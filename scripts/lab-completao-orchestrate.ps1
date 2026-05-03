@@ -8,20 +8,20 @@
   Optional per-host "completaoHealthUrl" for remote curl from the dev PC after SSH smoke.
   Optional per-host "completaoEngineMode":"container" or "completaoSkipEngineImport":true when the host
   runs Data Boar only via Docker/Swarm/Podman (skip bare-metal uv / import core.engine) - see LAB_COMPLETAO_RUNBOOK.md.
-  Optional "completaoHardwareProfile":"LAB-NODE-04" (or sshHost matching LAB-NODE-04): PASSIVE target only - no Docker/Podman,
-  no image_preflight probe on LAB-NODE-04, skip undervoltage gate for LAB-NODE-04 in host-smoke; IO latency snippet over SSH;
-  local python3/.venv plus journal/syslog tail for LAB-NODE-01/LAB-NODE-02 review.
+  Optional "completaoHardwareProfile":"pi3b" (or sshHost matching pi3b): PASSIVE target only - no Docker/Podman,
+  no image_preflight probe on pi3b, skip undervoltage gate for pi3b in host-smoke; IO latency snippet over SSH;
+  local python3/.venv plus journal/syslog tail for T14/Latitude review.
   Optional root "completaoMainEngineSshHost": SSH alias of the primary benchmark/engine host; undervoltage on other
   hosts is logged as warning only (host-smoke never fails the orchestrator for power throttling alone).
   Image preflight is non-blocking: missing images or probe SSH failure logs warnings and continues host smoke.
-  Optional "completaoHardwareProfile":"LAB-NODE-03-void" (or sshHost matching LAB-NODE-03): forces skip-engine-import and logs
-  Void xbps hint for mysqlclient build deps; keep DB/Swarm-heavy work on LAB-NODE-02 and LAB-NODE-01.
+  Optional "completaoHardwareProfile":"mini-bt-void" (or sshHost matching mini-bt): forces skip-engine-import and logs
+  Void xbps hint for mysqlclient build deps; keep DB/Swarm-heavy work on Latitude and T14.
 
   Optional root "completaoDataContractsPath": YAML for scripts/lab_completao_data_contract_check.py (column contract
   preflight). Runs after lab-op-git-ensure-ref when present and the file exists. See docs/private.example/homelab/completao_data_contracts.example.yaml.
 
   Optional root "completaoImageRefs": JSON array of image refs (e.g. fabioleitao/data_boar:lab). When set and
-  -SkiColleague-KagePreflight is not used, probes completaoImageProbeSshHost or the first non-LAB-NODE-04 manifest sshHost with docker/podman
+  -SkipImagePreflight is not used, probes completaoImageProbeSshHost or the first non-pi3b manifest sshHost with docker/podman
   image inspect (read-only) before host smoke; missing images log warnings and the run continues (idempotent: no pull/create).
 
   Writes docs/private/homelab/reports/completao_<stamp>_orchestrate_events.jsonl (one JSON object per line) for tooling.
@@ -53,7 +53,7 @@
   .\scripts\lab-completao-orchestrate.ps1 -Privileged -LabGitRef v1.2.0 -SkipGitPullOnInventoryRefresh
 
 .EXAMPLE
-  Optional fixed-matrix high-density container path (Podman on LAB-NODE-01, Docker elsewhere, ephemeral /tmp config):
+  Optional fixed-matrix high-density container path (Podman on T14, Docker elsewhere, ephemeral /tmp config):
   .\scripts\lab-completao-orchestrate.ps1 -HybridLabOpHighDensity173
 #>
 param(
@@ -69,7 +69,7 @@ param(
     [switch] $SkipLabGitRefCheck,
     [switch] $AlignLabClonesToLabGitRef,
     [switch] $SkipDataContractPreflight,
-    [switch] $SkiColleague-KagePreflight
+    [switch] $SkipImagePreflight
 )
 
 $ErrorActionPreference = "Stop"
@@ -107,11 +107,11 @@ function Get-CompletaoHardwareProfile {
     if ($HostEntry.PSObject.Properties.Name -contains "completaoHardwareProfile" -and $HostEntry.completaoHardwareProfile) {
         return [string]$HostEntry.completaoHardwareProfile
     }
-    if ($Alias -match "LAB-NODE-04") {
-        return "LAB-NODE-04"
+    if ($Alias -match "pi3b") {
+        return "pi3b"
     }
-    if ($Alias -match "LAB-NODE-03|minibt") {
-        return "LAB-NODE-03-void"
+    if ($Alias -match "mini-bt|minibt") {
+        return "mini-bt-void"
     }
     return ""
 }
@@ -132,10 +132,10 @@ function Test-CompletaoSshRepoDir {
     return ($out -match "COMPLETAO_HEALTH_OK")
 }
 
-function Build-LAB-NODE-04PassiveRemoteCmd {
+function Build-Pi3bPassiveRemoteCmd {
     param([string]$RepoPathEsc)
-    # Single-line bash for ssh: no Docker/Podman; IO latency on /tmp; venv/system databoar --help; logs for LAB-NODE-01/LAB-NODE-02.
-    return "cd '$RepoPathEsc' && { echo '=== LAB-NODE-04 passive path (no container engine) ==='; if [ -x .venv/bin/python3 ]; then echo 'using .venv/bin/python3 -m databoar --help'; .venv/bin/python3 -m databoar --help 2>&1 | head -n 50 || true; elif command -v python3 >/dev/null 2>&1; then echo 'no .venv; trying python3 -m databoar --help'; python3 -m databoar --help 2>&1 | head -n 50 || true; else echo 'SKIP_NO_PYTHON_OR_VENV'; fi; echo '=== LAB-NODE-04 IO latency (isolated /tmp file, fdatasync) ==='; sync 2>/dev/null || true; rm -f /tmp/databoar_LAB-NODE-04_iolat 2>/dev/null || true; dd if=/dev/zero of=/tmp/databoar_LAB-NODE-04_iolat bs=4096 count=256 conv=fdatasync 2>&1 | tail -n 6 || true; rm -f /tmp/databoar_LAB-NODE-04_iolat 2>/dev/null || true; echo '=== recent logs (journal/syslog) ==='; journalctl -n 120 --no-pager 2>/dev/null || true; test -r /var/log/syslog && tail -n 80 /var/log/syslog 2>/dev/null || true; test -r /var/log/messages && tail -n 80 /var/log/messages 2>/dev/null || true; df -h 2>/dev/null | head -n 24 || true; } 2>&1"
+    # Single-line bash for ssh: no Docker/Podman; IO latency on /tmp; venv/system databoar --help; logs for T14/Latitude.
+    return "cd '$RepoPathEsc' && { echo '=== pi3b passive path (no container engine) ==='; if [ -x .venv/bin/python3 ]; then echo 'using .venv/bin/python3 -m databoar --help'; .venv/bin/python3 -m databoar --help 2>&1 | head -n 50 || true; elif command -v python3 >/dev/null 2>&1; then echo 'no .venv; trying python3 -m databoar --help'; python3 -m databoar --help 2>&1 | head -n 50 || true; else echo 'SKIP_NO_PYTHON_OR_VENV'; fi; echo '=== pi3b IO latency (isolated /tmp file, fdatasync) ==='; sync 2>/dev/null || true; rm -f /tmp/databoar_pi3b_iolat 2>/dev/null || true; dd if=/dev/zero of=/tmp/databoar_pi3b_iolat bs=4096 count=256 conv=fdatasync 2>&1 | tail -n 6 || true; rm -f /tmp/databoar_pi3b_iolat 2>/dev/null || true; echo '=== recent logs (journal/syslog) ==='; journalctl -n 120 --no-pager 2>/dev/null || true; test -r /var/log/syslog && tail -n 80 /var/log/syslog 2>/dev/null || true; test -r /var/log/messages && tail -n 80 /var/log/messages 2>/dev/null || true; df -h 2>/dev/null | head -n 24 || true; } 2>&1"
 }
 
 function Write-CompletaoOrchestrateEvent {
@@ -268,29 +268,29 @@ function Get-CompletaoImageRefsFromManifest {
     return ,$list.ToArray()
 }
 
-function Test-CompletaoHostEntryIsLAB-NODE-04 {
+function Test-CompletaoHostEntryIsPi3b {
     param($HostEntry, [string]$Alias)
-    if ($Alias -match '(?i)LAB-NODE-04') {
+    if ($Alias -match '(?i)pi3b') {
         return $true
     }
     if ($HostEntry) {
         $p = Get-CompletaoHardwareProfile -HostEntry $HostEntry -Alias $Alias
-        return ($p -match '^LAB-NODE-04')
+        return ($p -match '^pi3b')
     }
     return $false
 }
 
 function Test-CompletaoHostEntrySkipsImageProbe {
     param($HostEntry, [string]$Alias)
-    if (Test-CompletaoHostEntryIsLAB-NODE-04 -HostEntry $HostEntry -Alias $Alias) {
+    if (Test-CompletaoHostEntryIsPi3b -HostEntry $HostEntry -Alias $Alias) {
         return $true
     }
-    if ($Alias -match '(?i)LAB-NODE-03|^minibt$') {
+    if ($Alias -match '(?i)mini-bt|^minibt$') {
         return $true
     }
     if ($HostEntry) {
         $p = Get-CompletaoHardwareProfile -HostEntry $HostEntry -Alias $Alias
-        if ($p -match '^LAB-NODE-03-void') {
+        if ($p -match '^mini-bt-void') {
             return $true
         }
     }
@@ -302,7 +302,7 @@ function Get-CompletaoImageProbeAlias {
     if (-not $ManifestObj) {
         return ""
     }
-    # Skip passive LAB-NODE-04 and LAB-NODE-03 Void (no container engine / missing deps): never use them for image inspect.
+    # Skip passive pi3b and mini-bt Void (no container engine / missing deps): never use them for image inspect.
     if ($ManifestObj.PSObject.Properties.Name -contains "completaoImageProbeSshHost" -and $ManifestObj.completaoImageProbeSshHost) {
         $cand = [string]$ManifestObj.completaoImageProbeSshHost
         $he = $null
@@ -513,7 +513,7 @@ if (-not $SkipDataContractPreflight) {
     $LabResultPhases.data_contract_preflight = "skipped_switch"
 }
 
-if (-not $SkiColleague-KagePreflight) {
+if (-not $SkipImagePreflight) {
     $imgRefs = @(Get-CompletaoImageRefsFromManifest -ManifestObj $manifest)
     $hasImageRefsKey = ($manifest.PSObject.Properties.Name -contains "completaoImageRefs")
     if ($hasImageRefsKey -and $imgRefs.Count -eq 0) {
@@ -523,9 +523,9 @@ if (-not $SkiColleague-KagePreflight) {
     if ($imgRefs.Count -gt 0) {
         $probeHost = Get-CompletaoImageProbeAlias -ManifestObj $manifest
         if (-not $probeHost) {
-            Write-CompletaoOrchestrateEvent -ReportPath $eventsPath -Phase "image_preflight" -Status "warning" -Message "no_engine_probe_host_skipped" -Detail @{ note = "LAB-NODE-04 and LAB-NODE-03-void excluded from image inspect; set completaoImageProbeSshHost to an engine host (LAB-NODE-02/LAB-NODE-01) or add one before LAB-NODE-03 in manifest order" }
+            Write-CompletaoOrchestrateEvent -ReportPath $eventsPath -Phase "image_preflight" -Status "warning" -Message "no_engine_probe_host_skipped" -Detail @{ note = "pi3b and mini-bt-void excluded from image inspect; set completaoImageProbeSshHost to an engine host (Latitude/T14) or add one before mini-bt in manifest order" }
             $LabResultPhases.image_preflight = "skipped_no_engine_probe_host"
-            Write-Warning "lab-completao-orchestrate: completaoImageRefs set but no engine host for image inspect after skipping LAB-NODE-04/LAB-NODE-03 (non-blocking)."
+            Write-Warning "lab-completao-orchestrate: completaoImageRefs set but no engine host for image inspect after skipping pi3b/mini-bt (non-blocking)."
         } elseif (-not (Test-CompletaoSshProbe -Alias $probeHost)) {
             Write-CompletaoOrchestrateEvent -ReportPath $eventsPath -Phase "image_preflight" -Status "warning" -Message "ssh_probe_failed_nonblocking" -HostAlias $probeHost
             $LabResultPhases.image_preflight = "warning_ssh_probe_failed"
@@ -548,7 +548,7 @@ if (-not $SkiColleague-KagePreflight) {
                 $joined = ($missingList.ToArray() -join ",")
                 Write-CompletaoOrchestrateEvent -ReportPath $eventsPath -Phase "image_preflight" -Status "warning" -Message "image_missing_nonblocking" -HostAlias $probeHost -Detail @{ missing = $joined }
                 $LabResultPhases.image_preflight = "warning_missing_images"
-                Write-Warning "lab-completao-orchestrate: image(s) not on ${probeHost}: $joined (non-blocking). Pull/load on lab or use -SkiColleague-KagePreflight."
+                Write-Warning "lab-completao-orchestrate: image(s) not on ${probeHost}: $joined (non-blocking). Pull/load on lab or use -SkipImagePreflight."
             } else {
                 Write-CompletaoOrchestrateEvent -ReportPath $eventsPath -Phase "image_preflight" -Status "ok" -Message "all_images_present" -HostAlias $probeHost -Detail @{ images = (($imgRefs | ForEach-Object { [Convert]::ToString($_, [System.Globalization.CultureInfo]::InvariantCulture) }) -join ",") }
                 $LabResultPhases.image_preflight = "ok"
@@ -559,7 +559,7 @@ if (-not $SkiColleague-KagePreflight) {
         $LabResultPhases.image_preflight = "not_configured"
     }
 } else {
-    Write-CompletaoOrchestrateEvent -ReportPath $eventsPath -Phase "image_preflight" -Status "skipped" -Message "SkiColleague-KagePreflight_switch"
+    Write-CompletaoOrchestrateEvent -ReportPath $eventsPath -Phase "image_preflight" -Status "skipped" -Message "SkipImagePreflight_switch"
     $LabResultPhases.image_preflight = "skipped_switch"
 }
 
@@ -604,7 +604,7 @@ foreach ($h in $manifest.hosts) {
     }
 
     $hwProfile = Get-CompletaoHardwareProfile -HostEntry $h -Alias $alias
-    if ($hwProfile -match '^LAB-NODE-03-void') {
+    if ($hwProfile -match '^mini-bt-void') {
         $skipEngineImport = $true
     }
 
@@ -656,42 +656,42 @@ foreach ($h in $manifest.hosts) {
         continue
     }
 
-    if ($hwProfile -match '^LAB-NODE-03-void') {
-        $voidNote = "LAB_NOTE LAB-NODE-03 Void: run sudo xbps-install -S libmariadbclient-devel pkg-config if mysqlclient build fails; if uv sync still fails, use a private clone branch or gitignored local pyproject overlay on that host only (do not strip DB deps from the canonical Git repo); keep MariaDB/DB scan load on LAB-NODE-02/LAB-NODE-01; this host: filesystem + logs + skip-engine-import."
+    if ($hwProfile -match '^mini-bt-void') {
+        $voidNote = "LAB_NOTE mini-bt Void: run sudo xbps-install -S libmariadbclient-devel pkg-config if mysqlclient build fails; if uv sync still fails, use a private clone branch or gitignored local pyproject overlay on that host only (do not strip DB deps from the canonical Git repo); keep MariaDB/DB scan load on Latitude/T14; this host: filesystem + logs + skip-engine-import."
         [void]$hostLogSb.AppendLine($voidNote)
         [void]$master.AppendLine($voidNote)
         Write-Host $voidNote -ForegroundColor DarkYellow
     }
 
-    if ($hwProfile -match '^LAB-NODE-04') {
+    if ($hwProfile -match '^pi3b') {
         $piRp = $firstRepo
         if (-not $piRp) {
             $piRp = "/home/leitao"
-            $piNote = "LAB-NODE-04_NOTE no repoPaths in manifest; using passive base $piRp (NFS/home or operator default)."
+            $piNote = "PI3B_NOTE no repoPaths in manifest; using passive base $piRp (NFS/home or operator default)."
             Write-Host $piNote -ForegroundColor DarkYellow
             [void]$master.AppendLine($piNote)
             [void]$hostLogSb.AppendLine($piNote)
         }
         if (-not (Test-CompletaoSshRepoDir -Alias $alias -RepoPath $piRp)) {
-            Write-Warning "LAB-NODE-04 health: passive base missing or unreadable $piRp - skip host (skip-on-failure)."
-            [void]$master.AppendLine("LAB-NODE-04_HEALTH_FAIL skip-on-failure path=$piRp")
-            [void]$hostLogSb.AppendLine("LAB-NODE-04_HEALTH_FAIL skip-on-failure path=$piRp")
+            Write-Warning "Pi3B health: passive base missing or unreadable $piRp - skip host (skip-on-failure)."
+            [void]$master.AppendLine("PI3B_HEALTH_FAIL skip-on-failure path=$piRp")
+            [void]$hostLogSb.AppendLine("PI3B_HEALTH_FAIL skip-on-failure path=$piRp")
             $safe = ($alias -replace '[^\w\-\.]', '_')
             $logfn = "${safe}_${stamp}_completao_host_smoke.log"
             Set-Content -LiteralPath (Join-Path $outDir $logfn) -Value $hostLogSb.ToString() -Encoding utf8
             $hostStopwatch.Stop()
-            Add-CompletaoHostConnectivityRecord -Records $LabHostRecords -Alias $alias -SshProbeOk $true -Outcome "LAB-NODE-04_base_unreachable" -LogFileName $logfn -ElapsedSec $hostStopwatch.Elapsed.TotalSeconds
+            Add-CompletaoHostConnectivityRecord -Records $LabHostRecords -Alias $alias -SshProbeOk $true -Outcome "pi3b_base_unreachable" -LogFileName $logfn -ElapsedSec $hostStopwatch.Elapsed.TotalSeconds
             $HostRecordAdded = $true
             continue
         }
         $rpEsc = $piRp -replace "'", "'\''"
-        $piRemote = Build-LAB-NODE-04PassiveRemoteCmd -RepoPathEsc $rpEsc
+        $piRemote = Build-Pi3bPassiveRemoteCmd -RepoPathEsc $rpEsc
         $piRemoteEsc = $piRemote.Replace('"', '\"')
         $piLine = "ssh.exe -o BatchMode=yes -o ConnectTimeout=180 -o ServerAliveInterval=15 -o ServerAliveCountMax=8 $alias `"$piRemoteEsc`" 2>&1"
         $piOut = Invoke-CmdCapture -CmdLine $piLine
-        [void]$hostLogSb.AppendLine("--- LAB-NODE-04 passive (no Docker / no container smoke) repo: $piRp ---")
+        [void]$hostLogSb.AppendLine("--- pi3b passive (no Docker / no container smoke) repo: $piRp ---")
         [void]$hostLogSb.AppendLine($piOut)
-        [void]$master.AppendLine("--- LAB-NODE-04 passive repo: $piRp ---")
+        [void]$master.AppendLine("--- pi3b passive repo: $piRp ---")
         [void]$master.AppendLine($piOut)
         if ($healthUrl) {
             try {
@@ -708,10 +708,10 @@ foreach ($h in $manifest.hosts) {
         $safe = ($alias -replace '[^\w\-\.]', '_')
         $oneFile = Join-Path $outDir "${safe}_${stamp}_completao_host_smoke.log"
         Set-Content -LiteralPath $oneFile -Value $hostLogSb.ToString() -Encoding utf8
-        Write-Host "Wrote $oneFile (LAB-NODE-04 passive path)" -ForegroundColor Green
+        Write-Host "Wrote $oneFile (pi3b passive path)" -ForegroundColor Green
         $hostStopwatch.Stop()
         $logfn = "${safe}_${stamp}_completao_host_smoke.log"
-        Add-CompletaoHostConnectivityRecord -Records $LabHostRecords -Alias $alias -SshProbeOk $true -Outcome "LAB-NODE-04_passive_completed" -LogFileName $logfn -ElapsedSec $hostStopwatch.Elapsed.TotalSeconds
+        Add-CompletaoHostConnectivityRecord -Records $LabHostRecords -Alias $alias -SshProbeOk $true -Outcome "pi3b_passive_completed" -LogFileName $logfn -ElapsedSec $hostStopwatch.Elapsed.TotalSeconds
         $HostRecordAdded = $true
         continue
     }
@@ -798,7 +798,7 @@ Write-Host "Wrote consolidated $allFile" -ForegroundColor Green
 
 $hostLoopSec = [math]::Round(((Get-Date) - $hostLoopStarted).TotalSeconds, 2)
 $LabResultPhases.host_smoke_loop = "completed"
-$withSkips = @($LabHostRecords | Where-Object { $_.outcome -ne "smoke_log_written" -and $_.outcome -ne "LAB-NODE-04_passive_completed" })
+$withSkips = @($LabHostRecords | Where-Object { $_.outcome -ne "smoke_log_written" -and $_.outcome -ne "pi3b_passive_completed" })
 if ($withSkips.Count -gt 0) {
     $LabResultPhases.host_smoke_loop = "completed_with_skips"
 }
@@ -914,7 +914,7 @@ $labPayload = [ordered]@{
     run_flags                = [ordered]@{
         SkipInventoryPreflight     = [bool]$SkipInventoryPreflight
         SkipDataContractPreflight    = [bool]$SkipDataContractPreflight
-        SkiColleague-KagePreflight           = [bool]$SkiColleague-KagePreflight
+        SkipImagePreflight           = [bool]$SkipImagePreflight
         SkipLabGitRefCheck           = [bool]$SkipLabGitRefCheck
         SkipFping                    = [bool]$SkipFping
         AlignLabClonesToLabGitRef    = [bool]$AlignLabClonesToLabGitRef

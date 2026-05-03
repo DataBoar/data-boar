@@ -367,7 +367,7 @@ def main() -> None:
             print(info, file=sys.stderr, flush=True)
             ssl_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
             ssl_ctx.minimum_version = ssl.TLSVersion.TLSv1_2
-            ssl_ctx.load_cert_Colleague-Nn(certfile=cert_str, keyfile=key_str)
+            ssl_ctx.load_cert_chain(certfile=cert_str, keyfile=key_str)
         else:
             banner = (
                 "======================================================================\n"

@@ -223,13 +223,15 @@ def test_pr_merge_when_green_ps1_syntax():
     )
 
 
-def test_snmp_LAB-ROUTER-01_lab_probe_ps1_syntax():
+def test_snmp_LAB_ROUTER_01_lab_probe_ps1_syntax():
     """scripts/snmp-LAB-ROUTER-01-lab-probe.ps1 has valid PowerShell syntax (parse-only)."""
     root = _project_root()
     script = root / "scripts" / "snmp-LAB-ROUTER-01-lab-probe.ps1"
     if not script.exists():
         return
-    assert _parse_powershell_script(script, root), "snmp-LAB-ROUTER-01-lab-probe.ps1 parse failed"
+    assert _parse_powershell_script(script, root), (
+        "snmp-LAB-ROUTER-01-lab-probe.ps1 parse failed"
+    )
 
 
 def test_lab_op_sync_and_collect_ps1_syntax():
@@ -359,7 +361,7 @@ def test_lab_completao_host_smoke_sh_syntax():
     assert proc.returncode == 0, f"bash -n failed: {proc.stderr or proc.stdout}"
 
 
-def test_lab-node-01_ansible_preflight_sh_syntax():
+def test_lab_node_01_ansible_preflight_sh_syntax():
     """scripts/lab-node-01-ansible-preflight.sh has valid bash syntax (bash -n). Skipped on Windows."""
     if sys.platform == "win32":
         return
@@ -380,7 +382,7 @@ def test_lab-node-01_ansible_preflight_sh_syntax():
     assert proc.returncode == 0, f"bash -n failed: {proc.stderr or proc.stdout}"
 
 
-def test_lab-node-01_ansible_labop_podman_apply_sh_syntax():
+def test_lab_node_01_ansible_labop_podman_apply_sh_syntax():
     """scripts/lab-node-01-ansible-labop-podman-apply.sh has valid bash syntax (bash -n). Skipped on Windows."""
     if sys.platform == "win32":
         return
@@ -401,7 +403,7 @@ def test_lab-node-01_ansible_labop_podman_apply_sh_syntax():
     assert proc.returncode == 0, f"bash -n failed: {proc.stderr or proc.stdout}"
 
 
-def test_lab-node-01_session_warm_sh_syntax():
+def test_lab_node_01_session_warm_sh_syntax():
     """scripts/lab-node-01-session-warm.sh has valid bash syntax (bash -n). Skipped on Windows."""
     if sys.platform == "win32":
         return
@@ -422,7 +424,7 @@ def test_lab-node-01_session_warm_sh_syntax():
     assert proc.returncode == 0, f"bash -n failed: {proc.stderr or proc.stdout}"
 
 
-def test_lab-node-01_fix_docker_list_sh_syntax():
+def test_lab_node_01_fix_docker_list_sh_syntax():
     """scripts/lab-node-01-fix-docker-list.sh has valid bash syntax (bash -n). Skipped on Windows."""
     if sys.platform == "win32":
         return
@@ -443,7 +445,7 @@ def test_lab-node-01_fix_docker_list_sh_syntax():
     assert proc.returncode == 0, f"bash -n failed: {proc.stderr or proc.stdout}"
 
 
-def test_lab-node-01_docker_remove_live_restore_and_restart_sh_syntax():
+def test_lab_node_01_docker_remove_live_restore_and_restart_sh_syntax():
     """scripts/lab-node-01-docker-remove-live-restore-and-restart.sh has valid bash syntax. Skipped on Windows."""
     if sys.platform == "win32":
         return
@@ -464,7 +466,7 @@ def test_lab-node-01_docker_remove_live_restore_and_restart_sh_syntax():
     assert proc.returncode == 0, f"bash -n failed: {proc.stderr or proc.stdout}"
 
 
-def test_lab-node-01_bitwarden_cli_bootstrap_sh_syntax():
+def test_lab_node_01_bitwarden_cli_bootstrap_sh_syntax():
     """scripts/lab-node-01-bitwarden-cli-bootstrap.sh has valid bash syntax (bash -n). Skipped on Windows."""
     if sys.platform == "win32":
         return
@@ -485,7 +487,7 @@ def test_lab-node-01_bitwarden_cli_bootstrap_sh_syntax():
     assert proc.returncode == 0, f"bash -n failed: {proc.stderr or proc.stdout}"
 
 
-def test_lab-node-01_install_veracrypt_console_debian13_sh_syntax():
+def test_lab_node_01_install_veracrypt_console_debian13_sh_syntax():
     """scripts/lab-node-01-install-veracrypt-console-debian13.sh has valid bash syntax. Skipped on Windows."""
     if sys.platform == "win32":
         return
@@ -506,7 +508,7 @@ def test_lab-node-01_install_veracrypt_console_debian13_sh_syntax():
     assert proc.returncode == 0, f"bash -n failed: {proc.stderr or proc.stdout}"
 
 
-def test_lab-node-01_veracrypt_mount_private_repo_sh_syntax():
+def test_lab_node_01_veracrypt_mount_private_repo_sh_syntax():
     """scripts/lab-node-01-veracrypt-mount-private-repo.sh has valid bash syntax. Skipped on Windows."""
     if sys.platform == "win32":
         return
@@ -773,7 +775,7 @@ def test_operator_day_ritual_ps1_syntax():
     )
 
 
-def test_lab-node-01_ansible_baseline_ps1_syntax():
+def test_lab_node_01_ansible_baseline_ps1_syntax():
     """scripts/lab-node-01-ansible-baseline.ps1 has valid PowerShell syntax (parse-only)."""
     root = _project_root()
     script = root / "scripts" / "lab-node-01-ansible-baseline.ps1"

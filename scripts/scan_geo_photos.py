@@ -30,7 +30,9 @@ def get_gps(filepath):
                     gps_info[gps_tag] = gps_value
         if not gps_info:
             return None
-        lat = dms_to_dd(gps_info.get("GPSLAB-NODE-02"), gps_info.get("GPSLAB-NODE-02Ref"))
+        lat = dms_to_dd(
+            gps_info.get("GPSLAB-NODE-02"), gps_info.get("GPSLAB-NODE-02Ref")
+        )
         lon = dms_to_dd(gps_info.get("GPSLongitude"), gps_info.get("GPSLongitudeRef"))
         if lat is not None and lon is not None:
             return (lat, lon)

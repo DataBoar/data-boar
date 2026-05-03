@@ -297,7 +297,7 @@ def test_sanitize_log_text_applies_secrets_then_pii():
     assert "111.444.777-35" not in s
 
 
-def test_clean_error_walks_cause_Colleague-Nn_and_redacts():
+def test_clean_error_walks_cause_chain_and_redacts():
     from core.validation import clean_error
 
     class Inner(Exception):

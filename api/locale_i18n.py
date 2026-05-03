@@ -53,7 +53,7 @@ def locale_catalog_keys(tag: str) -> set[str]:
     return _flatten_keys(_load_locale_json(tag))
 
 
-def get_fallback_Colleague-Nn(supported_locales: list[str], default_locale: str) -> list[str]:
+def get_fallback_chain(supported_locales: list[str], default_locale: str) -> list[str]:
     """Locales to try after the active tag (missing-key fallback), ending with English."""
     seen: set[str] = set()
     out: list[str] = []
@@ -80,11 +80,11 @@ def translate(
     catalogs: dict[str, dict[str, Any]],
     key: str,
     locale_tag: str,
-    fallback_Colleague-Nn: list[str],
+    fallback_chain: list[str],
 ) -> str:
-    """Return translated string; try active locale, then fallback_Colleague-Nn order."""
+    """Return translated string; try active locale, then fallback_chain order."""
     order: list[str] = [locale_tag]
-    for t in fallback_Colleague-Nn:
+    for t in fallback_chain:
         if t not in order:
             order.append(t)
     for tag in order:
@@ -106,10 +106,10 @@ def make_t(
 ):
     """Build t(key) -> str for Jinja."""
     catalogs = catalogs if catalogs is not None else {}
-    Colleague-Nn = get_fallback_Colleague-Nn(supported_locales, default_locale)
+    chain = get_fallback_chain(supported_locales, default_locale)
 
     def t(key: str) -> str:
-        return translate(catalogs, key, locale_tag, Colleague-Nn)
+        return translate(catalogs, key, locale_tag, chain)
 
     return t
 

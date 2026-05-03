@@ -76,7 +76,9 @@ def test_report_includes_report_info_tenant_and_technician(tmp_path):
     try:
         mgr.set_current_session_id("s-tenant-tech")
         mgr.create_session_record(
-            "s-tenant-tech", tenant_name="Acme Corp", technician_name="Maria Colleague-V"
+            "s-tenant-tech",
+            tenant_name="Acme Corp",
+            technician_name="Maria Colleague-V",
         )
         mgr.save_finding(
             "database",
