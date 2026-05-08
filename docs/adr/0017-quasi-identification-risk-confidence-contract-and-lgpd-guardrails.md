@@ -1,5 +1,11 @@
 # ADR 0017: Quasi-identification risk/confidence contract and LGPD guardrails
 
+**Date:** 2026-04-07
+**Status:** Accepted
+**Author:** Fabio Leitao
+
+---
+
 ## Context
 
 The project now formalizes quasi-identification analysis for combinations such as `IP + geolocation + breadcrumbs` in logs/proxy traces. We need durable decisions that prevent ad-hoc behavior drift and future cognitive overload.

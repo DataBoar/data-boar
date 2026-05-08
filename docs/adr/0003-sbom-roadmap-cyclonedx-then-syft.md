@@ -1,8 +1,10 @@
 # ADR 0003: SBOM roadmap — CycloneDX (JSON) first, then Syft on Docker images
 
 **Status:** Accepted
-
 **Date:** 2026-03-26
+**Authors:** Fabio Leitao
+
+---
 
 ## Context
 

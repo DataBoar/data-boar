@@ -1,7 +1,10 @@
-﻿# ADR 0010: IP Declaration as prior-art protection for Data Boar at CLT employment
+# ADR 0010: IP Declaration as prior-art protection for Data Boar at CLT employment
 
 **Status:** Accepted
 **Date:** 2026-03-27 (IP Declaration sent) / Recorded: 2026-04-03
+**Authors:** Fabio Leitao
+
+---
 
 ## Context
 

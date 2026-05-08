@@ -230,6 +230,22 @@ else
   echo "(skip: no uv or no pyproject.toml)"
 fi
 
+_lc_section "Data Boar Engine (Baremetal RC)"
+# Se o Maestro enviou um config via argumento $1 ou se benchmark-rc existe
+CONFIG_RC="${1:-tests/config/benchmark-rc.yaml}"
+
+if [[ -f "$LC_REPO_ROOT/$CONFIG_RC" ]] && _lc_cmd uv; then
+  do_log_ INFO "Iniciando Scan de Performance Baremetal com $CONFIG_RC..."
+
+  # SRE FIX: Avisa o Maestro que o motor pesado iniciou
+  echo "SCANNING_BAREMETAL_RC at $(date +'%H:%M:%S')" > "${HOME}/.labop-status"
+
+  (cd "$LC_REPO_ROOT" && uv run data-boar scan --config "$CONFIG_RC")
+else
+  # Fallback para o smoke original se não houver config de benchmark
+  (cd "$LC_REPO_ROOT" && uv run python -c "import core.engine; print('import core.engine: OK')" 2>&1) || echo "import core.engine: FAILED"
+fi
+
 _lc_section "Docker / Podman"
 if _lc_cmd docker; then
   docker --version
@@ -287,6 +303,12 @@ if [[ "$LC_PRIV" == "1" ]]; then
 fi
 
 _lc_bench_compare
+
+# Adicionar no final de scripts/lab-completao-host-smoke.sh
+_lc_section "Telemetria"
+FINAL_TS=$(date +"%H:%M:%S")
+echo "DONE_SUCCESS_BAREMETAL at ${FINAL_TS}" > "${HOME}/.labop-status"
+echo "Status persistido em ${HOME}/.labop-status"
 
 echo "=== lab-completao-host-smoke END ==="
 exit 0

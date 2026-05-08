@@ -1,5 +1,11 @@
 # ADR 0020 — CI must scan full Git history for PII anti-recurrence patterns
 
+**Date:** 2026-04-08
+**Status:** Accepted
+**Author:** Fabio Leitao
+
+---
+
 ## Context
 
 Tracked-file guards (`tests/test_pii_guard.py`) and incremental history checks catch many issues before merge, but **public Git history** can still contain sensitive literals in **old commits** unless the full object graph is scanned. Shallow CI checkouts would miss that class of defect.
