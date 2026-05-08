@@ -22,8 +22,6 @@ However, corporate and enterprise clients increasingly use **Terraform-compatibl
 
 Ansible remains the correct tool for **configuration management and application deployment** (idempotent package installation, service management, file templates). OpenTofu is the correct tool for **infrastructure provisioning** (cloud VMs, managed databases, networking, DNS records).
 
----
-
 ## Decision
 
 Add a minimal OpenTofu module under `deploy/opentofu/` that provisions the infrastructure layer for a Data Boar deployment. The module is not a replacement for Ansible but a **complementary first step** in environments where infra is managed as code:
@@ -65,8 +63,6 @@ ansible-playbook -i inventory/ deploy/ansible/site.yml
 
 The `deploy/opentofu/README.md` documents this two-step workflow explicitly.
 
----
-
 ## Alternatives Considered
 
 | Alternative | Reason not chosen |
@@ -75,8 +71,6 @@ The `deploy/opentofu/README.md` documents this two-step workflow explicitly.
 | Provide Pulumi module | Much smaller adoption in the corporate on-premise segment; Python DSL preferred only for SRE audiences already in Python |
 | Provide Terraform modules only | BSL license creates friction for open-source and SME clients; OpenTofu is compatible |
 | Kubernetes Helm chart | `deploy/kubernetes/` already covers this; not all corporate clients have Kubernetes |
-
----
 
 ## Consequences
 
@@ -90,8 +84,6 @@ The `deploy/opentofu/README.md` documents this two-step workflow explicitly.
 - OpenTofu adds a new technology surface for documentation and support.
 - The module is intentionally minimal (Docker provider); cloud-provider extensions require client-side work.
 - State backend configuration (S3, etc.) is left to the client — not opinionated in the module.
-
----
 
 ## Related
 

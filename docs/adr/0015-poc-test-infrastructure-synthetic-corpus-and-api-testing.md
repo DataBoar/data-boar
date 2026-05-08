@@ -1,7 +1,7 @@
 # ADR 0015 — POC Test Infrastructure: Synthetic Corpus, Postman Collection, and Ansible Database Role
 
-**Date:** 2026-04-05
 **Status:** Accepted
+**Date:** 2026-04-05
 **Author:** Fabio Leitao
 
 ---
@@ -15,8 +15,6 @@ Data Boar was approaching its first real client POC. The team needed:
 3. **API testing** — the REST API must be validated by collaborators not comfortable with Python/CLI.
 4. **Reproducibility** — collaborators (team members) must run the same test pass independently and get comparable results.
 5. **Gap discovery** — false negatives, error message quality, and troubleshooting UX are as important as detection coverage for a first POC.
-
----
 
 ## Decision
 
@@ -54,8 +52,6 @@ Covers the REST API surface: scan trigger, scan status, report download, and err
 
 Public tracked guide: corpus generation, expected outcomes per scenario, validation steps, expected failure modes, and a gap report template.
 
----
-
 ## Alternatives Considered
 
 | Alternative | Reason not chosen |
@@ -64,8 +60,6 @@ Public tracked guide: corpus generation, expected outcomes per scenario, validat
 | CI unit tests only | Cannot cover full pipeline (filesystem + connector + report) |
 | Manual DB setup instructions | Not reproducible; high friction for remote collaborators |
 | Pytest fixtures at runtime | Too slow for large stress scenarios |
-
----
 
 ## Consequences
 
@@ -79,8 +73,6 @@ Public tracked guide: corpus generation, expected outcomes per scenario, validat
 - Optional libs (`Pillow`, `reportlab`, `python-docx`, `openpyxl`) needed for binary-format scenarios.
 - `run_error_tests.sh` assumes POSIX shell — Windows collaborators need WSL or Git Bash.
 - Synthetic DB does not yet cover MSSQL or Oracle.
-
----
 
 ## Related
 

@@ -1,5 +1,11 @@
 # ADR 0006 — Operator today-mode layout and published-release sync
 
+#**Status:** Accepted
+**Date:** 2026-03-30
+**Authors:** Fabio Leitao
+
+---
+
 ## Context
 
 Dated operator checklists (`OPERATOR_TODAY_MODE_*.md`) lived next to dozens of other runbooks under `docs/ops/`, which made them easy to miss and let **carryover** items (e.g. “tag pending”) drift after GitHub Releases and Docker Hub already matched `pyproject.toml`. LLM-assisted triage (e.g. **Gemini** feedback plans) also produced actionable doc rows that needed a **durable home** without mixing them into product code.

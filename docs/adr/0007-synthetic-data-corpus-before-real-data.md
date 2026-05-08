@@ -1,7 +1,10 @@
 # ADR 0007 — Synthetic data corpus as mandatory pre-requisite before real production data
 
-**Date:** 2026-04-03
 **Status:** Accepted
+**Date:** 2026-04-03
+**Authors:** Fabio Leitao
+
+---
 
 ## Context
 

@@ -2,8 +2,7 @@
 
 **Status:** Accepted — package and primary docs executed in-repo; PyPI publish and optional legacy-remote removal remain operator follow-ups
 **Date:** 2026-04-05
-**Deciders:** Fabio Tavares Leitao (maintainer)
-**Related:** `docs/plans/completed/PLAN_LOGO_AND_NAMING.md`, `docs/ops/REMOTES_AND_ORIGIN.md`
+**Deciders:** Fabio Tavares Leitao
 
 ---
 
@@ -26,8 +25,6 @@ The only reason the package name (`pyproject.toml [project] name`) was not chang
 was deferred priority. There are no downstream consumers pinning to PyPI since the package
 is not yet publicly published there.
 
----
-
 ## Decision
 
 Rename all remaining references from `python3-lgpd-crawler` to `data-boar` (or `data_boar`
@@ -47,8 +44,6 @@ for Python identifiers) as part of the next planned release:
 **Historical mentions** in ADRs, changelogs, and `docs/plans/completed/` describing the
 original name are acceptable and should be retained for historical accuracy — they do not
 need to be changed.
-
----
 
 ## Consequences
 
@@ -71,8 +66,6 @@ need to be changed.
 - Git history: commit messages mentioning the old name are historical record — acceptable to keep
 - ADR 0000 (project origin): explicitly documents the old name for historical context — keep as-is
 
----
-
 ## Execution checklist (for the release implementing this ADR)
 
 - [x] `pyproject.toml`: change `name = "python3-lgpd-crawler"` to `name = "data-boar"`
@@ -83,3 +76,7 @@ need to be changed.
 - [ ] Notify collaborator with: `git remote set-url origin git@github.com:FabioLeitao/data-boar.git` (if still on old URL)
 - [ ] Tag the release with a changelog note when publishing **data-boar** to PyPI
 - [ ] Optional: remove legacy second remote from `.git/config` after [BRANCH_AND_DOCKER_CLEANUP.md](../ops/BRANCH_AND_DOCKER_CLEANUP.md) §7
+
+## References
+- `docs/plans/completed/PLAN_LOGO_AND_NAMING.md`
+- `docs/ops/REMOTES_AND_ORIGIN.md`

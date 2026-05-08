@@ -1,8 +1,10 @@
 # ADR 0000: Project origin and ADR baseline
 
 **Status:** Accepted
-
 **Date:** 2026-03-26
+**Authors:** Fabio Leitao
+
+---
 
 ## Context
 

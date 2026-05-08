@@ -2,8 +2,7 @@
 
 **Status:** Proposed
 **Date:** 2026-04-03
-**Deciders:** Fabio Leitao (operator / founder)
-**Related plans:** `docs/plans/PLAN_IMAGE_SENSITIVE_DATA_DETECTION.pt_BR.md`, `docs/plans/PLAN_SYNTHETIC_DATA_LAB.pt_BR.md`
+**Deciders:** Fabio Leitao
 
 ---
 
@@ -28,8 +27,6 @@ Real-world scenarios where this matters:
 
 LGPD, GDPR, and similar norms consider the photo of an ID document to be personal data (LGPD Art. 5, X); a photo of a face is biometric data, classified as sensitive (LGPD Art. 5, II); a photo of a medical record or prescription is health data, also sensitive (Art. 5, II); photos of minors require special protection (Art. 14).
 
----
-
 ## Decision drivers
 
 1. **No cloud dependency for raw image content** -- sending customer images to a cloud OCR API creates a secondary data processing relationship, potentially requiring additional LGPD legal basis. Local or self-hosted OCR is strongly preferred.
@@ -37,8 +34,6 @@ LGPD, GDPR, and similar norms consider the photo of an ID document to be persona
 3. **Low-overhead first tier** -- Scanning filesystem image files must not require a GPU for basic operation.
 4. **Extensible tiers** -- Advanced scenarios (better accuracy, GPU, cloud with consent) must be opt-in, not breaking changes.
 5. **Compliance reporting** -- Findings from image scanning must integrate with the existing finding/reporting pipeline (category, norm, location).
-
----
 
 ## Options evaluated
 
@@ -67,8 +62,6 @@ LGPD, GDPR, and similar norms consider the photo of an ID document to be persona
 ### E. Vision-language models (CLIP, LLaVA, etc.)
 
 - **Decision:** DEFERRED to a future AI-tier feature flag -- useful for document type classification once OCR text is insufficient.
-
----
 
 ## Decision
 
@@ -113,8 +106,6 @@ Implement image-based sensitive data detection in three layers:
 - Feature flag controls rollout; existing scanners unaffected when flag is off.
 - Optional dependencies: `pytesseract`, `Pillow`, `easyocr` -- guarded with ImportError and user-friendly install instructions.
 
----
-
 ## Consequences
 
 **Positive:**
@@ -130,8 +121,6 @@ Implement image-based sensitive data detection in three layers:
 - False positives on low-quality images are likely; confidence scoring must be exposed.
 - BLOB sampling design must ensure no decoded image data ends up in reports or logs (privacy by design).
 - Biometric/face detection requires a separate computer-vision classifier (not just OCR) -- deferred.
-
----
 
 ## References
 

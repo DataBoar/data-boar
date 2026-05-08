@@ -2,6 +2,9 @@
 
 **Status:** Accepted
 **Date:** 2026-04-03
+**Authors:** Fabio Leitao
+
+---
 
 ## Context
 
