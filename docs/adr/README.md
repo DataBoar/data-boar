@@ -63,6 +63,7 @@ Short, durable notes that capture **why** the project chose an approach—not on
 | 0042  | [Public LAB lessons archive + hub (dated snapshots)](0042-lab-lessons-learned-archive-contract.md) | Accepted |
 | 0043  | [SQL column sampling — non-null filter and strategy hook](0043-sql-column-sampling-non-null-and-strategy-hook.md) | Accepted |
 | 0044  | [Dependabot uv ecosystem for pyproject + lock closure](0044-dependabot-uv-ecosystem-for-pyproject-lock-closure.md) | Accepted |
+| 0045  | [`chardet` major bumps blocked by `cyclonedx-bom` (Dependabot ignore + stop condition)](0045-chardet-pinned-by-cyclonedx-bom.md) | Accepted |
 
 ## Related docs
 
