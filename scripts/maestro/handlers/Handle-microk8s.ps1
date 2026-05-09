@@ -41,7 +41,7 @@ $podName = ssh -q -o BatchMode=yes "$($Node.user)@$($Node.hostname)" `
 if (-not $podName) {
     Write-Warning "      [WARN] Nenhum pod 'data-boar' Running em $($Node.hostname). Fallback para baremetal path."
     $payload = "cd $($Node.path) && bash ./scripts/lab-completao-host-smoke.sh $configArg"
-    $tmuxCmd = "tmux send-keys -t completao C-c ; sleep 0.5 ; tmux send-keys -t completao '`$payload' Enter"
+    $tmuxCmd = "tmux send-keys -t completao C-c ; sleep 0.5 ; tmux send-keys -t completao '$payload' Enter"
     ssh -q -o BatchMode=yes "$($Node.user)@$($Node.hostname)" "$tmuxCmd"
     return
 }
