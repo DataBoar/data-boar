@@ -18,7 +18,7 @@ param(
     [switch]$Deep # <--- Injeção do Maestro para habilitar o Benchmark
 )
 
-Write-Host "   [Target-NFS] Certificando aldo de dados NFS e disparando orquestração concentrada (Deep: $Deep) em $($Node.hostname)..." -ForegroundColor Magenta
+Write-Host "   [Target-NFS] Certificando alvo de dados NFS e disparando orquestração concentrada (Deep: $Deep) em $($Node.hostname)..." -ForegroundColor Magenta
 
 # Se for Deep, passa o caminho do config. Se não, não passa nada (comportamento original)
 $configArg = if ($Deep) { "tests/config/benchmark-rc.yaml" } else { "" }
@@ -42,7 +42,7 @@ if ($LASTEXITCODE -eq 0) {
 
     $tmuxCmd = "tmux send-keys -t completao C-c ; sleep 0.5 ; tmux send-keys -t completao '$payload' Enter"
 
-    # Injeta no Tmux do Pi3B
+    # Injeta no Tmux do Target NFS
     ssh -q -o BatchMode=yes "$($Node.user)@$($Node.hostname)" "$tmuxCmd"
 
 } else {

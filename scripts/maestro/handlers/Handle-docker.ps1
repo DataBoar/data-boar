@@ -23,6 +23,7 @@ Write-Host "   [Docker.io ou CE] Disparando orquestração containerizada (Deep:
 
 # Se for Deep, passa o caminho do config. Se não, não passa nada (comportamento original)
 $configArg = if ($Deep) { "tests/config/benchmark-rc.yaml" } else { "" }
+$modoTexto = if ($Deep) { "Benchmark RC (Deep)" } else { $Ref }
 
 # Construção do Payload Posix Native:
 # 1. Substitua o .sh abaixo pelo script real que faz o 'docker run' ou 'docker compose up' no seu ambiente
