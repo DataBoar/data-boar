@@ -22,6 +22,7 @@ Write-Host "   [Docker Swarm] Disparando orquestração containerizada (Deep: $D
 
 # Se for Deep, passa o caminho do config. Se não, não passa nada (comportamento original)
 $configArg = if ($Deep) { "tests/config/benchmark-rc.yaml" } else { "" }
+$modoTexto = if ($Deep) { "Benchmark RC (Deep)" } else { $Ref }
 
 # Construção do Payload Posix Native:
 # 1. Substitua o .sh abaixo pelo script real que faz o 'docker stack deploy' ou 'docker service create' similar no seu ambiente

@@ -21,7 +21,7 @@ $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
 Write-Host "   [Collect] Baixando artefatos de $($Node.hostname)..." -ForegroundColor DarkCyan
 
 # 2. Cria uma pasta específica para a coleta desta sessão
-# 2.1 Puxa todos os logs da pasta ~/log/ do nó para a nova pasta a L14, renomeando com Host + Timestamp para não sobrescrever o histórico
+# 2.1 Puxa todos os logs da pasta ~/log/ do nó para a pasta local de coleta, renomeando com Host + Timestamp para não sobrescrever o histórico
 $localDestDir = "$privateReportsDir\coleta_$($Node.hostname)_$timestamp"
 New-Item -ItemType Directory -Force -Path $localDestDir > $null
 

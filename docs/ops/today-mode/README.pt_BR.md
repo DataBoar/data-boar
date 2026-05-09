@@ -44,6 +44,7 @@ Ver **`AGENTS.md`** (*Workstation calendar clock*) e **`.cursor/rules/agent-sess
 | Doc | Função |
 | --- | ------ |
 | [CARRYOVER.pt_BR.md](CARRYOVER.pt_BR.md) | **Fila viva** — promover, deferir ou fechar (sem backlog silencioso). |
+| [WORKBOARD.pt_BR.md](WORKBOARD.pt_BR.md) | **Cockpit central** — roteamento em uma página entre backlog, carryover e lembretes (sem duplicar fonte de verdade). |
 | [PUBLISHED_SYNC.pt_BR.md](PUBLISHED_SYNC.pt_BR.md) | **GitHub Release + Docker Hub vs versão no repo** — atualizar após cada publish. |
 | [SOCIAL_PUBLISH_AND_TODAY_MODE.pt_BR.md](SOCIAL_PUBLISH_AND_TODAY_MODE.pt_BR.md) | **Hub social privado + today-mode** — posts planeados, adiamentos, evidência ad-hoc; casa com **`docs/private/social_drafts/`** (gitignored). EN: [SOCIAL_PUBLISH_AND_TODAY_MODE.md](SOCIAL_PUBLISH_AND_TODAY_MODE.md). |
 | [PRIVATE_OPERATOR_NOTES.pt_BR.md](../../PRIVATE_OPERATOR_NOTES.pt_BR.md) | Notas privadas de ritmo (`docs/private/…`) quando aplicável. |
