@@ -25,6 +25,17 @@ updates:
       uv-minor-patch:
         patterns: ["*"]
         update-types: ["minor", "patch"]
+    ignore:
+      # beautifulsoup4 and ebcdic are transitive deps of extract-msg with hard
+      # upper bounds (`beautifulsoup4<4.14`, `ebcdic<2`). Allowing Dependabot to
+      # propose major bumps generates unmergeable PRs that fail the SBOM Docker
+      # build with `ResolutionImpossible`. Re-enable individually once
+      # extract-msg lifts the cap. Refs: PR #346 (ebcdic 2.0.1 conflict) and
+      # the matching pyproject.toml direct pins.
+      - dependency-name: "ebcdic"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "beautifulsoup4"
+        update-types: ["version-update:semver-major"]
 
   # GitHub Actions (workflows and action versions)
   - package-ecosystem: "github-actions"
