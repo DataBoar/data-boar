@@ -29,7 +29,7 @@ $targetIp = $Node.ip
 $webPort = 8088
 $apiUrl = "http://${targetIp}:${webPort}/health"
 
-# Usamos as ferramentas nativas do PowerShell (Invoke-WebRequest) na L14 para testar o nó remoto
+# Usamos Invoke-WebRequest (PowerShell) neste host orquestrador para testar o nó remoto
 try {
     # Definimos um timeout baixo para não travar o Maestro se o serviço estiver offline
     $response = Invoke-WebRequest -Uri $apiUrl -Method Get -TimeoutSec 3 -UseBasicParsing -ErrorAction Stop
