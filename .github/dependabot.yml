@@ -25,6 +25,14 @@ updates:
       uv-minor-patch:
         patterns: ["*"]
         update-types: ["minor", "patch"]
+    # Ignore upgrades that the resolver would reject. Re-evaluate when the
+    # blocking constraint relaxes; see docs/adr/0045 for the residual-gap context.
+    ignore:
+      # cyclonedx-bom 7.3.0 (latest published) requires chardet>=5.1,<6.0; a major
+      # bump leaves Dependabot editing requirements.txt in isolation (PR #347 / run
+      # #25607356677). Drop this rule when cyclonedx-bom relaxes the chardet pin.
+      - dependency-name: "chardet"
+        update-types: ["version-update:semver-major"]
 
   # GitHub Actions (workflows and action versions)
   - package-ecosystem: "github-actions"
