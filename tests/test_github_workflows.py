@@ -247,6 +247,10 @@ def test_dependabot_sync_workflow_present_and_valid() -> None:
     paths = pr.get("paths") or []
     assert "uv.lock" in paths
     assert "pyproject.toml" in paths
+    # ADR 0045: bare requirements.txt edits from Dependabot must also trigger
+    # the auto-sync, otherwise the lock-vs-export guard catches the drift in CI
+    # (incident PR #347 / run #25607356677).
+    assert "requirements.txt" in paths
     jobs = data.get("jobs") or {}
     sync = jobs.get("sync-requirements")
     assert isinstance(sync, dict)
