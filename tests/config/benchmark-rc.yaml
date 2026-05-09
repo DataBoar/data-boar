@@ -1,0 +1,33 @@
+# Data Boar 1.7.4-rc - Perfil de Benchmark de Stress
+tenant: "Lab-Op"
+technician: "Maestro"
+
+scan_scope:
+  - name: "Data_Soup_Synthetic"
+    path: "tests/data/"
+    type: "filesystem"
+
+file_scan:
+  sample_limit: 50
+  scan_compressed: true        # Habilita suporte a .zip, .tar.gz, .7z[cite: 6]
+  use_content_type: true       # Equivale ao --content-type-check[cite: 6]
+  scan_for_stego: true         # Equivale ao --scan-stego[cite: 6]
+  extensions:
+    - .txt
+    - .csv
+    - .xlsx
+    - .docx
+    - .pdf
+    - .log
+    - .json
+    - .zip
+    - .tar.gz
+    - .7z
+
+engine_tuning:
+  rust_fast_filter: true
+  auto_throttling: true
+  max_cpu_target: 75           # Throttling agressivo para medir latência
+
+reporting:
+  export_audit_trail: "log/audit_trail_rc.log" # Essencial para Lessons Leraned. O conteúdo continuará sendo JSON, mas o scp vai coletar!
