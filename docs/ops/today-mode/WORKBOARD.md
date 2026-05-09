@@ -14,6 +14,7 @@
 | Plan index/map | [../../plans/PLANS_HUB.md](../../plans/PLANS_HUB.md) | Fast lookup of `PLAN_*.md` files |
 | Sprint and milestones view | [../../plans/SPRINTS_AND_MILESTONES.md](../../plans/SPRINTS_AND_MILESTONES.md) | Theme-level sequencing and milestone semantics |
 | Carryover queue (rolling) | [CARRYOVER.md](CARRYOVER.md) | Open items crossing days/blocks |
+| WRB follow-up (token window) | [GitHub issue #189](https://github.com/FabioLeitao/data-boar/issues/189) | Resume external review cycle now that tokens are available |
 | Dated execution checklist | [README.md](README.md) + `OPERATOR_TODAY_MODE_YYYY-MM-DD.md` | Daily focus and closure flow |
 | Publish alignment | [PUBLISHED_SYNC.md](PUBLISHED_SYNC.md) | Repo version vs GitHub Release vs Docker Hub |
 | Private rhythm/reminders | `docs/private/TODAY_MODE_CARRYOVER_AND_FOUNDER_RHYTHM.md` | Operator-only reminders and cadence |
@@ -25,12 +26,14 @@
 
 Update this section with concise bullets only. Keep details in canonical docs above.
 
-- **Now (top 1):** `S2a` transport + trust checkpoint from `PLANS_TODO`.
+- **Now (top 1):** `S2a` transport + trust (Phase 7 + trust-state slice aligned with `#86`) is selected in `PLANS_TODO`.
 - **Next (top 3):**
-  - `-1L` homelab proof pass when calendar allows.
-  - Continue prioritized trust/commercial slices after `S2a`.
-  - Keep carryover queue clean (`CARRYOVER.md`).
-- **Blockers:** write one line per blocker and link to the owning doc.
+  - Close the `1.7.0` carryover lane (`gh run list` on `main` + optional `lab-op` smoke follow-up in `CARRYOVER.md`).
+  - Run `-1L` homelab proof / `benchmark-ab` when the lab window is available.
+  - Send WRB follow-up and triage external review deltas into `PLANS_TODO`.
+- **Blockers:**
+  - Lab calendar/hardware window for `-1L` and `benchmark-ab` execution (`PLANS_TODO` + `CARRYOVER.md`).
+  - External review cadence for WRB follow-up (GitHub issue cycle + response wait).
 - **Deferred with date:** keep date + owner in `CARRYOVER.md`.
 
 ---
