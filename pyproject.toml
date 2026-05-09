@@ -222,7 +222,11 @@ dev = [
     "ruff>=0.15.11",
     "rapidfuzz>=3.9.0",
     "bandit>=1.9.4",
-    "mypy>=1.20.1",
+    "mypy>=2.0.0",
+    # Pin transitive runtime: mypy 2.0.0 requires librt>=0.10.0 (mypyc runtime).
+    # Dependabot bumped mypy in PR #325 without raising this transitive, breaking
+    # the SBOM Docker build (pip ResolutionImpossible). See SBOM run 25606472476.
+    "librt>=0.10.0; platform_python_implementation != 'PyPy'",
     "types-pyyaml>=6.0.12.20250915",
     # CycloneDX SBOM from uv-exported requirements (ADR 0003); same CLI as CI `sbom.yml`.
     "cyclonedx-bom>=7.0.0",
