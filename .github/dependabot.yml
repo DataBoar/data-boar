@@ -1,23 +1,28 @@
 # Dependabot: automated dependency and workflow updates for security and maintenance.
 # https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
 #
-# This project uses pyproject.toml (PEP 621) at repo root. Dependabot with package-ecosystem "pip"
-# and directory "/" will propose updates to dependencies in [project.dependencies].
-# Optional [dependency-groups] (PEP 735) may not be fully grouped; main deps are still updated.
+# This project uses pyproject.toml (PEP 621) at repo root with `uv` as the resolver
+# (uv.lock is the canonical pin; requirements.txt is generated via `uv export`).
+# We use package-ecosystem "uv" so Dependabot updates `pyproject.toml` and `uv.lock`
+# together. The `.github/workflows/dependabot-sync.yml` workflow then auto-regenerates
+# `requirements.txt` from the new lock and pushes it back to the PR branch, satisfying
+# the closure rule in docs/adr/0030 and the lock-vs-export guard in
+# tests/test_dependency_artifacts_sync.py without operator intervention.
+# Rationale: docs/adr/0044-dependabot-uv-ecosystem-for-pyproject-lock-closure.md.
 version: 2
 updates:
-  # Python dependencies (pyproject.toml)
-  - package-ecosystem: "pip"
+  # Python dependencies (pyproject.toml + uv.lock)
+  - package-ecosystem: "uv"
     directory: "/"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
     labels: ["dependencies"]
     commit-message:
-      prefix: "deps(pip)"
+      prefix: "deps(uv)"
     groups:
       # Batch minor/patch updates into one PR to reduce noise; security updates still created separately
-      pip-minor-patch:
+      uv-minor-patch:
         patterns: ["*"]
         update-types: ["minor", "patch"]
 
