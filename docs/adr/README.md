@@ -63,6 +63,7 @@ Short, durable notes that capture **why** the project chose an approach—not on
 | 0042  | [Public LAB lessons archive + hub (dated snapshots)](0042-lab-lessons-learned-archive-contract.md) | Accepted |
 | 0043  | [SQL column sampling — non-null filter and strategy hook](0043-sql-column-sampling-non-null-and-strategy-hook.md) | Accepted |
 | 0044  | [Dependabot uv ecosystem for pyproject + lock closure](0044-dependabot-uv-ecosystem-for-pyproject-lock-closure.md) | Accepted |
+| 0045  | [Pin `ebcdic` directly to respect `extract-msg`'s upper bound](0045-pin-ebcdic-direct-to-respect-extract-msg-cap.md) | Accepted |
 
 ## Related docs
 
