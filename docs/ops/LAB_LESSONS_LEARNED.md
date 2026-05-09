@@ -9,28 +9,17 @@
 
 ## Latest session (summary)
 
-**Date:** 2026-04-25 (UTC−3).
+**Date:** 2026-05-09 (UTC-3).
 
-**Verdict (short):** Rust `boar_fast_filter` import **OK**; checkpoint + kill-resume **OK**; throttler ramp to max workers **OK**; official 200k benchmark shows Pro path **slower** than OpenCore in the tested profile (**0.574x** — not a business-case speedup yet).
+**Verdict (short):** Maestro rerun is operationally healthier after wrapper + artifact-sync hardening: Docker precheck is explicit, reachable hosts complete `Deep -> monitor -> Collect`, offline hosts stay warnings. Remaining gaps: one web health target was unavailable in-session, synthetic DB stack deploy is not yet wired in Maestro handlers, and collect/offline exit semantics still need refinement.
 
-> **Reading the 0.574x figure (operator note).** The recorded
-> `speedup_vs_opencore = 0.574` in
-> [`tests/benchmarks/official_benchmark_200k.json`](../../tests/benchmarks/official_benchmark_200k.json)
-> means **Pro is 0.574x as fast as OpenCore** in this profile, i.e. Pro takes
-> roughly `1 / 0.574 ≈ 1.74x` more wall-clock time. The Slack handoff
-> phrasing **"0.574x mais lento"** is consistent in direction (Pro slower) but
-> arithmetically refers to the same ratio — do not double-invert it when
-> updating manifests, executive copy, or lab lessons. The regression guard at
-> [`tests/test_official_benchmark_200k_evidence.py`](../../tests/test_official_benchmark_200k_evidence.py)
-> pins this direction and the OpenCore ↔ Pro findings parity (`100,000` hits
-> on both paths) so prose and JSON cannot drift apart silently.
-
-**Full narrative (frozen):** [`lab_lessons_learned/LAB_LESSONS_LEARNED_2026_04_25.md`](lab_lessons_learned/LAB_LESSONS_LEARNED_2026_04_25.md)
+**Full narrative (frozen):** [`lab_lessons_learned/LAB_LESSONS_LEARNED_2026_05_09.md`](lab_lessons_learned/LAB_LESSONS_LEARNED_2026_05_09.md)
 
 **Evidence paths (repo):**
 
-- `tests/benchmarks/official_benchmark_200k.json`
-- Kill/resume scenario uses gitignored local DB + state — see `.gitignore` (`data/qa_completao_*`).
+- `scripts/maestro-deep-rc-monitor-collect.ps1`
+- `scripts/maestro/Sync-ContainerArtefact.ps1`
+- Private detailed logs remain in `docs/private/homelab/reports/` (public-safe summary only in this hub/archive).
 
 ## Archived sessions (public)
 
@@ -38,15 +27,17 @@
 | ------------ | -------- |
 | 2026-04-25 | [`lab_lessons_learned/LAB_LESSONS_LEARNED_2026_04_25.md`](lab_lessons_learned/LAB_LESSONS_LEARNED_2026_04_25.md) |
 | 2026-04-27 | [`lab_lessons_learned/LAB_LESSONS_LEARNED_2026_04_27.md`](lab_lessons_learned/LAB_LESSONS_LEARNED_2026_04_27.md) (reading guide / regression guard for the 0.574x figure; no new measurement) |
+| 2026-05-09 | [`lab_lessons_learned/LAB_LESSONS_LEARNED_2026_05_09.md`](lab_lessons_learned/LAB_LESSONS_LEARNED_2026_05_09.md) (Maestro rerun hardening + public-safe operational snapshot) |
 
 ## Follow-ups → plans (tracked)
 
-When a lesson becomes engineering work, promote it to **`docs/plans/PLANS_TODO.md`** (and refresh `python scripts/plans-stats.py --write`). Current bridge from the 2026-04-25 session:
+When a lesson becomes engineering work, promote it to **`docs/plans/PLANS_TODO.md`** (and refresh `python scripts/plans-stats.py --write`). Current bridge from the 2026-05-09 session:
 
 | Topic | Bridge |
 | ----- | ------ |
-| Pro+ benchmark / executive claims | Verified vs aspirational table: [`docs/ops/SPRINT_GREAT_LEAP_POSTMORTEM.md`](SPRINT_GREAT_LEAP_POSTMORTEM.md); production-like benchmark profile before uplift narrative. |
-| Integrity / tamper posture | [`docs/ops/INTEGRITY_CHECK_ALPHA_LOGIC.md`](INTEGRITY_CHECK_ALPHA_LOGIC.md), [`docs/ops/RELEASE_INTEGRITY.md`](RELEASE_INTEGRITY.md), plan row **Build identity & release integrity** in `PLANS_TODO.md`. |
+| Maestro synthetic DB stack parity | Align handler path with `LAB_SMOKE_MULTI_HOST` / `LAB_COMPLETAO_RUNBOOK` stack expectations (Postgres/MariaDB/Mongo synthetic flows). |
+| Collect/exit semantics with offline nodes | Split hard failure vs warning semantics so mixed rounds remain machine-readable without false-red. |
+| Web readiness before long monitor loops | Optional readiness gate when `/health` is expected in test scope. |
 | Completão narrative (private) | Use `docs/private/homelab/COMPLETAO_SESSION_*.md` per [`docs/ops/LAB_COMPLETAO_RUNBOOK.md`](LAB_COMPLETAO_RUNBOOK.md); mirror **numbers and pass/fail** here only. |
 
 ## Automation / assistant latch

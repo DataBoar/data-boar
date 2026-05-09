@@ -92,6 +92,16 @@ def test_handle_microk8s_fallback_tmux_sends_expanded_payload() -> None:
     )
 
 
+def test_maestro_deep_rc_monitor_collect_wrapper_parse() -> None:
+    """Token-aware lab wrapper (Deep + monitor + Collect) parses under pwsh."""
+    root = _project_root()
+    script = root / "scripts" / "maestro-deep-rc-monitor-collect.ps1"
+    assert script.is_file()
+    assert _parse_powershell_script(script, root), (
+        "maestro-deep-rc-monitor-collect.ps1 parse failed (install pwsh on CI if unexpected)"
+    )
+
+
 def test_maestro_no_retired_workstation_codename_token() -> None:
     """Keep scripts/maestro aligned with tests/test_public_tree_no_l14_codename.py word rule."""
     root = _project_root()
