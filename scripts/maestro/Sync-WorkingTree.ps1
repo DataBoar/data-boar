@@ -5,7 +5,7 @@
 
 .SYNOPSIS
  Author: Fábio Leitão com apoio da Gemini e Cursosr IDE
- Missão principal: Sub-Orquestrador de sincronismo em pré-flight para o teste Completão funcionar no Lab-Op a partir do repo no gh ou da working tree no ambiente canônico de Dev prinpinal na L14.
+ Missão principal: Sub-Orquestrador de sincronismo em pré-flight para o teste Completão funcionar no Lab-Op a partir do repo no gh ou da working tree no ambiente canônico de Dev principal no PC de desenvolvimento.
 #>
 
 param(
@@ -43,7 +43,7 @@ if ($Ref -eq "WorkingTree") {
     Push-Location $repoRoot
 
     # Comando Rsync.
-    # Nice catch excluding my docs/private from rsyncCmd so it wont exfiltrate L14!!! Thanks a lot Gemini... :-o
+    # Nice catch excluding my docs/private from rsyncCmd so it wont exfiltrate operator private tree!!! Thanks a lot Gemini... :-o
     $rsyncCmd = "rsync -azq -e 'ssh -q -o BatchMode=yes' --exclude='.git' --exclude='.venv' --exclude='__pycache__' --exclude='.pytest_cache' --exclude='*.bundle' --exclude='docs/private' --exclude='*.log' --exclude='*.xlsx' --exclude='*.db' --exclude='data-boar-blackbox-audit.txt' ./ ${targetUser}@${targetHost}:${finalPath}/"
 
     # Invocamos o WSL2 com aspas duplas no $rsyncCmd para o bash entender como argumento único

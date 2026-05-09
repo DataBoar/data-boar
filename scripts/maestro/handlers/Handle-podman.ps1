@@ -9,7 +9,7 @@
 .DESCRIPTION
  Responsável por disparar a execução do teste Completão utilizando a engine Podman.
  É injetado via Tmux no nó alvo para garantir resiliência e manter a sessão
- viva mesmo que o Maestro (L14) desconecte.
+ viva mesmo que o Maestro no host orquestrador desconecte.
  É 100% agnóstico: recebe o caminho do diretório (efêmero ou canônico) e a referência de versão do Maestro, sem assumir IPs ou caminhos fixos.
 #>
 
@@ -23,6 +23,7 @@ Write-Host "   [Podman] Disparando orquestração containerizada (Deep: $Deep) e
 
 # Se for Deep, passa o caminho do config. Se não, não passa nada (comportamento original)
 $configArg = if ($Deep) { "tests/config/benchmark-rc.yaml" } else { "" }
+$modoTexto = if ($Deep) { "Benchmark RC (Deep)" } else { $Ref }
 
 # Construção do Payload Posix Native para Podman:
 # 1. Substitua o .sh abaixo pelo script real que faz o 'podman run...' ou similar no seu ambiente mais tarde

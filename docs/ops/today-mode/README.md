@@ -44,6 +44,7 @@ See **`AGENTS.md`** (*Workstation calendar clock*) and **`.cursor/rules/agent-se
 | Doc | Role |
 | --- | ---- |
 | [CARRYOVER.md](CARRYOVER.md) | **Rolling queue** — promote, defer, or close items (no silent backlog). |
+| [WORKBOARD.md](WORKBOARD.md) | **Central cockpit** — one-page routing across backlog, carryover, and reminders (without duplicating source-of-truth docs). |
 | [PUBLISHED_SYNC.md](PUBLISHED_SYNC.md) | **GitHub Release + Docker Hub vs repo version** — refresh after each publish. |
 | [SOCIAL_PUBLISH_AND_TODAY_MODE.md](SOCIAL_PUBLISH_AND_TODAY_MODE.md) | **Private social hub + today-mode** — planned posts, deferrals, ad-hoc evidence; pairs with gitignored **`docs/private/social_drafts/`**. pt-BR: [SOCIAL_PUBLISH_AND_TODAY_MODE.pt_BR.md](SOCIAL_PUBLISH_AND_TODAY_MODE.pt_BR.md). |
 | [PRIVATE_OPERATOR_NOTES.md](../../PRIVATE_OPERATOR_NOTES.md) | Private rhythm note path (`docs/private/…`) when relevant. |
