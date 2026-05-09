@@ -9,7 +9,7 @@
 .DESCRIPTION
  Responsável por disparar a execução do teste Completão utilizando a engine Podman.
  É injetado via Tmux no nó alvo para garantir resiliência e manter a sessão
- viva mesmo que o Maestro (L14) desconecte.
+ viva mesmo que o Maestro (no primary Windows dev workstation, L-series) desconecte.
  É 100% agnóstico: recebe o caminho do diretório (efêmero ou canônico) e a referência de versão do Maestro, sem assumir IPs ou caminhos fixos.
 #>
 
