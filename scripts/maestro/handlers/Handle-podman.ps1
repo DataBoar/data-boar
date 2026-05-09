@@ -23,6 +23,7 @@ Write-Host "   [Podman] Disparando orquestração containerizada (Deep: $Deep) e
 
 # Se for Deep, passa o caminho do config. Se não, não passa nada (comportamento original)
 $configArg = if ($Deep) { "tests/config/benchmark-rc.yaml" } else { "" }
+$modoTexto = if ($Deep) { "Benchmark RC (Deep)" } else { $Ref }
 
 # Construção do Payload Posix Native para Podman:
 # 1. Substitua o .sh abaixo pelo script real que faz o 'podman run...' ou similar no seu ambiente mais tarde

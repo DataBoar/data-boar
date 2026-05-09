@@ -24,10 +24,10 @@ Write-Host "   [Web] Realizando Health Check da API/Dashboard e disparando orque
 $configArg = if ($Deep) { "tests/config/benchmark-rc.yaml" } else { "" }
 
 # Definimos as configurações base de rede.
-# Nota SRE: O ideal seria o Node informar qual a porta web, mas assumiremos 8080 como default do Data Boar
+# Porta padrão do Data Boar: 8088 (config.example.yaml + docker-compose.yml)
 $targetIp = $Node.ip
-$webPort = 8080
-$apiUrl = "http://${targetIp}:${webPort}/api/status" # Ajuste para um endpoint válido da sua aplicação
+$webPort = 8088
+$apiUrl = "http://${targetIp}:${webPort}/health"
 
 # Usamos as ferramentas nativas do PowerShell (Invoke-WebRequest) na L14 para testar o nó remoto
 try {
@@ -35,7 +35,7 @@ try {
     $response = Invoke-WebRequest -Uri $apiUrl -Method Get -TimeoutSec 3 -UseBasicParsing -ErrorAction Stop
 
     if ($response.StatusCode -eq 200) {
-        Write-Host "      [SUCCESS] Persona Web Ativa! $($Node.hostname) responde HTTP 200 na porta $webPort." -ForegroundColor Green
+        Write-Host "      [SUCCESS] Persona Web Ativa! $($Node.hostname) responde HTTP 200 na porta $webPort (/health)." -ForegroundColor Green
     } else {
         Write-Warning "      [WARNING] Persona Web de $($Node.hostname) retornou um status inesperado: $($response.StatusCode)"
     }
