@@ -10,6 +10,11 @@ dependencies = [
     "annotated-types>=0.7.0",
     "anyio>=4.12.1",
     "asyncio>=4.0.0",
+    # beautifulsoup4 is a transitive dep of extract-msg, but pinned here as a
+    # direct constraint so Dependabot/uv stop trying to bump past 4.14 until
+    # upstream extract-msg relaxes its `beautifulsoup4<4.14` requirement.
+    # See: https://pypi.org/project/extract-msg/0.55.0/ (requires_dist).
+    "beautifulsoup4>=4.13.5,<4.14",
     "blinker>=1.9.0",
     "certifi>=2026.2.25",
     "cffi>=2.0.0 ; platform_python_implementation != 'PyPy'",
