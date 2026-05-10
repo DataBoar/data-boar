@@ -31,6 +31,7 @@ if (-not (Test-Path $inventoryPath)) {
 # 2. Carregamento dos dados do Lab-Op [cite: 8, 16]
 $inventory = Get-Content $inventoryPath | ConvertFrom-Json
 Write-Host "--- [Maestro] Iniciando Turno no Lab-Op (Ref: $Ref) ---" -ForegroundColor Cyan
+$warningCount = 0
 
 # SRE FIX: Fase de Pre-flight Global (Evita build redundante)
 if (-not $Collect) {
@@ -48,7 +49,11 @@ $globalReport = foreach ($node in $inventory.lab_members) {
 
         # Sincronismo da Árvore de Arquivos
         # Inteligente: Prepara o terreno (WorkingTree ou Pasta Efêmera)
-        & "$PSScriptRoot/Sync-WorkingTree.ps1" -Node $node -Ref $Ref
+        $syncOk = [bool](& "$PSScriptRoot/Sync-WorkingTree.ps1" -Node $node -Ref $Ref)
+        if (-not $syncOk) {
+            Write-Warning "      [ERROR] Sync obrigatorio falhou em $($node.hostname). Skip de handlers neste turno."
+            continue
+        }
 
         # SRE FIX: Condicional rígida para Deploy de Container
         $isContainerHost = ($node.personas -contains "docker") -or ($node.personas -contains "podman") -or ($node.personas -contains "dockerswarm")
@@ -57,7 +62,18 @@ $globalReport = foreach ($node in $inventory.lab_members) {
         }
 
         # Despacho para Handlers baseados em Persona [cite: 1]
-        foreach ($persona in $node.personas) {
+        # Ordem SRE: container persona primeiro, web por último.
+        $orderedPersonas = $node.personas | Sort-Object {
+            switch ($_){
+                "docker" { 0; break }
+                "podman" { 0; break }
+                "dockerswarm" { 0; break }
+                "web" { 2; break }
+                default { 1; break }
+            }
+        }
+
+        foreach ($persona in $orderedPersonas) {
             $handler = "$PSScriptRoot/handlers/Handle-$persona.ps1"
 
             if (Test-Path $handler) {
@@ -65,6 +81,8 @@ $globalReport = foreach ($node in $inventory.lab_members) {
 		# PowerShell exige que você cole o valor no nome do parâmetro usando dois pontos (:), sem espaços!
 		# Assim ele não vai achar no Handler que tem uma variável sobrando sem motivo (ex: sshfs, nfs, etc.)
 		& $handler -Node $node -Ref $Ref -Deep:$Deep
+            } else {
+                Write-Warning "      [WARNING] Handler ausente para persona '$persona' em $($node.hostname): $handler"
             }
         }
     }
@@ -72,13 +90,34 @@ $globalReport = foreach ($node in $inventory.lab_members) {
     $status # Acumula para o relatório final [cite: 10]
 }
 
+$onlineHosts = @{}
+foreach ($status in $globalReport) {
+    if (($status.SSH -eq "UP") -and $status.Node) {
+        $onlineHosts[$status.Node] = $true
+    }
+}
+
 # 4. --- [Fase de Coleta SRE] ---
 if ($Collect) {
     Write-Host "`n--- [Maestro] Iniciando Coleta de Artefatos (Post-Flight) ---" -ForegroundColor DarkCyan
 
+    if ($onlineHosts.Count -eq 0) {
+        Write-Error "Nenhum host com SSH UP no inventario para coletar artefatos."
+        exit 6
+    }
+
     foreach ($node in $inventory.lab_members) {
         if ($node.personas -contains "baremetal" -or $node.personas -contains "docker" -or $node.personas -contains "podman" -or $node.personas -contains "target_sshfs" -or $node.personas -contains "target_nfs") {
-             & "$PSScriptRoot/Collect-Artifacts.ps1" -Node $node
+            if (-not $onlineHosts.ContainsKey($node.hostname)) {
+                Write-Warning "      [WARNING] Coleta ignorada para $($node.hostname): host offline (SSH DOWN)."
+                $warningCount++
+                continue
+            }
+
+            $collectOk = & "$PSScriptRoot/Collect-Artifacts.ps1" -Node $node
+            if (-not $collectOk) {
+                $warningCount++
+            }
         }
     }
 
@@ -95,3 +134,9 @@ if ($Collect) {
 # 5. Relatório Final Consolidado (Feedback Visual SRE) [cite: 10, 16]
 Write-Host "`n--- [Status Final do Lab-Op] ---" -ForegroundColor Cyan
 $globalReport | Format-Table -AutoSize
+
+if ($Collect -and $warningCount -gt 0) {
+    Write-Warning "[Maestro] Rodada concluida com warnings de coleta: $warningCount (sem hard-fail)."
+}
+
+exit 0

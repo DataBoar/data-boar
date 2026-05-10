@@ -10,8 +10,8 @@
 
 | Field | Value |
 | ----- | ----- |
-| **Verified** | **2026-04-22** |
-| **`pyproject.toml` on `main`** | **1.7.4-beta** (working; **published** stable = **1.7.3** / tag **`v1.7.3`** per [VERSIONING.md](../VERSIONING.md)) |
+| **Verified** | **2026-05-10** |
+| **`pyproject.toml` on `main`** | **1.7.4-rc** (working **pre-release**; **published** stable = **1.7.3** / tag **`v1.7.3`** per [VERSIONING.md](../VERSIONING.md)) |
 | **GitHub Release Latest** | [**v1.7.3**](https://github.com/FabioLeitao/data-boar/releases/tag/v1.7.3) (notes: **`docs/releases/1.7.3.md`**, **`CHANGELOG.md`**) |
 | **Docker Hub** | **`fabioleitao/data_boar:1.7.3`** + **`latest`** (same digest) — `sha256:510a51b0dc89e79d084b515b5201c803328040dbda594744c96ee245efcc4866`; **Full description** from **[`docs/ops/DOCKER_HUB_REPOSITORY_DESCRIPTION.md`](../DOCKER_HUB_REPOSITORY_DESCRIPTION.md)** |
 | **Next public version** (when `main` has a new bundle) | **1.7.4** — follow **`docs/VERSIONING.md`** + **`docs/releases/`** |

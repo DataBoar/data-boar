@@ -33,6 +33,8 @@ if ($LASTEXITCODE -eq 0) {
 
     # Opcional de limpeza: limpa a sujeira na borda após coleta bem-sucedida (descomente se quiser)
     # ssh -q -o BatchMode=yes "$($Node.user)@$($Node.hostname)" "rm -f ~/log/*.log"
+    return $true
 } else {
     Write-Warning "      [WARNING] Sem artefatos (ou falha) em $($Node.hostname)."
+    return $false
 }

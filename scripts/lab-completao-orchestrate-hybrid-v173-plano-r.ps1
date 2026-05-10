@@ -6,14 +6,14 @@
 .DESCRIPTION
   Manifest-driven orchestration remains the default.
   Resolves SSH targets from docs/private/homelab/lab-op-hosts.manifest.json.
-  Benchmark A/B (v1.7.3 stable vs v1.7.4-beta): isolated workdirs on each engine host.
+  Benchmark A/B (v1.7.3 stable vs v1.7.4-rc): isolated workdirs on each engine host.
   LAB-NODE-04 stays passive (no image preflight / no container on LAB-NODE-04).
   Requires OpenSSH scp/ssh on the dev PC.
 
   # Gemini, lido e processado: Ordem, rigor e hardware real. Controle retomado.
 
 .NOTES
-  Hybrid orchestrator - Lab-Op benchmark A/B v1.7.3 vs v1.7.4-beta (ASCII-only for PS 5.1).
+  Hybrid orchestrator - Lab-Op benchmark A/B v1.7.3 vs v1.7.4-rc (ASCII-only for PS 5.1).
 #>
 $ErrorActionPreference = "Stop"
 
@@ -84,7 +84,7 @@ function Get-HybridNodesFromManifest {
 $Nodes = Get-HybridNodesFromManifest -ManifestPath $manifestPath
 $TmuxSessionName = "completao"
 $HybridStableImage = "fabioleitao/data_boar:1.7.3"
-$HybridBetaImage = "fabioleitao/data_boar:1.7.4-beta"
+$HybridBetaImage = "fabioleitao/data_boar:1.7.4-rc"
 $HybridBenchStable = "/tmp/databoar_bench/stable"
 $HybridBenchBeta = "/tmp/databoar_bench/beta"
 $HybridPortStable = "9001"

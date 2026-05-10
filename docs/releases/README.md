@@ -28,6 +28,8 @@ To publish **v1.3.1** (or the version you just bumped) as a GitHub release with 
    gh release create v1.3.1 --notes-file docs/releases/1.3.1.md --title "1.3.1"
    ```
 
-   Or in the GitHub web UI: **Releases** → **Draft a new release** → choose tag `v1.3.1`, set title to `1.3.1`, and paste the contents of `docs/releases/1.3.1.md` into the description.
+   **Pre-releases (`-beta`, `-rc`):** add `--prerelease` and **do not** expect **`latest`** Docker Hub tags to move unless you explicitly publish candidate images. Example: `gh release create v1.7.4-rc --prerelease --notes-file docs/releases/1.7.4-rc.md`.
+
+   Or in the GitHub web UI: **Releases** → **Draft a new release** → choose tag `v1.3.1`, set title to `1.3.1`, and paste the contents of `docs/releases/1.3.1.md` into the description. For RCs, tick **Set as a pre-release** and leave **Set as the latest release** **off** unless you truly want the RC to become the repo’s **Latest** pointer.
 
 The release will then be visible on the repository’s Releases page and the Docker image with the same version tag is already on Docker Hub.

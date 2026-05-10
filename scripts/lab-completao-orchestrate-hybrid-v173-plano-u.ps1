@@ -7,13 +7,13 @@
   Manifest-driven orchestration remains the default: .\\scripts\\lab-completao-orchestrate.ps1 (no -HybridLabOpHighDensity173).
   Resolves SSH targets from **docs/private/homelab/lab-op-hosts.manifest.json** (`sshHost` + first `repoPaths` entry), same family as **lab-completao-orchestrate.ps1**.
   **LAB-NODE-02 scan path:** uses **`/home/leitao/Documents`** if present, else **`/home/leitao/documents`** (Zorin/GNOME vs lowercase checklist path).
-  **Benchmark A/B (v1.7.3 stable vs v1.7.4-beta):** isolated workdirs on each engine host: **`/tmp/databoar_bench/stable`**
+  **Benchmark A/B (v1.7.3 stable vs v1.7.4-rc):** isolated workdirs on each engine host: **`/tmp/databoar_bench/stable`**
   and **`/tmp/databoar_bench/beta`** (separate config YAML; no shared checkpoints). Published ports **9001** (stable) and
   **9002** (beta) mapped to container **8088**. Long runs use a **detached tmux** session per step, then log capture
   (disconnect-safe). **LAB-NODE-04** stays **passive** (no image preflight / no container on LAB-NODE-04).
   **Image distribution from the primary Windows dev workstation (no Hub pull on lab targets):** before the host loop, ensures
   **`fabioleitao/data_boar:1.7.3`** exists ( **`docker pull` / `podman pull` on Windows only** when no stable tar override), and builds
-  **`fabioleitao/data_boar:1.7.4-beta`** with **`docker build -f Dockerfile`** from the repo (session tag; not pushed to Hub) unless
+  **`fabioleitao/data_boar:1.7.4-rc`** with **`docker build -f Dockerfile`** from the repo (session tag; not pushed to Hub) unless
   **`DATA_BOAR_HYBRID_SKIP_LOCAL_BETA_BUILD=1`** reuses an existing beta image or **`DATA_BOAR_HYBRID_*_TAR_GZ`** supplies tars.
   Then **`docker save`** or **`podman save`** exports both when pre-built tars are not supplied, then syncs with
   **`rsync`** (if **`rsync`** is on PATH) else **`scp`**, then runs **`docker load`/`podman load`** for **both** archives
@@ -29,7 +29,7 @@
   Requires OpenSSH **scp**/**ssh** on the dev PC (L-series build box pushes tar to LAB-NODE-01/LAB-NODE-02).
 
 .NOTES
-  Hybrid orchestrator - Lab-Op benchmark A/B v1.7.3 vs v1.7.4-beta (ASCII-only for Windows PowerShell 5.1).
+  Hybrid orchestrator - Lab-Op benchmark A/B v1.7.3 vs v1.7.4-rc (ASCII-only for Windows PowerShell 5.1).
 #>
 
 $RepoRoot = (Get-Item $PSScriptRoot).Parent.FullName
@@ -96,7 +96,7 @@ $Nodes = Get-HybridNodesFromManifest -ManifestPath $manifestPath
 $TmuxSessionName = "completao"
 
 $HybridStableImage = "fabioleitao/data_boar:1.7.3"
-$HybridBetaImage = "fabioleitao/data_boar:1.7.4-beta"
+$HybridBetaImage = "fabioleitao/data_boar:1.7.4-rc"
 $HybridBenchStable = "/tmp/databoar_bench/stable"
 $HybridBenchBeta = "/tmp/databoar_bench/beta"
 $HybridPortStable = "9001"
@@ -767,10 +767,10 @@ foreach ($n in $Nodes) {
                 wall_ms   = $betaMs
                 image     = $HybridBetaImage
                 port      = $HybridPortBeta
-                narrative = "v1.7.4-beta Rust boar_fast_filter / FFI; compare wall_ms to stable for serialization boundary"
+                narrative = "v1.7.4-rc Rust boar_fast_filter / FFI; compare wall_ms to stable for serialization boundary"
             }
         } else {
-            Write-HybridCompletaoEvent -Phase "image_preflight" -Status "skipped" -Message "beta_missing_after_load" -HostLabel $n.Name -Detail @{ image = $HybridBetaImage; hint = "Verify tar matches fabioleitao/data_boar:1.7.4-beta tag" }
+            Write-HybridCompletaoEvent -Phase "image_preflight" -Status "skipped" -Message "beta_missing_after_load" -HostLabel $n.Name -Detail @{ image = $HybridBetaImage; hint = "Verify tar matches fabioleitao/data_boar:1.7.4-rc tag" }
         }
 
         $delta = $betaMs - $stableMs
@@ -787,5 +787,5 @@ foreach ($n in $Nodes) {
 }
 
 Write-HybridCompletaoEvent -Phase "summary" -Status "ok" -Message "hybrid_ab_benchmark_finished" -Detail @{ eventsPath = $eventsPathHybrid }
-Write-Host "Hybrid A/B (1.7.3 vs 1.7.4-beta) pass completed (per-node skip-on-failure where noted)." -ForegroundColor Green
+Write-Host "Hybrid A/B (1.7.3 vs 1.7.4-rc) pass completed (per-node skip-on-failure where noted)." -ForegroundColor Green
 exit 0
