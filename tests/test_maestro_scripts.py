@@ -50,15 +50,131 @@ def test_benchmark_rc_config_exists_for_deep_mode() -> None:
     assert cfg.is_file(), "tests/config/benchmark-rc.yaml required for Maestro -Deep"
 
 
+def test_target_cifs_handler_exists() -> None:
+    """Inventory persona target_cifs must have a dedicated handler."""
+    root = _project_root()
+    handler = root / "scripts" / "maestro" / "handlers" / "Handle-target_cifs.ps1"
+    assert handler.is_file(), "Missing handler for persona target_cifs"
+
+
+def test_db_target_handlers_exist() -> None:
+    """Inventory DB personas must have dedicated handlers."""
+    root = _project_root()
+    for name in (
+        "Handle-target_mariadb.ps1",
+        "Handle-target_postgres.ps1",
+        "Handle-target_mongodb.ps1",
+    ):
+        handler = root / "scripts" / "maestro" / "handlers" / name
+        assert handler.is_file(), f"Missing handler for persona {name}"
+
+
+def test_db_target_handlers_use_compose_contract() -> None:
+    """DB target handlers should use compose services from deploy/lab-smoke-stack."""
+    root = _project_root()
+    mariadb = (
+        root / "scripts" / "maestro" / "handlers" / "Handle-target_mariadb.ps1"
+    ).read_text(encoding="utf-8", errors="replace")
+    postgres = (
+        root / "scripts" / "maestro" / "handlers" / "Handle-target_postgres.ps1"
+    ).read_text(encoding="utf-8", errors="replace")
+    mongo = (
+        root / "scripts" / "maestro" / "handlers" / "Handle-target_mongodb.ps1"
+    ).read_text(encoding="utf-8", errors="replace")
+    assert "lab-mariadb" in mariadb
+    assert "lab-postgres" in postgres
+    assert "docker-compose.mongo.yml" in mongo
+    assert "TARGET_MARIADB_READY" in mariadb
+    assert "TARGET_POSTGRES_READY" in postgres
+    assert "TARGET_MONGODB_READY" in mongo
+    assert "podman info" in mariadb
+    assert "docker info" in mariadb
+    assert "podman run -d --name lab-mariadb" in mariadb
+    assert "docker.io/library/mariadb:11" in mariadb
+    assert "pick_port()" in mariadb
+    assert "LAB_MY_PORT_CANDIDATES" in mariadb
+    assert "TARGET_MARIADB_READY port=" in mariadb
+    assert "LAB_TARGET_DB_AUTOCLEAN" in mariadb
+    assert "podman info" in postgres
+    assert "docker info" in postgres
+    assert "podman run -d --name lab-postgres" in postgres
+    assert "docker.io/library/postgres:16-alpine" in postgres
+    assert "pick_port()" in postgres
+    assert "LAB_PG_PORT_CANDIDATES" in postgres
+    assert "TARGET_POSTGRES_READY port=" in postgres
+    assert "LAB_TARGET_DB_AUTOCLEAN" in postgres
+    assert "podman info" in mongo
+    assert "docker info" in mongo
+    assert "podman run -d --name lab-mongodb" in mongo
+    assert "docker.io/library/mongo:7" in mongo
+    assert "pick_port()" in mongo
+    assert "LAB_MONGO_PORT_CANDIDATES" in mongo
+    assert "TARGET_MONGODB_READY port=" in mongo
+    assert "LAB_TARGET_DB_AUTOCLEAN" in mongo
+
+
 def test_handle_web_health_contract() -> None:
     """Anti-regression: web persona targets API port 8088 and GET /health (not legacy 8080 /api/status)."""
     root = _project_root()
     text = (root / "scripts" / "maestro" / "handlers" / "Handle-web.ps1").read_text(
         encoding="utf-8", errors="replace"
     )
-    assert "$webPort = 8088" in text
+    assert '-Name "web_port" -DefaultValue 8088' in text
     assert "/health" in text
     assert "/api/status" not in text
+    assert "web_allow_insecure_tls" in text
+    assert "web_check_retries" in text
+    assert "Get-NodePropOrDefault" in text
+    assert "PSObject.Properties" in text
+    assert "--allow-insecure-http" in text
+    assert "--host 0.0.0.0" in text
+    assert "CFG_ARG" in text
+    assert "--config deploy/config.example.yaml" in text
+    assert "~/.labop-web-port" in text
+    assert "curl -fsS --max-time 5" in text
+    assert "__NODE_PATH__" in text
+    assert '.Replace("__NODE_PATH__"' in text
+
+
+def test_maestro_dispatch_orders_container_before_web() -> None:
+    """Container personas must execute before web checks for readiness coherence."""
+    root = _project_root()
+    text = (root / "scripts" / "maestro" / "Maestro.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "$orderedPersonas" in text
+    assert '"docker" { 0; break }' in text
+    assert '"web" { 2; break }' in text
+    assert "Handler ausente para persona" in text
+
+
+def test_sync_working_tree_uses_explicit_sync_result() -> None:
+    """Sync flow should rely on syncOk, avoiding false success from unrelated ssh exit codes."""
+    root = _project_root()
+    text = (root / "scripts" / "maestro" / "Sync-WorkingTree.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "$syncOk = $false" in text
+    assert "if ($syncOk)" in text
+    assert "if ($LASTEXITCODE -eq 0) {" in text
+    assert "Hash check OK" in text
+    assert "return [bool]$syncOk" in text
+    assert "--exclude='data-boar-*.tar'" in text
+    assert "ConnectTimeout=15" in text
+    assert "if ($syncOk) {" in text
+    assert "tmux new-session -d -s completao" in text
+    assert "> $null 2>&1" in text
+
+
+def test_maestro_skips_handlers_when_sync_fails() -> None:
+    """Maestro must not run handlers after a failed mandatory sync."""
+    root = _project_root()
+    text = (root / "scripts" / "maestro" / "Maestro.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert '$syncOk = [bool](& "$PSScriptRoot/Sync-WorkingTree.ps1"' in text
+    assert "Sync obrigatorio falhou" in text
+    assert "continue" in text
 
 
 def test_container_handlers_define_modo_texto_for_payload() -> None:
@@ -102,8 +218,72 @@ def test_maestro_deep_rc_monitor_collect_wrapper_parse() -> None:
     )
 
 
+def test_maestro_collect_exit_semantics_warn_without_hard_fail() -> None:
+    """Collect mode tracks warnings but keeps hard-fail exit reserved for critical cases."""
+    root = _project_root()
+    text = (root / "scripts" / "maestro" / "Maestro.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "$warningCount = 0" in text
+    assert "Coleta ignorada" in text
+    assert "Nenhum host com SSH UP no inventario para coletar artefatos." in text
+    assert "warnings de coleta" in text
+    assert "exit 6" in text
+    assert "exit 0" in text
+
+
+def test_wrapper_has_optional_web_readiness_gate() -> None:
+    """Wrapper supports skip/warn/fail web readiness before long monitor loops."""
+    root = _project_root()
+    text = (root / "scripts" / "maestro-deep-rc-monitor-collect.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "$HealthUrl" in text
+    assert "WebReadinessMode" in text
+    assert 'ValidateSet("skip", "warn", "fail")' in text
+    assert "Test-WebReadiness" in text
+    assert "Web readiness failed" in text
+
+
+def test_build_container_artefact_has_docker_fallback_policy() -> None:
+    """Build script should rebuild when Docker is up and fallback to tar when Docker is down."""
+    root = _project_root()
+    text = (root / "scripts" / "maestro" / "Build-ContainerArtefact.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "Test-DockerEngineReady" in text
+    assert "Docker indisponivel e sem artefato local" in text
+    assert "rebuild" in text.lower() or "Rebuild" in text
+    assert "lessons learned" in text
+
+
+def test_wrapper_docker_precheck_accepts_tar_fallback() -> None:
+    """Wrapper precheck should continue when Docker is down if tar fallback exists."""
+    root = _project_root()
+    text = (root / "scripts" / "maestro-deep-rc-monitor-collect.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "Get-VersionTagFromPyproject" in text
+    assert "fallback via" in text
+    assert "fallback ausente" in text
+
+
+def test_container_handlers_enable_lab_stack_up_in_deep_mode() -> None:
+    """Deep container personas pass --lab-stack-up into host smoke payload."""
+    root = _project_root()
+    for name in ("Handle-docker.ps1", "Handle-podman.ps1", "Handle-dockerswarm.ps1"):
+        body = (root / "scripts" / "maestro" / "handlers" / name).read_text(
+            encoding="utf-8", errors="replace"
+        )
+        assert "$stackArg" in body, f"{name} should define $stackArg"
+        assert "--lab-stack-up" in body, (
+            f"{name} should inject --lab-stack-up in Deep mode payload"
+        )
+        assert "lab-completao-host-smoke.sh $configArg $stackArg" in body
+
+
 def test_maestro_no_retired_workstation_codename_token() -> None:
-    """Keep scripts/maestro aligned with tests/test_public_tree_no_l14_codename.py word rule."""
+    """Maestro *.ps1 must not embed the retired workstation codename token (guard: test_public_tree_no_*codename*)."""
     root = _project_root()
     word = "".join((chr(76), chr(49), chr(52)))
     pattern = re.compile(rf"\b{re.escape(word)}\b")

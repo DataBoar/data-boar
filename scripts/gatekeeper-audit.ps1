@@ -12,6 +12,9 @@
     3. Staged paths only: git diff --cached --name-only --diff-filter=ACMRT, then
        git grep -n -F -f <strict-seeds> --cached -- <paths> (fixed strings from file = git's -F -f; same intent as -Ff).
 
+    3b. Leaf names like uv.lock are skipped: PyPI wheel/sdist URLs embed ISO8601 timestamps whose
+        time portion false-positive short fixed-string seeds (substring matches with git grep -F).
+
     4. Any remaining hit -> red error, exit 1.
 
     If nothing staged, or no strict seeds after filtering, exits 0. Missing seeds file -> skip (CI) unless -RequireSeeds.
@@ -120,15 +123,37 @@ if ($LASTEXITCODE -ne 0) {
     exit 2
 }
 
-$paths = @(
+$excludeLeaves = New-Object "System.Collections.Generic.HashSet[string]" ([StringComparer]::OrdinalIgnoreCase)
+[void]$excludeLeaves.Add("uv.lock")
+
+$allStaged = @(
     $stagedOut | ForEach-Object { $_.Trim() } | Where-Object { $_.Length -gt 0 }
 )
-if ($paths.Count -eq 0) {
+if ($allStaged.Count -eq 0) {
     Write-Host "GATEKEEPER-AUDIT: OK (nothing staged; no paths to scan)." -ForegroundColor Green
     exit 0
 }
 
-Write-Host "  Staged path(s): $($paths.Count)" -ForegroundColor Gray
+$skippedLock = 0
+$paths = New-Object System.Collections.Generic.List[string]
+foreach ($p in $allStaged) {
+    $leaf = Split-Path -Leaf $p
+    if ($excludeLeaves.Contains($leaf)) {
+        $skippedLock++
+        continue
+    }
+    $paths.Add($p) | Out-Null
+}
+if ($skippedLock -gt 0) {
+    Write-Host "  Skipped seed scan for $skippedLock path(s) (machine-generated: uv.lock)." -ForegroundColor DarkGray
+}
+
+if ($paths.Count -eq 0) {
+    Write-Host "GATEKEEPER-AUDIT: OK (only machine-generated paths staged; nothing left to scan)." -ForegroundColor Green
+    exit 0
+}
+
+Write-Host "  Staged path(s) scanned: $($paths.Count) (of $($allStaged.Count) total staged)" -ForegroundColor Gray
 
 $tmp = [System.IO.Path]::GetTempFileName()
 try {

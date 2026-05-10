@@ -43,7 +43,15 @@ param(
 
     [switch]$ClearHostEachLoop,
 
-    [switch]$SkipDockerPrecheck
+    [switch]$SkipDockerPrecheck,
+
+    [string]$HealthUrl = "",
+
+    [ValidateSet("skip", "warn", "fail")]
+    [string]$WebReadinessMode = "skip",
+
+    [ValidateRange(1, 120)]
+    [int]$HealthTimeoutSeconds = 5
 )
 
 Set-StrictMode -Version 2
@@ -65,6 +73,37 @@ function Test-DockerEngineReady {
     return ($LASTEXITCODE -eq 0)
 }
 
+function Get-VersionTagFromPyproject {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$PyprojectPath
+    )
+    $tag = "latest"
+    if (Test-Path -LiteralPath $PyprojectPath) {
+        $versionMatch = Get-Content -LiteralPath $PyprojectPath | Select-String -Pattern '^version\s*=\s*"([^"]+)"'
+        if ($versionMatch -match '^version\s*=\s*"([^"]+)"') {
+            $tag = $matches[1]
+        }
+    }
+    return $tag
+}
+
+function Test-WebReadiness {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Url,
+        [Parameter(Mandatory = $true)]
+        [int]$TimeoutSeconds
+    )
+
+    try {
+        $response = Invoke-WebRequest -Uri $Url -Method Get -TimeoutSec $TimeoutSeconds -UseBasicParsing
+        return ($response.StatusCode -ge 200 -and $response.StatusCode -lt 400)
+    } catch {
+        return $false
+    }
+}
+
 $repoRoot = if ($ProjectRoot) {
     (Resolve-Path -LiteralPath $ProjectRoot).Path
 } else {
@@ -74,6 +113,9 @@ $repoRoot = if ($ProjectRoot) {
 $maestro = Join-Path $repoRoot "scripts\maestro\Maestro.ps1"
 $getLabStatus = Join-Path $repoRoot "scripts\maestro\Get-LabStatus.ps1"
 $inventoryPath = Join-Path $repoRoot "docs\private\homelab\data\inventory.json"
+$pyprojectPath = Join-Path $repoRoot "pyproject.toml"
+$tarTag = Get-VersionTagFromPyproject -PyprojectPath $pyprojectPath
+$tarPath = Join-Path $repoRoot ("data-boar-{0}.tar" -f $tarTag)
 
 if (-not (Test-Path -LiteralPath $maestro)) {
     Write-Error "Maestro.ps1 not found: $maestro"
@@ -94,10 +136,16 @@ Push-Location -LiteralPath $repoRoot
 try {
     if (-not $SkipDockerPrecheck) {
         if (-not (Test-DockerEngineReady)) {
-            Write-Error "Docker engine not ready. Start Docker Desktop (or local Docker service) before running Maestro -Deep. You can bypass this guard with -SkipDockerPrecheck."
-            exit 4
+            if (Test-Path -LiteralPath $tarPath) {
+                $tarAge = (Get-Date) - (Get-Item -LiteralPath $tarPath).LastWriteTime
+                Write-Warning ("Docker indisponivel; seguindo com fallback via {0} ({1:N1}h). Build local sera pulado." -f (Split-Path -Leaf $tarPath), $tarAge.TotalHours)
+            } else {
+                Write-Error ("Docker indisponivel e fallback ausente ({0}). Start Docker Desktop or provide tar cache." -f (Split-Path -Leaf $tarPath))
+                exit 4
+            }
+        } else {
+            Write-Host "[Precheck] Docker engine reachable." -ForegroundColor DarkGray
         }
-        Write-Host "[Precheck] Docker engine reachable." -ForegroundColor DarkGray
     }
 
     Write-Host "--- [Phase 1] Maestro Deep (RC-style) ---" -ForegroundColor Magenta
@@ -109,6 +157,20 @@ try {
     }
 
     if (-not $SkipMonitor) {
+        if ($WebReadinessMode -ne "skip" -and $HealthUrl) {
+            $webReady = Test-WebReadiness -Url $HealthUrl -TimeoutSeconds $HealthTimeoutSeconds
+            if ($webReady) {
+                Write-Host ("[Precheck] Web readiness OK: {0}" -f $HealthUrl) -ForegroundColor DarkGray
+            } elseif ($WebReadinessMode -eq "fail") {
+                Write-Error ("Web readiness failed for {0}. Use -WebReadinessMode warn to continue on warning." -f $HealthUrl)
+                exit 5
+            } else {
+                Write-Warning ("Web readiness failed for {0}. Continuing due to -WebReadinessMode warn." -f $HealthUrl)
+            }
+        } elseif ($WebReadinessMode -ne "skip" -and -not $HealthUrl) {
+            Write-Warning "Web readiness requested but -HealthUrl is empty; skipping readiness check."
+        }
+
         $loop = 1
         $start = Get-Date
         while ($loop -le $IntendedLoops) {

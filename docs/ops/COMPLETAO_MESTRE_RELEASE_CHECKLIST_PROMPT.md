@@ -127,7 +127,7 @@ Erros Propositais: Valide se mensagens de erro (DB offline, IP inválido) são �
 
 Consolidação: Reúna os resultados em docs/reports/TEST_REPORT_v1.7.3.md.
 
-Sucesso: Se 'ALL GREEN' (paridade total e 0 leaks), declare pronto para 1.7.4-beta.
+Sucesso: Se 'ALL GREEN' (paridade total e 0 leaks), declare pronto para o *working line* atual em `pyproject.toml` (ex.: **1.7.4-rc**).
 
 REGRAS OPERACIONAIS CRÍTICAS:
 

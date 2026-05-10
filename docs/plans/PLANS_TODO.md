@@ -27,13 +27,13 @@ Use these tags in headings to keep priorities explicit and machine-countable:
 
 Do not edit this block manually; refresh with `python scripts/plans-stats.py --write`.
 
-- **Status rows counted:** 151  (Done: 86 | Incomplete: 65)
-- **Incomplete breakdown:** Pending `⬜`=61, Tracked `🔄` / `Tracked (partially done)`=4, Under consideration=0, Backlog-marked rows=0
+- **Status rows counted:** 160  (Done: 92 | Incomplete: 68)
+- **Incomplete breakdown:** Pending `⬜`=64, Tracked `🔄` / `Tracked (partially done)`=4, Under consideration=0, Backlog-marked rows=0
 
 | Horizon | Total rows | Done | Incomplete |
 | ------- | ----------: | ----: | ----------: |
 | `H0` | 39 | 32 | 7 |
-| `H1` | 0 | 0 | 0 |
+| `H1` | 9 | 6 | 3 |
 | `H2` | 0 | 0 | 0 |
 | `H3` | 108 | 50 | 58 |
 | `H4` | 0 | 0 | 0 |
@@ -381,9 +381,26 @@ Tighten runtime defaults for the API host. Implemented: default `127.0.0.1`, opt
 
 1. **Home lab validation (order –1L)** *(manual, high gain for prod readiness)* — **Progress:** primary LAN host running dashBOARd + real scans. **Sub-slice closed (2026-04-08):** dev workstation — `docker-lab-build.ps1` → `data_boar:lab`, Docker smoke with `CONFIG_PATH` + mounted synthetic FS, `/health` OK, scan completed with findings; **`lab-op-sync-and-collect.ps1`** OK (LAB-NODE-04, LAB-NODE-03, lab-node-02, lab-node-01; logs under `docs/private/homelab/reports/`). **Still open for full –1L gate:** second-environment / distro matrix per [HOMELAB_VALIDATION §9](../ops/HOMELAB_VALIDATION.md#9-multi-host-linux-optional-matrix-dns-ssh-different-distros) (not only this PC). **Sequence (staged):** **(A)** **Now —** second **x86_64** host (e.g. musl-based distro) + **ARM SBC**: minimum §1.1–1.2 + §2 synthetic FS per [HOMELAB_VALIDATION §9](../ops/HOMELAB_VALIDATION.md#9-multi-host-linux-optional-matrix-dns-ssh-different-distros); optional Docker §1.3–1.5. **Early option:** **Linux** guests on the **primary laptop** via **GNOME Boxes** / **virt-manager** — [§1.5](../ops/HOMELAB_VALIDATION.md#15-vms-on-the-primary-laptop-gnome-boxes--virt-manager--smoke-before-proxmox) (not a Proxmox substitute); **FreeBSD** / **Haiku** there are **exploratory** only. **(B) When your x86 tower is online as main server** (e.g. **HP ML310e Gen8–class** + **Proxmox**): **before** a dedicated “main server” validation block, finish **your** manual install — Proxmox, **≥1 Linux VM or LXC** (Debian/Ubuntu guest recommended), bridge/VLAN + disk as in [§9.1 readiness table](../ops/HOMELAB_VALIDATION.md#91-when-to-have-hardware-ready-operator-sync-with-planstodo-order-1l); then run **§1 + §2 on the guest** and optionally host long-lived **§4** DB lab there. **(C) Deferred —** **Intel Mac mini (mid-2011)** until hardware is repaired; **lowest** priority row in §9 matrix (legacy macOS / Python ceiling — document in private notes when live). **(D) Secondary laptop (modern business class — e.g. ThinkPad LAB-NODE-01 Gen 3–4–class)** — **prioritise soon** if it has **more CPU/RAM** than older lab laptops: use as **parallel Docker / pytest** runner ([HOMELAB_VALIDATION §9.2](../ops/HOMELAB_VALIDATION.md#92-parallel-testing-rig-optional--secondary-laptop-or-tower-guest)); bare **Linux + Docker** or **Win11+WSL2**. **(E) Optional spare desktop —** older **Core i3**–class tower only **if** you need more **metal**: not a prerequisite—see [HOMELAB_VALIDATION §9](../ops/HOMELAB_VALIDATION.md#9-multi-host-linux-optional-matrix-dns-ssh-different-distros) (*Spare commodity x86_64 desktop*) and [§9.1](../ops/HOMELAB_VALIDATION.md#91-when-to-have-hardware-ready-operator-sync-with-planstodo-order-1l). Record **dated** host-specific names/IPs/paths and **exact MTM** (machine type) only in `docs/private/` (gitignored). No feature code unless you document a gap.
 
-1. **CNPJ alphanumeric format validation** *(AI-assisted research + manual wiring)*
-   - Use AI for: research/spec for alphanumeric format, regex proposal, EN + pt-BR doc wording.
-   - Do manually: integrate regex/overrides, wire to existing detection/reporting, add tests.
+1. **Maestro completão hardening follow-ups (2026-05-09 lessons, pre-`1.7.4-rc`)** *(technical queue promoted from latest public lab snapshot)*
+   Source: [`docs/ops/LAB_LESSONS_LEARNED.md`](../ops/LAB_LESSONS_LEARNED.md) + [`docs/ops/lab_lessons_learned/LAB_LESSONS_LEARNED_2026_05_09.md`](../ops/lab_lessons_learned/LAB_LESSONS_LEARNED_2026_05_09.md).
+
+| # | To-do | Status |
+| - | ----- | ------ |
+| 1 | **Synthetic DB stack parity in Maestro path:** dedicated handlers are in place (`target_postgres`, `target_mariadb`, `target_mongodb`) and validated in a single run for reachable hosts (Mongo temporarily colocated on a secondary x86 lab host while WSL2 SSH remains down). | ✅ Done |
+| 2 | **Collect/exit semantics split:** separate hard-fail exits from mixed online/offline warning outcomes so successful online rounds are machine-readable without false-red release signals. | ✅ Done |
+| 3 | **Web readiness gate for long monitor loops:** add optional pre-loop check when `/health` is expected; fail-fast or downgrade to warning by explicit mode, then continue with deterministic behavior. | ✅ Done |
+| 4 | **DB target port-collision fallback:** add deterministic fallback or prebind guard when configured DB target port is already occupied on host (latest hit: Postgres `55432` on a lab laptop class host). | ✅ Done |
+| 5 | **WSL2 target SSH readiness:** move designated WSL2 lab host from `NETWORK ONLY` to `SSH UP` and execute one Mongo target round as part of completão evidence. | ✅ Done (scope decision) |
+| 6 | **Sync strictness on failed transfer:** ensure `Sync-WorkingTree` hard-stops handler dispatch when `rsync` warns/fails (latest run had one lab laptop class host sync warning while orchestration proceeded). | ✅ Done |
+
+1. **Post-`1.7.4` short-sprint closure queue** *(healthy next slices already scoped for execution)*
+   Source plans: [`PLAN_BANDIT_SECURITY_LINTER.md`](PLAN_BANDIT_SECURITY_LINTER.md), [`PLAN_CNPJ_ALPHANUMERIC_FORMAT_VALIDATION.md`](PLAN_CNPJ_ALPHANUMERIC_FORMAT_VALIDATION.md), [`PLAN_SCOPE_IMPORT_FROM_EXPORTS.md`](PLAN_SCOPE_IMPORT_FROM_EXPORTS.md).
+
+| Sprint | Slice | Execution focus | Exit checklist | Status |
+| ------ | ----- | --------------- | -------------- | ------ |
+| S1 | **Bandit Phase 3 closure** | Triage low findings (`-i`) and keep strict gate (`-ll -ii`) clean with minimal-risk fixes / justified suppressions | `uv run bandit -r . -c pyproject.toml -ll -ii` green; low triage documented; `check-all` green; plan ready to move to `completed/` + `plans_hub_sync` | ⬜ Pending |
+| S2 | **Scope import Phase E (light)** | First vendor-shaped adapter (GLPI-like export to canonical CSV/schema), with fixtures/tests and docs | adapter + fixtures merged; pytest for adapter green; EN+pt-BR operator docs updated; no "live integration" overpromise | ⬜ Pending |
+| S3 | **CNPJ Phase 5 (checksum layer)** | Design and optional opt-in checksum validation path (separate from regex compatibility) | Phase 5.1–5.3 addressed in plan; default behavior unchanged; tests/docs synced (EN + pt-BR) | ⬜ Pending |
 
 1. **Content type & cloaking detection – Step 1** *(small slice)*
    - Magic-byte table + read_magic / infer_content_type for supported formats; no connector change yet.
