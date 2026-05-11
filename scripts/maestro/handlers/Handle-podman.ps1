@@ -23,13 +23,14 @@ Write-Host "   [Podman] Disparando orquestração containerizada (Deep: $Deep) e
 
 # Se for Deep, passa o caminho do config. Se não, não passa nada (comportamento original)
 $configArg = if ($Deep) { "tests/config/benchmark-rc.yaml" } else { "" }
+$stackArg = if ($Deep) { "--lab-stack-up" } else { "" }
 $modoTexto = if ($Deep) { "Benchmark RC (Deep)" } else { $Ref }
 
 # Construção do Payload Posix Native para Podman:
 # 1. Substitua o .sh abaixo pelo script real que faz o 'podman run...' ou similar no seu ambiente mais tarde
 # 2. Protegendo aspas internas com escape de PowerShell:
 # 3. Repassamos o argumento do config para o bash script
-$payload = "cd $($Node.path) && echo `"Iniciando Baremetal Smoke ($modoTexto)...`" && bash ./scripts/lab-completao-host-smoke.sh $configArg"
+$payload = "cd $($Node.path) && echo `"Iniciando Baremetal Smoke ($modoTexto)...`" && bash ./scripts/lab-completao-host-smoke.sh $configArg $stackArg"
 
 # Prepara resiliencia via TMUX (Ctrl+C garante que o prompt está limpo antes do Enter)
 # SRE Fix: Separamos o Ctrl+C da injeção de texto com um micro-sleep (anti-race-condition)

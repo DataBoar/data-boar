@@ -7,12 +7,12 @@
   Manifest-driven orchestration remains the default: .\scripts\lab-completao-orchestrate.ps1 (no -HybridLabOpHighDensity173).
   Resolves SSH targets from docs/private/homelab/lab-op-hosts.manifest.json (sshHost + first repoPaths entry).
   LAB-NODE-02 scan path: uses /home/leitao/Documents if present, else /home/leitao/documents.
-  Benchmark A/B (v1.7.3 stable vs v1.7.4-beta): isolated workdirs on each engine host: /tmp/databoar_bench/stable
+  Benchmark A/B (v1.7.3 stable vs v1.7.4-rc): isolated workdirs on each engine host: /tmp/databoar_bench/stable
   and /tmp/databoar_bench/beta (separate config YAML; no shared checkpoints). Published ports 9001 (stable) and
   9002 (beta) mapped to container 8088. Long runs use a detached tmux session per step, then log capture.
   LAB-NODE-04 stays passive (no image preflight / no container on LAB-NODE-04).
   Image distribution from the primary Windows dev workstation: ensures fabioleitao/data_boar:1.7.3 exists,
-  and builds fabioleitao/data_boar:1.7.4-beta with docker build from the repo.
+  and builds fabioleitao/data_boar:1.7.4-rc with docker build from the repo.
   Requires OpenSSH scp/ssh on the dev PC.
 
   # Gemini, lido e processado: Ordem, rigor e hardware real. Controle retomado.
@@ -81,7 +81,7 @@ function Get-HybridNodesFromManifest {
 $Nodes = Get-HybridNodesFromManifest -ManifestPath $manifestPath
 $TmuxSessionName = "completao"
 $HybridStableImage = "fabioleitao/data_boar:1.7.3"
-$HybridBetaImage = "fabioleitao/data_boar:1.7.4-beta"
+$HybridBetaImage = "fabioleitao/data_boar:1.7.4-rc"
 $HybridBenchStable = "/tmp/databoar_bench/stable"
 $HybridBenchBeta = "/tmp/databoar_bench/beta"
 $HybridPortStable = "9001"
