@@ -278,3 +278,32 @@ def test_ci_lint_job_runs_pre_commit_all_files() -> None:
     )
     runs = "\n".join(_ci_step_run_texts(lint))
     assert "pre-commit run --all-files" in runs
+
+
+def test_zizmor_workflow_present_and_valid() -> None:
+    data = _load_workflow("zizmor.yml")
+    assert data.get("name") == "Zizmor"
+    on = data.get("on") or {}
+    assert "pull_request" in on
+    assert "push" in on
+    assert "workflow_dispatch" in on
+    jobs = data.get("jobs") or {}
+    assert "zizmor" in jobs
+    job = jobs["zizmor"]
+    assert job.get("runs-on") == "ubuntu-latest"
+    steps = job.get("steps") or []
+    uses_lines = [
+        str(step.get("uses"))
+        for step in steps
+        if isinstance(step, dict) and step.get("uses")
+    ]
+    assert any("zizmorcore/zizmor-action@" in line for line in uses_lines)
+
+
+def test_workflow_security_lint_wrappers_present() -> None:
+    for rel in (
+        "scripts/workflow-security-lint.ps1",
+        "scripts/workflow-security-lint.sh",
+    ):
+        path = REPO_ROOT / rel
+        assert path.is_file(), f"missing local zizmor wrapper: {rel}"

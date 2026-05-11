@@ -57,3 +57,9 @@ repos:
         entry: uv run python scripts/pii_history_guard.py
         language: system
         pass_filenames: false
+      - id: workflow-security-lint
+        name: zizmor workflow security lint (optional manual stage)
+        entry: pwsh -NoProfile -File scripts/workflow-security-lint.ps1 -SkipIfMissing
+        language: system
+        pass_filenames: false
+        stages: [manual]
