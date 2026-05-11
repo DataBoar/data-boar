@@ -166,6 +166,14 @@ def test_sync_working_tree_uses_explicit_sync_result() -> None:
     assert "> $null 2>&1" in text
 
 
+def test_gitignore_ignores_maestro_ephemeral_tar_bundles() -> None:
+    """Pre-release/beta Maestro tarballs at repo root stay local-only."""
+    root = _project_root()
+    gi = (root / ".gitignore").read_text(encoding="utf-8", errors="replace")
+    assert "/data-boar-*-beta.tar" in gi
+    assert "/data-boar-*-rc.tar" in gi
+
+
 def test_maestro_skips_handlers_when_sync_fails() -> None:
     """Maestro must not run handlers after a failed mandatory sync."""
     root = _project_root()

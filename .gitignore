@@ -20,6 +20,9 @@ data/lab_completao_benchmark.db
 bench/
 # Git checkout A/B harness (scripts/benchmark-ab.ps1)
 benchmark_runs/
+# Maestro / completão container bundles at repo root (ephemeral; rsync also excludes data-boar-*.tar)
+/data-boar-*-beta.tar
+/data-boar-*-rc.tar
 Relatorio_Auditoria_*.xlsx
 heatmap*.png
 # Executive desk outputs at repo root (local runs; regenerate via data-boar-report — USAGE.md section 5)
