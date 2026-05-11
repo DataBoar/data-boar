@@ -36,7 +36,7 @@ param(
     [string] $BenchmarkDirName = "benchmark_runs",
     [string] $LegacyTag = "v1.7.3",
     [string] $CurrentLabGitRef = "origin/main",
-    [string] $CurrentCaptureDir = "v1.7.4-beta",
+    [string] $CurrentCaptureDir = "v1.7.4-rc",
     [string] $ReportsRelative = "docs\private\homelab\reports",
     [string] $SqlitePath = "",
     [string] $ReportConfigYaml = "",

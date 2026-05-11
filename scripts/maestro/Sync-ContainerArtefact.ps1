@@ -19,10 +19,18 @@ $tarFile = "data-boar-${tag}.tar"
 $tarPath = "$PSScriptRoot/../../$tarFile"
 
 Write-Host "      [Container Sync] Distribuindo $tarFile para $($Node.hostname)..." -ForegroundColor DarkCyan
-scp -q $tarPath "$($Node.user)@$($Node.hostname):$($Node.path)/$tarFile"
+scp -q -o BatchMode=yes -o ConnectTimeout=10 $tarPath "$($Node.user)@$($Node.hostname):$($Node.path)/$tarFile"
+if ($LASTEXITCODE -ne 0) {
+    Write-Warning "      [WARNING] Falha ao enviar $tarFile para $($Node.hostname) (scp exit $LASTEXITCODE)."
+    return
+}
 
 $engine = if ($Node.personas -contains "podman") { "podman" } else { "docker" }
 $loadCmd = "cd $($Node.path) && $engine load -i $tarFile > /dev/null 2>&1"
 ssh -q -o BatchMode=yes "$($Node.user)@$($Node.hostname)" $loadCmd
 
-Write-Host "      [SUCCESS] Imagem provisionada remotamente via $engine." -ForegroundColor Green
+if ($LASTEXITCODE -eq 0) {
+    Write-Host "      [SUCCESS] Imagem provisionada remotamente via $engine." -ForegroundColor Green
+} else {
+    Write-Warning "      [WARNING] Falha ao carregar imagem via $engine em $($Node.hostname) (ssh exit $LASTEXITCODE)."
+}

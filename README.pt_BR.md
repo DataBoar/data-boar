@@ -35,6 +35,7 @@ Idiomas e encodings legados são suportados; **timeouts configuráveis** e **end
 **Cenários típicos:** Preparação para auditoria ou pedido do regulador; mapeamento de dados antes de migração ou implantação de DLP; conscientização de conformidade sem war room completo.
 
 > **Release atual:** **1.7.3**. **Docker Hub:** **`fabioleitao/data_boar:1.7.3`** ou **`latest`**. Resumo: [CHANGELOG.md](CHANGELOG.md). Notas: [docs/releases/1.7.3.md](docs/releases/1.7.3.md) e [Releases no GitHub](https://github.com/FabioLeitao/data-boar/releases). Golden anterior: **`v1.7.2-safe`** / **`1.7.2+safe`** — [docs/releases/1.7.2-safe.md](docs/releases/1.7.2-safe.md).
+> **Pré-release em `main`:** **`1.7.4-rc`** — rascunho de **pré-release** no GitHub: [docs/releases/1.7.4-rc.md](docs/releases/1.7.4-rc.md) (**não** move o **`latest`** do Docker; o estável continua **1.7.3** até **`1.7.4`** final).
 > **Documentação:** Este README e o `docs/USAGE.pt_BR.md` são as referências em português. Quando funcionalidades ou opções mudarem, atualize **ambos** os idiomas para mantê-los sincronizados.
 
 **Blog do produto** (atualizações em formato narrativo, posts mais curtos): [databoar.wordpress.com](https://databoar.wordpress.com) — a documentação técnica canônica continua neste repositório (`docs/`).

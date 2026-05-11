@@ -18,7 +18,7 @@ $ErrorActionPreference = "Stop"
 $StartTime = Get-Date
 $Global:LogFile = "audit-$(Get-Date -Format 'yyyyMMdd_HHmm').log"
 $TargetBranch = "workflow/completao-hybrid-sre-local-prep"
-$Version = "1.7.4-beta"
+$Version = "1.7.4-rc"
 $ResultsDir = "./results/$(Get-Date -Format 'yyyyMMdd_HHmm')"
 
 if (!(Test-Path $ResultsDir)) {

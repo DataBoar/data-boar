@@ -37,14 +37,14 @@ O "nascimento" do orquestrador Plano-V revelou instabilidades críticas no ciclo
 
 ### Fase 4: Image & Lifecycle Management
 *   [ ] **Stale Image Detector:** Comparar a data da imagem local com o último commit na pasta `rust/`.
-*   [ ] **Force Pull Logic:** Garantir que a tag `1.7.4-beta` seja atualizada se a versão local tiver mais de 24h ou se houver mudanças no binário.
+*   [ ] **Force Pull Logic:** Garantir que a tag `1.7.4-rc` (ou a linha de trabalho atual em `pyproject.toml`) seja atualizada se a versão local tiver mais de 24h ou se houver mudanças no binário.
 *   [ ] **Host Hygiene Guard:** Implementar check de memória no host (WORKSTATION) para alertar sobre vazamentos de sistema (ex: `gpsvc` leak) antes de iniciar benchmarks sensíveis.
 
 ---
 
 ## 🚀 Critérios de Aceite (Done-Done)
 - [ ] Orquestração completa (WORKSTATION -> LAB-NODE-01/LAB-NODE-02) sem nenhum comando manual via SSH.
-- [ ] Telemetria magenta do Rust 1.7.4-beta aparecendo no console local.
+- [ ] Telemetria magenta do Rust 1.7.4-rc aparecendo no console local.
 - [ ] Zero falhas no `test_powershell_scripts_ascii_safe`.
 - [ ] Evidências de performance colhidas com ambiente comprovadamente limpo (RAM < 50%).
 

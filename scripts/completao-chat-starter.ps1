@@ -17,7 +17,7 @@
     Used when Tier is smoke-tag (e.g. v1.7.3) or to override smoke-main default.
 
 .PARAMETER ReleaseSemver
-    PEP 440-ish product version for Tier release-master (e.g. 1.7.3, 1.7.4-beta).
+    PEP 440-ish product version for Tier release-master (e.g. 1.7.3, 1.7.4-rc).
     Leading "v" is stripped for doc resolution. Implied 1.7.3 when Tier is release-master-v1-7-3.
 
 .PARAMETER GitTag

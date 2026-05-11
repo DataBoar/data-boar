@@ -9,7 +9,7 @@
       Manifest-driven orchestration remains the default: .\scripts\lab-completao-orchestrate.ps1 (no -HybridLabOpHighDensity173).
       Resolves SSH targets from docs/private/homelab/lab-op-hosts.manifest.json (`sshHost` + first `repoPaths` entry).
       LAB-NODE-02 scan path: uses `/home/leitao/Documents` if present, else `/home/leitao/documents`.
-      Benchmark A/B (v1.7.3 stable vs v1.7.4-beta): isolated workdirs on each engine host.
+      Benchmark A/B (v1.7.3 stable vs v1.7.4-rc): isolated workdirs on each engine host.
       LAB-NODE-04 stays passive.
       Requires OpenSSH scp/ssh on the dev PC.
 #>
@@ -96,7 +96,7 @@ $Nodes = Get-HybridNodesFromManifest -ManifestPath $manifestPath
 # Configurac?es de Benchmarking
 $TmuxSessionName = "completao"
 $HybridStableImage = "fabioleitao/data_boar:1.7.3"
-$HybridBetaImage = "fabioleitao/data_boar:1.7.4-beta"
+$HybridBetaImage = "fabioleitao/data_boar:1.7.4-rc"
 $HybridBenchStable = "/tmp/databoar_bench/stable"
 $HybridBenchBeta = "/tmp/databoar_bench/beta"
 $HybridPortStable = "9001"

@@ -24,6 +24,7 @@ fi
 LC_PRIV=0
 LC_SKIP_ENGINE=0
 LC_EMIT_JSONL_ONLY=0
+LC_LAB_STACK_UP=0
 LC_HEALTH_URL="${LAB_COMPLETAO_HEALTH_URL:-}"
 LC_REPO_ROOT=""
 LC_BENCH_TRACK=""
@@ -56,6 +57,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --privileged) LC_PRIV=1 ;;
     --skip-engine-import) LC_SKIP_ENGINE=1 ;;
+    --lab-stack-up) LC_LAB_STACK_UP=1 ;;
     --emit-jsonl-host-env-and-exit) LC_EMIT_JSONL_ONLY=1 ;;
     --bench-track)
       LC_BENCH_TRACK="${2:-}"
@@ -75,6 +77,7 @@ Usage: bash scripts/lab-completao-host-smoke.sh [--privileged] [--skip-engine-im
 
   --privileged          Best-effort read-only probes via sudo -n (iptables/nft/ufw/fail2ban status).
   --skip-engine-import  Skip uv / import core.engine (hosts that run Data Boar only via Docker/Swarm/Podman).
+  --lab-stack-up        Try to bring up deploy/lab-smoke-stack (and optional Mongo compose overlay) before checks.
   --emit-jsonl-host-env-and-exit  Print one DATA_BOAR_COMPLETAO_JSONL_MIN_EVENT line (uv/python versions) and exit 0.
   --bench-track         Ephemeral A/B workdir under /tmp/databoar_bench/<stable|beta> (checkpoint isolation).
   --health-url          Override LAB_COMPLETAO_HEALTH_URL (e.g. http://127.0.0.1:8088/health).
@@ -82,6 +85,7 @@ Usage: bash scripts/lab-completao-host-smoke.sh [--privileged] [--skip-engine-im
 
 Environment:
   LAB_COMPLETAO_HEALTH_URL              Optional URL for curl -sf (Data Boar /health or similar).
+  LAB_COMPLETAO_LAB_STACK_UP            If 1, same as --lab-stack-up.
   LAB_COMPLETAO_SKIP_ENGINE_IMPORT      If set to 1, same as --skip-engine-import (manifest / container-only hosts).
   LAB_COMPLETAO_SSH_HOST_ALIAS          Set by lab-completao-orchestrate.ps1 (manifest sshHost) for power warnings.
   LAB_COMPLETAO_MAIN_ENGINE_SSH_HOST    Optional manifest completaoMainEngineSshHost; undervoltage on other hosts is warning-only.
@@ -98,6 +102,10 @@ EOF
   esac
   shift
 done
+
+if [[ "${LAB_COMPLETAO_LAB_STACK_UP:-}" == "1" ]]; then
+  LC_LAB_STACK_UP=1
+fi
 
 if [[ "$LC_EMIT_JSONL_ONLY" == "1" ]]; then
   _lc_emit_host_env_audit_line
@@ -264,6 +272,25 @@ fi
 _lc_section "lab-smoke-stack (deploy/lab-smoke-stack)"
 LSS="$LC_REPO_ROOT/deploy/lab-smoke-stack"
 if [[ -d "$LSS" ]] && [[ -f "$LSS/docker-compose.yml" ]]; then
+  if [[ "$LC_LAB_STACK_UP" == "1" ]]; then
+    echo "(requested) bringing up synthetic DB stack..."
+    if _lc_cmd docker; then
+      if [[ -f "$LSS/docker-compose.mongo.yml" ]]; then
+        (cd "$LSS" && _lc_try docker compose -f docker-compose.yml -f docker-compose.mongo.yml up -d 2>&1 | tail -n 40) || true
+      else
+        (cd "$LSS" && _lc_try docker compose up -d 2>&1 | tail -n 40) || true
+      fi
+    elif _lc_cmd podman; then
+      if [[ -f "$LSS/docker-compose.mongo.yml" ]]; then
+        (cd "$LSS" && _lc_try podman compose -f docker-compose.yml -f docker-compose.mongo.yml up -d 2>&1 | tail -n 40) || true
+      else
+        (cd "$LSS" && _lc_try podman compose up -d 2>&1 | tail -n 40) || true
+      fi
+    else
+      echo "(lab stack up skipped: no docker/podman available)"
+    fi
+  fi
+
   if _lc_cmd docker; then
     (cd "$LSS" && _lc_try docker compose ps 2>&1) || true
   elif _lc_cmd podman; then

@@ -6,7 +6,7 @@
 
 **Broader context:** [OPERATOR_MANUAL_ACTIONS.md](OPERATOR_MANUAL_ACTIONS.md) · [PLANS_TODO.md](../plans/PLANS_TODO.md) “Resume next session”.
 
-**Dated one-day focus:** see **[today-mode/README.md](today-mode/README.md)** (indexed checklists). Current example: [OPERATOR_TODAY_MODE_2026-04-02.md](today-mode/OPERATOR_TODAY_MODE_2026-04-02.md) ([pt-BR](today-mode/OPERATOR_TODAY_MODE_2026-04-02.pt_BR.md)). **WRB delta (example):** [WRB_DELTA_SNAPSHOT_2026-04-16.md](WRB_DELTA_SNAPSHOT_2026-04-16.md). **Published** stable line is **`v1.7.3`** / **`1.7.3`** on GitHub + Hub; **`main`** may already show **`1.7.4-beta`** after the post-release bump ([VERSIONING.md](../VERSIONING.md)). Prior golden **`v1.7.2-safe`** / **`1.7.2+safe`**: [docs/releases/1.7.2-safe.md](../releases/1.7.2-safe.md). Keep reconcile rows in [today-mode/PUBLISHED_SYNC.md](today-mode/PUBLISHED_SYNC.md).
+**Dated one-day focus:** see **[today-mode/README.md](today-mode/README.md)** (indexed checklists). Current example: [OPERATOR_TODAY_MODE_2026-04-02.md](today-mode/OPERATOR_TODAY_MODE_2026-04-02.md) ([pt-BR](today-mode/OPERATOR_TODAY_MODE_2026-04-02.pt_BR.md)). **WRB delta (example):** [WRB_DELTA_SNAPSHOT_2026-04-16.md](WRB_DELTA_SNAPSHOT_2026-04-16.md). **Published** stable line is **`v1.7.3`** / **`1.7.3`** on GitHub + Hub; **`main`** may already show a **pre-release** working line (for example **`1.7.4-rc`**) before the next stable publish ([VERSIONING.md](../VERSIONING.md)). Prior golden **`v1.7.2-safe`** / **`1.7.2+safe`**: [docs/releases/1.7.2-safe.md](../releases/1.7.2-safe.md). Keep reconcile rows in [today-mode/PUBLISHED_SYNC.md](today-mode/PUBLISHED_SYNC.md).
 
 ---
 

@@ -64,6 +64,7 @@ When the user asks to **commit**, **write a description**, **push to GitHub**, o
 | One-off PR with predefined message               | Create a small .ps1 that sets `$Title` and `$Body` (here-string) and calls `commit-or-pr.ps1 -Action PR -Title $Title -Body $Body -RunTests` | Same pattern as `scripts/do_pr.ps1`; avoids CLI escaping.                                                                  |
 | Merge PR after CI green + mergeable              | `.\scripts\pr-merge-when-green.ps1 -PrNumber <N>`                                                                                            | Verifies `gh pr checks`; optional `-RunLocalCheckAll`. See **`.cursor/rules/agent-autonomous-merge-and-lab-ops.mdc`**.     |
 | LAB-OP: pull repos + host report on many hosts   | `.\scripts\lab-op-sync-and-collect.ps1` (needs private manifest)                                                                             | **`docs/private.example/homelab/lab-op-hosts.manifest.example.json`** → `docs/private/homelab/lab-op-hosts.manifest.json`. |
+| Maestro **-Deep** turn + **`Get-LabStatus`** loop + **`-Collect`** | `.\scripts\maestro-deep-rc-monitor-collect.ps1` (optional **`-SkipMonitor`**, **`-SkipCollect`**, **`-ClearHostEachLoop`**) | Private **`docs/private/homelab/data/inventory.json`**; hub **`docs/ops/TOKEN_AWARE_SCRIPTS_HUB.md`** §3; **`scripts/maestro/Maestro.ps1`**. |
 
 ## Complete workflow: check → pre-commit → commit → describe → safe synced PR
 
