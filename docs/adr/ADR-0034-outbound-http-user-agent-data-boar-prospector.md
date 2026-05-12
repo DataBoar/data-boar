@@ -20,6 +20,7 @@ Data Boar reaches third-party HTTP(S) endpoints when operators configure **REST/
 - **Positive:** Logs and dashboards on the remote side can filter on `DataBoar-Prospector`; aligns public identity with **Data Boar** without reusing the old repo name as a wire token.
 - **Neutral:** Operators who relied on the previous library-default UA string will see a change in their API logs (expected once per upgrade).
 - **Documentation:** [TECH_GUIDE.md](../TECH_GUIDE.md) (REST/API section) points operators at the default UA and the `headers` override; this ADR plus `core/about.py` remain the source of truth.
+- **Ongoing:** Any new connector that performs outbound HTTP(S) discovery or sampling must apply `get_http_user_agent()` — unless the operator target YAML already supplies a `User-Agent` override. The four connectors listed in Decision 2 are the initial set, not an exhaustive closed list.
 
 ## References
 
