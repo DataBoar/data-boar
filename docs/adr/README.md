@@ -65,6 +65,7 @@ Short, durable notes that capture **why** the project chose an approach—not on
 | 0044  | [Dependabot uv ecosystem for pyproject + lock closure](ADR-0044-dependabot-uv-ecosystem-for-pyproject-lock-closure.md) | Accepted |
 | 0045  | [ADR metadata and format standardization](ADR-0045-adr-metadata-and-format-standardization.md) | Accepted |
 | 0046  | [Operator intent and blameless collaboration posture](ADR-0046-operator-intent-and-blameless-collaboration.md) | Accepted |
+| 0047  | [RCA-first defect investigation and fix discipline](ADR-0047-rca-first-defect-investigation-and-fix-discipline.md) | Accepted |
 
 ## Related docs
 
