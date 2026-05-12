@@ -72,6 +72,10 @@ meaning if the internal label silently changed to "Deep Scan" in a refactor.
   report fields, or CLI flags — even when behavior is unchanged.
 - **Ongoing:** Code reviewers (human or agent) check: does the PR rename any item on the
   operator-facing taxonomy surface? If yes, is there a `CHANGELOG.md` entry?
+- **Ongoing:** Scan result ordering within Excel reports and API response lists must be
+  deterministic across runs on the same input — customers and downstream parsers that
+  compare successive report versions depend on row and column stability. Changes to sort
+  keys or grouping logic are breaking-change surface and require a `CHANGELOG.md` entry.
 
 ## Alternatives Considered
 
