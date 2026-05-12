@@ -76,6 +76,10 @@ call site.
   and log line — reviewers check for bare `except: continue`, `except Exception: pass`, or
   silent `None` returns in connector paths. Bandit rules B110 and B112 catch a subset of
   these automatically.
+- **Watch:** Skipped items that affect the completeness of a compliance report must
+  appear in the report output, not only in the session log — customers cannot read
+  host-bound audit logs. Logging to `audit_YYYYMMDD.log` alone does not satisfy
+  Decision 1 for customer-facing scan gaps.
 
 ## Alternatives Considered
 
