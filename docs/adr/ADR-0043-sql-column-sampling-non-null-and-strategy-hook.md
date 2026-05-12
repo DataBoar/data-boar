@@ -26,6 +26,7 @@ Operators also need a **break-glass** way to cap reads without editing YAML duri
 - **Trade-off:** `WHERE col IS NOT NULL` can still force a scan on some engines if the optimiser cannot short-circuit; the default **small *n*** keeps this aligned with the existing “light probe” contract.
 - **Compliance:** Outputs are still **sample-based**, not exhaustive; reports should continue to state incomplete-population limits (existing generator strings and [`PLAN_ADDITIONAL_DETECTION_TECHNIQUES_AND_FN_REDUCTION.md`](../plans/PLAN_ADDITIONAL_DETECTION_TECHNIQUES_AND_FN_REDUCTION.md)).
 - **Watch:** When `DATA_BOAR_SQL_SAMPLE_LIMIT` is set to an invalid value and ignored, a WARNING log must be emitted — silent ignore defeats the break-glass use case and leaves the operator unaware that the configured YAML limit is in effect instead of their override.
+- **Ongoing:** New SQL dialects must implement their column-sample SQL via `SqlColumnSampleQueryBuilder` — never by duplicating LIMIT syntax or identifier-escaping logic directly in the connector.
 
 ## References
 
