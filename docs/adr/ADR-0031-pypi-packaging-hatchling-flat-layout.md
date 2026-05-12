@@ -1,8 +1,9 @@
 # ADR 0031 — PyPI packaging with Hatchling (flat layout)
 
-## Status
-
-Accepted
+- **Status:** Accepted
+- **Date (UTC):** 2026-04-19
+- **Authors:** Fabio Leitao
+- **Deciders:** Fabio Leitao
 
 ## Context
 

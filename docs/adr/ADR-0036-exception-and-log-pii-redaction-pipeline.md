@@ -1,5 +1,10 @@
 # ADR 0036 — Exception and log PII redaction pipeline
 
+- **Status:** Accepted
+- **Date (UTC):** 2026-04-22
+- **Authors:** Fabio Leitao
+- **Deciders:** Fabio Leitao
+
 ## Context
 
 Database drivers, HTTP clients (for example **httpx**), and ORMs often embed **SQL fragments**, **connection hints**, or **response bodies** in `str(exception)`. The product already redacted URL passwords and `api_key=`-style pairs via `redact_secrets_for_log` before **logging**, but **`scan_failures.details` in SQLite** still stored the raw `details` string. That breaks audit expectations: a DPO must not find customer **CPF** or **email** in failure rows or log files.

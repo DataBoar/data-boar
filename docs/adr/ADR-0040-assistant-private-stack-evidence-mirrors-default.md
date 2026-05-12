@@ -1,5 +1,10 @@
 # ADR 0040 — Assistant default: private stack evidence mirrors without rhetorical asks
 
+- **Status:** Accepted
+- **Date (UTC):** 2026-04-22
+- **Authors:** Fabio Leitao
+- **Deciders:** Fabio Leitao
+
 ## Context
 
 The stacked private repository under **`docs/private/`** holds **operator-owned progress history** and evidence that must **not** live on the public **`origin`**. Redundancy typically spans **multiple non-GitHub mirrors** (e.g. SSH **`lab-*`** bare repos on lab hosts and a **bare Git repository on a VeraCrypt-mounted volume** synced with cloud storage).

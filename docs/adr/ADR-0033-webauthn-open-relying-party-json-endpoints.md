@@ -1,10 +1,13 @@
-# ADR 0033: WebAuthn open Relying Party — JSON endpoints (Phase 1)
+# ADR 0033 — WebAuthn open Relying Party — JSON endpoints (Phase 1)
 
-## Status
-
-Accepted — implemented on `main` behind **`api.webauthn.enabled`** (default **false**).
+- **Status:** Accepted
+- **Date (UTC):** 2026-04-21
+- **Authors:** Fabio Leitao
+- **Deciders:** Fabio Leitao
 
 ## Context
+
+> **Note (from original Status):** — implemented on `main` behind **`api.webauthn.enabled`** (default **false**)
 
 GitHub **#86** requires in-app identity before RBAC. Commercial passwordless SaaS (e.g. Bitwarden Passwordless.dev) is valuable as an **optional adapter** later, but the product should not depend on a single vendor for core ceremonies.
 

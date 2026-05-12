@@ -1,5 +1,10 @@
 # ADR 0030 — Python dependency update closure (single pass)
 
+- **Status:** Accepted
+- **Date (UTC):** 2026-04-19
+- **Authors:** Fabio Leitao
+- **Deciders:** Fabio Leitao
+
 ## Context
 
 Dependency changes can arrive from many signals: CI failures, GitHub Dependabot, Docker Scout or other image scanners, partner review (for example Corporate-Entity-C), model-assisted triage (for example Gemini), or a maintainer decision. Those signals are **inputs**, not alternate sources of truth.
