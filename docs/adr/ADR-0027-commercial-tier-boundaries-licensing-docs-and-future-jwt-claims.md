@@ -1,4 +1,4 @@
-﻿# ADR 0027: Commercial tier boundaries — licensing docs and future JWT claims
+# ADR 0027 — Commercial tier boundaries — licensing docs and future JWT claims
 
 - **Status:** Accepted
 - **Date (UTC):** 2026-04-17
