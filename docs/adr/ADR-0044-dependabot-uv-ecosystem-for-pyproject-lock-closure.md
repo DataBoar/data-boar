@@ -1,8 +1,9 @@
 # ADR 0044 — Dependabot uses the `uv` ecosystem for Python deps (pyproject + lock closure)
 
-## Status
-
-Accepted.
+- **Status:** Accepted
+- **Date (UTC):** 2026-05-09
+- **Authors:** Fabio Leitao
+- **Deciders:** Fabio Leitao
 
 ## Context
 

@@ -1,7 +1,9 @@
 # ADR 0038 — Jurisdictional ambiguity: alert and inventory, do not decide law
 
-**Status:** Accepted
-**Date:** 2026-04-08
+- **Status:** Accepted
+- **Date (UTC):** 2026-04-08
+- **Authors:** Fabio Leitao
+- **Deciders:** Fabio Leitao
 
 ## Context
 

@@ -1,4 +1,9 @@
-# ADR 0043: SQL column sampling — non-null filter and strategy hook
+# ADR 0043 — SQL column sampling — non-null filter and strategy hook
+
+- **Status:** Accepted
+- **Date (UTC):** 2026-04-26
+- **Authors:** Fabio Leitao
+- **Deciders:** Fabio Leitao
 
 ## Context
 

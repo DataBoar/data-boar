@@ -1,5 +1,10 @@
 # ADR 0041 — Lab completão data contract preflight (optional)
 
+- **Status:** Accepted
+- **Date (UTC):** 2026-04-26
+- **Authors:** Fabio Leitao
+- **Deciders:** Fabio Leitao
+
 ## Context
 
 Lab completão orchestration historically validated **reachability** (SSH, `uv`, Docker/Podman) and could start **scans** against databases whose **schemas drifted** (renamed columns, dropped tables). That wastes time and blurs “product defect” vs “test fixture mismatch”.

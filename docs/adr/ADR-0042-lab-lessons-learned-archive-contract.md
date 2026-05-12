@@ -1,8 +1,9 @@
 # ADR 0042 — Public LAB lessons archive + hub (dated snapshots)
 
-## Status
-
-Accepted
+- **Status:** Accepted
+- **Date (UTC):** 2026-04-26
+- **Authors:** Fabio Leitao
+- **Deciders:** Fabio Leitao
 
 ## Context
 

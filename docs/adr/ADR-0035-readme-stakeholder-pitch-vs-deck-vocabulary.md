@@ -1,5 +1,10 @@
 # ADR 0035 — README stakeholder pitch vs optional deck vocabulary
 
+- **Status:** Accepted
+- **Date (UTC):** 2026-04-22
+- **Authors:** Fabio Leitao
+- **Deciders:** Fabio Leitao
+
 ## Context
 
 The root **README** has two audiences in one file: an executive **“For decision-makers”** block (plain language, metaphor-led) and a **“Technical overview”** table that points integrators to **USAGE**, **TECH_GUIDE**, **SENSITIVITY_DETECTION**, etc.

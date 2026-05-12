@@ -1,5 +1,10 @@
 # ADR 0037 — Data Boar self-audit log and governance of the auditor
 
+- **Status:** Accepted
+- **Date (UTC):** 2026-04-22
+- **Authors:** Fabio Leitao
+- **Deciders:** Fabio Leitao
+
 ## Context
 
 Enterprise buyers, **CISOs**, and **DPOs** increasingly ask not only “what did the scanner find?” but **“who operated the scanner, who changed its behaviour, and can we prove it?”** That is the **governance of the auditor**: the inventory product itself must be **defensible** under customer audit and internal SOC2-style control narratives.

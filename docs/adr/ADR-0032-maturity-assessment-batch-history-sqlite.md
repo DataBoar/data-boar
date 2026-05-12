@@ -1,8 +1,9 @@
 # ADR 0032 — Maturity self-assessment: per-batch history on the dashboard HTML
 
-## Status
-
-Accepted
+- **Status:** Accepted
+- **Date (UTC):** 2026-04-20
+- **Authors:** Fabio Leitao
+- **Deciders:** Fabio Leitao
 
 ## Context
 
