@@ -57,6 +57,11 @@ repos:
         entry: uv run python scripts/pii_history_guard.py
         language: system
         pass_filenames: false
+      - id: no-legacy-cursorrules
+        name: no legacy .cursorrules file
+        entry: uv run pytest tests/test_no_legacy_cursorrules.py -q -W error
+        language: system
+        pass_filenames: false
       - id: workflow-security-lint
         name: zizmor workflow security lint (optional manual stage)
         entry: pwsh -NoProfile -File scripts/workflow-security-lint.ps1 -SkipIfMissing
