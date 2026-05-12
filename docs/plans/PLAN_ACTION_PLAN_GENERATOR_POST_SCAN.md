@@ -2,14 +2,14 @@
 
 **Status:** ⬜ **Not started** — product/marketing framing agreed; implementation slices TBD after PoC priority call.
 
-**Synced with:** [PLANS_TODO.md](PLANS_TODO.md) (*Integration / active threads*), [ADR 0025](../adr/0025-compliance-positioning-evidence-inventory-not-legal-conclusion-engine.md) (evidence positioning), [PLAN_SQL_SAMPLING_SRE_AND_AUDIT_EVIDENCE.md](PLAN_SQL_SAMPLING_SRE_AND_AUDIT_EVIDENCE.md) (Slice 4 — coverage / confidence metadata), [PLAN_PDF_GRC_REPORT.md](PLAN_PDF_GRC_REPORT.md) (executive PDF narrative), [PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md](PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md) (audit trail / tamper posture)
+**Synced with:** [PLANS_TODO.md](PLANS_TODO.md) (*Integration / active threads*), [ADR 0025](../adr/ADR-0025-compliance-positioning-evidence-inventory-not-legal-conclusion-engine.md) (evidence positioning), [PLAN_SQL_SAMPLING_SRE_AND_AUDIT_EVIDENCE.md](PLAN_SQL_SAMPLING_SRE_AND_AUDIT_EVIDENCE.md) (Slice 4 — coverage / confidence metadata), [PLAN_PDF_GRC_REPORT.md](PLAN_PDF_GRC_REPORT.md) (executive PDF narrative), [PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md](PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md) (audit trail / tamper posture)
 
 <!-- plans-hub-summary: Post-scan Action Plan Generator: triage tiers, suggested mitigations, optional JSON/SQL snippets and evidence log—evidence for diligence, not legal conclusions. -->
 <!-- plans-hub-related: PLAN_SYNTHETIC_DATA_AND_CONFIDENCE_VALIDATION.md, PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md, ../REPORTS_AND_COMPLIANCE_OUTPUTS.md -->
 
 ## Purpose
 
-Mid-market buyers need **accountability**: moving from “we did not know” to **documented discovery + proportionate next steps**. The APG turns technical findings into a **structured remediation narrative** the DPO/CISO can attach to internal risk registers—while the product stays an **inventory and evidence** tool, not a legal conclusion engine ([ADR 0025](../adr/0025-compliance-positioning-evidence-inventory-not-legal-conclusion-engine.md)).
+Mid-market buyers need **accountability**: moving from “we did not know” to **documented discovery + proportionate next steps**. The APG turns technical findings into a **structured remediation narrative** the DPO/CISO can attach to internal risk registers—while the product stays an **inventory and evidence** tool, not a legal conclusion engine ([ADR 0025](../adr/ADR-0025-compliance-positioning-evidence-inventory-not-legal-conclusion-engine.md)).
 
 ## PoC framing — “semáforo” + suggested actions (illustrative)
 

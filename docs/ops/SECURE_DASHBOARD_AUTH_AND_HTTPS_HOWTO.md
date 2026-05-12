@@ -6,7 +6,7 @@
 
 **Related runbooks:** [API_KEY_FROM_ENV_OPERATOR_STEPS.md](API_KEY_FROM_ENV_OPERATOR_STEPS.md) (env wiring detail), [SECURE_BY_DEFAULT_BLOCKERS_AND_MIGRATION.md](SECURE_BY_DEFAULT_BLOCKERS_AND_MIGRATION.md) ([pt-BR](SECURE_BY_DEFAULT_BLOCKERS_AND_MIGRATION.pt_BR.md)) (rollout order), [PLAN_DASHBOARD_HTTPS_BY_DEFAULT_AND_HTTP_EXPLICIT_RISK.md](../plans/PLAN_DASHBOARD_HTTPS_BY_DEFAULT_AND_HTTP_EXPLICIT_RISK.md) (product rationale and anti-patterns).
 
-**Optional WebAuthn JSON (Phase 1a):** When **`api.webauthn.enabled: true`** and the token secret env (default **`DATA_BOAR_WEBAUTHN_TOKEN_SECRET`**) is set before startup, the API exposes **`/auth/webauthn/*`** for **FIDO2 / passkey** registration and authentication ([ADR 0033](../adr/0033-webauthn-open-relying-party-json-endpoints.md)). **`api.require_api_key`** does **not** apply to those paths. This does **not** require login for the HTML dashboard yet; browser session gates and RBAC are **[#86](https://github.com/FabioLeitao/data-boar/issues/86)** follow-up. Pytest subset: [SMOKE_WEBAUTHN_JSON.md](SMOKE_WEBAUTHN_JSON.md).
+**Optional WebAuthn JSON (Phase 1a):** When **`api.webauthn.enabled: true`** and the token secret env (default **`DATA_BOAR_WEBAUTHN_TOKEN_SECRET`**) is set before startup, the API exposes **`/auth/webauthn/*`** for **FIDO2 / passkey** registration and authentication ([ADR 0033](../adr/ADR-0033-webauthn-open-relying-party-json-endpoints.md)). **`api.require_api_key`** does **not** apply to those paths. This does **not** require login for the HTML dashboard yet; browser session gates and RBAC are **[#86](https://github.com/FabioLeitao/data-boar/issues/86)** follow-up. Pytest subset: [SMOKE_WEBAUTHN_JSON.md](SMOKE_WEBAUTHN_JSON.md).
 
 ---
 

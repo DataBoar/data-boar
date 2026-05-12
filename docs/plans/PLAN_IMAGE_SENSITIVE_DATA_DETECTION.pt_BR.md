@@ -25,7 +25,7 @@ Fundamento legal (GDPR):
 - Art. 4(14) -- biometric data.
 - Art. 9 -- special categories (health, biometric).
 
-ADR: `docs/adr/0012-ocr-image-sensitive-data-detection.md`
+ADR: `docs/adr/ADR-0012-ocr-image-sensitive-data-detection.md`
 
 ---
 

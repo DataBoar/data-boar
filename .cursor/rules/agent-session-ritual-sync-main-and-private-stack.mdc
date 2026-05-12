@@ -32,7 +32,7 @@ Canonical prose: **`AGENTS.md`** (*Workstation calendar clock*), **`docs/ops/tod
 
 ## Stacked private Git (`docs/private/`)
 
-- After meaningful changes under **`docs/private/`**, run **`scripts/private-git-sync.ps1`** from repo root; use **`-Push`** when the operator’s policy or request includes **non-GitHub mirrors** (configured **`lab-*`** remotes **and**, on Windows, a **bare `notes-sync.git` on the VeraCrypt-mounted drive** when that path exists — the script probes **`Z:`** first (operator default), then **`Y:`** fallback). **Do not** stop after lab pushes if another mirror is mounted and still behind. See **`docs/ops/PRIVATE_STACK_SYNC_RITUAL.md`**, **`operator-evidence-backup-no-rhetorical-asks.mdc`**, **[ADR 0040](../../docs/adr/0040-assistant-private-stack-evidence-mirrors-default.md)**, keyword **`private-stack-sync`**.
+- After meaningful changes under **`docs/private/`**, run **`scripts/private-git-sync.ps1`** from repo root; use **`-Push`** when the operator’s policy or request includes **non-GitHub mirrors** (configured **`lab-*`** remotes **and**, on Windows, a **bare `notes-sync.git` on the VeraCrypt-mounted drive** when that path exists — the script probes **`Z:`** first (operator default), then **`Y:`** fallback). **Do not** stop after lab pushes if another mirror is mounted and still behind. See **`docs/ops/PRIVATE_STACK_SYNC_RITUAL.md`**, **`operator-evidence-backup-no-rhetorical-asks.mdc`**, **[ADR 0040](../../docs/adr/ADR-0040-assistant-private-stack-evidence-mirrors-default.md)**, keyword **`private-stack-sync`**.
 
 ## PR / merge (when it makes sense — not every commit)
 

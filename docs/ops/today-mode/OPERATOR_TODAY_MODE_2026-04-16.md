@@ -21,7 +21,7 @@
 - **Working tree:** Commit or revert **`docs/ops/Corporate-Entity-C_REVIEW_REQUEST_GUIDELINE.md`** and other ops WIP before feature PRs.
 - **Corporate-Entity-C / WRB:** When gates are **green**, **[Corporate-Entity-C_REVIEW_REQUEST_GUIDELINE.md](../Corporate-Entity-C_REVIEW_REQUEST_GUIDELINE.md)** + **[WRB_DELTA_SNAPSHOT_2026-04-16.md](../WRB_DELTA_SNAPSHOT_2026-04-16.md)** — **appreciation-first**, **code is truth**.
 
-**Planning (carryover):** Enterprise discovery — **three complementary tracks** — [ADR 0024](../../adr/0024-enterprise-discovery-three-complementary-tracks.md); **PLANS_TODO** / **PLANS_HUB** bullets (**not** a legal promise).
+**Planning (carryover):** Enterprise discovery — **three complementary tracks** — [ADR 0024](../../adr/ADR-0024-enterprise-discovery-three-complementary-tracks.md); **PLANS_TODO** / **PLANS_HUB** bullets (**not** a legal promise).
 
 **Release compass:** Next version after **v1.6.8** → **1.6.9** — [PUBLISHED_SYNC.md](PUBLISHED_SYNC.md), **`docs/VERSIONING.md`**, [SPRINTS_AND_MILESTONES.md](../../plans/SPRINTS_AND_MILESTONES.md).
 

@@ -6,7 +6,7 @@ detail. Allowed entry points stay in docs/README (Internal and reference),
 docs/ops/, CONTRIBUTING, and plan files themselves.
 
 See: .cursor/rules/audience-segmentation-docs.mdc
-Architecture record: docs/adr/0004-external-docs-no-markdown-links-to-plans.md
+Architecture record: docs/adr/ADR-0004-external-docs-no-markdown-links-to-plans.md
 """
 
 from __future__ import annotations

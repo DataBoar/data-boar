@@ -39,7 +39,7 @@
 ## Opcional
 
 - **Branch protection:** ativar checks obrigatórios depois deste merge estar verde (Semgrep + CI).
-- **SBOM (CycloneDX):** seguir [ADR 0003](../../adr/0003-sbom-roadmap-cyclonedx-then-syft.md) noutro PR.
+- **SBOM (CycloneDX):** seguir [ADR 0003](../../adr/ADR-0003-sbom-roadmap-cyclonedx-then-syft.md) noutro PR.
 
 ---
 

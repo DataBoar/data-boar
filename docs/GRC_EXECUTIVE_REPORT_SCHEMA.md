@@ -96,7 +96,7 @@ This section is the **contract for implementers**. A first-party consolidator li
 | **`database_findings` / `filesystem_findings`** rows (target, location, pattern, sensitivity, `norm_tag`, recommendation text) | **`detailed_findings`** (+ aggregation into **`executive_summary`** counts). |
 | **`report.recommendation_overrides`** in config ([USAGE.md](USAGE.md)) | **`recommendations`** priority and wording where configured. |
 | Heatmap / density sheets (if present for session) | Optional **`executive_summary`** visual refs or embedded chart ids for PDF. |
-| **`--export-audit-trail`** payload ([ADR 0037](adr/0037-data-boar-self-audit-log-governance.md), `core/audit_export.py`) | **`report_metadata.scanner_version`**, integrity / runtime trust **annex** object (either merged or referenced by `report_id`). |
+| **`--export-audit-trail`** payload ([ADR 0037](adr/ADR-0037-data-boar-self-audit-log-governance.md), `core/audit_export.py`) | **`report_metadata.scanner_version`**, integrity / runtime trust **annex** object (either merged or referenced by `report_id`). |
 | Lab orchestration **`lab_result.json`** (`DATA_BOAR_COMPLETAO_EXIT_v1`) | **Not** merged into customer GRC JSON by default; use for **internal** assurance of the scan environment when documenting methodology. |
 
 **`compliance_score` (illustrative formula, to be fixed in code when implemented):** example: start from 100, subtract weighted sums of `risk_score` above threshold per `asset_class`, apply caps, never below 0. Document the formula next to the field in the generator’s README. **Disclose** in the PDF/dashboard footer that the score is **heuristic**.

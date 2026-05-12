@@ -172,7 +172,7 @@ The table **S0–S6** does **not** yet include a dedicated row for **subscriptio
 
 **Mobile-first within this cluster (optional scheduling):** **M-MOBILE-V1** does **not** require **D-WEB** — ship responsive CSS/HTML on current URLs; when **M-LOCALE-V1** or **#86** change paths, run a **short mobile regression** pass.
 
-**WebAuthn JSON core (Phase 1a):** On **`main`** — optional **`api.webauthn`** + **`/auth/webauthn/*`** ([ADR 0033](../adr/0033-webauthn-open-relying-party-json-endpoints.md)); pytest subset [SMOKE_WEBAUTHN_JSON.md](../ops/SMOKE_WEBAUTHN_JSON.md). This is **not** HTML dashboard login; **#86** Phase **1b+** remains the session + RBAC track on `/{locale}/…`.
+**WebAuthn JSON core (Phase 1a):** On **`main`** — optional **`api.webauthn`** + **`/auth/webauthn/*`** ([ADR 0033](../adr/ADR-0033-webauthn-open-relying-party-json-endpoints.md)); pytest subset [SMOKE_WEBAUTHN_JSON.md](../ops/SMOKE_WEBAUTHN_JSON.md). This is **not** HTML dashboard login; **#86** Phase **1b+** remains the session + RBAC track on `/{locale}/…`.
 
 **GRC maturity POC (related URLs, different theme):** Organizational questionnaire work ([PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md](PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md)) shares `api/routes.py` / templates with the dashboard but has **its own** backlog (consultant UX, **tenant-scoped** history / **RBAC** — [#86](https://github.com/FabioLeitao/data-boar/issues/86)). **Sequence:** bring that POC slice to a coherent checkpoint **before** prioritizing **#86** Phase 1 on a **separate branch** — Phase 1 remains **ASAP** **after** that checkpoint. **Checkpoint definition:** `smoke-maturity-assessment-poc.ps1` + runbook [SMOKE_MATURITY_ASSESSMENT_POC.md](../ops/SMOKE_MATURITY_ASSESSMENT_POC.md) §D (§E optional); the plan + runbook document **autonomous (CI/pytest) vs operator (browser)** so agents do not claim closure without §D. Cross-link: [PLANS_TODO.md](PLANS_TODO.md) *Integration / active threads* bullet *Maturity self-assessment*.
 
@@ -247,7 +247,7 @@ To reduce ambiguity inside **M-TRUST**, use these small checkpoints:
 - **M-TRUST-03:** crypto baseline self-check surfaced at runtime.
 - **M-TRUST-04:** review packet format used in one external review cycle.
 
-**Dependency supply Colleague-Nn (PyPI + GitHub Actions):** committed lockfile, **`pip-audit`** in CI, **Dependabot** (pip + actions), **SHA-pinned** Actions on main workflows—documented under **PLANS_TODO** *Integration / active threads*; operator notes in [WORKFLOW_DEFERRED_FOLLOWUPS.md](../ops/WORKFLOW_DEFERRED_FOLLOWUPS.md); **SBOM** artifacts: [ADR 0003](../adr/0003-sbom-roadmap-cyclonedx-then-syft.md).
+**Dependency supply Colleague-Nn (PyPI + GitHub Actions):** committed lockfile, **`pip-audit`** in CI, **Dependabot** (pip + actions), **SHA-pinned** Actions on main workflows—documented under **PLANS_TODO** *Integration / active threads*; operator notes in [WORKFLOW_DEFERRED_FOLLOWUPS.md](../ops/WORKFLOW_DEFERRED_FOLLOWUPS.md); **SBOM** artifacts: [ADR 0003](../adr/ADR-0003-sbom-roadmap-cyclonedx-then-syft.md).
 
 Reference plan: [PLAN_GRC_INSPIRED_ENTERPRISE_TRUST_ACCELERATORS.md](PLAN_GRC_INSPIRED_ENTERPRISE_TRUST_ACCELERATORS.md).
 

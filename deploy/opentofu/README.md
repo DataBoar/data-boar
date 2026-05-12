@@ -168,5 +168,5 @@ commands work identically.
 
 - `deploy/ansible/README.md` — Path A (Docker Compose) and Path B (full stack) Ansible playbooks
 - `deploy/kubernetes/` — Kubernetes manifests
-- `docs/adr/0016-opentofu-corporate-iac-path-alongside-ansible.md` — Design rationale
+- `docs/adr/ADR-0016-opentofu-corporate-iac-path-alongside-ansible.md` — Design rationale
 - `docs/USAGE.md` — Full deployment documentation

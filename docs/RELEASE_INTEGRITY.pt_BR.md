@@ -38,7 +38,7 @@ O runtime pode fazer verificações **opcionais** para que instalações modific
 
 ## SBOM (inventário da cadeia de suprimentos)
 
-Artefatos **CycloneDX JSON** para a árvore de dependências Python e para a **imagem Docker** construída a partir deste repositório são gerados pelo workflow do GitHub Actions [**SBOM**](../.github/workflows/sbom.yml), com os mesmos nomes descritos em [**SECURITY.pt_BR.md**](../SECURITY.pt_BR.md) (**`sbom-python.cdx.json`**, **`sbom-docker-image.cdx.json`**). Registro de decisão: [**ADR 0003**](adr/0003-sbom-roadmap-cyclonedx-then-syft.md). Regeneração local (Docker necessário para o SBOM da imagem): [**scripts/generate-sbom.ps1**](../scripts/generate-sbom.ps1).
+Artefatos **CycloneDX JSON** para a árvore de dependências Python e para a **imagem Docker** construída a partir deste repositório são gerados pelo workflow do GitHub Actions [**SBOM**](../.github/workflows/sbom.yml), com os mesmos nomes descritos em [**SECURITY.pt_BR.md**](../SECURITY.pt_BR.md) (**`sbom-python.cdx.json`**, **`sbom-docker-image.cdx.json`**). Registro de decisão: [**ADR 0003**](adr/ADR-0003-sbom-roadmap-cyclonedx-then-syft.md). Regeneração local (Docker necessário para o SBOM da imagem): [**scripts/generate-sbom.ps1**](../scripts/generate-sbom.ps1).
 
 ## Relacionado
 

@@ -30,4 +30,4 @@ In chat, the operator may ask to **verify alignment**, **check drift**, or **clo
 - **`docs/ops/PRIVATE_STACK_SYNC_RITUAL.md`**
 - **`scripts/private-git-sync.ps1`**
 - **`.cursor/rules/operator-evidence-backup-no-rhetorical-asks.mdc`**
-- **`docs/adr/0039-retention-evidence-posture-bonded-customs-adjacent-contexts.md`** (product retention posture — distinct from this **workflow** ADR)
+- **`docs/adr/ADR-0039-retention-evidence-posture-bonded-customs-adjacent-contexts.md`** (product retention posture — distinct from this **workflow** ADR)

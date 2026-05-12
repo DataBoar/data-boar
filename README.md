@@ -44,14 +44,14 @@ Multilingual and legacy encodings are supported; **configurable timeouts** and *
 
 ## The Architect's Vault
 
-Investors, integration partners, and senior technical reviewers often skim the README and then ask: **where is the decision trail?** This section is the deliberate **front door** to narrative, positioning, and architecture records that sit beside the code—so the repository reads as a **governed product**, not “just another script.” Execution backlogs and PMO tables stay one hop away via [docs/README.md](docs/README.md) (*Internal and reference*); per [ADR 0004](docs/adr/0004-external-docs-no-markdown-links-to-plans.md), this README avoids one-click Markdown links into the **plans** subtree under **docs** from this pitch surface.
+Investors, integration partners, and senior technical reviewers often skim the README and then ask: **where is the decision trail?** This section is the deliberate **front door** to narrative, positioning, and architecture records that sit beside the code—so the repository reads as a **governed product**, not “just another script.” Execution backlogs and PMO tables stay one hop away via [docs/README.md](docs/README.md) (*Internal and reference*); per [ADR 0004](docs/adr/ADR-0004-external-docs-no-markdown-links-to-plans.md), this README avoids one-click Markdown links into the **plans** subtree under **docs** from this pitch surface.
 
 | If you need… | Start here |
 | ------------- | ---------- |
 | **Value proposition** (boards, legal, compliance, procurement — concise brief) | [DECISION_MAKER_VALUE_BRIEF.md](docs/DECISION_MAKER_VALUE_BRIEF.md) · [pt-BR](docs/DECISION_MAKER_VALUE_BRIEF.pt_BR.md) |
 | **Architecture Decision Records** (context, decision, consequences — numbered series) | [docs/adr/README.md](docs/adr/README.md) · [pt-BR index](docs/adr/README.pt_BR.md) |
 | **Narrative and architecture history** (curated product story and stack evolution — placeholder until expanded) | [NARRATIVE_AND_ARCHITECTURE_HISTORY.md](docs/NARRATIVE_AND_ARCHITECTURE_HISTORY.md) · [pt-BR](docs/NARRATIVE_AND_ARCHITECTURE_HISTORY.pt_BR.md) |
-| **Governance of the auditor** (what the app can prove today about scans, exports, and operator evidence) | [ADR 0037](docs/adr/0037-data-boar-self-audit-log-governance.md) · [SRE framing](docs/OBSERVABILITY_SRE.md) ([pt-BR](docs/OBSERVABILITY_SRE.pt_BR.md)) |
+| **Governance of the auditor** (what the app can prove today about scans, exports, and operator evidence) | [ADR 0037](docs/adr/ADR-0037-data-boar-self-audit-log-governance.md) · [SRE framing](docs/OBSERVABILITY_SRE.md) ([pt-BR](docs/OBSERVABILITY_SRE.pt_BR.md)) |
 | **Concern-first navigation** (minors, jurisdiction hints, CISO-style paths) | [MAP.md](docs/MAP.md) · [pt-BR](docs/MAP.pt_BR.md) |
 | **Child / minor data** (thresholds, cross-reference, samples — dedicated operator guide) | [MINOR_DETECTION.md](docs/MINOR_DETECTION.md) · [pt-BR](docs/MINOR_DETECTION.pt_BR.md) |
 | **Full documentation index** (all topics; entry to internal reference in one place) | [docs/README.md](docs/README.md) · [pt-BR](docs/README.pt_BR.md) |

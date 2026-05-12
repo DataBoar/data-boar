@@ -45,7 +45,7 @@ would let us call HIGH confidence. Fixing the baseline (PR #239 helper) is a
 cheaper unlock than re-pinning per package.
 
 This is the **audit-and-block** posture from
-[ADR 0005](../../adr/0005-ci-github-actions-supply-Colleague-Nn-pins.md) and the
+[ADR 0005](../../adr/ADR-0005-ci-github-actions-supply-Colleague-Nn-pins.md) and the
 SBOM/lockfile clauses in
 [`SUPPLY_Colleague-NN_AND_TRUST_SIGNALS.md`](../inspirations/SUPPLY_Colleague-NN_AND_TRUST_SIGNALS.md):
 no rage-merge of a security bump on top of a misaligned lockfile.
@@ -224,7 +224,7 @@ clauses 1–4 for every PR in scope.
   trust-signal issue, not noise.
 * [`.cursor/skills/dependabot-recommendations/SKILL.md`](../../../.cursor/skills/dependabot-recommendations/SKILL.md)
   — operator workflow that PR #239 mechanizes.
-* [ADR 0005](../../adr/0005-ci-github-actions-supply-Colleague-Nn-pins.md) — the
+* [ADR 0005](../../adr/ADR-0005-ci-github-actions-supply-Colleague-Nn-pins.md) — the
   audit-and-block posture this ledger respects.
 
 ---

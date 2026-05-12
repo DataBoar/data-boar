@@ -73,7 +73,7 @@ Contrato para quem implementar o gerador. Um consolidador de primeira mão exist
 | Linhas **`database_findings` / `filesystem_findings`** | **`detailed_findings`** e agregações do **`executive_summary`**. |
 | **`report.recommendation_overrides`** no *config* | **`recommendations`** quando configurado. |
 | Heatmap / densidade da sessão | Referências visuais opcionais no resumo. |
-| **`--export-audit-trail`** (`core/audit_export.py`, [ADR 0037](adr/0037-data-boar-self-audit-log-governance.md)) | Versão da app / anexo de integridade ou *runtime trust*. |
+| **`--export-audit-trail`** (`core/audit_export.py`, [ADR 0037](adr/ADR-0037-data-boar-self-audit-log-governance.md)) | Versão da app / anexo de integridade ou *runtime trust*. |
 | **`lab_result.json`** do completão | Por padrão **fora** do JSON GRC do cliente; uso **interno** de garantia de ambiente de varredura. |
 
 **`compliance_score`:** documentar fórmula junto do código gerador; divulgar no rodapé do PDF/dashboard que é **heurística**.

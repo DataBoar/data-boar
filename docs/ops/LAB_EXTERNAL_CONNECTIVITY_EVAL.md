@@ -106,4 +106,4 @@ Chat token: **`external-eval`** (see **`.cursor/rules/session-mode-keywords.mdc`
 - [LAB_SMOKE_MULTI_HOST.md](LAB_SMOKE_MULTI_HOST.md) — LAN multi-host DB + FS.
 - [TROUBLESHOOTING_MATRIX.md](../TROUBLESHOOTING_MATRIX.md) — DB/network errors.
 - [USAGE.md](../USAGE.md) — `api` / `database` targets.
-- ADR [0028](../adr/0028-lab-external-connectivity-eval-playbook.md) — why this playbook exists.
+- ADR [0028](../adr/ADR-0028-lab-external-connectivity-eval-playbook.md) — why this playbook exists.

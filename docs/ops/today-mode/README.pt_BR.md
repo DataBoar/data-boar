@@ -33,7 +33,7 @@ Ver **`AGENTS.md`** (*Workstation calendar clock*) e **`.cursor/rules/agent-sess
 
 **Atalho rápido:** `.\scripts\operator-day-ritual.ps1 -Mode Morning -SkipReadiness` — só lista de arquivos + dicas sociais (raro). Isto **pula o Tier A** (`git fetch`, PRs, snapshot da CI); **não** é o gate completo de código/regressão.
 
-**Gate de código / dependências:** use **`.\scripts\check-all.ps1`** antes do PR ou merge (opcional **`-IncludeVersionSmoke`** para coerência de versão vs release publicado). A CI roda o mesmo pytest, incluindo testes de lock/export — veja [SECURITY.pt_BR.md](../../SECURITY.pt_BR.md) e [ADR 0030](../../adr/0030-python-dependency-update-closure-single-pass.md).
+**Gate de código / dependências:** use **`.\scripts\check-all.ps1`** antes do PR ou merge (opcional **`-IncludeVersionSmoke`** para coerência de versão vs release publicado). A CI roda o mesmo pytest, incluindo testes de lock/export — veja [SECURITY.pt_BR.md](../../SECURITY.pt_BR.md) e [ADR 0030](../../adr/ADR-0030-python-dependency-update-closure-single-pass.md).
 
 **Chat:** token opcional em inglês **`morning-readiness`** — mesmo objetivo do **`carryover-sweep`** para Tier A + ponteiro de doc (ver **`.cursor/rules/session-mode-keywords.mdc`**).
 

@@ -2,7 +2,7 @@
 
 **English:** [SMOKE_WEBAUTHN_JSON.md](SMOKE_WEBAUTHN_JSON.md)
 
-**Plano:** [PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md](../plans/PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md) fase **1a**; **ADR:** [0033](../adr/0033-webauthn-open-relying-party-json-endpoints.md).
+**Plano:** [PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md](../plans/PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md) fase **1a**; **ADR:** [0033](../adr/ADR-0033-webauthn-open-relying-party-json-endpoints.md).
 
 **Escopo:** Cobertura **pytest** automatizada para os endpoints JSON opcionais **`/auth/webauthn/*`** (sem navegador nem autenticador real). Cerimônias **FIDO2** completas com passkey ficam como verificação **manual** fora deste subconjunto.
 

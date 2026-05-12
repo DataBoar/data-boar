@@ -14,6 +14,6 @@ Para inventário de **cadeia de suprimentos** e **resposta a incidentes** (não 
 | `sbom-python.cdx.json` | Dependências Python alinhadas ao `uv.lock` |
 | `sbom-docker-image.cdx.json` | Pacotes observados na imagem Docker construída (Syft) |
 
-**Onde obter:** workflow do GitHub Actions **SBOM** (`.github/workflows/sbom.yml`) — artefatos na execução e anexados ao **GitHub Release** quando existir *release* para a tag. **Documentação:** [SECURITY.md](../SECURITY.md) (seção SBOM), [ADR 0003](adr/0003-sbom-roadmap-cyclonedx-then-syft.md). **Regeneração local:** `scripts/generate-sbom.ps1` (saídas no `.gitignore`).
+**Onde obter:** workflow do GitHub Actions **SBOM** (`.github/workflows/sbom.yml`) — artefatos na execução e anexados ao **GitHub Release** quando existir *release* para a tag. **Documentação:** [SECURITY.md](../SECURITY.md) (seção SBOM), [ADR 0003](adr/ADR-0003-sbom-roadmap-cyclonedx-then-syft.md). **Regeneração local:** `scripts/generate-sbom.ps1` (saídas no `.gitignore`).
 
 **Português (Brasil):** [README.pt_BR.md](README.pt_BR.md) · **Guia completo (EN):** [TESTING_POC_GUIDE.md](TESTING_POC_GUIDE.md)

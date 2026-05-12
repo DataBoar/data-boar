@@ -30,7 +30,7 @@ Use these audience buckets when editing docs, README sections, and training/disc
 - **Where plan links are OK:** **`docs/ops/`** runbooks, **`docs/plans/`** itself, **`docs/README.md`** / **README.pt_BR.md** internal tables, **CONTRIBUTING**, **AGENTS** when describing workflow, and **gitignored** `docs/private/` (never in tracked pages).
 - **Prefer instead of plan URLs:** **USAGE**, **TECH_GUIDE**, **COMPLIANCE_***, **SECURITY**, **releases/**, **SENSITIVITY_DETECTION**, **MINOR_DETECTION**, and **[README.md](../../docs/README.md)** index rows.
 - **Automation:** **`tests/test_docs_external_no_plan_links.py`** fails CI/pre-commit if a tracked **external-tier** Markdown file contains markdown links whose targets include `plans/` or `.cursor/plans`. Excluded from that scan: **`docs/ops/`**, **`docs/plans/`**, **`docs/adr/`**, **`docs/private/`**, **`docs/README*.md`** (hub), **`docs/COLLABORATION_TEAM*.md`**, **root `CONTRIBUTING*.md`**, **`AGENTS.md`**, and other **root policy** files listed in the test module.
-- **Architecture record:** **[ADR 0004](../../docs/adr/0004-external-docs-no-markdown-links-to-plans.md)** — information architecture decision (why external-tier surfaces stay separate from plan hyperlinks).
+- **Architecture record:** **[ADR 0004](../../docs/adr/ADR-0004-external-docs-no-markdown-links-to-plans.md)** — information architecture decision (why external-tier surfaces stay separate from plan hyperlinks).
 
 ## Link and visibility rules (summary)
 

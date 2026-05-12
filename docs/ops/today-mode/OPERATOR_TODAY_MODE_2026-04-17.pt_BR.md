@@ -11,7 +11,7 @@
 3. **Ordem deste arquivo:** **Bloco A** → **B** → **C** conforme o tempo.
 4. **Fim do dia:** **`eod-sync`** — ou **`.\scripts\operator-day-ritual.ps1 -Mode Eod`** — e a seção **Fim do dia** abaixo.
 
-**Retomar com baixo risco (depois de dormir / antes do foco profundo):** `git status -sb` (limpo ou WIP intencional) → `git fetch origin && git pull origin main` → reler **[CARRYOVER.pt_BR.md](CARRYOVER.pt_BR.md)** → **Bloco A** (CI verde + opcional `check-all`). Se **encerrou 2026-04-16** com **`eod-sync`**, já tens recorte de log/PR; se não, roda **`eod-sync` uma vez** antes de merge arriscado. **ADR / licenciamento:** [ADR 0027](../../adr/0027-commercial-tier-boundaries-licensing-docs-and-future-jwt-claims.md); exemplo privado com nomes: `docs/private/commercial/LICENSING_TIER_EXAMPLE_FEDERATED_OPERATOR.pt_BR.md`.
+**Retomar com baixo risco (depois de dormir / antes do foco profundo):** `git status -sb` (limpo ou WIP intencional) → `git fetch origin && git pull origin main` → reler **[CARRYOVER.pt_BR.md](CARRYOVER.pt_BR.md)** → **Bloco A** (CI verde + opcional `check-all`). Se **encerrou 2026-04-16** com **`eod-sync`**, já tens recorte de log/PR; se não, roda **`eod-sync` uma vez** antes de merge arriscado. **ADR / licenciamento:** [ADR 0027](../../adr/ADR-0027-commercial-tier-boundaries-licensing-docs-and-future-jwt-claims.md); exemplo privado com nomes: `docs/private/commercial/LICENSING_TIER_EXAMPLE_FEDERATED_OPERATOR.pt_BR.md`.
 
 ---
 

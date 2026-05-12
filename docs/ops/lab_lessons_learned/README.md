@@ -23,6 +23,6 @@ This directory holds **immutable, dated** snapshots of lab QA / SRE evidence (me
 
 ## Contract record
 
-Architecture and automation posture: **[ADR 0042](../../adr/0042-lab-lessons-learned-archive-contract.md)**.
+Architecture and automation posture: **[ADR 0042](../../adr/ADR-0042-lab-lessons-learned-archive-contract.md)**.
 
 Session token (situational Cursor rule): **`lab-lessons`** → **`.cursor/rules/lab-lessons-learned-archive.mdc`**.

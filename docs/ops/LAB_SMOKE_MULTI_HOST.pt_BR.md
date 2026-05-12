@@ -103,7 +103,7 @@ Quando isto funciona no teu laboratório, é um modo **válido** de expor uma **
    Preferir `**-o ro**` para leitura tipo auditoria quando o remoto permitir.
 3. **Config:** `type: filesystem`, `path:` por baixo do mount (ex.: `/mnt/lab-sshfs/...`). Mesmas regras que qualquer árvore local; espera **maior latência** e possíveis **handles** instáveis com Wi‑Fi fraco—`reconnect` e keep-alive ajudam.
 4. **Desmontar:** `fusermount -u /mnt/lab-sshfs` (Linux) ou equivalente no SO.
-5. **PII e publicação:** **Não** coloques `USER@HOST` reais, chaves, IPs de LAN ou caminhos de casa em Markdown **rastreado**, issues ou corpos de PR. Referências: [ADR 0018](../adr/0018-pii-anti-recurrence-guardrails-for-tracked-files-and-branch-history.md), [ADR 0019](../adr/0019-pii-verification-cadence-and-manual-review-gate.md). Notas operacionais com montagens reais ficam em `**docs/private/homelab/`** (gitignored).
+5. **PII e publicação:** **Não** coloques `USER@HOST` reais, chaves, IPs de LAN ou caminhos de casa em Markdown **rastreado**, issues ou corpos de PR. Referências: [ADR 0018](../adr/ADR-0018-pii-anti-recurrence-guardrails-for-tracked-files-and-branch-history.md), [ADR 0019](../adr/ADR-0019-pii-verification-cadence-and-manual-review-gate.md). Notas operacionais com montagens reais ficam em `**docs/private/homelab/`** (gitignored).
 
 ### 5.2 WebDAV — dois padrões de integração
 

@@ -50,4 +50,4 @@ When a lesson becomes engineering work, promote it to **`docs/plans/PLANS_TODO.m
 ## Automation / assistant latch
 
 - **Session token:** **`lab-lessons`** (English-only) loads **`.cursor/rules/lab-lessons-learned-archive.mdc`** when globs do not attach it — see [`docs/ops/OPERATOR_AGENT_COLD_START_LADDER.md`](OPERATOR_AGENT_COLD_START_LADDER.md) § *Token → rule latch (`lab-lessons`)`.
-- **ADR:** [`docs/adr/0042-lab-lessons-learned-archive-contract.md`](../adr/0042-lab-lessons-learned-archive-contract.md).
+- **ADR:** [`docs/adr/ADR-0042-lab-lessons-learned-archive-contract.md`](../adr/ADR-0042-lab-lessons-learned-archive-contract.md).

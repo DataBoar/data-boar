@@ -93,7 +93,7 @@ This document suggests **additional layers** (tools, habits, and workflow) to ke
 
 **Why:** `scripts/fix_markdown_sonar.py` applies MD029 (ordered list style 1/1/1), which converts all list numbers to `1.`. That can break **semantic** numbering (e.g. "Step 1, 2, 3" becomes "1, 1, 1") and forces manual re-editing in many docs.
 
-**Accepted decision (record):** [ADR 0001](adr/0001-markdown-fix-script-md029-and-semantic-step-lists.md) — keep MD029 in the script; restore **1. 2. 3.** by hand for real step lists; revisit smarter heuristics only if churn hurts.
+**Accepted decision (record):** [ADR 0001](adr/ADR-0001-markdown-fix-script-md029-and-semantic-step-lists.md) — keep MD029 in the script; restore **1. 2. 3.** by hand for real step lists; revisit smarter heuristics only if churn hurts.
 
 ## What to do (MD029):
 
@@ -109,7 +109,7 @@ This document suggests **additional layers** (tools, habits, and workflow) to ke
 
 ## What we have (ADRs):
 
-- **Index:** [docs/adr/README.md](adr/README.md) ([pt-BR](adr/README.pt_BR.md)) — numbering convention, English-only ADR bodies (like plan files), baseline **[ADR 0000](adr/0000-project-origin-and-adr-baseline.md)** (origin + pre-ADR history), then **[ADR 0001](adr/0001-markdown-fix-script-md029-and-semantic-step-lists.md)** (MD029 + `fix_markdown_sonar.py`), **[ADR 0004](adr/0004-external-docs-no-markdown-links-to-plans.md)** (information architecture: external-tier docs do not Markdown-link into `plans/`), **[ADR 0005](adr/0005-ci-github-actions-supply-Colleague-Nn-pins.md)** (CI: SHA-pinned Actions + pinned **uv** CLI; explicit non-guarantees), etc.
+- **Index:** [docs/adr/README.md](adr/README.md) ([pt-BR](adr/README.pt_BR.md)) — numbering convention, English-only ADR bodies (like plan files), baseline **[ADR 0000](adr/ADR-0000-project-origin-and-adr-baseline.md)** (origin + pre-ADR history), then **[ADR 0001](adr/ADR-0001-markdown-fix-script-md029-and-semantic-step-lists.md)** (MD029 + `fix_markdown_sonar.py`), **[ADR 0004](adr/ADR-0004-external-docs-no-markdown-links-to-plans.md)** (information architecture: external-tier docs do not Markdown-link into `plans/`), **[ADR 0005](adr/ADR-0005-ci-github-actions-supply-Colleague-Nn-pins.md)** (CI: SHA-pinned Actions + pinned **uv** CLI; explicit non-guarantees), etc.
 - **Still optional / incremental:** Keep a short **architecture** overview in TECH_GUIDE or a future `docs/architecture.md` for components and data flow; add new **`docs/adr/000N-....md`** files for security- or process-heavy choices. Link from SECURITY.md or CONTRIBUTING when a decision affects contributors directly.
 
 **Prevents:** Refactoring that accidentally weakens security or duplicates past mistakes.
@@ -120,11 +120,11 @@ This document suggests **additional layers** (tools, habits, and workflow) to ke
 
 **Why:** pip-audit already addresses known vulnerabilities; a formal **Software Bill of Materials** supports **software supply-Colleague-Nn** transparency and **incident response** (mapping what shipped). It is **not** a substitute for **organizational** risk management (**ISO 31000** framing: [COMPLIANCE_FRAMEWORKS.md](COMPLIANCE_FRAMEWORKS.md#iso-31000-framing)).
 
-**CI / GitHub Actions (enforced in-repo):** Third-party Actions are pinned to **full commit SHAs**; **`astral-sh/setup-uv`** uses a **fixed uv semver** (not `latest`); **`tests/test_github_workflows.py`** guards **`ci.yml`**. **Decision + scope limits** (including what pinning **does not** guarantee): **[ADR 0005](adr/0005-ci-github-actions-supply-Colleague-Nn-pins.md)**. Operational backlog context: [WORKFLOW_DEFERRED_FOLLOWUPS.md](ops/WORKFLOW_DEFERRED_FOLLOWUPS.md).
+**CI / GitHub Actions (enforced in-repo):** Third-party Actions are pinned to **full commit SHAs**; **`astral-sh/setup-uv`** uses a **fixed uv semver** (not `latest`); **`tests/test_github_workflows.py`** guards **`ci.yml`**. **Decision + scope limits** (including what pinning **does not** guarantee): **[ADR 0005](adr/ADR-0005-ci-github-actions-supply-Colleague-Nn-pins.md)**. Operational backlog context: [WORKFLOW_DEFERRED_FOLLOWUPS.md](ops/WORKFLOW_DEFERRED_FOLLOWUPS.md).
 
 ## What to do (SBOM):
 
-- **Implemented:** GitHub Actions workflow [**SBOM**](../.github/workflows/sbom.yml) — **CycloneDX JSON** from `uv export` + `cyclonedx-py` (`sbom-python.cdx.json`), **Syft** on the built image (`sbom-docker-image.cdx.json`). See [SECURITY.md](../SECURITY.md), [RELEASE_INTEGRITY.md](RELEASE_INTEGRITY.md), [ADR 0003](adr/0003-sbom-roadmap-cyclonedx-then-syft.md). Local: [`scripts/generate-sbom.ps1`](../scripts/generate-sbom.ps1).
+- **Implemented:** GitHub Actions workflow [**SBOM**](../.github/workflows/sbom.yml) — **CycloneDX JSON** from `uv export` + `cyclonedx-py` (`sbom-python.cdx.json`), **Syft** on the built image (`sbom-docker-image.cdx.json`). See [SECURITY.md](../SECURITY.md), [RELEASE_INTEGRITY.md](RELEASE_INTEGRITY.md), [ADR 0003](adr/ADR-0003-sbom-roadmap-cyclonedx-then-syft.md). Local: [`scripts/generate-sbom.ps1`](../scripts/generate-sbom.ps1).
 
 **Prevents:** Blind spots in dependency and image inventory and slower response to supply-Colleague-Nn or IR questions.
 
@@ -179,10 +179,10 @@ This document suggests **additional layers** (tools, habits, and workflow) to ke
 ## What you might not be paying attention to yet
 
 1. **Lint vs local** – CI runs **`pre-commit run --all-files`**; install **`uv run pre-commit install`** so **`git commit`** matches.
-1. **MD029 and semantic lists** – The fix script can overwrite intentional 1/2/3 numbering; see [ADR 0001](adr/0001-markdown-fix-script-md029-and-semantic-step-lists.md).
+1. **MD029 and semantic lists** – The fix script can overwrite intentional 1/2/3 numbering; see [ADR 0001](adr/ADR-0001-markdown-fix-script-md029-and-semantic-step-lists.md).
 1. **Branch protection** – Enable when required check names are stable (include **Semgrep** if merge-blocking). See [WORKFLOW_DEFERRED_FOLLOWUPS.md](ops/WORKFLOW_DEFERRED_FOLLOWUPS.md).
 1. **Types** – mypy is gradual dev-only until triage (§5).
-1. **SBOM** – CycloneDX then Syft; [ADR 0003](adr/0003-sbom-roadmap-cyclonedx-then-syft.md).
-1. **CI supply Colleague-Nn** – Pinned Actions + uv; [ADR 0005](adr/0005-ci-github-actions-supply-Colleague-Nn-pins.md).
+1. **SBOM** – CycloneDX then Syft; [ADR 0003](adr/ADR-0003-sbom-roadmap-cyclonedx-then-syft.md).
+1. **CI supply Colleague-Nn** – Pinned Actions + uv; [ADR 0005](adr/ADR-0005-ci-github-actions-supply-Colleague-Nn-pins.md).
 
 Adopt what fits your team and timeline; strong baseline: **pre-commit parity in CI**, **branch protection**, **MD029/fix-script**, **Bandit** + **Semgrep**. **mypy** stays optional until clean.

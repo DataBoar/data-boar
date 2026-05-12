@@ -11,7 +11,7 @@ This document helps **students, advisors, and examiners** use the **public** Dat
 - **Product overview and claims:** [README.md](../README.md) (decision-makers and compliance framing).
 - **Technical operation:** [TECH_GUIDE.md](TECH_GUIDE.md) (install, CLI, API, connectors, config).
 - **Compliance framing (not legal advice for your study):** [COMPLIANCE_AND_LEGAL.md](COMPLIANCE_AND_LEGAL.md), [COMPLIANCE_FRAMEWORKS.md](COMPLIANCE_FRAMEWORKS.md).
-- **Historical baseline for the repo and ADRs:** [adr/0000-project-origin-and-adr-baseline.md](adr/0000-project-origin-and-adr-baseline.md).
+- **Historical baseline for the repo and ADRs:** [adr/ADR-0000-project-origin-and-adr-baseline.md](adr/ADR-0000-project-origin-and-adr-baseline.md).
 
 ---
 

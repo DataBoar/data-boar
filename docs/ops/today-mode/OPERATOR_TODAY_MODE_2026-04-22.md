@@ -37,6 +37,6 @@ Run **`carryover-sweep`** or **`.\scripts\operator-day-ritual.ps1 -Mode Morning`
 
 ## Quick references
 
-- **`docs/adr/0035-readme-stakeholder-pitch-vs-deck-vocabulary.md`** — pitch vs deck wording
+- **`docs/adr/ADR-0035-readme-stakeholder-pitch-vs-deck-vocabulary.md`** — pitch vs deck wording
 - **`docs/plans/PLANS_TODO.md`** · **`docs/plans/PLANS_HUB.md`**
 - Session keywords: **`eod-sync`**, **`carryover-sweep`**, **`pmo-view`**

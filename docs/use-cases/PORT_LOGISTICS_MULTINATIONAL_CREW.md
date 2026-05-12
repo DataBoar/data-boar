@@ -38,8 +38,8 @@ Stress-test **jurisdiction hints**, **collision** copy in reports, and **multili
 
 - [use-cases/README.md](README.md) ([pt-BR](README.pt_BR.md)) — hub with other mid-market storyboards (law, accounting, pharma).
 - [THE_WHY.md](../philosophy/THE_WHY.md) ([pt-BR](../philosophy/THE_WHY.pt_BR.md)) — evidence-over-theatre positioning (public-safe).
-- [ADR 0039](../adr/0039-retention-evidence-posture-bonded-customs-adjacent-contexts.md) — retention/evidence boundary in customs-adjacent contexts.
+- [ADR 0039](../adr/ADR-0039-retention-evidence-posture-bonded-customs-adjacent-contexts.md) — retention/evidence boundary in customs-adjacent contexts.
 - [JURISDICTION_COLLISION_HANDLING.md](../JURISDICTION_COLLISION_HANDLING.md) ([pt-BR](../JURISDICTION_COLLISION_HANDLING.pt_BR.md))
 - [MINOR_DETECTION.md](../MINOR_DETECTION.md) ([pt-BR](../MINOR_DETECTION.pt_BR.md)) — when crew or visitor data may include minors’ metadata
 - [MAP.md](../MAP.md) ([pt-BR](../MAP.pt_BR.md))
-- [ADR 0038](../adr/0038-jurisdictional-ambiguity-alert-dont-decide.md)
+- [ADR 0038](../adr/ADR-0038-jurisdictional-ambiguity-alert-dont-decide.md)

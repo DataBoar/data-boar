@@ -90,4 +90,4 @@ Token de chat: **`external-eval`** (ver **`.cursor/rules/session-mode-keywords.m
 - [LAB_SMOKE_MULTI_HOST.md](LAB_SMOKE_MULTI_HOST.md)
 - [TROUBLESHOOTING_MATRIX.md](../TROUBLESHOOTING_MATRIX.md)
 - [USAGE.md](../USAGE.md)
-- ADR [0028](../adr/0028-lab-external-connectivity-eval-playbook.md)
+- ADR [0028](../adr/ADR-0028-lab-external-connectivity-eval-playbook.md)

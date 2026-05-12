@@ -34,9 +34,9 @@ These modules describe **what the software can verify or signal today** (or in c
 | **M2 — Technical severity** | How urgent is **technical** triage (sensitivity band, priority text, quasi-identifier / cross-ref risk)? | Excel columns, “Cross-ref data – ident. risk” where populated, [MAP.md](MAP.md) |
 | **M3 — Data-source posture** | What **systems** held the data (product, protocol, transport hints) without copying cell contents? | “Data source inventory” sheet when enabled, [TECH_GUIDE.md](TECH_GUIDE.md) |
 | **M4 — Minors and vulnerable contexts** | Are there **signals** consistent with possible minor-related fields or combinations needing policy review? | [MINOR_DETECTION.md](MINOR_DETECTION.md) |
-| **M5 — Jurisdictional tension** | Do metadata hints suggest **more than one** plausible regime so counsel can prioritise? | [JURISDICTION_COLLISION_HANDLING.md](JURISDICTION_COLLISION_HANDLING.md), [ADR 0038](adr/0038-jurisdictional-ambiguity-alert-dont-decide.md) |
-| **M6 — Governance of the auditor** | Can the organisation show **who ran** scans and what artefacts exist for export? | [ADR 0037](adr/0037-data-boar-self-audit-log-governance.md) |
-| **M7 — Retention in sealed / customs-adjacent contexts** | Is **retention** of artefacts understood as **operator-owned**, without automated “legal basis” tags? | [ADR 0039](adr/0039-retention-evidence-posture-bonded-customs-adjacent-contexts.md) |
+| **M5 — Jurisdictional tension** | Do metadata hints suggest **more than one** plausible regime so counsel can prioritise? | [JURISDICTION_COLLISION_HANDLING.md](JURISDICTION_COLLISION_HANDLING.md), [ADR 0038](adr/ADR-0038-jurisdictional-ambiguity-alert-dont-decide.md) |
+| **M6 — Governance of the auditor** | Can the organisation show **who ran** scans and what artefacts exist for export? | [ADR 0037](adr/ADR-0037-data-boar-self-audit-log-governance.md) |
+| **M7 — Retention in sealed / customs-adjacent contexts** | Is **retention** of artefacts understood as **operator-owned**, without automated “legal basis” tags? | [ADR 0039](adr/ADR-0039-retention-evidence-posture-bonded-customs-adjacent-contexts.md) |
 
 **Risk level in this methodology** means **technical and triage risk** (exposure, category strength, combination risk)—**not** a substitute for your enterprise risk register or legal conclusion.
 
@@ -55,7 +55,7 @@ Suggested **automation priority** for Data Boar (and similar inventory engines):
 | **Grau de risco técnico / prioridade de triagem** | **Yes — already core** | Recommendation sheets (“Base legal”, “Risco”, “Prioridade” columns are **guidance text**, not asserted legal basis—see below). |
 | **Titular** (identidade do titular) | **Later / mostly human** | Inferring *who* is the data subject from column names alone is unreliable; use **category** and **location** first, then DPO fills titular from process knowledge. |
 | **Finalidade** | **Human-led** | Purpose comes from **business process** and records of processing; optional future: **metadata hints** (column names, app names) as *suggestions only*. |
-| **Base legal** | **Never auto-assert** | The engine may surface **recommendation language** aligned to norms; **choosing** lawful basis remains **counsel / DPO**. See [ADR 0038](adr/0038-jurisdictional-ambiguity-alert-dont-decide.md) posture. |
+| **Base legal** | **Never auto-assert** | The engine may surface **recommendation language** aligned to norms; **choosing** lawful basis remains **counsel / DPO**. See [ADR 0038](adr/ADR-0038-jurisdictional-ambiguity-alert-dont-decide.md) posture. |
 | **Prazo de retenção** | **Human-led** | Not derivable from content samples without policy and legal context. |
 | **Compartilhamento / terceiros** | **Partial** | “Where else does this attribute appear?” (multi-target scans) supports **inventory**; contracts and legal relationships stay outside the tool. |
 | **Medidas de segurança** | **Partial** | Technical signals (e.g. TLS vs plaintext, version inventory, hardening recommendations where shipped) inform **security** workstreams—not a full ISO 27001 control attestation. |

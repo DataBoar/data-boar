@@ -8,7 +8,7 @@
 # `requirements.txt` from the new lock and pushes it back to the PR branch, satisfying
 # the closure rule in docs/adr/0030 and the lock-vs-export guard in
 # tests/test_dependency_artifacts_sync.py without operator intervention.
-# Rationale: docs/adr/0044-dependabot-uv-ecosystem-for-pyproject-lock-closure.md.
+# Rationale: docs/adr/ADR-0044-dependabot-uv-ecosystem-for-pyproject-lock-closure.md.
 version: 2
 updates:
   # Python dependencies (pyproject.toml + uv.lock)
