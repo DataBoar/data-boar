@@ -1,6 +1,0 @@
-{
-  "security_ops_van_allen_belt": {
-    "audit_first": "Write/adjust unit test before implementation where feasible.",
-    "log_mirroring": "Mirror critical errors/events to Slack protocol entries for mobile auditability."
-  }
-}
