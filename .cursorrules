@@ -14,7 +14,8 @@
     "lexicon_stability": {
       "Data Sniffing": "Discovery and sampling pass",
       "Deep Boring": "Structured compliance-report depth",
-      "Safe-Hold": "Estado de suspensão segura por falta de evidência"
+      "Safe-Hold": "Safe suspension state — scan halted due to missing or insufficient evidence",
+      "Audit Trail": "Immutable session and finding record; evidence chain for compliance reporting"
     },
     "lcm_level": "Use verbos de ação concretos (Level 1 e 2 no Linguistic Category Model) para descrever funções de código."
   },
