@@ -1,7 +1,9 @@
 # ADR 0025 — Compliance positioning: evidence and inventory, not a legal-conclusion engine
 
-**Status:** Accepted
-**Date:** 2026-04-08
+- **Status:** Accepted
+- **Date (UTC):** 2026-04-08
+- **Authors:** Fabio Leitao
+- **Deciders:** Fabio Leitao
 
 ## Context
 

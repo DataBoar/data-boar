@@ -1,7 +1,9 @@
-# ADR 0022: Public glossary — compliance laws, roles, and platform terms
+# ADR 0022 — Public glossary — compliance laws, roles, and platform terms
 
-**Status:** Accepted
-**Date:** 2026-04-08
+- **Status:** Accepted
+- **Date (UTC):** 2026-04-08
+- **Authors:** Fabio Leitao
+- **Deciders:** Fabio Leitao
 
 ## Context
 

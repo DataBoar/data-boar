@@ -1,7 +1,9 @@
-# ADR 0024: Enterprise discovery — three complementary tracks (planning posture)
+# ADR 0024 — Enterprise discovery — three complementary tracks (planning posture)
 
-**Status:** Accepted
-**Date:** 2026-04-16
+- **Status:** Accepted
+- **Date (UTC):** 2026-04-15
+- **Authors:** Fabio Leitao
+- **Deciders:** Fabio Leitao
 
 ## Context
 

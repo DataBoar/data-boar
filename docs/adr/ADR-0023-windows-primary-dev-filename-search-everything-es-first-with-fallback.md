@@ -1,7 +1,9 @@
-# ADR 0023: Windows primary dev PC filename search — Everything (`es.exe`) first, capped PowerShell fallback
+# ADR 0023 — Windows primary dev PC filename search — Everything (`es.exe`) first, capped PowerShell fallback
 
-**Status:** Accepted
-**Date:** 2026-04-09
+- **Status:** Accepted
+- **Date (UTC):** 2026-04-09
+- **Authors:** Fabio Leitao
+- **Deciders:** Fabio Leitao
 
 ## Context
 

@@ -1,10 +1,9 @@
 # ADR 0020 — CI must scan full Git history for PII anti-recurrence patterns
 
-**Date:** 2026-04-08
-**Status:** Accepted
-**Author:** Fabio Leitao
-
----
+- **Status:** Accepted
+- **Date (UTC):** 2026-04-08
+- **Authors:** Fabio Leitao
+- **Deciders:** Fabio Leitao
 
 ## Context
 

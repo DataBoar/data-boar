@@ -1,11 +1,13 @@
 # ADR 0021 — Public web presence: DNS alias (CNAME), canonical host, TLS, and hosting shape
 
-**Date:** 2026-04-08
-**Status:** Accepted (architecture); operator choice of concrete host remains open
-
----
+- **Status:** Accepted
+- **Date (UTC):** 2026-04-08
+- **Authors:** Fabio Leitao
+- **Deciders:** Fabio Leitao
 
 ## Context
+
+> **Note (from original Status):** (architecture); operator choice of concrete host remains open
 
 The project needs a **public website** (marketing, documentation pointers, trust) distinct from the **self-hosted product** (scanner, API, dashboard). The operator may register **more than one `.br` hostname** for brand or memorability. DNS and TLS must stay understandable for future contributors and for Registro.br–style setups.
 
