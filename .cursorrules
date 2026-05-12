@@ -1,21 +1,4 @@
 {
-  "slack_protocol": {
-    "channel": "#data-boar-ops",
-    "mandatory_notification_events": [
-      "RCA",
-      "PR_OPEN",
-      "TEST_FAILURE",
-      "STATE_CHANGE"
-    ],
-    "heartbeat_required_when_long_running": true,
-    "message_format": "[TASK_ID] | [PERSONA: NASA/Gibson] | [STATUS: RUNNING/FAIL/SUCCESS]",
-    "message_fields": [
-      "Summary: (1 sentence active voice)",
-      "Drift Check: (Linguistic/Functional status)",
-      "Performance: (Current vs Target 0.574x)"
-    ],
-    "operational_silence_forbidden": true
-  },
   "web_cursor_session_contract": {
     "telemetry_channel": "#data-boar-ops",
     "pre_code_rca_required": true,
