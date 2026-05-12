@@ -1,8 +1,9 @@
 # ADR 0029 — Cursor Markdown preview guardrail + lab-smoke Ansible hook
 
-## Status
-
-Accepted
+- **Status:** Accepted
+- **Date (UTC):** 2026-04-18
+- **Authors:** Fabio Leitao
+- **Deciders:** Fabio Leitao
 
 ## Context
 

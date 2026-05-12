@@ -1,5 +1,10 @@
 # ADR 0028 — Lab external connectivity evaluation playbook (tracked)
 
+- **Status:** Accepted
+- **Date (UTC):** 2026-04-18
+- **Authors:** Fabio Leitao
+- **Deciders:** Fabio Leitao
+
 ## Context
 
 LAN-only smoke (**LAB_SMOKE_MULTI_HOST**) and CI do not cover **third-party** HTTP APIs, intermittent **internet** reachability, or operator **firewall** mistakes. Contributors and field technicians need a **sanitized**, reproducible playbook without committing LAN IPs, passwords, or strategic notes.
