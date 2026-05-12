@@ -46,6 +46,7 @@ We **document and commit** to the following as the **2026 baseline**:
 - **Positive:** Customers and reviewers can map **existing** artefacts to control families (identification, logging, integrity checks for subsets of data) without the vendor over-claiming.
 - **Negative:** RFPs that demand **full** “DLP-style” admin audit for every UI click still need **roadmap** or **partner SIEM** scope until implemented.
 - **Career / positioning:** Framing “**governance of the auditor**” honestly (current + gaps + plan) is stronger than implying complete self-audit today.
+- **Ongoing:** When any item in Decision 5 (Explicit gaps) is closed by a shipped feature, move it from the gaps list to the appropriate Decision section, update this ADR's date, and align COMPLIANCE_AND_LEGAL, SECURITY, OBSERVABILITY_SRE, and MAP.md in the same commit — claiming coverage before those docs are updated violates the anti-mis-sell intent stated in Context.
 
 ## References
 
