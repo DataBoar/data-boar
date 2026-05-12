@@ -49,16 +49,19 @@ $safeTitle = $Title.ToLower() `
     -replace '-+', '-' `
     -replace '^-|-$', ''
 
-# Auto-detect next number (regex: PowerShell -Filter does not treat [0-9] as digit class)
+# Auto-detect next number (supports both legacy "0001-..." and new "ADR-0001-..." names)
 $existing = Get-ChildItem -Path $adrDir -File |
-    Where-Object { $_.Name -match '^\d{4}-.+\.md$' } |
-    ForEach-Object { [int]($_.Name.Substring(0, 4)) } |
+    Where-Object { $_.Name -match '^(ADR-)?\d{4}-.+\.md$' } |
+    ForEach-Object {
+        $m = [regex]::Match($_.Name, '^(?:ADR-)?(\d{4})-')
+        if ($m.Success) { [int]$m.Groups[1].Value }
+    } |
     Sort-Object -Descending |
     Select-Object -First 1
 
 $nextNum  = if ($null -ne $existing) { $existing + 1 } else { 1 }
 $numStr   = $nextNum.ToString("D4")
-$filename = "$numStr-$safeTitle.md"
+$filename = "ADR-$numStr-$safeTitle.md"
 $filepath = Join-Path $adrDir $filename
 $today    = (Get-Date).ToString("yyyy-MM-dd")
 
@@ -68,7 +71,7 @@ if (Test-Path $filepath) {
 }
 
 $template = @"
-# ADR ${numStr}: $Title
+# ADR ${numStr} - $Title
 
 **Status:** $Status
 **Date:** $today

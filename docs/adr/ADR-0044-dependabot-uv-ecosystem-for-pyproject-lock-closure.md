@@ -12,7 +12,7 @@ The repository pins Python dependencies with **`uv`**:
 - **`uv.lock`** is the **resolved** pin.
 - **`requirements.txt`** is a **pip-facing export** of `uv.lock` produced by `uv export --no-emit-package pyproject.toml -o requirements.txt`.
 
-[ADR 0030](0030-python-dependency-update-closure-single-pass.md) requires those three artifacts to move **together** in a single pass when an update is accepted. The guard `tests/test_dependency_artifacts_sync.py::test_requirements_txt_matches_uv_export` runs `uv export --frozen` and compares against the committed `requirements.txt`; any drift fails CI.
+[ADR 0030](ADR-0030-python-dependency-update-closure-single-pass.md) requires those three artifacts to move **together** in a single pass when an update is accepted. The guard `tests/test_dependency_artifacts_sync.py::test_requirements_txt_matches_uv_export` runs `uv export --frozen` and compares against the committed `requirements.txt`; any drift fails CI.
 
 Until now, **`.github/dependabot.yml`** declared the Python ecosystem as `pip`. The Dependabot `pip` ecosystem inspects requirement files (e.g. `requirements.txt`) and **edits them in isolation** — it does **not** know about `uv.lock` and does **not** rewrite `pyproject.toml` minimums. Result: every grouped Dependabot PR landed an updated `requirements.txt` while `uv.lock` and `pyproject.toml` stayed at the previous resolution. The lock-vs-export guard then failed CI deterministically.
 
@@ -76,8 +76,8 @@ PR #324 was opened under the old `pip` ecosystem and cannot be auto-converted. R
 
 ## References
 
-- [ADR 0030 — Python dependency update closure (single pass)](0030-python-dependency-update-closure-single-pass.md)
-- [ADR 0005 — CI and GitHub Actions supply chain pins](0005-ci-github-actions-supply-chain-pins.md)
+- [ADR 0030 — Python dependency update closure (single pass)](ADR-0030-python-dependency-update-closure-single-pass.md)
+- [ADR 0005 — CI and GitHub Actions supply chain pins](ADR-0005-ci-github-actions-supply-chain-pins.md)
 - `tests/test_dependency_artifacts_sync.py` — lock vs export guard.
 - `.github/dependabot.yml` — current configuration.
 - Failed run that motivated this ADR: GitHub Actions `25606471817` on `dependabot/pip/pip-minor-patch-8a525e5820`.

@@ -16,7 +16,7 @@ When a dependency update is **accepted** as viable (security fix, compatibility 
 2. Run **`uv lock`**, then **`uv export --no-emit-package pyproject.toml -o requirements.txt`**, and commit **`pyproject.toml`**, **`uv.lock`**, and **`requirements.txt`** together.
 3. Refresh the **local** environment with **`uv sync`** so **`.venv`** matches the same tree developers and CI use.
 4. Run the full gate (**`.\scripts\check-all.ps1`**) before merge; do not merge “halfway” green.
-5. **SBOM:** Regenerate or rely on the **SBOM** workflow at the **same commit** as the dependency change when the release or audit trail requires it—see [ADR 0003](0003-sbom-roadmap-cyclonedx-then-syft.md) and **`scripts/generate-sbom.ps1`**. Do not claim an SBOM from an older commit reflects the new tree.
+5. **SBOM:** Regenerate or rely on the **SBOM** workflow at the **same commit** as the dependency change when the release or audit trail requires it—see [ADR 0003](ADR-0003-sbom-roadmap-cyclonedx-then-syft.md) and **`scripts/generate-sbom.ps1`**. Do not claim an SBOM from an older commit reflects the new tree.
 6. **ADR:** Add or update an ADR when the change is a **policy or tooling decision** (for example switching audit tools, changing optional extra boundaries, or recording an upstream constraint), not for every routine patch version.
 
 **Explicit non-goals:** This ADR does **not** encourage frequent churn or “update because a bot opened a PR.” Reject or defer updates that lack justification, fail audit, or break tests. The closure rule applies **when** an update is intentionally merged.
@@ -30,5 +30,5 @@ When a dependency update is **accepted** as viable (security fix, compatibility 
 ## References
 
 - [SECURITY.md](../../SECURITY.md), [CONTRIBUTING.md](../../CONTRIBUTING.md) — dependency workflow.
-- [ADR 0003](0003-sbom-roadmap-cyclonedx-then-syft.md) — SBOM artifacts.
+- [ADR 0003](ADR-0003-sbom-roadmap-cyclonedx-then-syft.md) — SBOM artifacts.
 - [ADR 0005](0005-ci-github-actions-supply-Colleague-Nn-pins.md) — CI Action and **uv** CLI pinning.

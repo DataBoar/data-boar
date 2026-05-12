@@ -61,4 +61,4 @@ Options considered:
 - `docs/private/author_info/OPERATOR_LIFE_JOURNEY_2022_2026.pt_BR.md` (IP Declaration timeline)
 - `docs/private/author_info/OPERATOR_CONTEXT_FOR_AGENT.pt_BR.md` (employment context)
 - `docs/private/author_info/STRATEGIC_ALIGNMENT_MASTER.pt_BR.md` (long-term IP strategy)
-- [ADR 0000](0000-project-origin-and-adr-baseline.md) — project origin and Data Boar history
+- [ADR 0000](ADR-0000-project-origin-and-adr-baseline.md) — project origin and Data Boar history

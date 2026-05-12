@@ -27,8 +27,8 @@ The product **is** configurable (**profiles**, **regex overrides**, **recommenda
 
 ## References
 
-- [ADR 0026](0026-optional-jurisdiction-hints-dpo-facing-heuristic-metadata-only.md) — optional **jurisdiction hints** (same ceiling: indicators for review, not legal applicability).
+- [ADR 0026](ADR-0026-optional-jurisdiction-hints-dpo-facing-heuristic-metadata-only.md) — optional **jurisdiction hints** (same ceiling: indicators for review, not legal applicability).
 - [COMPLIANCE_AND_LEGAL.md](../COMPLIANCE_AND_LEGAL.md) — “What we surface”, “What we do not do”, professional services.
 - [GLOSSARY.md](../GLOSSARY.md) §**9** — short definitions of **metadata-only finding**, **counsel**, **DPIA**, **RoPA**, **TIA**/**SCC**, **PEP**/**KYC**, **compliance sample**.
 - [PLAN_COMPLIANCE_EVIDENCE_MAPPING.md](../plans/PLAN_COMPLIANCE_EVIDENCE_MAPPING.md) — section 8 backlog, positioning ceiling paragraph.
-- [ADR 0022](0022-public-glossary-compliance-and-platform-terms.md) — public glossary taxonomy; roles (DPO, etc.).
+- [ADR 0022](ADR-0022-public-glossary-compliance-and-platform-terms.md) — public glossary taxonomy; roles (DPO, etc.).

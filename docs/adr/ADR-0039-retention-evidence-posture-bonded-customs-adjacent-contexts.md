@@ -15,7 +15,7 @@ Data Boar is an **inventory and evidence-support** scanner—not a **retention e
 
 2. **Operator-owned retention:** Retention of the **SQLite** store, Excel exports, logs, and backups follows **deployment** and **organisational** policy (`report.*`, filesystem hygiene, backup tooling)—documented in [USAGE.md](../USAGE.md), [deploy/DEPLOY.md](../deploy/DEPLOY.md), and [COMPLIANCE_AND_LEGAL.md](../COMPLIANCE_AND_LEGAL.md). **Bonded-area** programmes do **not** get a special code path; operators document **why** they keep scans as long as they do.
 
-3. **Evidence hygiene:** [ADR 0036](0036-exception-and-log-pii-redaction-pipeline.md) (redacted errors/logs) and [ADR 0037](0037-data-boar-self-audit-log-governance.md) (export audit trail, wipe log) support **professional** posture when the same teams that face **regulatory** pressure also handle **operator** diagnostics—without turning stack traces into **secondary PII leaks**.
+3. **Evidence hygiene:** [ADR 0036](ADR-0036-exception-and-log-pii-redaction-pipeline.md) (redacted errors/logs) and [ADR 0037](ADR-0037-data-boar-self-audit-log-governance.md) (export audit trail, wipe log) support **professional** posture when the same teams that face **regulatory** pressure also handle **operator** diagnostics—without turning stack traces into **secondary PII leaks**.
 
 4. **Narrative anchors (public):** Workshop framing for “why evidence matters in high-friction zones” lives in **[THE_WHY.md](../philosophy/THE_WHY.md)** and the **[port logistics storyboard](../use-cases/PORT_LOGISTICS_MULTINATIONAL_CREW.md)**—**generic** roles, no employer names, no personal dossier content.
 
@@ -28,6 +28,6 @@ Data Boar is an **inventory and evidence-support** scanner—not a **retention e
 
 ## References
 
-- [ADR 0025](0025-compliance-positioning-evidence-inventory-not-legal-conclusion-engine.md), [ADR 0036](0036-exception-and-log-pii-redaction-pipeline.md), [ADR 0037](0037-data-boar-self-audit-log-governance.md), [ADR 0038](0038-jurisdictional-ambiguity-alert-dont-decide.md)
+- [ADR 0025](ADR-0025-compliance-positioning-evidence-inventory-not-legal-conclusion-engine.md), [ADR 0036](ADR-0036-exception-and-log-pii-redaction-pipeline.md), [ADR 0037](ADR-0037-data-boar-self-audit-log-governance.md), [ADR 0038](ADR-0038-jurisdictional-ambiguity-alert-dont-decide.md)
 - [THE_WHY.md](../philosophy/THE_WHY.md), [JURISDICTION_COLLISION_HANDLING.md](../JURISDICTION_COLLISION_HANDLING.md)
 - [use-cases/PORT_LOGISTICS_MULTINATIONAL_CREW.md](../use-cases/PORT_LOGISTICS_MULTINATIONAL_CREW.md)

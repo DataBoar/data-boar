@@ -23,5 +23,5 @@ Accepted
 
 ## Related
 
-- [ADR 0009](0009-ansible-idempotent-roles-as-single-automation-source.md) — Ansible as automation source.
+- [ADR 0009](ADR-0009-ansible-idempotent-roles-as-single-automation-source.md) — Ansible as automation source.
 - [LAB_SMOKE_MULTI_HOST.md](../ops/LAB_SMOKE_MULTI_HOST.md)

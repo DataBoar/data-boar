@@ -64,4 +64,4 @@ committing to a full stack before the infrastructure is ready.
 - [docs/ops/LMDE7_LAB-NODE-01_DEVELOPER_SETUP.pt_BR.md](../ops/LMDE7_LAB-NODE-01_DEVELOPER_SETUP.pt_BR.md) §8
 - [ops/automation/ansible/roles/lab-node-01_observability/](../../ops/automation/ansible/roles/lab-node-01_observability/)
 - [docs/plans/PLAN_LAB_OP_OBSERVABILITY_STACK.pt_BR.md](../plans/PLAN_LAB_OP_OBSERVABILITY_STACK.pt_BR.md)
-- [ADR 0009](0009-ansible-idempotent-roles-as-single-automation-source.md) — Ansible as automation source
+- [ADR 0009](ADR-0009-ansible-idempotent-roles-as-single-automation-source.md) — Ansible as automation source

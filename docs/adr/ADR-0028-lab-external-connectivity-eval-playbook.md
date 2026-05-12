@@ -24,4 +24,4 @@ Operator-only detail stays in **`docs/private/homelab/`** (not GitHub). ADR **00
 
 - [LAB_EXTERNAL_CONNECTIVITY_EVAL.md](../ops/LAB_EXTERNAL_CONNECTIVITY_EVAL.md)
 - [LAB_SMOKE_MULTI_HOST.md](../ops/LAB_SMOKE_MULTI_HOST.md)
-- [ADR 0015](0015-poc-test-infrastructure-synthetic-corpus-and-api-testing.md)
+- [ADR 0015](ADR-0015-poc-test-infrastructure-synthetic-corpus-and-api-testing.md)

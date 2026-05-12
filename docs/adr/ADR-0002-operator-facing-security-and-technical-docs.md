@@ -15,7 +15,7 @@ Contributors and **operators** (people who deploy, harden, and run Data Boar) ne
 1. Treat **[SECURITY.md](../../SECURITY.md)** (root) and **[docs/SECURITY.md](../SECURITY.md)** as the **security** entry points: supported Python versions, reporting vulnerabilities, dependency hygiene, and technician-oriented hardening pointers.
 1. Treat **[docs/TECH_GUIDE.md](../TECH_GUIDE.md)** as the **technical** entry point: install, run modes (CLI/API/web), connectors, config, and operational flags (including TLS and bind behaviour).
 1. When a change affects **how the product is run or secured**, update **SECURITY** and/or **TECH_GUIDE** (and **pt-BR** pairs) in the same PR whenever the behaviour is user-visible; link from release notes when the change is significant.
-1. **ADRs** under **`docs/adr/`** record **why** for durable decisions that are easy to misread from code alone; link **SECURITY** / **TECH_GUIDE** from an ADR when the decision directly affects operators (see also [ADR 0001](0001-markdown-fix-script-md029-and-semantic-step-lists.md) for doc tooling).
+1. **ADRs** under **`docs/adr/`** record **why** for durable decisions that are easy to misread from code alone; link **SECURITY** / **TECH_GUIDE** from an ADR when the decision directly affects operators (see also [ADR 0001](ADR-0001-markdown-fix-script-md029-and-semantic-step-lists.md) for doc tooling).
 
 ## Consequences
 

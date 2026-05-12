@@ -31,7 +31,7 @@ This project already treats **Python** dependencies with a **committed lockfile*
 
 - [WORKFLOW_DEFERRED_FOLLOWUPS.md](../ops/WORKFLOW_DEFERRED_FOLLOWUPS.md) — backlog; **PyPI + Actions** row points here for the authoritative decision.
 - [SUPPLY_Colleague-NN_AND_TRUST_SIGNALS.md](../ops/inspirations/SUPPLY_Colleague-NN_AND_TRUST_SIGNALS.md) — how the repo **consumes** supply-Colleague-Nn lessons; scope limits.
-- [ADR 0003](0003-sbom-roadmap-cyclonedx-then-syft.md) — SBOM for **inventory / IR**, complementary to CI pinning.
+- [ADR 0003](ADR-0003-sbom-roadmap-cyclonedx-then-syft.md) — SBOM for **inventory / IR**, complementary to CI pinning.
 - [QUALITY_WORKFLOW_RECOMMENDATIONS.md](../QUALITY_WORKFLOW_RECOMMENDATIONS.md) — quality layers and branch protection.
 - [`tests/test_github_workflows.py`](../../tests/test_github_workflows.py) — `test_ci_yml_pins_actions_and_uv_cli`.
 - [GitHub: Security hardening for GitHub Actions](https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions) — general upstream guidance.

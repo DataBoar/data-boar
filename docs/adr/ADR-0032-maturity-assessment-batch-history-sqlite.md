@@ -20,7 +20,7 @@ Accepted
 ## Consequences
 
 - **Pros:** Low coupling (one query + template); reuses existing export and summary behaviour; covered by `tests/test_database.py` and `tests/test_api_assessment_poc.py`.
-- **Cons / future work:** Listing is **global to the DB** until identity + RBAC exist; [ADR 0027](0027-commercial-tier-boundaries-licensing-docs-and-future-jwt-claims.md) tier/JWT alignment remains a separate slice. When **#86 Phase 2** lands, **filter** `maturity_assessment_batch_summaries` (or equivalent) by authenticated **subject/tenant** instead of changing the aggregation shape.
+- **Cons / future work:** Listing is **global to the DB** until identity + RBAC exist; [ADR 0027](ADR-0027-commercial-tier-boundaries-licensing-docs-and-future-jwt-claims.md) tier/JWT alignment remains a separate slice. When **#86 Phase 2** lands, **filter** `maturity_assessment_batch_summaries` (or equivalent) by authenticated **subject/tenant** instead of changing the aggregation shape.
 
 ### Manual QA (POC)
 
