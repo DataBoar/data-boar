@@ -1,12 +1,13 @@
 # ADR 0014 — Rename repository and package from `python3-lgpd-crawler` to `data-boar`
 
-**Status:** Accepted — package and primary docs executed in-repo; PyPI publish and optional legacy-remote removal remain operator follow-ups
-**Date:** 2026-04-05
-**Deciders:** Fabio Tavares Leitao
-
----
+- **Status:** Accepted
+- **Date (UTC):** 2026-04-05
+- **Authors:** Fabio Leitao
+- **Deciders:** Fabio Leitao
 
 ## Context
+
+> **Implementation note (from original Status field):** package and primary docs executed in-repo; PyPI publish and optional legacy-remote removal remain operator follow-ups
 
 The project was bootstrapped under the name `python3-lgpd-crawler` — a descriptive,
 technical name that accurately described its first form: a Python crawler for LGPD compliance.

@@ -1,10 +1,9 @@
-# ADR 0018: PII anti-recurrence guardrails for tracked files and branch history
+# ADR 0018 — PII anti-recurrence guardrails for tracked files and branch history
 
-**Status:** Accepted
-**Date:** 2026-04-07
-**Author:** Fabio Leitao
-
----
+- **Status:** Accepted
+- **Date (UTC):** 2026-04-07
+- **Authors:** Fabio Leitao
+- **Deciders:** Fabio Leitao
 
 ## Context
 

@@ -1,10 +1,9 @@
 # ADR 0016 — OpenTofu as Corporate IaC Path (Alongside Ansible)
 
-**Date:** 2026-04-05
-**Status:** Accepted
-**Author:** Fabio Leitao
-
----
+- **Status:** Accepted
+- **Date (UTC):** 2026-04-05
+- **Authors:** Fabio Leitao
+- **Deciders:** Fabio Leitao
 
 ## Context
 

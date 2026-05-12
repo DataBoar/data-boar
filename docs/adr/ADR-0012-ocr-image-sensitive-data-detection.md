@@ -1,10 +1,9 @@
-# ADR 0012 -- OCR and Image-Based Sensitive Data Detection
+# ADR 0012 — OCR and Image-Based Sensitive Data Detection
 
-**Status:** Proposed
-**Date:** 2026-04-03
-**Deciders:** Fabio Leitao
-
----
+- **Status:** Proposed
+- **Date (UTC):** 2026-04-03
+- **Authors:** Fabio Leitao
+- **Deciders:** Fabio Leitao
 
 ## Context
 

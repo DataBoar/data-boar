@@ -1,10 +1,9 @@
 # ADR 0015 — POC Test Infrastructure: Synthetic Corpus, Postman Collection, and Ansible Database Role
 
-**Status:** Accepted
-**Date:** 2026-04-05
-**Author:** Fabio Leitao
-
----
+- **Status:** Accepted
+- **Date (UTC):** 2026-04-05
+- **Authors:** Fabio Leitao
+- **Deciders:** Fabio Leitao
 
 ## Context
 

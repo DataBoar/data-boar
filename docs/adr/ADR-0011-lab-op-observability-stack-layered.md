@@ -1,10 +1,9 @@
-# ADR 0011: Layered observability stack for lab-op (Munin + Wazuh + Prometheus + Monit + rsyslog/GELF)
+# ADR 0011 — Layered observability stack for lab-op (Munin + Wazuh + Prometheus + Monit + rsyslog/GELF)
 
-**Status:** Accepted
-**Date:** 2026-04-03
-**Authors:** Fabio Leitao
-
----
+- **Status:** Accepted
+- **Date (UTC):** 2026-04-03
+- **Authors:** Fabio Leitao
+- **Deciders:** Fabio Leitao
 
 ## Context
 
