@@ -1,10 +1,9 @@
-# ADR 0004: Information architecture — external-tier docs must not link into `plans/`
+# ADR 0004 — Information architecture — external-tier docs must not link into `plans/`
 
-**Status:** Accepted
-**Date:** 2026-03-27
-**Authors:** Fabio Leitao
-
----
+- **Status:** Accepted
+- **Date (UTC):** 2026-03-27
+- **Authors:** Fabio Leitao
+- **Deciders:** Fabio Leitao
 
 ## Context
 
