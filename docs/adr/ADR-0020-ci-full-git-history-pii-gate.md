@@ -20,6 +20,7 @@ Tracked-file guards (`tests/test_pii_guard.py`) and incremental history checks c
 - **Positive:** Regressions that reintroduce forbidden patterns anywhere in history fail CI before merge.
 - **Cost:** Slightly longer CI (~seconds to low tens of seconds depending on repo size) and full clone bandwidth.
 - **Operational:** Contributors must not rely on shallow clones if they run `--full-history` locally; CI remains the canonical full scan on clean trees.
+- **Watch:** After any `git filter-repo` history rewrite, remote branches that still point at pre-rewrite commits must be deleted or force-pushed; `refs/remotes/*` blobs remain reachable until removed and the guard will continue to fail on them.
 
 ## References
 
