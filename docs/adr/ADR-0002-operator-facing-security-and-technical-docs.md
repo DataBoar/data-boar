@@ -1,10 +1,9 @@
-# ADR 0002: Operator-facing security and technical documentation
+# ADR 0002 — Operator-facing security and technical documentation
 
-**Status:** Accepted
-**Date:** 2026-03-25
-**Authors:** Fabio Leitao
-
----
+- **Status:** Accepted
+- **Date (UTC):** 2026-03-25
+- **Authors:** Fabio Leitao
+- **Deciders:** Fabio Leitao
 
 ## Context
 

@@ -1,10 +1,9 @@
-# ADR 0008: Docker CE (official repo) + Compose plugin + Swarm as primary lab container runtime
+# ADR 0008 — Docker CE (official repo) + Compose plugin + Swarm as primary lab container runtime
 
-**Status:** Accepted
-**Date:** 2026-04-03
-**Authors:** Fabio Leitao
-
----
+- **Status:** Accepted
+- **Date (UTC):** 2026-04-03
+- **Authors:** Fabio Leitao
+- **Deciders:** Fabio Leitao
 
 ## Context
 

@@ -1,10 +1,9 @@
-# ADR 0005: CI and GitHub Actions supply Colleague-Nn — pinned SHAs and pinned uv CLI
+# ADR 0005 — CI and GitHub Actions supply Colleague-Nn — pinned SHAs and pinned uv CLI
 
-**Status:** Accepted
-**Date:** 2026-03-27
-**Authors:** Fabio Leitao
-
----
+- **Status:** Accepted
+- **Date (UTC):** 2026-03-27
+- **Authors:** Fabio Leitao
+- **Deciders:** Fabio Leitao
 
 ## Context
 

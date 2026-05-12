@@ -1,10 +1,9 @@
-# ADR 0000: Project origin and ADR baseline
+# ADR 0000 — Project origin and ADR baseline
 
-**Status:** Accepted
-**Date:** 2026-03-26
-**Authors:** Fabio Leitao
-
----
+- **Status:** Accepted
+- **Date (UTC):** 2026-03-26
+- **Authors:** Fabio Leitao
+- **Deciders:** Fabio Leitao
 
 ## Context
 

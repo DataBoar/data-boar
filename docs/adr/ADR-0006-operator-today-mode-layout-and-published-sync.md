@@ -1,10 +1,9 @@
 # ADR 0006 — Operator today-mode layout and published-release sync
 
-#**Status:** Accepted
-**Date:** 2026-03-30
-**Authors:** Fabio Leitao
-
----
+- **Status:** Accepted
+- **Date (UTC):** 2026-03-30
+- **Authors:** Fabio Leitao
+- **Deciders:** Fabio Leitao
 
 ## Context
 

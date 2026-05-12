@@ -1,10 +1,9 @@
-# ADR 0001: Markdown fix script, MD029, and semantic step lists
+# ADR 0001 — Markdown fix script, MD029, and semantic step lists
 
-**Status:** Accepted
-**Date:** 2026-03-25
-**Authors:** Fabio Leitao
-
----
+- **Status:** Accepted
+- **Date (UTC):** 2026-03-25
+- **Authors:** Fabio Leitao
+- **Deciders:** Fabio Leitao
 
 ## Context
 

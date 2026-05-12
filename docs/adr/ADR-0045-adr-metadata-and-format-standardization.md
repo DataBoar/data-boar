@@ -42,6 +42,12 @@ explicit metadata and canonical sections:
 ## References (optional)
 ```
 
+**Filename convention:** ADR files must be named `ADR-NNNN-short-kebab-title.md`
+where `NNNN` is a zero-padded four-digit sequential number. The `ADR-` prefix
+makes ADR files unambiguously identifiable by filename alone, without relying on
+directory position or content inspection. The script `scripts/new-adr.ps1`
+generates compliant filenames automatically.
+
 Status lifecycle semantics:
 
 - **Accepted:** In force.
@@ -84,6 +90,6 @@ Status lifecycle semantics:
 
 ## References
 
-- [Documenting Architecture Decisions (Michael Nygard)](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions)
-- [MADR project](https://adr.github.io/madr/)
-- [MADR Template Primer (Olaf Zimmermann)](https://www.ozimmer.ch/practices/2022/11/22/MADRTemplatePrimer.html)
+- [Documenting Architecture Decisions (Michael Nygard)](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions) — consulted 2026-05-12
+- [MADR project — adr.github.io/madr](https://adr.github.io/madr/) — consulted 2026-05-12
+- [MADR Template Primer (Olaf Zimmermann)](https://www.ozimmer.ch/practices/2022/11/22/MADRTemplatePrimer.html) — consulted 2026-05-12
