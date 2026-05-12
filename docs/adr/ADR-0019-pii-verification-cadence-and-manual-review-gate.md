@@ -46,7 +46,7 @@ Without an explicit operational cadence and a mandatory manual review gate:
 
 ## References
 
-- `docs/adr/0018-pii-anti-recurrence-guardrails-for-tracked-files-and-branch-history.md`
+- `docs/adr/ADR-0018-pii-anti-recurrence-guardrails-for-tracked-files-and-branch-history.md`
 - `docs/ops/PII_PUBLIC_TREE_OPERATOR_GUIDE.md` (canonical procedural text)
 - `docs/ops/PII_PUBLIC_TREE_OPERATOR_GUIDE.pt_BR.md`
 - Legacy redirect stubs (bookmarks / old links): `docs/ops/PII_VERIFICATION_RUNBOOK.md`, `docs/ops/PII_VERIFICATION_RUNBOOK.pt_BR.md`

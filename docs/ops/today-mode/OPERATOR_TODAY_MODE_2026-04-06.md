@@ -24,7 +24,7 @@ Branch: main — sincronizado com origin.
 - [x] **Adicionar seção Ansible ao USAGE.pt_BR.md** (sync EN→pt-BR) — **feito** (2026-04-09).
 - [ ] **PLANS_TODO.md**: marcar Ansible como adicionado (H3/houseclean ou feature)
 - [x] **Branding rename**: ADR 0014 — `pyproject` / docs em **`data-boar`** (PyPI publish quando agendado)
-      → `docs/adr/0014-rename-repo-and-package-python3-lgpd-crawler-to-data-boar.md`
+      → `docs/adr/ADR-0014-rename-repo-and-package-python3-lgpd-crawler-to-data-boar.md`
 
 ### REDES SOCIAIS / FOUNDER
 - [ ] **Revisar posts LinkedIn e X revisados** (blobs + lab-op + milestones) e decidir se publica
@@ -60,5 +60,5 @@ Branch: main — sincronizado com origin.
 - Carta CISO v4 (CVEs): `CARTA_DISCLOSURE_CISO_v4_CVEs.txt`
 - Carta CISO v3 (Wazuh): `CARTA_DISCLOSURE_CISO_v3.txt`
 - Ansible deploy: `deploy/ansible/README.md`
-- ADR rename: `docs/adr/0014-rename-repo-and-package-python3-lgpd-crawler-to-data-boar.md`
+- ADR rename: `docs/adr/ADR-0014-rename-repo-and-package-python3-lgpd-crawler-to-data-boar.md`
 - Plans: `docs/plans/PLANS_TODO.md`

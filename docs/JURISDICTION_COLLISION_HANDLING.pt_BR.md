@@ -6,14 +6,14 @@ Este guia explica como **ler** as **dicas de jurisdição** opcionais quando os 
 
 ## O que o Data Boar faz e não faz
 
-- **Faz:** Expor texto **heurístico** de “possível relevância” na planilha **Report info** do Excel (quando as dicas estão habilitadas), usando **apenas metadados dos achados** (nomes de coluna/tabela/arquivo/caminho, `pattern_detected`, `norm_tag`, etc.) — ver [ADR 0026](adr/0026-optional-jurisdiction-hints-dpo-facing-heuristic-metadata-only.md) e [ADR 0038](adr/0038-jurisdictional-ambiguity-alert-dont-decide.md).
+- **Faz:** Expor texto **heurístico** de “possível relevância” na planilha **Report info** do Excel (quando as dicas estão habilitadas), usando **apenas metadados dos achados** (nomes de coluna/tabela/arquivo/caminho, `pattern_detected`, `norm_tag`, etc.) — ver [ADR 0026](adr/ADR-0026-optional-jurisdiction-hints-dpo-facing-heuristic-metadata-only.md) e [ADR 0038](adr/ADR-0038-jurisdictional-ambiguity-alert-dont-decide.md).
 - **Não faz:** Determinar **qual lei se aplica**, **qual formulário preencher primeiro**, **jurisdição mais restritiva** como resultado jurídico automático, nem **base legal** (incluindo LGPD Art. 7 II ou exceções de segurança/aduana). **Assessoria jurídica** e o **DPO** detêm essas decisões.
 
 ## A “tempestade perfeita” (por que este doc existe)
 
 Operações multinacionais — logística, portos, aviação, folha compartilhada — costumam ter **um perfil** de dados em que **sinais apontam para lados diferentes**: tipo de documento ou prefixo de telefone sugerem um país, empregador ou hospedeiro outro, auditoria ou regime aduaneiro outro. Isso é risco de **paralisia operacional** para times de privacidade, não só problema de regex.
 
-**Adjacência alfandegária / recinto:** programas de fronteira ou estilo **recinto** podem **exigir** coleta que parece “pesada” sob um olhar só de minimização de privacidade. O Data Boar continua entregando só **evidência de inventário** e **hints**; **não** rotula linhas como “obrigação legal cumprida” nem escolhe prazo de retenção — ver [ADR 0039](adr/0039-retention-evidence-posture-bonded-customs-adjacent-contexts.md) e [THE_WHY.pt_BR.md](philosophy/THE_WHY.pt_BR.md).
+**Adjacência alfandegária / recinto:** programas de fronteira ou estilo **recinto** podem **exigir** coleta que parece “pesada” sob um olhar só de minimização de privacidade. O Data Boar continua entregando só **evidência de inventário** e **hints**; **não** rotula linhas como “obrigação legal cumprida” nem escolhe prazo de retenção — ver [ADR 0039](adr/ADR-0039-retention-evidence-posture-bonded-customs-adjacent-contexts.md) e [THE_WHY.pt_BR.md](philosophy/THE_WHY.pt_BR.md).
 
 A oportunidade do Data Boar é **visualizar o emaranhado** (linguagem de inventário e triagem) para o **DPO** e o **CISO** priorizarem **revisão com assessoria** — não desatar o nó no software.
 
@@ -37,7 +37,7 @@ Use esta lente ao ler relatórios e desenhar playbooks:
 
 **Hoje (entregue):** Quando várias heurísticas regionais disparam, a planilha **Report info** pode mostrar **mais de uma** linha de dica de jurisdição (ex.: US-CA e US-CO acima do limiar). Isso é um **sinal visível de sobreposição** para humanos — ainda **sem** “score de colisão” numérico e **sem** tabela por achado.
 
-**Roadmap / inteligência de produto (não prometido neste release):** Um **resumo de colisão** consolidado (contagens, faixa de severidade, flag opcional por sessão) seria desenho **separado**: revisão de privacidade, UX no Excel/API e atualização de ADR. Ver [ADR 0038](adr/0038-jurisdictional-ambiguity-alert-dont-decide.md).
+**Roadmap / inteligência de produto (não prometido neste release):** Um **resumo de colisão** consolidado (contagens, faixa de severidade, flag opcional por sessão) seria desenho **separado**: revisão de privacidade, UX no Excel/API e atualização de ADR. Ver [ADR 0038](adr/ADR-0038-jurisdictional-ambiguity-alert-dont-decide.md).
 
 ## Frase sugerida para assessoria (pode copiar em slides)
 
@@ -49,5 +49,5 @@ Use esta lente ao ler relatórios e desenhar playbooks:
 - [COMPLIANCE_AND_LEGAL.pt_BR.md](COMPLIANCE_AND_LEGAL.pt_BR.md) — teto de linguagem ([EN](COMPLIANCE_AND_LEGAL.md))
 - [MAP.pt_BR.md](MAP.pt_BR.md) — índice por preocupação ([EN](MAP.md))
 - [use-cases/PORT_LOGISTICS_MULTINATIONAL_CREW.pt_BR.md](use-cases/PORT_LOGISTICS_MULTINATIONAL_CREW.pt_BR.md) — storyboard (cenário não exaustivo)
-- [ADR 0025](adr/0025-compliance-positioning-evidence-inventory-not-legal-conclusion-engine.md), [ADR 0026](adr/0026-optional-jurisdiction-hints-dpo-facing-heuristic-metadata-only.md), [ADR 0038](adr/0038-jurisdictional-ambiguity-alert-dont-decide.md), [ADR 0039](adr/0039-retention-evidence-posture-bonded-customs-adjacent-contexts.md)
+- [ADR 0025](adr/ADR-0025-compliance-positioning-evidence-inventory-not-legal-conclusion-engine.md), [ADR 0026](adr/ADR-0026-optional-jurisdiction-hints-dpo-facing-heuristic-metadata-only.md), [ADR 0038](adr/ADR-0038-jurisdictional-ambiguity-alert-dont-decide.md), [ADR 0039](adr/ADR-0039-retention-evidence-posture-bonded-customs-adjacent-contexts.md)
 - [THE_WHY.pt_BR.md](philosophy/THE_WHY.pt_BR.md) ([EN](philosophy/THE_WHY.md))

@@ -34,9 +34,9 @@ Estes módulos descrevem **o que o software verifica ou sinaliza hoje** (ou em t
 | **M2 — Severidade técnica** | Qual a urgência de **triagem técnica** (faixa de sensibilidade, texto de prioridade, risco de quasi-identificador / cruzamento)? | Colunas do Excel, planilha “Cross-ref data – ident. risk” quando preenchida, [MAP.pt_BR.md](MAP.pt_BR.md) |
 | **M3 — Postura da fonte de dados** | Quais **sistemas** guardaram o dado (produto, protocolo, sinais de transporte) sem copiar conteúdo de célula? | Planilha “Data source inventory” quando habilitada, [TECH_GUIDE.pt_BR.md](TECH_GUIDE.pt_BR.md) |
 | **M4 — Menores e contextos vulneráveis** | Há **sinais** compatíveis com possíveis campos ligados a menores ou combinações que pedem revisão de política? | [MINOR_DETECTION.pt_BR.md](MINOR_DETECTION.pt_BR.md) |
-| **M5 — Tensão jurisdicional** | Metadados sugerem **mais de um** regime plausível para a assessoria priorizar? | [JURISDICTION_COLLISION_HANDLING.pt_BR.md](JURISDICTION_COLLISION_HANDLING.pt_BR.md), [ADR 0038](adr/0038-jurisdictional-ambiguity-alert-dont-decide.md) |
-| **M6 — Governança do auditor** | A organização mostra **quem executou** varreduras e quais artefatos existem para exportação? | [ADR 0037](adr/0037-data-boar-self-audit-log-governance.md) |
-| **M7 — Retenção em contexto lacrado / adjacente à alfândega** | A **retenção** de artefatos é **do operador**, sem etiquetas automáticas de “base legal”? | [ADR 0039](adr/0039-retention-evidence-posture-bonded-customs-adjacent-contexts.md) |
+| **M5 — Tensão jurisdicional** | Metadados sugerem **mais de um** regime plausível para a assessoria priorizar? | [JURISDICTION_COLLISION_HANDLING.pt_BR.md](JURISDICTION_COLLISION_HANDLING.pt_BR.md), [ADR 0038](adr/ADR-0038-jurisdictional-ambiguity-alert-dont-decide.md) |
+| **M6 — Governança do auditor** | A organização mostra **quem executou** varreduras e quais artefatos existem para exportação? | [ADR 0037](adr/ADR-0037-data-boar-self-audit-log-governance.md) |
+| **M7 — Retenção em contexto lacrado / adjacente à alfândega** | A **retenção** de artefatos é **do operador**, sem etiquetas automáticas de “base legal”? | [ADR 0039](adr/ADR-0039-retention-evidence-posture-bonded-customs-adjacent-contexts.md) |
 
 **Nível de risco** nesta metodologia significa **risco técnico e de triagem** (exposição, força da categoria, risco de combinação) — **não** substitui seu registro de risco empresarial nem conclusão jurídica.
 
@@ -55,7 +55,7 @@ Nomes variam por modelo: **Titular**, **Finalidade**, **Base legal**, **Categori
 | **Risco técnico / prioridade de triagem** | **Sim — já é núcleo** | Planilhas de recomendação (colunas como “Base legal”, “Risco”, “Prioridade” são **texto orientador**, não base legal afirmada — veja abaixo). |
 | **Titular** | **Depois / sobretudo humano** | Inferir *quem* é o titular só pelo nome de coluna é frágil; priorize **categoria** e **local**, depois o DPO preenche titular com conhecimento de processo. |
 | **Finalidade** | **Liderado por humano** | Finalidade vem do **processo de negócio** e dos registros de tratamento; futuro opcional: **pistas por metadados** (nomes de coluna, apps) só como *sugestão*. |
-| **Base legal** | **Nunca afirmar sozinho** | O motor pode exibir **linguagem de recomendação** alinhada a normas; a **escolha** da base lícita é **jurídico / DPO**. Postura no [ADR 0038](adr/0038-jurisdictional-ambiguity-alert-dont-decide.md). |
+| **Base legal** | **Nunca afirmar sozinho** | O motor pode exibir **linguagem de recomendação** alinhada a normas; a **escolha** da base lícita é **jurídico / DPO**. Postura no [ADR 0038](adr/ADR-0038-jurisdictional-ambiguity-alert-dont-decide.md). |
 | **Prazo de retenção** | **Liderado por humano** | Não se deduz de amostras de conteúdo sem política e contexto jurídico. |
 | **Compartilhamento / terceiros** | **Parcial** | “Onde mais esse atributo aparece?” (varreduras multi-alvo) apoia **inventário**; contratos e relações jurídicas ficam fora da ferramenta. |
 | **Medidas de segurança** | **Parcial** | Sinais técnicos (ex.: TLS vs texto puro, inventário de versão, recomendações de hardening quando existirem) alimentam **security** — não atestam controle ISO 27001 completo. |

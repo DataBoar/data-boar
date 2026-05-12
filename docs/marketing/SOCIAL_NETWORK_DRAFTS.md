@@ -6,7 +6,7 @@
 
 **Pt-BR mirror:** [SOCIAL_NETWORK_DRAFTS.pt_BR.md](SOCIAL_NETWORK_DRAFTS.pt_BR.md)
 
-**Source themes (public docs):** [MAP.md](../MAP.md), [THE_WHY.md](../philosophy/THE_WHY.md), [JURISDICTION_COLLISION_HANDLING.md](../JURISDICTION_COLLISION_HANDLING.md), ADRs [0038](../adr/0038-jurisdictional-ambiguity-alert-dont-decide.md) / [0039](../adr/0039-retention-evidence-posture-bonded-customs-adjacent-contexts.md), [PORT_LOGISTICS_MULTINATIONAL_CREW.md](../use-cases/PORT_LOGISTICS_MULTINATIONAL_CREW.md).
+**Source themes (public docs):** [MAP.md](../MAP.md), [THE_WHY.md](../philosophy/THE_WHY.md), [JURISDICTION_COLLISION_HANDLING.md](../JURISDICTION_COLLISION_HANDLING.md), ADRs [0038](../adr/ADR-0038-jurisdictional-ambiguity-alert-dont-decide.md) / [0039](../adr/ADR-0039-retention-evidence-posture-bonded-customs-adjacent-contexts.md), [PORT_LOGISTICS_MULTINATIONAL_CREW.md](../use-cases/PORT_LOGISTICS_MULTINATIONAL_CREW.md).
 
 ---
 

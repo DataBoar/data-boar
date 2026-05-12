@@ -38,8 +38,8 @@ Teste de carga para **hints de jurisdição**, texto de **colisão** nos relató
 
 - [use-cases/README.pt_BR.md](README.pt_BR.md) ([EN](README.md)) — hub com outros storyboards de médio porte (advocacia, contabilidade, pharma).
 - [THE_WHY.pt_BR.md](../philosophy/THE_WHY.pt_BR.md) ([EN](../philosophy/THE_WHY.md)) — posicionamento evidência em vez de teatro (seguro para público).
-- [ADR 0039](../adr/0039-retention-evidence-posture-bonded-customs-adjacent-contexts.md) — limite de retenção/evidência em contextos adjacentes à alfândega.
+- [ADR 0039](../adr/ADR-0039-retention-evidence-posture-bonded-customs-adjacent-contexts.md) — limite de retenção/evidência em contextos adjacentes à alfândega.
 - [JURISDICTION_COLLISION_HANDLING.pt_BR.md](../JURISDICTION_COLLISION_HANDLING.pt_BR.md) ([EN](../JURISDICTION_COLLISION_HANDLING.md))
 - [MINOR_DETECTION.pt_BR.md](../MINOR_DETECTION.pt_BR.md) ([EN](../MINOR_DETECTION.md)) — quando metadados de tripulantes/visitantes podem envolver menores
 - [MAP.pt_BR.md](../MAP.pt_BR.md) ([EN](../MAP.md))
-- [ADR 0038](../adr/0038-jurisdictional-ambiguity-alert-dont-decide.md)
+- [ADR 0038](../adr/ADR-0038-jurisdictional-ambiguity-alert-dont-decide.md)

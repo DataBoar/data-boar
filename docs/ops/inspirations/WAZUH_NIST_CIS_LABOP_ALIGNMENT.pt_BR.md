@@ -36,8 +36,8 @@
 | Função CSF | Neste repositório / prática do operador | Escopo do produto (Data Boar) |
 | ---------- | ---------------------------------------- | ------------------------------ |
 | **Govern** | ADRs, disciplina de revisão, backlog de branch protection ([WORKFLOW_DEFERRED_FOLLOWUPS.pt_BR.md](../WORKFLOW_DEFERRED_FOLLOWUPS.pt_BR.md)) | Alegações honestas em [SECURITY.md](../../SECURITY.md) / [COMPLIANCE_AND_LEGAL.md](../../COMPLIANCE_AND_LEGAL.md) |
-| **Identify** | Lockfile, Dependabot, roadmap SBOM ([ADR 0003](../../adr/0003-sbom-roadmap-cyclonedx-then-syft.md)) | Evidência para descoberta de **dados** e conteúdo sensível — não inventário enterprise completo de ativos |
-| **Protect** | Actions com SHA fixo ([ADR 0005](../../adr/0005-ci-github-actions-supply-Colleague-Nn-pins.md)), permissões mínimas em workflow | Orientação de deploy seguro; endurecimento do ambiente continua com o cliente |
+| **Identify** | Lockfile, Dependabot, roadmap SBOM ([ADR 0003](../../adr/ADR-0003-sbom-roadmap-cyclonedx-then-syft.md)) | Evidência para descoberta de **dados** e conteúdo sensível — não inventário enterprise completo de ativos |
+| **Protect** | Actions com SHA fixo ([ADR 0005](../../adr/ADR-0005-ci-github-actions-supply-Colleague-Nn-pins.md)), permissões mínimas em workflow | Orientação de deploy seguro; endurecimento do ambiente continua com o cliente |
 | **Detect** | CI + Semgrep/CodeQL, Slack opcional em falha | Saída do scanner; **não** é SOC 24×7 |
 | **Respond** | Checklist de incidente no ecossistema ([SUPPLY_Colleague-NN_AND_TRUST_SIGNALS.pt_BR.md](SUPPLY_Colleague-NN_AND_TRUST_SIGNALS.pt_BR.md) — bloco adiado) | Runbooks do cliente são do cliente |
 | **Recover** | **Testar** backup/restauração do estado crítico do lab-op (processo adiado; mesmo bloco) | Idem — resiliência operacional depende do deploy |
@@ -52,7 +52,7 @@ Use a linguagem do CSF em conversas **comerciais/técnicas** para **posicionar**
 
 **Alinhamento aproximado (exemplos, não mapeamento para certificação):**
 
-- **Inventário e controle de ativos / software** → inventário de dependências e imagem ([ADR 0003](../../adr/0003-sbom-roadmap-cyclonedx-then-syft.md), `uv.lock`, Dependabot).
+- **Inventário e controle de ativos / software** → inventário de dependências e imagem ([ADR 0003](../../adr/ADR-0003-sbom-roadmap-cyclonedx-then-syft.md), `uv.lock`, Dependabot).
 - **Configuração segura** → hosts endurecidos no lab-op; caso de uso Wazuh **configuration assessment** como **verificação**, não feature do Data Boar.
 - **Gestão de logs de auditoria** → Wazuh no lab-op para revisão centralizada; logging da aplicação Data Boar no deploy é do operador.
 - **Defesas contra malware** → endpoint nos workstations e servidores; fora do núcleo do repositório salvo doc explícita.

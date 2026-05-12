@@ -13,7 +13,7 @@ Give a **single ordered path** so a **fresh chat** (no transcript memory) can st
 3. **[`CURSOR_AGENT_POLICY_HUB.md`](CURSOR_AGENT_POLICY_HUB.md)** — same themes with **clickable** paths into `.cursor/rules`, `.cursor/skills`, and `docs/ops/`.
 4. **[`TOKEN_AWARE_SCRIPTS_HUB.md`](TOKEN_AWARE_SCRIPTS_HUB.md)** — which **`scripts/*.ps1`** map to keywords, skills, and runbooks.
 5. **Lab / completão only:** **[`LAB_COMPLETAO_FRESH_AGENT_BRIEF.md`](LAB_COMPLETAO_FRESH_AGENT_BRIEF.md)** → **[`LAB_COMPLETAO_RUNBOOK.md`](LAB_COMPLETAO_RUNBOOK.md)** → **[`LAB_OP_HOST_PERSONAS.md`](LAB_OP_HOST_PERSONAS.md)** (ENT / PRO / edge / bridge + Ansible knobs).
-6. **Private stack only:** **[`PRIVATE_STACK_SYNC_RITUAL.md`](PRIVATE_STACK_SYNC_RITUAL.md)** · **`scripts/private-git-sync.ps1`** (**`-Push`** when mirrors must align) · **[ADR 0040](../adr/0040-assistant-private-stack-evidence-mirrors-default.md)**.
+6. **Private stack only:** **[`PRIVATE_STACK_SYNC_RITUAL.md`](PRIVATE_STACK_SYNC_RITUAL.md)** · **`scripts/private-git-sync.ps1`** (**`-Push`** when mirrors must align) · **[ADR 0040](../adr/ADR-0040-assistant-private-stack-evidence-mirrors-default.md)**.
 7. **Where docs live (LAB-PB vs LAB-OP):** **[`OPERATOR_LAB_DOCUMENT_MAP.md`](OPERATOR_LAB_DOCUMENT_MAP.md)**.
 8. **Session English tokens:** [`.cursor/rules/session-mode-keywords.mdc`](../../.cursor/rules/session-mode-keywords.mdc) — type tokens **exactly** (e.g. **`homelab`**, **`completao`**, **`lab-lessons`**, **`legal-dossier-update`**, **`private-stack-sync`**, **`es-find`**, **`release-ritual`**, **`sonar-mcp`**, **`study-check`**, **`short`** / **`token-aware`**).
 
@@ -31,7 +31,7 @@ Give a **single ordered path** so a **fresh chat** (no transcript memory) can st
 | **Vendor web LLM vs validated lab orchestration / *as-is* scripts** | **`LLM_AGENT_EDITING_CAUTION.md`** ([pt-BR](LLM_AGENT_EDITING_CAUTION.pt_BR.md)) — hype vs session limits; full evidence index under **`docs/private/ops/`** (gitignored) |
 | **Docs / hubs / MAP** | **`doc-hubs-plans-sync`** skill · **`docs/README.md`** *Internal and reference* · paired **`*.pt_BR.md`** |
 | **Lab smoke / completão** | **`COMPLETAO_OPERATOR_PROMPT_LIBRARY`** ( **`completao`** + **`tier:…`** ) · **`LAB_COMPLETAO_FRESH_AGENT_BRIEF`** · **`lab-completao-workflow.mdc`** · **`LAB_COMPLETAO_RUNBOOK`** · **`scripts/completao-chat-starter.ps1`** |
-| **Lab lessons archive (public)** | **`lab-lessons`** · **`lab-lessons-learned-archive.mdc`** · **`docs/ops/LAB_LESSONS_LEARNED.md`** · **`docs/ops/lab_lessons_learned/`** · [ADR 0042](../adr/0042-lab-lessons-learned-archive-contract.md) |
+| **Lab lessons archive (public)** | **`lab-lessons`** · **`lab-lessons-learned-archive.mdc`** · **`docs/ops/LAB_LESSONS_LEARNED.md`** · **`docs/ops/lab_lessons_learned/`** · [ADR 0042](../adr/ADR-0042-lab-lessons-learned-archive-contract.md) |
 | **Ansible / Podman / personas** | **`LAB_OP_HOST_PERSONAS`** · **`ops/automation/ansible/README.md`** |
 | **Homelab inventory / SSH batch** | Session token **`homelab`** · **`homelab-ssh-via-terminal.mdc`** · private **`lab-op-hosts.manifest.json`** (when present) · **`LAB_OP_PRIVILEGED_COLLECTION.md`** · **`OPERATOR_LAB_DOCUMENT_MAP`** · § *Token → rule latch (`homelab`)* below |
 | **Stacked private Git close** | Session **`private-stack-sync`** · **`docs-private-workspace-context.mdc`** · **`PRIVATE_STACK_SYNC_RITUAL`** · **`private-git-sync.ps1`** · § *Token → rule latch (`private-stack-sync`)* below |

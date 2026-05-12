@@ -23,6 +23,6 @@ Este diretório guarda **cópias imutáveis e datadas** de evidência de QA/SRE 
 
 ## Registro de contrato
 
-Postura de arquitetura e automação: **[ADR 0042](../../adr/0042-lab-lessons-learned-archive-contract.md)**.
+Postura de arquitetura e automação: **[ADR 0042](../../adr/ADR-0042-lab-lessons-learned-archive-contract.md)**.
 
 Token de sessão (regra Cursor situacional): **`lab-lessons`** → **`.cursor/rules/lab-lessons-learned-archive.mdc`**.

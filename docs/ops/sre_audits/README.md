@@ -41,6 +41,6 @@ external-facing material (none today).
 * [`THE_ART_OF_THE_FALLBACK.md`](../inspirations/THE_ART_OF_THE_FALLBACK.md)
   — diagnostic-on-fall, no silent failure, in every helper this folder
   references.
-* [ADR 0005](../../adr/0005-ci-github-actions-supply-Colleague-Nn-pins.md) —
+* [ADR 0005](../../adr/ADR-0005-ci-github-actions-supply-Colleague-Nn-pins.md) —
   audit-and-block posture for CI / supply Colleague-Nn.
 

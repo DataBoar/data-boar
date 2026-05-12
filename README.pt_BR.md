@@ -44,14 +44,14 @@ Idiomas e encodings legados são suportados; **timeouts configuráveis** e **end
 
 ## The Architect's Vault (cofre do arquiteto)
 
-Investidores, parceiros de integração e revisores técnicos seniores costumam ler o README e perguntar: **onde está o rastro de decisões?** Esta seção é a **porta de entrada** deliberada para narrativa, posicionamento e registros de arquitetura que ficam ao lado do código — para o repositório soar como **produto governado**, e não “só mais um script”. Backlogs de execução e tabelas de PMO ficam a **um clique** em [docs/README.pt_BR.md](docs/README.pt_BR.md) (*Interno e referência*); conforme [ADR 0004](docs/adr/0004-external-docs-no-markdown-links-to-plans.md) (inglês), este README evita links Markdown diretos da superfície de pitch para a subárvore **plans** dentro de **docs**.
+Investidores, parceiros de integração e revisores técnicos seniores costumam ler o README e perguntar: **onde está o rastro de decisões?** Esta seção é a **porta de entrada** deliberada para narrativa, posicionamento e registros de arquitetura que ficam ao lado do código — para o repositório soar como **produto governado**, e não “só mais um script”. Backlogs de execução e tabelas de PMO ficam a **um clique** em [docs/README.pt_BR.md](docs/README.pt_BR.md) (*Interno e referência*); conforme [ADR 0004](docs/adr/ADR-0004-external-docs-no-markdown-links-to-plans.md) (inglês), este README evita links Markdown diretos da superfície de pitch para a subárvore **plans** dentro de **docs**.
 
 | Se você precisa de… | Comece aqui |
 | ------------------- | ----------- |
 | **Proposta de valor** (diretoria, jurídico, conformidade, compras — briefing curto) | [DECISION_MAKER_VALUE_BRIEF.pt_BR.md](docs/DECISION_MAKER_VALUE_BRIEF.pt_BR.md) · [EN](docs/DECISION_MAKER_VALUE_BRIEF.md) |
 | **ADRs** (*Architecture Decision Records* — contexto, decisão, consequências) | [docs/adr/README.pt_BR.md](docs/adr/README.pt_BR.md) · [índice EN](docs/adr/README.md) |
 | **Histórico de narrativa e arquitetura** (história do produto e evolução da stack — placeholder até expandir) | [NARRATIVE_AND_ARCHITECTURE_HISTORY.pt_BR.md](docs/NARRATIVE_AND_ARCHITECTURE_HISTORY.pt_BR.md) · [EN](docs/NARRATIVE_AND_ARCHITECTURE_HISTORY.md) |
-| **Governança do auditor** (o que o app comprova hoje sobre varreduras, exportações e evidência operacional) | [ADR 0037](docs/adr/0037-data-boar-self-audit-log-governance.md) · enquadramento SRE: [OBSERVABILITY_SRE.pt_BR.md](docs/OBSERVABILITY_SRE.pt_BR.md) ([EN](docs/OBSERVABILITY_SRE.md)) |
+| **Governança do auditor** (o que o app comprova hoje sobre varreduras, exportações e evidência operacional) | [ADR 0037](docs/adr/ADR-0037-data-boar-self-audit-log-governance.md) · enquadramento SRE: [OBSERVABILITY_SRE.pt_BR.md](docs/OBSERVABILITY_SRE.pt_BR.md) ([EN](docs/OBSERVABILITY_SRE.md)) |
 | **Navegação por preocupação** (menores, notas de jurisdição, caminhos estilo CISO) | [MAP.pt_BR.md](docs/MAP.pt_BR.md) · [EN](docs/MAP.md) |
 | **Dados de menores / crianças** (limiares, cruzamento, amostras — guia do operador) | [MINOR_DETECTION.pt_BR.md](docs/MINOR_DETECTION.pt_BR.md) · [EN](docs/MINOR_DETECTION.md) |
 | **Índice completo da documentação** (todos os tópicos; entrada para referência interna num só lugar) | [docs/README.pt_BR.md](docs/README.pt_BR.md) · [EN](docs/README.md) |

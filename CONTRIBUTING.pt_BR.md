@@ -16,7 +16,7 @@ Obrigado por considerar contribuir. Este documento cobre a configuração local,
   pip install data-boar
   ```
 
-  Até lá, use **clone git** + **`uv sync`** ou **`pip install -e .`**. O repositório ainda contém o pacote Python histórico **`lgpd_crawler`** (imports) — é detalhe de implementação, não o nome do produto. Contexto da renomeação: **[ADR 0014](docs/adr/0014-rename-repo-and-package-python3-lgpd-crawler-to-data-boar.md)**.
+  Até lá, use **clone git** + **`uv sync`** ou **`pip install -e .`**. O repositório ainda contém o pacote Python histórico **`lgpd_crawler`** (imports) — é detalhe de implementação, não o nome do produto. Contexto da renomeação: **[ADR 0014](docs/adr/ADR-0014-rename-repo-and-package-python3-lgpd-crawler-to-data-boar.md)**.
 
 ### Publicação no PyPI (maintainers)
 
@@ -131,7 +131,7 @@ O Cursor registra isso em **`.cursor/rules/git-pr-sync-before-advice.mdc`**. Vej
 ## Código e documentação
 
 - **Estilo:** O repositório usa [EditorConfig](.editorconfig) (indentação, charset, fins de linha). O job **Lint** da CI executa **`uv run pre-commit run --all-files`** (Ruff + format + plans-stats + plans-hub + markdown + pt-BR + guarda commercial). Localmente: **`uv run pre-commit install`** e faça commits normais, ou rode **`uv run pre-commit run --all-files`** antes do PR. Se **ruff-format** falhar: **`uv run ruff format .`** e volte a fazer stage. Veja **`.pre-commit-config.yaml`**.
-- **Documentação:** Mantenha [README.md](README.md) e [docs/USAGE.md](docs/USAGE.md) em sincronia com o comportamento; atualize [README.pt_BR.md](README.pt_BR.md) e [docs/USAGE.pt_BR.md](docs/USAGE.pt_BR.md) para o português. Toda **nova** documentação voltada ao usuário deve existir em **inglês (canônico)** e **português brasileiro**; **arquivos de plano** e **ADRs numerados** em [docs/adr/](docs/adr/) podem ser apenas em inglês (veja [docs/adr/README.pt_BR.md](docs/adr/README.pt_BR.md)). Ao alterar docs para refletir atualizações da aplicação, **sincronize o outro idioma** (EN primeiro, depois pt-BR). Use seletor de idioma no topo de cada doc e links cruzados que ofereçam os dois idiomas (veja [docs/README.pt_BR.md](docs/README.pt_BR.md) — Política de documentação). **Após editar qualquer .md:** execute `uv run python scripts/fix_markdown_sonar.py` e `uv run pytest tests/test_markdown_lint.py -v -W error` para que as regras SonarQube/markdownlint (ex.: MD060 estilo de tabela) passem. O script de correção aplica MD029 (estilo de lista ordenada 1/1/1); se o doc usar **numeração semântica de passos** (1. 2. 3.), restaure à mão após rodar o script — fundamento: [ADR 0001](docs/adr/0001-markdown-fix-script-md029-and-semantic-step-lists.md) (EN).
+- **Documentação:** Mantenha [README.md](README.md) e [docs/USAGE.md](docs/USAGE.md) em sincronia com o comportamento; atualize [README.pt_BR.md](README.pt_BR.md) e [docs/USAGE.pt_BR.md](docs/USAGE.pt_BR.md) para o português. Toda **nova** documentação voltada ao usuário deve existir em **inglês (canônico)** e **português brasileiro**; **arquivos de plano** e **ADRs numerados** em [docs/adr/](docs/adr/) podem ser apenas em inglês (veja [docs/adr/README.pt_BR.md](docs/adr/README.pt_BR.md)). Ao alterar docs para refletir atualizações da aplicação, **sincronize o outro idioma** (EN primeiro, depois pt-BR). Use seletor de idioma no topo de cada doc e links cruzados que ofereçam os dois idiomas (veja [docs/README.pt_BR.md](docs/README.pt_BR.md) — Política de documentação). **Após editar qualquer .md:** execute `uv run python scripts/fix_markdown_sonar.py` e `uv run pytest tests/test_markdown_lint.py -v -W error` para que as regras SonarQube/markdownlint (ex.: MD060 estilo de tabela) passem. O script de correção aplica MD029 (estilo de lista ordenada 1/1/1); se o doc usar **numeração semântica de passos** (1. 2. 3.), restaure à mão após rodar o script — fundamento: [ADR 0001](docs/adr/ADR-0001-markdown-fix-script-md029-and-semantic-step-lists.md) (EN).
 - **Segredos:** Nunca faça commit de credenciais ou PII real. Use `.env` ou `config.local.yaml` (ambos estão no `.gitignore`) e redija em issues/PRs.
 
 ## CI e higiene de dependências
@@ -144,7 +144,7 @@ O Cursor registra isso em **`.cursor/rules/git-pr-sync-before-advice.mdc`**. Vej
 
 Se alterar **`.github/workflows/*.yml`** (jobs novos, `uses:` de terceiros ou `setup-uv`):
 
-1. Siga o **[ADR 0005](docs/adr/0005-ci-github-actions-supply-Colleague-Nn-pins.md)** — fixe actions de terceiros em **SHA de commit completo (40 caracteres)** (mantenha a tag legível em **comentário** YAML na mesma linha); fixe o CLI **uv** com **`version:`** semver explícito em **`ci.yml`** — **não** `"latest"`.
+1. Siga o **[ADR 0005](docs/adr/ADR-0005-ci-github-actions-supply-Colleague-Nn-pins.md)** — fixe actions de terceiros em **SHA de commit completo (40 caracteres)** (mantenha a tag legível em **comentário** YAML na mesma linha); fixe o CLI **uv** com **`version:`** semver explícito em **`ci.yml`** — **não** `"latest"`.
 1. Rode **`uv run pytest tests/test_github_workflows.py -v`** para o **`test_ci_yml_pins_actions_and_uv_cli`** (e checagens relacionadas) continuar verde antes do push.
 
 ## Histórico de releases e changelog

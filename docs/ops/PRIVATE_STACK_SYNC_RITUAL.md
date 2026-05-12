@@ -27,7 +27,7 @@ During private-tree work, the operator may rely on a **VeraCrypt-mounted drive**
 
 ### Assistants — evidence mirrors (default)
 
-When the operator asks to **verify alignment**, **check drift**, **sync private history**, or close hygiene that clearly touches **`docs/private/`**, treat **every reachable non-GitHub mirror** as **in the same job** — including SSH **`lab-*`** remotes **and** a **bare `notes-sync.git` on the VeraCrypt volume** when that path exists on the workstation (**`scripts/private-git-sync.ps1 -Push`** probes **`Z:`** first, then **`Y:`**, when those drive roots exist). **Do not** ask redundant “should I also push to backup?” questions; **report** concrete failures (missing mount, SSH, **`safe.directory`** / dubious ownership) instead. Canonical rule: **`.cursor/rules/operator-evidence-backup-no-rhetorical-asks.mdc`** · **[ADR 0040](../adr/0040-assistant-private-stack-evidence-mirrors-default.md)**.
+When the operator asks to **verify alignment**, **check drift**, **sync private history**, or close hygiene that clearly touches **`docs/private/`**, treat **every reachable non-GitHub mirror** as **in the same job** — including SSH **`lab-*`** remotes **and** a **bare `notes-sync.git` on the VeraCrypt volume** when that path exists on the workstation (**`scripts/private-git-sync.ps1 -Push`** probes **`Z:`** first, then **`Y:`**, when those drive roots exist). **Do not** ask redundant “should I also push to backup?” questions; **report** concrete failures (missing mount, SSH, **`safe.directory`** / dubious ownership) instead. Canonical rule: **`.cursor/rules/operator-evidence-backup-no-rhetorical-asks.mdc`** · **[ADR 0040](../adr/ADR-0040-assistant-private-stack-evidence-mirrors-default.md)**.
 
 ---
 

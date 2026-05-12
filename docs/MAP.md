@@ -13,10 +13,10 @@ For a **proof-of-concept** or partner dry-run, read in this order so dense docs 
 1. **[TECH_GUIDE.md](TECH_GUIDE.md)** ([pt-BR](TECH_GUIDE.pt_BR.md)) — install, first scan, ports, connectors overview.
 2. **This MAP** — scan the tables below (minors → jurisdiction → detection bridges → governance of the auditor). For **multinational tension** narrative (not legal advice), read **[JURISDICTION_COLLISION_HANDLING.md](JURISDICTION_COLLISION_HANDLING.md)** ([pt-BR](JURISDICTION_COLLISION_HANDLING.pt_BR.md)) after the jurisdiction rows.
 3. **[USAGE.md](USAGE.md)** ([pt-BR](USAGE.pt_BR.md)) — `detection` keys, `report.jurisdiction_hints`, CLI/API/dashboard flags.
-4. **Governance of the auditor (evidence today vs gaps):** **[ADR 0037](adr/0037-data-boar-self-audit-log-governance.md)** (English).
-5. **Jurisdiction hints (not legal conclusions):** **[ADR 0026](adr/0026-optional-jurisdiction-hints-dpo-facing-heuristic-metadata-only.md)** (English) plus the jurisdiction row in the table below.
+4. **Governance of the auditor (evidence today vs gaps):** **[ADR 0037](adr/ADR-0037-data-boar-self-audit-log-governance.md)** (English).
+5. **Jurisdiction hints (not legal conclusions):** **[ADR 0026](adr/ADR-0026-optional-jurisdiction-hints-dpo-facing-heuristic-metadata-only.md)** (English) plus the jurisdiction row in the table below.
 
-**Execution plans and PMO tables** live under plain-text path ``docs/plans/`` in your checkout; this map does **not** link there from product-tier Markdown ([ADR 0004](adr/0004-external-docs-no-markdown-links-to-plans.md)). Use **[docs/README.md](README.md)** — *Internal and reference* ([pt-BR](README.pt_BR.md)) as the deliberate entry (PLANS_TODO, PLANS_HUB, completed plans).
+**Execution plans and PMO tables** live under plain-text path ``docs/plans/`` in your checkout; this map does **not** link there from product-tier Markdown ([ADR 0004](adr/ADR-0004-external-docs-no-markdown-links-to-plans.md)). Use **[docs/README.md](README.md)** — *Internal and reference* ([pt-BR](README.pt_BR.md)) as the deliberate entry (PLANS_TODO, PLANS_HUB, completed plans).
 
 ---
 
@@ -24,12 +24,12 @@ For a **proof-of-concept** or partner dry-run, read in this order so dense docs 
 
 | ADR | Why it matters in a POC |
 | --- | ----------------------- |
-| [0000](adr/0000-project-origin-and-adr-baseline.md) | Baseline: ADRs complement code and plans; where to look first. |
-| [0004](adr/0004-external-docs-no-markdown-links-to-plans.md) | Why pitch docs link here and to **docs/README**, not straight into ``docs/plans/``. |
-| [0026](adr/0026-optional-jurisdiction-hints-dpo-facing-heuristic-metadata-only.md) | Jurisdiction hints: metadata-only, DPO-facing; limits of legal claims. |
-| [0035](adr/0035-readme-stakeholder-pitch-vs-deck-vocabulary.md) | README stakeholder tone vs optional deck vocabulary elsewhere. |
-| [0036](adr/0036-exception-and-log-pii-redaction-pipeline.md) | Exception/log redaction; safer operator evidence in logs and DB text. |
-| [0037](adr/0037-data-boar-self-audit-log-governance.md) | Self-audit: what is provable today (sessions, export trail, wipes) vs explicit gaps. |
+| [0000](adr/ADR-0000-project-origin-and-adr-baseline.md) | Baseline: ADRs complement code and plans; where to look first. |
+| [0004](adr/ADR-0004-external-docs-no-markdown-links-to-plans.md) | Why pitch docs link here and to **docs/README**, not straight into ``docs/plans/``. |
+| [0026](adr/ADR-0026-optional-jurisdiction-hints-dpo-facing-heuristic-metadata-only.md) | Jurisdiction hints: metadata-only, DPO-facing; limits of legal claims. |
+| [0035](adr/ADR-0035-readme-stakeholder-pitch-vs-deck-vocabulary.md) | README stakeholder tone vs optional deck vocabulary elsewhere. |
+| [0036](adr/ADR-0036-exception-and-log-pii-redaction-pipeline.md) | Exception/log redaction; safer operator evidence in logs and DB text. |
+| [0037](adr/ADR-0037-data-boar-self-audit-log-governance.md) | Self-audit: what is provable today (sessions, export trail, wipes) vs explicit gaps. |
 
 Full index: [adr/README.md](adr/README.md) ([pt-BR](adr/README.pt_BR.md)).
 
@@ -52,8 +52,8 @@ Design history for minor detection lives in a **completed** plan file under `doc
 | Question | Read first | Config / behaviour | Related |
 | -------- | ---------- | ------------------- | ------- |
 | What are **jurisdiction hints**, who are they for, and how do I enable them (CLI, API, dashboard, YAML)? | **[USAGE.md](USAGE.md)** — search **jurisdiction_hints** / **Report info** ([pt-BR](USAGE.pt_BR.md)) | `report.jurisdiction_hints`, `--jurisdiction-hint`, `POST /scan` body | [COMPLIANCE_AND_LEGAL.md](COMPLIANCE_AND_LEGAL.md) ([pt-BR](COMPLIANCE_AND_LEGAL.pt_BR.md)) |
-| Why hints are **not** legal conclusions and what ADR locked in? | **[ADR 0026](adr/0026-optional-jurisdiction-hints-dpo-facing-heuristic-metadata-only.md)** (English) | Index: [adr/README.md](adr/README.md) ([pt-BR](adr/README.pt_BR.md)) | [COMPLIANCE_TECHNICAL_REFERENCE.md](COMPLIANCE_TECHNICAL_REFERENCE.md) ([pt-BR](COMPLIANCE_TECHNICAL_REFERENCE.pt_BR.md)) |
-| Multinational **“perfect storm”** — overlapping regimes, anchor vs drift, port-style storyboard? | **[JURISDICTION_COLLISION_HANDLING.md](JURISDICTION_COLLISION_HANDLING.md)** ([pt-BR](JURISDICTION_COLLISION_HANDLING.pt_BR.md)) | Same opt-in hints; **no** numeric collision score in product yet | [ADR 0038](adr/0038-jurisdictional-ambiguity-alert-dont-decide.md), [use-cases/README.md](use-cases/README.md) ([pt-BR](use-cases/README.pt_BR.md)) — incl. port logistics storyboard |
+| Why hints are **not** legal conclusions and what ADR locked in? | **[ADR 0026](adr/ADR-0026-optional-jurisdiction-hints-dpo-facing-heuristic-metadata-only.md)** (English) | Index: [adr/README.md](adr/README.md) ([pt-BR](adr/README.pt_BR.md)) | [COMPLIANCE_TECHNICAL_REFERENCE.md](COMPLIANCE_TECHNICAL_REFERENCE.md) ([pt-BR](COMPLIANCE_TECHNICAL_REFERENCE.pt_BR.md)) |
+| Multinational **“perfect storm”** — overlapping regimes, anchor vs drift, port-style storyboard? | **[JURISDICTION_COLLISION_HANDLING.md](JURISDICTION_COLLISION_HANDLING.md)** ([pt-BR](JURISDICTION_COLLISION_HANDLING.pt_BR.md)) | Same opt-in hints; **no** numeric collision score in product yet | [ADR 0038](adr/ADR-0038-jurisdictional-ambiguity-alert-dont-decide.md), [use-cases/README.md](use-cases/README.md) ([pt-BR](use-cases/README.pt_BR.md)) — incl. port logistics storyboard |
 
 ---
 
@@ -71,7 +71,7 @@ Design history for minor detection lives in a **completed** plan file under `doc
 
 | Question | Read first | Notes |
 | -------- | ---------- | ----- |
-| What evidence exists **today** for scan attribution, wipes, export bundles, and log redaction? What is **not** implemented yet? | **[ADR 0037](adr/0037-data-boar-self-audit-log-governance.md)** (English) | Honest baseline for **CISO / SOC2-style** narratives; avoids over-claiming per-report or per-config immutable audit rows. |
+| What evidence exists **today** for scan attribution, wipes, export bundles, and log redaction? What is **not** implemented yet? | **[ADR 0037](adr/ADR-0037-data-boar-self-audit-log-governance.md)** (English) | Honest baseline for **CISO / SOC2-style** narratives; avoids over-claiming per-report or per-config immutable audit rows. |
 | SRE alignment (health, logs, future metrics) | **[OBSERVABILITY_SRE.md](OBSERVABILITY_SRE.md)** ([pt-BR](OBSERVABILITY_SRE.pt_BR.md)) | Links this ADR for governance-of-the-auditor framing. |
 
 ---
@@ -104,7 +104,7 @@ Design history for minor detection lives in a **completed** plan file under `doc
 ## Where this fits
 
 - **Technical install and run:** [TECH_GUIDE.md](TECH_GUIDE.md) ([pt-BR](TECH_GUIDE.pt_BR.md)) ends with a short **Topic map** pointer back here.
-- **Product philosophy (evidence over theatre):** [philosophy/THE_WHY.md](philosophy/THE_WHY.md) ([pt-BR](philosophy/THE_WHY.pt_BR.md)); retention boundary in sensitive zones: [ADR 0039](adr/0039-retention-evidence-posture-bonded-customs-adjacent-contexts.md).
+- **Product philosophy (evidence over theatre):** [philosophy/THE_WHY.md](philosophy/THE_WHY.md) ([pt-BR](philosophy/THE_WHY.pt_BR.md)); retention boundary in sensitive zones: [ADR 0039](adr/ADR-0039-retention-evidence-posture-bonded-customs-adjacent-contexts.md).
 - **Glossary (terms by theme):** [GLOSSARY.md](GLOSSARY.md) ([pt-BR](GLOSSARY.pt_BR.md)).
 
 If a topic is missing from this map, add a row in **both** `MAP.md` and `MAP.pt_BR.md` in the same PR.

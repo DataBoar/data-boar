@@ -2,7 +2,7 @@
 
 **Status:** **Slice 1** shipped on `main` (`WHERE` non-null filter, query builder hook, optional env cap). **Slice 2–3** backlog (metadata-first aggressiveness, dialect TABLESAMPLE / coverage score).
 
-**Synced with:** [PLANS_TODO.md](PLANS_TODO.md) (*Integration / active threads*), [ADR 0043](../adr/0043-sql-column-sampling-non-null-and-strategy-hook.md)
+**Synced with:** [PLANS_TODO.md](PLANS_TODO.md) (*Integration / active threads*), [ADR 0043](../adr/ADR-0043-sql-column-sampling-non-null-and-strategy-hook.md)
 
 <!-- plans-hub-summary: SRE-safe SQL column sampling: non-null TOP/LIMIT today; roadmap for metadata-driven caps, TABLESAMPLE, audit coverage signals. -->
 <!-- plans-hub-related: PLAN_ADDITIONAL_DETECTION_TECHNIQUES_AND_FN_REDUCTION.md, ../TOPOLOGY.md -->
@@ -55,5 +55,5 @@ Use this block when scoping refactors or demos so paths match the repo (not hypo
 
 ## References
 
-- [ADR 0043](../adr/0043-sql-column-sampling-non-null-and-strategy-hook.md) — decision record.
+- [ADR 0043](../adr/ADR-0043-sql-column-sampling-non-null-and-strategy-hook.md) — decision record.
 - [PLAN_ADDITIONAL_DETECTION_TECHNIQUES_AND_FN_REDUCTION.md](PLAN_ADDITIONAL_DETECTION_TECHNIQUES_AND_FN_REDUCTION.md) — FN / incomplete-sample narrative.

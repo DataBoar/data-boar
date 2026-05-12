@@ -7,7 +7,7 @@
 
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md) (pointer only). **Workflow bundle:** [GEMINI_PUBLIC_BUNDLE_REVIEW.md](../ops/GEMINI_PUBLIC_BUNDLE_REVIEW.md) ([pt-BR](../ops/GEMINI_PUBLIC_BUNDLE_REVIEW.pt_BR.md)).
 
-**Promoted operator hygiene (post-triage, not “Gemini as authority”):** dated checklists consolidated under **`docs/ops/today-mode/`** with **`PUBLISHED_SYNC.md`** and **`CARRYOVER.md`** — see [ADR 0006](../adr/0006-operator-today-mode-layout-and-published-sync.md).
+**Promoted operator hygiene (post-triage, not “Gemini as authority”):** dated checklists consolidated under **`docs/ops/today-mode/`** with **`PUBLISHED_SYNC.md`** and **`CARRYOVER.md`** — see [ADR 0006](../adr/ADR-0006-operator-today-mode-layout-and-published-sync.md).
 
 **Source texts (maintainer machine, gitignored):** `docs/feedbacks, reviews, comments and criticism/` — same drop zone as **Corporate-Entity-C / WRB**-style reviews (rule **`.cursor/rules/operator-feedback-inbox.mdc`**, token **`feedback-inbox`**). Gemini exports used for §6: `Gemini - revisao e recomendações … EN …`, `… pt_BR …`, `… compliance config samples yaml …`, `Gemini - raciocinio profundo …` (filenames show `2006_03_26` typo; treat as **2026-03-26**). **Do not** commit that folder; this plan holds the **distilled triage** only.
 

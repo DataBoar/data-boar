@@ -16,9 +16,9 @@ Estes ADRs registram **decisoes e cronologia**; o texto nao e duplicado aqui:
 
 | ADR | Tema |
 | --- | ----- |
-| [0018](../adr/0018-pii-anti-recurrence-guardrails-for-tracked-files-and-branch-history.md) | Guardrails anti-recorrencia para arquivos rastreados e historico de branch |
-| [0019](../adr/0019-pii-verification-cadence-and-manual-review-gate.md) | Cadencia de verificacao e gate de revisao manual |
-| [0020](../adr/0020-ci-full-git-history-pii-gate.md) | CI full-history `pii_history_guard` |
+| [0018](../adr/ADR-0018-pii-anti-recurrence-guardrails-for-tracked-files-and-branch-history.md) | Guardrails anti-recorrencia para arquivos rastreados e historico de branch |
+| [0019](../adr/ADR-0019-pii-verification-cadence-and-manual-review-gate.md) | Cadencia de verificacao e gate de revisao manual |
+| [0020](../adr/ADR-0020-ci-full-git-history-pii-gate.md) | CI full-history `pii_history_guard` |
 
 Regra do assistente / Cursor: **`.cursor/rules/public-tracked-pii-zero-tolerance.mdc`**.
 
@@ -257,7 +257,7 @@ git fetch --prune
 - **Parte III** abaixo — visibilidade de fork vs clone.
 - **Parte I** acima — cadência e grep manual.
 - [COMMIT_AND_PR.pt_BR.md](COMMIT_AND_PR.pt_BR.md) — sem narrativas sensíveis em PR/commit.
-- [ADR 0020](../adr/0020-ci-full-git-history-pii-gate.md) — gate de histórico completo na CI.
+- [ADR 0020](../adr/ADR-0020-ci-full-git-history-pii-gate.md) — gate de histórico completo na CI.
 - [COLLABORATION_TEAM.pt_BR.md](../COLLABORATION_TEAM.pt_BR.md) — fluxo fork / PR do colaborador.
 
 ---

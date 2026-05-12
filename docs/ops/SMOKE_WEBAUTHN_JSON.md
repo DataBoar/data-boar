@@ -2,7 +2,7 @@
 
 **Portuguese (Brazil):** [SMOKE_WEBAUTHN_JSON.pt_BR.md](SMOKE_WEBAUTHN_JSON.pt_BR.md)
 
-**Plan:** [PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md](../plans/PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md) Phase **1a**; **ADR:** [0033](../adr/0033-webauthn-open-relying-party-json-endpoints.md).
+**Plan:** [PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md](../plans/PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md) Phase **1a**; **ADR:** [0033](../adr/ADR-0033-webauthn-open-relying-party-json-endpoints.md).
 
 **Scope:** Automated **pytest** coverage for optional **`/auth/webauthn/*`** JSON endpoints (no browser / no authenticator required). Full **FIDO2** ceremonies with a real passkey remain a **manual** integration check outside this subset.
 

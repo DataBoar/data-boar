@@ -11,7 +11,7 @@
 3. **Run this file top to bottom:** **Block A** (gates) → **B** (testers) → **C** (lab-op) as time allows.
 4. **Evening:** **`eod-sync`** — or **`.\scripts\operator-day-ritual.ps1 -Mode Eod`** — then **[End of day](#end-of-day)** below.
 
-**Resume with low risk (after sleep / before deep work):** `git status -sb` (clean or intentional WIP) → `git fetch origin && git pull origin main` → skim **[CARRYOVER.md](CARRYOVER.md)** → **Block A** (CI green + optional `check-all`). If you **closed 2026-04-16** with **`eod-sync`**, you already have log/PR snapshot; if not, run **`eod-sync` once** before merging risky work. **ADR / licensing docs:** [ADR 0027](../../adr/0027-commercial-tier-boundaries-licensing-docs-and-future-jwt-claims.md); private example: `docs/private/commercial/LICENSING_TIER_EXAMPLE_FEDERATED_OPERATOR.pt_BR.md`.
+**Resume with low risk (after sleep / before deep work):** `git status -sb` (clean or intentional WIP) → `git fetch origin && git pull origin main` → skim **[CARRYOVER.md](CARRYOVER.md)** → **Block A** (CI green + optional `check-all`). If you **closed 2026-04-16** with **`eod-sync`**, you already have log/PR snapshot; if not, run **`eod-sync` once** before merging risky work. **ADR / licensing docs:** [ADR 0027](../../adr/ADR-0027-commercial-tier-boundaries-licensing-docs-and-future-jwt-claims.md); private example: `docs/private/commercial/LICENSING_TIER_EXAMPLE_FEDERATED_OPERATOR.pt_BR.md`.
 
 ---
 
@@ -66,5 +66,5 @@ See **[CARRYOVER.md](CARRYOVER.md)** — update rows when **Corporate-Entity-C**
 
 - **Release truth:** [PUBLISHED_SYNC.md](PUBLISHED_SYNC.md) · **v1.7.0** notes: [releases/1.7.0.md](../../releases/1.7.0.md)
 - **PLANS:** [PLANS_TODO.md](../../plans/PLANS_TODO.md) · [PLANS_HUB.md](../../plans/PLANS_HUB.md)
-- **ADR:** [0026 Jurisdiction hints](../../adr/0026-optional-jurisdiction-hints-dpo-facing-heuristic-metadata-only.md) · [0025 Compliance ceiling](../../adr/0025-compliance-positioning-evidence-inventory-not-legal-conclusion-engine.md)
+- **ADR:** [0026 Jurisdiction hints](../../adr/ADR-0026-optional-jurisdiction-hints-dpo-facing-heuristic-metadata-only.md) · [0025 Compliance ceiling](../../adr/ADR-0025-compliance-positioning-evidence-inventory-not-legal-conclusion-engine.md)
 - **Corporate-Entity-C:** [Corporate-Entity-C_REVIEW_REQUEST_GUIDELINE.md](../Corporate-Entity-C_REVIEW_REQUEST_GUIDELINE.md)

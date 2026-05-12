@@ -86,7 +86,7 @@ This is the exact failure mode our doctrine treats as
 
 - [`DEFENSIVE_SCANNING_MANIFESTO.md`](../inspirations/DEFENSIVE_SCANNING_MANIFESTO.md) §1.4 — *no surprise side effects*; the
   code we ship must match the artifacts customers install.
-- [ADR 0003](../../adr/0003-sbom-roadmap-cyclonedx-then-syft.md) treats
+- [ADR 0003](../../adr/ADR-0003-sbom-roadmap-cyclonedx-then-syft.md) treats
   `requirements.txt` as the **input to the SBOM**. A drifted
   `requirements.txt` produces an SBOM that does not match the wheel.
 - The risk is not "CI is red"; the risk is **a maintainer rage-merges to
@@ -194,7 +194,7 @@ Per the protocol I explicitly looked for, and did **not** find, evidence of:
   net-new Python code; only version pins move).
 - **Supply-Colleague-Nn risk introduced by the change** beyond §2.1 — the new
   hashes are signed by the upstream maintainers and resolved by `uv` from
-  the same registry already pinned in [ADR 0005](../../adr/0005-ci-github-actions-supply-Colleague-Nn-pins.md).
+  the same registry already pinned in [ADR 0005](../../adr/ADR-0005-ci-github-actions-supply-Colleague-Nn-pins.md).
 
 ---
 

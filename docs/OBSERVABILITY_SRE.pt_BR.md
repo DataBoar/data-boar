@@ -77,7 +77,7 @@ SRE foca em **confiabilidade**, **redução de toil**, **error budgets** e **ope
 
 ### Governança do auditor
 
-Enquadramento SRE: **quem vigia o vigilante** — o scanner precisa ser **defensável em auditoria**, não só os dados que ele inspeciona. O **[ADR 0037](adr/0037-data-boar-self-audit-log-governance.md)** (inglês) registra a **linha de base 2026** (atribuição de sessão no SQLite, export audit trail, log de wipe, log de envio de notificação, logs no host com redação) e as **lacunas explícitas** (sem log imutável por download de relatório ou por cada POST de config por padrão). Use-o em narrativas honestas para **CISO / procurement** e no [MAP.pt_BR.md](MAP.pt_BR.md).
+Enquadramento SRE: **quem vigia o vigilante** — o scanner precisa ser **defensável em auditoria**, não só os dados que ele inspeciona. O **[ADR 0037](adr/ADR-0037-data-boar-self-audit-log-governance.md)** (inglês) registra a **linha de base 2026** (atribuição de sessão no SQLite, export audit trail, log de wipe, log de envio de notificação, logs no host com redação) e as **lacunas explícitas** (sem log imutável por download de relatório ou por cada POST de config por padrão). Use-o em narrativas honestas para **CISO / procurement** e no [MAP.pt_BR.md](MAP.pt_BR.md).
 
 ---
 

@@ -59,7 +59,7 @@ See [SECURITY.md](../SECURITY.md), [USAGE.md](../USAGE.md), [TECH_GUIDE.md](../T
 
 ### Phase 1a deliverable — WebAuthn JSON relying party (shipped)
 
-**Intent:** Ship **standards-aligned** registration/authentication **JSON** endpoints and credential persistence **without** a commercial passwordless SaaS SDK, so deployments stay **vendor-neutral** at the core ([ADR 0033](../adr/0033-webauthn-open-relying-party-json-endpoints.md)).
+**Intent:** Ship **standards-aligned** registration/authentication **JSON** endpoints and credential persistence **without** a commercial passwordless SaaS SDK, so deployments stay **vendor-neutral** at the core ([ADR 0033](../adr/ADR-0033-webauthn-open-relying-party-json-endpoints.md)).
 
 | Item | Notes |
 | ---- | ----- |

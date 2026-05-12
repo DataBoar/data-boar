@@ -147,11 +147,11 @@ finding = {
 - Module: `core/image_detector.py` (or `core/detectors/image.py`).
 - Config flags: `enable_image_scanning`, `image_ocr_engine`, `image_blob_sampling_rows`.
 - Dependencies: optional group `image` in `pyproject.toml` (`pytesseract`, `Pillow`, `easyocr`).
-- ADR: `docs/adr/0012-ocr-image-sensitive-data-detection.md`.
+- ADR: `docs/adr/ADR-0012-ocr-image-sensitive-data-detection.md`.
 - Plan: `docs/plans/PLAN_IMAGE_SENSITIVE_DATA_DETECTION.pt_BR.md`.
 
 ## Additional Resources
 
 - For regulatory definitions and pattern–norm mapping, see [reference.md](reference.md).
-- ADR 0012: `docs/adr/0012-ocr-image-sensitive-data-detection.md`
+- ADR 0012: `docs/adr/ADR-0012-ocr-image-sensitive-data-detection.md`
 - Plan: `docs/plans/PLAN_IMAGE_SENSITIVE_DATA_DETECTION.pt_BR.md`

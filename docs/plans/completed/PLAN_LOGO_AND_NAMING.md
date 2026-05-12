@@ -5,7 +5,7 @@
 
 Plan for a copyright-safe logo (web, favicon, optional report), integration points in the app, and alternative application names (e.g. compliance_crawler) with availability notes for you to decide.
 
-> **Historical note (2026):** The PyPI / `pyproject` distribution id is now **`data-boar`** ([ADR 0014](../../adr/0014-rename-repo-and-package-python3-lgpd-crawler-to-data-boar.md)). Rows in this archived plan that still mention the old distribution name describe the state **at completion time**, not the current canonical install identity.
+> **Historical note (2026):** The PyPI / `pyproject` distribution id is now **`data-boar`** ([ADR 0014](../../adr/ADR-0014-rename-repo-and-package-python3-lgpd-crawler-to-data-boar.md)). Rows in this archived plan that still mention the old distribution name describe the state **at completion time**, not the current canonical install identity.
 
 ---
 
@@ -30,7 +30,7 @@ Mark items done here and in [PLANS_TODO.md](../PLANS_TODO.md) when actually comp
 
 ## Current state
 
-- **Package / display name:** PyPI distribution **`data-boar`** ([core/about.py](../../core/about.py), [pyproject.toml](../../pyproject.toml)); **display name:** **Data Boar**. See [ADR 0014](../../adr/0014-rename-repo-and-package-python3-lgpd-crawler-to-data-boar.md). **Availability (step 5):** at archive time, PyPI slots for `data-boar` / `data_boar` were unclaimed; a formal trademark search has not been run.
+- **Package / display name:** PyPI distribution **`data-boar`** ([core/about.py](../../core/about.py), [pyproject.toml](../../pyproject.toml)); **display name:** **Data Boar**. See [ADR 0014](../../adr/ADR-0014-rename-repo-and-package-python3-lgpd-crawler-to-data-boar.md). **Availability (step 5):** at archive time, PyPI slots for `data-boar` / `data_boar` were unclaimed; a formal trademark search has not been run.
 - **Mascot assets:** [api/static/mascot/](../../api/static/mascot/) contains the Data Boar mascot (color and B&W, SVG and PNG, translucent and full backgrounds). Used in base.html (favicon), about.html, dashboard.html, reports.html, **config.html**, **help.html**, and README (EN/pt-BR). See [MASCOT.md](../MASCOT.md) for which file to use where.
 - **Report:** "Report info" sheet is a Field/Value table (no embedded image yet); heatmap PNG footer is text-only ([report/generator.py](../../report/generator.py) `_build_report_info`, `_create_heatmap`). Optional: embed mascot in Report info sheet and/or heatmap image.
 - **Audience and scope:** DPO/compliance teams; PII/sensitive data auditing across DBs and filesystems; LGPD, GDPR, CCPA, HIPAA, GLBA; scanning, mapping, reporting.
@@ -114,7 +114,7 @@ Once the assets exist, wire them in as follows (no rule silencing or behavior ch
 
 ## 3. Application name change: options and availability
 
-**Canonical today:** display name **Data Boar**; PyPI distribution id **`data-boar`** ([ADR 0014](../../adr/0014-rename-repo-and-package-python3-lgpd-crawler-to-data-boar.md)). The table below is **historical brainstorming** from before that rename.
+**Canonical today:** display name **Data Boar**; PyPI distribution id **`data-boar`** ([ADR 0014](../../adr/ADR-0014-rename-repo-and-package-python3-lgpd-crawler-to-data-boar.md)). The table below is **historical brainstorming** from before that rename.
 
 | Candidate name              | Pros                                              | Cons                                                                 | Availability note                                                                                                              |
 | ---                         | ---                                               | ---                                                                  | ---                                                                                                                            |

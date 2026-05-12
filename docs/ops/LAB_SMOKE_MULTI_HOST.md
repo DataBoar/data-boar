@@ -103,7 +103,7 @@ When this works in your lab, it is a **valid** way to expose a **remote director
    Prefer **`-o ro`** for audit-style reads when the remote side allows it.
 1. **Config:** `type: filesystem`, `path:` under the mount (e.g. `/mnt/lab-sshfs/...`). Same scanning rules as any local tree; expect **higher latency** and occasional **stale handle** behaviour on flaky Wi‑Fi—`reconnect` and keep-alive options reduce drops.
 1. **Unmount:** `fusermount -u /mnt/lab-sshfs` (Linux) or your OS’s equivalent.
-1. **PII and publishing discipline:** Do **not** put real `USER@HOST`, keys, LAN IPs, or home paths into **tracked** Markdown, issues, or PR bodies. Guardrails: [ADR 0018](../adr/0018-pii-anti-recurrence-guardrails-for-tracked-files-and-branch-history.md), [ADR 0019](../adr/0019-pii-verification-cadence-and-manual-review-gate.md). Keep operator-specific mount lines in **gitignored** notes under `docs/private/homelab/` if you need a durable record.
+1. **PII and publishing discipline:** Do **not** put real `USER@HOST`, keys, LAN IPs, or home paths into **tracked** Markdown, issues, or PR bodies. Guardrails: [ADR 0018](../adr/ADR-0018-pii-anti-recurrence-guardrails-for-tracked-files-and-branch-history.md), [ADR 0019](../adr/ADR-0019-pii-verification-cadence-and-manual-review-gate.md). Keep operator-specific mount lines in **gitignored** notes under `docs/private/homelab/` if you need a durable record.
 
 ### 5.2 WebDAV — two integration patterns
 

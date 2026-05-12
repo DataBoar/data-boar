@@ -18,8 +18,8 @@ Use this list to declare the **maturity POC “ready”** for demos, beta notes,
 | 1 | **CI / tests** | `main` green: `pytest` coverage for assessment routes and DB (`tests/test_api_assessment_poc.py`, `tests/test_maturity_assessment_integrity.py`, `tests/test_database.py` batch summaries), plus repo-wide gate (`scripts/check-all.ps1` or CI **Lint** + **Test**). **Autonomous subset (fast):** `scripts/smoke-maturity-assessment-poc.ps1` (Windows) — same files as gate 1 minus full suite. |
 | 2 | **Config documented** | `api.maturity_self_assessment_poc_enabled: true`, valid **`api.maturity_assessment_pack_path`** (YAML shape per `tests/fixtures/maturity_assessment/sample_pack.yaml`), and tier **Pro+** for this feature — in lab via `licensing.effective_tier: pro` in YAML ([docs/USAGE.md](../USAGE.md) table row). |
 | 3 | **Happy path (manual smoke)** | Step-by-step: [docs/ops/SMOKE_MATURITY_ASSESSMENT_POC.md](../ops/SMOKE_MATURITY_ASSESSMENT_POC.md) ([pt-BR](../ops/SMOKE_MATURITY_ASSESSMENT_POC.pt_BR.md)) §D — browser flow (form → summary → history → export). |
-| 4 | **Integrity (optional demo)** | Same runbook §E — **`DATA_BOAR_MATURITY_INTEGRITY_SECRET`** at submit time; **`GET /status`** and **`--export-audit-trail`** ([ADR 0015](../adr/0015-poc-test-infrastructure-synthetic-corpus-and-api-testing.md) test posture). |
-| 5 | **Docs / ADR** | Operator-facing text in [USAGE.md](../USAGE.md) (+ pt-BR) for assessment + batch history; [ADR 0032](../adr/0032-maturity-assessment-batch-history-sqlite.md) for history behaviour. |
+| 4 | **Integrity (optional demo)** | Same runbook §E — **`DATA_BOAR_MATURITY_INTEGRITY_SECRET`** at submit time; **`GET /status`** and **`--export-audit-trail`** ([ADR 0015](../adr/ADR-0015-poc-test-infrastructure-synthetic-corpus-and-api-testing.md) test posture). |
+| 5 | **Docs / ADR** | Operator-facing text in [USAGE.md](../USAGE.md) (+ pt-BR) for assessment + batch history; [ADR 0032](../adr/ADR-0032-maturity-assessment-batch-history-sqlite.md) for history behaviour. |
 
 **Checkpoint closed:** run **`smoke-maturity-assessment-poc.ps1`** + complete runbook §D (and §E if you need integrity demo). Then proceed to **[#86](https://github.com/FabioLeitao/data-boar/issues/86)** on a dedicated branch; **return** to maturity (DOCX→YAML per tenant, consultant UX) when packaging or customer needs require it — see § *Next steps* below.
 
@@ -28,7 +28,7 @@ Use this list to declare the **maturity POC “ready”** for demos, beta notes,
 | Level | What it proves | Typical evidence |
 | ----- | ---------------- | ---------------- |
 | **A — Automated gates** | Same pytest subset as checklist **gate 1** below — API, DB batch order, HMAC helpers, audit-export parity | `.\scripts\smoke-maturity-assessment-poc.ps1` exit **0** on current `main`; CI **Test** job green on the same files |
-| **B — Docs / ADR** | Operator can configure flags + pack path + tier from [USAGE.md](../USAGE.md); history behaviour documented | Checklist **gate 5** below; [ADR 0032](../adr/0032-maturity-assessment-batch-history-sqlite.md) |
+| **B — Docs / ADR** | Operator can configure flags + pack path + tier from [USAGE.md](../USAGE.md); history behaviour documented | Checklist **gate 5** below; [ADR 0032](../adr/ADR-0032-maturity-assessment-batch-history-sqlite.md) |
 | **C — Full (demo / beta)** | Real browser UX: redirects, downloads, locale — **not** replaceable by pytest alone | [SMOKE_MATURITY_ASSESSMENT_POC.md](../ops/SMOKE_MATURITY_ASSESSMENT_POC.md) §D checkboxes (§E optional); record date + commit in **`docs/private/`** or a dated **today-mode** note if you want a paper trail **without** editing public plans |
 
 **Agent / CI:** Safe to claim **Level A + B** when smoke + USAGE + ADR match shipped code. **Level C** requires an **operator** pass — do not mark “full POC ready” in release prose without §D.
@@ -43,7 +43,7 @@ Use this table so **agents / CI** do not promise what only a **human operator** 
 | **2** Config documented | **Docs only** | [USAGE.md](../USAGE.md) (+ pt-BR) documents flags, pack path, tier; operator still applies a **local** `config.yaml` for manual §D. |
 | **3** Happy path (§D) | **No** | Browser steps in [SMOKE_MATURITY_ASSESSMENT_POC.md](../ops/SMOKE_MATURITY_ASSESSMENT_POC.md) — **required** to declare **full** “POC ready” for demos. |
 | **4** Integrity (§E) | **Partial** | HMAC + `/status` + audit export are **covered by tests**; **§E** remains the **live** lab check with env secret + running process. |
-| **5** Docs / ADR | **Yes** | USAGE, [ADR 0032](../adr/0032-maturity-assessment-batch-history-sqlite.md), this plan, runbook EN + pt-BR. |
+| **5** Docs / ADR | **Yes** | USAGE, [ADR 0032](../adr/ADR-0032-maturity-assessment-batch-history-sqlite.md), this plan, runbook EN + pt-BR. |
 
 **Working definitions:**
 
@@ -109,7 +109,7 @@ Operators and consultants need **organizational** visibility (roles, processes, 
 - **Aligned:** Same “evidence and governance” story: technical scan shows **where** data lives; maturity form shows **how prepared** the organization claims to be—both feed the DPO/consultant narrative in sales and delivery.
 - **Not aligned with open core:** This is **process/GRC content**, heavy UX, and ongoing content maintenance—natural fit for **commercial / partner** tier or a **separate product**, not the BSD AGPL community baseline.
 
-**Branding:** Can share **Data Boar** / **dashBOARd** chrome if embedded; must not blur **legal conclusions**—copy must repeat that output is **self-reported maturity signal**, not certification (see [ADR 0025](../adr/0025-compliance-positioning-evidence-inventory-not-legal-conclusion-engine.md) posture).
+**Branding:** Can share **Data Boar** / **dashBOARd** chrome if embedded; must not blur **legal conclusions**—copy must repeat that output is **self-reported maturity signal**, not certification (see [ADR 0025](../adr/ADR-0025-compliance-positioning-evidence-inventory-not-legal-conclusion-engine.md) posture).
 
 ## Architecture options (decision later)
 

@@ -77,7 +77,7 @@ SRE focuses on **reliability**, **toil reduction**, **error budgets**, and **ope
 
 ### Governance of the auditor
 
-SRE framing: **who watches the watcher** — the scanner must be **audit-defensible**, not only the data it inspects. **[ADR 0037](adr/0037-data-boar-self-audit-log-governance.md)** records the **2026 baseline** (session attribution in SQLite, export audit trail, wipe log, notification send log, host logs with redaction) and **explicit gaps** (no immutable per-report download log or per-config POST row by default). Use it for honest **CISO / procurement** narratives and for [MAP.md](MAP.md) navigation.
+SRE framing: **who watches the watcher** — the scanner must be **audit-defensible**, not only the data it inspects. **[ADR 0037](adr/ADR-0037-data-boar-self-audit-log-governance.md)** records the **2026 baseline** (session attribution in SQLite, export audit trail, wipe log, notification send log, host logs with redaction) and **explicit gaps** (no immutable per-report download log or per-config POST row by default). Use it for honest **CISO / procurement** narratives and for [MAP.md](MAP.md) navigation.
 
 ---
 

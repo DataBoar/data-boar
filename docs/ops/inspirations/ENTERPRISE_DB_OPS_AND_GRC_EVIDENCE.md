@@ -22,7 +22,7 @@ Themes that recur in practitioner training and public discourse (including activ
 
 - **Proven restore** beats “we take backups” — same idea as deferred **recovery discipline** in [SUPPLY_Colleague-NN_AND_TRUST_SIGNALS.md](SUPPLY_Colleague-NN_AND_TRUST_SIGNALS.md) / [WAZUH_NIST_CIS_LABOP_ALIGNMENT.md](WAZUH_NIST_CIS_LABOP_ALIGNMENT.md).
 - **Change control** and **rollback** paths for schema/deploy risk — parallel to **review discipline** for `.github/workflows` and dependency merges.
-- **Patch level and supply Colleague-Nn** awareness (verified patch state) — aligns with **ecosystem incident** and **SHA pin** habits ([ADR 0005](../../adr/0005-ci-github-actions-supply-Colleague-Nn-pins.md)).
+- **Patch level and supply Colleague-Nn** awareness (verified patch state) — aligns with **ecosystem incident** and **SHA pin** habits ([ADR 0005](../../adr/ADR-0005-ci-github-actions-supply-Colleague-Nn-pins.md)).
 - **Segregation** (prod vs non-prod, least privilege for break-glass admin) — organizational; Data Boar supports **evidence** for **data** exposure, not OS/DB IAM design.
 
 ---
@@ -36,7 +36,7 @@ Lists that circulate as **Excel packs** (incident dashboard, patch tracker, thir
 | **Audit findings / evidence** | Exports that show **where** policy-relevant content was found (path, type, sample policy) — **attachment** to a finding row if the customer maps fields | Severity scoring for **database uptime** or **network** control |
 | **Data / processing inventory** | Discovery output supports **Identify** for **data** (see [NIST CSF](https://www.nist.gov/cyberframework) table in Wazuh alignment note) | Full CMDB or **asset** lifecycle |
 | **Third-party / vendor risk** | Evidence that **subprocessors** or **copies** of data were surfaced in scans (when in scope) | Vendor financial or legal scoring |
-| **Patch / vuln management** | `pip-audit`, Dependabot, image SBOM roadmap ([ADR 0003](../../adr/0003-sbom-roadmap-cyclonedx-then-syft.md)) for **our** stack | Oracle RU / DB patch cadence |
+| **Patch / vuln management** | `pip-audit`, Dependabot, image SBOM roadmap ([ADR 0003](../../adr/ADR-0003-sbom-roadmap-cyclonedx-then-syft.md)) for **our** stack | Oracle RU / DB patch cadence |
 | **Incident / IR dashboard** | Timestamps and exports for **scanner** or **pipeline** events if customers integrate logs | SOC tier-1 triage for DB alerts |
 
 **Bidirectional learning:** if buyers repeatedly ask for **column X** in an export, that is a **product/docs** signal (field in CSV/JSON/API), not a reason to clone a 36-tab workbook in-repo.

@@ -173,7 +173,7 @@ A tabela **S0–S6** **ainda não** tem linha dedicada para **assinatura permane
 
 **Mobile dentro do cluster (opcional no calendário):** **M-MOBILE-V1** **não** depende do **D-WEB** — entregar CSS/HTML responsivo nas URLs atuais; quando **M-LOCALE-V1** ou **#86** mudarem caminhos, fazer **regressão mobile** curta.
 
-**Núcleo WebAuthn JSON (fase 1a):** No **`main`** — **`api.webauthn`** opcional + **`/auth/webauthn/*`** ([ADR 0033](../adr/0033-webauthn-open-relying-party-json-endpoints.md)); subconjunto pytest [SMOKE_WEBAUTHN_JSON.pt_BR.md](../ops/SMOKE_WEBAUTHN_JSON.pt_BR.md). **Não** é login HTML no painel; a linha **#86** fases **1b+** (sessão + RBAC em `/{locale}/…`).
+**Núcleo WebAuthn JSON (fase 1a):** No **`main`** — **`api.webauthn`** opcional + **`/auth/webauthn/*`** ([ADR 0033](../adr/ADR-0033-webauthn-open-relying-party-json-endpoints.md)); subconjunto pytest [SMOKE_WEBAUTHN_JSON.pt_BR.md](../ops/SMOKE_WEBAUTHN_JSON.pt_BR.md). **Não** é login HTML no painel; a linha **#86** fases **1b+** (sessão + RBAC em `/{locale}/…`).
 
 **POC de maturity GRC (URLs relacionadas, tema distinto):** O questionário organizacional ([PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md](PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md)) compartilha `api/routes.py` / templates com o painel, mas tem **backlog próprio** (consultor, **histórico por tenant** / **RBAC** — [#86](https://github.com/FabioLeitao/data-boar/issues/86)). **Sequência:** fechar o **marco M-MATURITY-POC** (`smoke-maturity-assessment-poc.ps1` + runbook [SMOKE_MATURITY_ASSESSMENT_POC.md](../ops/SMOKE_MATURITY_ASSESSMENT_POC.pt_BR.md) §D; §E opcional) **antes** da **#86** Fase 1 num **branch separado**. O plano documenta **o que é autônomo (CI/pytest) vs operador (browser)**. Cruzamento: [PLANS_TODO.md](PLANS_TODO.md) *Integration / active threads*, bullet *Maturity self-assessment*.
 
@@ -237,7 +237,7 @@ Use **IDs de marcos** (família **M-**: **M-TRUST**, **M-LAB**, …) e [VERSIONI
 
 **Cluster dashboard / idioma** (**D-WEB**, **M-LOCALE-V1**, **#86**) é **ortogonal** às linhas acima—agende conforme §4.2 quando promover o tema.
 
-**Cadeia de suprimentos (PyPI + GitHub Actions):** lockfile versionado, **`pip-audit`** na CI, **Dependabot** (pip + actions), Actions **fixadas em SHA** nos workflows principais — bullet *Integration / active threads* em **PLANS_TODO**; detalhes em [WORKFLOW_DEFERRED_FOLLOWUPS.pt_BR.md](../ops/WORKFLOW_DEFERRED_FOLLOWUPS.pt_BR.md); artefatos **SBOM:** [ADR 0003](../adr/0003-sbom-roadmap-cyclonedx-then-syft.md).
+**Cadeia de suprimentos (PyPI + GitHub Actions):** lockfile versionado, **`pip-audit`** na CI, **Dependabot** (pip + actions), Actions **fixadas em SHA** nos workflows principais — bullet *Integration / active threads* em **PLANS_TODO**; detalhes em [WORKFLOW_DEFERRED_FOLLOWUPS.pt_BR.md](../ops/WORKFLOW_DEFERRED_FOLLOWUPS.pt_BR.md); artefatos **SBOM:** [ADR 0003](../adr/ADR-0003-sbom-roadmap-cyclonedx-then-syft.md).
 
 ---
 

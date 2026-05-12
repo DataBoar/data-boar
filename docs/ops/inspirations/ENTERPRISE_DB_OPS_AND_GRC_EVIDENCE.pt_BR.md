@@ -22,7 +22,7 @@ Temas que voltam em treinamento de praticantes e em discurso público (incluindo
 
 - **Restore comprovado** vale mais que “fazemos backup” — mesma ideia do **disciplina de recuperação** adiada em [SUPPLY_Colleague-NN_AND_TRUST_SIGNALS.pt_BR.md](SUPPLY_Colleague-NN_AND_TRUST_SIGNALS.pt_BR.md) / [WAZUH_NIST_CIS_LABOP_ALIGNMENT.pt_BR.md](WAZUH_NIST_CIS_LABOP_ALIGNMENT.pt_BR.md).
 - **Controle de mudança** e caminhos de **rollback** para risco de schema/deploy — paralelo à **disciplina de revisão** de `.github/workflows` e merges de dependência.
-- **Nível de patch** e consciência de **cadeia de suprimentos** (patch verificado) — alinha a **incidente no ecossistema** e hábito de **pin por SHA** ([ADR 0005](../../adr/0005-ci-github-actions-supply-Colleague-Nn-pins.md)).
+- **Nível de patch** e consciência de **cadeia de suprimentos** (patch verificado) — alinha a **incidente no ecossistema** e hábito de **pin por SHA** ([ADR 0005](../../adr/ADR-0005-ci-github-actions-supply-Colleague-Nn-pins.md)).
 - **Segregação** (prod vs não prod, menor privilégio para admin) — organizacional; o Data Boar apoia **evidência** de **exposição de dados**, não desenho de IAM de SO/DB.
 
 ---
@@ -36,7 +36,7 @@ Listas que circulam como **pacotes Excel** (dashboard de incidente, rastreador d
 | **Achados / evidência de auditoria** | Exportações que mostram **onde** conteúdo relevante à política foi encontrado (caminho, tipo, amostra de política) — **anexo** a uma linha de achado se o cliente mapear campos | Severidade de **disponibilidade de banco** ou controle de **rede** |
 | **Inventário de dados / tratamento** | Saída de descoberta apoia **Identify** para **dados** (ver tabela NIST CSF na nota Wazuh) | CMDB completo ou ciclo de vida de **ativo** |
 | **Risco de terceiros / fornecedor** | Evidência de que **subprocessadores** ou **cópias** de dados apareceram em escopo de varredura (quando aplicável) | Nota financeira ou jurídica do fornecedor |
-| **Patch / gestão de vulnerabilidade** | `pip-audit`, Dependabot, roadmap SBOM ([ADR 0003](../../adr/0003-sbom-roadmap-cyclonedx-then-syft.md)) para **nossa** stack | Cadência de RU Oracle / patch de DB |
+| **Patch / gestão de vulnerabilidade** | `pip-audit`, Dependabot, roadmap SBOM ([ADR 0003](../../adr/ADR-0003-sbom-roadmap-cyclonedx-then-syft.md)) para **nossa** stack | Cadência de RU Oracle / patch de DB |
 | **Dashboard de incidente / IR** | Timestamps e exportações para eventos de **scanner** ou **pipeline** se o cliente integrar logs | Triagem SOC nível 1 para alertas de DB |
 
 **Aprendizado bidirecional:** se compradores pedirem repetidamente **coluna X** numa exportação, isso é **sinal** para produto/docs (campo em CSV/JSON/API), não motivo para clonar um workbook de 36 abas no repositório.

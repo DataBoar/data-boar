@@ -27,7 +27,7 @@ Durante o trabalho na árvore privada, **espera-se** uma **unidade montada pelo 
 
 ### Assistentes — espelhos de evidência (padrão)
 
-Quando o operador pedir **conferir alinhamento**, **drift**, **sync do histórico privado** ou higiene que claramente envolva **`docs/private/`**, trate **todos os espelhos não-GitHub alcançáveis** como **o mesmo trabalho** — remotos SSH **`lab-*`** **e** um **bare `notes-sync.git` no volume VeraCrypt** quando esse caminho existir na estação (**`scripts/private-git-sync.ps1 -Push`** sonda **`Z:`** primeiro, depois **`Y:`**, quando a raiz dessas unidades existir). **Não** perguntar em redundância “quer também push pro backup?”; **relatar** falhas concretas (montagem em falta, SSH, **`safe.directory`** / *dubious ownership*). Regra canônica: **`.cursor/rules/operator-evidence-backup-no-rhetorical-asks.mdc`** · **[ADR 0040](../adr/0040-assistant-private-stack-evidence-mirrors-default.md)** (texto EN).
+Quando o operador pedir **conferir alinhamento**, **drift**, **sync do histórico privado** ou higiene que claramente envolva **`docs/private/`**, trate **todos os espelhos não-GitHub alcançáveis** como **o mesmo trabalho** — remotos SSH **`lab-*`** **e** um **bare `notes-sync.git` no volume VeraCrypt** quando esse caminho existir na estação (**`scripts/private-git-sync.ps1 -Push`** sonda **`Z:`** primeiro, depois **`Y:`**, quando a raiz dessas unidades existir). **Não** perguntar em redundância “quer também push pro backup?”; **relatar** falhas concretas (montagem em falta, SSH, **`safe.directory`** / *dubious ownership*). Regra canônica: **`.cursor/rules/operator-evidence-backup-no-rhetorical-asks.mdc`** · **[ADR 0040](../adr/ADR-0040-assistant-private-stack-evidence-mirrors-default.md)** (texto EN).
 
 ---
 

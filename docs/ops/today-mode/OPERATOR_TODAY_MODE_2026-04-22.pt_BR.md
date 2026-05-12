@@ -37,6 +37,6 @@ Roda **`carryover-sweep`** ou **`.\scripts\operator-day-ritual.ps1 -Mode Morning
 
 ## Referências rápidas
 
-- **`docs/adr/0035-readme-stakeholder-pitch-vs-deck-vocabulary.md`** — pitch vs deck
+- **`docs/adr/ADR-0035-readme-stakeholder-pitch-vs-deck-vocabulary.md`** — pitch vs deck
 - **`docs/plans/PLANS_TODO.md`** · **`docs/plans/PLANS_HUB.md`**
 - Atalhos: **`eod-sync`**, **`carryover-sweep`**, **`pmo-view`**

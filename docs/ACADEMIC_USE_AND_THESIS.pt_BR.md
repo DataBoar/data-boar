@@ -11,7 +11,7 @@ Este documento ajuda **estudantes, orientadores e bancas** a usar a documentaç�
 - **Visão de produto e mensagem:** [README.md](../README.md) ([pt-BR](../README.pt_BR.md)) (enquadramento para decisores e compliance).
 - **Operação técnica:** [TECH_GUIDE.pt_BR.md](TECH_GUIDE.pt_BR.md) (instalação, CLI, API, conectores, config).
 - **Enquadramento de compliance (não substitui parecer jurídico para o seu estudo):** [COMPLIANCE_AND_LEGAL.pt_BR.md](COMPLIANCE_AND_LEGAL.pt_BR.md), [COMPLIANCE_FRAMEWORKS.pt_BR.md](COMPLIANCE_FRAMEWORKS.pt_BR.md).
-- **Linha de base histórica do repositório e ADRs:** [adr/0000-project-origin-and-adr-baseline.md](adr/0000-project-origin-and-adr-baseline.md) *(EN).*
+- **Linha de base histórica do repositório e ADRs:** [adr/ADR-0000-project-origin-and-adr-baseline.md](adr/ADR-0000-project-origin-and-adr-baseline.md) *(EN).*
 
 ---
 

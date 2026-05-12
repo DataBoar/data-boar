@@ -66,4 +66,4 @@ Phase 4 is explicitly blocked until Phases 1-3 pass.
 
 - `docs/plans/PLAN_SYNTHETIC_DATA_LAB.pt_BR.md` -- phased execution plan.
 - `docs/TECH_GUIDE.md` -- detector compatibility matrix (file formats and connectors).
-- `docs/adr/0008-ansible-opt-in-knob-pattern-lab-infra.md` -- container infrastructure on LAB-NODE-01.
+- `docs/adr/ADR-0008-ansible-opt-in-knob-pattern-lab-infra.md` -- container infrastructure on LAB-NODE-01.

@@ -28,7 +28,7 @@ Do **not** mark this rule **`alwaysApply`**: lab evidence hygiene is **high-sign
 
 ## Canonical prose
 
-- **ADR 0042:** `docs/adr/0042-lab-lessons-learned-archive-contract.md`
+- **ADR 0042:** `docs/adr/ADR-0042-lab-lessons-learned-archive-contract.md`
 - **Folder README:** `docs/ops/lab_lessons_learned/README.md` (+ **`.pt_BR.md`**)
 - **Completão runbook:** `docs/ops/LAB_COMPLETAO_RUNBOOK.md` § *Public vs private evidence*
 

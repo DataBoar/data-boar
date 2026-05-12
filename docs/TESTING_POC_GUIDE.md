@@ -374,5 +374,5 @@ For **procurement** and **incident-response** inventory (not organizational ISO 
 | `sbom-python.cdx.json` | Python dependencies aligned with `uv.lock` |
 | `sbom-docker-image.cdx.json` | Packages observed in the built Docker image (Syft) |
 
-**Where to get them:** GitHub Actions workflow **SBOM** (`.github/workflows/sbom.yml`) — artifacts on the run, and attached to the **GitHub Release** when a release exists for the tag. **Documentation:** [SECURITY.md](SECURITY.md) (SBOM section), [ADR 0003](adr/0003-sbom-roadmap-cyclonedx-then-syft.md). **Local regeneration:** `scripts/generate-sbom.ps1` (outputs are gitignored).
+**Where to get them:** GitHub Actions workflow **SBOM** (`.github/workflows/sbom.yml`) — artifacts on the run, and attached to the **GitHub Release** when a release exists for the tag. **Documentation:** [SECURITY.md](SECURITY.md) (SBOM section), [ADR 0003](adr/ADR-0003-sbom-roadmap-cyclonedx-then-syft.md). **Local regeneration:** `scripts/generate-sbom.ps1` (outputs are gitignored).
 
