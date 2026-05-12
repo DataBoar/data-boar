@@ -1,10 +1,4 @@
 {
-  "web_cursor_session_contract": {
-    "telemetry_channel": "#data-boar-ops",
-    "pre_code_rca_required": true,
-    "lexicon_source_of_truth": "public bundle + canonical repo docs",
-    "safe_hold_on_missing_evidence": true
-  },
   "security_ops_van_allen_belt": {
     "audit_first": "Write/adjust unit test before implementation where feasible.",
     "log_mirroring": "Mirror critical errors/events to Slack protocol entries for mobile auditability."
