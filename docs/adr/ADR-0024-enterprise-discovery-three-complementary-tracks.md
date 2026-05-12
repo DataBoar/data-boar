@@ -35,4 +35,4 @@ A single product toggle that “discovers everything” would be **misleading**,
 ## References
 
 - [PLAN_NEXT_WAVE_PLATFORM_AND_GTM.md](../plans/PLAN_NEXT_WAVE_PLATFORM_AND_GTM.md) (N2 — scope import called out)
-- [ADR 0004](0004-external-docs-no-markdown-links-to-plans.md) (external docs do not deep-link plans; internal hub/todo may)
+- [ADR 0004](ADR-0004-external-docs-no-markdown-links-to-plans.md) (external docs do not deep-link plans; internal hub/todo may)

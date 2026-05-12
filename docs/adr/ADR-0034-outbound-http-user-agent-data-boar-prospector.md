@@ -6,7 +6,7 @@
 
 ## Context
 
-Data Boar reaches third-party HTTP(S) endpoints when operators configure **REST/API**, **SharePoint**, **Power BI**, or **Dataverse** targets (discovery and sampling, not a generic web crawler). After the product rename ([ADR 0014](0014-rename-repo-and-package-python3-lgpd-crawler-to-data-boar.md)), the codebase did **not** send a legacy `lgpd-crawler` User-Agent; libraries defaulted to generic strings (for example `python-httpx/...`, `python-requests/...`). That is honest but **weak for supportability**: remote operators, API gateways, and WAF logs cannot tie traffic to this product without reading TLS fingerprints or payload patterns.
+Data Boar reaches third-party HTTP(S) endpoints when operators configure **REST/API**, **SharePoint**, **Power BI**, or **Dataverse** targets (discovery and sampling, not a generic web crawler). After the product rename ([ADR 0014](ADR-0014-rename-repo-and-package-python3-lgpd-crawler-to-data-boar.md)), the codebase did **not** send a legacy `lgpd-crawler` User-Agent; libraries defaulted to generic strings (for example `python-httpx/...`, `python-requests/...`). That is honest but **weak for supportability**: remote operators, API gateways, and WAF logs cannot tie traffic to this product without reading TLS fingerprints or payload patterns.
 
 ## Decision
 
@@ -24,5 +24,5 @@ Data Boar reaches third-party HTTP(S) endpoints when operators configure **REST/
 
 - `core/about.py` — `get_http_user_agent()`, `_package_version()`
 - `connectors/rest_connector.py`, `connectors/sharepoint_connector.py`, `connectors/powerbi_connector.py`, `connectors/dataverse_connector.py`
-- [ADR 0014](0014-rename-repo-and-package-python3-lgpd-crawler-to-data-boar.md)
-- [ADR 0035](0035-readme-stakeholder-pitch-vs-deck-vocabulary.md) — README executive pitch stays separate from optional deck vocabulary (**Data Sniffing** / **Deep Boring**); wire identity here vs prose boundaries there.
+- [ADR 0014](ADR-0014-rename-repo-and-package-python3-lgpd-crawler-to-data-boar.md)
+- [ADR 0035](ADR-0035-readme-stakeholder-pitch-vs-deck-vocabulary.md) — README executive pitch stays separate from optional deck vocabulary (**Data Sniffing** / **Deep Boring**); wire identity here vs prose boundaries there.

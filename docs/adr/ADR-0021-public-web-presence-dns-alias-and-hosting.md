@@ -60,4 +60,4 @@ This ADR records the **architectural** rules; it does **not** mandate a specific
 ## References
 
 - Registro.br documentation (DNS, glue records) — operator-facing.
-- Prior deployment automation: [ADR 0008](0008-docker-ce-swarm-over-docker-io-and-podman-only.md), [ADR 0009](0009-ansible-idempotent-roles-as-single-automation-source.md).
+- Prior deployment automation: [ADR 0008](ADR-0008-docker-ce-swarm-over-docker-io-and-podman-only.md), [ADR 0009](ADR-0009-ansible-idempotent-roles-as-single-automation-source.md).

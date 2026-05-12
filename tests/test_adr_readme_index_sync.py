@@ -11,7 +11,10 @@ README_EN = ADR_DIR / "README.md"
 # Canonical index for completeness lives in EN README (see docs/adr/README.pt_BR.md partial table).
 _INDEX_START = "## Index"
 _INDEX_END = "## Related docs"
-_LINK_TARGET = re.compile(r"\]\((\d{4}-[a-z0-9._-]+\.md)\)", re.IGNORECASE)
+_LINK_TARGET = re.compile(
+    r"\]\(((?:ADR-)?\d{4}-[a-z0-9._-]+\.md)\)",
+    re.IGNORECASE,
+)
 
 
 def _index_table_block(text: str) -> str:
@@ -31,7 +34,10 @@ def _indexed_filenames(readme_text: str) -> list[str]:
 
 
 def _numbered_adr_filenames() -> set[str]:
-    return {p.name for p in ADR_DIR.glob("[0-9][0-9][0-9][0-9]-*.md")}
+    names: set[str] = set()
+    names.update(p.name for p in ADR_DIR.glob("[0-9][0-9][0-9][0-9]-*.md"))
+    names.update(p.name for p in ADR_DIR.glob("ADR-[0-9][0-9][0-9][0-9]-*.md"))
+    return names
 
 
 def test_adr_readme_index_lists_every_numbered_adr_file() -> None:

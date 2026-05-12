@@ -77,5 +77,5 @@ configuration — not just hardening — within the same Ansible role model.
 - [docs/ops/LMDE7_LAB-NODE-01_DEVELOPER_SETUP.pt_BR.md](../ops/LMDE7_LAB-NODE-01_DEVELOPER_SETUP.pt_BR.md) §7.1.1
 - [ops/automation/ansible/playbooks/lab-node-01-baseline.yml](../../ops/automation/ansible/playbooks/lab-node-01-baseline.yml)
 - [ops/automation/ansible/roles/](../../ops/automation/ansible/roles/) — all roles
-- [ADR 0008](0008-docker-ce-swarm-over-docker-io-and-podman-only.md) — container runtime choice
-- [ADR 0011](0011-lab-op-observability-stack-layered.md) — observability stack rationale
+- [ADR 0008](ADR-0008-docker-ce-swarm-over-docker-io-and-podman-only.md) — container runtime choice
+- [ADR 0011](ADR-0011-lab-op-observability-stack-layered.md) — observability stack rationale

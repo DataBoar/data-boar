@@ -6,7 +6,7 @@ The root **README** has two audiences in one file: an executive **“For decisio
 
 Separately, compliance slide banks and structured technical docs use optional paired labels **Data Sniffing** (discovery/sampling pass) and **Deep Boring** (structured report depth), defined in **GLOSSARY** and scoped in **COMPLIANCE_FRAMEWORKS** — useful for procurement/DPO workshops, **not** as mandatory wording in the README executive paragraph.
 
-External review (including Gemini-suggested hygiene) flagged a regression risk: internal POC vocabulary could drift into the **stakeholder pitch**, confusing non-technical readers and contradicting the **information architecture** split between pitch and deep docs ([ADR 0004](0004-external-docs-no-markdown-links-to-plans.md), [ADR 0022](0022-public-glossary-compliance-and-platform-terms.md)).
+External review (including Gemini-suggested hygiene) flagged a regression risk: internal POC vocabulary could drift into the **stakeholder pitch**, confusing non-technical readers and contradicting the **information architecture** split between pitch and deep docs ([ADR 0004](ADR-0004-external-docs-no-markdown-links-to-plans.md), [ADR 0022](ADR-0022-public-glossary-compliance-and-platform-terms.md)).
 
 ## Decision
 
@@ -22,7 +22,7 @@ External review (including Gemini-suggested hygiene) flagged a regression risk: 
 
 ## References
 
-- [ADR 0034 — Outbound HTTP User-Agent](0034-outbound-http-user-agent-data-boar-prospector.md)
+- [ADR 0034 — Outbound HTTP User-Agent](ADR-0034-outbound-http-user-agent-data-boar-prospector.md)
 - [COMPLIANCE_FRAMEWORKS.md](../COMPLIANCE_FRAMEWORKS.md) (Engine vocabulary section)
 - [GLOSSARY.md](../GLOSSARY.md) (Product identity rows)
 - `tests/test_readme_stakeholder_pitch_contract.py`

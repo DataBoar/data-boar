@@ -24,7 +24,7 @@ Tracked-file guards (`tests/test_pii_guard.py`) and incremental history checks c
 
 ## References
 
-- [ADR 0018](0018-pii-anti-recurrence-guardrails-for-tracked-files-and-branch-history.md)
-- [ADR 0019](0019-pii-verification-cadence-and-manual-review-gate.md)
+- [ADR 0018](ADR-0018-pii-anti-recurrence-guardrails-for-tracked-files-and-branch-history.md)
+- [ADR 0019](ADR-0019-pii-verification-cadence-and-manual-review-gate.md)
 - `scripts/pii_history_guard.py`, `scripts/run-pii-history-rewrite.ps1`
 - `docs/ops/PII_PUBLIC_TREE_OPERATOR_GUIDE.md` (Parts I–II; `PII_VERIFICATION_RUNBOOK*.md` remains a redirect stub)
