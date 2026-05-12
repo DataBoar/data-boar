@@ -1,24 +1,4 @@
 {
-  "linguistic_rules": {
-    "tone": "NASA Command / Tech Lead de Trincheira",
-    "forbidden_passive_voice": [
-      "foram feitos",
-      "é permitido",
-      "são aplicados"
-    ],
-    "enforced_active_voice": [
-      "O sistema impõe",
-      "O script executa",
-      "O gate impede"
-    ],
-    "lexicon_stability": {
-      "Data Sniffing": "Discovery and sampling pass",
-      "Deep Boring": "Structured compliance-report depth",
-      "Safe-Hold": "Safe suspension state — scan halted due to missing or insufficient evidence",
-      "Audit Trail": "Immutable session and finding record; evidence chain for compliance reporting"
-    },
-    "lcm_level": "Use verbos de ação concretos (Level 1 e 2 no Linguistic Category Model) para descrever funções de código."
-  },
   "slack_protocol": {
     "channel": "#data-boar-ops",
     "mandatory_notification_events": [
