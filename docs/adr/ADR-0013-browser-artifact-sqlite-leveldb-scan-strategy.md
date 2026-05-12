@@ -1,8 +1,9 @@
-# ADR 0013: Browser artifact scanning — SQLite (default) + LevelDB (opt-in) strategy
+# ADR 0013 — Browser artifact scanning — SQLite (default) + LevelDB (opt-in) strategy
 
-**Status:** Accepted
-**Date:** 2026-04-03
-**Authors:** Fabio Leitao
+- **Status:** Accepted
+- **Date (UTC):** 2026-04-03
+- **Authors:** Fabio Leitao
+- **Deciders:** Fabio Leitao
 
 ## Context
 

@@ -1,10 +1,9 @@
-# ADR 0017: Quasi-identification risk/confidence contract and LGPD guardrails
+# ADR 0017 — Quasi-identification risk/confidence contract and LGPD guardrails
 
-**Date:** 2026-04-07
-**Status:** Accepted
-**Author:** Fabio Leitao
-
----
+- **Status:** Accepted
+- **Date (UTC):** 2026-04-07
+- **Authors:** Fabio Leitao
+- **Deciders:** Fabio Leitao
 
 ## Context
 

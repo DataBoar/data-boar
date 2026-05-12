@@ -1,10 +1,9 @@
-# ADR 0019: PII verification cadence and manual review gate
+# ADR 0019 — PII verification cadence and manual review gate
 
-**Status:** Accepted
-**Date:** 2026-04-07
-**Author:** Fabio Leitao
-
----
+- **Status:** Accepted
+- **Date (UTC):** 2026-04-07
+- **Authors:** Fabio Leitao
+- **Deciders:** Fabio Leitao
 
 ## Context
 
