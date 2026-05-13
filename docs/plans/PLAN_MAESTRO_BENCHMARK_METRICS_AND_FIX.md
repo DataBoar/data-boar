@@ -222,7 +222,65 @@ Expected output in `docs/private/homelab/reports/MAESTRO_BENCHMARK_AB_*.md`:
 | **8 — Locust persona** | Load test integration | `Handle-loadtest.ps1` + `tests/locustfile.py` | H2 |
 | **9 — Full A/B clean run** | v1.7.3 vs v1.7.4-rc | `maestro-benchmark-ab.ps1` green end-to-end | H1 milestone |
 | **10 — `boar_fast_filter` timing** | Rust core proof | `_lc_bench_compare` delta stable vs beta confirmed | H1 milestone |
-| **11 — Dependency doctor** | Graceful optional dep healing | Smoke script detects `archive_unsupported` / `ModuleNotFoundError`, tries `uv sync --extra compressed`, tests import, marks host with `7z_UNSUPPORTED` feature flag if `_lzma` missing, continues scan without aborting; lessons-harvest picks up the flag | H2 |
+| **11 — Dependency doctor** | Graceful optional dep healing + OS-level Ansible fallback | Smoke script detects `archive_unsupported` / `ModuleNotFoundError`, tries `uv sync --extra compressed`, tests import, if `_lzma` missing attempts Ansible OS package install via narrow sudoers, retries import, marks host with `7z_UNSUPPORTED` feature flag if all attempts fail, continues scan without aborting; all attempts logged with success/failure; lessons-harvest picks up the flag | H2 |
+
+---
+
+## Dependency doctor detail (Slice 11)
+
+### Flow (ordered, graceful degradation)
+
+```
+Smoke detects archive_unsupported or ModuleNotFoundError for py7zr
+  │
+  ├─ Step 1: uv sync --extra compressed
+  │     Log: "[DepDoctor] Attempting uv sync --extra compressed on $HOST"
+  │     Test: uv run python3 -c "import py7zr"
+  │     If OK → retry scan → log: "[DepDoctor] SUCCESS: py7zr installed via uv sync"
+  │
+  ├─ Step 2: if _lzma missing (import fails with No module named '_lzma')
+  │     Log: "[DepDoctor] _lzma C extension missing — OS-level gap. Attempting Ansible remediation."
+  │     Run: ansible-playbook scripts/maestro/playbooks/install_lzma_dev.yml -l $HOST
+  │           (requires liblzma-dev + python3 rebuild or pyenv reinstall; narrow sudoers)
+  │     Test: uv run python3 -c "import py7zr"
+  │     If OK → retry scan → log: "[DepDoctor] SUCCESS: _lzma resolved via Ansible"
+  │
+  └─ Step 3: if still failing
+        Log: "[DepDoctor] FAILURE: 7z unavailable on $HOST. Marking 7z_UNSUPPORTED."
+        Write to host inventory: { "feature_flags": { "7z": false, "reason": "lzma_unavailable" } }
+        Continue scan without .7z targets — do NOT abort completão
+        Emit WARNING in Maestro final report
+        lessons-harvest.ps1 converts flag to action item in PLANS_TODO
+```
+
+### Ansible playbook contract
+
+`scripts/maestro/playbooks/install_lzma_dev.yml` (to be created in Slice 11):
+- Requires narrow sudoers entry: `NOPASSWD: /usr/bin/apt-get install -y liblzma-dev`
+- Scope: **additive only** — never removes packages, never upgrades OS, never changes Python version
+- Idempotent: checks if `liblzma-dev` already installed before running apt
+- After install: triggers `uv python install` or `pyenv install` to rebuild Python with lzma support
+- Logs every step to `docs/private/homelab/reports/dep_doctor_$HOST_$DATE.log`
+- Fails loudly if apt unavailable (non-Debian host) — does not attempt equivalent on non-apt systems
+
+### Feature flag in inventory
+
+After a failed dependency doctor run, `docs/private/homelab/data/inventory.json` gains:
+
+```json
+{
+  "hostname": "latitude",
+  "feature_flags": {
+    "7z": false,
+    "7z_reason": "lzma_unavailable",
+    "7z_doctor_attempted": "2026-05-13",
+    "7z_doctor_result": "needs_python_rebuild"
+  }
+}
+```
+
+Maestro respects this flag on future runs: skips `.7z` scan targets for flagged hosts without
+re-attempting the doctor (unless operator passes `-ForceRedoctor` flag).
 
 ---
 
