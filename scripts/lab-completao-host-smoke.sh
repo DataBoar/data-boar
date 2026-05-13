@@ -29,6 +29,9 @@ LC_HEALTH_URL="${LAB_COMPLETAO_HEALTH_URL:-}"
 LC_REPO_ROOT=""
 LC_BENCH_TRACK=""
 LC_BENCH_ROOT=""
+# LC_BENCH_RUN_ID is forwarded via Maestro persona handlers (Handle-*.ps1) so completão A/B
+# sessions can correlate this smoke invocation with the wrapper RunId for audit/labeling.
+LC_BENCH_RUN_ID=""
 
 _lc_emit_host_env_audit_line() {
   local _uv="uv_missing"
@@ -63,6 +66,13 @@ while [[ $# -gt 0 ]]; do
       LC_BENCH_TRACK="${2:-}"
       shift
       ;;
+    --bench-run-id)
+      # Forwarded by Maestro persona handlers (Handle-*.ps1) so completão A/B sessions can
+      # correlate this smoke invocation with the wrapper RunId. Stored for audit/labeling
+      # only; downstream sections may surface it via $LC_BENCH_RUN_ID when desired.
+      LC_BENCH_RUN_ID="${2:-}"
+      shift
+      ;;
     --health-url)
       LC_HEALTH_URL="${2:-}"
       shift
@@ -73,13 +83,14 @@ while [[ $# -gt 0 ]]; do
       ;;
     --help|-h)
       cat <<'EOF'
-Usage: bash scripts/lab-completao-host-smoke.sh [--privileged] [--skip-engine-import] [--bench-track stable|beta] [--health-url URL] [--repo-root PATH]
+Usage: bash scripts/lab-completao-host-smoke.sh [--privileged] [--skip-engine-import] [--bench-track stable|beta] [--bench-run-id ID] [--health-url URL] [--repo-root PATH]
 
   --privileged          Best-effort read-only probes via sudo -n (iptables/nft/ufw/fail2ban status).
   --skip-engine-import  Skip uv / import core.engine (hosts that run Data Boar only via Docker/Swarm/Podman).
   --lab-stack-up        Try to bring up deploy/lab-smoke-stack (and optional Mongo compose overlay) before checks.
   --emit-jsonl-host-env-and-exit  Print one DATA_BOAR_COMPLETAO_JSONL_MIN_EVENT line (uv/python versions) and exit 0.
   --bench-track         Ephemeral A/B workdir under /tmp/databoar_bench/<stable|beta> (checkpoint isolation).
+  --bench-run-id        Run-id forwarded by Maestro A/B wrapper for audit correlation (no-op semantics; label only).
   --health-url          Override LAB_COMPLETAO_HEALTH_URL (e.g. http://127.0.0.1:8088/health).
   --repo-root           Repo root (default: infer from script location).
 
