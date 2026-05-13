@@ -70,7 +70,12 @@ scripts/
       Handle-target_sshfs.ps1      ← SSHFS mount/unmount
       Handle-target_cifs.ps1       ← SMB/CIFS mount/unmount
   maestro-benchmark-ab.ps1        ← A/B wrapper (stable vs rc)
-  lab-completao-host-smoke.sh     ← Per-host smoke (bash, runs in tmux)
+  lab-completao-host-smoke.sh     ← Per-host smoke (bash, runs in tmux on OS)
+  lab-completao-container-smoke.sh ← Container smoke: detects Docker/Podman,
+                                     starts Data Boar RC container (port 9002),
+                                     writes ~/.labop-status; invoked by
+                                     docker/podman handlers via tmux; calls
+                                     host smoke with --skip-engine-import
 ```
 
 ### 3.2 Execution flow
