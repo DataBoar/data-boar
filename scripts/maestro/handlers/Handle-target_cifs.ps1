@@ -34,7 +34,7 @@ $ensureScript = "$repoPath/scripts/labop-smb-server-ensure.sh"
 
 # --- Phase 1: SMB server-side ensure (service + port + firewall) ---
 $ensureMode = if ($Deep) { "--apply" } else { "--check" }
-$ensureCmd  = "sudo -n bash $ensureScript $ensureMode --share-path $linuxPath 2>&1"
+$ensureCmd  = "sudo -n bash $ensureScript $ensureMode 2>&1"
 
 Write-Host "      [CIFS-Ensure] Running: $ensureMode on $($Node.hostname)" -ForegroundColor DarkGray
 $ensureOut = ssh -q -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 `
