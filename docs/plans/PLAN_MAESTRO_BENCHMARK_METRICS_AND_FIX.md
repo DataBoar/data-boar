@@ -223,6 +223,106 @@ Expected output in `docs/private/homelab/reports/MAESTRO_BENCHMARK_AB_*.md`:
 | **9 — Full A/B clean run** | v1.7.3 vs v1.7.4-rc | `maestro-benchmark-ab.ps1` green end-to-end | H1 milestone |
 | **10 — `boar_fast_filter` timing** | Rust core proof | `_lc_bench_compare` delta stable vs beta confirmed | H1 milestone |
 | **11 — Dependency doctor** | Graceful optional dep healing + OS-level Ansible fallback | Smoke script detects `archive_unsupported` / `ModuleNotFoundError`, tries `uv sync --extra compressed`, tests import, if `_lzma` missing attempts Ansible OS package install via narrow sudoers, retries import, marks host with `7z_UNSUPPORTED` feature flag if all attempts fail, continues scan without aborting; all attempts logged with success/failure; lessons-harvest picks up the flag | H2 |
+| **12 — Server-side share validation** | NFS/CIFS/SSHFS target completeness | Target handlers validate server services + exports before declaring target READY; auto-remediation via narrow sudoers; E2E mount probe from scanner to target | H2 |
+
+---
+
+## Server-side share validation detail (Slice 12)
+
+### The current gap
+
+Target handlers (`Handle-target_nfs.ps1`, `Handle-target_cifs.ps1`, `Handle-target_sshfs.ps1`)
+today validate only: **does the path directory exist on the target node?** (`test -d`).
+They do NOT validate whether the share is actually accessible from the scanner node —
+meaning Data Boar could fail silently trying to mount a share that was never exported.
+
+### What each target handler should validate (and optionally remediate)
+
+#### NFS target
+
+```bash
+# Server-side checks (run on target node via SSH):
+systemctl is-active nfs-server       # NFS kernel server running
+systemctl is-active rpcbind          # portmapper running (NFS dependency)
+exportfs -v | grep "$TARGET_PATH"    # path is actually exported
+showmount -e localhost               # confirm export visible
+
+# If not running (narrow sudoers LABOP_NFS_SERVER):
+sudo systemctl start rpcbind nfs-server
+echo "$TARGET_PATH *(rw,sync,no_subtree_check)" >> /etc/exports
+sudo exportfs -ra
+
+# E2E probe from scanner node (NOT target node):
+mount -t nfs $TARGET_IP:$TARGET_PATH /tmp/probe_mount_nfs -o ro,timeo=10
+ls /tmp/probe_mount_nfs && echo "NFS_MOUNT_OK"
+umount /tmp/probe_mount_nfs
+```
+
+#### CIFS / Samba target
+
+```bash
+# Server-side checks (run on target node via SSH):
+systemctl is-active smbd             # Samba file server
+systemctl is-active nmbd             # Samba NetBIOS name server (optional but typical)
+smbclient -L localhost -N | grep "$SHARE_NAME"  # share visible locally
+
+# If not running (narrow sudoers LABOP_SMB_SERVER):
+sudo systemctl start smbd nmbd
+# Share must exist in /etc/samba/smb.conf (configuration step, not auto-created)
+
+# E2E probe from scanner node:
+smbclient //$TARGET_IP/$SHARE_NAME -N -c "ls" 2>&1 | grep -v "^$"
+```
+
+#### SSHFS target
+
+```bash
+# Server-side: SSHFS is SSH-native — no dedicated server daemon
+# Validate:
+systemctl is-active sshd             # SSH daemon running on target
+ssh -o BatchMode=yes -o ConnectTimeout=5 $TARGET_USER@$TARGET_IP "test -r $TARGET_PATH && echo PATH_READABLE"
+
+# E2E probe from scanner node:
+sshfs $TARGET_USER@$TARGET_IP:$TARGET_PATH /tmp/probe_mount_sshfs -o ro,ConnectTimeout=10
+ls /tmp/probe_mount_sshfs && echo "SSHFS_MOUNT_OK"
+fusermount -u /tmp/probe_mount_sshfs
+```
+
+### New sudoers entries needed (LABOP_NFS_SERVER, LABOP_SMB_SERVER)
+
+```sudoers
+Cmnd_Alias LABOP_NFS_SERVER = /bin/bash /home/leitao/Projects/dev/data-boar/scripts/labop-nfs-server-ensure.sh --apply
+Cmnd_Alias LABOP_SMB_SERVER = /bin/bash /home/leitao/Projects/dev/data-boar/scripts/labop-smb-server-ensure.sh --apply
+leitao ALL=(root) NOPASSWD: LABOP_NFS_SERVER, LABOP_SMB_SERVER
+```
+
+### Handler upgrade contract
+
+Each target handler returns one of three states:
+- `TARGET_READY` — server up, path exported/shared, E2E probe succeeded
+- `TARGET_DEGRADED` — server up, path exported, but E2E mount failed (network/firewall issue)
+- `TARGET_OFFLINE` — server not running; auto-remediation attempted; if failed, skip scan
+
+`Handle-target_sshfs.ps1`, `Handle-target_nfs.ps1`, `Handle-target_cifs.ps1` write state
+to `~/.labop-status` on the target node (currently only writes `TARGET_ACTIVE` without
+distinguishing server vs client vs E2E). `Get-LabStatus.ps1` reads this to show
+`[TARGET READY]`, `[TARGET DEGRADED]`, or `[TARGET OFFLINE]` in the Maestro table.
+
+### Data Boar scan connector link
+
+The completão validates the **infrastructure layer** (mount works). For the scan layer,
+`Handle-target_nfs.ps1` should also invoke a minimal Data Boar scan via the NFS mount
+path (same pattern as `Handle-target_postgres.ps1` which provisions the DB and then
+signals the Data Boar scanner node). The scan result (`filesystem_findings` count on
+the NFS/CIFS/SSHFS mount path) validates the full pipeline:
+
+```
+Target node (NFS/CIFS server) → mount on scanner → Data Boar scans mount → findings
+```
+
+This is the true end-to-end proof: not just "directory exists" but "Data Boar found
+PII in data that lives on a remote share, accessed via protocol X."
+| **11 — Dependency doctor** | Graceful optional dep healing + OS-level Ansible fallback | Smoke script detects `archive_unsupported` / `ModuleNotFoundError`, tries `uv sync --extra compressed`, tests import, if `_lzma` missing attempts Ansible OS package install via narrow sudoers, retries import, marks host with `7z_UNSUPPORTED` feature flag if all attempts fail, continues scan without aborting; all attempts logged with success/failure; lessons-harvest picks up the flag | H2 |
 
 ---
 
