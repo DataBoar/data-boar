@@ -17,7 +17,7 @@ Maestro exists because lab validation — real hosts, real SSH, real containers,
 | Musical term | Maestro meaning |
 | ------------ | --------------- |
 | Maestro (conductor) | `Maestro.ps1` — reads the score, controls tempo and sequence |
-| **Capo** (*capo di sezione* — section lead) | `Handle-*.ps1` handlers — each leads its instrument section with full expertise; the **Capos** are the Maestro's direct reports and the executors of real work |
+| Section lead *(informally: capo di sezione — metaphor flavor only)* | `Handle-*.ps1` **handlers** — each owns its instrument section completely; the canonical term in code and docs is **handler** |
 | Musician | Lab node (LAB-NODE-01, LAB-NODE-03, LAB-T14, …) — the performer |
 | Instrument / Voice (Persona) | The role each node plays: `docker`, `podman`, `baremetal`, `web`, `target_postgres`, … |
 | Score | `docs/private/homelab/data/inventory.json` — who plays what |
@@ -94,13 +94,13 @@ Maestro.ps1 -Deep -BenchTrack beta -BenchRunId abc123
       └─ Collect-Artifacts.ps1  (scp metrics from /tmp/databoar_bench/$track/)
 ```
 
-### 3.3 Capo taxonomy (persona handlers)
+### 3.3 Handler taxonomy (persona handlers)
 
-**Capos** (*capo di sezione* in Italian orchestra terminology — section lead) are the `Handle-<persona>.ps1` files. Each Capo owns its instrument section completely: it receives context from the Maestro and is fully responsible for how its section performs. Adding a new Capo = adding one handler file.
+**Handlers** (`Handle-<persona>.ps1`) are the specialized sub-orchestrators — one per persona type. Each handler owns its domain completely: it receives context from the Maestro and is fully responsible for how its section performs. In narrative docs the handlers are sometimes described with the musical metaphor of a *capo di sezione* (section lead), but the canonical code and taxonomy term is always **handler**.
 
-Capos are additive — one node can have multiple. The inventory entry lists them; Maestro orders dispatch (container personas first, `web` last, others in declaration order).
+Handlers are additive — one node can have multiple. The inventory entry lists them; Maestro orders dispatch (container personas first, `web` last, others in declaration order).
 
-| Persona | Capo handler | What it leads |
+| Persona | Handler (`Handle-<persona>.ps1`) | What it exercises |
 | ------- | ------------ | ------------- |
 | `baremetal` | Handle-baremetal.ps1 | Data Boar via `uv run` on bare OS |
 | `docker` | Handle-docker.ps1 | Docker CE `docker run` / `docker compose` |
