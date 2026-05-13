@@ -18,8 +18,11 @@ export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin${PATH+
 
 APPLY=0
 CLEANUP=0
-EXPORT_PATH="${HOME}/Documents/LGPD"
-STATUS_FILE="${HOME}/.labop-status"
+# Resolve operator home even when running as root via sudo
+_OPERATOR="${SUDO_USER:-leitao}"
+_OP_HOME="$(getent passwd "$_OPERATOR" | cut -d: -f6 2>/dev/null || echo "/home/$_OPERATOR")"
+EXPORT_PATH="${_OP_HOME}/Documents/LGPD"
+STATUS_FILE="${_OP_HOME}/.labop-status"
 FW_TAG="nfs"
 FW_STATE_FILE="${HOME}/.labop-fw-ephemeral-nfs.json"
 
@@ -67,15 +70,62 @@ fi
 NEED_FIX=0
 
 # ---------------------------------------------------------------------------
-# Phase 1: Detect NFS service name (distro-agnostic)
+# Detect init system (systemd vs runit/sv vs openrc vs sysv)
+# ---------------------------------------------------------------------------
+_svc_active() {
+  local svc="$1"
+  if command -v systemctl >/dev/null 2>&1; then
+    systemctl is-active --quiet "$svc" 2>/dev/null
+  elif command -v sv >/dev/null 2>&1; then
+    sv status "$svc" 2>/dev/null | grep -q "^run:"
+  elif command -v rc-service >/dev/null 2>&1; then
+    rc-service "$svc" status >/dev/null 2>&1
+  else
+    return 1
+  fi
+}
+
+_svc_start() {
+  local svc="$1"
+  if command -v systemctl >/dev/null 2>&1; then
+    systemctl start "$svc" 2>&1
+  elif command -v sv >/dev/null 2>&1; then
+    sv start "$svc" 2>&1
+  elif command -v rc-service >/dev/null 2>&1; then
+    rc-service "$svc" start 2>&1
+  else
+    echo "No supported init system found (systemd/runit/openrc)" >&2; return 1
+  fi
+}
+
+_svc_list_units() {
+  if command -v systemctl >/dev/null 2>&1; then
+    systemctl list-unit-files "$1.service" >/dev/null 2>&1
+  elif command -v sv >/dev/null 2>&1; then
+    test -d "/etc/sv/$1" 2>/dev/null
+  else
+    return 1
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# Detect NFS service name (distro-agnostic)
 # ---------------------------------------------------------------------------
 NFS_SVC=""
-for candidate in nfs-kernel-server nfs-server nfsserver nfs; do
-  if systemctl list-unit-files "$candidate.service" >/dev/null 2>&1; then
-    NFS_SVC="$candidate"
-    break
+for candidate in nfs-kernel-server nfs-server nfsserver nfs rpc.nfsd; do
+  if _svc_list_units "$candidate" 2>/dev/null; then
+    NFS_SVC="$candidate"; break
   fi
 done
+
+if [[ -z "$NFS_SVC" ]]; then
+  # Void Linux: nfs-utils package provides runit services under different names
+  for candidate in nfs-server nfsd; do
+    if command -v sv >/dev/null 2>&1 && test -d "/etc/sv/$candidate" 2>/dev/null; then
+      NFS_SVC="$candidate"; break
+    fi
+  done
+fi
 
 if [[ -z "$NFS_SVC" ]]; then
   _fail "No NFS server service found (tried: nfs-kernel-server nfs-server nfsserver nfs)."
@@ -85,30 +135,36 @@ fi
 _log "NFS service: $NFS_SVC"
 
 # ---------------------------------------------------------------------------
-# Phase 2: Check rpcbind
+# Phase 2: Check rpcbind (skip on runit/Void where rpcbind may be unnecessary)
 # ---------------------------------------------------------------------------
-if ! systemctl is-active --quiet rpcbind 2>/dev/null; then
-  _warn "rpcbind not running."
-  NEED_FIX=1
-  if [[ $APPLY -eq 1 ]]; then
-    _log "Starting rpcbind..."
-    systemctl start rpcbind 2>&1 && _ok "rpcbind started." || _fail "rpcbind start failed."
+if command -v systemctl >/dev/null 2>&1; then
+  if ! _svc_active rpcbind; then
+    _warn "rpcbind not running."
+    NEED_FIX=1
+    if [[ $APPLY -eq 1 ]]; then
+      _log "Starting rpcbind..."
+      _svc_start rpcbind && _ok "rpcbind started." || _fail "rpcbind start failed."
+    fi
+  else
+    _ok "rpcbind: active."
   fi
 else
-  _ok "rpcbind: active."
+  _log "rpcbind check skipped (no systemctl — runit/OpenRC manages portmapper differently)."
 fi
 
 # ---------------------------------------------------------------------------
 # Phase 3: Check NFS server
 # ---------------------------------------------------------------------------
-if ! systemctl is-active --quiet "$NFS_SVC" 2>/dev/null; then
+if ! _svc_active "$NFS_SVC" 2>/dev/null; then
   _warn "$NFS_SVC not running."
   NEED_FIX=1
   if [[ $APPLY -eq 1 ]]; then
     _log "Starting $NFS_SVC..."
-    systemctl start "$NFS_SVC" 2>&1 && _ok "$NFS_SVC started." || _fail "$NFS_SVC start failed."
+    _svc_start "$NFS_SVC" && _ok "$NFS_SVC started." || _fail "$NFS_SVC start failed."
   fi
-# Phase 3a: Check port 2049 (NFS) is listening
+else
+  _ok "$NFS_SVC: active."
+fi
 NFS_PORT=2049
 if type _port_listening >/dev/null 2>&1; then
   if _port_listening $NFS_PORT; then
