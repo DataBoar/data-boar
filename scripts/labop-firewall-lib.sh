@@ -106,6 +106,13 @@ _fw_open_ephemeral() {
   local proto="${2:-tcp}"
   local comment="labop-smoke-ephemeral-${port}-$$"
   FW_EPHEMERAL_TAG="$comment"
+  local state_file="${FW_STATE_FILE:-${HOME}/.labop-fw-ephemeral-${FW_TAG:-default}.json}"
+
+  # Auto-cleanup stale ephemeral state from a previous run before opening new rule
+  if [[ -f "$state_file" ]]; then
+    echo "[FW] Stale ephemeral state found — cleaning up before opening new rule."
+    FW_STATE_FILE="$state_file" _fw_cleanup_ephemeral 2>/dev/null || true
+  fi
 
   echo "[FW] Opening port $port/$proto for $LAB_OP_SUBNET (ephemeral, tag: $comment)"
 
