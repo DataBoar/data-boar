@@ -27,7 +27,7 @@ if ($LASTEXITCODE -ne 0) {
 
 $engine = if ($Node.personas -contains "podman") { "podman" } else { "docker" }
 $loadCmd = "cd $($Node.path) && $engine load -i $tarFile > /dev/null 2>&1"
-ssh -q -o BatchMode=yes "$($Node.user)@$($Node.hostname)" $loadCmd
+ssh -q -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$($Node.user)@$($Node.hostname)" $loadCmd
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "      [SUCCESS] Imagem provisionada remotamente via $engine." -ForegroundColor Green

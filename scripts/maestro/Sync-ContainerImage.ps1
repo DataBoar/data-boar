@@ -99,6 +99,6 @@ Write-Host "      [Load] Importando imagem no motor remoto ($engine)..." -Foregr
 
 # Load silencioso no worker. Se a imagem já existir igualzinha, o motor otimiza.
 $loadCmd = "cd $($Node.path) && $engine load -i $tarFile > /dev/null 2>&1"
-ssh -q -o BatchMode=yes "$($Node.user)@$($Node.hostname)" $loadCmd
+ssh -q -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$($Node.user)@$($Node.hostname)" $loadCmd
 
 Write-Host "      [SUCCESS] Imagem $fullImage provisionada com sucesso em $($Node.hostname)." -ForegroundColor Green

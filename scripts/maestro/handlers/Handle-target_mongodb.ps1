@@ -14,7 +14,12 @@
 param(
     [Parameter(Mandatory = $true)]$Node,
     [string]$Ref = "WorkingTree",
-    [switch]$Deep
+    [switch]$Deep,
+    [string]$BenchTrack = "",
+    [string]$BenchRunId = "",
+    [switch]$BenchCompare,
+    [int]$BenchWebPort = 0,
+    [string]$BenchHealthUrl = ""
 )
 
 Write-Host "   [Target-MongoDB] Provisionando MongoDB sintetico em $($Node.hostname)..." -ForegroundColor Magenta
@@ -61,7 +66,7 @@ echo "TARGET_MONGODB_READY port=${CHOSEN_PORT}"
 '@
 $remoteCmd = $remoteCmd.Replace("__NODE_PATH__", [string]$Node.path) -replace "`r", ""
 
-$out = ssh -q -o BatchMode=yes "$($Node.user)@$($Node.hostname)" "$remoteCmd"
+$out = ssh -q -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$($Node.user)@$($Node.hostname)" "$remoteCmd"
 if ($LASTEXITCODE -eq 0 -and $out -match "TARGET_MONGODB_READY") {
     $portMatch = [regex]::Match(($out -join "`n"), "port=(\d+)")
     if ($portMatch.Success) {

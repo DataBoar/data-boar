@@ -15,13 +15,29 @@
 param(
     [Parameter(Mandatory=$true)]$Node,
     [string]$Ref = "WorkingTree",
-    [switch]$Deep
+    [switch]$Deep,
+    [string]$BenchTrack = "",
+    [string]$BenchRunId = "",
+    [switch]$BenchCompare,
+    [int]$BenchWebPort = 0,
+    [string]$BenchHealthUrl = ""
 )
 
 $modoTexto = if ($Deep) { "Benchmark RC (Deep)" } else { $Ref }
 Write-Host "   [MicroK8s] Verificando cluster e disparando Completao ($modoTexto) em $($Node.hostname)..." -ForegroundColor DarkBlue
 
 $configArg = if ($Deep) { "tests/config/benchmark-rc.yaml" } else { "" }
+$smokeArgs = @()
+if (-not [string]::IsNullOrWhiteSpace($configArg)) { $smokeArgs += $configArg }
+if (-not [string]::IsNullOrWhiteSpace($BenchTrack)) { $smokeArgs += "--bench-track $BenchTrack" }
+if (-not [string]::IsNullOrWhiteSpace($BenchRunId)) { $smokeArgs += "--bench-run-id $BenchRunId" }
+if ($BenchWebPort -gt 0) { $smokeArgs += "--health-url http://127.0.0.1:$BenchWebPort/health" }
+if (-not [string]::IsNullOrWhiteSpace($BenchHealthUrl)) { $smokeArgs += "--health-url $BenchHealthUrl" }
+$smokeArgText = ($smokeArgs -join " ")
+$benchEnv = @()
+if ($BenchCompare) { $benchEnv += "LAB_COMPLETAO_BENCH_COMPARE=1" }
+if (-not [string]::IsNullOrWhiteSpace($BenchRunId)) { $benchEnv += "LAB_COMPLETAO_BENCH_RUN_ID=$BenchRunId" }
+$benchEnvPrefix = if ($benchEnv.Count -gt 0) { ($benchEnv -join " ") + " " } else { "" }
 
 # 1. Verifica status do cluster MicroK8s
 $k8sCheck = ssh -q -o BatchMode=yes -o ConnectTimeout=8 "$($Node.user)@$($Node.hostname)" "microk8s status --wait-ready --timeout 10 2>/dev/null | head -n 5 || echo MICROK8S_UNAVAILABLE"
@@ -35,24 +51,24 @@ Write-Host "      [MicroK8s] Status:" -ForegroundColor DarkGray
 $k8sCheck | ForEach-Object { Write-Host "        $_" -ForegroundColor DarkGray }
 
 # 2. Localiza pod do Data Boar
-$podName = ssh -q -o BatchMode=yes "$($Node.user)@$($Node.hostname)" `
+$podName = ssh -q -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$($Node.user)@$($Node.hostname)" `
     "microk8s kubectl get pods --all-namespaces -l app=data-boar --field-selector=status.phase=Running -o jsonpath='{.items[0].metadata.name}' 2>/dev/null"
 
 if (-not $podName) {
     Write-Warning "      [WARN] Nenhum pod 'data-boar' Running em $($Node.hostname). Fallback para baremetal path."
-    $payload = "cd $($Node.path) && bash ./scripts/lab-completao-host-smoke.sh $configArg"
+    $payload = "cd $($Node.path) && ${benchEnvPrefix}bash ./scripts/lab-completao-host-smoke.sh $smokeArgText"
     $tmuxCmd = "tmux send-keys -t completao C-c ; sleep 0.5 ; tmux send-keys -t completao '$payload' Enter"
-    ssh -q -o BatchMode=yes "$($Node.user)@$($Node.hostname)" "$tmuxCmd"
+    ssh -q -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$($Node.user)@$($Node.hostname)" "$tmuxCmd"
     return
 }
 
 Write-Host "      [MicroK8s] Pod encontrado: $podName" -ForegroundColor DarkGray
 
 # 3. Injeta smoke via tmux -> kubectl exec
-$payload = "microk8s kubectl exec $podName -- bash -c 'cd $($Node.path) 2>/dev/null || cd /app && bash ./scripts/lab-completao-host-smoke.sh $configArg'"
+$payload = "microk8s kubectl exec $podName -- bash -c 'cd $($Node.path) 2>/dev/null || cd /app && ${benchEnvPrefix}bash ./scripts/lab-completao-host-smoke.sh $smokeArgText'"
 $tmuxCmd = "tmux send-keys -t completao C-c ; sleep 0.5 ; tmux send-keys -t completao '$payload' Enter"
 
-ssh -q -o BatchMode=yes "$($Node.user)@$($Node.hostname)" "$tmuxCmd"
+ssh -q -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$($Node.user)@$($Node.hostname)" "$tmuxCmd"
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "      [SUCCESS] Smoke MicroK8s injetado no Tmux em $($Node.hostname) (pod: $podName)." -ForegroundColor Green

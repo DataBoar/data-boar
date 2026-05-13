@@ -14,7 +14,12 @@
 param(
     [Parameter(Mandatory = $true)]$Node,
     [string]$Ref = "WorkingTree",
-    [switch]$Deep
+    [switch]$Deep,
+    [string]$BenchTrack = "",
+    [string]$BenchRunId = "",
+    [switch]$BenchCompare,
+    [int]$BenchWebPort = 0,
+    [string]$BenchHealthUrl = ""
 )
 
 Write-Host "   [Target-CIFS] Certificando alvo de dados CIFS e disparando orquestracao concentrada (Deep: $Deep) em $($Node.hostname)..." -ForegroundColor Magenta
@@ -24,14 +29,14 @@ $configArg = if ($Deep) { "tests/config/benchmark-rc.yaml" } else { "" }
 
 $linuxPath = $Node.path -replace "^~", "`$HOME"
 $checkCmd = "test -d ""$linuxPath"""
-ssh -q -o BatchMode=yes "$($Node.user)@$($Node.hostname)" "$checkCmd" > $null 2>&1
+ssh -q -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$($Node.user)@$($Node.hostname)" "$checkCmd" > $null 2>&1
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "      [SUCCESS] Target CIFS validado. $($Node.hostname):$($Node.path) esta pronto." -ForegroundColor Green
 
     $payload = "echo `"TARGET_ACTIVE at `$(date +'%H:%M:%S')`" > ~/.labop-status && mkdir -p ~/log && echo `"Monitorando IO/Load (vmstat 5)...`" && vmstat 5 | tee ~/log/target_io.log"
     $tmuxCmd = "tmux send-keys -t completao C-c ; sleep 0.5 ; tmux send-keys -t completao '$payload' Enter"
-    ssh -q -o BatchMode=yes "$($Node.user)@$($Node.hostname)" "$tmuxCmd"
+    ssh -q -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$($Node.user)@$($Node.hostname)" "$tmuxCmd"
 } else {
     Write-Warning "      [WARNING] O diretorio $($Node.path) nao foi encontrado no alvo CIFS $($Node.hostname)."
 }

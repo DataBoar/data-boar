@@ -15,7 +15,12 @@
 param(
     [Parameter(Mandatory=$true)]$Node,
     [string]$Ref = "WorkingTree",
-    [switch]$Deep # <--- Injeção do Maestro para habilitar o Benchmark
+    [switch]$Deep, # <--- Injeção do Maestro para habilitar o Benchmark
+    [string]$BenchTrack = "",
+    [string]$BenchRunId = "",
+    [switch]$BenchCompare,
+    [int]$BenchWebPort = 0,
+    [string]$BenchHealthUrl = ""
 )
 
 Write-Host "   [Web] Realizando Health Check da API/Dashboard e disparando orquestração containerizada (Deep: $Deep) em $($Node.hostname)..." -ForegroundColor DarkCyan
@@ -49,6 +54,17 @@ $retries = [int](Get-NodePropOrDefault -Obj $Node -Name "web_check_retries" -Def
 $waitSeconds = [int](Get-NodePropOrDefault -Obj $Node -Name "web_check_wait_seconds" -DefaultValue 2)
 $apiUrl = "${webScheme}://${targetIp}:${webPort}${webHealthPath}"
 $localHealthOk = $false
+$benchTrackNormalized = $BenchTrack.ToLowerInvariant()
+if ($BenchWebPort -gt 0) {
+    $webPort = [int]$BenchWebPort
+} elseif ($benchTrackNormalized -eq "stable") {
+    $webPort = 18088
+} elseif ($benchTrackNormalized -eq "beta") {
+    $webPort = 28088
+}
+if (-not [string]::IsNullOrWhiteSpace($BenchHealthUrl)) {
+    $apiUrl = $BenchHealthUrl
+}
 
 function Test-HealthUrl {
     param(
@@ -79,7 +95,7 @@ function Test-HealthUrl {
 
 # Sinal operacional extra: valida se o host remoto está escutando a porta alvo.
 $listenerCmd = "ss -ltn 2>/dev/null | awk 'NR==1 || /:$webPort\b/'"
-$listenerOut = ssh -q -o BatchMode=yes "$targetUser@$targetHost" "$listenerCmd"
+$listenerOut = ssh -q -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$targetUser@$targetHost" "$listenerCmd"
 if ($LASTEXITCODE -eq 0 -and $listenerOut -match ":$webPort") {
     Write-Host "      [Web-Precheck] Porta $webPort em escuta no host $targetHost." -ForegroundColor DarkGray
 } else {
@@ -106,8 +122,17 @@ if ($localHealthOk) {
 
 Write-Warning "      [Web-Recovery] Health check falhou. Tentando start fallback com main.py --web --host 0.0.0.0 --allow-insecure-http..."
 
-$candidatePorts = @($webPort, 18088, 28088, 38088) | Select-Object -Unique
+$candidatePorts = @()
+if ($benchTrackNormalized -eq "stable") {
+    $candidatePorts += @(18088, 18089, 18090)
+} elseif ($benchTrackNormalized -eq "beta") {
+    $candidatePorts += @(28088, 28089, 28090)
+} else {
+    $candidatePorts += @($webPort, 18088, 28088, 38088)
+}
+$candidatePorts = $candidatePorts | Select-Object -Unique
 $portsJoined = ($candidatePorts -join " ")
+$benchPortFile = if ($benchTrackNormalized) { "~/.labop-web-port-$benchTrackNormalized" } else { "~/.labop-web-port" }
 $remoteStartCmd = @'
 set -e
 cd __NODE_PATH__
@@ -127,7 +152,7 @@ if [ -f config.yaml ]; then
 elif [ -f deploy/config.example.yaml ]; then
   CFG_ARG="--config deploy/config.example.yaml"
 fi
-echo "$CHOSEN_PORT" > ~/.labop-web-port
+echo "$CHOSEN_PORT" > __BENCH_PORT_FILE__
 if [ -x .venv/bin/python ]; then
   START_CMD=".venv/bin/python main.py ${CFG_ARG} --web --host 0.0.0.0 --allow-insecure-http --port ${CHOSEN_PORT}"
 elif command -v uv >/dev/null 2>&1; then
@@ -142,8 +167,9 @@ echo "$CHOSEN_PORT"
 $remoteStartCmd = $remoteStartCmd.Replace("__NODE_PATH__", [string]$Node.path)
 $remoteStartCmd = $remoteStartCmd.Replace("__PORTS_JOINED__", [string]$portsJoined)
 $remoteStartCmd = $remoteStartCmd.Replace("__WEB_PORT__", [string]$webPort)
+$remoteStartCmd = $remoteStartCmd.Replace("__BENCH_PORT_FILE__", [string]$benchPortFile)
 $remoteStartCmd = $remoteStartCmd -replace "`r", ""
-$startOut = ssh -q -o BatchMode=yes "$targetUser@$targetHost" "$remoteStartCmd"
+$startOut = ssh -q -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$targetUser@$targetHost" "$remoteStartCmd"
 if ($LASTEXITCODE -ne 0 -or -not $startOut) {
     Write-Warning "      [ERROR] Fallback web start falhou em $targetHost."
     return
@@ -157,7 +183,7 @@ foreach ($line in $startOut) {
 }
 
 $remoteCurlCmd = "curl -fsS --max-time 5 http://127.0.0.1:$chosenPort$webHealthPath >/dev/null"
-ssh -q -o BatchMode=yes "$targetUser@$targetHost" "$remoteCurlCmd" > $null 2>&1
+ssh -q -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$targetUser@$targetHost" "$remoteCurlCmd" > $null 2>&1
 if ($LASTEXITCODE -ne 0) {
     Write-Warning "      [WARNING] Fallback web iniciou, mas curl remoto localhost falhou em ${targetHost}:$chosenPort$webHealthPath."
 }

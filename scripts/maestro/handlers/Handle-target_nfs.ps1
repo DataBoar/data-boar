@@ -15,7 +15,12 @@
 param(
     [Parameter(Mandatory=$true)]$Node,
     [string]$Ref = "WorkingTree",
-    [switch]$Deep # <--- Injeção do Maestro para habilitar o Benchmark
+    [switch]$Deep, # <--- Injeção do Maestro para habilitar o Benchmark
+    [string]$BenchTrack = "",
+    [string]$BenchRunId = "",
+    [switch]$BenchCompare,
+    [int]$BenchWebPort = 0,
+    [string]$BenchHealthUrl = ""
 )
 
 Write-Host "   [Target-NFS] Certificando alvo de dados NFS e disparando orquestração concentrada (Deep: $Deep) em $($Node.hostname)..." -ForegroundColor Magenta
@@ -30,7 +35,7 @@ $linuxPath = $Node.path -replace "^~", "`$HOME"
 
 # Validação Resiliente: 'test -d' confia no Exit Code silencioso, e > $null 2>&1 engole os banners multilíngues
 $checkCmd = "test -d ""$linuxPath"""
-ssh -q -o BatchMode=yes "$($Node.user)@$($Node.hostname)" "$checkCmd" > $null 2>&1
+ssh -q -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$($Node.user)@$($Node.hostname)" "$checkCmd" > $null 2>&1
 
 # $LASTEXITCODE é imune a banners de segurança e MotD
 if ($LASTEXITCODE -eq 0) {
@@ -43,7 +48,7 @@ if ($LASTEXITCODE -eq 0) {
     $tmuxCmd = "tmux send-keys -t completao C-c ; sleep 0.5 ; tmux send-keys -t completao '$payload' Enter"
 
     # Injeta no Tmux do Target NFS
-    ssh -q -o BatchMode=yes "$($Node.user)@$($Node.hostname)" "$tmuxCmd"
+    ssh -q -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$($Node.user)@$($Node.hostname)" "$tmuxCmd"
 
 } else {
     Write-Warning "      [WARNING] O diretório $($Node.path) não foi encontrado no alvo NFS $($Node.hostname)."
