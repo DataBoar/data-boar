@@ -30,7 +30,10 @@ Write-Host "   [Target-CIFS] Certificando alvo CIFS e disparando orquestracao (D
 
 $linuxPath    = $Node.path -replace "^~", "`$HOME"
 $repoPath     = $Node.path -replace "^~", "`$HOME"
-$ensureScript = "$repoPath/scripts/labop-smb-server-ensure.sh"
+# Ensure scripts always use canonical repo path (not ephemeral versioned checkout)
+# so the path matches the narrow sudoers entry exactly.
+$canonicalRepo = ($repoPath -replace "-v[0-9]+\.[0-9]+\.[0-9]+[^/]*$", "")
+$ensureScript = "$canonicalRepo/scripts/labop-smb-server-ensure.sh"
 
 # --- Phase 1: SMB server-side ensure (service + port + firewall) ---
 $ensureMode = if ($Deep) { "--apply" } else { "--check" }

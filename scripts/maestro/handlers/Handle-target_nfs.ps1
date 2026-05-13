@@ -29,8 +29,10 @@ param(
 Write-Host "   [Target-NFS] Certificando alvo NFS e disparando orquestracao (Deep: $Deep) em $($Node.hostname)..." -ForegroundColor Magenta
 
 $linuxPath = $Node.path -replace "^~", "`$HOME"
-$repoPath  = $Node.path -replace "^~", "`$HOME"  # canonical repo path on this node
-$ensureScript = "$repoPath/scripts/labop-nfs-server-ensure.sh"
+$repoPath  = $Node.path -replace "^~", "`$HOME"
+# Ensure scripts always use canonical repo path (not ephemeral versioned checkout)
+$canonicalRepo = ($repoPath -replace "-v[0-9]+\.[0-9]+\.[0-9]+[^/]*$", "")
+$ensureScript = "$canonicalRepo/scripts/labop-nfs-server-ensure.sh"
 
 # --- Phase 1: NFS server-side ensure (service + export + port + firewall) ---
 $ensureMode = if ($Deep) { "--apply" } else { "--check" }
