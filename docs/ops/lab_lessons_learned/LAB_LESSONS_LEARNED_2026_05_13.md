@@ -69,7 +69,7 @@ scanning confirmed working. Two new commercial use cases documented.
 
 | Gap | Severity | Action |
 | --- | -------- | ------ |
-| `py7zr` missing for `.7z` support | Medium | Add to `[compressed]` optional dep in `pyproject.toml` |
+| `py7zr` IS in `[compressed]` but `_lzma` missing on latitude | High | `py7zr` exists in `pyproject.toml` `[compressed]` (line 108) and passes CI. On latitude, `uv sync --extra compressed` installs py7zr but Python 3.13 was built without liblzma-dev — import fails at runtime with `No module named '_lzma'`. **Maestro should**: try install, test import, if `_lzma` missing mark host as `7z_UNSUPPORTED` in feature flags, continue without `.7z`, emit WARNING. Fix for latitude: `apt install liblzma-dev` + Python rebuild. |
 | `boar_fast_filter` not in lab venv (needs manual `maturin develop`) | Medium | Document in HOMELAB_VALIDATION; add to completão preflight check |
 | 0.574x ratio not reproduced — needs larger corpus | Low | Scale test with `tests/data/bench/synthetic_valid_cpf_3k.txt` (3000 lines, 1MB); current corpus too small |
 | Cross-host scans (mini-bt/t14 → latitude via sshfs/nfs/cifs) | Low | Next completão session; not urgent |
@@ -89,7 +89,7 @@ scanning confirmed working. Two new commercial use cases documented.
 
 | Topic | Action |
 | ----- | ------ |
-| `.7z` support | Add `py7zr` to `pyproject.toml` `[compressed]` optional extra |
+| `.7z` support | `py7zr` IS in `[compressed]` but `_lzma` missing on latitude — the Maestro should auto-detect and mark host as `7z_UNSUPPORTED` rather than failing silently. Separate issue from adding the dep. |
 | `boar_fast_filter` in lab hosts | Add `maturin develop --release` step to completão preflight or HOMELAB_VALIDATION |
 | `scan_scope` warning | Emit WARNING in `config/loader.py` when `scan_scope` key is present but `targets` is not |
 | Larger benchmark corpus | Use `tests/data/bench/synthetic_valid_cpf_3k.txt` as standard corpus; re-run A/B to confirm 0.574x claim |

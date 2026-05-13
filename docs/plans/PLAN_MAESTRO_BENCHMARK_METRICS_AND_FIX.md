@@ -222,6 +222,7 @@ Expected output in `docs/private/homelab/reports/MAESTRO_BENCHMARK_AB_*.md`:
 | **8 — Locust persona** | Load test integration | `Handle-loadtest.ps1` + `tests/locustfile.py` | H2 |
 | **9 — Full A/B clean run** | v1.7.3 vs v1.7.4-rc | `maestro-benchmark-ab.ps1` green end-to-end | H1 milestone |
 | **10 — `boar_fast_filter` timing** | Rust core proof | `_lc_bench_compare` delta stable vs beta confirmed | H1 milestone |
+| **11 — Dependency doctor** | Graceful optional dep healing | Smoke script detects `archive_unsupported` / `ModuleNotFoundError`, tries `uv sync --extra compressed`, tests import, marks host with `7z_UNSUPPORTED` feature flag if `_lzma` missing, continues scan without aborting; lessons-harvest picks up the flag | H2 |
 
 ---
 
