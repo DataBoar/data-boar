@@ -35,8 +35,8 @@ dependencies = [
     "h11>=0.16.0",
     "httpcore>=1.0.9",
     "httpx>=0.28.1",
-    "hypothesis>=6.150.0",
-    "idna>=3.11",
+    "hypothesis>=6.152.7",
+    "idna>=3.15",
     "iniconfig>=2.3.0",
     "itsdangerous>=2.2.0",
     "jinja2>=3.1.6",
@@ -52,7 +52,7 @@ dependencies = [
     "openpyxl>=3.1.5",
     "oracledb>=3.4.1",
     "packaging>=26.1",
-    "pandas>=3.0.1",
+    "pandas>=3.0.3",
     "pillow>=12.2.0",
     "pluggy>=1.6.0",
     "psycopg2-binary>=2.9.11",
@@ -63,17 +63,17 @@ dependencies = [
     "pymysql>=1.1.2",
     "pyodbc>=5.3.0",
     "pyparsing>=3.3.2",
-    "pypdf>=6.10.2",
+    "pypdf>=6.11.0",
     "pyjwt>=2.12.0",
     "pytest>=9.0.3",
     "python-dateutil>=2.9.0.post0",
     "python-docx>=1.2.0",
     "python-dotenv>=1.2.1",
-    "python-multipart>=0.0.26",
+    "python-multipart>=0.0.28",
     "pyyaml>=6.0.3",
-    "regex>=2026.2.19",
-    "reportlab>=4.4.7",
-    "requests>=2.33.0",
+    "regex>=2026.5.9",
+    "reportlab>=4.5.1",
+    "requests>=2.34.0",
     "scikit-learn>=1.8.0",
     "scipy>=1.17.0",
     "seaborn>=0.13.2",
@@ -102,12 +102,12 @@ data-boar-report = "cli.reporter:main"
 
 [project.optional-dependencies]
 nosql = ["pymongo>=4.0", "redis>=5.0"]
-bigdata = ["snowflake-connector-python>=3.0"]
+bigdata = ["snowflake-connector-python>=4.5.0"]
 shares = ["smbprotocol>=1.2.0", "webdavclient3>=0.14.0", "requests_ntlm>=1.2.0"]
 # Scan inside .7z archives (ZIP/tar/tar.gz etc. use stdlib). See docs/plans/PLAN_COMPRESSED_FILES.md.
 compressed = ["py7zr>=0.20.0"]
 # Deep-learning sensitivity: sentence embeddings + classifier on your training terms (see docs/SENSITIVITY_DETECTION.md)
-dl = ["sentence-transformers>=3.0.0"]
+dl = ["sentence-transformers>=5.5.0"]
 # Optional typo-tolerant column name vs sensitive terms (see sensitivity_detection.fuzzy_column_match)
 detection-fuzzy = ["rapidfuzz>=3.9.0"]
 # Rich media: ID3/Vorbis/FLAC tags (mutagen), OCR wrapper (pytesseract; install system tesseract-ocr),
@@ -227,7 +227,7 @@ dev = [
     "ruff>=0.15.11",
     "rapidfuzz>=3.9.0",
     "bandit>=1.9.4",
-    "mypy>=1.20.1",
+    "mypy>=2.1.0",
     "types-pyyaml>=6.0.12.20250915",
     # CycloneDX SBOM from uv-exported requirements (ADR 0003); same CLI as CI `sbom.yml`.
     "cyclonedx-bom>=7.0.0",
