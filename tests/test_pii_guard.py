@@ -35,6 +35,32 @@ _BUILTIN_LITERALS: list[str] = [
 ]
 
 _BUILTIN_REGEXES: list[tuple[str, re.Pattern[str]]] = [
+    # --- Credential / secret patterns (from security-guard complement) ---
+    (
+        "AWS IAM access key (AKIA prefix)",
+        re.compile(r"\bAKIA[0-9A-Z]{16}\b"),
+    ),
+    (
+        "GitHub PAT (ghp_ / gho_ / ghu_ / ghs_ / ghr_)",
+        re.compile(r"\bgh[pousr]_[A-Za-z0-9]{36,}\b"),
+    ),
+    (
+        "Bearer token in Authorization header",
+        re.compile(r"(?i)bearer\s+[A-Za-z0-9\-_\.]{20,}"),
+    ),
+    (
+        "Slack bot/user/app/refresh token (xox*)",
+        re.compile(r"\bxox[baprs]-[A-Za-z0-9\-]{10,}\b"),
+    ),
+    (
+        "Stripe live/test secret key",
+        re.compile(r"\bsk_(live|test)_[A-Za-z0-9]{24,}\b"),
+    ),
+    (
+        "PEM private key header",
+        re.compile(r"-----BEGIN (RSA|EC|DSA|OPENSSH|PGP) PRIVATE KEY"),
+    ),
+    # --- Operator-specific PII patterns ---
     ("CRM with digits (medical license)", re.compile(r"CRM-\d{4,}")),
     (
         "Windows absolute user path (non-placeholder)",
