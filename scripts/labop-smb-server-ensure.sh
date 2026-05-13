@@ -18,18 +18,22 @@ set -u
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin${PATH+:$PATH}"
 
 APPLY=0
+CLEANUP=0
 SHARE_PATH="${HOME}/Documents/LGPD"
 SHARE_NAME="lgpd_data"
 STATUS_FILE="${HOME}/.labop-status"
+FW_TAG="smb"
+FW_STATE_FILE="${HOME}/.labop-fw-ephemeral-smb.json"
 
 PREV_ARG=""
 for arg in "$@"; do
   case "$arg" in
     --apply)       APPLY=1 ;;
     --check)       APPLY=0 ;;
+    --cleanup)     CLEANUP=1 ;;
     --share-path)  ;;
     --share-name)  ;;
-    --help|-h) echo "Usage: $0 [--check | --apply] [--share-path PATH] [--share-name NAME]"; exit 0 ;;
+    --help|-h) echo "Usage: $0 [--check | --apply | --cleanup] [--share-path PATH] [--share-name NAME]"; exit 0 ;;
     *)
       if [[ "$PREV_ARG" == "--share-path" ]]; then
         SHARE_PATH="$arg"
@@ -42,13 +46,26 @@ for arg in "$@"; do
   PREV_ARG="$arg"
 done
 
+# Source firewall library
+_SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=labop-firewall-lib.sh
+source "$_SCRIPT_DIR/labop-firewall-lib.sh" 2>/dev/null || {
+  echo "[SMB-Ensure] WARN: labop-firewall-lib.sh not found — firewall checks skipped." >&2
+}
+
 _log() { echo "[SMB-Ensure $(date -u +%H:%M:%SZ)] $*"; }
 _ok()  { echo "[SMB-Ensure] OK: $*"; }
 _warn(){ echo "[SMB-Ensure] WARN: $*" >&2; }
 _fail(){ echo "[SMB-Ensure] FAIL: $*" >&2; }
 
 HOST=$(hostname -f 2>/dev/null || hostname)
-_log "Starting on $HOST (apply=$APPLY share_path=$SHARE_PATH share_name=$SHARE_NAME)"
+_log "Starting on $HOST (apply=$APPLY cleanup=$CLEANUP share_path=$SHARE_PATH subnet=$LAB_OP_SUBNET)"
+
+if [[ $CLEANUP -eq 1 ]]; then
+  _log "Cleanup mode: reverting ephemeral firewall rules."
+  type _fw_cleanup_ephemeral >/dev/null 2>&1 && _fw_cleanup_ephemeral
+  exit 0
+fi
 
 NEED_FIX=0
 
@@ -67,7 +84,37 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# Phase 2: Check nmbd (optional but typical for NetBIOS browsing)
+# Phase 2a: Port check + firewall for SMB (445 primary, 139 NetBIOS legacy)
+# ---------------------------------------------------------------------------
+SMB_PORT=445
+SMB_PORT_LEGACY=139
+if type _fw_detect >/dev/null 2>&1; then
+  _fw_detect
+  for port in $SMB_PORT $SMB_PORT_LEGACY; do
+    if type _port_listening >/dev/null 2>&1; then
+      if _port_listening $port; then
+        _ok "Port $port/tcp listening."
+      else
+        _warn "Port $port/tcp NOT listening."
+        NEED_FIX=1
+      fi
+    fi
+    if _fw_port_allowed $port tcp; then
+      _ok "Firewall allows $LAB_OP_SUBNET → port $port/tcp."
+    else
+      _warn "Firewall BLOCKS $LAB_OP_SUBNET → port $port/tcp."
+      NEED_FIX=1
+      if [[ $APPLY -eq 1 ]]; then
+        _log "Opening port $port/tcp ephemerally for $LAB_OP_SUBNET..."
+        FW_TAG="smb-${port}"
+        FW_STATE_FILE="${HOME}/.labop-fw-ephemeral-smb-${port}.json"
+        _fw_open_ephemeral $port tcp || _warn "Ephemeral rule failed (check sudoers LABOP_SMB_SERVER)."
+      else
+        type _fw_troubleshoot_hint >/dev/null 2>&1 && _fw_troubleshoot_hint $port tcp "SMB/Samba"
+      fi
+    fi
+  done
+fi
 # ---------------------------------------------------------------------------
 if systemctl list-unit-files nmbd.service >/dev/null 2>&1; then
   if ! systemctl is-active --quiet nmbd 2>/dev/null; then

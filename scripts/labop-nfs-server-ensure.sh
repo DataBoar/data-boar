@@ -17,15 +17,19 @@ set -u
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin${PATH+:$PATH}"
 
 APPLY=0
+CLEANUP=0
 EXPORT_PATH="${HOME}/Documents/LGPD"
 STATUS_FILE="${HOME}/.labop-status"
+FW_TAG="nfs"
+FW_STATE_FILE="${HOME}/.labop-fw-ephemeral-nfs.json"
 
 for arg in "$@"; do
   case "$arg" in
     --apply)        APPLY=1 ;;
     --check)        APPLY=0 ;;
-    --export-path)  ;;  # handled below via shift-next
-    --help|-h) echo "Usage: $0 [--check | --apply] [--export-path PATH]"; exit 0 ;;
+    --cleanup)      CLEANUP=1 ;;
+    --export-path)  ;;
+    --help|-h) echo "Usage: $0 [--check | --apply | --cleanup] [--export-path PATH]"; exit 0 ;;
     *)
       if [[ "${PREV_ARG:-}" == "--export-path" ]]; then
         EXPORT_PATH="$arg"
@@ -36,13 +40,29 @@ for arg in "$@"; do
   PREV_ARG="$arg"
 done
 
+# Source firewall library
+_SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=labop-firewall-lib.sh
+source "$_SCRIPT_DIR/labop-firewall-lib.sh" 2>/dev/null || {
+  echo "[NFS-Ensure] WARN: labop-firewall-lib.sh not found — firewall checks skipped." >&2
+}
+
 _log() { echo "[NFS-Ensure $(date -u +%H:%M:%SZ)] $*"; }
 _ok()  { echo "[NFS-Ensure] OK: $*"; }
 _warn(){ echo "[NFS-Ensure] WARN: $*" >&2; }
 _fail(){ echo "[NFS-Ensure] FAIL: $*" >&2; }
 
 HOST=$(hostname -f 2>/dev/null || hostname)
-_log "Starting on $HOST (apply=$APPLY export_path=$EXPORT_PATH)"
+_log "Starting on $HOST (apply=$APPLY cleanup=$CLEANUP export_path=$EXPORT_PATH subnet=$LAB_OP_SUBNET)"
+
+# ---------------------------------------------------------------------------
+# Cleanup mode: revert ephemeral firewall rules only
+# ---------------------------------------------------------------------------
+if [[ $CLEANUP -eq 1 ]]; then
+  _log "Cleanup mode: reverting ephemeral firewall rules."
+  type _fw_cleanup_ephemeral >/dev/null 2>&1 && _fw_cleanup_ephemeral
+  exit 0
+fi
 
 NEED_FIX=0
 
@@ -88,12 +108,33 @@ if ! systemctl is-active --quiet "$NFS_SVC" 2>/dev/null; then
     _log "Starting $NFS_SVC..."
     systemctl start "$NFS_SVC" 2>&1 && _ok "$NFS_SVC started." || _fail "$NFS_SVC start failed."
   fi
-else
-  _ok "$NFS_SVC: active."
+# Phase 3a: Check port 2049 (NFS) is listening
+NFS_PORT=2049
+if type _port_listening >/dev/null 2>&1; then
+  if _port_listening $NFS_PORT; then
+    _ok "Port $NFS_PORT/tcp listening."
+  else
+    _warn "Port $NFS_PORT/tcp NOT listening — NFS service may not be fully started."
+    NEED_FIX=1
+  fi
 fi
 
-# ---------------------------------------------------------------------------
-# Phase 4: Check export path
+# Phase 3b: Firewall check for NFS port
+if type _fw_detect >/dev/null 2>&1; then
+  _fw_detect
+  if _fw_port_allowed $NFS_PORT tcp; then
+    _ok "Firewall allows $LAB_OP_SUBNET → port $NFS_PORT/tcp."
+  else
+    _warn "Firewall BLOCKS $LAB_OP_SUBNET → port $NFS_PORT/tcp."
+    NEED_FIX=1
+    if [[ $APPLY -eq 1 ]]; then
+      _log "Opening port $NFS_PORT/tcp ephemerally for $LAB_OP_SUBNET..."
+      _fw_open_ephemeral $NFS_PORT tcp || _warn "Ephemeral rule failed (check sudoers LABOP_NFS_SERVER)."
+    else
+      type _fw_troubleshoot_hint >/dev/null 2>&1 && _fw_troubleshoot_hint $NFS_PORT tcp "NFS"
+    fi
+  fi
+fi
 # ---------------------------------------------------------------------------
 if [[ ! -d "$EXPORT_PATH" ]]; then
   _warn "Export path does not exist: $EXPORT_PATH"
