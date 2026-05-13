@@ -70,7 +70,11 @@ scripts/
       Handle-target_sshfs.ps1      ← Montagem/desmontagem SSHFS
       Handle-target_cifs.ps1       ← Montagem/desmontagem SMB/CIFS
   maestro-benchmark-ab.ps1        ← Wrapper A/B (stable vs rc)
-  lab-completao-host-smoke.sh     ← Smoke por host (bash, roda em tmux)
+  lab-completao-host-smoke.sh     ← Smoke por host (bash, roda em tmux no OS)
+  lab-completao-container-smoke.sh ← Smoke de container: detecta Docker/Podman,
+                                     sobe Data Boar RC (porta 9002), escreve
+                                     ~/.labop-status; chamado pelos handlers
+                                     docker/podman via tmux após host smoke
 ```
 
 ### 3.2 Fluxo de execução
