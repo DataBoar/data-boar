@@ -1,6 +1,9 @@
 # Plan: Databricks SQL, Unity Catalog, and lakehouse scope (medium-term)
 
-**Status:** **Backlog / planning** — **no committed implementation window** until a **customer, partner, or GTM** signal justifies the slice. Detailed design can wait; this file captures **intent**, **two tracks** (data vs inventory), and **commercial posture** so the roadmap stays coherent.
+**Status:** Pending
+**Date:** 2026-05-02
+**Authors:** Fabio Leitao
+**Priority:** H2
 
 **Horizon:** **[H2]** medium-term (post core connector hardening and scope-import maturity), unless promoted earlier by demand.
 

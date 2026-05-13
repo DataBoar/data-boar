@@ -1,6 +1,10 @@
 # Plan: Opt-in network port / service hints (“hidden ingredients” adjacent)
 
-**Status:** Proposal (not implemented)
+**Status:** Pending
+**Date:** 2026-03-25
+**Authors:** Fabio Leitao
+**Priority:** H2
+
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md), [PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md](PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md) (Tier 3b / “sniffing for hidden ingredients” umbrella)
 
 ## Purpose

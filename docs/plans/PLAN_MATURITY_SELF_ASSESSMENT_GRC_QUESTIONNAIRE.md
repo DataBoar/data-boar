@@ -1,9 +1,13 @@
 # PLAN: Organizational maturity self-assessment (GRC-style questionnaire)
 
+**Status:** Completed
+**Date:** 2026-04-16
+**Authors:** Fabio Leitao
+**Priority:** H0
+**Depends on:** ADR-0025
+
 <!-- plans-hub-summary: POC on main: gated /{locale}/assessment + YAML rubric scores + SQLite + HMAC + post-submit summary + per-batch history table + GET /assessment/export (CSV/Markdown); evidence levels A/B/C (smoke vs full demo); SMOKE runbook; RBAC + report-bundle backlog; not legal audit. -->
 <!-- plans-hub-related: PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md, LICENSING_OPEN_CORE_AND_COMMERCIAL.md (future tier features), PLAN_SCOPE_IMPORT_FROM_EXPORTS.md (inventory bootstrap narrative) -->
-
-**Status:** **POC A shipped on `main`** — gated `GET`/`POST /{locale}/assessment`, optional **`api.maturity_assessment_pack_path`** (YAML with optional per-answer **`scores`**), **SQLite** table `maturity_assessment_answers`, optional **HMAC-SHA256 per row** (`row_hmac`) when **`DATA_BOAR_MATURITY_INTEGRITY_SECRET`** (or **`api.maturity_integrity_secret_from_env`**) is set at write time. **`GET /status`** and **`python main.py --export-audit-trail`** include **`maturity_assessment_integrity`** (counts: ok / mismatch / unsealed / unknown_sealed). **Not** encryption; deters casual DB edits and supports demo narrative. **Shipped on `main`:** rubric **total / percent** on post-submit summary; **`GET /{locale}/assessment`** lists **recent batches** (newest first, bounded); **`GET /{locale}/assessment/export`** (CSV or Markdown **attachment** — not an on-disk path under `report.output_dir`). **Declare “POC ready”** via **`scripts/smoke-maturity-assessment-poc.ps1`** + [SMOKE_MATURITY_ASSESSMENT_POC.md](../ops/SMOKE_MATURITY_ASSESSMENT_POC.md) §D (§E optional). **Still backlog:** consultant UX, legal one-pager, **tenant-scoped** history / **RBAC** ([#86](https://github.com/FabioLeitao/data-boar/issues/86)), report bundle annex export, **DOCX→YAML** per tenant when packaging. **JWT `dbtier` vs lab `effective_tier`:** API regression tests in `tests/test_api_assessment_poc.py` (**enforced** license + `dbtier` community vs pro) ✅.
 
 **Horizon / urgency:** `[H3]` or `[H4]` · `[U3]` for the **complete** product slice; next code slices: **tenant/history model** when clear, then **RBAC** (#86) alignment.
 

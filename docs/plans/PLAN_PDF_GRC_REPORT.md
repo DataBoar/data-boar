@@ -1,6 +1,11 @@
 # PLAN: PDF GRC Report (Executive + Detailed + Priority Matrix)
 
-**Status:** Planned — Priority band B (after open core POC)
+**Status:** Pending
+**Date:** 2026-04-05
+**Authors:** Fabio Leitao
+**Priority:** H1
+**Depends on:** ADR-0048
+
 **Owner:** Fabio Leitao
 **Relates to:** `PLAN_PRODUCT_TIERS_AND_OPEN_CORE.md`, `LICENSING_SPEC.md`, `PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md` (org questionnaire is a **separate** commercial track — this PDF is **technical scan** output only).
 **Tier:** Pro feature (PDF on-demand; XLSX always generated)

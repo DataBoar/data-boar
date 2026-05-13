@@ -1,5 +1,10 @@
 # Lab-op observability stack — metrics, logs, dashboards (plan only)
 
+**Status:** Pending
+**Date:** 2026-03-24
+**Authors:** Fabio Leitao
+**Priority:** H2
+
 **Português (Brasil):** [PLAN_LAB_OP_OBSERVABILITY_STACK.pt_BR.md](PLAN_LAB_OP_OBSERVABILITY_STACK.pt_BR.md)
 
 **Purpose:** Sequence **optional** homelab instrumentation—**Grafana**, time-series DBs, **centralized logs**—without blocking Data Boar development or **–1L** validation. **No** implementation in this repo; operator deploys via Compose, k3s Helm, or vendor appliances on **lab-op** hosts (ThinkPad LAB-NODE-01, LAB-NODE-02, Proxmox guests).
@@ -59,4 +64,3 @@ URLs, retention, LDAP, and LAN firewall rules belong in **`docs/private/homelab/
 - **LAB_OP_MINIMAL_CONTAINER_STACK.md** §7 — short pointer here.
 - **Reminder (when hardware allows):** deploy **syslog/logs** first (**Promtail + Loki + Grafana**, phase **C**); add **Wazuh** (phase **E**) on a **VM/tower** with enough RAM — minimal operator checklist: [OBSERVABILITY_SYSLOG_DETECTION_CHECKLIST.md](../private.example/homelab/OBSERVABILITY_SYSLOG_DETECTION_CHECKLIST.md) ([pt-BR](../private.example/homelab/OBSERVABILITY_SYSLOG_DETECTION_CHECKLIST.pt_BR.md)).
 
-**Status:** ⬜ Plan only — no repo code until a concrete operator runbook justifies a small doc PR (e.g. example Compose **without secrets** under `docs/private.example/`).

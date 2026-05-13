@@ -1,6 +1,10 @@
 # Plan: Market alignment checkpoint and Corporate-Entity-C review timing
 
-**Status:** Proposed (checkpoint note)
+**Status:** Pending
+**Date:** 2026-03-25
+**Authors:** Fabio Leitao
+**Priority:** H1
+
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md), [SPRINTS_AND_MILESTONES.md](SPRINTS_AND_MILESTONES.md)
 
 ## Purpose

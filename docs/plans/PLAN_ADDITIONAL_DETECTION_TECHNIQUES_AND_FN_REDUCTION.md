@@ -1,8 +1,13 @@
 # Plan: Additional detection techniques and false-negative reduction
 
+**Status:** Completed
+**Date:** 2026-03-15
+**Authors:** Fabio Leitao
+**Priority:** H2
+**Depends on:** ADR-0043
+
 <!-- plans-hub-summary: POC detection baseline on main (priorities 1-5 shipped); priorities 6+ (aggregated modes, dictionaries, NER) stay optional backlog. -->
 
-**Status:** **POC baseline complete on `main`** — priorities **1–5** shipped: column-name normalisation, optional fuzzy column match, connector format/length hints (incl. email widths, UUID name tokens), optional **`embedding_prototype_hint`**. **Backlog:** aggregated / incomplete-data modes, region dictionaries, FK/table context, NER or external APIs (priorities 6+) — see *Implementation priorities* below.
 **Goal:** Explore techniques, frameworks, and libraries (beyond Regex, ML, and DL) to improve report quality, with emphasis on **reducing false negatives** (missed PII) even at the cost of more false positives (which can be handled later by human review).
 
 ---

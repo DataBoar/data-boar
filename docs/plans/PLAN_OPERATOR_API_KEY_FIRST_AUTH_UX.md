@@ -1,6 +1,9 @@
 # Plan: Operator API key–first auth UX (reduce JWT / manual Bearer toil)
 
-**Status:** Exploratory spike (not implementing product IdP)
+**Status:** Pending
+**Date:** 2026-03-29
+**Authors:** Fabio Leitao
+**Priority:** H2
 
 **Horizon / urgency:** `[H3]` / `[U2]` — **sidequest · exploratory**; run in a **buffer** sprint or after a coherent main slice when operator ergonomics matter more than feature depth.
 

@@ -1,6 +1,10 @@
 # Plan checkpoint: priority matrix adjustments (2026-03-25)
 
-**Status:** Applied updates in planning docs
+**Status:** Pending
+**Date:** 2026-03-25
+**Authors:** Fabio Leitao
+**Priority:** H0
+
 **Goal context:** faster commercialization readiness without regressions, with trust-first sequencing.
 
 ## What was adjusted

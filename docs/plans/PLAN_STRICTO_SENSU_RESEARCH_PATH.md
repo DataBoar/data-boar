@@ -1,8 +1,12 @@
 # Plan: Stricto sensu research path (M.Sc. and PhD) on top of Data Boar
 
+**Status:** Deferred
+**Date:** 2026-03-18
+**Authors:** Fabio Leitao
+**Priority:** H3
+
 <!-- plans-hub-summary: M.Sc./PhD research lines using Data Boar as experimental platform—detection, evidence, methodology; revisit when programs/advisors near. -->
 
-**Status:** Not started (structure only)
 **Synced with:** `long-term-product-and-academic-roadmap` and [PLAN_LATO_SENSU_THESIS.md](PLAN_LATO_SENSU_THESIS.md)
 
 This plan outlines how to evolve the existing application and documentation into **one or more stricto sensu research lines** (M.Sc. and eventually PhD). It focuses on **questions, methodology, and experimental infrastructure**, not on shipping new product features directly.

@@ -1,6 +1,9 @@
 # LAB-OP — CAPEX / OPEX & Procurement (tracked plan)
 
-**Status:** Active — under continuous curation.
+**Status:** Active
+**Date:** 2026-04-02
+**Authors:** Fabio Leitao
+**Priority:** H2
 
 **pt-BR:** [PLAN_LAB_OP_CAPEX_OPEX_PROCUREMENT.pt_BR.md](PLAN_LAB_OP_CAPEX_OPEX_PROCUREMENT.pt_BR.md)
 

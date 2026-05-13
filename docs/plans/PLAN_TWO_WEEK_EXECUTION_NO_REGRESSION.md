@@ -1,6 +1,10 @@
 # Plan: Two-week execution sprint (no regressions, low toil, fast delivery)
 
-**Status:** Active — cycle **2026-04-21 → 2026-05-04** (replace dates when you start the next wall-clock window)
+**Status:** Active
+**Date:** 2026-03-25
+**Authors:** Fabio Leitao
+**Priority:** H0
+
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md)
 
 **Previous template cycles:** Earlier uses of this file without a dated closure are **superseded** by the [Integration / active threads](PLANS_TODO.md) narrative (S0 closed, **S1 – Lab proof** selected). Close each cycle with: green `main`, explicit carryover rows, and one release or demo note if you shipped user-visible slices.

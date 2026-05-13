@@ -1,6 +1,10 @@
 # Plan: SQL column sampling — SRE posture, audit evidence, and statistical “pre-wiring”
 
-**Status:** **Slice 1** shipped on `main` (`WHERE` non-null filter, query builder hook, optional env cap). **Slice 2–3** backlog (metadata-first aggressiveness, dialect TABLESAMPLE / coverage score).
+**Status:** Completed
+**Date:** 2026-04-26
+**Authors:** Fabio Leitao
+**Priority:** H2
+**Depends on:** ADR-0043
 
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md) (*Integration / active threads*), [ADR 0043](../adr/ADR-0043-sql-column-sampling-non-null-and-strategy-hook.md)
 

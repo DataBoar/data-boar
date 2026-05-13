@@ -1,6 +1,9 @@
 # Plan: Extended sensitive discovery positioning (clinical adjacency, IP, security artifacts)
 
-**Status:** Active (documentation); optional sample packs later.
+**Status:** Active
+**Date:** 2026-04-13
+**Authors:** Fabio Leitao
+**Priority:** H2
 
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md)
 

@@ -1,6 +1,10 @@
 # Plan: Dashboard HTTPS-by-default with explicit HTTP risk mode
 
-**Status:** Core phases shipped (TLS + explicit HTTP + status/banner + audit-export `dashboard_transport`); **Phase 7** transport integrity / tamper trust — **prioritized** as **S2a** first implementation slice (paired with **#86** governance + [PLAN_GRC_INSPIRED_ENTERPRISE_TRUST_ACCELERATORS.md](PLAN_GRC_INSPIRED_ENTERPRISE_TRUST_ACCELERATORS.md) §A1–A2; see [SPRINTS_AND_MILESTONES.md](SPRINTS_AND_MILESTONES.md) §4)
+**Status:** Completed
+**Date:** 2026-03-25
+**Authors:** Fabio Leitao
+**Priority:** H2
+
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md)
 
 ## Purpose

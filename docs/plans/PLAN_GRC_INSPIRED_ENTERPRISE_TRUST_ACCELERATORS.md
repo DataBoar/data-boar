@@ -1,6 +1,10 @@
 # Plan: GRC-inspired trust accelerators for enterprise recognition
 
-**Status:** **Active (first slice)** — paired with **S2a** in [SPRINTS_AND_MILESTONES.md](SPRINTS_AND_MILESTONES.md) §4 / [PLANS_TODO.md](PLANS_TODO.md) *Integration* (**S2a**); implements **A1–A2** minimum alongside [PLAN_DASHBOARD_HTTPS_BY_DEFAULT_AND_HTTP_EXPLICIT_RISK.md](PLAN_DASHBOARD_HTTPS_BY_DEFAULT_AND_HTTP_EXPLICIT_RISK.md) **Phase 7** transport hardening
+**Status:** Active
+**Date:** 2026-03-25
+**Authors:** Fabio Leitao
+**Priority:** H0
+
 **Audience:** Internal product planning (operator + maintainers)
 
 ## Purpose

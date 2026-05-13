@@ -32,7 +32,7 @@ Multilingual and legacy encodings are supported; **configurable timeouts** and *
 
 **We invite you to get in touch** to see how Data Boar can support your compliance journey.
 
-**Typical scenarios:** Preparing for an audit or regulator request; mapping data before a migration or DLP rollout; raising compliance awareness without a full war room.
+**Typical scenarios:** Preparing for an audit or regulator request; mapping data before a migration or DLP rollout; raising compliance awareness without a full war room; supporting data privacy consultants as the technical evidence layer in LGPD adequacy engagements.
 
 > **Current release:** **1.7.3**. **Docker Hub:** **`fabioleitao/data_boar:1.7.3`** or **`latest`**. Summary: [CHANGELOG.md](CHANGELOG.md). Full notes: [docs/releases/1.7.3.md](docs/releases/1.7.3.md) and the [GitHub Releases page](https://github.com/FabioLeitao/data-boar/releases). Prior golden: **`v1.7.2-safe`** / **`1.7.2+safe`** — [docs/releases/1.7.2-safe.md](docs/releases/1.7.2-safe.md).
 > **Working pre-release on `main`:** **`1.7.4-rc`** — draft GitHub **pre-release** notes: [docs/releases/1.7.4-rc.md](docs/releases/1.7.4-rc.md) (does **not** move Docker **`latest`**; stable remains **1.7.3** until **1.7.4** final).

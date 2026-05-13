@@ -1,6 +1,11 @@
 # Plan: Synthetic and true-like data sources, confidence scoring, and operator guidance
 
-**Status:** Not started
+**Status:** Deferred
+**Date:** 2026-03-15
+**Authors:** Fabio Leitao
+**Priority:** H3
+**Depends on:** ADR-0007
+
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md) (central to-do list)
 
 ## When implementing steps: update docs and tests; then update PLANS_TODO.md and this file.

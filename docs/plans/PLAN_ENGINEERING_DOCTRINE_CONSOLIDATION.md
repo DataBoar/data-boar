@@ -2,6 +2,12 @@
 
 # Plan — Engineering doctrine consolidation (Data Boar DNA)
 
+**Status:** Active
+**Date:** 2026-04-27
+**Authors:** Fabio Leitao
+**Priority:** H0
+**Depends on:** ADR-0046, ADR-0047
+
 > *"Hope is not a strategy, but a well-built tool is."*
 
 This plan consolidates the **Data Boar engineering doctrine** so that craftsmanship,

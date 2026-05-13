@@ -1,5 +1,10 @@
 # Lab-op — firewall / L3 baseline, assistant access, security posture, observability (sequenced)
 
+**Status:** Pending
+**Date:** 2026-03-24
+**Authors:** Fabio Leitao
+**Priority:** H2
+
 **Português (Brasil):** [PLAN_LAB_FIREWALL_ACCESS_AND_OBSERVABILITY.pt_BR.md](PLAN_LAB_FIREWALL_ACCESS_AND_OBSERVABILITY.pt_BR.md)
 
 **Purpose:** One **ordered spine** for homelab work that started with **UniFi / firewall tuning**: align **L3 + DHCP + DNS** per VLAN, enable **safe Cursor/assistant automation** on the operator PC, capture **security posture** (CyberSecure, IPS, honeypots, cadence), then layer **observability** — **syslog → Loki** before **Wazuh** — without pretending all stacks run on one small laptop at once.

@@ -1,6 +1,9 @@
 # Plan (future): public website, marketing depth, and extra doc languages
 
-**Status:** ⬜ **Reminder / backlog** — not scheduled. Revisit when the product is **closer to production-ready** (e.g. after **M-LAB**, stable **M-TRUST**, and a clear GTM slice).
+**Status:** Pending
+**Date:** 2026-03-21
+**Authors:** Fabio Leitao
+**Priority:** H3
 
 **Purpose:** Capture intent so we do not forget: a **stronger public surface** (site + optional extra languages) aligned with **branding** (Data Boar / dashBOARd, data soup narrative) and **trust** (releases, docs, use cases).
 

@@ -1,6 +1,9 @@
 # Plan: Next wave after core trust foundations (platform + GTM)
 
-**Status:** Proposed (post current trio)
+**Status:** Pending
+**Date:** 2026-04-02
+**Authors:** Fabio Leitao
+**Priority:** H1
 
 ## Purpose
 

@@ -1,8 +1,11 @@
 ﻿# Plano: Carreira e presenca digital do fundador
 
-<!-- plans-hub-summary: Plano privado do operador - detalhes de carreira, branding e presença digital. Documento completo em docs/private/ (gitignored). -->
+**Status:** Pending
+**Date:** 2026-04-04
+**Authors:** Fabio Leitao
+**Priority:** H1
 
-**Status:** Ativo - ver arquivo privado.
+<!-- plans-hub-summary: Plano privado do operador - detalhes de carreira, branding e presença digital. Documento completo em docs/private/ (gitignored). -->
 
 **Âmbito:** Este plano trata do alinhamento entre carreira profissional do fundador/operador, posicionamento público e branding do produto. Por conter dados pessoais (nome, handles, empregadores, metas), o conteúdo detalhado é mantido exclusivamente em arquivo gitignored.
 
