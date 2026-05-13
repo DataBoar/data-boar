@@ -68,6 +68,7 @@ Short, durable notes that capture **why** the project chose an approach—not on
 | 0047  | [RCA-first defect investigation and fix discipline](ADR-0047-rca-first-defect-investigation-and-fix-discipline.md) | Accepted |
 | 0048  | [Operator-facing taxonomy and naming contract preservation](ADR-0048-operator-facing-taxonomy-and-naming-contract-preservation.md) | Accepted |
 | 0049  | [No brittle mitigations — robust input handling over symptom suppression](ADR-0049-no-brittle-mitigations-robust-input-handling.md) | Accepted |
+| 0050  | [Plan document metadata standard](ADR-0050-plan-document-metadata-standard.md) | Accepted |
 
 ## Related docs
 
