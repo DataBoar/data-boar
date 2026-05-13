@@ -181,22 +181,29 @@ See `PLAN_MAESTRO_BENCHMARK_METRICS_AND_FIX.md` for full analysis. Summary:
 
 ### 6.2 Common invocations
 
+> **Important:** The full A/B benchmark takes 20–25 minutes. Cursor's integrated
+> terminal kills background jobs after ~10 minutes. **Run long benchmarks in a
+> native PowerShell window** (Windows Terminal, `pwsh` outside Cursor) rather than
+> via Cursor's shell or background tasks.
+
 ```powershell
 # Standard completão (smoke only, current working tree)
 .\scripts\maestro\Maestro.ps1
 
 # Deep benchmark run (uses benchmark-rc.yaml, collects metrics)
-# NOTE: Bug 2 currently prevents this from working on baremetal/docker. Fix first.
 .\scripts\maestro\Maestro.ps1 -Deep -BenchTrack beta -BenchRunId "20260513_post_fix"
+
+# Token-aware wrapper: Deep + monitor loop + Collect (single run)
+.\scripts\maestro-deep-rc-monitor-collect.ps1
+
+# A/B benchmark (stable v1.7.3 vs rc v1.7.4) — run in native PS terminal
+.\scripts\maestro-benchmark-ab.ps1 `
+  -LegacyRef v1.7.3 -LegacyTrack stable -LegacyWebPort 18088 `
+  -CandidateRef "WorkingTree" -CandidateTrack beta -CandidateWebPort 28088 `
+  -BenchCompare -RunId "ab_$(Get-Date -Format 'yyyyMMdd_HHmmss')"
 
 # Collect artifacts from last async run
 .\scripts\maestro\Maestro.ps1 -Collect
-
-# A/B benchmark (stable v1.7.3 vs rc v1.7.4)
-.\scripts\maestro-benchmark-ab.ps1 `
-  -LegacyRef v1.7.3 -LegacyTrack stable -LegacyWebPort 18088 `
-  -CandidateRef v1.7.4-rc -CandidateTrack beta -CandidateWebPort 28088 `
-  -BenchCompare
 ```
 
 ### 6.3 Reading results
