@@ -232,23 +232,40 @@ Expected output in `docs/private/homelab/reports/MAESTRO_BENCHMARK_AB_*.md`:
 
 ```
 Smoke detects archive_unsupported or ModuleNotFoundError for py7zr
-  │
-  ├─ Step 1: uv sync --extra compressed
-  │     Log: "[DepDoctor] Attempting uv sync --extra compressed on $HOST"
-  │     Test: uv run python3 -c "import py7zr"
-  │     If OK → retry scan → log: "[DepDoctor] SUCCESS: py7zr installed via uv sync"
-  │
-  ├─ Step 2: if _lzma missing (import fails with No module named '_lzma')
-  │     Log: "[DepDoctor] _lzma C extension missing — OS-level gap. Attempting Ansible remediation."
-  │     Run: ansible-playbook scripts/maestro/playbooks/install_lzma_dev.yml -l $HOST
-  │           (requires liblzma-dev + python3 rebuild or pyenv reinstall; narrow sudoers)
-  │     Test: uv run python3 -c "import py7zr"
-  │     If OK → retry scan → log: "[DepDoctor] SUCCESS: _lzma resolved via Ansible"
-  │
-  └─ Step 3: if still failing
-        Log: "[DepDoctor] FAILURE: 7z unavailable on $HOST. Marking 7z_UNSUPPORTED."
-        Write to host inventory: { "feature_flags": { "7z": false, "reason": "lzma_unavailable" } }
-        Continue scan without .7z targets — do NOT abort completão
+  |
+  +- Step 1: uv sync --extra compressed
+  |     Log: "[DepDoctor] Attempting uv sync --extra compressed on $HOST"
+  |     Test: uv run python3 -c "import py7zr"
+  |     If OK -> retry scan -> log: "[DepDoctor] SUCCESS: py7zr installed via uv sync"
+  |
+  +- Step 2: if _lzma missing (import fails with No module named _lzma)
+  |     Detect OS package manager on remote host:
+  |       apt     -> "apt-get install -y liblzma-dev"    (Debian/Ubuntu/Zorin)
+  |       xbps    -> "xbps-install -y xz-devel"          (Void Linux)
+  |       pacman  -> "pacman -S --noconfirm xz"           (Arch/Manjaro)
+  |       dnf     -> "dnf install -y xz-devel"            (Fedora/RHEL/Rocky)
+  |       zypper  -> "zypper install -y xz-devel"         (openSUSE)
+  |       apk     -> "apk add xz-dev"                     (Alpine)
+  |       none    -> skip, go to Step 3
+  |     Log: "[DepDoctor] PM detected: $PM. Installing $PKG on $HOST via narrow sudoers"
+  |     Run: ssh $HOST "sudo -n $PM_INSTALL_CMD"   (NOPASSWD entry per distro)
+  |     Log: exit code + stdout/stderr captured
+  |     If package installed -> uv python install (or pyenv reinstall) to rebuild Python
+  |     Test: uv run python3 -c "import py7zr"
+  |     If OK -> retry scan -> log: "[DepDoctor] SUCCESS: _lzma resolved via OS PM ($PM)"
+  |
+  +- Step 3: Ansible playbook (complex/multi-step or insufficient sudoers)
+  |     Run: ansible-playbook scripts/maestro/playbooks/install_lzma_dev.yml -l $HOST
+  |     Log attempt, PM used, outcome, any package manager output captured
+  |     Test: uv run python3 -c "import py7zr"
+  |     If OK -> retry scan -> log: "[DepDoctor] SUCCESS: _lzma resolved via Ansible"
+  |
+  +- Step 4: all attempts failed
+        Log: "[DepDoctor] FAILURE: 7z unavailable on $HOST after all remediation attempts."
+        Write inventory feature flag:
+          { "7z": false, "reason": "lzma_unavailable",
+            "pm_tried": "$PM", "last_attempt": "$DATE", "steps_tried": 3 }
+        Continue scan without .7z targets -- do NOT abort completao
         Emit WARNING in Maestro final report
         lessons-harvest.ps1 converts flag to action item in PLANS_TODO
 ```
@@ -256,12 +273,15 @@ Smoke detects archive_unsupported or ModuleNotFoundError for py7zr
 ### Ansible playbook contract
 
 `scripts/maestro/playbooks/install_lzma_dev.yml` (to be created in Slice 11):
-- Requires narrow sudoers entry: `NOPASSWD: /usr/bin/apt-get install -y liblzma-dev`
+- Detects distro family (`ansible_os_family`: Debian, RedHat, Arch, Void, Suse, Alpine)
+  and uses the correct package name per distro (see Step 2 table above)
+- Requires narrow sudoers entries per distro — template in
+  `docs/private/homelab/LABOP_COMPLETAO_SUDOERS*.md`
 - Scope: **additive only** — never removes packages, never upgrades OS, never changes Python version
-- Idempotent: checks if `liblzma-dev` already installed before running apt
-- After install: triggers `uv python install` or `pyenv install` to rebuild Python with lzma support
+- Idempotent: checks if lzma header already present before running package manager
+- After install: triggers `uv python install` (or `pyenv install`) to rebuild Python with lzma support
 - Logs every step to `docs/private/homelab/reports/dep_doctor_$HOST_$DATE.log`
-- Fails loudly if apt unavailable (non-Debian host) — does not attempt equivalent on non-apt systems
+- Fails loudly with diagnostic if distro not recognized — does not guess
 
 ### Feature flag in inventory
 
