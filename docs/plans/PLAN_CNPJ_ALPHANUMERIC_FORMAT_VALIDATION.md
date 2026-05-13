@@ -1,6 +1,10 @@
 # Plan: CNPJ alphanumeric format – understanding, validation, and compatibility
 
-**Status:** Phase 4 done; Phase 5 (checksum validation) future. Phases 1–4 complete.
+**Status:** Completed
+**Date:** 2026-03-15
+**Authors:** Fabio Leitao
+**Priority:** H3
+
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md) (central to-do list)
 
 ## When implementing steps: update docs and tests; then update PLANS_TODO.md and this file.

@@ -1,6 +1,9 @@
 # Plan: Scope import from exports (inventory bootstrap → YAML config)
 
-**Status:** Phases **B–D** complete on `main` (CSV → YAML fragment CLI + tests + **EN/pt-BR** operator workflow, [ops quickstart](../ops/SCOPE_IMPORT_QUICKSTART.md), USAGE privacy line). **Phase E** = optional vendor adapters (e.g. GLPI-shaped) + commercial narrative—incremental until promoted.
+**Status:** Pending
+**Date:** 2026-04-15
+**Authors:** Fabio Leitao
+**Priority:** H2
 
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md)
 

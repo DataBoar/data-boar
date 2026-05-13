@@ -1,11 +1,15 @@
 # Plan: Clojure/Lisp augmentation feasibility for Data Boar
 
+**Status:** Deferred
+**Date:** 2026-05-09
+**Authors:** Fabio Leitao
+**Priority:** H3
+
 **Português (Brasil):** [PLAN_CLOJURE_AUGMENTATION.pt_BR.md](PLAN_CLOJURE_AUGMENTATION.pt_BR.md)
 
 <!-- plans-hub-summary: Evaluate whether a Clojure sidecar adds measurable value for policy logic and temporal evidence without regressing Rust/Python baseline. -->
 <!-- plans-hub-related: PLAN_LATO_SENSU_THESIS.md, PLAN_STRICTO_SENSU_RESEARCH_PATH.md, PLAN_NEXT_WAVE_PLATFORM_AND_GTM.md -->
 
-**Status:** Proposed (not started)
 **Horizon suggestion:** `[H4][U3]` far-horizon exploration after current commercialization slices
 **Primary scope:** Architecture feasibility and evidence, not immediate product migration
 

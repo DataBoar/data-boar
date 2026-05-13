@@ -1,6 +1,9 @@
 # Dashboard mobile responsive layout
 
-**Status:** **Not started** — planning target; milestones below are **planning only** until scheduled on `main`.
+**Status:** Deferred
+**Date:** 2026-04-12
+**Authors:** Fabio Leitao
+**Priority:** H2
 
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md) (Tier 4 / `[H3][U2]`), [SPRINTS_AND_MILESTONES.md](SPRINTS_AND_MILESTONES.md) (dashboard web surface). **Independent** of dashboard i18n (**D-WEB** / **M-LOCALE-V1** in [PLAN_DASHBOARD_I18N.md](completed/PLAN_DASHBOARD_I18N.md)) — ship responsive CSS first where possible. **Retest** after locale-prefixed routes or **#86** RBAC changes ([PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md](PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md)).
 

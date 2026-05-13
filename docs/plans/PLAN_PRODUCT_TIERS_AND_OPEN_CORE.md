@@ -1,6 +1,11 @@
 # PLAN: Product Tiers and Open-Core Boundary Definition
 
-**Status:** Draft — not yet legal-reviewed
+**Status:** Pending
+**Date:** 2026-04-04
+**Authors:** Fabio Leitao
+**Priority:** H1
+**Depends on:** ADR-0025
+
 **Priority:** [H2][U1] — near-term before partner onboarding
 **Related:** `docs/LICENSING_OPEN_CORE_AND_COMMERCIAL.md`, `docs/LICENSING_SPEC.md`, `docs/plans/PLANS_TODO.md`
 

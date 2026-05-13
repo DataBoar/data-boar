@@ -1,6 +1,9 @@
 # Plan: Action Plan Generator (APG) — post-scan accountability and remediation hints
 
-**Status:** ⬜ **Not started** — product/marketing framing agreed; implementation slices TBD after PoC priority call.
+**Status:** Deferred
+**Date:** 2026-04-26
+**Authors:** Fabio Leitao
+**Priority:** H1
 
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md) (*Integration / active threads*), [ADR 0025](../adr/ADR-0025-compliance-positioning-evidence-inventory-not-legal-conclusion-engine.md) (evidence positioning), [PLAN_SQL_SAMPLING_SRE_AND_AUDIT_EVIDENCE.md](PLAN_SQL_SAMPLING_SRE_AND_AUDIT_EVIDENCE.md) (Slice 4 — coverage / confidence metadata), [PLAN_PDF_GRC_REPORT.md](PLAN_PDF_GRC_REPORT.md) (executive PDF narrative), [PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md](PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md) (audit trail / tamper posture)
 

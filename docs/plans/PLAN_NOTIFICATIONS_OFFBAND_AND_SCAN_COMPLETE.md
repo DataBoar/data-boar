@@ -1,6 +1,10 @@
 # Plan: Off-band notifications and scan-completion notifications
 
-**Status:** Phase 1–2 baseline implemented (config + notifier + scan-complete trigger + docs); Phase 3+ backlog.
+**Status:** Pending
+**Date:** 2026-03-15
+**Authors:** Fabio Leitao
+**Priority:** H2
+
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md) (central to-do list)
 
 ## When implementing steps: update docs and tests; then update PLANS_TODO.md and this file.

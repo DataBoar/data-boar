@@ -1,5 +1,10 @@
 # Lab-op — firewall / L3, acesso ao assistente, postura de segurança, observabilidade (sequenciado)
 
+**Status:** Pending
+**Date:** 2026-03-24
+**Authors:** Fabio Leitao
+**Priority:** H2
+
 **English:** [PLAN_LAB_FIREWALL_ACCESS_AND_OBSERVABILITY.md](PLAN_LAB_FIREWALL_ACCESS_AND_OBSERVABILITY.md)
 
 **Finalidade:** Uma **espinha dorsal ordenada** para o trabalho de homelab que começou com **ajuste de UniFi / firewall**: alinhar **L3 + DHCP + DNS** por VLAN, permitir **automação segura com Cursor** no PC do operador, registar **postura de segurança** (CyberSecure, IPS, honeypots, cadência) e depois **observabilidade** — **syslog → Loki** antes de **Wazuh** — sem assumir que tudo corre ao mesmo tempo num portátil pequeno.

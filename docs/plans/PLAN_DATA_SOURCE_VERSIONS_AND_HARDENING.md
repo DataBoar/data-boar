@@ -1,6 +1,10 @@
 # Plan: Data source version and protocol detection with CVE awareness and hardening guidance
 
-**Status:** Not started
+**Status:** Deferred
+**Date:** 2026-03-15
+**Authors:** Fabio Leitao
+**Priority:** H3
+
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md) (central to-do list)
 
 ## When implementing steps: update docs and tests; then update PLANS_TODO.md and this file.

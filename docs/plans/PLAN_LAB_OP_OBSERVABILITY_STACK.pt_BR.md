@@ -1,5 +1,10 @@
 # Stack de observabilidade no lab-op — métricas, logs, dashboards (só plano)
 
+**Status:** Pending
+**Date:** 2026-03-24
+**Authors:** Fabio Leitao
+**Priority:** H2
+
 **English:** [PLAN_LAB_OP_OBSERVABILITY_STACK.md](PLAN_LAB_OP_OBSERVABILITY_STACK.md)
 
 **Objetivo:** Ordenar instrumentação **opcional** do homelab — **Grafana**, bases de séries temporais, **centralização de logs** — sem bloquear desenvolvimento do Data Boar nem a validação **–1L**. **Sem** implementação neste repositório; o operador instala via Compose, Helm no k3s ou appliance na **lab-op** (LAB-NODE-01, LAB-NODE-02, VMs Proxmox).

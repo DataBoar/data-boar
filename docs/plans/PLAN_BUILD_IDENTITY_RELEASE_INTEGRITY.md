@@ -1,6 +1,11 @@
 # Plan: Build identity, runtime version display, and release integrity
 
-**Status:** Not started
+**Status:** Deferred
+**Date:** 2026-03-23
+**Authors:** Fabio Leitao
+**Priority:** H2
+**Depends on:** ADR-0034
+
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md)
 **Related:** [PLAN_SELF_UPGRADE_AND_VERSION_CHECK.md](PLAN_SELF_UPGRADE_AND_VERSION_CHECK.md) (remote “latest” vs current; upgrade paths)
 

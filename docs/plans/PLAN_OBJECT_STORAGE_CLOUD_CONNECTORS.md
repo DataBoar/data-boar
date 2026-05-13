@@ -1,6 +1,9 @@
 # Plan: Object storage connectors (S3-class, Azure Blob, GCS)
 
-**Status:** Not started (planning only). **Synced with:** [PLANS_TODO.md](PLANS_TODO.md).
+**Status:** Deferred
+**Date:** 2026-03-26
+**Authors:** Fabio Leitao
+**Priority:** H2
 
 ## Purpose
 

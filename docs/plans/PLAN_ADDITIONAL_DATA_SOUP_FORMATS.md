@@ -1,6 +1,10 @@
 ﻿# Plan: Additional "data soup" formats and rich media
 
-**Status:** Tier 3 **metadata + subtitles + magic-byte cloaking** — **merged to `main` when shipped** (see [PLANS_TODO.md](PLANS_TODO.md) **Integration / active threads** until then); **Tier 1** (`.epub`, `.parquet`/`.orc`/`.feather` via optional PyArrow, `.avro`, `.dbf`) and **stego hints** (`file_scan.scan_for_stego`, `--scan-stego`, dashboard) are **implemented** on `main` (optional `[dataformats]` extra for columnar/legacy binary types).
+**Status:** Completed
+**Date:** 2026-03-15
+**Authors:** Fabio Leitao
+**Priority:** H2
+
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md)
 
 **Related plans:** [PLAN_COMPRESSED_FILES.md](completed/PLAN_COMPRESSED_FILES.md) (scan inside archives), [PLAN_CONTENT_TYPE_AND_CLOAKING_DETECTION.md](completed/PLAN_CONTENT_TYPE_AND_CLOAKING_DETECTION.md) (magic-byte/cloaking), [PLAN_CONTENT_TYPE_AND_CLOAKING_DETECTION.md](PLAN_CONTENT_TYPE_AND_CLOAKING_DETECTION.md#steganography-future--optional) (steganography as future phase).

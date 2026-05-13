@@ -1,5 +1,10 @@
 # Plan: Completão Orchestration Resilience (Plan-V)
 
+**Status:** Pending
+**Date:** 2026-05-03
+**Authors:** Fabio Leitao
+**Priority:** H0
+
 *   **Status:** In Progress 🚧
 *   **Owner:** Fabio Leitao (Performance Engineer III)
 *   **Philosophy:** #SREGuardaEvidencias

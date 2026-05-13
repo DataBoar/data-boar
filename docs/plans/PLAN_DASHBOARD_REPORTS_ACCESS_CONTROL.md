@@ -1,6 +1,10 @@
 # Plan: Dashboard / reports access control (roles & permissions)
 
-**Status:** Phase **0 (D-WEB)** design snapshot ✅ (route matrix + middleware Mermaid + proxy pointers — § *Phase 0 deliverable* below); **Phase 1a** (vendor-neutral **WebAuthn JSON RP** + SQLite — § *Phase 1a deliverable* below) ✅ on `main`; **Phase 1b** (browser session gates **HTML** on `/{locale}/…` + CSRF for forms) ✅ minimal on `main` ( **`GET /{locale}/login`** + middleware + `tests/test_webauthn_html_gate.py` ); **Phase 2** (**RBAC** — `api.rbac`, optional `roles_json` on `webauthn_credentials`, `api.rbac` in `config/loader`, `tests/test_rbac.py`) ✅ on `main` when tier allows `dashboard_rbac`; **Phase 3** (enterprise **SSO/OIDC**) ⬜ — [GitHub #86](https://github.com/FabioLeitao/data-boar/issues/86)
+**Status:** Pending
+**Date:** 2026-03-21
+**Authors:** Fabio Leitao
+**Priority:** H2
+**Depends on:** ADR-0025
 
 **Horizon / urgency:** `[H2]` / `[U2]` — after **Priority band A** and when multi-tenant / multi-user dashboard exposure is real, not before core scan stability.
 

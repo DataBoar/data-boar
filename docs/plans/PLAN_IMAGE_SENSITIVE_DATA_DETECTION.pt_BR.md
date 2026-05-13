@@ -1,5 +1,10 @@
 # Plano: Detecção de Dados Sensíveis em Imagens (OCR + BLOB + Embeds)
 
+**Status:** Pending
+**Date:** 2026-04-04
+**Authors:** Fabio Leitao
+**Priority:** H3
+
 <!-- PLANO: PLAN_IMAGE_SENSITIVE_DATA_DETECTION -->
 <!-- Status: Proposed | Prioridade: H2 (alto valor, depende de Synthetic Data Lab estável) -->
 <!-- Criado: 2026-04-03 | Autor: Fabio Leitao -->

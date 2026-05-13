@@ -1,6 +1,11 @@
 # Plan: Compliance evidence mapping – regulations to app features and reports
 
-**Status:** Not started (structure only)
+**Status:** Deferred
+**Date:** 2026-03-18
+**Authors:** Fabio Leitao
+**Priority:** H0
+**Depends on:** ADR-0025, ADR-0037
+
 **Synced with:** `long-term-product-and-academic-roadmap`, [COMPLIANCE_FRAMEWORKS.md](../COMPLIANCE_FRAMEWORKS.md), [PLAN_LATO_SENSU_THESIS.md](PLAN_LATO_SENSU_THESIS.md)
 
 This plan keeps a **structured mapping** between regulations/standards (LGPD, GDPR, FELCA, ISO/IEC 27701/27001/27002/27005, SOC 2, etc.) and **concrete app features and reports**. It is for internal and academic use—**not** for the public README roadmap.

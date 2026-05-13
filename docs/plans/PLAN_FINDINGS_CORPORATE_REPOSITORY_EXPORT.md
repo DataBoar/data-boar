@@ -1,6 +1,10 @@
 # Plan: Corporate findings repository — export / sync beyond local SQLite (medium-term)
 
-**Status:** **Backlog / planning** — addresses a **real enterprise concern** (findings **governance**, **residency**, and **SIEM/analytics** alignment) without committing to a **specific vendor stack** until a **customer or compliance** thread forces prioritization.
+**Status:** Pending
+**Date:** 2026-05-02
+**Authors:** Fabio Leitao
+**Priority:** H2
+**Depends on:** ADR-0048
 
 **Horizon:** **[H2]** medium-term; **expedite** only when a **named prospect or contract** requires a concrete sink (MongoDB, a given SQL engine, object storage + lake ingestion, etc.).
 

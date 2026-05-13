@@ -1,8 +1,11 @@
 ﻿# Plan: Founder / SRE career and product alignment
 
-<!-- plans-hub-summary: Private operator plan - strategic alignment between founder career (SRE, cybersec, LGPD, academic) and Data Boar commercial readiness. Full content in docs/private/ (gitignored). -->
+**Status:** Active
+**Date:** 2026-04-02
+**Authors:** Fabio Leitao
+**Priority:** H1
 
-**Status:** Active - see private file.
+<!-- plans-hub-summary: Private operator plan - strategic alignment between founder career (SRE, cybersec, LGPD, academic) and Data Boar commercial readiness. Full content in docs/private/ (gitignored). -->
 
 **Scope:** This plan bridges the operator's career trajectory (SRE, cybersecurity, data protection, academic) with Data Boar's commercial readiness milestones. Because it contains personal identifiers (professional history, certifications, institutional affiliations, financial sequencing), the full content is maintained exclusively in a gitignored file.
 

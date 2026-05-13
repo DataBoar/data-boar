@@ -1,6 +1,11 @@
 # PLAN: Laboratório de Dados Sintéticos para Testes do Data Boar
 
-**Status:** ⬜ Pending
+**Status:** Pending
+**Date:** 2026-04-04
+**Authors:** Fabio Leitao
+**Priority:** H3
+**Depends on:** ADR-0007
+
 **Prioridade:** H1 — pré-requisito para testes controlados antes de dados reais
 **Dependências:** Data Boar detector pipeline (`core/detector.py`), matriz de conectores (`docs/TECH_GUIDE.pt_BR.md`)
 **Colaboradores:** operador, colaboradores futuros (fornecedor de dados sintéticos e ambiente de test)

@@ -1,6 +1,9 @@
 # Plan: Enterprise back-office connectors (SST, HR, ERP, CRM, folha, helpdesk, URM)
 
-**Status:** Not started (planning / backlog catalogue)
+**Status:** Deferred
+**Date:** 2026-03-21
+**Authors:** Fabio Leitao
+**Priority:** H3
 
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md)
 

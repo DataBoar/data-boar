@@ -1,6 +1,9 @@
 # LAB-OP — CAPEX / OPEX & Procurement (plano rastreado)
 
-**Status:** Ativo — em curadoria contínua.
+**Status:** Pending
+**Date:** 2026-04-02
+**Authors:** Fabio Leitao
+**Priority:** H2
 
 **Âmbito:** Infra **do operador** (LAB-OP): hardware, rede, energia/HVAC, segurança física, software, assinaturas, tokens de IA, treinamento. Sem preços, links ou nomes de lojas — detalhes reais no arquivo privado gitignored.
 

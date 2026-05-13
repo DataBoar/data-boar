@@ -1,6 +1,10 @@
 # Plan: Lato sensu thesis – Data Boar as applied artifact
 
-**Status:** Not started (structure only)
+**Status:** Deferred
+**Date:** 2026-03-17
+**Authors:** Fabio Leitao
+**Priority:** H3
+
 **Synced with:** `long-term-product-and-academic-roadmap` (conceptual) and [PLANS_TODO.md](PLANS_TODO.md) (execution order)
 
 This plan turns the existing application and its plans into a **professionally oriented lato sensu thesis**. It does not change runtime behaviour; scope is framing, documentation, and small glue pieces (tables, diagrams, examples).

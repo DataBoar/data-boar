@@ -1,6 +1,10 @@
 # Plan: Readiness and operations (meta / “see the forest”)
 
-**Status:** Discovery and checklist (not a delivery plan with phases)
+**Status:** Pending
+**Date:** 2026-03-15
+**Authors:** Fabio Leitao
+**Priority:** H0
+
 **Purpose:** Capture aspects that are easy to miss when focused on feature plans—so you can decide what to formalise, automate, or document next. No obligation to implement everything; use as a prioritised checklist.
 
 ---

@@ -1,9 +1,12 @@
 # Plan: Gemini feedback triage (non-authoritative)
 
+**Status:** Pending
+**Date:** 2026-03-29
+**Authors:** Fabio Leitao
+**Priority:** H3
+
 <!-- plans-hub-summary: Gemini triage from 2026-03-26 local bundle (WRB folder): P0/P1/P2 rows with IDs—non-authoritative until verified and promoted. -->
 <!-- plans-hub-related: TOKEN_AWARE_USAGE.md, PLANS_TODO.md, PORTFOLIO_AND_EVIDENCE_SOURCES.md, PYTHON_UPGRADE_PLAYBOOK.md -->
-
-**Status:** Open — **meta / optional** — suggestions here are **not** product commitments until promoted into **[PLANS_TODO.md](PLANS_TODO.md)** or a scoped **issue** with agreement.
 
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md) (pointer only). **Workflow bundle:** [GEMINI_PUBLIC_BUNDLE_REVIEW.md](../ops/GEMINI_PUBLIC_BUNDLE_REVIEW.md) ([pt-BR](../ops/GEMINI_PUBLIC_BUNDLE_REVIEW.pt_BR.md)).
 

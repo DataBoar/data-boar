@@ -1,8 +1,12 @@
 # Plan: Version check and self-upgrade (with container-aware behaviour)
 
+**Status:** Deferred
+**Date:** 2026-03-15
+**Authors:** Fabio Leitao
+**Priority:** H3
+
 **Related:** [PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md](PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md) — **local** build string (`release` vs `dev`, optional manifest) shown at startup and in the dashboard; this plan focuses on **remote** “latest” and **upgrade** paths.
 
-**Status:** Not started
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md) (central to-do list)
 
 ## When implementing steps: update docs and tests; then update PLANS_TODO.md and this file.
@@ -138,8 +142,6 @@ When the app detects it is running inside Docker or Kubernetes, **do not** perfo
 ---
 
 ## 9. Alternative delivery: package-manager and signed artifacts (winget-like, .deb, apt)
-
-**Status:** Optional later phase. Fits the same goals (version check, safe upgrade, audit) with an extra **Linux/server delivery path** similar to how Microsoft uses **winget** (check for update, one command to upgrade). **Complexity/gain:** Medium–high complexity; high gain for Debian/Ubuntu and enterprise environments that standardise on apt.
 
 ### 9.1 Does it make sense? Does it fit our goals?
 

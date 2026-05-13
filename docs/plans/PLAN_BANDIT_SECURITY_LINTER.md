@@ -1,6 +1,10 @@
 # Plan: Bandit (Python security linter)
 
-**Status:** Phase 1–2 done (dev dependency, `pyproject` config, CI **strict** gate). **Phase 3** = triage **low** (`-i`), tighten skips / `# nosec` with justification, or raise the gate once the tree is clean.
+**Status:** Completed
+**Date:** 2026-03-26
+**Authors:** Fabio Leitao
+**Priority:** H0
+**Depends on:** ADR-0037
 
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md)
 

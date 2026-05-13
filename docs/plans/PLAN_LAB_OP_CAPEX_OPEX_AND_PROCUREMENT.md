@@ -1,5 +1,10 @@
 # Lab-OP CAPEX/OPEX & Procurement (tracked, no prices)
 
+**Status:** Pending
+**Date:** 2026-04-02
+**Authors:** Fabio Leitao
+**Priority:** H2
+
 **Purpose:** Provide one procurement decision spine for Lab-OP that covers **all major spending fronts** (hardware, storage, networking, power, HVAC, software/subscriptions, tokens, and training) while preserving financial detail in private notes only.
 
 **Scope policy:**
