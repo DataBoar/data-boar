@@ -19,9 +19,15 @@
 regex:
   # Built-in patterns (same as core/detector.py DEFAULT_PATTERNS) – LGPD-relevant
   - name: "LGPD_CPF"
+    # Pattern matches formatted (123.456.789-09) and unformatted (11 digits) CPF.
+    # Note: the scanner engine validates CPF checksum digits (Mod-11 algorithm) at
+    # detection time — format-only matches without valid checksum are suppressed.
+    # False-positive risk: low for formatted, near-zero for unformatted (checksum gate).
     pattern: "\\b\\d{3}\\.?\\d{3}\\.?\\d{3}-?\\d{2}\\b"
     norm_tag: "LGPD Art. 5"
   - name: "LGPD_CNPJ"
+    # Pattern matches formatted and unformatted CNPJ (14 digits).
+    # Checksum validation (Mod-11) is applied by the engine.
     pattern: "\\b\\d{2}\\.?\\d{3}\\.?\\d{3}/?\\d{4}-?\\d{2}\\b"
     norm_tag: "LGPD Art. 5"
   - name: "LGPD_CNPJ_ALNUM"
