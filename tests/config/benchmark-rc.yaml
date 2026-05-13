@@ -2,10 +2,10 @@
 tenant: "Lab-Op"
 technician: "Maestro"
 
-scan_scope:
+targets:
   - name: "Data_Soup_Synthetic"
+    type: filesystem
     path: "tests/data/"
-    type: "filesystem"
 
 file_scan:
   sample_limit: 50
