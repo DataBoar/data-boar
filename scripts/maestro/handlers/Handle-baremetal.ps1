@@ -15,7 +15,13 @@
 param(
     [Parameter(Mandatory=$true)]$Node,
     [string]$Ref = "WorkingTree",
-    [switch]$Deep # <--- Injeção do Maestro para habilitar o Benchmark RC
+    [switch]$Deep, # <--- Injeção do Maestro para habilitar o Benchmark RC
+    # Benchmark context forwarded by Maestro.ps1 (opt-in A/B). Empty defaults = legacy behaviour.
+    [string]$BenchTrack = "",
+    [string]$BenchRunId = "",
+    [switch]$BenchCompare,
+    [int]$BenchWebPort = 0,
+    [string]$BenchHealthUrl = ""
 )
 
 $modoTexto = if ($Deep) { "Benchmark RC (Deep)" } else { "$Ref" }
@@ -24,12 +30,19 @@ Write-Host "   [Baremetal] Disparando $modoTexto em $($Node.hostname)..." -Foreg
 # Se for Deep, passa o caminho do config. Se não, não passa nada (comportamento original)
 $configArg = if ($Deep) { "tests/config/benchmark-rc.yaml" } else { "" }
 
+# LAB_COMPLETAO_BENCH_COMPARE=1 ativa o probe coarse de wall-clock no smoke (stable: core.engine vs beta: boar_fast_filter).
+# Mantemos export inline no payload para não persistir variável no shell remoto e respeitar a injeção via tmux.
+$benchEnvPrefix = if ($BenchCompare) { "LAB_COMPLETAO_BENCH_COMPARE=1 " } else { "" }
+$benchTrackArg = if ($BenchTrack) { "--bench-track $BenchTrack" } else { "" }
+$benchRunIdArg = if ($BenchRunId) { "--bench-run-id $BenchRunId" } else { "" }
+$benchHealthArg = if ($BenchHealthUrl) { "--health-url $BenchHealthUrl" } else { "" }
+
 # Construção do Payload Posix Native:
 # 1. Entra na pasta correta (fornecida pelo Node.path dinâmico do Maestro)
 # 2. Ativa o venv (source para bash/zsh nativos)
 # 3. Executa usando 'bash' explícito laboral caso as permissões (+x) tenham sido perdidas no scp, repassando a Ref desejada
-# 4. Repassamos o argumento do config para o bash script
-$payload = "cd $($Node.path) && echo `"Iniciando Baremetal Smoke ($modoTexto)...`" && bash ./scripts/lab-completao-host-smoke.sh $configArg"
+# 4. Repassamos o argumento do config + bench flags para o bash script
+$payload = "cd $($Node.path) && echo `"Iniciando Baremetal Smoke ($modoTexto)...`" && ${benchEnvPrefix}bash ./scripts/lab-completao-host-smoke.sh $configArg $benchTrackArg $benchRunIdArg $benchHealthArg"
 
 # Prepara resiliencia via TMUX (Ctrl+C garante que o prompt está limpo antes do Enter)
 # SRE Fix: Separamos o Ctrl+C da injeção de texto com um micro-sleep (anti-race-condition)

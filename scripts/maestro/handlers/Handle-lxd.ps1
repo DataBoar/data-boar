@@ -16,13 +16,25 @@
 param(
     [Parameter(Mandatory=$true)]$Node,
     [string]$Ref = "WorkingTree",
-    [switch]$Deep
+    [switch]$Deep,
+    # Benchmark context forwarded by Maestro.ps1 (opt-in A/B). Empty defaults = legacy behaviour.
+    [string]$BenchTrack = "",
+    [string]$BenchRunId = "",
+    [switch]$BenchCompare,
+    [int]$BenchWebPort = 0,
+    [string]$BenchHealthUrl = ""
 )
 
 $modoTexto = if ($Deep) { "Benchmark RC (Deep)" } else { $Ref }
 Write-Host "   [LXD] Verificando container LXD e disparando Completão ($modoTexto) em $($Node.hostname)..." -ForegroundColor DarkMagenta
 
 $configArg = if ($Deep) { "tests/config/benchmark-rc.yaml" } else { "" }
+
+# Bench context (opt-in): forward to lab-completao-host-smoke.sh inside the LXC container.
+$benchEnvPrefix = if ($BenchCompare) { "LAB_COMPLETAO_BENCH_COMPARE=1 " } else { "" }
+$benchTrackArg = if ($BenchTrack) { "--bench-track $BenchTrack" } else { "" }
+$benchRunIdArg = if ($BenchRunId) { "--bench-run-id $BenchRunId" } else { "" }
+$benchHealthArg = if ($BenchHealthUrl) { "--health-url $BenchHealthUrl" } else { "" }
 
 # 1. Verifica se LXD está ativo e lista containers
 $lxcCheck = ssh -q -o BatchMode=yes -o ConnectTimeout=8 "$($Node.user)@$($Node.hostname)" "lxc list --format csv 2>/dev/null | head -n 10 || echo LXD_UNAVAILABLE"
@@ -51,7 +63,8 @@ if (-not $containerName) {
 }
 
 # 3. Injeta smoke via tmux → lxc exec
-$payload = "lxc exec $containerName -- bash -c 'cd $($Node.path) && bash ./scripts/lab-completao-host-smoke.sh $configArg'"
+# Bench env é prefixado dentro do bash -c para que o LAB_COMPLETAO_BENCH_COMPARE seja visível ao smoke.
+$payload = "lxc exec $containerName -- bash -c '${benchEnvPrefix}cd $($Node.path) && bash ./scripts/lab-completao-host-smoke.sh $configArg $benchTrackArg $benchRunIdArg $benchHealthArg'"
 $tmuxCmd = "tmux send-keys -t completao C-c ; sleep 0.5 ; tmux send-keys -t completao '$payload' Enter"
 
 ssh -q -o BatchMode=yes "$($Node.user)@$($Node.hostname)" "$tmuxCmd"

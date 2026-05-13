@@ -15,13 +15,25 @@
 param(
     [Parameter(Mandatory=$true)]$Node,
     [string]$Ref = "WorkingTree",
-    [switch]$Deep
+    [switch]$Deep,
+    # Benchmark context forwarded by Maestro.ps1 (opt-in A/B). Empty defaults = legacy behaviour.
+    [string]$BenchTrack = "",
+    [string]$BenchRunId = "",
+    [switch]$BenchCompare,
+    [int]$BenchWebPort = 0,
+    [string]$BenchHealthUrl = ""
 )
 
 $modoTexto = if ($Deep) { "Benchmark RC (Deep)" } else { $Ref }
 Write-Host "   [MicroK8s] Verificando cluster e disparando Completao ($modoTexto) em $($Node.hostname)..." -ForegroundColor DarkBlue
 
 $configArg = if ($Deep) { "tests/config/benchmark-rc.yaml" } else { "" }
+
+# Bench context (opt-in): forwarded to lab-completao-host-smoke.sh inside the kubectl-exec'd pod.
+$benchEnvPrefix = if ($BenchCompare) { "LAB_COMPLETAO_BENCH_COMPARE=1 " } else { "" }
+$benchTrackArg = if ($BenchTrack) { "--bench-track $BenchTrack" } else { "" }
+$benchRunIdArg = if ($BenchRunId) { "--bench-run-id $BenchRunId" } else { "" }
+$benchHealthArg = if ($BenchHealthUrl) { "--health-url $BenchHealthUrl" } else { "" }
 
 # 1. Verifica status do cluster MicroK8s
 $k8sCheck = ssh -q -o BatchMode=yes -o ConnectTimeout=8 "$($Node.user)@$($Node.hostname)" "microk8s status --wait-ready --timeout 10 2>/dev/null | head -n 5 || echo MICROK8S_UNAVAILABLE"
@@ -40,7 +52,8 @@ $podName = ssh -q -o BatchMode=yes "$($Node.user)@$($Node.hostname)" `
 
 if (-not $podName) {
     Write-Warning "      [WARN] Nenhum pod 'data-boar' Running em $($Node.hostname). Fallback para baremetal path."
-    $payload = "cd $($Node.path) && bash ./scripts/lab-completao-host-smoke.sh $configArg"
+    # Fallback baremetal: bench env prefixado inline para o tmux/bash remoto.
+    $payload = "cd $($Node.path) && ${benchEnvPrefix}bash ./scripts/lab-completao-host-smoke.sh $configArg $benchTrackArg $benchRunIdArg $benchHealthArg"
     $tmuxCmd = "tmux send-keys -t completao C-c ; sleep 0.5 ; tmux send-keys -t completao '$payload' Enter"
     ssh -q -o BatchMode=yes "$($Node.user)@$($Node.hostname)" "$tmuxCmd"
     return
@@ -49,7 +62,8 @@ if (-not $podName) {
 Write-Host "      [MicroK8s] Pod encontrado: $podName" -ForegroundColor DarkGray
 
 # 3. Injeta smoke via tmux -> kubectl exec
-$payload = "microk8s kubectl exec $podName -- bash -c 'cd $($Node.path) 2>/dev/null || cd /app && bash ./scripts/lab-completao-host-smoke.sh $configArg'"
+# Bench env vai dentro do bash -c para que o LAB_COMPLETAO_BENCH_COMPARE seja visível ao smoke no pod.
+$payload = "microk8s kubectl exec $podName -- bash -c '${benchEnvPrefix}cd $($Node.path) 2>/dev/null || cd /app && bash ./scripts/lab-completao-host-smoke.sh $configArg $benchTrackArg $benchRunIdArg $benchHealthArg'"
 $tmuxCmd = "tmux send-keys -t completao C-c ; sleep 0.5 ; tmux send-keys -t completao '$payload' Enter"
 
 ssh -q -o BatchMode=yes "$($Node.user)@$($Node.hostname)" "$tmuxCmd"
