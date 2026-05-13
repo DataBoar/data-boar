@@ -156,7 +156,7 @@ Answer **all** that apply for each candidate item:
 | **G-13-01** | **Docker host-binding:** instructions assume privileged mode for SRE host scans → unauthorized host binding risk. | MISUNDERSTOOD: Docker container runs as `appuser` non-root; SRE lab-op narrow sudoers is separate. Check DOCKER_SETUP.md scope language for clarity. | Cold | Operator success | Dismissed (misunderstood — two separate architectures) |
 | **G-13-02** | **CI fail-open/fail-closed:** pipeline lacks explicit documentation on behavior during dependency fetch timeouts. | Check `.github/workflows/ci.yml` error handling; confirm `pip-audit` / `uv` timeout behavior is documented. | Warm | Trust | ⬜ |
 | **G-13-03** | **Maestro hybrid scripts** retain legacy code paths (`hybrid-v173`) contradicting modular handler architecture. | Scripts exist as documented legacy (21+ variants in scripts/); consider moving to `scripts/legacy/` and noting in MAESTRO_ARCHITECTURE_AND_ROADMAP.md. | Cold | Docs hygiene | ⬜ |
-| **G-13-04** | **"Clean slate" lacks bold warning** about data loss on primary Windows workstations. | We have `PRIMARY_WINDOWS_WORKSTATION_PROTECTION.md`; check if it's linked from `PII_DEFINITIVE_REMEDIATION.md` doc Gemini cited. | Cold | Trust | ⬜ (verify link exists) |
+| **G-13-04** | **"Clean slate" lacks bold warning** about data loss on primary Windows workstations. | We have `PRIMARY_WINDOWS_WORKSTATION_PROTECTION.md`; check if it's linked from `PII_DEFINITIVE_REMEDIATION.md` doc Gemini cited. | Cold | Trust | **Mitigado:** `PII_PUBLIC_TREE_OPERATOR_GUIDE.md` linhas 205+357 têm aviso em negrito + link; Gemini citou arquivo que não estava no bundle. |
 | **G-13-05** | **PII memory limits** for large repo diffs not specified in PII guardrails docs. | Check `PII_VERIFICATION_RUNBOOK.md` — document `--max-diff-size` or similar limit. | Warm | Trust | ⬜ |
 
 ### 6.5b pt-BR locale
@@ -164,7 +164,7 @@ Answer **all** that apply for each candidate item:
 | ID | Item | Verify how | Urgency | Aligns §5? | Status |
 | -- | ---- | ---------- | ------- | ----------- | ------ |
 | **G-13-06** | **"Ficheiro"** in terminal output examples instead of "arquivo". | `uv run pytest tests/test_docs_pt_br_locale.py`; also grep terminal/output text in templates. | Warm | Compliance narrative | ⬜ (ongoing locale sweep) |
-| **G-13-07** | **"Quebra de dados"** instead of standard "Vazamento de dados" / "Incidente de segurança". | Grep `GLOSSARY.pt_BR.md` and security docs for "quebra de dados". | Cold | Compliance narrative | ⬜ |
+| **G-13-07** | **"Quebra de dados"** instead of standard "Vazamento de dados" / "Incidente de segurança". | Grep `GLOSSARY.pt_BR.md` and security docs for "quebra de dados". | Cold | Compliance narrative | **Dismissed:** "quebra de dados" não encontrado nos docs pt_BR atuais — Gemini pode ter gerado de texto que não existe no bundle. |
 | **G-13-08** | **"Implantação" vs "Deploy"** inconsistency across pt-BR docs. | Grep `docs/**/*.pt_BR.md`; standardize to "Deploy" (kept EN in IT context, per locale rule). | Cold | Docs hygiene | ⬜ (batch in `docs` session) |
 
 ### 6.5c Compliance YAML samples
@@ -173,7 +173,7 @@ Answer **all** that apply for each candidate item:
 | -- | ---- | ---------- | ------- | ----------- | ------ |
 | **G-13-09** | **min_confidence missing** in GDPR and other compliance YAML examples → engine may default to 1.0 causing silent FN. | Check `compliance-sample-eu_gdpr.yaml`; confirm engine default for min_confidence when absent. | Hot | Trustworthy scans | **Promovido P0** — verificar e adicionar threshold nos samples |
 | **G-13-10** | **Minor detection keywords in English only** → critical FN for Brazilian pt-BR documents (e.g. "data de nascimento" not matched). | Check `compliance-sample-us_co_cpa_minors.yaml` and `core/detector.py` minor detection keyword lists. | Hot | Trustworthy scans | **Promovido P0** — adicionar equivalentes pt-BR |
-| **G-13-11** | **CPF/CNPJ samples lack checksum validation hint** → docs may imply format-only matching, risking FP flood. | Engine DOES validate checksums (confirmed in tests); YAML samples should note this. Add comment in `compliance-sample-lgpd.yaml`. | Warm | Trustworthy scans | ⬜ |
+| **G-13-11** | **CPF/CNPJ samples lack checksum validation hint** → docs may imply format-only matching, risking FP flood. | Engine DOES validate checksums (confirmed in tests); YAML samples should note this. Add comment in `compliance-sample-lgpd.yaml`. | Warm | Trustworthy scans | **Mitigado:** comentário adicionado em `compliance-sample-lgpd.yaml` explicando validação Mod-11 e risco FP. |
 | **G-13-12** | **financial_routing_number regex too broad** → matches generic UUIDs/sequential IDs. | Review `compliance-sample-pci_dss.yaml` routing regex; add context bound or warning comment. | Warm | Trustworthy scans | ⬜ |
 | **G-13-13** | **Override behavior (merge vs replace) unclear** when health data sample loaded alongside base LGPD. | Document in USAGE.md `override_behavior` section; confirm in code. | Warm | Operator success | ⬜ |
 
