@@ -791,3 +791,13 @@ See PLAN_READINESS for MCP recommendation, workflow automation, and when to revi
 ---
 
 ## Last synced with plan files. Update this doc when completing steps or when plans change.
+
+---
+
+## Backlog: Maestro script renames (houseclean, low priority)
+
+- `scripts/t14-ansible-labop-podman-apply.sh` → `scripts/labop-ansible-podman-apply.sh`
+  — nome `t14-` é artefato histórico; conteúdo é genérico para todos os hosts (usa
+  `.labop-skip-lab-node-01-podman` file para skip em hosts sem Podman). Requer atualizar:
+  sudoers em todos os hosts (`LABOP_ANSIBLE_PODMAN`), docs, e tests que referenciam o nome.
+  Fazer numa sessão `houseclean` dedicada com `git mv` + atualização do sudoers via push + git pull nos hosts.
