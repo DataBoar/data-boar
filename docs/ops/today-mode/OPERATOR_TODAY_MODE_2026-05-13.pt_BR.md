@@ -32,6 +32,21 @@ Rode **`carryover-sweep`** ou **`.\scripts\operator-day-ritual.ps1 -Mode Morning
 - [ ] **Engajamento A (Setor Jurídico)** — próximo passo: definir alvos de scan com ponto de contato técnico (Ivan); decidir qual conector usar na fase de exploração.
 - [ ] **ADR-0050 backfill** — o script `scripts/add_plan_metadata.py` pode ser reaproveitado para novos plans; manter o padrão de header em qualquer `PLAN_*.md` novo.
 
+### Maestro / benchmark — **bugs confirmados (prioridade alta)**
+
+> Fonte: análise de código 2026-05-12. Veja `PLAN_MAESTRO_BENCHMARK_METRICS_AND_FIX.md`.
+
+- [ ] **Bug 1 (crítico) — SSH sem `ConnectTimeout`**: todos os handlers e Maestro.ps1 fazem `ssh -q -o BatchMode=yes` sem timeout. Se um host tiver problema de rede, o processo fica em wait infinito. Fix: adicionar `-o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=3` em **todos** os `ssh` dos handlers. Afeta: `Handle-baremetal.ps1:56`, `Handle-docker.ps1:58`, `Handle-web.ps1:98,172,186`, `Maestro.ps1:51`.
+- [ ] **Bug 2 (crítico) — `benchmark-rc.yaml` passado como arg posicional desconhecido**: `Handle-baremetal.ps1` e `Handle-docker.ps1` passam `tests/config/benchmark-rc.yaml` diretamente para `lab-completao-host-smoke.sh`, que não reconhece arg posicional e **sai com exit 2 imediatamente**. Todo run `-Deep` em baremetal/docker falha silenciosamente; nenhum artefato é gerado. Fix: adicionar flag `--bench-config` ao smoke script e ao handler.
+- [ ] **Bug 3 (race condition) — `-Collect` sem esperar async tmux**: `maestro-benchmark-ab.ps1` chama `-Collect` imediatamente após `-Deep`, mas o smoke está rodando em tmux de forma assíncrona. O `-Collect` tenta SCP de artefatos que ainda não existem. Fix: sentinel file (`$LC_BENCH_ROOT/.completao_done_$RUN_ID`) + `Wait-CompletaoSmoke.ps1`, ou `-SleepBeforeCollect 120` como paliativo.
+- [ ] **Hybrid-173 como spec** — `scripts/lab-completao-orchestrate-hybrid-v173.ps1` e variantes plano-a..v têm medições que funcionaram. Estudar para portar `boar_fast_filter` import timing, detached tmux session create, e JSONL event stream para o Maestro moderno.
+- [ ] **`boar_fast_filter` timing** — o PyO3 fix no v1.7.4-rc pode estar mais rápido que v1.7.3 mas nunca foi medido no Maestro. Após bugs 1–3 corrigidos, rodar `maestro-benchmark-ab.ps1 -BenchCompare` para confirmar.
+
+### Novos plans criados esta sessão
+
+- `PLAN_LOCUST_LOAD_TEST_INTEGRATION.md` — Locust como persona `loadtest` no Maestro (H2)
+- `PLAN_MAESTRO_BENCHMARK_METRICS_AND_FIX.md` — bugs + full test matrix (H1)
+
 ### Backlog aberto (não urgent hoje, mas não esquecer)
 
 - [ ] **B608 global Bandit skip** → migrar para `# nosec B608` inline nos connectors específicos; tirar do skip global (P3 hardening).
