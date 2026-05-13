@@ -8,7 +8,7 @@
 
 ## 1. O que é o Maestro
 
-O **Maestro** é o orquestrador central, baseado em personas e orientado por inventário, do **Lab-Op** — o ambiente de homelab do Data Boar. Não é um executor de testes. Não é um pipeline de CI. É um **regente**: lê o inventário privado (a partitura), despacha para sub-orquestradores especializados (os **Capos**), e coleta as evidências de uma performance completa (a completão).
+O **Maestro** é o orquestrador central, baseado em personas e orientado por inventário, do **Lab-Op** — o ambiente de homelab do Data Boar. Não é um executor de testes. Não é um pipeline de CI. É um **regente**: lê o inventário privado (a partitura), despacha para handlers especializados, e coleta as evidências de uma performance completa (a completão).
 
 O Maestro existe porque a validação em laboratório — hosts reais, SSH real, contêineres reais, bancos de dados reais, sistemas de arquivos reais, protocolos reais — não pode ser representada totalmente por testes unitários nem pelo GitHub CI. Quando o Data Boar faz um scan num PostgreSQL de produção com nomes de colunas em encoding misto ou num MariaDB com schemas vazios, essa superfície só é exercida no lab. O Maestro torna esse exercício repetível, documentado e comparável entre versões.
 
@@ -17,7 +17,7 @@ O Maestro existe porque a validação em laboratório — hosts reais, SSH real,
 | Termo musical | Significado no Maestro |
 | ------------- | ---------------------- |
 | Maestro (regente) | `Maestro.ps1` — lê a partitura, controla o andamento e a sequência |
-| **Capo** (*capo di sezione* — chefe de seção) | Handlers `Handle-*.ps1` — cada um lidera sua seção com total autonomia; os **Capos** são os reportes diretos do Maestro e os executores do trabalho real |
+| Chefe de seção *(metáfora: capo di sezione — apenas narrativa)* | **Handlers** `Handle-*.ps1` — cada um lidera sua seção com total autonomia; o termo canônico é sempre **handler** |
 | Músico | Nó do lab (LAB-NODE-01, LAB-NODE-03, LAB-T14, …) — o performer |
 | Instrumento / Voz (Persona) | O papel que cada nó desempenha: `docker`, `podman`, `baremetal`, `web`, `target_postgres`, … |
 | Partitura | `docs/private/homelab/data/inventory.json` — quem toca o quê |
@@ -85,7 +85,7 @@ Maestro.ps1 -Deep -BenchTrack beta -BenchRunId abc123
    ├─ Sync-WorkingTree.ps1       (rsync ou scp repo para node.path)
    ├─ Sync-ContainerArtefact.ps1 (docker save → scp → docker load, se persona contêiner)
    └─ foreach persona em node.personas (ordem: contêiner primeiro, web por último)
-      └─ Handle-<persona>.ps1 @handlerArgs   ← Capo em ação
+      └─ Handle-<persona>.ps1 @handlerArgs   ← handler em ação
          └─ ssh: tmux send-keys → lab-completao-host-smoke.sh (assíncrono, dentro do tmux)
                                    ou comando direto docker/podman/compose
 │
@@ -94,14 +94,14 @@ Maestro.ps1 -Deep -BenchTrack beta -BenchRunId abc123
       └─ Collect-Artifacts.ps1  (scp de métricas de /tmp/databoar_bench/$track/)
 ```
 
-### 3.3 Taxonomia de Capos (handlers de persona)
+### 3.3 Taxonomia de handlers (handlers de persona)
 
-Os **Capos** (*capo di sezione* em terminologia de orquestra italiana — chefe de seção) são os arquivos `Handle-<persona>.ps1`. Cada Capo possui completamente sua seção de instrumento: recebe contexto do Maestro e é totalmente responsável pela performance da sua seção. Adicionar um novo Capo = adicionar um arquivo de handler.
+Os **handlers** (`Handle-<persona>.ps1`) são os sub-orquestradores especializados — um por tipo de persona. Cada handler possui completamente seu domínio: recebe contexto do Maestro e é totalmente responsável pela performance da sua seção. Nos docs narrativos os handlers são às vezes descritos com a metáfora musical de *capo di sezione* (chefe de seção), mas o termo canônico em código e documentação é sempre **handler**.
 
-Capos são aditivos — um nó pode ter múltiplos. A entrada do inventário os lista; o Maestro ordena o despacho (personas de contêiner primeiro, `web` por último, outros na ordem de declaração).
+Handlers são aditivos — um nó pode ter múltiplos. A entrada do inventário os lista; o Maestro ordena o despacho (personas de contêiner primeiro, `web` por último, outros na ordem de declaração).
 
-| Persona | Handler (Capo) | O que lidera |
-| ------- | -------------- | ------------ |
+| Persona | Handler | O que exerce |
+| ------- | ------- | ------------ |
 | `baremetal` | Handle-baremetal.ps1 | Data Boar via `uv run` no OS sem contêiner |
 | `docker` | Handle-docker.ps1 | Docker CE `docker run` / `docker compose` |
 | `dockerswarm` | Handle-dockerswarm.ps1 | Serviço em modo Docker Swarm |
