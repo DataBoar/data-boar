@@ -215,10 +215,66 @@ Expected output in `docs/private/homelab/reports/MAESTRO_BENCHMARK_AB_*.md`:
 | **1 — Bug fixes** | SSH timeout + config arg + collect race | 3 code fixes across 5 files; `tests/test_maestro_scripts.py` updated | **P0** |
 | **2 — Sentinel + poll** | Reliable collect | `Wait-CompletaoSmoke.ps1` + sentinel file in smoke script | H1 |
 | **3 — Detached tmux create** | No "session must exist" assumption | `Handle-*.ps1` create session if missing | H1 |
-| **4 — Oracle XE target** | SQL matrix completeness | `Handle-target_oracle.ps1` + synthetic schema | H2 |
-| **5 — Locust persona** | Load test integration | `Handle-loadtest.ps1` + `tests/locustfile.py` | H2 |
-| **6 — Full A/B clean run** | v1.7.3 vs v1.7.4-rc | `maestro-benchmark-ab.ps1` green end-to-end | H1 milestone |
-| **7 — `boar_fast_filter` timing** | Rust core proof | `_lc_bench_compare` delta stable vs beta confirmed | H1 milestone |
+| **4 — Transfer hierarchy** | rsync > scp; Hub pull for stable | `Sync-WorkingTree.ps1` prefers rsync; `Build-ContainerArtefact.ps1` pulls Hub for stable tags | H1 |
+| **5 — Ephemeral cleanup** | No stale bench dirs or images | `Collect-Artifacts.ps1` removes `/tmp/databoar_bench/$track/` post-collect; stale container images pruned | H1 |
+| **6 — Lessons learned pipeline** | JSONL → plans/fixes | `scripts/maestro-lessons-harvest.ps1` parses JSONL events → promotes to `PLANS_TODO.md` or inline fix by priority matrix | H2 |
+| **7 — Oracle XE target** | SQL matrix completeness | `Handle-target_oracle.ps1` + synthetic schema | H2 |
+| **8 — Locust persona** | Load test integration | `Handle-loadtest.ps1` + `tests/locustfile.py` | H2 |
+| **9 — Full A/B clean run** | v1.7.3 vs v1.7.4-rc | `maestro-benchmark-ab.ps1` green end-to-end | H1 milestone |
+| **10 — `boar_fast_filter` timing** | Rust core proof | `_lc_bench_compare` delta stable vs beta confirmed | H1 milestone |
+
+---
+
+## Transfer hierarchy (Slice 4 detail)
+
+**Priority:** `rsync` > `scp` — never `unison` (bidirectional; overkill for one-way push).
+
+`Sync-WorkingTree.ps1` strategy:
+1. Try `rsync -az --delete --exclude=.git --exclude=.venv` — fastest, delta-only, handles large trees well.
+2. Fall back to `scp -r` if `rsync` not in PATH on either end — log which path was taken.
+
+`Build-ContainerArtefact.ps1` / image distribution:
+1. **Stable tags** (e.g. `v1.7.3`, `latest`): `docker pull fabioleitao/data_boar:$tag` from Hub on lab host directly when possible — avoids `docker save`/`scp`/`docker load` round-trip entirely.
+2. **RC/beta tags** (not on Hub): build locally on dev PC → `docker save` → `rsync`/`scp` → `docker load` on lab host (current behaviour).
+3. **Guard:** before build, check if `docker images -q fabioleitao/data_boar:$tag` returns a valid ID on the lab host — skip transfer entirely if image already present and not stale.
+
+Env var override: `DATA_BOAR_MAESTRO_FORCE_LOCAL_BUILD=1` forces local build even for stable tags (for testing image changes not yet published).
+
+## Ephemeral cleanup policy (Slice 5 detail)
+
+**After `-Collect` phase completes successfully:**
+
+On each lab host (via SSH after SCP):
+
+```bash
+# Remove bench workdir for this run_id only (not other concurrent runs)
+rm -rf /tmp/databoar_bench/$LC_BENCH_TRACK/metrics/$LC_BENCH_RUN_ID_* 2>/dev/null || true
+# Remove sentinel after confirmed collect
+rm -f /tmp/databoar_bench/$LC_BENCH_TRACK/.completao_done_$LC_BENCH_RUN_ID 2>/dev/null || true
+# Prune benchmark container images older than 3 runs
+docker image prune -f --filter "label=maestro.bench=true" 2>/dev/null || true
+```
+
+**Keep:**
+- `/tmp/databoar_bench/$track/` root and `.checkpoint_isolation_marker` (needed by parallel runs)
+- `docs/private/homelab/reports/` on dev PC — never delete; this is the audit trail
+
+**Parameter:** `maestro-benchmark-ab.ps1` gains `-SkipCleanup` flag (default: clean). `Maestro.ps1 -Collect` gains `-CleanupAfterCollect` flag.
+
+## Lessons learned pipeline (Slice 6 detail)
+
+After each completão session, `scripts/maestro-lessons-harvest.ps1`:
+
+1. Parses JSONL event stream from `docs/private/homelab/reports/completao_*.jsonl`.
+2. Extracts `status: failed` / `status: warning` events with their `phase` and `message`.
+3. For each finding, checks against **existing priority matrix**:
+   - Matches an open H0/H1 plan → appends as evidence bullet to that plan's carryover.
+   - Matches H2/H3 → creates or updates a `PLAN_MAESTRO_LAB_FINDINGS_YYYY_MM.md` stub.
+   - No plan match → emits a low-effort inline fix suggestion in the harvest report.
+4. Outputs `docs/private/homelab/reports/LESSONS_HARVEST_$runId.md` for operator review.
+5. Operator promotes actionable items to `PLANS_TODO.md` or `PLAN_MAESTRO_*.md` manually — harvest never writes to tracked plans automatically (audit trail, not autopilot).
+
+Token-aware: harvest runs `--quick` mode by default (last session only); `--all` for full history audit.
 
 ## Acceptance criteria (Slice 1 — bugs only)
 
