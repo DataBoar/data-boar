@@ -18,13 +18,28 @@ export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin${PATH+
 if [[ -d "${HOME}/.local/bin" ]]; then export PATH="${HOME}/.local/bin:${PATH}"; fi
 
 CHECK_ONLY=0
+PRIVILEGED=0
+APPLY_ONLY=0
 for arg in "$@"; do
   case "$arg" in
-    --check) CHECK_ONLY=1 ;;
-    --help|-h) echo "Usage: $0 [--check]"; exit 0 ;;
+    --check)      CHECK_ONLY=1 ;;
+    --privileged) PRIVILEGED=1 ;;
+    --apply)      APPLY_ONLY=1 ;;  # uv sync only, no OS PM (no root needed)
+    --help|-h) echo "Usage: $0 [--check | --apply | --privileged]
+  (no args)     same as --check: probe only, no changes
+  --check       probe only, exit 0 if healthy, 1 if fix needed
+  --apply       uv sync --extra compressed only (no OS package manager)
+  --privileged  full flow: uv sync + OS PM (apt/xbps/...) + Python rebuild
+                requires root (sudo -n); the intended LABOP_DEP_DOCTOR invocation
+"; exit 0 ;;
     *) echo "[DepDoctor] Unknown arg: $arg" >&2; exit 2 ;;
   esac
 done
+
+# Default: no args = check only (safe accidental invocation)
+if [[ $PRIVILEGED -eq 0 && $APPLY_ONLY -eq 0 ]]; then
+  CHECK_ONLY=1
+fi
 
 _log() { echo "[DepDoctor $(date -u +%H:%M:%SZ)] $*"; }
 _ok()  { echo "[DepDoctor] OK: $*"; }
@@ -32,7 +47,7 @@ _warn(){ echo "[DepDoctor] WARN: $*" >&2; }
 _fail(){ echo "[DepDoctor] FAIL: $*" >&2; }
 
 HOST=$(hostname -f 2>/dev/null || hostname)
-_log "Starting on $HOST (check_only=$CHECK_ONLY)"
+_log "Starting on $HOST (check_only=$CHECK_ONLY privileged=$PRIVILEGED apply_only=$APPLY_ONLY)"
 
 # ---------------------------------------------------------------------------
 # Phase 1: detect uv + repo root
@@ -90,7 +105,7 @@ if [[ $CHECK_ONLY -eq 1 ]]; then
 fi
 
 # ---------------------------------------------------------------------------
-# Phase 3: try uv sync --extra compressed first
+# Phase 3: try uv sync --extra compressed (safe, no root needed)
 # ---------------------------------------------------------------------------
 _log "Step 1: uv sync --extra compressed"
 if (cd "$REPO_ROOT" && "$UV_BIN" sync --extra compressed 2>&1); then
@@ -109,8 +124,14 @@ fi
 if [[ $NEED_FIX -eq 0 ]]; then exit 0; fi
 
 # ---------------------------------------------------------------------------
-# Phase 4: OS-level package manager for liblzma
+# Phase 4: OS-level package manager for liblzma (requires --privileged / root)
 # ---------------------------------------------------------------------------
+if [[ $PRIVILEGED -eq 0 ]]; then
+  _warn "OS-level package manager step skipped: --privileged not set."
+  _warn "Re-run as: sudo -n bash $0 --privileged"
+  _warn "Host feature: 7z_UNSUPPORTED reason=lzma_unavailable_uvsync_only"
+  exit 1
+fi
 _log "Step 2: detecting OS package manager for lzma-dev install"
 
 PM=""
