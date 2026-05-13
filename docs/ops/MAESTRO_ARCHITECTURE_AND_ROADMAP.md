@@ -17,9 +17,10 @@ Maestro exists because lab validation — real hosts, real SSH, real containers,
 | Musical term | Maestro meaning |
 | ------------ | --------------- |
 | Maestro (conductor) | `Maestro.ps1` — reads the score, controls tempo and sequence |
-| Orchestra members | Lab nodes (LAB-NODE-01, LAB-NODE-03, LAB-T14, …) |
-| Instruments (Persona) | Role each node plays: `docker`, `podman`, `baremetal`, `web`, `target_postgres`, … |
-| Score (Inventory) | `docs/private/homelab/data/inventory.json` — who plays what |
+| **Capo** (*capo di sezione* — section lead) | `Handle-*.ps1` handlers — each leads its instrument section with full expertise; the **Capos** are the Maestro's direct reports and the executors of real work |
+| Musician | Lab node (LAB-NODE-01, LAB-NODE-03, LAB-T14, …) — the performer |
+| Instrument / Voice (Persona) | The role each node plays: `docker`, `podman`, `baremetal`, `web`, `target_postgres`, … |
+| Score | `docs/private/homelab/data/inventory.json` — who plays what |
 | Performance (Completão) | One full run across all nodes, all personas, all target surfaces |
 | Encore (A/B benchmark) | `maestro-benchmark-ab.ps1` — stable vs rc, same score, two performances |
 | Program notes | `docs/private/homelab/reports/` — evidence of each performance |
@@ -93,25 +94,29 @@ Maestro.ps1 -Deep -BenchTrack beta -BenchRunId abc123
       └─ Collect-Artifacts.ps1  (scp metrics from /tmp/databoar_bench/$track/)
 ```
 
-### 3.3 Persona taxonomy
+### 3.3 Capo taxonomy (persona handlers)
 
-Personas are additive — one node can have multiple. The inventory entry lists them; Maestro orders dispatch (container personas first, `web` last, others in declaration order).
+**Capos** (*capo di sezione* in Italian orchestra terminology — section lead) are the `Handle-<persona>.ps1` files. Each Capo owns its instrument section completely: it receives context from the Maestro and is fully responsible for how its section performs. Adding a new Capo = adding one handler file.
 
-| Persona | Type | What it exercises |
-| ------- | ---- | ----------------- |
-| `baremetal` | Engine | Data Boar via `uv run` on bare OS |
-| `docker` | Engine | Data Boar via `docker run` or `docker compose` (Docker CE) |
-| `podman` | Engine | Rootless Podman container |
-| `dockerswarm` | Engine | Docker Swarm service deployment |
-| `microk8s` | Engine | Kubernetes pod via microk8s |
-| `lxd` | Engine | LXD system container |
-| `web` | Surface | HTTP `/health` + API reachability; gate for load test |
-| `target_postgres` | DB Target | Synthetic PostgreSQL (compose), scanned cross-host |
-| `target_mariadb` | DB Target | Synthetic MariaDB (compose), scanned cross-host |
-| `target_mongodb` | DB Target | Synthetic MongoDB (compose), scanned cross-host |
-| `target_nfs` | Storage | NFS share mount |
-| `target_sshfs` | Storage | SSHFS mount |
-| `target_cifs` | Storage | SMB/CIFS mount |
+Capos are additive — one node can have multiple. The inventory entry lists them; Maestro orders dispatch (container personas first, `web` last, others in declaration order).
+
+| Persona | Capo handler | What it leads |
+| ------- | ------------ | ------------- |
+| `baremetal` | Handle-baremetal.ps1 | Data Boar via `uv run` on bare OS |
+| `docker` | Handle-docker.ps1 | Docker CE `docker run` / `docker compose` |
+| `dockerswarm` | Handle-dockerswarm.ps1 | Docker Swarm service mode |
+| `podman` | Handle-podman.ps1 | Rootless Podman container |
+| `microk8s` | Handle-microk8s.ps1 | Kubernetes pod via microk8s |
+| `lxd` | Handle-lxd.ps1 | LXD system container |
+| `web` | Handle-web.ps1 | HTTP `/health` + API reachability; load test gate |
+| `target_postgres` | Handle-target_postgres.ps1 | Synthetic PostgreSQL (compose), scanned cross-host |
+| `target_mariadb` | Handle-target_mariadb.ps1 | Synthetic MariaDB (compose), scanned cross-host |
+| `target_mongodb` | Handle-target_mongodb.ps1 | Synthetic MongoDB (compose), scanned cross-host |
+| `target_nfs` | Handle-target_nfs.ps1 | NFS share mount |
+| `target_sshfs` | Handle-target_sshfs.ps1 | SSHFS mount |
+| `target_cifs` | Handle-target_cifs.ps1 | SMB/CIFS mount |
+| `target_oracle` *(roadmap)* | Handle-target_oracle.ps1 | Synthetic Oracle XE (compose) |
+| `loadtest` *(roadmap)* | Handle-loadtest.ps1 | Locust HTTP load test after web health |
 
 ### 3.4 Inventory contract
 
