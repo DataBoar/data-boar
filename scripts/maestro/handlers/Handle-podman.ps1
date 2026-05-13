@@ -16,7 +16,12 @@
 param(
     [Parameter(Mandatory=$true)]$Node,
     [string]$Ref = "WorkingTree",
-    [switch]$Deep # <--- Injeção do Maestro para habilitar o Benchmark
+    [switch]$Deep, # <--- Injeção do Maestro para habilitar o Benchmark
+    [string]$BenchTrack = "",
+    [string]$BenchRunId = "",
+    [switch]$BenchCompare,
+    [int]$BenchWebPort = 0,
+    [string]$BenchHealthUrl = ""
 )
 
 Write-Host "   [Podman] Disparando orquestração containerizada (Deep: $Deep) em $($Node.hostname)..." -ForegroundColor DarkCyan
@@ -25,12 +30,24 @@ Write-Host "   [Podman] Disparando orquestração containerizada (Deep: $Deep) e
 $configArg = if ($Deep) { "tests/config/benchmark-rc.yaml" } else { "" }
 $stackArg = if ($Deep) { "--lab-stack-up" } else { "" }
 $modoTexto = if ($Deep) { "Benchmark RC (Deep)" } else { $Ref }
+$smokeArgs = @()
+if (-not [string]::IsNullOrWhiteSpace($configArg)) { $smokeArgs += $configArg }
+if (-not [string]::IsNullOrWhiteSpace($stackArg)) { $smokeArgs += $stackArg }
+if (-not [string]::IsNullOrWhiteSpace($BenchTrack)) { $smokeArgs += "--bench-track $BenchTrack" }
+if (-not [string]::IsNullOrWhiteSpace($BenchRunId)) { $smokeArgs += "--bench-run-id $BenchRunId" }
+if ($BenchWebPort -gt 0) { $smokeArgs += "--health-url http://127.0.0.1:$BenchWebPort/health" }
+if (-not [string]::IsNullOrWhiteSpace($BenchHealthUrl)) { $smokeArgs += "--health-url $BenchHealthUrl" }
+$smokeArgText = ($smokeArgs -join " ")
+$benchEnv = @()
+if ($BenchCompare) { $benchEnv += "LAB_COMPLETAO_BENCH_COMPARE=1" }
+if (-not [string]::IsNullOrWhiteSpace($BenchRunId)) { $benchEnv += "LAB_COMPLETAO_BENCH_RUN_ID=$BenchRunId" }
+$benchEnvPrefix = if ($benchEnv.Count -gt 0) { ($benchEnv -join " ") + " " } else { "" }
 
 # Construção do Payload Posix Native para Podman:
 # 1. Substitua o .sh abaixo pelo script real que faz o 'podman run...' ou similar no seu ambiente mais tarde
 # 2. Protegendo aspas internas com escape de PowerShell:
 # 3. Repassamos o argumento do config para o bash script
-$payload = "cd $($Node.path) && echo `"Iniciando Baremetal Smoke ($modoTexto)...`" && bash ./scripts/lab-completao-host-smoke.sh $configArg $stackArg"
+$payload = "cd $($Node.path) && echo `"Iniciando Baremetal Smoke ($modoTexto)...`" && ${benchEnvPrefix}bash ./scripts/lab-completao-host-smoke.sh $smokeArgText"
 
 # Prepara resiliencia via TMUX (Ctrl+C garante que o prompt está limpo antes do Enter)
 # SRE Fix: Separamos o Ctrl+C da injeção de texto com um micro-sleep (anti-race-condition)
@@ -38,7 +55,7 @@ $payload = "cd $($Node.path) && echo `"Iniciando Baremetal Smoke ($modoTexto)...
 $tmuxCmd = "tmux send-keys -t completao C-c ; sleep 0.5 ; tmux send-keys -t completao '$payload' Enter"
 
 # Injeção resiliente via TMUX
-ssh -q -o BatchMode=yes "$($Node.user)@$($Node.hostname)" "$tmuxCmd"
+ssh -q -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$($Node.user)@$($Node.hostname)" "$tmuxCmd"
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "      [SUCCESS] Orquestração Podman injetada no Tmux com sucesso." -ForegroundColor Green

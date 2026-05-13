@@ -29,6 +29,8 @@ LC_HEALTH_URL="${LAB_COMPLETAO_HEALTH_URL:-}"
 LC_REPO_ROOT=""
 LC_BENCH_TRACK=""
 LC_BENCH_ROOT=""
+LC_BENCH_RUN_ID="${LAB_COMPLETAO_BENCH_RUN_ID:-}"
+LC_BENCH_METRICS_DIR=""
 
 _lc_emit_host_env_audit_line() {
   local _uv="uv_missing"
@@ -63,6 +65,10 @@ while [[ $# -gt 0 ]]; do
       LC_BENCH_TRACK="${2:-}"
       shift
       ;;
+    --bench-run-id)
+      LC_BENCH_RUN_ID="${2:-}"
+      shift
+      ;;
     --health-url)
       LC_HEALTH_URL="${2:-}"
       shift
@@ -73,13 +79,14 @@ while [[ $# -gt 0 ]]; do
       ;;
     --help|-h)
       cat <<'EOF'
-Usage: bash scripts/lab-completao-host-smoke.sh [--privileged] [--skip-engine-import] [--bench-track stable|beta] [--health-url URL] [--repo-root PATH]
+Usage: bash scripts/lab-completao-host-smoke.sh [--privileged] [--skip-engine-import] [--bench-track stable|beta] [--bench-run-id ID] [--health-url URL] [--repo-root PATH]
 
   --privileged          Best-effort read-only probes via sudo -n (iptables/nft/ufw/fail2ban status).
   --skip-engine-import  Skip uv / import core.engine (hosts that run Data Boar only via Docker/Swarm/Podman).
   --lab-stack-up        Try to bring up deploy/lab-smoke-stack (and optional Mongo compose overlay) before checks.
   --emit-jsonl-host-env-and-exit  Print one DATA_BOAR_COMPLETAO_JSONL_MIN_EVENT line (uv/python versions) and exit 0.
   --bench-track         Ephemeral A/B workdir under /tmp/databoar_bench/<stable|beta> (checkpoint isolation).
+  --bench-run-id        Optional run marker for metric files (default: UTC timestamp).
   --health-url          Override LAB_COMPLETAO_HEALTH_URL (e.g. http://127.0.0.1:8088/health).
   --repo-root           Repo root (default: infer from script location).
 
@@ -91,6 +98,7 @@ Environment:
   LAB_COMPLETAO_MAIN_ENGINE_SSH_HOST    Optional manifest completaoMainEngineSshHost; undervoltage on other hosts is warning-only.
   LAB_COMPLETAO_SKIP_UNDERVOLTAGE_CHECK If 1, skip vcgencmd/journal undervoltage section (LAB-NODE-04 passive / operator override).
   LAB_COMPLETAO_BENCH_TRACK             stable|beta when --bench-track not passed.
+  LAB_COMPLETAO_BENCH_RUN_ID            run marker for benchmark metric files.
   LAB_COMPLETAO_BENCH_COMPARE           If 1, emit coarse wall-clock import probe (stable: core.engine; beta: boar_fast_filter).
 EOF
       exit 0
@@ -141,8 +149,43 @@ _lc_init_bench_workdir() {
   fi
   LC_BENCH_ROOT="/tmp/databoar_bench/$LC_BENCH_TRACK"
   mkdir -p "$LC_BENCH_ROOT" 2>/dev/null || true
+  if [[ -z "$LC_BENCH_RUN_ID" ]]; then
+    LC_BENCH_RUN_ID="$(date -u +%Y%m%dT%H%M%SZ 2>/dev/null || date +%s)"
+  fi
+  LC_BENCH_METRICS_DIR="$LC_BENCH_ROOT/metrics"
+  mkdir -p "$LC_BENCH_METRICS_DIR" 2>/dev/null || true
   echo "databoar_bench_track=$LC_BENCH_TRACK" >"$LC_BENCH_ROOT/.checkpoint_isolation_marker" 2>/dev/null || true
+  echo "databoar_bench_run_id=$LC_BENCH_RUN_ID" >>"$LC_BENCH_ROOT/.checkpoint_isolation_marker" 2>/dev/null || true
   echo "BENCH_WORKDIR: $LC_BENCH_ROOT (isolated; do not share checkpoints between stable and beta)"
+}
+
+_lc_capture_metrics_snapshot() {
+  if [[ -z "$LC_BENCH_TRACK" || -z "$LC_BENCH_METRICS_DIR" ]]; then
+    return 0
+  fi
+  local stage="$1"
+  local prefix="$LC_BENCH_METRICS_DIR/${LC_BENCH_TRACK}_${LC_BENCH_RUN_ID}_${stage}"
+  {
+    echo "ts=$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date)"
+    echo "host=$(hostname 2>/dev/null || echo unknown)"
+    echo "track=$LC_BENCH_TRACK"
+    echo "run_id=$LC_BENCH_RUN_ID"
+  } >"${prefix}_meta.txt" 2>/dev/null || true
+  if _lc_cmd vmstat; then
+    vmstat 1 5 >"${prefix}_vmstat.log" 2>/dev/null || true
+  fi
+  if _lc_cmd iostat; then
+    iostat -x 1 3 >"${prefix}_iostat.log" 2>/dev/null || true
+  fi
+  if _lc_cmd free; then
+    free -m >"${prefix}_free.log" 2>/dev/null || true
+  fi
+  if _lc_cmd df; then
+    df -h >"${prefix}_df.log" 2>/dev/null || true
+  fi
+  if _lc_cmd ps; then
+    ps -eo pid,comm,%cpu,%mem --sort=-%cpu | head -n 25 >"${prefix}_topcpu.log" 2>/dev/null || true
+  fi
 }
 
 _lc_undervoltage_check() {
@@ -212,7 +255,7 @@ echo "REPO_ROOT: $LC_REPO_ROOT"
 echo "HOST: $(hostname -f 2>/dev/null || hostname 2>/dev/null || echo unknown)"
 echo "PRIVILEGED: $LC_PRIV"
 if [[ -n "$LC_BENCH_TRACK" ]]; then
-  echo "BENCH_TRACK: $LC_BENCH_TRACK ROOT: ${LC_BENCH_ROOT:-}"
+  echo "BENCH_TRACK: $LC_BENCH_TRACK ROOT: ${LC_BENCH_ROOT:-} RUN_ID: ${LC_BENCH_RUN_ID:-na}"
 fi
 
 _lc_emit_host_env_audit_line
@@ -241,6 +284,8 @@ fi
 _lc_section "Data Boar Engine (Baremetal RC)"
 # Se o Maestro enviou um config via argumento $1 ou se benchmark-rc existe
 CONFIG_RC="${1:-tests/config/benchmark-rc.yaml}"
+_lc_capture_metrics_snapshot "pre_scan"
+_scan_start_epoch="$(date +%s 2>/dev/null || echo 0)"
 
 if [[ -f "$LC_REPO_ROOT/$CONFIG_RC" ]] && _lc_cmd uv; then
   do_log_ INFO "Iniciando Scan de Performance Baremetal com $CONFIG_RC..."
@@ -253,6 +298,20 @@ else
   # Fallback para o smoke original se não houver config de benchmark
   (cd "$LC_REPO_ROOT" && uv run python -c "import core.engine; print('import core.engine: OK')" 2>&1) || echo "import core.engine: FAILED"
 fi
+_scan_end_epoch="$(date +%s 2>/dev/null || echo 0)"
+if [[ "$_scan_start_epoch" -gt 0 && "$_scan_end_epoch" -ge "$_scan_start_epoch" ]]; then
+  echo "SCAN_WALL_SECONDS=$((_scan_end_epoch - _scan_start_epoch))"
+  if [[ -n "$LC_BENCH_METRICS_DIR" ]]; then
+    {
+      echo "scan_start_epoch=$_scan_start_epoch"
+      echo "scan_end_epoch=$_scan_end_epoch"
+      echo "scan_wall_seconds=$((_scan_end_epoch - _scan_start_epoch))"
+      echo "track=$LC_BENCH_TRACK"
+      echo "run_id=$LC_BENCH_RUN_ID"
+    } >"$LC_BENCH_METRICS_DIR/${LC_BENCH_TRACK}_${LC_BENCH_RUN_ID}_scan_wall.txt" 2>/dev/null || true
+  fi
+fi
+_lc_capture_metrics_snapshot "post_scan"
 
 _lc_section "Docker / Podman"
 if _lc_cmd docker; then

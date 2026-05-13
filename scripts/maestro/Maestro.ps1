@@ -16,7 +16,13 @@
 param(
     [string]$Ref = "WorkingTree",
     [switch]$Collect, # <--- NOVA FLAG SRE
-    [switch]$Deep     # <--- NOVA FLAG PARA TESTES RC
+    [switch]$Deep,    # <--- NOVA FLAG PARA TESTES RC
+    [ValidateSet("", "stable", "beta")]
+    [string]$BenchTrack = "",
+    [string]$BenchRunId = "",
+    [switch]$BenchCompare,
+    [int]$BenchWebPort = 0,
+    [string]$BenchHealthUrl = ""
 )
 
 # 1. Localização do Inventário Privado (Zero PII no código)[cite: 8, 14, 16]
@@ -78,9 +84,19 @@ $globalReport = foreach ($node in $inventory.lab_members) {
 
             if (Test-Path $handler) {
                 # O Node contém o path atualizado pelo Sync-WorkingTree (Injeção de Contexto) [cite:1]
-		# PowerShell exige que você cole o valor no nome do parâmetro usando dois pontos (:), sem espaços!
-		# Assim ele não vai achar no Handler que tem uma variável sobrando sem motivo (ex: sshfs, nfs, etc.)
-		& $handler -Node $node -Ref $Ref -Deep:$Deep
+                # PowerShell exige que você cole o valor no nome do parâmetro usando dois pontos (:), sem espaços!
+                # Assim ele não vai achar no Handler que tem uma variável sobrando sem motivo (ex: sshfs, nfs, etc.)
+                $handlerArgs = @{
+                    Node = $node
+                    Ref = $Ref
+                    Deep = $Deep
+                    BenchTrack = $BenchTrack
+                    BenchRunId = $BenchRunId
+                    BenchCompare = $BenchCompare
+                    BenchWebPort = $BenchWebPort
+                    BenchHealthUrl = $BenchHealthUrl
+                }
+                & $handler @handlerArgs
             } else {
                 Write-Warning "      [WARNING] Handler ausente para persona '$persona' em $($node.hostname): $handler"
             }

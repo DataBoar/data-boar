@@ -15,7 +15,12 @@
 param(
     [Parameter(Mandatory=$true)]$Node,
     [string]$Ref = "WorkingTree",
-    [switch]$Deep # <--- Injeção do Maestro para habilitar o Benchmark RC
+    [switch]$Deep, # <--- Injeção do Maestro para habilitar o Benchmark RC
+    [string]$BenchTrack = "",
+    [string]$BenchRunId = "",
+    [switch]$BenchCompare,
+    [int]$BenchWebPort = 0,
+    [string]$BenchHealthUrl = ""
 )
 
 $modoTexto = if ($Deep) { "Benchmark RC (Deep)" } else { "$Ref" }
@@ -23,13 +28,24 @@ Write-Host "   [Baremetal] Disparando $modoTexto em $($Node.hostname)..." -Foreg
 
 # Se for Deep, passa o caminho do config. Se não, não passa nada (comportamento original)
 $configArg = if ($Deep) { "tests/config/benchmark-rc.yaml" } else { "" }
+$smokeArgs = @()
+if (-not [string]::IsNullOrWhiteSpace($configArg)) { $smokeArgs += "--bench-config $configArg" }
+if (-not [string]::IsNullOrWhiteSpace($BenchTrack)) { $smokeArgs += "--bench-track $BenchTrack" }
+if (-not [string]::IsNullOrWhiteSpace($BenchRunId)) { $smokeArgs += "--bench-run-id $BenchRunId" }
+if ($BenchWebPort -gt 0) { $smokeArgs += "--health-url http://127.0.0.1:$BenchWebPort/health" }
+if (-not [string]::IsNullOrWhiteSpace($BenchHealthUrl)) { $smokeArgs += "--health-url $BenchHealthUrl" }
+$smokeArgText = ($smokeArgs -join " ")
+$benchEnv = @()
+if ($BenchCompare) { $benchEnv += "LAB_COMPLETAO_BENCH_COMPARE=1" }
+if (-not [string]::IsNullOrWhiteSpace($BenchRunId)) { $benchEnv += "LAB_COMPLETAO_BENCH_RUN_ID=$BenchRunId" }
+$benchEnvPrefix = if ($benchEnv.Count -gt 0) { ($benchEnv -join " ") + " " } else { "" }
 
 # Construção do Payload Posix Native:
 # 1. Entra na pasta correta (fornecida pelo Node.path dinâmico do Maestro)
 # 2. Ativa o venv (source para bash/zsh nativos)
 # 3. Executa usando 'bash' explícito laboral caso as permissões (+x) tenham sido perdidas no scp, repassando a Ref desejada
 # 4. Repassamos o argumento do config para o bash script
-$payload = "cd $($Node.path) && echo `"Iniciando Baremetal Smoke ($modoTexto)...`" && bash ./scripts/lab-completao-host-smoke.sh $configArg"
+$payload = "cd $($Node.path) && echo `"Iniciando Baremetal Smoke ($modoTexto)...`" && ${benchEnvPrefix}bash ./scripts/lab-completao-host-smoke.sh $smokeArgText"
 
 # Prepara resiliencia via TMUX (Ctrl+C garante que o prompt está limpo antes do Enter)
 # SRE Fix: Separamos o Ctrl+C da injeção de texto com um micro-sleep (anti-race-condition)
@@ -37,7 +53,7 @@ $payload = "cd $($Node.path) && echo `"Iniciando Baremetal Smoke ($modoTexto)...
 $tmuxCmd = "tmux send-keys -t completao C-c ; sleep 0.5 ; tmux send-keys -t completao '$payload' Enter"
 
 # Injeção resiliente via TMUX
-ssh -q -o BatchMode=yes "$($Node.user)@$($Node.hostname)" "$tmuxCmd"
+ssh -q -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$($Node.user)@$($Node.hostname)" "$tmuxCmd"
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "      [SUCCESS] Orquestração injetada no Tmux com sucesso." -ForegroundColor Green
