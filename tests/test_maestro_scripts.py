@@ -240,6 +240,47 @@ def test_maestro_collect_exit_semantics_warn_without_hard_fail() -> None:
     assert "exit 0" in text
 
 
+def test_maestro_benchmark_context_is_opt_in_and_forwarded() -> None:
+    """Maestro exposes benchmark context flags and forwards them to handlers."""
+    root = _project_root()
+    text = (root / "scripts" / "maestro" / "Maestro.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "[string]$BenchTrack" in text
+    assert "[string]$BenchRunId" in text
+    assert "[switch]$BenchCompare" in text
+    assert "[int]$BenchWebPort" in text
+    assert "[string]$BenchHealthUrl" in text
+    assert "BenchTrack = $BenchTrack" in text
+    assert "BenchRunId = $BenchRunId" in text
+    assert "BenchCompare = $BenchCompare" in text
+    assert "BenchWebPort = $BenchWebPort" in text
+    assert "BenchHealthUrl = $BenchHealthUrl" in text
+
+
+def test_container_handlers_forward_benchmark_flags_to_host_smoke() -> None:
+    """Container-oriented handlers pass bench track/run id and compare flags to smoke script."""
+    root = _project_root()
+    for name in (
+        "Handle-baremetal.ps1",
+        "Handle-docker.ps1",
+        "Handle-podman.ps1",
+        "Handle-dockerswarm.ps1",
+        "Handle-lxd.ps1",
+        "Handle-microk8s.ps1",
+    ):
+        body = (root / "scripts" / "maestro" / "handlers" / name).read_text(
+            encoding="utf-8", errors="replace"
+        )
+        assert "[string]$BenchTrack" in body, f"{name}: missing BenchTrack param"
+        assert "[string]$BenchRunId" in body, f"{name}: missing BenchRunId param"
+        assert "LAB_COMPLETAO_BENCH_COMPARE=1" in body, (
+            f"{name}: should export compare flag env when requested"
+        )
+        assert "--bench-track $BenchTrack" in body
+        assert "--bench-run-id $BenchRunId" in body
+
+
 def test_wrapper_has_optional_web_readiness_gate() -> None:
     """Wrapper supports skip/warn/fail web readiness before long monitor loops."""
     root = _project_root()
@@ -287,7 +328,24 @@ def test_container_handlers_enable_lab_stack_up_in_deep_mode() -> None:
         assert "--lab-stack-up" in body, (
             f"{name} should inject --lab-stack-up in Deep mode payload"
         )
-        assert "lab-completao-host-smoke.sh $configArg $stackArg" in body
+        assert "$smokeArgs" in body
+        assert "$smokeArgText" in body
+        assert "lab-completao-host-smoke.sh $smokeArgText" in body
+
+
+def test_maestro_benchmark_ab_has_sleep_before_collect() -> None:
+    """Bug 3 regression: maestro-benchmark-ab.ps1 must wait for async smoke before Collect."""
+    root = _project_root()
+    text = (root / "scripts" / "maestro-benchmark-ab.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "SleepBeforeCollect" in text, (
+        "maestro-benchmark-ab.ps1 must have -SleepBeforeCollect to prevent race between "
+        "async tmux smoke and -Collect SCP phase"
+    )
+    assert "Start-Sleep -Seconds $SleepBeforeCollect" in text, (
+        "Sleep must be applied before Collect phase"
+    )
 
 
 def test_maestro_no_retired_workstation_codename_token() -> None:
