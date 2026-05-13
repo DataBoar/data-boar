@@ -33,7 +33,7 @@ if ($Ref -eq "WorkingTree") {
 }
 
 # 2. Garantir que o diretório existe (Silenciando banners do Linux remoto)
-ssh -q -o BatchMode=yes "$targetUser@$targetHost" "mkdir -p $finalPath" > $null 2>&1
+ssh -q -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$targetUser@$targetHost" "mkdir -p $finalPath" > $null 2>&1
 
 # 3. Lógica de Transferência
 $syncOk = $false
@@ -60,7 +60,7 @@ if ($Ref -eq "WorkingTree") {
         $localPyprojectHash = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $repoRoot "pyproject.toml")).Hash.ToLower()
         $localMaestroHash = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $repoRoot "scripts/maestro/Maestro.ps1")).Hash.ToLower()
         $verifyCmd = "cd $finalPath && sha256sum pyproject.toml scripts/maestro/Maestro.ps1 2>/dev/null"
-        $verifyOut = ssh -q -o BatchMode=yes "$targetUser@$targetHost" "$verifyCmd"
+        $verifyOut = ssh -q -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$targetUser@$targetHost" "$verifyCmd"
         if ($LASTEXITCODE -ne 0 -or -not $verifyOut) {
             Write-Warning "      [WARNING] Nao foi possivel validar hash remoto pos-rsync em $targetHost."
         } else {
@@ -85,8 +85,10 @@ if ($Ref -eq "WorkingTree") {
     }
 } else {
     # Novo Fluxo: Git Remote Fetch (Efêmero)
-    $gitCmd = "cd $finalPath && git init && git remote add origin git@github.com:FabioLeitao/data-boar.git && git fetch origin $Ref && git checkout FETCH_HEAD"
-    ssh -q -o BatchMode=yes "$targetUser@$targetHost" "$gitCmd" > $null 2>&1
+    # Remove stale origin if present from a previous ephemeral checkout (local or remote URL),
+    # then re-add the canonical GitHub remote before fetching the ref.
+    $gitCmd = "cd $finalPath && git init && (git remote remove origin 2>/dev/null || true) && git remote add origin git@github.com:FabioLeitao/data-boar.git && git fetch origin $Ref --depth=1 && git checkout FETCH_HEAD"
+    ssh -q -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$targetUser@$targetHost" "$gitCmd" > $null 2>&1
     if ($LASTEXITCODE -eq 0) {
         $syncOk = $true
     }
@@ -99,7 +101,7 @@ if ($syncOk) {
 
     # Sessões tmux só fazem sentido com sync válido.
     $tmuxInit = "tmux new-session -d -s completao 2>/dev/null || true ; tmux new-session -d -s monitor 2>/dev/null || true"
-    ssh -q -o BatchMode=yes "$targetUser@$targetHost" "$tmuxInit" > $null 2>&1
+    ssh -q -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$targetUser@$targetHost" "$tmuxInit" > $null 2>&1
 } else {
     Write-Warning "      [ERROR] Falha na preparação/sincronização de $targetHost."
 }
