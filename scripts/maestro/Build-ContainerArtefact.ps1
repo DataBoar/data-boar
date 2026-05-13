@@ -33,28 +33,30 @@ if ($tarExists) {
 
 $dockerReady = Test-DockerEngineReady
 if ($dockerReady) {
-    if ($tarExists) {
-        if ($fileAge.TotalHours -gt $freshThresholdHours) {
-            Write-Host ("   [Pre-flight] Docker online; artefato {0} stale ({1:N1}h). Rebuild forçado." -f $tarFile, $fileAge.TotalHours) -ForegroundColor Yellow
-        } else {
-            Write-Host ("   [Pre-flight] Docker online; refrescando {0} (cache atual {1:N1}h)." -f $tarFile, $fileAge.TotalHours) -ForegroundColor DarkGray
-        }
+    $shouldBuild = $true
+    if ($tarExists -and $fileAge.TotalHours -le $freshThresholdHours) {
+        Write-Host ("   [Pre-flight] Docker online; artefato {0} fresco ({1:N1}h < {2}h threshold). Reutilizando." -f $tarFile, $fileAge.TotalHours, $freshThresholdHours) -ForegroundColor DarkGray
+        $shouldBuild = $false
+    } elseif ($tarExists) {
+        Write-Host ("   [Pre-flight] Docker online; artefato {0} stale ({1:N1}h). Rebuild forcado." -f $tarFile, $fileAge.TotalHours) -ForegroundColor Yellow
         Remove-Item -LiteralPath $tarPath -Force
     } else {
         Write-Host "   [Pre-flight] Docker online e sem cache local. Build do artefato requerido." -ForegroundColor DarkGray
     }
 
-    Write-Host "   [Pre-flight] Compilando $fullImage e gerando artefato SRE..." -ForegroundColor Yellow
-    $null = docker build -q -t $fullImage "$PSScriptRoot/../../"
-    if ($LASTEXITCODE -ne 0) {
-        Write-Error "Falha no docker build para $fullImage."
-        exit 7
-    }
-    $null = docker save $fullImage -o $tarPath
-    if ($LASTEXITCODE -ne 0) {
-        Write-Error "Falha no docker save para $tarFile."
-        exit 8
-    }
+    if ($shouldBuild) {
+        Write-Host "   [Pre-flight] Compilando $fullImage e gerando artefato SRE..." -ForegroundColor Yellow
+        $null = docker build -q -t $fullImage "$PSScriptRoot/../../"
+        if ($LASTEXITCODE -ne 0) {
+            Write-Error "Falha no docker build para $fullImage."
+            exit 7
+        }
+        $null = docker save $fullImage -o $tarPath
+        if ($LASTEXITCODE -ne 0) {
+            Write-Error "Falha no docker save para $tarFile."
+            exit 8
+        }
+    } # end if ($shouldBuild)
     return
 }
 
