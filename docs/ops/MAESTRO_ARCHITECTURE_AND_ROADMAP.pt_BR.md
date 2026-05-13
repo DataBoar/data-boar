@@ -180,22 +180,29 @@ Veja `PLAN_MAESTRO_BENCHMARK_METRICS_AND_FIX.md` para análise completa. Resumo:
 
 ### 6.2 Invocações comuns
 
+> **Importante:** O benchmark A/B completo leva 20–25 minutos. O terminal integrado
+> do Cursor encerra processos em background após ~10 minutos. **Execute benchmarks
+> longos num terminal PowerShell nativo** (Windows Terminal, `pwsh` fora do Cursor)
+> em vez de via shell ou tarefas em background do Cursor.
+
 ```powershell
 # Completão padrão (smoke apenas, working tree atual)
 .\scripts\maestro\Maestro.ps1
 
 # Run de benchmark deep (usa benchmark-rc.yaml, coleta métricas)
-# ATENÇÃO: Bug 2 impede que isso funcione em baremetal/docker. Corrigir primeiro.
 .\scripts\maestro\Maestro.ps1 -Deep -BenchTrack beta -BenchRunId "20260513_pos_fix"
+
+# Wrapper token-aware: Deep + monitor loop + Collect (run unitário)
+.\scripts\maestro-deep-rc-monitor-collect.ps1
+
+# Benchmark A/B (stable v1.7.3 vs rc v1.7.4) — rodar em terminal PS nativo
+.\scripts\maestro-benchmark-ab.ps1 `
+  -LegacyRef v1.7.3 -LegacyTrack stable -LegacyWebPort 18088 `
+  -CandidateRef "WorkingTree" -CandidateTrack beta -CandidateWebPort 28088 `
+  -BenchCompare -RunId "ab_$(Get-Date -Format 'yyyyMMdd_HHmmss')"
 
 # Coletar artefatos do último run assíncrono
 .\scripts\maestro\Maestro.ps1 -Collect
-
-# Benchmark A/B (stable v1.7.3 vs rc v1.7.4)
-.\scripts\maestro-benchmark-ab.ps1 `
-  -LegacyRef v1.7.3 -LegacyTrack stable -LegacyWebPort 18088 `
-  -CandidateRef v1.7.4-rc -CandidateTrack beta -CandidateWebPort 28088 `
-  -BenchCompare
 ```
 
 ### 6.3 Lendo os resultados
