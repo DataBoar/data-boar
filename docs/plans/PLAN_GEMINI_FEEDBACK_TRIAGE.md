@@ -140,3 +140,48 @@ Answer **all** that apply for each candidate item:
 | 2026-03-29 | Initial plan — optional triage, non-authoritative; hub + `PLANS_TODO` pointer. |
 | 2026-03-31 | Populated §6 with **concrete IDs G-26-01…22** from Gemini texts in gitignored `docs/feedbacks, reviews, comments and criticism/` (bundle dated **2026-03-26** in content; filenames typo `2006`). |
 | 2026-03-27 | Warm-batch verification: **G-26-02**, **G-26-06**, **G-26-11…12**, **G-26-15**, **G-26-17**, **G-26-19…22** marked **Mitigado** — docs, `sonar-project.properties` comment, `compliance-sample-argentina_pdpa.yaml`, `report/generator.py` docstring, **`tests/test_report_recommendations.py`** ordering test. |
+| 2026-05-13 | New bundle pass (consolidated single-prompt format); §6.5 added with **G-13-01…14** from `C:\temp\gemini_bundles_2026_05_13.txt`. Three items approved by operator: G-13-06, G-13-09, G-13-10 → promoted / confirmed P0/P1. |
+
+---
+
+## 6.5 Consolidated bundle **2026-05-13** (single-prompt, all four tracks)
+
+**Bundle:** `uv run python scripts/export_public_gemini_bundle.py --compliance-yaml --verify` (output gitignored).
+**Prompt:** consolidated four-track template per [GEMINI_PUBLIC_BUNDLE_REVIEW.md](../ops/GEMINI_PUBLIC_BUNDLE_REVIEW.md) §Suggested Gemini prompt.
+
+### 6.5a EN + infra + CI
+
+| ID | Item (Gemini wording compressed) | Verify how | Urgency | Aligns §5? | Status |
+| -- | -------------------------------- | ---------- | ------- | ----------- | ------ |
+| **G-13-01** | **Docker host-binding:** instructions assume privileged mode for SRE host scans → unauthorized host binding risk. | MISUNDERSTOOD: Docker container runs as `appuser` non-root; SRE lab-op narrow sudoers is separate. Check DOCKER_SETUP.md scope language for clarity. | Cold | Operator success | Dismissed (misunderstood — two separate architectures) |
+| **G-13-02** | **CI fail-open/fail-closed:** pipeline lacks explicit documentation on behavior during dependency fetch timeouts. | Check `.github/workflows/ci.yml` error handling; confirm `pip-audit` / `uv` timeout behavior is documented. | Warm | Trust | ⬜ |
+| **G-13-03** | **Maestro hybrid scripts** retain legacy code paths (`hybrid-v173`) contradicting modular handler architecture. | Scripts exist as documented legacy (21+ variants in scripts/); consider moving to `scripts/legacy/` and noting in MAESTRO_ARCHITECTURE_AND_ROADMAP.md. | Cold | Docs hygiene | ⬜ |
+| **G-13-04** | **"Clean slate" lacks bold warning** about data loss on primary Windows workstations. | We have `PRIMARY_WINDOWS_WORKSTATION_PROTECTION.md`; check if it's linked from `PII_DEFINITIVE_REMEDIATION.md` doc Gemini cited. | Cold | Trust | ⬜ (verify link exists) |
+| **G-13-05** | **PII memory limits** for large repo diffs not specified in PII guardrails docs. | Check `PII_VERIFICATION_RUNBOOK.md` — document `--max-diff-size` or similar limit. | Warm | Trust | ⬜ |
+
+### 6.5b pt-BR locale
+
+| ID | Item | Verify how | Urgency | Aligns §5? | Status |
+| -- | ---- | ---------- | ------- | ----------- | ------ |
+| **G-13-06** | **"Ficheiro"** in terminal output examples instead of "arquivo". | `uv run pytest tests/test_docs_pt_br_locale.py`; also grep terminal/output text in templates. | Warm | Compliance narrative | ⬜ (ongoing locale sweep) |
+| **G-13-07** | **"Quebra de dados"** instead of standard "Vazamento de dados" / "Incidente de segurança". | Grep `GLOSSARY.pt_BR.md` and security docs for "quebra de dados". | Cold | Compliance narrative | ⬜ |
+| **G-13-08** | **"Implantação" vs "Deploy"** inconsistency across pt-BR docs. | Grep `docs/**/*.pt_BR.md`; standardize to "Deploy" (kept EN in IT context, per locale rule). | Cold | Docs hygiene | ⬜ (batch in `docs` session) |
+
+### 6.5c Compliance YAML samples
+
+| ID | Item | Verify how | Urgency | Aligns §5? | Status |
+| -- | ---- | ---------- | ------- | ----------- | ------ |
+| **G-13-09** | **min_confidence missing** in GDPR and other compliance YAML examples → engine may default to 1.0 causing silent FN. | Check `compliance-sample-eu_gdpr.yaml`; confirm engine default for min_confidence when absent. | Hot | Trustworthy scans | **Promovido P0** — verificar e adicionar threshold nos samples |
+| **G-13-10** | **Minor detection keywords in English only** → critical FN for Brazilian pt-BR documents (e.g. "data de nascimento" not matched). | Check `compliance-sample-us_co_cpa_minors.yaml` and `core/detector.py` minor detection keyword lists. | Hot | Trustworthy scans | **Promovido P0** — adicionar equivalentes pt-BR |
+| **G-13-11** | **CPF/CNPJ samples lack checksum validation hint** → docs may imply format-only matching, risking FP flood. | Engine DOES validate checksums (confirmed in tests); YAML samples should note this. Add comment in `compliance-sample-lgpd.yaml`. | Warm | Trustworthy scans | ⬜ |
+| **G-13-12** | **financial_routing_number regex too broad** → matches generic UUIDs/sequential IDs. | Review `compliance-sample-pci_dss.yaml` routing regex; add context bound or warning comment. | Warm | Trustworthy scans | ⬜ |
+| **G-13-13** | **Override behavior (merge vs replace) unclear** when health data sample loaded alongside base LGPD. | Document in USAGE.md `override_behavior` section; confirm in code. | Warm | Operator success | ⬜ |
+
+### 6.5d Cross-cutting
+
+| ID | Item | Verify how | Urgency | Aligns §5? | Status |
+| -- | ---- | ---------- | ------- | ----------- | ------ |
+| **G-13-14** | **boar_fast_filter + malformed UTF-8**: does Rust filter silently drop malformed files before Python engine can flag them for review? | Check `rust/boar_fast_filter/src/` encoding error handling; add note to TECH_GUIDE on encoding boundary behavior. | Hot | Trust | **Promovido P1** — doc + optional test |
+| **G-13-15** | **SQLite corruption on aborted scan** (`qa_kill_scan.py`): audit log may leave open transaction or corrupted journal. | Read `database/` session management; test with kill during scan. | Hot | Trust/evidence | **Promovido P0** — `test_scan_abort_integrity` |
+| **G-13-16** | **Jurisdiction collision tie-breaker** (LGPD + GDPR both match): no documented logic for which wins in report. | USAGE/COMPLIANCE_METHODOLOGY — add "multi-jurisdiction" section explaining current behavior (additive, not exclusive). | Warm | Compliance narrative | ⬜ |
+| **G-13-17** | **Clearing audit.sqlite between benchmark runs**: unclear if SRE operators should clear state to prevent cross-contamination. | Add operational note in HOMELAB_VALIDATION.md or MAESTRO docs. | Cold | SRE ops | ⬜ |
