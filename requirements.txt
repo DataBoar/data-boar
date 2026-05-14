@@ -416,8 +416,9 @@ easygui==0.98.3 \
     --hash=sha256:33498710c68b5376b459cd3fc48d1d1f33822139eb3ed01defbc0528326da3ba \
     --hash=sha256:d653ff79ee1f42f63b5a090f2f98ce02335d86ad8963b3ce2661805cafe99a04
     # via oletools
-ebcdic==1.1.1 \
-    --hash=sha256:33b4cb729bc2d0bf46cc1847b0e5946897cb8d3f53520c5b9aa5fa98d7e735f1
+ebcdic==2.0.1 \
+    --hash=sha256:3a1bedfbeee76cab2d7e4de62409ac015cd7afb25d590fe1546105c32a065cf1 \
+    --hash=sha256:645034983a6f4837f0e46e4bfe59d67de0b19e7c4294d33beebe74565cdefae6
     # via extract-msg
 et-xmlfile==2.0.0 \
     --hash=sha256:7a91720bc756843502c3b7504c77b8fe44217c85c537d85037f0f536151b2caa \
