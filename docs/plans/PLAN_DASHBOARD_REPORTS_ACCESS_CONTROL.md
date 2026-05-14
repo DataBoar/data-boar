@@ -130,10 +130,14 @@ See [SECURITY.md](../SECURITY.md), [USAGE.md](../USAGE.md), [TECH_GUIDE.md](../T
 | `GET` | `/report` | XLSX | Last report download | `reports_reader`+ |
 | `GET` | `/heatmap` | PNG | Last heatmap | `reports_reader`+ |
 | `GET` | `/list` | JSON | List API | `authenticated` / automation |
+| `GET` | `/findings` | JSON | Latest session findings (unified schema with `source_type` discriminator and Phase 1 identity fields `source_mtime_ns`, `source_size`, `content_fingerprint`); async StreamingResponse — see `api/routes.py` Findings export block | `reports_reader`+ |
+| `GET` | `/findings/csv` | CSV attachment | Latest session findings as UTF-8 CSV download (same schema as JSON variant) | `reports_reader`+ |
 | `PATCH` | `/sessions/{session_id}` | JSON | Metadata | `authenticated` |
 | `PATCH` | `/sessions/{session_id}/technician` | JSON | Technician tag | `authenticated` |
 | `GET` | `/reports/{session_id}` | XLSX | Report by session | `reports_reader`+ |
 | `GET` | `/heatmap/{session_id}` | PNG | Heatmap by session | `reports_reader`+ |
+| `GET` | `/findings/{session_id}` | JSON | Findings for `session_id` (same unified schema as `GET /findings`) | `reports_reader`+ |
+| `GET` | `/findings/{session_id}/csv` | CSV attachment | Findings for `session_id` as UTF-8 CSV download | `reports_reader`+ |
 | `GET` | `/logs` | text | Logs listing | `authenticated` |
 | `GET` | `/logs/{session_id}` | text | Session log | `authenticated` |
 | `POST` | `/scan_database` | JSON | DB scan | `scanner`+ |
