@@ -42,8 +42,13 @@ regex:
     pattern: "\\b[1-9]\\d{9}\\b"
     norm_tag: "Ukraine PDP"
   - name: "UA_PASSPORT_BIOMETRIC"
-    # Biometric passport: 2 uppercase ASCII letters + 6 digits
+    # Biometric passport: 2 uppercase ASCII letters + 6 digits (e.g. FN123456)
     pattern: "\\b[A-Z]{2}\\d{6}\\b"
+    norm_tag: "Ukraine PDP"
+  - name: "UA_PASSPORT_LEGACY"
+    # Legacy internal passport (до 2015): 2 Cyrillic uppercase letters + 6 digits
+    # Cyrillic range А–Я (U+0410–U+042F); also catches romanised variants via UA_PASSPORT_BIOMETRIC
+    pattern: "\\b[\\u0410-\\u042F]{2}\\d{6}\\b"
     norm_tag: "Ukraine PDP"
   # Precise geolocation (Art. 2 Law 2297-VI — location data identifying a natural person = personal data)
   - name: "UA_JSON_LAT_PRECISION"
@@ -168,11 +173,89 @@ terms:
     label: sensitive
   - text: "ombudsman"
     label: sensitive
+  - text: "профспілкове членство"
+    label: sensitive
+  - text: "trade union membership"
+    label: sensitive
+  - text: "сексуальне життя"
+    label: sensitive
+  - text: "sexual life"
+    label: sensitive
+  - text: "портативність даних"
+    label: sensitive
+  - text: "data portability"
+    label: sensitive
+  - text: "право на обмеження"
+    label: sensitive
+  - text: "right to restriction"
+    label: sensitive
+  - text: "мінімізація даних"
+    label: sensitive
+  - text: "data minimisation"
+    label: sensitive
+  - text: "обмеження зберігання"
+    label: sensitive
+  - text: "storage limitation"
+    label: sensitive
+  - text: "строк зберігання"
+    label: sensitive
+  - text: "retention period"
+    label: sensitive
+  - text: "реєстр операцій обробки"
+    label: sensitive
+  - text: "register of processing activities"
+    label: sensitive
+  - text: "ROPA"
+    label: sensitive
+  - text: "оцінка впливу на захист даних"
+    label: sensitive
+  - text: "data protection impact assessment"
+    label: sensitive
+  - text: "DPIA"
+    label: sensitive
+  - text: "72 години"
+    label: sensitive
+  - text: "72-hour notification"
+    label: sensitive
+  - text: "воєнний стан"
+    label: sensitive
+  - text: "martial law"
+    label: sensitive
+  - text: "надзвичайний стан"
+    label: sensitive
+  - text: "state of emergency"
+    label: sensitive
+  - text: "правомірність обробки"
+    label: sensitive
+  - text: "lawful basis"
+    label: sensitive
+  - text: "законний інтерес"
+    label: sensitive
+  - text: "legitimate interest"
+    label: sensitive
+  - text: "уповноважена особа з захисту даних"
+    label: sensitive
+  - text: "data protection officer"
+    label: sensitive
+  - text: "DPO"
+    label: sensitive
+  - text: "цифровий підпис"
+    label: sensitive
+  - text: "digital signature"
+    label: sensitive
+  - text: "ідентифікатор пристрою"
+    label: sensitive
+  - text: "device identifier"
+    label: sensitive
+  - text: "кандидат на членство в ЄС"
+    label: sensitive
+  - text: "EU candidate status"
+    label: sensitive
 
 recommendation_overrides:
   - norm_tag_pattern: "Ukraine PDP"
-    base_legal: "Law of Ukraine on Personal Data Protection No. 2297-VI (2010, as amended 2023); DPA: Uповноважений Верховної Ради України з прав людини (Ukrainian Parliament Commissioner for Human Rights); GDPR-convergent direction under EU candidacy (June 2022)"
-    risk: "Personal data under Ukrainian law, including sensitive categories (health, biometric, genetic, racial/ethnic origin, criminal record). Breach notification obligations apply (72 h to DPA under 2023 amendments). Coordinate-shaped values in logs/APIs are heuristic inventory signals only — not automatic legal classification. Cross-border transfer restrictions apply; martial law context (2022-present) creates additional regulatory uncertainty — scope with Ukrainian legal counsel."
-    recommendation: "Ensure lawful basis for processing; notify DPA within 72 h of breach (Law 3454-IX 2023); apply GDPR-aligned data subject rights (access, erasure, portability) per 2023 amendments; confirm cross-border transfer safeguards; maintain a register of processing activities; assess impact of martial law data processing exceptions with counsel."
+    base_legal: "Law of Ukraine on Personal Data Protection No. 2297-VI (2010, as amended 2023); DPA: Уповноважений Верховної Ради України з прав людини (Ukrainian Parliament Commissioner for Human Rights); GDPR-convergent amendments: Law 3454-IX (2023 — 72 h breach notification), Law 2782-IX (2023 — GDPR Ch. III rights); EU candidate status since June 2022"
+    risk: "Personal data under Ukrainian law, including sensitive categories (Art. 7: health, biometric, genetic, racial/ethnic origin, trade union membership, sexual life, criminal record). Breach notification to the DPA required within 72 hours (Law 3454-IX 2023). Coordinate-shaped values in logs/APIs are heuristic inventory signals only — not automatic legal classification. Cross-border transfer restrictions apply (approved country list or adequate safeguards). Martial law context (2022-present) expands state security exceptions — scope all processing with Ukrainian legal counsel."
+    recommendation: "Establish lawful basis for processing (consent, legitimate interest, legal obligation); notify DPA within 72 h of breach (Law 3454-IX 2023) and affected data subjects without undue delay; apply GDPR-aligned rights: access, erasure, portability, restriction, objection, automated-decision review (Laws 2782-IX 2023); maintain ROPA (register of processing activities) covering all operations; conduct DPIA for high-risk processing, profiling, and systematic monitoring; appoint DPO if processing is large-scale or involves sensitive categories; confirm cross-border transfer safeguards (standard contractual clauses or approved country list); assess applicability of martial law data processing exceptions with qualified Ukrainian legal counsel."
     priority: "ALTA"
-    relevant_for: "DPO, Legal, Information Security, Ukrainian Ombudsman compliance"
+    relevant_for: "DPO, Legal, Information Security, Ukrainian Ombudsman compliance, EU data protection teams handling Ukraine-based data subjects"

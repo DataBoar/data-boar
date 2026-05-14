@@ -34,12 +34,12 @@ These files already exist and are receiving the four-pattern geolocation geometr
 |---|---|---|
 | A1 | `compliance-sample-india_dpdp.yaml` | ✅ Done (commit `0e953fa`) |
 | A2 | `compliance-sample-popia.yaml` | ✅ Done (commit `9b4c3c5`) |
-| A3 | `compliance-sample-turkey_kvkk.yaml` | ⬜ Next |
-| A4 | `compliance-sample-uae_pdpl.yaml` | ⬜ Pending |
-| A5 | `compliance-sample-new_zealand_privacy.yaml` | ⬜ Pending |
-| A6 | `compliance-sample-philippines_dpa.yaml` | ⬜ Pending |
-| A7 | `compliance-sample-us_co_cpa_minors.yaml` | ⬜ Pending |
-| A8 | `compliance-sample-us_ftc_coppa.yaml` | ⬜ Pending |
+| A3 | `compliance-sample-turkey_kvkk.yaml` | ✅ Done |
+| A4 | `compliance-sample-uae_pdpl.yaml` | ✅ Done |
+| A5 | `compliance-sample-new_zealand_privacy.yaml` | ✅ Done |
+| A6 | `compliance-sample-philippines_dpa.yaml` | ✅ Done |
+| A7 | `compliance-sample-us_co_cpa_minors.yaml` | ✅ Done |
+| A8 | `compliance-sample-us_ftc_coppa.yaml` | ✅ Done |
 
 ---
 
@@ -108,8 +108,8 @@ All new YAML samples **must** follow the canonical geometry established across t
 ## Sprint sequencing (proposed)
 
 ```
-Sprint current:   A3 (Turkey) → A4 (UAE) → A5 (NZ) → A6 (PH) → A7 (CO) → A8 (COPPA)
-Sprint B (next):  B1 Ukraine → B2 HIPAA → B3 FERPA → B4 China PIPL → B5 Korea PIPA
+Sprint A (done):  A1 India → A2 POPIA → A3 Turkey → A4 UAE → A5 NZ → A6 PH → A7 CO → A8 COPPA
+Sprint B (next):  B1 Ukraine ✅ → B2 HIPAA → B3 FERPA → B4 China PIPL → B5 Korea PIPA
 Sprint C:         B6 Mexico → B7 Thailand → B8 Indonesia → B9 Quebec Law 25
 Sprint D:         Group 2 remaining (Vietnam, Malaysia, Argentina reform, Colombia, Chile)
 Sprint E:         Group 3 monitoring + ML/DL backfill
