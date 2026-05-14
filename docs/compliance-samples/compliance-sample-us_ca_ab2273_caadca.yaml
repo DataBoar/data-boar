@@ -9,10 +9,27 @@
 #   regex_overrides_file: path/to/compliance-sample-us_ca_ab2273_caadca.yaml
 #   ml_patterns_file: path/to/compliance-sample-us_ca_ab2273_caadca.yaml
 # Merge recommendation_overrides into report.recommendation_overrides.
+#
+# Precise geolocation (logs / APIs): same regex geometry as compliance-sample-us_va_vcdpa.yaml
+# (JSON lat/lng, location: pair, latitude=&longitude=). norm_tag matches this sample's framework label
+# for report overrides. Heuristic only — especially sensitive when combined with minor-facing context;
+# not an age-assurance or parental-consent determination.
 
 regex:
   - name: "CA_AB2273_REF"
     pattern: "(?i)\\bAB[\\s-]*2273\\b"
+    norm_tag: "CA AB 2273 (CAADCA)"
+  - name: "CA_AB2273_JSON_LAT_PRECISION"
+    pattern: "(?i)[\"']lat[\"']\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\b"
+    norm_tag: "CA AB 2273 (CAADCA)"
+  - name: "CA_AB2273_JSON_LNG_PRECISION"
+    pattern: "(?i)[\"'](?:lng|lon)[\"']\\s*:\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}\\b"
+    norm_tag: "CA AB 2273 (CAADCA)"
+  - name: "CA_AB2273_LOCATION_CSV_PAIR"
+    pattern: "(?i)\\blocation\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*,\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "CA AB 2273 (CAADCA)"
+  - name: "CA_AB2273_QUERYSTRING_LAT_LONG"
+    pattern: "(?i)latitude=[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*&\\s*longitude=[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
     norm_tag: "CA AB 2273 (CAADCA)"
 
 terms:
@@ -40,13 +57,17 @@ terms:
     label: sensitive
   - text: "geolocation minor"
     label: sensitive
+  - text: "precise geolocation"
+    label: sensitive
+  - text: "geolocation data"
+    label: sensitive
   - text: "profiling children"
     label: sensitive
 
 recommendation_overrides:
   - norm_tag_pattern: "CA AB 2273 (CAADCA)"
     base_legal: "California AB 2273 (Age-Appropriate Design Code) — informational labelling; legal status and scope require counsel"
-    risk: "Stored or processed data may be relevant to age-appropriate design reviews; automated detection does not establish regulatory coverage."
+    risk: "Stored or processed data may be relevant to age-appropriate design reviews; precise coordinate-shaped values in logs/APIs are heuristic inventory signals only (not minor identification or parental consent). Automated detection does not establish regulatory coverage."
     recommendation: "Engage DPO/counsel on AB 2273 scope, DPIA obligations, and minor-facing processing. Use output as technical discovery input only."
     priority: "ALTA"
     relevant_for: "DPO, California privacy counsel, product compliance"

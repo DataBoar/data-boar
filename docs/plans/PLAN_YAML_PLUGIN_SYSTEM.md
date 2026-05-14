@@ -1,11 +1,14 @@
----
-Status: In Progress
-Priority: H1
-Tags: extensibility, plugin, yaml, schema, patterns
-ADR: ADR-0052
----
-
 # PLAN — YAML-Based Plugin System (Extensibility)
+
+**Status:** Active
+**Date:** 2026-05-14
+**Authors:** Fabio Leitao
+**Priority:** H1
+**Tags:** extensibility, plugin, yaml, schema, patterns, ADR-0052
+**Depends on:** ADR-0052
+
+<!-- plans-hub-summary: Centralized YAML schema + validator for operator pattern plugins; unified patterns_plugin_file; Phase 1b (context gates, PCI) queued as S4b. -->
+<!-- plans-hub-related: PLAN_ADDITIONAL_DETECTION_TECHNIQUES_AND_FN_REDUCTION.md -->
 
 ## Goal
 
@@ -20,7 +23,7 @@ Allow operators to add custom discovery patterns without modifying the Data Boar
 
 ## Approach (Three Phases)
 
-### Phase 1 — Canonical Schema + Validator (this plan) ✅
+### Phase 1 — Canonical Schema + Validator (this plan) — shipped
 
 1. `config/plugin_schema.yaml` — centralized definition for all plugin types (regex, ml, dl).
 2. `config/plugin_validator.py` — lightweight validator (no third-party deps) that reads the schema and checks a plugin file before loading, emitting `PluginValidationWarning` with actionable messages.
@@ -31,9 +34,11 @@ Allow operators to add custom discovery patterns without modifying the Data Boar
 ### Phase 1b — Context gates + PCI sample calibration (queued; `PLANS_TODO` **S4b**)
 
 - **Driver:** PCI-DSS v4 readiness — noisy logs where digit runs collide with PAN-shaped regexes; validate ADR-0052 YAML expressiveness under stress.
-- **Engine work:** optional schema fields (e.g. proximity keywords, metadata) must wire into `SensitivityDetector` (regex light → Luhn or keyword window before heavy work)—not validator-only.
+- **Engine work:** optional schema fields (e.g. proximity keywords, metadata) must wire into `SensitivityDetector` (regex light to Luhn or keyword window before heavy work), not validator-only.
 - **Sample file:** `docs/compliance-samples/compliance-sample-pci_dss.yaml` — align PAN patterns with built-in `CREDIT_CARD` to avoid duplicate findings; document framing already warns on bare routing-style regexes.
 - **Exit:** same discipline as other sprint rows — tests + `check-all`; then remove or date the matching row in `docs/ops/today-mode/CARRYOVER.md` (EN + pt-BR).
+- **Follow-up — ML/DL backfill (defaults + samples):** align built-in `DEFAULT_ML_TERMS` / DL prototype paths with **compliance-sample-*.yaml** vocabulary (geo and sector terms); add optional `dl_patterns:` blocks in samples when operators need embedding parity — thin slices, no big-bang.
+- **Follow-up — U.S. retail + health samples:** optional new files mirroring the **LGPD** export model (core `DEFAULT_*` stays canonical): e.g. `compliance-sample-us_ca_cpra.yaml` (CCPA as amended / CPRA inventory framing) and `compliance-sample-us_hipaa_phi.yaml` (PHI-oriented patterns and terms) for counsel-tuned overrides.
 
 ### Phase 2 — Rust Passthrough (future)
 
@@ -45,12 +50,12 @@ Allow operators to add custom discovery patterns without modifying the Data Boar
 
 ## Acceptance Criteria (Phase 1)
 
-- [ ] `config/plugin_schema.yaml` documents all three pattern types with required/optional fields, types, and constraints.
-- [ ] `validate_plugin_file(path, plugin_type)` returns a `PluginValidationResult` (valid bool + list of issue strings).
-- [ ] Invalid items in `regex_overrides_file` emit `PluginValidationWarning` (not silent skip).
-- [ ] `patterns_plugin_file:` config key loads all three sections from one file.
-- [ ] All existing example files pass validation.
-- [ ] `tests/test_plugin_schema.py` green with ≥ 8 test cases.
+- [x] `config/plugin_schema.yaml` documents all three pattern types with required/optional fields, types, and constraints.
+- [x] `validate_plugin_file(path, plugin_type)` returns a `PluginValidationResult` (valid bool + list of issue strings).
+- [x] Invalid items in `regex_overrides_file` emit `PluginValidationWarning` (not silent skip).
+- [x] `patterns_plugin_file:` config key loads all three sections from one file.
+- [x] All existing example files pass validation.
+- [x] `tests/test_plugin_schema.py` green with at least 8 test cases.
 
 ## Related
 
