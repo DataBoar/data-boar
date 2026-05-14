@@ -1,7 +1,7 @@
-# Turkey KVKK – sample compliance profile (Law 6698, KVKK Board)
+# Turkey KVKK – sample compliance profile (Law 6698; Kişisel Verileri Koruma Kurumu)
 #
-# Target audience: Turkey deployments. Kişisel Verileri Koruma Kurumu (KVKK).
-# Terms in Turkish and English (kişisel veri / personal data).
+# Target audience: Turkish deployments and KVKK compliance. Kişisel Verileri Koruma
+# Kurumu (KVKK Board); veri sorumlusu (data controller) / veri işleyen (data processor).
 #
 # How to use:
 #   1. Set in your main config:
@@ -9,17 +9,53 @@
 #        ml_patterns_file: path/to/compliance-sample-turkey_kvkk.yaml
 #   2. Merge the recommendation_overrides list below into your config under report.recommendation_overrides.
 #
-# Turkey: Law 6698 (KVKK); KVKK Board; data controller/processor.
+# Legal scope:
+#   - Law 6698 on the Protection of Personal Data (KVKK), enacted 7 April 2016.
+#     Broadly modelled on EU Directive 95/46/EC; convergence towards GDPR ongoing.
+#   - Key obligations: registration in VERBİS (data controller registry) for large controllers;
+#     explicit consent (açık rıza) for sensitive data categories; cross-border transfer via
+#     KVKK Board approval or binding corporate rules.
+#   - Sensitive data (Art. 6): race, ethnic origin, political opinion, philosophical belief,
+#     religion, sect, other beliefs, appearance and dress, trade union membership, health,
+#     sexual life, criminal conviction, biometric and genetic data.
+#   - Amendment Law 7499 (2024): aligned breach notification with GDPR 72-hour rule
+#     (previously 72 h guideline only, now statutory).
+#   - The scanner does not evaluate VERBİS registration or cross-border transfer approvals.
+#     Use output as inventory signal; scope with KVKK-specialist counsel.
+#
+# Regex design:
+#   - TC_KIMLIK: Turkish national ID number (T.C. Kimlik No); 11 digits, first digit non-zero.
+#     Spaced-display variant (TC_KIMLIK_ALT) covers plain 11-digit strings without digit-zero start.
+#   - Precise geolocation: same four-decimal-place geometry as compliance-sample-us_va_vcdpa.yaml.
+#     Location data is personal data under KVKK Art. 3 (direct/indirect identification).
+#
+# Use double-quoted YAML with escaped backslashes.
 
 regex:
   - name: "TC_KIMLIK"
+    # Turkish national ID — 11 digits, first digit non-zero
     pattern: "\\b[1-9]\\d{10}\\b"
     norm_tag: "Turkey KVKK"
   - name: "TC_KIMLIK_ALT"
+    # Fallback: bare 11-digit string (higher FP rate; triage with context)
     pattern: "\\b\\d{11}\\b"
     norm_tag: "Turkey KVKK"
+  # Precise geolocation (KVKK Art. 3 — location data identifying a natural person = personal data)
+  - name: "KVKK_JSON_LAT_PRECISION"
+    pattern: "(?i)[\"']lat[\"']\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\b"
+    norm_tag: "Turkey KVKK"
+  - name: "KVKK_JSON_LNG_PRECISION"
+    pattern: "(?i)[\"'](?:lng|lon)[\"']\\s*:\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}\\b"
+    norm_tag: "Turkey KVKK"
+  - name: "KVKK_LOCATION_CSV_PAIR"
+    pattern: "(?i)\\blocation\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*,\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "Turkey KVKK"
+  - name: "KVKK_QUERYSTRING_LAT_LONG"
+    pattern: "(?i)latitude=[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*&\\s*longitude=[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "Turkey KVKK"
 
-# ML terms: Turkish and English (kişisel veri, personal data, KVKK).
+# ML terms: Turkish (TR) + English, covering KVKK vocabulary, sensitive data categories,
+# VERBİS registry, cross-border transfer, and 2024 amendment breach notification terms.
 terms:
   - text: "kişisel veri"
     label: sensitive
@@ -51,13 +87,83 @@ terms:
     label: sensitive
   - text: "veri kayıt sistemi"
     label: sensitive
+  - text: "verbis"
+    label: sensitive
+  - text: "özel nitelikli kişisel veri"
+    label: sensitive
+  - text: "sensitive personal data"
+    label: sensitive
+  - text: "ırk"
+    label: sensitive
+  - text: "etnik köken"
+    label: sensitive
+  - text: "ethnic origin"
+    label: sensitive
+  - text: "siyasi düşünce"
+    label: sensitive
+  - text: "political opinion"
+    label: sensitive
+  - text: "dini inanç"
+    label: sensitive
+  - text: "religious belief"
+    label: sensitive
+  - text: "sendika üyeliği"
+    label: sensitive
+  - text: "trade union membership"
+    label: sensitive
+  - text: "sağlık verisi"
+    label: sensitive
+  - text: "health data"
+    label: sensitive
+  - text: "cinsel hayat"
+    label: sensitive
+  - text: "biyometrik veri"
+    label: sensitive
+  - text: "biometric data"
+    label: sensitive
+  - text: "genetik veri"
+    label: sensitive
+  - text: "genetic data"
+    label: sensitive
+  - text: "cezai mahkumiyet"
+    label: sensitive
+  - text: "criminal conviction"
+    label: sensitive
+  - text: "yurt dışına veri aktarımı"
+    label: sensitive
+  - text: "cross-border transfer"
+    label: sensitive
+  - text: "veri ihlali bildirimi"
+    label: sensitive
+  - text: "data breach notification"
+    label: sensitive
+  - text: "konum verisi"
+    label: sensitive
+  - text: "location data"
+    label: sensitive
+  - text: "geolocation"
+    label: sensitive
+  - text: "profilleme"
+    label: sensitive
+  - text: "profiling"
+    label: sensitive
+  - text: "otomatik karar"
+    label: sensitive
+  - text: "automated decision"
+    label: sensitive
+  - text: "veri koruma görevlisi"
+    label: sensitive
+  - text: "dpo"
+    label: sensitive
   - text: "data subject application"
+    label: sensitive
+  - text: "başvuru hakkı"
     label: sensitive
 
 recommendation_overrides:
   - norm_tag_pattern: "Turkey KVKK"
-    base_legal: "Law 6698 (KVKK); Kişisel Verileri Koruma Kurumu"
-    risk: "Kişisel veri; veri sorumlusu ve veri işleyen yükümlülükleri; açık rıza."
-    recommendation: "Comply with KVKK; register with KVKK Board if required; obtain explicit consent; fulfil data subject rights."
+    base_legal: "Law 6698 on the Protection of Personal Data (KVKK), April 2016; KVKK Board (Kişisel Verileri Koruma Kurumu); Amendment Law 7499 (2024) — 72-hour breach notification now statutory"
+    risk: "Personal data and sensitive personal data categories under KVKK Art. 6 (race, ethnic origin, political opinion, religion, health, sexual life, criminal conviction, biometric and genetic data). Precise coordinate-shaped values are heuristic inventory signals only. Cross-border transfer requires KVKK Board approval or adequate safeguards. VERBİS registration mandatory for data controllers above the legal threshold."
+    recommendation: "Obtain explicit consent (açık rıza) for sensitive data categories; register in VERBİS if legally required; fulfil data subject rights (Art. 11); notify KVKK Board and data subjects within 72 hours of a data breach (Law 7499 / 2024); confirm cross-border transfer legal basis; apply data minimisation and purpose limitation."
     priority: "ALTA"
-    relevant_for: "DPO, Veri Sorumlusu, KVKK Board"
+    relevant_for: "DPO, Veri Sorumlusu, KVKK Board, Legal"

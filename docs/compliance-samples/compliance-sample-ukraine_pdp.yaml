@@ -1,0 +1,178 @@
+# Ukraine Personal Data Protection – sample compliance profile
+#
+# Target audience: Ukrainian deployments; organisations processing personal data of
+# Ukrainian citizens or operating in Ukraine. Uповноважений Верховної Ради України з
+# прав людини (Ukrainian Parliament Commissioner for Human Rights — DPA).
+#
+# How to use:
+#   1. Set in your main config:
+#        regex_overrides_file: path/to/compliance-sample-ukraine_pdp.yaml
+#        ml_patterns_file: path/to/compliance-sample-ukraine_pdp.yaml
+#   2. Merge the recommendation_overrides list below into your config under report.recommendation_overrides.
+#
+# Legal scope:
+#   - Law of Ukraine on Personal Data Protection No. 2297-VI (2010), as amended.
+#     Original baseline aligned with EU Directive 95/46/EC; ongoing legislative
+#     convergence towards GDPR since Ukraine obtained EU candidate status (June 2022).
+#   - Key amendments: Law 3454-IX (2023) — breach notification obligations (72 h to DPA);
+#     Law 2782-IX (2023) — expansion of data subject rights consistent with GDPR Ch. III.
+#   - Sensitive data categories (Article 7): racial/ethnic origin, political views,
+#     religious/philosophical beliefs, trade union membership, health, sexual life,
+#     biometric data, genetic data, criminal record.
+#   - Cross-border transfer: permitted to countries on approved list or with adequate
+#     safeguards (analogous to GDPR standard contractual clauses).
+#   - Wartime context (2022-present): martial law regulations affect certain processing
+#     activities; state security exceptions are broad. Use output as inventory signal only;
+#     scope with Ukrainian legal counsel.
+#
+# Regex design:
+#   - UA_IPN: Individual taxpayer number (ідентифікаційний номер платника податків);
+#     10-digit numeric string; issued by the State Tax Service of Ukraine.
+#   - UA_PASSPORT_BIOMETRIC: Biometric passport number; 2 uppercase letters + 6 digits (e.g. FN123456).
+#   - UA_PASSPORT_LEGACY: Legacy internal passport series/number: 2 Cyrillic letters + 6 digits.
+#     Note: Cyrillic letters in data may appear romanised; both patterns included.
+#   - Precise geolocation: same four-decimal-place geometry as compliance-sample-us_va_vcdpa.yaml
+#     and other enriched samples. Location data is personal data under Art. 2 (identifier).
+#
+# Use double-quoted YAML with escaped backslashes.
+
+regex:
+  - name: "UA_IPN"
+    # Ukrainian taxpayer number: 10 digits, first digit non-zero
+    pattern: "\\b[1-9]\\d{9}\\b"
+    norm_tag: "Ukraine PDP"
+  - name: "UA_PASSPORT_BIOMETRIC"
+    # Biometric passport: 2 uppercase ASCII letters + 6 digits
+    pattern: "\\b[A-Z]{2}\\d{6}\\b"
+    norm_tag: "Ukraine PDP"
+  # Precise geolocation (Art. 2 Law 2297-VI — location data identifying a natural person = personal data)
+  - name: "UA_JSON_LAT_PRECISION"
+    pattern: "(?i)[\"']lat[\"']\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\b"
+    norm_tag: "Ukraine PDP"
+  - name: "UA_JSON_LNG_PRECISION"
+    pattern: "(?i)[\"'](?:lng|lon)[\"']\\s*:\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}\\b"
+    norm_tag: "Ukraine PDP"
+  - name: "UA_LOCATION_CSV_PAIR"
+    pattern: "(?i)\\blocation\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*,\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "Ukraine PDP"
+  - name: "UA_QUERYSTRING_LAT_LONG"
+    pattern: "(?i)latitude=[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*&\\s*longitude=[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "Ukraine PDP"
+
+# ML terms: Ukrainian (UK) + English, covering Law 2297-VI vocabulary, GDPR-convergent
+# terms (added by 2023 amendments), sensitive data categories, and breach notification.
+terms:
+  - text: "персональні дані"
+    label: sensitive
+  - text: "personal data"
+    label: sensitive
+  - text: "суб'єкт персональних даних"
+    label: sensitive
+  - text: "data subject"
+    label: sensitive
+  - text: "розпорядник"
+    label: sensitive
+  - text: "data controller"
+    label: sensitive
+  - text: "уповноважений"
+    label: sensitive
+  - text: "data processor"
+    label: sensitive
+  - text: "обробка персональних даних"
+    label: sensitive
+  - text: "processing of personal data"
+    label: sensitive
+  - text: "згода"
+    label: sensitive
+  - text: "consent"
+    label: sensitive
+  - text: "порушення захисту"
+    label: sensitive
+  - text: "data breach"
+    label: sensitive
+  - text: "витік даних"
+    label: sensitive
+  - text: "sensitive data"
+    label: sensitive
+  - text: "спеціальні категорії"
+    label: sensitive
+  - text: "расове походження"
+    label: sensitive
+  - text: "racial origin"
+    label: sensitive
+  - text: "етнічне походження"
+    label: sensitive
+  - text: "ethnic origin"
+    label: sensitive
+  - text: "релігійні переконання"
+    label: sensitive
+  - text: "political views"
+    label: sensitive
+  - text: "стан здоров'я"
+    label: sensitive
+  - text: "health data"
+    label: sensitive
+  - text: "health record"
+    label: sensitive
+  - text: "біометричні дані"
+    label: sensitive
+  - text: "biometric data"
+    label: sensitive
+  - text: "генетичні дані"
+    label: sensitive
+  - text: "genetic data"
+    label: sensitive
+  - text: "кримінальне минуле"
+    label: sensitive
+  - text: "criminal record"
+    label: sensitive
+  - text: "сексуальне життя"
+    label: sensitive
+  - text: "ідентифікаційний номер"
+    label: sensitive
+  - text: "ipn"
+    label: sensitive
+  - text: "паспорт"
+    label: sensitive
+  - text: "passport"
+    label: sensitive
+  - text: "транскордонна передача"
+    label: sensitive
+  - text: "cross-border transfer"
+    label: sensitive
+  - text: "геолокація"
+    label: sensitive
+  - text: "geolocation"
+    label: sensitive
+  - text: "location data"
+    label: sensitive
+  - text: "precise location"
+    label: sensitive
+  - text: "право на доступ"
+    label: sensitive
+  - text: "right of access"
+    label: sensitive
+  - text: "право на видалення"
+    label: sensitive
+  - text: "right to erasure"
+    label: sensitive
+  - text: "профілювання"
+    label: sensitive
+  - text: "profiling"
+    label: sensitive
+  - text: "автоматизоване рішення"
+    label: sensitive
+  - text: "automated decision"
+    label: sensitive
+  - text: "уповноважений верховної ради"
+    label: sensitive
+  - text: "ombudsman"
+    label: sensitive
+
+recommendation_overrides:
+  - norm_tag_pattern: "Ukraine PDP"
+    base_legal: "Law of Ukraine on Personal Data Protection No. 2297-VI (2010, as amended 2023); DPA: Uповноважений Верховної Ради України з прав людини (Ukrainian Parliament Commissioner for Human Rights); GDPR-convergent direction under EU candidacy (June 2022)"
+    risk: "Personal data under Ukrainian law, including sensitive categories (health, biometric, genetic, racial/ethnic origin, criminal record). Breach notification obligations apply (72 h to DPA under 2023 amendments). Coordinate-shaped values in logs/APIs are heuristic inventory signals only — not automatic legal classification. Cross-border transfer restrictions apply; martial law context (2022-present) creates additional regulatory uncertainty — scope with Ukrainian legal counsel."
+    recommendation: "Ensure lawful basis for processing; notify DPA within 72 h of breach (Law 3454-IX 2023); apply GDPR-aligned data subject rights (access, erasure, portability) per 2023 amendments; confirm cross-border transfer safeguards; maintain a register of processing activities; assess impact of martial law data processing exceptions with counsel."
+    priority: "ALTA"
+    relevant_for: "DPO, Legal, Information Security, Ukrainian Ombudsman compliance"
