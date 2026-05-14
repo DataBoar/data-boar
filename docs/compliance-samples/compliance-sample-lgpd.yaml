@@ -11,6 +11,15 @@
 #        ml_patterns_file: path/to/compliance-sample-lgpd.yaml
 #   2. Merge the recommendation_overrides list below into report.recommendation_overrides.
 #
+# Detection thresholds (not configurable in this file; set in main config.yaml):
+#   - sensitivity_detection.fuzzy_column_match_min_confidence (int, default 25):
+#       Similarity mínima (Levenshtein) para matching fuzzy de nomes de coluna.
+#       Aumente para 60-80 para reduzir falsos positivos em colunas com nomes curtos.
+#   - sensitivity_detection.embedding_prototype_hint_min_confidence (int, default 20):
+#       Similaridade coseno mínima para hints via embedding.
+#   O score de confiança do ML (0-100) é calculado internamente pelo predict_proba;
+#   não há campo min_confidence por termo neste YAML.
+#
 # Regex: built-in LGPD-relevant patterns (CPF, CNPJ, phone, email, card, date) are
 # included explicitly so the sample matches the detector; RG, CEP and PIS/PASEP add
 # high-confidence Brazilian identifiers so we don't rely only on ML/DL in hybrid mode.

@@ -518,6 +518,23 @@ To support a new data source (e.g. another database driver or API), see **[ADDIN
 - Log file: `audit_YYYYMMDD.log` (and console).
 - On each finding (possible personal/sensitive data), the app logs and prints an `[ALERT]` to the console so the operator is notified on the fly.
 
+## Rust acceleration module (`boar_fast_filter`) and encoding boundary
+
+The optional `boar_fast_filter` Rust extension (built with [maturin](https://github.com/PyO3/maturin) + PyO3) provides a fast pre-filter stage: it receives a **batch of Python `str` objects** and returns the indexes of rows that contain CPF-like patterns, e-mail addresses, or potential credit-card sequences. Rows without any of those patterns are skipped before the slower ML/DL pipeline.
+
+**Encoding boundary (important for malformed-byte files):**
+
+The Rust module operates exclusively on decoded Python strings — it never receives raw bytes. All file-reading and encoding resolution happens on the **Python side** before `filter_batch` is called:
+
+- The filesystem connector reads text files with `errors="replace"` (default). Malformed byte sequences become the Unicode replacement character `U+FFFD` (`?`). The file is **not skipped** — it is analyzed with replacement characters in place.
+- If you need stricter behavior (e.g., skip files with encoding errors instead of silently replacing bytes), set `targets[].encoding_errors: "strict"` in your config. A `ScanFailure` entry is written to the SQLite audit log for every file where a `UnicodeDecodeError` occurs in strict mode.
+- The Rust pre-filter inherits whichever `str` the Python layer produces. If a CPF or e-mail straddles a replaced byte, the pattern may not match — this is a known, acceptable trade-off; the deterministic regex stage on the Python side still runs on the full replacement-substituted text.
+- For binary or truly undecodable files, the connector records them as `scan_failures` rather than silently excluding them from the audit log.
+
+**Build notes (lab environments):**
+
+Building `boar_fast_filter` requires Rust (`rustup`), `maturin`, and a C linker. On Python 3.13 hosts built without `liblzma-dev`, the `.7z` extra may fail independently of the Rust extension. The Maestro orchestration scripts include a "Dependency Doctor" workflow that auto-detects missing C extensions, attempts OS package manager remediation (`apt install liblzma-dev`, `xbps-install lzma`, etc.), and marks the host with a `7z_UNSUPPORTED` feature flag when the OS library cannot be installed.
+
 ## Dependencies and security
 
 - **Source of truth:** For the **uv** toolColleague-Nn, **`pyproject.toml`** is the single source of truth for declared dependencies; **`uv.lock`** pins the resolved tree for reproducible installs (avoids “it worked yesterday” breakage). **pip** and **`requirements.txt`** are derivative (requirements.txt is exported from the lockfile for pip-based environments). Do not edit **`uv.lock`** or **`requirements.txt`** by hand for version changes. When you add, remove, or change a dependency, edit **`pyproject.toml`** only, then run `uv lock` and export.

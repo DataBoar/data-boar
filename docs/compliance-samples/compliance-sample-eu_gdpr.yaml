@@ -9,6 +9,15 @@
 #        ml_patterns_file: path/to/compliance-sample-eu_gdpr.yaml
 #   2. Merge the recommendation_overrides list below into your config under report.recommendation_overrides.
 #
+# Detection thresholds (not configurable in this file; set in main config.yaml):
+#   - sensitivity_detection.fuzzy_column_match_min_confidence (int, default 25):
+#       Minimum Levenshtein similarity for fuzzy column-name matching.
+#       Raise to 60-80 to reduce false positives on short column names.
+#   - sensitivity_detection.embedding_prototype_hint_min_confidence (int, default 20):
+#       Minimum cosine similarity for embedding-based prototype hints.
+#   The ML confidence score (0-100) is computed internally by scikit-learn
+#   predict_proba; there is no per-term min_confidence field in this YAML.
+#
 # Regulation (EU) 2016/679; EDPB; member-state DPAs.
 
 regex:
