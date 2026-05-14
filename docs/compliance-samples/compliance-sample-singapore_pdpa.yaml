@@ -1,6 +1,7 @@
 # Singapore PDPA – sample compliance profile (Personal Data Protection Act 2012, PDPC)
 #
-# Target audience: Singapore and APAC deployments. PDPC; personal data, DNC.
+# Target audience: Singapore and APAC deployments. Terms in English so column names
+# in Singapore tech/fintech/health stacks are detected.
 #
 # How to use:
 #   1. Set in your main config:
@@ -8,17 +9,59 @@
 #        ml_patterns_file: path/to/compliance-sample-singapore_pdpa.yaml
 #   2. Merge the recommendation_overrides list below into your config under report.recommendation_overrides.
 #
-# Singapore: PDPA 2012; Personal Data Protection Commission (PDPC).
+# Singapore: PDPA 2012 (amended by Personal Data Protection (Amendment) Act 2020, effective
+# 1 Feb 2021 / 1 Oct 2022 phased); Personal Data Protection Commission (PDPC); mandatory
+# breach notification; data portability (Business Improvement direction); enhanced consent
+# framework; Do Not Call (DNC) registry.
+#
+# Detection thresholds (not configurable in this file; set in main config.yaml):
+#   - sensitivity_detection.fuzzy_column_match_min_confidence (int, default 25)
+#   - sensitivity_detection.embedding_prototype_hint_min_confidence (int, default 20)
+#
+# Legal scope (read before relying on tags):
+#   - PDPA applies to private-sector organisations collecting, using, or disclosing personal
+#     data in/from Singapore. Public agencies are separately regulated.
+#   - Data Boar performs technical pattern and term matching only. It does NOT evaluate
+#     consent, purpose limitation, or breach notification thresholds. Use output as inventory
+#     signal; scope determination with counsel.
+#
+# Regex design:
+#   - NRIC_SG: Singapore National Registration Identity Card / FIN / Employment Pass
+#     (letter + 7 digits + check letter; prefixes S/T/F/G).
+#   - SG_UEN: Unique Entity Number — 9–10 alphanumeric characters used to identify business
+#     entities; may appear alongside personal data in B2B records (heuristic; not guaranteed).
+#   - Precise geolocation: same four-decimal-place geometry as compliance-sample-us_va_vcdpa.yaml
+#     and compliance-sample-eu_gdpr.yaml. PDPA Advisory Guidelines (location data) confirm
+#     that precise location data identifying an individual is personal data. Patterns are
+#     heuristic coordinate-shape signals only — not automatic PDPC classification.
+#
+# Use double-quoted YAML with escaped backslashes (see .cursor/rules/yaml-regex-patterns.mdc).
 
 regex:
   - name: "NRIC_SG"
+    # Singapore NRIC / FIN / Employment Pass: S/T/F/G + 7 digits + check letter
     pattern: "\\b[SFTG]\\d{7}[A-Z]\\b"
     norm_tag: "Singapore PDPA"
-  - name: "NRIC_SG_ALT"
-    pattern: "\\b\\d{4}\\s?\\d{4}\\s?\\d{4}\\b"
+  - name: "SG_UEN"
+    # Singapore Unique Entity Number: 9-10 chars (YYYYNNNNNC or NNNNNNNNC)
+    pattern: "\\b(?:\\d{4}[A-Z]{1,2}\\d{4}[A-Z]|\\d{8,9}[A-Z])\\b"
+    norm_tag: "Singapore PDPA"
+  # Precise geolocation (PDPC Advisory Guidelines confirm location data identifying
+  # an individual = personal data under PDPA s.2)
+  - name: "SG_PDPA_JSON_LAT_PRECISION"
+    pattern: "(?i)[\"']lat[\"']\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\b"
+    norm_tag: "Singapore PDPA"
+  - name: "SG_PDPA_JSON_LNG_PRECISION"
+    pattern: "(?i)[\"'](?:lng|lon)[\"']\\s*:\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}\\b"
+    norm_tag: "Singapore PDPA"
+  - name: "SG_PDPA_LOCATION_CSV_PAIR"
+    pattern: "(?i)\\blocation\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*,\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "Singapore PDPA"
+  - name: "SG_PDPA_QUERYSTRING_LAT_LONG"
+    pattern: "(?i)latitude=[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*&\\s*longitude=[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
     norm_tag: "Singapore PDPA"
 
-# ML terms: personal data, PDPC, DNC, consent.
+# ML terms: EN — Singapore PDPA vocabulary, DNC, 2020 amendment additions.
 terms:
   - text: "personal data"
     label: sensitive
@@ -26,15 +69,25 @@ terms:
     label: sensitive
   - text: "pdpc"
     label: sensitive
+  - text: "personal data protection commission"
+    label: sensitive
   - text: "data protection commission"
     label: sensitive
   - text: "do not call"
     label: sensitive
   - text: "dnc"
     label: sensitive
+  - text: "dnc registry"
+    label: sensitive
   - text: "data subject"
     label: sensitive
+  - text: "individual"
+    label: sensitive
   - text: "consent"
+    label: sensitive
+  - text: "deemed consent"
+    label: sensitive
+  - text: "legitimate interests"
     label: sensitive
   - text: "organisation"
     label: sensitive
@@ -42,13 +95,71 @@ terms:
     label: sensitive
   - text: "notification obligation"
     label: sensitive
+  - text: "mandatory breach notification"
+    label: sensitive
+  - text: "data breach"
+    label: sensitive
+  - text: "data portability"
+    label: sensitive
   - text: "nric"
+    label: sensitive
+  - text: "fin"
+    label: sensitive
+  - text: "uen"
+    label: sensitive
+  - text: "name"
+    label: sensitive
+  - text: "email"
+    label: sensitive
+  - text: "phone number"
+    label: sensitive
+  - text: "address"
+    label: sensitive
+  - text: "date of birth"
+    label: sensitive
+  - text: "identification number"
+    label: sensitive
+  - text: "passport number"
+    label: sensitive
+  - text: "financial information"
+    label: sensitive
+  - text: "health information"
+    label: sensitive
+  - text: "medical record"
+    label: sensitive
+  - text: "racial origin"
+    label: sensitive
+  - text: "religious belief"
+    label: sensitive
+  - text: "biometric data"
+    label: sensitive
+  - text: "location data"
+    label: sensitive
+  - text: "geolocation"
+    label: sensitive
+  - text: "precise geolocation"
+    label: sensitive
+  - text: "location information"
+    label: sensitive
+  - text: "ip address"
+    label: sensitive
+  - text: "device id"
+    label: sensitive
+  - text: "browsing history"
+    label: sensitive
+  - text: "data intermediary"
+    label: sensitive
+  - text: "data processor"
+    label: sensitive
+  - text: "overseas transfer"
+    label: sensitive
+  - text: "cross-border transfer"
     label: sensitive
 
 recommendation_overrides:
   - norm_tag_pattern: "Singapore PDPA"
-    base_legal: "Personal Data Protection Act 2012; PDPC"
-    risk: "Personal data; consent and purpose limitation; DNC regime."
-    recommendation: "Comply with PDPA; register with PDPC if required; implement consent and notification obligations; respect DNC."
+    base_legal: "Personal Data Protection Act 2012 (PDPA); PDPC — Personal Data Protection Commission; Amendment Act 2020 (effective 2021/2022)"
+    risk: "Personal data of individuals in Singapore in scope of PDPA. Precise coordinate-shaped values in logs/APIs are heuristic inventory signals only — not automatic PDPC classification. Mandatory breach notification (72-hour window for significant harm) applies from Feb 2021 amendment."
+    recommendation: "Specify purpose and obtain valid consent or rely on an enumerated exception; implement data protection policies and appoint a Data Protection Officer (DPO); comply with mandatory breach notification (PDPC within 3 business days if significant harm/500+ individuals); respect DNC registry; review overseas transfer obligations with counsel."
     priority: "ALTA"
-    relevant_for: "DPO, PDPC, Data Protection Officer"
+    relevant_for: "DPO, PDPC, Legal, Information Security, Product"
