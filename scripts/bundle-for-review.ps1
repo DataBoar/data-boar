@@ -245,11 +245,11 @@ try {
     }
 
     if (Test-UnsupportedBinaryFile -Extension $extension) {
-      Write-BundleLine -Writer $writer -Text "(BINARY FILE — listed but not inlined)"
+      Write-BundleLine -Writer $writer -Text "(BINARY FILE - listed but not inlined)"
       continue
     }
 
-    Write-BundleLine -Writer $writer -Text "(UNRECOGNIZED FILE TYPE — listed but not inlined)"
+    Write-BundleLine -Writer $writer -Text "(UNRECOGNIZED FILE TYPE - listed but not inlined)"
   }
 }
 finally {
