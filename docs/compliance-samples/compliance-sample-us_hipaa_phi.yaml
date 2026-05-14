@@ -1,0 +1,274 @@
+# US HIPAA / PHI — sample compliance profile
+#
+# Target audience: US covered entities (health plans, health care clearinghouses,
+# health care providers), business associates, and any organisation processing
+# Protected Health Information (PHI) under the Health Insurance Portability and
+# Accountability Act of 1996 (HIPAA) and the HITECH Act 2009.
+#
+# How to use:
+#   1. Set in your main config:
+#        regex_overrides_file: path/to/compliance-sample-us_hipaa_phi.yaml
+#        ml_patterns_file: path/to/compliance-sample-us_hipaa_phi.yaml
+#   2. Merge the recommendation_overrides list below into your config under
+#      report.recommendation_overrides.
+#
+# Legal scope:
+#   - HIPAA Privacy Rule (45 CFR Part 164, Subpart E): governs use and
+#     disclosure of PHI by covered entities and business associates.
+#   - HIPAA Security Rule (45 CFR Part 164, Subpart C): administrative,
+#     physical, and technical safeguards for electronic PHI (ePHI).
+#   - HIPAA Breach Notification Rule (45 CFR §§ 164.400-414): notification to
+#     individuals (60 days), HHS OCR, and media (if > 500 individuals in a state).
+#   - HITECH Act (2009): strengthens enforcement, extends Security Rule to
+#     business associates directly, introduces tiered civil monetary penalties.
+#   - Enforcement: HHS Office for Civil Rights (OCR); state attorneys general.
+#   - PHI = individually identifiable health information (18 identifiers under
+#     Safe Harbor de-identification standard, 45 CFR § 164.514(b)(2)).
+#   - Special sensitivity: psychotherapy notes (45 CFR § 164.508(a)(2));
+#     substance use disorder records (42 CFR Part 2); reproductive health;
+#     genetic information (GINA — 45 CFR § 164.502(a)(5)(i)).
+#
+# Regex design:
+#   - US_HIPAA_NPI: National Provider Identifier — 10-digit number, contextual
+#     (preceded by "NPI" or "national provider"); ISO 17533.
+#   - US_HIPAA_DEA: DEA Registration Number — 2 uppercase letters + 7 digits,
+#     contextual prefix "DEA"; not a standalone health identifier but common in
+#     prescriber workflows.
+#   - US_HIPAA_MRN: Medical Record Number — alphanumeric 6-12 chars with
+#     contextual "MRN" prefix; institutions vary widely in format.
+#   - US_HIPAA_ICD10: ICD-10-CM diagnosis code — letter + 2 digits + optional
+#     decimal + 1-4 chars; contextual prefix "ICD" or "diagnosis code".
+#   - Precise geolocation: same four-decimal-place geometry as
+#     compliance-sample-us_va_vcdpa.yaml. Geographic data smaller than state
+#     level is one of the 18 PHI identifiers (Safe Harbor item 3);
+#     coordinates in EHR/log data are an inventory signal for PHI exposure.
+#
+# Use double-quoted YAML with escaped backslashes.
+
+regex:
+  - name: "US_HIPAA_NPI"
+    # National Provider Identifier: 10-digit number with contextual prefix
+    pattern: "\\b(?:NPI|national\\s+provider(?:\\s+identifier)?)\\s*[:#]?\\s*\\d{10}\\b"
+    norm_tag: "HIPAA PHI"
+  - name: "US_HIPAA_DEA"
+    # DEA registration number: 2 uppercase letters + 7 digits (contextual)
+    pattern: "\\b(?:DEA|dea\\s*reg(?:istration)?)\\s*[:#]?\\s*[A-Z]{2}\\d{7}\\b"
+    norm_tag: "HIPAA PHI"
+  - name: "US_HIPAA_MRN"
+    # Medical record number: 6-12 alphanumeric chars with contextual prefix
+    pattern: "\\b(?:MRN|medical\\s+record\\s+(?:no|num|number|id))\\s*[:#]?\\s*[A-Z0-9]{6,12}\\b"
+    norm_tag: "HIPAA PHI"
+  - name: "US_HIPAA_ICD10"
+    # ICD-10-CM diagnosis code with contextual prefix
+    pattern: "\\b(?:ICD-?10|diagnosis\\s+code)\\s*[:#]?\\s*[A-Z]\\d{2}\\.?[A-Z0-9]{1,4}\\b"
+    norm_tag: "HIPAA PHI"
+  # Precise geolocation — geographic data < state level is PHI Safe Harbor identifier #3
+  # (45 CFR § 164.514(b)(2)(i)) — same four-decimal geometry as reference VCDPA sample
+  - name: "HIPAA_JSON_LAT_PRECISION"
+    pattern: "(?i)[\"']lat[\"']\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\b"
+    norm_tag: "HIPAA PHI"
+  - name: "HIPAA_JSON_LNG_PRECISION"
+    pattern: "(?i)[\"'](?:lng|lon)[\"']\\s*:\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}\\b"
+    norm_tag: "HIPAA PHI"
+  - name: "HIPAA_LOCATION_CSV_PAIR"
+    pattern: "(?i)\\blocation\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*,\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "HIPAA PHI"
+  - name: "HIPAA_QUERYSTRING_LAT_LONG"
+    pattern: "(?i)latitude=[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*&\\s*longitude=[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "HIPAA PHI"
+
+# ML terms: English, covering HIPAA/HITECH vocabulary, PHI identifiers, safeguard
+# categories, enforcement, special-sensitivity subcategories, and de-identification.
+terms:
+  - text: "protected health information"
+    label: sensitive
+  - text: "PHI"
+    label: sensitive
+  - text: "ePHI"
+    label: sensitive
+  - text: "electronic PHI"
+    label: sensitive
+  - text: "covered entity"
+    label: sensitive
+  - text: "business associate"
+    label: sensitive
+  - text: "business associate agreement"
+    label: sensitive
+  - text: "BAA"
+    label: sensitive
+  - text: "health record"
+    label: sensitive
+  - text: "medical record"
+    label: sensitive
+  - text: "health information"
+    label: sensitive
+  - text: "individually identifiable health information"
+    label: sensitive
+  - text: "HIPAA"
+    label: sensitive
+  - text: "HITECH"
+    label: sensitive
+  - text: "Privacy Rule"
+    label: sensitive
+  - text: "Security Rule"
+    label: sensitive
+  - text: "Breach Notification Rule"
+    label: sensitive
+  - text: "45 CFR Part 164"
+    label: sensitive
+  - text: "HHS OCR"
+    label: sensitive
+  - text: "Office for Civil Rights"
+    label: sensitive
+  - text: "minimum necessary"
+    label: sensitive
+  - text: "Notice of Privacy Practices"
+    label: sensitive
+  - text: "NPP"
+    label: sensitive
+  - text: "treatment payment operations"
+    label: sensitive
+  - text: "TPO"
+    label: sensitive
+  - text: "safe harbor"
+    label: sensitive
+  - text: "expert determination"
+    label: sensitive
+  - text: "de-identification"
+    label: sensitive
+  - text: "re-identification"
+    label: sensitive
+  - text: "limited data set"
+    label: sensitive
+  - text: "data use agreement"
+    label: sensitive
+  - text: "DUA"
+    label: sensitive
+  - text: "NPI"
+    label: sensitive
+  - text: "national provider identifier"
+    label: sensitive
+  - text: "DEA number"
+    label: sensitive
+  - text: "medical record number"
+    label: sensitive
+  - text: "MRN"
+    label: sensitive
+  - text: "ICD-10"
+    label: sensitive
+  - text: "diagnosis code"
+    label: sensitive
+  - text: "health plan"
+    label: sensitive
+  - text: "health insurance"
+    label: sensitive
+  - text: "beneficiary number"
+    label: sensitive
+  - text: "psychotherapy notes"
+    label: sensitive
+  - text: "substance use disorder"
+    label: sensitive
+  - text: "42 CFR Part 2"
+    label: sensitive
+  - text: "reproductive health"
+    label: sensitive
+  - text: "genetic information"
+    label: sensitive
+  - text: "GINA"
+    label: sensitive
+  - text: "mental health record"
+    label: sensitive
+  - text: "biometric identifier"
+    label: sensitive
+  - text: "EHR"
+    label: sensitive
+  - text: "EMR"
+    label: sensitive
+  - text: "electronic health record"
+    label: sensitive
+  - text: "electronic medical record"
+    label: sensitive
+  - text: "health information exchange"
+    label: sensitive
+  - text: "HIE"
+    label: sensitive
+  - text: "patient data"
+    label: sensitive
+  - text: "patient rights"
+    label: sensitive
+  - text: "right of access"
+    label: sensitive
+  - text: "right to amend"
+    label: sensitive
+  - text: "accounting of disclosures"
+    label: sensitive
+  - text: "authorization"
+    label: sensitive
+  - text: "disclosure"
+    label: sensitive
+  - text: "administrative safeguards"
+    label: sensitive
+  - text: "physical safeguards"
+    label: sensitive
+  - text: "technical safeguards"
+    label: sensitive
+  - text: "risk analysis"
+    label: sensitive
+  - text: "risk management"
+    label: sensitive
+  - text: "access controls"
+    label: sensitive
+  - text: "audit controls"
+    label: sensitive
+  - text: "integrity controls"
+    label: sensitive
+  - text: "transmission security"
+    label: sensitive
+  - text: "encryption"
+    label: sensitive
+  - text: "breach notification"
+    label: sensitive
+  - text: "unsecured PHI"
+    label: sensitive
+  - text: "civil monetary penalty"
+    label: sensitive
+  - text: "willful neglect"
+    label: sensitive
+  - text: "corrective action plan"
+    label: sensitive
+  - text: "CAP"
+    label: sensitive
+  - text: "health care operations"
+    label: sensitive
+  - text: "payment"
+    label: sensitive
+  - text: "treatment"
+    label: sensitive
+  - text: "workforce training"
+    label: sensitive
+  - text: "privacy officer"
+    label: sensitive
+  - text: "security officer"
+    label: sensitive
+  - text: "HIPAA compliant"
+    label: sensitive
+  - text: "admission date"
+    label: sensitive
+  - text: "discharge date"
+    label: sensitive
+  - text: "date of birth"
+    label: sensitive
+  - text: "date of death"
+    label: sensitive
+  - text: "ZIP code"
+    label: sensitive
+  - text: "geographic subdivisions"
+    label: sensitive
+
+recommendation_overrides:
+  - norm_tag_pattern: "HIPAA PHI"
+    base_legal: "Health Insurance Portability and Accountability Act of 1996 (HIPAA); HITECH Act 2009; Privacy Rule (45 CFR Part 164 Subpart E); Security Rule (45 CFR Part 164 Subpart C); Breach Notification Rule (45 CFR §§ 164.400-414); Enforcement Rule (45 CFR Part 160); HHS Office for Civil Rights (OCR). Special sensitivity: psychotherapy notes (45 CFR § 164.508(a)(2)); substance use disorder records (42 CFR Part 2); genetic information (GINA, 45 CFR § 164.502(a)(5)(i))."
+    risk: "Protected Health Information (PHI) detected — individually identifiable health information subject to HIPAA. Includes 18 Safe Harbor identifiers: names, geographic data smaller than state (including coordinates), dates (except year), phone/fax, email, SSN, MRN, health plan beneficiary numbers, account numbers, certificate/license numbers, vehicle/device identifiers, URLs, IP addresses, biometric identifiers, full-face photographs, and unique codes. ePHI requires Security Rule safeguards. Geolocation coordinates in logs or APIs are a heuristic inventory signal for geographic PHI (Safe Harbor item 3); not a classification — scope with HIPAA counsel. Breach of unsecured PHI triggers notification within 60 days to individuals, HHS OCR, and (for > 500 in a state) media."
+    recommendation: "Confirm covered-entity or business-associate status; execute BAA with all downstream processors; apply minimum-necessary standard to all disclosures; implement Privacy Rule access, amendment, and accounting-of-disclosures rights (45 CFR §§ 164.524-528); document Notice of Privacy Practices (NPP) and distribute to patients; conduct Security Rule risk analysis and risk management (45 CFR §§ 164.308(a)(1)); implement administrative, physical, and technical safeguards for ePHI; apply encryption or equivalent measures to render PHI unusable per Breach Notification safe harbour; notify HHS OCR within 60 days of breach discovery (45 CFR § 164.412); for psychotherapy notes and substance-use records, obtain separate written authorisation; for genetic data, apply GINA restrictions; maintain HIPAA compliance programme with workforce training and designated Privacy/Security Officers."
+    priority: "ALTA"
+    relevant_for: "Privacy Officer, Security Officer, Legal, Health IT, Compliance, Business Associates, EHR/EMR vendors, pharma and insurance data teams"
