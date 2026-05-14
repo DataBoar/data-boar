@@ -5,7 +5,11 @@ from core.scanner import DataScanner
 
 def test_cpf_detection():
     scanner = DataScanner()
-    result = scanner.scan_column("cpf", "123.456.789-00")
+    # Public-domain CPF fixture with valid Mod-11 check digits (also used in
+    # tests/test_brazilian_cpf.py and tests/test_security.py); required after
+    # commit 6103764 introduced the _CHECKSUM_GATED_PATTERNS gate so that
+    # shape-only sequential digits no longer pass as LGPD_CPF.
+    result = scanner.scan_column("cpf", "390.533.447-05")
     assert result["sensitivity_level"] == "HIGH"
     assert "LGPD_CPF" in result.get("pattern_detected", "") or "CPF" in result.get(
         "pattern_detected", ""

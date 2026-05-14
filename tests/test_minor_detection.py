@@ -152,7 +152,9 @@ class TestMinorDetectionDoesNotBreakExisting(unittest.TestCase):
 
     def test_cpf_still_high(self):
         scanner = DataScanner()
-        result = scanner.scan_column("documento", "123.456.789-00")
+        # Public-domain CPF with valid Mod-11 check digits (390.533.447-05);
+        # required after commit 6103764 added the checksum gate to LGPD_CPF.
+        result = scanner.scan_column("documento", "390.533.447-05")
         self.assertEqual(result["sensitivity_level"], "HIGH")
         self.assertIn("CPF", result.get("pattern_detected", ""))
 

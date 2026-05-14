@@ -104,11 +104,18 @@ La la la"""
         self.assertIn(result["sensitivity_level"], ("LOW", "MEDIUM"))
 
     def test_real_cpf_in_lyrics_still_high(self):
-        """Strong PII (CPF) in content that looks like lyrics should still be HIGH."""
+        """Strong PII (CPF) in content that looks like lyrics should still be HIGH.
+
+        Uses the canonical public CPF fixture 390.533.447-05 (Mod-11 valid).
+        After commit 6103764 the LGPD_CPF pattern is checksum-gated, so the
+        previous shape-only fixture (123.456.789-00) was correctly rejected
+        as a false positive; this test now exercises the real-CPF path the
+        name implies.
+        """
         scanner = DataScanner()
         lyrics_with_cpf = """Verse 1
         Chorus
-        The CPF is 123.456.789-00 for the form
+        The CPF is 390.533.447-05 for the form
         La la la"""
         result = scanner.scan_column("form_data", lyrics_with_cpf)
         self.assertEqual(result["sensitivity_level"], "HIGH")
