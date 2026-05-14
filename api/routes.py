@@ -9,7 +9,11 @@ unprefixed /, /config, … redirect to the
 negotiated locale prefix. API: POST /scan and /start (optional tenant/technician tags), GET /status
 (JSON includes ``audit_log`` sampling posture), /report, /list, GET /reports/{session_id},
 POST /scan_database (optional tenant/technician),
-PATCH /sessions/{session_id} and /sessions/{session_id}/technician for metadata updates. On startup load
+PATCH /sessions/{session_id} and /sessions/{session_id}/technician for metadata updates.
+Findings export (unified JSON/CSV): GET /findings (latest session), GET /findings/csv,
+GET /findings/{session_id}, GET /findings/{session_id}/csv — async StreamingResponse, unified schema
+with ``source_type`` discriminator and Phase 1 identity fields (``source_mtime_ns``, ``source_size``,
+``content_fingerprint``). On startup load
 config (config.yaml or CONFIG_PATH) and create a singleton AuditEngine.
 
 Path safety: session_id is validated before use in file paths. Report paths use
@@ -25,6 +29,7 @@ Security: default middleware adds X-Content-Type-Options, X-Frame-Options, Conte
 Referrer-Policy, Permissions-Policy, and Strict-Transport-Security (only when served over HTTPS).
 """
 
+import io
 import os
 import re
 import secrets
@@ -43,6 +48,7 @@ from fastapi.responses import (
     JSONResponse,
     RedirectResponse,
     Response,
+    StreamingResponse,
 )
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -969,6 +975,10 @@ def _is_api_or_asset_path(path: str) -> bool:
         return True
     if path.startswith("/about/json"):
         return True
+    if path == "/findings" or path == "/findings/csv":
+        return True
+    if path.startswith("/findings/"):
+        return True
     if path.startswith("/openapi") or path in ("/docs", "/redoc"):
         return True
     return False
@@ -1246,6 +1256,168 @@ async def list_sessions_api(sort: str = "date_desc"):
     if (sort or "").strip().lower() == "date_asc":
         sessions = list(reversed(sessions))
     return {"sessions": sessions}
+
+
+# ---------------------------------------------------------------------------
+# Findings export endpoints (JSON + CSV) — unified schema, async
+# GET /findings               → last session findings as JSON
+# GET /findings/csv           → last session findings as CSV download
+# GET /findings/{session_id}  → specific session findings as JSON
+# GET /findings/{session_id}/csv → specific session findings as CSV download
+# ---------------------------------------------------------------------------
+
+_FINDINGS_UNIFIED_FIELDS = [
+    "id",
+    "session_id",
+    "source_type",
+    "target_name",
+    "path",
+    "file_name",
+    "data_type",
+    "schema_name",
+    "table_name",
+    "column_name",
+    "sensitivity_level",
+    "pattern_detected",
+    "norm_tag",
+    "ml_confidence",
+    "source_mtime_ns",
+    "source_size",
+    "content_fingerprint",
+    "created_at",
+]
+
+
+_FINDINGS_CSV_MEDIA_TYPE = "text/csv; charset=utf-8"
+
+
+def _findings_to_unified(
+    db_findings: list[dict], fs_findings: list[dict]
+) -> list[dict]:
+    """Merge database + filesystem findings into the unified schema for export.
+
+    Fields present only in one source type are filled with None in the other.
+    ``source_type`` is added so consumers can distinguish origin.
+    ``created_at`` is serialised to ISO-8601 string when it is a datetime object.
+    """
+    rows: list[dict] = []
+    for f in db_findings:
+        row = dict.fromkeys(_FINDINGS_UNIFIED_FIELDS)
+        row.update(f)
+        row["source_type"] = "database"
+        if isinstance(row.get("created_at"), datetime):
+            row["created_at"] = row["created_at"].isoformat()
+        rows.append({k: row.get(k) for k in _FINDINGS_UNIFIED_FIELDS})
+    for f in fs_findings:
+        row = dict.fromkeys(_FINDINGS_UNIFIED_FIELDS)
+        row.update(f)
+        row["source_type"] = "filesystem"
+        if isinstance(row.get("created_at"), datetime):
+            row["created_at"] = row["created_at"].isoformat()
+        rows.append({k: row.get(k) for k in _FINDINGS_UNIFIED_FIELDS})
+    return rows
+
+
+def _resolve_session_for_findings(engine, session_id: str | None) -> str | None:
+    """Return the session_id to use for a findings export (explicit or latest)."""
+    if session_id:
+        _validate_session_id(session_id)
+        return session_id
+    sid = getattr(engine.db_manager, "current_session_id", None)
+    if sid:
+        return sid
+    sessions = engine.db_manager.list_sessions()
+    return sessions[0]["session_id"] if sessions else None
+
+
+def _build_findings_csv(rows: list[dict]) -> str:
+    """Serialise a list of unified finding dicts to a CSV string (UTF-8)."""
+    import csv as _csv
+
+    buf = io.StringIO()
+    writer = _csv.DictWriter(
+        buf,
+        fieldnames=_FINDINGS_UNIFIED_FIELDS,
+        extrasaction="ignore",
+        lineterminator="\r\n",
+    )
+    writer.writeheader()
+    if rows:
+        writer.writerows(rows)
+    return buf.getvalue()
+
+
+@app.get("/findings", responses=_NOT_FOUND_404)
+async def get_findings_latest():
+    """Return all findings for the most recent scan session as a unified JSON array.
+
+    Each item contains ``source_type`` (``database`` or ``filesystem``),
+    common fields (``sensitivity_level``, ``pattern_detected``, ``norm_tag``,
+    ``ml_confidence``) and source-specific fields (``path``/``file_name`` for
+    filesystem; ``schema_name``/``table_name``/``column_name`` for database).
+    Fields not applicable to a source type are ``null``.
+    """
+    engine = _get_engine()
+    sid = _resolve_session_for_findings(engine, None)
+    if not sid:
+        raise HTTPException(status_code=404, detail="No scan sessions found.")
+    db_f, fs_f, _ = engine.db_manager.get_findings(sid)
+    rows = _findings_to_unified(db_f, fs_f)
+    return {"session_id": sid, "count": len(rows), "findings": rows}
+
+
+@app.get("/findings/csv", responses=_NOT_FOUND_404)
+async def get_findings_latest_csv():
+    """Download all findings for the most recent session as a UTF-8 CSV attachment."""
+    engine = _get_engine()
+    sid = _resolve_session_for_findings(engine, None)
+    if not sid:
+        raise HTTPException(status_code=404, detail="No scan sessions found.")
+    db_f, fs_f, _ = engine.db_manager.get_findings(sid)
+    rows = _findings_to_unified(db_f, fs_f)
+    csv_content = _build_findings_csv(rows)
+    safe_sid = re.sub(r"[^\w-]", "_", sid)[:64]
+    filename = f"findings_{safe_sid}.csv"
+    return StreamingResponse(
+        iter([csv_content.encode("utf-8")]),
+        media_type=_FINDINGS_CSV_MEDIA_TYPE,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@app.get("/findings/{session_id}", responses=_SESSION_RESPONSES)
+async def get_findings_by_session(session_id: str):
+    """Return all findings for ``session_id`` as a unified JSON array.
+
+    See ``GET /findings`` for the schema description.
+    """
+    _validate_session_id(session_id)
+    engine = _get_engine()
+    db_f, fs_f, _ = engine.db_manager.get_findings(session_id)
+    if not db_f and not fs_f:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No findings for session {session_id}.",
+        )
+    rows = _findings_to_unified(db_f, fs_f)
+    return {"session_id": session_id, "count": len(rows), "findings": rows}
+
+
+@app.get("/findings/{session_id}/csv", responses=_SESSION_RESPONSES)
+async def get_findings_by_session_csv(session_id: str):
+    """Download all findings for ``session_id`` as a UTF-8 CSV attachment."""
+    _validate_session_id(session_id)
+    engine = _get_engine()
+    db_f, fs_f, _ = engine.db_manager.get_findings(session_id)
+    rows = _findings_to_unified(db_f, fs_f)
+    csv_content = _build_findings_csv(rows)
+    safe_sid = re.sub(r"[^\w-]", "_", session_id)[:64]
+    filename = f"findings_{safe_sid}.csv"
+    return StreamingResponse(
+        iter([csv_content.encode("utf-8")]),
+        media_type=_FINDINGS_CSV_MEDIA_TYPE,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 class SessionTenantUpdate(BaseModel):

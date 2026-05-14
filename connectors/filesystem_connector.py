@@ -5,6 +5,7 @@ On permission error: save_failure with reason permission_denied.
 Scans all compatible/supported file types by extension; unknown types get path/name-only analysis.
 """
 
+import hashlib
 import os
 import tempfile
 import zipfile
@@ -31,6 +32,18 @@ DEFAULT_MAX_INNER_SIZE = 10_000_000
 # Clamp range for max_inner_size (config may be validated in loader; this is defense-in-depth).
 MIN_MAX_INNER_SIZE = 1_000_000  # 1 MB
 MAX_MAX_INNER_SIZE = 500_000_000  # 500 MB
+
+
+def _file_content_fingerprint(raw_bytes: bytes | None) -> str | None:
+    """Return blake2s(raw_bytes, digest_size=8).hexdigest() for change detection.
+
+    Returns None when raw_bytes is None or empty. Not a cryptographic commitment
+    (see ADR-0051): used only as a fast equality probe between scan runs.
+    """
+    if not raw_bytes:
+        return None
+    return hashlib.blake2s(raw_bytes, digest_size=8).hexdigest()
+
 
 # Plain text and markup (read as text with errors=replace)
 _TEXT_EXTENSIONS = {
@@ -661,6 +674,16 @@ class FilesystemConnector:
             effective_ext = choose_effective_rich_media_extension(
                 effective_ext, self.use_content_type, file_path
             )
+            # Collect file-identity stats before read (Phase 1 — ADR-0051).
+            # Stat is best-effort; failure never aborts the scan.
+            _mtime_ns: int | None = None
+            _size: int | None = None
+            try:
+                _stat = file_path.stat()
+                _mtime_ns = _stat.st_mtime_ns
+                _size = _stat.st_size
+            except OSError:
+                pass
             content = _read_text_sample(
                 file_path,
                 effective_ext,
@@ -675,6 +698,17 @@ class FilesystemConnector:
             res = self.scanner.scan_file_content(content, file_path)
             if res is None:
                 continue
+            # Compute content fingerprint from the raw byte prefix of the sample.
+            # Uses the text content encoded back to UTF-8 as a best-effort proxy for
+            # raw bytes (avoids re-reading the file; fast and consistent per session).
+            _fingerprint: str | None = None
+            try:
+                if content:
+                    _fingerprint = _file_content_fingerprint(
+                        content.encode("utf-8", errors="replace")
+                    )
+            except Exception:
+                pass
             self.db_manager.save_finding(
                 source_type="filesystem",
                 target_name=target_name,
@@ -685,6 +719,9 @@ class FilesystemConnector:
                 pattern_detected=res["pattern_detected"],
                 norm_tag=res.get("norm_tag", ""),
                 ml_confidence=res.get("ml_confidence", 0),
+                source_mtime_ns=_mtime_ns,
+                source_size=_size,
+                content_fingerprint=_fingerprint,
             )
             try:
                 from utils.logger import log_finding

@@ -561,3 +561,95 @@ def test_load_config_file(config_path=None):
     config = load_config(path)
     assert "targets" in config
     assert "file_scan" in config
+
+
+# ---------------------------------------------------------------------------
+# Phase 1 incremental-scan schema: file-identity fields on FilesystemFinding
+# ---------------------------------------------------------------------------
+
+
+def test_filesystem_finding_has_file_identity_columns(tmp_path):
+    """FilesystemFinding rows accept and persist source_mtime_ns, source_size,
+    content_fingerprint — Phase 1 of incremental scan (ADR-0051).
+    """
+    from core.database import LocalDBManager
+
+    db_path = str(tmp_path / "identity_test.db")
+    mgr = LocalDBManager(db_path)
+    try:
+        session_id = "idem-test-001"
+        mgr.set_current_session_id(session_id)
+        mgr.create_session_record(session_id)
+        mgr.save_finding(
+            "filesystem",
+            target_name="target-docs",
+            path="/tmp/docs",
+            file_name="test.txt",
+            data_type="TXT",
+            sensitivity_level="HIGH",
+            pattern_detected="CPF",
+            norm_tag="LGPD",
+            ml_confidence=80,
+            source_mtime_ns=1_700_000_000_000_000_000,
+            source_size=1024,
+            content_fingerprint="abcdef0123456789",
+        )
+        _, fs_findings, _ = mgr.get_findings(session_id)
+        assert len(fs_findings) == 1
+        f = fs_findings[0]
+        assert f.get("source_mtime_ns") == 1_700_000_000_000_000_000
+        assert f.get("source_size") == 1024
+        assert f.get("content_fingerprint") == "abcdef0123456789"
+    finally:
+        mgr.dispose()
+
+
+def test_filesystem_finding_identity_nullable(tmp_path):
+    """FilesystemFinding rows without file-identity fields (legacy behaviour)
+    remain valid — fields are nullable (ADR-0051 backward-compat).
+    """
+    from core.database import LocalDBManager
+
+    db_path = str(tmp_path / "identity_null_test.db")
+    mgr = LocalDBManager(db_path)
+    try:
+        session_id = "idem-test-null"
+        mgr.set_current_session_id(session_id)
+        mgr.create_session_record(session_id)
+        mgr.save_finding(
+            "filesystem",
+            target_name="target-docs",
+            path="/tmp/docs",
+            file_name="legacy.txt",
+            data_type="TXT",
+            sensitivity_level="MEDIUM",
+            pattern_detected="EMAIL",
+            norm_tag="",
+            ml_confidence=0,
+            # No source_mtime_ns / source_size / content_fingerprint
+        )
+        _, fs_findings, _ = mgr.get_findings(session_id)
+        assert len(fs_findings) == 1
+        f = fs_findings[0]
+        assert f.get("source_mtime_ns") is None
+        assert f.get("source_size") is None
+        assert f.get("content_fingerprint") is None
+    finally:
+        mgr.dispose()
+
+
+def test_file_content_fingerprint_helper():
+    """_file_content_fingerprint returns a 16-char hex string for non-empty bytes."""
+    from connectors.filesystem_connector import _file_content_fingerprint
+
+    fp = _file_content_fingerprint(b"hello world")
+    assert fp is not None
+    assert len(fp) == 16
+    assert all(c in "0123456789abcdef" for c in fp)
+    # Same input -> same fingerprint (deterministic)
+    assert _file_content_fingerprint(b"hello world") == fp
+    # Different input -> different fingerprint (with overwhelming probability)
+    assert _file_content_fingerprint(b"hello worl!") != fp
+    # None/empty -> None
+    assert _file_content_fingerprint(None) is None  # type: ignore[arg-type]
+    assert _file_content_fingerprint(b"") is None

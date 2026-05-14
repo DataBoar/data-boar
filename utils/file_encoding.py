@@ -10,6 +10,7 @@ Usage:
 - Pattern files (regex_overrides_file, ml_patterns_file, etc.): use read_text_with_encoding()
   with encoding from config (default utf-8); errors="replace" avoids crashes on bad bytes.
 """
+
 from pathlib import Path
 from typing import Sequence
 

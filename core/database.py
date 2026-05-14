@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy import (
+    BigInteger,
     Boolean,
     Column,
     DateTime,
@@ -91,6 +92,15 @@ class FilesystemFinding(Base):
     pattern_detected = Column(String(100))
     norm_tag = Column(String(100))
     ml_confidence = Column(Integer)
+    # File-identity fields for incremental scan (Phase 1 — additive, nullable).
+    # NULL means the scan predates Phase 1 or stat/fingerprint collection failed.
+    source_mtime_ns = Column(BigInteger, nullable=True)
+    # st_mtime_ns at scan time (nanoseconds since epoch).
+    source_size = Column(BigInteger, nullable=True)
+    # st_size at scan time (bytes).
+    content_fingerprint = Column(String(16), nullable=True)
+    # blake2s(sampled_bytes, digest_size=8).hexdigest() — change detection, not
+    # cryptographic evidence. See ADR-0051.
     created_at = Column(DateTime, default=_utc_now)
 
 
