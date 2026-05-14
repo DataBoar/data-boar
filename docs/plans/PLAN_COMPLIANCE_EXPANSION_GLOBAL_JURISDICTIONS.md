@@ -109,7 +109,7 @@ All new YAML samples **must** follow the canonical geometry established across t
 
 ```
 Sprint A (done):  A1 India → A2 POPIA → A3 Turkey → A4 UAE → A5 NZ → A6 PH → A7 CO → A8 COPPA
-Sprint B:         B1 Ukraine ✅ → B2 HIPAA ✅ → B3 FERPA → B4 China PIPL → B5 Korea PIPA ✅
+Sprint B:         B1 Ukraine ✅ → B2 HIPAA ✅ → B3 FERPA ✅ → B4 China PIPL → B5 Korea PIPA ✅
 Sprint C:         B6 Mexico ✅ → B7 Thailand → B8 Indonesia → B9 Quebec Law 25
 Sprint D:         Group 2 remaining (Vietnam, Malaysia, Argentina reform, Colombia, Chile)
 Sprint E:         Group 3 monitoring + ML/DL backfill

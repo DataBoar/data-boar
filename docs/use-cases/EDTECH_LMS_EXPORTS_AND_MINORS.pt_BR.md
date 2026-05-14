@@ -26,11 +26,13 @@ Storyboard para **plataformas de ensino** que exportam **listas**, **notas** e c
 
 ## Oportunidade para parceiros
 
-Consultorias agregam uma **passagem Boar com escopo** ao desenho de **programa de privacidade** para EdTech em Series A–B ou para higiene de RFP de **rede escolar**.
+Consultorias agregam uma **passagem Boar com escopo** ao desenho de **programa de privacidade** para EdTech em Series A–B ou para higiene de RFP de **rede escolar**. Para instituições EUA e fornecedores com papel de *school official*, combine a passagem com texto de `norm_tag` focado em FERPA via [compliance-sample-us_ferpa.yaml](../compliance-samples/compliance-sample-us_ferpa.yaml).
 
 ## Alinhamento de produto (maintainers)
 
 Sobreposição forte com **alinhamento técnico a privacidade infantil nos EUA** e com temas de roadmap de **deteção de menores** — entregue comportamento **documentado e conservador** e **limites claros** em [MINOR_DETECTION.pt_BR.md](../MINOR_DETECTION.pt_BR.md) e [USAGE.pt_BR.md](../USAGE.pt_BR.md). Sequenciamento: [docs/README.pt_BR.md](../README.pt_BR.md) **Internal and reference**.
+
+**FERPA (registros escolares EUA):** Use [compliance-sample-us_ferpa.yaml](../compliance-samples/compliance-sample-us_ferpa.yaml) para `norm_tag` **FERPA** (valores em formato SSN, IDs de aluno com contexto, rótulos de data de nascimento, vocabulário LMS/SIS, geolocalização em 4 padrões). Use em conjunto [compliance-sample-us_ftc_coppa.yaml](../compliance-samples/compliance-sample-us_ftc_coppa.yaml) quando houver recolha online para menores de 13 anos. Índice: [COMPLIANCE_FRAMEWORKS.pt_BR.md](../COMPLIANCE_FRAMEWORKS.pt_BR.md#lista-de-amostras-e-links) ([EN](../COMPLIANCE_FRAMEWORKS.md#list-of-samples-and-links)).
 
 **Sinais fortes:** *hints* de menor, amostras de jurisdição, JSON de auditoria / JSON GRC para *data room* de aquisição ([GRC_EXECUTIVE_REPORT_SCHEMA.pt_BR.md](../GRC_EXECUTIVE_REPORT_SCHEMA.pt_BR.md)).
 

@@ -26,11 +26,13 @@ Storyboard for **education platforms** exporting **rosters**, **grades**, and **
 
 ## Partner opportunity
 
-Consultancies bundle a **scoped Boar pass** with **privacy programme** design for Series A–B EdTech or for **district** RFP hygiene.
+Consultancies bundle a **scoped Boar pass** with **privacy programme** design for Series A–B EdTech or for **district** RFP hygiene. For US institutions and school-official vendors, combine the pass with FERPA-oriented `norm_tag` wording via [compliance-sample-us_ferpa.yaml](../compliance-samples/compliance-sample-us_ferpa.yaml).
 
 ## Product alignment (maintainers)
 
 Strong overlap with **US child-privacy technical alignment** and **minor detection** roadmap themes—ship **documented, conservative** behaviour and **clear limits** in [MINOR_DETECTION.md](../MINOR_DETECTION.md) and [USAGE.md](../USAGE.md). Maintainer sequencing: [docs/README.md](../README.md) **Internal and reference**.
+
+**FERPA (US education records):** Use [compliance-sample-us_ferpa.yaml](../compliance-samples/compliance-sample-us_ferpa.yaml) for `norm_tag` **FERPA** (SSN-shaped values, contextual student IDs, DOB labels, LMS/SIS vocabulary, four-pattern geolocation). Co-apply [compliance-sample-us_ftc_coppa.yaml](../compliance-samples/compliance-sample-us_ftc_coppa.yaml) when under-13 online collection is in scope. Entry point: [COMPLIANCE_FRAMEWORKS.md](../COMPLIANCE_FRAMEWORKS.md#list-of-samples-and-links) ([pt-BR](../COMPLIANCE_FRAMEWORKS.pt_BR.md#lista-de-amostras-e-links)).
 
 **Signal strengths:** minor hints, jurisdiction samples, audit JSON / GRC JSON for acquirer data rooms ([GRC_EXECUTIVE_REPORT_SCHEMA.md](../GRC_EXECUTIVE_REPORT_SCHEMA.md)).
 

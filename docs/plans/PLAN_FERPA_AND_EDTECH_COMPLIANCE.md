@@ -107,11 +107,11 @@ The immediate deliverable for this conversation is demonstrating that Data Boar 
 
 ## Acceptance criteria (overall plan)
 
-- [ ] `compliance-sample-us_ferpa.yaml` committed and tests passing
-- [ ] `EDTECH_LMS_EXPORTS_AND_MINORS.md` updated with FERPA reference
-- [ ] FERPA row in `COMPLIANCE_FRAMEWORKS.md` table
-- [ ] `PLANS_TODO.md` updated with FERPA compliance vertical status
-- [ ] pt-BR mirrors updated
+- [x] `compliance-sample-us_ferpa.yaml` committed and tests passing
+- [x] `EDTECH_LMS_EXPORTS_AND_MINORS.md` updated with FERPA reference
+- [x] FERPA row in `COMPLIANCE_FRAMEWORKS.md` table
+- [x] `PLANS_TODO.md` updated with FERPA compliance vertical status
+- [x] pt-BR mirrors updated
 
 ---
 

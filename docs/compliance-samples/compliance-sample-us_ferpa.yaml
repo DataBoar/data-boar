@@ -1,0 +1,153 @@
+# US FERPA — sample compliance profile (education records)
+#
+# Target audience: US K-12 districts, higher-education institutions, and EdTech vendors
+# that maintain or process student education records. Statute: Family Educational
+# Rights and Privacy Act (FERPA), 20 U.S.C. § 1232g; enforcement guidance and complaints
+# via FPCO (Family Policy Compliance Office), US Department of Education.
+#
+# How to use:
+#   1. Set in your main config:
+#        regex_overrides_file: path/to/compliance-sample-us_ferpa.yaml
+#        ml_patterns_file: path/to/compliance-sample-us_ferpa.yaml
+#   2. Merge the recommendation_overrides list below into your config under
+#      report.recommendation_overrides.
+#
+# Legal scope (summary — not legal advice):
+#   - FERPA protects **education records** — records directly related to a student
+#     maintained by the institution or a party acting for it. Directory information,
+#     de-identified records, and certain law-enforcement / treatment exceptions have
+#     nuance the scanner does **not** evaluate.
+#   - The scanner flags **inventory signals** (SSN-shaped values, contextual student IDs,
+#     DOB fields, LMS/SIS vocabulary, grade/roster language). It does **not** decide
+#     whether a row is an education record, whether directory-information opt-out applies,
+#     or whether a disclosure meets a FERPA exception.
+#   - Pair with `compliance-sample-us_ftc_coppa.yaml` when under-13 online collection
+#     may co-apply; pair with `docs/MINOR_DETECTION.md` class hints for triage.
+#
+# Regex design:
+#   - FERPA_SSN: same geometry as `CCPA_SSN` in compliance-sample-us_ca_cpra.yaml
+#     (ddd-dd-dddd); common in financial-aid and legacy SIS exports — high sensitivity.
+#   - FERPA_STUDENT_ID: alphanumeric ID with contextual column-style labels only.
+#   - FERPA_DOB: date-of-birth labels with common date shapes (slash/dash; US-friendly).
+#   - Precise geolocation: four-pattern geometry from compliance-sample-us_va_vcdpa.yaml
+#     (field trips, bus tracking, campus apps — treat as inventory signal; not a FERPA
+#     legal determination).
+#
+# Use double-quoted YAML with escaped backslashes.
+
+regex:
+  - name: "FERPA_SSN"
+    pattern: "\\b\\d{3}-\\d{2}-\\d{4}\\b"
+    norm_tag: "FERPA"
+  - name: "FERPA_STUDENT_ID"
+    pattern: "(?i)\\b(?:student\\s+(?:id|identifier|no\\.?|number)|learner\\s+id|pupil\\s+id|sis\\s+(?:id|student)|enrollment\\s+(?:id|number))\\s*[:#]?\\s*[A-Z0-9]{6,12}\\b"
+    norm_tag: "FERPA"
+  - name: "FERPA_DOB"
+    pattern: "(?i)\\b(?:date\\s+of\\s+birth|d\\.?o\\.?b\\.?|birth\\s*date)\\s*[:#]?\\s*(?:\\d{1,2}[/-]\\d{1,2}[/-]\\d{2,4}|\\d{4}[/-]\\d{1,2}[/-]\\d{1,2})\\b"
+    norm_tag: "FERPA"
+  - name: "FERPA_JSON_LAT_PRECISION"
+    pattern: "(?i)[\"']lat[\"']\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\b"
+    norm_tag: "FERPA"
+  - name: "FERPA_JSON_LNG_PRECISION"
+    pattern: "(?i)[\"'](?:lng|lon)[\"']\\s*:\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}\\b"
+    norm_tag: "FERPA"
+  - name: "FERPA_LOCATION_CSV_PAIR"
+    pattern: "(?i)\\blocation\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*,\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "FERPA"
+  - name: "FERPA_QUERYSTRING_LAT_LONG"
+    pattern: "(?i)latitude=[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*&\\s*longitude=[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "FERPA"
+
+terms:
+  - text: "FERPA"
+    label: sensitive
+  - text: "family educational rights and privacy act"
+    label: sensitive
+  - text: "20 USC 1232g"
+    label: sensitive
+  - text: "FPCO"
+    label: sensitive
+  - text: "family policy compliance office"
+    label: sensitive
+  - text: "education record"
+    label: sensitive
+  - text: "education records"
+    label: sensitive
+  - text: "student record"
+    label: sensitive
+  - text: "personally identifiable information"
+    label: sensitive
+  - text: "directory information"
+    label: sensitive
+  - text: "non-directory information"
+    label: sensitive
+  - text: "eligible student"
+    label: sensitive
+  - text: "parent rights"
+    label: sensitive
+  - text: "guardian"
+    label: sensitive
+  - text: "minor student"
+    label: sensitive
+  - text: "school official"
+    label: sensitive
+  - text: "legitimate educational interest"
+    label: sensitive
+  - text: "FERPA consent"
+    label: sensitive
+  - text: "FERPA release"
+    label: sensitive
+  - text: "written consent"
+    label: sensitive
+  - text: "student id"
+    label: sensitive
+  - text: "enrollment status"
+    label: sensitive
+  - text: "transcript"
+    label: sensitive
+  - text: "grade report"
+    label: sensitive
+  - text: "gpa"
+    label: sensitive
+  - text: "grade point average"
+    label: sensitive
+  - text: "gradebook"
+    label: sensitive
+  - text: "roster"
+    label: sensitive
+  - text: "course completion"
+    label: sensitive
+  - text: "LMS"
+    label: sensitive
+  - text: "learning management system"
+    label: sensitive
+  - text: "SIS"
+    label: sensitive
+  - text: "student information system"
+    label: sensitive
+  - text: "IEP"
+    label: sensitive
+  - text: "individualized education program"
+    label: sensitive
+  - text: "504 plan"
+    label: sensitive
+  - text: "disability accommodation"
+    label: sensitive
+  - text: "financial aid"
+    label: sensitive
+  - text: "FAFSA"
+    label: sensitive
+  - text: "student loan"
+    label: sensitive
+  - text: "registrar"
+    label: sensitive
+  - text: "records request"
+    label: sensitive
+
+recommendation_overrides:
+  - norm_tag_pattern: "FERPA"
+    base_legal: "FERPA (20 U.S.C. § 1232g); FPCO — Family Policy Compliance Office, US Department of Education (complaint and guidance channel)."
+    risk: "Education records or components (e.g. SSN-shaped identifiers, contextual student IDs, dates of birth, grades, enrollment, directory or non-directory student data) — inventory signals for records that may be subject to FERPA. Directory-information opt-outs, school-official roles, and statutory exceptions are not evaluated by the scanner."
+    recommendation: "Treat findings as catalog of where student-related fields concentrate; map to responsible institutional records policy; confirm disclosures, consent, and vendor flows with FERPA counsel; document retention and subprocessors for LMS/SIS exports."
+    priority: "ALTA"
+    relevant_for: "FERPA Compliance Officer, Registrar, DPO, Legal, Student Records, EdTech vendor counsel"
