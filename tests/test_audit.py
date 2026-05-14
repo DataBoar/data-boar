@@ -5,7 +5,13 @@ from core.scanner import DataScanner
 
 def test_cpf_detection():
     scanner = DataScanner()
-    result = scanner.scan_column("cpf", "123.456.789-00")
+    # Use a checksum-valid CPF (Modulo-11). The shape `123.456.789-09` passes
+    # `core.brazilian_cpf.cpf_checksum_valid`; `123.456.789-00` does not (the d2
+    # check digit is 9, not 0). Without a valid checksum the LGPD_CPF regex no
+    # longer fires by design (commits ac0bad9 / 6e8e371) and the ML fallback
+    # masks the regex pathway under `pattern_detected="ML_DETECTED"`. Keep the
+    # behavioral assertion identical (HIGH + CPF tag) by using a valid fixture.
+    result = scanner.scan_column("cpf", "123.456.789-09")
     assert result["sensitivity_level"] == "HIGH"
     assert "LGPD_CPF" in result.get("pattern_detected", "") or "CPF" in result.get(
         "pattern_detected", ""
@@ -23,8 +29,12 @@ def test_cnpj_numeric_and_alnum_detection():
     # Enable alphanumeric CNPJ so both legacy numeric and new alnum formats are detected by regex.
     scanner = DataScanner(detection_config={"cnpj_alphanumeric": True})
 
-    # Legacy numeric CNPJ
-    numeric = "12.345.678/0001-99"
+    # Legacy numeric CNPJ — checksum-valid (Modulo-11). `12.345.678/0001-99`
+    # does NOT validate (correct check digits for base 12345678000195). Use the
+    # canonical valid form so the LGPD_CNPJ regex (which now requires checksum)
+    # actually fires; otherwise ML fallback returns `ML_DETECTED` and the
+    # `CNPJ in pattern_detected` assertion fails.
+    numeric = "12.345.678/0001-95"
     numeric_result = scanner.scan_column("cnpj", numeric)
     assert numeric_result["sensitivity_level"] == "HIGH"
     assert "CNPJ" in numeric_result.get("pattern_detected", "")

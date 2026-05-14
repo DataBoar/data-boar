@@ -104,11 +104,18 @@ La la la"""
         self.assertIn(result["sensitivity_level"], ("LOW", "MEDIUM"))
 
     def test_real_cpf_in_lyrics_still_high(self):
-        """Strong PII (CPF) in content that looks like lyrics should still be HIGH."""
+        """Strong PII (CPF) in content that looks like lyrics should still be HIGH.
+
+        Uses a checksum-valid CPF (`123.456.789-09`) so the LGPD_CPF regex
+        (which now enforces Modulo-11 — see `core.brazilian_cpf.cpf_checksum_valid`)
+        fires and short-circuits the entertainment-context downgrade to MEDIUM.
+        Without a valid checksum the regex would not match and ML alone would
+        cap at MEDIUM under entertainment context.
+        """
         scanner = DataScanner()
         lyrics_with_cpf = """Verse 1
         Chorus
-        The CPF is 123.456.789-00 for the form
+        The CPF is 123.456.789-09 for the form
         La la la"""
         result = scanner.scan_column("form_data", lyrics_with_cpf)
         self.assertEqual(result["sensitivity_level"], "HIGH")

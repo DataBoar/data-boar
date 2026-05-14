@@ -151,8 +151,12 @@ class TestMinorDetectionDoesNotBreakExisting(unittest.TestCase):
     """Ensure minor detection is additive: existing behaviour for non-minor data unchanged."""
 
     def test_cpf_still_high(self):
+        # Checksum-valid CPF (Modulo-11) — required since the LGPD_CPF regex
+        # gates on `core.brazilian_cpf.cpf_checksum_valid`. The previous fixture
+        # `123.456.789-00` is shape-only (invalid d2) and triggers the ML
+        # fallback, which masks the regex-driven CPF tag we assert below.
         scanner = DataScanner()
-        result = scanner.scan_column("documento", "123.456.789-00")
+        result = scanner.scan_column("documento", "123.456.789-09")
         self.assertEqual(result["sensitivity_level"], "HIGH")
         self.assertIn("CPF", result.get("pattern_detected", ""))
 
