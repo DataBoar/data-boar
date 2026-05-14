@@ -1,0 +1,140 @@
+---
+# Data Boar — Centralized Plugin Schema Definition
+#
+# This file is the single source of truth for what a valid Data Boar pattern plugin
+# file looks like. It is read at runtime by config/plugin_validator.py.
+#
+# Operators author custom pattern files (regex_overrides_file, ml_patterns_file,
+# dl_patterns_file, or the unified patterns_plugin_file) and this schema defines what
+# fields are valid, which are required, and what types are accepted.
+#
+# Three plugin types are defined below.  Each uses a "list" format where every item
+# is a YAML mapping.  The "unified" plugin file wraps all three under top-level keys.
+# See: docs/plans/PLAN_YAML_PLUGIN_SYSTEM.md, ADR-0052.
+
+# ---------------------------------------------------------------------------
+# regex_patterns
+# ---------------------------------------------------------------------------
+# Used by: regex_overrides_file (legacy) or the `regex_patterns:` section of
+#          patterns_plugin_file (unified).
+# Loader:  core/detector.py :: _load_regex_overrides()
+# Example: config/regex_overrides.example.yaml
+regex_patterns:
+  description: "Custom regex patterns injected into the sensitivity detection engine."
+  format: list
+  item_fields:
+    name:
+      type: string
+      required: true
+      description: >
+        Unique identifier for this pattern.
+        Used in log output and findings to identify the source rule.
+        Convention: UPPER_SNAKE_CASE (e.g. RG_BR, PLATE_MERCOSUL).
+    pattern:
+      type: string
+      required: true
+      description: >
+        Regular expression string.
+        Must use double-quoted YAML with escaped backslashes (\\b, \\d, \\s).
+        The pattern is matched against the concatenation of column name and sample text.
+    norm_tag:
+      type: string
+      required: false
+      default: "Custom"
+      description: >
+        Compliance norm tag displayed in findings (e.g. "LGPD Art. 5", "GDPR Art. 4",
+        "CCPA / Personal data context").  Defaults to "Custom" when omitted.
+
+# ---------------------------------------------------------------------------
+# ml_patterns
+# ---------------------------------------------------------------------------
+# Used by: ml_patterns_file (legacy) or the `ml_patterns:` section of
+#          patterns_plugin_file (unified).
+# Loader:  core/detector.py :: _load_ml_patterns()
+# Example: docs/sensitivity_terms.example.yaml
+ml_patterns:
+  description: >
+    Custom keyword/phrase terms for the ML-assisted sensitivity scorer.
+    Each term is compared against tokenised text; a hit raises the sensitivity score.
+  format: list
+  item_fields:
+    text:
+      type: string
+      required: true
+      description: >
+        The term or short phrase to match (case-insensitive, lowercased at load time).
+        Examples: "cpf", "cartão de crédito", "date of birth".
+    label:
+      type: string_or_int
+      required: false
+      default: "sensitive"
+      allowed_values:
+        - "sensitive"
+        - "non_sensitive"
+        - 1
+        - 0
+      description: >
+        Sensitivity label for this term.
+        "sensitive" / 1 → increases sensitivity score.
+        "non_sensitive" / 0 → can be used to suppress false positives.
+        Defaults to "sensitive" when omitted.
+
+# ---------------------------------------------------------------------------
+# dl_patterns
+# ---------------------------------------------------------------------------
+# Used by: dl_patterns_file (legacy) or the `dl_patterns:` section of
+#          patterns_plugin_file (unified).
+# Loader:  core/detector.py :: _load_dl_patterns() (same format as ml_patterns)
+# Example: docs/sensitivity_terms_sensitive_categories.example.yaml
+dl_patterns:
+  description: >
+    Additional terms for the deep-learning sensitivity layer.
+    Same field structure as ml_patterns; processed by the DL scorer rather than
+    the ML keyword scorer.
+  format: list
+  item_fields:
+    text:
+      type: string
+      required: true
+      description: "Term or phrase (case-insensitive, lowercased at load time)."
+    label:
+      type: string_or_int
+      required: false
+      default: "sensitive"
+      allowed_values:
+        - "sensitive"
+        - "non_sensitive"
+        - 1
+        - 0
+      description: "Sensitivity label (same semantics as ml_patterns.label)."
+
+# ---------------------------------------------------------------------------
+# unified_plugin_file
+# ---------------------------------------------------------------------------
+# Schema for the optional unified patterns_plugin_file config key.
+# One file may contain any combination of the three sections above.
+# Each section follows the item_fields defined for its type.
+#
+# Example skeleton:
+#
+#   regex_patterns:
+#     - name: "RG_BR"
+#       pattern: "\\b\\d{1,2}\\.?\\d{3}\\.?\\d{3}-?[0-9Xx]\\b"
+#       norm_tag: "LGPD Art. 5"
+#
+#   ml_patterns:
+#     - text: "cpf"
+#       label: "sensitive"
+#
+#   dl_patterns:
+#     - text: "dado pessoal"
+unified_plugin_file:
+  description: >
+    Schema for a unified plugin YAML file that may contain any combination of
+    regex_patterns, ml_patterns, and dl_patterns sections.
+    This is the recommended format for new deployments.
+  allowed_top_level_keys:
+    - regex_patterns
+    - ml_patterns
+    - dl_patterns
+  each_section_follows: "the item_fields defined for its corresponding type above"

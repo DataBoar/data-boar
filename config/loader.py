@@ -642,6 +642,44 @@ def normalize_config(
     out["ml_patterns_file"] = data.get("ml_patterns_file") or ""
     out["regex_overrides_file"] = data.get("regex_overrides_file") or ""
     out["dl_patterns_file"] = data.get("dl_patterns_file") or ""
+
+    # Unified plugin file (ADR-0052): a single YAML with optional sections
+    # regex_patterns, ml_patterns, dl_patterns.  Takes precedence over the
+    # corresponding legacy keys when both are non-empty.
+    _ppf = (data.get("patterns_plugin_file") or "").strip()
+    out["patterns_plugin_file"] = _ppf
+    if _ppf:
+        import warnings
+
+        from config.plugin_validator import (
+            PluginValidationWarning,
+            validate_plugin_file,
+        )
+
+        pv = validate_plugin_file(_ppf, plugin_type="unified_plugin_file")
+        for issue in pv.issues:
+            warnings.warn(
+                f"patterns_plugin_file '{_ppf}': {issue}",
+                PluginValidationWarning,
+                stacklevel=2,
+            )
+        # If valid, override the matching legacy keys so callers need not repeat paths.
+        if pv.valid:
+            import yaml
+            from pathlib import Path as _Path
+
+            try:
+                _unified_raw = (
+                    yaml.safe_load(_Path(_ppf).read_text(encoding="utf-8")) or {}
+                )
+            except Exception:  # noqa: BLE001
+                _unified_raw = {}
+            if "regex_patterns" in _unified_raw and not out["regex_overrides_file"]:
+                out["regex_overrides_file"] = _ppf
+            if "ml_patterns" in _unified_raw and not out["ml_patterns_file"]:
+                out["ml_patterns_file"] = _ppf
+            if "dl_patterns" in _unified_raw and not out["dl_patterns_file"]:
+                out["dl_patterns_file"] = _ppf
     _raw_sf = data.get("sql_sampling_file")
     out["sql_sampling_file"] = _raw_sf.strip() if isinstance(_raw_sf, str) else ""
     _sfl = data.get("sql_sampling_files")

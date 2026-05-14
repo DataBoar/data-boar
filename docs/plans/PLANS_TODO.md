@@ -27,13 +27,13 @@ Use these tags in headings to keep priorities explicit and machine-countable:
 
 Do not edit this block manually; refresh with `python scripts/plans-stats.py --write`.
 
-- **Status rows counted:** 162  (Done: 95 | Incomplete: 67)
+- **Status rows counted:** 163  (Done: 96 | Incomplete: 67)
 - **Incomplete breakdown:** Pending `⬜`=63, Tracked `🔄` / `Tracked (partially done)`=4, Under consideration=0, Backlog-marked rows=0
 
 | Horizon | Total rows | Done | Incomplete |
 | ------- | ----------: | ----: | ----------: |
 | `H0` | 40 | 33 | 7 |
-| `H1` | 9 | 7 | 2 |
+| `H1` | 10 | 8 | 2 |
 | `H2` | 0 | 0 | 0 |
 | `H3` | 108 | 50 | 58 |
 | `H4` | 0 | 0 | 0 |
@@ -395,13 +395,14 @@ Tighten runtime defaults for the API host. Implemented: default `127.0.0.1`, opt
 | 6 | **Sync strictness on failed transfer:** ensure `Sync-WorkingTree` hard-stops handler dispatch when `rsync` warns/fails (latest run had one lab laptop class host sync warning while orchestration proceeded). | ✅ Done |
 
 1. **Post-`1.7.4` short-sprint closure queue** *(healthy next slices already scoped for execution)*
-   Source plans: [`PLAN_BANDIT_SECURITY_LINTER.md`](PLAN_BANDIT_SECURITY_LINTER.md), [`PLAN_CNPJ_ALPHANUMERIC_FORMAT_VALIDATION.md`](PLAN_CNPJ_ALPHANUMERIC_FORMAT_VALIDATION.md), [`PLAN_SCOPE_IMPORT_FROM_EXPORTS.md`](PLAN_SCOPE_IMPORT_FROM_EXPORTS.md).
+   Source plans: [`PLAN_BANDIT_SECURITY_LINTER.md`](PLAN_BANDIT_SECURITY_LINTER.md), [`PLAN_CNPJ_ALPHANUMERIC_FORMAT_VALIDATION.md`](PLAN_CNPJ_ALPHANUMERIC_FORMAT_VALIDATION.md), [`PLAN_SCOPE_IMPORT_FROM_EXPORTS.md`](PLAN_SCOPE_IMPORT_FROM_EXPORTS.md), [`PLAN_YAML_PLUGIN_SYSTEM.md`](PLAN_YAML_PLUGIN_SYSTEM.md).
 
 | Sprint | Slice | Execution focus | Exit checklist | Status |
 | ------ | ----- | --------------- | -------------- | ------ |
 | S1 | **Bandit Phase 3 closure** | Triage low findings (`-i`) and keep strict gate (`-ll -ii`) clean with minimal-risk fixes / justified suppressions | `uv run bandit -r . -c pyproject.toml -ll -ii` green; low triage documented; `check-all` green; plan ready to move to `completed/` + `plans_hub_sync` | ⬜ Pending |
 | S2 | **Scope import Phase E (light)** | First vendor-shaped adapter (GLPI-like export to canonical CSV/schema), with fixtures/tests and docs | adapter + fixtures merged; pytest for adapter green; EN+pt-BR operator docs updated; no "live integration" overpromise | ✅ Done — `config/scope_import_glpi.py`, `scripts/scope_import_glpi.py`, 12 tests |
 | S3 | **CNPJ Phase 5 (checksum layer)** | Design and optional opt-in checksum validation path (separate from regex compatibility) | Phase 5.1–5.3 addressed in plan; default behavior unchanged; tests/docs synced (EN + pt-BR) | ⬜ Pending |
+| S4 | **YAML-Based Plugin System — Phase 1** | Centralized schema (`config/plugin_schema.yaml`), validator (`config/plugin_validator.py`), unified `patterns_plugin_file` key | `validate_plugin_file()` validates all example files; 14 tests green; `lint-only` green; ADR-0052 created | ✅ Done |
 
 1. **Content type & cloaking detection – Step 1** *(small slice)*
    - Magic-byte table + read_magic / infer_content_type for supported formats; no connector change yet.

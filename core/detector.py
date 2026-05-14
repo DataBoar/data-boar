@@ -716,6 +716,18 @@ def _load_regex_overrides(
     """Load name -> (pattern, norm_tag) from YAML/JSON file. Uses given encoding (default utf-8)."""
     if not path or not Path(path).exists():
         return {}
+    # Validate against canonical plugin schema (ADR-0052); emit warnings for bad items.
+    import warnings
+
+    from config.plugin_validator import PluginValidationWarning, validate_plugin_file
+
+    result = validate_plugin_file(path, plugin_type="regex_patterns")
+    for issue in result.issues:
+        warnings.warn(
+            f"Plugin file '{path}': {issue}",
+            PluginValidationWarning,
+            stacklevel=2,
+        )
     raw = read_text_with_encoding(path, encoding=encoding, errors=errors)
     if Path(path).suffix.lower() in (".yaml", ".yml"):
         import yaml
