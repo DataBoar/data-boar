@@ -11,6 +11,10 @@
 #   2. Merge the recommendation_overrides list below into your config under report.recommendation_overrides.
 #
 # PIPEDA: Personal Information Protection and Electronic Documents Act; Office of the Privacy Commissioner.
+#
+# Precise geolocation (logs / APIs): same regex geometry as compliance-sample-us_va_vcdpa.yaml and
+# compliance-sample-eu_gdpr.yaml (JSON lat/lng, location: pair, latitude=&longitude=). norm_tag stays
+# "PIPEDA" for Canadian inventory. Heuristic only — not an OPC determination of sensitivity or consent.
 
 regex:
   - name: "SIN_CA"
@@ -18,6 +22,18 @@ regex:
     norm_tag: "PIPEDA"
   - name: "SIN_CA_ALT"
     pattern: "\\b\\d{9}\\b"
+    norm_tag: "PIPEDA"
+  - name: "PIPEDA_JSON_LAT_PRECISION"
+    pattern: "(?i)[\"']lat[\"']\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\b"
+    norm_tag: "PIPEDA"
+  - name: "PIPEDA_JSON_LNG_PRECISION"
+    pattern: "(?i)[\"'](?:lng|lon)[\"']\\s*:\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}\\b"
+    norm_tag: "PIPEDA"
+  - name: "PIPEDA_LOCATION_CSV_PAIR"
+    pattern: "(?i)\\blocation\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*,\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "PIPEDA"
+  - name: "PIPEDA_QUERYSTRING_LAT_LONG"
+    pattern: "(?i)latitude=[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*&\\s*longitude=[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
     norm_tag: "PIPEDA"
 
 # ML terms: English and French (PIPEDA s. 2 "personal information"; consent, limitation).
@@ -39,6 +55,18 @@ terms:
   - text: "commissaire à la vie privée"
     label: sensitive
   - text: "pipeda"
+    label: sensitive
+  - text: "geolocation"
+    label: sensitive
+  - text: "geolocation data"
+    label: sensitive
+  - text: "precise geolocation"
+    label: sensitive
+  - text: "géolocalisation"
+    label: sensitive
+  - text: "données de géolocalisation"
+    label: sensitive
+  - text: "géolocalisation précise"
     label: sensitive
   - text: "limitation of purposes"
     label: sensitive
@@ -125,7 +153,7 @@ terms:
 recommendation_overrides:
   - norm_tag_pattern: "PIPEDA"
     base_legal: "PIPEDA s. 2 (personal information); Privacy Commissioner"
-    risk: "Personal information as defined under Canadian federal law."
-    recommendation: "Review PIPEDA consent and limitation purposes; comply with Office of the Privacy Commissioner guidance."
+    risk: "Personal information as defined under Canadian federal law; possible precise geolocation in logs/APIs (heuristic regex only — not an OPC classification of sensitivity or consent)."
+    recommendation: "Review PIPEDA consent and limitation of purposes; document legitimate need for location data; comply with Office of the Privacy Commissioner guidance."
     priority: "ALTA"
     relevant_for: "DPO, Privacy Officer, Privacy Commissioner"
