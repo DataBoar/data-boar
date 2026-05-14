@@ -877,6 +877,7 @@ shares = [
 [package.dev-dependencies]
 dev = [
     { name = "bandit" },
+    { name = "chardet" },
     { name = "cyclonedx-bom" },
     { name = "markdown" },
     { name = "mypy" },
@@ -989,6 +990,7 @@ provides-extras = ["nosql", "bigdata", "shares", "compressed", "dl", "detection-
 [package.metadata.requires-dev]
 dev = [
     { name = "bandit", specifier = ">=1.9.4" },
+    { name = "chardet", specifier = ">=5.1,<6.0" },
     { name = "cyclonedx-bom", specifier = ">=7.0.0" },
     { name = "markdown", specifier = ">=3.10.2" },
     { name = "mypy", specifier = ">=1.20.1" },

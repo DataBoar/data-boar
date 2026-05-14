@@ -238,5 +238,13 @@ dev = [
     "types-pyyaml>=6.0.12.20250915",
     # CycloneDX SBOM from uv-exported requirements (ADR 0003); same CLI as CI `sbom.yml`.
     "cyclonedx-bom>=7.0.0",
+    # chardet is a transitive dep of cyclonedx-bom, but pinned here as a direct
+    # dev constraint so Dependabot/uv stop trying to bump past 5.x until upstream
+    # cyclonedx-bom relaxes its `chardet<6.0,>=5.1` requirement. Same defensive
+    # pattern as `beautifulsoup4<4.14` above (extract-msg upper bound).
+    # See: https://pypi.org/project/cyclonedx-bom/7.3.0/ (requires_dist).
+    # Incident: CI run #25879920102 (PR #347, Dependabot chardet 5.2.0 -> 7.4.3
+    # produced ResolutionImpossible in `pip install` inside SBOM Docker build).
+    "chardet>=5.1,<6.0",
     "markdown>=3.10.2",
 ]
