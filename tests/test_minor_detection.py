@@ -152,7 +152,12 @@ class TestMinorDetectionDoesNotBreakExisting(unittest.TestCase):
 
     def test_cpf_still_high(self):
         scanner = DataScanner()
-        result = scanner.scan_column("documento", "123.456.789-00")
+        # Mod-11 checksum-valid synthetic CPF (see tests/test_brazilian_cpf.py).
+        # The legacy `123.456.789-00` is the canonical INVALID documentation
+        # fixture; _CHECKSUM_GATED_PATTERNS in core/detector.py would drop it
+        # so this regression test must use a checksum-valid number to exercise
+        # the LGPD_CPF regex path it is asserting on.
+        result = scanner.scan_column("documento", "123.456.789-09")
         self.assertEqual(result["sensitivity_level"], "HIGH")
         self.assertIn("CPF", result.get("pattern_detected", ""))
 
