@@ -79,11 +79,19 @@ except ImportError:
 # - LGPD_CPF and LGPD_CNPJ are checksum-gated in the detect() loop via _CHECKSUM_GATED_PATTERNS
 #   (Mod-11 validation from core.brazilian_cpf); LGPD_CNPJ_ALNUM is not gated (different
 #   encoding; RFB IN 2.229/2024 format validation is out of scope for now).
+#   LGPD_CNPJ_ALNUM uses a lookahead to require ≥1 letter so it does not fire on pure-numeric
+#   values already handled (with checksum) by LGPD_CNPJ — prevents double-hit and FP noise.
 DEFAULT_PATTERNS = {
     "LGPD_CPF": (r"\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b", "LGPD Art. 5"),
     "LGPD_CNPJ": (r"\b\d{2}\.?\d{3}\.?\d{3}/?\d{4}-?\d{2}\b", "LGPD Art. 5"),
+    # LGPD_CNPJ_ALNUM targets the new alphanumeric CNPJ (IN RFB 2.229/2024).
+    # The lookahead (?=[A-Z0-9./-]*[A-Z]) requires at least one uppercase letter in
+    # the first 12 positions so this pattern does NOT overlap with pure-numeric CNPJs
+    # already handled (with Mod-11 checksum) by LGPD_CNPJ. Without this guard every
+    # legacy numeric CNPJ would double-fire here, generating redundant findings and
+    # polluting the report when cnpj_alphanumeric is enabled (ADR-0052 / Phase 5.1).
     "LGPD_CNPJ_ALNUM": (
-        r"\b[A-Z0-9]{2}\.?[A-Z0-9]{3}\.?[A-Z0-9]{3}/?[A-Z0-9]{4}-?\d{2}\b",
+        r"\b(?=[A-Z0-9./-]*[A-Z])[A-Z0-9]{2}\.?[A-Z0-9]{3}\.?[A-Z0-9]{3}/?[A-Z0-9]{4}-?\d{2}\b",
         "LGPD Art. 5",
     ),
     "EMAIL": (r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b", "GDPR Art. 4(1)"),
