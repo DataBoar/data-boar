@@ -2,3 +2,18 @@ Lab fixture — fictional person for cross-file linkage tests.
 Nome preferencial: Aurora Sintetica Lab
 Documento de teste (CPF formato): 123.456.789-09
 Observacao: mesmo rotulo aparece no CSV companheiro na pasta homelab_synthetic.
+
+# Dados adicionais de teste — CPFs validos (Mod-11 verificado, nao pertencem a pessoas reais)
+CPF-2: 104.332.181-00
+CPF-3: 317.024.090-07
+CPF-4: sem pontuacao 57634063460
+CPF-5: 795.115.226-98
+
+# CNPJs validos de teste
+CNPJ-1: 27.726.568/0001-40
+CNPJ-2: 55.816.406/0001-39
+
+# Exemplos de REJEICAO — formato correto mas checksum invalido (nao devem ser detectados)
+FALSO-POSITIVO-1: 123.456.789-00
+FALSO-POSITIVO-2: 12345678901
+FALSO-POSITIVO-3: 000.000.000-00
