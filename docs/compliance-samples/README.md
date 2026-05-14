@@ -40,6 +40,7 @@ For operational governance (scope, minimization, retention, traceability), use [
 | **compliance-sample-us_ca_ab2273_caadca.yaml** | California AB 2273 (Age-Appropriate Design Code): **labelling** for voluntary scoping; applicability requires counsel; **precise geolocation** regex (same geometry as VCDPA / EU GDPR sample) for minor-context inventory signals.                                              |
 | **compliance-sample-us_co_cpa_minors.yaml**    | Colorado Privacy Act — minors / under-18 contexts: **technical** norm tags; does not establish “known minor” legally.                                               |
 | **compliance-sample-us_va_vcdpa.yaml**         | Virginia VCDPA: sensitive-category terms; **precision geolocation** regexes (4+ decimals + keyword/JSON shape); B2B/employment scope **not** auto-classified — see file header. |
+| **compliance-sample-us_ca_cpra.yaml**          | California CPRA / CCPA (as amended): exports built-in `CCPA_SSN` + CPRA SPI identifiers (CA DL, ITIN); **precise geolocation** regex (§ 1798.140(ae)(1)(H)); consumer-privacy ML terms; heuristic only.                                                              |
 | **compliance-sample-us_fcpa_internal_policy_pack.yaml** | U.S. **FCPA** + employer **anti-corruption policy** lexicon (**inventory**); not bribery detection or legal advice.                                               |
 
 All samples in the tables above are available. Each sample is self-contained (regex overrides, ML terms, recommendation overrides) so you can enable one framework by including that file's blocks in your config. For the **full regional table**, filenames, and how to merge samples into `config.yaml`, see [COMPLIANCE_FRAMEWORKS.md](../COMPLIANCE_FRAMEWORKS.md#compliance-samples) ([pt-BR](../COMPLIANCE_FRAMEWORKS.pt_BR.md#amostras-de-conformidade)).
@@ -76,7 +77,7 @@ When choosing or authoring a sample, consider the **language(s)** of the target 
 | **Turkey (KVKK)**                 | Turkish and English (e.g. kişisel veri / personal data).                                                       |
 | **Russia (152-FZ)**               | Russian and English (e.g. персональные данные / personal data); revalidate terms when regulations are amended. |
 | **Switzerland (FADP)**            | English; optional DE/FR/IT.                                                                                    |
-| **U.S. (COPPA, AB 2273, CO CPA, VCDPA)** | English (column names and privacy programs in U.S. deployments).                                               |
+| **U.S. (COPPA, AB 2273, CO CPA, VCDPA, CPRA/CCPA)** | English (column names and privacy programs in U.S. deployments).                                               |
 
 Document in the sample header or in [COMPLIANCE_FRAMEWORKS](../COMPLIANCE_FRAMEWORKS.md) when a sample includes multi-language terms. See also the rule **.cursor/rules/compliance-samples-language.mdc**.
 
