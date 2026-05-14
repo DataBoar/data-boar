@@ -1,7 +1,7 @@
 # APPI – sample compliance profile (Japan; Act on the Protection of Personal Information)
 #
 # Target audience: Japan and APAC deployments. ML terms in English and Japanese (個人情報,
-# 保有個人データ) so column names in either language are detected.
+# 要配慮個人情報, 保有個人データ) so column names in either language are detected.
 #
 # How to use:
 #   1. Set in your main config:
@@ -9,21 +9,72 @@
 #        ml_patterns_file: path/to/compliance-sample-appi.yaml
 #   2. Merge the recommendation_overrides list below into your config under report.recommendation_overrides.
 #
-# APPI: Personal Information Protection Commission (PPC); "personal information", "retained personal data".
+# APPI: Personal Information Protection Commission (PPC); Act on the Protection of Personal
+# Information (個人情報の保護に関する法律); last major revision effective April 2022.
+# Key categories: "personal information" (個人情報; Art. 2), "sensitive personal information"
+# requiring special care (要配慮個人情報; Art. 2(3) / Art. 17), "retained personal data"
+# (保有個人データ; Art. 2(7)).
+#
+# Detection thresholds (not configurable in this file; set in main config.yaml):
+#   - sensitivity_detection.fuzzy_column_match_min_confidence (int, default 25)
+#   - sensitivity_detection.embedding_prototype_hint_min_confidence (int, default 20)
+#
+# Legal scope (read before relying on tags):
+#   - APPI requires personal information handlers (個人情報取扱事業者) to specify purpose of
+#     use and obtain consent for sensitive categories. Cross-border transfer rules changed in
+#     the 2022 revision (Art. 24).
+#   - Data Boar performs technical pattern and term matching only. It does NOT classify
+#     purpose of use, evaluate consent, or apply 2022 transfer rules. Use output as inventory
+#     signal; scope determination with counsel.
+#
+# Regex design:
+#   - MY_NUMBER_JP: 12-digit Japanese Individual Number (マイナンバー; Act on Use of Numbers
+#     to Identify a Specific Individual in Administrative Procedures).
+#   - JP_POSTAL: Japanese postal code (〒NNN-NNNN or NNNNNNN).
+#   - Precise geolocation: same four-decimal-place geometry as compliance-sample-us_va_vcdpa.yaml
+#     and compliance-sample-eu_gdpr.yaml. The PPC has confirmed location data (位置情報) that
+#     identifies an individual constitutes "personal information" under APPI Art. 2. Patterns
+#     are heuristic coordinate-shape signals only — not automatic PPC classification.
+#
+# Use double-quoted YAML with escaped backslashes (see .cursor/rules/yaml-regex-patterns.mdc).
 
 regex:
   - name: "MY_NUMBER_JP"
-    pattern: "\\b\\d{4}\\s?\\d{4}\\s?\\d{4}\\s?\\d{4}\\b"
+    # Japanese Individual Number (マイナンバー): 12 digits, optionally spaced in groups of 4
+    pattern: "\\b\\d{4}\\s?\\d{4}\\s?\\d{4}\\b"
     norm_tag: "APPI"
   - name: "JP_POSTAL"
+    # Japanese postal code: NNN-NNNN or NNNNNNN; often prefixed with 〒 in display
     pattern: "\\b\\d{3}-?\\d{4}\\b"
     norm_tag: "APPI"
+  # Precise geolocation (位置情報 — PPC clarification: identifies an individual → personal info)
+  - name: "APPI_JSON_LAT_PRECISION"
+    pattern: "(?i)[\"']lat[\"']\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\b"
+    norm_tag: "APPI"
+  - name: "APPI_JSON_LNG_PRECISION"
+    pattern: "(?i)[\"'](?:lng|lon)[\"']\\s*:\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}\\b"
+    norm_tag: "APPI"
+  - name: "APPI_LOCATION_CSV_PAIR"
+    pattern: "(?i)\\blocation\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*,\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "APPI"
+  - name: "APPI_QUERYSTRING_LAT_LONG"
+    pattern: "(?i)latitude=[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*&\\s*longitude=[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "APPI"
 
-# ML terms: English and Japanese (personal information, retained personal data, PPC).
+# ML terms: English and Japanese.
+# 個人情報 = personal information; 要配慮個人情報 = sensitive personal information (special care);
+# 保有個人データ = retained personal data; 本人 = data subject / individual;
+# 氏名 = name; 住所 = address; 電話番号 = phone number; 生年月日 = date of birth;
+# 位置情報 = location information; 病歴 = medical history; 人種 = race; 信条 = creed/belief;
+# マイナンバー = My Number (individual number); 利用目的 = purpose of use.
 terms:
   - text: "personal information"
     label: sensitive
   - text: "個人情報"
+    label: sensitive
+  - text: "sensitive personal information"
+    label: sensitive
+  - text: "要配慮個人情報"
     label: sensitive
   - text: "retained personal data"
     label: sensitive
@@ -41,19 +92,91 @@ terms:
     label: sensitive
   - text: "business operator"
     label: sensitive
-  - text: "利用目的"
+  - text: "個人情報取扱事業者"
     label: sensitive
   - text: "purpose of use"
+    label: sensitive
+  - text: "利用目的"
     label: sensitive
   - text: "my number"
     label: sensitive
   - text: "マイナンバー"
     label: sensitive
+  - text: "個人番号"
+    label: sensitive
+  - text: "name"
+    label: sensitive
+  - text: "氏名"
+    label: sensitive
+  - text: "address"
+    label: sensitive
+  - text: "住所"
+    label: sensitive
+  - text: "phone number"
+    label: sensitive
+  - text: "電話番号"
+    label: sensitive
+  - text: "email"
+    label: sensitive
+  - text: "メールアドレス"
+    label: sensitive
+  - text: "date of birth"
+    label: sensitive
+  - text: "生年月日"
+    label: sensitive
+  - text: "location information"
+    label: sensitive
+  - text: "位置情報"
+    label: sensitive
+  - text: "precise geolocation"
+    label: sensitive
+  - text: "精密な位置情報"
+    label: sensitive
+  - text: "race"
+    label: sensitive
+  - text: "人種"
+    label: sensitive
+  - text: "creed"
+    label: sensitive
+  - text: "信条"
+    label: sensitive
+  - text: "social status"
+    label: sensitive
+  - text: "社会的身分"
+    label: sensitive
+  - text: "medical history"
+    label: sensitive
+  - text: "病歴"
+    label: sensitive
+  - text: "disability"
+    label: sensitive
+  - text: "障害"
+    label: sensitive
+  - text: "criminal record"
+    label: sensitive
+  - text: "前科"
+    label: sensitive
+  - text: "biometric data"
+    label: sensitive
+  - text: "生体情報"
+    label: sensitive
+  - text: "genetic data"
+    label: sensitive
+  - text: "遺伝情報"
+    label: sensitive
+  - text: "cross-border transfer"
+    label: sensitive
+  - text: "第三者提供"
+    label: sensitive
+  - text: "consent"
+    label: sensitive
+  - text: "同意"
+    label: sensitive
 
 recommendation_overrides:
   - norm_tag_pattern: "APPI"
-    base_legal: "APPI (Act on the Protection of Personal Information); PPC"
-    risk: "Personal information / retained personal data; purpose of use and consent."
-    recommendation: "Comply with APPI; specify purpose of use; obtain consent where required; follow PPC guidelines."
+    base_legal: "APPI (個人情報の保護に関する法律); PPC — Personal Information Protection Commission; 2022 revision"
+    risk: "Personal information or sensitive personal information (要配慮個人情報) in scope of APPI. Precise coordinate-shaped values in logs/APIs are heuristic inventory signals only — not an automatic PPC classification. Cross-border transfer rules (Art. 24, 2022 revision) may apply when data leaves Japan."
+    recommendation: "Verify personal-information handler (個人情報取扱事業者) obligations; specify purpose of use (利用目的); obtain consent for sensitive categories; confirm cross-border transfer safeguards (Art. 24); consider PPC voluntary annual audit alignment."
     priority: "ALTA"
-    relevant_for: "DPO, Personal Information Protection Commission (PPC)"
+    relevant_for: "DPO, Personal Information Protection Commission (PPC), Legal, Information Security"
