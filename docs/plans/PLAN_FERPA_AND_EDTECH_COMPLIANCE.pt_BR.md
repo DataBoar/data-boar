@@ -15,7 +15,7 @@ Depends on: PLAN_YAML_PLUGIN_SYSTEM.md
 ## Motivação
 
 O mercado de **EdTech** e **EAD (Ensino a Distância)** representa uma vertical em expansão para o Data Boar.
-Uma conversa comercial ativa (Brazil, 2026 — agradecimento especial a um contato do provedor EAD) torna
+Uma conversa comercial ativa (Brazil, 2026) torna
 visível uma necessidade concreta do cliente: **onde está o PII de estudantes no nosso LMS, integrações e backups?**
 
 **FERPA (Family Educational Rights and Privacy Act, 20 U.S.C. § 1232g)** é a lei federal norte-americana

@@ -15,7 +15,7 @@ Depends on: PLAN_YAML_PLUGIN_SYSTEM.md
 ## Motivation
 
 The **EdTech** and **EAD (Ensino a Distância)** market represents an expanding vertical for Data Boar.
-An active commercial conversation (Rio Grande do Sul, May 2026 — special thanks to an EAD provider contact) surfaces
+An active commercial conversation (Rio Grande do Sul, May 2026) surfaces
 a concrete client need: **where does student PII live across our LMS, integrations, and backups?**
 
 **FERPA (Family Educational Rights and Privacy Act, 20 U.S.C. § 1232g)** is the US federal law governing
