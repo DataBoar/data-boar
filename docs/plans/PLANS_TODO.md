@@ -27,13 +27,13 @@ Use these tags in headings to keep priorities explicit and machine-countable:
 
 Do not edit this block manually; refresh with `python scripts/plans-stats.py --write`.
 
-- **Status rows counted:** 162  (Done: 94 | Incomplete: 68)
-- **Incomplete breakdown:** Pending `⬜`=64, Tracked `🔄` / `Tracked (partially done)`=4, Under consideration=0, Backlog-marked rows=0
+- **Status rows counted:** 162  (Done: 95 | Incomplete: 67)
+- **Incomplete breakdown:** Pending `⬜`=63, Tracked `🔄` / `Tracked (partially done)`=4, Under consideration=0, Backlog-marked rows=0
 
 | Horizon | Total rows | Done | Incomplete |
 | ------- | ----------: | ----: | ----------: |
 | `H0` | 40 | 33 | 7 |
-| `H1` | 9 | 6 | 3 |
+| `H1` | 9 | 7 | 2 |
 | `H2` | 0 | 0 | 0 |
 | `H3` | 108 | 50 | 58 |
 | `H4` | 0 | 0 | 0 |
@@ -400,7 +400,7 @@ Tighten runtime defaults for the API host. Implemented: default `127.0.0.1`, opt
 | Sprint | Slice | Execution focus | Exit checklist | Status |
 | ------ | ----- | --------------- | -------------- | ------ |
 | S1 | **Bandit Phase 3 closure** | Triage low findings (`-i`) and keep strict gate (`-ll -ii`) clean with minimal-risk fixes / justified suppressions | `uv run bandit -r . -c pyproject.toml -ll -ii` green; low triage documented; `check-all` green; plan ready to move to `completed/` + `plans_hub_sync` | ⬜ Pending |
-| S2 | **Scope import Phase E (light)** | First vendor-shaped adapter (GLPI-like export to canonical CSV/schema), with fixtures/tests and docs | adapter + fixtures merged; pytest for adapter green; EN+pt-BR operator docs updated; no "live integration" overpromise | ⬜ Pending |
+| S2 | **Scope import Phase E (light)** | First vendor-shaped adapter (GLPI-like export to canonical CSV/schema), with fixtures/tests and docs | adapter + fixtures merged; pytest for adapter green; EN+pt-BR operator docs updated; no "live integration" overpromise | ✅ Done — `config/scope_import_glpi.py`, `scripts/scope_import_glpi.py`, 12 tests |
 | S3 | **CNPJ Phase 5 (checksum layer)** | Design and optional opt-in checksum validation path (separate from regex compatibility) | Phase 5.1–5.3 addressed in plan; default behavior unchanged; tests/docs synced (EN + pt-BR) | ⬜ Pending |
 
 1. **Content type & cloaking detection – Step 1** *(small slice)*
@@ -430,6 +430,8 @@ Tighten runtime defaults for the API host. Implemented: default `127.0.0.1`, opt
 1. **LAB-OP — Observability stack (optional)** — Phases A–E in [PLAN_LAB_OP_OBSERVABILITY_STACK.md](PLAN_LAB_OP_OBSERVABILITY_STACK.md): Grafana + (Prometheus **or** InfluxDB); logs via (Loki **or** Graylog+OpenSearch); avoid running everything on a **≤16 GB** LAB-NODE-01 at once. **Prereq:** [LAB_OP_MINIMAL_CONTAINER_STACK.md](../ops/LAB_OP_MINIMAL_CONTAINER_STACK.md) §1–§3; **§7** pointer. **Sequence:** prefer [PLAN_LAB_FIREWALL_ACCESS_AND_OBSERVABILITY.md](PLAN_LAB_FIREWALL_ACCESS_AND_OBSERVABILITY.md) **phase 4 before 5** (logs before Wazuh). ⬜ Backlog.
 1. **LAB-OP — Wazuh rollout (optional)** — When resources and baseline allow: deploy Wazuh manager + enroll lab-op / Proxmox guests as agents for vuln and hardening telemetry. **Prereq:** [LAB_OP_MINIMAL_CONTAINER_STACK.md](../ops/LAB_OP_MINIMAL_CONTAINER_STACK.md) §6 sequence; **after** centralized logs per [PLAN_LAB_FIREWALL_ACCESS_AND_OBSERVABILITY.md](PLAN_LAB_FIREWALL_ACCESS_AND_OBSERVABILITY.md) **phase 4**. Operator runbook + retention/noise tuning stay in **`docs/private/homelab/`**. ⬜ Backlog.
 1. **Corporate-Entity-C backlog (token-aware, non-blocking)** — **W-KPI baseline done** (manual KPI panel in readiness plan). Next optional slice: automate KPI extraction/export when maintenance is green. (W-CONTRACT already covered by existing contract tests for reports + OpenAPI responses.)
+1. **PII guard expanded (documented)** — ✅ Implemented (2026-05): `tests/test_pii_guard.py` upgraded to also detect AWS AKIA keys, GitHub PATs, Slack tokens, Stripe keys, PEM headers, and Bearer tokens. No dedicated plan needed; CI-enforced via pre-commit and GitHub Actions. Workspace fact recorded in `AGENTS.md`.
+1. **`scan_scope:` config key trap — deprecation notice** — ⬜ The canonical YAML key for scan targets is `targets:`, not `scan_scope:`. Configs using `scan_scope:` produce "No findings" silently. Action: add a startup warning when `scan_scope:` key is detected in config (log + stderr), pointing operator to `targets:`. Low-effort, high-operator-value. Workspace fact recorded in `AGENTS.md`.
 1. **Secrets vault – Phase B** – full vault implementation, re-import CLI/web, optional remove-from-config, and key management docs.
 1. **Version check & self-upgrade** – version fetch, CLI/API, backup/restore, container detection, audit log.
 1. **Selenium QA test suite** – full UI automation suite, stress tests, QA reports.

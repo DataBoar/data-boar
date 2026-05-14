@@ -297,7 +297,19 @@ def normalize_config(
 
     When ``config_path`` is set, optional ``sql_sampling_file`` / ``sql_sampling_files`` entries
     are loaded relative to that file's directory and merged into ``sql_sampling`` (inline wins).
+
+    Emits a warning when the obsolete ``scan_scope:`` key is detected (produces no targets).
+    The canonical key is ``targets:`` — see workspace fact in AGENTS.md.
     """
+    import sys
+
+    if "scan_scope" in data:
+        _msg = (
+            "[data-boar] WARNING: config key 'scan_scope:' is obsolete and will be ignored. "
+            "Use 'targets:' instead.  See docs/USAGE.md for the canonical config format."
+        )
+        print(_msg, file=sys.stderr)
+
     if not isinstance(data, dict):
         raise ValueError("Config root must be a dict")
     data = dict(data)
