@@ -5,7 +5,11 @@ from core.scanner import DataScanner
 
 def test_cpf_detection():
     scanner = DataScanner()
-    result = scanner.scan_column("cpf", "123.456.789-00")
+    # 123.456.789-09 is the canonical valid CPF documentation fixture
+    # (see tests/test_brazilian_cpf.py::_VALID_CPFS). Detector now applies
+    # Mod-11 checksum gating before tagging LGPD_CPF, so test data must be
+    # checksum-valid; otherwise ML correctly downgrades the row.
+    result = scanner.scan_column("cpf", "123.456.789-09")
     assert result["sensitivity_level"] == "HIGH"
     assert "LGPD_CPF" in result.get("pattern_detected", "") or "CPF" in result.get(
         "pattern_detected", ""

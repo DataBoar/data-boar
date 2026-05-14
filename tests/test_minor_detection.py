@@ -152,7 +152,9 @@ class TestMinorDetectionDoesNotBreakExisting(unittest.TestCase):
 
     def test_cpf_still_high(self):
         scanner = DataScanner()
-        result = scanner.scan_column("documento", "123.456.789-00")
+        # 123.456.789-09 = canonical valid CPF fixture (Mod-11 valid).
+        # Detector now applies checksum gating before tagging LGPD_CPF.
+        result = scanner.scan_column("documento", "123.456.789-09")
         self.assertEqual(result["sensitivity_level"], "HIGH")
         self.assertIn("CPF", result.get("pattern_detected", ""))
 

@@ -106,9 +106,12 @@ La la la"""
     def test_real_cpf_in_lyrics_still_high(self):
         """Strong PII (CPF) in content that looks like lyrics should still be HIGH."""
         scanner = DataScanner()
+        # 123.456.789-09 is the canonical valid CPF fixture (Mod-11 valid).
+        # The detector now checksum-gates LGPD_CPF, so synthetic invalid CPFs
+        # are correctly filtered out; real CPFs still classify HIGH.
         lyrics_with_cpf = """Verse 1
         Chorus
-        The CPF is 123.456.789-00 for the form
+        The CPF is 123.456.789-09 for the form
         La la la"""
         result = scanner.scan_column("form_data", lyrics_with_cpf)
         self.assertEqual(result["sensitivity_level"], "HIGH")
