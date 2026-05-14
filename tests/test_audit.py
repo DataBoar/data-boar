@@ -4,8 +4,12 @@ from core.scanner import DataScanner
 
 
 def test_cpf_detection():
+    # Mod-11 checksum-valid synthetic CPF (see tests/test_brazilian_cpf.py::_VALID_CPFS).
+    # The detector gates LGPD_CPF/LGPD_CNPJ matches behind core.brazilian_cpf
+    # checksum validation (core/detector.py::_CHECKSUM_GATED_PATTERNS); shape-only
+    # fixtures fall through to the ML branch and pattern_detected becomes ML_DETECTED.
     scanner = DataScanner()
-    result = scanner.scan_column("cpf", "123.456.789-00")
+    result = scanner.scan_column("cpf", "123.456.789-09")
     assert result["sensitivity_level"] == "HIGH"
     assert "LGPD_CPF" in result.get("pattern_detected", "") or "CPF" in result.get(
         "pattern_detected", ""
@@ -23,8 +27,11 @@ def test_cnpj_numeric_and_alnum_detection():
     # Enable alphanumeric CNPJ so both legacy numeric and new alnum formats are detected by regex.
     scanner = DataScanner(detection_config={"cnpj_alphanumeric": True})
 
-    # Legacy numeric CNPJ
-    numeric = "12.345.678/0001-99"
+    # Legacy numeric CNPJ -- Mod-11 checksum-valid synthetic value
+    # (see tests/test_brazilian_cpf.py::_VALID_CNPJS). LGPD_CNPJ is checksum-gated
+    # via core.brazilian_cpf.text_contains_valid_cnpj; shape-only fixtures get
+    # filtered out and pattern_detected falls through to ML_DETECTED.
+    numeric = "11.222.333/0001-81"
     numeric_result = scanner.scan_column("cnpj", numeric)
     assert numeric_result["sensitivity_level"] == "HIGH"
     assert "CNPJ" in numeric_result.get("pattern_detected", "")

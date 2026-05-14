@@ -151,8 +151,11 @@ class TestMinorDetectionDoesNotBreakExisting(unittest.TestCase):
     """Ensure minor detection is additive: existing behaviour for non-minor data unchanged."""
 
     def test_cpf_still_high(self):
+        # Mod-11 checksum-valid synthetic CPF -- the detector gates LGPD_CPF
+        # behind core.brazilian_cpf.text_contains_valid_cpf to suppress the
+        # false positives this regression test was meant to guard against.
         scanner = DataScanner()
-        result = scanner.scan_column("documento", "123.456.789-00")
+        result = scanner.scan_column("documento", "123.456.789-09")
         self.assertEqual(result["sensitivity_level"], "HIGH")
         self.assertIn("CPF", result.get("pattern_detected", ""))
 

@@ -104,11 +104,17 @@ La la la"""
         self.assertIn(result["sensitivity_level"], ("LOW", "MEDIUM"))
 
     def test_real_cpf_in_lyrics_still_high(self):
-        """Strong PII (CPF) in content that looks like lyrics should still be HIGH."""
+        """Strong PII (CPF) in content that looks like lyrics should still be HIGH.
+
+        Uses a Mod-11 checksum-valid synthetic CPF so LGPD_CPF survives the
+        checksum gate (core/detector.py::_CHECKSUM_GATED_PATTERNS) and the
+        entertainment-context branch keeps HIGH because LGPD_CPF is not in
+        WEAK_PATTERNS_IN_ENTERTAINMENT.
+        """
         scanner = DataScanner()
         lyrics_with_cpf = """Verse 1
         Chorus
-        The CPF is 123.456.789-00 for the form
+        The CPF is 123.456.789-09 for the form
         La la la"""
         result = scanner.scan_column("form_data", lyrics_with_cpf)
         self.assertEqual(result["sensitivity_level"], "HIGH")
