@@ -106,9 +106,11 @@ La la la"""
     def test_real_cpf_in_lyrics_still_high(self):
         """Strong PII (CPF) in content that looks like lyrics should still be HIGH."""
         scanner = DataScanner()
+        # Use a Mod-11-valid CPF; the entertainment-context heuristic only
+        # downgrades when no strong regex hit survives the checksum gate.
         lyrics_with_cpf = """Verse 1
         Chorus
-        The CPF is 123.456.789-00 for the form
+        The CPF is 111.444.777-35 for the form
         La la la"""
         result = scanner.scan_column("form_data", lyrics_with_cpf)
         self.assertEqual(result["sensitivity_level"], "HIGH")

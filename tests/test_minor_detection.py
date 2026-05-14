@@ -152,7 +152,11 @@ class TestMinorDetectionDoesNotBreakExisting(unittest.TestCase):
 
     def test_cpf_still_high(self):
         scanner = DataScanner()
-        result = scanner.scan_column("documento", "123.456.789-00")
+        # Use a Mod-11-valid CPF so the LGPD_CPF regex hit survives the
+        # checksum gate (`_CHECKSUM_GATED_PATTERNS`). The minor-detection slice
+        # must not regress real CPF detection -- but it also must not assert
+        # against an invalid placeholder.
+        result = scanner.scan_column("documento", "111.444.777-35")
         self.assertEqual(result["sensitivity_level"], "HIGH")
         self.assertIn("CPF", result.get("pattern_detected", ""))
 

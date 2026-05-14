@@ -5,7 +5,12 @@ from core.scanner import DataScanner
 
 def test_cpf_detection():
     scanner = DataScanner()
-    result = scanner.scan_column("cpf", "123.456.789-00")
+    # 111.444.777-35 has a valid Mod-11 checksum so the LGPD_CPF regex hit
+    # passes the `_CHECKSUM_GATED_PATTERNS` defensive gate (G-13-11) instead of
+    # falling through to the ML_DETECTED label. Avoid sequential placeholders
+    # like 123.456.789-00 here -- those are exactly what the checksum gate is
+    # designed to reject as false positives.
+    result = scanner.scan_column("cpf", "111.444.777-35")
     assert result["sensitivity_level"] == "HIGH"
     assert "LGPD_CPF" in result.get("pattern_detected", "") or "CPF" in result.get(
         "pattern_detected", ""
@@ -23,8 +28,10 @@ def test_cnpj_numeric_and_alnum_detection():
     # Enable alphanumeric CNPJ so both legacy numeric and new alnum formats are detected by regex.
     scanner = DataScanner(detection_config={"cnpj_alphanumeric": True})
 
-    # Legacy numeric CNPJ
-    numeric = "12.345.678/0001-99"
+    # Legacy numeric CNPJ -- 11.222.333/0001-81 has a valid Mod-11 checksum so
+    # it passes the gate; previous fixture (`12.345.678/0001-99`) is a known
+    # invalid placeholder and is filtered by the defensive gate.
+    numeric = "11.222.333/0001-81"
     numeric_result = scanner.scan_column("cnpj", numeric)
     assert numeric_result["sensitivity_level"] == "HIGH"
     assert "CNPJ" in numeric_result.get("pattern_detected", "")
