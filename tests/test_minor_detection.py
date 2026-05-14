@@ -152,7 +152,9 @@ class TestMinorDetectionDoesNotBreakExisting(unittest.TestCase):
 
     def test_cpf_still_high(self):
         scanner = DataScanner()
-        result = scanner.scan_column("documento", "123.456.789-00")
+        # 123.456.789-09 is a checksum-valid public test CPF; -00 fails Mod-11 and is
+        # correctly refused by _CHECKSUM_GATED_PATTERNS in core/detector.py.
+        result = scanner.scan_column("documento", "123.456.789-09")
         self.assertEqual(result["sensitivity_level"], "HIGH")
         self.assertIn("CPF", result.get("pattern_detected", ""))
 
