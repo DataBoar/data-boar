@@ -136,6 +136,10 @@ See [SECURITY.md](../SECURITY.md), [USAGE.md](../USAGE.md), [TECH_GUIDE.md](../T
 | `GET` | `/heatmap/{session_id}` | PNG | Heatmap by session | `reports_reader`+ |
 | `GET` | `/logs` | text | Logs listing | `authenticated` |
 | `GET` | `/logs/{session_id}` | text | Session log | `authenticated` |
+| `GET` | `/findings` | JSON | Findings export across all sessions (unified schema with `source_type` discriminator + Phase 1 identity fields `source_mtime_ns`, `source_size`, `content_fingerprint`) — see [PLAN_INCREMENTAL_SCAN_IDEMPOTENCY.md](PLAN_INCREMENTAL_SCAN_IDEMPOTENCY.md). **Exempt from locale redirect** (`_is_api_or_asset_path`). | `reports_reader`+ |
+| `GET` | `/findings/csv` | CSV (StreamingResponse) | Findings export across all sessions, CSV form | `reports_reader`+ |
+| `GET` | `/findings/{session_id}` | JSON | Findings for one session | `reports_reader`+ |
+| `GET` | `/findings/{session_id}/csv` | CSV (StreamingResponse) | Findings for one session, CSV form | `reports_reader`+ |
 | `POST` | `/scan_database` | JSON | DB scan | `scanner`+ |
 
 Static: `GET /static/...` (long cache; same process). **Today:** no per-route RBAC — global `api.require_api_key` only when enabled. **Locale:** see [PLAN_DASHBOARD_I18N.md](completed/PLAN_DASHBOARD_I18N.md) (M-LOCALE-V1); unprefixed legacy HTML paths (`/config`, `/reports`, `/help`, `/about`) redirect the same way as `/`.
