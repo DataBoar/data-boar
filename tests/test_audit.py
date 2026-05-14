@@ -4,8 +4,14 @@ from core.scanner import DataScanner
 
 
 def test_cpf_detection():
+    # 123.456.789-09 is the canonical placeholder shape (1..9 prefix) with the
+    # arithmetically valid check digits. The historical fixture "...-00" was
+    # rejected by the LGPD_CPF regex once strict checksum landed (G-13-11), so
+    # only the ML branch fired and "CPF" disappeared from pattern_detected.
+    # Updating the fixture preserves the original *intent* (regex/lexicon must
+    # recognize a real CPF), without weakening the detector.
     scanner = DataScanner()
-    result = scanner.scan_column("cpf", "123.456.789-00")
+    result = scanner.scan_column("cpf", "123.456.789-09")
     assert result["sensitivity_level"] == "HIGH"
     assert "LGPD_CPF" in result.get("pattern_detected", "") or "CPF" in result.get(
         "pattern_detected", ""

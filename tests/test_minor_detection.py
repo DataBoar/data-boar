@@ -151,8 +151,11 @@ class TestMinorDetectionDoesNotBreakExisting(unittest.TestCase):
     """Ensure minor detection is additive: existing behaviour for non-minor data unchanged."""
 
     def test_cpf_still_high(self):
+        # Placeholder updated to a checksum-valid CPF (G-13-11 strict mode).
+        # Goal of the test is unchanged: a CPF still scored HIGH and labeled
+        # with "CPF" in pattern_detected (regex branch, not ML fallback).
         scanner = DataScanner()
-        result = scanner.scan_column("documento", "123.456.789-00")
+        result = scanner.scan_column("documento", "123.456.789-09")
         self.assertEqual(result["sensitivity_level"], "HIGH")
         self.assertIn("CPF", result.get("pattern_detected", ""))
 
