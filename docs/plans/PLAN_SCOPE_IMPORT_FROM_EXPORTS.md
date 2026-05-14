@@ -78,7 +78,7 @@ Vendor-specific adapters **map** to this schema in future phases; v1 is the **ge
 | B | **CLI or script**: canonical file → **stdout** or **fragment file** (merge instructions) | ✅ `scripts/scope_import_csv.py` + `config/scope_import_csv.py` |
 | C | **One reference adapter** (e.g. generic CSV host list or GLPI-shaped export) + pytest | ✅ Generic CSV + `tests/test_scope_import_csv.py`; GLPI-shaped adapter ⬜ later |
 | D | **Docs (EN + pt-BR):** operator workflow, privacy note (exports may contain sensitive infra metadata) | ✅ [USAGE.md](../USAGE.md#scope-import-from-csv-config-fragment) + [USAGE.pt_BR.md](../USAGE.pt_BR.md#scope-import-csv-fragment) (Secrets + **Privacy** bullets), [TECH_GUIDE.md](../TECH_GUIDE.md) pointer, [deploy/scope_import.example.csv](../../deploy/scope_import.example.csv), [SCOPE_IMPORT_QUICKSTART.md](../ops/SCOPE_IMPORT_QUICKSTART.md) (+ [.pt_BR](../ops/SCOPE_IMPORT_QUICKSTART.pt_BR.md)) |
-| E | **Optional:** first vendor-shaped adapter (e.g. GLPI export → canonical CSV); **commercial** narrative: “accelerator” / partner-delivered slices ([LICENSING_SPEC.md](../LICENSING_SPEC.md)) | ⬜ Pending |
+| E | **Optional:** first vendor-shaped adapter (e.g. GLPI export → canonical CSV); **commercial** narrative: "accelerator" / partner-delivered slices ([LICENSING_SPEC.md](../LICENSING_SPEC.md)) | ✅ `config/scope_import_glpi.py` + `scripts/scope_import_glpi.py` + 12 tests |
 
 ---
 
