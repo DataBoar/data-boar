@@ -19,6 +19,10 @@
 #   predict_proba; there is no per-term min_confidence field in this YAML.
 #
 # Regulation (EU) 2016/679; EDPB; member-state DPAs.
+#
+# Precise geolocation (logs / APIs): same regex geometry as compliance-sample-us_va_vcdpa.yaml
+# (JSON lat/lng, location: pair, latitude=&longitude=); norm_tag stays "EU GDPR" for EEA inventory.
+# Heuristic only - not an automated Art. 9 / special-category legal determination.
 
 regex:
   - name: "EU_IBAN"
@@ -26,6 +30,18 @@ regex:
     norm_tag: "EU GDPR"
   - name: "EU_VAT"
     pattern: "\\b[A-Z]{2}?\\s?[A-Z0-9]{8,12}\\b"
+    norm_tag: "EU GDPR"
+  - name: "EU_JSON_LAT_PRECISION"
+    pattern: "(?i)[\"']lat[\"']\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\b"
+    norm_tag: "EU GDPR"
+  - name: "EU_JSON_LNG_PRECISION"
+    pattern: "(?i)[\"'](?:lng|lon)[\"']\\s*:\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}\\b"
+    norm_tag: "EU GDPR"
+  - name: "EU_LOCATION_CSV_PAIR"
+    pattern: "(?i)\\blocation\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*,\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "EU GDPR"
+  - name: "EU_QUERYSTRING_LAT_LONG"
+    pattern: "(?i)latitude=[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*&\\s*longitude=[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
     norm_tag: "EU GDPR"
 
 # ML terms: Art. 4(1) personal data, data subject; EN + DE/FR for multilingual EU.
@@ -43,6 +59,18 @@ terms:
   - text: "personne concernée"
     label: sensitive
   - text: "eu gdpr"
+    label: sensitive
+  - text: "geolocation"
+    label: sensitive
+  - text: "geolocation data"
+    label: sensitive
+  - text: "biometric data"
+    label: sensitive
+  - text: "special categories of personal data"
+    label: sensitive
+  - text: "besondere kategorien personenbezogener daten"
+    label: sensitive
+  - text: "données sensibles"
     label: sensitive
   - text: "regulation 2016/679"
     label: sensitive
