@@ -1,0 +1,43 @@
+id,nome_ficticio,cpf,cnpj_empresa,estado_nascimento,obs
+1,Ficticio Lab A,221.710.616-34,,MG,CPF regiao 6 (MG) — emitido pre-2017 adulto
+2,Ficticio Lab B,245.371.844-42,,AL,CPF regiao 4 (AL/PB/PE/RN)
+3,Ficticio Lab C,338.384.778-04,,SP,CPF regiao 8 (SP)
+4,Ficticio Lab D,974.395.291-89,,DF,CPF regiao 1 (DF/GO/MS/MT/TO)
+5,Ficticio Lab E,319.551.419-24,,PR,CPF regiao 9 (PR/SC)
+6,Ficticio Lab F,785.443.303-80,,CE,CPF regiao 3 (CE/MA/PI)
+7,Ficticio Lab G,554.743.563-58,,MG,CPF regiao 6 (MG)
+8,Ficticio Lab H,978.644.503-18,,SP,CPF regiao 8 (SP)
+9,Ficticio Lab I,018.466.108-00,,SP,CPF regiao 8 (SP) — digito 9 = 8
+10,Ficticio Lab J,932.929.183-08,,CE,CPF regiao 3 (CE/MA/PI)
+11,Ficticio Lab K,061.230.758-10,,MG,CPF regiao 6 (MG) sem pontuacao: 06123075810
+12,Ficticio Lab L,852.280.835-02,,BA,CPF regiao 5 (BA/SE)
+13,Ficticio Lab M,618.265.557-73,,ES,CPF regiao 7 (ES/RJ)
+14,Ficticio Lab N,168.664.796-49,,MG,CPF regiao 6 (MG) — empresa: 27.726.568/0001-40
+14,Ficticio Lab N,,27.726.568/0001-40,MG,CNPJ valido — mesma entidade
+15,Ficticio Lab O,338.539.991-23,,SP,CPF regiao 8 (SP) — empresa: 55.816.406/0001-39
+15,Ficticio Lab O,,55.816.406/0001-39,SP,CNPJ valido
+16,Ficticio Lab P,857.632.419-91,,PR,CPF regiao 9 (PR/SC)
+17,Ficticio Lab Q,258.154.394-95,,BA,CPF regiao 5 (BA/SE)
+18,Ficticio Lab R,394.236.838-27,,PE,CPF regiao 4 (AL/PB/PE/RN)
+19,Ficticio Lab S,624.355.686-73,,CE,CPF regiao 3 (CE/MA/PI)
+20,Ficticio Lab T,345.300.036-63,,MG,CPF regiao 6 (MG)
+21,Ficticio Lab U,459.170.268-58,,AL,CPF regiao 4
+22,Ficticio Lab V,230.715.172-97,,AC,CPF regiao 2 (Norte/Amazonia)
+23,Ficticio Lab W,576.103.568-59,,PR,CPF regiao 9 (PR/SC)
+24,Ficticio Lab X,132.732.002-94,,GO,CPF regiao 1 (DF/GO/MS/MT/TO)
+25,Ficticio Lab Y,191.301.780-02,,GO,CPF regiao 1
+26,Ficticio Lab Z,116.056.932-00,,RS,CPF regiao 0 (RS)
+27,Ficticio Lab AA,125.368.976-80,,RS,CPF regiao 0 (RS)
+28,Ficticio Lab AB,479.394.791-30,,GO,CPF regiao 1
+29,Ficticio Lab AC,119.499.440-77,,RJ,CPF regiao 7 (ES/RJ)
+30,Ficticio Lab AD,47634470686,,SP,sem pontuacao — CPF regiao 6 (MG)
+31,Ficticio Lab AE,65718594244,,SP,sem pontuacao — CPF regiao 4
+32,Ficticio Lab AF,194.536.952-38,,MG,CPF regiao 6 (MG)
+33,Ficticio Lab AG,915.785.065-81,,RS,CPF regiao 0 (RS)
+34,Ficticio Lab AH,812.422.573-73,,CE,CPF regiao 3
+35,Ficticio Lab AI,989.431.356-61,,DF,CPF regiao 1
+36,Ficticio Lab AJ,778.259.732-32,,PE,CPF regiao 4
+37,Ficticio Lab AK,482.700.805-19,,BA,CPF regiao 5
+38,Ficticio Lab AL,717.508.399-89,,PR,CPF regiao 9
+39,Ficticio Lab AM,952.275.838-89,,PR,CPF regiao 9
+40,Ficticio Lab AN,883.300.806-17,,DF,CPF regiao 1

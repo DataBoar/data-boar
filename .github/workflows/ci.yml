@@ -1,6 +1,20 @@
 # CI: tests and dependency audit on push/PR.
 # Keeps main branch healthy and improves security via automated checks.
 #
+# Failure posture (fail-closed by default):
+#   - Individual steps: every step uses the default `continue-on-error: false`.
+#     A failed step (non-zero exit code) immediately stops that job and marks
+#     the run as failed — the pipeline does NOT silently pass on errors.
+#   - `uv sync` / `uv pip install pip-audit` network failures: if dependency
+#     fetch or lock-file install fails (network timeout, registry unavailable,
+#     hash mismatch), the job exits with a non-zero code and the entire run
+#     is marked FAILED (not skipped, not passed).
+#   - `pip-audit` security scan: runs after install; a discovered vulnerability
+#     without a matching `--ignore-vuln` entry fails the job.
+#   - `fail-fast: false` on the matrix means Python-3.12 and Python-3.13 jobs
+#     run to completion even if one fails, so both error logs are collected.
+#     It does NOT mean "pass when there are errors" — just parallel visibility.
+#
 # Third-party Actions use full commit SHAs (major tag noted in comment). Refresh via Dependabot
 # (github-actions) or deliberately after reading upstream release notes. astral-sh/setup-uv `version`
 # pins the uv CLI release (see https://github.com/astral-sh/uv/releases), not the action repo tag.
