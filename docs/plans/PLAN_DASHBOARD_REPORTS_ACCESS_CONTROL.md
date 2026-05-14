@@ -130,6 +130,10 @@ See [SECURITY.md](../SECURITY.md), [USAGE.md](../USAGE.md), [TECH_GUIDE.md](../T
 | `GET` | `/report` | XLSX | Last report download | `reports_reader`+ |
 | `GET` | `/heatmap` | PNG | Last heatmap | `reports_reader`+ |
 | `GET` | `/list` | JSON | List API | `authenticated` / automation |
+| `GET` | `/findings` | JSON | All findings for the **latest** session, unified schema with `source_type` discriminator + Phase 1 identity fields (`source_mtime_ns`, `source_size`, `content_fingerprint`) — async StreamingResponse | `reports_reader`+ |
+| `GET` | `/findings/csv` | CSV attachment | Latest session findings as UTF-8 CSV (same unified schema) | `reports_reader`+ |
+| `GET` | `/findings/{session_id}` | JSON | Findings for a specific session (same schema as `/findings`) | `reports_reader`+ |
+| `GET` | `/findings/{session_id}/csv` | CSV attachment | Findings for a specific session as UTF-8 CSV | `reports_reader`+ |
 | `PATCH` | `/sessions/{session_id}` | JSON | Metadata | `authenticated` |
 | `PATCH` | `/sessions/{session_id}/technician` | JSON | Technician tag | `authenticated` |
 | `GET` | `/reports/{session_id}` | XLSX | Report by session | `reports_reader`+ |
