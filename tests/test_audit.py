@@ -4,8 +4,13 @@ from core.scanner import DataScanner
 
 
 def test_cpf_detection():
+    # 390.533.447-05 is the canonical public Mod-11-valid CPF used across the test suite
+    # (e.g. tests/test_brazilian_cpf.py, tests/test_setup_lab_db.py). The previous fixture
+    # 123.456.789-00 was shape-only and is correctly suppressed by the
+    # _CHECKSUM_GATED_PATTERNS Mod-11 gate in core/detector.py (commit 6103764) — that gate
+    # is a Defensive-Scanning-Manifesto invariant and must NOT be relaxed to satisfy a test.
     scanner = DataScanner()
-    result = scanner.scan_column("cpf", "123.456.789-00")
+    result = scanner.scan_column("cpf", "390.533.447-05")
     assert result["sensitivity_level"] == "HIGH"
     assert "LGPD_CPF" in result.get("pattern_detected", "") or "CPF" in result.get(
         "pattern_detected", ""
@@ -23,8 +28,11 @@ def test_cnpj_numeric_and_alnum_detection():
     # Enable alphanumeric CNPJ so both legacy numeric and new alnum formats are detected by regex.
     scanner = DataScanner(detection_config={"cnpj_alphanumeric": True})
 
-    # Legacy numeric CNPJ
-    numeric = "12.345.678/0001-99"
+    # Legacy numeric CNPJ — 11.222.333/0001-81 is the canonical Mod-11-valid public CNPJ
+    # already used in tests/test_cnpj_formats.py. Commit 6e8e371 added a lookahead to
+    # LGPD_CNPJ_ALNUM so pure-numeric CNPJs no longer double-fire there; with that fix
+    # in place this assertion exercises the checksum-gated LGPD_CNPJ path (no double-hit).
+    numeric = "11.222.333/0001-81"
     numeric_result = scanner.scan_column("cnpj", numeric)
     assert numeric_result["sensitivity_level"] == "HIGH"
     assert "CNPJ" in numeric_result.get("pattern_detected", "")

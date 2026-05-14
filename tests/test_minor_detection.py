@@ -151,8 +151,11 @@ class TestMinorDetectionDoesNotBreakExisting(unittest.TestCase):
     """Ensure minor detection is additive: existing behaviour for non-minor data unchanged."""
 
     def test_cpf_still_high(self):
+        # 390.533.447-05 is the canonical public Mod-11-valid CPF used elsewhere in the
+        # test suite. The prior fixture 123.456.789-00 was shape-only and is suppressed
+        # by _CHECKSUM_GATED_PATTERNS in core.detector (FP-first defensive posture).
         scanner = DataScanner()
-        result = scanner.scan_column("documento", "123.456.789-00")
+        result = scanner.scan_column("documento", "390.533.447-05")
         self.assertEqual(result["sensitivity_level"], "HIGH")
         self.assertIn("CPF", result.get("pattern_detected", ""))
 
