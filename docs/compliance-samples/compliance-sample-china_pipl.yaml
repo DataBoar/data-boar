@@ -1,0 +1,156 @@
+# China PIPL — sample compliance profile (Personal Information Protection Law)
+#
+# NOT LEGAL ADVICE. Technical inventory signals only. Implementing regulations, CAC
+# practice, and sector measures under the PIPL and related laws evolve — revalidate
+# with qualified PRC counsel.
+#
+# Target audience: Mainland China exposures; processors of personal information
+# inside or outside China when activities relate to natural persons in China.
+# Statute: Personal Information Protection Law (个人信息保护法), effective Nov 2021.
+#
+# How to use:
+#   1. Set in your main config:
+#        regex_overrides_file: path/to/compliance-sample-china_pipl.yaml
+#        ml_patterns_file: path/to/compliance-sample-china_pipl.yaml
+#   2. Merge the recommendation_overrides list below into your config under
+#      report.recommendation_overrides.
+#
+# Legal scope (summary):
+#   - PIPL governs processing of personal information (个人信息) about identified or
+#     identifiable natural persons within China, with extraterritorial reach in
+#     prescribed circumstances. Sensitive categories (Art. 28), separate consent for
+#     certain acts, cross-border transfers (Ch. III), and children's personal
+#     information (Art. 31) carry high operational risk.
+#   - Data Boar output is pattern and term matching only. It does not assess lawful
+#     basis, separate consent validity, CII operator duties, security assessment
+#     requirements for export, or localization obligations for critical operators.
+#
+# Regex design:
+#   - CN_PRC_ID_CARD_CTX: 18-digit Mainland resident identity card number per GB 11643
+#     shape (17 digits + checksum digit 0-9 or X); requires contextual labels
+#     (Chinese or English) to reduce false positives on arbitrary 18-digit numbers.
+#   - CN_USCC_CTX: Unified Social Credit Code (统一社会信用代码), 18 alphanumeric;
+#     contextual prefix for enterprise registry exports.
+#   - Precise geolocation: same four-decimal geometry as compliance-sample-us_va_vcdpa.yaml.
+#
+# Use double-quoted YAML with escaped backslashes. Chinese terms use UTF-8.
+
+regex:
+  - name: "CN_PRC_ID_CARD_CTX"
+    pattern: "(?i)(?:\u8eab\u4efd\u8bc1|resident\\s+identity\\s+card|id\\s+card\\s*(?:no\\.?|number)?|national\\s+id)\\s*[:#]?\\s*\\b\\d{17}[0-9Xx]\\b"
+    norm_tag: "China PIPL"
+  - name: "CN_USCC_CTX"
+    pattern: "(?i)(?:\u7edf\u4e00\u793e\u4f1a\u4fe1\u7528\u4ee3\u7801|unified\\s+social\\s+credit)\\s*[:#]?\\s*\\b[0-9A-Z]{18}\\b"
+    norm_tag: "China PIPL"
+  - name: "PIPL_JSON_LAT_PRECISION"
+    pattern: "(?i)[\"']lat[\"']\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\b"
+    norm_tag: "China PIPL"
+  - name: "PIPL_JSON_LNG_PRECISION"
+    pattern: "(?i)[\"'](?:lng|lon)[\"']\\s*:\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}\\b"
+    norm_tag: "China PIPL"
+  - name: "PIPL_LOCATION_CSV_PAIR"
+    pattern: "(?i)\\blocation\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*,\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "China PIPL"
+  - name: "PIPL_QUERYSTRING_LAT_LONG"
+    pattern: "(?i)latitude=[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*&\\s*longitude=[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "China PIPL"
+
+terms:
+  - text: "PIPL"
+    label: sensitive
+  - text: "\u4e2a\u4eba\u4fe1\u606f\u4fdd\u62a4\u6cd5"
+    label: sensitive
+  - text: "personal information protection law"
+    label: sensitive
+  - text: "\u4e2a\u4eba\u4fe1\u606f"
+    label: sensitive
+  - text: "personal information"
+    label: sensitive
+  - text: "\u654f\u611f\u4e2a\u4eba\u4fe1\u606f"
+    label: sensitive
+  - text: "sensitive personal information"
+    label: sensitive
+  - text: "\u4e2a\u4eba\u4fe1\u606f\u5904\u7406\u8005"
+    label: sensitive
+  - text: "personal information processor"
+    label: sensitive
+  - text: "\u53d7\u6258\u5904\u7406\u8005"
+    label: sensitive
+  - text: "entrusted party"
+    label: sensitive
+  - text: "\u5355\u72ec\u540c\u610f"
+    label: sensitive
+  - text: "separate consent"
+    label: sensitive
+  - text: "\u8de8\u5883\u63d0\u4f9b"
+    label: sensitive
+  - text: "cross-border transfer"
+    label: sensitive
+  - text: "cross border transfer"
+    label: sensitive
+  - text: "\u5173\u952e\u4fe1\u606f\u57fa\u7840\u8bbe\u65bd"
+    label: sensitive
+  - text: "critical information infrastructure"
+    label: sensitive
+  - text: "CII"
+    label: sensitive
+  - text: "\u513f\u7ae5\u4e2a\u4eba\u4fe1\u606f"
+    label: sensitive
+  - text: "children personal information"
+    label: sensitive
+  - text: "\u56fd\u5bb6\u7f51\u4fe1\u529e"
+    label: sensitive
+  - text: "CAC"
+    label: sensitive
+  - text: "cyberspace administration"
+    label: sensitive
+  - text: "\u5883\u5185\u5b58\u50a8"
+    label: sensitive
+  - text: "data localization"
+    label: sensitive
+  - text: "local storage china"
+    label: sensitive
+  - text: "\u533f\u540d\u5316"
+    label: sensitive
+  - text: "anonymization"
+    label: sensitive
+  - text: "\u53bb\u6807\u8bc6\u5316"
+    label: sensitive
+  - text: "de-identification"
+    label: sensitive
+  - text: "\u81ea\u52a8\u5316\u51b3\u7b56"
+    label: sensitive
+  - text: "automated decision-making"
+    label: sensitive
+  - text: "\u64a4\u56de\u540c\u610f"
+    label: sensitive
+  - text: "withdraw consent"
+    label: sensitive
+  - text: "personal information protection impact assessment"
+    label: sensitive
+  - text: "legitimate interest processing"
+    label: sensitive
+  - text: "data breach notification"
+    label: sensitive
+  - text: "biometric data"
+    label: sensitive
+  - text: "health data"
+    label: sensitive
+  - text: "financial account information"
+    label: sensitive
+  - text: "precise geolocation"
+    label: sensitive
+  - text: "once-only principle"
+    label: sensitive
+  - text: "minimum necessary"
+    label: sensitive
+  - text: "\u6700\u5c0f\u5fc5\u8981"
+    label: sensitive
+
+recommendation_overrides:
+  - norm_tag_pattern: "China PIPL"
+    base_legal: "Personal Information Protection Law of the People's Republic of China (PIPL); enforcement and guidance via Cyberspace Administration of China (CAC) and related regulators; civil code and Cybersecurity Law may co-apply."
+    risk: "Personal and sensitive personal information; contextual PRC ID card and Unified Social Credit Code patterns; coordinate-shaped fields as inventory signals only. Cross-border transfer, CII localization, children's PI, separate consent, and security assessment duties depend on facts and current CAC measures — not evaluated by the scanner."
+    recommendation: "Map roles (processor / entrusted party); document purpose limitation and retention; assess cross-border mechanisms and storage location with PRC counsel; extend ML terms for product-specific column names in CN/EN mixed stacks."
+    priority: "ALTA"
+    relevant_for: "DPO, Legal, CAC-facing compliance, Product, Information Security, Data Localization"
