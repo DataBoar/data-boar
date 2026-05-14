@@ -1,7 +1,9 @@
 # Australia Privacy Act – sample compliance profile (Privacy Act 1988, OAIC, APPs)
 #
-# Target audience: Australian and Oceania deployments. OAIC, APPs, Notifiable Data Breaches.
-# Terms: personal information (EN). Optional TFN regex for Tax File Number.
+# NOT LEGAL ADVICE. This file is a technical starting point for operators and engineers.
+#
+# Target audience: Australian and Oceania deployments. OAIC; Australian Privacy Principles (APPs);
+# Notifiable Data Breaches (NDB) scheme. Key identifiers: Tax File Number (TFN), Medicare.
 #
 # How to use:
 #   1. Set in your main config:
@@ -9,50 +11,192 @@
 #        ml_patterns_file: path/to/compliance-sample-australia_privacy.yaml
 #   2. Merge the recommendation_overrides list below into your config under report.recommendation_overrides.
 #
-# Australia: Privacy Act 1988; Office of the Australian Information Commissioner (OAIC); APPs.
+# Privacy Act 1988 (Cth): major amendment Act passed November 2024 (Privacy and Other
+# Legislation Amendment Act 2024). Key reforms: statutory tort for serious invasions of
+# privacy (commencement TBD), children's online privacy code, APP clarity amendments. Some
+# provisions (small business exemption removal, direct right of action) were deferred or
+# dropped — revalidate with counsel for your coverage period.
+#
+# Detection thresholds (not configurable in this file; set in main config.yaml):
+#   - sensitivity_detection.fuzzy_column_match_min_confidence (int, default 25)
+#   - sensitivity_detection.embedding_prototype_hint_min_confidence (int, default 20)
+#
+# Legal scope (read before relying on tags):
+#   - Privacy Act applies to APP entities (federal agencies + organisations with annual turnover
+#     > AUD $3M; also health service providers regardless of size). Some states have their own
+#     privacy acts (NSW, VIC, QLD, ACT, NT) — this sample targets the federal Act only.
+#   - Data Boar performs technical pattern and term matching only. It does NOT evaluate APP
+#     compliance, NDB notification thresholds, or state-law overlay. Use output as inventory
+#     signal; scope determination with counsel.
+#
+# Regex design:
+#   - TFN_AU / TFN_AU_SPACED: Australian Tax File Number (ATO). 8–9 digits; high false-positive
+#     risk on generic numeric strings — tune fuzzy confidence threshold upward or review
+#     findings in context. Spaced variant covers "123 456 782" display format.
+#   - MEDICARE_AU: Medicare card number (10 digits + optional individual reference digit).
+#   - ABN_AU: Australian Business Number (11 digits, space-separated groups 2-3-3-3); may appear
+#     alongside personal data in health/provider contexts.
+#   - AU_PASSPORT: Australian passport (1–2 uppercase letters + 7 digits).
+#   - Precise geolocation: same four-decimal-place geometry as compliance-sample-us_va_vcdpa.yaml
+#     and compliance-sample-eu_gdpr.yaml. Location data linked to an identifiable individual is
+#     "personal information" under Privacy Act s.6. Patterns are heuristic coordinate-shape
+#     signals only — not automatic OAIC or APP classification.
+#
+# Use double-quoted YAML with escaped backslashes (see .cursor/rules/yaml-regex-patterns.mdc).
 
 regex:
   - name: "TFN_AU"
+    # Tax File Number: 8 digits (older issuance)
     pattern: "\\b\\d{8}\\b"
     norm_tag: "Australia Privacy"
   - name: "TFN_AU_ALT"
+    # Tax File Number: 9 digits (current issuance)
     pattern: "\\b\\d{9}\\b"
     norm_tag: "Australia Privacy"
+  - name: "TFN_AU_SPACED"
+    # Tax File Number displayed as NNN NNN NNN (three groups of 3)
+    pattern: "\\b\\d{3}\\s\\d{3}\\s\\d{3}\\b"
+    norm_tag: "Australia Privacy"
   - name: "MEDICARE_AU"
+    # Medicare card: 10 digits + optional individual reference digit (space-separated)
     pattern: "\\b\\d{10}\\s?\\d\\b"
     norm_tag: "Australia Privacy"
+  - name: "ABN_AU"
+    # Australian Business Number: NN NNN NNN NNN (11 digits, grouped)
+    pattern: "\\b\\d{2}\\s?\\d{3}\\s?\\d{3}\\s?\\d{3}\\b"
+    norm_tag: "Australia Privacy"
+  - name: "AU_PASSPORT"
+    # Australian passport: 1–2 uppercase letters + 7 digits (e.g. PA1234567 or N1234567)
+    pattern: "\\b[A-Z]{1,2}\\d{7}\\b"
+    norm_tag: "Australia Privacy"
+  # Precise geolocation (Privacy Act s.6 — location data identifying an individual = personal info)
+  - name: "AU_JSON_LAT_PRECISION"
+    pattern: "(?i)[\"']lat[\"']\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\b"
+    norm_tag: "Australia Privacy"
+  - name: "AU_JSON_LNG_PRECISION"
+    pattern: "(?i)[\"'](?:lng|lon)[\"']\\s*:\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}\\b"
+    norm_tag: "Australia Privacy"
+  - name: "AU_LOCATION_CSV_PAIR"
+    pattern: "(?i)\\blocation\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*,\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "Australia Privacy"
+  - name: "AU_QUERYSTRING_LAT_LONG"
+    pattern: "(?i)latitude=[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*&\\s*longitude=[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "Australia Privacy"
 
-# ML terms: personal information, APPs, OAIC, notifiable data breach.
+# ML terms: EN — Privacy Act / APP / OAIC vocabulary.
+# "Sensitive information" is a defined subset under s.6 of the Act requiring heightened protection.
 terms:
   - text: "personal information"
+    label: sensitive
+  - text: "sensitive information"
     label: sensitive
   - text: "tax file number"
     label: sensitive
   - text: "tfn"
     label: sensitive
+  - text: "medicare"
+    label: sensitive
+  - text: "medicare number"
+    label: sensitive
   - text: "oaic"
+    label: sensitive
+  - text: "office of the australian information commissioner"
     label: sensitive
   - text: "australian privacy principles"
     label: sensitive
   - text: "apps"
     label: sensitive
+  - text: "app entity"
+    label: sensitive
   - text: "notifiable data breach"
+    label: sensitive
+  - text: "eligible data breach"
     label: sensitive
   - text: "ndb scheme"
     label: sensitive
   - text: "privacy act"
     label: sensitive
+  - text: "information commissioner"
+    label: sensitive
   - text: "data subject"
     label: sensitive
   - text: "consent"
     label: sensitive
-  - text: "information commissioner"
+  - text: "privacy impact assessment"
+    label: sensitive
+  - text: "de-identification"
+    label: sensitive
+  - text: "pseudonymisation"
+    label: sensitive
+  - text: "cross-border disclosure"
+    label: sensitive
+  - text: "overseas disclosure"
+    label: sensitive
+  - text: "health information"
+    label: sensitive
+  - text: "health record"
+    label: sensitive
+  - text: "biometric information"
+    label: sensitive
+  - text: "biometric data"
+    label: sensitive
+  - text: "genetic information"
+    label: sensitive
+  - text: "racial origin"
+    label: sensitive
+  - text: "ethnic origin"
+    label: sensitive
+  - text: "political opinion"
+    label: sensitive
+  - text: "religious belief"
+    label: sensitive
+  - text: "philosophical belief"
+    label: sensitive
+  - text: "trade union membership"
+    label: sensitive
+  - text: "sexual orientation"
+    label: sensitive
+  - text: "criminal record"
+    label: sensitive
+  - text: "location data"
+    label: sensitive
+  - text: "geolocation"
+    label: sensitive
+  - text: "precise geolocation"
+    label: sensitive
+  - text: "location information"
+    label: sensitive
+  - text: "name"
+    label: sensitive
+  - text: "address"
+    label: sensitive
+  - text: "date of birth"
+    label: sensitive
+  - text: "email"
+    label: sensitive
+  - text: "phone number"
+    label: sensitive
+  - text: "passport number"
+    label: sensitive
+  - text: "driver licence"
+    label: sensitive
+  - text: "driver license"
+    label: sensitive
+  - text: "abn"
+    label: sensitive
+  - text: "financial information"
+    label: sensitive
+  - text: "children's privacy"
+    label: sensitive
+  - text: "minor"
+    label: sensitive
+  - text: "online privacy"
     label: sensitive
 
 recommendation_overrides:
   - norm_tag_pattern: "Australia Privacy"
-    base_legal: "Privacy Act 1988 (Cth); OAIC; Australian Privacy Principles (APPs)"
-    risk: "Personal information; TFN and other identifiers; notifiable data breach obligations."
-    recommendation: "Comply with APPs; assess NDB obligations; follow OAIC guidelines for collection, use and disclosure."
+    base_legal: "Privacy Act 1988 (Cth); OAIC; Australian Privacy Principles (APPs); Privacy and Other Legislation Amendment Act 2024; NDB scheme (Part IIIC)"
+    risk: "Personal information (including sensitive information under s.6 — health, biometric, genetic, racial/ethnic origin, political opinion, religious belief, trade union membership, sexual orientation, criminal record) in scope of Privacy Act 1988. Precise coordinate-shaped values in logs/APIs are heuristic inventory signals only — not automatic OAIC classification. NDB notification window: 30 days to notify OAIC and affected individuals when an eligible data breach occurs."
+    recommendation: "Comply with applicable APPs (collection, use, disclosure, quality, security, openness, access and correction, identifiers, anonymity, transborder data flows); assess NDB eligibility within 30 days; consult OAIC guidelines; consider privacy impact assessment (PIA) for high-risk activities; revalidate with counsel for 2024 amendment commencement dates."
     priority: "ALTA"
-    relevant_for: "DPO, OAIC, Privacy Officer"
+    relevant_for: "Privacy Officer, DPO, OAIC, Legal, Information Security, Product"

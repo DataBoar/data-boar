@@ -1,4 +1,4 @@
-# Russia 152-FZ – sample compliance profile (Federal Law No. 152-FZ “On Personal Data”)
+# Russia 152-FZ – sample compliance profile (Federal Law No. 152-FZ "On Personal Data")
 #
 # NOT LEGAL ADVICE. This file is a technical starting point for operators and engineers.
 #
@@ -7,28 +7,72 @@
 # against your data facts; refresh the sample when your program or the legal baseline changes.
 #
 # Target audience: Russia-related deployments. Roskomnadzor (supervisory authority); operator
-# (personal-data controller) concepts under 152-FZ. Terms: Russian + English as requested.
-#
-# Regex notes:
-#   - SNILS (insurance number): formatted XXX-XXX-XXX XX is relatively distinctive in context.
-#   - INN (10-digit, legal entities): pattern uses first digit 7–9 as a common heuristic for
-#     domestic legal-entity INNs; expect false positives on arbitrary 10-digit numbers—tune or
-#     disable if noisy.
+# (personal-data controller) concepts under 152-FZ. Terms: Russian + English.
 #
 # How to use:
 #   1. Set in your main config:
 #        regex_overrides_file: path/to/compliance-sample-russia_152_fz.yaml
 #        ml_patterns_file: path/to/compliance-sample-russia_152_fz.yaml
 #   2. Merge the recommendation_overrides list below into your config under report.recommendation_overrides.
+#
+# Federal Law No. 152-FZ "On Personal Data"; key amendments: Federal Law No. 266-FZ (2022) —
+# strengthened Roskomnadzor powers, mandatory breach notification (72 h initial / 5 days detailed),
+# tighter cross-border transfer rules (Art. 12), expanded localization requirement (Art. 22.1).
+#
+# Detection thresholds (not configurable in this file; set in main config.yaml):
+#   - sensitivity_detection.fuzzy_column_match_min_confidence (int, default 25)
+#   - sensitivity_detection.embedding_prototype_hint_min_confidence (int, default 20)
+#
+# Legal scope (read before relying on tags):
+#   - Data Boar performs technical pattern and term matching only. It does NOT classify processing
+#     bases, evaluate localization compliance, or assess breach notification timelines. Use output
+#     as inventory signal; scope determination with counsel.
+#
+# Regex notes:
+#   - SNILS_RU (insurance number): formatted XXX-XXX-XXX XX — relatively distinctive in context.
+#   - INN_RU_LEGAL_ENTITY_HEURISTIC (10-digit): first digit 7–9 heuristic for domestic legal-entity
+#     INNs; expect false positives on arbitrary 10-digit numbers — tune or disable if noisy.
+#   - INN_RU_INDIVIDUAL: 12-digit individual taxpayer number (физическое лицо).
+#   - SNILS_RU_PLAIN: SNILS without hyphens (display variant XXXXXXXXXXX 11 digits).
+#   - Precise geolocation: same four-decimal-place geometry as compliance-sample-us_va_vcdpa.yaml
+#     and compliance-sample-eu_gdpr.yaml. Geolocation data that identifies a Russian citizen may
+#     constitute personal data under 152-FZ Art. 3. Patterns are heuristic signals only.
+#
+# Use double-quoted YAML with escaped backslashes (see .cursor/rules/yaml-regex-patterns.mdc).
 
 regex:
   - name: "SNILS_RU"
+    # SNILS (Страховой номер индивидуального лицевого счёта): NNN-NNN-NNN NN
     pattern: "\\b\\d{3}-\\d{3}-\\d{3}\\s\\d{2}\\b"
     norm_tag: "Russia 152-FZ"
+  - name: "SNILS_RU_PLAIN"
+    # SNILS without delimiters (11 digits): used in some DB storage formats
+    pattern: "\\b\\d{11}\\b"
+    norm_tag: "Russia 152-FZ"
   - name: "INN_RU_LEGAL_ENTITY_HEURISTIC"
+    # INN legal entity (ИНН юридического лица): 10-digit heuristic (first digit 7–9 for domestic)
     pattern: "\\b[789]\\d{9}\\b"
     norm_tag: "Russia 152-FZ"
+  - name: "INN_RU_INDIVIDUAL"
+    # INN individual (ИНН физического лица): 12 digits
+    pattern: "\\b\\d{12}\\b"
+    norm_tag: "Russia 152-FZ"
+  # Precise geolocation (152-FZ Art. 3 — location data identifying a Russian citizen = personal data)
+  - name: "RU_JSON_LAT_PRECISION"
+    pattern: "(?i)[\"']lat[\"']\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\b"
+    norm_tag: "Russia 152-FZ"
+  - name: "RU_JSON_LNG_PRECISION"
+    pattern: "(?i)[\"'](?:lng|lon)[\"']\\s*:\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}\\b"
+    norm_tag: "Russia 152-FZ"
+  - name: "RU_LOCATION_CSV_PAIR"
+    pattern: "(?i)\\blocation\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*,\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "Russia 152-FZ"
+  - name: "RU_QUERYSTRING_LAT_LONG"
+    pattern: "(?i)latitude=[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*&\\s*longitude=[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "Russia 152-FZ"
 
+# ML terms: Russian + English. Covers 152-FZ base vocabulary + special categories (Art. 10)
+# + localization and breach notification requirements (Federal Law No. 266-FZ 2022).
 terms:
   - text: "персональные данные"
     label: sensitive
@@ -70,11 +114,89 @@ terms:
     label: sensitive
   - text: "personal data localization"
     label: sensitive
+  # Special categories (Art. 10 — особые категории персональных данных)
+  - text: "специальные категории персональных данных"
+    label: sensitive
+  - text: "special categories of personal data"
+    label: sensitive
+  - text: "расовая принадлежность"
+    label: sensitive
+  - text: "racial origin"
+    label: sensitive
+  - text: "национальная принадлежность"
+    label: sensitive
+  - text: "ethnic origin"
+    label: sensitive
+  - text: "политические взгляды"
+    label: sensitive
+  - text: "political opinion"
+    label: sensitive
+  - text: "религиозные убеждения"
+    label: sensitive
+  - text: "religious belief"
+    label: sensitive
+  - text: "философские убеждения"
+    label: sensitive
+  - text: "philosophical belief"
+    label: sensitive
+  - text: "состояние здоровья"
+    label: sensitive
+  - text: "health condition"
+    label: sensitive
+  - text: "здоровье"
+    label: sensitive
+  - text: "интимная жизнь"
+    label: sensitive
+  - text: "sexual life"
+    label: sensitive
+  - text: "биометрические данные"
+    label: sensitive
+  - text: "biometric data"
+    label: sensitive
+  - text: "биометрические персональные данные"
+    label: sensitive
+  - text: "biometric personal data"
+    label: sensitive
+  - text: "судимость"
+    label: sensitive
+  - text: "criminal record"
+    label: sensitive
+  # 266-FZ 2022 additions
+  - text: "уведомление об утечке данных"
+    label: sensitive
+  - text: "data breach notification"
+    label: sensitive
+  - text: "инцидент"
+    label: sensitive
+  - text: "утечка персональных данных"
+    label: sensitive
+  - text: "personal data leak"
+    label: sensitive
+  - text: "геолокация"
+    label: sensitive
+  - text: "geolocation"
+    label: sensitive
+  - text: "precise geolocation"
+    label: sensitive
+  - text: "точная геолокация"
+    label: sensitive
+  - text: "местонахождение"
+    label: sensitive
+  - text: "location data"
+    label: sensitive
+  - text: "снилс"
+    label: sensitive
+  - text: "snils"
+    label: sensitive
+  - text: "инн"
+    label: sensitive
+  - text: "inn"
+    label: sensitive
 
 recommendation_overrides:
   - norm_tag_pattern: "Russia 152-FZ"
-    base_legal: "Federal Law No. 152-FZ (On Personal Data); Roskomnadzor supervision"
-    risk: "Personal data processing; operator obligations; SNILS/INN-style identifiers; cross-border and localization rules where applicable."
-    recommendation: "Map processing to 152-FZ roles and grounds; maintain records and notices as required; revalidate patterns and terms when law or guidance changes; involve qualified counsel for jurisdictional questions."
+    base_legal: "Federal Law No. 152-FZ (On Personal Data); Roskomnadzor supervision; Federal Law No. 266-FZ (2022) — strengthened obligations"
+    risk: "Personal data including special categories (Art. 10: racial/ethnic origin, political opinion, religious/philosophical belief, health, sexual life, biometric data, criminal record) under 152-FZ. Precise coordinate-shaped values in logs/APIs are heuristic inventory signals only. Data localization (Art. 22.1): personal data of Russian citizens must be stored in Russia on initial collection. Mandatory breach notification: 72 h initial + 5 days detailed report to Roskomnadzor (266-FZ 2022). Regulatory baseline evolves frequently — revalidate."
+    recommendation: "Map processing to 152-FZ roles and legal grounds; maintain records and privacy notices; ensure localization for Russian citizens' personal data; implement 72-hour breach notification process; apply strict safeguards for special categories (Art. 10); obtain explicit consent where required; involve qualified Russian data-protection counsel given frequent law and guidance changes."
     priority: "ALTA"
-    relevant_for: "DPO, Personal data operator, Roskomnadzor"
+    relevant_for: "DPO, Personal data operator, Roskomnadzor, Legal, Information Security"
