@@ -2,6 +2,7 @@
 Unified logger: one schema, file (audit_YYYYMMDD.log) + console; optional session_id in format.
 On violation: log and print to console immediately so operator is notified on the fly.
 """
+
 import logging
 from datetime import datetime, timezone
 from typing import Any
@@ -72,6 +73,10 @@ def notify_violation(message: str | dict[str, Any]) -> None:
     get_logger().warning("VIOLATION: %s", message)
     if isinstance(message, dict):
         import json
-        print("[ALERT] Possible personal/sensitive data:", json.dumps(message, default=str)[:500])
+
+        print(
+            "[ALERT] Possible personal/sensitive data:",
+            json.dumps(message, default=str)[:500],
+        )
     else:
         print("[ALERT] Possible personal/sensitive data:", message)

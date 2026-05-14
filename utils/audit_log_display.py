@@ -57,7 +57,9 @@ def audit_log_target_label(config: dict[str, Any], *, default: str) -> str:
     return _base_audit_slug(str(config.get("name", "") or default))
 
 
-def sanitize_target_name_for_audit_log(name: str | None, *, default: str = "target") -> str:
+def sanitize_target_name_for_audit_log(
+    name: str | None, *, default: str = "target"
+) -> str:
     """Collapse dangerous/verbose characters for a single-line audit log field."""
     if name is None or not str(name).strip():
         return default
