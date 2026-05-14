@@ -141,6 +141,9 @@ if ($Push) {
         if (-not (Test-Path -LiteralPath $driveRoot)) { continue }
         $bareWin = Join-Path $driveRoot "notes-sync.git"
         if (-not (Test-Path -LiteralPath $bareWin)) { continue }
+        # VeraCrypt (and some FUSE stacks): receive-pack fsync on temp pack can fail with "Bad file descriptor".
+        # core.fsync none applies only to this bare repo path (Git 2.41+). Idempotent.
+        git -C $bareWin config core.fsync none 2>&1 | Out-Null
         $bareUri = "${dl}:/notes-sync.git"
         Write-Info "Push bare (VC): $bareUri ..."
         $pushOut = git push $bareUri main:main 2>&1 | Select-Object -First 12
