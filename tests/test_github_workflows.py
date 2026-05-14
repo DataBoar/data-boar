@@ -48,6 +48,49 @@ def test_slack_ci_failure_notify_workflow_present_and_valid() -> None:
     assert "notify" in (data.get("jobs") or {})
 
 
+def test_slack_ci_failure_notify_has_operator_kill_switch() -> None:
+    """The CI failure notifier exposes a reversible kill-switch via repo variable.
+
+    Regression guard: the operator must be able to mute Slack CI-failure pings
+    by flipping ``vars.MUTE_CI_FAILURE_NOTIFY`` (true/1/yes/on) in the GitHub
+    UI without editing YAML or revoking ``secrets.SLACK_WEBHOOK_URL`` (which
+    other Slack workflows share). The detect step must read the variable in
+    its ``env:`` and short-circuit ``present=false`` when truthy, so the
+    existing ``if: steps.<id>.outputs.present == 'true'`` gate skips the POST.
+    """
+    data = _load_workflow("slack-ci-failure-notify.yml")
+    notify = (data.get("jobs") or {}).get("notify") or {}
+    steps = notify.get("steps") or []
+    detect_step = None
+    for step in steps:
+        if not isinstance(step, dict):
+            continue
+        env = step.get("env") or {}
+        if "MUTE_CI_FAILURE_NOTIFY" in env and "SLACK_WEBHOOK_URL" in env:
+            detect_step = step
+            break
+    assert detect_step is not None, (
+        "slack-ci-failure-notify.yml: expected a step that reads both "
+        "SLACK_WEBHOOK_URL and MUTE_CI_FAILURE_NOTIFY via env (kill-switch)."
+    )
+    env_block = detect_step.get("env") or {}
+    assert "vars.MUTE_CI_FAILURE_NOTIFY" in str(
+        env_block.get("MUTE_CI_FAILURE_NOTIFY", "")
+    ), (
+        "MUTE_CI_FAILURE_NOTIFY must be wired to vars.MUTE_CI_FAILURE_NOTIFY "
+        "(repo Variable, not Secret) so the operator can flip it from the UI."
+    )
+    run_text = str(detect_step.get("run") or "")
+    assert "present=false" in run_text and "exit 0" in run_text, (
+        "kill-switch branch must write present=false and exit 0 cleanly so "
+        "the run does not show a phantom failure when notifications are muted."
+    )
+    for token in ("true", "1", "yes", "on"):
+        assert token in run_text, (
+            f"kill-switch should accept truthy token {token!r} (case-insensitive)."
+        )
+
+
 def test_slack_release_published_notify_workflow_present_and_valid() -> None:
     data = _load_workflow("slack-release-published-notify.yml")
     assert data.get("name")
