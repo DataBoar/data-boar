@@ -105,10 +105,14 @@ La la la"""
 
     def test_real_cpf_in_lyrics_still_high(self):
         """Strong PII (CPF) in content that looks like lyrics should still be HIGH."""
+        # The detector's checksum gate (Mod-11) drops shape-only matches like
+        # 123.456.789-00 to avoid sequential-ID false positives. To exercise
+        # the "real CPF survives entertainment context" path, the fixture
+        # must be checksum-valid; 123.456.789-09 is the documented positive.
         scanner = DataScanner()
         lyrics_with_cpf = """Verse 1
         Chorus
-        The CPF is 123.456.789-00 for the form
+        The CPF is 123.456.789-09 for the form
         La la la"""
         result = scanner.scan_column("form_data", lyrics_with_cpf)
         self.assertEqual(result["sensitivity_level"], "HIGH")

@@ -4,8 +4,12 @@ from core.scanner import DataScanner
 
 
 def test_cpf_detection():
+    # Fixture must satisfy the Mod-11 checksum gate added to LGPD_CPF in
+    # core.detector._CHECKSUM_GATED_PATTERNS (anti-FP for sequential IDs).
+    # 123.456.789-09 is the classic checksum-valid documentation fixture
+    # (also used as the canonical positive case in tests/test_brazilian_cpf.py).
     scanner = DataScanner()
-    result = scanner.scan_column("cpf", "123.456.789-00")
+    result = scanner.scan_column("cpf", "123.456.789-09")
     assert result["sensitivity_level"] == "HIGH"
     assert "LGPD_CPF" in result.get("pattern_detected", "") or "CPF" in result.get(
         "pattern_detected", ""
@@ -23,8 +27,10 @@ def test_cnpj_numeric_and_alnum_detection():
     # Enable alphanumeric CNPJ so both legacy numeric and new alnum formats are detected by regex.
     scanner = DataScanner(detection_config={"cnpj_alphanumeric": True})
 
-    # Legacy numeric CNPJ
-    numeric = "12.345.678/0001-99"
+    # Legacy numeric CNPJ — checksum-valid fixture (Mod-11 gate in core.detector).
+    # 12.345.678/0001-95 is the canonical valid-CNPJ training fixture
+    # (12345678000199 fails the second check digit; 12345678000195 passes).
+    numeric = "12.345.678/0001-95"
     numeric_result = scanner.scan_column("cnpj", numeric)
     assert numeric_result["sensitivity_level"] == "HIGH"
     assert "CNPJ" in numeric_result.get("pattern_detected", "")

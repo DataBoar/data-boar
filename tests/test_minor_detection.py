@@ -151,8 +151,10 @@ class TestMinorDetectionDoesNotBreakExisting(unittest.TestCase):
     """Ensure minor detection is additive: existing behaviour for non-minor data unchanged."""
 
     def test_cpf_still_high(self):
+        # Checksum-valid CPF fixture — required after the Mod-11 gate landed in
+        # core.detector._CHECKSUM_GATED_PATTERNS (anti-FP for sequential IDs).
         scanner = DataScanner()
-        result = scanner.scan_column("documento", "123.456.789-00")
+        result = scanner.scan_column("documento", "123.456.789-09")
         self.assertEqual(result["sensitivity_level"], "HIGH")
         self.assertIn("CPF", result.get("pattern_detected", ""))
 
