@@ -25,6 +25,21 @@ updates:
       uv-minor-patch:
         patterns: ["*"]
         update-types: ["minor", "patch"]
+    # Upstream-blocked transitive dependencies.
+    # Each ignore MUST cite the upstream constraint and a stop condition
+    # (when can the cap be removed?). Document in docs/adr/ when adding or
+    # removing entries here. Closure rule: docs/adr/ADR-0053.
+    ignore:
+      # `chardet` is pulled in transitively only by `cyclonedx-bom` (dev/SBOM
+      # toolchain). The latest `cyclonedx-bom` on PyPI (7.3.0, 2026-03-30) pins
+      # `chardet>=5.1,<6.0`. Any major bump of `chardet` (>=6) therefore breaks
+      # the Docker SBOM build with pip's `ResolutionImpossible` — see Actions
+      # run 25879920050 and PR #347 (chardet 5.2.0 -> 7.4.3).
+      # Stop condition: when `cyclonedx-bom` publishes a release that allows
+      # `chardet>=6`, remove this entry and let Dependabot bump `chardet` again.
+      # Tracking: docs/adr/ADR-0053-chardet-pinned-by-cyclonedx-bom.md.
+      - dependency-name: "chardet"
+        update-types: ["version-update:semver-major"]
 
   # GitHub Actions (workflows and action versions)
   - package-ecosystem: "github-actions"
