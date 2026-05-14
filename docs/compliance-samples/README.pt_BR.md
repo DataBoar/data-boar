@@ -22,6 +22,7 @@ Para governança operacional (escopo, minimização, retenção e rastreabilidad
 | **compliance-sample-us_ftc_coppa.yaml**        | EUA FTC COPPA (privacidade online de crianças): termos e overrides de **mapeamento técnico**; sem verificação de idade nem aconselhamento jurídico.                                                 |
 | **compliance-sample-us_ca_ab2273_caadca.yaml** | Califórnia AB 2273 (Age-Appropriate Design): **rotulagem** para escopo voluntário; aplicabilidade exige assessoria jurídica.                                                                        |
 | **compliance-sample-us_co_cpa_minors.yaml**    | Colorado CPA — contextos com menores de 18 anos: **norm tags técnicos**; não estabelece “menor conhecido” no sentido jurídico.                                                                      |
+| **compliance-sample-us_va_vcdpa.yaml**         | Virgínia VCDPA: termos de categorias sensíveis; regexes de **geolocalização precisa** (4+ decimais + palavra-chave/JSON); escopo B2B/emprego **não** classificado automaticamente — ver cabeçalho do arquivo. |
 | **compliance-sample-us_fcpa_internal_policy_pack.yaml** | EUA **FCPA** + **política anticorrupção** interna (empregador) — **inventário**; não detecção de suborno nem aconselhamento jurídico.                                                               |
 | **compliance-sample-russia_152_fz.yaml**       | Rússia Lei federal 152-FZ: Roskomnadzor; operador de dados pessoais; termos EN + RU; regex SNILS e INN heurístico (risco de falso positivo — ver cabeçalho do arquivo); **revisar com frequência**. |
 
@@ -59,7 +60,7 @@ Ao escolher ou criar uma amostra, considere o(s) **idioma(s)** da região alvo p
 | **Turquia (KVKK)**               | Turco e inglês (ex.: kişisel veri / personal data).                                                        |
 | **Rússia (152-FZ)**              | Russo e inglês (ex.: персональные данные / personal data); rever termos quando houver alteração normativa. |
 | **Suíça (FADP)**                 | Inglês; opcional DE/FR/IT.                                                                                 |
-| **EUA (COPPA, AB 2273, CO CPA)** | Inglês (implantações e programas de privacidade nos EUA).                                                  |
+| **EUA (COPPA, AB 2273, CO CPA, VCDPA)** | Inglês (implantações e programas de privacidade nos EUA).                                                  |
 
 Documente no cabeçalho da amostra ou em [COMPLIANCE_FRAMEWORKS](../COMPLIANCE_FRAMEWORKS.pt_BR.md) quando uma amostra incluir termos em mais de um idioma. Veja também a regra **.cursor/rules/compliance-samples-language.mdc**.
 

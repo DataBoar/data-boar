@@ -148,9 +148,18 @@ def _validate_typed_list(
     type_schema = schema.get(plugin_type, {})
     item_fields: dict[str, Any] = type_schema.get("item_fields", {})
 
-    # Accept both top-level list and a dict with a "patterns"/"terms" key.
+    # Accept top-level list or dict. Legacy compliance files use ``regex`` for regex
+    # overrides and ``terms`` for ML terms in the *same* file; pick the list that matches
+    # ``plugin_type`` (do not read ``terms`` when validating ``regex_patterns``).
     if isinstance(data, dict):
-        items = data.get("patterns", data.get("terms", data.get(plugin_type, [])))
+        if plugin_type == "regex_patterns":
+            items = data.get(
+                "patterns", data.get("regex", data.get("regex_patterns", []))
+            )
+        elif plugin_type in ("ml_patterns", "dl_patterns"):
+            items = data.get("patterns", data.get("terms", data.get(plugin_type, [])))
+        else:
+            items = []
     elif isinstance(data, list):
         items = data
     else:

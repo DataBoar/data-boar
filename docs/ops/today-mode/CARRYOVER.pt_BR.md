@@ -12,6 +12,7 @@
 
 | Item | Origem | Estado | Próximo passo / defer |
 | ---- | ------ | ------ | ----- |
+| **PCI-DSS v4 / prontidão global — ruído PAN + ADR-0052 fase 2 (gates de contexto)** | Sessão operador **2026-05-14** (nota estratégica; fila com dono) | ⬜ Pendente | **Linha dona:** `PLANS_TODO.md` tabela pós-`1.7.4` **S4b** — estender `plugin_schema` + validador + gating no `SensitivityDetector` (proximity opcional / caminho Luhn); calibrar `docs/compliance-samples/compliance-sample-pci_dss.yaml` vs `CREDIT_CARD` embutido; ver `PLAN_YAML_PLUGIN_SYSTEM.md` § *Phase 1b*. Fechar esta linha do carryover quando **S4b** fechar ou adiar com **data** no `PLANS_TODO`. |
 | **`v1.7.4-rc` na `main` + pré-release GitHub; Hub estável ainda `1.7.3`** | [OPERATOR_TODAY_MODE_2026-05-11.pt_BR.md](OPERATOR_TODAY_MODE_2026-05-11.pt_BR.md) · [PUBLISHED_SYNC.pt_BR.md](PUBLISHED_SYNC.pt_BR.md) | ✅ Enviado (RC) | Medição controlada **1.7.3 vs 1.7.4-rc** no lab antes de promover; sem mover Hub **`latest`** até **1.7.4** estável. |
 | **Workflow `zizmor` (warn-first)** | PR **#354** mergeado **2026-05-11** | ✅ Feito | Advisory local por padrão; enforce com `-Enforce` quando a linha de base estiver limpa. |
 | **Evidência matriz DB Maestro (all-to-all)** | [LAB_LESSONS_LEARNED_2026_05_10.md](../lab_lessons_learned/LAB_LESSONS_LEARNED_2026_05_10.md) | ⬜ Pendente | Uma rodada consolidada + configs por host em **`docs/private/homelab/reports/`**. |

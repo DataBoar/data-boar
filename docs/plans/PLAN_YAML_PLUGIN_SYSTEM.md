@@ -28,6 +28,13 @@ Allow operators to add custom discovery patterns without modifying the Data Boar
 4. New unified key: `patterns_plugin_file:` — a single YAML file that may contain `regex_patterns:`, `ml_patterns:`, and/or `dl_patterns:` sections. Backward-compatible with the three legacy keys.
 5. Tests: `tests/test_plugin_schema.py` — unit-test validator edge cases (missing required field, wrong type, unknown key, unified file).
 
+### Phase 1b — Context gates + PCI sample calibration (queued; `PLANS_TODO` **S4b**)
+
+- **Driver:** PCI-DSS v4 readiness — noisy logs where digit runs collide with PAN-shaped regexes; validate ADR-0052 YAML expressiveness under stress.
+- **Engine work:** optional schema fields (e.g. proximity keywords, metadata) must wire into `SensitivityDetector` (regex light → Luhn or keyword window before heavy work)—not validator-only.
+- **Sample file:** `docs/compliance-samples/compliance-sample-pci_dss.yaml` — align PAN patterns with built-in `CREDIT_CARD` to avoid duplicate findings; document framing already warns on bare routing-style regexes.
+- **Exit:** same discipline as other sprint rows — tests + `check-all`; then remove or date the matching row in `docs/ops/today-mode/CARRYOVER.md` (EN + pt-BR).
+
 ### Phase 2 — Rust Passthrough (future)
 
 - Export compiled regex patterns from the plugin file to the Rust `boar_fast_filter` layer so custom regexes benefit from Rust-speed matching.

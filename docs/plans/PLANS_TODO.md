@@ -27,13 +27,13 @@ Use these tags in headings to keep priorities explicit and machine-countable:
 
 Do not edit this block manually; refresh with `python scripts/plans-stats.py --write`.
 
-- **Status rows counted:** 163  (Done: 97 | Incomplete: 66)
-- **Incomplete breakdown:** Pending `⬜`=62, Tracked `🔄` / `Tracked (partially done)`=4, Under consideration=0, Backlog-marked rows=0
+- **Status rows counted:** 164  (Done: 97 | Incomplete: 67)
+- **Incomplete breakdown:** Pending `⬜`=63, Tracked `🔄` / `Tracked (partially done)`=4, Under consideration=0, Backlog-marked rows=0
 
 | Horizon | Total rows | Done | Incomplete |
 | ------- | ----------: | ----: | ----------: |
 | `H0` | 40 | 33 | 7 |
-| `H1` | 10 | 9 | 1 |
+| `H1` | 11 | 9 | 2 |
 | `H2` | 0 | 0 | 0 |
 | `H3` | 108 | 50 | 58 |
 | `H4` | 0 | 0 | 0 |
@@ -403,6 +403,7 @@ Tighten runtime defaults for the API host. Implemented: default `127.0.0.1`, opt
 | S2 | **Scope import Phase E (light)** | First vendor-shaped adapter (GLPI-like export to canonical CSV/schema), with fixtures/tests and docs | adapter + fixtures merged; pytest for adapter green; EN+pt-BR operator docs updated; no "live integration" overpromise | ✅ Done — `config/scope_import_glpi.py`, `scripts/scope_import_glpi.py`, 12 tests |
 | S3 | **CNPJ Phase 5 (checksum layer)** | Design and optional opt-in checksum validation path (separate from regex compatibility) | Phase 5.1–5.3 addressed in plan; default behavior unchanged; tests/docs synced (EN + pt-BR) | ⬜ Pending |
 | S4 | **YAML-Based Plugin System — Phase 1** | Centralized schema (`config/plugin_schema.yaml`), validator (`config/plugin_validator.py`), unified `patterns_plugin_file` key | `validate_plugin_file()` validates all example files; 14 tests green; `lint-only` green; ADR-0052 created | ✅ Done |
+| S4b | **PCI-DSS v4 stress + YAML plugin Phase 1b (context gates)** | Extend ADR-0052 (`plugin_schema` / `plugin_validator`) and detector so optional fields (e.g. proximity keywords, metadata) are real gates—not YAML-only; PAN/Luhn path; reduce double-fire vs built-in `CREDIT_CARD`; align `docs/compliance-samples/compliance-sample-pci_dss.yaml` | `check-all` green; synthetic noisy financial corpus tests; EN operator doc touch (`SENSITIVITY_DETECTION` or compliance sample header); carryover row closed or dated defer | ⬜ Pending |
 
 1. **Content type & cloaking detection – Step 1** *(small slice)*
    - Magic-byte table + read_magic / infer_content_type for supported formats; no connector change yet.

@@ -105,6 +105,30 @@ def test_regex_plugin_wrong_type_for_name(tmp_path):
     assert any("name" in issue for issue in result.issues)
 
 
+def test_regex_plugin_compliance_dict_prefers_regex_over_terms(tmp_path):
+    """Legacy compliance files list ``regex`` and ``terms`` in one mapping; regex
+    validation must not treat ML ``terms`` as regex items (regression guard).
+    """
+    from config.plugin_validator import validate_plugin_file
+
+    path = _write_yaml(
+        tmp_path,
+        "combo.yaml",
+        """
+        regex:
+          - name: "GEO_TEST"
+            pattern: "\\\\blocation\\\\b"
+            norm_tag: "VCDPA"
+        terms:
+          - text: "personal data"
+            label: sensitive
+        """,
+    )
+    result = validate_plugin_file(path, plugin_type="regex_patterns")
+    assert result.valid is True
+    assert result.issues == []
+
+
 # ---------------------------------------------------------------------------
 # validate_plugin_file — ml_patterns
 # ---------------------------------------------------------------------------

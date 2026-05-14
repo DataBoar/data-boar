@@ -91,6 +91,7 @@ Laws, guidance, and real-world identifier usage evolve in many sampled jurisdict
 | **U.S. (FTC COPPA)**          | [compliance-sample-us_ftc_coppa.yaml](compliance-samples/compliance-sample-us_ftc_coppa.yaml)               | Federal children's online privacy **technical mapping**; not age verification or legal advice.      |
 | **U.S. (CA AB 2273)**         | [compliance-sample-us_ca_ab2273_caadca.yaml](compliance-samples/compliance-sample-us_ca_ab2273_caadca.yaml) | California Age-Appropriate Design Code **labelling**; applicability varies—counsel required.        |
 | **U.S. (CO CPA — minors)**    | [compliance-sample-us_co_cpa_minors.yaml](compliance-samples/compliance-sample-us_co_cpa_minors.yaml)       | Colorado Privacy Act / under-18 contexts **technical mapping**; not “known minor” detection.        |
+| **U.S. (Virginia — VCDPA)**   | [compliance-sample-us_va_vcdpa.yaml](compliance-samples/compliance-sample-us_va_vcdpa.yaml)                 | Virginia Consumer Data Protection Act: sensitive lexicon + **precision geolocation** regexes; **no** automatic B2B/employment exemption analysis — see sample header. |
 | **U.S. (FCPA / internal policy pack)** | [compliance-sample-us_fcpa_internal_policy_pack.yaml](compliance-samples/compliance-sample-us_fcpa_internal_policy_pack.yaml) | **FCPA**-adjacent and employer **anti-corruption policy** lexicon (**inventory**); not bribery detection or legal conclusion. |
 
 ### What goes in which file
