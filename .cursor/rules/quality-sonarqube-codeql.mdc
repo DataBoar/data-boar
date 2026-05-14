@@ -28,7 +28,7 @@ Other **`CI`** jobs: **test** (pytest matrix 3.12/3.13), **bandit**, **dependenc
 
    Fix any failure before committing.
 
-1. **Optional — Bandit (matches CI):** After **security-sensitive** Python changes (SQL connectors, subprocess, auth), run **`uv run bandit -c pyproject.toml -r api core config connectors database file_scan report main.py -ll -q`**. Config: **`[tool.bandit]`** in **`pyproject.toml`**. Full triage: **`docs/plans/PLAN_BANDIT_SECURITY_LINTER.md`**.
+1. **Optional — Bandit (matches CI):** After **security-sensitive** Python changes (SQL connectors, subprocess, auth), run **`uv run bandit -c pyproject.toml -r api core config connectors database file_scan report main.py -ll -q`**. Config: **`[tool.bandit]`** in **`pyproject.toml`**. Full triage: **`docs/plans/completed/PLAN_BANDIT_SECURITY_LINTER.md`**.
 
 1. **Avoid these SonarQube patterns** (guarded by tests or CI):
    - **S3981:** Do not use `len(...) >= 0` (length is never negative). Use `== 0` or `> 0` instead, or drop the assertion if both are acceptable.
@@ -77,4 +77,4 @@ The full suite (`uv run pytest -v -W error`) is the regression gate: keep all te
 - **.github/workflows/codeql.yml** – CodeQL runs on push/PR; fix findings in Security tab.
 - **docs/QUALITY_WORKFLOW_RECOMMENDATIONS.md** – Extra layers (pre-commit, Bandit, Semgrep, mypy, MD029, ADRs, etc.).
 - **`.github/workflows/ci.yml`** – **`lint`** job runs **`pre-commit run --all-files`**; **`test`** runs full pytest.
-- **docs/plans/PLAN_BANDIT_SECURITY_LINTER.md** – Bandit dev/CI config and low-severity triage backlog.
+- **`docs/plans/completed/PLAN_BANDIT_SECURITY_LINTER.md`** – Bandit dev/CI config and low-severity triage log (Phase 3 closed).

@@ -8,7 +8,7 @@ Add **Semgrep** as a **complementary** static scan in GitHub Actions alongside *
 
 **Workflow file:** `.github/workflows/semgrep.yml`. **Reference:** [docs/QUALITY_WORKFLOW_RECOMMENDATIONS.md](../../QUALITY_WORKFLOW_RECOMMENDATIONS.md) §4.
 
-**See also:** [PLAN_BANDIT_SECURITY_LINTER.md](../PLAN_BANDIT_SECURITY_LINTER.md) (Bandit in **CI** / `pyproject` — overlapping SQL-string heuristics; we skip **B608** where identifiers are vetted, analogous to the Semgrep exclude above).
+**See also:** [PLAN_BANDIT_SECURITY_LINTER.md](PLAN_BANDIT_SECURITY_LINTER.md) (Bandit in **CI** / `pyproject` — overlapping SQL-string heuristics; we skip **B608** where identifiers are vetted, analogous to the Semgrep exclude above).
 
 ---
 

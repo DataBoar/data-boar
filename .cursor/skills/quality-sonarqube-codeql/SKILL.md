@@ -69,7 +69,7 @@ uv run pytest tests/test_report_path_safety.py -v -W error
 uv run python scripts/fix_markdown_sonar.py
 uv run pytest tests/test_markdown_lint.py -v -W error
 
-# Bandit (medium+; optional but recommended after security-sensitive Python edits — same gate as CI)
+# Bandit (CI strict `-ll -ii`; optional but recommended after security-sensitive Python edits — same gate as CI). Low triage: `docs/plans/completed/PLAN_BANDIT_SECURITY_LINTER.md`.
 uv run bandit -c pyproject.toml -r api core config connectors database file_scan report main.py -ll -q
 
 # Mypy (dev-only, soft defaults in pyproject.toml; optional signal after large refactors — not a CI gate yet)

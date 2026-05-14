@@ -138,7 +138,7 @@ norecursedirs = [
 
 [tool.ruff]
 # Legacy dirs now linted: utils/, scanners/, logging_custom/ — cleaned 2026-05-14.
-# db/ still excluded (deeper structural issues; tracked in PLAN_BANDIT_SECURITY_LINTER.md).
+# db/ still excluded (deeper structural issues; see docs/plans/completed/PLAN_BANDIT_SECURITY_LINTER.md).
 extend-exclude = ["db"]
 
 [tool.ruff.lint.per-file-ignores]
@@ -177,13 +177,13 @@ extend-exclude = ["db"]
 "scripts/plans_hub_sync.py" = ["C901"]
 
 # Bandit (security linter): pyproject baseline + strict CI gate (``bandit`` job).
-# See docs/plans/PLAN_BANDIT_SECURITY_LINTER.md.
+# See docs/plans/completed/PLAN_BANDIT_SECURITY_LINTER.md.
 [tool.bandit]
 exclude_dirs = ["tests", "db", ".venv"]
 # B608: identifier-built SQL from discovery (validated/quoted), not end-user SQL.
 # B310: urlopen in utils/notify.py is HTTPS webhook — annotated with # nosec B310.
 # Legacy dirs utils/, scanners/, logging_custom/ now included — cleaned 2026-05-14.
-# db/ still excluded (deeper structural issues; tracked in PLAN_BANDIT_SECURITY_LINTER.md).
+# db/ still excluded (deeper structural issues; see docs/plans/completed/PLAN_BANDIT_SECURITY_LINTER.md).
 skips = []
 # B608 was previously skipped globally; now annotated inline with # nosec B608 in
 # connectors/sql_sampling.py (all 10 occurrences) — identifiers are ANSI-quoted

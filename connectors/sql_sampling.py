@@ -242,7 +242,7 @@ def _plan_sqlite_column_sample(
     label = _with_large_suffix("non_null_limit_sqlite", large)
     q = text(
         _tag_sql(
-            f'SELECT "{safe_col}" FROM "{safe_table}" '  # nosec B608 -- identifiers from DB schema introspection; ANSI-quoted '""'-escape (sql_connector.py:394-396)
+            f'SELECT "{safe_col}" FROM "{safe_table}" '  # nosec B608
             f'WHERE "{safe_col}" IS NOT NULL LIMIT {lim}'
         )
     )
@@ -275,7 +275,7 @@ def _plan_mysql_column_sample(
     if statement_timeout_ms and statement_timeout_ms > 0:
         hint = f"/*+ MAX_EXECUTION_TIME({int(statement_timeout_ms)}) */ "
     q = text(
-        _tag_sql(f"SELECT {hint}`{cc}` FROM {t} WHERE `{cc}` IS NOT NULL LIMIT {lim}")  # nosec B608 -- identifiers from DB schema introspection; backtick-quoted '``'-escape via _bk()
+        _tag_sql(f"SELECT {hint}`{cc}` FROM {t} WHERE `{cc}` IS NOT NULL LIMIT {lim}")  # nosec B608
     )
     return ColumnSamplePlan(
         query=q,
@@ -299,7 +299,7 @@ def _plan_oracle_column_sample(
     # Inner filter first: ROWNUM on the outer query caps non-null rows only.
     q = text(
         _tag_sql(
-            f'SELECT * FROM (SELECT "{safe_col}" FROM {t} '  # nosec B608 -- identifiers from DB schema introspection; ANSI-quoted '""'-escape (sql_connector.py:394-396)
+            f'SELECT * FROM (SELECT "{safe_col}" FROM {t} '  # nosec B608
             f'WHERE "{safe_col}" IS NOT NULL) WHERE ROWNUM <= :lim'
         )
     ).bindparams(lim=lim)
@@ -331,7 +331,7 @@ def _plan_snowflake_column_sample(
     lim_v = _clamp_limit(lim)
     q = text(
         _tag_sql(
-            f'SELECT "{safe_col}" FROM ('  # nosec B608 -- identifiers from DB schema introspection; ANSI-quoted '""'-escape (sql_connector.py:394-396)
+            f'SELECT "{safe_col}" FROM ('  # nosec B608
             f'SELECT "{safe_col}" FROM {t} WHERE "{safe_col}" IS NOT NULL'
             f") _db_sf_nonnull SAMPLE ({lim_v} ROWS)"
         )
@@ -379,7 +379,7 @@ def _plan_mssql_column_sample(
     label = _with_large_suffix(base_label, large)
     q = text(
         _tag_sql(
-            f'SELECT TOP ({lim}) "{safe_col}" FROM {t}{ts_clause} WITH (NOLOCK) '  # nosec B608 -- identifiers from DB schema introspection; ANSI-quoted '""'-escape (sql_connector.py:394-396)
+            f'SELECT TOP ({lim}) "{safe_col}" FROM {t}{ts_clause} WITH (NOLOCK) '  # nosec B608
             f'WHERE "{safe_col}" IS NOT NULL'
         )
     )
@@ -408,7 +408,7 @@ def _plan_postgresql_column_sample(
         label = _with_large_suffix("non_null_tablesample_system_postgresql", large)
         q = text(
             _tag_sql(
-                f'SELECT "{safe_col}" FROM {t} TABLESAMPLE SYSTEM ({pct_s}) '  # nosec B608 -- identifiers from DB schema introspection; ANSI-quoted '""'-escape (sql_connector.py:394-396)
+                f'SELECT "{safe_col}" FROM {t} TABLESAMPLE SYSTEM ({pct_s}) '  # nosec B608
                 f'WHERE "{safe_col}" IS NOT NULL LIMIT {lim}'
             )
         )
@@ -417,7 +417,7 @@ def _plan_postgresql_column_sample(
         label = _with_large_suffix("non_null_limit_postgresql", large)
         q = text(
             _tag_sql(
-                f'SELECT "{safe_col}" FROM {t} WHERE "{safe_col}" IS NOT NULL LIMIT {lim}'  # nosec B608 -- identifiers from DB schema introspection; ANSI-quoted '""'-escape (sql_connector.py:394-396)
+                f'SELECT "{safe_col}" FROM {t} WHERE "{safe_col}" IS NOT NULL LIMIT {lim}'  # nosec B608
             )
         )
         human = "LIMIT (PostgreSQL)"
@@ -445,7 +445,7 @@ def _plan_postgres_like_column_sample(
     t = _ansi_quoted_table(safe_schema, safe_table, schema)
     q = text(
         _tag_sql(
-            f'SELECT "{safe_col}" FROM {t} WHERE "{safe_col}" IS NOT NULL LIMIT {lim}'  # nosec B608 -- identifiers from DB schema introspection; ANSI-quoted '""'-escape (sql_connector.py:394-396)
+            f'SELECT "{safe_col}" FROM {t} WHERE "{safe_col}" IS NOT NULL LIMIT {lim}'  # nosec B608
         )
     )
     return ColumnSamplePlan(
@@ -470,7 +470,7 @@ def _plan_default_column_sample(
     t = _ansi_quoted_table(safe_schema, safe_table, schema)
     q = text(
         _tag_sql(
-            f'SELECT "{safe_col}" FROM {t} WHERE "{safe_col}" IS NOT NULL LIMIT {lim}'  # nosec B608 -- identifiers from DB schema introspection; ANSI-quoted '""'-escape (sql_connector.py:394-396)
+            f'SELECT "{safe_col}" FROM {t} WHERE "{safe_col}" IS NOT NULL LIMIT {lim}'  # nosec B608
         )
     )
     return ColumnSamplePlan(
@@ -654,7 +654,7 @@ def column_sample_sql_for_cursor(
         lim_v = _clamp_limit(limit)
         t = _ansi_quoted_table(safe_schema, safe_table, schema)
         sql = _tag_sql(
-            f'SELECT * FROM (SELECT "{safe_col}" FROM {t} '  # nosec B608 -- identifiers from DB schema introspection; ANSI-quoted '""'-escape (sql_connector.py:394-396)
+            f'SELECT * FROM (SELECT "{safe_col}" FROM {t} '  # nosec B608
             f'WHERE "{safe_col}" IS NOT NULL) WHERE ROWNUM <= {lim_v}'
         )
         human = plan.human_strategy or plan.strategy_label

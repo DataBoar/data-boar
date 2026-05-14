@@ -3,6 +3,9 @@ Off-band and scan-completion notifications (webhooks, Slack, Teams, Telegram).
 
 Default: disabled in config. Secrets come from env or config; never log full URLs.
 See docs/USAGE.md and PLAN_NOTIFICATIONS_OFFBAND_AND_SCAN_COMPLETE.md.
+
+Bandit B310: ``urlopen`` below is POST to operator-configured HTTPS webhooks only
+(caller validates scheme); each call uses ``# nosec B310`` with no trailing tokens.
 """
 
 from __future__ import annotations
@@ -37,7 +40,7 @@ def _post_json(url: str, payload: dict[str, Any], timeout_s: float = 15.0) -> No
             method="POST",
         )
         try:
-            with urllib.request.urlopen(req, timeout=timeout_s) as resp:  # nosec B310 — webhook; scheme is always https (caller-validated URL from config)
+            with urllib.request.urlopen(req, timeout=timeout_s) as resp:  # nosec B310
                 resp.read()
             return
         except urllib.error.HTTPError as e:
@@ -62,7 +65,7 @@ def _post_form(url: str, body: dict[str, str], timeout_s: float = 15.0) -> None:
             method="POST",
         )
         try:
-            with urllib.request.urlopen(req, timeout=timeout_s) as resp:  # nosec B310 — webhook; scheme is always https (caller-validated URL from config)
+            with urllib.request.urlopen(req, timeout=timeout_s) as resp:  # nosec B310
                 resp.read()
             return
         except urllib.error.HTTPError as e:
