@@ -70,6 +70,8 @@ Short, durable notes that capture **why** the project chose an approach—not on
 | 0049  | [No brittle mitigations — robust input handling over symptom suppression](ADR-0049-no-brittle-mitigations-robust-input-handling.md) | Accepted |
 | 0050  | [Plan document metadata standard](ADR-0050-plan-document-metadata-standard.md) | Accepted |
 | 0051  | [Incremental filesystem scan: file-identity fingerprint contract](ADR-0051-incremental-filesystem-scan-file-identity-fingerprint.md) | Accepted |
+| 0052  | [YAML-based plugin system: centralized schema and unified plugin file](ADR-0052-yaml-plugin-system-centralized-schema.md) | Accepted |
+| 0053  | [Decline `chardet` semver-major bumps while `cyclonedx-bom` pins `chardet<6.0`](ADR-0053-chardet-pinned-by-cyclonedx-bom.md) | Accepted |
 
 ## Related docs
 
