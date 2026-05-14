@@ -1,7 +1,7 @@
 # New Zealand Privacy Act – sample compliance profile (Privacy Act 2020, OPC)
 #
-# Target audience: New Zealand and Oceania deployments. Office of the Privacy Commissioner (OPC).
-# Terms: personal information, privacy principles (EN).
+# Target audience: New Zealand deployments and Oceania-regional compliance.
+# Office of the Privacy Commissioner (OPC); privacy breach notification (NPC).
 #
 # How to use:
 #   1. Set in your main config:
@@ -9,17 +9,65 @@
 #        ml_patterns_file: path/to/compliance-sample-new_zealand_privacy.yaml
 #   2. Merge the recommendation_overrides list below into your config under report.recommendation_overrides.
 #
-# New Zealand: Privacy Act 2020; Office of the Privacy Commissioner (OPC).
+# Legal scope:
+#   - Privacy Act 2020 (NZ), in force 1 December 2020; supersedes Privacy Act 1993.
+#   - Regulator: Office of the Privacy Commissioner (OPC).
+#   - 13 Information Privacy Principles (IPPs) govern collection, use, storage, and disclosure.
+#   - Notifiable Privacy Breach (NPB) regime: agencies must notify OPC and affected individuals
+#     of privacy breaches likely to cause serious harm (Part 7, Privacy Act 2020). No fixed
+#     hour threshold — notification "as soon as practicable."
+#   - Trans-border data flows: agency must not transfer personal information outside NZ unless
+#     the destination provides comparable privacy safeguards (IPP 12), or other exceptions apply.
+#   - Sensitive categories: Privacy Act 2020 does not enumerate a closed list of "sensitive"
+#     categories; sensitivity is assessed by context and degree of harm if disclosed. Health,
+#     genetic, biometric, sexual orientation, ethnicity, religion, and financial data are
+#     treated as high-sensitivity in OPC guidance and Human Rights Act 1993 overlay.
+#   - Children: Privacy Act 2020 applies to all natural persons regardless of age. Additional
+#     protections apply under the Children's Act 2014 and Education sector rules.
+#   - The scanner does not evaluate IPP compliance or serious-harm thresholds. Use output as
+#     inventory signal; scope with NZ privacy counsel.
+#
+# Regex design:
+#   - IRD_NZ: Inland Revenue Department (IRD) tax number — 8 or 9 digits, hyphens optional
+#     (format XX-XXX-XXX or XXX-XXX-XXX). Stored as 8-9 digit plain strings.
+#   - NHI_NZ: National Health Index number — 3 uppercase letters + 4 digits (e.g. ABC1234).
+#     High relevance in health sector; OPC guidance treats NHI as personal information.
+#   - NZ_PASSPORT: NZ passport — 2 uppercase letters + 6 digits (e.g. LH123456).
+#   - Precise geolocation: same four-decimal-place geometry as compliance-sample-us_va_vcdpa.yaml.
+#     Location data is personal information under Privacy Act 2020 s.7 (any information
+#     about an identifiable individual).
+#
+# Use double-quoted YAML with escaped backslashes.
 
 regex:
   - name: "IRD_NZ"
-    pattern: "\\b\\d{2,3}-?\\d{2,3}-?\\d{3}\\b"
+    # NZ IRD number: 8-9 digits, hyphens optional (XX-XXX-XXX or XXX-XXX-XXX)
+    pattern: "\\b\\d{2,3}-?\\d{3}-?\\d{3}\\b"
     norm_tag: "New Zealand Privacy"
   - name: "NHI_NZ"
+    # National Health Index: 3 uppercase letters + 4 digits
     pattern: "\\b[A-Z]{3}\\d{4}\\b"
     norm_tag: "New Zealand Privacy"
+  - name: "NZ_PASSPORT"
+    # NZ passport: 2 uppercase letters + 6 digits
+    pattern: "\\b[A-Z]{2}\\d{6}\\b"
+    norm_tag: "New Zealand Privacy"
+  # Precise geolocation (Privacy Act 2020 s.7 — identifiable location = personal information)
+  - name: "NZ_JSON_LAT_PRECISION"
+    pattern: "(?i)[\"']lat[\"']\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\b"
+    norm_tag: "New Zealand Privacy"
+  - name: "NZ_JSON_LNG_PRECISION"
+    pattern: "(?i)[\"'](?:lng|lon)[\"']\\s*:\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}\\b"
+    norm_tag: "New Zealand Privacy"
+  - name: "NZ_LOCATION_CSV_PAIR"
+    pattern: "(?i)\\blocation\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*,\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "New Zealand Privacy"
+  - name: "NZ_QUERYSTRING_LAT_LONG"
+    pattern: "(?i)latitude=[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*&\\s*longitude=[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "New Zealand Privacy"
 
-# ML terms: personal information, privacy principles, OPC.
+# ML terms: Privacy Act 2020 vocabulary, 13 IPPs, sensitive categories (OPC guidance),
+# notifiable privacy breach, trans-border flows, and NZ sector overlays (health, children).
 terms:
   - text: "personal information"
     label: sensitive
@@ -45,11 +93,65 @@ terms:
     label: sensitive
   - text: "privacy breach"
     label: sensitive
+  - text: "serious harm"
+    label: sensitive
+  - text: "health information"
+    label: sensitive
+  - text: "health record"
+    label: sensitive
+  - text: "genetic information"
+    label: sensitive
+  - text: "biometric data"
+    label: sensitive
+  - text: "sexual orientation"
+    label: sensitive
+  - text: "ethnic origin"
+    label: sensitive
+  - text: "religion"
+    label: sensitive
+  - text: "financial information"
+    label: sensitive
+  - text: "criminal conviction"
+    label: sensitive
+  - text: "trans-border data flow"
+    label: sensitive
+  - text: "cross-border transfer"
+    label: sensitive
+  - text: "comparable safeguards"
+    label: sensitive
+  - text: "ird number"
+    label: sensitive
+  - text: "tax number"
+    label: sensitive
+  - text: "nhi"
+    label: sensitive
+  - text: "national health index"
+    label: sensitive
+  - text: "passport"
+    label: sensitive
+  - text: "geolocation"
+    label: sensitive
+  - text: "location data"
+    label: sensitive
+  - text: "children"
+    label: sensitive
+  - text: "minor"
+    label: sensitive
+  - text: "privacy impact assessment"
+    label: sensitive
+  - text: "privacy by design"
+    label: sensitive
+  - text: "data retention"
+    label: sensitive
+  - text: "profiling"
+    label: sensitive
+  - text: "automated decision"
+    label: sensitive
 
 recommendation_overrides:
   - norm_tag_pattern: "New Zealand Privacy"
-    base_legal: "Privacy Act 2020 (NZ); Office of the Privacy Commissioner (OPC)"
-    risk: "Personal information; Information Privacy Principles; notifiable privacy breach."
-    recommendation: "Comply with Privacy Act 2020; follow IPPs; assess notifiable privacy breach obligations; engage OPC as needed."
+    base_legal: "Privacy Act 2020 (NZ); Office of the Privacy Commissioner (OPC); in force 1 December 2020"
+    risk: "Personal information subject to 13 Information Privacy Principles (IPPs). Notifiable Privacy Breach (NPB) regime requires notification to OPC and affected individuals for breaches likely to cause serious harm. High-sensitivity categories (health, genetic, biometric, sexual orientation, ethnicity, financial, criminal) identified per OPC guidance and Human Rights Act 1993. Precise coordinate-shaped values are heuristic inventory signals only."
+    recommendation: "Comply with 13 IPPs (collection, use, storage, disclosure, unique identifiers, correction, trans-border flows); notify OPC and affected individuals of notifiable privacy breaches as soon as practicable; assess trans-border transfer safeguards (IPP 12 — comparable protections); conduct Privacy Impact Assessments for high-risk processing; engage OPC guidance for health, children, and biometric data handling."
     priority: "ALTA"
-    relevant_for: "DPO, Privacy Officer, OPC"
+    relevant_for: "Privacy Officer, DPO, OPC, Legal, Information Security"

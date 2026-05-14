@@ -1,7 +1,8 @@
 # Philippines DPA – sample compliance profile (Data Privacy Act 2012, RA 10173)
 #
-# Target audience: Philippines and SEA deployments. National Privacy Commission (NPC).
-# Terms: personal information, sensitive personal information (EN).
+# Target audience: Philippines deployments and Southeast Asia regional compliance.
+# National Privacy Commission (NPC); Personal Information Controller (PIC) /
+# Personal Information Processor (PIP) concepts.
 #
 # How to use:
 #   1. Set in your main config:
@@ -9,21 +10,78 @@
 #        ml_patterns_file: path/to/compliance-sample-philippines_dpa.yaml
 #   2. Merge the recommendation_overrides list below into your config under report.recommendation_overrides.
 #
-# Philippines: RA 10173; National Privacy Commission (NPC); PIC/PIP concepts.
+# Legal scope:
+#   - Republic Act 10173 (Data Privacy Act 2012, DPA 2012), in force 8 March 2012;
+#     Implementing Rules and Regulations (IRR) issued 2016.
+#   - Regulator: National Privacy Commission (NPC).
+#   - Key NPC circulars: NPC 16-01 (security of personal data), NPC 16-02 (data sharing
+#     agreements), NPC 16-03 (data breach notification — 72 h to NPC, plus notification
+#     to data subjects without undue delay).
+#   - Sensitive personal information (SPI, s.3(l)): race, ethnic origin, marital status,
+#     age, colour, religious, philosophical or political affiliation, health, education,
+#     genetic or sexual life, criminal proceedings and convictions, government-issued IDs
+#     (SSS, GSIS, TIN, PHILHEALTH, Unified Multi-Purpose ID / PhilSys / National ID).
+#   - Registration: PICs and PIPs processing SPI at scale must register with NPC.
+#   - DPA 2012 is broadly modelled on EU Directive 95/46/EC; partial GDPR convergence
+#     ongoing. NPC has not formally issued an adequacy decision list; cross-border
+#     transfers require contractual safeguards or NPC approval.
+#   - PhilSys (Philippine Identification System) / National ID (Republic Act 11055):
+#     12-digit PhilSys Number (PSN); biometric data stored in central registry.
+#   - The scanner does not evaluate NPC registration status, contract adequacy, or
+#     cross-border transfer approvals. Use output as inventory signal; scope with
+#     Philippine privacy counsel.
+#
+# Regex design:
+#   - PH_SSS_ID: Social Security System number — XX-XXXXXXX-X (10 digits, hyphens optional).
+#   - PH_GSIS_ID: Government Service Insurance System ID — XXXX-XXXX-XXXX (12 digits).
+#   - PH_TIN: Bureau of Internal Revenue Taxpayer ID — XXX-XXX-XXX(-XXXX) (9-13 digits).
+#   - PH_PHILSYS: PhilSys National ID — 12-digit numeric string (PSN). May overlap with
+#     other 12-digit IDs; triage with field name context.
+#   - Precise geolocation: same four-decimal-place geometry as compliance-sample-us_va_vcdpa.yaml.
+#     Location data is personal information under DPA 2012 s.3(g) (information about an
+#     identifiable natural person).
+#
+# Use double-quoted YAML with escaped backslashes.
 
 regex:
   - name: "PH_SSS_ID"
+    # SSS number: XX-XXXXXXX-X (10 digits, hyphens optional)
     pattern: "\\b\\d{2}-?\\d{7}-?\\d\\b"
     norm_tag: "Philippines DPA"
   - name: "PH_GSIS_ID"
+    # GSIS ID: XXXX-XXXX-XXXX (12 digits, hyphens optional)
     pattern: "\\b\\d{4}-?\\d{4}-?\\d{4}\\b"
     norm_tag: "Philippines DPA"
+  - name: "PH_TIN"
+    # BIR Tax Identification Number: XXX-XXX-XXX or XXX-XXX-XXX-XXXX
+    pattern: "\\b\\d{3}-\\d{3}-\\d{3}(?:-\\d{4})?\\b"
+    norm_tag: "Philippines DPA"
+  - name: "PH_PHILSYS"
+    # PhilSys National ID (PSN): 12 digits, plain string
+    pattern: "\\b\\d{12}\\b"
+    norm_tag: "Philippines DPA"
+  # Precise geolocation (DPA 2012 s.3(g) — identifiable location = personal information)
+  - name: "PH_JSON_LAT_PRECISION"
+    pattern: "(?i)[\"']lat[\"']\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\b"
+    norm_tag: "Philippines DPA"
+  - name: "PH_JSON_LNG_PRECISION"
+    pattern: "(?i)[\"'](?:lng|lon)[\"']\\s*:\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}\\b"
+    norm_tag: "Philippines DPA"
+  - name: "PH_LOCATION_CSV_PAIR"
+    pattern: "(?i)\\blocation\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*,\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "Philippines DPA"
+  - name: "PH_QUERYSTRING_LAT_LONG"
+    pattern: "(?i)latitude=[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*&\\s*longitude=[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "Philippines DPA"
 
-# ML terms: personal information, sensitive personal information, NPC.
+# ML terms: DPA 2012 vocabulary, SPI categories, NPC circulars, PhilSys/National ID,
+# breach notification, and cross-border transfer terms.
 terms:
   - text: "personal information"
     label: sensitive
   - text: "sensitive personal information"
+    label: sensitive
+  - text: "spi"
     label: sensitive
   - text: "personal information controller"
     label: sensitive
@@ -45,11 +103,71 @@ terms:
     label: sensitive
   - text: "ra 10173"
     label: sensitive
+  - text: "race"
+    label: sensitive
+  - text: "ethnic origin"
+    label: sensitive
+  - text: "marital status"
+    label: sensitive
+  - text: "religious affiliation"
+    label: sensitive
+  - text: "political affiliation"
+    label: sensitive
+  - text: "health record"
+    label: sensitive
+  - text: "health information"
+    label: sensitive
+  - text: "genetic data"
+    label: sensitive
+  - text: "sexual life"
+    label: sensitive
+  - text: "criminal conviction"
+    label: sensitive
+  - text: "government id"
+    label: sensitive
+  - text: "sss number"
+    label: sensitive
+  - text: "gsis id"
+    label: sensitive
+  - text: "tin"
+    label: sensitive
+  - text: "philhealth"
+    label: sensitive
+  - text: "philsys"
+    label: sensitive
+  - text: "national id"
+    label: sensitive
+  - text: "psn"
+    label: sensitive
+  - text: "unified multi-purpose id"
+    label: sensitive
+  - text: "umid"
+    label: sensitive
+  - text: "data breach notification"
+    label: sensitive
+  - text: "72-hour notification"
+    label: sensitive
+  - text: "cross-border transfer"
+    label: sensitive
+  - text: "data sharing agreement"
+    label: sensitive
+  - text: "privacy impact assessment"
+    label: sensitive
+  - text: "geolocation"
+    label: sensitive
+  - text: "location data"
+    label: sensitive
+  - text: "biometric data"
+    label: sensitive
+  - text: "profiling"
+    label: sensitive
+  - text: "automated decision"
+    label: sensitive
 
 recommendation_overrides:
   - norm_tag_pattern: "Philippines DPA"
-    base_legal: "Data Privacy Act 2012 (RA 10173); National Privacy Commission (NPC)"
-    risk: "Personal information and sensitive personal information; PIC/PIP obligations."
-    recommendation: "Comply with RA 10173; register with NPC if required; implement consent and security measures per NPC advisories."
+    base_legal: "Data Privacy Act 2012 (RA 10173); NPC Implementing Rules and Regulations 2016; NPC Circular 16-03 (72-hour breach notification)"
+    risk: "Personal information and sensitive personal information (SPI) under DPA 2012. SPI categories: race, ethnic origin, marital status, religious/political affiliation, health, genetic, sexual life, criminal record, government-issued IDs (SSS, GSIS, TIN, PHILHEALTH, PhilSys/National ID). Precise coordinate-shaped values in logs/APIs are heuristic inventory signals only. NPC registration required for large-scale SPI processors. Cross-border transfers require contractual safeguards or NPC approval."
+    recommendation: "Comply with DPA 2012 data life cycle principles (collection, processing, storage, use, disposal); obtain valid consent or other legal basis for SPI; register with NPC when required; notify NPC within 72 hours and data subjects without undue delay on breach (NPC Circular 16-03); ensure cross-border transfer safeguards; execute data sharing agreements per NPC Circular 16-02."
     priority: "ALTA"
-    relevant_for: "DPO, PIC, PIP, National Privacy Commission"
+    relevant_for: "DPO, PIC, PIP, National Privacy Commission, Legal"
