@@ -1,7 +1,11 @@
 # India DPDP – sample compliance profile (Digital Personal Data Protection Act 2023, DPBI)
 #
-# Target audience: India deployments. Data Protection Board of India (DPBI); data fiduciary.
-# Terms: personal data, data fiduciary (EN).
+# NOT LEGAL ADVICE. Technical inventory signals only; rules, notifications, and Board practice
+# under the DPDP Act continue to evolve — revalidate with qualified Indian counsel.
+#
+# Target audience: India deployments. Data Protection Board of India (DPBI); data fiduciary /
+# data principal; consent and lawful processing. Terms primarily EN (common in Indian tech
+# stacks); common alternate spellings (e.g. Aadhaar / Aadhar) where operators mirror UI copy.
 #
 # How to use:
 #   1. Set in your main config:
@@ -9,7 +13,26 @@
 #        ml_patterns_file: path/to/compliance-sample-india_dpdp.yaml
 #   2. Merge the recommendation_overrides list below into your config under report.recommendation_overrides.
 #
-# India: DPDP Act 2023; DPBI; consent and lawful use.
+# Detection thresholds (not configurable in this file; set in main config.yaml):
+#   - sensitivity_detection.fuzzy_column_match_min_confidence (int, default 25)
+#   - sensitivity_detection.embedding_prototype_hint_min_confidence (int, default 20)
+#
+# Legal scope (read before relying on tags):
+#   - DPDP Act 2023 applies to digital personal data processed in India or outside India if
+#     offering goods/services to data principals in India. Exemptions (e.g. certain state
+#     instruments, research, startups in prescribed cases) are not evaluated by the scanner.
+#   - Data Boar performs pattern and term matching only. It does not classify lawful basis,
+#     consent validity, Significant Data Fiduciary (SDF) designation, or cross-border transfer
+#     whitelists. Use output as inventory signal; scope with counsel.
+#
+# Regex design:
+#   - AADHAAR_IN / PAN_IN: high-signal Indian identifiers (spacing variants on Aadhaar).
+#   - Precise geolocation: same four-decimal-place geometry as compliance-sample-us_va_vcdpa.yaml
+#     and compliance-sample-eu_gdpr.yaml. Location data that identifies a data principal is
+#     personal data under the DPDP Act. Heuristic coordinate-shape signals only — not automatic
+#     DPBI classification.
+#
+# Use double-quoted YAML with escaped backslashes (see .cursor/rules/yaml-regex-patterns.mdc).
 
 regex:
   - name: "AADHAAR_IN"
@@ -18,8 +41,21 @@ regex:
   - name: "PAN_IN"
     pattern: "\\b[A-Z]{5}\\d{4}[A-Z]\\b"
     norm_tag: "India DPDP"
+  # Precise geolocation (personal data when it identifies a data principal — DPDP Act 2023)
+  - name: "DPDP_IN_JSON_LAT_PRECISION"
+    pattern: "(?i)[\"']lat[\"']\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\b"
+    norm_tag: "India DPDP"
+  - name: "DPDP_IN_JSON_LNG_PRECISION"
+    pattern: "(?i)[\"'](?:lng|lon)[\"']\\s*:\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}\\b"
+    norm_tag: "India DPDP"
+  - name: "DPDP_IN_LOCATION_CSV_PAIR"
+    pattern: "(?i)\\blocation\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*,\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "India DPDP"
+  - name: "DPDP_IN_QUERYSTRING_LAT_LONG"
+    pattern: "(?i)latitude=[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*&\\s*longitude=[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "India DPDP"
 
-# ML terms: personal data, data fiduciary, DPBI, consent manager.
+# ML terms: DPDP Act 2023 vocabulary (EN) plus common alternate spellings for Indian identifiers.
 terms:
   - text: "personal data"
     label: sensitive
@@ -41,17 +77,93 @@ terms:
     label: sensitive
   - text: "lawful purpose"
     label: sensitive
+  - text: "legitimate use"
+    label: sensitive
   - text: "aadhaar"
+    label: sensitive
+  - text: "aadhar"
     label: sensitive
   - text: "pan number"
     label: sensitive
+  - text: "permanent account number"
+    label: sensitive
   - text: "sensitive personal data"
+    label: sensitive
+  - text: "children personal data"
+    label: sensitive
+  - text: "child data"
+    label: sensitive
+  - text: "significant data fiduciary"
+    label: sensitive
+  - text: "sdf"
+    label: sensitive
+  - text: "data auditor"
+    label: sensitive
+  - text: "data protection officer"
+    label: sensitive
+  - text: "grievance redressal"
+    label: sensitive
+  - text: "cross border transfer"
+    label: sensitive
+  - text: "cross-border transfer"
+    label: sensitive
+  - text: "data breach"
+    label: sensitive
+  - text: "intimation to board"
+    label: sensitive
+  - text: "geolocation"
+    label: sensitive
+  - text: "geolocation data"
+    label: sensitive
+  - text: "precise geolocation"
+    label: sensitive
+  - text: "location data"
+    label: sensitive
+  - text: "location information"
+    label: sensitive
+  - text: "gps coordinates"
+    label: sensitive
+  - text: "biometric data"
+    label: sensitive
+  - text: "biometric"
+    label: sensitive
+  - text: "genetic data"
+    label: sensitive
+  - text: "health data"
+    label: sensitive
+  - text: "financial data"
+    label: sensitive
+  - text: "name"
+    label: sensitive
+  - text: "email"
+    label: sensitive
+  - text: "phone number"
+    label: sensitive
+  - text: "address"
+    label: sensitive
+  - text: "ip address"
+    label: sensitive
+  - text: "device id"
+    label: sensitive
+  - text: "profiling"
+    label: sensitive
+  - text: "automated processing"
+    label: sensitive
+  - text: "right to access"
+    label: sensitive
+  - text: "right to correction"
+    label: sensitive
+  - text: "right to erasure"
+    label: sensitive
+  - text: "right to grievance"
+    label: sensitive
+  - text: "meity"
     label: sensitive
 
 recommendation_overrides:
   - norm_tag_pattern: "India DPDP"
-    base_legal: "Digital Personal Data Protection Act 2023; Data Protection Board of India (DPBI)"
-    risk: "Personal data and sensitive personal data; data fiduciary obligations; Aadhaar/PAN handling."
-    recommendation: "Comply with DPDP Act 2023; register with DPBI if required; implement consent and lawful purpose; follow Aadhaar/PAN rules."
+    base_legal: "Digital Personal Data Protection Act 2023 (DPDP Act); Data Protection Board of India (DPBI); Central Government rules and notifications (evolving)"
+    risk: "Personal data of data principals in India; Aadhaar/PAN and other identifiers; precise coordinate-shaped values in logs/APIs are heuristic inventory signals only (not DPBI classification). Significant Data Fiduciary obligations, children's data, cross-border transfer restrictions, and breach intimation timelines depend on facts and current rules — the scanner does not evaluate them."
+    recommendation: "Map processing to data fiduciary vs data processor roles; document consent and lawful bases; appoint Consent Manager where applicable; align with DPBI guidance and MeitY notifications as updated; implement grievance redressal and data principal rights workflows; involve Indian privacy counsel for SDF designation, cross-border transfers, and children's data."
     priority: "ALTA"
-    relevant_for: "DPO, Data Fiduciary, DPBI"
+    relevant_for: "DPO, Data Fiduciary, DPBI, Legal, Information Security, Product"
