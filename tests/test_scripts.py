@@ -267,6 +267,16 @@ def test_lab_completao_orchestrate_hybrid_v173_ps1_syntax():
     )
 
 
+def test_maestro_benchmark_ab_ps1_syntax():
+    root = _project_root()
+    script = root / "scripts" / "maestro-benchmark-ab.ps1"
+    if not script.exists():
+        return
+    assert _parse_powershell_script(script, root), (
+        "maestro-benchmark-ab.ps1 parse failed"
+    )
+
+
 def test_lab_op_repo_status_ps1_syntax():
     """scripts/lab-op-repo-status.ps1 has valid PowerShell syntax (parse-only)."""
     root = _project_root()

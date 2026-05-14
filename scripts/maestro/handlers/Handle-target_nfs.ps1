@@ -36,7 +36,14 @@ $ensureScript = "$canonicalRepo/scripts/labop-nfs-server-ensure.sh"
 
 # --- Phase 1: NFS server-side ensure (service + export + port + firewall) ---
 $ensureMode = if ($Deep) { "--apply" } else { "--check" }
-$ensureCmd  = "sudo -n bash $ensureScript $ensureMode 2>&1"
+# Pass inventory-driven service/pkg info via env vars (sudo -n preserves LAB_* if sudoers allows,
+# or scripts read them when running as root via sudo - they are set in the SSH session env)
+$nfsSvc  = if ($Node.PSObject.Properties["nfs_svc"] -and $Node.nfs_svc) { $Node.nfs_svc } else { "" }
+$pkgMgr  = if ($Node.PSObject.Properties["pkg_mgr"] -and $Node.pkg_mgr) { $Node.pkg_mgr } else { "" }
+$envPrefix = ""
+if ($nfsSvc)  { $envPrefix += "LAB_NFS_SVC='$nfsSvc' " }
+if ($pkgMgr)  { $envPrefix += "LAB_PKG_MGR='$pkgMgr' " }
+$ensureCmd  = "${envPrefix}sudo -n bash $ensureScript $ensureMode 2>&1"
 
 Write-Host "      [NFS-Ensure] Running: $ensureMode on $($Node.hostname)" -ForegroundColor DarkGray
 $ensureOut = ssh -q -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 `

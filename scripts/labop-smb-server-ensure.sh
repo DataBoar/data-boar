@@ -19,9 +19,12 @@ export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin${PATH+
 
 APPLY=0
 CLEANUP=0
-SHARE_PATH="${HOME}/Documents/LGPD"
+# Resolve operator home even when running as root via sudo
+_OPERATOR="${SUDO_USER:-leitao}"
+_OP_HOME="$(getent passwd "$_OPERATOR" | cut -d: -f6 2>/dev/null || echo "/home/$_OPERATOR")"
+SHARE_PATH="${_OP_HOME}/Documents/LGPD"
 SHARE_NAME="lgpd_data"
-STATUS_FILE="${HOME}/.labop-status"
+STATUS_FILE="${_OP_HOME}/.labop-status"
 FW_TAG="smb"
 FW_STATE_FILE="${HOME}/.labop-fw-ephemeral-smb.json"
 
