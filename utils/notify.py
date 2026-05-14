@@ -37,7 +37,7 @@ def _post_json(url: str, payload: dict[str, Any], timeout_s: float = 15.0) -> No
             method="POST",
         )
         try:
-            with urllib.request.urlopen(req, timeout=timeout_s) as resp:
+            with urllib.request.urlopen(req, timeout=timeout_s) as resp:  # nosec B310 — webhook; scheme is always https (caller-validated URL from config)
                 resp.read()
             return
         except urllib.error.HTTPError as e:
@@ -62,7 +62,7 @@ def _post_form(url: str, body: dict[str, str], timeout_s: float = 15.0) -> None:
             method="POST",
         )
         try:
-            with urllib.request.urlopen(req, timeout=timeout_s) as resp:
+            with urllib.request.urlopen(req, timeout=timeout_s) as resp:  # nosec B310 — webhook; scheme is always https (caller-validated URL from config)
                 resp.read()
             return
         except urllib.error.HTTPError as e:
@@ -197,9 +197,7 @@ def send_all_operator_notifications(
             results.append(
                 send_single_operator_channel_block(item, text, timeout_s=timeout_s)
             )
-        return results if results else [
-            (None, False, "no operator webhook configured")
-        ]
+        return results if results else [(None, False, "no operator webhook configured")]
     return [send_to_first_configured_operator_channel(n, text, timeout_s=timeout_s)]
 
 
@@ -399,7 +397,8 @@ def notify_scan_complete_sync(
     tenant_cfg = n.get("tenant") or {}
     if isinstance(tenant_cfg, dict):
         tblock = _resolve_tenant_channel_block(
-            tenant_cfg, summary.get("tenant_name") if isinstance(summary, dict) else None
+            tenant_cfg,
+            summary.get("tenant_name") if isinstance(summary, dict) else None,
         )
         if tblock:
             tch, tok, terr = send_single_operator_channel_block(tblock, text)

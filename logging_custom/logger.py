@@ -1,7 +1,7 @@
 # logging_custom/logger.py – backward compatibility: re-export from utils.logger.
 # Prefer: from utils.logger import get_logger, log_finding, notify_violation
 
-from utils.logger import get_logger, setup_live_logger, notify_violation as _notify_violation
+from utils.logger import get_logger, notify_violation as _notify_violation
 
 
 def setup_logging(log_config):

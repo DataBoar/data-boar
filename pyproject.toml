@@ -137,8 +137,9 @@ norecursedirs = [
 ]
 
 [tool.ruff]
-# Dirs with many existing issues; main app (api, config, connectors, core, database, file_scan, report, scripts, tests) is linted in CI and pre-commit
-extend-exclude = ["db", "scanners", "utils", "logging_custom"]
+# Legacy dirs now linted: utils/, scanners/, logging_custom/ — cleaned 2026-05-14.
+# db/ still excluded (deeper structural issues; tracked in PLAN_BANDIT_SECURITY_LINTER.md).
+extend-exclude = ["db"]
 
 [tool.ruff.lint.per-file-ignores]
 # Connectors must register before we import connector_for_target; optional deps in try/except
@@ -178,8 +179,11 @@ extend-exclude = ["db", "scanners", "utils", "logging_custom"]
 # Bandit (security linter): pyproject baseline + strict CI gate (``bandit`` job).
 # See docs/plans/PLAN_BANDIT_SECURITY_LINTER.md.
 [tool.bandit]
-exclude_dirs = ["tests", "db", "scanners", "utils", "logging_custom", ".venv"]
+exclude_dirs = ["tests", "db", ".venv"]
 # B608: identifier-built SQL from discovery (validated/quoted), not end-user SQL.
+# B310: urlopen in utils/notify.py is HTTPS webhook — annotated with # nosec B310.
+# Legacy dirs utils/, scanners/, logging_custom/ now included — cleaned 2026-05-14.
+# db/ still excluded (deeper structural issues; tracked in PLAN_BANDIT_SECURITY_LINTER.md).
 skips = ["B608"]
 level = "MEDIUM"
 confidence = "MEDIUM"
