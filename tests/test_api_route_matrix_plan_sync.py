@@ -30,6 +30,10 @@ def _registered_http_routes() -> list[str]:
 EXPECTED_HTTP_ROUTES: tuple[str, ...] = (
     "GET /about/json",
     "GET /auth/webauthn/status",
+    "GET /findings",
+    "GET /findings/csv",
+    "GET /findings/{session_id}",
+    "GET /findings/{session_id}/csv",
     "GET /health",
     "GET /heatmap",
     "GET /heatmap/{session_id}",
