@@ -1,19 +1,89 @@
-# Colorado Privacy Act (CPA) — minors / under-18 rules — sample profile (technical mapping)
+# Colorado Privacy Act (CPA) — Minors / Under-18 provisions — sample profile
 #
-# NOT LEGAL ADVICE. Colorado CPA and AG final rules (including provisions about
-# consumers under 18) govern specific conduct; this file only helps tag findings
-# for inventory and report wording. Does not detect "known minor" status.
+# Target audience: US deployments processing data of Colorado consumers, with
+# elevated risk for processors of minors' data under CPA § 6-1-1308 and AG Final Rules.
 #
 # How to use:
-#   regex_overrides_file: path/to/compliance-sample-us_co_cpa_minors.yaml
-#   ml_patterns_file: path/to/compliance-sample-us_co_cpa_minors.yaml
-# Merge recommendation_overrides into report.recommendation_overrides.
+#   1. Set in your main config:
+#        regex_overrides_file: path/to/compliance-sample-us_co_cpa_minors.yaml
+#        ml_patterns_file: path/to/compliance-sample-us_co_cpa_minors.yaml
+#   2. Merge the recommendation_overrides list below into your config under report.recommendation_overrides.
+#
+# Legal scope:
+#   - Colorado Privacy Act (CPA), C.R.S. § 6-1-1301 et seq., effective July 1, 2023.
+#   - Regulator: Colorado Attorney General (AG).
+#   - AG Final Rules: adopted December 2022, effective July 1, 2023.
+#   - Applies to: controllers that (1) conduct business in CO or target CO residents, AND
+#     process personal data of ≥100,000 consumers/year OR ≥25,000 consumers/year where
+#     personal data is sold.
+#   - Consumer rights: access, correction, deletion, data portability, opt-out
+#     (targeted advertising, sale, profiling with legal/significant effects).
+#   - Universal Opt-Out Mechanism (UOOM): controllers must honor browser-based global
+#     opt-out signals (e.g. GPC) as of July 1, 2024.
+#   - Sensitive data categories (§ 6-1-1303(25)): racial/ethnic origin, religious beliefs,
+#     mental/physical health, sex life/sexual orientation, citizenship/immigration status,
+#     genetic data, biometric data, children's personal data (known minor's data).
+#   - Data Protection Assessments (DPA): required for high-risk processing (targeted ads,
+#     sale, sensitive data, profiling, large-scale public place processing).
+#
+# Minors-specific provisions (CPA § 6-1-1308 + AG Rules § 6.08):
+#   - Under-13: data of known children processed subject to COPPA; CPA § 6-1-1308 treats
+#     children's personal data as a "sensitive data" category requiring heightened consent.
+#   - Ages 13–17: controllers may NOT process personal data of "known minors" for targeted
+#     advertising or sale without the consumer's consent (opt-in for those cohorts).
+#   - "Known minor" is determined from context signals (account registration, age gates,
+#     parental controls, inferred signals); CPA does not require active age verification
+#     but demands proportional diligence.
+#   - Processing sensitive data of known minors requires explicit consent regardless of age.
+#   - Data Protection Assessment required before processing known minors' data for profiling.
+#
+# Detection note:
+#   - The scanner does NOT determine "known minor" status or whether a real person is under 18.
+#   - Regex patterns flag text fragments referencing CPA, minors, or age-related identifiers.
+#   - Precise geolocation patterns flag coordinate-shaped values in structured data (API
+#     responses, DB exports, log lines); location data is personal data under CPA § 6-1-1303(16).
+#   - Use scanner output as metadata inventory signal; scope with Colorado privacy counsel.
+#
+# Regex design:
+#   - CO_CPA_REF: text-level reference to "Colorado Privacy Act".
+#   - CO_CPA_MINOR_REF: contextual pattern catching "known minor", "under 18 colorado",
+#     "consumer under 18" phrases in data content or log text.
+#   - CO_CPA_DOB: date-of-birth field pattern (ISO YYYY-MM-DD) adjacent to age/minor signals.
+#     Wide regex — expect false positives outside age-gate / registration context.
+#   - Precise geolocation: same four-decimal-place geometry as compliance-sample-us_va_vcdpa.yaml.
+#     Location data is personal data under CPA § 6-1-1303(16).
+#
+# Use double-quoted YAML with escaped backslashes.
 
 regex:
   - name: "CO_CPA_REF"
+    # Text-level reference to Colorado Privacy Act
     pattern: "(?i)\\bColorado\\s+Privacy\\s+Act\\b"
-    norm_tag: "CO CPA minors (technical)"
+    norm_tag: "CO CPA minors"
+  - name: "CO_CPA_MINOR_REF"
+    # Contextual phrase: known minor / consumer under 18 / under 13 / under 17 / under 18
+    pattern: "(?i)\\b(?:known\\s+minor|consumer\\s+under\\s+1[38]|under\\s+(?:thirteen|seventeen|eighteen)|under\\s+1[38]\\s+years?|child(?:ren)?(?:'?s)?\\s+(?:personal\\s+)?data|minor(?:'?s)?\\s+data)\\b"
+    norm_tag: "CO CPA minors"
+  - name: "CO_CPA_DOB"
+    # ISO date-of-birth (YYYY-MM-DD) — wide pattern; triage with field-name context
+    pattern: "(?i)(?:dob|date_of_birth|birth_date|birthdate)\\s*[=:\\s]\\s*\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])"
+    norm_tag: "CO CPA minors"
+  # Precise geolocation (CPA § 6-1-1303(16) — location data is personal data)
+  - name: "CO_CPA_JSON_LAT_PRECISION"
+    pattern: "(?i)[\"']lat[\"']\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\b"
+    norm_tag: "CO CPA minors"
+  - name: "CO_CPA_JSON_LNG_PRECISION"
+    pattern: "(?i)[\"'](?:lng|lon)[\"']\\s*:\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}\\b"
+    norm_tag: "CO CPA minors"
+  - name: "CO_CPA_LOCATION_CSV_PAIR"
+    pattern: "(?i)\\blocation\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*,\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "CO CPA minors"
+  - name: "CO_CPA_QUERYSTRING_LAT_LONG"
+    pattern: "(?i)latitude=[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*&\\s*longitude=[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "CO CPA minors"
 
+# ML terms: CPA § 6-1-1301 et seq. vocabulary, AG Final Rules, sensitive data categories,
+# minors provisions (§ 6-1-1308), UOOM, Data Protection Assessments, and COPPA cross-ref.
 terms:
   - text: "Colorado Privacy Act"
     label: sensitive
@@ -23,23 +93,95 @@ terms:
     label: sensitive
   - text: "consumer under 18"
     label: sensitive
-  - text: "under eighteen colorado privacy"
+  - text: "consumer under 13"
     label: sensitive
-  - text: "Colorado Attorney General privacy"
+  - text: "children's personal data"
     label: sensitive
-  - text: "universal opt-out minors"
+  - text: "minor's data"
     label: sensitive
-  - text: "sale of personal data minor"
+  - text: "age gate"
     label: sensitive
-  - text: "processing personal data minor"
+  - text: "parental consent"
     label: sensitive
-  - text: "sensitive data minor colorado"
+  - text: "COPPA"
+    label: sensitive
+  - text: "targeted advertising"
+    label: sensitive
+  - text: "sale of personal data"
+    label: sensitive
+  - text: "profiling"
+    label: sensitive
+  - text: "sensitive data"
+    label: sensitive
+  - text: "racial origin"
+    label: sensitive
+  - text: "ethnic origin"
+    label: sensitive
+  - text: "religious beliefs"
+    label: sensitive
+  - text: "mental health"
+    label: sensitive
+  - text: "physical health"
+    label: sensitive
+  - text: "health condition"
+    label: sensitive
+  - text: "sexual orientation"
+    label: sensitive
+  - text: "sex life"
+    label: sensitive
+  - text: "citizenship status"
+    label: sensitive
+  - text: "immigration status"
+    label: sensitive
+  - text: "genetic data"
+    label: sensitive
+  - text: "biometric data"
+    label: sensitive
+  - text: "universal opt-out"
+    label: sensitive
+  - text: "uoom"
+    label: sensitive
+  - text: "global privacy control"
+    label: sensitive
+  - text: "gpc"
+    label: sensitive
+  - text: "opt-out signal"
+    label: sensitive
+  - text: "data protection assessment"
+    label: sensitive
+  - text: "dpa assessment"
+    label: sensitive
+  - text: "right of access"
+    label: sensitive
+  - text: "right to delete"
+    label: sensitive
+  - text: "right to correct"
+    label: sensitive
+  - text: "data portability"
+    label: sensitive
+  - text: "right to opt-out"
+    label: sensitive
+  - text: "controller"
+    label: sensitive
+  - text: "processor"
+    label: sensitive
+  - text: "personal data"
+    label: sensitive
+  - text: "Colorado Attorney General"
+    label: sensitive
+  - text: "geolocation"
+    label: sensitive
+  - text: "location data"
+    label: sensitive
+  - text: "date of birth"
+    label: sensitive
+  - text: "dob"
     label: sensitive
 
 recommendation_overrides:
-  - norm_tag_pattern: "CO CPA minors (technical)"
-    base_legal: "Colorado CPA and AG rules — minors/consumers under 18 (technical mapping; not a legal determination)"
-    risk: "Fields or content may relate to processing affecting minors under Colorado law; requires legal review of facts and 'known minor' context."
-    recommendation: "Coordinate with DPO/counsel on CPA duties for consumers under 18, opt-out/sale constraints, and documentation. Use findings as metadata inventory support only."
+  - norm_tag_pattern: "CO CPA minors"
+    base_legal: "Colorado Privacy Act (CPA), C.R.S. § 6-1-1301 et seq., effective July 1, 2023; AG Final Rules (December 2022); § 6-1-1308 (minors); Universal Opt-Out Mechanism required as of July 1, 2024"
+    risk: "Fields or content may relate to processing personal data of known minors (under 13: COPPA + CPA sensitive-data consent; ages 13–17: opt-in required before targeted advertising or sale). Sensitive data categories (racial/ethnic origin, health, biometric, genetic, sexual orientation, citizenship, children's data) require heightened consent and a Data Protection Assessment before high-risk use. Location data (precise coordinates) is personal data under CPA § 6-1-1303(16). Findings are heuristic inventory signals only — scanner does NOT determine known-minor status."
+    recommendation: "Review whether 'known minor' processing obligations under § 6-1-1308 apply; obtain explicit consent for targeted advertising or sale to consumers ages 13–17; apply COPPA requirements for under-13 cohorts; conduct Data Protection Assessment before processing sensitive data of known minors for profiling; honor Universal Opt-Out Mechanism (GPC) signals as of July 1, 2024; maintain processing records for AG audit readiness."
     priority: "ALTA"
-    relevant_for: "DPO, Colorado privacy counsel, incident response"
+    relevant_for: "DPO, Colorado privacy counsel, product/engineering (age-gate, UOOM), incident response"
