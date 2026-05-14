@@ -2,7 +2,7 @@
 Factory for different types of scanners
 """
 
-from typing import Dict, Type, Any
+from typing import Dict, Type
 from src.scanners.base_scanner import BaseScanner
 from src.scanners.db_scanner import DatabaseScanner
 from src.scanners.file_scanner import FileScanner

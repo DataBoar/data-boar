@@ -39,16 +39,24 @@ To reduce false positives on song lyrics and music tablature/chord sheets:
 from pathlib import Path
 from typing import Any
 
+import copy
 import re
 
 from core.column_name_normalize import normalize_column_name_for_ml
+from core.brazilian_cpf import text_contains_valid_cpf, text_contains_valid_cnpj
 from core.dl_backend import DLClassifier, is_available as dl_available
 from core.embedding_prototype_hint import try_embedding_prototype_elevation
 from core.fuzzy_column_match import try_fuzzy_elevation
 from core.suggested_review import column_name_suggests_identifier_review
 from utils.file_encoding import read_text_with_encoding
 
-import copy
+# Pattern names that require at least one checksum-valid token in the scanned
+# text before being included in found_patterns (false-positive gate).
+# Identifiers from schema introspection, validated with Mod-11 (core.brazilian_cpf).
+_CHECKSUM_GATED_PATTERNS: dict[str, object] = {
+    "LGPD_CPF": text_contains_valid_cpf,
+    "LGPD_CNPJ": text_contains_valid_cnpj,
+}
 
 # Optional ML deps (numpy/pandas/sklearn) - fail gracefully if not installed
 try:
@@ -67,8 +75,10 @@ except ImportError:
 # Notes on Brazilian identifiers:
 # - LGPD_CNPJ matches the legacy numeric-only format (14 digits, optional ./-/ punctuation).
 # - LGPD_CNPJ_ALNUM matches the newer alphanumeric format where the first 12 positions may
-#   contain A–Z or 0–9 and the last two positions remain numeric check digits. We intentionally
-#   do not enforce checksum validation here; that belongs to a later detector-logic phase.
+#   contain A–Z or 0–9 and the last two positions remain numeric check digits.
+# - LGPD_CPF and LGPD_CNPJ are checksum-gated in the detect() loop via _CHECKSUM_GATED_PATTERNS
+#   (Mod-11 validation from core.brazilian_cpf); LGPD_CNPJ_ALNUM is not gated (different
+#   encoding; RFB IN 2.229/2024 format validation is out of scope for now).
 DEFAULT_PATTERNS = {
     "LGPD_CPF": (r"\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b", "LGPD Art. 5"),
     "LGPD_CNPJ": (r"\b\d{2}\.?\d{3}\.?\d{3}/?\d{4}-?\d{2}\b", "LGPD Art. 5"),
@@ -1242,8 +1252,16 @@ class SensitivityDetector:
         found_patterns: list[tuple[str, str]] = []
         for name, (_, norm_tag) in self.patterns.items():
             rex = self._compiled.get(name)
-            if rex and rex.search(combined):
-                found_patterns.append((name, norm_tag))
+            if not (rex and rex.search(combined)):
+                continue
+            # Checksum gate: for CPF and CNPJ (numeric), require at least one
+            # match with a valid Mod-11 check digit.  This eliminates false
+            # positives from sequential IDs, counters, and test data that
+            # happen to match the 11/14-digit shape but fail the algorithm.
+            gate_fn = _CHECKSUM_GATED_PATTERNS.get(name)
+            if gate_fn is not None and not gate_fn(combined):  # type: ignore[operator]
+                continue
+            found_patterns.append((name, norm_tag))
 
         ml_confidence = 0
         if self._ml_available and self._model and self._vectorizer:
