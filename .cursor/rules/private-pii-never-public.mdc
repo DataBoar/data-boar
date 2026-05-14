@@ -70,6 +70,21 @@ tracked by the **public Git** (`origin` / GitHub). They belong **exclusively** i
 - Any document that is "privileged" (attorney-client, court filing, settlement)
 - Third-party names in legal context (except genericized references)
 
+### 9. Plan documents and context sections — third-party names and commercial attribution
+- **No real first names, surnames, or nicknames** of business contacts, prospects, clients,
+  students, professors, university staff, or any non-operator third party in tracked plan
+  files (docs/plans/), use-case files (docs/use-cases/), or Motivation/Context sections.
+- **No company names, product names, or event details** that would uniquely identify a real
+  commercial interaction (e.g. "EAD provider in Brazil, 2026").
+- Even when chat context includes a name (e.g. "agradecemos a Fulana"), the agent MUST NOT
+  propagate it into tracked Markdown. Use genericized language instead:
+  - Real name → "a DPO contact", "an EAD provider", "a university professor", "a prospect"
+  - "EAD no Rio Grande do Sul" → "an EAD provider in Brazil"
+  - "(agradeça a X)" → omit entirely or write "based on a real-world contact"
+- Private notes about inspiration sources: save under docs/private/author_info/ or
+  docs/private/ops/ only; never in tracked plan Motivation sections.
+- Attribution in commit messages is also forbidden (e.g. "Co-credit: Fulana from X").
+
 ---
 
 ## What IS acceptable in public tracked files
@@ -102,7 +117,11 @@ tracked by the **public Git** (`origin` / GitHub). They belong **exclusively** i
    matching docs/private/ companion.
 3. **Scan before PR**: look for patterns in the diff: 11-digit sequences (CPF),
    full names of family members, RFC1918 IPs, real employer names.
-4. **Private git commit --trailer "Made-with: Cursor"**: after any session that adds content to docs/private/,
+4. **Scan plan Motivation/Context sections**: before staging any PLAN_*.md or use-case file,
+   re-read the Motivation section for first names, company names, gratitude phrases
+   ("agradece a", "thanks to", "agradeça a"), or temporal commercial identifiers
+   ("maio 2026", provider city + date). Genericize before commit.
+5. **Private git commit --trailer "Made-with: Cursor"**: after any session that adds content to docs/private/,
    run scripts/private-git-sync.ps1 or git -C docs/private add -A && commit.
 
 ---

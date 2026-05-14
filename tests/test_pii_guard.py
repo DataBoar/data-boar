@@ -276,3 +276,58 @@ def test_guard_files_do_not_embed_sensitive_seed_literals():
     assert not violations, (
         "Guard file leaked explicit sensitive seed literals:\n" + "\n".join(violations)
     )
+
+
+_GRATITUDE_ATTRIBUTION_RE = re.compile(
+    r"(?i)"
+    r"\b(?:thanks?\s+to|thank\s+you\s+to"
+    r"|agradec[ea](?:mos)?\s+[aà]"
+    r"|agradeça\s+[aà]"
+    r"|obrigad[oa]\s+[aà])\s+"
+    r"[A-ZÁÉÍÓÚÂÊÎÔÛÀÈÌÒÙÃÕ][a-záéíóúâêîôûàèìòùãõ]{2,}"
+    r"(?:\s+[A-ZÁÉÍÓÚÂÊÎÔÛÀÈÌÒÙÃÕ][a-záéíóúâêîôûàèìòùãõ]{2,})?"
+)
+
+# Paths that intentionally contain example gratitude phrases (rule definitions, etc.)
+_GRATITUDE_ALLOWED_PATHS = {
+    "tests/test_pii_guard.py",
+    ".cursor/rules/private-pii-never-public.mdc",
+}
+
+
+def test_plan_and_usecase_files_no_gratitude_attribution():
+    """
+    Plan Motivation/Context sections must not contain gratitude phrases that
+    attribute real people (e.g. 'thanks to Fulana', 'agradecemos a João').
+
+    Scans PLAN_*.md and docs/use-cases/**/*.md tracked files only — avoids
+    false positives in generic docs where similar phrasing is legitimate.
+    """
+    tracked = _git_ls_files()
+    violations: list[str] = []
+
+    for fpath in tracked:
+        if fpath in _GRATITUDE_ALLOWED_PATHS:
+            continue
+        if not (
+            ("docs/plans/PLAN_" in fpath and fpath.endswith(".md"))
+            or fpath.startswith("docs/use-cases/")
+        ):
+            continue
+        full = REPO_ROOT / fpath
+        if not full.is_file():
+            continue
+        try:
+            content = full.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        if _GRATITUDE_ATTRIBUTION_RE.search(content):
+            violations.append(
+                f"  {fpath}: contains a gratitude attribution phrase "
+                f"(real name in plan Motivation/Context — move to docs/private/)"
+            )
+
+    assert not violations, (
+        "Plan/use-case PII guard failed — gratitude attribution with real name:\n"
+        + "\n".join(violations)
+    )

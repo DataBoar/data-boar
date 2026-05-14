@@ -1,22 +1,100 @@
 # U.S. FTC COPPA — sample compliance profile (technical mapping only)
 #
-# NOT LEGAL ADVICE. This file helps technical/DPO teams label findings and report
-# text when scoping children's-privacy contexts under federal COPPA framing.
-# Data Boar does NOT verify age, parental consent, or COPPA compliance.
-# Consult qualified counsel for legal obligations.
-#
-# Children's Online Privacy Protection Act; FTC COPPA Rule (16 CFR Part 312).
+# Target audience: US deployments processing personal information from children under 13;
+# operators of websites/apps directed to children or with actual knowledge of child users.
 #
 # How to use:
-#   regex_overrides_file: path/to/compliance-sample-us_ftc_coppa.yaml
-#   ml_patterns_file: path/to/compliance-sample-us_ftc_coppa.yaml
-# Merge recommendation_overrides into report.recommendation_overrides.
+#   1. Set in your main config:
+#        regex_overrides_file: path/to/compliance-sample-us_ftc_coppa.yaml
+#        ml_patterns_file: path/to/compliance-sample-us_ftc_coppa.yaml
+#   2. Merge the recommendation_overrides list below into your config under report.recommendation_overrides.
+#
+# Legal scope:
+#   - Children's Online Privacy Protection Act (COPPA), 15 U.S.C. §§ 6501–6506.
+#   - FTC COPPA Rule (16 CFR Part 312); last major revision effective July 1, 2013.
+#   - FTC 2024 COPPA Rule Amendment (proposed/final rulemaking): strengthens consent
+#     requirements, adds limits on targeted advertising to children, expands definition
+#     of "personal information" to include biometric identifiers, clarifies ed-tech
+#     carve-outs, and requires separate parental consent for internal uses vs. disclosure.
+#     Monitor the Federal Register for final effective date.
+#   - COPPA applies to: operators of child-directed websites/apps AND operators with
+#     "actual knowledge" that a user is under 13; also covers third-party plug-ins/widgets
+#     with actual knowledge of child visitors.
+#   - "Personal information" under COPPA (16 CFR § 312.2): first/last name, home address,
+#     email address, phone number, SSN, persistent identifier (cookie, IP address, serial
+#     number when linked to personal information), photo, video, audio file containing
+#     child's image or voice, geolocation data sufficient to identify street name or city,
+#     and (2024 amendment) biometric identifiers.
+#   - "Directed to children" test: subject matter, visual content, music, celebrities,
+#     age of models, child-oriented activities, advertising, use of animated characters.
+#     Mixed-audience sites may apply age-screening to divert under-13 users.
+#   - Verifiable Parental Consent (VPC): must obtain before collecting, using, or disclosing
+#     personal information of under-13 users. Acceptable methods: signed form, credit card,
+#     video conference, government ID scan, knowledge-based authentication (2013 Rule).
+#   - Data minimization: collect only what is reasonably necessary for the child-directed
+#     activity; retain only as long as necessary.
+#   - Safe Harbors: FTC-approved COPPA safe harbor programs (e.g. kidSAFE, CARU, PRIVO)
+#     provide a presumption of compliance if operator follows program guidelines.
+#   - Ed-tech exception: schools can provide consent on behalf of parents for online
+#     educational services used at school direction; strict data-use limits apply.
+#   - FTC enforcement track record: significant civil penalties (e.g. TikTok $5.7 M 2019,
+#     YouTube $170 M 2019, Epic/Fortnite $275 M 2023). Personal liability possible for
+#     operators and officers.
+#
+# Detection note:
+#   - The scanner does NOT determine whether a site is "directed to children," whether a
+#     user is under 13, or whether VPC was obtained.
+#   - Regex patterns flag text referencing COPPA-scope identifiers, child-directed context,
+#     or personal information categories defined in 16 CFR § 312.2.
+#   - Precise geolocation flags coordinate-shaped values; COPPA explicitly treats location
+#     data sufficient to identify a street name/city as personal information.
+#   - Use scanner output as metadata inventory signal; scope with COPPA counsel.
+#
+# Regex design:
+#   - COPPA_ACRONYM: literal "COPPA" in text.
+#   - COPPA_UNDER13_REF: contextual phrase catching "under 13", "under thirteen",
+#     "children under", "child user", "directed to children", "mixed audience".
+#   - COPPA_PERSISTENT_ID: "persistent identifier" phrase — COPPA-defined category.
+#   - COPPA_VPC: "verifiable parental consent" or abbreviated VPC phrase.
+#   - Precise geolocation: same four-decimal-place geometry as compliance-sample-us_va_vcdpa.yaml.
+#     COPPA 16 CFR § 312.2 explicitly includes geolocation data in personal information.
+#
+# Use double-quoted YAML with escaped backslashes.
 
 regex:
   - name: "COPPA_ACRONYM"
+    # Literal COPPA reference
     pattern: "(?i)\\bCOPPA\\b"
     norm_tag: "US FTC COPPA"
+  - name: "COPPA_UNDER13_REF"
+    # Child-directed / under-13 contextual phrases
+    pattern: "(?i)\\b(?:under\\s+1[23]|under\\s+(?:twelve|thirteen)|children?\\s+under|child\\s+user|directed\\s+to\\s+children|child[\\s-]directed|mixed[\\s-]audience|child[\\s-]oriented)\\b"
+    norm_tag: "US FTC COPPA"
+  - name: "COPPA_PERSISTENT_ID"
+    # COPPA-defined personal information category
+    pattern: "(?i)\\bpersistent\\s+identifier\\b"
+    norm_tag: "US FTC COPPA"
+  - name: "COPPA_VPC"
+    # Verifiable parental consent phrase
+    pattern: "(?i)\\b(?:verifiable\\s+parental\\s+consent|vpc\\s+method|parental\\s+consent\\s+method)\\b"
+    norm_tag: "US FTC COPPA"
+  # Precise geolocation (COPPA 16 CFR § 312.2 — location data is personal information)
+  - name: "COPPA_JSON_LAT_PRECISION"
+    pattern: "(?i)[\"']lat[\"']\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\b"
+    norm_tag: "US FTC COPPA"
+  - name: "COPPA_JSON_LNG_PRECISION"
+    pattern: "(?i)[\"'](?:lng|lon)[\"']\\s*:\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}\\b"
+    norm_tag: "US FTC COPPA"
+  - name: "COPPA_LOCATION_CSV_PAIR"
+    pattern: "(?i)\\blocation\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*,\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "US FTC COPPA"
+  - name: "COPPA_QUERYSTRING_LAT_LONG"
+    pattern: "(?i)latitude=[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*&\\s*longitude=[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "US FTC COPPA"
 
+# ML terms: COPPA statute (15 U.S.C. §§ 6501-6506), FTC Rule 16 CFR Part 312,
+# 2024 rulemaking proposals, personal information categories, VPC methods,
+# safe harbor programs, ed-tech carve-out, and enforcement vocabulary.
 terms:
   - text: "children's online privacy"
     label: sensitive
@@ -25,6 +103,8 @@ terms:
   - text: "parental consent"
     label: sensitive
   - text: "verifiable parental consent"
+    label: sensitive
+  - text: "vpc"
     label: sensitive
   - text: "directed to children"
     label: sensitive
@@ -46,11 +126,65 @@ terms:
     label: sensitive
   - text: "persistent identifier"
     label: sensitive
+  - text: "mixed audience"
+    label: sensitive
+  - text: "child oriented"
+    label: sensitive
+  - text: "child user"
+    label: sensitive
+  - text: "age screening"
+    label: sensitive
+  - text: "age gate"
+    label: sensitive
+  - text: "age verification"
+    label: sensitive
+  - text: "actual knowledge"
+    label: sensitive
+  - text: "actual knowledge of minor"
+    label: sensitive
+  - text: "data minimization"
+    label: sensitive
+  - text: "children's data"
+    label: sensitive
+  - text: "child's voice"
+    label: sensitive
+  - text: "child's image"
+    label: sensitive
+  - text: "biometric identifier"
+    label: sensitive
+  - text: "geolocation data"
+    label: sensitive
+  - text: "location data"
+    label: sensitive
+  - text: "safe harbor"
+    label: sensitive
+  - text: "kidsafe"
+    label: sensitive
+  - text: "caru"
+    label: sensitive
+  - text: "privo"
+    label: sensitive
+  - text: "ed-tech"
+    label: sensitive
+  - text: "educational technology"
+    label: sensitive
+  - text: "school consent"
+    label: sensitive
+  - text: "third party plug-in"
+    label: sensitive
+  - text: "plug-in operator"
+    label: sensitive
+  - text: "civil penalty"
+    label: sensitive
+  - text: "ftc enforcement"
+    label: sensitive
+  - text: "16 cfr part 312"
+    label: sensitive
 
 recommendation_overrides:
   - norm_tag_pattern: "US FTC COPPA"
-    base_legal: "U.S. COPPA / FTC Rule (16 CFR Part 312) — technical mapping only; not a compliance determination"
-    risk: "Data may relate to children's online privacy contexts; requires legal/DPO review. Tool does not verify age or consent."
-    recommendation: "Scope with counsel/DPO: COPPA applicability, parental consent, data minimization, and retention for child-related processing. Use findings as technical inventory input only."
+    base_legal: "Children's Online Privacy Protection Act (COPPA), 15 U.S.C. §§ 6501-6506; FTC COPPA Rule (16 CFR Part 312, eff. 2013); FTC 2024 COPPA Rule Amendment (monitor Federal Register for final effective date)"
+    risk: "Data may relate to personal information of children under 13 in scope of COPPA. Personal information under COPPA includes: name, address, email, phone, SSN, persistent identifiers (cookies, IP, device ID when linked), photos/video/audio with child's image or voice, geolocation sufficient to identify a street name, and (2024 amendment) biometric identifiers. FTC enforcement penalties up to $51,744 per violation per day (adjusted annually). Personal liability is possible. Ed-tech operators face strict data-use limits even with school-based consent. Scanner does NOT verify age, VPC status, or safe harbor enrollment."
+    recommendation: "Assess whether site/app is 'directed to children' per 16 CFR § 312.2 subject-matter test or whether operator has 'actual knowledge' of under-13 users; obtain Verifiable Parental Consent (VPC) before collecting, using, or disclosing children's personal information; implement data minimization and restricted retention; evaluate FTC-approved safe harbor enrollment (kidSAFE, CARU, PRIVO); review 2024 rulemaking changes on targeted advertising and biometric identifiers before rule takes effect; for ed-tech deployments, confirm school-consent scope and data-use limitations."
     priority: "ALTA"
-    relevant_for: "DPO, privacy counsel, FTC-facing compliance review"
+    relevant_for: "DPO, COPPA counsel, product/engineering (age-gate, VPC flow), FTC-facing compliance review"
