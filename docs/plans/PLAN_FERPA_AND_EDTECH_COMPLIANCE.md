@@ -69,9 +69,9 @@ Even for **Brazilian EAD** platforms without a US footprint, FERPA awareness mat
 | **`recommendation_overrides`** | `base_legal`: "FERPA (20 U.S.C. § 1232g); FPCO — Family Policy Compliance Office, US Dept of Education"; `risk`: "Education records containing student PII subject to FERPA..."; `relevant_for`: "FERPA Compliance Officer, DPO, Legal, Student Records" |
 
 **Acceptance criteria:**
-- `uv run pytest tests/test_compliance_samples.py -k ferpa` passes (≥2 items)
-- All four geolocation regex patterns present
-- At least 25 ML terms
+- [x] `uv run pytest tests/test_compliance_samples.py -k ferpa` passes (sample loads; ≥2 items via parametrized file id)
+- [x] All four geolocation regex patterns present
+- [x] At least 25 ML terms (42 in shipped YAML)
 
 ### Phase 2 — Use-case alignment
 
