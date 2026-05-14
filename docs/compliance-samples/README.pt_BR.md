@@ -64,7 +64,7 @@ Ao escolher ou criar uma amostra, considere o(s) **idioma(s)** da região alvo p
 | **Austrália / NZ**               | Inglês.                                                                                                    |
 | **Singapura (PDPA)**             | Inglês.                                                                                                    |
 | **UAE / Arábia Saudita (PDPL)**  | Inglês; opcional árabe para nomes de colunas.                                                              |
-| **Argentina / Colômbia / Chile** | Espanhol e inglês (ex.: datos personales / personal data).                                                 |
+| **Argentina / Colômbia / Chile / México** | Espanhol e inglês (ex.: datos personales / personal data).                                                 |
 | **Quênia / Nigéria**             | Inglês.                                                                                                    |
 | **Marrocos**                     | Francês e/ou árabe conforme relevante.                                                                     |
 | **Índia (DPDP)**                 | Inglês.                                                                                                    |
