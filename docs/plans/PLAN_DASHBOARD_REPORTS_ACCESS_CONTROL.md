@@ -136,6 +136,10 @@ See [SECURITY.md](../SECURITY.md), [USAGE.md](../USAGE.md), [TECH_GUIDE.md](../T
 | `GET` | `/heatmap/{session_id}` | PNG | Heatmap by session | `reports_reader`+ |
 | `GET` | `/logs` | text | Logs listing | `authenticated` |
 | `GET` | `/logs/{session_id}` | text | Session log | `authenticated` |
+| `GET` | `/findings` | JSON | Last session findings (unified schema; async StreamingResponse) — added by `feat(api): add findings export endpoints` (commit `f29ae56`) | `reports_reader`+ |
+| `GET` | `/findings/csv` | CSV | Last session findings as CSV download (same schema as `/findings`) | `reports_reader`+ |
+| `GET` | `/findings/{session_id}` | JSON | Findings by session — see `GET /findings` schema | `reports_reader`+ |
+| `GET` | `/findings/{session_id}/csv` | CSV | Findings by session as CSV download | `reports_reader`+ |
 | `POST` | `/scan_database` | JSON | DB scan | `scanner`+ |
 
 Static: `GET /static/...` (long cache; same process). **Today:** no per-route RBAC — global `api.require_api_key` only when enabled. **Locale:** see [PLAN_DASHBOARD_I18N.md](completed/PLAN_DASHBOARD_I18N.md) (M-LOCALE-V1); unprefixed legacy HTML paths (`/config`, `/reports`, `/help`, `/about`) redirect the same way as `/`.
