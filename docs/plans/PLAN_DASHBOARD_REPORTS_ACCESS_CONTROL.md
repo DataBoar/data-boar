@@ -130,6 +130,10 @@ See [SECURITY.md](../SECURITY.md), [USAGE.md](../USAGE.md), [TECH_GUIDE.md](../T
 | `GET` | `/report` | XLSX | Last report download | `reports_reader`+ |
 | `GET` | `/heatmap` | PNG | Last heatmap | `reports_reader`+ |
 | `GET` | `/list` | JSON | List API | `authenticated` / automation |
+| `GET` | `/findings` | JSON | Unified findings (DB + filesystem) for the most recent session: `source_type`, `sensitivity_level`, `pattern_detected`, `norm_tag`, `ml_confidence` + source-specific fields; **404** when no scan sessions exist | `reports_reader`+ |
+| `GET` | `/findings/csv` | CSV | UTF-8 CSV attachment of the latest-session unified findings (`Content-Disposition` with safe session-id filename) | `reports_reader`+ |
+| `GET` | `/findings/{session_id}` | JSON | Same unified shape as `/findings` for a specific session; `_validate_session_id` rejects malformed ids; **404** when no findings | `reports_reader`+ |
+| `GET` | `/findings/{session_id}/csv` | CSV | UTF-8 CSV attachment for a specific session | `reports_reader`+ |
 | `PATCH` | `/sessions/{session_id}` | JSON | Metadata | `authenticated` |
 | `PATCH` | `/sessions/{session_id}/technician` | JSON | Technician tag | `authenticated` |
 | `GET` | `/reports/{session_id}` | XLSX | Report by session | `reports_reader`+ |
