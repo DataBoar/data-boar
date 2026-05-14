@@ -137,6 +137,10 @@ See [SECURITY.md](../SECURITY.md), [USAGE.md](../USAGE.md), [TECH_GUIDE.md](../T
 | `GET` | `/logs` | text | Logs listing | `authenticated` |
 | `GET` | `/logs/{session_id}` | text | Session log | `authenticated` |
 | `POST` | `/scan_database` | JSON | DB scan | `scanner`+ |
+| `GET` | `/findings` | JSON | Unified findings (DB + filesystem) for the **most recent** scan session — `404` when no sessions exist | `reports_reader`+ |
+| `GET` | `/findings/csv` | CSV attachment | Same as `GET /findings` but streamed as `findings_{sid}.csv` UTF-8 download | `reports_reader`+ |
+| `GET` | `/findings/{session_id}` | JSON | Unified findings (DB + filesystem) for a **specific** session — `404` when the session has no findings; session id is `_validate_session_id`-checked | `reports_reader`+ |
+| `GET` | `/findings/{session_id}/csv` | CSV attachment | Same as above but streamed as `findings_{sid}.csv` UTF-8 download | `reports_reader`+ |
 
 Static: `GET /static/...` (long cache; same process). **Today:** no per-route RBAC — global `api.require_api_key` only when enabled. **Locale:** see [PLAN_DASHBOARD_I18N.md](completed/PLAN_DASHBOARD_I18N.md) (M-LOCALE-V1); unprefixed legacy HTML paths (`/config`, `/reports`, `/help`, `/about`) redirect the same way as `/`.
 
