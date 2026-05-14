@@ -24,6 +24,11 @@
 # included explicitly so the sample matches the detector; RG, CEP and PIS/PASEP add
 # high-confidence Brazilian identifiers so we don't rely only on ML/DL in hybrid mode.
 # Use double-quoted YAML with escaped backslashes for regex (see .cursor/rules/yaml-regex-patterns.mdc).
+#
+# Precise geolocation (logs / APIs): same regex geometry as compliance-sample-us_va_vcdpa.yaml and
+# compliance-sample-eu_gdpr.yaml (JSON lat/lng, location: pair, latitude=&longitude=). norm_tag stays
+# "LGPD Art. 5" for inventory alignment with other personal-data signals in this file. Heuristic only —
+# not an automated Art. 11 LGPD / sensitive-data legal determination.
 
 regex:
   # Built-in patterns (same as core/detector.py DEFAULT_PATTERNS) – LGPD-relevant
@@ -64,6 +69,18 @@ regex:
     norm_tag: "LGPD Art. 5"
   - name: "PIS_PASEP_BR"
     pattern: "\\b\\d{3}\\.?\\d{5}\\.?\\d{2}-?\\d\\b"
+    norm_tag: "LGPD Art. 5"
+  - name: "LGPD_JSON_LAT_PRECISION"
+    pattern: "(?i)[\"']lat[\"']\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\b"
+    norm_tag: "LGPD Art. 5"
+  - name: "LGPD_JSON_LNG_PRECISION"
+    pattern: "(?i)[\"'](?:lng|lon)[\"']\\s*:\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}\\b"
+    norm_tag: "LGPD Art. 5"
+  - name: "LGPD_LOCATION_CSV_PAIR"
+    pattern: "(?i)\\blocation\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*,\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "LGPD Art. 5"
+  - name: "LGPD_QUERYSTRING_LAT_LONG"
+    pattern: "(?i)latitude=[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*&\\s*longitude=[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
     norm_tag: "LGPD Art. 5"
 
 # ML/DL terms: full set matching app defaults (core/detector.py DEFAULT_ML_TERMS) plus
@@ -412,6 +429,26 @@ terms:
   - text: "biometric data"
     label: sensitive
   - text: "genetic data"
+    label: sensitive
+  - text: "geolocalização"
+    label: sensitive
+  - text: "geolocalizacao"
+    label: sensitive
+  - text: "dados de geolocalização"
+    label: sensitive
+  - text: "dados de geolocalizacao"
+    label: sensitive
+  - text: "localização precisa"
+    label: sensitive
+  - text: "localizacao precisa"
+    label: sensitive
+  - text: "coordenadas gps"
+    label: sensitive
+  - text: "precise geolocation"
+    label: sensitive
+  - text: "geolocation data"
+    label: sensitive
+  - text: "geolocation"
     label: sensitive
   - text: "union affiliation"
     label: sensitive
