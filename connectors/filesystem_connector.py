@@ -723,6 +723,21 @@ class FilesystemConnector:
                 source_size=_size,
                 content_fingerprint=_fingerprint,
             )
+            # Phase 2 (ADR-0051): upsert cross-session file identity index.
+            _sid = getattr(self.db_manager, "_current_session_id", None)
+            if _sid:
+                try:
+                    self.db_manager.upsert_object_state(
+                        target_name=target_name,
+                        abs_path=str(file_path),
+                        session_id=_sid,
+                        mtime_ns=_mtime_ns,
+                        size=_size,
+                        content_fingerprint=_fingerprint,
+                        sensitivity_level=res["sensitivity_level"],
+                    )
+                except Exception:
+                    pass  # non-fatal: Phase 2 state index should not break the scan
             try:
                 from utils.logger import log_finding
 

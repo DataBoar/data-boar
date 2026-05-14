@@ -16,6 +16,7 @@ from sqlalchemy import (
     LargeBinary,
     String,
     Text,
+    UniqueConstraint,
     create_engine,
     desc,
     func,
@@ -220,6 +221,34 @@ class DataSourceInventory(Base):
     transport_security = Column(String(120), nullable=True)
     raw_details = Column(Text, nullable=True)  # JSON/text payload from connector probe
     created_at = Column(DateTime, default=_utc_now)
+
+
+class ScanObjectState(Base):
+    """Cross-session file identity index — Phase 2 of incremental scan (ADR-0051).
+
+    One row per (target_name, abs_path); upserted after each filesystem finding.
+    Enables cross-session diff queries: "which files changed since the last scan?"
+    without scanning the full corpus again.
+
+    NULL fields mean either the column was not collected (pre-Phase-1 row) or stat
+    failed at scan time.  ``updated_at`` is refreshed on every upsert.
+    """
+
+    __tablename__ = "scan_object_state"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    target_name = Column(String(100), nullable=False, index=True)
+    abs_path = Column(String(512), nullable=False, index=True)
+    last_session_id = Column(String(64), nullable=False)
+    # File identity collected at the last scan (mirrors FilesystemFinding Phase 1 fields).
+    mtime_ns = Column(BigInteger, nullable=True)
+    size = Column(BigInteger, nullable=True)
+    content_fingerprint = Column(String(16), nullable=True)
+    last_sensitivity = Column(String(20), nullable=True)
+    updated_at = Column(DateTime, default=_utc_now, onupdate=_utc_now)
+
+    __table_args__ = (
+        UniqueConstraint("target_name", "abs_path", name="uq_scan_object_path"),
+    )
 
 
 class WebAuthnCredential(Base):
@@ -744,6 +773,86 @@ class LocalDBManager:
         except Exception:
             session.rollback()
             raise
+        finally:
+            session.close()
+
+    def upsert_object_state(
+        self,
+        target_name: str,
+        abs_path: str,
+        session_id: str,
+        mtime_ns: int | None,
+        size: int | None,
+        content_fingerprint: str | None,
+        sensitivity_level: str | None,
+    ) -> None:
+        """Upsert one row in scan_object_state (cross-session file identity index).
+
+        Uses SQLite ``INSERT OR REPLACE`` semantics: if a row with the same
+        ``(target_name, abs_path)`` exists it is replaced; otherwise inserted.
+        This is Phase 2 of the incremental scan plan (ADR-0051).
+        """
+        session = self._session_factory()
+        try:
+            existing = (
+                session.query(ScanObjectState)
+                .filter_by(target_name=target_name, abs_path=abs_path)
+                .first()
+            )
+            if existing is not None:
+                existing.last_session_id = session_id
+                existing.mtime_ns = mtime_ns
+                existing.size = size
+                existing.content_fingerprint = content_fingerprint
+                existing.last_sensitivity = sensitivity_level
+                existing.updated_at = _utc_now()
+            else:
+                session.add(
+                    ScanObjectState(
+                        target_name=target_name,
+                        abs_path=abs_path,
+                        last_session_id=session_id,
+                        mtime_ns=mtime_ns,
+                        size=size,
+                        content_fingerprint=content_fingerprint,
+                        last_sensitivity=sensitivity_level,
+                    )
+                )
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
+
+    def get_object_state(
+        self,
+        target_name: str,
+        abs_path: str,
+    ) -> dict[str, Any] | None:
+        """Return the latest identity record for (target_name, abs_path), or None.
+
+        Used by Phase 3 (short-circuit) to check if a file changed since the last scan.
+        """
+        session = self._session_factory()
+        try:
+            row = (
+                session.query(ScanObjectState)
+                .filter_by(target_name=target_name, abs_path=abs_path)
+                .first()
+            )
+            if row is None:
+                return None
+            return {
+                "target_name": row.target_name,
+                "abs_path": row.abs_path,
+                "last_session_id": row.last_session_id,
+                "mtime_ns": row.mtime_ns,
+                "size": row.size,
+                "content_fingerprint": row.content_fingerprint,
+                "last_sensitivity": row.last_sensitivity,
+                "updated_at": row.updated_at,
+            }
         finally:
             session.close()
 

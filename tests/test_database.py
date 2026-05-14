@@ -653,3 +653,98 @@ def test_file_content_fingerprint_helper():
     # None/empty -> None
     assert _file_content_fingerprint(None) is None  # type: ignore[arg-type]
     assert _file_content_fingerprint(b"") is None
+
+
+# ---------------------------------------------------------------------------
+# Phase 2 — ScanObjectState table + upsert_object_state / get_object_state
+# ---------------------------------------------------------------------------
+
+
+def test_scan_object_state_upsert_insert(tmp_path):
+    """upsert_object_state inserts a new row when the path is unseen."""
+    from core.database import LocalDBManager
+
+    db = LocalDBManager(str(tmp_path / "ph2.db"))
+    db.set_current_session_id("sess-001")
+    db.create_session_record("sess-001")
+    try:
+        db.upsert_object_state(
+            target_name="tgt-a",
+            abs_path="/data/file.txt",
+            session_id="sess-001",
+            mtime_ns=1_700_000_000_000_000_000,
+            size=512,
+            content_fingerprint="aabbccdd00112233",
+            sensitivity_level="HIGH",
+        )
+        row = db.get_object_state("tgt-a", "/data/file.txt")
+        assert row is not None
+        assert row["last_session_id"] == "sess-001"
+        assert row["mtime_ns"] == 1_700_000_000_000_000_000
+        assert row["size"] == 512
+        assert row["content_fingerprint"] == "aabbccdd00112233"
+        assert row["last_sensitivity"] == "HIGH"
+    finally:
+        db.dispose()
+
+
+def test_scan_object_state_upsert_update(tmp_path):
+    """upsert_object_state updates the existing row on repeat (same path, new session)."""
+    from core.database import LocalDBManager
+
+    db = LocalDBManager(str(tmp_path / "ph2_update.db"))
+    db.set_current_session_id("sess-001")
+    db.create_session_record("sess-001")
+    try:
+        db.upsert_object_state(
+            "tgt", "/data/x.csv", "sess-001", 1_000, 100, "abc", "LOW"
+        )
+        db.upsert_object_state(
+            "tgt", "/data/x.csv", "sess-002", 2_000, 200, "xyz", "HIGH"
+        )
+
+        row = db.get_object_state("tgt", "/data/x.csv")
+        assert row is not None
+        # Row must be updated, not doubled.
+        assert row["last_session_id"] == "sess-002"
+        assert row["mtime_ns"] == 2_000
+        assert row["content_fingerprint"] == "xyz"
+        assert row["last_sensitivity"] == "HIGH"
+    finally:
+        db.dispose()
+
+
+def test_scan_object_state_no_double_rows(tmp_path):
+    """Repeated upserts must not create duplicate rows."""
+    from core.database import LocalDBManager, ScanObjectState
+
+    db = LocalDBManager(str(tmp_path / "ph2_no_dup.db"))
+    db.set_current_session_id("sess-001")
+    db.create_session_record("sess-001")
+    try:
+        for i in range(3):
+            db.upsert_object_state(
+                "tgt", "/data/dup.txt", f"sess-{i}", i, i * 10, None, None
+            )
+
+        with db._session_factory() as s:
+            count = (
+                s.query(ScanObjectState)
+                .filter_by(target_name="tgt", abs_path="/data/dup.txt")
+                .count()
+            )
+        assert count == 1
+    finally:
+        db.dispose()
+
+
+def test_get_object_state_missing_returns_none(tmp_path):
+    """get_object_state returns None for an unknown (target, path) pair."""
+    from core.database import LocalDBManager
+
+    db = LocalDBManager(str(tmp_path / "ph2_missing.db"))
+    try:
+        result = db.get_object_state("nonexistent", "/nowhere.txt")
+        assert result is None
+    finally:
+        db.dispose()
