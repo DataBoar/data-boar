@@ -184,7 +184,10 @@ exclude_dirs = ["tests", "db", ".venv"]
 # B310: urlopen in utils/notify.py is HTTPS webhook — annotated with # nosec B310.
 # Legacy dirs utils/, scanners/, logging_custom/ now included — cleaned 2026-05-14.
 # db/ still excluded (deeper structural issues; tracked in PLAN_BANDIT_SECURITY_LINTER.md).
-skips = ["B608"]
+skips = []
+# B608 was previously skipped globally; now annotated inline with # nosec B608 in
+# connectors/sql_sampling.py (all 10 occurrences) — identifiers are ANSI-quoted
+# with '""'-escaping from DB schema introspection, not end-user input.
 level = "MEDIUM"
 confidence = "MEDIUM"
 # Força auditoria em chamadas de sistema e FFI (importante para o core em Rust)
