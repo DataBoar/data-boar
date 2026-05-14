@@ -831,7 +831,11 @@ def _detect_possible_minor(
         "data de nascimento",
         "data nascimento",
         "data de nasc",
+        "dt_nasc",
+        "dt_nascimento",
+        "dtnasc",
         "nascimento",
+        "menor_de_idade",
         "dob",
         "ddn",
         "dn",
@@ -845,9 +849,16 @@ def _detect_possible_minor(
         "idade",
         "idade_atual",
         "idade_pessoa",
+        "idade_anos",
+        "anos",
         "faixa etaria",
         "faixa etária",
+        "faixa_etaria",
         "idd",
+        "menores",
+        "crianca",
+        "criança",
+        "adolescente",
     )
 
     is_dob_like = any(tok in col for tok in dob_tokens)

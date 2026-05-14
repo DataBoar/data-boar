@@ -13,6 +13,7 @@ External LLM review (e.g. Gemini on `**export_public_gemini_bundle.py`** output)
 This runbook avoids **manual `cat *.md`** mistakes: the bundle is built from `**git ls-files` only**, excludes `**docs/private/`**, and wraps every file as:
 
 ```text
+
 --- FILE: path/relative/to/repo ---
 <exact file contents>
 
@@ -23,6 +24,7 @@ This runbook avoids **manual `cat *.md`** mistakes: the bundle is built from `**
 From the repo root:
 
 ```bash
+
 uv run python scripts/export_public_gemini_bundle.py \
   --output docs/private/gemini_bundles/public_bundle_$(date -I).txt \
   --compliance-yaml \
@@ -33,12 +35,10 @@ uv run python scripts/export_public_gemini_bundle.py \
 **Windows (PowerShell):** do **not** paste the line above — `$(date -I)` is **bash**; PowerShell mis-parses it and you get a broken path like `**public_bundle_.txt`**. Use a dated path explicitly:
 
 ```powershell
+
 uv run python scripts/export_public_gemini_bundle.py `
-
   --output "docs/private/gemini_bundles/public_bundle_$(Get-Date -Format 'yyyy-MM-dd').txt" `
-
   --compliance-yaml `
-
   --verify
 
 ```
@@ -48,6 +48,7 @@ uv run python scripts/export_public_gemini_bundle.py `
 On Linux/macOS you can use:
 
 ```bash
+
 ./scripts/export_public_gemini_bundle.sh -o /tmp/public_bundle.txt --compliance-yaml --verify
 
 ```
@@ -83,6 +84,7 @@ Use the bundle as **the only** large attachment; do **not** add private notes. K
 **Role line:** we use a **single sentence** of role + domain (below) instead of a long “you are…” paragraph. That usually matches or beats fluffy persona text: what drives quality here is **scope, output shape, and FILE: citations**—not a job title. If you prefer zero role wording, delete the first sentence and keep “You review…”.
 
 ```text
+
 You are a technical documentation reviewer for an open-source, security-adjacent product (Data Boar — LGPD-style sensitivity / compliance scanning). Review the attached bundle only; sections look like:
 --- FILE: <path> ---
 <body>
@@ -112,6 +114,7 @@ Output (use exactly these headings; keep each bullet one line + FILE:path when p
 ### Compact prompt (when the API is overwhelmed or the bundle is huge)
 
 ```text
+
 Same attachment format (--- FILE: ---). Data Boar = LGPD-style scanner; triage only.
 
 In **one** reply, max **8** findings total across all sections, each: `- [P0|P1|P2] FILE:path — one sentence`.
@@ -133,6 +136,7 @@ Tighten or shorten the prompt when the bundle is near the model’s context limi
 - **Sliding-window “puzzle piece” heuristic:** `scripts/audit_concat_sliding_window.py` builds an index of every *N*-line window over tracked `*.md` / `*.yaml` / `*.yml`, then marks which lines in your concatenated blob are covered by at least one matching window. **Uncovered** runs may be glue between files, manual edits, or text that no longer exists on disk — **not proof** of loss (generic lines and boundary effects happen). Example:
 
   ```bash
+
   uv run python scripts/audit_concat_sliding_window.py \
     -i docs/private/mess_concatenated_gemini_sanity_check/sobre-data-boar.md \
     --window 25 --strip-bundle-markers --show-sample-matches 15
