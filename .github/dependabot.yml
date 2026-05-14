@@ -25,6 +25,13 @@ updates:
       uv-minor-patch:
         patterns: ["*"]
         update-types: ["minor", "patch"]
+    # Upstream-capped transitive deps. We do NOT silence security alerts here:
+    # ``ignore`` blocks Dependabot version-update PRs, security advisories still surface.
+    # Rationale: ADR 0053 (ebcdic 2.x blocked by extract-msg<2). When extract-msg
+    # relaxes its ``ebcdic<2`` cap upstream, remove the corresponding entry.
+    ignore:
+      - dependency-name: "ebcdic"
+        update-types: ["version-update:semver-major"]
 
   # GitHub Actions (workflows and action versions)
   - package-ecosystem: "github-actions"
