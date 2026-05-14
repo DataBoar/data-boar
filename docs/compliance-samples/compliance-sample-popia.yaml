@@ -1,7 +1,7 @@
-# POPIA – sample compliance profile (South Africa; Protection of Personal Information Act)
+# POPIA – sample compliance profile (South Africa; Protection of Personal Information Act 4 of 2013)
 #
-# Target audience: South African deployments and POPIA compliance. Terms align with
-# "personal information", "responsible party", Information Regulator.
+# Target audience: South African deployments and POPIA compliance. Information Regulator
+# (South Africa); responsible party / operator roles.
 #
 # How to use:
 #   1. Set in your main config:
@@ -9,17 +9,55 @@
 #        ml_patterns_file: path/to/compliance-sample-popia.yaml
 #   2. Merge the recommendation_overrides list below into your config under report.recommendation_overrides.
 #
-# POPIA: Act 4 of 2013; Information Regulator (South Africa).
+# POPIA: Protection of Personal Information Act 4 of 2013; Part B of Chapter 4 commenced
+# 1 July 2020; full commencement 1 July 2021 (grace period ended). Enforcement by
+# Information Regulator (South Africa) from 2021; major enforcement actions ongoing.
+#
+# Detection thresholds (not configurable in this file; set in main config.yaml):
+#   - sensitivity_detection.fuzzy_column_match_min_confidence (int, default 25)
+#   - sensitivity_detection.embedding_prototype_hint_min_confidence (int, default 20)
+#
+# Legal scope (read before relying on tags):
+#   - POPIA applies to responsible parties who process personal information in South Africa
+#     or who use automated means in SA. Certain exemptions apply (e.g. household, journalistic,
+#     judicial functions). The scanner does not evaluate exemptions or cross-border transfer
+#     adequacy under s.72. Use output as inventory signal; scope with counsel.
+#
+# Regex design:
+#   - SA_ID: South African national ID number (13 digits: YYMMDD + gender + citizenship + checksum).
+#     Spaced variant covers "760101 5009 08 7" display format.
+#   - Precise geolocation: same four-decimal-place geometry as compliance-sample-us_va_vcdpa.yaml
+#     and compliance-sample-eu_gdpr.yaml. Location data that identifies a data subject is
+#     personal information under POPIA s.1. Heuristic coordinate-shape signals only.
+#
+# Use double-quoted YAML with escaped backslashes (see .cursor/rules/yaml-regex-patterns.mdc).
 
 regex:
   - name: "SA_ID"
+    # South African ID number displayed with spaces: YYMMDD GGGG CCC
     pattern: "\\b\\d{6}\\s?\\d{4}\\s?\\d{3}\\b"
     norm_tag: "POPIA"
   - name: "SA_ID_ALT"
+    # SA ID number stored as plain 13-digit string
     pattern: "\\b\\d{13}\\b"
     norm_tag: "POPIA"
+  # Precise geolocation (POPIA s.1 — location data identifying a data subject = personal information)
+  - name: "POPIA_JSON_LAT_PRECISION"
+    pattern: "(?i)[\"']lat[\"']\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\b"
+    norm_tag: "POPIA"
+  - name: "POPIA_JSON_LNG_PRECISION"
+    pattern: "(?i)[\"'](?:lng|lon)[\"']\\s*:\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}\\b"
+    norm_tag: "POPIA"
+  - name: "POPIA_LOCATION_CSV_PAIR"
+    pattern: "(?i)\\blocation\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*,\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "POPIA"
+  - name: "POPIA_QUERYSTRING_LAT_LONG"
+    pattern: "(?i)latitude=[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*&\\s*longitude=[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "POPIA"
 
-# ML terms: POPIA terminology (personal information, responsible party, data subject).
+# ML terms: POPIA vocabulary (EN) covering the eight conditions for lawful processing,
+# special personal information (s.26), children's personal information (s.34), and
+# trans-border transfer requirements (s.72).
 terms:
   - text: "personal information"
     label: sensitive
@@ -43,11 +81,85 @@ terms:
     label: sensitive
   - text: "identity number"
     label: sensitive
+  - text: "south african id"
+    label: sensitive
+  - text: "special personal information"
+    label: sensitive
+  - text: "race"
+    label: sensitive
+  - text: "ethnic origin"
+    label: sensitive
+  - text: "religious belief"
+    label: sensitive
+  - text: "philosophical belief"
+    label: sensitive
+  - text: "political persuasion"
+    label: sensitive
+  - text: "trade union membership"
+    label: sensitive
+  - text: "health information"
+    label: sensitive
+  - text: "health record"
+    label: sensitive
+  - text: "sexual life"
+    label: sensitive
+  - text: "biometric information"
+    label: sensitive
+  - text: "biometric data"
+    label: sensitive
+  - text: "criminal behaviour"
+    label: sensitive
+  - text: "criminal record"
+    label: sensitive
+  - text: "children personal information"
+    label: sensitive
+  - text: "minor"
+    label: sensitive
+  - text: "trans-border transfer"
+    label: sensitive
+  - text: "cross-border transfer"
+    label: sensitive
+  - text: "information officer"
+    label: sensitive
+  - text: "data security"
+    label: sensitive
+  - text: "data breach"
+    label: sensitive
+  - text: "security compromise"
+    label: sensitive
+  - text: "consent"
+    label: sensitive
+  - text: "legitimate interest"
+    label: sensitive
+  - text: "geolocation"
+    label: sensitive
+  - text: "precise geolocation"
+    label: sensitive
+  - text: "location data"
+    label: sensitive
+  - text: "name"
+    label: sensitive
+  - text: "email"
+    label: sensitive
+  - text: "phone number"
+    label: sensitive
+  - text: "address"
+    label: sensitive
+  - text: "date of birth"
+    label: sensitive
+  - text: "financial information"
+    label: sensitive
+  - text: "account number"
+    label: sensitive
+  - text: "profiling"
+    label: sensitive
+  - text: "automated decision"
+    label: sensitive
 
 recommendation_overrides:
   - norm_tag_pattern: "POPIA"
-    base_legal: "POPIA (Act 4 of 2013); Information Regulator"
-    risk: "Personal information; conditions for lawful processing."
-    recommendation: "Comply with POPIA conditions; register with Information Regulator if required; apply purpose specification and processing limitation."
+    base_legal: "POPIA (Protection of Personal Information Act 4 of 2013); Information Regulator (South Africa); full enforcement from 1 July 2021"
+    risk: "Personal information and special personal information (race, ethnic origin, religion, political persuasion, health, sexual life, biometric data, criminal behaviour) under POPIA. Precise coordinate-shaped values in logs/APIs are heuristic inventory signals only — not automatic POPIA classification. Children's personal information (s.34) and cross-border transfers (s.72 — third-country adequacy) require heightened attention."
+    recommendation: "Comply with the eight conditions for lawful processing; appoint an Information Officer; notify Information Regulator of security compromises; obtain prior authorisation for special personal information categories (s.27–32) where required; confirm cross-border transfer safeguards (s.72) with counsel; apply children's data obligations (s.34–35)."
     priority: "ALTA"
-    relevant_for: "DPO, Information Officer, Information Regulator"
+    relevant_for: "DPO, Information Officer, Information Regulator, Legal, Information Security"
