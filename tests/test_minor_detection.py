@@ -151,8 +151,14 @@ class TestMinorDetectionDoesNotBreakExisting(unittest.TestCase):
     """Ensure minor detection is additive: existing behaviour for non-minor data unchanged."""
 
     def test_cpf_still_high(self):
+        # 529.982.247-25 is a valid Mod-11 CPF; LGPD_CPF is checksum-gated in
+        # core.detector (_CHECKSUM_GATED_PATTERNS), so the classic placeholder
+        # 123.456.789-00 falls through to the ML-only branch with pattern
+        # "ML_DETECTED". The minor-detection regression contract is: real CPF
+        # input remains HIGH and surfaces the regex pattern name — verify that
+        # against a checksum-valid fixture.
         scanner = DataScanner()
-        result = scanner.scan_column("documento", "123.456.789-00")
+        result = scanner.scan_column("documento", "529.982.247-25")
         self.assertEqual(result["sensitivity_level"], "HIGH")
         self.assertIn("CPF", result.get("pattern_detected", ""))
 

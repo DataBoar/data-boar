@@ -105,10 +105,16 @@ La la la"""
 
     def test_real_cpf_in_lyrics_still_high(self):
         """Strong PII (CPF) in content that looks like lyrics should still be HIGH."""
+        # 529.982.247-25 is a valid Mod-11 CPF; LGPD_CPF is checksum-gated in
+        # core.detector so the classic placeholder 123.456.789-00 falls through to
+        # the ML-only branch (still HIGH, but pattern "ML_DETECTED"). Use a real-shaped
+        # CPF so this test exercises the regex-name HIGH path inside lyrics context,
+        # which is the original intent (entertainment heuristics must not downgrade
+        # a real PII regex hit).
         scanner = DataScanner()
         lyrics_with_cpf = """Verse 1
         Chorus
-        The CPF is 123.456.789-00 for the form
+        The CPF is 529.982.247-25 for the form
         La la la"""
         result = scanner.scan_column("form_data", lyrics_with_cpf)
         self.assertEqual(result["sensitivity_level"], "HIGH")
