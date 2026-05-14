@@ -25,6 +25,15 @@ updates:
       uv-minor-patch:
         patterns: ["*"]
         update-types: ["minor", "patch"]
+    # Ignore unsatisfiable transitive bumps. Dependabot otherwise generates broken PRs
+    # that patch requirements.txt while the resolver (uv.lock) cannot satisfy the bump
+    # because of an upstream cap on a parent package.
+    ignore:
+      # ebcdic 2.x is incompatible with extract-msg<=0.55.0 (which pins ebcdic<2,>=1.1.1).
+      # Re-evaluate when extract-msg lifts the <2 cap. Tracking issue: see PR opened from
+      # cursor/data-boar-agent-protocol-1fbd ("ci(deps): ignore impossible ebcdic 2.x bump").
+      - dependency-name: "ebcdic"
+        update-types: ["version-update:semver-major"]
 
   # GitHub Actions (workflows and action versions)
   - package-ecosystem: "github-actions"
