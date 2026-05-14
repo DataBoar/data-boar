@@ -110,9 +110,7 @@ def looks_like_subtitle_markup(sample: str) -> bool:
     timing_hits = sum(
         1
         for ln in lines[:40]
-        if "-->" in ln
-        or _RE_CUE_TIMING.match(ln)
-        or _RE_CUE_TIMING_SHORT.match(ln)
+        if "-->" in ln or _RE_CUE_TIMING.match(ln) or _RE_CUE_TIMING_SHORT.match(ln)
     )
     if timing_hits >= 2:
         return True
