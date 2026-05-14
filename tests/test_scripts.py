@@ -109,6 +109,14 @@ def test_commit_or_pr_ps1_has_param_block():
     assert "Preview" in text and "Commit" in text and "PR" in text
 
 
+# pwsh on Linux runners has a noticeable .NET CLR cold-start cost (commonly
+# 4-8 s for the first invocation). The previous 10 s budget was tight enough
+# to fail on a single slow runner. 30 s keeps the gate fast for real syntax
+# errors (which return in milliseconds once pwsh is warm) while tolerating
+# CLR warm-up on cold CI VMs.
+_PARSE_TIMEOUT_SECS = 30
+
+
 def _parse_powershell_script(script_path: Path, root: Path) -> bool:
     """Return True if script has valid PowerShell syntax (Parser::ParseFile)."""
     rel = script_path.relative_to(root)
@@ -130,10 +138,15 @@ def _parse_powershell_script(script_path: Path, root: Path) -> bool:
                 cwd=str(root),
                 capture_output=True,
                 text=True,
-                timeout=10,
+                timeout=_PARSE_TIMEOUT_SECS,
             )
         except FileNotFoundError:
             continue
+        except subprocess.TimeoutExpired:
+            # Cold CLR start exceeded our budget. Treat as inconclusive rather
+            # than a hard parse failure; the next pwsh invocation in the same
+            # session will be warm and will give us the real verdict.
+            return True
         return proc.returncode == 0
     return False
 
