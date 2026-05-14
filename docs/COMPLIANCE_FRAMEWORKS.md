@@ -105,6 +105,26 @@ Each sample can provide up to three kinds of content. Your **main config** refer
 
 The same YAML file can contain **regex**, **terms**, and **recommendation_overrides**; you set `regex_overrides_file` and `ml_patterns_file` to that file path, and copy the `recommendation_overrides` block into your main config under `report.recommendation_overrides`.
 
+### Merge behavior: additive by design
+
+Compliance sample patterns and terms are **merged with** (not a replacement for) the built-in detector patterns:
+
+- **`regex_overrides_file`** — the detector runs both the built-in patterns (CPF, CNPJ, email, phone, SSN, credit card, …) **and** the patterns in your sample file. If a built-in pattern has the same `name` as one in the overrides file, the override wins for that specific name. Patterns with unique names in the overrides file are added on top.
+- **`ml_patterns_file`** / **`sensitivity_detection.ml_terms`** — your terms are **merged** with the default built-in ML terms. When you load `compliance-sample-eu_gdpr.yaml` alongside your LGPD base config, the detector trains on LGPD built-in terms **plus** the GDPR terms from the sample — it does **not** drop LGPD coverage.
+- **`report.recommendation_overrides`** — the list is evaluated top-to-bottom using **first-match substring semantics** on `norm_tag_pattern`. Order matters: put more specific patterns (e.g. `"UK GDPR"`) before broader ones (e.g. `"GDPR"`) so `"UK GDPR"` findings do not accidentally match the `"GDPR"` rule first.
+
+To remove a built-in pattern (rare), set it in `sensitivity_detection.exclude_patterns` or supply an `ml_patterns_file` that explicitly does **not** include those terms.
+
+### Multi-jurisdiction behavior (when LGPD + GDPR both match)
+
+When a finding matches patterns from **two or more** jurisdictions simultaneously (e.g. an email address in a database that also contains EU data subject references and Brazilian CPF numbers), the detector reports **all matching norm_tags** — the behavior is **additive, not exclusive**:
+
+- The finding gets **all** applicable `norm_tag` values (union, not winner-take-all).
+- The **report** shows each norm_tag row in the Recommendations sheet, using the first matching `recommendation_overrides` entry for each.
+- There is **no automatic tie-breaker** that "picks" LGPD over GDPR or vice versa; that judgment is left to DPOs and counsel, per [ADR 0025](adr/ADR-0025-compliance-positioning-evidence-inventory-not-legal-conclusion-engine.md) and [ADR 0038](adr/ADR-0038-jurisdictional-ambiguity-alert-dont-decide.md).
+- When two overlapping `norm_tag_pattern` entries exist in `recommendation_overrides`, the **first match in list order** determines the recommendation text for that pattern. Order the list from most specific to least specific to get predictable output.
+- The **jurisdiction hints** layer (`report.jurisdiction_hints`) is a separate, per-session heuristic signal — see [JURISDICTION_COLLISION_HANDLING.md](JURISDICTION_COLLISION_HANDLING.md) for the counsel-facing framing.
+
 ### How to use a sample
 
 1. **Choose the sample** for your regulation from the table above (or from [compliance-samples/README.md](compliance-samples/README.md)).

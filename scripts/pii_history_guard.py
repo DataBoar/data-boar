@@ -118,13 +118,25 @@ def _extract_added_lines(patch_text: str) -> list[str]:
     return lines
 
 
-def _collect_lines_to_scan(scan_range: str) -> list[str]:
+_DEFAULT_MAX_DIFF_SIZE_MB = 500
+
+
+def _collect_lines_to_scan(scan_range: str, max_diff_size_mb: int) -> list[str]:
     if scan_range == "--all":
         proc = _git(["log", "--all", "-p", "--unified=0", "--no-color", "--", "."])
     else:
         proc = _git(["diff", "--unified=0", "--no-color", scan_range, "--", "."])
     if proc.returncode != 0:
         raise RuntimeError(f"git patch scan failed: {proc.stderr.strip()}")
+    diff_bytes = len(proc.stdout.encode("utf-8", errors="replace"))
+    limit_bytes = max_diff_size_mb * 1024 * 1024
+    if diff_bytes > limit_bytes:
+        raise RuntimeError(
+            f"pii_history_guard: diff output is {diff_bytes // (1024 * 1024)} MB "
+            f"which exceeds --max-diff-size-mb {max_diff_size_mb}. "
+            "Run with a larger limit or narrow the scan range. "
+            "See docs/ops/PII_PUBLIC_TREE_OPERATOR_GUIDE.md §Memory."
+        )
     return _extract_added_lines(proc.stdout)
 
 
@@ -135,6 +147,19 @@ def main() -> int:
         action="store_true",
         help="scan complete git history instead of origin/main..HEAD range",
     )
+    parser.add_argument(
+        "--max-diff-size-mb",
+        type=int,
+        default=_DEFAULT_MAX_DIFF_SIZE_MB,
+        metavar="MB",
+        help=(
+            "Abort if the combined git diff/log patch output exceeds this size "
+            f"in megabytes (default: {_DEFAULT_MAX_DIFF_SIZE_MB} MB). "
+            "Prevents OOM on very large repositories. "
+            "Increase for repos with unusually large histories. "
+            "See docs/ops/PII_PUBLIC_TREE_OPERATOR_GUIDE.md §Memory."
+        ),
+    )
     args = parser.parse_args()
 
     if not (REPO_ROOT / ".git").exists():
@@ -142,7 +167,7 @@ def main() -> int:
         return 0
 
     scan_range = _resolve_scan_range(args.full_history)
-    lines = _collect_lines_to_scan(scan_range)
+    lines = _collect_lines_to_scan(scan_range, args.max_diff_size_mb)
     violations: list[str] = []
     for idx, line in enumerate(lines, start=1):
         for label, pattern in FORBIDDEN_LINE_PATTERNS:

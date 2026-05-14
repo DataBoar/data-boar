@@ -5,9 +5,12 @@ from __future__ import annotations
 import unittest
 
 from core.brazilian_cpf import (
+    CPF_FISCAL_REGION_MAP,
     PIIValidator,
     cnpj_checksum_valid,
+    cpf_birth_state_consistent,
     cpf_checksum_valid,
+    cpf_fiscal_region,
     normalize_cnpj_digits,
     normalize_cpf_digits,
     text_contains_valid_cnpj,
@@ -226,4 +229,174 @@ class TestCnpjCorpus(unittest.TestCase):
                 self.assertTrue(
                     text_contains_valid_cnpj(f"empresa cnpj={cnpj} ok"),
                     f"Expected text_contains_valid_cnpj to find: {cnpj}",
+                )
+
+
+# ---------------------------------------------------------------------------
+# CPF fiscal-region / state-origin tests
+#
+# Legislation note:
+#   - Provimento CNJ nº 63/2017: CPF mandatory in birth registrations.
+#   - Lei nº 14.534/2023: CPF as universal identifier in all public documents.
+#   - Before 2017: CPF could be obtained in any state; 9th digit may not
+#     match birth state for persons registered before the reform.
+# ---------------------------------------------------------------------------
+
+# (cpf_digits, expected_region_digit, expected_states_include)
+_FISCAL_REGION_FIXTURES: list[tuple[str, str, list[str]]] = [
+    ("22171061634", "6", ["MG"]),  # 221.710.616-34 — MG
+    ("33838477804", "8", ["SP"]),  # 338.384.778-04 — SP
+    ("31955141924", "9", ["PR", "SC"]),  # 319.551.419-24 — PR/SC
+    ("78544330380", "3", ["CE", "MA", "PI"]),  # 785.443.303-80 — Nordeste Norte
+    ("01846610800", "8", ["SP"]),  # 018.466.108-00 — SP (digito 8)
+    ("61826555773", "7", ["ES", "RJ"]),  # 618.265.557-73 — ES/RJ
+    ("33838477804", "8", ["SP"]),  # digit 8 → SP
+    ("97439529189", "1", ["DF", "GO", "MS", "MT", "TO"]),  # digit 1 → Centro-Oeste
+    ("24537184442", "4", ["AL", "PB", "PE", "RN"]),  # digit 4 → Nordeste Leste
+    ("85228083502", "5", ["BA", "SE"]),  # digit 5 → Nordeste Sul
+    ("23071517297", "2", ["AC", "AM", "AP", "PA", "RO", "RR"]),  # digit 2 → Norte
+]
+
+
+class TestCpfFiscalRegion(unittest.TestCase):
+    """Unit tests for cpf_fiscal_region() and cpf_birth_state_consistent()."""
+
+    def test_map_has_all_10_regions(self) -> None:
+        self.assertEqual(set(CPF_FISCAL_REGION_MAP.keys()), set("0123456789"))
+
+    def test_every_region_has_states_and_description(self) -> None:
+        for digit, info in CPF_FISCAL_REGION_MAP.items():
+            with self.subTest(digit=digit):
+                self.assertIn("states", info)
+                self.assertIn("description", info)
+                self.assertTrue(len(info["states"]) >= 1)
+
+    def test_fixture_region_digit_matches(self) -> None:
+        for digits, expected_digit, expected_states in _FISCAL_REGION_FIXTURES:
+            with self.subTest(cpf=digits):
+                region = cpf_fiscal_region(digits)
+                self.assertIsNotNone(region, f"Region should not be None for {digits}")
+                self.assertEqual(
+                    digits[8],
+                    expected_digit,
+                    f"9th digit mismatch for {digits}",
+                )
+                for state in expected_states:
+                    self.assertIn(state, region["states"])  # type: ignore[index]
+
+    def test_invalid_digits_returns_none(self) -> None:
+        self.assertIsNone(cpf_fiscal_region(""))
+        self.assertIsNone(cpf_fiscal_region("1234567890"))  # 10 digits
+        self.assertIsNone(cpf_fiscal_region("123456789012"))  # 12 digits
+
+    def test_birth_state_consistent_match(self) -> None:
+        # 221.710.616-34 → region 6 → MG
+        self.assertTrue(cpf_birth_state_consistent("22171061634", "MG"))
+
+    def test_birth_state_consistent_mismatch(self) -> None:
+        # 221.710.616-34 → region 6 → MG; SP is NOT in region 6
+        # Result is False but this is a *hint* only — pre-2017 CPFs may mismatch
+        self.assertFalse(cpf_birth_state_consistent("22171061634", "SP"))
+
+    def test_birth_state_consistent_empty_state_returns_none(self) -> None:
+        self.assertIsNone(cpf_birth_state_consistent("22171061634", ""))
+
+    def test_birth_state_consistent_case_insensitive(self) -> None:
+        self.assertTrue(cpf_birth_state_consistent("22171061634", "mg"))
+        self.assertTrue(cpf_birth_state_consistent("22171061634", "Mg"))
+
+    def test_all_10_region_digits_map_to_known_states(self) -> None:
+        """Regression: every digit 0-9 maps to at least one recognisable UF."""
+        known_ufs = {
+            "AC",
+            "AL",
+            "AM",
+            "AP",
+            "BA",
+            "CE",
+            "DF",
+            "ES",
+            "GO",
+            "MA",
+            "MG",
+            "MS",
+            "MT",
+            "PA",
+            "PB",
+            "PE",
+            "PI",
+            "PR",
+            "RJ",
+            "RN",
+            "RO",
+            "RR",
+            "RS",
+            "SC",
+            "SE",
+            "SP",
+            "TO",
+        }
+        for digit, info in CPF_FISCAL_REGION_MAP.items():
+            for uf in info["states"]:
+                with self.subTest(digit=digit, uf=uf):
+                    self.assertIn(uf, known_ufs, f"Unknown UF '{uf}' in region {digit}")
+
+
+# ---------------------------------------------------------------------------
+# Large corpus regression: 30 CPFs sampled from the 266 verified externally
+# ---------------------------------------------------------------------------
+
+_LARGE_CORPUS_SAMPLE = [
+    # formatted — all verified valid
+    "221.710.616-34",
+    "245.371.844-42",
+    "338.384.778-04",
+    "974.395.291-89",
+    "319.551.419-24",
+    "785.443.303-80",
+    "554.743.563-58",
+    "978.644.503-18",
+    "018.466.108-00",
+    "932.929.183-08",
+    "061.230.758-10",
+    "221.302.650-57",
+    "852.280.835-02",
+    "618.265.557-73",
+    "168.664.796-49",
+    "338.539.991-23",
+    "857.632.419-91",
+    "258.154.394-95",
+    "394.236.838-27",
+    "624.355.686-73",
+    # unformatted (no punctuation)
+    "47634470686",
+    "65718594244",
+    "85646432359",
+    "63738186590",
+    "60208674632",
+    "61780005377",
+    "97981036534",
+    "05314960150",
+    "25370041407",
+    "08868379520",
+]
+
+
+class TestLargeCorpusRegression(unittest.TestCase):
+    """Regression gate: 30 CPFs sampled from the 266 user-provided corpus."""
+
+    def test_all_large_corpus_cpfs_valid(self) -> None:
+        for cpf in _LARGE_CORPUS_SAMPLE:
+            with self.subTest(cpf=cpf):
+                self.assertTrue(
+                    PIIValidator.validate_cpf(cpf),
+                    f"Large-corpus CPF failed validation: {cpf}",
+                )
+
+    def test_all_large_corpus_cpfs_found_in_text(self) -> None:
+        for cpf in _LARGE_CORPUS_SAMPLE:
+            with self.subTest(cpf=cpf):
+                self.assertTrue(
+                    text_contains_valid_cpf(f"dados cpf={cpf} fim"),
+                    f"text_contains_valid_cpf missed: {cpf}",
                 )

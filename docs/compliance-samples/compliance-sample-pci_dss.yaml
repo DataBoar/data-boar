@@ -11,6 +11,16 @@
 #
 # Built-in detector already includes CREDIT_CARD; this sample adds norm_tag PCI-DSS and
 # recommendation text for assessors. Optional: add PAN, CVV, track data patterns if needed.
+#
+# NOTE — financial routing / ABA routing number regex (NOT included here by default):
+#   If you add a custom routing-number pattern (e.g. ABA 9-digit: \b\d{9}\b or
+#   \b[0-9]{4}[0-9]{4}[0-9]\b with routing-transit framing), be aware that bare 9-digit
+#   sequences produce very high FALSE POSITIVE rates against sequential IDs, ZIP+4 codes,
+#   UUIDs, and other counters. To reduce FP risk:
+#     a) Require structural context in the regex (e.g. near "routing", "ABA", "RTN", slash notation).
+#     b) Pair the pattern with a keyword trigger (column name matches "routing" or "aba").
+#     c) Test against a column with known non-PAN sequential data before enabling in production.
+#   See SENSITIVITY_DETECTION.md §Custom regex patterns for guidance on scoping patterns.
 
 regex:
   - name: "PAN"

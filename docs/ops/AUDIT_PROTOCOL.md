@@ -20,7 +20,7 @@ contra ``boar_fast_filter.FastFilter``. Quando a extensão Rust estiver instalad
 a suíte executa os exemplos; sem a extensão, o pytest marca os casos como skip (mesmo contrato
 que ``tests/test_rust_bridge.py``).
 
-**Gate local:** ``scripts/pre-commit-and-tests.ps1`` / ``.sh`` executam esse ficheiro **em primeiro lugar**
+**Gate local:** ``scripts/pre-commit-and-tests.ps1`` / ``.sh`` executam esse arquivo **em primeiro lugar**
 e depois o resto da suíte com ``--deselect tests/security/test_mem_integrity.py`` (evita correr os
 mesmos exemplos Hypothesis duas vezes). O ``check-all`` herda este fluxo.
 
