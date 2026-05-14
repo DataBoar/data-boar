@@ -1,7 +1,8 @@
-# UAE PDPL – sample compliance profile (Federal Decree-Law 45/2021, UAE DPA)
+# UAE PDPL – sample compliance profile
 #
-# Target audience: UAE and Middle East deployments. Personal data, sensitive data.
-# Terms: EN + optional Arabic (بيانات شخصية) for column names in Arabic data.
+# Target audience: UAE deployments and Middle East regional compliance.
+# UAE Data Office (مكتب حماية البيانات الإماراتي).
+# Terms: EN + Arabic (بيانات شخصية / بيانات حساسة) for column names in Arabic-language data.
 #
 # How to use:
 #   1. Set in your main config:
@@ -9,17 +10,61 @@
 #        ml_patterns_file: path/to/compliance-sample-uae_pdpl.yaml
 #   2. Merge the recommendation_overrides list below into your config under report.recommendation_overrides.
 #
-# UAE: Federal Decree-Law No. 45 of 2021; UAE Data Office (UAE DPA).
+# Legal scope:
+#   - Federal Decree-Law No. 45 of 2021 on the Protection of Personal Data (UAE PDPL);
+#     in force 2 January 2022. Implementing Regulations issued by Cabinet Resolution in 2023.
+#   - Regulator: UAE Data Office (UAEDO), part of the Telecommunications and Digital
+#     Government Regulatory Authority (TDRA).
+#   - Sensitive data categories (Art. 2 / Regulations): racial/ethnic origin, religion,
+#     political/philosophical opinions, criminal record, health/medical data, biometric data,
+#     genetic data, credit/financial data, children's data.
+#   - Cross-border transfer: permitted to countries on UAEDO approved list, or via controller
+#     contract with adequate safeguards (equivalent to GDPR standard contractual clauses).
+#   - Breach notification: controller must notify UAEDO "without undue delay" after becoming
+#     aware of a breach involving significant risk; no fixed statutory hour threshold in the
+#     Decree-Law text (regulations apply operational specifics — verify current guidance).
+#   - Free Zones (e.g. DIFC, ADGM): each has its own data protection regime. DIFC uses
+#     DP Law 2020 (GDPR-aligned); ADGM uses DP Regulations 2021. This sample covers the
+#     Federal PDPL only. Free Zone operators should use the relevant Free Zone sample or
+#     apply Free Zone rules alongside Federal PDPL.
+#   - The scanner does not evaluate Free Zone applicability, cross-border adequacy decisions,
+#     or UAEDO registration status. Use output as inventory signal; scope with UAE counsel.
+#
+# Regex design:
+#   - UAE_ID: Emirates ID number; format 784-YYYY-NNNNNNN-C (784 = UAE country code,
+#     YYYY = birth year, 7-digit serial, 1 check digit). Hyphens optional in stored data.
+#   - UAE_PASSPORT_ALT: Heuristic; 1-2 uppercase letters + 6-9 digits. High FP rate;
+#     triage with surrounding field context.
+#   - Precise geolocation: same four-decimal-place geometry as compliance-sample-us_va_vcdpa.yaml.
+#     Location data is personal data under UAE PDPL Art. 2 (identifier).
+#
+# Use double-quoted YAML with escaped backslashes.
 
 regex:
   - name: "UAE_ID"
+    # Emirates ID: 784-YYYY-NNNNNNN-C; hyphens optional
     pattern: "\\b784-?\\d{4}-?\\d{7}-?\\d\\b"
     norm_tag: "UAE PDPL"
   - name: "UAE_PASSPORT_ALT"
+    # Heuristic passport; triage with context (high FP)
     pattern: "\\b[A-Z]{1,2}\\d{6,9}\\b"
     norm_tag: "UAE PDPL"
+  # Precise geolocation (UAE PDPL Art. 2 — location identifier = personal data)
+  - name: "UAE_JSON_LAT_PRECISION"
+    pattern: "(?i)[\"']lat[\"']\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\b"
+    norm_tag: "UAE PDPL"
+  - name: "UAE_JSON_LNG_PRECISION"
+    pattern: "(?i)[\"'](?:lng|lon)[\"']\\s*:\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}\\b"
+    norm_tag: "UAE PDPL"
+  - name: "UAE_LOCATION_CSV_PAIR"
+    pattern: "(?i)\\blocation\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*,\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "UAE PDPL"
+  - name: "UAE_QUERYSTRING_LAT_LONG"
+    pattern: "(?i)latitude=[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*&\\s*longitude=[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "UAE PDPL"
 
-# ML terms: English and optional Arabic (personal data, sensitive data).
+# ML terms: English + Arabic covering UAE PDPL vocabulary, sensitive data categories,
+# cross-border transfer, breach notification, and Free Zone awareness note.
 terms:
   - text: "personal data"
     label: sensitive
@@ -31,9 +76,15 @@ terms:
     label: sensitive
   - text: "data controller"
     label: sensitive
+  - text: "مراقب البيانات"
+    label: sensitive
   - text: "data processor"
     label: sensitive
+  - text: "معالج البيانات"
+    label: sensitive
   - text: "uae data office"
+    label: sensitive
+  - text: "مكتب حماية البيانات"
     label: sensitive
   - text: "federal decree-law 45"
     label: sensitive
@@ -41,15 +92,83 @@ terms:
     label: sensitive
   - text: "data subject"
     label: sensitive
+  - text: "صاحب البيانات"
+    label: sensitive
   - text: "consent"
     label: sensitive
+  - text: "موافقة"
+    label: sensitive
   - text: "lawful basis"
+    label: sensitive
+  - text: "racial origin"
+    label: sensitive
+  - text: "ethnic origin"
+    label: sensitive
+  - text: "الأصل العرقي"
+    label: sensitive
+  - text: "religion"
+    label: sensitive
+  - text: "الدين"
+    label: sensitive
+  - text: "political opinion"
+    label: sensitive
+  - text: "criminal record"
+    label: sensitive
+  - text: "السجل الجنائي"
+    label: sensitive
+  - text: "health data"
+    label: sensitive
+  - text: "medical data"
+    label: sensitive
+  - text: "البيانات الصحية"
+    label: sensitive
+  - text: "biometric data"
+    label: sensitive
+  - text: "البيانات البيومترية"
+    label: sensitive
+  - text: "genetic data"
+    label: sensitive
+  - text: "البيانات الجينية"
+    label: sensitive
+  - text: "financial data"
+    label: sensitive
+  - text: "credit data"
+    label: sensitive
+  - text: "children data"
+    label: sensitive
+  - text: "بيانات الأطفال"
+    label: sensitive
+  - text: "cross-border transfer"
+    label: sensitive
+  - text: "نقل البيانات عبر الحدود"
+    label: sensitive
+  - text: "data breach"
+    label: sensitive
+  - text: "اختراق البيانات"
+    label: sensitive
+  - text: "emirates id"
+    label: sensitive
+  - text: "رقم الهوية"
+    label: sensitive
+  - text: "geolocation"
+    label: sensitive
+  - text: "location data"
+    label: sensitive
+  - text: "بيانات الموقع"
+    label: sensitive
+  - text: "profiling"
+    label: sensitive
+  - text: "difc"
+    label: sensitive
+  - text: "adgm"
+    label: sensitive
+  - text: "free zone"
     label: sensitive
 
 recommendation_overrides:
   - norm_tag_pattern: "UAE PDPL"
-    base_legal: "Federal Decree-Law No. 45 of 2021 (UAE PDPL); UAE Data Office"
-    risk: "Personal data and sensitive data; controller/processor obligations."
-    recommendation: "Comply with UAE PDPL; register with UAE Data Office if required; implement lawful basis and consent."
+    base_legal: "Federal Decree-Law No. 45 of 2021 on the Protection of Personal Data (UAE PDPL); UAE Data Office (UAEDO / TDRA); Cabinet Regulations 2023. Free Zone note: DIFC uses DP Law 2020 and ADGM uses DP Regulations 2021 — each is a separate regime; verify applicable framework with UAE counsel."
+    risk: "Personal data and sensitive data categories (race/ethnic origin, religion, political opinion, criminal record, health/medical, biometric, genetic, financial/credit, children's data) under UAE PDPL. Precise coordinate-shaped values in logs/APIs are heuristic inventory signals only — not automatic legal classification. Cross-border transfers require UAEDO-approved destination or contractual safeguards. Breach notification obligations apply on discovery of significant-risk incidents."
+    recommendation: "Identify lawful basis for each processing activity; obtain explicit consent for sensitive data categories; register with UAE Data Office if required; notify UAEDO without undue delay on significant data breach; confirm cross-border transfer safeguards; verify whether DIFC or ADGM Free Zone rules apply in parallel; apply data minimisation and purpose limitation."
     priority: "ALTA"
-    relevant_for: "DPO, UAE Data Office, Data Controller"
+    relevant_for: "DPO, UAE Data Office, Data Controller, Legal, Compliance Officer (DIFC/ADGM where applicable)"
