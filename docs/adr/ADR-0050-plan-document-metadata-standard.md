@@ -53,6 +53,8 @@ header block.
 
 **Backfill:** Not required for all existing plans immediately. Apply when a plan is
 touched for a substantive update. New plans created after this ADR must comply at creation.
+`scripts/add_plan_metadata.py` automates header injection for existing files and can be
+reused as a scaffold reference when creating new plans.
 
 ## Rationale
 
@@ -75,6 +77,10 @@ touched for a substantive update. New plans created after this ADR must comply a
 - **Negative:** Slight additional overhead when creating a new plan (five header lines).
 - **Ongoing:** When creating or substantially revising a `PLAN_*.md`, verify the header
   block is present and fields are current before committing.
+- **Ongoing:** Every new `PLAN_*.md` — regardless of session keyword (`feature`, `docs`,
+  `houseclean`, `backlog`) — must include the five-field header block at creation time.
+  Use `scripts/add_plan_metadata.py` as a scaffold reference or run it against the new
+  file immediately after creation to insert a correct placeholder block.
 - **Ongoing:** `scripts/plans_hub_sync.py` — future enhancement: extract `Status`,
   `Priority`, and `Depends on` from the header block and surface them in `PLANS_HUB.md`.
 
@@ -97,5 +103,6 @@ touched for a substantive update. New plans created after this ADR must comply a
 
 - [`scripts/plans_hub_sync.py`](../../scripts/plans_hub_sync.py) — plan hub sync tooling
 - [`scripts/plans-stats.py`](../../scripts/plans-stats.py) — plan status dashboard
+- [`scripts/add_plan_metadata.py`](../../scripts/add_plan_metadata.py) — backfill and scaffold tool: injects the ADR-0050 header block into existing or new `PLAN_*.md` files
 - [`docs/plans/PLANS_HUB.md`](../plans/PLANS_HUB.md) — auto-generated plan index
 - [`docs/plans/PLANS_TODO.md`](../plans/PLANS_TODO.md) — horizon taxonomy (H0–H3)
