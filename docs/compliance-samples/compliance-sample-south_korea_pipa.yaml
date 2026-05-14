@@ -1,0 +1,290 @@
+# South Korea Personal Information Protection Act (PIPA) – sample compliance profile
+#
+# Target audience: Republic of Korea deployments; controllers/processors handling
+# personal information of data subjects in South Korea or Korean operations abroad.
+# Regulator: Personal Information Protection Commission (PIPC; 개인정보보호위원회).
+#
+# How to use:
+#   1. Set in your main config:
+#        regex_overrides_file: path/to/compliance-sample-south_korea_pipa.yaml
+#        ml_patterns_file: path/to/compliance-sample-south_korea_pipa.yaml
+#   2. Merge the recommendation_overrides list below into your config under
+#      report.recommendation_overrides.
+#
+# Legal scope (summary — not legal advice):
+#   - Personal Information Protection Act (개인정보 보호법), as amended (notably
+#     2020 "three-data" framework alignment and subsequent sensitive-information
+#     and cross-border rules). PIPA sits with related acts (e.g. network usage,
+#     credit information) — scope with Korean counsel for sector-specific law.
+#   - Key constructs: personal information (개인정보), unique identification
+#     information (고유식별정보; e.g. Resident Registration Number), sensitive
+#     information (민감정보), pseudonymous information (가명정보), personal
+#     information processor (개인정보처리자), entrustment (위탁), third-party
+#     provision (제3자 제공), overseas transfer (국외 이전).
+#   - Biometric data: Korea imposes strict consent and limitation rules; treat
+#     biometric findings as high-sensitivity inventory signals.
+#   - Data Boar output is technical pattern/term matching only — not consent,
+#     lawful basis, or PIPC enforcement classification.
+#
+# Regex design:
+#   - KR_RRN_CTX: Resident Registration Number (주민등록번호) — 6 digits (birth
+#     date YYMMDD), hyphen, 7 digits; **contextual** prefix (Korean or English)
+#     to reduce false positives on arbitrary date-like strings.
+#   - KR_BIZ_REG_CTX: Business registration number (사업자등록번호) — NNN-NN-NNNNN;
+#     contextual prefix (often appears on invoices and HR/tax exports).
+#   - KR_PASSPORT: Machine-readable passport — one letter + 8 digits (common MOFA
+#     series); contextual where possible (high collision with generic alphanumeric).
+#   - Precise geolocation: same four-decimal geometry as compliance-sample-us_va_vcdpa.yaml.
+#     Location data identifying a natural person is personal information under PIPA.
+#
+# Use double-quoted YAML with escaped backslashes.
+
+regex:
+  - name: "KR_RRN_CTX"
+    # 주민등록번호 — always use near labels in real systems; pattern requires context
+    pattern: "(?i)(?:주민등록번호|RRN|resident\\s+registration(?:\\s+number)?)\\s*[:#]?\\s*\\d{6}-[1-4]\\d{6}\\b"
+    norm_tag: "South Korea PIPA"
+  - name: "KR_BIZ_REG_CTX"
+    pattern: "(?i)(?:사업자등록번호|business\\s+registration(?:\\s+number)?)\\s*[:#]?\\s*\\d{3}-\\d{2}-\\d{5}\\b"
+    norm_tag: "South Korea PIPA"
+  - name: "KR_PASSPORT_CTX"
+    pattern: "(?i)(?:passport|여권|MOFA)\\s*[:#]?\\s*\\b[M|T|S]\\d{8}\\b"
+    norm_tag: "South Korea PIPA"
+  - name: "KR_JSON_LAT_PRECISION"
+    pattern: "(?i)[\"']lat[\"']\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\b"
+    norm_tag: "South Korea PIPA"
+  - name: "KR_JSON_LNG_PRECISION"
+    pattern: "(?i)[\"'](?:lng|lon)[\"']\\s*:\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}\\b"
+    norm_tag: "South Korea PIPA"
+  - name: "KR_LOCATION_CSV_PAIR"
+    pattern: "(?i)\\blocation\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*,\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "South Korea PIPA"
+  - name: "KR_QUERYSTRING_LAT_LONG"
+    pattern: "(?i)latitude=[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*&\\s*longitude=[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "South Korea PIPA"
+
+terms:
+  - text: "personal information"
+    label: sensitive
+  - text: "개인정보"
+    label: sensitive
+  - text: "personal information processor"
+    label: sensitive
+  - text: "개인정보처리자"
+    label: sensitive
+  - text: "PIPA"
+    label: sensitive
+  - text: "개인정보 보호법"
+    label: sensitive
+  - text: "PIPC"
+    label: sensitive
+  - text: "개인정보보호위원회"
+    label: sensitive
+  - text: "data subject"
+    label: sensitive
+  - text: "정보주체"
+    label: sensitive
+  - text: "unique identification information"
+    label: sensitive
+  - text: "고유식별정보"
+    label: sensitive
+  - text: "sensitive information"
+    label: sensitive
+  - text: "민감정보"
+    label: sensitive
+  - text: "pseudonymous information"
+    label: sensitive
+  - text: "가명정보"
+    label: sensitive
+  - text: "anonymized information"
+    label: sensitive
+  - text: "익명정보"
+    label: sensitive
+  - text: "processing of personal information"
+    label: sensitive
+  - text: "개인정보 처리"
+    label: sensitive
+  - text: "purpose of processing"
+    label: sensitive
+  - text: "처리 목적"
+    label: sensitive
+  - text: "consent"
+    label: sensitive
+  - text: "동의"
+    label: sensitive
+  - text: "separate consent"
+    label: sensitive
+  - text: "별도 동의"
+    label: sensitive
+  - text: "third party provision"
+    label: sensitive
+  - text: "제3자 제공"
+    label: sensitive
+  - text: "overseas transfer"
+    label: sensitive
+  - text: "국외 이전"
+    label: sensitive
+  - text: "cross-border transfer"
+    label: sensitive
+  - text: "entrustment"
+    label: sensitive
+  - text: "위탁"
+    label: sensitive
+  - text: "processor"
+    label: sensitive
+  - text: "수탁자"
+    label: sensitive
+  - text: "subcontracting"
+    label: sensitive
+  - text: "재위탁"
+    label: sensitive
+  - text: "data breach"
+    label: sensitive
+  - text: "개인정보 유출"
+    label: sensitive
+  - text: "personal information leakage"
+    label: sensitive
+  - text: "침해사고"
+    label: sensitive
+  - text: "breach notification"
+    label: sensitive
+  - text: "유출 통지"
+    label: sensitive
+  - text: "resident registration number"
+    label: sensitive
+  - text: "주민등록번호"
+    label: sensitive
+  - text: "biometric data"
+    label: sensitive
+  - text: "생체인식 정보"
+    label: sensitive
+  - text: "biometric information"
+    label: sensitive
+  - text: "health information"
+    label: sensitive
+  - text: "건강 정보"
+    label: sensitive
+  - text: "genetic information"
+    label: sensitive
+  - text: "유전 정보"
+    label: sensitive
+  - text: "sexual orientation"
+    label: sensitive
+  - text: "성생활"
+    label: sensitive
+  - text: "political opinion"
+    label: sensitive
+  - text: "정치적 견해"
+    label: sensitive
+  - text: "union membership"
+    label: sensitive
+  - text: "노조 가입"
+    label: sensitive
+  - text: "criminal record"
+    label: sensitive
+  - text: "범죄경력"
+    label: sensitive
+  - text: "location information"
+    label: sensitive
+  - text: "위치정보"
+    label: sensitive
+  - text: "precise geolocation"
+    label: sensitive
+  - text: "video surveillance"
+    label: sensitive
+  - text: "영상정보처리기기"
+    label: sensitive
+  - text: "CCTV"
+    label: sensitive
+  - text: "privacy policy"
+    label: sensitive
+  - text: "개인정보 처리방침"
+    label: sensitive
+  - text: "right of access"
+    label: sensitive
+  - text: "열람"
+    label: sensitive
+  - text: "right to erasure"
+    label: sensitive
+  - text: "삭제"
+    label: sensitive
+  - text: "right to suspend processing"
+    label: sensitive
+  - text: "처리정지"
+    label: sensitive
+  - text: "data portability"
+    label: sensitive
+  - text: "이동 요구"
+    label: sensitive
+  - text: "automated decision"
+    label: sensitive
+  - text: "자동화된 결정"
+    label: sensitive
+  - text: "profiling"
+    label: sensitive
+  - text: "프로파일링"
+    label: sensitive
+  - text: "privacy impact assessment"
+    label: sensitive
+  - text: "개인정보 영향평가"
+    label: sensitive
+  - text: "영향평가"
+    label: sensitive
+  - text: "data protection officer"
+    label: sensitive
+  - text: "책임자"
+    label: sensitive
+  - text: "personal data localization"
+    label: sensitive
+  - text: "국내 이전"
+    label: sensitive
+  - text: "adequacy"
+    label: sensitive
+  - text: "충분성"
+    label: sensitive
+  - text: "standard contractual clauses"
+    label: sensitive
+  - text: "손해배상"
+    label: sensitive
+  - text: "damages"
+    label: sensitive
+  - text: "administrative fine"
+    label: sensitive
+  - text: "과징금"
+    label: sensitive
+  - text: "corrective order"
+    label: sensitive
+  - text: "시정명령"
+    label: sensitive
+  - text: "credit information"
+    label: sensitive
+  - text: "신용정보"
+    label: sensitive
+  - text: "children personal information"
+    label: sensitive
+  - text: "아동 개인정보"
+    label: sensitive
+  - text: "cookie"
+    label: sensitive
+  - text: "쿠키"
+    label: sensitive
+  - text: "online identifier"
+    label: sensitive
+  - text: "온라인 식별자"
+    label: sensitive
+  - text: "mobile identifier"
+    label: sensitive
+  - text: "광고 식별자"
+    label: sensitive
+  - text: "marketing consent"
+    label: sensitive
+  - text: "마케팅 수신 동의"
+    label: sensitive
+
+recommendation_overrides:
+  - norm_tag_pattern: "South Korea PIPA"
+    base_legal: "Republic of Korea Personal Information Protection Act (개인정보 보호법; PIPA), as amended; regulator: Personal Information Protection Commission (PIPC; 개인정보보호위원회). Related sector laws (e.g. network usage, credit information) may apply concurrently — scope with Korean counsel."
+    risk: "Personal information under PIPA includes unique identification information (e.g. Resident Registration Number when labeled), sensitive information (health, biometric, genetic, political views, union membership, sexual orientation, criminal record, and other statutory categories), pseudonymous information where re-identification is possible, and location data that identifies a natural person. Biometric processing attracts heightened consent and purpose-limitation scrutiny. Overseas transfer and third-party provision require statutory bases and safeguards. Coordinate-shaped values in exports/logs are heuristic inventory signals only — not automatic PIPC classification."
+    recommendation: "Map all 개인정보처리자 / processor roles; publish and maintain 개인정보 처리방침; obtain valid consent (including separate consent where PIPA requires) for sensitive information, biometrics, third-party provision, overseas transfer, and marketing; execute entrustment agreements (위탁) and flow-down controls for 수탁자; conduct impact assessments where required; implement breach response and notification practice aligned with PIPC guidance; restrict 고유식별정보 collection/storage to legal minima; document 국외 이전 mechanisms (e.g. adequacy, SCCs, or Korean-law equivalents); designate privacy 책임자 and train workforce; for 영상정보처리기기 (CCTV), follow posting and retention rules — verify with Korean counsel for your sector."
+    priority: "ALTA"
+    relevant_for: "DPO, Legal, Information Security, Korean operations, cloud/SaaS serving Korean users, HR and payroll exports"
