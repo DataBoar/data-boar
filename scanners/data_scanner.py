@@ -1,7 +1,5 @@
-import re
 from utils.regex_patterns import RegexPatterns
 from utils.ml_classifier import MLClassifier
-from scanner.db_connector import DBConnector
 
 
 class DataScanner:

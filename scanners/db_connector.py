@@ -1,6 +1,5 @@
 from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
-from scanner.db_connector import DBConnector
 from utils.logger import Logger
 
 

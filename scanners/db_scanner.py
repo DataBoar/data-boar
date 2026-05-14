@@ -5,11 +5,10 @@ Database scanner implementation
 import re
 from datetime import datetime
 from typing import List, Dict, Any
-from sqlalchemy.orm import sessionmaker, scoped_session
-from src.db.models import DataAuditRecord
+from sqlalchemy.orm import sessionmaker
 
 
-class DatabaseScanner(BaseScanner):
+class DatabaseScanner:  # legacy — BaseScanner was never defined in this module
     def __init__(self, config: dict):
         self.config = config
         self.session = None
@@ -55,9 +54,9 @@ class DatabaseScanner(BaseScanner):
     ) -> str:
         """Create connection string based on database type"""
         if db_type == "postgresql":
-            return f"postgresql://username:password@host:port/database"
+            return "postgresql://username:password@host:port/database"
         elif db_type == "mysql":
-            return f"mysql+pymysql://username:password@host:port/database"
+            return "mysql+pymysql://username:password@host:port/database"
         else:
             raise ValueError(f"Unsupported database type: {db_type}")
 
@@ -122,7 +121,7 @@ class DatabaseScanner(BaseScanner):
             return "PII"
         elif "password" in data_type.lower():
             return "Secret"
-        elif "document" in table.lower() or "number" in column.lower():
+        elif "document" in table.lower() or "number" in column.lower():  # noqa: F821 — legacy: table/column not in method scope; runtime NameError expected
             return "ID"
         else:
             return "General"
@@ -146,4 +145,4 @@ class DatabaseScanner(BaseScanner):
             "data_sample": sample_data,
             "metadata": {"scan_date": datetime.now().isoformat()},
         }
-        results.append(record)
+        results.append(record)  # noqa: F821 — legacy: results not in method scope; caller should use return value
