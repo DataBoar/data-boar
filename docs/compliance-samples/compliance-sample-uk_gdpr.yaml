@@ -11,12 +11,29 @@
 
 # Custom regex patterns; matches get norm_tag "UK GDPR" in the report.
 # Use double-quoted YAML with escaped backslashes (\\b, \\s, \\d) so linters and loaders accept; value is literal \b \s \d for regex.
+#
+# Precise geolocation (logs / APIs): same regex geometry as compliance-sample-us_va_vcdpa.yaml and
+# compliance-sample-eu_gdpr.yaml (JSON lat/lng, location: pair, latitude=&longitude=). norm_tag stays
+# "UK GDPR" for UK inventory. Heuristic only — not an ICO or lawful-basis determination.
+
 regex:
   - name: "UK_NIN"
     pattern: "\\b[A-Z]{2}\\s?\\d{6}\\s?[A-D]\\b"
     norm_tag: "UK GDPR"
   - name: "UK_NINO_ALT"
     pattern: "\\b[A-Z]{2}\\s?\\d{2}\\s?\\d{2}\\s?\\d{2}\\s?\\d{2}\\s?[A-D]\\b"
+    norm_tag: "UK GDPR"
+  - name: "UK_JSON_LAT_PRECISION"
+    pattern: "(?i)[\"']lat[\"']\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\b"
+    norm_tag: "UK GDPR"
+  - name: "UK_JSON_LNG_PRECISION"
+    pattern: "(?i)[\"'](?:lng|lon)[\"']\\s*:\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}\\b"
+    norm_tag: "UK GDPR"
+  - name: "UK_LOCATION_CSV_PAIR"
+    pattern: "(?i)\\blocation\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*,\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "UK GDPR"
+  - name: "UK_QUERYSTRING_LAT_LONG"
+    pattern: "(?i)latitude=[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*&\\s*longitude=[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
     norm_tag: "UK GDPR"
 
 # ML training terms for column/sample classification (UK / data subject terminology).
@@ -38,6 +55,12 @@ terms:
   - text: "legitimate interest"
     label: sensitive
   - text: "uk gdpr"
+    label: sensitive
+  - text: "geolocation"
+    label: sensitive
+  - text: "geolocation data"
+    label: sensitive
+  - text: "precise geolocation"
     label: sensitive
   # Phone / contact (multiple naming schemes for column names)
   - text: "phone"
@@ -107,7 +130,7 @@ terms:
 recommendation_overrides:
   - norm_tag_pattern: "UK GDPR"
     base_legal: "UK GDPR Art. 4(1); ICO guidance"
-    risk: "Identification of data subject."
-    recommendation: "Apply UK GDPR safeguards; consider DPA registration with ICO if required."
+    risk: "Identification of data subject; possible precise geolocation or biometric-adjacent fields in logs/APIs (heuristic regex only — not an ICO classification)."
+    recommendation: "Apply UK GDPR safeguards; consider DPA registration with ICO if required; where location tracking applies, confirm lawful basis and record DPIA decisions with counsel."
     priority: "ALTA"
     relevant_for: "DPO, UK Representative, ICO"
