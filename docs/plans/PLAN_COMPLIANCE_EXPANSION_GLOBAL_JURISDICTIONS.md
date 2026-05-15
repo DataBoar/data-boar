@@ -110,7 +110,7 @@ All new YAML samples **must** follow the canonical geometry established across t
 ```
 Sprint A (done):  A1 India → A2 POPIA → A3 Turkey → A4 UAE → A5 NZ → A6 PH → A7 CO → A8 COPPA
 Sprint B:         B1 Ukraine ✅ → B2 HIPAA ✅ → B3 FERPA ✅ → B4 China PIPL ✅ → B5 Korea PIPA ✅
-Sprint C:         B6 Mexico ✅ → B7 Thailand → B8 Indonesia → B9 Quebec Law 25
+Sprint C:         B6 Mexico ✅ → B7 Thailand ✅ → B8 Indonesia ✅ → B9 Quebec Law 25 ✅
 Sprint D:         Group 2 remaining (Vietnam, Malaysia, Argentina reform, Colombia, Chile)
 Sprint E:         Group 3 monitoring + ML/DL backfill
 ```
@@ -120,7 +120,7 @@ Sprint E:         Group 3 monitoring + ML/DL backfill
 ## Acceptance criteria (overall plan)
 
 - [ ] All A-series slices (A3–A8) committed with four-pattern geolocation and expanded ML terms
-- [ ] All Group 1 YAML files created (B1–B8)
+- [x] All Group 1 YAML files in Sprint B–C track created (B1–B9 samples shipped in-repo, including Thailand, Indonesia, Quebec Law 25)
 - [ ] All Group 2 YAML files created
 - [ ] `COMPLIANCE_FRAMEWORKS.md` and `README.md` tables updated for each new file
 - [ ] pt-BR mirrors updated for each documentation change
