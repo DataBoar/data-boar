@@ -532,6 +532,8 @@ Para suportar uma nova fonte de dados (ex.: outro driver de banco ou API), veja 
 
   Faça commit de **pyproject.toml**, **uv.lock** e **requirements.txt**. Assim as instalações permanecem reproduzíveis e alinhadas; `pip install -r requirements.txt` equivale ao `uv sync`.
 
+- **Postura de cadeia de suprimentos:** O **`uv.lock`** fixa versões (e *hashes*) para instalações reproduzíveis; ele **não substitui** **`pip-audit`**, Dependabot nem revisão humana para **CVEs conhecidos** e abusos na cadeia. Veja **[SECURITY.pt_BR.md](../../SECURITY.pt_BR.md)** (seção *Lockfile e mitigação da cadeia de suprimentos*).
+
 - **Dependabot / automação:** Se um PR (ex.: do Dependabot) sugerir atualizar só o `requirements.txt` ou o `uv.lock`, aplique a alteração na **fonte da verdade** primeiro: atualize a versão mínima correspondente no **`pyproject.toml`**, depois execute `uv lock` e `uv export --no-emit-package pyproject.toml -o requirements.txt` e faça commit dos três arquivos. Não faça merge de uma atualização de dependência que edite apenas `requirements.txt` ou `uv.lock`.
 
 - **Verificar CVEs conhecidos:** Execute `uv pip audit` (ou `pip audit` se disponível) antes da implantação; corrija ou fixe pacotes vulneráveis.

@@ -26,6 +26,12 @@ This document describes which versions of the application are supported, which d
   uv export --no-emit-package pyproject.toml -o requirements.txt
   ```
 
+### Lockfile and supply-chain mitigation (`uv.lock`)
+
+Committing **`uv.lock`** is a **supply-chain control**: it pins the **full resolved dependency tree** (direct and transitive) so `uv sync` and CI install **the same package versions** from hashes recorded in the lockfile. That **reduces** unreviewed drift from floating `>=` resolution on PyPI, “works on my machine” breakage, and mismatch between **`uv.lock`** and a pip-only **`requirements.txt`** export.
+
+The lockfile **does not** prove that those pins are **free of known CVEs** or **non-malicious**. **Vulnerability mitigation** on the Python install path layers **on top of** the lockfile: CI **`pip-audit`**, **GitHub Dependabot** (this repo uses **`package-ecosystem: uv`** so PRs move `pyproject.toml` and **`uv.lock`** together—see [ADR 0044](docs/adr/ADR-0044-dependabot-uv-ecosystem-for-pyproject-lock-closure.md)), maintainer review, and optional **SBOM** artifacts ([below](#software-bill-of-materials-sbom)). When you triage advisories or apply updates, refresh **`uv.lock`** through the single-pass closure (**`pyproject.toml` → `uv lock` → `uv export`**) in [ADR 0030](docs/adr/ADR-0030-python-dependency-update-closure-single-pass.md)—do not hand-edit the lockfile to “fix” audits.
+
 ### Runtime prerequisites (Linux example)
 
 On Ubuntu/Debian you should have at least:

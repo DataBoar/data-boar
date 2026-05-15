@@ -26,6 +26,12 @@ O **`pyproject.toml`** é a fonte de verdade para a toolColleague-Nn **uv**. O a
   uv export --no-emit-package pyproject.toml -o requirements.txt
   ```
 
+### Lockfile e mitigação da cadeia de suprimentos (`uv.lock`)
+
+Fazer commit do **`uv.lock`** é um **controle de cadeia de suprimentos**: ele fixa a **árvore completa resolvida** (dependências diretas e transitivas) para que `uv sync` e o CI instalem **as mesmas versões de pacotes** com base nos hashes registados no lockfile. Isso **reduz** deriva não revisada por resolução flutuante de `>=` no PyPI, quebras do tipo “funcionou na minha máquina” e divergência entre **`uv.lock`** e o export **`requirements.txt`** para pip.
+
+O lockfile **não prova**, por si só, que esses pins estão **livres de CVEs conhecidos** ou que são **benignos**. A **mitigação de vulnerabilidade** no caminho de instalação Python se **empilha** sobre o lockfile: **`pip-audit`** no CI, **GitHub Dependabot** (este repositório usa **`package-ecosystem: uv`** para PRs alinharem `pyproject.toml` e **`uv.lock`** — veja [ADR 0044](docs/adr/ADR-0044-dependabot-uv-ecosystem-for-pyproject-lock-closure.md)), revisão humana e artefatos **SBOM** ([abaixo](#lista-de-materiais-de-software-sbom)). Ao triar advisories ou aplicar atualizações, regenere **`uv.lock`** pelo fechamento de um único passo (**`pyproject.toml` → `uv lock` → `uv export`**) em [ADR 0030](docs/adr/ADR-0030-python-dependency-update-closure-single-pass.md) — **não** edite o lockfile à mão para “consertar” auditorias.
+
 ### Pré-requisitos de runtime (exemplo Linux)
 
 No Ubuntu/Debian você deve ter pelo menos:
