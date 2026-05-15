@@ -9,6 +9,7 @@ so it works in multilingual and legacy Windows environments. Pattern files
 pattern_files_encoding key (default utf-8) with errors=replace to avoid crashes.
 """
 
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -25,6 +26,8 @@ except ImportError:
     json = None
 
 import os
+
+_logger = logging.getLogger(__name__)
 
 
 def _notification_env_value(val: Any) -> str | None:
@@ -298,17 +301,15 @@ def normalize_config(
     When ``config_path`` is set, optional ``sql_sampling_file`` / ``sql_sampling_files`` entries
     are loaded relative to that file's directory and merged into ``sql_sampling`` (inline wins).
 
-    Emits a warning when the obsolete ``scan_scope:`` key is detected (produces no targets).
-    The canonical key is ``targets:`` — see workspace fact in AGENTS.md.
+    Emits a logging WARNING (and stderr via default/lastResort handlers) when the obsolete
+    ``scan_scope:`` key is detected (produces no targets). The canonical key is ``targets:``
+    — see workspace fact in AGENTS.md.
     """
-    import sys
-
     if "scan_scope" in data:
-        _msg = (
-            "[data-boar] WARNING: config key 'scan_scope:' is obsolete and will be ignored. "
-            "Use 'targets:' instead.  See docs/USAGE.md for the canonical config format."
+        _logger.warning(
+            "[data-boar] config key 'scan_scope:' is obsolete and will be ignored. "
+            "Use 'targets:' instead. See docs/USAGE.md for the canonical config format."
         )
-        print(_msg, file=sys.stderr)
 
     if not isinstance(data, dict):
         raise ValueError("Config root must be a dict")

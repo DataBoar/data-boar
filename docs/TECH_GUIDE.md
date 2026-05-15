@@ -549,6 +549,8 @@ Building `boar_fast_filter` requires Rust (`rustup`), `maturin`, and a C linker.
 
   Commit **pyproject.toml**, **uv.lock**, and **requirements.txt**. This keeps installs reproducible and aligned so `pip install -r requirements.txt` matches `uv sync`.
 
+- **Supply-chain posture:** **`uv.lock`** pins versions (and hashes) for reproducible installs; it **does not** replace **`pip-audit`**, Dependabot, or maintainer review for **known CVEs** and supply-chain abuse. See **[SECURITY.md](../SECURITY.md)** (*Lockfile and supply-chain mitigation*).
+
 - **Dependabot / automation:** If a PR (e.g. from Dependabot) suggests updating only `requirements.txt` or `uv.lock`, apply the change to the **source of truth** first: update the corresponding minimum version in **`pyproject.toml`**, then run `uv lock` and `uv export --no-emit-package pyproject.toml -o requirements.txt` and commit all three files. Do not merge a dependency update that only edits `requirements.txt` or `uv.lock`.
 
 - **Check for known CVEs:** Run `uv pip audit` (or `pip audit` if available) before deployment; fix or pin any vulnerable packages.

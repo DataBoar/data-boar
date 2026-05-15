@@ -67,7 +67,7 @@ When a lesson becomes engineering work, promote it to **`docs/plans/PLANS_TODO.m
 | Completão narrative (private) | Use `docs/private/homelab/COMPLETAO_SESSION_*.md` per [`docs/ops/LAB_COMPLETAO_RUNBOOK.md`](LAB_COMPLETAO_RUNBOOK.md); mirror **numbers and pass/fail** here only. |
 | **`.7z` support missing** | Add `py7zr` to `pyproject.toml` `[compressed]` optional extra — `sample2.7z` failed with `archive_unsupported` (2026-05-13 session). |
 | **`boar_fast_filter` lab venv gap** | `maturin develop --release` needed on each lab host — add to HOMELAB_VALIDATION preflight; confirmed: Rust 1.95 + maturin 1.13.3, 27s compile on latitude. |
-| **Unrecognized `scan_scope` config key** | `config/loader.py` should emit WARNING when `scan_scope` key is present but `targets` is not; currently silently ignored — operators get "No findings" with no error. |
+| **Unrecognized `scan_scope` config key** | **Closed:** `normalize_config()` logs WARNING when `scan_scope:` is present (`config/loader.py`; test `test_scan_scope_key_emits_warning`). |
 | **0.574x claim validation pending** | Current A/B shows 0.955x on 10-file corpus; needs `tests/data/bench/synthetic_valid_cpf_3k.txt` (3000 lines, 1MB) for meaningful comparison. |
 | **Forensic search + geo hints** | `PLAN_FORENSIC_SEARCH_AND_GEOGRAPHIC_HINTS.md` — Slice 1 of both use cases is low effort; promote to H1 if Engajamento A validates demand. |
 
