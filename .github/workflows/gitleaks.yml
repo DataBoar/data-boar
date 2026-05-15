@@ -1,0 +1,45 @@
+# Gitleaks — secret scanning on push/PR and weekly schedule.
+# OSS mode; third-party Actions use full commit SHAs (ADR 0005); bump via Dependabot.
+#
+# Complements other repo gates (same idea as perf-ai-challenge-2 baseline, adapted here):
+# - pre-commit + pytest (PII / talent / commercial guards on the tree CI exercises)
+# - Gitleaks scans credential-shaped leaks with full Git history (fetch-depth: 0),
+#   catching cases hooks miss (different laptop, hook not installed, history paths).
+#
+# Optional: add a repo-root `.gitleaks.toml` when you need allowlists (e.g. long-lived
+# doc examples that still trip heuristics). Neither this repo nor the perf-ai / challenge-2
+# clones shipped one; tune here instead of mutating CI to "report only" without maintainer intent.
+#
+# Local parity (operator machine, not CI): use the upstream gitleaks CLI or container
+# from https://github.com/gitleaks/gitleaks — pin a version or digest in your own notes;
+# do not rely on undocumented random Dockerfiles for policy truth.
+name: Gitleaks
+
+permissions:
+  contents: read
+
+'on':
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  schedule:
+    - cron: "0 8 * * 1"
+  workflow_dispatch:
+
+jobs:
+  scan:
+    name: Secret scan (Gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Gitleaks
+        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2
+        env:
+          # GITLEAKS_LICENSE only needed for org features; OSS works without.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
