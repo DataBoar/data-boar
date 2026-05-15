@@ -772,6 +772,7 @@ dependencies = [
     { name = "cryptography" },
     { name = "cycler" },
     { name = "defusedxml" },
+    { name = "ebcdic" },
     { name = "et-xmlfile" },
     { name = "extract-msg" },
     { name = "fastapi" },
@@ -877,6 +878,7 @@ shares = [
 [package.dev-dependencies]
 dev = [
     { name = "bandit" },
+    { name = "chardet" },
     { name = "cyclonedx-bom" },
     { name = "markdown" },
     { name = "mypy" },
@@ -904,6 +906,7 @@ requires-dist = [
     { name = "cycler", specifier = ">=0.12.1" },
     { name = "dbfread", marker = "extra == 'dataformats'", specifier = ">=2.0.7" },
     { name = "defusedxml", specifier = ">=0.7.1" },
+    { name = "ebcdic", specifier = ">=1.1.1,<2" },
     { name = "et-xmlfile", specifier = ">=2.0.0" },
     { name = "extract-msg", specifier = ">=0.55.0" },
     { name = "fastapi", specifier = ">=0.136.0" },
@@ -989,6 +992,7 @@ provides-extras = ["nosql", "bigdata", "shares", "compressed", "dl", "detection-
 [package.metadata.requires-dev]
 dev = [
     { name = "bandit", specifier = ">=1.9.4" },
+    { name = "chardet", specifier = ">=5.1,<6.0" },
     { name = "cyclonedx-bom", specifier = ">=7.0.0" },
     { name = "markdown", specifier = ">=3.10.2" },
     { name = "mypy", specifier = ">=1.20.1" },

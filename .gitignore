@@ -51,6 +51,8 @@ docs/feedbacks, reviews, comments and criticism/
 # Operator-only social posting schedule / home-office window policy: keep under docs/private/ (e.g. social_drafts/OPERATOR_SOCIAL_POSTING_WINDOWS.pt_BR.md) — never copy full tables to public tracked docs.
 docs/private/
 .cursor/private/
+# Cursor hooks: ephemeral local state (e.g. continual-learning index) — keep hooks.json / scripts tracked if added later
+.cursor/hooks/state/
 
 # LAB-OP: skip lab-node-01-podman.yml package install on constrained hosts (see inventory.example.ini + lab-node-01-ansible-labop-podman-apply.sh)
 .labop-skip-lab-node-01-podman

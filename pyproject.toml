@@ -25,6 +25,9 @@ dependencies = [
     "cryptography>=46.0.5",
     "cycler>=0.12.1",
     "defusedxml>=0.7.1",
+    # ebcdic is a transitive dep of extract-msg; pinned here so Dependabot sees
+    # extract-msg 0.55.x requires_dist: ebcdic<2,>=1.1.1 (ADR 0053).
+    "ebcdic>=1.1.1,<2",
     "et-xmlfile>=2.0.0",
     "extract-msg>=0.55.0",
     "fastapi>=0.136.0",
@@ -238,5 +241,8 @@ dev = [
     "types-pyyaml>=6.0.12.20250915",
     # CycloneDX SBOM from uv-exported requirements (ADR 0003); same CLI as CI `sbom.yml`.
     "cyclonedx-bom>=7.0.0",
+    # chardet is transitive via cyclonedx-bom; dev-only pin matches cyclonedx-bom's
+    # chardet>=5.1,<6.0 until upstream allows 6+ (ADR 0054).
+    "chardet>=5.1,<6.0",
     "markdown>=3.10.2",
 ]
