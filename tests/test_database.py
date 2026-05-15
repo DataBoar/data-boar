@@ -1,5 +1,6 @@
 """Tests for config loader and database layer (no live DB required)."""
 
+import logging
 import os
 import time
 import pytest
@@ -9,12 +10,13 @@ from config.loader import load_config, normalize_config
 from core.database import DataSourceInventory, DataWipeLog, LocalDBManager, failure_hint
 
 
-def test_scan_scope_key_emits_warning(capsys):
+def test_scan_scope_key_emits_warning(caplog):
     """normalize_config warns on obsolete 'scan_scope:' key (AGENTS.md workspace fact)."""
-    normalize_config({"scan_scope": [{"type": "filesystem", "path": "/tmp"}]})
-    captured = capsys.readouterr()
-    assert "scan_scope" in captured.err
-    assert "targets" in captured.err
+    with caplog.at_level(logging.WARNING, logger="config.loader"):
+        normalize_config({"scan_scope": [{"type": "filesystem", "path": "/tmp"}]})
+    joined = " ".join(r.message for r in caplog.records)
+    assert "scan_scope" in joined
+    assert "targets" in joined
 
 
 def test_normalize_config_empty():
