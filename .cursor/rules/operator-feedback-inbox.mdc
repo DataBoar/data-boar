@@ -1,0 +1,25 @@
+---
+description: WRB-style feedback drops — gitignored inbox first; never commit raw payloads; ask before attributing in tracked plans.
+globs:
+  - docs/private.example/feedbacks-inbox/**
+  - docs/PRIVATE_OPERATOR_NOTES.md
+alwaysApply: false
+---
+
+# Operator feedback inbox (external reviews)
+
+## When this rule attaches
+
+**Context:** **`alwaysApply: false`** — loads when paths above match **or** the operator types **`feedback-inbox`** **or** attaches **`@operator-feedback-inbox.mdc`**. Session table: **`.cursor/rules/session-mode-keywords.mdc`**.
+
+## Contract
+
+1. **Drop zone (gitignored):** **`docs/feedbacks, reviews, comments and criticism/`** at repo root — see **`docs/private.example/feedbacks-inbox/README.md`** (+ **`.pt_BR.md`**) and **`docs/PRIVATE_OPERATOR_NOTES.md`**.
+1. **First action:** **`read_file`** / list that folder when the operator asks for feedback triage. If **missing or empty**, say so plainly.
+1. **Origin unclear** (e.g. Corporate-Entity-C vs Gemini vs other): **ask the operator** before writing attributions into **`docs/plans/`**, **`PLANS_TODO.md`**, or **issues**.
+1. **Never** commit raw inbox files to **`origin`** / public GitHub. Distilled, redacted summaries belong in tracked plans or ops notes per project policy.
+1. **Private mirror:** Receipts may also live under **`docs/private/feedbacks_and_reviews/`** in the stacked private repo — still not on the product remote.
+
+### Skill
+
+Skill file: `.cursor/skills/operator-feedback-inbox/SKILL.md`
