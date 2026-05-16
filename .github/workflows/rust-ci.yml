@@ -9,7 +9,7 @@
 # string is not a repo directory -- do not use it in paths: or pathspecs here.
 #
 # Action pins follow the existing repo convention (full commit SHA + version
-# comment). The Rust toolColleague-Nn itself is provided by the runner image; we
+# comment). The Rust toolchain itself is provided by the runner image; we
 # install/refresh it deterministically with `rustup` instead of adding a new
 # third-party action SHA to track.
 #
@@ -50,9 +50,9 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install Rust toolColleague-Nn (stable) with clippy and rustfmt
+      - name: Install Rust toolchain (stable) with clippy and rustfmt
         run: |
-          rustup toolColleague-Nn install stable --profile minimal --no-self-update
+          rustup toolchain install stable --profile minimal --no-self-update
           rustup default stable
           rustup component add clippy rustfmt
           rustc --version
