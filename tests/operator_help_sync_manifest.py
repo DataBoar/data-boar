@@ -100,7 +100,7 @@ OPERATOR_HELP_MARKERS: tuple[OperatorHelpMarker, ...] = (
     OperatorHelpMarker(
         "technician",
         "--technician",
-        '--technician "Alice V."',
+        '--technician "Alice Colleague-V"',
         _MAN_TECH,
     ),
     OperatorHelpMarker(
