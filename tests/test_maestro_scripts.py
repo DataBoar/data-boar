@@ -356,9 +356,22 @@ def test_maestro_benchmark_ab_has_sleep_before_collect() -> None:
         "maestro-benchmark-ab.ps1 must have -SleepBeforeCollect to prevent race between "
         "async tmux smoke and -Collect SCP phase"
     )
-    assert "Start-Sleep -Seconds $SleepBeforeCollect" in text, (
-        "Sleep must be applied before Collect phase"
+    assert "Wait-BaremetalBenchSentinel.ps1" in text, (
+        "maestro-benchmark-ab.ps1 must poll baremetal bench sentinel before Collect"
     )
+    assert "Start-Sleep -Seconds $SleepBeforeCollect" in text, (
+        "Sleep must remain as fallback when sentinel misses or is skipped"
+    )
+
+
+def test_lab_completao_host_smoke_writes_baremetal_scan_sentinel() -> None:
+    """Baremetal bench runs must drop a Maestro-visible completion marker under LC_BENCH_ROOT."""
+    root = _project_root()
+    text = (root / "scripts" / "lab-completao-host-smoke.sh").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert ".baremetal_scan_complete" in text
+    assert "LC_BENCH_ROOT" in text
 
 
 def test_maestro_no_retired_workstation_codename_token() -> None:

@@ -319,6 +319,15 @@ if [[ "$_scan_start_epoch" -gt 0 && "$_scan_end_epoch" -ge "$_scan_start_epoch" 
 fi
 _lc_capture_metrics_snapshot "post_scan"
 
+# Bench isolation: Maestro A/B can poll this file instead of a fixed sleep before -Collect (issue #405).
+if [[ -n "${LC_BENCH_ROOT:-}" ]]; then
+  {
+    echo "run_id=${LC_BENCH_RUN_ID:-}"
+    echo "ts=$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u)"
+    echo "host=$(hostname 2>/dev/null || echo unknown)"
+  } >"$LC_BENCH_ROOT/.baremetal_scan_complete" 2>/dev/null || true
+fi
+
 _lc_section "Docker / Podman"
 if _lc_cmd docker; then
   docker --version
@@ -396,7 +405,6 @@ fi
 
 _lc_bench_compare
 
-# Adicionar no final de scripts/lab-completao-host-smoke.sh
 _lc_section "Telemetria"
 FINAL_TS=$(date +"%H:%M:%S")
 echo "DONE_SUCCESS_BAREMETAL at ${FINAL_TS}" > "${HOME}/.labop-status"
