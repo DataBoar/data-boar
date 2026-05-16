@@ -38,5 +38,5 @@ def get_about_info() -> dict:
         "author": "Fabio Leitao",
         "license": "BSD 3-Clause License",
         "license_url": "https://opensource.org/licenses/BSD-3-Clause",
-        "copyright": "Copyright (c) 2025, Fabio Leitao",
+        "copyright": "Copyright (c) 2025-2026, Fabio Leitao",
     }

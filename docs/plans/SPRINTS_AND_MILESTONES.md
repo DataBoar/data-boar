@@ -221,6 +221,12 @@ Use GitHub **Milestones** or release tags; below is the **semantic** layer align
 | **M-SITE-READY**    | **First public website + technical doc hub** (GTM-ready slice) | **Live** static/marketing site with: (1) **non-technical** story pages (aligned with **stakeholder pitch**, not a dump of TECH_GUIDE); (2) **technical hub** — deep links or embedded paths to **version-aligned** USAGE, TECH_GUIDE, TESTING, deploy/Docker, scenarios, compliance-samples entry, **release notes**, **Docker Hub** + **GitHub**; (3) **roadmap** listing **specific active fronts** (connectors, dashboard, notifications, …); (4) **locale** UX **consistent** with dashBOARd i18n plan (prefix / cookie / `Accept-Language` / JSON catalogs). See [PLAN_WEBSITE_AND_DOCS_I18N_FUTURE.md](PLAN_WEBSITE_AND_DOCS_I18N_FUTURE.md) §2.1–2.3. |
 | **M-RELEASE x.y.z** | Versioned product cut                                          | Existing VERSIONING checklist + `docs/releases/x.y.z.md` + Hub tags                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 
+### Active milestone (current sprint)
+
+| Milestone | Status | Sprint | Blocker / notes |
+| --------- | ------ | ------ | --------------- |
+| **M-PILOT-READY** | Active | current | Depends on shipping **v1.7.4** plus three active pilot tracks (law / pharma / EdTech — see [PLANS_TODO.md](PLANS_TODO.md) **M-PILOT-READY**). |
+
 **Cadence suggestion:** **M-TRUST** before a big feature push; **M-OBS** can trail **M-TRUST** in the same or next sprint (small docs/automation); **M-LAB** before customer/demo storytelling; **M-RICH** when the rich-media PR merges; **M-ACCESS** before promising **permanent subscription** or **multi-user** production on a reachable host; **M-SITE-READY** when you intentionally ship a **public** doc/marketing surface (after **M-LOCALE-V1** is wise if you want matching locale UX); **M-RELEASE** whenever VERSIONING says ship.
 
 ### Composing milestones (release lifecycle map)

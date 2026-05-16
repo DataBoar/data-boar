@@ -24,7 +24,7 @@ Ou seja: **a documentação no repositório é suficiente para proteger a *obra*
 
 - **LICENSE** (raiz): “Copyright (c) 2025, FabioLeitao” e os termos da BSD 3-Clause.
 - **NOTICE** (raiz): Lugar único que declara o titular dos direitos, que a obra (código, docs, mascote) está sob BSD 3-Clause e aponta para LICENSE e para [docs/MASCOT.md](MASCOT.md) no caso do mascote.
-- **core/about.py**: A aplicação expõe “Copyright (c) 2025, Fabio Leitao” na API, na página About e nos relatórios.
+- **core/about.py**: A aplicação expõe “Copyright (c) 2025-2026, Fabio Leitao” na API, na página About e nos relatórios.
 - **[docs/MASCOT.md](MASCOT.md)**: Afirma que os assets do mascote são arte original do projeto e cobertos pela licença BSD 3-Clause do repositório.
 
 Isso é suficiente para **afirmar** direitos autorais e para **conformidade com a licença** (ex.: redistribuidores mantendo o aviso). Por si só não “registra” direitos autorais nem cria uma marca.

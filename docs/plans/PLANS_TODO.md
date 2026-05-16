@@ -27,12 +27,12 @@ Use these tags in headings to keep priorities explicit and machine-countable:
 
 Do not edit this block manually; refresh with `python scripts/plans-stats.py --write`.
 
-- **Status rows counted:** 164  (Done: 97 | Incomplete: 67)
-- **Incomplete breakdown:** Pending `⬜`=63, Tracked `🔄` / `Tracked (partially done)`=4, Under consideration=0, Backlog-marked rows=0
+- **Status rows counted:** 167  (Done: 97 | Incomplete: 70)
+- **Incomplete breakdown:** Pending `⬜`=66, Tracked `🔄` / `Tracked (partially done)`=4, Under consideration=0, Backlog-marked rows=0
 
 | Horizon | Total rows | Done | Incomplete |
 | ------- | ----------: | ----: | ----------: |
-| `H0` | 40 | 33 | 7 |
+| `H0` | 43 | 33 | 10 |
 | `H1` | 11 | 9 | 2 |
 | `H2` | 0 | 0 | 0 |
 | `H3` | 108 | 50 | 58 |
@@ -105,7 +105,7 @@ Refresh periodically: `gh issue list --state open --limit 50` (requires [`gh`](h
 
 | #                                                        | Short title                                      | Type                  | Plan                                                                                 | Sequence (token-aware)                                                                   |
 | -                                                        | -----------                                      | ----                  | ----                                                                                 | ------------------------                                                                 |
-| [86](https://github.com/FabioLeitao/data-boar/issues/86) | Reports / dashboard access by role or permission | Feature + security UX | [PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md](PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md) | `[H2][U2]` after **Priority band A**; **Phase 0 (D-WEB)** ✅; **Phase 1** = session + **passwordless (WebAuthn)** ✅; **Phase 2** = **RBAC** ✅ (`api.rbac`, Pro+); **Phase 3** = enterprise SSO/OIDC optional ⬜ |
+| [86](https://github.com/FabioLeitao/data-boar/issues/86) | Reports / dashboard access by role or permission | Feature + security UX | [PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md](PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md) | **`[H1]`** firm (does not block **1.7.4**); after **Priority band A**; **Phase 0 (D-WEB)** ✅; **Phase 1** = session + **passwordless (WebAuthn)** ✅; **Phase 2** = **RBAC** ✅ (`api.rbac`, Pro+); **Phase 3** = enterprise SSO/OIDC optional ⬜ |
 
 **Dashboard web surface cluster:** [#86](https://github.com/FabioLeitao/data-boar/issues/86) (RBAC) and [PLAN_DASHBOARD_I18N.md](completed/PLAN_DASHBOARD_I18N.md) (locale) share `api/routes.py` / templates. **Order:** **M-LOCALE-V1** ✅ (locale prefix on **`main`**, **2026-04**); **D-WEB** ✅; **M-MATURITY-POC** (smoke + runbook §D for full readiness) **then** **#86 Phase 1** on its own branch/PR — see [SPRINTS_AND_MILESTONES.md](SPRINTS_AND_MILESTONES.md) §4.2 / §5 and the **Integration** bullet *Maturity self-assessment* above.
 
@@ -231,6 +231,16 @@ Complete **in order** when you need to reduce public artifact exposure or tighte
 **Every order –1 pass (cadence):** Briefly **re-check advisories that had no fix last time**: run **`uvx pip-audit -r requirements.txt`** (or equivalent); confirm whether **pygments** ([DEPENDABOT_PYGMENTS_CVE.md](../ops/DEPENDABOT_PYGMENTS_CVE.md)), **pyOpenSSL + Snowflake** ([DEPENDABOT_PYOPENSSL_SNOWFLAKE.md](../ops/DEPENDABOT_PYOPENSSL_SNOWFLAKE.md)), or **Debian base** packages from **Docker Scout** now have a released fix — bump **`pyproject.toml` / rebuild image** when they do; otherwise keep triage docs and GitHub dismissals accurate.
 
 After **A1–A3** (minimum), you can **resume token-aware pace** on Tier 2 features (e.g. content-type Step 4) unless A4–A7 are blocking revenue.
+
+**`[H0]` Maestro + release gate (**M-PILOT-READY** drivers):**
+
+| Item | Issue(s) | Status |
+| ---- | -------- | ------ |
+| Maestro SSH `ConnectTimeout` | [#403](https://github.com/FabioLeitao/data-boar/issues/403) | ⬜ Pending |
+| Maestro `--bench-config` argument fix | [#404](https://github.com/FabioLeitao/data-boar/issues/404), [#408](https://github.com/FabioLeitao/data-boar/issues/408) | ⬜ Pending |
+| Release gate **1.7.4** checklist (tag, Hub, `docs/releases/1.7.4.md`) | [#406](https://github.com/FabioLeitao/data-boar/issues/406) | ⬜ Pending |
+
+**`[H1]` RBAC reports access — [#86](https://github.com/FabioLeitao/data-boar/issues/86)** (firm next gate; does not block **1.7.4**): ⬜ Pending — Phase 3+ / enterprise SSO/OIDC path per [PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md](PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md).
 
 **Reference:** [CODE_PROTECTION_OPERATOR_PLAYBOOK.md](../CODE_PROTECTION_OPERATOR_PLAYBOOK.md), [LICENSING_SPEC.md](../LICENSING_SPEC.md), [HOSTING_AND_WEBSITE_OPTIONS.md](../HOSTING_AND_WEBSITE_OPTIONS.md).
 
@@ -519,6 +529,23 @@ Counted rows below celebrate the **maintenance + publish** sprint; see **`docs/r
 | **Docker Hub** `:1.6.7` + `:latest`               | ✅ Done     | Pushed **2026-03-26** per [DOCKER_IMAGE_RELEASE_ORDER.md](../ops/DOCKER_IMAGE_RELEASE_ORDER.md) |
 
 **Next patch:** **`1.7.4`** when the next bundle ships (after **`v1.7.3`** / **1.7.3**).
+
+### **M-PILOT-READY** — First commercial pilot gate
+
+**Exit criteria (all required):**
+
+- [ ] `v1.7.4` tagged and published on Docker Hub ([#406](https://github.com/FabioLeitao/data-boar/issues/406))
+- [ ] Maestro Bug 1 fixed: SSH `ConnectTimeout` ([#403](https://github.com/FabioLeitao/data-boar/issues/403))
+- [ ] Maestro Bug 2 fixed: `--bench-config` argument ([#404](https://github.com/FabioLeitao/data-boar/issues/404) + [#408](https://github.com/FabioLeitao/data-boar/issues/408))
+- [ ] PR [#391](https://github.com/FabioLeitao/data-boar/pull/391) merged: PII filter toolchain fix
+- [ ] Completão smoke-only clean on all four hosts (latitude, t14-leitao, mini-bt, pi3b)
+- [ ] `docs/releases/1.7.4.md` created
+
+**Commercial pipeline active (internal reference — no names):**
+
+- Law firm pilot → [LAW_FIRM_CLIENT_MATTER_AND_TRUST_DATA.md](../use-cases/LAW_FIRM_CLIENT_MATTER_AND_TRUST_DATA.md)
+- Pharma pilot → [PHARMA_SPECIALTY_SALES_HOSPITALS_AND_PATIENT_PROGRAMS.md](../use-cases/PHARMA_SPECIALTY_SALES_HOSPITALS_AND_PATIENT_PROGRAMS.md)
+- EdTech pilot → [EDTECH_LMS_EXPORTS_AND_MINORS.md](../use-cases/EDTECH_LMS_EXPORTS_AND_MINORS.md)
 
 ### Additional detection techniques & false-negative reduction – [PLAN_ADDITIONAL_DETECTION_TECHNIQUES_AND_FN_REDUCTION.md](PLAN_ADDITIONAL_DETECTION_TECHNIQUES_AND_FN_REDUCTION.md)
 

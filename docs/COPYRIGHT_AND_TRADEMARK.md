@@ -24,7 +24,7 @@ So: **documentation in the repo is enough to protect the *work* (code and mascot
 
 - **LICENSE** (root): “Copyright (c) 2025, FabioLeitao” and the BSD 3-Clause terms.
 - **NOTICE** (root): Single place that states the copyright holder, that the work (code, docs, mascot) is under BSD 3-Clause, and points to LICENSE and to [docs/MASCOT.md](MASCOT.md) for the mascot.
-- **core/about.py**: Application exposes “Copyright (c) 2025, Fabio Leitao” in the API, About page, and reports.
+- **core/about.py**: Application exposes “Copyright (c) 2025-2026, Fabio Leitao” in the API, About page, and reports.
 - **[docs/MASCOT.md](MASCOT.md)**: States that the mascot assets are original artwork for the project and covered by the repository BSD 3-Clause License.
 
 That is sufficient for **asserting** copyright and for **license compliance** (e.g. redistributors keeping the notice). It does not by itself “register” copyright or create a trademark.
