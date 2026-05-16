@@ -1,7 +1,7 @@
 ---
 galaxy_info:
-  role_name: lab-node-01_toolColleague-Nn_restrict
-  description: Optional restriction of x86_64-linux-gnu toolColleague-Nn binaries to root + dedicated group.
+  role_name: lab-node-01_toolchain_restrict
+  description: Optional restriction of x86_64-linux-gnu toolchain binaries to root + dedicated group.
   license: BSD-3-Clause
   platforms:
     - name: Debian

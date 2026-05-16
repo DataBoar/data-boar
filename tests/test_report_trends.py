@@ -78,7 +78,7 @@ def test_report_includes_report_info_tenant_and_technician(tmp_path):
         mgr.create_session_record(
             "s-tenant-tech",
             tenant_name="Acme Corp",
-            technician_name="Maria Colleague-V",
+            technician_name="Maria V.",
         )
         mgr.save_finding(
             "database",
@@ -99,7 +99,7 @@ def test_report_includes_report_info_tenant_and_technician(tmp_path):
         row_tenant = df[df["Field"] == "Tenant / Customer"].iloc[0]
         assert row_tenant["Value"] == "Acme Corp"
         row_tech = df[df["Field"] == "Technician / Operator"].iloc[0]
-        assert row_tech["Value"] == "Maria Colleague-V"
+        assert row_tech["Value"] == "Maria V."
     finally:
         mgr.dispose()
 

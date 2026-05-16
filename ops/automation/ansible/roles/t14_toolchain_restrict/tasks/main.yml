@@ -1,69 +1,69 @@
 ---
-- name: Skip toolColleague-Nn restriction (opt-in)
-  when: not (lab-node-01_toolColleague-Nn_restrict_enabled | bool)
+- name: Skip toolchain restriction (opt-in)
+  when: not (lab-node-01_toolchain_restrict_enabled | bool)
   ansible.builtin.debug:
-    msg: "ToolColleague-Nn restriction disabled (lab-node-01_toolColleague-Nn_restrict_enabled=false)."
+    msg: "Toolchain restriction disabled (lab-node-01_toolchain_restrict_enabled=false)."
 
-- name: Apply toolColleague-Nn restriction
-  when: lab-node-01_toolColleague-Nn_restrict_enabled | bool
+- name: Apply toolchain restriction
+  when: lab-node-01_toolchain_restrict_enabled | bool
   block:
-    - name: Ensure toolColleague-Nn group exists
+    - name: Ensure toolchain group exists
       ansible.builtin.group:
-        name: "{{ lab-node-01_toolColleague-Nn_group }}"
+        name: "{{ lab-node-01_toolchain_group }}"
         state: present
 
-    - name: Find versioned / glob toolColleague-Nn binaries
+    - name: Find versioned / glob toolchain binaries
       ansible.builtin.find:
-        paths: "{{ lab-node-01_toolColleague-Nn_bin_dir }}"
+        paths: "{{ lab-node-01_toolchain_bin_dir }}"
         file_type: file
-        patterns: "{{ lab-node-01_toolColleague-Nn_glob_patterns }}"
-      register: lab-node-01_toolColleague-Nn_glob_hits
+        patterns: "{{ lab-node-01_toolchain_glob_patterns }}"
+      register: lab-node-01_toolchain_glob_hits
 
-    - name: Stat exact toolColleague-Nn paths
+    - name: Stat exact toolchain paths
       ansible.builtin.stat:
-        path: "{{ lab-node-01_toolColleague-Nn_bin_dir }}/{{ item }}"
-      loop: "{{ lab-node-01_toolColleague-Nn_exact_basenames }}"
-      register: lab-node-01_toolColleague-Nn_exact_stat
+        path: "{{ lab-node-01_toolchain_bin_dir }}/{{ item }}"
+      loop: "{{ lab-node-01_toolchain_exact_basenames }}"
+      register: lab-node-01_toolchain_exact_stat
 
     - name: Build combined path list
       ansible.builtin.set_fact:
-        lab-node-01_toolColleague-Nn_paths: >-
+        lab-node-01_toolchain_paths: >-
           {{
             (
-              (lab-node-01_toolColleague-Nn_glob_hits.files | default([]) | map(attribute='path') | list)
-              + (lab-node-01_toolColleague-Nn_exact_stat.results | default([])
+              (lab-node-01_toolchain_glob_hits.files | default([]) | map(attribute='path') | list)
+              + (lab-node-01_toolchain_exact_stat.results | default([])
                 | selectattr('stat.exists')
                 | map(attribute='item')
-                | map('regex_replace', '^', lab-node-01_toolColleague-Nn_bin_dir + '/')
+                | map('regex_replace', '^', lab-node-01_toolchain_bin_dir + '/')
                 | list)
             ) | unique | list
           }}
 
-    - name: Apply owner, group, mode to toolColleague-Nn binaries
+    - name: Apply owner, group, mode to toolchain binaries
       ansible.builtin.file:
         path: "{{ item }}"
-        owner: "{{ lab-node-01_toolColleague-Nn_owner }}"
-        group: "{{ lab-node-01_toolColleague-Nn_group }}"
-        mode: "{{ lab-node-01_toolColleague-Nn_file_mode }}"
+        owner: "{{ lab-node-01_toolchain_owner }}"
+        group: "{{ lab-node-01_toolchain_group }}"
+        mode: "{{ lab-node-01_toolchain_file_mode }}"
         follow: true
-      loop: "{{ lab-node-01_toolColleague-Nn_paths }}"
+      loop: "{{ lab-node-01_toolchain_paths }}"
       loop_control:
         label: "{{ item }}"
 
     - name: Install acl package for setfacl (optional ACL tasks)
-      when: (lab-node-01_toolColleague-Nn_acl_extra_groups | length) > 0
+      when: (lab-node-01_toolchain_acl_extra_groups | length) > 0
       ansible.builtin.apt:
         name: acl
         state: present
 
     - name: Add POSIX ACL entries for extra groups (rx)
-      when: (lab-node-01_toolColleague-Nn_acl_extra_groups | length) > 0
+      when: (lab-node-01_toolchain_acl_extra_groups | length) > 0
       ansible.posix.acl:
         path: "{{ item.0 }}"
         entity: "{{ item.1 }}"
         etype: group
         permissions: rx
         state: present
-      loop: "{{ lab-node-01_toolColleague-Nn_paths | product(lab-node-01_toolColleague-Nn_acl_extra_groups) | list }}"
+      loop: "{{ lab-node-01_toolchain_paths | product(lab-node-01_toolchain_acl_extra_groups) | list }}"
       loop_control:
         label: "{{ item.0 }} g:{{ item.1 }}"

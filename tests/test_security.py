@@ -233,7 +233,7 @@ def test_sanitize_tenant_technician_strips_and_removes_control_chars():
     assert sanitize_tenant_technician("  Acme Corp  ") == "Acme Corp"
     # Control chars (NULL, tab, newline, DEL) removed
     assert sanitize_tenant_technician("Acme\x00Corp") == "AcmeCorp"
-    assert sanitize_tenant_technician("Alice\tColleague-V") == "AliceColleague-V"
+    assert sanitize_tenant_technician("Alice\tV.") == "AliceV."
     assert sanitize_tenant_technician("Bob\nOperator") == "BobOperator"
     assert sanitize_tenant_technician("Op\x7fname") == "Opname"
     # Only control chars removed; printable kept

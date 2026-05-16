@@ -46,7 +46,7 @@ Usage:
   .\scripts\repo-grep.ps1 -Pattern "x" -PreferBareGrep
 
 Notes:
-  - GNU grep from unrelated installs (e.g. FPC toolColleague-Nn) is skipped for recursion safety; use rg or Select-String.
+  - GNU grep from unrelated installs (e.g. FPC toolchain) is skipped for recursion safety; use rg or Select-String.
   - If rg is missing: winget install BurntSushi.ripgrep.MSVC (or install rg and ensure PATH).
   - baregrep.exe: often under %USERPROFILE%\\Downloads; use -PreferBareGrep (may show GUI / splash).
 

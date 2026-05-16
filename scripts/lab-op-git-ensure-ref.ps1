@@ -13,7 +13,7 @@
 
   Remote bash runs "git fetch origin --prune" first (required), then "git fetch origin --tags --prune"
   as best-effort (|| true). Divergent local tags can make tag fetch exit non-zero; that must not
-  abort the Colleague-Nn before HEAD vs resolved ref - otherwise logs show SSH exit != 0 with no LABOP_REF_* line.
+  abort the chain before HEAD vs resolved ref - otherwise logs show SSH exit != 0 with no LABOP_REF_* line.
 
   When pinning to a release tag, run lab-completao-orchestrate.ps1 with -SkipGitPullOnInventoryRefresh so
   lab-op-sync-and-collect does not git pull to main before this step - see LAB_COMPLETAO_RUNBOOK.md.

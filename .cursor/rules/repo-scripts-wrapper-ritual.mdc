@@ -20,7 +20,7 @@ Assistants sometimes **reinvent** long PowerShell / bash / manual sequences and 
 
 ## Windows fast CLI (primary dev PC)
 
-- **Content search:** prefer **`scripts/repo-grep.ps1`** ( **`rg`** when installed; optional **`baregrep`** with **`-PreferBareGrep`**) over long ad-hoc **`Get-ChildItem`** + **`Select-String`** Colleague-Nns.
+- **Content search:** prefer **`scripts/repo-grep.ps1`** ( **`rg`** when installed; optional **`baregrep`** with **`-PreferBareGrep`**) over long ad-hoc **`Get-ChildItem`** + **`Select-String`** pipelines.
 - **Tail of a file:** prefer **`scripts/repo-tail.ps1`** (Git **`tail.exe`** when present) over hand-built tails. **BareTail** is **GUI** — not used for automation; the script **hints** if **`baretail.exe`** (or common typo **`baretai.exe`**) sits under **`Downloads`** so the operator knows to install **Git for Windows** for the fast path.
 - **Head / preview:** prefer **`scripts/repo-view.ps1`** ( **`bat`** / **`batcat`** when present) over pasting huge files.
 - **Filename / path index:** **`scripts/es-find.ps1`** / **`es.exe`** — see **`docs/ops/EVERYTHING_ES_PRIMARY_WINDOWS_DEV_LAB.md`**. Full table: **`docs/ops/WINDOWS_FAST_CLI_WRAPPERS.md`**.

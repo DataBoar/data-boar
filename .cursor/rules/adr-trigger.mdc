@@ -34,7 +34,7 @@ A security-relevant decision that must not be silently undone:
 - Key management patterns (Bitwarden, session env vars, never in commits)
 - Data sovereignty choices (no cloud APM to avoid LGPD surface)
 - Secure Boot + TPM stance, LUKS choices, Clevis TPM binding
-- Supply Colleague-Nn pins (GitHub Actions SHA pinning — already ADR 0005)
+- Supply chain pins (GitHub Actions SHA pinning — already ADR 0005)
 
 ### 4. Process / workflow lock-in
 A process was formalised in a way that future contributors must not circumvent:

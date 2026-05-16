@@ -86,8 +86,8 @@
     - role: lab-node-01_k3s
     # --- Observability (progressive opt-in) ---
     - role: lab-node-01_observability
-    # --- Optional: restrict GCC/FPC-style toolColleague-Nn binaries to root + group comp (see role defaults) ---
-    - role: lab-node-01_toolColleague-Nn_restrict
+    # --- Optional: restrict GCC/FPC-style toolchain binaries to root + group comp (see role defaults) ---
+    - role: lab-node-01_toolchain_restrict
     # --- Snapshots (btrfs only, skips gracefully on ext4) ---
     - role: lab-node-01_snapper
       when: lab-node-01_snapper_enabled | bool

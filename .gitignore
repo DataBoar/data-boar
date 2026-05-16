@@ -156,7 +156,7 @@ docs/_build/
 .pybuilder/
 target/
 
-# Jupyter NotColleague-Sok
+# Jupyter Notebook
 .ipynb_checkpoints
 
 # IPython

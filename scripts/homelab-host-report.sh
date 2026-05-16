@@ -413,7 +413,7 @@ else
   echo "(no cpufreq sysfs — VM or older kernel?)"
 fi
 
-_hr_section "Optional dev toolColleague-Nns (not required for Data Boar)"
+_hr_section "Optional dev toolchains (not required for Data Boar)"
 command -v go >/dev/null && go version || echo "go: not in PATH"
 command -v rustc >/dev/null && rustc --version || echo "rustc: not in PATH"
 command -v zig >/dev/null && zig version || echo "zig: not in PATH"

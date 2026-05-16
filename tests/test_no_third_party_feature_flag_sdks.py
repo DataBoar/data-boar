@@ -14,8 +14,8 @@ Doctrine references:
   - docs/ops/inspirations/THE_ART_OF_THE_FALLBACK.md (diagnostic on fall:
     when a manifest is missing we explain what was checked, not raise a
     cryptic FileNotFoundError).
-  - docs/ops/inspirations/SUPPLY_Colleague-NN_AND_TRUST_SIGNALS.md (every new
-    runtime dependency is a supply-Colleague-Nn hop; flag SDKs in particular
+  - docs/ops/inspirations/SUPPLY_CHAIN_AND_TRUST_SIGNALS.md (every new
+    runtime dependency is a supply-chain hop; flag SDKs in particular
     phone home, so they need an ADR + sunset plan).
 """
 

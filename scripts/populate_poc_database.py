@@ -464,7 +464,7 @@ def populate_multilingual(conn, cfg: DBConfig) -> None:
         (
             _p(_NAMES, 4),
             _p(_NAMES_EN, 0),
-            "Maria Colleague-V",
+            "Maria V.",
             "maria@example.pt",
             "PT",
             "123456789",

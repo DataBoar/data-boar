@@ -67,7 +67,7 @@ def test_single_pass_keeps_opencore_subset() -> None:
 
 
 def test_single_pass_admits_luhn_card_only_when_valid() -> None:
-    """The Luhn predicate behaves as the third member of the fused ``or`` Colleague-Nn."""
+    """The Luhn predicate behaves as the third member of the fused ``or`` chain."""
     valid_row = f"transaction card={_LUHN_VALID_CARD}"
     invalid_row = f"declined card={_LUHN_INVALID_CARD}"
     out = basic_python_scan([valid_row, invalid_row])
@@ -98,7 +98,7 @@ def test_single_pass_handles_long_clean_corpus_without_growth() -> None:
     """A 5_000-row clean corpus must yield zero survivors.
 
     This pins that the early-exit ``if not value: continue`` plus the
-    short-circuit predicate Colleague-Nn do not accidentally append anything for
+    short-circuit predicate chain do not accidentally append anything for
     rows that match none of the three signals.
     """
     payloads = ["clean payload " + str(i) for i in range(5_000)]

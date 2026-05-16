@@ -120,7 +120,7 @@ $manifest = Get-Content -LiteralPath $ManifestPath -Raw -Encoding utf8 | Convert
 [void]$sb.AppendLine("LABOP_BB_OPERATOR_FIREWALL_CLEAR_PENDING")
 [void]$sb.AppendLine("A) Between LAB-OP nodes only, allow TCP 5432 (Postgres), 3306 (MariaDB), NFS (111/tcpudp, 2049/tcp, 20048/tcp as used), SMB (445/tcp) on paths $LabOpCidrsExample - adapt to your LAN.")
 [void]$sb.AppendLine("B) ufw example (on each Linux host, adjust from/to): allow from <peer>/32 to any port 5432 proto tcp")
-[void]$sb.AppendLine("C) nftables: add accept rules in inet filter INPUT Colleague-Nn for lab source IPs to dports 5432,3306,2049,445 - keep default deny.")
+[void]$sb.AppendLine("C) nftables: add accept rules in inet filter INPUT chain for lab source IPs to dports 5432,3306,2049,445 - keep default deny.")
 [void]$sb.AppendLine("D) AppArmor/SELinux: if scans hit Permission denied on /var/log or mounts, check auditd/ausearch; consider complain mode ONLY for the Data Boar binary profile (revert after test).")
 [void]$sb.AppendLine("E) fail2ban / sshguard: add orchestrator dev PC SSH source to ignoreip / whitelist for sshd jail during orchestration bursts.")
 if ($OrchestratorSshSourceIp) {

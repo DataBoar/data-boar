@@ -15,7 +15,7 @@ lab-op / <lab-host-2> / SBC / dev laptop class / Attiv / UPS / homelab /
 (legacy chat nicknames may still appear — facts live in `docs/private/homelab/` only) /
 hardware inventory / coleta de dados / relatorio de energia.
 
-## 1. Required private-file read Colleague-Nn
+## 1. Required private-file read order
 
 Read in this order -- stop when you have enough context for the task:
 

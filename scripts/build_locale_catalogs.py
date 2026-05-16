@@ -55,7 +55,7 @@ def _en() -> dict:
             "tenant_label": "Customer / tenant name (optional)",
             "tenant_ph": "e.g. Acme Corp",
             "tech_label": "Technician / operator (optional)",
-            "tech_ph": "e.g. Colleague-W Colleague-V",
+            "tech_ph": "e.g. W. V.",
             "cli_parity": "CLI parity for one-shot scans:",
             "cli_parity_link": "Help & Docs",
             "cli_parity_tail": (
@@ -402,7 +402,7 @@ def _pt_br(en: dict) -> dict:
     base["dashboard"]["tenant_label"] = "Cliente / tenant (opcional)"
     base["dashboard"]["tenant_ph"] = "ex.: Acme Corp"
     base["dashboard"]["tech_label"] = "Técnico / operador (opcional)"
-    base["dashboard"]["tech_ph"] = "ex.: Colleague-W Colleague-V"
+    base["dashboard"]["tech_ph"] = "ex.: W. V."
     base["dashboard"]["cli_parity"] = "Paridade com a CLI para varreduras pontuais:"
     base["dashboard"]["cli_parity_link"] = "Ajuda e documentação"
     base["dashboard"]["cli_parity_tail"] = (

@@ -84,7 +84,7 @@ $remoteCmd = @(
     "sshd -T 2>/dev/null | egrep '^(port|listenaddress|permitrootlogin|passwordauthentication|pubkeyauthentication|kbdinteractiveauthentication|allowusers|maxauthtries|maxsessions|clientaliveinterval|clientalivecountmax)' || true",
     "echo '=== sshd_config active lines ==='",
     "grep -v '^#' /etc/ssh/sshd_config 2>/dev/null | sed '/^$/d' || true",
-    "echo '=== firewall Colleague-Nns (top) ==='",
+    "echo '=== firewall chains (top) ==='",
     "(command -v iptables && iptables -S | sed -n '1,160p') 2>/dev/null || true",
     "(command -v nft && nft list ruleset | sed -n '1,160p') 2>/dev/null || true"
 ) -join "; "

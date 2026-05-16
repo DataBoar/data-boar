@@ -18,7 +18,7 @@
 
 # Bitwarden docs: npm install on Linux may need build-essential (or distro equivalent) first.
 # https://bitwarden.com/help/cli/ — "Download and install"
-- name: Install Node.js, npm, and build toolColleague-Nn (for Bitwarden CLI via npm)
+- name: Install Node.js, npm, and build toolchain (for Bitwarden CLI via npm)
   ansible.builtin.apt:
     name:
       - build-essential

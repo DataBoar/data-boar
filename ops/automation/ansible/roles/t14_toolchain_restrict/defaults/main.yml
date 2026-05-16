@@ -1,19 +1,19 @@
 ---
-# Restrict selected /usr/bin/x86_64-linux-gnu-* toolColleague-Nn binaries to root + a dedicated group (default: comp).
-# Opt-in: lab-node-01_toolColleague-Nn_restrict_enabled=false by default (safe for generic workstations).
+# Restrict selected /usr/bin/x86_64-linux-gnu-* toolchain binaries to root + a dedicated group (default: comp).
+# Opt-in: lab-node-01_toolchain_restrict_enabled=false by default (safe for generic workstations).
 #
 # Package upgrades (apt) can restore vendor permissions — re-run this playbook or a post-upgrade hook.
-lab-node-01_toolColleague-Nn_restrict_enabled: false
+lab-node-01_toolchain_restrict_enabled: false
 
-lab-node-01_toolColleague-Nn_owner: root
-lab-node-01_toolColleague-Nn_group: comp
+lab-node-01_toolchain_owner: root
+lab-node-01_toolchain_group: comp
 # Match your manual model: owner rwx, group r-x, others r-- (no execute for "other").
-lab-node-01_toolColleague-Nn_file_mode: "0754"
+lab-node-01_toolchain_file_mode: "0754"
 
-lab-node-01_toolColleague-Nn_bin_dir: /usr/bin
+lab-node-01_toolchain_bin_dir: /usr/bin
 
-# Basenames matched under lab-node-01_toolColleague-Nn_bin_dir (fnmatch). Versioned GCC/FPC families.
-lab-node-01_toolColleague-Nn_glob_patterns:
+# Basenames matched under lab-node-01_toolchain_bin_dir (fnmatch). Versioned GCC/FPC families.
+lab-node-01_toolchain_glob_patterns:
   - x86_64-linux-gnu-cpp-1*
   - x86_64-linux-gnu-g++-1*
   - x86_64-linux-gnu-gcc-1*
@@ -25,7 +25,7 @@ lab-node-01_toolColleague-Nn_glob_patterns:
   - x86_64-linux-gnu-fpc*
 
 # Exact names (no glob) — only regular files that exist are touched.
-lab-node-01_toolColleague-Nn_exact_basenames:
+lab-node-01_toolchain_exact_basenames:
   - x86_64-linux-gnu-as
   - x86_64-linux-gnu-ar
   - x86_64-linux-gnu-c++filt
@@ -34,5 +34,5 @@ lab-node-01_toolColleague-Nn_exact_basenames:
 
 # Optional: extra POSIX ACL group entries (rx) without changing primary group ownership.
 # Requires collection ansible.posix and package `acl` on the host (role installs `acl` when non-empty).
-# Example: lab-node-01_toolColleague-Nn_acl_extra_groups: [ "backup" ]
-lab-node-01_toolColleague-Nn_acl_extra_groups: []
+# Example: lab-node-01_toolchain_acl_extra_groups: [ "backup" ]
+lab-node-01_toolchain_acl_extra_groups: []

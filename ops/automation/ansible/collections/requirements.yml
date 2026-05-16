@@ -1,5 +1,5 @@
 ---
-# Optional: only needed if you enable lab-node-01_toolColleague-Nn_acl_extra_groups (ansible.posix.acl).
+# Optional: only needed if you enable lab-node-01_toolchain_acl_extra_groups (ansible.posix.acl).
 collections:
   - name: ansible.posix
     version: ">=1.5.0"

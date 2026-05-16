@@ -124,7 +124,7 @@ def sanitize_log_text(text: str | None) -> str:
 def clean_error(exc: BaseException | None, *, max_length: int = 8192) -> str:
     """
     Serialize an exception for logs or ``save_failure`` details: ``str(exc)``
-    plus a short ``__cause__`` Colleague-Nn (httpx/SQLAlchemy often wrap the original
+    plus a short ``__cause__`` chain (httpx/SQLAlchemy often wrap the original
     error), then ``sanitize_log_text``. Never pass raw ``str(e)`` to SQLite or
     user-visible error banners if the string may contain response bodies or SQL.
     """
