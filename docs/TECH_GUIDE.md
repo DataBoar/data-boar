@@ -295,16 +295,24 @@ When using the API (`--web`), the server loads config from **`CONFIG_PATH`** (en
 
 | Method   | Endpoint                            | Description                                                                                                                                      |
 | -------- | ----------                          | -------------                                                                                                                                    |
+| `GET`    | `/health`                           | Liveness/readiness JSON for orchestrators; **not** gated by `require_api_key` (see [SECURITY.md](SECURITY.md)).                                  |
+| `GET`    | `/about/json`                       | Machine-readable name, version, author, and license fields for API consumers.                                                                      |
 | `POST`   | `/scan` or `/start`                 | Start full audit in background; returns `session_id`. Optional JSON body: `{ "tenant": "Acme Corp", "technician": "Alice" }` to tag the session. |
 | `POST`   | `/scan_database`                    | One-off scan of one database (JSON body); returns `session_id`                                                                                   |
 | `GET`    | `/status`                           | `running`, `current_session_id`, `findings_count`                                                                                                |
+| `GET`    | `/findings`                         | Latest session: unified JSON array of DB + filesystem findings (`source_type`, `norm_tag`, paths/columns, etc.).                                 |
+| `GET`    | `/findings/csv`                     | Latest session: findings as UTF-8 CSV attachment.                                                                                               |
+| `GET`    | `/findings/{session_id}`            | Same unified JSON schema for a specific session.                                                                                                 |
+| `GET`    | `/findings/{session_id}/csv`        | CSV attachment for that session.                                                                                                                 |
 | `GET`    | `/report`                           | Download **last generated** Excel report                                                                                                         |
 | `GET`    | `/heatmap`                          | Download **last generated** heatmap PNG (sensitivity/risk heatmap for most recent session)                                                       |
-| `GET`    | `/list` or `/reports`               | List past sessions (to pick a report); includes `tenant_name`, `technician_name`, counts, and status.                                            |
+| `GET`    | `/list`                             | JSON list of past sessions (`tenant_name`, `technician_name`, counts, status). Query: `sort=date_desc` (default) or `sort=date_asc`. Unprefixed `/reports` redirects to the localized dashboard HTML list (`/{locale}/reports`), not this JSON API. |
 | `GET`    | `/reports/{session_id}`             | Regenerate and download report for that session                                                                                                  |
 | `GET`    | `/heatmap/{session_id}`             | Regenerate report (if needed) and download heatmap PNG for that session                                                                          |
 | `PATCH`  | `/sessions/{session_id}`            | Set or clear tenant/customer name for an existing session. Body: `{ "tenant": "..." }`.                                                          |
 | `PATCH`  | `/sessions/{session_id}/technician` | Set or clear technician/operator name for an existing session. Body: `{ "technician": "..." }`.                                                  |
+| `GET`    | `/logs`                             | Download the newest `audit_*.log` in the server working directory (plain text).                                                                  |
+| `GET`    | `/logs/{session_id}`                | Download the newest `audit_*.log` whose contents mention this `session_id`.                                                                      |
 
 For **deployment**, **using the web API** (with request/response examples), **configuration and credentials** (databases, filesystems, APIs with basic/bearer/OAuth2/custom auth, and shared content), and **downloading current and previous reports**, see **[USAGE.md](USAGE.md)**.
 

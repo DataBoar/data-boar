@@ -1,0 +1,276 @@
+# Brazil — FELCA (Lei 15.211/2025 — Estatuto Digital da Criança e do Adolescente)
+# In force: 17 March 2026
+#
+# NOT LEGAL ADVICE. This file is a technical starting point for inventory and
+# tagging of data fields that may relate to children and adolescents (menores de
+# 18 anos) in the context of digital platforms subject to FELCA. It does NOT
+# certify compliance, implement age verification, or replace DPO / legal counsel.
+#
+# Scope: FELCA applies to digital platforms directed at or accessible by minors
+# in Brazil. The engine supports discovery and mapping only — consent workflows,
+# parental verification, and platform-control requirements must be addressed by
+# DPO/legal teams independently of scan findings.
+#
+# Pair with: compliance-sample-lgpd.yaml for full Brazilian PII coverage.
+# Authority: ANPD (Autoridade Nacional de Proteção de Dados)
+# Reference: Lei 15.211/2025 — planalto.gov.br
+#
+# How to use:
+#   regex_overrides_file: path/to/compliance-sample-brazil_felca.yaml
+#   ml_patterns_file:     path/to/compliance-sample-brazil_felca.yaml
+#   Merge recommendation_overrides into report.recommendation_overrides.
+#
+# Token-aware note: use session token `compliance` or `felca` to bind
+# this sample in a Cursor / Composer 2 fresh thread before editing.
+
+regex:
+  # --- Age / date-of-birth signals that may indicate minors ---
+  - name: "FELCA_DOB_FIELD_LABEL"
+    # Column or field names explicitly referencing birth date of a child context.
+    # Heuristic: flag for DPO review; not all DOB fields belong to minors.
+    pattern: "(?i)\\b(data[_\\s-]?nasc(?:imento)?|nascimento|birth[_\\s-]?date|dob|date[_\\s-]?of[_\\s-]?birth)\\b"
+    norm_tag: "FELCA Art. 14 (dado de menor)"
+
+  - name: "FELCA_AGE_FIELD_LABEL"
+    # Column or field names for age — may indicate minor-related processing.
+    pattern: "(?i)\\b(idade|age|anos[_\\s]?completados|years[_\\s]?old)\\b"
+    norm_tag: "FELCA Art. 14 (dado de menor)"
+
+  - name: "FELCA_MINOR_INDICATOR_BOOLEAN"
+    # Boolean / flag columns explicitly marking minor status.
+    pattern: "(?i)\\b(is[_\\s]?minor|eh[_\\s]?menor|menor[_\\s]?de[_\\s]?idade|underage|crianca[_\\s]?flag|menor[_\\s]?flag)\\b"
+    norm_tag: "FELCA Art. 14 (dado de menor)"
+
+  - name: "FELCA_PARENTAL_CONSENT_FIELD"
+    # Fields capturing parental consent — core FELCA requirement.
+    pattern: "(?i)\\b(consentimento[_\\s]?parental|consentimento[_\\s]?responsavel|parental[_\\s]?consent|guardian[_\\s]?consent|responsible[_\\s]?consent|autoriza[cç][aã]o[_\\s]?responsavel)\\b"
+    norm_tag: "FELCA Art. 14 (consentimento responsável)"
+
+  - name: "FELCA_GUARDIAN_FIELD"
+    # Fields for parent / legal guardian data.
+    pattern: "(?i)\\b(responsavel[_\\s]?legal|nome[_\\s]?responsavel|parent[_\\s]?name|guardian[_\\s]?name|mae|pai|nome[_\\s]?mae|nome[_\\s]?pai|mother[_\\s]?name|father[_\\s]?name)\\b"
+    norm_tag: "FELCA Art. 14 (dado de responsável)"
+
+  - name: "FELCA_SCHOOL_ENROLLMENT"
+    # School enrollment / class identifiers common in EdTech platforms.
+    pattern: "(?i)\\b(matricula[_\\s]?escolar|numero[_\\s]?matricula|student[_\\s]?id|school[_\\s]?id|turma|serie[_\\s]?escolar|grade[_\\s]?level|ano[_\\s]?escolar|class[_\\s]?id|classroom[_\\s]?id)\\b"
+    norm_tag: "FELCA Art. 14 (dado educacional de menor)"
+
+  - name: "FELCA_CHILD_PROFILE_FIELD"
+    # Profile-type fields specific to child accounts.
+    pattern: "(?i)\\b(perfil[_\\s]?crianca|child[_\\s]?profile|kid[_\\s]?account|conta[_\\s]?menor|perfil[_\\s]?menor|junior[_\\s]?account)\\b"
+    norm_tag: "FELCA Art. 14 (dado de menor)"
+
+terms:
+  # --- FELCA / minor-protection vocabulary (PT-BR primary, EN secondary) ---
+
+  # Age group / status
+  - text: "criança"
+    label: sensitive
+  - text: "adolescente"
+    label: sensitive
+  - text: "menor de idade"
+    label: sensitive
+  - text: "menor"
+    label: sensitive
+  - text: "menores"
+    label: sensitive
+  - text: "child"
+    label: sensitive
+  - text: "children"
+    label: sensitive
+  - text: "adolescent"
+    label: sensitive
+  - text: "minors"
+    label: sensitive
+  - text: "underage"
+    label: sensitive
+  - text: "under 18"
+    label: sensitive
+  - text: "sub-18"
+    label: sensitive
+  - text: "idade escolar"
+    label: sensitive
+  - text: "school age"
+    label: sensitive
+
+  # Parental / guardian consent (FELCA core requirement)
+  - text: "consentimento parental"
+    label: sensitive
+  - text: "consentimento do responsável"
+    label: sensitive
+  - text: "autorização dos pais"
+    label: sensitive
+  - text: "autorização parental"
+    label: sensitive
+  - text: "responsável legal"
+    label: sensitive
+  - text: "responsavel legal"
+    label: sensitive
+  - text: "parental consent"
+    label: sensitive
+  - text: "guardian consent"
+    label: sensitive
+  - text: "parental authorization"
+    label: sensitive
+  - text: "parental approval"
+    label: sensitive
+  - text: "legal guardian"
+    label: sensitive
+  - text: "parent or guardian"
+    label: sensitive
+  - text: "consentimento verificável"
+    label: sensitive
+  - text: "verifiable parental consent"
+    label: sensitive
+
+  # Educational / platform context
+  - text: "matrícula escolar"
+    label: sensitive
+  - text: "matricula escolar"
+    label: sensitive
+  - text: "número de matrícula"
+    label: sensitive
+  - text: "turma"
+    label: sensitive
+  - text: "série escolar"
+    label: sensitive
+  - text: "serie escolar"
+    label: sensitive
+  - text: "ano escolar"
+    label: sensitive
+  - text: "escola"
+    label: sensitive
+  - text: "aluno"
+    label: sensitive
+  - text: "student id"
+    label: sensitive
+  - text: "school enrollment"
+    label: sensitive
+  - text: "grade level"
+    label: sensitive
+  - text: "classroom"
+    label: sensitive
+  - text: "plataforma educacional"
+    label: sensitive
+  - text: "edtech"
+    label: sensitive
+  - text: "ensino fundamental"
+    label: sensitive
+  - text: "ensino médio"
+    label: sensitive
+
+  # FELCA-specific rights and concepts
+  - text: "dado pessoal de criança"
+    label: sensitive
+  - text: "dado pessoal de adolescente"
+    label: sensitive
+  - text: "dados de menores"
+    label: sensitive
+  - text: "child personal data"
+    label: sensitive
+  - text: "children's data"
+    label: sensitive
+  - text: "child data"
+    label: sensitive
+  - text: "design adequado à criança"
+    label: sensitive
+  - text: "age-appropriate design"
+    label: sensitive
+  - text: "privacy by design para menores"
+    label: sensitive
+  - text: "proteção de dados de crianças"
+    label: sensitive
+  - text: "children's privacy"
+    label: sensitive
+  - text: "melhor interesse da criança"
+    label: sensitive
+  - text: "best interest of the child"
+    label: sensitive
+  - text: "estatuto digital"
+    label: sensitive
+  - text: "plataforma digital"
+    label: sensitive
+
+  # Digital platform signals
+  - text: "conta infantil"
+    label: sensitive
+  - text: "perfil infantil"
+    label: sensitive
+  - text: "perfil criança"
+    label: sensitive
+  - text: "child account"
+    label: sensitive
+  - text: "kids account"
+    label: sensitive
+  - text: "junior account"
+    label: sensitive
+  - text: "child profile"
+    label: sensitive
+  - text: "kid mode"
+    label: sensitive
+  - text: "modo infantil"
+    label: sensitive
+  - text: "controle parental"
+    label: sensitive
+  - text: "parental control"
+    label: sensitive
+  - text: "verificação de idade"
+    label: sensitive
+  - text: "age verification"
+    label: sensitive
+  - text: "age gate"
+    label: sensitive
+
+  # Health / wellbeing context (amplified risk for minors under FELCA)
+  - text: "saúde mental de menores"
+    label: sensitive
+  - text: "saude mental crianca"
+    label: sensitive
+  - text: "child mental health"
+    label: sensitive
+  - text: "child wellbeing"
+    label: sensitive
+  - text: "bem-estar infantil"
+    label: sensitive
+
+  # Non-sensitive anchors (reduce false positives)
+  - text: "product_id"
+    label: non_sensitive
+  - text: "item_id"
+    label: non_sensitive
+  - text: "session_token"
+    label: non_sensitive
+  - text: "log_entry"
+    label: non_sensitive
+  - text: "internal_code"
+    label: non_sensitive
+
+recommendation_overrides:
+  - norm_tag_pattern: "FELCA Art. 14 (consentimento responsável)"
+    base_legal: "FELCA (Lei 15.211/2025) Art. 14 — consentimento parental verificável obrigatório para tratamento de dados de crianças e adolescentes em plataformas digitais. Em vigor desde 17/03/2026. Autoridade: ANPD."
+    risk: "Campo captura ou referencia consentimento de responsável legal. FELCA exige que o consentimento seja verificável e documentado antes do tratamento de dados de menores."
+    recommendation: "Verificar: (1) se há workflow de coleta e registro de consentimento verificável; (2) se dados de consentimento são auditáveis; (3) se há mecanismo de revogação. Consultar DPO e assessoria jurídica. Não tratar como atestado de conformidade."
+    priority: "ALTA"
+    relevant_for: "DPO, encarregado LGPD, jurídico, produto, ANPD"
+
+  - norm_tag_pattern: "FELCA Art. 14 (dado educacional de menor)"
+    base_legal: "FELCA (Lei 15.211/2025) + LGPD Art. 14 — dado educacional de menor em plataforma digital. Tratamento requer base legal e consentimento parental verificável. Em vigor desde 17/03/2026."
+    risk: "Dados educacionais de menores (matrícula, turma, desempenho escolar) ampliam o perfil do menor — risco de reidentificação e uso indevido. Plataformas EdTech têm escrutínio elevado da ANPD."
+    recommendation: "Verificar finalidade do tratamento, base legal aplicável (Art. 7 ou 11 LGPD + FELCA), retenção mínima e acesso restrito. Documentar no RoPA. Consultar DPO."
+    priority: "ALTA"
+    relevant_for: "DPO, encarregado LGPD, jurídico, produto, EdTech"
+
+  - norm_tag_pattern: "FELCA Art. 14 (dado de responsável)"
+    base_legal: "FELCA (Lei 15.211/2025) — dado de responsável legal coletado no contexto de plataforma digital com menores. LGPD Art. 5 (dado pessoal do responsável)."
+    risk: "Dado do responsável legal coletado para fins de consentimento FELCA. Uso secundário ou compartilhamento não autorizado pode violar tanto a LGPD quanto o FELCA."
+    recommendation: "Confirmar que o dado do responsável é coletado apenas para a finalidade de consentimento e não reutilizado para marketing ou compartilhado sem nova base legal. Consultar DPO."
+    priority: "ALTA"
+    relevant_for: "DPO, jurídico, produto, marketing"
+
+  - norm_tag_pattern: "FELCA Art. 14 (dado de menor)"
+    base_legal: "FELCA (Lei 15.211/2025) + LGPD Art. 14 — dado pessoal de criança ou adolescente em plataforma digital. Em vigor desde 17/03/2026. Autoridade fiscalizatória: ANPD."
+    risk: "Dado relacionado a menor de idade em plataforma digital. FELCA impõe design adequado à criança, minimização de coleta, e limitações de uso para fins comerciais sem base legal qualificada."
+    recommendation: "Avaliar: (1) necessidade e proporcionalidade da coleta; (2) existência de consentimento parental verificável; (3) adequação do design da plataforma (Art. 9 FELCA — design adequado); (4) vedações específicas (publicidade comportamental direcionada a menores). Consultar DPO e assessoria jurídica. Este inventário não substitui avaliação legal."
+    priority: "ALTA"
+    relevant_for: "DPO, encarregado LGPD, jurídico, produto, ANPD, conselho de administração"

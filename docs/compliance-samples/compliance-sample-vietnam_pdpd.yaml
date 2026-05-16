@@ -1,0 +1,267 @@
+# Vietnam — Personal Data Protection Decree (Nghị định 13/2023/NĐ-CP)
+# In force: 1 July 2024 (transitional period ended; full enforcement)
+#
+# NOT LEGAL ADVICE. Technical starting point for inventory of personal data fields
+# in systems subject to Vietnam's PDPD. Does NOT certify compliance or replace
+# legal counsel, DPO analysis, or engagement with Vietnamese authorities.
+#
+# Authority: Bộ Công an (Ministry of Public Security) / Cục An ninh mạng
+# (Department of Cybersecurity and High-Tech Crime Prevention).
+# Reference: Nghị định 13/2023/NĐ-CP — thuvienphapluat.vn / chinhphu.vn
+#
+# Key scope: Any organisation collecting, storing, using, disclosing, or transferring
+# personal data of individuals in Vietnam, regardless of where the controller is
+# located. Extraterritorial reach similar to GDPR.
+#
+# Pair with: compliance-sample-eu_gdpr.yaml or compliance-sample-singapore_pdpa.yaml
+# for cross-border or APAC deployments.
+#
+# How to use:
+#   regex_overrides_file: path/to/compliance-sample-vietnam_pdpd.yaml
+#   ml_patterns_file:     path/to/compliance-sample-vietnam_pdpd.yaml
+#   Merge recommendation_overrides into report.recommendation_overrides.
+#
+# Token-aware note: use session token `compliance` or `pdpd` in Cursor / Composer 2.
+# Regex: use double-quoted YAML with escaped backslashes (see yaml-regex-patterns.mdc).
+
+regex:
+  # --- Vietnam national identifiers ---
+  - name: "VN_CCCD"
+    # Căn cước công dân (National ID Card) — 12 digits, issued 2021 onwards.
+    # Previous CMND (9-digit) still valid; combined pattern covers both.
+    pattern: "\\b\\d{12}\\b"
+    norm_tag: "Vietnam PDPD Art. 9 (sensitive — ID)"
+
+  - name: "VN_CMND_OLD"
+    # Chứng minh nhân dân — old 9-digit national ID (phased out but data still present).
+    pattern: "\\b\\d{9}\\b"
+    norm_tag: "Vietnam PDPD Art. 2 (personal data)"
+
+  - name: "VN_PASSPORT"
+    # Vietnamese passport: 1 letter + 7 digits (e.g. B1234567).
+    pattern: "\\b[A-Z]\\d{7}\\b"
+    norm_tag: "Vietnam PDPD Art. 9 (sensitive — ID)"
+
+  - name: "VN_PHONE"
+    # Vietnamese mobile / landline: 10 digits starting with 0, optional separators.
+    pattern: "\\b0\\d{2}[-\\s]?\\d{3}[-\\s]?\\d{4}\\b"
+    norm_tag: "Vietnam PDPD Art. 2 (personal data)"
+
+  - name: "VN_TAX_CODE_PERSONAL"
+    # Mã số thuế cá nhân (personal tax code) — 10 digits.
+    pattern: "\\b\\d{10}\\b"
+    norm_tag: "Vietnam PDPD Art. 2 (personal data)"
+
+  - name: "VN_TAX_CODE_BUSINESS"
+    # Mã số thuế doanh nghiệp (business tax code) — 13 digits.
+    pattern: "\\b\\d{10}-\\d{3}\\b"
+    norm_tag: "Vietnam PDPD Art. 2 (personal data)"
+
+  - name: "VN_BHXH"
+    # Mã số bảo hiểm xã hội (social insurance code) — 10 digits.
+    pattern: "\\b\\d{10}\\b"
+    norm_tag: "Vietnam PDPD Art. 9 (sensitive — social insurance)"
+
+  # --- Precise geolocation (same geometry as GDPR/VCDPA samples) ---
+  - name: "VN_PDPD_JSON_LAT_PRECISION"
+    pattern: "(?i)[\"']lat[\"']\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\b"
+    norm_tag: "Vietnam PDPD Art. 9 (sensitive — geolocation)"
+
+  - name: "VN_PDPD_JSON_LNG_PRECISION"
+    pattern: "(?i)[\"'](?:lng|lon)[\"']\\s*:\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}\\b"
+    norm_tag: "Vietnam PDPD Art. 9 (sensitive — geolocation)"
+
+  - name: "VN_PDPD_LOCATION_CSV_PAIR"
+    pattern: "(?i)\\blocation\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*,\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "Vietnam PDPD Art. 9 (sensitive — geolocation)"
+
+  # --- Field label patterns ---
+  - name: "VN_FIELD_CCCD_LABEL"
+    pattern: "(?i)\\b(cccd|cmnd|can[_\\s]?cuoc|chung[_\\s]?minh)\\b"
+    norm_tag: "Vietnam PDPD Art. 9 (sensitive — ID)"
+
+  - name: "VN_FIELD_HEALTH_LABEL"
+    pattern: "(?i)\\b(ho[_\\s]?so[_\\s]?benh[_\\s]?an|benh[_\\s]?an|y[_\\s]?te|suc[_\\s]?khoe|kham[_\\s]?benh|benh[_\\s]?vien)\\b"
+    norm_tag: "Vietnam PDPD Art. 9 (sensitive — health)"
+
+terms:
+  # --- Vietnamese terms (primary) + English (secondary) ---
+
+  # Basic personal data (dữ liệu cá nhân cơ bản - Art. 2)
+  - { text: "dữ liệu cá nhân", label: sensitive }
+  - { text: "du lieu ca nhan", label: sensitive }
+  - { text: "thông tin cá nhân", label: sensitive }
+  - { text: "thong tin ca nhan", label: sensitive }
+  - { text: "chủ thể dữ liệu", label: sensitive }
+  - { text: "personal data", label: sensitive }
+  - { text: "personal information", label: sensitive }
+  - { text: "data subject", label: sensitive }
+
+  # Identity documents
+  - { text: "căn cước công dân", label: sensitive }
+  - { text: "can cuoc cong dan", label: sensitive }
+  - { text: "chứng minh nhân dân", label: sensitive }
+  - { text: "chung minh nhan dan", label: sensitive }
+  - { text: "hộ chiếu", label: sensitive }
+  - { text: "ho chieu", label: sensitive }
+  - { text: "passport", label: sensitive }
+  - { text: "national id", label: sensitive }
+
+  # Financial data (dữ liệu tài chính — classified as sensitive in Vietnam PDPD)
+  - { text: "dữ liệu tài chính", label: sensitive }
+  - { text: "du lieu tai chinh", label: sensitive }
+  - { text: "tài khoản ngân hàng", label: sensitive }
+  - { text: "tai khoan ngan hang", label: sensitive }
+  - { text: "số tài khoản", label: sensitive }
+  - { text: "so tai khoan", label: sensitive }
+  - { text: "bank account", label: sensitive }
+  - { text: "credit card", label: sensitive }
+  - { text: "thẻ tín dụng", label: sensitive }
+  - { text: "the tin dung", label: sensitive }
+  - { text: "số thẻ ngân hàng", label: sensitive }
+  - { text: "financial data", label: sensitive }
+
+  # Health / medical (dữ liệu sức khỏe — Art. 9 sensitive)
+  - { text: "sức khỏe", label: sensitive }
+  - { text: "suc khoe", label: sensitive }
+  - { text: "bệnh án", label: sensitive }
+  - { text: "benh an", label: sensitive }
+  - { text: "hồ sơ y tế", label: sensitive }
+  - { text: "ho so y te", label: sensitive }
+  - { text: "y tế", label: sensitive }
+  - { text: "y te", label: sensitive }
+  - { text: "health record", label: sensitive }
+  - { text: "medical record", label: sensitive }
+  - { text: "bệnh viện", label: sensitive }
+  - { text: "khám bệnh", label: sensitive }
+
+  # Biometric (dữ liệu sinh trắc học — Art. 9 sensitive)
+  - { text: "sinh trắc học", label: sensitive }
+  - { text: "sinh trac hoc", label: sensitive }
+  - { text: "vân tay", label: sensitive }
+  - { text: "van tay", label: sensitive }
+  - { text: "nhận diện khuôn mặt", label: sensitive }
+  - { text: "nhan dien khuon mat", label: sensitive }
+  - { text: "biometric data", label: sensitive }
+  - { text: "fingerprint", label: sensitive }
+  - { text: "face recognition", label: sensitive }
+  - { text: "facial recognition", label: sensitive }
+
+  # Genetic (dữ liệu di truyền — Art. 9 sensitive)
+  - { text: "dữ liệu di truyền", label: sensitive }
+  - { text: "du lieu di truyen", label: sensitive }
+  - { text: "genetic data", label: sensitive }
+
+  # Political / religious (Art. 9 sensitive)
+  - { text: "quan điểm chính trị", label: sensitive }
+  - { text: "quan diem chinh tri", label: sensitive }
+  - { text: "tôn giáo", label: sensitive }
+  - { text: "ton giao", label: sensitive }
+  - { text: "tín ngưỡng", label: sensitive }
+  - { text: "tin nguong", label: sensitive }
+  - { text: "political opinion", label: sensitive }
+  - { text: "religion", label: sensitive }
+  - { text: "religious belief", label: sensitive }
+
+  # Ethnic origin (nguồn gốc dân tộc — Art. 9 sensitive)
+  - { text: "nguồn gốc dân tộc", label: sensitive }
+  - { text: "nguon goc dan toc", label: sensitive }
+  - { text: "ethnic origin", label: sensitive }
+  - { text: "race", label: sensitive }
+
+  # Sexual life (cuộc sống tình dục — Art. 9 sensitive)
+  - { text: "cuộc sống tình dục", label: sensitive }
+  - { text: "cuoc song tinh duc", label: sensitive }
+  - { text: "sexual orientation", label: sensitive }
+  - { text: "sexual life", label: sensitive }
+
+  # Criminal data (dữ liệu hình sự — Art. 9 sensitive)
+  - { text: "dữ liệu hình sự", label: sensitive }
+  - { text: "du lieu hinh su", label: sensitive }
+  - { text: "tiền án", label: sensitive }
+  - { text: "tien an", label: sensitive }
+  - { text: "criminal record", label: sensitive }
+
+  # Geolocation (thông tin vị trí địa lý — Art. 9 sensitive)
+  - { text: "vị trí địa lý", label: sensitive }
+  - { text: "vi tri dia ly", label: sensitive }
+  - { text: "tọa độ", label: sensitive }
+  - { text: "toa do", label: sensitive }
+  - { text: "geolocation", label: sensitive }
+  - { text: "precise location", label: sensitive }
+  - { text: "GPS coordinates", label: sensitive }
+
+  # Children's data (dữ liệu trẻ em — Art. 9 sensitive)
+  - { text: "dữ liệu trẻ em", label: sensitive }
+  - { text: "du lieu tre em", label: sensitive }
+  - { text: "trẻ em", label: sensitive }
+  - { text: "tre em", label: sensitive }
+  - { text: "children's data", label: sensitive }
+
+  # Contact / demographic
+  - { text: "địa chỉ email", label: sensitive }
+  - { text: "email", label: sensitive }
+  - { text: "số điện thoại", label: sensitive }
+  - { text: "so dien thoai", label: sensitive }
+  - { text: "phone number", label: sensitive }
+  - { text: "địa chỉ", label: sensitive }
+  - { text: "dia chi", label: sensitive }
+  - { text: "address", label: sensitive }
+  - { text: "ngày sinh", label: sensitive }
+  - { text: "ngay sinh", label: sensitive }
+  - { text: "date of birth", label: sensitive }
+  - { text: "họ tên", label: sensitive }
+  - { text: "ho ten", label: sensitive }
+  - { text: "full name", label: sensitive }
+  - { text: "password", label: sensitive }
+  - { text: "mật khẩu", label: sensitive }
+  - { text: "mat khau", label: sensitive }
+
+  # Controller / processor terminology
+  - { text: "bên kiểm soát dữ liệu", label: sensitive }
+  - { text: "bên xử lý dữ liệu", label: sensitive }
+  - { text: "data controller", label: sensitive }
+  - { text: "data processor", label: sensitive }
+
+  # Non-sensitive anchors
+  - { text: "product_id", label: non_sensitive }
+  - { text: "item_code", label: non_sensitive }
+  - { text: "session_token", label: non_sensitive }
+  - { text: "log_entry", label: non_sensitive }
+  - { text: "system_log", label: non_sensitive }
+
+recommendation_overrides:
+  - norm_tag_pattern: "Vietnam PDPD Art. 9 (sensitive — health)"
+    base_legal: "Vietnam PDPD (Nghị định 13/2023/NĐ-CP) Art. 9 — dữ liệu sức khỏe là dữ liệu cá nhân nhạy cảm. In force since 1 July 2024. Authority: Bộ Công an."
+    risk: "Health / medical data is classified as sensitive personal data under Art. 9. Requires explicit consent and heightened security measures. Cross-border transfer requires impact assessment and Ministry of Public Security notification."
+    recommendation: "Verify explicit consent for collection. Assess cross-border transfer obligations (Art. 25 — impact assessment + notification to Bộ Công an for critical transfers). Engage DPO / legal counsel. This label is not a legal conclusion."
+    priority: "HIGH"
+    relevant_for: "DPO, legal, IT security, APAC compliance team"
+
+  - norm_tag_pattern: "Vietnam PDPD Art. 9 (sensitive — ID)"
+    base_legal: "Vietnam PDPD (Nghị định 13/2023/NĐ-CP) Art. 9 — national ID, passport, and biometric reference numbers as sensitive personal data. In force since 1 July 2024."
+    risk: "National identity documents are sensitive personal data under Art. 9. Unauthorised disclosure or cross-border transfer may trigger regulatory penalties and mandatory data breach notification."
+    recommendation: "Apply data minimisation; verify lawful basis and explicit consent where applicable. For cross-border transfers, conduct a Personal Data Protection Impact Assessment (DPIA) and notify Bộ Công an if required. Consult legal counsel."
+    priority: "HIGH"
+    relevant_for: "DPO, legal, IT security"
+
+  - norm_tag_pattern: "Vietnam PDPD Art. 9 (sensitive — geolocation)"
+    base_legal: "Vietnam PDPD (Nghị định 13/2023/NĐ-CP) Art. 9 — thông tin vị trí địa lý chính xác là dữ liệu nhạy cảm. In force since 1 July 2024."
+    risk: "Precise geolocation is classified as sensitive personal data under Art. 9. Heightened consent, security, and cross-border transfer rules apply."
+    recommendation: "Minimise precision of stored coordinates. Verify explicit consent. Assess cross-border transfer obligations. Consult legal counsel. Heuristic inventory only — not a legal determination."
+    priority: "HIGH"
+    relevant_for: "DPO, legal, product team"
+
+  - norm_tag_pattern: "Vietnam PDPD Art. 9 (sensitive — social insurance)"
+    base_legal: "Vietnam PDPD (Nghị định 13/2023/NĐ-CP) Art. 9 — social insurance codes linked to health/financial data classified as sensitive. In force since 1 July 2024."
+    risk: "Social insurance / BHXH numbers are linked to health and financial records. Classified as sensitive personal data under Art. 9 in combination."
+    recommendation: "Apply access controls, minimise retention, and verify lawful basis. Consult DPO and legal counsel for any cross-border use."
+    priority: "HIGH"
+    relevant_for: "DPO, legal, HR, payroll"
+
+  - norm_tag_pattern: "Vietnam PDPD Art. 2 (personal data)"
+    base_legal: "Vietnam PDPD (Nghị định 13/2023/NĐ-CP) Art. 2 — dữ liệu cá nhân cơ bản. In force since 1 July 2024. Authority: Bộ Công an."
+    risk: "Basic personal data under Art. 2. Controllers must register processing activities with Bộ Công an for certain categories. Breach notification obligation applies."
+    recommendation: "Ensure lawful basis, consent where required, and breach notification readiness (Art. 23 — 72 h to Bộ Công an). Register data processing activities if required. Consult DPO and legal counsel."
+    priority: "MEDIUM"
+    relevant_for: "DPO, legal, IT security, APAC compliance"
