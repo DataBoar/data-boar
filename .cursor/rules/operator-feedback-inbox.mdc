@@ -16,7 +16,8 @@ alwaysApply: false
 
 1. **Drop zone (gitignored):** **`docs/feedbacks, reviews, comments and criticism/`** at repo root — see **`docs/private.example/feedbacks-inbox/README.md`** (+ **`.pt_BR.md`**) and **`docs/PRIVATE_OPERATOR_NOTES.md`**.
 1. **First action:** **`read_file`** / list that folder when the operator asks for feedback triage. If **missing or empty**, say so plainly.
-1. **Origin unclear** (e.g. Corporate-Entity-C vs Gemini vs other): **ask the operator** before writing attributions into **`docs/plans/`**, **`PLANS_TODO.md`**, or **issues**.
+1. **Origin unclear** (e.g. Corporate-Entity-C vs Gemini vs **Claude (Sonnet or other) external export** vs other): **ask the operator** before writing attributions into **`docs/plans/`**, **`PLANS_TODO.md`**, or **issue/PR text**. When the operator **already names** the source (e.g. pasted Claude multi-persona audit), **do not** demand re-confirmation for that label.
+1. **GitHub issues** may **mirror** inbox items as a **tracker** (optional). Treat issue bodies as **pointers + short summaries** — **not** a place to paste raw inbox blobs. **Triage posture:** external reviews are **recommendations and opinions**, **not** authoritative gates — same habit as **Gemini** rounds: **done** / **deferred** / **won’t do** / **already satisfied** is a **maintainer + agent** decision; close or comment issues accordingly when you reconcile.
 1. **Never** commit raw inbox files to **`origin`** / public GitHub. Distilled, redacted summaries belong in tracked plans or ops notes per project policy.
 1. **Private mirror:** Receipts may also live under **`docs/private/feedbacks_and_reviews/`** in the stacked private repo — still not on the product remote.
 

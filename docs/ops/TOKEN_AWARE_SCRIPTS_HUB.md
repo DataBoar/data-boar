@@ -29,6 +29,14 @@
 | `safe-workspace-snapshot.ps1` | Pre-commit snapshot | Session **`safe-commit`** |
 | `smoke-maturity-assessment-poc.ps1` | Fast pytest subset (maturity POC gate 1) | [PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md](../plans/PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md), [SMOKE_MATURITY_ASSESSMENT_POC.md](SMOKE_MATURITY_ASSESSMENT_POC.md) |
 
+### 1b. GitHub Actions YAML contract (pytest — not under `scripts/`)
+
+| Artifact | How to run | Wired to |
+| -------- | ---------- | -------- |
+| **[`tests/test_github_workflows.py`](../../tests/test_github_workflows.py)** | **`.\scripts\quick-test.ps1 -Path tests/test_github_workflows.py`** (or full **`check-all`**) · **`./scripts/quick-test.sh --path tests/test_github_workflows.py`** | **[`.github/workflows/ci.yml`](../../.github/workflows/ci.yml)** runs **`uv run pytest`** on the **full** suite (this module always included); **[ADR 0005](../adr/ADR-0005-ci-github-actions-supply-chain-pins.md)**; **[`OPERATOR_NOTIFICATION_CHANNELS.md`](OPERATOR_NOTIFICATION_CHANNELS.md)** §4.1 / §4.1.1; **[`TESTING.md`](../TESTING.md)** |
+
+**Use after:** edits to **`.github/workflows/*.yml`** (Slack, `ci.yml` pins / lint job, Semgrep, Gitleaks, SBOM, Dependabot sync, zizmor) — fast feedback without running the entire product test matrix.
+
 ### 1a. Windows fast CLI (content / tail / preview)
 
 | Script | Role | Wired to |

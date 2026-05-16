@@ -12,6 +12,8 @@ audit_results.db-journal
 *.db-journal
 # Ephemeral scan state at repo root (BoarStateTracker / local runs)
 .data_boar_state.json
+# Gitleaks CLI JSON report at repo root (local audit artifact; do not track — see docs/ops if CI runs gitleaks)
+gitleaks-report.json
 # Local completão QA SQLite + checkpoints (generate via scripts/setup_lab_db.py / lab runs)
 data/qa_completao_*.db
 data/qa_completao_*.json

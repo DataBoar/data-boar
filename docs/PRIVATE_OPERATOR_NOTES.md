@@ -25,8 +25,8 @@ git check-ignore -v docs/private/anything.md
 
 ### Partner / collaborator / client feedback (separate from `docs/private/`)
 
-- **Path:** **`docs/feedbacks, reviews, comments and criticism/`** — **gitignored** (see root **`.gitignore`**), **not** a subtree of **`docs/private/`**. Same **WRB**-style habit as Corporate-Entity-C/Gemini review drops: the operator **posts** all incoming feedback there.
-- **Agents:** When asked to find or interpret such feedback, look **there first**; if empty or origin is unclear (**Corporate-Entity-C** vs **Gemini** vs other), **ask the operator** before attributing in tracked plans. Rule **`.cursor/rules/operator-feedback-inbox.mdc`** · tracked blueprint **`docs/private.example/feedbacks-inbox/README.md`**.
+- **Path:** **`docs/feedbacks, reviews, comments and criticism/`** — **gitignored** (see root **`.gitignore`**), **not** a subtree of **`docs/private/`**. Same **WRB**-style habit as Corporate-Entity-C / **Gemini** / **Claude (external multi-persona)**: the operator **pastes** incoming feedback there; **`origin`** issues may **track** items but must stay **short** (no raw dumps).
+- **Agents:** When asked to find or interpret such feedback, look **there first**; if empty or origin is unclear (**Corporate-Entity-C** vs **Gemini** vs **Claude external** vs other), **ask the operator** before attributing in tracked plans. External reviews are **advisory** — triage **done / defer / won’t do / already done** like **Gemini** rounds. Rule **`.cursor/rules/operator-feedback-inbox.mdc`** · tracked blueprint **`docs/private.example/feedbacks-inbox/README.md`**.
 
 ---
 

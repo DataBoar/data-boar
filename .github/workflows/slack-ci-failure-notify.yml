@@ -11,6 +11,7 @@ permissions:
     workflows:
       - CI
       - Semgrep
+      - Gitleaks
       - SBOM
       - Dependabot requirements.txt sync
     types: [completed]

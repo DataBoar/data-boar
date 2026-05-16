@@ -70,7 +70,7 @@ This document suggests **additional layers** (tools, habits, and workflow) to ke
 - **GitHub Actions:** [`.github/workflows/semgrep.yml`](../.github/workflows/semgrep.yml) runs on push/PR to `main`/`master` using the official **`semgrep/semgrep`** container, ruleset **`p/python`**, **`--metrics=off`**, and one **excluded rule** documented in workflow comments (false positive on vetted `sqlalchemy.text` identifier paths).
 - **Local (optional):** `uvx semgrep scan --config p/python --metrics=off` (add the same `--exclude-rule` as in the workflow if you want parity). Custom rules can live under `.semgrep/` later.
 
-**Prevents:** Extra Python anti-patterns; complements CodeQL. **Slack:** [slack-ci-failure-notify.yml](../.github/workflows/slack-ci-failure-notify.yml) already lists **`Semgrep`** next to **`CI`** when `SLACK_WEBHOOK_URL` is set ([OPERATOR_NOTIFICATION_CHANNELS.md](ops/OPERATOR_NOTIFICATION_CHANNELS.md) §4.1).
+**Prevents:** Extra Python anti-patterns; complements CodeQL. **Slack:** **`Slack CI failure notify`** (`workflow_run`, lists **`Semgrep`** next to **`CI`**, etc.) ships on **`origin`** as **`.github/workflows/slack-ci-failure-notify.yml`**; a **private snapshot** for pause drills lives under **`docs/private/raw_pastes/cursor-incident/slack-ci-failure-notify.yml.old`** ([OPERATOR_NOTIFICATION_CHANNELS.md](ops/OPERATOR_NOTIFICATION_CHANNELS.md) §4.1.1). Pause again only deliberately (same doc).
 
 ---
 

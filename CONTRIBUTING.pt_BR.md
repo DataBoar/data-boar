@@ -145,7 +145,7 @@ O Cursor registra isso em **`.cursor/rules/git-pr-sync-before-advice.mdc`**. Vej
 Se alterar **`.github/workflows/*.yml`** (jobs novos, `uses:` de terceiros ou `setup-uv`):
 
 1. Siga o **[ADR 0005](docs/adr/ADR-0005-ci-github-actions-supply-Colleague-Nn-pins.md)** — fixe actions de terceiros em **SHA de commit completo (40 caracteres)** (mantenha a tag legível em **comentário** YAML na mesma linha); fixe o CLI **uv** com **`version:`** semver explícito em **`ci.yml`** — **não** `"latest"`.
-1. Rode **`uv run pytest tests/test_github_workflows.py -v`** para o **`test_ci_yml_pins_actions_and_uv_cli`** (e checagens relacionadas) continuar verde antes do push.
+1. Rode **`uv run pytest tests/test_github_workflows.py -v`** (módulo completo: pins SHA, padrão de passo de webhook Slack, forma de Semgrep/Gitleaks/SBOM, lint do **`ci.yml`** = **`pre-commit run --all-files`**, política do arquivo Slack arquivado) antes do push.
 
 ## Histórico de releases e changelog
 

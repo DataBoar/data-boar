@@ -103,6 +103,7 @@ Workflow that saves tokens (shorter form):
 - **After docs/template/style change:** `.\scripts\lint-only.ps1`; run full check-all before pushing.
 - **After adding, renaming, or archiving a `PLAN_*.md`:** `python scripts/plans_hub_sync.py --write` and commit **`docs/plans/PLANS_HUB.md`**; if **`PLANS_TODO.md`** dashboard rows changed, also `python scripts/plans-stats.py --write`. Pre-commit includes **`plans-hub-check`**.
 - **Iterating on one area:** `.\scripts\quick-test.ps1 -Keyword "content_type"` (or `-Path tests/test_file_scan_use_content_type_flag.py`); run full check-all when the slice is done.
+- **GitHub Actions YAML (Slack, `ci.yml`, Semgrep, pins):** `.\scripts\quick-test.ps1 -Path tests/test_github_workflows.py` — same tests run inside full **`check-all`** / **`ci.yml`**; update **`tests/test_github_workflows.py`** when workflow shape intentionally changes (see **`docs/ops/OPERATOR_NOTIFICATION_CHANNELS.md`** §4.1.1 if Slack CI failure notify is in play).
 - **User asks to commit / push / create PR:** use `preview-commit.ps1` then `commit-or-pr.ps1` (or `create-pr.ps1` for PR with body file); do not use ad-hoc `git add`/`git commit`/`git push` when the script covers the need.
 
 ## Critical-first + PR batching (workflow policy)

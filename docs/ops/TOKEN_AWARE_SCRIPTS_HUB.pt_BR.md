@@ -29,6 +29,14 @@
 | `safe-workspace-snapshot.ps1` | Snapshot pre-commit | Palavra-chave **`safe-commit`** |
 | `smoke-maturity-assessment-poc.ps1` | Subconjunto pytest rapido (gate 1 do POC de maturidade) | [PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md](../plans/PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md), [SMOKE_MATURITY_ASSESSMENT_POC.md](SMOKE_MATURITY_ASSESSMENT_POC.md) |
 
+### 1b. Contrato YAML do GitHub Actions (pytest — não fica em `scripts/`)
+
+| Artefato | Como rodar | Ligado a |
+| -------- | ---------- | -------- |
+| **[`tests/test_github_workflows.py`](../../tests/test_github_workflows.py)** | **`.\scripts\quick-test.ps1 -Path tests/test_github_workflows.py`** (ou **`check-all`**) · **`./scripts/quick-test.sh --path tests/test_github_workflows.py`** | **[`.github/workflows/ci.yml`](../../.github/workflows/ci.yml)** roda **`uv run pytest`** na **suíte completa** (este módulo entra sempre); **[ADR 0005](../adr/ADR-0005-ci-github-actions-supply-chain-pins.md)**; **[`OPERATOR_NOTIFICATION_CHANNELS.pt_BR.md`](OPERATOR_NOTIFICATION_CHANNELS.pt_BR.md)** §4.1 / §4.1.1; **[`TESTING.pt_BR.md`](../TESTING.pt_BR.md)** |
+
+**Use depois de:** mudanças em **`.github/workflows/*.yml`** (Slack, pins / job de lint do `ci.yml`, Semgrep, Gitleaks, SBOM, Dependabot sync, zizmor) — feedback rápido sem rodar toda a matriz de testes do produto.
+
 ### 1a. CLI rápida no Windows (conteúdo / tail / preview)
 
 | Script | Função | Ligado a |

@@ -14,7 +14,7 @@ description: Use when editing docs/plans (PLANS_TODO, PLANS_HUB, PLAN_*), docs/M
 | **Pre-commit / CI** | Same hooks as `.\scripts\check-all.ps1` Lint job | `uv run pre-commit run --all-files` |
 | **Tests** | `tests/test_plans_hub_sync.py`, `tests/test_plans_stats.py`, `tests/test_docs_external_no_plan_links.py`, markdown lint | Part of `check-all` |
 
-These **do not** auto-edit **MAP.md**, **README** pitch tables, or **AGENTS.md** “last ADR” line—that is **human/agent ritual** below.
+These **do not** auto-edit **MAP.md**, **README** pitch tables, or **AGENTS.md** ADR guidance prose—that is **human/agent ritual** below. **AGENTS.md** does **not** carry a hardcoded “current last ADR” number (it goes stale); agents discover the latest file on disk or run **`.\scripts\new-adr.ps1`** (auto-numbering).
 
 ## Ritual — after a **notable** sequencing or plan-file change
 
@@ -26,7 +26,7 @@ These **do not** auto-edit **MAP.md**, **README** pitch tables, or **AGENTS.md**
 ## Ritual — after a **new or materially changed ADR**
 
 1. **`docs/adr/README.md`** and **`docs/adr/README.pt_BR.md`:** index row + consequences if needed.
-2. **`AGENTS.md`:** bump “Current last: **ADR NNNN**” to match the highest numbered `docs/adr/NNNN-*.md` **Accepted** (or the repo convention you use for “latest”).
+2. Do **not** edit **AGENTS.md** just to bump a “last ADR” number—**AGENTS.md** intentionally avoids that hardcode. Use **`.\scripts\new-adr.ps1`** for the next id or list **`docs/adr/ADR-*.md`** sorted to see the latest.
 3. If the ADR changes operator-facing claims: touch **MAP** / **COMPLIANCE_AND_LEGAL** / **USAGE** pointers as appropriate (same PR when possible).
 
 ## Ritual — after **MAP.md** / **docs/README** hub edits

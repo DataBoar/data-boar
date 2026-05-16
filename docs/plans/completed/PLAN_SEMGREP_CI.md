@@ -1,6 +1,6 @@
 # Plan: Semgrep in CI (OSS ruleset)
 
-**Status:** ✅ **Complete** (archived under `docs/plans/completed/`). Workflow on `main`, tests, docs, Corporate-Entity-C baseline. **Slack:** failure notify watches **`Semgrep`** when **`SLACK_WEBHOOK_URL`** is set — optional operator smoke: see § below. **Synced with:** [PLANS_TODO.md](../PLANS_TODO.md).
+**Status:** ✅ **Complete** (archived under `docs/plans/completed/`). Workflow on `main`, tests, docs, Corporate-Entity-C baseline. **Slack:** **`Slack CI failure notify`** watches **`Semgrep`** (and other listed workflows) on upstream **`failure`** when **`SLACK_WEBHOOK_URL`** is set — optional operator smoke: see § below. **Synced with:** [PLANS_TODO.md](../PLANS_TODO.md).
 
 ## Purpose
 
@@ -31,13 +31,13 @@ Add **Semgrep** as a **complementary** static scan in GitHub Actions alongside *
 | 2 | Extend `tests/test_github_workflows.py` so the workflow YAML parses and has expected `on` / job shape.                                                                            | ✅ Done         |
 | 3 | Update [QUALITY_WORKFLOW_RECOMMENDATIONS.md](../../QUALITY_WORKFLOW_RECOMMENDATIONS.md) §4 to point at the workflow.                                                                 | ✅ Done         |
 | 4 | Document in [PLANS_TODO.md](../PLANS_TODO.md) and ops baseline for Corporate-Entity-C.                                                                                                           | ✅ Done         |
-| 5 | **Slack on Semgrep failure:** [slack-ci-failure-notify.yml](../../../.github/workflows/slack-ci-failure-notify.yml) lists **`Semgrep`** in `workflow_run.workflows` (with **`CI`**). | ✅ Done (wired) |
+| 5 | **Slack on Semgrep failure:** **`Slack CI failure notify`** lists **`Semgrep`** in `workflow_run.workflows` (with **`CI`**, **`Gitleaks`**, **`SBOM`**, **`Dependabot requirements.txt sync`**); live YAML **`.github/workflows/slack-ci-failure-notify.yml`** on **`origin`**, with **private snapshot** **`docs/private/raw_pastes/cursor-incident/slack-ci-failure-notify.yml.old`** for pause drills ([OPERATOR_NOTIFICATION_CHANNELS.md](../../ops/OPERATOR_NOTIFICATION_CHANNELS.md) §4.1.1). | ✅ Done |
 
 ---
 
 ## Optional operator smoke (Slack path)
 
-To **prove** Slack fires on **Semgrep** (not only on **CI**), use a **throwaway branch** (never merge): e.g. temporarily remove `--exclude-rule …` or add a trivial Semgrep violation, push, open PR, wait for **Semgrep** workflow → **failure**, then confirm **Slack CI failure notify** ran and the message shows **Semgrep (OSS, Python)** (or the current job `name`) in the first line. Revert the branch. Requires **`SLACK_WEBHOOK_URL`** on the repo.
+To **prove** Slack fires on **Semgrep** (not only on **CI**), use a **throwaway branch** (never merge): e.g. temporarily remove `--exclude-rule …` or add a trivial Semgrep violation, push, open PR, wait for **Semgrep** workflow → **failure**, then confirm **Slack CI failure notify** ran (requires **`.github/workflows/slack-ci-failure-notify.yml`** on the default branch per [OPERATOR_NOTIFICATION_CHANNELS.md](../../ops/OPERATOR_NOTIFICATION_CHANNELS.md) §4.1.1) and the message shows **Semgrep (OSS, Python)** (or the current job `name`) in the first line. Revert the branch. Requires **`SLACK_WEBHOOK_URL`** on the repo.
 
 ---
 

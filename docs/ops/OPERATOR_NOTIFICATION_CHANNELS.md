@@ -94,19 +94,30 @@ Implement **one generic “notify” step** in CI (bash/PowerShell) that posts t
 
 ### 4.1 Slack setup checklist (channel B)
 
-**Webhook guard (all Slack Actions):** Every workflow in `.github/workflows/slack-*.yml` that POSTs to Slack uses a **job-level** `if:` with `secrets.SLACK_WEBHOOK_URL != ''` (except where additional toggles apply). If the secret is unset, the job is **Skipped** — not failed.
+**Webhook guard (Slack Actions that POST):** Do **not** put `secrets.*` or `SLACK_WEBHOOK_URL` in a **job-level** `if:` (GitHub can record a **phantom failed** workflow run with zero jobs). The repo pattern is: a **step** reads `SLACK_WEBHOOK_URL` via `env:`, writes `present=true|false` to `$GITHUB_OUTPUT`, and downstream steps use `if: steps.<id>.outputs.present == 'true'`. **Regression tests:** `tests/test_github_workflows.py::test_slack_post_workflows_guard_webhook_secret` (and, when the file is on `origin`, it includes every shipped `slack-*.yml` that POSTs).
 
 1. In your Slack workspace, create a channel (e.g. **`#data-boar-ops`**).
 1. Create an [**Incoming Webhook**](https://api.slack.com/messaging/webhooks) for your workspace (Slack app → choose channel → copy the webhook URL).
 1. On GitHub: **Settings → Secrets and variables → Actions → New repository secret** — name **`SLACK_WEBHOOK_URL`**, value = the webhook URL.
 1. **Smoke test:** **Actions → Slack operator ping (manual) → Run workflow** (optional custom message). If the secret is unset, the job is **skipped** (no failure).
 1. **Optional @mention for mobile/desktop push:** Repository **variable** **`SLACK_MENTION_USER_ID`** (Slack member ID, `U…`) — see §4.2 D). Manual ping also accepts input **`mention_user_id`** for a one-off test.
-1. **CI / Semgrep failure ping (phase 1):** workflow **`Slack CI failure notify`** (`.github/workflows/slack-ci-failure-notify.yml`) runs when **`CI`** or **`Semgrep`** finishes with **`failure`** (push/PR to `main` or `master`). Uses the **same** `SLACK_WEBHOOK_URL`. If the secret is unset, the notify job is **skipped**. The Slack line uses the failing workflow’s display name (e.g. **Test (Python 3.13)** or **Semgrep (OSS, Python)**). *Fork PRs:* failures may still produce a ping—reduce noise later (branch filters) if needed.
+1. **CI / Semgrep failure ping (phase 1):** workflow **`Slack CI failure notify`** (`.github/workflows/slack-ci-failure-notify.yml`) runs when **`CI`**, **`Semgrep`**, **`Gitleaks`**, **`SBOM`**, or **`Dependabot requirements.txt sync`** completes with **`failure`** (per GitHub `workflow_run` rules). Uses **`SLACK_WEBHOOK_URL`**; optional **`SLACK_MENTION_USER_ID`**. If the secret is unset, notify steps **skip** cleanly. **Private snapshot + pause recipe:** **§4.1.1**.
 1. **Release published ping (opt-in):** workflow **`Slack release published notify`** (`.github/workflows/slack-release-published-notify.yml`) posts a short message when a GitHub Release is published. Toggle with repo variable **`SLACK_NOTIFY_RELEASE_PUBLISHED=true`**.
 1. **PR merged ping (opt-in):** workflow **`Slack PR merged notify`** (`.github/workflows/slack-pr-merged-notify.yml`) posts when a PR is merged into `main`/`master`. Toggle with **`SLACK_NOTIFY_PR_MERGED=true`**.
 1. **Ops digest (manual + scheduled opt-in):** workflow **`Slack ops digest`** (`.github/workflows/slack-ops-digest.yml`) supports `workflow_dispatch` and weekday schedule. Scheduled posts are enabled only with **`SLACK_NOTIFY_DAILY_DIGEST=true`**; manual dispatch always works when secret exists.
 1. **Product / scan-complete:** reuse the same webhook URL in Data Boar **`config.yaml`** or env (see [USAGE.md](../USAGE.md) — operator notifications); separate from Actions workflows above.
 1. **Backlog (optional):** scheduled digest via [scripts/notify_webhook.py](../../scripts/notify_webhook.py) or KPI export once you want EOD/sprint summaries (see §7).
+
+#### 4.1.1 Slack CI failure notify — contract (live + private snapshot + pause)
+
+**Shipped:** **`.github/workflows/slack-ci-failure-notify.yml`** on **`origin`**. **`tests/test_github_workflows.py`** enforces YAML shape, upstream **`workflows:`** list, and the same **Slack webhook step guard** as other **`slack-*.yml`** files that POST.
+
+| Topic | Detail |
+| ----- | ------ |
+| **Live (GitHub executes)** | **`workflow_run`** on **`completed`**, job **`if:`** upstream **`failure`** only; step-level **`SLACK_WEBHOOK_URL`** detection (`present=true|false` → **`GITHUB_OUTPUT`**); POST when the secret is set. Upstream display names in YAML: **`CI`**, **`Semgrep`**, **`Gitleaks`**, **`SBOM`**, **`Dependabot requirements.txt sync`**. |
+| **Private snapshot (not executed by GitHub)** | **`docs/private/raw_pastes/cursor-incident/slack-ci-failure-notify.yml.old`** — refresh after you **intentionally** change the live workflow (copy the merged YAML) so pause drills keep a diff anchor. Indexed in **`docs/private/ops/CURSOR_INCIDENT_EVIDENCE_INDEX.pt_BR.md`**. |
+| **Pause again** | Remove **`slack-ci-failure-notify.yml`** from **`.github/workflows/`**, save last YAML to **`.yml.old`**, replace **`test_slack_ci_failure_notify_workflow_present_and_valid`** with an **absence** test, remove **`slack-ci-failure-notify.yml`** from **`test_slack_post_workflows_guard_webhook_secret`** **`names`**, run **`pytest tests/test_github_workflows.py`**, merge. |
+| **Turn back on** | Copy **`.old`** → **`.github/workflows/slack-ci-failure-notify.yml`**, restore **presence** test + **`names`** entry, **`pytest tests/test_github_workflows.py`**, **`check-all`**, merge. |
 
 ### 4.2 Slack incoming webhook — operator how-to (grab URL, store it, verify)
 
@@ -140,7 +151,7 @@ If your workspace blocks custom apps, ask a workspace admin to approve app insta
 | Secret exists             | GitHub → **Settings → Secrets and variables → Actions**                          | **`SLACK_WEBHOOK_URL`** listed (value is **hidden**; that’s normal).                                                                         |
 | Manual ping works         | **Actions** → **Slack operator ping (manual)** → **Run workflow** → open the run | Job **succeeded** (not **skipped**). **Skipped** usually means secret missing/misnamed or workflows not on the branch GitHub runs.           |
 | Message arrived           | Slack → your ops channel                                                         | New message with the text you sent (or the default ping line).                                                                               |
-| CI / Semgrep failure path | After a real **`CI`** or **`Semgrep`** failure (or a test branch)                | **Actions** shows **Slack CI failure notify** run; Slack shows **“Data Boar — &lt;workflow name&gt; falhou”** with a link to the failed run. |
+| CI / Semgrep failure → Slack | After a listed upstream workflow fails and **`SLACK_WEBHOOK_URL`** is set | **Actions** shows **Slack CI failure notify**; Slack shows **“Data Boar — &lt;workflow name&gt; falhou”** with link to the run. If the secret is unset, the notify job still completes but skips the POST step. |
 
 If **manual** job is **skipped**, confirm the secret name is exactly **`SLACK_WEBHOOK_URL`** and that `.github/workflows/slack-operator-ping.yml` is on the default branch (or the branch you run Actions from).
 

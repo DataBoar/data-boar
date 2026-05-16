@@ -1,9 +1,16 @@
-"""Ensure operator Slack workflow files exist and parse as valid YAML.
+"""Offline guards on tracked ``.github/workflows/*.yml`` (and two wrapper scripts).
 
-Integration (real Slack POST) is not run in pytest; see docs/ops/OPERATOR_NOTIFICATION_CHANNELS.md §4.1.
+**Slack:** Parses all shipped ``slack-*.yml`` including ``slack-ci-failure-notify.yml``
+(``workflow_run`` on upstream failures). A private snapshot may live at
+``docs/private/raw_pastes/cursor-incident/slack-ci-failure-notify.yml.old`` for
+pause drills — see **``docs/ops/OPERATOR_NOTIFICATION_CHANNELS.md`` §4.1.1**
+(pt-BR: ``OPERATOR_NOTIFICATION_CHANNELS.pt_BR.md``).
+No real Slack POST in pytest — see §4.1 overall.
 
-Supply Colleague-Nn: ci.yml must not use floating `version: \"latest\"` for astral-sh/setup-uv; Actions use commit SHAs.
-sbom.yml pins third-party Actions to full commit SHAs (ADR 0005).
+**Supply chain / CI shape:** ``ci.yml`` / ``sbom.yml`` / ``gitleaks.yml`` / ``dependabot-sync.yml``
+pin third-party Actions to full commit SHAs where applicable; ``ci.yml`` must not use
+floating ``version: \"latest\"`` for ``astral-sh/setup-uv`` (ADR 0005). ``semgrep.yml``,
+``zizmor.yml``, and ``workflow-security-lint`` wrapper paths get structural checks.
 """
 
 from __future__ import annotations
@@ -42,6 +49,7 @@ def test_slack_ci_failure_notify_workflow_present_and_valid() -> None:
     assert wr.get("workflows") == [
         "CI",
         "Semgrep",
+        "Gitleaks",
         "SBOM",
         "Dependabot requirements.txt sync",
     ]
@@ -176,6 +184,43 @@ def test_semgrep_workflow_present_and_valid() -> None:
     assert job.get("runs-on") == "ubuntu-latest"
     container = job.get("container") or {}
     assert "semgrep" in str(container.get("image", "")).lower()
+
+
+def test_gitleaks_workflow_present_and_valid() -> None:
+    data = _load_workflow("gitleaks.yml")
+    assert data.get("name") == "Gitleaks"
+    on = data.get("on") or {}
+    assert "push" in on
+    assert "pull_request" in on
+    assert "schedule" in on
+    assert "workflow_dispatch" in on
+    jobs = data.get("jobs") or {}
+    assert "scan" in jobs
+    job = jobs["scan"]
+    assert job.get("runs-on") == "ubuntu-latest"
+    steps = job.get("steps") or []
+    uses_lines = [
+        str(step.get("uses"))
+        for step in steps
+        if isinstance(step, dict) and step.get("uses")
+    ]
+    assert any("actions/checkout@" in line for line in uses_lines)
+    assert any("gitleaks/gitleaks-action@" in line for line in uses_lines)
+
+
+def test_gitleaks_yml_pins_actions_to_shas() -> None:
+    """Third-party Actions in gitleaks.yml use full commit SHAs (ADR 0005 bar)."""
+    text = (WORKFLOWS / "gitleaks.yml").read_text(encoding="utf-8")
+    sha_40 = re.compile(r"@[0-9a-f]{40}")
+    for line in text.splitlines():
+        code = line.split("#", 1)[0]
+        if "uses:" not in code or "docker://" in code:
+            continue
+        if not any(p in code for p in ("actions/", "github/", "gitleaks/")):
+            continue
+        assert sha_40.search(code), (
+            f"expected full commit SHA in uses line: {line.strip()!r}"
+        )
 
 
 def _ci_step_run_texts(job: dict) -> list[str]:
