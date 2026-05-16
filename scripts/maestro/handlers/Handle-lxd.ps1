@@ -29,7 +29,7 @@ Write-Host "   [LXD] Verificando container LXD e disparando Completão ($modoTex
 
 $configArg = if ($Deep) { "tests/config/benchmark-rc.yaml" } else { "" }
 $smokeArgs = @()
-if (-not [string]::IsNullOrWhiteSpace($configArg)) { $smokeArgs += $configArg }
+if (-not [string]::IsNullOrWhiteSpace($configArg)) { $smokeArgs += "--bench-config $configArg" }
 if (-not [string]::IsNullOrWhiteSpace($BenchTrack)) { $smokeArgs += "--bench-track $BenchTrack" }
 if (-not [string]::IsNullOrWhiteSpace($BenchRunId)) { $smokeArgs += "--bench-run-id $BenchRunId" }
 if ($BenchWebPort -gt 0) { $smokeArgs += "--health-url http://127.0.0.1:$BenchWebPort/health" }

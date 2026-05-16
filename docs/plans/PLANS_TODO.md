@@ -27,12 +27,12 @@ Use these tags in headings to keep priorities explicit and machine-countable:
 
 Do not edit this block manually; refresh with `python scripts/plans-stats.py --write`.
 
-- **Status rows counted:** 167  (Done: 97 | Incomplete: 70)
-- **Incomplete breakdown:** Pending `⬜`=66, Tracked `🔄` / `Tracked (partially done)`=4, Under consideration=0, Backlog-marked rows=0
+- **Status rows counted:** 168  (Done: 100 | Incomplete: 68)
+- **Incomplete breakdown:** Pending `⬜`=64, Tracked `🔄` / `Tracked (partially done)`=4, Under consideration=0, Backlog-marked rows=0
 
 | Horizon | Total rows | Done | Incomplete |
 | ------- | ----------: | ----: | ----------: |
-| `H0` | 43 | 33 | 10 |
+| `H0` | 44 | 36 | 8 |
 | `H1` | 11 | 9 | 2 |
 | `H2` | 0 | 0 | 0 |
 | `H3` | 108 | 50 | 58 |
@@ -236,8 +236,9 @@ After **A1–A3** (minimum), you can **resume token-aware pace** on Tier 2 featu
 
 | Item | Issue(s) | Status |
 | ---- | -------- | ------ |
-| Maestro SSH `ConnectTimeout` | [#403](https://github.com/FabioLeitao/data-boar/issues/403) | ⬜ Pending |
-| Maestro `--bench-config` argument fix | [#404](https://github.com/FabioLeitao/data-boar/issues/404), [#408](https://github.com/FabioLeitao/data-boar/issues/408) | ⬜ Pending |
+| Maestro SSH `ConnectTimeout` | [#403](https://github.com/FabioLeitao/data-boar/issues/403) | ✅ Done |
+| benchmark-rc `targets:` key (not `scan_scope`) | [#407](https://github.com/FabioLeitao/data-boar/issues/407) | ✅ Done |
+| Maestro `--bench-config` argument fix | [#404](https://github.com/FabioLeitao/data-boar/issues/404), [#408](https://github.com/FabioLeitao/data-boar/issues/408) | ✅ Done |
 | Release gate **1.7.4** checklist (tag, Hub, `docs/releases/1.7.4.md`) | [#406](https://github.com/FabioLeitao/data-boar/issues/406) | ⬜ Pending |
 
 **`[H1]` RBAC reports access — [#86](https://github.com/FabioLeitao/data-boar/issues/86)** (firm next gate; does not block **1.7.4**): ⬜ Pending — Phase 3+ / enterprise SSO/OIDC path per [PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md](PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md).
@@ -535,9 +536,9 @@ Counted rows below celebrate the **maintenance + publish** sprint; see **`docs/r
 **Exit criteria (all required):**
 
 - [ ] `v1.7.4` tagged and published on Docker Hub ([#406](https://github.com/FabioLeitao/data-boar/issues/406))
-- [ ] Maestro Bug 1 fixed: SSH `ConnectTimeout` ([#403](https://github.com/FabioLeitao/data-boar/issues/403))
-- [ ] Maestro Bug 2 fixed: `--bench-config` argument ([#404](https://github.com/FabioLeitao/data-boar/issues/404) + [#408](https://github.com/FabioLeitao/data-boar/issues/408))
-- [ ] PR [#391](https://github.com/FabioLeitao/data-boar/pull/391) merged: PII filter toolchain fix
+- [x] Maestro Bug 1 fixed: SSH `ConnectTimeout` ([#403](https://github.com/FabioLeitao/data-boar/issues/403) — closed with evidence on **`main`**)
+- [x] Maestro Bug 2 fixed: `--bench-config` argument ([#404](https://github.com/FabioLeitao/data-boar/issues/404) + [#408](https://github.com/FabioLeitao/data-boar/issues/408) — `lab-completao-host-smoke.sh` parses flag; container handlers pass `--bench-config` before `--lab-stack-up`)
+- [x] Issue [#391](https://github.com/FabioLeitao/data-boar/issues/391) closed (**PII filter** toolchain / substring guard on **`main`** — 2026-05-16)
 - [ ] Completão smoke-only clean on all four hosts (latitude, t14-leitao, mini-bt, pi3b)
 - [ ] `docs/releases/1.7.4.md` created
 

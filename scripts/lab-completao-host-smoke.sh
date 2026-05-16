@@ -31,6 +31,7 @@ LC_BENCH_TRACK=""
 LC_BENCH_ROOT=""
 LC_BENCH_RUN_ID="${LAB_COMPLETAO_BENCH_RUN_ID:-}"
 LC_BENCH_METRICS_DIR=""
+LC_BENCH_CONFIG=""
 
 _lc_emit_host_env_audit_line() {
   local _uv="uv_missing"
@@ -69,6 +70,10 @@ while [[ $# -gt 0 ]]; do
       LC_BENCH_RUN_ID="${2:-}"
       shift
       ;;
+    --bench-config)
+      LC_BENCH_CONFIG="${2:-}"
+      shift
+      ;;
     --health-url)
       LC_HEALTH_URL="${2:-}"
       shift
@@ -79,12 +84,13 @@ while [[ $# -gt 0 ]]; do
       ;;
     --help|-h)
       cat <<'EOF'
-Usage: bash scripts/lab-completao-host-smoke.sh [--privileged] [--skip-engine-import] [--bench-track stable|beta] [--bench-run-id ID] [--health-url URL] [--repo-root PATH]
+Usage: bash scripts/lab-completao-host-smoke.sh [--privileged] [--skip-engine-import] [--bench-config PATH] [--bench-track stable|beta] [--bench-run-id ID] [--health-url URL] [--repo-root PATH]
 
   --privileged          Best-effort read-only probes via sudo -n (iptables/nft/ufw/fail2ban status).
   --skip-engine-import  Skip uv / import core.engine (hosts that run Data Boar only via Docker/Swarm/Podman).
   --lab-stack-up        Try to bring up deploy/lab-smoke-stack (and optional Mongo compose overlay) before checks.
   --emit-jsonl-host-env-and-exit  Print one DATA_BOAR_COMPLETAO_JSONL_MIN_EVENT line (uv/python versions) and exit 0.
+  --bench-config        Relative path under repo root for data-boar scan --config (Deep/benchmark RC; default: tests/config/benchmark-rc.yaml).
   --bench-track         Ephemeral A/B workdir under /tmp/databoar_bench/<stable|beta> (checkpoint isolation).
   --bench-run-id        Optional run marker for metric files (default: UTC timestamp).
   --health-url          Override LAB_COMPLETAO_HEALTH_URL (e.g. http://127.0.0.1:8088/health).
@@ -282,8 +288,8 @@ else
 fi
 
 _lc_section "Data Boar Engine (Baremetal RC)"
-# Se o Maestro enviou um config via argumento $1 ou se benchmark-rc existe
-CONFIG_RC="${1:-tests/config/benchmark-rc.yaml}"
+# Maestro passes --bench-config PATH (flags parsed above); default matches Deep RC benchmark.
+CONFIG_RC="${LC_BENCH_CONFIG:-tests/config/benchmark-rc.yaml}"
 _lc_capture_metrics_snapshot "pre_scan"
 _scan_start_epoch="$(date +%s 2>/dev/null || echo 0)"
 

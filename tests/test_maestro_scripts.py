@@ -279,6 +279,9 @@ def test_container_handlers_forward_benchmark_flags_to_host_smoke() -> None:
         )
         assert "--bench-track $BenchTrack" in body
         assert "--bench-run-id $BenchRunId" in body
+        assert "--bench-config $configArg" in body, (
+            f"{name}: Deep smoke must pass --bench-config so lab-completao-host-smoke.sh parses argv"
+        )
 
 
 def test_wrapper_has_optional_web_readiness_gate() -> None:
@@ -331,6 +334,16 @@ def test_container_handlers_enable_lab_stack_up_in_deep_mode() -> None:
         assert "$smokeArgs" in body
         assert "$smokeArgText" in body
         assert "lab-completao-host-smoke.sh $smokeArgText" in body
+
+
+def test_lab_completao_host_smoke_parses_bench_config_flag() -> None:
+    """Maestro --bench-config must be a real flag (not positional $1) so Deep argv parses."""
+    root = _project_root()
+    text = (root / "scripts" / "lab-completao-host-smoke.sh").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "    --bench-config)" in text
+    assert 'CONFIG_RC="${LC_BENCH_CONFIG:-tests/config/benchmark-rc.yaml}"' in text
 
 
 def test_maestro_benchmark_ab_has_sleep_before_collect() -> None:
