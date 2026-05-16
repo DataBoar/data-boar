@@ -540,7 +540,7 @@ Counted rows below celebrate the **maintenance + publish** sprint; see **`docs/r
 - [x] Maestro Bug 2 fixed: `--bench-config` argument ([#404](https://github.com/FabioLeitao/data-boar/issues/404) + [#408](https://github.com/FabioLeitao/data-boar/issues/408) — `lab-completao-host-smoke.sh` parses flag; container handlers pass `--bench-config` before `--lab-stack-up`)
 - [x] Issue [#391](https://github.com/FabioLeitao/data-boar/issues/391) closed (**PII filter** toolchain / substring guard on **`main`** — 2026-05-16)
 - [ ] Completão smoke-only clean on all four hosts (latitude, t14-leitao, mini-bt, pi3b)
-- [ ] `docs/releases/1.7.4.md` created
+- [x] `docs/releases/1.7.4.md` created (**draft** checklist — set **Release date** and expand highlights at publish; see file banner)
 
 **Commercial pipeline active (internal reference — no names):**
 
