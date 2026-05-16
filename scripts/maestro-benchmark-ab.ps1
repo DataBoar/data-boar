@@ -26,7 +26,10 @@ param(
     [switch]$SkipCollect,
     [string]$ProjectRoot = "",
     [string]$NotesPath = "",
-    [int]$SleepBeforeCollect = 120
+    [int]$SleepBeforeCollect = 120,
+    [switch]$SkipBenchSentinelWait,
+    [int]$BenchSentinelTimeoutSec = 900,
+    [int]$BenchSentinelPollSec = 5
 )
 
 Set-StrictMode -Version 2
@@ -75,7 +78,10 @@ function Invoke-BenchmarkRound {
         [bool]$CollectEnabled,
         [Parameter(Mandatory = $true)]
         [string]$MaestroScript,
-        [int]$SleepBeforeCollect = 120
+        [int]$SleepBeforeCollect = 120,
+        [bool]$UseBenchSentinel = $true,
+        [int]$BenchSentinelTimeoutSec = 900,
+        [int]$BenchSentinelPollSec = 5
     )
 
     Write-Host ""
@@ -96,8 +102,16 @@ function Invoke-BenchmarkRound {
 
     $collectExit = $null
     if ($CollectEnabled) {
-        if ($SleepBeforeCollect -gt 0) {
-            Write-Host ("      [Benchmark] Waiting {0}s for async smoke to finish before Collect..." -f $SleepBeforeCollect) -ForegroundColor DarkGray
+        $sentinelScript = Join-Path (Split-Path -Parent $MaestroScript) "Wait-BaremetalBenchSentinel.ps1"
+        $sentinelOk = $false
+        if ($UseBenchSentinel -and (Test-Path -LiteralPath $sentinelScript)) {
+            & $sentinelScript -BenchTrack $Track -BenchRunId $RunMarker -TimeoutSec $BenchSentinelTimeoutSec -PollSec $BenchSentinelPollSec
+            if ($LASTEXITCODE -eq 0) {
+                $sentinelOk = $true
+            }
+        }
+        if (-not $sentinelOk -and $SleepBeforeCollect -gt 0) {
+            Write-Host ("      [Benchmark] Sentinel miss or skipped; sleeping {0}s before Collect..." -f $SleepBeforeCollect) -ForegroundColor DarkGray
             Start-Sleep -Seconds $SleepBeforeCollect
         }
         $collectArgs = @{
@@ -146,7 +160,10 @@ try {
             -CompareEnabled $BenchCompare `
             -CollectEnabled (-not $SkipCollect) `
             -MaestroScript $maestroPath `
-            -SleepBeforeCollect $SleepBeforeCollect
+            -SleepBeforeCollect $SleepBeforeCollect `
+            -UseBenchSentinel (-not $SkipBenchSentinelWait) `
+            -BenchSentinelTimeoutSec $BenchSentinelTimeoutSec `
+            -BenchSentinelPollSec $BenchSentinelPollSec
         $results += $res
 
         if ($res.deepExit -gt $worstExit) { $worstExit = $res.deepExit }
@@ -196,6 +213,7 @@ $noteLines += @(
     "## Notes",
     "",
     "- Handlers received benchmark context via Maestro opt-in parameters (track/run_id/web_port).",
+    "- Host smoke writes /tmp/databoar_bench/<track>/.baremetal_scan_complete when bench-track is set; maestro-benchmark-ab waits via Wait-BaremetalBenchSentinel.ps1 with SleepBeforeCollect fallback.",
     "- Host smoke emitted isolated artifacts under /tmp/databoar_bench/<track>/metrics when bench-track is set.",
     "- Keep this file private (docs/private)."
 )

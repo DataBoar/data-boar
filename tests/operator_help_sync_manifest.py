@@ -113,6 +113,24 @@ OPERATOR_HELP_MARKERS: tuple[OperatorHelpMarker, ...] = (
     OperatorHelpMarker("uv_run", None, "uv run", None),
     OperatorHelpMarker("api_host_env", "API_HOST", "API_HOST", "API_HOST"),
     OperatorHelpMarker("bind_loopback", "127.0.0.1", "127.0.0.1", "127.0.0.1"),
+    OperatorHelpMarker(
+        "findings_export",
+        None,
+        "/findings/csv",
+        "/findings/csv",
+    ),
+    OperatorHelpMarker(
+        "sql_sample_limit_env",
+        None,
+        "DATA_BOAR_SQL_SAMPLE_LIMIT",
+        "DATA_BOAR_SQL_SAMPLE_LIMIT",
+    ),
+    OperatorHelpMarker(
+        "sample_statement_timeout_env",
+        None,
+        "DATA_BOAR_SAMPLE_STATEMENT_TIMEOUT_MS",
+        "DATA_BOAR_SAMPLE_STATEMENT_TIMEOUT_MS",
+    ),
 )
 
 

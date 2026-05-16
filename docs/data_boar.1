@@ -330,6 +330,38 @@ is true, the API key is read from this variable (alternative to
 .B api.api_key
 in the config file).
 .
+.TP
+.B API_HOST
+When
+.B \-\-web
+is set and
+.B \-\-host
+is not passed, the bind address falls back to
+.B api.host
+in config, then this variable, then
+.BR 127.0.0.1 .
+See
+.I docs/USAGE.md
+and
+.BR core/host_resolution.py .
+.
+.TP
+.B DATA_BOAR_SQL_SAMPLE_LIMIT
+Optional integer (clamped between 1 and 10000): when set in the process environment it
+.B replaces
+.B file_scan.sample_limit
+for SQLAlchemy and Snowflake column sampling only, without editing YAML.
+See
+.I docs/USAGE.md
+(\(lqRelational database sampling\(rq).
+.
+.TP
+.B DATA_BOAR_SAMPLE_STATEMENT_TIMEOUT_MS
+Optional integer: overrides the short read timeout budget (milliseconds) for generated sampling statements on database targets when set in the process environment.
+See
+.I docs/USAGE.md
+(\(lqSRE sampling knobs\(rq).
+.
 .SH FILES
 .TP
 .I config.yaml
@@ -371,6 +403,79 @@ Application name, version, author, license.
 .TP
 .B /docs
 Interactive API documentation (OpenAPI/Swagger).
+.TP
+.B /health
+Liveness/readiness JSON; stays public even when
+.B api.require_api_key
+protects other routes.
+.TP
+.B /status
+Scan/engine status JSON (includes transport metadata useful for dashboards).
+.TP
+.B /list
+List scan sessions (metadata) as JSON.
+.TP
+.B POST /scan
+Start a full audit of all targets in the current configuration. Optional JSON body may include
+.BR tenant ", " technician ", " scan_compressed ", " content_type_check ", " scan_for_stego ", " jurisdiction_hint
+(see OpenAPI at
+.B /docs
+and
+.IR docs/USAGE.md ).
+.TP
+.B /report
+Download the Excel report for the latest session.
+.TP
+.B /heatmap
+Download the heatmap PNG for the latest session.
+.TP
+.B /logs
+Download the audit log for the latest session.
+.TP
+.BI /reports/ session_id
+Excel report for
+.IR session_id
+(regenerated on demand).
+.TP
+.BI /heatmap/ session_id
+Heatmap PNG for
+.IR session_id .
+.TP
+.BI /logs/ session_id
+Audit log for
+.IR session_id .
+.TP
+.BI "PATCH /sessions/" session_id
+Update tenant/customer; JSON body uses a
+.B tenant
+key (see EXAMPLES).
+.TP
+.BI "PATCH /sessions/" session_id /technician
+Update technician/operator; JSON body uses a
+.B technician
+key (see EXAMPLES).
+.TP
+.B /findings
+JSON export of all findings for the latest completed session (unified schema with
+.I source_type
+per row; filesystem rows may include
+.I content_fingerprint
+and source metadata).
+.TP
+.B /findings/csv
+Same findings as
+.B /findings
+for the latest session, as a UTF\-8 CSV download.
+.TP
+.BI "/findings/" session_id
+Findings for
+.I session_id
+as JSON (unified schema).
+.TP
+.BI "/findings/" session_id /csv
+Findings for
+.I session_id
+as UTF\-8 CSV.
 .P
 The "Start scan" button triggers
 .B POST /scan
@@ -511,6 +616,38 @@ Download audit log for a session:
 .RS
 .nf
 curl \-o audit.log "http://localhost:8088/logs/SESSION_ID"
+.fi
+.RE
+.
+.TP
+Download latest findings as JSON:
+.RS
+.nf
+curl \-o findings.json http://localhost:8088/findings
+.fi
+.RE
+.
+.TP
+Download latest findings as CSV:
+.RS
+.nf
+curl \-o findings.csv http://localhost:8088/findings/csv
+.fi
+.RE
+.
+.TP
+Download findings for a session (JSON):
+.RS
+.nf
+curl \-o findings.json "http://localhost:8088/findings/SESSION_ID"
+.fi
+.RE
+.
+.TP
+Download findings for a session (CSV):
+.RS
+.nf
+curl \-o findings.csv "http://localhost:8088/findings/SESSION_ID/csv"
 .fi
 .RE
 .

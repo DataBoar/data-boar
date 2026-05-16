@@ -56,6 +56,20 @@ curl -o heatmap.png  http://&lt;host&gt;:&lt;port&gt;/heatmap/&lt;session_id&gt;
 curl -o audit.log    http://&lt;host&gt;:&lt;port&gt;/logs/&lt;session_id&gt;</code></pre>
     </li>
   </ul>
+  <h3>{{ t('help.findings_h3') }}</h3>
+  <p class="muted">{{ t('help.findings_p') }}</p>
+  <pre><code># Latest session (unified DB + filesystem metadata)
+curl -o findings.json  http://&lt;host&gt;:&lt;port&gt;/findings
+curl -o findings.csv   http://&lt;host&gt;:&lt;port&gt;/findings/csv
+
+# Specific session
+curl -o findings.json  http://&lt;host&gt;:&lt;port&gt;/findings/&lt;session_id&gt;
+curl -o findings.csv   http://&lt;host&gt;:&lt;port&gt;/findings/&lt;session_id&gt;/csv</code></pre>
+</section>
+
+<section class="card">
+  <h2>{{ t('help.sql_env_h2') }}</h2>
+  <p class="muted">{{ t('help.sql_env_p') }}</p>
 </section>
 
 <section class="card">
