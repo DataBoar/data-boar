@@ -13,7 +13,7 @@ Storyboard em documentação para descoberta **repetível** em **vários pequeno
 ## Storyboard (fluxo)
 
 1. **Onboarding** — o consultor copia um pacote de “inventário de dados” para uma raiz de varredura com escopo; nomes são inconsistentes (`ClienteA`, `client_a_final`).
-2. **Risco entre inquilinos** — o mesmo notColleague-Sok ou ferramenta de sync tocou **vários** clientes; ZIPs aninham cópias antigas.
+2. **Risco entre inquilinos** — o mesmo notebook ou ferramenta de sync tocou **vários** clientes; ZIPs aninham cópias antigas.
 3. **Boar fareja (alvos com escopo)** — filesystem + amostragem SQL opcional em cópias **somente leitura**; colunas densas em PII e sequências tipo documento nacional aparecem no mapa de calor do relatório.
 4. **Oficina com parceiro** — os achados priorizam **onde** apertar retenção e permissões de compartilhamento; **recomendações** localizam linguagem para DPO quando configuradas.
 5. **Momento humano** — **menor privilégio** em contas de RMM e backup; **assessoria** para escopo contratual de DPA. O produto **não** declara “MSP seguro” nem substitui SIEM.

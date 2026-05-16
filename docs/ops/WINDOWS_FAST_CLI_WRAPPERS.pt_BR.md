@@ -12,7 +12,7 @@ No **PC Windows do operador**, o assistente deve preferir **wrappers pequenos** 
 
 | Script | Prefere | Fallback | Notas |
 | ------ | ------- | -------- | ----- |
-| **`scripts/repo-grep.ps1`** | **`rg`** (ripgrep); **`baregrep.exe`** só com **`-PreferBareGrep`** | **`Select-String`** (varredura com teto de arquivos) | Evita **`grep.exe`** “estranho” (ex.: toolColleague-Nn FPC) em modo recursivo inseguro. **`-MaxOutputLines`** limita a transcrição. Também procura **`baregrep.exe`** em **`%USERPROFILE%\Downloads`** (portátil; não é winget). |
+| **`scripts/repo-grep.ps1`** | **`rg`** (ripgrep); **`baregrep.exe`** só com **`-PreferBareGrep`** | **`Select-String`** (varredura com teto de arquivos) | Evita **`grep.exe`** “estranho” (ex.: toolchain FPC) em modo recursivo inseguro. **`-MaxOutputLines`** limita a transcrição. Também procura **`baregrep.exe`** em **`%USERPROFILE%\Downloads`** (portátil; não é winget). |
 | **`scripts/repo-tail.ps1`** | **`tail.exe`** do Git (**`usr\bin`**) quando existir | **`Get-Content -Tail`** | **BareTail** é **GUI** — **não** entra na automação; se existir **`baretail.exe`** (ou erro comum **`baretai.exe`**) em **`Downloads`**, o script imprime **uma dica** para o operador lembrar do caminho rápido via Git **`tail`**. |
 | **`scripts/repo-view.ps1`** | **`bat`** / **`batcat`** com pager desligado + intervalo de linhas | **`Get-Content -TotalCount`** | Resolve **`bat`** / **`batcat`** no **`PATH`**, WinGet Links, cargo ou **`Downloads`**. |
 

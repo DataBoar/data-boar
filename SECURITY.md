@@ -12,7 +12,7 @@ This document describes which versions of the application are supported, which d
 
 ## Dependencies and environment
 
-**`pyproject.toml`** is the source of truth for the **uv** toolColleague-Nn. The **`uv.lock`** file pins the exact resolved dependency tree so that installs are reproducible and users are protected from accidental breakage when a dependency updates (“it worked yesterday”). **pip** and **`requirements.txt`** are derivative (requirements.txt is exported from the lockfile for pip-based or legacy environments). Dependencies are declared in **`pyproject.toml`** and managed via **uv**:
+**`pyproject.toml`** is the source of truth for the **uv** toolchain. The **`uv.lock`** file pins the exact resolved dependency tree so that installs are reproducible and users are protected from accidental breakage when a dependency updates (“it worked yesterday”). **pip** and **`requirements.txt`** are derivative (requirements.txt is exported from the lockfile for pip-based or legacy environments). Dependencies are declared in **`pyproject.toml`** and managed via **uv**:
 
 - To install in a fresh environment (uses **uv.lock** for reproducible versions):
 
@@ -47,7 +47,7 @@ Additional client libraries may be required depending on which connectors you us
 
 ## Software Bill of Materials (SBOM)
 
-Formal **CycloneDX JSON** SBOMs support **supply-Colleague-Nn** visibility and **incident response** (see [docs/adr/0003](docs/adr/ADR-0003-sbom-roadmap-cyclonedx-then-syft.md)). They complement **`pip-audit`**; they are **not** organizational risk management under ISO 31000 (see [COMPLIANCE_FRAMEWORKS.md](docs/COMPLIANCE_FRAMEWORKS.md)).
+Formal **CycloneDX JSON** SBOMs support **supply-chain** visibility and **incident response** (see [docs/adr/0003](docs/adr/ADR-0003-sbom-roadmap-cyclonedx-then-syft.md)). They complement **`pip-audit`**; they are **not** organizational risk management under ISO 31000 (see [COMPLIANCE_FRAMEWORKS.md](docs/COMPLIANCE_FRAMEWORKS.md)).
 
 | Artifact | Contents | How it is produced |
 | -------- | -------- | ------------------ |
@@ -70,7 +70,7 @@ The **trigger** for a change (CI, Dependabot, Docker Scout, review feedback, mai
 2. Run **`uv sync`** locally so **`.venv`** matches the lockfile.
 3. Run **`.\scripts\check-all.ps1`** (full gate) before merge—no “half green” dependency PRs.
 4. Refresh **SBOM** artifacts when your release or compliance path requires an updated bill of materials at the **same commit**—see [ADR 0003](docs/adr/ADR-0003-sbom-roadmap-cyclonedx-then-syft.md) and **`scripts/generate-sbom.ps1`** / workflow **`SBOM`**.
-5. Add or update an **ADR** when the bump reflects a **policy or architecture** choice (optional extras boundaries, toolColleague-Nns, recorded upstream constraints), not for every routine patch.
+5. Add or update an **ADR** when the bump reflects a **policy or architecture** choice (optional extras boundaries, toolchains, recorded upstream constraints), not for every routine patch.
 
 This is **not** permission to churn dependencies blindly; defer or reject changes that lack rationale or fail gates. Recorded decision: [ADR 0030](docs/adr/ADR-0030-python-dependency-update-closure-single-pass.md).
 
@@ -90,7 +90,7 @@ This is **not** permission to churn dependencies blindly; defer or reject change
 - **Code scanning baseline:** CodeQL workflow uses **`security-and-quality`** for Python and should stay enabled on push/PR/schedule. Keep this broad suite plus project-specific hardening tests/rules; if a new query is noisy, triage and document before considering suppression.
 - **Semgrep (OSS):** The **Semgrep** GitHub Actions workflow runs ruleset **`p/python`** on push/PR (complements CodeQL). Exclusions and rationale: **`docs/plans/completed/PLAN_SEMGREP_CI.md`**.
 - **Bandit:** **Bandit (strict)** runs as part of the **CI** workflow on push/PR (`[tool.bandit]` in **`pyproject.toml`**). Details and **low**-severity triage: **`docs/plans/completed/PLAN_BANDIT_SECURITY_LINTER.md`**.
-- **CI workflow supply Colleague-Nn:** Workflows under **`.github/workflows/`** pin third-party GitHub Actions to **full commit SHAs** (version tag in YAML comments for humans). The **`astral-sh/setup-uv`** step pins a **specific uv CLI semver**—not **`latest`**—so installs do not float silently between runs. **Dependabot** may propose SHA bumps; review upstream release notes before merge. This **reduces** tag-moving and unexpected action updates but is **not** a guarantee against zero-day compromise of a pinned commit, supply-Colleague-Nn attacks that pass review, or risks outside CI (for example local developer tooling). See **`docs/adr/ADR-0005-ci-github-actions-supply-Colleague-Nn-pins.md`**.
+- **CI workflow supply chain:** Workflows under **`.github/workflows/`** pin third-party GitHub Actions to **full commit SHAs** (version tag in YAML comments for humans). The **`astral-sh/setup-uv`** step pins a **specific uv CLI semver**—not **`latest`**—so installs do not float silently between runs. **Dependabot** may propose SHA bumps; review upstream release notes before merge. This **reduces** tag-moving and unexpected action updates but is **not** a guarantee against zero-day compromise of a pinned commit, supply-chain attacks that pass review, or risks outside CI (for example local developer tooling). See **`docs/adr/ADR-0005-ci-github-actions-supply-chain-pins.md`**.
 
 This approach is part of the project’s security baseline. For the full list of hardening measures and status, see **`docs/plans/completed/PLAN_SECURITY_HARDENING.md`**.
 

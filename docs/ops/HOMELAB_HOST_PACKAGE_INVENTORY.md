@@ -42,11 +42,11 @@ If you tell us **which connectors** you actually scan in lab, we can narrow the 
 
 ---
 
-## 2.5 Optional developer toolColleague-Nns (Go, Rust, Zig, Odin, Homebrew)
+## 2.5 Optional developer toolchains (Go, Rust, Zig, Odin, Homebrew)
 
 **Data Boar itself is Python 3.12+** (`pyproject.toml` / `uv`). **Go, Rust, Zig, Odin, and Linuxbrew do not** need to be installed for **§1.1–1.2**, **Docker** builds, or normal connector tests. They are **nice for you** as a developer and for **adjacent** repos or experiments.
 
-| ToolColleague-Nn                    | Role vs this repo                                                                                                                                                                                                                                       |
+| Toolchain                    | Role vs this repo                                                                                                                                                                                                                                       |
 | ---------                    | -----------------                                                                                                                                                                                                                                       |
 | **Go**                       | Useful for **sidecars**, small CLIs, or infra tools; **no** Go source in Data Boar today.                                                                                                                                                               |
 | **Rust**                     | Same; **only** becomes relevant here if we ever ship a **Rust extension** for Python (**PyO3** / **maturin**)—**not** on the current critical path. Some **Python wheels** ship prebuilt binaries; you rarely need `rustc` unless building from source. |
@@ -55,7 +55,7 @@ If you tell us **which connectors** you actually scan in lab, we can narrow the 
 
 **When extra languages *would* make sense for the product:** a **proven** bottleneck (e.g. a hot path measured in prod), a **security** boundary (small audited binary), or a **mandatory** integration SDK only available in native code—until then, **stay Python-first** to match CI, docs, and onboarding.
 
-**Quick capture (optional):** `go version`, `rustc --version`, `zig version`, `odin version`, `brew --version` — reported by `homelab-host-report.sh` in the **optional toolColleague-Nns** block.
+**Quick capture (optional):** `go version`, `rustc --version`, `zig version`, `odin version`, `brew --version` — reported by `homelab-host-report.sh` in the **optional toolchains** block.
 
 ---
 

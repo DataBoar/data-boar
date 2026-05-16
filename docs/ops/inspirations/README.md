@@ -13,7 +13,7 @@ Purpose: a small, high-signal list of sources that inform **hardening and compli
 - [Security Now / GRC](SECURITY_NOW.md)
 - [OWASP projects and guidance](OWASP.md)
 - [CISA KEV + advisories](CISA_KEV_AND_ADVISORIES.md)
-- [Supply Colleague-Nn and trust signals](SUPPLY_Colleague-NN_AND_TRUST_SIGNALS.md) ([pt-BR — follow-ups adiados](SUPPLY_Colleague-NN_AND_TRUST_SIGNALS.pt_BR.md))
+- [Supply chain and trust signals](SUPPLY_CHAIN_AND_TRUST_SIGNALS.md) ([pt-BR — follow-ups adiados](SUPPLY_CHAIN_AND_TRUST_SIGNALS.pt_BR.md))
 - [Wazuh docs + NIST CSF / CIS — lab-op alignment](WAZUH_NIST_CIS_LABOP_ALIGNMENT.md) ([pt-BR](WAZUH_NIST_CIS_LABOP_ALIGNMENT.pt_BR.md))
 - [Lab-op observability — official doc bookmarks](LAB_OP_OBSERVABILITY_LEARNING_LINKS.md) ([pt-BR](LAB_OP_OBSERVABILITY_LEARNING_LINKS.pt_BR.md))
 - [Enterprise DB ops + GRC evidence slots](ENTERPRISE_DB_OPS_AND_GRC_EVIDENCE.md) ([pt-BR](ENTERPRISE_DB_OPS_AND_GRC_EVIDENCE.pt_BR.md))

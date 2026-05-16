@@ -17,7 +17,7 @@ restore the green-CI contract without changing product behavior.
 
 - **Open PRs reviewed:** 5 (1 cargo, 4 pip / Dependabot).
 - **High/Critical security findings (exploitable today):** **0**.
-- **Medium findings (block / re-roll):** **1 systemic** (lockfile drift on every Dependabot pip PR — see §2.1) plus **1 supply-Colleague-Nn ergonomics** finding for the `cryptography 47.0.0` jump.
+- **Medium findings (block / re-roll):** **1 systemic** (lockfile drift on every Dependabot pip PR — see §2.1) plus **1 supply-chain ergonomics** finding for the `cryptography 47.0.0` jump.
 - **PR ready to merge after green-light:** **#226** (pyo3 0.23 → 0.24, all checks green, lockfile in sync — Cargo path, no pip drift).
 
 ```text
@@ -94,7 +94,7 @@ This is the exact failure mode our doctrine treats as
   resulting `main` ships with a `requirements.txt` claiming `46.0.7`. SBOM
   scanners and downstream pip installs then disagree about what is
   installed. This is exactly the *fail-open / blurred SBOM* class flagged
-  in [`SUPPLY_Colleague-NN_AND_TRUST_SIGNALS.md`](../inspirations/SUPPLY_Colleague-NN_AND_TRUST_SIGNALS.md).
+  in [`SUPPLY_CHAIN_AND_TRUST_SIGNALS.md`](../inspirations/SUPPLY_CHAIN_AND_TRUST_SIGNALS.md).
 
 #### Root cause
 
@@ -170,7 +170,7 @@ trail kept here.
 - **Diff scope:** 1238 added / 769 removed, **only** `requirements.txt`.
 - **Findings:**
   - **[Medium] | Batched group PR hides per-package risk | A 35-package roll-up makes per-package threat modeling impossible inside one PR review pass; this is precisely what the `pip-minor-patch` group config was designed to do, but it must be paired with §2.1 so a maintainer at least sees a **green** CI before merging. Until §2.1 lands, splitting this PR is **not** worth the toil — re-trigger after the lockfile auto-sync workflow exists.
-  - **[Low — informational] | No new direct dependency added.** Confirmed by reading the diff: every `==` change in `requirements.txt` corresponds to a `>=` floor that already exists in `pyproject.toml`. So the supply-Colleague-Nn *graph* is unchanged; only versions move.
+  - **[Low — informational] | No new direct dependency added.** Confirmed by reading the diff: every `==` change in `requirements.txt` corresponds to a `>=` floor that already exists in `pyproject.toml`. So the supply-chain *graph* is unchanged; only versions move.
 
 ### 3.5 PR #226 — `chore(deps): bump pyo3 from 0.23.5 to 0.24.1` (cargo)
 
@@ -192,9 +192,9 @@ Per the protocol I explicitly looked for, and did **not** find, evidence of:
   any diff).
 - **SSRF / Path traversal / unsafe deserialization** new code paths (no
   net-new Python code; only version pins move).
-- **Supply-Colleague-Nn risk introduced by the change** beyond §2.1 — the new
+- **Supply-chain risk introduced by the change** beyond §2.1 — the new
   hashes are signed by the upstream maintainers and resolved by `uv` from
-  the same registry already pinned in [ADR 0005](../../adr/ADR-0005-ci-github-actions-supply-Colleague-Nn-pins.md).
+  the same registry already pinned in [ADR 0005](../../adr/ADR-0005-ci-github-actions-supply-chain-pins.md).
 
 ---
 
@@ -216,7 +216,7 @@ Per the protocol I explicitly looked for, and did **not** find, evidence of:
 - **Doctrine sources:**
   [`DEFENSIVE_SCANNING_MANIFESTO.md`](../inspirations/DEFENSIVE_SCANNING_MANIFESTO.md),
   [`THE_ART_OF_THE_FALLBACK.md`](../inspirations/THE_ART_OF_THE_FALLBACK.md),
-  [`SUPPLY_Colleague-NN_AND_TRUST_SIGNALS.md`](../inspirations/SUPPLY_Colleague-NN_AND_TRUST_SIGNALS.md).
+  [`SUPPLY_CHAIN_AND_TRUST_SIGNALS.md`](../inspirations/SUPPLY_CHAIN_AND_TRUST_SIGNALS.md).
 - **Existing controls verified working:**
   `tests/test_dependency_artifacts_sync.py`,
   `pre-commit` uv-export hook, `Dependency audit` workflow,

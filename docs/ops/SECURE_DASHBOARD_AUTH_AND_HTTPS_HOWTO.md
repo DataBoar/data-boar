@@ -107,13 +107,13 @@ See [deploy/DEPLOY.md](../deploy/DEPLOY.md) ([pt-BR](../deploy/DEPLOY.pt_BR.md))
 
 ### B.2 Native HTTPS on Data Boar (PEM paths on the host)
 
-**1.** Obtain **`fullColleague-Nn.pem`** (or server cert + Colleague-Nn) and **`privkey.pem`** (private key). Restrict key file permissions (e.g. `chmod 600` on Unix).
+**1.** Obtain **`fullchain.pem`** (or server cert + **chain**) and **`privkey.pem`** (private key). Restrict key file permissions (e.g. `chmod 600` on Unix).
 
 **2.** Start:
 
 ```bash
 uv run python main.py --web --config config.yaml \
-  --https-cert-file /etc/data-boar/certs/fullColleague-Nn.pem \
+  --https-cert-file /etc/data-boar/certs/fullchain.pem \
   --https-key-file /etc/data-boar/certs/privkey.pem
 ```
 
@@ -121,7 +121,7 @@ Or in YAML:
 
 ```yaml
 api:
-  https_cert_file: "/etc/data-boar/certs/fullColleague-Nn.pem"
+  https_cert_file: "/etc/data-boar/certs/fullchain.pem"
   https_key_file: "/etc/data-boar/certs/privkey.pem"
 ```
 
@@ -136,7 +136,7 @@ api:
 ## Typical flow (Linux, Certbot, HTTP-01):
 
 1. Point DNS **A/AAAA** for `dashboard.example.com` to your server (or use a validated DNS plugin).
-1. Run Certbot (standalone or webroot) to obtain certs; note paths (often `/etc/letsencrypt/live/<name>/fullColleague-Nn.pem` and `privkey.pem`).
+1. Run Certbot (standalone or webroot) to obtain certs; note paths (often `/etc/letsencrypt/live/<name>/fullchain.pem` and `privkey.pem`).
 1. Point Data Boar **`--https-cert-file`** / **`--https-key-file`** at those PEM files **or** configure the **reverse proxy** to use them and keep the app on loopback HTTP (often simpler renewal).
 1. **Renewal:** Use **certbot renew** on a timer; if the app reads PEM files directly, restart or reload the process after renewal so new certs are loaded (or use a proxy that hot-reloads).
 
@@ -154,7 +154,7 @@ openssl req -x509 -newkey rsa:2048 -sha256 -days 365 -nodes \
   -subj "/CN=localhost"
 ```
 
-Use **`server-cert.pem`** as **`--https-cert-file`** and **`server-key.pem`** as **`--https-key-file`**. For **QA/UAT** behind a corporate name, prefer **internal PKI** or **DNS-validated** certs so clients trust the Colleague-Nn without ad-hoc root installs.
+Use **`server-cert.pem`** as **`--https-cert-file`** and **`server-key.pem`** as **`--https-key-file`**. For **QA/UAT** behind a corporate name, prefer **internal PKI** or **DNS-validated** certs so clients trust the **chain** without ad-hoc root installs.
 
 **Local dev ergonomics:** Tools like **`mkcert`** install a **local dev CA** on the developer machine only — useful to avoid noisy browser warnings while testing TLS behaviour; do **not** treat that as production trust distribution.
 

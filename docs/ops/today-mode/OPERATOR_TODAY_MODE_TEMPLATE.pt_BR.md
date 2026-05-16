@@ -8,7 +8,7 @@
 
 ## Bloco 0 — Realidade de manhã (10–15 min)
 
-Rode **`carryover-sweep`** ou **`.\scripts\operator-day-ritual.ps1 -Mode Morning`** — o script imprime o **Tier A** (`git fetch`, `git status -sb`, PRs abertos, último CI do **`main`**, arquivo **today-mode** para **hoje**) e lembretes dos **Tiers B–D** (cadência de supply Colleague-Nn / imagem / lab). Ver **[README.pt_BR.md](README.pt_BR.md)** (*Prontidão de manhã*). Depois:
+Rode **`carryover-sweep`** ou **`.\scripts\operator-day-ritual.ps1 -Mode Morning`** — o script imprime o **Tier A** (`git fetch`, `git status -sb`, PRs abertos, último CI do **`main`**, arquivo **today-mode** para **hoje**) e lembretes dos **Tiers B–D** (cadência de supply chain / imagem / lab). Ver **[README.pt_BR.md](README.pt_BR.md)** (*Prontidão de manhã*). Depois:
 
 1. **`origin/main`:** **`git pull origin main`** se o ritual mostrar que estás atrás.
 2. **Working tree (repo público):** decide: commits, branch, stash ou continuar.

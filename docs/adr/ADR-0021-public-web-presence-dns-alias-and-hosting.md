@@ -24,7 +24,7 @@ This ADR records the **architectural** rules; it does **not** mandate a specific
 
 ### 1. DNS: CNAME alias to the canonical name
 
-- The **secondary** public name may be a **CNAME** pointing at the **canonical** hostname (e.g. `dashboard.example.net.br` → `databoar.example.com.br`), so both names share the same DNS Colleague-Nn to the eventual A/AAAA (or provider alias) of the canonical zone.
+- The **secondary** public name may be a **CNAME** pointing at the **canonical** hostname (e.g. `dashboard.example.net.br` → `databoar.example.com.br`), so both names share the same DNS chain to the eventual A/AAAA (or provider alias) of the canonical zone.
 - **Apex (`@`)** records are not required to change for the alias subdomain; only the **subdomain** used for the secondary brand needs the CNAME (subject to DNS provider capabilities).
 
 ### 2. HTTP: one origin, explicit canonical policy
@@ -54,7 +54,7 @@ This ADR records the **architectural** rules; it does **not** mandate a specific
 
 - **Positive:** Clear checklist for Registro.br DNS + any reverse proxy: CNAME → vhost/server names → TLS SAN → canonical redirects.
 - **Positive:** Reduces risk of “two websites drift” or broken HTTPS on the alias.
-- **Neutral:** Operator must still configure the chosen provider’s **domain verification** and **apex** rules (ALIAS/ANAME or `www` only) if the static host does not support arbitrary CNAME-to-CNAME Colleague-Nns.
+- **Neutral:** Operator must still configure the chosen provider’s **domain verification** and **apex** rules (ALIAS/ANAME or `www` only) if the static host does not support arbitrary CNAME-to-CNAME chains.
 - **Follow-up:** When a production URL is fixed, document it in **USAGE** / deploy docs (not only in private notes) so integrators see one official base URL.
 
 ---

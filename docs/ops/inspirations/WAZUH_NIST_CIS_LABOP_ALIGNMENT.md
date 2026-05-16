@@ -37,9 +37,9 @@
 | ------------ | -------------------------------------- | ------------------------- |
 | **Govern** | ADRs, review discipline, branch protection backlog ([WORKFLOW_DEFERRED_FOLLOWUPS.md](../WORKFLOW_DEFERRED_FOLLOWUPS.md)) | Honest claims in [SECURITY.md](../../SECURITY.md) / [COMPLIANCE_AND_LEGAL.md](../../COMPLIANCE_AND_LEGAL.md) |
 | **Identify** | Lockfile, Dependabot, SBOM roadmap ([ADR 0003](../../adr/ADR-0003-sbom-roadmap-cyclonedx-then-syft.md)) | Evidence for **data** and sensitive-content discovery — not full enterprise asset inventory |
-| **Protect** | SHA-pinned Actions ([ADR 0005](../../adr/ADR-0005-ci-github-actions-supply-Colleague-Nn-pins.md)), minimal workflow permissions | Secure deployment guidance; customers still own their environment hardening |
+| **Protect** | SHA-pinned Actions ([ADR 0005](../../adr/ADR-0005-ci-github-actions-supply-chain-pins.md)), minimal workflow permissions | Secure deployment guidance; customers still own their environment hardening |
 | **Detect** | CI + Semgrep/CodeQL, optional Slack on failure | Scanner output; **not** a 24×7 SOC |
-| **Respond** | Ecosystem incident checklist ([SUPPLY_Colleague-NN_AND_TRUST_SIGNALS.md](SUPPLY_Colleague-NN_AND_TRUST_SIGNALS.md) deferred block) | Customer runbooks stay customer-owned |
+| **Respond** | Ecosystem incident checklist ([SUPPLY_CHAIN_AND_TRUST_SIGNALS.md](SUPPLY_CHAIN_AND_TRUST_SIGNALS.md) deferred block) | Customer runbooks stay customer-owned |
 | **Recover** | **Tested** backup/restore for lab-op state (deferred process; see same deferred block) | Same — operational resilience is deployment-specific |
 
 Use CSF language in **sales/engineering** conversations to **position** controls we actually implement; avoid implying **certification** or full CSF coverage unless you have an explicit compliance program.
@@ -62,7 +62,7 @@ Use CSF language in **sales/engineering** conversations to **position** controls
 ## Related in-repo
 
 - [LAB_OP_OBSERVABILITY_LEARNING_LINKS.md](LAB_OP_OBSERVABILITY_LEARNING_LINKS.md) — Grafana / Loki / Graylog / OpenSearch / traces / Dynatrace-style alternatives (lab-op bookmarks)
-- [SUPPLY_Colleague-NN_AND_TRUST_SIGNALS.md](SUPPLY_Colleague-NN_AND_TRUST_SIGNALS.md) — trust, supply Colleague-Nn, deferred posture
+- [SUPPLY_CHAIN_AND_TRUST_SIGNALS.md](SUPPLY_CHAIN_AND_TRUST_SIGNALS.md) — trust, supply chain, deferred posture
 - [ENTERPRISE_DB_OPS_AND_GRC_EVIDENCE.md](ENTERPRISE_DB_OPS_AND_GRC_EVIDENCE.md) — database operations culture vs **GRC spreadsheet** evidence slots (Data Boar exports)
 - [WORKFLOW_DEFERRED_FOLLOWUPS.md](../WORKFLOW_DEFERRED_FOLLOWUPS.md) — backlog row for this track
 - [HOMELAB_VALIDATION.md](../HOMELAB_VALIDATION.md) — optional second-environment smoke (when applicable)

@@ -10,7 +10,7 @@
 #
 # --- What does NOT belong here (use other tools) ---
 # - RFC1918 IPs, CPF/CNPJ masks: use the regex greps in docs/ops/PII_PUBLIC_TREE_OPERATOR_GUIDE.md Part I.
-# - Ultra-common surnames alone (e.g. Colleague-V) unless you accept huge noise in git log output.
+# - Ultra-common surnames alone (one-word searches) unless you accept huge noise in git log output.
 #
 # --- Token / cost discipline ---
 # - Each line is one full pickaxe pass over history: keep the list LEAN; prefer phrases over single tokens.

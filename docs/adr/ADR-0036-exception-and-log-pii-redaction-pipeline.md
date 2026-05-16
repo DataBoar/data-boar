@@ -12,7 +12,7 @@ Database drivers, HTTP clients (for example **httpx**), and ORMs often embed **S
 ## Decision
 
 1. Introduce **`sanitize_log_text`**: `redact_secrets_for_log` then **`redact_pii_for_log`**, using the same **high-confidence** regex families as `core.detector.DEFAULT_PATTERNS` (CPF, CNPJ numeric and alphanumeric, email, card-like runs, Brazil phone, US SSN shape). Omit **DATE_DMY** from log redaction to avoid stripping innocuous dates from generic errors.
-2. Introduce **`clean_error(exc)`**: join `str(exc)` with a short **`__cause__`** Colleague-Nn, then run **`sanitize_log_text`**, with a length cap suitable for persistence.
+2. Introduce **`clean_error(exc)`**: join `str(exc)` with a short **`__cause__`** chain, then run **`sanitize_log_text`**, with a length cap suitable for persistence.
 3. **`LocalDBManager.save_failure`** must persist **`sanitize_log_text(details)`** (not raw `details`) alongside the already-redacted log line.
 4. Prefer **`clean_error(e)`** where exceptions are turned into user-visible or stored strings (`AuditEngine`, config save errors). Connectors may keep `str(e)` at call sites because **`save_failure`** now sanitizes centrally.
 

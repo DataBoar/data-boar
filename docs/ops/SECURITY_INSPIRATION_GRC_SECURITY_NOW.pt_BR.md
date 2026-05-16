@@ -63,7 +63,7 @@ Este é um guia vivo. Atualizamos de forma incremental conforme extraímos liç�
    - criptografia de transporte,
    - trust anchors/certificados,
    - hardening de endpoint,
-   - supply Colleague-Nn e assinatura,
+   - supply chain e assinatura,
    - least privilege / abuse controls.
 1. Para cada lição candidata, decidir:
    - **Adotar agora**, ou

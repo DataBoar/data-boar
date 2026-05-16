@@ -12,7 +12,7 @@ Este documento descreve quais versões da aplicação são suportadas, qual linh
 
 ## Dependências e ambiente
 
-O **`pyproject.toml`** é a fonte de verdade para a toolColleague-Nn **uv**. O arquivo **`uv.lock`** fixa a árvore exata de dependências resolvidas para que as instalações sejam reproduzíveis e os usuários fiquem protegidos de quebras acidentais quando uma dependência atualiza (“funcionou ontem”). **pip** e **`requirements.txt`** são derivados (o requirements.txt é exportado do lockfile para ambientes pip ou legados). As dependências são declaradas em **`pyproject.toml`** e gerenciadas via **uv**:
+O **`pyproject.toml`** é a fonte de verdade para a toolchain **uv**. O arquivo **`uv.lock`** fixa a árvore exata de dependências resolvidas para que as instalações sejam reproduzíveis e os usuários fiquem protegidos de quebras acidentais quando uma dependência atualiza (“funcionou ontem”). **pip** e **`requirements.txt`** são derivados (o requirements.txt é exportado do lockfile para ambientes pip ou legados). As dependências são declaradas em **`pyproject.toml`** e gerenciadas via **uv**:
 
 - Para instalar em um ambiente limpo (usa o **uv.lock** para versões reproduzíveis):
 
@@ -70,7 +70,7 @@ O **gatilho** da mudança (CI, Dependabot, Docker Scout, revisão externa, decis
 2. Rode **`uv sync`** localmente para o **`.venv`** bater com o lockfile.
 3. Rode **`.\scripts\check-all.ps1`** (gate completo) antes do merge — sem PR de dependência “meio verde”.
 4. Atualize artefatos de **SBOM** quando o release ou o trilho de compliance exigir lista de materiais no **mesmo commit** — veja [ADR 0003](docs/adr/ADR-0003-sbom-roadmap-cyclonedx-then-syft.md) e **`scripts/generate-sbom.ps1`** / workflow **`SBOM`**.
-5. Acrescente ou atualize um **ADR** quando o bump refletir **política ou arquitetura** (limites de extras opcionais, toolColleague-Nns, restrição upstream documentada), não para cada patch de rotina.
+5. Acrescente ou atualize um **ADR** quando o bump refletir **política ou arquitetura** (limites de extras opcionais, toolchains, restrição upstream documentada), não para cada patch de rotina.
 
 Isto **não** é licença para churn cego de dependências; adie ou rejeite mudanças sem fundamento ou que falhem nos gates. Decisão registrada: [ADR 0030](docs/adr/ADR-0030-python-dependency-update-closure-single-pass.md).
 
@@ -90,7 +90,7 @@ Isto **não** é licença para churn cego de dependências; adie ou rejeite muda
 - **Linha de base de code scanning:** O workflow de CodeQL usa **`security-and-quality`** para Python e deve permanecer ativo em push/PR/agendado. Mantenha essa cobertura ampla junto com regras/testes de hardening do projeto; se uma query nova gerar ruído, triar e documentar antes de considerar supressão.
 - **Semgrep (OSS):** O workflow **Semgrep** no GitHub Actions roda o conjunto **`p/python`** em push/PR (complementa o CodeQL). Exclusões e justificativa: **`docs/plans/completed/PLAN_SEMGREP_CI.md`**.
 - **Bandit:** O job **Bandit (strict)** corre dentro do workflow **CI** em push/PR (`[tool.bandit]` no **`pyproject.toml`**). Detalhes e triagem de achados **low**: **`docs/plans/completed/PLAN_BANDIT_SECURITY_LINTER.md`**.
-- **Cadeia de suprimentos da CI:** Os workflows em **`.github/workflows/`** fixam Actions de terceiros em **SHA de commit completo** (tag de versão em comentários YAML para humanos). O passo **`astral-sh/setup-uv`** fixa um **semver específico** do CLI **uv** — não **`latest`** — para as instalações não variarem silenciosamente entre execuções. O **Dependabot** pode propor bumps de SHA; revisar notas de release antes do merge. Isso **reduz** risco de tag móvel e de atualizações inesperadas da action, mas **não garante** proteção contra zero-day no commit fixo, ataques à cadeia que passem na revisão ou riscos fora da CI (por exemplo ferramentas no ambiente local do desenvolvedor). Veja **`docs/adr/ADR-0005-ci-github-actions-supply-Colleague-Nn-pins.md`**.
+- **Cadeia de suprimentos da CI:** Os workflows em **`.github/workflows/`** fixam Actions de terceiros em **SHA de commit completo** (tag de versão em comentários YAML para humanos). O passo **`astral-sh/setup-uv`** fixa um **semver específico** do CLI **uv** — não **`latest`** — para as instalações não variarem silenciosamente entre execuções. O **Dependabot** pode propor bumps de SHA; revisar notas de release antes do merge. Isso **reduz** risco de tag móvel e de atualizações inesperadas da action, mas **não garante** proteção contra zero-day no commit fixo, ataques à cadeia que passem na revisão ou riscos fora da CI (por exemplo ferramentas no ambiente local do desenvolvedor). Veja **`docs/adr/ADR-0005-ci-github-actions-supply-chain-pins.md`**.
 
 Essa abordagem faz parte da linha de base de segurança do projeto. Para a lista completa de medidas de endurecimento e status, veja **`docs/plans/completed/PLAN_SECURITY_HARDENING.md`**.
 

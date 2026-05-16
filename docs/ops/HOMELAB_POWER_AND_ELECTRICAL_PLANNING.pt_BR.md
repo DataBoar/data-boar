@@ -26,7 +26,7 @@ Em climas **quentes e úmidos** (ex. **Niterói**), o **ar-condicionado** entra 
 
 ## Resumo
 
-**Portátil primary:** o EN usa uma **classe** ilustrativa (notColleague-Sok **14"** ~2012, **≤8 GB** DDR3, Ubuntu/Zorin); **marca/modelo/hostname** só em **`docs/private/homelab/`** — ver [PRIVATE_OPERATOR_NOTES.pt_BR.md](../PRIVATE_OPERATOR_NOTES.pt_BR.md). Adaptador **65/90 W** de teto; **§10.1** no EN.
+**Portátil primary:** o EN usa uma **classe** ilustrativa (notebook **14"** ~2012, **≤8 GB** DDR3, Ubuntu/Zorin); **marca/modelo/hostname** só em **`docs/private/homelab/`** — ver [PRIVATE_OPERATOR_NOTES.pt_BR.md](../PRIVATE_OPERATOR_NOTES.pt_BR.md). Adaptador **65/90 W** de teto; **§10.1** no EN.
 
 1. **Preencha a tabela** (§3 do EN) com modelos, CPU, RAM, PSU e consumo (idle/leve/pesado) de cada máquina.
 1. **Envie:** tabela preenchida + tensão (120 V ou 230 V) + disjuntor do **circuito do lab** (ex. 15 A, 20 A) + UPS atual (se houver) + **modelo do split LG**; se o AC tem **disjuntor 220 V dedicado** (como no seu caso), isso **já** está anotado no doc — só confirme **amperagem** do AC em privado se quiser cálculo de quadro.

@@ -14,7 +14,7 @@ Este é um **storyboard em documentação** para oficinas e POCs em **PMEs e mé
 
 1. **Ciclo de folha** — arquivos mensais caem em caminhos previsíveis; colunas em **forma de CPF/CNPJ** podem coexistir com campos de texto livre “observação”.
 2. **Picos de obrigações** — mais envios ad hoc, arquivos **compactados**, cópias duplicadas com nomes “final” e “final2”.
-3. **Risco de mistura entre clientes** — o mesmo notColleague-Sok ou *share* do contador pode conter **várias** árvores de cliente; nome de pasta é separador fraco.
+3. **Risco de mistura entre clientes** — o mesmo notebook ou *share* do contador pode conter **várias** árvores de cliente; nome de pasta é separador fraco.
 4. **Boar fareja (alvos com escopo)** — filesystem + SQL opcional mostram sequências **tipo documento nacional**, tokens “bancários” e colunas numéricas **ambíguas**.
 5. **Relatório ao DPO ou sócio** — os achados priorizam **onde** se concentra metadado denso pessoal + financeiro; **recomendações** de [compliance-samples](../compliance-samples/) podem localizar a redação (amostras LGPD, GDPR etc.).
 6. **Momento humano** — **Retenção** e **menor privilégio** em compartilhamentos; **assessoria** onde couber sigilo fiscal ou trabalhista. O produto **não** calcula imposto nem valida folha.

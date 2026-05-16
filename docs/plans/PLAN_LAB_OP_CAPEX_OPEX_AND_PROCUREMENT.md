@@ -92,7 +92,7 @@
 - Track real consumption windows and peak behavior prior to major electrical changes.
 - Model incremental growth scenarios (current baseline, near-term, and stress case).
 - Use measured data to decide: utility upgrade now, defer, or stage with local mitigations.
-- Keep a hard dependency Colleague-Nn: meter/contract validation -> UPS sizing -> utility increase request.
+- Keep a hard dependency chain: meter/contract validation -> UPS sizing -> utility increase request.
 
 ### 3.5 HVAC and environment
 - Compare keep/repair/replace options by total operational impact: thermal stability, noise, efficiency, maintainability.

@@ -19,7 +19,7 @@
 | Method                                                               | When to use                                                                                                                                                                                                                                                                     |
 | ------                                                               | -----------                                                                                                                                                                                                                                                                     |
 | **Bitwarden CLI (`bw`)**                                             | Already referenced in `homelab-host-report.sh`; good for “fetch secret at script run time” without a static file.                                                                                                                                                               |
-| **OS credential store** (Windows Credential Manager, macOS KeyColleague-Nn) | For interactive or scheduled jobs on one machine.                                                                                                                                                                                                                               |
+| **OS credential store** (Windows Credential Manager, macOS Keychain) | For interactive or scheduled jobs on one machine.                                                                                                                                                                                                                               |
 | **Session-only environment variables**                               | You set **`$env:VAR`** in the **integrated terminal** **before** asking the agent to run a script; the **same** shell session runs the command. **Do not** rely on “the AI clears the variable” as your only control — **close the terminal** or **end the session** when done. |
 | **Gitignored file** e.g. **`docs/private/homelab/.env.snmp.local`**  | One file per machine; copy from **`.env.example`** pattern in this folder; **never** commit.                                                                                                                                                                                    |
 
@@ -68,7 +68,7 @@ Create under **`docs/private/homelab/`** (not copied to GitHub):
 
 `snmpwalk` is **not** a native Windows tool. **`apt-get` runs inside Linux**, not in PowerShell. Do this:
 
-1. **Install WSL** (once): in an **elevated** PowerShell: `wsl --install` (installs Ubuntu by default on many setups). RColleague-Sot if Windows asks. See [Microsoft: Install WSL](https://learn.microsoft.com/en-us/windows/wsl/install).
+1. **Install WSL** (once): in an **elevated** PowerShell: `wsl --install` (installs Ubuntu by default on many setups). Restart if Windows asks. See [Microsoft: Install WSL](https://learn.microsoft.com/en-us/windows/wsl/install).
 1. **Open your Linux distro** (Start menu → Ubuntu, or run `wsl` in a terminal).
 1. **Inside the same distro you pass to `-WslDistro`** (e.g. open **Debian** if you use `-WslDistro "Debian"`), install Net-SNMP **once**:
 

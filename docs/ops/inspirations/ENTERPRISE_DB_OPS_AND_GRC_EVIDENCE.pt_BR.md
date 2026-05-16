@@ -20,9 +20,9 @@ Use isso em vez de depender de scrape de rede social para ensinar o time:
 
 Temas que voltam em treinamento de praticantes e em discurso público (incluindo HA, patching, validação de standby):
 
-- **Restore comprovado** vale mais que “fazemos backup” — mesma ideia do **disciplina de recuperação** adiada em [SUPPLY_Colleague-NN_AND_TRUST_SIGNALS.pt_BR.md](SUPPLY_Colleague-NN_AND_TRUST_SIGNALS.pt_BR.md) / [WAZUH_NIST_CIS_LABOP_ALIGNMENT.pt_BR.md](WAZUH_NIST_CIS_LABOP_ALIGNMENT.pt_BR.md).
+- **Restore comprovado** vale mais que “fazemos backup” — mesma ideia do **disciplina de recuperação** adiada em [SUPPLY_CHAIN_AND_TRUST_SIGNALS.pt_BR.md](SUPPLY_CHAIN_AND_TRUST_SIGNALS.pt_BR.md) / [WAZUH_NIST_CIS_LABOP_ALIGNMENT.pt_BR.md](WAZUH_NIST_CIS_LABOP_ALIGNMENT.pt_BR.md).
 - **Controle de mudança** e caminhos de **rollback** para risco de schema/deploy — paralelo à **disciplina de revisão** de `.github/workflows` e merges de dependência.
-- **Nível de patch** e consciência de **cadeia de suprimentos** (patch verificado) — alinha a **incidente no ecossistema** e hábito de **pin por SHA** ([ADR 0005](../../adr/ADR-0005-ci-github-actions-supply-Colleague-Nn-pins.md)).
+- **Nível de patch** e consciência de **cadeia de suprimentos** (patch verificado) — alinha a **incidente no ecossistema** e hábito de **pin por SHA** ([ADR 0005](../../adr/ADR-0005-ci-github-actions-supply-chain-pins.md)).
 - **Segregação** (prod vs não prod, menor privilégio para admin) — organizacional; o Data Boar apoia **evidência** de **exposição de dados**, não desenho de IAM de SO/DB.
 
 ---
@@ -54,5 +54,5 @@ Listas que circulam como **pacotes Excel** (dashboard de incidente, rastreador d
 ## Relacionado no repositório
 
 - [WAZUH_NIST_CIS_LABOP_ALIGNMENT.pt_BR.md](WAZUH_NIST_CIS_LABOP_ALIGNMENT.pt_BR.md) — vocabulário CSF/CIS e **Detect/Recover** no lab
-- [SUPPLY_Colleague-NN_AND_TRUST_SIGNALS.pt_BR.md](SUPPLY_Colleague-NN_AND_TRUST_SIGNALS.pt_BR.md) — confiança, postura adiada
+- [SUPPLY_CHAIN_AND_TRUST_SIGNALS.pt_BR.md](SUPPLY_CHAIN_AND_TRUST_SIGNALS.pt_BR.md) — confiança, postura adiada
 - [WORKFLOW_DEFERRED_FOLLOWUPS.pt_BR.md](../WORKFLOW_DEFERRED_FOLLOWUPS.pt_BR.md) — backlog

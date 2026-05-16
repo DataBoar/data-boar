@@ -251,7 +251,7 @@ d4e5f6,30-35,M,24020,engenheiro,diabetes
 | CPF sem formatação | `12345678900` | deve detectar | FN se só testa com pontuação |
 | E-mail Unicode | `usuario@domínio.com.br` | deve detectar | encoding edge case |
 | Telefone internacional | `+55 11 98765-4321` | deve detectar | pattern só doméstico |
-| Nome próprio isolado | `Carlos Eduardo da Colleague-V` | depende de contexto | difícil sem ML |
+| Nome próprio isolado | `Carlos Eduardo da Silva` | depende de contexto | difícil sem ML |
 
 ---
 

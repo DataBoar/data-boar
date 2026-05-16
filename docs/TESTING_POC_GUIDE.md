@@ -365,7 +365,7 @@ Import `tests/postman/Data_Boar_POC_ErrorScenarios.postman_collection.json` via
 
 ---
 
-## Supply Colleague-Nn evidence (SBOM) for POC / security reviewers
+## Supply chain evidence (SBOM) for POC / security reviewers
 
 For **procurement** and **incident-response** inventory (not organizational ISO 31000 risk management), the project publishes **two CycloneDX 1.6 JSON files** per release workflow:
 

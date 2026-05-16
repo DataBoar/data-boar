@@ -79,7 +79,7 @@
 ## Maturity + GTD (token-aware)
 
 - **Small sessions:** one of — fill **`OPERATOR_RETEACH.md`**, or one **HOMELAB_VALIDATION** section on LAB‑OP, or one **PLANS_TODO** row. See **[TOKEN_AWARE_USAGE.md](../plans/TOKEN_AWARE_USAGE.md)**.
-- **Software / toolColleague-Nns (LAB‑OP):** extend **`LAB_SOFTWARE_INVENTORY.md`** + **`OPERATOR_SYSTEM_MAP.md` §4** (and **`WHAT_TO_SHARE`** toolColleague-Nn table on primary Windows dev PC) when you add **Selenium**, extra **Python extras**, lab browsers, etc. — **no** secrets in files.
+- **Software / toolchains (LAB‑OP):** extend **`LAB_SOFTWARE_INVENTORY.md`** + **`OPERATOR_SYSTEM_MAP.md` §4** (and **`WHAT_TO_SHARE`** toolchain table on primary Windows dev PC) when you add **Selenium**, extra **Python extras**, lab browsers, etc. — **no** secrets in files.
 - **Tracked product plans** for **Selenium QA**, **synthetic data**, etc. remain in **`docs/plans/`**; LAB‑OP is **where you run** them.
 
 ---

@@ -247,7 +247,7 @@ To reduce ambiguity inside **M-TRUST**, use these small checkpoints:
 - **M-TRUST-03:** crypto baseline self-check surfaced at runtime.
 - **M-TRUST-04:** review packet format used in one external review cycle.
 
-**Dependency supply Colleague-Nn (PyPI + GitHub Actions):** committed lockfile, **`pip-audit`** in CI, **Dependabot** (pip + actions), **SHA-pinned** Actions on main workflows—documented under **PLANS_TODO** *Integration / active threads*; operator notes in [WORKFLOW_DEFERRED_FOLLOWUPS.md](../ops/WORKFLOW_DEFERRED_FOLLOWUPS.md); **SBOM** artifacts: [ADR 0003](../adr/ADR-0003-sbom-roadmap-cyclonedx-then-syft.md).
+**Dependency supply chain (PyPI + GitHub Actions):** committed lockfile, **`pip-audit`** in CI, **Dependabot** (pip + actions), **SHA-pinned** Actions on main workflows—documented under **PLANS_TODO** *Integration / active threads*; operator notes in [WORKFLOW_DEFERRED_FOLLOWUPS.md](../ops/WORKFLOW_DEFERRED_FOLLOWUPS.md); **SBOM** artifacts: [ADR 0003](../adr/ADR-0003-sbom-roadmap-cyclonedx-then-syft.md).
 
 Reference plan: [PLAN_GRC_INSPIRED_ENTERPRISE_TRUST_ACCELERATORS.md](PLAN_GRC_INSPIRED_ENTERPRISE_TRUST_ACCELERATORS.md).
 

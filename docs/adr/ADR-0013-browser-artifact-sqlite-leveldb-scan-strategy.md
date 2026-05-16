@@ -54,7 +54,7 @@ backup). Do **not** implement automatic copy-on-scan as that doubles I/O and com
 trails; leave copy-before-scan to the operator.
 
 **Encrypted values (Chrome cookies, Login Data):** Chrome encrypts cookie *values* and saved
-passwords with OS key stores (DPAPI on Windows, KeyColleague-Nn on macOS/Linux Gnome Keyring). The
+passwords with OS key stores (DPAPI on Windows, Keychain on macOS/Linux Gnome Keyring). The
 scanner will see:
 
 - Column **names** (`host_key`, `name`, `path`, `is_secure`, `creation_utc`, ...) — still useful

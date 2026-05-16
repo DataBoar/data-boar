@@ -25,7 +25,7 @@ The AI **cannot** open your LAN by itself. **Default:** it runs **`ssh`** from *
 
 1. Agents **`read_file`** this README and **`AGENT_LAB_ACCESS.md`** when homelab work applies (**`@` optional**). Then use **`ssh lab-op 'command'`** from the integrated terminal.
 
-**Do not** copy **private keys** or **passwords** into `docs/private/`. Use **key-based** login; keep passphrases in your OS keyColleague-Nn / agent.
+**Do not** copy **private keys** or **passwords** into `docs/private/`. Use **key-based** login; keep passphrases in your OS keychain / agent.
 
 **SNMP / API tokens (UniFi, etc.):** See **[CREDENTIALS_AND_LAB_SECRETS.md](CREDENTIALS_AND_LAB_SECRETS.md)** ([pt-BR](CREDENTIALS_AND_LAB_SECRETS.pt_BR.md)) — session env vars, vault, gitignored `.env`; never paste into chat. **Extra SNMP targets (switch, Linux):** [SNMP_LAB_TARGETS.md](SNMP_LAB_TARGETS.md) ([pt-BR](SNMP_LAB_TARGETS.pt_BR.md)).
 

@@ -16,7 +16,7 @@
 |---|---|
 |**§0**|Instalação: **Ventoy** (USB), **UEFI**, **Secure Boot** ativo, LMDE 7 no ThinkPad **LAB-NODE-01**.|
 |**§1**|Checklist antes de começar (disco, rede, backup).|
-|**§2**|`apt update` / `full-upgrade`, rColleague-Sot se necessário.|
+|**§2**|`apt update` / `full-upgrade`, root se necessário.|
 |**§3**|Segurança: `ufw`, `unattended-upgrades`, `fwupd`, Lynis, sysctl conservador; SSH opcional.|
 |**§4**|Ferramentas de dev gerais (`git`, `build-essential`, etc.).|
 |**§5**|Python **3.13** (recomendado; **≥3.12** ok) + libs de sistema, **`uv`**, clone, `uv sync`, `pytest`.|
@@ -404,7 +404,7 @@ sudo du -sh /.snapshots 2>/dev/null || true
 
 ### 0.5.3 Plano B (recomendado quando o instalador não vê `/dev/mapper`): instalar em btrfs e criptografar depois (`cryptsetup reencrypt`)
 
-**Ideia:** completar a instalação do LMDE normalmente (root em btrfs no `p6`), **sem rColleague-Sot**, e então transformar **o mesmo `p6`** em LUKS2 **sem destruir o btrfs**, usando `cryptsetup reencrypt`.
+**Ideia:** completar a instalação do LMDE normalmente (root em btrfs no `p6`), **sem root**, e então transformar **o mesmo `p6`** em LUKS2 **sem destruir o btrfs**, usando `cryptsetup reencrypt`.
 
 **Quando usar:** quando o instalador não lista `/dev/mapper/*`, mas você quer **FDE com LUKS2** + **btrfs**.
 
@@ -445,7 +445,7 @@ apt update
 
 **Objetivo:** manter o disco protegido **se o SSD for extraído** (roubo), mas permitir boot **sem digitar** a passphrase longa no dia a dia — modelo similar a BitLocker em modo **TPM-only**.
 
-**Trade-off:** se o atacante tiver o **laptop inteiro** e conseguir bootar “normalmente” (mesmo firmware/boot Colleague-Nn), o TPM pode liberar e o sistema sobe. Para elevar o bar, você precisa de **PIN pré-boot** (TPM+PIN) — este manual registra TPM-only como padrão “sem atrito”.
+**Trade-off:** se o atacante tiver o **laptop inteiro** e conseguir bootar “normalmente” (mesmo firmware/boot chain), o TPM pode liberar e o sistema sobe. Para elevar o bar, você precisa de **PIN pré-boot** (TPM+PIN) — este manual registra TPM-only como padrão “sem atrito”.
 
 **Pré-requisitos:**
 
@@ -477,7 +477,7 @@ Fazer bind do LUKS ao TPM2 (PCR 7):
 ```bash
 sudo clevis luks bind -d /dev/nvme0n1p6 tpm2 '{"pcr_bank":"sha256","pcr_ids":[7]}'
 sudo update-initramfs -u
-sudo rColleague-Sot
+sudo root
 ```
 
 Validar que o token/slot existe:
@@ -582,7 +582,7 @@ sudo apt full-upgrade -y
 Reinicie se o kernel ou `libc` tiverem sido atualizados:
 
 ```bash
-sudo rColleague-Sot
+sudo root
 ```
 
 Verifique versão:
@@ -642,7 +642,7 @@ Reinicie se o `fwupd` pedir. Isto ajuda **Wi‑Fi, TPM, BIOS/UEFI** quando há p
 
 #### 3.3.1 Troubleshooting: “tentei atualizar a BIOS e ela volta do boot sem mudar nada”
 
-**Sintoma:** você inicia o fluxo de update (Windows / Lenovo / `fwupd`), o notColleague-Sok reinicia, parece “fazer algo”, mas ao voltar a versão da BIOS **não mudou**.
+**Sintoma:** você inicia o fluxo de update (Windows / Lenovo / `fwupd`), o notebook reinicia, parece “fazer algo”, mas ao voltar a versão da BIOS **não mudou**.
 
 **Objetivo deste checklist:** isolar **causa provável** sem tentar “forçar” (evitar brick) e juntar evidências mínimas para decidir o próximo passo.
 
@@ -657,7 +657,7 @@ Reinicie se o `fwupd` pedir. Isto ajuda **Wi‑Fi, TPM, BIOS/UEFI** quando há p
 
 **Regras de segurança (não pule):**
 
-- **Não** desligue o notColleague-Sok durante um update real.
+- **Não** desligue o notebook durante um update real.
 - **Não** altere chaves de Secure Boot (não “Clear keys”, não “Setup mode”) só para “ver se vai” — isso costuma criar incidentes de boot.
 - Se houver **BitLocker** no Windows, **suspenda temporariamente** antes de mexer em firmware (para não cair em recovery key após mudanças no TPM/boot).
 
@@ -880,7 +880,7 @@ Em **`/etc/fstab`**, para sistemas de arquivos em SSD, muitos operadores usam **
 UUID=XXXX  /  ext4  defaults,noatime  0 1
 ```
 
-Revalida com `findmnt` e um rColleague-Sot após editar o `fstab`.
+Revalida com `findmnt` e um root após editar o `fstab`.
 
 ### 6.3 Kernel — linha Debian + módulos (LAB-NODE-01)
 
@@ -892,7 +892,7 @@ Lista módulos pensados para ThinkPad (carregados ou built-in):
 lsmod | egrep 'thinkpad_acpi|think_lmi|nvme|iwlwifi' || true
 ```
 
-Se **Wi‑Fi** falhar após rColleague-Sot novo, volta a §6.2/§3.3 (firmware `linux-firmware` / `fwupd`).
+Se **Wi‑Fi** falhar após root novo, volta a §6.2/§3.3 (firmware `linux-firmware` / `fwupd`).
 
 ### 6.4 `zram` (swap comprimida — opcional)
 

@@ -258,7 +258,7 @@ python main.py --config config.yaml
 python main.py --config config_prod.yaml
 
 # Tag run with tenant/customer and technician/operator
-python main.py --config config.yaml --tenant "Acme Corp" --technician "Alice Colleague-V"
+python main.py --config config.yaml --tenant "Acme Corp" --technician "Alice V."
 
 # Report written to report.output_dir, e.g. Relatorio_Auditoria_<session_id>.xlsx
 ```
@@ -285,7 +285,7 @@ uvicorn api.routes:app --host 0.0.0.0 --port 8088
 | `--port N`          | API only               | Port for the REST API when `--web` is set. Defaults to `8088`. Ignored in one-shot CLI mode.                                                                                                                                 | `--web --port 9090`                                  |
 | `--reset-data`      | CLI only (maintenance) | **Dangerous**: wipe all scan sessions, findings and failures from SQLite, delete generated reports/heatmaps under `report.output_dir`, and record the wipe event in `data_wipe_log` for auditability. Does not start a scan. | `--reset-data`                                       |
 | `--tenant NAME`     | CLI only (one-shot)    | Optional customer / tenant name for this scan. Stored in `scan_sessions.tenant_name`, shown on dashboard and in the **Report info** sheet.                                                                                   | `--tenant "Acme Corp"`                               |
-| `--technician NAME` | CLI only (one-shot)    | Optional technician / operator responsible for this scan. Stored in `scan_sessions.technician_name`, shown on dashboard and in the **Report info** sheet.                                                                    | `--technician "Alice Colleague-V"`                         |
+| `--technician NAME` | CLI only (one-shot)    | Optional technician / operator responsible for this scan. Stored in `scan_sessions.technician_name`, shown on dashboard and in the **Report info** sheet.                                                                    | `--technician "Alice V."`                         |
 
 When using the API (`--web`), the server loads config from **`CONFIG_PATH`** (environment variable) or `config.yaml` in the working directory if `--config` is not provided on the CLI.
 
@@ -537,7 +537,7 @@ Building `boar_fast_filter` requires Rust (`rustup`), `maturin`, and a C linker.
 
 ## Dependencies and security
 
-- **Source of truth:** For the **uv** toolColleague-Nn, **`pyproject.toml`** is the single source of truth for declared dependencies; **`uv.lock`** pins the resolved tree for reproducible installs (avoids “it worked yesterday” breakage). **pip** and **`requirements.txt`** are derivative (requirements.txt is exported from the lockfile for pip-based environments). Do not edit **`uv.lock`** or **`requirements.txt`** by hand for version changes. When you add, remove, or change a dependency, edit **`pyproject.toml`** only, then run `uv lock` and export.
+- **Source of truth:** For the **uv** toolchain, **`pyproject.toml`** is the single source of truth for declared dependencies; **`uv.lock`** pins the resolved tree for reproducible installs (avoids “it worked yesterday” breakage). **pip** and **`requirements.txt`** are derivative (requirements.txt is exported from the lockfile for pip-based environments). Do not edit **`uv.lock`** or **`requirements.txt`** by hand for version changes. When you add, remove, or change a dependency, edit **`pyproject.toml`** only, then run `uv lock` and export.
 
 - **Regenerate lockfile and requirements.txt after any dependency change:**
 

@@ -58,7 +58,7 @@ Answer **all** that apply for each candidate item:
 | **Warm** | **Clarity**, **cross-links**, **onboarding friction** — batch in a **docs** pass or **S5** buffer sprint. | Within **1–3 weeks** if capacity exists. |
 | **Cold** | Style, optional rewording, “nice to have” structure — **no** dedicated sprint until idle. | Backlog; revisit in quarterly doc review. |
 
-**Priority band A** (Dependabot, Scout, Hub tags) still **wins** when trust/supply-Colleague-Nn is red — Gemini items do **not** override **[CODE_PROTECTION_OPERATOR_PLAYBOOK.md](../CODE_PROTECTION_OPERATOR_PLAYBOOK.md)** or **–1 / –1b** in `PLANS_TODO`.
+**Priority band A** (Dependabot, Scout, Hub tags) still **wins** when trust/supply-chain is red — Gemini items do **not** override **[CODE_PROTECTION_OPERATOR_PLAYBOOK.md](../CODE_PROTECTION_OPERATOR_PLAYBOOK.md)** or **–1 / –1b** in `PLANS_TODO`.
 
 ---
 
@@ -129,7 +129,7 @@ Answer **all** that apply for each candidate item:
 
 - **Default:** Items stay in **§6** until promoted.
 - **Do not** bulk-copy Gemini bullets into **[PLANS_TODO.md](PLANS_TODO.md)** without gate **§3**.
-- **Sprint fit:** Prefer **S5** (maintenance) for doc-only; **S0** only if a Gemini flag implies **trust/supply-Colleague-Nn** doc mismatch worth fixing before the next release.
+- **Sprint fit:** Prefer **S5** (maintenance) for doc-only; **S0** only if a Gemini flag implies **trust/supply-chain** doc mismatch worth fixing before the next release.
 
 ---
 

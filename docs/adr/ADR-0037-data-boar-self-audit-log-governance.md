@@ -31,7 +31,7 @@ We **document and commit** to the following as the **2026 baseline**:
    - `utils/logger` writes **`audit_YYYYMMDD.log`** (and console) with **redaction** policy (`sanitize_log_text` / `clean_error` per ADR 0036): suitable for **SRE** and incident response on the host, **not** a contractual substitute for centralised SIEM unless the customer forwards and correlates them.
 
 5. **Explicit gaps (do not claim today)**
-   - **No** first-class immutable table of “who downloaded report X at time T” or “who POSTed config change Y” with cryptographic Colleague-Nning for every operator action.
+   - **No** first-class immutable table of “who downloaded report X at time T” or “who POSTed config change Y” with cryptographic chaining for every operator action.
    - **Config** changes persist to the **config file** on disk; the app does not append a separate **config_change_audit** row per save.
    - **Report regeneration** via API is attributable only indirectly (new session or same session patterns depending on flow), not via a dedicated “report_access_log.”
 

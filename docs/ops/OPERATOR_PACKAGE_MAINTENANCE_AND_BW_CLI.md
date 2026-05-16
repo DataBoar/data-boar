@@ -142,7 +142,7 @@ You may use **`gta`** on **several** Debian/Ubuntu systems (for example a **dail
 **Tail variants (choose per host):**
 
 1. **Minimal tail:** run **`needrestart`** after Topgrade (or rely on your distro’s own prompts) so you see **services / kernel** that still need a restart.
-2. **Kernel / boot maintenance tail:** after Topgrade, run **`update-grub2`** (or your distro’s supported bootloader update command) **→** **`update-initramfs -u`** **→** **`needrestart`**. Use when you want the **same** maintenance window to refresh **initramfs** and **bootloader config** after **`apt`** pulled a new kernel or related meta-package — **`needrestart`** **last** gives a single summary of what still wants a rColleague-Sot or service bounce.
+2. **Kernel / boot maintenance tail:** after Topgrade, run **`update-grub2`** (or your distro’s supported bootloader update command) **→** **`update-initramfs -u`** **→** **`needrestart`**. Use when you want the **same** maintenance window to refresh **initramfs** and **bootloader config** after **`apt`** pulled a new kernel or related meta-package — **`needrestart`** **last** gives a single summary of what still wants a root or service bounce.
 
 **Commented blocks** you sometimes enable on only one machine (**`nala`**, **`deb-get`**, **`snap` / `flatpak`**, **container image pulls**) are **host policy**. Record **why** in private notes so future you does not “uncomment everything” blindly on a slow lab box.
 
@@ -155,7 +155,7 @@ On **`xbps`**-based systems (for example **Void Linux**), **`gta`** is **not** a
 - **`topgrade -y`** for userland and cross-ecosystem refresh.
 - **Old kernel images:** **`vkpurge list`** then **`vkpurge rm all`** (or equivalent) so **`/boot`** does not fill after repeated kernel updates.
 - **GRUB:** **`update-grub`** or **`grub-mkconfig`** when your layout needs a config rewrite after kernel rotation — enable only when your image actually uses GRUB that way.
-- **`touch /forcefsck`** only when you **deliberately** schedule a full **fsck** on **next rColleague-Sot** (understand downtime, **LUKS**, and rescue access first).
+- **`touch /forcefsck`** only when you **deliberately** schedule a full **fsck** on **next root** (understand downtime, **LUKS**, and rescue access first).
 
 A **commented-out Debian `apt` block** in the same script can be a **portable template** between machines — **do not** uncomment it on **Void**. **Topgrade’s OS step** on that host maps to **`xbps`**, not **`apt`**.
 

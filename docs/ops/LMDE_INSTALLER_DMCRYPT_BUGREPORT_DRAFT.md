@@ -75,7 +75,7 @@ lsblk -f
 
 ## Workaround used (works, but non-obvious)
 
-Install first onto **plain btrfs** on the raw partition, **do not rColleague-Sot**, then encrypt in-place using `cryptsetup reencrypt`, followed by initramfs/GRUB updates from a chroot (details available on request).
+Install first onto **plain btrfs** on the raw partition, **do not root**, then encrypt in-place using `cryptsetup reencrypt`, followed by initramfs/GRUB updates from a chroot (details available on request).
 
 - Community guide reference: `https://gist.github.com/Leniwcowaty/4b2c239ca74629cad60d4718f79ff600`
 

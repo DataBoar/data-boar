@@ -5,13 +5,13 @@
 
 ## Purpose
 
-Document how the product **supports** (does not certify) alignment with **auditable and management standards** such as **ISO/IEC 27701** (Colleague-KS), **SOC 2**, and **FELCA** (Lei 15.211/2025 – Estatuto Digital da Criança e do Adolescente), and ensure the roadmap for decision-makers mentions these where relevant. No new runtime behaviour or code is required for the initial scope; this plan is **documentation- and roadmap-only**, sequenced for minimal token use.
+Document how the product **supports** (does not certify) alignment with **auditable and management standards** such as **ISO/IEC 27701** (PIMS), **SOC 2**, and **FELCA** (Lei 15.211/2025 – Estatuto Digital da Criança e do Adolescente), and ensure the roadmap for decision-makers mentions these where relevant. No new runtime behaviour or code is required for the initial scope; this plan is **documentation- and roadmap-only**, sequenced for minimal token use.
 
 ---
 
 ## How we support these standards
 
-### ISO/IEC 27701 (Privacy Information Management Systems – Colleague-KS)
+### ISO/IEC 27701 (Privacy Information Management Systems (PIMS))
 
 - **What it is:** International standard (2019; 2025 standalone edition) for establishing and operating a Privacy Information Management System. It requires PII controllers and processors to demonstrate accountability, manage privacy risks, and provide evidence (e.g. documented processing, DPIAs, cross-border transfer documentation).
 - **Our role:** We do **not** certify organisations. We provide **discovery and mapping** of personal/sensitive data across sources (files, SQL, NoSQL, APIs, shares, etc.) and **metadata-only** reporting (where found, pattern type, sensitivity, norm tags). That supports **evidence-based accountability**: knowing where PII is and the scope of processing is a prerequisite for applying ISO/IEC 27701 controls and for audits. Our config-driven norm tags and recommendation overrides align with the regulations organisations declare under ISO/IEC 27701 (e.g. LGPD, GDPR, CCPA).
@@ -51,7 +51,7 @@ Document how the product **supports** (does not certify) alignment with **audita
 | --- | --------                                                                                                                                                                                                                                              | -------- |
 | 1   | Add subsection “Auditable and management standards (supporting role)” in COMPLIANCE_FRAMEWORKS.md: ISO/IEC 27701 and FELCA paragraphs; link to this plan.                                                                                             | ✅ Done   |
 | 2   | Add equivalent subsection in COMPLIANCE_FRAMEWORKS.pt_BR.md (natural pt-BR).                                                                                                                                                                          | ✅ Done   |
-| 3   | Update roadmap sentence in README.md (decision-makers / “Why it holds up”): mention alignment with ISO/IEC 27701 (Colleague-KS) and FELCA (minor-data mapping) documented; we continue to extend support for auditable and regional standards.                | ✅ Done   |
+| 3   | Update roadmap sentence in README.md (decision-makers / “Why it holds up”): mention alignment with ISO/IEC 27701 (PIMS) and FELCA (minor-data mapping) documented; we continue to extend support for auditable and regional standards.                | ✅ Done   |
 | 4   | Update roadmap sentence in README.pt_BR.md equivalently (on-brand, minimal change).                                                                                                                                                                   | ✅ Done   |
 | 5   | In PLANS_TODO.md: add “Compliance standards alignment” to plan status and conflict/dependency table; add a short block with these to-dos; place in “What to start next” as smallest-scope (doc-only) so it can be done first under token constraints. | ✅ Done   |
 

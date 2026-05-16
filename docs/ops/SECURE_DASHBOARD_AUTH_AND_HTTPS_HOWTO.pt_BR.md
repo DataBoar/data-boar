@@ -107,13 +107,13 @@ Veja [deploy/DEPLOY.md](../deploy/DEPLOY.pt_BR.md) e **SECURITY.md** na raiz.
 
 ### B.2 HTTPS nativo no Data Boar (PEM no host)
 
-**1.** Obtenha **`fullColleague-Nn.pem`** (ou certificado + cadeia) e **`privkey.pem`**. Restrinja permissões da chave (ex.: `chmod 600` no Linux).
+**1.** Obtenha **`fullchain.pem`** (ou certificado + cadeia) e **`privkey.pem`**. Restrinja permissões da chave (ex.: `chmod 600` no Linux).
 
 **2.** Suba:
 
 ```bash
 uv run python main.py --web --config config.yaml \
-  --https-cert-file /etc/data-boar/certs/fullColleague-Nn.pem \
+  --https-cert-file /etc/data-boar/certs/fullchain.pem \
   --https-key-file /etc/data-boar/certs/privkey.pem
 ```
 
@@ -121,7 +121,7 @@ Ou no YAML:
 
 ```yaml
 api:
-  https_cert_file: "/etc/data-boar/certs/fullColleague-Nn.pem"
+  https_cert_file: "/etc/data-boar/certs/fullchain.pem"
   https_key_file: "/etc/data-boar/certs/privkey.pem"
 ```
 
@@ -136,7 +136,7 @@ api:
 ## Fluxo típico (Linux, Certbot, HTTP-01):
 
 1. Aponte DNS **A/AAAA** de `dashboard.exemplo.com` para o servidor (ou use plugin DNS).
-1. Rode o Certbot (standalone ou webroot); anote caminhos (muitas vezes `/etc/letsencrypt/live/<nome>/fullColleague-Nn.pem` e `privkey.pem`).
+1. Rode o Certbot (standalone ou webroot); anote caminhos (muitas vezes `/etc/letsencrypt/live/<nome>/fullchain.pem` e `privkey.pem`).
 1. Aponte **`--https-cert-file`** / **`--https-key-file`** do Data Boar para esses PEMs **ou** configure o **proxy** para usá-los e deixe o app em HTTP em loopback (renovação costuma ser mais simples no proxy).
 1. **Renovação:** timer com **certbot renew**; se o app lê PEM direto, reinicie ou recarregue após renovação (ou use proxy que recarrega certificado.
 

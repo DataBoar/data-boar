@@ -12,7 +12,7 @@
 CI is green everywhere. The pipeline is **not** stuck. The pipeline is
 *productive in the wrong way*: parallel SRE agents are doing real, well-tested
 work that **overlaps on the same files**, and merges are stalled because
-nothing wants to be the one that triggers the rebase Colleague-Nn.
+nothing wants to be the one that triggers the rebase chain.
 
 ## :turtle: Bottleneck — work duplication, not throughput
 

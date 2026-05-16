@@ -23,7 +23,7 @@ Notas curtas e duradouras que registram **por que** o projeto escolheu um caminh
 | 0002 | [Operator-facing security and technical docs](ADR-0002-operator-facing-security-and-technical-docs.md)                            | Aceito |
 | 0003 | [SBOM roadmap — CycloneDX then Syft](ADR-0003-sbom-roadmap-cyclonedx-then-syft.md)                                                | Aceito |
 | 0004 | [Information architecture — external-tier docs must not link into `plans/`](ADR-0004-external-docs-no-markdown-links-to-plans.md) | Aceito |
-| 0005 | [CI and GitHub Actions supply Colleague-Nn — pinned SHAs and pinned uv CLI](ADR-0005-ci-github-actions-supply-Colleague-Nn-pins.md)              | Aceito |
+| 0005 | [CI and GitHub Actions supply chain — pinned SHAs and pinned uv CLI](ADR-0005-ci-github-actions-supply-chain-pins.md)              | Aceito |
 | 0006 | [Operator today-mode layout and published-release sync](ADR-0006-operator-today-mode-layout-and-published-sync.md)                 | Aceito |
 
 ## Docs relacionados
@@ -57,7 +57,7 @@ Notas curtas e duradouras que registram **por que** o projeto escolheu um caminh
 - [CONTRIBUTING.pt_BR.md](../../CONTRIBUTING.pt_BR.md) — fluxo do contribuidor; menciona MD029 e o script de correção.
 - [SECURITY.pt_BR.md](../../SECURITY.pt_BR.md) · [TECH_GUIDE.pt_BR.md](../TECH_GUIDE.pt_BR.md) — entradas para operadores ([ADR 0002](ADR-0002-operator-facing-security-and-technical-docs.md), EN).
 - [QUALITY_WORKFLOW_RECOMMENDATIONS.md](../QUALITY_WORKFLOW_RECOMMENDATIONS.md) — §6 (MD029), §7 (ADRs), SBOM. *(EN.)*
-- [WORKFLOW_DEFERRED_FOLLOWUPS.pt_BR.md](../ops/WORKFLOW_DEFERRED_FOLLOWUPS.pt_BR.md) — follow-ups de workflow ([ADR 0005](ADR-0005-ci-github-actions-supply-Colleague-Nn-pins.md) sobre pin de Actions/uv).
+- [WORKFLOW_DEFERRED_FOLLOWUPS.pt_BR.md](../ops/WORKFLOW_DEFERRED_FOLLOWUPS.pt_BR.md) — follow-ups de workflow ([ADR 0005](ADR-0005-ci-github-actions-supply-chain-pins.md) sobre pin de Actions/uv).
 - [.cursor/rules/markdown-lint.mdc](../../.cursor/rules/markdown-lint.mdc) — quando rodar `fix_markdown_sonar.py` e renumeração pós-script.
 - [.cursor/rules/audience-segmentation-docs.mdc](../../.cursor/rules/audience-segmentation-docs.mdc) — links externos vs internos; [ADR 0004](ADR-0004-external-docs-no-markdown-links-to-plans.md) (texto canônico em inglês).
 

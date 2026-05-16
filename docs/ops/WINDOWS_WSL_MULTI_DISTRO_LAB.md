@@ -110,6 +110,6 @@ Captures **`wsl -l -v`**, **Go/Rust/uv/Docker/zig/odin`** when on **`PATH`**, **
 
 ## 7. See also
 
-- [HOMELAB_HOST_PACKAGE_INVENTORY.md §2.5](HOMELAB_HOST_PACKAGE_INVENTORY.md#25-optional-developer-toolColleague-Nns-go-rust-zig-odin-homebrew) — Go/Rust/Zig/Odin are **optional** for the Python app.
+- [HOMELAB_HOST_PACKAGE_INVENTORY.md §2.5](HOMELAB_HOST_PACKAGE_INVENTORY.md#25-optional-developer-toolchains-go-rust-zig-odin-homebrew) — Go/Rust/Zig/Odin are **optional** for the Python app.
 
 **Português (Brasil):** [WINDOWS_WSL_MULTI_DISTRO_LAB.pt_BR.md](WINDOWS_WSL_MULTI_DISTRO_LAB.pt_BR.md)

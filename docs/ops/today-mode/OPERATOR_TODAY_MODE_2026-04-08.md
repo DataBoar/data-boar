@@ -45,7 +45,7 @@ Ver tabela completa em **`OPERATOR_TODAY_MODE_2026-04-06.md`**. Resumo:
 - [x] Commit/push **Ansible + USAGE** — **feito** em `origin/main` (2026-04-09); outro clone só precisa `git pull`.
 - [x] `USAGE.pt_BR.md` — seção Ansible (sync EN) — **feito** (2026-04-09).
 - [ ] `ansible-playbook … --check` no LAB-NODE-01/lab quando disponível
-- [ ] **LAB-NODE-01 / `uv`:** playbook atual não instala toolColleague-Nn dev — se quiser testar Data Boar **a partir do código** no LAB-NODE-01, ou instalas `uv` à mão ou abrimos issue/PR para role opcional `uv` (discutido no chat)
+- [ ] **LAB-NODE-01 / `uv`:** playbook atual não instala toolchain dev — se quiser testar Data Boar **a partir do código** no LAB-NODE-01, ou instalas `uv` à mão ou abrimos issue/PR para role opcional `uv` (discutido no chat)
 - [ ] Homelab: NVMe USB-C; VeraCrypt (private doc)
 
 ---

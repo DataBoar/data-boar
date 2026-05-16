@@ -150,7 +150,7 @@ Use after **§1** host order. Tick when done on your lab sheet.
 | E | **Dev PC (Windows):** Data Boar (container or Win) uses `config.lab-smoke.example.yaml` with hub **LAN IP**; scan both DB targets + optional FS mounts. | Session completes; findings for `lab_customers` / linkage tables; `dob_possible_minor` counters if minors seed triggers. |
 | F | **lab-node-02:** `uv run` scan to same DB host:ports; optional dashboard `:8088`. | Same as E from Linux paths. |
 | G | **LAB-NODE-03:** CLI scan over LAN; confirm **musl** wheels (PyMySQL/psycopg2) load. | No import errors; scan completes. |
-| H | **LAB-NODE-04:** `scan.max_workers: 1`; last in Colleague-Nn. | Completes or documents timeout/OOM for runbook. |
+| H | **LAB-NODE-04:** `scan.max_workers: 1`; last in chain. | Completes or documents timeout/OOM for runbook. |
 | I | **Filesystem extras:** mount `tests/data/compressed` **and** `tests/data/homelab_synthetic` read-only; `scan_compressed: true`. | Findings in archives + text/CSV linkage files. |
 | J | **Shares (optional):** SMB/NFS/sshfs/cloud-local path in `filesystem` target after OS mount. | Same as any FS target — verify hydrated files (not cloud placeholders). |
 | K | **WebDAV connector (optional):** `type: webdav` against a lab server; credentials only in **private** / gitignored config. | Session completes; listing/download behaves per [TECH_GUIDE.md](../TECH_GUIDE.md); no credential echoes in logs you would paste publicly. |

@@ -87,7 +87,7 @@ docker images data_boar --format "{{.Tag}}\t{{.Size}}"
 
 - [TESTING.md](../TESTING.md) · [DOCKER_SETUP.md](../DOCKER_SETUP.md) · [HOMELAB_VALIDATION.md](../ops/HOMELAB_VALIDATION.md)
 - [SECURITY.md](../SECURITY.md) — supported Python lines
-- [TECH_GUIDE.md](../TECH_GUIDE.md) — local toolColleague-Nns
+- [TECH_GUIDE.md](../TECH_GUIDE.md) — local toolchains
 - [PLAN_READINESS_AND_OPERATIONS.md](PLAN_READINESS_AND_OPERATIONS.md) · [PLANS_TODO.md](PLANS_TODO.md)
 
 ---

@@ -258,7 +258,7 @@ python main.py --config config.yaml
 python main.py --config config_prod.yaml
 
 # Marcar execução com tenant/customer e technician/operator
-python main.py --config config.yaml --tenant "Acme Corp" --technician "Alice Colleague-V"
+python main.py --config config.yaml --tenant "Acme Corp" --technician "Alice V."
 
 # Relatório gravado em report.output_dir, ex.: Relatorio_Auditoria_<session_id>.xlsx
 ```
@@ -285,7 +285,7 @@ uvicorn api.routes:app --host 0.0.0.0 --port 8088
 | `--port N`          | Somente API              | Porta da API REST quando `--web` está definido. Padrão `8088`. Ignorado no modo CLI único.                                                                                                                            | `--web --port 9090`                                  |
 | `--reset-data`      | Somente CLI (manutenção) | **Perigoso**: apaga todas as sessões de varredura, achados e falhas do SQLite, remove relatórios/heatmaps gerados em `report.output_dir` e registra o evento em `data_wipe_log` para auditoria. Não inicia varredura. | `--reset-data`                                       |
 | `--tenant NAME`     | Somente CLI (único)      | Nome opcional de customer/tenant para esta varredura. Armazenado em `scan_sessions.tenant_name`, exibido no dashboard e na planilha **Report info**.                                                                  | `--tenant "Acme Corp"`                               |
-| `--technician NAME` | Somente CLI (único)      | Nome opcional do técnico/operador responsável por esta varredura. Armazenado em `scan_sessions.technician_name`, exibido no dashboard e na planilha **Report info**.                                                  | `--technician "Alice Colleague-V"`                         |
+| `--technician NAME` | Somente CLI (único)      | Nome opcional do técnico/operador responsável por esta varredura. Armazenado em `scan_sessions.technician_name`, exibido no dashboard e na planilha **Report info**.                                                  | `--technician "Alice V."`                         |
 
 Ao usar a API (`--web`), o servidor carrega a config de **`CONFIG_PATH`** (variável de ambiente) ou `config.yaml` no diretório de trabalho se `--config` não for informado na CLI.
 

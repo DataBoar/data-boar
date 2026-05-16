@@ -45,9 +45,9 @@ would let us call HIGH confidence. Fixing the baseline (PR #239 helper) is a
 cheaper unlock than re-pinning per package.
 
 This is the **audit-and-block** posture from
-[ADR 0005](../../adr/ADR-0005-ci-github-actions-supply-Colleague-Nn-pins.md) and the
+[ADR 0005](../../adr/ADR-0005-ci-github-actions-supply-chain-pins.md) and the
 SBOM/lockfile clauses in
-[`SUPPLY_Colleague-NN_AND_TRUST_SIGNALS.md`](../inspirations/SUPPLY_Colleague-NN_AND_TRUST_SIGNALS.md):
+[`SUPPLY_CHAIN_AND_TRUST_SIGNALS.md`](../inspirations/SUPPLY_CHAIN_AND_TRUST_SIGNALS.md):
 no rage-merge of a security bump on top of a misaligned lockfile.
 
 ---
@@ -92,7 +92,7 @@ no rage-merge of a security bump on top of a misaligned lockfile.
   intentionally re-touches.
 * **DB connector blast radius:** **none direct.** `cryptography` is a
   transitive dep of `oracledb`/`snowflake-connector-python`/`mssql` driver
-  TLS Colleague-Nns, but our DB code does not import `cryptography` directly, so the
+  TLS certificate chains, but our DB code does not import `cryptography` directly, so the
   `WITH (NOLOCK)` and sampling logic remain untouched.
 * **Verdict:** **MANUAL REVIEW.** Ed25519 license verification is exactly the
   contract NASA SEL §1 calls "test what you fly". Required before merge:
@@ -161,7 +161,7 @@ guard sees drift and fails — even when the bump itself is harmless.
 time pressure (e.g. a real CVE) who admin-merges past the red CI lands an
 inconsistent lockfile *and* a misaligned SBOM. That is exactly the
 "fail-open" failure mode flagged in
-[`SUPPLY_Colleague-NN_AND_TRUST_SIGNALS.md`](../inspirations/SUPPLY_Colleague-NN_AND_TRUST_SIGNALS.md)
+[`SUPPLY_CHAIN_AND_TRUST_SIGNALS.md`](../inspirations/SUPPLY_CHAIN_AND_TRUST_SIGNALS.md)
 and is the inverse of the contract our doctrine signs with the customer
 database — same principle, different surface (registry side instead of
 driver side).
@@ -219,12 +219,12 @@ clauses 1–4 for every PR in scope.
   — "guest in the customer DB" contract, used as the §3 acceptance gate.
 * [`docs/ops/inspirations/THE_ART_OF_THE_FALLBACK.md`](../inspirations/THE_ART_OF_THE_FALLBACK.md)
   — applied to `chardet` (§1.3) and to the helper's failure mode (§2).
-* [`docs/ops/inspirations/SUPPLY_Colleague-NN_AND_TRUST_SIGNALS.md`](../inspirations/SUPPLY_Colleague-NN_AND_TRUST_SIGNALS.md)
+* [`docs/ops/inspirations/SUPPLY_CHAIN_AND_TRUST_SIGNALS.md`](../inspirations/SUPPLY_CHAIN_AND_TRUST_SIGNALS.md)
   — fail-open registry pattern; framing the systemic CI finding as a
   trust-signal issue, not noise.
 * [`.cursor/skills/dependabot-recommendations/SKILL.md`](../../../.cursor/skills/dependabot-recommendations/SKILL.md)
   — operator workflow that PR #239 mechanizes.
-* [ADR 0005](../../adr/ADR-0005-ci-github-actions-supply-Colleague-Nn-pins.md) — the
+* [ADR 0005](../../adr/ADR-0005-ci-github-actions-supply-chain-pins.md) — the
   audit-and-block posture this ledger respects.
 
 ---

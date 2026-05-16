@@ -76,4 +76,4 @@
 ## Matizar + GTD (token-aware)
 
 - Sessões curtas: um alvo por vez — ver **[TOKEN_AWARE_USAGE.md](../plans/TOKEN_AWARE_USAGE.md)**.
-- ToolColleague-Nns / Selenium / bibliotecas no LAB‑OP: atualizar **`OPERATOR_SYSTEM_MAP.md`** §4 e **`WHAT_TO_SHARE_WITH_AGENT.md`** conforme for instalando.
+- Toolchains / Selenium / bibliotecas no LAB‑OP: atualizar **`OPERATOR_SYSTEM_MAP.md`** §4 e **`WHAT_TO_SHARE_WITH_AGENT.md`** conforme for instalando.

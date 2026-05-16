@@ -85,7 +85,7 @@ Use this table so **agents / CI** do not promise what only a **human operator** 
 | **1** | **A** — Routes under **`/{locale}/…/assessment`** + optional YAML pack ✅; **SQLite persistence + answers** ✅; **optional HMAC row integrity** ✅ (`GET /status`, **`--export-audit-trail`**) | **First** in-app spike: single app, same audit story; align with RBAC [#86](https://github.com/FabioLeitao/data-boar/issues/86) later. |
 | **2** | **B** — Excel sheet + formula scoring | Fast tabular path; compare UX vs A for consultant workflows. |
 | **3** | **C** — Companion app + API/SSO | Separation / white-label; evaluate **after** A/B learnings. |
-| **4** | **D** — PDF/export-only narrative | Simplicity vs interactivity; last in the **comparison Colleague-Nn**, not “never”. |
+| **4** | **D** — PDF/export-only narrative | Simplicity vs interactivity; last in the **comparison chain**, not “never”. |
 
 **POC scaffolding (ongoing):** feature-flag + tier / JWT gates; optional YAML pack from **`api.maturity_assessment_pack_path`** — **no** proprietary questionnaire text in the **public** repo (curate privately; see `tests/fixtures/maturity_assessment/sample_pack.yaml` for shape). Routes use the same **`/{locale_slug}/…`** pattern as the rest of the dashboard HTML ([PLAN_DASHBOARD_I18N.md](completed/PLAN_DASHBOARD_I18N.md)).
 

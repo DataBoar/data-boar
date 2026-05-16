@@ -142,7 +142,7 @@ Você **pode** usar o **`gta`** em **vários** sistemas Debian/Ubuntu (por exemp
 **Variantes de rasto (por host):**
 
 1. **Rasto mínimo:** **`needrestart`** depois do Topgrade (ou confie nos prompts da distro) para ver **serviços / kernel** que ainda precisam de reinício.
-2. **Rasto kernel / boot:** depois do Topgrade, **`update-grub2`** (ou o comando suportado pela sua distro) **→** **`update-initramfs -u`** **→** **`needrestart`**. Use quando quiser que a **mesma** janela de manutenção regenere **initramfs** e **config do bootloader** após **`apt`** instalar kernel novo — **`needrestart`** **no fim** resume o que ainda pede rColleague-Sot ou restart de serviço.
+2. **Rasto kernel / boot:** depois do Topgrade, **`update-grub2`** (ou o comando suportado pela sua distro) **→** **`update-initramfs -u`** **→** **`needrestart`**. Use quando quiser que a **mesma** janela de manutenção regenere **initramfs** e **config do bootloader** após **`apt`** instalar kernel novo — **`needrestart`** **no fim** resume o que ainda pede root ou restart de serviço.
 
 **Blocos comentados** que às vezes você ativa só numa máquina (**`nala`**, **`deb-get`**, **`snap` / `flatpak`**, **pulls de imagens**) são **política do host**. **Registre** o motivo em notas privadas.
 
@@ -155,7 +155,7 @@ Em sistemas baseados em **`xbps`** (por exemplo **Void Linux**), o **`gta`** **n
 - **`topgrade -y`** para camadas de usuário e ecossistemas cruzados.
 - **Kernels antigos:** **`vkpurge list`** e depois **`vkpurge rm all`** (ou equivalente) para **não** encher **`/boot`** após vários updates de kernel.
 - **GRUB:** **`update-grub`** ou **`grub-mkconfig`** quando a imagem **precisa** regravar config após troca de kernel — habilite só quando fizer sentido.
-- **`touch /forcefsck`** só quando você **quer de propósito** um **fsck** completo no **próximo rColleague-Sot** (entenda tempo parado, **LUKS** e acesso de recuperação antes).
+- **`touch /forcefsck`** só quando você **quer de propósito** um **fsck** completo no **próximo root** (entenda tempo parado, **LUKS** e acesso de recuperação antes).
 
 Um **bloco Debian `apt` comentado** no mesmo arquivo pode ser **modelo portável** entre máquinas — **não** descomente isso em **Void**. O passo de **SO** do Topgrade nesse host mapeia para **`xbps`**, não para **`apt`**.
 

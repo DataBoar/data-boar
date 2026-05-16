@@ -5,7 +5,7 @@
 
 ---
 
-## Evidência de *supply Colleague-Nn* (SBOM) para revisores da POC / segurança
+## Evidência de *supply chain* (SBOM) para revisores da POC / segurança
 
 Para inventário de **cadeia de suprimentos** e **resposta a incidentes** (não substitui gestão de risco organizacional ISO 31000), o projeto publica **dois arquivos JSON CycloneDX 1.6** por execução do workflow de release:
 

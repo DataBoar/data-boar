@@ -45,7 +45,7 @@ The main entry point is `main.py`.
 python main.py --config config.yaml
 
 # Tag scan with tenant and technician metadata
-python main.py --config config.yaml --tenant "Acme Corp" --technician "Alice Colleague-V"
+python main.py --config config.yaml --tenant "Acme Corp" --technician "Alice V."
 ```
 
 - Loads config, runs a full audit of all targets (databases, filesystems, APIs, shares as configured).
@@ -235,7 +235,7 @@ curl -X POST http://localhost:8088/scan
 # Start a scan tagged with tenant/customer and technician/operator
 curl -X POST http://localhost:8088/scan \
   -H "Content-Type: application/json" \
-  -d '{ "tenant": "Acme Corp", "technician": "Alice Colleague-V" }'
+  -d '{ "tenant": "Acme Corp", "technician": "Alice V." }'
 ```
 
 ## Response (200)
@@ -281,7 +281,7 @@ curl -X POST http://localhost:8088/scan_database \
     "database": "mydb",
     "driver": "postgresql+psycopg2",
     "tenant": "Acme Corp",
-    "technician": "Alice Colleague-V"
+    "technician": "Alice V."
   }'
 ```
 
@@ -304,7 +304,7 @@ curl http://localhost:8088/list
       "finished_at": "2025-03-01LAB-NODE-01:35:10",
       "status": "completed",
       "tenant_name": "Acme Corp",
-      "technician_name": "Alice Colleague-V",
+      "technician_name": "Alice V.",
       "database_findings": 12,
       "filesystem_findings": 30,
       "scan_failures": 0

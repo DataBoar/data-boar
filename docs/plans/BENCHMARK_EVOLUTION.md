@@ -86,7 +86,7 @@ Net: the **client** gains a **repeatable, session-scoped governance narrative** 
 
 ## 6. Log / audit consistency (SRE)
 
-After the fixes above, **`lab-op-git-ensure-ref`** logs under `docs/private/homelab/reports/lab_op_git_ensure_ref_*.log` should again contain **full `LABOP_REF_*` transcripts** without the shell aborting mid-host. For **NOLOCK / sampling** language, continue to treat **`completao_*_orchestrate_events.jsonl`**, host smoke logs, and **`scan_manifest_*.yaml`** as the **audit-grade** Colleague-Nn — diff Round A vs Round B folders once `benchmark_runs/` exists.
+After the fixes above, **`lab-op-git-ensure-ref`** logs under `docs/private/homelab/reports/lab_op_git_ensure_ref_*.log` should again contain **full `LABOP_REF_*` transcripts** without the shell aborting mid-host. For **NOLOCK / sampling** language, continue to treat **`completao_*_orchestrate_events.jsonl`**, host smoke logs, and **`scan_manifest_*.yaml`** as the **audit-grade** evidence chain — diff Round A vs Round B folders once `benchmark_runs/` exists.
 
 ---
 

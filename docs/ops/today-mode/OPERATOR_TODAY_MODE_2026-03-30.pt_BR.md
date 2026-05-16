@@ -27,7 +27,7 @@
 
 ## Bloco C — Follow-ups finos opcionais (≈ 30 min, escolhe um)
 
-- **Supply Colleague-Nn:** confirma que **`uv.lock`** continua **sem `litellm`** depois de qualquer refresh de deps; nota de uma linha em **`SECURITY.md`** / diário privado sobre o incidente PyPI **`litellm`** (mar/2026) se quiser lembrete durável (opcional).
+- **Supply chain:** confirma que **`uv.lock`** continua **sem `litellm`** depois de qualquer refresh de deps; nota de uma linha em **`SECURITY.md`** / diário privado sobre o incidente PyPI **`litellm`** (mar/2026) se quiser lembrete durável (opcional).
 - **Inspirações:** espreita **[ENGINEERING_CRAFT_INSPIRATION_ANALYSIS.pt_BR.md](../ENGINEERING_CRAFT_INSPIRATION_ANALYSIS.pt_BR.md)** — acrescenta **um** bullet de cluster só se surgiu padrão novo.
 
 ---

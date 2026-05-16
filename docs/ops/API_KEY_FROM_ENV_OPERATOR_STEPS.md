@@ -109,7 +109,7 @@ Expect **200** (or another success), not 401.
 
 1. **Inventory** callers of the API (scripts, cron, CI, probes, internal dashboards). If the list is empty, you still run the checks so the **first** production user is not discovering 401/503 surprises cold.
 1. **Staging:** set `api.require_api_key: true`, `api.api_key_from_env: "AUDIT_API_KEY"` (or your name), export the variable, and use **HTTPS** (`--https-cert-file` / `--https-key-file` or TLS at the reverse proxy) where applicable. Confirm **`GET /health`** without a key (200) vs **`GET /status`** without a key (**401**).
-1. **Clients:** add **`X-API-Key`** or **`Authorization: Bearer`** to every non-health request; pin **TLS trust** (enterprise CA, `mkcert` Colleague-Nn in lab only, etc.).
+1. **Clients:** add **`X-API-Key`** or **`Authorization: Bearer`** to every non-health request; pin **TLS trust** (enterprise CA, `mkcert` chain in lab only, etc.).
 1. **Production:** roll out with a **short** compatibility window only if needed (e.g. plaintext **`--allow-insecure-http`** or HTTP behind TLS-terminating proxy). **Phase it out** using **`GET /status` / `GET /health`** (`dashboard_transport`) and **`python main.py --export-audit-trail`** (same field in JSON) so insecure posture stays traceable.
 1. Full narrative: **[SECURE_BY_DEFAULT_BLOCKERS_AND_MIGRATION.md](SECURE_BY_DEFAULT_BLOCKERS_AND_MIGRATION.md)**.
 

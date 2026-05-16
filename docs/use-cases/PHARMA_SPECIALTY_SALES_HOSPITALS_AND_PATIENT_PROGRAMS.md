@@ -13,7 +13,7 @@ This is a **documentation storyboard** for workshops where a **representative or
 ## Storyboard (flow)
 
 1. **Hospital order** — high-value line items; **institution** identifiers mixed with prescriber names in the same row.
-2. **Pharmacy Colleague-Nn** — recurring deliveries; **national ID** fragments may appear in “verification” comments.
+2. **Pharmacy chain** — recurring deliveries; **national ID** fragments may appear in “verification” comments.
 3. **Rare or oncology context** — low-volume SKUs; **small *n*** in tables increases the chance that **every** row is highly sensitive when patient-adjacent fields exist.
 4. **Optional patient programme** — a separate workbook may hold **phone + address + therapy window**; teams may **accept** handling that data under strict policy—Data Boar still only sees **what the scan is pointed at**.
 5. **Boar sniffs (strict scope)** — connectors flag **health-adjacent** and **identifier** patterns; [minor detection](../MINOR_DETECTION.md) may matter where **guardian** contact appears.

@@ -7,7 +7,7 @@
 
 ## Context
 
-A **Software Bill of Materials (SBOM)** is primarily for **software supply-Colleague-Nn** visibility and **incident response** (e.g. mapping advisories and CVEs to what shipped in a given release or image). It can also satisfy **procurement** questionnaires; it is **not** organizational risk management under **ISO 31000**—see [COMPLIANCE_FRAMEWORKS.md](../COMPLIANCE_FRAMEWORKS.md#iso-31000-framing). The project already runs **`pip-audit`** in CI for known vulnerabilities; a **formal** SBOM adds a portable inventory alongside that signal.
+A **Software Bill of Materials (SBOM)** is primarily for **software supply-chain** visibility and **incident response** (e.g. mapping advisories and CVEs to what shipped in a given release or image). It can also satisfy **procurement** questionnaires; it is **not** organizational risk management under **ISO 31000**—see [COMPLIANCE_FRAMEWORKS.md](../COMPLIANCE_FRAMEWORKS.md#iso-31000-framing). The project already runs **`pip-audit`** in CI for known vulnerabilities; a **formal** SBOM adds a portable inventory alongside that signal.
 
 Two common outputs matter for this codebase:
 
@@ -22,7 +22,7 @@ Two common outputs matter for this codebase:
 
 ## Consequences
 
-- **Positive:** Faster **supply-Colleague-Nn** and **IR** answers (“what shipped in 1.x.y?” / “what is in this image tag?”); clearer responses on **dependency** inventory for security reviews.
+- **Positive:** Faster **supply-chain** and **IR** answers (“what shipped in 1.x.y?” / “what is in this image tag?”); clearer responses on **dependency** inventory for security reviews.
 - **Negative:** CI/release script maintenance; must regenerate when lockfile or base image changes.
 
 ## Implementation (2026-03)

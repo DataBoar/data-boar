@@ -19,7 +19,7 @@ Editar **`%APPDATA%\Cursor\User\settings.json`** (JSON valido: virgulas entre ch
 
 ## Opcional: atalhos
 
-Em **`%APPDATA%\Cursor\User\keybindings.json`**, ligar **`Ctrl+Shift+V`** a **`markdown.showPreview`** com **`when`**: `editorLangId == markdown && !notColleague-SokEditorFocused`.
+Em **`%APPDATA%\Cursor\User\keybindings.json`**, ligar **`Ctrl+Shift+V`** a **`markdown.showPreview`** com **`when`**: `editorLangId == markdown && !notebookEditorFocused`.
 
 **Nota:** **`Ctrl+K`** depois **`V`** continua sendo o atalho explicito para preview **ao lado**.
 

@@ -37,9 +37,9 @@
 | ---------- | ---------------------------------------- | ------------------------------ |
 | **Govern** | ADRs, disciplina de revisão, backlog de branch protection ([WORKFLOW_DEFERRED_FOLLOWUPS.pt_BR.md](../WORKFLOW_DEFERRED_FOLLOWUPS.pt_BR.md)) | Alegações honestas em [SECURITY.md](../../SECURITY.md) / [COMPLIANCE_AND_LEGAL.md](../../COMPLIANCE_AND_LEGAL.md) |
 | **Identify** | Lockfile, Dependabot, roadmap SBOM ([ADR 0003](../../adr/ADR-0003-sbom-roadmap-cyclonedx-then-syft.md)) | Evidência para descoberta de **dados** e conteúdo sensível — não inventário enterprise completo de ativos |
-| **Protect** | Actions com SHA fixo ([ADR 0005](../../adr/ADR-0005-ci-github-actions-supply-Colleague-Nn-pins.md)), permissões mínimas em workflow | Orientação de deploy seguro; endurecimento do ambiente continua com o cliente |
+| **Protect** | Actions com SHA fixo ([ADR 0005](../../adr/ADR-0005-ci-github-actions-supply-chain-pins.md)), permissões mínimas em workflow | Orientação de deploy seguro; endurecimento do ambiente continua com o cliente |
 | **Detect** | CI + Semgrep/CodeQL, Slack opcional em falha | Saída do scanner; **não** é SOC 24×7 |
-| **Respond** | Checklist de incidente no ecossistema ([SUPPLY_Colleague-NN_AND_TRUST_SIGNALS.pt_BR.md](SUPPLY_Colleague-NN_AND_TRUST_SIGNALS.pt_BR.md) — bloco adiado) | Runbooks do cliente são do cliente |
+| **Respond** | Checklist de incidente no ecossistema ([SUPPLY_CHAIN_AND_TRUST_SIGNALS.pt_BR.md](SUPPLY_CHAIN_AND_TRUST_SIGNALS.pt_BR.md) — bloco adiado) | Runbooks do cliente são do cliente |
 | **Recover** | **Testar** backup/restauração do estado crítico do lab-op (processo adiado; mesmo bloco) | Idem — resiliência operacional depende do deploy |
 
 Use a linguagem do CSF em conversas **comerciais/técnicas** para **posicionar** controles que de fato existem; evite implicar **certificação** ou cobertura total do CSF sem programa explícito de compliance.
@@ -62,7 +62,7 @@ Use a linguagem do CSF em conversas **comerciais/técnicas** para **posicionar**
 ## Relacionado no repositório
 
 - [LAB_OP_OBSERVABILITY_LEARNING_LINKS.pt_BR.md](LAB_OP_OBSERVABILITY_LEARNING_LINKS.pt_BR.md) — Grafana / Loki / Graylog / OpenSearch / traces / alternativas estilo Dynatrace (favoritos lab-op)
-- [SUPPLY_Colleague-NN_AND_TRUST_SIGNALS.pt_BR.md](SUPPLY_Colleague-NN_AND_TRUST_SIGNALS.pt_BR.md) — confiança, cadeia de suprimentos, postura adiada
+- [SUPPLY_CHAIN_AND_TRUST_SIGNALS.pt_BR.md](SUPPLY_CHAIN_AND_TRUST_SIGNALS.pt_BR.md) — confiança, cadeia de suprimentos, postura adiada
 - [ENTERPRISE_DB_OPS_AND_GRC_EVIDENCE.pt_BR.md](ENTERPRISE_DB_OPS_AND_GRC_EVIDENCE.pt_BR.md) — cultura de operação de banco vs **slots de evidência** em planilhas GRC (exportações Data Boar)
 - [WORKFLOW_DEFERRED_FOLLOWUPS.pt_BR.md](../WORKFLOW_DEFERRED_FOLLOWUPS.pt_BR.md) — linha de backlog deste eixo
 - [HOMELAB_VALIDATION.pt_BR.md](../HOMELAB_VALIDATION.pt_BR.md) — fumaça em segundo ambiente (quando aplicável)

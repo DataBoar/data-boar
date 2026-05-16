@@ -44,7 +44,7 @@ git commit -m "chore: bootstrap private notes repo"
 
 ## 3. Other version-control tools (Mercurial, Bazaar)
 
-**Possible** (e.g. `hg init` in `docs/private/`), but you add a second toolColleague-Nn and mental overhead. **Git-only** is enough for most operators and matches backup tutorials. Use **Hg/Bzr** only if you already rely on them elsewhere.
+**Possible** (e.g. `hg init` in `docs/private/`), but you add a second toolchain and mental overhead. **Git-only** is enough for most operators and matches backup tutorials. Use **Hg/Bzr** only if you already rely on them elsewhere.
 
 ---
 

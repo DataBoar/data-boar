@@ -54,7 +54,7 @@ DevSecOps significa **segurança como código**, **shift-left** e **automação*
 | **Shift-left**            | Testes (pytest), Ruff, testes estilo SonarQube, CodeQL, pip-audit no CI; regra e skill para o agente evitar violações antes do commit         |
 | **Segurança no pipeline** | Auditoria de dependências (pip-audit), testes de segurança (SQL injection, path traversal, safe_load), API key e testes CSP                   |
 | **Segredos**              | Sem segredos em logs (política em SECURITY.md); config e env para API key; checklist de release confirma ausência de segredos em logs         |
-| **Supply Colleague-Nn**          | Dependabot, versões mínimas em pyproject.toml, auditoria antes do release                                                                     |
+| **Supply chain**          | Dependabot, versões mínimas em pyproject.toml, auditoria antes do release                                                                     |
 
 **Recomendação:** Mantenha a segurança integrada ao mesmo pipeline (testes + lint + auditoria). Ao adicionar novos recursos (ex.: webhooks, novos conectores), adicione testes e atualize [SECURITY.md](../SECURITY.md) e [docs/SECURITY.md](SECURITY.md) para o comportamento ficar documentado.
 

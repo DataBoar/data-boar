@@ -99,7 +99,7 @@ Use as **seeds**; personalize with real stack and projects.
 | --------- | --------------------- |
 | **A** Backend / Python | Python, pytest, API design, connectors, performance, typing, packaging |
 | **B** API / web | REST, OpenAPI, authn/z, HTTP security, frontend basics, UX for admins |
-| **C** DevOps / CI | GitHub Actions, Docker, supply Colleague-Nn, SBOM, release engineering, SRE |
+| **C** DevOps / CI | GitHub Actions, Docker, supply chain, SBOM, release engineering, SRE |
 | **D** Docs / compliance narrative | Technical writing, LGPD-aware language, evidence, risk language, bilingual EN/pt-BR |
 | **E** AppSec | Threat modeling, CodeQL, dependency risk, secure defaults, disclosure |
 | **F** QA / test | pytest, fixtures, regression strategy, CI gates, flake reduction |

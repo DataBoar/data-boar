@@ -165,8 +165,8 @@
 | Item | Prioridade | Justificativa |
 | ---- | ---------- | ------------- |
 | Cabos Ethernet cat6 (rezerva) | P0 | Custo mínimo, elimina atraso em reconfiguração. |
-| Kit de manutenção (chaves Torx/Phillips, spudger, ESD) | P0 | Para T-series and L-series ThinkPads e outros notColleague-Soks; sem isso, manutenção é inviável. |
-| Carregadores/fontes reserva para notColleague-Soks | P1 | Fora de linha podem demorar semanas para repor. |
+| Kit de manutenção (chaves Torx/Phillips, spudger, ESD) | P0 | Para T-series and L-series ThinkPads e outros notebooks; sem isso, manutenção é inviável. |
+| Carregadores/fontes reserva para notebooks | P1 | Fora de linha podem demorar semanas para repor. |
 | KVM 2 portas para manutenção sem monitor extra | P1 | Reduz toil em manutenção de hosts headless. |
 | Estoque mínimo de peças (SSD 2.5", M.2, fans) | P2 | Reduz downtime de hosts legacy. |
 

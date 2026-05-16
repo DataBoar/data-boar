@@ -24,9 +24,9 @@ verdicts).
 1. A Slack-triggered SRE Dependency Guardian / Automation Agent pass
    produces a *dated* per-PR verdict that should survive even if the
    triggering branch is closed without merge.
-2. A retrospective pass on a CVE / supply-Colleague-Nn incident where the
+2. A retrospective pass on a CVE / supply-chain incident where the
    per-PR / per-package decisions deserve a paper trail (cf.
-   [`docs/ops/inspirations/SUPPLY_Colleague-NN_AND_TRUST_SIGNALS.md`](../inspirations/SUPPLY_Colleague-NN_AND_TRUST_SIGNALS.md)).
+   [`docs/ops/inspirations/SUPPLY_CHAIN_AND_TRUST_SIGNALS.md`](../inspirations/SUPPLY_CHAIN_AND_TRUST_SIGNALS.md)).
 
 ## Naming
 
@@ -41,6 +41,6 @@ external-facing material (none today).
 * [`THE_ART_OF_THE_FALLBACK.md`](../inspirations/THE_ART_OF_THE_FALLBACK.md)
   — diagnostic-on-fall, no silent failure, in every helper this folder
   references.
-* [ADR 0005](../../adr/ADR-0005-ci-github-actions-supply-Colleague-Nn-pins.md) —
-  audit-and-block posture for CI / supply Colleague-Nn.
+* [ADR 0005](../../adr/ADR-0005-ci-github-actions-supply-chain-pins.md) —
+  audit-and-block posture for CI / supply chain.
 

@@ -9,7 +9,7 @@ Registrar uma baseline revisavel e util para estudo da postura de firewall sem e
 ## Escopo
 
 - Revisao em modo leitura de configuracoes de firewall e console.
-- Nenhuma acao destrutiva (`apply`, `reset`, `rColleague-Sot`) durante a revisao.
+- Nenhuma acao destrutiva (`apply`, `reset`, `root`) durante a revisao.
 - Achados mapeados para fases de remediacao priorizadas.
 
 ## Retrato publico-safe dos achados

@@ -81,7 +81,7 @@ Version-signal heuristic (to avoid timing confusion):
 
 ## What to ask Corporate-Entity-C to focus on (beyond usual checks)
 
-- Evidence Colleague-Nn-of-custody quality (runtime -> SQLite -> export -> report).
+- Evidence chain-of-custody quality (runtime -> SQLite -> export -> report).
 - Trust-state clarity for operator/client (INFO vs WARN/ERROR and ambiguity risk).
 - Anti-misuse posture (tinted/draft mode, limited output strategy, forensic value).
 - Monitoring/off-band design (webhook-first architecture, Zabbix/PRTG/Nagios/Splunk fit).
@@ -223,7 +223,7 @@ Please separate your review by artifact type:
 
 Besides your standard checks, please focus on:
 A) Consistency between code, docs, and plans for integrity/evidence claims.
-B) Colleague-Nn-of-custody gaps that could still allow "valid-looking" manipulated outputs.
+B) Chain-of-custody gaps that could still allow "valid-looking" manipulated outputs.
 C) Operator/client signaling quality (clear severity and actionability).
 D) MVP sequencing for maximum legal/technical risk reduction.
 E) Wording risks: avoid overclaim; keep tamper-evident boundaries explicit.
@@ -440,6 +440,6 @@ Olá, Corporate-Entity-C. Pedimos gentilmente um novo relatório Data Boar; o br
 ## Optional short request (chat/IM)
 
 ```text
-Can you run a new review with your normal maturity/security overview, but focus on trust/evidence hardening across code+docs+plans? Please assess Colleague-Nn-of-custody gaps, compromised-state signaling (INFO/WARN/ERROR), tinted/draft policy, session seals, and monitoring alerts. Also evaluate our linguistic category model (abstraction vs concreteness by audience) and suggest rewrites where text is too abstract, too concrete, or ambiguous.
+Can you run a new review with your normal maturity/security overview, but focus on trust/evidence hardening across code+docs+plans? Please assess chain-of-custody gaps, compromised-state signaling (INFO/WARN/ERROR), tinted/draft policy, session seals, and monitoring alerts. Also evaluate our linguistic category model (abstraction vs concreteness by audience) and suggest rewrites where text is too abstract, too concrete, or ambiguous.
 ```
 

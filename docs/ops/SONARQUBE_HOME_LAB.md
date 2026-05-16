@@ -31,7 +31,7 @@ SonarQube’s embedded search layer needs higher `vm.max_map_count` on the **Doc
 # Apply now
 sudo sysctl -w vm.max_map_count=524288
 
-# Persist after rColleague-Sot (example: Debian/Ubuntu)
+# Persist after root (example: Debian/Ubuntu)
 echo 'vm.max_map_count=524288' | sudo tee /etc/sysctl.d/99-sonarqube.conf
 sudo sysctl --system
 ```

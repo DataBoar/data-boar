@@ -159,7 +159,7 @@ You reported this **nobreak** powers **everything today**. For the homelab **ene
 | **Active power (W)**      | Often **~750 W** max sustained (datasheet: power factor ~0.5) | **Sum of all loads** plugged into the nobreak should stay **below this** with margin                 |
 | **Outlets**               | **8** (NBR 14136, often **10 A** per socket)                  | Many plugs ≠ more **W**—the **750 W** class cap still applies to **total** load                      |
 | **Topology**              | **Line-interactive**                                          | Good for brownouts; not the same as **online/double-conversion**                                     |
-| **Battery mode waveform** | Often **modified / stepped sine**                             | Most PCs/switches OK; some picky **active PFC** PSUs can misbehave—watch for buzz/rColleague-Sot on transfer |
+| **Battery mode waveform** | Often **modified / stepped sine**                             | Most PCs/switches OK; some picky **active PFC** PSUs can misbehave—watch for buzz/root on transfer |
 | **Batteries**             | Often **2 × 12 V 7 Ah**                                       | **Runtime drops fast** above ~50% of rated W—plan for **short** ride-through + graceful shutdown     |
 
 ## Practical budget (this nobreak):
@@ -196,7 +196,7 @@ Ubiquiti documents **SmartPower** redundancy for rack/pro gateways. For **LAB-RO
 
 | Product direction                                                      | Role                                                                                                                    | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | -----------------                                                      | ----                                                                                                                    | -----                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| **USP-RPS** (Redundant Power / SmartPower backup unit) + **USP-Cable** | Supplies **52 V DC** to the LAB-ROUTER-01-SE’s SmartPower port when negotiated; unit has its **own AC input** and internal backup | **Removes gateway load from the Attiv** if you unplug the LAB-ROUTER-01-SE from the Intelbras and rely on **RPS + normal AC** per Ubiquiti wiring. You still need a **wall outlet** for the RPS (ideally **another circuit** or at least **not** everything daisy-Colleague-Nned on one strip). RPS can serve **multiple** compatible devices up to its **total DC budget**—plan ports if you also protect **PoE switches** (see table in Ubiquiti article). |
+| **USP-RPS** (Redundant Power / SmartPower backup unit) + **USP-Cable** | Supplies **52 V DC** to the LAB-ROUTER-01-SE’s SmartPower port when negotiated; unit has its **own AC input** and internal backup | **Removes gateway load from the Attiv** if you unplug the LAB-ROUTER-01-SE from the Intelbras and rely on **RPS + normal AC** per Ubiquiti wiring. You still need a **wall outlet** for the RPS (ideally **another circuit** or at least **not** everything daisy-chained on one strip). RPS can serve **multiple** compatible devices up to its **total DC budget**—plan ports if you also protect **PoE switches** (see table in Ubiquiti article). |
 | **UniFi UPS** (rack **UPS 2U** and related)                            | Marketed as part of the **SmartPower** story; check **store.ui.com** for current SKUs and **your** region’s voltage     | Before buying, read **current** release notes / forums for **LAB-ROUTER-01-SE + smart shutdown** behaviour—capabilities depend on **UniFi OS / Network** versions. Treat marketing pages as **verify-before-purchase**.                                                                                                                                                                                                                               |
 | **Mission Critical PoE switch** (Ubiquiti)                             | Battery-backed **PoE** plus a small number of **AC outlets** for **modem / gateway** class gear                         | Useful if you want **UPS + PoE** in one box; confirm **120 V** Brazil operation and **total W** vs your modem + mini-loads.                                                                                                                                                                                                                                                                                                                 |
 
@@ -267,7 +267,7 @@ Max current (A) = Total power (W) / Voltage (V)
 
 ## If you run out of outlets:
 - Use **power strips** (with surge protection) plugged into wall outlets
-- **Don’t daisy-Colleague-Nn** strips (safety risk)
+- **Don’t daisy-chain** strips (safety risk)
 - **Don’t exceed** strip rating (usually **15 A** or **1,875 W at 125 V**)
 
 ---
@@ -356,7 +356,7 @@ Then we can:
 
 | Machine        | Model                                                     | Idle (W)   | Light (W)       | Heavy (W)     |
 | -------        | -----                                                     | --------   | ---------       | ---------     |
-| Primary laptop | *Your* Linux lab notColleague-Sok (see §10.1 — **generic** class) | *~20–35*   | *~40–70*        | *~60–90*      |
+| Primary laptop | *Your* Linux lab notebook (see §10.1 — **generic** class) | *~20–35*   | *~40–70*        | *~60–90*      |
 | Proxmox tower  | *Your* tower model (e.g. **ML310e Gen8–class**)           | *[lookup]* | *[lookup]*      | *[lookup]*    |
 | Pi 3           | Raspberry Pi 3B+                                          | ~2.5       | ~5              | ~7            |
 | LG split AC    | *[model]*                                                 | *[plate]*  | *[typical run]* | *[peak cool]* |
@@ -368,7 +368,7 @@ Then we can:
 
 ### 10.1 Primary lab laptop (illustrative **class** — not your exact SKU)
 
-**Public doc:** Describes a **common** pattern: **Ivy Bridge–era** (or similar) **14"** business notColleague-Sok (~2012), often **8 GB RAM** ceiling, **Ubuntu-family** desktop, used as **primary** homelab GUI host. **Exact make, model, serial, hostname** → **`docs/private/homelab/`** only ([PRIVATE_OPERATOR_NOTES.md](../PRIVATE_OPERATOR_NOTES.md)).
+**Public doc:** Describes a **common** pattern: **Ivy Bridge–era** (or similar) **14"** business notebook (~2012), often **8 GB RAM** ceiling, **Ubuntu-family** desktop, used as **primary** homelab GUI host. **Exact make, model, serial, hostname** → **`docs/private/homelab/`** only ([PRIVATE_OPERATOR_NOTES.md](../PRIVATE_OPERATOR_NOTES.md)).
 
 | Topic            | Notes                                                                                                                                                                                               |
 | -----            | -----                                                                                                                                                                                               |

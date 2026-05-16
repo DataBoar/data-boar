@@ -64,7 +64,7 @@ A tabela em **`.cursor/rules/session-mode-keywords.mdc`** é **pequena e só em 
 
 ## 6. IDE / OOM / hardware
 
-**Travamento ou OOM** no Cursor costuma ser **pressão de memória local** (chat grande, muitos arquivos, extensões). Mais **RAM** no notColleague-Sok ajuda; **mensagens menores**, **fechar** abas e **dividir** o trabalho em sessões também ajuda. **Não** é julgamento sobre o projeto ou sobre seu ritmo.
+**Travamento ou OOM** no Cursor costuma ser **pressão de memória local** (chat grande, muitos arquivos, extensões). Mais **RAM** no notebook ajuda; **mensagens menores**, **fechar** abas e **dividir** o trabalho em sessões também ajuda. **Não** é julgamento sobre o projeto ou sobre seu ritmo.
 
 ---
 

@@ -143,7 +143,7 @@ When secure mode is enabled, the app should detect if TLS/certificate capabiliti
 Do **not** "fix browser warnings" by misissuing/misdeploying a custom root certificate and pushing it into client machine trusted root stores as an app shortcut.
 
 - This creates broad trust blast radius and weakens endpoint trust boundaries.
-- It can make unsafe cert Colleague-Nns appear valid and hides real TLS problems from operators/users.
+- It can make unsafe cert chains appear valid and hides real TLS problems from operators/users.
 - It conflicts with secure-by-design goals and auditable trust posture.
 
 ## Safer recommendation path

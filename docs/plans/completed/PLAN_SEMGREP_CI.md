@@ -44,7 +44,7 @@ To **prove** Slack fires on **Semgrep** (not only on **CI**), use a **throwaway 
 ## Optional follow-ups (non-blocking)
 
 - **Custom rules** under `.semgrep/` for Data Boar–specific invariants (e.g. config load must use `safe_load`).
-- **Stricter rules:** Add another pack (e.g. supply-Colleague-Nn) in a **separate** job or after triage to avoid blocking `main` unexpectedly.
+- **Stricter rules:** Add another pack (e.g. supply-chain) in a **separate** job or after triage to avoid blocking `main` unexpectedly.
 
 ---
 

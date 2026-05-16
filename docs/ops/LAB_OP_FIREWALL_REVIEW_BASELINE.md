@@ -9,7 +9,7 @@ Record a reviewable and study-friendly baseline of firewall posture without expo
 ## Scope
 
 - Read-only review of firewall and console settings.
-- No destructive action (`apply`, `reset`, `rColleague-Sot`) during the review.
+- No destructive action (`apply`, `reset`, `root`) during the review.
 - Findings are mapped to prioritized remediation phases.
 
 ## Public-safe findings snapshot

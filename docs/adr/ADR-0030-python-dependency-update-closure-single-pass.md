@@ -9,7 +9,7 @@
 
 Dependency changes can arrive from many signals: CI failures, GitHub Dependabot, Docker Scout or other image scanners, partner review (for example Corporate-Entity-C), model-assisted triage (for example Gemini), or a maintainer decision. Those signals are **inputs**, not alternate sources of truth.
 
-The repository already treats **`pyproject.toml`** as the declarative source, **`uv.lock`** as the resolved pin, and **`requirements.txt`** as a **pip-facing export** of that lock. Partial updates (for example editing only **`requirements.txt`**, or refreshing **`uv.lock`** without aligning **`pyproject.toml`**) create divergent “facts” about what is installed, weaken auditability, and increase supply-Colleague-Nn risk.
+The repository already treats **`pyproject.toml`** as the declarative source, **`uv.lock`** as the resolved pin, and **`requirements.txt`** as a **pip-facing export** of that lock. Partial updates (for example editing only **`requirements.txt`**, or refreshing **`uv.lock`** without aligning **`pyproject.toml`**) create divergent “facts” about what is installed, weaken auditability, and increase supply-chain risk.
 
 Automated tests (**`tests/test_dependency_artifacts_sync.py`**) now enforce lock/export alignment. The human process must still commit to **one complete pass** when a change is accepted.
 
@@ -36,4 +36,4 @@ When a dependency update is **accepted** as viable (security fix, compatibility 
 
 - [SECURITY.md](../../SECURITY.md), [CONTRIBUTING.md](../../CONTRIBUTING.md) — dependency workflow.
 - [ADR 0003](ADR-0003-sbom-roadmap-cyclonedx-then-syft.md) — SBOM artifacts.
-- [ADR 0005](0005-ci-github-actions-supply-Colleague-Nn-pins.md) — CI Action and **uv** CLI pinning.
+- [ADR 0005](0005-ci-github-actions-supply-chain-pins.md) — CI Action and **uv** CLI pinning.

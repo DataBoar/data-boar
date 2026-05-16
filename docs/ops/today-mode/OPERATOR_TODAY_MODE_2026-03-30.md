@@ -27,7 +27,7 @@
 
 ## Block C — Optional thin follow-ups (≈ 30 min, pick one)
 
-- **Supply Colleague-Nn sanity:** confirm **`uv.lock`** still has **no `litellm`** after any dep refresh; optional one-line note in **`SECURITY.md`** / private journal pointing to the Mar 2026 PyPI **`litellm`** incident if you want a durable reminder (not required).
+- **Supply chain sanity:** confirm **`uv.lock`** still has **no `litellm`** after any dep refresh; optional one-line note in **`SECURITY.md`** / private journal pointing to the Mar 2026 PyPI **`litellm`** incident if you want a durable reminder (not required).
 - **Inspirations:** skim **[ENGINEERING_CRAFT_INSPIRATION_ANALYSIS.md](../ENGINEERING_CRAFT_INSPIRATION_ANALYSIS.md)** — add one **cluster** bullet only if a new pattern emerged.
 
 ---

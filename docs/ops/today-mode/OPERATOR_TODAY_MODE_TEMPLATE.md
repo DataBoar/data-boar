@@ -8,7 +8,7 @@
 
 ## Block 0 — Morning reality check (10–15 min)
 
-Run **`carryover-sweep`** or **`.\scripts\operator-day-ritual.ps1 -Mode Morning`** — the script prints **Tier A** (`git fetch`, `git status -sb`, open PRs, latest **`main`** CI, today-mode file for **today**) plus **Tier B–D reminders** (supply Colleague-Nn / image / lab cadence). See **[README.md](README.md)** (*Morning readiness*). Then:
+Run **`carryover-sweep`** or **`.\scripts\operator-day-ritual.ps1 -Mode Morning`** — the script prints **Tier A** (`git fetch`, `git status -sb`, open PRs, latest **`main`** CI, today-mode file for **today**) plus **Tier B–D reminders** (supply chain / image / lab cadence). See **[README.md](README.md)** (*Morning readiness*). Then:
 
 1. **`origin/main`:** **`git pull origin main`** if the ritual shows your branch is behind.
 2. **Working tree (public repo):** decide: commits, branch, stash, or continue.

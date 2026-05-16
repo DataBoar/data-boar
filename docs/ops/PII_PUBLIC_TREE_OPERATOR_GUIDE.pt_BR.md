@@ -454,7 +454,7 @@ Para repositório **público**, o GitHub **não** publica:
 | ----- | ---- |
 | 1 | Rodar **`gh api .../forks`** (ou a UI web) e **anotar** cada `full_name` e `pushed_at`. |
 | 2 | Para cada fork que ainda importa: **avisar o dono** — alinhar com o `main` atual ou apagar o fork (você não faz isso pelo login dele). |
-| 3 | **Inventário de seus próprios dispositivos** onde você (ou quem você confia) clonou o repo: PC dev, notColleague-Soks, lab — **liste em notas privadas**, não neste doc público. Em cada um: `git fetch origin && git reset --hard origin/main` quando quiser igualar ao GitHub. |
+| 3 | **Inventário de seus próprios dispositivos** onde você (ou quem você confia) clonou o repo: PC dev, notebooks, lab — **liste em notas privadas**, não neste doc público. Em cada um: `git fetch origin && git reset --hard origin/main` quando quiser igualar ao GitHub. |
 | 4 | **Opcional:** abrir **Insights → Traffic** no GitHub (se disponível) só para **tendência** — não é lista de quem clonou. |
 | 5 | Aceitar que **clones anônimos** de repo público **não** são auditáveis por completo; redução de risco é **histórico canônico reescrito + forks que você enxerga + máquinas conhecidas**. |
 

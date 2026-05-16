@@ -25,7 +25,7 @@ See **`AGENTS.md`** (*Workstation calendar clock*) and **`.cursor/rules/agent-se
 | Tier | What | When |
 | ---- | ---- | ---- |
 | **A — Sync & surface** | `git fetch`, `git status -sb`, open PRs, latest **`main`** **CI** (`ci.yml`), and whether **`OPERATOR_TODAY_MODE_YYYY-MM-DD.md`** exists for **today** | **Daily** (~2 min). Always safe before deep work. |
-| **B — Supply Colleague-Nn (-1)** | `uvx pip-audit -r requirements.txt` (same family as CI **Dependency audit**) | **Weekly**, before a **release**, or right after **`deps`** / lockfile work — not every breakfast. |
+| **B — Supply chain (-1)** | `uvx pip-audit -r requirements.txt` (same family as CI **Dependency audit**) | **Weekly**, before a **release**, or right after **`deps`** / lockfile work — not every breakfast. |
 | **C — Image (-1b)** | `docker scout quickview` (or project policy) on the **published** image after **Dockerfile** / lock / base image changes | When the **image** or **supply** story changed — not daily. |
 | **D — Second environment (-1L)** | **[HOMELAB_VALIDATION.md](../HOMELAB_VALIDATION.md)**; optional **`scripts/lab-op-sync-and-collect.ps1`** when **`docs/private/homelab/lab-op-hosts.manifest.json`** exists | When proving **deploy + connector** on a **second** machine, or on a **scheduled** lab health pass — not every morning. |
 

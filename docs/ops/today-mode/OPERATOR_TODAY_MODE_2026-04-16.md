@@ -44,7 +44,7 @@
 
 ## Block A — Quality gates (before the feature token budget)
 
-Order is **intentional**: supply Colleague-Nn and repo scans first, **image** second, **optional Sonar** when available, then **full gate**.
+Order is **intentional**: supply chain and repo scans first, **image** second, **optional Sonar** when available, then **full gate**.
 
 ### A0 — One-shot triage
 

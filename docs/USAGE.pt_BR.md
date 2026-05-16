@@ -54,7 +54,7 @@ O ponto de entrada é `main.py`.
 python main.py --config config.yaml
 
 # Execução com tags de tenant e técnico
-python main.py --config config.yaml --tenant "Acme Corp" --technician "Alice Colleague-V"
+python main.py --config config.yaml --tenant "Acme Corp" --technician "Alice V."
 ```
 
 - Carrega a configuração, varre todos os alvos (`targets`) e grava achados em `audit_results.db`.
@@ -210,7 +210,7 @@ curl -X POST http://localhost:8088/scan
 # Com tenant e technician
 curl -X POST http://localhost:8088/scan \
   -H "Content-Type: application/json" \
-  -d '{ "tenant": "Acme Corp", "technician": "Alice Colleague-V" }'
+  -d '{ "tenant": "Acme Corp", "technician": "Alice V." }'
 ```
 
 Resposta típica:
@@ -250,7 +250,7 @@ curl -X POST http://localhost:8088/scan_database \
     "database": "mydb",
     "driver": "postgresql+psycopg2",
     "tenant": "Acme Corp",
-    "technician": "Alice Colleague-V"
+    "technician": "Alice V."
   }'
 ```
 
@@ -271,7 +271,7 @@ Resposta (exemplo):
       "finished_at": "2025-03-01LAB-NODE-01:35:10",
       "status": "completed",
       "tenant_name": "Acme Corp",
-      "technician_name": "Alice Colleague-V",
+      "technician_name": "Alice V.",
       "database_findings": 12,
       "filesystem_findings": 30,
       "scan_failures": 0

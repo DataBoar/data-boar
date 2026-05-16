@@ -111,7 +111,7 @@ Este documento sugere **camadas adicionais** (ferramentas, hábitos e fluxo de t
 
 #### O que temos (ADRs):
 
-- **Índice:** [docs/adr/README.md](adr/README.md) ([pt-BR](adr/README.pt_BR.md)) — convenção de numeração, corpos de ADR somente em inglês (como arquivos de plano), baseline **[ADR 0000](adr/ADR-0000-project-origin-and-adr-baseline.md)** (origem + histórico pré-ADR), depois **[ADR 0001](adr/ADR-0001-markdown-fix-script-md029-and-semantic-step-lists.md)** (MD029 + `fix_markdown_sonar.py`), **[ADR 0004](adr/ADR-0004-external-docs-no-markdown-links-to-plans.md)** (arquitetura da informação), **[ADR 0005](adr/ADR-0005-ci-github-actions-supply-Colleague-Nn-pins.md)** (CI: Actions com SHA fixo + uv fixo), etc.
+- **Índice:** [docs/adr/README.md](adr/README.md) ([pt-BR](adr/README.pt_BR.md)) — convenção de numeração, corpos de ADR somente em inglês (como arquivos de plano), baseline **[ADR 0000](adr/ADR-0000-project-origin-and-adr-baseline.md)** (origem + histórico pré-ADR), depois **[ADR 0001](adr/ADR-0001-markdown-fix-script-md029-and-semantic-step-lists.md)** (MD029 + `fix_markdown_sonar.py`), **[ADR 0004](adr/ADR-0004-external-docs-no-markdown-links-to-plans.md)** (arquitetura da informação), **[ADR 0005](adr/ADR-0005-ci-github-actions-supply-chain-pins.md)** (CI: Actions com SHA fixo + uv fixo), etc.
 - **Ainda opcional / incremental:** Manter uma visão curta de **arquitetura** no TECH_GUIDE ou num futuro `docs/architecture.md` para componentes e fluxo de dados; adicionar novos `docs/adr/000N-....md` para escolhas com impacto em segurança ou processo. Linkar de SECURITY.md ou CONTRIBUTING quando uma decisão afeta contribuidores diretamente.
 
 **Previne:** Refatoração que acidentalmente enfraquece a segurança ou duplica erros passados.
@@ -122,7 +122,7 @@ Este documento sugere **camadas adicionais** (ferramentas, hábitos e fluxo de t
 
 **Por quê:** pip-audit já trata vulnerabilidades conhecidas; um **Software Bill of Materials** formal suporta **transparência da cadeia de suprimentos** e **resposta a incidentes** (mapear o que foi entregue).
 
-**CI / GitHub Actions (aplicado no repo):** Actions de terceiros são fixadas a **SHAs completos**; **`astral-sh/setup-uv`** usa um **semver fixo de uv** (não `latest`); **`tests/test_github_workflows.py`** guarda **`ci.yml`**. **Decisão + limites de escopo**: **[ADR 0005](adr/ADR-0005-ci-github-actions-supply-Colleague-Nn-pins.md)**.
+**CI / GitHub Actions (aplicado no repo):** Actions de terceiros são fixadas a **SHAs completos**; **`astral-sh/setup-uv`** usa um **semver fixo de uv** (não `latest`); **`tests/test_github_workflows.py`** guarda **`ci.yml`**. **Decisão + limites de escopo**: **[ADR 0005](adr/ADR-0005-ci-github-actions-supply-chain-pins.md)**.
 
 #### O que fazer (SBOM):
 
@@ -184,6 +184,6 @@ Este documento sugere **camadas adicionais** (ferramentas, hábitos e fluxo de t
 1. **Proteção de branch** — Habilitar quando os nomes de checks obrigatórios estiverem estáveis (incluir **Semgrep** se quiser bloquear merges). Veja [WORKFLOW_DEFERRED_FOLLOWUPS.md](ops/WORKFLOW_DEFERRED_FOLLOWUPS.md).
 1. **Tipos** — mypy é gradual somente-dev até triagem (§5).
 1. **SBOM** — CycloneDX depois Syft; [ADR 0003](adr/ADR-0003-sbom-roadmap-cyclonedx-then-syft.md).
-1. **Cadeia de suprimentos CI** — Actions e uv fixados; [ADR 0005](adr/ADR-0005-ci-github-actions-supply-Colleague-Nn-pins.md).
+1. **Cadeia de suprimentos CI** — Actions e uv fixados; [ADR 0005](adr/ADR-0005-ci-github-actions-supply-chain-pins.md).
 
 Adote o que se encaixa na sua equipe e cronograma; base sólida: **paridade pre-commit no CI**, **proteção de branch**, **MD029/script**, **Bandit** + **Semgrep**. **mypy** permanece opcional até estar limpo.

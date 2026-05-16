@@ -25,7 +25,7 @@
    If your corpus can include people under 18, **minors detection is first-class** in the roadmap—not a bolt-on regex. That is a product ethics choice, not a marketing slogan. #ChildSafety #ResponsibleAI
 
 5. **Bonded / customs-adjacent contexts**
-   In sealed or customs-adjacent environments, **retention and artefacts are operator-owned**. The tool does not silently tag “legal basis” for you. ADR 0039 documents that posture for integrators. #SupplyColleague-Nn #Audit
+   In sealed or customs-adjacent environments, **retention and artefacts are operator-owned**. The tool does not silently tag “legal basis” for you. ADR 0039 documents that posture for integrators. #SupplyChain #Audit
 
 6. **Port logistics + crew data**
    Generic **use-case storyboard**: multinational crew, shore passes, mixed languages, high sensitivity. Useful for **DPIA-style thinking** and scope conversations—no customer names, no drama. #Maritime #HRData

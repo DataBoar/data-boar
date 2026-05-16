@@ -63,7 +63,7 @@ This is a living guide. We update it incrementally as we extract high-signal les
    - transport crypto,
    - trust anchors/cert handling,
    - endpoint hardening,
-   - supply Colleague-Nn and signing,
+   - supply chain and signing,
    - least privilege / abuse controls.
 1. For each candidate lesson, write one of:
    - **Adopt now**, or

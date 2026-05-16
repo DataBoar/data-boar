@@ -19,7 +19,7 @@ Edit **`%APPDATA%\Cursor\User\settings.json`** (JSON: comma-separated keys, vali
 
 ## Optional: keybindings
 
-In **`%APPDATA%\Cursor\User\keybindings.json`**, bind **`Ctrl+Shift+V`** to **`markdown.showPreview`** with **`when`**: `editorLangId == markdown && !notColleague-SokEditorFocused` so the default “preview to the side” command does not win after updates.
+In **`%APPDATA%\Cursor\User\keybindings.json`**, bind **`Ctrl+Shift+V`** to **`markdown.showPreview`** with **`when`**: `editorLangId == markdown && !notebookEditorFocused` so the default “preview to the side” command does not win after updates.
 
 **Note:** **`Ctrl+K`** then **`V`** is still the explicit “open preview to the side” shortcut by design.
 

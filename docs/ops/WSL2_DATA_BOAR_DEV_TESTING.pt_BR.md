@@ -2,7 +2,7 @@
 
 **English:** [WSL2_DATA_BOAR_DEV_TESTING.md](WSL2_DATA_BOAR_DEV_TESTING.md)
 
-**Objetivo:** Tratar o **WSL2** no PC Windows principal de desenvolvimento (notColleague-Sok típico estilo ThinkPad) como **superfície opcional de execução** adicional ao Windows nativo e aos Linux em laptops (LAB-NODE-01, lab-node-02). **Não** substitui CI nem hosts de homelab; reduz o risco de assumir um único SO ou um único runtime de contentores para como clientes ou integradores rodam o Data Boar.
+**Objetivo:** Tratar o **WSL2** no PC Windows principal de desenvolvimento (notebook típico estilo ThinkPad) como **superfície opcional de execução** adicional ao Windows nativo e aos Linux em laptops (LAB-NODE-01, lab-node-02). **Não** substitui CI nem hosts de homelab; reduz o risco de assumir um único SO ou um único runtime de contentores para como clientes ou integradores rodam o Data Boar.
 
 ---
 

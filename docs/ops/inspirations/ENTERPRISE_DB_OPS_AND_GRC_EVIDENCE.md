@@ -20,9 +20,9 @@ Use these instead of scraping social feeds when teaching the team:
 
 Themes that recur in practitioner training and public discourse (including activity around HA features, patching, and standby validation):
 
-- **Proven restore** beats “we take backups” — same idea as deferred **recovery discipline** in [SUPPLY_Colleague-NN_AND_TRUST_SIGNALS.md](SUPPLY_Colleague-NN_AND_TRUST_SIGNALS.md) / [WAZUH_NIST_CIS_LABOP_ALIGNMENT.md](WAZUH_NIST_CIS_LABOP_ALIGNMENT.md).
+- **Proven restore** beats “we take backups” — same idea as deferred **recovery discipline** in [SUPPLY_CHAIN_AND_TRUST_SIGNALS.md](SUPPLY_CHAIN_AND_TRUST_SIGNALS.md) / [WAZUH_NIST_CIS_LABOP_ALIGNMENT.md](WAZUH_NIST_CIS_LABOP_ALIGNMENT.md).
 - **Change control** and **rollback** paths for schema/deploy risk — parallel to **review discipline** for `.github/workflows` and dependency merges.
-- **Patch level and supply Colleague-Nn** awareness (verified patch state) — aligns with **ecosystem incident** and **SHA pin** habits ([ADR 0005](../../adr/ADR-0005-ci-github-actions-supply-Colleague-Nn-pins.md)).
+- **Patch level and supply chain** awareness (verified patch state) — aligns with **ecosystem incident** and **SHA pin** habits ([ADR 0005](../../adr/ADR-0005-ci-github-actions-supply-chain-pins.md)).
 - **Segregation** (prod vs non-prod, least privilege for break-glass admin) — organizational; Data Boar supports **evidence** for **data** exposure, not OS/DB IAM design.
 
 ---
@@ -54,5 +54,5 @@ Lists that circulate as **Excel packs** (incident dashboard, patch tracker, thir
 ## Related in-repo
 
 - [WAZUH_NIST_CIS_LABOP_ALIGNMENT.md](WAZUH_NIST_CIS_LABOP_ALIGNMENT.md) — CSF/CIS vocabulary and lab **Detect/Recover**
-- [SUPPLY_Colleague-NN_AND_TRUST_SIGNALS.md](SUPPLY_Colleague-NN_AND_TRUST_SIGNALS.md) — trust, deferred posture
+- [SUPPLY_CHAIN_AND_TRUST_SIGNALS.md](SUPPLY_CHAIN_AND_TRUST_SIGNALS.md) — trust, deferred posture
 - [WORKFLOW_DEFERRED_FOLLOWUPS.md](../WORKFLOW_DEFERRED_FOLLOWUPS.md) — backlog

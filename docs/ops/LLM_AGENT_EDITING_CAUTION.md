@@ -12,7 +12,7 @@ This page is a **short, public** warning for maintainers and collaborators. A **
 
 ## What went wrong (generic pattern)
 
-- The operator asked for **literal fidelity** (*as-is*) to an already-reviewed script, including **audit / Colleague-Nn-of-custody comments** and deliberate “probe” lines.
+- The operator asked for **literal fidelity** (*as-is*) to an already-reviewed script, including **audit / chain-of-custody comments** and deliberate “probe” lines.
 - A **vendor web chat LLM** (example: **Google Gemini**) produced **many renamed variants** instead of a single faithful file, moved blocks, and changed paths (for example export directories oscillating between a **private reports tree** and a generic **`out/`** folder).
 - Recovery required **restoring from a known-good backup**, staging many files, and committing with a **strong** message so the cost is visible in **`git log`**.
 - Separately, the same vendor product can **claim “memory”** in marketing while, in a long thread, alternating between **“no verbatim log”**, **dramatic self-descriptions**, **confident hallucinations about repository state**, and an honest **refusal** line — all useful **stress-test signals**, not a legal case.
