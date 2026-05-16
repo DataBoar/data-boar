@@ -418,7 +418,9 @@ easygui==0.98.3 \
     # via oletools
 ebcdic==1.1.1 \
     --hash=sha256:33b4cb729bc2d0bf46cc1847b0e5946897cb8d3f53520c5b9aa5fa98d7e735f1
-    # via extract-msg
+    # via
+    #   data-boar
+    #   extract-msg
 et-xmlfile==2.0.0 \
     --hash=sha256:7a91720bc756843502c3b7504c77b8fe44217c85c537d85037f0f536151b2caa \
     --hash=sha256:dab3f4764309081ce75662649be815c4c9081e88f0837825f90fd28317d4da54

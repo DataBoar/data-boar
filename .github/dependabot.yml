@@ -25,6 +25,15 @@ updates:
       uv-minor-patch:
         patterns: ["*"]
         update-types: ["minor", "patch"]
+    # Upstream-capped transitives: `ignore` blocks Dependabot version-update PRs only;
+    # security advisories still surface. See docs/adr/ADR-0053-*.md and ADR-0054-*.md.
+    ignore:
+      # ebcdic 2.x is incompatible with extract-msg 0.55.x (requires_dist ebcdic<2,>=1.1.1).
+      - dependency-name: "ebcdic"
+        update-types: ["version-update:semver-major"]
+      # chardet 6+ is incompatible with cyclonedx-bom until upstream relaxes chardet<6.0.
+      - dependency-name: "chardet"
+        update-types: ["version-update:semver-major"]
 
   # GitHub Actions (workflows and action versions)
   - package-ecosystem: "github-actions"
