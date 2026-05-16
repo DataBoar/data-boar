@@ -241,7 +241,7 @@ After **A1–A3** (minimum), you can **resume token-aware pace** on Tier 2 featu
 | Maestro `--bench-config` argument fix | [#404](https://github.com/FabioLeitao/data-boar/issues/404), [#408](https://github.com/FabioLeitao/data-boar/issues/408) | ✅ Done |
 | Release gate **1.7.4** checklist (tag, Hub, `docs/releases/1.7.4.md`) | [#406](https://github.com/FabioLeitao/data-boar/issues/406) | ⬜ Pending |
 
-**GitHub triage (thin sweep 2026-05-16):** Duplicate filings closed with evidence on the canonical issue: **#437** → **#435**, **#438** → **#436** (duplicate titles for `data_boar.1` ENV / WEB INTERFACE gaps). Still open in the same cluster: **#434**, **#435**, **#436**, **#439** (man page + operator-help markers). Release/policy queue examples: **#418**–**#427**, **#406**. **#405** remains open: `-SleepBeforeCollect` workaround is on `main` (`416ee3c`); sentinel-based wait is the listed follow-up in the issue body.
+**GitHub triage (thin sweep 2026-05-16):** Duplicate filings closed with evidence on the canonical issue: **#437** → **#435**, **#438** → **#436** (duplicate titles for `data_boar.1` ENV / WEB INTERFACE gaps). **Update 2026-05-16:** **#434**, **#435**, **#436**, **#439**, and **#405** closed after merge **[#466](https://github.com/FabioLeitao/data-boar/pull/466)** (man §1 + `/help` + manifest; `Wait-BaremetalBenchSentinel.ps1` + `SleepBeforeCollect` fallback). Release/policy queue examples: **#418**–**#427**, **#406**.
 
 **`[H1]` RBAC reports access — [#86](https://github.com/FabioLeitao/data-boar/issues/86)** (firm next gate; does not block **1.7.4**): ⬜ Pending — Phase 3+ / enterprise SSO/OIDC path per [PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md](PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md).
 
