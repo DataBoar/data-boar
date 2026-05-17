@@ -4,6 +4,7 @@ Human-readable summary of user-facing changes. **Detailed release notes:** [docs
 
 ## Unreleased (`main`)
 
+- **Legacy DB module filename:** **`db/databasse.py`** renamed to **`db/database.py`** so filesystem paths match **`sonar-project.properties`** exclusions and operator mental model (**GitHub [#488](https://github.com/FabioLeitao/data-boar/issues/488)**).
 - **Release candidate (working line):** bump **`1.7.4-rc`** on `main` (`pyproject.toml`, man `.TH`, hybrid lab image defaults, **PUBLISHED_SYNC** reconciliation); draft **GitHub pre-release** checklist in **`docs/releases/1.7.4-rc.md`** — **no** Docker Hub **`latest`** move until **`1.7.4`** final.
 - **Maestro / completão (Deep benchmark argv):** `scripts/lab-completao-host-smoke.sh` parses **`--bench-config`**; container handlers (Docker, Podman, Swarm, LXD, MicroK8s) pass that flag before **`--lab-stack-up`** so Deep smoke no longer hits **`exit 2`** on unknown args (issues **#404**, **#408**). Draft stable checklist: **`docs/releases/1.7.4.md`**.
 - **Lab lessons public archive:** **`docs/ops/lab_lessons_learned/`** dated snapshots + hub **`LAB_LESSONS_LEARNED.md`** contract ([ADR 0042](docs/adr/ADR-0042-lab-lessons-learned-archive-contract.md)); situational **`.cursor/rules/lab-lessons-learned-archive.mdc`**; session token **`lab-lessons`** in **`session-mode-keywords.mdc`**; cold-start ladder, policy hubs, **`LAB_COMPLETAO_RUNBOOK`**, **`PLANS_TODO`** Integration row, and phase-2 situationalization inventory updated.
