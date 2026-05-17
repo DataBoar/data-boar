@@ -75,7 +75,9 @@ This page describes the topology of those files and their formats, with examples
 .IR config.yaml ):
 defines targets (databases, filesystems, APIs, shares), file_scan, report, api, sqlite_path, scan,
 .B rate_limit
-and optional paths to the files below.
+and optional
+.B timeouts
+(connector defaults), plus optional paths to the files below.
 .IP \(bu 2
 .B regex_overrides_file
 (optional): path to a YAML/JSON file listing custom
@@ -257,6 +259,23 @@ and
 .I reason
 fields (the CLI only prints warnings).
 .TP
+.B timeouts
+(optional) Global connection and read timeout defaults (seconds).
+Sub-keys:
+.I connect_seconds
+(integer, default 25) and
+.I read_seconds
+(integer, default 90).
+Per-target overrides on any target entry: set
+.IR connect_timeout ,
+.IR read_timeout ,
+or
+.I timeout
+directly to override the global default for that source only.
+See
+.I docs/USAGE.md
+(section: Timeouts for data source connections).
+.TP
 .B detection
 (optional) Minor data and aggregated identification:
 .I minor_age_threshold
@@ -355,6 +374,9 @@ Example main config (excerpt):
   # allow_insecure_http: false           # explicit plaintext only when true (Docker image CMD often sets CLI flag instead)
 
 \fBsqlite_path:\fR audit_results.db
+\fBtimeouts:\fR
+  connect_seconds: 25
+  read_seconds: 90
 \fBscan:\fR
   max_workers: 1
 
