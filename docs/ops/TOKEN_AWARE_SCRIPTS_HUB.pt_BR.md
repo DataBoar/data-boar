@@ -44,6 +44,7 @@
 | `repo-grep.ps1` | Busca em conteúdo: **`rg`**, opcional **`baregrep`** (`-PreferBareGrep`; também **`Downloads`**) | **`docs/ops/WINDOWS_FAST_CLI_WRAPPERS.pt_BR.md`**, **`.cursor/rules/repo-scripts-wrapper-ritual.mdc`** |
 | `repo-tail.ps1` | Ultimas **N** linhas: **`tail.exe`** do Git, senão **`Get-Content -Tail`** | Igual |
 | `repo-view.ps1` | Preview com teto: **`bat`** / **`batcat`**, senão **`Get-Content`** | Igual |
+| `video-frame-samples.ps1` | Frames **PNG** esparsos de vídeo (**`ffmpeg`** / **`ffprobe`**; instantes do operador) | **`docs/ops/VIDEO_FRAME_EXTRACT_FOR_AGENT.pt_BR.md`**, **`.cursor/skills/video-frames-for-agent/SKILL.md`**, **`.cursor/rules/repo-scripts-wrapper-ritual.mdc`** |
 
 ---
 

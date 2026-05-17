@@ -15,6 +15,7 @@ On the **operator Windows workstation**, assistants should prefer **small repo w
 | **`scripts/repo-grep.ps1`** | **`rg`** (ripgrep), optional **`baregrep.exe`** with **`-PreferBareGrep`** | **`Select-String`** (capped file scan) | Skips unrelated **`grep.exe`** (e.g. FPC toolchain) for recursive safety. Default **`-MaxOutputLines`** caps transcript size. **`baregrep.exe`** is also searched under **`%USERPROFILE%\Downloads`** (portable drop; not winget). |
 | **`scripts/repo-tail.ps1`** | Git **`usr\bin\tail.exe`** when present | **`Get-Content -Tail`** | **BareTail** is a **GUI** log viewer — **not** invoked for automation; if **`baretail.exe`** / typo **`baretai.exe`** exists under **`Downloads`**, the script prints a **one-line hint** so the operator knows why the fast path is Git **`tail`**. |
 | **`scripts/repo-view.ps1`** | **`bat`** / **`batcat`** with pager off + line range | **`Get-Content -TotalCount`** | Resolves **`bat`** / **`batcat`** on **`PATH`**, WinGet Links, cargo, or **`%USERPROFILE%\Downloads`**. Good for **syntax-highlighted** previews without dumping huge files. |
+| **`scripts/video-frame-samples.ps1`** | **`ffmpeg`** + **`ffprobe`** (WinGet Links or **`PATH`**) | none (hard dependency) | Sparse **PNG** frames at **`-Timestamp`** / **`-TimestampsCsv`**; **`-ProbeOnly`** for duration; optional **`-MaxWidth`**. See **`VIDEO_FRAME_EXTRACT_FOR_AGENT.md`**. |
 
 **Filename / path index (not file contents):** keep using **`scripts/es-find.ps1`** → **`es.exe`** — see **`EVERYTHING_ES_PRIMARY_WINDOWS_DEV_LAB.md`**. There is no **`locate(1)`** on Windows; **`es`** is the fast analogue for **names/paths**.
 
@@ -23,6 +24,7 @@ On the **operator Windows workstation**, assistants should prefer **small repo w
 - **Ripgrep:** `winget install BurntSushi.ripgrep.MSVC` (or another `rg` distribution) so **`repo-grep.ps1`** hits the fast path. Prefer **`rg`** over random **`grep.exe`** installs (toolchain collisions); see script comments.
 - **Git for Windows:** ships **`tail.exe`** and **`less.exe`** under **`Program Files\Git\usr\bin\`** — enables **`repo-tail.ps1`** fast path; **`less`** is for **interactive** paging (assistants still cap output with **`repo-view.ps1`** / **`Get-Content`** for transcripts).
 - **`bat`:** often via **WinGet** (`sharkdp.bat`) or **cargo**; **`repo-view.ps1`** also checks **`Downloads`** for portable **`bat.exe`** / **`batcat.exe`**.
+- **ffmpeg:** **`winget install ffmpeg`** (or another distribution) so **`video-frame-samples.ps1`** can run **`ffprobe`** / **`ffmpeg`**; the script also checks **`%LOCALAPPDATA%\Microsoft\WinGet\Links`**.
 - **BareGrep / BareTail (Bare Metal Software):** optional **GUI** tools; **`baregrep.exe`** is often a **portable** drop under **`%USERPROFILE%\Downloads`** (not winget). **`repo-grep.ps1`** can invoke it with **`-PreferBareGrep`** (may show a **splash**). **`baretail.exe`** is **not** scripted for tail automation — use **Git `tail.exe`** or **`Get-Content -Tail`**; the wrapper **hints** if it sees a **`Downloads`** copy so nothing feels “forgotten.”
 
 ## Assistant behaviour (toil reduction)
@@ -36,5 +38,6 @@ On the **operator Windows workstation**, assistants should prefer **small repo w
 
 - **`docs/ops/TOKEN_AWARE_SCRIPTS_HUB.md`**
 - **`docs/ops/EVERYTHING_ES_PRIMARY_WINDOWS_DEV_LAB.md`**
+- **`docs/ops/VIDEO_FRAME_EXTRACT_FOR_AGENT.md`**
 - **ADR 0023** — Everything / **`es-find.ps1`** first with fallback
 - **`.cursor/rules/repo-scripts-wrapper-ritual.mdc`**
