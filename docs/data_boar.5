@@ -127,6 +127,38 @@ and
 .I docs/security.md
 for fixes, regression tests, and full recommendations.
 .
+.P
+Prefer credentials in the process environment instead of plaintext in the config on disk.
+Each
+.B targets
+entry may set
+.I pass_from_env
+(or the alias
+.IR password_from_env )
+to the name of an environment variable holding the password, and
+.I user_from_env
+for the username.
+At load time the loader copies those values into the in-memory
+.I pass
+and
+.I user
+fields (falling back to inline
+.IR pass ,
+.IR password ,
+or
+.I user
+when the variable is unset or empty).
+For API-type targets with an
+.I auth
+mapping, optional
+.I token_from_env
+and
+.I client_secret_from_env
+resolve the same way (plus top-level
+.IR client_secret_from_env
+for OAuth-style flows).
+Never commit live secrets; keep env var names in config only.
+.
 .SH MAIN CONFIGURATION FILE
 The main file (e.g.
 .IR config.yaml )
@@ -141,6 +173,16 @@ Each item has at least
 and
 .I type
 (database, filesystem, api, sharepoint, webdav, smb, nfs, powerbi, dataverse, etc.), plus type-specific keys (driver, host, port, user, pass, database for DB; path, recursive for filesystem; etc.).
+Optional credential indirection:
+.IR pass_from_env " / " password_from_env ,
+.IR user_from_env ,
+and (inside
+.IR auth ,
+when applicable)
+.IR token_from_env " / " client_secret_from_env
+(see
+.B SECURITY AND CREDENTIALS
+above).
 .TP
 .B file_scan
 .I extensions
@@ -279,6 +321,8 @@ Example main config (excerpt):
     port: 5432
     user: audit_user
     pass: secure_password
+    # pass_from_env: MY_DB_PASSWORD   # optional: take password from env (recommended vs plaintext)
+    # user_from_env: MY_DB_USER      # optional: take username from env
     database: customers_db
   \- name: "Documentos_LGPD"
     type: filesystem
