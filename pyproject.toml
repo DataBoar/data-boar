@@ -9,7 +9,6 @@ dependencies = [
     "annotated-doc>=0.0.4",
     "annotated-types>=0.7.0",
     "anyio>=4.12.1",
-    "asyncio>=4.0.0",
     # beautifulsoup4 is a transitive dep of extract-msg, but pinned here as a
     # direct constraint so Dependabot/uv stop trying to bump past 4.14 until
     # upstream extract-msg relaxes its `beautifulsoup4<4.14` requirement.
@@ -38,9 +37,7 @@ dependencies = [
     "h11>=0.16.0",
     "httpcore>=1.0.9",
     "httpx>=0.28.1",
-    "hypothesis>=6.152.7",
     "idna>=3.15",
-    "iniconfig>=2.3.0",
     "itsdangerous>=2.2.0",
     "jinja2>=3.1.6",
     "joblib>=1.5.3",
@@ -57,7 +54,6 @@ dependencies = [
     "packaging>=26.1",
     "pandas>=3.0.3",
     "pillow>=12.2.0",
-    "pluggy>=1.6.0",
     "psycopg2-binary>=2.9.11",
     "pycparser>=3.0 ; implementation_name != 'PyPy' and platform_python_implementation != 'PyPy'",
     "pydantic>=2.13.2",
@@ -68,7 +64,6 @@ dependencies = [
     "pyparsing>=3.3.2",
     "pypdf>=6.11.0",
     "pyjwt>=2.12.0",
-    "pytest>=9.0.3",
     "python-dateutil>=2.9.0.post0",
     "python-docx>=1.2.0",
     "python-dotenv>=1.2.1",
@@ -80,8 +75,6 @@ dependencies = [
     "scikit-learn>=1.8.0",
     "scipy>=1.17.0",
     "seaborn>=0.13.2",
-    "setuptools>=82.0.1",
-    "six>=1.17.0",
     "sqlalchemy>=2.0.48",
     "starlette>=0.52.1",
     "threadpoolctl>=3.6.0",
@@ -233,16 +226,20 @@ packages = [
 
 [dependency-groups]
 dev = [
-    "pre-commit>=4.0.0",
-    "ruff>=0.15.13",
-    "rapidfuzz>=3.9.0",
     "bandit>=1.9.4",
-    "mypy>=2.1.0",
-    "types-pyyaml>=6.0.12.20250915",
-    # CycloneDX SBOM from uv-exported requirements (ADR 0003); same CLI as CI `sbom.yml`.
-    "cyclonedx-bom>=7.0.0",
     # chardet is transitive via cyclonedx-bom; dev-only pin matches cyclonedx-bom's
     # chardet>=5.1,<6.0 until upstream allows 6+ (ADR 0054).
     "chardet>=5.1,<6.0",
+    # CycloneDX SBOM from uv-exported requirements (ADR 0003); same CLI as CI `sbom.yml`.
+    "cyclonedx-bom>=7.0.0",
+    "hypothesis>=6.152.7",
+    "iniconfig>=2.3.0",
     "markdown>=3.10.2",
+    "mypy>=2.1.0",
+    "pluggy>=1.6.0",
+    "pre-commit>=4.0.0",
+    "pytest>=9.0.3",
+    "rapidfuzz>=3.9.0",
+    "ruff>=0.15.13",
+    "types-pyyaml>=6.0.12.20250915",
 ]

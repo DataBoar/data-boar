@@ -61,7 +61,8 @@ jobs:
 
       - name: Install dependencies
         # shares extra: smbprotocol/webdav — keeps SMB/CIFS/WebDAV connector registration aligned with TECH_GUIDE
-        run: uv sync --extra shares
+        # dev group: pytest, hypothesis, pre-commit stack — not shipped to end-user `uv sync` default in CI test matrix
+        run: uv sync --extra shares --group dev
 
       - name: Run tests
         run: uv run pytest -v -W error
@@ -92,9 +93,7 @@ jobs:
           version: "0.11.2"
 
       - name: Install dependencies
-        run: uv sync --extra shares
-
-      # Single gate: same hooks as local `uv run pre-commit run --all-files` (.pre-commit-config.yaml).
+        run: uv sync --extra shares --group dev
       - name: Pre-commit (all files)
         run: uv run pre-commit run --all-files
 
