@@ -147,6 +147,10 @@ Para um **corpo de PR longo**, use:
 
 Quando **`gh pr checks <N>`** passar e o PR estiver **mergeable** (sem conflitos), use **`.\scripts\pr-merge-when-green.ps1 -PrNumber <N>`** na raiz do repositório (`gh` autenticado). Opcional: **`-RunLocalCheckAll`** para um **`check-all`** local antes do merge. Ver **`.cursor/rules/agent-autonomous-merge-and-lab-ops.mdc`**.
 
+### Issue canônica versus duplicata (eco)
+
+Quando duas ou mais issues rastreiam o mesmo recorte, escolha **uma canônica**, entregue PRs que a referenciem, faça merge com **CI verde** e só então feche **duplicatas** com **`gh issue close … --duplicate-of …`** e comentário com evidência. Passos completos: [GITHUB_ISSUE_CANONICAL_AND_DUPLICATE_CLOSE.pt_BR.md](GITHUB_ISSUE_CANONICAL_AND_DUPLICATE_CLOSE.pt_BR.md) ([EN](GITHUB_ISSUE_CANONICAL_AND_DUPLICATE_CLOSE.md)).
+
 ### Auto-merge do GitHub (opcional)
 
 **Recomendação padrão:** manter **auto-merge desligado** em PRs normais de feature/workflow. Preferir merge **explícito** com checks verdes e decisão consciente (humano ou **`pr-merge-when-green.ps1`**), evitando merges surpresa e mantendo controle alinhado a um fluxo deliberado e sem cerimônia inútil.
