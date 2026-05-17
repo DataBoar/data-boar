@@ -16,6 +16,7 @@ On the **operator Windows workstation**, assistants should prefer **small repo w
 | **`scripts/repo-tail.ps1`** | Git **`usr\bin\tail.exe`** when present | **`Get-Content -Tail`** | **BareTail** is a **GUI** log viewer — **not** invoked for automation; if **`baretail.exe`** / typo **`baretai.exe`** exists under **`Downloads`**, the script prints a **one-line hint** so the operator knows why the fast path is Git **`tail`**. |
 | **`scripts/repo-view.ps1`** | **`bat`** / **`batcat`** with pager off + line range | **`Get-Content -TotalCount`** | Resolves **`bat`** / **`batcat`** on **`PATH`**, WinGet Links, cargo, or **`%USERPROFILE%\Downloads`**. Good for **syntax-highlighted** previews without dumping huge files. |
 | **`scripts/video-frame-samples.ps1`** | **`ffmpeg`** + **`ffprobe`** (WinGet Links or **`PATH`**) | none (hard dependency) | Sparse **PNG** frames at **`-Timestamp`** / **`-TimestampsCsv`**; **`-ProbeOnly`** for duration; optional **`-MaxWidth`**. See **`VIDEO_FRAME_EXTRACT_FOR_AGENT.md`**. |
+| **`scripts/image-inspect.ps1`** | **`uv run python scripts/image_inspect.py`** (Pillow, optional **mutagen**, **ffprobe**, **pytesseract**) | none (needs **uv** + synced extras) | EXIF / media tags + optional OCR — same stack as **`connectors/rich_media_sample`**. See **`IMAGE_EXIF_OCR_FOR_AGENT.md`**. |
 
 **Filename / path index (not file contents):** keep using **`scripts/es-find.ps1`** → **`es.exe`** — see **`EVERYTHING_ES_PRIMARY_WINDOWS_DEV_LAB.md`**. There is no **`locate(1)`** on Windows; **`es`** is the fast analogue for **names/paths**.
 
@@ -39,5 +40,6 @@ On the **operator Windows workstation**, assistants should prefer **small repo w
 - **`docs/ops/TOKEN_AWARE_SCRIPTS_HUB.md`**
 - **`docs/ops/EVERYTHING_ES_PRIMARY_WINDOWS_DEV_LAB.md`**
 - **`docs/ops/VIDEO_FRAME_EXTRACT_FOR_AGENT.md`**
+- **`docs/ops/IMAGE_EXIF_OCR_FOR_AGENT.md`**
 - **ADR 0023** — Everything / **`es-find.ps1`** first with fallback
 - **`.cursor/rules/repo-scripts-wrapper-ritual.mdc`**

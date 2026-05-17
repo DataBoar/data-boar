@@ -46,6 +46,14 @@
 | `repo-view.ps1` | Preview com teto: **`bat`** / **`batcat`**, senão **`Get-Content`** | Igual |
 | `video-frame-samples.ps1` | Frames **PNG** esparsos de vídeo (**`ffmpeg`** / **`ffprobe`**; instantes do operador) | **`docs/ops/VIDEO_FRAME_EXTRACT_FOR_AGENT.pt_BR.md`**, **`.cursor/skills/video-frames-for-agent/SKILL.md`**, **`.cursor/rules/repo-scripts-wrapper-ritual.mdc`** |
 
+### 1c. Imagens estáticas + áudio + tags de vídeo (inspeção do operador)
+
+| Script | Função | Ligado a |
+| ------ | ---- | -------- |
+| `image-inspect.ps1` | Wrapper **uv**: **`image_inspect.py`** — EXIF / mutagen / **ffprobe** + **Tesseract** opcional (mesma pilha que **`rich_media_sample`**) | **`docs/ops/IMAGE_EXIF_OCR_FOR_AGENT.pt_BR.md`**, **`.cursor/skills/image-inspect-for-agent/SKILL.md`** |
+| `image_inspect.py` | CLI de um arquivo sobre **`build_rich_media_text_sample`** | Igual |
+| `icloud-photos-fetch-range.ps1` | Traz arquivos iCloud / Fotos do Apple para **`docs/private/icloud_temp/`** (depois inspecionar) | Guia privado **`ICLOUD_PHOTOS_SYNC_GUIDE.md`** quando existir; **`session-collect`** |
+
 ---
 
 ## 2. PII / árvore pública / estação principal de desenvolvimento

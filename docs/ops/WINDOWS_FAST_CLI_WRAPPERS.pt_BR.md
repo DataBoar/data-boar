@@ -16,6 +16,7 @@ No **PC Windows do operador**, o assistente deve preferir **wrappers pequenos** 
 | **`scripts/repo-tail.ps1`** | **`tail.exe`** do Git (**`usr\bin`**) quando existir | **`Get-Content -Tail`** | **BareTail** é **GUI** — **não** entra na automação; se existir **`baretail.exe`** (ou erro comum **`baretai.exe`**) em **`Downloads`**, o script imprime **uma dica** para o operador lembrar do caminho rápido via Git **`tail`**. |
 | **`scripts/repo-view.ps1`** | **`bat`** / **`batcat`** com pager desligado + intervalo de linhas | **`Get-Content -TotalCount`** | Resolve **`bat`** / **`batcat`** no **`PATH`**, WinGet Links, cargo ou **`Downloads`**. |
 | **`scripts/video-frame-samples.ps1`** | **`ffmpeg`** + **`ffprobe`** (WinGet Links ou **`PATH`**) | *nenhum* (dependência dura) | Extração esparsa de **PNG** com **`-Timestamp`** / **`-TimestampsCsv`** do operador; **`-ProbeOnly`** para duração; **`-MaxWidth`** opcional. Ver **`VIDEO_FRAME_EXTRACT_FOR_AGENT.pt_BR.md`**. |
+| **`scripts/image-inspect.ps1`** | **`uv run python scripts/image_inspect.py`** (Pillow, **mutagen** opcional, **ffprobe**, **pytesseract**) | *nenhum* (precisa **uv** + *extras* sincronizados) | EXIF / tags de mídia + OCR opcional — mesma pilha que **`rich_media_sample`**. Ver **`IMAGE_EXIF_OCR_FOR_AGENT.pt_BR.md`**. |
 
 **Nome/caminho de arquivo (não conteúdo):** continuar com **`scripts/es-find.ps1`** → **`es.exe`** — ver **`EVERYTHING_ES_PRIMARY_WINDOWS_DEV_LAB.md`**. Não há **`locate(1)`** no Windows; o **`es`** é o análogo rápido para **nomes/caminhos**.
 
@@ -39,5 +40,6 @@ No **PC Windows do operador**, o assistente deve preferir **wrappers pequenos** 
 - **`docs/ops/TOKEN_AWARE_SCRIPTS_HUB.md`**
 - **`docs/ops/EVERYTHING_ES_PRIMARY_WINDOWS_DEV_LAB.md`**
 - **`docs/ops/VIDEO_FRAME_EXTRACT_FOR_AGENT.pt_BR.md`**
+- **`docs/ops/IMAGE_EXIF_OCR_FOR_AGENT.pt_BR.md`**
 - **ADR 0023** — Everything / **`es-find.ps1`** primeiro com fallback
 - **`.cursor/rules/repo-scripts-wrapper-ritual.mdc`**

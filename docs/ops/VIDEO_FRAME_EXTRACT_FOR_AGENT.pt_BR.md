@@ -54,6 +54,10 @@ A saída imprime **`output_dir`** e uma linha por caminho **PNG**; o assistente 
 
 Não precisa de um segundo “Everything de vídeo”: **descoberta de caminho** continua **`es-find.ps1`**; **extração no tempo** fica **`video-frame-samples.ps1`**.
 
+## Par com fotos estáticas (EXIF / OCR)
+
+Para **JPEG / HEIC / PNG** e **Tesseract** opcional sobre texto visível, use **`scripts/image-inspect.ps1`** — [IMAGE_EXIF_OCR_FOR_AGENT.pt_BR.md](IMAGE_EXIF_OCR_FOR_AGENT.pt_BR.md).
+
 ## Referências
 
 - **`docs/ops/TOKEN_AWARE_SCRIPTS_HUB.md`** (linha no hub)

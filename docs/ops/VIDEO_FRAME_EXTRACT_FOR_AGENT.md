@@ -54,6 +54,10 @@ Output prints **`output_dir`** and one line per **PNG** path; the assistant **`r
 
 There is no need for a second “video Everything”: **path discovery** stays **`es-find.ps1`**; **time extraction** stays **`video-frame-samples.ps1`**.
 
+## Pairing with still photos (EXIF / OCR)
+
+For **JPEG / HEIC / PNG** and optional **Tesseract** on visible text, use **`scripts/image-inspect.ps1`** — [IMAGE_EXIF_OCR_FOR_AGENT.md](IMAGE_EXIF_OCR_FOR_AGENT.md).
+
 ## References
 
 - **`docs/ops/TOKEN_AWARE_SCRIPTS_HUB.md`** (hub row)
