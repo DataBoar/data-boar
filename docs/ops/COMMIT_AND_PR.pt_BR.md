@@ -44,6 +44,10 @@ Isso complementa o **PR em lote**: muitos commits **locais** podem virar **um PR
 
 **Recomendação:** Trabalho que mira **[#86](https://github.com/FabioLeitao/data-boar/issues/86)** (**sessão** no painel / **passwordless** / **RBAC**, conforme [PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md](../plans/PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md)) costuma ficar melhor num **branch e PR próprios**. Evite misturar com outras fatias do dashboard (por exemplo funcionalidades do questionário de **maturity**) no mesmo PR, salvo se você **quiser de propósito** uma revisão única — PRs menores são mais fáceis de reverter e batem com a entrega em fases do plano.
 
+### Fatias finas, faixas de prioridade e quando chamar o operador
+
+Comportamento **combinado entre assistente e mantenedor** ao reduzir issues em **PRs pequenos**: leia **[THIN_SLICE_AGENT_PRIORITY_HANDOFF.pt_BR.md](THIN_SLICE_AGENT_PRIORITY_HANDOFF.pt_BR.md)** ([EN](THIN_SLICE_AGENT_PRIORITY_HANDOFF.md)). Resumo: ficar na **mesma faixa** (`P0`→`P3`); se um slice estiver **bloqueado**, **registar ponteiro de retomada** e seguir **outro item da mesma faixa**; **não** abrir trabalho de **faixa inferior** enquanto itens de **faixa superior** continuarem **acionáveis** sem handoff — **parar e chamar o operador**.
+
 ## Fazer manualmente
 
 ### Preview: lista de arquivos vs mensagem de commit
