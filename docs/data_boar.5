@@ -235,6 +235,32 @@ and
 .I docs/deploy/DEPLOY.md
 for hardening and stricter CSP.
 .TP
+.B api.workers
+(optional, integer) Number of HTTP server workers (uvicorn).
+Default 1 (minimal footprint); increase to 2-4 for higher concurrent API traffic
+(scans are I/O-bound so extra workers mainly help dashboard responsiveness
+during an active scan). Distinct from
+.BR scan.max_workers
+(parallel scan targets).
+.TP
+.B licensing
+(optional) Tier simulation block for lab and development environments.
+Sub-key
+.I licensing.effective_tier
+accepts
+.BR community ,
+.BR pro ,
+or
+.BR enterprise .
+When set, tier-gated features behave as if the named tier is active
+without requiring a signed JWT token. Omit this block entirely in production;
+a JWT
+.I dbtier
+claim overrides
+.I effective_tier
+when both are present. See
+.IR docs/LICENSING_SPEC.md .
+.TP
 .B sqlite_path
 Path to the SQLite database (e.g.
 .IR audit_results.db ).
