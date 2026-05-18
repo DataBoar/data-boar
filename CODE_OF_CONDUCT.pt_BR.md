@@ -38,7 +38,7 @@ Este Código de Conduta se aplica tanto em espaços do projeto quanto em espaço
 
 ## Aplicação
 
-Instâncias de comportamento abusivo, de assédio ou de outra forma inaceitável podem ser reportadas entrando em contato com a equipe do projeto em . Todas as reclamações serão analisadas e investigadas e resultarão em uma resposta considerada necessária e apropriada às circunstâncias. A equipe do projeto é obrigada a manter confidencialidade em relação ao autor do reporte. Detalhes adicionais sobre políticas de aplicação específicas podem ser publicados separadamente.
+Instâncias de comportamento abusivo, de assédio ou de outra forma inaceitável podem ser reportadas entrando em contato com a equipe do projeto em fabio.tleitao@outlook.com. Todas as reclamações serão analisadas e investigadas e resultarão em uma resposta considerada necessária e apropriada às circunstâncias. A equipe do projeto é obrigada a manter confidencialidade em relação ao autor do reporte. Detalhes adicionais sobre políticas de aplicação específicas podem ser publicados separadamente.
 
 Mantenedores do projeto que não sigam ou não apliquem o Código de Conduta de boa-fé podem enfrentar repercussões temporárias ou permanentes conforme determinado por outros membros da liderança do projeto.
 

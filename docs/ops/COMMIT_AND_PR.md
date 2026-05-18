@@ -177,6 +177,10 @@ For a **long PR body**, use:
 
 When **`gh pr checks <N>`** passes and the PR is **mergeable** (no conflicts), use **`.\scripts\pr-merge-when-green.ps1 -PrNumber <N>`** from the repo root (`gh` authenticated). Optional: **`-RunLocalCheckAll`** for a local **`check-all`** before merge. See **`.cursor/rules/agent-autonomous-merge-and-lab-ops.mdc`**.
 
+### Canonical issue vs duplicate (“echo”) closure
+
+When two or more issues track the same slice, pick **one canonical** issue, ship PRs that reference it, merge after **green CI**, then close **duplicates** with **`gh issue close … --duplicate-of …`** and an evidence comment. Full operator steps: [GITHUB_ISSUE_CANONICAL_AND_DUPLICATE_CLOSE.md](GITHUB_ISSUE_CANONICAL_AND_DUPLICATE_CLOSE.md) ([pt-BR](GITHUB_ISSUE_CANONICAL_AND_DUPLICATE_CLOSE.pt_BR.md)).
+
 ### GitHub auto-merge (optional)
 
 **Default recommendation:** keep **auto-merge disabled** for normal feature/workflow PRs. Prefer an **explicit** merge after green checks and a conscious decision (human or **`pr-merge-when-green.ps1`**), so you avoid surprise merges and keep control aligned with a low-ceremony but deliberate workflow.
