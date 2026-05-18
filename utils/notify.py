@@ -4,8 +4,8 @@ Off-band and scan-completion notifications (webhooks, Slack, Teams, Telegram).
 Default: disabled in config. Secrets come from env or config; never log full URLs.
 See docs/USAGE.md and PLAN_NOTIFICATIONS_OFFBAND_AND_SCAN_COMPLETE.md.
 
-Bandit B310: ``urlopen`` below is POST to operator-configured HTTPS webhooks only
-(caller validates scheme); each call uses ``# nosec B310`` with no trailing tokens.
+``_post_json`` / ``_post_form`` require an ``https`` URL before ``urlopen`` (Bandit B310).
+Operator webhooks and the Telegram API URL are HTTPS-only paths.
 """
 
 from __future__ import annotations
@@ -30,7 +30,19 @@ _SCAN_COMPLETE_OK_SESSIONS: set[str] = set()
 _MAX_DEDUPE_SESSIONS = 10_000
 
 
+def _require_https_webhook_url(url: str) -> None:
+    """Reject non-HTTPS URLs before urllib opens the request (Bandit B310 contract)."""
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme.lower() != "https":
+        raise ValueError(
+            f"notification webhook URL must use https (got scheme {parsed.scheme!r})"
+        )
+    if not parsed.netloc:
+        raise ValueError("notification webhook URL must include a host")
+
+
 def _post_json(url: str, payload: dict[str, Any], timeout_s: float = 15.0) -> None:
+    _require_https_webhook_url(url)
     data = json.dumps(payload).encode("utf-8")
     for attempt in range(_WEBHOOK_MAX_ATTEMPTS):
         req = urllib.request.Request(
@@ -40,6 +52,7 @@ def _post_json(url: str, payload: dict[str, Any], timeout_s: float = 15.0) -> No
             method="POST",
         )
         try:
+            # B310: HTTPS-only URL enforced above via _require_https_webhook_url.
             with urllib.request.urlopen(req, timeout=timeout_s) as resp:  # nosec B310
                 resp.read()
             return
@@ -56,6 +69,7 @@ def _post_json(url: str, payload: dict[str, Any], timeout_s: float = 15.0) -> No
 
 
 def _post_form(url: str, body: dict[str, str], timeout_s: float = 15.0) -> None:
+    _require_https_webhook_url(url)
     encoded = urllib.parse.urlencode(body).encode("utf-8")
     for attempt in range(_WEBHOOK_MAX_ATTEMPTS):
         req = urllib.request.Request(
@@ -65,6 +79,7 @@ def _post_form(url: str, body: dict[str, str], timeout_s: float = 15.0) -> None:
             method="POST",
         )
         try:
+            # B310: HTTPS-only URL enforced above via _require_https_webhook_url.
             with urllib.request.urlopen(req, timeout=timeout_s) as resp:  # nosec B310
                 resp.read()
             return

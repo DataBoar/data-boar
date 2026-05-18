@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 import urllib.error
 
+import pytest
+
 from utils.notify import (
     _SCAN_COMPLETE_OK_SESSIONS,
     build_scan_complete_message,
@@ -15,6 +17,11 @@ from utils.notify import (
     send_to_first_configured_operator_channel,
     should_send_scan_complete_notification,
 )
+
+
+def test_send_slack_rejects_http_url():
+    with pytest.raises(ValueError, match="https"):
+        send_slack_webhook("http://hooks.example/hook", "nope")
 
 
 def test_build_scan_complete_message_includes_session_and_counts():
