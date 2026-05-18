@@ -75,7 +75,9 @@ This page describes the topology of those files and their formats, with examples
 .IR config.yaml ):
 defines targets (databases, filesystems, APIs, shares), file_scan, report, api, sqlite_path, scan,
 .B rate_limit
-and optional paths to the files below.
+and optional
+.B timeouts
+(connector defaults), plus optional paths to the files below.
 .IP \(bu 2
 .B regex_overrides_file
 (optional): path to a YAML/JSON file listing custom
@@ -233,6 +235,32 @@ and
 .I docs/deploy/DEPLOY.md
 for hardening and stricter CSP.
 .TP
+.B api.workers
+(optional, integer) Number of HTTP server workers (uvicorn).
+Default 1 (minimal footprint); increase to 2-4 for higher concurrent API traffic
+(scans are I/O-bound so extra workers mainly help dashboard responsiveness
+during an active scan). Distinct from
+.BR scan.max_workers
+(parallel scan targets).
+.TP
+.B licensing
+(optional) Tier simulation block for lab and development environments.
+Sub-key
+.I licensing.effective_tier
+accepts
+.BR community ,
+.BR pro ,
+or
+.BR enterprise .
+When set, tier-gated features behave as if the named tier is active
+without requiring a signed JWT token. Omit this block entirely in production;
+a JWT
+.I dbtier
+claim overrides
+.I effective_tier
+when both are present. See
+.IR docs/LICENSING_SPEC.md .
+.TP
 .B sqlite_path
 Path to the SQLite database (e.g.
 .IR audit_results.db ).
@@ -256,6 +284,23 @@ When enabled, API endpoints that start scans may return HTTP 429 with a structur
 and
 .I reason
 fields (the CLI only prints warnings).
+.TP
+.B timeouts
+(optional) Global connection and read timeout defaults (seconds).
+Sub-keys:
+.I connect_seconds
+(integer, default 25) and
+.I read_seconds
+(integer, default 90).
+Per-target overrides on any target entry: set
+.IR connect_timeout ,
+.IR read_timeout ,
+or
+.I timeout
+directly to override the global default for that source only.
+See
+.I docs/USAGE.md
+(section: Timeouts for data source connections).
 .TP
 .B detection
 (optional) Minor data and aggregated identification:
@@ -355,6 +400,9 @@ Example main config (excerpt):
   # allow_insecure_http: false           # explicit plaintext only when true (Docker image CMD often sets CLI flag instead)
 
 \fBsqlite_path:\fR audit_results.db
+\fBtimeouts:\fR
+  connect_seconds: 25
+  read_seconds: 90
 \fBscan:\fR
   max_workers: 1
 

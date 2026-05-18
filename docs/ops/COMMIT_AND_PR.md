@@ -63,6 +63,10 @@ This complements **PR batching**: many **local** commits can still ship as **one
 
 **Recommendation:** Work that targets **[#86](https://github.com/FabioLeitao/data-boar/issues/86)** (dashboard **session** / **passwordless** / **RBAC** per [PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md](../plans/PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md)) should usually live in its **own branch and PR**. Avoid mixing it with unrelated dashboard slices (for example **maturity self-assessment** questionnaire features) in the same PR unless you **explicitly** want one combined review — smaller PRs are easier to revert and match the plan’s phased delivery.
 
+### Thin slices, priority bands, and when to ping the operator
+
+For **assistant- and maintainer-agreed** behaviour when burning down GitHub issues in **small PRs**: read **[THIN_SLICE_AGENT_PRIORITY_HANDOFF.md](THIN_SLICE_AGENT_PRIORITY_HANDOFF.md)** ([pt-BR](THIN_SLICE_AGENT_PRIORITY_HANDOFF.pt_BR.md)). Summary: stay inside the **same priority band** (`P0`→`P3`); if a slice is blocked, **write a resume pointer** and continue **another same-band** item; **do not** start **lower-band** work while **higher-band** items are still actionable without a handoff — **stop and ping the operator** instead.
+
 ## Doing it yourself
 
 ### Preview: file list vs commit message
