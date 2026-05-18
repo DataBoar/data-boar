@@ -118,8 +118,8 @@ class PowerBIConnector:
             try:
                 self._client.close()
             except Exception:
-                # Best-effort close: ignore client shutdown errors.
-                return
+                # Best-effort close; always drop the handle.
+                pass
             self._client = None
         self._token = None
 
@@ -130,22 +130,17 @@ class PowerBIConnector:
         )
         if workspace_ids:
             return list(workspace_ids)
-        try:
-            r = self._client.get("/myorg/groups")
-            if r.status_code != 200:
-                return []
-            data = r.json()
-            return [g["id"] for g in data.get("value", [])]
-        except Exception:
-            return []
+        r = self._client.get("/myorg/groups")
+        r.raise_for_status()
+        data = r.json()
+        return [g["id"] for g in data.get("value", [])]
 
     def _get_datasets(self, group_id: str | None) -> list[dict]:
         if group_id:
             r = self._client.get(f"/myorg/groups/{group_id}/datasets")
         else:
             r = self._client.get("/myorg/datasets")
-        if r.status_code != 200:
-            return []
+        r.raise_for_status()
         data = r.json()
         return data.get("value", [])
 
@@ -157,8 +152,7 @@ class PowerBIConnector:
             )
         else:
             r = self._client.get(f"/myorg/datasets/{dataset_id}/tables")
-        if r.status_code != 200:
-            return []
+        r.raise_for_status()
         data = r.json()
         return data.get("value", [])
 
@@ -175,8 +169,7 @@ class PowerBIConnector:
             "serializerSettings": {"includeNulls": True},
         }
         r = self._client.post(url, json=payload)
-        if r.status_code != 200:
-            return []
+        r.raise_for_status()
         try:
             data = r.json()
             results = data.get("results", [])

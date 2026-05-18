@@ -164,8 +164,7 @@ class DataverseConnector:
                 "$filter": "IsValidForAdvancedFind eq true",
             },
         )
-        if r.status_code != 200:
-            return []
+        r.raise_for_status()
         data = r.json()
         return data.get("value", [])
 
@@ -175,16 +174,14 @@ class DataverseConnector:
             f"/EntityDefinitions(LogicalName='{logical_name}')/Attributes",
             params={"$select": "LogicalName,SchemaName,AttributeType"},
         )
-        if r.status_code != 200:
-            return []
+        r.raise_for_status()
         data = r.json()
         return data.get("value", [])
 
     def _sample_entity(self, entity_set: str) -> list[dict]:
         """Fetch top N rows from an entity set."""
         r = self._client.get(f"/{entity_set}", params={"$top": self.sample_limit})
-        if r.status_code != 200:
-            return []
+        r.raise_for_status()
         data = r.json()
         return data.get("value", [])
 
