@@ -10,6 +10,7 @@ pattern_files_encoding key (default utf-8) with errors=replace to avoid crashes.
 """
 
 import logging
+import warnings
 from pathlib import Path
 from typing import Any
 
@@ -28,6 +29,26 @@ except ImportError:
 import os
 
 _logger = logging.getLogger(__name__)
+
+
+def _warn_if_env_from_key_unset_or_empty(
+    env_var_name: str, config_descriptor: str
+) -> None:
+    """
+    Emit UserWarning when a config *_from_env key is set but the env var is missing or blank.
+
+    Operators still get non-fatal fallback to inline ``pass``, ``user``, ``token``, etc. (issue #508).
+    """
+    if (os.environ.get(env_var_name) or "").strip():
+        return
+    warnings.warn(
+        (
+            f"Environment variable {env_var_name!r} is unset or empty; "
+            f"{config_descriptor} falls back to inline or default values when present."
+        ),
+        UserWarning,
+        stacklevel=3,
+    )
 
 
 def _notification_env_value(val: Any) -> str | None:
@@ -484,6 +505,10 @@ def normalize_config(
             t.get("pass_from_env") or t.get("password_from_env") or ""
         ).strip()
         if env_pass_key:
+            _warn_if_env_from_key_unset_or_empty(
+                env_pass_key,
+                ("pass_from_env" if t.get("pass_from_env") else "password_from_env"),
+            )
             t["pass"] = (
                 (os.environ.get(env_pass_key) or "").strip()
                 or t.get("pass")
@@ -492,6 +517,7 @@ def normalize_config(
             )
         env_user_key = (t.get("user_from_env") or "").strip()
         if env_user_key:
+            _warn_if_env_from_key_unset_or_empty(env_user_key, "user_from_env")
             t["user"] = (
                 (os.environ.get(env_user_key) or "").strip()
                 or t.get("user")
@@ -502,11 +528,15 @@ def normalize_config(
         if isinstance(auth, dict):
             token_env = (auth.get("token_from_env") or "").strip()
             if token_env:
+                _warn_if_env_from_key_unset_or_empty(token_env, "auth.token_from_env")
                 auth["token"] = (
                     (os.environ.get(token_env) or "").strip() or auth.get("token") or ""
                 )
             cs_env = (auth.get("client_secret_from_env") or "").strip()
             if cs_env:
+                _warn_if_env_from_key_unset_or_empty(
+                    cs_env, "auth.client_secret_from_env"
+                )
                 auth["client_secret"] = (
                     (os.environ.get(cs_env) or "").strip()
                     or auth.get("client_secret")
@@ -514,6 +544,7 @@ def normalize_config(
                 )
         env_cs_key = (t.get("client_secret_from_env") or "").strip()
         if env_cs_key:
+            _warn_if_env_from_key_unset_or_empty(env_cs_key, "client_secret_from_env")
             t["client_secret"] = (
                 (os.environ.get(env_cs_key) or "").strip()
                 or t.get("client_secret")

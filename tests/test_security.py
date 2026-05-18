@@ -456,3 +456,30 @@ def test_normalize_config_resolves_pass_from_env_and_user_from_env(monkeypatch):
     assert out["targets"][0]["pass"] == "env-pass"
     assert out["targets"][1]["pass"] == "env-pass"
     assert out["targets"][1]["user"] == "env-user"
+
+
+def test_normalize_config_warns_when_pass_from_env_unset_then_falls_back(monkeypatch):
+    """Issue #508: missing env for pass_from_env emits UserWarning; inline pass still applies."""
+    import warnings
+
+    from config.loader import normalize_config
+
+    monkeypatch.delenv("MISSING_DB_PASS", raising=False)
+    data = {
+        "targets": [
+            {
+                "name": "db1",
+                "type": "database",
+                "pass": "inline-secret",
+                "pass_from_env": "MISSING_DB_PASS",
+            }
+        ],
+        "api": {},
+        "report": {"output_dir": "."},
+    }
+    with warnings.catch_warnings(record=True) as recorded:
+        warnings.simplefilter("always")
+        out = normalize_config(data)
+    assert out["targets"][0]["pass"] == "inline-secret"
+    assert any("pass_from_env" in str(w.message) for w in recorded)
+    assert any("MISSING_DB_PASS" in str(w.message) for w in recorded)
