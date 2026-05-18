@@ -1,7 +1,7 @@
 # Plan: CLI — config validation, session diff, DSAR-oriented export
 
-**Status:** Pending
-**Date:** 2026-05-14
+**Status:** In progress (slice A complete; B/C pending)
+**Date:** 2026-05-18
 **Authors:** Fabio Leitao
 **Priority:** H1 U1
 **Depends on:** Stable config loader and CLI entry (`main.py`); optional alignment with scan run manifest / execution summary output
@@ -33,9 +33,9 @@ Together they close the gap between “I changed config / upgraded / rescoped ta
 
 ### Slice A — Config validation (`#520`)
 
-- [ ] CLI flag (name per `docs/OPERATOR_HELP_AUDIT.md` / `operator_help_sync_manifest.py`) parses config and exits **0** with a concise **OK** path; non-zero on invalid config with **actionable** messages (no secret values in stderr).
-- [ ] **Tests:** at least one **positive** and one **negative** fixture; warnings policy matches project norm (`-W error` in CI).
-- [ ] **Docs:** USAGE (EN + pt-BR) and man page stub if applicable; cross-link from TECH_GUIDE deploy/ops where config is edited.
+- [x] CLI flag (name per `docs/OPERATOR_HELP_AUDIT.md` / `operator_help_sync_manifest.py`) parses config and exits **0** with a concise **OK** path; non-zero on invalid config with **actionable** messages (no secret values in stderr).
+- [x] **Tests:** at least one **positive** and one **negative** fixture; warnings policy matches project norm (`-W error` in CI).
+- [x] **Docs:** USAGE (EN + pt-BR) and man page stub if applicable; cross-link from TECH_GUIDE deploy/ops where config is edited.
 
 ### Slice B — Session diff (`#521`)
 

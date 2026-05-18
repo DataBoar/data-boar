@@ -9,7 +9,7 @@ Esta página é o **guia de uso do operador**: **CLI**, **API web e dashboard**,
 O documento descreve, em português, como:
 
 - Executar a aplicação via **CLI** e **API web**;
-- Entender os parâmetros (`--config`, `--web`, `--port`, `--host`, `--https-cert-file`, `--https-key-file`, `--allow-insecure-http`, `--tenant`, `--technician`, `--scan-compressed`, `--content-type-check`, `--scan-stego`, `--jurisdiction-hint`);
+- Entender os parâmetros (`--config`, `--web`, `--port`, `--host`, `--https-cert-file`, `--https-key-file`, `--allow-insecure-http`, `--validate-config`, `--tenant`, `--technician`, `--scan-compressed`, `--content-type-check`, `--scan-stego`, `--jurisdiction-hint`);
 - Navegar pelo **dashboard web**;
 - Iniciar varreduras e baixar relatórios/heatmaps usando **curl**.
 
@@ -35,6 +35,7 @@ O ponto de entrada é `main.py`.
 | `--https-cert-file`     | *(vazio)*            | Caminho PEM do certificado para TLS com `--web`; exige `--https-key-file` (ou `api.https_cert_file` / `api.https_key_file`). TLS **≥ 1.2**. Sem os dois arquivos, a inicialização **falha** salvo `--allow-insecure-http`.                                                               |
 | `--https-key-file`      | *(vazio)*            | Caminho PEM da chave privada para TLS com `--web`; pareado com `--https-cert-file` ou as chaves `api.*` correspondentes.                                                                                                                                                                 |
 | `--allow-insecure-http` | *(flag)*             | **Aceite explícito de risco:** servir o dashboard em **HTTP em texto plano** (risco de interceptação/alteração). Em produção, prefira TLS ou proxy reverso. Equivale a `api.allow_insecure_http: true`. A imagem **Docker** padrão passa essa flag para rodar sem certificados montados. |
+| `--validate-config`     | *(flag)*             | Pré-voo: analisa o config, reconhece conectores e chaves obrigatórias por target; **WARN** em `*_from_env` ausentes (não é erro). Sem rede nem DB. Sai **0** com `[OK]` ou **1** com `[INVALID]`. Incompatível com `--web`, `--reset-data` e `--export-audit-trail`. |
 | `--reset-data`          | *(flag)*             | Operação de manutenção perigosa: apaga todas as sessões/achados/falhas do SQLite, remove relatórios/heatmaps em `report.output_dir` e registra o wipe na tabela `data_wipe_log`. Não inicia varredura.                                                                                   |
 | `--export-audit-trail`  | *(caminho opcional)* | Exporta Rastro de Auditoria (Audit Trail) em JSON a partir do SQLite (`data_wipe_log`, resumo de sessões, `dashboard_transport`, **`maturity_assessment_integrity`** quando houver linhas do POC de maturity — mesmos totais que **`GET /status`**). Sem caminho ou com `-` → **stdout**; caso contrário grava no arquivo. **Não** altera o banco. Incompatível com `--web` e `--reset-data`.                             |
 | `--tenant`              | *(vazio)*            | Nome do cliente/tenant na execução CLI; gravado na sessão e exibido em dashboard/relatórios.                                                                                                                                                                                             |

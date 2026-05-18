@@ -115,6 +115,9 @@ O `uv` também pode executar a aplicação diretamente com todas as dependência
 # Varredura CLI única
 uv run python main.py --config config.yaml
 
+# Só validar config (mesmo carregador de varreduras/API; sai 0 se OK)
+uv run python main.py --config config.yaml --validate-config
+
 # Iniciar o servidor da API (equivalente a python main.py --web)
 uv run python main.py --config config.yaml --web --port 8088
 ```
