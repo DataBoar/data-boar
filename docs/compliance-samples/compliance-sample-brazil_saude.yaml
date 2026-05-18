@@ -1,0 +1,150 @@
+# Brazil — Setor de saúde: identificadores e dados sensíveis
+# Reguladores: CFM, CFF, CFO, COFEN, ANVISA, ANS; LGPD Art. 5, XI — dados de saúde
+# são dados pessoais sensíveis (Art. 11 — bases legais reforçadas).
+#
+# NOT LEGAL ADVICE. Technical starting point for data inventory.
+# Pair with: compliance-sample-lgpd.yaml (mandatory for any Brazilian processing)
+#
+# How to use:
+#   regex_overrides_file: path/to/compliance-sample-brazil_saude.yaml
+#   ml_patterns_file:     path/to/compliance-sample-brazil_saude.yaml
+#   Merge recommendation_overrides into report.recommendation_overrides.
+#
+# CRM/CRF/CRO/COREN shapes vary by state council; patterns are heuristic (high FP risk
+# in generic text). Review noisy corpora with counsel.
+
+regex:
+  - name: "BR_SAUDE_CRM"
+    pattern: "(?i)\\b(?:CRM)\\s*[/\\-]?\\s*(?:[A-Z]{2}\\s*)?\\d{4,6}\\b|\\b\\d{4,6}\\s*/\\s*[A-Z]{2}\\b"
+    norm_tag: "LGPD Art. 5 (dado de saúde — CRM médico)"
+
+  - name: "BR_SAUDE_CRF"
+    pattern: "(?i)\\b(?:CRF)\\s*[/\\-]?\\s*(?:[A-Z]{2}\\s*)?\\d{4,6}\\b"
+    norm_tag: "LGPD Art. 5 (dado de saúde — CRF farmacêutico)"
+
+  - name: "BR_SAUDE_CRO"
+    pattern: "(?i)\\b(?:CRO)\\s*[/\\-]?\\s*(?:[A-Z]{2}\\s*)?\\d{4,6}\\b"
+    norm_tag: "LGPD Art. 5 (dado de saúde — CRO dentista)"
+
+  - name: "BR_SAUDE_COREN"
+    pattern: "(?i)\\b(?:COREN)\\s*[/\\-]?\\s*(?:[A-Z]{2}\\s*)?\\d{5,7}\\b"
+    norm_tag: "LGPD Art. 5 (dado de saúde — COREN enfermagem)"
+
+  - name: "BR_SAUDE_CNS"
+    pattern: "(?i)\\b(?:CNS|cartao\\s+nacional\\s+de\\s+saude)[\\s:\\-]*\\d{15}\\b|\\b[12789]\\d{14}\\b"
+    norm_tag: "LGPD Art. 5 (dado de saúde — CNS)"
+
+  - name: "BR_SAUDE_ANVISA_RMS"
+    pattern: "\\b1\\.\\d{4}\\.\\d{4}\\.\\d{3}-\\d{1}\\b"
+    norm_tag: "LGPD Art. 5 (dado regulatório — ANVISA RMS)"
+
+  - name: "BR_SAUDE_ANVISA_CONTEXTUAL"
+    pattern: "(?i)\\b(?:registro\\s+ms|reg\\.?\\s*ms|ANVISA|registro\\s+anvisa)[\\s:\\-]*[\\d\\.\\-]{10,18}\\b"
+    norm_tag: "LGPD Art. 5 (dado regulatório — ANVISA)"
+
+  - name: "BR_SAUDE_ANS"
+    pattern: "(?i)\\b(?:ANS|registro\\s+ans|operadora\\s+ans)[\\s:\\-]*\\d{6}\\b"
+    norm_tag: "LGPD Art. 5 (dado de saúde — ANS operadora)"
+
+  - name: "BR_SAUDE_RECEITUARIO"
+    pattern: "(?i)\\b(?:numero\\s+receita|receituario\\s+n[o°]?|prescription\\s+id|rx\\s+n[o°]?)[\\s:\\-]*[A-Z0-9]{4,15}\\b"
+    norm_tag: "LGPD Art. 5 (dado de saúde — receituário)"
+
+  - name: "BR_SAUDE_PRONTUARIO"
+    pattern: "(?i)\\b(?:prontuario|n[o°]?\\s+prontuario|medical\\s+record|MRN)[\\s:\\-]*[A-Z0-9]{4,12}\\b"
+    norm_tag: "LGPD Art. 5 (dado de saúde — prontuário)"
+
+terms:
+  - { text: "CRM", label: sensitive }
+  - { text: "conselho regional de medicina", label: sensitive }
+  - { text: "CRF", label: sensitive }
+  - { text: "conselho regional de farmacia", label: sensitive }
+  - { text: "CRO", label: sensitive }
+  - { text: "COREN", label: sensitive }
+  - { text: "CNS", label: sensitive }
+  - { text: "cartao nacional de saude", label: sensitive }
+  - { text: "cartão nacional de saúde", label: sensitive }
+  - { text: "prontuario", label: sensitive }
+  - { text: "prontuário", label: sensitive }
+  - { text: "receita medica", label: sensitive }
+  - { text: "receita médica", label: sensitive }
+  - { text: "receituario", label: sensitive }
+  - { text: "receituário", label: sensitive }
+  - { text: "prescricao", label: sensitive }
+  - { text: "prescrição", label: sensitive }
+  - { text: "diagnostico", label: sensitive }
+  - { text: "diagnóstico", label: sensitive }
+  - { text: "CID", label: sensitive }
+  - { text: "CID-10", label: sensitive }
+  - { text: "laudo medico", label: sensitive }
+  - { text: "laudo médico", label: sensitive }
+  - { text: "exame laboratorial", label: sensitive }
+  - { text: "resultado de exame", label: sensitive }
+  - { text: "historico clinico", label: sensitive }
+  - { text: "histórico clínico", label: sensitive }
+  - { text: "dado de saude", label: sensitive }
+  - { text: "dado de saúde", label: sensitive }
+  - { text: "dado clinico", label: sensitive }
+  - { text: "dado clínico", label: sensitive }
+  - { text: "informacao de saude", label: sensitive }
+  - { text: "health data", label: sensitive }
+  - { text: "medical record", label: sensitive }
+  - { text: "patient data", label: sensitive }
+  - { text: "dado do paciente", label: sensitive }
+  - { text: "ANVISA", label: sensitive }
+  - { text: "registro de medicamento", label: sensitive }
+  - { text: "RMS", label: sensitive }
+  - { text: "registro ms", label: sensitive }
+  - { text: "bula do medicamento", label: sensitive }
+  - { text: "principio ativo", label: sensitive }
+  - { text: "princípio ativo", label: sensitive }
+  - { text: "lote do medicamento", label: sensitive }
+  - { text: "numero do lote", label: sensitive }
+  - { text: "validade do medicamento", label: sensitive }
+  - { text: "farmacovigilancia", label: sensitive }
+  - { text: "farmacovigilância", label: sensitive }
+  - { text: "notificacao adversa", label: sensitive }
+  - { text: "notificação adversa", label: sensitive }
+  - { text: "ANS", label: sensitive }
+  - { text: "plano de saude", label: sensitive }
+  - { text: "plano de saúde", label: sensitive }
+  - { text: "operadora de saude", label: sensitive }
+  - { text: "numero da carteirinha", label: sensitive }
+  - { text: "beneficiario", label: sensitive }
+  - { text: "beneficiário", label: sensitive }
+  - { text: "numero do beneficiario", label: sensitive }
+  - { text: "cobertura do plano", label: sensitive }
+  - { text: "health plan", label: sensitive }
+  - { text: "health insurance number", label: sensitive }
+  - { text: "product_sku", label: non_sensitive }
+  - { text: "batch_code_internal", label: non_sensitive }
+  - { text: "item_ref", label: non_sensitive }
+
+recommendation_overrides:
+  - norm_tag_pattern: "LGPD Art. 5 (dado de saúde — CRM médico)"
+    base_legal: "LGPD Art. 5, XI + Art. 11 — dados de saúde são dados sensíveis. CRM identifica o médico responsável por prescrições e procedimentos. CFM regulamenta o uso (prontuário eletrônico — resoluções aplicáveis em vigor)."
+    risk: "Número de CRM vincula o médico a prescrições, atestados e procedimentos. Exposição pode facilitar fraudes em prescrições e violação do sigilo profissional. Dado de saúde sujeito a restrições reforçadas da LGPD Art. 11."
+    recommendation: "Verificar base legal específica (LGPD Art. 11) para armazenamento de CRM em contexto de saúde. Aplicar controle de acesso restrito. Criptografar em repouso e em trânsito. Confirmar obrigações de retenção mínima. Consultar DPO, CISO e área jurídica. Não é conclusão legal."
+    priority: "ALTA"
+    relevant_for: "DPO, CISO, TI hospitalar, jurídico, farmácias, planos de saúde, representantes de medicamentos"
+
+  - norm_tag_pattern: "LGPD Art. 5 (dado de saúde — CNS)"
+    base_legal: "LGPD Art. 5, XI + Art. 11 — CNS identifica o paciente no SUS e ecossistema de dados em saúde. Dado sensível; portarias do Ministério da Saúde e marcos da RNDS aplicam-se ao processamento."
+    risk: "CNS com 15 dígitos identifica o paciente no SUS. Exposição permite rastreamento de histórico clínico e atendimentos. Tratamento reforçado sob LGPD Art. 11."
+    recommendation: "CNS não deve ser armazenado fora de sistemas de saúde autorizados sem base legal e governança explícitas. Verificar conformidade com normas de saúde digital vigentes. Aplicar criptografia e controle de acesso. Consultar DPO e área jurídica. Não é conclusão legal."
+    priority: "CRÍTICA"
+    relevant_for: "DPO, CISO, TI hospitalar, sistemas SUS, jurídico"
+
+  - norm_tag_pattern: "LGPD Art. 5 (dado regulatório — ANVISA RMS)"
+    base_legal: "RDCs e legislação sanitária — RMS identifica medicamentos registrados. LGPD aplica-se ao tratamento de dados pessoais no contexto clínico e comercial."
+    risk: "RMS em bases de dispensação ou vendas pode, combinado com dados identificadores, vincular pacientes a medicamentos e condições de saúde. Em farmacovigilância, pode revelar contexto sensível (Art. 5, XI)."
+    recommendation: "Avaliar contexto de uso do RMS. Quando associado a dados de paciente, tratar como dado de saúde (LGPD Art. 11). Verificar conformidade com rastreabilidade e normas ANVISA vigentes. Consultar DPO, jurídico e regulatório."
+    priority: "MÉDIA"
+    relevant_for: "DPO, área regulatória, CISO, indústria e distribuição farmacêutica"
+
+  - norm_tag_pattern: "LGPD Art. 5 (dado de saúde — receituário)"
+    base_legal: "LGPD Art. 5, XI — prescrição é dado de saúde sensível. Receituário eletrônico e substâncias sujeitas a regime especial possuem requisitos adicionais."
+    risk: "Identificadores de receita vinculam paciente a medicamentos e diagnóstico implícito. Em farmácias e hospitais, permitem reconstrução de histórico clínico."
+    recommendation: "Tratar dados de receituário como sensíveis (LGPD Art. 11). Criptografar e restringir acesso. Alinhar retenção a obrigações sanitárias aplicáveis. Consultar DPO, CISO e jurídico/regulatório."
+    priority: "ALTA"
+    relevant_for: "DPO, CISO, farmácias, hospitais, distribuidoras, indústria farmacêutica"
