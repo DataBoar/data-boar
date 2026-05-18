@@ -272,10 +272,15 @@ class AuditEngine:
         """Run one target: resolve connector, instantiate, run()."""
         resolved = connector_for_target(target)
         if not resolved:
+            tname = target.get("name", "unknown")
+            ttype = target.get("type", "?")
             self.db_manager.save_failure(
-                target.get("name", "unknown"),
-                "error",
-                "Unsupported target type or driver",
+                tname,
+                "unknown_connector_type",
+                (
+                    f"No connector registered for type '{ttype}'. "
+                    "Check config.yaml — possible typo or missing optional dependency."
+                ),
             )
             return
         connector_class, _ = resolved

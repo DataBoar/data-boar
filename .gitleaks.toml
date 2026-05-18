@@ -1,0 +1,12 @@
+title = "data-boar gitleaks config"
+
+[allowlist]
+description = "Confirmed FP 2026-05-18 — synthetic test data and operator howto curl examples"
+paths = [
+  '''scripts/generate_synthetic_poc_corpus\.py''',
+  '''docs/ops/API_KEY_FROM_ENV_OPERATOR_STEPS\.md''',
+  '''docs/ops/API_KEY_FROM_ENV_OPERATOR_STEPS\.pt_BR\.md''',
+  '''docs/ops/SECURE_DASHBOARD_AUTH_AND_HTTPS_HOWTO\.md''',
+  '''docs/ops/SECURE_DASHBOARD_AUTH_AND_HTTPS_HOWTO\.pt_BR\.md''',
+  '''docs/OPERATOR_NOTIFICATION_CHANNELS\.md'''
+]

@@ -85,3 +85,28 @@ def test_run_target_run_error_still_records_save_failure(tmp_path, monkeypatch) 
     assert len(recorded) == 1
     assert recorded[0][0] == "run-fail"
     assert "exploded" in recorded[0][2]
+
+
+def test_unknown_target_type_creates_failure(tmp_path, monkeypatch) -> None:
+    """Unknown target type must record scan_failures (ADR-0049, #416)."""
+    config: dict[str, Any] = {
+        "targets": [{"name": "snow", "type": "unknowntype_xyz"}],
+        "file_scan": {"sample_limit": 5, "extensions": [".txt"]},
+        "detection": {},
+    }
+    eng = AuditEngine(config, db_path=str(tmp_path / "audit3.db"))
+    recorded: list[tuple[str, str, str]] = []
+
+    monkeypatch.setattr(
+        eng.db_manager,
+        "save_failure",
+        lambda n, r, d: recorded.append((n, r, d)),
+    )
+    monkeypatch.setattr("core.engine.connector_for_target", lambda _t: None)
+
+    eng._run_target(config["targets"][0])
+
+    assert len(recorded) == 1
+    assert recorded[0][0] == "snow"
+    assert recorded[0][1] == "unknown_connector_type"
+    assert "unknowntype_xyz" in recorded[0][2]
