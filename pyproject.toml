@@ -115,6 +115,8 @@ richmedia = [
 ]
 # Parquet/ORC/Feather (pyarrow), Avro (fastavro), dBase (dbfread) — Tier-1 data soup formats.
 dataformats = ["pyarrow>=14.0.0", "fastavro>=1.9.0", "dbfread>=2.0.7"]
+# Legacy ".doc" samples: mammoth reads ZIP-based OOXML; binary Word 97-2003 often yields empty content (see docs/TROUBLESHOOTING.md).
+legacy-doc = ["mammoth>=1.6.0"]
 # GRC executive JSON dashboard (Streamlit + Plotly). Run: ``streamlit run app/dashboard.py``.
 grc-dashboard = ["streamlit>=1.40.0", "plotly>=5.24.0"]
 

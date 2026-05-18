@@ -29,6 +29,16 @@ The application maps failure **reasons** to a **Suggested next step** in the rep
 
 ---
 
+## Legacy `.doc` files: filename vs body text
+
+Filesystem scans always use **path and filename**. **Body text** for the `.doc` extension uses the optional **`mammoth`** library (install the **`legacy-doc`** extra: `pip install -e ".[legacy-doc]"` or `uv sync --extra legacy-doc`).
+
+**What you get:** Mammoth reads **Office Open XML packaged as a ZIP** (the same container family as `.docx`). That covers some real-world `.doc` files that are actually OOXML, or were renamed.
+
+**Limitation:** Classic **Word 97-2003 binary** `.doc` (OLE compound file) is **not** a ZIP; mammoth typically cannot open it, so **content sample stays empty** and only the name/path contributes to findings. If you need compliance evidence from those bodies, convert them to `.docx` (or another supported format) upstream, or plan a separate ingestion path — the product does not shell out to LibreOffice (see issue/plan scope for this slice).
+
+---
+
 ## Docker: connecting to remote data from the container
 
 Many deployments use the **Docker image**. The container must be able to reach your databases, file shares (NFS/SMB), and APIs.
