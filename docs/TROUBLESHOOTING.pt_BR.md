@@ -29,6 +29,16 @@ A aplicação mapeia **reasons** de falha para um **Suggested next step** no rel
 
 ---
 
+## Arquivos `.doc` legados: nome do arquivo vs texto do corpo
+
+Varreduras em filesystem **sempre** usam **caminho e nome do arquivo**. O **texto do corpo** para a extensão `.doc` usa a biblioteca opcional **`mammoth`** (instale o extra **`legacy-doc`**: `pip install -e ".[legacy-doc]"` ou `uv sync --extra legacy-doc`).
+
+**O que você ganha:** O mammoth lê **Office Open XML empacotado em ZIP** (a mesma família de contêiner que `.docx`). Isso cobre alguns `.doc` reais que são OOXML de fato, ou que foram renomeados.
+
+**Limitação:** O `.doc` **binário Word 97-2003** (arquivo composto OLE) **não** é ZIP; o mammoth em geral **não** abre, então a **amostra de conteúdo fica vazia** e só o nome/caminho entra nos achados. Se você precisa de evidência de compliance no corpo desses arquivos, converta para `.docx` (ou outro formato suportado) antes da varredura, ou planeje outra rota de ingestão — o produto **não** chama LibreOffice por subprocesso (escopo deste slice conforme issue/plan).
+
+---
+
 ## Docker: conectar a dados remotos a partir do container
 
 Muitas implantações usam a **imagem Docker**. O container precisa conseguir alcançar seus bancos de dados, shares de arquivos (NFS/SMB) e APIs.

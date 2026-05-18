@@ -272,8 +272,19 @@ def _read_text_sample(
             doc = Document(path)
             return finalize(" ".join(p.text for p in doc.paragraphs[:50])[:max_chars])
         if ext == ".doc":
-            # Legacy .doc: binary format; path/name still analyzed
-            return finalize("")
+            # Extension ".doc" may be OOXML (ZIP) readable like .docx, or legacy Word 97-2003 (OLE binary).
+            # Optional mammoth handles OOXML; OLE binary typically fails at zip open — path/name still analyzed.
+            try:
+                import mammoth
+            except ImportError:
+                return finalize("")
+            try:
+                with path.open("rb") as fh:
+                    result = mammoth.extract_raw_text(fh)
+                raw = result.value or ""
+            except Exception:
+                return finalize("")
+            return finalize(raw)
         if ext == ".odt":
             try:
                 from odf.opendocument import load
