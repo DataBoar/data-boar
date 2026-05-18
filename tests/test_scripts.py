@@ -897,6 +897,26 @@ def test_social_x_pace_remind_ps1_syntax():
     )
 
 
+def test_video_frame_samples_ps1_syntax():
+    """scripts/video-frame-samples.ps1 has valid PowerShell syntax (parse-only)."""
+    root = _project_root()
+    script = root / "scripts" / "video-frame-samples.ps1"
+    if not script.exists():
+        return
+    assert _parse_powershell_script(script, root), (
+        "video-frame-samples.ps1 parse failed"
+    )
+
+
+def test_image_inspect_ps1_syntax():
+    """scripts/image-inspect.ps1 has valid PowerShell syntax (parse-only)."""
+    root = _project_root()
+    script = root / "scripts" / "image-inspect.ps1"
+    if not script.exists():
+        return
+    assert _parse_powershell_script(script, root), "image-inspect.ps1 parse failed"
+
+
 def test_run_pii_local_seeds_pickaxe_ps1_syntax():
     """scripts/run-pii-local-seeds-pickaxe.ps1 has valid PowerShell syntax (parse-only)."""
     root = _project_root()

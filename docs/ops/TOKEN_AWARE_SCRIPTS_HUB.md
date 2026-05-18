@@ -44,6 +44,15 @@
 | `repo-grep.ps1` | Content search: **`rg`**, optional **`baregrep`** (`-PreferBareGrep`; also **`Downloads`**) | **`docs/ops/WINDOWS_FAST_CLI_WRAPPERS.md`**, **`.cursor/rules/repo-scripts-wrapper-ritual.mdc`** |
 | `repo-tail.ps1` | Last **N** lines: Git **`tail.exe`**, else **`Get-Content -Tail`** | Same |
 | `repo-view.ps1` | Capped preview: **`bat`** / **`batcat`**, else **`Get-Content`** | Same |
+| `video-frame-samples.ps1` | Sparse **PNG** frames from video (**`ffmpeg`** / **`ffprobe`**; operator **timestamps**) | **`docs/ops/VIDEO_FRAME_EXTRACT_FOR_AGENT.md`**, **`.cursor/skills/video-frames-for-agent/SKILL.md`**, **`.cursor/rules/repo-scripts-wrapper-ritual.mdc`** |
+
+### 1c. Still images + audio + video tags (operator inspect)
+
+| Script | Role | Wired to |
+| ------ | ---- | -------- |
+| `image-inspect.ps1` | **uv** wrapper: **`image_inspect.py`** — EXIF / mutagen / **ffprobe** + optional **Tesseract** (same stack as **`rich_media_sample`**) | **`docs/ops/IMAGE_EXIF_OCR_FOR_AGENT.md`**, **`.cursor/skills/image-inspect-for-agent/SKILL.md`** |
+| `image_inspect.py` | One-file CLI over **`build_rich_media_text_sample`** | Same |
+| `icloud-photos-fetch-range.ps1` | Stage iCloud / Apple Photos files into **`docs/private/icloud_temp/`** (then inspect) | Private **`ICLOUD_PHOTOS_SYNC_GUIDE.md`** when present; **`session-collect`** |
 
 ---
 
