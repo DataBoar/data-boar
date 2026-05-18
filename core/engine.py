@@ -87,12 +87,21 @@ try:
 except ImportError:
     pass
 
+from connectors.sql_connector import SQLConnector
 from core.connector_registry import connector_for_target
 from core.crypto_audit import StrongCryptoSignal, summarize_crypto_from_connection_info
 from core.database import LocalDBManager
 from core.sampling import SamplingPolicy
 from core.scanner import DataScanner
 from core.session import new_session_id
+
+_CONNECTOR_SAMPLING_POLICY_BASES: tuple[type, ...] = (SQLConnector,)
+try:
+    from connectors.snowflake_connector import SnowflakeConnector
+
+    _CONNECTOR_SAMPLING_POLICY_BASES = (SQLConnector, SnowflakeConnector)
+except ImportError:
+    pass
 
 
 class AuditEngine:
@@ -281,8 +290,32 @@ class AuditEngine:
         )
         file_passwords = fs_config.get("file_passwords") or {}
         ext = fs_config.get("extensions")
-        if t == "filesystem":
-            if ext is not None:
+        from core.validation import clean_error
+
+        try:
+            if t == "filesystem":
+                if ext is not None:
+                    connector = connector_class(
+                        target_with_fs,
+                        self.scanner,
+                        self.db_manager,
+                        extensions=ext,
+                        scan_sqlite_as_db=scan_sqlite_as_db,
+                        sample_limit=sample_limit,
+                        file_sample_max_chars=file_sample_max_chars,
+                        file_passwords=file_passwords,
+                    )
+                else:
+                    connector = connector_class(
+                        target_with_fs,
+                        self.scanner,
+                        self.db_manager,
+                        scan_sqlite_as_db=scan_sqlite_as_db,
+                        sample_limit=sample_limit,
+                        file_sample_max_chars=file_sample_max_chars,
+                        file_passwords=file_passwords,
+                    )
+            elif t in ("sharepoint", "webdav", "smb", "cifs", "nfs"):
                 connector = connector_class(
                     target_with_fs,
                     self.scanner,
@@ -293,69 +326,45 @@ class AuditEngine:
                     file_sample_max_chars=file_sample_max_chars,
                     file_passwords=file_passwords,
                 )
-            else:
+            elif t in ("powerbi", "dataverse", "powerapps"):
                 connector = connector_class(
-                    target_with_fs,
+                    target,
                     self.scanner,
                     self.db_manager,
-                    scan_sqlite_as_db=scan_sqlite_as_db,
                     sample_limit=sample_limit,
-                    file_sample_max_chars=file_sample_max_chars,
-                    file_passwords=file_passwords,
+                    detection_config=self.config.get("detection"),
                 )
-        elif t in ("sharepoint", "webdav", "smb", "cifs", "nfs"):
-            connector = connector_class(
-                target_with_fs,
-                self.scanner,
-                self.db_manager,
-                extensions=ext,
-                scan_sqlite_as_db=scan_sqlite_as_db,
-                sample_limit=sample_limit,
-                file_sample_max_chars=file_sample_max_chars,
-                file_passwords=file_passwords,
-            )
-        elif t in ("powerbi", "dataverse", "powerapps"):
-            connector = connector_class(
-                target,
-                self.scanner,
-                self.db_manager,
-                sample_limit=sample_limit,
-                detection_config=self.config.get("detection"),
-            )
-        else:
-            # Database targets (postgresql, mysql, sqlite, mssql, oracle, mongodb, etc.): pass
-            # sample_limit from file_scan (row/doc caps) and detection config for optional probes.
-            extra_kw: dict[str, Any] = {}
-            if connector_class.__name__ in ("SQLConnector", "SnowflakeConnector"):
-                extra_kw["sampling_policy"] = self._sampling_policy
-            connector = connector_class(
-                target,
-                self.scanner,
-                self.db_manager,
-                sample_limit=sample_limit,
-                detection_config=self.config.get("detection"),
-                **extra_kw,
-            )
-            # Phase 1: inspect connection info to collect coarse crypto/transport hints.
-            name = (target.get("name") or "").strip() or "database"
-            driver = (target.get("driver") or "").strip()
-            dsn = (target.get("dsn") or "").strip()
-            sslmode = (target.get("sslmode") or "").strip()
-            conn_info = {
-                "type": "database",
-                "name": name,
-                "driver": driver,
-                "dsn": dsn,
-                "sslmode": sslmode,
-            }
-            signals = summarize_crypto_from_connection_info(conn_info)
-            if signals:
-                self._crypto_signals.append((name, signals))
-        try:
+            else:
+                # Database targets (postgresql, mysql, sqlite, mssql, oracle, mongodb, etc.): pass
+                # sample_limit from file_scan (row/doc caps) and detection config for optional probes.
+                extra_kw: dict[str, Any] = {}
+                if issubclass(connector_class, _CONNECTOR_SAMPLING_POLICY_BASES):
+                    extra_kw["sampling_policy"] = self._sampling_policy
+                connector = connector_class(
+                    target,
+                    self.scanner,
+                    self.db_manager,
+                    sample_limit=sample_limit,
+                    detection_config=self.config.get("detection"),
+                    **extra_kw,
+                )
+                # Phase 1: inspect connection info to collect coarse crypto/transport hints.
+                name = (target.get("name") or "").strip() or "database"
+                driver = (target.get("driver") or "").strip()
+                dsn = (target.get("dsn") or "").strip()
+                sslmode = (target.get("sslmode") or "").strip()
+                conn_info = {
+                    "type": "database",
+                    "name": name,
+                    "driver": driver,
+                    "dsn": dsn,
+                    "sslmode": sslmode,
+                }
+                signals = summarize_crypto_from_connection_info(conn_info)
+                if signals:
+                    self._crypto_signals.append((name, signals))
             connector.run()
         except Exception as e:
-            from core.validation import clean_error
-
             self.db_manager.save_failure(
                 target.get("name", "unknown"), "error", clean_error(e)
             )
