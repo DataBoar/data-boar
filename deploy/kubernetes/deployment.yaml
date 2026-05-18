@@ -2,21 +2,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: lgpd-audit
+  name: data-boar
   labels:
-    app: lgpd-audit
+    app: data-boar
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: lgpd-audit
+      app: data-boar
   template:
     metadata:
       labels:
-        app: lgpd-audit
+        app: data-boar
     spec:
       containers:
-        - name: lgpd-audit
+        - name: data-boar
           image: fabioleitao/data_boar:latest
           ports:
             - containerPort: 8088
@@ -54,4 +54,4 @@ spec:
           emptyDir: {}
         - name: config
           configMap:
-            name: lgpd-audit-config
+            name: data-boar-config

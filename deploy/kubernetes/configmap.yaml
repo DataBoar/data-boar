@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: lgpd-audit-config
+  name: data-boar-config
   labels:
-    app: lgpd-audit
+    app: data-boar
 data:
   config.yaml: |
     targets: []

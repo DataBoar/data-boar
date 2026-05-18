@@ -119,7 +119,7 @@ cp deploy/docker-compose.override.example.yml deploy/docker-compose.override.yml
 docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.override.yml up -d
 ```
 
-Logs: `docker compose -f deploy/docker-compose.yml logs -f lgpd-audit`. Parar: `docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.override.yml down`.
+Logs: `docker compose -f deploy/docker-compose.yml logs -f data-boar`. Parar: `docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.override.yml down`.
 
 ## 5. Docker Swarm
 
@@ -128,10 +128,10 @@ Use o mesmo Compose com `docker stack deploy`:
 ```bash
 docker swarm init
 # Com override para bind mount ./data
-docker stack deploy -c deploy/docker-compose.yml -c deploy/docker-compose.override.yml lgpd-audit
+docker stack deploy -c deploy/docker-compose.yml -c deploy/docker-compose.override.yml data-boar-audit
 ```
 
-Remover: `docker stack rm lgpd-audit`.
+Remover: `docker stack rm data-boar-audit`.
 
 ## 6. Kubernetes
 
@@ -191,7 +191,7 @@ Em implantações típicas, o estado fica sob **`/data`** (volume ou bind mount)
 | Push                  | `docker tag ... fabioleitao/data_boar:latest` e `docker push ...`                                   |
 | **Container único**   | `docker run -d -p 8088:8088 -v ./data:/data data_boar:latest`                                       |
 | **Compose**           | `docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.override.yml up -d`           |
-| **Swarm**             | `docker stack deploy -c deploy/docker-compose.yml -c deploy/docker-compose.override.yml lgpd-audit` |
+| **Swarm**             | `docker stack deploy -c deploy/docker-compose.yml -c deploy/docker-compose.override.yml data-boar-audit` |
 | **Kubernetes**        | `kubectl apply -f deploy/kubernetes/`                                                               |
 | **Backup / restore**  | Dados em `/data` (seção 9): backup do volume ou bind mount; restaurar com o mesmo layout e validar `/health` |
 

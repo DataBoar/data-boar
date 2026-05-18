@@ -51,7 +51,7 @@ To run a single audit from the CLI in the cluster, create a **Job** that overrid
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: lgpd-audit-cli-once
+  name: data-boar-cli-once
 spec:
   template:
     spec:
@@ -72,7 +72,7 @@ spec:
         - name: data
 
           configMap:
-            name: lgpd-audit-config
+            name: data-boar-config
       restartPolicy: Never
   backoffLimit: 0
 ```

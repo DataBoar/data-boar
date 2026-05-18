@@ -1,13 +1,13 @@
-# Optional: PodDisruptionBudget for lgpd-audit.
+# Optional: PodDisruptionBudget for data-boar.
 # Apply only when running more than one replica (e.g. replicas: 2).
 # Ensures at least one pod remains available during voluntary disruptions (node drain, etc.).
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: lgpd-audit-pdb
+  name: data-boar-pdb
   namespace: default
 spec:
   minAvailable: 1
   selector:
     matchLabels:
-      app: lgpd-audit
+      app: data-boar

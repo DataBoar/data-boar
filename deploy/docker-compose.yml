@@ -1,5 +1,5 @@
 # Docker Compose v3. Compatible with Docker Swarm: deploy with
-#   docker stack deploy -c deploy/docker-compose.yml lgpd-audit
+#   docker stack deploy -c deploy/docker-compose.yml data-boar-audit
 # Default: runs the image CMD = web API + frontend (dashboard, reports, config UI) on port 8088.
 # No "command:" override = container starts the API. For CLI one-shot use a separate run with entrypoint override.
 # Requires: config at /data/config.yaml (mount volume or bind).
@@ -8,7 +8,7 @@
 version: "3.8"
 
 services:
-  lgpd-audit:
+  data-boar:
     image: fabioleitao/data_boar:latest
     # command not set: use image default = web API + frontend
     build:
@@ -19,7 +19,7 @@ services:
     environment:
       CONFIG_PATH: /data/config.yaml
     volumes:
-      - lgpd-data:/data
+      - data-boar-data:/data
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8088/health')\""]
       interval: 15s
@@ -38,4 +38,4 @@ services:
           cpus: "0.25"
 
 volumes:
-  lgpd-data:
+  data-boar-data:

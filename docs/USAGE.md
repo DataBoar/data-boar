@@ -144,7 +144,7 @@ Pre-built images are on Docker Hub: `fabioleitao/data_boar:latest` ([hub.docker.
 1. **Prepare** a config file (e.g. `config.yaml`) with `targets`, `file_scan`, `report`, and optionally `api.port`.
 1. **Set config path** (optional):
 
-   `CONFIG_PATH=/etc/lgpd-audit/config.yaml` (or your path) so the API loads that file regardless of working directory.
+   `CONFIG_PATH=/etc/data-boar/config.yaml` (or your path) so the API loads that file regardless of working directory.
 
 1. **Run the server:**
 

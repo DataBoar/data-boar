@@ -1,15 +1,15 @@
-# Optional: restrict ingress to lgpd-audit pods.
+# Optional: restrict ingress to data-boar pods.
 # Apply only if your cluster supports NetworkPolicy (e.g. Calico, Cilium).
 # Adjust namespaceSelector / podSelector to match your ingress controller or allowed clients.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: lgpd-audit-ingress
+  name: data-boar-ingress
   namespace: default
 spec:
   podSelector:
     matchLabels:
-      app: lgpd-audit
+      app: data-boar
   policyTypes:
     - Ingress
   ingress:

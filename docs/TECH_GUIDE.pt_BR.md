@@ -396,7 +396,7 @@ targets:
     type: custom
     headers:
       Authorization: "Bearer ..."
-      X-Requested-By: "lgpd-audit"
+      X-Requested-By: "data-boar"
 ```
 
 Achados de alvos de API aparecem na planilha **Filesystem findings** com `file_name` no formato `GET /users | email` (endpoint e campo). O projeto usa **httpx** (já é dependência) para HTTP; não é necessária instalação extra para o conector REST.
@@ -606,7 +606,7 @@ Prepare `/data/config.yaml` a partir de `deploy/config.example.yaml` (veja [depl
 - **Build:** `docker build -t data_boar:latest .` (ou `docker build -t fabioleitao/data_boar:latest .` para push no Docker Hub; veja [deploy/DEPLOY.md](deploy/DEPLOY.md)).
 - **Run:** Monte a config em `/data/config.yaml` (veja `deploy/config.example.yaml`). Exponha a porta 8088.
 - **Compose:** `docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.override.yml up -d` (prepare `./data/config.yaml` antes).
-- **Swarm:** `docker stack deploy -c deploy/docker-compose.yml -c deploy/docker-compose.override.yml lgpd-audit`.
+- **Swarm:** `docker stack deploy -c deploy/docker-compose.yml -c deploy/docker-compose.override.yml data-boar-audit`.
 - **Kubernetes:** `kubectl apply -f deploy/kubernetes/` (veja [deploy/kubernetes/README.md](deploy/kubernetes/README.md)).
 
 Passos completos (build, push, container único, Compose, Swarm, Kubernetes): **[deploy/DEPLOY.md](deploy/DEPLOY.md)** ([pt-BR](deploy/DEPLOY.pt_BR.md)). Para MCP, construa e faça push a partir do código: [DOCKER_SETUP.md](DOCKER_SETUP.md) ([pt-BR](DOCKER_SETUP.pt_BR.md)).

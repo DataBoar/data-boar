@@ -159,7 +159,7 @@ You can tighten the Deployment with a **securityContext** and add a **NetworkPol
           type: RuntimeDefault
       containers:
 
-        - name: lgpd-audit
+        - name: data-boar
 
           securityContext:
             allowPrivilegeEscalation: false
@@ -216,7 +216,7 @@ cp deploy/config.example.yaml data/config.yaml
 
 ### 4.2 Optional: bind mount for `/data`
 
-By default `deploy/docker-compose.yml` uses a named volume `lgpd-data`. To use a host directory (e.g. `./data`) instead, use the override file:
+By default `deploy/docker-compose.yml` uses a named volume `data-boar-data`. To use a host directory (e.g. `./data`) instead, use the override file:
 
 ```bash
 cp deploy/docker-compose.override.example.yml deploy/docker-compose.override.yml
@@ -238,7 +238,7 @@ If you did not create an override, use:
 docker compose -f deploy/docker-compose.yml up -d
 ```
 
-(Then populate the `lgpd-data` volume with `config.yaml` if needed.)
+(Then populate the `data-boar-data` volume with `config.yaml` if needed.)
 
 ### 4.4 Access and manage
 
@@ -248,7 +248,7 @@ docker compose -f deploy/docker-compose.yml up -d
 
 ```bash
 # View logs
-docker compose -f deploy/docker-compose.yml logs -f lgpd-audit
+docker compose -f deploy/docker-compose.yml logs -f data-boar
 
 # Stop and remove
 docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.override.yml down
@@ -278,11 +278,12 @@ mkdir -p data
 cp deploy/config.example.yaml data/config.yaml
 # Edit data/config.yaml
 
-# Override volume to bind mount ./data into the service
-docker stack deploy -c deploy/docker-compose.yml lgpd-audit
+# Override volume to bind mount ./data into the service (create override from the example first)
+cp deploy/docker-compose.override.example.yml deploy/docker-compose.override.yml
+docker stack deploy -c deploy/docker-compose.yml -c deploy/docker-compose.override.yml data-boar-audit
 ```
 
-If you use the default **named volume** `lgpd-data`, the first time the service starts the container will see an empty `/data`. You must put `config.yaml` into that volume (e.g. run a one-off container that mounts the volume and copies a file in, or use a config mount). Easiest for local: **bind mount**.
+If you use the default **named volume** `data-boar-data`, the first time the service starts the container will see an empty `/data`. You must put `config.yaml` into that volume (e.g. run a one-off container that mounts the volume and copies a file in, or use a config mount). Easiest for local: **bind mount**.
 
 Create `deploy/docker-compose.override.yml` (or a fragment) to bind mount without editing the main file:
 
@@ -290,7 +291,7 @@ Create `deploy/docker-compose.override.yml` (or a fragment) to bind mount withou
 # deploy/docker-compose.override.yml (optional, for bind mount)
 version: "3.8"
 services:
-  lgpd-audit:
+  data-boar:
     volumes:
 
       - ./data:/data
@@ -300,17 +301,17 @@ services:
 Then from repo root:
 
 ```bash
-docker stack deploy -c deploy/docker-compose.yml -c deploy/docker-compose.override.yml lgpd-audit
+docker stack deploy -c deploy/docker-compose.yml -c deploy/docker-compose.override.yml data-boar-audit
 ```
 
-If you don't use an override, ensure the stack's `lgpd-data` volume is populated with `config.yaml` (e.g. via a one-off container).
+If you don't use an override, ensure the stack's `data-boar-data` volume is populated with `config.yaml` (e.g. via a one-off container).
 
 ### 5.3 Check the service
 
 ```bash
 docker service ls
-docker service ps lgpd-audit_lgpd-audit
-docker service logs lgpd-audit_lgpd-audit
+docker service ps data-boar-audit_data-boar
+docker service logs data-boar-audit_data-boar
 ```
 
 ### 5.4 Access
@@ -323,7 +324,7 @@ Port 8088 is exposed by the Compose file.
 ### 5.5 Remove the stack
 
 ```bash
-docker stack rm lgpd-audit
+docker stack rm data-boar-audit
 ```
 
 ## 6. Deploy with Kubernetes
@@ -411,7 +412,7 @@ Typical deployments keep all durable state under **`/data`** (volume or bind mou
 | Push to registry         | `docker tag ... fabioleitao/data_boar:latest` then `docker login` and `docker push fabioleitao/data_boar:latest`                           |
 | **Single container**     | `docker run -d -p 8088:8088 -v ./data:/data data_boar:latest` (section 3)                                                                  |
 | **Docker Compose**       | `docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.override.yml up -d` — prepare `./data/config.yaml` first (section 4) |
-| **Docker Swarm**         | `docker stack deploy -c deploy/docker-compose.yml -c deploy/docker-compose.override.yml lgpd-audit` (section 5)                            |
+| **Docker Swarm**         | `docker stack deploy -c deploy/docker-compose.yml -c deploy/docker-compose.override.yml data-boar-audit` (section 5)                            |
 | **Kubernetes**           | `kubectl apply -f deploy/kubernetes/` — see `deploy/kubernetes/README.md` for image and config (section 6)                                 |
 | **Backup / restore**     | Persisted data under `/data` (section 9): back up the mounted volume or bind mount; restore with the same layout, then verify `/health`        |
 
