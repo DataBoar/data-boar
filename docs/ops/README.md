@@ -17,7 +17,7 @@ In Cursor chat, say **`pmo-view`** when you want the assistant to **surface plan
 
 - **You** open each file in the editor, then: **Windows / Linux:** `Ctrl+Shift+V` (Open Preview) or `Ctrl+K` then `V` (Preview to the Side). **macOS:** `Cmd+Shift+V` or `Cmd+K` then `V`.
 - The assistant **cannot** switch your tab to Preview automatically—that is an editor gesture.
-- **Typical files:** [`plans/PLANS_TODO.md`](../plans/PLANS_TODO.md), [`plans/SPRINTS_AND_MILESTONES.md`](../plans/SPRINTS_AND_MILESTONES.md) ([pt-BR](../plans/SPRINTS_AND_MILESTONES.pt_BR.md)), [`plans/TOKEN_AWARE_USAGE.md`](../plans/TOKEN_AWARE_USAGE.md), [COMMIT_AND_PR.md](COMMIT_AND_PR.md) ([pt-BR](COMMIT_AND_PR.pt_BR.md)), [OPERATOR_LAB_DOCUMENT_MAP.md](OPERATOR_LAB_DOCUMENT_MAP.md) ([pt-BR](OPERATOR_LAB_DOCUMENT_MAP.pt_BR.md)), [Corporate-Entity-C_IN_REPO_BASELINE.md](Corporate-Entity-C_IN_REPO_BASELINE.md) (Corporate-Entity-C reviewer paths).
+- **Typical files:** [`plans/PLANS_TODO.md`](../plans/PLANS_TODO.md), [PLANS_DOCUMENTATION_HIERARCHY.md](PLANS_DOCUMENTATION_HIERARCHY.md) ([pt-BR](PLANS_DOCUMENTATION_HIERARCHY.pt_BR.md)), [`plans/SPRINTS_AND_MILESTONES.md`](../plans/SPRINTS_AND_MILESTONES.md) ([pt-BR](../plans/SPRINTS_AND_MILESTONES.pt_BR.md)), [`plans/TOKEN_AWARE_USAGE.md`](../plans/TOKEN_AWARE_USAGE.md), [COMMIT_AND_PR.md](COMMIT_AND_PR.md) ([pt-BR](COMMIT_AND_PR.pt_BR.md)), [OPERATOR_LAB_DOCUMENT_MAP.md](OPERATOR_LAB_DOCUMENT_MAP.md) ([pt-BR](OPERATOR_LAB_DOCUMENT_MAP.pt_BR.md)), [Corporate-Entity-C_IN_REPO_BASELINE.md](Corporate-Entity-C_IN_REPO_BASELINE.md) (Corporate-Entity-C reviewer paths).
 
 Defined in **`.cursor/rules/session-mode-keywords.mdc`**.
 

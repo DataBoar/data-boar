@@ -133,6 +133,7 @@ Os artefatos de deploy (Compose, Kubernetes, exemplos de config) ficam na pasta 
 
 - [ops/README.md](ops/README.md) — Índice dos runbooks do operador e **checklist de auditoria de links** após mover docs.
 - [plans/PLANS_TODO.md](plans/PLANS_TODO.md) — Status dos planos e estado atual da aplicação (fonte única de verdade para os to-dos dos planos abertos). *Arquivos de plano são apenas em inglês para histórico; runbooks em ops/ são EN + pt-BR.*
+- [ops/PLANS_DOCUMENTATION_HIERARCHY.md](ops/PLANS_DOCUMENTATION_HIERARCHY.md) — **`PLAN_*.md` vs `PLANS_HUB` vs `PLANS_TODO`:** modelo PMO em três camadas e ritual do mantenedor — [pt-BR](ops/PLANS_DOCUMENTATION_HIERARCHY.pt_BR.md).
 - [plans/PLANS_HUB.md](plans/PLANS_HUB.md) — **Hub de planos:** tabela de todos os `PLAN_*.md` (abertos + arquivados) para colaboradores; atualize com `python scripts/plans_hub_sync.py --write`. [Intro pt-BR](plans/PLANS_HUB.pt_BR.md).
 - [plans/MAINTENANCE_FRONT_OF_WORK.md](plans/MAINTENANCE_FRONT_OF_WORK.md) — Após rajadas de PRs paralelos: manter um frente ativa de desenvolvimento; matriz CI/Python; fatias opcionais de manutenção (Scout, deps). *(EN-only.)*
 - [plans/PYTHON_UPGRADE_PLAYBOOK.md](plans/PYTHON_UPGRADE_PLAYBOOK.md) — Sequenciamento de upgrade do runtime Python (3.12→3.13→…), Docker, CI e wheels; [guia em pt-BR](plans/PYTHON_UPGRADE_PLAYBOOK.pt_BR.md).

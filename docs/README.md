@@ -133,6 +133,7 @@ Deploy assets (Compose, Kubernetes, config examples) remain in the [deploy/](../
 
 - [ops/README.md](ops/README.md) — Operator runbooks index (this folder) and **link-audit checklist** for doc moves.
 - [plans/PLANS_TODO.md](plans/PLANS_TODO.md) — Plan status and current app state (single source of truth for open-plan to-dos). *Plan files are EN-only for history; operator runbooks under ops/ are EN + pt-BR.*
+- [ops/PLANS_DOCUMENTATION_HIERARCHY.md](ops/PLANS_DOCUMENTATION_HIERARCHY.md) — **`PLAN_*.md` vs `PLANS_HUB` vs `PLANS_TODO`:** three-layer PMO model and maintainer ritual — [pt-BR](ops/PLANS_DOCUMENTATION_HIERARCHY.pt_BR.md).
 - [plans/PLANS_HUB.md](plans/PLANS_HUB.md) — **Plans hub:** table of every `PLAN_*.md` (open + completed) for collaborators; refresh with `python scripts/plans_hub_sync.py --write`. [pt-BR intro](plans/PLANS_HUB.pt_BR.md).
 - [plans/MAINTENANCE_FRONT_OF_WORK.md](plans/MAINTENANCE_FRONT_OF_WORK.md) — After parallel PR bursts: keep one active dev front; CI/Python matrix alignment; optional maintenance slices (Scout, deps).
 - [plans/PYTHON_UPGRADE_PLAYBOOK.md](plans/PYTHON_UPGRADE_PLAYBOOK.md) — Python runtime upgrade sequencing (3.12→3.13→…), Docker, CI, and wheels; [pt-BR companion](plans/PYTHON_UPGRADE_PLAYBOOK.pt_BR.md).

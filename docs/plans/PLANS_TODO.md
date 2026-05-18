@@ -6,6 +6,8 @@ This document is the **single source of truth** for the project's plan status an
 
 **Plans hub (collaborator map):** **[PLANS_HUB.md](PLANS_HUB.md)** ([pt-BR](PLANS_HUB.pt_BR.md)) — auto-maintained table of **every** `PLAN_*.md` (open + completed) with short summaries and optional cross-links. Refresh with `python scripts/plans_hub_sync.py --write` when you add or archive a plan; CI enforces freshness via `plans_hub_sync.py --check`.
 
+**How the pieces fit:** **`PLAN_*.md`** = durable spec · **`PLANS_HUB.md`** = index of all plan files · **`PLANS_TODO.md`** = execution mirror and dependency dashboard — see **[PLANS_DOCUMENTATION_HIERARCHY.md](../ops/PLANS_DOCUMENTATION_HIERARCHY.md)** ([pt-BR](../ops/PLANS_DOCUMENTATION_HIERARCHY.pt_BR.md)).
+
 **Integrity / tamper-evidence (index):** links-only map in **[Integrity and tamper-evidence index (planning map)](#integrity-and-tamper-evidence-index-planning-map)** below — no separate `PLAN_INTEGRITY_*.md` file.
 
 **Token-aware work:** When context or token limits apply (e.g. after an initial Pro+ burst), prefer **one plan or one to-do per session**; open only the files needed for that step. See **[TOKEN_AWARE_USAGE.md](TOKEN_AWARE_USAGE.md)** for short vs long-term goals, artifact references (Docker Hub, `docs/private/`), and one-session workflow.

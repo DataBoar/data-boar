@@ -17,7 +17,7 @@ No chat do Cursor, diga `**pmo-view**` quando quiser que o assistente **destaque
 
 - **Você** abre cada arquivo no editor e usa: **Windows / Linux:** `Ctrl+Shift+V` (Abrir pré-visualização) ou `Ctrl+K` e depois `V` (lado a lado). **macOS:** `Cmd+Shift+V` ou `Cmd+K` e `V`.
 - O assistente **não consegue** mudar sua aba para Preview sozinho — é gesto do editor.
-- **Arquivos típicos:** `[plans/PLANS_TODO.md](../plans/PLANS_TODO.md)`, `[plans/SPRINTS_AND_MILESTONES.pt_BR.md](../plans/SPRINTS_AND_MILESTONES.pt_BR.md)` ([EN](../plans/SPRINTS_AND_MILESTONES.md)), `[plans/TOKEN_AWARE_USAGE.md](../plans/TOKEN_AWARE_USAGE.md)`, [COMMIT_AND_PR.pt_BR.md](COMMIT_AND_PR.pt_BR.md) ([EN](COMMIT_AND_PR.md)), [OPERATOR_LAB_DOCUMENT_MAP.pt_BR.md](OPERATOR_LAB_DOCUMENT_MAP.pt_BR.md) ([EN](OPERATOR_LAB_DOCUMENT_MAP.md)), [Corporate-Entity-C_IN_REPO_BASELINE.md](Corporate-Entity-C_IN_REPO_BASELINE.md) (caminhos no repositório para revisores Corporate-Entity-C).
+- **Arquivos típicos:** `[plans/PLANS_TODO.md](../plans/PLANS_TODO.md)`, [PLANS_DOCUMENTATION_HIERARCHY.pt_BR.md](PLANS_DOCUMENTATION_HIERARCHY.pt_BR.md) ([EN](PLANS_DOCUMENTATION_HIERARCHY.md)), `[plans/SPRINTS_AND_MILESTONES.pt_BR.md](../plans/SPRINTS_AND_MILESTONES.pt_BR.md)` ([EN](../plans/SPRINTS_AND_MILESTONES.md)), `[plans/TOKEN_AWARE_USAGE.md](../plans/TOKEN_AWARE_USAGE.md)`, [COMMIT_AND_PR.pt_BR.md](COMMIT_AND_PR.pt_BR.md) ([EN](COMMIT_AND_PR.md)), [OPERATOR_LAB_DOCUMENT_MAP.pt_BR.md](OPERATOR_LAB_DOCUMENT_MAP.pt_BR.md) ([EN](OPERATOR_LAB_DOCUMENT_MAP.md)), [Corporate-Entity-C_IN_REPO_BASELINE.md](Corporate-Entity-C_IN_REPO_BASELINE.md) (caminhos no repositório para revisores Corporate-Entity-C).
 
 Definido em `**.cursor/rules/session-mode-keywords.mdc`**.
 

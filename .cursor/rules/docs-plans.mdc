@@ -64,6 +64,7 @@ When you **create** a new plan, add the new roadmap goal to the pitch (README "F
 
 ## Reference
 
+- **Three-layer PMO model (`PLAN_*` vs hub vs `PLANS_TODO`):** **[PLANS_DOCUMENTATION_HIERARCHY.md](../ops/PLANS_DOCUMENTATION_HIERARCHY.md)** ([pt-BR](../ops/PLANS_DOCUMENTATION_HIERARCHY.pt_BR.md)).
 - **Central to-do list:** `docs/plans/PLANS_TODO.md`.
 - **Plans hub (collaborator map):** `docs/plans/PLANS_HUB.md` — sync with `scripts/plans_hub_sync.py`.
 - **Token-aware usage:** `docs/plans/TOKEN_AWARE_USAGE.md`.
