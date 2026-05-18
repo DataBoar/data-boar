@@ -27,13 +27,13 @@ Use these tags in headings to keep priorities explicit and machine-countable:
 
 Do not edit this block manually; refresh with `python scripts/plans-stats.py --write`.
 
-- **Status rows counted:** 168  (Done: 100 | Incomplete: 68)
-- **Incomplete breakdown:** Pending `⬜`=64, Tracked `🔄` / `Tracked (partially done)`=4, Under consideration=0, Backlog-marked rows=0
+- **Status rows counted:** 178  (Done: 100 | Incomplete: 78)
+- **Incomplete breakdown:** Pending `⬜`=72, Tracked `🔄` / `Tracked (partially done)`=6, Under consideration=0, Backlog-marked rows=0
 
 | Horizon | Total rows | Done | Incomplete |
 | ------- | ----------: | ----: | ----------: |
-| `H0` | 44 | 36 | 8 |
-| `H1` | 11 | 9 | 2 |
+| `H0` | 28 | 24 | 4 |
+| `H1` | 37 | 21 | 16 |
 | `H2` | 0 | 0 | 0 |
 | `H3` | 108 | 50 | 58 |
 | `H4` | 0 | 0 | 0 |
@@ -106,10 +106,13 @@ Refresh periodically: `gh issue list --state open --limit 50` (requires [`gh`](h
 | #                                                        | Short title                                      | Type                  | Plan                                                                                 | Sequence (token-aware)                                                                   |
 | -                                                        | -----------                                      | ----                  | ----                                                                                 | ------------------------                                                                 |
 | [86](https://github.com/FabioLeitao/data-boar/issues/86) | Reports / dashboard access by role or permission | Feature + security UX | [PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md](PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md) | **`[H1]`** firm (does not block **1.7.4**); after **Priority band A**; **Phase 0 (D-WEB)** ✅; **Phase 1** = session + **passwordless (WebAuthn)** ✅; **Phase 2** = **RBAC** ✅ (`api.rbac`, Pro+); **Phase 3** = enterprise SSO/OIDC optional ⬜ |
+| [512](https://github.com/FabioLeitao/data-boar/issues/512) | Maintainer batch — P0/P1 triage + PR discipline | Process / PMO | [PLAN_MAINTAINER_ISSUE_BATCH_AND_PMO_SYNC.md](PLAN_MAINTAINER_ISSUE_BATCH_AND_PMO_SYNC.md) | **P0** — thin PRs, promote durable work into **`PLAN_*.md`** + **`plans_hub_sync --write`** |
+| [483](https://github.com/FabioLeitao/data-boar/issues/483) | Public contact surfaces / domain alias policy | Docs / governance | [PLAN_OPERATING_DOMAIN_CONTACTS_AND_ALIAS_POLICY.md](PLAN_OPERATING_DOMAIN_CONTACTS_AND_ALIAS_POLICY.md) | **P1** — SECURITY / CoC / CONTRIBUTING alignment; no PII in plan Motivation |
+| [520](https://github.com/FabioLeitao/data-boar/issues/520)–[522](https://github.com/FabioLeitao/data-boar/issues/522) | CLI: validate-config, session diff, DSAR export | Feature (CLI) | [PLAN_CLI_VALIDATE_DIFF_AND_DSAR_EXPORT.md](PLAN_CLI_VALIDATE_DIFF_AND_DSAR_EXPORT.md) | **`[H1][U1]`** three slices; align with scan manifest / run summary when present |
 
 **Claude audit / doc-hygiene issue sweep (#87+, 2026-05):** Ship **thin PRs** (one subject per commit cluster; `check-all` before integration). **Sequence when titles disagree:** band in headline **`[P0]` → `[P1]` → `[P2]` → `[P3]`**, then **ascending issue #**; issues **without** a band trail the banded set, still by **#**. **Source of truth** for what is open: `gh issue list --state open --limit 200` (refresh this table when closing chunks). **Duplicate / echo issues:** after merge + green CI, close the canonical issue then mark duplicates with evidence — [GITHUB_ISSUE_CANONICAL_AND_DUPLICATE_CLOSE.md](../ops/GITHUB_ISSUE_CANONICAL_AND_DUPLICATE_CLOSE.md) ([pt-BR](../ops/GITHUB_ISSUE_CANONICAL_AND_DUPLICATE_CLOSE.pt_BR.md)). **Next targets after CoC enforcement (#480 / #418):** [#483](https://github.com/FabioLeitao/data-boar/issues/483) (P1 databoar.com.br alias decision), [#485](https://github.com/FabioLeitao/data-boar/issues/485)–[#498](https://github.com/FabioLeitao/data-boar/issues/498) per numeric sweep (skip duplicates: e.g. [#478](https://github.com/FabioLeitao/data-boar/issues/478) vs [#479](https://github.com/FabioLeitao/data-boar/issues/479) ANPD children samples — consolidate before coding). Older open **#378–#454** stack: same rule; prefer **docs/man** fixes (e.g. [#454](https://github.com/FabioLeitao/data-boar/issues/454) timeouts key names) before net-new compliance samples.
 
-**GitHub triage snapshot (refresh when batching):** Recently closed on **`main`** (connectors / loader / notify / deploy naming): [#502](https://github.com/FabioLeitao/data-boar/issues/502), [#503](https://github.com/FabioLeitao/data-boar/issues/503), [#508](https://github.com/FabioLeitao/data-boar/issues/508), [#517](https://github.com/FabioLeitao/data-boar/issues/517), [#495](https://github.com/FabioLeitao/data-boar/issues/495). **Coordination:** [#512](https://github.com/FabioLeitao/data-boar/issues/512) (**P0**). **CLI backlog (promote into a `PLAN_*.md` row + USAGE/operator-help when slicing):** [#520](https://github.com/FabioLeitao/data-boar/issues/520) (`--validate-config`), [#521](https://github.com/FabioLeitao/data-boar/issues/521) (`--diff` sessions), [#522](https://github.com/FabioLeitao/data-boar/issues/522) (`--export-dsar`).
+**GitHub triage snapshot (refresh when batching):** Recently closed on **`main`** (connectors / loader / notify / deploy naming): [#502](https://github.com/FabioLeitao/data-boar/issues/502), [#503](https://github.com/FabioLeitao/data-boar/issues/503), [#508](https://github.com/FabioLeitao/data-boar/issues/508), [#517](https://github.com/FabioLeitao/data-boar/issues/517), [#495](https://github.com/FabioLeitao/data-boar/issues/495). **Coordination:** [#512](https://github.com/FabioLeitao/data-boar/issues/512) (**P0**) — [PLAN_MAINTAINER_ISSUE_BATCH_AND_PMO_SYNC.md](PLAN_MAINTAINER_ISSUE_BATCH_AND_PMO_SYNC.md). **CLI / evidence:** [#520](https://github.com/FabioLeitao/data-boar/issues/520) (`--validate-config`), [#521](https://github.com/FabioLeitao/data-boar/issues/521) (`--diff` sessions), [#522](https://github.com/FabioLeitao/data-boar/issues/522) (`--export-dsar`) — [PLAN_CLI_VALIDATE_DIFF_AND_DSAR_EXPORT.md](PLAN_CLI_VALIDATE_DIFF_AND_DSAR_EXPORT.md). **Public contacts / domains (P1):** [#483](https://github.com/FabioLeitao/data-boar/issues/483) — [PLAN_OPERATING_DOMAIN_CONTACTS_AND_ALIAS_POLICY.md](PLAN_OPERATING_DOMAIN_CONTACTS_AND_ALIAS_POLICY.md).
 
 **Dashboard web surface cluster:** [#86](https://github.com/FabioLeitao/data-boar/issues/86) (RBAC) and [PLAN_DASHBOARD_I18N.md](completed/PLAN_DASHBOARD_I18N.md) (locale) share `api/routes.py` / templates. **Order:** **M-LOCALE-V1** ✅ (locale prefix on **`main`**, **2026-04**); **D-WEB** ✅; **M-MATURITY-POC** (smoke + runbook §D for full readiness) **then** **#86 Phase 1** on its own branch/PR — see [SPRINTS_AND_MILESTONES.md](SPRINTS_AND_MILESTONES.md) §4.2 / §5 and the **Integration** bullet *Maturity self-assessment* above.
 
@@ -159,6 +162,9 @@ Post–PR **#118**: clarified **`private-layout`** vs **`docs/private/homelab`**
 | Object storage (S3 / Azure Blob / GCS)         | Optional: Compressed files, content-type, configurable timeouts, Secrets Phase A (env for keys)                                       | None           | **Additive** connector; list + download/stream objects then same filesystem scan path. See PLAN_OBJECT_STORAGE_CLOUD_CONNECTORS.                                                                                                                                          |
 | Semgrep CI                                     | —                                                                                                                                     | None           | **Workflow only**; complements CodeQL. See PLAN_SEMGREP_CI.md.                                                                                                                                                                                                            |
 | Bandit security linter                         | —                                                                                                                                     | None           | **Dev dep + CI job** (strict); config in pyproject. See [completed/PLAN_BANDIT_SECURITY_LINTER.md](completed/PLAN_BANDIT_SECURITY_LINTER.md).                                                                                                                                                                                  |
+| CLI validate, session diff, DSAR export        | Config loader; optional fields from [PLAN_SCAN_RUN_MANIFEST_AND_EXECUTION_SUMMARY.md](PLAN_SCAN_RUN_MANIFEST_AND_EXECUTION_SUMMARY.md) | None           | Operator CLI: `--validate-config`, session `--diff`, `--export-dsar` (metadata-first defaults). [PLAN_CLI_VALIDATE_DIFF_AND_DSAR_EXPORT.md](PLAN_CLI_VALIDATE_DIFF_AND_DSAR_EXPORT.md); [#520](https://github.com/FabioLeitao/data-boar/issues/520)–[#522](https://github.com/FabioLeitao/data-boar/issues/522). |
+| Maintainer issue batch and PMO sync            | `gh` CLI; CONTRIBUTING / commit ritual                                                                                                | None           | Batch P0/P1; promote issues → `PLAN_*.md` + `plans_hub_sync` / `plans-stats`. [PLAN_MAINTAINER_ISSUE_BATCH_AND_PMO_SYNC.md](PLAN_MAINTAINER_ISSUE_BATCH_AND_PMO_SYNC.md); [#512](https://github.com/FabioLeitao/data-boar/issues/512). |
+| Operating domain contacts and alias policy     | —                                                                                                                                     | None           | Doc-only: SECURITY / CoC / CONTRIBUTING contact alignment. [PLAN_OPERATING_DOMAIN_CONTACTS_AND_ALIAS_POLICY.md](PLAN_OPERATING_DOMAIN_CONTACTS_AND_ALIAS_POLICY.md); [#483](https://github.com/FabioLeitao/data-boar/issues/483). |
 
 ---
 
@@ -330,6 +336,41 @@ Doc-first: buyer/DPO positioning in COMPLIANCE_AND_LEGAL + COMPLIANCE_FRAMEWORKS
 | 2 | COMPLIANCE_AND_LEGAL.pt_BR.md: equivalent section (pt-BR).                                     | ✅ Done |
 | 3 | COMPLIANCE_FRAMEWORKS.md + pt_BR: short cross-link to COMPLIANCE_AND_LEGAL (no `docs/plans/`). | ✅ Done |
 | 4 | Add this plan file; run `plans_hub_sync.py --write` and `plans-stats.py --write`.             | ✅ Done |
+
+## [H0] Maintainer PMO — GitHub triage ↔ `docs/plans/`
+
+### Maintainer issue batch and PMO sync – [PLAN_MAINTAINER_ISSUE_BATCH_AND_PMO_SYNC.md](PLAN_MAINTAINER_ISSUE_BATCH_AND_PMO_SYNC.md)
+
+**`[H0][U0]`** process — GitHub [#512](https://github.com/FabioLeitao/data-boar/issues/512).
+
+| Phase | To-do | Status |
+| ----- | ----- | ------ |
+| 1.1–1.4 | Refresh open-issue snapshot; batch thin PRs; close with evidence | 🔄 Tracked |
+| 2.1–2.2 | Promote multi-step threads into `PLAN_*.md` + dependency rows | 🔄 Tracked |
+| 3.1 | `plans_hub_sync.py --write` and `plans-stats.py --write` after hub/dashboard inputs change | ⬜ Pending |
+
+## [H1] CLI operator tools and public contact policy
+
+### CLI validate, session diff, DSAR export – [PLAN_CLI_VALIDATE_DIFF_AND_DSAR_EXPORT.md](PLAN_CLI_VALIDATE_DIFF_AND_DSAR_EXPORT.md)
+
+**`[H1][U1]`** — GitHub [#520](https://github.com/FabioLeitao/data-boar/issues/520), [#521](https://github.com/FabioLeitao/data-boar/issues/521), [#522](https://github.com/FabioLeitao/data-boar/issues/522).
+
+| Phase | To-do | Status |
+| ----- | ----- | ------ |
+| A.1–A.4 | `--validate-config` (or agreed name): CLI + tests + USAGE / operator-help | ⬜ Pending |
+| B.1–B.3 | Session `--diff`: inputs, stable output format, regression fixtures | ⬜ Pending |
+| C.1–C.3 | `--export-dsar`: metadata-first default, explicit opt-in for samples, docs | ⬜ Pending |
+
+### Operating-domain contacts and alias policy – [PLAN_OPERATING_DOMAIN_CONTACTS_AND_ALIAS_POLICY.md](PLAN_OPERATING_DOMAIN_CONTACTS_AND_ALIAS_POLICY.md)
+
+**`[H1][U1]`** docs — GitHub [#483](https://github.com/FabioLeitao/data-boar/issues/483).
+
+| # | To-do | Status |
+| - | ----- | ------ |
+| 1 | SECURITY (EN + pt-BR): single coherent disclosure path | ⬜ Pending |
+| 2 | CODE_OF_CONDUCT pair: escalation matches SECURITY | ⬜ Pending |
+| 3 | CONTRIBUTING pair: vulnerability reporting points to SECURITY | ⬜ Pending |
+| 4 | Close #483 with file list + plan link | ⬜ Pending |
 
 ### Corporate-Entity-C 2026-03-18 — evolution review (9.1/10) and follow-ups
 
