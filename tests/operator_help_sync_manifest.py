@@ -47,6 +47,7 @@ _MAN_JURISDICTION_HINT = r"\-\-jurisdiction\-hint"
 _MAN_HTTPS_CERT = r"\-\-https\-cert\-file"
 _MAN_HTTPS_KEY = r"\-\-https\-key\-file"
 _MAN_ALLOW_INSECURE_HTTP = r"\-\-allow\-insecure\-http"
+_MAN_VALIDATE_CONFIG = r"\-\-validate\-config"
 
 OPERATOR_HELP_MARKERS: tuple[OperatorHelpMarker, ...] = (
     OperatorHelpMarker("config", "--config", "config.yaml", _MAN_CONFIG),
@@ -69,6 +70,12 @@ OPERATOR_HELP_MARKERS: tuple[OperatorHelpMarker, ...] = (
         "--allow-insecure-http",
         "--allow-insecure-http",
         _MAN_ALLOW_INSECURE_HTTP,
+    ),
+    OperatorHelpMarker(
+        "validate_config",
+        "--validate-config",
+        "--validate-config",
+        _MAN_VALIDATE_CONFIG,
     ),
     OperatorHelpMarker("port", "--port", "--port", _MAN_PORT),
     OperatorHelpMarker(

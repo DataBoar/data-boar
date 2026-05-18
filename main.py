@@ -5,6 +5,7 @@ CLI entry point: load config (YAML/JSON), run audit and report (optionally tagge
 
 import argparse
 import json
+import os
 import ssl
 import sys
 from pathlib import Path
@@ -49,6 +50,81 @@ def _emit_runtime_trust_info(
         print(attention_line, file=sys.stderr)
 
 
+_ENV_FIELDS_TARGET = (
+    "pass_from_env",
+    "user_from_env",
+    "token_from_env",
+    "api_key_from_env",
+)
+_ENV_FIELDS_AUTH = ("client_secret_from_env",)
+
+
+def _validate_config_and_exit(config: dict[str, Any], config_path: str) -> None:
+    """Pre-flight: connector recognition, required keys, env hints (no network/DB)."""
+    import core.engine  # noqa: F401 — register connector types (same as scan path)
+
+    from core.connector_registry import connector_for_target
+
+    errors: list[str] = []
+    warnings: list[str] = []
+    targets = config.get("targets", [])
+
+    print(f"Validating config: {config_path}")
+
+    if not targets:
+        warnings.append("config: no targets defined")
+
+    for i, target in enumerate(targets):
+        name = target.get("name", f"target[{i}]")
+        result = connector_for_target(target)
+
+        if result is None:
+            t = target.get("type", "?")
+            d = target.get("driver", "")
+            errors.append(
+                f"target \"{name}\": unknown type/driver '{t}'"
+                + (f" driver={d!r}" if d else "")
+                + " — no connector registered"
+            )
+            continue
+
+        _, required_keys = result
+        for key in required_keys:
+            if key not in target:
+                errors.append(f'target "{name}": required key "{key}" missing')
+
+        for field in _ENV_FIELDS_TARGET:
+            env_name = target.get(field)
+            if env_name and not os.environ.get(env_name):
+                warnings.append(
+                    f'target "{name}": {field}={env_name!r} — env var not set'
+                )
+
+        auth = target.get("auth") or {}
+        for field in _ENV_FIELDS_AUTH:
+            env_name = auth.get(field)
+            if env_name and not os.environ.get(env_name):
+                warnings.append(
+                    f'target "{name}": auth.{field}={env_name!r} — env var not set'
+                )
+
+        kind = target.get("type", "?")
+        driver = target.get("driver", "")
+        label = f"type={kind}" + (f" driver={driver}" if driver else "")
+        print(f'  OK    target[{i}] "{name}"  {label}')
+
+    for w in warnings:
+        print(f"  WARN  {w}")
+    for e in errors:
+        print(f"  ERROR {e}")
+
+    if errors:
+        print(f"\n[INVALID] {len(errors)} error(s), {len(warnings)} warning(s).")
+        sys.exit(1)
+    print(f"\n[OK] {len(targets)} target(s) valid. {len(warnings)} warning(s).")
+    sys.exit(0)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description=(
@@ -73,6 +149,9 @@ def main() -> None:
             "\n"
             "  # One-shot with archive scan + content-type detection (this run only)\n"
             "  python main.py --config config.yaml --scan-compressed --content-type-check\n"
+            "\n"
+            "  # Validate config only (loader checks; no scan or API startup)\n"
+            "  python main.py --config config.yaml --validate-config\n"
             "\n"
             "  # Wipe all collected data and generated reports (dangerous, see SECURITY.md)\n"
             "  python main.py --config config.yaml --reset-data\n"
@@ -187,6 +266,16 @@ def main() -> None:
         ),
     )
     parser.add_argument(
+        "--validate-config",
+        action="store_true",
+        help=(
+            "Validate config structure, connector types, and required keys per target; "
+            "warn on unset *_from_env vars. No connections, scan, or --web. "
+            "Exit 0 when valid, 1 on errors. Incompatible with --web, --reset-data, "
+            "and --export-audit-trail."
+        ),
+    )
+    parser.add_argument(
         "--tenant",
         default=None,
         help=(
@@ -243,6 +332,15 @@ def main() -> None:
     )
     args = parser.parse_args()
 
+    if args.validate_config and (
+        args.web or args.reset_data or args.export_audit_trail is not None
+    ):
+        print(
+            "Cannot combine --validate-config with --web, --reset-data, or --export-audit-trail.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+
     try:
         config = load_config(args.config)
     except FileNotFoundError as e:
@@ -259,6 +357,9 @@ def main() -> None:
             "What to do: Validate your config against docs/USAGE.md; check indentation and quoted strings."
         )
         sys.exit(1)
+
+    if args.validate_config:
+        _validate_config_and_exit(config, args.config)
 
     if args.scan_compressed:
         config.setdefault("file_scan", {})["scan_compressed"] = True

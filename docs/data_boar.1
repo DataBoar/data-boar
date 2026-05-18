@@ -175,6 +175,21 @@ Explicit risk acceptance: serve the dashboard over plaintext HTTP (no TLS betwee
 in the configuration instead of this flag. The default Docker image command passes this flag so the container runs without mounted certificates.
 .
 .TP
+.B \-\-validate\-config
+Pre\-flight validation: parse the main configuration file (YAML or JSON), check connector type/driver recognition and required keys per target; warn on unset
+.BR *_from_env
+variables (warnings only). Makes no network connections and does not open SQLite. Exit
+.B 0
+with
+.BR [OK]
+or
+.B 1
+with
+.BR [INVALID] .
+Cannot be combined with
+.BR \-\-web ", " \-\-reset\-data ", or " \-\-export\-audit\-trail .
+.
+.TP
 .B \-\-scan\-compressed
 When set, treat
 .B file_scan.scan_compressed

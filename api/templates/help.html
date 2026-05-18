@@ -24,6 +24,7 @@
   <p class="muted">{{ t('help.run_cli_p1') }}</p>
   <p><strong>{{ t('help.run_cli_oneshot') }}</strong></p>
   <pre><code>uv run python main.py --config config.yaml
+uv run python main.py --config config.yaml --validate-config
 uv run python main.py --config config.yaml --tenant "Acme Corp" --technician "Alice Colleague-V"
 # Same optional toggles as the dashboard checkboxes (this run only):
 uv run python main.py --config config.yaml --scan-compressed --content-type-check --scan-stego --jurisdiction-hint</code></pre>
