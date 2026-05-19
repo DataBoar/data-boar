@@ -22,6 +22,7 @@ Use these tags in headings to keep priorities explicit and machine-countable:
 
 - Horizons: `[H0]` must-do-now, `[H1]` short-term, `[H2]` medium-term, `[H3]` long-term/production-ready milestone, `[H4]` far horizon (post-lato/master's scenario), `[H5]` dream horizon (PhD thesis scenario).
 - Urgency: `[U0]` security/safety now, `[U1]` low-AI/high-gain soon, `[U2]` not critical next, `[U3]` backlog/catalogue.
+- **Gravity (findings):** `[G0]` negligible, `[G1]` low, `[G2]` significant, `[G3]` critical (compliance breach, PII leak, Safe-Hold candidate). **Orthogonal** to GitHub **`[P0]-[P3]`** execution labels and to **CodeQL P0/P1/P2** — see **[PLAN_G_TIER.md](PLAN_G_TIER.md)** ([pt-BR](PLAN_G_TIER.pt_BR.md)).
 - Status labels used in to-do rows/tables: `✅ Done`, `⬜ Pending`, `🔄 Tracked`, `Tracked (partially done)`, `Under consideration`, `Backlog`.
 
 <!-- PLANS_STATUS_DASHBOARD:START -->
@@ -86,6 +87,8 @@ When **partners** or **buyers** anchor on a vertical (MSP, insurance, RPO, real 
 - **WebAuthn JSON (Phase 1a, #86 track):** Vendor-neutral **`/auth/webauthn/*`** + SQLite + signed cookie on **`main`** (default **off**) — [ADR 0033](../adr/ADR-0033-webauthn-open-relying-party-json-endpoints.md), [PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md](PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md) § *Phase 1a deliverable*, [SMOKE_WEBAUTHN_JSON.md](../ops/SMOKE_WEBAUTHN_JSON.md). **Phase 1b** (HTML session gates + CSRF) ✅ on **`main`**. **Phase 2** (**RBAC**) ✅ on **`main`** when tier allows. **Phase 3** (SSO/OIDC) remains **[#86](https://github.com/FabioLeitao/data-boar/issues/86)** follow-up.
 - **Sprint mirror:** [SPRINTS_AND_MILESTONES.md](SPRINTS_AND_MILESTONES.md) §3 + **M-RICH** when milestones change.
 - **Gemini / LLM doc triage (optional):** After a public-bundle review, use [PLAN_GEMINI_FEEDBACK_TRIAGE.md](PLAN_GEMINI_FEEDBACK_TRIAGE.md) for non-authoritative optional to-dos and promotion gates—does not override CI, pytest, or agreed sequencing until promoted here or in an issue.
+- **Taxonomy axes (G0-G3 + hub):** [PLAN_G_TIER.md](PLAN_G_TIER.md) ([pt-BR](PLAN_G_TIER.pt_BR.md)) formalizes **gravity** for findings; [PLAN_TAXONOMY_AXES.md](PLAN_TAXONOMY_AXES.md) maps orthogonal axes; [ADR-0055](../adr/ADR-0055-orthogonal-priority-axes-anti-collision-contract.md) records the anti-collision contract. **`scripts/inv-adr.ps1`** regenerates **`docs/adr/INVENTORY.txt`**.
+- **Plan checkbox discipline:** When code ships for a named plan slice, update **`PLAN_*.md`** checkboxes in the **same PR** — see **`AGENTS.md`** (*Plan checkbox discipline*); **`plans-status-pl-sync.mdc`** stays situational (plan globs only).
 
 **Gemini Cold — promoted sequence (safest first, `[H3][U3]` doc/hygiene unless noted):** Use a **`docs`** or **`houseclean`** session; run **`check-all`** before merge. Source IDs: §6 of [PLAN_GEMINI_FEEDBACK_TRIAGE.md](PLAN_GEMINI_FEEDBACK_TRIAGE.md).
 

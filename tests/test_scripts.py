@@ -223,6 +223,42 @@ def test_pr_merge_when_green_ps1_syntax():
     )
 
 
+def test_inv_adr_ps1_syntax():
+    """scripts/inv-adr.ps1 has valid PowerShell syntax (parse-only)."""
+    root = _project_root()
+    script = root / "scripts" / "inv-adr.ps1"
+    if not script.exists():
+        return
+    assert _parse_powershell_script(script, root), "inv-adr.ps1 parse failed"
+
+
+def test_inv_adr_inventory_hash_matches_data_lines():
+    """INVENTORY.txt InventoryHash covers data rows only (regression guard)."""
+    root = _project_root()
+    inv = root / "docs" / "adr" / "INVENTORY.txt"
+    if not inv.exists():
+        return
+    text = inv.read_text(encoding="utf-8")
+    lines = text.splitlines()
+    data_lines = []
+    for line in lines:
+        if line.startswith("#"):
+            continue
+        if not line.strip():
+            continue
+        if line.startswith("# InventoryHash:"):
+            continue
+        data_lines.append(line)
+    assert data_lines, "expected ADR data rows in INVENTORY.txt"
+    import hashlib
+
+    expected = hashlib.sha256("\n".join(data_lines).encode("utf-8")).hexdigest().upper()
+    hash_line = next((ln for ln in lines if ln.startswith("# InventoryHash:")), "")
+    assert hash_line, "missing InventoryHash line"
+    got = hash_line.split(":", 1)[1].strip().upper()
+    assert got == expected, "InventoryHash does not match data rows"
+
+
 def test_snmp_LAB_ROUTER_01_lab_probe_ps1_syntax():
     """scripts/snmp-LAB-ROUTER-01-lab-probe.ps1 has valid PowerShell syntax (parse-only)."""
     root = _project_root()

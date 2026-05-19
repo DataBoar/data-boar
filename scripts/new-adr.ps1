@@ -122,6 +122,22 @@ if ($AddToIndex) {
             Write-Host "  Index: updated docs/adr/README.md" -ForegroundColor Cyan
         }
     }
+    $readmePtPath = Join-Path $adrDir "README.pt_BR.md"
+    if (Test-Path -LiteralPath $readmePtPath) {
+        $readmePt = Get-Content $readmePtPath -Raw -Encoding UTF8
+        $stubPt = "| $numStr  | [$Title]($filename) | $Status |"
+        if ($readmePt -notmatch [regex]::Escape($stubPt)) {
+            $readmePt = $readmePt -replace '(## Docs relacionados|## Related docs)', "$stubPt`n`n`$1"
+            Set-Content $readmePtPath $readmePt -Encoding UTF8
+            Write-Host "  Index pt-BR: updated docs/adr/README.pt_BR.md" -ForegroundColor Cyan
+        }
+    }
+}
+
+$invScript = Join-Path $PSScriptRoot "inv-adr.ps1"
+if (Test-Path -LiteralPath $invScript) {
+    & $invScript -AdrDir $adrDir -OutFile (Join-Path $adrDir "INVENTORY.txt")
+    Write-Host "  Inventory: updated docs/adr/INVENTORY.txt" -ForegroundColor Cyan
 }
 
 Write-Host ""

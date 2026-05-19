@@ -73,6 +73,7 @@ Short, durable notes that capture **why** the project chose an approach—not on
 | 0052  | [YAML plugin system: centralized schema and unified plugin file](ADR-0052-yaml-plugin-system-centralized-schema.md) | Accepted |
 | 0053  | [`ebcdic` direct upper-bound pin and Dependabot ignore for blocked semver-major](ADR-0053-ebcdic-direct-upper-bound-and-dependabot-ignore.md) | Accepted |
 | 0054  | [Decline `chardet` semver-major bumps while `cyclonedx-bom` pins `chardet<6.0`](ADR-0054-chardet-pinned-by-cyclonedx-bom.md) | Accepted |
+| 0055  | [Orthogonal priority axes (H/U/A/P/G/S/M) anti-collision contract](ADR-0055-orthogonal-priority-axes-anti-collision-contract.md) | Accepted |
 
 ## Related docs
 
