@@ -50,6 +50,9 @@ _MAN_ALLOW_INSECURE_HTTP = r"\-\-allow\-insecure\-http"
 _MAN_VALIDATE_CONFIG = r"\-\-validate\-config"
 _MAN_DIFF = r"\-\-diff"
 _MAN_FAIL_ON_NEW_HIGH = r"\-\-fail\-on\-new\-high"
+_MAN_EXPORT_DSAR = r"\-\-export\-dsar"
+_MAN_DSAR_OUTPUT = r"\-\-dsar\-output"
+_MAN_DSAR_INCLUDE_SAMPLES = r"\-\-dsar\-include\-samples"
 
 OPERATOR_HELP_MARKERS: tuple[OperatorHelpMarker, ...] = (
     OperatorHelpMarker("config", "--config", "config.yaml", _MAN_CONFIG),
@@ -90,6 +93,24 @@ OPERATOR_HELP_MARKERS: tuple[OperatorHelpMarker, ...] = (
         "--fail-on-new-high",
         "--fail-on-new-high",
         _MAN_FAIL_ON_NEW_HIGH,
+    ),
+    OperatorHelpMarker(
+        "export_dsar",
+        "--export-dsar",
+        "--export-dsar",
+        _MAN_EXPORT_DSAR,
+    ),
+    OperatorHelpMarker(
+        "dsar_output",
+        "--dsar-output",
+        "--dsar-output",
+        _MAN_DSAR_OUTPUT,
+    ),
+    OperatorHelpMarker(
+        "dsar_include_samples",
+        "--dsar-include-samples",
+        None,
+        _MAN_DSAR_INCLUDE_SAMPLES,
     ),
     OperatorHelpMarker("port", "--port", "--port", _MAN_PORT),
     OperatorHelpMarker(

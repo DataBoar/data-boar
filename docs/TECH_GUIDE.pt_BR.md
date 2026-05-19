@@ -119,6 +119,8 @@ uv run python main.py --config config.yaml
 uv run python main.py --config config.yaml --validate-config
 uv run python main.py --config config.yaml --diff <session_a_uuid> <session_b_uuid>
 uv run python main.py --config config.yaml --diff <session_a_uuid> <session_b_uuid> --fail-on-new-high
+uv run python main.py --config config.yaml --export-dsar <session_uuid>
+uv run python main.py --config config.yaml --export-dsar <session_uuid> --dsar-output dsar_export.json
 
 # Iniciar o servidor da API (equivalente a python main.py --web)
 uv run python main.py --config config.yaml --web --port 8088

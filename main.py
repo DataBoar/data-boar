@@ -271,6 +271,9 @@ def main() -> None:
             "  # Compare two scan sessions (CI: add --fail-on-new-high)\n"
             "  python main.py --config config.yaml --diff <session_a> <session_b>\n"
             "\n"
+            "  # DSAR-oriented JSON export for one session (stdout or --dsar-output)\n"
+            "  python main.py --config config.yaml --export-dsar <session_id>\n"
+            "\n"
             "  # Wipe all collected data and generated reports (dangerous, see SECURITY.md)\n"
             "  python main.py --config config.yaml --reset-data\n"
             "\n"
@@ -414,6 +417,34 @@ def main() -> None:
         ),
     )
     parser.add_argument(
+        "--export-dsar",
+        metavar="SESSION_ID",
+        dest="export_dsar",
+        default=None,
+        help=(
+            "Export findings for SESSION_ID as DSAR-ready JSON (LGPD Art. 18 / "
+            "GDPR Art. 15). Metadata-first by default; use --dsar-include-samples "
+            "only when stored sample fields must be included. Print to stdout or "
+            "--dsar-output PATH. Incompatible with --web and --reset-data."
+        ),
+    )
+    parser.add_argument(
+        "--dsar-output",
+        metavar="PATH",
+        dest="dsar_output",
+        default=None,
+        help="Write DSAR export to PATH instead of stdout. Requires --export-dsar.",
+    )
+    parser.add_argument(
+        "--dsar-include-samples",
+        action="store_true",
+        dest="dsar_include_samples",
+        help=(
+            "With --export-dsar: include raw sample fields from finding rows when "
+            "present (increases disclosure risk; SQLite stores metadata only by default)."
+        ),
+    )
+    parser.add_argument(
         "--tenant",
         default=None,
         help=(
@@ -471,10 +502,14 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.validate_config and (
-        args.web or args.reset_data or args.export_audit_trail is not None
+        args.web
+        or args.reset_data
+        or args.export_audit_trail is not None
+        or args.export_dsar is not None
     ):
         print(
-            "Cannot combine --validate-config with --web, --reset-data, or --export-audit-trail.",
+            "Cannot combine --validate-config with --web, --reset-data, "
+            "--export-audit-trail, or --export-dsar.",
             file=sys.stderr,
         )
         sys.exit(2)
@@ -484,12 +519,35 @@ def main() -> None:
         or args.reset_data
         or args.export_audit_trail is not None
         or args.validate_config
+        or args.export_dsar is not None
     ):
         print(
             "Cannot combine --diff with --web, --reset-data, --export-audit-trail, "
-            "or --validate-config.",
+            "--export-dsar, or --validate-config.",
             file=sys.stderr,
         )
+        sys.exit(2)
+
+    if args.export_dsar is not None and (
+        args.web
+        or args.reset_data
+        or args.export_audit_trail is not None
+        or args.validate_config
+        or args.diff_sessions
+    ):
+        print(
+            "Cannot combine --export-dsar with --web, --reset-data, "
+            "--export-audit-trail, --validate-config, or --diff.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+
+    if args.dsar_output and args.export_dsar is None:
+        print("--dsar-output requires --export-dsar.", file=sys.stderr)
+        sys.exit(2)
+
+    if args.dsar_include_samples and args.export_dsar is None:
+        print("--dsar-include-samples requires --export-dsar.", file=sys.stderr)
         sys.exit(2)
 
     try:
@@ -533,6 +591,28 @@ def main() -> None:
         config["report"]["jurisdiction_hints"]["enabled"] = True
 
     runtime_trust = get_runtime_trust_snapshot(config)
+
+    if args.export_dsar is not None:
+        _emit_runtime_trust_info(runtime_trust, to_stdout=False, to_stderr=True)
+        from core.dsar_export import build_dsar_payload
+
+        engine = AuditEngine(config)
+        try:
+            payload = build_dsar_payload(
+                engine.db_manager,
+                session_id=args.export_dsar,
+                include_samples=args.dsar_include_samples,
+            )
+            body = json.dumps(payload, indent=2, ensure_ascii=False) + "\n"
+            dest = args.dsar_output
+            if dest:
+                Path(dest).write_text(body, encoding="utf-8")
+                print(f"DSAR export written to {dest}", file=sys.stderr)
+            else:
+                sys.stdout.write(body)
+        finally:
+            engine.db_manager.dispose()
+        return
 
     if args.export_audit_trail is not None:
         # Keep stdout clean for JSON when export destination is stdout.
