@@ -29,13 +29,13 @@ Use these tags in headings to keep priorities explicit and machine-countable:
 
 Do not edit this block manually; refresh with `python scripts/plans-stats.py --write`.
 
-- **Status rows counted:** 178  (Done: 100 | Incomplete: 78)
-- **Incomplete breakdown:** Pending `⬜`=72, Tracked `🔄` / `Tracked (partially done)`=6, Under consideration=0, Backlog-marked rows=0
+- **Status rows counted:** 178  (Done: 102 | Incomplete: 76)
+- **Incomplete breakdown:** Pending `⬜`=70, Tracked `🔄` / `Tracked (partially done)`=6, Under consideration=0, Backlog-marked rows=0
 
 | Horizon | Total rows | Done | Incomplete |
 | ------- | ----------: | ----: | ----------: |
 | `H0` | 28 | 24 | 4 |
-| `H1` | 37 | 21 | 16 |
+| `H1` | 37 | 23 | 14 |
 | `H2` | 0 | 0 | 0 |
 | `H3` | 108 | 50 | 58 |
 | `H4` | 0 | 0 | 0 |
@@ -359,8 +359,8 @@ Doc-first: buyer/DPO positioning in COMPLIANCE_AND_LEGAL + COMPLIANCE_FRAMEWORKS
 
 | Phase | To-do | Status |
 | ----- | ----- | ------ |
-| A.1–A.4 | `--validate-config` (or agreed name): CLI + tests + USAGE / operator-help | ⬜ Pending |
-| B.1–B.3 | Session `--diff`: inputs, stable output format, regression fixtures | ⬜ Pending |
+| A.1–A.4 | `--validate-config` (or agreed name): CLI + tests + USAGE / operator-help | ✅ Done |
+| B.1–B.3 | Session `--diff`: inputs, stable output format, regression fixtures | ✅ Done |
 | C.1–C.3 | `--export-dsar`: metadata-first default, explicit opt-in for samples, docs | ⬜ Pending |
 
 ### Operating-domain contacts and alias policy – [PLAN_OPERATING_DOMAIN_CONTACTS_AND_ALIAS_POLICY.md](PLAN_OPERATING_DOMAIN_CONTACTS_AND_ALIAS_POLICY.md)

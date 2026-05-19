@@ -117,6 +117,8 @@ uv run python main.py --config config.yaml
 
 # Validate config only (same loader as scans/API; exit 0 if OK)
 uv run python main.py --config config.yaml --validate-config
+uv run python main.py --config config.yaml --diff <session_a_uuid> <session_b_uuid>
+uv run python main.py --config config.yaml --diff <session_a_uuid> <session_b_uuid> --fail-on-new-high
 
 # Start the API server (equivalent to python main.py --web)
 uv run python main.py --config config.yaml --web --port 8088

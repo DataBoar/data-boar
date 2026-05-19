@@ -933,6 +933,106 @@ class LocalDBManager:
         finally:
             session.close()
 
+    def _session_exists(self, session_id: str) -> bool:
+        sid = (session_id or "").strip()
+        if not sid:
+            return False
+        session = self._session_factory()
+        try:
+            return (
+                session.query(ScanSession).filter(ScanSession.session_id == sid).first()
+                is not None
+            )
+        finally:
+            session.close()
+
+    def diff_sessions(self, session_a: str, session_b: str) -> dict[str, Any]:
+        """Return new/resolved/changed findings between two scan sessions."""
+        a = (session_a or "").strip()
+        b = (session_b or "").strip()
+        if not self._session_exists(a):
+            raise ValueError(f"Unknown session: {a}")
+        if not self._session_exists(b):
+            raise ValueError(f"Unknown session: {b}")
+
+        def _db_key(f: DatabaseFinding) -> tuple:
+            return (
+                f.target_name,
+                f.schema_name,
+                f.table_name,
+                f.column_name,
+                f.pattern_detected,
+            )
+
+        def _fs_key(f: FilesystemFinding) -> tuple:
+            return (f.target_name, f.path, f.file_name, f.pattern_detected)
+
+        session = self._session_factory()
+        try:
+            db_a = {
+                _db_key(f): f
+                for f in session.query(DatabaseFinding)
+                .filter(DatabaseFinding.session_id == a)
+                .all()
+            }
+            db_b = {
+                _db_key(f): f
+                for f in session.query(DatabaseFinding)
+                .filter(DatabaseFinding.session_id == b)
+                .all()
+            }
+            fs_a = {
+                _fs_key(f): f
+                for f in session.query(FilesystemFinding)
+                .filter(FilesystemFinding.session_id == a)
+                .all()
+            }
+            fs_b = {
+                _fs_key(f): f
+                for f in session.query(FilesystemFinding)
+                .filter(FilesystemFinding.session_id == b)
+                .all()
+            }
+        finally:
+            session.close()
+
+        def _diff(dict_a: dict, dict_b: dict) -> tuple[dict, dict, dict]:
+            new = {k: dict_b[k] for k in dict_b if k not in dict_a}
+            resolved = {k: dict_a[k] for k in dict_a if k not in dict_b}
+            changed = {
+                k: (dict_a[k], dict_b[k])
+                for k in dict_a
+                if k in dict_b
+                and (dict_a[k].sensitivity_level or "")
+                != (dict_b[k].sensitivity_level or "")
+            }
+            return new, resolved, changed
+
+        db_new, db_resolved, db_changed = _diff(db_a, db_b)
+        fs_new, fs_resolved, fs_changed = _diff(fs_a, fs_b)
+
+        new_high_count = sum(
+            1
+            for f in list(db_new.values()) + list(fs_new.values())
+            if (f.sensitivity_level or "").upper() == "HIGH"
+        )
+
+        return {
+            "session_a": a,
+            "session_b": b,
+            "database": {
+                "new": db_new,
+                "resolved": db_resolved,
+                "changed": db_changed,
+            },
+            "filesystem": {
+                "new": fs_new,
+                "resolved": fs_resolved,
+                "changed": fs_changed,
+            },
+            "new_high_count": new_high_count,
+        }
+
     def get_session_scan_summary_for_notification(
         self, session_id: str
     ) -> dict[str, Any]:

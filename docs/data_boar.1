@@ -190,6 +190,29 @@ Cannot be combined with
 .BR \-\-web ", " \-\-reset\-data ", or " \-\-export\-audit\-trail .
 .
 .TP
+.B \-\-diff SESSION_A SESSION_B
+Compare findings between two scan sessions (UUIDs) in the configured SQLite database. Prints new, resolved, and severity\-changed rows to stdout. Use
+.BR \-\-fail\-on\-new\-high
+with
+.BR \-\-diff
+to exit
+.B 1
+when new HIGH findings appear in SESSION_B (CI gate). Unknown session UUID exits
+.B 2 .
+Cannot be combined with
+.BR \-\-web ", " \-\-reset\-data ", " \-\-export\-audit\-trail ", or " \-\-validate\-config .
+.
+.TP
+.B \-\-fail\-on\-new\-high
+When used with
+.BR \-\-diff :
+exit
+.B 1
+if SESSION_B has any new HIGH\-sensitivity finding vs SESSION_A; otherwise exit
+.B 0
+(unless a session UUID is invalid).
+.
+.TP
 .B \-\-scan\-compressed
 When set, treat
 .B file_scan.scan_compressed

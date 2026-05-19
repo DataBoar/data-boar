@@ -39,9 +39,9 @@ Together they close the gap between “I changed config / upgraded / rescoped ta
 
 ### Slice B — Session diff (`#521`)
 
-- [ ] Accepts two session references (paths / identifiers documented in USAGE); outputs **stable** JSON or text format suitable for scripting.
-- [ ] Defines **ordering** and **identity keys** for findings (file path, column, rule id, etc.) so “same finding” is deterministic; document limitations when schema evolves.
-- [ ] **Tests:** synthetic two-session fixture with known delta.
+- [x] Accepts two session UUIDs via `--diff SESSION_A SESSION_B`; prints structured text summary to stdout.
+- [x] Identity keys: DB `(target, schema, table, column, pattern)`; FS `(target, path, file_name, pattern)`; severity changes when level differs.
+- [x] **Tests:** `tests/test_cli_diff.py` (in-memory SQLite + CLI subprocess).
 
 ### Slice C — DSAR-oriented export (`#522`)
 

@@ -48,6 +48,8 @@ _MAN_HTTPS_CERT = r"\-\-https\-cert\-file"
 _MAN_HTTPS_KEY = r"\-\-https\-key\-file"
 _MAN_ALLOW_INSECURE_HTTP = r"\-\-allow\-insecure\-http"
 _MAN_VALIDATE_CONFIG = r"\-\-validate\-config"
+_MAN_DIFF = r"\-\-diff"
+_MAN_FAIL_ON_NEW_HIGH = r"\-\-fail\-on\-new\-high"
 
 OPERATOR_HELP_MARKERS: tuple[OperatorHelpMarker, ...] = (
     OperatorHelpMarker("config", "--config", "config.yaml", _MAN_CONFIG),
@@ -76,6 +78,18 @@ OPERATOR_HELP_MARKERS: tuple[OperatorHelpMarker, ...] = (
         "--validate-config",
         "--validate-config",
         _MAN_VALIDATE_CONFIG,
+    ),
+    OperatorHelpMarker(
+        "diff_sessions",
+        "--diff",
+        "--diff",
+        _MAN_DIFF,
+    ),
+    OperatorHelpMarker(
+        "fail_on_new_high",
+        "--fail-on-new-high",
+        "--fail-on-new-high",
+        _MAN_FAIL_ON_NEW_HIGH,
     ),
     OperatorHelpMarker("port", "--port", "--port", _MAN_PORT),
     OperatorHelpMarker(
