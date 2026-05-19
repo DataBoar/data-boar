@@ -130,7 +130,7 @@ def _parse_powershell_script(script_path: Path, root: Path) -> bool:
                 cwd=str(root),
                 capture_output=True,
                 text=True,
-                timeout=10,
+                timeout=30,
             )
         except FileNotFoundError:
             continue
