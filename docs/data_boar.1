@@ -213,6 +213,30 @@ if SESSION_B has any new HIGH\-sensitivity finding vs SESSION_A; otherwise exit
 (unless a session UUID is invalid).
 .
 .TP
+.B \-\-export\-dsar SESSION_ID
+Export findings for one scan session as DSAR\-oriented JSON (metadata\-first; LGPD Art. 18 / GDPR Art. 15 framing). Print to stdout or use
+.BR \-\-dsar\-output PATH .
+Unknown or empty session yields empty
+.B findings_by_source
+and exit
+.B 0 .
+Cannot be combined with
+.BR \-\-web ", " \-\-reset\-data ", " \-\-export\-audit\-trail ", " \-\-validate\-config ", or " \-\-diff .
+.
+.TP
+.B \-\-dsar\-output PATH
+Write DSAR JSON to
+.B PATH
+instead of stdout. Requires
+.BR \-\-export\-dsar .
+.
+.TP
+.B \-\-dsar\-include\-samples
+With
+.BR \-\-export\-dsar :
+include raw sample fields from stored finding rows when present (SQLite stores metadata only by default).
+.
+.TP
 .B \-\-scan\-compressed
 When set, treat
 .B file_scan.scan_compressed

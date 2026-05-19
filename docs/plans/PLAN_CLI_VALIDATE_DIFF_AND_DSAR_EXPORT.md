@@ -1,6 +1,6 @@
 # Plan: CLI — config validation, session diff, DSAR-oriented export
 
-**Status:** In progress (slice A complete; B/C pending)
+**Status:** In progress (slices A–B complete; slice C complete on branch)
 **Date:** 2026-05-18
 **Authors:** Fabio Leitao
 **Priority:** H1 U1
@@ -45,9 +45,9 @@ Together they close the gap between “I changed config / upgraded / rescoped ta
 
 ### Slice C — DSAR-oriented export (`#522`)
 
-- [ ] Default export is **metadata-heavy**; any inclusion of **raw cell samples** requires **explicit** flags documented next to risk (retention, legal review).
-- [ ] **README / SECURITY** posture: export does **not** become an exfiltration default; logs/audit trail mention export events where the product already logs scan lifecycle.
-- [ ] **Tests:** golden export structure (redacted paths); PII guards in tests use placeholders only.
+- [x] Default export is **metadata-heavy**; any inclusion of **raw cell samples** requires **explicit** flags documented next to risk (retention, legal review).
+- [x] **USAGE / TECH_GUIDE / operator-help:** DSAR export documented; `notes` field states technical-inventory limits (not legal advice).
+- [x] **Tests:** `tests/test_dsar_export.py` (payload + CLI stdout/file/incompatible flags); PII guards use placeholders only.
 
 ## Rollout
 

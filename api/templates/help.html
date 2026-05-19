@@ -27,6 +27,8 @@
 uv run python main.py --config config.yaml --validate-config
 uv run python main.py --config config.yaml --diff &lt;session_a&gt; &lt;session_b&gt;
 uv run python main.py --config config.yaml --diff &lt;session_a&gt; &lt;session_b&gt; --fail-on-new-high
+uv run python main.py --config config.yaml --export-dsar &lt;session_id&gt;
+uv run python main.py --config config.yaml --export-dsar &lt;session_id&gt; --dsar-output dsar.json
 uv run python main.py --config config.yaml --tenant "Acme Corp" --technician "Alice Colleague-V"
 # Same optional toggles as the dashboard checkboxes (this run only):
 uv run python main.py --config config.yaml --scan-compressed --content-type-check --scan-stego --jurisdiction-hint</code></pre>
