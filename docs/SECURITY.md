@@ -41,6 +41,30 @@ All of the above tests live in **`tests/test_security.py`** (plus the audit-log 
 
 ---
 
+## Incident Response Philosophy
+
+Data Boar is a tool for detecting personal and sensitive data. The standard for how it handles its own repository must be at least as rigorous as what it recommends to customers.
+
+We do not claim a perfect record; we claim a deterministic response.
+
+When a hygiene incident occurred in the project's history, the response was:
+
+1. **Find:** full-history audit via `scripts/pii_history_guard.py --full-history` and a fresh-clone check via `scripts/pii-fresh-clone-audit.ps1` (Windows) or an empty-folder `git clone` per [docs/ops/PII_PUBLIC_TREE_OPERATOR_GUIDE.md](ops/PII_PUBLIC_TREE_OPERATOR_GUIDE.md).
+2. **Fix:** history remediation via `git filter-repo`; prior Docker Hub tags deprecated; Golden Clean Slate published as **`v1.7.2-safe`** (verifiable on GitHub).
+3. **Build:** layered deterministic guardrails:
+   - `tests/test_pii_guard.py` — tracked-file patterns
+   - `scripts/gatekeeper-audit.ps1` — staged-file gate against private operator seeds (Python port: issue #560)
+   - `.pre-commit-config.yaml` — hooks on every commit
+   - `scripts/pii_history_guard.py` — branch anti-recurrence gate (`origin/main..HEAD`)
+4. **Verify:** tiered cadence (weekly / monthly / quarterly) with mandatory manual review before marking SAFE — [docs/ops/PII_PUBLIC_TREE_OPERATOR_GUIDE.md](ops/PII_PUBLIC_TREE_OPERATOR_GUIDE.md).
+5. **Govern:** [ADR-0018](adr/ADR-0018-pii-anti-recurrence-guardrails-for-tracked-files-and-branch-history.md) and [ADR-0019](adr/ADR-0019-pii-verification-cadence-and-manual-review-gate.md) are permanent architectural decisions.
+
+The public **`v1.7.2-safe`** tag exists so due-diligence readers can verify the narrative independently. Finding a sensitivity incident and responding with durable, test-backed controls is a stronger trust signal than claiming the incident never happened.
+
+**For customers:** the same discipline governs how the tool handles your data during a scan — **metadata-only findings**, no exfiltration, **Audit Trail** per session, configurable sampling bounds. See [COMPLIANCE_FRAMEWORKS.md](COMPLIANCE_FRAMEWORKS.md) and [USAGE.md](USAGE.md) (Privacy and data handling).
+
+---
+
 ## Related documentation
 
 - **Documentation index** (all topics, both languages): [README.md](README.md) · [README.pt_BR.md](README.pt_BR.md).

@@ -10,6 +10,19 @@ A aplicação auxilia times de DPO, segurança e **conformidade** a descobrir e 
 
 **`norm_tag`**, **overrides de recomendação** e o **Excel** continuam sendo o **eixo principal** para alinhar **detecção e texto de relatório** a cada **perfil de framework** que você mescla a partir de [compliance-samples/](compliance-samples/). Para **leitura DPO/CISO** de uma varredura **já concluída**, o produto pode também emitir **Markdown executivo** e **`scan_manifest_*.yaml`** junto do XLSX: resumem **postura de execução** (amostragem, timeouts, notas de dialeto quando couber) e **priorização de remediação** sem colar literais sensíveis — útil quando a **assessoria** pergunta *o quê* foi rotulado e *como* as leituras foram limitadas. São artefatos **adjacentes à governança**, **não** substituto de **suite GRC** de programa nem de **chancela** jurídica — veja a seção **Evidência e saídas** em [COMPLIANCE_AND_LEGAL.pt_BR.md](COMPLIANCE_AND_LEGAL.pt_BR.md) e [REPORTS_AND_COMPLIANCE_OUTPUTS.pt_BR.md](REPORTS_AND_COMPLIANCE_OUTPUTS.pt_BR.md).
 
+### Conformidade sem toil — frameworks de governança e gerenciamento de serviços
+
+Estatutos de privacidade (**LGPD**, **GDPR**, **CCPA**, amostras em [compliance-samples/](compliance-samples/)) respondem **qual lei** rotula os achados. Frameworks de **governança de TI** e **gerenciamento de serviços** respondem **como a TI prova operação de controle e co-cria valor durável** com o negócio — sem substituir o jurídico nem certificação credenciada.
+
+| Necessidade | Onde ler |
+| ----------- | -------- |
+| Conceitos (três camadas, ciclo de melhoria, pilha de frameworks) | [GOVERNANCE_SERVICE_MANAGEMENT_PRIMER.pt_BR.md](GOVERNANCE_SERVICE_MANAGEMENT_PRIMER.pt_BR.md) ([EN](GOVERNANCE_SERVICE_MANAGEMENT_PRIMER.md)) |
+| Tabelas por framework (ISO 38500, 27014, COBIT, ITIL 4, ISO 20000, BACEN) | [ITSM_GOVERNANCE_ALIGNMENT.pt_BR.md](ITSM_GOVERNANCE_ALIGNMENT.pt_BR.md) ([EN](ITSM_GOVERNANCE_ALIGNMENT.md)) |
+| Contrato JSON GRC executivo | [GRC_EXECUTIVE_REPORT_SCHEMA.pt_BR.md](GRC_EXECUTIVE_REPORT_SCHEMA.pt_BR.md) |
+| Termos ITSM/GRC (COBIT, ITIL 4, Governance Lens, …) | [GLOSSARY.pt_BR.md](GLOSSARY.pt_BR.md) §9–10 |
+
+**Postura do produto:** O Data Boar reduz **toil de governança de dados** (inventário manual, greps ad hoc) via **descoberta** por conectores, achados **somente de metadados**, **Audit Trail** por sessão e **`--diff`** opcional entre execuções. **Governance Lens** (chaves de licenciamento Pro/Enterprise) é a narrativa executiva planejada sobre Excel/GRC padrão — veja [LICENSING_SPEC.md](LICENSING_SPEC.md). O motor **não** certifica resultados ISO, COBIT, ITIL ou BACEN.
+
 ### Vocabulário do motor (POC, decks e docs técnicos)
 
 O [README.md](../README.md) na seção **“Para gestores e líderes de conformidade”** permanece em **linguagem executiva acessível** (por exemplo **farejando com critério** na metáfora da **sopa de dados**). **Não** é obrigatório usar os rótulos internos abaixo nesse bloco.

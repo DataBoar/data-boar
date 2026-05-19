@@ -41,6 +41,30 @@ Esses testes estão em **`tests/test_security.py`** e nos testes de audit log ac
 
 ---
 
+## Filosofia de Resposta a Incidentes
+
+O Data Boar é uma ferramenta de detecção de dados pessoais e sensíveis. O padrão com que trata o próprio repositório precisa ser ao menos tão rigoroso quanto o que recomenda aos clientes.
+
+Não afirmamos um histórico perfeito; afirmamos uma resposta determinística.
+
+Quando ocorreu um incidente de higiene no histórico do projeto, a resposta foi:
+
+1. **Encontrar:** auditoria de histórico completo via `scripts/pii_history_guard.py --full-history` e verificação em clone limpo via `scripts/pii-fresh-clone-audit.ps1` (Windows) ou `git clone` em pasta vazia conforme [docs/ops/PII_PUBLIC_TREE_OPERATOR_GUIDE.pt_BR.md](ops/PII_PUBLIC_TREE_OPERATOR_GUIDE.pt_BR.md).
+2. **Corrigir:** remediação do histórico via `git filter-repo`; tags anteriores do Docker Hub depreciadas; Golden Clean Slate publicado como **`v1.7.2-safe`** (verificável no GitHub).
+3. **Construir:** guardrails determinísticos em camadas:
+   - `tests/test_pii_guard.py` — padrões em arquivos rastreados
+   - `scripts/gatekeeper-audit.ps1` — gate de arquivos staged contra seeds privados do operador (porta Python: issue #560)
+   - `.pre-commit-config.yaml` — hooks em todo commit
+   - `scripts/pii_history_guard.py` — gate anti-reincidência de branch (`origin/main..HEAD`)
+4. **Verificar:** cadência em camadas (semanal / mensal / trimestral) com revisão manual obrigatória antes de marcar SAFE — [docs/ops/PII_PUBLIC_TREE_OPERATOR_GUIDE.pt_BR.md](ops/PII_PUBLIC_TREE_OPERATOR_GUIDE.pt_BR.md).
+5. **Governar:** [ADR-0018](adr/ADR-0018-pii-anti-recurrence-guardrails-for-tracked-files-and-branch-history.md) e [ADR-0019](adr/ADR-0019-pii-verification-cadence-and-manual-review-gate.md) são decisões arquiteturais permanentes.
+
+A tag pública **`v1.7.2-safe`** existe para que leitores de due diligence verifiquem a narrativa de forma independente. Encontrar um incidente de sensibilidade e responder com controles duráveis e testáveis é um sinal de confiança mais forte do que negar que o incidente existiu.
+
+**Para clientes:** a mesma disciplina governa como a ferramenta trata seus dados durante uma varredura — achados **somente de metadados**, sem exfiltração, **Audit Trail** por sessão, limites de amostragem configuráveis. Veja [COMPLIANCE_FRAMEWORKS.pt_BR.md](COMPLIANCE_FRAMEWORKS.pt_BR.md) e [USAGE.pt_BR.md](USAGE.pt_BR.md) (Privacidade e tratamento de dados).
+
+---
+
 ## Documentação relacionada
 
 - **Índice da documentação** (todos os tópicos, ambos os idiomas): [README.md](README.md) · [README.pt_BR.md](README.pt_BR.md).

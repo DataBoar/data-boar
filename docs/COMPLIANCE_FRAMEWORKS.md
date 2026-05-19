@@ -10,6 +10,19 @@ The application helps DPO, security, and compliance teams discover and map perso
 
 **`norm_tag`**, **recommendation overrides**, and the Excel workbook remain the **primary** way to align **detection and report wording** with each **framework profile** you merge from [compliance-samples/](compliance-samples/). For **CISO/DPO read-outs** of a **completed** scan, the product may also emit **executive Markdown** and a **`scan_manifest_*.yaml`** alongside the XLSX: they summarise **execution posture** (sampling, timeouts, dialect notes where applicable) and **prioritised remediation** without pasting sensitive literals—useful when **counsel** asks both *what* was labelled and *how* reads were bounded. They are **governance-adjacent** artefacts, **not** a substitute for programme-level GRC tooling or legal sign-off—see **Evidence and outputs** in [COMPLIANCE_AND_LEGAL.md](COMPLIANCE_AND_LEGAL.md) and [REPORTS_AND_COMPLIANCE_OUTPUTS.md](REPORTS_AND_COMPLIANCE_OUTPUTS.md).
 
+### Compliance without toil — governance and service-management frameworks
+
+Privacy statutes (**LGPD**, **GDPR**, **CCPA**, samples under [compliance-samples/](compliance-samples/)) answer **which law** labels apply. **IT governance** and **service management** frameworks answer **how IT proves control operation and co-creates durable value** with the business—without replacing counsel or accredited certification.
+
+| Need | Where to read |
+| ---- | ------------- |
+| Concepts (three layers, improvement loop, framework stack) | [GOVERNANCE_SERVICE_MANAGEMENT_PRIMER.md](GOVERNANCE_SERVICE_MANAGEMENT_PRIMER.md) ([pt-BR](GOVERNANCE_SERVICE_MANAGEMENT_PRIMER.pt_BR.md)) |
+| Per-framework tables (ISO 38500, 27014, COBIT, ITIL 4, ISO 20000, BACEN) | [ITSM_GOVERNANCE_ALIGNMENT.md](ITSM_GOVERNANCE_ALIGNMENT.md) ([pt-BR](ITSM_GOVERNANCE_ALIGNMENT.pt_BR.md)) |
+| Executive GRC JSON contract | [GRC_EXECUTIVE_REPORT_SCHEMA.md](GRC_EXECUTIVE_REPORT_SCHEMA.md) |
+| ITSM/GRC terms (COBIT, ITIL 4, Governance Lens, …) | [GLOSSARY.md](GLOSSARY.md) §9–10 |
+
+**Product posture:** Data Boar reduces **data-governance toil** (manual inventory, ad-hoc greps) via connector-driven **discovery**, **metadata-only findings**, session **Audit Trail**, and optional **`--diff`** between runs. **Governance Lens** (Pro/Enterprise licensing keys) is the planned executive narrative on top of standard Excel/GRC outputs—see [LICENSING_SPEC.md](LICENSING_SPEC.md). The engine does **not** certify ISO, COBIT, ITIL, or BACEN outcomes.
+
 ### Engine vocabulary (POC decks and technical docs)
 
 The root [README](../README.md) **“For decision-makers”** section stays in **plain stakeholder language** (for example **sniffing with judgment** on the **data soup** metaphor). It does **not** require the internal deck labels below.
