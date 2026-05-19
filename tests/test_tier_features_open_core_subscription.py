@@ -43,6 +43,8 @@ def test_open_tier_bypasses_feature_gates():
     assert is_feature_available("maturity_self_assessment_poc", Tier.OPEN)
     assert is_feature_available("report_pdf", Tier.OPEN)
     assert is_feature_available("pdf_digital_signature", Tier.OPEN)
+    assert is_feature_available("governance_lens_pro", Tier.OPEN)
+    assert is_feature_available("governance_lens_enterprise", Tier.OPEN)
 
 
 def test_pro_tier_includes_maturity_poc_and_pdf_report():
