@@ -125,6 +125,121 @@ def _validate_config_and_exit(config: dict[str, Any], config_path: str) -> None:
     sys.exit(0)
 
 
+def _print_session_diff(result: dict[str, Any]) -> None:
+    """Human-readable summary for --diff (stdout)."""
+    session_a = result["session_a"]
+    session_b = result["session_b"]
+    print(f"\nDiff: {session_a} -> {session_b}\n")
+
+    db = result["database"]
+    fs = result["filesystem"]
+    db_target_names: set[str] = set()
+    for bucket in (db["new"], db["resolved"]):
+        for f in bucket.values():
+            db_target_names.add(f.target_name or "")
+    for _k, (fa, _fb) in db["changed"].items():
+        db_target_names.add(fa.target_name or "")
+
+    fs_target_names: set[str] = set()
+    for bucket in (fs["new"], fs["resolved"]):
+        for f in bucket.values():
+            fs_target_names.add(f.target_name or "")
+    for _k, (fa, _fb) in fs["changed"].items():
+        fs_target_names.add(fa.target_name or "")
+
+    n_db_targets = len(db_target_names) or (
+        1 if db["new"] or db["resolved"] or db["changed"] else 0
+    )
+    n_fs_targets = len(fs_target_names) or (
+        1 if fs["new"] or fs["resolved"] or fs["changed"] else 0
+    )
+
+    print(f"DATABASE ({n_db_targets} target(s) with delta):")
+    for f in db["new"].values():
+        schema = f.schema_name or ""
+        table = f.table_name or ""
+        col = f.column_name or ""
+        loc = ".".join(p for p in (schema, table, col) if p)
+        print(
+            f"  NEW    {f.target_name}  {loc}  "
+            f"{f.pattern_detected} / {f.sensitivity_level}"
+        )
+    for f in db["resolved"].values():
+        schema = f.schema_name or ""
+        table = f.table_name or ""
+        col = f.column_name or ""
+        loc = ".".join(p for p in (schema, table, col) if p)
+        print(f"  RESOLVED  {f.target_name}  {loc}  (was {f.sensitivity_level})")
+    for _k, (fa, fb) in db["changed"].items():
+        schema = fa.schema_name or ""
+        table = fa.table_name or ""
+        col = fa.column_name or ""
+        loc = ".".join(p for p in (schema, table, col) if p)
+        print(
+            f"  CHANGED   {fa.target_name}  {loc}  "
+            f"{fa.sensitivity_level} -> {fb.sensitivity_level}"
+        )
+
+    print(f"\nFILESYSTEM ({n_fs_targets} target(s) with delta):")
+    for f in fs["new"].values():
+        path = f.path or ""
+        fname = f.file_name or ""
+        label = f"{path}  {fname}".strip()
+        print(
+            f"  NEW    {f.target_name}  {label}  "
+            f"{f.pattern_detected} / {f.sensitivity_level}"
+        )
+    for f in fs["resolved"].values():
+        path = f.path or ""
+        fname = f.file_name or ""
+        label = f"{path}  {fname}".strip()
+        print(f"  RESOLVED  {f.target_name}  {label}  (was {f.sensitivity_level})")
+    for _k, (fa, fb) in fs["changed"].items():
+        path = fa.path or ""
+        fname = fa.file_name or ""
+        label = f"{path}  {fname}".strip()
+        print(
+            f"  CHANGED   {fa.target_name}  {label}  "
+            f"{fa.sensitivity_level} -> {fb.sensitivity_level}"
+        )
+
+    n_new = len(db["new"]) + len(fs["new"])
+    n_resolved = len(db["resolved"]) + len(fs["resolved"])
+    n_changed = len(db["changed"]) + len(fs["changed"])
+    n_new_high = result["new_high_count"]
+    print(
+        f"\nSummary: {n_new} new ({n_new_high} HIGH), "
+        f"{n_resolved} resolved, {n_changed} severity change(s)."
+    )
+
+
+def _run_session_diff_cli(
+    config: dict[str, Any],
+    session_a: str,
+    session_b: str,
+    *,
+    fail_on_new_high: bool,
+) -> None:
+    from core.database import LocalDBManager
+
+    db_path = config.get("sqlite_path", "audit_results.db")
+    mgr = LocalDBManager(db_path)
+    try:
+        result = mgr.diff_sessions(session_a, session_b)
+        _print_session_diff(result)
+        if fail_on_new_high and result["new_high_count"] > 0:
+            print(
+                f"\n[FAIL] --fail-on-new-high: {result['new_high_count']} "
+                "new HIGH finding(s). Exit 1."
+            )
+            sys.exit(1)
+    except ValueError as e:
+        print(f"Session error: {e}", file=sys.stderr)
+        sys.exit(2)
+    finally:
+        mgr.dispose()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description=(
@@ -152,6 +267,9 @@ def main() -> None:
             "\n"
             "  # Validate config only (loader checks; no scan or API startup)\n"
             "  python main.py --config config.yaml --validate-config\n"
+            "\n"
+            "  # Compare two scan sessions (CI: add --fail-on-new-high)\n"
+            "  python main.py --config config.yaml --diff <session_a> <session_b>\n"
             "\n"
             "  # Wipe all collected data and generated reports (dangerous, see SECURITY.md)\n"
             "  python main.py --config config.yaml --reset-data\n"
@@ -276,6 +394,26 @@ def main() -> None:
         ),
     )
     parser.add_argument(
+        "--diff",
+        nargs=2,
+        metavar=("SESSION_A", "SESSION_B"),
+        dest="diff_sessions",
+        help=(
+            "Compare findings between two scan sessions by UUID. "
+            "Prints new, resolved, and severity-changed rows. "
+            "Use --fail-on-new-high for CI exit 1 when new HIGH findings appear."
+        ),
+    )
+    parser.add_argument(
+        "--fail-on-new-high",
+        action="store_true",
+        dest="fail_on_new_high",
+        help=(
+            "With --diff: exit 1 when SESSION_B has new HIGH-sensitivity findings "
+            "vs SESSION_A (CI regression gate)."
+        ),
+    )
+    parser.add_argument(
         "--tenant",
         default=None,
         help=(
@@ -341,6 +479,19 @@ def main() -> None:
         )
         sys.exit(2)
 
+    if args.diff_sessions and (
+        args.web
+        or args.reset_data
+        or args.export_audit_trail is not None
+        or args.validate_config
+    ):
+        print(
+            "Cannot combine --diff with --web, --reset-data, --export-audit-trail, "
+            "or --validate-config.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+
     try:
         config = load_config(args.config)
     except FileNotFoundError as e:
@@ -360,6 +511,16 @@ def main() -> None:
 
     if args.validate_config:
         _validate_config_and_exit(config, args.config)
+
+    if args.diff_sessions:
+        session_a, session_b = args.diff_sessions
+        _run_session_diff_cli(
+            config,
+            session_a,
+            session_b,
+            fail_on_new_high=args.fail_on_new_high,
+        )
+        sys.exit(0)
 
     if args.scan_compressed:
         config.setdefault("file_scan", {})["scan_compressed"] = True
