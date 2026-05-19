@@ -6,9 +6,27 @@ Shared by API routes, RBAC, and maturity POC so tier logic stays in one place.
 
 from __future__ import annotations
 
+import os
 from typing import Any
 
 from core.licensing.tier_features import Tier
+
+
+def is_dev_tier_override_env() -> bool:
+    """True when CI/dev may honor DATA_BOAR_TIER_OVERRIDE (never production builds)."""
+    env = os.environ.get("DATA_BOAR_ENV", "").strip().lower()
+    if env in ("development", "dev", "ci"):
+        return True
+    debug = os.environ.get("DEBUG", "").strip().lower()
+    return debug in ("1", "true", "yes")
+
+
+def tier_override_from_env() -> Tier | None:
+    """Optional lab/CI tier simulation via DATA_BOAR_TIER_OVERRIDE."""
+    raw = os.environ.get("DATA_BOAR_TIER_OVERRIDE", "").strip().lower()
+    if not raw or not is_dev_tier_override_env():
+        return None
+    return map_dbtier_string_to_tier(raw)
 
 
 def map_dbtier_string_to_tier(raw: str) -> Tier:
@@ -30,6 +48,10 @@ def get_runtime_tier_for_features(cfg: dict[str, Any]) -> Tier:
     Resolve tier for ``is_feature_available``: JWT ``dbtier`` when enforced and VALID/GRACE wins over
     ``licensing.effective_tier``; otherwise lab YAML; default OPEN (all features on).
     """
+    env_override = tier_override_from_env()
+    if env_override is not None:
+        return env_override
+
     dbtier_claim = ""
     try:
         from core.licensing.guard import get_license_guard

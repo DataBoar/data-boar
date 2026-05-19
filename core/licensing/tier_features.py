@@ -63,6 +63,14 @@ FEATURE_TIER_MAP: dict[str, Tier] = {
     "connector_azure_blob": Tier.PRO,
     "connector_gcs": Tier.PRO,
     "scheduled_scans": Tier.PRO,
+    # Aliases / upcoming gates (see GitHub #558, #544, #552, #551)
+    "scan_scheduler_pro": Tier.PRO,
+    "scan_scheduler_ui_enterprise": Tier.ENTERPRISE,
+    "governance_lens_pro": Tier.PRO,
+    "governance_lens_enterprise": Tier.ENTERPRISE,
+    "findings_sink_sql": Tier.PRO,
+    "scan_max_workers_pro": Tier.PRO,
+    "scan_max_workers_enterprise": Tier.ENTERPRISE,
     "api_key_management_ui": Tier.PRO,
     "dashboard_rbac": Tier.PRO,
     # GRC-style org maturity questionnaire UI (POC); not open core — see PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md

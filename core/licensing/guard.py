@@ -12,7 +12,13 @@ from typing import Any
 
 import jwt
 
+from core.licensing.feature_gate import FeatureCheckResult, check_feature
 from core.licensing.fingerprint import compute_machine_fingerprint
+from core.licensing.runtime_feature_tier import (
+    get_runtime_tier_for_features,
+    map_dbtier_string_to_tier,
+)
+from core.licensing.tier_features import Tier
 from core.licensing.integrity import (
     check_build_digest_expected,
     verify_manifest_optional,
@@ -337,6 +343,22 @@ class LicenseGuard:
         if c.state in ("OPEN", "VALID", "GRACE") and c.trial and c.max_report_rows > 0:
             return c.max_report_rows
         return None
+
+    def product_tier_for_features(self) -> Tier:
+        """Resolve product tier for feature gates (YAML, JWT, dev override)."""
+        return get_runtime_tier_for_features(self._config)
+
+    def check_feature(self, feature: str) -> FeatureCheckResult:
+        """Structured tier gate — does not raise on denial."""
+        return check_feature(feature, self.product_tier_for_features())
+
+    def is_allowed(self, feature: str) -> bool:
+        return self.check_feature(feature).allowed
+
+    @staticmethod
+    def tier_from_dbtier_string(raw: str) -> Tier:
+        """Map a tier label (fixtures / tests) to :class:`Tier`."""
+        return map_dbtier_string_to_tier(raw)
 
 
 def _ts_iso(ts: float) -> str:
