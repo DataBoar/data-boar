@@ -4,6 +4,9 @@ Human-readable summary of user-facing changes. **Detailed release notes:** [docs
 
 ## Unreleased (`main`)
 
+- **Config redaction:** `config/redact_config.py` uses substring key matching (with `token_url` allowlist) so compound keys like `telegram_bot_token` and `file_passwords` redact on GET `/config` — **#622**.
+- **Man page (`data_boar.5`):** document `locale` block and unified `patterns_plugin_file` section — **#444**, **#431**.
+- **Issue queue / PMO:** refresh `PLANS_TODO.md` triage snapshot (135 open, head-of-queue P1 man + **#483**; **P0** only **#606** product scope).
 - **Governance docs:** Contributor Covenant **2.1** in `CODE_OF_CONDUCT` (+ pt-BR); refresh `TERMS_OF_USE` and `PRIVACY_POLICY` (+ pt-BR) for **1.7.4-rc**, tier matrix cross-links, optional dashboard auth, and maturity-assessment local storage — closes **#419**, **#423**, **#424**.
 - **Legacy DB module filename:** **`db/databasse.py`** renamed to **`db/database.py`** so filesystem paths match **`sonar-project.properties`** exclusions and operator mental model (**GitHub [#488](https://github.com/FabioLeitao/data-boar/issues/488)**).
 - **Release candidate (working line):** bump **`1.7.4-rc`** on `main` (`pyproject.toml`, man `.TH`, hybrid lab image defaults, **PUBLISHED_SYNC** reconciliation); draft **GitHub pre-release** checklist in **`docs/releases/1.7.4-rc.md`** — **no** Docker Hub **`latest`** move until **`1.7.4`** final.

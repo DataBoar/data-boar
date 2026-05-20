@@ -409,6 +409,33 @@ def test_redact_config_for_display_redacts_secrets():
     assert "dbpass" not in str(redacted)
 
 
+def test_redact_config_substring_keys_and_allowlist():
+    """Compound secret key names redact; token_url stays visible (not a credential value)."""
+    from config.redact_config import redact_config_for_display, REDACTED_PLACEHOLDER
+
+    data = {
+        "notifications": {
+            "operator": {
+                "telegram_bot_token": "bot-secret",
+                "token_url": "https://example.com/oauth/token",
+            }
+        },
+        "file_passwords": {"archive.zip": "zip-pass"},
+        "api": {"maturity_integrity_secret_from_env": "MY_MATURITY_SECRET"},
+    }
+    redacted = redact_config_for_display(data)
+    assert (
+        redacted["notifications"]["operator"]["telegram_bot_token"]
+        == REDACTED_PLACEHOLDER
+    )
+    assert (
+        redacted["notifications"]["operator"]["token_url"]
+        == "https://example.com/oauth/token"
+    )
+    assert redacted["file_passwords"]["archive.zip"] == REDACTED_PLACEHOLDER
+    assert redacted["api"]["maturity_integrity_secret_from_env"] == REDACTED_PLACEHOLDER
+
+
 def test_merge_config_on_save_preserves_secrets_when_submitted_is_placeholder():
     """POST /config merge keeps current secret when submitted value is placeholder or empty."""
     from config.redact_config import merge_config_on_save, REDACTED_PLACEHOLDER

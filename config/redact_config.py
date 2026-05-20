@@ -13,8 +13,31 @@ from typing import Any
 # Placeholder shown in UI instead of secret values; also used to detect "do not overwrite" on save
 REDACTED_PLACEHOLDER = "# REDACTED - set via env or vault"
 
-# Key names whose values are considered secrets (redacted for display; preserved on save when submitted value is placeholder)
-_SECRET_KEYS = frozenset({"pass", "password", "api_key", "token", "client_secret"})
+# Substrings in key names that indicate secret values (redacted for display; preserved on save
+# when submitted value is placeholder). Exact match alone misses compound keys such as
+# telegram_bot_token or file_passwords.
+_SECRET_SUBSTRINGS = frozenset(
+    {
+        "password",
+        "pass",
+        "api_key",
+        "token",
+        "secret",
+        "private_key",
+        "credential",
+        "bearer",
+    }
+)
+
+# Keys that contain a substring above but are not secrets (e.g. OAuth token_url is a URL).
+_SECRET_KEY_ALLOWLIST = frozenset({"token_url"})
+
+
+def _is_secret_key(key: str) -> bool:
+    k = key.lower()
+    if k in _SECRET_KEY_ALLOWLIST:
+        return False
+    return any(sub in k for sub in _SECRET_SUBSTRINGS)
 
 
 def _redact_value(val: Any) -> Any:
@@ -23,18 +46,27 @@ def _redact_value(val: Any) -> Any:
     return val
 
 
+def _redact_secret_subtree(obj: Any) -> Any:
+    """Redact all non-empty string leaves under a secret-named key (e.g. file_passwords map)."""
+    if isinstance(obj, dict):
+        return {k: _redact_secret_subtree(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_redact_secret_subtree(i) for i in obj]
+    return _redact_value(obj)
+
+
 def _walk_redact(obj: Any, in_api: bool = False) -> Any:
     """Deep-copy and replace secret values with placeholder. in_api: we're under api key."""
     if isinstance(obj, dict):
         out = {}
         for k, v in obj.items():
-            key_lower = k.lower() if isinstance(k, str) else ""
-            if (
-                key_lower in _SECRET_KEYS
-                and isinstance(v, str)
-                and (v.strip() or not in_api)
-            ):
-                out[k] = REDACTED_PLACEHOLDER
+            if isinstance(k, str) and _is_secret_key(k):
+                if isinstance(v, str) and (v.strip() or not in_api):
+                    out[k] = REDACTED_PLACEHOLDER
+                elif isinstance(v, (dict, list)):
+                    out[k] = _redact_secret_subtree(v)
+                else:
+                    out[k] = copy.deepcopy(v)
             else:
                 out[k] = _walk_redact(
                     v, in_api=(in_api or (isinstance(k, str) and k == "api"))
@@ -64,7 +96,8 @@ def _walk_merge(
     """
     if current is None:
         return submitted
-    if path and path.split(".")[-1].split("[")[0].lower() in _SECRET_KEYS:
+    leaf = path.split(".")[-1].split("[")[0] if path else ""
+    if leaf and _is_secret_key(leaf):
         sub_val = submitted if isinstance(submitted, str) else ""
         if isinstance(sub_val, str) and (
             not sub_val.strip() or sub_val.strip() == REDACTED_PLACEHOLDER
@@ -75,9 +108,8 @@ def _walk_merge(
     if isinstance(submitted, dict) and isinstance(current, dict):
         out = dict(current)
         for k, v in submitted.items():
-            key_lower = k.lower() if isinstance(k, str) else ""
             sub_path = f"{path}.{k}" if path else k
-            if key_lower in _SECRET_KEYS:
+            if isinstance(k, str) and _is_secret_key(k):
                 if isinstance(v, str) and (
                     not v.strip() or v.strip() == REDACTED_PLACEHOLDER
                 ):
