@@ -6,6 +6,8 @@ Ponto de entrada para **cenários concretos de produto** (discovery, hand-off de
 
 Os **storyboards de workshop** (narrativas por setor para pré-vendas) continuam em [README.md](README.md) ([EN](README.md)).
 
+**Decks executivos** (stakeholder, DPO, CISO): [pitch/INDEX.pt_BR.md](../pitch/INDEX.pt_BR.md) ([EN](../pitch/INDEX.md)).
+
 ---
 
 ## Discovery e remediação
@@ -45,6 +47,7 @@ Os **storyboards de workshop** (narrativas por setor para pré-vendas) continuam
 
 ## Documentos relacionados
 
+- [pitch/INDEX.pt_BR.md](../pitch/INDEX.pt_BR.md) — decks executivos por papel
 - [DECISION_MAKER_VALUE_BRIEF.pt_BR.md](../DECISION_MAKER_VALUE_BRIEF.pt_BR.md)
 - [REPORTS_AND_COMPLIANCE_OUTPUTS.pt_BR.md](../REPORTS_AND_COMPLIANCE_OUTPUTS.pt_BR.md)
 - [USAGE.pt_BR.md](../USAGE.pt_BR.md)
