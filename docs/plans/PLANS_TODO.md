@@ -30,13 +30,13 @@ Use these tags in headings to keep priorities explicit and machine-countable:
 
 Do not edit this block manually; refresh with `python scripts/plans-stats.py --write`.
 
-- **Status rows counted:** 180  (Done: 108 | Incomplete: 72)
-- **Incomplete breakdown:** Pending `⬜`=66, Tracked `🔄` / `Tracked (partially done)`=6, Under consideration=0, Backlog-marked rows=0
+- **Status rows counted:** 180  (Done: 109 | Incomplete: 71)
+- **Incomplete breakdown:** Pending `⬜`=65, Tracked `🔄` / `Tracked (partially done)`=6, Under consideration=0, Backlog-marked rows=0
 
 | Horizon | Total rows | Done | Incomplete |
 | ------- | ----------: | ----: | ----------: |
 | `H0` | 30 | 26 | 4 |
-| `H1` | 37 | 27 | 10 |
+| `H1` | 37 | 28 | 9 |
 | `H2` | 0 | 0 | 0 |
 | `H3` | 108 | 50 | 58 |
 | `H4` | 0 | 0 | 0 |
@@ -117,7 +117,7 @@ Refresh periodically: `gh issue list --state open --limit 50` (requires [`gh`](h
 
 **Claude audit / doc-hygiene issue sweep (#87+, 2026-05):** Ship **thin PRs** (one subject per commit cluster; `check-all` before integration). **Sequence when titles disagree:** band in headline **`[P0]` → `[P1]` → `[P2]` → `[P3]`**, then **ascending issue #**; issues **without** a band trail the banded set, still by **#**. **Source of truth:** `gh issue list --state open --limit 200` (~**135** open as of **2026-05-20**; **no** new issues filed that day — backlog is stable, not growing overnight). **Duplicate / echo issues:** after merge + green CI, close the canonical issue then mark duplicates with evidence — [GITHUB_ISSUE_CANONICAL_AND_DUPLICATE_CLOSE.md](../ops/GITHUB_ISSUE_CANONICAL_AND_DUPLICATE_CLOSE.md) ([pt-BR](../ops/GITHUB_ISSUE_CANONICAL_AND_DUPLICATE_CLOSE.pt_BR.md)). **Priority discipline ([THIN_SLICE_AGENT_PRIORITY_HANDOFF.md](../ops/THIN_SLICE_AGENT_PRIORITY_HANDOFF.md)):** stay in **P1** until blocked — do **not** cherry-pick **P3** housekeeping while **P1** man/docs slices remain. **Head of queue (2026-05-20):** **P0** only [#606](https://github.com/FabioLeitao/data-boar/issues/606) (Enterprise plugin hooks — product scope; defer unless operator names it). **P1 docs/man (thin):** [#431](https://github.com/FabioLeitao/data-boar/issues/431), [#444](https://github.com/FabioLeitao/data-boar/issues/444) (`data_boar.5`), then [#483](https://github.com/FabioLeitao/data-boar/issues/483) (domain/contact policy). **P2 security (thin):** [#622](https://github.com/FabioLeitao/data-boar/issues/622) (`redact_config` substring keys). **Governance closed:** [#419](https://github.com/FabioLeitao/data-boar/issues/419), [#423](https://github.com/FabioLeitao/data-boar/issues/423), [#424](https://github.com/FabioLeitao/data-boar/issues/424) via PR **#621**. **Man timeouts:** [#454](https://github.com/FabioLeitao/data-boar/issues/454) ✅ (supersedes #448 key-name drift).
 
-**GitHub triage snapshot (refresh when batching):** Recently closed: governance **#419–#424** (PR **#621**); hubs **#571**, ADR inventory **#578**, rules hub **#582–#583** (PR **#619–#620**); connectors **#502**, **#503**, **#508**, **#517**, **#495**. **Coordination:** [#512](https://github.com/FabioLeitao/data-boar/issues/512) (**P0** PMO batch). **CLI / evidence:** [#520](https://github.com/FabioLeitao/data-boar/issues/520)–[#522](https://github.com/FabioLeitao/data-boar/issues/522). **Public contacts (P1):** [#483](https://github.com/FabioLeitao/data-boar/issues/483). **Man5 gaps (P1):** [#431](https://github.com/FabioLeitao/data-boar/issues/431), [#444](https://github.com/FabioLeitao/data-boar/issues/444).
+**GitHub triage snapshot (refresh when batching):** Recently closed: governance **#419–#424** (PR **#621**); public contacts **#418**, **#480**, **#483** (PR **#628**); man5 **#431**, **#444**, **#622** (PR **#624**); hubs **#571**, ADR inventory **#578**, rules hub **#582–#583** (PR **#619–#620**); connectors **#502**, **#503**, **#508**, **#517**, **#495**. **Coordination:** [#512](https://github.com/FabioLeitao/data-boar/issues/512) (**P0** PMO batch). **CLI / evidence:** [#520](https://github.com/FabioLeitao/data-boar/issues/520)–[#522](https://github.com/FabioLeitao/data-boar/issues/522).
 
 **Dashboard web surface cluster:** [#86](https://github.com/FabioLeitao/data-boar/issues/86) (RBAC) and [PLAN_DASHBOARD_I18N.md](completed/PLAN_DASHBOARD_I18N.md) (locale) share `api/routes.py` / templates. **Order:** **M-LOCALE-V1** ✅ (locale prefix on **`main`**, **2026-04**); **D-WEB** ✅; **M-MATURITY-POC** (smoke + runbook §D for full readiness) **then** **#86 Phase 1** on its own branch/PR — see [SPRINTS_AND_MILESTONES.md](SPRINTS_AND_MILESTONES.md) §4.2 / §5 and the **Integration** bullet *Maturity self-assessment* above.
 
@@ -377,7 +377,7 @@ Doc-first: buyer/DPO positioning in COMPLIANCE_AND_LEGAL + COMPLIANCE_FRAMEWORKS
 | 1 | SECURITY (EN + pt-BR): single coherent disclosure path | ✅ Done (GitHub advisories / Issues; no personal email per [#483](https://github.com/FabioLeitao/data-boar/issues/483)) |
 | 2 | CODE_OF_CONDUCT pair: escalation matches SECURITY | ✅ Done (Contributor Covenant 2.1, PR **#621**; `conduct@databoar.com.br` enforcement contact) |
 | 3 | CONTRIBUTING pair: vulnerability reporting points to SECURITY | ✅ Done ([CONTRIBUTING.md](../../CONTRIBUTING.md) → [SECURITY.md](../../SECURITY.md)) |
-| 4 | Close #483 with file list + plan link | ⬜ Pending (closes with conduct/contact alias PR) |
+| 4 | Close #483 with file list + plan link | ✅ Done (PR **#628**; closes **#418**, **#480**, **#483**) |
 
 ### Corporate-Entity-C 2026-03-18 — evolution review (9.1/10) and follow-ups
 
