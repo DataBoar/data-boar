@@ -78,7 +78,7 @@ Quando a empresa adota a **ISO 31000** como **referência de gestão de risco**,
 
 Raramente a organização tem um inventário único e limpo de cada **ingrediente** da **sopa de dados**—cópias sombra, exportações legadas, modelos de BI e compartilhamentos ad hoc são frequentes. O **Data Boar** **ingere e digere** o que você apontar; **descobrir e priorizar** fontes, **afinar** tags de norma e linguagem de recomendação e **alinhar** expectativa jurídica ao escopo técnico costuma ser exercício **conjunto**.
 
-Há **serviços contratados** (consultoria e ajustes finos) para apoiar: escopo de alvos, alinhamento de configuração ao **mix regulatório** e redução do tempo até confiança operacional—**sem substituir** DPO ou assessoria jurídica. Limites comerciais e de licenciamento: [LICENSING_OPEN_CORE_AND_COMMERCIAL.md](LICENSING_OPEN_CORE_AND_COMMERCIAL.md). **Contato** pelos canais que já utiliza com o mantenedor (ex.: GitHub, e-mail profissional)—sem obrigação.
+Há **serviços contratados** (consultoria e ajustes finos) para apoiar: escopo de alvos, alinhamento de configuração ao **mix regulatório** e redução do tempo até confiança operacional—**sem substituir** DPO ou assessoria jurídica. Limites comerciais e de licenciamento: [LICENSING_OPEN_CORE_AND_COMMERCIAL.md](LICENSING_OPEN_CORE_AND_COMMERCIAL.md). **Contato** via GitHub ou [contact@databoar.com.br](mailto:contact@databoar.com.br) para serviços profissionais—sem obrigação.
 
 ---
 
