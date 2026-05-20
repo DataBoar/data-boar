@@ -76,7 +76,7 @@ When your organization uses **ISO 31000** as its **risk-management framework**, 
 
 Organisations rarely have a single, tidy inventory of every **ingredient** in their **data soup**—shadow copies, legacy exports, BI models, and ad hoc shares are common. **Data Boar** is built to **ingest and digest** what you point it at; **discovering and prioritising** those sources, **tuning** norm tags and recommendation language, and **bridging** legal expectations with technical scope is often a **joint** exercise.
 
-**Contracted services** (consulting and fine-tuning) are available to help: scoping targets, aligning configuration to your **regulatory mix**, and shortening time-to-trust—without replacing your **DPO** or **counsel**. For licensing and commercial boundaries, see [LICENSING_OPEN_CORE_AND_COMMERCIAL.md](LICENSING_OPEN_CORE_AND_COMMERCIAL.md). **Get in touch** via the channels you already use with the maintainer (e.g. GitHub, professional email)—no obligation.
+**Contracted services** (consulting and fine-tuning) are available to help: scoping targets, aligning configuration to your **regulatory mix**, and shortening time-to-trust—without replacing your **DPO** or **counsel**. For licensing and commercial boundaries, see [LICENSING_OPEN_CORE_AND_COMMERCIAL.md](LICENSING_OPEN_CORE_AND_COMMERCIAL.md). **Get in touch** via GitHub or [contact@databoar.com.br](mailto:contact@databoar.com.br) for professional services enquiries—no obligation.
 
 ---
 

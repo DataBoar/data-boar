@@ -30,13 +30,13 @@ Use these tags in headings to keep priorities explicit and machine-countable:
 
 Do not edit this block manually; refresh with `python scripts/plans-stats.py --write`.
 
-- **Status rows counted:** 180  (Done: 106 | Incomplete: 74)
-- **Incomplete breakdown:** Pending `⬜`=68, Tracked `🔄` / `Tracked (partially done)`=6, Under consideration=0, Backlog-marked rows=0
+- **Status rows counted:** 180  (Done: 108 | Incomplete: 72)
+- **Incomplete breakdown:** Pending `⬜`=66, Tracked `🔄` / `Tracked (partially done)`=6, Under consideration=0, Backlog-marked rows=0
 
 | Horizon | Total rows | Done | Incomplete |
 | ------- | ----------: | ----: | ----------: |
 | `H0` | 30 | 26 | 4 |
-| `H1` | 37 | 25 | 12 |
+| `H1` | 37 | 27 | 10 |
 | `H2` | 0 | 0 | 0 |
 | `H3` | 108 | 50 | 58 |
 | `H4` | 0 | 0 | 0 |
@@ -374,10 +374,10 @@ Doc-first: buyer/DPO positioning in COMPLIANCE_AND_LEGAL + COMPLIANCE_FRAMEWORKS
 
 | # | To-do | Status |
 | - | ----- | ------ |
-| 1 | SECURITY (EN + pt-BR): single coherent disclosure path | ⬜ Pending |
-| 2 | CODE_OF_CONDUCT pair: escalation matches SECURITY | ✅ Done (Contributor Covenant 2.1, PR **#621**) |
-| 3 | CONTRIBUTING pair: vulnerability reporting points to SECURITY | ⬜ Pending |
-| 4 | Close #483 with file list + plan link | ⬜ Pending |
+| 1 | SECURITY (EN + pt-BR): single coherent disclosure path | ✅ Done (GitHub advisories / Issues; no personal email per [#483](https://github.com/FabioLeitao/data-boar/issues/483)) |
+| 2 | CODE_OF_CONDUCT pair: escalation matches SECURITY | ✅ Done (Contributor Covenant 2.1, PR **#621**; `conduct@databoar.com.br` enforcement contact) |
+| 3 | CONTRIBUTING pair: vulnerability reporting points to SECURITY | ✅ Done ([CONTRIBUTING.md](../../CONTRIBUTING.md) → [SECURITY.md](../../SECURITY.md)) |
+| 4 | Close #483 with file list + plan link | ⬜ Pending (closes with conduct/contact alias PR) |
 
 ### Corporate-Entity-C 2026-03-18 — evolution review (9.1/10) and follow-ups
 
