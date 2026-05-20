@@ -2,7 +2,7 @@
 
 **English:** [TERMS_OF_USE.md](TERMS_OF_USE.md)
 
-_Atualizado em: 2026-04-05_
+_Atualizado em: 2026-05-20_
 
 ## 1. Licença de código aberto
 
@@ -35,15 +35,17 @@ Independentemente do nível de licença, você **não** pode usar o Data Boar pa
 ## 4. Uso comercial e níveis de licenciamento
 
 Entregar resultados de varredura do Data Boar a terceiros como parte de serviço pago (consultoria,
-auditoria, MSSP) exige no mínimo uma **licença Pro**. Veja `docs/SUBSCRIPTION_TIERS.md`
-e `docs/LICENSING_OPEN_CORE_AND_COMMERCIAL.md`.
+auditoria, MSSP) exige no mínimo uma **licença Pro**. Veja [docs/SUBSCRIPTION_TIERS.md](docs/SUBSCRIPTION_TIERS.md),
+[docs/LICENSING_SPEC.md](docs/LICENSING_SPEC.md) e [docs/LICENSING_OPEN_CORE_AND_COMMERCIAL.md](docs/LICENSING_OPEN_CORE_AND_COMMERCIAL.md).
 
 Usar o Data Boar em vários ambientes de clientes exige no mínimo uma **licença Partner**.
 
 ## 5. Funcionalidades próximas a vigilância
 
-Funcionalidades que varrem pastas de capturas de tela, arquivos de áudio, artefatos de navegador ou *memory dumps*
-estão restritas a níveis licenciados e exigem confirmação explícita do operador em tempo de execução.
+Funcionalidades que varrem artefatos de navegador, formatos proprietários legados de escritório e outros
+caminhos de mídia rica listados em [docs/SUBSCRIPTION_TIERS.md](docs/SUBSCRIPTION_TIERS.md)
+(por exemplo capturas de tela ou áudio quando habilitados na sua build) estão restritas a níveis
+licenciados e exigem confirmação explícita do operador em tempo de execução.
 
 Ao habilitar esses recursos, você declara que:
 

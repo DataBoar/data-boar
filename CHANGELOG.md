@@ -4,6 +4,7 @@ Human-readable summary of user-facing changes. **Detailed release notes:** [docs
 
 ## Unreleased (`main`)
 
+- **Governance docs:** Contributor Covenant **2.1** in `CODE_OF_CONDUCT` (+ pt-BR); refresh `TERMS_OF_USE` and `PRIVACY_POLICY` (+ pt-BR) for **1.7.4-rc**, tier matrix cross-links, optional dashboard auth, and maturity-assessment local storage — closes **#419**, **#423**, **#424**.
 - **Legacy DB module filename:** **`db/databasse.py`** renamed to **`db/database.py`** so filesystem paths match **`sonar-project.properties`** exclusions and operator mental model (**GitHub [#488](https://github.com/FabioLeitao/data-boar/issues/488)**).
 - **Release candidate (working line):** bump **`1.7.4-rc`** on `main` (`pyproject.toml`, man `.TH`, hybrid lab image defaults, **PUBLISHED_SYNC** reconciliation); draft **GitHub pre-release** checklist in **`docs/releases/1.7.4-rc.md`** — **no** Docker Hub **`latest`** move until **`1.7.4`** final.
 - **Maestro / completão (Deep benchmark argv):** `scripts/lab-completao-host-smoke.sh` parses **`--bench-config`**; container handlers (Docker, Podman, Swarm, LXD, MicroK8s) pass that flag before **`--lab-stack-up`** so Deep smoke no longer hits **`exit 2`** on unknown args (issues **#404**, **#408**). Draft stable checklist: **`docs/releases/1.7.4.md`**.

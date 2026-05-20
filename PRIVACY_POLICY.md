@@ -2,7 +2,7 @@
 
 **Português (Brasil):** [PRIVACY_POLICY.pt_BR.md](PRIVACY_POLICY.pt_BR.md)
 
-_Last updated: 2026-04-05_
+_Last updated: 2026-05-20_
 
 ## What Data Boar is
 
@@ -33,6 +33,10 @@ this repository.
 
 ## 2. The Data Boar tool (what runs on your machine)
 
+Policy reviewed against the **1.7.4-rc** product line on the public repository (local scan,
+optional dashboard, tier-gated connectors). If you run a different build, compare
+[docs/SUBSCRIPTION_TIERS.md](docs/SUBSCRIPTION_TIERS.md) and release notes.
+
 Data Boar scans **your** databases, filesystems, and documents for personal data.
 It does **not**:
 
@@ -51,6 +55,19 @@ If you use a signed licence token (JWT), the token is validated **locally**
 using the embedded public key. No call is made to a licence server.
 The token itself contains only: tier name, expiry date, and a cryptographic signature.
 It contains no personal data about you.
+
+### Optional dashboard authentication (when you enable it)
+
+If you deploy the web dashboard with authentication enabled, credentials and session
+metadata stay on infrastructure you control. WebAuthn and RBAC are optional operator
+configuration paths documented in the technical guide; they are not required for
+Community Edition CLI scans.
+
+### Maturity assessment (local questionnaire)
+
+The maturity assessment workflow stores answers in a local SQLite database on your
+machine. It does not transmit responses to Data Boar maintainers unless you export
+or share them yourself.
 
 ## 3. What we do collect (minimal)
 
@@ -73,7 +90,8 @@ Consult your legal counsel regarding your obligations under applicable law.
 
 ## 5. Surveillance-adjacent features (Pro and Enterprise)
 
-Some features in licensed tiers (screenshot scanning, audio transcription, memory dump analysis)
+Some features in licensed tiers (for example browser artefacts, legacy proprietary office
+formats, and other rich-media paths in [docs/SUBSCRIPTION_TIERS.md](docs/SUBSCRIPTION_TIERS.md))
 can detect personal data in artefacts that may belong to individuals other than the operator.
 
 You must have a **legal basis** under LGPD Art. 7 (or GDPR Art. 6) before scanning data
