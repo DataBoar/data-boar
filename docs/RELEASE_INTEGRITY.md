@@ -42,4 +42,6 @@ The runtime can perform **optional** checks so modified installs are flagged as 
 
 ## Related
 
+- [ops/INTEGRITY_HUB.md](ops/INTEGRITY_HUB.md) ([pt-BR](ops/INTEGRITY_HUB.pt_BR.md)) — navigation hub for all integrity layers (this file vs [ops/RELEASE_INTEGRITY.md](ops/RELEASE_INTEGRITY.md)).
+- [ops/RELEASE_INTEGRITY.md](ops/RELEASE_INTEGRITY.md) ([pt-BR](ops/RELEASE_INTEGRITY.pt_BR.md)) — operator release specification (Rust evidence, SRE checklist); **not** a duplicate of this licensing-focused doc.
 - [LICENSING_SPEC.md](LICENSING_SPEC.md)

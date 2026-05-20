@@ -57,10 +57,10 @@
 
 | Hub | Canonical path | Covers |
 | --- | -------------- | ------ |
-| Release integrity | `docs/ops/RELEASE_INTEGRITY.md` | Tags, Hub, evidence |
-| Integrity check (alpha) | `docs/ops/INTEGRITY_CHECK_ALPHA_LOGIC.md` | Runtime trust notes |
-
-*(planned)* Consolidated **INTEGRITY_HUB** — GitHub **#576**.
+| **Integrity hub** | `docs/ops/INTEGRITY_HUB.md` | Tamper detection, runtime trust, release vs licensing docs, ADR inventory |
+| Release integrity (ops spec) | `docs/ops/RELEASE_INTEGRITY.md` | Rust build evidence, SRE checklist, GRC weights |
+| Release integrity (product) | `docs/RELEASE_INTEGRITY.md` | Licensing digest, optional signed manifest, SBOM |
+| Integrity check (alpha) | `docs/ops/INTEGRITY_CHECK_ALPHA_LOGIC.md` | Runtime trust design spec |
 
 ### Inspirations and doctrine
 
