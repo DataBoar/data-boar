@@ -261,6 +261,29 @@ claim overrides
 when both are present. See
 .IR docs/LICENSING_SPEC.md .
 .TP
+.B locale
+(optional) Dashboard HTML locale configuration.
+Controls the path-prefixed UI language (e.g.
+.BR /en/ ,
+.BR /pt-br/ ).
+Sub-keys:
+.I default_locale
+(e.g.
+.BR en ),
+.I supported_locales
+(list, e.g.
+.BR "[en, pt-BR]" ),
+.I cookie_name
+(default:
+.BR db_locale ),
+.I cookie_max_age_seconds
+(integer; default 31536000, one year).
+Visiting
+.B /
+redirects to the negotiated locale prefix.
+See
+.IR docs/USAGE.md .
+.TP
 .B sqlite_path
 Path to the SQLite database (e.g.
 .IR audit_results.db ).
@@ -329,6 +352,20 @@ is not set).
 .TP
 .B regex_overrides_file
 Path to custom regex patterns file.
+.TP
+.B patterns_plugin_file
+(optional) Path to a unified plugin YAML file validated at load time (ADR-0052).
+May contain any combination of
+.I regex_patterns ,
+.I ml_patterns ,
+and
+.I dl_patterns
+sections.
+When non-empty, takes precedence over the separate legacy pattern file keys above.
+See
+.SH UNIFIED PLUGIN FILE
+below and
+.IR config/plugin_schema.yaml .
 .TP
 .B sensitivity_detection
 (optional) Inline
@@ -540,6 +577,48 @@ and
 .I docs/PLAN_SENSITIVE_CATEGORIES_ML_DL.md
 for a full set of sensitive-category terms (health, religion, political, PEP, race, union, genetic, biometric, sex life).
 .
+.SH UNIFIED PLUGIN FILE
+Set
+.B patterns_plugin_file
+in the main config to a single YAML file that may define any combination of:
+.TP
+.B regex_patterns
+List of { name, pattern, norm_tag } (same shape as
+.B regex_overrides_file ).
+.TP
+.B ml_patterns
+List of { text, label } training terms (same shape as
+.B ml_patterns_file ).
+.TP
+.B dl_patterns
+List of { text, label } training terms (same shape as
+.B dl_patterns_file ).
+.
+.P
+The loader validates the file against
+.IR config/plugin_schema.yaml
+before use.
+When
+.B patterns_plugin_file
+is set and non-empty, it takes precedence over the legacy per-type file keys.
+.
+.P
+Example skeleton (YAML):
+.RS
+.nf
+regex_patterns:
+  \- name: "RG_BR"
+    pattern: "\e\eb\e\ed{1,2}\e\eb\.?\e\ed{3}\e\eb\.?\e\ed{3}-?[0-9Xx]\e\eb"
+    norm_tag: "LGPD Art. 5"
+ml_patterns:
+  \- text: "cpf"
+    label: sensitive
+dl_patterns:
+  \- text: "religious affiliation"
+    label: sensitive
+.fi
+.RE
+.
 .SH LEARNED PATTERNS (OUTPUT)
 When
 .B learned_patterns.enabled
@@ -584,6 +663,9 @@ Example path for ML training terms (text, label).
 .TP
 .I config/dl_patterns.yaml
 Example path for DL training terms (same format; can point to the same file as ML).
+.TP
+.I patterns_plugin.yaml
+Example path for a unified plugin file (regex_patterns + ml_patterns + dl_patterns sections).
 .TP
 .I learned_patterns.yaml
 Example output path when learned_patterns.enabled is true.
