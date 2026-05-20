@@ -40,6 +40,7 @@
 | Hub | Caminho canônico | Cobre |
 | --- | ---------------- | ----- |
 | Cursor policy hub | `docs/ops/CURSOR_AGENT_POLICY_HUB.md` | Regras + skills |
+| Hub de regras e skills | `docs/hubs/RULES_AND_SKILLS_HUB.md` | Todas as rules `.mdc` + skills (gerado) |
 | Cold-start ladder | `docs/ops/OPERATOR_AGENT_COLD_START_LADDER.md` | Roteador de sessão |
 | Contrato do agente | `AGENTS.md` | Não negociáveis + índice |
 

@@ -1,0 +1,27 @@
+---
+description: After any docs/adr ADR-*.md change, regenerate INVENTORY.txt via inv-adr.ps1 in the same PR.
+globs:
+  - docs/adr/**
+alwaysApply: false
+---
+
+# ADR inventory ritual
+
+## When this applies
+
+Any edit under **`docs/adr/`** that adds, renames, or changes **`ADR-*.md`**.
+
+## Required steps
+
+1. Run **`.\scripts\inv-adr.ps1`** from repo root (or rely on **`new-adr.ps1`**, which invokes it after scaffold).
+2. Stage **`docs/adr/INVENTORY.txt`** in the **same commit/PR** as the ADR change.
+3. Optional operator attestation: **`ssh-keygen -Y sign -f <key> -n file docs/adr/INVENTORY.txt`** and commit **`INVENTORY.txt.sig`** when publishing evidence.
+
+## Agent guardrail
+
+- **Do not** merge a PR that changes **`ADR-*.md`** without an updated **`INVENTORY.txt`**.
+- If pytest **`test_adr_inventory_sync`** fails, regenerate inventory before push.
+
+## Canonical decision
+
+**[ADR-0056](../../docs/adr/ADR-0056-cryptographic-adr-inventory-inv-adr-ssh-attestation.md)**
