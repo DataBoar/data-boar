@@ -2,7 +2,7 @@
 
 **English:** [INDEX.md](INDEX.md)
 
-Narrativas **de duas páginas** por público para workshops, compras e briefings de liderança. Complementam o índice em [docs/README.md](../README.md) e **não** linkam planos internos (ver [ADR 0004](../adr/ADR-0004-external-docs-no-markdown-links-to-plans.md)).
+Narrativas **de duas páginas** por público para workshops, compras e briefings de liderança. Complementam o índice em [docs/README.md](../README.md) e o mapa de papéis em [AUDIENCE_GUIDE.pt_BR.md](../AUDIENCE_GUIDE.pt_BR.md). **Não** linkam planos internos (ver [ADR 0004](../adr/ADR-0004-external-docs-no-markdown-links-to-plans.md)).
 
 ## Decks (por papel)
 
