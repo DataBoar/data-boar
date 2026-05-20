@@ -73,6 +73,12 @@ fi
 echo "Refreshing plans status dashboard..." >&2
 "$PY" "$REPO_ROOT/scripts/plans-stats.py" --write
 
+echo "Checking hub index links..." >&2
+"$PY" "$REPO_ROOT/scripts/check_hubs.py" || {
+  echo "check-all.sh: FAILED hub link check (check_hubs.py)." >&2
+  exit 1
+}
+
 # Delegate: same behaviour as pre-commit-and-tests.ps1 (venv recovery, pre-commit, pytest).
 pct_args=()
 if [[ "$SKIP_PRECOMMIT" -eq 1 ]]; then
