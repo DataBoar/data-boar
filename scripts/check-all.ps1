@@ -60,6 +60,13 @@ if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
 
+Write-Host "Checking hub index links..." -ForegroundColor Yellow
+& python "$repoRoot\scripts\check_hubs.py"
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "check-all: FAILED hub link check (check_hubs.py)." -ForegroundColor Red
+    exit $LASTEXITCODE
+}
+
 # Delegate to the existing script so we keep behaviour in one place.
 $argsList = @()
 if ($SkipPreCommit) {
