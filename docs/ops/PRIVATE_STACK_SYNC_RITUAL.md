@@ -21,6 +21,10 @@
 2. From the **product repo root**, run **`scripts/private-git-sync.ps1`** (optional **`-Push`** if your policy pushes the stacked repo to **non-GitHub** remotes).
 3. If your workflow uses **encrypted local storage** for that tree, follow the **mount → work → unmount** discipline documented in **`docs/ops/PRIVATE_LOCAL_VERSIONING.md`** and your **private** homelab runbooks (not duplicated here).
 
+### Homelab env secrets (`-Push`)
+
+With **`-Push`**, the script **(a)** pushes Git to **`lab-*`** and the VeraCrypt **bare** `notes-sync.git`, **(b)** copies listed homelab secret leaf files (e.g. **`.env.bitwarden.local`**) into the VeraCrypt **`working/homelab/`** tree with hash check, and **(c)** mirrors the private folder to **pCloud** only when **`P:`** is mounted, using **bounded robocopy retries** and **`/XF`** so those secret leaf names **never** land in the pCloud mirror. Extend the leaf list in the script when you add new homelab-only env files.
+
 ### Operator expectation (generic — no drive letters or paths here)
 
 During private-tree work, the operator may rely on a **VeraCrypt-mounted drive** staying available so the nested private tree remains writable and backup/sync routines stay valid. If that mount is **missing when expected**, treat it as a **workflow anomaly** and recover using **private** runbooks and vault-local secrets — **never** paste volume credentials into chat or into **tracked** files.

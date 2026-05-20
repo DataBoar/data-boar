@@ -259,6 +259,29 @@ def test_inv_adr_inventory_hash_matches_data_lines():
     assert got == expected, "InventoryHash does not match data rows"
 
 
+def test_private_git_sync_ps1_syntax():
+    """scripts/private-git-sync.ps1 has valid PowerShell syntax (parse-only)."""
+    root = _project_root()
+    script = root / "scripts" / "private-git-sync.ps1"
+    if not script.exists():
+        return
+    assert _parse_powershell_script(script, root), "private-git-sync.ps1 parse failed"
+
+
+def test_private_git_sync_ps1_excludes_homelab_secrets_from_pcloud():
+    """private-git-sync mirrors homelab secret leaf names to VC and /XF on pCloud."""
+    root = _project_root()
+    script = root / "scripts" / "private-git-sync.ps1"
+    if not script.exists():
+        return
+    text = script.read_text(encoding="utf-8")
+    assert "HomelabSecretLeafNames" in text
+    assert ".env.bitwarden.local" in text
+    assert "Sync-VeraCryptHomelabSecrets" in text
+    assert "/XF" in text
+    assert "/R:2" in text and "/W:5" in text
+
+
 def test_snmp_LAB_ROUTER_01_lab_probe_ps1_syntax():
     """scripts/snmp-LAB-ROUTER-01-lab-probe.ps1 has valid PowerShell syntax (parse-only)."""
     root = _project_root()

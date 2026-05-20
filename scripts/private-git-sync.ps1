@@ -14,7 +14,8 @@
     Mensagem de commit (default: auto-gerada com timestamp).
 
 .PARAMETER Push
-    Se informado, faz push para os remotes lab-* em docs/private/.git, depois tenta bare notes-sync.git em Z: ou Y: (VeraCrypt; Z: e o padrao do operador; Y: apenas como fallback se remapeado), e robocopy para P: se montado.
+    Se informado, faz push para os remotes lab-* em docs/private/.git, push bare notes-sync.git em Z: ou Y: (VeraCrypt),
+    copia homelab secrets para Z:\working\homelab (nunca para P:), e robocopy limitado para P: se montado.
 
 .PARAMETER FeedbacksOnly
     Apenas sincroniza feedbacks (nao faz commit geral).
@@ -40,6 +41,100 @@ function Write-Header($m) { Write-Host "`n=== $m ===" -ForegroundColor Cyan }
 function Write-Ok($m)     { Write-Host "  OK  $m" -ForegroundColor Green }
 function Write-Info($m)   { Write-Host "  ... $m" -ForegroundColor Gray }
 function Write-Warn($m)   { Write-Host " WARN $m" -ForegroundColor Yellow }
+
+# Homelab leaf names: VeraCrypt working/homelab only; excluded from pCloud robocopy (no secrets in sync cloud).
+$Script:HomelabSecretLeafNames = @(".env.bitwarden.local")
+
+function Get-VeraCryptDriveLetter {
+    foreach ($dl in @("Z", "Y")) {
+        if (Test-Path -LiteralPath "${dl}:\") { return $dl }
+    }
+    return $null
+}
+
+function Sync-VeraCryptHomelabSecrets {
+    param(
+        [string]$PrivateDirRoot
+    )
+    $homelabSrc = Join-Path $PrivateDirRoot "homelab"
+    if (-not (Test-Path -LiteralPath $homelabSrc)) {
+        Write-Info "VC homelab secrets: pasta homelab ausente -- pulando"
+        return
+    }
+    $dl = Get-VeraCryptDriveLetter
+    if (-not $dl) {
+        Write-Info "VC homelab secrets: Z:/Y: nao montado -- pulando"
+        return
+    }
+    $vcHomelab = Join-Path "${dl}:\" "working\homelab"
+    $vcWorking = Join-Path "${dl}:\" "working"
+    if (-not (Test-Path -LiteralPath $vcWorking)) {
+        Write-Warn "VC homelab secrets: ${dl}:\working ausente -- pulando"
+        return
+    }
+    if (-not (Test-Path -LiteralPath $vcHomelab)) {
+        New-Item -ItemType Directory -Path $vcHomelab -Force | Out-Null
+        Write-Info "VC homelab secrets: criado ${dl}:\working\homelab"
+    }
+    foreach ($leaf in $Script:HomelabSecretLeafNames) {
+        $src = Join-Path $homelabSrc $leaf
+        if (-not (Test-Path -LiteralPath $src)) {
+            Write-Info "VC homelab secrets: ausente em homelab\$leaf"
+            continue
+        }
+        $dst = Join-Path $vcHomelab $leaf
+        try {
+            Copy-Item -LiteralPath $src -Destination $dst -Force -ErrorAction Stop
+            $hSrc = (Get-FileHash -LiteralPath $src -Algorithm SHA256).Hash
+            $hDst = (Get-FileHash -LiteralPath $dst -Algorithm SHA256).Hash
+            if ($hSrc -eq $hDst) {
+                Write-Ok "VC homelab secrets: ${dl}:\working\homelab\$leaf"
+            } else {
+                Write-Warn "VC homelab secrets: hash diverge apos copia ($leaf)"
+            }
+        } catch {
+            Write-Warn "VC homelab secrets: FALHOU homelab\$leaf -- $($_.Exception.Message)"
+        }
+    }
+}
+
+function Invoke-PCloudPrivateTreeMirror {
+    param(
+        [string]$SourceDir,
+        [string]$DestDir
+    )
+    if (-not (Test-Path "P:\")) {
+        Write-Info "pCloud (P:) nao montado -- pulando backup pCloud"
+        return $true
+    }
+    if (-not (Test-Path $DestDir)) {
+        New-Item -ItemType Directory -Path $DestDir -Force | Out-Null
+    }
+    $robArgs = @(
+        $SourceDir, $DestDir,
+        "/MIR", "/XD", ".git",
+        "/R:2", "/W:5",
+        "/NFL", "/NDL", "/NJH", "/NJS"
+    )
+    foreach ($leaf in $Script:HomelabSecretLeafNames) {
+        $robArgs += "/XF"
+        $robArgs += $leaf
+    }
+    Write-Info "pCloud robocopy (sem secrets homelab listados em /XF) ..."
+    & robocopy @robArgs | Out-Null
+    $rc = $LASTEXITCODE
+    # Robocopy: 0-7 = success with possible extras; >= 8 = hard failure
+    if ($rc -ge 8) {
+        Write-Warn "pCloud robocopy FALHOU (exit=$rc): $DestDir"
+        return $false
+    }
+    if ($rc -ge 2) {
+        Write-Ok "pCloud sync OK (exit=$rc, extras/removidos): $DestDir"
+    } else {
+        Write-Ok "pCloud sync OK: $DestDir"
+    }
+    return $true
+}
 
 Write-Header "private-git-sync: Stacked Private Repo Sync"
 
@@ -112,11 +207,13 @@ if ($pendingCount -eq 0) {
 
 $ErrorActionPreference = $prevEap
 
-# --- 4. Push para todos os remotes configurados (opcional) ---
+# --- 4. Push e espelhos (opcional) ---
 if ($Push) {
-    Write-Header "Passo 3: Push para todos os lab remotes"
     $prevEapPush = $ErrorActionPreference
     $ErrorActionPreference = "Continue"
+    $pushHadFailure = $false
+
+    Write-Header "Passo 3: Push para todos os lab remotes"
     $remotes = git remote 2>&1
     $labRemotes = $remotes | Where-Object { $_ -match "^lab-" }
     if (-not $labRemotes) {
@@ -132,17 +229,20 @@ if ($Push) {
             $pushExit = $LASTEXITCODE
             $outPreview = $out | Select-Object -First 8
             if ($pushExit -eq 0) { Write-Ok "Push OK: $r" }
-            else { Write-Warn "Push FALHOU: $r -- $outPreview" }
+            else {
+                Write-Warn "Push FALHOU: $r -- $outPreview"
+                $pushHadFailure = $true
+            }
         }
     }
-    # Bare mirror on VeraCrypt volume (Windows): probe Z: first (operator default), then Y: fallback; path name only (ADR 0040).
+
+    Write-Header "Passo 4: Push bare notes-sync.git (VeraCrypt Z: ou Y:)"
+    $vcBareOk = $false
     foreach ($dl in @("Z", "Y")) {
         $driveRoot = "${dl}:\"
         if (-not (Test-Path -LiteralPath $driveRoot)) { continue }
         $bareWin = Join-Path $driveRoot "notes-sync.git"
         if (-not (Test-Path -LiteralPath $bareWin)) { continue }
-        # VeraCrypt (and some FUSE stacks): receive-pack fsync on temp pack can fail with "Bad file descriptor".
-        # core.fsync none applies only to this bare repo path (Git 2.41+). Idempotent.
         git -C $bareWin config core.fsync none 2>&1 | Out-Null
         $bareUri = "${dl}:/notes-sync.git"
         Write-Info "Push bare (VC): $bareUri ..."
@@ -155,23 +255,36 @@ if ($Push) {
                 git config --global --add safe.directory $canon 2>&1 | Out-Null
                 $pushOut = git push $bareUri main:main 2>&1 | Select-Object -First 12
             }
-            if ($LASTEXITCODE -eq 0) { Write-Ok "Push OK (VC bare): $bareUri" }
-            else { Write-Warn "Push FALHOU (VC bare): $bareUri -- $pushOut" }
-        }
-        else {
+            if ($LASTEXITCODE -eq 0) {
+                Write-Ok "Push OK (VC bare): $bareUri"
+                $vcBareOk = $true
+            } else {
+                Write-Warn "Push FALHOU (VC bare): $bareUri -- $pushOut"
+                $pushHadFailure = $true
+            }
+        } else {
             Write-Ok "Push OK (VC bare): $bareUri"
+            $vcBareOk = $true
         }
+        if ($vcBareOk) { break }
     }
-    # pCloud via robocopy (se P: montado)
-    if (Test-Path "P:\") {
-        $pcloudDest = "P:\lab-private-backup\notes-sync"
-        if (-not (Test-Path $pcloudDest)) { New-Item -ItemType Directory -Path $pcloudDest -Force | Out-Null }
-        robocopy $privateDir $pcloudDest /MIR /XD ".git" /NFL /NDL /NJH /NJS 2>&1 | Out-Null
-        Write-Ok "pCloud sync OK: $pcloudDest"
-    } else {
-        Write-Info "pCloud (P:) nao montado -- pulando backup pCloud"
+    if (-not $vcBareOk) {
+        Write-Info "VC bare: nenhum notes-sync.git em Z:/Y: -- pulando"
     }
+
+    Write-Header "Passo 5: Homelab secrets no VeraCrypt working/ (nunca pCloud)"
+    Sync-VeraCryptHomelabSecrets -PrivateDirRoot $privateDir
+
+    Write-Header "Passo 6: Espelho pCloud (P:) -- sem secrets homelab em /XF"
+    $pcloudDest = "P:\lab-private-backup\notes-sync"
+    if (-not (Invoke-PCloudPrivateTreeMirror -SourceDir $privateDir -DestDir $pcloudDest)) {
+        $pushHadFailure = $true
+    }
+
     $ErrorActionPreference = $prevEapPush
+    if ($pushHadFailure) {
+        Write-Warn "private-git-sync: concluido com avisos/falhas em push ou pCloud"
+    }
 }
 
 Write-Header "private-git-sync: Concluido"

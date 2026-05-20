@@ -21,6 +21,10 @@
 2. Na **raiz do repo do produto**, corre **`scripts/private-git-sync.ps1`** (opcional **`-Push`** se a política enviar o repo empilhado para remotes **fora do GitHub**).
 3. Se usares **armazenamento local cifrado** para essa árvore, segue a disciplina **montar → trabalhar → desmontar** descrita em **`docs/ops/PRIVATE_LOCAL_VERSIONING.md`** e nos teus runbooks **privados** de homelab (não duplicados aqui).
 
+### Secrets homelab (`-Push`)
+
+Com **`-Push`**, o script **(a)** faz push Git para **`lab-*`** e para o **bare** `notes-sync.git` no VeraCrypt, **(b)** copia arquivos secretos listados (ex.: **`.env.bitwarden.local`**) para **`working/homelab/`** no volume com verificação de hash, e **(c)** espelha para **pCloud** só se **`P:`** estiver montado, com **retries limitados** no robocopy e **`/XF`** para esses nomes **não** irem para a nuvem de sync. Novos env só-homelab: acrescente o nome do arquivo na lista do script.
+
 ### Expectativa do operador (genérico — sem letras de unidade nem caminhos)
 
 Durante o trabalho na árvore privada, **espera-se** uma **unidade montada pelo VeraCrypt** para manter o fluxo de escrita e de **sync/backup** coerente. Se essa montagem **faltar quando era esperada**, trate como **anomalia** e recupere com runbooks **privados** e segredos no **cofre** — **nunca** cole credenciais de volume no chat nem em arquivos **tracked**.
