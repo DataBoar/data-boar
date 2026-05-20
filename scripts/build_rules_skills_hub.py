@@ -192,7 +192,8 @@ def main() -> int:
     if args.check:
         ok = True
         for path, expected in ((OUT_EN, en), (OUT_PT, pt)):
-            if not path.is_file() or path.read_text(encoding="utf-8") != expected:
+            got = path.read_text(encoding="utf-8") if path.is_file() else ""
+            if got.replace("\r\n", "\n") != expected.replace("\r\n", "\n"):
                 print(
                     f"build_rules_skills_hub: stale {path.relative_to(REPO_ROOT)}",
                     file=sys.stderr,

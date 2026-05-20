@@ -69,7 +69,10 @@ foreach ($adr in $adrs) {
     $raw = Get-Content -LiteralPath $adr.FullName -Raw -Encoding UTF8
     $title = Get-AdrTitleFromContent -Raw $raw -FileName $adr.Name
     $status = Get-AdrStatusFromContent -Raw $raw
-    $hash = (Get-FileHash -LiteralPath $adr.FullName -Algorithm SHA256).Hash
+    $norm = $raw -replace "`r`n", "`n" -replace "`r", "`n"
+    $bytes = [System.Text.Encoding]::UTF8.GetBytes($norm)
+    $sha = [System.Security.Cryptography.SHA256]::Create()
+    $hash = [BitConverter]::ToString($sha.ComputeHash($bytes)).Replace("-", "")
     $dataLines.Add("$num | $status | $hash | $($adr.Name) | $title")
 }
 

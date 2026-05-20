@@ -17,7 +17,9 @@ ROW_RE = re.compile(
 
 
 def _file_sha256(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest().upper()
+    raw = path.read_text(encoding="utf-8")
+    norm = raw.replace("\r\n", "\n").replace("\r", "\n")
+    return hashlib.sha256(norm.encode("utf-8")).hexdigest().upper()
 
 
 def test_inventory_lists_every_adr_file():
