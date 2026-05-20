@@ -6,6 +6,8 @@ Entry point for **concrete product scenarios** (discovery, remediation hand-off,
 
 **Workshop storyboards** (sector narratives for sales engineering) remain in [README.md](README.md) ([pt-BR](README.pt_BR.md)).
 
+**Executive pitch decks** (stakeholder, DPO, CISO): [pitch/INDEX.md](../pitch/INDEX.md) ([pt-BR](../pitch/INDEX.pt_BR.md)).
+
 ---
 
 ## Discovery and remediation
@@ -45,6 +47,7 @@ Entry point for **concrete product scenarios** (discovery, remediation hand-off,
 
 ## Related docs
 
+- [pitch/INDEX.md](../pitch/INDEX.md) ([pt-BR](../pitch/INDEX.pt_BR.md)) — executive decks by role
 - [DECISION_MAKER_VALUE_BRIEF.md](../DECISION_MAKER_VALUE_BRIEF.md) ([pt-BR](../DECISION_MAKER_VALUE_BRIEF.pt_BR.md))
 - [REPORTS_AND_COMPLIANCE_OUTPUTS.md](../REPORTS_AND_COMPLIANCE_OUTPUTS.md) ([pt-BR](../REPORTS_AND_COMPLIANCE_OUTPUTS.pt_BR.md))
 - [USAGE.md](../USAGE.md) ([pt-BR](../USAGE.pt_BR.md))
