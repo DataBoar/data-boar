@@ -140,6 +140,8 @@ if (Test-Path -LiteralPath $invScript) {
     Write-Host "  Inventory: updated docs/adr/INVENTORY.txt" -ForegroundColor Cyan
 }
 
+Write-Host "  WARNING: Run inv-adr.ps1 to update INVENTORY.txt if ADRs were edited outside this script" -ForegroundColor Yellow
+
 Write-Host ""
 Write-Host "Next steps:" -ForegroundColor Yellow
 Write-Host "  1. Open: $filepath"

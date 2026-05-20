@@ -40,6 +40,7 @@
 | Hub | Canonical path | Covers |
 | --- | -------------- | ------ |
 | Cursor policy hub | `docs/ops/CURSOR_AGENT_POLICY_HUB.md` | Rules + skills map |
+| Rules and skills hub | `docs/hubs/RULES_AND_SKILLS_HUB.md` | All `.mdc` rules + skills (generated) |
 | Cold-start ladder | `docs/ops/OPERATOR_AGENT_COLD_START_LADDER.md` | Fresh-session router |
 | Agent contract | `AGENTS.md` | Non-negotiables + quick index |
 

@@ -74,6 +74,8 @@ Short, durable notes that capture **why** the project chose an approach—not on
 | 0053  | [`ebcdic` direct upper-bound pin and Dependabot ignore for blocked semver-major](ADR-0053-ebcdic-direct-upper-bound-and-dependabot-ignore.md) | Accepted |
 | 0054  | [Decline `chardet` semver-major bumps while `cyclonedx-bom` pins `chardet<6.0`](ADR-0054-chardet-pinned-by-cyclonedx-bom.md) | Accepted |
 | 0055  | [Orthogonal priority axes (H/U/A/P/G/S/M) anti-collision contract](ADR-0055-orthogonal-priority-axes-anti-collision-contract.md) | Accepted |
+| 0056  | [Cryptographic ADR inventory (inv-adr.ps1 + SSH ed25519 attestation)](ADR-0056-cryptographic-adr-inventory-inv-adr-ssh-attestation.md) | Accepted |
+| 0057  | [Lightweight hub index (co-located links, no file moves)](ADR-0057-lightweight-hub-index-co-located-links.md) | Accepted |
 
 ## Related docs
 

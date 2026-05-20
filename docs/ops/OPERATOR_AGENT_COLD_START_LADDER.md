@@ -9,7 +9,7 @@ Give a **single ordered path** so a **fresh chat** (no transcript memory) can st
 ## Read in this order (pick depth by task)
 
 1. **This file** — task router + seven non-negotiables below.
-2. **[`docs/hubs/INDEX.md`](../hubs/INDEX.md)** ([pt-BR](../hubs/INDEX.pt_BR.md)) — map of all navigation hubs (two hops to any area).
+2. **[`docs/hubs/INDEX.md`](../hubs/INDEX.md)** ([pt-BR](../hubs/INDEX.pt_BR.md)) — map of all navigation hubs (two hops to any area). For **which Cursor rule or skill applies**, open **[`RULES_AND_SKILLS_HUB.md`](../hubs/RULES_AND_SKILLS_HUB.md)**.
 3. **[`AGENTS.md`](../../AGENTS.md)** — Quick index table (theme → first doc); long bullets are the contract.
 4. **[`CURSOR_AGENT_POLICY_HUB.md`](CURSOR_AGENT_POLICY_HUB.md)** — same themes with **clickable** paths into `.cursor/rules`, `.cursor/skills`, and `docs/ops/`.
 5. **[`TOKEN_AWARE_SCRIPTS_HUB.md`](TOKEN_AWARE_SCRIPTS_HUB.md)** — which **`scripts/*.ps1`** map to keywords, skills, and runbooks.
