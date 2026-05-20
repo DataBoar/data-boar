@@ -50,6 +50,7 @@ We **document and commit** to the following as the **2026 baseline**:
 
 ## References
 
+- [INTEGRITY_HUB.md](../ops/INTEGRITY_HUB.md) ([pt-BR](../ops/INTEGRITY_HUB.pt_BR.md)) — navigation hub for integrity, tamper detection, and related ADRs.
 - `core/database.py` — `ScanSession`, `ScanFailure`, `NotificationSendLog`, wipe log helpers.
 - `core/audit_export.py` — `build_audit_trail_payload`, `AUDIT_TRAIL_SCHEMA_VERSION`.
 - `utils/logger.py` — file audit log naming and redaction-aware messages.

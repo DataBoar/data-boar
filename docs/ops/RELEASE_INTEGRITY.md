@@ -38,5 +38,7 @@ releases, with explicit focus on Pro+ paths.
 
 ## 5) Related specifications
 
+- [INTEGRITY_HUB.md](INTEGRITY_HUB.md) ([pt-BR](INTEGRITY_HUB.pt_BR.md)) — **start here** for tamper detection, runtime modules, scripts, and ADR inventory.
+- [RELEASE_INTEGRITY.md](../RELEASE_INTEGRITY.md) ([pt-BR](../RELEASE_INTEGRITY.pt_BR.md)) — **product** licensing tamper-evidence (build digest, optional manifest); distinct scope from this ops release spec.
 - [INTEGRITY_CHECK_ALPHA_LOGIC.md](INTEGRITY_CHECK_ALPHA_LOGIC.md) ([pt-BR](INTEGRITY_CHECK_ALPHA_LOGIC.pt_BR.md)) — optional runtime integrity defense (design).
 - [SPRINT_GREAT_LEAP_POSTMORTEM.md](SPRINT_GREAT_LEAP_POSTMORTEM.md) ([pt-BR](SPRINT_GREAT_LEAP_POSTMORTEM.pt_BR.md)) — verified vs aspirational lab metrics.

@@ -42,4 +42,6 @@ Artefatos **CycloneDX JSON** para a árvore de dependências Python e para a **i
 
 ## Relacionado
 
+- [ops/INTEGRITY_HUB.pt_BR.md](ops/INTEGRITY_HUB.pt_BR.md) ([EN](ops/INTEGRITY_HUB.md)) — hub de navegação para todas as camadas de integridade (este arquivo vs [ops/RELEASE_INTEGRITY.pt_BR.md](ops/RELEASE_INTEGRITY.pt_BR.md)).
+- [ops/RELEASE_INTEGRITY.pt_BR.md](ops/RELEASE_INTEGRITY.pt_BR.md) ([EN](ops/RELEASE_INTEGRITY.md)) — especificação operacional de release (evidência Rust, checklist SRE); **não** é duplicata deste doc focado em licenciamento.
 - [LICENSING_SPEC.md](LICENSING_SPEC.md) (EN)

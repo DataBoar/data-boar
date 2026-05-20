@@ -57,10 +57,10 @@
 
 | Hub | Caminho canônico | Cobre |
 | --- | ---------------- | ----- |
-| Release integrity | `docs/ops/RELEASE_INTEGRITY.md` | Tags, Hub, evidência |
-| Integrity check (alpha) | `docs/ops/INTEGRITY_CHECK_ALPHA_LOGIC.md` | Confiança em runtime |
-
-*(planejado)* **INTEGRITY_HUB** — GitHub **#576**.
+| **Hub de integridade** | `docs/ops/INTEGRITY_HUB.md` | Tamper detection, confiança em runtime, docs de release vs licenciamento, inventário ADR |
+| Release integrity (spec ops) | `docs/ops/RELEASE_INTEGRITY.md` | Evidência Rust, checklist SRE, pesos GRC |
+| Release integrity (produto) | `docs/RELEASE_INTEGRITY.md` | Digest de licenciamento, manifesto opcional, SBOM |
+| Integrity check (alpha) | `docs/ops/INTEGRITY_CHECK_ALPHA_LOGIC.md` | Especificação de design em runtime |
 
 ### Inspirações
 

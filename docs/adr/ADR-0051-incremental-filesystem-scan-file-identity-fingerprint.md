@@ -111,6 +111,7 @@ any scan run before Phase 1 was deployed.
 
 ## Related
 
+- [INTEGRITY_HUB.md](../ops/INTEGRITY_HUB.md) ([pt-BR](../ops/INTEGRITY_HUB.pt_BR.md)) — navigation hub for integrity surfaces (file fingerprinting is scan identity, not release tamper-evidence).
 - [PLAN_INCREMENTAL_SCAN_IDEMPOTENCY.md](../../plans/PLAN_INCREMENTAL_SCAN_IDEMPOTENCY.md)
 - [PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md](../../plans/PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md)
 - [ADR-0043](ADR-0043-sql-column-sampling-non-null-and-strategy-hook.md) (SQL sampling audit evidence pattern)

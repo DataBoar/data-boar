@@ -2,6 +2,8 @@
 
 **Português (Brasil):** [INTEGRITY_CHECK_ALPHA_LOGIC.pt_BR.md](INTEGRITY_CHECK_ALPHA_LOGIC.pt_BR.md)
 
+**Integrity navigation hub:** [INTEGRITY_HUB.md](INTEGRITY_HUB.md) ([pt-BR](INTEGRITY_HUB.pt_BR.md)) — full map of runtime, release, and ADR integrity surfaces.
+
 This document is a **design specification** for optional **runtime integrity verification** of critical Data Boar artifacts (Python sources, optional native extensions, and signed reference hashes). It is **not** a guarantee that every behavior below is implemented in the main product path until an ADR and code land explicitly.
 
 ## Goals

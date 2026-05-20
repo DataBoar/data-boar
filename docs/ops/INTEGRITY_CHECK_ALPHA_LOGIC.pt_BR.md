@@ -2,6 +2,8 @@
 
 **English:** [INTEGRITY_CHECK_ALPHA_LOGIC.md](INTEGRITY_CHECK_ALPHA_LOGIC.md)
 
+**Hub de navegação de integridade:** [INTEGRITY_HUB.pt_BR.md](INTEGRITY_HUB.pt_BR.md) ([EN](INTEGRITY_HUB.md)) — mapa completo de runtime, release e superfícies ADR.
+
 Este documento é uma **especificação de desenho** para verificação **opcional** de integridade em runtime de artefatos críticos do Data Boar (fontes Python, extensões nativas opcionais e hashes de referência assinados). **Não** garante que todo o comportamento abaixo já esteja implementado no produto principal até existir ADR e código explícito.
 
 ## Objetivos

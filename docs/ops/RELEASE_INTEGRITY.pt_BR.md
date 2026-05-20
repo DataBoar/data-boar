@@ -39,5 +39,7 @@ releases do Data Boar, com foco explícito nos caminhos Pro+.
 
 ## 5) Especificações relacionadas
 
+- [INTEGRITY_HUB.pt_BR.md](INTEGRITY_HUB.pt_BR.md) ([EN](INTEGRITY_HUB.md)) — **comece aqui** para tamper detection, módulos de runtime, scripts e inventário ADR.
+- [RELEASE_INTEGRITY.pt_BR.md](../RELEASE_INTEGRITY.pt_BR.md) ([EN](../RELEASE_INTEGRITY.md)) — tamper-evidence de **licenciamento** no produto (digest de build, manifesto opcional); escopo distinto desta spec ops de release.
 - [INTEGRITY_CHECK_ALPHA_LOGIC.pt_BR.md](INTEGRITY_CHECK_ALPHA_LOGIC.pt_BR.md) ([EN](INTEGRITY_CHECK_ALPHA_LOGIC.md)) — defesa opcional de integridade em runtime (desenho).
 - [SPRINT_GREAT_LEAP_POSTMORTEM.pt_BR.md](SPRINT_GREAT_LEAP_POSTMORTEM.pt_BR.md) ([EN](SPRINT_GREAT_LEAP_POSTMORTEM.md)) — métricas verificadas vs metas aspiracionais de lab.
