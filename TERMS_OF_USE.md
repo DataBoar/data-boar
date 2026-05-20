@@ -2,7 +2,7 @@
 
 **Português (Brasil):** [TERMS_OF_USE.pt_BR.md](TERMS_OF_USE.pt_BR.md)
 
-_Last updated: 2026-04-05_
+_Last updated: 2026-05-20_
 
 ## 1. Open-source licence
 
@@ -35,15 +35,17 @@ Regardless of your licence tier, you may **not** use Data Boar to:
 ## 4. Commercial use and licensing tiers
 
 Delivering Data Boar scan results to third parties as part of a paid service (consulting,
-audit, MSSP) requires at minimum a **Pro licence**. See `docs/SUBSCRIPTION_TIERS.md`
-and `docs/LICENSING_OPEN_CORE_AND_COMMERCIAL.md`.
+audit, MSSP) requires at minimum a **Pro licence**. See [docs/SUBSCRIPTION_TIERS.md](docs/SUBSCRIPTION_TIERS.md),
+[docs/LICENSING_SPEC.md](docs/LICENSING_SPEC.md), and [docs/LICENSING_OPEN_CORE_AND_COMMERCIAL.md](docs/LICENSING_OPEN_CORE_AND_COMMERCIAL.md).
 
 Using Data Boar across multiple client environments requires at minimum a **Partner licence**.
 
 ## 5. Surveillance-adjacent features
 
-Features that scan screenshot folders, audio files, browser artefacts, or memory dumps
-are restricted to licensed tiers and require explicit operator acknowledgment at runtime.
+Features that scan browser artefacts, legacy proprietary office formats, and other
+rich-media paths listed in [docs/SUBSCRIPTION_TIERS.md](docs/SUBSCRIPTION_TIERS.md)
+(for example screenshot folders or audio when enabled in your build) are restricted
+to licensed tiers and require explicit operator acknowledgment at runtime.
 
 By enabling these features you represent that:
 

@@ -2,7 +2,7 @@
 
 **English:** [PRIVACY_POLICY.md](PRIVACY_POLICY.md)
 
-_Atualizado em: 2026-04-05_
+_Atualizado em: 2026-05-20_
 
 ## O que é o Data Boar
 
@@ -33,6 +33,10 @@ este repositório.
 
 ## 2. A ferramenta Data Boar (o que roda na sua máquina)
 
+Política revisada em relação à linha de produto **1.7.4-rc** no repositório público (varredura local,
+painel opcional, conectores por nível de licença). Se você usa outra build, compare
+[docs/SUBSCRIPTION_TIERS.md](docs/SUBSCRIPTION_TIERS.md) e as notas de release.
+
 O Data Boar varre **os seus** bancos, filesystems e documentos em busca de dados pessoais.
 Ele **não**:
 
@@ -51,6 +55,17 @@ Se você usar *token* de licença assinado (JWT), a validação é feita **local
 com a chave pública embutida. Não há chamada a servidor de licença.
 O próprio *token* contém apenas: nome do nível, data de expiração e assinatura criptográfica.
 Não contém dados pessoais sobre você.
+
+### Autenticação opcional no painel (quando você habilita)
+
+Se você implantar o painel web com autenticação, credenciais e metadados de sessão ficam na
+infraestrutura que você controla. WebAuthn e RBAC são caminhos opcionais de configuração do
+operador documentados no guia técnico; não são obrigatórios para varreduras CLI da edição Community.
+
+### Avaliação de maturidade (questionário local)
+
+O fluxo de avaliação de maturidade grava respostas em banco SQLite local na sua máquina.
+Não envia respostas aos mantenedores do Data Boar salvo se você exportar ou compartilhar.
 
 ## 3. O que coletamos (mínimo)
 
@@ -73,7 +88,8 @@ Consulte seu assessor jurídico sobre obrigações aplicáveis.
 
 ## 5. Funcionalidades próximas a vigilância (Pro e Enterprise)
 
-Alguns recursos em níveis licenciados (varredura de capturas de tela, transcrição de áudio, análise de *memory dump*)
+Alguns recursos em níveis licenciados (por exemplo artefatos de navegador, formatos proprietários
+legados de escritório e outros caminhos de mídia rica em [docs/SUBSCRIPTION_TIERS.md](docs/SUBSCRIPTION_TIERS.md))
 podem detectar dados pessoais em artefatos de terceiros além do operador.
 
 Você precisa de **base legal** nos termos do art. 7 da LGPD (ou art. 6 do GDPR) antes de varrer dados
