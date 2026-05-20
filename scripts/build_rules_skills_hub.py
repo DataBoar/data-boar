@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -62,9 +63,30 @@ def _load_session_keywords() -> list[str]:
     return SESSION_KEYWORD.findall(path.read_text(encoding="utf-8"))
 
 
+def _git_tracked_paths(glob_pattern: str) -> list[Path]:
+    proc = subprocess.run(
+        ["git", "ls-files", glob_pattern],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        return []
+    out: list[Path] = []
+    for line in proc.stdout.splitlines():
+        line = line.strip()
+        if line:
+            out.append((REPO_ROOT / line).resolve())
+    return out
+
+
 def _collect_rules() -> list[dict]:
     rows: list[dict] = []
-    for path in sorted(RULES_DIR.glob("*.mdc")):
+    paths = _git_tracked_paths(".cursor/rules/*.mdc")
+    if not paths:
+        paths = sorted(RULES_DIR.glob("*.mdc"))
+    for path in sorted(paths, key=lambda p: p.name):
         raw = path.read_text(encoding="utf-8")
         fm = _parse_frontmatter(raw)
         always = fm.get("alwaysApply", "").lower() == "true"
@@ -84,7 +106,10 @@ def _collect_rules() -> list[dict]:
 
 def _collect_skills() -> list[dict]:
     rows: list[dict] = []
-    for path in sorted(SKILLS_DIR.glob("**/SKILL.md")):
+    paths = _git_tracked_paths(".cursor/skills/**/SKILL.md")
+    if not paths:
+        paths = sorted(SKILLS_DIR.glob("**/SKILL.md"))
+    for path in sorted(paths, key=lambda p: p.as_posix()):
         rel = path.relative_to(SKILLS_DIR)
         folder = rel.parent.as_posix() if rel.parent != Path(".") else rel.parent.name
         raw = path.read_text(encoding="utf-8")
