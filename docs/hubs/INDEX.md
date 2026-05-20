@@ -2,7 +2,7 @@
 
 **Português (Brasil):** [INDEX.pt_BR.md](INDEX.pt_BR.md)
 
-> **For agents (Cursor and others):** read this page first when you need the **map of maps**. Each row points to a hub that already lives in its canonical folder — we **do not** move hubs here (see issue **#577** / ADR **#583** backlog).
+> **For agents (Cursor and others):** read this page first when you need the **map of maps**. Master one-liner index: [`docs/ops/DOCS_AND_HUBS_INDEX.md`](../ops/DOCS_AND_HUBS_INDEX.md). Each row below points to a hub in its canonical folder — we **do not** move files here ([ADR-0057](../adr/ADR-0057-lightweight-hub-index-co-located-links.md)).
 
 ## How to use
 
