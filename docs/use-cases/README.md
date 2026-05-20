@@ -6,6 +6,8 @@ Short **narrative storyboards** for POCs, sales-engineering workshops, and DPO/I
 
 Each storyboard includes **Partner opportunity** (how to qualify a lead) and **Product alignment (maintainers)** (which shipped surfaces to stress first—without linking into `docs/plans/` from buyer-facing docs; see [docs/README.md](../README.md) *Internal and reference*).
 
+**Product use cases** (scan → remediate → prove, tokenized exports, biometrics): [USE_CASES_HUB.md](USE_CASES_HUB.md) ([pt-BR](USE_CASES_HUB.pt_BR.md)).
+
 ## Index
 
 | Storyboard | Focus | Typical Data Boar targets |

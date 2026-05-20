@@ -6,6 +6,8 @@ Narrativas **curtas** para POCs, oficinas com pré-vendas técnico e alinhamento
 
 Cada storyboard inclui **Oportunidade para parceiros** (como qualificar um lead) e **Alinhamento de produto (maintainers)** (quais superfícies já entregues priorizar primeiro — sem link para `docs/plans/` a partir de docs voltados a compradores; ver [docs/README.pt_BR.md](../README.pt_BR.md) *Internal and reference*).
 
+**Use cases de produto** (escanear → remediar → provar, export tokenizado, biometria): [USE_CASES_HUB.pt_BR.md](USE_CASES_HUB.pt_BR.md) ([EN](USE_CASES_HUB.md)).
+
 ## Índice
 
 | Storyboard | Foco | Alvos típicos do Data Boar |
