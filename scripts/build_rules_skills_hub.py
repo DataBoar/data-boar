@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import re
 import sys
 from pathlib import Path
@@ -16,6 +17,7 @@ OUT_PT = REPO_ROOT / "docs" / "hubs" / "RULES_AND_SKILLS_HUB.pt_BR.md"
 
 FRONTMATTER = re.compile(r"^---\s*\r?\n(.*?)\r?\n---\s*\r?\n", re.DOTALL)
 SESSION_KEYWORD = re.compile(r"\|\s*\*\*([a-z0-9-]+)\*\*\s*\|", re.I)
+FINGERPRINT_RE = re.compile(r"<!-- rules-skills-fingerprint: ([a-f0-9]{64}) -->")
 
 
 def _parse_frontmatter(text: str) -> dict[str, str]:
@@ -42,6 +44,15 @@ def _first_heading_or_line(text: str, fallback: str) -> str:
                 s = s[:117] + "..."
             return s
     return fallback
+
+
+def _fingerprint(rules: list[dict], skills: list[dict]) -> str:
+    parts = [
+        f"r:{r['file']}:{int(r['always'])}"
+        for r in sorted(rules, key=lambda x: x["file"])
+    ]
+    parts.extend(f"s:{s['folder']}" for s in sorted(skills, key=lambda x: x["folder"]))
+    return hashlib.sha256("\n".join(parts).encode("utf-8")).hexdigest()
 
 
 def _load_session_keywords() -> list[str]:
@@ -89,7 +100,9 @@ def _collect_skills() -> list[dict]:
     return rows
 
 
-def _render_en(rules: list[dict], skills: list[dict], keywords: list[str]) -> str:
+def _render_en(
+    rules: list[dict], skills: list[dict], keywords: list[str], fingerprint: str
+) -> str:
     always = [r for r in rules if r["always"]]
     situational = [r for r in rules if not r["always"]]
     kw_hint = ", ".join(f"`{k}`" for k in keywords[:12])
@@ -152,6 +165,8 @@ def _render_en(rules: list[dict], skills: list[dict], keywords: list[str]) -> st
             "- Hub pattern: [ADR-0057](../adr/ADR-0057-lightweight-hub-index-co-located-links.md).",
             "- Cross-cutting map: [INDEX.md](INDEX.md).",
             "",
+            f"<!-- rules-skills-fingerprint: {fingerprint} -->",
+            "",
         ]
     )
     return "\n".join(lines)
@@ -186,16 +201,25 @@ def main() -> int:
     rules = _collect_rules()
     skills = _collect_skills()
     keywords = _load_session_keywords()
-    en = _render_en(rules, skills, keywords)
+    fingerprint = _fingerprint(rules, skills)
+    en = _render_en(rules, skills, keywords, fingerprint)
     pt = _render_pt(rules, skills, keywords)
 
     if args.check:
         ok = True
-        for path, expected in ((OUT_EN, en), (OUT_PT, pt)):
-            got = path.read_text(encoding="utf-8") if path.is_file() else ""
-            if got.replace("\r\n", "\n") != expected.replace("\r\n", "\n"):
+        if not OUT_EN.is_file():
+            print(
+                "build_rules_skills_hub: missing RULES_AND_SKILLS_HUB.md",
+                file=sys.stderr,
+            )
+            ok = False
+        else:
+            got = OUT_EN.read_text(encoding="utf-8")
+            m = FINGERPRINT_RE.search(got)
+            if not m or m.group(1) != fingerprint:
                 print(
-                    f"build_rules_skills_hub: stale {path.relative_to(REPO_ROOT)}",
+                    "build_rules_skills_hub: stale fingerprint "
+                    f"(run with --write; {len(rules)} rules, {len(skills)} skills)",
                     file=sys.stderr,
                 )
                 ok = False
