@@ -2,7 +2,7 @@
 
 **Português (Brasil):** [INDEX.pt_BR.md](INDEX.pt_BR.md)
 
-Audience-specific **two-page** narratives for workshops, procurement, and leadership briefings. They complement the product index in [docs/README.md](../README.md) and stay **free of internal plan links** (see [ADR 0004](../adr/ADR-0004-external-docs-no-markdown-links-to-plans.md)).
+Audience-specific **two-page** narratives for workshops, procurement, and leadership briefings. They complement the product index in [docs/README.md](../README.md) and the role map in [AUDIENCE_GUIDE.md](../AUDIENCE_GUIDE.md). They stay **free of internal plan links** (see [ADR 0004](../adr/ADR-0004-external-docs-no-markdown-links-to-plans.md)).
 
 ## Decks (by role)
 
