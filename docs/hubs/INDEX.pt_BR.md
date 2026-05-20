@@ -2,7 +2,7 @@
 
 **English:** [INDEX.md](INDEX.md)
 
-> **Para agentes:** leia esta página primeiro quando precisar do **mapa dos mapas**. Cada linha aponta para o hub no diretório canônico — **não** movemos hubs para cá (ver issue **#577**).
+> **Para agentes:** leia esta página quando precisar do **mapa dos mapas**. Indice mestre (one-liners): [`docs/ops/DOCS_AND_HUBS_INDEX.md`](../ops/DOCS_AND_HUBS_INDEX.md). Cada linha abaixo aponta para o hub no diretorio canonico — **nao** movemos arquivos ([ADR-0057](../adr/ADR-0057-lightweight-hub-index-co-located-links.md)).
 
 ## Como usar
 
