@@ -729,9 +729,11 @@ def main() -> None:
         if should_warn_insecure_api_bind(config, host):
             print(
                 "WARNING: API bind is non-loopback (%s) but api.require_api_key is not "
-                "effectively enabled. Set api.require_api_key: true and a strong "
-                "api.api_key (or api_key_from_env), or keep host 127.0.0.1 / reverse proxy. "
-                "See SECURITY.md and docs/USAGE.md." % (host,),
+                "effectively enabled. Scan findings (including PII) are reachable without "
+                "authentication (LGPD Art. 46 / adequate security measures). Set "
+                "api.require_api_key: true and a strong api.api_key (or api_key_from_env), "
+                "or keep host 127.0.0.1 / reverse proxy. See SECURITY.md and docs/USAGE.md."
+                % (host,),
                 file=sys.stderr,
                 flush=True,
             )
