@@ -1,0 +1,10 @@
+#!/bin/sh
+# pre-commit hook — defense-in-depth (git level)
+# G0·S — agent safety hardening 2026-05-21
+STAGED_ADRS=$(git diff --cached --name-only | grep "docs/adr/ADR-.*\.md")
+if [ -n "$STAGED_ADRS" ]; then
+  echo "BLOCKED [G0·S]: commit includes ADR file(s): $STAGED_ADRS"
+  echo "ADR modification requires explicit operator authorization (ADR-0056)."
+  exit 1
+fi
+exit 0
