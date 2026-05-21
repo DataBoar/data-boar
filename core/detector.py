@@ -765,10 +765,23 @@ def _load_ml_patterns(
     path: str | None,
     encoding: str = "utf-8",
     errors: str = "replace",
+    *,
+    plugin_type: str = "ml_patterns",
 ) -> list[tuple[str, int]]:
     """Load (text, label) from YAML/JSON; label 1=sensitive, 0=non_sensitive. Uses given encoding."""
     if not path or not Path(path).exists():
         return []
+    import warnings
+
+    from config.plugin_validator import PluginValidationWarning, validate_plugin_file
+
+    result = validate_plugin_file(path, plugin_type=plugin_type)
+    for issue in result.issues:
+        warnings.warn(
+            f"Plugin file '{path}': {issue}",
+            PluginValidationWarning,
+            stacklevel=2,
+        )
     raw = read_text_with_encoding(path, encoding=encoding, errors=errors)
     if Path(path).suffix.lower() in (".yaml", ".yml"):
         import yaml
@@ -840,7 +853,9 @@ def _load_dl_terms(
                     out.append((text, label))
         if out:
             return out
-    return _load_ml_patterns(path, encoding=encoding, errors=errors)
+    return _load_ml_patterns(
+        path, encoding=encoding, errors=errors, plugin_type="dl_patterns"
+    )
 
 
 def _detect_possible_minor(

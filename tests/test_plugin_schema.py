@@ -187,6 +187,38 @@ def test_ml_plugin_invalid_label_value(tmp_path):
     assert any("label" in issue for issue in result.issues)
 
 
+def test_ml_patterns_invalid_file_emits_warning(tmp_path):
+    """Loading invalid ml_patterns via detector emits PluginValidationWarning."""
+    from config.plugin_validator import PluginValidationWarning
+    from core.detector import _load_ml_patterns
+
+    path = _write_yaml(
+        tmp_path,
+        "bad_ml_load.yaml",
+        """
+        - label: "sensitive"
+        """,
+    )
+    with pytest.warns(PluginValidationWarning, match="text"):
+        _load_ml_patterns(path)
+
+
+def test_dl_patterns_invalid_file_emits_warning(tmp_path):
+    """Loading invalid dl_patterns via detector emits PluginValidationWarning."""
+    from config.plugin_validator import PluginValidationWarning
+    from core.detector import _load_dl_terms
+
+    path = _write_yaml(
+        tmp_path,
+        "bad_dl_load.yaml",
+        """
+        - label: "sensitive"
+        """,
+    )
+    with pytest.warns(PluginValidationWarning, match="text"):
+        _load_dl_terms(path, inline=None)
+
+
 # ---------------------------------------------------------------------------
 # validate_plugin_file — unified_plugin_file
 # ---------------------------------------------------------------------------
