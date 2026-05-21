@@ -99,6 +99,22 @@ def _excel_safe_sheet_title(title: str) -> str:
     return cleaned[:31]
 
 
+_FORMULA_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
+
+
+def _excel_sanitize_cell(value: object) -> object:
+    """Prefix formula-like strings so Excel/openpyxl treat them as literal text (CWE-1236)."""
+    if isinstance(value, str) and value.startswith(_FORMULA_PREFIXES):
+        return "'" + value
+    return value
+
+
+def _excel_safe_dataframe(data: Any) -> pd.DataFrame:
+    """Build a DataFrame with cell values sanitized against Excel formula injection."""
+    df = pd.DataFrame(data)
+    return df.map(_excel_sanitize_cell)
+
+
 def _filter_by_min_sensitivity(rows: list[dict], min_sensitivity: str) -> list[dict]:
     """Keep only rows with sensitivity_level >= min_sensitivity (HIGH > MEDIUM > LOW)."""
     if not min_sensitivity or (min_sensitivity or "").upper() == "LOW":
@@ -934,7 +950,7 @@ def _write_excel_sheets(
     suggested_review_rows: list[dict] | None = None,
 ) -> None:
     """Write all Excel sheets (Report info, Executive summary, findings, recommendations, trends, heatmap data)."""
-    pd.DataFrame(report_info).to_excel(
+    _excel_safe_dataframe(report_info).to_excel(
         writer, sheet_name=_SHEET_REPORT_INFO, index=False
     )
     # Small mascot branding in top-right of Report info (D1), minimal; table stays in A:B
@@ -951,23 +967,23 @@ def _write_excel_sheets(
     if report_cfg.get("include_executive_summary", False) and (
         db_rows_for_sheets or fs_rows_for_sheets
     ):
-        pd.DataFrame(
+        _excel_safe_dataframe(
             _build_executive_summary_rows(db_rows_for_sheets, fs_rows_for_sheets)
         ).to_excel(writer, sheet_name="Executive summary", index=False)
     db_high_keys, fs_high_keys = _apply_minor_confidence_and_return_keys(
         db_rows_for_sheets, fs_rows_for_sheets, config
     )
     if db_rows_for_sheets:
-        pd.DataFrame(db_rows_for_sheets).to_excel(
+        _excel_safe_dataframe(db_rows_for_sheets).to_excel(
             writer, sheet_name=_SHEET_DB_FINDINGS, index=False
         )
     if fs_rows_for_sheets:
-        pd.DataFrame(fs_rows_for_sheets).to_excel(
+        _excel_safe_dataframe(fs_rows_for_sheets).to_excel(
             writer, sheet_name=_SHEET_FS_FINDINGS, index=False
         )
     sr = suggested_review_rows or []
     if sr:
-        pd.DataFrame(sr).to_excel(
+        _excel_safe_dataframe(sr).to_excel(
             writer, sheet_name=_SHEET_SUGGESTED_REVIEW, index=False
         )
     agg_rows = db_manager.get_aggregated_identification_risks(session_id)
@@ -984,11 +1000,11 @@ def _write_excel_sheets(
             for r in agg_rows
         ]
         sheet_with_note = [_AGGREGATED_CROSSREF_SAMPLE_NOTE_ROW] + sheet_data
-        pd.DataFrame(sheet_with_note).to_excel(
+        _excel_safe_dataframe(sheet_with_note).to_excel(
             writer, sheet_name="Cross-ref data – ident. risk", index=False
         )
     if fail_rows:
-        pd.DataFrame(_enrich_failures(fail_rows)).to_excel(
+        _excel_safe_dataframe(_enrich_failures(fail_rows)).to_excel(
             writer, sheet_name=_SHEET_SCAN_FAILURES, index=False
         )
     inv_rows = []
@@ -1007,7 +1023,7 @@ def _write_excel_sheets(
             }
             for r in inv_rows
         ]
-        pd.DataFrame(inv_sheet_rows).to_excel(
+        _excel_safe_dataframe(inv_sheet_rows).to_excel(
             writer, sheet_name=_SHEET_DATA_SOURCE_INVENTORY, index=False
         )
     overrides = report_cfg.get("recommendation_overrides", [])
@@ -1020,16 +1036,18 @@ def _write_excel_sheets(
         recs.insert(0, _aggregated_identification_recommendation_row())
     if db_high_keys or fs_high_keys:
         recs.insert(0, _minor_crossref_recommendation_row())
-    pd.DataFrame(recs).to_excel(writer, sheet_name="Recommendations", index=False)
+    _excel_safe_dataframe(recs).to_excel(
+        writer, sheet_name="Recommendations", index=False
+    )
     praise = _praise_rows(db_rows_for_sheets, fs_rows_for_sheets)
     if praise:
-        pd.DataFrame(praise).to_excel(
+        _excel_safe_dataframe(praise).to_excel(
             writer, sheet_name="Praise / existing controls", index=False
         )
     trends = _trends_rows(
         db_manager, session_id, current_db, current_fs, current_fail, current_started_at
     )
-    pd.DataFrame(trends).to_excel(
+    _excel_safe_dataframe(trends).to_excel(
         writer, sheet_name="Trends - Session comparison", index=False
     )
     heatmap_rows = [
