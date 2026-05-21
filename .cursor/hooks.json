@@ -2,7 +2,9 @@
   "version": 1,
   "hooks": {
     "beforeShellExecution": [
-      { "command": ".cursor/hooks/adr-protection.sh" }
+      {
+        "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .cursor/hooks/adr-protection.ps1"
+      }
     ]
   }
 }

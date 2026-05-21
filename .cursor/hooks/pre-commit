@@ -1,5 +1,5 @@
 #!/bin/sh
-# pre-commit hook — defense-in-depth (git level)
+# pre-commit hook — defense-in-depth (git level, Git Bash on Windows)
 # G0·S — agent safety hardening 2026-05-21
 STAGED_ADRS=$(git diff --cached --name-only | grep "docs/adr/ADR-.*\.md")
 if [ -n "$STAGED_ADRS" ]; then

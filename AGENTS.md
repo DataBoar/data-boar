@@ -158,7 +158,7 @@ Cursor Support (Nathan) confirmed three agent-safety gaps; forum thread: [Three 
 
 - **Bug 1 — File-Deletion Protection inoperative:** Platform failure. Compensating control: git **`pre-commit`** hook in **`.cursor/hooks/pre-commit`** (ADR staging guard) plus normal review discipline.
 - **Bug 2 — Slack STOP signals ignored:** Platform failure; Slack messages are not cancel signals. Workaround: use the **Stop** control on [cursor.com/agents](https://cursor.com/agents) (or IDE stop) to halt a run.
-- **Bug 3 — No `beforeShellExecution` hard boundary on stable:** Repo implements **`.cursor/hooks.json`** → **`.cursor/hooks/adr-protection.sh`**, plus **`git config core.hooksPath .cursor/hooks`** (one-time per clone) so the git-level **`pre-commit`** hook runs. ADR edits still require explicit operator authorization (**ADR-0056**); CI **`inv-adr.ps1`** + ed25519 remain the cryptographic enforcement layer.
+- **Bug 3 — No `beforeShellExecution` hard boundary on stable:** Repo implements **`.cursor/hooks.json`** → **`.cursor/hooks/adr-protection.ps1`** (Windows: `powershell.exe -File`), plus **`git config core.hooksPath .cursor/hooks`** (one-time per clone) so the git-level **`pre-commit`** hook runs (Git Bash). ADR edits still require explicit operator authorization (**ADR-0056**); CI **`inv-adr.ps1`** + ed25519 remain the cryptographic enforcement layer.
 
 **Defense layers for `docs/adr/`:**
 
