@@ -151,3 +151,21 @@ Examples: `docs(homelab):`, `docs(private-layout):`, `docs(feedback-inbox):`, `c
 - **`audit.ps1` vs `check-all`:** Root **`audit.ps1`** tees **`check-all`** into **`logs/audit-*.log`**—intended as optional **manual Maestro/completão preflight** on the Windows dev PC; **`Maestro.ps1`** and **`lab-completao-orchestrate.ps1`** are **not** wired to call it yet. Commits and PRs use **`check-all`** / **`lint-only`** per slice—not **`audit.ps1`** on every commit.
 - **Maestro persona taxonomy:** Canonical term is **`handler`** (`Handle-<persona>.ps1`); avoid musical-metaphor labels (e.g. Capo/soloist) in scripts, tables, or docs.
 - **Public `databoar.com.br` contact aliases:** Tracked CoC/compliance surfaces use **`conduct@databoar.com.br`** and **`contact@databoar.com.br`**—no personal **`outlook.com`** in the public tree; provider-side mailbox setup remains an operator-manual step.
+
+## Known platform limitations and active workarounds (confirmed 2026-05-21)
+
+Cursor Support (Nathan) confirmed three agent-safety gaps; forum thread: [Three confirmed agent safety failures](https://forum.cursor.com/t/bug-three-confirmed-agent-safety-failures-file-deletion-protection-inoperative-slack-stop-signals-ignored-no-beforeshellexecution-hard-boundary/161253). Priority per **ADR-0055** (**G0·H·U·A·S**). Implementation: **#646**.
+
+- **Bug 1 — File-Deletion Protection inoperative:** Platform failure. Compensating control: git **`pre-commit`** hook in **`.cursor/hooks/pre-commit`** (ADR staging guard) plus normal review discipline.
+- **Bug 2 — Slack STOP signals ignored:** Platform failure; Slack messages are not cancel signals. Workaround: use the **Stop** control on [cursor.com/agents](https://cursor.com/agents) (or IDE stop) to halt a run.
+- **Bug 3 — No `beforeShellExecution` hard boundary on stable:** Repo implements **`.cursor/hooks.json`** → **`.cursor/hooks/adr-protection.ps1`** (Windows: `powershell.exe -File`), plus **`git config core.hooksPath .cursor/hooks`** (one-time per clone) so the git-level **`pre-commit`** hook runs (Git Bash). ADR edits still require explicit operator authorization (**ADR-0056**); CI **`inv-adr.ps1`** + ed25519 remain the cryptographic enforcement layer.
+
+**Defense layers for `docs/adr/`:**
+
+| Layer | Mechanism | Type |
+| ----- | --------- | ---- |
+| 1 | **`.cursor/rules/`** | LLM steering (suggestion) |
+| 2 | **`beforeShellExecution`** hook | Shell-level intercept |
+| 3 | **`pre-commit`** git hook | Git-level intercept |
+| 4 | **`inv-adr.ps1`** + ed25519 | Cryptographic CI enforcement |
+
