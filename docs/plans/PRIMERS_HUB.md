@@ -20,7 +20,15 @@ Educational **plan-tier** documents that explain how Data Boar aligns with exter
 
 | Primer | Summary |
 | ------ | ------- |
-| GOVERNANCE_SERVICE_MANAGEMENT_PRIMER.md *(planned — #555)* | ISO 38500, ISO 31000, ISO 37301, COBIT, ITIL 4 |
+| IT_GOVERNANCE_FRAMEWORKS_PRIMER.md *(planned — #629)* | ISO/IEC 38500, COBIT 2019 — EDM cycle; diagram companion [GOVERNANCE_ITSM_DIAGRAMS_SOURCE.md](GOVERNANCE_ITSM_DIAGRAMS_SOURCE.md) |
+| ITSM_FRAMEWORKS_PRIMER.md *(planned — #630)* | ITIL 4, ISO/IEC 20000 — service practices mapping; same diagram companion |
+| ITSM_GOVERNANCE_ALIGNMENT.md *(planned — #554)* | ITIL 4, ISO 38500, COBIT 2019, ISO 27014, ISO 20000 — alignment tables (product docs tier when promoted) |
+
+## Audit and assurance
+
+| Primer | Summary |
+| ------ | ------- |
+| SOC2_COMPLIANCE_PRIMER.md *(planned — #598)* | SOC 2 Privacy Trust Services Criteria |
 
 ## Financial sector
 
@@ -38,6 +46,7 @@ Educational **plan-tier** documents that explain how Data Boar aligns with exter
 
 | Doc | Role |
 | --- | ---- |
+| [GOVERNANCE_ITSM_DIAGRAMS_SOURCE.md](GOVERNANCE_ITSM_DIAGRAMS_SOURCE.md) | Mermaid/tables companion for **#629** / **#630** (not a standalone primer) |
 | [AI_EVOLUTION_PRIMER.md](../AI_EVOLUTION_PRIMER.md) | AI history for integrators (product docs, not `docs/plans/`) |
 | [completed/PLAN_COMPLIANCE_STANDARDS_ALIGNMENT.md](completed/PLAN_COMPLIANCE_STANDARDS_ALIGNMENT.md) | Shipped doc-only alignment (27701 + FELCA narrative) |
 
