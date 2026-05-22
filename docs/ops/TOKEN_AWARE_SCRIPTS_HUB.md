@@ -17,7 +17,7 @@
 | Script | Role | Wired to |
 | ------ | ---- | -------- |
 | `check-all.ps1` | Full gate (Windows) | **`token-aware-automation`** SKILL, **`.cursor/rules/check-all-gate.mdc`**, `CONTRIBUTING.md`, **[`SCRIPTS_CROSS_PLATFORM_PAIRING.md`](SCRIPTS_CROSS_PLATFORM_PAIRING.md)** |
-| `check-all.sh` | Full gate (Linux / macOS; bash) — same steps as `check-all.ps1`; **optional `pwsh`** for `gatekeeper-audit.ps1` | Same as **`check-all.ps1`** |
+| `check-all.sh` | Full gate (Linux / macOS; bash) — same steps as **`check-all.ps1`**; PII seeds via **`uv run python scripts/gatekeeper_audit.py`** (**`pwsh`** not required — issue **`#560`**) | Same as **`check-all.ps1`** |
 | `lint-only.ps1` | Docs/style only | Same + pairing doc |
 | `lint-only.sh` | Same (Linux / macOS) | Same |
 | `quick-test.ps1` | Narrow pytest | Same + pairing doc |
@@ -136,6 +136,7 @@
 | `new-adr.ps1` | ADR scaffold | **`AGENTS.md`** ADR habit, **`docs/adr/README.md`** |
 | `pre-commit-and-tests.ps1` | Thin wrapper | Prefer **`check-all.ps1`** unless you need the subset |
 | `gatekeeper-audit.ps1` | PII seeds vs **staged paths only** (`git diff --cached --name-only` + `git grep -F -f`); drops public-identity seeds (**FabioLeitao**, **`C:\Users\fabio`**, **`/home/leitao`**) before grep; first gate in **`check-all.ps1`** | **`PII_LOCAL_SEEDS.txt`** (private), **`PII_REMEDIATION_RITUAL.md`** |
+| `gatekeeper_audit.py` | Python port (**`uv run python`**) — same gate for **`check-all.sh`**, **`pre-commit`**, and collaborators without **`pwsh`** | Same seeds file; **`#560`** |
 | `private-git-sync.ps1` | Nested private repo (`-Push`: **`lab-*`** + optional **VC bare `notes-sync.git` on `Z:`** (default) **then `Y:`** + `P:` tree mirror when mounted) | **`docs/ops/PRIVATE_LOCAL_VERSIONING.md`**, **`PRIVATE_STACK_SYNC_RITUAL.md`**, session **`private-stack-sync`**, **`PRIVATE_OPERATOR_NOTES.md`**, **ADR 0040**, **`operator-evidence-backup-no-rhetorical-asks.mdc`** |
 | `license-smoke.ps1`, `version-readiness-smoke.ps1`, `release-integrity-check.ps1` | Release checks | **`docs/releases/`**, **`VERSIONING.md`** |
 | `generate-sbom.ps1` | SBOM | **`WORKFLOW_DEFERRED_FOLLOWUPS.md`**, security docs |

@@ -67,7 +67,7 @@ Ou **`uv build`** e **`uv publish dist/*`** com **`UV_PUBLISH_TOKEN`** definido.
 1. **Gate local completo (recomendado antes do PR)** — um comando:
 
    - **Windows:** `.\scripts\check-all.ps1` na raiz do repositório.
-   - **Linux / macOS:** `./scripts/check-all.sh` (torne executável: `chmod +x scripts/check-all.sh`). Instale [PowerShell (`pwsh`)](https://learn.microsoft.com/powershell/scripting/install/installing-powershell) se quiser o mesmo passo de PII **gatekeeper-audit** que no Windows; senão o script segue com aviso explícito.
+   - **Linux / macOS:** `./scripts/check-all.sh` (torne executável: `chmod +x scripts/check-all.sh`). Exige **`uv`** no `PATH`; o gate roda **`uv run python scripts/gatekeeper_audit.py`** nas seeds de PII staged (sem depender de **`pwsh`** — **`#560`**).
    - **Atalhos em par:** `./scripts/lint-only.sh`, `./scripts/quick-test.sh`, `./scripts/pre-commit-and-tests.sh` espelham os **`.ps1`** — ver **[docs/ops/SCRIPTS_CROSS_PLATFORM_PAIRING.pt_BR.md](docs/ops/SCRIPTS_CROSS_PLATFORM_PAIRING.pt_BR.md)** ([EN](docs/ops/SCRIPTS_CROSS_PLATFORM_PAIRING.md)).
 
 1. **Execute os testes** (ou use o gate completo acima)
