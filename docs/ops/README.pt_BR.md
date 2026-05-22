@@ -6,7 +6,7 @@ Esta pasta reúne documentação **procedural** para mantenedor/operador. Docume
 
 ## Antes de abrir um PR (operadores)
 
-1. Na raiz: **Windows:** `**.\scripts\check-all.ps1**` (atualiza o dashboard dos planos, pre-commit e pytest completo). **Linux / macOS:** `./scripts/check-all.sh` (mesmo fluxo; instale `**pwsh**` no PATH para paridade com o **gatekeeper-audit**). **Gêmeos finos:** `./scripts/lint-only.sh`, `./scripts/quick-test.sh`, `./scripts/pre-commit-and-tests.sh` — ver **[SCRIPTS_CROSS_PLATFORM_PAIRING.pt_BR.md](SCRIPTS_CROSS_PLATFORM_PAIRING.pt_BR.md)** ([EN](SCRIPTS_CROSS_PLATFORM_PAIRING.md)). Em alternativa manual: `python3 scripts/plans-stats.py --write` (ou `python`), `uv run pre-commit run --all-files`, `uv run pytest -v -W error`.
+1. Na raiz: **Windows:** `**.\scripts\check-all.ps1**` (atualiza o dashboard dos planos, pre-commit e pytest completo). **Linux / macOS:** `./scripts/check-all.sh` (mesmo fluxo; **`gatekeeper_audit.py`** por **`uv`**, sem **`pwsh`** obrigatório — **`#560`**`). **Gêmeos finos:** `./scripts/lint-only.sh`, `./scripts/quick-test.sh`, `./scripts/pre-commit-and-tests.sh` — ver **[SCRIPTS_CROSS_PLATFORM_PAIRING.pt_BR.md](SCRIPTS_CROSS_PLATFORM_PAIRING.pt_BR.md)** ([EN](SCRIPTS_CROSS_PLATFORM_PAIRING.md)). Em alternativa manual: `python3 scripts/plans-stats.py --write` (ou `python`), `uv run pre-commit run --all-files`, `uv run pytest -v -W error`.
 2. **Não** versionar `**docs/private/`** (inventário real do lab; ignorado pelo git) nem `**git add -f config.yaml**`. Use o modelo versionado `**docs/private.example/**` e a política **[PRIVATE_OPERATOR_NOTES.pt_BR.md](../PRIVATE_OPERATOR_NOTES.pt_BR.md)**.
 
 ### Atalho no chat: `pmo-view` (planos / docs estilo PMO, preview Markdown)

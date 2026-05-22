@@ -6,9 +6,9 @@ The runtime can perform **optional** checks so modified installs are flagged as 
 
 ## Embedded build digest
 
-- File: [`core/licensing/_build_digest.txt`](../core/licensing/_build_digest.txt) — default `dev` in source trees.
-- At release time, replace the single line with a **SHA-256 hex** of an agreed release artifact (e.g. tarball) or a constant release id.
-- Set environment variable **`DATA_BOAR_EXPECTED_BUILD_DIGEST`** to the same value on customer installs. If it **does not match** the embedded file, the license guard sets state **TAMPERED** (blocks scans when `licensing.mode: enforced`).
+- File: [`core/licensing/_build_digest.txt`](../core/licensing/_build_digest.txt) — default **`dev`** in checked-out developer trees.
+
+  The file **`is`** tracked intentionally (placeholder, not `.gitignored`): release packaging or customer-specific builds replace the single line with a **SHA-256 hex** or other agreed release id; operators set **`DATA_BOAR_EXPECTED_BUILD_DIGEST`** on deployed hosts to the **same** value so the licensing guard can raise **TAMPERED** (blocks scans when `licensing.mode: enforced`). Do **not** treat OSS-tree **`dev`** alone as a production integrity contract—the env var activates the check **only when** deployment policy supplies a digest.
 
 ## Signed file manifest (optional)
 

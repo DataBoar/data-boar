@@ -6,9 +6,9 @@ O runtime pode fazer verificações **opcionais** para que instalações modific
 
 ## Digest de build embutido
 
-- Arquivo: [`core/licensing/_build_digest.txt`](../core/licensing/_build_digest.txt) — padrão `dev` em árvores de código.
-- No momento do release, substitua a linha única por um **SHA-256 hex** de um artefato de release acordado (ex.: tarball) ou um id constante de release.
-- Defina a variável de ambiente **`DATA_BOAR_EXPECTED_BUILD_DIGEST`** com o mesmo valor em instalações de cliente. Se **não** coincidir com o arquivo embutido, o guard de licença define estado **TAMPERED** (bloqueia varreduras quando `licensing.mode: enforced`).
+- Arquivo: [`core/licensing/_build_digest.txt`](../core/licensing/_build_digest.txt) — padrão **`dev`** em clones de desenvolvimento.
+
+  O arquivo **fica rastreado** no Git de propósito (*placeholder*, **sem** `.gitignore`): no release ou build dedicado ao cliente substitua a linha única pelo **SHA-256 hex** (ou id acordado); em produção defina **`DATA_BOAR_EXPECTED_BUILD_DIGEST`** com o **mesmo** valor para o guard de licença marcar **TAMPERED** sob `licensing.mode: enforced` quando houver divergência. **`dev`** sozinho em árvore OSS **não** substitui um digest contratual — a variável só ativa o contraste quando a política de implantação fornece um digest.
 
 ## Manifesto de arquivos assinado (opcional)
 

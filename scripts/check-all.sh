@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # check-all.sh — Linux/macOS (bash) mirror of scripts/check-all.ps1.
-# Same gates: gatekeeper (pwsh) + Rust (cargo fmt/check/test, PYO3 ABI3 hint) +
+# Same gates: gatekeeper_audit.py (uv) + Rust (cargo fmt/check/test, PYO3 ABI3 hint) +
 # plans-stats --write + pre-commit-and-tests.sh (venv + pre-commit + pytest).
 # From repo root:
 #   ./scripts/check-all.sh
 #   ./scripts/check-all.sh --skip-pre-commit
 #   ./scripts/check-all.sh --include-version-smoke
-# On Windows, prefer .\scripts\check-all.ps1 (identical flow).
-# Full parity with Windows requires pwsh for gatekeeper-audit.ps1; install
-# PowerShell Core where possible. Rust requires cargo on PATH.
+# On Windows, prefer .\scripts\check-all.ps1 (gatekeeper stays gatekeeper-audit.ps1 per #560).
+# Linux/macOS: gatekeeper_audit.py avoids a silent skip when pwsh is absent (issue #560).
+# Rust requires cargo on PATH.
 # Memory safety: pre-commit-and-tests.sh runs tests/security/test_mem_integrity.py first (Hypothesis),
 # then full pytest with --deselect on that file (parity with check-all.ps1).
 set -euo pipefail
@@ -37,14 +37,14 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
-# PII gate (parity with check-all.ps1) — reuses PowerShell script.
-if command -v pwsh >/dev/null 2>&1; then
-  if ! pwsh "$REPO_ROOT/scripts/gatekeeper-audit.ps1"; then
-    echo "check-all.sh: ABORTED by gatekeeper-audit (PII seed hit in staged files)." >&2
-    exit "$?"
-  fi
-else
-  echo "check-all.sh: WARN: pwsh not on PATH; skipping gatekeeper-audit.ps1 (install PowerShell for parity with check-all.ps1)." >&2
+# PII seed gate — Python port (parity with scripts/gatekeeper-audit.ps1; issue #560).
+if ! command -v uv >/dev/null 2>&1; then
+  echo "check-all.sh: ABORTED: uv not on PATH (required for scripts/gatekeeper_audit.py)." >&2
+  exit 2
+fi
+if ! uv run python "$REPO_ROOT/scripts/gatekeeper_audit.py"; then
+  echo "check-all.sh: ABORTED by gatekeeper_audit (PII seed hit or gate failure)." >&2
+  exit "$?"
 fi
 
 # Rust guard (same commands as check-all.ps1: fmt --check, check, test --quiet)

@@ -17,6 +17,20 @@ Use this decision order every session:
    - When no critical blocker exists, prioritize feature/bugfix work according to `docs/plans/PLANS_TODO.md` taxonomy and sequencing (H0/H1/H2..., U0/U1/U2...).
    - Stay token-aware: bias to low-cost, low-complexity, high-gain increments **within** that taxonomy and the **active sprint theme** (§3)—not unrelated “cheap” tasks by default.
 
+1. **Sub-ordering within the same P label and milestone (U axis)**
+   - Within issues sharing the same P label and GH milestone, execute in this fixed order:
+     - **U0 first** — security/safety now; block all other work in that session until resolved
+     - **U1 next** — high-value, chain blockers, or external deadline pressure
+     - **U2 next** — valuable but no hard external deadline
+     - **U3 next** — explicitly deferred within the milestone
+     - **No U marker = U3** — absence of a U tag in the issue body means lowest sub-priority within the milestone; never treat unlabeled issues as equal to U0–U2
+   - This ordering is **mandatory**, not a suggestion. Do not reorder based on perceived complexity, token cost, or familiarity.
+
+1. **Cross-milestone hard gate**
+   - **Never start v1.7.5-beta issues before all v1.7.4 issues are closed.**
+   - Issues marked `**NÃO INICIAR ANTES DE #N FECHADA**` in their body are **hard blockers** — not advisory notes. Starting such an issue before #N is closed is a deterministic violation.
+   - If operator explicitly reprioritizes cross-milestone work, they must say so explicitly in the session message; silence = respect the gate.
+
 1. **Sprint theme vs token-cherry-picking (coherence)**
    - After **Priority band A** (when invoked) and critical gates, anchor sessions on the **active milestone or sprint theme** from [PLANS_TODO.md](../../docs/plans/PLANS_TODO.md) and [SPRINTS_AND_MILESTONES.md](../../docs/plans/SPRINTS_AND_MILESTONES.md) (e.g. Kanban **Selected** / **In progress**).
    - **Token-aware** means splitting **that theme** into small, reviewable chunks—not jumping to a different product thread every session **only** because it would use fewer tokens. If the **operator** reprioritises, switch theme explicitly.

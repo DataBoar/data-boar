@@ -17,7 +17,7 @@
 | Script | Função | Ligado a |
 | ------ | ---- | -------- |
 | `check-all.ps1` | Gate completo (Windows) | SKILL **`token-aware-automation`**, **`.cursor/rules/check-all-gate.mdc`**, `CONTRIBUTING.md`, **[`SCRIPTS_CROSS_PLATFORM_PAIRING.pt_BR.md`](SCRIPTS_CROSS_PLATFORM_PAIRING.pt_BR.md)** |
-| `check-all.sh` | Gate completo (Linux / macOS; bash) — mesmos passos de **`check-all.ps1`**; **`pwsh`** opcional para `gatekeeper-audit.ps1` | Igual a **`check-all.ps1`** |
+| `check-all.sh` | Gate completo (Linux / macOS; bash) — mesmos passos de **`check-all.ps1`**; seeds PII via **`uv run python scripts/gatekeeper_audit.py`** (**sem `pwsh` obrigatorio — issue `#560`**) | Igual a **`check-all.ps1`** |
 | `lint-only.ps1` | So lint/format | Igual + doc de pares |
 | `lint-only.sh` | Igual (Linux / macOS) | Igual |
 | `quick-test.ps1` | Pytest focado | Igual + doc de pares |
@@ -135,6 +135,7 @@
 | `new-adr.ps1` | Scaffold de ADR | **`AGENTS.md`**, **`docs/adr/README.md`** |
 | `pre-commit-and-tests.ps1` | Wrapper fino | Preferir **`check-all.ps1`** salvo subset necessario |
 | `gatekeeper-audit.ps1` | Seeds PII vs **só paths em staging** (`git diff --cached --name-only` + `git grep -F -f`); remove seeds de identidade pública (**FabioLeitao**, **`C:\Users\fabio`**, **`/home/leitao`**) antes do grep; primeiro gate em **`check-all.ps1`** | **`PII_LOCAL_SEEDS.txt`** (privado), **`PII_REMEDIATION_RITUAL.md`** |
+| `gatekeeper_audit.py` | Port Python (**`uv run python`**) — mesmo gate para **`check-all.sh`**, **`pre-commit`** e colaboradores sem **`pwsh`** | Mesmo arquivo de seeds; **`#560`** |
 | `private-git-sync.ps1` | Repo privado empilhado (`-Push`: **`lab-*`** + bare opcional **`notes-sync.git`** no VeraCrypt (**`Z:`** primeiro, **`Y:`** fallback) + mirror em **`P:`** se montado) | **`docs/ops/PRIVATE_LOCAL_VERSIONING.md`**, **`PRIVATE_STACK_SYNC_RITUAL.md`**, sessao **`private-stack-sync`**, **`PRIVATE_OPERATOR_NOTES.md`**, **ADR 0040**, **`operator-evidence-backup-no-rhetorical-asks.mdc`** |
 | `license-smoke.ps1`, `version-readiness-smoke.ps1`, `release-integrity-check.ps1` | Checks de release | **`docs/releases/`**, **`VERSIONING.md`** |
 | `generate-sbom.ps1` | SBOM | **`WORKFLOW_DEFERRED_FOLLOWUPS.md`**, docs de seguranca |

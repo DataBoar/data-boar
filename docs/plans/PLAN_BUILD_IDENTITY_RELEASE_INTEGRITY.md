@@ -41,6 +41,7 @@
 - **UI/API:** [api/routes.py](../../api/routes.py) passes `about` to templates; Excel/report footer uses `get_about_info()`.
 - **Startup:** [main.py](../../main.py) does not yet emit a standard **INFO** build line before audit/web.
 - **Existing plan:** [PLAN_SELF_UPGRADE_AND_VERSION_CHECK.md](PLAN_SELF_UPGRADE_AND_VERSION_CHECK.md) covers **remote** latest version and upgrade UX—**complement** with local **build identity** first so operators see **what is running** before checking **whether an update exists**.
+- **Licensing tamper-evidence** ([`core/licensing/integrity.py`](../../core/licensing/integrity.py), [`docs/RELEASE_INTEGRITY.md`](../RELEASE_INTEGRITY.md)): optional **`DATA_BOAR_EXPECTED_BUILD_DIGEST`** (must match the single line in embedded [`core/licensing/_build_digest.txt`](../../core/licensing/_build_digest.txt)) and optional manifest via **`DATA_BOAR_RELEASE_MANIFEST_PATH`** / **`licensing.manifest_path`**. Checked-out Git trees ship **`dev`** in that file; **release pipelines** overwrite the embedded line **or** deliver a matching built artefact—the **`dev`** placeholder is **not**, by itself, a production integrity anchor. **`PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY`** baseline: Phase **E.11** done (**CLI** **`--export-audit-trail`** JSON with placeholders for future anchor rows). **SQLite integrity anchor**, **startup re-verify**, and tamper-driven **trust level** (**E.1–E.9**) remain **pending** (tracked as Phase 2–3 / future issues—**not** part of tamper-documentation-only slices).
 
 ---
 
@@ -199,4 +200,4 @@
 
 ---
 
-*Last updated: Phase E (SQLite anchor, wipe semantics, tamper → -alpha) added from operator spec. Update when phases complete.*
+*Last updated: Phase **E.11** (`--export-audit-trail`) implemented. SQLite anchor + startup re-verify + trust downgrade (**E.1–E.9**) pending. Licensing-layer digest/manifest baseline documented (`docs/RELEASE_INTEGRITY.md`; issue `#545`).*

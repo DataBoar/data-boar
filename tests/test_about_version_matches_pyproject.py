@@ -60,9 +60,24 @@ def test_http_user_agent_is_data_boar_prospector() -> None:
     ],
 )
 def test_man_th_line_contains_project_version(path: str, label: str) -> None:
-    """`.TH` fourth argument includes the marketing version (e.g. Data Boar 1.7.2-beta)."""
+    """`.TH` fourth argument uses the marketing string (for example ``Data Boar 1.7.2-beta``).
+
+    While ``pyproject.toml`` carries a PEP 440 pre-release suffix (for example ``1.7.4-rc``),
+    the man pages may already advertise the final **minor.patch** semver on ``main``
+    preparatory commits (release checklist: ``docs/releases/1.7.4.md``, issue **#641**).
+    """
     root = Path(__file__).resolve().parent.parent
-    ver = _project_version_from_pyproject()
+    pv = Version(_project_version_from_pyproject())
     text = (root / path).read_text(encoding="utf-8")
     first = next((ln for ln in text.splitlines() if ln.startswith(".TH")), "")
-    assert ver in first, f"{label}: expected {ver!r} in {first!r}"
+    m = re.search(r'"Data Boar\s+([^"]+)"', first)
+    assert m is not None, (
+        f"{label}: expected a fourth-argument marketing string matching "
+        f'\\"Data Boar <version>\\" in {first!r}'
+    )
+    marketing = Version(m.group(1))
+    allowed_prep = pv.is_prerelease and marketing == Version(pv.base_version)
+    assert marketing == pv or allowed_prep, (
+        f"{label}: man marketing {marketing!r} disagrees with pyproject {pv!r} "
+        "(no GA prep exemption)"
+    )
