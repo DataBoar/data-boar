@@ -78,6 +78,7 @@ Short, durable notes that capture **why** the project chose an approach—not on
 | 0057  | [Lightweight hub index (co-located links, no file moves)](ADR-0057-lightweight-hub-index-co-located-links.md) | Accepted |
 | 0058  | [Primer hub registration ritual](ADR-0058-primer-hub-registration-ritual.md) | Accepted |
 | 0061 | [ADR-0061 U-axis issue sub-order and cross-milestone gate](ADR-0061-u-axis-issue-suborder-and-cross-milestone-gate.md) | Accepted |
+| 0062 | [ADR-0062 Agent containment: triple-audit offband pattern](ADR-0062-agent-containment-triple-audit-offband-pingpong.md) | Accepted |
 
 ## Related docs
 
