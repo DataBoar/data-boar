@@ -246,6 +246,8 @@ Complete **in order** when you need to reduce public artifact exposure or tighte
 
 **Every order –1 pass (cadence):** Briefly **re-check advisories that had no fix last time**: run **`uvx pip-audit -r requirements.txt`** (or equivalent); confirm whether **pygments** ([DEPENDABOT_PYGMENTS_CVE.md](../ops/DEPENDABOT_PYGMENTS_CVE.md)), **pyOpenSSL + Snowflake** ([DEPENDABOT_PYOPENSSL_SNOWFLAKE.md](../ops/DEPENDABOT_PYOPENSSL_SNOWFLAKE.md)), or **Debian base** packages from **Docker Scout** now have a released fix — bump **`pyproject.toml` / rebuild image** when they do; otherwise keep triage docs and GitHub dismissals accurate.
 
+**Quarterly blocked-dependency checkpoint (SECURITY.md / #427):** At least every **~90 days** (or sooner on any **–1** pass), update **Last triage** in the two Dependabot triage docs above, refresh the **SECURITY.md** checkpoint line, run **`gh api …/dependabot/alerts`** (or **Security → Dependabot**), and confirm **`uv.lock`** floors still match documented status. Last completed: **2026-05-22** (pygments **2.20.0**, pyOpenSSL **26.2.0** via Snowflake **4.5.0**).
+
 After **A1–A3** (minimum), you can **resume token-aware pace** on Tier 2 features (e.g. content-type Step 4) unless A4–A7 are blocking revenue.
 
 **`[H0]` Maestro + release gate (**M-PILOT-READY** drivers):**
