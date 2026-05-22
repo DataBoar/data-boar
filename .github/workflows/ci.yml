@@ -148,10 +148,10 @@ jobs:
       - name: Install pip-audit
         run: uv pip install pip-audit
 
-      # CVE-2026-3219: fixed in pip>=26.1 (PyPI still at 26.0.1 as of 2026-04); drop --ignore-vuln when released.
+      # CVE-2026-3219 cleared: pip>=26.1 fixes (PyPI 26.1.1 as of 2026-05); no longer suppressed.
       # PYSEC-2024-277 / PYSEC-2026-89 / PYSEC-2025-183: OSV entries without PyPI fix versions (2026-05-20); triage via deps issue.
       - name: Run pip audit
-        run: uv run pip-audit --ignore-vuln CVE-2026-3219 --ignore-vuln PYSEC-2024-277 --ignore-vuln PYSEC-2026-89 --ignore-vuln PYSEC-2025-183
+        run: uv run pip-audit --ignore-vuln PYSEC-2024-277 --ignore-vuln PYSEC-2026-89 --ignore-vuln PYSEC-2025-183
 
   sonar:
     name: SonarQube / SonarCloud
