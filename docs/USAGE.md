@@ -42,6 +42,15 @@ The main entry point is `main.py`.
 | `--jurisdiction-hint`   | *(flag)*          | Opt-in for this run: enable heuristic jurisdiction notes on the Excel **Report info** sheet (e.g. US-CA CCPA/CPRA, Colorado, Japan APPI) when metadata signals suggest possible relevance. Not a legal conclusion. Same effect as `report.jurisdiction_hints.enabled: true` for this process; stores the opt-in on the session. |
 <!-- markdownlint-enable MD060 -->
 
+### Optional licensing tamper-evidence (enforced installs)
+
+Some enterprise deployments require explicit **tamper-evidence hooks** beside `licensing.mode: enforced`:
+
+- **`DATA_BOAR_EXPECTED_BUILD_DIGEST`** — compares to the embedded line in **`core/licensing/_build_digest.txt`** (replace the OSS **`dev`** placeholder in packaged builds—see **`docs/RELEASE_INTEGRITY.md`**). Mismatch ⇒ **TAMPERED** (blocks scans when enforcement is active).
+- **`DATA_BOAR_RELEASE_MANIFEST_PATH`** or **`licensing.manifest_path`** — optional SHA-256 manifest JSON verified at startup when provided (**same doc**).
+
+**Roadmap:** **SQLite anchor**, **startup re-verify**, and **trust-level downgrade** unrelated to licensing-only checks remain **planned** (**`docs/plans/PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md`** — Phase **E.11** JSON export ✅; anchors ⬜).
+
 ### Outcomes
 
 ## One-shot audit (no `--web`)

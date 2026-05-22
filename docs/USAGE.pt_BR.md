@@ -51,6 +51,15 @@ O ponto de entrada é `main.py`.
 | `--jurisdiction-hint`   | *(flag)*             | Opt-in nesta execução: notas heurísticas de jurisdição na planilha **Report info** (ex.: EUA-CA CCPA/CPRA, Colorado, Japão APPI) quando metadados sugerem relevância. Não é conclusão jurídica. Equivale a `report.jurisdiction_hints.enabled: true` neste processo e grava o opt-in na sessão. |
 <!-- markdownlint-enable MD060 -->
 
+### Evidência opcional de adulteração na camada de licenciamento (`licensing.mode: enforced`)
+
+Implantações corporativas podem exigir *hooks* de **tamper-evidence** paralelos ao enforcement:
+
+- **`DATA_BOAR_EXPECTED_BUILD_DIGEST`** — compara com a linha embutida em **`core/licensing/_build_digest.txt`** (substitua o *placeholder* **`dev`** no pacote entregue; ver **`docs/RELEASE_INTEGRITY.pt_BR.md`**). Divergência ⇒ **TAMPERED** e bloqueio de varreduras com enforcement ligado.
+- **`DATA_BOAR_RELEASE_MANIFEST_PATH`** ou **`licensing.manifest_path`** — JSON opcional de SHA-256 de arquivos críticos verificado na subida (**mesmo documento**).
+
+**Roadmap:** *anchor* SQLite, re-hash na inicialização e degradação de confiança além da camada de licenciamento continuam **planejadas** (**`docs/plans/PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md`** — export **E.11** via **`--export-audit-trail`** ✅; *anchors* ⬜).
+
 ### Resultados
 
 #### Varredura única (sem `--web`)
