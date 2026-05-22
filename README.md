@@ -38,6 +38,18 @@ Multilingual and legacy encodings are supported; **configurable timeouts** and *
 > **Working pre-release on `main`:** **`1.7.4-rc`** — draft GitHub **pre-release** notes: [docs/releases/1.7.4-rc.md](docs/releases/1.7.4-rc.md) (does **not** move Docker **`latest`**; stable remains **1.7.3** until **1.7.4** final).
 > **Documentation note:** This README and `docs/USAGE.md` are the canonical English references. When features or options change, update **both** languages to keep them in sync.
 
+### Release **1.7.4** final — README checklist (blocked by **#406**)
+
+Do **not** tick these until release gate **[#406](https://github.com/FabioLeitao/data-boar/issues/406)** completes and **`1.7.4`** final is published ([issue #425](https://github.com/FabioLeitao/data-boar/issues/425)).
+
+- [ ] **Current release** banner: **1.7.3** → **1.7.4**
+- [ ] **Docker Hub:** confirm **`fabioleitao/data_boar:1.7.4`** and consumer **`latest`** moved per **[VERSIONING.md](docs/VERSIONING.md)** / **[DOCKER_IMAGE_RELEASE_ORDER.md](docs/ops/DOCKER_IMAGE_RELEASE_ORDER.md)**
+- [ ] **Working pre-release** line: remove or repoint (for example next **`1.7.5-rc`**)
+- [ ] README link to **`docs/releases/1.7.4.md`** in the shipping-notes row once final
+- [ ] **CHANGELOG:** fold **`Unreleased`** into **`## 1.7.4 (YYYY-MM-DD)`** using the GitHub/tag date
+- [ ] **README.pt_BR.md:** mirror banner + checklist completion
+- [ ] Confirm **`docs/USAGE.md`** (+ pt-BR) match any ship-time install/version callouts (**CONTRIBUTING** remains EN-canonical workflow)
+
 **Product blog (narrative updates, shorter posts):** [databoar.wordpress.com](https://databoar.wordpress.com) — canonical technical documentation remains in this repository (`docs/`).
 
 ---

@@ -38,6 +38,18 @@ Idiomas e encodings legados são suportados; **timeouts configuráveis** e **end
 > **Pré-release em `main`:** **`1.7.4-rc`** — rascunho de **pré-release** no GitHub: [docs/releases/1.7.4-rc.md](docs/releases/1.7.4-rc.md) (**não** move o **`latest`** do Docker; o estável continua **1.7.3** até **`1.7.4`** final).
 > **Documentação:** Este README e o `docs/USAGE.pt_BR.md` são as referências em português. Quando funcionalidades ou opções mudarem, atualize **ambos** os idiomas para mantê-los sincronizados.
 
+### Release **1.7.4** final — checklist do README (bloqueado pelo **#406**)
+
+Não execute estes itens até o gate de release **[#406](https://github.com/FabioLeitao/data-boar/issues/406)** fechar e o **`1.7.4`** final estar publicado ([issue #425](https://github.com/FabioLeitao/data-boar/issues/425)).
+
+- [ ] Banner **Release atual**: **1.7.3** → **1.7.4**
+- [ ] **Docker Hub:** confirmar **`fabioleitao/data_boar:1.7.4`** + **`latest`** conforme **[VERSIONING.md](docs/VERSIONING.md)** / **[DOCKER_IMAGE_RELEASE_ORDER.md](docs/ops/DOCKER_IMAGE_RELEASE_ORDER.pt_BR.md)**
+- [ ] Linha **pré-release**: remover ou apontar (por exemplo próximo **`1.7.5-rc`**)
+- [ ] Link **`docs/releases/1.7.4.md`** na linha de notas assim que shippar
+- [ ] **CHANGELOG:** mover **`Unreleased`** para **`## 1.7.4 (AAAA-MM-DD)`** com data do tag/GitHub Release
+- [ ] **README.md**: espelhar o mesmo fechamento (EN source)
+- [ ] Confirmar **`docs/USAGE`** (EN + pt-BR) alinhados a **instalação**/versão se necessário (**CONTRIBUTING**: EN é canônico técnico)
+
 **Blog do produto** (atualizações em formato narrativo, posts mais curtos): [databoar.wordpress.com](https://databoar.wordpress.com) — a documentação técnica canônica continua neste repositório (`docs/`).
 
 ---
