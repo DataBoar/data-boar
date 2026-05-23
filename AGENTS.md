@@ -176,3 +176,5 @@ Cursor Support (Nathan) confirmed three agent-safety gaps; forum thread: [Three 
 | 3 | **`pre-commit`** git hook | Git-level intercept |
 | 4 | **`inv-adr.ps1`** + ed25519 | Cryptographic CI enforcement |
 
+Ver ADR-0062 para o padrão A.I.I.D.C.O.B.P.P. de auditoria offband.
+
