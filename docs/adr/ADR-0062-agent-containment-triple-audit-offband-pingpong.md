@@ -14,8 +14,8 @@ Este padrão emergiu empiricamente durante a madrugada de 21-22/05/2026 e foi va
 ```mermaid
 flowchart TD
     OP["🧑 Operador\n(Banda Base — data bus)"]
-    CW["Claude Windows\nSonnet 4.6 — Auditor A\n(L14-Win, WSL2+W11)"]
-    CL["Claude Linux\nSonnet 4.6 — Auditor B\n(T14-Leitao, LMDE7/tmux)"]
+    CW["Claude Windows\nSonnet 4.6 — Auditor A\n(LAB-NODE-01)"]
+    CL["Claude Linux\nSonnet 4.6 — Auditor B\n(LAB-NODE-02)"]
     CT["Consenso Tático\nLinting de Prompt\n(convergência entre auditores)"]
     GG["Google Gemini\nValidador de Arquitetura\n(revisão estrutural independente)"]
     TG["Target — Cursor / Git\nTier Composer-2.5\n(executor — labora apenas)"]
