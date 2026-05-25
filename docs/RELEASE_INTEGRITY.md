@@ -6,9 +6,9 @@ The runtime can perform **optional** checks so modified installs are flagged as 
 
 ## Embedded build digest
 
-- File: [`core/licensing/_build_digest.txt`](../core/licensing/_build_digest.txt) — default **`dev`** in checked-out developer trees.
+- File: [`core/licensing/_build_digest.txt`](../core/licensing/_build_digest.txt) — **gitignored**; generated locally or in CI (not committed to `main`).
 
-  The file **`is`** tracked intentionally (placeholder, not `.gitignored`): release packaging or customer-specific builds replace the single line with a **SHA-256 hex** or other agreed release id; operators set **`DATA_BOAR_EXPECTED_BUILD_DIGEST`** on deployed hosts to the **same** value so the licensing guard can raise **TAMPERED** (blocks scans when `licensing.mode: enforced`). Do **not** treat OSS-tree **`dev`** alone as a production integrity contract—the env var activates the check **only when** deployment policy supplies a digest.
+  [`scripts/generate_build_digest.py`](../scripts/generate_build_digest.py) computes a **deterministic SHA-256 hex** over sorted critical source files (`main.py`, `core/**/*.py`, `connectors/**/*.py`, `scanners/**/*.py`, `cli/**/*.py`) and writes the single-line digest. The **SBOM** workflow runs this step **before** `docker build` so the digest is baked into release images. Operators set **`DATA_BOAR_EXPECTED_BUILD_DIGEST`** on deployed hosts to the **same** value (see [`.env.example`](../.env.example)) so the licensing guard raises **TAMPERED** when `licensing.mode: enforced` and the embedded line diverges. Release tags also attach **`build-digest.txt`** (copy of the digest) on GitHub Releases for independent verification.
 
 ## Signed file manifest (optional)
 
@@ -28,6 +28,7 @@ The runtime can perform **optional** checks so modified installs are flagged as 
 
 ## Automation
 
+- [`scripts/generate_build_digest.py`](../scripts/generate_build_digest.py) — canonical build digest (`--check` fails on drift).
 - [`scripts/release-integrity-check.ps1`](../scripts/release-integrity-check.ps1) — validates a manifest against the working tree (developer/CI use).
 - [`scripts/example-release-manifest.json`](../scripts/example-release-manifest.json) — sample shape (replace paths/hashes for real releases).
 

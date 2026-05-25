@@ -245,6 +245,15 @@ def test_sbom_workflow_present_and_valid() -> None:
     assert "generate" in jobs
 
 
+def test_sbom_workflow_generates_build_digest_before_docker_build() -> None:
+    """Release integrity: digest must exist before docker build (issue #711)."""
+    text = (WORKFLOWS / "sbom.yml").read_text(encoding="utf-8")
+    digest_idx = text.index("generate_build_digest.py")
+    docker_idx = text.index("docker build -t data_boar:sbom")
+    assert digest_idx < docker_idx
+    assert "build-digest.txt" in text
+
+
 def test_sbom_yml_pins_actions_to_shas() -> None:
     """Third-party Actions in sbom.yml use full commit SHAs (same bar as ci.yml)."""
     text = (WORKFLOWS / "sbom.yml").read_text(encoding="utf-8")

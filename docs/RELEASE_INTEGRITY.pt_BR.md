@@ -6,9 +6,9 @@ O runtime pode fazer verificações **opcionais** para que instalações modific
 
 ## Digest de build embutido
 
-- Arquivo: [`core/licensing/_build_digest.txt`](../core/licensing/_build_digest.txt) — padrão **`dev`** em clones de desenvolvimento.
+- Arquivo: [`core/licensing/_build_digest.txt`](../core/licensing/_build_digest.txt) — **gitignored**; gerado localmente ou no CI (não commitado em `main`).
 
-  O arquivo **fica rastreado** no Git de propósito (*placeholder*, **sem** `.gitignore`): no release ou build dedicado ao cliente substitua a linha única pelo **SHA-256 hex** (ou id acordado); em produção defina **`DATA_BOAR_EXPECTED_BUILD_DIGEST`** com o **mesmo** valor para o guard de licença marcar **TAMPERED** sob `licensing.mode: enforced` quando houver divergência. **`dev`** sozinho em árvore OSS **não** substitui um digest contratual — a variável só ativa o contraste quando a política de implantação fornece um digest.
+  O script [`scripts/generate_build_digest.py`](../scripts/generate_build_digest.py) calcula um **SHA-256 hex determinístico** sobre arquivos fonte críticos ordenados (`main.py`, `core/**/*.py`, `connectors/**/*.py`, `scanners/**/*.py`, `cli/**/*.py`) e grava a linha única. O workflow **SBOM** executa esse passo **antes** do `docker build` para embutir o digest nas imagens de release. Em produção, defina **`DATA_BOAR_EXPECTED_BUILD_DIGEST`** com o **mesmo** valor (veja [`.env.example`](../.env.example)) para o guard marcar **TAMPERED** com `licensing.mode: enforced` quando a linha embutida divergir. Tags de release também anexam **`build-digest.txt`** no GitHub Release para verificação independente.
 
 ## Manifesto de arquivos assinado (opcional)
 
@@ -28,6 +28,7 @@ O runtime pode fazer verificações **opcionais** para que instalações modific
 
 ## Automação
 
+- [`scripts/generate_build_digest.py`](../scripts/generate_build_digest.py) — digest canônico de build (`--check` falha se houver drift).
 - [`scripts/release-integrity-check.ps1`](../scripts/release-integrity-check.ps1) — valida um manifesto contra a árvore de trabalho (desenvolvedor / CI).
 - [`scripts/example-release-manifest.json`](../scripts/example-release-manifest.json) — formato de exemplo (substitua caminhos/hashes em releases reais).
 
