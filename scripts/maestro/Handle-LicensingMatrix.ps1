@@ -129,6 +129,7 @@ function Start-MatrixApiProcess {
     $env:CONFIG_PATH = $ConfigPath
     $env:DATA_BOAR_LICENSE_PUBLIC_KEY_PATH = $PublicKeyPath
     $logPath = Join-Path ([System.IO.Path]::GetTempPath()) ("data-boar-lic-matrix-log-" + [guid]::NewGuid().ToString("n") + ".txt")
+    $errPath = $logPath -replace '\.txt$', '-err.txt'
     $args = @(
         "run", "python", "main.py",
         "--config", $ConfigPath,
@@ -142,13 +143,40 @@ function Start-MatrixApiProcess {
         -ArgumentList $args `
         -WorkingDirectory $Root `
         -RedirectStandardOutput $logPath `
-        -RedirectStandardError $logPath `
+        -RedirectStandardError $errPath `
         -PassThru `
         -WindowStyle Hidden
     return [PSCustomObject]@{
         Process = $proc
         LogPath = $logPath
+        ErrPath = $errPath
     }
+}
+
+function Get-MatrixApiLogSnippet {
+    param(
+        $ApiBundle,
+        [int]$MaxLines = 8
+    )
+    if ($null -eq $ApiBundle) {
+        return ""
+    }
+    $parts = @()
+    foreach ($label in @("stdout", "stderr")) {
+        $pathProp = if ($label -eq "stdout") { "LogPath" } else { "ErrPath" }
+        $path = $ApiBundle.$pathProp
+        if (-not $path -or -not (Test-Path -LiteralPath $path)) {
+            continue
+        }
+        $lines = Get-Content -LiteralPath $path -Tail $MaxLines -ErrorAction SilentlyContinue
+        if ($lines) {
+            $parts += "${label}: $($lines -join ' | ')"
+        }
+    }
+    if ($parts.Count -eq 0) {
+        return ""
+    }
+    return " (" + ($parts -join "; ") + ")"
 }
 
 function Stop-MatrixApiProcess {
@@ -163,6 +191,9 @@ function Stop-MatrixApiProcess {
     }
     if ($ApiBundle.LogPath -and (Test-Path $ApiBundle.LogPath)) {
         Remove-Item -Path $ApiBundle.LogPath -Force -ErrorAction SilentlyContinue
+    }
+    if ($ApiBundle.ErrPath -and (Test-Path $ApiBundle.ErrPath)) {
+        Remove-Item -Path $ApiBundle.ErrPath -Force -ErrorAction SilentlyContinue
     }
 }
 
@@ -255,7 +286,8 @@ try {
             $apiBundle = Start-MatrixApiProcess -Root $RepoRoot -ConfigPath $cfgPath -ApiPort $Port -PublicKeyPath $pubKey
             $baseUrl = "http://127.0.0.1:$Port"
             if (-not (Wait-ApiHealth -BaseUrl $baseUrl -TimeoutSec $HealthTimeoutSec)) {
-                Add-MatrixAssertion -FailureList ([ref]$failures) -Tier $tier -CaseName "health" -Ok $false -Detail "API did not become healthy on $baseUrl"
+                $logHint = Get-MatrixApiLogSnippet -ApiBundle $apiBundle
+                Add-MatrixAssertion -FailureList ([ref]$failures) -Tier $tier -CaseName "health" -Ok $false -Detail "API did not become healthy on $baseUrl$logHint"
                 continue
             }
 
