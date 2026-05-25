@@ -52,9 +52,9 @@ FEATURE_TIER_MAP: dict[str, Tier] = {
     "ansible_deploy": Tier.COMMUNITY,
     "compressed_files": Tier.COMMUNITY,
     "content_type_detection": Tier.COMMUNITY,
-    "ocr_images": Tier.COMMUNITY,
     "synthetic_data_testing": Tier.COMMUNITY,
     # Pro features (PDF report, advanced connectors, scheduling)
+    "ocr_images": Tier.PRO,
     "report_pdf": Tier.PRO,  # see PLAN_PDF_GRC_REPORT.md
     "report_pdf_custom_branding": Tier.ENTERPRISE,
     "connector_snowflake": Tier.PRO,
