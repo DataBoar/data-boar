@@ -269,7 +269,7 @@ class TestCpfFiscalRegion(unittest.TestCase):
             with self.subTest(digit=digit):
                 self.assertIn("states", info)
                 self.assertIn("description", info)
-                self.assertTrue(len(info["states"]) >= 1)
+                self.assertGreaterEqual(len(info["states"]), 1)
 
     def test_fixture_region_digit_matches(self) -> None:
         for digits, expected_digit, expected_states in _FISCAL_REGION_FIXTURES:
