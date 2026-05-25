@@ -41,6 +41,7 @@ tmp_completao_*.yaml
 # Cryptographic material (never track)
 *.key
 *.pem
+!core/licensing/license-pub-v1.pem
 *.p12
 *.pfx
 *.jks
