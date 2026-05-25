@@ -361,6 +361,10 @@ def test_zizmor_workflow_present_and_valid() -> None:
         if isinstance(step, dict) and step.get("uses")
     ]
     assert any("zizmorcore/zizmor-action@" in line for line in uses_lines)
+    env = job.get("env") or {}
+    enforce_expr = str(env.get("ENFORCE_ZIZMOR", ""))
+    assert "ZIZMOR_ENFORCE == 'false'" in enforce_expr
+    assert "'true'" in enforce_expr
 
 
 def test_workflow_security_lint_wrappers_present() -> None:
