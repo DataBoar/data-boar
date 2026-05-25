@@ -60,8 +60,8 @@ def collect_native_extension_paths(repo_root: Path) -> list[Path]:
             origin = Path(spec.origin)
             if origin.suffix in {".so", ".pyd"}:
                 add(origin)
-    except (ImportError, ModuleNotFoundError, ValueError, OSError):
-        pass
+    except (ImportError, ModuleNotFoundError, ValueError, OSError):  # noqa: BLE001
+        pass  # boar_fast_filter optional until maturin build
 
     return sorted(paths, key=lambda p: _manifest_path_key(repo_root, p))
 

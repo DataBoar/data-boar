@@ -60,8 +60,8 @@ def get_runtime_tier_for_features(cfg: dict[str, Any]) -> Tier:
         c = g.context
         if c.state in ("VALID", "GRACE"):
             dbtier_claim = str(getattr(c, "dbtier", "") or "").strip().lower()
-    except Exception:
-        pass
+    except Exception:  # noqa: BLE001
+        pass  # license guard may be unavailable during early bootstrap
     lc = cfg.get("licensing") if isinstance(cfg.get("licensing"), dict) else {}
     yaml_tier = str(lc.get("effective_tier") or "").strip().lower()
     if dbtier_claim:

@@ -76,7 +76,7 @@ def _mask_env_name(field: str, env_name: str) -> str:
 
 def _validate_config_and_exit(config: dict[str, Any], config_path: str) -> None:
     """Pre-flight: connector recognition, required keys, env hints (no network/DB)."""
-    import core.engine  # noqa: F401 — register connector types (same as scan path)
+    # Connector registration runs via top-level ``from core.engine import AuditEngine``.
 
     from core.connector_registry import connector_for_target
 
