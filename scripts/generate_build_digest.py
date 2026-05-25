@@ -66,7 +66,9 @@ def write_build_digest(repo_root: Path, digest_hex: str) -> Path:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Generate core/licensing/_build_digest.txt")
+    parser = argparse.ArgumentParser(
+        description="Generate core/licensing/_build_digest.txt"
+    )
     parser.add_argument(
         "--repo-root",
         type=Path,
@@ -96,7 +98,10 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.check:
         if not out_path.is_file():
-            print(f"generate_build_digest: missing {DIGEST_REL.as_posix()}", file=sys.stderr)
+            print(
+                f"generate_build_digest: missing {DIGEST_REL.as_posix()}",
+                file=sys.stderr,
+            )
             return 1
         existing = out_path.read_text(encoding="utf-8").strip().lower()
         if existing != computed:
