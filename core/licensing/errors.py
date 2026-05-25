@@ -24,4 +24,6 @@ class FeatureTierBlockedError(RuntimeError):
         self.reason = reason
         self.required_tier = required_tier
         self.current_tier = current_tier
-        super().__init__(reason or f"Feature '{feature}' is not available for this tier.")
+        super().__init__(
+            reason or f"Feature '{feature}' is not available for this tier."
+        )
