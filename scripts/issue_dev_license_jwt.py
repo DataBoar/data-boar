@@ -43,7 +43,10 @@ def main() -> None:
     )
     p.add_argument("--sub", default="dev-lic-1", help="JWT sub (license id)")
     p.add_argument(
-        "--dbtier", default="pro", help="dbtier claim (e.g. pro, enterprise)"
+        "--dbtier",
+        default="pro",
+        choices=["community", "pro", "enterprise"],
+        help="dbtier claim (community, pro, or enterprise)",
     )
     p.add_argument("--days", type=int, default=7, help="Validity in days from now")
     p.add_argument("--out", help="Write token to this file (.lic); default stdout")
