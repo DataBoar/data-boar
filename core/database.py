@@ -305,6 +305,9 @@ class LocalDBManager:
         self._ensure_maturity_row_hmac_column()
         self._ensure_webauthn_credentials_table()
         self._ensure_webauthn_roles_json_column()
+        self._ensure_source_mtime_ns_column()
+        self._ensure_source_size_column()
+        self._ensure_content_fingerprint_column()
         self._session_factory = sessionmaker(bind=self.engine, expire_on_commit=False)
         self._current_session_id: str | None = None
 
@@ -423,6 +426,59 @@ class LocalDBManager:
                 conn.execute(
                     text(
                         "ALTER TABLE webauthn_credentials ADD COLUMN roles_json VARCHAR(512)"
+                    )
+                )
+                conn.commit()
+
+    def _ensure_source_mtime_ns_column(self) -> None:
+        """Add source_mtime_ns to filesystem_findings if missing (Phase 1 migration)."""
+        with self.engine.connect() as conn:
+            r = conn.execute(
+                text(
+                    "SELECT 1 FROM pragma_table_info('filesystem_findings') "
+                    "WHERE name='source_mtime_ns'"
+                )
+            )
+            if r.fetchone() is None:
+                conn.execute(
+                    text(
+                        "ALTER TABLE filesystem_findings "
+                        "ADD COLUMN source_mtime_ns BIGINT"
+                    )
+                )
+                conn.commit()
+
+    def _ensure_source_size_column(self) -> None:
+        """Add source_size to filesystem_findings if missing (Phase 1 migration)."""
+        with self.engine.connect() as conn:
+            r = conn.execute(
+                text(
+                    "SELECT 1 FROM pragma_table_info('filesystem_findings') "
+                    "WHERE name='source_size'"
+                )
+            )
+            if r.fetchone() is None:
+                conn.execute(
+                    text(
+                        "ALTER TABLE filesystem_findings ADD COLUMN source_size BIGINT"
+                    )
+                )
+                conn.commit()
+
+    def _ensure_content_fingerprint_column(self) -> None:
+        """Add content_fingerprint to filesystem_findings if missing (Phase 1 migration)."""
+        with self.engine.connect() as conn:
+            r = conn.execute(
+                text(
+                    "SELECT 1 FROM pragma_table_info('filesystem_findings') "
+                    "WHERE name='content_fingerprint'"
+                )
+            )
+            if r.fetchone() is None:
+                conn.execute(
+                    text(
+                        "ALTER TABLE filesystem_findings "
+                        "ADD COLUMN content_fingerprint VARCHAR(16)"
                     )
                 )
                 conn.commit()
