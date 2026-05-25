@@ -254,6 +254,15 @@ def test_sbom_workflow_generates_build_digest_before_docker_build() -> None:
     assert "build-digest.txt" in text
 
 
+def test_sbom_workflow_generates_release_manifest_after_docker_build() -> None:
+    """Release integrity: manifest generated inside image after docker build (#713)."""
+    text = (WORKFLOWS / "sbom.yml").read_text(encoding="utf-8")
+    docker_idx = text.index("docker build -t data_boar:sbom")
+    manifest_idx = text.index("Generate release manifest inside image")
+    assert docker_idx < manifest_idx
+    assert "release-manifest.json" in text
+
+
 def test_sbom_yml_pins_actions_to_shas() -> None:
     """Third-party Actions in sbom.yml use full commit SHAs (same bar as ci.yml)."""
     text = (WORKFLOWS / "sbom.yml").read_text(encoding="utf-8")

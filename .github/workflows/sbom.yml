@@ -23,6 +23,7 @@ permissions:
       - ".github/workflows/sbom.yml"
       - "scripts/generate-sbom.ps1"
       - "scripts/generate_build_digest.py"
+      - "scripts/generate_release_manifest.py"
       - "core/**/*.py"
       - "main.py"
   workflow_dispatch:
@@ -85,6 +86,19 @@ jobs:
       - name: Build image for SBOM (same Dockerfile as publish)
         run: docker build -t data_boar:sbom -f Dockerfile .
 
+      - name: Generate release manifest inside image
+        run: |
+          mkdir -p dist
+          chmod a+w dist
+          docker run --rm -v "$PWD/dist:/out" -w /app data_boar:sbom \
+            python scripts/generate_release_manifest.py --out /out/release-manifest.json --quiet
+          cp dist/release-manifest.json release-manifest.json
+
+      - name: Verify release manifest
+        run: |
+          docker run --rm -v "$PWD:/work" -w /app data_boar:sbom \
+            python scripts/generate_release_manifest.py --check /work/release-manifest.json --quiet
+
       - name: Generate image SBOM (Syft → CycloneDX JSON)
         run: |
           docker run --rm \
@@ -102,6 +116,7 @@ jobs:
             sbom-python.cdx.json
             sbom-docker-image.cdx.json
             build-digest.txt
+            release-manifest.json
           if-no-files-found: error
 
       - name: Attach SBOMs to GitHub Release (when applicable)
@@ -123,5 +138,5 @@ jobs:
             echo "No GitHub Release for $TAG yet — artifacts remain on the workflow run only."
             exit 0
           fi
-          gh release upload "$TAG" sbom-python.cdx.json sbom-docker-image.cdx.json build-digest.txt \
+          gh release upload "$TAG" sbom-python.cdx.json sbom-docker-image.cdx.json build-digest.txt release-manifest.json \
             --clobber --repo "${{ github.repository }}"

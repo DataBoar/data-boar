@@ -12,25 +12,31 @@ O runtime pode fazer verificações **opcionais** para que instalações modific
 
 ## Manifesto de arquivos assinado (opcional)
 
-- Esquema JSON:
+- Esquema JSON (gerado por [`scripts/generate_release_manifest.py`](../scripts/generate_release_manifest.py)):
 
 ```json
 {
-  "version": 1,
+  "generated_at": "2026-05-24T23:00:00Z",
+  "data_boar_version": "1.7.4",
   "files": [
+    { "path": "main.py", "sha256": "hex..." },
     { "path": "core/licensing/guard.py", "sha256": "hex..." }
   ]
 }
 ```
 
-- Defina **`DATA_BOAR_RELEASE_MANIFEST_PATH`** ou `licensing.manifest_path` no config para o caminho desse arquivo.
+  Os caminhos críticos seguem o mesmo conjunto do build digest mais `boar_fast_filter*.so` quando a extensão Rust está compilada. O workflow **SBOM** gera `release-manifest.json` **dentro** da imagem Docker (após `docker build`) para que caminhos da extensão nativa coincidam com o runtime; o arquivo vai para GitHub Releases junto com SBOMs e `build-digest.txt`.
+
+- Defina **`DATA_BOAR_RELEASE_MANIFEST_PATH`** ou `licensing.manifest_path` no config (veja [`.env.example`](../.env.example)).
 - Na inicialização (modo enforced), os hashes são verificados; divergência → **TAMPERED**.
+- Verificação local: `uv run python scripts/generate_release_manifest.py --check dist/release-manifest.json`
 
 ## Automação
 
 - [`scripts/generate_build_digest.py`](../scripts/generate_build_digest.py) — digest canônico de build (`--check` falha se houver drift).
+- [`scripts/generate_release_manifest.py`](../scripts/generate_release_manifest.py) — manifesto SHA-256 por arquivo (`--out`, `--check`).
 - [`scripts/release-integrity-check.ps1`](../scripts/release-integrity-check.ps1) — valida um manifesto contra a árvore de trabalho (desenvolvedor / CI).
-- [`scripts/example-release-manifest.json`](../scripts/example-release-manifest.json) — formato de exemplo (substitua caminhos/hashes em releases reais).
+- [`scripts/example-release-manifest.json`](../scripts/example-release-manifest.json) — exemplo mínimo legado (prefira a saída do gerador em releases).
 
 ## Notas de empacotamento
 
