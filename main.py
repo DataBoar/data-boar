@@ -57,6 +57,21 @@ _ENV_FIELDS_TARGET = (
     "api_key_from_env",
 )
 _ENV_FIELDS_AUTH = ("client_secret_from_env",)
+_SENSITIVE_FIELDS = frozenset(
+    {
+        "pass_from_env",
+        "token_from_env",
+        "api_key_from_env",
+        "client_secret_from_env",
+    }
+)
+
+
+def _mask_env_name(field: str, env_name: str) -> str:
+    """Return env var name for logs, masking credential field references."""
+    if field in _SENSITIVE_FIELDS:
+        return "***"
+    return env_name
 
 
 def _validate_config_and_exit(config: dict[str, Any], config_path: str) -> None:
@@ -97,7 +112,7 @@ def _validate_config_and_exit(config: dict[str, Any], config_path: str) -> None:
             env_name = target.get(field)
             if env_name and not os.environ.get(env_name):
                 warnings.append(
-                    f'target "{name}": {field}={env_name!r} — env var not set'
+                    f'target "{name}": {field}={_mask_env_name(field, env_name)!r} — env var not set'
                 )
 
         auth = target.get("auth") or {}
@@ -105,7 +120,7 @@ def _validate_config_and_exit(config: dict[str, Any], config_path: str) -> None:
             env_name = auth.get(field)
             if env_name and not os.environ.get(env_name):
                 warnings.append(
-                    f'target "{name}": auth.{field}={env_name!r} — env var not set'
+                    f'target "{name}": auth.{field}={_mask_env_name(field, env_name)!r} — env var not set'
                 )
 
         kind = target.get("type", "?")
