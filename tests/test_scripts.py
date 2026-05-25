@@ -822,6 +822,15 @@ def test_issue_dev_license_jwt_py_compiles():
     py_compile.compile(str(script), doraise=True)
 
 
+def test_generate_build_digest_py_compiles():
+    """scripts/generate_build_digest.py compiles (licensing build digest)."""
+    root = _project_root()
+    script = root / "scripts" / "generate_build_digest.py"
+    if not script.exists():
+        return
+    py_compile.compile(str(script), doraise=True)
+
+
 def test_recovery_doc_bundle_sanity_ps1_syntax():
     """scripts/recovery-doc-bundle-sanity.ps1 has valid PowerShell syntax (parse-only)."""
     root = _project_root()

@@ -22,6 +22,9 @@ permissions:
       - "Dockerfile"
       - ".github/workflows/sbom.yml"
       - "scripts/generate-sbom.ps1"
+      - "scripts/generate_build_digest.py"
+      - "core/**/*.py"
+      - "main.py"
   workflow_dispatch:
 
 concurrency:
@@ -73,6 +76,12 @@ jobs:
           --output-reproducible
           -o sbom-python.cdx.json
 
+      - name: Generate build digest (licensing tamper check)
+        run: uv run python scripts/generate_build_digest.py --quiet
+
+      - name: Stage build digest for release verification
+        run: cp core/licensing/_build_digest.txt build-digest.txt
+
       - name: Build image for SBOM (same Dockerfile as publish)
         run: docker build -t data_boar:sbom -f Dockerfile .
 
@@ -92,6 +101,7 @@ jobs:
           path: |
             sbom-python.cdx.json
             sbom-docker-image.cdx.json
+            build-digest.txt
           if-no-files-found: error
 
       - name: Attach SBOMs to GitHub Release (when applicable)
@@ -113,5 +123,5 @@ jobs:
             echo "No GitHub Release for $TAG yet — artifacts remain on the workflow run only."
             exit 0
           fi
-          gh release upload "$TAG" sbom-python.cdx.json sbom-docker-image.cdx.json \
+          gh release upload "$TAG" sbom-python.cdx.json sbom-docker-image.cdx.json build-digest.txt \
             --clobber --repo "${{ github.repository }}"

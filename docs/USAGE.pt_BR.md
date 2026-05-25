@@ -55,7 +55,7 @@ O ponto de entrada é `main.py`.
 
 Implantações corporativas podem exigir *hooks* de **tamper-evidence** paralelos ao enforcement:
 
-- **`DATA_BOAR_EXPECTED_BUILD_DIGEST`** — compara com a linha embutida em **`core/licensing/_build_digest.txt`** (substitua o *placeholder* **`dev`** no pacote entregue; ver **`docs/RELEASE_INTEGRITY.pt_BR.md`**). Divergência ⇒ **TAMPERED** e bloqueio de varreduras com enforcement ligado.
+- **`DATA_BOAR_EXPECTED_BUILD_DIGEST`** — compara com a linha embutida em **`core/licensing/_build_digest.txt`** (gerada no build via **`scripts/generate_build_digest.py`** — ver **`docs/RELEASE_INTEGRITY.pt_BR.md`**). Divergência ⇒ **TAMPERED** e bloqueio de varreduras com enforcement ligado.
 - **`DATA_BOAR_RELEASE_MANIFEST_PATH`** ou **`licensing.manifest_path`** — JSON opcional de SHA-256 de arquivos críticos verificado na subida (**mesmo documento**).
 
 **Roadmap:** *anchor* SQLite, re-hash na inicialização e degradação de confiança além da camada de licenciamento continuam **planejadas** (**`docs/plans/PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md`** — export **E.11** via **`--export-audit-trail`** ✅; *anchors* ⬜).
