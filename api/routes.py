@@ -1206,6 +1206,17 @@ async def start_scan(
     return {"status": "started", "session_id": session_id}
 
 
+@app.post("/scan_pdf", responses=_RATE_LIMIT_429)
+async def scan_pdf():
+    """Pro+ tier gate for executive PDF export (Maestro licensing-matrix smoke)."""
+    _raise_if_license_blocks_scan()
+    _raise_if_feature_blocked("report_pdf")
+    return JSONResponse(
+        status_code=202,
+        content={"status": "accepted", "feature": "report_pdf"},
+    )
+
+
 @app.get("/status")
 async def get_status():
     """Return running, current_session_id, findings_count, and declarative ``audit_log`` (sampling posture)."""
