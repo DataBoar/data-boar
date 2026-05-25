@@ -831,6 +831,15 @@ def test_generate_build_digest_py_compiles():
     py_compile.compile(str(script), doraise=True)
 
 
+def test_generate_release_manifest_py_compiles():
+    """scripts/generate_release_manifest.py compiles (licensing release manifest)."""
+    root = _project_root()
+    script = root / "scripts" / "generate_release_manifest.py"
+    if not script.exists():
+        return
+    py_compile.compile(str(script), doraise=True)
+
+
 def test_recovery_doc_bundle_sanity_ps1_syntax():
     """scripts/recovery-doc-bundle-sanity.ps1 has valid PowerShell syntax (parse-only)."""
     root = _project_root()
