@@ -578,6 +578,52 @@ def test_load_config_file(config_path=None):
 # ---------------------------------------------------------------------------
 
 
+def test_localdbmanager_migrates_filesystem_findings_columns(tmp_path):
+    """Legacy filesystem_findings tables gain Phase 1 columns on LocalDBManager init."""
+    from sqlalchemy import create_engine, text
+
+    from core.database import LocalDBManager
+
+    db_path = str(tmp_path / "legacy_fs_findings.db")
+    engine = create_engine(f"sqlite:///{db_path}")
+    with engine.connect() as conn:
+        conn.execute(
+            text(
+                """
+                CREATE TABLE filesystem_findings (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    session_id VARCHAR(64) NOT NULL,
+                    target_name VARCHAR(100),
+                    path VARCHAR(512),
+                    file_name VARCHAR(255),
+                    data_type VARCHAR(50),
+                    sensitivity_level VARCHAR(20),
+                    pattern_detected VARCHAR(100),
+                    norm_tag VARCHAR(100),
+                    ml_confidence INTEGER,
+                    created_at DATETIME
+                )
+                """
+            )
+        )
+        conn.commit()
+    engine.dispose()
+
+    mgr = LocalDBManager(db_path)
+    try:
+        with mgr.engine.connect() as conn:
+            for col in ("source_mtime_ns", "source_size", "content_fingerprint"):
+                r = conn.execute(
+                    text(
+                        "SELECT 1 FROM pragma_table_info('filesystem_findings') "
+                        f"WHERE name='{col}'"
+                    )
+                )
+                assert r.fetchone() is not None, f"missing column {col}"
+    finally:
+        mgr.dispose()
+
+
 def test_filesystem_finding_has_file_identity_columns(tmp_path):
     """FilesystemFinding rows accept and persist source_mtime_ns, source_size,
     content_fingerprint — Phase 1 of incremental scan (ADR-0051).
