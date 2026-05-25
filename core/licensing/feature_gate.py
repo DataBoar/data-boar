@@ -7,7 +7,9 @@ Use :func:`check_feature` before activating tier-gated product behaviour.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
+from core.licensing.errors import FeatureTierBlockedError
 from core.licensing.tier_features import (
     Tier,
     get_required_tier,
@@ -62,4 +64,23 @@ def check_feature(feature: str, current_tier: Tier) -> FeatureCheckResult:
         feature=name,
         required_tier=required.value,
         current_tier=current_tier.value,
+    )
+
+
+def require_feature(cfg: dict[str, Any], feature: str) -> None:
+    """
+    Raise :class:`FeatureTierBlockedError` when *feature* is denied for the runtime tier.
+
+    Uses :func:`core.licensing.guard.get_license_guard` so JWT ``dbtier`` wins in enforced mode.
+    """
+    from core.licensing.guard import get_license_guard
+
+    result = get_license_guard(cfg).check_feature(feature)
+    if result.allowed:
+        return
+    raise FeatureTierBlockedError(
+        result.feature,
+        result.reason,
+        required_tier=result.required_tier,
+        current_tier=result.current_tier,
     )
