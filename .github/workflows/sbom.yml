@@ -89,6 +89,7 @@ jobs:
       - name: Generate release manifest inside image
         run: |
           mkdir -p dist
+          chmod a+w dist
           docker run --rm -v "$PWD/dist:/out" -w /app data_boar:sbom \
             python scripts/generate_release_manifest.py --out /out/release-manifest.json --quiet
           cp dist/release-manifest.json release-manifest.json
