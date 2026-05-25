@@ -27,6 +27,10 @@ The product needs a **single, reviewable place** for **open core vs Pro vs Enter
 - **Negative:** Public licensing docs are longer; must be updated when tier semantics change.
 - **Watch:** When JWT claims go live, **revalidate** table rows and remove “illustrative” wording where behaviour is fixed.
 
+## Related Decisions
+
+- [ADR 0066 — TAMPERED state behavior (fail-closed in enforced mode)](ADR-0066-tampered-state-behavior.md) — caps effective runtime tier at Community when integrity checks fail under **enforced** licensing; open mode logs CRITICAL and continues
+
 ## References
 
 - [`docs/LICENSING_OPEN_CORE_AND_COMMERCIAL.md`](../LICENSING_OPEN_CORE_AND_COMMERCIAL.md) · [pt-BR](../LICENSING_OPEN_CORE_AND_COMMERCIAL.pt_BR.md)
