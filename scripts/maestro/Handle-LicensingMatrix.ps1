@@ -157,6 +157,7 @@ function Start-MatrixApiProcess {
         Process = $proc
         LogPath = $logPath
         ErrPath = $errPath
+        ApiPort = $ApiPort
     }
 }
 
@@ -193,8 +194,20 @@ function Stop-MatrixApiProcess {
     }
     $proc = $ApiBundle.Process
     if (-not $proc.HasExited) {
-        Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
-        Start-Sleep -Seconds 1
+        try { $proc.Kill($true) } catch { Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue }
+        Start-Sleep -Seconds 2
+    }
+    if ($ApiBundle.ApiPort) {
+        $portFree = $false
+        $deadline = (Get-Date).AddSeconds(8)
+        while ((Get-Date) -lt $deadline) {
+            $conn = Get-NetTCPConnection -LocalPort $ApiBundle.ApiPort -State Listen -ErrorAction SilentlyContinue
+            if (-not $conn) { $portFree = $true; break }
+            Start-Sleep -Milliseconds 300
+        }
+        if (-not $portFree) {
+            Write-MaestroStep INFO "port $($ApiBundle.ApiPort) still busy after kill - proceeding anyway"
+        }
     }
     if ($ApiBundle.LogPath -and (Test-Path $ApiBundle.LogPath)) {
         Remove-Item -Path $ApiBundle.LogPath -Force -ErrorAction SilentlyContinue
