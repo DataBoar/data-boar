@@ -291,6 +291,9 @@ try {
                 continue
             }
 
+            $healthResp = Invoke-WebRequest -Uri "$baseUrl/health" -Method Get -SkipHttpErrorCheck
+            Write-MaestroStep INFO "tier=$tier health.license=$($healthResp.Content)"
+
             $pdfStatus = Invoke-ApiPostStatus -Url "$baseUrl/scan_pdf" -BodyJson "{}"
             $scanSchedStatus = Invoke-ApiPostStatus -Url "$baseUrl/scan" -BodyJson '{"scheduled":true}'
             $scanNormalStatus = Invoke-ApiPostStatus -Url "$baseUrl/scan" -BodyJson "{}"
