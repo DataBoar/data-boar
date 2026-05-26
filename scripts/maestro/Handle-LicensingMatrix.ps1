@@ -107,8 +107,10 @@ function Invoke-ApiPostStatus {
         -Uri $Url `
         -Method Post `
         -ContentType "application/json; charset=utf-8" `
+        -Headers @{ Accept = "application/json" } `
         -Body $BodyJson `
-        -SkipHttpErrorCheck
+        -SkipHttpErrorCheck `
+        -MaximumRedirection 0
     return [int]$response.StatusCode
 }
 
@@ -194,10 +196,16 @@ function Stop-MatrixApiProcess {
     }
     $proc = $ApiBundle.Process
     if (-not $proc.HasExited) {
-        try { $proc.Kill($true) } catch { Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue }
+        & taskkill /F /T /PID $proc.Id 2>$null
         Start-Sleep -Seconds 2
     }
+    # belt-and-suspenders: kill whatever process still holds the port, then poll until free
     if ($ApiBundle.ApiPort) {
+        $portPid = (Get-NetTCPConnection -LocalPort $ApiBundle.ApiPort -State Listen -ErrorAction SilentlyContinue).OwningProcess
+        if ($portPid) {
+            Stop-Process -Id $portPid -Force -ErrorAction SilentlyContinue
+            Start-Sleep -Seconds 1
+        }
         $portFree = $false
         $deadline = (Get-Date).AddSeconds(8)
         while ((Get-Date) -lt $deadline) {
