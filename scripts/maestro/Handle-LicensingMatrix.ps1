@@ -123,11 +123,13 @@ function Start-MatrixApiProcess {
     param(
         [string]$Root,
         [string]$ConfigPath,
+        [string]$LicensePath,
         [int]$ApiPort,
         [string]$PublicKeyPath
     )
     $env:CONFIG_PATH = $ConfigPath
     $env:DATA_BOAR_LICENSE_PUBLIC_KEY_PATH = $PublicKeyPath
+    $env:DATA_BOAR_LICENSE_PATH = $LicensePath
     $logPath = Join-Path ([System.IO.Path]::GetTempPath()) ("data-boar-lic-matrix-log-" + [guid]::NewGuid().ToString("n") + ".txt")
     $errPath = $logPath -replace '\.txt$', '-err.txt'
     $args = @(
@@ -283,7 +285,7 @@ try {
 
         $apiBundle = $null
         try {
-            $apiBundle = Start-MatrixApiProcess -Root $RepoRoot -ConfigPath $cfgPath -ApiPort $Port -PublicKeyPath $pubKey
+            $apiBundle = Start-MatrixApiProcess -Root $RepoRoot -ConfigPath $cfgPath -LicensePath $tierLicenses[$tier] -ApiPort $Port -PublicKeyPath $pubKey
             $baseUrl = "http://127.0.0.1:$Port"
             if (-not (Wait-ApiHealth -BaseUrl $baseUrl -TimeoutSec $HealthTimeoutSec)) {
                 $logHint = Get-MatrixApiLogSnippet -ApiBundle $apiBundle
