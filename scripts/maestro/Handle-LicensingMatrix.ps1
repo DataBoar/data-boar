@@ -60,6 +60,7 @@ function New-LicensingMatrixConfig {
     )
     $sqlite = Join-Path $WorkDir "audit.db"
     $outDir = Join-Path $WorkDir "reports"
+    New-Item -ItemType Directory -Force -Path $WorkDir | Out-Null
     New-Item -ItemType Directory -Force -Path $outDir | Out-Null
     $yaml = @"
 licensing:
@@ -127,9 +128,6 @@ function Start-MatrixApiProcess {
         [int]$ApiPort,
         [string]$PublicKeyPath
     )
-    $env:CONFIG_PATH = $ConfigPath
-    $env:DATA_BOAR_LICENSE_PUBLIC_KEY_PATH = $PublicKeyPath
-    $env:DATA_BOAR_LICENSE_PATH = $LicensePath
     $logPath = Join-Path ([System.IO.Path]::GetTempPath()) ("data-boar-lic-matrix-log-" + [guid]::NewGuid().ToString("n") + ".txt")
     $errPath = $logPath -replace '\.txt$', '-err.txt'
     $args = @(
@@ -140,6 +138,12 @@ function Start-MatrixApiProcess {
         "--port", "$ApiPort",
         "--allow-insecure-http"
     )
+    $childEnv = [System.Collections.Hashtable](
+        [System.Environment]::GetEnvironmentVariables([System.EnvironmentVariableTarget]::Process)
+    )
+    $childEnv["DATA_BOAR_LICENSE_PATH"] = $LicensePath
+    $childEnv["DATA_BOAR_LICENSE_PUBLIC_KEY_PATH"] = $PublicKeyPath
+    $childEnv["CONFIG_PATH"] = $ConfigPath
     $proc = Start-Process `
         -FilePath "uv" `
         -ArgumentList $args `
@@ -147,7 +151,8 @@ function Start-MatrixApiProcess {
         -RedirectStandardOutput $logPath `
         -RedirectStandardError $errPath `
         -PassThru `
-        -WindowStyle Hidden
+        -WindowStyle Hidden `
+        -Environment $childEnv
     return [PSCustomObject]@{
         Process = $proc
         LogPath = $logPath
@@ -266,6 +271,10 @@ foreach ($tier in @("community", "pro", "enterprise")) {
         exit 1
     }
 }
+
+Remove-Item Env:DATA_BOAR_LICENSE_PATH -ErrorAction SilentlyContinue
+Remove-Item Env:DATA_BOAR_LICENSE_PUBLIC_KEY_PATH -ErrorAction SilentlyContinue
+Remove-Item Env:CONFIG_PATH -ErrorAction SilentlyContinue
 
 $failures = [System.Collections.Generic.List[string]]::new()
 $workRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("data-boar-lic-matrix-" + [guid]::NewGuid().ToString("n"))
