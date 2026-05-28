@@ -1014,6 +1014,8 @@ async def locale_html_middleware(request: Request, call_next):
     set locale preference cookie on successful HTML responses.
     Registered last so it runs first on incoming requests (outermost).
     """
+    if "application/json" in request.headers.get("accept", ""):
+        return await call_next(request)
     path = request.url.path
     if _is_api_or_asset_path(path):
         return await call_next(request)

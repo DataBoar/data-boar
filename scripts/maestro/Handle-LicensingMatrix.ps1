@@ -103,15 +103,22 @@ function Invoke-ApiPostStatus {
         [string]$Url,
         [string]$BodyJson = "{}"
     )
-    $response = Invoke-WebRequest `
-        -Uri $Url `
-        -Method Post `
-        -ContentType "application/json; charset=utf-8" `
-        -Headers @{ Accept = "application/json" } `
-        -Body $BodyJson `
-        -SkipHttpErrorCheck `
-        -MaximumRedirection 0
-    return [int]$response.StatusCode
+    try {
+        $response = Invoke-WebRequest `
+            -Uri $Url `
+            -Method Post `
+            -ContentType "application/json; charset=utf-8" `
+            -Headers @{ Accept = "application/json" } `
+            -Body $BodyJson `
+            -SkipHttpErrorCheck `
+            -MaximumRedirection 0
+        return [int]$response.StatusCode
+    } catch {
+        if ($_.Exception.Message -match "[Rr]edirect") {
+            return 302
+        }
+        throw
+    }
 }
 
 function Test-StatusAllowed {
