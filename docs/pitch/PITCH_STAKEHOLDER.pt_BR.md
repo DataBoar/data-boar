@@ -28,6 +28,8 @@ Posicionamento completo: [DECISION_MAKER_VALUE_BRIEF.pt_BR.md](../DECISION_MAKER
 
 ## Resultados realistas em 30 / 60 / 90 dias
 
+> **Deploy em horas. Primeiro scan em dias.** Os horizontes abaixo refletem maturidade operacional, não tempo de ativação.
+
 | Horizonte | Marco |
 | --------- | ----- |
 | **30 dias** | Primeira varredura delimitada; mapa de calor de padrões de alto risco; donos de remediação definidos |
