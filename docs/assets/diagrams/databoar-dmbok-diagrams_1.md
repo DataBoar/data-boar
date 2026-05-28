@@ -147,8 +147,8 @@ O DGA exige que dados compartilhados entre organizações sejam identificados, c
 
 **Para o repo:** adicionar em `docs/COMPLIANCE_AND_LEGAL.md` junto com ISO/IEC 38505 e DMBOK (issue #638).
 
-- DGA: https://digital-strategy.ec.europa.eu/en/policies/data-governance-act
-- EU Regulation 2022/868: https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A32022R0868
+- [DGA](https://digital-strategy.ec.europa.eu/en/policies/data-governance-act)
+- [EU Regulation 2022/868](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A32022R0868)
 
 ---
 
