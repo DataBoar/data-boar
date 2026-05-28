@@ -110,9 +110,9 @@ alinhamento da gestão de dados à governança de TI e corporativa.
 
 Esta norma não está ainda em `docs/COMPLIANCE_AND_LEGAL.md` — adicionar na próxima atualização.
 
-- ISO/IEC 38505: https://www.iso.org/standard/56639.html
-- ISO/IEC 38500: https://www.iso.org/standard/62816.html
-- DMBOK (DAMA): https://www.dama.org/cpages/body-of-knowledge
+- [ISO/IEC 38505](https://www.iso.org/standard/56639.html)
+- [ISO/IEC 38500](https://www.iso.org/standard/62816.html)
+- [DMBOK (DAMA)](https://www.dama.org/cpages/body-of-knowledge)
 
 ---
 
