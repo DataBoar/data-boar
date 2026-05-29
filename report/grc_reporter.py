@@ -17,6 +17,7 @@ from typing import Any, Literal
 
 from core.about import get_about_info
 
+from report import nist_csf_hints
 from report.grc_risk_taxonomy import (
     DENSITY_TAXONOMY_VERSION,
     LgpdDensityRiskConfig,
@@ -25,6 +26,8 @@ from report.grc_risk_taxonomy import (
 
 SCHEMA_VERSION = "data_boar_grc_executive_report_v1"
 COMPLIANCE_SCORE_METHOD = "heuristic_v1_weighted_excess_risk"
+# Method label for the optional NIST CSF 2.0 function-hint block (see issue #760).
+NIST_CSF_HINT_METHOD = "heuristic_norm_tag_to_csf_v1"
 
 RiskLevel = Literal["LOW", "MEDIUM", "HIGH", "CRITICAL"]
 RemediationPriority = Literal["CRITICAL", "HIGH", "MEDIUM", "LOW"]
@@ -323,7 +326,32 @@ class GRCReporter:
             "regulatory_impact": str(regulatory_impact or ""),
         }
         row.update(density_meta)
+        # Optional, non-breaking NIST CSF 2.0 function hint (issue #760): derived from
+        # ``norm_tags`` via the shipped, versioned mapping table. Heuristic only, never a
+        # compliance determination (ADR-0025); omit the field entirely when nothing maps.
+        csf_hint = nist_csf_hints.csf_functions_for_norm_tags(row["norm_tags"])
+        if csf_hint:
+            row["nist_csf_function_hint"] = csf_hint
+            self._ensure_nist_csf_hint_meta()
         self._detailed_findings.append(row)
+
+    def _ensure_nist_csf_hint_meta(self) -> None:
+        """
+        Surface the CSF-hint disclaimer + mapping version once in ``compliance_mapping``.
+
+        Keeps each ``detailed_findings`` row a plain array of short codes while the
+        ADR-0025 disclaimer stays visible next to the other framework hints. Called only
+        when at least one finding carries a ``nist_csf_function_hint``.
+        """
+        if "nist_csf_mapping_version" in self._compliance_mapping:
+            return
+        self._compliance_mapping["nist_csf_function_hint_method"] = NIST_CSF_HINT_METHOD
+        self._compliance_mapping["nist_csf_mapping_version"] = (
+            nist_csf_hints.mapping_version()
+        )
+        self._compliance_mapping["nist_csf_function_hint_disclaimer"] = (
+            nist_csf_hints.disclaimer()
+        )
 
     def add_finding(
         self,

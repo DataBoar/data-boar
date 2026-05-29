@@ -49,6 +49,7 @@ Cada elemento deve bastar para **uma linha do one-pager do CISO** e para **fila 
 | **`heatmap_quadrant`** | string | Um de `impact_high_likelihood_high`, `impact_high_likelihood_low`, `impact_low_likelihood_high`, `impact_low_likelihood_low` — limiar **50** em cada eixo na implementação de referência. |
 | **`pii_types`** | vetor | `type`, `count`, `exposure` — só metadados. |
 | **`location_summary`**, **`violation_desc`**, **`norm_tags`**, **`remediation_priority`** | — | Igual à versão EN; `violation_desc` permanece **técnica**, sem afirmar ilícito como fato. |
+| **`nist_csf_function_hint`** | vetor de strings | **Opcional, non-breaking.** Códigos curtos do **NIST CSF 2.0** (ex.: `"GV"`, `"ID.AM"`, `"PR.DS"`) derivados de `norm_tags` por uma **tabela versionada e shipped** (`report/nist_csf_mapping.yaml`). **Indício heurístico, não conclusão de conformidade** (ver §3.3 e [ADR 0025](adr/ADR-0025-compliance-positioning-evidence-inventory-not-legal-conclusion-engine.md)). **Omitido** quando nenhum `norm_tag` mapeia — nunca vetor vazio. |
 | **`regulatory_impact`** | string | Frase de **negócio / oficina jurídica** por linha (ex.: artigos candidatos, enquadramento de risco administrativo). **Não** é conclusão jurídica automática; **jurídico / DPO** valida. Pode ser string vazia. |
 
 **Severidade sensível ao contexto:** o mesmo perfil de **`pii_types`** pode implicar **`risk_score`** diferente quando **`asset_class`** é log *append-only* versus repositório de identidade — ver **[`COMPLETAO_OPERATOR_PROMPT_LIBRARY.pt_BR.md`](ops/COMPLETAO_OPERATOR_PROMPT_LIBRARY.pt_BR.md)**.
@@ -60,6 +61,26 @@ Cada elemento deve bastar para **uma linha do one-pager do CISO** e para **fila 
 ### 3.2 Densidade de risco alinhada à LGPD (campos opcionais por linha)
 
 Com **`lgpd_density=LgpdDensityRiskConfig(...)`** em **`GRCReporter.add_finding`** / **`add_detailed_finding`**, o **`risk_score`** vem de **`report.grc_risk_taxonomy`**: tabela **identificadores (10)** / **financeiros_gov (30)** / **sensitive (80)** / **infantil (100)** por unidade contada, fórmula **Σ(count × peso)**, escala 0–100 com **`cap_raw`** padrão **2500** (ajustável). Campos extras: **`risk_density_raw`**, **`risk_density_scaled_cap`**, **`risk_density_breakdown`** (inclui **`risk_category`**: ``IDENTIFIER`` / ``FINANCIAL`` / ``SENSITIVE`` / ``CHILD_DATA`` vindo de **`core/intelligence`**), **`risk_density_taxonomy_version`**, **`dominant_risk_taxonomy`** — ver tabela e fórmulas na versão EN (§3.2). **Não** é classificação jurídica automática; **DPO/jurídico** valida rótulos e pesos por contrato.
+
+### 3.3 *Hint* opcional de função **NIST CSF 2.0** (non-breaking)
+
+CISOs costumam raciocinar pelas *Functions* do **NIST CSF 2.0** (Govern, Identify, Protect, Detect, Respond, Recover). Para um *dashboard* ou PDF **filtrar findings por função CSF** sem alterar o contrato, cada linha de `detailed_findings[]` **pode** carregar um vetor **opcional** de códigos curtos:
+
+| Campo | Tipo | Notas |
+| ----- | ---- | ----- |
+| **`nist_csf_function_hint`** | vetor de strings | Códigos CSF 2.0 — **Function** (`"GV"`, `"ID"`, …) ou **Function.Category** (`"ID.AM"`, `"PR.DS"`). Ordem canônica **GV, ID, PR, DE, RS, RC**. Presente só quando ao menos um `norm_tag` mapeia. |
+
+**Onde fica o mapeamento (versionado e shipped — não hard-coded):** `report/nist_csf_mapping.yaml` (`mapping_version`, ex.: `nist_csf_2_0_hint_v1`). Mapeia substrings de `norm_tag` para códigos CSF — mesmo modelo dos **article hints** (§4) e dos perfis [compliance-samples/](compliance-samples/). O consolidador `report/grc_reporter.py` deriva o *hint* de `norm_tags`; o *loader* é `report/nist_csf_hints.py`.
+
+**Local do disclaimer (ADR-0025):** para cada linha continuar um vetor simples de códigos, o disclaimer heurístico e a versão da tabela aparecem **uma vez** em `compliance_mapping` (emitidos só quando ao menos um finding carrega o *hint*):
+
+| Chave em `compliance_mapping` | Significado |
+| ----- | ----- |
+| **`nist_csf_function_hint_method`** | Ex.: `heuristic_norm_tag_to_csf_v1`. |
+| **`nist_csf_mapping_version`** | Versão da tabela shipped. |
+| **`nist_csf_function_hint_disclaimer`** | Em linguagem clara: **indício, não conclusão de conformidade nem atestado de controle** ([ADR 0025](adr/ADR-0025-compliance-positioning-evidence-inventory-not-legal-conclusion-engine.md)); CISO/DPO valida. |
+
+**Non-breaking:** campo **opcional aditivo** — `schema_version` continua `data_boar_grc_executive_report_v1`; consumidores que ignoram chaves desconhecidas não são afetados. **Escopo:** apenas NIST CSF 2.0 (sem COBIT/SOC 2/ISO aqui). O posicionamento tri-nível em **prosa** (NIST CSF / SANS / ISO 27035) é o complemento textual; este campo é o complemento **estruturado** que faz o artefato *carregar* a tag CSF.
 
 ---
 
