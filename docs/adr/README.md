@@ -83,12 +83,14 @@ Short, durable notes that capture **why** the project chose an approach—not on
 
 ## Related docs
 
-- [CONTRIBUTING.md](../../CONTRIBUTING.md) — contributor workflow; links MD029 and the fix script.
-- [SECURITY.md](../../SECURITY.md) · [docs/TECH_GUIDE.md](../TECH_GUIDE.md) — operator entry points ([ADR 0002](ADR-0002-operator-facing-security-and-technical-docs.md)).
-- [QUALITY_WORKFLOW_RECOMMENDATIONS.md](../QUALITY_WORKFLOW_RECOMMENDATIONS.md) — §6 (MD029), §7 (ADRs), SBOM.
-- [docs/ops/WORKFLOW_DEFERRED_FOLLOWUPS.md](../ops/WORKFLOW_DEFERRED_FOLLOWUPS.md) — deferred workflow/supply-chain notes ([ADR 0005](ADR-0005-ci-github-actions-supply-chain-pins.md) for Action/uv pinning).
-- [.cursor/rules/markdown-lint.mdc](../../.cursor/rules/markdown-lint.mdc) — when to run `fix_markdown_sonar.py` and post-script renumbering.
-- [.cursor/rules/audience-segmentation-docs.mdc](../../.cursor/rules/audience-segmentation-docs.mdc) — external vs internal doc links; [ADR 0004](ADR-0004-external-docs-no-markdown-links-to-plans.md).
+| Doc | Notes |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| [CONTRIBUTING.md](../../CONTRIBUTING.md) | contributor workflow; links MD029 and the fix script. |
+| [SECURITY.md](../../SECURITY.md) · [docs/TECH_GUIDE.md](../TECH_GUIDE.md) | operator entry points ([ADR 0002](ADR-0002-operator-facing-security-and-technical-docs.md)). |
+| [QUALITY_WORKFLOW_RECOMMENDATIONS.md](../QUALITY_WORKFLOW_RECOMMENDATIONS.md) | §6 (MD029), §7 (ADRs), SBOM. |
+| [docs/ops/WORKFLOW_DEFERRED_FOLLOWUPS.md](../ops/WORKFLOW_DEFERRED_FOLLOWUPS.md) | deferred workflow/supply-chain notes ([ADR 0005](ADR-0005-ci-github-actions-supply-chain-pins.md) for Action/uv pinning). |
+| [.cursor/rules/markdown-lint.mdc](../../.cursor/rules/markdown-lint.mdc) | when to run `fix_markdown_sonar.py` and post-script renumbering. |
+| [.cursor/rules/audience-segmentation-docs.mdc](../../.cursor/rules/audience-segmentation-docs.mdc) | external vs internal doc links; [ADR 0004](ADR-0004-external-docs-no-markdown-links-to-plans.md). |
 
 ## Documentation index
 

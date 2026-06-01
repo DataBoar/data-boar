@@ -166,6 +166,7 @@ Examples: `docs(homelab):`, `docs(private-layout):`, `docs(feedback-inbox):`, `c
 - **Issue queue Mermaid map:** Open-issue sequencing visualization lives at **`docs/ops/ISSUE_QUEUE_SEQUENCING_MAP.md`** (issue **#654**); refresh when **NÃO INICIAR** chains or wave counts change; linked from **`docs/plans/PLANS_TODO.md`** Wave 1 bullet and **`docs/ops/README.md`**.
 - **ADR-0061 U-axis gate:** Formal sub-order within same P+milestone and cross-milestone hard gate are documented in **`docs/adr/ADR-0061-u-axis-issue-suborder-and-cross-milestone-gate.md`** (implements **`.cursor/rules/execution-priority-and-pr-batching.mdc`**).
 - **Repo truth over LLM consensus:** For ADR numbers, filenames, and inventory, **`docs/adr/*.md`** + **`Get-ChildItem docs/adr/ADR-*.md`** beat converged model suggestions — three auditors can agree on a wrong filename until the repo is read.
+- **SQLite schema migrations (`_ensure_*`):** Every new **`Column()`** on an **existing** table requires a matching **`_ensure_*()`** method in **`LocalDBManager`** and a regression test that bootstraps a legacy DB without the column and asserts it is added on init — see **`docs/plans/PLAN_SCHEMA_MIGRATION.md`**.
 
 ## Known platform limitations and active workarounds (confirmed 2026-05-21)
 

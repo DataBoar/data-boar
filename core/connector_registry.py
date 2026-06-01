@@ -58,6 +58,25 @@ def _resolve_database_connector(
     return None
 
 
+_CONNECTOR_TIER_FEATURES: dict[str, str] = {
+    "snowflake": "connector_snowflake",
+    "s3": "connector_s3_object_storage",
+    "azure_blob": "connector_azure_blob",
+    "gcs": "connector_gcs",
+}
+
+
+def tier_feature_for_target(target: dict[str, Any]) -> str | None:
+    """Return the tier feature name for Pro+ cloud connectors, or None when not gated."""
+    t = (target.get("type") or "").strip().lower()
+    if t in _CONNECTOR_TIER_FEATURES:
+        return _CONNECTOR_TIER_FEATURES[t]
+    if t == "database":
+        driver = (target.get("driver") or "").split("+")[0].strip().lower()
+        return _CONNECTOR_TIER_FEATURES.get(driver)
+    return None
+
+
 def connector_for_target(target: dict[str, Any]) -> tuple[Type[Any], list[str]] | None:
     """
     Resolve connector from target config. Target may have type='database' with driver='postgresql+psycopg2'.

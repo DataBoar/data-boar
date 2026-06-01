@@ -28,6 +28,8 @@ Full positioning: [DECISION_MAKER_VALUE_BRIEF.md](../DECISION_MAKER_VALUE_BRIEF.
 
 ## Outcomes you can expect in 30 / 60 / 90 days
 
+> **Deploy in hours. First scan in days.** The horizons below reflect operational maturity, not activation time.
+
 | Horizon | Realistic milestone |
 | ------- | ------------------- |
 | **30 days** | First scoped scan; heatmap of high-risk patterns; agreed remediation owners |
