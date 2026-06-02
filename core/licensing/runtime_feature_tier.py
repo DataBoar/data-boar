@@ -6,10 +6,13 @@ Shared by API routes, RBAC, and maturity POC so tier logic stays in one place.
 
 from __future__ import annotations
 
+import logging
 import os
 from typing import Any
 
 from core.licensing.tier_features import Tier
+
+logger = logging.getLogger("data_boar.licensing")
 
 
 def is_dev_tier_override_env() -> bool:
@@ -53,6 +56,7 @@ def get_runtime_tier_for_features(cfg: dict[str, Any]) -> Tier:
         return env_override
 
     dbtier_claim = ""
+    lc = cfg.get("licensing") if isinstance(cfg.get("licensing"), dict) else {}
     try:
         from core.licensing.guard import get_license_guard
 
@@ -60,9 +64,18 @@ def get_runtime_tier_for_features(cfg: dict[str, Any]) -> Tier:
         c = g.context
         if c.state in ("VALID", "GRACE"):
             dbtier_claim = str(getattr(c, "dbtier", "") or "").strip().lower()
-    except Exception:
-        pass
-    lc = cfg.get("licensing") if isinstance(cfg.get("licensing"), dict) else {}
+        elif c.state == "TAMPERED":
+            mode = str(lc.get("mode") or "open").strip().lower()
+            if mode == "enforced":
+                logger.critical(
+                    "LicenseGuard state=TAMPERED in enforced mode — capping effective tier to Community"
+                )
+                return Tier.COMMUNITY
+            logger.critical(
+                "LicenseGuard state=TAMPERED in open mode — unauthorized build detected"
+            )
+    except Exception:  # noqa: BLE001
+        pass  # license guard may be unavailable during early bootstrap
     yaml_tier = str(lc.get("effective_tier") or "").strip().lower()
     if dbtier_claim:
         return map_dbtier_string_to_tier(dbtier_claim)

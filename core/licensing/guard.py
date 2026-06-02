@@ -14,10 +14,7 @@ import jwt
 
 from core.licensing.feature_gate import FeatureCheckResult, check_feature
 from core.licensing.fingerprint import compute_machine_fingerprint
-from core.licensing.runtime_feature_tier import (
-    get_runtime_tier_for_features,
-    map_dbtier_string_to_tier,
-)
+from core.licensing.runtime_feature_tier import map_dbtier_string_to_tier
 from core.licensing.tier_features import Tier
 from core.licensing.integrity import (
     check_build_digest_expected,
@@ -346,6 +343,8 @@ class LicenseGuard:
 
     def product_tier_for_features(self) -> Tier:
         """Resolve product tier for feature gates (YAML, JWT, dev override)."""
+        from core.licensing.runtime_feature_tier import get_runtime_tier_for_features
+
         return get_runtime_tier_for_features(self._config)
 
     def check_feature(self, feature: str) -> FeatureCheckResult:

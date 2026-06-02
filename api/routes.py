@@ -513,6 +513,9 @@ class ScanStartBody(BaseModel):
     scan_for_stego: bool | None = (
         None  # when True, merge into file_scan for this run only (entropy hints on rich media)
     )
+    scheduled: bool | None = (
+        None  # when True, treat as a scheduled/cron-triggered scan (Pro+ ``scheduled_scans``)
+    )
 
 
 # Load config and create engine at import time (or on startup event)
@@ -683,6 +686,26 @@ def _raise_if_license_blocks_scan() -> None:
             "detail": c.detail,
         },
     )
+
+
+def _raise_if_feature_blocked(feature: str) -> None:
+    """403 when the runtime tier denies a Pro/Enterprise feature."""
+    from core.licensing.errors import FeatureTierBlockedError
+    from core.licensing.feature_gate import require_feature
+
+    try:
+        require_feature(_get_config(), feature)
+    except FeatureTierBlockedError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "error": "feature_tier_blocked",
+                "feature": exc.feature,
+                "message": exc.reason,
+                "required_tier": exc.required_tier,
+                "current_tier": exc.current_tier,
+            },
+        ) from exc
 
 
 def _validate_webauthn_startup(cfg: dict) -> None:
@@ -991,6 +1014,8 @@ async def locale_html_middleware(request: Request, call_next):
     set locale preference cookie on successful HTML responses.
     Registered last so it runs first on incoming requests (outermost).
     """
+    if "application/json" in request.headers.get("accept", ""):
+        return await call_next(request)
     path = request.url.path
     if _is_api_or_asset_path(path):
         return await call_next(request)
@@ -1106,8 +1131,10 @@ _SESSION_RESPONSES = {
 async def start_scan(
     background_tasks: BackgroundTasks, body: ScanStartBody | None = None
 ):
-    """Start audit in background. Optional body: tenant, technician, scan_compressed, content_type_check, scan_for_stego, jurisdiction_hint. Returns session_id."""
+    """Start audit in background. Optional body: tenant, technician, scan_compressed, content_type_check, scan_for_stego, scheduled, jurisdiction_hint. Returns session_id."""
     _raise_if_license_blocks_scan()
+    if body and getattr(body, "scheduled", None) is True:
+        _raise_if_feature_blocked("scheduled_scans")
     engine = _get_engine()
     if engine.is_running:
         raise HTTPException(status_code=409, detail="Audit already in progress.")
@@ -1179,6 +1206,17 @@ async def start_scan(
     background_tasks.add_task(run_targets)
     _invalidate_sessions_cache()
     return {"status": "started", "session_id": session_id}
+
+
+@app.post("/scan_pdf", responses=_RATE_LIMIT_429)
+async def scan_pdf():
+    """Pro+ tier gate for executive PDF export (Maestro licensing-matrix smoke)."""
+    _raise_if_license_blocks_scan()
+    _raise_if_feature_blocked("report_pdf")
+    return JSONResponse(
+        status_code=202,
+        content={"status": "accepted", "feature": "report_pdf"},
+    )
 
 
 @app.get("/status")
@@ -1564,6 +1602,9 @@ async def download_log_for_session(session_id: str):
 async def scan_database(config: DatabaseConfig, background_tasks: BackgroundTasks):
     """One-off scan of a single database (body: name, host, port, user, password, database, optional driver). Starts in background; returns session_id."""
     _raise_if_license_blocks_scan()
+    driver_key = (config.driver or "").split("+")[0].strip().lower()
+    if driver_key == "snowflake":
+        _raise_if_feature_blocked("connector_snowflake")
     engine = _get_engine()
     if engine.is_running:
         raise HTTPException(status_code=409, detail="Audit already in progress.")

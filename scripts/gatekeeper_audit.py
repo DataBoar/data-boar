@@ -130,8 +130,8 @@ def git_grep_strict_seeds(
         if tmp_path is not None:
             try:
                 tmp_path.unlink(missing_ok=True)
-            except OSError:
-                pass
+            except OSError:  # noqa: BLE001
+                pass  # temp cleanup best-effort
 
     return None, 0
 

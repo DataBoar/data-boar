@@ -43,51 +43,46 @@ def _compute_config_scope_hash(config: dict[str, Any]) -> str:
 
 
 # Import connectors so they register themselves
-import connectors.sql_connector  # noqa: F401
 import connectors.filesystem_connector  # noqa: F401
+from connectors.sql_connector import SQLConnector
 
 try:
     import connectors.mongodb_connector  # noqa: F401
-except ImportError:
-    pass
+except ImportError:  # noqa: BLE001
+    pass  # optional connector not installed
 try:
     import connectors.redis_connector  # noqa: F401
-except ImportError:
-    pass
+except ImportError:  # noqa: BLE001
+    pass  # optional connector not installed
 try:
     import connectors.rest_connector  # noqa: F401
-except ImportError:
-    pass
+except ImportError:  # noqa: BLE001
+    pass  # optional connector not installed
 try:
     import connectors.smb_connector  # noqa: F401
-except ImportError:
-    pass
+except ImportError:  # noqa: BLE001
+    pass  # optional connector not installed
 try:
     import connectors.webdav_connector  # noqa: F401
-except ImportError:
-    pass
+except ImportError:  # noqa: BLE001
+    pass  # optional connector not installed
 try:
     import connectors.sharepoint_connector  # noqa: F401
-except ImportError:
-    pass
+except ImportError:  # noqa: BLE001
+    pass  # optional connector not installed
 try:
     import connectors.nfs_connector  # noqa: F401
-except ImportError:
-    pass
+except ImportError:  # noqa: BLE001
+    pass  # optional connector not installed
 try:
     import connectors.powerbi_connector  # noqa: F401
-except ImportError:
-    pass
+except ImportError:  # noqa: BLE001
+    pass  # optional connector not installed
 try:
     import connectors.dataverse_connector  # noqa: F401
-except ImportError:
-    pass
-try:
-    import connectors.snowflake_connector  # noqa: F401
-except ImportError:
-    pass
+except ImportError:  # noqa: BLE001
+    pass  # optional connector not installed
 
-from connectors.sql_connector import SQLConnector
 from core.connector_registry import connector_for_target
 from core.crypto_audit import StrongCryptoSignal, summarize_crypto_from_connection_info
 from core.database import LocalDBManager
@@ -100,8 +95,8 @@ try:
     from connectors.snowflake_connector import SnowflakeConnector
 
     _CONNECTOR_SAMPLING_POLICY_BASES = (SQLConnector, SnowflakeConnector)
-except ImportError:
-    pass
+except ImportError:  # noqa: BLE001
+    pass  # optional Snowflake connector not installed
 
 
 class AuditEngine:
@@ -270,6 +265,19 @@ class AuditEngine:
 
     def _run_target(self, target: dict[str, Any]) -> None:
         """Run one target: resolve connector, instantiate, run()."""
+        from core.connector_registry import tier_feature_for_target
+        from core.licensing.errors import FeatureTierBlockedError
+        from core.licensing.feature_gate import require_feature
+
+        tier_feature = tier_feature_for_target(target)
+        if tier_feature:
+            try:
+                require_feature(self.config, tier_feature)
+            except FeatureTierBlockedError as exc:
+                tname = target.get("name", "unknown")
+                self.db_manager.save_failure(tname, "tier_blocked", exc.reason)
+                return
+
         resolved = connector_for_target(target)
         if not resolved:
             tname = target.get("name", "unknown")

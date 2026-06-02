@@ -62,6 +62,7 @@ EXPECTED_HTTP_ROUTES: tuple[str, ...] = (
     "POST /auth/webauthn/registration/verify",
     "POST /scan",
     "POST /scan_database",
+    "POST /scan_pdf",
     "POST /start",
     "POST /{locale_slug}/assessment",
     "POST /{locale_slug}/config",

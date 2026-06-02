@@ -137,6 +137,7 @@ See [SECURITY.md](../SECURITY.md), [USAGE.md](../USAGE.md), [TECH_GUIDE.md](../T
 | `GET` | `/logs` | text | Logs listing | `authenticated` |
 | `GET` | `/logs/{session_id}` | text | Session log | `authenticated` |
 | `POST` | `/scan_database` | JSON | DB scan | `scanner`+ |
+| `POST` | `/scan_pdf` | JSON | Pro+ tier gate for executive PDF (`report_pdf`); Maestro licensing-matrix smoke returns **202** when allowed, **403** when blocked | `reports_reader`+ |
 | `GET` | `/findings` | JSON | Latest-session findings export (async `StreamingResponse`, unified schema) | `reports_reader`+ |
 | `GET` | `/findings/csv` | CSV | Latest-session findings export as CSV download | `reports_reader`+ |
 | `GET` | `/findings/{session_id}` | JSON | Findings for a specific session | `reports_reader`+ |

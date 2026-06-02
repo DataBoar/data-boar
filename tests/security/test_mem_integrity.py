@@ -60,5 +60,5 @@ def test_integer_boundary_safety(val: int) -> None:
         for idx in result:
             assert isinstance(idx, int)
             assert 0 <= idx < count
-    except (OverflowError, ValueError):
-        pass
+    except (OverflowError, ValueError):  # noqa: BLE001
+        pass  # Hypothesis edge inputs may exceed Rust batch bounds
