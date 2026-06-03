@@ -1,28 +1,31 @@
-# Posts a short message to Slack when selected workflows fail (workflow_run).
+# Reusable workflow: posts a short message to Slack when a caller workflow fails.
+# Invoked via workflow_call from CI, Semgrep, Gitleaks, SBOM, and Dependabot sync.
 # Requires repository secret SLACK_WEBHOOK_URL (same as Slack operator ping).
 # Skips if secret unset. No checkout needed.
 name: Slack CI failure notify
 
+'on':
+  workflow_call:
+    inputs:
+      run_name:
+        required: true
+        type: string
+      head_branch:
+        required: true
+        type: string
+      event:
+        required: true
+        type: string
+      html_url:
+        required: true
+        type: string
+
 permissions:
   contents: read
-
-'on':
-  workflow_run:
-    workflows:
-      - CI
-      - Semgrep
-      - Gitleaks
-      - SBOM
-      - Dependabot requirements.txt sync
-    types: [completed]
 
 jobs:
   notify:
     runs-on: ubuntu-latest
-    # Only the upstream-conclusion check is at job level (no secrets context).
-    # Webhook presence is detected at step level — placing `secrets.*` in a
-    # job-level `if:` can produce a phantom failed run with 0 jobs.
-    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
     steps:
       - name: Detect Slack webhook
         id: webhook
@@ -41,11 +44,11 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           SLACK_MENTION_USER_ID: ${{ vars.SLACK_MENTION_USER_ID }}
-          RUN_HTML_URL: ${{ github.event.workflow_run.html_url }}
-          RUN_NAME: ${{ github.event.workflow_run.name }}
-          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          RUN_HTML_URL: ${{ inputs.html_url }}
+          RUN_NAME: ${{ inputs.run_name }}
+          HEAD_BRANCH: ${{ inputs.head_branch }}
           REPO: ${{ github.repository }}
-          EVENT: ${{ github.event.workflow_run.event }}
+          EVENT: ${{ inputs.event }}
         run: |
           python3 <<'PY'
           import json

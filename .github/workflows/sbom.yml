@@ -46,6 +46,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
@@ -56,6 +57,7 @@ jobs:
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           version: "0.11.2"
+          enable-cache: false
 
       # mariadb / mysqlclient PyPI packages may build from source when no wheel matches;
       # provide Connector/C and libmysqlclient headers (same class of fix as local Docker/dev docs).
@@ -127,10 +129,11 @@ jobs:
           }}
         env:
           GH_TOKEN: ${{ github.token }}
+          GITHUB_EVENT_RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
         run: |
           set -euo pipefail
           if [ "${{ github.event_name }}" = "release" ]; then
-            TAG="${{ github.event.release.tag_name }}"
+            TAG="${GITHUB_EVENT_RELEASE_TAG_NAME}"
           else
             TAG="${GITHUB_REF#refs/tags/}"
           fi
@@ -140,3 +143,17 @@ jobs:
           fi
           gh release upload "$TAG" sbom-python.cdx.json sbom-docker-image.cdx.json build-digest.txt release-manifest.json \
             --clobber --repo "${{ github.repository }}"
+
+  slack-notify-on-failure:
+    name: Slack CI failure notify
+    if: ${{ always() && contains(needs.*.result, 'failure') }}
+    needs: [generate]
+    uses: ./.github/workflows/slack-ci-failure-notify.yml
+    with:
+      run_name: SBOM
+      head_branch: ${{ github.head_ref || github.ref_name }}
+      event: ${{ github.event_name }}
+      html_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    secrets:
+      SLACK_WEBHOOK_URL:
+        required: false

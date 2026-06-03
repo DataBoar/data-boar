@@ -46,6 +46,7 @@ jobs:
         if: steps.webhook.outputs.present == 'true'
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Build digest payload
         if: steps.webhook.outputs.present == 'true'

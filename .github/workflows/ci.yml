@@ -45,6 +45,7 @@ jobs:
         with:
           # Full history required for scripts/pii_history_guard.py --full-history (PII in old commits).
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Install libmariadb-dev (mariadb PyPI connector builds from source on Linux)
         run: sudo apt-get update && sudo apt-get install -y libmariadb-dev pkg-config
@@ -78,6 +79,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Install libmariadb-dev (mariadb PyPI connector builds from source on Linux)
         run: sudo apt-get update && sudo apt-get install -y libmariadb-dev pkg-config
@@ -102,6 +104,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
 
       - name: Install libmariadb-dev (mariadb PyPI connector builds from source on Linux)
         run: sudo apt-get update && sudo apt-get install -y libmariadb-dev pkg-config
@@ -128,6 +132,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
 
       - name: Install libmariadb-dev (mariadb PyPI connector builds from source on Linux)
         run: sudo apt-get update && sudo apt-get install -y libmariadb-dev pkg-config
@@ -165,6 +171,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Install libmariadb-dev (mariadb PyPI connector builds from source on Linux)
         run: sudo apt-get update && sudo apt-get install -y libmariadb-dev pkg-config
@@ -203,3 +210,17 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           # SonarQube Server only: set SONAR_HOST_URL in repo secrets
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+  slack-notify-on-failure:
+    name: Slack CI failure notify
+    if: ${{ always() && contains(needs.*.result, 'failure') }}
+    needs: [test, lint, bandit, audit, sonar]
+    uses: ./.github/workflows/slack-ci-failure-notify.yml
+    with:
+      run_name: CI
+      head_branch: ${{ github.head_ref || github.ref_name }}
+      event: ${{ github.event_name }}
+      html_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    secrets:
+      SLACK_WEBHOOK_URL:
+        required: false
