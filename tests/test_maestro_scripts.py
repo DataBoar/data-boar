@@ -161,6 +161,9 @@ def test_sync_working_tree_uses_explicit_sync_result() -> None:
     assert "return [bool]$syncOk" in text
     assert "--exclude='data-boar-*.tar'" in text
     assert "ConnectTimeout=15" in text
+    assert "if ($IsWindows)" in text
+    assert "bash -c" in text
+    assert '$Node.git_origin' in text
     assert "if ($syncOk) {" in text
     assert "tmux new-session -d -s completao" in text
     assert "> $null 2>&1" in text
@@ -297,14 +300,15 @@ def test_wrapper_has_optional_web_readiness_gate() -> None:
     assert "Web readiness failed" in text
 
 
-def test_build_container_artefact_has_docker_fallback_policy() -> None:
-    """Build script should rebuild when Docker is up and fallback to tar when Docker is down."""
+def test_build_container_artefact_has_container_engine_fallback_policy() -> None:
+    """Build script should rebuild when docker/podman is up and fallback to tar when both are down."""
     root = _project_root()
     text = (root / "scripts" / "maestro" / "Build-ContainerArtefact.ps1").read_text(
         encoding="utf-8", errors="replace"
     )
-    assert "Test-DockerEngineReady" in text
-    assert "Docker indisponivel e sem artefato local" in text
+    assert "Test-ContainerEngineReady" in text
+    assert '"podman"' in text
+    assert "Container engine indisponivel" in text
     assert "rebuild" in text.lower() or "Rebuild" in text
     assert "lessons learned" in text
 
