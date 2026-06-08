@@ -30,12 +30,12 @@ Use these tags in headings to keep priorities explicit and machine-countable:
 
 Do not edit this block manually; refresh with `python scripts/plans-stats.py --write`.
 
-- **Status rows counted:** 183  (Done: 109 | Incomplete: 74)
+- **Status rows counted:** 184  (Done: 110 | Incomplete: 74)
 - **Incomplete breakdown:** Pending `⬜`=68, Tracked `🔄` / `Tracked (partially done)`=6, Under consideration=0, Backlog-marked rows=0
 
 | Horizon | Total rows | Done | Incomplete |
 | ------- | ----------: | ----: | ----------: |
-| `H0` | 33 | 26 | 7 |
+| `H0` | 34 | 27 | 7 |
 | `H1` | 37 | 28 | 9 |
 | `H2` | 0 | 0 | 0 |
 | `H3` | 108 | 50 | 58 |
@@ -265,6 +265,7 @@ After **A1–A3** (minimum), you can **resume token-aware pace** on Tier 2 featu
 | Maestro SSH `ConnectTimeout` | [#403](https://github.com/FabioLeitao/data-boar/issues/403) | ✅ Done |
 | benchmark-rc `targets:` key (not `scan_scope`) | [#407](https://github.com/FabioLeitao/data-boar/issues/407) | ✅ Done |
 | Maestro `--bench-config` argument fix | [#404](https://github.com/FabioLeitao/data-boar/issues/404), [#408](https://github.com/FabioLeitao/data-boar/issues/408) | ✅ Done |
+| Maestro Linux orchestrator (T14: rsync/bash, `git_origin`, podman) | [#786](https://github.com/FabioLeitao/data-boar/issues/786) · [PLAN_MAESTRO_LINUX_ORCHESTRATOR.md](PLAN_MAESTRO_LINUX_ORCHESTRATOR.md) | ✅ Done (code); ⬜ T14 pre-flight |
 | Release gate **1.7.4** checklist (tag, Hub, `docs/releases/1.7.4.md`) | [#406](https://github.com/FabioLeitao/data-boar/issues/406) | ⬜ Pending |
 
 **`[H0][U1]` Licensing enforcement — open GitHub issues (cluster):**
