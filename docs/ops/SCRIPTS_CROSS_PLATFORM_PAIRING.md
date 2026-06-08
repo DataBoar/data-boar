@@ -23,6 +23,7 @@ Some **developer gates** and **thin wrappers** exist in **two forms**: **PowerSh
 | Lint / hooks only | `scripts/lint-only.ps1` | `scripts/lint-only.sh` |
 | Pytest subset (`-Path` / `-Keyword`) | `scripts/quick-test.ps1` | `scripts/quick-test.sh` |
 | Pre-commit + full pytest (no gatekeeper / no plans-stats) | `scripts/pre-commit-and-tests.ps1` | `scripts/pre-commit-and-tests.sh` |
+| Stacked private repo sync (`docs/private/`) | `scripts/private-git-sync.ps1` | `scripts/private-git-sync.sh` |
 
 **Note:** `check-all.ps1` calls **`gatekeeper-audit.ps1`**, the **Rust guard** (`cargo fmt` / `check` / `test` under `rust/boar_fast_filter/`), then **`plans-stats.py --write`**, then delegates to **`pre-commit-and-tests.ps1`**. **`check-all.sh`** mirrors that order: PII seeds through **`uv run python scripts/gatekeeper_audit.py`** (no **`pwsh`** dependency — issue **`#560`**), same Rust guard with **`PYO3_USE_ABI3_FORWARD_COMPATIBILITY`**, **`plans-stats.py`**, then **`pre-commit-and-tests.sh`**. The **`pre-commit`** bundle also invokes **`gatekeeper_audit.py`** on each commit alongside the other guards. **`pre-commit-and-tests.*`** skips gatekeeper, Rust, and plans-stats by design; it runs **`tests/security/test_mem_integrity.py`** first (Hypothesis + PyO3), then the full pytest suite with **`--deselect`** on that file so the gate stays explicit without duplicating Hypothesis examples.
 
