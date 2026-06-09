@@ -23,6 +23,7 @@ Alguns **gates de desenvolvimento** e **wrappers finos** existem em **duas forma
 | Só *lint* / *hooks* | `scripts/lint-only.ps1` | `scripts/lint-only.sh` |
 | Subconjunto *pytest* (`-Path` / `-Keyword`) | `scripts/quick-test.ps1` | `scripts/quick-test.sh` |
 | *Pre-commit* + *pytest* completo (sem *gatekeeper* / sem *plans-stats*) | `scripts/pre-commit-and-tests.ps1` | `scripts/pre-commit-and-tests.sh` |
+| Sync do repo privado empilhado (`docs/private/`) | `scripts/private-git-sync.ps1` | `scripts/private-git-sync.sh` |
 
 **Nota:** o **`check-all.ps1`** chama **`gatekeeper-audit.ps1`**, o **guard Rust** (`cargo fmt` / `check` / `test` em **`rust/boar_fast_filter/`**), depois **`plans-stats.py --write`** e delega ao **`pre-commit-and-tests.ps1`**. O **`check-all.sh`** espelha essa ordem: seeds PII via **`uv run python scripts/gatekeeper_audit.py`** (sem depender de **`pwsh`** — issue **`#560`**), mesmo guard Rust com **`PYO3_USE_ABI3_FORWARD_COMPATIBILITY`**, **`plans-stats.py`**, depois **`pre-commit-and-tests.sh`**. O pacote **`pre-commit`** também chama **`gatekeeper_audit.py`** em cada commit com os outros *hooks*. Os **`pre-commit-and-tests.*`** ignoram *gatekeeper*, Rust e *plans-stats* de propósito; executam primeiro **`tests/security/test_mem_integrity.py`** (Hypothesis + PyO3) e depois o *pytest* completo com **`--deselect`** nesse arquivo para não duplicar os exemplos Hypothesis.
 

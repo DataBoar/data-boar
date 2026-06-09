@@ -291,8 +291,14 @@ fusermount -u /tmp/probe_mount_sshfs
 ### New sudoers entries needed (LABOP_NFS_SERVER, LABOP_SMB_SERVER)
 
 ```sudoers
-Cmnd_Alias LABOP_NFS_SERVER = /bin/bash /home/leitao/Projects/dev/data-boar/scripts/labop-nfs-server-ensure.sh --apply
-Cmnd_Alias LABOP_SMB_SERVER = /bin/bash /home/leitao/Projects/dev/data-boar/scripts/labop-smb-server-ensure.sh --apply
+Cmnd_Alias LABOP_NFS_SERVER = /bin/bash /home/leitao/Projects/dev/data-boar/scripts/labop-nfs-server-ensure.sh --check, \
+                              /usr/bin/bash /home/leitao/Projects/dev/data-boar/scripts/labop-nfs-server-ensure.sh --check, \
+                              /bin/bash /home/leitao/Projects/dev/data-boar/scripts/labop-nfs-server-ensure.sh --apply, \
+                              /usr/bin/bash /home/leitao/Projects/dev/data-boar/scripts/labop-nfs-server-ensure.sh --apply
+Cmnd_Alias LABOP_SMB_SERVER = /bin/bash /home/leitao/Projects/dev/data-boar/scripts/labop-smb-server-ensure.sh --check, \
+                              /usr/bin/bash /home/leitao/Projects/dev/data-boar/scripts/labop-smb-server-ensure.sh --check, \
+                              /bin/bash /home/leitao/Projects/dev/data-boar/scripts/labop-smb-server-ensure.sh --apply, \
+                              /usr/bin/bash /home/leitao/Projects/dev/data-boar/scripts/labop-smb-server-ensure.sh --apply
 leitao ALL=(root) NOPASSWD: LABOP_NFS_SERVER, LABOP_SMB_SERVER
 ```
 

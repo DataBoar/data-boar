@@ -28,7 +28,19 @@
                                         /usr/bin/bash {{ lab-node-01_labop_repo_path }}/scripts/lab-node-01-ansible-labop-podman-apply.sh --apply, \
                                         /bin/bash {{ lab-node-01_labop_repo_path }}/scripts/lab-node-01-ansible-labop-podman-apply.sh --check, \
                                         /usr/bin/bash {{ lab-node-01_labop_repo_path }}/scripts/lab-node-01-ansible-labop-podman-apply.sh --check
+{% if lab-node-01_labop_sudoers_maestro_targets | bool %}
+      Cmnd_Alias LABOP_NFS_SERVER = /bin/bash {{ lab-node-01_labop_repo_path }}/scripts/labop-nfs-server-ensure.sh --check, \
+                                    /usr/bin/bash {{ lab-node-01_labop_repo_path }}/scripts/labop-nfs-server-ensure.sh --check, \
+                                    /bin/bash {{ lab-node-01_labop_repo_path }}/scripts/labop-nfs-server-ensure.sh --apply, \
+                                    /usr/bin/bash {{ lab-node-01_labop_repo_path }}/scripts/labop-nfs-server-ensure.sh --apply
+      Cmnd_Alias LABOP_SMB_SERVER = /bin/bash {{ lab-node-01_labop_repo_path }}/scripts/labop-smb-server-ensure.sh --check, \
+                                    /usr/bin/bash {{ lab-node-01_labop_repo_path }}/scripts/labop-smb-server-ensure.sh --check, \
+                                    /bin/bash {{ lab-node-01_labop_repo_path }}/scripts/labop-smb-server-ensure.sh --apply, \
+                                    /usr/bin/bash {{ lab-node-01_labop_repo_path }}/scripts/labop-smb-server-ensure.sh --apply
+      {{ lab-node-01_labop_sudoers_user }} ALL=(root) NOPASSWD: LABOP_HOST_REPORT, LABOP_ANSIBLE_PODMAN, LABOP_NFS_SERVER, LABOP_SMB_SERVER
+{% else %}
       {{ lab-node-01_labop_sudoers_user }} ALL=(root) NOPASSWD: LABOP_HOST_REPORT, LABOP_ANSIBLE_PODMAN
+{% endif %}
   failed_when: false
 
 - name: Validate sudoers include syntax (visudo -c)
