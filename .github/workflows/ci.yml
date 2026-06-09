@@ -205,7 +205,7 @@ jobs:
 
       - name: SonarQube / SonarCloud Scan
         if: steps.sonar_token.outputs.present == 'true'
-        uses: SonarSource/sonarqube-scan-action@299e4b793aaa83bf2aba7c9c14bedbb485688ec4 # v7
+        uses: SonarSource/sonarqube-scan-action@7006c4492b2e0ee0f816d36501671557c97f5995 # v7
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           # SonarQube Server only: set SONAR_HOST_URL in repo secrets
