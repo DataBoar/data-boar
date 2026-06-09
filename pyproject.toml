@@ -235,6 +235,7 @@ dev = [
     # CycloneDX SBOM from uv-exported requirements (ADR 0003); same CLI as CI `sbom.yml`.
     "cyclonedx-bom>=7.0.0",
     "hypothesis>=6.155.0",
+    "httpx2",
     "iniconfig>=2.3.0",
     "markdown>=3.10.2",
     "mypy>=2.1.0",
