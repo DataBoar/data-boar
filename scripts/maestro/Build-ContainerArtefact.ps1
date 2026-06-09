@@ -18,16 +18,52 @@ $freshThresholdHours = 1
 $staleWarnHours = 24
 
 function Test-ContainerEngineReady {
-    foreach ($cmd in @("docker", "podman")) {
+    if ($env:DOCKER_HOST -match "podman" -and (Get-Command podman -ErrorAction SilentlyContinue)) {
+        $null = & podman info --format "{{.Host.Os}}" 2>$null
+        if ($LASTEXITCODE -eq 0) {
+            return [PSCustomObject]@{ Cmd = "podman"; Ready = $true; IsPodman = $true }
+        }
+    }
+    foreach ($cmd in @("podman", "docker")) {
         if (-not (Get-Command $cmd -ErrorAction SilentlyContinue)) {
             continue
         }
         $null = & $cmd info --format '{{.ServerVersion}}' 2>$null
         if ($LASTEXITCODE -eq 0) {
-            return [PSCustomObject]@{ Cmd = $cmd; Ready = $true }
+            $isPodman = ($cmd -eq "podman")
+            return [PSCustomObject]@{ Cmd = $cmd; Ready = $true; IsPodman = $isPodman }
         }
     }
-    return [PSCustomObject]@{ Cmd = $null; Ready = $false }
+    return [PSCustomObject]@{ Cmd = $null; Ready = $false; IsPodman = $false }
+}
+
+function Invoke-ContainerImageBuild {
+    param(
+        [string]$EngineCmd,
+        [bool]$IsPodman,
+        [string]$FullImage,
+        [string]$Context
+    )
+    if ($IsPodman -or $EngineCmd -eq "podman") {
+        & podman build -q -t $FullImage $Context
+        return $LASTEXITCODE
+    }
+    if ($env:DOCKER_HOST -match "podman" -and (Get-Command podman -ErrorAction SilentlyContinue)) {
+        & podman build -q -t $FullImage $Context
+        return $LASTEXITCODE
+    }
+    $prevBuildKit = $env:DOCKER_BUILDKIT
+    $env:DOCKER_BUILDKIT = "0"
+    try {
+        & docker build -q -t $FullImage $Context
+        return $LASTEXITCODE
+    } finally {
+        if ($null -eq $prevBuildKit) {
+            Remove-Item Env:DOCKER_BUILDKIT -ErrorAction SilentlyContinue
+        } else {
+            $env:DOCKER_BUILDKIT = $prevBuildKit
+        }
+    }
 }
 
 $tarExists = Test-Path -LiteralPath $tarPath
@@ -52,9 +88,9 @@ if ($engine.Ready) {
 
     if ($shouldBuild) {
         Write-Host "   [Pre-flight] Compilando $fullImage e gerando artefato SRE..." -ForegroundColor Yellow
-        $null = & $engineCmd build -q -t $fullImage "$PSScriptRoot/../../"
-        if ($LASTEXITCODE -ne 0) {
-            Write-Error "Falha no $engineCmd build para $fullImage."
+        $buildExit = Invoke-ContainerImageBuild -EngineCmd $engineCmd -IsPodman $engine.IsPodman -FullImage $fullImage -Context "$PSScriptRoot/../../"
+        if ($buildExit -ne 0) {
+            Write-Error "Falha no build da imagem $fullImage (engine=$engineCmd)."
             exit 7
         }
         $null = & $engineCmd save $fullImage -o $tarPath

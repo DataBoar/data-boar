@@ -132,6 +132,17 @@ Os includes em **`/etc/sudoers.d/`** são lidos pela **ordem lexicográfica do n
 
 Se **`git pull --ff-only origin main`** diz **up to date** mas **`lab-node-01-ansible-labop-podman-apply.sh --check`** ainda falha no **`ansible.builtin.apt`** (ou **`labop-share-client-install.sh`** ainda tenta o pacote **`sshfs`** no Void), as **correções canónicas ainda não estão no remoto Git** que o host segue — por exemplo, alterações só no **working tree do PC de desenvolvimento** até **commit + push**. Confirma no host: **`git log -1 --oneline`** igual ao **`main`** no GitHub e volta a fazer pull.
 
+### Maestro — ensure NFS / CIFS (`Handle-target_nfs`, `Handle-target_cifs`)
+
+Os handlers Maestro rodam **`--check`** (padrão) ou **`--apply`** (modo **`-Deep`**):
+
+```bash
+sudo -n bash "$HOME/Projects/dev/data-boar/scripts/labop-nfs-server-ensure.sh" --check
+sudo -n bash "$HOME/Projects/dev/data-boar/scripts/labop-smb-server-ensure.sh" --check
+```
+
+Os **`Cmnd_Alias`** precisam listar **`--check`** e **`--apply`**, **`/bin/bash`** e **`/usr/bin/bash`**, no caminho **canônico** do repo (não checkout efêmero com sufixo de versão). Modelo rastreado: **`docs/private.example/homelab/labop-maestro-target-sudoers.example`**. Mescla em **`/etc/sudoers.d/z-labop-host-report`** (ordena **depois** de **`wheel`** — ver acima). Valida: **`sudo visudo -cf /etc/sudoers.d/z-labop-host-report`**.
+
 ## Guardrails
 
 - Se você não precisar disso no dia a dia, remova o arquivo do sudoers após a janela de coleta.
