@@ -155,5 +155,4 @@ jobs:
       event: ${{ github.event_name }}
       html_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
     secrets:
-      SLACK_WEBHOOK_URL:
-        required: false
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
