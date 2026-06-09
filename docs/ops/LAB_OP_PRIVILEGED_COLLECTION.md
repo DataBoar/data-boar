@@ -133,6 +133,17 @@ Drop-ins under **`/etc/sudoers.d/`** are read in **filename sort order** (C loca
 
 If **`git pull --ff-only origin main`** says **up to date** but **`lab-node-01-ansible-labop-podman-apply.sh --check`** still fails inside **`ansible.builtin.apt`** (or **`labop-share-client-install.sh`** still tries the **`sshfs`** package name on Void), the **canonical fixes are not on the Git remote** the host tracks — e.g. changes only exist on the **operator dev PC** working tree until **committed and pushed**. Confirm on the host: **`git log -1 --oneline`** matches **`main`** on GitHub, then pull again.
 
+### Maestro target NFS / CIFS ensure (`Handle-target_nfs`, `Handle-target_cifs`)
+
+Maestro handlers run **read-only** checks with **`--check`** (default) or **`--apply`** in **`-Deep`** mode:
+
+```bash
+sudo -n bash "$HOME/Projects/dev/data-boar/scripts/labop-nfs-server-ensure.sh" --check
+sudo -n bash "$HOME/Projects/dev/data-boar/scripts/labop-smb-server-ensure.sh" --check
+```
+
+**`Cmnd_Alias`** entries must list **both** **`--check`** and **`--apply`**, and **both** **`/bin/bash`** and **`/usr/bin/bash`**, on the **canonical** repo path (not version-suffixed ephemeral checkouts). Tracked template: **`docs/private.example/homelab/labop-maestro-target-sudoers.example`**. Merge into **`/etc/sudoers.d/z-labop-host-report`** (sort **after** **`wheel`** — see above). Validate: **`sudo visudo -cf /etc/sudoers.d/z-labop-host-report`**.
+
 ## Guardrails
 
 - Prefer removing the sudoers file after the collection window if you don't need it long term.

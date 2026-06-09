@@ -92,7 +92,7 @@ if ($Ref -eq "WorkingTree") {
     # Remove stale origin if present from a previous ephemeral checkout (local or remote URL),
     # then re-add origin (per-node git_origin override or canonical GitHub) before fetching the ref.
     $gitOrigin = "git@github.com:FabioLeitao/data-boar.git"
-    if ($Node.git_origin) {
+    if ($Node.PSObject.Properties['git_origin'] -and $Node.git_origin) {
         $gitOrigin = $Node.git_origin
     }
     $gitCmd = "cd $finalPath && git init && (git remote remove origin 2>/dev/null || true) && git remote add origin $gitOrigin && git fetch origin $Ref --depth=1 && git checkout FETCH_HEAD"
