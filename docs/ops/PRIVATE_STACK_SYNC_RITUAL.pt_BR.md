@@ -18,7 +18,7 @@
 ## Fluxo típico (alto nível)
 
 1. Quando a árvore privada tiver alterações que queiras registar, garante um estado **honesto** para commit (mesma ideia que “commit limpo” no `main`).
-2. Na **raiz do repo do produto**, corre **`scripts/private-git-sync.ps1`** (opcional **`-Push`** se a política enviar o repo empilhado para remotes **fora do GitHub**).
+2. Na **raiz do repo do produto**, corre **`scripts/private-git-sync.ps1`** (Windows) ou **`scripts/private-git-sync.sh --push`** (Linux/macOS); opcional **`-Push`** / **`--push`** se a política enviar o repo empilhado para remotes **fora do GitHub**. Os **bare mirrors lab** usam a lista canônica no script (**mini-bt, latitude, t14, alpine-emachines**); **pi3b fica de fora** (SD fragil).
 3. Se usares **armazenamento local cifrado** para essa árvore, segue a disciplina **montar → trabalhar → desmontar** descrita em **`docs/ops/PRIVATE_LOCAL_VERSIONING.md`** e nos teus runbooks **privados** de homelab (não duplicados aqui).
 
 ### Secrets homelab (`-Push`)

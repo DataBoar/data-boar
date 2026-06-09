@@ -45,6 +45,15 @@ function Write-Warn($m)   { Write-Host " WARN $m" -ForegroundColor Yellow }
 # Homelab leaf names: VeraCrypt working/homelab only; excluded from pCloud robocopy (no secrets in sync cloud).
 $Script:HomelabSecretLeafNames = @(".env.bitwarden.local")
 
+# Lab bare notes-sync.git mirrors: reliable local disks only.
+# pi3b is intentionally excluded (fragile SD card, limited space) -- do not add lab-pi3b to this list.
+$Script:LabBareMirrorHosts = @(
+    "mini-bt",
+    "latitude",
+    "t14",
+    "alpine-emachines"
+)
+
 function Get-VeraCryptDriveLetter {
     foreach ($dl in @("Z", "Y")) {
         if (Test-Path -LiteralPath "${dl}:\") { return $dl }
@@ -96,6 +105,46 @@ function Sync-VeraCryptHomelabSecrets {
             Write-Warn "VC homelab secrets: FALHOU homelab\$leaf -- $($_.Exception.Message)"
         }
     }
+}
+
+function Get-LabBareMirrorSshUser {
+    if ($env:LAB_OP_SSH_USER) { return $env:LAB_OP_SSH_USER.Trim() }
+    return "leitao"
+}
+
+function Get-LabBareMirrorRemoteUrl {
+    param([string]$HostShort)
+    $sshUser = Get-LabBareMirrorSshUser
+    return "ssh://${sshUser}@${HostShort}/home/${sshUser}/Documents/.kb-cache/repos/notes-sync.git"
+}
+
+function Ensure-LabBareMirrorRemote {
+    param(
+        [string]$RemoteName,
+        [string]$RemoteUrl
+    )
+    $existing = git remote get-url $RemoteName 2>$null
+    if (-not $existing) {
+        git remote add $RemoteName $RemoteUrl 2>&1 | Out-Null
+        Write-Info "Remote criado: $RemoteName"
+        return
+    }
+    if ($existing -ne $RemoteUrl) {
+        git remote set-url $RemoteName $RemoteUrl 2>&1 | Out-Null
+        Write-Info "Remote atualizado: $RemoteName"
+    }
+}
+
+function Ensure-LabBareMirrorBareRepo {
+    param([string]$HostShort)
+    $sshUser = Get-LabBareMirrorSshUser
+    $initCmd = "mkdir -p ~/Documents/.kb-cache/repos && test -d ~/Documents/.kb-cache/repos/notes-sync.git || git init --bare ~/Documents/.kb-cache/repos/notes-sync.git"
+    $out = ssh -o BatchMode=yes -o ConnectTimeout=15 "${sshUser}@${HostShort}" $initCmd 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warn "Bare init FALHOU em ${HostShort}: $out"
+        return $false
+    }
+    return $true
 }
 
 function Invoke-PCloudPrivateTreeMirror {
@@ -213,27 +262,29 @@ if ($Push) {
     $ErrorActionPreference = "Continue"
     $pushHadFailure = $false
 
-    Write-Header "Passo 3: Push para todos os lab remotes"
-    $remotes = git remote 2>&1
-    $labRemotes = $remotes | Where-Object { $_ -match "^lab-" }
-    if (-not $labRemotes) {
-        Write-Warn "Nenhum remote 'lab-*' configurado. Configure com:"
-        Write-Warn "  git -C docs/private remote add lab-host-1 ssh://<user>@<host-1>/<home>/<user>/Documents/.kb-cache/repos/notes-sync.git"
-        Write-Warn "  git -C docs/private remote add lab-host-2 ssh://<user>@<host-2>/<home>/<user>/Documents/.kb-cache/repos/notes-sync.git"
-        Write-Warn "  git -C docs/private remote add lab-host-3 ssh://<user>@<host-3>/<home>/<user>/Documents/.kb-cache/repos/notes-sync.git"
-    } else {
-        foreach ($r in $labRemotes) {
-            Write-Info "Pushing para $r ..."
-            # Capture stderr (SSH MOTD) without piping - pipeline resets $LASTEXITCODE on Windows PS 5.1
-            $out = git push $r main 2>&1
-            $pushExit = $LASTEXITCODE
-            $outPreview = $out | Select-Object -First 8
-            if ($pushExit -eq 0) { Write-Ok "Push OK: $r" }
-            else {
-                Write-Warn "Push FALHOU: $r -- $outPreview"
-                $pushHadFailure = $true
-            }
+    Write-Header "Passo 3: Push bare notes-sync.git para lab hosts (lista canonica)"
+    Write-Info "Hosts: $($Script:LabBareMirrorHosts -join ', ') (pi3b excluido -- SD fragil)"
+    foreach ($hostShort in $Script:LabBareMirrorHosts) {
+        $remoteName = "lab-$hostShort"
+        $remoteUrl = Get-LabBareMirrorRemoteUrl -HostShort $hostShort
+        Ensure-LabBareMirrorRemote -RemoteName $remoteName -RemoteUrl $remoteUrl
+        if (-not (Ensure-LabBareMirrorBareRepo -HostShort $hostShort)) {
+            $pushHadFailure = $true
+            continue
         }
+        Write-Info "Pushing para $remoteName ..."
+        $out = git push $remoteName main 2>&1
+        $pushExit = $LASTEXITCODE
+        $outPreview = $out | Select-Object -First 8
+        if ($pushExit -eq 0) { Write-Ok "Push OK: $remoteName" }
+        else {
+            Write-Warn "Push FALHOU: $remoteName -- $outPreview"
+            $pushHadFailure = $true
+        }
+    }
+    $stalePi3b = git remote 2>&1 | Where-Object { $_ -eq "lab-pi3b" }
+    if ($stalePi3b) {
+        Write-Info "lab-pi3b ainda configurado localmente; politica atual nao faz push para pi3b. Remova com: git -C docs/private remote remove lab-pi3b"
     }
 
     Write-Header "Passo 4: Push bare notes-sync.git (VeraCrypt Z: ou Y:)"
