@@ -132,6 +132,8 @@ def required_roles_for_route(method: str, path: str) -> frozenset[str] | None:
         return SCAN
     if path == "/scan_database" and m == "POST":
         return SCAN
+    if path == "/scan_pdf" and m == "POST":
+        return REP
     if path in ("/report", "/heatmap") and m in ("GET", "HEAD"):
         return REP
     if path.startswith("/reports/") and m in ("GET", "HEAD"):

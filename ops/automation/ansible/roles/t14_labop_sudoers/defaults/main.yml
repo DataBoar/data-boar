@@ -2,6 +2,9 @@
 # Opt-in: writing sudoers is sensitive; keep disabled by default.
 lab-node-01_labop_sudoers_enable: false
 
+# Include Maestro NFS/CIFS ensure scripts (LABOP_NFS_SERVER / LABOP_SMB_SERVER).
+lab-node-01_labop_sudoers_maestro_targets: true
+
 # Target sudoers include path.
 lab-node-01_labop_sudoers_include_path: /etc/sudoers.d/labop-host-report
 

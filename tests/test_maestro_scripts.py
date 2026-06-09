@@ -161,6 +161,9 @@ def test_sync_working_tree_uses_explicit_sync_result() -> None:
     assert "return [bool]$syncOk" in text
     assert "--exclude='data-boar-*.tar'" in text
     assert "ConnectTimeout=15" in text
+    assert "if ($IsWindows)" in text
+    assert "bash -c" in text
+    assert "PSObject.Properties['git_origin']" in text
     assert "if ($syncOk) {" in text
     assert "tmux new-session -d -s completao" in text
     assert "> $null 2>&1" in text
@@ -297,14 +300,17 @@ def test_wrapper_has_optional_web_readiness_gate() -> None:
     assert "Web readiness failed" in text
 
 
-def test_build_container_artefact_has_docker_fallback_policy() -> None:
-    """Build script should rebuild when Docker is up and fallback to tar when Docker is down."""
+def test_build_container_artefact_has_container_engine_fallback_policy() -> None:
+    """Build script should rebuild when docker/podman is up and fallback to tar when both are down."""
     root = _project_root()
     text = (root / "scripts" / "maestro" / "Build-ContainerArtefact.ps1").read_text(
         encoding="utf-8", errors="replace"
     )
-    assert "Test-DockerEngineReady" in text
-    assert "Docker indisponivel e sem artefato local" in text
+    assert "Test-ContainerEngineReady" in text
+    assert "Invoke-ContainerImageBuild" in text
+    assert '"podman"' in text
+    assert "DOCKER_BUILDKIT" in text
+    assert "Container engine indisponivel" in text
     assert "rebuild" in text.lower() or "Rebuild" in text
     assert "lessons learned" in text
 
@@ -336,6 +342,19 @@ def test_container_handlers_enable_lab_stack_up_in_deep_mode() -> None:
         assert "lab-completao-host-smoke.sh $smokeArgText" in body
 
 
+def test_lab_completao_host_smoke_uses_main_py_not_data_boar_scan() -> None:
+    """Baremetal RC must invoke python main.py --config (no fictional data-boar scan subcommand)."""
+    root = _project_root()
+    text = (root / "scripts" / "lab-completao-host-smoke.sh").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "uv run python main.py --config" in text
+    assert "uv run data-boar scan" not in text
+    assert "DONE_FAILED_BAREMETAL" in text
+    assert 'LC_BAREMETAL_SCAN_OK' in text
+    assert "maturin develop --release" in text
+
+
 def test_lab_completao_host_smoke_parses_bench_config_flag() -> None:
     """Maestro --bench-config must be a real flag (not positional $1) so Deep argv parses."""
     root = _project_root()
@@ -344,6 +363,19 @@ def test_lab_completao_host_smoke_parses_bench_config_flag() -> None:
     )
     assert "    --bench-config)" in text
     assert 'CONFIG_RC="${LC_BENCH_CONFIG:-tests/config/benchmark-rc.yaml}"' in text
+
+
+def test_labop_maestro_target_sudoers_example_lists_check_and_apply() -> None:
+    """Narrow sudoers example covers Maestro --check and --apply for NFS and CIFS."""
+    root = _project_root()
+    path = root / "docs/private.example/homelab/labop-maestro-target-sudoers.example"
+    assert path.is_file(), "missing labop-maestro-target-sudoers.example"
+    text = path.read_text(encoding="utf-8", errors="replace")
+    assert "LABOP_NFS_SERVER" in text
+    assert "LABOP_SMB_SERVER" in text
+    assert "--check" in text
+    assert "--apply" in text
+    assert "/usr/bin/bash" in text
 
 
 def test_maestro_benchmark_ab_has_sleep_before_collect() -> None:

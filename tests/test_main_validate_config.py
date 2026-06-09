@@ -96,8 +96,51 @@ def test_validate_config_missing_required_key(tmp_path):
     assert 'required key "path" missing' in r.stdout
 
 
+def test_mask_env_name_sensitive_vs_non_sensitive() -> None:
+    repo = Path(__file__).resolve().parents[1]
+    sys.path.insert(0, str(repo))
+    import main as main_module
+
+    assert main_module._mask_env_name("pass_from_env", "PG_SECRET") == "***"
+    assert main_module._mask_env_name("api_key_from_env", "API_KEY") == "***"
+    assert main_module._mask_env_name("user_from_env", "DB_USER") == "DB_USER"
+
+
 def test_validate_config_unset_env_var_warns_but_ok(tmp_path):
-    env_name = "PG_PASS_TEST_VALIDATE_CONFIG_UNUSED"
+    env_name = "DB_USER_TEST_VALIDATE_CONFIG_UNUSED"
+    cfg = _base_config(
+        tmp_path,
+        f"""  - name: prod-postgres
+    type: database
+    driver: postgresql+psycopg2
+    user_from_env: {env_name}""",
+    )
+    child_env = os.environ.copy()
+    child_env.pop(env_name, None)
+    repo = Path(__file__).resolve().parents[1]
+    r = subprocess.run(
+        [
+            sys.executable,
+            str(repo / "main.py"),
+            "--config",
+            str(cfg),
+            "--validate-config",
+        ],
+        capture_output=True,
+        text=True,
+        cwd=str(repo),
+        timeout=60,
+        check=False,
+        env=child_env,
+    )
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "[OK] 1 target(s) valid" in r.stdout
+    assert env_name in r.stdout
+    assert "WARN" in r.stdout
+
+
+def test_validate_config_masks_sensitive_env_name_in_warning(tmp_path):
+    env_name = "PG_PASS_TEST_VALIDATE_CONFIG_MASK"
     cfg = _base_config(
         tmp_path,
         f"""  - name: prod-postgres
@@ -124,8 +167,8 @@ def test_validate_config_unset_env_var_warns_but_ok(tmp_path):
         env=child_env,
     )
     assert r.returncode == 0, r.stdout + r.stderr
-    assert "[OK] 1 target(s) valid" in r.stdout
-    assert env_name in r.stdout
+    assert "pass_from_env='***'" in r.stdout
+    assert env_name not in r.stdout
     assert "WARN" in r.stdout
 
 

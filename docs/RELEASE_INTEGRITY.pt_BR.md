@@ -6,30 +6,37 @@ O runtime pode fazer verificações **opcionais** para que instalações modific
 
 ## Digest de build embutido
 
-- Arquivo: [`core/licensing/_build_digest.txt`](../core/licensing/_build_digest.txt) — padrão **`dev`** em clones de desenvolvimento.
+- Arquivo: [`core/licensing/_build_digest.txt`](../core/licensing/_build_digest.txt) — **gitignored**; gerado localmente ou no CI (não commitado em `main`).
 
-  O arquivo **fica rastreado** no Git de propósito (*placeholder*, **sem** `.gitignore`): no release ou build dedicado ao cliente substitua a linha única pelo **SHA-256 hex** (ou id acordado); em produção defina **`DATA_BOAR_EXPECTED_BUILD_DIGEST`** com o **mesmo** valor para o guard de licença marcar **TAMPERED** sob `licensing.mode: enforced` quando houver divergência. **`dev`** sozinho em árvore OSS **não** substitui um digest contratual — a variável só ativa o contraste quando a política de implantação fornece um digest.
+  O script [`scripts/generate_build_digest.py`](../scripts/generate_build_digest.py) calcula um **SHA-256 hex determinístico** sobre arquivos fonte críticos ordenados (`main.py`, `core/**/*.py`, `connectors/**/*.py`, `scanners/**/*.py`, `cli/**/*.py`) e grava a linha única. O workflow **SBOM** executa esse passo **antes** do `docker build` para embutir o digest nas imagens de release. Em produção, defina **`DATA_BOAR_EXPECTED_BUILD_DIGEST`** com o **mesmo** valor (veja [`.env.example`](../.env.example)) para o guard marcar **TAMPERED** com `licensing.mode: enforced` quando a linha embutida divergir. Tags de release também anexam **`build-digest.txt`** no GitHub Release para verificação independente.
 
 ## Manifesto de arquivos assinado (opcional)
 
-- Esquema JSON:
+- Esquema JSON (gerado por [`scripts/generate_release_manifest.py`](../scripts/generate_release_manifest.py)):
 
 ```json
 {
-  "version": 1,
+  "generated_at": "2026-05-24T23:00:00Z",
+  "data_boar_version": "1.7.4",
   "files": [
+    { "path": "main.py", "sha256": "hex..." },
     { "path": "core/licensing/guard.py", "sha256": "hex..." }
   ]
 }
 ```
 
-- Defina **`DATA_BOAR_RELEASE_MANIFEST_PATH`** ou `licensing.manifest_path` no config para o caminho desse arquivo.
+  Os caminhos críticos seguem o mesmo conjunto do build digest mais `boar_fast_filter*.so` quando a extensão Rust está compilada. O workflow **SBOM** gera `release-manifest.json` **dentro** da imagem Docker (após `docker build`) para que caminhos da extensão nativa coincidam com o runtime; o arquivo vai para GitHub Releases junto com SBOMs e `build-digest.txt`.
+
+- Defina **`DATA_BOAR_RELEASE_MANIFEST_PATH`** ou `licensing.manifest_path` no config (veja [`.env.example`](../.env.example)).
 - Na inicialização (modo enforced), os hashes são verificados; divergência → **TAMPERED**.
+- Verificação local: `uv run python scripts/generate_release_manifest.py --check dist/release-manifest.json`
 
 ## Automação
 
+- [`scripts/generate_build_digest.py`](../scripts/generate_build_digest.py) — digest canônico de build (`--check` falha se houver drift).
+- [`scripts/generate_release_manifest.py`](../scripts/generate_release_manifest.py) — manifesto SHA-256 por arquivo (`--out`, `--check`).
 - [`scripts/release-integrity-check.ps1`](../scripts/release-integrity-check.ps1) — valida um manifesto contra a árvore de trabalho (desenvolvedor / CI).
-- [`scripts/example-release-manifest.json`](../scripts/example-release-manifest.json) — formato de exemplo (substitua caminhos/hashes em releases reais).
+- [`scripts/example-release-manifest.json`](../scripts/example-release-manifest.json) — exemplo mínimo legado (prefira a saída do gerador em releases).
 
 ## Notas de empacotamento
 

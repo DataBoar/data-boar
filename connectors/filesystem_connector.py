@@ -693,8 +693,8 @@ class FilesystemConnector:
                 _stat = file_path.stat()
                 _mtime_ns = _stat.st_mtime_ns
                 _size = _stat.st_size
-            except OSError:
-                pass
+            except OSError:  # noqa: BLE001
+                pass  # stat() best-effort for file-identity metadata
             content = _read_text_sample(
                 file_path,
                 effective_ext,
@@ -718,8 +718,8 @@ class FilesystemConnector:
                     _fingerprint = _file_content_fingerprint(
                         content.encode("utf-8", errors="replace")
                     )
-            except Exception:
-                pass
+            except Exception:  # noqa: BLE001
+                pass  # fingerprint is optional audit metadata
             self.db_manager.save_finding(
                 source_type="filesystem",
                 target_name=target_name,

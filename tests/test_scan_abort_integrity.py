@@ -90,8 +90,8 @@ def _kill(proc: subprocess.Popen) -> None:  # type: ignore[type-arg]
             proc.kill()
         else:
             os.kill(proc.pid, signal.SIGKILL)
-    except ProcessLookupError:
-        pass
+    except ProcessLookupError:  # noqa: BLE001
+        pass  # process already exited
     proc.wait(timeout=5)
 
 

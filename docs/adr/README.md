@@ -77,15 +77,20 @@ Short, durable notes that capture **why** the project chose an approach—not on
 | 0056  | [Cryptographic ADR inventory (inv-adr.ps1 + SSH ed25519 attestation)](ADR-0056-cryptographic-adr-inventory-inv-adr-ssh-attestation.md) | Accepted |
 | 0057  | [Lightweight hub index (co-located links, no file moves)](ADR-0057-lightweight-hub-index-co-located-links.md) | Accepted |
 | 0058  | [Primer hub registration ritual](ADR-0058-primer-hub-registration-ritual.md) | Accepted |
+| 0061 | [ADR-0061 U-axis issue sub-order and cross-milestone gate](ADR-0061-u-axis-issue-suborder-and-cross-milestone-gate.md) | Accepted |
+| 0062 | [ADR-0062 Agent containment: triple-audit offband pattern](ADR-0062-agent-containment-triple-audit-offband-pingpong.md) | Accepted |
+| 0066 | [TAMPERED state behavior — fail-closed in enforced mode](ADR-0066-tampered-state-behavior.md) | Accepted |
 
 ## Related docs
 
-- [CONTRIBUTING.md](../../CONTRIBUTING.md) — contributor workflow; links MD029 and the fix script.
-- [SECURITY.md](../../SECURITY.md) · [docs/TECH_GUIDE.md](../TECH_GUIDE.md) — operator entry points ([ADR 0002](ADR-0002-operator-facing-security-and-technical-docs.md)).
-- [QUALITY_WORKFLOW_RECOMMENDATIONS.md](../QUALITY_WORKFLOW_RECOMMENDATIONS.md) — §6 (MD029), §7 (ADRs), SBOM.
-- [docs/ops/WORKFLOW_DEFERRED_FOLLOWUPS.md](../ops/WORKFLOW_DEFERRED_FOLLOWUPS.md) — deferred workflow/supply-chain notes ([ADR 0005](ADR-0005-ci-github-actions-supply-chain-pins.md) for Action/uv pinning).
-- [.cursor/rules/markdown-lint.mdc](../../.cursor/rules/markdown-lint.mdc) — when to run `fix_markdown_sonar.py` and post-script renumbering.
-- [.cursor/rules/audience-segmentation-docs.mdc](../../.cursor/rules/audience-segmentation-docs.mdc) — external vs internal doc links; [ADR 0004](ADR-0004-external-docs-no-markdown-links-to-plans.md).
+| Doc | Notes |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| [CONTRIBUTING.md](../../CONTRIBUTING.md) | contributor workflow; links MD029 and the fix script. |
+| [SECURITY.md](../../SECURITY.md) · [docs/TECH_GUIDE.md](../TECH_GUIDE.md) | operator entry points ([ADR 0002](ADR-0002-operator-facing-security-and-technical-docs.md)). |
+| [QUALITY_WORKFLOW_RECOMMENDATIONS.md](../QUALITY_WORKFLOW_RECOMMENDATIONS.md) | §6 (MD029), §7 (ADRs), SBOM. |
+| [docs/ops/WORKFLOW_DEFERRED_FOLLOWUPS.md](../ops/WORKFLOW_DEFERRED_FOLLOWUPS.md) | deferred workflow/supply-chain notes ([ADR 0005](ADR-0005-ci-github-actions-supply-chain-pins.md) for Action/uv pinning). |
+| [.cursor/rules/markdown-lint.mdc](../../.cursor/rules/markdown-lint.mdc) | when to run `fix_markdown_sonar.py` and post-script renumbering. |
+| [.cursor/rules/audience-segmentation-docs.mdc](../../.cursor/rules/audience-segmentation-docs.mdc) | external vs internal doc links; [ADR 0004](ADR-0004-external-docs-no-markdown-links-to-plans.md). |
 
 ## Documentation index
 

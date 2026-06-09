@@ -11,6 +11,8 @@ from pathlib import Path
 from typing import Any
 
 import pandas as pd
+
+from core.licensing.feature_gate import require_feature
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
@@ -38,8 +40,15 @@ def _p(text: str) -> str:
     return html.escape(str(text or ""), quote=False).replace("\n", "<br/>")
 
 
-def export_grc_executive_pdf(data: dict[str, Any], path: Path) -> None:
+def export_grc_executive_pdf(
+    data: dict[str, Any],
+    path: Path,
+    *,
+    config: dict[str, Any] | None = None,
+) -> None:
     """Short board-ready PDF: metadata, executive summary, asset summary, recommendations."""
+    if config is not None:
+        require_feature(config, "report_pdf")
     path.parent.mkdir(parents=True, exist_ok=True)
     meta = data["report_metadata"]
     exe = data["executive_summary"]

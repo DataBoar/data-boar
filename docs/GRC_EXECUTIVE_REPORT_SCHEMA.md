@@ -32,7 +32,7 @@
 | **`detailed_findings`** | Array of **risk-matrix rows** (see §3). |
 | **`recommendations`** | Prioritised actions: **`id`**, **`priority`** (e.g. P0–P3), **`action`**, **`estimated_effort`**, **`regulatory_impact_note`** (worded as **hypothesis** for DPO workshop, not a sanction prediction). |
 
-Optional future blocks (non-breaking additions): **`data_lineage_notes`**, **`tooling_limits`**, **`operator_attestation`**, **`integrity_reference`** (hash of config + session).
+Optional future blocks (non-breaking additions): **`data_lineage_notes`**, **`tooling_limits`**, **`operator_attestation`**, **`integrity_reference`** (hash of config + session). A shipped, **non-breaking** per-finding **`nist_csf_function_hint`** (plus the matching `compliance_mapping` disclaimer keys) is described in **§3.3**.
 
 ---
 
@@ -54,6 +54,7 @@ Each element should be sufficient for a **CISO one-pager row** and a **DPO triag
 | **`location_summary`** | string | Column, file path pattern, or API field class — **metadata**. |
 | **`violation_desc`** | string | **Technical** description (e.g. “high-density CPF-like tokens without field-level encryption signal in this scan configuration”). Avoid stating legal breach as fact. |
 | **`norm_tags`** | array of strings | Pass-through from findings / config (see [COMPLIANCE_METHODOLOGY.md](COMPLIANCE_METHODOLOGY.md)). |
+| **`nist_csf_function_hint`** | array of strings | **Optional, non-breaking.** Short **NIST CSF 2.0** codes (e.g. `"GV"`, `"ID.AM"`, `"PR.DS"`) derived from `norm_tags` via a **versioned shipped table** (`report/nist_csf_mapping.yaml`). **Heuristic hint, not a compliance determination** (see §3.3 and [ADR 0025](adr/ADR-0025-compliance-positioning-evidence-inventory-not-legal-conclusion-engine.md)). **Omitted** when no `norm_tag` maps — never an empty array. |
 | **`remediation_priority`** | string | e.g. `CRITICAL` / `HIGH` / `MEDIUM` / `LOW` — mapped from **adjusted** `risk_score` and operator overrides. |
 | **`regulatory_impact`** | string | **Business / legal workshop wording** for this row (e.g. candidate articles, administrative-risk framing). **Not** an automated legal conclusion; **counsel / DPO** must validate. Empty string is allowed when the integrator has no vetted sentence yet. |
 
@@ -83,6 +84,26 @@ When the Python consolidator is called with **`lgpd_density=LgpdDensityRiskConfi
 **Extra JSON fields (density mode only):** **`risk_density_raw`**, **`risk_density_scaled_cap`**, **`risk_density_breakdown`** (per-type lines: `pii_type`, `count`, **`risk_category`** (`IDENTIFIER` / `FINANCIAL` / `SENSITIVE` / `CHILD_DATA` — from ``core.intelligence``), `taxonomy`, `weight`, `line_score`), **`risk_density_taxonomy_version`**, **`dominant_risk_taxonomy`**. These fields justify *why* an asset scores high without embedding raw values.
 
 **Not legal classification:** substring mapping from detector labels is a **starting taxonomy**; operators may override weights or caps per engagement in future versions.
+
+### 3.3 Optional **NIST CSF 2.0** function hint (non-breaking)
+
+CISOs often reason in **NIST CSF 2.0** *Functions* (Govern, Identify, Protect, Detect, Respond, Recover). To let a dashboard or PDF **filter findings by CSF function** without bumping the contract, each `detailed_findings[]` row **may** carry an **optional** array of short CSF codes:
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| **`nist_csf_function_hint`** | array of strings | Short CSF 2.0 codes — **Function** (`"GV"`, `"ID"`, …) or **Function.Category** (`"ID.AM"`, `"PR.DS"`). Sorted in canonical order **GV, ID, PR, DE, RS, RC**. Present only when at least one `norm_tag` maps. |
+
+**Where the mapping lives (versioned, shipped — not hard-coded):** `report/nist_csf_mapping.yaml` (`mapping_version`, e.g. `nist_csf_2_0_hint_v1`). It maps `norm_tag` substrings to CSF codes — same model as the **article hints** (§4) and the [compliance-samples/](compliance-samples/) profiles. The reference consolidator `report/grc_reporter.py` derives the hint from `norm_tags`; the loader is `report/nist_csf_hints.py`.
+
+**Disclaimer location (ADR-0025):** so each row stays a plain array of codes, the heuristic disclaimer and mapping version are surfaced **once** in `compliance_mapping` (emitted only when at least one finding carries the hint):
+
+| `compliance_mapping` key | Meaning |
+| ----- | ----- |
+| **`nist_csf_function_hint_method`** | e.g. `heuristic_norm_tag_to_csf_v1`. |
+| **`nist_csf_mapping_version`** | Version string from the shipped table. |
+| **`nist_csf_function_hint_disclaimer`** | Plain-language **hint, not a compliance determination or control attestation** ([ADR 0025](adr/ADR-0025-compliance-positioning-evidence-inventory-not-legal-conclusion-engine.md)); CISO/DPO validates. |
+
+**Non-breaking:** this is an **additive optional** field — `schema_version` stays `data_boar_grc_executive_report_v1`; consumers that ignore unknown keys are unaffected. **Scope:** NIST CSF 2.0 **only** (no COBIT/SOC 2/ISO mapping here). For the **prose** tri-level positioning (NIST CSF / SANS / ISO 27035) see the related documentation discussion; this field is the **structured** complement that makes the artefact *carry* the CSF tag.
 
 ---
 

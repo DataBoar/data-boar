@@ -5,8 +5,8 @@
 # See docs/ops/LAB_COMPLETAO_RUNBOOK.md and docs/ops/LAB_SMOKE_MULTI_HOST.md.
 #
 # Exit codes (DATA_BOAR_COMPLETAO_EXIT_v1 -- same contract as docs/ops/LAB_COMPLETAO_RUNBOOK.md):
-#   0 -- completed diagnostic bundle (success; individual steps may log FAILED inside the transcript).
-#   1 -- reserved for future infra-hard-fail fast-path (network/tool missing when a gate requires it).
+#   0 -- completed diagnostic bundle (baremetal scan/import OK when not --skip-engine-import).
+#   1 -- baremetal scan or engine import failed (no DONE_SUCCESS_BAREMETAL).
 #   2 -- invalid invocation / unknown CLI argument (contract violation).
 #   3 -- reserved for compliance-violation signals when a scanner hook is wired to this script.
 #
@@ -145,6 +145,35 @@ _lc_sudo() {
   sudo -n "$@" 2>/dev/null || echo "(sudo -n failed or denied for: $*)"
 }
 
+_lc_prepare_baremetal_runtime() {
+  if [[ ! -f "$LC_REPO_ROOT/pyproject.toml" ]] || ! _lc_cmd uv; then
+    return 1
+  fi
+  echo "Preparing baremetal venv (uv sync)..."
+  if ! (cd "$LC_REPO_ROOT" && uv sync); then
+    echo "uv sync: FAILED"
+    return 1
+  fi
+  if (cd "$LC_REPO_ROOT" && uv run maturin develop --release >/dev/null 2>&1); then
+    echo "maturin develop --release: OK"
+  else
+    echo "maturin develop --release: skipped or failed (Python fallback may still run)"
+  fi
+  return 0
+}
+
+_lc_run_engine_import_probe() {
+  if ! _lc_prepare_baremetal_runtime; then
+    echo "import core.engine: FAILED (uv sync)"
+    return 1
+  fi
+  if (cd "$LC_REPO_ROOT" && uv run python -c "import core.engine; print('import core.engine: OK')" 2>&1); then
+    return 0
+  fi
+  echo "import core.engine: FAILED"
+  return 1
+}
+
 _lc_init_bench_workdir() {
   if [[ -z "$LC_BENCH_TRACK" ]]; then
     return 0
@@ -279,10 +308,14 @@ else
 fi
 
 _lc_section "Python import (engine)"
+LC_ENGINE_IMPORT_OK=0
 if [[ "$LC_SKIP_ENGINE" == "1" ]]; then
   echo "(skipped: container-only host -- expect Data Boar via Docker / Podman / Swarm stack, not bare-metal uv; see docs/ops/LAB_COMPLETAO_RUNBOOK.md)"
+  LC_ENGINE_IMPORT_OK=1
 elif [[ -f "$LC_REPO_ROOT/pyproject.toml" ]] && _lc_cmd uv; then
-  (cd "$LC_REPO_ROOT" && uv run python -c "import core.engine; print('import core.engine: OK')" 2>&1) || echo "import core.engine: FAILED"
+  if _lc_run_engine_import_probe; then
+    LC_ENGINE_IMPORT_OK=1
+  fi
 else
   echo "(skip: no uv or no pyproject.toml)"
 fi
@@ -292,17 +325,26 @@ _lc_section "Data Boar Engine (Baremetal RC)"
 CONFIG_RC="${LC_BENCH_CONFIG:-tests/config/benchmark-rc.yaml}"
 _lc_capture_metrics_snapshot "pre_scan"
 _scan_start_epoch="$(date +%s 2>/dev/null || echo 0)"
+LC_BAREMETAL_SCAN_OK=0
 
-if [[ -f "$LC_REPO_ROOT/$CONFIG_RC" ]] && _lc_cmd uv; then
-  do_log_ INFO "Iniciando Scan de Performance Baremetal com $CONFIG_RC..."
-
-  # SRE FIX: Avisa o Maestro que o motor pesado iniciou
+if [[ "$LC_SKIP_ENGINE" == "1" ]]; then
+  echo "(skipped baremetal scan: container-only host)"
+  LC_BAREMETAL_SCAN_OK=1
+elif [[ -f "$LC_REPO_ROOT/$CONFIG_RC" ]] && _lc_cmd uv; then
+  echo "Iniciando scan baremetal com $CONFIG_RC via main.py..."
   echo "SCANNING_BAREMETAL_RC at $(date +'%H:%M:%S')" > "${HOME}/.labop-status"
-
-  (cd "$LC_REPO_ROOT" && uv run data-boar scan --config "$CONFIG_RC")
+  if _lc_prepare_baremetal_runtime && (cd "$LC_REPO_ROOT" && uv run python main.py --config "$CONFIG_RC"); then
+    LC_BAREMETAL_SCAN_OK=1
+    echo "BAREMETAL_SCAN: OK"
+  else
+    echo "BAREMETAL_SCAN: FAILED"
+  fi
+elif [[ -f "$LC_REPO_ROOT/pyproject.toml" ]] && _lc_cmd uv; then
+  if _lc_run_engine_import_probe; then
+    LC_BAREMETAL_SCAN_OK=1
+  fi
 else
-  # Fallback para o smoke original se não houver config de benchmark
-  (cd "$LC_REPO_ROOT" && uv run python -c "import core.engine; print('import core.engine: OK')" 2>&1) || echo "import core.engine: FAILED"
+  echo "(skip baremetal scan: missing config or uv)"
 fi
 _scan_end_epoch="$(date +%s 2>/dev/null || echo 0)"
 if [[ "$_scan_start_epoch" -gt 0 && "$_scan_end_epoch" -ge "$_scan_start_epoch" ]]; then
@@ -407,8 +449,16 @@ _lc_bench_compare
 
 _lc_section "Telemetria"
 FINAL_TS=$(date +"%H:%M:%S")
-echo "DONE_SUCCESS_BAREMETAL at ${FINAL_TS}" > "${HOME}/.labop-status"
-echo "Status persistido em ${HOME}/.labop-status"
+if [[ "$LC_BAREMETAL_SCAN_OK" == "1" ]]; then
+  echo "DONE_SUCCESS_BAREMETAL at ${FINAL_TS}" > "${HOME}/.labop-status"
+  echo "Status persistido em ${HOME}/.labop-status (DONE_SUCCESS_BAREMETAL)"
+else
+  echo "DONE_FAILED_BAREMETAL at ${FINAL_TS}" > "${HOME}/.labop-status"
+  echo "Status persistido em ${HOME}/.labop-status (DONE_FAILED_BAREMETAL)"
+fi
 
 echo "=== lab-completao-host-smoke END ==="
+if [[ "$LC_BAREMETAL_SCAN_OK" != "1" ]]; then
+  exit 1
+fi
 exit 0

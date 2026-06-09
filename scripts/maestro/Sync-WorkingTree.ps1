@@ -47,8 +47,12 @@ if ($Ref -eq "WorkingTree") {
     # Nice catch excluding my docs/private from rsyncCmd so it wont exfiltrate operator private tree!!! Thanks a lot Gemini... :-o
     $rsyncCmd = "rsync -azq -e 'ssh -q -o BatchMode=yes -o ConnectTimeout=15' --exclude='.git' --exclude='.venv' --exclude='__pycache__' --exclude='.pytest_cache' --exclude='*.bundle' --exclude='docs/private' --exclude='*.log' --exclude='*.xlsx' --exclude='*.db' --exclude='data-boar-blackbox-audit.txt' --exclude='data-boar-*.tar' ./ ${targetUser}@${targetHost}:${finalPath}/"
 
-    # Invocamos o WSL2 com aspas duplas no $rsyncCmd para o bash entender como argumento único
-    wsl.exe -e bash -c "$rsyncCmd"
+    # Invocamos bash nativo no Linux ou WSL2 no Windows
+    if ($IsWindows) {
+        wsl.exe -e bash -c "$rsyncCmd"
+    } else {
+        bash -c "$rsyncCmd"
+    }
 
     $exitCode = $LASTEXITCODE
     Pop-Location
@@ -86,8 +90,12 @@ if ($Ref -eq "WorkingTree") {
 } else {
     # Novo Fluxo: Git Remote Fetch (Efêmero)
     # Remove stale origin if present from a previous ephemeral checkout (local or remote URL),
-    # then re-add the canonical GitHub remote before fetching the ref.
-    $gitCmd = "cd $finalPath && git init && (git remote remove origin 2>/dev/null || true) && git remote add origin git@github.com:FabioLeitao/data-boar.git && git fetch origin $Ref --depth=1 && git checkout FETCH_HEAD"
+    # then re-add origin (per-node git_origin override or canonical GitHub) before fetching the ref.
+    $gitOrigin = "git@github.com:FabioLeitao/data-boar.git"
+    if ($Node.PSObject.Properties['git_origin'] -and $Node.git_origin) {
+        $gitOrigin = $Node.git_origin
+    }
+    $gitCmd = "cd $finalPath && git init && (git remote remove origin 2>/dev/null || true) && git remote add origin $gitOrigin && git fetch origin $Ref --depth=1 && git checkout FETCH_HEAD"
     ssh -q -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$targetUser@$targetHost" "$gitCmd" > $null 2>&1
     if ($LASTEXITCODE -eq 0) {
         $syncOk = $true

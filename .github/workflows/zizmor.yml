@@ -32,24 +32,26 @@ jobs:
     name: Zizmor (GitHub Actions security lint)
     runs-on: ubuntu-latest
     env:
-      # Default mode: advisory (warn-first).
-      # To enforce by default, create repository variable ZIZMOR_ENFORCE=true.
-      # workflow_dispatch input `enforce=true` overrides for manual runs.
-      ENFORCE_ZIZMOR: ${{ github.event_name == 'workflow_dispatch' && inputs.enforce || vars.ZIZMOR_ENFORCE == 'true' }}
+      # Default mode: enforced on PR/push/schedule (issue #732).
+      # Opt out temporarily with repository variable ZIZMOR_ENFORCE=false.
+      # workflow_dispatch defaults to advisory unless input enforce=true.
+      ENFORCE_ZIZMOR: ${{ github.event_name == 'workflow_dispatch' && (inputs.enforce && 'true' || 'false') || (vars.ZIZMOR_ENFORCE == 'false' && 'false' || 'true') }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
 
-      - name: Run zizmor (advisory by default)
+      - name: Run zizmor
         id: zizmor
         continue-on-error: true
-        uses: zizmorcore/zizmor-action@b572f7b1a1c2d41efaab43d504f68d215c3cd727 # v0.5.4
+        uses: zizmorcore/zizmor-action@5f14fd08f7cf1cb1609c1e344975f152c7ee938d # v0.5.6
 
       - name: Warn in advisory mode
         if: ${{ steps.zizmor.outcome == 'failure' && env.ENFORCE_ZIZMOR != 'true' }}
         run: |
           echo "::warning::zizmor found workflow issues (advisory mode)."
-          echo "::warning::Set repository variable ZIZMOR_ENFORCE=true or run workflow_dispatch with enforce=true to fail on findings."
+          echo "::warning::Enforcement is on by default; set repository variable ZIZMOR_ENFORCE=false to opt out temporarily."
 
       - name: Enforce findings
         if: ${{ steps.zizmor.outcome == 'failure' && env.ENFORCE_ZIZMOR == 'true' }}
