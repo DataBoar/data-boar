@@ -19,6 +19,9 @@ name: Slack CI failure notify
       html_url:
         required: true
         type: string
+    secrets:
+      SLACK_WEBHOOK_URL:
+        required: false
 
 permissions:
   contents: read
