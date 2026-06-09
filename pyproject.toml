@@ -244,5 +244,5 @@ dev = [
     "pytest>=9.0.3",
     "rapidfuzz>=3.9.0",
     "ruff>=0.15.15",
-    "types-pyyaml>=6.0.12.20250915",
+    "types-pyyaml>=6.0.12.20260518",
 ]
