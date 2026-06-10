@@ -28,7 +28,7 @@ Assistants sometimes **reinvent** long PowerShell / bash / manual sequences and 
 ## What this does **not** mean
 
 - **Small one-liners** (`Test-Path`, `git status`, `gh pr view`) stay fine when no wrapper adds value.
-- **Linux lab-op over SSH** uses **`find`/`fd`**, **`lab-op.ps1`**, host reports — not Windows-only wrappers.
+- **Linux lab-op over SSH** uses **`find`**, **`fd`**, **`locate`/`plocate`**, **`git grep`**, **`grep -r`**, **`lab-op.ps1`**, host reports — not Windows-only wrappers.
 
 ## Cross-platform gate twins (`.ps1` ↔ `.sh`)
 

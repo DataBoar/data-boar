@@ -11,7 +11,7 @@
 
 ## Context
 
-The Maestro pre-flight orchestrator ran on **L14** (Windows 11 + WSL2). The canonical dev/orchestrator host is now **T14** (LMDE 7, native Linux). Three pre-flight bugs block completão runs without Windows-specific assumptions.
+The Maestro pre-flight orchestrator ran on the **primary Windows dev workstation** (Windows 11 + WSL2). The canonical dev/orchestrator host is now the **operator primary Linux dev workstation** (LMDE 7, native Linux). Three pre-flight bugs block completão runs without Windows-specific assumptions.
 
 ## Scope
 
@@ -30,7 +30,7 @@ Nodes that cannot reach GitHub directly (e.g. air-gapped lab, LAN-only fetch) ma
 ```json
 {
   "hostname": "alpine-emachines",
-  "git_origin": "ssh://leitao@t14-leitao/home/leitao/Projects/dev/data-boar",
+  "git_origin": "ssh://<ssh-user>@<lab-host>/path/to/data-boar",
   "path": "~/Projects/dev/data-boar",
   "user": "leitao"
 }
@@ -46,12 +46,12 @@ When absent, Ref-fetch keeps the canonical default: `git@github.com:FabioLeitao/
 | 2 | Bug 2 — `$Node.git_origin` override | ✅ |
 | 3 | Bug 3 — podman fallback in `Build-ContainerArtefact.ps1` | ✅ |
 | 4 | `tests/test_maestro_scripts.py` guards | ✅ |
-| 5 | Pre-flight on T14 against real inventory | ⬜ Operator |
+| 5 | Pre-flight on primary Linux orchestrator host against real inventory | ⬜ Operator |
 
 ## Verification
 
 ```powershell
-# From repo root on T14 (pwsh 7.6+)
+# From repo root on the Linux orchestrator host (pwsh 7.6+)
 pwsh -NoProfile -File scripts/maestro/Maestro.ps1 -WhatIf   # if supported
 uv run pytest tests/test_maestro_scripts.py -q
 ```
