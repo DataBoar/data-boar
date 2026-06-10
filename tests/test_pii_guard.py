@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import re
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -298,7 +299,7 @@ _GRATITUDE_ALLOWED_PATHS = {
 def test_plan_and_usecase_files_no_gratitude_attribution():
     """
     Plan Motivation/Context sections must not contain gratitude phrases that
-    attribute real people (e.g. 'thanks to Fulana', 'agradecemos a João').
+    attribute real people (e.g. 'thanks to a named contact', 'agradecemos a <nome>').
 
     Scans PLAN_*.md and docs/use-cases/**/*.md tracked files only — avoids
     false positives in generic docs where similar phrasing is legitimate.
@@ -331,3 +332,62 @@ def test_plan_and_usecase_files_no_gratitude_attribution():
         "Plan/use-case PII guard failed — gratitude attribution with real name:\n"
         + "\n".join(violations)
     )
+
+
+def test_pii_history_guard_diff_uses_three_dot_range(monkeypatch) -> None:
+    """Regression #805: git diff must use merge-base (three-dot), not tree compare."""
+    import scripts.pii_history_guard as guard
+
+    calls: list[list[str]] = []
+
+    def fake_git(args: list[str]) -> subprocess.CompletedProcess[str]:
+        calls.append(args)
+        return subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(guard, "_git", fake_git)
+    guard._collect_lines_to_scan("origin/main..HEAD", 500)
+    assert calls == [
+        ["diff", "--unified=0", "--no-color", "origin/main...HEAD", "--", "."]
+    ]
+
+
+def test_pii_history_guard_ok_when_branch_is_ancestor_of_main(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """When HEAD has no commits ahead of origin/main, guard must not false-positive."""
+    import scripts.pii_history_guard as guard
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+
+    def git(*args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            ["git", *args],
+            cwd=repo,
+            check=check,
+            capture_output=True,
+            text=True,
+        )
+
+    git("init", "-b", "main")
+    git("config", "user.email", "guard@test.example")
+    git("config", "user.name", "Guard Test")
+    sample = repo / "sample.md"
+    sample.write_text(
+        '"git_origin": "ssh://operator@lab-host-not-example/home/dev/data-boar"\n',
+        encoding="utf-8",
+    )
+    git("add", "sample.md")
+    git("commit", "-m", "base with ssh url")
+    git("checkout", "-b", "feature-behind")
+    git("checkout", "main")
+    sample.write_text("git_origin placeholder only\n", encoding="utf-8")
+    git("add", "sample.md")
+    git("commit", "-m", "fix on main")
+    main_sha = git("rev-parse", "main").stdout.strip()
+    git("update-ref", "refs/remotes/origin/main", main_sha)
+    git("checkout", "feature-behind")
+
+    monkeypatch.setattr(guard, "REPO_ROOT", repo)
+    monkeypatch.setattr(sys, "argv", ["pii_history_guard.py"])
+    assert guard.main() == 0
