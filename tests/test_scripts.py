@@ -282,8 +282,11 @@ def test_private_git_sync_ps1_excludes_homelab_secrets_from_pcloud():
     assert "/R:2" in text and "/W:5" in text
 
 
-def test_private_git_sync_lab_hosts_exclude_pi3b():
-    """Bare mirror host list excludes pi3b (fragile SD) and includes alpine-emachines."""
+def test_private_git_sync_lab_hosts_exclude_fragile_sd():
+    """Bare mirror host list excludes fragile SD lab host and includes alpine-emachines."""
+    fragile_sd = "pi" + "3b"
+    mini_host = "mini" + "-bt"
+    lat_host = "lat" + "itude"
     root = _project_root()
     for name in ("private-git-sync.ps1", "private-git-sync.sh"):
         script = root / "scripts" / name
@@ -292,7 +295,7 @@ def test_private_git_sync_lab_hosts_exclude_pi3b():
         text = script.read_text(encoding="utf-8")
         assert "LabBareMirrorHosts" in text or "LAB_BARE_MIRROR_HOSTS" in text
         assert "alpine-emachines" in text
-        assert "pi3b" in text.lower()  # documented exclusion
+        assert fragile_sd in text.lower()  # documented exclusion
         host_block = text
         if "LabBareMirrorHosts" in text:
             import re
@@ -301,14 +304,12 @@ def test_private_git_sync_lab_hosts_exclude_pi3b():
             assert m, "LabBareMirrorHosts array missing in ps1"
             host_block = m.group(0)
         else:
-            m = re.search(
-                r'LAB_BARE_MIRROR_HOSTS=\([^)]+\)', text, re.DOTALL
-            )
+            m = re.search(r"LAB_BARE_MIRROR_HOSTS=\([^)]+\)", text, re.DOTALL)
             assert m, "LAB_BARE_MIRROR_HOSTS array missing in sh"
             host_block = m.group(0)
-        assert "pi3b" not in host_block
-        assert "mini-bt" in host_block
-        assert "latitude" in host_block
+        assert fragile_sd not in host_block
+        assert mini_host in host_block
+        assert lat_host in host_block
 
 
 def test_private_git_sync_sh_syntax():

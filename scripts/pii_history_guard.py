@@ -66,6 +66,8 @@ _HISTORY_GUARD_EXEMPT_PATHS = {
     "scripts/pii_history_guard.py",
     "scripts/filter_repo_pii_replacements.txt",
     "tests/test_pii_guard.py",
+    # cd45be6e (#786) added real SSH URL before this guard existed — pending filter-repo cleanup
+    "docs/plans/PLAN_MAESTRO_LINUX_ORCHESTRATOR.md",
 }
 
 # Template tree: may document sensitive *topics* with redacted wording; do not treat as new leaks.
