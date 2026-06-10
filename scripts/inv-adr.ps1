@@ -44,8 +44,13 @@ if (-not (Test-Path -LiteralPath $AdrDir)) {
 
 function Get-AdrStatusFromContent {
     param([string]$Raw)
-    if ($Raw -match '(?m)^-\s+\*\*Status:\*\*\s*(\w+)') { return $Matches[1].Trim() }
-    if ($Raw -match '\*\*Status:\*\*\s*(\w+)') { return $Matches[1].Trim() }
+    # ADR 0045 amendment: ## Status section (full line - Accepted or "Duplicate of ADR-NNNN")
+    if ($Raw -match '(?ms)^## Status\s*\r?\n\s*([^\r\n#]+?)\s*(?:\r?\n|$)') {
+        $fromSection = $Matches[1].Trim()
+        if ($fromSection) { return $fromSection }
+    }
+    if ($Raw -match '(?m)^-\s+\*\*Status:\*\*\s*(.+)') { return $Matches[1].Trim() }
+    if ($Raw -match '\*\*Status:\*\*\s*(\S+)') { return $Matches[1].Trim() }
     return "Unknown"
 }
 
