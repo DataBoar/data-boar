@@ -345,6 +345,8 @@ Você pode varrer APIs HTTP(S) remotas em busca de dados pessoais ou sensíveis 
 
 **Obrigatório:** `name`, `base_url` (ou `url`). **Opcional:** `paths` ou `endpoints` (lista de paths, ex.: `["/users", "/orders"]`), `discover_url` (GET retorna lista de paths a varrer), `timeout`, `headers` e um bloco `auth`.
 
+**Guarda SSRF (#832):** `base_url`, `discover_url` e `auth.token_url` que resolvem para hosts link-local (metadados de nuvem `169.254.0.0/16`), loopback ou privados (RFC1918/ULA) são **rejeitados por padrão** — o alvo registra a falha e nenhuma requisição é enviada. Varrer infraestrutura interna é um caso de uso normal do Data Boar, então faça o opt-in por alvo com `allow_private_networks: true`. Esquemas que não sejam `http(s)` são sempre rejeitados. A mesma guarda vale para SharePoint (`site_url`), WebDAV (`base_url`) e Power BI (`auth.token_url` customizado).
+
 **User-Agent HTTP(S) padrão de saída:** clientes de descoberta enviam **`DataBoar-Prospector/<versão>`** (mesma versão resolvida do pacote `data-boar` instalado — `core.about.get_http_user_agent()`). Use essa string em logs de WAF ou API gateway no destino para identificar o produto. Se o fornecedor exigir outro valor, defina **`User-Agent`** (chave case-insensitive) em `headers` no alvo; isso **substitui** o padrão em REST/API. Conectores SharePoint, Power BI e Dataverse aplicam o mesmo padrão. Veja [ADR 0034](adr/ADR-0034-outbound-http-user-agent-data-boar-prospector.md) (texto canônico em inglês).
 
 ### Tipos de auth
