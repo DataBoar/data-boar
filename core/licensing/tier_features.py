@@ -8,8 +8,15 @@ STRATEGY (internal — not yet public):
   Pro        — PDF reports, advanced connectors, scheduled scans, API key management, support SLA
   Enterprise — custom branding, digital signatures, multi-tenant, SSO, priority support
 
-CURRENT STATUS: stub — enforcement not yet implemented.
-All features default to OPEN (no restriction) until licensing contracts are finalized.
+CONNECTOR BOUNDARY (operator decision, ratified 2026-06-11 — #843):
+  Open-core stays useful: filesystem, self-hosted SQL/NoSQL (sqlite/postgres/
+  mysql/mongo/redis), compressed files, and the generic REST connector are
+  Community. The gate bites only on MANAGED CORPORATE infrastructure:
+  PowerBI, SharePoint, Dataverse, WebDAV, SMB/CIFS, NFS, MSSQL, Oracle (plus
+  the cloud connectors already mapped: Snowflake, SAP, S3, Azure Blob, GCS)
+  are Pro. Gating only bites in licensing.mode: enforced — Tier.OPEN
+  (enforcement off) stays free for dev and lab.
+
 Do NOT expose tier names or pricing publicly until branding decision is made.
 
 When adding a NEW FEATURE, add a row here FIRST, then implement the gate in the code.
@@ -53,15 +60,29 @@ FEATURE_TIER_MAP: dict[str, Tier] = {
     "compressed_files": Tier.COMMUNITY,
     "content_type_detection": Tier.COMMUNITY,
     "synthetic_data_testing": Tier.COMMUNITY,
+    # Generic REST stays open-core (#843) — explicit entry so the registry
+    # gate records an allow decision instead of falling through silently.
+    "connector_rest": Tier.COMMUNITY,
     # Pro features (PDF report, advanced connectors, scheduling)
     "ocr_images": Tier.PRO,
     "report_pdf": Tier.PRO,  # see PLAN_PDF_GRC_REPORT.md
     "report_pdf_custom_branding": Tier.ENTERPRISE,
+    "compliance_grade_report": Tier.PRO,  # DPO A+→F score — see #697
     "connector_snowflake": Tier.PRO,
     "connector_sap": Tier.PRO,
     "connector_s3_object_storage": Tier.PRO,
     "connector_azure_blob": Tier.PRO,
     "connector_gcs": Tier.PRO,
+    # Managed corporate infrastructure connectors (#843 boundary)
+    "connector_powerbi": Tier.PRO,
+    "connector_sharepoint": Tier.PRO,
+    "connector_dataverse": Tier.PRO,
+    "connector_webdav": Tier.PRO,
+    "connector_smb": Tier.PRO,
+    "connector_cifs": Tier.PRO,
+    "connector_nfs": Tier.PRO,
+    "connector_mssql": Tier.PRO,
+    "connector_oracle": Tier.PRO,
     "scheduled_scans": Tier.PRO,
     # Aliases / upcoming gates (see GitHub #558, #544, #552, #551)
     "scan_scheduler_pro": Tier.PRO,
@@ -87,6 +108,9 @@ FEATURE_TIER_MAP: dict[str, Tier] = {
     "historical_comparison": Tier.ENTERPRISE,
     "audit_log_export": Tier.ENTERPRISE,
     "custom_detectors": Tier.ENTERPRISE,
+    "vcs_connector": Tier.ENTERPRISE,  # files version control (VCS) scanner — see #677
+    "plugin_partner_interface": Tier.ENTERPRISE,  # L1/L2/L3 plugin arch — see #695
+    "partner_provider_driver": Tier.ENTERPRISE,  # stealthization via partner provider — see #696
 }
 
 # ---------------------------------------------------------------------------

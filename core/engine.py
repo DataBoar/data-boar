@@ -265,18 +265,17 @@ class AuditEngine:
 
     def _run_target(self, target: dict[str, Any]) -> None:
         """Run one target: resolve connector, instantiate, run()."""
-        from core.connector_registry import tier_feature_for_target
+        from core.connector_registry import require_connector_allowed
         from core.licensing.errors import FeatureTierBlockedError
-        from core.licensing.feature_gate import require_feature
 
-        tier_feature = tier_feature_for_target(target)
-        if tier_feature:
-            try:
-                require_feature(self.config, tier_feature)
-            except FeatureTierBlockedError as exc:
-                tname = target.get("name", "unknown")
-                self.db_manager.save_failure(tname, "tier_blocked", exc.reason)
-                return
+        # Connector tier gate (#843): fail-loud + scan_failures row in enforced
+        # mode; free in Tier.OPEN and for open-core connectors.
+        try:
+            require_connector_allowed(self.config, target)
+        except FeatureTierBlockedError as exc:
+            tname = target.get("name", "unknown")
+            self.db_manager.save_failure(tname, "tier_blocked", exc.reason)
+            return
 
         resolved = connector_for_target(target)
         if not resolved:
