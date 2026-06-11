@@ -158,16 +158,26 @@ function Start-MatrixApiProcess {
     $childEnv["DATA_BOAR_LICENSE_PUBLIC_KEY_PATH"] = $PublicKeyPath
     $childEnv["CONFIG_PATH"] = $ConfigPath
     # -Environment requires pwsh 7.4+ (guaranteed by #Requires -Version 7.6.1 above).
-    # -WindowStyle Hidden is Windows-only; pwsh silently ignores it on Linux/macOS.
-    $proc = Start-Process `
-        -FilePath "uv" `
-        -ArgumentList $args `
-        -WorkingDirectory $Root `
-        -RedirectStandardOutput $logPath `
-        -RedirectStandardError $errPath `
-        -PassThru `
-        -WindowStyle Hidden `
-        -Environment $childEnv
+    # -WindowStyle Hidden is Windows-ONLY: on Linux/macOS Start-Process THROWS a
+    # ParameterBindingException — it does NOT silently ignore the parameter.
+    $spArgs = @{
+        FilePath               = "uv"
+        ArgumentList           = $args
+        WorkingDirectory       = $Root
+        RedirectStandardOutput = $logPath
+        RedirectStandardError  = $errPath
+        PassThru               = $true
+        Environment            = $childEnv
+    }
+    if ($IsWindows) { $spArgs["WindowStyle"] = "Hidden" }
+    try {
+        $proc = Start-Process @spArgs
+    } catch {
+        throw "Start-MatrixApiProcess: failed to spawn 'uv' on port ${ApiPort}: $_"
+    }
+    if ($null -eq $proc) {
+        throw "Start-MatrixApiProcess: Start-Process returned null (spawn failed) on port ${ApiPort}"
+    }
     return [PSCustomObject]@{
         Process = $proc
         LogPath = $logPath

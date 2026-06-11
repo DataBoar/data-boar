@@ -470,3 +470,46 @@ def test_maestro_no_retired_workstation_codename_token() -> None:
     assert not hits, (
         f"Remove retired workstation codename token from: {', '.join(hits)}"
     )
+
+
+def test_start_matrix_api_process_guards_window_style_linux() -> None:
+    """Anti-regression #827: -WindowStyle Hidden must be guarded by $IsWindows.
+
+    On Linux/macOS, Start-Process throws a ParameterBindingException for -WindowStyle
+    Hidden — it does NOT silently ignore the parameter as an older comment claimed.
+    The fix conditionally adds WindowStyle only on Windows via a splatted hashtable.
+    """
+    root = _project_root()
+    text = (root / "scripts" / "maestro" / "Handle-LicensingMatrix.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    # -WindowStyle must either be absent or guarded by $IsWindows
+    if "-WindowStyle" in text:
+        assert "$IsWindows" in text, (
+            "Start-MatrixApiProcess uses -WindowStyle Hidden without an $IsWindows guard; "
+            "on Linux Start-Process throws ParameterBindingException, killing the first API spawn"
+        )
+    # The misleading 'silently ignores' comment must be corrected
+    assert "silently ignores" not in text, (
+        "Handle-LicensingMatrix.ps1 still carries the incorrect 'silently ignores' comment "
+        "about -WindowStyle Hidden on Linux — the parameter THROWS, not ignores"
+    )
+
+
+def test_start_matrix_api_process_propagates_spawn_failure() -> None:
+    """Anti-regression #827: Start-Process must be wrapped in try/catch to propagate exit != 0.
+
+    Previously Start-Process exceptions were unhandled, causing the function to return null
+    and the caller to silently continue (masking spawn failures as exit 0).
+    """
+    root = _project_root()
+    text = (root / "scripts" / "maestro" / "Handle-LicensingMatrix.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    # Must have try/catch guarding Start-Process
+    assert "try {" in text or "try{" in text, (
+        "Start-MatrixApiProcess must wrap Start-Process in try/catch to propagate spawn failures"
+    )
+    assert "throw" in text, (
+        "Start-MatrixApiProcess must re-throw or throw a descriptive error on spawn failure"
+    )
