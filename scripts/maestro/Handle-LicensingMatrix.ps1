@@ -114,8 +114,12 @@ function Invoke-ApiPostStatus {
             -MaximumRedirection 0
         return [int]$response.StatusCode
     } catch {
-        if ($_.Exception.Message -match "[Rr]edirect") {
-            return 302
+        # Use numeric status code, not locale-dependent exception message text.
+        # PowerShell throws on 3xx when -MaximumRedirection 0; the response
+        # object carries the real status code regardless of system locale.
+        $resp = $_.Exception.Response
+        if ($resp -and [int]$resp.StatusCode -ge 300 -and [int]$resp.StatusCode -lt 400) {
+            return [int]$resp.StatusCode
         }
         throw
     }
@@ -153,6 +157,8 @@ function Start-MatrixApiProcess {
     $childEnv["DATA_BOAR_LICENSE_PATH"] = $LicensePath
     $childEnv["DATA_BOAR_LICENSE_PUBLIC_KEY_PATH"] = $PublicKeyPath
     $childEnv["CONFIG_PATH"] = $ConfigPath
+    # -Environment requires pwsh 7.4+ (guaranteed by #Requires -Version 7.6.1 above).
+    # -WindowStyle Hidden is Windows-only; pwsh silently ignores it on Linux/macOS.
     $proc = Start-Process `
         -FilePath "uv" `
         -ArgumentList $args `
@@ -203,21 +209,32 @@ function Stop-MatrixApiProcess {
     }
     $proc = $ApiBundle.Process
     if (-not $proc.HasExited) {
-        & taskkill /F /T /PID $proc.Id 2>$null
+        # Cross-platform: proc.Kill($true) terminates the entire process tree
+        # (covers child uv/python processes on Linux and Windows alike).
+        # taskkill /F /T is Windows-only and must not be used here.
+        try { $proc.Kill($true) } catch { }
         Start-Sleep -Seconds 2
     }
-    # belt-and-suspenders: kill whatever process still holds the port, then poll until free
+    # belt-and-suspenders: kill whatever process still holds the port, then poll until free.
+    # Get-NetTCPConnection is Windows-only; on Linux use .NET IPGlobalProperties for the poll
+    # and skip the PID-by-port lookup (proc.Kill($true) above covers child processes).
     if ($ApiBundle.ApiPort) {
-        $portPid = (Get-NetTCPConnection -LocalPort $ApiBundle.ApiPort -State Listen -ErrorAction SilentlyContinue).OwningProcess
-        if ($portPid) {
-            Stop-Process -Id $portPid -Force -ErrorAction SilentlyContinue
-            Start-Sleep -Seconds 1
+        if ($IsWindows) {
+            $portPid = (Get-NetTCPConnection -LocalPort $ApiBundle.ApiPort -State Listen -ErrorAction SilentlyContinue).OwningProcess
+            if ($portPid) {
+                Stop-Process -Id $portPid -Force -ErrorAction SilentlyContinue
+                Start-Sleep -Seconds 1
+            }
         }
         $portFree = $false
         $deadline = (Get-Date).AddSeconds(8)
         while ((Get-Date) -lt $deadline) {
-            $conn = Get-NetTCPConnection -LocalPort $ApiBundle.ApiPort -State Listen -ErrorAction SilentlyContinue
-            if (-not $conn) { $portFree = $true; break }
+            # GetActiveTcpListeners() is cross-platform (.NET 5+, covers pwsh 7.4+).
+            $listeners = [System.Net.NetworkInformation.IPGlobalProperties]::GetIPGlobalProperties().GetActiveTcpListeners()
+            if (-not ($listeners | Where-Object { $_.Port -eq $ApiBundle.ApiPort })) {
+                $portFree = $true
+                break
+            }
             Start-Sleep -Milliseconds 300
         }
         if (-not $portFree) {

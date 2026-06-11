@@ -406,6 +406,57 @@ def test_lab_completao_host_smoke_writes_baremetal_scan_sentinel() -> None:
     assert "LC_BENCH_ROOT" in text
 
 
+def test_invoke_api_post_status_uses_numeric_status_not_locale_string() -> None:
+    """Anti-regression #818: redirect detection must use numeric status code, not locale-dependent message text.
+
+    PowerShell throws on 3xx when -MaximumRedirection 0; the exception message is
+    locale-translated on non-English systems (e.g. pt_BR), so matching the word
+    'redirect' in the message text is unreliable.  The fix reads
+    $_.Exception.Response.StatusCode (an integer) instead.
+    """
+    root = _project_root()
+    text = (root / "scripts" / "maestro" / "Handle-LicensingMatrix.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "[Rr]edirect" not in text, (
+        "Invoke-ApiPostStatus must not match the word 'redirect' in the exception message "
+        "(locale-dependent); check numeric StatusCode instead"
+    )
+    assert ".StatusCode -ge 300" in text, (
+        "Invoke-ApiPostStatus must check numeric 3xx lower bound (.StatusCode -ge 300)"
+    )
+    assert ".StatusCode -lt 400" in text, (
+        "Invoke-ApiPostStatus must check numeric 3xx upper bound (.StatusCode -lt 400)"
+    )
+
+
+def test_stop_matrix_api_process_is_cross_platform() -> None:
+    """Anti-regression #820: Stop-MatrixApiProcess must not use Windows-only taskkill
+    or unconditional Get-NetTCPConnection; cross-platform kill and port poll required.
+    """
+    root = _project_root()
+    text = (root / "scripts" / "maestro" / "Handle-LicensingMatrix.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "& taskkill" not in text, (
+        "Stop-MatrixApiProcess must not invoke taskkill (Windows-only); use proc.Kill or Stop-Process"
+    )
+    # Get-NetTCPConnection must be guarded by $IsWindows when present
+    if "Get-NetTCPConnection" in text:
+        assert "$IsWindows" in text, (
+            "Get-NetTCPConnection is Windows-only and must be inside an 'if ($IsWindows)' block"
+        )
+    # Cross-platform port poll must use .NET IPGlobalProperties
+    assert "GetActiveTcpListeners" in text, (
+        "Port-free poll must use .NET GetActiveTcpListeners() which works cross-platform "
+        "instead of Windows-only Get-NetTCPConnection"
+    )
+    # Cross-platform process kill must be present
+    assert "proc.Kill" in text or "Stop-Process" in text, (
+        "Stop-MatrixApiProcess must use proc.Kill($true) or Stop-Process for cross-platform kill"
+    )
+
+
 def test_maestro_no_retired_workstation_codename_token() -> None:
     """Maestro *.ps1 must not embed the retired workstation codename token (guard: test_public_tree_no_*codename*)."""
     root = _project_root()
