@@ -30,12 +30,12 @@ Use these tags in headings to keep priorities explicit and machine-countable:
 
 Do not edit this block manually; refresh with `python scripts/plans-stats.py --write`.
 
-- **Status rows counted:** 184  (Done: 110 | Incomplete: 74)
-- **Incomplete breakdown:** Pending `⬜`=68, Tracked `🔄` / `Tracked (partially done)`=6, Under consideration=0, Backlog-marked rows=0
+- **Status rows counted:** 186  (Done: 113 | Incomplete: 73)
+- **Incomplete breakdown:** Pending `⬜`=67, Tracked `🔄` / `Tracked (partially done)`=6, Under consideration=0, Backlog-marked rows=0
 
 | Horizon | Total rows | Done | Incomplete |
 | ------- | ----------: | ----: | ----------: |
-| `H0` | 34 | 27 | 7 |
+| `H0` | 36 | 30 | 6 |
 | `H1` | 37 | 28 | 9 |
 | `H2` | 0 | 0 | 0 |
 | `H3` | 108 | 50 | 58 |
@@ -91,7 +91,7 @@ When **partners** or **buyers** anchor on a vertical (MSP, insurance, RPO, real 
 - **Taxonomy axes (G0-G3 + hub):** [PLAN_G_TIER.md](PLAN_G_TIER.md) ([pt-BR](PLAN_G_TIER.pt_BR.md)) formalizes **gravity** for findings; [PLAN_TAXONOMY_AXES.md](PLAN_TAXONOMY_AXES.md) maps orthogonal axes; [ADR-0055](../adr/ADR-0055-orthogonal-priority-axes-anti-collision-contract.md) records the anti-collision contract. **`scripts/inv-adr.ps1`** regenerates **`docs/adr/INVENTORY.txt`**.
 - **Plan checkbox discipline:** When code ships for a named plan slice, update **`PLAN_*.md`** checkboxes in the **same PR** — see **`AGENTS.md`** (*Plan checkbox discipline*); **`plans-status-pl-sync.mdc`** stays situational (plan globs only).
 - **Licensing enforcement (open issues — PMO index):** Cluster **#704** [P0] (Maestro + JWT on four lab hosts) → **#719** [P1] **`[U1]`** (silent bypass via `DATA_BOAR_ENV=development` / `DEBUG=1` — CRITICAL log + Docker doc) → **#708–#722** (issuer, trial/grace/revocation ADRs). Table below under **`[H0][U1]` Licensing enforcement**; **A6** `license-smoke` should gain a **#719** regression when the fix lands. **After** Wave 1 **#656** U0/U1 slices and **#406** release gate — not a substitute for **#606** [P0] plugin hooks unless operator reprioritizes.
-- **LAB-OP Ansible + host hygiene ([#756](https://github.com/FabioLeitao/data-boar/issues/756)):** **`[H0][U1]`** **mini-bt** disk **~90%** (may block completão / bare mirror on that node) · **`[H0][U2]`** install **`bw`** CLI via T14 Ansible playbook (idempotent). Issue states **no release-gate blocker** — operator-paced; see **LAB-OP** paragraph below and **M-PILOT-READY** completão row.
+- **LAB-OP Ansible + host hygiene ([#756](https://github.com/FabioLeitao/data-boar/issues/756)):** **`[H0][U1]`** one lab node's disk at **~90%** (may block completão / bare mirror on that node) · **`[H0][U2]`** install **`bw`** CLI via the lab Ansible playbook (idempotent). Issue states **no release-gate blocker** — operator-paced; see **LAB-OP** paragraph below and **M-PILOT-READY** completão row.
 - **Forensics primer — first responder ([#747](https://github.com/FabioLeitao/data-boar/issues/747)):** Complements parent **[#685](https://github.com/FabioLeitao/data-boar/issues/685)**; thin **`docs(primers)`** checklist · **`[H2][U3][P2]`** — Gemini Cold row **G-26-19** below; hub chain **#685 → #747 → #744** when primers hub expands.
 
 **Gemini Cold — promoted sequence (safest first, `[H3][U3]` doc/hygiene unless noted):** Use a **`docs`** or **`houseclean`** session; run **`check-all`** before merge. Source IDs: §6 of [PLAN_GEMINI_FEEDBACK_TRIAGE.md](PLAN_GEMINI_FEEDBACK_TRIAGE.md).
@@ -121,7 +121,7 @@ Refresh periodically: `gh issue list --state open --limit 50` (requires [`gh`](h
 | [520](https://github.com/FabioLeitao/data-boar/issues/520)–[522](https://github.com/FabioLeitao/data-boar/issues/522) | CLI: validate-config, session diff, DSAR export | Feature (CLI) | [PLAN_CLI_VALIDATE_DIFF_AND_DSAR_EXPORT.md](PLAN_CLI_VALIDATE_DIFF_AND_DSAR_EXPORT.md) | **`[H1][U1]`** three slices; align with scan manifest / run summary when present |
 | [704](https://github.com/FabioLeitao/data-boar/issues/704) | Maestro + JWT enterprise on four lab hosts | Security / licensing | [LICENSING_SPEC.md](../LICENSING_SPEC.md) · **M-PILOT-READY** | **`[H0][U0/U1]`** [P0] — before **#719**; after Wave 1 **#656** U0/U1 when operator names lab licensing slice |
 | [719](https://github.com/FabioLeitao/data-boar/issues/719) | Dev env vars bypass JWT enforcement (no audit log) | Bug / security | [LICENSING_SPEC.md](../LICENSING_SPEC.md) · [DEPLOY.md](../deploy/DEPLOY.md) | **`[H0][U1]`** [P1] — after **#704** or in parallel if prod exposure confirmed; **A6** regression when fixed |
-| [756](https://github.com/FabioLeitao/data-boar/issues/756) | T14 Ansible: `bw` CLI + mini-bt disk hygiene | Lab-op / workflow | [HOMELAB_VALIDATION.md](../ops/HOMELAB_VALIDATION.md) · [LMDE7_LAB-NODE-01_DEVELOPER_SETUP.md](../ops/LMDE7_LAB-NODE-01_DEVELOPER_SETUP.md) | **`[H0][U1]`** disk on **mini-bt** · **`[U2]`** `bw` playbook — **not** release gate; see **LAB-OP** § below |
+| [756](https://github.com/FabioLeitao/data-boar/issues/756) | Lab Ansible: `bw` CLI + lab-node disk hygiene | Lab-op / workflow | [HOMELAB_VALIDATION.md](../ops/HOMELAB_VALIDATION.md) · [LMDE7_LAB-NODE-01_DEVELOPER_SETUP.md](../ops/LMDE7_LAB-NODE-01_DEVELOPER_SETUP.md) | **`[H0][U1]`** disk on one lab node ([#756](https://github.com/FabioLeitao/data-boar/issues/756)) · **`[U2]`** `bw` playbook — **not** release gate; see **LAB-OP** § below |
 | [747](https://github.com/FabioLeitao/data-boar/issues/747) | Forensics primer first-responder checklist | Docs | [PRIMERS_HUB.md](PRIMERS_HUB.md) · parent **[#685](https://github.com/FabioLeitao/data-boar/issues/685)** | **`[H2][U3]`** [P2] — Gemini Cold **G-26-19**; after higher-band docs/man slices |
 
 **Claude audit / doc-hygiene issue sweep (#87+, 2026-05):** Ship **thin PRs** (one subject per commit cluster; `check-all` before integration). **Sequence when titles disagree:** band in headline **`[P0]` → `[P1]` → `[P2]` → `[P3]`**, then **ascending issue #**; issues **without** a band trail the banded set, still by **#**. **Source of truth:** `gh issue list --state open --limit 200` (~**135** open as of **2026-05-20**; **no** new issues filed that day — backlog is stable, not growing overnight). **Duplicate / echo issues:** after merge + green CI, close the canonical issue then mark duplicates with evidence — [GITHUB_ISSUE_CANONICAL_AND_DUPLICATE_CLOSE.md](../ops/GITHUB_ISSUE_CANONICAL_AND_DUPLICATE_CLOSE.md) ([pt-BR](../ops/GITHUB_ISSUE_CANONICAL_AND_DUPLICATE_CLOSE.pt_BR.md)). **Priority discipline ([THIN_SLICE_AGENT_PRIORITY_HANDOFF.md](../ops/THIN_SLICE_AGENT_PRIORITY_HANDOFF.md)):** stay in **P1** until blocked — do **not** cherry-pick **P3** housekeeping while **P1** man/docs slices remain. **Head of queue (2026-05-20; PMO rows for #704/#719/#756/#747 added 2026-06-03):** **P0** only [#606](https://github.com/FabioLeitao/data-boar/issues/606) (Enterprise plugin hooks — product scope; defer unless operator names it). **P0/P1 licensing (lab + enforcement):** [#704](https://github.com/FabioLeitao/data-boar/issues/704) then [#719](https://github.com/FabioLeitao/data-boar/issues/719) — see **`[H0][U1]` Licensing enforcement** table. **P1 docs/man (thin):** [#431](https://github.com/FabioLeitao/data-boar/issues/431), [#444](https://github.com/FabioLeitao/data-boar/issues/444) (`data_boar.5`), then [#483](https://github.com/FabioLeitao/data-boar/issues/483) (domain/contact policy). **P2 security (thin):** [#622](https://github.com/FabioLeitao/data-boar/issues/622) (`redact_config` substring keys). **P2 docs (primers):** [#747](https://github.com/FabioLeitao/data-boar/issues/747). **Lab-op (non-gate):** [#756](https://github.com/FabioLeitao/data-boar/issues/756). **Governance closed:** [#419](https://github.com/FabioLeitao/data-boar/issues/419), [#423](https://github.com/FabioLeitao/data-boar/issues/423), [#424](https://github.com/FabioLeitao/data-boar/issues/424) via PR **#621**. **Man timeouts:** [#454](https://github.com/FabioLeitao/data-boar/issues/454) ✅ (supersedes #448 key-name drift).
@@ -265,7 +265,7 @@ After **A1–A3** (minimum), you can **resume token-aware pace** on Tier 2 featu
 | Maestro SSH `ConnectTimeout` | [#403](https://github.com/FabioLeitao/data-boar/issues/403) | ✅ Done |
 | benchmark-rc `targets:` key (not `scan_scope`) | [#407](https://github.com/FabioLeitao/data-boar/issues/407) | ✅ Done |
 | Maestro `--bench-config` argument fix | [#404](https://github.com/FabioLeitao/data-boar/issues/404), [#408](https://github.com/FabioLeitao/data-boar/issues/408) | ✅ Done |
-| Maestro Linux orchestrator (T14: rsync/bash, `git_origin`, podman) | [#786](https://github.com/FabioLeitao/data-boar/issues/786) · [PLAN_MAESTRO_LINUX_ORCHESTRATOR.md](PLAN_MAESTRO_LINUX_ORCHESTRATOR.md) | ✅ Done (code); ⬜ T14 pre-flight |
+| Maestro Linux orchestrator (lab node: rsync/bash, `git_origin`, podman) | [#786](https://github.com/FabioLeitao/data-boar/issues/786) · [PLAN_MAESTRO_LINUX_ORCHESTRATOR.md](PLAN_MAESTRO_LINUX_ORCHESTRATOR.md) | ✅ Done (code); ⬜ lab-node pre-flight |
 | Release gate **1.7.4** checklist (tag, Hub, `docs/releases/1.7.4.md`) | [#406](https://github.com/FabioLeitao/data-boar/issues/406) | ⬜ Pending |
 
 **`[H0][U1]` Licensing enforcement — open GitHub issues (cluster):**
@@ -273,8 +273,10 @@ After **A1–A3** (minimum), you can **resume token-aware pace** on Tier 2 featu
 | Order | Issue | Band | U-axis | Status | Notes |
 | ----: | ----- | ---- | ------ | ------ | ----- |
 | 1 | [#704](https://github.com/FabioLeitao/data-boar/issues/704) | [P0] | U0/U1 | ⬜ Pending | Maestro + JWT enterprise on four lab hosts (**M-PILOT-READY** driver) |
-| 2 | [#719](https://github.com/FabioLeitao/data-boar/issues/719) | [P1] | **U1** | ⬜ Pending | `DATA_BOAR_ENV=development` / `DEBUG=1` bypasses JWT without CRITICAL audit log — fix + Docker operator doc |
-| 3 | [#708](https://github.com/FabioLeitao/data-boar/issues/708)–[#722](https://github.com/FabioLeitao/data-boar/issues/722) | [P1] | U1–U2 | ⬜ Pending | Issuer ADRs, trial/grace/revocation — ascending **#** within band; promote individually when thin PR ready |
+| 2 | [#719](https://github.com/FabioLeitao/data-boar/issues/719) | [P1] | **U1** | ✅ Done | Env bypass **removed** (fail-closed + audit trail) — PR [#847](https://github.com/FabioLeitao/data-boar/pull/847) merged; QA path = 60-day machine-bound signed `.lic` (PR [#848](https://github.com/FabioLeitao/data-boar/pull/848) merged) |
+| 3 | [#843](https://github.com/FabioLeitao/data-boar/issues/843) + [#705](https://github.com/FabioLeitao/data-boar/issues/705) | [P1] | U1 | ✅ Done | Connector tier gating in registry + `FEATURE_TIER_MAP` completion — PR [#849](https://github.com/FabioLeitao/data-boar/pull/849) merged; [PLAN_CONNECTOR_TIER_GATING.md](PLAN_CONNECTOR_TIER_GATING.md) |
+| 4 | [#551](https://github.com/FabioLeitao/data-boar/issues/551) | [P1] | U1 | ✅ Done | Worker cap `dbmax_workers` (enforced-only clamp + audit) + Python 3.14 CI matrix signal-only — PR [#850](https://github.com/FabioLeitao/data-boar/pull/850) merged |
+| 5 | [#708](https://github.com/FabioLeitao/data-boar/issues/708)–[#722](https://github.com/FabioLeitao/data-boar/issues/722) | [P1] | U1–U2 | ⬜ Pending | Issuer ADRs, trial/grace/revocation — ascending **#** within band; promote individually when thin PR ready. Next: [#718](https://github.com/FabioLeitao/data-boar/issues/718) + [#846](https://github.com/FabioLeitao/data-boar/issues/846) fingerprint binding + deployment pack |
 
 **Sequence:** After Wave 1 **[#656](https://github.com/FabioLeitao/data-boar/issues/656)** U0/U1 items and **#406** release gate unless operator confirms production JWT bypass (**#719** → treat as **U0**). Cross-ref Priority band **A6** and Integration bullet *Licensing enforcement*.
 
@@ -422,7 +424,7 @@ Second review cycle (premium WABIX, 2026-03-23): PDF `docs/feedbacks, reviews, c
 
 **LAB-OP (batch sync + inventory):** ✅ Docs + script aligned — [HOMELAB_HOST_PACKAGE_INVENTORY.md](../ops/HOMELAB_HOST_PACKAGE_INVENTORY.md) §4, **`scripts/lab-op-sync-and-collect.ps1`**, manifest + runbook under **`docs/private/homelab/`** (gitignored; template **`docs/private.example/homelab/LAB_OP_SYNC_RUNBOOK.md`**). **Open on hosts:** **`<lab-host-2>`** / secondary **SBC** — resolve local edits blocking **`git pull`** on **`scripts/homelab-host-report.sh`**, then re-run collect (or **`-SkipGitPull`** for report-only).
 
-**LAB-OP — Ansible + host hygiene ([#756](https://github.com/FabioLeitao/data-boar/issues/756)):** ⬜ Pending — **`[H0][U1]`** free disk on **mini-bt** (~**90%**; may block completão smoke and bare **`notes-sync`** mirror on that node) · **`[H0][U2]`** add **`bw`** (Bitwarden CLI) to T14 Ansible playbook for idempotent lab-op secret fetch. **Not** a **1.7.4** / **M-PILOT-READY** release-gate blocker per issue body — operator-paced on T14/LMDE session; carryover from [OPERATOR_TODAY_MODE_2026-05-29.md](../ops/today-mode/OPERATOR_TODAY_MODE_2026-05-29.md). **Next:** `ssh` hygiene on **mini-bt**, then playbook task + **`lab-op-sync-and-collect.ps1`** re-run.
+**LAB-OP — Ansible + host hygiene ([#756](https://github.com/FabioLeitao/data-boar/issues/756)):** ⬜ Pending — **`[H0][U1]`** free disk on one lab node (~**90%**; may block completão smoke and bare **`notes-sync`** mirror on that node) · **`[H0][U2]`** add **`bw`** (Bitwarden CLI) to the lab Ansible playbook for idempotent lab-op secret fetch. **Not** a **1.7.4** / **M-PILOT-READY** release-gate blocker per issue body — operator-paced on the lab-node/LMDE session; carryover from [OPERATOR_TODAY_MODE_2026-05-29.md](../ops/today-mode/OPERATOR_TODAY_MODE_2026-05-29.md). **Next:** `ssh` hygiene on that node (host details in the private manifest — [#756](https://github.com/FabioLeitao/data-boar/issues/756)), then playbook task + **`lab-op-sync-and-collect.ps1`** re-run.
 
 **LAB-OP — URGENT (operator, electrical + purchasing):** 🔄 **Partial (private notes)** — **Done in operator copy of** **`docs/private/homelab/LAB_OP_SHOPPING_LIST_AND_POWER.md`:** main **breaker** (**Schneider Easy9 C50**), **inverter** label (**Growatt MIC 3000TL-X**), **floor panels** §7.5–§7.7 (**Quarto** = lab **20 A** circuit), **split** on panel. **Still ⬜:** **Enel meter** photo (demand / limits as shown). **Clarified (operator):** no **second panel on the lab floor** — another panel exists on a **different floor** (living/kitchen area); optional photo for mapping only. Optional appliance label photos (fridge, chest freezer; occasional washer/microwave) noted in private **§0** — **not** a blocker. Meter gap **blocks** fully confident UPS sizing and Enel load-increase paperwork. Cover note (no prices): [LAB_OP_SHOPPING_LIST_COVER_NOTE.md](../private.example/homelab/LAB_OP_SHOPPING_LIST_COVER_NOTE.md). See [HOMELAB_POWER_AND_ELECTRICAL_PLANNING.md](../ops/HOMELAB_POWER_AND_ELECTRICAL_PLANNING.md). **Private synthesis / dream-tier shopping:** same file **§12**.
 
@@ -617,7 +619,7 @@ Counted rows below celebrate the **maintenance + publish** sprint; see **`docs/r
 - [x] Maestro Bug 1 fixed: SSH `ConnectTimeout` ([#403](https://github.com/FabioLeitao/data-boar/issues/403) — closed with evidence on **`main`**)
 - [x] Maestro Bug 2 fixed: `--bench-config` argument ([#404](https://github.com/FabioLeitao/data-boar/issues/404) + [#408](https://github.com/FabioLeitao/data-boar/issues/408) — `lab-completao-host-smoke.sh` parses flag; container handlers pass `--bench-config` before `--lab-stack-up`)
 - [x] Issue [#391](https://github.com/FabioLeitao/data-boar/issues/391) closed (**PII filter** toolchain / substring guard on **`main`** — 2026-05-16)
-- [ ] Completão smoke-only clean on all four hosts (latitude, t14-leitao, mini-bt, pi3b) — **mini-bt** disk hygiene ([#756](https://github.com/FabioLeitao/data-boar/issues/756) **`[U1]`**) before treating that node green
+- [ ] Completão smoke-only clean on all four smoke hosts (private manifest: `docs/private/homelab/lab-op-hosts.manifest.json`) — lab-node disk hygiene ([#756](https://github.com/FabioLeitao/data-boar/issues/756) **`[U1]`**) before treating that node green
 - [x] `docs/releases/1.7.4.md` created (**draft** checklist — set **Release date** and expand highlights at publish; see file banner)
 
 **Commercial pipeline active (internal reference — no names):**
@@ -907,8 +909,9 @@ See PLAN_READINESS for MCP recommendation, workflow automation, and when to revi
 
 ## Backlog: Maestro script renames (houseclean, low priority)
 
-- `scripts/t14-ansible-labop-podman-apply.sh` → `scripts/labop-ansible-podman-apply.sh`
-  — nome `t14-` é artefato histórico; conteúdo é genérico para todos os hosts (usa
+- Renomear o script Ansible/podman apply com prefixo de host legado em `scripts/` →
+  `scripts/labop-ansible-podman-apply.sh`
+  — o prefixo de host no nome é artefato histórico; conteúdo é genérico para todos os hosts (usa
   `.labop-skip-lab-node-01-podman` file para skip em hosts sem Podman). Requer atualizar:
   sudoers em todos os hosts (`LABOP_ANSIBLE_PODMAN`), docs, e tests que referenciam o nome.
   Fazer numa sessão `houseclean` dedicada com `git mv` + atualização do sudoers via push + git pull nos hosts.
