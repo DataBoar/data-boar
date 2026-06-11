@@ -598,11 +598,11 @@ class LocalDBManager:
         pv = int(pack_version)
         session = self._session_factory()
         try:
-            for qid, text in answers.items():
+            for qid, answer_text in answers.items():
                 qkey = (qid or "")[:128]
                 if not qkey:
                     continue
-                atext = (text or "")[:4000]
+                atext = (answer_text or "")[:4000]
                 mac = ""
                 if integrity_secret:
                     mac = compute_answer_hmac(
