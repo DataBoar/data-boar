@@ -1,6 +1,6 @@
 # Plan: Build identity, runtime version display, and release integrity
 
-**Status:** Deferred
+**Status:** In progress — Phase E core landed (#856): SQLite integrity anchor (`core/integrity_anchor.py`), startup re-verify in any mode, TINTED/`-alpha` trust surfaces, `integrity_events`, open-mode worker clamp. Signed manifest (Phase C.4) and `--reverify-integrity` flag remain pending.
 **Date:** 2026-03-23
 **Authors:** Fabio Leitao
 **Priority:** H2
@@ -80,6 +80,20 @@
 ---
 
 ## Phase E — SQLite integrity anchor, audit trail, and tamper-aware trust level
+
+> **Status (2026-06-11, #856):** E.1–E.9 **implemented** in
+> [`core/integrity_anchor.py`](../../core/integrity_anchor.py) (anchor +
+> `integrity_events` tables in the scan SQLite file, preserved by
+> `wipe_all_data()`), wired into `main.py` startup, `/health`, `/status`,
+> `get_about_info()` (`-alpha` forcing), `enterprise_surface_posture`
+> (`integrity_tampered` → `elevated`), and the report Info sheet
+> (`Build trust` / `Integrity state` rows). E.10 threat model documented in
+> [`docs/ops/INTEGRITY_CHECK_ALPHA_LOGIC.md`](../ops/INTEGRITY_CHECK_ALPHA_LOGIC.md).
+> Plus a **new** behaviour-critical gate: open-mode worker clamp
+> (`OPEN_MODE_WORKER_CAP = 2` in `core/engine.py`, inside the hashed
+> allowlist). Pending: `--reverify-integrity` flag, Merkle-root compression,
+> HMAC of the anchor row, signed manifest (Phase C.4).
+> Tests: [`tests/test_integrity_anchor.py`](../../tests/test_integrity_anchor.py).
 
 *Operator idea (2026-03): deploy may ship a **hash/signature manifest**; the app should **persist** the outcome in **SQLite** so it is not “one-shot”, survives selective wipes, and drives **what we tell the user** about reliability.*
 

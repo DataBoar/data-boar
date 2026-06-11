@@ -54,6 +54,45 @@ Anexar registro estruturado a `security_alert.log` (ou destino SIEM):
 - **Extensões:** módulos nativos podem residir em `site-packages`; hasheie o **artefato instalado** resolvido em runtime, não só `pro/*.pyd` na árvore de fontes.
 - **Assinatura:** manifestos “known-good” devem ser **assinados** ou distribuídos por canal confiável do operador (fora do escopo deste texto).
 
+## Implementado: Fase E — âncora de integridade em SQLite (#856)
+
+`core/integrity_anchor.py` implementa a espinha da detecção Alpha:
+
+1. **Primeira execução (E.1–E.2):** SHA-256 da allowlist crítica de
+   comportamento (`main.py`, `core/detector.py`, `core/engine.py`,
+   `core/integrity_anchor.py`, `core/licensing/guard.py`, `api/routes.py`) →
+   persistido na tabela SQLite `build_integrity_anchor` (`release_label`,
+   hashes por arquivo, `validated_at`, `signature_ok`, `validator_version`).
+   A âncora **sobrevive ao `--reset-data`**: `wipe_all_data()` limpa apenas as
+   tabelas de scan.
+2. **Re-verificação no startup (E.3):** todo start (CLI e web, **qualquer**
+   modo de licenciamento, incluindo `open`) recomputa os hashes e compara com
+   a âncora. Divergência → `integrity_state=tampered` /
+   `trust_level=adulterated`.
+3. **TINTED / `-alpha` (E.4):** o estado adulterado força o rótulo
+   `-alpha (development / not CI-validated)` na aba Info do report (linhas
+   `Build trust` / `Integrity state`), no rodapé do dashboard, em
+   `GET /about`, `GET /status`, `/health` e nos logs de startup (log CRITICAL
+   + banner no stderr). A severidade de `enterprise_surface` sobe para
+   `elevated` com a razão `integrity_tampered` (alinhado ao ADR-0066).
+4. **Clamp de workers em modo open:** `core/engine.py` limita
+   `scan.max_workers` a `OPEN_MODE_WORKER_CAP = 2` no modo open. O clamp fica
+   dentro da allowlist hasheada — remover o clamp altera `core/engine.py` e
+   tinge o build.
+5. **Forense (E.5):** `integrity_events` é uma tabela append-only
+   (validation / re-verify / tamper) preservada em wipes de dados.
+
+### Modelo de ameaça honesto (E.6)
+
+Isto é **evidência de adulteração, não prova de inviolabilidade.** Um atacante
+com acesso de escrita ao código **e** ao arquivo SQLite da âncora pode apagar
+ou re-basear a âncora (o app então re-executa a primeira validação ou mostra
+`unknown`). Mitigações: permissões de arquivo, montagem somente leitura do DB
+em deploys de alta garantia, e o **manifest assinado** (Sigstore / CI OIDC —
+Fase C.4 do `PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY`) como próxima camada. A
+âncora local captura com confiabilidade edições casuais, forks com gates
+removidos e drift silencioso de deploy — que é o objetivo da detecção Alpha.
+
 ## Relacionados
 
 - [RELEASE_INTEGRITY.pt_BR.md](RELEASE_INTEGRITY.pt_BR.md) ([EN](RELEASE_INTEGRITY.md))

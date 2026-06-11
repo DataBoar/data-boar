@@ -3,8 +3,10 @@
 
 Contract under test:
 
-1. Open mode (no ``licensing:`` block or ``mode: open``) NEVER caps
-   ``scan.max_workers`` — ``worker_cap()`` returns ``None``.
+1. Open mode (no ``licensing:`` block or ``mode: open``) — ``worker_cap()``
+   returns ``None`` (no LICENSING cap). The engine still applies the
+   open-mode integrity clamp ``OPEN_MODE_WORKER_CAP=2`` (#856) — see
+   ``tests/test_integrity_anchor.py`` for that contract.
 2. Enforced mode with a usable (VALID/GRACE) license: a positive
    ``dbmax_workers`` claim wins.
 3. Enforced mode without the claim: tier fallback defaults apply —
@@ -220,14 +222,21 @@ def test_engine_clamps_workers_in_enforced(ed25519_priv, tmp_path, caplog):
     assert "cap=2" in clamps[0].message
 
 
-def test_engine_open_mode_never_clamps(tmp_path, caplog):
+def test_engine_open_mode_licensing_cap_is_none_but_856_clamp_applies(tmp_path, caplog):
+    """Open mode has NO licensing cap (#551); the #856 integrity clamp (=2) applies."""
+    from core.integrity_anchor import OPEN_MODE_WORKER_CAP
+
     engine = _engine(tmp_path, max_workers=16)
     with caplog.at_level(logging.DEBUG, logger=AUDIT_LOGGER):
         engine.start_audit()
-    assert engine._max_workers == 16
-    assert not any(
-        "workers_clamped" in r.message for r in caplog.records if r.name == AUDIT_LOGGER
-    )
+    assert engine._max_workers == OPEN_MODE_WORKER_CAP
+    clamps = [
+        r.message
+        for r in caplog.records
+        if r.name == AUDIT_LOGGER and "workers_clamped" in r.message
+    ]
+    assert len(clamps) == 1
+    assert "open-mode clamp #856" in clamps[0]
 
 
 def test_engine_cap_failure_is_fail_soft(ed25519_priv, tmp_path, monkeypatch, caplog):

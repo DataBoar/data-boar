@@ -220,6 +220,28 @@ class AuditEngine:
             )
             self._max_workers = cap
 
+        # #856: open-mode worker clamp (behaviour-critical — part of the
+        # integrity manifest; removing this block tints the build -alpha).
+        # Open mode runs at most OPEN_MODE_WORKER_CAP parallel workers; paid
+        # tiers raise the ceiling via licensing (#551 above).
+        if guard.context.mode != "enforced":
+            from core.integrity_anchor import OPEN_MODE_WORKER_CAP
+            from core.licensing.audit import audit_enforcement_event
+
+            if self._max_workers > OPEN_MODE_WORKER_CAP:
+                audit_enforcement_event(
+                    "workers_clamped",
+                    mode=guard.context.mode,
+                    state=guard.context.state,
+                    allowed=False,
+                    detail=(
+                        f"requested={self._max_workers} "
+                        f"cap={OPEN_MODE_WORKER_CAP} (open-mode clamp #856)"
+                    ),
+                    level=logging.WARNING,
+                )
+                self._max_workers = OPEN_MODE_WORKER_CAP
+
         session_id = new_session_id()
         self.db_manager.set_current_session_id(session_id)
         scope_hash = _compute_config_scope_hash(self.config)
