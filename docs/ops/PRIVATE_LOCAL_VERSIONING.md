@@ -67,7 +67,7 @@ Alternatives:
 
 ## 6. What to store for motivation, funding, and estimates
 
-Keep **numbers, comparisons, and narrative** that would be awkward on GitHub under **`docs/private/operator_economics/`** (and **`commercial/`** when client-facing). Suggested filenames (create locally; see **[private.example/operator_economics/README.md](../private.example/operator_economics/README.md)**):
+Keep **numbers, comparisons, and narrative** that would be awkward on GitHub under **`docs/private/operator_economics/`** (and **`commercial/`** when client-facing). Suggested filenames (create locally; see **[private.example/economics/README.md](../private.example/economics/README.md)**):
 
 - **Phase effort (demo / beta / production):** rough ranges, assumptions, who could help—good for **you** and for **assistant context** when you ask for planning help.
 - **Financing / budget / purchase comparisons:** options, links, “why this vendor”—still **private** if it reveals runway or strategy.

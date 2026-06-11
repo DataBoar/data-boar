@@ -47,7 +47,7 @@
 
 **Documento EN (detalhe + “Practices” + contrato completo):** [OPERATOR_SECRETS_BITWARDEN.md](OPERATOR_SECRETS_BITWARDEN.md)
 
-**Decisão de plano (pessoal, gitignored):** matriz **Famílias / Premium / Teams** e notas sobre “assento para IA” — **`docs/private/operator_economics/BITWARDEN_SUBSCRIPTION_DECISION_NOTES.pt_BR.md`** (só na tua árvore local; ver **`docs/private.example/operator_economics/README.md`**).
+**Decisão de plano (pessoal, gitignored):** matriz **Famílias / Premium / Teams** e notas sobre “assento para IA” — **`docs/private/operator_economics/BITWARDEN_SUBSCRIPTION_DECISION_NOTES.pt_BR.md`** (só na tua árvore local; ver **`docs/private.example/economics/README.md`**).
 
 ## Ver também
 

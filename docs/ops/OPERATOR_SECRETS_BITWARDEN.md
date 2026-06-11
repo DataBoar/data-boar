@@ -118,7 +118,7 @@ dpkg-query -W -f='${Status}\t${Package}\t${Version}\n' bitwarden-cli 2>/dev/null
 
 ## Plan decision notes (maintainer-only path)
 
-**Families / Premium / Teams** trade-offs and “no AI seat” — optional private notes: **`docs/private/operator_economics/BITWARDEN_SUBSCRIPTION_DECISION_NOTES.md`** (local workspace only; layout pointer: **`docs/private.example/operator_economics/README.md`**).
+**Families / Premium / Teams** trade-offs and “no AI seat” — optional private notes: **`docs/private/operator_economics/BITWARDEN_SUBSCRIPTION_DECISION_NOTES.md`** (local workspace only; layout pointer: **`docs/private.example/economics/README.md`**).
 
 ## See also
 
