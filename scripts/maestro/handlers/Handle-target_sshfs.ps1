@@ -7,15 +7,22 @@
  Sub-Orquestrador especialista na persona 'target_sshfs'.
 
 .DESCRIPTION
- Responsável por preparar e validar um nó para atuar como ALVO de escaneamento via protocolo SSH (sshfs ou sftp).
- Garante que o diretório de dados alvo existe no storage remoto (neste alboratório podem ser todos os hosts linux que forem selecionados como target) antes de ser exportado e montado pelos engines (workers) do Data Boar.
- É 100% agnóstico: recebe o caminho do diretório (efêmero ou canônico) e a referência de versão do Maestro, sem assumir IPs ou caminhos fixos.
+ Responsavel por preparar e validar um no para atuar como ALVO de escaneamento via protocolo
+ SSH (sshfs ou sftp). Garante que o diretorio de dados alvo existe no storage remoto antes de
+ ser exportado e montado pelos engines (workers) do Data Boar.
+ E 100% agnostico: recebe o caminho do diretorio (efemero ou canonico) e a referencia de
+ versao do Maestro, sem assumir IPs ou caminhos fixos.
+
+ Sentinel (#831): IO monitor payload writes /tmp/databoar_handler/target_sshfs_sentinel.txt
+ with the vmstat start result so Maestro can verify SSHFS target readiness.
+
+ Quote/escape safety (#830): IO monitor payload is base64-encoded before tmux injection.
 #>
 
 param(
     [Parameter(Mandatory=$true)]$Node,
     [string]$Ref = "WorkingTree",
-    [switch]$Deep, # <--- Injeção do Maestro para habilitar o Benchmark
+    [switch]$Deep,
     [string]$BenchTrack = "",
     [string]$BenchRunId = "",
     [switch]$BenchCompare,
@@ -23,33 +30,28 @@ param(
     [string]$BenchHealthUrl = ""
 )
 
-Write-Host "   [Target-SSHFS] Certificando alvo de dados e disparando orquestração concentrada (Deep: $Deep) em $($Node.hostname)..." -ForegroundColor Magenta
+Write-Host "   [Target-SSHFS] Certificando alvo de dados e disparando orquestracao concentrada (Deep: $Deep) em $($Node.hostname)..." -ForegroundColor Magenta
 
-# Se for Deep, passa o caminho do config. Se não, não passa nada (comportamento original)
-$configArg = if ($Deep) { "tests/config/benchmark-rc.yaml" } else { "" }
-
-# Construção do Payload Posix Native:
-# 1. Validação de Diretório
-# Tradução de SRE: Converte o '~' do JSON para a variável $HOME do Linux
+# Traducao de SRE: Converte o '~' do JSON para a variavel $HOME do Linux
 $linuxPath = $Node.path -replace "^~", "`$HOME"
 
-# Validação Resiliente: 'test -d' confia no Exit Code silencioso, e > $null 2>&1 engole os banners multilíngues
-$checkCmd = "test -d ""$linuxPath"""
+# Validacao Resiliente: 'test -d' confia no Exit Code silencioso
+$checkCmd = "test -d `"$linuxPath`""
 ssh -q -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$($Node.user)@$($Node.hostname)" "$checkCmd" > $null 2>&1
 
-# $LASTEXITCODE é imune a banners de segurança e MotD
 if ($LASTEXITCODE -eq 0) {
-    Write-Host "      [SUCCESS] Target SSHFS validado. $($Node.hostname):$($Node.path) está pronto." -ForegroundColor Green
+    Write-Host "      [SUCCESS] Target SSHFS validado. $($Node.hostname):$($Node.path) esta pronto." -ForegroundColor Green
 
-    # 2. NOVA FEATURE: Disparar monitoramento de IO no Tmux do Target
-    # O payload atualiza o status (tirando o PENDING) e inicia o vmstat a cada 5 segundos, gravando num log
-    $payload = "echo `"TARGET_ACTIVE at `$(date +'%H:%M:%S')`" > ~/.labop-status && mkdir -p ~/log && echo `"Monitorando IO/Load (vmstat 5)...`" && vmstat 5 | tee ~/log/target_io.log"
+    # Sentinel path for pass/fail aggregation (#831)
+    $sentinelDir  = "/tmp/databoar_handler"
+    $sentinelFile = "$sentinelDir/target_sshfs_sentinel.txt"
 
-    $tmuxCmd = "tmux send-keys -t completao C-c ; sleep 0.5 ; tmux send-keys -t completao '$payload' Enter"
-
-    # Injeta no Tmux do Pi3B
+    # Base64-encode IO monitor payload to eliminate shell-quoting issues. (#830)
+    $ioPayload  = "echo TARGET_ACTIVE at \$(date +%H:%M:%S) > ~/.labop-status && mkdir -p ~/log $sentinelDir && echo Monitorando IO/Load vmstat 5... && vmstat 5 | tee ~/log/target_io.log ; echo \$? > $sentinelFile"
+    $payloadB64 = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($ioPayload))
+    $tmuxCmd    = "tmux send-keys -t completao C-c ; sleep 0.5 ; tmux send-keys -t completao 'echo $payloadB64 | base64 -d | bash' Enter"
     ssh -q -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$($Node.user)@$($Node.hostname)" "$tmuxCmd"
 
 } else {
-    Write-Warning "      [WARNING] O diretório $($Node.path) não foi encontrado no alvo $($Node.hostname)."
+    Write-Warning "      [WARNING] O diretorio $($Node.path) nao foi encontrado no alvo $($Node.hostname)."
 }

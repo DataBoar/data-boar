@@ -29,6 +29,7 @@ Security: default middleware adds X-Content-Type-Options, X-Frame-Options, Conte
 Referrer-Policy, Permissions-Policy, and Strict-Transport-Security (only when served over HTTPS).
 """
 
+import hmac
 import io
 import os
 import re
@@ -885,10 +886,10 @@ async def security_headers_middleware(request: Request, call_next):
         "camera=(), microphone=(), geolocation=(), interest-cohort=(), payment=(), usb=(), "
         "magnetometer=(), gyroscope=(), accelerometer=()",
     )
-    # CSP: allow self and Chart.js CDN for scripts; allow inline styles used by templates.
+    # CSP: script-src 'self' only — Chart.js is vendored in api/static/ (#825).
     response.headers.setdefault(
         "Content-Security-Policy",
-        "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; "
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
         "img-src 'self' data:; font-src 'self'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; "
         "base-uri 'self'; object-src 'none'",
     )
@@ -948,7 +949,7 @@ async def optional_api_key_middleware(request: Request, call_next):
         auth = request.headers.get("authorization", "").strip()
         if auth.lower().startswith("bearer "):
             provided = auth[7:].strip()
-    if not provided or provided != expected:
+    if not provided or not hmac.compare_digest(provided, expected):
         return JSONResponse(
             status_code=401, content={"detail": "Missing or invalid API key"}
         )
