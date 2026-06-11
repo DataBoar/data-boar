@@ -35,7 +35,28 @@ Varreduras em filesystem **sempre** usam **caminho e nome do arquivo**. O **text
 
 **O que você ganha:** O mammoth lê **Office Open XML empacotado em ZIP** (a mesma família de contêiner que `.docx`). Isso cobre alguns `.doc` reais que são OOXML de fato, ou que foram renomeados.
 
-**Limitação:** O `.doc` **binário Word 97-2003** (arquivo composto OLE) **não** é ZIP; o mammoth em geral **não** abre, então a **amostra de conteúdo fica vazia** e só o nome/caminho entra nos achados. Se você precisa de evidência de compliance no corpo desses arquivos, converta para `.docx` (ou outro formato suportado) antes da varredura, ou planeje outra rota de ingestão — o produto **não** chama LibreOffice por subprocesso (escopo deste slice conforme issue/plan).
+**Limitação:** O `.doc` **binário Word 97-2003** (arquivo composto OLE) **não** é ZIP; o mammoth em geral **não** abre, então a **amostra de conteúdo fica vazia** e só o nome/caminho entra nos achados.
+
+### Extração nativa de corpo em `.doc` OLE/CFBF — decisão won't-fix
+
+O Data Boar **não implementará** extração nativa de corpo para arquivos `.doc` OLE2/CFBF (Compound File Binary Format) via LibreOffice por subprocesso ou conversor similar. Esta é uma **decisão de escopo explícita e permanente**, não uma lacuna temporária.
+
+**Racional:**
+
+| Motivo | Detalhe |
+| ------ | ------- |
+| **Peso da dependência** | O LibreOffice instala ~400 MB de binários e fontes no ambiente de varredura; inaceitável para um container leve de análise de dados. |
+| **Superficie de ataque / vetores RCE** | Chamar uma suite de escritório por subprocesso para analisar documentos binários não confiáveis é uma classe conhecida de risco de RCE. Analisar binários OLE malformados com LibreOffice expõe o host a toda a sua superficie de vulnerabilidade. |
+| **Memória e isolamento** | O LibreOffice não foi projetado para invocações headless de alta concorrência; vazamentos de processo e crashes por OOM foram observados em ambientes de varredura em produção. |
+| **Prevalência do formato** | Arquivos `.doc` binários Word 97-2003 representam uma fração decrescente dos corpora empresariais; a maioria dos sistemas modernos de gestão de documentos já normaliza para `.docx` ou PDF na ingestão. |
+
+**O que fazer em vez disso:**
+
+- **Converter antes da varredura:** Execute `libreoffice --headless --convert-to docx seu_arquivo.doc` (ou um serviço gerenciado de conversão) nos arquivos **antes** da varredura. O Data Boar lê o `.docx` resultante nativamente.
+- **Use a saída `.docx` do seu DMS:** Configure seu Sistema de Gestão de Documentos para exportar em `.docx`/PDF ao alimentar o Data Boar.
+- **O caminho do arquivo ainda é varrido:** Mesmo sem conteúdo do corpo, o Data Boar sinaliza o arquivo pelo caminho e nome se houver PII (ex.: `CPF_000000000-00_contrato.doc`).
+
+Esta decisão está registrada no issue do GitHub [#671](https://github.com/FabioLeitao/data-boar/issues/671). Não é necessário ADR — este é um limite de escopo won't-fix, não uma troca arquitetural.
 
 ---
 

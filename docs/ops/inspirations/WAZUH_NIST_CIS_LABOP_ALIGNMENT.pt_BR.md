@@ -44,6 +44,43 @@
 
 Use a linguagem do CSF em conversas **comerciais/técnicas** para **posicionar** controles que de fato existem; evite implicar **certificação** ou cobertura total do CSF sem programa explícito de compliance.
 
+### SP 800-63-4 (Diretrizes de Identidade Digital Rev 4) — dados de identidade são PII por definição
+
+**Referência canônica:** [NIST SP 800-63-4](https://pages.nist.gov/800-63-4/) (final esperado 2025–2026; rascunho público disponível).
+
+O SP 800-63-4 define os **dados de identidade** coletados durante a validação de identidade digital como PII. Isso alinha diretamente ao escopo de detecção do Data Boar:
+
+| Conceito SP 800-63-4 | Relevância para o Data Boar |
+| --------------------- | --------------------------- |
+| Dados de identidade (nome, data de nascimento, endereço, ID nacional) coletados na validação | O Data Boar detecta exatamente essas classes de dados em bancos, sistemas de arquivos e APIs — argumento direto para DPO/CISO em ambientes de validação de identidade |
+| Vinculação de atributos de identidade a credenciais | PII próxima a credenciais em session stores, tabelas de BD e compartilhamentos de arquivo está no escopo de varredura do Data Boar |
+| Alternativas de identidade que preservam privacidade | A detecção de retenção ou duplicação desnecessária de PII apoia a avaliação desses controles |
+
+**Argumento para DPO/CISO:** "O Data Boar detecta exatamente o que o SP 800-63-4 define como PII de identidade — ele localiza onde esses registros estão antes de você construir um programa de validação ou gestão de credenciais."
+
+### Overlays de Controles SP 800-53r5 para Sistemas de IA — controles de privacidade para IA
+
+**Referência canônica:** Overlay do NIST SP 800-53 Rev 5 para IA (veja a documentação do NIST AI RMF em <https://airc.nist.gov>).
+
+O Overlay de Controles para Sistemas de IA estende os controles de privacidade e segurança do NIST SP 800-53r5 para sistemas de IA. Relevante para o Data Boar:
+
+- **Família PT (Privacy)** — A detecção de sensibilidade do Data Boar suporta evidências para PT-1 (autoridade), PT-2 (propósito), PT-3 (propósitos do processamento de PII).
+- **Função Measure do NIST AI RMF** — Executar uma varredura estruturada antes ou durante o treinamento de modelos de IA suporta a função Measure, identificando PII que não deveria estar nos dados de treinamento (postura de governança de dados).
+
+**Argumento para o produto:** "Data Boar como controle preventivo para PII em dados de treinamento — alinha com a função Measure do NIST AI RMF e os controles de privacidade do overlay SP 800-53r5 para IA."
+
+### SP 800-228A (Deploy Seguro de APIs REST — IPD) — item a observar
+
+**Referência canônica:** NIST SP 800-228A Rascunho Público Inicial — comentários públicos encerrados em 2026-07-02; final esperado para o final de 2026.
+Ver: <https://csrc.nist.gov/pubs/sp/800/228/a/ipd>
+
+O SP 800-228A se tornará a referência NIST para hardening de APIs REST que tratam dados sensíveis. Relevante após a publicação final:
+
+- A API REST do Data Boar ([docs/TECH_GUIDE.md](../../TECH_GUIDE.md)) lida com resultados de varredura e configuração — autenticação, TLS, rate limiting e filtragem de saída se alinham com a orientação esperada do SP 800-228A.
+- O ADR-0065 registra a decisão de adiar o alinhamento formal até a publicação do padrão ([ADR-0065](../../adr/ADR-0065-nist-sp800228a-api-security-reference.md)).
+
+**Ação:** Revisar o texto final do SP 800-228A em relação às rotas em `api/` quando publicado; considerar um novo ADR para alinhamento de hardening de API nesse momento.
+
 ---
 
 ## CIS Controls — lente de priorização
