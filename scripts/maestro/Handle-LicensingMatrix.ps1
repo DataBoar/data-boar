@@ -314,11 +314,15 @@ $tierLicenses = @{
     enterprise = Join-Path $keysDir "dev-enterprise.lic"
 }
 
+# QA licenses: 60-day expiry + bound to this machine's fingerprint (#719 —
+# env bypass removed; signed short-lived machine-bound .lic is the only path).
 foreach ($tier in @("community", "pro", "enterprise")) {
     $outPath = $tierLicenses[$tier]
     & uv run python $issuerScript `
         --dbtier $tier `
         --sub "maestro-$tier" `
+        --days 60 `
+        --dbmfp auto `
         --out $outPath `
         --private-key-pem-file $signKey
     if ($LASTEXITCODE -ne 0) {
