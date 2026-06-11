@@ -1,7 +1,17 @@
-# ADR 0055 - Orthogonal priority axes (H/U/A/P/G/S/M) anti-collision contract
+# ADR 0055 — Orthogonal priority axes (H/U/A/P/G/S/M) anti-collision contract
 
-**Status:** Accepted
-**Date:** 2026-05-19
+- **Date (UTC):** 2026-05-19
+- **Authors:** Fabio Leitao
+- **Deciders:** Fabio Leitao
+
+## Status
+
+Accepted
+
+### Status history
+
+- 2026-05-19 — Accepted
+- 2026-06-11 — Amended: retrofit to ADR-0045 UMADR format (metadata list, Authors, Status history) — GitHub #675
 
 ## Context
 

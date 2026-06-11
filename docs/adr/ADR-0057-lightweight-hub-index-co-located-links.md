@@ -1,7 +1,17 @@
-# ADR 0057 - Lightweight hub index (co-located links, no file moves)
+# ADR 0057 — Lightweight hub index (co-located links, no file moves)
 
-**Status:** Accepted
-**Date:** 2026-05-20
+- **Date (UTC):** 2026-05-20
+- **Authors:** Fabio Leitao
+- **Deciders:** Fabio Leitao
+
+## Status
+
+Accepted
+
+### Status history
+
+- 2026-05-20 — Accepted
+- 2026-06-11 — Amended: retrofit to ADR-0045 UMADR format (metadata list, Authors, Status history) — GitHub #675
 
 ## Context
 

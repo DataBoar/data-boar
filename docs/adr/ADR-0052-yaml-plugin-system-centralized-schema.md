@@ -1,10 +1,17 @@
-# ADR-0052 — YAML-Based Plugin System: Centralized Schema and Unified Plugin File
+# ADR 0052 — YAML-Based Plugin System: Centralized Schema and Unified Plugin File
 
-**Date:** 2026-05-14
-**Status:** Accepted
-**Deciders:** Operator / Maintainer
+- **Date (UTC):** 2026-05-14
+- **Authors:** Fabio Leitao
+- **Deciders:** Fabio Leitao
 
----
+## Status
+
+Accepted
+
+### Status history
+
+- 2026-05-14 — Accepted
+- 2026-06-11 — Amended: retrofit to ADR-0045 UMADR format (metadata list, Authors, Status history) — GitHub #675
 
 ## Context
 
