@@ -430,6 +430,33 @@ def test_invoke_api_post_status_uses_numeric_status_not_locale_string() -> None:
     )
 
 
+def test_stop_matrix_api_process_is_cross_platform() -> None:
+    """Anti-regression #820: Stop-MatrixApiProcess must not use Windows-only taskkill
+    or unconditional Get-NetTCPConnection; cross-platform kill and port poll required.
+    """
+    root = _project_root()
+    text = (root / "scripts" / "maestro" / "Handle-LicensingMatrix.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "& taskkill" not in text, (
+        "Stop-MatrixApiProcess must not invoke taskkill (Windows-only); use proc.Kill or Stop-Process"
+    )
+    # Get-NetTCPConnection must be guarded by $IsWindows when present
+    if "Get-NetTCPConnection" in text:
+        assert "$IsWindows" in text, (
+            "Get-NetTCPConnection is Windows-only and must be inside an 'if ($IsWindows)' block"
+        )
+    # Cross-platform port poll must use .NET IPGlobalProperties
+    assert "GetActiveTcpListeners" in text, (
+        "Port-free poll must use .NET GetActiveTcpListeners() which works cross-platform "
+        "instead of Windows-only Get-NetTCPConnection"
+    )
+    # Cross-platform process kill must be present
+    assert "proc.Kill" in text or "Stop-Process" in text, (
+        "Stop-MatrixApiProcess must use proc.Kill($true) or Stop-Process for cross-platform kill"
+    )
+
+
 def test_maestro_no_retired_workstation_codename_token() -> None:
     """Maestro *.ps1 must not embed the retired workstation codename token (guard: test_public_tree_no_*codename*)."""
     root = _project_root()
