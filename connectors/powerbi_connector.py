@@ -16,6 +16,8 @@ from core.suggested_review import (
     augment_low_id_like_for_persist,
 )
 
+from .url_guard import target_allows_private, validate_outbound_url
+
 try:
     import httpx
 
@@ -48,6 +50,15 @@ def _get_access_token(target: dict[str, Any]) -> str | None:
     token_url = auth.get("token_url") or _AZURE_TOKEN_URL_TMPL.format(
         tenant_id=tenant_id
     )
+    # SSRF guard (#832): a custom token_url receives the client_secret via POST —
+    # never let it point at link-local/private hosts without explicit opt-in.
+    err = validate_outbound_url(
+        token_url,
+        allow_private=target_allows_private(target),
+        label="auth.token_url",
+    )
+    if err:
+        raise ValueError(err)
     resp = httpx.post(
         token_url,
         data={
