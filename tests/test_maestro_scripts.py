@@ -513,3 +513,116 @@ def test_start_matrix_api_process_propagates_spawn_failure() -> None:
     assert "throw" in text, (
         "Start-MatrixApiProcess must re-throw or throw a descriptive error on spawn failure"
     )
+
+
+# ---------------------------------------------------------------------------
+# #830 / #831 — handler quote/escape safety + sentinel pattern
+# ---------------------------------------------------------------------------
+
+_SMOKE_HANDLER_PERSONAS = [
+    "baremetal",
+    "docker",
+    "dockerswarm",
+    "lxd",
+    "microk8s",
+    "podman",
+    "target_cifs",
+    "target_nfs",
+    "target_sshfs",
+]
+
+
+def _handler_text(root: Path, persona: str) -> str:
+    path = root / "scripts" / "maestro" / "handlers" / f"Handle-{persona}.ps1"
+    return path.read_text(encoding="utf-8", errors="replace")
+
+
+def test_smoke_handlers_use_base64_payload_for_tmux() -> None:
+    """Anti-regression #830: handler payloads must be base64-encoded before tmux send-keys.
+
+    Embedding raw shell commands in tmux send-keys single-quoted args fails when
+    Node.path, BenchRunId, or Ref contain single quotes or shell metacharacters.
+    The fix encodes the payload as base64 so the tmux arg is always safe ASCII.
+    """
+    root = _project_root()
+    # Handlers that use tmux send-keys to inject a bash payload
+    tmux_handlers = [
+        "baremetal",
+        "docker",
+        "dockerswarm",
+        "lxd",
+        "microk8s",
+        "podman",
+        "target_cifs",
+        "target_nfs",
+        "target_sshfs",
+    ]
+    for persona in tmux_handlers:
+        text = _handler_text(root, persona)
+        assert "base64" in text, (
+            f"Handle-{persona}.ps1 must base64-encode the tmux payload (#830); "
+            "raw single-quoted payloads break on paths or values with special chars"
+        )
+        assert "ToBase64String" in text or "payloadB64" in text, (
+            f"Handle-{persona}.ps1 must use [Convert]::ToBase64String or equivalent (#830)"
+        )
+
+
+def test_smoke_handlers_have_ref_allowlist() -> None:
+    """Anti-regression #830: handlers that accept -Ref must validate it against an allowlist.
+
+    An unvalidated -Ref value could inject shell metacharacters into the payload.
+    """
+    root = _project_root()
+    # All persona handlers accept -Ref; those that inject it into shell commands must validate
+    inject_ref_handlers = [
+        "baremetal",
+        "docker",
+        "dockerswarm",
+        "lxd",
+        "microk8s",
+        "podman",
+    ]
+    for persona in inject_ref_handlers:
+        text = _handler_text(root, persona)
+        assert "safeRefPattern" in text or "allowlist" in text.lower(), (
+            f"Handle-{persona}.ps1 must validate -Ref against an allowlist (#830); "
+            "unvalidated Ref values can inject shell metacharacters into the payload"
+        )
+
+
+def test_smoke_handlers_write_sentinel_file() -> None:
+    """Anti-regression #831: each smoke handler must write a sentinel file with the exit code.
+
+    Without a sentinel, Maestro cannot machine-verify whether the smoke actually passed
+    or failed (tmux inject exits 0 regardless of smoke outcome).
+    """
+    root = _project_root()
+    for persona in _SMOKE_HANDLER_PERSONAS:
+        text = _handler_text(root, persona)
+        assert "_sentinel.txt" in text, (
+            f"Handle-{persona}.ps1 must write a sentinel file (e.g. {persona}_sentinel.txt) "
+            "with the smoke exit code for real pass/fail aggregation (#831)"
+        )
+        # Sentinel must capture the actual exit code
+        assert "_rc" in text or "sentinel" in text.lower(), (
+            f"Handle-{persona}.ps1 must record the smoke exit code in the sentinel (#831)"
+        )
+
+
+def test_wait_handler_sentinel_exists_and_parses() -> None:
+    """Anti-regression #831: Wait-HandlerSentinel.ps1 must exist and parse cleanly."""
+    root = _project_root()
+    sentinel_script = root / "scripts" / "maestro" / "Wait-HandlerSentinel.ps1"
+    assert sentinel_script.exists(), (
+        "scripts/maestro/Wait-HandlerSentinel.ps1 must exist to generalize "
+        "the baremetal sentinel pattern to all handler personas (#831)"
+    )
+    text = sentinel_script.read_text(encoding="utf-8", errors="replace")
+    assert "Personas" in text, (
+        "Wait-HandlerSentinel.ps1 must accept a -Personas parameter listing which "
+        "handlers to wait for (#831)"
+    )
+    assert "_sentinel.txt" in text, (
+        "Wait-HandlerSentinel.ps1 must poll for *_sentinel.txt files written by handlers (#831)"
+    )
