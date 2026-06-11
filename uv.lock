@@ -754,7 +754,7 @@ validation = [
 
 [[package]]
 name = "data-boar"
-version = "1.7.4rc0"
+version = "1.7.4"
 source = { editable = "." }
 dependencies = [
     { name = "annotated-doc" },
