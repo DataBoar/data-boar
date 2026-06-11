@@ -678,6 +678,18 @@ No credentials. Uses `file_scan` settings (extensions, recursive, scan_sqlite_as
 
 Use `type: api` or `type: rest`. Required: `name`, `base_url` (or `url`). Optional: `paths` or `endpoints`, `discover_url`, `timeout`, `headers`, and an `auth` block.
 
+**SSRF guard:** `base_url`, `discover_url`, and `auth.token_url` pointing at link-local (cloud metadata `169.254.0.0/16`), loopback, or private (RFC1918/ULA) hosts are rejected by default. To scan internal infrastructure, add `allow_private_networks: true` to the target. The same guard applies to SharePoint (`site_url`), WebDAV (`base_url`), and Power BI (`auth.token_url`) targets.
+
+```yaml
+
+- name: "Internal API"
+
+    type: api
+    base_url: "http://10.0.0.5:8080"
+    paths: ["/users"]
+    allow_private_networks: true  # explicit opt-in for private/loopback hosts
+```
+
 ## Basic auth
 
 ```yaml

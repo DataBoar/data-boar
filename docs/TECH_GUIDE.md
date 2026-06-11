@@ -345,6 +345,8 @@ You can scan remote HTTP(S) APIs for personal or sensitive data by adding target
 
 **Required:** `name`, `base_url` (or `url`). **Optional:** `paths` or `endpoints` (list of path strings, e.g. `["/users", "/orders"]`), `discover_url` (GET returns a list of paths to scan), `timeout`, `headers`, and an `auth` block.
 
+**SSRF guard (#832):** `base_url`, `discover_url`, and `auth.token_url` resolving to link-local (cloud metadata `169.254.0.0/16`), loopback, or private (RFC1918/ULA) hosts are **rejected by default** — the target records a failure and no request is sent. Scanning internal infrastructure is a normal Data Boar use case, so opt in per target with `allow_private_networks: true`. Non-`http(s)` schemes are always rejected. The same guard applies to SharePoint (`site_url`), WebDAV (`base_url`), and Power BI (custom `auth.token_url`).
+
 **Default outbound User-Agent:** discovery HTTP(S) clients send **`DataBoar-Prospector/<version>`** (same resolved version as the installed `data-boar` package — `core.about.get_http_user_agent()`). Use this string in remote WAF or API-gateway logs to identify this product. If a vendor requires a different token, set **`User-Agent`** (case-insensitive key) under `headers` on the target; that value **overrides** the default for REST/API. SharePoint, Power BI, and Dataverse connectors apply the same default. See [ADR 0034](adr/ADR-0034-outbound-http-user-agent-data-boar-prospector.md).
 
 ### Auth types

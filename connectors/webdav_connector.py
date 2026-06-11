@@ -157,6 +157,18 @@ class WebDAVConnector:
                 target_name, "error", "Missing base_url or url (e.g. https://host/path)"
             )
             return
+        # SSRF guard (#832): reject link-local/private/loopback hosts unless the
+        # target config opts in with allow_private_networks: true.
+        from .url_guard import target_allows_private, validate_outbound_url
+
+        err = validate_outbound_url(
+            base_url,
+            allow_private=target_allows_private(self.config),
+            label="base_url",
+        )
+        if err:
+            self.db_manager.save_failure(target_name, "error", err)
+            return
         user = self.config.get("user", self.config.get("username", ""))
         password = self.config.get("pass", self.config.get("password", ""))
         path_in_share = (self.config.get("path", "") or "").strip("/")
