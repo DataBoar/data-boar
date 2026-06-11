@@ -45,7 +45,7 @@ if ($Ref -eq "WorkingTree") {
 
     # Comando Rsync.
     # Nice catch excluding my docs/private from rsyncCmd so it wont exfiltrate operator private tree!!! Thanks a lot Gemini... :-o
-    $rsyncCmd = "rsync -azq -e 'ssh -q -o BatchMode=yes -o ConnectTimeout=15' --exclude='.git' --exclude='.venv' --exclude='__pycache__' --exclude='.pytest_cache' --exclude='*.bundle' --exclude='docs/private' --exclude='*.log' --exclude='*.xlsx' --exclude='*.db' --exclude='data-boar-blackbox-audit.txt' --exclude='data-boar-*.tar' ./ ${targetUser}@${targetHost}:${finalPath}/"
+    $rsyncCmd = "rsync -azq -e 'ssh -q -o BatchMode=yes -o ConnectTimeout=15' --exclude='.git' --exclude='.venv' --exclude='__pycache__' --exclude='.pytest_cache' --exclude='*.bundle' --exclude='docs/private' --exclude='*.log' --exclude='*.xlsx' --exclude='*.db' --exclude='data-boar-blackbox-audit.txt' --exclude='data-boar-*.tar' --exclude='.env' --exclude='.env.*' ./ ${targetUser}@${targetHost}:${finalPath}/"
 
     # Invocamos bash nativo no Linux ou WSL2 no Windows
     if ($IsWindows) {

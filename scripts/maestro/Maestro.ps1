@@ -38,6 +38,7 @@ if (-not (Test-Path $inventoryPath)) {
 $inventory = Get-Content $inventoryPath | ConvertFrom-Json
 Write-Host "--- [Maestro] Iniciando Turno no Lab-Op (Ref: $Ref) ---" -ForegroundColor Cyan
 $warningCount = 0
+$realFailCount = 0
 
 # SRE FIX: Fase de Pre-flight Global (Evita build redundante)
 if (-not $Collect) {
@@ -97,6 +98,12 @@ $globalReport = foreach ($node in $inventory.lab_members) {
                     BenchHealthUrl = $BenchHealthUrl
                 }
                 & $handler @handlerArgs
+                # Capture real handler failures (#825): offline-skip already gated above;
+                # exit != 0 here means allowlist rejection, SSH send-keys failure, etc.
+                if ($LASTEXITCODE -ne 0) {
+                    $realFailCount++
+                    Write-Warning "      [REAL FAIL] Handler '$persona' em $($node.hostname) saiu com exit $LASTEXITCODE"
+                }
             } else {
                 Write-Warning "      [WARNING] Handler ausente para persona '$persona' em $($node.hostname): $handler"
             }
@@ -153,6 +160,13 @@ $globalReport | Format-Table -AutoSize
 
 if ($Collect -and $warningCount -gt 0) {
     Write-Warning "[Maestro] Rodada concluida com warnings de coleta: $warningCount (sem hard-fail)."
+}
+
+# Aggregate REAL handler failures into exit code (#825).
+# Offline-skip and Safe-Hold do NOT increment $realFailCount — only genuine handler errors do.
+if ($realFailCount -gt 0) {
+    Write-Error "[Maestro] $realFailCount handler(s) retornaram exit != 0 (falhas reais, nao offline-skip)."
+    exit 1
 }
 
 exit 0
