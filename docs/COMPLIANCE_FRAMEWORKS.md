@@ -227,6 +227,14 @@ The application does **not** certify organisations. It provides **discovery and 
 
 Other auditable or regional norms can be addressed via our config-driven norm tags and [compliance-samples](compliance-samples/); we continue to extend documentation and samples as new standards become relevant.
 
+### NIST SP 800-63-4 (Digital Identity Guidelines Rev 4) — identity data relevance
+
+**Status:** Final text expected 2025–2026 (public draft available at <https://pages.nist.gov/800-63-4/>). Not yet a built-in norm tag; documented here for integrators and DPOs.
+
+SP 800-63-4 explicitly classifies **identity data** (name, date of birth, address, national identifiers, biometric data) collected during digital identity proofing as PII. Data Boar detects these exact data classes in databases, filesystems, and APIs.
+
+**Practical alignment:** Organizations running identity-proofing programmes or managing credential stores can use Data Boar scans to locate where identity-proofing PII resides across their data estate — supporting evidence for a SP 800-63-4-informed data inventory. Pair with the LGPD or GDPR compliance-sample profile to align `norm_tag` text to local regulation while referencing NIST 800-63-4 scope in DPO reports.
+
 ---
 
 ## Explicitly referenced today (built-in labels)
