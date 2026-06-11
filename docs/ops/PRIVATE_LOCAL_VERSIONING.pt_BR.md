@@ -66,7 +66,7 @@ Alternativas:
 
 ## 6. O que guardar para motivação, financiamento e estimativas
 
-Números, comparativos e narrativa que seriam **estranhos** no GitHub ficam em **`docs/private/operator_economics/`** (e **`commercial/`** quando for lado cliente). Nomes sugeridos (crie localmente; ver **[private.example/operator_economics/README.md](../private.example/operator_economics/README.md)**):
+Números, comparativos e narrativa que seriam **estranhos** no GitHub ficam em **`docs/private/operator_economics/`** (e **`commercial/`** quando for lado cliente). Nomes sugeridos (crie localmente; ver **[private.example/economics/README.md](../private.example/economics/README.md)**):
 
 - **Esforço por fase (demo / beta / production):** faixas grosseiras, premissas, quem poderia ajudar—útil para **você** e para **contexto do assistente** em planejamento.
 - **Financiamento / orçamento / comparativo de compra:** opções, links, “por que este fornecedor”—continua **privado** se expõe *runway* ou estratégia.
