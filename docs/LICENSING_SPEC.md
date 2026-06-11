@@ -6,12 +6,31 @@ Technical specification for **optional** commercial enforcement. Default is **op
 
 | Mode       | Config / env                                                    | Behaviour                                                                                          |
 | ----       | ------------                                                    | ----------                                                                                         |
-| `open`     | `licensing.mode: open` or unset; `DATA_BOAR_LICENSE_MODE=open`  | Full functionality; license token optional; status shows **OPEN**                                  |
-| `enforced` | `licensing.mode: enforced` or `DATA_BOAR_LICENSE_MODE=enforced` | Valid signed token required for ingest/digest; invalid/expired/revoked/tampered states block scans |
+| `open`     | `licensing.mode: open` or unset; `DATA_BOAR_LICENSE_MODE=enforced` can escalate | Full functionality; license token optional; status shows **OPEN**                                  |
+| `enforced` | `licensing.mode: enforced`                                      | Valid signed token required for ingest/digest; invalid/expired/revoked/tampered states block scans |
+
+### No environment bypass (#719)
+
+Enforcement state is determined **only** by `licensing.mode: enforced` plus a
+valid signed license. Environment variables can never disable it:
+
+- `DATA_BOAR_LICENSE_MODE=open` is **ignored** when YAML sets `mode: enforced`
+  (the attempt is recorded as a CRITICAL audit event). The env var can only
+  **escalate** `open` → `enforced`.
+- `DATA_BOAR_ENV=development`, `DEBUG=1`, and the former
+  `DATA_BOAR_TIER_OVERRIDE` have **zero** licensing effect. The dev/CI tier
+  override was removed — use a locally issued signed QA license instead
+  (`scripts/issue_dev_license_jwt.py`).
+- Without a valid license in enforced mode the runtime **fails closed**:
+  scans are denied (Safe-Hold / HTTP 403) and the feature tier is capped to
+  Community — never "open".
+
+Every enforcement decision (allow / deny / clamp / expire) is recorded on the
+`data_boar.licensing.audit` logger with the `LICENSE_AUDIT` prefix.
 
 Environment variables override YAML when set:
 
-- `DATA_BOAR_LICENSE_MODE` — `open` | `enforced`
+- `DATA_BOAR_LICENSE_MODE` — `enforced` (escalation only; `open` cannot downgrade YAML `enforced`)
 - `DATA_BOAR_LICENSE_PATH` — path to JWT file (`.lic`)
 - `DATA_BOAR_LICENSE_PUBLIC_KEY_PATH` — PEM file with **Ed25519 public** key (verify only)
 - `DATA_BOAR_LICENSE_PUBLIC_KEY_PEM` — inline PEM (alternative to path; dev/CI only)

@@ -7,10 +7,7 @@ import os
 import pytest
 
 from core.licensing.guard import LicenseGuard, reset_license_guard_for_tests
-from core.licensing.runtime_feature_tier import (
-    get_runtime_tier_for_features,
-    tier_override_from_env,
-)
+from core.licensing.runtime_feature_tier import get_runtime_tier_for_features
 from core.licensing.tier_features import Tier
 
 
@@ -97,18 +94,12 @@ def test_scan_max_workers_enterprise_denied_pro(pro_guard):
     assert not result.allowed
 
 
-def test_tier_override_env_requires_dev_env(monkeypatch):
-    monkeypatch.setenv("DATA_BOAR_TIER_OVERRIDE", "pro")
-    monkeypatch.delenv("DATA_BOAR_ENV", raising=False)
-    monkeypatch.delenv("DEBUG", raising=False)
-    assert tier_override_from_env() is None
-
-
-def test_tier_override_env_honored_in_dev(monkeypatch):
+def test_tier_override_env_removed_no_bypass(monkeypatch):
+    """#719: DATA_BOAR_TIER_OVERRIDE no longer exists — env never changes tier."""
     monkeypatch.setenv("DATA_BOAR_TIER_OVERRIDE", "community")
     monkeypatch.setenv("DATA_BOAR_ENV", "development")
     reset_license_guard_for_tests()
     cfg = {"licensing": {"mode": "open", "effective_tier": "pro"}}
-    assert get_runtime_tier_for_features(cfg) == Tier.COMMUNITY
+    assert get_runtime_tier_for_features(cfg) == Tier.PRO
     g = LicenseGuard(cfg)
-    assert not g.is_allowed("governance_lens_pro")
+    assert g.is_allowed("governance_lens_pro")

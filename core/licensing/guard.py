@@ -4,6 +4,7 @@ Runtime license guard: open mode (default) vs enforced commercial token verifica
 
 from __future__ import annotations
 
+import logging
 import os
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -12,6 +13,7 @@ from typing import Any
 
 import jwt
 
+from core.licensing.audit import audit_enforcement_event
 from core.licensing.feature_gate import FeatureCheckResult, check_feature
 from core.licensing.fingerprint import compute_machine_fingerprint
 from core.licensing.runtime_feature_tier import map_dbtier_string_to_tier
@@ -92,18 +94,41 @@ class LicenseGuard:
 
     def __init__(self, config: dict[str, Any]) -> None:
         lc = (config.get("licensing") or {}) if isinstance(config, dict) else {}
+        yaml_mode = str(lc.get("mode", "open")).strip().lower()
+        if yaml_mode not in ("open", "enforced"):
+            yaml_mode = "open"
         env_mode = (os.environ.get("DATA_BOAR_LICENSE_MODE") or "").strip().lower()
-        if env_mode in ("open", "enforced"):
-            mode = env_mode
+        # #719: environment can only ESCALATE open -> enforced; it can never
+        # downgrade enforced -> open. Enforcement state is determined solely by
+        # licensing.mode + a valid signed license — no env kill-switch.
+        if yaml_mode == "enforced":
+            mode = "enforced"
+            if env_mode == "open":
+                audit_enforcement_event(
+                    "env_mode_downgrade_ignored",
+                    mode="enforced",
+                    allowed=False,
+                    detail="DATA_BOAR_LICENSE_MODE=open ignored — licensing.mode is enforced",
+                )
+        elif env_mode == "enforced":
+            mode = "enforced"
         else:
-            mode = str(lc.get("mode", "open")).strip().lower()
-        if mode not in ("open", "enforced"):
-            mode = "open"
+            mode = yaml_mode
         self.mode = mode
         self._config = config
         self._lc = lc
         self._context: LicenseContext | None = None
         self._evaluate()
+        # Audit Trail (#719): every license evaluation outcome is recorded —
+        # allow (OPEN/VALID/GRACE) at INFO, deny/expire at CRITICAL in enforced.
+        c = self.context
+        audit_enforcement_event(
+            "license_evaluated",
+            mode=c.mode,
+            state=c.state,
+            allowed=c.state in ("OPEN", "VALID", "GRACE"),
+            detail=c.detail,
+        )
 
     def _evaluate(self) -> None:
         mfp = compute_machine_fingerprint()
@@ -320,7 +345,15 @@ class LicenseGuard:
 
     def allows_scan(self) -> bool:
         c = self.context
-        return c.state in ("OPEN", "VALID", "GRACE")
+        allowed = c.state in ("OPEN", "VALID", "GRACE")
+        audit_enforcement_event(
+            "scan_gate",
+            mode=c.mode,
+            state=c.state,
+            allowed=allowed,
+            detail=c.detail if not allowed else "",
+        )
+        return allowed
 
     def allows_full_report(self) -> bool:
         c = self.context
@@ -338,18 +371,50 @@ class LicenseGuard:
         """If trial with positive cap, return max rows; else None (no cap)."""
         c = self.context
         if c.state in ("OPEN", "VALID", "GRACE") and c.trial and c.max_report_rows > 0:
+            audit_enforcement_event(
+                "report_rows_clamped",
+                mode=c.mode,
+                state=c.state,
+                allowed=False,
+                detail=f"trial_cap={c.max_report_rows}",
+                level=logging.WARNING,
+            )
             return c.max_report_rows
         return None
 
     def product_tier_for_features(self) -> Tier:
-        """Resolve product tier for feature gates (YAML, JWT, dev override)."""
+        """Resolve product tier for feature gates (YAML lab simulation or JWT dbtier)."""
         from core.licensing.runtime_feature_tier import get_runtime_tier_for_features
 
         return get_runtime_tier_for_features(self._config)
 
     def check_feature(self, feature: str) -> FeatureCheckResult:
-        """Structured tier gate — does not raise on denial."""
-        return check_feature(feature, self.product_tier_for_features())
+        """Structured tier gate — does not raise on denial. Denials are audited."""
+        result = check_feature(feature, self.product_tier_for_features())
+        c = self.context
+        if result.allowed:
+            # Per-feature allows are high-frequency: DEBUG keeps the audit
+            # record available without flooding default INFO logs.
+            audit_enforcement_event(
+                "feature_gate",
+                mode=c.mode,
+                state=c.state,
+                allowed=True,
+                feature=result.feature,
+                tier=result.current_tier,
+                level=logging.DEBUG,
+            )
+        else:
+            audit_enforcement_event(
+                "feature_denied",
+                mode=c.mode,
+                state=c.state,
+                allowed=False,
+                feature=result.feature,
+                tier=result.current_tier,
+                detail=f"required={result.required_tier}",
+            )
+        return result
 
     def is_allowed(self, feature: str) -> bool:
         return self.check_feature(feature).allowed
