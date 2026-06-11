@@ -54,6 +54,11 @@ class LicenseContext:
     dbtier: str = ""
     # Parallel scan worker cap from JWT (`dbmax_workers` claim, #551); 0 = no explicit claim.
     max_workers: int = 0
+    # Deployment pack (#846): commercial add-on id + licensed site count. The GLOBAL
+    # deploy count is issuance-enforced (the issuer emits the pack); runtime only
+    # validates its OWN fingerprint ∈ dbmfp (single hex or pack array) — see #718.
+    deployment_pack_id: str = ""
+    max_deployments: int = 0
 
     def to_public_dict(self) -> dict[str, Any]:
         return {
@@ -69,7 +74,42 @@ class LicenseContext:
             "trial": self.trial,
             "watermark": self.watermark or None,
             "dbtier": self.dbtier or None,
+            "deployment_pack_id": self.deployment_pack_id or None,
+            "max_deployments": self.max_deployments or None,
         }
+
+
+# #846: deployment-count defaults are ISSUANCE-enforced — the issuer emits the
+# fingerprint pack; runtime only validates its OWN fingerprint ∈ dbmfp (#718).
+# Pro default pending operator ratification (described as on-prem + 1 cloud/branch).
+DEFAULT_PRO_DEPLOYMENTS = 2  # operator-ratify: 1 vs 2
+DEFAULT_ENTERPRISE_DEPLOYMENTS = 0  # 0 = unlimited (contract-driven)
+
+
+def _parse_dbmfp_claim(raw: Any) -> list[str] | None:
+    """
+    Parse the ``dbmfp`` claim (#718 + #846).
+
+    Accepted shapes: absent/empty → ``[]`` (no binding); a single hex string →
+    one-entry list; a list/tuple of hex strings (deployment pack) → normalized
+    list. Any other type is a malformed claim → ``None`` (caller fails closed,
+    #719 posture — a bad binding claim must never mean "unbound").
+    """
+    if raw is None:
+        return []
+    if isinstance(raw, str):
+        v = raw.strip().lower()
+        return [v] if v else []
+    if isinstance(raw, (list, tuple)):
+        out: list[str] = []
+        for item in raw:
+            if not isinstance(item, str):
+                return None
+            v = item.strip().lower()
+            if v:
+                out.append(v)
+        return out
+    return None
 
 
 # #551: fallback worker caps when a usable license carries no dbmax_workers
@@ -279,9 +319,29 @@ class LicenseGuard:
         exp_iso = _ts_iso(exp)
         grace_iso = _ts_iso(grace_ts) if grace_ts else ""
 
-        token_mfp = str(claims.get("dbmfp", "") or "").strip().lower()
-        # Non-empty dbmfp binds the license to one fingerprint (deployment/host).
-        if token_mfp and mfp.lower() != token_mfp:
+        # #718 + #846: dbmfp binds the license to one fingerprint (single hex
+        # string) or to a deployment pack (list of hex strings). Runtime
+        # validates only its OWN fingerprint ∈ pack; the GLOBAL deploy count
+        # (dbmax_deployments) is issuance-enforced by the issuer.
+        allowed_fps = _parse_dbmfp_claim(claims.get("dbmfp"))
+        pack_id = str(claims.get("dbdeployment_pack_id", "") or "").strip()
+        try:
+            max_deployments = int(claims.get("dbmax_deployments", 0) or 0)
+        except (TypeError, ValueError):
+            max_deployments = 0
+        if allowed_fps is None:
+            # Malformed binding claim fails CLOSED (#719 posture) — it must
+            # never degrade to "unbound".
+            self._context = LicenseContext(
+                state="INVALID",
+                mode="enforced",
+                license_id=lic_id,
+                machine_fingerprint=mfp,
+                detail="malformed_dbmfp_claim",
+                watermark="INVALID_TOKEN",
+            )
+            return
+        if allowed_fps and mfp.lower() not in allowed_fps:
             self._context = LicenseContext(
                 state="MACHINE_MISMATCH",
                 mode="enforced",
@@ -298,6 +358,8 @@ class LicenseGuard:
                 machine_fingerprint=mfp,
                 detail="machine_fingerprint_mismatch",
                 watermark="WRONG_HOST",
+                deployment_pack_id=pack_id,
+                max_deployments=max_deployments,
             )
             return
 
@@ -305,7 +367,7 @@ class LicenseGuard:
             os.environ.get("DATA_BOAR_LICENSE_MACHINE_STRICT", "").strip().lower()
             in ("1", "true", "yes")
         )
-        if bind_strict and not token_mfp:
+        if bind_strict and not allowed_fps:
             self._context = LicenseContext(
                 state="UNLICENSED",
                 mode="enforced",
@@ -356,6 +418,8 @@ class LicenseGuard:
             watermark=wm,
             dbtier=str(claims.get("dbtier") or "").strip(),
             max_workers=claim_workers,
+            deployment_pack_id=pack_id,
+            max_deployments=max_deployments,
         )
 
     @property

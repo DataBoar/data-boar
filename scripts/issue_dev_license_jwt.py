@@ -64,6 +64,25 @@ def _resolve_dbmfp(raw: str) -> str:
     return value
 
 
+def _resolve_dbmfp_pack(raw: str) -> list[str]:
+    """
+    Resolve --dbmfp-pack: comma-separated fingerprints (deployment pack, #846).
+
+    Each entry is a hex fingerprint from --show-machine-fingerprint on the
+    target machine; the literal 'auto' binds THIS machine as one pack member.
+    """
+    pack: list[str] = []
+    for part in raw.split(","):
+        value = part.strip().lower()
+        if not value:
+            continue
+        if value == "auto":
+            value = _machine_fingerprint()
+        if value not in pack:
+            pack.append(value)
+    return pack
+
+
 def main() -> None:
     p = argparse.ArgumentParser(
         description=(
@@ -98,6 +117,28 @@ def main() -> None:
         ),
     )
     p.add_argument(
+        "--dbmfp-pack",
+        help=(
+            "Deployment pack (#846): comma-separated fingerprint hexes to bind "
+            "the license to N machines (use 'auto' for THIS machine, e.g. "
+            "'auto,<tester-hex>'). Overrides --dbmfp. Runtime validates only "
+            "its own fingerprint; the pack size is issuance-enforced."
+        ),
+    )
+    p.add_argument(
+        "--pack-id",
+        help="dbdeployment_pack_id claim (audit trail; default: '<sub>-pack' when --dbmfp-pack is used)",
+    )
+    p.add_argument(
+        "--dbmax-deployments",
+        type=int,
+        help=(
+            "dbmax_deployments claim — licensed site count. Default: pack size "
+            "when --dbmfp-pack is used, else omitted. Enterprise contracts may "
+            "use 0 = unlimited."
+        ),
+    )
+    p.add_argument(
         "--show-machine-fingerprint",
         action="store_true",
         help="Print this machine's fingerprint (send to the issuer) and exit",
@@ -127,9 +168,24 @@ def main() -> None:
         "dbkid": "dev",
         "dbtier": args.dbtier.strip(),
     }
-    dbmfp = _resolve_dbmfp(args.dbmfp)
-    if dbmfp:
-        payload["dbmfp"] = dbmfp
+    if args.dbmfp_pack:
+        pack = _resolve_dbmfp_pack(args.dbmfp_pack)
+        if not pack:
+            print("--dbmfp-pack resolved to an empty pack", file=sys.stderr)
+            sys.exit(1)
+        payload["dbmfp"] = pack
+        payload["dbdeployment_pack_id"] = args.pack_id or f"{args.sub}-pack"
+        payload["dbmax_deployments"] = (
+            args.dbmax_deployments if args.dbmax_deployments is not None else len(pack)
+        )
+    else:
+        dbmfp = _resolve_dbmfp(args.dbmfp)
+        if dbmfp:
+            payload["dbmfp"] = dbmfp
+        if args.dbmax_deployments is not None:
+            payload["dbmax_deployments"] = args.dbmax_deployments
+        if args.pack_id:
+            payload["dbdeployment_pack_id"] = args.pack_id
     token = jwt.encode(payload, key, algorithm="EdDSA")
     if args.out:
         Path(args.out).write_text(token + "\n", encoding="utf-8")
