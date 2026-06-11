@@ -11,9 +11,14 @@
 #     is marked FAILED (not skipped, not passed).
 #   - `pip-audit` security scan: runs after install; a discovered vulnerability
 #     without a matching `--ignore-vuln` entry fails the job.
-#   - `fail-fast: false` on the matrix means Python-3.12 and Python-3.13 jobs
-#     run to completion even if one fails, so both error logs are collected.
+#   - `fail-fast: false` on the matrix means Python-3.12/3.13/3.14 jobs
+#     run to completion even if one fails, so all error logs are collected.
 #     It does NOT mean "pass when there are errors" — just parallel visibility.
+#   - Python 3.14 is SIGNAL-ONLY (#551): it runs the full test suite for the
+#     future no-GIL Enterprise runtime but uses `continue-on-error: true` so an
+#     ecosystem gap (missing wheels, dep incompatibility) does not block merges.
+#     The runtime / Docker base image stays 3.12/3.13 until the licensing
+#     enforcement gate is green (rationale in #551).
 #
 # Third-party Actions use full commit SHAs (major tag noted in comment). Refresh via Dependabot
 # (github-actions) or deliberately after reading upstream release notes. astral-sh/setup-uv `version`
@@ -39,7 +44,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.12", "3.13"]
+        python-version: ["3.12", "3.13", "3.14"]
+    # 3.14 is signal-only (#551) — see header comment. 3.12/3.13 stay blocking.
+    continue-on-error: ${{ matrix.python-version == '3.14' }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
