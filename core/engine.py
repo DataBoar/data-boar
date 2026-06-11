@@ -193,6 +193,33 @@ class AuditEngine:
                 f"Licensing blocks scan: state={c.state} detail={c.detail}",
             )
 
+        # #551: licensing worker cap — effective = min(scan.max_workers, tier cap).
+        # Enforced mode only (open mode returns None = no cap). Fail-soft: a cap
+        # resolution error must never abort a scan the license gate already
+        # allowed — warn and run uncapped instead.
+        import logging
+
+        try:
+            cap = guard.worker_cap()
+        except Exception as e:  # noqa: BLE001
+            logging.getLogger(__name__).warning(
+                "Licensing worker cap resolution failed (fail-soft, no cap): %s", e
+            )
+            cap = None
+        if cap is not None and self._max_workers > cap:
+            from core.licensing.audit import audit_enforcement_event
+
+            c = guard.context
+            audit_enforcement_event(
+                "workers_clamped",
+                mode=c.mode,
+                state=c.state,
+                allowed=False,
+                detail=f"requested={self._max_workers} cap={cap}",
+                level=logging.WARNING,
+            )
+            self._max_workers = cap
+
         session_id = new_session_id()
         self.db_manager.set_current_session_id(session_id)
         scope_hash = _compute_config_scope_hash(self.config)

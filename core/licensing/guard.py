@@ -52,6 +52,8 @@ class LicenseContext:
     watermark: str = ""
     # Product tier hint from JWT (`dbtier` claim) when mode is enforced — see LICENSING_SPEC.md
     dbtier: str = ""
+    # Parallel scan worker cap from JWT (`dbmax_workers` claim, #551); 0 = no explicit claim.
+    max_workers: int = 0
 
     def to_public_dict(self) -> dict[str, Any]:
         return {
@@ -69,6 +71,16 @@ class LicenseContext:
             "dbtier": self.dbtier or None,
         }
 
+
+# #551: fallback worker caps when a usable license carries no dbmax_workers
+# claim. Tier resolution in enforced mode already fails closed to COMMUNITY,
+# so an unlicensed/invalid state inherits the Community cap.
+_TIER_DEFAULT_WORKER_CAP: dict[Tier, int | None] = {
+    Tier.OPEN: None,
+    Tier.COMMUNITY: 2,
+    Tier.PRO: 5,
+    Tier.ENTERPRISE: None,  # unlimited — Enterprise perk
+}
 
 _guard_instance: LicenseGuard | None = None
 
@@ -305,6 +317,13 @@ class LicenseGuard:
 
         trial = bool(claims.get("dbtrial", False))
         max_rows = int(claims.get("dbmaxrows", 0) or 0)
+        # #551: dbmax_workers claim — fail-soft on malformed values (treat as absent).
+        try:
+            claim_workers = int(claims.get("dbmax_workers", 0) or 0)
+        except (TypeError, ValueError):
+            claim_workers = 0
+        if claim_workers < 0:
+            claim_workers = 0
 
         if now <= exp:
             state = "VALID"
@@ -336,6 +355,7 @@ class LicenseGuard:
             detail="ok" if state in ("VALID", "GRACE") else state.lower(),
             watermark=wm,
             dbtier=str(claims.get("dbtier") or "").strip(),
+            max_workers=claim_workers,
         )
 
     @property
@@ -381,6 +401,23 @@ class LicenseGuard:
             )
             return c.max_report_rows
         return None
+
+    def worker_cap(self) -> int | None:
+        """
+        Max parallel scan workers allowed by licensing (#551). ``None`` = unlimited.
+
+        Only ``enforced`` mode caps — open mode never restricts ``scan.max_workers``.
+        A positive ``dbmax_workers`` claim on a usable (VALID/GRACE) license wins;
+        otherwise the resolved tier default applies (Community 2 / Pro 5 /
+        Enterprise unlimited). Enforced fail-closed states resolve to the
+        Community tier, so they inherit the Community cap.
+        """
+        c = self.context
+        if c.mode != "enforced":
+            return None
+        if c.state in ("VALID", "GRACE") and c.max_workers > 0:
+            return c.max_workers
+        return _TIER_DEFAULT_WORKER_CAP.get(self.product_tier_for_features(), 2)
 
     def product_tier_for_features(self) -> Tier:
         """Resolve product tier for feature gates (YAML lab simulation or JWT dbtier)."""
