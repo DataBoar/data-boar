@@ -181,6 +181,76 @@ Em implantações típicas, o estado fica sob **`/data`** (volume ou bind mount)
 
 **English:** [DEPLOY.md §9](DEPLOY.md#9-backup-and-restore-persistent-data).
 
+## 10. Executar com Podman (rootless, LMDE / Debian / Fedora)
+
+[Podman](https://podman.io) e uma alternativa ao Docker com CLI compativel. Funciona **rootless por padrao** — os containers nao precisam de privilegios de root no host.
+
+### Principais diferencas em relacao ao Docker
+
+| Aspecto | Docker | Podman |
+| ------- | ------ | ------ |
+| Modo padrao | Root (salvo rootless configurado) | Rootless (por usuario) |
+| Daemon | Necessario | Daemonless (fork/exec) |
+| Compose | `docker compose` (v2) | `podman-compose` ou `podman kube play` |
+| Caminho do socket | `/var/run/docker.sock` | `/run/user/<UID>/podman/podman.sock` |
+| Compatibilidade de imagem | OCI (mesmo formato) | OCI (compativel) |
+
+### Pull e execucao (rootless)
+
+```bash
+# Baixar a imagem do Docker Hub (mesma imagem do Docker)
+podman pull fabioleitao/data_boar:latest
+
+# Executar como API + frontend (porta 8088) com bind mount para dados persistentes
+podman run -d \
+  --name data-boar \
+  -p 8088:8088 \
+  -v ./data:/data:Z \
+  -e CONFIG_PATH=/data/config.yaml \
+  fabioleitao/data_boar:latest
+```
+
+> **Nota:** O sufixo `:Z` no volume define o rotulo SELinux para Podman rootless em Fedora/RHEL. No Debian/LMDE e ignorado sem erros.
+
+### CLI one-shot com Podman
+
+```bash
+podman run --rm \
+  -v ./data:/data:Z \
+  fabioleitao/data_boar:latest \
+  python main.py --config /data/config.yaml --output /data/relatorio.xlsx
+```
+
+### Gerenciar o container
+
+```bash
+podman ps                          # status
+podman logs -f data-boar           # logs em tempo real
+podman stop data-boar && podman rm data-boar   # parar e remover
+```
+
+### Servico de usuario persistente (systemd)
+
+```bash
+podman generate systemd --name data-boar --files --new
+mkdir -p ~/.config/systemd/user
+mv container-data-boar.service ~/.config/systemd/user/
+systemctl --user enable --now container-data-boar.service
+```
+
+### Compose com Podman
+
+```bash
+pip install podman-compose        # ou pacote da distro
+podman-compose -f deploy/docker-compose.yml up -d
+```
+
+### Licoes aprendidas
+
+Licoes operacionais de implantacoes de lab (LAB-NODE-02, LMDE 7) serao documentadas em [`docs/ops/LAB_LESSONS_LEARNED.md`](../ops/LAB_LESSONS_LEARNED.md) conforme acumuladas.
+
+**English:** [DEPLOY.md §10](DEPLOY.md#10-run-with-podman-rootless-lmde--debian--fedora).
+
 ## Resumo
 
 | Objetivo              | Comando / passo                                                                                     |
@@ -194,6 +264,7 @@ Em implantações típicas, o estado fica sob **`/data`** (volume ou bind mount)
 | **Swarm**             | `docker stack deploy -c deploy/docker-compose.yml -c deploy/docker-compose.override.yml data-boar-audit` |
 | **Kubernetes**        | `kubectl apply -f deploy/kubernetes/`                                                               |
 | **Backup / restore**  | Dados em `/data` (seção 9): backup do volume ou bind mount; restaurar com o mesmo layout e validar `/health` |
+| **Podman (rootless)** | `podman pull fabioleitao/data_boar:latest` e `podman run -d -p 8088:8088 -v ./data:/data:Z ...` (seção 10) |
 
 ## Atrás de NAT, load balancer ou proxy reverso
 
