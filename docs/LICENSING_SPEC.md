@@ -73,6 +73,7 @@ Custom claims (namespaced to avoid collisions):
 | `dbissuer`  | string | Issuer operator id (e.g. SSH key fingerprint or email)                          |
 | `dbkid`     | string | Signing key id for rotation                                                     |
 | `dbgrace`   | int    | Grace period end (unix); after `exp`, still **GRACE** until this time           |
+| `dbmax_workers` | int | Max parallel scan workers (#551). **Enforced mode only:** the engine clamps `scan.max_workers` to `min(scan.max_workers, dbmax_workers)`. Absent/zero on a usable license → tier defaults apply (Community **2** / Pro **5** / Enterprise **unlimited**). Open mode never caps. Clamp is fail-soft and audited (`workers_clamped`, WARNING). |
 | `dbmax_deployments` | int | **Planned** — max distinct **licensed production sites** (machine seeds / fingerprints) for this token; **1** = Pro-style single server or single consultant laptop; **0** may mean **unlimited** when contract allows (Enterprise). Not enforced until product reads it. |
 | `dbdeployment_pack_id` | string | **Optional** — id of a **commercial add-on** (e.g. “+5 sites”) for audit/refill trail; pairs with re-issued JWT or companion allowlist file. |
 
