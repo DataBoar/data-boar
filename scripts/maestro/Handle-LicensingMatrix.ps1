@@ -114,8 +114,12 @@ function Invoke-ApiPostStatus {
             -MaximumRedirection 0
         return [int]$response.StatusCode
     } catch {
-        if ($_.Exception.Message -match "[Rr]edirect") {
-            return 302
+        # Use numeric status code, not locale-dependent exception message text.
+        # PowerShell throws on 3xx when -MaximumRedirection 0; the response
+        # object carries the real status code regardless of system locale.
+        $resp = $_.Exception.Response
+        if ($resp -and [int]$resp.StatusCode -ge 300 -and [int]$resp.StatusCode -lt 400) {
+            return [int]$resp.StatusCode
         }
         throw
     }
