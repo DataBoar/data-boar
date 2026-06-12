@@ -139,6 +139,6 @@ Bad: "This is P0" (ambiguous: CodeQL? GitHub? gravity?).
 
 | # | Item | Status |
 | - | ---- | ------ |
-| 1 | Publish this hub + pt-BR mirror | ⬜ Pending |
-| 2 | Link from [OPERATOR_AGENT_COLD_START_LADDER.md](../ops/OPERATOR_AGENT_COLD_START_LADDER.md) | ⬜ Pending |
+| 1 | Publish this hub + pt-BR mirror | ✅ Done |
+| 2 | Link from [OPERATOR_AGENT_COLD_START_LADDER.md](../ops/OPERATOR_AGENT_COLD_START_LADDER.md) | ✅ Done |
 | 3 | DOCS_AND_HUBS_INDEX (#571) cross-link when available | ⬜ Pending |

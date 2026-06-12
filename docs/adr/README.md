@@ -79,7 +79,9 @@ Short, durable notes that capture **why** the project chose an approach—not on
 | 0058  | [Primer hub registration ritual](ADR-0058-primer-hub-registration-ritual.md) | Accepted |
 | 0061 | [ADR-0061 U-axis issue sub-order and cross-milestone gate](ADR-0061-u-axis-issue-suborder-and-cross-milestone-gate.md) | Accepted |
 | 0062 | [ADR-0062 Agent containment: triple-audit offband pattern](ADR-0062-agent-containment-triple-audit-offband-pingpong.md) | Accepted |
+| 0065 | [NIST SP 800-228A as REST API security hardening reference](ADR-0065-nist-sp800228a-api-security-reference.md) | Deferred |
 | 0066 | [TAMPERED state behavior — fail-closed in enforced mode](ADR-0066-tampered-state-behavior.md) | Accepted |
+| 0068 | [Primary Linux dev workstation (temporary)](ADR-0068-primary-linux-dev-workstation-temporary.md) | Proposed |
 
 ## Related docs
 

@@ -20,7 +20,7 @@ repos:
     hooks:
       - id: plans-stats-check
         name: plans status dashboard is fresh
-        entry: python scripts/plans-stats.py --check
+        entry: uv run python scripts/plans-stats.py --check
         language: system
         pass_filenames: false
       - id: markdown-lint-guard

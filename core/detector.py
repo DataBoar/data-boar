@@ -751,13 +751,38 @@ def _load_regex_overrides(
     items = (
         data if isinstance(data, list) else data.get("patterns", data.get("regex", []))
     )
+    from config.plugin_validator import _has_nested_quantifier
+
     for item in items:
         if isinstance(item, dict):
             name = item.get("name", "")
             pattern = item.get("pattern", "")
             norm = item.get("norm_tag", "Custom")
-            if name and pattern:
-                out[name] = (pattern, norm)
+            if not (name and pattern):
+                continue
+            # ReDoS guard (#829) — enforcement at the trust boundary: third-party
+            # override patterns only. Built-in DEFAULT_PATTERNS are curated and
+            # exempt (calibration test: tests/test_redos_guard.py).
+            if _has_nested_quantifier(pattern):
+                warnings.warn(
+                    f"Plugin file '{path}': pattern '{name}' skipped — nested "
+                    f"quantifiers detected (potential ReDoS). Simplify the "
+                    f"pattern. (#829)",
+                    PluginValidationWarning,
+                    stacklevel=2,
+                )
+                continue
+            try:
+                re.compile(pattern)
+            except re.error as exc:
+                warnings.warn(
+                    f"Plugin file '{path}': pattern '{name}' skipped — invalid "
+                    f"regex: {exc}. (#829)",
+                    PluginValidationWarning,
+                    stacklevel=2,
+                )
+                continue
+            out[name] = (pattern, norm)
     return out
 
 
@@ -1124,6 +1149,9 @@ class SensitivityDetector:
         for k, v in over.items():
             patterns[k] = v
         self.patterns = patterns
+        # Built-in DEFAULT_PATTERNS are curated (trusted); third-party overrides
+        # were already filtered by _load_regex_overrides (ReDoS + re.error guard,
+        # #829), so every pattern reaching this point compiles safely.
         self._compiled = {
             name: re.compile(pat) for name, (pat, _) in self.patterns.items()
         }

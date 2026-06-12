@@ -203,6 +203,16 @@ A **ISO 31000** é uma **diretriz de gestão de risco da organização** (contex
 
 Outras normas auditáveis ou regionais podem ser atendidas via norm tags configuráveis e [compliance-samples](compliance-samples/); seguimos estendendo documentação e amostras conforme novos padrões se tornem relevantes.
 
+### NIST SP 800-63-4 (Diretrizes de Identidade Digital Rev 4) — relevância para dados de identidade
+
+**Status:** Texto final esperado 2025–2026 (rascunho público disponível em <https://pages.nist.gov/800-63-4/>). Ainda não é um norm tag embutido; documentado aqui para integradores e DPOs.
+
+O SP 800-63-4 classifica explicitamente os **dados de identidade** (nome, data de nascimento, endereço, identificadores nacionais, dados biométricos) coletados durante a validação de identidade digital como PII. O Data Boar detecta exatamente essas classes de dados em bancos de dados, sistemas de arquivos e APIs.
+
+**Alinhamento prático:** Organizações que executam programas de validação de identidade ou gerenciam stores de credenciais podem usar varreduras do Data Boar para localizar onde a PII de validação de identidade reside — suportando evidências para um inventário de dados informado pelo SP 800-63-4. Combine com o perfil de amostra LGPD ou GDPR para alinhar o texto do `norm_tag` à regulamentação local enquanto referencia o escopo do NIST 800-63-4 nos relatórios do DPO.
+
+---
+
 ## Referenciados explicitamente hoje (rótulos embutidos)
 
 Os padrões regex embutidos e rótulos do relatório referem-se a estes frameworks (com valores de exemplo de `norm_tag`):

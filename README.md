@@ -1,5 +1,7 @@
 # Data Boar
 
+> **Try it in 30 seconds (no real data):** `./scripts/demo.sh` — generates synthetic corpus, starts the dashboard at `http://127.0.0.1:8088/pt-br/`. Requires `uv` ([install](https://docs.astral.sh/uv/getting-started/installation/)). Docker: `docker run --rm -p 8088:8088 fabioleitao/data_boar:latest demo`.
+
 **Data Boar** — enterprise data discovery and risk governance: compliance-aware mapping of personal and sensitive data across your data soup (intelligence engine, not a single-jurisdiction “audit app”).
 
 ![Data Boar mascot](api/static/mascot/data_boar_mascote_color.svg)

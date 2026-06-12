@@ -2,6 +2,8 @@
 
 **This folder is versioned** so new clones get a **layout to copy**. Your **real** notes must live under **`docs/private/`**, which is **gitignored** — copy like this:
 
+**Example vs real tree:** Tracked stubs under **`private.example/`** use neutral folder names (**`org-notes/`**, **`economics/`**). Your live **`docs/private/`** tree may use different names (e.g. **`employers/`**, **`operator_economics/`**) — see **[PRIVATE_OPERATOR_NOTES.md](../PRIVATE_OPERATOR_NOTES.md)** for the operator layout table.
+
 Optional **local notify** (Signal/SMS/SMTP credentials for operator digests): copy **`private.example/notify/README.md`** into **`docs/private/notify/`** and follow that template—still **gitignored** once under `docs/private/`.
 
 **Partner / client feedback inbox (WRB-style):** read **`private.example/feedbacks-inbox/README.md`**. The real drop folder **`docs/feedbacks, reviews, comments and criticism/`** is **gitignored** at repo root (not under `docs/private/`); create it locally when you start collecting reviews.
@@ -11,7 +13,7 @@ Optional **local notify** (Signal/SMS/SMTP credentials for operator digests): co
 mkdir -p docs/private/homelab docs/private/author_info docs/private/notify docs/private/commercial docs/private/operator_economics docs/private/academic docs/private/security_audit docs/private/scripts
 cp docs/private.example/homelab/README.md docs/private/homelab/
 cp docs/private.example/commercial/README.md docs/private/commercial/
-cp docs/private.example/operator_economics/README.md docs/private/operator_economics/
+cp docs/private.example/economics/README.md docs/private/operator_economics/
 # Optional: seed re-teach structure (EN and/or pt-BR); rename locally e.g. to a single OPERATOR_RETEACH.md
 # cp docs/private.example/homelab/OPERATOR_RETEACH.md docs/private/homelab/
 # cp docs/private.example/homelab/OPERATOR_RETEACH.pt_BR.md docs/private/homelab/
@@ -31,7 +33,7 @@ chmod +x docs/private/scripts/clean-slate.sh
 New-Item -ItemType Directory -Force -Path docs/private/homelab, docs/private/author_info, docs/private/notify, docs/private/commercial, docs/private/operator_economics, docs/private/academic, docs/private/security_audit, docs/private/scripts | Out-Null
 Copy-Item docs/private.example/homelab/README.md docs/private/homelab/
 Copy-Item docs/private.example/commercial/README.md docs/private/commercial/
-Copy-Item docs/private.example/operator_economics/README.md docs/private/operator_economics/
+Copy-Item docs/private.example/economics/README.md docs/private/operator_economics/
 # Optional: Copy-Item docs/private.example/homelab/OPERATOR_RETEACH*.md docs/private/homelab/
 Copy-Item docs/private.example/author_info/README.md docs/private/author_info/
 Copy-Item docs/private.example/academic/README.md docs/private/academic/

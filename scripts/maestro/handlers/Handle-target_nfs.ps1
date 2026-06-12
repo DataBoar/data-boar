@@ -13,6 +13,12 @@
  do lab-op e regra de firewall efemera se necessario.
  Apos validacao bem-sucedida, inicia monitoramento de IO via vmstat no tmux.
  E 100% agnostico: recebe path e hostname do inventario, sem IPs fixos no codigo.
+
+ Sentinel (#831): payload writes /tmp/databoar_handler/target_nfs_sentinel.txt with
+ the IO monitor result so Maestro can verify NFS target readiness.
+
+ Quote/escape safety (#830): IO monitor payload is base64-encoded before tmux injection;
+ ensure script path uses canonical repo path from Node.path.
 #>
 
 param(
@@ -60,9 +66,15 @@ if ($ensureExit -eq 0) {
     Write-Warning "      [WARNING] NFS ensure --check returned exit $ensureExit on $($Node.hostname). Run with -Deep to attempt remediation."
 }
 
-# --- Phase 2: IO monitoring in tmux (same as before) ---
-$payload  = "echo `"TARGET_ACTIVE at `$(date +'%H:%M:%S')`" > ~/.labop-status && mkdir -p ~/log && vmstat 5 | tee ~/log/target_nfs_io.log"
-$tmuxCmd  = "tmux send-keys -t completao C-c ; sleep 0.5 ; tmux send-keys -t completao '$payload' Enter"
+# --- Phase 2: IO monitoring in tmux ---
+# Sentinel path for pass/fail aggregation (#831)
+$sentinelDir  = "/tmp/databoar_handler"
+$sentinelFile = "$sentinelDir/target_nfs_sentinel.txt"
+
+# Base64-encode IO monitor payload to eliminate shell-quoting issues. (#830)
+$ioPayload  = "echo TARGET_ACTIVE at \$(date +%H:%M:%S) > ~/.labop-status && mkdir -p ~/log $sentinelDir && vmstat 5 | tee ~/log/target_nfs_io.log ; echo \$? > $sentinelFile"
+$payloadB64 = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($ioPayload))
+$tmuxCmd    = "tmux send-keys -t completao C-c ; sleep 0.5 ; tmux send-keys -t completao 'echo $payloadB64 | base64 -d | bash' Enter"
 ssh -q -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 `
     "$($Node.user)@$($Node.hostname)" "$tmuxCmd" > $null 2>&1
 

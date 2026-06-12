@@ -4,6 +4,7 @@ Runtime license guard: open mode (default) vs enforced commercial token verifica
 
 from __future__ import annotations
 
+import logging
 import os
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -12,6 +13,7 @@ from typing import Any
 
 import jwt
 
+from core.licensing.audit import audit_enforcement_event
 from core.licensing.feature_gate import FeatureCheckResult, check_feature
 from core.licensing.fingerprint import compute_machine_fingerprint
 from core.licensing.runtime_feature_tier import map_dbtier_string_to_tier
@@ -50,6 +52,13 @@ class LicenseContext:
     watermark: str = ""
     # Product tier hint from JWT (`dbtier` claim) when mode is enforced — see LICENSING_SPEC.md
     dbtier: str = ""
+    # Parallel scan worker cap from JWT (`dbmax_workers` claim, #551); 0 = no explicit claim.
+    max_workers: int = 0
+    # Deployment pack (#846): commercial add-on id + licensed site count. The GLOBAL
+    # deploy count is issuance-enforced (the issuer emits the pack); runtime only
+    # validates its OWN fingerprint ∈ dbmfp (single hex or pack array) — see #718.
+    deployment_pack_id: str = ""
+    max_deployments: int = 0
 
     def to_public_dict(self) -> dict[str, Any]:
         return {
@@ -65,8 +74,56 @@ class LicenseContext:
             "trial": self.trial,
             "watermark": self.watermark or None,
             "dbtier": self.dbtier or None,
+            "deployment_pack_id": self.deployment_pack_id or None,
+            "max_deployments": self.max_deployments or None,
         }
 
+
+# #846: deployment-count defaults are ISSUANCE-enforced — the issuer emits the
+# fingerprint pack; runtime only validates its OWN fingerprint ∈ dbmfp (#718).
+# Pro = 2 deployments (operator-ratified 2026-06-11: on-prem + 1 cloud/branch).
+DEFAULT_PRO_DEPLOYMENTS = 2
+DEFAULT_ENTERPRISE_DEPLOYMENTS = 0  # 0 = unlimited (contract-driven)
+
+
+def _parse_dbmfp_claim(raw: Any) -> list[str] | None:
+    """
+    Parse the ``dbmfp`` claim (#718 + #846).
+
+    Accepted shapes: absent/empty → ``[]`` (no binding); a single hex string →
+    one-entry list; a list/tuple of hex strings (deployment pack) → normalized
+    list. Any other type is a malformed claim → ``None`` (caller fails closed,
+    #719 posture — a bad binding claim must never mean "unbound").
+    """
+    if raw is None:
+        return []
+    if isinstance(raw, str):
+        v = raw.strip().lower()
+        return [v] if v else []
+    if isinstance(raw, (list, tuple)):
+        out: list[str] = []
+        for item in raw:
+            if not isinstance(item, str):
+                return None
+            v = item.strip().lower()
+            if v:
+                out.append(v)
+        return out
+    return None
+
+
+# #551 + #853: fallback worker caps when a usable license carries no
+# dbmax_workers claim. Ratified ladder (2026-06-11): Community 2 · Pro 4 ·
+# Pro+ 8 · Enterprise unlimited. Pro+ is not a Tier enum value — it ships as
+# a dbmax_workers=8 claim at issuance (claim wins over tier default). Tier
+# resolution in enforced mode already fails closed to COMMUNITY, so an
+# unlicensed/invalid state inherits the Community cap.
+_TIER_DEFAULT_WORKER_CAP: dict[Tier, int | None] = {
+    Tier.OPEN: None,
+    Tier.COMMUNITY: 2,
+    Tier.PRO: 4,
+    Tier.ENTERPRISE: None,  # unlimited — Enterprise perk
+}
 
 _guard_instance: LicenseGuard | None = None
 
@@ -92,18 +149,41 @@ class LicenseGuard:
 
     def __init__(self, config: dict[str, Any]) -> None:
         lc = (config.get("licensing") or {}) if isinstance(config, dict) else {}
+        yaml_mode = str(lc.get("mode", "open")).strip().lower()
+        if yaml_mode not in ("open", "enforced"):
+            yaml_mode = "open"
         env_mode = (os.environ.get("DATA_BOAR_LICENSE_MODE") or "").strip().lower()
-        if env_mode in ("open", "enforced"):
-            mode = env_mode
+        # #719: environment can only ESCALATE open -> enforced; it can never
+        # downgrade enforced -> open. Enforcement state is determined solely by
+        # licensing.mode + a valid signed license — no env kill-switch.
+        if yaml_mode == "enforced":
+            mode = "enforced"
+            if env_mode == "open":
+                audit_enforcement_event(
+                    "env_mode_downgrade_ignored",
+                    mode="enforced",
+                    allowed=False,
+                    detail="DATA_BOAR_LICENSE_MODE=open ignored — licensing.mode is enforced",
+                )
+        elif env_mode == "enforced":
+            mode = "enforced"
         else:
-            mode = str(lc.get("mode", "open")).strip().lower()
-        if mode not in ("open", "enforced"):
-            mode = "open"
+            mode = yaml_mode
         self.mode = mode
         self._config = config
         self._lc = lc
         self._context: LicenseContext | None = None
         self._evaluate()
+        # Audit Trail (#719): every license evaluation outcome is recorded —
+        # allow (OPEN/VALID/GRACE) at INFO, deny/expire at CRITICAL in enforced.
+        c = self.context
+        audit_enforcement_event(
+            "license_evaluated",
+            mode=c.mode,
+            state=c.state,
+            allowed=c.state in ("OPEN", "VALID", "GRACE"),
+            detail=c.detail,
+        )
 
     def _evaluate(self) -> None:
         mfp = compute_machine_fingerprint()
@@ -218,16 +298,41 @@ class LicenseGuard:
             )
             return
 
+        # #717 kill-switch: an entry in the revocation list may name the
+        # license id (`sub`), a token id (`jti`), or a signing key id
+        # (`dbkid`). Any match fails CLOSED — REVOKED resolves to the
+        # Community tier via runtime_trust (_UNEXPECTED_LICENSE_STATES).
         revoked = load_revocation_ids(rev_path or None)
         lic_id = str(claims.get("sub", ""))
+        token_id = str(claims.get("jti", "") or "")
+        key_id = str(claims.get("dbkid", "") or "")
+        revoked_field = ""
         if lic_id and lic_id in revoked:
+            revoked_field = "sub"
+        elif token_id and token_id in revoked:
+            revoked_field = "jti"
+        elif key_id and key_id in revoked:
+            revoked_field = "dbkid"
+        if revoked_field:
+            detail = f"license_revoked:{revoked_field}"
             self._context = LicenseContext(
                 state="REVOKED",
                 mode="enforced",
                 license_id=lic_id,
+                key_id=key_id,
                 machine_fingerprint=mfp,
-                detail="license_revoked",
+                detail=detail,
                 watermark="REVOKED",
+            )
+            # Dedicated kill-switch audit record (WARNING): the generic
+            # `license_evaluated` event still fires CRITICAL afterwards.
+            audit_enforcement_event(
+                "license_revoked",
+                mode="enforced",
+                state="REVOKED",
+                allowed=False,
+                detail=detail,
+                level=logging.WARNING,
             )
             return
 
@@ -242,9 +347,29 @@ class LicenseGuard:
         exp_iso = _ts_iso(exp)
         grace_iso = _ts_iso(grace_ts) if grace_ts else ""
 
-        token_mfp = str(claims.get("dbmfp", "") or "").strip().lower()
-        # Non-empty dbmfp binds the license to one fingerprint (deployment/host).
-        if token_mfp and mfp.lower() != token_mfp:
+        # #718 + #846: dbmfp binds the license to one fingerprint (single hex
+        # string) or to a deployment pack (list of hex strings). Runtime
+        # validates only its OWN fingerprint ∈ pack; the GLOBAL deploy count
+        # (dbmax_deployments) is issuance-enforced by the issuer.
+        allowed_fps = _parse_dbmfp_claim(claims.get("dbmfp"))
+        pack_id = str(claims.get("dbdeployment_pack_id", "") or "").strip()
+        try:
+            max_deployments = int(claims.get("dbmax_deployments", 0) or 0)
+        except (TypeError, ValueError):
+            max_deployments = 0
+        if allowed_fps is None:
+            # Malformed binding claim fails CLOSED (#719 posture) — it must
+            # never degrade to "unbound".
+            self._context = LicenseContext(
+                state="INVALID",
+                mode="enforced",
+                license_id=lic_id,
+                machine_fingerprint=mfp,
+                detail="malformed_dbmfp_claim",
+                watermark="INVALID_TOKEN",
+            )
+            return
+        if allowed_fps and mfp.lower() not in allowed_fps:
             self._context = LicenseContext(
                 state="MACHINE_MISMATCH",
                 mode="enforced",
@@ -261,6 +386,8 @@ class LicenseGuard:
                 machine_fingerprint=mfp,
                 detail="machine_fingerprint_mismatch",
                 watermark="WRONG_HOST",
+                deployment_pack_id=pack_id,
+                max_deployments=max_deployments,
             )
             return
 
@@ -268,7 +395,7 @@ class LicenseGuard:
             os.environ.get("DATA_BOAR_LICENSE_MACHINE_STRICT", "").strip().lower()
             in ("1", "true", "yes")
         )
-        if bind_strict and not token_mfp:
+        if bind_strict and not allowed_fps:
             self._context = LicenseContext(
                 state="UNLICENSED",
                 mode="enforced",
@@ -280,6 +407,13 @@ class LicenseGuard:
 
         trial = bool(claims.get("dbtrial", False))
         max_rows = int(claims.get("dbmaxrows", 0) or 0)
+        # #551: dbmax_workers claim — fail-soft on malformed values (treat as absent).
+        try:
+            claim_workers = int(claims.get("dbmax_workers", 0) or 0)
+        except (TypeError, ValueError):
+            claim_workers = 0
+        if claim_workers < 0:
+            claim_workers = 0
 
         if now <= exp:
             state = "VALID"
@@ -311,6 +445,9 @@ class LicenseGuard:
             detail="ok" if state in ("VALID", "GRACE") else state.lower(),
             watermark=wm,
             dbtier=str(claims.get("dbtier") or "").strip(),
+            max_workers=claim_workers,
+            deployment_pack_id=pack_id,
+            max_deployments=max_deployments,
         )
 
     @property
@@ -320,7 +457,15 @@ class LicenseGuard:
 
     def allows_scan(self) -> bool:
         c = self.context
-        return c.state in ("OPEN", "VALID", "GRACE")
+        allowed = c.state in ("OPEN", "VALID", "GRACE")
+        audit_enforcement_event(
+            "scan_gate",
+            mode=c.mode,
+            state=c.state,
+            allowed=allowed,
+            detail=c.detail if not allowed else "",
+        )
+        return allowed
 
     def allows_full_report(self) -> bool:
         c = self.context
@@ -338,18 +483,67 @@ class LicenseGuard:
         """If trial with positive cap, return max rows; else None (no cap)."""
         c = self.context
         if c.state in ("OPEN", "VALID", "GRACE") and c.trial and c.max_report_rows > 0:
+            audit_enforcement_event(
+                "report_rows_clamped",
+                mode=c.mode,
+                state=c.state,
+                allowed=False,
+                detail=f"trial_cap={c.max_report_rows}",
+                level=logging.WARNING,
+            )
             return c.max_report_rows
         return None
 
+    def worker_cap(self) -> int | None:
+        """
+        Max parallel scan workers allowed by licensing (#551). ``None`` = unlimited.
+
+        Only ``enforced`` mode caps — open mode never restricts ``scan.max_workers``.
+        A positive ``dbmax_workers`` claim on a usable (VALID/GRACE) license wins;
+        otherwise the resolved tier default applies (Community 2 / Pro 4 /
+        Enterprise unlimited; Pro+ = claim-driven 8). Enforced fail-closed
+        states resolve to the Community tier, so they inherit the Community cap.
+        """
+        c = self.context
+        if c.mode != "enforced":
+            return None
+        if c.state in ("VALID", "GRACE") and c.max_workers > 0:
+            return c.max_workers
+        return _TIER_DEFAULT_WORKER_CAP.get(self.product_tier_for_features(), 2)
+
     def product_tier_for_features(self) -> Tier:
-        """Resolve product tier for feature gates (YAML, JWT, dev override)."""
+        """Resolve product tier for feature gates (YAML lab simulation or JWT dbtier)."""
         from core.licensing.runtime_feature_tier import get_runtime_tier_for_features
 
         return get_runtime_tier_for_features(self._config)
 
     def check_feature(self, feature: str) -> FeatureCheckResult:
-        """Structured tier gate — does not raise on denial."""
-        return check_feature(feature, self.product_tier_for_features())
+        """Structured tier gate — does not raise on denial. Denials are audited."""
+        result = check_feature(feature, self.product_tier_for_features())
+        c = self.context
+        if result.allowed:
+            # Per-feature allows are high-frequency: DEBUG keeps the audit
+            # record available without flooding default INFO logs.
+            audit_enforcement_event(
+                "feature_gate",
+                mode=c.mode,
+                state=c.state,
+                allowed=True,
+                feature=result.feature,
+                tier=result.current_tier,
+                level=logging.DEBUG,
+            )
+        else:
+            audit_enforcement_event(
+                "feature_denied",
+                mode=c.mode,
+                state=c.state,
+                allowed=False,
+                feature=result.feature,
+                tier=result.current_tier,
+                detail=f"required={result.required_tier}",
+            )
+        return result
 
     def is_allowed(self, feature: str) -> bool:
         return self.check_feature(feature).allowed

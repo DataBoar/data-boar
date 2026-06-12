@@ -510,3 +510,120 @@ def test_normalize_config_warns_when_pass_from_env_unset_then_falls_back(monkeyp
     assert out["targets"][0]["pass"] == "inline-secret"
     assert any("pass_from_env" in str(w.message) for w in recorded)
     assert any("MISSING_DB_PASS" in str(w.message) for w in recorded)
+
+
+# ---------------------------------------------------------------------------
+# Anti-regression for #825 security findings
+# ---------------------------------------------------------------------------
+
+
+def test_api_key_middleware_uses_hmac_compare_digest() -> None:
+    """Anti-regression #825 finding-2: API key comparison must use hmac.compare_digest.
+
+    Direct string equality (provided != expected) is vulnerable to timing attacks.
+    The middleware in api/routes.py must use hmac.compare_digest instead.
+    """
+    from pathlib import Path
+
+    routes_text = (Path(__file__).parent.parent / "api" / "routes.py").read_text(
+        encoding="utf-8"
+    )
+    assert "hmac.compare_digest" in routes_text, (
+        "api/routes.py API key middleware must use hmac.compare_digest to prevent "
+        "timing-based key enumeration attacks (#825 finding-2)"
+    )
+
+
+def test_maturity_integrity_uses_hmac_compare_digest() -> None:
+    """Anti-regression #825 finding-2: MAC verification must use hmac.compare_digest.
+
+    Direct string equality (mac == got) is vulnerable to timing attacks.
+    core/maturity_assessment/integrity.py must use hmac.compare_digest.
+    """
+    from pathlib import Path
+
+    integrity_text = (
+        Path(__file__).parent.parent / "core" / "maturity_assessment" / "integrity.py"
+    ).read_text(encoding="utf-8")
+    assert "hmac.compare_digest" in integrity_text, (
+        "core/maturity_assessment/integrity.py must use hmac.compare_digest for MAC "
+        "verification to prevent timing attacks (#825 finding-2)"
+    )
+
+
+def test_sync_working_tree_excludes_dotenv_from_rsync() -> None:
+    """Anti-regression #825 finding-3: rsync must exclude .env and .env.* files.
+
+    Without these excludes, rsync could exfiltrate operator secrets (API keys, passwords)
+    stored in .env files to remote lab-op hosts during sync.
+    """
+    from pathlib import Path
+
+    sync_text = (
+        Path(__file__).parent.parent / "scripts" / "maestro" / "Sync-WorkingTree.ps1"
+    ).read_text(encoding="utf-8", errors="replace")
+    assert "--exclude='.env'" in sync_text or "--exclude=.env" in sync_text, (
+        "Sync-WorkingTree.ps1 rsync command must exclude '.env' files to prevent "
+        "secret exfiltration to lab-op hosts (#825 finding-3)"
+    )
+    assert "--exclude='.env.*'" in sync_text or "--exclude=.env.*" in sync_text, (
+        "Sync-WorkingTree.ps1 rsync command must exclude '.env.*' files (#825 finding-3)"
+    )
+
+
+def test_dashboard_html_does_not_load_chart_js_from_cdn() -> None:
+    """Anti-regression #825 finding-4: Chart.js must be vendored, not loaded from CDN.
+
+    Loading third-party scripts from CDN (cdn.jsdelivr.net) bypasses CSP 'self'
+    and creates a supply-chain risk. Chart.js must be served from /static/.
+    """
+    from pathlib import Path
+
+    dashboard_html = (
+        Path(__file__).parent.parent / "api" / "templates" / "dashboard.html"
+    ).read_text(encoding="utf-8")
+    assert "cdn.jsdelivr.net" not in dashboard_html, (
+        "api/templates/dashboard.html must not load Chart.js from CDN; "
+        "use the vendored /static/chart.umd.min.js instead (#825 finding-4)"
+    )
+    assert (
+        "/static/chart.umd.min.js" in dashboard_html
+        or "chart.umd.min.js" in dashboard_html
+    ), (
+        "api/templates/dashboard.html must reference the vendored chart.umd.min.js (#825 finding-4)"
+    )
+
+
+def test_csp_does_not_allow_cdn_jsdelivr_in_script_src() -> None:
+    """Anti-regression #825 finding-4: CSP script-src must not include cdn.jsdelivr.net.
+
+    With Chart.js vendored, the CSP can drop the CDN allowance and enforce 'self' only.
+    """
+    from pathlib import Path
+
+    routes_text = (Path(__file__).parent.parent / "api" / "routes.py").read_text(
+        encoding="utf-8"
+    )
+    assert "cdn.jsdelivr.net" not in routes_text, (
+        "api/routes.py CSP must not allow cdn.jsdelivr.net in script-src; "
+        "Chart.js is now vendored so 'self' is sufficient (#825 finding-4)"
+    )
+
+
+def test_maestro_aggregates_real_failures_in_exit() -> None:
+    """Anti-regression #825 finding-5: Maestro.ps1 must exit non-zero on real handler failures.
+
+    Previously Maestro always exited 0 even when handlers returned non-zero exit codes,
+    masking genuine failures. Offline-skips and Safe-Hold are excluded from the failure count.
+    """
+    from pathlib import Path
+
+    maestro_text = (
+        Path(__file__).parent.parent / "scripts" / "maestro" / "Maestro.ps1"
+    ).read_text(encoding="utf-8", errors="replace")
+    assert "realFailCount" in maestro_text, (
+        "Maestro.ps1 must track real handler failures in $realFailCount (#825 finding-5)"
+    )
+    assert "exit 1" in maestro_text, (
+        "Maestro.ps1 must exit 1 when real handler failures are detected (#825 finding-5)"
+    )

@@ -1,0 +1,47 @@
+---
+description: AI executor vs auditor role contract (Cursor = executor, Claude Code = read-only auditor)
+alwaysApply: true
+---
+# Agent roles — executor vs auditor (AI axis)
+
+This rule adds the **AI executor x auditor** axis to the project governance model.
+It complements (does not replace) `.cursor/rules/collaboration-maintainer-contributor.mdc`,
+which covers the **human** maintainer x contributor axis.
+
+## Cursor — executor + cognitive support
+
+- **Role:** primary execution agent for this repo.
+- **Capabilities:** writes code, edits docs, runs scripts, stages files, commits, opens and
+  merges PRs, calls browser/homelab/MCP tools — under operator governance.
+- **Constraints:** all non-negotiable rules in `AGENTS.md` and `.cursor/rules/` apply:
+  PII policy, commercial confidentiality, ADR governance, cross-platform guard rails,
+  pre-commit hooks, CI gates. Writes and commits only inside these agreed patterns.
+
+## Claude Code (and any other read-only model the operator adds) — auditor
+
+- **Role:** read-only reasoning, review, and audit agent.
+- **Scope:** reads repo files, analyzes content, reasons about design, audits compliance.
+  **Does not write or commit to the repo.**
+- **Output path (how to deliver findings):**
+  - `gh issue create` — structured issues with context for the Cursor executor to implement.
+  - `gh issue comment` — commentary on existing issues.
+  - Prompts delivered to Cursor in the operator's chat for execution.
+- **Rationale:** a single write path (Cursor) keeps governance hooks intact — pre-commit,
+  ADR protection, PII guards, PII seed gate, audit trail, signed commits. A second write
+  agent would either bypass those hooks or replicate them inconsistently.
+
+## Anti-patterns to avoid
+
+- Claude Code must **not** `git commit`, `git push`, or write tracked files directly.
+- Cursor must **not** defer write work to Claude Code as if it were a co-executor.
+- Neither agent replaces the **human operator** for merge approvals, secret management,
+  or high-blast-radius decisions (history rewrite, live publish, destructive ops).
+- An auditor agent that encounters a security finding must create a **`[U0]`-tagged issue**
+  and alert the operator — it must not attempt a silent fix.
+
+## Canonical references
+
+- `CLAUDE.md` at the repo root — cold-start pointer for Claude Code sessions.
+- `AGENTS.md` *Maintainer + contributor* bullet — human axis (maintainer x contributor).
+- `AGENTS.md` *Quick index* — maps this rule from the "Agent roles" row.
+- `.cursor/rules/collaboration-maintainer-contributor.mdc` — human axis contract.

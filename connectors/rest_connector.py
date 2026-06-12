@@ -16,6 +16,8 @@ from core.suggested_review import (
     augment_low_id_like_for_persist,
 )
 
+from .url_guard import target_allows_private, validate_outbound_url
+
 try:
     import httpx
 
@@ -197,6 +199,19 @@ class RESTConnector:
         base_url = (self.config.get("base_url") or self.config.get("url", "")).rstrip(
             "/"
         )
+        # SSRF guard (#832): reject link-local/private/loopback hosts unless the
+        # target config opts in with allow_private_networks: true.
+        allow_private = target_allows_private(self.config)
+        for candidate, label in (
+            (base_url, "base_url"),
+            (self.config.get("discover_url", ""), "discover_url"),
+            ((self.config.get("auth") or {}).get("token_url", ""), "auth.token_url"),
+        ):
+            err = validate_outbound_url(
+                candidate, allow_private=allow_private, label=label
+            )
+            if err:
+                raise ValueError(err)
         connect_s = float(self.config.get("connect_timeout_seconds", 25))
         read_s = float(self.config.get("read_timeout_seconds", 90))
         # Default (first arg) used for write/pool; connect and read set explicitly (httpx requires default or all four).
@@ -232,7 +247,14 @@ class RESTConnector:
                 "httpx not installed. Install with: pip install httpx",
             )
             return
-        self.connect()
+        try:
+            self.connect()
+        except ValueError as e:
+            # SSRF guard rejection (#832) — record and stop, never request.
+            self.db_manager.save_failure(
+                self.config.get("name", "api"), "error", str(e)
+            )
+            return
         try:
             paths = self.config.get("paths") or self.config.get("endpoints") or []
             discover_url = self.config.get("discover_url")

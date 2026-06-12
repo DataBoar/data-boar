@@ -34,41 +34,6 @@ from report.safe_prefix import safe_session_prefix
 from report.scan_evidence import _aggregate_apg, _build_manifest
 
 
-def _emit_rca_block(
-    *,
-    phase: str,
-    symptom: str,
-    hypotheses: list[str],
-    next_step: str,
-    exit_code: int,
-) -> None:
-    """Print a Sysinternals-style RCA block for ``data-boar-report`` failures.
-
-    The block is intentionally short and human-readable; it is meant for the
-    Cursor/PowerShell terminal an operator (or this SRE agent) sees right after
-    a failed invocation. It also gives the lab orchestrator a stable string to
-    quote in completao logs.
-
-    The CLI's exit code is the canonical signal; the block adds context, it
-    does not replace ``return`` / non-zero exits.
-    """
-    print(f"--- RCA (data-boar-report phase={phase}) ---", file=sys.stderr)
-    print(f"symptom : {symptom}", file=sys.stderr)
-    print(f"exit    : {exit_code}", file=sys.stderr)
-    if hypotheses:
-        print("hypotheses (narrow):", file=sys.stderr)
-        for h in hypotheses:
-            print(f"  - {h}", file=sys.stderr)
-    if next_step:
-        print(f"next    : {next_step}", file=sys.stderr)
-    print(
-        "doctrine: docs/ops/inspirations/THE_ART_OF_THE_FALLBACK.md, "
-        "INTERNAL_DIAGNOSTIC_AESTHETICS.md",
-        file=sys.stderr,
-    )
-    print("--- end RCA ---", file=sys.stderr)
-
-
 def _session_meta(db_manager: LocalDBManager, session_id: str) -> dict[str, Any]:
     for s in db_manager.list_sessions() or []:
         if s.get("session_id") == session_id:
@@ -94,6 +59,7 @@ def _session_meta(db_manager: LocalDBManager, session_id: str) -> dict[str, Any]
 # can grep operator transcripts; new steps must be appended (not reordered) to
 # preserve the "additive" audit contract documented in
 # INTERNAL_DIAGNOSTIC_AESTHETICS.md §2.3.
+_STEP_PARSE_ARGS = "parse_args"
 _STEP_LOAD_CONFIG = "load_config"
 _STEP_OPEN_SQLITE = "open_sqlite"
 _STEP_FETCH_FINDINGS = "fetch_findings"
@@ -172,6 +138,8 @@ def _narrow_hypothesis(*, step: str, error: BaseException) -> str:
     supports. Wider speculation belongs in the operator runbook, not the RCA.
     """
     error_type = type(error).__name__
+    if step == _STEP_PARSE_ARGS:
+        return "caller omitted --session-id or passed whitespace-only value"
     if step == _STEP_LOAD_CONFIG:
         if error_type in {"FileNotFoundError", "PermissionError"}:
             return "config YAML missing or unreadable on this workstation"
@@ -203,6 +171,11 @@ def _next_manual_command(
     session_id: str,
 ) -> str:
     """Suggest the smallest deterministic command that reproduces the failure."""
+    if step == _STEP_PARSE_ARGS:
+        return (
+            f"python -m cli.reporter --config {config_path} "
+            "--session-id <UUID-from-scan_sessions>"
+        )
     if step == _STEP_LOAD_CONFIG:
         return f"python -c 'from config.loader import load_config; load_config({str(config_path)!r})'"
     if step in {_STEP_OPEN_SQLITE, _STEP_FETCH_FINDINGS}:
@@ -274,19 +247,12 @@ def main(argv: list[str] | None = None) -> int:
     if not sid:
         print("session-id vazio", file=sys.stderr)
         _emit_rca_block(
-            phase="parse_args",
-            symptom="--session-id is empty after trimming.",
-            hypotheses=[
-                "The caller forgot to pass --session-id (CLI contract violation).",
-                "A wrapper script substituted an empty variable.",
-            ],
-            next_step=(
-                "Re-run with --session-id <UUID>; list available ids with: "
-                'uv run python -c "from core.database import LocalDBManager as M; '
-                "import sys; m=M(sys.argv[1]);"
-                " print([s.get('session_id') for s in m.list_sessions() or []])\" <sqlite_path>"
-            ),
-            exit_code=2,
+            step=_STEP_PARSE_ARGS,
+            error=ValueError("--session-id is empty after trimming."),
+            config_path=cfg_path,
+            sqlite_path="",
+            session_id="",
+            output_path=None,
         )
         return 2
 

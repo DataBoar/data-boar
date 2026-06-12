@@ -4,7 +4,11 @@ Human-readable summary of user-facing changes. **Detailed release notes:** [docs
 
 ## Unreleased (`main`)
 
-**Targeting:** **`1.7.4`** — **semver type:** **minor** ([docs/releases/1.7.4.md](docs/releases/1.7.4.md)).
+**Targeting:** **`1.7.5-beta`** — next working line after **1.7.4** final.
+
+---
+
+## 1.7.4 (2026-06-11)
 
 ### Added
 
@@ -50,10 +54,17 @@ Human-readable summary of user-facing changes. **Detailed release notes:** [docs
 - **Config redaction API:** substring key matching (**`telegram_bot_token`**, **`file_passwords`**, …) on **`GET /config`** — **#622**.
 - **Excel export:** formula / **DDE** injection sanitisation — **#547**.
 - **`public-tracked-pii-zero-tolerance.mdc`:** placeholder slug hygiene for **`test_pii_guard`**.
+- **Timing-safe API key + MAC comparison:** `hmac.compare_digest` in `api/routes.py` and `core/maturity_assessment/integrity.py` — **#825**.
+- **Chart.js vendored** (`api/static/chart.umd.min.js`); CSP `script-src 'self'` — no CDN dependency — **#825**.
+- **rsync excludes `.env` / `.env.*`** in `Sync-WorkingTree.ps1` — **#825**.
+- **Maestro exits non-zero on real handler failures** (`$realFailCount`); offline-skips excluded — **#825**.
+- **Maestro Linux-compat:** `-WindowStyle Hidden` guarded by `$IsWindows`; `Start-Process` wrapped in `try/catch` to propagate spawn failures — **#827**.
+- **Smoke handlers: base64-encoded `tmux` payloads** eliminate shell-quoting injection; `-Ref` allowlist in all 10 handlers — **#830**.
+- **Sentinel result propagation:** all 10 handlers write `/tmp/databoar_handler/<persona>_sentinel.txt`; `Wait-HandlerSentinel.ps1` generalises polling + exit aggregation — **#831**.
 
 ---
 
-Dense paragraphs (Cursor rollback lines, Ansible allowlists, RC cadence) live in **[docs/releases/1.7.4.md](docs/releases/1.7.4.md)**. **Working line:** **`1.7.4-rc`** per [VERSIONING.md](docs/VERSIONING.md); **published** **`latest`** remains **1.7.3** until **final** **`1.7.4`**.
+Full release notes and Docker publish commands: **[docs/releases/1.7.4.md](docs/releases/1.7.4.md)**.
 
 ---
 

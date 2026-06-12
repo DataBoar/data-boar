@@ -96,7 +96,8 @@ def test_runtime_tier_from_yaml_effective_tier():
     assert get_runtime_tier_for_features(cfg) == Tier.PRO
 
 
-def test_runtime_tier_env_override_wins_in_dev(monkeypatch):
+def test_runtime_tier_env_override_removed(monkeypatch):
+    """#719: env override removed — YAML effective_tier wins even with dev env vars."""
     monkeypatch.setenv("DATA_BOAR_TIER_OVERRIDE", "enterprise")
     monkeypatch.setenv("DATA_BOAR_ENV", "ci")
     reset_license_guard_for_tests()
@@ -104,4 +105,4 @@ def test_runtime_tier_env_override_wins_in_dev(monkeypatch):
         "licensing": {"mode": "open", "effective_tier": "community"},
         "api": {},
     }
-    assert get_runtime_tier_for_features(cfg) == Tier.ENTERPRISE
+    assert get_runtime_tier_for_features(cfg) == Tier.COMMUNITY

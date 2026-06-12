@@ -402,6 +402,85 @@ Typical deployments keep all durable state under **`/data`** (volume or bind mou
 
 **Português (Brasil):** [DEPLOY.pt_BR.md §9](DEPLOY.pt_BR.md#9-backup-e-restore-dados-persistentes).
 
+## 10. Run with Podman (rootless, LMDE / Debian / Fedora)
+
+[Podman](https://podman.io) is an alternative container runtime to Docker with a similar CLI. It runs **rootless by default**, which means containers do not require root privileges on the host. This section covers the basic deployment pattern; it does not document lab-specific private configurations.
+
+### Key differences from Docker
+
+| Topic | Docker | Podman |
+| ----- | ------ | ------ |
+| Default mode | Root (unless rootless configured) | Rootless (per-user) |
+| Daemon | Background daemon required | Daemonless (fork/exec) |
+| Compose | Docker Compose v2 (`docker compose`) | `podman-compose` or `podman kube play` |
+| Socket path | `/var/run/docker.sock` | `/run/user/<UID>/podman/podman.sock` |
+| Image compat | OCI images (same format) | OCI images (compatible) |
+
+### Pull and run (rootless)
+
+```bash
+# Pull the image from Docker Hub (same image as Docker deployments)
+podman pull fabioleitao/data_boar:latest
+
+# Run as API + frontend (port 8088) with a bind mount for persistent data
+podman run -d \
+  --name data-boar \
+  -p 8088:8088 \
+  -v ./data:/data:Z \
+  -e CONFIG_PATH=/data/config.yaml \
+  fabioleitao/data_boar:latest
+```
+
+> **Note:** The `:Z` suffix on the volume mount sets the SELinux label for rootless Podman on Fedora/RHEL-based systems. On Debian/LMDE it is ignored safely.
+
+### CLI one-shot with Podman
+
+```bash
+podman run --rm \
+  -v ./data:/data:Z \
+  fabioleitao/data_boar:latest \
+  python main.py --config /data/config.yaml --output /data/report.xlsx
+```
+
+### Manage the container
+
+```bash
+# Check status
+podman ps
+
+# View logs
+podman logs -f data-boar
+
+# Stop and remove
+podman stop data-boar && podman rm data-boar
+```
+
+### Persistent user service (systemd)
+
+On systems with systemd (LMDE, Debian, Fedora), you can generate a systemd unit from the running container so it starts automatically on login:
+
+```bash
+podman generate systemd --name data-boar --files --new
+mkdir -p ~/.config/systemd/user
+mv container-data-boar.service ~/.config/systemd/user/
+systemctl --user enable --now container-data-boar.service
+```
+
+### Compose with Podman
+
+`podman-compose` accepts the same `docker-compose.yml` format:
+
+```bash
+pip install podman-compose        # or use your distro package
+podman-compose -f deploy/docker-compose.yml up -d
+```
+
+### Lessons learned
+
+Operational lessons from lab deployments (LAB-NODE-02, LMDE 7) will be documented in [`docs/ops/LAB_LESSONS_LEARNED.md`](../ops/LAB_LESSONS_LEARNED.md) as they accumulate. Check that file for host-specific troubleshooting tips.
+
+**Português (Brasil):** [DEPLOY.pt_BR.md §10](DEPLOY.pt_BR.md#10-executar-com-podman-rootless-lmde--debian--fedora).
+
 ## Summary
 
 | Goal                     | Command / step                                                                                                                             |
@@ -415,6 +494,7 @@ Typical deployments keep all durable state under **`/data`** (volume or bind mou
 | **Docker Swarm**         | `docker stack deploy -c deploy/docker-compose.yml -c deploy/docker-compose.override.yml data-boar-audit` (section 5)                            |
 | **Kubernetes**           | `kubectl apply -f deploy/kubernetes/` — see `deploy/kubernetes/README.md` for image and config (section 6)                                 |
 | **Backup / restore**     | Persisted data under `/data` (section 9): back up the mounted volume or bind mount; restore with the same layout, then verify `/health`        |
+| **Podman (rootless)**    | `podman pull fabioleitao/data_boar:latest` then `podman run -d -p 8088:8088 -v ./data:/data:Z ...` (section 10)                                |
 
 You can use **Docker Compose** or **Kubernetes** as alternatives to Docker Swarm; same image and config layout apply. All paths and image names assume you are in the repo root or in `deploy/` as indicated.
 

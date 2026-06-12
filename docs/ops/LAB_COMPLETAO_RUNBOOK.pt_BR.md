@@ -147,8 +147,13 @@ Alguns equipamentos do lab são **orquestração** ou **política**: o operador 
 
 Ver `**docs/private.example/homelab/lab-op-hosts.manifest.example.json`** para campos opcionais.
 
-## Nós com hardware limitado (LAB-NODE-04, LAB-NODE-03 Void; Kubernetes adiado)
+## Nós com hardware limitado (LAB-NODE-04, LAB-NODE-03 Void, Alpine/musl; Kubernetes adiado)
 
+- **Host Alpine Linux / musl (eMachines E527 — 5º host, [#821](https://github.com/FabioLeitao/data-boar/issues/821)):** Celeron 900, 3,8 GB RAM. Libc musl exige pacotes compilados para musl (`apk add` — não `apt`/`dnf`). Pontos críticos para completão:
+  - Wheels Python com extensões C podem exigir **wheels compatíveis com musl** ou compilação a partir do código-fonte — defina `completaoSkipEngineImport: true` no manifesto e valide via contêiner ou caminho passivo até confirmar o import nativo do motor.
+  - CPU lenta: se o smoke script atingir o prazo de `HealthTimeoutSec`, **aumente o timeout** para este host via campo do manifesto `completaoHealthTimeoutSec` ou passando `--health-timeout N` ao smoke script. Comece com **60 s** e reduza somente após uma corrida bem-sucedida.
+  - Pacotes `apk` padrão: `python3`, `py3-pip`, `docker`, `openssh`.
+  - Registrar pacotes adicionais necessários em **`docs/private/homelab/LAB_SOFTWARE_INVENTORY.md`** e nas notas de sessão de completão.
 - **LAB-NODE-04 (sem Docker no hardware):** `**completaoHardwareProfile`** começando por `**LAB-NODE-04**` ou `**sshHost**` com `**LAB-NODE-04**` — o `**lab-completao-orchestrate.ps1**` usa só o caminho **passivo** (`**.venv/bin/python3`** ou `**python3 -m databoar --help**` + logs do sistema), **sem** smoke de contêiner. **Kubernetes** fica **fora** desta fase até haver capacidade dedicada.
 - **LAB-NODE-03 (Void, compilação `mysqlclient`):** alias `**LAB-NODE-03`** / `**minibt**` ou perfil `**LAB-NODE-03-void**` força `**--skip-engine-import**` e registra dicas `**xbps-install**` (`**libmariadbclient-devel**`, `**pkg-config**`); scans pesados de **MariaDB/MySQL** e **Swarm** no **LAB-NODE-02** e **LAB-NODE-01**. Se `**uv sync`** continuar falhando, usar **branch privada** ou **overlay** `**pyproject`** **gitignored** **só nesse host** — **não** retirar extras de BD do `**pyproject.toml`** canônico no Git.
 - **Skip-on-failure:** falhas de **SSH**, de **saúde do diretório** do primeiro `**repoPaths`**, ou base passiva LAB-NODE-04 inválida fazem `**continue**` com aviso e linhas `**skip-on-failure**` nos relatórios em `**docs/private/homelab/reports/**`.

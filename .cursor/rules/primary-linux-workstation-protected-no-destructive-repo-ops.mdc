@@ -1,0 +1,39 @@
+---
+description: Primary Linux dev workstation — never run clean-slate, history rewrite, or destructive repo reset on the canonical clone; temporary while Windows primary is in Lenovo repair (E0482B2DMD)
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# Primary Linux dev workstation protection (canonical clone + evidence)
+
+## Scope
+
+- **primary Linux dev workstation** (LMDE 7) is the operator’s **primary dev workstation** **temporarily** (former Windows primary failed **2026-06-07**; Lenovo case **E0482B2DMD**) where the **canonical** `data-boar` working tree, **evidence**, and **long-lived Git history** must stay intact. Tracked docs use **role labels**, not hostnames to paste into commits.
+- **`DATA_BOAR_ROOT`** (operator default **`~/Projects/dev/data-boar`**) is **intouchable** for **`rm -rf`**, **`clean-slate`**, **`git reset --hard`**, **`git clean -fdx`**, or history rewrite in routine sessions.
+- **lab-op** and other **manifest SSH hosts** are **not** this canonical tree: destructive align scripts **only** apply on those remote **`repoPaths`** — see **`docs/ops/LAB_COMPLETAO_RUNBOOK.md`** (*Blast radius*) and **`docs/ops/PRIMARY_LINUX_WORKSTATION_PROTECTION.md`**.
+- **Reversion:** When the **Windows primary dev workstation** returns from repair, the operator may move the canonical clone role back — see **ADR 0068** and **`docs/ops/PRIMARY_LINUX_WORKSTATION_PROTECTION.md`** (*Reversion when Windows primary returns*). Until then, apply **this** rule on the Linux primary dev workstation, not only the Windows rule.
+
+## Hard prohibitions (assistants + automation)
+
+1. **Do not run** on the Linux primary dev workstation canonical clone (integrated terminal or scripted): **`clean-slate.sh`** / private **`clean-slate`** against **`DATA_BOAR_ROOT`**, **`git filter-repo`** on the canonical tree, **`git reset --hard`** / **`git clean -fdx`**, **`scripts/run-pii-history-rewrite.ps1`** unless the script’s **documented opt-in guard** is satisfied **and** the operator explicitly asked for that flow on **this** machine (default: **never** for routine work).
+2. **Do not narrate or “simulate”** a successful destructive reset, mirror rewrite, or “wiped and recloned” outcome for the **canonical** Linux primary tree in chat — same as **`clean-slate-pii-self-audit.mdc`**.
+3. **Do not add** repo automation that **deletes or replaces** **`DATA_BOAR_ROOT`** without an explicit **off-by-default** guard documented in **`docs/ops/PRIMARY_LINUX_WORKSTATION_PROTECTION.md`**.
+
+## Allowed on the Linux primary dev workstation (non-destructive to canonical tree)
+
+- **Guards on current tree:** `uv run python scripts/pii_history_guard.py`, `uv run pytest tests/test_pii_guard.py`, **`./scripts/check-all.sh`**, etc.
+- **Temp-only clones:** fresh clone under **`/tmp/`** (or another **dedicated temp** path) — **never** remove **`DATA_BOAR_ROOT`**.
+- **Pre-commit:** **`uv run pre-commit install`** once per clone; every **`git commit`** runs the hook bundle when installed.
+- **Read-only filename / path search (Linux — not `es.exe`):** **`find`**, **`fd`**, **`locate`/`plocate`** (**plocate 1.1.23** on primary Linux dev workstation; keep index fresh), plus content tools **`git grep`** and **`grep -r`**. Session keyword **`es-find`** is **Windows-only** (**`everything-es-cli.mdc`**, **`scripts/es-find.ps1`**).
+
+## Where destructive work belongs
+
+- **Designated lab hosts** (SSH), not Linux primary canonical clone — **`docs/ops/PII_PUBLIC_TREE_OPERATOR_GUIDE.md`** H.9.
+- **Public history rewrite:** isolated working copy + mirror backup; **`DATA_BOAR_ALLOW_DESTRUCTIVE_REPO_OPS=1`** only on an agreed non-canonical host.
+
+## Cross-links
+
+- **`docs/ops/PRIMARY_LINUX_WORKSTATION_PROTECTION.md`** (EN) / **`.pt_BR.md`**
+- **`docs/ops/PRIMARY_WINDOWS_WORKSTATION_PROTECTION.md`** (when Windows primary returns)
+- **`docs/adr/ADR-0068-primary-linux-dev-workstation-temporary.md`**
+- **`clean-slate-pii-self-audit.mdc`**, **`private-pii-never-public.mdc`**

@@ -35,7 +35,28 @@ Filesystem scans always use **path and filename**. **Body text** for the `.doc` 
 
 **What you get:** Mammoth reads **Office Open XML packaged as a ZIP** (the same container family as `.docx`). That covers some real-world `.doc` files that are actually OOXML, or were renamed.
 
-**Limitation:** Classic **Word 97-2003 binary** `.doc` (OLE compound file) is **not** a ZIP; mammoth typically cannot open it, so **content sample stays empty** and only the name/path contributes to findings. If you need compliance evidence from those bodies, convert them to `.docx` (or another supported format) upstream, or plan a separate ingestion path — the product does not shell out to LibreOffice (see issue/plan scope for this slice).
+**Limitation:** Classic **Word 97-2003 binary** `.doc` (OLE compound file) is **not** a ZIP; mammoth typically cannot open it, so **content sample stays empty** and only the name/path contributes to findings.
+
+### `.doc` OLE/CFBF native body extraction — won't-fix decision
+
+Data Boar **will not** implement native body extraction for OLE2/CFBF (Compound File Binary Format) `.doc` files via LibreOffice shell-out or a similar heavyweight converter. This is an **explicit, permanent scope decision**, not a temporary gap.
+
+**Rationale:**
+
+| Concern | Detail |
+| ------- | ------ |
+| **Dependency weight** | LibreOffice installs ~400 MB of binaries and fonts into the scan environment; unacceptable for a lightweight data-scanning container. |
+| **Attack surface / RCE vectors** | Shelling out to an office suite to parse untrusted binary documents is a well-known RCE risk class. Parsing malformed OLE binaries with LibreOffice exposes the host to its full vulnerability surface. |
+| **Memory and isolation** | LibreOffice is not designed for high-concurrency headless invocations; process leaks and OOM crashes have been observed in production scanning environments. |
+| **Format prevalence** | Classic Word 97-2003 binary `.doc` files represent a shrinking fraction of enterprise corpora; most modern document management systems already normalize to `.docx` or PDF on ingestion. |
+
+**What to do instead:**
+
+- **Convert upstream:** Run `libreoffice --headless --convert-to docx your.doc` (or a managed document-conversion service) on the files **before** scanning. Data Boar then reads the resulting `.docx` natively.
+- **Use `.docx` output from your DMS:** Configure your Document Management System to export in `.docx`/PDF when feeding Data Boar.
+- **Filename path already scanned:** Even without body content, Data Boar still flags the file via its path and filename if PII is present there (e.g. `CPF_000000000-00_contract.doc`).
+
+This decision is tracked at GitHub issue [#671](https://github.com/FabioLeitao/data-boar/issues/671). No ADR is required — this is a won't-fix scope boundary, not an architectural trade-off.
 
 ---
 
