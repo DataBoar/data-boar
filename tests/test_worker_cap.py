@@ -8,7 +8,8 @@ Contract under test:
 2. Enforced mode with a usable (VALID/GRACE) license: a positive
    ``dbmax_workers`` claim wins.
 3. Enforced mode without the claim: tier fallback defaults apply —
-   Community 2 / Pro 5 / Enterprise unlimited (``None``).
+   Community 2 / Pro 4 / Enterprise unlimited (``None``); Pro+ is
+   claim-driven (``dbmax_workers: 8`` at issuance, #853).
 4. Enforced fail-closed states (no license, invalid) resolve the tier to
    Community → inherit the Community cap. Dev env vars do not lift it (#719).
 5. Engine integration: ``start_audit`` clamps ``_max_workers`` to the cap
@@ -132,14 +133,14 @@ def test_enforced_malformed_claim_falls_back_to_tier(ed25519_priv, tmp_path):
     )
     assert g.context.state == "VALID"
     assert g.context.max_workers == 0  # fail-soft: malformed claim treated as absent
-    assert g.worker_cap() == 5
+    assert g.worker_cap() == 4
 
 
 def test_enforced_negative_claim_treated_as_absent(ed25519_priv, tmp_path):
     g = _enforced_guard(
         ed25519_priv, tmp_path, extra={"dbtier": "pro", "dbmax_workers": -4}
     )
-    assert g.worker_cap() == 5
+    assert g.worker_cap() == 4
 
 
 # --- 3. enforced: tier fallback defaults ------------------------------------
@@ -152,7 +153,15 @@ def test_enforced_community_default_cap(ed25519_priv, tmp_path):
 
 def test_enforced_pro_default_cap(ed25519_priv, tmp_path):
     g = _enforced_guard(ed25519_priv, tmp_path, extra={"dbtier": "pro"})
-    assert g.worker_cap() == 5
+    assert g.worker_cap() == 4
+
+
+def test_enforced_pro_plus_is_claim_driven(ed25519_priv, tmp_path):
+    """#853: Pro+ has no Tier enum — it ships as dbmax_workers=8 at issuance."""
+    g = _enforced_guard(
+        ed25519_priv, tmp_path, extra={"dbtier": "pro", "dbmax_workers": 8}
+    )
+    assert g.worker_cap() == 8
 
 
 def test_enforced_enterprise_unlimited(ed25519_priv, tmp_path):
