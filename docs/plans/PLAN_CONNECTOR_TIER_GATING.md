@@ -44,9 +44,15 @@ stays free for dev and lab.
 | C | Per-connector gating tests (`tests/test_connector_tier_gating.py`): map entries, target resolution, community/pro/OPEN behaviour, enforced JWT end-to-end, engine failure row | ✅ Done |
 | D | Pricing/tier docs refresh (#610 `PRICING.md` does not exist yet — boundary documented in `tier_features.py` docstring and this plan until #610 lands) | ⬜ Pending |
 | E | Enterprise connector families (CMDB, findings-sink) gated when implemented | ⬜ Pending |
+| F | **#854 fail-closed:** exhaustive `_CONNECTOR_TIER_FEATURES` (explicit Community entries for api/filesystem/mongodb/redis/postgresql/mysql/mariadb/sqlite); unknown connector type or driver → `FeatureTierBlockedError` + CRITICAL `connector_unknown_blocked` audit (no default-community); free only in `Tier.OPEN` | ✅ Done |
 
 ## Notes
 
 - `powerapps` targets map to `connector_dataverse` (same connector family).
-- MSSQL/Oracle gate via `type: database` + `driver` prefix; postgres, mysql,
-  sqlite drivers are intentionally unmapped (open-core).
+- MSSQL/Oracle gate via `type: database` + `driver` prefix.
+- **#854:** the tier map is now **exhaustive** — every registered connector
+  type (and database driver) carries an explicit entry; absence means
+  **fail-closed** (blocked outside `Tier.OPEN`), so adding a connector forces
+  a tier decision and can never leak as silent community.
+- Open on #854: tier decision for `rich_media` / data-soup formats
+  (community vs Pro) — operator call, tracked on the issue.

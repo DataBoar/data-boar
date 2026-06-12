@@ -58,17 +58,29 @@ def _resolve_database_connector(
     return None
 
 
-# Connector tier boundary (#843, operator-ratified 2026-06-11):
+# Connector tier boundary (#843, operator-ratified 2026-06-11; #854 fail-closed):
 # - Open-core (Community): filesystem, self-hosted SQL/NoSQL (sqlite/postgres/
-#   mysql/mongo/redis), compressed files, generic REST. Filesystem and
-#   self-hosted DB engines are intentionally ABSENT from this map — never gated.
+#   mysql/mariadb/mongo/redis), compressed files, generic REST/API.
 # - Pro: managed corporate infrastructure (PowerBI, SharePoint, Dataverse,
 #   WebDAV, SMB/CIFS, NFS, MSSQL, Oracle) + cloud connectors.
-# The gate only bites in licensing.mode: enforced; Tier.OPEN stays free.
+# #854 anti-leak: this map is EXHAUSTIVE for registered connector types. A
+# type (or database driver) absent from this map has NO tier decision and is
+# FAIL-CLOSED by require_connector_allowed — blocked outside Tier.OPEN, never
+# silently community. Adding a connector forces an explicit tier choice here.
+# The gate only bites in licensing.mode: enforced (or lab tier simulation);
+# Tier.OPEN stays free.
 _CONNECTOR_TIER_FEATURES: dict[str, str] = {
     # Community baseline (explicit so the gate records an allow decision)
-    "api": "connector_rest",
+    "api": "connector_api",
     "rest": "connector_rest",
+    "filesystem": "connector_filesystem",
+    # Self-hosted SQL/NoSQL engines (open-core; resolved via type or driver)
+    "postgresql": "connector_postgresql",
+    "mysql": "connector_mysql",
+    "mariadb": "connector_mariadb",
+    "sqlite": "connector_sqlite",
+    "mongodb": "connector_mongodb",
+    "redis": "connector_redis",
     # Cloud connectors (Pro)
     "snowflake": "connector_snowflake",
     "s3": "connector_s3_object_storage",
@@ -90,10 +102,12 @@ _CONNECTOR_TIER_FEATURES: dict[str, str] = {
 
 
 def tier_feature_for_target(target: dict[str, Any]) -> str | None:
-    """Return the tier feature name for a target, or None when never gated.
+    """Return the tier feature name for a target, or None when UNKNOWN.
 
-    None means open-core by design (filesystem, self-hosted SQL/NoSQL) —
-    see the boundary comment on ``_CONNECTOR_TIER_FEATURES``.
+    Since #854 the map is exhaustive: every registered connector type has an
+    explicit entry. ``None`` no longer means "never gated" — it means the
+    connector type carries NO tier decision and the gate fails CLOSED on it
+    (outside ``Tier.OPEN``). See ``_CONNECTOR_TIER_FEATURES``.
     """
     t = (target.get("type") or "").strip().lower()
     if t in _CONNECTOR_TIER_FEATURES:
@@ -105,18 +119,54 @@ def tier_feature_for_target(target: dict[str, Any]) -> str | None:
 
 
 def require_connector_allowed(cfg: dict[str, Any], target: dict[str, Any]) -> None:
-    """Tier gate at connector instantiation (#843).
+    """Tier gate at connector instantiation (#843; #854 fail-closed).
 
     Raises :class:`core.licensing.errors.FeatureTierBlockedError` with an
     actionable message when the runtime tier denies this connector in
-    enforced mode. Free in ``Tier.OPEN`` (enforcement off) and for open-core
-    connectors (no map entry).
+    enforced mode. Free in ``Tier.OPEN`` (enforcement off).
+
+    **#854 anti-leak:** a connector type WITHOUT an explicit entry in
+    ``_CONNECTOR_TIER_FEATURES`` is blocked (CRITICAL audit record) instead
+    of silently defaulting to community — adding a connector forces an
+    explicit tier decision.
     """
     feature = tier_feature_for_target(target)
-    if not feature:
-        return
     from core.licensing.errors import FeatureTierBlockedError
     from core.licensing.feature_gate import require_feature
+
+    if not feature:
+        import logging
+
+        from core.licensing.audit import audit_enforcement_event
+        from core.licensing.guard import get_license_guard
+        from core.licensing.tier_features import Tier
+
+        guard = get_license_guard(cfg)
+        if guard.product_tier_for_features() == Tier.OPEN:
+            return  # enforcement off (dev / lab) — never gates
+        ttype = (target.get("type") or "?").strip().lower()
+        pseudo_feature = f"connector_{ttype}"
+        detail = (
+            f"connector '{ttype}' has no explicit FEATURE_TIER_MAP entry — "
+            "fail-closed (#854); add an explicit tier decision in "
+            "core/connector_registry.py before enabling it"
+        )
+        audit_enforcement_event(
+            "connector_unknown_blocked",
+            mode=guard.context.mode,
+            state=guard.context.state,
+            allowed=False,
+            feature=pseudo_feature,
+            tier=guard.product_tier_for_features().value,
+            detail=detail,
+            level=logging.CRITICAL,
+        )
+        raise FeatureTierBlockedError(
+            pseudo_feature,
+            detail,
+            required_tier="unmapped",
+            current_tier=guard.product_tier_for_features().value,
+        )
 
     try:
         require_feature(cfg, feature)

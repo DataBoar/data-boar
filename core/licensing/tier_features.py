@@ -63,6 +63,18 @@ FEATURE_TIER_MAP: dict[str, Tier] = {
     # Generic REST stays open-core (#843) — explicit entry so the registry
     # gate records an allow decision instead of falling through silently.
     "connector_rest": Tier.COMMUNITY,
+    # #854: explicit per-connector entries for EVERY registered connector.
+    # The registry gate now fails CLOSED on a connector type without an
+    # explicit tier decision — absence here means blocked (except Tier.OPEN),
+    # never silently community.
+    "connector_api": Tier.COMMUNITY,  # generic API/REST family (alias of rest)
+    "connector_filesystem": Tier.COMMUNITY,
+    "connector_mongodb": Tier.COMMUNITY,  # self-hosted NoSQL (open-core)
+    "connector_redis": Tier.COMMUNITY,  # self-hosted NoSQL (open-core)
+    "connector_postgresql": Tier.COMMUNITY,  # self-hosted SQL (open-core)
+    "connector_mysql": Tier.COMMUNITY,
+    "connector_mariadb": Tier.COMMUNITY,
+    "connector_sqlite": Tier.COMMUNITY,
     # Pro features (PDF report, advanced connectors, scheduling)
     "ocr_images": Tier.PRO,
     "report_pdf": Tier.PRO,  # see PLAN_PDF_GRC_REPORT.md
