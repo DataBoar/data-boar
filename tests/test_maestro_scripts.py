@@ -20,8 +20,12 @@ def _maestro_ps1_paths(root: Path) -> list[Path]:
     return sorted(base.rglob("*.ps1"))
 
 
-def test_all_maestro_powershell_scripts_parse() -> None:
-    """Every tracked .ps1 under scripts/maestro/ parses under pwsh/PowerShell Parser."""
+def test_all_maestro_powershell_scripts_parse(warm_pwsh) -> None:
+    """Every tracked .ps1 under scripts/maestro/ parses under pwsh/PowerShell Parser.
+
+    ``warm_pwsh`` (#860): session-scoped warm-up absorbs the pwsh cold-start
+    once, so the per-file ParseFile timeout never flakes after a fresh boot.
+    """
     root = _project_root()
     failures: list[str] = []
     for script in _maestro_ps1_paths(root):
@@ -219,7 +223,7 @@ def test_handle_microk8s_fallback_tmux_sends_expanded_payload() -> None:
     )
 
 
-def test_maestro_deep_rc_monitor_collect_wrapper_parse() -> None:
+def test_maestro_deep_rc_monitor_collect_wrapper_parse(warm_pwsh) -> None:
     """Token-aware lab wrapper (Deep + monitor + Collect) parses under pwsh."""
     root = _project_root()
     script = root / "scripts" / "maestro-deep-rc-monitor-collect.ps1"
@@ -610,7 +614,7 @@ def test_smoke_handlers_write_sentinel_file() -> None:
         )
 
 
-def test_wait_handler_sentinel_exists_and_parses() -> None:
+def test_wait_handler_sentinel_exists_and_parses(warm_pwsh) -> None:
     """Anti-regression #831: Wait-HandlerSentinel.ps1 must exist and parse cleanly."""
     root = _project_root()
     sentinel_script = root / "scripts" / "maestro" / "Wait-HandlerSentinel.ps1"
