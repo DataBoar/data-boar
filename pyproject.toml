@@ -37,7 +37,7 @@ dependencies = [
     "h11>=0.16.0",
     "httpcore>=1.0.9",
     "httpx>=0.28.1",
-    "idna>=3.17",
+    "idna>=3.18",
     "itsdangerous>=2.2.0",
     "jinja2>=3.1.6",
     "joblib>=1.5.3",
@@ -62,26 +62,26 @@ dependencies = [
     "pymysql>=1.2.0",
     "pyodbc>=5.3.0",
     "pyparsing>=3.3.2",
-    "pypdf>=6.12.2",
+    "pypdf>=6.13.0",
     "pyjwt>=2.12.0",
     "python-dateutil>=2.9.0.post0",
     "python-docx>=1.2.0",
     "python-dotenv>=1.2.1",
-    "python-multipart>=0.0.29",
+    "python-multipart>=0.0.32",
     "pyyaml>=6.0.3",
     "regex>=2026.5.9",
     "reportlab>=4.5.1",
     "requests>=2.34.2",
-    "scikit-learn>=1.8.0",
+    "scikit-learn>=1.9.0",
     "scipy>=1.17.0",
     "seaborn>=0.13.2",
     "sqlalchemy>=2.0.50",
-    "starlette==1.2.0",
+    "starlette==1.2.1",
     "threadpoolctl>=3.6.0",
     "typing-extensions>=4.15.0",
     "typing-inspection>=0.4.2",
     "urllib3>=2.6.3",
-    "uvicorn>=0.48.0",
+    "uvicorn>=0.49.0",
     "werkzeug>=3.1.6",
     "webauthn>=2.2.0",
 ]
@@ -118,7 +118,7 @@ dataformats = ["pyarrow>=14.0.0", "fastavro>=1.9.0", "dbfread>=2.0.7"]
 # Legacy ".doc" samples: mammoth reads ZIP-based OOXML; binary Word 97-2003 often yields empty content (see docs/TROUBLESHOOTING.md).
 legacy-doc = ["mammoth>=1.6.0"]
 # GRC executive JSON dashboard (Streamlit + Plotly). Run: ``streamlit run app/dashboard.py``.
-grc-dashboard = ["streamlit>=1.58.0", "plotly>=5.24.0"]
+grc-dashboard = ["streamlit>=1.58.0", "plotly>=6.8.0"]
 
 [tool.pytest.ini_options]
 # Fail on any warning (DeprecationWarning, ResourceWarning, etc.) so the suite stays clean
@@ -234,7 +234,7 @@ dev = [
     "chardet>=5.1,<6.0",
     # CycloneDX SBOM from uv-exported requirements (ADR 0003); same CLI as CI `sbom.yml`.
     "cyclonedx-bom>=7.0.0",
-    "hypothesis>=6.155.0",
+    "hypothesis>=6.155.2",
     "httpx2",
     "iniconfig>=2.3.0",
     "markdown>=3.10.2",
@@ -243,6 +243,6 @@ dev = [
     "pre-commit>=4.0.0",
     "pytest>=9.0.3",
     "rapidfuzz>=3.9.0",
-    "ruff>=0.15.15",
+    "ruff>=0.15.16",
     "types-pyyaml>=6.0.12.20260518",
 ]
