@@ -77,19 +77,42 @@ def test_feature_tier_map_entries(feature, tier):
         ({"type": "smb"}, "connector_smb"),
         ({"type": "cifs"}, "connector_cifs"),
         ({"type": "nfs"}, "connector_nfs"),
-        ({"type": "api"}, "connector_rest"),
+        ({"type": "api"}, "connector_api"),
         ({"type": "rest"}, "connector_rest"),
         ({"type": "database", "driver": "mssql+pyodbc"}, "connector_mssql"),
         ({"type": "database", "driver": "oracle+oracledb"}, "connector_oracle"),
-        # open-core by design — never gated
-        ({"type": "filesystem"}, None),
-        ({"type": "database", "driver": "postgresql+psycopg2"}, None),
-        ({"type": "database", "driver": "sqlite"}, None),
-        ({"type": "database", "driver": "mysql+pymysql"}, None),
+        # open-core — explicit Community entries since #854 (fail-closed map)
+        ({"type": "filesystem"}, "connector_filesystem"),
+        ({"type": "database", "driver": "postgresql+psycopg2"}, "connector_postgresql"),
+        ({"type": "database", "driver": "sqlite"}, "connector_sqlite"),
+        ({"type": "database", "driver": "mysql+pymysql"}, "connector_mysql"),
+        ({"type": "database", "driver": "mongodb"}, "connector_mongodb"),
+        ({"type": "redis"}, "connector_redis"),
+        # unknown — no tier decision: gate fails closed outside Tier.OPEN
+        ({"type": "carrier_pigeon"}, None),
+        ({"type": "database", "driver": "duckdb"}, None),
     ],
 )
 def test_tier_feature_for_target(target, expected):
     assert tier_feature_for_target(target) == expected
+
+
+@pytest.mark.parametrize(
+    ("feature", "tier"),
+    [
+        ("connector_api", Tier.COMMUNITY),
+        ("connector_filesystem", Tier.COMMUNITY),
+        ("connector_mongodb", Tier.COMMUNITY),
+        ("connector_redis", Tier.COMMUNITY),
+        ("connector_postgresql", Tier.COMMUNITY),
+        ("connector_mysql", Tier.COMMUNITY),
+        ("connector_mariadb", Tier.COMMUNITY),
+        ("connector_sqlite", Tier.COMMUNITY),
+    ],
+)
+def test_feature_tier_map_explicit_open_core_entries(feature, tier):
+    """#854: every registered connector has an explicit map entry."""
+    assert FEATURE_TIER_MAP.get(feature) == tier
 
 
 # --- gate behaviour (lab simulation: mode open + effective_tier) -----------
@@ -116,6 +139,33 @@ def test_community_allowed_on_rest_and_open_core():
     require_connector_allowed(
         _cfg("community"), {"type": "database", "driver": "postgresql+psycopg2"}
     )
+    require_connector_allowed(
+        _cfg("community"), {"type": "database", "driver": "mongodb"}
+    )
+    require_connector_allowed(_cfg("community"), {"type": "redis"})
+
+
+# --- #854: unknown connector type fails CLOSED ------------------------------
+
+
+def test_unknown_connector_blocked_at_community():
+    """#854 anti-leak: no FEATURE_TIER_MAP entry → blocked, not community."""
+    with pytest.raises(FeatureTierBlockedError) as exc_info:
+        require_connector_allowed(_cfg("community"), {"type": "carrier_pigeon"})
+    msg = str(exc_info.value)
+    assert "fail-closed" in msg
+    assert "carrier_pigeon" in msg
+
+
+def test_unknown_database_driver_blocked_at_pro():
+    """#854: unknown driver under type=database also fails closed."""
+    with pytest.raises(FeatureTierBlockedError):
+        require_connector_allowed(_cfg("pro"), {"type": "database", "driver": "duckdb"})
+
+
+def test_unknown_connector_free_in_open_tier():
+    """Tier.OPEN (enforcement off) never gates — including unknown types."""
+    require_connector_allowed(_cfg(None), {"type": "carrier_pigeon"})
 
 
 def test_pro_allowed_on_corporate_connectors():
@@ -171,6 +221,14 @@ def test_enforced_community_license_blocks_pro_connector(tmp_path):
 def test_enforced_pro_license_allows_pro_connector(tmp_path):
     cfg = _signed_license(tmp_path, "pro")
     require_connector_allowed(cfg, {"type": "sharepoint"})
+
+
+def test_enforced_unknown_connector_blocked_even_for_enterprise(tmp_path):
+    """#854: fail-closed has no tier escape — unmapped means blocked."""
+    cfg = _signed_license(tmp_path, "enterprise")
+    with pytest.raises(FeatureTierBlockedError) as exc_info:
+        require_connector_allowed(cfg, {"type": "carrier_pigeon"})
+    assert "fail-closed" in str(exc_info.value)
 
 
 # --- engine integration: blocked connector -> scan_failures row ------------
