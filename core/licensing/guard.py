@@ -298,16 +298,41 @@ class LicenseGuard:
             )
             return
 
+        # #717 kill-switch: an entry in the revocation list may name the
+        # license id (`sub`), a token id (`jti`), or a signing key id
+        # (`dbkid`). Any match fails CLOSED — REVOKED resolves to the
+        # Community tier via runtime_trust (_UNEXPECTED_LICENSE_STATES).
         revoked = load_revocation_ids(rev_path or None)
         lic_id = str(claims.get("sub", ""))
+        token_id = str(claims.get("jti", "") or "")
+        key_id = str(claims.get("dbkid", "") or "")
+        revoked_field = ""
         if lic_id and lic_id in revoked:
+            revoked_field = "sub"
+        elif token_id and token_id in revoked:
+            revoked_field = "jti"
+        elif key_id and key_id in revoked:
+            revoked_field = "dbkid"
+        if revoked_field:
+            detail = f"license_revoked:{revoked_field}"
             self._context = LicenseContext(
                 state="REVOKED",
                 mode="enforced",
                 license_id=lic_id,
+                key_id=key_id,
                 machine_fingerprint=mfp,
-                detail="license_revoked",
+                detail=detail,
                 watermark="REVOKED",
+            )
+            # Dedicated kill-switch audit record (WARNING): the generic
+            # `license_evaluated` event still fires CRITICAL afterwards.
+            audit_enforcement_event(
+                "license_revoked",
+                mode="enforced",
+                state="REVOKED",
+                allowed=False,
+                detail=detail,
+                level=logging.WARNING,
             )
             return
 

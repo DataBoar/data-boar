@@ -139,6 +139,75 @@ def test_enforced_revoked(ed25519_priv, tmp_path):
     g = LicenseGuard(cfg)
     assert g.allows_scan() is False
     assert g.context.state == "REVOKED"
+    assert g.context.detail == "license_revoked:sub"
+
+
+def _revoked_guard(priv, tmp_path, *, token_extra: dict, revoked_ids: list[str]):
+    """#717 helper: enforced guard with a token + revocation list on disk."""
+    pem = _pem_public(priv)
+    lic = tmp_path / "t.lic"
+    lic.write_text(_make_token(priv, extra=token_extra), encoding="utf-8")
+    rev = tmp_path / "rev.json"
+    rev.write_text(json.dumps({"revoked_license_ids": revoked_ids}), encoding="utf-8")
+    cfg = {
+        "licensing": {
+            "mode": "enforced",
+            "license_path": str(lic),
+            "revocation_list_path": str(rev),
+        }
+    }
+    os.environ["DATA_BOAR_LICENSE_PUBLIC_KEY_PEM"] = pem
+    return LicenseGuard(cfg)
+
+
+def test_enforced_revoked_by_jti(ed25519_priv, tmp_path, caplog):
+    """#717: a revoked token id (jti) kills the token — fail-closed + WARNING."""
+    import logging
+
+    with caplog.at_level(logging.WARNING, logger="data_boar.licensing.audit"):
+        g = _revoked_guard(
+            ed25519_priv,
+            tmp_path,
+            token_extra={"jti": "tok-123", "dbtier": "enterprise"},
+            revoked_ids=["tok-123"],
+        )
+    assert g.allows_scan() is False
+    assert g.context.state == "REVOKED"
+    assert g.context.detail == "license_revoked:jti"
+    # Fail-closed: REVOKED resolves to Community for feature gates.
+    assert g.product_tier_for_features().value == "community"
+    revoked_events = [
+        r
+        for r in caplog.records
+        if "license_revoked" in r.message and r.levelno == logging.WARNING
+    ]
+    assert revoked_events, "expected a WARNING license_revoked audit event"
+
+
+def test_enforced_revoked_by_kid_kills_all_tokens_of_key(ed25519_priv, tmp_path):
+    """#717: revoking a signing key id (dbkid) disables every token it signed."""
+    g = _revoked_guard(
+        ed25519_priv,
+        tmp_path,
+        token_extra={"dbkid": "k-compromised"},
+        revoked_ids=["k-compromised"],
+    )
+    assert g.allows_scan() is False
+    assert g.context.state == "REVOKED"
+    assert g.context.detail == "license_revoked:dbkid"
+    assert g.context.key_id == "k-compromised"
+
+
+def test_enforced_not_revoked_when_ids_do_not_match(ed25519_priv, tmp_path):
+    """#717: an unrelated revocation entry must not block a valid license."""
+    g = _revoked_guard(
+        ed25519_priv,
+        tmp_path,
+        token_extra={"jti": "tok-ok"},
+        revoked_ids=["someone-else", "other-jti", "other-kid"],
+    )
+    assert g.context.state == "VALID"
+    assert g.allows_scan() is True
 
 
 def test_enforced_machine_mismatch(ed25519_priv, tmp_path):
