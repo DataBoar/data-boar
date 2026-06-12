@@ -28,7 +28,6 @@ import sqlite3
 
 import pytest
 
-import core.integrity_anchor as ia
 from core.integrity_anchor import (
     OPEN_MODE_WORKER_CAP,
     compute_module_hashes,
@@ -104,7 +103,7 @@ def _tamper(monkeypatch):
     """Simulate post-anchor module drift (e.g. clamp removed from engine.py)."""
     drifted = compute_module_hashes()
     drifted["core/engine.py"] = "0" * 64
-    monkeypatch.setattr(ia, "compute_module_hashes", lambda: drifted)
+    monkeypatch.setattr("core.integrity_anchor.compute_module_hashes", lambda: drifted)
 
 
 def test_tamper_marks_adulterated_with_event_and_critical_log(
