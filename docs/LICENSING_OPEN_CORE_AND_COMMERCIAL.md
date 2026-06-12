@@ -106,8 +106,8 @@ With **no enforcement** (default), the application runs in **open** mode: no lic
 
 **Reserve for Pro-class SKUs (illustrative — product may ship pieces earlier in open core):**
 
-- **Commercial entitlement** and **standard support** channel (SLA lighter than Enterprise).
-- **Single licensed production deployment** per license (see [Deployments, copies, and sites](#deployments-copies-and-sites-pro-vs-enterprise)) — not multi-site fleet rights. The **same** legal entity may hold **multiple Pro SKUs** for **different** footprints (e.g. **cloud vs on-prem** at **one** site); that is still **not** a substitute for **group-wide** Enterprise where the **whole** organisation needs coverage.
+- **Commercial entitlement**, **standard support** channel (SLA lighter than Enterprise), **configuration assistance**, and **productized customization** (profiles, report shaping, connector configuration as packaged services) — a subscription is **not just feature gates**; see [SUBSCRIPTION_TIERS.md](SUBSCRIPTION_TIERS.md) §What a subscription includes.
+- **Two licensed production deployments** per license (operator-ratified 2026-06-11 — e.g. on-prem + 1 cloud/branch; see [Deployments, copies, and sites](#deployments-copies-and-sites-pro-vs-enterprise)) — not multi-site fleet rights. The **same** legal entity may hold **multiple Pro SKUs** for **different** footprints (e.g. **cloud vs on-prem** at **one** site); that is still **not** a substitute for **group-wide** Enterprise where the **whole** organisation needs coverage.
 - **Higher worker and target ceilings** than open core — but **not** necessarily “everything”: some **premium ingredients** may be **Enterprise-only** if cost-to-serve or risk is too high for Pro (see table above).
 - **Premium detection and format coverage** where cost-to-serve is high: e.g. full ML/DL-assisted stacks where gated, stronger content-type / “cloaking” surfaces, legacy or niche formats — aligned with the internal feature matrix.
 - **Machine-bound license** and **named deployment** limits as in [LICENSING_SPEC.md](LICENSING_SPEC.md) (`dbmfp`, trial caps).
