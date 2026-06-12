@@ -27,11 +27,23 @@ def get_about_info() -> dict:
     Return application name, version, author and license (same as LICENSE and README).
     Used by the API /about page, Excel report "Report info" sheet, heatmap image footer,
     and dashboard/reports web pages.
+
+    #856 (Phase E): when the integrity anchor flags tampering, the version is
+    forced to the ``-alpha`` label ("development / not CI-validated") so every
+    surface that renders about info shows the TINTED state.
     """
+    from core.integrity_anchor import ALPHA_NOTE, get_integrity_snapshot
+
+    snap = get_integrity_snapshot()
+    tampered = snap.get("integrity_state") == "tampered"
     ver = _package_version()
+    if tampered:
+        ver = f"{ver}-alpha ({ALPHA_NOTE})"
     return {
         "name": "Data Boar",
         "version": ver,
+        "integrity_state": snap.get("integrity_state", "unknown"),
+        "build_trust": snap.get("trust_level", "unknown"),
         # Note: the template already prints `about.name` before `about.description`,
         # so `description` must not repeat the product name.
         "description": "Audits personal and sensitive data across databases and filesystems, aligned with LGPD, GDPR, CCPA, HIPAA, and GLBA.",

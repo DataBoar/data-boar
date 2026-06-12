@@ -1183,6 +1183,12 @@ def _build_report_info(
         [
             {"Field": "Application", "Value": about["name"]},
             {"Field": "Version", "Value": about["version"]},
+            # #856 (E.9): auditors must see adulterated vs validated builds.
+            {"Field": "Build trust", "Value": about.get("build_trust", "unknown")},
+            {
+                "Field": "Integrity state",
+                "Value": about.get("integrity_state", "unknown"),
+            },
             {"Field": "Author", "Value": about["author"]},
             {"Field": "License", "Value": about["license"]},
             {"Field": "Copyright", "Value": about["copyright"]},

@@ -107,6 +107,19 @@ class LocaleSlug(str, Enum):
     pt_br = "pt-br"
 
 
+def _integrity_snapshot() -> dict:
+    """#856: integrity anchor snapshot for /health and /status (ensure once, lazily)."""
+    from core.integrity_anchor import ensure_integrity_anchor, get_integrity_snapshot
+
+    snap = get_integrity_snapshot()
+    if snap.get("integrity_state") == "unknown" and "error" not in snap:
+        try:
+            snap = ensure_integrity_anchor(_get_config())
+        except Exception:  # noqa: BLE001 - fail-soft surface, never break probes
+            pass
+    return snap
+
+
 def _about_info() -> dict:
     """Application name, version, author and license (from core.about, matches LICENSE and README)."""
     return get_about_info()
@@ -1080,6 +1093,7 @@ async def health():
     body["license"] = _license_public_dict()
     body["dashboard_transport"] = get_dashboard_transport_snapshot()
     body["enterprise_surface"] = get_enterprise_surface_posture(_get_config())
+    body["integrity"] = _integrity_snapshot()
     return body
 
 
@@ -1237,6 +1251,7 @@ async def get_status():
         "dashboard_transport": get_dashboard_transport_snapshot(),
         "enterprise_surface": get_enterprise_surface_posture(cfg),
         "maturity_assessment_integrity": maturity_integrity,
+        "integrity": _integrity_snapshot(),
     }
 
 

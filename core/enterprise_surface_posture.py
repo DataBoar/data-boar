@@ -22,6 +22,7 @@ def _severity_from_reasons(reasons: list[str]) -> str:
         "plaintext_http_explicit" in reasons
         or "license_trust_untrusted" in reasons
         or "api_key_required_but_unresolved" in reasons
+        or "integrity_tampered" in reasons
     ):
         return "elevated"
     if "license_trust_degraded" in reasons:
@@ -61,6 +62,13 @@ def get_enterprise_surface_posture(config: dict[str, Any]) -> dict[str, Any]:
         reasons.append("license_trust_degraded")
     if access_mode == "api_key_misconfigured":
         reasons.append("api_key_required_but_unresolved")
+
+    # #856: tampered integrity anchor tints the whole posture (ADR-0066).
+    from core.integrity_anchor import get_integrity_snapshot
+
+    integrity_state = str(get_integrity_snapshot().get("integrity_state", "unknown"))
+    if integrity_state == "tampered":
+        reasons.append("integrity_tampered")
 
     severity = _severity_from_reasons(reasons)
 

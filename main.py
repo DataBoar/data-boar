@@ -605,6 +605,19 @@ def main() -> None:
         config.setdefault("report", {}).setdefault("jurisdiction_hints", {})
         config["report"]["jurisdiction_hints"]["enabled"] = True
 
+    # #856 (Phase E): integrity anchor first-run validation / startup re-verify.
+    # Runs in ANY licensing mode (including open); fail-soft (state=unknown).
+    from core.integrity_anchor import ALPHA_NOTE, ensure_integrity_anchor
+
+    _integrity = ensure_integrity_anchor(config)
+    if _integrity.get("integrity_state") == "tampered":
+        print(
+            "*** INTEGRITY: behaviour-critical modules diverge from the "
+            f"validated anchor — runtime self-marked -alpha ({ALPHA_NOTE}). "
+            f"Mismatched: {', '.join(_integrity.get('mismatched_files', []))} ***",
+            file=sys.stderr,
+        )
+
     runtime_trust = get_runtime_trust_snapshot(config)
 
     if args.export_dsar is not None:
