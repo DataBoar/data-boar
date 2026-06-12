@@ -17,6 +17,12 @@ A **dual structure in one public, auditable repository** (the Bitwarden / Elasti
 
 Everything in the **core**, for any purpose the BSD 3-Clause allows — including **internal use inside a commercial organisation** at no cost (see [Terms of Use §2](../TERMS_OF_USE.md)). Scanning systems you are authorised to scan, building reports for your own compliance program, modifying and extending the code: all free.
 
+Explicitly included in "free":
+
+- **Self-host** — you run it on your own infrastructure; no hosted dependency.
+- **Air-gapped** — Data Boar works fully offline; no phone-home is required to scan.
+- **No mandatory telemetry** — the scanner does not require sending your data, metrics, or findings anywhere. Your data stays where it is.
+
 ## 3. What requires a paid subscription?
 
 - **Delivering scan results to third parties as a paid service** (consulting, audit, MSSP) — Pro or higher (see [Terms of Use §4](../TERMS_OF_USE.md)).
@@ -26,6 +32,8 @@ Everything in the **core**, for any purpose the BSD 3-Clause allows — includin
 ## 4. Will the core ever close?
 
 **No — by definition.** The open-source core (scanner, detectors, plugin interface, baseline surfaces, research material) **never closes**. The commercial model funds the project precisely so the core can stay open and auditable.
+
+The key argument: **a tool that reads ALL of a customer's data MUST be auditable**. Nobody should trust a privacy **black box** with full read access to their most sensitive stores — open code is the only honest answer to "what exactly does this scanner do with my data?". The open core is also the project's **adoption engine**: DPOs, researchers, and engineers can evaluate, audit, and adopt it with zero friction, and that funnel is worth more than any closed-source moat.
 
 ## 5. Can I fork Data Boar?
 
@@ -45,13 +53,15 @@ Yes. The BSD 3-Clause core is forkable under its terms. Two boundaries:
 
 A determined actor can patch any of it locally; the point is that **tampered builds are evident**, unsupported, and commercially unusable at scale.
 
+For buyers, the practical takeaway: **customers handling sensitive data should run the OFFICIAL signed and supported build**. Trust, integrity verification, and support are part of what the subscription delivers — a patched or unofficial build forfeits exactly the assurances a privacy tool exists to provide.
+
 ## 7. What are the tiers?
 
 Community (free) → Pro → Pro+ → Enterprise, plus a custom **Partner** family. **Tier = capability, claim = quantity.** Full ladder, capability table, and worker/deployment claims: [SUBSCRIPTION_TIERS.md](SUBSCRIPTION_TIERS.md).
 
 ## 8. Can I write and distribute plugins?
 
-The **plugin interface is core (BSD-3)** — writing plugins against it is free. The **plugin/partner architecture** for commercial distribution (partner catalogs, white-label packaging) is an **Enterprise/Partner** capability. Independent open-source plugins remain yours under your own license.
+The **plugin interface is core (BSD-3)** — writing plugins against it is free. Third-party plugins are **declarative by default**: they describe patterns and rules, and the validator **rejects unsafe patterns** before they run. Plugins that **execute arbitrary code** are a different risk surface — that path is **Enterprise/Partner**, under agreement. The **plugin/partner architecture** for commercial distribution (partner catalogs, white-label packaging) is likewise an **Enterprise/Partner** capability. Independent open-source plugins remain yours under your own license.
 
 ## 9. Can I use Data Boar in academic work?
 
