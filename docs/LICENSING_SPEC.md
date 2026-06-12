@@ -109,9 +109,13 @@ JSON:
 
 ```json
 {
-  "revoked_license_ids": ["license-uuid-1", "license-uuid-2"]
+  "revoked_license_ids": ["license-uuid-1", "license-uuid-2", "jti-token-id", "k1"]
 }
 ```
+
+**Kill-switch matching (#717):** each entry may name a **license id** (`sub` claim), a **token id** (`jti` claim), or a **signing key id** (`dbkid` claim). Any match fails **closed**: state `REVOKED`, watermark `REVOKED`, effective tier capped to **Community**, plus a dedicated `license_revoked` audit event (WARNING) with the matched field (`license_revoked:sub|jti|dbkid`). Revoking a `dbkid` disables **every** token signed with that key — the emergency lever for a compromised signing key.
+
+**Distribution:** the list is read from `DATA_BOAR_LICENSE_REVOCATION_PATH` (env) or `licensing.revocation_list_path` (YAML) at evaluation time (startup / re-evaluate) — **no hot-reload by design**; restart the process (or container) to pick up an updated list. A local file is the air-gapped-friendly default.
 
 ## Trial / POC behaviour
 
