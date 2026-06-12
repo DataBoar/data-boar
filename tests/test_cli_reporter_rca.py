@@ -40,6 +40,28 @@ def cfg_yaml(tmp_path: Path) -> Path:
     return cfg_path
 
 
+def test_reporter_empty_session_id_emits_rca_without_traceback(
+    tmp_path: Path, cfg_yaml: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """``--session-id ""`` must emit the RCA block and exit 2 without a traceback."""
+    rc = reporter_main(
+        [
+            "--config",
+            str(cfg_yaml),
+            "--session-id",
+            "",
+        ]
+    )
+    assert rc == 2
+    captured = capsys.readouterr()
+    err = captured.err
+    assert "session-id vazio" in err
+    assert "[data-boar-report] RCA" in err
+    assert "step              parse_args" in err
+    assert "error_type        ValueError" in err
+    assert "Traceback" not in err
+
+
 def test_reporter_missing_session_returns_zero_when_sqlite_resolvable(
     tmp_path: Path, cfg_yaml: Path
 ) -> None:

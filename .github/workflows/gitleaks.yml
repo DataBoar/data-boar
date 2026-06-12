@@ -43,3 +43,16 @@ jobs:
         env:
           # GITLEAKS_LICENSE only needed for org features; OSS works without.
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  slack-notify-on-failure:
+    name: Slack CI failure notify
+    if: ${{ always() && contains(needs.*.result, 'failure') }}
+    needs: [scan]
+    uses: ./.github/workflows/slack-ci-failure-notify.yml
+    with:
+      run_name: Gitleaks
+      head_branch: ${{ github.head_ref || github.ref_name }}
+      event: ${{ github.event_name }}
+      html_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    secrets:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

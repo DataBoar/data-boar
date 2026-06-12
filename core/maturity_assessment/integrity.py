@@ -115,7 +115,7 @@ def verify_maturity_assessment_rows(
             question_id=str(r.get("question_id") or ""),
             answer_text=str(r.get("answer_text") or ""),
         ).lower()
-        if mac == got:
+        if hmac.compare_digest(mac, got):
             out["rows_ok"] += 1
         else:
             out["rows_mismatch"] += 1

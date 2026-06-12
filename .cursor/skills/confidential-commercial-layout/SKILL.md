@@ -6,7 +6,7 @@ Operator or agent is writing or moving **pricing**, **proposal numbers**, **clie
 
 ## Rules
 
-1. **Location:** **`docs/private/`** only (entire tree is **gitignored**). Use **`docs/private/commercial/`** for **client-facing** pricing and proposals; use **`docs/private/operator_economics/`** for **your** OPEX (utilities, tools), shopping lists, and runway (see **`docs/private.example/operator_economics/README.md`**).
+1. **Location:** **`docs/private/`** only (entire tree is **gitignored**). Use **`docs/private/commercial/`** for **client-facing** pricing and proposals; use **`docs/private/operator_economics/`** for **your** OPEX (utilities, tools), shopping lists, and runway (see **`docs/private.example/economics/README.md`**).
 1. **Never commit** those files. Do not `git add -f` under **`docs/private/`** or **`.cursor/private/`**.
 1. **Tracked repo** may hold **templates** in **`docs/private.example/commercial/README.md`** — no real numbers, no client names.
 1. **Public docs** may describe **product** licensing and compliance **without** bespoke rates or identifiable client stories.

@@ -43,6 +43,98 @@ _TYPE_CHECK: dict[str, type | tuple[type, ...]] = {
 _UNIFIED_SECTION_KEYS = frozenset(("regex_patterns", "ml_patterns", "dl_patterns"))
 
 
+def _is_unbounded_brace(body: str) -> bool:
+    """Return True for a ``{m,}`` repetition body (no upper bound), e.g. ``2,``."""
+    return body.endswith(",") and body[:-1].isdigit()
+
+
+def _has_nested_quantifier(pattern: str) -> bool:
+    """ReDoS guard (#829): return True when *pattern* nests an unbounded
+    quantifier inside a group that is itself unbounded-quantified.
+
+    This is the classic catastrophic-backtracking shape ("star height > 1",
+    same criterion as the ``safe-regex`` linter): ``(a+)+``, ``(\\w*)*``,
+    ``([a-z]+)*``, ``(x{2,})+``.
+
+    The scanner walks the pattern character by character so that:
+
+    - escaped metacharacters (``\\+``, ``\\(``, ``\\)``) are treated as
+      literals — Brazilian phone patterns like ``(\\+55\\s?)?`` stay valid;
+    - quantifier characters inside character classes (``[+*]``) are literals;
+    - the bounded ``?`` quantifier never triggers the guard (0-or-1 repetition
+      cannot blow up on its own);
+    - unbounded content propagates to enclosing groups, so ``((a+)b)+`` is
+      flagged like ``safe-regex`` would flag it (conservative by design).
+    """
+    i = 0
+    n = len(pattern)
+    in_class = False
+    # One flag per currently-open group: "contains an unbounded quantifier".
+    group_stack: list[bool] = []
+
+    while i < n:
+        ch = pattern[i]
+
+        if ch == "\\":
+            i += 2  # skip escaped char (literal, never a quantifier/group)
+            continue
+
+        if in_class:
+            if ch == "]":
+                in_class = False
+            i += 1
+            continue
+
+        if ch == "[":
+            in_class = True
+            # "[]" and "[^]" treat the first ] as a literal member.
+            if i + 1 < n and pattern[i + 1] == "]":
+                i += 1
+            elif i + 2 < n and pattern[i + 1] == "^" and pattern[i + 2] == "]":
+                i += 2
+            i += 1
+            continue
+
+        if ch == "(":
+            group_stack.append(False)
+            i += 1
+            continue
+
+        if ch == ")":
+            had_unbounded = group_stack.pop() if group_stack else False
+            j = i + 1
+            if had_unbounded and j < n:
+                nxt = pattern[j]
+                if nxt in "*+":
+                    return True
+                if nxt == "{":
+                    close = pattern.find("}", j)
+                    if close != -1 and _is_unbounded_brace(pattern[j + 1 : close]):
+                        return True
+            if had_unbounded and group_stack:
+                group_stack[-1] = True  # propagate to enclosing group
+            i += 1
+            continue
+
+        if ch in "*+":
+            if group_stack:
+                group_stack = [True] * len(group_stack)
+            i += 1
+            continue
+
+        if ch == "{":
+            close = pattern.find("}", i)
+            if close != -1:
+                if _is_unbounded_brace(pattern[i + 1 : close]) and group_stack:
+                    group_stack = [True] * len(group_stack)
+                i = close + 1
+                continue
+
+        i += 1
+
+    return False
+
+
 class PluginValidationWarning(UserWarning):
     """Raised (via warnings.warn) when a plugin file contains items that do not
     conform to the canonical schema in config/plugin_schema.yaml.
@@ -261,6 +353,17 @@ def _validate_item(
             issues.append(
                 f"{location}, field '{field_name}': value {value!r} not in "
                 f"allowed values {allowed}."
+            )
+
+        # ReDoS guard (#829): reject regex patterns with nested quantifiers.
+        if (
+            field_name == "pattern"
+            and isinstance(value, str)
+            and _has_nested_quantifier(value)
+        ):
+            issues.append(
+                f"{location}, field 'pattern': potential ReDoS — nested quantifiers "
+                f"detected in {value!r}. Simplify or use atomic grouping."
             )
 
     return issues

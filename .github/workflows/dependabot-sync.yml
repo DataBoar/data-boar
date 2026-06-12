@@ -21,7 +21,7 @@ concurrency:
 jobs:
   sync-requirements:
     name: Regenerate requirements.txt
-    if: github.actor == 'dependabot[bot]'
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -31,6 +31,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Install uv
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
@@ -49,7 +50,24 @@ jobs:
             git config user.name "github-actions[bot]"
             git add requirements.txt
             git commit -m "chore(deps): auto-regenerate requirements.txt after uv.lock update"
-            git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
+            git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}" \
+              "HEAD:${GITHUB_EVENT_PULL_REQUEST_HEAD_REF}"
           else
             echo "No changes to requirements.txt"
           fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_EVENT_PULL_REQUEST_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+
+  slack-notify-on-failure:
+    name: Slack CI failure notify
+    if: ${{ always() && contains(needs.*.result, 'failure') }}
+    needs: [sync-requirements]
+    uses: ./.github/workflows/slack-ci-failure-notify.yml
+    with:
+      run_name: Dependabot requirements.txt sync
+      head_branch: ${{ github.head_ref || github.ref_name }}
+      event: ${{ github.event_name }}
+      html_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    secrets:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

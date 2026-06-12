@@ -1,7 +1,7 @@
 """Offline guards on tracked ``.github/workflows/*.yml`` (and two wrapper scripts).
 
 **Slack:** Parses all shipped ``slack-*.yml`` including ``slack-ci-failure-notify.yml``
-(``workflow_run`` on upstream failures). A private snapshot may live at
+(``workflow_call`` reusable workflow; upstream workflows invoke it on failure). A private snapshot may live at
 ``docs/private/raw_pastes/cursor-incident/slack-ci-failure-notify.yml.old`` for
 pause drills — see **``docs/ops/OPERATOR_NOTIFICATION_CHANNELS.md`` §4.1.1**
 (pt-BR: ``OPERATOR_NOTIFICATION_CHANNELS.pt_BR.md``).
@@ -43,17 +43,47 @@ def test_slack_ci_failure_notify_workflow_present_and_valid() -> None:
     data = _load_workflow("slack-ci-failure-notify.yml")
     assert data.get("name")
     on = data.get("on") or {}
-    assert "workflow_run" in on
-    wr = on["workflow_run"]
-    assert isinstance(wr, dict)
-    assert wr.get("workflows") == [
-        "CI",
-        "Semgrep",
-        "Gitleaks",
-        "SBOM",
-        "Dependabot requirements.txt sync",
-    ]
+    assert "workflow_call" in on
+    wc = on["workflow_call"]
+    assert isinstance(wc, dict)
+    inputs = wc.get("inputs") or {}
+    for key in ("run_name", "head_branch", "event", "html_url"):
+        assert key in inputs
+        assert inputs[key].get("required") is True
     assert "notify" in (data.get("jobs") or {})
+
+
+def test_upstream_workflows_invoke_slack_ci_failure_notify_on_failure() -> None:
+    """Failure Slack ping is workflow_call from upstream CI workflows (not workflow_run)."""
+    callers = (
+        ("ci.yml", "CI", ("test", "lint", "bandit", "audit", "sonar")),
+        ("semgrep.yml", "Semgrep", ("semgrep",)),
+        ("gitleaks.yml", "Gitleaks", ("scan",)),
+        ("sbom.yml", "SBOM", ("generate",)),
+        (
+            "dependabot-sync.yml",
+            "Dependabot requirements.txt sync",
+            ("sync-requirements",),
+        ),
+    )
+    for filename, run_name, needs_jobs in callers:
+        data = _load_workflow(filename)
+        jobs = data.get("jobs") or {}
+        slack_jobs = [
+            (jid, job)
+            for jid, job in jobs.items()
+            if isinstance(job, dict)
+            and str(job.get("uses", "")).endswith("slack-ci-failure-notify.yml")
+        ]
+        assert len(slack_jobs) == 1, (
+            f"{filename}: expected one slack notify reusable job, found {len(slack_jobs)}"
+        )
+        _jid, job = slack_jobs[0]
+        job_if = str(job.get("if") or "").lower()
+        assert "failure" in job_if
+        assert set(job.get("needs") or []) == set(needs_jobs)
+        with_block = job.get("with") or {}
+        assert with_block.get("run_name") == run_name
 
 
 def test_slack_release_published_notify_workflow_present_and_valid() -> None:
@@ -216,6 +246,8 @@ def test_gitleaks_yml_pins_actions_to_shas() -> None:
         code = line.split("#", 1)[0]
         if "uses:" not in code or "docker://" in code:
             continue
+        if "./.github/workflows/" in code:
+            continue
         if not any(p in code for p in ("actions/", "github/", "gitleaks/")):
             continue
         assert sha_40.search(code), (
@@ -271,6 +303,8 @@ def test_sbom_yml_pins_actions_to_shas() -> None:
         code = line.split("#", 1)[0]
         if "uses:" not in code or "docker://" in code:
             continue
+        if "./.github/workflows/" in code:
+            continue
         if not any(p in code for p in ("actions/", "github/", "astral-sh/")):
             continue
         assert sha_40.search(code), (
@@ -288,6 +322,8 @@ def test_ci_yml_pins_actions_and_uv_cli() -> None:
     for line in text.splitlines():
         code = line.split("#", 1)[0]
         if "uses:" not in code or "docker://" in code:
+            continue
+        if "./.github/workflows/" in code:
             continue
         if not any(
             p in code for p in ("actions/", "github/", "astral-sh/", "SonarSource/")
@@ -321,6 +357,8 @@ def test_dependabot_sync_workflow_present_and_valid() -> None:
     for line in text.splitlines():
         code = line.split("#", 1)[0]
         if "uses:" not in code or "docker://" in code:
+            continue
+        if "./.github/workflows/" in code:
             continue
         if not any(p in code for p in ("actions/", "github/", "astral-sh/")):
             continue

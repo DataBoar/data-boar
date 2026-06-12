@@ -56,7 +56,7 @@ def test_prep_audit_sh_has_shebang_and_exit_code():
 # --- PowerShell: commit-or-pr.ps1 syntax (Parser::ParseFile) ---
 
 
-def test_commit_or_pr_ps1_syntax():
+def test_commit_or_pr_ps1_syntax(warm_pwsh):
     """scripts/commit-or-pr.ps1 has valid PowerShell syntax (parse-only, no execution)."""
     root = _project_root()
     script = root / "scripts" / "commit-or-pr.ps1"
@@ -69,9 +69,10 @@ def test_commit_or_pr_ps1_syntax():
         "$null = [System.Management.Automation.Language.Parser]::ParseFile($path, [ref]$null, [ref]$errors); "
         "exit ([int]($errors -and $errors.Count -gt 0))"
     )
-    # CI runners occasionally cold-start pwsh slowly; try both shells and allow
-    # a bit more time than a typical local parse.
-    timeout_s = 30
+    # #860: the FIRST pwsh start after boot can exceed 30s under load (JIT /
+    # assembly cache cold on Linux). The session-scoped ``warm_pwsh`` fixture
+    # absorbs that once; 60s here is belt-and-suspenders for slow CI runners.
+    timeout_s = 60
     errors: list[str] = []
     for pw in ("pwsh", "powershell"):
         try:
@@ -130,7 +131,9 @@ def _parse_powershell_script(script_path: Path, root: Path) -> bool:
                 cwd=str(root),
                 capture_output=True,
                 text=True,
-                timeout=30,
+                # #860: 60s absorbs pwsh cold-start on slow runners; callers in
+                # parse loops should also request the ``warm_pwsh`` fixture.
+                timeout=60,
             )
         except FileNotFoundError:
             continue
@@ -280,6 +283,54 @@ def test_private_git_sync_ps1_excludes_homelab_secrets_from_pcloud():
     assert "Sync-VeraCryptHomelabSecrets" in text
     assert "/XF" in text
     assert "/R:2" in text and "/W:5" in text
+
+
+def test_private_git_sync_lab_hosts_exclude_fragile_sd():
+    """Bare mirror host list excludes fragile SD lab host and includes alpine-emachines."""
+    fragile_sd = "pi" + "3b"
+    mini_host = "mini" + "-bt"
+    lat_host = "lat" + "itude"
+    root = _project_root()
+    for name in ("private-git-sync.ps1", "private-git-sync.sh"):
+        script = root / "scripts" / name
+        if not script.exists():
+            continue
+        text = script.read_text(encoding="utf-8")
+        assert "LabBareMirrorHosts" in text or "LAB_BARE_MIRROR_HOSTS" in text
+        assert "alpine-emachines" in text
+        assert fragile_sd in text.lower()  # documented exclusion
+        host_block = text
+        if "LabBareMirrorHosts" in text:
+            import re
+
+            m = re.search(r"LabBareMirrorHosts\s*=\s*@\([^)]+\)", text, re.DOTALL)
+            assert m, "LabBareMirrorHosts array missing in ps1"
+            host_block = m.group(0)
+        else:
+            m = re.search(r"LAB_BARE_MIRROR_HOSTS=\([^)]+\)", text, re.DOTALL)
+            assert m, "LAB_BARE_MIRROR_HOSTS array missing in sh"
+            host_block = m.group(0)
+        assert fragile_sd not in host_block
+        assert mini_host in host_block
+        assert lat_host in host_block
+
+
+def test_private_git_sync_sh_syntax():
+    """scripts/private-git-sync.sh passes bash -n."""
+    root = _project_root()
+    script = root / "scripts" / "private-git-sync.sh"
+    if not script.exists():
+        return
+    import subprocess
+
+    proc = subprocess.run(
+        ["bash", "-n", str(script)],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stderr or proc.stdout
 
 
 def test_snmp_LAB_ROUTER_01_lab_probe_ps1_syntax():

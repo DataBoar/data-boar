@@ -193,6 +193,55 @@ class AuditEngine:
                 f"Licensing blocks scan: state={c.state} detail={c.detail}",
             )
 
+        # #551: licensing worker cap — effective = min(scan.max_workers, tier cap).
+        # Enforced mode only (open mode returns None = no cap). Fail-soft: a cap
+        # resolution error must never abort a scan the license gate already
+        # allowed — warn and run uncapped instead.
+        import logging
+
+        try:
+            cap = guard.worker_cap()
+        except Exception as e:  # noqa: BLE001
+            logging.getLogger(__name__).warning(
+                "Licensing worker cap resolution failed (fail-soft, no cap): %s", e
+            )
+            cap = None
+        if cap is not None and self._max_workers > cap:
+            from core.licensing.audit import audit_enforcement_event
+
+            c = guard.context
+            audit_enforcement_event(
+                "workers_clamped",
+                mode=c.mode,
+                state=c.state,
+                allowed=False,
+                detail=f"requested={self._max_workers} cap={cap}",
+                level=logging.WARNING,
+            )
+            self._max_workers = cap
+
+        # #856: open-mode worker clamp (behaviour-critical — part of the
+        # integrity manifest; removing this block tints the build -alpha).
+        # Open mode runs at most OPEN_MODE_WORKER_CAP parallel workers; paid
+        # tiers raise the ceiling via licensing (#551 above).
+        if guard.context.mode != "enforced":
+            from core.integrity_anchor import OPEN_MODE_WORKER_CAP
+            from core.licensing.audit import audit_enforcement_event
+
+            if self._max_workers > OPEN_MODE_WORKER_CAP:
+                audit_enforcement_event(
+                    "workers_clamped",
+                    mode=guard.context.mode,
+                    state=guard.context.state,
+                    allowed=False,
+                    detail=(
+                        f"requested={self._max_workers} "
+                        f"cap={OPEN_MODE_WORKER_CAP} (open-mode clamp #856)"
+                    ),
+                    level=logging.WARNING,
+                )
+                self._max_workers = OPEN_MODE_WORKER_CAP
+
         session_id = new_session_id()
         self.db_manager.set_current_session_id(session_id)
         scope_hash = _compute_config_scope_hash(self.config)
@@ -265,18 +314,17 @@ class AuditEngine:
 
     def _run_target(self, target: dict[str, Any]) -> None:
         """Run one target: resolve connector, instantiate, run()."""
-        from core.connector_registry import tier_feature_for_target
+        from core.connector_registry import require_connector_allowed
         from core.licensing.errors import FeatureTierBlockedError
-        from core.licensing.feature_gate import require_feature
 
-        tier_feature = tier_feature_for_target(target)
-        if tier_feature:
-            try:
-                require_feature(self.config, tier_feature)
-            except FeatureTierBlockedError as exc:
-                tname = target.get("name", "unknown")
-                self.db_manager.save_failure(tname, "tier_blocked", exc.reason)
-                return
+        # Connector tier gate (#843): fail-loud + scan_failures row in enforced
+        # mode; free in Tier.OPEN and for open-core connectors.
+        try:
+            require_connector_allowed(self.config, target)
+        except FeatureTierBlockedError as exc:
+            tname = target.get("name", "unknown")
+            self.db_manager.save_failure(tname, "tier_blocked", exc.reason)
+            return
 
         resolved = connector_for_target(target)
         if not resolved:

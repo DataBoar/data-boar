@@ -6,12 +6,31 @@ Technical specification for **optional** commercial enforcement. Default is **op
 
 | Mode       | Config / env                                                    | Behaviour                                                                                          |
 | ----       | ------------                                                    | ----------                                                                                         |
-| `open`     | `licensing.mode: open` or unset; `DATA_BOAR_LICENSE_MODE=open`  | Full functionality; license token optional; status shows **OPEN**                                  |
-| `enforced` | `licensing.mode: enforced` or `DATA_BOAR_LICENSE_MODE=enforced` | Valid signed token required for ingest/digest; invalid/expired/revoked/tampered states block scans |
+| `open`     | `licensing.mode: open` or unset; `DATA_BOAR_LICENSE_MODE=enforced` can escalate | Full functionality; license token optional; status shows **OPEN**                                  |
+| `enforced` | `licensing.mode: enforced`                                      | Valid signed token required for ingest/digest; invalid/expired/revoked/tampered states block scans |
+
+### No environment bypass (#719)
+
+Enforcement state is determined **only** by `licensing.mode: enforced` plus a
+valid signed license. Environment variables can never disable it:
+
+- `DATA_BOAR_LICENSE_MODE=open` is **ignored** when YAML sets `mode: enforced`
+  (the attempt is recorded as a CRITICAL audit event). The env var can only
+  **escalate** `open` → `enforced`.
+- `DATA_BOAR_ENV=development`, `DEBUG=1`, and the former
+  `DATA_BOAR_TIER_OVERRIDE` have **zero** licensing effect. The dev/CI tier
+  override was removed — use a locally issued signed QA license instead
+  (`scripts/issue_dev_license_jwt.py`).
+- Without a valid license in enforced mode the runtime **fails closed**:
+  scans are denied (Safe-Hold / HTTP 403) and the feature tier is capped to
+  Community — never "open".
+
+Every enforcement decision (allow / deny / clamp / expire) is recorded on the
+`data_boar.licensing.audit` logger with the `LICENSE_AUDIT` prefix.
 
 Environment variables override YAML when set:
 
-- `DATA_BOAR_LICENSE_MODE` — `open` | `enforced`
+- `DATA_BOAR_LICENSE_MODE` — `enforced` (escalation only; `open` cannot downgrade YAML `enforced`)
 - `DATA_BOAR_LICENSE_PATH` — path to JWT file (`.lic`)
 - `DATA_BOAR_LICENSE_PUBLIC_KEY_PATH` — PEM file with **Ed25519 public** key (verify only)
 - `DATA_BOAR_LICENSE_PUBLIC_KEY_PEM` — inline PEM (alternative to path; dev/CI only)
@@ -48,16 +67,17 @@ Custom claims (namespaced to avoid collisions):
 | `dbcid`     | string | Customer ID                                                                     |
 | `dbcname`   | string | Customer display name                                                           |
 | `dbenv`     | string | Target environment: `production`, `qa`, `uat`, `homologation`, `debug`, `trial` |
-| `dbmfp`     | string | Expected machine fingerprint (hex SHA-256); empty = any host                    |
+| `dbmfp`     | string \| array | Expected machine fingerprint(s). Single hex string = one host; **array of hex strings = deployment pack** (#718 + #846): runtime accepts when its own fingerprint ∈ pack. Empty/absent = any host. **Malformed claim (wrong type) fails closed** (`INVALID`) — never degrades to "unbound". |
 | `dbtrial`   | bool   | Trial / POC: cap report rows and watermark                                      |
 | `dbmaxrows` | int    | Max data rows in report when trial (e.g. 15)                                    |
 | `dbissuer`  | string | Issuer operator id (e.g. SSH key fingerprint or email)                          |
 | `dbkid`     | string | Signing key id for rotation                                                     |
 | `dbgrace`   | int    | Grace period end (unix); after `exp`, still **GRACE** until this time           |
-| `dbmax_deployments` | int | **Planned** — max distinct **licensed production sites** (machine seeds / fingerprints) for this token; **1** = Pro-style single server or single consultant laptop; **0** may mean **unlimited** when contract allows (Enterprise). Not enforced until product reads it. |
-| `dbdeployment_pack_id` | string | **Optional** — id of a **commercial add-on** (e.g. “+5 sites”) for audit/refill trail; pairs with re-issued JWT or companion allowlist file. |
+| `dbmax_workers` | int | Max parallel scan workers (#551) — in practice the number of **targets scanned concurrently**. **Enforced mode only:** the engine clamps `scan.max_workers` to `min(scan.max_workers, dbmax_workers)`. Absent/zero on a usable license → tier defaults apply (Community **2** / Pro **4** / Enterprise **unlimited**; ratified 2026-06-11, #853). **Pro+** is claim-driven: issued tokens carry `dbmax_workers: 8` (claim wins over tier default). Open mode never caps. Clamp is fail-soft and audited (`workers_clamped`, WARNING). |
+| `dbmax_deployments` | int | Max distinct **licensed production sites** (fingerprints) for this token (#846). **Issuance-enforced:** the issuer emits the `dbmfp` pack with at most this many entries; runtime reads the claim into `LicenseContext.max_deployments` (audit/report surface) and validates only its **own** fingerprint ∈ pack. **0** may mean **unlimited** when contract allows (Enterprise). Pro default = **2** (operator-ratified 2026-06-11: on-prem + 1 cloud/branch) — see `DEFAULT_PRO_DEPLOYMENTS` in `core/licensing/guard.py`. |
+| `dbdeployment_pack_id` | string | Id of a **commercial add-on** (e.g. “+5 sites”) for audit/refill trail (#846); surfaced in `LicenseContext.deployment_pack_id`. Issuer: `scripts/issue_dev_license_jwt.py --dbmfp-pack <hex,hex,...> [--pack-id ...]`. |
 
-**Multi-site verification (not implemented):** Today only **`dbmfp`** (single) is meaningful. For Enterprise **N** sites, options to evaluate: (1) **array** of allowed fingerprints in an extended token or **signed sidecar JSON** next to the `.lic` file; (2) **online** registration (privacy + ops cost); (3) **multiple JWTs** same `dbcid`, one fingerprint each — simplest cryptographically, heavier for the customer. See [LICENSING_OPEN_CORE_AND_COMMERCIAL.md](LICENSING_OPEN_CORE_AND_COMMERCIAL.md) §Deployments, copies, and sites.
+**Multi-site verification (honest boundary, #718 + #846):** Implemented via option (1) — **array** of allowed fingerprints in the `dbmfp` claim (deployment pack). Runtime validates only that **its own** `compute_machine_fingerprint()` (hostname + optional `DATA_BOAR_MACHINE_SEED`) is in the pack — the **global** deploy count is enforced at **issuance** (the issuer signs a pack of at most `dbmax_deployments` fingerprints); the runtime cannot count other sites. Alternatives kept for reference: (2) **online** registration (privacy + ops cost); (3) **multiple JWTs** same `dbcid`, one fingerprint each. See [LICENSING_OPEN_CORE_AND_COMMERCIAL.md](LICENSING_OPEN_CORE_AND_COMMERCIAL.md) §Deployments, copies, and sites.
 
 ## Lifecycle states
 
@@ -89,9 +109,13 @@ JSON:
 
 ```json
 {
-  "revoked_license_ids": ["license-uuid-1", "license-uuid-2"]
+  "revoked_license_ids": ["license-uuid-1", "license-uuid-2", "jti-token-id", "k1"]
 }
 ```
+
+**Kill-switch matching (#717):** each entry may name a **license id** (`sub` claim), a **token id** (`jti` claim), or a **signing key id** (`dbkid` claim). Any match fails **closed**: state `REVOKED`, watermark `REVOKED`, effective tier capped to **Community**, plus a dedicated `license_revoked` audit event (WARNING) with the matched field (`license_revoked:sub|jti|dbkid`). Revoking a `dbkid` disables **every** token signed with that key — the emergency lever for a compromised signing key.
+
+**Distribution:** the list is read from `DATA_BOAR_LICENSE_REVOCATION_PATH` (env) or `licensing.revocation_list_path` (YAML) at evaluation time (startup / re-evaluate) — **no hot-reload by design**; restart the process (or container) to pick up an updated list. A local file is the air-gapped-friendly default.
 
 ## Trial / POC behaviour
 
@@ -131,7 +155,7 @@ which optional capabilities are available at runtime and which installer extras 
 | Claim / control idea                                  | Purpose                                                                                                                               |
 | ---                                                   | ---                                                                                                                                   |
 | `dbtier` (`standard`, `pro`, `partner`, `enterprise`) | Single source of truth for entitlement tier in runtime, report info, and audit trail. **Implementation (2026-04):** when `licensing.mode` is **enforced** and the token is **VALID** or **GRACE**, the verify path copies this claim into `LicenseContext.dbtier` and `GET /health` → `license.dbtier`; dashboard code maps it to internal tier for **optional** feature gates (e.g. maturity POC) alongside lab-only `licensing.effective_tier` in YAML. **Maturity POC gate:** `docs/plans/PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md` § *Next slice*; regression: `tests/test_api_assessment_poc.py` (`test_assessment_enforced_jwt_dbtier_*`). |
-| `dbmax_workers` (int)                                 | Optional cap on **parallel scan workers** (open core policy target: **1** default, **2** max — see [LICENSING_OPEN_CORE_AND_COMMERCIAL.md](LICENSING_OPEN_CORE_AND_COMMERCIAL.md)). Pro/Enterprise: higher or **unbounded** in token (`0` = unlimited — product decision). |
+| `dbmax_workers` (int)                                 | **Implemented (#551/#853)** — cap on **parallel scan workers** (≈ concurrent targets). Ratified ladder: Community **2** · Pro **4** · Pro+ **8** (claim-driven) · Enterprise **unlimited** — see [LICENSING_OPEN_CORE_AND_COMMERCIAL.md](LICENSING_OPEN_CORE_AND_COMMERCIAL.md). |
 | `dbmax_targets` (int)                                 | Optional cap on **configured targets** per session or deployment envelope; **0** may mean unlimited when contract allows.              |
 | `dbfeatures` (string list)                            | Explicit feature flags independent from tier defaults (e.g. `compressed_scan`, `content_type_cloaking`, future `ai_heuristics_plus`). |
 | `dbkill` / revocation overlays                        | Emergency disable for vulnerable/abused capabilities without shipping a full app update.                                              |

@@ -7,15 +7,24 @@
  Sub-Orquestrador especialista na persona 'baremetal'.
 
 .DESCRIPTION
- Responsável por disparar a execução do teste Completão utilizando shell script ou equivalente.
- Injeta o comando de execução do Data Boar diretamente em uma sessão Tmux existente no nó remoto para garantir resiliência e manter a sessão viva mesmo que o Maestro (14) desconecte.
- É 100% agnóstico: recebe o caminho do diretório (efêmero ou canônico) e a referência de versão do Maestro, sem assumir IPs ou caminhos fixos.
+ Responsavel por disparar a execucao do teste Completao utilizando shell script ou equivalente.
+ Injeta o comando de execucao do Data Boar diretamente em uma sessao Tmux existente no no remoto
+ para garantir resiliencia e manter a sessao viva mesmo que o Maestro desconecte.
+ E 100% agnostico: recebe o caminho do diretorio (efemero ou canonico) e a referencia de versao
+ do Maestro, sem assumir IPs ou caminhos fixos.
+
+ Sentinel (#831): payload writes /tmp/databoar_handler/baremetal_sentinel.txt with the smoke
+ exit code so Maestro can verify real pass/fail via Wait-HandlerSentinel.ps1.
+
+ Quote/escape safety (#830): payload is base64-encoded before injection into tmux send-keys,
+ eliminating all shell-quoting ambiguity from Node.path, Ref, or BenchRunId values.
+ Ref is validated against an allowlist before use.
 #>
 
 param(
     [Parameter(Mandatory=$true)]$Node,
     [string]$Ref = "WorkingTree",
-    [switch]$Deep, # <--- Injeção do Maestro para habilitar o Benchmark RC
+    [switch]$Deep,
     [string]$BenchTrack = "",
     [string]$BenchRunId = "",
     [switch]$BenchCompare,
@@ -23,10 +32,16 @@ param(
     [string]$BenchHealthUrl = ""
 )
 
-$modoTexto = if ($Deep) { "Benchmark RC (Deep)" } else { "$Ref" }
+# Allowlist: reject Ref values that could inject shell metacharacters (#830)
+$safeRefPattern = '^(WorkingTree|stable|beta|v\d+\.\d+\.\d+(-[\w.]+)?)$'
+if ($Ref -notmatch $safeRefPattern) {
+    Write-Error "[Baremetal] Invalid -Ref value '$Ref' rejected by allowlist"
+    exit 2
+}
+
+$modoTexto = if ($Deep) { "Benchmark RC (Deep)" } else { $Ref }
 Write-Host "   [Baremetal] Disparando $modoTexto em $($Node.hostname)..." -ForegroundColor DarkGreen
 
-# Se for Deep, passa o caminho do config. Se não, não passa nada (comportamento original)
 $configArg = if ($Deep) { "tests/config/benchmark-rc.yaml" } else { "" }
 $smokeArgs = @()
 if (-not [string]::IsNullOrWhiteSpace($configArg)) { $smokeArgs += "--bench-config $configArg" }
@@ -40,23 +55,27 @@ if ($BenchCompare) { $benchEnv += "LAB_COMPLETAO_BENCH_COMPARE=1" }
 if (-not [string]::IsNullOrWhiteSpace($BenchRunId)) { $benchEnv += "LAB_COMPLETAO_BENCH_RUN_ID=$BenchRunId" }
 $benchEnvPrefix = if ($benchEnv.Count -gt 0) { ($benchEnv -join " ") + " " } else { "" }
 
-# Construção do Payload Posix Native:
-# 1. Entra na pasta correta (fornecida pelo Node.path dinâmico do Maestro)
-# 2. Ativa o venv (source para bash/zsh nativos)
-# 3. Executa usando 'bash' explícito laboral caso as permissões (+x) tenham sido perdidas no scp, repassando a Ref desejada
-# 4. Repassamos o argumento do config para o bash script
-$payload = "cd $($Node.path) && echo `"Iniciando Baremetal Smoke ($modoTexto)...`" && ${benchEnvPrefix}bash ./scripts/lab-completao-host-smoke.sh $smokeArgText"
+# Sentinel path for pass/fail aggregation (#831)
+$sentinelDir  = "/tmp/databoar_handler"
+$sentinelFile = "$sentinelDir/baremetal_sentinel.txt"
 
-# Prepara resiliencia via TMUX (Ctrl+C garante que o prompt está limpo antes do Enter)
-# SRE Fix: Separamos o Ctrl+C da injeção de texto com um micro-sleep (anti-race-condition)
-# Isso garante que o bash se recupere do SIGINT e não engula o 'c' do 'cd'.
-$tmuxCmd = "tmux send-keys -t completao C-c ; sleep 0.5 ; tmux send-keys -t completao '$payload' Enter"
+# Build the payload as a plain string (PowerShell expands its own variables here).
+# Backtick-$ (`$) produces a literal $ that survives into the bash command. (#830)
+# Node.path is used as-is: bash handles ~ expansion; base64 encoding removes quoting risk.
+$nodePath    = $Node.path
+$payload     = "cd $nodePath && echo 'Iniciando Baremetal Smoke ($modoTexto)...' && ${benchEnvPrefix}bash ./scripts/lab-completao-host-smoke.sh $smokeArgText ; _rc=`$? ; mkdir -p $sentinelDir ; echo `$_rc > $sentinelFile ; exit `$_rc"
 
-# Injeção resiliente via TMUX
+# Base64-encode the payload: eliminates ALL shell-quoting issues in tmux send-keys. (#830)
+$payloadB64  = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($payload))
+
+# Ctrl+C clears the prompt, sleep avoids SIGINT/text race, then type decoded payload.
+$tmuxCmd = "tmux send-keys -t completao C-c ; sleep 0.5 ; tmux send-keys -t completao 'echo $payloadB64 | base64 -d | bash' Enter"
+
 ssh -q -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$($Node.user)@$($Node.hostname)" "$tmuxCmd"
 
 if ($LASTEXITCODE -eq 0) {
-    Write-Host "      [SUCCESS] Orquestração injetada no Tmux com sucesso." -ForegroundColor Green
+    Write-Host "      [SUCCESS] Orquestracao injetada no Tmux com sucesso." -ForegroundColor Green
 } else {
     Write-Warning "      [ERROR] Falha ao comunicar com o Tmux em $($Node.hostname)."
+    exit 1
 }

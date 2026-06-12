@@ -1,0 +1,20 @@
+# Example: narrow sudoers for Maestro Handle-target_nfs / Handle-target_cifs
+# Copy fragments into /etc/sudoers.d/z-labop-host-report (or merge with existing LAB-OP drop-in).
+# Replace REPO_PATH and USER with operator values. Validate: sudo visudo -cf /etc/sudoers.d/z-labop-host-report
+#
+# Handlers invoke exactly:
+#   sudo -n bash REPO_PATH/scripts/labop-nfs-server-ensure.sh --check|--apply
+#   sudo -n bash REPO_PATH/scripts/labop-smb-server-ensure.sh --check|--apply
+# List BOTH /bin/bash and /usr/bin/bash (Void Linux may resolve bash to /usr/bin/bash).
+
+Cmnd_Alias LABOP_NFS_SERVER = /bin/bash REPO_PATH/scripts/labop-nfs-server-ensure.sh --check, \
+                              /usr/bin/bash REPO_PATH/scripts/labop-nfs-server-ensure.sh --check, \
+                              /bin/bash REPO_PATH/scripts/labop-nfs-server-ensure.sh --apply, \
+                              /usr/bin/bash REPO_PATH/scripts/labop-nfs-server-ensure.sh --apply
+
+Cmnd_Alias LABOP_SMB_SERVER = /bin/bash REPO_PATH/scripts/labop-smb-server-ensure.sh --check, \
+                              /usr/bin/bash REPO_PATH/scripts/labop-smb-server-ensure.sh --check, \
+                              /bin/bash REPO_PATH/scripts/labop-smb-server-ensure.sh --apply, \
+                              /usr/bin/bash REPO_PATH/scripts/labop-smb-server-ensure.sh --apply
+
+USER ALL=(root) NOPASSWD: LABOP_NFS_SERVER, LABOP_SMB_SERVER

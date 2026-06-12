@@ -29,6 +29,7 @@ Security: default middleware adds X-Content-Type-Options, X-Frame-Options, Conte
 Referrer-Policy, Permissions-Policy, and Strict-Transport-Security (only when served over HTTPS).
 """
 
+import hmac
 import io
 import os
 import re
@@ -104,6 +105,19 @@ class LocaleSlug(str, Enum):
 
     en = "en"
     pt_br = "pt-br"
+
+
+def _integrity_snapshot() -> dict:
+    """#856: integrity anchor snapshot for /health and /status (ensure once, lazily)."""
+    from core.integrity_anchor import ensure_integrity_anchor, get_integrity_snapshot
+
+    snap = get_integrity_snapshot()
+    if snap.get("integrity_state") == "unknown" and "error" not in snap:
+        try:
+            snap = ensure_integrity_anchor(_get_config())
+        except Exception:  # noqa: BLE001 - fail-soft surface, never break probes
+            pass
+    return snap
 
 
 def _about_info() -> dict:
@@ -885,10 +899,10 @@ async def security_headers_middleware(request: Request, call_next):
         "camera=(), microphone=(), geolocation=(), interest-cohort=(), payment=(), usb=(), "
         "magnetometer=(), gyroscope=(), accelerometer=()",
     )
-    # CSP: allow self and Chart.js CDN for scripts; allow inline styles used by templates.
+    # CSP: script-src 'self' only — Chart.js is vendored in api/static/ (#825).
     response.headers.setdefault(
         "Content-Security-Policy",
-        "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; "
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
         "img-src 'self' data:; font-src 'self'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; "
         "base-uri 'self'; object-src 'none'",
     )
@@ -948,7 +962,7 @@ async def optional_api_key_middleware(request: Request, call_next):
         auth = request.headers.get("authorization", "").strip()
         if auth.lower().startswith("bearer "):
             provided = auth[7:].strip()
-    if not provided or provided != expected:
+    if not provided or not hmac.compare_digest(provided, expected):
         return JSONResponse(
             status_code=401, content={"detail": "Missing or invalid API key"}
         )
@@ -1079,6 +1093,7 @@ async def health():
     body["license"] = _license_public_dict()
     body["dashboard_transport"] = get_dashboard_transport_snapshot()
     body["enterprise_surface"] = get_enterprise_surface_posture(_get_config())
+    body["integrity"] = _integrity_snapshot()
     return body
 
 
@@ -1236,6 +1251,7 @@ async def get_status():
         "dashboard_transport": get_dashboard_transport_snapshot(),
         "enterprise_surface": get_enterprise_surface_posture(cfg),
         "maturity_assessment_integrity": maturity_integrity,
+        "integrity": _integrity_snapshot(),
     }
 
 

@@ -35,7 +35,7 @@ Use plain Markdown under **`docs/private/operator_economics/`** (or split by lan
 
 ```powershell
 New-Item -ItemType Directory -Force -Path docs/private/operator_economics | Out-Null
-Copy-Item docs/private.example/operator_economics/README.md docs/private/operator_economics/
+Copy-Item docs/private.example/economics/README.md docs/private/operator_economics/
 # Edit locally; never commit docs/private/
 ```
 

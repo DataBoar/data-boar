@@ -20,8 +20,12 @@ def _maestro_ps1_paths(root: Path) -> list[Path]:
     return sorted(base.rglob("*.ps1"))
 
 
-def test_all_maestro_powershell_scripts_parse() -> None:
-    """Every tracked .ps1 under scripts/maestro/ parses under pwsh/PowerShell Parser."""
+def test_all_maestro_powershell_scripts_parse(warm_pwsh) -> None:
+    """Every tracked .ps1 under scripts/maestro/ parses under pwsh/PowerShell Parser.
+
+    ``warm_pwsh`` (#860): session-scoped warm-up absorbs the pwsh cold-start
+    once, so the per-file ParseFile timeout never flakes after a fresh boot.
+    """
     root = _project_root()
     failures: list[str] = []
     for script in _maestro_ps1_paths(root):
@@ -161,6 +165,9 @@ def test_sync_working_tree_uses_explicit_sync_result() -> None:
     assert "return [bool]$syncOk" in text
     assert "--exclude='data-boar-*.tar'" in text
     assert "ConnectTimeout=15" in text
+    assert "if ($IsWindows)" in text
+    assert "bash -c" in text
+    assert "PSObject.Properties['git_origin']" in text
     assert "if ($syncOk) {" in text
     assert "tmux new-session -d -s completao" in text
     assert "> $null 2>&1" in text
@@ -216,7 +223,7 @@ def test_handle_microk8s_fallback_tmux_sends_expanded_payload() -> None:
     )
 
 
-def test_maestro_deep_rc_monitor_collect_wrapper_parse() -> None:
+def test_maestro_deep_rc_monitor_collect_wrapper_parse(warm_pwsh) -> None:
     """Token-aware lab wrapper (Deep + monitor + Collect) parses under pwsh."""
     root = _project_root()
     script = root / "scripts" / "maestro-deep-rc-monitor-collect.ps1"
@@ -297,14 +304,17 @@ def test_wrapper_has_optional_web_readiness_gate() -> None:
     assert "Web readiness failed" in text
 
 
-def test_build_container_artefact_has_docker_fallback_policy() -> None:
-    """Build script should rebuild when Docker is up and fallback to tar when Docker is down."""
+def test_build_container_artefact_has_container_engine_fallback_policy() -> None:
+    """Build script should rebuild when docker/podman is up and fallback to tar when both are down."""
     root = _project_root()
     text = (root / "scripts" / "maestro" / "Build-ContainerArtefact.ps1").read_text(
         encoding="utf-8", errors="replace"
     )
-    assert "Test-DockerEngineReady" in text
-    assert "Docker indisponivel e sem artefato local" in text
+    assert "Test-ContainerEngineReady" in text
+    assert "Invoke-ContainerImageBuild" in text
+    assert '"podman"' in text
+    assert "DOCKER_BUILDKIT" in text
+    assert "Container engine indisponivel" in text
     assert "rebuild" in text.lower() or "Rebuild" in text
     assert "lessons learned" in text
 
@@ -336,6 +346,19 @@ def test_container_handlers_enable_lab_stack_up_in_deep_mode() -> None:
         assert "lab-completao-host-smoke.sh $smokeArgText" in body
 
 
+def test_lab_completao_host_smoke_uses_main_py_not_data_boar_scan() -> None:
+    """Baremetal RC must invoke python main.py --config (no fictional data-boar scan subcommand)."""
+    root = _project_root()
+    text = (root / "scripts" / "lab-completao-host-smoke.sh").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "uv run python main.py --config" in text
+    assert "uv run data-boar scan" not in text
+    assert "DONE_FAILED_BAREMETAL" in text
+    assert "LC_BAREMETAL_SCAN_OK" in text
+    assert "maturin develop --release" in text
+
+
 def test_lab_completao_host_smoke_parses_bench_config_flag() -> None:
     """Maestro --bench-config must be a real flag (not positional $1) so Deep argv parses."""
     root = _project_root()
@@ -344,6 +367,19 @@ def test_lab_completao_host_smoke_parses_bench_config_flag() -> None:
     )
     assert "    --bench-config)" in text
     assert 'CONFIG_RC="${LC_BENCH_CONFIG:-tests/config/benchmark-rc.yaml}"' in text
+
+
+def test_labop_maestro_target_sudoers_example_lists_check_and_apply() -> None:
+    """Narrow sudoers example covers Maestro --check and --apply for NFS and CIFS."""
+    root = _project_root()
+    path = root / "docs/private.example/homelab/labop-maestro-target-sudoers.example"
+    assert path.is_file(), "missing labop-maestro-target-sudoers.example"
+    text = path.read_text(encoding="utf-8", errors="replace")
+    assert "LABOP_NFS_SERVER" in text
+    assert "LABOP_SMB_SERVER" in text
+    assert "--check" in text
+    assert "--apply" in text
+    assert "/usr/bin/bash" in text
 
 
 def test_maestro_benchmark_ab_has_sleep_before_collect() -> None:
@@ -374,6 +410,57 @@ def test_lab_completao_host_smoke_writes_baremetal_scan_sentinel() -> None:
     assert "LC_BENCH_ROOT" in text
 
 
+def test_invoke_api_post_status_uses_numeric_status_not_locale_string() -> None:
+    """Anti-regression #818: redirect detection must use numeric status code, not locale-dependent message text.
+
+    PowerShell throws on 3xx when -MaximumRedirection 0; the exception message is
+    locale-translated on non-English systems (e.g. pt_BR), so matching the word
+    'redirect' in the message text is unreliable.  The fix reads
+    $_.Exception.Response.StatusCode (an integer) instead.
+    """
+    root = _project_root()
+    text = (root / "scripts" / "maestro" / "Handle-LicensingMatrix.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "[Rr]edirect" not in text, (
+        "Invoke-ApiPostStatus must not match the word 'redirect' in the exception message "
+        "(locale-dependent); check numeric StatusCode instead"
+    )
+    assert ".StatusCode -ge 300" in text, (
+        "Invoke-ApiPostStatus must check numeric 3xx lower bound (.StatusCode -ge 300)"
+    )
+    assert ".StatusCode -lt 400" in text, (
+        "Invoke-ApiPostStatus must check numeric 3xx upper bound (.StatusCode -lt 400)"
+    )
+
+
+def test_stop_matrix_api_process_is_cross_platform() -> None:
+    """Anti-regression #820: Stop-MatrixApiProcess must not use Windows-only taskkill
+    or unconditional Get-NetTCPConnection; cross-platform kill and port poll required.
+    """
+    root = _project_root()
+    text = (root / "scripts" / "maestro" / "Handle-LicensingMatrix.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "& taskkill" not in text, (
+        "Stop-MatrixApiProcess must not invoke taskkill (Windows-only); use proc.Kill or Stop-Process"
+    )
+    # Get-NetTCPConnection must be guarded by $IsWindows when present
+    if "Get-NetTCPConnection" in text:
+        assert "$IsWindows" in text, (
+            "Get-NetTCPConnection is Windows-only and must be inside an 'if ($IsWindows)' block"
+        )
+    # Cross-platform port poll must use .NET IPGlobalProperties
+    assert "GetActiveTcpListeners" in text, (
+        "Port-free poll must use .NET GetActiveTcpListeners() which works cross-platform "
+        "instead of Windows-only Get-NetTCPConnection"
+    )
+    # Cross-platform process kill must be present
+    assert "proc.Kill" in text or "Stop-Process" in text, (
+        "Stop-MatrixApiProcess must use proc.Kill($true) or Stop-Process for cross-platform kill"
+    )
+
+
 def test_maestro_no_retired_workstation_codename_token() -> None:
     """Maestro *.ps1 must not embed the retired workstation codename token (guard: test_public_tree_no_*codename*)."""
     root = _project_root()
@@ -386,4 +473,160 @@ def test_maestro_no_retired_workstation_codename_token() -> None:
             hits.append(str(script.relative_to(root)))
     assert not hits, (
         f"Remove retired workstation codename token from: {', '.join(hits)}"
+    )
+
+
+def test_start_matrix_api_process_guards_window_style_linux() -> None:
+    """Anti-regression #827: -WindowStyle Hidden must be guarded by $IsWindows.
+
+    On Linux/macOS, Start-Process throws a ParameterBindingException for -WindowStyle
+    Hidden — it does NOT silently ignore the parameter as an older comment claimed.
+    The fix conditionally adds WindowStyle only on Windows via a splatted hashtable.
+    """
+    root = _project_root()
+    text = (root / "scripts" / "maestro" / "Handle-LicensingMatrix.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    # -WindowStyle must either be absent or guarded by $IsWindows
+    if "-WindowStyle" in text:
+        assert "$IsWindows" in text, (
+            "Start-MatrixApiProcess uses -WindowStyle Hidden without an $IsWindows guard; "
+            "on Linux Start-Process throws ParameterBindingException, killing the first API spawn"
+        )
+    # The misleading 'silently ignores' comment must be corrected
+    assert "silently ignores" not in text, (
+        "Handle-LicensingMatrix.ps1 still carries the incorrect 'silently ignores' comment "
+        "about -WindowStyle Hidden on Linux — the parameter THROWS, not ignores"
+    )
+
+
+def test_start_matrix_api_process_propagates_spawn_failure() -> None:
+    """Anti-regression #827: Start-Process must be wrapped in try/catch to propagate exit != 0.
+
+    Previously Start-Process exceptions were unhandled, causing the function to return null
+    and the caller to silently continue (masking spawn failures as exit 0).
+    """
+    root = _project_root()
+    text = (root / "scripts" / "maestro" / "Handle-LicensingMatrix.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    # Must have try/catch guarding Start-Process
+    assert "try {" in text or "try{" in text, (
+        "Start-MatrixApiProcess must wrap Start-Process in try/catch to propagate spawn failures"
+    )
+    assert "throw" in text, (
+        "Start-MatrixApiProcess must re-throw or throw a descriptive error on spawn failure"
+    )
+
+
+# ---------------------------------------------------------------------------
+# #830 / #831 — handler quote/escape safety + sentinel pattern
+# ---------------------------------------------------------------------------
+
+_SMOKE_HANDLER_PERSONAS = [
+    "baremetal",
+    "docker",
+    "dockerswarm",
+    "lxd",
+    "microk8s",
+    "podman",
+    "target_cifs",
+    "target_nfs",
+    "target_sshfs",
+]
+
+
+def _handler_text(root: Path, persona: str) -> str:
+    path = root / "scripts" / "maestro" / "handlers" / f"Handle-{persona}.ps1"
+    return path.read_text(encoding="utf-8", errors="replace")
+
+
+def test_smoke_handlers_use_base64_payload_for_tmux() -> None:
+    """Anti-regression #830: handler payloads must be base64-encoded before tmux send-keys.
+
+    Embedding raw shell commands in tmux send-keys single-quoted args fails when
+    Node.path, BenchRunId, or Ref contain single quotes or shell metacharacters.
+    The fix encodes the payload as base64 so the tmux arg is always safe ASCII.
+    """
+    root = _project_root()
+    # Handlers that use tmux send-keys to inject a bash payload
+    tmux_handlers = [
+        "baremetal",
+        "docker",
+        "dockerswarm",
+        "lxd",
+        "microk8s",
+        "podman",
+        "target_cifs",
+        "target_nfs",
+        "target_sshfs",
+    ]
+    for persona in tmux_handlers:
+        text = _handler_text(root, persona)
+        assert "base64" in text, (
+            f"Handle-{persona}.ps1 must base64-encode the tmux payload (#830); "
+            "raw single-quoted payloads break on paths or values with special chars"
+        )
+        assert "ToBase64String" in text or "payloadB64" in text, (
+            f"Handle-{persona}.ps1 must use [Convert]::ToBase64String or equivalent (#830)"
+        )
+
+
+def test_smoke_handlers_have_ref_allowlist() -> None:
+    """Anti-regression #830: handlers that accept -Ref must validate it against an allowlist.
+
+    An unvalidated -Ref value could inject shell metacharacters into the payload.
+    """
+    root = _project_root()
+    # All persona handlers accept -Ref; those that inject it into shell commands must validate
+    inject_ref_handlers = [
+        "baremetal",
+        "docker",
+        "dockerswarm",
+        "lxd",
+        "microk8s",
+        "podman",
+    ]
+    for persona in inject_ref_handlers:
+        text = _handler_text(root, persona)
+        assert "safeRefPattern" in text or "allowlist" in text.lower(), (
+            f"Handle-{persona}.ps1 must validate -Ref against an allowlist (#830); "
+            "unvalidated Ref values can inject shell metacharacters into the payload"
+        )
+
+
+def test_smoke_handlers_write_sentinel_file() -> None:
+    """Anti-regression #831: each smoke handler must write a sentinel file with the exit code.
+
+    Without a sentinel, Maestro cannot machine-verify whether the smoke actually passed
+    or failed (tmux inject exits 0 regardless of smoke outcome).
+    """
+    root = _project_root()
+    for persona in _SMOKE_HANDLER_PERSONAS:
+        text = _handler_text(root, persona)
+        assert "_sentinel.txt" in text, (
+            f"Handle-{persona}.ps1 must write a sentinel file (e.g. {persona}_sentinel.txt) "
+            "with the smoke exit code for real pass/fail aggregation (#831)"
+        )
+        # Sentinel must capture the actual exit code
+        assert "_rc" in text or "sentinel" in text.lower(), (
+            f"Handle-{persona}.ps1 must record the smoke exit code in the sentinel (#831)"
+        )
+
+
+def test_wait_handler_sentinel_exists_and_parses(warm_pwsh) -> None:
+    """Anti-regression #831: Wait-HandlerSentinel.ps1 must exist and parse cleanly."""
+    root = _project_root()
+    sentinel_script = root / "scripts" / "maestro" / "Wait-HandlerSentinel.ps1"
+    assert sentinel_script.exists(), (
+        "scripts/maestro/Wait-HandlerSentinel.ps1 must exist to generalize "
+        "the baremetal sentinel pattern to all handler personas (#831)"
+    )
+    text = sentinel_script.read_text(encoding="utf-8", errors="replace")
+    assert "Personas" in text, (
+        "Wait-HandlerSentinel.ps1 must accept a -Personas parameter listing which "
+        "handlers to wait for (#831)"
+    )
+    assert "_sentinel.txt" in text, (
+        "Wait-HandlerSentinel.ps1 must poll for *_sentinel.txt files written by handlers (#831)"
     )

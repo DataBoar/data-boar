@@ -26,6 +26,8 @@ Em climas **quentes e úmidos** (ex. **Niterói**), o **ar-condicionado** entra 
 
 ## Resumo
 
+**5º host registrado (Alpine Linux / musl — eMachines E527):** Celeron 900, 3.8 GB RAM, consumo estimado ~15 W idle / ~25 W leve / ~45 W pesado. Adicionado ao inventário do lab via [#821](https://github.com/FabioLeitao/data-boar/issues/821); tabela §3 do EN já atualizada. Incluir este host no cálculo de UPS e disjuntor da sala.
+
 **Portátil primary:** o EN usa uma **classe** ilustrativa (notebook **14"** ~2012, **≤8 GB** DDR3, Ubuntu/Zorin); **marca/modelo/hostname** só em **`docs/private/homelab/`** — ver [PRIVATE_OPERATOR_NOTES.pt_BR.md](../PRIVATE_OPERATOR_NOTES.pt_BR.md). Adaptador **65/90 W** de teto; **§10.1** no EN.
 
 1. **Preencha a tabela** (§3 do EN) com modelos, CPU, RAM, PSU e consumo (idle/leve/pesado) de cada máquina.

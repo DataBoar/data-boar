@@ -17,9 +17,11 @@ jobs:
     name: Semgrep (OSS, Python)
     runs-on: ubuntu-latest
     container:
-      image: semgrep/semgrep
+      image: semgrep/semgrep:1.117.0@sha256:a256468ff217498bfde2f44bd74dd2ffd0460bd08fabbbec009dbdeb4870f4dc
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
 
       # p/python: community Python rules. One rule is excluded — see docs/plans/completed/PLAN_SEMGREP_CI.md
       # (sqlalchemy.text FP where identifiers are validated; CodeQL + tests cover injection).
@@ -28,3 +30,16 @@ jobs:
           semgrep scan --config p/python --metrics=off
           --exclude-rule python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
           --error .
+
+  slack-notify-on-failure:
+    name: Slack CI failure notify
+    if: ${{ always() && contains(needs.*.result, 'failure') }}
+    needs: [semgrep]
+    uses: ./.github/workflows/slack-ci-failure-notify.yml
+    with:
+      run_name: Semgrep
+      head_branch: ${{ github.head_ref || github.ref_name }}
+      event: ${{ github.event_name }}
+      html_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    secrets:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

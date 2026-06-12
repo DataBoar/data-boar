@@ -11,7 +11,7 @@ ADR_DIR = REPO / "docs" / "adr"
 INVENTORY = ADR_DIR / "INVENTORY.txt"
 
 ROW_RE = re.compile(
-    r"^(\d{4}) \| (\w+) \| ([0-9A-F]{64}) \| (ADR-\d{4}-.+\.md) \| ",
+    r"^(\d{4}) \| (.+?) \| ([0-9A-F]{64}) \| (ADR-\d{4}-.+\.md) \| ",
     re.MULTILINE,
 )
 
@@ -20,6 +20,28 @@ def _file_sha256(path: Path) -> str:
     raw = path.read_text(encoding="utf-8")
     norm = raw.replace("\r\n", "\n").replace("\r", "\n")
     return hashlib.sha256(norm.encode("utf-8")).hexdigest().upper()
+
+
+def test_inventory_row_regex_accepts_compound_status() -> None:
+    """STATUS column may be multi-word (ADR 0045: Duplicate of ADR-NNNN)."""
+    hash_hex = "A" * 64
+    line = (
+        f"0044 | Duplicate of ADR-0044 | {hash_hex} | "
+        "ADR-0044-dependabot-uv-ecosystem-for-pyproject-lock-closure.md | title"
+    )
+    m = ROW_RE.match(line)
+    assert m is not None
+    assert m.group(2) == "Duplicate of ADR-0044"
+
+
+def test_inventory_row_regex_accepts_obsolete_and_quarantined() -> None:
+    """Single-word UMADR statuses (Obsolete, Quarantined) parse in INVENTORY rows."""
+    hash_hex = "B" * 64
+    for num, status in (("0068", "Obsolete"), ("0045", "Quarantined")):
+        line = f"{num} | {status} | {hash_hex} | ADR-{num}-example-title.md | example"
+        m = ROW_RE.match(line)
+        assert m is not None, status
+        assert m.group(2) == status
 
 
 def test_inventory_lists_every_adr_file():

@@ -1,6 +1,6 @@
 [project]
 name = "data-boar"
-version = "1.7.4-rc"
+version = "1.7.4"
 description = "Data Boar — compliance-aware discovery and mapping of personal and sensitive data across databases, files, and APIs (LGPD, GDPR, CCPA, and configurable frameworks)."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -15,10 +15,10 @@ dependencies = [
     # See: https://pypi.org/project/extract-msg/0.55.0/ (requires_dist).
     "beautifulsoup4>=4.13.5,<4.14",
     "blinker>=1.9.0",
-    "certifi>=2026.2.25",
+    "certifi>=2026.5.20",
     "cffi>=2.0.0 ; platform_python_implementation != 'PyPy'",
     "charset-normalizer>=3.4.4",
-    "click>=8.3.1",
+    "click>=8.4.1",
     "colorama>=0.4.6 ; sys_platform == 'win32'",
     "contourpy>=1.3.3",
     "cryptography>=46.0.5",
@@ -29,15 +29,15 @@ dependencies = [
     "ebcdic>=1.1.1,<2",
     "et-xmlfile>=2.0.0",
     "extract-msg>=0.55.0",
-    "fastapi>=0.136.0",
+    "fastapi>=0.136.3",
     "flask>=3.1.3",
     "flask-sqlalchemy>=3.1.1",
     "fonttools>=4.63.0",
-    "greenlet>=3.3.0 ; platform_machine == 'AMD64' or platform_machine == 'WIN32' or platform_machine == 'aarch64' or platform_machine == 'amd64' or platform_machine == 'ppc64le' or platform_machine == 'win32' or platform_machine == 'x86_64'",
+    "greenlet>=3.5.1 ; platform_machine == 'AMD64' or platform_machine == 'WIN32' or platform_machine == 'aarch64' or platform_machine == 'amd64' or platform_machine == 'ppc64le' or platform_machine == 'win32' or platform_machine == 'x86_64'",
     "h11>=0.16.0",
     "httpcore>=1.0.9",
     "httpx>=0.28.1",
-    "idna>=3.15",
+    "idna>=3.17",
     "itsdangerous>=2.2.0",
     "jinja2>=3.1.6",
     "joblib>=1.5.3",
@@ -47,10 +47,10 @@ dependencies = [
     "matplotlib>=3.10.8",
     "mysql>=0.0.3",
     "mysqlclient>=2.2.7",
-    "numpy>=2.4.5",
+    "numpy>=2.4.6",
     "odfpy>=1.4.1",
     "openpyxl>=3.1.5",
-    "oracledb>=3.4.1",
+    "oracledb>=4.0.1",
     "packaging>=26.1",
     "pandas>=3.0.3",
     "pillow>=12.2.0",
@@ -59,15 +59,15 @@ dependencies = [
     "pydantic>=2.13.2",
     "pydantic-core>=2.46.2",
     "pygments>=2.20.0",
-    "pymysql>=1.1.2",
+    "pymysql>=1.2.0",
     "pyodbc>=5.3.0",
     "pyparsing>=3.3.2",
-    "pypdf>=6.11.0",
+    "pypdf>=6.12.2",
     "pyjwt>=2.12.0",
     "python-dateutil>=2.9.0.post0",
     "python-docx>=1.2.0",
     "python-dotenv>=1.2.1",
-    "python-multipart>=0.0.28",
+    "python-multipart>=0.0.29",
     "pyyaml>=6.0.3",
     "regex>=2026.5.9",
     "reportlab>=4.5.1",
@@ -75,13 +75,13 @@ dependencies = [
     "scikit-learn>=1.8.0",
     "scipy>=1.17.0",
     "seaborn>=0.13.2",
-    "sqlalchemy>=2.0.48",
-    "starlette==1.0.1",
+    "sqlalchemy>=2.0.50",
+    "starlette==1.2.0",
     "threadpoolctl>=3.6.0",
     "typing-extensions>=4.15.0",
     "typing-inspection>=0.4.2",
     "urllib3>=2.6.3",
-    "uvicorn>=0.47.0",
+    "uvicorn>=0.48.0",
     "werkzeug>=3.1.6",
     "webauthn>=2.2.0",
 ]
@@ -98,12 +98,12 @@ data-boar-report = "cli.reporter:main"
 
 [project.optional-dependencies]
 nosql = ["pymongo>=4.0", "redis>=5.0"]
-bigdata = ["snowflake-connector-python>=4.5.0"]
+bigdata = ["snowflake-connector-python>=4.6.0"]
 shares = ["smbprotocol>=1.2.0", "webdavclient3>=0.14.0", "requests_ntlm>=1.2.0"]
 # Scan inside .7z archives (ZIP/tar/tar.gz etc. use stdlib). See docs/plans/PLAN_COMPRESSED_FILES.md.
 compressed = ["py7zr>=0.20.0"]
 # Deep-learning sensitivity: sentence embeddings + classifier on your training terms (see docs/SENSITIVITY_DETECTION.md)
-dl = ["sentence-transformers>=5.5.0"]
+dl = ["sentence-transformers>=5.5.1"]
 # Optional typo-tolerant column name vs sensitive terms (see sensitivity_detection.fuzzy_column_match)
 detection-fuzzy = ["rapidfuzz>=3.9.0"]
 # Rich media: ID3/Vorbis/FLAC tags (mutagen), OCR wrapper (pytesseract; install system tesseract-ocr),
@@ -118,7 +118,7 @@ dataformats = ["pyarrow>=14.0.0", "fastavro>=1.9.0", "dbfread>=2.0.7"]
 # Legacy ".doc" samples: mammoth reads ZIP-based OOXML; binary Word 97-2003 often yields empty content (see docs/TROUBLESHOOTING.md).
 legacy-doc = ["mammoth>=1.6.0"]
 # GRC executive JSON dashboard (Streamlit + Plotly). Run: ``streamlit run app/dashboard.py``.
-grc-dashboard = ["streamlit>=1.40.0", "plotly>=5.24.0"]
+grc-dashboard = ["streamlit>=1.58.0", "plotly>=5.24.0"]
 
 [tool.pytest.ini_options]
 # Fail on any warning (DeprecationWarning, ResourceWarning, etc.) so the suite stays clean
@@ -234,7 +234,8 @@ dev = [
     "chardet>=5.1,<6.0",
     # CycloneDX SBOM from uv-exported requirements (ADR 0003); same CLI as CI `sbom.yml`.
     "cyclonedx-bom>=7.0.0",
-    "hypothesis>=6.152.7",
+    "hypothesis>=6.155.0",
+    "httpx2",
     "iniconfig>=2.3.0",
     "markdown>=3.10.2",
     "mypy>=2.1.0",
@@ -242,6 +243,6 @@ dev = [
     "pre-commit>=4.0.0",
     "pytest>=9.0.3",
     "rapidfuzz>=3.9.0",
-    "ruff>=0.15.13",
-    "types-pyyaml>=6.0.12.20250915",
+    "ruff>=0.15.15",
+    "types-pyyaml>=6.0.12.20260518",
 ]
