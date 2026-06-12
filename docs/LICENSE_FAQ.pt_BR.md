@@ -17,6 +17,12 @@ Uma **estrutura dupla em um único repositório público e auditável** (o padr�
 
 Tudo no **core**, para qualquer propósito que a BSD 3-Clause permita — incluindo **uso interno em organização comercial** sem custo (veja [Termos de Uso §2](../TERMS_OF_USE.pt_BR.md)). Varrer sistemas que você está autorizado a varrer, montar relatórios para o seu próprio programa de conformidade, modificar e estender o código: tudo livre.
 
+Explicitamente incluído no "grátis":
+
+- **Self-host** — você roda na sua própria infraestrutura; sem dependência de serviço hospedado.
+- **Air-gapped** — o Data Boar funciona totalmente offline; nenhum phone-home é necessário para varrer.
+- **Sem telemetria obrigatória** — o scanner não exige enviar seus dados, métricas ou achados para lugar nenhum. Seu dado fica onde está.
+
 ## 3. O que exige assinatura paga?
 
 - **Entregar resultados de varredura a terceiros como serviço pago** (consultoria, auditoria, MSSP) — Pro ou superior (veja [Termos de Uso §4](../TERMS_OF_USE.pt_BR.md)).
@@ -26,6 +32,8 @@ Tudo no **core**, para qualquer propósito que a BSD 3-Clause permita — inclui
 ## 4. O core vai fechar algum dia?
 
 **Não — por definição.** O core open-source (scanner, detectores, interface de plugin, superfícies base, material de pesquisa) **nunca fecha**. O modelo comercial financia o projeto justamente para o core continuar aberto e auditável.
+
+O argumento-chave: **uma ferramenta que lê TODO o dado do cliente TEM que ser auditável**. Ninguém deve confiar numa **caixa-preta** de privacidade com acesso total de leitura aos seus repositórios mais sensíveis — código aberto é a única resposta honesta para "o que exatamente esse scanner faz com o meu dado?". O core aberto também é o **motor de adoção** do projeto: DPOs, pesquisadores e engenheiros conseguem avaliar, auditar e adotar sem fricção, e esse funil vale mais que qualquer fosso de código fechado.
 
 ## 5. Posso forkar o Data Boar?
 
@@ -45,13 +53,15 @@ Sim. O core BSD 3-Clause é forkável nos termos da licença. Duas fronteiras:
 
 Um ator determinado consegue alterar qualquer coisa localmente; o ponto é que **builds adulterados ficam evidentes**, sem suporte e comercialmente inutilizáveis em escala.
 
+Para quem compra, a leitura prática: **clientes que tratam dado sensível devem rodar o build OFICIAL assinado e suportado**. Confiança, verificação de integridade e suporte são parte do que a assinatura entrega — um build alterado ou não oficial abre mão exatamente das garantias que uma ferramenta de privacidade existe para dar.
+
 ## 7. Quais são as camadas?
 
 Community (grátis) → Pro → Pro+ → Enterprise, mais a família **Partner** customizada. **Tier = capacidade, claim = quantidade.** Escada completa, tabela de capacidades e claims de workers/deployments: [SUBSCRIPTION_TIERS.pt_BR.md](SUBSCRIPTION_TIERS.pt_BR.md).
 
 ## 8. Posso escrever e distribuir plugins?
 
-A **interface de plugin é core (BSD-3)** — escrever plugins contra ela é livre. A **arquitetura de plugin/partner** para distribuição comercial (catálogos de parceiros, empacotamento white-label) é capacidade **Enterprise/Partner**. Plugins open-source independentes continuam sendo seus, sob a licença que você escolher.
+A **interface de plugin é core (BSD-3)** — escrever plugins contra ela é livre. Plugins de terceiros são **declarativos por padrão**: eles descrevem padrões e regras, e o validador **rejeita patterns inseguros** antes de rodarem. Plugins que **executam código arbitrário** são outra superfície de risco — esse caminho é **Enterprise/Partner**, sob acordo. A **arquitetura de plugin/partner** para distribuição comercial (catálogos de parceiros, empacotamento white-label) também é capacidade **Enterprise/Partner**. Plugins open-source independentes continuam sendo seus, sob a licença que você escolher.
 
 ## 9. Posso usar o Data Boar em trabalho acadêmico?
 
