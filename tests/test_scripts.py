@@ -56,7 +56,7 @@ def test_prep_audit_sh_has_shebang_and_exit_code():
 # --- PowerShell: commit-or-pr.ps1 syntax (Parser::ParseFile) ---
 
 
-def test_commit_or_pr_ps1_syntax():
+def test_commit_or_pr_ps1_syntax(warm_pwsh):
     """scripts/commit-or-pr.ps1 has valid PowerShell syntax (parse-only, no execution)."""
     root = _project_root()
     script = root / "scripts" / "commit-or-pr.ps1"
@@ -69,9 +69,10 @@ def test_commit_or_pr_ps1_syntax():
         "$null = [System.Management.Automation.Language.Parser]::ParseFile($path, [ref]$null, [ref]$errors); "
         "exit ([int]($errors -and $errors.Count -gt 0))"
     )
-    # CI runners occasionally cold-start pwsh slowly; try both shells and allow
-    # a bit more time than a typical local parse.
-    timeout_s = 30
+    # #860: the FIRST pwsh start after boot can exceed 30s under load (JIT /
+    # assembly cache cold on Linux). The session-scoped ``warm_pwsh`` fixture
+    # absorbs that once; 60s here is belt-and-suspenders for slow CI runners.
+    timeout_s = 60
     errors: list[str] = []
     for pw in ("pwsh", "powershell"):
         try:
@@ -130,7 +131,9 @@ def _parse_powershell_script(script_path: Path, root: Path) -> bool:
                 cwd=str(root),
                 capture_output=True,
                 text=True,
-                timeout=30,
+                # #860: 60s absorbs pwsh cold-start on slow runners; callers in
+                # parse loops should also request the ``warm_pwsh`` fixture.
+                timeout=60,
             )
         except FileNotFoundError:
             continue
