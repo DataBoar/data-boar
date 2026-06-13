@@ -5,6 +5,12 @@ name: Zizmor
 
 permissions:
   contents: read
+  # zizmor-action's advanced-security upload (github/codeql-action/upload-sarif)
+  # posts a SARIF to the Security tab even with zero findings. On push to a
+  # branch that needs security-events: write (pull_request runs are allowed
+  # without it). Mirrors codeql.yml so the enforced push run is deterministic.
+  security-events: write
+  actions: read
 
 'on':
   pull_request:
