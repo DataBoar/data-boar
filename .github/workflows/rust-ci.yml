@@ -48,7 +48,7 @@ jobs:
       # PyO3 needs a Python interpreter visible at link time; setup-python
       # exports PYO3_PYTHON-compatible env via PATH so cargo builds find it.
       - name: Set up Python (for PyO3 link)
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: "3.12"
 
