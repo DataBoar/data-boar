@@ -1,0 +1,80 @@
+# docs/CLAIMS.yml — manifesto de claims HEADLINE do Data Boar.
+# SÓ claims que a narrativa pública faz (README/pitch/tier table). NÃO toda frase de doc.
+#
+# Cada claim headline carrega `backed_by` verificável. tests/test_claims_consistency.py
+# assere que o lastro EXISTE no checkout (offline, determinístico). Claim sem lastro → CI vermelho.
+#
+# Tipos de backed_by e como o teste checa:
+#   file: / adr: / doc: / test:  → arquivo (ou diretório) existe
+#   symbol:                       → "arquivo::Simbolo" existe (parse leve)
+#   tier_feature:                 → chave existe no FEATURE_TIER_MAP
+#   registry:                     → connector registrado (register("x", ...))
+#   issue: / note: / benchmark:   → INFORMATIVO (não falha CI; rastreabilidade)
+#
+# ⚠️ Claims de PERFORMANCE/quantidade (ex.: "11–13x"): o teste só confirma que o CÓDIGO
+#    existe — o NÚMERO exige benchmark/perf-test, não presença de símbolo. Marcar com note:.
+version: 1
+claims:
+  - id: connector-redis
+    text: "Escaneia Redis (NoSQL self-hosted) por nomes/tipos de chave sensíveis, sem armazenar valores."
+    tier: community
+    backed_by:
+      - symbol: "connectors/redis_connector.py::RedisConnector"
+      - registry: "redis"                  # register("redis", ...) em connectors/redis_connector.py
+      - tier_feature: connector_redis       # chave no FEATURE_TIER_MAP
+      - test: tests/test_connector_tier_gating.py
+
+  - id: connector-tier-failclosed
+    text: "Connector sem degrau de tier explícito é BLOQUEADO (fail-closed), nunca silenciosamente Community."
+    tier: enforcement
+    backed_by:
+      - file: core/licensing/tier_features.py
+      - symbol: "core/connector_registry.py::require_connector_allowed"
+      - test: tests/test_connector_tier_gating.py
+      - issue: 854
+
+  - id: rust-prefilter-speedup
+    text: "Pré-filtro Rust (Pro) acelera o hotspot ~11–13x vs Python, com paridade de findings."
+    tier: pro
+    backed_by:
+      - symbol: "pro/prefilter.py::ProPreFilter"
+      - note: "PERF claim — código verificável; o número exige benchmark/perf-test, não só presença."
+
+  - id: sbom-generation
+    text: "Gera SBOM (CycloneDX) para visibilidade de supply-chain / IR."
+    tier: community
+    backed_by:
+      - adr: docs/adr/ADR-0003-sbom-roadmap-cyclonedx-then-syft.md
+      - file: .github/workflows/sbom.yml
+      - tier_feature: sbom_export
+
+  - id: pii-detectors-br
+    text: "Detecta PII brasileira: CPF, CNPJ (inclui alfanumérico), RG, e-mail, telefone, endereço."
+    tier: community
+    backed_by:
+      - tier_feature: detector_cpf
+      - tier_feature: detector_cnpj
+      - tier_feature: detector_email
+      - test: tests/test_brazilian_cpf.py
+      - test: tests/test_cnpj_formats.py
+
+  - id: reports-xlsx-html
+    text: "Relatórios em XLSX e HTML no open-core (Community)."
+    tier: community
+    backed_by:
+      - tier_feature: report_xlsx
+      - tier_feature: report_html
+
+  - id: compressed-ingestion
+    text: "Ingere arquivos comprimidos (zip, 7z, tar, tar.gz, tar.bz2) quando habilitado."
+    tier: community
+    backed_by:
+      - tier_feature: compressed_files
+      - test: tests/test_archives_helpers.py
+
+  - id: read-only-doctrine
+    text: "Read-only por definição; coleta metadata, não extrai dados crus (least-privilege)."
+    tier: doctrine
+    backed_by:
+      - doc: docs/SECURITY.md
+      - note: "Doutrina — ver também o modelo de trust/integridade."
