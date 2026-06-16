@@ -555,14 +555,14 @@ A extensão é **opcional em tempo de execução**: quando o `boar_fast_filter` 
   ```bash
   # Na raiz do projeto: resolver e bloquear, depois exportar para pip
   uv lock
-  uv export --no-emit-package pyproject.toml -o requirements.txt
+  uv export --frozen --no-emit-project -o requirements.txt
   ```
 
-  Faça commit de **pyproject.toml**, **uv.lock** e **requirements.txt**. Assim as instalações permanecem reproduzíveis e alinhadas; `pip install -r requirements.txt` equivale ao `uv sync`.
+  Faça commit de **pyproject.toml**, **uv.lock** e **requirements.txt**. O export usa **`--no-emit-project`** para o arquivo ficar **instalável por pip** em clientes sem uv: `pip install -r requirements.txt` instala o **conjunto de dependências fixado e com hashes** (ele **não** instala o próprio Data Boar — adicione o projeto com `pip install .` a partir do repositório, ou rode direto do código-fonte). Exports antigos emitiam uma linha editável `-e .` junto com os hashes, o que o pip rejeita em uma passada (`--require-hashes`); o `--no-emit-project` remove essa linha.
 
 - **Postura de cadeia de suprimentos:** O **`uv.lock`** fixa versões (e *hashes*) para instalações reproduzíveis; ele **não substitui** **`pip-audit`**, Dependabot nem revisão humana para **CVEs conhecidos** e abusos na cadeia. Veja **[SECURITY.pt_BR.md](../../SECURITY.pt_BR.md)** (seção *Lockfile e mitigação da cadeia de suprimentos*).
 
-- **Dependabot / automação:** Se um PR (ex.: do Dependabot) sugerir atualizar só o `requirements.txt` ou o `uv.lock`, aplique a alteração na **fonte da verdade** primeiro: atualize a versão mínima correspondente no **`pyproject.toml`**, depois execute `uv lock` e `uv export --no-emit-package pyproject.toml -o requirements.txt` e faça commit dos três arquivos. Não faça merge de uma atualização de dependência que edite apenas `requirements.txt` ou `uv.lock`.
+- **Dependabot / automação:** Se um PR (ex.: do Dependabot) sugerir atualizar só o `requirements.txt` ou o `uv.lock`, aplique a alteração na **fonte da verdade** primeiro: atualize a versão mínima correspondente no **`pyproject.toml`**, depois execute `uv lock` e `uv export --frozen --no-emit-project -o requirements.txt` e faça commit dos três arquivos. Não faça merge de uma atualização de dependência que edite apenas `requirements.txt` ou `uv.lock`.
 
 - **Verificar CVEs conhecidos:** Execute `uv pip audit` (ou `pip audit` se disponível) antes da implantação; corrija ou fixe pacotes vulneráveis.
 - Veja também **Segurança e conformidade** abaixo.

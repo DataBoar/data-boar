@@ -575,14 +575,14 @@ abi3 wheels for constrained hosts is tracked in **#782**.
   ```bash
   # From project root: resolve and lock, then export for pip
   uv lock
-  uv export --no-emit-package pyproject.toml -o requirements.txt
+  uv export --frozen --no-emit-project -o requirements.txt
   ```
 
-  Commit **pyproject.toml**, **uv.lock**, and **requirements.txt**. This keeps installs reproducible and aligned so `pip install -r requirements.txt` matches `uv sync`.
+  Commit **pyproject.toml**, **uv.lock**, and **requirements.txt**. The export uses **`--no-emit-project`** so the file is **pip-installable** for uv-less clients: `pip install -r requirements.txt` installs the **pinned, hashed dependency set** (it does **not** install Data Boar itself — add the project with `pip install .` from the repo, or run from source). Earlier exports emitted an editable `-e .` line alongside hashes, which pip rejects in one pass (`--require-hashes`); `--no-emit-project` removes it.
 
 - **Supply-chain posture:** **`uv.lock`** pins versions (and hashes) for reproducible installs; it **does not** replace **`pip-audit`**, Dependabot, or maintainer review for **known CVEs** and supply-chain abuse. See **[SECURITY.md](../SECURITY.md)** (*Lockfile and supply-chain mitigation*).
 
-- **Dependabot / automation:** If a PR (e.g. from Dependabot) suggests updating only `requirements.txt` or `uv.lock`, apply the change to the **source of truth** first: update the corresponding minimum version in **`pyproject.toml`**, then run `uv lock` and `uv export --no-emit-package pyproject.toml -o requirements.txt` and commit all three files. Do not merge a dependency update that only edits `requirements.txt` or `uv.lock`.
+- **Dependabot / automation:** If a PR (e.g. from Dependabot) suggests updating only `requirements.txt` or `uv.lock`, apply the change to the **source of truth** first: update the corresponding minimum version in **`pyproject.toml`**, then run `uv lock` and `uv export --frozen --no-emit-project -o requirements.txt` and commit all three files. Do not merge a dependency update that only edits `requirements.txt` or `uv.lock`.
 
 - **Check for known CVEs:** Run `uv pip audit` (or `pip audit` if available) before deployment; fix or pin any vulnerable packages.
 - See also **Security and compliance** below.
