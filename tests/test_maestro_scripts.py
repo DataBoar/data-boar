@@ -630,3 +630,53 @@ def test_wait_handler_sentinel_exists_and_parses(warm_pwsh) -> None:
     assert "_sentinel.txt" in text, (
         "Wait-HandlerSentinel.ps1 must poll for *_sentinel.txt files written by handlers (#831)"
     )
+
+
+def test_build_container_artefact_degrades_without_hub() -> None:
+    """#888: Build-ContainerArtefact must detect podman/docker, build+save a local
+    tar (never assume Docker Hub), and emit an actionable error when no engine and
+    no cached artefact are available.
+    """
+    root = _project_root()
+    text = (root / "scripts" / "maestro" / "Build-ContainerArtefact.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "podman" in text and "docker" in text, (
+        "Build-ContainerArtefact must detect both podman and docker engines (#888)."
+    )
+    assert re.search(r"\$engineCmd\s+save|save\s+\$fullImage", text), (
+        "Build-ContainerArtefact must `save` the image to a local tar (offline/-rc, "
+        "no Docker Hub) (#888)."
+    )
+    # Never pull/push from a registry as the primary path (build is from the working tree).
+    assert "docker pull" not in text and "podman pull" not in text, (
+        "Build-ContainerArtefact must not assume a registry/Hub pull (#888)."
+    )
+    assert "exit 9" in text, (
+        "Build-ContainerArtefact must exit with an actionable code when no engine and "
+        "no local artefact exist (#888)."
+    )
+
+
+def test_sync_container_artefact_scp_fallback_is_actionable() -> None:
+    """#888: Sync-ContainerArtefact must scp the local tar and `load` it remotely,
+    and surface failures (missing artefact / scp failure) as actionable errors
+    instead of silently swallowing them.
+    """
+    root = _project_root()
+    text = (root / "scripts" / "maestro" / "Sync-ContainerArtefact.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "scp " in text, (
+        "Sync-ContainerArtefact must scp the artefact to the node (#888)."
+    )
+    assert re.search(r"(podman|docker)\s+load|load -i", text), (
+        "Sync-ContainerArtefact must `load` the tar on the remote engine (#888)."
+    )
+    assert "Test-Path -LiteralPath $tarPath" in text, (
+        "Sync-ContainerArtefact must guard against a missing local artefact before scp (#888)."
+    )
+    # The scp failure path must be an error (actionable), not a swallowed warning.
+    assert re.search(r"scp exit \$LASTEXITCODE", text) and "Write-Error" in text, (
+        "Sync-ContainerArtefact must report scp failure as an actionable error (#888)."
+    )
