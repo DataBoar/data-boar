@@ -5,6 +5,12 @@ name: Zizmor
 
 permissions:
   contents: read
+  # zizmor-action's advanced-security upload (github/codeql-action/upload-sarif)
+  # posts a SARIF to the Security tab even with zero findings. On push to a
+  # branch that needs security-events: write (pull_request runs are allowed
+  # without it). Mirrors codeql.yml so the enforced push run is deterministic.
+  security-events: write
+  actions: read
 
 'on':
   pull_request:
@@ -46,6 +52,13 @@ jobs:
         id: zizmor
         continue-on-error: true
         uses: zizmorcore/zizmor-action@5f14fd08f7cf1cb1609c1e344975f152c7ee938d # v0.5.6
+        with:
+          # Deterministic runs: skip network-dependent audits (e.g.
+          # ref-version-mismatch, known-vulnerable-actions) that flap on
+          # GITHUB_TOKEN rate-limits. Offline audits (template-injection,
+          # excessive-permissions, artipacked, unpinned-uses, ...) still run.
+          # SHA pins + exact version comments (#878) keep the offline posture.
+          online-audits: false
 
       - name: Warn in advisory mode
         if: ${{ steps.zizmor.outcome == 'failure' && env.ENFORCE_ZIZMOR != 'true' }}

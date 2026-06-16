@@ -552,6 +552,20 @@ The Rust module operates exclusively on decoded Python strings — it never rece
 
 Building `boar_fast_filter` requires Rust (`rustup`), `maturin`, and a C linker. On Python 3.13 hosts built without `liblzma-dev`, the `.7z` extra may fail independently of the Rust extension. The Maestro orchestration scripts include a "Dependency Doctor" workflow that auto-detects missing C extensions, attempts OS package manager remediation (`apt install liblzma-dev`, `xbps-install lzma`, etc.), and marks the host with a `7z_UNSUPPORTED` feature flag when the OS library cannot be installed.
 
+**Capable host (build locally) vs constrained host (prebuilt wheel):** `maturin` is a
+**dev dependency** (`[dependency-groups].dev` in `pyproject.toml`; added via `uv add --dev maturin`).
+Compiling the Rust extension is RAM- and CPU-intensive, so the build path is split by host class:
+
+| Host class | Path | Command |
+| ---------- | ---- | ------- |
+| **Capable** (≥4 GB RAM, dev/lab/CI host) | Build in place from source | `uv sync` then `uv run maturin develop --release` |
+| **Constrained** (<4 GB RAM, e.g. Raspberry Pi 3B) | Install a prebuilt **abi3** wheel — never compile | consume the wheel from the wheel-matrix (#782) |
+
+The extension is **optional at runtime**: when `boar_fast_filter` is absent, the engine falls back to
+the pure-Python pre-filter (slower, identical findings). A constrained host that cannot build and has
+no matching wheel still runs correctly on the Python path. The cross-host wheel-matrix that produces the
+abi3 wheels for constrained hosts is tracked in **#782**.
+
 ## Dependencies and security
 
 - **Source of truth:** For the **uv** toolchain, **`pyproject.toml`** is the single source of truth for declared dependencies; **`uv.lock`** pins the resolved tree for reproducible installs (avoids “it worked yesterday” breakage). **pip** and **`requirements.txt`** are derivative (requirements.txt is exported from the lockfile for pip-based environments). Do not edit **`uv.lock`** or **`requirements.txt`** by hand for version changes. When you add, remove, or change a dependency, edit **`pyproject.toml`** only, then run `uv lock` and export.
@@ -561,14 +575,14 @@ Building `boar_fast_filter` requires Rust (`rustup`), `maturin`, and a C linker.
   ```bash
   # From project root: resolve and lock, then export for pip
   uv lock
-  uv export --no-emit-package pyproject.toml -o requirements.txt
+  uv export --frozen --no-emit-project -o requirements.txt
   ```
 
-  Commit **pyproject.toml**, **uv.lock**, and **requirements.txt**. This keeps installs reproducible and aligned so `pip install -r requirements.txt` matches `uv sync`.
+  Commit **pyproject.toml**, **uv.lock**, and **requirements.txt**. The export uses **`--no-emit-project`** so the file is **pip-installable** for uv-less clients: `pip install -r requirements.txt` installs the **pinned, hashed dependency set** (it does **not** install Data Boar itself — add the project with `pip install .` from the repo, or run from source). Earlier exports emitted an editable `-e .` line alongside hashes, which pip rejects in one pass (`--require-hashes`); `--no-emit-project` removes it.
 
 - **Supply-chain posture:** **`uv.lock`** pins versions (and hashes) for reproducible installs; it **does not** replace **`pip-audit`**, Dependabot, or maintainer review for **known CVEs** and supply-chain abuse. See **[SECURITY.md](../SECURITY.md)** (*Lockfile and supply-chain mitigation*).
 
-- **Dependabot / automation:** If a PR (e.g. from Dependabot) suggests updating only `requirements.txt` or `uv.lock`, apply the change to the **source of truth** first: update the corresponding minimum version in **`pyproject.toml`**, then run `uv lock` and `uv export --no-emit-package pyproject.toml -o requirements.txt` and commit all three files. Do not merge a dependency update that only edits `requirements.txt` or `uv.lock`.
+- **Dependabot / automation:** If a PR (e.g. from Dependabot) suggests updating only `requirements.txt` or `uv.lock`, apply the change to the **source of truth** first: update the corresponding minimum version in **`pyproject.toml`**, then run `uv lock` and `uv export --frozen --no-emit-project -o requirements.txt` and commit all three files. Do not merge a dependency update that only edits `requirements.txt` or `uv.lock`.
 
 - **Check for known CVEs:** Run `uv pip audit` (or `pip audit` if available) before deployment; fix or pin any vulnerable packages.
 - See also **Security and compliance** below.
