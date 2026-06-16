@@ -1492,9 +1492,9 @@ pyparsing==3.3.2 \
     #   matplotlib
     #   oletools
     #   pip-requirements-parser
-pypdf==6.12.2 \
-    --hash=sha256:111669eb6680c04495ae0c113a1476e3bf93a95761d23c7406b591c80a6490b1 \
-    --hash=sha256:67b2699357a1f3f4c945940ea80826349ee507c9e2577724a14b4941982c104d
+pypdf==6.13.2 \
+    --hash=sha256:5a96a17dbdfbf9c2ab24c0a13fa0aba182be22ba6f283098712c16fc242f509f \
+    --hash=sha256:6eeb9e57693f29d41bd01255d02660cbbb41fd7fc818a982677389a35e4f2083
     # via data-boar
 pytest==9.0.3 \
     --hash=sha256:2c5efc453d45394fdd706ade797c0a81091eccd1d6e4bccfcd476e2b8e0ab5d9 \
