@@ -535,6 +535,17 @@ Para suportar uma nova fonte de dados (ex.: outro driver de banco ou API), veja 
 - Arquivo de log: `audit_YYYYMMDD.log` (e console).
 - A cada achado (possível dado pessoal/sensível), o app registra em log e imprime um `[ALERT]` no console para o operador ser notificado na hora.
 
+## Módulo de aceleração Rust (`boar_fast_filter`) — build vs wheel
+
+A extensão Rust opcional `boar_fast_filter` (construída com [maturin](https://github.com/PyO3/maturin) + PyO3) é um pré-filtro rápido. O `maturin` é uma **dependência de desenvolvimento** (`[dependency-groups].dev` no `pyproject.toml`; adicionado via `uv add --dev maturin`). Compilar a extensão consome RAM e CPU, então o caminho de build é dividido por classe de host:
+
+| Classe do host | Caminho | Comando |
+| -------------- | ------- | ------- |
+| **Capaz** (≥4 GB de RAM; dev/lab/CI) | Compila a partir do código | `uv sync` e depois `uv run maturin develop --release` |
+| **Restrito** (<4 GB de RAM, ex.: Raspberry Pi 3B) | Instala um **wheel** abi3 pré-compilado — nunca compila | consome o wheel da wheel-matrix (#782) |
+
+A extensão é **opcional em tempo de execução**: quando o `boar_fast_filter` está ausente, o motor usa o pré-filtro em Python puro (mais lento, achados idênticos). Um host restrito que não compila e não tem wheel compatível ainda funciona pelo caminho Python. A wheel-matrix multi-host que gera os wheels abi3 para hosts restritos é rastreada na **#782**.
+
 ## Dependências e segurança
 
 - **Fonte da verdade:** Para a ferramenta **uv**, o **`pyproject.toml`** é a fonte de verdade das dependências declaradas; o **`uv.lock`** fixa a árvore resolvida para instalações reproduzíveis (evita quebras “funcionou ontem”). **pip** e **`requirements.txt`** são derivados (o requirements.txt é exportado do lockfile para ambientes pip). Não edite **`uv.lock`** nem **`requirements.txt`** à mão para mudanças de versão. Ao adicionar, remover ou alterar uma dependência, edite apenas o **`pyproject.toml`**, depois execute `uv lock` e export.
