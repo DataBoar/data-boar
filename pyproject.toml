@@ -37,7 +37,7 @@ dependencies = [
     "h11>=0.16.0",
     "httpcore>=1.0.9",
     "httpx>=0.28.1",
-    "idna>=3.17",
+    "idna>=3.18",
     "itsdangerous>=2.2.0",
     "jinja2>=3.1.6",
     "joblib>=1.5.3",
@@ -67,12 +67,12 @@ dependencies = [
     "python-dateutil>=2.9.0.post0",
     "python-docx>=1.2.0",
     "python-dotenv>=1.2.1",
-    "python-multipart>=0.0.31",
+    "python-multipart>=0.0.32",
     "pyyaml>=6.0.3",
     "regex>=2026.5.9",
     "reportlab>=4.5.1",
     "requests>=2.34.2",
-    "scikit-learn>=1.8.0",
+    "scikit-learn>=1.9.0",
     "scipy>=1.17.0",
     "seaborn>=0.13.2",
     "sqlalchemy>=2.0.50",
@@ -81,13 +81,13 @@ dependencies = [
     "typing-extensions>=4.15.0",
     "typing-inspection>=0.4.2",
     "urllib3>=2.6.3",
-    "uvicorn>=0.48.0",
+    "uvicorn>=0.49.0",
     "werkzeug>=3.1.6",
     "webauthn>=2.2.0",
 ]
 
 [build-system]
-requires = ["hatchling>=1.24.0"]
+requires = ["hatchling>=1.29.0"]
 build-backend = "hatchling.build"
 
 # PyPI / `pip install`: flat layout — explicit packages (avoid setuptools auto-discover noise).
@@ -118,7 +118,14 @@ dataformats = ["pyarrow>=14.0.0", "fastavro>=1.9.0", "dbfread>=2.0.7"]
 # Legacy ".doc" samples: mammoth reads ZIP-based OOXML; binary Word 97-2003 often yields empty content (see docs/TROUBLESHOOTING.md).
 legacy-doc = ["mammoth>=1.6.0"]
 # GRC executive JSON dashboard (Streamlit + Plotly). Run: ``streamlit run app/dashboard.py``.
-grc-dashboard = ["streamlit>=1.58.0", "plotly>=5.24.0"]
+grc-dashboard = ["streamlit>=1.58.0", "plotly>=6.8.0"]
+
+[tool.uv]
+# rpds-py is transitive (referencing -> jsonschema). Upstream pivoted to CalVer at
+# 2026.5.1, which is a legitimate release but BREAKING for our suite (Dependabot
+# #871 turned CI red on 3.12/3.13/3.14). Cap below 2026 to keep the working 0.x
+# line until we explicitly validate the CalVer series. Remove when ready to adopt.
+constraint-dependencies = ["rpds-py<2026"]
 
 [tool.pytest.ini_options]
 # Fail on any warning (DeprecationWarning, ResourceWarning, etc.) so the suite stays clean
@@ -234,7 +241,7 @@ dev = [
     "chardet>=5.1,<6.0",
     # CycloneDX SBOM from uv-exported requirements (ADR 0003); same CLI as CI `sbom.yml`.
     "cyclonedx-bom>=7.0.0",
-    "hypothesis>=6.155.0",
+    "hypothesis>=6.155.2",
     "httpx2",
     "iniconfig>=2.3.0",
     "markdown>=3.10.2",
@@ -250,6 +257,6 @@ dev = [
     "pre-commit>=4.0.0",
     "pytest>=9.0.3",
     "rapidfuzz>=3.9.0",
-    "ruff>=0.15.15",
+    "ruff>=0.15.16",
     "types-pyyaml>=6.0.12.20260518",
 ]
