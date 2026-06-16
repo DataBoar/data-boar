@@ -7,7 +7,9 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$manifestPath = Join-Path $repoRoot "rust\boar_fast_filter\Cargo.toml"
+# Nested Join-Path keeps the separator portable across Windows PowerShell 5.1 and
+# PowerShell Core on Linux/musl (the multi-segment Join-Path form needs PS 6+).
+$manifestPath = Join-Path (Join-Path (Join-Path $repoRoot "rust") "boar_fast_filter") "Cargo.toml"
 
 if (-not (Test-Path -LiteralPath $manifestPath)) {
     throw "Rust manifest not found: $manifestPath"
@@ -15,20 +17,18 @@ if (-not (Test-Path -LiteralPath $manifestPath)) {
 
 Push-Location $repoRoot
 try {
-    & uv run pip install maturin
-    if ($LASTEXITCODE -ne 0) {
-        throw "Failed to install maturin"
-    }
-
-    $args = @("develop", "--manifest-path", $manifestPath)
+    # maturin is a dev dependency (pyproject [dependency-groups].dev, #892), so it is
+    # already in the uv-managed .venv. Run it via `uv run maturin` (uv-first) rather
+    # than installing it with pip, which would pollute the env outside the lockfile.
+    $maturinArgs = @("develop", "--manifest-path", $manifestPath)
     if ($Release) {
-        $args += "--release"
+        $maturinArgs += "--release"
     }
     if ($Target) {
-        $args += @("--target", $Target)
+        $maturinArgs += @("--target", $Target)
     }
 
-    & maturin @args
+    & uv run maturin @maturinArgs
     if ($LASTEXITCODE -ne 0) {
         throw "maturin develop failed"
     }

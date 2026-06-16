@@ -10,11 +10,10 @@ Current suspects include:
 
 ## Build (dev)
 
-From repository root:
+From repository root (`maturin` ships as a dev dependency, so `uv run` finds it in the `.venv` — no separate `pip install`):
 
-```powershell
-uv run pip install maturin
-maturin develop --manifest-path rust/boar_fast_filter/Cargo.toml --release
+```bash
+uv run maturin develop --manifest-path rust/boar_fast_filter/Cargo.toml --release
 ```
 
 This makes `boar_fast_filter` importable in the active Python environment.

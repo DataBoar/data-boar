@@ -1146,3 +1146,32 @@ def test_powershell_scripts_ascii_safe():
         "PowerShell scripts contain non-ASCII characters that break PS 5.1:\n"
         + "\n".join(violations)
     )
+
+
+def test_build_rust_prefilter_is_uv_first_and_cross_platform():
+    """#890 guard: build-rust-prefilter.ps1 must be uv-first and path-portable.
+
+    Regressions this catches:
+    - `pip install maturin` (not uv-first; maturin is a dev-dep since #892).
+    - bare `maturin` invocation instead of `uv run maturin`.
+    - a hardcoded backslash separator in the manifest path (breaks PowerShell Core
+      on Linux/musl, where the build must also run).
+    """
+    root = _project_root()
+    script = root / "scripts" / "build-rust-prefilter.ps1"
+    if not script.exists():
+        return
+    text = script.read_text(encoding="utf-8")
+
+    assert "pip install maturin" not in text, (
+        "build-rust-prefilter.ps1 must not pip-install maturin; use `uv run maturin` "
+        "(maturin is a dev dependency)."
+    )
+    assert "uv run maturin" in text, (
+        "build-rust-prefilter.ps1 must invoke maturin via `uv run maturin` (uv-first)."
+    )
+    # No backslash path literal for the Rust manifest (cross-platform Join-Path only).
+    assert "rust\\boar_fast_filter" not in text, (
+        "build-rust-prefilter.ps1 must not hardcode a backslash manifest path; "
+        "use nested Join-Path so PowerShell Core on Linux/musl resolves it too."
+    )
