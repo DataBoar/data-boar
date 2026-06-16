@@ -680,3 +680,38 @@ def test_sync_container_artefact_scp_fallback_is_actionable() -> None:
     assert re.search(r"scp exit \$LASTEXITCODE", text) and "Write-Error" in text, (
         "Sync-ContainerArtefact must report scp failure as an actionable error (#888)."
     )
+
+
+def test_handle_web_reconciles_exit_code_after_recovery() -> None:
+    """#889: Handle-web must reconcile the exit code with the real process health.
+
+    Scenario "HTTP 200 but realFail": after recovery, an external 200 must NOT be
+    reported as success when the recovered process never answered on the host's own
+    loopback. The handler must exit non-zero (exit 7) so Maestro counts a realFail,
+    and the final post-fallback failure path must also exit non-zero (no silent
+    fall-through to exit 0).
+    """
+    root = _project_root()
+    text = (root / "scripts" / "maestro" / "handlers" / "Handle-web.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    # Ground-truth signal is captured (remote loopback curl result).
+    assert "$remoteCurlOk" in text, (
+        "Handle-web must capture the remote loopback curl result to reconcile against "
+        "the external HTTP probe (#889)."
+    )
+    # 200-but-realFail reconciliation: inside the success branch, a failed remote curl
+    # forces exit 7 instead of returning success.
+    assert re.search(r"if \(-not \$remoteCurlOk\)\s*\{[^}]*exit 7", text, re.DOTALL), (
+        "Handle-web must exit 7 when HTTP 200 contradicts the remote loopback check (#889)."
+    )
+    # Real failures (fallback start failed; final health check failed) must exit 7,
+    # not fall through to exit 0.
+    assert text.count("exit 7") >= 3, (
+        "Handle-web must propagate realFail via exit 7 on start failure, the 200-but-"
+        "realFail reconciliation, and the final post-fallback failure (#889)."
+    )
+    # The final failure line must be an error + exit, not a swallowed warning.
+    assert re.search(r"Health Check Web falhou[\s\S]{0,200}exit 7", text), (
+        "Handle-web final failure after fallback must surface a non-zero exit (#889)."
+    )

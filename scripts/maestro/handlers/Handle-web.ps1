@@ -171,8 +171,10 @@ $remoteStartCmd = $remoteStartCmd.Replace("__BENCH_PORT_FILE__", [string]$benchP
 $remoteStartCmd = $remoteStartCmd -replace "`r", ""
 $startOut = ssh -q -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$targetUser@$targetHost" "$remoteStartCmd"
 if ($LASTEXITCODE -ne 0 -or -not $startOut) {
-    Write-Warning "      [ERROR] Fallback web start falhou em $targetHost."
-    return
+    # Real failure: the recovery start itself did not run. Exit non-zero so Maestro
+    # counts a realFail (#889) instead of treating the swallowed warning as success.
+    Write-Error "      [REAL FAIL] Fallback web start falhou em $targetHost."
+    exit 7
 }
 
 $chosenPort = $webPort
@@ -184,7 +186,10 @@ foreach ($line in $startOut) {
 
 $remoteCurlCmd = "curl -fsS --max-time 5 http://127.0.0.1:$chosenPort$webHealthPath >/dev/null"
 ssh -q -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$targetUser@$targetHost" "$remoteCurlCmd" > $null 2>&1
-if ($LASTEXITCODE -ne 0) {
+# Ground-truth signal of the recovered process: did the service answer on the chosen
+# port from the host's own loopback? Kept to reconcile against the external HTTP probe.
+$remoteCurlOk = ($LASTEXITCODE -eq 0)
+if (-not $remoteCurlOk) {
     Write-Warning "      [WARNING] Fallback web iniciou, mas curl remoto localhost falhou em ${targetHost}:$chosenPort$webHealthPath."
 }
 
@@ -192,6 +197,14 @@ $webScheme = "http"
 $apiUrl = "http://${targetIp}:${chosenPort}${webHealthPath}"
 for ($attempt = 1; $attempt -le $retries; $attempt++) {
     if (Test-HealthUrl -Url $apiUrl -Scheme $webScheme -SkipTls $false) {
+        # Reconciliation (#889): an external HTTP 200 is not enough. If the recovered
+        # process never answered on the host's own loopback (remoteCurlOk = false), the
+        # 200 is from a stale process / proxy / wrong port -- a realFail masked by 200.
+        # Reconcile the exit code with the ground truth and fail loud (exit 7).
+        if (-not $remoteCurlOk) {
+            Write-Error "      [REAL FAIL] HTTP 200 em $apiUrl, mas o curl remoto localhost falhou no processo recuperado: estado inconsistente pos-recovery em $($Node.hostname). Tratando como falha real."
+            exit 7
+        }
         Write-Host "      [SUCCESS] Persona Web recuperada! $($Node.hostname) responde HTTP 200 em $apiUrl." -ForegroundColor Green
         return
     }
@@ -200,4 +213,7 @@ for ($attempt = 1; $attempt -le $retries; $attempt++) {
     }
 }
 
-Write-Warning "      [ERROR] Health Check Web falhou em $($Node.hostname) após fallback, incluindo start forçado. URL final: $apiUrl."
+# Real failure after the forced recovery: surface a non-zero exit so Maestro records a
+# realFail (#889) rather than letting the script fall off the end with exit 0.
+Write-Error "      [REAL FAIL] Health Check Web falhou em $($Node.hostname) após fallback, incluindo start forçado. URL final: $apiUrl."
+exit 7
