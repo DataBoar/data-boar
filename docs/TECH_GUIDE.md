@@ -552,6 +552,20 @@ The Rust module operates exclusively on decoded Python strings — it never rece
 
 Building `boar_fast_filter` requires Rust (`rustup`), `maturin`, and a C linker. On Python 3.13 hosts built without `liblzma-dev`, the `.7z` extra may fail independently of the Rust extension. The Maestro orchestration scripts include a "Dependency Doctor" workflow that auto-detects missing C extensions, attempts OS package manager remediation (`apt install liblzma-dev`, `xbps-install lzma`, etc.), and marks the host with a `7z_UNSUPPORTED` feature flag when the OS library cannot be installed.
 
+**Capable host (build locally) vs constrained host (prebuilt wheel):** `maturin` is a
+**dev dependency** (`[dependency-groups].dev` in `pyproject.toml`; added via `uv add --dev maturin`).
+Compiling the Rust extension is RAM- and CPU-intensive, so the build path is split by host class:
+
+| Host class | Path | Command |
+| ---------- | ---- | ------- |
+| **Capable** (≥4 GB RAM, dev/lab/CI host) | Build in place from source | `uv sync` then `uv run maturin develop --release` |
+| **Constrained** (<4 GB RAM, e.g. Raspberry Pi 3B) | Install a prebuilt **abi3** wheel — never compile | consume the wheel from the wheel-matrix (#782) |
+
+The extension is **optional at runtime**: when `boar_fast_filter` is absent, the engine falls back to
+the pure-Python pre-filter (slower, identical findings). A constrained host that cannot build and has
+no matching wheel still runs correctly on the Python path. The cross-host wheel-matrix that produces the
+abi3 wheels for constrained hosts is tracked in **#782**.
+
 ## Dependencies and security
 
 - **Source of truth:** For the **uv** toolchain, **`pyproject.toml`** is the single source of truth for declared dependencies; **`uv.lock`** pins the resolved tree for reproducible installs (avoids “it worked yesterday” breakage). **pip** and **`requirements.txt`** are derivative (requirements.txt is exported from the lockfile for pip-based environments). Do not edit **`uv.lock`** or **`requirements.txt`** by hand for version changes. When you add, remove, or change a dependency, edit **`pyproject.toml`** only, then run `uv lock` and export.

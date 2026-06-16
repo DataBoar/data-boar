@@ -238,6 +238,13 @@ dev = [
     "httpx2",
     "iniconfig>=2.3.0",
     "markdown>=3.10.2",
+    # maturin builds the Rust `boar_fast_filter` extension on CAPABLE hosts
+    # (`maturin develop --release`). RAM-constrained hosts (<4GB, e.g. a
+    # Raspberry Pi 3-class board) do
+    # NOT build locally — they consume a prebuilt abi3 wheel (#782 wheel-matrix).
+    # Dev-dep only: the runtime falls back to pure Python when the extension is
+    # absent. See docs/TECH_GUIDE.md (Rust prefilter build). (#892, xref #782)
+    "maturin>=1.14.0",
     "mypy>=2.1.0",
     "pluggy>=1.6.0",
     "pre-commit>=4.0.0",
