@@ -16,18 +16,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 COPY requirements.txt /app/requirements.txt
-# `requirements.txt` begins with `-e .` (uv export); pip needs the project tree at /app before `pip install -r`.
+# `requirements.txt` (uv export --no-emit-project) is dependency-only and pip-installable:
+# pinned + hashed wheels, no editable `-e .`. The project itself is installed separately below.
 COPY . /app
 
 # Upgrade pip/wheel in builder before deps (Scout: pip<25.3, wheel<=0.46.1 had CVEs; image inherits site-packages).
-# `uv export` emits `-e .` plus hashed wheels; pip refuses editable + hashes in one `install -r` pass — split installs.
+# Install the hashed dependency set first, then the project (--no-deps -e) so its console scripts resolve.
 # Do not end this RUN with `; true` — it would mask a failed `pip install`.
 RUN pip uninstall -y wheel || true && \
     pip install --no-cache-dir --upgrade "pip>=25.3" && \
     pip install --no-cache-dir --force-reinstall "wheel>=0.46.2" && \
     python -c "import wheel; import sys; sys.exit(0 if tuple(map(int, wheel.__version__.split('.'))) >= (0,46,2) else 1)" && \
-    python -c "from pathlib import Path; s=Path('/app/requirements.txt').read_text(encoding='utf-8').splitlines(); Path('/app/requirements.docker.txt').write_text('\\n'.join(x for x in s if x.strip()!='-e .')+'\\n', encoding='utf-8')" && \
-    pip install --no-cache-dir -r /app/requirements.docker.txt && \
+    pip install --no-cache-dir -r /app/requirements.txt && \
     pip install --no-cache-dir --no-deps -e /app && \
     (find /usr/local/lib/python3.13/site-packages -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true) && \
     (find /usr/local/lib/python3.13/site-packages -name "*.pyc" -delete 2>/dev/null || true)

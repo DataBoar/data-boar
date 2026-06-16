@@ -535,6 +535,17 @@ Para suportar uma nova fonte de dados (ex.: outro driver de banco ou API), veja 
 - Arquivo de log: `audit_YYYYMMDD.log` (e console).
 - A cada achado (possível dado pessoal/sensível), o app registra em log e imprime um `[ALERT]` no console para o operador ser notificado na hora.
 
+## Módulo de aceleração Rust (`boar_fast_filter`) — build vs wheel
+
+A extensão Rust opcional `boar_fast_filter` (construída com [maturin](https://github.com/PyO3/maturin) + PyO3) é um pré-filtro rápido. O `maturin` é uma **dependência de desenvolvimento** (`[dependency-groups].dev` no `pyproject.toml`; adicionado via `uv add --dev maturin`). Compilar a extensão consome RAM e CPU, então o caminho de build é dividido por classe de host:
+
+| Classe do host | Caminho | Comando |
+| -------------- | ------- | ------- |
+| **Capaz** (≥4 GB de RAM; dev/lab/CI) | Compila a partir do código | `uv sync` e depois `uv run maturin develop --release` |
+| **Restrito** (<4 GB de RAM, ex.: Raspberry Pi 3B) | Instala um **wheel** abi3 pré-compilado — nunca compila | consome o wheel da wheel-matrix (#782) |
+
+A extensão é **opcional em tempo de execução**: quando o `boar_fast_filter` está ausente, o motor usa o pré-filtro em Python puro (mais lento, achados idênticos). Um host restrito que não compila e não tem wheel compatível ainda funciona pelo caminho Python. A wheel-matrix multi-host que gera os wheels abi3 para hosts restritos é rastreada na **#782**.
+
 ## Dependências e segurança
 
 - **Fonte da verdade:** Para a ferramenta **uv**, o **`pyproject.toml`** é a fonte de verdade das dependências declaradas; o **`uv.lock`** fixa a árvore resolvida para instalações reproduzíveis (evita quebras “funcionou ontem”). **pip** e **`requirements.txt`** são derivados (o requirements.txt é exportado do lockfile para ambientes pip). Não edite **`uv.lock`** nem **`requirements.txt`** à mão para mudanças de versão. Ao adicionar, remover ou alterar uma dependência, edite apenas o **`pyproject.toml`**, depois execute `uv lock` e export.
@@ -544,14 +555,14 @@ Para suportar uma nova fonte de dados (ex.: outro driver de banco ou API), veja 
   ```bash
   # Na raiz do projeto: resolver e bloquear, depois exportar para pip
   uv lock
-  uv export --no-emit-package pyproject.toml -o requirements.txt
+  uv export --frozen --no-emit-project -o requirements.txt
   ```
 
-  Faça commit de **pyproject.toml**, **uv.lock** e **requirements.txt**. Assim as instalações permanecem reproduzíveis e alinhadas; `pip install -r requirements.txt` equivale ao `uv sync`.
+  Faça commit de **pyproject.toml**, **uv.lock** e **requirements.txt**. O export usa **`--no-emit-project`** para o arquivo ficar **instalável por pip** em clientes sem uv: `pip install -r requirements.txt` instala o **conjunto de dependências fixado e com hashes** (ele **não** instala o próprio Data Boar — adicione o projeto com `pip install .` a partir do repositório, ou rode direto do código-fonte). Exports antigos emitiam uma linha editável `-e .` junto com os hashes, o que o pip rejeita em uma passada (`--require-hashes`); o `--no-emit-project` remove essa linha.
 
 - **Postura de cadeia de suprimentos:** O **`uv.lock`** fixa versões (e *hashes*) para instalações reproduzíveis; ele **não substitui** **`pip-audit`**, Dependabot nem revisão humana para **CVEs conhecidos** e abusos na cadeia. Veja **[SECURITY.pt_BR.md](../../SECURITY.pt_BR.md)** (seção *Lockfile e mitigação da cadeia de suprimentos*).
 
-- **Dependabot / automação:** Se um PR (ex.: do Dependabot) sugerir atualizar só o `requirements.txt` ou o `uv.lock`, aplique a alteração na **fonte da verdade** primeiro: atualize a versão mínima correspondente no **`pyproject.toml`**, depois execute `uv lock` e `uv export --no-emit-package pyproject.toml -o requirements.txt` e faça commit dos três arquivos. Não faça merge de uma atualização de dependência que edite apenas `requirements.txt` ou `uv.lock`.
+- **Dependabot / automação:** Se um PR (ex.: do Dependabot) sugerir atualizar só o `requirements.txt` ou o `uv.lock`, aplique a alteração na **fonte da verdade** primeiro: atualize a versão mínima correspondente no **`pyproject.toml`**, depois execute `uv lock` e `uv export --frozen --no-emit-project -o requirements.txt` e faça commit dos três arquivos. Não faça merge de uma atualização de dependência que edite apenas `requirements.txt` ou `uv.lock`.
 
 - **Verificar CVEs conhecidos:** Execute `uv pip audit` (ou `pip audit` se disponível) antes da implantação; corrija ou fixe pacotes vulneráveis.
 - Veja também **Segurança e conformidade** abaixo.
