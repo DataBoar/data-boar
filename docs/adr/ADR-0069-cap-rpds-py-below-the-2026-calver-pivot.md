@@ -13,6 +13,14 @@ Accepted
 
 - 2026-06-17 — Accepted
 
+> **Milestone — UMADR taxonomy anchor.** This `Accepted` cap-ADR is a canonical example of the
+> transitory-cap pattern that motivates UMADR's `Quarantined` status
+> ([ADR 0045](ADR-0045-adr-metadata-and-format-standardization.md)): the decision to cap is in force
+> (`Accepted`), while its subject — adopting the `rpds-py` CalVer (`2026.x`) series — stays bracketed
+> pending an explicit resolution (remove the cap on adoption, or a successor). The removal condition
+> in *Consequences* is that lifecycle made concrete, closing the loop between this decision and the
+> taxonomy that names it.
+
 ## Context
 
 `rpds-py` is a **transitive** dependency only (`referencing` → `jsonschema`); nothing in
@@ -94,7 +102,7 @@ version is legitimate yet unusable in our resolution or runtime:
 - [ADR 0054 — `chardet` pinned by cyclonedx-bom](ADR-0054-chardet-pinned-by-cyclonedx-bom.md)
 - [ADR 0030 — Python dependency update closure (single pass)](ADR-0030-python-dependency-update-closure-single-pass.md)
 - [ADR 0044 — Dependabot uv ecosystem for pyproject/lock closure](ADR-0044-dependabot-uv-ecosystem-for-pyproject-lock-closure.md)
-- [ADR 0045 — ADR metadata and format standardization](ADR-0045-adr-metadata-and-format-standardization.md)
+- [ADR 0045 — ADR metadata and format standardization](ADR-0045-adr-metadata-and-format-standardization.md) — UMADR; `Quarantined` taxonomy this ADR exemplifies.
 
 ## References
 
