@@ -73,3 +73,4 @@ Notas curtas e duradouras que registram **por que** o projeto escolheu um caminh
 ## Índice geral da documentação
 
 Veja [docs/README.pt_BR.md](../README.pt_BR.md) para o mapa completo.
+

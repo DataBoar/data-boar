@@ -1,4 +1,4 @@
-﻿# Architecture Decision Records (ADR)
+# Architecture Decision Records (ADR)
 
 **Português (Brasil):** [README.pt_BR.md](README.pt_BR.md)
 
@@ -82,6 +82,7 @@ Short, durable notes that capture **why** the project chose an approach—not on
 | 0065 | [NIST SP 800-228A as REST API security hardening reference](ADR-0065-nist-sp800228a-api-security-reference.md) | Deferred |
 | 0066 | [TAMPERED state behavior — fail-closed in enforced mode](ADR-0066-tampered-state-behavior.md) | Accepted |
 | 0068 | [Primary Linux dev workstation (temporary)](ADR-0068-primary-linux-dev-workstation-temporary.md) | Proposed |
+| 0069 | [Cap rpds-py below the 2026 CalVer pivot](ADR-0069-cap-rpds-py-below-the-2026-calver-pivot.md) | Accepted |
 
 ## Related docs
 

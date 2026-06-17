@@ -133,3 +133,23 @@ def test_rpds_py_locked_below_2026() -> None:
         "The 2026.x CalVer series is breaking for the suite (Dependabot #871). "
         "Re-run 'uv lock' with the [tool.uv] 'rpds-py<2026' constraint in place."
     )
+
+
+def test_rpds_py_dependabot_ignore_present() -> None:
+    """Dependabot must ignore ``rpds-py`` semver-major (the CalVer pivot) PRs.
+
+    Binds the ``dependency-name: "rpds-py"`` entry to its
+    ``version-update:semver-major`` ``update-types`` so a stray semver-major block
+    elsewhere cannot satisfy the guard by accident (defense in depth for ADR 0069).
+    """
+    text = _dependabot_text()
+    pattern = re.compile(
+        r'dependency-name:\s*"rpds-py"\s*\n'
+        r"\s*update-types:\s*\[[^\]]*version-update:\s*semver-major[^\]]*\]",
+        re.MULTILINE,
+    )
+    assert pattern.search(text) is not None, (
+        ".github/dependabot.yml must keep the ignore entry for 'rpds-py' "
+        "version-update:semver-major (the breaking 2026.x CalVer pivot). "
+        "See docs/adr/ADR-0069-cap-rpds-py-below-the-2026-calver-pivot.md."
+    )
