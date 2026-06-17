@@ -19,6 +19,7 @@ import argparse
 import os
 import sys
 from datetime import datetime, timedelta, timezone
+from getpass import getpass
 from pathlib import Path
 
 import jwt
@@ -52,6 +53,35 @@ def _load_private_key_pem() -> str:
         file=sys.stderr,
     )
     sys.exit(1)
+
+
+def _resolve_key_password(pem: str) -> bytes | None:
+    """Resolve the signing-key passphrase for ``load_pem_private_key`` (#910).
+
+    Backward-compatible: an unencrypted PEM still loads with ``password=None``.
+    For an AES-encrypted PKCS#8 PEM the passphrase is resolved in this order:
+
+    1. ``DATA_BOAR_LICENSE_ISSUER_PRIVATE_KEY_PASSWORD`` env var (non-interactive
+       path — Maestro / automation set this before calling the issuer).
+    2. Interactive ``getpass`` prompt when stdin is a TTY (operator issuing a
+       real license at the keyboard).
+    3. Encrypted key with neither env var nor a TTY: exit with an actionable
+       message instead of a raw ``TypeError`` traceback from cryptography.
+    """
+    pw = os.environ.get("DATA_BOAR_LICENSE_ISSUER_PRIVATE_KEY_PASSWORD", "").strip()
+    if pw:
+        return pw.encode("utf-8")
+    if "ENCRYPTED" in pem:
+        if sys.stdin.isatty():
+            entered = getpass("License signing key passphrase: ").strip()
+            if entered:
+                return entered.encode("utf-8")
+        sys.exit(
+            "Signing key is encrypted: set "
+            "DATA_BOAR_LICENSE_ISSUER_PRIVATE_KEY_PASSWORD or run in a TTY to "
+            "enter the passphrase."
+        )
+    return None
 
 
 def _resolve_dbmfp(raw: str) -> str:
@@ -155,7 +185,7 @@ def main() -> None:
     else:
         pem = _load_private_key_pem()
 
-    key = load_pem_private_key(pem.encode("utf-8"), password=None)
+    key = load_pem_private_key(pem.encode("utf-8"), password=_resolve_key_password(pem))
     now = datetime.now(timezone.utc)
     payload = {
         "sub": args.sub,

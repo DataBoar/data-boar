@@ -16,6 +16,26 @@ enforced mode is a real signed license. QA licenses are deliberately:
 Keep the Ed25519 **private** key outside Git (e.g. `~/.keys/data-boar/`).
 See `docs/private.example/licensing/README.md` for key generation.
 
+### Optional: encrypted signing key (passphrase)
+
+The signing key may be stored as an AES-encrypted PKCS#8 PEM. The issuer
+(`scripts/issue_dev_license_jwt.py`) resolves the passphrase in this order:
+
+1. **Env var** `DATA_BOAR_LICENSE_ISSUER_PRIVATE_KEY_PASSWORD` — the
+   non-interactive path for automation. Maestro (`Handle-LicensingMatrix.ps1`)
+   runs head-less, so export it **before** running the handler:
+
+   ```bash
+   export DATA_BOAR_LICENSE_ISSUER_PRIVATE_KEY_PASSWORD='your-passphrase'
+   ```
+
+2. **Interactive prompt** — in a TTY with no env var set, the issuer asks
+   `License signing key passphrase:` and reads it without echo.
+3. **Unencrypted key** — no passphrase needed (backward-compatible).
+
+An encrypted key with neither the env var nor a TTY exits with an actionable
+message (never a raw traceback).
+
 ## 2. Issue a license for THIS machine
 
 ```bash

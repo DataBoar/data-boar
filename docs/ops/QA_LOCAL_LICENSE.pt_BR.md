@@ -18,6 +18,26 @@ deliberadamente:
 Mantenha a chave **privada** Ed25519 fora do Git (ex.: `~/.keys/data-boar/`).
 Veja `docs/private.example/licensing/README.md` para gerar as chaves.
 
+### Opcional: chave de assinatura cifrada (passphrase)
+
+A chave de assinatura pode ficar como um PEM PKCS#8 cifrado com AES. O emissor
+(`scripts/issue_dev_license_jwt.py`) resolve a passphrase nesta ordem:
+
+1. **Variável de ambiente** `DATA_BOAR_LICENSE_ISSUER_PRIVATE_KEY_PASSWORD` — o
+   caminho não interativo para automação. O Maestro (`Handle-LicensingMatrix.ps1`)
+   roda sem terminal, então exporte-a **antes** de executar o handler:
+
+   ```bash
+   export DATA_BOAR_LICENSE_ISSUER_PRIVATE_KEY_PASSWORD='sua-passphrase'
+   ```
+
+2. **Prompt interativo** — em um TTY sem a variável definida, o emissor pergunta
+   `License signing key passphrase:` e lê sem exibir o que é digitado.
+3. **Chave sem cifra** — não precisa de passphrase (compatível com o fluxo atual).
+
+Uma chave cifrada sem a variável de ambiente e sem TTY encerra com uma mensagem
+acionável (nunca um traceback cru).
+
 ## 2. Emitir licença para ESTA máquina
 
 ```bash
