@@ -12,6 +12,7 @@ Accepted
 
 - 2026-05-20 — Accepted
 - 2026-06-11 — Amended: retrofit to ADR-0045 UMADR format (metadata list, Authors, Status history) — GitHub #675
+- 2026-06-17 — Amended: ship docs/adr/allowed_signers trust anchor + third-party verify recipe — #916
 
 ## Context
 
@@ -34,6 +35,15 @@ Git history proves *when* files changed but does not give third parties a portab
 3. Keep **`InventoryHash`** as a self-attested SHA-256 over inventory data rows (excluding comment lines and the hash line itself), enforced by `tests/test_scripts.py`.
 4. **`scripts/new-adr.ps1`** runs `inv-adr.ps1` after scaffolding; it also prints an explicit reminder to re-run inventory when ADRs are edited outside that script.
 5. **CI** asserts inventory completeness and hash consistency via pytest; it does **not** hold the operator private key for signing.
+6. **Publish the trust anchor in-tree** at `docs/adr/allowed_signers` (#916). The file holds the operator's **non-secret** attestation public key in `ssh-keygen` allowed-signers format, scoped to `namespaces="file"`, so any third party can verify the attestation from the repository alone — no passphrase, no operator infrastructure:
+
+   ```bash
+   ssh-keygen -Y verify -f docs/adr/allowed_signers -I fabio.tleitao@gmail.com \
+     -n file -s docs/adr/INVENTORY.txt.sig < docs/adr/INVENTORY.txt
+   # -> Good "file" signature for fabio.tleitao@gmail.com
+   ```
+
+   Only the **attestation** key enters `docs/adr/allowed_signers` with `namespaces="file"`; the commit-signing trust list is kept separate (attestation key != commit-signing key). A private key is **never** committed.
 
 ### Guardrails
 
@@ -51,8 +61,10 @@ Git history proves *when* files changed but does not give third parties a portab
 ## References
 
 - `scripts/inv-adr.ps1`, `scripts/new-adr.ps1`
-- `docs/adr/INVENTORY.txt`
+- `docs/adr/INVENTORY.txt` — canonical integrity manifest
+- `docs/adr/INVENTORY.txt.sig` — SSHSIG ed25519 detached attestation (namespace `file`)
+- `docs/adr/allowed_signers` — operator attestation trust anchor; the third-party verify recipe above reads it
 - `.cursor/rules/adr-inventory-ritual.mdc`
 - `tests/test_scripts.py` (`test_inv_adr_inventory_hash_matches_data_lines`)
 - `tests/test_adr_inventory_sync.py`
-- Issue **#582**, **#575**
+- Issue **#582**, **#575**, **#916**
