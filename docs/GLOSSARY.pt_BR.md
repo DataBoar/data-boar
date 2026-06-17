@@ -25,6 +25,7 @@ Os termos estão agrupados por **tema** (produto, fluxo de varredura, conformida
 | **Posicionamento de conformidade e artefatos**             | **GRC** (governança, risco e conformidade), relatórios só com metadados, amostras, transferências internacionais, **dicas de jurisdição / tensão** (heurística, não lei aplicável), princípios (minimização), cadeia de operadores; **SOC 2** (atestação AICPA — ver linha na tabela abaixo); **VBA** (*value-based agreement* — vocabulário farma/pagador; não o **VBA** do Office); **Corporate-Entity-C/WRB** e **Google Gemini** (ferramentas de **revisão/chat do mantenedor** — processo, não dependência do motor em produção)                                                                                                                                                     |
 | **ISO/IEC e ABNT NBR (normas de sistemas de gestão)**      | SGSI, gestão de privacidade (PIMS) e gestão de risco em segurança da informação — títulos curtos + links para o catálogo ISO                                                                                                                                                                                                                                 |
 | **Licenciamento, *open core* e assinaturas**               | Modelo pretendido de ***open core***, linha de base **OSS** vs módulos comerciais, **JWT** de licença, direitos de **assinatura** (rascunhos de política)                                                                                                                                                                                                    |
+| **Governança de dados (DMBOK e ciclo de vida)** | **Dados**, **gestão de dados**, **governança de dados**, **GGD**, **Data Steward** / **Data Owner**, **linhagem de dados**, **qualidade de dados**, **DMBOK**—vocabulário DAMA-DMBOK + ISO/IEC 25012 |
 | **Orquestração de lab: Maestro, completão e homelab** | **Maestro** (regente), **handler** (termo canônico para `Handle-*.ps1`), **persona**, **completão**, **bench track**, vocabulário do lab-op; *capo di sezione* como metáfora narrativa apenas |
 
 ---
@@ -256,13 +257,29 @@ Rascunhos de política e ganchos técnicos—**não** substituem assessoria jur�
 | **OSS** (*software de código aberto*)        | **Software de código aberto**: software distribuído sob licença que concede uso, modificação e redistribuição nas condições do texto; licenças **aprovadas pela OSI** são referência comum para a linha de base do ***open core***. **Outro sentido na doc do detector:** “OSS Markdown” descreve nomes de arquivo típicos de **README**/contribuição em projetos públicos ao calibrar sensibilidade em filesystem—veja [SENSITIVITY_DETECTION.pt_BR.md](SENSITIVITY_DETECTION.pt_BR.md).                                                                |
 | **subscription level** (nível de assinatura) | Termo informal para o **nível comercial ou direito** associado a cliente pagante ou parceiro (ex.: *trial*, parceiro, *enterprise*—**nomes e SKUs a definir**). O rascunho de política vincula uso em **produção** de certos módulos ***source-available*** a **assinatura válida** e **JWT de licença** assinado; **claims** futuros podem codificar o *tier* no token—veja [LICENSING_OPEN_CORE_AND_COMMERCIAL.md](LICENSING_OPEN_CORE_AND_COMMERCIAL.md) (tiers futuros), [LICENSING_SPEC.md](LICENSING_SPEC.md). **Veja também:** **open core**.     |
 
+### 12. Governança de dados (DMBOK e ciclo de vida do dado)
+
+Vocabulário de gestão e governança de dados (DAMA-DMBOK 2.ed.; modelo de qualidade ISO/IEC 25012). Público: DPOs, *data stewards* e líderes de governança que posicionam a saída de **descoberta** do Data Boar dentro de um programa mais amplo de governança de dados.
+
+| Termo | Definição |
+| ---- | ---------- |
+| **Dados** (*data*) | Fatos e representações (valores, registros, sinais) que viram informação em contexto—a matéria-prima que o Data Boar descobre e classifica; **PII** e dados sensíveis são subconjuntos. Base: DAMA-DMBOK. |
+| **Gestão de dados** (*data management*) | A disciplina DAMA-DMBOK de planejar, controlar e entregar ativos de dados ao longo do ciclo de vida (arquitetura, modelagem, armazenamento, segurança, qualidade, metadados). O Data Boar apoia as funções de segurança e qualidade via **descoberta** e **achados**. **Veja também:** **Governança de dados**, **DMBOK**. |
+| **Governança de dados** (*data governance*) | O exercício de autoridade, direitos de decisão e responsabilização sobre ativos de dados (política, padrões, *stewardship*)—a camada de "quem decide e responde" no centro da roda do DMBOK, acima da **gestão de dados**. **Veja também:** **Data Steward**, **Data Owner**. |
+| **GGD** | Termo guarda-chuva em português *Gestão e Governança de Dados*: o programa combinado que une a execução de **gestão de dados** à supervisão de **governança de dados**. |
+| **Data Steward** (curador de dados) | Papel responsável pela qualidade, pelas definições e pelo uso correto de um domínio de dados no dia a dia—as mãos operacionais da **governança de dados**. **Veja também:** **Data Owner**. |
+| **Data Owner** (dono de dados) | Autoridade responsável por um ativo ou domínio de dados (classificação, política de acesso, aceitação de risco); distinto do **Data Steward** que executa. |
+| **Data Lineage** (linhagem de dados) | Origem e transformações documentadas dos dados conforme fluem entre sistemas (origem -> transformação -> consumo); apoia análise de impacto e auditoria. Distinto da **provenance** de build de artefatos de software. |
+| **Data Quality** (qualidade de dados) | Adequação dos dados ao uso pretendido, medida por dimensões (acurácia, completude, consistência, tempestividade, validade, unicidade); formalizada na **ISO/IEC 25012**. Os **achados** do Data Boar expõem lacunas que afetam qualidade e risco. |
+| **DMBOK** | **Data Management Body of Knowledge** (DAMA International): o framework de referência que organiza as funções de gestão de dados em torno de um núcleo de governança. |
+
 ---
 
 **Veja também:** [COMPLIANCE_FRAMEWORKS.pt_BR.md](COMPLIANCE_FRAMEWORKS.pt_BR.md) (regulamentações e extensibilidade), [USAGE.pt_BR.md](USAGE.pt_BR.md) (config e API), [SENSITIVITY_DETECTION.pt_BR.md](SENSITIVITY_DETECTION.pt_BR.md) (padrões e ML/DL), [TECH_GUIDE.pt_BR.md](TECH_GUIDE.pt_BR.md#detection-stack-vs-generative-llms) (pilha determinística vs hype de LLM), [AI_EVOLUTION_PRIMER.pt_BR.md](AI_EVOLUTION_PRIMER.pt_BR.md) (história da IA e famílias de método—sem hype), [OBSERVABILITY_SRE.pt_BR.md](OBSERVABILITY_SRE.pt_BR.md) (`/health`, `/status`). Índice completo: [README.md](README.md) · [README.pt_BR.md](README.pt_BR.md).
 
 ---
 
-### 12. Orquestração de lab: Maestro, completão e homelab
+### 13. Orquestração de lab: Maestro, completão e homelab
 
 Termos usados na camada de orquestração de lab **Maestro** e no ritual de validação **completão**. Este vocabulário é **voltado ao operador** (não ao usuário do produto) e se aplica ao ambiente de homelab utilizado para testes de integração e confiança de release. Referência completa: [docs/ops/MAESTRO_ARCHITECTURE_AND_ROADMAP.pt_BR.md](ops/MAESTRO_ARCHITECTURE_AND_ROADMAP.pt_BR.md).
 
