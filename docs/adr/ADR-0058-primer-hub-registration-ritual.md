@@ -12,6 +12,7 @@ Accepted
 
 - 2026-05-20 — Accepted
 - 2026-06-11 — Amended: retrofit to ADR-0045 UMADR format (metadata list, Authors, Status history) — GitHub #675
+- 2026-06-17 — Amended: primer taxonomy split — technical/onboarding primers live under `docs/primers/` (local index); compliance/framework primers stay under `docs/plans/` (this hub). See ADR-0070 — GitHub #744
 
 ## Context
 
@@ -25,6 +26,11 @@ Issue **#626** requested a durable ritual so new primer issues do not become "va
 2. Acceptance criteria on primer issues must include: *"Row added to PRIMERS_HUB.md (planned link until file exists)."*
 3. When a primer ships, replace the plain-text planned row with a markdown link to the file and run **`python scripts/plans_hub_sync.py --write`** if plan metadata changed.
 4. **`GOVERNANCE_ITSM_DIAGRAMS_SOURCE.md`** and similar **diagram companions** may stay outside the hub table; cross-link from the primer issue or primer doc instead of duplicating rows.
+5. **Taxonomy (amended 2026-06-17 — ADR-0070):** this ritual governs **deliverable-tier**
+   *compliance / framework* primers under **`docs/plans/`**, indexed by **`PRIMERS_HUB.md`**.
+   *Technical / onboarding* primers (thematic KT, e.g. `AI_EVOLUTION_PRIMER`,
+   `DECISION_RECORDS_PRIMER`) live under **`docs/primers/`** with their own local index
+   (`docs/primers/INDEX.md`) and are not required in the `docs/plans/` hub table.
 
 ## Consequences
 
@@ -36,4 +42,5 @@ Issue **#626** requested a durable ritual so new primer issues do not become "va
 
 - [PRIMERS_HUB.md](../plans/PRIMERS_HUB.md)
 - [ADR-0057](ADR-0057-lightweight-hub-index-co-located-links.md)
-- GitHub **#625**, **#626**
+- [ADR-0070](ADR-0070-primer-taxonomy-and-home.md) — primer taxonomy and home (amends this ADR)
+- GitHub **#625**, **#626**, **#744**
