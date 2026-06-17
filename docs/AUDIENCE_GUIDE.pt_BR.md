@@ -56,7 +56,7 @@ Mapa de navegação para **oito** perfis de leitor. Índice completo: [README.md
 
 | | |
 | - | - |
-| **Entrada** | [AI_EVOLUTION_PRIMER.pt_BR.md](AI_EVOLUTION_PRIMER.pt_BR.md) |
+| **Entrada** | [AI_EVOLUTION_PRIMER.pt_BR.md](primers/AI_EVOLUTION_PRIMER.pt_BR.md) |
 | **Trilha** | [philosophy/THE_WHY.pt_BR.md](philosophy/THE_WHY.pt_BR.md) → [TESTING_POC_GUIDE.pt_BR.md](TESTING_POC_GUIDE.pt_BR.md) → [COMPLIANCE_FRAMEWORKS.pt_BR.md](COMPLIANCE_FRAMEWORKS.pt_BR.md) → [GLOSSARY.pt_BR.md](GLOSSARY.pt_BR.md) |
 | **Evitar** | Pitch comercial; runbooks do dia a dia |
 | **Sobreposição** | Compliance (metodologia); desenvolvedor (corpus de teste) |

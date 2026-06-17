@@ -4,7 +4,7 @@
 
 Esta nota é para **integradores**, **leitores de conformidade** e **mantenedores** que ouvem “IA” usada de forma intercambiável para **regex**, **florestas aleatórias**, **chatbots** e **modelos com bilhões de parâmetros**. **Não** é uma história completa do campo; décadas e rótulos ficam **aproximados** de propósito. Para profundidade de manual, use uma referência geral de IA/ML (ex.: Russell & Norvig, *Artificial Intelligence: A Modern Approach*) — aqui só **ancoramos vocabulário** para a postura **determinística + supervisionada** do Data Boar fazer sentido.
 
-**Documentação de produto relacionada:** [TECH_GUIDE.pt_BR.md](TECH_GUIDE.pt_BR.md#detection-stack-vs-generative-llms) · [SENSITIVITY_DETECTION.pt_BR.md](SENSITIVITY_DETECTION.pt_BR.md) · [GLOSSARY.pt_BR.md](GLOSSARY.pt_BR.md) (§8 e **§8b**).
+**Documentação de produto relacionada:** [TECH_GUIDE.pt_BR.md](../TECH_GUIDE.pt_BR.md#detection-stack-vs-generative-llms) · [SENSITIVITY_DETECTION.pt_BR.md](../SENSITIVITY_DETECTION.pt_BR.md) · [GLOSSARY.pt_BR.md](../GLOSSARY.pt_BR.md) (§8 e **§8b**).
 
 ---
 
@@ -56,9 +56,9 @@ Esta nota é para **integradores**, **leitores de conformidade** e **mantenedore
 
 ## 5. Alinhamento com o Data Boar (evidência primeiro)
 
-- **Detecção no produto:** **Regex** + **padrões nomeados** + **ML/DL supervisionado** com **os seus** termos e **as suas** amostras, com pontuação **reprodutível** — ver [SENSITIVITY_DETECTION.pt_BR.md](SENSITIVITY_DETECTION.pt_BR.md). Isso fica na coluna **ML clássico / DL controlado**, não na coluna **LLM generativo aberto**.
+- **Detecção no produto:** **Regex** + **padrões nomeados** + **ML/DL supervisionado** com **os seus** termos e **as suas** amostras, com pontuação **reprodutível** — ver [SENSITIVITY_DETECTION.pt_BR.md](../SENSITIVITY_DETECTION.pt_BR.md). Isso fica na coluna **ML clássico / DL controlado**, não na coluna **LLM generativo aberto**.
 - **Saídas de conformidade:** **Achados com foco em metadados**, **norm tags**, agregação de **quasi-identificadores**, sinais de **menores**, **dicas de jurisdição** — artefatos estruturados para revisão **humana**, não prosa generativa que inventa **fontes**.
-- **À volta do repositório:** **LLMs** (agentes no IDE, chat do fornecedor) podem ajudar a **rascunhar** documentação ou **explorar** ideias — tratar a saída como **não verificada** até **testes** e **diff** confirmarem; ver [docs/ops/LLM_AGENT_EDITING_CAUTION.pt_BR.md](ops/LLM_AGENT_EDITING_CAUTION.pt_BR.md).
+- **À volta do repositório:** **LLMs** (agentes no IDE, chat do fornecedor) podem ajudar a **rascunhar** documentação ou **explorar** ideias — tratar a saída como **não verificada** até **testes** e **diff** confirmarem; ver [docs/ops/LLM_AGENT_EDITING_CAUTION.pt_BR.md](../ops/LLM_AGENT_EDITING_CAUTION.pt_BR.md).
 
 ---
 
@@ -70,4 +70,4 @@ Esta nota é para **integradores**, **leitores de conformidade** e **mantenedore
 
 ---
 
-**Veja também:** [COMPLIANCE_FRAMEWORKS.pt_BR.md](COMPLIANCE_FRAMEWORKS.pt_BR.md#detecção-determinística-vs-hype-de-llm-generativo) · [docs/ops/LLM_AGENT_EDITING_CAUTION.pt_BR.md](ops/LLM_AGENT_EDITING_CAUTION.pt_BR.md)
+**Veja também:** [COMPLIANCE_FRAMEWORKS.pt_BR.md](../COMPLIANCE_FRAMEWORKS.pt_BR.md#detecção-determinística-vs-hype-de-llm-generativo) · [docs/ops/LLM_AGENT_EDITING_CAUTION.pt_BR.md](../ops/LLM_AGENT_EDITING_CAUTION.pt_BR.md)

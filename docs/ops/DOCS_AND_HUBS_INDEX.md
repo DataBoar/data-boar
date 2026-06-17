@@ -14,7 +14,8 @@
 | [`docs/plans/PLANS_TODO.md`](../plans/PLANS_TODO.md) | Execution dashboard and sequencing | Picking the next slice |
 | [`docs/ops/PLANS_DOCUMENTATION_HIERARCHY.md`](PLANS_DOCUMENTATION_HIERARCHY.md) | `PLAN_*` vs `PLANS_TODO` vs `PLANS_HUB` | PMO / three-layer model |
 | [`docs/plans/PLAN_TAXONOMY_AXES.md`](../plans/PLAN_TAXONOMY_AXES.md) | H / U / G / P bands | Priority vocabulary |
-| [`docs/plans/PRIMERS_HUB.md`](../plans/PRIMERS_HUB.md) | Framework education primers | Compliance framework context |
+| [`docs/plans/PRIMERS_HUB.md`](../plans/PRIMERS_HUB.md) | Framework education primers (compliance tier) | Compliance framework context |
+| [`docs/primers/INDEX.md`](../primers/INDEX.md) | Technical / onboarding primers (KT) | AI evolution, decision records (ADR/MADR/UMADR) |
 
 ## Architecture decisions
 
