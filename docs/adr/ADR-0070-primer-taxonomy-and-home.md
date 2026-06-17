@@ -7,11 +7,12 @@
 
 ## Status
 
-Proposed
+Accepted
 
 ### Status history
 
 - 2026-06-17 — Proposed
+- 2026-06-17 — Accepted: ratified to proceed with the #744 migration now (Maestro gate decoupled)
 
 ## Context
 
@@ -84,8 +85,9 @@ primers therefore must not link down into the plan-tier hub; the central hub (in
   a future amendment is needed when `docs/training/` or `docs/plans/primers/` is adopted.
 - **Enforcement:** `tests/test_docs_external_no_plan_links.py` (no primer → plans links);
   `scripts/check_hubs.py` (hub link integrity); review convention from amended ADR-0058.
-- **Governance:** this ADR is **Proposed**; the physical migration (#744) proceeds once it is
-  **Accepted**.
+- **Governance:** this ADR is **Accepted**; the physical migration (#744) executes in the same
+  slice. Later refinements (the `docs/training/` umbrella, a `docs/plans/primers/` subfolder)
+  land via amendment or a successor ADR.
 
 ## Alternatives Considered
 

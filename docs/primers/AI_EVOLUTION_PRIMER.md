@@ -4,7 +4,7 @@
 
 This note is for **integrators, compliance readers, and maintainers** who hear “AI” used interchangeably for **regex**, **random forests**, **chatbots**, and **billion-parameter models**. It is **not** a full history of the field; decades and labels are **approximate** on purpose. For textbook depth, use a general AI/ML reference (e.g. Russell & Norvig, *Artificial Intelligence: A Modern Approach*)—here we only **anchor vocabulary** so Data Boar’s **deterministic + supervised** posture makes sense.
 
-**Related product docs:** [TECH_GUIDE.md](TECH_GUIDE.md#detection-stack-vs-generative-llms) · [SENSITIVITY_DETECTION.md](SENSITIVITY_DETECTION.md) · [GLOSSARY.md](GLOSSARY.md) (§8 and **§8b**).
+**Related product docs:** [TECH_GUIDE.md](../TECH_GUIDE.md#detection-stack-vs-generative-llms) · [SENSITIVITY_DETECTION.md](../SENSITIVITY_DETECTION.md) · [GLOSSARY.md](../GLOSSARY.md) (§8 and **§8b**).
 
 ---
 
@@ -56,9 +56,9 @@ This note is for **integrators, compliance readers, and maintainers** who hear �
 
 ## 5. How this aligns with Data Boar (evidence-first)
 
-- **In-product detection:** **Regex** + **named patterns** + **supervised ML/DL** on **your** terms and **your** samples, with **reproducible** scoring—see [SENSITIVITY_DETECTION.md](SENSITIVITY_DETECTION.md). That sits in the **classical ML / controlled DL** column, not the **open-ended LLM** column.
+- **In-product detection:** **Regex** + **named patterns** + **supervised ML/DL** on **your** terms and **your** samples, with **reproducible** scoring—see [SENSITIVITY_DETECTION.md](../SENSITIVITY_DETECTION.md). That sits in the **classical ML / controlled DL** column, not the **open-ended LLM** column.
 - **Compliance outputs:** **Metadata-first findings**, **norm tags**, **quasi-identifier** aggregation, **minor** signals, **jurisdiction hints**—structured artefacts for **human** review, not generative prose that invents **sources**.
-- **Around the repo:** **LLMs** (IDE agents, vendor chat) can help **draft** docs or **explore** ideas—treat outputs as **unverified** until **tests** and **diff** say otherwise; see [docs/ops/LLM_AGENT_EDITING_CAUTION.md](ops/LLM_AGENT_EDITING_CAUTION.md).
+- **Around the repo:** **LLMs** (IDE agents, vendor chat) can help **draft** docs or **explore** ideas—treat outputs as **unverified** until **tests** and **diff** say otherwise; see [docs/ops/LLM_AGENT_EDITING_CAUTION.md](../ops/LLM_AGENT_EDITING_CAUTION.md).
 
 ---
 
@@ -70,4 +70,4 @@ This note is for **integrators, compliance readers, and maintainers** who hear �
 
 ---
 
-**See also:** [COMPLIANCE_FRAMEWORKS.md](COMPLIANCE_FRAMEWORKS.md#deterministic-detection-vs-generative-llm-hype) · [docs/ops/LLM_AGENT_EDITING_CAUTION.md](ops/LLM_AGENT_EDITING_CAUTION.md)
+**See also:** [COMPLIANCE_FRAMEWORKS.md](../COMPLIANCE_FRAMEWORKS.md#deterministic-detection-vs-generative-llm-hype) · [docs/ops/LLM_AGENT_EDITING_CAUTION.md](../ops/LLM_AGENT_EDITING_CAUTION.md)

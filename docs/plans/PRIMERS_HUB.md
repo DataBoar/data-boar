@@ -42,12 +42,24 @@ Educational **plan-tier** documents that explain how Data Boar aligns with exter
 | ------ | ------- |
 | AI_COMPLIANCE_PRIMER.md *(planned — #592)* | EU AI Act, ISO/IEC 42001, NIST AI RMF |
 
+## Technical / onboarding primers (`docs/primers/`)
+
+Thematic knowledge transfer (KT) for integrators and contributors — distinct from the
+compliance/framework primers above. Per [ADR-0070](../adr/ADR-0070-primer-taxonomy-and-home.md)
+(amends [ADR-0058](../adr/ADR-0058-primer-hub-registration-ritual.md)) these live under
+`docs/primers/` with a local index, and are surfaced here in the single central hub.
+
+| Primer | Summary |
+| ------ | ------- |
+| [AI_EVOLUTION_PRIMER.md](../primers/AI_EVOLUTION_PRIMER.md) | AI history for integrators (winters, expert systems, ML/DL, LLMs — no hype) |
+| [DECISION_RECORDS_PRIMER.md](../primers/DECISION_RECORDS_PRIMER.md) | ADR → MADR → UMADR onboarding |
+| Local index | [docs/primers/INDEX.md](../primers/INDEX.md) |
+
 ## Related (not primers)
 
 | Doc | Role |
 | --- | ---- |
 | [GOVERNANCE_ITSM_DIAGRAMS_SOURCE.md](GOVERNANCE_ITSM_DIAGRAMS_SOURCE.md) | Mermaid/tables companion for **#629** / **#630** (not a standalone primer) |
-| [AI_EVOLUTION_PRIMER.md](../AI_EVOLUTION_PRIMER.md) | AI history for integrators (product docs, not `docs/plans/`) |
 | [completed/PLAN_COMPLIANCE_STANDARDS_ALIGNMENT.md](completed/PLAN_COMPLIANCE_STANDARDS_ALIGNMENT.md) | Shipped doc-only alignment (27701 + FELCA narrative) |
 
 ---

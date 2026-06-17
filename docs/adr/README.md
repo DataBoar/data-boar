@@ -83,7 +83,7 @@ Short, durable notes that capture **why** the project chose an approach—not on
 | 0066 | [TAMPERED state behavior — fail-closed in enforced mode](ADR-0066-tampered-state-behavior.md) | Accepted |
 | 0068 | [Primary Linux dev workstation (temporary)](ADR-0068-primary-linux-dev-workstation-temporary.md) | Proposed |
 | 0069 | [Cap rpds-py below the 2026 CalVer pivot](ADR-0069-cap-rpds-py-below-the-2026-calver-pivot.md) | Accepted |
-| 0070 | [Primer taxonomy and home: technical/onboarding vs deliverable](ADR-0070-primer-taxonomy-and-home.md) | Proposed |
+| 0070 | [Primer taxonomy and home: technical/onboarding vs deliverable](ADR-0070-primer-taxonomy-and-home.md) | Accepted |
 
 ## Related docs
 

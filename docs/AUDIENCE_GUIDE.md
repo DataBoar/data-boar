@@ -56,7 +56,7 @@ Navigation map for **eight** reader types. Full doc index: [README.md](README.md
 
 | | |
 | - | - |
-| **Entry** | [AI_EVOLUTION_PRIMER.md](AI_EVOLUTION_PRIMER.md) |
+| **Entry** | [AI_EVOLUTION_PRIMER.md](primers/AI_EVOLUTION_PRIMER.md) |
 | **Trail** | [philosophy/THE_WHY.md](philosophy/THE_WHY.md) → [TESTING_POC_GUIDE.md](TESTING_POC_GUIDE.md) → [COMPLIANCE_FRAMEWORKS.md](COMPLIANCE_FRAMEWORKS.md) (deterministic vs LLM section) → [GLOSSARY.md](GLOSSARY.md) |
 | **Skip** | Sales pitch folder; day-to-day ops runbooks |
 | **Overlap** | Compliance engineer (methodology); developer (test corpus) |

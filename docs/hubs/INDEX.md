@@ -19,7 +19,8 @@
 | Plans hub | `docs/plans/PLANS_HUB.md` | Every `PLAN_*.md` + hub summary |
 | Plans hierarchy | `docs/ops/PLANS_DOCUMENTATION_HIERARCHY.md` | `PLAN_*` vs `PLANS_TODO` vs `PLANS_HUB` |
 | Taxonomy axes | `docs/plans/PLAN_TAXONOMY_AXES.md` | H / U / G / P bands |
-| Primers hub | `docs/plans/PRIMERS_HUB.md` | Framework education primers |
+| Primers hub | `docs/plans/PRIMERS_HUB.md` | Framework education primers (compliance tier) |
+| Primers (technical) | `docs/primers/INDEX.md` | Onboarding/KT primers (AI evolution, decision records) |
 | Plans to-do | `docs/plans/PLANS_TODO.md` | Execution dashboard |
 
 ### Architecture decisions
