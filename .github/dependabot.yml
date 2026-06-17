@@ -26,13 +26,17 @@ updates:
         patterns: ["*"]
         update-types: ["minor", "patch"]
     # Upstream-capped transitives: `ignore` blocks Dependabot version-update PRs only;
-    # security advisories still surface. See docs/adr/ADR-0053-*.md and ADR-0054-*.md.
+    # security advisories still surface. See docs/adr/ADR-0053-*.md, ADR-0054-*.md, ADR-0069-*.md.
     ignore:
       # ebcdic 2.x is incompatible with extract-msg 0.55.x (requires_dist ebcdic<2,>=1.1.1).
       - dependency-name: "ebcdic"
         update-types: ["version-update:semver-major"]
       # chardet 6+ is incompatible with cyclonedx-bom until upstream relaxes chardet<6.0.
       - dependency-name: "chardet"
+        update-types: ["version-update:semver-major"]
+      # rpds-py 2026.x is a breaking CalVer pivot (legitimate but red on 3.12/3.13/3.14);
+      # capped <2026 via [tool.uv] constraint-dependencies. See docs/adr/ADR-0069-*.md.
+      - dependency-name: "rpds-py"
         update-types: ["version-update:semver-major"]
     cooldown:
       default-days: 7
