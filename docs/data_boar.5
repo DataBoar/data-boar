@@ -340,6 +340,41 @@ See
 .I quasi_identifier_mapping
 (list).
 .TP
+.B sensitivity_detection.connector_format_id_hint
+(optional, bool, default false) When true, connectors pass declared SQL type
+and length metadata (for example VARCHAR(N) on ID-like column names), which
+may elevate a borderline LOW score to MEDIUM (tag:
+.BR FORMAT_LENGTH_HINT_ID ).
+Reduces false negatives on structured ID columns.
+See
+.IR docs/SENSITIVITY_DETECTION.md .
+.TP
+.B sensitivity_detection.fuzzy_column_match
+(optional, bool, default false) When true, applies fuzzy string matching to
+column names to catch variations of known sensitive field names (for example
+cpf_num, email_address). Requires the optional
+.I rapidfuzz
+dependency (extra
+.IR detection-fuzzy );
+ignored when it is not installed.
+.TP
+.B sensitivity_detection.fuzzy_column_match_min_confidence
+(optional, integer 0-100, default 25) Lower bound of the combined-confidence
+band in which a fuzzy column-name match may elevate a finding to MEDIUM.
+.TP
+.B sensitivity_detection.fuzzy_column_match_max_confidence
+(optional, integer 0-100, default 45) Upper bound of that band; it is capped
+at
+.I medium_confidence_threshold
+minus one so normal MEDIUM and ML paths stay unchanged.
+.TP
+.B sensitivity_detection.fuzzy_column_match_min_ratio
+(optional, integer 50-100, default 85) Minimum fuzzy match ratio (string
+similarity) required for a column name to count as a match. Higher values
+reduce false positives.
+See
+.IR docs/SENSITIVITY_DETECTION.md .
+.TP
 .B ml_patterns_file
 Path to ML terms file (used if
 .B sensitivity_detection.ml_terms
