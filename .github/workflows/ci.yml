@@ -163,8 +163,9 @@ jobs:
 
       # CVE-2026-3219 cleared: pip>=26.1 fixes (PyPI 26.1.1 as of 2026-05); no longer suppressed.
       # PYSEC-2024-277 / PYSEC-2026-89 / PYSEC-2025-183: OSV entries without PyPI fix versions (2026-05-20); triage via deps issue.
+      # PYSEC-2026-217: mariadb 1.1.14 connector — OSV entry without a PyPI fix version (2026-06-17); remove when a fixed release ships. Tracked in #922.
       - name: Run pip audit
-        run: uv run pip-audit --ignore-vuln PYSEC-2024-277 --ignore-vuln PYSEC-2026-89 --ignore-vuln PYSEC-2025-183
+        run: uv run pip-audit --ignore-vuln PYSEC-2024-277 --ignore-vuln PYSEC-2026-89 --ignore-vuln PYSEC-2025-183 --ignore-vuln PYSEC-2026-217
 
   sonar:
     name: SonarQube / SonarCloud
