@@ -46,6 +46,23 @@ def keypair(tmp_path):
     return priv_path, pub_pem.decode("ascii"), priv.public_key()
 
 
+@pytest.fixture
+def encrypted_keypair(tmp_path):
+    """Ed25519 private key in an AES-encrypted PKCS#8 PEM (#910)."""
+    passphrase = "qa-test-passphrase"  # noqa: S105 - test-only, not a real secret
+    priv = Ed25519PrivateKey.generate()
+    priv_pem = priv.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.BestAvailableEncryption(
+            passphrase.encode("utf-8")
+        ),
+    )
+    priv_path = tmp_path / "priv-enc.pem"
+    priv_path.write_bytes(priv_pem)
+    return priv_path, priv.public_key(), passphrase
+
+
 @pytest.fixture(autouse=True)
 def _clean_guard():
     reset_license_guard_for_tests()
@@ -54,16 +71,26 @@ def _clean_guard():
     os.environ.pop("DATA_BOAR_LICENSE_PUBLIC_KEY_PEM", None)
 
 
-def _run_issuer(*argv: str) -> str:
-    proc = subprocess.run(
+def _run_issuer(*argv: str, env: dict | None = None) -> str:
+    proc = _run_issuer_proc(*argv, env=env)
+    assert proc.returncode == 0, proc.stderr
+    return proc.stdout.strip()
+
+
+def _run_issuer_proc(
+    *argv: str, env: dict | None = None
+) -> subprocess.CompletedProcess[str]:
+    # stdin=DEVNULL makes sys.stdin.isatty() deterministically False in the child,
+    # so the encrypted-key-without-env path exits instead of blocking on getpass.
+    return subprocess.run(
         [sys.executable, str(ISSUER), *argv],
         capture_output=True,
         text=True,
         cwd=str(REPO_ROOT),
         timeout=60,
+        env=env,
+        stdin=subprocess.DEVNULL,
     )
-    assert proc.returncode == 0, proc.stderr
-    return proc.stdout.strip()
 
 
 def test_issuer_defaults_60d_enterprise_machine_bound(keypair):
@@ -125,3 +152,34 @@ def test_maestro_handler_issues_60d_machine_bound():
     )
     assert "--days 60" in src
     assert "--dbmfp auto" in src
+
+
+PASSWORD_ENV = "DATA_BOAR_LICENSE_ISSUER_PRIVATE_KEY_PASSWORD"
+
+
+def test_issuer_encrypted_key_with_password_env(encrypted_keypair):
+    """Encrypted signing key + password env issues OK (Maestro/automation path, #910)."""
+    priv_path, pub_key, passphrase = encrypted_keypair
+    env = {**os.environ, PASSWORD_ENV: passphrase}
+    token = _run_issuer("--private-key-pem-file", str(priv_path), env=env)
+    claims = jwt.decode(token, pub_key, algorithms=["EdDSA"])
+    assert claims["dbtier"] == "enterprise"
+
+
+def test_issuer_clean_key_without_password_env(keypair):
+    """Backward-compat (#910): unencrypted key + no password env still issues."""
+    priv_path, _pub_pem, pub_key = keypair
+    env = {k: v for k, v in os.environ.items() if k != PASSWORD_ENV}
+    token = _run_issuer("--private-key-pem-file", str(priv_path), env=env)
+    claims = jwt.decode(token, pub_key, algorithms=["EdDSA"])
+    assert claims["dbtier"] == "enterprise"
+
+
+def test_issuer_encrypted_key_without_env_or_tty_exits_actionably(encrypted_keypair):
+    """Encrypted key + no env + no TTY exits with an actionable message, not a traceback (#910)."""
+    priv_path, _pub_key, _passphrase = encrypted_keypair
+    env = {k: v for k, v in os.environ.items() if k != PASSWORD_ENV}
+    proc = _run_issuer_proc("--private-key-pem-file", str(priv_path), env=env)
+    assert proc.returncode != 0
+    assert PASSWORD_ENV in proc.stderr
+    assert "Traceback" not in proc.stderr

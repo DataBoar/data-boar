@@ -314,6 +314,13 @@ $tierLicenses = @{
     enterprise = Join-Path $keysDir "dev-enterprise.lic"
 }
 
+# Encrypted signing key (#910): when license-signing-v1-pkcs8.pem is AES-encrypted,
+# the issuer reads its passphrase from DATA_BOAR_LICENSE_ISSUER_PRIVATE_KEY_PASSWORD.
+# Maestro runs head-less (no TTY), so the operator MUST export that env var before
+# running this handler; the child `& uv run` inherits the current process environment.
+# Without it (encrypted key + no TTY) the issuer exits with an actionable message and
+# the per-tier guard below reports the failure. An unencrypted key needs no passphrase.
+
 # QA licenses: 60-day expiry + bound to this machine's fingerprint (#719 —
 # env bypass removed; signed short-lived machine-bound .lic is the only path).
 foreach ($tier in @("community", "pro", "enterprise")) {
