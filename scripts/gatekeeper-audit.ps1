@@ -10,10 +10,12 @@
        C:\Users\fabio (and c:/users/fabio), /home/leitao; those lines are not passed to git grep.
 
     3. Staged paths only: git diff --cached --name-only --diff-filter=ACMRT, then
-       git grep -n -F -f <strict-seeds> --cached -- <paths> (fixed strings from file = git's -F -f; same intent as -Ff).
+       git grep -n -w -F -f <strict-seeds> --cached -- <paths> (word-boundary fixed strings
+       from file; -w stops short seeds substring-colliding inside larger words -- issue #944).
 
-    3b. Leaf names like uv.lock are skipped: PyPI wheel/sdist URLs embed ISO8601 timestamps whose
-        time portion false-positive short fixed-string seeds (substring matches with git grep -F).
+    3b. Leaf names like uv.lock are still skipped (defense-in-depth): PyPI wheel/sdist URLs embed
+        ISO8601 timestamps; -w already rejects those substring collisions, but machine-generated
+        lock churn is irrelevant to PII review, so we skip it explicitly.
 
     4. Any remaining hit -> red error, exit 1.
 
@@ -69,6 +71,46 @@ function Test-PublicIdentitySeedExcluded([string] $seed) {
     return $false
 }
 
+function Get-PiiGateAllowlist([string] $root) {
+    # Operator-approved per-location FP exceptions (issue #944, ADR-0071).
+    # Active line format: <repo-relative-path>|<seed>|<reason>
+    $allowPath = Join-Path $root "security\pii_gate_allowlist.txt"
+    $entries = New-Object System.Collections.Generic.List[object]
+    if (-not (Test-Path -LiteralPath $allowPath)) { return $entries }
+    foreach ($raw in (Get-Content -LiteralPath $allowPath -Encoding UTF8)) {
+        $t = $raw.Trim()
+        if ($t.Length -eq 0 -or $t.StartsWith("#")) { continue }
+        $parts = $t -split '\|'
+        if ($parts.Count -lt 2) { continue }
+        $rel = ($parts[0]).Trim().Replace('\', '/')
+        $seed = ($parts[1]).Trim()
+        if ($rel -and $seed) {
+            $entries.Add([pscustomobject]@{ Path = $rel; Seed = $seed }) | Out-Null
+        }
+    }
+    return $entries
+}
+
+function Test-LineFullyAllowlisted([string] $line, $strictSeeds, $allowlist) {
+    # Parse "path:line:content"; suppress only if EVERY matched seed is allowlisted for that path.
+    # Fail-safe: unparsable line or no identifiable seed -> not suppressed.
+    $m = [regex]::Match($line, '^(.*?):(\d+):(.*)$')
+    if (-not $m.Success) { return $false }
+    $path = $m.Groups[1].Value.Replace('\', '/')
+    $content = $m.Groups[3].Value
+    $allowedHere = @($allowlist | Where-Object { $_.Path -eq $path } | ForEach-Object { $_.Seed })
+    $matched = @()
+    foreach ($seed in $strictSeeds) {
+        $pat = "(?<!\w)" + [regex]::Escape($seed) + "(?!\w)"
+        if ([regex]::IsMatch($content, $pat)) { $matched += $seed }
+    }
+    if ($matched.Count -eq 0) { return $false }
+    foreach ($seed in $matched) {
+        if ($allowedHere -notcontains $seed) { return $false }
+    }
+    return $true
+}
+
 if (-not (Test-Path -LiteralPath $SeedsPath)) {
     if ($RequireSeeds) {
         Write-GateFail "Seeds file required but missing: $SeedsPath"
@@ -112,6 +154,11 @@ if ($skippedPublic -gt 0) {
 if ($strictSeeds.Count -eq 0) {
     Write-Host "GATEKEEPER-AUDIT: OK (no strict seeds to scan)." -ForegroundColor Green
     exit 0
+}
+
+$allowlist = Get-PiiGateAllowlist $repoRoot
+if ($allowlist.Count -gt 0) {
+    Write-Host "  Sanctioned FP allowlist: $($allowlist.Count) entr(y/ies) from security/pii_gate_allowlist.txt (operator-approved, per-location)." -ForegroundColor DarkGray
 }
 
 $prevEap = $ErrorActionPreference
@@ -165,8 +212,12 @@ try {
         $end = [Math]::Min($i + $batchSize, $paths.Count) - 1
         $chunk = $paths[$i..$end]
         $ErrorActionPreference = "Continue"
-        # -F -f: fixed-string patterns from file (same as common -Ff intent for pickaxe-style literals).
-        $grepArgs = @("-C", $repoRoot, "grep", "-n", "-F", "-f", $tmp, "--cached", "--") + $chunk
+        # -n -w -F -f: line numbers, word-boundary, fixed-string patterns from file.
+        # -w (word-boundary) makes a short seed match only when delimited by non-word
+        # chars, so it never substring-collides with a larger word (issue #944);
+        # sensitivity is preserved for whole-word / full-string seeds. Twin of
+        # scripts/gatekeeper_audit.py. Pair with distinctive seeds, never fragments.
+        $grepArgs = @("-C", $repoRoot, "grep", "-n", "-w", "-F", "-f", $tmp, "--cached", "--") + $chunk
         $out = & git @grepArgs 2>&1
         $ErrorActionPreference = $prevEap
         $text = if ($null -eq $out) { "" } else { ($out | Out-String).TrimEnd() }
@@ -174,10 +225,18 @@ try {
 
         if ($code -eq 0) {
             if ($text.Length -gt 0) {
-                Write-GateFail "HIT - staged content matches a strict PII seed (not public-identity allowlist):"
-                Write-Host $text -ForegroundColor Red
-                Write-GateFail "ABORT: redact or unstage before commit/push."
-                exit 1
+                $kept = @()
+                foreach ($ln in ($text -split "`n")) {
+                    if ($ln.Trim().Length -eq 0) { continue }
+                    if (Test-LineFullyAllowlisted $ln $strictSeeds $allowlist) { continue }
+                    $kept += $ln
+                }
+                if ($kept.Count -gt 0) {
+                    Write-GateFail "HIT - staged content matches a strict PII seed (not public-identity allowlist):"
+                    Write-Host ($kept -join "`n") -ForegroundColor Red
+                    Write-GateFail "ABORT: redact or unstage before commit/push."
+                    exit 1
+                }
             }
         }
         elseif ($code -eq 1) {

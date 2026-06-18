@@ -79,6 +79,11 @@ jobs:
       - name: PII history guard (full git history)
         run: uv run python scripts/pii_history_guard.py --full-history
 
+      - name: PII gate change tripwire (self-protecting gate; ADR-0071, #944)
+        run: |
+          git fetch origin main --depth=1 2>/dev/null || true
+          uv run python scripts/gate_change_tripwire.py --base origin/main
+
   lint:
     name: Lint (pre-commit)
     runs-on: ubuntu-latest

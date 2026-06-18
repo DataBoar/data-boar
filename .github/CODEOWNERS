@@ -1,0 +1,44 @@
+# CODEOWNERS -- self-protecting PII/security gate (issue #944, ADR-0071)
+#
+# Purpose: any change to a gate file (matcher, history guard, hooks, CI, allowlist,
+# gate ADRs, the hard rule, the example seed template) must be reviewed by the gate
+# owner. This closes the "the gated modifies the gate" failure mode: a PR can no
+# longer silently weaken the gate that audits it.
+#
+# Operator-only settings (NOT the agent): in GitHub branch protection for `main`,
+# enable "Require review from Code Owners" + "Do not allow bypassing the above
+# settings". Also scope the bot/automation token so it cannot self-approve these
+# paths. See ADR-0071 and docs/plans/PLAN_PII_GATE_INTEGRITY.md.
+#
+# Note: the live seed denylist docs/private/security_audit/PII_LOCAL_SEEDS.txt is
+# gitignored, so it never appears in a PR diff and cannot be CODEOWNERS-guarded;
+# the tracked template below carries the policy instead.
+
+# --- PII / security gate: matchers + history guard ---
+/scripts/gatekeeper_audit.py                                   @FabioLeitao
+/scripts/gatekeeper-audit.ps1                                  @FabioLeitao
+/scripts/pii_history_guard.py                                  @FabioLeitao
+/scripts/gate_change_tripwire.py                               @FabioLeitao
+
+# --- Gate hooks + CI wiring ---
+/.pre-commit-config.yaml                                       @FabioLeitao
+/.github/workflows/ci.yml                                      @FabioLeitao
+/.github/workflows/gate-change-tripwire.yml                    @FabioLeitao
+/.github/CODEOWNERS                                            @FabioLeitao
+
+# --- Gate tests ---
+/tests/test_pii_guard.py                                       @FabioLeitao
+/tests/test_gatekeeper_audit_word_boundary.py                  @FabioLeitao
+/tests/test_gate_change_tripwire.py                            @FabioLeitao
+
+# --- Sanctioned FP exception allowlist (operator-approved, per-location) ---
+/security/pii_gate_allowlist.txt                               @FabioLeitao
+/docs/private.example/security_audit/PII_LOCAL_SEEDS.example.txt   @FabioLeitao
+
+# --- Gate governance: ADRs, plan, hard rule ---
+/docs/adr/ADR-0018-pii-anti-recurrence-guardrails-for-tracked-files-and-branch-history.md   @FabioLeitao
+/docs/adr/ADR-0020-ci-full-git-history-pii-gate.md             @FabioLeitao
+/docs/adr/ADR-0049-no-brittle-mitigations-robust-input-handling.md   @FabioLeitao
+/docs/adr/ADR-0071-self-protecting-pii-gate.md                 @FabioLeitao
+/docs/plans/PLAN_PII_GATE_INTEGRITY.md                         @FabioLeitao
+/.cursor/rules/never-weaken-security-gates.mdc                 @FabioLeitao

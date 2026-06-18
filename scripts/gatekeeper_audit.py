@@ -14,12 +14,77 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
 
 DEFAULT_SEEDS_REL = Path("docs") / "private" / "security_audit" / "PII_LOCAL_SEEDS.txt"
+ALLOWLIST_REL = Path("security") / "pii_gate_allowlist.txt"
+
+
+def load_allowlist(path: Path) -> list[tuple[str, str]]:
+    """Operator-approved per-location FP exceptions: (repo_relative_path, seed).
+
+    Sanctioned way to silence a confirmed false positive (issue #944, ADR-0071) --
+    NEVER by loosening the matcher. File is CODEOWNERS-protected.
+    """
+    if not path.is_file():
+        return []
+    entries: list[tuple[str, str]] = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        s = line.strip()
+        if not s or s.startswith("#"):
+            continue
+        parts = s.split("|")
+        if len(parts) < 2:
+            continue
+        rel = parts[0].strip().replace("\\", "/")
+        seed = parts[1].strip()
+        if rel and seed:
+            entries.append((rel, seed))
+    return entries
+
+
+def _seeds_in_line(content: str, strict_seeds: list[str]) -> set[str]:
+    """Strict seeds present in a line under word-boundary semantics (mirror -w)."""
+    found: set[str] = set()
+    for seed in strict_seeds:
+        if re.search(r"(?<!\w)" + re.escape(seed) + r"(?!\w)", content):
+            found.add(seed)
+    return found
+
+
+def filter_allowlisted(
+    hit_text: str,
+    strict_seeds: list[str],
+    allowlist: list[tuple[str, str]],
+) -> str:
+    """Drop hit lines whose every matched seed is allowlisted for that path.
+
+    Fail-safe: if a line's seed set cannot be identified, the line is KEPT.
+    """
+    if not allowlist:
+        return hit_text
+    allow_by_path: dict[str, set[str]] = {}
+    for rel, seed in allowlist:
+        allow_by_path.setdefault(rel, set()).add(seed)
+
+    kept: list[str] = []
+    for line in hit_text.splitlines():
+        m = re.match(r"^(.*?):(\d+):(.*)$", line)
+        if not m:
+            kept.append(line)
+            continue
+        path = m.group(1).replace("\\", "/")
+        content = m.group(3)
+        seeds_here = _seeds_in_line(content, strict_seeds)
+        allowed = allow_by_path.get(path, set())
+        if seeds_here and not (seeds_here - allowed):
+            continue  # every matched seed is an approved FP at this path
+        kept.append(line)
+    return "\n".join(kept)
 
 
 def _repo_root() -> Path:
@@ -74,9 +139,16 @@ def git_grep_strict_seeds(
     repo: Path,
     strict_seeds: list[str],
     paths: list[str],
+    allowlist: list[tuple[str, str]] | None = None,
 ) -> tuple[str | None, int]:
-    """Return (stdout hit text or None, exit code 0/1/2)."""
+    """Return (stdout hit text or None, exit code 0/1/2).
 
+    Operator-approved per-location FP exceptions (allowlist) are filtered out before
+    a hit is reported -- never by loosening the matcher (issue #944, ADR-0071).
+    """
+
+    allowlist = allowlist or []
+    kept_all: list[str] = []
     tmp_path: Path | None = None
     try:
         with tempfile.NamedTemporaryFile(
@@ -98,6 +170,12 @@ def git_grep_strict_seeds(
                     str(repo),
                     "grep",
                     "-n",
+                    # -w (word-boundary): a seed only matches when delimited by non-word
+                    # chars, so a short seed (e.g. a given name) never substring-collides
+                    # with a larger word (issue #944). Sensitivity is preserved: whole-word
+                    # and full-string seeds still match. Pair with distinctive seeds
+                    # (full name / rare bigram), never isolated common fragments.
+                    "-w",
                     "-F",
                     "-f",
                     str(tmp_path),
@@ -111,7 +189,9 @@ def git_grep_strict_seeds(
             stdout = proc.stdout.strip()
             if proc.returncode == 0:
                 if stdout:
-                    return stdout, 0
+                    filtered = filter_allowlisted(stdout, strict_seeds, allowlist)
+                    if filtered.strip():
+                        kept_all.append(filtered)
             elif proc.returncode == 1:
                 if stdout:
                     sys.stderr.write(
@@ -133,6 +213,8 @@ def git_grep_strict_seeds(
             except OSError:  # noqa: BLE001
                 pass  # temp cleanup best-effort
 
+    if kept_all:
+        return "\n".join(kept_all), 0
     return None, 0
 
 
@@ -232,7 +314,14 @@ def run_gate(*, repo: Path, seeds_path: Path, require_seeds: bool) -> int:
 
     cw(f"  Staged path(s) scanned: {len(paths)} (of {len(staged)} total staged)\n")
 
-    hit, code = git_grep_strict_seeds(repo, strict, paths)
+    allowlist = load_allowlist(repo / ALLOWLIST_REL)
+    if allowlist:
+        cw(
+            f"  Sanctioned FP allowlist: {len(allowlist)} entr(y/ies) from "
+            f"{ALLOWLIST_REL} (operator-approved, per-location).\n"
+        )
+
+    hit, code = git_grep_strict_seeds(repo, strict, paths, allowlist)
     if code != 0:
         return code
     if hit:

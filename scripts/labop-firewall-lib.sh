@@ -47,7 +47,7 @@ _fw_detect() {
     FW_TYPE="firewalld"
   elif command -v nft >/dev/null 2>&1 && nft list ruleset 2>/dev/null | grep -q "type filter"; then
     FW_TYPE="nftables"
-  elif command -v iptables >/dev/null 2>&1 && iptables -L INPUT -n 2>/dev/null | grep -qiv "chain INPUT"; then
+  elif command -v iptables >/dev/null 2>&1 && iptables -L INPUT -n 2>/dev/null | grep -qv "Chain INPUT"; then
     FW_TYPE="iptables"
   fi
   echo "[FW] Detected firewall: $FW_TYPE (subnet: $LAB_OP_SUBNET)"

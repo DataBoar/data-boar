@@ -1,0 +1,21 @@
+# PII gate -- sanctioned false-positive allowlist (issue #944, ADR-0071)
+#
+# This is the ONLY sanctioned way to silence a confirmed gatekeeper_audit false
+# positive. NEVER loosen the matcher logic or weaken a seed to pass a commit/CI.
+#
+# Each active line scopes ONE exception by (path, seed):
+#
+#     <repo-relative-path>|<seed-literal>|<reason / who confirmed>
+#
+# Semantics: a gatekeeper hit at <path> is suppressed only when every strict seed
+# matched on that line is allowlisted for that exact path. Any non-allowlisted seed
+# still fails the gate. Lines starting with '#' and blank lines are ignored.
+#
+# Governance: this file is CODEOWNERS-protected (owner = operator). An exception is
+# legitimate only after the operator confirms the match is a genuine false positive.
+# Keep the list LEAN and audited; remove entries when the underlying file changes.
+#
+# Example (commented; not active; token below is synthetic, not a real seed):
+#   docs/ops/SOME_RUNBOOK.md|ExampleModelToken|FP: hardware model name, not a person -- approved @FabioLeitao
+#
+# --- Active exceptions (operator-approved) ---
