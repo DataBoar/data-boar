@@ -26,7 +26,10 @@ SHARE_PATH="${_OP_HOME}/Documents/LGPD"
 SHARE_NAME="lgpd_data"
 STATUS_FILE="${_OP_HOME}/.labop-status"
 FW_TAG="smb"
-FW_STATE_FILE="${HOME}/.labop-fw-ephemeral-smb.json"
+# Use the resolved operator home (not $HOME) so the ephemeral-firewall state file is
+# found at teardown even under sudo ($HOME=/root) -- otherwise the ephemeral rule can
+# leak into a persistent one (#935).
+FW_STATE_FILE="${_OP_HOME}/.labop-fw-ephemeral-smb.json"
 
 PREV_ARG=""
 for arg in "$@"; do

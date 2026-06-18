@@ -15,7 +15,13 @@
 
 set -u
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin${PATH+:$PATH}"
-if [[ -d "${HOME}/.local/bin" ]]; then export PATH="${HOME}/.local/bin:${PATH}"; fi
+# This script's intended invocation is sudo -n, where $HOME is /root and the operator's
+# uv (~/.local/bin) is invisible. Resolve the operator home via getent (same pattern as
+# labop-nfs/smb-ensure), preferring SUDO_USER then the current user (#935).
+_DD_OPERATOR="${SUDO_USER:-$(id -un 2>/dev/null || echo "${USER:-}")}"
+_DD_OP_HOME="$(getent passwd "$_DD_OPERATOR" 2>/dev/null | cut -d: -f6)"
+if [[ -z "$_DD_OP_HOME" ]]; then _DD_OP_HOME="${HOME:-/root}"; fi
+if [[ -d "${_DD_OP_HOME}/.local/bin" ]]; then export PATH="${_DD_OP_HOME}/.local/bin:${PATH}"; fi
 
 CHECK_ONLY=0
 PRIVILEGED=0
@@ -56,7 +62,7 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 _log "Repo root: $REPO_ROOT"
 
 UV_BIN=""
-for candidate in "${HOME}/.local/bin/uv" "/usr/local/bin/uv" "$(command -v uv 2>/dev/null)"; do
+for candidate in "${_DD_OP_HOME}/.local/bin/uv" "/usr/local/bin/uv" "$(command -v uv 2>/dev/null)"; do
   if [[ -x "$candidate" ]]; then UV_BIN="$candidate"; break; fi
 done
 if [[ -z "$UV_BIN" ]]; then

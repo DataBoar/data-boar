@@ -273,7 +273,9 @@ def iter_archive_members(
             import py7zr
         except ImportError:
             raise ArchiveUnsupportedError(
-                "7z support requires py7zr; install with pip install py7zr or [compressed] extra"
+                "7z support requires py7zr: `uv sync --extra compressed` (uv) "
+                "or `pip install 'data-boar[compressed]'` (fallback); "
+                "on a host without liblzma see issue #926"
             )
         pwd = pw.get(".7z") or pw.get("default") or None
         try:
