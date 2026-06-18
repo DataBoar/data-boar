@@ -93,6 +93,21 @@ _svc_start() {
   if command -v systemctl >/dev/null 2>&1; then
     systemctl start "$svc" 2>&1
   elif command -v sv >/dev/null 2>&1; then
+    # runit (Void): `sv start` fails with "unable to change to service directory"
+    # when the service is defined in /etc/sv but not linked into the supervised
+    # runsvdir. Link it first, wait for runsv to spawn, then start (#940).
+    local _rsv="" _d _i
+    for _d in /var/service /run/runit/service /etc/runit/runsvdir/current /service; do
+      if [[ -d "$_d" ]]; then _rsv="$_d"; break; fi
+    done
+    if [[ -n "$_rsv" && -d "/etc/sv/$svc" && ! -e "$_rsv/$svc" ]]; then
+      _log "runit: linking /etc/sv/$svc into $_rsv (service not yet supervised)."
+      ln -s "/etc/sv/$svc" "$_rsv/$svc" 2>&1 || true
+      for _i in 1 2 3 4 5; do
+        [[ -e "$_rsv/$svc/supervise" ]] && break
+        sleep 1
+      done
+    fi
     sv start "$svc" 2>&1
   elif command -v rc-service >/dev/null 2>&1; then
     rc-service "$svc" start 2>&1

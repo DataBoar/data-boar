@@ -47,10 +47,24 @@ _fw_detect() {
     FW_TYPE="firewalld"
   elif command -v nft >/dev/null 2>&1 && nft list ruleset 2>/dev/null | grep -q "type filter"; then
     FW_TYPE="nftables"
-  elif command -v iptables >/dev/null 2>&1 && iptables -L INPUT -n 2>/dev/null | grep -qv "Chain INPUT"; then
+  elif command -v iptables >/dev/null 2>&1 && iptables -L INPUT -n 2>/dev/null | grep -qiv "chain INPUT"; then
     FW_TYPE="iptables"
   fi
   echo "[FW] Detected firewall: $FW_TYPE (subnet: $LAB_OP_SUBNET)"
+}
+
+# ---------------------------------------------------------------------------
+# Discover the host's real nftables input base chain as "<family> <table> <chain>".
+# Some lightweight non-systemd lab hosts may not have the assumed `inet filter input` chain, so
+# `add rule inet filter input ...` fails with ENOENT. Empty output = no manageable
+# input hook chain (#940).
+# ---------------------------------------------------------------------------
+_fw_nft_input_chain() {
+  nft list ruleset 2>/dev/null | awk '
+    /^[[:space:]]*table / { fam=$2; tbl=$3; next }
+    /^[[:space:]]*chain /  { ch=$2; next }
+    /hook input/           { print fam, tbl, ch; exit }
+  '
 }
 
 # ---------------------------------------------------------------------------
@@ -100,6 +114,7 @@ _fw_port_allowed() {
 # ---------------------------------------------------------------------------
 FW_EPHEMERAL_ADDED=0
 FW_EPHEMERAL_TAG=""
+FW_NFT_CHAIN=""
 
 _fw_open_ephemeral() {
   local port="$1"
@@ -121,7 +136,18 @@ _fw_open_ephemeral() {
       ufw allow proto "$proto" from "$LAB_OP_SUBNET" to any port "$port" comment "$comment" 2>&1
       ;;
     nftables)
-      nft add rule inet filter input ip saddr "$LAB_OP_SUBNET" "$proto" dport "$port" accept comment "\"$comment\"" 2>&1
+      # Discover the real input base chain instead of assuming `inet filter input`
+      # (absent on some lightweight lab hosts) -- otherwise the add fails ENOENT (#940).
+      local nft_fam nft_tbl nft_ch
+      read -r nft_fam nft_tbl nft_ch < <(_fw_nft_input_chain)
+      if [[ -z "$nft_ch" ]]; then
+        echo "[FW] WARN: no nftables input base chain found (looked for 'hook input'); cannot open $port/$proto ephemerally." >&2
+        echo "[FW] Hint: create one, e.g. sudo nft add table inet filter; sudo nft 'add chain inet filter input { type filter hook input priority 0; policy accept; }'" >&2
+        false
+      else
+        FW_NFT_CHAIN="$nft_fam $nft_tbl $nft_ch"
+        nft add rule "$nft_fam" "$nft_tbl" "$nft_ch" ip saddr "$LAB_OP_SUBNET" "$proto" dport "$port" accept comment "\"$comment\"" 2>&1
+      fi
       ;;
     iptables)
       iptables -I INPUT -p "$proto" -s "$LAB_OP_SUBNET" --dport "$port" -j ACCEPT -m comment --comment "$comment" 2>&1
@@ -139,7 +165,7 @@ _fw_open_ephemeral() {
     FW_EPHEMERAL_ADDED=1
     # Persist state for cleanup
     local state_file="${FW_STATE_FILE:-${HOME}/.labop-fw-ephemeral-${FW_TAG:-default}.json}"
-    echo "{\"fw\":\"$FW_TYPE\",\"port\":$port,\"proto\":\"$proto\",\"subnet\":\"$LAB_OP_SUBNET\",\"tag\":\"$comment\"}" > "$state_file" 2>/dev/null || true
+    echo "{\"fw\":\"$FW_TYPE\",\"port\":$port,\"proto\":\"$proto\",\"subnet\":\"$LAB_OP_SUBNET\",\"tag\":\"$comment\",\"nftchain\":\"${FW_NFT_CHAIN:-}\"}" > "$state_file" 2>/dev/null || true
     echo "[FW] Ephemeral rule added. State saved to $state_file."
     return 0
   else
@@ -174,11 +200,18 @@ _fw_cleanup_ephemeral() {
       ufw delete allow proto "$proto" from "$subnet" to any port "$port" 2>&1 || true
       ;;
     nftables)
-      # nftables doesn't easily delete by comment; delete by handle if known
-      local handle
+      # nftables doesn't easily delete by comment; delete by handle on the same chain
+      # the rule was added to (#940 -- not always `inet filter input`).
+      local handle nftchain nft_fam nft_tbl nft_ch
+      nftchain=$(grep -o '"nftchain":"[^"]*"' "$state_file" | cut -d'"' -f4)
+      if [[ -n "$nftchain" ]]; then
+        read -r nft_fam nft_tbl nft_ch <<<"$nftchain"
+      else
+        nft_fam="inet"; nft_tbl="filter"; nft_ch="input"
+      fi
       handle=$(nft -a list ruleset 2>/dev/null | grep "$tag" | grep -o 'handle [0-9]*' | awk '{print $2}')
       if [[ -n "$handle" ]]; then
-        nft delete rule inet filter input handle "$handle" 2>&1 || true
+        nft delete rule "$nft_fam" "$nft_tbl" "$nft_ch" handle "$handle" 2>&1 || true
       else
         echo "[FW] WARN: Could not find nftables rule handle for tag $tag — manual cleanup may be needed." >&2
       fi
