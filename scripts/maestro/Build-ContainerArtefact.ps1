@@ -19,7 +19,7 @@ $staleWarnHours = 24
 
 function Test-ContainerEngineReady {
     if ($env:DOCKER_HOST -match "podman" -and (Get-Command podman -ErrorAction SilentlyContinue)) {
-        $null = & podman info --format "{{.Host.Os}}" 2>$null
+        $null = & podman info --format "{{.Host.OS}}" 2>$null
         if ($LASTEXITCODE -eq 0) {
             return [PSCustomObject]@{ Cmd = "podman"; Ready = $true; IsPodman = $true }
         }
