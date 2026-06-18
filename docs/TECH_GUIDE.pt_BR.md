@@ -122,8 +122,8 @@ uv run python main.py --config config.yaml --diff <session_a_uuid> <session_b_uu
 uv run python main.py --config config.yaml --export-dsar <session_uuid>
 uv run python main.py --config config.yaml --export-dsar <session_uuid> --dsar-output dsar_export.json
 
-# Iniciar o servidor da API (equivalente a python main.py --web)
-uv run python main.py --config config.yaml --web --port 8088
+# Iniciar o servidor da API (texto plano explícito; veja o gate de transporte em "API REST")
+uv run python main.py --config config.yaml --web --allow-insecure-http --port 8088
 ```
 
 Suporte opcional NoSQL (MongoDB, Redis):
@@ -273,30 +273,39 @@ python main.py --config config.yaml --tenant "Acme Corp" --technician "Alice V."
 ### API REST (porta padrão 8088)
 
 ```bash
-# Iniciar API na porta padrão 8088
-python main.py --config config.yaml --web
+# Iniciar API na porta padrão 8088 (texto plano é aceite explícito — veja o gate abaixo)
+python main.py --config config.yaml --web --allow-insecure-http
 
 # Iniciar API em porta customizada
-python main.py --config config.yaml --web --port 9090
+python main.py --config config.yaml --web --allow-insecure-http --port 9090
 
-# Equivalente (sem usar a CLI do main.py)
+# TLS em vez de texto plano (recomendado fora do loopback)
+python main.py --config config.yaml --web --https-cert-file server.crt --https-key-file server.key --port 8088
+```
+
+**Gate de transporte:** `main.py --web` exige **ou** HTTPS (`--https-cert-file` / `--https-key-file`, ou o bloco `api` na config) **ou** o aceite explícito `--allow-insecure-http` (apenas loopback / laboratório). Caso contrário, termina com código **2** e erro no stderr — então um `--web` copiado-e-colado **sem** essa flag falha antes de qualquer varredura. Espelha [USAGE.pt_BR.md](USAGE.pt_BR.md#servidor-api---web).
+
+```bash
+# Não recomendado para adoção: ignora o gate de transporte do main.py E o
+# configure_dashboard_transport, então GET /status reporta mode: not_configured.
 uvicorn api.routes:app --host 0.0.0.0 --port 8088
 ```
 
 ## Argumentos da CLI (referência)
 
-| Argumento           | Modo                     | Descrição                                                                                                                                                                                                             | Exemplos                                             |
-| ---------           | ------                   | -------------                                                                                                                                                                                                         | ----------                                           |
-| `--config PATH`     | CLI e API                | Caminho do arquivo de config YAML/JSON. Padrão `config.yaml` se omitido.                                                                                                                                              | `--config config.yaml`, `--config configs/prod.yaml` |
-| `--web`             | Somente API              | Iniciar a API REST em vez de executar uma varredura única.                                                                                                                                                            | `--web`                                              |
-| `--port N`          | Somente API              | Porta da API REST quando `--web` está definido. Padrão `8088`. Ignorado no modo CLI único.                                                                                                                            | `--web --port 9090`                                  |
-| `--reset-data`      | Somente CLI (manutenção) | **Perigoso**: apaga todas as sessões de varredura, achados e falhas do SQLite, remove relatórios/heatmaps gerados em `report.output_dir` e registra o evento em `data_wipe_log` para auditoria. Não inicia varredura. | `--reset-data`                                       |
-| `--tenant NAME`     | Somente CLI (único)      | Nome opcional de customer/tenant para esta varredura. Armazenado em `scan_sessions.tenant_name`, exibido no dashboard e na planilha **Report info**.                                                                  | `--tenant "Acme Corp"`                               |
-| `--technician NAME` | Somente CLI (único)      | Nome opcional do técnico/operador responsável por esta varredura. Armazenado em `scan_sessions.technician_name`, exibido no dashboard e na planilha **Report info**.                                                  | `--technician "Alice V."`                         |
+**A referência completa e autoritativa da CLI (todas as 22 flags — `--config`, `--web`, `--host`, `--port`, `--https-cert-file` / `--https-key-file`, `--allow-insecure-http`, `--validate-config`, `--diff`, `--fail-on-new-high`, `--export-dsar` / `--dsar-output`, `--export-audit-trail`, `--scan-compressed`, `--content-type-check`, `--scan-stego`, `--jurisdiction-hint`, `--reset-data`, `--tenant`, `--technician`, …) está em [USAGE.pt_BR.md §1 — Interface de linha de comando](USAGE.pt_BR.md#1-interface-de-linha-de-comando-cli).** É a única fonte de verdade (mantida em sincronia com `main.py`); este guia não duplica uma cópia parcial. A lista viva é sempre `uv run python main.py --help`.
+
+Orientação rápida para as mais comuns:
+
+- `--config PATH` — config YAML/JSON (padrão `config.yaml`). Usada por CLI **e** API.
+- `--web` — sobe a API REST / dashboard em vez da varredura única (precisa do gate de transporte acima: `--allow-insecure-http` ou TLS).
+- `--port N` / `--host HOST` — bind do `--web` (padrão `127.0.0.1:8088`; `--host 0.0.0.0` só com controles de rede).
+- `--validate-config` — pré-voo dos alvos, sem varredura (exit 0 se OK).
+- `--reset-data` — **perigoso**: apaga sessões/achados/relatórios do SQLite (auditado em `data_wipe_log`).
 
 Ao usar a API (`--web`), o servidor carrega a config de **`CONFIG_PATH`** (variável de ambiente) ou `config.yaml` no diretório de trabalho se `--config` não for informado na CLI.
 
-**Dashboard web:** Com o servidor em execução, abra <http://localhost:8088/en/> (ou `/pt-br/`) para um dashboard simples: status da varredura, quantidade/qualidade dos dados descobertos (achados DB/FS, falhas), **gráfico de progresso ao longo do tempo** (total de achados e score de risco por sessão), campos opcionais para **tenant/customer** e **technician/operator** antes de iniciar uma varredura, sessões recentes (incluindo colunas tenant/technician) e links para **Reports** (lista e download) e **Configuration** (editar YAML no navegador). O `/` sem prefixo redireciona para o locale negociado (cookie, `Accept-Language`, config).
+**Dashboard web:** Com o servidor em execução, abra <http://localhost:8088/en/> (ou `/pt-br/`) para um dashboard simples: status da varredura, quantidade/qualidade dos dados descobertos (achados DB/FS, falhas), **gráfico de progresso ao longo do tempo** (total de achados e score de risco por sessão), campos opcionais para **tenant/customer** e **technician/operator** antes de iniciar uma varredura, sessões recentes (incluindo colunas tenant/technician) e links para **Reports** (lista e download) e **Configuration** (editar YAML no navegador). O `/` sem prefixo redireciona para o locale negociado (cookie, `Accept-Language`, config). O relatório baixa de duas formas: pelos endpoints da API acima (`/report`, `/reports/{session_id}`) **e** pelo botão **Download** na página **Reports** — para um passo a passo não técnico (abrir `/en/` → preencher tenant/technician → **Start scan** → **Reports** → **Download**), veja [USAGE.pt_BR.md — Painel web](USAGE.pt_BR.md#urls-principais).
 
 ## Rotas da API (resumo)
 
@@ -620,6 +629,8 @@ docker run -d -p 8088:8088 -v /path/to/your/data:/data -e CONFIG_PATH=/data/conf
 ```
 
 Prepare `/data/config.yaml` a partir de `deploy/config.example.yaml` (veja [deploy/DEPLOY.md](deploy/DEPLOY.md) ([pt-BR](deploy/DEPLOY.pt_BR.md))). Você pode optar por usar esta imagem como container instanciado em vez de puxar o código do Git e construir localmente.
+
+> **Saída do relatório no Docker:** `report.output_dir` tem padrão `.` (o diretório de trabalho do container). Dentro de um container esse caminho é **efêmero** — os arquivos Excel/heatmap somem quando o container para. Aponte `report.output_dir` para um **volume montado** (por exemplo `/data` no exemplo acima) para os relatórios caírem no host, **ou** recupere-os pelo botão **Download** do dashboard / pelos endpoints `/report` e `/reports/{session_id}` da API.
 
 ### Construir a partir do código
 
