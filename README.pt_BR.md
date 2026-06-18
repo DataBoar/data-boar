@@ -4,6 +4,8 @@
 
 ![Data Boar mascot](api/static/mascot/data_boar_mascote_color.svg)
 
+**Scanner de PII de código aberto com postura forense para LGPD · GDPR · conformidade auditável.**
+
 **LGPD — relato-testemunho (visita de campo, Brasil):** [Português (Brasil)](docs/LGPD_WITNESS_REPORT_NIO_FIELD_VISIT_2026.pt_BR.md) · [English](docs/LGPD_WITNESS_REPORT_NIO_FIELD_VISIT_2026.md)
 
 **English:** [README.md](README.md) · [docs/USAGE.md](docs/USAGE.md) · **5 min (pt-BR):** [QUICKSTART.md](QUICKSTART.md)

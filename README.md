@@ -6,6 +6,8 @@
 
 ![Data Boar mascot](api/static/mascot/data_boar_mascote_color.svg)
 
+**Forensic-grade open-source PII scanner for LGPD · GDPR · evidence-ready compliance.**
+
 **LGPD — real-world witness report (ISP field visit, Brazil):** [English](docs/LGPD_WITNESS_REPORT_NIO_FIELD_VISIT_2026.md) · [Português (Brasil)](docs/LGPD_WITNESS_REPORT_NIO_FIELD_VISIT_2026.pt_BR.md)
 
 **Português (Brasil):** [README.pt_BR.md](README.pt_BR.md) · [docs/USAGE.pt_BR.md](docs/USAGE.pt_BR.md) · → [Audience guide](docs/AUDIENCE_GUIDE.md) — who should read which docs · **5 min (pt-BR):** [QUICKSTART.md](QUICKSTART.md)
