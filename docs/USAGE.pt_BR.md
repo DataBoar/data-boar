@@ -160,6 +160,14 @@ Imagens pré-construídas estão no Docker Hub: `fabioleitao/data_boar:latest` (
 
 As páginas HTML usam **prefixo de idioma** (`/en/…`, `/pt-br/…`). Acessar `/`, `/reports`, `/config`, `/help` ou `/about` **sem** prefixo redireciona conforme cookie `db_locale`, cabeçalho `Accept-Language` e `locale.default_locale` no YAML (veja bloco `locale` em [USAGE.md](USAGE.md)). As rotas JSON da API continuam **sem** prefixo.
 
+**Passo a passo (não técnico, primeira execução):**
+
+1. **Abra** o painel no navegador: `http://127.0.0.1:8088/pt-br/` (ou `/en/`). O servidor precisa estar no ar antes — veja [Servidor API (`--web`)](#servidor-api---web) (texto plano exige `--allow-insecure-http`; fora do loopback use TLS).
+2. **(Opcional) Identifique a execução:** preencha **tenant/cliente** e **técnico/operador** nos campos do formulário — aparecem na planilha **Report info** do relatório.
+3. **Inicie a varredura:** clique em **Start scan**. A página acompanha o status enquanto a auditoria roda (`POST /scan` por baixo).
+4. **Abra Reports:** ao terminar, vá para a página **Reports** (`/pt-br/reports`).
+5. **Baixe:** clique em **Download** na linha da sessão para obter o relatório Excel (e o heatmap). Sem shell nem chamada de API.
+
 - **Dashboard:** `http://<host>:<port>/en/` (ou `/pt-br/`)
 - **Reports:** `http://<host>:<port>/en/reports`
 - **Configuration:** `http://<host>:<port>/en/config`
