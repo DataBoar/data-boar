@@ -195,6 +195,7 @@ Post–PR **#118**: clarified **`private-layout`** vs **`docs/private/homelab`**
 - **Commercial runtime trust:** embedded digest, optional release manifest, **`TAMPERED`** when licensing enforcement is on — [RELEASE_INTEGRITY.md](../RELEASE_INTEGRITY.md), [LICENSING_SPEC.md](../LICENSING_SPEC.md).
 - **Secure-by-default rollout constraints** (breaking-change framing): [SECURE_BY_DEFAULT_BLOCKERS_AND_MIGRATION.md](../ops/SECURE_BY_DEFAULT_BLOCKERS_AND_MIGRATION.md).
 - **Supply chain inventory (dependencies / image):** [ADR 0003](../adr/ADR-0003-sbom-roadmap-cyclonedx-then-syft.md), [SECURITY.md](../SECURITY.md) (SBOM filenames).
+- **PII gate integrity (self-protecting seed gate) `[H0][U0]`:** word-boundary matcher, distinctive real seeds (no synthesis), CODEOWNERS + branch protection, CI modification tripwire, operator-approved per-location FP allowlist, hard rule against weakening gates — [PLAN_PII_GATE_INTEGRITY.md](PLAN_PII_GATE_INTEGRITY.md), [ADR 0071](../adr/ADR-0071-self-protecting-pii-gate.md); GitHub #944.
 
 **Non-goals (explicit):**
 

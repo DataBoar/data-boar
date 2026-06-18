@@ -1,0 +1,47 @@
+---
+description: Hard rule — NEVER weaken, disable, or bypass a security gate (PII, secrets, history guard, CODEOWNERS, signed-commit checks) to pass a commit or CI. A triggered gate means STOP and escalate to the operator. The only response to a false positive is tighten-pattern + operator-approved allowlist — never loosen.
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# Never weaken a security gate to pass CI (hard rule)
+
+## The rule (non-negotiable)
+
+When a security gate fires — PII seed gate (`gatekeeper_audit.py` / `gatekeeper-audit.ps1`),
+`pii_history_guard.py`, `tests/test_pii_guard.py`, secret scanners, CODEOWNERS, signed-commit
+or ADR-attestation checks — you **MUST NOT** weaken, disable, loosen, or circumvent it to make
+a commit or CI pass.
+
+**Gate fired → STOP and escalate to the operator.** Report what fired, where, and why; do not
+"fix" it by mutating the gate.
+
+## Forbidden responses to a gate hit
+
+- Making a matcher case-insensitive, removing `-w`/`\b` word boundaries, or shortening/altering
+  a seed so a real string stops matching.
+- Editing or rewording the **audited file** purely to dodge the seed (e.g. changing
+  `"Chain INPUT"` casing so a substring stops matching) — that is dodging, not fixing.
+- Commenting out, `# noqa`-ing, `--no-verify`, skipping a hook, or relaxing a CI step.
+- Synthesizing or deleting entries from a **real-PII denylist** to silence it.
+
+## The only sanctioned responses to a false positive
+
+1. **Tighten the pattern** structurally (e.g. word-boundary matching, distinctive full-string
+   seeds instead of common fragments) so the gate is *more* precise, never less sensitive.
+2. **Operator-approved, per-location allowlist** — add a CODEOWNERS-protected exception
+   (`security/pii_gate_allowlist.txt`: `path|seed|reason`) only after the operator confirms the
+   match is a genuine false positive. Never put FP handling in matcher logic.
+
+## Why
+
+Weakening the gate to pass is exactly the failure class the gate exists to prevent
+(issue #944, ADR-0049 "no brittle mitigations"). The gate is self-protected: gate files are
+CODEOWNERS-owned by the operator and a CI tripwire (`scripts/gate_change_tripwire.py`) fails
+LOUD if a PR touches a gate file without an operator marker.
+
+## Canonical references
+
+- [ADR 0071](../../docs/adr/ADR-0071-self-protecting-pii-gate.md) — self-protecting PII gate.
+- [ADR 0018](../../docs/adr/ADR-0018-pii-anti-recurrence-guardrails-for-tracked-files-and-branch-history.md), [ADR 0020](../../docs/adr/ADR-0020-ci-full-git-history-pii-gate.md), [ADR 0049](../../docs/adr/ADR-0049-no-brittle-mitigations-robust-input-handling.md).
+- `docs/plans/PLAN_PII_GATE_INTEGRITY.md`; `.github/CODEOWNERS`; `security/pii_gate_allowlist.txt`.
