@@ -136,6 +136,20 @@ Priorize a integridade do Windows dev workstation; ele é sua base de comando. S
 
 ---
 
+## Release 1.7.4 final — checklist da README (migrado da README, #945)
+
+Retirado da landing `README.md` (público: avaliador / CISO, não processo interno de release — ver #945). **Não** marque estes itens até o gate de release **[#406](https://github.com/FabioLeitao/data-boar/issues/406)** concluir e o **`1.7.4`** final ser publicado ([issue #425](https://github.com/FabioLeitao/data-boar/issues/425)).
+
+- [ ] Banner **release atual**: **1.7.3** → **1.7.4**
+- [ ] **Docker Hub:** confirmar **`fabioleitao/data_boar:1.7.4`** e o **`latest`** de consumo movidos conforme **[VERSIONING.md](../VERSIONING.md)** / **[DOCKER_IMAGE_RELEASE_ORDER.md](DOCKER_IMAGE_RELEASE_ORDER.md)**
+- [ ] Linha de **pré-release de trabalho**: remover ou repontar (por exemplo, próximo **`1.7.5-rc`**)
+- [ ] Link da README para **`docs/releases/1.7.4.md`** na linha de notas quando final
+- [ ] **CHANGELOG:** dobrar **`Unreleased`** em **`## 1.7.4 (YYYY-MM-DD)`** usando a data do GitHub/tag
+- [ ] **README.pt_BR.md:** espelhar a conclusão do banner
+- [ ] Confirmar que **`docs/USAGE.md`** (+ pt-BR) batem com qualquer aviso de instalação/versão no momento do ship (**CONTRIBUTING** permanece o fluxo canônico em EN)
+
+---
+
 ## Ligações
 
 - **[`COMPLETAO_OPERATOR_PROMPT_LIBRARY.pt_BR.md`](COMPLETAO_OPERATOR_PROMPT_LIBRARY.pt_BR.md)** — taxonomia **`tier:`** + **`completao-chat-starter.ps1`**

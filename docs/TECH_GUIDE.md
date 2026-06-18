@@ -122,8 +122,8 @@ uv run python main.py --config config.yaml --diff <session_a_uuid> <session_b_uu
 uv run python main.py --config config.yaml --export-dsar <session_uuid>
 uv run python main.py --config config.yaml --export-dsar <session_uuid> --dsar-output dsar_export.json
 
-# Start the API server (equivalent to python main.py --web)
-uv run python main.py --config config.yaml --web --port 8088
+# Start the API server (plaintext opt-in; see the transport gate under "REST API")
+uv run python main.py --config config.yaml --web --allow-insecure-http --port 8088
 ```
 
 Optional NoSQL support (MongoDB, Redis):
@@ -273,30 +273,39 @@ python main.py --config config.yaml --tenant "Acme Corp" --technician "Alice V."
 ### REST API (default port 8088)
 
 ```bash
-# Start API with default port 8088
-python main.py --config config.yaml --web
+# Start API with default port 8088 (plaintext is an explicit opt-in — see gate below)
+python main.py --config config.yaml --web --allow-insecure-http
 
 # Start API on a custom port
-python main.py --config config.yaml --web --port 9090
+python main.py --config config.yaml --web --allow-insecure-http --port 9090
 
-# Equivalent (bypassing main.py CLI)
+# TLS instead of plaintext (recommended off loopback)
+python main.py --config config.yaml --web --https-cert-file server.crt --https-key-file server.key --port 8088
+```
+
+**Transport gate:** `main.py --web` requires **either** HTTPS (`--https-cert-file` / `--https-key-file`, or the `api` block in config) **or** an explicit `--allow-insecure-http` (loopback / lab only). Otherwise it exits with code **2** and an error on stderr — so a copy-paste `--web` **without** this flag fails before any scan. This mirrors [USAGE.md](USAGE.md#rest-api-server---web).
+
+```bash
+# Not recommended for adoption: bypasses main.py's transport gate AND
+# configure_dashboard_transport, so GET /status reports mode: not_configured.
 uvicorn api.routes:app --host 0.0.0.0 --port 8088
 ```
 
 ## CLI arguments (reference)
 
-| Argument            | Mode                   | Description                                                                                                                                                                                                                  | Examples                                             |
-| ---------           | ------                 | -------------                                                                                                                                                                                                                | ----------                                           |
-| `--config PATH`     | CLI & API              | Path to YAML/JSON config file. Defaults to `config.yaml` if omitted.                                                                                                                                                         | `--config config.yaml`, `--config configs/prod.yaml` |
-| `--web`             | API only               | Start the REST API instead of running a one-shot scan.                                                                                                                                                                       | `--web`                                              |
-| `--port N`          | API only               | Port for the REST API when `--web` is set. Defaults to `8088`. Ignored in one-shot CLI mode.                                                                                                                                 | `--web --port 9090`                                  |
-| `--reset-data`      | CLI only (maintenance) | **Dangerous**: wipe all scan sessions, findings and failures from SQLite, delete generated reports/heatmaps under `report.output_dir`, and record the wipe event in `data_wipe_log` for auditability. Does not start a scan. | `--reset-data`                                       |
-| `--tenant NAME`     | CLI only (one-shot)    | Optional customer / tenant name for this scan. Stored in `scan_sessions.tenant_name`, shown on dashboard and in the **Report info** sheet.                                                                                   | `--tenant "Acme Corp"`                               |
-| `--technician NAME` | CLI only (one-shot)    | Optional technician / operator responsible for this scan. Stored in `scan_sessions.technician_name`, shown on dashboard and in the **Report info** sheet.                                                                    | `--technician "Alice V."`                         |
+**The full, authoritative CLI reference (all 22 flags — `--config`, `--web`, `--host`, `--port`, `--https-cert-file` / `--https-key-file`, `--allow-insecure-http`, `--validate-config`, `--diff`, `--fail-on-new-high`, `--export-dsar` / `--dsar-output`, `--export-audit-trail`, `--scan-compressed`, `--content-type-check`, `--scan-stego`, `--jurisdiction-hint`, `--reset-data`, `--tenant`, `--technician`, …) lives in [USAGE.md §1 — Command-line interface](USAGE.md#1-command-line-interface-cli).** It is the single source of truth (kept in sync with `main.py`); this guide does not duplicate a partial copy. The live list is always `uv run python main.py --help`.
+
+Quick orientation for the most common ones:
+
+- `--config PATH` — YAML/JSON config (defaults to `config.yaml`). Used by CLI **and** API.
+- `--web` — start the REST API / dashboard instead of a one-shot scan (needs the transport gate above: `--allow-insecure-http` or TLS).
+- `--port N` / `--host HOST` — bind for `--web` (default `127.0.0.1:8088`; `--host 0.0.0.0` only with network controls).
+- `--validate-config` — pre-flight targets, no scan (exit 0 if OK).
+- `--reset-data` — **dangerous**: wipe sessions/findings/reports from SQLite (audited in `data_wipe_log`).
 
 When using the API (`--web`), the server loads config from **`CONFIG_PATH`** (environment variable) or `config.yaml` in the working directory if `--config` is not provided on the CLI.
 
-**Web dashboard:** With the server running, open <http://localhost:8088/en/> (or `/pt-br/`) for a simple dashboard: scan status, quantity/quality of discovered data (DB/FS findings, failures), **progress graph over time** (total findings and a risk score per session), optional inputs for **tenant/customer** and **technician/operator** before starting a scan, recent sessions (including tenant/technician columns), and links to **Reports** (list and download) and **Configuration** (edit YAML in the browser). Unprefixed `/` redirects to the negotiated locale (cookie, `Accept-Language`, config).
+**Web dashboard:** With the server running, open <http://localhost:8088/en/> (or `/pt-br/`) for a simple dashboard: scan status, quantity/quality of discovered data (DB/FS findings, failures), **progress graph over time** (total findings and a risk score per session), optional inputs for **tenant/customer** and **technician/operator** before starting a scan, recent sessions (including tenant/technician columns), and links to **Reports** (list and download) and **Configuration** (edit YAML in the browser). Unprefixed `/` redirects to the negotiated locale (cookie, `Accept-Language`, config). Reports download both ways: the API endpoints above (`/report`, `/reports/{session_id}`) **and** the browser **Download** button on the **Reports** page — for a step-by-step non-technical walkthrough (open `/en/` → set tenant/technician → **Start scan** → **Reports** → **Download**), see [USAGE.md — Web dashboard](USAGE.md#web-dashboard).
 
 ## API routes (summary)
 
@@ -640,6 +649,8 @@ docker run -d -p 8088:8088 -v /path/to/your/data:/data -e CONFIG_PATH=/data/conf
 ```
 
 Prepare `/data/config.yaml` from `deploy/config.example.yaml` (see [deploy/DEPLOY.md](deploy/DEPLOY.md) ([pt-BR](deploy/DEPLOY.pt_BR.md))). You can decide to use this image as an instanced container instead of pulling the code from Git and building locally.
+
+> **Docker report output:** `report.output_dir` defaults to `.` (the container working directory). Inside a container that path is **ephemeral** — the Excel/heatmap files vanish when the container stops. Point `report.output_dir` at a **mounted volume** (for example `/data` in the example above) so reports land on the host, **or** retrieve them through the dashboard **Download** button / the `/report` and `/reports/{session_id}` API endpoints.
 
 ### Build from source
 

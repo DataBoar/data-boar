@@ -1,6 +1,6 @@
 # Data Boar
 
-> **Try it in 30 seconds (no real data):** `./scripts/demo.sh` — generates synthetic corpus, starts the dashboard at `http://127.0.0.1:8088/pt-br/`. Requires `uv` ([install](https://docs.astral.sh/uv/getting-started/installation/)). Docker: `docker run --rm -p 8088:8088 fabioleitao/data_boar:latest demo`.
+> **Try it in 30 seconds (no real data) — any OS (Docker):** `docker run --rm -p 8088:8088 fabioleitao/data_boar:latest demo` → open `http://127.0.0.1:8088/pt-br/`. **Linux/macOS shell (local `uv`, no Docker):** `./scripts/demo.sh` (requires `uv` — [install](https://docs.astral.sh/uv/getting-started/installation/)). **Windows or step-by-step:** [5-min QuickStart](QUICKSTART.md). All demo paths use synthetic data and plaintext loopback (`--allow-insecure-http`).
 
 **Data Boar** — enterprise data discovery and risk governance: compliance-aware mapping of personal and sensitive data across your data soup (intelligence engine, not a single-jurisdiction “audit app”).
 
@@ -38,23 +38,7 @@ Multilingual and legacy encodings are supported; **configurable timeouts** and *
 
 **Typical scenarios:** Preparing for an audit or regulator request; mapping data before a migration or DLP rollout; raising compliance awareness without a full war room; supporting data privacy consultants as the technical evidence layer in LGPD adequacy engagements.
 
-> **Current release:** **1.7.3**. **Docker Hub:** **`fabioleitao/data_boar:1.7.3`** or **`latest`**. Summary: [CHANGELOG.md](CHANGELOG.md). Full notes: [docs/releases/1.7.3.md](docs/releases/1.7.3.md) and the [GitHub Releases page](https://github.com/FabioLeitao/data-boar/releases). Prior golden: **`v1.7.2-safe`** / **`1.7.2+safe`** — [docs/releases/1.7.2-safe.md](docs/releases/1.7.2-safe.md).
-> **Working pre-release on `main`:** **`1.7.4-rc`** — draft GitHub **pre-release** notes: [docs/releases/1.7.4-rc.md](docs/releases/1.7.4-rc.md) (does **not** move Docker **`latest`**; stable remains **1.7.3** until **1.7.4** final).
-> **Documentation note:** This README and `docs/USAGE.md` are the canonical English references. When features or options change, update **both** languages to keep them in sync.
-
-### Release **1.7.4** final — README checklist (blocked by **#406**)
-
-Do **not** tick these until release gate **[#406](https://github.com/FabioLeitao/data-boar/issues/406)** completes and **`1.7.4`** final is published ([issue #425](https://github.com/FabioLeitao/data-boar/issues/425)).
-
-- [ ] **Current release** banner: **1.7.3** → **1.7.4**
-- [ ] **Docker Hub:** confirm **`fabioleitao/data_boar:1.7.4`** and consumer **`latest`** moved per **[VERSIONING.md](docs/VERSIONING.md)** / **[DOCKER_IMAGE_RELEASE_ORDER.md](docs/ops/DOCKER_IMAGE_RELEASE_ORDER.md)**
-- [ ] **Working pre-release** line: remove or repoint (for example next **`1.7.5-rc`**)
-- [ ] README link to **`docs/releases/1.7.4.md`** in the shipping-notes row once final
-- [ ] **CHANGELOG:** fold **`Unreleased`** into **`## 1.7.4 (YYYY-MM-DD)`** using the GitHub/tag date
-- [ ] **README.pt_BR.md:** mirror banner + checklist completion
-- [ ] Confirm **`docs/USAGE.md`** (+ pt-BR) match any ship-time install/version callouts (**CONTRIBUTING** remains EN-canonical workflow)
-
-**Product blog (narrative updates, shorter posts):** [databoar.wordpress.com](https://databoar.wordpress.com) — canonical technical documentation remains in this repository (`docs/`).
+> **Current release & changelog:** [CHANGELOG.md](CHANGELOG.md) · full notes under [docs/releases/](docs/releases/) · [GitHub Releases](https://github.com/FabioLeitao/data-boar/releases). **Docker Hub:** [fabioleitao/data_boar](https://hub.docker.com/r/fabioleitao/data_boar) (`latest` + pinned tags).
 
 ---
 
@@ -100,7 +84,7 @@ Data Boar runs as a **one-shot CLI** audit or as a **REST API** (default port 80
 | Testing, security, contributing                                   | [docs/TESTING.md](docs/TESTING.md) · [SECURITY.md](SECURITY.md) · [CONTRIBUTING.md](CONTRIBUTING.md)                                                                                                                                         |
 | **`pip` from PyPI                                                 | **`pip install data-boar`** when published; until then **git clone** + **`uv sync`** — see [CONTRIBUTING.md — Repository and install identity](CONTRIBUTING.md#repository-and-install-identity-data-boar).                                     |
 
-**Quick start (from repo root):** On **Linux (native, not Docker)**, install system libraries **before** `uv sync`—see [Technical guide — Requirements and environment preparation](docs/TECH_GUIDE.md#requirements-and-environment-preparation) (example `apt` line includes `libpq-dev`, `unixodbc-dev`, and related headers; add `default-libmysqlclient-dev` if building **mysqlclient**). Then `uv sync` → prepare `config.yaml` (see `deploy/config.example.yaml` and [USAGE](docs/USAGE.md)) → `uv run python main.py --config config.yaml --validate-config` to pre-flight targets (no scan) → `uv run python main.py --config config.yaml` for one-shot, or `uv run python main.py --config config.yaml --web --allow-insecure-http` for plaintext API/dashboard (default bind `127.0.0.1`, e.g. [http://127.0.0.1:8088/](http://127.0.0.1:8088/); for TLS use `--https-cert-file` / `--https-key-file`; use `--host 0.0.0.0` only with network controls). Full flags: `uv run python main.py --help`. **Do not commit** root `config.yaml` (`.gitignore`); it may contain LAN paths and secrets—see [CONTRIBUTING.md](CONTRIBUTING.md#public-repo-hygiene-lan-credentials).
+**Quick start:** the [5-min QuickStart](QUICKSTART.md) walks through both paths (Docker or local `uv`, copy-paste); the full flag and configuration reference is in [USAGE.md](docs/USAGE.md). On **Linux (native, not Docker)**, install system libraries **before** `uv sync` — see [Technical guide — Requirements and environment preparation](docs/TECH_GUIDE.md#requirements-and-environment-preparation). **Do not commit** root `config.yaml` (`.gitignore`); it may contain LAN paths and secrets — see [CONTRIBUTING.md](CONTRIBUTING.md#public-repo-hygiene-lan-credentials).
 
 **Full documentation index** (browse all topics and languages): [docs/README.md](docs/README.md) · [docs/README.pt_BR.md](docs/README.pt_BR.md).
 
@@ -110,4 +94,4 @@ Data Boar runs as a **one-shot CLI** audit or as a **REST API** (default port 80
 
 **License and copyright:** [LICENSE](LICENSE) ([pt-BR](LICENSE.pt_BR.md)) · [NOTICE](NOTICE) ([pt-BR](NOTICE.pt_BR.md)) · [docs/COPYRIGHT_AND_TRADEMARK.md](docs/COPYRIGHT_AND_TRADEMARK.md) ([pt-BR](docs/COPYRIGHT_AND_TRADEMARK.pt_BR.md)).
 
-**Maintainer:** [Fabio Leitao on GitHub](https://github.com/FabioLeitao) — Docker Hub namespace `fabioleitao`. The **product blog** link is above; other personal professional social links are not embedded in this README — see the GitHub profile (policy: `**tests/test_pii_guard.py`**, `**docs/ops/COMMIT_AND_PR.md**`). Set the GitHub profile **Website** field to `https://databoar.wordpress.com` if you want a one-click entry point to the blog.
+**Maintainer:** [Fabio Leitao on GitHub](https://github.com/FabioLeitao) — Docker Hub namespace `fabioleitao`. **Product blog** (narrative updates, shorter posts): [databoar.wordpress.com](https://databoar.wordpress.com) — canonical technical documentation stays in this repository (`docs/`). Other personal professional social links are not embedded in this README — see the GitHub profile (policy: `**tests/test_pii_guard.py`**, `**docs/ops/COMMIT_AND_PR.md**`).

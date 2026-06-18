@@ -197,6 +197,14 @@ Pre-built images are on Docker Hub: `fabioleitao/data_boar:latest` ([hub.docker.
 
 When the API server is running, a **simple web dashboard** is available in the browser. **HTML pages use a locale prefix** (`/en/…`, `/pt-br/…` by default). Visiting `/`, `/config`, `/reports`, `/help`, or `/about` without a prefix **redirects** to the best match: **`db_locale` cookie** (if valid), then **`Accept-Language`**, then **`locale.default_locale`** in config (see `locale` block below). **JSON API routes** (`/status`, `/scan`, `/reports/{session_id}`, …) stay **without** a locale prefix.
 
+**Walkthrough (non-technical, first run):**
+
+1. **Open** the dashboard in a browser: `http://127.0.0.1:8088/en/` (or `/pt-br/`). It must be running first — see [REST API server (`--web`)](#rest-api-server---web) (plaintext needs `--allow-insecure-http`; off-loopback use TLS).
+2. **(Optional) Tag the run:** type a **tenant/customer** and **technician/operator** in the form fields — these appear on the report's **Report info** sheet.
+3. **Start scan:** click **Start scan**. The page polls status while the audit runs (`POST /scan` under the hood).
+4. **Open Reports:** when the scan finishes, go to the **Reports** page (`/en/reports`).
+5. **Download:** click **Download** on the session row to get the Excel report (and heatmap). No shell or API call needed.
+
 | Page              | URL (examples)                            | Description                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | ---               | ---                                       | ---                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | **Dashboard**     | `http://<host>:<port>/en/`               | Scan status (running/idle, current session, findings count), quantity/quality summary (DB findings, FS findings, failures, total), **“Progress over time” chart** (total findings + risk score per session), form inputs for **tenant/customer** and **technician/operator** before starting a scan, and a “Start scan” button. Recent sessions table shows session ID, started date, tenant, technician, findings, failures, and a download link. |
