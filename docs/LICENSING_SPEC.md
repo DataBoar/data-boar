@@ -1,5 +1,7 @@
 # Licensing specification (runtime)
 
+**Português (Brasil):** [LICENSING_SPEC.pt_BR.md](LICENSING_SPEC.pt_BR.md)
+
 Technical specification for **optional** commercial enforcement. Default is **open** mode (no token required).
 
 ## Modes
