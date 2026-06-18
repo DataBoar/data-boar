@@ -44,7 +44,23 @@ docker run -d --name data-boar-quickstart -p 8088:8088 `
   fabioleitao/data_boar:latest
 ```
 
-1. Peça à TI para ajustar os caminhos em `data\config.yaml` (pastas reais **ou** use o [Caminho B](#caminho-b--python-local-laboratório-no-repositório) com a pasta de demo).
+<details>
+<summary>Linux / macOS (bash)</summary>
+
+```bash
+cd /caminho/para/data-boar
+mkdir -p data
+cp deploy/samples/config.starter-lgpd-eval.yaml data/config.yaml
+docker pull fabioleitao/data_boar:latest
+docker run -d --name data-boar-quickstart -p 8088:8088 \
+  -v "$PWD/data:/data" \
+  -e CONFIG_PATH=/data/config.yaml \
+  fabioleitao/data_boar:latest
+```
+
+</details>
+
+1. Peça à TI para ajustar os caminhos em `data\config.yaml` (pastas reais **ou** use o [Caminho B](#caminho-b--python-local-para-desenvolvedor--ti-técnico) com a pasta de demo).
 2. Abra no navegador: [http://localhost:8088/pt-br/](http://localhost:8088/pt-br/) (ou `/en/`).
 3. No dashBOARd, dispare uma varredura (botão de scan) ou siga a ajuda embutida em **Ajuda / Help**.
 
@@ -52,7 +68,7 @@ Detalhes de volume e persistência: [docs/DOCKER_SETUP.pt_BR.md](docs/DOCKER_SET
 
 ---
 
-## Caminho B — Python local (laboratório no repositório)
+## Caminho B — Python local (para desenvolvedor / TI técnico)
 
 Ideal para validar o produto **sem** expor dados reais: usamos a pasta sintética `tests/data/homelab_synthetic/`.
 
@@ -97,12 +113,4 @@ uv run python main.py --web --config quickstart.config.yaml --allow-insecure-htt
 
 ---
 
-## Ritual de integridade (mantenedores)
-
-Antes de commit/PR, o gate canônico é `.\scripts\check-all.ps1`. Se você já usa log datado:
-
-```powershell
-.\audit.ps1 -Mode check-all
-```
-
-Modo só documentação: `.\audit.ps1 -Mode lint-only`. Logs em `logs\audit-*.log` e `logs\latest.log`.
+**Mantenedores:** gate de integridade em [CONTRIBUTING.md](CONTRIBUTING.md).
