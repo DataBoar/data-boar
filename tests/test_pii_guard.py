@@ -14,6 +14,7 @@ recurrence.
 
 from __future__ import annotations
 
+import os
 import re
 import subprocess
 import sys
@@ -360,6 +361,23 @@ def test_pii_history_guard_ok_when_branch_is_ancestor_of_main(
     repo = tmp_path / "repo"
     repo.mkdir()
 
+    # Strip GIT_* control vars the runner may export (e.g. pre-commit stashes
+    # changes and exports GIT_INDEX_FILE/GIT_DIR); without this, the tmp repo's
+    # commits leak into the parent repo's index and fail with "invalid object".
+    _git_env = {
+        k: v
+        for k, v in os.environ.items()
+        if k
+        not in {
+            "GIT_DIR",
+            "GIT_INDEX_FILE",
+            "GIT_WORK_TREE",
+            "GIT_OBJECT_DIRECTORY",
+            "GIT_COMMON_DIR",
+            "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+        }
+    }
+
     def git(*args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
             ["git", *args],
@@ -367,6 +385,7 @@ def test_pii_history_guard_ok_when_branch_is_ancestor_of_main(
             check=check,
             capture_output=True,
             text=True,
+            env=_git_env,
         )
 
     git("init", "-b", "main")
