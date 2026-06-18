@@ -36,23 +36,7 @@ Idiomas e encodings legados são suportados; **timeouts configuráveis** e **end
 
 **Cenários típicos:** Preparação para auditoria ou pedido do regulador; mapeamento de dados antes de migração ou implantação de DLP; conscientização de conformidade sem war room completo.
 
-> **Release atual:** **1.7.3**. **Docker Hub:** **`fabioleitao/data_boar:1.7.3`** ou **`latest`**. Resumo: [CHANGELOG.md](CHANGELOG.md). Notas: [docs/releases/1.7.3.md](docs/releases/1.7.3.md) e [Releases no GitHub](https://github.com/FabioLeitao/data-boar/releases). Golden anterior: **`v1.7.2-safe`** / **`1.7.2+safe`** — [docs/releases/1.7.2-safe.md](docs/releases/1.7.2-safe.md).
-> **Pré-release em `main`:** **`1.7.4-rc`** — rascunho de **pré-release** no GitHub: [docs/releases/1.7.4-rc.md](docs/releases/1.7.4-rc.md) (**não** move o **`latest`** do Docker; o estável continua **1.7.3** até **`1.7.4`** final).
-> **Documentação:** Este README e o `docs/USAGE.pt_BR.md` são as referências em português. Quando funcionalidades ou opções mudarem, atualize **ambos** os idiomas para mantê-los sincronizados.
-
-### Release **1.7.4** final — checklist do README (bloqueado pelo **#406**)
-
-Não execute estes itens até o gate de release **[#406](https://github.com/FabioLeitao/data-boar/issues/406)** fechar e o **`1.7.4`** final estar publicado ([issue #425](https://github.com/FabioLeitao/data-boar/issues/425)).
-
-- [ ] Banner **Release atual**: **1.7.3** → **1.7.4**
-- [ ] **Docker Hub:** confirmar **`fabioleitao/data_boar:1.7.4`** + **`latest`** conforme **[VERSIONING.md](docs/VERSIONING.md)** / **[DOCKER_IMAGE_RELEASE_ORDER.md](docs/ops/DOCKER_IMAGE_RELEASE_ORDER.pt_BR.md)**
-- [ ] Linha **pré-release**: remover ou apontar (por exemplo próximo **`1.7.5-rc`**)
-- [ ] Link **`docs/releases/1.7.4.md`** na linha de notas assim que shippar
-- [ ] **CHANGELOG:** mover **`Unreleased`** para **`## 1.7.4 (AAAA-MM-DD)`** com data do tag/GitHub Release
-- [ ] **README.md**: espelhar o mesmo fechamento (EN source)
-- [ ] Confirmar **`docs/USAGE`** (EN + pt-BR) alinhados a **instalação**/versão se necessário (**CONTRIBUTING**: EN é canônico técnico)
-
-**Blog do produto** (atualizações em formato narrativo, posts mais curtos): [databoar.wordpress.com](https://databoar.wordpress.com) — a documentação técnica canônica continua neste repositório (`docs/`).
+> **Release atual e changelog:** [CHANGELOG.md](CHANGELOG.md) · notas completas em [docs/releases/](docs/releases/) · [Releases no GitHub](https://github.com/FabioLeitao/data-boar/releases). **Docker Hub:** [fabioleitao/data_boar](https://hub.docker.com/r/fabioleitao/data_boar) (`latest` + tags fixas).
 
 ---
 
@@ -98,7 +82,7 @@ Se você precisa de:
 - **Testes, segurança, contribuição:** [docs/TESTING.pt_BR.md](docs/TESTING.pt_BR.md) · [SECURITY.pt_BR.md](SECURITY.pt_BR.md) · [CONTRIBUTING.pt_BR.md](CONTRIBUTING.pt_BR.md)
 - **pip via PyPI:** **`pip install data-boar`** quando publicado; até lá **git clone** + **`uv sync`** — veja [CONTRIBUTING.pt_BR.md — Repositório e identidade](CONTRIBUTING.pt_BR.md#repositório-e-identidade-de-instalação-data-boar).
 
-**Início rápido (na raiz do repositório):** Em **Linux nativo (sem Docker)**, instale as bibliotecas de sistema **antes** de `uv sync` — veja [Guia técnico — Requisitos e preparação do ambiente](docs/TECH_GUIDE.pt_BR.md#requisitos-e-preparação-do-ambiente) (o exemplo com `apt` inclui `libpq-dev`, `unixodbc-dev` e cabeçalhos relacionados; acrescente `default-libmysqlclient-dev` se for compilar **mysqlclient**). Depois `uv sync` → prepare `config.yaml` (veja `deploy/config.example.yaml` e [USAGE](docs/USAGE.pt_BR.md)) → `uv run python main.py --config config.yaml` para execução única, ou `uv run python main.py --config config.yaml --web --allow-insecure-http` para API/dashboard em HTTP texto plano (bind padrão `127.0.0.1`, ex. <http://127.0.0.1:8088/>; para TLS use `--https-cert-file` / `--https-key-file`; use `--host 0.0.0.0` só com controles de rede). Lista de flags: `uv run python main.py --help`. **Não commite** o `config.yaml` da raiz (`.gitignore`); pode conter caminhos da LAN e segredos—veja a seção **Higiene do repositório público** em [CONTRIBUTING.pt_BR.md](CONTRIBUTING.pt_BR.md).
+**Início rápido:** o [QuickStart de 5 min](QUICKSTART.md) cobre os dois caminhos (Docker ou `uv` local, copia-e-cola); a referência completa de flags e configuração está em [USAGE.pt_BR.md](docs/USAGE.pt_BR.md). Em **Linux nativo (sem Docker)**, instale as bibliotecas de sistema **antes** de `uv sync` — veja [Guia técnico — Requisitos e preparação do ambiente](docs/TECH_GUIDE.pt_BR.md#requisitos-e-preparação-do-ambiente). **Não commite** o `config.yaml` da raiz (`.gitignore`); pode conter caminhos da LAN e segredos — veja a seção **Higiene do repositório público** em [CONTRIBUTING.pt_BR.md](CONTRIBUTING.pt_BR.md).
 
 **Índice completo da documentação** (todos os tópicos e idiomas): [docs/README.md](docs/README.md) · [docs/README.pt_BR.md](docs/README.pt_BR.md).
 
@@ -108,4 +92,4 @@ Se você precisa de:
 
 **Licença e direitos autorais:** [LICENSE](LICENSE) ([pt-BR](LICENSE.pt_BR.md)) · [NOTICE](NOTICE) ([pt-BR](NOTICE.pt_BR.md)) · [docs/COPYRIGHT_AND_TRADEMARK.pt_BR.md](docs/COPYRIGHT_AND_TRADEMARK.pt_BR.md) ([EN](docs/COPYRIGHT_AND_TRADEMARK.md)).
 
-**Mantenedor:** [Fabio Leitao no GitHub](https://github.com/FabioLeitao) — namespace `fabioleitao` no Docker Hub. O link do **blog do produto** está acima; outras redes sociais profissionais pessoais não ficam embutidas neste README — ver o perfil no GitHub (política: **`tests/test_pii_guard.py`**, **`docs/ops/COMMIT_AND_PR.md`**). No GitHub, use o campo **Website** do perfil com `https://databoar.wordpress.com` se quiser um atalho ao blog.
+**Mantenedor:** [Fabio Leitao no GitHub](https://github.com/FabioLeitao) — namespace `fabioleitao` no Docker Hub. **Blog do produto** (atualizações em formato narrativo, posts mais curtos): [databoar.wordpress.com](https://databoar.wordpress.com) — a documentação técnica canônica continua neste repositório (`docs/`). Outras redes sociais profissionais pessoais não ficam embutidas neste README — ver o perfil no GitHub (política: **`tests/test_pii_guard.py`**, **`docs/ops/COMMIT_AND_PR.md`**).
