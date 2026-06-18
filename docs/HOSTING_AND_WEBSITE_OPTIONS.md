@@ -1,5 +1,7 @@
 # Hosting options: private repositories and public website
 
+**Português (Brasil):** [HOSTING_AND_WEBSITE_OPTIONS.pt_BR.md](HOSTING_AND_WEBSITE_OPTIONS.pt_BR.md)
+
 This memo supports the **Licensing, Enforcement, and GTM** program: where to host private issuer tooling, commercial modules, and a public marketing site. **Costs are indicative (2025–2026); confirm on each vendor’s pricing page.**
 
 ## Private source (issuer tooling, commercial modules)
