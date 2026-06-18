@@ -16,9 +16,18 @@
 
 set -u
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin${PATH+:$PATH}"
+# Resolve the operator home robustly: under sudo / container, $HOME can be /root or
+# unset, which hides the operator's uv (~/.local/bin) and writes .labop-status to the
+# wrong place. Derive it via getent (same pattern as labop-nfs/smb-ensure), preferring
+# SUDO_USER then the current user (#935).
+_LC_OPERATOR="${SUDO_USER:-$(id -un 2>/dev/null || echo "${USER:-}")}"
+_LC_OP_HOME="$(getent passwd "$_LC_OPERATOR" 2>/dev/null | cut -d: -f6)"
+if [[ -z "$_LC_OP_HOME" ]]; then
+  _LC_OP_HOME="${HOME:-/root}"
+fi
 # uv is often installed to ~/.local/bin (login shells add it; non-interactive SSH may not).
-if [[ -d "${HOME}/.local/bin" ]]; then
-  export PATH="${HOME}/.local/bin:${PATH}"
+if [[ -d "${_LC_OP_HOME}/.local/bin" ]]; then
+  export PATH="${_LC_OP_HOME}/.local/bin:${PATH}"
 fi
 
 LC_PRIV=0
@@ -370,7 +379,7 @@ if [[ "$LC_SKIP_ENGINE" == "1" ]]; then
   LC_BAREMETAL_SCAN_OK=1
 elif [[ -f "$LC_REPO_ROOT/$CONFIG_RC" ]] && _lc_cmd uv; then
   echo "Iniciando scan baremetal com $CONFIG_RC via main.py..."
-  echo "SCANNING_BAREMETAL_RC at $(date +'%H:%M:%S')" > "${HOME}/.labop-status"
+  echo "SCANNING_BAREMETAL_RC at $(date +'%H:%M:%S')" > "${_LC_OP_HOME}/.labop-status"
   if _lc_prepare_baremetal_runtime && (cd "$LC_REPO_ROOT" && uv run python main.py --config "$CONFIG_RC"); then
     LC_BAREMETAL_SCAN_OK=1
     echo "BAREMETAL_SCAN: OK"
@@ -488,11 +497,11 @@ _lc_bench_compare
 _lc_section "Telemetria"
 FINAL_TS=$(date +"%H:%M:%S")
 if [[ "$LC_BAREMETAL_SCAN_OK" == "1" ]]; then
-  echo "DONE_SUCCESS_BAREMETAL at ${FINAL_TS}" > "${HOME}/.labop-status"
-  echo "Status persistido em ${HOME}/.labop-status (DONE_SUCCESS_BAREMETAL)"
+  echo "DONE_SUCCESS_BAREMETAL at ${FINAL_TS}" > "${_LC_OP_HOME}/.labop-status"
+  echo "Status persistido em ${_LC_OP_HOME}/.labop-status (DONE_SUCCESS_BAREMETAL)"
 else
-  echo "DONE_FAILED_BAREMETAL at ${FINAL_TS}" > "${HOME}/.labop-status"
-  echo "Status persistido em ${HOME}/.labop-status (DONE_FAILED_BAREMETAL)"
+  echo "DONE_FAILED_BAREMETAL at ${FINAL_TS}" > "${_LC_OP_HOME}/.labop-status"
+  echo "Status persistido em ${_LC_OP_HOME}/.labop-status (DONE_FAILED_BAREMETAL)"
 fi
 
 echo "=== lab-completao-host-smoke END ==="

@@ -24,7 +24,10 @@ _OP_HOME="$(getent passwd "$_OPERATOR" | cut -d: -f6 2>/dev/null || echo "/home/
 EXPORT_PATH="${_OP_HOME}/Documents/LGPD"
 STATUS_FILE="${_OP_HOME}/.labop-status"
 FW_TAG="nfs"
-FW_STATE_FILE="${HOME}/.labop-fw-ephemeral-nfs.json"
+# Use the resolved operator home (not $HOME) so the ephemeral-firewall state file is
+# found at teardown even under sudo ($HOME=/root) -- otherwise the ephemeral rule can
+# leak into a persistent one (#935).
+FW_STATE_FILE="${_OP_HOME}/.labop-fw-ephemeral-nfs.json"
 
 for arg in "$@"; do
   case "$arg" in
