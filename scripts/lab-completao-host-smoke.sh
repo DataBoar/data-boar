@@ -106,6 +106,7 @@ Environment:
   LAB_COMPLETAO_BENCH_TRACK             stable|beta when --bench-track not passed.
   LAB_COMPLETAO_BENCH_RUN_ID            run marker for benchmark metric files.
   LAB_COMPLETAO_BENCH_COMPARE           If 1, emit coarse wall-clock import probe (stable: core.engine; beta: boar_fast_filter).
+  LAB_COMPLETAO_PREBUILT_WHEEL          Optional path to a prebuilt boar_fast_filter wheel (#782 Build-Once); installed after uv sync instead of a per-host maturin build.
 EOF
       exit 0
       ;;
@@ -145,14 +146,51 @@ _lc_sudo() {
   sudo -n "$@" 2>/dev/null || echo "(sudo -n failed or denied for: $*)"
 }
 
+# Install a pre-built Build-Once boar_fast_filter wheel (#782 / #937) so the Rust
+# prefilter is active WITHOUT a per-host Rust toolchain. boar_fast_filter is not a
+# locked dependency, so the `uv sync` above prunes any pre-deployed wheel; re-install
+# it here. Returns 0 when a wheel was installed and `import boar_fast_filter` succeeds;
+# 1 otherwise (caller falls back to maturin build-from-source). Wheel source order:
+#   1. LAB_COMPLETAO_PREBUILT_WHEEL (explicit file path, e.g. scp'd by the orchestrator).
+#   2. <repo>/rust/boar_fast_filter/target/wheels/boar_fast_filter-*.whl (build output /
+#      Build-Once drop location).
+_lc_install_prebuilt_rust_wheel() {
+  local wheel=""
+  if [[ -n "${LAB_COMPLETAO_PREBUILT_WHEEL:-}" && -f "${LAB_COMPLETAO_PREBUILT_WHEEL}" ]]; then
+    wheel="${LAB_COMPLETAO_PREBUILT_WHEEL}"
+  else
+    wheel="$(ls -1t "$LC_REPO_ROOT"/rust/boar_fast_filter/target/wheels/boar_fast_filter-*.whl 2>/dev/null | head -n1)"
+  fi
+  if [[ -z "$wheel" || ! -f "$wheel" ]]; then
+    return 1
+  fi
+  if ! (cd "$LC_REPO_ROOT" && uv pip install --no-deps --reinstall "$wheel" >/dev/null 2>&1); then
+    echo "boar_fast_filter: prebuilt wheel install failed ($(basename "$wheel")); will try maturin"
+    return 1
+  fi
+  if (cd "$LC_REPO_ROOT" && uv run python -c "import boar_fast_filter" >/dev/null 2>&1); then
+    echo "boar_fast_filter: Build-Once wheel active ($(basename "$wheel")) -- no per-host Rust toolchain needed"
+    return 0
+  fi
+  echo "boar_fast_filter: prebuilt wheel did not import on this host ($(basename "$wheel")); will try maturin"
+  return 1
+}
+
 _lc_prepare_baremetal_runtime() {
   if [[ ! -f "$LC_REPO_ROOT/pyproject.toml" ]] || ! _lc_cmd uv; then
     return 1
   fi
-  echo "Preparing baremetal venv (uv sync)..."
-  if ! (cd "$LC_REPO_ROOT" && uv sync); then
+  # --extra compressed pulls py7zr so .7z archives are scannable in the completao
+  # flow; without it `uv sync` prunes py7zr and .7z stays archive_unsupported (#931).
+  echo "Preparing baremetal venv (uv sync --extra compressed)..."
+  if ! (cd "$LC_REPO_ROOT" && uv sync --extra compressed); then
     echo "uv sync: FAILED"
     return 1
+  fi
+  # Prefer the prebuilt Build-Once wheel (no Rust toolchain per host, #937); only
+  # build from source via maturin when no usable wheel is available on this host.
+  if _lc_install_prebuilt_rust_wheel; then
+    return 0
   fi
   if (cd "$LC_REPO_ROOT" && uv run maturin develop --release >/dev/null 2>&1); then
     echo "maturin develop --release: OK"
