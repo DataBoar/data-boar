@@ -2,7 +2,7 @@
 
 **English:** [AUDIENCE_GUIDE.md](AUDIENCE_GUIDE.md)
 
-Mapa de navegação para **oito** perfis de leitor. Índice completo: [README.md](README.md). Decks executivos: [pitch/INDEX.pt_BR.md](pitch/INDEX.pt_BR.md).
+Mapa de navegação para **onze** perfis de leitor. Índice completo: [README.md](README.md). Decks executivos: [pitch/INDEX.pt_BR.md](pitch/INDEX.pt_BR.md).
 
 ---
 
@@ -32,6 +32,33 @@ Mapa de navegação para **oito** perfis de leitor. Índice completo: [README.md
 | **Trilha** | [SECURITY.pt_BR.md](SECURITY.pt_BR.md) → [COMPLIANCE_TECHNICAL_REFERENCE.pt_BR.md](COMPLIANCE_TECHNICAL_REFERENCE.pt_BR.md) → [GRC_EXECUTIVE_REPORT_SCHEMA.pt_BR.md](GRC_EXECUTIVE_REPORT_SCHEMA.pt_BR.md) → [adr/ADR-0039-retention-evidence-posture-bonded-customs-adjacent-contexts.md](adr/ADR-0039-retention-evidence-posture-bonded-customs-adjacent-contexts.md) |
 | **Evitar** | Primers acadêmicos; tom de pitch para conselho |
 | **Sobreposição** | DPO (enquadramento legal); desenvolvedor (hardening de deploy) |
+
+## PMO / líder de projeto
+
+| | |
+| - | - |
+| **Entrada** | `pitch/PITCH_PMO.md` *(pitch planejado — #682)* |
+| **Trilha** | [GRC_EXECUTIVE_REPORT_SCHEMA.pt_BR.md](GRC_EXECUTIVE_REPORT_SCHEMA.pt_BR.md) → heatmap / acompanhamento de sprint → [releases/](releases/) (entregue vs roadmap) |
+| **Evitar** | ADRs de engenharia, [TECH_GUIDE.pt_BR.md](TECH_GUIDE.pt_BR.md) |
+| **Sobreposição** | Executivo (value brief); CISO (schema GRC) |
+
+## CFO / C-level financeiro
+
+| | |
+| - | - |
+| **Entrada** | `pitch/PITCH_CFO.md` *(pitch planejado — #683)* |
+| **Trilha** | [DECISION_MAKER_VALUE_BRIEF.pt_BR.md](DECISION_MAKER_VALUE_BRIEF.pt_BR.md) → [LICENSING_OPEN_CORE_AND_COMMERCIAL.pt_BR.md](LICENSING_OPEN_CORE_AND_COMMERCIAL.pt_BR.md) → [releases/](releases/) |
+| **Evitar** | [TECH_GUIDE.pt_BR.md](TECH_GUIDE.pt_BR.md), frameworks técnicos de compliance |
+| **Sobreposição** | Executivo (value brief); PMO (entrega vs custo) |
+
+## CCO / jurídico (General Counsel)
+
+| | |
+| - | - |
+| **Entrada** | `pitch/PITCH_COMPLIANCE_OFFICER.md` *(pitch planejado — #684)* |
+| **Trilha** | [COMPLIANCE_AND_LEGAL.pt_BR.md](COMPLIANCE_AND_LEGAL.pt_BR.md) → [COMPLIANCE_FRAMEWORKS.pt_BR.md](COMPLIANCE_FRAMEWORKS.pt_BR.md) |
+| **Evitar** | [TECH_GUIDE.pt_BR.md](TECH_GUIDE.pt_BR.md); não confundir com DPO (LGPD operacional) |
+| **Sobreposição** | DPO (resumo jurídico, papel distinto); Executivo (postura de compliance) |
 
 ## Engenheiro de compliance
 
@@ -83,18 +110,21 @@ Mapa de navegação para **oito** perfis de leitor. Índice completo: [README.md
 
 ## Matriz de sobreposição
 
-| Doc | Executivo | DPO | CISO | Compliance | Dev | Acadêmico | Agente | Operador |
-| --- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| [DECISION_MAKER_VALUE_BRIEF.pt_BR.md](DECISION_MAKER_VALUE_BRIEF.pt_BR.md) | ● | ○ | ○ | ○ | | | | |
-| [COMPLIANCE_FRAMEWORKS.pt_BR.md](COMPLIANCE_FRAMEWORKS.pt_BR.md) | ○ | ● | ○ | ● | ○ | ○ | | |
-| [SECURITY.pt_BR.md](SECURITY.pt_BR.md) | | ○ | ● | ○ | ● | | | ○ |
-| [USAGE.pt_BR.md](USAGE.pt_BR.md) | | ○ | ○ | ○ | ● | | ○ | ● |
-| [pitch/INDEX.pt_BR.md](pitch/INDEX.pt_BR.md) | ● | ● | ● | | | | | |
+| Doc | Executivo | DPO | CISO | Compliance | Dev | Acadêmico | Agente | Operador | PMO | CFO | CCO |
+| --- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| [DECISION_MAKER_VALUE_BRIEF.pt_BR.md](DECISION_MAKER_VALUE_BRIEF.pt_BR.md) | ● | ○ | ○ | ○ | | | | | ○ | ● | |
+| [COMPLIANCE_FRAMEWORKS.pt_BR.md](COMPLIANCE_FRAMEWORKS.pt_BR.md) | ○ | ● | ○ | ● | ○ | ○ | | | | | ● |
+| [SECURITY.pt_BR.md](SECURITY.pt_BR.md) | | ○ | ● | ○ | ● | | | ○ | | | |
+| [USAGE.pt_BR.md](USAGE.pt_BR.md) | | ○ | ○ | ○ | ● | | ○ | ● | | | |
+| [pitch/INDEX.pt_BR.md](pitch/INDEX.pt_BR.md) | ● | ● | ● | | | | | | ● | ● | ● |
+| [GRC_EXECUTIVE_REPORT_SCHEMA.pt_BR.md](GRC_EXECUTIVE_REPORT_SCHEMA.pt_BR.md) | | | ○ | | | | | | ● | | |
+| [LICENSING_OPEN_CORE_AND_COMMERCIAL.pt_BR.md](LICENSING_OPEN_CORE_AND_COMMERCIAL.pt_BR.md) | ○ | | | | | | | | | ● | |
+| [COMPLIANCE_AND_LEGAL.pt_BR.md](COMPLIANCE_AND_LEGAL.pt_BR.md) | ○ | ● | | ○ | | | | | | | ● |
 
 ● = trilha principal · ○ = sobreposição opcional
 
 ---
 
-## Índice de hubs (planejado)
+## Índice de hubs
 
-**`docs/hubs/INDEX.md`** está no GitHub **#577**. Até lá, use [README.md](README.md), [pitch/INDEX.pt_BR.md](pitch/INDEX.pt_BR.md) e [use-cases/USE_CASES_HUB.pt_BR.md](use-cases/USE_CASES_HUB.pt_BR.md).
+O **mapa de mapas** consolidado fica em [hubs/INDEX.md](hubs/INDEX.md). Também úteis: [README.md](README.md), [pitch/INDEX.pt_BR.md](pitch/INDEX.pt_BR.md) e [use-cases/USE_CASES_HUB.pt_BR.md](use-cases/USE_CASES_HUB.pt_BR.md).

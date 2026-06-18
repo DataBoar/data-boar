@@ -2,7 +2,7 @@
 
 **Português (Brasil):** [AUDIENCE_GUIDE.pt_BR.md](AUDIENCE_GUIDE.pt_BR.md)
 
-Navigation map for **eight** reader types. Full doc index: [README.md](README.md). Executive decks: [pitch/INDEX.md](pitch/INDEX.md).
+Navigation map for **eleven** reader types. Full doc index: [README.md](README.md). Executive decks: [pitch/INDEX.md](pitch/INDEX.md).
 
 ---
 
@@ -32,6 +32,33 @@ Navigation map for **eight** reader types. Full doc index: [README.md](README.md
 | **Trail** | [SECURITY.md](SECURITY.md) → [COMPLIANCE_TECHNICAL_REFERENCE.md](COMPLIANCE_TECHNICAL_REFERENCE.md) → [GRC_EXECUTIVE_REPORT_SCHEMA.md](GRC_EXECUTIVE_REPORT_SCHEMA.md) → [adr/ADR-0039-retention-evidence-posture-bonded-customs-adjacent-contexts.md](adr/ADR-0039-retention-evidence-posture-bonded-customs-adjacent-contexts.md) |
 | **Skip** | Academic primers; stakeholder-only pitch tone |
 | **Overlap** | DPO (legal framing); developer (deploy hardening) |
+
+## PMO / project lead
+
+| | |
+| - | - |
+| **Entry** | `pitch/PITCH_PMO.md` *(pitch planned — #682)* |
+| **Trail** | [GRC_EXECUTIVE_REPORT_SCHEMA.md](GRC_EXECUTIVE_REPORT_SCHEMA.md) → heatmap / sprint tracking → [releases/](releases/) (shipped vs roadmap) |
+| **Skip** | Engineering ADRs, [TECH_GUIDE.md](TECH_GUIDE.md) |
+| **Overlap** | Executive (value brief); CISO (GRC schema) |
+
+## CFO / financial C-level
+
+| | |
+| - | - |
+| **Entry** | `pitch/PITCH_CFO.md` *(pitch planned — #683)* |
+| **Trail** | [DECISION_MAKER_VALUE_BRIEF.md](DECISION_MAKER_VALUE_BRIEF.md) → [LICENSING_OPEN_CORE_AND_COMMERCIAL.md](LICENSING_OPEN_CORE_AND_COMMERCIAL.md) → [releases/](releases/) |
+| **Skip** | [TECH_GUIDE.md](TECH_GUIDE.md), technical compliance frameworks |
+| **Overlap** | Executive (value brief); PMO (delivery vs cost) |
+
+## CCO / General Counsel
+
+| | |
+| - | - |
+| **Entry** | `pitch/PITCH_COMPLIANCE_OFFICER.md` *(pitch planned — #684)* |
+| **Trail** | [COMPLIANCE_AND_LEGAL.md](COMPLIANCE_AND_LEGAL.md) → [COMPLIANCE_FRAMEWORKS.md](COMPLIANCE_FRAMEWORKS.md) |
+| **Skip** | [TECH_GUIDE.md](TECH_GUIDE.md); do not confuse with DPO (operational LGPD) |
+| **Overlap** | DPO (legal summary, distinct role); Executive (compliance posture) |
 
 ## Compliance engineer
 
@@ -83,18 +110,21 @@ Navigation map for **eight** reader types. Full doc index: [README.md](README.md
 
 ## Overlap matrix (shared reads)
 
-| Doc | Executive | DPO | CISO | Compliance | Developer | Academic | Agent | Operator |
-| --- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| [DECISION_MAKER_VALUE_BRIEF.md](DECISION_MAKER_VALUE_BRIEF.md) | ● | ○ | ○ | ○ | | | | |
-| [COMPLIANCE_FRAMEWORKS.md](COMPLIANCE_FRAMEWORKS.md) | ○ | ● | ○ | ● | ○ | ○ | | |
-| [SECURITY.md](SECURITY.md) | | ○ | ● | ○ | ● | | | ○ |
-| [USAGE.md](USAGE.md) | | ○ | ○ | ○ | ● | | ○ | ● |
-| [pitch/INDEX.md](pitch/INDEX.md) | ● | ● | ● | | | | | |
+| Doc | Executive | DPO | CISO | Compliance | Developer | Academic | Agent | Operator | PMO | CFO | CCO |
+| --- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| [DECISION_MAKER_VALUE_BRIEF.md](DECISION_MAKER_VALUE_BRIEF.md) | ● | ○ | ○ | ○ | | | | | ○ | ● | |
+| [COMPLIANCE_FRAMEWORKS.md](COMPLIANCE_FRAMEWORKS.md) | ○ | ● | ○ | ● | ○ | ○ | | | | | ● |
+| [SECURITY.md](SECURITY.md) | | ○ | ● | ○ | ● | | | ○ | | | |
+| [USAGE.md](USAGE.md) | | ○ | ○ | ○ | ● | | ○ | ● | | | |
+| [pitch/INDEX.md](pitch/INDEX.md) | ● | ● | ● | | | | | | ● | ● | ● |
+| [GRC_EXECUTIVE_REPORT_SCHEMA.md](GRC_EXECUTIVE_REPORT_SCHEMA.md) | | | ○ | | | | | | ● | | |
+| [LICENSING_OPEN_CORE_AND_COMMERCIAL.md](LICENSING_OPEN_CORE_AND_COMMERCIAL.md) | ○ | | | | | | | | | ● | |
+| [COMPLIANCE_AND_LEGAL.md](COMPLIANCE_AND_LEGAL.md) | ○ | ● | | ○ | | | | | | | ● |
 
 ● = primary trail · ○ = optional overlap
 
 ---
 
-## Hubs index (planned)
+## Hubs index
 
-A consolidated **`docs/hubs/INDEX.md`** is tracked on GitHub **#577**. Until it ships, use [README.md](README.md), [pitch/INDEX.md](pitch/INDEX.md), and [use-cases/USE_CASES_HUB.md](use-cases/USE_CASES_HUB.md).
+The consolidated **map of maps** lives at [hubs/INDEX.md](hubs/INDEX.md). Also useful: [README.md](README.md), [pitch/INDEX.md](pitch/INDEX.md), and [use-cases/USE_CASES_HUB.md](use-cases/USE_CASES_HUB.md).
