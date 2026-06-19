@@ -158,7 +158,10 @@ _lc_sudo() {
 # Install a pre-built Build-Once boar_fast_filter wheel (#782 / #937) so the Rust
 # prefilter is active WITHOUT a per-host Rust toolchain. boar_fast_filter is not a
 # locked dependency, so the `uv sync` above prunes any pre-deployed wheel; re-install
-# it here. Returns 0 when a wheel was installed and `import boar_fast_filter` succeeds;
+# it here. CRITICAL (#951): every `uv run` AFTER this install must pass `--no-sync`,
+# otherwise `uv run` re-syncs the venv to the lockfile and prunes the just-installed
+# wheel -> the scan silently falls back to pure-Python and the "compiled on every node"
+# gate criterion is never met. Returns 0 when a wheel was installed and imports;
 # 1 otherwise (caller falls back to maturin build-from-source). Wheel source order:
 #   1. LAB_COMPLETAO_PREBUILT_WHEEL (explicit file path, e.g. scp'd by the orchestrator).
 #   2. <repo>/rust/boar_fast_filter/target/wheels/boar_fast_filter-*.whl (build output /
@@ -177,7 +180,7 @@ _lc_install_prebuilt_rust_wheel() {
     echo "boar_fast_filter: prebuilt wheel install failed ($(basename "$wheel")); will try maturin"
     return 1
   fi
-  if (cd "$LC_REPO_ROOT" && uv run python -c "import boar_fast_filter" >/dev/null 2>&1); then
+  if (cd "$LC_REPO_ROOT" && uv run --no-sync python -c "import boar_fast_filter" >/dev/null 2>&1); then
     echo "boar_fast_filter: Build-Once wheel active ($(basename "$wheel")) -- no per-host Rust toolchain needed"
     return 0
   fi
@@ -214,7 +217,7 @@ _lc_run_engine_import_probe() {
     echo "import core.engine: FAILED (uv sync)"
     return 1
   fi
-  if (cd "$LC_REPO_ROOT" && uv run python -c "import core.engine; print('import core.engine: OK')" 2>&1); then
+  if (cd "$LC_REPO_ROOT" && uv run --no-sync python -c "import core.engine; print('import core.engine: OK')" 2>&1); then
     return 0
   fi
   echo "import core.engine: FAILED"
@@ -316,13 +319,13 @@ _lc_bench_compare() {
   if [[ "$LC_BENCH_TRACK" == "stable" ]]; then
     echo "--- stable track: core.engine import wall seconds ---"
     _t0=$(date +%s)
-    (cd "$LC_REPO_ROOT" && uv run python -c "import core.engine; print('engine_ok')") || true
+    (cd "$LC_REPO_ROOT" && uv run --no-sync python -c "import core.engine; print('engine_ok')") || true
     _t1=$(date +%s)
     echo "BENCH_STABLE_IMPORT_SEC=$((_t1 - _t0))"
   elif [[ "$LC_BENCH_TRACK" == "beta" ]]; then
     echo "--- beta track: boar_fast_filter (FFI) import wall seconds ---"
     _t0=$(date +%s)
-    (cd "$LC_REPO_ROOT" && uv run python -c "import importlib.util as u; print('boar_fast_filter_ok' if u.find_spec('boar_fast_filter') else 'boar_fast_filter_missing')") || true
+    (cd "$LC_REPO_ROOT" && uv run --no-sync python -c "import importlib.util as u; print('boar_fast_filter_ok' if u.find_spec('boar_fast_filter') else 'boar_fast_filter_missing')") || true
     _t1=$(date +%s)
     echo "BENCH_BETA_FFI_IMPORT_SEC=$((_t1 - _t0))"
   else
@@ -380,7 +383,7 @@ if [[ "$LC_SKIP_ENGINE" == "1" ]]; then
 elif [[ -f "$LC_REPO_ROOT/$CONFIG_RC" ]] && _lc_cmd uv; then
   echo "Iniciando scan baremetal com $CONFIG_RC via main.py..."
   echo "SCANNING_BAREMETAL_RC at $(date +'%H:%M:%S')" > "${_LC_OP_HOME}/.labop-status"
-  if _lc_prepare_baremetal_runtime && (cd "$LC_REPO_ROOT" && uv run python main.py --config "$CONFIG_RC"); then
+  if _lc_prepare_baremetal_runtime && (cd "$LC_REPO_ROOT" && uv run --no-sync python main.py --config "$CONFIG_RC"); then
     LC_BAREMETAL_SCAN_OK=1
     echo "BAREMETAL_SCAN: OK"
   else
