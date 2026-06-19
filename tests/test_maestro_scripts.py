@@ -352,7 +352,8 @@ def test_lab_completao_host_smoke_uses_main_py_not_data_boar_scan() -> None:
     text = (root / "scripts" / "lab-completao-host-smoke.sh").read_text(
         encoding="utf-8", errors="replace"
     )
-    assert "uv run python main.py --config" in text
+    # --no-sync keeps the boar_fast_filter wheel installed for the real scan (#951).
+    assert "uv run --no-sync python main.py --config" in text
     assert "uv run data-boar scan" not in text
     assert "DONE_FAILED_BAREMETAL" in text
     assert "LC_BAREMETAL_SCAN_OK" in text
