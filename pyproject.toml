@@ -44,7 +44,7 @@ dependencies = [
     "kiwisolver>=1.4.9",
     "mariadb>=1.1.14",
     "markupsafe>=3.0.3",
-    "matplotlib>=3.10.8",
+    "matplotlib>=3.11.0",
     "mysql>=0.0.3",
     "mysqlclient>=2.2.7",
     "numpy>=2.4.6",
@@ -110,7 +110,7 @@ detection-fuzzy = ["rapidfuzz>=3.9.0"]
 # HEIC/HEIF decoding for iPhone photos (pillow-heif; bridges PIL to libheif).
 richmedia = [
     "mutagen>=1.47.0",
-    "pillow-heif>=0.16.0",
+    "pillow-heif>=1.4.0",
     "pytesseract>=0.3.13",
 ]
 # Parquet/ORC/Feather (pyarrow), Avro (fastavro), dBase (dbfread) — Tier-1 data soup formats.
