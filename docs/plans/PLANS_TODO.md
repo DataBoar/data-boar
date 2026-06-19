@@ -30,12 +30,12 @@ Use these tags in headings to keep priorities explicit and machine-countable:
 
 Do not edit this block manually; refresh with `python scripts/plans-stats.py --write`.
 
-- **Status rows counted:** 191  (Done: 113 | Incomplete: 78)
-- **Incomplete breakdown:** Pending `⬜`=72, Tracked `🔄` / `Tracked (partially done)`=6, Under consideration=0, Backlog-marked rows=0
+- **Status rows counted:** 192  (Done: 113 | Incomplete: 79)
+- **Incomplete breakdown:** Pending `⬜`=73, Tracked `🔄` / `Tracked (partially done)`=6, Under consideration=0, Backlog-marked rows=0
 
 | Horizon | Total rows | Done | Incomplete |
 | ------- | ----------: | ----: | ----------: |
-| `H0` | 41 | 30 | 11 |
+| `H0` | 42 | 30 | 12 |
 | `H1` | 37 | 28 | 9 |
 | `H2` | 0 | 0 | 0 |
 | `H3` | 108 | 50 | 58 |
@@ -270,7 +270,8 @@ After **A1–A3** (minimum), you can **resume token-aware pace** on Tier 2 featu
 | Release gate **1.7.4** checklist (tag, Hub, `docs/releases/1.7.4.md`) | [#406](https://github.com/FabioLeitao/data-boar/issues/406) | ⬜ Pending — **blocked by lab provisioning** (2026-06-18, [LAB_LESSONS_LEARNED_2026_06_18.md](../ops/lab_lessons_learned/LAB_LESSONS_LEARNED_2026_06_18.md)): acceptance run never started a scan; rows below are the unblockers |
 | Cross-platform completão runner (`cmd.exe` core → Linux transport) | issue TBD · [LAB_LESSONS_LEARNED_2026_06_18.md](../ops/lab_lessons_learned/LAB_LESSONS_LEARNED_2026_06_18.md) · [ADR 0068](../adr/ADR-0068-primary-linux-dev-workstation-temporary.md) | ⬜ Pending — `lab-completao-orchestrate.ps1` dies at first remote call on the Linux primary; no orchestrated path today |
 | Fleet `uv` non-interactive SSH `PATH` provisioning | issue TBD · [LAB_LESSONS_LEARNED_2026_06_18.md](../ops/lab_lessons_learned/LAB_LESSONS_LEARNED_2026_06_18.md) | ⬜ Pending — `uv` absent from non-interactive `PATH` on multiple nodes → scans never start |
-| Native fast-filter build matrix (multi-arch / musl) | issue TBD · [LAB_LESSONS_LEARNED_2026_06_18.md](../ops/lab_lessons_learned/LAB_LESSONS_LEARNED_2026_06_18.md) | ⬜ Pending — `boar_fast_filter` x86_64-glibc only; ARM/musl/minimal nodes lack wheel + on-host Rust/maturin (recurrence of 2026-05-13 single-node follow-up) |
+| Native fast-filter build matrix (ARM wheel) | issue TBD · [LAB_LESSONS_LEARNED_2026_06_18.md](../ops/lab_lessons_learned/LAB_LESSONS_LEARNED_2026_06_18.md) | ⬜ Pending — `boar_fast_filter` x86_64-glibc + **musl wheel both build** (evidence-corrected); **ARM** is the real gap (no published ARM wheel, Build-Once); recurrence of 2026-05-13 single-node follow-up |
+| `uv run` prunes locally-built wheel from `.venv` (musl) | issue TBD · [LAB_LESSONS_LEARNED_2026_06_18.md](../ops/lab_lessons_learned/LAB_LESSONS_LEARNED_2026_06_18.md) | ⬜ Pending — `musllinux` `boar_fast_filter` wheel builds but `uv run` re-resolve drops it → `ModuleNotFoundError`; ML sdists (no musl wheels) rebuild on sync. Pin/install local wheel so `uv run` keeps it |
 | Auditor smoke: escalate repeated failure across nodes | issue TBD · [LAB_LESSONS_LEARNED_2026_06_18.md](../ops/lab_lessons_learned/LAB_LESSONS_LEARNED_2026_06_18.md) | ⬜ Pending — aggregate "same failure on N nodes" into one "lab-not-provisioned" verdict + abort, not per-node retry |
 | `protect_canonical` guard (load-bearing in Maestro sync) | issue TBD · [ADR 0068](../adr/ADR-0068-primary-linux-dev-workstation-temporary.md) | ⬜ Pending — declarative protection for both primary dev hosts, not a runtime agent decision |
 

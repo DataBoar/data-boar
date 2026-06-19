@@ -27,16 +27,20 @@ multiple node classes**:
 
 | Node class | `uv` on non-interactive SSH | Native fast-filter extension | Gap |
 | ---------- | --------------------------- | ---------------------------- | --- |
-| ARM SBC | missing from `PATH` | absent | no ARM wheel; no on-host Rust/maturin |
-| musl edge node | present | absent | no musl wheel; no on-host Rust/maturin |
+| ARM SBC | missing from `PATH` | absent | no published ARM wheel; `uv` missing from non-interactive `PATH` (so it can't fetch the maturin build-backend or build); on-host Rust not probed this session |
+| musl edge node | present (system path) | wheel built, not installed in `.venv` | `uv run` prune behavior drops the local wheel; ML sdists rebuild on sync |
 | minimal-coreutils node | present | absent | distro build deps; busybox-style coreutils |
 | glibc x86_64 laptop | missing from `PATH` | previously compiled | `PATH` only |
 | primary-dev loopback | missing from `PATH` (interactive OK) | n/a | `PATH`; **protected — never an align target** |
 
-The native fast-filter extension is **x86_64-glibc only** (Build-Once wheel). ARM and musl
-nodes need a **multi-arch / musl wheel** or **on-host Rust + maturin** (absent), so the
-"30x faster import" sanity is unverifiable there and finding-parity would rely on the
-pure-Python fallback — which still needs `uv` on the `PATH`.
+Evidence-based correction (operator proofs, same session): the musl edge node **does**
+build the native fast-filter (a `musllinux` wheel and on-host Rust toolchain are present).
+Its real gap is the wheel **not being installed into the project `.venv`** — `uv run`
+re-resolves and prunes the local wheel, and ML sdists (no musl wheels) try to rebuild on
+that sync. So "no musl wheel / no Rust" was a **false** first read. The genuine multi-arch
+gap is the **ARM SBC** (no ARM wheel published, Build-Once is x86_64-glibc), where the
+"30x faster import" sanity stays unverified and parity would rely on the pure-Python
+fallback — which still needs `uv` on the non-interactive `PATH`.
 
 ## Central lesson — aggregate failures into a verdict
 
