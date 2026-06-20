@@ -40,9 +40,24 @@ Write-Host "--- [Maestro] Iniciando Turno no Lab-Op (Ref: $Ref) ---" -Foreground
 $warningCount = 0
 $realFailCount = 0
 
-# SRE FIX: Fase de Pre-flight Global (Evita build redundante)
-if (-not $Collect) {
+# SRE FIX (#950): Fase de Pre-flight Global. O build do artefato de container so
+# faz sentido se ALGUM no do inventario tem persona de container
+# (docker/podman/dockerswarm) -- mesma regra do $isContainerHost no laco de
+# despacho abaixo. Em um run baremetal-only isso evita trabalho/ruido redundante
+# (o build incondicional nao crasha o Maestro, mas e desperdicio -- ver #950).
+$fleetHasContainerPersona = $false
+foreach ($member in $inventory.lab_members) {
+    if (($member.personas -contains "docker") -or ($member.personas -contains "podman") -or ($member.personas -contains "dockerswarm")) {
+        $fleetHasContainerPersona = $true
+        break
+    }
+}
+
+if ((-not $Collect) -and $fleetHasContainerPersona) {
     & "$PSScriptRoot/Build-ContainerArtefact.ps1"
+}
+elseif (-not $Collect) {
+    Write-Host "   [Maestro] Build de container PULADO: nenhum no com persona container (docker/podman/dockerswarm) no inventario (#950)." -ForegroundColor DarkGray
 }
 
 # 3. Processamento dos Membros do Laboratório

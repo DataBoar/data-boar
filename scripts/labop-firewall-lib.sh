@@ -30,7 +30,7 @@ _fw_detect_subnet() {
     # Assume /24 subnet (typical for home/lab environments)
     echo "${primary_ip%.*}.0/24"
   else
-    echo "192.168.0.0/16"  # wide fallback — operator should set LAB_OP_SUBNET
+    echo "192.168.0.0/16"  # wide fallback - operator should set LAB_OP_SUBNET
   fi
 }
 
@@ -125,7 +125,7 @@ _fw_open_ephemeral() {
 
   # Auto-cleanup stale ephemeral state from a previous run before opening new rule
   if [[ -f "$state_file" ]]; then
-    echo "[FW] Stale ephemeral state found — cleaning up before opening new rule."
+    echo "[FW] Stale ephemeral state found - cleaning up before opening new rule."
     FW_STATE_FILE="$state_file" _fw_cleanup_ephemeral 2>/dev/null || true
   fi
 
@@ -156,7 +156,7 @@ _fw_open_ephemeral() {
       firewall-cmd --add-rich-rule="rule family=ipv4 source address='$LAB_OP_SUBNET' port port='$port' protocol='$proto' accept" 2>&1
       ;;
     none)
-      echo "[FW] No firewall active — no rule needed."
+      echo "[FW] No firewall active - no rule needed."
       return 0
       ;;
   esac
@@ -181,7 +181,7 @@ _fw_cleanup_ephemeral() {
   local state_file="${FW_STATE_FILE:-${HOME}/.labop-fw-ephemeral-${FW_TAG:-default}.json}"
 
   if [[ ! -f "$state_file" ]]; then
-    echo "[FW] No ephemeral state file found — nothing to clean up."
+    echo "[FW] No ephemeral state file found - nothing to clean up."
     return 0
   fi
 
@@ -213,7 +213,7 @@ _fw_cleanup_ephemeral() {
       if [[ -n "$handle" ]]; then
         nft delete rule "$nft_fam" "$nft_tbl" "$nft_ch" handle "$handle" 2>&1 || true
       else
-        echo "[FW] WARN: Could not find nftables rule handle for tag $tag — manual cleanup may be needed." >&2
+        echo "[FW] WARN: Could not find nftables rule handle for tag $tag - manual cleanup may be needed." >&2
       fi
       ;;
     iptables)
@@ -244,7 +244,7 @@ _fw_troubleshoot_hint() {
     nftables) echo "[FW]   sudo nft add rule inet filter input ip saddr $LAB_OP_SUBNET $proto dport $port accept" ;;
     iptables) echo "[FW]   sudo iptables -I INPUT -p $proto -s $LAB_OP_SUBNET --dport $port -j ACCEPT" ;;
     firewalld)echo "[FW]   sudo firewall-cmd --add-rich-rule=\"rule family=ipv4 source address='$LAB_OP_SUBNET' port port='$port' protocol='$proto' accept\" --permanent && sudo firewall-cmd --reload" ;;
-    none)     echo "[FW]   No firewall detected — port may be blocked by a network device upstream." ;;
+    none)     echo "[FW]   No firewall detected - port may be blocked by a network device upstream." ;;
   esac
   echo "[FW] To auto-open ephemerally for this smoke run, use --apply flag (requires LABOP sudoers)."
   echo ""

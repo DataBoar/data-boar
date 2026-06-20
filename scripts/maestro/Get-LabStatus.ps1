@@ -15,48 +15,56 @@ $lastResult = "N/A"
 
 Write-Host "Probing $TargetHost... " -NoNewline -ForegroundColor Gray
 
-# 1. Teste ICMP (Ping silencioso)
-if (Test-Connection -ComputerName $TargetHost -Count 1 -Quiet) {
-    $icmp = "UP"
+# 1. Teste ICMP (informativo APENAS; nunca gateia o SSH -- #952).
+#    Em pwsh no Linux o socket ICMP raw pode exigir privilegio -> Test-Connection
+#    lanca excecao ou retorna falso-DOWN. SSH e a fonte da verdade de prontidao;
+#    um no com ICMP bloqueado mas SSH up (hardening comum) NAO deve ser pulado.
+try {
+    if (Test-Connection -ComputerName $TargetHost -Count 1 -Quiet -ErrorAction SilentlyContinue) {
+        $icmp = "UP"
+    }
+} catch {
+    $icmp = "DOWN"
+}
 
-# 2. Teste SSH Ninja: Puxa Tmux e Status na MESMA conexão SSH usando usuario injetado pelo Maestro
-    $probeCmd = "tmux ls 2>/dev/null ; echo '@@@' ; cat ~/.labop-status 2>/dev/null ; exit 0"
-    $rawOutput = ssh -q -o ConnectTimeout=8 -o BatchMode=yes "${TargetUser}@${TargetHost}" "$probeCmd"
+# 2. Teste SSH Ninja (#952): roda SEMPRE, independente do resultado do ICMP.
+#    Puxa Tmux e Status na MESMA conexao SSH usando o usuario injetado pelo Maestro.
+$probeCmd = "tmux ls 2>/dev/null ; echo '@@@' ; cat ~/.labop-status 2>/dev/null ; exit 0"
+$rawOutput = ssh -q -o ConnectTimeout=8 -o BatchMode=yes "${TargetUser}@${TargetHost}" "$probeCmd"
 
-    if ($LASTEXITCODE -eq 0 -and $null -ne $rawOutput) {
-        $ssh = "UP"
+if ($LASTEXITCODE -eq 0 -and $null -ne $rawOutput) {
+    $ssh = "UP"
 
-        # 2.1 Quebra a resposta da sonda nos dois pedaços
-        # CORREÇÃO SRE: Junta o array em uma única string ANTES de dar o split!
-        $joinedOutput = $rawOutput -join "`n"
-        $parts = $joinedOutput -split "@@@"
+    # 2.1 Quebra a resposta da sonda nos dois pedacos
+    # CORRECAO SRE: Junta o array em uma unica string ANTES de dar o split!
+    $joinedOutput = $rawOutput -join "`n"
+    $parts = $joinedOutput -split "@@@"
 
-        $tmuxLs = $parts[0]
-        $statusRaw = if ($parts.Count -gt 1) { $parts[1].Trim() } else { "" }
+    $tmuxLs = $parts[0]
+    $statusRaw = if ($parts.Count -gt 1) { $parts[1].Trim() } else { "" }
 
-        # 3. Valida a sessão Tmux
-        if ($tmuxLs -match $expectedSession) {
-            $tmux = "WARM ($expectedSession)"
-        } else {
-            $tmux = "COLD (No Session)"
-        }
+    # 3. Valida a sessao Tmux
+    if ($tmuxLs -match $expectedSession) {
+        $tmux = "WARM ($expectedSession)"
+    } else {
+        $tmux = "COLD (No Session)"
+    }
 
-	# 4. Lê telemetria (sem criar novas variáveis desnecessárias ou abrir novas sessoes ssh)
-        if ($statusRaw) {
-            $lastResult = $statusRaw
-        } else {
-            $lastResult = "PENDING"
-        }
+    # 4. Le telemetria (sem criar novas variaveis desnecessarias ou abrir novas sessoes ssh)
+    if ($statusRaw) {
+        $lastResult = $statusRaw
+    } else {
+        $lastResult = "PENDING"
     }
 }
 
-# Feedback visual mantido original (Essencial para o SRE)
-if ($icmp -eq "UP" -and $ssh -eq "UP" -and $tmux -match "WARM") {
+# Feedback visual (SSH = fonte da verdade de prontidao; ICMP so informativo -- #952)
+if ($ssh -eq "UP" -and $tmux -match "WARM") {
     Write-Host "[READY]" -ForegroundColor Green
-} elseif ($icmp -eq "UP" -and $ssh -eq "UP") {
+} elseif ($ssh -eq "UP") {
     Write-Host "[SSH UP/NO SESSION]" -ForegroundColor Yellow
 } elseif ($icmp -eq "UP") {
-    Write-Host "[NETWORK ONLY]" -ForegroundColor Cyan
+    Write-Host "[NETWORK ONLY (ICMP up, SSH down)]" -ForegroundColor Cyan
 } else {
     Write-Host "[OFFLINE]" -ForegroundColor Red
 }

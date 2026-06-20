@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Data Boar — install OS packages for CIFS/NFS/sshfs kernel mounts used in lab workflows.
+# Data Boar - install OS packages for CIFS/NFS/sshfs kernel mounts used in lab workflows.
 # See docs/ops/LAB_SMOKE_MULTI_HOST.md and ops/automation/ansible/playbooks/lab-data-boar-share-clients.yml.
 #
 # Usage on the Linux host (from repo root):

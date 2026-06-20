@@ -7,10 +7,22 @@ static anti-regressions for known handler bugs (GitHub issues #329/#330 family).
 
 from __future__ import annotations
 
+import json
 import re
+import shutil
+import subprocess
+import tempfile
 from pathlib import Path
 
 from tests.test_scripts import _parse_powershell_script, _project_root
+
+
+def _find_pwsh() -> str | None:
+    """Return the first available PowerShell executable, or None."""
+    for pw in ("pwsh", "powershell"):
+        if shutil.which(pw):
+            return pw
+    return None
 
 
 def _maestro_ps1_paths(root: Path) -> list[Path]:
@@ -352,7 +364,8 @@ def test_lab_completao_host_smoke_uses_main_py_not_data_boar_scan() -> None:
     text = (root / "scripts" / "lab-completao-host-smoke.sh").read_text(
         encoding="utf-8", errors="replace"
     )
-    assert "uv run python main.py --config" in text
+    # --no-sync keeps the boar_fast_filter wheel installed for the real scan (#951).
+    assert "uv run --no-sync python main.py --config" in text
     assert "uv run data-boar scan" not in text
     assert "DONE_FAILED_BAREMETAL" in text
     assert "LC_BAREMETAL_SCAN_OK" in text
@@ -714,4 +727,78 @@ def test_handle_web_reconciles_exit_code_after_recovery() -> None:
     # The final failure line must be an error + exit, not a swallowed warning.
     assert re.search(r"Health Check Web falhou[\s\S]{0,200}exit 7", text), (
         "Handle-web final failure after fallback must surface a non-zero exit (#889)."
+    )
+
+
+def _run_maestro_build_decision(pwsh: str, personas: list[str], tmp: Path) -> bool:
+    """Run a real copy of Maestro.ps1 against a fixture inventory with stubbed child
+    scripts; return True if Build-ContainerArtefact was invoked (marker written).
+
+    Lab-free (#950): the Get-LabStatus stub returns SSH=DOWN, so the node dispatch
+    loop is a no-op (no SSH, no sync, no handlers). Only the top-level container-build
+    decision and the final report run. The Build stub writes a marker we can observe.
+    """
+    root = _project_root()
+    maestro_src = root / "scripts" / "maestro" / "Maestro.ps1"
+    mdir = tmp / "scripts" / "maestro"
+    mdir.mkdir(parents=True)
+    data_dir = tmp / "docs" / "private" / "homelab" / "data"
+    data_dir.mkdir(parents=True)
+
+    shutil.copyfile(maestro_src, mdir / "Maestro.ps1")
+    marker = mdir / "build_invoked.marker"
+    (mdir / "Build-ContainerArtefact.ps1").write_text(
+        'Set-Content -LiteralPath "$PSScriptRoot/build_invoked.marker" -Value built\n',
+        encoding="utf-8",
+    )
+    (mdir / "Get-LabStatus.ps1").write_text(
+        "param($TargetHost, $TargetUser)\n"
+        "[pscustomobject]@{ SSH = 'DOWN'; Tmux = ''; Node = $null; Host = $TargetHost }\n",
+        encoding="utf-8",
+    )
+    inv = {"lab_members": [{"hostname": "h1", "user": "u", "personas": personas}]}
+    (data_dir / "inventory.json").write_text(json.dumps(inv), encoding="utf-8")
+
+    proc = subprocess.run(
+        [pwsh, "-NoProfile", "-NonInteractive", "-File", str(mdir / "Maestro.ps1")],
+        cwd=str(tmp),
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    assert proc.returncode == 0, (
+        f"Maestro.ps1 exited {proc.returncode}\nSTDOUT:\n{proc.stdout}\nSTDERR:\n{proc.stderr}"
+    )
+    return marker.exists()
+
+
+def test_maestro_skips_container_build_when_no_container_persona(warm_pwsh) -> None:
+    """#950 guard: baremetal-only inventory -> Build-ContainerArtefact is NOT invoked.
+
+    Behavioral, lab-free: runs a real copy of Maestro.ps1 with a fixture inventory
+    that has no docker/podman/dockerswarm persona; the build must be skipped.
+    """
+    pwsh = _find_pwsh()
+    if not pwsh:
+        return
+    with tempfile.TemporaryDirectory() as td:
+        built = _run_maestro_build_decision(pwsh, ["baremetal"], Path(td))
+    assert not built, (
+        "Build-ContainerArtefact ran even though no node has a container persona (#950)"
+    )
+
+
+def test_maestro_runs_container_build_when_container_persona_present(warm_pwsh) -> None:
+    """#950 guard: a node with a container persona -> Build-ContainerArtefact still runs.
+
+    Behavioral, lab-free: same harness as the skip case but with a docker persona;
+    the build must be invoked.
+    """
+    pwsh = _find_pwsh()
+    if not pwsh:
+        return
+    with tempfile.TemporaryDirectory() as td:
+        built = _run_maestro_build_decision(pwsh, ["baremetal", "docker"], Path(td))
+    assert built, (
+        "Build-ContainerArtefact did NOT run even though a node has a docker persona (#950)"
     )

@@ -56,7 +56,7 @@ done
 _SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=labop-firewall-lib.sh
 source "$_SCRIPT_DIR/labop-firewall-lib.sh" 2>/dev/null || {
-  echo "[SMB-Ensure] WARN: labop-firewall-lib.sh not found — firewall checks skipped." >&2
+  echo "[SMB-Ensure] WARN: labop-firewall-lib.sh not found - firewall checks skipped." >&2
 }
 
 _log() { echo "[SMB-Ensure $(date -u +%H:%M:%SZ)] $*"; }
@@ -106,9 +106,9 @@ if type _fw_detect >/dev/null 2>&1; then
       fi
     fi
     if _fw_port_allowed $port tcp; then
-      _ok "Firewall allows $LAB_OP_SUBNET → port $port/tcp."
+      _ok "Firewall allows $LAB_OP_SUBNET -> port $port/tcp."
     else
-      _warn "Firewall BLOCKS $LAB_OP_SUBNET → port $port/tcp."
+      _warn "Firewall BLOCKS $LAB_OP_SUBNET -> port $port/tcp."
       NEED_FIX=1
       if [[ $APPLY -eq 1 ]]; then
         _log "Opening port $port/tcp ephemerally for $LAB_OP_SUBNET..."

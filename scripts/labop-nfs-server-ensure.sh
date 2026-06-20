@@ -50,7 +50,7 @@ done
 _SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=labop-firewall-lib.sh
 source "$_SCRIPT_DIR/labop-firewall-lib.sh" 2>/dev/null || {
-  echo "[NFS-Ensure] WARN: labop-firewall-lib.sh not found — firewall checks skipped." >&2
+  echo "[NFS-Ensure] WARN: labop-firewall-lib.sh not found - firewall checks skipped." >&2
 }
 
 _log() { echo "[NFS-Ensure $(date -u +%H:%M:%SZ)] $*"; }
@@ -167,7 +167,7 @@ if command -v systemctl >/dev/null 2>&1; then
     _ok "rpcbind: active."
   fi
 else
-  _log "rpcbind check skipped (no systemctl — runit/OpenRC manages portmapper differently)."
+  _log "rpcbind check skipped (no systemctl - runit/OpenRC manages portmapper differently)."
 fi
 
 # ---------------------------------------------------------------------------
@@ -188,7 +188,7 @@ if type _port_listening >/dev/null 2>&1; then
   if _port_listening $NFS_PORT; then
     _ok "Port $NFS_PORT/tcp listening."
   else
-    _warn "Port $NFS_PORT/tcp NOT listening — NFS service may not be fully started."
+    _warn "Port $NFS_PORT/tcp NOT listening - NFS service may not be fully started."
     NEED_FIX=1
   fi
 fi
@@ -197,9 +197,9 @@ fi
 if type _fw_detect >/dev/null 2>&1; then
   _fw_detect
   if _fw_port_allowed $NFS_PORT tcp; then
-    _ok "Firewall allows $LAB_OP_SUBNET → port $NFS_PORT/tcp."
+    _ok "Firewall allows $LAB_OP_SUBNET -> port $NFS_PORT/tcp."
   else
-    _warn "Firewall BLOCKS $LAB_OP_SUBNET → port $NFS_PORT/tcp."
+    _warn "Firewall BLOCKS $LAB_OP_SUBNET -> port $NFS_PORT/tcp."
     NEED_FIX=1
     if [[ $APPLY -eq 1 ]]; then
       _log "Opening port $NFS_PORT/tcp ephemerally for $LAB_OP_SUBNET..."

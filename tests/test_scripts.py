@@ -1148,6 +1148,124 @@ def test_powershell_scripts_ascii_safe():
     )
 
 
+def test_get_lab_status_ps1_syntax():
+    """scripts/maestro/Get-LabStatus.ps1 has valid PowerShell syntax (parse-only, #952)."""
+    root = _project_root()
+    script = root / "scripts" / "maestro" / "Get-LabStatus.ps1"
+    if not script.exists():
+        return
+    assert _parse_powershell_script(script, root), "Get-LabStatus.ps1 parse failed"
+
+
+def test_get_lab_status_probes_ssh_independent_of_icmp():
+    """#952 guard: the SSH probe must not be nested inside the ICMP (Test-Connection) block.
+
+    A node with ICMP blocked but SSH up (common hardening), or a pwsh-on-Linux raw-ICMP
+    privilege failure, must NOT cause Get-LabStatus to report SSH DOWN and have Maestro
+    skip the node. We assert the ssh probe line is at top-level indentation (column 0),
+    i.e. not gated behind the Test-Connection ``if`` block.
+    """
+    root = _project_root()
+    script = root / "scripts" / "maestro" / "Get-LabStatus.ps1"
+    if not script.exists():
+        return
+    lines = script.read_text(encoding="utf-8").splitlines()
+    ssh_probe = [ln for ln in lines if "$rawOutput = ssh " in ln]
+    assert ssh_probe, "expected an ssh probe assigning $rawOutput"
+    # Top-level (not indented under the ICMP if-block) => SSH runs regardless of ICMP.
+    assert all(not ln.startswith((" ", "\t")) for ln in ssh_probe), (
+        "SSH probe must run independent of ICMP (not indented under Test-Connection) (#952)"
+    )
+
+
+def test_host_smoke_uv_run_uses_no_sync_after_wheel():
+    """#951 guard: lab-completao-host-smoke.sh runs the scan/import via ``uv run --no-sync``.
+
+    boar_fast_filter is not a locked dependency, so a plain ``uv run`` re-syncs the venv
+    and prunes the pre-installed Build-Once wheel -> main.py silently scans in pure-Python
+    and the "Rust prefilter compiled on every node" gate criterion (#406) is never met.
+    This guard asserts the wheel-dependent invocations keep ``--no-sync`` and that no bare
+    ``uv run python main.py`` reintroduces the prune.
+    """
+    root = _project_root()
+    script = root / "scripts" / "lab-completao-host-smoke.sh"
+    if not script.exists():
+        return
+    text = script.read_text(encoding="utf-8")
+    # The scan must not re-sync (would prune the prefilter wheel).
+    assert "uv run --no-sync python main.py" in text, (
+        "the baremetal scan must use `uv run --no-sync python main.py` (#951)"
+    )
+    assert "uv run python main.py" not in text, (
+        "bare `uv run python main.py` re-syncs and prunes boar_fast_filter (#951)"
+    )
+    # The boar_fast_filter import check must reflect the installed wheel, not a re-synced env.
+    assert 'uv run --no-sync python -c "import boar_fast_filter"' in text, (
+        "the boar_fast_filter import probe must use --no-sync (#951)"
+    )
+
+
+def test_labop_shell_scripts_ascii_safe():
+    """#794 guard: scripts/labop-*.sh are ASCII-only (no em-dash, arrow, curly quotes).
+
+    These ensure/firewall scripts run on lab hosts whose ``LANG`` is not guaranteed to
+    be a UTF-8 locale (e.g. Void Linux). A multi-byte char (em-dash U+2014, arrow U+2192)
+    inside a quoted string is misread under ``LANG=C`` and can break ``if``/``else``
+    parsing -> "unexpected end of file" (the #794 failure on an old lab host). Enforce
+    ASCII so the same class of bug cannot regress.
+    """
+    root = _project_root()
+    violations: list[str] = []
+    for script in sorted((root / "scripts").glob("labop-*.sh")):
+        text = script.read_text(encoding="utf-8", errors="replace")
+        for lineno, line in enumerate(text.splitlines(), start=1):
+            m = _PS1_ASCII_UNSAFE_RE.search(line)
+            if m:
+                char = m.group(0)
+                violations.append(
+                    f"  scripts/{script.name}:{lineno} non-ASCII char {char!r}"
+                    f" (U+{ord(char):04X}) - use ASCII equivalent"
+                )
+    assert not violations, (
+        "labop-*.sh contain non-ASCII chars that break bash parsing in non-UTF-8 "
+        "locales (#794):\n" + "\n".join(violations)
+    )
+
+
+def test_labop_ensure_scripts_parse_under_c_locale():
+    """#794 guard: labop ensure scripts pass ``LANG=C bash -n`` (non-UTF-8 locale).
+
+    Reproduces the exact Void Linux failure mode (an old lab host) where a multi-byte
+    char under a C locale breaks ``if`` parsing. Skipped on Windows / when bash is absent.
+    """
+    if sys.platform == "win32":
+        return
+    root = _project_root()
+    import os
+
+    env = dict(os.environ)
+    env["LANG"] = "C"
+    env["LC_ALL"] = "C"
+    for name in ("labop-nfs-server-ensure.sh", "labop-smb-server-ensure.sh"):
+        script = root / "scripts" / name
+        if not script.exists():
+            continue
+        try:
+            proc = subprocess.run(
+                ["bash", "-n", str(script)],
+                cwd=str(root),
+                capture_output=True,
+                text=True,
+                timeout=10,
+                env=env,
+            )
+        except FileNotFoundError:
+            return
+        assert proc.returncode == 0, (
+            f"LANG=C bash -n failed for {name}: {proc.stderr or proc.stdout}"
+        )
+
+
 def test_build_rust_prefilter_is_uv_first_and_cross_platform():
     """#890 guard: build-rust-prefilter.ps1 must be uv-first and path-portable.
 
