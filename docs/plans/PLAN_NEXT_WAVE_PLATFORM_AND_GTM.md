@@ -31,6 +31,16 @@ Define the next three execution fronts after:
 - Keep private personal/professional details in `docs/private/` and produce public-safe derivatives.
 - Align learning roadmap with shipping roadmap so certifications and academic work directly improve product value.
 
+## Partner channel thesis — data-protection / backup vendors (criticality overlay)
+
+Natural enterprise channel that complements **N2's** partner-friendly accelerator narrative. Backup / data-protection platforms (e.g. **Cohesity**, **Rubrik**, **Veeam**, **Commvault**, **Veritas**) already own the **install base** and already **fan data out** into snapshots, DR sites, and long-retention tiers — but their **own maturity checklists** ask the customer whether they have visibility into **which data is most critical / most sensitive**. That is exactly Data Boar's output.
+
+- **Positioning (one line):** the platform **asks** “do you know which data is most critical?”; Data Boar is the **answer** — a criticality/sensitivity **evidence overlay**, not a backup, restore, or recoverability claim.
+- **Why it qualifies leads cheaply:** the gap is **self-identified by the vendor's own assessment**, so the discovery workshop attaches to an existing budget conversation instead of creating a new one.
+- **Scope discipline:** keep it an **evidence overlay** — no recoverability guarantees, no DR product claims, no vendor certification. Ingest **restored/mounted read-only copies** and **export catalogues** as scan roots; reuse the file/compressed/SQL pipeline (ties to N2 scope-import accelerators).
+- **Buyer-facing narrative (generic, no vendor names):** [../use-cases/BACKUP_AND_DATA_PROTECTION_ESTATE_CRITICALITY.md](../use-cases/BACKUP_AND_DATA_PROTECTION_ESTATE_CRITICALITY.md) ([pt-BR](../use-cases/BACKUP_AND_DATA_PROTECTION_ESTATE_CRITICALITY.pt_BR.md)).
+- **Promotion gate:** stays a thesis until **repeatable revenue evidence** appears; only then promote a row in `PLANS_TODO.md` (*Partner / sector demand*) — do **not** add buyer-facing links into `docs/plans/`.
+
 ## Deliverables
 
 - One tracked doc slice per front.

@@ -22,6 +22,7 @@ Cada storyboard inclui **Oportunidade para parceiros** (como qualificar um lead)
 | [REAL_ESTATE_AND_CONDOMINIUM_MANAGEMENT.pt_BR.md](REAL_ESTATE_AND_CONDOMINIUM_MANAGEMENT.pt_BR.md) | Locação / condomínio / gestão predial PME, alto fluxo documental | Pastas por unidade, contratos, registos de consumo, exportações simples de CRM |
 | [NGO_MIGRANT_WELCOME_AND_HUMANITARIAN_FILES.pt_BR.md](NGO_MIGRANT_WELCOME_AND_HUMANITARIAN_FILES.pt_BR.md) | Triagem humanitária; minimização ética em primeiro lugar | Planilhas de triagem, digitalizações (onde permitido), exportações de mensagens |
 | [EDTECH_LMS_EXPORTS_AND_MINORS.pt_BR.md](EDTECH_LMS_EXPORTS_AND_MINORS.pt_BR.md) | Listas LMS, responsáveis, menores; higiene para due diligence | CSV/JSON do LMS, tickets, SQL opcional de listas |
+| [BACKUP_AND_DATA_PROTECTION_ESTATE_CRITICALITY.pt_BR.md](BACKUP_AND_DATA_PROTECTION_ESTATE_CRITICALITY.pt_BR.md) | Parque de backup / proteção de dados; camada de criticidade sobre a base instalada | Cópias restauradas/montadas somente leitura, compartilhamentos/bancos de origem, catálogos de exportação |
 
 ## Incluir novos storyboards no futuro
 
