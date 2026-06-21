@@ -1,0 +1,52 @@
+---
+description: Release/version guardrails — commit gate vs release gate, VOID 1.7.4, no 1.7.5, octet maturity. Situational — semver bumps, VERSIONING, pyproject version.
+globs:
+  - pyproject.toml
+  - docs/VERSIONING.md
+  - docs/VERSIONING.pt_BR.md
+  - CHANGELOG.md
+  - security/version_policy.yaml
+  - tests/test_release_version_policy.py
+  - docs/releases/**
+  - docs/adr/ADR-0072*.md
+  - docs/adr/ADR-0073*.md
+alwaysApply: false
+---
+
+# Release & versioning guardrails (post-#970)
+
+## When this rule attaches
+
+**Situational** — globs above, semver bump / release doc work, or **`@release-versioning.mdc`**. **`release-publish-sequencing.mdc`** covers **tag → GitHub → Docker → Hub** choreography; **this rule** covers **authorization to bump** and **phantom-version prevention**.
+
+## Two gates (ADR-0072 — Proposed)
+
+| | **Commit gate** | **Release gate** |
+|---|---|---|
+| Question | May this code enter `main`? | May this version become stable? |
+| Criterion | `check-all` / CI / pre-commit GREEN | Lab completão (#406) + operator FASE 3 |
+| Vocabulary | **Never** call this "gate" alone — **local checks** / **CI** | **Gate** without qualifier = **this** |
+
+**Green commit gate never authorizes removing `-beta`/`-rc` from `pyproject.toml`.**
+
+## Version facts (ADR-0073 — Proposed)
+
+- **`1.7.4` stable = VOID** (#970). Real stable after gate: **`1.7.4.201`** (`.201` = fix-1; `.200` burned).
+- **`main` today:** **`1.7.4-rc-2`** until **#406** closes.
+- **`1.7.5` does not exist.** Next dev line: **`1.8.0-beta`** (#772).
+- Octet bands: **0–127 beta · 128–199 rc · 200–255 release** — see **`docs/VERSIONING.md`**.
+
+## Agent must not
+
+1. Bump to **stable** (no suffix) while **#406** is OPEN.
+2. Invent **`1.7.5`** / **`1.7.5-beta`** targeting.
+3. Treat **verifiable** smoke hardening (#831) as **release gate passed**.
+4. Tag, GitHub Release, or Docker publish without operator **FASE 3** — pair with **`release-publish-sequencing.mdc`**.
+
+## Machine guard
+
+**`security/version_policy.yaml`** + **`tests/test_release_version_policy.py`** — run via **`check-all`**.
+
+## Canonical refs
+
+- **`docs/VERSIONING.md`** · **ADR-0072** · **ADR-0073** · **#970** · **#772** · **#978**
