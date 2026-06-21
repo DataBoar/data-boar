@@ -148,7 +148,7 @@ Moved out of the landing `README.md` (audience: evaluator / CISO, not internal r
 
 - [ ] **Current release** banner: **1.7.3** → **1.7.4**
 - [ ] **Docker Hub:** confirm **`fabioleitao/data_boar:1.7.4`** and consumer **`latest`** moved per **[VERSIONING.md](../VERSIONING.md)** / **[DOCKER_IMAGE_RELEASE_ORDER.md](DOCKER_IMAGE_RELEASE_ORDER.md)**
-- [ ] **Working pre-release** line: remove or repoint (for example next **`1.7.5-rc`**)
+- [ ] **Working pre-release** line: remove or repoint (for example next **`1.8.0-beta`**)
 - [ ] README link to **`docs/releases/1.7.4.md`** in the shipping-notes row once final
 - [ ] **CHANGELOG:** fold **`Unreleased`** into **`## 1.7.4 (YYYY-MM-DD)`** using the GitHub/tag date
 - [ ] **README.pt_BR.md:** mirror banner completion

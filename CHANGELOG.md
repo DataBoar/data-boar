@@ -4,13 +4,15 @@ Human-readable summary of user-facing changes. **Detailed release notes:** [docs
 
 ## Unreleased (`main`)
 
-**Targeting:** **`1.7.5-beta`** — next working line after **1.7.4** final.
+**Working tree:** `pyproject.toml` **`1.7.4-rc-2`** · alvo pós-gate **`1.7.4.201`** (#971).
+
+**Targeting (próxima linha de desenvolvimento):** **`1.8.0-beta`** (#772) — após gate **#406** e release real documentada em **#971**.
 
 ---
 
-## 1.7.4-rc-2 (unreleased — gate #406 pendente)
+## 1.7.4 — VOID / NEVER RELEASED (2026-06-11) — #970, PR #840 prematuro
 
-> **Tombstone:** **`1.7.4` = VOID** — nunca lançada; promovida sem gate (**#970**, PR **#840** prematuro). Release real nasce **`1.7.4.201`** (fix-1 pós-GA; **`.200` = GA queimada). Ver **#971**.
+> **NÚMERO queimado** — nunca lançada como stable; promovida sem gate **#406**. As mudanças abaixo **são reais** (landed em `main`); mantidas por **historicidade**. Release real: **`1.7.4.201`** (fix-1 pós-GA; **`.200` = GA queimada**) — ver **#971**. Próxima linha arquitetural: **`1.8.0-beta`** (#772).
 
 ### Added
 

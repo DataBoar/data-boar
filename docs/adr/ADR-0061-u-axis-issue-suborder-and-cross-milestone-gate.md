@@ -12,10 +12,11 @@ Accepted
 
 - 2026-05-22 — Accepted
 - 2026-06-11 — Amended: retrofit to ADR-0045 UMADR format (metadata list, EN sections, Status history, Rationale, Alternatives Considered, Related Decisions) — GitHub #674
+- 2026-06-21 — Amended: milestone examples v1.7.5-beta → v1.8.0-beta (#772, #976; post–#970 VOID alignment)
 
 ## Context
 
-ADR-0055 establishes that prioritisation axes are orthogonal and must not be collapsed. It does **not** define how an agent should use the U axis to order issues when multiple issues share the same P label and milestone. Without this ADR, an agent could pick any P2/v1.7.5-beta issue in any order.
+ADR-0055 establishes that prioritisation axes are orthogonal and must not be collapsed. It does **not** define how an agent should use the U axis to order issues when multiple issues share the same P label and milestone. Without this ADR, an agent could pick any P2/v1.8.0-beta issue in any order.
 
 The rule `.cursor/rules/execution-priority-and-pr-batching.mdc` implements the behaviour; this ADR is the formal contract that gives it binding status in the repository.
 
@@ -33,7 +34,7 @@ The rule `.cursor/rules/execution-priority-and-pr-batching.mdc` implements the b
 
 ### Cross-milestone gate
 
-- Issues in a later milestone (e.g. v1.7.5-beta) **must not start** before the earlier milestone (e.g. v1.7.4) is fully closed.
+- Issues in a later milestone (e.g. v1.8.0-beta) **must not start** before the earlier milestone (e.g. v1.7.4) is fully closed.
 - The annotation `**NÃO INICIAR ANTES DE #N FECHADA**` in an issue body is a **hard constraint** — not advisory.
 - Cross-milestone reprioritisation requires **explicit operator instruction** at the start of the session.
 

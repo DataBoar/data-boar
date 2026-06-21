@@ -27,7 +27,7 @@ Use this decision order every session:
    - This ordering is **mandatory**, not a suggestion. Do not reorder based on perceived complexity, token cost, or familiarity.
 
 1. **Cross-milestone hard gate**
-   - **Never start v1.7.5-beta issues before all v1.7.4 issues are closed.**
+   - **Never start v1.8.0-beta issues before all v1.7.4 issues are closed.**
    - Issues marked `**NÃO INICIAR ANTES DE #N FECHADA**` in their body are **hard blockers** — not advisory notes. Starting such an issue before #N is closed is a deterministic violation.
    - If operator explicitly reprioritizes cross-milestone work, they must say so explicitly in the session message; silence = respect the gate.
 

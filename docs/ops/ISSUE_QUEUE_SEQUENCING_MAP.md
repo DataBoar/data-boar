@@ -1,7 +1,7 @@
 ---
 # Issue Queue Sequencing Map
 <!-- auto-maintained: refresh when new issues are added or NÃO INICIAR chains change -->
-**Última atualização:** 2026-05-22
+**Última atualização:** 2026-06-21
 **Total open issues:** 145
 
 ```mermaid
@@ -23,7 +23,7 @@ subgraph WAVE_174["WAVE v1.7.4 (7 issues)"]
   i640 --> i406
 end
 
-subgraph WAVE_175["WAVE v1.7.5-beta (102 issues — 6 fases)"]
+subgraph WAVE_175["WAVE v1.8.0-beta (102 issues — 6 fases)"]
 
   subgraph U0["Segurança U0"]
     i560["#560 gatekeeper-audit Python puro"]:::p2
@@ -103,7 +103,7 @@ classDef p3 fill:#7f8c8d,color:#fff
 | Dimensão | Distribuição |
 |---|---|
 | P0/P1/P2/P3 | 2/6/99/38 |
-| v1.7.4 / v1.7.5-beta / backlog | 7/102/36 |
+| v1.7.4 / v1.8.0-beta / backlog | 7/102/36 |
 | U0/U1/U2/U3/sem U | 2/9/18/5/111 |
 | G3/G2/G1/sem G | 2/4/1/138 |
 ---
