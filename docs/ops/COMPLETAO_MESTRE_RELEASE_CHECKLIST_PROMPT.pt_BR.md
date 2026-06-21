@@ -142,7 +142,7 @@ Retirado da landing `README.md` (público: avaliador / CISO, não processo inter
 
 - [ ] Banner **release atual**: **1.7.3** → **1.7.4**
 - [ ] **Docker Hub:** confirmar **`fabioleitao/data_boar:1.7.4`** e o **`latest`** de consumo movidos conforme **[VERSIONING.md](../VERSIONING.md)** / **[DOCKER_IMAGE_RELEASE_ORDER.md](DOCKER_IMAGE_RELEASE_ORDER.md)**
-- [ ] Linha de **pré-release de trabalho**: remover ou repontar (por exemplo, próximo **`1.7.5-rc`**)
+- [ ] Linha de **pré-release de trabalho**: remover ou repontar (por exemplo, próximo **`1.8.0-beta`**)
 - [ ] Link da README para **`docs/releases/1.7.4.md`** na linha de notas quando final
 - [ ] **CHANGELOG:** dobrar **`Unreleased`** em **`## 1.7.4 (YYYY-MM-DD)`** usando a data do GitHub/tag
 - [ ] **README.pt_BR.md:** espelhar a conclusão do banner
