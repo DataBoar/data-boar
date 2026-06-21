@@ -79,16 +79,7 @@ function Invoke-SyncTarSshFallback {
 
     Write-Warning "      [Sync-Fallback #969] rsync exit $RsyncExitCode em $RemoteHost; tentando tar|ssh (mesmas exclusoes que rsync; remoto pode nao ter rsync — ex. alpine)."
     $escapedRoot = $RepoRoot -replace "'", "'\\''"
-    $tarPipeCmd = @"
-tar -czf - \
-  --exclude='.git' --exclude='.venv' --exclude='__pycache__' --exclude='.pytest_cache' \
-  --exclude='*.bundle' --exclude='docs/private' --exclude='*.log' --exclude='*.xlsx' \
-  --exclude='*.db' --exclude='data-boar-blackbox-audit.txt' --exclude='data-boar-*.tar' \
-  --exclude='.env' --exclude='.env.*' \
-  -C '$escapedRoot' . \
-| ssh -q -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 \
-  ${RemoteUser}@${RemoteHost} "mkdir -p $RemotePath && tar -xzf - -C $RemotePath"
-"@
+    $tarPipeCmd = "tar -czf - --exclude='.git' --exclude='.venv' --exclude='__pycache__' --exclude='.pytest_cache' --exclude='*.bundle' --exclude='docs/private' --exclude='*.log' --exclude='*.xlsx' --exclude='*.db' --exclude='data-boar-blackbox-audit.txt' --exclude='data-boar-*.tar' --exclude='.env' --exclude='.env.*' -C '$escapedRoot' . | ssh -q -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 ${RemoteUser}@${RemoteHost} `"mkdir -p $RemotePath && tar -xzf - -C $RemotePath`""
 
     if ($IsWindows) {
         wsl.exe -e bash -c $tarPipeCmd
