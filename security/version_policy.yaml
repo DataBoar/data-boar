@@ -1,0 +1,22 @@
+# Release/version policy guardrails (ADR-0072/0073, GitHub #978).
+# Operator: set release_gate.open to false only after #406 closes.
+
+release_gate:
+  issue_number: 406
+  open: true
+
+forbidden_version_literals:
+  - "1.7.5-beta"
+  - "v1.7.5-beta"
+  - 'version = "1.7.5"'
+  - "version = '1.7.5'"
+
+# Paths where forbidden literals may appear (negation docs, policy, tests, ADR tombstones).
+scan_allowlist_path_substrings:
+  - "security/version_policy.yaml"
+  - "tests/test_release_version_policy.py"
+  - "docs/adr/ADR-0073"
+  - "docs/adr/ADR-0061"
+  - "docs/VERSIONING"
+  - "CHANGELOG.md"
+  - "AGENTS.md"
