@@ -20,3 +20,4 @@ scan_allowlist_path_substrings:
   - "docs/VERSIONING"
   - "CHANGELOG.md"
   - "AGENTS.md"
+  - ".cursor/rules/release-versioning.mdc"
