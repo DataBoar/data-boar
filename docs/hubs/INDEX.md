@@ -55,6 +55,13 @@
 | Use cases | `docs/use-cases/USE_CASES_HUB.md` | Storyboards + product scenarios |
 | Pitch decks | `docs/pitch/INDEX.md` | Stakeholder / DPO / CISO |
 
+### Security, governance, and posture
+
+| Hub | Canonical path | Covers |
+| --- | -------------- | ------ |
+| **Posture hub** | `docs/SECURITY_GOVERNANCE_POSTURE_HUB.md` | Security, governance, safety, quality, provenance — co-located index |
+| Governance diagrams | `docs/ops/governance/DATABOAR_GOVERNANCE_DIAGRAMS.md` | ISO/COBIT/ITIL positioning diagrams for pitches |
+
 ### Integrity and release evidence
 
 | Hub | Canonical path | Covers |

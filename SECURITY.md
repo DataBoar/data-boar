@@ -4,6 +4,8 @@
 
 This document describes which versions of the application are supported, which dependency baseline is expected, and how to report security vulnerabilities to the maintainers. For copyright and license: [NOTICE](NOTICE); for making copyright and trademark official: [docs/COPYRIGHT_AND_TRADEMARK.md](docs/COPYRIGHT_AND_TRADEMARK.md) ([pt-BR](docs/COPYRIGHT_AND_TRADEMARK.pt_BR.md)).
 
+**Governance posture index (PII gates, agent containment, supply chain, provenance):** [`docs/SECURITY_GOVERNANCE_POSTURE_HUB.md`](docs/SECURITY_GOVERNANCE_POSTURE_HUB.md) ([pt-BR](docs/SECURITY_GOVERNANCE_POSTURE_HUB.pt_BR.md)) — co-located links only; does not replace this vulnerability policy.
+
 ## Supported versions
 
 - **Application (brand):** **Data Boar**. PyPI distribution id: **`data-boar`** (see [CONTRIBUTING.md](CONTRIBUTING.md#repository-and-install-identity-data-boar)). Current development targets **Python 3.12+**.
