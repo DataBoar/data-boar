@@ -8,7 +8,9 @@ Human-readable summary of user-facing changes. **Detailed release notes:** [docs
 
 ---
 
-## 1.7.4 (2026-06-11)
+## 1.7.4-rc-2 (unreleased — gate #406 pendente)
+
+> **Tombstone:** **`1.7.4` = VOID** — nunca lançada; promovida sem gate (**#970**, PR **#840** prematuro). Release real nasce **`1.7.4.201`** (fix-1 pós-GA; **`.200` = GA queimada). Ver **#971**.
 
 ### Added
 
