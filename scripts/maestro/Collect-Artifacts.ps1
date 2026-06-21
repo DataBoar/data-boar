@@ -5,7 +5,9 @@
 
 .SYNOPSIS
  Coletor de Telemetria Fria (Post-Flight).
- Puxa logs operacionais do Tmux remoto e salva no cofre privado sem expor no GH público.
+ Puxa logs operacionais do repo remoto (<path>/log/) e salva no cofre privado sem expor no GH publico.
+
+ #956: scans gravam em <repo>/log/ (benchmark-rc export_audit_trail), nao ~/log/.
 #>
 
 param(
@@ -20,21 +22,37 @@ $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
 
 Write-Host "   [Collect] Baixando artefatos de $($Node.hostname)..." -ForegroundColor DarkCyan
 
-# 2. Cria uma pasta específica para a coleta desta sessão
-# 2.1 Puxa todos os logs da pasta ~/log/ do nó para a pasta local de coleta, renomeando com Host + Timestamp para não sobrescrever o histórico
+$repoPath = [string]$Node.path -replace "^~", "~"
 $localDestDir = "$privateReportsDir\coleta_$($Node.hostname)_$timestamp"
 New-Item -ItemType Directory -Force -Path $localDestDir > $null
 
-$targetLogPattern = "$($Node.user)@$($Node.hostname):~/log/*.log"
-scp -q -o BatchMode=yes $targetLogPattern "$localDestDir\" > $null 2>&1
+$remoteBase = "$($Node.user)@$($Node.hostname)"
+$repoLogPattern = "${remoteBase}:${repoPath}/log/*.log"
+$repoAuditPattern = "${remoteBase}:${repoPath}/log/audit_trail*.log"
 
-if ($LASTEXITCODE -eq 0) {
+$collected = $false
+scp -q -o BatchMode=yes $repoLogPattern "$localDestDir\" > $null 2>&1
+if ($LASTEXITCODE -eq 0) { $collected = $true }
+
+if (-not $collected) {
+    scp -q -o BatchMode=yes $repoAuditPattern "$localDestDir\" > $null 2>&1
+    if ($LASTEXITCODE -eq 0) { $collected = $true }
+}
+
+# Legacy fallback: operator home ~/log (pre-#956); warn once if only legacy exists.
+if (-not $collected) {
+    $legacyPattern = "${remoteBase}:~/log/*.log"
+    scp -q -o BatchMode=yes $legacyPattern "$localDestDir\" > $null 2>&1
+    if ($LASTEXITCODE -eq 0) {
+        Write-Warning "      [WARNING] Coleta usou fallback ~/log (esperado <repo>/log/ apos #956)."
+        $collected = $true
+    }
+}
+
+if ($collected) {
     Write-Host "      [SUCCESS] Artefatos salvos em private/homelab/reports/" -ForegroundColor Green
-
-    # Opcional de limpeza: limpa a sujeira na borda após coleta bem-sucedida (descomente se quiser)
-    # ssh -q -o BatchMode=yes "$($Node.user)@$($Node.hostname)" "rm -f ~/log/*.log"
     return $true
 } else {
-    Write-Warning "      [WARNING] Sem artefatos (ou falha) em $($Node.hostname)."
+    Write-Warning "      [WARNING] Sem artefatos em $($Node.path)/log/ (ou falha scp) em $($Node.hostname)."
     return $false
 }

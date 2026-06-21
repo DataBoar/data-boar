@@ -107,7 +107,8 @@ if ($syncOk) {
     Write-Host "      [SUCCESS] $targetHost pronto em $finalPath." -ForegroundColor Green
     $Node.path = $finalPath
 
-    # Sessões tmux só fazem sentido com sync válido.
+    # Legacy tmux name kept pending operator attach workflow (#955 UX question).
+    # Multi-persona live runs inject into completao_<persona> (Lab-MaestroCommon.ps1).
     $tmuxInit = "tmux new-session -d -s completao 2>/dev/null || true ; tmux new-session -d -s monitor 2>/dev/null || true"
     ssh -q -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$targetUser@$targetHost" "$tmuxInit" > $null 2>&1
 } else {

@@ -23,6 +23,7 @@
 param(
     [Parameter(Mandatory = $true)]
     [string[]]$Personas,
+    [string[]]$OnlyHosts = @(),
     [int]$TimeoutSec = 900,
     [int]$PollSec = 10
 )
@@ -41,6 +42,9 @@ $sentinelDir = "/tmp/databoar_handler"
 # Build list of (node, persona) pairs to wait for
 $targets = [System.Collections.Generic.List[PSCustomObject]]::new()
 foreach ($node in $inventory.lab_members) {
+    if ($OnlyHosts.Count -gt 0 -and ($OnlyHosts -notcontains $node.hostname)) {
+        continue
+    }
     foreach ($persona in $Personas) {
         if ($node.personas -contains $persona) {
             $targets.Add([PSCustomObject]@{

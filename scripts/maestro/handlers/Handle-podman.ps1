@@ -31,6 +31,8 @@ param(
     [string]$BenchHealthUrl = ""
 )
 
+. "$PSScriptRoot/../Lab-MaestroCommon.ps1"
+
 # Allowlist: reject Ref values that could inject shell metacharacters (#830)
 $safeRefPattern = '^(WorkingTree|stable|beta|v\d+\.\d+\.\d+(-[\w.]+)?)$'
 if ($Ref -notmatch $safeRefPattern) {
@@ -61,13 +63,12 @@ $sentinelDir  = "/tmp/databoar_handler"
 $sentinelFile = "$sentinelDir/podman_sentinel.txt"
 
 $nodePath = $Node.path
-$payload  = "cd $nodePath && echo 'Iniciando Podman Smoke ($modoTexto)...' && ${benchEnvPrefix}bash ./scripts/lab-completao-host-smoke.sh $smokeArgText ; _rc=`$? ; mkdir -p $sentinelDir ; echo `$_rc > $sentinelFile ; exit `$_rc"
+$payload  = "rm -f $sentinelFile ; cd $nodePath && echo 'Iniciando Podman Smoke ($modoTexto)...' && ${benchEnvPrefix}bash ./scripts/lab-completao-host-smoke.sh $smokeArgText ; _rc=`$? ; mkdir -p $sentinelDir ; echo `$_rc > $sentinelFile ; exit `$_rc"
 
 # Base64-encode to eliminate shell-quoting issues in tmux send-keys. (#830)
 $payloadB64 = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($payload))
-$tmuxCmd    = "tmux send-keys -t completao C-c ; sleep 0.5 ; tmux send-keys -t completao 'echo $payloadB64 | base64 -d | bash' Enter"
-
-ssh -q -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$($Node.user)@$($Node.hostname)" "$tmuxCmd"
+$injectExit = Invoke-HandlerTmuxPayload -Node $Node -Persona "podman" -PayloadB64 $payloadB64
+$LASTEXITCODE = $injectExit
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "      [SUCCESS] Orquestracao Podman injetada no Tmux com sucesso." -ForegroundColor Green

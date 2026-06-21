@@ -22,10 +22,19 @@ param(
     [string]$BenchHealthUrl = ""
 )
 
+. "$PSScriptRoot/../Lab-MaestroCommon.ps1"
+
 Write-Host "   [Target-MariaDB] Provisionando MariaDB sintetico em $($Node.hostname)..." -ForegroundColor Magenta
+
+$sentinelDir  = "/tmp/databoar_handler"
+$sentinelFile = "$sentinelDir/target_mariadb_sentinel.txt"
 
 $remoteCmd = @'
 set -e
+SENTINEL="__SENTINEL__"
+mkdir -p "$(dirname "$SENTINEL")"
+_rc=0
+trap '_rc=$?; echo $_rc > "$SENTINEL"; exit $_rc' EXIT
 cd __NODE_PATH__/deploy/lab-smoke-stack
 pick_port() {
   local default_port="$1"
@@ -68,6 +77,7 @@ fi
 echo "TARGET_MARIADB_READY port=${CHOSEN_PORT} at $(date +'%H:%M:%S')" > ~/.labop-status
 echo "TARGET_MARIADB_READY port=${CHOSEN_PORT}"
 '@
+$remoteCmd = $remoteCmd.Replace("__SENTINEL__", $sentinelFile)
 $remoteCmd = $remoteCmd.Replace("__NODE_PATH__", [string]$Node.path) -replace "`r", ""
 
 $out = ssh -q -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$($Node.user)@$($Node.hostname)" "$remoteCmd"
@@ -80,4 +90,6 @@ if ($LASTEXITCODE -eq 0 -and $out -match "TARGET_MARIADB_READY") {
     }
 } else {
     Write-Warning "      [WARNING] Falha ao provisionar target_mariadb em $($Node.hostname)."
+    Write-RemoteSentinel -Node $Node -SentinelFile $sentinelFile -ExitCode 1
+    exit 1
 }
