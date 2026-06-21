@@ -27,6 +27,45 @@ Examples:
 
 ---
 
+## Build octet maturity + release-line roadmap (ADR-0073)
+
+**Canonical decision:** [ADR-0073](adr/ADR-0073-version-scheme-octet-maturity-and-roadmap.md). Pairs with [ADR-0072](adr/ADR-0072-commit-gate-vs-release-gate-distinct-criteria.md) (commit gate ≠ release gate).
+
+Originally an **internal** Gibson DNS-beacon discipline; after the unauthorized `1.7.4` promotion (#970) the **public** number exposes maturity too.
+
+### Third-segment octet bands (when using numeric build maturity)
+
+| Build range | Meaning | Examples |
+| --- | --- | --- |
+| **0–127** | beta band | experimental / working slices |
+| **128–199** | rc band | release-candidate maturity |
+| **200–255** | release band | **`.200` = GA**, **`.201` = fix-1**, **`.202` = fix-2**, … |
+
+Suffixes (`-beta`, `-rc`, `-rc-N`) remain valid on `main` while the **release gate** (GitHub #406) is open. A green **commit gate** (`check-all`) never authorizes removing them — see ADR-0072.
+
+### Current 1.7.4 line (post-#970)
+
+| Label | Status |
+| --- | --- |
+| **`1.7.4` / build `.200` (GA)** | **VOID** — never released; promoted without gate (#970, PR #840) |
+| **`main` working tree** | **`1.7.4-rc-2`** in `pyproject.toml` until gate **#406** closes |
+| **Real stable after gate** | starts at **`1.7.4.201`** (fix-1 post-burned GA) — not `1.7.4` |
+
+Ladder (historic + target): `1.7.4-beta` → `1.7.4-rc` → **`1.7.4-rc-2`** (today) → **`1.7.4.201`** (post-gate).
+
+### Release-line roadmap (intent — not naive semver increment)
+
+| Line | Scope |
+| --- | --- |
+| **`1.7.4.x`** | Open-core maturity + commercial JWT protection (**fix line** after gate) |
+| **`1.8.x`** | Augmented corporate capacities (re-ID, sidecars, plugins/Clojure — **new architecture**, not a 1.7 minor) |
+| **`1.7.5`** | **Does not exist** — agents must not invent it (#772). Next dev milestone: **`1.8.0-beta`**. |
+| **`1.9.x`** | Horizon (compliance-domain expansion — triage per #772) |
+
+DNS-beacon / heartbeat / kill-switch lifecycle (#717) stays on the **1.8.x** roadmap (`docs/plans/PLAN_SELF_UPGRADE_AND_VERSION_CHECK.md`, maintainer index in `docs/README.md`); out of scope for this section.
+
+---
+
 ## Pre-release flow (`-beta` / `-rc`) before final publish
 
 Use lowercase suffixes consistently:

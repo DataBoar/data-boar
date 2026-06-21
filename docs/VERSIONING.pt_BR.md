@@ -27,6 +27,45 @@ Exemplos:
 
 ---
 
+## Octeto-maturidade do build + roadmap de linha (#971 / ADR-0073)
+
+**Decisão canônica:** [ADR-0073](adr/ADR-0073-version-scheme-octet-maturity-and-roadmap.md) (EN). Complementa [ADR-0072](adr/ADR-0072-commit-gate-vs-release-gate-distinct-criteria.md) (commit gate ≠ release gate).
+
+Disciplina **estilo Gibson DNS-beacon**, antes interna; após a promoção não autorizada de **`1.7.4`** (#970) o **número público** também expõe maturidade.
+
+### Faixas do terceiro octeto (build numérico com maturidade)
+
+| Faixa build | Significado | Exemplos |
+| --- | --- | --- |
+| **0–127** | faixa beta | fatias experimentais |
+| **128–199** | faixa rc | maturidade release-candidate |
+| **200–255** | faixa release | **`.200` = GA**, **`.201` = fix-1**, **`.202` = fix-2**, … |
+
+Sufixos (`-beta`, `-rc`, `-rc-N`) continuam válidos em `main` enquanto o **release gate** (GitHub #406) estiver aberto. **Commit gate** verde (`check-all`) **não** autoriza removê-los — ver ADR-0072.
+
+### Linha 1.7.4 atual (pós-#970)
+
+| Rótulo | Status |
+| --- | --- |
+| **`1.7.4` / build `.200` (GA)** | **VOID** — nunca lançada; promovida sem gate (#970, PR #840) |
+| **Working tree `main`** | **`1.7.4-rc-2`** no `pyproject.toml` até fechar **#406** |
+| **Stable real pós-gate** | começa em **`1.7.4.201`** (fix-1 pós-GA queimada) — não `1.7.4` |
+
+Escada: `1.7.4-beta` → `1.7.4-rc` → **`1.7.4-rc-2`** (hoje) → **`1.7.4.201`** (pós-gate).
+
+### Roadmap de linha (intenção — sem incremento ingênuo)
+
+| Linha | Escopo |
+| --- | --- |
+| **`1.7.4.x`** | Maturidade open-core + proteção comercial JWT (**linha de fix** pós-gate) |
+| **`1.8.x`** | Capacidades corporativas aumentadas (re-ID, sidecars, plugins/Clojure — **nova arquitetura**) |
+| **`1.7.5`** | **Não existe** — agentes não inventam (#772). Próximo milestone dev: **`1.8.0-beta`**. |
+| **`1.9.x`** | Horizonte (expansão compliance — triagem #772) |
+
+Lifecycle DNS-beacon / heartbeat / kill-switch (#717) fica no roadmap **1.8.x** (`docs/plans/PLAN_SELF_UPGRADE_AND_VERSION_CHECK.md`, índice interno em `docs/README.md`).
+
+---
+
 ## Fluxo de pré-release (`-beta` / `-rc`) antes do publish final
 
 Use sufixos em minúsculo de forma consistente:
