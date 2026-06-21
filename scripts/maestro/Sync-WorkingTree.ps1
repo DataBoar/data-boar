@@ -6,6 +6,9 @@
 .SYNOPSIS
  Author: Fábio Leitão com apoio da Gemini e Cursosr IDE
  Missão principal: Sub-Orquestrador de sincronismo em pré-flight para o teste Completão funcionar no Lab-Op a partir do repo no gh ou da working tree no ambiente canônico de Dev principal no PC de desenvolvimento.
+
+ #969: rsync e pre-req; se falhar (ex. exit 12 / rsync ausente no remoto), fallback tar|ssh com mesmas exclusoes.
+ Narrow doas+apk rsync install fica para #958.
 #>
 
 param(
@@ -32,13 +35,83 @@ if ($Ref -eq "WorkingTree") {
     Write-Host "   [Ref-Fetch] Preparando versão $Ref em pasta efêmera no $targetHost" -ForegroundColor Yellow
 }
 
+function Test-SyncHashVerify {
+    param(
+        [Parameter(Mandatory = $true)][string]$RepoRoot,
+        [Parameter(Mandatory = $true)][string]$RemoteUser,
+        [Parameter(Mandatory = $true)][string]$RemoteHost,
+        [Parameter(Mandatory = $true)][string]$RemotePath
+    )
+
+    $localPyprojectHash = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $RepoRoot "pyproject.toml")).Hash.ToLower()
+    $localMaestroHash = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $RepoRoot "scripts/maestro/Maestro.ps1")).Hash.ToLower()
+    $verifyCmd = "cd $RemotePath && sha256sum pyproject.toml scripts/maestro/Maestro.ps1 2>/dev/null"
+    $verifyOut = ssh -q -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "${RemoteUser}@${RemoteHost}" "$verifyCmd"
+    if ($LASTEXITCODE -ne 0 -or -not $verifyOut) {
+        Write-Warning "      [WARNING] Nao foi possivel validar hash remoto pos-sync em $RemoteHost."
+        return $false
+    }
+
+    $remoteHashes = @{}
+    foreach ($line in $verifyOut) {
+        if ($line -match '^([0-9a-fA-F]{64})\s+(.+)$') {
+            $remoteHashes[$matches[2]] = $matches[1].ToLower()
+        }
+    }
+
+    if (($remoteHashes["pyproject.toml"] -ne $localPyprojectHash) -or ($remoteHashes["scripts/maestro/Maestro.ps1"] -ne $localMaestroHash)) {
+        Write-Warning "      [WARNING] Hash mismatch apos sync em $RemoteHost. Sync invalido para run."
+        return $false
+    }
+
+    Write-Host "      [Sync-Verify] Hash check OK (pyproject + Maestro)." -ForegroundColor DarkGray
+    return $true
+}
+
+function Invoke-SyncTarSshFallback {
+    param(
+        [Parameter(Mandatory = $true)][string]$RepoRoot,
+        [Parameter(Mandatory = $true)][string]$RemoteUser,
+        [Parameter(Mandatory = $true)][string]$RemoteHost,
+        [Parameter(Mandatory = $true)][string]$RemotePath,
+        [int]$RsyncExitCode
+    )
+
+    Write-Warning "      [Sync-Fallback #969] rsync exit $RsyncExitCode em $RemoteHost; tentando tar|ssh (mesmas exclusoes que rsync; remoto pode nao ter rsync — ex. alpine)."
+    $escapedRoot = $RepoRoot -replace "'", "'\\''"
+    $tarPipeCmd = @"
+tar -czf - \
+  --exclude='.git' --exclude='.venv' --exclude='__pycache__' --exclude='.pytest_cache' \
+  --exclude='*.bundle' --exclude='docs/private' --exclude='*.log' --exclude='*.xlsx' \
+  --exclude='*.db' --exclude='data-boar-blackbox-audit.txt' --exclude='data-boar-*.tar' \
+  --exclude='.env' --exclude='.env.*' \
+  -C '$escapedRoot' . \
+| ssh -q -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 \
+  ${RemoteUser}@${RemoteHost} "mkdir -p $RemotePath && tar -xzf - -C $RemotePath"
+"@
+
+    if ($IsWindows) {
+        wsl.exe -e bash -c $tarPipeCmd
+    } else {
+        bash -c $tarPipeCmd
+    }
+
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warning "      [Sync-Fallback] tar|ssh falhou em $RemoteHost (exit $LASTEXITCODE). Instalar rsync no remoto ou ver #958 (narrow doas apk)."
+        return $false
+    }
+
+    Write-Host "      [Sync-Fallback] tar|ssh OK em $RemoteHost." -ForegroundColor DarkGray
+    return $true
+}
+
 # 2. Garantir que o diretório existe (Silenciando banners do Linux remoto)
 ssh -q -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$targetUser@$targetHost" "mkdir -p $finalPath" > $null 2>&1
 
 # 3. Lógica de Transferência
 $syncOk = $false
 if ($Ref -eq "WorkingTree") {
-    # Fluxo Evoluído: rsync (Delta Transfer) via WSL2
+    # Fluxo Evoluído: rsync (Delta Transfer) via WSL2 / bash nativo Linux
     $repoRoot = (Resolve-Path "$PSScriptRoot/../../").Path
 
     Push-Location $repoRoot
@@ -57,34 +130,12 @@ if ($Ref -eq "WorkingTree") {
     $exitCode = $LASTEXITCODE
     Pop-Location
 
-    if ($exitCode -ne 0) {
-        Write-Warning "      [WARNING] O rsync via WSL2 falhou no nó $targetHost (Exit Code $exitCode)."
+    if ($exitCode -eq 0) {
+        $syncOk = Test-SyncHashVerify -RepoRoot $repoRoot -RemoteUser $targetUser -RemoteHost $targetHost -RemotePath $finalPath
     } else {
-        # Verificacao SRE: confirmar que arquivos chave ficaram identicos no host remoto.
-        $localPyprojectHash = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $repoRoot "pyproject.toml")).Hash.ToLower()
-        $localMaestroHash = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $repoRoot "scripts/maestro/Maestro.ps1")).Hash.ToLower()
-        $verifyCmd = "cd $finalPath && sha256sum pyproject.toml scripts/maestro/Maestro.ps1 2>/dev/null"
-        $verifyOut = ssh -q -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$targetUser@$targetHost" "$verifyCmd"
-        if ($LASTEXITCODE -ne 0 -or -not $verifyOut) {
-            Write-Warning "      [WARNING] Nao foi possivel validar hash remoto pos-rsync em $targetHost."
-        } else {
-            $remoteHashes = @{}
-            foreach ($line in $verifyOut) {
-                if ($line -match '^([0-9a-fA-F]{64})\s+(.+)$') {
-                    $remoteHashes[$matches[2]] = $matches[1].ToLower()
-                }
-            }
-            $hashOk = $true
-            if (($remoteHashes["pyproject.toml"] -ne $localPyprojectHash) -or ($remoteHashes["scripts/maestro/Maestro.ps1"] -ne $localMaestroHash)) {
-                $hashOk = $false
-            }
-
-            if ($hashOk) {
-                Write-Host "      [Sync-Verify] Hash check OK (pyproject + Maestro)." -ForegroundColor DarkGray
-                $syncOk = $true
-            } else {
-                Write-Warning "      [WARNING] Hash mismatch apos rsync em $targetHost. Sync invalido para run."
-            }
+        Write-Warning "      [WARNING] rsync falhou no no $targetHost (exit $exitCode)."
+        if (Invoke-SyncTarSshFallback -RepoRoot $repoRoot -RemoteUser $targetUser -RemoteHost $targetHost -RemotePath $finalPath -RsyncExitCode $exitCode) {
+            $syncOk = Test-SyncHashVerify -RepoRoot $repoRoot -RemoteUser $targetUser -RemoteHost $targetHost -RemotePath $finalPath
         }
     }
 } else {
@@ -117,4 +168,3 @@ if ($syncOk) {
 
 # Retorna boolean puro para o Maestro.
 return [bool]$syncOk
-

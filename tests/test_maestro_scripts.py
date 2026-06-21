@@ -887,7 +887,7 @@ def test_target_nfs_deep_apply_fail_is_real_fail() -> None:
 
 
 def test_collect_artifacts_uses_repo_log_path() -> None:
-    """#956: post-flight collect pulls from <repo>/log/, not only ~/log/."""
+    """#956/#968: post-flight collect pulls from <repo>/log/; Join-Path; REAL FAIL if empty."""
     root = _project_root()
     text = (root / "scripts" / "maestro" / "Collect-Artifacts.ps1").read_text(
         encoding="utf-8", errors="replace"
@@ -895,6 +895,24 @@ def test_collect_artifacts_uses_repo_log_path() -> None:
     assert "/log/*.log" in text
     assert "audit_trail" in text
     assert "~/log/*.log" in text  # legacy fallback only
+    assert "Join-Path" in text
+    assert "[REAL FAIL] Collect" in text
+    assert "Get-CollectArtifactCount" in text
+    assert "${localDestDir}/" in text
+    assert "$localDestDir\\" not in text
+
+
+def test_sync_working_tree_tar_fallback_on_rsync_failure() -> None:
+    """#969: rsync failure triggers tar|ssh fallback with same exclude set."""
+    root = _project_root()
+    text = (root / "scripts" / "maestro" / "Sync-WorkingTree.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "Invoke-SyncTarSshFallback" in text
+    assert "Sync-Fallback #969" in text
+    assert "tar -czf -" in text
+    assert "tar -xzf -" in text
+    assert "--exclude='docs/private'" in text
 
 
 def test_maestro_calls_wait_handler_sentinel_for_real_results() -> None:
