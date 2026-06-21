@@ -86,6 +86,7 @@ Short, durable notes that capture **why** the project chose an approach—not on
 | 0070 | [Primer taxonomy and home: technical/onboarding vs deliverable](ADR-0070-primer-taxonomy-and-home.md) | Accepted |
 | 0071 | [Self-protecting PII gate: word-boundary matcher, CODEOWNERS, tripwire, FP allowlist](ADR-0071-self-protecting-pii-gate.md) | Proposed |
 | 0072 | [Commit Gate vs Release Gate: distinct criteria](ADR-0072-commit-gate-vs-release-gate-distinct-criteria.md) | Proposed |
+| 0073 | [Version scheme: octet-maturity build numbers + release-line roadmap](ADR-0073-version-scheme-octet-maturity-and-roadmap.md) | Proposed |
 
 ## Related docs
 
