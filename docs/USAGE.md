@@ -193,17 +193,26 @@ Pre-built images are on Docker Hub: `fabioleitao/data_boar:latest` ([hub.docker.
 - **Rollout:** Inventory API clients (scripts, cron, CI, probes), enable **staging** first with TLS + API key where applicable, then production with a short compatibility window if needed — **[SECURE_BY_DEFAULT_BLOCKERS_AND_MIGRATION.md](ops/SECURE_BY_DEFAULT_BLOCKERS_AND_MIGRATION.md)**. After enabling HTTPS or plaintext HTTP explicitly, use **`GET /status` / `GET /health`** and **`--export-audit-trail`** (`dashboard_transport` in the JSON) to verify posture.
 - See also [SECURITY.md](../SECURITY.md#optional-api-key-enterprise) and the Configuration section below.
 
-### Web dashboard
+### Web dashboard {#web-dashboard}
 
 When the API server is running, a **simple web dashboard** is available in the browser. **HTML pages use a locale prefix** (`/en/…`, `/pt-br/…` by default). Visiting `/`, `/config`, `/reports`, `/help`, or `/about` without a prefix **redirects** to the best match: **`db_locale` cookie** (if valid), then **`Accept-Language`**, then **`locale.default_locale`** in config (see `locale` block below). **JSON API routes** (`/status`, `/scan`, `/reports/{session_id}`, …) stay **without** a locale prefix.
 
 **Walkthrough (non-technical, first run):**
 
 1. **Open** the dashboard in a browser: `http://127.0.0.1:8088/en/` (or `/pt-br/`). It must be running first — see [REST API server (`--web`)](#rest-api-server---web) (plaintext needs `--allow-insecure-http`; off-loopback use TLS).
+
+   ![Dashboard home — scan form](img/dashboard/en/scan-start.png)
+
 2. **(Optional) Tag the run:** type a **tenant/customer** and **technician/operator** in the form fields — these appear on the report's **Report info** sheet.
-3. **Start scan:** click **Start scan**. The page polls status while the audit runs (`POST /scan` under the hood).
-4. **Open Reports:** when the scan finishes, go to the **Reports** page (`/en/reports`).
-5. **Download:** click **Download** on the session row to get the Excel report (and heatmap). No shell or API call needed.
+3. **Check targets (optional):** open **Configuration** and confirm databases, filesystems, or other targets are listed — the next scan uses exactly that file.
+
+   ![Configuration page — YAML targets](img/dashboard/en/config.png)
+
+4. **Start scan:** click **Start scan**. The page polls status while the audit runs (`POST /scan` under the hood).
+5. **Open Reports:** when the scan finishes, go to the **Reports** page (`/en/reports` or `/pt-br/reports`).
+6. **Download:** click **Download** on the session row to get the Excel report (and heatmap). No shell or API call needed.
+
+   ![Reports — Download button per session](img/dashboard/en/reports-download.png)
 
 | Page              | URL (examples)                            | Description                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | ---               | ---                                       | ---                                                                                                                                                                                                                                                                                                                                                                                                                                                |
@@ -248,6 +257,8 @@ The **Start scan** button sends `POST /scan` and triggers a **full audit of all 
 ---
 
 ## 3. Using the API (examples)
+
+**For automation / scripting** — use the `curl` examples below when you need CI, cron jobs, or integrations. For DPO, legal, and other non-technical users, prefer the [web dashboard walkthrough](#web-dashboard) and [Downloading reports (web)](#downloading-reports-web) first.
 
 ### Start a full audit
 
@@ -1052,6 +1063,19 @@ scan:
 ---
 
 ## 5. Downloading reports (summary)
+
+### Downloading reports (web) {#downloading-reports-web}
+
+For **DPO, legal, and other non-technical readers** (see [AUDIENCE_GUIDE.md](AUDIENCE_GUIDE.md)), use the browser — screenshots show the path before any `curl` commands.
+
+1. Open **Reports** from the top menu (`/en/reports` or `/pt-br/reports`).
+2. Click **Download** on the session row you need.
+
+![Reports page — click Download on a session row](img/dashboard/en/reports-download.png)
+
+The Excel workbook is saved to your browser downloads folder; the heatmap PNG is generated alongside the workbook when the report is built.
+
+### For automation / scripting
 
 | Goal                                   | How                                                                                                                                                    |
 | ---                                    | ---                                                                                                                                                    |

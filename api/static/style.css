@@ -89,3 +89,12 @@ h2 { font-size: 1.1rem; margin: 0 0 0.75rem; color: var(--muted); }
 .config-form label { display: block; margin-bottom: 0.25rem; color: var(--muted); }
 .config-form textarea { width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font-family: ui-monospace, monospace; font-size: 0.85rem; resize: vertical; }
 .config-form .mono { font-family: ui-monospace, monospace; }
+.help-shot {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0.75rem 0 1rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.help-shot-caption { margin: -0.5rem 0 1rem; font-size: 0.9rem; }

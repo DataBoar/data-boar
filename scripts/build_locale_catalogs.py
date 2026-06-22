@@ -194,6 +194,11 @@ def _en() -> dict:
                 "Recent sessions are listed at the bottom of the dashboard and on the Reports page, "
                 "with download links."
             ),
+            "run_web_shot_alt": "Dashboard scan form with Start scan button highlighted",
+            "run_web_shot_caption": (
+                "Dashboard — optional tenant/technician fields and Start scan (no shell required)."
+            ),
+            "run_auto_h3": "For automation / scripting",
             "run_cli_h3": "From the CLI",
             "run_cli_p1": (
                 "From the repo root, prefer uv run python main.py (or activate your venv and run "
@@ -225,6 +230,23 @@ def _en() -> dict:
                 "Does not modify the database. Omit the path or use - for stdout."
             ),
             "dl_h2": "Downloading reports, heatmaps and logs",
+            "dl_web_h3": "From the web dashboard",
+            "dl_web_li1": (
+                "Open Reports from the top menu (or go to /en/reports or /pt-br/reports)."
+            ),
+            "dl_web_li2": (
+                "Click Download on the session row to save the Excel report "
+                "(the heatmap is generated with the workbook)."
+            ),
+            "dl_web_shot_alt": "Reports table with Download button on each session row",
+            "dl_web_shot_caption": (
+                "Reports — click Download on the row you need (no curl required)."
+            ),
+            "dl_auto_h3": "For automation / scripting",
+            "dl_auto_p": (
+                "Use curl or your HTTP client when you need scripted downloads "
+                "(CI, cron, integrations):"
+            ),
             "dl_li1": (
                 "Use the Reports page to see all sessions and click Download to get the Excel report "
                 "for a specific run."
@@ -547,6 +569,13 @@ def _pt_br(en: dict) -> dict:
     base["help"]["run_web_tail"] = (
         "Sessões recentes aparecem no fim do painel e na página Relatórios, com links para download."
     )
+    base["help"]["run_web_shot_alt"] = (
+        "Formulário de varredura no painel com o botão Iniciar varredura"
+    )
+    base["help"]["run_web_shot_caption"] = (
+        "Painel — campos opcionais de cliente/técnico e Iniciar varredura (sem shell)."
+    )
+    base["help"]["run_auto_h3"] = "Para automação / scripting"
     base["help"]["run_cli_h3"] = "Pela CLI"
     base["help"]["run_cli_p1"] = (
         "Na raiz do repositório, prefira uv run python main.py (ou ative o venv e execute "
@@ -581,6 +610,25 @@ def _pt_br(en: dict) -> dict:
         "futuro: linhas de integridade). Não modifica o banco. Omita o caminho ou use - para stdout."
     )
     base["help"]["dl_h2"] = "Baixar relatórios, mapas de calor e logs"
+    base["help"]["dl_web_h3"] = "Pelo painel web"
+    base["help"]["dl_web_li1"] = (
+        "Abra Relatórios no menu superior (ou acesse /pt-br/reports ou /en/reports)."
+    )
+    base["help"]["dl_web_li2"] = (
+        "Clique em Baixar na linha da sessão para salvar o Excel "
+        "(o mapa de calor é gerado junto com a planilha)."
+    )
+    base["help"]["dl_web_shot_alt"] = (
+        "Tabela de relatórios com o botão Baixar em cada sessão"
+    )
+    base["help"]["dl_web_shot_caption"] = (
+        "Relatórios — clique em Baixar na linha desejada (sem curl)."
+    )
+    base["help"]["dl_auto_h3"] = "Para automação / scripting"
+    base["help"]["dl_auto_p"] = (
+        "Use curl ou seu cliente HTTP quando precisar automatizar downloads "
+        "(CI, cron, integrações):"
+    )
     base["help"]["dl_li1"] = (
         "Use a página Relatórios para ver todas as sessões e clique em Baixar para obter o Excel "
         "da execução."

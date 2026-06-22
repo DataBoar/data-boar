@@ -88,6 +88,9 @@ __pycache__/
 *.png
 # Mascot branding PNGs are versioned
 !api/static/mascot/*.png
+# dashBOARd operator walkthrough screenshots (docs #1005, #945)
+!docs/img/dashboard/**/*.png
+!api/static/dashboard/**/*.png
 
 # Distribution / packaging
 .Python
