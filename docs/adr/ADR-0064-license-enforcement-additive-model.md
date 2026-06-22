@@ -17,8 +17,8 @@ Proposed
 [ADR 0027](ADR-0027-commercial-tier-boundaries-licensing-docs-and-future-jwt-claims.md)
 (2026-04-17) documented tier boundaries and **deferred runtime enforcement** to product
 and counsel. The Watch condition (“when JWT claims go live, revalidate docs”) is now
-actionable for the **1.8.0-beta** enforcement line (renumbered from earlier 1.7.5-beta
-planning in operator notes).
+actionable for the **1.8.0-beta** enforcement line (renumbered from an earlier phantom
+beta roadmap per issue #772; see [ADR 0073](ADR-0073-version-scheme-octet-maturity-and-roadmap.md)).
 
 Signing algorithm is [ADR 0063](ADR-0063-ed25519-license-jwt-signing.md). Plugin auth
 boundaries for L2/L3 are [ADR 0075](ADR-0075-plugin-auth-file-based-vs-bearer.md).
