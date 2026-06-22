@@ -56,7 +56,11 @@ def test_slack_ci_failure_notify_workflow_present_and_valid() -> None:
 def test_upstream_workflows_invoke_slack_ci_failure_notify_on_failure() -> None:
     """Failure Slack ping is workflow_call from upstream CI workflows (not workflow_run)."""
     callers = (
-        ("ci.yml", "CI", ("test", "lint", "bandit", "audit", "sonar")),
+        (
+            "ci.yml",
+            "CI",
+            ("test", "lint", "bandit", "audit", "dependency-review", "sonar"),
+        ),
         ("semgrep.yml", "Semgrep", ("semgrep",)),
         ("gitleaks.yml", "Gitleaks", ("scan",)),
         ("sbom.yml", "SBOM", ("generate",)),
@@ -332,6 +336,41 @@ def test_ci_yml_pins_actions_and_uv_cli() -> None:
         assert sha_40.search(code), (
             f"expected full commit SHA in uses line: {line.strip()!r}"
         )
+
+
+def test_ci_yml_has_dependency_review_job_on_pull_request() -> None:
+    """ADR-0074 Layer 1 / #988: PR-time dependency diff before merge."""
+    data = _load_workflow("ci.yml")
+    jobs = data.get("jobs") or {}
+    dep = jobs.get("dependency-review")
+    assert isinstance(dep, dict), "ci.yml must define dependency-review job"
+    assert "pull_request" in str(dep.get("if") or "")
+    perms = dep.get("permissions") or {}
+    assert perms.get("pull-requests") == "read"
+    steps = dep.get("steps") or []
+    uses = [str(s.get("uses")) for s in steps if isinstance(s, dict) and s.get("uses")]
+    assert any("actions/dependency-review-action@" in u for u in uses)
+
+
+def test_rust_ci_runs_cargo_audit_and_deny() -> None:
+    """ADR-0074 Layer 1 / #988: Rust SCA in rust-ci.yml."""
+    text = (WORKFLOWS / "rust-ci.yml").read_text(encoding="utf-8")
+    assert "cargo audit" in text
+    assert "cargo deny check" in text
+
+
+def test_dockerfile_pins_python_base_image_by_digest() -> None:
+    """ADR-0074 Layer 1 / #988: base image digest pin, not tag-only FROM."""
+    dockerfile = REPO_ROOT / "Dockerfile"
+    text = dockerfile.read_text(encoding="utf-8")
+    from_lines = [
+        line.strip()
+        for line in text.splitlines()
+        if line.strip().upper().startswith("FROM ")
+    ]
+    assert len(from_lines) >= 2
+    for line in from_lines:
+        assert "@sha256:" in line, f"expected digest pin in FROM line: {line!r}"
 
 
 def test_dependabot_sync_workflow_present_and_valid() -> None:
