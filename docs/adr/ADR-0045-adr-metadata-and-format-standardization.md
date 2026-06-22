@@ -13,6 +13,7 @@ Accepted
 - 2026-05-12 — Accepted
 - 2026-06-09 — Amended: append-only Status history, immutable Date (UTC), extended status enum (Duplicate of ADR-NNNN), locale en_US, immutability clause — [GitHub #803](https://github.com/FabioLeitao/data-boar/issues/803)
 - 2026-06-09 — Amended: UMADR declaration + Obsolete/Quarantined statuses — [GitHub #803](https://github.com/FabioLeitao/data-boar/issues/803)
+- 2026-06-21 — Amended: `Reserved` status + new ADR materialization defaults to **Proposed** — [GitHub #993](https://github.com/FabioLeitao/data-boar/issues/993)
 
 ## Context
 
@@ -97,7 +98,7 @@ locale rule in the ADR constitution itself.
    compound form):
 
 ```
-[Accepted | Proposed | Deferred | Rejected | Deprecated | Obsolete | Quarantined | Superseded by ADR-NNNN | Duplicate of ADR-NNNN]
+[Accepted | Proposed | Deferred | Rejected | Deprecated | Obsolete | Quarantined | Reserved | Superseded by ADR-NNNN | Duplicate of ADR-NNNN]
 ```
 
    Status lifecycle semantics:
@@ -114,6 +115,13 @@ locale rule in the ADR constitution itself.
    - **Quarantined:** **Transitional, non-terminal** review hold — the ADR may be harmful
      to follow blindly or needs human review before continued use. **Must resolve** to
      **Accepted**, **Deprecated**, or **Superseded by ADR-NNNN** (not a resting state).
+   - **Reserved:** The **ADR number is allocated** (issue tracker, README index row, or
+     maintainer manifest) but **no `ADR-NNNN-*.md` file exists yet**. Draft decision text
+     may live in a GitHub issue until materialized. **Silent numeric gaps are forbidden**
+     when an issue explicitly reserves a number — record **Reserved** in the index or
+     materialize a stub ADR with `## Status` = **Reserved** and `Reserved by #NNN` in
+     Status history. When the decision is written, replace **Reserved** with **Proposed**
+     (or supersede the stub file with the full record).
    - **Superseded by ADR-NNNN:** The **decision** was replaced by a newer ADR (must cite
      replacement ADR number in the status string and in Status history).
    - **Duplicate of ADR-NNNN:** A **redundant non-authoritative copy** of the **same**
@@ -121,17 +129,23 @@ locale rule in the ADR constitution itself.
      Prefer removing the duplicate **file** from the tree; if retained for audit, assign
      this status and append Status history. Distinct from **Superseded** (new decision).
 
-5. **Filename convention:** ADR files must be named `ADR-NNNN-short-kebab-title.md`
+5. **New ADR materialization (agent + operator contract):** When an executor creates a new
+   `ADR-NNNN-*.md`, **`## Status` must be `Proposed`** until the operator explicitly
+   accepts the decision and optionally attests via [ADR 0056](ADR-0056-cryptographic-adr-inventory-inv-adr-ssh-attestation.md).
+   Agents **must not** set **Accepted** on first commit. This does not retroactively change
+   already-**Accepted** ADRs.
+
+6. **Filename convention:** ADR files must be named `ADR-NNNN-short-kebab-title.md`
    where `NNNN` is a zero-padded four-digit sequential number. The `ADR-` prefix
    makes ADR files unambiguously identifiable by filename alone. The script
    `scripts/new-adr.ps1` generates compliant filenames automatically.
 
-6. **Locale:** ADRs are authored in **en_US** as technical documents. ADRs have **no**
+7. **Locale:** ADRs are authored in **en_US** as technical documents. ADRs have **no**
    pt-BR mirror or paired file (unlike operator-facing docs and the docs README).
    General locale contract for the rest of the repository:
    **`.cursor/rules/docs-pt-br-locale.mdc`** — do not duplicate normative pt-BR rules here.
 
-7. **Curated mutability:** Typo fixes, link updates, and clarifications that do **not**
+8. **Curated mutability:** Typo fixes, link updates, and clarifications that do **not**
    change the **Decision** conclusions are allowed in-place. Material changes to what was
    decided require a **new ADR** or an explicit **Amended:** line in Status history plus
    proportionate edits; solo + human-in-the-loop governance may amend in-place when the

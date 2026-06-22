@@ -77,16 +77,22 @@ Short, durable notes that capture **why** the project chose an approach—not on
 | 0056  | [Cryptographic ADR inventory (inv-adr.ps1 + SSH ed25519 attestation)](ADR-0056-cryptographic-adr-inventory-inv-adr-ssh-attestation.md) | Accepted |
 | 0057  | [Lightweight hub index (co-located links, no file moves)](ADR-0057-lightweight-hub-index-co-located-links.md) | Accepted |
 | 0058  | [Primer hub registration ritual](ADR-0058-primer-hub-registration-ritual.md) | Accepted |
+| 0059  | *Reserved* — minimal plugin hook infrastructure (GitHub #606, 1.8.x) | Reserved |
+| 0060 | [`db/` Ruff and Bandit exclusion — risk accepted](ADR-0060-db-lint-bandit-exclusion-risk-accepted.md) | Proposed |
 | 0061 | [ADR-0061 U-axis issue sub-order and cross-milestone gate](ADR-0061-u-axis-issue-suborder-and-cross-milestone-gate.md) | Accepted |
 | 0062 | [ADR-0062 Agent containment: triple-audit offband pattern](ADR-0062-agent-containment-triple-audit-offband-pingpong.md) | Accepted |
+| 0063 | [ed25519 (EdDSA) for license JWT signing](ADR-0063-ed25519-license-jwt-signing.md) | Proposed |
+| 0064 | [License enforcement — additive open-core + JWT](ADR-0064-license-enforcement-additive-model.md) | Proposed |
 | 0065 | [NIST SP 800-228A as REST API security hardening reference](ADR-0065-nist-sp800228a-api-security-reference.md) | Deferred |
 | 0066 | [TAMPERED state behavior — fail-closed in enforced mode](ADR-0066-tampered-state-behavior.md) | Accepted |
+| 0067  | *Reserved* — number freed (was #769 plugin auth); see **0075** | Reserved |
 | 0068 | [Primary Linux dev workstation (temporary)](ADR-0068-primary-linux-dev-workstation-temporary.md) | Proposed |
 | 0069 | [Cap rpds-py below the 2026 CalVer pivot](ADR-0069-cap-rpds-py-below-the-2026-calver-pivot.md) | Accepted |
 | 0070 | [Primer taxonomy and home: technical/onboarding vs deliverable](ADR-0070-primer-taxonomy-and-home.md) | Accepted |
 | 0071 | [Self-protecting PII gate: word-boundary matcher, CODEOWNERS, tripwire, FP allowlist](ADR-0071-self-protecting-pii-gate.md) | Proposed |
 | 0072 | [Commit Gate vs Release Gate: distinct criteria](ADR-0072-commit-gate-vs-release-gate-distinct-criteria.md) | Proposed |
 | 0073 | [Version scheme: octet-maturity build numbers + release-line roadmap](ADR-0073-version-scheme-octet-maturity-and-roadmap.md) | Proposed |
+| 0075 | [Plugin authentication — file-based license vs Bearer](ADR-0075-plugin-auth-file-based-vs-bearer.md) | Proposed |
 
 ## Related docs
 
