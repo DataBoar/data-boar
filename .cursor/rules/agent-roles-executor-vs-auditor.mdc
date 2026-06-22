@@ -29,6 +29,10 @@ which covers the **human** maintainer x contributor axis.
 - **Rationale:** a single write path (Cursor) keeps governance hooks intact — pre-commit,
   ADR protection, PII guards, PII seed gate, audit trail, signed commits. A second write
   agent would either bypass those hooks or replicate them inconsistently.
+- **Cross-vendor (ADR-0062, #991):** Auditors must span **different vendors** for gate/security
+  sign-off; same-vendor dual-audit is harness diversity only. Pin model IDs — never Auto.
+  Illustrative roster: **C** Claude Code, **A** claude.ai, **B** Sonnet/lab, **G** Gemini/NotebookLM;
+  **O** OpenAI slot is still a gap for full triangulation.
 
 ## Anti-patterns to avoid
 
@@ -42,6 +46,7 @@ which covers the **human** maintainer x contributor axis.
 ## Canonical references
 
 - `CLAUDE.md` at the repo root — cold-start pointer for Claude Code sessions.
+- [ADR-0062](../../docs/adr/ADR-0062-agent-containment-triple-audit-offband-pingpong.md) — A.I.I.D.C.O.B.P.P.; cross-vendor mandate (#991)
 - `AGENTS.md` *Maintainer + contributor* bullet — human axis (maintainer x contributor).
 - `AGENTS.md` *Quick index* — maps this rule from the "Agent roles" row.
 - `.cursor/rules/collaboration-maintainer-contributor.mdc` — human axis contract.
