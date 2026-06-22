@@ -4,6 +4,8 @@
 
 Este documento descreve quais versões da aplicação são suportadas, qual linha de base de dependências é esperada e como reportar vulnerabilidades de segurança aos mantenedores. Sobre direitos autorais e licença: [NOTICE](NOTICE); para tornar direitos autorais e marca oficial: [docs/COPYRIGHT_AND_TRADEMARK.pt_BR.md](docs/COPYRIGHT_AND_TRADEMARK.pt_BR.md) (português) · [docs/COPYRIGHT_AND_TRADEMARK.md](docs/COPYRIGHT_AND_TRADEMARK.md) (inglês).
 
+**Índice de postura de governança (gates de PII, contenção de agentes, supply chain, proveniência):** [`docs/SECURITY_GOVERNANCE_POSTURE_HUB.pt_BR.md`](docs/SECURITY_GOVERNANCE_POSTURE_HUB.pt_BR.md) ([EN](docs/SECURITY_GOVERNANCE_POSTURE_HUB.md)) — links co-localizados; não substitui esta política de vulnerabilidades.
+
 ## Versões suportadas
 
 - **Aplicação (marca):** **Data Boar**. Id da distribuição PyPI: **`data-boar`** (veja [CONTRIBUTING.pt_BR.md](CONTRIBUTING.pt_BR.md#repositório-e-identidade-de-instalação-data-boar)). O desenvolvimento atual tem como alvo **Python 3.12+**.

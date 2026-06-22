@@ -1,0 +1,14 @@
+flowchart TD
+    OP["🧑 Operator\n(Base Band — data bus)"]
+    CW["Claude Windows\nSonnet 4.6 — Auditor A\n(LAB-NODE-01)"]
+    CL["Claude Linux\nSonnet 4.6 — Auditor B\n(LAB-NODE-02)"]
+    CT["Tactical Consensus\nPrompt Linting\n(convergence between auditors)"]
+    GG["Google Gemini\nArchitecture Validator\n(independent structural review)"]
+    TG["Target — Cursor / Git\nComposer tier\n(executor — works only)"]
+
+    OP -->|"distributes payload"| CW
+    OP -->|"distributes payload"| CL
+    CW -->|"ping: recommendation A"| CT
+    CL -->|"pong: review B"| CT
+    CT -->|"converged payload"| GG
+    GG -->|"structural sign-off"| TG

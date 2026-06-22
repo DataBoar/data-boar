@@ -55,6 +55,13 @@
 | Use cases | `docs/use-cases/USE_CASES_HUB.md` | Cenários de produto |
 | Pitch | `docs/pitch/INDEX.md` | Decks executivos |
 
+### Segurança, governança e postura
+
+| Hub | Caminho canônico | Cobre |
+| --- | ---------------- | ----- |
+| **Hub de postura** | `docs/SECURITY_GOVERNANCE_POSTURE_HUB.md` | Segurança, governança, safety, qualidade, proveniência — índice co-localizado |
+| Diagramas de governança | `docs/ops/governance/DATABOAR_GOVERNANCE_DIAGRAMS.md` | Diagramas ISO/COBIT/ITIL para pitches |
+
 ### Integridade e release
 
 | Hub | Caminho canônico | Cobre |

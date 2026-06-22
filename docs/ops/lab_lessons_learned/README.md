@@ -11,6 +11,7 @@ This directory holds **immutable, dated** snapshots of lab QA / SRE evidence (me
 | Artifact | Rule |
 | -------- | ---- |
 | **Dated snapshot** | `LAB_LESSONS_LEARNED_YYYY_MM_DD.md` (calendar date of the **session end** in the operator timezone used for the write-up; **one file per session** unless the operator explicitly splits). |
+| **Named lesson** | `LAB_LESSON_<TOPIC>.md` (+ optional `.pt_BR.md`) for durable patterns validated by ADRs — e.g. [`LAB_LESSON_AIIDCOBPP_QUAD_AUDIT.md`](LAB_LESSON_AIIDCOBPP_QUAD_AUDIT.md) (ADR-0062, GitHub **#992**). |
 | **Hub** | [`docs/ops/LAB_LESSONS_LEARNED.md`](../LAB_LESSONS_LEARNED.md) — short **current** narrative + archive index + **follow-up** pointers into **`docs/plans/PLANS_TODO.md`**. |
 | **Private completão narrative** | `docs/private/homelab/COMPLETAO_SESSION_*.md` — hostnames, LAN, operator commentary; **never** copy those verbatim into this archive. |
 
