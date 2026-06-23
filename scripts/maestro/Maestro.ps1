@@ -39,6 +39,13 @@ $inventory = Get-Content $inventoryPath | ConvertFrom-Json
 Write-Host "--- [Maestro] Iniciando Turno no Lab-Op (Ref: $Ref) ---" -ForegroundColor Cyan
 $warningCount = 0
 $realFailCount = 0
+# Personas that write /tmp/databoar_handler/<persona>_sentinel.txt (#831); web is inline health only.
+$script:SentinelPersonas = @(
+    "baremetal", "docker", "podman", "dockerswarm", "lxd", "microk8s",
+    "target_nfs", "target_cifs", "target_sshfs",
+    "target_postgres", "target_mariadb", "target_mongodb"
+)
+$dispatchedSentinelPersonas = [System.Collections.Generic.List[string]]::new()
 
 # SRE FIX (#950): Fase de Pre-flight Global. O build do artefato de container so
 # faz sentido se ALGUM no do inventario tem persona de container
@@ -118,6 +125,10 @@ $globalReport = foreach ($node in $inventory.lab_members) {
                 if ($LASTEXITCODE -ne 0) {
                     $realFailCount++
                     Write-Warning "      [REAL FAIL] Handler '$persona' em $($node.hostname) saiu com exit $LASTEXITCODE"
+                } elseif ($script:SentinelPersonas -contains $persona) {
+                    if (-not ($dispatchedSentinelPersonas -contains $persona)) {
+                        $dispatchedSentinelPersonas.Add($persona)
+                    }
                 }
             } else {
                 Write-Warning "      [WARNING] Handler ausente para persona '$persona' em $($node.hostname): $handler"
@@ -132,6 +143,17 @@ $onlineHosts = @{}
 foreach ($status in $globalReport) {
     if (($status.SSH -eq "UP") -and $status.Node) {
         $onlineHosts[$status.Node] = $true
+    }
+}
+
+# --- [Fase de Agregacao Real] Poll handler sentinels (#949 / #831) ---
+if (-not $Collect -and $dispatchedSentinelPersonas.Count -gt 0) {
+    $waitHosts = @($onlineHosts.Keys)
+    Write-Host "`n--- [Maestro] Aguardando sentinels reais ($($dispatchedSentinelPersonas.Count) persona(s)) ---" -ForegroundColor DarkGray
+    & "$PSScriptRoot/Wait-HandlerSentinel.ps1" -Personas @($dispatchedSentinelPersonas) -OnlyHosts $waitHosts
+    if ($LASTEXITCODE -ne 0) {
+        $realFailCount++
+        Write-Warning "      [REAL FAIL] Wait-HandlerSentinel reportou falha ou timeout (resultado de scan/provision, nao so injecao tmux)."
     }
 }
 

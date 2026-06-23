@@ -127,6 +127,15 @@ def test_db_target_handlers_use_compose_contract() -> None:
     assert "LAB_MONGO_PORT_CANDIDATES" in mongo
     assert "TARGET_MONGODB_READY port=" in mongo
     assert "LAB_TARGET_DB_AUTOCLEAN" in mongo
+    for text, persona in (
+        (mariadb, "target_mariadb"),
+        (postgres, "target_postgres"),
+        (mongo, "target_mongodb"),
+    ):
+        assert f"{persona}_sentinel.txt" in text, (
+            f"DB handler must write {persona}_sentinel.txt (#953)"
+        )
+        assert "__SENTINEL__" in text or "SENTINEL=" in text
 
 
 def test_handle_web_health_contract() -> None:
@@ -576,7 +585,7 @@ def test_smoke_handlers_use_base64_payload_for_tmux() -> None:
     ]
     for persona in tmux_handlers:
         text = _handler_text(root, persona)
-        assert "base64" in text, (
+        assert "base64" in text.lower() or "Invoke-HandlerTmuxPayload" in text, (
             f"Handle-{persona}.ps1 must base64-encode the tmux payload (#830); "
             "raw single-quoted payloads break on paths or values with special chars"
         )
@@ -802,3 +811,137 @@ def test_maestro_runs_container_build_when_container_persona_present(warm_pwsh) 
     assert built, (
         "Build-ContainerArtefact did NOT run even though a node has a docker persona (#950)"
     )
+
+
+# ---------------------------------------------------------------------------
+# P0 bundle #955/#953/#956/#949/#954 — sentinel/collect/tmux/priv regressions
+# ---------------------------------------------------------------------------
+
+_TMUX_SMOKE_HANDLERS = [
+    "Handle-baremetal.ps1",
+    "Handle-docker.ps1",
+    "Handle-podman.ps1",
+    "Handle-dockerswarm.ps1",
+    "Handle-lxd.ps1",
+    "Handle-microk8s.ps1",
+    "Handle-target_nfs.ps1",
+    "Handle-target_cifs.ps1",
+    "Handle-target_sshfs.ps1",
+]
+
+
+def test_handlers_no_shared_completao_cc_clobber() -> None:
+    """#955: multi-persona nodes must not C-c the shared 'completao' session."""
+    root = _project_root()
+    hits: list[str] = []
+    for name in _TMUX_SMOKE_HANDLERS:
+        text = (root / "scripts" / "maestro" / "handlers" / name).read_text(
+            encoding="utf-8", errors="replace"
+        )
+        if "send-keys -t completao C-c" in text:
+            hits.append(name)
+    assert not hits, f"Remove shared-session C-c clobber in: {', '.join(hits)}"
+
+
+def test_handlers_use_per_persona_tmux_helper() -> None:
+    """#955: handlers dot-source Lab-MaestroCommon and inject via Invoke-HandlerTmuxPayload."""
+    root = _project_root()
+    for name in _TMUX_SMOKE_HANDLERS:
+        text = (root / "scripts" / "maestro" / "handlers" / name).read_text(
+            encoding="utf-8", errors="replace"
+        )
+        assert "Lab-MaestroCommon.ps1" in text, (
+            f"{name} must dot-source Lab-MaestroCommon.ps1"
+        )
+        assert "Invoke-HandlerTmuxPayload" in text, (
+            f"{name} must use Invoke-HandlerTmuxPayload (#955)"
+        )
+
+
+def test_target_nfs_cifs_use_priv_env_bash_ensure() -> None:
+    """#954: ensure runs as `$PRIV env ... bash` (doas strips caller env without env prefix)."""
+    root = _project_root()
+    for name in ("Handle-target_nfs.ps1", "Handle-target_cifs.ps1"):
+        text = (root / "scripts" / "maestro" / "handlers" / name).read_text(
+            encoding="utf-8", errors="replace"
+        )
+        assert "Build-EnsureRemoteCommand" in text
+        assert "command -v doas" in (
+            root / "scripts" / "maestro" / "Lab-MaestroCommon.ps1"
+        ).read_text(encoding="utf-8", errors="replace")
+        assert "`$PRIV $envPrefix bash" in (
+            root / "scripts" / "maestro" / "Lab-MaestroCommon.ps1"
+        ).read_text(encoding="utf-8", errors="replace")
+
+
+def test_target_nfs_deep_apply_fail_is_real_fail() -> None:
+    """#954/#949 bundle: Deep ensure --apply failure must exit non-zero and write sentinel 1."""
+    root = _project_root()
+    text = (
+        root / "scripts" / "maestro" / "handlers" / "Handle-target_nfs.ps1"
+    ).read_text(encoding="utf-8", errors="replace")
+    assert "elseif ($Deep)" in text
+    assert "[REAL FAIL] NFS ensure --apply" in text
+    assert "Write-RemoteSentinel" in text
+    assert "exit 1" in text
+
+
+def test_collect_artifacts_uses_repo_log_path() -> None:
+    """#956/#968: post-flight collect pulls from <repo>/log/; Join-Path; REAL FAIL if empty."""
+    root = _project_root()
+    text = (root / "scripts" / "maestro" / "Collect-Artifacts.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "/log/*.log" in text
+    assert "audit_trail" in text
+    assert "~/log/*.log" in text  # legacy fallback only
+    assert "Join-Path" in text
+    assert "[REAL FAIL] Collect" in text
+    assert "Get-CollectArtifactCount" in text
+    assert "${localDestDir}/" in text
+    assert "$localDestDir\\" not in text
+
+
+def test_sync_working_tree_tar_fallback_on_rsync_failure() -> None:
+    """#969: rsync failure triggers tar|ssh fallback with same exclude set."""
+    root = _project_root()
+    text = (root / "scripts" / "maestro" / "Sync-WorkingTree.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "Invoke-SyncTarSshFallback" in text
+    assert "Sync-Fallback #969" in text
+    assert "tar -czf -" in text
+    assert "tar -xzf -" in text
+    assert "--exclude='docs/private'" in text
+
+
+def test_maestro_calls_wait_handler_sentinel_for_real_results() -> None:
+    """#949: Maestro polls Wait-HandlerSentinel after dispatch (real pass/fail, not inject-only)."""
+    root = _project_root()
+    text = (root / "scripts" / "maestro" / "Maestro.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "Wait-HandlerSentinel.ps1" in text
+    assert "dispatchedSentinelPersonas" in text
+    assert "-OnlyHosts" in text
+    assert "Wait-HandlerSentinel reportou falha" in text
+
+
+def test_wait_handler_sentinel_supports_only_hosts_filter() -> None:
+    """#949: limit polling to hosts that ran this Maestro turn."""
+    root = _project_root()
+    text = (root / "scripts" / "maestro" / "Wait-HandlerSentinel.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "OnlyHosts" in text
+    assert "-notcontains $node.hostname" in text
+
+
+def test_smoke_handlers_clear_sentinel_before_run() -> None:
+    """Bundle guard: stale sentinel from prior run must be removed (rm -f) before smoke."""
+    root = _project_root()
+    for persona in ("baremetal", "docker", "podman", "dockerswarm", "lxd", "microk8s"):
+        text = _handler_text(root, persona)
+        assert "rm -f $sentinelFile" in text or "rm -f $sentinelFile ;" in text, (
+            f"Handle-{persona}.ps1 must rm -f sentinel before run"
+        )

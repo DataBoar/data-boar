@@ -29,6 +29,8 @@ param(
     [string]$BenchHealthUrl = ""
 )
 
+. "$PSScriptRoot/../Lab-MaestroCommon.ps1"
+
 # Allowlist: reject Ref values that could inject shell metacharacters (#830)
 $safeRefPattern = '^(WorkingTree|stable|beta|v\d+\.\d+\.\d+(-[\w.]+)?)$'
 if ($Ref -notmatch $safeRefPattern) {
@@ -61,7 +63,8 @@ $k8sCheck = ssh -q -o BatchMode=yes -o ConnectTimeout=8 "$($Node.user)@$($Node.h
 
 if ($LASTEXITCODE -ne 0 -or $k8sCheck -match "MICROK8S_UNAVAILABLE") {
     Write-Warning "      [ERROR] MicroK8s indisponivel em $($Node.hostname). Verifique 'microk8s status'."
-    return
+    Write-RemoteSentinel -Node $Node -SentinelFile $sentinelFile -ExitCode 1
+    exit 1
 }
 
 Write-Host "      [MicroK8s] Status:" -ForegroundColor DarkGray
@@ -75,10 +78,10 @@ $nodePath = $Node.path
 
 if (-not $podName) {
     Write-Warning "      [WARN] Nenhum pod 'data-boar' Running em $($Node.hostname). Fallback para baremetal path."
-    $payload    = "cd $nodePath && ${benchEnvPrefix}bash ./scripts/lab-completao-host-smoke.sh $smokeArgText ; _rc=`$? ; mkdir -p $sentinelDir ; echo `$_rc > $sentinelFile ; exit `$_rc"
+    $payload    = "rm -f $sentinelFile ; cd $nodePath && ${benchEnvPrefix}bash ./scripts/lab-completao-host-smoke.sh $smokeArgText ; _rc=`$? ; mkdir -p $sentinelDir ; echo `$_rc > $sentinelFile ; exit `$_rc"
     $payloadB64 = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($payload))
-    $tmuxCmd    = "tmux send-keys -t completao C-c ; sleep 0.5 ; tmux send-keys -t completao 'echo $payloadB64 | base64 -d | bash' Enter"
-    ssh -q -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$($Node.user)@$($Node.hostname)" "$tmuxCmd"
+    $injectExit = Invoke-HandlerTmuxPayload -Node $Node -Persona "microk8s" -PayloadB64 $payloadB64
+    if ($injectExit -ne 0) { exit 1 }
     return
 }
 
@@ -87,11 +90,10 @@ Write-Host "      [MicroK8s] Pod encontrado: $podName" -ForegroundColor DarkGray
 # 3. Injeta smoke via tmux -> kubectl exec
 # Base64-encode to eliminate shell-quoting issues in kubectl exec + tmux send-keys. (#830)
 $innerCmd   = "cd $nodePath 2>/dev/null || cd /app && ${benchEnvPrefix}bash ./scripts/lab-completao-host-smoke.sh $smokeArgText"
-$payload    = "microk8s kubectl exec $podName -- bash -c '$innerCmd' ; _rc=`$? ; mkdir -p $sentinelDir ; echo `$_rc > $sentinelFile ; exit `$_rc"
+$payload    = "rm -f $sentinelFile ; microk8s kubectl exec $podName -- bash -c '$innerCmd' ; _rc=`$? ; mkdir -p $sentinelDir ; echo `$_rc > $sentinelFile ; exit `$_rc"
 $payloadB64 = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($payload))
-$tmuxCmd    = "tmux send-keys -t completao C-c ; sleep 0.5 ; tmux send-keys -t completao 'echo $payloadB64 | base64 -d | bash' Enter"
-
-ssh -q -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$($Node.user)@$($Node.hostname)" "$tmuxCmd"
+$injectExit = Invoke-HandlerTmuxPayload -Node $Node -Persona "microk8s" -PayloadB64 $payloadB64
+$LASTEXITCODE = $injectExit
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "      [SUCCESS] Smoke MicroK8s injetado no Tmux em $($Node.hostname) (pod: $podName)." -ForegroundColor Green

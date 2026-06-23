@@ -17,8 +17,7 @@
  Sentinel (#831): payload writes /tmp/databoar_handler/target_cifs_sentinel.txt with
  the IO monitor result so Maestro can verify CIFS target readiness.
 
- Quote/escape safety (#830): IO monitor payload is base64-encoded before tmux injection;
- ensure script path uses canonical repo path from Node.path.
+ Privilege (#954): doas vs sudo; env VAR=val bash. Deep apply-fail must not mask ready=0.
 #>
 
 param(
@@ -32,18 +31,24 @@ param(
     [string]$BenchHealthUrl = ""
 )
 
+. "$PSScriptRoot/../Lab-MaestroCommon.ps1"
+
 Write-Host "   [Target-CIFS] Certificando alvo CIFS e disparando orquestracao (Deep: $Deep) em $($Node.hostname)..." -ForegroundColor Magenta
 
-$linuxPath    = $Node.path -replace "^~", "`$HOME"
 $repoPath     = $Node.path -replace "^~", "`$HOME"
-# Ensure scripts always use canonical repo path (not ephemeral versioned checkout)
-# so the path matches the narrow sudoers entry exactly.
 $canonicalRepo = ($repoPath -replace "-v[0-9]+\.[0-9]+\.[0-9]+[^/]*$", "")
 $ensureScript = "$canonicalRepo/scripts/labop-smb-server-ensure.sh"
 
+$sentinelDir  = "/tmp/databoar_handler"
+$sentinelFile = "$sentinelDir/target_cifs_sentinel.txt"
+
 # --- Phase 1: SMB server-side ensure (service + port + firewall) ---
 $ensureMode = if ($Deep) { "--apply" } else { "--check" }
-$ensureCmd  = "sudo -n bash $ensureScript $ensureMode 2>&1"
+$ensureEnv = @{}
+if ($Node.PSObject.Properties["lab_op_subnet"] -and $Node.lab_op_subnet) {
+    $ensureEnv["LAB_OP_SUBNET"] = [string]$Node.lab_op_subnet
+}
+$ensureCmd = Build-EnsureRemoteCommand -EnsureScript $ensureScript -EnsureMode $ensureMode -EnvVars $ensureEnv
 
 Write-Host "      [CIFS-Ensure] Running: $ensureMode on $($Node.hostname)" -ForegroundColor DarkGray
 $ensureOut = ssh -q -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 `
@@ -55,21 +60,17 @@ if ($ensureOut) { $ensureOut | ForEach-Object { Write-Host "        $_" -Foregro
 if ($ensureExit -eq 0) {
     Write-Host "      [SUCCESS] CIFS server-side validated: $($Node.hostname):$($Node.path)" -ForegroundColor Green
 } elseif ($Deep) {
-    Write-Warning "      [WARNING] CIFS ensure --apply returned exit $ensureExit on $($Node.hostname). Continuing (non-fatal)."
+    Write-Warning "      [REAL FAIL] CIFS ensure --apply returned exit $ensureExit on $($Node.hostname)."
+    Write-RemoteSentinel -Node $Node -SentinelFile $sentinelFile -ExitCode 1
+    exit 1
 } else {
     Write-Warning "      [WARNING] CIFS ensure --check returned exit $ensureExit on $($Node.hostname). Run with -Deep to attempt remediation."
 }
 
 # --- Phase 2: IO monitoring in tmux ---
-# Sentinel path for pass/fail aggregation (#831)
-$sentinelDir  = "/tmp/databoar_handler"
-$sentinelFile = "$sentinelDir/target_cifs_sentinel.txt"
-
-# Base64-encode IO monitor payload to eliminate shell-quoting issues. (#830)
-$ioPayload  = "echo TARGET_ACTIVE at \$(date +%H:%M:%S) > ~/.labop-status && mkdir -p ~/log $sentinelDir && vmstat 5 | tee ~/log/target_cifs_io.log ; echo \$? > $sentinelFile"
+$repoLogDir = "$repoPath/log"
+$ioPayload  = "rm -f $sentinelFile ; mkdir -p $repoLogDir $sentinelDir ; echo 0 > $sentinelFile ; echo TARGET_ACTIVE at \$(date +%H:%M:%S) > ~/.labop-status && vmstat 5 | tee $repoLogDir/target_cifs_io.log"
 $payloadB64 = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($ioPayload))
-$tmuxCmd    = "tmux send-keys -t completao C-c ; sleep 0.5 ; tmux send-keys -t completao 'echo $payloadB64 | base64 -d | bash' Enter"
-ssh -q -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 `
-    "$($Node.user)@$($Node.hostname)" "$tmuxCmd" > $null 2>&1
+$null = Invoke-HandlerTmuxPayload -Node $Node -Persona "target_cifs" -PayloadB64 $payloadB64
 
-Write-Host "      [CIFS] IO monitor injected in tmux on $($Node.hostname)." -ForegroundColor DarkGreen
+Write-Host "      [CIFS] IO monitor injected in tmux session $(Get-HandlerTmuxSessionName -Persona 'target_cifs') on $($Node.hostname)." -ForegroundColor DarkGreen
