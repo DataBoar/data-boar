@@ -21,6 +21,8 @@ extension absent on ARM/musl/minimal nodes) that **recur across the fleet**. Cen
 the same failure on N nodes is **signal aggregation = "lab not provisioned"** that should
 escalate and abort, not be retried as per-node noise. Gate stays **OPEN**; **no** version bump.
 
+**Follow-up (2026-06-23):** **#948** — Maestro **`Maestro-CanonicalGuard.ps1`**: loopback/canonical host never receives WorkingTree overwrite or `git reset` align; ephemeral refs under **`/tmp/databoar_bench/`**. Graceful skip when host offline remains [#966] pattern.
+
 **Full narrative (frozen):** [`lab_lessons_learned/LAB_LESSONS_LEARNED_2026_06_18.md`](lab_lessons_learned/LAB_LESSONS_LEARNED_2026_06_18.md)
 
 **Evidence paths:**

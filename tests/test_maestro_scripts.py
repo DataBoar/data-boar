@@ -917,6 +917,28 @@ def test_sync_working_tree_tar_fallback_on_rsync_failure() -> None:
     assert "--exclude='docs/private'" in text
 
 
+def test_maestro_canonical_guard_fail_closed() -> None:
+    """#948: canonical/maestro nodes skip WorkingTree overwrite; ephemeral under /tmp/databoar_bench."""
+    root = _project_root()
+    guard = (root / "scripts" / "maestro" / "Maestro-CanonicalGuard.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    sync = (root / "scripts" / "maestro" / "Sync-WorkingTree.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    ensure = (root / "scripts" / "lab-op-git-ensure-ref.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "Test-MaestroInventoryNodeProtected" in guard
+    assert "Test-ManifestRepoPathProtected" in guard
+    assert "Get-MaestroEphemeralRepoPath" in guard
+    assert "/tmp/databoar_bench/" in guard
+    assert "Maestro-CanonicalGuard.ps1" in sync
+    assert "[GUARD #948]" in sync
+    assert "Maestro-CanonicalGuard.ps1" in ensure
+    assert "[GUARD #948] Skip git Reset" in ensure
+
+
 def test_maestro_resets_labop_status_each_turn() -> None:
     """#969: per-host ~/.labop-status reset at turn start; refresh after handlers."""
     root = _project_root()

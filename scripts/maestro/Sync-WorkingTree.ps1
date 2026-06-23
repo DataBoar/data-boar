@@ -19,20 +19,28 @@ param(
 # O StrictMode entra LOGO APÓS os parâmetros
 Set-StrictMode -Version 2
 
+. "$PSScriptRoot/maestro/Maestro-CanonicalGuard.ps1"
+$script:MaestroOrchestratorHost = Get-MaestroOrchestratorHostname
+
 # Mapeamento alinhado com o objeto JSON recebido do Maestro
 $targetHost = $Node.hostname
 $targetIp   = $Node.ip
 $targetUser = $Node.user
 $basePath   = $Node.path
 
-# Lógica de Pasta Efêmera: se não for WorkingTree, cria um sufixo
-# 1. Definição Limpa do Path (Onde o erro começou)
+# Lógica de Pasta Efêmera: parent isolado /tmp/databoar_bench (#948) — sem sibling data-boar*
 if ($Ref -eq "WorkingTree") {
     $finalPath = $basePath
     Write-Host "   [Sync] Sincronizando Working Tree -> $targetHost" -ForegroundColor Cyan
 } else {
-    $finalPath = "$basePath-$Ref" # Ex: ~/Projects/dev/data-boar-1.7.3
-    Write-Host "   [Ref-Fetch] Preparando versão $Ref em pasta efêmera no $targetHost" -ForegroundColor Yellow
+    $finalPath = Get-MaestroEphemeralRepoPath -Ref $Ref -BasePath $basePath
+    Write-Host "   [Ref-Fetch] Preparando versão $Ref em $finalPath no $targetHost" -ForegroundColor Yellow
+}
+
+if ($Ref -eq "WorkingTree" -and (Test-MaestroInventoryNodeProtected -Node $Node -OrchestratorHost $script:MaestroOrchestratorHost)) {
+    Write-Warning "   [GUARD #948] Skip WorkingTree sync overwrite on protected node $targetHost (canonical/maestro/loopback)."
+    $Node.path = $finalPath
+    return $true
 }
 
 function Test-SyncHashVerify {

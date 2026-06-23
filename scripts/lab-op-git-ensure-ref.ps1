@@ -136,6 +136,13 @@ function Invoke-SshRemoteCapture {
     }
 }
 
+$guardScript = Join-Path $RepoRoot "scripts/maestro/Maestro-CanonicalGuard.ps1"
+if (-not (Test-Path -LiteralPath $guardScript)) {
+    throw "Missing $guardScript (#948 canonical guard)."
+}
+. $guardScript
+$script:MaestroOrchestratorHost = Get-MaestroOrchestratorHostname
+
 $master = [System.Text.StringBuilder]::new()
 [void]$master.AppendLine("=== lab-op-git-ensure-ref $stamp ===")
 [void]$master.AppendLine("Mode: $Mode  Ref: $Ref")
@@ -169,8 +176,17 @@ foreach ($h in $manifest.hosts) {
     }
 
     $refEsc = Escape-BashSingleQuoted -S $Ref
+    $protectFlag = $null
+    if ($h.PSObject.Properties.Name -contains "protectCanonical") {
+        $protectFlag = $h.protectCanonical
+    }
     foreach ($rp in $h.repoPaths) {
         if (-not $rp) { continue }
+        if ($Mode -eq "Reset" -and (Test-ManifestRepoPathProtected -SshAlias $alias -RepoPath $rp -OrchestratorHost $script:MaestroOrchestratorHost -ProtectCanonical $protectFlag)) {
+            Write-Warning "[GUARD #948] Skip git Reset on protected repo $rp ($alias) - canonical/loopback."
+            [void]$master.AppendLine("[GUARD #948] SKIP Reset $rp on $alias")
+            continue
+        }
         $rpEsc = Escape-BashSingleQuoted -S $rp
         $remoteCmd = if ($Mode -eq "Reset") {
             Build-RemoteResetCmd -RpEsc $rpEsc -RefEsc $refEsc

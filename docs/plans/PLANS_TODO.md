@@ -31,7 +31,7 @@ Use these tags in headings to keep priorities explicit and machine-countable:
 Do not edit this block manually; refresh with `python scripts/plans-stats.py --write`.
 
 - **Status rows counted:** 192  (Done: 113 | Incomplete: 79)
-- **Incomplete breakdown:** Pending `⬜`=73, Tracked `🔄` / `Tracked (partially done)`=6, Under consideration=0, Backlog-marked rows=0
+- **Incomplete breakdown:** Pending `⬜`=72, Tracked `🔄` / `Tracked (partially done)`=7, Under consideration=0, Backlog-marked rows=0
 
 | Horizon | Total rows | Done | Incomplete |
 | ------- | ----------: | ----: | ----------: |
@@ -273,7 +273,7 @@ After **A1–A3** (minimum), you can **resume token-aware pace** on Tier 2 featu
 | Native fast-filter build matrix (ARM wheel) | issue TBD · [LAB_LESSONS_LEARNED_2026_06_18.md](../ops/lab_lessons_learned/LAB_LESSONS_LEARNED_2026_06_18.md) | ⬜ Pending — `boar_fast_filter` x86_64-glibc + **musl wheel both build** (evidence-corrected); **ARM** is the real gap (no published ARM wheel, Build-Once); recurrence of 2026-05-13 single-node follow-up |
 | `uv run` prunes locally-built wheel from `.venv` (musl) | issue TBD · [LAB_LESSONS_LEARNED_2026_06_18.md](../ops/lab_lessons_learned/LAB_LESSONS_LEARNED_2026_06_18.md) | ⬜ Pending — `musllinux` `boar_fast_filter` wheel builds but `uv run` re-resolve drops it → `ModuleNotFoundError`; ML sdists (no musl wheels) rebuild on sync. Pin/install local wheel so `uv run` keeps it |
 | Auditor smoke: escalate repeated failure across nodes | issue TBD · [LAB_LESSONS_LEARNED_2026_06_18.md](../ops/lab_lessons_learned/LAB_LESSONS_LEARNED_2026_06_18.md) | ⬜ Pending — aggregate "same failure on N nodes" into one "lab-not-provisioned" verdict + abort, not per-node retry |
-| `protect_canonical` guard (load-bearing in Maestro sync) | issue TBD · [ADR 0068](../adr/ADR-0068-primary-linux-dev-workstation-temporary.md) | ⬜ Pending — declarative protection for both primary dev hosts, not a runtime agent decision |
+| `protect_canonical` guard (load-bearing in Maestro sync) | [#948](https://github.com/FabioLeitao/data-boar/issues/948) · [PLAN_MAESTRO_CANONICAL_GUARD](PLAN_MAESTRO_CANONICAL_GUARD.md) · [ADR 0068](../adr/ADR-0068-primary-linux-dev-workstation-temporary.md) | 🔄 In progress |
 
 **`[H0][U1]` Licensing enforcement — open GitHub issues (cluster):**
 
