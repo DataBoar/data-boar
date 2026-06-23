@@ -5,6 +5,7 @@
       "repoPaths": [
         "/home/REPLACE_USER/Projects/dev/data-boar"
       ],
+      "protectCanonical": false,
       "completaoHealthUrl": "http://REPLACE_HOST_LAN:8088/health"
     },
     {

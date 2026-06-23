@@ -5,6 +5,11 @@
 - **Authors:** Fabio Leitao
 - **Deciders:** Fabio Leitao
 
+### Status history
+
+- 2026-06-09 — Proposed
+- 2026-06-23 — Amended: Maestro canonical guard (#948) — orchestrator never align/overwrite target
+
 ## Context
 
 The operator’s **Windows primary dev workstation** (ThinkPad **L-series**, Windows 11 + WSL2) failed on **2026-06-07** (**GSOD** / **CLOCK_WATCHDOG_TIMEOUT**, suspected **VRM**). It is under **Lenovo warranty repair** (case **E0482B2DMD**). Day-to-day **`data-boar`** development moved to **primary Linux dev workstation** (LMDE 7), which now holds the **canonical** Git clone (`~/Projects/dev/data-boar`).
@@ -34,6 +39,7 @@ Tracked policy still described a **Windows-only** “primary dev PC” (**`PRIMA
 
 4. **[ADR 0023](ADR-0023-windows-primary-dev-filename-search-everything-es-first-with-fallback.md) remains `Accepted` and unchanged** — Windows **`es.exe`** / **`es-find`** protection applies again when the L-series primary returns from RMA. This ADR **does not** Supersede, Deprecate, or replace ADR 0023. On Linux primary, use Linux tools below instead of **`es-find`**. Lab-op SSH: **`find`**, **`fd`**, **`locate`/`plocate`**, **`git grep`**, **`grep -r`**.
 5. **Mandatory quality ritual on the Linux primary dev workstation:** **`uv run pre-commit install`** once per clone; **`./scripts/check-all.sh`** green **before** every PR. Tracked in **`docs/plans/PLAN_PRIMARY_LINUX_WORKSTATION_PROTECTION.md`** ([#801](https://github.com/FabioLeitao/data-boar/issues/801)).
+6. **Maestro canonical guard (GitHub #948):** the orchestrator / **`protect_canonical`** inventory node is **never** a WorkingTree rsync overwrite or **`lab-op-git-ensure-ref -Mode Reset`** target; ephemeral refs use **`/tmp/databoar_bench/<ref>`**. Implemented in **`scripts/maestro/Maestro-CanonicalGuard.ps1`** — fail-closed when flags are ambiguous.
 
 ## Reversion when Windows primary returns
 
