@@ -3,7 +3,8 @@
 
 param(
     [Parameter(Mandatory=$true)][string]$TargetHost,
-    [Parameter(Mandatory=$true)][string]$TargetUser
+    [Parameter(Mandatory=$true)][string]$TargetUser,
+    [string]$RunMarker = ""
 )
 
 $expectedSession = "completao"
@@ -50,11 +51,15 @@ if ($LASTEXITCODE -eq 0 -and $null -ne $rawOutput) {
         $tmux = "COLD (No Session)"
     }
 
-    # 4. Le telemetria (sem criar novas variaveis desnecessarias ou abrir novas sessoes ssh)
-    if ($statusRaw) {
+    # 4. Le telemetria (#969: NOT_RUN apos reset; STALE se marker de outro turno)
+    if ($statusRaw -match '^\s*NOT_RUN\b') {
+        $lastResult = "NOT_RUN"
+    } elseif ($RunMarker -and $statusRaw -and $statusRaw -notmatch [regex]::Escape($RunMarker)) {
+        $lastResult = "STALE ($statusRaw)"
+    } elseif ($statusRaw) {
         $lastResult = $statusRaw
     } else {
-        $lastResult = "PENDING"
+        $lastResult = "NOT_RUN"
     }
 }
 

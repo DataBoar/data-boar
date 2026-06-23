@@ -36,7 +36,9 @@ if (-not (Test-Path $inventoryPath)) {
 
 # 2. Carregamento dos dados do Lab-Op [cite: 8, 16]
 $inventory = Get-Content $inventoryPath | ConvertFrom-Json
-Write-Host "--- [Maestro] Iniciando Turno no Lab-Op (Ref: $Ref) ---" -ForegroundColor Cyan
+. "$PSScriptRoot/Lab-MaestroCommon.ps1"
+$script:MaestroRunMarker = Get-Date -Format "yyyyMMdd_HHmmss"
+Write-Host "--- [Maestro] Iniciando Turno no Lab-Op (Ref: $Ref, run=$($script:MaestroRunMarker)) ---" -ForegroundColor Cyan
 $warningCount = 0
 $realFailCount = 0
 # Personas that write /tmp/databoar_handler/<persona>_sentinel.txt (#831); web is inline health only.
@@ -70,8 +72,11 @@ elseif (-not $Collect) {
 # 3. Processamento dos Membros do Laboratório
 $globalReport = foreach ($node in $inventory.lab_members) {
 
+    # #969: reset per-host status before probe so stale ~/.labop-status never reads as current.
+    [void](Reset-LabOpStatus -Node $node -RunMarker $script:MaestroRunMarker)
+
     # Pre-flight Check: Injetando PII via argumentos (Agnosticismo)[cite: 14, 16]
-    $status = & "$PSScriptRoot/Get-LabStatus.ps1" -TargetHost $node.hostname -TargetUser $node.user
+    $status = & "$PSScriptRoot/Get-LabStatus.ps1" -TargetHost $node.hostname -TargetUser $node.user -RunMarker $script:MaestroRunMarker
 
     # SRE FIX: Se estivermos apenas coletando (-Collect), NÃO dispare a orquestração de novo!
     if ($status.SSH -eq "UP" -and -not $Collect) {
@@ -134,6 +139,9 @@ $globalReport = foreach ($node in $inventory.lab_members) {
                 Write-Warning "      [WARNING] Handler ausente para persona '$persona' em $($node.hostname): $handler"
             }
         }
+
+        # Refresh status for final report after handlers may have updated ~/.labop-status (#969).
+        $status = & "$PSScriptRoot/Get-LabStatus.ps1" -TargetHost $node.hostname -TargetUser $node.user -RunMarker $script:MaestroRunMarker
     }
 
     $status # Acumula para o relatório final [cite: 10]

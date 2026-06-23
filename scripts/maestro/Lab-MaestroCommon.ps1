@@ -85,3 +85,18 @@ function Clear-RemoteSentinel {
     $cmd = "rm -f $SentinelFile"
     ssh -q -o BatchMode=yes -o ConnectTimeout=15 "$($Node.user)@$($Node.hostname)" "$cmd" > $null 2>&1
 }
+
+function Reset-LabOpStatus {
+    <#
+    #969: clear stale ~/.labop-status at the start of each Maestro turn so yesterday's
+    DONE_FAILED does not masquerade as the current run outcome.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]$Node,
+        [Parameter(Mandatory = $true)][string]$RunMarker
+    )
+    $safeMarker = $RunMarker -replace "'", ""
+    $cmd = "echo 'NOT_RUN maestro=$safeMarker at '`$(date -Iseconds 2>/dev/null || date +%Y-%m-%dT%H:%M:%S)' > ~/.labop-status"
+    ssh -q -o BatchMode=yes -o ConnectTimeout=8 "$($Node.user)@$($Node.hostname)" "$cmd" > $null 2>&1
+    return ($LASTEXITCODE -eq 0)
+}
