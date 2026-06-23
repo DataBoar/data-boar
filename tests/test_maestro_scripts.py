@@ -8,6 +8,7 @@ static anti-regressions for known handler bugs (GitHub issues #329/#330 family).
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -1108,3 +1109,66 @@ def test_check_all_login_env_cargo_bootstrap() -> None:
     assert "_ensure_login_tool_path" in sh or ".cargo/env" in sh
     assert "Ensure-LoginToolPath" in ps1
     assert ".cargo" in ps1
+
+
+def _run_fw_guard_subnet_check(
+    root: Path, subnet: str
+) -> subprocess.CompletedProcess[str]:
+    env = os.environ.copy()
+    env["LAB_OP_SUBNET"] = subnet
+    return subprocess.run(
+        ["bash", str(root / "scripts" / "labop-fw-guard-ensure.sh"), "--check"],
+        cwd=root,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
+def test_labop_fw_guard_rfc1918_subnet_accepts_private_cidr() -> None:
+    """#1020 zero-trust: fw-guard accepts RFC1918 CIDR (not exit 2)."""
+    root = _project_root()
+    for subnet in ("192.168.40.0/24", "10.0.0.0/8", "172.16.0.0/12"):
+        proc = _run_fw_guard_subnet_check(root, subnet)
+        assert proc.returncode != 2, (
+            f"expected RFC1918 accept for {subnet}, got exit 2: {proc.stderr}"
+        )
+        assert "is not a private RFC1918 CIDR" not in proc.stderr
+
+
+def test_labop_fw_guard_rfc1918_subnet_rejects_non_private() -> None:
+    """#1020 zero-trust: fw-guard exit 2 for public, wildcard, or garbage CIDR."""
+    root = _project_root()
+    for subnet in ("0.0.0.0/0", "1.2.3.0/24", "192.168.40.0/0", "not-a-cidr", ""):
+        if subnet == "":
+            proc = subprocess.run(
+                ["bash", str(root / "scripts" / "labop-fw-guard-ensure.sh"), "--check"],
+                cwd=root,
+                env={k: v for k, v in os.environ.items() if k != "LAB_OP_SUBNET"},
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+        else:
+            proc = _run_fw_guard_subnet_check(root, subnet)
+        assert proc.returncode == 2, (
+            f"expected exit 2 for {subnet!r}, got {proc.returncode}: {proc.stderr}"
+        )
+
+
+def test_labop_gate_readiness_validates_rfc1918_on_write() -> None:
+    """#1020 belt-and-suspenders: gate-readiness validates before .labop-gate write."""
+    root = _project_root()
+    text = (root / "scripts" / "labop-gate-readiness.sh").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "_is_rfc1918_lab_subnet" in text
+    assert "LAB_OP_SUBNET_not_rfc1918" in text
+    assert (root / "scripts" / "labop-rfc1918-cidr-lib.sh").is_file()
+    fw = (root / "scripts" / "labop-fw-guard-ensure.sh").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "labop-rfc1918-cidr-lib.sh" in fw
+    assert "is not a private RFC1918 CIDR" in fw
+    assert "zero-trust" in fw

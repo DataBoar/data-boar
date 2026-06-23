@@ -35,6 +35,13 @@ if [[ -z "$SUBNET" ]]; then
   exit 2
 fi
 
+# shellcheck source=labop-rfc1918-cidr-lib.sh
+. "$(cd "$(dirname "$0")" && pwd)/labop-rfc1918-cidr-lib.sh"
+if ! labop_is_rfc1918_cidr "$SUBNET"; then
+  echo "[FW-Guard] FAIL: LAB_OP_SUBNET '$SUBNET' is not a private RFC1918 CIDR - refusing (zero-trust)" >&2
+  exit 2
+fi
+
 _log() { echo "[FW-Guard $(date -u +%H:%M:%SZ)] $*"; }
 _ok()  { echo "[FW-Guard] OK: $*"; }
 _warn(){ echo "[FW-Guard] WARN: $*" >&2; }

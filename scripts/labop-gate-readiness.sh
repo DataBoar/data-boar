@@ -73,12 +73,24 @@ _ensure_login_path
 
 GATE_CTX_DIR="$REPO_ROOT/.labop-gate"
 
+# shellcheck source=labop-rfc1918-cidr-lib.sh
+. "$SCRIPT_DIR/labop-rfc1918-cidr-lib.sh"
+
+_is_rfc1918_lab_subnet() {
+  labop_is_rfc1918_cidr "$1"
+}
+
 _write_gate_context() {
   mkdir -p "$GATE_CTX_DIR"
   if [[ -n "${LAB_OP_SUBNET:-}" ]]; then
+    if ! _is_rfc1918_lab_subnet "$LAB_OP_SUBNET"; then
+      echo "[GateReadiness] FAIL: LAB_OP_SUBNET '$LAB_OP_SUBNET' is not a private RFC1918 CIDR - refusing (zero-trust)" >&2
+      return 1
+    fi
     printf '%s\n' "$LAB_OP_SUBNET" >"$GATE_CTX_DIR/LAB_OP_SUBNET"
   fi
   printf '%s\n' "$PERSONAS_RAW" >"$GATE_CTX_DIR/PERSONAS"
+  return 0
 }
 
 _priv_cmd() {
@@ -101,7 +113,9 @@ _invoke_priv_script() {
   local priv out ec=0
   priv="$(_priv_cmd)"
   [[ -z "$priv" ]] && return 127
-  _write_gate_context
+  if ! _write_gate_context; then
+    return 125
+  fi
   out="$($priv bash "$script" "$mode" 2>&1)" || ec=$?
   printf '%s\n' "$out" >&2
   if [[ $ec -ne 0 ]] && _priv_denied_output "$out"; then
@@ -212,6 +226,9 @@ if [[ -f "$FW_SCRIPT" ]]; then
   if [[ -z "${LAB_OP_SUBNET:-}" ]]; then
     _gr fail2ban ALARM "LAB_OP_SUBNET_unset"
     FAIL=1
+  elif ! _is_rfc1918_lab_subnet "${LAB_OP_SUBNET}"; then
+    _gr fail2ban ALARM "LAB_OP_SUBNET_not_rfc1918"
+    FAIL=1
   elif [[ "$PRIV" != "NO_PRIV" ]]; then
     FW_EC=0
     if ! _invoke_priv_script "$FW_SCRIPT" "$FW_MODE"; then
@@ -219,6 +236,9 @@ if [[ -f "$FW_SCRIPT" ]]; then
     fi
     if [[ $FW_EC -eq 0 ]]; then
       _gr fail2ban OK "subnet_whitelisted"
+    elif [[ $FW_EC -eq 125 ]]; then
+      _gr fail2ban ALARM "LAB_OP_SUBNET_not_rfc1918"
+      FAIL=1
     elif [[ $FW_EC -eq 126 ]]; then
       _gr fail2ban ALARM "privilege_denied"
       FAIL=1
