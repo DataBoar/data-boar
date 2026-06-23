@@ -1,5 +1,5 @@
 #!/usr/bin/env pwsh
-# Run pinned Pester suite (PowerShell script LOGIC — #984).
+# Run pinned Pester suite (PowerShell script LOGIC - #984).
 # Linux/macOS: invoked from check-all.sh when pwsh is on PATH.
 # Usage: .\scripts\run-pester.ps1
 
@@ -7,7 +7,7 @@
 
 $ErrorActionPreference = 'Stop'
 
-# Pin — keep in sync with tests/test_pester_harness.py::PESTER_REQUIRED_VERSION
+# Pin - keep in sync with tests/test_pester_harness.py::PESTER_REQUIRED_VERSION
 $PesterRequiredVersion = '5.6.1'
 
 $repoRoot = (Get-Item $PSScriptRoot).Parent.FullName
