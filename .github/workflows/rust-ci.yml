@@ -82,7 +82,7 @@ jobs:
       # Supply-chain Layer 1 (ADR-0074 / GitHub #988): Rust SCA before merge.
       - name: Install cargo-audit and cargo-deny
         run: |
-          cargo install cargo-audit --version 0.21.2 --locked --force
+          cargo install cargo-audit --version 0.22.2 --locked --force
           cargo install cargo-deny --version 0.17.0 --locked --force
 
       - name: cargo audit (RUSTSEC)
