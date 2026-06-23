@@ -26,19 +26,23 @@ if [[ -d "${_DD_OP_HOME}/.local/bin" ]]; then export PATH="${_DD_OP_HOME}/.local
 CHECK_ONLY=0
 PRIVILEGED=0
 APPLY_ONLY=0
-for arg in "$@"; do
-  case "$arg" in
-    --check)      CHECK_ONLY=1 ;;
-    --privileged) PRIVILEGED=1 ;;
-    --apply)      APPLY_ONLY=1 ;;  # uv sync only, no OS PM (no root needed)
-    --help|-h) echo "Usage: $0 [--check | --apply | --privileged]
+PERSONAS_RAW=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --check)      CHECK_ONLY=1; shift ;;
+    --privileged) PRIVILEGED=1; shift ;;
+    --apply)      APPLY_ONLY=1; shift ;;  # uv sync only, no OS PM (no root needed)
+    --personas=*) PERSONAS_RAW="${1#--personas=}"; shift ;;
+    --personas)   PERSONAS_RAW="${2:-}"; shift 2 ;;
+    --help|-h) echo "Usage: $0 [--check | --apply | --privileged] [--personas p1,p2,...]
   (no args)     same as --check: probe only, no changes
   --check       probe only, exit 0 if healthy, 1 if fix needed
   --apply       uv sync --extra compressed only (no OS package manager)
   --privileged  full flow: uv sync + OS PM (apt/xbps/...) + Python rebuild
                 requires root (sudo -n); the intended LABOP_DEP_DOCTOR invocation
+  --personas    Maestro persona list (#958): apk/apt packages for nfs/cifs/io bins
 "; exit 0 ;;
-    *) echo "[DepDoctor] Unknown arg: $arg" >&2; exit 2 ;;
+    *) echo "[DepDoctor] Unknown arg: $1" >&2; exit 2 ;;
   esac
 done
 
@@ -53,7 +57,147 @@ _warn(){ echo "[DepDoctor] WARN: $*" >&2; }
 _fail(){ echo "[DepDoctor] FAIL: $*" >&2; }
 
 HOST=$(hostname -f 2>/dev/null || hostname)
-_log "Starting on $HOST (check_only=$CHECK_ONLY privileged=$PRIVILEGED apply_only=$APPLY_ONLY)"
+_log "Starting on $HOST (check_only=$CHECK_ONLY privileged=$PRIVILEGED apply_only=$APPLY_ONLY personas=${PERSONAS_RAW:-<none>})"
+
+_detect_pm() {
+  if command -v apt-get >/dev/null 2>&1; then echo "apt"; return 0; fi
+  if command -v xbps-install >/dev/null 2>&1; then echo "xbps"; return 0; fi
+  if command -v pacman >/dev/null 2>&1; then echo "pacman"; return 0; fi
+  if command -v dnf >/dev/null 2>&1; then echo "dnf"; return 0; fi
+  if command -v zypper >/dev/null 2>&1; then echo "zypper"; return 0; fi
+  if command -v apk >/dev/null 2>&1; then echo "apk"; return 0; fi
+  echo ""
+}
+
+_pkg_logical_to_pm() {
+  local logical="$1" pm="$2"
+  case "$logical" in
+    procps) echo "procps" ;;
+    iproute2) echo "iproute2" ;;
+    samba) echo "samba" ;;
+    nfs-utils)
+      case "$pm" in
+        apt) echo "nfs-kernel-server" ;;
+        *) echo "nfs-utils" ;;
+      esac
+      ;;
+    *) echo "$logical" ;;
+  esac
+}
+
+_pkg_installed() {
+  local pkg="$1" pm="$2"
+  case "$pm" in
+    apt) dpkg -s "$pkg" >/dev/null 2>&1 ;;
+    apk) apk info -e "$pkg" >/dev/null 2>&1 ;;
+    xbps) xbps-query "$pkg" >/dev/null 2>&1 ;;
+    pacman) pacman -Q "$pkg" >/dev/null 2>&1 ;;
+    dnf) rpm -q "$pkg" >/dev/null 2>&1 ;;
+    zypper) rpm -q "$pkg" >/dev/null 2>&1 ;;
+    *) return 1 ;;
+  esac
+}
+
+_pm_install_cmd() {
+  local pkg="$1" pm="$2"
+  case "$pm" in
+    apt) echo "apt-get install -y $pkg" ;;
+    apk) echo "apk add $pkg" ;;
+    xbps) echo "xbps-install -y $pkg" ;;
+    pacman) echo "pacman -S --noconfirm $pkg" ;;
+    dnf) echo "dnf install -y $pkg" ;;
+    zypper) echo "zypper install -y $pkg" ;;
+    *) return 1 ;;
+  esac
+}
+
+_persona_logical_pkgs() {
+  local persona="${1// /}"
+  case "$persona" in
+    target_nfs) echo "nfs-utils procps iproute2" ;;
+    target_cifs) echo "samba procps iproute2" ;;
+    baremetal|web) echo "procps iproute2" ;;
+    *) echo "" ;;
+  esac
+}
+
+_load_personas_from_gate_context() {
+  if [[ -n "$PERSONAS_RAW" ]]; then
+    return 0
+  fi
+  local gate_file
+  gate_file="$(cd "$(dirname "$0")/.." && pwd)/.labop-gate/PERSONAS"
+  if [[ -f "$gate_file" ]]; then
+    PERSONAS_RAW="$(tr -d '\n\r' <"$gate_file")"
+  fi
+}
+
+_run_persona_os_phase() {
+  [[ -z "$PERSONAS_RAW" ]] && return 0
+  local pm pkgs logical pkg failed=0
+  pm="$(_detect_pm)"
+  if [[ -z "$pm" ]]; then
+    _warn "Persona OS phase: no package manager (ALARM)"
+    return 1
+  fi
+  declare -A WANT=()
+  local p blob
+  IFS=',' read -ra _PL <<<"$PERSONAS_RAW"
+  for p in "${_PL[@]}"; do
+    blob="$(_persona_logical_pkgs "$p")"
+    for logical in $blob; do
+      WANT["$logical"]=1
+    done
+  done
+  for logical in "${!WANT[@]}"; do
+    pkg="$(_pkg_logical_to_pm "$logical" "$pm")"
+    if _pkg_installed "$pkg" "$pm"; then
+      _ok "persona pkg $pkg ($logical) installed"
+    else
+      _warn "persona pkg $pkg ($logical) missing"
+      failed=1
+      if [[ $CHECK_ONLY -eq 0 && $PRIVILEGED -eq 1 ]]; then
+        local cmd
+        cmd="$(_pm_install_cmd "$pkg" "$pm")"
+        _log "Installing: $cmd"
+        if ! eval "$cmd" 2>&1; then
+          _fail "install failed for $pkg via $pm"
+        fi
+      fi
+    fi
+  done
+  # Re-verify ALL wanted packages; success on one install must not mask another failure (#1020).
+  for logical in "${!WANT[@]}"; do
+    pkg="$(_pkg_logical_to_pm "$logical" "$pm")"
+    if ! _pkg_installed "$pkg" "$pm"; then
+      failed=1
+      _warn "persona pkg $pkg ($logical) still missing after phase"
+    fi
+  done
+  if [[ $failed -ne 0 ]]; then
+    return 1
+  fi
+  return 0
+}
+
+# ---------------------------------------------------------------------------
+# Phase 0: persona OS packages (#958) before Python probes
+# ---------------------------------------------------------------------------
+_load_personas_from_gate_context
+PERSONA_OS_OK=1
+if [[ -n "$PERSONAS_RAW" ]]; then
+  if ! _run_persona_os_phase; then
+    PERSONA_OS_OK=0
+    if [[ $CHECK_ONLY -eq 1 ]]; then
+      _warn "Persona OS packages missing (check-only)."
+      exit 1
+    fi
+    if [[ $PRIVILEGED -eq 0 ]]; then
+      _warn "Persona OS packages missing; re-run with --privileged"
+      exit 1
+    fi
+  fi
+fi
 
 # ---------------------------------------------------------------------------
 # Phase 1: detect uv + repo root
@@ -101,6 +245,10 @@ if ! probe_lzma; then
 fi
 
 if [[ $NEED_FIX -eq 0 ]]; then
+  if [[ -n "$PERSONAS_RAW" && $PERSONA_OS_OK -eq 0 ]]; then
+    _fail "Persona OS packages still missing (privileged remediation incomplete)."
+    exit 1
+  fi
   _ok "All optional modules healthy. Nothing to do."
   exit 0
 fi
@@ -140,25 +288,20 @@ if [[ $PRIVILEGED -eq 0 ]]; then
 fi
 _log "Step 2: detecting OS package manager for lzma-dev install"
 
-PM=""
-PM_CMD=""
-if command -v apt-get >/dev/null 2>&1; then
-  PM="apt"; PM_CMD="apt-get install -y liblzma-dev"
-elif command -v xbps-install >/dev/null 2>&1; then
-  PM="xbps"; PM_CMD="xbps-install -y xz-devel"
-elif command -v pacman >/dev/null 2>&1; then
-  PM="pacman"; PM_CMD="pacman -S --noconfirm xz"
-elif command -v dnf >/dev/null 2>&1; then
-  PM="dnf"; PM_CMD="dnf install -y xz-devel"
-elif command -v zypper >/dev/null 2>&1; then
-  PM="zypper"; PM_CMD="zypper install -y xz-devel"
-elif command -v apk >/dev/null 2>&1; then
-  PM="apk"; PM_CMD="apk add xz-dev"
-else
-  _fail "No recognized package manager found (apt/xbps/pacman/dnf/zypper/apk). Cannot install liblzma."
-  _warn "Host feature: 7z_UNSUPPORTED reason=no_known_pm"
-  exit 1
-fi
+PM="$(_detect_pm)"
+case "$PM" in
+  apt) PM_CMD="apt-get install -y liblzma-dev" ;;
+  xbps) PM_CMD="xbps-install -y xz-devel" ;;
+  pacman) PM_CMD="pacman -S --noconfirm xz" ;;
+  dnf) PM_CMD="dnf install -y xz-devel" ;;
+  zypper) PM_CMD="zypper install -y xz-devel" ;;
+  apk) PM_CMD="apk add xz-dev" ;;
+  *)
+    _fail "No recognized package manager found (apt/xbps/pacman/dnf/zypper/apk). Cannot install liblzma."
+    _warn "Host feature: 7z_UNSUPPORTED reason=no_known_pm"
+    exit 1
+    ;;
+esac
 
 _log "PM detected: $PM. Running: $PM_CMD"
 if eval "$PM_CMD" 2>&1; then
@@ -192,6 +335,10 @@ _log "Step 4: uv sync --extra compressed (post-install)"
 
 _log "Final probe..."
 if probe_lzma && probe_module "py7zr"; then
+  if [[ -n "$PERSONAS_RAW" && $PERSONA_OS_OK -eq 0 ]]; then
+    _fail "Persona OS packages still missing after full remediation."
+    exit 1
+  fi
   _ok "All optional modules healthy after full remediation."
   exit 0
 else

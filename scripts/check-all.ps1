@@ -24,6 +24,24 @@ if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
 
+# #1003: login-env parity (cargo/uv/maturin off default PATH in non-interactive shells).
+function Ensure-LoginToolPath {
+    if (Get-Command cargo -ErrorAction SilentlyContinue) { return $true }
+    $homeDir = if ($env:HOME) { $env:HOME } else { $env:USERPROFILE }
+    if (-not $homeDir) { return $false }
+    $cargoEnv = Join-Path $homeDir ".cargo" "env"
+    if (Test-Path $cargoEnv) { . $cargoEnv }
+    $localBin = Join-Path $homeDir ".local" "bin"
+    if (Test-Path $localBin) { $env:PATH = "$localBin$([IO.Path]::PathSeparator)$env:PATH" }
+    $cargoBin = Join-Path $homeDir ".cargo" "bin"
+    if (Test-Path $cargoBin) { $env:PATH = "$cargoBin$([IO.Path]::PathSeparator)$env:PATH" }
+    return [bool](Get-Command cargo -ErrorAction SilentlyContinue)
+}
+if (-not (Ensure-LoginToolPath)) {
+    Write-Host "Rust Guard... Failed (cargo not on PATH; source ~/.cargo/env?)" -ForegroundColor Red
+    exit 1
+}
+
 try {
     $prevPyO3Abi3 = $env:PYO3_USE_ABI3_FORWARD_COMPATIBILITY
     $env:PYO3_USE_ABI3_FORWARD_COMPATIBILITY = "1"

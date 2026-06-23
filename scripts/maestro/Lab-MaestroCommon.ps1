@@ -100,3 +100,51 @@ function Reset-LabOpStatus {
     ssh -q -o BatchMode=yes -o ConnectTimeout=8 "$($Node.user)@$($Node.hostname)" "$cmd" > $null 2>&1
     return ($LASTEXITCODE -eq 0)
 }
+
+function Get-MaestroCanonicalRepoPath {
+    param([Parameter(Mandatory = $true)][string]$RepoPath)
+    # Same suffix strip as Handle-target_nfs.ps1 / Handle-target_cifs.ps1 (#99b6fdc).
+    return ($RepoPath -replace "-v[0-9]+\.[0-9]+\.[0-9]+[^/\\]*$", "")
+}
+
+function Invoke-LabopGateReadiness {
+    <#
+    #960: ALARM (--check) skips handlers; REMEDIATE (-Deep / --apply) uses narrow grants.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]$Node,
+        [switch]$Deep
+    )
+    $personaList = @($Node.personas)
+    if (-not $personaList -or $personaList.Count -eq 0) {
+        return $true
+    }
+    $personaCsv = ($personaList -join ',')
+    $repoPath = Get-MaestroCanonicalRepoPath -RepoPath ([string]$Node.path)
+    $mode = if ($Deep) { '--apply' } else { '--check' }
+    $envPrefix = ""
+    if ($Node.PSObject.Properties.Name -contains 'lab_op_subnet' -and $Node.lab_op_subnet) {
+        $subnet = [string]$Node.lab_op_subnet
+        if ($subnet -match "[\s'`"$\\]") {
+            throw "Invoke-LabopGateReadiness: unsafe lab_op_subnet on $($Node.hostname)"
+        }
+        $envPrefix = "env LAB_OP_SUBNET=$subnet "
+    }
+    $gateScript = "$repoPath/scripts/labop-gate-readiness.sh"
+    $remoteCmd = "cd '$repoPath' && ${envPrefix}bash '$gateScript' $mode --personas '$personaCsv' 2>&1"
+    Write-Host "      [GateReadiness] $mode on $($Node.hostname) personas=$personaCsv" -ForegroundColor DarkCyan
+    $output = ssh -q -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 `
+        "$($Node.user)@$($Node.hostname)" $remoteCmd 2>&1
+    foreach ($line in @($output)) {
+        if ($line) { Write-Host "      $line" }
+    }
+    if ($LASTEXITCODE -ne 0) {
+        if ($Deep) {
+            Write-Warning "      [REAL FAIL] Gate readiness --apply failed on $($Node.hostname)"
+        } else {
+            Write-Warning "      [ALARM] Gate readiness failed on $($Node.hostname). Handlers skipped. Use -Deep to remediate."
+        }
+        return $false
+    }
+    return $true
+}

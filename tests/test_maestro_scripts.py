@@ -8,6 +8,7 @@ static anti-regressions for known handler bugs (GitHub issues #329/#330 family).
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -990,3 +991,184 @@ def test_smoke_handlers_clear_sentinel_before_run() -> None:
         assert "rm -f $sentinelFile" in text or "rm -f $sentinelFile ;" in text, (
             f"Handle-{persona}.ps1 must rm -f sentinel before run"
         )
+
+
+def test_labop_gate_readiness_script_contract() -> None:
+    """#960: tracked gate-readiness emits GR lines; ALARM vs apply modes."""
+    root = _project_root()
+    path = root / "scripts" / "labop-gate-readiness.sh"
+    assert path.is_file(), "missing scripts/labop-gate-readiness.sh"
+    text = path.read_text(encoding="utf-8", errors="replace")
+    assert 'echo "GR host=' in text
+    assert "--check" in text and "--apply" in text
+    assert "--personas" in text
+    assert "labop-fw-guard-ensure.sh" in text
+    assert "labop-dep-doctor.sh" in text
+    assert "boar_fast_filter" in text
+    assert "maturin" in text
+
+
+def test_labop_fw_guard_ensure_contract() -> None:
+    """#957: fail2ban/sshguard ignoreip check+apply; LAB_OP_SUBNET required."""
+    root = _project_root()
+    path = root / "scripts" / "labop-fw-guard-ensure.sh"
+    assert path.is_file(), "missing scripts/labop-fw-guard-ensure.sh"
+    text = path.read_text(encoding="utf-8", errors="replace")
+    assert "LAB_OP_SUBNET" in text
+    assert "--check" in text and "--apply" in text
+    assert "fail2ban" in text
+    assert "sshguard" in text
+    assert "leave-no-trace" in text
+
+
+def test_labop_dep_doctor_persona_packages() -> None:
+    """#958: dep-doctor accepts --personas and apk/apt package map."""
+    root = _project_root()
+    text = (root / "scripts" / "labop-dep-doctor.sh").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "--personas" in text
+    assert "_persona_logical_pkgs" in text
+    assert 'target_nfs) echo "nfs-utils procps iproute2"' in text
+    assert 'target_cifs) echo "samba procps iproute2"' in text
+    assert "nfs-utils" in text
+    assert "samba" in text
+    assert "procps" in text
+    assert "iproute2" in text
+    assert "apk" in text
+    assert 'xbps-query "$pkg"' in text
+    assert "PERSONA_OS_OK" in text
+    assert "_load_personas_from_gate_context" in text
+
+
+def test_labop_dep_doctor_persona_os_failure_not_swallowed() -> None:
+    """#1020 Bugbot: PERSONA_OS_OK must block exit 0 when persona OS still failing."""
+    root = _project_root()
+    text = (root / "scripts" / "labop-dep-doctor.sh").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "Persona OS packages still missing" in text
+    assert "still missing after phase" in text
+    assert "no package manager (ALARM)" in text
+
+
+def test_labop_gate_readiness_narrow_grant_invoke() -> None:
+    """#1020: privileged nested calls use .labop-gate context + fixed sudoers args."""
+    root = _project_root()
+    text = (root / "scripts" / "labop-gate-readiness.sh").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "_write_gate_context" in text
+    assert ".labop-gate" in text
+    assert "_invoke_priv_script" in text
+    assert "privilege_denied" in text
+    assert 'bash "$DEP_SCRIPT" --check --personas' in text
+    assert "env LAB_OP_SUBNET" not in text
+
+
+def test_labop_fw_guard_subnet_file_and_reversible_sshguard() -> None:
+    """#1020: fw-guard reads .labop-gate/LAB_OP_SUBNET; sshguard uses drop-in not append."""
+    root = _project_root()
+    text = (root / "scripts" / "labop-fw-guard-ensure.sh").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert ".labop-gate/LAB_OP_SUBNET" in text
+    assert "MERGED_IPS" in text
+    assert "whitelist.d/labop-subnet.conf" in text
+    assert '>>"$WL_FILE"' not in text
+
+
+def test_maestro_invokes_gate_readiness_before_handlers() -> None:
+    """#960: Maestro runs Invoke-LabopGateReadiness after sync, before handlers."""
+    root = _project_root()
+    maestro = (root / "scripts" / "maestro" / "Maestro.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    common = (root / "scripts" / "maestro" / "Lab-MaestroCommon.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "Invoke-LabopGateReadiness" in common
+    assert "labop-gate-readiness.sh" in common
+    assert "Invoke-LabopGateReadiness -Node" in maestro
+    assert "[ALARM] Gate readiness" in common
+    sync_idx = maestro.index("Sync-WorkingTree.ps1")
+    gate_idx = maestro.index("Invoke-LabopGateReadiness")
+    handler_idx = maestro.index("foreach ($persona in $orderedPersonas)")
+    assert sync_idx < gate_idx < handler_idx
+
+
+def test_check_all_login_env_cargo_bootstrap() -> None:
+    """#1003: check-all twins source ~/.cargo/env before Rust guard."""
+    root = _project_root()
+    sh = (root / "scripts" / "check-all.sh").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    ps1 = (root / "scripts" / "check-all.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "_ensure_login_tool_path" in sh or ".cargo/env" in sh
+    assert "Ensure-LoginToolPath" in ps1
+    assert ".cargo" in ps1
+
+
+def _run_fw_guard_subnet_check(
+    root: Path, subnet: str
+) -> subprocess.CompletedProcess[str]:
+    env = os.environ.copy()
+    env["LAB_OP_SUBNET"] = subnet
+    return subprocess.run(
+        ["bash", str(root / "scripts" / "labop-fw-guard-ensure.sh"), "--check"],
+        cwd=root,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
+def test_labop_fw_guard_rfc1918_subnet_accepts_private_cidr() -> None:
+    """#1020 zero-trust: fw-guard accepts RFC1918 CIDR (not exit 2)."""
+    root = _project_root()
+    for subnet in ("192.168.40.0/24", "10.0.0.0/8", "172.16.0.0/12"):
+        proc = _run_fw_guard_subnet_check(root, subnet)
+        assert proc.returncode != 2, (
+            f"expected RFC1918 accept for {subnet}, got exit 2: {proc.stderr}"
+        )
+        assert "is not a private RFC1918 CIDR" not in proc.stderr
+
+
+def test_labop_fw_guard_rfc1918_subnet_rejects_non_private() -> None:
+    """#1020 zero-trust: fw-guard exit 2 for public, wildcard, or garbage CIDR."""
+    root = _project_root()
+    for subnet in ("0.0.0.0/0", "1.2.3.0/24", "192.168.40.0/0", "not-a-cidr", ""):
+        if subnet == "":
+            proc = subprocess.run(
+                ["bash", str(root / "scripts" / "labop-fw-guard-ensure.sh"), "--check"],
+                cwd=root,
+                env={k: v for k, v in os.environ.items() if k != "LAB_OP_SUBNET"},
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+        else:
+            proc = _run_fw_guard_subnet_check(root, subnet)
+        assert proc.returncode == 2, (
+            f"expected exit 2 for {subnet!r}, got {proc.returncode}: {proc.stderr}"
+        )
+
+
+def test_labop_gate_readiness_validates_rfc1918_on_write() -> None:
+    """#1020 belt-and-suspenders: gate-readiness validates before .labop-gate write."""
+    root = _project_root()
+    text = (root / "scripts" / "labop-gate-readiness.sh").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "_is_rfc1918_lab_subnet" in text
+    assert "LAB_OP_SUBNET_not_rfc1918" in text
+    assert (root / "scripts" / "labop-rfc1918-cidr-lib.sh").is_file()
+    fw = (root / "scripts" / "labop-fw-guard-ensure.sh").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "labop-rfc1918-cidr-lib.sh" in fw
+    assert "is not a private RFC1918 CIDR" in fw
+    assert "zero-trust" in fw
