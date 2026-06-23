@@ -12,6 +12,7 @@ Proposed
 ### Status history
 
 - 2026-06-21 — Proposed
+- 2026-06-23 — Amended: suffix spelling aligned with ADR-0073 (`-rc[.N]`); cross-ref ADR-0073; trailer distinction `Gate-Close-Approved-By:` vs `Gate-Change-Approved-By:`
 
 ## Context
 
@@ -46,10 +47,11 @@ Two gates exist, with **completely distinct criteria, authorities, and triggers:
 
 1. **"Gate" with no qualifier = release gate.** `check-all` is NEVER called "gate" — it is "local checks" / "CI" (sacred taxonomy, cf. ADR-0048).
 2. **A green commit gate does NOT authorize a stable version bump. Ever.**
-3. **Bumping to stable (removing `-rc`/`-beta`) = FASE 3 = only with the release gate CLOSED + operator OK.** Release PRs bump only to `-rc-N`.
+3. **Bumping to stable (removing `-rc`/`-beta`) = FASE 3 = only with the release gate CLOSED + operator OK.** Release PRs bump only to `-rc[.N]` (PEP 440; equivalent forms such as `-rc-2` / `-rc.2` normalize to the same pre-release line per [ADR 0073](ADR-0073-version-scheme-octet-maturity-and-roadmap.md)).
 4. **Verifiable ≠ verified.** Closing a gate-*verifiability* bug (e.g. #831) is not the gate having *passed*.
 5. **Machine guard:** CI/pre-commit blocks a `version` without `-rc*`/`-beta` suffix on `main` while any `release-gate`-labeled issue (e.g. #406) is OPEN.
 6. **Operator-gated issue close (GitHub #990):** Release-gate issues carry label **`operator-gated`**. Workflow **`.github/workflows/operator-gated-reopen.yml`** reopens them unless close approval is **(a)** label **`gate-close-approved`** at close time, or **(b)** the **latest** comment **starts with** **`Gate-Close-Approved-By: @FabioLeitao`** (deliberate close comment — **not** issue body, **not** comment history; protocol doc cites in backticks must not unlock closes). Actor is **not** trusted. Legitimate close: `gh issue close <n> --comment "Gate-Close-Approved-By: @FabioLeitao — <evidence>"` or add **`gate-close-approved`** then close.
+7. **Trailer distinction (do not conflate):** **`Gate-Close-Approved-By:`** (this ADR — closes a **release-gate issue**) × **`Gate-Change-Approved-By:`** ([ADR 0071](ADR-0071-self-protecting-pii-gate.md) — modifies a **gate file**).
 
 ## Rationale
 
@@ -77,7 +79,9 @@ Two gates exist, with **completely distinct criteria, authorities, and triggers:
 - [ADR 0048 — operator-facing taxonomy and naming contract](ADR-0048-operator-facing-taxonomy-and-naming-contract-preservation.md)
 - [ADR 0061 — U-axis issue suborder and cross-milestone gate](ADR-0061-u-axis-issue-suborder-and-cross-milestone-gate.md)
 - [ADR 0056 — cryptographic ADR inventory](ADR-0056-cryptographic-adr-inventory-inv-adr-ssh-attestation.md)
-- GitHub #970 (premature bump RCA), #406 (release gate checklist), #990 (operator-gated auto-reopen workflow)
+- [ADR 0071 — Self-protecting PII gate](ADR-0071-self-protecting-pii-gate.md) — `Gate-Change-Approved-By:` (gate-file change)
+- [ADR 0073 — Version scheme: octet-maturity side-channel + release-line roadmap](ADR-0073-version-scheme-octet-maturity-and-roadmap.md) — PEP 440 suffix spelling (`-rc[.N]`)
+- GitHub #970 (premature bump RCA), #406 (release gate checklist), #990 (operator-gated auto-reopen workflow), #973 (RO audit comment)
 
 ## References
 
