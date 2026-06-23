@@ -7,12 +7,13 @@
 
 ## Status
 
-Proposed
+Accepted
 
 ### Status history
 
 - 2026-06-18 — Proposed
 - 2026-06-23 — Amended: `require_code_owner_review` toggle deferred until a 2nd code owner exists (solo self-approval deadlock); tripwire + no-bypass ruleset are the live enforcement
+- 2026-06-23 — Accepted (ratification by @FabioLeitao — signature PENDING).
 
 ## Context
 

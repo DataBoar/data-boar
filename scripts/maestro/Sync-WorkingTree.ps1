@@ -7,8 +7,8 @@
  Author: Fábio Leitão com apoio da Gemini e Cursosr IDE
  Missão principal: Sub-Orquestrador de sincronismo em pré-flight para o teste Completão funcionar no Lab-Op a partir do repo no gh ou da working tree no ambiente canônico de Dev principal no PC de desenvolvimento.
 
- #969: rsync e pre-req; se falhar (ex. exit 12 / rsync ausente no remoto), fallback tar|ssh com mesmas exclusoes.
- Narrow doas+apk rsync install fica para #958.
+ #969: rsync e pre-req; se falhar (ex. exit 12 / rsync ausente no remoto), fallback scp+tar
+ #969b: depois tar|ssh stream. Narrow doas+apk rsync install fica para #958.
 #>
 
 param(
@@ -76,6 +76,52 @@ function Test-SyncHashVerify {
     return $true
 }
 
+function Invoke-SyncScpTarFallback {
+    param(
+        [Parameter(Mandatory = $true)][string]$RepoRoot,
+        [Parameter(Mandatory = $true)][string]$RemoteUser,
+        [Parameter(Mandatory = $true)][string]$RemoteHost,
+        [Parameter(Mandatory = $true)][string]$RemotePath,
+        [int]$RsyncExitCode
+    )
+
+    Write-Warning "      [Sync-Fallback #969] rsync exit $RsyncExitCode em $RemoteHost; tentando scp+tar (remoto nao precisa de rsync — Consigliere #F4)."
+    $localTar = Join-Path ([System.IO.Path]::GetTempPath()) ("databoar-sync-" + [guid]::NewGuid().ToString("n") + ".tar.gz")
+    $remoteTar = "/tmp/databoar-sync-upload.tar.gz"
+    $escapedRoot = $RepoRoot -replace "'", "'\\''"
+    $tarLocalCmd = "tar -czf '$localTar' --exclude='.git' --exclude='.venv' --exclude='__pycache__' --exclude='.pytest_cache' --exclude='*.bundle' --exclude='docs/private' --exclude='*.log' --exclude='*.xlsx' --exclude='*.db' --exclude='data-boar-blackbox-audit.txt' --exclude='data-boar-*.tar' --exclude='.env' --exclude='.env.*' -C '$escapedRoot' ."
+
+    if ($IsWindows) {
+        wsl.exe -e bash -c $tarLocalCmd
+    } else {
+        bash -c $tarLocalCmd
+    }
+    if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $localTar)) {
+        Write-Warning "      [Sync-Fallback] scp: falha ao criar tarball local (exit $LASTEXITCODE)."
+        if (Test-Path -LiteralPath $localTar) { Remove-Item -LiteralPath $localTar -Force -ErrorAction SilentlyContinue }
+        return $false
+    }
+
+    scp -q -o BatchMode=yes -o ConnectTimeout=15 "$localTar" "${RemoteUser}@${RemoteHost}:${remoteTar}"
+    $scpExit = $LASTEXITCODE
+    Remove-Item -LiteralPath $localTar -Force -ErrorAction SilentlyContinue
+    if ($scpExit -ne 0) {
+        Write-Warning "      [Sync-Fallback] scp falhou em $RemoteHost (exit $scpExit)."
+        ssh -q -o BatchMode=yes -o ConnectTimeout=15 "${RemoteUser}@${RemoteHost}" "rm -f $remoteTar" > $null 2>&1
+        return $false
+    }
+
+    $extractCmd = "mkdir -p $RemotePath && tar -xzf $remoteTar -C $RemotePath && rm -f $remoteTar"
+    ssh -q -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "${RemoteUser}@${RemoteHost}" "$extractCmd"
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warning "      [Sync-Fallback] scp: extract remoto falhou em $RemoteHost (exit $LASTEXITCODE)."
+        return $false
+    }
+
+    Write-Host "      [Sync-Fallback] scp+tar OK em $RemoteHost." -ForegroundColor DarkGray
+    return $true
+}
+
 function Invoke-SyncTarSshFallback {
     param(
         [Parameter(Mandatory = $true)][string]$RepoRoot,
@@ -133,7 +179,9 @@ if ($Ref -eq "WorkingTree") {
         $syncOk = Test-SyncHashVerify -RepoRoot $repoRoot -RemoteUser $targetUser -RemoteHost $targetHost -RemotePath $finalPath
     } else {
         Write-Warning "      [WARNING] rsync falhou no no $targetHost (exit $exitCode)."
-        if (Invoke-SyncTarSshFallback -RepoRoot $repoRoot -RemoteUser $targetUser -RemoteHost $targetHost -RemotePath $finalPath -RsyncExitCode $exitCode) {
+        if (Invoke-SyncScpTarFallback -RepoRoot $repoRoot -RemoteUser $targetUser -RemoteHost $targetHost -RemotePath $finalPath -RsyncExitCode $exitCode) {
+            $syncOk = Test-SyncHashVerify -RepoRoot $repoRoot -RemoteUser $targetUser -RemoteHost $targetHost -RemotePath $finalPath
+        } elseif (Invoke-SyncTarSshFallback -RepoRoot $repoRoot -RemoteUser $targetUser -RemoteHost $targetHost -RemotePath $finalPath -RsyncExitCode $exitCode) {
             $syncOk = Test-SyncHashVerify -RepoRoot $repoRoot -RemoteUser $targetUser -RemoteHost $targetHost -RemotePath $finalPath
         }
     }

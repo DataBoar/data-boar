@@ -903,13 +903,15 @@ def test_collect_artifacts_uses_repo_log_path() -> None:
 
 
 def test_sync_working_tree_tar_fallback_on_rsync_failure() -> None:
-    """#969: rsync failure triggers tar|ssh fallback with same exclude set."""
+    """#969: rsync failure triggers scp+tar then tar|ssh fallback with same exclude set."""
     root = _project_root()
     text = (root / "scripts" / "maestro" / "Sync-WorkingTree.ps1").read_text(
         encoding="utf-8", errors="replace"
     )
-    assert "Invoke-SyncTarSshFallback" in text
+    assert "Invoke-SyncScpTarFallback" in text
     assert "Sync-Fallback #969" in text
+    assert "Consigliere #F4" in text
+    assert "Invoke-SyncTarSshFallback" in text
     assert "tar -czf -" in text
     assert "tar -xzf -" in text
     assert "--exclude='docs/private'" in text
@@ -935,6 +937,27 @@ def test_maestro_canonical_guard_fail_closed() -> None:
     assert "[GUARD #948]" in sync
     assert "Maestro-CanonicalGuard.ps1" in ensure
     assert "[GUARD #948] Skip git Reset" in ensure
+
+
+def test_maestro_resets_labop_status_each_turn() -> None:
+    """#969: per-host ~/.labop-status reset at turn start; refresh after handlers."""
+    root = _project_root()
+    maestro = (root / "scripts" / "maestro" / "Maestro.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    common = (root / "scripts" / "maestro" / "Lab-MaestroCommon.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    status = (root / "scripts" / "maestro" / "Get-LabStatus.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "Reset-LabOpStatus" in common
+    assert "NOT_RUN maestro=" in common
+    assert "MaestroRunMarker" in maestro
+    assert "Reset-LabOpStatus -Node" in maestro
+    assert "-RunMarker $script:MaestroRunMarker" in maestro
+    assert "STALE (" in status
+    assert '"NOT_RUN"' in status
 
 
 def test_maestro_calls_wait_handler_sentinel_for_real_results() -> None:
