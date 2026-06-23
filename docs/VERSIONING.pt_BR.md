@@ -27,37 +27,43 @@ Exemplos:
 
 ---
 
-## Octeto-maturidade do build + roadmap de linha (#971 / ADR-0073)
+## Octeto-maturidade (side-channel) + roadmap de linha (ADR-0073 — Proposed)
 
-**Decisão canônica:** [ADR-0073](adr/ADR-0073-version-scheme-octet-maturity-and-roadmap.md) (EN). Complementa [ADR-0072](adr/ADR-0072-commit-gate-vs-release-gate-distinct-criteria.md) (commit gate ≠ release gate).
+**Rascunho canônico:** [ADR-0073](adr/ADR-0073-version-scheme-octet-maturity-and-roadmap.md) (EN, **Proposed** — não ratificado). Complementa [ADR-0072](adr/ADR-0072-commit-gate-vs-release-gate-distinct-criteria.md) (commit gate ≠ release gate).
 
-Disciplina **estilo Gibson DNS-beacon**, antes interna; após a promoção não autorizada de **`1.7.4`** (#970) o **número público** também expõe maturidade.
+### Versão pública vs octeto de maturidade (não misturar)
 
-### Faixas do terceiro octeto (build numérico com maturidade)
-
-| Faixa build | Significado | Exemplos |
+| Superfície | Formato | Regra |
 | --- | --- | --- |
-| **0–127** | faixa beta | fatias experimentais |
-| **128–199** | faixa rc | maturidade release-candidate |
-| **200–255** | faixa release | **`.200` = GA**, **`.201` = fix-1**, **`.202` = fix-2**, … |
+| **Versão pública** (`[project] version`, About, tags, Docker, README) | `major.minor.build` + sufixo PEP 440 opcional (`-beta[.N]` / `-rc[.N]`) ou nada | **Só três segmentos** — nunca `1.7.4.201` nem quarto segmento |
+| **Octeto de maturidade** (faixas Gibson DNS-beacon) | `[tool.databoar] maturity_build` (derivado, side-channel) | **Nunca** em `[project] version` nem no About |
+| **Sufixo `-alpha`** | Tamper-detection (#856) | **Não** é faixa de maturidade |
+
+Faixas do octeto quando `maturity_build` estiver em uso (ferramentas operador/beacon — **não** o dígito build do semver público, salvo política explícita do operador):
+
+| Faixa octeto | Significado |
+| --- | --- |
+| **0–127** | maturidade beta |
+| **128–199** | maturidade rc |
+| **200–255** | maturidade release (`.200` = GA, `.201` = fix-1, …) |
 
 Sufixos (`-beta`, `-rc`, `-rc-N`) continuam válidos em `main` enquanto o **release gate** (GitHub #406) estiver aberto. **Commit gate** verde (`check-all`) **não** autoriza removê-los — ver ADR-0072.
 
-### Linha 1.7.4 atual (pós-#970)
+### Linha 1.7.4 atual
 
 | Rótulo | Status |
 | --- | --- |
-| **`1.7.4` / build `.200` (GA)** | **VOID** — nunca lançada; promovida sem gate (#970, PR #840) |
-| **Working tree `main`** | **`1.7.4-rc-2`** no `pyproject.toml` até fechar **#406** |
-| **Stable real pós-gate** | começa em **`1.7.4.201`** (fix-1 pós-GA queimada) — não `1.7.4` |
+| **Working tree `main`** | **`1.7.4-rc-2`** no `pyproject.toml` — **não bumpar** até ADR-0073 **Accepted** e gate **#406** fechar |
+| **#970** | Bump/tag stable prematuro sem release gate — corrigido por **ADR-0072** + gate **#406**; **`1.7.4` não é VOID** |
+| **Numeração pública pós-GA** | **OPEN / TBD** (HITL operador) — deve respeitar três segmentos + sufixo; ver ADR-0073 |
 
-Escada: `1.7.4-beta` → `1.7.4-rc` → **`1.7.4-rc-2`** (hoje) → **`1.7.4.201`** (pós-gate).
+Escada (histórico + hoje): `1.7.4-beta` → `1.7.4-rc` → **`1.7.4-rc-2`** (atual). **Próximo semver stable + tag:** TBD pendente ratificação ADR-0073 e gate **#406**.
 
 ### Roadmap de linha (intenção — sem incremento ingênuo)
 
 | Linha | Escopo |
 | --- | --- |
-| **`1.7.4.x`** | Maturidade open-core + proteção comercial JWT (**linha de fix** pós-gate) |
+| **Linha `1.7.4`** | Maturidade open-core + proteção comercial JWT |
 | **`1.8.x`** | Capacidades corporativas aumentadas (re-ID, sidecars, plugins/Clojure — **nova arquitetura**) |
 | **`1.7.5`** | **Não existe** — agentes não inventam (#772). Próximo milestone dev: **`1.8.0-beta`**. |
 | **`1.9.x`** | Horizonte (expansão compliance — triagem #772) |

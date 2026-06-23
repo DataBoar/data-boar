@@ -1,5 +1,5 @@
 ---
-description: Release/version guardrails — commit gate vs release gate, VOID 1.7.4, no 1.7.5, octet maturity. Situational — semver bumps, VERSIONING, pyproject version.
+description: Release/version guardrails — commit gate vs release gate, ADR-0073 side-channel, no 1.7.5, semver TBD. Situational — semver bumps, VERSIONING, pyproject version.
 globs:
   - pyproject.toml
   - docs/VERSIONING.md
@@ -31,10 +31,11 @@ alwaysApply: false
 
 ## Version facts (ADR-0073 — Proposed)
 
-- **`1.7.4` stable = VOID** (#970). Real stable after gate: **`1.7.4.201`** (`.201` = fix-1; `.200` burned).
-- **`main` today:** **`1.7.4-rc-2`** until **#406** closes.
+- **`main` today:** **`1.7.4-rc-2`** until **#406** closes and ADR-0073 is **Accepted**.
+- **#970:** premature stable bump/tag without release gate — corrected by **ADR-0072** + **#406**; **`1.7.4` is not VOID**.
+- **Stable semver + tag after gate:** **TBD** (operator HITL post-GA numbering — three segments + suffix only; no fourth segment).
 - **`1.7.5` does not exist.** Next dev line: **`1.8.0-beta`** (#772).
-- Octet bands: **0–127 beta · 128–199 rc · 200–255 release** — see **`docs/VERSIONING.md`**.
+- **Maturity octet** (0–127 beta · 128–199 rc · 200–255 release): **`[tool.databoar] maturity_build`** side-channel — **never** in `[project] version` or About. See **`docs/VERSIONING.md`**.
 
 ## Agent must not
 

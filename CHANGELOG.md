@@ -4,15 +4,15 @@ Human-readable summary of user-facing changes. **Detailed release notes:** [docs
 
 ## Unreleased (`main`)
 
-**Working tree:** `pyproject.toml` **`1.7.4-rc-2`** · alvo pós-gate **`1.7.4.201`** (#971).
+**Working tree:** `pyproject.toml` **`1.7.4-rc-2`** · semver stable/tag **TBD** pós-ratificação **ADR-0073** + gate **#406**.
 
-**Targeting (próxima linha de desenvolvimento):** **`1.8.0-beta`** (#772) — após gate **#406** e release real documentada em **#971**.
+**Targeting (próxima linha de desenvolvimento):** **`1.8.0-beta`** (#772) — após gate **#406** e semver stable definido.
 
 ---
 
-## 1.7.4 — VOID / NEVER RELEASED (2026-06-11) — #970, PR #840 prematuro
+## 1.7.4 — working line (unreleased; bump prematuro #970 revertido)
 
-> **NÚMERO queimado** — nunca lançada como stable; promovida sem gate **#406**. As mudanças abaixo **são reais** (landed em `main`); mantidas por **historicidade**. Release real: **`1.7.4.201`** (fix-1 pós-GA; **`.200` = GA queimada**) — ver **#971**. Próxima linha arquitetural: **`1.8.0-beta`** (#772).
+> PR #840 promoveu stable sem **release gate** **#406**; **`main`** permanece em pré-release. As mudanças abaixo **são reais** (landed em `main`); mantidas por **historicidade**. **Semver stable + tag:** **TBD** pós-ratificação **ADR-0073** + fechamento **#406**. Próxima linha arquitetural: **`1.8.0-beta`** (#772).
 
 ### Added
 
