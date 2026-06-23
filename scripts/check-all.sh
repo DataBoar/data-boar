@@ -79,6 +79,16 @@ echo "Checking hub index links..." >&2
   exit 1
 }
 
+if command -v pwsh >/dev/null 2>&1; then
+  echo "Running Pester (PowerShell logic)..." >&2
+  pwsh -NoProfile -NonInteractive -File "$REPO_ROOT/scripts/run-pester.ps1" || {
+    echo "check-all.sh: FAILED Pester suite (run-pester.ps1)." >&2
+    exit 1
+  }
+else
+  echo "check-all.sh: pwsh not on PATH; skipping Pester (#984 — install pwsh for PS1 logic gate)." >&2
+fi
+
 # Delegate: same behaviour as pre-commit-and-tests.ps1 (venv recovery, pre-commit, pytest).
 pct_args=()
 if [[ "$SKIP_PRECOMMIT" -eq 1 ]]; then

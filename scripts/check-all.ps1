@@ -67,6 +67,13 @@ if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
 
+Write-Host "Running Pester (PowerShell logic)..." -ForegroundColor Yellow
+& "$repoRoot\scripts\run-pester.ps1"
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "check-all: FAILED Pester suite (run-pester.ps1)." -ForegroundColor Red
+    exit $LASTEXITCODE
+}
+
 # Delegate to the existing script so we keep behaviour in one place.
 $argsList = @()
 if ($SkipPreCommit) {
