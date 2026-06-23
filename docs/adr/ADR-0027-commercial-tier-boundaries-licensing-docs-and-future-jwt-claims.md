@@ -5,6 +5,15 @@
 - **Authors:** Fabio Leitao
 - **Deciders:** Fabio Leitao
 
+## Status
+
+Accepted
+
+### Status history
+
+- 2026-04-17 — Accepted
+- 2026-06-21 — Amended: Watch condition fulfilled by [ADR 0064](ADR-0064-license-enforcement-additive-model.md) (Proposed) — GitHub #993 / #709
+
 ## Context
 
 The product needs a **single, reviewable place** for **open core vs Pro vs Enterprise** positioning: scale (workers, targets), **deployments per license**, **federated** groups (branch silos with shared CISO but local P&L), and **JWT-shaped** controls for when enforcement ships. Without documenting this, sales and engineering drift apart; naming **real employers** in **public** docs violates repository privacy policy, so **concrete buyer examples** stay in **`docs/private/`**.
@@ -25,10 +34,12 @@ The product needs a **single, reviewable place** for **open core vs Pro vs Enter
 
 - **Positive:** Sales, integrators, and future enforcement work share one **narrative**; ADR links **why** the public docs grew.
 - **Negative:** Public licensing docs are longer; must be updated when tier semantics change.
-- **Watch:** When JWT claims go live, **revalidate** table rows and remove “illustrative” wording where behaviour is fixed.
+- **Watch:** ~~When JWT claims go live, **revalidate** table rows and remove “illustrative” wording where behaviour is fixed.~~ **Fulfilled (2026-06-21):** runtime enforcement architecture is [ADR 0064](ADR-0064-license-enforcement-additive-model.md) (Proposed); signing algorithm [ADR 0063](ADR-0063-ed25519-license-jwt-signing.md). Public licensing docs must still track implementation drift until ADR-0064 is **Accepted** and shipped.
 
 ## Related Decisions
 
+- [ADR 0063 — ed25519 license JWT signing](ADR-0063-ed25519-license-jwt-signing.md)
+- [ADR 0064 — License enforcement additive model](ADR-0064-license-enforcement-additive-model.md) — fulfills this ADR’s deferred enforcement Watch
 - [ADR 0066 — TAMPERED state behavior (fail-closed in enforced mode)](ADR-0066-tampered-state-behavior.md) — caps effective runtime tier at Community when integrity checks fail under **enforced** licensing; open mode logs CRITICAL and continues
 
 ## References
