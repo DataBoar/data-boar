@@ -52,6 +52,58 @@ Legacy metadata line.
         $text = Get-Content -LiteralPath $outFile -Raw
         $text | Should -Match '9998 \| Accepted \|'
         $text | Should -Match '9999 \| Proposed \|'
+        $text | Should -Match '(?m) \| -$'
         $text | Should -Match 'InventoryHash:'
+    }
+
+    It 'emits PENDING Ratified-By for pending ratification history' {
+        $ratDir = Join-Path $TestDrive 'adr-ratify'
+        New-Item -ItemType Directory -Path $ratDir -Force | Out-Null
+        @'
+# ADR 9997 - Ratification Pending
+
+## Status
+
+Accepted
+
+### Status history
+
+- 2026-06-23 — Accepted (ratification by @FabioLeitao — signature PENDING).
+
+## Context
+
+Fixture.
+'@ | Set-Content -LiteralPath (Join-Path $ratDir 'ADR-9997-ratification-pending.md') -Encoding UTF8
+
+        $outFile = Join-Path $TestDrive 'INVENTORY-ratify.txt'
+        & $script:InvAdr -AdrDir $ratDir -OutFile $outFile | Out-Null
+        $text = Get-Content -LiteralPath $outFile -Raw
+        $text | Should -Match '9997 \| Accepted \|'
+        $text | Should -Match '(?m) \| PENDING$'
+    }
+
+    It 'stamps Ratified-By when -RatifiedBy matches pending handle' {
+        $ratDir = Join-Path $TestDrive 'adr-stamp'
+        New-Item -ItemType Directory -Path $ratDir -Force | Out-Null
+        @'
+# ADR 9996 - Ratification Stamp
+
+## Status
+
+Accepted
+
+### Status history
+
+- 2026-06-23 — Accepted (ratification by @FabioLeitao — signature PENDING).
+
+## Context
+
+Fixture.
+'@ | Set-Content -LiteralPath (Join-Path $ratDir 'ADR-9996-ratification-stamp.md') -Encoding UTF8
+
+        $outFile = Join-Path $TestDrive 'INVENTORY-stamp.txt'
+        & $script:InvAdr -AdrDir $ratDir -OutFile $outFile -RatifiedBy '@FabioLeitao' | Out-Null
+        $text = Get-Content -LiteralPath $outFile -Raw
+        $text | Should -Match '(?m) \| @FabioLeitao$'
     }
 }
