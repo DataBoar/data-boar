@@ -95,6 +95,13 @@ $globalReport = foreach ($node in $inventory.lab_members) {
             & "$PSScriptRoot/Sync-ContainerArtefact.ps1" -Node $node
         }
 
+        # #960: gate readiness before handlers (ALARM non-Deep / REMEDIATE -Deep).
+        $gateOk = Invoke-LabopGateReadiness -Node $node -Deep:$Deep
+        if (-not $gateOk) {
+            if ($Deep) { $realFailCount++ }
+            continue
+        }
+
         # Despacho para Handlers baseados em Persona [cite: 1]
         # Ordem SRE: container persona primeiro, web por último.
         $orderedPersonas = $node.personas | Sort-Object {

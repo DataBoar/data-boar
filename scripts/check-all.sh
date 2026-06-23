@@ -47,11 +47,24 @@ if ! uv run python "$REPO_ROOT/scripts/gatekeeper_audit.py"; then
   exit "$?"
 fi
 
-# Rust guard (same commands as check-all.ps1: fmt --check, check, test --quiet)
-if ! command -v cargo >/dev/null 2>&1; then
-  printf '\033[31m%s\033[0m\n' "Rust Guard... Failed (cargo not on PATH)" >&2
+# #1003: non-interactive SSH/login-env parity — cargo/uv/maturin often live off default PATH.
+_ensure_login_tool_path() {
+  command -v cargo >/dev/null 2>&1 && return 0
+  if [[ -f "${HOME}/.cargo/env" ]]; then
+    # shellcheck source=/dev/null
+    . "${HOME}/.cargo/env"
+  fi
+  if [[ -d "${HOME}/.local/bin" ]]; then
+    export PATH="${HOME}/.local/bin:${PATH}"
+  fi
+  command -v cargo >/dev/null 2>&1
+}
+if ! _ensure_login_tool_path; then
+  printf '\033[31m%s\033[0m\n' "Rust Guard... Failed (cargo not on PATH; source ~/.cargo/env?)" >&2
   exit 1
 fi
+
+# Rust guard (same commands as check-all.ps1: fmt --check, check, test --quiet)
 echo "Running Rust guard (cargo fmt, check, test)..." >&2
 if ! (
   export PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1

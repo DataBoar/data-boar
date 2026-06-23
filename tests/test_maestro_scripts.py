@@ -990,3 +990,79 @@ def test_smoke_handlers_clear_sentinel_before_run() -> None:
         assert "rm -f $sentinelFile" in text or "rm -f $sentinelFile ;" in text, (
             f"Handle-{persona}.ps1 must rm -f sentinel before run"
         )
+
+
+def test_labop_gate_readiness_script_contract() -> None:
+    """#960: tracked gate-readiness emits GR lines; ALARM vs apply modes."""
+    root = _project_root()
+    path = root / "scripts" / "labop-gate-readiness.sh"
+    assert path.is_file(), "missing scripts/labop-gate-readiness.sh"
+    text = path.read_text(encoding="utf-8", errors="replace")
+    assert 'echo "GR host=' in text
+    assert "--check" in text and "--apply" in text
+    assert "--personas" in text
+    assert "labop-fw-guard-ensure.sh" in text
+    assert "labop-dep-doctor.sh" in text
+    assert "boar_fast_filter" in text
+    assert "maturin" in text
+
+
+def test_labop_fw_guard_ensure_contract() -> None:
+    """#957: fail2ban/sshguard ignoreip check+apply; LAB_OP_SUBNET required."""
+    root = _project_root()
+    path = root / "scripts" / "labop-fw-guard-ensure.sh"
+    assert path.is_file(), "missing scripts/labop-fw-guard-ensure.sh"
+    text = path.read_text(encoding="utf-8", errors="replace")
+    assert "LAB_OP_SUBNET" in text
+    assert "--check" in text and "--apply" in text
+    assert "fail2ban" in text
+    assert "sshguard" in text
+    assert "leave-no-trace" in text
+
+
+def test_labop_dep_doctor_persona_packages() -> None:
+    """#958: dep-doctor accepts --personas and apk/apt package map."""
+    root = _project_root()
+    text = (root / "scripts" / "labop-dep-doctor.sh").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "--personas" in text
+    assert "_persona_logical_pkgs" in text
+    assert "nfs-utils" in text
+    assert "samba" in text
+    assert "procps" in text
+    assert "iproute2" in text
+    assert "apk" in text
+
+
+def test_maestro_invokes_gate_readiness_before_handlers() -> None:
+    """#960: Maestro runs Invoke-LabopGateReadiness after sync, before handlers."""
+    root = _project_root()
+    maestro = (root / "scripts" / "maestro" / "Maestro.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    common = (root / "scripts" / "maestro" / "Lab-MaestroCommon.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "Invoke-LabopGateReadiness" in common
+    assert "labop-gate-readiness.sh" in common
+    assert "Invoke-LabopGateReadiness -Node" in maestro
+    assert "[ALARM] Gate readiness" in common
+    sync_idx = maestro.index("Sync-WorkingTree.ps1")
+    gate_idx = maestro.index("Invoke-LabopGateReadiness")
+    handler_idx = maestro.index("foreach ($persona in $orderedPersonas)")
+    assert sync_idx < gate_idx < handler_idx
+
+
+def test_check_all_login_env_cargo_bootstrap() -> None:
+    """#1003: check-all twins source ~/.cargo/env before Rust guard."""
+    root = _project_root()
+    sh = (root / "scripts" / "check-all.sh").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    ps1 = (root / "scripts" / "check-all.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "_ensure_login_tool_path" in sh or ".cargo/env" in sh
+    assert "Ensure-LoginToolPath" in ps1
+    assert ".cargo" in ps1
