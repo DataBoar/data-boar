@@ -7,12 +7,13 @@
 
 ## Status
 
-Proposed
+Accepted
 
 ### Status history
 
 - 2026-06-21 — Proposed
 - 2026-06-23 — Amended: suffix spelling aligned with ADR-0073 (`-rc[.N]`); cross-ref ADR-0073; trailer distinction `Gate-Close-Approved-By:` vs `Gate-Change-Approved-By:`
+- 2026-06-23 — Accepted (ratification by @FabioLeitao — signature PENDING).
 
 ## Context
 

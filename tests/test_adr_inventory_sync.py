@@ -11,7 +11,7 @@ ADR_DIR = REPO / "docs" / "adr"
 INVENTORY = ADR_DIR / "INVENTORY.txt"
 
 ROW_RE = re.compile(
-    r"^(\d{4}) \| (.+?) \| ([0-9A-F]{64}) \| (ADR-\d{4}-.+\.md) \| ",
+    r"^(\d{4}) \| (.+?) \| ([0-9A-F]{64}) \| (ADR-\d{4}-.+\.md) \| (.+?) \| (\S+)\s*$",
     re.MULTILINE,
 )
 
@@ -27,7 +27,7 @@ def test_inventory_row_regex_accepts_compound_status() -> None:
     hash_hex = "A" * 64
     line = (
         f"0044 | Duplicate of ADR-0044 | {hash_hex} | "
-        "ADR-0044-dependabot-uv-ecosystem-for-pyproject-lock-closure.md | title"
+        "ADR-0044-dependabot-uv-ecosystem-for-pyproject-lock-closure.md | title | -"
     )
     m = ROW_RE.match(line)
     assert m is not None
@@ -38,10 +38,24 @@ def test_inventory_row_regex_accepts_obsolete_and_quarantined() -> None:
     """Single-word UMADR statuses (Obsolete, Quarantined) parse in INVENTORY rows."""
     hash_hex = "B" * 64
     for num, status in (("0068", "Obsolete"), ("0045", "Quarantined")):
-        line = f"{num} | {status} | {hash_hex} | ADR-{num}-example-title.md | example"
+        line = (
+            f"{num} | {status} | {hash_hex} | ADR-{num}-example-title.md | example | -"
+        )
         m = ROW_RE.match(line)
         assert m is not None, status
         assert m.group(2) == status
+
+
+def test_inventory_row_regex_accepts_ratified_by_pending() -> None:
+    """RATIFIED_BY column may be PENDING or an @handle."""
+    hash_hex = "C" * 64
+    line = (
+        f"0071 | Accepted | {hash_hex} | ADR-0071-self-protecting-pii-gate.md | "
+        "Self protecting | PENDING"
+    )
+    m = ROW_RE.match(line)
+    assert m is not None
+    assert m.group(6) == "PENDING"
 
 
 def test_inventory_lists_every_adr_file():

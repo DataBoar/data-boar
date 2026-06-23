@@ -6,11 +6,12 @@
 
 ## Status
 
-Proposed
+Accepted
 
 ### Status history
 
 - 2026-06-21 — Proposed (materializes number reserved by GitHub #381; disambiguation per #993)
+- 2026-06-23 — Accepted (ratification by @FabioLeitao — signature PENDING).
 
 ## Context
 
