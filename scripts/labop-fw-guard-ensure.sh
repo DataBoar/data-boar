@@ -4,7 +4,8 @@
 # Run via narrow sudoers from labop-gate-readiness.sh / Maestro -Deep (#957).
 #
 # Usage: sudo -n bash labop-fw-guard-ensure.sh [--check | --apply]
-#   Env: LAB_OP_SUBNET (required, e.g. RFC1918 CIDR from inventory)
+#   Subnet: REPO_ROOT/.labop-gate/LAB_OP_SUBNET (written by labop-gate-readiness.sh before
+#   narrow-grant invoke). LAB_OP_SUBNET env is fallback for direct operator testing only.
 #
 # Exit: 0=healthy or remediated; 1=needs fix (check) or remediation failed; 2=bad args
 
@@ -25,8 +26,12 @@ for arg in "$@"; do
 done
 
 SUBNET="${LAB_OP_SUBNET:-}"
+GATE_SUBNET_FILE="$(cd "$(dirname "$0")/.." && pwd)/.labop-gate/LAB_OP_SUBNET"
+if [[ -f "$GATE_SUBNET_FILE" ]]; then
+  SUBNET="$(tr -d '[:space:]' <"$GATE_SUBNET_FILE")"
+fi
 if [[ -z "$SUBNET" ]]; then
-  echo "[FW-Guard] FAIL: LAB_OP_SUBNET unset" >&2
+  echo "[FW-Guard] FAIL: LAB_OP_SUBNET unset (write .labop-gate/LAB_OP_SUBNET or set env)" >&2
   exit 2
 fi
 
@@ -65,16 +70,22 @@ if command -v fail2ban-client >/dev/null 2>&1; then
     _warn "fail2ban sshd ignoreip missing lab subnet (have: ${IGNOREIP:-<empty>})"
     NEED_FIX=1
     if [[ $APPLY -eq 1 ]]; then
-      JAIL_LOCAL="/etc/fail2ban/jail.local"
       DROPIN="/etc/fail2ban/jail.d/labop-ignoreip.local"
       if [[ -w /etc/fail2ban ]] || [[ -w "$(dirname "$DROPIN")" ]]; then
+        MERGED_IPS="$IGNOREIP"
+        if [[ -z "$MERGED_IPS" ]]; then
+          MERGED_IPS="127.0.0.1/8 ::1"
+        fi
+        if ! _subnet_in_list "$MERGED_IPS"; then
+          MERGED_IPS="$MERGED_IPS $SUBNET"
+        fi
         if [[ ! -f "$DROPIN" ]] || ! grep -qF "$SUBNET" "$DROPIN" 2>/dev/null; then
           {
             echo "# labop-fw-guard-ensure.sh (leave-no-trace: remove this file to revert)"
             echo "[sshd]"
-            echo "ignoreip = 127.0.0.1/8 ::1 $SUBNET"
+            echo "ignoreip = $MERGED_IPS"
           } >"$DROPIN"
-          _log "Wrote $DROPIN"
+          _log "Wrote $DROPIN (merged ignoreip, preserved existing entries)"
         fi
         if fail2ban-client reload >/dev/null 2>&1 || systemctl reload fail2ban >/dev/null 2>&1; then
           _ok "fail2ban reloaded after ignoreip remediation"
@@ -101,6 +112,11 @@ if command -v sshguard >/dev/null 2>&1 || [[ -f /etc/sshguard/whitelist ]]; then
       break
     fi
   done
+  for d in /etc/sshguard/whitelist.d /etc/sshguard.whitelist.d; do
+    if [[ -d "$d" ]]; then
+      WL="$WL $(grep -vh '^#' "$d"/* 2>/dev/null | tr '\n' ' ')"
+    fi
+  done
   if _subnet_in_list "$WL"; then
     _ok "sshguard whitelist includes $SUBNET"
   elif [[ -z "$WL" && $F2B_PRESENT -eq 1 ]]; then
@@ -109,12 +125,18 @@ if command -v sshguard >/dev/null 2>&1 || [[ -f /etc/sshguard/whitelist ]]; then
     _warn "sshguard whitelist missing lab subnet (have: ${WL:-<empty>})"
     NEED_FIX=1
     if [[ $APPLY -eq 1 ]]; then
-      WL_FILE="/etc/sshguard/whitelist"
-      if [[ ! -f "$WL_FILE" ]]; then WL_FILE="/etc/sshguard.whitelist"; fi
-      if [[ -w "$WL_FILE" ]] || [[ ! -f "$WL_FILE" && -w "$(dirname "$WL_FILE")" ]]; then
-        if ! grep -qF "$SUBNET" "$WL_FILE" 2>/dev/null; then
-          echo "$SUBNET" >>"$WL_FILE"
-          _log "Appended $SUBNET to $WL_FILE"
+      SG_DROPIN="/etc/sshguard/whitelist.d/labop-subnet.conf"
+      if [[ ! -d "$(dirname "$SG_DROPIN")" ]]; then
+        SG_DROPIN="/etc/sshguard.whitelist.d/labop-subnet.conf"
+      fi
+      if [[ -w "$(dirname "$SG_DROPIN")" ]] || [[ ! -f "$SG_DROPIN" && -w /etc/sshguard ]]; then
+        mkdir -p "$(dirname "$SG_DROPIN")" 2>/dev/null || true
+        if [[ ! -f "$SG_DROPIN" ]] || ! grep -qF "$SUBNET" "$SG_DROPIN" 2>/dev/null; then
+          {
+            echo "# labop-fw-guard-ensure.sh (leave-no-trace: remove this file to revert)"
+            echo "$SUBNET"
+          } >"$SG_DROPIN"
+          _log "Wrote reversible drop-in $SG_DROPIN"
         fi
         if command -v rc-service >/dev/null 2>&1; then
           rc-service sshguard restart >/dev/null 2>&1 || true

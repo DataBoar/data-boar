@@ -1028,11 +1028,53 @@ def test_labop_dep_doctor_persona_packages() -> None:
     )
     assert "--personas" in text
     assert "_persona_logical_pkgs" in text
+    assert 'target_nfs) echo "nfs-utils procps iproute2"' in text
+    assert 'target_cifs) echo "samba procps iproute2"' in text
     assert "nfs-utils" in text
     assert "samba" in text
     assert "procps" in text
     assert "iproute2" in text
     assert "apk" in text
+    assert 'xbps-query "$pkg"' in text
+    assert "PERSONA_OS_OK" in text
+    assert "_load_personas_from_gate_context" in text
+
+
+def test_labop_dep_doctor_persona_os_failure_not_swallowed() -> None:
+    """#1020 Bugbot: PERSONA_OS_OK must block exit 0 when persona OS still failing."""
+    root = _project_root()
+    text = (root / "scripts" / "labop-dep-doctor.sh").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "Persona OS packages still missing" in text
+    assert "still missing after phase" in text
+    assert "no package manager (ALARM)" in text
+
+
+def test_labop_gate_readiness_narrow_grant_invoke() -> None:
+    """#1020: privileged nested calls use .labop-gate context + fixed sudoers args."""
+    root = _project_root()
+    text = (root / "scripts" / "labop-gate-readiness.sh").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "_write_gate_context" in text
+    assert ".labop-gate" in text
+    assert "_invoke_priv_script" in text
+    assert "privilege_denied" in text
+    assert 'bash "$DEP_SCRIPT" --check --personas' in text
+    assert "env LAB_OP_SUBNET" not in text
+
+
+def test_labop_fw_guard_subnet_file_and_reversible_sshguard() -> None:
+    """#1020: fw-guard reads .labop-gate/LAB_OP_SUBNET; sshguard uses drop-in not append."""
+    root = _project_root()
+    text = (root / "scripts" / "labop-fw-guard-ensure.sh").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert ".labop-gate/LAB_OP_SUBNET" in text
+    assert "MERGED_IPS" in text
+    assert "whitelist.d/labop-subnet.conf" in text
+    assert '>>"$WL_FILE"' not in text
 
 
 def test_maestro_invokes_gate_readiness_before_handlers() -> None:

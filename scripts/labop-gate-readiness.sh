@@ -71,6 +71,45 @@ _ensure_login_path() {
 
 _ensure_login_path
 
+GATE_CTX_DIR="$REPO_ROOT/.labop-gate"
+
+_write_gate_context() {
+  mkdir -p "$GATE_CTX_DIR"
+  if [[ -n "${LAB_OP_SUBNET:-}" ]]; then
+    printf '%s\n' "$LAB_OP_SUBNET" >"$GATE_CTX_DIR/LAB_OP_SUBNET"
+  fi
+  printf '%s\n' "$PERSONAS_RAW" >"$GATE_CTX_DIR/PERSONAS"
+}
+
+_priv_cmd() {
+  if [[ "$PRIV" == "doas-narrow" ]]; then
+    echo "doas -n"
+  elif [[ "$PRIV" == "sudo-narrow" ]]; then
+    echo "sudo -n"
+  else
+    echo ""
+  fi
+}
+
+_priv_denied_output() {
+  local out="$1"
+  grep -qiE 'not allowed|a password is required|doas \(.*\) failed|sorry, user|authentication failures' <<<"$out"
+}
+
+_invoke_priv_script() {
+  local script="$1" mode="$2"
+  local priv out ec=0
+  priv="$(_priv_cmd)"
+  [[ -z "$priv" ]] && return 127
+  _write_gate_context
+  out="$($priv bash "$script" "$mode" 2>&1)" || ec=$?
+  printf '%s\n' "$out" >&2
+  if [[ $ec -ne 0 ]] && _priv_denied_output "$out"; then
+    return 126
+  fi
+  return $ec
+}
+
 _persona_needs() {
   local persona="$1" need="$2"
   local p
@@ -174,10 +213,15 @@ if [[ -f "$FW_SCRIPT" ]]; then
     _gr fail2ban ALARM "LAB_OP_SUBNET_unset"
     FAIL=1
   elif [[ "$PRIV" != "NO_PRIV" ]]; then
-    PRIV_CMD="sudo -n"
-    command -v doas >/dev/null 2>&1 && doas -n true 2>/dev/null && PRIV_CMD="doas -n"
-    if $PRIV_CMD env LAB_OP_SUBNET="$LAB_OP_SUBNET" bash "$FW_SCRIPT" $FW_MODE; then
+    FW_EC=0
+    if ! _invoke_priv_script "$FW_SCRIPT" "$FW_MODE"; then
+      FW_EC=$?
+    fi
+    if [[ $FW_EC -eq 0 ]]; then
       _gr fail2ban OK "subnet_whitelisted"
+    elif [[ $FW_EC -eq 126 ]]; then
+      _gr fail2ban ALARM "privilege_denied"
+      FAIL=1
     elif [[ $APPLY -eq 1 ]]; then
       _gr fail2ban ALARM "remediation_failed"
       FAIL=1
@@ -191,25 +235,31 @@ if [[ -f "$FW_SCRIPT" ]]; then
   fi
 fi
 
-# --- dep-doctor persona packages (#958) ---
+# --- dep-doctor (#958): always --check as operator; --privileged via narrow grant only ---
 DEP_SCRIPT="$SCRIPT_DIR/labop-dep-doctor.sh"
-if [[ -f "$DEP_SCRIPT" ]] && { [[ $APPLY -eq 1 ]] || [[ $FAIL -eq 1 ]]; }; then
-  if [[ "$PRIV" != "NO_PRIV" ]]; then
-    PRIV_CMD="sudo -n"
-    command -v doas >/dev/null 2>&1 && doas -n true 2>/dev/null && PRIV_CMD="doas -n"
-    DEP_ARGS=(--personas "$PERSONAS_RAW")
-    if [[ $APPLY -eq 1 ]]; then
-      DEP_ARGS=(--privileged "${DEP_ARGS[@]}")
-    else
-      DEP_ARGS=(--check "${DEP_ARGS[@]}")
+if [[ -f "$DEP_SCRIPT" ]]; then
+  DEP_OUT=""
+  DEP_EC=0
+  DEP_OUT="$(bash "$DEP_SCRIPT" --check --personas "$PERSONAS_RAW" 2>&1)" || DEP_EC=$?
+  printf '%s\n' "$DEP_OUT" >&2
+  if [[ $DEP_EC -eq 0 ]]; then
+    _gr dep-doctor OK "modules_and_persona_os"
+  else
+    _gr dep-doctor ALARM "packages_or_modules_missing"
+    FAIL=1
+  fi
+  if [[ $APPLY -eq 1 && "$PRIV" != "NO_PRIV" ]]; then
+    PRIV_EC=0
+    if ! _invoke_priv_script "$DEP_SCRIPT" --privileged; then
+      PRIV_EC=$?
     fi
-    if $PRIV_CMD bash "$DEP_SCRIPT" "${DEP_ARGS[@]}"; then
-      _gr dep-doctor OK "persona_packages"
-    elif [[ $APPLY -eq 1 ]]; then
-      _gr dep-doctor ALARM "remediation_failed"
+    if [[ $PRIV_EC -eq 0 ]]; then
+      _gr dep-doctor REMEDIATE "privileged_heal_ok"
+    elif [[ $PRIV_EC -eq 126 ]]; then
+      _gr dep-doctor ALARM "privilege_denied"
       FAIL=1
     else
-      _gr dep-doctor ALARM "packages_or_modules_missing"
+      _gr dep-doctor ALARM "remediation_failed"
       FAIL=1
     fi
   fi

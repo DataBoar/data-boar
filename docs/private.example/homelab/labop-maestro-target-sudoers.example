@@ -17,4 +17,19 @@ Cmnd_Alias LABOP_SMB_SERVER = /bin/bash REPO_PATH/scripts/labop-smb-server-ensur
                               /bin/bash REPO_PATH/scripts/labop-smb-server-ensure.sh --apply, \
                               /usr/bin/bash REPO_PATH/scripts/labop-smb-server-ensure.sh --apply
 
-USER ALL=(root) NOPASSWD: LABOP_NFS_SERVER, LABOP_SMB_SERVER
+# FASE 2 gate readiness (#957/#958)
+# exactly (no env prefix, no variable persona args):
+#   sudo -n bash REPO_PATH/scripts/labop-fw-guard-ensure.sh --check|--apply
+#   sudo -n bash REPO_PATH/scripts/labop-dep-doctor.sh --check|--privileged
+
+Cmnd_Alias LABOP_FW_GUARD = /bin/bash REPO_PATH/scripts/labop-fw-guard-ensure.sh --check, \
+                            /usr/bin/bash REPO_PATH/scripts/labop-fw-guard-ensure.sh --check, \
+                            /bin/bash REPO_PATH/scripts/labop-fw-guard-ensure.sh --apply, \
+                            /usr/bin/bash REPO_PATH/scripts/labop-fw-guard-ensure.sh --apply
+
+Cmnd_Alias LABOP_DEP_DOCTOR = /bin/bash REPO_PATH/scripts/labop-dep-doctor.sh --check, \
+                              /usr/bin/bash REPO_PATH/scripts/labop-dep-doctor.sh --check, \
+                              /bin/bash REPO_PATH/scripts/labop-dep-doctor.sh --privileged, \
+                              /usr/bin/bash REPO_PATH/scripts/labop-dep-doctor.sh --privileged
+
+USER ALL=(root) NOPASSWD: LABOP_NFS_SERVER, LABOP_SMB_SERVER, LABOP_FW_GUARD, LABOP_DEP_DOCTOR

@@ -90,7 +90,7 @@ _pkg_installed() {
   case "$pm" in
     apt) dpkg -s "$pkg" >/dev/null 2>&1 ;;
     apk) apk info -e "$pkg" >/dev/null 2>&1 ;;
-    xbps) xbps-query -l "$pkg" >/dev/null 2>&1 ;;
+    xbps) xbps-query "$pkg" >/dev/null 2>&1 ;;
     pacman) pacman -Q "$pkg" >/dev/null 2>&1 ;;
     dnf) rpm -q "$pkg" >/dev/null 2>&1 ;;
     zypper) rpm -q "$pkg" >/dev/null 2>&1 ;;
@@ -114,20 +114,31 @@ _pm_install_cmd() {
 _persona_logical_pkgs() {
   local persona="${1// /}"
   case "$persona" in
-    target_cifs) echo "samba" ;;
-    target_nfs) echo "nfs-utils" ;;
-    baremetal|target_nfs|target_cifs|web) echo "procps iproute2" ;;
+    target_nfs) echo "nfs-utils procps iproute2" ;;
+    target_cifs) echo "samba procps iproute2" ;;
+    baremetal|web) echo "procps iproute2" ;;
     *) echo "" ;;
   esac
 }
 
+_load_personas_from_gate_context() {
+  if [[ -n "$PERSONAS_RAW" ]]; then
+    return 0
+  fi
+  local gate_file
+  gate_file="$(cd "$(dirname "$0")/.." && pwd)/.labop-gate/PERSONAS"
+  if [[ -f "$gate_file" ]]; then
+    PERSONAS_RAW="$(tr -d '\n\r' <"$gate_file")"
+  fi
+}
+
 _run_persona_os_phase() {
   [[ -z "$PERSONAS_RAW" ]] && return 0
-  local pm pkgs logical pkg need=0
+  local pm pkgs logical pkg failed=0
   pm="$(_detect_pm)"
   if [[ -z "$pm" ]]; then
-    _warn "Persona OS phase: no package manager (skip)"
-    return 0
+    _warn "Persona OS phase: no package manager (ALARM)"
+    return 1
   fi
   declare -A WANT=()
   local p blob
@@ -144,21 +155,26 @@ _run_persona_os_phase() {
       _ok "persona pkg $pkg ($logical) installed"
     else
       _warn "persona pkg $pkg ($logical) missing"
-      need=1
+      failed=1
       if [[ $CHECK_ONLY -eq 0 && $PRIVILEGED -eq 1 ]]; then
         local cmd
         cmd="$(_pm_install_cmd "$pkg" "$pm")"
         _log "Installing: $cmd"
-        if eval "$cmd" 2>&1; then
-          _ok "installed $pkg via $pm"
-          need=0
-        else
+        if ! eval "$cmd" 2>&1; then
           _fail "install failed for $pkg via $pm"
         fi
       fi
     fi
   done
-  if [[ $need -ne 0 ]]; then
+  # Re-verify ALL wanted packages; success on one install must not mask another failure (#1020).
+  for logical in "${!WANT[@]}"; do
+    pkg="$(_pkg_logical_to_pm "$logical" "$pm")"
+    if ! _pkg_installed "$pkg" "$pm"; then
+      failed=1
+      _warn "persona pkg $pkg ($logical) still missing after phase"
+    fi
+  done
+  if [[ $failed -ne 0 ]]; then
     return 1
   fi
   return 0
@@ -167,6 +183,7 @@ _run_persona_os_phase() {
 # ---------------------------------------------------------------------------
 # Phase 0: persona OS packages (#958) before Python probes
 # ---------------------------------------------------------------------------
+_load_personas_from_gate_context
 PERSONA_OS_OK=1
 if [[ -n "$PERSONAS_RAW" ]]; then
   if ! _run_persona_os_phase; then
@@ -228,6 +245,10 @@ if ! probe_lzma; then
 fi
 
 if [[ $NEED_FIX -eq 0 ]]; then
+  if [[ -n "$PERSONAS_RAW" && $PERSONA_OS_OK -eq 0 ]]; then
+    _fail "Persona OS packages still missing (privileged remediation incomplete)."
+    exit 1
+  fi
   _ok "All optional modules healthy. Nothing to do."
   exit 0
 fi
@@ -314,6 +335,10 @@ _log "Step 4: uv sync --extra compressed (post-install)"
 
 _log "Final probe..."
 if probe_lzma && probe_module "py7zr"; then
+  if [[ -n "$PERSONAS_RAW" && $PERSONA_OS_OK -eq 0 ]]; then
+    _fail "Persona OS packages still missing after full remediation."
+    exit 1
+  fi
   _ok "All optional modules healthy after full remediation."
   exit 0
 else
