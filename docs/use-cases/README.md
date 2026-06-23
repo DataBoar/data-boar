@@ -22,6 +22,7 @@ Each storyboard includes **Partner opportunity** (how to qualify a lead) and **P
 | [REAL_ESTATE_AND_CONDOMINIUM_MANAGEMENT.md](REAL_ESTATE_AND_CONDOMINIUM_MANAGEMENT.md) | Rental / condo / property SMB, high document churn | Unit folders, contracts, consumption logs, simple CRM exports |
 | [NGO_MIGRANT_WELCOME_AND_HUMANITARIAN_FILES.md](NGO_MIGRANT_WELCOME_AND_HUMANITARIAN_FILES.md) | Humanitarian intake; ethics-first minimisation | Intake spreadsheets, scans (where allowed), messaging exports |
 | [EDTECH_LMS_EXPORTS_AND_MINORS.md](EDTECH_LMS_EXPORTS_AND_MINORS.md) | LMS rosters, guardians, minors; due diligence hygiene | LMS CSV/JSON, tickets, optional roster SQL |
+| [BACKUP_AND_DATA_PROTECTION_ESTATE_CRITICALITY.md](BACKUP_AND_DATA_PROTECTION_ESTATE_CRITICALITY.md) | Backup / data-protection estate; criticality overlay on the install base | Restored/mounted read-only copies, source shares/DBs, export catalogues |
 
 ## Adding future storyboards
 
