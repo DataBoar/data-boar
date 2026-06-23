@@ -76,7 +76,17 @@ jobs:
       - name: cargo test
         run: cargo test --all-targets --locked
 
-      # `-D warnings` promotes every clippy lint to an error so the job fails
-      # on any new warning introduced in the crate.
       - name: cargo clippy (deny warnings)
         run: cargo clippy --all-targets --locked -- -D warnings
+
+      # Supply-chain Layer 1 (ADR-0074 / GitHub #988): Rust SCA before merge.
+      - name: Install cargo-audit and cargo-deny
+        run: |
+          cargo install cargo-audit --version 0.22.2 --locked --force
+          cargo install cargo-deny --version 0.19.9 --locked --force
+
+      - name: cargo audit (RUSTSEC)
+        run: cargo audit
+
+      - name: cargo deny check
+        run: cargo deny check advisories bans licenses sources

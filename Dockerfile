@@ -7,7 +7,9 @@
 # -----------------------------------------------------------------------------
 # Rolling 3.13 slim: aligns with CI (3.12 + 3.13), requires-python >=3.12, and Docker Scout
 # base-image recommendations (fewer base CVEs vs. 3.12-slim at last scan).
-FROM python:3.13-slim AS builder
+# Digest pin (ADR-0074 / #988): tag-only FROM is tag-moving risk; Dependabot docker ecosystem
+# proposes digest bumps. Human tag comment for review (python:3.13-slim).
+FROM python:3.13-slim@sha256:3a2c25932e66f706172de831a1b283d491c53ef876cd7fc55a62bcf9a6dd2c61 AS builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential gcc g++ pkg-config \
@@ -35,7 +37,8 @@ RUN pip uninstall -y wheel || true && \
 # -----------------------------------------------------------------------------
 # Stage 2: minimal runtime (no build tools, only runtime libs + app)
 # -----------------------------------------------------------------------------
-FROM python:3.13-slim
+# python:3.13-slim (digest pin; same as builder stage).
+FROM python:3.13-slim@sha256:3a2c25932e66f706172de831a1b283d491c53ef876cd7fc55a62bcf9a6dd2c61
 
 LABEL org.opencontainers.image.description="LGPD/GDPR/CCPA audit. Default: web API and frontend on port 8088. Override command for CLI one-shot."
 

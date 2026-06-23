@@ -52,3 +52,15 @@ updates:
       prefix: "ci(actions)"
     cooldown:
       default-days: 7
+
+  # Base image digest pins in Dockerfile (ADR-0074 / #988).
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 3
+    labels: ["dependencies", "docker"]
+    commit-message:
+      prefix: "deps(docker)"
+    cooldown:
+      default-days: 7

@@ -172,6 +172,21 @@ jobs:
       - name: Run pip audit
         run: uv run pip-audit --ignore-vuln PYSEC-2024-277 --ignore-vuln PYSEC-2026-89 --ignore-vuln PYSEC-2025-183 --ignore-vuln PYSEC-2026-217
 
+  dependency-review:
+    name: Dependency review (PR)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@56339e523c0409420f6c2c9a2f4292bbb3c07dd3 # v4.8.0
+
   sonar:
     name: SonarQube / SonarCloud
     runs-on: ubuntu-latest
@@ -227,7 +242,7 @@ jobs:
   slack-notify-on-failure:
     name: Slack CI failure notify
     if: ${{ always() && contains(needs.*.result, 'failure') }}
-    needs: [test, lint, bandit, audit, sonar]
+    needs: [test, lint, bandit, audit, dependency-review, sonar]
     uses: ./.github/workflows/slack-ci-failure-notify.yml
     with:
       run_name: CI
