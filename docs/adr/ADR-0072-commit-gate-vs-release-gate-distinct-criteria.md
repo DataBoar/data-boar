@@ -49,6 +49,7 @@ Two gates exist, with **completely distinct criteria, authorities, and triggers:
 3. **Bumping to stable (removing `-rc`/`-beta`) = FASE 3 = only with the release gate CLOSED + operator OK.** Release PRs bump only to `-rc-N`.
 4. **Verifiable ≠ verified.** Closing a gate-*verifiability* bug (e.g. #831) is not the gate having *passed*.
 5. **Machine guard:** CI/pre-commit blocks a `version` without `-rc*`/`-beta` suffix on `main` while any `release-gate`-labeled issue (e.g. #406) is OPEN.
+6. **Operator-gated issue close (GitHub #990):** Release-gate issues carry label **`operator-gated`**. Workflow **`.github/workflows/operator-gated-reopen.yml`** reopens them unless close approval is **(a)** label **`gate-close-approved`** at close time, or **(b)** the **latest** comment **starts with** **`Gate-Close-Approved-By: @FabioLeitao`** (deliberate close comment — **not** issue body, **not** comment history; protocol doc cites in backticks must not unlock closes). Actor is **not** trusted. Legitimate close: `gh issue close <n> --comment "Gate-Close-Approved-By: @FabioLeitao — <evidence>"` or add **`gate-close-approved`** then close.
 
 ## Rationale
 
@@ -76,7 +77,7 @@ Two gates exist, with **completely distinct criteria, authorities, and triggers:
 - [ADR 0048 — operator-facing taxonomy and naming contract](ADR-0048-operator-facing-taxonomy-and-naming-contract-preservation.md)
 - [ADR 0061 — U-axis issue suborder and cross-milestone gate](ADR-0061-u-axis-issue-suborder-and-cross-milestone-gate.md)
 - [ADR 0056 — cryptographic ADR inventory](ADR-0056-cryptographic-adr-inventory-inv-adr-ssh-attestation.md)
-- GitHub #970 (premature bump RCA), #406 (release gate checklist)
+- GitHub #970 (premature bump RCA), #406 (release gate checklist), #990 (operator-gated auto-reopen workflow)
 
 ## References
 

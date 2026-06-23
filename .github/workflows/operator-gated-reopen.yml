@@ -1,0 +1,110 @@
+# Operator-gated issue close guard (GitHub #990, ADR-0072).
+#
+# Issues labeled `operator-gated` (e.g. release gate #406) cannot stay CLOSED unless:
+#   (a) label `gate-close-approved` is present at close time, OR
+#   (b) the **latest** issue comment starts with the deliberate trailer (close comment):
+#         Gate-Close-Approved-By: @FabioLeitao
+#
+# Do NOT scan issue body or comment history — a protocol doc comment citing the trailer
+# in backticks would otherwise allow any close (fatal false negative).
+#
+# Actor identity is NOT trusted (operator and agents share the same GitHub account).
+name: Operator-gated issue reopen
+
+permissions:
+  issues: write
+
+on:
+  issues:
+    types: [closed]
+
+jobs:
+  guard-reopen:
+    name: Reopen without close approval
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enforce operator-gated close contract
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        with:
+          script: |
+            const OPERATOR_GATED_LABEL = "operator-gated";
+            const APPROVED_CLOSE_LABEL = "gate-close-approved";
+            // Trailer must open the close comment — not a doc line citing it in backticks.
+            const CLOSE_MARKER =
+              /^\s*Gate-Close-Approved-By:\s*@?FabioLeitao\b/im;
+
+            const issue = context.payload.issue;
+            const labels = (issue.labels || []).map((l) => l.name);
+            if (!labels.includes(OPERATOR_GATED_LABEL)) {
+              core.info(
+                `Issue #${issue.number} lacks ${OPERATOR_GATED_LABEL} — no-op`
+              );
+              return;
+            }
+
+            const { owner, repo } = context.repo;
+            const issue_number = issue.number;
+
+            if (labels.includes(APPROVED_CLOSE_LABEL)) {
+              core.info(
+                `Issue #${issue_number}: ${APPROVED_CLOSE_LABEL} label — close allowed`
+              );
+              return;
+            }
+
+            const comments = await github.paginate(
+              github.rest.issues.listComments,
+              {
+                owner,
+                repo,
+                issue_number,
+                per_page: 100,
+              }
+            );
+
+            if (comments.length === 0) {
+              core.warning(
+                `Issue #${issue_number}: no comments — cannot verify close trailer`
+              );
+            } else {
+              const sorted = [...comments].sort(
+                (a, b) => new Date(b.created_at) - new Date(a.created_at)
+              );
+              const latestBody = sorted[0].body || "";
+              if (CLOSE_MARKER.test(latestBody)) {
+                core.info(
+                  `Issue #${issue_number}: latest comment has Gate-Close-Approved-By — close allowed`
+                );
+                return;
+              }
+            }
+
+            const notice =
+              "Auto-reopened: issue `operator-gated` fechada sem aprovação válida. " +
+              "Use **uma** destas opções na próxima tentativa:\n" +
+              "1. Comentário de fechamento cuja **primeira linha** seja " +
+              "`Gate-Close-Approved-By: @FabioLeitao — <evidência>` " +
+              "(ex.: `gh issue close " +
+              issue_number +
+              " --comment \"Gate-Close-Approved-By: @FabioLeitao — …\"`), ou\n" +
+              "2. Label `gate-close-approved` antes de fechar.\n\n" +
+              "O workflow **não** varre corpo da issue nem comentários antigos — " +
+              "citar o protocolo em doc não libera fechamento (FASE 3, ADR-0072).";
+
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number,
+              body: notice,
+            });
+
+            await github.rest.issues.update({
+              owner,
+              repo,
+              issue_number,
+              state: "open",
+            });
+
+            core.warning(
+              `Issue #${issue_number} reopened — missing close approval`
+            );

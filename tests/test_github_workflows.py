@@ -412,3 +412,31 @@ def test_workflow_security_lint_wrappers_present() -> None:
     ):
         path = REPO_ROOT / rel
         assert path.is_file(), f"missing local zizmor wrapper: {rel}"
+
+
+def test_operator_gated_reopen_workflow_present_and_valid() -> None:
+    """ADR-0072 / #990: structural guard for operator-gated issue auto-reopen."""
+    data = _load_workflow("operator-gated-reopen.yml")
+    assert data.get("name")
+    text = (WORKFLOWS / "operator-gated-reopen.yml").read_text(encoding="utf-8")
+    # PyYAML may coerce bare `on:` — assert trigger from source text.
+    assert re.search(r"types:\s*\[closed\]", text)
+    perms = data.get("permissions") or {}
+    assert perms.get("issues") == "write"
+    jobs = data.get("jobs") or {}
+    assert "guard-reopen" in jobs
+    assert "operator-gated" in text
+    assert "gate-close-approved" in text
+    assert "Gate-Close-Approved-By" in text
+    assert "sorted[0]" in text or "latest" in text.lower()
+    assert "issue.body" not in text.replace("latestBody", "")
+    assert "actions/github-script@" in text
+    sha_40 = re.compile(r"@[0-9a-f]{40}")
+    for line in text.splitlines():
+        code = line.split("#", 1)[0]
+        if "uses:" not in code or "docker://" in code:
+            continue
+        if "actions/github-script@" in code:
+            assert sha_40.search(code), (
+                f"expected full commit SHA for github-script: {line.strip()!r}"
+            )
