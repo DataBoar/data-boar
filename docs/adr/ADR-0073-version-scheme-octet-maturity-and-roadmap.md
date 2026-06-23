@@ -58,6 +58,7 @@ How to version **post-GA public fixes** under rule (1) — **without** a fourth 
 
 ## Related Decisions
 
+- [ADR 0071 — Self-protecting PII gate](ADR-0071-self-protecting-pii-gate.md) — `Gate-Change-Approved-By:` (gate-file change) vs `Gate-Close-Approved-By:` (release-gate issue close)
 - [ADR 0072 — Commit Gate vs Release Gate](ADR-0072-commit-gate-vs-release-gate-distinct-criteria.md)
 - [ADR 0045 — ADR metadata and format standardization (UMADR)](ADR-0045-adr-metadata-and-format-standardization.md)
 - [ADR 0048 — operator-facing taxonomy and naming contract](ADR-0048-operator-facing-taxonomy-and-naming-contract-preservation.md)
