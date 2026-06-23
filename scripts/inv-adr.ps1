@@ -22,7 +22,11 @@
 
 .PARAMETER RatifiedBy
     Operator handle (e.g. @FabioLeitao). Stamps RATIFIED_BY for ADRs whose status history
-  pending ratification matches this handle. Use with a signed commit trailer ADR-Ratified-By:.
+    pending ratification matches this handle. Use with a signed commit trailer ADR-Ratified-By:.
+
+.PARAMETER StampOnlyNumbers
+    When used with -RatifiedBy, stamp only these ADR numbers (e.g. 0068 or 0060,0063).
+    Other rows keep prior @handle from existing INVENTORY when regen would yield PENDING.
 
 .PARAMETER Write
     Explicit write (default when -DryRun is not set). Accepted for operator ritual parity.
@@ -37,6 +41,7 @@ param(
     [string]$OutFile = "",
     [switch]$DryRun,
     [string]$RatifiedBy = "",
+    [string[]]$StampOnlyNumbers = @(),
     [switch]$Write
 )
 
@@ -109,11 +114,33 @@ function Get-AdrRatifiedByFromContent {
     return $handle
 }
 
+function Get-PreservedRatifiedByMap {
+    param([string]$Path)
+    $map = @{}
+    if (-not (Test-Path -LiteralPath $Path)) { return $map }
+    foreach ($line in Get-Content -LiteralPath $Path -Encoding UTF8) {
+        if ($line -match '^(\d{4}) \| .+ \| .+ \| .+ \| .+ \| (@\S+)$') {
+            $map[$Matches[1]] = $Matches[2]
+        }
+    }
+    return $map
+}
+
 $stampHandle = $RatifiedBy.Trim()
 if ($stampHandle -and $stampHandle -notmatch '^@\S+$') {
     Write-Error "RatifiedBy must be an @handle (e.g. @FabioLeitao); got: $RatifiedBy"
     exit 1
 }
+
+$stampOnlySet = @{}
+foreach ($n in $StampOnlyNumbers) {
+    foreach ($part in ($n -split '[,\s]+')) {
+        $p = $part.Trim()
+        if ($p) { $stampOnlySet[$p] = $true }
+    }
+}
+$useStampFilter = ($stampOnlySet.Count -gt 0)
+$preservedRatifiedBy = Get-PreservedRatifiedByMap -Path $OutFile
 
 $adrs = Get-ChildItem -LiteralPath $AdrDir -File -Filter "ADR-*.md" |
     Where-Object { $_.Name -match '^ADR-(\d{4})-' } |
@@ -127,7 +154,19 @@ foreach ($adr in $adrs) {
     $raw = Get-Content -LiteralPath $adr.FullName -Raw -Encoding UTF8
     $title = Get-AdrTitleFromContent -Raw $raw -FileName $adr.Name
     $status = Get-AdrStatusFromContent -Raw $raw
-    $ratifiedBy = Get-AdrRatifiedByFromContent -Raw $raw -StampHandle $stampHandle
+    $stampForAdr = ""
+    if ($stampHandle) {
+        if (-not $useStampFilter -or $stampOnlySet.ContainsKey($num)) {
+            $stampForAdr = $stampHandle
+        }
+    }
+    $ratifiedBy = Get-AdrRatifiedByFromContent -Raw $raw -StampHandle $stampForAdr
+    if ($ratifiedBy -eq 'PENDING' -and $preservedRatifiedBy.ContainsKey($num)) {
+        $prev = $preservedRatifiedBy[$num]
+        if ($prev -match '^@\S+$') {
+            $ratifiedBy = $prev
+        }
+    }
     $norm = $raw -replace "`r`n", "`n" -replace "`r", "`n"
     $bytes = [System.Text.Encoding]::UTF8.GetBytes($norm)
     $sha = [System.Security.Cryptography.SHA256]::Create()

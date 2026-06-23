@@ -1,6 +1,6 @@
 # ADR 0068 — Primary Linux dev workstation (temporary)
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date (UTC):** 2026-06-09
 - **Authors:** Fabio Leitao
 - **Deciders:** Fabio Leitao
@@ -9,6 +9,7 @@
 
 - 2026-06-09 — Proposed
 - 2026-06-23 — Amended: Maestro canonical guard (#948) — orchestrator never align/overwrite target
+- 2026-06-23 — Accepted (ratification by @FabioLeitao — signature PENDING).
 
 ## Context
 
