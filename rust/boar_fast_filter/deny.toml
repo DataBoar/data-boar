@@ -1,6 +1,6 @@
 # cargo-deny policy for boar_fast_filter (ADR-0074 Layer 1 / GitHub #988).
 # Run: cargo deny check advisories bans licenses sources
-# Schema: advisories/licenses version 2 (cargo-deny 0.17+; deprecated keys removed).
+# Schema: advisories/licenses version 2 (cargo-deny 0.18.6+ for CVSS 4.0 advisory DB).
 
 [advisories]
 version = 2

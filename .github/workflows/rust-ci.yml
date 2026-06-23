@@ -83,7 +83,7 @@ jobs:
       - name: Install cargo-audit and cargo-deny
         run: |
           cargo install cargo-audit --version 0.22.2 --locked --force
-          cargo install cargo-deny --version 0.17.0 --locked --force
+          cargo install cargo-deny --version 0.19.9 --locked --force
 
       - name: cargo audit (RUSTSEC)
         run: cargo audit
