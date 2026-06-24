@@ -69,12 +69,19 @@ _detect_pm() {
 _pkg_logical_to_pm() {
   local logical="$1" pm="$2"
   case "$logical" in
-    procps) echo "procps" ;;
+    procps)
+      case "$pm" in
+        xbps) echo "procps-ng" ;;
+        apk) echo "procps" ;;
+        *) echo "procps" ;;
+      esac
+      ;;
     iproute2) echo "iproute2" ;;
     samba) echo "samba" ;;
     nfs-utils)
       case "$pm" in
         apt) echo "nfs-kernel-server" ;;
+        apk) echo "nfs-utils" ;;
         *) echo "nfs-utils" ;;
       esac
       ;;

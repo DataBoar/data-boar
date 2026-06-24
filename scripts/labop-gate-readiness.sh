@@ -71,6 +71,29 @@ _ensure_login_path() {
 
 _ensure_login_path
 
+# Narrow sudoers/doas grants match a literal bash path (#1021 ROUND 5) - never bare `bash`.
+_resolve_bash_bin() {
+  local candidate
+  candidate="$(command -v bash 2>/dev/null || true)"
+  if [[ -n "$candidate" && -x "$candidate" ]]; then
+    printf '%s' "$candidate"
+    return 0
+  fi
+  for candidate in /usr/bin/bash /bin/bash; do
+    if [[ -x "$candidate" ]]; then
+      printf '%s' "$candidate"
+      return 0
+    fi
+  done
+  return 1
+}
+
+LABOP_BASH_BIN=""
+if ! LABOP_BASH_BIN="$(_resolve_bash_bin)"; then
+  _gr privilege ALARM "bash_bin_unresolved"
+  FAIL=1
+fi
+
 GATE_CTX_DIR="$REPO_ROOT/.labop-gate"
 
 # shellcheck source=labop-rfc1918-cidr-lib.sh
@@ -114,15 +137,28 @@ _invoke_priv_script() {
   local priv out ec=0
   priv="$(_priv_cmd)"
   [[ -z "$priv" ]] && return 127
+  if [[ -z "$LABOP_BASH_BIN" ]]; then
+    return 127
+  fi
   if ! _write_gate_context; then
     return 125
   fi
-  out="$($priv bash "$script" "$@" 2>&1)" || ec=$?
+  out="$($priv "$LABOP_BASH_BIN" "$script" "$@" 2>&1)" || ec=$?
   printf '%s\n' "$out" >&2
   if [[ $ec -ne 0 ]] && _priv_denied_output "$out"; then
     return 126
   fi
   return $ec
+}
+
+_has_persona() {
+  local want="$1" p
+  IFS=',' read -ra _PL <<<"$PERSONAS_RAW"
+  for p in "${_PL[@]}"; do
+    p="${p// /}"
+    [[ "$p" == "$want" ]] && return 0
+  done
+  return 1
 }
 
 _persona_needs() {
@@ -172,7 +208,7 @@ _doas_c_has_labop_grant() {
   local conf
   for conf in /etc/doas.conf /etc/doas.d/*.conf; do
     [[ -f "$conf" ]] || continue
-    if doas -C "$conf" bash "$_FW_GUARD_SCRIPT" --check 2>/dev/null; then
+    if doas -C "$conf" "${LABOP_BASH_BIN:-/bin/bash}" "$_FW_GUARD_SCRIPT" --check 2>/dev/null; then
       return 0
     fi
   done
@@ -188,7 +224,7 @@ _probe_fw_guard_priv() {
   if ! _write_gate_context; then
     return 1
   fi
-  out="$($priv bash "$_FW_GUARD_SCRIPT" --check 2>&1)" || ec=$?
+  out="$($priv "${LABOP_BASH_BIN:-/bin/bash}" "$_FW_GUARD_SCRIPT" --check 2>&1)" || ec=$?
   _FW_GUARD_PROBE_OUT="$out"
   _FW_GUARD_PROBE_EC=$ec
   _FW_GUARD_PROBE_DONE=1
@@ -238,16 +274,18 @@ _detect_doas_narrow() {
 
 # --- Privilege probe (#954 / #959 / #1022: narrow grant != sudo -n true) ---
 PRIV="NO_PRIV"
-if _detect_doas_narrow; then
-  PRIV="doas-narrow"
-elif _detect_sudo_narrow; then
-  PRIV="sudo-narrow"
-fi
-if [[ "$PRIV" == "NO_PRIV" ]]; then
-  _gr privilege ALARM "no_narrow_grant"
-  FAIL=1
-else
-  _gr privilege OK "$PRIV" "${_PRIV_DETAIL:-}"
+if [[ -n "$LABOP_BASH_BIN" ]]; then
+  if _detect_doas_narrow; then
+    PRIV="doas-narrow"
+  elif _detect_sudo_narrow; then
+    PRIV="sudo-narrow"
+  fi
+  if [[ "$PRIV" == "NO_PRIV" ]]; then
+    _gr privilege ALARM "no_narrow_grant"
+    FAIL=1
+  else
+    _gr privilege OK "$PRIV" "${_PRIV_DETAIL:-}"
+  fi
 fi
 
 # --- Per-persona binaries ---
@@ -305,14 +343,16 @@ fi
 # --- fail2ban / sshguard (#957) ---
 FW_SCRIPT="$SCRIPT_DIR/labop-fw-guard-ensure.sh"
 if [[ -f "$FW_SCRIPT" ]]; then
-  FW_MODE=$([[ $APPLY -eq 1 ]] && echo --apply || echo --check)
-  if [[ -z "${LAB_OP_SUBNET:-}" ]]; then
+  if _has_persona maestro; then
+    _gr fail2ban OK "maestro_orchestrator_skip"
+  elif [[ -z "${LAB_OP_SUBNET:-}" ]]; then
     _gr fail2ban ALARM "LAB_OP_SUBNET_unset"
     FAIL=1
   elif ! _is_rfc1918_lab_subnet "${LAB_OP_SUBNET}"; then
     _gr fail2ban ALARM "LAB_OP_SUBNET_not_rfc1918"
     FAIL=1
   elif [[ "$PRIV" != "NO_PRIV" ]]; then
+    FW_MODE=$([[ $APPLY -eq 1 ]] && echo --apply || echo --check)
     FW_EC=0
     if [[ "${_FW_GUARD_PROBE_DONE:-0}" -eq 1 && "$FW_MODE" == "--check" ]]; then
       printf '%s\n' "$_FW_GUARD_PROBE_OUT" >&2

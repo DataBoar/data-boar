@@ -1050,6 +1050,8 @@ def test_labop_dep_doctor_persona_packages() -> None:
     assert "nfs-utils" in text
     assert "samba" in text
     assert "procps" in text
+    assert "procps-ng" in text
+    assert "_pkg_logical_to_pm" in text
     assert "iproute2" in text
     assert "apk" in text
     assert 'xbps-query "$pkg"' in text
@@ -1090,6 +1092,10 @@ def test_labop_gate_readiness_narrow_grant_invoke() -> None:
     assert "maturin develop" in text
     assert "if ! _invoke_priv_script" not in text
     assert "Capture exit directly" in text
+    assert "_resolve_bash_bin" in text
+    assert "LABOP_BASH_BIN" in text
+    assert '"$LABOP_BASH_BIN"' in text
+    assert "maestro_orchestrator_skip" in text
     assert "env LAB_OP_SUBNET" not in text
 
 
