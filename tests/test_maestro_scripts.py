@@ -927,6 +927,7 @@ def test_target_nfs_deep_apply_fail_is_real_fail() -> None:
     assert "elseif ($Deep)" in text
     assert "[REAL FAIL] NFS ensure --apply" in text
     assert "elseif ($ensureExit -eq 3)" in text
+    assert "exit 3" in text
     assert "Get-EnsureAlarmFromOutput" in text
     assert "Write-RemoteSentinel" in text
     assert "exit 1" in text
@@ -954,7 +955,29 @@ def test_target_cifs_graceful_alarm_on_exit_3() -> None:
         root / "scripts" / "maestro" / "handlers" / "Handle-target_cifs.ps1"
     ).read_text(encoding="utf-8", errors="replace")
     assert "elseif ($ensureExit -eq 3)" in text
+    assert "exit 3" in text
     assert "Get-EnsureAlarmFromOutput" in text
+
+
+def test_maestro_handler_exit_3_alarm_tally() -> None:
+    """#1021 R9b: exit 3 = ALARM tally; exit 1 = REAL FAIL; summary ALARM:N."""
+    root = _project_root()
+    common = (root / "scripts" / "maestro" / "Lab-MaestroCommon.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    maestro = (root / "scripts" / "maestro" / "Maestro.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    deep = (root / "scripts" / "maestro" / "Maestro-Deep-5Host-Gate.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "Add-MaestroHandlerExitTally" in common
+    assert "Format-MaestroHandlersSummary" in common
+    assert 'return "ALARM:$HandlerAlarms"' in common
+    assert "$handlerAlarmCount" in maestro
+    assert "$LASTEXITCODE -eq 3" in maestro
+    assert "Add-MaestroHandlerExitTally" in deep
+    assert "Format-MaestroHandlersSummary" in deep
 
 
 def test_target_cifs_skips_server_ensure_on_maestro_orchestrator() -> None:

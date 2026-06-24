@@ -41,6 +41,7 @@ $script:MaestroRunMarker = Get-Date -Format "yyyyMMdd_HHmmss"
 Write-Host "--- [Maestro] Iniciando Turno no Lab-Op (Ref: $Ref, run=$($script:MaestroRunMarker)) ---" -ForegroundColor Cyan
 $warningCount = 0
 $realFailCount = 0
+$handlerAlarmCount = 0
 # Personas that write /tmp/databoar_handler/<persona>_sentinel.txt (#831); web is inline health only.
 $script:SentinelPersonas = @(
     "baremetal", "docker", "podman", "dockerswarm", "lxd", "microk8s",
@@ -132,9 +133,11 @@ $globalReport = foreach ($node in $inventory.lab_members) {
                     BenchHealthUrl = $BenchHealthUrl
                 }
                 & $handler @handlerArgs
-                # Capture real handler failures (#825): offline-skip already gated above;
-                # exit != 0 here means allowlist rejection, SSH send-keys failure, etc.
-                if ($LASTEXITCODE -ne 0) {
+                # #1021 R9b: exit 3 = graceful ALARM; exit != 0 && != 3 = REAL FAIL (#825).
+                if ($LASTEXITCODE -eq 3) {
+                    $handlerAlarmCount++
+                    Write-Warning "      [ALARM] Handler '$persona' em $($node.hostname) exit 3 (graceful degradation)."
+                } elseif ($LASTEXITCODE -ne 0) {
                     $realFailCount++
                     Write-Warning "      [REAL FAIL] Handler '$persona' em $($node.hostname) saiu com exit $LASTEXITCODE"
                 } elseif ($script:SentinelPersonas -contains $persona) {
@@ -215,7 +218,10 @@ if ($Collect -and $warningCount -gt 0) {
 }
 
 # Aggregate REAL handler failures into exit code (#825).
-# Offline-skip and Safe-Hold do NOT increment $realFailCount — only genuine handler errors do.
+# Exit 3 (graceful ALARM) does not increment $realFailCount (#1021 R9b).
+if ($handlerAlarmCount -gt 0) {
+    Write-Warning "[Maestro] $handlerAlarmCount handler(s) ALARM (exit 3, graceful — nao contam como REAL FAIL)."
+}
 if ($realFailCount -gt 0) {
     Write-Error "[Maestro] $realFailCount handler(s) retornaram exit != 0 (falhas reais, nao offline-skip)."
     exit 1

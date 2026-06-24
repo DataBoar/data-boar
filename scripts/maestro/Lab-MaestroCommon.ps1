@@ -20,9 +20,6 @@ function Get-HandlerTmuxSessionName {
 }
 
 function Get-EnsureAlarmFromOutput {
-    <#
-    Parses ALARM= lines from labop-*-ensure.sh (exit 3 graceful, #1021 R9).
-    #>
     param(
         [Parameter(Mandatory = $true)][AllowEmptyCollection()][string[]]$Lines,
         [Parameter(Mandatory = $true)][string]$LogTag
@@ -36,6 +33,40 @@ function Get-EnsureAlarmFromOutput {
         }
     }
     return $null
+}
+
+function Add-MaestroHandlerExitTally {
+    <#
+    #1021 R9b: passou (0) vs degradou (3) vs falhou (other). Exit 3 is ALARM, not REAL FAIL.
+    #>
+    param(
+        [Parameter(Mandatory = $true)][int]$ExitCode,
+        [ref]$FailCount,
+        [ref]$AlarmCount
+    )
+    if ($ExitCode -eq 0) { return }
+    if ($ExitCode -eq 3) {
+        $AlarmCount.Value++
+        return
+    }
+    $FailCount.Value++
+}
+
+function Format-MaestroHandlersSummary {
+    <#
+    Per-host handler rollup for Deep smoke / gate reports (#1021 R9b).
+    #>
+    param(
+        [bool]$GateOk,
+        [int]$HandlerRan = 0,
+        [int]$HandlerFails = 0,
+        [int]$HandlerAlarms = 0
+    )
+    if (-not $GateOk) { return 'SKIP' }
+    if ($HandlerRan -eq 0) { return 'NONE' }
+    if ($HandlerFails -gt 0) { return "FAIL:$HandlerFails" }
+    if ($HandlerAlarms -gt 0) { return "ALARM:$HandlerAlarms" }
+    return 'OK'
 }
 
 function Get-LabPrivilegeInvoker {
