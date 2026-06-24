@@ -1086,14 +1086,16 @@ def test_labop_dep_doctor_graceful_optional_modules() -> None:
     assert "scikit-learn" in text
 
 
-def test_labop_gate_readiness_fw_apply_check_fallback() -> None:
-    """#1021 R6: fw-guard --apply 126 falls back to --check or probe cache."""
+def test_labop_gate_readiness_canonical_bash_bin_for_grants() -> None:
+    """#1021 R6 RCA: prefer /usr/bin/bash over command -v (secure_path /usr/sbin trap)."""
     root = _project_root()
     text = (root / "scripts" / "labop-gate-readiness.sh").read_text(
         encoding="utf-8", errors="replace"
     )
-    assert "FW_APPLY_FALLBACK" in text
-    assert "check_only_apply_grant_missing" in text
+    assert "/usr/bin/bash" in text
+    assert "bash_bin=" in text
+    assert "FW_APPLY_FALLBACK" not in text
+    assert "check_only_apply_grant_missing" not in text
     assert "optional_modules_degraded" in text
     assert "_dep_optional_degraded" in text
 

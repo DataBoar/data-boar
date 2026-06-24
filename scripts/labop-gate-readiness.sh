@@ -71,20 +71,29 @@ _ensure_login_path() {
 
 _ensure_login_path
 
-# Narrow sudoers/doas grants match a literal bash path (#1021 ROUND 5) - never bare `bash`.
+# Narrow sudoers/doas grants match a literal bash path (#1021 ROUND 5/6).
+# Prefer /usr/bin/bash and /bin/bash (grant-canonical) before command -v bash,
+# which may resolve to /usr/sbin/bash via secure_path and miss the grant (#1021 R6 RCA).
 _resolve_bash_bin() {
-  local candidate
-  candidate="$(command -v bash 2>/dev/null || true)"
-  if [[ -n "$candidate" && -x "$candidate" ]]; then
-    printf '%s' "$candidate"
-    return 0
-  fi
+  local candidate resolved
   for candidate in /usr/bin/bash /bin/bash; do
     if [[ -x "$candidate" ]]; then
       printf '%s' "$candidate"
       return 0
     fi
   done
+  candidate="$(command -v bash 2>/dev/null || true)"
+  if [[ -n "$candidate" && -x "$candidate" ]]; then
+    resolved="$(readlink -f "$candidate" 2>/dev/null || printf '%s' "$candidate")"
+    case "$resolved" in
+      /usr/bin/bash|/bin/bash)
+        printf '%s' "$resolved"
+        return 0
+        ;;
+    esac
+    printf '%s' "$candidate"
+    return 0
+  fi
   return 1
 }
 
@@ -92,7 +101,10 @@ LABOP_BASH_BIN=""
 if ! LABOP_BASH_BIN="$(_resolve_bash_bin)"; then
   _gr privilege ALARM "bash_bin_unresolved"
   FAIL=1
+else
+  _gr bootstrap OK "bash_bin=$LABOP_BASH_BIN"
 fi
+_log "mode=$MODE_WORD personas=$PERSONAS_RAW repo=$REPO_ROOT bash=$LABOP_BASH_BIN"
 
 GATE_CTX_DIR="$REPO_ROOT/.labop-gate"
 
@@ -361,26 +373,8 @@ if [[ -f "$FW_SCRIPT" ]]; then
       _invoke_priv_script "$FW_SCRIPT" "$FW_MODE"
       FW_EC=$?
     fi
-    # #1021 R6: --apply grant missing (126) but --check works (narrow sudoers on some hosts).
-    FW_APPLY_FALLBACK=0
-    if [[ $FW_EC -eq 126 && "$FW_MODE" == "--apply" ]]; then
-      if [[ "${_FW_GUARD_PROBE_DONE:-0}" -eq 1 && "$_FW_GUARD_PROBE_EC" -eq 0 ]]; then
-        FW_EC=0
-        FW_APPLY_FALLBACK=1
-      else
-        _invoke_priv_script "$FW_SCRIPT" --check
-        FW_EC=$?
-        if [[ $FW_EC -eq 0 ]]; then
-          FW_APPLY_FALLBACK=1
-        fi
-      fi
-    fi
     if [[ $FW_EC -eq 0 ]]; then
-      if [[ "${FW_APPLY_FALLBACK:-0}" -eq 1 ]]; then
-        _gr fail2ban OK "check_only_apply_grant_missing"
-      else
-        _gr fail2ban OK "subnet_whitelisted"
-      fi
+      _gr fail2ban OK "subnet_whitelisted"
     elif [[ $FW_EC -eq 125 ]]; then
       _gr fail2ban ALARM "LAB_OP_SUBNET_not_rfc1918"
       FAIL=1
