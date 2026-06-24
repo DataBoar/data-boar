@@ -28,7 +28,12 @@ function Test-ContainerEngineReady {
         if (-not (Get-Command $cmd -ErrorAction SilentlyContinue)) {
             continue
         }
-        $null = & $cmd info --format '{{.ServerVersion}}' 2>$null
+        # Podman info lacks Docker's .ServerVersion template (#1021 -Deep preflight on Linux primary).
+        if ($cmd -eq "podman") {
+            $null = & podman info --format '{{.Host.OS}}' 2>$null
+        } else {
+            $null = & docker info --format '{{.ServerVersion}}' 2>$null
+        }
         if ($LASTEXITCODE -eq 0) {
             $isPodman = ($cmd -eq "podman")
             return [PSCustomObject]@{ Cmd = $cmd; Ready = $true; IsPodman = $isPodman }
@@ -45,17 +50,17 @@ function Invoke-ContainerImageBuild {
         [string]$Context
     )
     if ($IsPodman -or $EngineCmd -eq "podman") {
-        & podman build -q -t $FullImage $Context
+        $null = & podman build -q -t $FullImage $Context
         return $LASTEXITCODE
     }
     if ($env:DOCKER_HOST -match "podman" -and (Get-Command podman -ErrorAction SilentlyContinue)) {
-        & podman build -q -t $FullImage $Context
+        $null = & podman build -q -t $FullImage $Context
         return $LASTEXITCODE
     }
     $prevBuildKit = $env:DOCKER_BUILDKIT
     $env:DOCKER_BUILDKIT = "0"
     try {
-        & docker build -q -t $FullImage $Context
+        $null = & docker build -q -t $FullImage $Context
         return $LASTEXITCODE
     } finally {
         if ($null -eq $prevBuildKit) {

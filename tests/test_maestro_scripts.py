@@ -679,6 +679,12 @@ def test_build_container_artefact_degrades_without_hub() -> None:
         "Build-ContainerArtefact must exit with an actionable code when no engine and "
         "no local artefact exist (#888)."
     )
+    assert "podman info --format '{{.Host.OS}}'" in text, (
+        "Podman engine probe must not use Docker-only .ServerVersion template (#1021)."
+    )
+    assert re.search(r"\$null\s*=\s*&\s*podman build -q", text), (
+        "Quiet podman build must not leak image id into function return (#1021)."
+    )
 
 
 def test_sync_container_artefact_scp_fallback_is_actionable() -> None:
@@ -887,6 +893,16 @@ def test_target_nfs_deep_apply_fail_is_real_fail() -> None:
     assert "exit 1" in text
 
 
+def test_target_cifs_skips_server_ensure_on_maestro_orchestrator() -> None:
+    """#1021: maestro orchestrator is CIFS client-only; no LABOP_SMB_SERVER grant needed."""
+    root = _project_root()
+    text = (
+        root / "scripts" / "maestro" / "handlers" / "Handle-target_cifs.ps1"
+    ).read_text(encoding="utf-8", errors="replace")
+    assert "maestro" in text
+    assert "Skip server ensure on maestro orchestrator" in text
+
+
 def test_collect_artifacts_uses_repo_log_path() -> None:
     """#956/#968: post-flight collect pulls from <repo>/log/; Join-Path; REAL FAIL if empty."""
     root = _project_root()
@@ -1050,6 +1066,8 @@ def test_labop_dep_doctor_persona_os_failure_not_swallowed() -> None:
     assert "Persona OS packages still missing" in text
     assert "still missing after phase" in text
     assert "no package manager (ALARM)" in text
+    assert "_load_personas_from_gate_context" in text
+    assert "personas=${PERSONAS_RAW:-<none>}" in text
 
 
 def test_labop_gate_readiness_narrow_grant_invoke() -> None:
@@ -1063,6 +1081,10 @@ def test_labop_gate_readiness_narrow_grant_invoke() -> None:
     assert "_invoke_priv_script" in text
     assert "privilege_denied" in text
     assert 'bash "$DEP_SCRIPT" --check --personas' in text
+    assert "--privileged --personas" in text
+    assert "packages_still_missing_after_remediate" in text
+    assert "DEP_RECHECK_EC" in text
+    assert "maturin develop" in text
     assert "env LAB_OP_SUBNET" not in text
 
 
@@ -1116,14 +1138,24 @@ def _run_fw_guard_subnet_check(
 ) -> subprocess.CompletedProcess[str]:
     env = os.environ.copy()
     env["LAB_OP_SUBNET"] = subnet
-    return subprocess.run(
-        ["bash", str(root / "scripts" / "labop-fw-guard-ensure.sh"), "--check"],
-        cwd=root,
-        env=env,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    gate_file = root / ".labop-gate" / "LAB_OP_SUBNET"
+    gate_backup: str | None = None
+    if gate_file.is_file():
+        gate_backup = gate_file.read_text(encoding="utf-8", errors="replace")
+        gate_file.unlink()
+    try:
+        return subprocess.run(
+            ["bash", str(root / "scripts" / "labop-fw-guard-ensure.sh"), "--check"],
+            cwd=root,
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    finally:
+        if gate_backup is not None:
+            gate_file.parent.mkdir(parents=True, exist_ok=True)
+            gate_file.write_text(gate_backup, encoding="utf-8")
 
 
 def test_labop_fw_guard_rfc1918_subnet_accepts_private_cidr() -> None:
@@ -1142,14 +1174,28 @@ def test_labop_fw_guard_rfc1918_subnet_rejects_non_private() -> None:
     root = _project_root()
     for subnet in ("0.0.0.0/0", "1.2.3.0/24", "192.168.40.0/0", "not-a-cidr", ""):
         if subnet == "":
-            proc = subprocess.run(
-                ["bash", str(root / "scripts" / "labop-fw-guard-ensure.sh"), "--check"],
-                cwd=root,
-                env={k: v for k, v in os.environ.items() if k != "LAB_OP_SUBNET"},
-                capture_output=True,
-                text=True,
-                check=False,
-            )
+            gate_file = root / ".labop-gate" / "LAB_OP_SUBNET"
+            gate_backup: str | None = None
+            if gate_file.is_file():
+                gate_backup = gate_file.read_text(encoding="utf-8", errors="replace")
+                gate_file.unlink()
+            try:
+                proc = subprocess.run(
+                    [
+                        "bash",
+                        str(root / "scripts" / "labop-fw-guard-ensure.sh"),
+                        "--check",
+                    ],
+                    cwd=root,
+                    env={k: v for k, v in os.environ.items() if k != "LAB_OP_SUBNET"},
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+            finally:
+                if gate_backup is not None:
+                    gate_file.parent.mkdir(parents=True, exist_ok=True)
+                    gate_file.write_text(gate_backup, encoding="utf-8")
         else:
             proc = _run_fw_guard_subnet_check(root, subnet)
         assert proc.returncode == 2, (

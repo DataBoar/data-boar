@@ -109,14 +109,15 @@ _priv_denied_output() {
 }
 
 _invoke_priv_script() {
-  local script="$1" mode="$2"
+  local script="$1"
+  shift
   local priv out ec=0
   priv="$(_priv_cmd)"
   [[ -z "$priv" ]] && return 127
   if ! _write_gate_context; then
     return 125
   fi
-  out="$($priv bash "$script" "$mode" 2>&1)" || ec=$?
+  out="$($priv bash "$script" "$@" 2>&1)" || ec=$?
   printf '%s\n' "$out" >&2
   if [[ $ec -ne 0 ]] && _priv_denied_output "$out"; then
     return 126
@@ -280,15 +281,17 @@ if _any_persona cifs; then
 fi
 
 if _any_persona baremetal; then
+  UV_BIN="$(command -v uv 2>/dev/null || true)"
   for bin in uv cargo maturin; do
     if command -v "$bin" >/dev/null 2>&1; then
       _gr "login-env:$bin" OK "on_path"
+    elif [[ "$bin" == "maturin" && -n "$UV_BIN" ]] && "$UV_BIN" run maturin --version >/dev/null 2>&1; then
+      _gr "login-env:maturin" OK "uv_run"
     else
       _gr "login-env:$bin" ALARM "missing_from_path"
       FAIL=1
     fi
   done
-  UV_BIN="$(command -v uv 2>/dev/null || true)"
   if [[ -n "$UV_BIN" ]]; then
     if "$UV_BIN" run --project "$REPO_ROOT" python3 -c "import boar_fast_filter" >/dev/null 2>&1; then
       _gr rust-wheel OK "boar_fast_filter_importable"
@@ -345,24 +348,52 @@ if [[ -f "$DEP_SCRIPT" ]]; then
   DEP_EC=0
   DEP_OUT="$(bash "$DEP_SCRIPT" --check --personas "$PERSONAS_RAW" 2>&1)" || DEP_EC=$?
   printf '%s\n' "$DEP_OUT" >&2
-  if [[ $DEP_EC -eq 0 ]]; then
+  DEP_ALARM=0
+  if [[ $DEP_EC -ne 0 ]]; then
+    DEP_ALARM=1
+  fi
+  if [[ $APPLY -eq 1 && "$PRIV" != "NO_PRIV" && $DEP_ALARM -eq 1 ]]; then
+    PRIV_EC=0
+    if ! _invoke_priv_script "$DEP_SCRIPT" --privileged --personas "$PERSONAS_RAW"; then
+      PRIV_EC=$?
+    fi
+    DEP_RECHECK_EC=0
+    if [[ $PRIV_EC -eq 0 ]]; then
+      DEP_RECHECK_OUT="$(bash "$DEP_SCRIPT" --check --personas "$PERSONAS_RAW" 2>&1)" || DEP_RECHECK_EC=$?
+      printf '%s\n' "$DEP_RECHECK_OUT" >&2
+    fi
+    if [[ $PRIV_EC -eq 0 && $DEP_RECHECK_EC -eq 0 ]]; then
+      _gr dep-doctor REMEDIATE "privileged_heal_ok"
+      DEP_ALARM=0
+    elif [[ $PRIV_EC -eq 126 ]]; then
+      _gr dep-doctor ALARM "privilege_denied"
+    elif [[ $PRIV_EC -ne 0 ]]; then
+      _gr dep-doctor ALARM "remediation_failed"
+    else
+      _gr dep-doctor ALARM "packages_still_missing_after_remediate"
+    fi
+  fi
+  if [[ $DEP_ALARM -eq 0 ]]; then
     _gr dep-doctor OK "modules_and_persona_os"
   else
     _gr dep-doctor ALARM "packages_or_modules_missing"
     FAIL=1
   fi
-  if [[ $APPLY -eq 1 && "$PRIV" != "NO_PRIV" ]]; then
-    PRIV_EC=0
-    if ! _invoke_priv_script "$DEP_SCRIPT" --privileged; then
-      PRIV_EC=$?
-    fi
-    if [[ $PRIV_EC -eq 0 ]]; then
-      _gr dep-doctor REMEDIATE "privileged_heal_ok"
-    elif [[ $PRIV_EC -eq 126 ]]; then
-      _gr dep-doctor ALARM "privilege_denied"
-      FAIL=1
+fi
+
+# --- rust wheel (#1021): maturin develop on --apply when baremetal persona needs FFI ---
+if [[ $APPLY -eq 1 ]] && _any_persona baremetal; then
+  UV_BIN="$(command -v uv 2>/dev/null || true)"
+  if [[ -n "$UV_BIN" ]] && ! "$UV_BIN" run --project "$REPO_ROOT" python3 -c "import boar_fast_filter" >/dev/null 2>&1; then
+    if (cd "$REPO_ROOT" && "$UV_BIN" run maturin develop --release >/dev/null 2>&1); then
+      if "$UV_BIN" run --project "$REPO_ROOT" python3 -c "import boar_fast_filter" >/dev/null 2>&1; then
+        _gr rust-wheel REMEDIATE "maturin_develop_ok"
+      else
+        _gr rust-wheel ALARM "import_still_missing_after_maturin"
+        FAIL=1
+      fi
     else
-      _gr dep-doctor ALARM "remediation_failed"
+      _gr rust-wheel ALARM "maturin_develop_failed"
       FAIL=1
     fi
   fi

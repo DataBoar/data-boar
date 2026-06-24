@@ -43,28 +43,35 @@ $sentinelDir  = "/tmp/databoar_handler"
 $sentinelFile = "$sentinelDir/target_cifs_sentinel.txt"
 
 # --- Phase 1: SMB server-side ensure (service + port + firewall) ---
-$ensureMode = if ($Deep) { "--apply" } else { "--check" }
-$ensureEnv = @{}
-if ($Node.PSObject.Properties["lab_op_subnet"] -and $Node.lab_op_subnet) {
-    $ensureEnv["LAB_OP_SUBNET"] = [string]$Node.lab_op_subnet
-}
-$ensureCmd = Build-EnsureRemoteCommand -EnsureScript $ensureScript -EnsureMode $ensureMode -EnvVars $ensureEnv
-
-Write-Host "      [CIFS-Ensure] Running: $ensureMode on $($Node.hostname)" -ForegroundColor DarkGray
-$ensureOut = ssh -q -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 `
-    "$($Node.user)@$($Node.hostname)" "$ensureCmd"
-$ensureExit = $LASTEXITCODE
-
-if ($ensureOut) { $ensureOut | ForEach-Object { Write-Host "        $_" -ForegroundColor DarkGray } }
-
-if ($ensureExit -eq 0) {
-    Write-Host "      [SUCCESS] CIFS server-side validated: $($Node.hostname):$($Node.path)" -ForegroundColor Green
-} elseif ($Deep) {
-    Write-Warning "      [REAL FAIL] CIFS ensure --apply returned exit $ensureExit on $($Node.hostname)."
-    Write-RemoteSentinel -Node $Node -SentinelFile $sentinelFile -ExitCode 1
-    exit 1
+# Maestro/orchestrator nodes scan remote CIFS targets; they are not SMB servers (#1021).
+$personaList = @($Node.personas)
+$skipServerEnsure = ($personaList -contains "maestro")
+if ($skipServerEnsure) {
+    Write-Host "      [CIFS-Ensure] Skip server ensure on maestro orchestrator (client-only persona mix)." -ForegroundColor DarkGray
 } else {
-    Write-Warning "      [WARNING] CIFS ensure --check returned exit $ensureExit on $($Node.hostname). Run with -Deep to attempt remediation."
+    $ensureMode = if ($Deep) { "--apply" } else { "--check" }
+    $ensureEnv = @{}
+    if ($Node.PSObject.Properties["lab_op_subnet"] -and $Node.lab_op_subnet) {
+        $ensureEnv["LAB_OP_SUBNET"] = [string]$Node.lab_op_subnet
+    }
+    $ensureCmd = Build-EnsureRemoteCommand -EnsureScript $ensureScript -EnsureMode $ensureMode -EnvVars $ensureEnv
+
+    Write-Host "      [CIFS-Ensure] Running: $ensureMode on $($Node.hostname)" -ForegroundColor DarkGray
+    $ensureOut = ssh -q -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 `
+        "$($Node.user)@$($Node.hostname)" "$ensureCmd"
+    $ensureExit = $LASTEXITCODE
+
+    if ($ensureOut) { $ensureOut | ForEach-Object { Write-Host "        $_" -ForegroundColor DarkGray } }
+
+    if ($ensureExit -eq 0) {
+        Write-Host "      [SUCCESS] CIFS server-side validated: $($Node.hostname):$($Node.path)" -ForegroundColor Green
+    } elseif ($Deep) {
+        Write-Warning "      [REAL FAIL] CIFS ensure --apply returned exit $ensureExit on $($Node.hostname)."
+        Write-RemoteSentinel -Node $Node -SentinelFile $sentinelFile -ExitCode 1
+        exit 1
+    } else {
+        Write-Warning "      [WARNING] CIFS ensure --check returned exit $ensureExit on $($Node.hostname). Run with -Deep to attempt remediation."
+    }
 }
 
 # --- Phase 2: IO monitoring in tmux ---

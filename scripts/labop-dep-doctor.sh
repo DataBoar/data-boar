@@ -56,9 +56,6 @@ _ok()  { echo "[DepDoctor] OK: $*"; }
 _warn(){ echo "[DepDoctor] WARN: $*" >&2; }
 _fail(){ echo "[DepDoctor] FAIL: $*" >&2; }
 
-HOST=$(hostname -f 2>/dev/null || hostname)
-_log "Starting on $HOST (check_only=$CHECK_ONLY privileged=$PRIVILEGED apply_only=$APPLY_ONLY personas=${PERSONAS_RAW:-<none>})"
-
 _detect_pm() {
   if command -v apt-get >/dev/null 2>&1; then echo "apt"; return 0; fi
   if command -v xbps-install >/dev/null 2>&1; then echo "xbps"; return 0; fi
@@ -180,10 +177,13 @@ _run_persona_os_phase() {
   return 0
 }
 
+HOST=$(hostname -f 2>/dev/null || hostname)
+_load_personas_from_gate_context
+_log "Starting on $HOST (check_only=$CHECK_ONLY privileged=$PRIVILEGED apply_only=$APPLY_ONLY personas=${PERSONAS_RAW:-<none>})"
+
 # ---------------------------------------------------------------------------
 # Phase 0: persona OS packages (#958) before Python probes
 # ---------------------------------------------------------------------------
-_load_personas_from_gate_context
 PERSONA_OS_OK=1
 if [[ -n "$PERSONAS_RAW" ]]; then
   if ! _run_persona_os_phase; then
