@@ -157,6 +157,7 @@ def test_confirm_target_db_synthetic_data_contract() -> None:
     assert "docker compose exec -T lab-postgres" in common
     assert "docker compose exec -T lab-mariadb" in common
     assert "docker-compose.mongo.yml exec -T lab-mongodb" in common
+    assert '-replace "`r", ""' in common
 
 
 def test_handle_web_health_contract() -> None:

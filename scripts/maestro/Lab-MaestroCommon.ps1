@@ -170,10 +170,10 @@ exit 1
         }
     }
 
-    $remoteCmd = $engineBody.Replace('__STACK_DIR__', $stackDir).Replace('__MAX_ATTEMPTS__', [string]$MaxAttempts).Replace('__WAIT_SECONDS__', [string]$WaitSeconds)
+    $remoteCmd = $engineBody.Replace('__STACK_DIR__', $stackDir).Replace('__MAX_ATTEMPTS__', [string]$MaxAttempts).Replace('__WAIT_SECONDS__', [string]$WaitSeconds) -replace "`r", ""
 
     $out = ssh -q -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 `
-        "$($Node.user)@$($Node.hostname)" $remoteCmd 2>&1
+        "$($Node.user)@$($Node.hostname)" "$remoteCmd" 2>&1
     $text = ($out | Out-String).Trim()
     if ($LASTEXITCODE -eq 0 -and $text -match 'SYNTHETIC_DATA_OK') {
         $countMatch = [regex]::Match($text, 'count=(\d+)')
