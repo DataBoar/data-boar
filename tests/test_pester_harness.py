@@ -34,6 +34,7 @@ def test_pester_tranche1_files_exist() -> None:
         "Audit.Tests.ps1",
         "CheckAll.Tests.ps1",
         "InvAdr.Tests.ps1",
+        "Maestro-GateReadiness.Tests.ps1",
         "Wrappers.Tranche1.Tests.ps1",
     )
     for name in expected:

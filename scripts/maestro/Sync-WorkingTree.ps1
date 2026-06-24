@@ -19,7 +19,7 @@ param(
 # O StrictMode entra LOGO APÓS os parâmetros
 Set-StrictMode -Version 2
 
-. "$PSScriptRoot/maestro/Maestro-CanonicalGuard.ps1"
+. "$PSScriptRoot/Maestro-CanonicalGuard.ps1"
 $script:MaestroOrchestratorHost = Get-MaestroOrchestratorHostname
 
 # Mapeamento alinhado com o objeto JSON recebido do Maestro

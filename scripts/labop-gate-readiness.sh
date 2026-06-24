@@ -155,18 +155,98 @@ _any_persona() {
   return 1
 }
 
-# --- Privilege probe (#954 / #959) ---
+_FW_GUARD_SCRIPT="$SCRIPT_DIR/labop-fw-guard-ensure.sh"
+_FW_GUARD_PROBE_DONE=0
+_FW_GUARD_PROBE_EC=0
+_FW_GUARD_PROBE_OUT=""
+_PRIV_DETAIL=""
+
+_sudo_l_has_labop_grant() {
+  local listing
+  listing="$(sudo -n -l 2>/dev/null)" || return 1
+  grep -qE 'LABOP_(FW_GUARD|DEP_DOCTOR|NFS_SERVER|SMB_SERVER)|labop-(fw-guard|dep-doctor|nfs-server|smb-server)-ensure\.sh' <<<"$listing"
+}
+
+_doas_c_has_labop_grant() {
+  local conf
+  for conf in /etc/doas.conf /etc/doas.d/*.conf; do
+    [[ -f "$conf" ]] || continue
+    if doas -C "$conf" bash "$_FW_GUARD_SCRIPT" --check 2>/dev/null; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+_probe_fw_guard_priv() {
+  local priv="$1"
+  local out ec=0
+  if [[ ! -f "$_FW_GUARD_SCRIPT" ]]; then
+    return 1
+  fi
+  if ! _write_gate_context; then
+    return 1
+  fi
+  out="$($priv bash "$_FW_GUARD_SCRIPT" --check 2>&1)" || ec=$?
+  _FW_GUARD_PROBE_OUT="$out"
+  _FW_GUARD_PROBE_EC=$ec
+  _FW_GUARD_PROBE_DONE=1
+  if [[ $ec -eq 126 ]] || _priv_denied_output "$out"; then
+    return 1
+  fi
+  return 0
+}
+
+_detect_sudo_narrow() {
+  if ! command -v sudo >/dev/null 2>&1; then
+    return 1
+  fi
+  if sudo -n true 2>/dev/null; then
+    _PRIV_DETAIL="blanket"
+    return 0
+  fi
+  if _sudo_l_has_labop_grant; then
+    _PRIV_DETAIL="sudo_l"
+    return 0
+  fi
+  if _probe_fw_guard_priv "sudo -n"; then
+    _PRIV_DETAIL="probe_fw_guard"
+    return 0
+  fi
+  return 1
+}
+
+_detect_doas_narrow() {
+  if ! command -v doas >/dev/null 2>&1; then
+    return 1
+  fi
+  if doas -n true 2>/dev/null; then
+    _PRIV_DETAIL="blanket"
+    return 0
+  fi
+  if [[ -f "$_FW_GUARD_SCRIPT" ]] && _doas_c_has_labop_grant; then
+    _PRIV_DETAIL="doas_c"
+    return 0
+  fi
+  if _probe_fw_guard_priv "doas -n"; then
+    _PRIV_DETAIL="probe_fw_guard"
+    return 0
+  fi
+  return 1
+}
+
+# --- Privilege probe (#954 / #959 / #1022: narrow grant != sudo -n true) ---
 PRIV="NO_PRIV"
-if command -v doas >/dev/null 2>&1 && doas -n true 2>/dev/null; then
+if _detect_doas_narrow; then
   PRIV="doas-narrow"
-elif command -v sudo >/dev/null 2>&1 && sudo -n true 2>/dev/null; then
+elif _detect_sudo_narrow; then
   PRIV="sudo-narrow"
 fi
 if [[ "$PRIV" == "NO_PRIV" ]]; then
-  _gr privilege ALARM "no doas/sudo -n"
+  _gr privilege ALARM "no_narrow_grant"
   FAIL=1
 else
-  _gr privilege OK "$PRIV"
+  _gr privilege OK "$PRIV" "${_PRIV_DETAIL:-}"
 fi
 
 # --- Per-persona binaries ---
@@ -231,7 +311,10 @@ if [[ -f "$FW_SCRIPT" ]]; then
     FAIL=1
   elif [[ "$PRIV" != "NO_PRIV" ]]; then
     FW_EC=0
-    if ! _invoke_priv_script "$FW_SCRIPT" "$FW_MODE"; then
+    if [[ "${_FW_GUARD_PROBE_DONE:-0}" -eq 1 && "$FW_MODE" == "--check" ]]; then
+      printf '%s\n' "$_FW_GUARD_PROBE_OUT" >&2
+      FW_EC="$_FW_GUARD_PROBE_EC"
+    elif ! _invoke_priv_script "$FW_SCRIPT" "$FW_MODE"; then
       FW_EC=$?
     fi
     if [[ $FW_EC -eq 0 ]]; then

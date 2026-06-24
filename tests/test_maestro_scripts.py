@@ -1172,3 +1172,40 @@ def test_labop_gate_readiness_validates_rfc1918_on_write() -> None:
     assert "labop-rfc1918-cidr-lib.sh" in fw
     assert "is not a private RFC1918 CIDR" in fw
     assert "zero-trust" in fw
+
+
+def test_sync_working_tree_canonical_guard_dot_source() -> None:
+    """#1022: Sync-WorkingTree dots Maestro-CanonicalGuard from PSScriptRoot."""
+    root = _project_root()
+    text = (root / "scripts" / "maestro/Sync-WorkingTree.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "$PSScriptRoot/Maestro-CanonicalGuard.ps1" in text
+    assert "maestro/maestro/Maestro-CanonicalGuard" not in text
+
+
+def test_lab_maestro_common_remote_repo_path_expands_tilde() -> None:
+    """#1022: SSH gate cd uses $HOME instead of literal ~."""
+    root = _project_root()
+    text = (root / "scripts/maestro/Lab-MaestroCommon.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "function Get-MaestroRemoteRepoPath" in text
+    assert "`$HOME" in text
+    assert "cd $repoPath" in text
+    assert "cd '$repoPath'" not in text
+
+
+def test_labop_gate_readiness_narrow_privilege_probe() -> None:
+    """#1022: privilege probe detects narrow grants (not only sudo -n true)."""
+    root = _project_root()
+    text = (root / "scripts" / "labop-gate-readiness.sh").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "_detect_sudo_narrow" in text
+    assert "_detect_doas_narrow" in text
+    assert "sudo -n -l" in text
+    assert "doas -C" in text
+    assert "no_narrow_grant" in text
+    assert "_FW_GUARD_PROBE_DONE" in text
+    assert "no doas/sudo -n" not in text

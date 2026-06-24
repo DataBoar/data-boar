@@ -107,6 +107,15 @@ function Get-MaestroCanonicalRepoPath {
     return ($RepoPath -replace "-v[0-9]+\.[0-9]+\.[0-9]+[^/\\]*$", "")
 }
 
+function Get-MaestroRemoteRepoPath {
+    param([Parameter(Mandatory = $true)][string]$RepoPath)
+    $canonical = Get-MaestroCanonicalRepoPath -RepoPath $RepoPath
+    if ($canonical -match '^~(/.*)$') {
+        return "`$HOME$($Matches[1])"
+    }
+    return $canonical
+}
+
 function Invoke-LabopGateReadiness {
     <#
     #960: ALARM (--check) skips handlers; REMEDIATE (-Deep / --apply) uses narrow grants.
@@ -120,7 +129,7 @@ function Invoke-LabopGateReadiness {
         return $true
     }
     $personaCsv = ($personaList -join ',')
-    $repoPath = Get-MaestroCanonicalRepoPath -RepoPath ([string]$Node.path)
+    $repoPath = Get-MaestroRemoteRepoPath -RepoPath ([string]$Node.path)
     $mode = if ($Deep) { '--apply' } else { '--check' }
     $envPrefix = ""
     if ($Node.PSObject.Properties.Name -contains 'lab_op_subnet' -and $Node.lab_op_subnet) {
@@ -131,7 +140,7 @@ function Invoke-LabopGateReadiness {
         $envPrefix = "env LAB_OP_SUBNET=$subnet "
     }
     $gateScript = "$repoPath/scripts/labop-gate-readiness.sh"
-    $remoteCmd = "cd '$repoPath' && ${envPrefix}bash '$gateScript' $mode --personas '$personaCsv' 2>&1"
+    $remoteCmd = "cd $repoPath && ${envPrefix}bash $gateScript $mode --personas '$personaCsv' 2>&1"
     Write-Host "      [GateReadiness] $mode on $($Node.hostname) personas=$personaCsv" -ForegroundColor DarkCyan
     $output = ssh -q -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 `
         "$($Node.user)@$($Node.hostname)" $remoteCmd 2>&1
