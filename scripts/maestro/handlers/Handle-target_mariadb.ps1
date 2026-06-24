@@ -83,11 +83,19 @@ $remoteCmd = $remoteCmd.Replace("__NODE_PATH__", [string]$Node.path) -replace "`
 $out = ssh -q -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$($Node.user)@$($Node.hostname)" "$remoteCmd"
 if ($LASTEXITCODE -eq 0 -and $out -match "TARGET_MARIADB_READY") {
     $portMatch = [regex]::Match(($out -join "`n"), "port=(\d+)")
+    $portNum = if ($portMatch.Success) { [int]$portMatch.Groups[1].Value } else { 0 }
     if ($portMatch.Success) {
-        Write-Host "      [SUCCESS] MariaDB sintetico pronto em $($Node.hostname) (porta $($portMatch.Groups[1].Value))." -ForegroundColor Green
+        Write-Host "      [SUCCESS] MariaDB sintetico pronto em $($Node.hostname) (porta $portNum)." -ForegroundColor Green
     } else {
         Write-Host "      [SUCCESS] MariaDB sintetico pronto em $($Node.hostname)." -ForegroundColor Green
     }
+    $verify = Confirm-TargetDbSyntheticData -Node $Node -Engine mariadb -Port $portNum
+    if (-not $verify.Ok) {
+        Write-Warning "      [REAL FAIL] MariaDB up mas dados sinteticos ausentes: $($verify.Detail)"
+        Write-RemoteSentinel -Node $Node -SentinelFile $sentinelFile -ExitCode 1
+        exit 1
+    }
+    Write-Host "      [VERIFY] lab_customers count=$($verify.Count) (synthetic seed OK)" -ForegroundColor Green
 } else {
     Write-Warning "      [WARNING] Falha ao provisionar target_mariadb em $($Node.hostname)."
     Write-RemoteSentinel -Node $Node -SentinelFile $sentinelFile -ExitCode 1

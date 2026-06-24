@@ -137,6 +137,26 @@ def test_db_target_handlers_use_compose_contract() -> None:
             f"DB handler must write {persona}_sentinel.txt (#953)"
         )
         assert "__SENTINEL__" in text or "SENTINEL=" in text
+        assert "Confirm-TargetDbSyntheticData" in text
+        assert "[VERIFY]" in text
+        assert "[REAL FAIL]" in text
+
+
+def test_confirm_target_db_synthetic_data_contract() -> None:
+    """#1021 R9c: post-READY oracle via count(*) / countDocuments on lab smoke seeds."""
+    root = _project_root()
+    common = (root / "scripts" / "maestro" / "Lab-MaestroCommon.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "function Confirm-TargetDbSyntheticData" in common
+    assert "SYNTHETIC_DATA_OK" in common
+    assert "SYNTHETIC_DATA_FAIL" in common
+    assert "lab_customers" in common
+    assert "lab_people" in common
+    assert "lab_smoke_mongo" in common
+    assert "docker compose exec -T lab-postgres" in common
+    assert "docker compose exec -T lab-mariadb" in common
+    assert "docker-compose.mongo.yml exec -T lab-mongodb" in common
 
 
 def test_handle_web_health_contract() -> None:

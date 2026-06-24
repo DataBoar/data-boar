@@ -69,6 +69,121 @@ function Format-MaestroHandlersSummary {
     return 'OK'
 }
 
+function Confirm-TargetDbSyntheticData {
+    <#
+    #1021 R9c: after container READY, prove init seed rows exist (not just port open).
+    Uses podman/docker exec against lab-* containers; retries while entrypoint init runs.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]$Node,
+        [Parameter(Mandatory = $true)][ValidateSet('postgres', 'mariadb', 'mongodb')]
+        [string]$Engine,
+        [int]$Port = 0,
+        [int]$MaxAttempts = 15,
+        [int]$WaitSeconds = 2
+    )
+
+    $repoPath = Get-MaestroRemoteRepoPath -RepoPath ([string]$Node.path)
+    $stackDir = "$repoPath/deploy/lab-smoke-stack"
+
+    $engineBody = switch ($Engine) {
+        'postgres' {
+            @'
+cd __STACK_DIR__
+_count_pg() {
+  if command -v podman >/dev/null 2>&1 && podman ps --format '{{.Names}}' 2>/dev/null | grep -qx 'lab-postgres'; then
+    podman exec lab-postgres psql -U "${LAB_PG_USER:-lab_smoke}" -d "${LAB_PG_DATABASE:-lab_smoke_pg}" -tAc "SELECT count(*) FROM lab_customers;"
+  elif command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+    docker compose exec -T lab-postgres psql -U "${LAB_PG_USER:-lab_smoke}" -d "${LAB_PG_DATABASE:-lab_smoke_pg}" -tAc "SELECT count(*) FROM lab_customers;"
+  else
+    return 2
+  fi
+}
+attempt=0
+while [ "$attempt" -lt __MAX_ATTEMPTS__ ]; do
+  cnt=$(_count_pg 2>/dev/null) || cnt=""
+  cnt=$(printf '%s' "$cnt" | tr -d '[:space:]')
+  if printf '%s' "$cnt" | grep -Eq '^[0-9]+$' && [ "$cnt" -gt 0 ]; then
+    echo "SYNTHETIC_DATA_OK engine=postgres table=lab_customers count=$cnt"
+    exit 0
+  fi
+  attempt=$((attempt + 1))
+  sleep __WAIT_SECONDS__
+done
+echo "SYNTHETIC_DATA_FAIL engine=postgres reason=zero_or_unreachable"
+exit 1
+'@
+        }
+        'mariadb' {
+            @'
+cd __STACK_DIR__
+_count_my() {
+  if command -v podman >/dev/null 2>&1 && podman ps --format '{{.Names}}' 2>/dev/null | grep -qx 'lab-mariadb'; then
+    podman exec lab-mariadb mariadb -u"${LAB_MY_USER:-lab_smoke}" -p"${LAB_MY_PASSWORD:-lab_smoke_change_me}" -N -e "SELECT count(*) FROM lab_customers;" "${LAB_MY_DATABASE:-lab_smoke_my}"
+  elif command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+    docker compose exec -T lab-mariadb mariadb -u"${LAB_MY_USER:-lab_smoke}" -p"${LAB_MY_PASSWORD:-lab_smoke_change_me}" -N -e "SELECT count(*) FROM lab_customers;" "${LAB_MY_DATABASE:-lab_smoke_my}"
+  else
+    return 2
+  fi
+}
+attempt=0
+while [ "$attempt" -lt __MAX_ATTEMPTS__ ]; do
+  cnt=$(_count_my 2>/dev/null) || cnt=""
+  cnt=$(printf '%s' "$cnt" | tr -d '[:space:]')
+  if printf '%s' "$cnt" | grep -Eq '^[0-9]+$' && [ "$cnt" -gt 0 ]; then
+    echo "SYNTHETIC_DATA_OK engine=mariadb table=lab_customers count=$cnt"
+    exit 0
+  fi
+  attempt=$((attempt + 1))
+  sleep __WAIT_SECONDS__
+done
+echo "SYNTHETIC_DATA_FAIL engine=mariadb reason=zero_or_unreachable"
+exit 1
+'@
+        }
+        'mongodb' {
+            @'
+cd __STACK_DIR__
+_count_mongo() {
+  if command -v podman >/dev/null 2>&1 && podman ps --format '{{.Names}}' 2>/dev/null | grep -qx 'lab-mongodb'; then
+    podman exec lab-mongodb mongosh --quiet --eval 'db.getSiblingDB("lab_smoke_mongo").lab_people.countDocuments()'
+  elif command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+    docker compose -f docker-compose.mongo.yml exec -T lab-mongodb mongosh --quiet --eval 'db.getSiblingDB("lab_smoke_mongo").lab_people.countDocuments()'
+  else
+    return 2
+  fi
+}
+attempt=0
+while [ "$attempt" -lt __MAX_ATTEMPTS__ ]; do
+  cnt=$(_count_mongo 2>/dev/null) || cnt=""
+  cnt=$(printf '%s' "$cnt" | tr -d '[:space:]')
+  if printf '%s' "$cnt" | grep -Eq '^[0-9]+$' && [ "$cnt" -gt 0 ]; then
+    echo "SYNTHETIC_DATA_OK engine=mongodb collection=lab_people count=$cnt"
+    exit 0
+  fi
+  attempt=$((attempt + 1))
+  sleep __WAIT_SECONDS__
+done
+echo "SYNTHETIC_DATA_FAIL engine=mongodb reason=zero_or_unreachable"
+exit 1
+'@
+        }
+    }
+
+    $remoteCmd = $engineBody.Replace('__STACK_DIR__', $stackDir).Replace('__MAX_ATTEMPTS__', [string]$MaxAttempts).Replace('__WAIT_SECONDS__', [string]$WaitSeconds)
+
+    $out = ssh -q -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 `
+        "$($Node.user)@$($Node.hostname)" $remoteCmd 2>&1
+    $text = ($out | Out-String).Trim()
+    if ($LASTEXITCODE -eq 0 -and $text -match 'SYNTHETIC_DATA_OK') {
+        $countMatch = [regex]::Match($text, 'count=(\d+)')
+        $count = if ($countMatch.Success) { [int]$countMatch.Groups[1].Value } else { 0 }
+        return [pscustomobject]@{ Ok = $true; Count = $count; Detail = $text }
+    }
+    $failDetail = if ($text) { $text } else { "ssh_exit=$LASTEXITCODE engine=$Engine port=$Port" }
+    return [pscustomobject]@{ Ok = $false; Count = 0; Detail = $failDetail }
+}
+
 function Get-LabPrivilegeInvoker {
     <#
     Returns the non-interactive privilege prefix for remote ensure scripts (#954).
