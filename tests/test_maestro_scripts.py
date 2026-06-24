@@ -1100,6 +1100,28 @@ def test_labop_gate_readiness_canonical_bash_bin_for_grants() -> None:
     assert "_dep_optional_degraded" in text
 
 
+def test_labop_gate_readiness_graceful_rust_accelerator() -> None:
+    """#1021 R7: baremetal rust-wheel/maturin degrade without FAIL=1 (MiM 17:42)."""
+    root = _project_root()
+    text = (root / "scripts" / "labop-gate-readiness.sh").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "_emit_rust_accel_hints" in text
+    assert "RUST_ACCEL_UNSUPPORTED" in text
+    assert "pure_python_fallback" in text
+    assert "optional_accelerator_missing" in text
+    assert "maturin develop" in text
+    assert (
+        "boar_fast_filter_missing_in_venv" not in text or "pure_python_fallback" in text
+    )
+    # rust-wheel ALARM paths must not set FAIL=1 (uv still required)
+    assert 'rust-wheel ALARM "boar_fast_filter_missing_in_venv"' not in text
+    assert (
+        "FAIL=1"
+        not in text.split("optional_accelerator_missing")[1].split("# --- fail2ban")[0]
+    )
+
+
 def test_labop_gate_readiness_narrow_grant_invoke() -> None:
     """#1020: privileged nested calls use .labop-gate context + fixed sudoers args."""
     root = _project_root()

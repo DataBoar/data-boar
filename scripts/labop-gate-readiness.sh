@@ -330,24 +330,70 @@ if _any_persona cifs; then
   fi
 fi
 
+# --- baremetal Rust accelerator (#1021 R7): optional FFI; pure-Python fallback is OK ---
+_rust_toolchain_runnable() {
+  local uv_bin mat_ok=0
+  if command -v maturin >/dev/null 2>&1; then
+    mat_ok=1
+  else
+    uv_bin="$(command -v uv 2>/dev/null || true)"
+    if [[ -n "$uv_bin" ]] && "$uv_bin" run maturin --version >/dev/null 2>&1; then
+      mat_ok=1
+    fi
+  fi
+  [[ $mat_ok -eq 1 ]] && command -v rustc >/dev/null 2>&1
+}
+
+_boar_fast_filter_importable() {
+  local uv_bin="$1"
+  [[ -n "$uv_bin" ]] && "$uv_bin" run --project "$REPO_ROOT" python3 -c "import boar_fast_filter" >/dev/null 2>&1
+}
+
+_emit_rust_accel_hints() {
+  local reason="${1:-optional_degraded}"
+  echo "[GateReadiness] WARN: HINT: boar_fast_filter (Rust) is optional; scanner uses pure-Python fallback" >&2
+  echo "[GateReadiness] WARN: HINT: install rustc + maturin, then: uv run maturin develop --release (repo root)" >&2
+  echo "[GateReadiness] WARN: Host feature: RUST_ACCEL_UNSUPPORTED reason=$reason" >&2
+}
+
 if _any_persona baremetal; then
   UV_BIN="$(command -v uv 2>/dev/null || true)"
-  for bin in uv cargo maturin; do
+  if [[ -z "$UV_BIN" ]]; then
+    _gr "login-env:uv" ALARM "missing_from_path"
+    FAIL=1
+  else
+    _gr "login-env:uv" OK "on_path"
+  fi
+  for bin in cargo maturin; do
     if command -v "$bin" >/dev/null 2>&1; then
       _gr "login-env:$bin" OK "on_path"
     elif [[ "$bin" == "maturin" && -n "$UV_BIN" ]] && "$UV_BIN" run maturin --version >/dev/null 2>&1; then
       _gr "login-env:maturin" OK "uv_run"
     else
-      _gr "login-env:$bin" ALARM "missing_from_path"
-      FAIL=1
+      _gr "login-env:$bin" ALARM "optional_accelerator_missing"
     fi
   done
-  if [[ -n "$UV_BIN" ]]; then
-    if "$UV_BIN" run --project "$REPO_ROOT" python3 -c "import boar_fast_filter" >/dev/null 2>&1; then
-      _gr rust-wheel OK "boar_fast_filter_importable"
-    else
-      _gr rust-wheel ALARM "boar_fast_filter_missing_in_venv"
-      FAIL=1
+  if _boar_fast_filter_importable "$UV_BIN"; then
+    _gr rust-wheel OK "boar_fast_filter_importable"
+  else
+    _emit_rust_accel_hints "boar_fast_filter_missing_in_venv"
+    _gr rust-wheel ALARM "pure_python_fallback hint=maturin_develop_release"
+    if [[ $APPLY -eq 1 && -n "$UV_BIN" ]]; then
+      if _rust_toolchain_runnable; then
+        if (cd "$REPO_ROOT" && "$UV_BIN" run maturin develop --release >/dev/null 2>&1); then
+          if _boar_fast_filter_importable "$UV_BIN"; then
+            _gr rust-wheel REMEDIATE "maturin_develop_ok"
+          else
+            _emit_rust_accel_hints "import_still_missing_after_maturin"
+            _gr rust-wheel ALARM "maturin_develop_no_import hint=pure_python_fallback"
+          fi
+        else
+          _emit_rust_accel_hints "maturin_develop_failed"
+          _gr rust-wheel ALARM "maturin_develop_failed hint=pure_python_fallback"
+        fi
+      else
+        _gr rust-wheel ALARM "rust_toolchain_unavailable hint=install_rust_maturin"
+      fi
     fi
   fi
 fi
@@ -444,40 +490,6 @@ if [[ -f "$DEP_SCRIPT" ]]; then
   else
     _gr dep-doctor ALARM "packages_or_modules_missing"
     FAIL=1
-  fi
-fi
-
-# --- rust wheel (#1021): maturin develop on --apply when baremetal persona needs FFI ---
-_rust_toolchain_runnable() {
-  local uv_bin mat_ok=0
-  if command -v maturin >/dev/null 2>&1; then
-    mat_ok=1
-  else
-    uv_bin="$(command -v uv 2>/dev/null || true)"
-    if [[ -n "$uv_bin" ]] && "$uv_bin" run maturin --version >/dev/null 2>&1; then
-      mat_ok=1
-    fi
-  fi
-  [[ $mat_ok -eq 1 ]] && command -v rustc >/dev/null 2>&1
-}
-
-if [[ $APPLY -eq 1 ]] && _any_persona baremetal; then
-  UV_BIN="$(command -v uv 2>/dev/null || true)"
-  if [[ -n "$UV_BIN" ]] && ! "$UV_BIN" run --project "$REPO_ROOT" python3 -c "import boar_fast_filter" >/dev/null 2>&1; then
-    if ! _rust_toolchain_runnable; then
-      _gr rust-wheel ALARM "rust_toolchain_unavailable"
-      FAIL=1
-    elif (cd "$REPO_ROOT" && "$UV_BIN" run maturin develop --release >/dev/null 2>&1); then
-      if "$UV_BIN" run --project "$REPO_ROOT" python3 -c "import boar_fast_filter" >/dev/null 2>&1; then
-        _gr rust-wheel REMEDIATE "maturin_develop_ok"
-      else
-        _gr rust-wheel ALARM "import_still_missing_after_maturin"
-        FAIL=1
-      fi
-    else
-      _gr rust-wheel ALARM "maturin_develop_failed"
-      FAIL=1
-    fi
   fi
 fi
 
