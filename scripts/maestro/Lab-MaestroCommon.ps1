@@ -19,6 +19,25 @@ function Get-HandlerTmuxSessionName {
     return "completao_$Persona"
 }
 
+function Get-EnsureAlarmFromOutput {
+    <#
+    Parses ALARM= lines from labop-*-ensure.sh (exit 3 graceful, #1021 R9).
+    #>
+    param(
+        [Parameter(Mandatory = $true)][AllowEmptyCollection()][string[]]$Lines,
+        [Parameter(Mandatory = $true)][string]$LogTag
+    )
+    foreach ($line in @($Lines)) {
+        if ($line -match "\[$LogTag\] ALARM=([a-z_]+)(?: hint=([^\s]+))?") {
+            return [pscustomobject]@{
+                Alarm = $Matches[1]
+                Hint  = $Matches[2]
+            }
+        }
+    }
+    return $null
+}
+
 function Get-LabPrivilegeInvoker {
     <#
     Returns the non-interactive privilege prefix for remote ensure scripts (#954).

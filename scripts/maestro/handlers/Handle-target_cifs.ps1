@@ -18,6 +18,7 @@
  the IO monitor result so Maestro can verify CIFS target readiness.
 
  Privilege (#954/#1021 R8): .labop-gate context + canonical bash for grant-match.
+ Deep apply-fail: exit 3 = graceful ALARM (#1021 R9); exit 1 = REAL FAIL.
 #>
 
 param(
@@ -65,6 +66,11 @@ if ($skipServerEnsure) {
 
     if ($ensureExit -eq 0) {
         Write-Host "      [SUCCESS] CIFS server-side validated: $($Node.hostname):$($Node.path)" -ForegroundColor Green
+    } elseif ($ensureExit -eq 3) {
+        $grace = Get-EnsureAlarmFromOutput -Lines @($ensureOut) -LogTag 'SMB-Ensure'
+        $alarm = if ($grace) { $grace.Alarm } else { 'cifs_degraded' }
+        $hint = if ($grace -and $grace.Hint) { $grace.Hint } else { 'see_ensure_log' }
+        Write-Warning "      [ALARM] CIFS ensure graceful on $($Node.hostname): $alarm hint=$hint"
     } elseif ($Deep) {
         Write-Warning "      [REAL FAIL] CIFS ensure --apply returned exit $ensureExit on $($Node.hostname)."
         Write-RemoteSentinel -Node $Node -SentinelFile $sentinelFile -ExitCode 1

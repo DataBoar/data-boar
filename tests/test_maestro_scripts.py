@@ -919,15 +919,42 @@ def test_handle_web_post_fallback_retry_backoff() -> None:
 
 
 def test_target_nfs_deep_apply_fail_is_real_fail() -> None:
-    """#954/#949 bundle: Deep ensure --apply failure must exit non-zero and write sentinel 1."""
+    """#954/#949: Deep ensure --apply hard failure (exit 1) must exit non-zero; exit 3 = graceful."""
     root = _project_root()
     text = (
         root / "scripts" / "maestro" / "handlers" / "Handle-target_nfs.ps1"
     ).read_text(encoding="utf-8", errors="replace")
     assert "elseif ($Deep)" in text
     assert "[REAL FAIL] NFS ensure --apply" in text
+    assert "elseif ($ensureExit -eq 3)" in text
+    assert "Get-EnsureAlarmFromOutput" in text
     assert "Write-RemoteSentinel" in text
     assert "exit 1" in text
+
+
+def test_nfs_smb_ensure_graceful_alarm_exit_3() -> None:
+    """#1021 R9: ensure scripts emit ALARM markers and exit 3 for known infra gaps."""
+    root = _project_root()
+    nfs = (root / "scripts" / "labop-nfs-server-ensure.sh").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    smb = (root / "scripts" / "labop-smb-server-ensure.sh").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "ALARM=nfs_server_unavailable" in nfs
+    assert "ALARM=nfs_export_unavailable" in nfs
+    assert "exit 3" in nfs
+    assert "ALARM=smbd_start_failed" in smb
+    assert "exit 3" in smb
+
+
+def test_target_cifs_graceful_alarm_on_exit_3() -> None:
+    root = _project_root()
+    text = (
+        root / "scripts" / "maestro" / "handlers" / "Handle-target_cifs.ps1"
+    ).read_text(encoding="utf-8", errors="replace")
+    assert "elseif ($ensureExit -eq 3)" in text
+    assert "Get-EnsureAlarmFromOutput" in text
 
 
 def test_target_cifs_skips_server_ensure_on_maestro_orchestrator() -> None:

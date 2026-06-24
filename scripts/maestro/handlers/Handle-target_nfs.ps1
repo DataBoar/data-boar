@@ -22,7 +22,7 @@
 
  Privilege (#954/#1021 R8): Build-EnsureRemoteCommand writes .labop-gate context then
  $PRIV <canonical-bash> script (no env-prefix on privileged argv).
- Deep (#949 bundle): ensure --apply failure must NOT mask as ready=0.
+ Deep (#949 bundle): ensure --apply hard failure exits non-zero; exit 3 = graceful ALARM (#1021 R9).
 #>
 
 param(
@@ -66,6 +66,11 @@ if ($ensureOut) { $ensureOut | ForEach-Object { Write-Host "        $_" -Foregro
 
 if ($ensureExit -eq 0) {
     Write-Host "      [SUCCESS] NFS server-side validated: $($Node.hostname):$($Node.path)" -ForegroundColor Green
+} elseif ($ensureExit -eq 3) {
+    $grace = Get-EnsureAlarmFromOutput -Lines @($ensureOut) -LogTag 'NFS-Ensure'
+    $alarm = if ($grace) { $grace.Alarm } else { 'nfs_degraded' }
+    $hint = if ($grace -and $grace.Hint) { $grace.Hint } else { 'see_ensure_log' }
+    Write-Warning "      [ALARM] NFS ensure graceful on $($Node.hostname): $alarm hint=$hint"
 } elseif ($Deep) {
     Write-Warning "      [REAL FAIL] NFS ensure --apply returned exit $ensureExit on $($Node.hostname)."
     Write-RemoteSentinel -Node $Node -SentinelFile $sentinelFile -ExitCode 1

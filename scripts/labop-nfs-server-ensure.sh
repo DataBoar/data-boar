@@ -10,7 +10,7 @@
 #   --apply              start services + configure export (additive only)
 #   --export-path PATH   path to validate/export (default: $HOME/Documents/LGPD)
 #
-# Exit codes: 0=healthy, 1=needs fix, 2=invocation error
+# Exit codes: 0=healthy, 1=needs fix (hard), 2=invocation error, 3=graceful ALARM (#1021 R9)
 #
 # Distro support: Debian/Ubuntu (nfs-kernel-server), Fedora/RHEL (nfs-server),
 #                 openSUSE (nfsserver), Alpine (nfs), Void (nfs-utils)
@@ -164,7 +164,8 @@ fi
 if [[ -z "$NFS_SVC" ]]; then
   _fail "No NFS server service found (tried: nfs-kernel-server nfs-server nfsserver nfs)."
   echo "NFS_SERVER_UNAVAILABLE at $(date +'%H:%M:%S')" > "$STATUS_FILE" 2>/dev/null || true
-  exit 1
+  echo "[NFS-Ensure] ALARM=nfs_server_unavailable hint=t14_primary_nfs_coverage" >&2
+  exit 3
 fi
 _log "NFS service: $NFS_SVC"
 
@@ -246,7 +247,11 @@ if command -v exportfs >/dev/null 2>&1; then
     if [[ $APPLY -eq 1 ]]; then
       _log "Adding export: $EXPORT_PATH *(ro,sync,no_subtree_check)"
       echo "$EXPORT_PATH *(ro,sync,no_subtree_check)" >> /etc/exports
-      exportfs -ra 2>&1 && _ok "exportfs -ra OK." || _fail "exportfs -ra failed."
+      exportfs -ra 2>&1 && _ok "exportfs -ra OK." || {
+        _fail "exportfs -ra failed."
+        echo "[NFS-Ensure] ALARM=nfs_export_unavailable hint=t14_primary_nfs_coverage" >&2
+        exit 3
+      }
     fi
   fi
 fi

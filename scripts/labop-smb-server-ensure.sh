@@ -13,7 +13,7 @@
 # NOTE: smb.conf is NOT auto-written -- operator must configure shares manually.
 #       This script only ensures services are running and validates existing config.
 #
-# Exit codes: 0=healthy, 1=needs fix, 2=invocation error
+# Exit codes: 0=healthy, 1=needs fix (hard), 2=invocation error, 3=graceful ALARM (#1021 R9)
 
 set -u
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin${PATH+:$PATH}"
@@ -82,6 +82,12 @@ fi
 
 NEED_FIX=0
 
+if ! command -v systemctl >/dev/null 2>&1; then
+  _warn "No systemd; SMB server ensure needs systemctl (graceful ALARM)."
+  echo "[SMB-Ensure] ALARM=smbd_start_failed hint=t14_primary_cifs_coverage" >&2
+  exit 3
+fi
+
 # ---------------------------------------------------------------------------
 # Phase 1: Check smbd
 # ---------------------------------------------------------------------------
@@ -90,7 +96,13 @@ if ! systemctl is-active --quiet smbd 2>/dev/null; then
   NEED_FIX=1
   if [[ $APPLY -eq 1 ]]; then
     _log "Starting smbd..."
-    systemctl start smbd 2>&1 && _ok "smbd started." || _fail "smbd start failed."
+    if systemctl start smbd 2>&1; then
+      _ok "smbd started."
+    else
+      _fail "smbd start failed."
+      echo "[SMB-Ensure] ALARM=smbd_start_failed hint=t14_primary_cifs_coverage" >&2
+      exit 3
+    fi
   fi
 else
   _ok "smbd: active."
