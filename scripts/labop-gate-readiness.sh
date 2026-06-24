@@ -361,8 +361,26 @@ if [[ -f "$FW_SCRIPT" ]]; then
       _invoke_priv_script "$FW_SCRIPT" "$FW_MODE"
       FW_EC=$?
     fi
+    # #1021 R6: --apply grant missing (126) but --check works (narrow sudoers on some hosts).
+    FW_APPLY_FALLBACK=0
+    if [[ $FW_EC -eq 126 && "$FW_MODE" == "--apply" ]]; then
+      if [[ "${_FW_GUARD_PROBE_DONE:-0}" -eq 1 && "$_FW_GUARD_PROBE_EC" -eq 0 ]]; then
+        FW_EC=0
+        FW_APPLY_FALLBACK=1
+      else
+        _invoke_priv_script "$FW_SCRIPT" --check
+        FW_EC=$?
+        if [[ $FW_EC -eq 0 ]]; then
+          FW_APPLY_FALLBACK=1
+        fi
+      fi
+    fi
     if [[ $FW_EC -eq 0 ]]; then
-      _gr fail2ban OK "subnet_whitelisted"
+      if [[ "${FW_APPLY_FALLBACK:-0}" -eq 1 ]]; then
+        _gr fail2ban OK "check_only_apply_grant_missing"
+      else
+        _gr fail2ban OK "subnet_whitelisted"
+      fi
     elif [[ $FW_EC -eq 125 ]]; then
       _gr fail2ban ALARM "LAB_OP_SUBNET_not_rfc1918"
       FAIL=1
@@ -383,6 +401,10 @@ if [[ -f "$FW_SCRIPT" ]]; then
 fi
 
 # --- dep-doctor (#958): always --check as operator; --privileged via narrow grant only ---
+_dep_optional_degraded() {
+  grep -qE 'optional_modules_degraded|7z_UNSUPPORTED' <<<"$1"
+}
+
 DEP_SCRIPT="$SCRIPT_DIR/labop-dep-doctor.sh"
 if [[ -f "$DEP_SCRIPT" ]]; then
   DEP_OUT=""
@@ -390,8 +412,11 @@ if [[ -f "$DEP_SCRIPT" ]]; then
   DEP_OUT="$(bash "$DEP_SCRIPT" --check --personas "$PERSONAS_RAW" 2>&1)" || DEP_EC=$?
   printf '%s\n' "$DEP_OUT" >&2
   DEP_ALARM=0
+  DEP_OPTIONAL_DEGRADED=0
   if [[ $DEP_EC -ne 0 ]]; then
     DEP_ALARM=1
+  elif _dep_optional_degraded "$DEP_OUT"; then
+    DEP_OPTIONAL_DEGRADED=1
   fi
   if [[ $APPLY -eq 1 && "$PRIV" != "NO_PRIV" && $DEP_ALARM -eq 1 ]]; then
     # Capture exit directly - `if ! cmd; then EC=$?` records 0 (negation success), not 126 (#1021).
@@ -405,6 +430,9 @@ if [[ -f "$DEP_SCRIPT" ]]; then
     if [[ $PRIV_EC -eq 0 && $DEP_RECHECK_EC -eq 0 ]]; then
       _gr dep-doctor REMEDIATE "privileged_heal_ok"
       DEP_ALARM=0
+      if _dep_optional_degraded "${DEP_RECHECK_OUT:-}"; then
+        DEP_OPTIONAL_DEGRADED=1
+      fi
     elif [[ $PRIV_EC -eq 126 ]]; then
       _gr dep-doctor ALARM "privilege_denied"
     elif [[ $PRIV_EC -ne 0 ]]; then
@@ -414,7 +442,11 @@ if [[ -f "$DEP_SCRIPT" ]]; then
     fi
   fi
   if [[ $DEP_ALARM -eq 0 ]]; then
-    _gr dep-doctor OK "modules_and_persona_os"
+    if [[ $DEP_OPTIONAL_DEGRADED -eq 1 ]]; then
+      _gr dep-doctor ALARM "optional_modules_degraded hint=uv_sync_extra_compressed"
+    else
+      _gr dep-doctor OK "modules_and_persona_os"
+    fi
   else
     _gr dep-doctor ALARM "packages_or_modules_missing"
     FAIL=1

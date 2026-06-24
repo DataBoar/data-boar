@@ -1072,6 +1072,32 @@ def test_labop_dep_doctor_persona_os_failure_not_swallowed() -> None:
     assert "personas=${PERSONAS_RAW:-<none>}" in text
 
 
+def test_labop_dep_doctor_graceful_optional_modules() -> None:
+    """#1021 R6: min-spec py7zr/lzma degrade with hints; uv probes as operator."""
+    root = _project_root()
+    text = (root / "scripts" / "labop-dep-doctor.sh").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "_uv_run_as_operator" in text
+    assert "_uv_sync_compressed_graceful" in text
+    assert "optional_modules_degraded" in text
+    assert "uv sync --extra compressed" in text
+    assert "7z_UNSUPPORTED" in text
+    assert "scikit-learn" in text
+
+
+def test_labop_gate_readiness_fw_apply_check_fallback() -> None:
+    """#1021 R6: fw-guard --apply 126 falls back to --check or probe cache."""
+    root = _project_root()
+    text = (root / "scripts" / "labop-gate-readiness.sh").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "FW_APPLY_FALLBACK" in text
+    assert "check_only_apply_grant_missing" in text
+    assert "optional_modules_degraded" in text
+    assert "_dep_optional_degraded" in text
+
+
 def test_labop_gate_readiness_narrow_grant_invoke() -> None:
     """#1020: privileged nested calls use .labop-gate context + fixed sudoers args."""
     root = _project_root()

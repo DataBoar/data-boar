@@ -222,17 +222,64 @@ if [[ -z "$UV_BIN" ]]; then
 fi
 _log "uv: $UV_BIN ($("$UV_BIN" --version 2>/dev/null | head -1))"
 
+# uv/python probes must run as the operator, not root (#1021 R6 false-positive when root).
+_uv_run_as_operator() {
+  if [[ "$(id -un)" == "root" && -n "$_DD_OPERATOR" && "$_DD_OPERATOR" != "root" ]]; then
+    sudo -u "$_DD_OPERATOR" -H env PATH="$PATH" "$UV_BIN" run --project "$REPO_ROOT" "$@"
+  else
+    "$UV_BIN" run --project "$REPO_ROOT" "$@"
+  fi
+}
+
+_emit_optional_module_hints() {
+  _warn "HINT: optional 7z/compressed support: uv sync --extra compressed"
+  _warn "HINT: may need OS lzma headers (liblzma-dev / xz-dev / xz-devel)"
+  _warn "Host feature: 7z_UNSUPPORTED reason=optional_modules_degraded"
+}
+
+_optional_modules_only_gap() {
+  [[ $NEED_FIX -eq 1 && $PERSONA_OS_OK -eq 1 ]]
+}
+
+_uv_pip_install_py7zr() {
+  if [[ "$(id -un)" == "root" && -n "$_DD_OPERATOR" && "$_DD_OPERATOR" != "root" ]]; then
+    sudo -u "$_DD_OPERATOR" -H env PATH="$PATH" bash -c "cd '$REPO_ROOT' && '$UV_BIN' pip install 'py7zr>=0.20.0'"
+  else
+    (cd "$REPO_ROOT" && "$UV_BIN" pip install 'py7zr>=0.20.0')
+  fi
+}
+
+_uv_sync_compressed_graceful() {
+  local out ec=0
+  if [[ "$(id -un)" == "root" && -n "$_DD_OPERATOR" && "$_DD_OPERATOR" != "root" ]]; then
+    out="$(sudo -u "$_DD_OPERATOR" -H env PATH="$PATH" bash -c "cd '$REPO_ROOT' && '$UV_BIN' sync --extra compressed" 2>&1)" || ec=$?
+  else
+    out="$(cd "$REPO_ROOT" && "$UV_BIN" sync --extra compressed 2>&1)" || ec=$?
+  fi
+  printf '%s\n' "$out"
+  if [[ $ec -eq 0 ]]; then
+    return 0
+  fi
+  if grep -qiE 'scikit-learn|Failed to build|failed-wheel|error: failed' <<<"$out"; then
+    _warn "uv sync failed on ML/core build (min-spec); trying py7zr-only pip install"
+    if _uv_pip_install_py7zr 2>&1; then
+      return 0
+    fi
+  fi
+  return "$ec"
+}
+
 # ---------------------------------------------------------------------------
 # Phase 2: probe for known optional modules
 # ---------------------------------------------------------------------------
 probe_module() {
   local mod="$1"
-  "$UV_BIN" run --project "$REPO_ROOT" python3 -c "import $mod" >/dev/null 2>&1
+  _uv_run_as_operator python3 -c "import $mod" >/dev/null 2>&1
   return $?
 }
 
 probe_lzma() {
-  "$UV_BIN" run --project "$REPO_ROOT" python3 -c "import lzma" >/dev/null 2>&1
+  _uv_run_as_operator python3 -c "import lzma" >/dev/null 2>&1
   return $?
 }
 
@@ -261,6 +308,11 @@ if [[ $NEED_FIX -eq 0 ]]; then
 fi
 
 if [[ $CHECK_ONLY -eq 1 ]]; then
+  if _optional_modules_only_gap; then
+    _emit_optional_module_hints
+    _ok "optional_modules_degraded (graceful; gate may proceed)"
+    exit 0
+  fi
   _warn "Check-only mode: fixes needed but not applied."
   exit 1
 fi
@@ -269,7 +321,7 @@ fi
 # Phase 3: try uv sync --extra compressed (safe, no root needed)
 # ---------------------------------------------------------------------------
 _log "Step 1: uv sync --extra compressed"
-if (cd "$REPO_ROOT" && "$UV_BIN" sync --extra compressed 2>&1); then
+if _uv_sync_compressed_graceful; then
   _log "uv sync succeeded. Re-probing py7zr..."
   if probe_module "py7zr"; then
     _ok "py7zr now importable after uv sync."
@@ -338,7 +390,7 @@ fi
 # Phase 6: re-sync and final probe
 # ---------------------------------------------------------------------------
 _log "Step 4: uv sync --extra compressed (post-install)"
-(cd "$REPO_ROOT" && "$UV_BIN" sync --extra compressed 2>&1) || _warn "Post-install sync failed."
+_uv_sync_compressed_graceful || _warn "Post-install sync failed."
 
 _log "Final probe..."
 if probe_lzma && probe_module "py7zr"; then
@@ -349,6 +401,11 @@ if probe_lzma && probe_module "py7zr"; then
   _ok "All optional modules healthy after full remediation."
   exit 0
 else
+  if _optional_modules_only_gap; then
+    _emit_optional_module_hints
+    _ok "optional_modules_degraded after remediation (graceful)"
+    exit 0
+  fi
   _fail "Modules still unavailable after all remediation steps."
   _warn "Host feature: 7z_UNSUPPORTED reason=lzma_unavailable_after_all_steps"
   exit 1
