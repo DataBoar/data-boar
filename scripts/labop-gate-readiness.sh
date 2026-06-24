@@ -105,7 +105,7 @@ _priv_cmd() {
 
 _priv_denied_output() {
   local out="$1"
-  grep -qiE 'not allowed|a password is required|doas \(.*\) failed|sorry, user|authentication failures' <<<"$out"
+  grep -qiE 'not allowed|a password is required|authentication required|doas \(.*\) failed|sorry, user|authentication failures' <<<"$out"
 }
 
 _invoke_priv_script() {
@@ -354,7 +354,9 @@ if [[ -f "$DEP_SCRIPT" ]]; then
   fi
   if [[ $APPLY -eq 1 && "$PRIV" != "NO_PRIV" && $DEP_ALARM -eq 1 ]]; then
     PRIV_EC=0
-    if ! _invoke_priv_script "$DEP_SCRIPT" --privileged --personas "$PERSONAS_RAW"; then
+    # Plano B (#1021): narrow LABOP_DEP_DOCTOR grant matches --privileged only; personas from
+    # .labop-gate/PERSONAS via dep-doctor _load_personas_from_gate_context (written above).
+    if ! _invoke_priv_script "$DEP_SCRIPT" --privileged; then
       PRIV_EC=$?
     fi
     DEP_RECHECK_EC=0
@@ -382,10 +384,22 @@ if [[ -f "$DEP_SCRIPT" ]]; then
 fi
 
 # --- rust wheel (#1021): maturin develop on --apply when baremetal persona needs FFI ---
+_rust_toolchain_runnable() {
+  if command -v rustc >/dev/null 2>&1; then
+    return 0
+  fi
+  local uv_bin
+  uv_bin="$(command -v uv 2>/dev/null || true)"
+  [[ -n "$uv_bin" ]] && "$uv_bin" run maturin --version >/dev/null 2>&1
+}
+
 if [[ $APPLY -eq 1 ]] && _any_persona baremetal; then
   UV_BIN="$(command -v uv 2>/dev/null || true)"
   if [[ -n "$UV_BIN" ]] && ! "$UV_BIN" run --project "$REPO_ROOT" python3 -c "import boar_fast_filter" >/dev/null 2>&1; then
-    if (cd "$REPO_ROOT" && "$UV_BIN" run maturin develop --release >/dev/null 2>&1); then
+    if ! _rust_toolchain_runnable; then
+      _gr rust-wheel ALARM "rust_toolchain_unavailable"
+      FAIL=1
+    elif (cd "$REPO_ROOT" && "$UV_BIN" run maturin develop --release >/dev/null 2>&1); then
       if "$UV_BIN" run --project "$REPO_ROOT" python3 -c "import boar_fast_filter" >/dev/null 2>&1; then
         _gr rust-wheel REMEDIATE "maturin_develop_ok"
       else
