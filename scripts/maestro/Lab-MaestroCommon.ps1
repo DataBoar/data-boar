@@ -22,10 +22,20 @@ function Get-HandlerTmuxSessionName {
 function Get-LabPrivilegeInvoker {
     <#
     Returns the non-interactive privilege prefix for remote ensure scripts (#954).
-    doas strips caller env by default; callers must use: $priv env VAR=val bash script.sh
+    #1021 R8: env vars go to .labop-gate/ context files (Plano B); privileged argv is
+    canonical bash + script only so narrow sudoers/doas grants match literally.
     #>
     return @'
 if command -v doas >/dev/null 2>&1; then echo "doas -n"; elif command -v sudo >/dev/null 2>&1; then echo "sudo -n"; else echo "NO_PRIV"; fi
+'@.Trim()
+}
+
+function Get-LabCanonicalBashProbe {
+    <#
+    #1021 R8: prefer /usr/bin/bash and /bin/bash before command -v (usrmerge secure_path).
+    #>
+    return @'
+BASH_BIN=""; for _b in /usr/bin/bash /bin/bash; do if [ -x "$_b" ]; then BASH_BIN="$_b"; break; fi; done; if [ -z "$BASH_BIN" ]; then echo "[Ensure] bash_bin_unresolved" >&2; exit 2; fi
 '@.Trim()
 }
 
@@ -36,16 +46,30 @@ function Build-EnsureRemoteCommand {
         [hashtable]$EnvVars = @{}
     )
     $privProbe = Get-LabPrivilegeInvoker
-    $envPairs = @()
+    $bashProbe = Get-LabCanonicalBashProbe
+    $ctxFileByKey = @{
+        LAB_OP_SUBNET = 'LAB_OP_SUBNET'
+        LAB_NFS_SVC   = 'LAB_NFS_SVC'
+        LAB_PKG_MGR   = 'LAB_PKG_MGR'
+    }
+    $ctxWrites = @()
     foreach ($k in $EnvVars.Keys) {
         $v = [string]$EnvVars[$k]
         if ($v -match "[\s'`"$\\]") {
             throw "Build-EnsureRemoteCommand: unsafe env value for $k"
         }
-        $envPairs += "${k}=${v}"
+        if (-not $ctxFileByKey.ContainsKey($k)) {
+            throw "Build-EnsureRemoteCommand: unsupported context key $k (use .labop-gate files)"
+        }
+        $fname = $ctxFileByKey[$k]
+        $ctxWrites += "printf '%s\n' '$v' >`"`$GATE_DIR/$fname`""
     }
-    $envPrefix = if ($envPairs.Count -gt 0) { "env $($envPairs -join ' ') " } else { "" }
-    return "PRIV=`$($privProbe)` ; if [ `"`$PRIV`" = NO_PRIV ]; then echo '[Ensure] NO doas/sudo on host' >&2; exit 2; fi; `$PRIV $envPrefix bash $EnsureScript $EnsureMode 2>&1"
+    $ctxBlock = if ($ctxWrites.Count -gt 0) {
+        "ENSURE_SCRIPT=$EnsureScript; GATE_DIR=`"`$(cd `"`$(dirname `"`$ENSURE_SCRIPT`")/..`" && pwd)/.labop-gate`"; mkdir -p `"`$GATE_DIR`"; $($ctxWrites -join '; '); "
+    } else {
+        "ENSURE_SCRIPT=$EnsureScript; "
+    }
+    return "${ctxBlock}PRIV=`$($privProbe)` ; if [ `"`$PRIV`" = NO_PRIV ]; then echo '[Ensure] NO doas/sudo on host' >&2; exit 2; fi; $bashProbe; `$PRIV `"`$BASH_BIN`" `"`$ENSURE_SCRIPT`" '$EnsureMode' 2>&1"
 }
 
 function Invoke-HandlerTmuxPayload {
@@ -131,16 +155,17 @@ function Invoke-LabopGateReadiness {
     $personaCsv = ($personaList -join ',')
     $repoPath = Get-MaestroRemoteRepoPath -RepoPath ([string]$Node.path)
     $mode = if ($Deep) { '--apply' } else { '--check' }
-    $envPrefix = ""
+    $ctxSetup = ""
     if ($Node.PSObject.Properties.Name -contains 'lab_op_subnet' -and $Node.lab_op_subnet) {
         $subnet = [string]$Node.lab_op_subnet
         if ($subnet -match "[\s'`"$\\]") {
             throw "Invoke-LabopGateReadiness: unsafe lab_op_subnet on $($Node.hostname)"
         }
-        $envPrefix = "env LAB_OP_SUBNET=$subnet "
+        $ctxSetup = "mkdir -p .labop-gate && printf '%s\n' '$subnet' > .labop-gate/LAB_OP_SUBNET && "
     }
+    $bashProbe = Get-LabCanonicalBashProbe
     $gateScript = "$repoPath/scripts/labop-gate-readiness.sh"
-    $remoteCmd = "cd $repoPath && ${envPrefix}bash $gateScript $mode --personas '$personaCsv' 2>&1"
+    $remoteCmd = "cd $repoPath && ${ctxSetup}${bashProbe}; `"`$BASH_BIN`" $gateScript $mode --personas '$personaCsv' 2>&1"
     Write-Host "      [GateReadiness] $mode on $($Node.hostname) personas=$personaCsv" -ForegroundColor DarkCyan
     $output = ssh -q -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 `
         "$($Node.user)@$($Node.hostname)" $remoteCmd 2>&1

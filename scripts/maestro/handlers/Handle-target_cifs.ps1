@@ -17,7 +17,7 @@
  Sentinel (#831): payload writes /tmp/databoar_handler/target_cifs_sentinel.txt with
  the IO monitor result so Maestro can verify CIFS target readiness.
 
- Privilege (#954): doas vs sudo; env VAR=val bash. Deep apply-fail must not mask ready=0.
+ Privilege (#954/#1021 R8): .labop-gate context + canonical bash for grant-match.
 #>
 
 param(

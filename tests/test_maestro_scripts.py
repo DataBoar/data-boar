@@ -866,19 +866,56 @@ def test_handlers_use_per_persona_tmux_helper() -> None:
 
 
 def test_target_nfs_cifs_use_priv_env_bash_ensure() -> None:
-    """#954: ensure runs as `$PRIV env ... bash` (doas strips caller env without env prefix)."""
+    """#954/#1021 R8: ensure uses .labop-gate context + canonical bash (no env-prefix on priv argv)."""
     root = _project_root()
+    common = (root / "scripts" / "maestro" / "Lab-MaestroCommon.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
     for name in ("Handle-target_nfs.ps1", "Handle-target_cifs.ps1"):
         text = (root / "scripts" / "maestro" / "handlers" / name).read_text(
             encoding="utf-8", errors="replace"
         )
         assert "Build-EnsureRemoteCommand" in text
-        assert "command -v doas" in (
-            root / "scripts" / "maestro" / "Lab-MaestroCommon.ps1"
-        ).read_text(encoding="utf-8", errors="replace")
-        assert "`$PRIV $envPrefix bash" in (
-            root / "scripts" / "maestro" / "Lab-MaestroCommon.ps1"
-        ).read_text(encoding="utf-8", errors="replace")
+    assert "Get-LabCanonicalBashProbe" in common
+    assert ".labop-gate" in common
+    assert "env VAR=val" not in common
+    assert "`$ENSURE_SCRIPT`" in common
+    assert "Get-LabCanonicalBashProbe" in common
+
+
+def test_nfs_smb_ensure_read_labop_gate_context() -> None:
+    """#1021 R8: NFS/SMB ensure reads subnet from .labop-gate before firewall checks."""
+    root = _project_root()
+    for script in ("labop-nfs-server-ensure.sh", "labop-smb-server-ensure.sh"):
+        text = (root / "scripts" / script).read_text(encoding="utf-8", errors="replace")
+        assert ".labop-gate/LAB_OP_SUBNET" in text
+    nfs = (root / "scripts" / "labop-nfs-server-ensure.sh").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "LAB_NFS_SVC" in nfs
+    assert "LAB_PKG_MGR" in nfs
+
+
+def test_maestro_gate_invoke_canonical_bash_no_env_prefix() -> None:
+    """#1021 R8: Invoke-LabopGateReadiness uses .labop-gate + canonical bash, not env bash."""
+    root = _project_root()
+    common = (root / "scripts" / "maestro" / "Lab-MaestroCommon.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "Get-LabCanonicalBashProbe" in common
+    assert ".labop-gate/LAB_OP_SUBNET" in common
+    assert "env LAB_OP_SUBNET" not in common
+
+
+def test_handle_web_post_fallback_retry_backoff() -> None:
+    """#1021 R8: web handler retries localhost curl + external health after fallback start."""
+    root = _project_root()
+    text = (root / "scripts" / "maestro" / "handlers" / "Handle-web.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "web_check_post_fallback_retries" in text
+    assert "postFallbackWaitSeconds" in text
+    assert "for ($curlAttempt = 1" in text
 
 
 def test_target_nfs_deep_apply_fail_is_real_fail() -> None:

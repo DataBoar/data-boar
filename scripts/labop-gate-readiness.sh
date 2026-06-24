@@ -108,6 +108,12 @@ _log "mode=$MODE_WORD personas=$PERSONAS_RAW repo=$REPO_ROOT bash=$LABOP_BASH_BI
 
 GATE_CTX_DIR="$REPO_ROOT/.labop-gate"
 
+# Plano B (#1021 R8): Maestro/handlers write subnet to .labop-gate before gate runs.
+if [[ -z "${LAB_OP_SUBNET:-}" && -f "$GATE_CTX_DIR/LAB_OP_SUBNET" ]]; then
+  LAB_OP_SUBNET="$(tr -d '[:space:]' <"$GATE_CTX_DIR/LAB_OP_SUBNET")"
+  export LAB_OP_SUBNET
+fi
+
 # shellcheck source=labop-rfc1918-cidr-lib.sh
 . "$SCRIPT_DIR/labop-rfc1918-cidr-lib.sh"
 

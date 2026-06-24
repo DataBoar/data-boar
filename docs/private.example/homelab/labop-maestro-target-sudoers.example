@@ -8,10 +8,11 @@
 # Verify with the real run (not only sudo -l):
 #   sudo -n /usr/bin/bash REPO_PATH/scripts/labop-fw-guard-ensure.sh --check
 #
-# Handlers invoke exactly:
-#   sudo -n bash REPO_PATH/scripts/labop-nfs-server-ensure.sh --check|--apply
-#   sudo -n bash REPO_PATH/scripts/labop-smb-server-ensure.sh --check|--apply
-# List BOTH /bin/bash and /usr/bin/bash (Void Linux may resolve bash to /usr/bin/bash).
+# Handlers invoke exactly (#1021 R8 — grant-match argv, env via .labop-gate/):
+#   Maestro writes REPO_PATH/.labop-gate/LAB_OP_SUBNET (and optional LAB_NFS_SVC) as the operator user.
+#   sudo -n /usr/bin/bash REPO_PATH/scripts/labop-nfs-server-ensure.sh --check|--apply
+#   sudo -n /usr/bin/bash REPO_PATH/scripts/labop-smb-server-ensure.sh --check|--apply
+#   (never: env LAB_OP_SUBNET=... bash — breaks narrow sudoers/doas literal match)
 
 Cmnd_Alias LABOP_NFS_SERVER = /bin/bash REPO_PATH/scripts/labop-nfs-server-ensure.sh --check, \
                               /usr/bin/bash REPO_PATH/scripts/labop-nfs-server-ensure.sh --check, \

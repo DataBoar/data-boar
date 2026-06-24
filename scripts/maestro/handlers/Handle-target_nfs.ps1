@@ -20,8 +20,8 @@
  Quote/escape safety (#830): IO monitor payload is base64-encoded before tmux injection;
  ensure script path uses canonical repo path from Node.path.
 
- Privilege (#954): doas vs sudo via Build-EnsureRemoteCommand; env VAR=val bash so doas
- does not strip LAB_* (even though ensure auto-detects NFS svc today).
+ Privilege (#954/#1021 R8): Build-EnsureRemoteCommand writes .labop-gate context then
+ $PRIV <canonical-bash> script (no env-prefix on privileged argv).
  Deep (#949 bundle): ensure --apply failure must NOT mask as ready=0.
 #>
 

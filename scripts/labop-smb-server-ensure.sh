@@ -3,7 +3,8 @@
 # Validates and optionally ensures SMB/Samba server-side prerequisites on a target node.
 # Run via narrow sudoers (LABOP_SMB_SERVER) from Maestro Handle-target_cifs.ps1.
 #
-# Usage: sudo -n bash /path/to/labop-smb-server-ensure.sh [--check | --apply] [--share-path PATH] [--share-name NAME]
+# Usage: sudo -n /usr/bin/bash /path/to/labop-smb-server-ensure.sh [--check | --apply] [--share-path PATH] [--share-name NAME]
+#   Subnet: REPO_ROOT/.labop-gate/LAB_OP_SUBNET (Maestro context file; env is fallback only).
 #   (no args / --check)  probe only; exit 0 if healthy, 1 if fix needed
 #   --apply              start services (additive; does NOT write smb.conf automatically)
 #   --share-path PATH    path to validate (default: $HOME/Documents/LGPD)
@@ -54,6 +55,12 @@ done
 
 # Source firewall library
 _SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+_REPO_ROOT="$(cd "$_SCRIPT_DIR/.." && pwd)"
+_GATE_DIR="$_REPO_ROOT/.labop-gate"
+if [[ -f "$_GATE_DIR/LAB_OP_SUBNET" ]]; then
+  LAB_OP_SUBNET="$(tr -d '[:space:]' <"$_GATE_DIR/LAB_OP_SUBNET")"
+  export LAB_OP_SUBNET
+fi
 # shellcheck source=labop-firewall-lib.sh
 source "$_SCRIPT_DIR/labop-firewall-lib.sh" 2>/dev/null || {
   echo "[SMB-Ensure] WARN: labop-firewall-lib.sh not found - firewall checks skipped." >&2
