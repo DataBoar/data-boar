@@ -317,7 +317,8 @@ if [[ -f "$FW_SCRIPT" ]]; then
     if [[ "${_FW_GUARD_PROBE_DONE:-0}" -eq 1 && "$FW_MODE" == "--check" ]]; then
       printf '%s\n' "$_FW_GUARD_PROBE_OUT" >&2
       FW_EC="$_FW_GUARD_PROBE_EC"
-    elif ! _invoke_priv_script "$FW_SCRIPT" "$FW_MODE"; then
+    else
+      _invoke_priv_script "$FW_SCRIPT" "$FW_MODE"
       FW_EC=$?
     fi
     if [[ $FW_EC -eq 0 ]]; then
@@ -353,12 +354,9 @@ if [[ -f "$DEP_SCRIPT" ]]; then
     DEP_ALARM=1
   fi
   if [[ $APPLY -eq 1 && "$PRIV" != "NO_PRIV" && $DEP_ALARM -eq 1 ]]; then
-    PRIV_EC=0
-    # Plano B (#1021): narrow LABOP_DEP_DOCTOR grant matches --privileged only; personas from
-    # .labop-gate/PERSONAS via dep-doctor _load_personas_from_gate_context (written above).
-    if ! _invoke_priv_script "$DEP_SCRIPT" --privileged; then
-      PRIV_EC=$?
-    fi
+    # Capture exit directly - `if ! cmd; then EC=$?` records 0 (negation success), not 126 (#1021).
+    _invoke_priv_script "$DEP_SCRIPT" --privileged
+    PRIV_EC=$?
     DEP_RECHECK_EC=0
     if [[ $PRIV_EC -eq 0 ]]; then
       DEP_RECHECK_OUT="$(bash "$DEP_SCRIPT" --check --personas "$PERSONAS_RAW" 2>&1)" || DEP_RECHECK_EC=$?
@@ -385,12 +383,16 @@ fi
 
 # --- rust wheel (#1021): maturin develop on --apply when baremetal persona needs FFI ---
 _rust_toolchain_runnable() {
-  if command -v rustc >/dev/null 2>&1; then
-    return 0
+  local uv_bin mat_ok=0
+  if command -v maturin >/dev/null 2>&1; then
+    mat_ok=1
+  else
+    uv_bin="$(command -v uv 2>/dev/null || true)"
+    if [[ -n "$uv_bin" ]] && "$uv_bin" run maturin --version >/dev/null 2>&1; then
+      mat_ok=1
+    fi
   fi
-  local uv_bin
-  uv_bin="$(command -v uv 2>/dev/null || true)"
-  [[ -n "$uv_bin" ]] && "$uv_bin" run maturin --version >/dev/null 2>&1
+  [[ $mat_ok -eq 1 ]] && command -v rustc >/dev/null 2>&1
 }
 
 if [[ $APPLY -eq 1 ]] && _any_persona baremetal; then

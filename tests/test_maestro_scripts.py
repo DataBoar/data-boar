@@ -1082,12 +1082,14 @@ def test_labop_gate_readiness_narrow_grant_invoke() -> None:
     assert "privilege_denied" in text
     assert 'bash "$DEP_SCRIPT" --check --personas' in text
     assert '_invoke_priv_script "$DEP_SCRIPT" --privileged' in text
-    assert "Plano B" in text or ".labop-gate/PERSONAS" in text
+    assert "Plano B" in text or "Capture exit directly" in text
     assert "authentication required" in text.lower()
     assert "packages_still_missing_after_remediate" in text
     assert "DEP_RECHECK_EC" in text
     assert "rust_toolchain_unavailable" in text
     assert "maturin develop" in text
+    assert "if ! _invoke_priv_script" not in text
+    assert "Capture exit directly" in text
     assert "env LAB_OP_SUBNET" not in text
 
 
