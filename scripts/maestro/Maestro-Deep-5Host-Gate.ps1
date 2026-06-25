@@ -128,18 +128,19 @@ function Invoke-MaestroDeepGatePass {
     "`n=== SUMMARY $PassLabel $(Get-Date -Format o) ===" | Add-Content $log
     $passSummary | Format-Table | Out-String | Tee-Object -FilePath $log -Append
     $passSummary | Format-Table
-    return ,$passSummary
+    return $passSummary
 }
 
 Remove-Item $log -ErrorAction SilentlyContinue
-$summary = Invoke-MaestroDeepGatePass -PassLabel "pass1" -TargetNodes $targets
+$summary = @(Invoke-MaestroDeepGatePass -PassLabel "pass1" -TargetNodes $targets)
 
 if ($IdempotentTwice) {
     "`n=== IDEMPOTENCY pass2 $(Get-Date -Format o) ===" | Add-Content $log
-    $summary2 = Invoke-MaestroDeepGatePass -PassLabel "pass2" -TargetNodes $targets -SkipPreflight
+    $summary2 = @(Invoke-MaestroDeepGatePass -PassLabel "pass2" -TargetNodes $targets -SkipPreflight)
     $mismatch = @()
-    foreach ($row in $summary) {
-        $other = $summary2 | Where-Object { $_.Host -eq $row.Host } | Select-Object -First 1
+    foreach ($row in @($summary)) {
+        if (-not $row.Host) { continue }
+        $other = @($summary2) | Where-Object { $_.Host -eq $row.Host } | Select-Object -First 1
         if (-not $other) { $mismatch += "$($row.Host): missing in pass2"; continue }
         $line = "$($row.Host)|$($row.Sync)|$($row.Gate)|$($row.Handlers)"
         $line2 = "$($other.Host)|$($other.Sync)|$($other.Gate)|$($other.Handlers)"
@@ -158,9 +159,9 @@ if ($IdempotentTwice) {
 "`n=== GR LINES ===" | Add-Content $log
 Get-Content $log | Select-String -Pattern 'GR host=' | ForEach-Object { $_.Line.Trim() } | Tee-Object -FilePath $log -Append
 
-$totalFails = ($summary | Where-Object { $_.Handlers -like 'FAIL:*' }).Count
+$totalFails = (@($summary) | Where-Object { $_.Handlers -like 'FAIL:*' }).Count
 if ($IdempotentTwice) {
-    $totalFails += ($summary2 | Where-Object { $_.Handlers -like 'FAIL:*' }).Count
+    $totalFails += (@($summary2) | Where-Object { $_.Handlers -like 'FAIL:*' }).Count
 }
 if ($totalFails -gt 0) { exit 1 }
 exit 0
