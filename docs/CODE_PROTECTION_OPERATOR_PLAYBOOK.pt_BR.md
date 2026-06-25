@@ -15,7 +15,7 @@
 | **Dependências**          | A1 | Aprovar/merge de PRs Dependabot no GitHub                            | Triagem, bumps mínimos, testes, correções                                                           |
 | **CVEs da imagem**        | A2 | Rodar Docker localmente, aprovar mudanças no Dockerfile              | Interpretação do `docker scout`, base/pins mínimos                                                  |
 | **Registry público**      | A3 | UI do Docker Hub: excluir ou documentar tags                         | Atualizar [deploy/DEPLOY.pt_BR.md](deploy/DEPLOY.pt_BR.md) §8, refs Compose/K8s                     |
-| **Isolamento do emissor** | A4 | Repo privado; copiar `tools/license-studio`; **nunca** enviar chaves | Modelo de README privado, checklist, `.gitignore`                                                   |
+| **Isolamento do emissor** | A4 | Repo privado [`FabioLeitao/license-studio`](https://github.com/FabioLeitao/license-studio); **nunca** enviar chaves | [LICENSE_STUDIO_SPINOUT.md](ops/LICENSE_STUDIO_SPINOUT.md), checklist, `.gitignore` |
 | **Pessoas**               | A5 | Convidar colaboradores no GitHub/GitLab                              | —                                                                                                   |
 | **Automação**             | A6 | Aprovar adições de CI                                                | `scripts/license-smoke.ps1` ou job pytest, docs em um PR                                            |
 | **Jurídico**              | A7 | Contato com advogado                                                 | Apenas apontar docs: [LICENSING_OPEN_CORE_AND_COMMERCIAL.md](LICENSING_OPEN_CORE_AND_COMMERCIAL.md) |
@@ -38,7 +38,7 @@
 
 ### A4 — Repositório privado do emissor (sem segredos no público)
 
-> **Priority band A, passo A4 apenas.** Esboçar README para **repositório privado** ao copiar `tools/license-studio` para fora da árvore pública: layout, como compilar `sign`, onde ficam as chaves (nunca no git), link para [LICENSING_SPEC.md](LICENSING_SPEC.md). Sem chaves, sem URLs com tokens.
+> **Priority band A, passo A4.** Ferramenta de emissão no repo privado **`FabioLeitao/license-studio`** (spinout 2026-06-25). Veja [docs/ops/LICENSE_STUDIO_SPINOUT.md](ops/LICENSE_STUDIO_SPINOUT.md): layout, `studio sign`, onde ficam as chaves (nunca no git), link para [LICENSING_SPEC.md](LICENSING_SPEC.md). Sem chaves, sem URLs com tokens.
 
 ### A5 — Acesso a parceiros (manual)
 

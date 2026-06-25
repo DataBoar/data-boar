@@ -9,7 +9,7 @@
 | Repo | Clone | Canonical code today | Verify before migrate |
 | ---- | ----- | -------------------- | --------------------- |
 | **`FabioLeitao/maestro`** | `gh repo clone FabioLeitao/maestro` (private) | **Still** `data-boar/scripts/maestro*` (this repo — you know this tree) | `gh pr list -R FabioLeitao/maestro` — **2 open PRs** to `main` as of operator onboarding (re-check HEAD; may drift) |
-| **`FabioLeitao/license-studio`** | `gh repo clone FabioLeitao/license-studio` (private, Go stdlib scaffold) | **More mature copy:** `data-boar/tools/license-studio` (`go.sum`, `schema/audit.sql`, `cmd/studio/`) | Diff private repo vs `tools/license-studio` before moving sensitive code |
+| **`FabioLeitao/license-studio`** | `gh repo clone FabioLeitao/license-studio` (private) | **Spun out 2026-06-25** — was `data-boar/tools/license-studio`; client enforcement stays in `core/licensing/` | `docs/ops/LICENSE_STUDIO_SPINOUT.md` |
 
 **Rules:**
 
@@ -30,7 +30,7 @@
 | **`data-boar`** | public (BSD-3) | Core: PII scanner LGPD/GDPR. **Claude = RO auditor**; **Cursor = writes / PR / merge**. |
 | **`data-boar-design-system`** | private | Six TUIs (License Studio, Data Boar, Carrion Crow, Resolute Rikki, Quirky Quati, Maestro) + design language. |
 | **`maestro`** | private | E2E orchestrator spinout; **`.ps1` canonical still in `data-boar/scripts/maestro*`**; private repo = governance/CI/ADRs — **re-check open PRs** (`gh pr list -R FabioLeitao/maestro`) |
-| **`license-studio`** | private | Ed25519 issuer (Go); **mature impl also in `data-boar/tools/license-studio`** — reconcile before migrate |
+| **`license-studio`** | private | Ed25519 issuer (Go); **canonical repo** `FabioLeitao/license-studio` (spun out of public tree 2026-06-25) |
 
 **Ten NEW private scaffolds** (seeds, born-with-rigor UMADR+CI; **concept-only — do not pretend they have product code**):
 

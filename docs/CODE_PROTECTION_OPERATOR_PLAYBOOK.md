@@ -15,7 +15,7 @@
 | **Dependencies**     | A1 | Approve/merge Dependabot PRs on GitHub                                | Triage alerts, bump pins, run tests, fix breakages                                           |
 | **Image CVEs**       | A2 | Run Docker locally, approve Dockerfile changes                        | `docker scout` output interpretation, minimal base image / pin bumps                         |
 | **Public registry**  | A3 | Docker Hub UI: delete or document tags                                | Update [deploy/DEPLOY.md](deploy/DEPLOY.md) §8, Compose/K8s refs                             |
-| **Issuer isolation** | A4 | Create private repo; copy `tools/license-studio`; **never** push keys | Private README template, checklist, `.gitignore` reminders                                   |
+| **Issuer isolation** | A4 | Private repo [`FabioLeitao/license-studio`](https://github.com/FabioLeitao/license-studio); **never** push keys | [LICENSE_STUDIO_SPINOUT.md](ops/LICENSE_STUDIO_SPINOUT.md), checklist, `.gitignore` reminders |
 | **People**           | A5 | GitHub/GitLab invites for partners                                    | —                                                                                            |
 | **Automation**       | A6 | Approve CI additions                                                  | `scripts/license-smoke.ps1` or pytest job, docs only in one PR                               |
 | **Legal**            | A7 | Call counsel                                                          | Doc pointers: [LICENSING_OPEN_CORE_AND_COMMERCIAL.md](LICENSING_OPEN_CORE_AND_COMMERCIAL.md) |
@@ -40,7 +40,7 @@ Use these **verbatim** or tweak the bracketed parts.
 
 ### A4 — Private issuer repo (no secrets in public)
 
-> **Priority band A, step A4 only.** Draft a **private-repo** README outline for copying `tools/license-studio` out of the public tree: directory layout, how to build `sign`, where keys live (never in git), and link to [LICENSING_SPEC.md](LICENSING_SPEC.md). No keys, no real URLs with tokens.
+> **Priority band A, step A4.** Issuer tooling lives in private **`FabioLeitao/license-studio`** (spun out 2026-06-25). See [docs/ops/LICENSE_STUDIO_SPINOUT.md](ops/LICENSE_STUDIO_SPINOUT.md): layout, `studio sign`, where keys live (never in git), link to [LICENSING_SPEC.md](LICENSING_SPEC.md). No keys, no real URLs with tokens.
 
 ### A5 — Partner access (manual)
 
