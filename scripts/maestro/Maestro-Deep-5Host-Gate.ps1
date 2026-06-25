@@ -8,6 +8,7 @@
   Handlers column OK | ALARM:N | FAIL:N (#1021 R9b).
   #1021 R11: -Detach runs under tmux+setsid (avoid nohup orphan); -IdempotentTwice runs two passes.
   #1021 R12: idempotency compare uses Compare-MaestroDeepGateSummaries (no Format-Table pipeline pollution).
+  #1021 R12.1: Get-MaestroDeepSummaryRows flattens pass return; row-count guard must match gate host list.
 #>
 param(
     [switch]$Detach,
@@ -44,16 +45,43 @@ $targets = @($inv.lab_members | Where-Object {
         $_.hostname -and ($_.ip -match '^\d+\.\d+\.\d+\.\d+$')
     })
 
+function Get-MaestroDeepSummaryRows {
+    <#
+    #1021 R12.1: flatten Invoke-MaestroDeepGatePass return (never trust nested single-element arrays).
+    #>
+    param([object]$RawResult)
+    if ($null -eq $RawResult) { return @() }
+    $flat = [System.Collections.Generic.List[object]]::new()
+    foreach ($item in @($RawResult)) {
+        if ($null -eq $item) { continue }
+        $hasHost = $item.PSObject.Properties.Match("Host").Count -gt 0
+        if ($hasHost) {
+            [void]$flat.Add($item)
+            continue
+        }
+        if ($item -is [System.Collections.IEnumerable] -and $item -isnot [string]) {
+            foreach ($inner in @($item)) {
+                if ($null -eq $inner) { continue }
+                if ($inner.PSObject.Properties.Match("Host").Count -gt 0) {
+                    [void]$flat.Add($inner)
+                }
+            }
+        }
+    }
+    return @($flat)
+}
+
 function Compare-MaestroDeepGateSummaries {
     <#
     #1021 R12: compare pass1 vs pass2 rows by Host key (no pipeline/Format-Table pollution).
+    #1021 R12.1: inputs flattened via Get-MaestroDeepSummaryRows.
     #>
     param(
         [object[]]$Pass1,
         [object[]]$Pass2
     )
-    $rows1 = @($Pass1 | Where-Object { $null -ne $_ -and $null -ne $_.Host })
-    $rows2 = @($Pass2 | Where-Object { $null -ne $_ -and $null -ne $_.Host })
+    $rows1 = Get-MaestroDeepSummaryRows -RawResult $Pass1
+    $rows2 = Get-MaestroDeepSummaryRows -RawResult $Pass2
     $mismatch = [System.Collections.Generic.List[string]]::new()
     foreach ($row in $rows1) {
         $key = [string]$row.Host
@@ -170,20 +198,27 @@ function Invoke-MaestroDeepGatePass {
     $tableOut = $passSummary | Format-Table | Out-String
     $tableOut | Tee-Object -FilePath $log -Append | Out-Null
     Write-Host $tableOut
-    # Return only data rows — never emit Format-Table to the success pipeline (R12).
-    return ,@($passSummary)
+    # Return flat PSCustomObject rows only — no comma-nested array (R12.1).
+    return @($passSummary)
 }
 
+$expectedGateHosts = @($targets).Count
+
 Remove-Item $log -ErrorAction SilentlyContinue
-$summaryRaw = Invoke-MaestroDeepGatePass -PassLabel "pass1" -TargetNodes $targets
-$summary = @($summaryRaw | Where-Object { $null -ne $_ -and $null -ne $_.Host })
+$summary = Get-MaestroDeepSummaryRows -RawResult (Invoke-MaestroDeepGatePass -PassLabel "pass1" -TargetNodes $targets)
 
 if ($IdempotentTwice) {
     "`n=== IDEMPOTENCY pass2 $(Get-Date -Format o) ===" | Add-Content $log
-    $summary2Raw = Invoke-MaestroDeepGatePass -PassLabel "pass2" -TargetNodes $targets -SkipPreflight
-    $summary2 = @($summary2Raw | Where-Object { $null -ne $_ -and $null -ne $_.Host })
+    $summary2 = Get-MaestroDeepSummaryRows -RawResult (
+        Invoke-MaestroDeepGatePass -PassLabel "pass2" -TargetNodes $targets -SkipPreflight
+    )
     $idem = Compare-MaestroDeepGateSummaries -Pass1 $summary -Pass2 $summary2
-    "IDEMPOTENCY compare: pass1_rows=$($idem.Pass1Count) pass2_rows=$($idem.Pass2Count)" | Tee-Object -FilePath $log -Append
+    "IDEMPOTENCY compare: pass1_rows=$($idem.Pass1Count) pass2_rows=$($idem.Pass2Count) expected=$expectedGateHosts" | Tee-Object -FilePath $log -Append
+    if ($idem.Pass1Count -ne $expectedGateHosts -or $idem.Pass2Count -ne $expectedGateHosts) {
+        "IDEMPOTENCY: ROW_COUNT_FAIL expected=$expectedGateHosts pass1=$($idem.Pass1Count) pass2=$($idem.Pass2Count)" | Tee-Object -FilePath $log -Append
+        Write-Warning "IDEMPOTENCY: row count guard failed — verifier cannot trust match"
+        exit 1
+    }
     if ($idem.Ok) {
         "IDEMPOTENCY: pass1 and pass2 SUMMARY match" | Tee-Object -FilePath $log -Append
         Write-Host "IDEMPOTENCY: pass1 and pass2 SUMMARY match" -ForegroundColor Green
