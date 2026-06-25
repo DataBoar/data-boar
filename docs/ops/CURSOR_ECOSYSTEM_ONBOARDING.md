@@ -2,6 +2,23 @@
 
 > Built off-band (Claude Code + operator Obsidian vault). **Cursor does not know this by default** — paste or `@` this file in fresh chats. For **detail**, read the vault (`~/Projects/dev/obsidian-vault/databoar-commercial/`), starting with **`_NORTE_mapa-do-todo-e-sequencia.md`**, **CHIRP** pattern (HUB/subject → source). Vault recall via its `.cursorrules`.
 
+## Pre-context — two NEW private repos (paste before spinout work)
+
+**Cursor has no session context for these until you clone/read them.** They were scaffolded **off-band** (not by a prior Cursor turn in this repo).
+
+| Repo | Clone | Canonical code today | Verify before migrate |
+| ---- | ----- | -------------------- | --------------------- |
+| **`FabioLeitao/maestro`** | `gh repo clone FabioLeitao/maestro` (private) | **Still** `data-boar/scripts/maestro*` (this repo — you know this tree) | `gh pr list -R FabioLeitao/maestro` — **2 open PRs** to `main` as of operator onboarding (re-check HEAD; may drift) |
+| **`FabioLeitao/license-studio`** | `gh repo clone FabioLeitao/license-studio` (private, Go stdlib scaffold) | **More mature copy:** `data-boar/tools/license-studio` (`go.sum`, `schema/audit.sql`, `cmd/studio/`) | Diff private repo vs `tools/license-studio` before moving sensitive code |
+
+**Rules:**
+
+- **Verify everything against HEAD** — descriptions in vault/relay may be stale vs live Git.
+- **Do not migrate sensitive code** without operator confirmation and diff.
+- **OPSEC:** relay **off-band via operator (copy-paste), zero trace** in public GitHub issues — correct for private repos.
+
+**Operator workstation note:** clones may already exist under `~/Projects/dev/maestro` and `~/Projects/dev/license-studio` — still **`read_file` / `git log`** there; do not assume chat memory.
+
 ## The house
 
 **Data Boar** = the org/house + umbrella mascot. The ecosystem = a **bestiary** of products sharing DNA (local · air-gapped · deterministic · TUI "dashBOARd-like" · one golden JWT · zero-LLM-on-data).
@@ -12,8 +29,8 @@
 | ---- | ---------- | ---- |
 | **`data-boar`** | public (BSD-3) | Core: PII scanner LGPD/GDPR. **Claude = RO auditor**; **Cursor = writes / PR / merge**. |
 | **`data-boar-design-system`** | private | Six TUIs (License Studio, Data Boar, Carrion Crow, Resolute Rikki, Quirky Quati, Maestro) + design language. |
-| **`maestro`** | private | E2E orchestrator (spinout from data-boar; 2 PRs to reconcile). |
-| **`license-studio`** | private | Ed25519 issuer (Go). |
+| **`maestro`** | private | E2E orchestrator spinout; **`.ps1` canonical still in `data-boar/scripts/maestro*`**; private repo = governance/CI/ADRs — **re-check open PRs** (`gh pr list -R FabioLeitao/maestro`) |
+| **`license-studio`** | private | Ed25519 issuer (Go); **mature impl also in `data-boar/tools/license-studio`** — reconcile before migrate |
 
 **Ten NEW private scaffolds** (seeds, born-with-rigor UMADR+CI; **concept-only — do not pretend they have product code**):
 
