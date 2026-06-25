@@ -143,14 +143,18 @@ def test_db_target_handlers_use_compose_contract() -> None:
 
 
 def test_confirm_target_db_synthetic_data_contract() -> None:
-    """#1021 R9c: post-READY oracle via count(*) / countDocuments on lab smoke seeds."""
+    """#1021 R9c/R11: post-READY oracle; R11 splits seed_empty vs confirm_unreachable."""
     root = _project_root()
     common = (root / "scripts" / "maestro" / "Lab-MaestroCommon.ps1").read_text(
         encoding="utf-8", errors="replace"
     )
     assert "function Confirm-TargetDbSyntheticData" in common
+    assert "function Get-LabDbInitStageBash" in common
+    assert "stage_lab_db_init" in common
+    assert "chmod -R a+rX" in common
     assert "SYNTHETIC_DATA_OK" in common
-    assert "SYNTHETIC_DATA_FAIL" in common
+    assert "reason=seed_empty" in common
+    assert "reason=confirm_unreachable" in common
     assert "lab_customers" in common
     assert "lab_people" in common
     assert "lab_smoke_mongo" in common
@@ -158,6 +162,35 @@ def test_confirm_target_db_synthetic_data_contract() -> None:
     assert "docker compose exec -T lab-mariadb" in common
     assert "docker-compose.mongo.yml exec -T lab-mongodb" in common
     assert '-replace "`r", ""' in common
+
+
+def test_db_handlers_stage_init_for_podman() -> None:
+    """#1021 R11: podman bind-mount uses staged a+rX init, not 660 repo files."""
+    root = _project_root()
+    for name, token in (
+        ("Handle-target_postgres.ps1", "PG_INIT"),
+        ("Handle-target_mariadb.ps1", "MY_INIT"),
+        ("Handle-target_mongodb.ps1", "MONGO_INIT"),
+    ):
+        text = (root / "scripts" / "maestro" / "handlers" / name).read_text(
+            encoding="utf-8", errors="replace"
+        )
+        assert "__DB_INIT_STAGE__" in text or "stage_lab_db_init" in text
+        assert token in text
+        assert "TARGET_" in text and "_INIT_FAIL" in text
+
+
+def test_maestro_deep_gate_detach_tmux() -> None:
+    """#1021 R11: re-Deep harness supports tmux+setsid detach and idempotent pass."""
+    root = _project_root()
+    text = (root / "scripts" / "maestro" / "Maestro-Deep-5Host-Gate.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "[switch]`$Detach" in text or "[switch]$Detach" in text
+    assert "tmux new-session" in text
+    assert "setsid pwsh" in text
+    assert "IdempotentTwice" in text
+    assert "IDEMPOTENCY" in text
 
 
 def test_handle_web_health_contract() -> None:

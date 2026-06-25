@@ -69,6 +69,33 @@ function Format-MaestroHandlersSummary {
     return 'OK'
 }
 
+function Get-LabDbInitStageBash {
+    <#
+    #1021 R11: SCP/rsync often leaves init SQL at 660; rootless podman cannot read bind mount.
+    Stage to /tmp with a+rX before podman run (see LAB_SMOKE_MULTI_HOST.md / ADR-0029).
+    #>
+    return @'
+stage_lab_db_init() {
+  local src="$1"
+  local label="$2"
+  local dest="/tmp/databoar-lab-init/${label}"
+  rm -rf "$dest"
+  mkdir -p "$dest"
+  cp -a "${src}/." "$dest/"
+  chmod -R a+rX "$dest"
+  printf '%s' "$dest"
+}
+ensure_lab_smoke_init_readable() {
+  local dir
+  for dir in "$@"; do
+    if [ -d "$dir" ]; then
+      chmod -R a+rX "$dir" 2>/dev/null || true
+    fi
+  done
+}
+'@.Trim()
+}
+
 function Confirm-TargetDbSyntheticData {
     <#
     #1021 R9c: after container READY, prove init seed rows exist (not just port open).
@@ -90,6 +117,21 @@ function Confirm-TargetDbSyntheticData {
         'postgres' {
             @'
 cd __STACK_DIR__
+_pg_container_state() {
+  if command -v podman >/dev/null 2>&1 && podman ps -a --format '{{.Names}}' 2>/dev/null | grep -qx 'lab-postgres'; then
+    podman inspect -f '{{.State.Status}}' lab-postgres 2>/dev/null || echo missing
+    return
+  fi
+  if command -v docker >/dev/null 2>&1 && docker compose ps lab-postgres 2>/dev/null | grep -q 'Up'; then
+    echo running
+    return
+  fi
+  if command -v docker >/dev/null 2>&1 && docker compose ps -a lab-postgres 2>/dev/null | grep -q lab-postgres; then
+    echo exited
+    return
+  fi
+  echo missing
+}
 _count_pg() {
   if command -v podman >/dev/null 2>&1 && podman ps --format '{{.Names}}' 2>/dev/null | grep -qx 'lab-postgres'; then
     podman exec lab-postgres psql -U "${LAB_PG_USER:-lab_smoke}" -d "${LAB_PG_DATABASE:-lab_smoke_pg}" -tAc "SELECT count(*) FROM lab_customers;"
@@ -99,9 +141,17 @@ _count_pg() {
     return 2
   fi
 }
+st=$(_pg_container_state)
+if [ "$st" != "running" ]; then
+  echo "SYNTHETIC_DATA_FAIL engine=postgres reason=confirm_unreachable container=$st"
+  command -v podman >/dev/null 2>&1 && podman logs --tail 5 lab-postgres 2>&1 || true
+  exit 1
+fi
 attempt=0
+last_err=""
 while [ "$attempt" -lt __MAX_ATTEMPTS__ ]; do
-  cnt=$(_count_pg 2>/dev/null) || cnt=""
+  cnt=$(_count_pg 2>"/tmp/databoar-pg-count.err") || cnt=""
+  last_err=$(tail -1 /tmp/databoar-pg-count.err 2>/dev/null || true)
   cnt=$(printf '%s' "$cnt" | tr -d '[:space:]')
   if printf '%s' "$cnt" | grep -Eq '^[0-9]+$' && [ "$cnt" -gt 0 ]; then
     echo "SYNTHETIC_DATA_OK engine=postgres table=lab_customers count=$cnt"
@@ -110,13 +160,32 @@ while [ "$attempt" -lt __MAX_ATTEMPTS__ ]; do
   attempt=$((attempt + 1))
   sleep __WAIT_SECONDS__
 done
-echo "SYNTHETIC_DATA_FAIL engine=postgres reason=zero_or_unreachable"
+if [ -n "$last_err" ]; then
+  echo "SYNTHETIC_DATA_FAIL engine=postgres reason=confirm_exec_failed detail=${last_err}"
+else
+  echo "SYNTHETIC_DATA_FAIL engine=postgres reason=seed_empty container=running"
+fi
 exit 1
 '@
         }
         'mariadb' {
             @'
 cd __STACK_DIR__
+_my_container_state() {
+  if command -v podman >/dev/null 2>&1 && podman ps -a --format '{{.Names}}' 2>/dev/null | grep -qx 'lab-mariadb'; then
+    podman inspect -f '{{.State.Status}}' lab-mariadb 2>/dev/null || echo missing
+    return
+  fi
+  if command -v docker >/dev/null 2>&1 && docker compose ps lab-mariadb 2>/dev/null | grep -q 'Up'; then
+    echo running
+    return
+  fi
+  if command -v docker >/dev/null 2>&1 && docker compose ps -a lab-mariadb 2>/dev/null | grep -q lab-mariadb; then
+    echo exited
+    return
+  fi
+  echo missing
+}
 _count_my() {
   if command -v podman >/dev/null 2>&1 && podman ps --format '{{.Names}}' 2>/dev/null | grep -qx 'lab-mariadb'; then
     podman exec lab-mariadb mariadb -u"${LAB_MY_USER:-lab_smoke}" -p"${LAB_MY_PASSWORD:-lab_smoke_change_me}" -N -e "SELECT count(*) FROM lab_customers;" "${LAB_MY_DATABASE:-lab_smoke_my}"
@@ -126,9 +195,17 @@ _count_my() {
     return 2
   fi
 }
+st=$(_my_container_state)
+if [ "$st" != "running" ]; then
+  echo "SYNTHETIC_DATA_FAIL engine=mariadb reason=confirm_unreachable container=$st"
+  command -v podman >/dev/null 2>&1 && podman logs --tail 5 lab-mariadb 2>&1 || true
+  exit 1
+fi
 attempt=0
+last_err=""
 while [ "$attempt" -lt __MAX_ATTEMPTS__ ]; do
-  cnt=$(_count_my 2>/dev/null) || cnt=""
+  cnt=$(_count_my 2>"/tmp/databoar-my-count.err") || cnt=""
+  last_err=$(tail -1 /tmp/databoar-my-count.err 2>/dev/null || true)
   cnt=$(printf '%s' "$cnt" | tr -d '[:space:]')
   if printf '%s' "$cnt" | grep -Eq '^[0-9]+$' && [ "$cnt" -gt 0 ]; then
     echo "SYNTHETIC_DATA_OK engine=mariadb table=lab_customers count=$cnt"
@@ -137,13 +214,32 @@ while [ "$attempt" -lt __MAX_ATTEMPTS__ ]; do
   attempt=$((attempt + 1))
   sleep __WAIT_SECONDS__
 done
-echo "SYNTHETIC_DATA_FAIL engine=mariadb reason=zero_or_unreachable"
+if [ -n "$last_err" ]; then
+  echo "SYNTHETIC_DATA_FAIL engine=mariadb reason=confirm_exec_failed detail=${last_err}"
+else
+  echo "SYNTHETIC_DATA_FAIL engine=mariadb reason=seed_empty container=running"
+fi
 exit 1
 '@
         }
         'mongodb' {
             @'
 cd __STACK_DIR__
+_mongo_container_state() {
+  if command -v podman >/dev/null 2>&1 && podman ps -a --format '{{.Names}}' 2>/dev/null | grep -qx 'lab-mongodb'; then
+    podman inspect -f '{{.State.Status}}' lab-mongodb 2>/dev/null || echo missing
+    return
+  fi
+  if command -v docker >/dev/null 2>&1 && docker compose -f docker-compose.mongo.yml ps lab-mongodb 2>/dev/null | grep -q 'Up'; then
+    echo running
+    return
+  fi
+  if command -v docker >/dev/null 2>&1 && docker compose -f docker-compose.mongo.yml ps -a lab-mongodb 2>/dev/null | grep -q lab-mongodb; then
+    echo exited
+    return
+  fi
+  echo missing
+}
 _count_mongo() {
   if command -v podman >/dev/null 2>&1 && podman ps --format '{{.Names}}' 2>/dev/null | grep -qx 'lab-mongodb'; then
     podman exec lab-mongodb mongosh --quiet --eval 'db.getSiblingDB("lab_smoke_mongo").lab_people.countDocuments()'
@@ -153,9 +249,17 @@ _count_mongo() {
     return 2
   fi
 }
+st=$(_mongo_container_state)
+if [ "$st" != "running" ]; then
+  echo "SYNTHETIC_DATA_FAIL engine=mongodb reason=confirm_unreachable container=$st"
+  command -v podman >/dev/null 2>&1 && podman logs --tail 5 lab-mongodb 2>&1 || true
+  exit 1
+fi
 attempt=0
+last_err=""
 while [ "$attempt" -lt __MAX_ATTEMPTS__ ]; do
-  cnt=$(_count_mongo 2>/dev/null) || cnt=""
+  cnt=$(_count_mongo 2>"/tmp/databoar-mongo-count.err") || cnt=""
+  last_err=$(tail -1 /tmp/databoar-mongo-count.err 2>/dev/null || true)
   cnt=$(printf '%s' "$cnt" | tr -d '[:space:]')
   if printf '%s' "$cnt" | grep -Eq '^[0-9]+$' && [ "$cnt" -gt 0 ]; then
     echo "SYNTHETIC_DATA_OK engine=mongodb collection=lab_people count=$cnt"
@@ -164,7 +268,11 @@ while [ "$attempt" -lt __MAX_ATTEMPTS__ ]; do
   attempt=$((attempt + 1))
   sleep __WAIT_SECONDS__
 done
-echo "SYNTHETIC_DATA_FAIL engine=mongodb reason=zero_or_unreachable"
+if [ -n "$last_err" ]; then
+  echo "SYNTHETIC_DATA_FAIL engine=mongodb reason=confirm_exec_failed detail=${last_err}"
+else
+  echo "SYNTHETIC_DATA_FAIL engine=mongodb reason=seed_empty container=running"
+fi
 exit 1
 '@
         }

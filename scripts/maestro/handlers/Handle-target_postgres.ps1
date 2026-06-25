@@ -36,6 +36,9 @@ mkdir -p "$(dirname "$SENTINEL")"
 _rc=0
 trap '_rc=$?; echo $_rc > "$SENTINEL"; exit $_rc' EXIT
 cd __NODE_PATH__/deploy/lab-smoke-stack
+__DB_INIT_STAGE__
+ensure_lab_smoke_init_readable "$PWD/init/postgres"
+PG_INIT="$(stage_lab_db_init "$PWD/init/postgres" postgres)"
 pick_port() {
   local default_port="$1"
   local candidates="$2"
@@ -62,11 +65,23 @@ if command -v podman >/dev/null 2>&1 && podman info >/dev/null 2>&1; then
     -e POSTGRES_USER="${LAB_PG_USER:-lab_smoke}" \
     -e POSTGRES_PASSWORD="${LAB_PG_PASSWORD:-lab_smoke_change_me}" \
     -e POSTGRES_DB="${LAB_PG_DATABASE:-lab_smoke_pg}" \
-    -v "$PWD/init/postgres:/docker-entrypoint-initdb.d:ro" \
+    -v "${PG_INIT}:/docker-entrypoint-initdb.d:ro" \
     docker.io/library/postgres:16-alpine >/dev/null
+  for _w in $(seq 1 60); do
+    if podman inspect -f '{{.State.Status}}' lab-postgres 2>/dev/null | grep -qx running; then
+      break
+    fi
+    if podman inspect -f '{{.State.Status}}' lab-postgres 2>/dev/null | grep -qx exited; then
+      echo "TARGET_POSTGRES_INIT_FAIL"
+      podman logs --tail 8 lab-postgres 2>&1 || true
+      exit 1
+    fi
+    sleep 1
+  done
   podman ps --filter name=lab-postgres --format "{{.Names}} {{.Status}}" || true
 elif command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
   export LAB_PG_PORT="$CHOSEN_PORT"
+  ensure_lab_smoke_init_readable "$PWD/init/postgres"
   docker compose up -d lab-postgres >/dev/null
   docker compose ps lab-postgres || true
 else
@@ -77,7 +92,9 @@ echo "TARGET_POSTGRES_READY port=${CHOSEN_PORT} at $(date +'%H:%M:%S')" > ~/.lab
 echo "TARGET_POSTGRES_READY port=${CHOSEN_PORT}"
 '@
 $remoteCmd = $remoteCmd.Replace("__SENTINEL__", $sentinelFile)
-$remoteCmd = $remoteCmd.Replace("__NODE_PATH__", [string]$Node.path) -replace "`r", ""
+$remoteCmd = $remoteCmd.Replace("__NODE_PATH__", [string]$Node.path)
+$remoteCmd = $remoteCmd.Replace("__DB_INIT_STAGE__", (Get-LabDbInitStageBash))
+$remoteCmd = $remoteCmd -replace "`r", ""
 
 $out = ssh -q -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$($Node.user)@$($Node.hostname)" "$remoteCmd"
 if ($LASTEXITCODE -eq 0 -and $out -match "TARGET_POSTGRES_READY") {

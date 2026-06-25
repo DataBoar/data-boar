@@ -36,6 +36,9 @@ mkdir -p "$(dirname "$SENTINEL")"
 _rc=0
 trap '_rc=$?; echo $_rc > "$SENTINEL"; exit $_rc' EXIT
 cd __NODE_PATH__/deploy/lab-smoke-stack
+__DB_INIT_STAGE__
+ensure_lab_smoke_init_readable "$PWD/init/mariadb"
+MY_INIT="$(stage_lab_db_init "$PWD/init/mariadb" mariadb)"
 pick_port() {
   local default_port="$1"
   local candidates="$2"
@@ -63,11 +66,23 @@ if command -v podman >/dev/null 2>&1 && podman info >/dev/null 2>&1; then
     -e MARIADB_DATABASE="${LAB_MY_DATABASE:-lab_smoke_my}" \
     -e MARIADB_USER="${LAB_MY_USER:-lab_smoke}" \
     -e MARIADB_PASSWORD="${LAB_MY_PASSWORD:-lab_smoke_change_me}" \
-    -v "$PWD/init/mariadb:/docker-entrypoint-initdb.d:ro" \
+    -v "${MY_INIT}:/docker-entrypoint-initdb.d:ro" \
     docker.io/library/mariadb:11 >/dev/null
+  for _w in $(seq 1 90); do
+    if podman inspect -f '{{.State.Status}}' lab-mariadb 2>/dev/null | grep -qx running; then
+      break
+    fi
+    if podman inspect -f '{{.State.Status}}' lab-mariadb 2>/dev/null | grep -qx exited; then
+      echo "TARGET_MARIADB_INIT_FAIL"
+      podman logs --tail 8 lab-mariadb 2>&1 || true
+      exit 1
+    fi
+    sleep 1
+  done
   podman ps --filter name=lab-mariadb --format "{{.Names}} {{.Status}}" || true
 elif command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
   export LAB_MY_PORT="$CHOSEN_PORT"
+  ensure_lab_smoke_init_readable "$PWD/init/mariadb"
   docker compose up -d lab-mariadb >/dev/null
   docker compose ps lab-mariadb || true
 else
@@ -78,7 +93,9 @@ echo "TARGET_MARIADB_READY port=${CHOSEN_PORT} at $(date +'%H:%M:%S')" > ~/.labo
 echo "TARGET_MARIADB_READY port=${CHOSEN_PORT}"
 '@
 $remoteCmd = $remoteCmd.Replace("__SENTINEL__", $sentinelFile)
-$remoteCmd = $remoteCmd.Replace("__NODE_PATH__", [string]$Node.path) -replace "`r", ""
+$remoteCmd = $remoteCmd.Replace("__NODE_PATH__", [string]$Node.path)
+$remoteCmd = $remoteCmd.Replace("__DB_INIT_STAGE__", (Get-LabDbInitStageBash))
+$remoteCmd = $remoteCmd -replace "`r", ""
 
 $out = ssh -q -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$($Node.user)@$($Node.hostname)" "$remoteCmd"
 if ($LASTEXITCODE -eq 0 -and $out -match "TARGET_MARIADB_READY") {
