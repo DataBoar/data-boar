@@ -7,6 +7,7 @@
   Sync WorkingTree, gate --apply, handlers -Deep per persona; prints summary with
   Handlers column OK | ALARM:N | FAIL:N (#1021 R9b).
   #1021 R11: -Detach runs under tmux+setsid (avoid nohup orphan); -IdempotentTwice runs two passes.
+  #1021 R12: idempotency compare uses Compare-MaestroDeepGateSummaries (no Format-Table pipeline pollution).
 #>
 param(
     [switch]$Detach,
@@ -42,6 +43,46 @@ $inv = Get-Content $invPath -Raw | ConvertFrom-Json
 $targets = @($inv.lab_members | Where-Object {
         $_.hostname -and ($_.ip -match '^\d+\.\d+\.\d+\.\d+$')
     })
+
+function Compare-MaestroDeepGateSummaries {
+    <#
+    #1021 R12: compare pass1 vs pass2 rows by Host key (no pipeline/Format-Table pollution).
+    #>
+    param(
+        [object[]]$Pass1,
+        [object[]]$Pass2
+    )
+    $rows1 = @($Pass1 | Where-Object { $null -ne $_ -and $null -ne $_.Host })
+    $rows2 = @($Pass2 | Where-Object { $null -ne $_ -and $null -ne $_.Host })
+    $mismatch = [System.Collections.Generic.List[string]]::new()
+    foreach ($row in $rows1) {
+        $key = [string]$row.Host
+        $other = @($rows2 | Where-Object { [string]$_.Host -eq $key } | Select-Object -First 1)
+        if ($other.Count -eq 0) {
+            $mismatch.Add("${key}: missing in pass2")
+            continue
+        }
+        $o = $other[0]
+        $line1 = "$key|$($row.Sync)|$($row.Gate)|$($row.Handlers)"
+        $line2 = "$key|$($o.Sync)|$($o.Gate)|$($o.Handlers)"
+        if ($line1 -ne $line2) {
+            $mismatch.Add("pass1=$line1 pass2=$line2")
+        }
+    }
+    foreach ($row in $rows2) {
+        $key = [string]$row.Host
+        $found = @($rows1 | Where-Object { [string]$_.Host -eq $key })
+        if ($found.Count -eq 0) {
+            $mismatch.Add("${key}: missing in pass1")
+        }
+    }
+    return [pscustomobject]@{
+        Ok       = ($mismatch.Count -eq 0)
+        Mismatch = @($mismatch)
+        Pass1Count = $rows1.Count
+        Pass2Count = $rows2.Count
+    }
+}
 
 function Invoke-MaestroDeepGatePass {
     param(
@@ -126,33 +167,31 @@ function Invoke-MaestroDeepGatePass {
     }
 
     "`n=== SUMMARY $PassLabel $(Get-Date -Format o) ===" | Add-Content $log
-    $passSummary | Format-Table | Out-String | Tee-Object -FilePath $log -Append
-    $passSummary | Format-Table
-    return $passSummary
+    $tableOut = $passSummary | Format-Table | Out-String
+    $tableOut | Tee-Object -FilePath $log -Append | Out-Null
+    Write-Host $tableOut
+    # Return only data rows — never emit Format-Table to the success pipeline (R12).
+    return ,@($passSummary)
 }
 
 Remove-Item $log -ErrorAction SilentlyContinue
-$summary = @(Invoke-MaestroDeepGatePass -PassLabel "pass1" -TargetNodes $targets)
+$summaryRaw = Invoke-MaestroDeepGatePass -PassLabel "pass1" -TargetNodes $targets
+$summary = @($summaryRaw | Where-Object { $null -ne $_ -and $null -ne $_.Host })
 
 if ($IdempotentTwice) {
     "`n=== IDEMPOTENCY pass2 $(Get-Date -Format o) ===" | Add-Content $log
-    $summary2 = @(Invoke-MaestroDeepGatePass -PassLabel "pass2" -TargetNodes $targets -SkipPreflight)
-    $mismatch = @()
-    foreach ($row in @($summary)) {
-        if (-not $row.Host) { continue }
-        $other = @($summary2) | Where-Object { $_.Host -eq $row.Host } | Select-Object -First 1
-        if (-not $other) { $mismatch += "$($row.Host): missing in pass2"; continue }
-        $line = "$($row.Host)|$($row.Sync)|$($row.Gate)|$($row.Handlers)"
-        $line2 = "$($other.Host)|$($other.Sync)|$($other.Gate)|$($other.Handlers)"
-        if ($line -ne $line2) { $mismatch += "pass1=$line pass2=$line2" }
-    }
-    if ($mismatch.Count -eq 0) {
+    $summary2Raw = Invoke-MaestroDeepGatePass -PassLabel "pass2" -TargetNodes $targets -SkipPreflight
+    $summary2 = @($summary2Raw | Where-Object { $null -ne $_ -and $null -ne $_.Host })
+    $idem = Compare-MaestroDeepGateSummaries -Pass1 $summary -Pass2 $summary2
+    "IDEMPOTENCY compare: pass1_rows=$($idem.Pass1Count) pass2_rows=$($idem.Pass2Count)" | Tee-Object -FilePath $log -Append
+    if ($idem.Ok) {
         "IDEMPOTENCY: pass1 and pass2 SUMMARY match" | Tee-Object -FilePath $log -Append
         Write-Host "IDEMPOTENCY: pass1 and pass2 SUMMARY match" -ForegroundColor Green
     } else {
         "IDEMPOTENCY: MISMATCH" | Tee-Object -FilePath $log -Append
-        $mismatch | Tee-Object -FilePath $log -Append
+        $idem.Mismatch | Tee-Object -FilePath $log -Append
         Write-Warning "IDEMPOTENCY: pass1 vs pass2 mismatch — see log"
+        exit 1
     }
 }
 

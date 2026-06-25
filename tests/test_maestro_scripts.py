@@ -181,16 +181,20 @@ def test_db_handlers_stage_init_for_podman() -> None:
 
 
 def test_maestro_deep_gate_detach_tmux() -> None:
-    """#1021 R11: re-Deep harness supports tmux+setsid detach and idempotent pass."""
+    """#1021 R11/R12: re-Deep harness tmux detach + idempotent compare helper."""
     root = _project_root()
     text = (root / "scripts" / "maestro" / "Maestro-Deep-5Host-Gate.ps1").read_text(
         encoding="utf-8", errors="replace"
     )
-    assert "[switch]`$Detach" in text or "[switch]$Detach" in text
+    assert "[switch]$Detach" in text or "[switch]`$Detach" in text
     assert "tmux new-session" in text
     assert "setsid pwsh" in text
     assert "IdempotentTwice" in text
-    assert "IDEMPOTENCY" in text
+    assert "Compare-MaestroDeepGateSummaries" in text
+    assert "IDEMPOTENCY: pass1 and pass2 SUMMARY match" in text
+    assert "Format-Table | Out-String" in text
+    assert "pass1_rows=" in text
+    assert "exit 1" in text.split("IDEMPOTENCY: MISMATCH")[1][:400]
 
 
 def test_handle_web_health_contract() -> None:
