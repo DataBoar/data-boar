@@ -235,6 +235,6 @@ Listed in priority order from a "partner trying to steal value" perspective:
 | 2 | Implement Phase 1-2 JWT enforcement (dbtier + check_feature) | [H2][U1] |
 | 3 | Update LICENSING_OPEN_CORE_AND_COMMERCIAL.md with link to this plan | [H1] |
 | 4 | Draft Pro/Partner one-pager for partner conversations | [H2] |
-| 5 | Create `tools/license-studio` private repo for issuer tooling | [H2] |
+| 5 | ~~Create `tools/license-studio` private repo~~ → **`FabioLeitao/license-studio`** (done 2026-06-25) | [H2] |
 | 6 | Define academic/thesis exception policy | [H3] |
 | 7 | Add `dbfeatures` to LICENSING_SPEC.md claims table | [H2] |

@@ -32,7 +32,7 @@ Ao endurecer **proteção de IP**, ofertas **comerciais** ou programas de **parc
 | **Mito, tom e metáforas** | Linguagem **javali / trilha / auditoria**; enquadramento de conformidade (LGPD/GDPR/CCPA e amostras); **heatmap de risco** como metáfora visual; “sensibilidade”, “achados”, “quasi-identificadores” como voz do produto | README, docs COMPLIANCE, texto do relatório, copy do dashboard |
 | **Aparência geral (próxima de trade dress)** | **Layout** do dashboard (cards, status, gráfico), rótulos de navegação, padrões claro/escuro; **estrutura** das planilhas Excel, convenções de colunas, blocos de atribuição; títulos **OpenAPI** da API onde houver marca | `api/templates/`, CSS estático, código de layout do relatório |
 | **Operação e “como funciona”** | **CLI one-shot** vs **API + dashboard** vs comando padrão **Docker**; ciclo de vida de sessão/relatório; estados de licenciamento em About/health — a **história documentada do operador** é **expressão protegível por direitos autorais**; know-how **secreto** **não** publicado pode ser tema separado de segredo industrial | [USAGE.md](USAGE.md), [TECH_GUIDE.md](TECH_GUIDE.md), [deploy/DEPLOY.md](deploy/DEPLOY.md), [LICENSING_SPEC.md](LICENSING_SPEC.md) |
-| **Recursos complementares e apps adjacentes** | Nomenclatura no **Docker Hub** (`fabioleitao/data_boar`, tags); futuro **site** público; ferramenta **privada** de emissão de licença (`tools/license-studio` — repositório separado); outros repositórios citados no portfólio (ex.: demos de infra) — esclarecer o que é **família de produto** vs **pessoal** | [DOCKER_SETUP.md](DOCKER_SETUP.md), [HOSTING_AND_WEBSITE_OPTIONS.md](HOSTING_AND_WEBSITE_OPTIONS.md); ponteiros do mantenedor na seção *Internal and reference* do [README.md](README.md); runbooks privados |
+| **Recursos complementares e apps adjacentes** | Nomenclatura no **Docker Hub** (`fabioleitao/data_boar`, tags); futuro **site** público; ferramenta **privada** de emissão de licença ([`FabioLeitao/license-studio`](https://github.com/FabioLeitao/license-studio) — repositório privado); outros repositórios citados no portfólio (ex.: demos de infra) — esclarecer o que é **família de produto** vs **pessoal** | [DOCKER_SETUP.md](DOCKER_SETUP.md), [HOSTING_AND_WEBSITE_OPTIONS.md](HOSTING_AND_WEBSITE_OPTIONS.md); ponteiros do mantenedor na seção *Internal and reference* do [README.md](README.md); runbooks privados |
 
 **Ângulo parceiro / enterprise:** Se parceiros entregam auditorias para **seus** clientes, os contratos devem dizer se podem **co-marca**, devem **manter** atribuição Data Boar ou **white-label** (e em quais SKUs). Isso interage com marca e **mascote** nas exportações de relatórios.
 
@@ -43,7 +43,7 @@ Para noções básicas de copyright vs marca e ponteiros de registro, veja [COPY
 ## O que nunca pode estar no repositório público
 
 - **Chaves privadas de assinatura**, segredos “blob” do operador ou qualquer material que permita forjar JWTs de licença válidos.
-- O código-fonte ou binários da **ferramenta de emissão** de licença destinados só à sua equipe (manter em **repositório privado separado**; veja `tools/license-studio/README.md`).
+- O código-fonte ou binários da **ferramenta de emissão** de licença destinados só à sua equipe (manter no repositório privado [`FabioLeitao/license-studio`](https://github.com/FabioLeitao/license-studio); veja [docs/ops/LICENSE_STUDIO_SPINOUT.md](ops/LICENSE_STUDIO_SPINOUT.md)).
 
 ## Comportamento padrão (desenvolvimento e CI)
 

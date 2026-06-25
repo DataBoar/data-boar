@@ -52,6 +52,8 @@ if (-not $webHealthPath.StartsWith("/")) { $webHealthPath = "/$webHealthPath" }
 $allowInsecureTls = [bool](Get-NodePropOrDefault -Obj $Node -Name "web_allow_insecure_tls" -DefaultValue $false)
 $retries = [int](Get-NodePropOrDefault -Obj $Node -Name "web_check_retries" -DefaultValue 3)
 $waitSeconds = [int](Get-NodePropOrDefault -Obj $Node -Name "web_check_wait_seconds" -DefaultValue 2)
+$postFallbackRetries = [int](Get-NodePropOrDefault -Obj $Node -Name "web_check_post_fallback_retries" -DefaultValue 6)
+$postFallbackWaitSeconds = [int](Get-NodePropOrDefault -Obj $Node -Name "web_check_post_fallback_wait_seconds" -DefaultValue 3)
 $apiUrl = "${webScheme}://${targetIp}:${webPort}${webHealthPath}"
 $localHealthOk = $false
 $benchTrackNormalized = $BenchTrack.ToLowerInvariant()
@@ -161,9 +163,15 @@ else
   START_CMD="python3 main.py ${CFG_ARG} --web --host 0.0.0.0 --allow-insecure-http --port ${CHOSEN_PORT}"
 fi
 nohup bash -lc "$START_CMD" > ~/.labop-web.log 2>&1 < /dev/null &
-sleep 2
+for _w in 1 2 3 4 5; do
+  sleep 2
+  if curl -fsS --max-time 3 "http://127.0.0.1:${CHOSEN_PORT}__WEB_HEALTH_PATH__" >/dev/null 2>&1; then
+    break
+  fi
+done
 echo "$CHOSEN_PORT"
 '@
+$remoteStartCmd = $remoteStartCmd.Replace("__WEB_HEALTH_PATH__", [string]$webHealthPath)
 $remoteStartCmd = $remoteStartCmd.Replace("__NODE_PATH__", [string]$Node.path)
 $remoteStartCmd = $remoteStartCmd.Replace("__PORTS_JOINED__", [string]$portsJoined)
 $remoteStartCmd = $remoteStartCmd.Replace("__WEB_PORT__", [string]$webPort)
@@ -185,17 +193,27 @@ foreach ($line in $startOut) {
 }
 
 $remoteCurlCmd = "curl -fsS --max-time 5 http://127.0.0.1:$chosenPort$webHealthPath >/dev/null"
-ssh -q -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$targetUser@$targetHost" "$remoteCurlCmd" > $null 2>&1
+$remoteCurlOk = $false
+for ($curlAttempt = 1; $curlAttempt -le $postFallbackRetries; $curlAttempt++) {
+    ssh -q -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$targetUser@$targetHost" "$remoteCurlCmd" > $null 2>&1
+    if ($LASTEXITCODE -eq 0) {
+        $remoteCurlOk = $true
+        break
+    }
+    if ($curlAttempt -lt $postFallbackRetries) {
+        Write-Warning "      [Web-Recovery] curl localhost ainda falhou (tentativa $curlAttempt/$postFallbackRetries); aguardando ${postFallbackWaitSeconds}s..."
+        Start-Sleep -Seconds $postFallbackWaitSeconds
+    }
+}
 # Ground-truth signal of the recovered process: did the service answer on the chosen
 # port from the host's own loopback? Kept to reconcile against the external HTTP probe.
-$remoteCurlOk = ($LASTEXITCODE -eq 0)
 if (-not $remoteCurlOk) {
-    Write-Warning "      [WARNING] Fallback web iniciou, mas curl remoto localhost falhou em ${targetHost}:$chosenPort$webHealthPath."
+    Write-Warning "      [WARNING] Fallback web iniciou, mas curl remoto localhost falhou em ${targetHost}:$chosenPort$webHealthPath após $postFallbackRetries tentativas."
 }
 
 $webScheme = "http"
 $apiUrl = "http://${targetIp}:${chosenPort}${webHealthPath}"
-for ($attempt = 1; $attempt -le $retries; $attempt++) {
+for ($attempt = 1; $attempt -le $postFallbackRetries; $attempt++) {
     if (Test-HealthUrl -Url $apiUrl -Scheme $webScheme -SkipTls $false) {
         # Reconciliation (#889): an external HTTP 200 is not enough. If the recovered
         # process never answered on the host's own loopback (remoteCurlOk = false), the
@@ -208,8 +226,8 @@ for ($attempt = 1; $attempt -le $retries; $attempt++) {
         Write-Host "      [SUCCESS] Persona Web recuperada! $($Node.hostname) responde HTTP 200 em $apiUrl." -ForegroundColor Green
         return
     }
-    if ($attempt -lt $retries) {
-        Start-Sleep -Seconds $waitSeconds
+    if ($attempt -lt $postFallbackRetries) {
+        Start-Sleep -Seconds $postFallbackWaitSeconds
     }
 }
 

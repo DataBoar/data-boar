@@ -137,6 +137,70 @@ def test_db_target_handlers_use_compose_contract() -> None:
             f"DB handler must write {persona}_sentinel.txt (#953)"
         )
         assert "__SENTINEL__" in text or "SENTINEL=" in text
+        assert "Confirm-TargetDbSyntheticData" in text
+        assert "[VERIFY]" in text
+        assert "[REAL FAIL]" in text
+
+
+def test_confirm_target_db_synthetic_data_contract() -> None:
+    """#1021 R9c/R11: post-READY oracle; R11 splits seed_empty vs confirm_unreachable."""
+    root = _project_root()
+    common = (root / "scripts" / "maestro" / "Lab-MaestroCommon.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "function Confirm-TargetDbSyntheticData" in common
+    assert "function Get-LabDbInitStageBash" in common
+    assert "stage_lab_db_init" in common
+    assert "chmod -R a+rX" in common
+    assert "SYNTHETIC_DATA_OK" in common
+    assert "reason=seed_empty" in common
+    assert "reason=confirm_unreachable" in common
+    assert "lab_customers" in common
+    assert "lab_people" in common
+    assert "lab_smoke_mongo" in common
+    assert "docker compose exec -T lab-postgres" in common
+    assert "docker compose exec -T lab-mariadb" in common
+    assert "docker-compose.mongo.yml exec -T lab-mongodb" in common
+    assert '-replace "`r", ""' in common
+
+
+def test_db_handlers_stage_init_for_podman() -> None:
+    """#1021 R11: podman bind-mount uses staged a+rX init, not 660 repo files."""
+    root = _project_root()
+    for name, token in (
+        ("Handle-target_postgres.ps1", "PG_INIT"),
+        ("Handle-target_mariadb.ps1", "MY_INIT"),
+        ("Handle-target_mongodb.ps1", "MONGO_INIT"),
+    ):
+        text = (root / "scripts" / "maestro" / "handlers" / name).read_text(
+            encoding="utf-8", errors="replace"
+        )
+        assert "__DB_INIT_STAGE__" in text or "stage_lab_db_init" in text
+        assert token in text
+        assert "TARGET_" in text and "_INIT_FAIL" in text
+
+
+def test_maestro_deep_gate_detach_tmux() -> None:
+    """#1021 R11/R12/R12.1: re-Deep harness tmux detach + idempotent compare + row guard."""
+    root = _project_root()
+    text = (root / "scripts" / "maestro" / "Maestro-Deep-5Host-Gate.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "[switch]$Detach" in text or "[switch]`$Detach" in text
+    assert "tmux new-session" in text
+    assert "setsid pwsh" in text
+    assert "IdempotentTwice" in text
+    assert "Compare-MaestroDeepGateSummaries" in text
+    assert "Get-MaestroDeepSummaryRows" in text
+    assert "IDEMPOTENCY: pass1 and pass2 SUMMARY match" in text
+    assert "IDEMPOTENCY: ROW_COUNT_FAIL" in text
+    assert "expectedGateHosts" in text
+    assert "return ,@($passSummary)" not in text
+    assert "return @($passSummary)" in text
+    assert "Format-Table | Out-String" in text
+    assert "pass1_rows=" in text
+    assert "exit 1" in text.split("IDEMPOTENCY: MISMATCH")[1][:400]
+    assert "exit 1" in text.split("IDEMPOTENCY: ROW_COUNT_FAIL")[1][:300]
 
 
 def test_handle_web_health_contract() -> None:
@@ -679,6 +743,12 @@ def test_build_container_artefact_degrades_without_hub() -> None:
         "Build-ContainerArtefact must exit with an actionable code when no engine and "
         "no local artefact exist (#888)."
     )
+    assert "podman info --format '{{.Host.OS}}'" in text, (
+        "Podman engine probe must not use Docker-only .ServerVersion template (#1021)."
+    )
+    assert re.search(r"\$null\s*=\s*&\s*podman build -q", text), (
+        "Quiet podman build must not leak image id into function return (#1021)."
+    )
 
 
 def test_sync_container_artefact_scp_fallback_is_actionable() -> None:
@@ -860,31 +930,128 @@ def test_handlers_use_per_persona_tmux_helper() -> None:
 
 
 def test_target_nfs_cifs_use_priv_env_bash_ensure() -> None:
-    """#954: ensure runs as `$PRIV env ... bash` (doas strips caller env without env prefix)."""
+    """#954/#1021 R8: ensure uses .labop-gate context + canonical bash (no env-prefix on priv argv)."""
     root = _project_root()
+    common = (root / "scripts" / "maestro" / "Lab-MaestroCommon.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
     for name in ("Handle-target_nfs.ps1", "Handle-target_cifs.ps1"):
         text = (root / "scripts" / "maestro" / "handlers" / name).read_text(
             encoding="utf-8", errors="replace"
         )
         assert "Build-EnsureRemoteCommand" in text
-        assert "command -v doas" in (
-            root / "scripts" / "maestro" / "Lab-MaestroCommon.ps1"
-        ).read_text(encoding="utf-8", errors="replace")
-        assert "`$PRIV $envPrefix bash" in (
-            root / "scripts" / "maestro" / "Lab-MaestroCommon.ps1"
-        ).read_text(encoding="utf-8", errors="replace")
+    assert "Get-LabCanonicalBashProbe" in common
+    assert ".labop-gate" in common
+    assert "env VAR=val" not in common
+    assert "`$ENSURE_SCRIPT`" in common
+    assert "Get-LabCanonicalBashProbe" in common
+
+
+def test_nfs_smb_ensure_read_labop_gate_context() -> None:
+    """#1021 R8: NFS/SMB ensure reads subnet from .labop-gate before firewall checks."""
+    root = _project_root()
+    for script in ("labop-nfs-server-ensure.sh", "labop-smb-server-ensure.sh"):
+        text = (root / "scripts" / script).read_text(encoding="utf-8", errors="replace")
+        assert ".labop-gate/LAB_OP_SUBNET" in text
+    nfs = (root / "scripts" / "labop-nfs-server-ensure.sh").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "LAB_NFS_SVC" in nfs
+    assert "LAB_PKG_MGR" in nfs
+
+
+def test_maestro_gate_invoke_canonical_bash_no_env_prefix() -> None:
+    """#1021 R8: Invoke-LabopGateReadiness uses .labop-gate + canonical bash, not env bash."""
+    root = _project_root()
+    common = (root / "scripts" / "maestro" / "Lab-MaestroCommon.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "Get-LabCanonicalBashProbe" in common
+    assert ".labop-gate/LAB_OP_SUBNET" in common
+    assert "env LAB_OP_SUBNET" not in common
+
+
+def test_handle_web_post_fallback_retry_backoff() -> None:
+    """#1021 R8: web handler retries localhost curl + external health after fallback start."""
+    root = _project_root()
+    text = (root / "scripts" / "maestro" / "handlers" / "Handle-web.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "web_check_post_fallback_retries" in text
+    assert "postFallbackWaitSeconds" in text
+    assert "for ($curlAttempt = 1" in text
 
 
 def test_target_nfs_deep_apply_fail_is_real_fail() -> None:
-    """#954/#949 bundle: Deep ensure --apply failure must exit non-zero and write sentinel 1."""
+    """#954/#949: Deep ensure --apply hard failure (exit 1) must exit non-zero; exit 3 = graceful."""
     root = _project_root()
     text = (
         root / "scripts" / "maestro" / "handlers" / "Handle-target_nfs.ps1"
     ).read_text(encoding="utf-8", errors="replace")
     assert "elseif ($Deep)" in text
     assert "[REAL FAIL] NFS ensure --apply" in text
+    assert "elseif ($ensureExit -eq 3)" in text
+    assert "exit 3" in text
+    assert "Get-EnsureAlarmFromOutput" in text
     assert "Write-RemoteSentinel" in text
     assert "exit 1" in text
+
+
+def test_nfs_smb_ensure_graceful_alarm_exit_3() -> None:
+    """#1021 R9: ensure scripts emit ALARM markers and exit 3 for known infra gaps."""
+    root = _project_root()
+    nfs = (root / "scripts" / "labop-nfs-server-ensure.sh").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    smb = (root / "scripts" / "labop-smb-server-ensure.sh").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "ALARM=nfs_server_unavailable" in nfs
+    assert "ALARM=nfs_export_unavailable" in nfs
+    assert "exit 3" in nfs
+    assert "ALARM=smbd_start_failed" in smb
+    assert "exit 3" in smb
+
+
+def test_target_cifs_graceful_alarm_on_exit_3() -> None:
+    root = _project_root()
+    text = (
+        root / "scripts" / "maestro" / "handlers" / "Handle-target_cifs.ps1"
+    ).read_text(encoding="utf-8", errors="replace")
+    assert "elseif ($ensureExit -eq 3)" in text
+    assert "exit 3" in text
+    assert "Get-EnsureAlarmFromOutput" in text
+
+
+def test_maestro_handler_exit_3_alarm_tally() -> None:
+    """#1021 R9b: exit 3 = ALARM tally; exit 1 = REAL FAIL; summary ALARM:N."""
+    root = _project_root()
+    common = (root / "scripts" / "maestro" / "Lab-MaestroCommon.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    maestro = (root / "scripts" / "maestro" / "Maestro.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    deep = (root / "scripts" / "maestro" / "Maestro-Deep-5Host-Gate.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "Add-MaestroHandlerExitTally" in common
+    assert "Format-MaestroHandlersSummary" in common
+    assert 'return "ALARM:$HandlerAlarms"' in common
+    assert "$handlerAlarmCount" in maestro
+    assert "$LASTEXITCODE -eq 3" in maestro
+    assert "Add-MaestroHandlerExitTally" in deep
+    assert "Format-MaestroHandlersSummary" in deep
+
+
+def test_target_cifs_skips_server_ensure_on_maestro_orchestrator() -> None:
+    """#1021: maestro orchestrator is CIFS client-only; no LABOP_SMB_SERVER grant needed."""
+    root = _project_root()
+    text = (
+        root / "scripts" / "maestro" / "handlers" / "Handle-target_cifs.ps1"
+    ).read_text(encoding="utf-8", errors="replace")
+    assert "maestro" in text
+    assert "Skip server ensure on maestro orchestrator" in text
 
 
 def test_collect_artifacts_uses_repo_log_path() -> None:
@@ -1034,6 +1201,8 @@ def test_labop_dep_doctor_persona_packages() -> None:
     assert "nfs-utils" in text
     assert "samba" in text
     assert "procps" in text
+    assert "procps-ng" in text
+    assert "_pkg_logical_to_pm" in text
     assert "iproute2" in text
     assert "apk" in text
     assert 'xbps-query "$pkg"' in text
@@ -1050,6 +1219,58 @@ def test_labop_dep_doctor_persona_os_failure_not_swallowed() -> None:
     assert "Persona OS packages still missing" in text
     assert "still missing after phase" in text
     assert "no package manager (ALARM)" in text
+    assert "_load_personas_from_gate_context" in text
+    assert "personas=${PERSONAS_RAW:-<none>}" in text
+
+
+def test_labop_dep_doctor_graceful_optional_modules() -> None:
+    """#1021 R6: min-spec py7zr/lzma degrade with hints; uv probes as operator."""
+    root = _project_root()
+    text = (root / "scripts" / "labop-dep-doctor.sh").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "_uv_run_as_operator" in text
+    assert "_uv_sync_compressed_graceful" in text
+    assert "optional_modules_degraded" in text
+    assert "uv sync --extra compressed" in text
+    assert "7z_UNSUPPORTED" in text
+    assert "scikit-learn" in text
+
+
+def test_labop_gate_readiness_canonical_bash_bin_for_grants() -> None:
+    """#1021 R6 RCA: prefer /usr/bin/bash over command -v (secure_path /usr/sbin trap)."""
+    root = _project_root()
+    text = (root / "scripts" / "labop-gate-readiness.sh").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "/usr/bin/bash" in text
+    assert "bash_bin=" in text
+    assert "FW_APPLY_FALLBACK" not in text
+    assert "check_only_apply_grant_missing" not in text
+    assert "optional_modules_degraded" in text
+    assert "_dep_optional_degraded" in text
+
+
+def test_labop_gate_readiness_graceful_rust_accelerator() -> None:
+    """#1021 R7: baremetal rust-wheel/maturin degrade without FAIL=1 (MiM 17:42)."""
+    root = _project_root()
+    text = (root / "scripts" / "labop-gate-readiness.sh").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "_emit_rust_accel_hints" in text
+    assert "RUST_ACCEL_UNSUPPORTED" in text
+    assert "pure_python_fallback" in text
+    assert "optional_accelerator_missing" in text
+    assert "maturin develop" in text
+    assert (
+        "boar_fast_filter_missing_in_venv" not in text or "pure_python_fallback" in text
+    )
+    # rust-wheel ALARM paths must not set FAIL=1 (uv still required)
+    assert 'rust-wheel ALARM "boar_fast_filter_missing_in_venv"' not in text
+    assert (
+        "FAIL=1"
+        not in text.split("optional_accelerator_missing")[1].split("# --- fail2ban")[0]
+    )
 
 
 def test_labop_gate_readiness_narrow_grant_invoke() -> None:
@@ -1063,6 +1284,19 @@ def test_labop_gate_readiness_narrow_grant_invoke() -> None:
     assert "_invoke_priv_script" in text
     assert "privilege_denied" in text
     assert 'bash "$DEP_SCRIPT" --check --personas' in text
+    assert '_invoke_priv_script "$DEP_SCRIPT" --privileged' in text
+    assert "Plano B" in text or "Capture exit directly" in text
+    assert "authentication required" in text.lower()
+    assert "packages_still_missing_after_remediate" in text
+    assert "DEP_RECHECK_EC" in text
+    assert "rust_toolchain_unavailable" in text
+    assert "maturin develop" in text
+    assert "if ! _invoke_priv_script" not in text
+    assert "Capture exit directly" in text
+    assert "_resolve_bash_bin" in text
+    assert "LABOP_BASH_BIN" in text
+    assert '"$LABOP_BASH_BIN"' in text
+    assert "maestro_orchestrator_skip" in text
     assert "env LAB_OP_SUBNET" not in text
 
 
@@ -1116,14 +1350,24 @@ def _run_fw_guard_subnet_check(
 ) -> subprocess.CompletedProcess[str]:
     env = os.environ.copy()
     env["LAB_OP_SUBNET"] = subnet
-    return subprocess.run(
-        ["bash", str(root / "scripts" / "labop-fw-guard-ensure.sh"), "--check"],
-        cwd=root,
-        env=env,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    gate_file = root / ".labop-gate" / "LAB_OP_SUBNET"
+    gate_backup: str | None = None
+    if gate_file.is_file():
+        gate_backup = gate_file.read_text(encoding="utf-8", errors="replace")
+        gate_file.unlink()
+    try:
+        return subprocess.run(
+            ["bash", str(root / "scripts" / "labop-fw-guard-ensure.sh"), "--check"],
+            cwd=root,
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    finally:
+        if gate_backup is not None:
+            gate_file.parent.mkdir(parents=True, exist_ok=True)
+            gate_file.write_text(gate_backup, encoding="utf-8")
 
 
 def test_labop_fw_guard_rfc1918_subnet_accepts_private_cidr() -> None:
@@ -1142,14 +1386,28 @@ def test_labop_fw_guard_rfc1918_subnet_rejects_non_private() -> None:
     root = _project_root()
     for subnet in ("0.0.0.0/0", "1.2.3.0/24", "192.168.40.0/0", "not-a-cidr", ""):
         if subnet == "":
-            proc = subprocess.run(
-                ["bash", str(root / "scripts" / "labop-fw-guard-ensure.sh"), "--check"],
-                cwd=root,
-                env={k: v for k, v in os.environ.items() if k != "LAB_OP_SUBNET"},
-                capture_output=True,
-                text=True,
-                check=False,
-            )
+            gate_file = root / ".labop-gate" / "LAB_OP_SUBNET"
+            gate_backup: str | None = None
+            if gate_file.is_file():
+                gate_backup = gate_file.read_text(encoding="utf-8", errors="replace")
+                gate_file.unlink()
+            try:
+                proc = subprocess.run(
+                    [
+                        "bash",
+                        str(root / "scripts" / "labop-fw-guard-ensure.sh"),
+                        "--check",
+                    ],
+                    cwd=root,
+                    env={k: v for k, v in os.environ.items() if k != "LAB_OP_SUBNET"},
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+            finally:
+                if gate_backup is not None:
+                    gate_file.parent.mkdir(parents=True, exist_ok=True)
+                    gate_file.write_text(gate_backup, encoding="utf-8")
         else:
             proc = _run_fw_guard_subnet_check(root, subnet)
         assert proc.returncode == 2, (
@@ -1172,3 +1430,40 @@ def test_labop_gate_readiness_validates_rfc1918_on_write() -> None:
     assert "labop-rfc1918-cidr-lib.sh" in fw
     assert "is not a private RFC1918 CIDR" in fw
     assert "zero-trust" in fw
+
+
+def test_sync_working_tree_canonical_guard_dot_source() -> None:
+    """#1022: Sync-WorkingTree dots Maestro-CanonicalGuard from PSScriptRoot."""
+    root = _project_root()
+    text = (root / "scripts" / "maestro/Sync-WorkingTree.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "$PSScriptRoot/Maestro-CanonicalGuard.ps1" in text
+    assert "maestro/maestro/Maestro-CanonicalGuard" not in text
+
+
+def test_lab_maestro_common_remote_repo_path_expands_tilde() -> None:
+    """#1022: SSH gate cd uses $HOME instead of literal ~."""
+    root = _project_root()
+    text = (root / "scripts/maestro/Lab-MaestroCommon.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "function Get-MaestroRemoteRepoPath" in text
+    assert "`$HOME" in text
+    assert "cd $repoPath" in text
+    assert "cd '$repoPath'" not in text
+
+
+def test_labop_gate_readiness_narrow_privilege_probe() -> None:
+    """#1022: privilege probe detects narrow grants (not only sudo -n true)."""
+    root = _project_root()
+    text = (root / "scripts" / "labop-gate-readiness.sh").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "_detect_sudo_narrow" in text
+    assert "_detect_doas_narrow" in text
+    assert "sudo -n -l" in text
+    assert "doas -C" in text
+    assert "no_narrow_grant" in text
+    assert "_FW_GUARD_PROBE_DONE" in text
+    assert "no doas/sudo -n" not in text

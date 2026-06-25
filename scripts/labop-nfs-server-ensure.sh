@@ -3,12 +3,14 @@
 # Validates and optionally ensures NFS server-side prerequisites on a target node.
 # Run via narrow sudoers (LABOP_NFS_SERVER) from Maestro Handle-target_nfs.ps1.
 #
-# Usage: sudo -n bash /path/to/labop-nfs-server-ensure.sh [--check | --apply] [--export-path PATH]
+# Usage: sudo -n /usr/bin/bash /path/to/labop-nfs-server-ensure.sh [--check | --apply] [--export-path PATH]
+#   Subnet and persona hints: REPO_ROOT/.labop-gate/LAB_OP_SUBNET (and optional LAB_NFS_SVC,
+#   LAB_PKG_MGR) written by Maestro Build-EnsureRemoteCommand before narrow-grant invoke.
 #   (no args / --check)  probe only; exit 0 if healthy, 1 if fix needed
 #   --apply              start services + configure export (additive only)
 #   --export-path PATH   path to validate/export (default: $HOME/Documents/LGPD)
 #
-# Exit codes: 0=healthy, 1=needs fix, 2=invocation error
+# Exit codes: 0=healthy, 1=needs fix (hard), 2=invocation error, 3=graceful ALARM (#1021 R9)
 #
 # Distro support: Debian/Ubuntu (nfs-kernel-server), Fedora/RHEL (nfs-server),
 #                 openSUSE (nfsserver), Alpine (nfs), Void (nfs-utils)
@@ -48,6 +50,20 @@ done
 
 # Source firewall library
 _SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+_REPO_ROOT="$(cd "$_SCRIPT_DIR/.." && pwd)"
+_GATE_DIR="$_REPO_ROOT/.labop-gate"
+if [[ -f "$_GATE_DIR/LAB_OP_SUBNET" ]]; then
+  LAB_OP_SUBNET="$(tr -d '[:space:]' <"$_GATE_DIR/LAB_OP_SUBNET")"
+  export LAB_OP_SUBNET
+fi
+if [[ -f "$_GATE_DIR/LAB_NFS_SVC" ]]; then
+  LAB_NFS_SVC="$(tr -d '[:space:]' <"$_GATE_DIR/LAB_NFS_SVC")"
+  export LAB_NFS_SVC
+fi
+if [[ -f "$_GATE_DIR/LAB_PKG_MGR" ]]; then
+  LAB_PKG_MGR="$(tr -d '[:space:]' <"$_GATE_DIR/LAB_PKG_MGR")"
+  export LAB_PKG_MGR
+fi
 # shellcheck source=labop-firewall-lib.sh
 source "$_SCRIPT_DIR/labop-firewall-lib.sh" 2>/dev/null || {
   echo "[NFS-Ensure] WARN: labop-firewall-lib.sh not found - firewall checks skipped." >&2
@@ -148,7 +164,8 @@ fi
 if [[ -z "$NFS_SVC" ]]; then
   _fail "No NFS server service found (tried: nfs-kernel-server nfs-server nfsserver nfs)."
   echo "NFS_SERVER_UNAVAILABLE at $(date +'%H:%M:%S')" > "$STATUS_FILE" 2>/dev/null || true
-  exit 1
+  echo "[NFS-Ensure] ALARM=nfs_server_unavailable hint=t14_primary_nfs_coverage" >&2
+  exit 3
 fi
 _log "NFS service: $NFS_SVC"
 
@@ -230,7 +247,11 @@ if command -v exportfs >/dev/null 2>&1; then
     if [[ $APPLY -eq 1 ]]; then
       _log "Adding export: $EXPORT_PATH *(ro,sync,no_subtree_check)"
       echo "$EXPORT_PATH *(ro,sync,no_subtree_check)" >> /etc/exports
-      exportfs -ra 2>&1 && _ok "exportfs -ra OK." || _fail "exportfs -ra failed."
+      exportfs -ra 2>&1 && _ok "exportfs -ra OK." || {
+        _fail "exportfs -ra failed."
+        echo "[NFS-Ensure] ALARM=nfs_export_unavailable hint=t14_primary_nfs_coverage" >&2
+        exit 3
+      }
     fi
   fi
 fi
