@@ -4,15 +4,13 @@ Human-readable summary of user-facing changes. **Detailed release notes:** [docs
 
 ## Unreleased (`main`)
 
-**Working tree:** `pyproject.toml` **`1.7.4-rc-2`** · semver stable/tag **TBD** pós-ratificação **ADR-0073** + gate **#406**.
-
-**Targeting (próxima linha de desenvolvimento):** **`1.8.0-beta`** (#772) — após gate **#406** e semver stable definido.
+**Targeting (next dev line):** **`1.8.0-beta`** (#772) — after operator **release-ritual** for **1.7.4** (PR **#1024**).
 
 ---
 
-## 1.7.4 — working line (unreleased; bump prematuro #970 revertido)
+## 1.7.4 (2026-06-26)
 
-> PR #840 promoveu stable sem **release gate** **#406**; **`main`** permanece em pré-release. As mudanças abaixo **são reais** (landed em `main`); mantidas por **historicidade**. **Semver stable + tag:** **TBD** pós-ratificação **ADR-0073** + fechamento **#406**. Próxima linha arquitetural: **`1.8.0-beta`** (#772).
+> **Stable GA** on the **`1.7.4` line** — release gate **#406** closed with Maestro Deep 5-host completão evidence ([#1021](https://github.com/FabioLeitao/data-boar/issues/1021)). **#970** was a **premature** stable bump/tag **without** the gate — corrected by **ADR-0072**; **`1.7.4` is not VOID**. Public version **`1.7.4`**; **`[tool.databoar] maturity_build = 201`** (side-channel per **ADR-0073** — #976, #977).
 
 ### Added
 

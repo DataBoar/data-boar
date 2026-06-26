@@ -42,7 +42,7 @@ The report is written under `report.output_dir` in config (e.g. `/data`); copy i
 
 You can run the application **without cloning the repository** by using the published image on Docker Hub:
 
-- **Docker Hub:** [hub.docker.com/r/fabioleitao/data_boar](https://hub.docker.com/r/fabioleitao/data_boar) — **`fabioleitao/data_boar:latest`** and **`fabioleitao/data_boar:1.7.3`**
+- **Docker Hub:** [hub.docker.com/r/fabioleitao/data_boar](https://hub.docker.com/r/fabioleitao/data_boar) — **`fabioleitao/data_boar:latest`** and **`fabioleitao/data_boar:1.7.4`**
 
 Example:
 
@@ -77,12 +77,12 @@ docker push ghcr.io/fabioleitao/data_boar:latest
 
 ```bash
 # From repo root
-docker build -t fabioleitao/data_boar:latest -t fabioleitao/data_boar:1.7.3 .
+docker build -t fabioleitao/data_boar:latest -t fabioleitao/data_boar:1.7.4 .
 docker login
 # Username: fabioleitao (or your Docker Hub username)
 # Password: your Docker Hub password or Access Token
 docker push fabioleitao/data_boar:latest
-docker push fabioleitao/data_boar:1.7.3
+docker push fabioleitao/data_boar:1.7.4
 ```
 
 Then in `deploy/docker-compose.yml` set `image:` to your pushed image (e.g. `fabioleitao/data_boar:latest` or `ghcr.io/fabioleitao/...`).
@@ -91,10 +91,10 @@ Then in `deploy/docker-compose.yml` set `image:` to your pushed image (e.g. `fab
 
 ```bash
 uv run pytest -v -W error
-docker build -t fabioleitao/data_boar:latest -t fabioleitao/data_boar:1.7.3 .
+docker build -t fabioleitao/data_boar:latest -t fabioleitao/data_boar:1.7.4 .
 docker login              # username: fabioleitao, password: your token
 docker push fabioleitao/data_boar:latest
-docker push fabioleitao/data_boar:1.7.3
+docker push fabioleitao/data_boar:1.7.4
 ```
 
 See also [DOCKER_SETUP.md](../DOCKER_SETUP.md).
@@ -398,7 +398,7 @@ Typical deployments keep all durable state under **`/data`** (volume or bind mou
 #### Operational notes
 
 - Prefer **API keys from environment** (`api.api_key_from_env`) so secrets are not only in files you include in file-level backups—see [SECURITY.md](../../SECURITY.md).
-- For long-term recovery, record the **image tag or digest** you ran (e.g. `fabioleitao/data_boar:1.7.3`) alongside the data backup so you can match behaviour when restoring.
+- For long-term recovery, record the **image tag or digest** you ran (e.g. `fabioleitao/data_boar:1.7.4`) alongside the data backup so you can match behaviour when restoring.
 
 **Português (Brasil):** [DEPLOY.pt_BR.md §9](DEPLOY.pt_BR.md#9-backup-e-restore-dados-persistentes).
 

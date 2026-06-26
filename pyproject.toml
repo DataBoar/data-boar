@@ -1,6 +1,6 @@
 [project]
 name = "data-boar"
-version = "1.7.4-rc-2"
+version = "1.7.4"
 description = "Data Boar — compliance-aware discovery and mapping of personal and sensitive data across databases, files, and APIs (LGPD, GDPR, CCPA, and configurable frameworks)."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -260,3 +260,7 @@ dev = [
     "ruff>=0.15.16",
     "types-pyyaml>=6.0.12.20260518",
 ]
+
+# Operator-only maturity octet (ADR-0073). Never surfaced in [project].version or About.
+[tool.databoar]
+maturity_build = 201

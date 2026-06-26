@@ -41,7 +41,7 @@ O relatório é escrito em `report.output_dir` do config (ex.: `/data`). **Não*
 
 Você pode executar a aplicação **sem clonar o repositório** usando a imagem publicada no Docker Hub:
 
-- **Docker Hub:** [hub.docker.com/r/fabioleitao/data_boar](https://hub.docker.com/r/fabioleitao/data_boar) — **`fabioleitao/data_boar:latest`** e **`fabioleitao/data_boar:1.7.3`**
+- **Docker Hub:** [hub.docker.com/r/fabioleitao/data_boar](https://hub.docker.com/r/fabioleitao/data_boar) — **`fabioleitao/data_boar:latest`** e **`fabioleitao/data_boar:1.7.4`**
 
 Exemplo:
 
@@ -70,10 +70,10 @@ docker push ghcr.io/fabioleitao/data_boar:latest
 ### Opção B – Docker Hub (imagem branded Data Boar)
 
 ```bash
-docker build -t fabioleitao/data_boar:latest -t fabioleitao/data_boar:1.7.3 .
+docker build -t fabioleitao/data_boar:latest -t fabioleitao/data_boar:1.7.4 .
 docker login
 docker push fabioleitao/data_boar:latest
-docker push fabioleitao/data_boar:1.7.3
+docker push fabioleitao/data_boar:1.7.4
 ```
 
 Veja também [DOCKER_SETUP.md](../DOCKER_SETUP.md).
@@ -177,7 +177,7 @@ Em implantações típicas, o estado fica sob **`/data`** (volume ou bind mount)
 #### Notas operacionais
 
 - Prefira **chave de API por variável de ambiente** (`api.api_key_from_env`) para que segredos não dependam só de arquivos incluídos no backup de disco — veja [SECURITY.md](../../SECURITY.md).
-- Para recuperação ao longo do tempo, registre a **tag ou digest da imagem** usada (ex.: `fabioleitao/data_boar:1.7.3`) junto com o backup de dados.
+- Para recuperação ao longo do tempo, registre a **tag ou digest da imagem** usada (ex.: `fabioleitao/data_boar:1.7.4`) junto com o backup de dados.
 
 **English:** [DEPLOY.md §9](DEPLOY.md#9-backup-and-restore-persistent-data).
 

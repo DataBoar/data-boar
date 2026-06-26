@@ -19,7 +19,7 @@ alwaysApply: false
 
 **Situational** — globs above, semver bump / release doc work, or **`@release-versioning.mdc`**. **`release-publish-sequencing.mdc`** covers **tag → GitHub → Docker → Hub** choreography; **this rule** covers **authorization to bump** and **phantom-version prevention**.
 
-## Two gates (ADR-0072 — Proposed)
+## Two gates (ADR-0072 — Accepted)
 
 | | **Commit gate** | **Release gate** |
 |---|---|---|
@@ -29,20 +29,31 @@ alwaysApply: false
 
 **Green commit gate never authorizes removing `-beta`/`-rc` from `pyproject.toml`.**
 
-## Version facts (ADR-0073 — Proposed)
+## Version facts (ADR-0073 — Accepted)
 
-- **`main` today:** **`1.7.4-rc-2`** until **#406** closes and ADR-0073 is **Accepted**.
+- **`main` today:** **`1.7.4` STABLE** (release PR **#1024**); ADR-0073 **Accepted**; release gate **#406 CLOSED**.
 - **#970:** premature stable bump/tag without release gate — corrected by **ADR-0072** + **#406**; **`1.7.4` is not VOID**.
-- **Stable semver + tag after gate:** **TBD** (operator HITL post-GA numbering — three segments + suffix only; no fourth segment).
-- **`1.7.5` does not exist.** Next dev line: **`1.8.0-beta`** (#772).
-- **Maturity octet** (0–127 beta · 128–199 rc · 200–255 release): **`[tool.databoar] maturity_build`** side-channel — **never** in `[project] version` or About. See **`docs/VERSIONING.md`**.
+- **Published stable:** tag **`v1.7.4`**, GitHub Release, Docker Hub **`1.7.4`** / **`latest`** — operator **release-ritual** post-merge (not agent-autonomous).
+- **`1.7.5` does not exist.** Next dev line: **`1.8.0-beta`** (#772) **after** publish ritual completes.
+- **Maturity octet** (0–127 beta · 128–199 rc · 200–255 release): **`[tool.databoar] maturity_build = 201`** side-channel — **never** in `[project] version` or About. See **`docs/VERSIONING.md`**.
+
+## Distribution policy (pre-release vs stable)
+
+| Channel | `-beta` / `-rc` | Stable (no suffix) |
+| --- | --- | --- |
+| **Git** (`main` / tags) | Yes — UAT/QA consume from git | Tag **`vX.Y.Z`** + GitHub Release |
+| **Docker Hub** | **Never** push pre-release tags | **`X.Y.Z`** + **`latest`** after local smoke + scout |
+| **PyPI** | **Never** | Stable only (#74 — post-1.7.4) |
+| **Local image build** (smoke / scout) | OK — **do not push** | Required before Hub push |
+
+Beta/rc builds stay **git-only** for external users; operators may build images locally without publishing.
 
 ## Agent must not
 
-1. Bump to **stable** (no suffix) while **#406** is OPEN.
+1. Bump to **stable** while a **`release-gate`** issue (e.g. **#406** successor) is **OPEN** without operator FASE 3.
 2. Invent **`1.7.5`** / **`1.7.5-beta`** targeting.
 3. Treat **verifiable** smoke hardening (#831) as **release gate passed**.
-4. Tag, GitHub Release, or Docker publish without operator **FASE 3** — pair with **`release-publish-sequencing.mdc`**.
+4. Tag, GitHub Release, or Docker Hub publish without operator **release-ritual** — pair with **`release-publish-sequencing.mdc`**.
 
 ## Machine guard
 

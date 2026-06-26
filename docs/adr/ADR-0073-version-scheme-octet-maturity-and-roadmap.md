@@ -7,12 +7,13 @@
 
 ## Status
 
-Proposed
+Accepted
 
 ### Status history
 
 - 2026-06-21 — Proposed
 - 2026-06-23 — Proposed (amended): destensionar octeto da versão pública; regras (1)–(4) abaixo; TBD pós-GA aberto (#977 auditoria RO)
+- 2026-06-25 — Accepted: resolve #977 — post-GA public fixes stay on the **same public line** (`1.7.4`); **`maturity_build`** octet distinguishes fix maturity; **`1.7.5` does not exist**; next **public** line = **`1.8.0`** (#971)
 
 ## Context
 
@@ -21,7 +22,7 @@ Versioning today is governed by `docs/VERSIONING.md` (**major.minor.build** + `-
 1. Premature promotion `1.7.4-rc → 1.7.4` (#970) — stable bump without the **release gate** (ADR-0072, GitHub #406).
 2. Phantom roadmap `1.7.5-beta` (#772) — agents inferred "next = 1.7.5" by naive increment, against the real roadmap (1.8.x).
 
-A richer scheme (vault `self-upgrade-beacon-heartbeat-design-2026-06-15`, Gibson-style) carries **octet-maturity** bands (**0–127** beta · **128–199** rc · **200–255** release). An early draft of this ADR wrongly placed that octet **inside** the public version (`1.7.4.201`, `1.7.4` VOID). RO audit on #977 flagged the contradiction: even as **Proposed**, that wording risks agent improvisation. **Do not bump `pyproject.toml` until this ADR is amended and ratified.** Working line today: **`1.7.4-rc-2`**.
+A richer scheme (vault `self-upgrade-beacon-heartbeat-design-2026-06-15`, Gibson-style) carries **octet-maturity** bands (**0–127** beta · **128–199** rc · **200–255** release). An early draft of this ADR wrongly placed that octet **inside** the public version (`1.7.4.201`, `1.7.4` VOID). RO audit on #977 flagged the contradiction: even as **Proposed**, that wording risks agent improvisation. **Ratified 2026-06-25** with rules (1)–(4) below and post-GA fix policy in §Decision. Working line before GA release PR: **`1.7.4-rc-2`**.
 
 ## Decision
 
@@ -30,9 +31,16 @@ A richer scheme (vault `self-upgrade-beacon-heartbeat-design-2026-06-15`, Gibson
 3. **`-alpha` suffix:** tamper-detection axis only (GitHub #856), **not** a maturity band — separate from beta/rc/release.
 4. **`1.7.4` is not VOID:** #970 was a **premature tag/bump** without release-gate approval; discipline is restored by **ADR-0072** + gate **#406**, not by "burning" the public number.
 
-### OPEN / TBD (operator HITL — do not decide by agent inference)
+### Post-GA public fixes (#977 — resolved)
 
-How to version **post-GA public fixes** under rule (1) — **without** a fourth segment. The pre-amend draft used `1.7.4.x` / `1.7.4.201`, which **violates** rule (1). **Status: OPEN** until the operator decides and ratifies this ADR.
+Under rules (1)–(4), a **post-GA public fix** on the `1.7.4` line:
+
+- **Does not** create **`1.7.5`** (that number **does not exist** on the roadmap — #772).
+- **Keeps** the **public** semver at **`1.7.4`** (three segments, no fourth segment).
+- **Distinguishes** fix maturity via **`[tool.databoar] maturity_build`** (side-channel only — e.g. `.200` consumed by the voided #970 GA attempt; the real GA uses `.201`).
+- **Next public line** after `1.7.4` GA work completes: **`1.8.0`** (new architecture — not a naive `1.7.x` increment).
+
+Beacon mechanics (DNS bands, TXT, anti-fraud) remain **1.8.x** roadmap scope (#717, PLAN_SELF_UPGRADE) — out of scope for the 1.7.4 GA release slice.
 
 5. **Release-line roadmap (semver intent):** `1.7.4` line = open-core maturity + commercial JWT protection; `1.8.x` = augmented corporate capacities (re-ID, sidecars, plugins/Clojure — **new architecture**, not a 1.7 minor). **`1.7.5` does not exist.** Next dev milestone: **`1.8.0-beta`**; horizon: `1.9.x`. `docs/VERSIONING.md` documents (1)–(4) + (5); full DNS-beacon/heartbeat/kill-switch lifecycle = 1.8.x roadmap (PLAN_SELF_UPGRADE), out of scope here.
 
@@ -48,7 +56,7 @@ How to version **post-GA public fixes** under rule (1) — **without** a fourth 
 - **Positive:** agents cannot invent `1.7.5`, four-segment versions, or naive stable bumps; maturity remains traceable via `maturity_build` when wired.
 - **Cost:** `VERSIONING.md` + issue hygiene (#971, #406); future `pyproject.toml` `[tool.databoar]` field; CI guards must align (no `1.7.4.201` / VOID strings in policy).
 - **Pairs with ADR-0072 (release gate)** — together they surround the release surface.
-- **Blocked until ratified:** stable semver bump from `1.7.4-rc-2`; post-GA fix numbering (TBD above).
+- **Ratified:** stable semver bump from `1.7.4-rc-2` to **`1.7.4`** authorized only with release gate **#406** closed per operator FASE 3 (#976, release PR #1024).
 
 ## Alternatives Considered
 
