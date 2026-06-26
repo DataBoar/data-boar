@@ -172,7 +172,7 @@
     "run_web_shot_caption": "Dashboard — optional tenant/technician fields and Start scan (no shell required).",
     "run_auto_h3": "For automation / scripting",
     "run_cli_h3": "From the CLI",
-    "run_cli_p1": "From the repo root, prefer uv run python main.py (or activate your venv and run python main.py). Full flag list: python main.py --help. Packaged installs: man 1 data_boar (command) and man 5 data_boar (config file format).",
+    "run_cli_p1": "From the repo root, prefer uv run python main.py (or activate your venv and run python main.py). Full flag list: python main.py --help. Packaged installs: man 1 data-boar (command) and man 5 data-boar (config file format).",
     "run_cli_oneshot": "One-shot audit (same targets as a dashboard scan):",
     "run_cli_api": "Start the API / dashBOARd (no scan until you use the browser or HTTP):",
     "run_cli_tls": "You must either terminate TLS at the process (--https-cert-file + --https-key-file, or the same under api: in config) or explicitly accept plaintext with --allow-insecure-http (or api.allow_insecure_http: true). The official Docker image passes --allow-insecure-http by default; mount certs and remove it for HTTPS.",

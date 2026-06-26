@@ -1,8 +1,8 @@
 .\" data_boar.5 - file formats and configuration for Data Boar (PyPI distribution: data-boar)
-.\" View as: man 5 data_boar or man 5 lgpd_crawler (symlink for compatibility)
-.TH DATA_BOAR 5 "May 2026" "Data Boar 1.7.4" "File Formats"
+.\" View as: man 5 data-boar (primary), man 5 data_boar or man 5 lgpd_crawler (symlink aliases)
+.TH DATA-BOAR 5 "May 2026" "Data Boar 1.7.4" "File Formats"
 .SH NAME
-data_boar config, lgpd_crawler config \- configuration and pattern file formats for Data Boar (compliance-aware discovery and mapping)
+data-boar config, data_boar config, lgpd_crawler config \- configuration and pattern file formats for Data Boar (compliance-aware discovery and mapping)
 .
 .SH WHY TWO MAN PAGES (SECTION 1 AND 5)
 On Linux, BSD and most Unix-like systems, the
@@ -22,16 +22,23 @@ describes
 (e.g. configuration files and their syntax).
 .
 .P
-This project provides two man pages in different sections; both the
-.B data_boar
+This project provides two man pages in different sections; the primary installed names are
+.BR data-boar
 and
-.B lgpd_crawler
-names work (install with symlinks so both resolve):
+.BR data-boar (5);
+symlinks also expose
+.BR data_boar
+and
+.BR lgpd_crawler
+:
 .TP
+.B "man data-boar"
+or
 .B "man data_boar"
 or
 .B "man lgpd_crawler"
 (or
+.BR "man 1 data-boar" ,
 .BR "man 1 data_boar" ,
 .BR "man 1 lgpd_crawler" )
 Shows the
@@ -39,6 +46,8 @@ Shows the
 and its options (config path, \-\-web, \-\-host, \-\-port, \-\-tenant, \-\-technician, \-\-scan\-compressed, \-\-content\-type\-check, \-\-reset\-data, API usage, curl examples).
 Use this when you want to know how to run the application.
 .TP
+.B "man 5 data-boar"
+or
 .B "man 5 data_boar"
 or
 .B "man 5 lgpd_crawler"
@@ -49,11 +58,15 @@ Use this when you want to understand or edit config files and pattern definition
 .
 .P
 If you type only
+.B "man data-boar"
+,
 .B "man data_boar"
 or
 .B "man lgpd_crawler"
 the system usually shows section 1 first (the command).
 To open the config/file-format page explicitly, use
+.BR "man 5 data-boar"
+,
 .BR "man 5 data_boar"
 or
 .BR "man 5 lgpd_crawler" .
@@ -466,7 +479,7 @@ Example main config (excerpt):
 
 \fBapi:\fR
   port: 8088
-  # host: 127.0.0.1   # optional bind address; see man 1 data_boar for CLI and API_HOST
+  # host: 127.0.0.1   # optional bind address; see man 1 data-boar for CLI and API_HOST
   # https_cert_file: /path/server.crt   # optional: TLS for python main.py --web
   # https_key_file: /path/server.key    # optional: must pair with https_cert_file
   # allow_insecure_http: false           # explicit plaintext only when true (Docker image CMD often sets CLI flag instead)
@@ -708,49 +721,72 @@ Example output path when learned_patterns.enabled is true.
 .SH INSTALLATION OF THIS MAN PAGE
 Section 5 pages are installed in
 .IR man5 .
-Install both section 1 and 5 from the source tree, then create symlinks so that
-.B "man data_boar"
+Install both section 1 and 5 from the source tree as
+.BR data-boar.1
 and
-.B "man 5 data_boar"
-work in addition to
-.B lgpd_crawler .
+.BR data-boar.5
+(primary hyphenated names), then create symlinks for
+.BR data_boar
+and
+.BR lgpd_crawler
+aliases.
 See the
 .B "INSTALLATION OF THIS MAN PAGE"
 section in
-.BR data_boar (1)
+.BR data-boar (1)
 (or
+.BR data_boar (1)
+or
 .BR lgpd_crawler (1))
-for the full sequence (copy
+for the full sequence (system\-wide under
+.IR /usr/local/share/man
+or user\-local under
+.IR ~/.local/share/man ,
+copy
 .I docs/data_boar.1
 and
 .I docs/data_boar.5
-into
+to
+.IR data-boar.1
+and
+.IR data-boar.5
+in
 .I man1
 and
 .IR man5 ,
-then optionally
-.B "ln -sf data_boar.1 lgpd_crawler.1"
+then
+.B "ln -sf data-boar.1 data_boar.1"
+,
+.B "ln -sf data-boar.1 lgpd_crawler.1"
+,
+.B "ln -sf data-boar.5 data_boar.5"
 and
-.B "ln -sf data_boar.5 lgpd_crawler.5"
-in the respective directories for backward compatibility,
+.B "ln -sf data-boar.5 lgpd_crawler.5"
+in the respective directories,
 .BR mandb ).
 .PP
 After installation, view this page with:
 .RS
-.B man 5 data_boar
+.B "man 5 data-boar"
 or
-.B man 5 lgpd_crawler
+.B "man 5 data_boar"
+or
+.B "man 5 lgpd_crawler"
 .RE
 .PP
 To view the command and options (section 1) use
+.B "man data-boar"
+,
 .B "man data_boar"
 or
 .B "man lgpd_crawler"
 (or
+.BR "man 1 data-boar" ,
 .BR "man 1 data_boar" ,
 .BR "man 1 lgpd_crawler" ).
 .
 .SH SEE ALSO
+.BR data-boar (1),
 .BR data_boar (1),
 .BR lgpd_crawler (1)
 (command, options, API, curl examples),

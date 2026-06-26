@@ -203,7 +203,7 @@ def _en() -> dict:
             "run_cli_p1": (
                 "From the repo root, prefer uv run python main.py (or activate your venv and run "
                 "python main.py). Full flag list: python main.py --help. Packaged installs: "
-                "man 1 data_boar (command) and man 5 data_boar (config file format)."
+                "man 1 data-boar (command) and man 5 data-boar (config file format)."
             ),
             "run_cli_oneshot": "One-shot audit (same targets as a dashboard scan):",
             "run_cli_api": "Start the API / dashBOARd (no scan until you use the browser or HTTP):",
@@ -580,7 +580,7 @@ def _pt_br(en: dict) -> dict:
     base["help"]["run_cli_p1"] = (
         "Na raiz do repositório, prefira uv run python main.py (ou ative o venv e execute "
         "python main.py). Lista completa de flags: python main.py --help. Instalações empacotadas: "
-        "man 1 data_boar (comando) e man 5 data_boar (formato do arquivo de configuração)."
+        "man 1 data-boar (comando) e man 5 data-boar (formato do arquivo de configuração)."
     )
     base["help"]["run_cli_oneshot"] = (
         "Auditoria pontual (mesmos alvos que uma varredura pelo painel):"

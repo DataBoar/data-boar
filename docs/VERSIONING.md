@@ -124,7 +124,9 @@ When you bump the version, update **all** of the following so the number is cons
 | Location               | What to change                                                                                                  |
 | ---                    | ---                                                                                                             |
 | **`docs/data_boar.1`** | In the `.TH` line (e.g. `"Data Boar 1.5.4"`), set the version to the new one.                                   |
-| **`docs/data_boar.5`** | Same: update the version in the `.TH` line. (Legacy: `lgpd_crawler` is a compatibility symlink to these pages.) |
+| **`docs/data_boar.5`** | Same: update the version in the `.TH` line.                                                                     |
+
+**Command vs man page names:** The packaged CLI is **`data-boar`** (hyphen). The primary installed man pages are **`data-boar`** (sections 1 and 5). Source files remain **`docs/data_boar.{1,5}`** in the repository; install copies them as `data-boar.{1,5}` with optional symlinks **`data_boar`** and **`lgpd_crawler`** (legacy aliases). See the **INSTALLATION OF THIS MAN PAGE** section in `docs/data_boar.1`.
 
 ### 4. Deploy and Docker
 
