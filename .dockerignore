@@ -6,6 +6,7 @@ docs/stacked_private_repo/
 *.txt
 !requirements.txt
 *.log
+log/
 
 # --- Contexto enxuto (sem isto, COPY . . herda .venv/tests e dispara tamanho ~GB) ---
 scripts/pii_history_guard.py
