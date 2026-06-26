@@ -47,7 +47,7 @@ Faixas do octeto quando `maturity_build` estiver em uso (ferramentas operador/be
 | **128–199** | maturidade rc |
 | **200–255** | maturidade release (`.200` = GA, `.201` = fix-1, …) |
 
-Sufixos (`-beta`, `-rc`, `-rc-N`) continuam válidos em `main` enquanto o **release gate** (GitHub #406) estiver aberto. **Commit gate** verde (`check-all`) **não** autoriza removê-los — ver ADR-0072.
+Sufixos (`-beta`, `-rc`, `-rc-N`) são obrigatórios em `main` enquanto um issue de **release gate** (ex.: GitHub #406) estiver **aberto**. **Commit gate** verde (`check-all`) **não** autoriza removê-los — ver ADR-0072. Gate **#406** fechado com **1.7.4** stable (PR **#1024**).
 
 ### Linha 1.7.4 atual
 

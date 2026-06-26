@@ -29,7 +29,7 @@ Examples:
 
 ## Octet maturity (side-channel) + release-line roadmap (ADR-0073 — Accepted)
 
-**Canonical draft:** [ADR-0073](adr/ADR-0073-version-scheme-octet-maturity-and-roadmap.md) (**Proposed** — not ratified). Pairs with [ADR-0072](adr/ADR-0072-commit-gate-vs-release-gate-distinct-criteria.md) (commit gate ≠ release gate).
+**Canonical:** [ADR-0073](adr/ADR-0073-version-scheme-octet-maturity-and-roadmap.md) (**Accepted**). Pairs with [ADR-0072](adr/ADR-0072-commit-gate-vs-release-gate-distinct-criteria.md) (commit gate ≠ release gate).
 
 ### Public version vs maturity octet (do not conflate)
 
@@ -47,7 +47,7 @@ Octet bands when using `maturity_build` (operator/beacon tooling — **not** the
 | **128–199** | rc maturity |
 | **200–255** | release maturity (`.200` = GA maturity, `.201` = fix-1 maturity, …) |
 
-Suffixes (`-beta`, `-rc`, `-rc-N`) remain valid on `main` while the **release gate** (GitHub #406) is open. A green **commit gate** (`check-all`) never authorizes removing them — see ADR-0072.
+Suffixes (`-beta`, `-rc`, `-rc-N`) are required on `main` while a **release gate** issue (e.g. GitHub #406) is **open**. A green **commit gate** (`check-all`) never authorizes removing them — see ADR-0072. Gate **#406** closed with **1.7.4** stable (PR **#1024**).
 
 ### Current 1.7.4 line
 
