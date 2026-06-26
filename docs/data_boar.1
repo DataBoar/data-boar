@@ -1,11 +1,11 @@
 .\" data_boar.1 - man page for Data Boar (application; PyPI distribution: data-boar)
-.\" View as: man data_boar or man lgpd_crawler (symlink for compatibility)
-.TH DATA_BOAR 1 "May 2026" "Data Boar 1.7.4" "User Commands"
+.\" View as: man data-boar (primary), man data_boar or man lgpd_crawler (symlink aliases)
+.TH DATA-BOAR 1 "May 2026" "Data Boar 1.7.4" "User Commands"
 .SH NAME
-data_boar, lgpd_crawler \- enterprise data discovery and risk governance (Data Boar)
+data-boar, data_boar, lgpd_crawler \- enterprise data discovery and risk governance (Data Boar)
 .
 .SH SYNOPSIS
-.B data_boar
+.B data-boar
 [
 .B \-\-config
 .I FILE
@@ -341,8 +341,10 @@ and
 fields (the CLI only logs warnings and exit codes remain unchanged). See
 .I docs/USAGE.md
 and
-.I data_boar (5)
+.I data-boar (5)
 (or
+.I data_boar (5)
+or
 .I lgpd_crawler (5))
 for full configuration examples.
 .IP \(bu 2
@@ -736,40 +738,73 @@ curl \-X POST http://localhost:8088/scan \\
 .RE
 .
 .SH INSTALLATION OF THIS MAN PAGE
-To install this man page system\-wide on a typical Linux or BSD system, ensure the target directories exist, copy both section 1 and 5 pages, create symlinks so that both
-.B data_boar
+Install the troff sources from this repository as
+.BR data-boar (1)
 and
-.B lgpd_crawler
-work, then update the man index:
+.BR data-boar (5)
+(the installed filenames use a hyphen, matching the packaged CLI
+.BR data-boar ).
+Create optional symlinks so
+.BR data_boar
+and
+.BR lgpd_crawler
+also resolve (legacy aliases).
 .PP
+Two common routes:
+.TP
+.B System\-wide
+(with
+.BR sudo ;
+typical Linux or BSD)
 .RS
 .nf
 sudo mkdir \-p /usr/local/share/man/man1/ /usr/local/share/man/man5/
 sudo chmod 755 /usr/local/share/man/man1/ /usr/local/share/man/man5/
-sudo cp docs/data_boar.1 /usr/local/share/man/man1/
-sudo cp docs/data_boar.5 /usr/local/share/man/man5/
-sudo chmod 644 /usr/local/share/man/man1/data_boar.1 /usr/local/share/man/man5/data_boar.5
-sudo ln \-sf data_boar.1 /usr/local/share/man/man1/lgpd_crawler.1
-sudo ln \-sf data_boar.5 /usr/local/share/man/man5/lgpd_crawler.5
+sudo cp docs/data_boar.1 /usr/local/share/man/man1/data-boar.1
+sudo cp docs/data_boar.5 /usr/local/share/man/man5/data-boar.5
+sudo chmod 644 /usr/local/share/man/man1/data-boar.1 \\
+    /usr/local/share/man/man5/data-boar.5
+sudo ln \-sf data-boar.1 /usr/local/share/man/man1/data_boar.1
+sudo ln \-sf data-boar.1 /usr/local/share/man/man1/lgpd_crawler.1
+sudo ln \-sf data-boar.5 /usr/local/share/man/man5/data_boar.5
+sudo ln \-sf data-boar.5 /usr/local/share/man/man5/lgpd_crawler.5
 sudo mandb
 .fi
 .RE
+.TP
+.B User\-local
+(no
+.BR sudo ;
+writes under your home directory; default
+.BR manpath
+on many distributions already includes
+.IR ~/.local/share/man )
+.RS
+.nf
+mkdir \-p ~/.local/share/man/man1 ~/.local/share/man/man5
+cp docs/data_boar.1 ~/.local/share/man/man1/data-boar.1
+cp docs/data_boar.5 ~/.local/share/man/man5/data-boar.5
+chmod 644 ~/.local/share/man/man1/data-boar.1 \\
+    ~/.local/share/man/man5/data-boar.5
+ln \-sf data-boar.1 ~/.local/share/man/man1/data_boar.1
+ln \-sf data-boar.1 ~/.local/share/man/man1/lgpd_crawler.1
+ln \-sf data-boar.5 ~/.local/share/man/man5/data_boar.5
+ln \-sf data-boar.5 ~/.local/share/man/man5/lgpd_crawler.5
+mandb \-u
+.fi
+.RE
 .PP
-After installation,
-.B "man data_boar"
+Source paths remain
+.I docs/data_boar.1
 and
-.B "man 5 data_boar"
-work; the optional symlinks make
-.B "man lgpd_crawler"
-and
-.B "man 5 lgpd_crawler"
-show the same pages (legacy command alias).
+.I docs/data_boar.5
+in the repository; only the installed primary names use the hyphen.
 .PP
 The
 .B chmod 755
-on the directories ensures all users can traverse them (new directories may be 750 with a restrictive umask). The
+on system directories ensures all users can traverse them (new directories may be 750 with a restrictive umask). The
 .B chmod 644
-on the files ensures all users can read the pages (the copies might otherwise be 640).
+on the installed pages ensures all users can read them.
 .PP
 On some BSD systems use
 .B "sudo makewhatis"
@@ -781,12 +816,16 @@ creates it so that
 .B "sudo cp"
 does not fail with "No such file or directory".
 .PP
-After installation, view the page with:
+After installation, view the pages with:
 .RS
-.B man data_boar
+.B "man data-boar"
+or the alias
+.B "man data_boar"
 or
-.B man lgpd_crawler
+.B "man lgpd_crawler"
 (section 1), and
+.B "man 5 data-boar"
+or
 .B "man 5 data_boar"
 or
 .B "man 5 lgpd_crawler"
@@ -803,12 +842,15 @@ describes
 .I configuration and file formats
 (config file topology, regex/ML/DL pattern files, examples).
 View it with
+.BR "man 5 data-boar"
+or
 .BR "man 5 data_boar"
 or
 .BR "man 5 lgpd_crawler" .
 On Unix/Linux/BSD, section 1 is for programs and commands; section 5 is for file formats and conventions.
 .
 .SH SEE ALSO
+.BR data-boar (5),
 .BR data_boar (5),
 .BR lgpd_crawler (5)
 (configuration and pattern file formats),
