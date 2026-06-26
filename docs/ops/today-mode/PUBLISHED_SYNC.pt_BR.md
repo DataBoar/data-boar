@@ -11,10 +11,10 @@
 | Campo | Valor |
 | ----- | ----- |
 | **Verificado** | **2026-06-26** |
-| **`pyproject.toml` em `main`** | **`1.7.4`** na branch **`release/1.7.4`** (PR **#1024** aguardando merge do operador; **publicado** estável ainda **1.7.3** até **release-ritual** pós-merge) |
-| **GitHub Release Latest** | [**v1.7.3**](https://github.com/FabioLeitao/data-boar/releases/tag/v1.7.3) (notas: **`docs/releases/1.7.3.md`**, **`CHANGELOG.md`**) — **v1.7.4** após publish |
-| **Docker Hub** | **`fabioleitao/data_boar:1.7.3`** + **`latest`** (publicado) — alvo **`1.7.4`** após publish do operador |
-| **Próxima versão pública** (após publish **1.7.4**) | **`1.8.0-beta`** conforme [VERSIONING.md](../VERSIONING.md) + ADR-0073 |
+| **`pyproject.toml` em `main`** | **`1.7.4`** (mergeado via PR **#1024**; **publicado** estável **1.7.4**) |
+| **GitHub Release Latest** | [**v1.7.4**](https://github.com/FabioLeitao/data-boar/releases/tag/v1.7.4) (notas: **`docs/releases/1.7.4.md`**, **`CHANGELOG.md`**) |
+| **Docker Hub** | **`fabioleitao/data_boar:1.7.4`** + **`latest`** (publicado **2026-06-26**) |
+| **Próxima versão pública** | **`1.8.0-beta`** conforme [VERSIONING.md](../VERSIONING.md) + ADR-0073 |
 
 ---
 
@@ -29,7 +29,7 @@ grep -n '^version' pyproject.toml
 gh release list --repo FabioLeitao/data-boar --limit 5
 ```
 
-Docker Hub: confirma **`1.7.3`** e **`latest`** em [hub.docker.com/r/fabioleitao/data_boar/tags](https://hub.docker.com/r/fabioleitao/data_boar/tags) ou na API do registry; **descrição longa** alinhada a **[`docs/ops/DOCKER_HUB_REPOSITORY_DESCRIPTION.md`](../DOCKER_HUB_REPOSITORY_DESCRIPTION.md)**. **GitHub:** existe Release **`v1.7.3`**.
+Docker Hub: confirma **`1.7.4`** e **`latest`** em [hub.docker.com/r/fabioleitao/data_boar/tags](https://hub.docker.com/r/fabioleitao/data_boar/tags) ou na API do registry; **descrição longa** alinhada a **[`docs/ops/DOCKER_HUB_REPOSITORY_DESCRIPTION.md`](../DOCKER_HUB_REPOSITORY_DESCRIPTION.md)**. **GitHub:** existe Release **`v1.7.4`**.
 
 ---
 
