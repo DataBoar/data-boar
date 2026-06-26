@@ -65,17 +65,17 @@ RUN pip uninstall -y wheel || true && \
     pip install --no-cache-dir --force-reinstall "wheel>=0.46.2" && \
     python -c "import wheel; import sys; sys.exit(0 if tuple(map(int, wheel.__version__.split('.'))) >= (0,46,2) else 1)"
 
-# Copy application code
-COPY . .
+# Copy application code (daemonless Linux: host umask 007 can leave 660 root:root)
+RUN useradd -r -u 1000 -d /data appuser && \
+    mkdir -p /data && chown -R appuser:appuser /data
+
+COPY --chown=appuser:appuser . .
 
 ENV CONFIG_PATH=/data/config.yaml
 ENV PYTHONUNBUFFERED=1
 # Docker image default: expose web API on all interfaces inside the container
 # so published ports work from outside Docker Desktop/WSL host.
 ENV API_HOST=0.0.0.0
-
-RUN useradd -r -u 1000 -d /data appuser && \
-    mkdir -p /data && chown -R appuser:appuser /data
 
 USER appuser
 
