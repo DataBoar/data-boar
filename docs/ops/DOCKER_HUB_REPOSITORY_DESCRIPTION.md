@@ -13,7 +13,7 @@
 Use one line (adjust version when you bump):
 
 ```text
-Data Boar — PII/sensitive data discovery (LGPD/GDPR-aware). OSS by Fabio Leitao. Tags: latest, 1.7.3. Docs on GitHub.
+Data Boar — PII/sensitive data discovery (LGPD/GDPR-aware). OSS by Fabio Leitao. Tags: latest, 1.7.4. Docs on GitHub.
 ```
 
 ---
@@ -29,7 +29,7 @@ Copy from the block below into **Repository → Edit** on Docker Hub.
 
 **Compliance-aware discovery** of personal and sensitive data across databases, files, APIs, and more — **data soup** in, structured findings out. Open-source Python stack with optional ML/DL; aligns with **LGPD**, **GDPR**, **CCPA**, and other frameworks via config.
 
-**Current Hub image tags:** **`latest`** and **`1.7.3`** resolve to the **same digest** (Linux/amd64). Pin **`1.7.3`** for an immutable semver pull string. The prior **golden** tag **`v1.7.2-safe`** may still appear under **Tags** for historical audit — prefer **`1.7.3`** or **`latest`** for new deploys unless you intentionally pin the golden digest. Confirm **`pyproject.toml`** and **[GitHub Releases](https://github.com/FabioLeitao/data-boar/releases)** for the exact pairing.
+**Current Hub image tags:** **`latest`** and **`1.7.4`** resolve to the **same digest** (Linux/amd64). Pin **`1.7.4`** for an immutable semver pull string. The prior **golden** tag **`v1.7.2-safe`** may still appear under **Tags** for historical audit — prefer **`1.7.4`** or **`latest`** for new deploys unless you intentionally pin the golden digest. Confirm **`pyproject.toml`** and **[GitHub Releases](https://github.com/FabioLeitao/data-boar/releases)** for the exact pairing.
 
 ### Copyright and maintainer
 
@@ -40,7 +40,7 @@ Copy from the block below into **Repository → Edit** on Docker Hub.
 ### Supported tags
 
 - **`fabioleitao/data_boar:latest`** — newest published build
-- **`fabioleitao/data_boar:1.7.3`** — immutable semver tag (same image as **`latest`** at last stable publish)
+- **`fabioleitao/data_boar:1.7.4`** — immutable semver tag (same image as **`latest`** at last stable publish)
 
 ### Quick start (web API + dashboard on port 8088)
 
@@ -77,10 +77,10 @@ From the repo root, after tests pass and you are logged in to Docker Hub:
 ```bash
 uv run pytest -v -W error
 docker build -t fabioleitao/data_boar:latest .
-docker tag fabioleitao/data_boar:latest fabioleitao/data_boar:1.7.3
+docker tag fabioleitao/data_boar:latest fabioleitao/data_boar:1.7.4
 docker login
 docker push fabioleitao/data_boar:latest
-docker push fabioleitao/data_boar:1.7.3
+docker push fabioleitao/data_boar:1.7.4
 ```
 
 For the next formal release, bump **`pyproject.toml`** / **`core/about.py`** per [VERSIONING.md](https://github.com/FabioLeitao/data-boar/blob/main/docs/VERSIONING.md), publish semver tags per [DOCKER_IMAGE_RELEASE_ORDER.md](https://github.com/FabioLeitao/data-boar/blob/main/docs/ops/DOCKER_IMAGE_RELEASE_ORDER.md), then **replace the entire Full description** on Hub from this file so **Supported tags** and the **`docker tag`** lines stay in sync with the **Tags** tab (no partial edits).

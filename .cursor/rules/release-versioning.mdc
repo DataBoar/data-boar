@@ -29,9 +29,9 @@ alwaysApply: false
 
 **Green commit gate never authorizes removing `-beta`/`-rc` from `pyproject.toml`.**
 
-## Version facts (ADR-0073 — Proposed)
+## Version facts (ADR-0073 — Accepted)
 
-- **`main` today:** **`1.7.4-rc-2`** until **#406** closes and ADR-0073 is **Accepted**.
+- **`main` today:** **`1.7.4`** on release branch **`release/1.7.4`** (PR **#1024**); ADR-0073 **Accepted**; release gate **#406** closes in the same PR train before merge.
 - **#970:** premature stable bump/tag without release gate — corrected by **ADR-0072** + **#406**; **`1.7.4` is not VOID**.
 - **Stable semver + tag after gate:** **TBD** (operator HITL post-GA numbering — three segments + suffix only; no fourth segment).
 - **`1.7.5` does not exist.** Next dev line: **`1.8.0-beta`** (#772).

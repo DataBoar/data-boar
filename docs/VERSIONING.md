@@ -27,7 +27,7 @@ Examples:
 
 ---
 
-## Octet maturity (side-channel) + release-line roadmap (ADR-0073 — Proposed)
+## Octet maturity (side-channel) + release-line roadmap (ADR-0073 — Accepted)
 
 **Canonical draft:** [ADR-0073](adr/ADR-0073-version-scheme-octet-maturity-and-roadmap.md) (**Proposed** — not ratified). Pairs with [ADR-0072](adr/ADR-0072-commit-gate-vs-release-gate-distinct-criteria.md) (commit gate ≠ release gate).
 
@@ -53,11 +53,11 @@ Suffixes (`-beta`, `-rc`, `-rc-N`) remain valid on `main` while the **release ga
 
 | Label | Status |
 | --- | --- |
-| **`main` working tree** | **`1.7.4-rc-2`** in `pyproject.toml` — **do not bump** until ADR-0073 is **Accepted** and release gate **#406** closes |
+| **`main` working tree** | **`1.7.4`** in `pyproject.toml` on release branch **`release/1.7.4`** (PR **#1024**); publish (tag/Hub) follows operator merge + **release-ritual** |
 | **#970** | Premature stable bump/tag without release gate — corrected by **ADR-0072** + gate **#406**; **`1.7.4` is not VOID** |
-| **Post-GA public fix numbering** | **OPEN / TBD** (operator HITL) — must stay within three-segment + suffix rule; see ADR-0073 |
+| **Post-GA public fix numbering** | **Resolved** (#977) — public line stays **`1.7.4`**; **`maturity_build`** octet distinguishes fixes; next public line **`1.8.0`** |
 
-Ladder (historic + today): `1.7.4-beta` → `1.7.4-rc` → **`1.7.4-rc-2`** (current). **Next stable semver + tag:** TBD pending ADR-0073 ratification and gate **#406**.
+Ladder (historic): `1.7.4-beta` → `1.7.4-rc` → `1.7.4-rc-2` → **`1.7.4`** (stable target, release PR **#1024**).
 
 ### Release-line roadmap (intent — not naive semver increment)
 

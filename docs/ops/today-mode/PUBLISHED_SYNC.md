@@ -10,11 +10,11 @@
 
 | Field | Value |
 | ----- | ----- |
-| **Verified** | **2026-05-10** |
-| **`pyproject.toml` on `main`** | **1.7.4-rc** (working **pre-release**; **published** stable = **1.7.3** / tag **`v1.7.3`** per [VERSIONING.md](../VERSIONING.md)) |
-| **GitHub Release Latest** | [**v1.7.3**](https://github.com/FabioLeitao/data-boar/releases/tag/v1.7.3) (notes: **`docs/releases/1.7.3.md`**, **`CHANGELOG.md`**) |
-| **Docker Hub** | **`fabioleitao/data_boar:1.7.3`** + **`latest`** (same digest) — `sha256:510a51b0dc89e79d084b515b5201c803328040dbda594744c96ee245efcc4866`; **Full description** from **[`docs/ops/DOCKER_HUB_REPOSITORY_DESCRIPTION.md`](../DOCKER_HUB_REPOSITORY_DESCRIPTION.md)** |
-| **Next public version** (when `main` has a new bundle) | **1.7.4** — follow **`docs/VERSIONING.md`** + **`docs/releases/`** |
+| **Verified** | **2026-06-26** |
+| **`pyproject.toml` on `main`** | **`1.7.4`** on branch **`release/1.7.4`** (PR **#1024** pending operator merge; **published** stable still **1.7.3** until post-merge **release-ritual**) |
+| **GitHub Release Latest** | [**v1.7.3**](https://github.com/FabioLeitao/data-boar/releases/tag/v1.7.3) (notes: **`docs/releases/1.7.3.md`**, **`CHANGELOG.md`**) — **v1.7.4** after publish |
+| **Docker Hub** | **`fabioleitao/data_boar:1.7.3`** + **`latest`** (published) — target **`1.7.4`** after operator publish |
+| **Next public version** (after **1.7.4** publish) | **`1.8.0-beta`** per [VERSIONING.md](../VERSIONING.md) + ADR-0073 |
 
 ---
 

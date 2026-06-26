@@ -27,9 +27,9 @@ Exemplos:
 
 ---
 
-## Octeto-maturidade (side-channel) + roadmap de linha (ADR-0073 — Proposed)
+## Octeto-maturidade (side-channel) + roadmap de linha (ADR-0073 — Accepted)
 
-**Rascunho canônico:** [ADR-0073](adr/ADR-0073-version-scheme-octet-maturity-and-roadmap.md) (EN, **Proposed** — não ratificado). Complementa [ADR-0072](adr/ADR-0072-commit-gate-vs-release-gate-distinct-criteria.md) (commit gate ≠ release gate).
+**Rascunho canônico:** [ADR-0073](adr/ADR-0073-version-scheme-octet-maturity-and-roadmap.md) (EN, **Accepted**). Complementa [ADR-0072](adr/ADR-0072-commit-gate-vs-release-gate-distinct-criteria.md) (commit gate ≠ release gate).
 
 ### Versão pública vs octeto de maturidade (não misturar)
 
@@ -53,11 +53,11 @@ Sufixos (`-beta`, `-rc`, `-rc-N`) continuam válidos em `main` enquanto o **rele
 
 | Rótulo | Status |
 | --- | --- |
-| **Working tree `main`** | **`1.7.4-rc-2`** no `pyproject.toml` — **não bumpar** até ADR-0073 **Accepted** e gate **#406** fechar |
+| **Working tree `main`** | **`1.7.4`** no `pyproject.toml` na branch **`release/1.7.4`** (PR **#1024**); publish (tag/Hub) após merge do operador + **release-ritual** |
 | **#970** | Bump/tag stable prematuro sem release gate — corrigido por **ADR-0072** + gate **#406**; **`1.7.4` não é VOID** |
-| **Numeração pública pós-GA** | **OPEN / TBD** (HITL operador) — deve respeitar três segmentos + sufixo; ver ADR-0073 |
+| **Numeração pública pós-GA** | **Resolvido** (#977) — linha pública permanece **`1.7.4`**; octeto **`maturity_build`** distingue fixes; próxima linha pública **`1.8.0`** |
 
-Escada (histórico + hoje): `1.7.4-beta` → `1.7.4-rc` → **`1.7.4-rc-2`** (atual). **Próximo semver stable + tag:** TBD pendente ratificação ADR-0073 e gate **#406**.
+Escada (histórico): `1.7.4-beta` → `1.7.4-rc` → `1.7.4-rc-2` → **`1.7.4`** (stable alvo, PR **#1024**).
 
 ### Roadmap de linha (intenção — sem incremento ingênuo)
 
