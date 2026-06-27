@@ -2,7 +2,7 @@
 
 <!-- plans-hub-summary: Endurecer imagem de release — runtime distroless Debian 13 (nonroot, sem shell) via multi-stage; gate grype --fail-on high --only-fixed; VEX por-CVE justificado. Reduz ruído de CVE de base (High+ sem fix) para imagem GA-clean p/ parceiros. -->
 
-**Status:** In progress — PLAN graduado 2026-06-27; branch `feat/image-hardening-1028` com Dockerfile + `collect-runtime-rootfs.sh` em rascunho; **PR-A** (base-swap) pendente de build/smoke verde.
+**Status:** In progress — **PR-A** ready for review (distroless base-swap + smoke/TLS/.so verified locally); **PR-B** VEX pending.
 **Date:** 2026-06-27
 **Authors:** Fabio Leitao (operator); draft RO vault + execução Cursor
 **Priority:** H1
@@ -74,13 +74,13 @@ Reconciliation against branch `feat/image-hardening-1028` (2026-06-27):
 
 | Gap | Requirement | Status | PR | Notes |
 | --- | ----------- | ------ | -- | ----- |
-| **Python-version match** | Distroless runtime must run the same CPython minor CI uses (**3.13** primary; support **3.12–3.14** band in docs) | 🔄 Design done | **A** | Bundled `/usr/local` from `python:3.13-slim` builder; **not** `distroless/python3` tag alone. Verify with smoke + import smoke. |
-| **PyO3 `.so` + glibc** | `boar_fast_filter` built in **builder** against **glibc** compatible with runtime; `.so` copied via `site-packages` | ⬜ Pending | **A** | Dockerfile today does **not** run `maturin` — extension optional at runtime (Python fallback). **PR-A:** add `maturin develop --release` (or wheel) in builder when `rust/` present; confirm `import boar_fast_filter` in smoke or document graceful absence. |
-| **CA certs / OpenSSL / TLS** | HTTPS connectors (`httpx`, `requests`, DB TLS) need `ca-certificates` + `libssl`/`libcrypto` in rootfs | 🔄 Partial | **A** | `collect-runtime-rootfs.sh` copies `ca-certificates.crt` and discovers `libssl`/`libcrypto` via `ldd`. **PR-A:** add TLS smoke (`httpx` → `https://example.com` or certifi probe). |
-| **`tzdata`** | Correct local time in logs/reports when connector uses TZ | ⬜ Pending | **A** | Distroless has no zoneinfo by default. If smoke shows UTC-only OK for container default, document; else copy `/usr/share/zoneinfo` subset or set `TZ=UTC` in `ENV` and document operator override via `-e TZ=...` + mount if needed later. |
-| **No-shell entrypoint** | `CMD`/`ENTRYPOINT` exec form; healthchecks must not assume `sh -c` | ✅ Done | **A** | `CMD ["/usr/local/bin/python3.13", "main.py", ...]` — no shell. |
-| **Smoke `_package_version()`** | `podman run --rm IMG python -c 'from core.about import _package_version; print(_package_version())'` | ⬜ Pending | **A** | Operator-local `build-push-podman.sh` wrapper — must match `pyproject.toml` version, **no maturity octet** in output. See [DOCKER_IMAGE_RELEASE_ORDER.md](../ops/DOCKER_IMAGE_RELEASE_ORDER.md). |
-| **`build-push-podman.sh` compat** | Steps 3–4: smoke + `grype --fail-on high --only-fixed` | ⬜ Pending | **A** / **B** | Wrapper unchanged; image must pass. **PR-B:** versioned `.grype.yaml` + optional `--config` in repo gate script; formalize in release rule/skill. |
+| **Python-version match** | Distroless runtime must run the same CPython minor CI uses (**3.13** primary; support **3.12–3.14** band in docs) | ✅ PR-A | **A** | Bundled `/usr/local` from `python:3.13-slim` builder; smoke verifies `_package_version()` and imports. |
+| **PyO3 `.so` + glibc** | `boar_fast_filter` built in **builder** against **glibc** compatible with runtime; `.so` copied via `site-packages` | ✅ PR-A | **A** | `maturin build --release` in builder; `docker-image-smoke.sh` imports `boar_fast_filter`. |
+| **CA certs / OpenSSL / TLS** | HTTPS connectors need `ca-certificates` + `libssl`/`libcrypto` in rootfs | ✅ PR-A | **A** | `collect-runtime-rootfs.sh` + TLS probe (`httpx` → `https://example.com`). |
+| **`tzdata`** | Correct local time in logs/reports when connector uses TZ | ⬜ Deferred | **A** | Container defaults UTC; operator may set `-e TZ=...` — document in PR-B or DOCKER_SETUP if needed. |
+| **No-shell entrypoint** | `CMD`/`ENTRYPOINT` exec form; healthchecks must not assume `sh -c` | ✅ PR-A | **A** | `CMD ["/usr/local/bin/python3.13", ...]` |
+| **Smoke `_package_version()`** | `podman run --rm IMG python -c '...'` | ✅ PR-A | **A** | `scripts/docker/docker-image-smoke.sh` + `python`/`python3.13` symlinks for wrapper compat. |
+| **`build-push-podman.sh` compat** | Steps 3–4: smoke + `grype --fail-on high --only-fixed` | ✅ PR-A | **B** | Verified locally on `data_boar:hardening-test`; `.grype.yaml` formalizes won't-fix in PR-B. |
 
 ---
 
@@ -92,14 +92,14 @@ Reconciliation against branch `feat/image-hardening-1028` (2026-06-27):
 
 | # | To-do | Status |
 | - | ----- | ------ |
-| A.1 | Dockerfile: builder → runtime-assembler → `cc-debian13:nonroot` (digest-pinned) | 🔄 WIP |
-| A.2 | `scripts/docker/collect-runtime-rootfs.sh` — `/usr/local`, DB libs, CA bundle, `ldd` closure | 🔄 WIP |
-| A.3 | Strip pip/wheel/setuptools from runtime export | 🔄 WIP |
-| A.4 | Optional: `maturin` / `boar_fast_filter` in builder | ⬜ |
-| A.5 | Local: `podman build` + smoke `_package_version()` + octet-leak grep (wrapper contract) | ⬜ |
-| A.6 | TLS probe smoke (connector-relevant) | ⬜ |
-| A.7 | `tests/test_github_workflows.py::test_dockerfile_pins_python_base_image_by_digest` — extend for **all** `FROM` lines (3 stages) | ⬜ |
-| A.8 | Update [DOCKER_SETUP.md](../DOCKER_SETUP.md) / [scripts/docker/README.md](../../scripts/docker/README.md) — distroless runtime, debug image note | ⬜ |
+| A.1 | Dockerfile: builder → runtime-assembler → `cc-debian13:nonroot` (digest-pinned) | ✅ |
+| A.2 | `scripts/docker/collect-runtime-rootfs.sh` — `/usr/local`, DB libs, CA bundle, `ldd` closure | ✅ |
+| A.3 | Strip pip/wheel/setuptools from runtime export | ✅ |
+| A.4 | `maturin` / `boar_fast_filter` in builder | ✅ |
+| A.5 | Local: `podman build` + smoke `_package_version()` + octet-leak grep (wrapper contract) | ✅ |
+| A.6 | TLS probe smoke (`httpx` → `https://example.com`) | ✅ |
+| A.7 | `tests/test_docker_image_hardening.py` + `test_github_workflows` digest guard (3 stages) | ✅ |
+| A.8 | Update [scripts/docker/README.md](../../scripts/docker/README.md) — smoke + collect scripts | ✅ |
 
 **Pause after PR-A opens** — Claude Code audits diff before merge.
 

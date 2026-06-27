@@ -30,13 +30,13 @@ Use these tags in headings to keep priorities explicit and machine-countable:
 
 Do not edit this block manually; refresh with `python scripts/plans-stats.py --write`.
 
-- **Status rows counted:** 195  (Done: 113 | Incomplete: 82)
-- **Incomplete breakdown:** Pending `⬜`=74, Tracked `🔄` / `Tracked (partially done)`=8, Under consideration=0, Backlog-marked rows=0
+- **Status rows counted:** 195  (Done: 115 | Incomplete: 80)
+- **Incomplete breakdown:** Pending `⬜`=73, Tracked `🔄` / `Tracked (partially done)`=7, Under consideration=0, Backlog-marked rows=0
 
 | Horizon | Total rows | Done | Incomplete |
 | ------- | ----------: | ----: | ----------: |
 | `H0` | 42 | 30 | 12 |
-| `H1` | 40 | 28 | 12 |
+| `H1` | 40 | 30 | 10 |
 | `H2` | 0 | 0 | 0 |
 | `H3` | 108 | 50 | 58 |
 | `H4` | 0 | 0 | 0 |
@@ -418,8 +418,8 @@ Doc-first: buyer/DPO positioning in COMPLIANCE_AND_LEGAL + COMPLIANCE_FRAMEWORKS
 
 | Slice | To-do | Status |
 | ----- | ----- | ------ |
-| **PR-A** | Multi-stage → `gcr.io/distroless/cc-debian13:nonroot` + `collect-runtime-rootfs.sh`; nonroot **65532**; exec `CMD`; smoke `_package_version()` + `build-push-podman.sh` contract | 🔄 In progress |
-| **PR-A** | PyO3 `boar_fast_filter` in builder (optional ext); TLS / CA smoke | ⬜ Pending |
+| **PR-A** | Multi-stage → `gcr.io/distroless/cc-debian13:nonroot` + `collect-runtime-rootfs.sh`; nonroot **65532**; exec `CMD`; smoke `_package_version()` + `build-push-podman.sh` contract | ✅ Ready for review |
+| **PR-A** | PyO3 `boar_fast_filter` in builder; TLS / CA smoke | ✅ |
 | **PR-B** | `.grype.yaml` VEX (per-CVE rationale); `grype-image-gate` scripts; release rule formalizes `--only-fixed` | ⬜ Pending |
 
 ### Corporate-Entity-C 2026-03-18 — evolution review (9.1/10) and follow-ups
