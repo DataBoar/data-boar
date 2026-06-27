@@ -33,15 +33,19 @@ Clone de dev: `uv sync --extra sql-all` (ou escolha extras). Ver [PLAN_PACKAGING
 
 ### Publicação no PyPI (maintainers)
 
-O build usa **hatchling** via **`pyproject.toml`**. Na raiz do repositório (Windows):
+O build usa **[hatchling](https://github.com/pypa/hatch)** via **`pyproject.toml`**. O **upload é só no CI** (PyPI Trusted Publishing / OIDC) — **sem** `UV_PUBLISH_TOKEN` na estação de trabalho.
+
+Na raiz do repo, **depois** do **GitHub Release** (ver **`.cursor/rules/release-publish-sequencing.mdc`** / token **`release-ritual`**):
 
 ```powershell
-.\scripts\pypi-publish.ps1 -DryRun
-$env:UV_PUBLISH_TOKEN = "<token de API PyPI>"
-.\scripts\pypi-publish.ps1
+.\scripts\pypi-publish.ps1 -Target testpypi   # dispara TestPyPI primeiro
+# gh run watch  — conferir https://test.pypi.org/project/data-boar/
+.\scripts\pypi-publish.ps1 -Target pypi       # PyPI produção quando TestPyPI estiver ok
 ```
 
-Ou **`uv build`** e **`uv publish dist/*`** com **`UV_PUBLISH_TOKEN`** definido. Instalações via PyPI expõem **dois** entry points de console de **mesmo nível** (mesmo pacote, mesma régua de qualidade — regressão em qualquer um bloqueia o *gate* de merge):
+Linux/macOS: **`./scripts/pypi-publish.sh -t testpypi`** / **`-t pypi`**. Workflow: **`.github/workflows/publish-pypi.yml`**. Referências: [ADR-0031](docs/adr/ADR-0031-pypi-packaging-hatchling-flat-layout.md), [ADR-0005](docs/adr/ADR-0005-ci-github-actions-supply-chain-pins.md).
+
+Instalações via PyPI expõem **dois** entry points de console de **mesmo nível** (mesmo pacote, mesma régua de qualidade — regressão em qualquer um bloqueia o *gate* de merge):
 
 - **`data-boar`** → **`main:main`** (CLI, varredura *one-shot*, servidor API com `--web`).
 - **`data-boar-report`** → **`cli.reporter:main`** (Markdown executivo a partir da sessão no SQLite local — sem conector SQL ao vivo; ver [docs/USAGE.pt_BR.md](docs/USAGE.pt_BR.md) *Resumo executivo*, [EN](docs/USAGE.md) seção 5).

@@ -1,53 +1,61 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Build sdist+wheel and publish data-boar to PyPI (uv).
+    Dispatch PyPI publish via GitHub Actions OIDC (zero local API token).
 
 .DESCRIPTION
-    Uses `uv build` then `uv publish`. Set UV_PUBLISH_TOKEN (PyPI API token) in the environment
-    or pass -Token. Never commit tokens. For first-time publish, ensure the PyPI project name
-    `data-boar` is created / allowed on your account.
+    Build and upload happen in CI (.github/workflows/publish-pypi.yml) using PyPI
+    Trusted Publishing (OIDC). This wrapper does NOT run uv build or uv publish on
+    the workstation. No UV_PUBLISH_TOKEN and no PyPI API token in operator env.
 
-    Dry run: .\scripts\pypi-publish.ps1 -DryRun
+    Release ritual: after GitHub Release, dispatch TestPyPI first, verify install,
+    then dispatch production PyPI. See .cursor/rules/release-publish-sequencing.mdc
+    and docs/VERSIONING.md. Packaging: ADR-0031; workflow pins: ADR-0005.
+
+.PARAMETER Target
+    testpypi (default) or pypi. Production PyPI requires workflow_dispatch with
+    environment protection on GitHub.
+
+.PARAMETER Ref
+    Git ref for workflow run (default main). Use the release branch or tag ref when
+    publishing a specific line from non-main.
 
 .EXAMPLE
-    $env:UV_PUBLISH_TOKEN = "<pypi-api-token>"
-    .\scripts\pypi-publish.ps1
+    .\scripts\pypi-publish.ps1 -Target testpypi
+    .\scripts\pypi-publish.ps1 -Target pypi -Ref main
 #>
 param(
-    [switch]$DryRun,
-    [string]$Token = ""
+    [ValidateSet("testpypi", "pypi")]
+    [string]$Target = "testpypi",
+    [string]$Ref = "main"
 )
 
 $ErrorActionPreference = "Stop"
-$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
-Set-Location $repoRoot
 
-if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
-    Write-Host "uv: not found. Install uv and run from repo root." -ForegroundColor Red
+if (-not (Get-Command gh -ErrorAction SilentlyContinue)) {
+    Write-Host "gh: not found. Install GitHub CLI and run gh auth login." -ForegroundColor Red
     exit 1
 }
 
-Write-Host "=== uv build ===" -ForegroundColor Cyan
-& uv build
+Write-Host "=== PyPI publish dispatch (OIDC via CI) ===" -ForegroundColor Cyan
+Write-Host "Target: $Target  Ref: $Ref"
+Write-Host "Local uv build/publish: disabled (CI builds dist; OIDC uploads)." -ForegroundColor DarkGray
+
+if ($Target -eq "pypi") {
+    Write-Host "Production PyPI: confirm GitHub Release exists and TestPyPI was verified." -ForegroundColor Yellow
+}
+
+& gh workflow run publish-pypi.yml --ref $Ref -f "target=$Target"
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-if ($DryRun) {
-    Write-Host "=== uv publish --dry-run ===" -ForegroundColor Cyan
-    & uv publish --dry-run dist/*
-    exit $LASTEXITCODE
+Write-Host ""
+Write-Host "[OK] Workflow dispatched. Monitor:" -ForegroundColor Green
+Write-Host "  gh run list --workflow=publish-pypi.yml --limit 3"
+Write-Host "  gh run watch   # use run id from list above"
+Write-Host ""
+if ($Target -eq "testpypi") {
+    Write-Host "Verify package: https://test.pypi.org/project/data-boar/"
+} else {
+    Write-Host "Verify package: https://pypi.org/project/data-boar/"
+    Write-Host "Install smoke:    pipx install data-boar==<version>   # after run succeeds"
 }
-
-if ($Token) {
-    $env:UV_PUBLISH_TOKEN = $Token
-}
-
-if (-not $env:UV_PUBLISH_TOKEN) {
-    Write-Host "UV_PUBLISH_TOKEN is not set. Set it (PyPI API token) or use -DryRun." -ForegroundColor Yellow
-    Write-Host "Example: `$env:UV_PUBLISH_TOKEN = '<token>'; .\scripts\pypi-publish.ps1" -ForegroundColor Gray
-    exit 1
-}
-
-Write-Host "=== uv publish (PyPI) ===" -ForegroundColor Cyan
-& uv publish dist/*
-exit $LASTEXITCODE

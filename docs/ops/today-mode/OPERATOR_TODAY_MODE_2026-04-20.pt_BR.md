@@ -24,7 +24,7 @@ Roda **`carryover-sweep`** ou **`.\scripts\operator-day-ritual.ps1 -Mode Morning
 ## Carryover — do EOD 2026-04-19
 
 - [ ] **`git push origin main`** — publica commits de docs + packaging (confirmar **`check-all`** verde localmente se não correste antes do commit).
-- [ ] **PyPI (opcional):** `.\scripts\pypi-publish.ps1 -DryRun` e depois publish com token — só se for o dia do **primeiro** upload ao índice.
+- [ ] **PyPI (opcional, superseded):** fluxo atual = dispatch OIDC (`pypi-publish.ps1 -Target testpypi|pypi`) — ver **`CONTRIBUTING.pt_BR.md`**; item histórico abaixo usava token.
 - [ ] **`.vscode/`** — untracked no EOD; ignorar, gitignore ou commit **só** se for intencional.
 
 ---

@@ -1181,6 +1181,25 @@ def test_powershell_scripts_ascii_safe():
     )
 
 
+def test_pypi_publish_oidc_dispatch_wrapper() -> None:
+    """#1046: pypi-publish twins dispatch publish-pypi.yml; no UV_PUBLISH_TOKEN / uv publish."""
+    root = _project_root()
+    ps1 = (root / "scripts" / "pypi-publish.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    sh = (root / "scripts" / "pypi-publish.sh").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    for text in (ps1, sh):
+        assert "publish-pypi.yml" in text
+        assert "gh workflow run" in text
+        assert "UV_PUBLISH_TOKEN =" not in text
+        assert "uv publish dist" not in text
+        assert "& uv publish" not in text
+    assert "ValidateSet" in ps1 or "testpypi" in ps1
+    assert "testpypi" in sh and "pypi" in sh
+
+
 def test_get_lab_status_ps1_syntax():
     """scripts/maestro/Get-LabStatus.ps1 has valid PowerShell syntax (parse-only, #952)."""
     root = _project_root()

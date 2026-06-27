@@ -111,7 +111,7 @@ requires = ["hatchling>=1.29.0"]
 build-backend = "hatchling.build"
 
 # PyPI / `pip install`: flat layout — explicit packages (avoid setuptools auto-discover noise).
-# See `scripts/pypi-publish.ps1` and CONTRIBUTING.md (install identity).
+# See scripts/pypi-publish.ps1 (OIDC dispatch) and CONTRIBUTING.md (install identity).
 [project.scripts]
 data-boar = "main:main"
 data-boar-report = "cli.reporter:main"

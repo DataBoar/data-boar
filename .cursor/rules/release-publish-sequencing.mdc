@@ -13,6 +13,9 @@ globs:
   - scripts/docker-prune-local.ps1
   - scripts/grype-image-gate.ps1
   - scripts/grype-image-gate.sh
+  - scripts/pypi-publish.ps1
+  - scripts/pypi-publish.sh
+  - .github/workflows/publish-pypi.yml
   - .grype.yaml
   - scripts/docker/README.md
   - .cursor/skills/docker-smoke-container-hygiene/SKILL.md
@@ -50,7 +53,12 @@ Do **not** claim a version is **published** until **all** relevant steps for **t
 2. **Git tag:** `vX.Y.Z` on the **exact commit** that still has **`X.Y.Z` final** in `pyproject.toml`. If there are **two** commits (release, then beta), the tag **must** point to the **release** commit, **not** `HEAD` with beta.
 3. **Push tag:** `git push origin vX.Y.Z` (or project remote).
 4. **GitHub Release:** `gh release create vX.Y.Z` with notes from **`docs/releases/X.Y.Z.md`** (or equivalent). **Verify** with `gh release list` / `gh release view vX.Y.Z` in-session — **do not** invent “it’s live” without a check when tools work.
-5. **Docker image — build, smoke, push, prune, Hub UI (see also [`docs/ops/DOCKER_IMAGE_RELEASE_ORDER.md`](../../docs/ops/DOCKER_IMAGE_RELEASE_ORDER.md)):**
+5. **PyPI (OIDC dispatch — zero workstation token; ADR-0031 packaging + ADR-0005 workflow pins):**
+   1. **TestPyPI:** `.\scripts\pypi-publish.ps1 -Target testpypi` (Linux/macOS: `./scripts/pypi-publish.sh -t testpypi`) — dispatches **`.github/workflows/publish-pypi.yml`**. **No** `UV_PUBLISH_TOKEN`; **no** local `uv publish`.
+   2. **Verify TestPyPI:** `gh run watch` (after `gh run list --workflow=publish-pypi.yml`), confirm **`https://test.pypi.org/project/data-boar/`** shows the expected version; optional `pip install -i https://test.pypi.org/simple/ data-boar==X.Y.Z`.
+   3. **Production PyPI:** when TestPyPI is good and the release gate is satisfied, `.\scripts\pypi-publish.ps1 -Target pypi` (or `./scripts/pypi-publish.sh -t pypi`).
+   4. **Verify PyPI:** **`https://pypi.org/project/data-boar/`** — optional `pipx install data-boar==X.Y.Z` smoke on a lab host.
+6. **Docker image — build, smoke, push, prune, Hub UI (see also [`docs/ops/DOCKER_IMAGE_RELEASE_ORDER.md`](../../docs/ops/DOCKER_IMAGE_RELEASE_ORDER.md)):**
    1. **Disk (primary dev PC):** Before a large `docker build`, confirm **free space** on the volume Docker uses (Windows: e.g. `Get-PSDrive C` / relevant drive; Docker Desktop **Settings → Resources** for disk location). Full disks cause **opaque build failures** and image corruption.
    2. **Build:** From repo root at the release commit, **`.\scripts\docker-lab-build.ps1`** (or the publish script’s build step) so the image embeds the same **`pyproject.toml`** as **`X.Y.Z`**.
    3. **Smoke on Docker Desktop (mandatory before `docker push` to Hub):** Run **`.\scripts\docker-image-smoke.ps1`** (or `docker run --rm` smoke) against the local image (e.g. **`data_boar:lab`**) per **`docs/DOCKER_SETUP.md`** §7. **Do not** push if smoke fails.
@@ -58,11 +66,11 @@ Do **not** claim a version is **published** until **all** relevant steps for **t
    4. **Push:** `docker login` + push **`fabioleitao/data_boar:X.Y.Z`** and **`latest`** per **`docs/ops/DOCKER_IMAGE_RELEASE_ORDER.md`** / **`docker-hub-publish.ps1`** when present.
    5. **Prune (same workstation):** **`.\scripts\docker-prune-local.ps1 -WhatIf`** then without **`-WhatIf`** — avoids **dozens** of stale **`data_boar:*`** tags cluttering Docker Desktop; align with **`docs/ops/BRANCH_AND_DOCKER_CLEANUP.md`** §4. Optional: `docker image prune -f` / `docker builder prune -f` when disk is tight — **confirm** with operator before aggressive prunes.
    6. **Hub repository page:** Paste **Short + Full** from **`docs/ops/DOCKER_HUB_REPOSITORY_DESCRIPTION.md`** (replace **entire** Full description). **Stable** releases only for this marketing refresh; **`-beta`** / **`-rc`** do not require Hub page text updates unless asked. **Same-session rule:** If you **push** any **customer-pullable** tag (including hygiene tags like **`v1.7.2-safe`**) or **delete** Hub tags, refresh Hub copy **in that session** so **Supported tags** / example **`docker tag`** lines match the **Tags** tab — never leave the overview citing **removed** tags (e.g. old **1.6.x**).
-6. **Reconciliation:** **`docs/ops/today-mode/PUBLISHED_SYNC.md`** (+ **`.pt_BR.md`**) aligned with **published** semver, Hub tags, and **`pyproject.toml` on `main`** (often **pre-release** after step 7).
+7. **Reconciliation:** **`docs/ops/today-mode/PUBLISHED_SYNC.md`** (+ **`.pt_BR.md`**) aligned with **published** semver, Hub tags, PyPI project page, and **`pyproject.toml` on `main`** (often **pre-release** after step 8).
 
 **Only after** the operator (or automation with credentials) has completed the publish steps they care about:
 
-7. **Separate commit** on `main`: bump working tree to **`X.Y.(Z+1)-beta`** (or next planned pre-release) + docs that distinguish **Current release** (README) vs **`main`**.
+8. **Separate commit** on `main`: bump working tree to **`X.Y.(Z+1)-beta`** (or next planned pre-release) + docs that distinguish **Current release** (README) vs **`main`**.
 
 ---
 
@@ -71,7 +79,8 @@ Do **not** claim a version is **published** until **all** relevant steps for **t
 - **Do not** add **`X.Y.Z-beta`** on `main` in the **same** PR as the final **`X.Y.Z`** **before** tag + GitHub Release + Hub steps are **actually done**, unless the operator explicitly orders a **rebase/split** workflow and names the **SHA** to tag.
 - **Do not** tell the operator the release is on GitHub because “the commits exist locally” — **verify** `origin` and **`gh`**.
 - **Do not** tag **`vX.Y.Z`** on a commit whose **`pyproject.toml`** already says **`beta`** for the **next** line of work.
-- **Do not** treat **Docker Hub push** as complete for a **stable** release **without** a **local smoke** on the operator **Docker Desktop** (or an explicit waiver, e.g. CI-only image) — see step **5.3**.
+- **Do not** treat **Docker Hub push** as complete for a **stable** release **without** a **local smoke** on the operator **Docker Desktop** (or an explicit waiver, e.g. CI-only image) — see step **6.3**.
+- **Do not** use **`UV_PUBLISH_TOKEN`** or local **`uv publish`** for maintainer PyPI uploads — use **`scripts/pypi-publish.ps1`** / **`pypi-publish.sh`** (OIDC dispatch only; #1046).
 - **Do not** omit **prune** guidance after publish when many **`data_boar:*`** / **`fabioleitao/data_boar:*`** tags accumulate — use **`.\scripts\docker-prune-local.ps1`** per **`scripts/docker/README.md`**.
 - **Do not** finish a Hub **push** or **tag cleanup** without updating **Docker Hub → Repository → General → Full description** when the old text still lists **tags that no longer exist** on Hub — that confuses pullers more than a missing paragraph.
 
@@ -79,6 +88,6 @@ Do **not** claim a version is **published** until **all** relevant steps for **t
 
 ## Mental model (one sentence)
 
-**Published = tag + GitHub Release + Docker Hub image (+ local smoke before push) + Hub page copy + prune habit; working = what `pyproject.toml` says on `main` after you intentionally move forward.**
+**Published = tag + GitHub Release + PyPI (TestPyPI then production via OIDC dispatch) + Docker Hub image (+ local smoke before push) + Hub page copy + prune habit; working = what `pyproject.toml` says on `main` after you intentionally move forward.**
 
 Session keyword **`release-ritual`**: **`read_file`** this rule (or **`@release-publish-sequencing.mdc`** if situational globs did not attach it), **`docs/VERSIONING.md`**, and **`.cursor/rules/docker-local-smoke-cleanup.mdc`** before editing versions, release docs, or advising Docker publish.

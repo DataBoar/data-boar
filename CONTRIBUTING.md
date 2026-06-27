@@ -33,15 +33,19 @@ Dev clone: `uv sync --extra sql-all` (or pick extras). See [PLAN_PACKAGING_EXTRA
 
 ### Publishing to PyPI (maintainers)
 
-Build uses **[hatchling](https://github.com/pypa/hatch)** via **`pyproject.toml`** (`[build-system]` + `[tool.hatch.build]`). From the repo root (Windows):
+Build uses **[hatchling](https://github.com/pypa/hatch)** via **`pyproject.toml`**. **Upload is CI-only** (PyPI Trusted Publishing / OIDC) — **no** `UV_PUBLISH_TOKEN` on the workstation.
+
+From the repo root after **GitHub Release** (see **`.cursor/rules/release-publish-sequencing.mdc`** / session **`release-ritual`**):
 
 ```powershell
-.\scripts\pypi-publish.ps1 -DryRun   # build + validate upload path only
-$env:UV_PUBLISH_TOKEN = "<PyPI API token>"   # never commit this
-.\scripts\pypi-publish.ps1
+.\scripts\pypi-publish.ps1 -Target testpypi   # dispatch TestPyPI first
+# gh run watch  — verify https://test.pypi.org/project/data-boar/
+.\scripts\pypi-publish.ps1 -Target pypi       # production PyPI when TestPyPI is good
 ```
 
-Or: **`uv build`** then **`uv publish dist/*`** with **`UV_PUBLISH_TOKEN`** set. PyPI installs expose two **first-class** console entry points (same package, same quality bar — regressions in either block the merge gate):
+Linux/macOS: **`./scripts/pypi-publish.sh -t testpypi`** / **`-t pypi`**. Workflow: **`.github/workflows/publish-pypi.yml`**. References: [ADR-0031](docs/adr/ADR-0031-pypi-packaging-hatchling-flat-layout.md), [ADR-0005](docs/adr/ADR-0005-ci-github-actions-supply-chain-pins.md).
+
+PyPI installs expose two **first-class** console entry points (same package, same quality bar — regressions in either block the merge gate):
 
 - **`data-boar`** → **`main:main`** (CLI, one-shot scan, `--web` API server).
 - **`data-boar-report`** → **`cli.reporter:main`** (executive Markdown from the local SQLite session — no live SQL connector; see [docs/USAGE.md](docs/USAGE.md) section 5, [pt-BR](docs/USAGE.pt_BR.md)).

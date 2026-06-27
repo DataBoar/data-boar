@@ -105,12 +105,24 @@ Use lowercase suffixes consistently:
 ## Working vs published version (avoid confusion)
 
 - **Working version:** what `pyproject.toml` currently states on your branch (may be `-beta`/`-rc` or unsent work).
-- **Published version:** latest Git tag + GitHub Release + Docker Hub tag available to external users.
+- **Published version:** latest Git tag + GitHub Release + Docker Hub tag + PyPI **`data-boar`** version available to external users.
 - Do not assume they are equal; always call both explicitly in release notes and review requests.
 
 ### Assistant / automation (ordering guardrail)
 
 **Cursor / agents:** follow **`.cursor/rules/release-publish-sequencing.mdc`** (**situational** — session **`release-ritual`** or **`@release-publish-sequencing.mdc`** when globs miss; **`docker-local-smoke-cleanup.mdc`** stays **always-on** for smoke/prune) — create Git tag **`vX.Y.Z`**, GitHub Release, and Docker Hub publish steps **before** moving `main` to the next **`-beta`** (or next dev) bump. Session keyword **`release-ritual`** means **`read_file`** that rule (or **`@`**) and this file before editing semver or release docs.
+
+---
+
+## Distribution channels (published artifacts)
+
+| Channel | Consumer install | Maintainer publish (stable) |
+| --- | --- | --- |
+| **Git** | `git clone` / release tarball | Tag **`vX.Y.Z`** + **`gh release create`** |
+| **PyPI** | `pip install data-boar` / `pipx install data-boar` | OIDC dispatch: **`scripts/pypi-publish.ps1`** / **`pypi-publish.sh`** → **`.github/workflows/publish-pypi.yml`** — **TestPyPI first**, then **pypi** (#1046). **No** workstation API token. Packaging: [ADR-0031](adr/ADR-0031-pypi-packaging-hatchling-flat-layout.md); workflow pins: [ADR-0005](adr/ADR-0005-ci-github-actions-supply-chain-pins.md). |
+| **Docker Hub** | `docker pull fabioleitao/data_boar:X.Y.Z` | Local smoke + **`docker-hub-publish`** ritual — see **`docs/ops/DOCKER_IMAGE_RELEASE_ORDER.md`** |
+
+Pre-release **`-beta`** / **`-rc`** builds stay **git-only** for external consumers on PyPI and Docker Hub (stable suffix only on those indexes). See **`.cursor/rules/release-publish-sequencing.mdc`** for full order (GitHub Release → PyPI → Docker).
 
 ---
 
@@ -163,7 +175,7 @@ Keep **published** semver story consistent for anyone pulling images or reading 
 | Location | What to change |
 | --- | --- |
 | **`docs/ops/DOCKER_HUB_REPOSITORY_DESCRIPTION.md`** | **Short** + **Full** blocks for the Docker Hub UI: **Current release**, **Supported tags** semver, **copyright/maintainer** lines, and CLI examples (`python main.py`). **Manual paste** into Hub **after each stable image push** — the website does not pull from Git; drift (e.g. years-old **Tags** listing **1.6.5**) means someone skipped this step. Skip Hub copy refresh for **`-beta`** / **`-rc`**-only pushes unless you intentionally advertise them. |
-| **`docs/ops/today-mode/PUBLISHED_SYNC.md`** (+ **`.pt_BR.md`**) | Table row: **GitHub Latest**, **Docker Hub** tags, and “next” patch — must match what customers can actually install. |
+| **`docs/ops/today-mode/PUBLISHED_SYNC.md`** (+ **`.pt_BR.md`**) | Table row: **GitHub Latest**, **Docker Hub** tags, **PyPI** project version, and “next” patch — must match what customers can actually install. |
 | **`docs/TECH_GUIDE.md`** (+ **`.pt_BR.md`**) | Example Hub tag in the Docker subsection (if it pins a semver). |
 | **Operator social / milestones** (e.g. **`docs/private/social_drafts/`**, gitignored) | If a post cites “current release”, “latest on Docker Hub”, or a version number, align with **`README.md`** **Current release** line and **`PUBLISHED_SYNC`** — never celebrate a version that is not yet on GitHub + Hub unless you label it as **upcoming**. |
 
