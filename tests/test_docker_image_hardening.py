@@ -8,10 +8,15 @@ from pathlib import Path
 
 import pytest
 
+import yaml
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DOCKERFILE = REPO_ROOT / "Dockerfile"
 COLLECT_SCRIPT = REPO_ROOT / "scripts" / "docker" / "collect-runtime-rootfs.sh"
 SMOKE_SH = REPO_ROOT / "scripts" / "docker" / "docker-image-smoke.sh"
+GRYPE_CONFIG = REPO_ROOT / ".grype.yaml"
+GRYPE_GATE_SH = REPO_ROOT / "scripts" / "grype-image-gate.sh"
+GRYPE_GATE_PS1 = REPO_ROOT / "scripts" / "grype-image-gate.ps1"
 
 
 def _dockerfile_from_lines() -> list[str]:
@@ -55,6 +60,32 @@ def test_dockerfile_builds_boar_fast_filter_in_builder() -> None:
     text = DOCKERFILE.read_text(encoding="utf-8")
     assert "maturin build --release" in text
     assert "import boar_fast_filter" in text
+
+
+def test_grype_vex_config_has_documented_ignore_rules() -> None:
+    """PR-B #1028: .grype.yaml documents wont-fix base classes with reason (audit posture)."""
+    assert GRYPE_CONFIG.is_file()
+    data = yaml.safe_load(GRYPE_CONFIG.read_text(encoding="utf-8"))
+    rules = data.get("ignore") or []
+    assert len(rules) >= 5
+    for rule in rules:
+        assert rule.get("reason"), f"ignore rule missing reason: {rule!r}"
+        assert rule.get("fix-state") == "wont-fix"
+        assert rule.get("package", {}).get("type") == "deb"
+    names = {r["package"]["name"] for r in rules}
+    assert "libc6" in names
+    assert "mariadb" in names
+
+
+def test_grype_image_gate_scripts_enforce_only_fixed() -> None:
+    """Gate wrappers must not weaken --only-fixed (PLAN_IMAGE_HARDENING PR-B)."""
+    sh = GRYPE_GATE_SH.read_text(encoding="utf-8")
+    ps1 = GRYPE_GATE_PS1.read_text(encoding="utf-8")
+    assert "--only-fixed" in sh
+    assert "--fail-on high" in sh
+    assert ".grype.yaml" in sh
+    assert "--only-fixed" in ps1
+    assert "--fail-on" in ps1 and "high" in ps1
 
 
 @pytest.mark.skipif(

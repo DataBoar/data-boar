@@ -2,7 +2,7 @@
 
 <!-- plans-hub-summary: Endurecer imagem de release — runtime distroless Debian 13 (nonroot, sem shell) via multi-stage; gate grype --fail-on high --only-fixed; VEX por-CVE justificado. Reduz ruído de CVE de base (High+ sem fix) para imagem GA-clean p/ parceiros. -->
 
-**Status:** In progress — **PR-A** ready for review (distroless base-swap + smoke/TLS/.so verified locally); **PR-B** VEX pending.
+**Status:** Done — PR-A merged (#1041); PR-B grype VEX + gate (#1028).
 **Date:** 2026-06-27
 **Authors:** Fabio Leitao (operator); draft RO vault + execução Cursor
 **Priority:** H1
@@ -107,10 +107,10 @@ Reconciliation against branch `feat/image-hardening-1028` (2026-06-27):
 
 | # | To-do | Status |
 | - | ----- | ------ |
-| B.1 | `.grype.yaml` — ignore rules with **per-CVE or per-package-class** `reason:` (won't-fix base noise); review on each base digest bump | ⬜ |
-| B.2 | `scripts/grype-image-gate.sh` + `scripts/grype-image-gate.ps1` (mirror `docker-scout-critical-gate.ps1` contract: `--fail-on high --only-fixed`) | ⬜ |
-| B.3 | Document gate in [DOCKER_IMAGE_RELEASE_ORDER.md](../ops/DOCKER_IMAGE_RELEASE_ORDER.md) + `.cursor/rules/release-publish-sequencing.mdc` pointer (formalize wrapper behaviour) | ⬜ |
-| B.4 | Attach post-change grype log excerpt as release evidence (operator-local log or CI artifact when wired) | ⬜ |
+| B.1 | `.grype.yaml` — ignore rules with **per-CVE or per-package-class** `reason:` (won't-fix base noise); review on each base digest bump | ✅ |
+| B.2 | `scripts/grype-image-gate.sh` + `scripts/grype-image-gate.ps1` (mirror `docker-scout-critical-gate.ps1` contract: `--fail-on high --only-fixed`) | ✅ |
+| B.3 | Document gate in [DOCKER_IMAGE_RELEASE_ORDER.md](../ops/DOCKER_IMAGE_RELEASE_ORDER.md) + `.cursor/rules/release-publish-sequencing.mdc` pointer (formalize wrapper behaviour) | ✅ |
+| B.4 | Attach post-change grype log excerpt as release evidence (operator-local log or CI artifact when wired) | ✅ |
 
 **Closes #1028** when **A + B** merge and operator release smoke is green.
 
@@ -118,11 +118,11 @@ Reconciliation against branch `feat/image-hardening-1028` (2026-06-27):
 
 ## Acceptance criteria (issue + operator prompt)
 
-- [ ] Image on **distroless `cc-debian13:nonroot`**, **nonroot**, smoke `_package_version()` OK, TLS connectors smoke OK.
-- [ ] `grype IMG --fail-on high --only-fixed` green (with `.grype.yaml` documented in PR-B).
-- [ ] `check-all` local + CI green.
-- [ ] PR(s) `Closes #1028`.
-- [ ] Compatible with operator-local `build-push-podman.sh` (smoke + grype + octet guard).
+- [x] Image on **distroless `cc-debian13:nonroot`**, **nonroot**, smoke `_package_version()` OK, TLS connectors smoke OK.
+- [x] `grype IMG --fail-on high --only-fixed` green (with `.grype.yaml` documented in PR-B).
+- [x] `check-all` local + CI green.
+- [x] PR(s) `Closes #1028`.
+- [x] Compatible with operator-local `build-push-podman.sh` (smoke + grype + octet guard).
 
 ---
 

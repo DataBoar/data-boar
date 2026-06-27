@@ -30,13 +30,13 @@ Use these tags in headings to keep priorities explicit and machine-countable:
 
 Do not edit this block manually; refresh with `python scripts/plans-stats.py --write`.
 
-- **Status rows counted:** 195  (Done: 115 | Incomplete: 80)
-- **Incomplete breakdown:** Pending `⬜`=73, Tracked `🔄` / `Tracked (partially done)`=7, Under consideration=0, Backlog-marked rows=0
+- **Status rows counted:** 194  (Done: 115 | Incomplete: 79)
+- **Incomplete breakdown:** Pending `⬜`=72, Tracked `🔄` / `Tracked (partially done)`=7, Under consideration=0, Backlog-marked rows=0
 
 | Horizon | Total rows | Done | Incomplete |
 | ------- | ----------: | ----: | ----------: |
 | `H0` | 42 | 30 | 12 |
-| `H1` | 40 | 30 | 10 |
+| `H1` | 39 | 30 | 9 |
 | `H2` | 0 | 0 | 0 |
 | `H3` | 108 | 50 | 58 |
 | `H4` | 0 | 0 | 0 |
@@ -412,15 +412,14 @@ Doc-first: buyer/DPO positioning in COMPLIANCE_AND_LEGAL + COMPLIANCE_FRAMEWORKS
 | 3 | CONTRIBUTING pair: vulnerability reporting points to SECURITY | ✅ Done ([CONTRIBUTING.md](../../CONTRIBUTING.md) → [SECURITY.md](../../SECURITY.md)) |
 | 4 | Close #483 with file list + plan link | ✅ Done (PR **#628**; closes **#418**, **#480**, **#483**) |
 
-### Release image hardening (distroless + grype VEX) – [PLAN_IMAGE_HARDENING.md](PLAN_IMAGE_HARDENING.md)
+### Release image hardening (distroless + grype VEX) – [PLAN_IMAGE_HARDENING.md](completed/PLAN_IMAGE_HARDENING.md)
 
-**`[H1][U1]`** — GitHub [#1028](https://github.com/FabioLeitao/data-boar/issues/1028) `[P2][build][security]`. Post-GA hardening: reduce base CVE noise (~10 Critical / ~25 High, **0** with fix on **1.7.4** grype scan); distroless **nonroot** runtime for partner optics. **Fatiamento:** **PR-A** base-swap (Dockerfile + smoke + TLS) → pause for auditor review → **PR-B** `.grype.yaml` + repo grype gate + release docs. Branch **`feat/image-hardening-1028`** (WIP). Links **#856**, release machinery **#75**.
+**`[H1][U1]`** — GitHub [#1028](https://github.com/FabioLeitao/data-boar/issues/1028) `[P2][build][security]`. **Done** — PR-A merged (#1041); PR-B grype VEX + gate scripts + `.grype.yaml`. Distroless **nonroot** runtime; **`grype --fail-on high --only-fixed`** with documented VEX.
 
 | Slice | To-do | Status |
 | ----- | ----- | ------ |
-| **PR-A** | Multi-stage → `gcr.io/distroless/cc-debian13:nonroot` + `collect-runtime-rootfs.sh`; nonroot **65532**; exec `CMD`; smoke `_package_version()` + `build-push-podman.sh` contract | ✅ Ready for review |
-| **PR-A** | PyO3 `boar_fast_filter` in builder; TLS / CA smoke | ✅ |
-| **PR-B** | `.grype.yaml` VEX (per-CVE rationale); `grype-image-gate` scripts; release rule formalizes `--only-fixed` | ⬜ Pending |
+| **PR-A** | Multi-stage distroless + smoke/TLS/PyO3 | ✅ Merged |
+| **PR-B** | `.grype.yaml` VEX; `grype-image-gate` scripts; release docs | ✅ PR-B branch |
 
 ### Corporate-Entity-C 2026-03-18 — evolution review (9.1/10) and follow-ups
 
