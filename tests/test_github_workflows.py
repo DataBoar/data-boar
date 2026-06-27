@@ -479,3 +479,71 @@ def test_operator_gated_reopen_workflow_present_and_valid() -> None:
             assert sha_40.search(code), (
                 f"expected full commit SHA for github-script: {line.strip()!r}"
             )
+
+
+def test_publish_pypi_workflow_present_and_valid() -> None:
+    """#1042 / #74: OIDC PyPI publish — build in CI, prod gated on dispatch target=pypi."""
+    data = _load_workflow("publish-pypi.yml")
+    assert data.get("name") == "Publish to PyPI"
+    on = data.get("on") or {}
+    assert "release" in on
+    rel = on["release"]
+    assert isinstance(rel, dict)
+    assert rel.get("types") == ["published"]
+    assert "workflow_dispatch" in on
+    wd = on["workflow_dispatch"]
+    assert isinstance(wd, dict)
+    target = (wd.get("inputs") or {}).get("target") or {}
+    assert target.get("type") == "choice"
+    assert target.get("default") == "testpypi"
+    assert set(target.get("options") or []) == {"testpypi", "pypi"}
+
+    jobs = data.get("jobs") or {}
+    for job_id in ("build", "publish-testpypi", "publish-pypi"):
+        assert job_id in jobs, f"missing job {job_id}"
+
+    build = jobs["build"]
+    runs = "\n".join(_ci_step_run_texts(build))
+    assert "uv build" in runs
+    assert "twine check" in runs
+
+    testpypi = jobs["publish-testpypi"]
+    assert testpypi.get("environment") == "testpypi"
+    test_if = str(testpypi.get("if") or "")
+    assert "release" in test_if
+    assert "testpypi" in test_if
+    test_perms = testpypi.get("permissions") or {}
+    assert test_perms.get("id-token") == "write"
+
+    prod = jobs["publish-pypi"]
+    assert prod.get("environment") == "pypi"
+    prod_if = str(prod.get("if") or "")
+    assert "pypi" in prod_if
+    assert "workflow_dispatch" in prod_if
+    prod_perms = prod.get("permissions") or {}
+    assert prod_perms.get("id-token") == "write"
+
+
+def test_publish_pypi_yml_pins_actions_to_shas() -> None:
+    """ADR-0074: publish-pypi.yml pins all third-party Actions (incl. pypa/gh-action-pypi-publish)."""
+    text = (WORKFLOWS / "publish-pypi.yml").read_text(encoding="utf-8")
+    sha_40 = re.compile(r"@[0-9a-f]{40}")
+    for line in text.splitlines():
+        code = line.split("#", 1)[0]
+        if "uses:" not in code or "docker://" in code:
+            continue
+        if "./.github/workflows/" in code:
+            continue
+        if not any(
+            p in code
+            for p in (
+                "actions/",
+                "github/",
+                "astral-sh/",
+                "pypa/gh-action-pypi-publish@",
+            )
+        ):
+            continue
+        assert sha_40.search(code), (
+            f"expected full commit SHA in uses line: {line.strip()!r}"
+        )

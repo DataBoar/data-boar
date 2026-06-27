@@ -4,6 +4,33 @@ version = "1.7.4"
 description = "Data Boar — compliance-aware discovery and mapping of personal and sensitive data across databases, files, and APIs (LGPD, GDPR, CCPA, and configurable frameworks)."
 readme = "README.md"
 requires-python = ">=3.12"
+license = "BSD-3-Clause"
+license-files = ["LICENSE"]
+authors = [{ name = "Fabio Tavares Leitão", email = "author@databoar.com.br" }]
+keywords = [
+    "lgpd",
+    "gdpr",
+    "ccpa",
+    "pii",
+    "data-discovery",
+    "compliance",
+    "privacy",
+    "ropa",
+    "data-mapping",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "Intended Audience :: Legal Industry",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Security",
+    "Topic :: Database",
+]
 # Dependabot-friendly: minimum versions (>=) allow security patches; pin (==) only where needed for reproducibility.
 dependencies = [
     "annotated-doc>=0.0.4",
@@ -95,6 +122,13 @@ build-backend = "hatchling.build"
 [project.scripts]
 data-boar = "main:main"
 data-boar-report = "cli.reporter:main"
+
+[project.urls]
+Homepage = "https://github.com/FabioLeitao/data-boar"
+Repository = "https://github.com/FabioLeitao/data-boar"
+Issues = "https://github.com/FabioLeitao/data-boar/issues"
+Changelog = "https://github.com/FabioLeitao/data-boar/blob/main/CHANGELOG.md"
+"Docker Hub" = "https://hub.docker.com/r/fabioleitao/data_boar"
 
 [project.optional-dependencies]
 nosql = ["pymongo>=4.0", "redis>=8.0.0"]

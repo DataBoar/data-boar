@@ -1,0 +1,96 @@
+# PyPI publish machinery (GitHub #74 / #1042): OIDC Trusted Publishing — no API token in CI.
+# Dist is built in CI from checkout (tag on release, or HEAD on dispatch) — no local build in workflow design.
+# Production PyPI upload is deliberate: workflow_dispatch with target=pypi only (environment: pypi).
+# TestPyPI: release published OR workflow_dispatch default (testpypi).
+# ADR-0074: all third-party Actions pinned to full commit SHAs.
+name: Publish to PyPI
+
+permissions:
+  contents: read
+
+'on':
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Onde publicar"
+        type: choice
+        options: [testpypi, pypi]
+        default: testpypi
+
+concurrency:
+  group: publish-pypi-${{ github.workflow }}-${{ github.event.release.tag_name || github.ref }}-${{ github.event.inputs.target || 'release' }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build dist
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        with:
+          enable-cache: false
+
+      - name: Build sdist and wheel
+        run: uv build
+
+      - name: Validate dist (twine check)
+        run: uvx twine check dist/*
+
+      - name: Upload dist artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dist
+          path: dist/
+
+  publish-testpypi:
+    name: Publish to TestPyPI
+    if: >-
+      github.event_name == 'release' ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'testpypi')
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: testpypi
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Download dist
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish to TestPyPI (OIDC)
+        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # v1.14.0
+        with:
+          repository-url: https://test.pypi.org/legacy/
+
+  publish-pypi:
+    name: Publish to PyPI
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'pypi'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: pypi
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Download dist
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish to PyPI (OIDC)
+        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # v1.14.0
