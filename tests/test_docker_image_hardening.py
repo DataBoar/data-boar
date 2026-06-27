@@ -47,6 +47,8 @@ def test_collect_runtime_rootfs_script_bundles_tls_and_db_libs() -> None:
     assert "libpq.so" in text
     assert "libssl.so" in text or "libcrypto.so" in text
     assert "libmariadb.so" in text
+    assert "usrmerge_dest" in text or "copy_lib_path" in text
+    assert "refusing usr-merge conflict" in text
 
 
 def test_dockerfile_builds_boar_fast_filter_in_builder() -> None:

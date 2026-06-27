@@ -2,6 +2,9 @@
 # Bundle a minimal rootfs layer for distroless runtime (issue #1028).
 # Run inside the runtime-assembler stage (Debian 13 + runtime .deb libs + /usr/local).
 # Usage: collect-runtime-rootfs.sh <export-dir>
+#
+# Debian 13 / distroless cc-debian13 use usr-merge: /lib and /lib64 are symlinks into /usr.
+# Never write ${EXPORT}/lib or ${EXPORT}/lib64 (real dirs) — BuildKit COPY fails on symlink targets.
 set -euo pipefail
 
 EXPORT="${1:?export directory required}"
@@ -13,6 +16,26 @@ copy_path() {
         return 0
     fi
     local dest="${EXPORT}${src}"
+    mkdir -p "$(dirname "${dest}")"
+    cp -a "${src}" "${dest}"
+}
+
+# Map runtime library paths to usr-merged destinations under EXPORT.
+usrmerge_dest() {
+    local src="$1"
+    case "${src}" in
+        /lib/*) echo "/usr${src}" ;;
+        /lib64/*) echo "/usr${src}" ;;
+        *) echo "${src}" ;;
+    esac
+}
+
+copy_lib_path() {
+    local src="$1"
+    [[ -f "${src}" ]] || return 0
+    local dest_path
+    dest_path="$(usrmerge_dest "${src}")"
+    local dest="${EXPORT}${dest_path}"
     mkdir -p "$(dirname "${dest}")"
     cp -a "${src}" "${dest}"
 }
@@ -55,11 +78,11 @@ for py in /usr/local/bin/python3.13 /usr/local/bin/python3; do
     add_deps_from "${py}"
 done
 
-# DB client libraries installed via apt in assembler.
+# DB client libraries installed via apt in assembler (usr-merged paths only).
 while IFS= read -r -d '' lib; do
     add_deps_from "${lib}"
 done < <(
-    find /usr/lib /lib -type f \( \
+    find /usr/lib /usr/lib64 -type f \( \
         -name 'libpq.so*' -o \
         -name 'libffi.so*' -o \
         -name 'libodbc*.so*' -o \
@@ -73,13 +96,19 @@ sort -u "${DEPS_FILE}" | while read -r lib; do
     [[ -n "${lib}" && -f "${lib}" ]] || continue
     # Distroless cc-debian13 ships glibc; skip core libc to avoid clobbering the base.
     case "${lib}" in
-        /lib/*/libc.so.*|/lib/*/libm.so.*|/lib/*/libpthread.so.*|/lib/*/libdl.so.*|/lib/*/librt.so.*|/lib/*/libresolv.so.*)
+        /lib/*/libc.so.*|/lib/*/libm.so.*|/lib/*/libpthread.so.*|/lib/*/libdl.so.*|/lib/*/librt.so.*|/lib/*/libresolv.so.*|/usr/lib/*/libc.so.*|/usr/lib/*/libm.so.*|/usr/lib/*/libpthread.so.*|/usr/lib/*/libdl.so.*|/usr/lib/*/librt.so.*|/usr/lib/*/libresolv.so.*)
             continue
             ;;
     esac
-    copy_path "${lib}"
+    copy_lib_path "${lib}"
 done
 
 # Writable data mount point (nonroot uid 65532 = distroless :nonroot).
 mkdir -p "${EXPORT}/data"
 chown 65532:65532 "${EXPORT}/data"
+
+# Guard: usr-merge safety — must not ship real /lib or /lib64 trees.
+if [[ -d "${EXPORT}/lib" || -d "${EXPORT}/lib64" ]]; then
+    echo "collect-runtime-rootfs: refusing usr-merge conflict (${EXPORT}/lib or lib64 is a directory)" >&2
+    exit 1
+fi
