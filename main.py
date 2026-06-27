@@ -21,6 +21,13 @@ from core.licensing import LicenseBlockedError
 from core.runtime_trust import get_runtime_trust_snapshot
 
 
+def _cli_public_version_line() -> str:
+    """Public CLI --version string (no maturity_build octet; see ADR-0073)."""
+    from core.about import _package_version
+
+    return f"Data Boar {_package_version()}"
+
+
 def _emit_runtime_trust_info(
     snapshot: dict[str, Any], *, to_stdout: bool = True, to_stderr: bool = True
 ) -> None:
@@ -309,6 +316,12 @@ def main() -> None:
             "scans, list sessions and download the latest reports through the browser."
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=_cli_public_version_line(),
+        help="Show the public product version and exit (no scan or API startup).",
     )
     parser.add_argument(
         "--config",
