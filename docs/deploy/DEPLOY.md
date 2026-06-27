@@ -258,6 +258,30 @@ docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.override.ym
 
 In `deploy/docker-compose.yml` set `image: fabioleitao/data_boar:latest` (or your registry) and remove or comment out the `build:` block. Then run the same `docker compose ... up -d` commands.
 
+## Podman (rootless)
+
+Podman is a daemonless, rootless container runtime — the default on
+RHEL/Fedora and recommended for zero-trust environments.
+
+```bash
+podman run -d --name data-boar \
+  -p 8088:8088 \
+  -v ./data:/data:z \
+  fabioleitao/data_boar:latest
+```
+
+> **SELinux note:** Use `:z` (shared label) or `:Z` (private label)
+> on the volume mount when SELinux is enforcing.
+> Omit the label on non-SELinux hosts.
+
+For Compose-style workflows, `podman-compose` is compatible with the
+existing `deploy/docker-compose.yml`:
+
+```bash
+pipx install podman-compose
+podman-compose -f deploy/docker-compose.yml up -d
+```
+
 ## 5. Deploy with Docker Swarm
 
 Docker Swarm is an alternative for orchestrating the service across a cluster. Use the same Compose file with `docker stack deploy`.

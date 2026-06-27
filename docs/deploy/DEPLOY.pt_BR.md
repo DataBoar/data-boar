@@ -121,6 +121,30 @@ docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.override.ym
 
 Logs: `docker compose -f deploy/docker-compose.yml logs -f data-boar`. Parar: `docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.override.yml down`.
 
+## Podman (rootless)
+
+Podman é um runtime de contêiner daemonless e rootless — o padrão em
+RHEL/Fedora e recomendado em ambientes zero-trust.
+
+```bash
+podman run -d --name data-boar \
+  -p 8088:8088 \
+  -v ./data:/data:z \
+  fabioleitao/data_boar:latest
+```
+
+> **Nota SELinux:** Use `:z` (rótulo compartilhado) ou `:Z` (rótulo privado)
+> no mount do volume quando o SELinux estiver em enforcing.
+> Omita o rótulo em hosts sem SELinux.
+
+Para fluxos estilo Compose, o `podman-compose` é compatível com o
+`deploy/docker-compose.yml` existente:
+
+```bash
+pipx install podman-compose
+podman-compose -f deploy/docker-compose.yml up -d
+```
+
 ## 5. Docker Swarm
 
 Use o mesmo Compose com `docker stack deploy`:

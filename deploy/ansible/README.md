@@ -117,4 +117,4 @@ ssh user@your-server docker logs -f data_boar
 - `deploy/docker-compose.yml` — base compose definition
 - `docs/USAGE.md` — CLI and configuration reference
 - `docs/TECH_GUIDE.md` — architecture overview
-- `docs/DEPLOY.md` — Docker and manual deployment alternatives (if present)
+- `docs/deploy/DEPLOY.md` — Docker and manual deployment alternatives
