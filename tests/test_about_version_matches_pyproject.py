@@ -77,7 +77,8 @@ def test_man_th_line_contains_project_version(path: str, label: str) -> None:
     )
     marketing = Version(m.group(1))
     allowed_prep = pv.is_prerelease and marketing == Version(pv.base_version)
-    assert marketing == pv or allowed_prep, (
+    allowed_post = pv.is_postrelease and marketing == Version(pv.base_version)
+    assert marketing == pv or allowed_prep or allowed_post, (
         f"{label}: man marketing {marketing!r} disagrees with pyproject {pv!r} "
-        "(no GA prep exemption)"
+        "(no GA prep/post exemption)"
     )

@@ -689,7 +689,7 @@ name = "cuda-bindings"
 version = "12.9.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "cuda-pathfinder", marker = "sys_platform != 'emscripten' and sys_platform != 'win32'" },
+    { name = "cuda-pathfinder" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a9/c1/dabe88f52c3e3760d861401bb994df08f672ec893b8f7592dc91626adcf3/cuda_bindings-12.9.4-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:fda147a344e8eaeca0c6ff113d2851ffca8f7dfc0a6c932374ee5c47caa649c8", size = 12151019, upload-time = "2025-10-21T14:51:43.167Z" },
@@ -757,7 +757,7 @@ validation = [
 
 [[package]]
 name = "data-boar"
-version = "1.7.4"
+version = "1.7.4.post1"
 source = { editable = "." }
 dependencies = [
     { name = "annotated-doc" },
@@ -790,26 +790,19 @@ dependencies = [
     { name = "jinja2" },
     { name = "joblib" },
     { name = "kiwisolver" },
-    { name = "mariadb" },
     { name = "markupsafe" },
     { name = "matplotlib" },
-    { name = "mysql" },
-    { name = "mysqlclient" },
     { name = "numpy" },
     { name = "odfpy" },
     { name = "openpyxl" },
-    { name = "oracledb" },
     { name = "packaging" },
     { name = "pandas" },
     { name = "pillow" },
-    { name = "psycopg2-binary" },
     { name = "pycparser", marker = "implementation_name != 'PyPy' and platform_python_implementation != 'PyPy'" },
     { name = "pydantic" },
     { name = "pydantic-core" },
     { name = "pygments" },
     { name = "pyjwt" },
-    { name = "pymysql" },
-    { name = "pyodbc" },
     { name = "pyparsing" },
     { name = "pypdf" },
     { name = "python-dateutil" },
@@ -859,9 +852,24 @@ grc-dashboard = [
 legacy-doc = [
     { name = "mammoth" },
 ]
+mariadb = [
+    { name = "mariadb" },
+]
+mssql = [
+    { name = "pyodbc" },
+]
+mysql = [
+    { name = "pymysql" },
+]
 nosql = [
     { name = "pymongo" },
     { name = "redis" },
+]
+oracle = [
+    { name = "oracledb" },
+]
+postgres = [
+    { name = "psycopg2-binary" },
 ]
 richmedia = [
     { name = "mutagen" },
@@ -872,6 +880,13 @@ shares = [
     { name = "requests-ntlm" },
     { name = "smbprotocol" },
     { name = "webdavclient3" },
+]
+sql-all = [
+    { name = "mariadb" },
+    { name = "oracledb" },
+    { name = "psycopg2-binary" },
+    { name = "pymysql" },
+    { name = "pyodbc" },
 ]
 
 [package.dev-dependencies]
@@ -928,22 +943,23 @@ requires-dist = [
     { name = "joblib", specifier = ">=1.5.3" },
     { name = "kiwisolver", specifier = ">=1.4.9" },
     { name = "mammoth", marker = "extra == 'legacy-doc'", specifier = ">=1.6.0" },
-    { name = "mariadb", specifier = ">=1.1.14" },
+    { name = "mariadb", marker = "extra == 'mariadb'", specifier = ">=1.1.14" },
+    { name = "mariadb", marker = "extra == 'sql-all'", specifier = ">=1.1.14" },
     { name = "markupsafe", specifier = ">=3.0.3" },
     { name = "matplotlib", specifier = ">=3.10.8" },
     { name = "mutagen", marker = "extra == 'richmedia'", specifier = ">=1.47.0" },
-    { name = "mysql", specifier = ">=0.0.3" },
-    { name = "mysqlclient", specifier = ">=2.2.7" },
     { name = "numpy", specifier = ">=2.4.6" },
     { name = "odfpy", specifier = ">=1.4.1" },
     { name = "openpyxl", specifier = ">=3.1.5" },
-    { name = "oracledb", specifier = ">=4.0.1" },
+    { name = "oracledb", marker = "extra == 'oracle'", specifier = ">=4.0.1" },
+    { name = "oracledb", marker = "extra == 'sql-all'", specifier = ">=4.0.1" },
     { name = "packaging", specifier = ">=26.1" },
     { name = "pandas", specifier = ">=3.0.3" },
     { name = "pillow", specifier = ">=12.2.0" },
     { name = "pillow-heif", marker = "extra == 'richmedia'", specifier = ">=0.16.0" },
     { name = "plotly", marker = "extra == 'grc-dashboard'", specifier = ">=6.8.0" },
-    { name = "psycopg2-binary", specifier = ">=2.9.11" },
+    { name = "psycopg2-binary", marker = "extra == 'postgres'", specifier = ">=2.9.11" },
+    { name = "psycopg2-binary", marker = "extra == 'sql-all'", specifier = ">=2.9.11" },
     { name = "py7zr", marker = "extra == 'compressed'", specifier = ">=0.20.0" },
     { name = "pyarrow", marker = "extra == 'dataformats'", specifier = ">=14.0.0" },
     { name = "pycparser", marker = "implementation_name != 'PyPy' and platform_python_implementation != 'PyPy'", specifier = ">=3.0" },
@@ -952,8 +968,10 @@ requires-dist = [
     { name = "pygments", specifier = ">=2.20.0" },
     { name = "pyjwt", specifier = ">=2.12.0" },
     { name = "pymongo", marker = "extra == 'nosql'", specifier = ">=4.0" },
-    { name = "pymysql", specifier = ">=1.2.0" },
-    { name = "pyodbc", specifier = ">=5.3.0" },
+    { name = "pymysql", marker = "extra == 'mysql'", specifier = ">=1.2.0" },
+    { name = "pymysql", marker = "extra == 'sql-all'", specifier = ">=1.2.0" },
+    { name = "pyodbc", marker = "extra == 'mssql'", specifier = ">=5.3.0" },
+    { name = "pyodbc", marker = "extra == 'sql-all'", specifier = ">=5.3.0" },
     { name = "pyparsing", specifier = ">=3.3.2" },
     { name = "pypdf", specifier = ">=6.13.0" },
     { name = "pytesseract", marker = "extra == 'richmedia'", specifier = ">=0.3.13" },
@@ -986,7 +1004,7 @@ requires-dist = [
     { name = "webdavclient3", marker = "extra == 'shares'", specifier = ">=0.14.0" },
     { name = "werkzeug", specifier = ">=3.1.6" },
 ]
-provides-extras = ["nosql", "bigdata", "shares", "compressed", "dl", "detection-fuzzy", "richmedia", "dataformats", "legacy-doc", "grc-dashboard"]
+provides-extras = ["postgres", "mysql", "mariadb", "mssql", "oracle", "sql-all", "nosql", "bigdata", "shares", "compressed", "dl", "detection-fuzzy", "richmedia", "dataformats", "legacy-doc", "grc-dashboard"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -2190,30 +2208,6 @@ wheels = [
 ]
 
 [[package]]
-name = "mysql"
-version = "0.0.3"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "mysqlclient" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/8d/3c/943f6734849a6aed97d83af689ce7096927b52465df7bccfbcb45a7e7d14/mysql-0.0.3.tar.gz", hash = "sha256:fd7bae7d7301ce7cd3932e5ff7f77bbc8e34872108252866e08d16d6b8e8de8c", size = 2037, upload-time = "2021-05-25T19:52:16.818Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/9a/52/8d29c58f6ae448a72fbc612955bd31accb930ca479a7ba7197f4ae4edec2/mysql-0.0.3-py3-none-any.whl", hash = "sha256:8893cb143a5ac525c49ef358a23b8a0dc9721a95646f7bab6ca2f384c18a6a9a", size = 1237, upload-time = "2021-05-25T19:52:15.462Z" },
-]
-
-[[package]]
-name = "mysqlclient"
-version = "2.2.8"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/eb/b0/9df076488cb2e536d40ce6dbd4273c1f20a386e31ffe6e7cb613902b3c2a/mysqlclient-2.2.8.tar.gz", hash = "sha256:8ed20c5615a915da451bb308c7d0306648a4fd9a2809ba95c992690006306199", size = 92287, upload-time = "2026-02-10T10:58:37.405Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/db/1f/7d6b3fbfc8a317805fdb8bbfbc23af99f2090497090e82513daf491a29ce/mysqlclient-2.2.8-cp312-cp312-win_amd64.whl", hash = "sha256:000c7ec3d11e7c411db832e4cfcd7f05db47464326381f5d5ae991b4bb572f93", size = 207171, upload-time = "2026-02-10T10:58:39.827Z" },
-    { url = "https://files.pythonhosted.org/packages/e6/d5/76e369b0fdccd2eb9ed7d890e4e3e23aa1344fea62f0180d7f1574285e54/mysqlclient-2.2.8-cp313-cp313-win_amd64.whl", hash = "sha256:a81f5e12f8d05439709cb02fba97f9f76d1a6c528164f2260d8798fec969e300", size = 207158, upload-time = "2026-02-10T10:58:38.663Z" },
-    { url = "https://files.pythonhosted.org/packages/42/44/6ae21b4e8490eb5167d04fa7452c462ffd72a502b96bf531477ef044a380/mysqlclient-2.2.8-cp314-cp314-win_amd64.whl", hash = "sha256:9bed7c8d3b629bdc09e17fb628d5b3b0a5fd1f12b09432b464b9126c727bedc0", size = 211644, upload-time = "2026-02-10T10:58:45.022Z" },
-    { url = "https://files.pythonhosted.org/packages/66/e5/037d55623be9f681236e04abe12e1290847c06bd48270c3f19ac33493cbf/mysqlclient-2.2.8-cp314-cp314t-win_amd64.whl", hash = "sha256:260cce0e81446c83bf0a389e0fae38d68547d9f8fc0833bc733014e10ce28a99", size = 213067, upload-time = "2026-02-10T10:58:43.389Z" },
-]
-
-[[package]]
 name = "narwhals"
 version = "2.20.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2338,7 +2332,7 @@ name = "nvidia-cudnn-cu12"
 version = "9.10.2.21"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "nvidia-cublas-cu12", marker = "sys_platform != 'emscripten' and sys_platform != 'win32'" },
+    { name = "nvidia-cublas-cu12" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/ba/51/e123d997aa098c61d029f76663dedbfb9bc8dcf8c60cbd6adbe42f76d049/nvidia_cudnn_cu12-9.10.2.21-py3-none-manylinux_2_27_x86_64.whl", hash = "sha256:949452be657fa16687d0930933f032835951ef0892b37d2d53824d1a84dc97a8", size = 706758467, upload-time = "2025-06-06T21:54:08.597Z" },
@@ -2349,7 +2343,7 @@ name = "nvidia-cufft-cu12"
 version = "11.3.3.83"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "nvidia-nvjitlink-cu12", marker = "sys_platform != 'emscripten' and sys_platform != 'win32'" },
+    { name = "nvidia-nvjitlink-cu12" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/1f/13/ee4e00f30e676b66ae65b4f08cb5bcbb8392c03f54f2d5413ea99a5d1c80/nvidia_cufft_cu12-11.3.3.83-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:4d2dd21ec0b88cf61b62e6b43564355e5222e4a3fb394cac0db101f2dd0d4f74", size = 193118695, upload-time = "2025-03-07T01:45:27.821Z" },
@@ -2376,9 +2370,9 @@ name = "nvidia-cusolver-cu12"
 version = "11.7.3.90"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "nvidia-cublas-cu12", marker = "sys_platform != 'emscripten' and sys_platform != 'win32'" },
-    { name = "nvidia-cusparse-cu12", marker = "sys_platform != 'emscripten' and sys_platform != 'win32'" },
-    { name = "nvidia-nvjitlink-cu12", marker = "sys_platform != 'emscripten' and sys_platform != 'win32'" },
+    { name = "nvidia-cublas-cu12" },
+    { name = "nvidia-cusparse-cu12" },
+    { name = "nvidia-nvjitlink-cu12" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/85/48/9a13d2975803e8cf2777d5ed57b87a0b6ca2cc795f9a4f59796a910bfb80/nvidia_cusolver_cu12-11.7.3.90-py3-none-manylinux_2_27_x86_64.whl", hash = "sha256:4376c11ad263152bd50ea295c05370360776f8c3427b30991df774f9fb26c450", size = 267506905, upload-time = "2025-03-07T01:47:16.273Z" },
@@ -2389,7 +2383,7 @@ name = "nvidia-cusparse-cu12"
 version = "12.5.8.93"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "nvidia-nvjitlink-cu12", marker = "sys_platform != 'emscripten' and sys_platform != 'win32'" },
+    { name = "nvidia-nvjitlink-cu12" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c2/f5/e1854cb2f2bcd4280c44736c93550cc300ff4b8c95ebe370d0aa7d2b473d/nvidia_cusparse_cu12-12.5.8.93-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:1ec05d76bbbd8b61b06a80e1eaf8cf4959c3d4ce8e711b65ebd0443bb0ebb13b", size = 288216466, upload-time = "2025-03-07T01:48:13.779Z" },

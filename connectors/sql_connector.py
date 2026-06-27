@@ -12,6 +12,7 @@ from urllib.parse import quote
 
 from sqlalchemy import create_engine, inspect, text
 
+from connectors.sql_driver_deps import ensure_sql_driver_available
 from connectors.sql_sampling import (
     SamplingManager,
     TableSamplingMetadata,
@@ -28,7 +29,7 @@ from core.suggested_review import (
 DRIVER_MAP = {
     "postgresql": "postgresql+psycopg2",
     "mysql": "mysql+pymysql",
-    "mariadb": "mysql+pymysql",
+    "mariadb": "mariadb+mariadbconnector",
     "sqlite": "sqlite",
     "mssql": "mssql+pyodbc",
     "oracle": "oracle+oracledb",
@@ -275,6 +276,8 @@ class SQLConnector:
         )
 
     def connect(self) -> None:
+        driver_key = (self.config.get("driver") or "postgresql").split("+")[0].lower()
+        ensure_sql_driver_available(driver_key)
         url = _build_url(self.config)
         connect_args = _connect_args_from_target(self.config)
         self.engine = create_engine(url, pool_pre_ping=True, connect_args=connect_args)

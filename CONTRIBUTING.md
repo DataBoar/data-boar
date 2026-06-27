@@ -18,6 +18,19 @@ Thank you for considering contributing. This document covers local setup, workfl
 
   Until a release is published under that name, use a **git clone** with **`uv sync`** or **`pip install -e .`**. The tree still contains the historical **`lgpd_crawler`** Python package for imports and continuity — that is implementation layout, not the product name. Rename context: **[ADR 0014](docs/adr/ADR-0014-rename-repo-and-package-python3-lgpd-crawler-to-data-boar.md)**.
 
+**SQL connectors (optional extras):** Core **`pip install data-boar`** includes **filesystem + SQLite** scanning only — no PostgreSQL/MySQL/MariaDB/MSSQL/Oracle C-extension wheels. Install per engine:
+
+```bash
+pip install 'data-boar[postgres]'   # PostgreSQL
+pip install 'data-boar[mysql]'        # MySQL (pymysql)
+pip install 'data-boar[mariadb]'     # MariaDB Connector/C
+pip install 'data-boar[mssql]'       # SQL Server
+pip install 'data-boar[oracle]'       # Oracle
+pip install 'data-boar[sql-all]'     # all SQL extras (Docker / lab)
+```
+
+Dev clone: `uv sync --extra sql-all` (or pick extras). See [PLAN_PACKAGING_EXTRAS.md](docs/plans/PLAN_PACKAGING_EXTRAS.md) and [TECH_GUIDE.md](docs/TECH_GUIDE.md) (*Supported databases*).
+
 ### Publishing to PyPI (maintainers)
 
 Build uses **[hatchling](https://github.com/pypa/hatch)** via **`pyproject.toml`** (`[build-system]` + `[tool.hatch.build]`). From the repo root (Windows):

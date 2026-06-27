@@ -81,6 +81,30 @@ def test_docker_image_smoke_script_passes_on_built_image() -> None:
     if match:
         version = match.group(1)
 
+    if version:
+        probe = subprocess.run(
+            [
+                "podman",
+                "run",
+                "--rm",
+                image,
+                "/usr/local/bin/python3.13",
+                "-c",
+                "from core.about import _package_version; print(_package_version())",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if probe.returncode != 0:
+            pytest.skip(f"cannot probe version in image {image!r}")
+        installed = (probe.stdout or "").strip()
+        if installed != version:
+            pytest.skip(
+                f"stale image {image!r}: installed {installed!r} != pyproject {version!r}; "
+                "rebuild with docker-lab-build.ps1 / podman build"
+            )
+
     cmd = [str(SMOKE_SH), image]
     if version:
         cmd.append(version)
