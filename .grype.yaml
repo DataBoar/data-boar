@@ -1,0 +1,75 @@
+# Grype VEX / ignore posture for Data Boar release images (#1028 PR-B).
+#
+# AUDIT POSTURE — not blind suppression:
+# - Gate scripts ALWAYS pass: grype IMG --fail-on high --only-fixed --config .grype.yaml
+# - Never remove or bypass --only-fixed in grype-image-gate.* (actionable High/Critical only).
+# - Rules here document accepted won't-fix Debian base noise for partner reports and full scans.
+#
+# REVIEW: re-run full grype and revisit every rule when bumping:
+#   - gcr.io/distroless/cc-debian13:nonroot digest (Dockerfile stage 3)
+#   - python:3.13-slim digest (builder / runtime-assembler)
+# See ADR-0074, PLAN_IMAGE_HARDENING (completed), docs/ops/evidence/GRYPE_DISTROLESS_GATE_SAMPLE.md
+
+ignore:
+  # --- glibc (distroless cc-debian13 runtime) ---
+  - package:
+      name: libc6
+      type: deb
+    fix-state: wont-fix
+    reason: >-
+      Debian trixie glibc in minimal distroless runtime; vendor marked won't-fix.
+      Not application code; no shell/package manager in final image. Revisit on base digest bump.
+
+  # --- MariaDB client library (libmariadb3; grype reports package name "mariadb") ---
+  - package:
+      name: mariadb
+      type: deb
+    fix-state: wont-fix
+    reason: >-
+      libmariadb3 client .so bundled for SQL connector optional extra at build time;
+      vendor won't-fix on current Debian revision. Revisit on libmariadb3 / base digest bump.
+
+  # --- zlib (transitive deb in runtime rootfs) ---
+  - package:
+      name: zlib1g
+      type: deb
+    fix-state: wont-fix
+    reason: >-
+      Compression library in minimal runtime rootfs; vendor won't-fix. Revisit on base digest bump.
+
+  # --- Legacy python:3.13-slim assembler noise (if present in scans / older digests) ---
+  - package:
+      name: perl-base
+      type: deb
+    fix-state: wont-fix
+    reason: >-
+      Debian base package from builder/assembler lineage; not shipped in distroless CMD path.
+      Documented for audit when slim-stage packages appear in SBOM comparisons. Revisit on slim digest bump.
+
+  - package:
+      name: ncurses-base
+      type: deb
+    fix-state: wont-fix
+    reason: >-
+      Debian ncurses meta-package; base OS noise without vendor fix on trixie. Revisit on base digest bump.
+
+  - package:
+      name: libncursesw6
+      type: deb
+    fix-state: wont-fix
+    reason: >-
+      ncurses runtime library from Debian base; won't-fix class for partner scan reports. Revisit on base digest bump.
+
+  - package:
+      name: util-linux
+      type: deb
+    fix-state: wont-fix
+    reason: >-
+      Debian util-linux base utilities; not invoked in distroless runtime (no shell). Revisit on base digest bump.
+
+  - package:
+      name: libuuid1
+      type: deb
+    fix-state: wont-fix
+    reason: >-
+      util-linux dependency in Debian base closure; won't-fix vendor posture. Revisit on base digest bump.

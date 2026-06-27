@@ -24,6 +24,7 @@ Some **developer gates** and **thin wrappers** exist in **two forms**: **PowerSh
 | Lint / hooks only | `scripts/lint-only.ps1` | `scripts/lint-only.sh` |
 | Pytest subset (`-Path` / `-Keyword`) | `scripts/quick-test.ps1` | `scripts/quick-test.sh` |
 | Pre-commit + full pytest (no gatekeeper / no plans-stats) | `scripts/pre-commit-and-tests.ps1` | `scripts/pre-commit-and-tests.sh` |
+| Grype release image gate (`--fail-on high --only-fixed` + `.grype.yaml`) | `scripts/grype-image-gate.ps1` | `scripts/grype-image-gate.sh` |
 | PowerShell logic (Pester, pinned) | `scripts/run-pester.ps1` | *(same — `check-all.sh` calls `pwsh run-pester.ps1` when `pwsh` on PATH)* |
 | Stacked private repo sync (`docs/private/`) | `scripts/private-git-sync.ps1` | `scripts/private-git-sync.sh` |
 

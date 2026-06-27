@@ -11,6 +11,9 @@ globs:
   - docs/ops/today-mode/PUBLISHED_SYNC.pt_BR.md
   - scripts/docker-lab-build.ps1
   - scripts/docker-prune-local.ps1
+  - scripts/grype-image-gate.ps1
+  - scripts/grype-image-gate.sh
+  - .grype.yaml
   - scripts/docker/README.md
   - .cursor/skills/docker-smoke-container-hygiene/SKILL.md
 alwaysApply: false
@@ -50,7 +53,8 @@ Do **not** claim a version is **published** until **all** relevant steps for **t
 5. **Docker image — build, smoke, push, prune, Hub UI (see also [`docs/ops/DOCKER_IMAGE_RELEASE_ORDER.md`](../../docs/ops/DOCKER_IMAGE_RELEASE_ORDER.md)):**
    1. **Disk (primary dev PC):** Before a large `docker build`, confirm **free space** on the volume Docker uses (Windows: e.g. `Get-PSDrive C` / relevant drive; Docker Desktop **Settings → Resources** for disk location). Full disks cause **opaque build failures** and image corruption.
    2. **Build:** From repo root at the release commit, **`.\scripts\docker-lab-build.ps1`** (or the publish script’s build step) so the image embeds the same **`pyproject.toml`** as **`X.Y.Z`**.
-   3. **Smoke on Docker Desktop (mandatory before `docker push` to Hub):** Run at least one **`docker run --rm`** against the local image (e.g. **`data_boar:lab`**) — e.g. `python main.py --version` / `--help` or **`/health`** per **`docs/DOCKER_SETUP.md`** §7. **Do not** push **`:X.Y.Z`** / **`:latest`** to **Docker Hub** if smoke fails. Saying “published” without a smoke run on the **same** machine used to push is an **incomplete** ritual unless the operator explicitly waives (CI-only build).
+   3. **Smoke on Docker Desktop (mandatory before `docker push` to Hub):** Run **`.\scripts\docker-image-smoke.ps1`** (or `docker run --rm` smoke) against the local image (e.g. **`data_boar:lab`**) per **`docs/DOCKER_SETUP.md`** §7. **Do not** push if smoke fails.
+   3b. **Grype gate (#1028):** **`.\scripts\grype-image-gate.ps1 -Image data_boar:lab`** — **`--fail-on high --only-fixed`** + **`.grype.yaml`**; fails only on actionable High/Critical (never drop **`--only-fixed`**).
    4. **Push:** `docker login` + push **`fabioleitao/data_boar:X.Y.Z`** and **`latest`** per **`docs/ops/DOCKER_IMAGE_RELEASE_ORDER.md`** / **`docker-hub-publish.ps1`** when present.
    5. **Prune (same workstation):** **`.\scripts\docker-prune-local.ps1 -WhatIf`** then without **`-WhatIf`** — avoids **dozens** of stale **`data_boar:*`** tags cluttering Docker Desktop; align with **`docs/ops/BRANCH_AND_DOCKER_CLEANUP.md`** §4. Optional: `docker image prune -f` / `docker builder prune -f` when disk is tight — **confirm** with operator before aggressive prunes.
    6. **Hub repository page:** Paste **Short + Full** from **`docs/ops/DOCKER_HUB_REPOSITORY_DESCRIPTION.md`** (replace **entire** Full description). **Stable** releases only for this marketing refresh; **`-beta`** / **`-rc`** do not require Hub page text updates unless asked. **Same-session rule:** If you **push** any **customer-pullable** tag (including hygiene tags like **`v1.7.2-safe`**) or **delete** Hub tags, refresh Hub copy **in that session** so **Supported tags** / example **`docker tag`** lines match the **Tags** tab — never leave the overview citing **removed** tags (e.g. old **1.6.x**).
