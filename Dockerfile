@@ -7,7 +7,7 @@
 # -----------------------------------------------------------------------------
 # Rolling 3.13 slim (Debian 13 / trixie): aligns with CI, requires-python >=3.12.
 # Digest pin (ADR-0074 / #988): Dependabot docker ecosystem proposes digest bumps.
-FROM python:3.13-slim@sha256:3a2c25932e66f706172de831a1b283d491c53ef876cd7fc55a62bcf9a6dd2c61 AS builder
+FROM python:3.14-slim@sha256:63a4c7f612a00f92042cbdcc7cdc6a306f38485af0a200b9c89de7d9b1607d15 AS builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential gcc g++ pkg-config curl ca-certificates \
@@ -43,7 +43,7 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --pr
 # -----------------------------------------------------------------------------
 # Stage 2: assemble runtime rootfs (shell stage — not shipped)
 # -----------------------------------------------------------------------------
-FROM python:3.13-slim@sha256:3a2c25932e66f706172de831a1b283d491c53ef876cd7fc55a62bcf9a6dd2c61 AS runtime-assembler
+FROM python:3.14-slim@sha256:63a4c7f612a00f92042cbdcc7cdc6a306f38485af0a200b9c89de7d9b1607d15 AS runtime-assembler
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 libffi8 unixodbc libmariadb3 \
