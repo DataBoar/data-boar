@@ -30,13 +30,13 @@ Use these tags in headings to keep priorities explicit and machine-countable:
 
 Do not edit this block manually; refresh with `python scripts/plans-stats.py --write`.
 
-- **Status rows counted:** 192  (Done: 113 | Incomplete: 79)
-- **Incomplete breakdown:** Pending `⬜`=72, Tracked `🔄` / `Tracked (partially done)`=7, Under consideration=0, Backlog-marked rows=0
+- **Status rows counted:** 195  (Done: 113 | Incomplete: 82)
+- **Incomplete breakdown:** Pending `⬜`=74, Tracked `🔄` / `Tracked (partially done)`=8, Under consideration=0, Backlog-marked rows=0
 
 | Horizon | Total rows | Done | Incomplete |
 | ------- | ----------: | ----: | ----------: |
 | `H0` | 42 | 30 | 12 |
-| `H1` | 37 | 28 | 9 |
+| `H1` | 40 | 28 | 12 |
 | `H2` | 0 | 0 | 0 |
 | `H3` | 108 | 50 | 58 |
 | `H4` | 0 | 0 | 0 |
@@ -411,6 +411,16 @@ Doc-first: buyer/DPO positioning in COMPLIANCE_AND_LEGAL + COMPLIANCE_FRAMEWORKS
 | 2 | CODE_OF_CONDUCT pair: escalation matches SECURITY | ✅ Done (Contributor Covenant 2.1, PR **#621**; `conduct@databoar.com.br` enforcement contact) |
 | 3 | CONTRIBUTING pair: vulnerability reporting points to SECURITY | ✅ Done ([CONTRIBUTING.md](../../CONTRIBUTING.md) → [SECURITY.md](../../SECURITY.md)) |
 | 4 | Close #483 with file list + plan link | ✅ Done (PR **#628**; closes **#418**, **#480**, **#483**) |
+
+### Release image hardening (distroless + grype VEX) – [PLAN_IMAGE_HARDENING.md](PLAN_IMAGE_HARDENING.md)
+
+**`[H1][U1]`** — GitHub [#1028](https://github.com/FabioLeitao/data-boar/issues/1028) `[P2][build][security]`. Post-GA hardening: reduce base CVE noise (~10 Critical / ~25 High, **0** with fix on **1.7.4** grype scan); distroless **nonroot** runtime for partner optics. **Fatiamento:** **PR-A** base-swap (Dockerfile + smoke + TLS) → pause for auditor review → **PR-B** `.grype.yaml` + repo grype gate + release docs. Branch **`feat/image-hardening-1028`** (WIP). Links **#856**, release machinery **#75**.
+
+| Slice | To-do | Status |
+| ----- | ----- | ------ |
+| **PR-A** | Multi-stage → `gcr.io/distroless/cc-debian13:nonroot` + `collect-runtime-rootfs.sh`; nonroot **65532**; exec `CMD`; smoke `_package_version()` + `build-push-podman.sh` contract | 🔄 In progress |
+| **PR-A** | PyO3 `boar_fast_filter` in builder (optional ext); TLS / CA smoke | ⬜ Pending |
+| **PR-B** | `.grype.yaml` VEX (per-CVE rationale); `grype-image-gate` scripts; release rule formalizes `--only-fixed` | ⬜ Pending |
 
 ### Corporate-Entity-C 2026-03-18 — evolution review (9.1/10) and follow-ups
 
