@@ -10,7 +10,8 @@
 
 param(
     [switch]$SkipPreCommit = $false,
-    [switch]$IncludeVersionSmoke = $false
+    [switch]$IncludeVersionSmoke = $false,
+    [switch]$Enforced = $false
 )
 
 $ErrorActionPreference = "Stop"
@@ -101,6 +102,14 @@ if ($SkipPreCommit) {
 & "$repoRoot\scripts\pre-commit-and-tests.ps1" @argsList
 $exitCode = $LASTEXITCODE
 
+if ($exitCode -eq 0) {
+    Write-Host "=== check-all: security scans (Bandit + Zizmor; fail-collect) ===" -ForegroundColor Cyan
+    $secArgs = @()
+    if ($Enforced) { $secArgs += "-Enforced" }
+    & "$repoRoot\scripts\check-all-security-scans.ps1" @secArgs
+    $exitCode = $LASTEXITCODE
+}
+
 if ($exitCode -eq 0 -and $IncludeVersionSmoke) {
     $smokeScript = "$repoRoot\scripts\version-readiness-smoke.ps1"
     if (Test-Path -LiteralPath $smokeScript) {
@@ -113,7 +122,7 @@ if ($exitCode -eq 0 -and $IncludeVersionSmoke) {
 }
 
 if ($exitCode -eq 0) {
-    Write-Host "check-all: OK (pre-commit and pytest passed)." -ForegroundColor Green
+    Write-Host "check-all: OK (pre-commit, pytest, and security scans passed)." -ForegroundColor Green
 } else {
     Write-Host "check-all: FAILED (see output above)." -ForegroundColor Red
 }

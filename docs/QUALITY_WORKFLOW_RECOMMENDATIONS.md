@@ -68,9 +68,60 @@ This document suggests **additional layers** (tools, habits, and workflow) to ke
 ## What we do (Semgrep):
 
 - **GitHub Actions:** [`.github/workflows/semgrep.yml`](../.github/workflows/semgrep.yml) runs on push/PR to `main`/`master` using the official **`semgrep/semgrep`** container, ruleset **`p/python`**, **`--metrics=off`**, and one **excluded rule** documented in workflow comments (false positive on vetted `sqlalchemy.text` identifier paths).
-- **Local (optional):** `uvx semgrep scan --config p/python --metrics=off` (add the same `--exclude-rule` as in the workflow if you want parity). Custom rules can live under `.semgrep/` later.
+- **Local (optional):** `uvx semgrep scan --config p/python --metrics=off` with the same **`--exclude-rule`** as the workflow (see **§ check-all unified mirror** below). Custom rules can live under `.semgrep/` later.
 
-**Prevents:** Extra Python anti-patterns; complements CodeQL. **Slack:** **`Slack CI failure notify`** (`workflow_run`, lists **`Semgrep`** next to **`CI`**, etc.) ships on **`origin`** as **`.github/workflows/slack-ci-failure-notify.yml`**; a **private snapshot** for pause drills lives under **`docs/private/raw_pastes/cursor-incident/slack-ci-failure-notify.yml.old`** ([OPERATOR_NOTIFICATION_CHANNELS.md](ops/OPERATOR_NOTIFICATION_CHANNELS.md) §4.1.1). Pause again only deliberately (same doc).
+**Prevents:** Extra Python anti-patterns; complements CodeQL. **Slack:** **`Slack CI failure notify`** (`workflow_call`, lists **`Semgrep`** next to **`CI`**, etc.) ships on **`origin`** as **`.github/workflows/slack-ci-failure-notify.yml`**; a **private snapshot** for pause drills lives under **`docs/private/raw_pastes/cursor-incident/slack-ci-failure-notify.yml.old`** ([OPERATOR_NOTIFICATION_CHANNELS.md](ops/OPERATOR_NOTIFICATION_CHANNELS.md) §4.1.1). Pause again only deliberately (same doc).
+
+---
+
+### 4b. Zizmor (workflow static analysis)
+
+**Why:** GitHub Actions workflows are code — misconfigured `permissions`, unpinned actions, or dangerous `pull_request_target` patterns are supply-chain and abuse risks. **Zizmor** scans `.github/workflows/` for those classes of issues.
+
+## What we do (Zizmor):
+
+- **CI:** [`.github/workflows/zizmor.yml`](../.github/workflows/zizmor.yml) runs on push/PR via **`zizmorcore/zizmor-action`** (SHA-pinned). **Advisory** by default unless **`ZIZMOR_ENFORCE`** / repo **`ENFORCE_ZIZMOR`** is set — see [OPERATOR_NOTIFICATION_CHANNELS.md](ops/OPERATOR_NOTIFICATION_CHANNELS.md) and **`scripts/workflow-security-lint.sh`**.
+- **Local:** `uvx zizmor .github/workflows/` (same path as **`workflow-security-lint.sh`**). **`check-all`** runs Zizmor in the **default** security tier and **fails** on findings (shift-left mirror of a strict posture before merge).
+
+**Prevents:** Workflow misconfigurations that Bandit/Semgrep do not see.
+
+---
+
+### 4c. `check-all` as unified CI mirror (tiered)
+
+**Why:** Contributors on the **Linux primary** dev workstation and agents should run **one** local ritual that matches **what CI will run**, without re-typing job commands from five workflow files.
+
+## Tiers (`./scripts/check-all.sh` / `.\scripts\check-all.ps1`)
+
+| Tier | When | What (after existing gatekeeper, Rust, plans-stats, hubs, Pester, pre-commit, pytest) |
+| ---- | ---- | ---------------------------------------------------------------------------------------- |
+| **Default (offline-capable)** | Every pre-PR / agent slice | **Bandit** — `uv run bandit -c pyproject.toml -r api core config connectors database file_scan report main.py -ll -q` (same paths as QUALITY doc + CI product scope). **Zizmor** — `uvx zizmor .github/workflows/`. |
+| **Opt-in `--enforced` / `-Enforced`** | Before security-sensitive PRs; when Semgrep CI is the worry | **+ Semgrep** — `uvx semgrep scan --config p/python --metrics=off` with the same **`--exclude-rule`** as [`.github/workflows/semgrep.yml`](../.github/workflows/semgrep.yml), **`--error .`**. Requires network for `uvx`. |
+
+**Fail-collect:** The security tier runs **all** scans in the tier, then reports **every** failure (no fail-fast within Bandit / Zizmor / Semgrep). Earlier gates (PII gatekeeper, Rust, pre-commit) still abort immediately — see **`scripts/check-all-security-scans.sh`** / **`.ps1`**.
+
+**Not in default `check-all` (separate CI jobs):** CodeQL, Sonar, pip-audit, SBOM image build — run those via CI or dedicated scripts; do not bloat the daily loop.
+
+### Future waves (same doc — not implemented in #1044)
+
+| Wave | Intent | Status |
+| ---- | ------ | ------ |
+| **Wave 2** | Optional **pre-commit** hooks for Bandit / Zizmor (subset, fast) | Deferred — track in this section |
+| **Wave 3** | Cursor rule: **run `check-all --enforced` before PR** when the slice touches connectors, workflows, or auth | Deferred — pointer in **§10** below |
+
+---
+
+### ROI — shift-left economics
+
+Running **`check-all`** locally (default tier) trades **~2–5 minutes** on the dev PC for **avoiding a full CI round-trip** (queue + matrix + Semgrep container), which is typically **15–40+ minutes** wall-clock when a Bandit or workflow finding fails late.
+
+| Finding class | Without local mirror | With `check-all` default tier |
+| ------------- | ------------------- | ----------------------------- |
+| Bandit on connectors | Fails in CI **Bandit** job after lint+test already ran | Surfaces in one local pass |
+| Workflow permission drift | Fails in **Zizmor** workflow (or stays advisory until enforced) | Surfaces before push |
+| Semgrep SQLAlchemy FP path | Only when **`--enforced`** or CI Semgrep | Operator/agent opt-in — matches container command |
+
+**Token-aware habit:** Use **`./scripts/check-all.sh --skip-pre-commit`** only when iterating on tests; run **full** `check-all` before opening the PR. Use **`--enforced`** when the diff touches **security surfaces** listed in Wave 3 — not on every docs-only slice.
 
 ---
 
@@ -153,6 +204,7 @@ This document suggests **additional layers** (tools, habits, and workflow) to ke
 
 - When you add a **new** quality or security check (e.g. Ruff in CI, Bandit, a new Sonar rule): update the **quality rule** and **skill** with the new command and what to avoid. Keep TESTING.md and this doc in sync.
 - Consider a short **rule** that fires when editing config or connector code: "Use parameterized queries; no secrets in logs; run security tests after change."
+- **`check-all` mirror (#1044):** Default local gate = **`./scripts/check-all.sh`** / **`.\scripts\check-all.ps1`** (Bandit + Zizmor after pre-commit/pytest). Use **`--enforced`** / **`-Enforced`** for Semgrep parity before security-sensitive PRs — see **§4c** above. **Wave 3 (future):** codify "run `--enforced` before PR" in **`.cursor/rules/quality-sonarqube-codeql.mdc`** when the slice touches connectors, workflows, or auth.
 
 **Prevents:** Regressions and bad habits from creeping in during daily edits.
 
@@ -165,6 +217,8 @@ This document suggests **additional layers** (tools, habits, and workflow) to ke
 | Lint (pre-commit) in CI | Same hooks as `.pre-commit-config.yaml`    | Low    | Drift vs local hooks, failed lint job                        |
 | Pre-commit (local)      | Catch on `git commit`                      | Low    | Failed CI, rework                                            |
 | Bandit                  | Python security patterns (CI **medium+**)  | Low    | Anti-patterns tests may miss; **low** triage in plan Phase 3 |
+| Zizmor                  | GitHub Actions workflow hygiene            | Low    | Permission/pinning drift before CI                           |
+| `check-all` mirror      | Local tiered CI parity (Bandit+Zizmor+opt Semgrep) | Low | Late CI failures, rework loops                       |
 | Semgrep                 | Custom + community SAST                    | Medium | Extra vulnerability/bug patterns                             |
 | mypy                    | Type safety                                | Medium | Refactor bugs, wrong types                                   |
 | MD029 / fix script      | Avoid doc rework                           | Low    | Repeated manual numbering fixes                              |
@@ -178,7 +232,7 @@ This document suggests **additional layers** (tools, habits, and workflow) to ke
 
 ## What you might not be paying attention to yet
 
-1. **Lint vs local** – CI runs **`pre-commit run --all-files`**; install **`uv run pre-commit install`** so **`git commit`** matches.
+1. **Lint vs local** – CI runs **`pre-commit run --all-files`**; install **`uv run pre-commit install`** so **`git commit`** matches. **`check-all`** adds **Bandit + Zizmor** (default) and optional **`--enforced`** Semgrep — see **§4c**.
 1. **MD029 and semantic lists** – The fix script can overwrite intentional 1/2/3 numbering; see [ADR 0001](adr/ADR-0001-markdown-fix-script-md029-and-semantic-step-lists.md).
 1. **Branch protection** – Enable when required check names are stable (include **Semgrep** if merge-blocking). See [WORKFLOW_DEFERRED_FOLLOWUPS.md](ops/WORKFLOW_DEFERRED_FOLLOWUPS.md).
 1. **Types** – mypy is gradual dev-only until triage (§5).

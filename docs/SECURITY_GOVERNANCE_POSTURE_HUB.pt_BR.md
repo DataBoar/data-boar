@@ -50,8 +50,8 @@
 | Tema | Pontos de entrada |
 | ---- | ----------------- |
 | Stack de gates no CI | [ADR-0005](adr/ADR-0005-ci-quality-gates-and-supply-chain-scanning.md) · `.github/workflows/ci.yml` |
-| Ritual de gate local | [`docs/TESTING.md`](TESTING.md) · `./scripts/check-all.sh` / `.\scripts\check-all.ps1` |
-| Análise estática | Bandit · Semgrep · CodeQL (workflows) · Ruff/pre-commit |
+| Ritual de gate local | [`docs/TESTING.md`](TESTING.md) · [`docs/QUALITY_WORKFLOW_RECOMMENDATIONS.pt_BR.md`](QUALITY_WORKFLOW_RECOMMENDATIONS.pt_BR.md) · `./scripts/check-all.sh` / `.\scripts\check-all.ps1` |
+| Análise estática | Bandit · Semgrep · Zizmor · CodeQL (workflows) · Ruff/pre-commit |
 | Sem mitigações frágeis | [ADR-0049](adr/ADR-0049-no-brittle-mitigations-robust-input-handling.md) |
 
 ## Proveniência

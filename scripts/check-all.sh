@@ -6,6 +6,7 @@
 #   ./scripts/check-all.sh
 #   ./scripts/check-all.sh --skip-pre-commit
 #   ./scripts/check-all.sh --include-version-smoke
+#   ./scripts/check-all.sh --enforced          # + Semgrep (semgrep.yml parity; network)
 # On Windows, prefer .\scripts\check-all.ps1 (gatekeeper stays gatekeeper-audit.ps1 per #560).
 # Linux/macOS: gatekeeper_audit.py avoids a silent skip when pwsh is absent (issue #560).
 # Rust requires cargo on PATH.
@@ -18,14 +19,17 @@ cd "$REPO_ROOT" || exit 2
 
 SKIP_PRECOMMIT=0
 INCLUDE_VERSION_SMOKE=0
+ENFORCED=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     -SkipPreCommit | --skip-pre-commit) SKIP_PRECOMMIT=1 ;;
     -IncludeVersionSmoke | --include-version-smoke) INCLUDE_VERSION_SMOKE=1 ;;
+    -Enforced | --enforced) ENFORCED=1 ;;
     -h | --help)
       echo "Usage: $0 [options]"
       echo "  --skip-pre-commit          Only run pytest (same as check-all.ps1 -SkipPreCommit)"
       echo "  --include-version-smoke    After success, run version-readiness-smoke.ps1 (requires pwsh)"
+      echo "  --enforced                 Also run Semgrep (mirrors semgrep.yml; needs network)"
       echo "  -h, --help                 This help"
       exit 0
       ;;
@@ -116,6 +120,16 @@ if [[ "$exit_code" -ne 0 ]]; then
   exit "$exit_code"
 fi
 
+sec_args=()
+if [[ "$ENFORCED" -eq 1 ]]; then
+  sec_args+=(--enforced)
+fi
+echo "=== check-all.sh: security scans (Bandit + Zizmor; fail-collect) ===" >&2
+if ! bash "$REPO_ROOT/scripts/check-all-security-scans.sh" "${sec_args[@]}"; then
+  echo "check-all.sh: FAILED security scan tier." >&2
+  exit 1
+fi
+
 if [[ "$INCLUDE_VERSION_SMOKE" -eq 1 ]]; then
   vsmoke="$REPO_ROOT/scripts/version-readiness-smoke.ps1"
   if [[ -f "$vsmoke" ]]; then
@@ -130,5 +144,5 @@ if [[ "$INCLUDE_VERSION_SMOKE" -eq 1 ]]; then
   fi
 fi
 
-echo "check-all.sh: OK (pre-commit and pytest passed)." >&2
+echo "check-all.sh: OK (pre-commit, pytest, and security scans passed)." >&2
 exit 0

@@ -50,8 +50,8 @@
 | Topic | Entry points |
 | ----- | ------------ |
 | CI gate stack | [ADR-0005](adr/ADR-0005-ci-quality-gates-and-supply-chain-scanning.md) · `.github/workflows/ci.yml` |
-| Local gate ritual | [`docs/TESTING.md`](TESTING.md) · `./scripts/check-all.sh` / `.\scripts\check-all.ps1` |
-| Static analysis | Bandit · Semgrep · CodeQL (workflows) · Ruff/pre-commit |
+| Local gate ritual | [`docs/TESTING.md`](TESTING.md) · [`docs/QUALITY_WORKFLOW_RECOMMENDATIONS.md`](QUALITY_WORKFLOW_RECOMMENDATIONS.md) · `./scripts/check-all.sh` / `.\scripts\check-all.ps1` |
+| Static analysis | Bandit · Semgrep · Zizmor · CodeQL (workflows) · Ruff/pre-commit |
 | No brittle mitigations | [ADR-0049](adr/ADR-0049-no-brittle-mitigations-robust-input-handling.md) |
 
 ## Provenance
