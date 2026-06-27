@@ -20,6 +20,9 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+. (Join-Path $PSScriptRoot "Lab-MaestroCommon.ps1")
+Initialize-MaestroLoginToolPath
+
 function Write-MaestroStep {
     param(
         [Parameter(Mandatory = $true)]

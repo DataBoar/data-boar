@@ -18,7 +18,7 @@ O Maestro existe porque a validação em laboratório — hosts reais, SSH real,
 | ------------- | ---------------------- |
 | Maestro (regente) | `Maestro.ps1` — lê a partitura, controla o andamento e a sequência |
 | Chefe de seção *(metáfora: capo di sezione — apenas narrativa)* | **Handlers** `Handle-*.ps1` — cada um lidera sua seção com total autonomia; o termo canônico é sempre **handler** |
-| Músico | Nó do lab (LAB-NODE-01, LAB-NODE-03, LAB-T14, …) — o performer |
+| Músico | Nó do lab (aliases do inventário como `<lab-node-a>`, `<lab-node-b>`, …) — o performer |
 | Instrumento / Voz (Persona) | O papel que cada nó desempenha: `docker`, `podman`, `baremetal`, `web`, `target_postgres`, … |
 | Partitura | `docs/private/homelab/data/inventory.json` — quem toca o quê |
 | Apresentação (Completão) | Um ciclo completo em todos os nós, todas as personas, todas as superfícies de alvo |
@@ -137,6 +137,17 @@ Handlers são aditivos — um nó pode ter múltiplos. A entrada do inventário 
   "web_scheme": "http"
 }
 ```
+
+### 3.5 Piso min-spec do lab (bare-metal / musl)
+
+Quando personas bare-metal executam `uv`, `maturin` ou stacks ML opcionais em nós de lab com poucos recursos (em especial **SBCs Alpine/musl** medidos na issue **#1003**), duas restrições de build se repetem:
+
+| Restrição | Sintoma | Mitigação |
+| --------- | ------- | --------- |
+| **crt-static** | `cargo build` cru falha com *"does not support these crate types"* para `cdylib` PyO3 em musl com CRT estático por padrão | O **`maturin`** injeta `RUSTFLAGS="-C target-feature=-crt-static"` automaticamente; `cargo build` sem essa flag falha em musl |
+| **sklearn-wheel** | `uv sync` tenta compilar **scikit-learn** from-source em Alpine sem AVX / com pouca RAM | Depende de **wheel pré-buildado** do pipeline **#782 Build-Once** (ou aceitar ML opcional degradado); ver `labop-dep-doctor.sh` e `lab-completao-host-smoke.sh` |
+
+**Paridade login-env (#1003):** sessões SSH e tmux não interativas costumam omitir `~/.local/bin` e `~/.cargo/env` do `PATH`. O Maestro centraliza um prelúdio bash remoto em `Lab-MaestroCommon.ps1` (`Get-MaestroRemoteLoginPathPrelude`) para todos os handlers injetados via tmux; `Handle-web.ps1` e `lab-completao-host-smoke.sh` aplicam o mesmo padrão antes de `uv` / `maturin`; `labop-gate-readiness.sh` sonda `login-env:uv`, `login-env:cargo` e `login-env:maturin` após `_ensure_login_path`.
 
 ---
 

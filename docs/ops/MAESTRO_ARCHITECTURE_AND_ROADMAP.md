@@ -18,7 +18,7 @@ Maestro exists because lab validation — real hosts, real SSH, real containers,
 | ------------ | --------------- |
 | Maestro (conductor) | `Maestro.ps1` — reads the score, controls tempo and sequence |
 | Section lead *(informally: capo di sezione — metaphor flavor only)* | `Handle-*.ps1` **handlers** — each owns its instrument section completely; the canonical term in code and docs is **handler** |
-| Musician | Lab node (LAB-NODE-01, LAB-NODE-03, LAB-T14, …) — the performer |
+| Musician | Lab node (inventory aliases such as `<lab-node-a>`, `<lab-node-b>`, …) — the performer |
 | Instrument / Voice (Persona) | The role each node plays: `docker`, `podman`, `baremetal`, `web`, `target_postgres`, … |
 | Score | `docs/private/homelab/data/inventory.json` — who plays what |
 | Performance (Completão) | One full run across all nodes, all personas, all target surfaces |
@@ -138,6 +138,17 @@ Handlers are additive — one node can have multiple. The inventory entry lists 
   "web_scheme": "http"
 }
 ```
+
+### 3.5 Lab min-spec floor (bare-metal / musl hosts)
+
+When bare-metal personas run `uv`, `maturin`, or optional ML stacks on resource-constrained lab nodes (notably **Alpine/musl** SBCs measured in GitHub issue **#1003**), two build constraints recur:
+
+| Constraint | Symptom | Mitigation |
+| ---------- | ------- | ---------- |
+| **crt-static** | Raw `cargo build` fails with *"does not support these crate types"* for PyO3 `cdylib` on musl when static CRT is the default | **`maturin`** injects `RUSTFLAGS="-C target-feature=-crt-static"` automatically; plain `cargo build` without that flag will fail on musl |
+| **sklearn-wheel** | `uv sync` attempts to compile **scikit-learn** from source on no-AVX / low-RAM Alpine hosts | Depends on a **pre-built wheel** from the **#782 Build-Once** pipeline (or accept degraded optional ML); see `labop-dep-doctor.sh` and `lab-completao-host-smoke.sh` |
+
+**Login-env parity (#1003):** non-interactive SSH and tmux sessions often omit `~/.local/bin` and `~/.cargo/env` from `PATH`. Maestro centralizes a remote bash prelude in `Lab-MaestroCommon.ps1` (`Get-MaestroRemoteLoginPathPrelude`) for all tmux-injected handlers; `Handle-web.ps1` and `lab-completao-host-smoke.sh` apply the same pattern before `uv` / `maturin`; `labop-gate-readiness.sh` probes `login-env:uv`, `login-env:cargo`, and `login-env:maturin` after `_ensure_login_path`.
 
 ---
 
