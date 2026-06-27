@@ -16,6 +16,8 @@ Other **`CI`** jobs: **test** (pytest matrix 3.12/3.13), **bandit**, **dependenc
 
 **Windows (operator):** Prefer **`.\scripts\check-all.ps1`** or **`.\scripts\lint-only.ps1`** over ad-hoc one-liners when iterating — same gates, consistent with **check-all-gate**. Install hooks once: **`uv run pre-commit install`** so **`git commit`** runs the same checks without waiting for CI.
 
+**Security scan tier (#1044):** Default **`check-all`** runs **Bandit** + **Zizmor** after pre-commit/pytest (`scripts/check-all-security-scans.*`, fail-collect). Use **`--enforced`** / **`-Enforced`** to add **Semgrep** (same command as **`semgrep.yml`**). Full mirror table: **`docs/QUALITY_WORKFLOW_RECOMMENDATIONS.md`** §4c.
+
 ## After editing Python
 
 1. **Lint bundle (Ruff + docs guards + plans-stats):** Run **`uv run pre-commit run --all-files`** (or rely on **`git commit`** after **`uv run pre-commit install`**). Fix format with **`uv run ruff format .`** when **ruff-format** fails. Same checks run in **`ci.yml`** **`lint`**; see **pre-commit-ruff** and **`.pre-commit-config.yaml`**.
@@ -48,6 +50,14 @@ Other **`CI`** jobs: **test** (pytest matrix 3.12/3.13), **bandit**, **dependenc
 1. Run the **markdown lint** flow (see rule **markdown-lint**): `uv run python scripts/fix_markdown_sonar.py` then `uv run pytest tests/test_markdown_lint.py -v -W error`.
 
 ## Full regression (recommended before PR)
+
+```bash
+./scripts/check-all.sh
+# Security-sensitive slice (connectors, workflows, auth):
+./scripts/check-all.sh --enforced
+```
+
+Default **`check-all`** mirrors CI lint/test plus **Bandit** + **Zizmor** (fail-collect). **`--enforced`** adds **Semgrep** — see **`docs/QUALITY_WORKFLOW_RECOMMENDATIONS.md`** §4c.
 
 ```bash
 uv run pytest -v -W error

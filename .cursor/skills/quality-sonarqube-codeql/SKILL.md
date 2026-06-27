@@ -53,6 +53,8 @@ After changing Python or markdown:
 
 **Windows:** Prefer **`.\scripts\check-all.ps1`** (full gate) or **`.\scripts\lint-only.ps1`** (runs **`pre-commit run --all-files`**) per **check-all-gate** — matches the **CI lint** job.
 
+**Security tier (#1044):** Default **`check-all`** ends with **Bandit** + **Zizmor** (`check-all-security-scans.*`, fail-collect). **`--enforced`** / **`-Enforced`** adds **Semgrep** (parity with **`semgrep.yml`**). See **`docs/QUALITY_WORKFLOW_RECOMMENDATIONS.md`** §4c; **Wave 3 (future):** run **`--enforced`** before PR when touching connectors, workflows, or auth.
+
 **Once per clone:** **`uv run pre-commit install`** so **`git commit`** runs the same hooks locally.
 
 ```bash
@@ -79,6 +81,10 @@ uv run mypy api core
 Before opening a PR, run the full suite:
 
 ```bash
+./scripts/check-all.sh
+# Optional — Semgrep parity before security-sensitive PRs:
+./scripts/check-all.sh --enforced
+
 uv run pytest -v -W error
 ```
 

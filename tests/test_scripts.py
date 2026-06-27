@@ -769,6 +769,38 @@ def test_check_all_supports_optional_version_smoke():
     assert "version-readiness-smoke.ps1" in text
 
 
+def test_check_all_supports_enforced_security_tier():
+    """check-all exposes --enforced / -Enforced for Semgrep parity (#1044)."""
+    root = _project_root()
+    for rel in ("scripts/check-all.ps1", "scripts/check-all.sh"):
+        script = root / rel
+        if not script.exists():
+            continue
+        text = script.read_text(encoding="utf-8", errors="replace")
+        assert "Enforced" in text or "enforced" in text
+        assert "check-all-security-scans" in text
+
+
+def test_check_all_security_scans_mirror_ci_commands():
+    """Security scan tier uses CI-parity Bandit, Zizmor, and Semgrep commands."""
+    root = _project_root()
+    sh = root / "scripts" / "check-all-security-scans.sh"
+    ps1 = root / "scripts" / "check-all-security-scans.ps1"
+    assert sh.is_file() and ps1.is_file()
+    sh_text = sh.read_text(encoding="utf-8", errors="replace")
+    ps1_text = ps1.read_text(encoding="utf-8", errors="replace")
+    for text in (sh_text, ps1_text):
+        assert (
+            "bandit -c pyproject.toml -r api core config connectors database file_scan report main.py -ll -q"
+            in text
+        )
+        assert "uvx zizmor .github/workflows/" in text
+        assert "semgrep scan --config p/python --metrics=off" in text
+        assert "avoid-sqlalchemy-text.avoid-sqlalchemy-text" in text
+    assert "FAILURES" in sh_text
+    assert "failures" in ps1_text.lower()
+
+
 def test_pr_hygiene_mentions_gh_preflight():
     """pr-hygiene-remind includes gh preflight reminder and quick checks switch."""
     root = _project_root()
@@ -983,6 +1015,7 @@ def test_paired_dev_gate_shell_scripts_bash_syntax():
     root = _project_root()
     rels = (
         "scripts/check-all.sh",
+        "scripts/check-all-security-scans.sh",
         "scripts/lint-only.sh",
         "scripts/quick-test.sh",
         "scripts/pre-commit-and-tests.sh",
