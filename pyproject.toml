@@ -1,6 +1,6 @@
 [project]
 name = "data-boar"
-version = "1.7.4"
+version = "1.7.4.post1"
 description = "Data Boar — compliance-aware discovery and mapping of personal and sensitive data across databases, files, and APIs (LGPD, GDPR, CCPA, and configurable frameworks)."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -69,25 +69,18 @@ dependencies = [
     "jinja2>=3.1.6",
     "joblib>=1.5.3",
     "kiwisolver>=1.4.9",
-    "mariadb>=1.1.14",
     "markupsafe>=3.0.3",
     "matplotlib>=3.10.8",
-    "mysql>=0.0.3",
-    "mysqlclient>=2.2.7",
     "numpy>=2.4.6",
     "odfpy>=1.4.1",
     "openpyxl>=3.1.5",
-    "oracledb>=4.0.1",
     "packaging>=26.1",
     "pandas>=3.0.3",
     "pillow>=12.2.0",
-    "psycopg2-binary>=2.9.11",
     "pycparser>=3.0 ; implementation_name != 'PyPy' and platform_python_implementation != 'PyPy'",
     "pydantic>=2.13.2",
     "pydantic-core>=2.46.2",
     "pygments>=2.20.0",
-    "pymysql>=1.2.0",
-    "pyodbc>=5.3.0",
     "pyparsing>=3.3.2",
     "pypdf>=6.13.0",
     "pyjwt>=2.12.0",
@@ -131,6 +124,19 @@ Changelog = "https://github.com/FabioLeitao/data-boar/blob/main/CHANGELOG.md"
 "Docker Hub" = "https://hub.docker.com/r/fabioleitao/data_boar"
 
 [project.optional-dependencies]
+# SQL engines (#1047): core install = files + sqlite only; no DB C-extensions in core.
+postgres = ["psycopg2-binary>=2.9.11"]
+mysql = ["pymysql>=1.2.0"]
+mariadb = ["mariadb>=1.1.14"]
+mssql = ["pyodbc>=5.3.0"]
+oracle = ["oracledb>=4.0.1"]
+sql-all = [
+    "psycopg2-binary>=2.9.11",
+    "pymysql>=1.2.0",
+    "mariadb>=1.1.14",
+    "pyodbc>=5.3.0",
+    "oracledb>=4.0.1",
+]
 nosql = ["pymongo>=4.0", "redis>=8.0.0"]
 bigdata = ["snowflake-connector-python>=4.6.0"]
 shares = ["smbprotocol>=1.2.0", "webdavclient3>=0.14.0", "requests_ntlm>=1.2.0"]
@@ -295,6 +301,7 @@ dev = [
     "types-pyyaml>=6.0.12.20260518",
 ]
 
-# Operator-only maturity octet (ADR-0073). Never surfaced in [project].version or About.
+# Operator-only maturity octet (ADR-0073). Never copy into [project].version.
+# postN <-> maturity_build map: docs/releases/1.7.4.post1.md (and successors).
 [tool.databoar]
-maturity_build = 201
+maturity_build = 202

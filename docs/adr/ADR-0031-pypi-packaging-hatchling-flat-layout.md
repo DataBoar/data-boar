@@ -17,6 +17,7 @@
 - Declare **explicit** `[tool.hatch.build.targets.wheel] packages = [...]` for application packages plus **`force-include`** for **`main.py`** at repo root.
 - Add **`[project.scripts]`** → **`data-boar = "main:main"`** for `pip install` UX.
 - Maintainer publish: **`scripts/pypi-publish.ps1`** (wraps **`uv build`** + **`uv publish`** with **`UV_PUBLISH_TOKEN`**).
+- **Optional dependencies:** heavy or platform-specific connectors belong in **`[project.optional-dependencies]`** extras (see [PLAN_PACKAGING_EXTRAS.md](../plans/PLAN_PACKAGING_EXTRAS.md), #1047) — **core** `pip install data-boar` must not pull SQL C-extensions.
 
 ## Consequences
 

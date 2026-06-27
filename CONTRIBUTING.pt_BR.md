@@ -18,6 +18,19 @@ Obrigado por considerar contribuir. Este documento cobre a configuração local,
 
   Até lá, use **clone git** + **`uv sync`** ou **`pip install -e .`**. O repositório ainda contém o pacote Python histórico **`lgpd_crawler`** (imports) — é detalhe de implementação, não o nome do produto. Contexto da renomeação: **[ADR 0014](docs/adr/ADR-0014-rename-repo-and-package-python3-lgpd-crawler-to-data-boar.md)**.
 
+**Conectores SQL (extras opcionais):** o **`pip install data-boar`** *core* cobre **arquivos + SQLite** — sem wheels C-extension de PostgreSQL/MySQL/MariaDB/MSSQL/Oracle. Instale por motor:
+
+```bash
+pip install 'data-boar[postgres]'   # PostgreSQL
+pip install 'data-boar[mysql]'        # MySQL (pymysql)
+pip install 'data-boar[mariadb]'     # MariaDB Connector/C
+pip install 'data-boar[mssql]'       # SQL Server
+pip install 'data-boar[oracle]'       # Oracle
+pip install 'data-boar[sql-all]'     # todos os extras SQL (Docker / lab)
+```
+
+Clone de dev: `uv sync --extra sql-all` (ou escolha extras). Ver [PLAN_PACKAGING_EXTRAS.md](docs/plans/PLAN_PACKAGING_EXTRAS.md) e [TECH_GUIDE.pt_BR.md](docs/TECH_GUIDE.pt_BR.md) (*Bancos e drivers*).
+
 ### Publicação no PyPI (maintainers)
 
 O build usa **hatchling** via **`pyproject.toml`**. Na raiz do repositório (Windows):

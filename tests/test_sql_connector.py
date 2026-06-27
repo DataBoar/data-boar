@@ -8,6 +8,7 @@ import sqlite3
 from unittest.mock import MagicMock
 
 from connectors.sql_connector import (
+    DRIVER_MAP,
     SQLConnector,
     _connect_args_from_target,
     _discover_fallback_no_schemas,
@@ -16,6 +17,20 @@ from connectors.sql_connector import (
     _should_skip_schema,
 )
 from sqlalchemy import create_engine, inspect
+from sqlalchemy.engine.url import make_url
+
+
+def test_driver_map_uses_registered_sqlalchemy_dialects():
+    """DRIVER_MAP URLs must resolve to installed dialects (unit tests do not connect)."""
+    for driver, drivername in DRIVER_MAP.items():
+        url_str = (
+            "sqlite:///:memory:"
+            if driver == "sqlite"
+            else f"{drivername}://user:pass@localhost:1/db"
+        )
+        dialect = make_url(url_str).get_dialect()
+        assert dialect is not None, f"{driver} -> {drivername}"
+    assert DRIVER_MAP["mariadb"] == "mariadb+mariadbconnector"
 
 
 def test_resolve_sample_statement_timeout_ms_default():

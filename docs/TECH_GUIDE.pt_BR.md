@@ -334,19 +334,19 @@ Para **implantação**, **uso da API web** (com exemplos de requisição/respost
 
 ## Bancos e drivers suportados
 
-| Engine           | Driver (config)             | Nota                                                                                                                                  |
-| -----------      | --------------------------- | -------------------------                                                                                                             |
-| PostgreSQL       | `postgresql+psycopg2`       | psycopg2-binary                                                                                                                       |
-| MySQL            | `mysql+pymysql`             | pymysql                                                                                                                               |
-| MariaDB          | `mysql+pymysql`             | mesmo que MySQL                                                                                                                       |
-| SQLite           | `sqlite`                    | database = path                                                                                                                       |
-| SQL Server       | `mssql+pyodbc`              | pyodbc                                                                                                                                |
-| Oracle (19+ RAC) | `oracle+oracledb`           | oracledb (modo thin; sem Oracle Client). Na config `database` = nome do serviço (ex.: customers_db ou ORCL).                          |
-| Snowflake        | `snowflake`                 | opcional: `uv pip install -e ".[bigdata]"`; config usa `account`, `user`, `pass`, `database`, `schema`, `warehouse`, opcional `role`. |
-| MongoDB          | `mongodb`                   | opcional: pymongo                                                                                                                     |
-| Redis            | `redis`                     | opcional: redis                                                                                                                       |
+| Engine           | Driver (config)             | Extra opcional (`pip install 'data-boar[…]'`) | Nota                                                                                                                                  |
+| -----------      | --------------------------- | --------------------------------------------- | -------------------------                                                                                                             |
+| PostgreSQL       | `postgresql+psycopg2`       | `postgres`                                    | psycopg2-binary                                                                                                                       |
+| MySQL            | `mysql+pymysql`             | `mysql`                                       | pymysql (Python puro)                                                                                                                 |
+| MariaDB          | `mariadb+mariadbconnector`  | `mariadb`                                     | MariaDB Connector/C (pacote `mariadb`)                                                                                              |
+| SQLite           | `sqlite`                    | *(core — stdlib)*                             | database = path                                                                                                                       |
+| SQL Server       | `mssql+pyodbc`              | `mssql`                                       | pyodbc                                                                                                                                |
+| Oracle (19+ RAC) | `oracle+oracledb`           | `oracle`                                      | oracledb (modo thin; sem Oracle Client). Na config `database` = nome do serviço (ex.: customers_db ou ORCL).                          |
+| Snowflake        | `snowflake`                 | `bigdata`                                     | opcional: `uv pip install -e ".[bigdata]"`; config usa `account`, `user`, `pass`, `database`, `schema`, `warehouse`, opcional `role`. |
+| MongoDB          | `mongodb`                   | `nosql`                                       | pymongo                                                                                                                               |
+| Redis            | `redis`                     | `nosql`                                       | redis                                                                                                                                 |
 
-Para MongoDB/Redis, adicione um alvo com `type: database` e `driver: mongodb` ou `redis` (host, port, database/password conforme necessário). Instale dependências opcionais: `uv pip install -e ".[nosql]"`. Para Snowflake, adicione um alvo com `type: database` e `driver: snowflake` e instale o extra `.[bigdata]`.
+Para MongoDB/Redis, adicione um alvo com `type: database` e `driver: mongodb` ou `redis` (host, port, database/password conforme necessário). Instale dependências opcionais: `uv pip install -e ".[nosql]"`. Para Snowflake, adicione um alvo com `type: database` e `driver: snowflake` e instale o extra `.[bigdata]`. Para **todos os motores SQL** em lab/Docker: `uv pip install -e ".[sql-all]"` ou `pip install 'data-boar[sql-all]'`.
 
 ## Alvos REST/API e autenticação
 

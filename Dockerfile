@@ -24,6 +24,9 @@ RUN pip uninstall -y wheel || true && \
     python -c "import wheel; import sys; sys.exit(0 if tuple(map(int, wheel.__version__.split('.'))) >= (0,46,2) else 1)" && \
     pip install --no-cache-dir -r /app/requirements.txt && \
     pip install --no-cache-dir --no-deps -e /app && \
+    pip install --no-cache-dir \
+        "psycopg2-binary>=2.9.11" "pymysql>=1.2.0" "mariadb>=1.1.14" \
+        "pyodbc>=5.3.0" "oracledb>=4.0.1" && \
     (find /usr/local/lib/python3.13/site-packages -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true) && \
     (find /usr/local/lib/python3.13/site-packages -name "*.pyc" -delete 2>/dev/null || true)
 

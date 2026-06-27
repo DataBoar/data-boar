@@ -14,6 +14,7 @@ Accepted
 - 2026-06-21 — Proposed
 - 2026-06-23 — Proposed (amended): destensionar octeto da versão pública; regras (1)–(4) abaixo; TBD pós-GA aberto (#977 auditoria RO)
 - 2026-06-25 — Accepted: resolve #977 — post-GA public fixes stay on the **same public line** (`1.7.4`); **`maturity_build`** octet distinguishes fix maturity; **`1.7.5` does not exist**; next **public** line = **`1.8.0`** (#971)
+- 2026-06-27 — Amended: cláusula de distribuição PyPI (#1047) — post-release como publish-counter. (ratificado pelo operador)
 
 ## Context
 
@@ -26,8 +27,8 @@ A richer scheme (vault `self-upgrade-beacon-heartbeat-design-2026-06-15`, Gibson
 
 ## Decision
 
-1. **Public version (all artifacts — `[project] version`, About, Git tag, Docker tag, README, man pages):** `major.minor.build` (**three segments only**) + optional PEP 440 pre-release suffix (`-beta[.N]` / `-rc[.N]`) or **none**. **Never a fourth segment** (e.g. `1.7.4.201` is invalid).
-2. **Octet-maturity (Gibson DNS-beacon bands):** lives in a **separate derived field** — `[tool.databoar] maturity_build` — a **side-channel** (release notes, beacon, operator tooling). Bands: **0–127** beta · **128–199** rc · **200–255** release (`.200` = GA maturity, `.201` = fix-1 maturity, …). **Never** copy this octet into `[project] version` or the About surface.
+1. **Public version (release line):** `major.minor.build` (**three segments only**) + optional PEP 440 pre-release suffix (`-beta[.N]` / `-rc[.N]`) or **none**. **Never a fourth semver segment** (e.g. `1.7.4.201` is invalid). PEP 440 **`.postN`** on PyPI is **not** that fourth segment — see § *PyPI dual counters* below.
+2. **Octet-maturity (Gibson DNS-beacon bands):** lives in a **separate derived field** — `[tool.databoar] maturity_build` — a **side-channel** (release notes, beacon, operator tooling). Bands: **0–127** beta · **128–199** rc · **200–255** release (`.200` = GA maturity, `.201` = fix-1 maturity, …). **Never** copy this octet into `[project] version` or any version string. **`.postN` is never the octet** — rule (1) stays intact.
 3. **`-alpha` suffix:** tamper-detection axis only (GitHub #856), **not** a maturity band — separate from beta/rc/release.
 4. **`1.7.4` is not VOID:** #970 was a **premature tag/bump** without release-gate approval; discipline is restored by **ADR-0072** + gate **#406**, not by "burning" the public number.
 
@@ -39,6 +40,36 @@ Under rules (1)–(4), a **post-GA public fix** on the `1.7.4` line:
 - **Keeps** the **public** semver at **`1.7.4`** (three segments, no fourth segment).
 - **Distinguishes** fix maturity via **`[tool.databoar] maturity_build`** (side-channel only — e.g. `.200` consumed by the voided #970 GA attempt; the real GA uses `.201`).
 - **Next public line** after `1.7.4` GA work completes: **`1.8.0`** (new architecture — not a naive `1.7.x` increment).
+
+### PyPI dual counters (#1047 — ratified 2026-06-27)
+
+PyPI indexes are **immutable per uploaded version string**; there is **no** `maturity_build` side-channel on the index. A **packaging fix** on the **`1.7.4` line** that must reach PyPI consumers uses **two independent counters**:
+
+| Counter | Where it lives | Increments when | Example |
+| ---- | ---- | ---- | ---- |
+| **Publication** | PEP 440 **`.postN`** in `[project] version`, About, User-Agent, PyPI | Each **PyPI upload** — **not** each local build | `1.7.4.post1`, `1.7.4.post2` |
+| **Maturity / build** | `[tool.databoar] maturity_build` (Gibson octet side-channel) | Each maturity-tagged build (published or not) | `.201`, `.202`, `.203` |
+
+**Rule (1) intact:** **`.postN` is never the octet**; `1.7.4.202` (fourth semver segment) remains invalid.
+
+**Divergence (expected):** Counters may diverge when `maturity_build` advances without a PyPI upload — e.g. `1.7.4.post1` ↔ `.202`, local `.203` never published, next PyPI upload is `1.7.4.post2` ↔ `.204`.
+
+**Surfaces (honest split):**
+
+| Surface | Shows |
+| ---- | ---- |
+| **Public line** — README, man `.TH`, marketing copy | **`1.7.4`** (release line; no `.postN` where stakeholders expect a clean semver) |
+| **Build** — `[project] version`, About API/UI, PyPI, User-Agent | **`1.7.4.postN`** (publish counter; **does not leak** the octet — **not a bug**) |
+
+**Mandatory traceability:** Maintain an explicit **`postN ↔ maturity_build` map** in release notes and/or a version manifest — e.g. `1.7.4=.201 · 1.7.4.post1=.202 · …` Without this map, the two counters diverge **without audit trail**.
+
+| Policy | Detail |
+| ---- | ------ |
+| **Not** | `1.7.5`; Gibson octet in the version string; fourth semver segment |
+| **Defer to `1.8.0`** | Architecture-line changes only — not lean-core / extras packaging fixes on `1.7.4` |
+| **Git tag / Docker** | Operator **release-ritual** may tag `v1.7.4.postN`; map must record octet pairing |
+
+Canonical example: [#1047](https://github.com/FabioLeitao/data-boar/issues/1047) — SQL drivers moved to extras; first PyPI republication **`1.7.4.post1`** with **`maturity_build = 202`**. Map: [`docs/releases/1.7.4.post1.md`](../releases/1.7.4.post1.md).
 
 Beacon mechanics (DNS bands, TXT, anti-fraud) remain **1.8.x** roadmap scope (#717, PLAN_SELF_UPGRADE) — out of scope for the 1.7.4 GA release slice.
 
@@ -70,7 +101,7 @@ Beacon mechanics (DNS bands, TXT, anti-fraud) remain **1.8.x** roadmap scope (#7
 - [ADR 0072 — Commit Gate vs Release Gate](ADR-0072-commit-gate-vs-release-gate-distinct-criteria.md)
 - [ADR 0045 — ADR metadata and format standardization (UMADR)](ADR-0045-adr-metadata-and-format-standardization.md)
 - [ADR 0048 — operator-facing taxonomy and naming contract](ADR-0048-operator-facing-taxonomy-and-naming-contract-preservation.md)
-- GitHub #970 (premature bump), #971 (VERSIONING + `maturity_build`), #977 (ADR + audit), #772 (`1.7.5` → `1.8`), #406 (release gate), #717 (kill-switch), PLAN_SELF_UPGRADE
+- GitHub #970 (premature bump), #971 (VERSIONING + `maturity_build`), #977 (ADR + audit), #772 (`1.7.5` → `1.8`), #406 (release gate), #717 (kill-switch), PLAN_SELF_UPGRADE, [#1047](https://github.com/FabioLeitao/data-boar/issues/1047) (PyPI post-release on `1.7.4` line)
 
 ## References
 

@@ -70,6 +70,17 @@ Ladder (historic): `1.7.4-beta` → `1.7.4-rc` → `1.7.4-rc-2` → **`1.7.4`** 
 
 DNS-beacon / heartbeat / kill-switch lifecycle (#717) stays on the **1.8.x** roadmap (`docs/plans/PLAN_SELF_UPGRADE_AND_VERSION_CHECK.md`, maintainer index in `docs/README.md`); out of scope for this section.
 
+### PyPI post-releases + dual counters (ADR-0073 — ratified 2026-06-27)
+
+When **`1.7.4`** is already on PyPI and a packaging fix must ship without a new public line:
+
+| Counter | Field | Rule |
+| --- | --- | --- |
+| **Publication** | `[project] version` **`.postN`**, About, PyPI | One increment per **PyPI upload** (not per local build) |
+| **Maturity** | `[tool.databoar] maturity_build` | Octet side-channel; may advance on unpublished builds |
+
+**Marketing line** stays **`1.7.4`** (README, man); **build line** is **`1.7.4.postN`**. Maintain the **`postN ↔ maturity_build` map** in [`docs/releases/`](releases/) — e.g. [`1.7.4.post1.md`](releases/1.7.4.post1.md): `1.7.4=.201 · 1.7.4.post1=.202`.
+
 ---
 
 ## Pre-release flow (`-beta` / `-rc`) before final publish
