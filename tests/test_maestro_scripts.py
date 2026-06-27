@@ -1345,6 +1345,34 @@ def test_check_all_login_env_cargo_bootstrap() -> None:
     assert ".cargo" in ps1
 
 
+def test_maestro_handlers_login_env_parity_1003() -> None:
+    """#1003: Handle-* and tmux payloads bootstrap login PATH before uv/cargo/maturin."""
+    root = _project_root()
+    common = (root / "scripts" / "maestro" / "Lab-MaestroCommon.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    licensing = (root / "scripts" / "maestro" / "Handle-LicensingMatrix.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    web = (root / "scripts" / "maestro" / "handlers" / "Handle-web.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    rust_ps1 = (root / "scripts" / "build-rust-prefilter.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "Initialize-MaestroLoginToolPath" in common
+    assert "Get-MaestroRemoteLoginPathPrelude" in common
+    invoke_idx = common.index("function Invoke-HandlerTmuxPayload")
+    assert common.index("Get-MaestroRemoteLoginPathPrelude", invoke_idx) > invoke_idx
+    assert licensing.index("Initialize-MaestroLoginToolPath") < licensing.index(
+        "& uv run python"
+    )
+    assert ".local/bin" in web and "bash -lc" in web
+    assert rust_ps1.index("Initialize-MaestroLoginToolPath") < rust_ps1.index(
+        "uv run maturin"
+    )
+
+
 def _run_fw_guard_subnet_check(
     root: Path, subnet: str
 ) -> subprocess.CompletedProcess[str]:

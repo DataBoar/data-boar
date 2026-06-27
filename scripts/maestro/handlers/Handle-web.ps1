@@ -137,6 +137,8 @@ $portsJoined = ($candidatePorts -join " ")
 $benchPortFile = if ($benchTrackNormalized) { "~/.labop-web-port-$benchTrackNormalized" } else { "~/.labop-web-port" }
 $remoteStartCmd = @'
 set -e
+export PATH="${HOME}/.local/bin:${PATH}"
+[ -f "${HOME}/.cargo/env" ] && . "${HOME}/.cargo/env"
 cd __NODE_PATH__
 CHOSEN_PORT=""
 for P in __PORTS_JOINED__; do

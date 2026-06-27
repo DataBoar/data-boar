@@ -13,6 +13,32 @@
 
 Set-StrictMode -Version 2
 
+function Initialize-MaestroLoginToolPath {
+    <#
+    #1003: Non-interactive shells often omit ~/.local/bin and ~/.cargo/env from PATH.
+    Prepend operator tool paths before local uv/cargo/maturin invocations on the dev PC.
+    #>
+    $homeDir = if ($env:HOME) { $env:HOME } else { $env:USERPROFILE }
+    if (-not $homeDir) { return }
+    $cargoEnv = Join-Path $homeDir ".cargo" "env"
+    if (Test-Path -LiteralPath $cargoEnv) { . $cargoEnv }
+    foreach ($dir in @(
+            (Join-Path $homeDir ".local" "bin"),
+            (Join-Path $homeDir ".cargo" "bin")
+        )) {
+        if (Test-Path -LiteralPath $dir) {
+            $env:PATH = "$dir$([IO.Path]::PathSeparator)$env:PATH"
+        }
+    }
+}
+
+function Get-MaestroRemoteLoginPathPrelude {
+    <#
+    #1003: Bash prelude for SSH/tmux payloads (parity with lab-completao-host-smoke.sh).
+    #>
+    return 'export PATH="${HOME}/.local/bin:${PATH}"; [ -f "${HOME}/.cargo/env" ] && . "${HOME}/.cargo/env"; '
+}
+
 function Get-HandlerTmuxSessionName {
     param([Parameter(Mandatory = $true)][string]$Persona)
     # Per-persona session avoids C-c clobber on multi-persona nodes (#955).
@@ -357,7 +383,9 @@ function Invoke-HandlerTmuxPayload {
         "tmux has-session -t $session 2>/dev/null || tmux new-session -d -s $session ; "
     }
     # No C-c: dedicated session per persona (#955).
-    $tmuxCmd = "${create}tmux send-keys -t $session 'echo $PayloadB64 | base64 -d | bash' Enter"
+    # #1003: login-env PATH before decoded payload (non-interactive tmux lacks ~/.local/bin).
+    $prelude = Get-MaestroRemoteLoginPathPrelude
+    $tmuxCmd = "${create}tmux send-keys -t $session '${prelude}echo $PayloadB64 | base64 -d | bash' Enter"
     ssh -q -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 `
         "$($Node.user)@$($Node.hostname)" "$tmuxCmd"
     return $LASTEXITCODE

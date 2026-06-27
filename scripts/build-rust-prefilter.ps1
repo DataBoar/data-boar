@@ -15,6 +15,9 @@ if (-not (Test-Path -LiteralPath $manifestPath)) {
     throw "Rust manifest not found: $manifestPath"
 }
 
+. (Join-Path $PSScriptRoot "maestro/Lab-MaestroCommon.ps1")
+Initialize-MaestroLoginToolPath
+
 Push-Location $repoRoot
 try {
     # maturin is a dev dependency (pyproject [dependency-groups].dev, #892), so it is
