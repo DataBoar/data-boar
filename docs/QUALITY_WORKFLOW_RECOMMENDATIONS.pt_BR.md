@@ -70,9 +70,60 @@ Este documento sugere **camadas adicionais** (ferramentas, hábitos e fluxo de t
 #### O que fazemos (Semgrep):
 
 - **GitHub Actions:** [`.github/workflows/semgrep.yml`](../.github/workflows/semgrep.yml) roda em push/PR para `main`/`master` usando o container oficial **`semgrep/semgrep`**, ruleset **`p/python`**, **`--metrics=off`** e uma **regra excluída** documentada nos comentários do workflow (falso positivo em caminhos `sqlalchemy.text` verificados).
-- **Local (opcional):** `uvx semgrep scan --config p/python --metrics=off` (adicione o mesmo `--exclude-rule` do workflow para paridade). Regras customizadas podem ficar sob `.semgrep/` no futuro.
+- **Local (opcional):** `uvx semgrep scan --config p/python --metrics=off` com o mesmo **`--exclude-rule`** do workflow (veja **§ check-all espelho unificado** abaixo). Regras customizadas podem ficar sob `.semgrep/` no futuro.
 
 **Previne:** Padrões extras de vulnerabilidade/bug em Python; complementa o CodeQL.
+
+---
+
+### 4b. Zizmor (análise estática de workflows)
+
+**Por quê:** Workflows do GitHub Actions são código — `permissions` mal configuradas, actions sem pin ou padrões perigosos de `pull_request_target` são riscos de cadeia de suprimentos e abuso. O **Zizmor** varre `.github/workflows/` nessas classes de problema.
+
+#### O que fazemos (Zizmor):
+
+- **CI:** [`.github/workflows/zizmor.yml`](../.github/workflows/zizmor.yml) roda em push/PR via **`zizmorcore/zizmor-action`** (SHA fixo). **Avisório** por padrão, salvo **`ZIZMOR_ENFORCE`** / **`ENFORCE_ZIZMOR`** no repo — veja [OPERATOR_NOTIFICATION_CHANNELS.md](ops/OPERATOR_NOTIFICATION_CHANNELS.md) e **`scripts/workflow-security-lint.sh`**.
+- **Local:** `uvx zizmor .github/workflows/` (mesmo caminho que **`workflow-security-lint.sh`**). O **`check-all`** executa Zizmor no tier **padrão** de security scans e **falha** em achados (postura shift-left antes do merge).
+
+**Previne:** Misconfigurações de workflow que Bandit/Semgrep não veem.
+
+---
+
+### 4c. `check-all` como espelho unificado do CI (tiered)
+
+**Por quê:** Contribuidores na estação **Linux primary** e agentes devem rodar **um** ritual local que espelha **o que o CI vai rodar**, sem redigitar comandos de cinco workflows.
+
+#### Tiers (`./scripts/check-all.sh` / `.\scripts\check-all.ps1`)
+
+| Tier | Quando | O quê (após gatekeeper, Rust, plans-stats, hubs, Pester, pre-commit, pytest) |
+| ---- | ------ | ---------------------------------------------------------------------------- |
+| **Padrão (offline-capable)** | Todo pré-PR / slice do agente | **Bandit** — `uv run bandit -c pyproject.toml -r api core config connectors database file_scan report main.py -ll -q`. **Zizmor** — `uvx zizmor .github/workflows/`. |
+| **Opt-in `--enforced` / `-Enforced`** | Antes de PRs sensíveis à segurança | **+ Semgrep** — `uvx semgrep scan --config p/python --metrics=off` com o mesmo **`--exclude-rule`** de [`.github/workflows/semgrep.yml`](../.github/workflows/semgrep.yml), **`--error .`**. Requer rede para `uvx`. |
+
+**Fail-collect:** O tier de security scans roda **todos** os scans do tier e só então reporta **todas** as falhas (sem fail-fast entre Bandit / Zizmor / Semgrep). Gates anteriores (gatekeeper PII, Rust, pre-commit) ainda abortam imediatamente — veja **`scripts/check-all-security-scans.sh`** / **`.ps1`**.
+
+**Fora do `check-all` padrão (jobs CI separados):** CodeQL, Sonar, pip-audit, build SBOM — rodar via CI ou scripts dedicados.
+
+#### Ondas futuras (mesmo doc — fora do escopo de #1044)
+
+| Onda | Intenção | Status |
+| ---- | -------- | ------ |
+| **Onda 2** | Hooks **pre-commit** opcionais para Bandit / Zizmor (subconjunto rápido) | Adiado |
+| **Onda 3** | Regra Cursor: **`check-all --enforced` antes de PR** quando o slice toca conectores, workflows ou auth | Adiado — ponteiro na **§10** |
+
+---
+
+### ROI — economia shift-left
+
+Rodar **`check-all`** localmente (tier padrão) troca **~2–5 minutos** no PC de dev por **evitar uma volta completa no CI** (fila + matriz + container Semgrep), tipicamente **15–40+ minutos** quando Bandit ou workflow falham tarde.
+
+| Classe de achado | Sem espelho local | Com tier padrão do `check-all` |
+| ---------------- | ----------------- | ------------------------------ |
+| Bandit em connectors | Falha no job **Bandit** depois de lint+test | Surge num passe local |
+| Drift de permissão em workflow | Falha no workflow **Zizmor** (ou fica avisório) | Surge antes do push |
+| Caminho FP SQLAlchemy no Semgrep | Só com **`--enforced`** ou Semgrep no CI | Opt-in operador/agente — mesmo comando do container |
+
+**Hábito token-aware:** Use **`./scripts/check-all.sh --skip-pre-commit`** só ao iterar testes; rode **`check-all` completo** antes de abrir o PR. Use **`--enforced`** quando o diff tocar **superfícies de segurança** da Onda 3 — não em todo slice só de docs.
 
 ---
 
@@ -154,6 +205,7 @@ Este documento sugere **camadas adicionais** (ferramentas, hábitos e fluxo de t
 
 - Ao adicionar uma **nova** verificação de qualidade ou segurança (ex.: Ruff no CI, Bandit, nova regra do Sonar): atualize a **regra de qualidade** e a **skill** com o novo comando e o que evitar. Manter TESTING.md e este doc em sincronia.
 - Considerar uma **regra** curta que dispare ao editar config ou código de conector: "Use queries parametrizadas; sem segredos em logs; execute testes de segurança após mudança."
+- **Espelho `check-all` (#1044):** Gate local padrão = **`./scripts/check-all.sh`** / **`.\scripts\check-all.ps1`** (Bandit + Zizmor após pre-commit/pytest). Use **`--enforced`** / **`-Enforced`** para paridade Semgrep antes de PRs sensíveis — veja **§4c**. **Onda 3 (futuro):** codificar "rodar `--enforced` antes do PR" em **`.cursor/rules/quality-sonarqube-codeql.mdc`** quando o slice tocar conectores, workflows ou auth.
 
 **Previne:** Regressões e maus hábitos que se infiltram durante edições cotidianas.
 
@@ -166,6 +218,8 @@ Este documento sugere **camadas adicionais** (ferramentas, hábitos e fluxo de t
 | Lint (pre-commit) no CI   | Mesmos hooks que `.pre-commit-config.yaml`         | Baixo  | Deriva em relação a hooks locais, job de lint falhando          |
 | Pre-commit (local)        | Capturar no `git commit`                           | Baixo  | CI falhando, retrabalho                                         |
 | Bandit                    | Padrões de segurança Python (CI **medium+**)       | Baixo  | Antipadrões que testes podem perder; triagem **low** na Phase 3 |
+| Zizmor                    | Higiene de workflows GitHub Actions                | Baixo  | Deriva de permissões/pins antes do CI                          |
+| Espelho `check-all`       | Paridade local tiered (Bandit+Zizmor+Semgrep opt.) | Baixo  | Falhas tardias no CI, loops de retrabalho                     |
 | Semgrep                   | SAST customizado + comunidade                      | Médio  | Padrões extras de vulnerabilidade/bug                           |
 | mypy                      | Segurança de tipos                                 | Médio  | Bugs de refatoração, tipos errados                              |
 | MD029 / script de correção | Evitar retrabalho em docs                         | Baixo  | Correções manuais repetidas de numeração                        |
@@ -179,7 +233,7 @@ Este documento sugere **camadas adicionais** (ferramentas, hábitos e fluxo de t
 
 ## O que você pode não estar monitorando ainda
 
-1. **Lint vs local** — CI roda **`pre-commit run --all-files`**; instale **`uv run pre-commit install`** para que **`git commit`** tenha paridade.
+1. **Lint vs local** — CI roda **`pre-commit run --all-files`**; instale **`uv run pre-commit install`** para que **`git commit`** tenha paridade. **`check-all`** adiciona **Bandit + Zizmor** (padrão) e **Semgrep** opcional com **`--enforced`** — veja **§4c**.
 1. **MD029 e listas semânticas** — O script de correção pode sobrescrever numeração intencional 1/2/3; veja [ADR 0001](adr/ADR-0001-markdown-fix-script-md029-and-semantic-step-lists.md).
 1. **Proteção de branch** — Habilitar quando os nomes de checks obrigatórios estiverem estáveis (incluir **Semgrep** se quiser bloquear merges). Veja [WORKFLOW_DEFERRED_FOLLOWUPS.md](ops/WORKFLOW_DEFERRED_FOLLOWUPS.md).
 1. **Tipos** — mypy é gradual somente-dev até triagem (§5).
