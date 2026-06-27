@@ -264,7 +264,6 @@ Podman is a daemonless, rootless container runtime — the default on
 RHEL/Fedora and recommended for zero-trust environments.
 
 ```bash
-# Pull and run (rootless — no sudo required)
 podman run -d --name data-boar \
   -p 8088:8088 \
   -v ./data:/data:z \
@@ -272,13 +271,14 @@ podman run -d --name data-boar \
 ```
 
 > **SELinux note:** Use `:z` (shared label) or `:Z` (private label)
-> on the volume mount when SELinux is enforcing. Omit on non-SELinux hosts.
+> on the volume mount when SELinux is enforcing.
+> Omit the label on non-SELinux hosts.
 
-For Compose-style workflows, `podman-compose` accepts the existing
-`deploy/docker-compose.yml` without changes:
+For Compose-style workflows, `podman-compose` is compatible with the
+existing `deploy/docker-compose.yml`:
 
 ```bash
-pip install podman-compose
+pipx install podman-compose
 podman-compose -f deploy/docker-compose.yml up -d
 ```
 
