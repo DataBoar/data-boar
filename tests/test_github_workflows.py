@@ -368,7 +368,7 @@ def test_dockerfile_pins_python_base_image_by_digest() -> None:
         for line in text.splitlines()
         if line.strip().upper().startswith("FROM ")
     ]
-    assert len(from_lines) >= 2
+    assert len(from_lines) >= 3
     for line in from_lines:
         assert "@sha256:" in line, f"expected digest pin in FROM line: {line!r}"
 

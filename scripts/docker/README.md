@@ -10,6 +10,8 @@ All scripts assume the **repository root** is the parent of `scripts/` (run them
 | [../docker-lab-build.ps1](../docker-lab-build.ps1)                     | `docker build -t data_boar:lab`; optionally re-tags old **lab** → **lab-prev** before rebuild; optional **-TagSmoke** for A/B.                      |
 | [../docker-prune-local.ps1](../docker-prune-local.ps1)                 | `docker rmi` extra tags on **fabioleitao/data_boar** and **data_boar** repos; keeps a small allowlist. Use **-WhatIf** first.                       |
 | [../docker-scout-critical-gate.ps1](../docker-scout-critical-gate.ps1) | Scout CRITICAL gate: fails only when a **fixed** CRITICAL exists; warns/pass on upstream **not fixed** CVEs.                                        |
+| [docker-image-smoke.sh](docker-image-smoke.sh) / [docker-image-smoke.ps1](docker-image-smoke.ps1) | Post-build smoke (#1028): public version, no octet leak, `boar_fast_filter` import, **TLS** probe (`httpx` → `https://example.com`). |
+| [collect-runtime-rootfs.sh](collect-runtime-rootfs.sh) | Bundle `/usr/local`, DB/TLS `.so`, CA certs for distroless runtime (#1028). |
 | [DataBoarDockerCommon.ps1](DataBoarDockerCommon.ps1)                   | Shared helpers (dot-sourced only).                                                                                                                  |
 
 ## Typical flows
