@@ -1,6 +1,6 @@
 # PLAN: Organizational maturity self-assessment (GRC-style questionnaire)
 
-**Status:** Completed
+**Status:** Completed (archived under `docs/plans/completed/`)
 **Date:** 2026-04-16
 **Authors:** Fabio Leitao
 **Priority:** H0
@@ -11,7 +11,7 @@
 
 **Horizon / urgency:** `[H3]` or `[H4]` · `[U3]` for the **complete** product slice; next code slices: **tenant/history model** when clear, then **RBAC** (#86) alignment.
 
-**Synced with:** [PLANS_TODO.md](PLANS_TODO.md) (Backlog catalogue entry).
+**Synced with:** [PLANS_TODO.md](../PLANS_TODO.md) (Backlog catalogue entry).
 
 ### POC ready — minimum checklist (definition of done)
 
@@ -21,9 +21,9 @@ Use this list to declare the **maturity POC “ready”** for demos, beta notes,
 | --- | --- | --- |
 | 1 | **CI / tests** | `main` green: `pytest` coverage for assessment routes and DB (`tests/test_api_assessment_poc.py`, `tests/test_maturity_assessment_integrity.py`, `tests/test_database.py` batch summaries), plus repo-wide gate (`scripts/check-all.ps1` or CI **Lint** + **Test**). **Autonomous subset (fast):** `scripts/smoke-maturity-assessment-poc.ps1` (Windows) — same files as gate 1 minus full suite. |
 | 2 | **Config documented** | `api.maturity_self_assessment_poc_enabled: true`, valid **`api.maturity_assessment_pack_path`** (YAML shape per `tests/fixtures/maturity_assessment/sample_pack.yaml`), and tier **Pro+** for this feature — in lab via `licensing.effective_tier: pro` in YAML ([docs/USAGE.md](../USAGE.md) table row). |
-| 3 | **Happy path (manual smoke)** | Step-by-step: [docs/ops/SMOKE_MATURITY_ASSESSMENT_POC.md](../ops/SMOKE_MATURITY_ASSESSMENT_POC.md) ([pt-BR](../ops/SMOKE_MATURITY_ASSESSMENT_POC.pt_BR.md)) §D — browser flow (form → summary → history → export). |
-| 4 | **Integrity (optional demo)** | Same runbook §E — **`DATA_BOAR_MATURITY_INTEGRITY_SECRET`** at submit time; **`GET /status`** and **`--export-audit-trail`** ([ADR 0015](../adr/ADR-0015-poc-test-infrastructure-synthetic-corpus-and-api-testing.md) test posture). |
-| 5 | **Docs / ADR** | Operator-facing text in [USAGE.md](../USAGE.md) (+ pt-BR) for assessment + batch history; [ADR 0032](../adr/ADR-0032-maturity-assessment-batch-history-sqlite.md) for history behaviour. |
+| 3 | **Happy path (manual smoke)** | Step-by-step: [docs/ops/SMOKE_MATURITY_ASSESSMENT_POC.md](../../ops/SMOKE_MATURITY_ASSESSMENT_POC.md) ([pt-BR](../../ops/SMOKE_MATURITY_ASSESSMENT_POC.pt_BR.md)) §D — browser flow (form → summary → history → export). |
+| 4 | **Integrity (optional demo)** | Same runbook §E — **`DATA_BOAR_MATURITY_INTEGRITY_SECRET`** at submit time; **`GET /status`** and **`--export-audit-trail`** ([ADR 0015](../../adr/ADR-0015-poc-test-infrastructure-synthetic-corpus-and-api-testing.md) test posture). |
+| 5 | **Docs / ADR** | Operator-facing text in [USAGE.md](../USAGE.md) (+ pt-BR) for assessment + batch history; [ADR 0032](../../adr/ADR-0032-maturity-assessment-batch-history-sqlite.md) for history behaviour. |
 
 **Checkpoint closed:** run **`smoke-maturity-assessment-poc.ps1`** + complete runbook §D (and §E if you need integrity demo). Then proceed to **[#86](https://github.com/FabioLeitao/data-boar/issues/86)** on a dedicated branch; **return** to maturity (DOCX→YAML per tenant, consultant UX) when packaging or customer needs require it — see § *Next steps* below.
 
@@ -32,8 +32,8 @@ Use this list to declare the **maturity POC “ready”** for demos, beta notes,
 | Level | What it proves | Typical evidence |
 | ----- | ---------------- | ---------------- |
 | **A — Automated gates** | Same pytest subset as checklist **gate 1** below — API, DB batch order, HMAC helpers, audit-export parity | `.\scripts\smoke-maturity-assessment-poc.ps1` exit **0** on current `main`; CI **Test** job green on the same files |
-| **B — Docs / ADR** | Operator can configure flags + pack path + tier from [USAGE.md](../USAGE.md); history behaviour documented | Checklist **gate 5** below; [ADR 0032](../adr/ADR-0032-maturity-assessment-batch-history-sqlite.md) |
-| **C — Full (demo / beta)** | Real browser UX: redirects, downloads, locale — **not** replaceable by pytest alone | [SMOKE_MATURITY_ASSESSMENT_POC.md](../ops/SMOKE_MATURITY_ASSESSMENT_POC.md) §D checkboxes (§E optional); record date + commit in **`docs/private/`** or a dated **today-mode** note if you want a paper trail **without** editing public plans |
+| **B — Docs / ADR** | Operator can configure flags + pack path + tier from [USAGE.md](../USAGE.md); history behaviour documented | Checklist **gate 5** below; [ADR 0032](../../adr/ADR-0032-maturity-assessment-batch-history-sqlite.md) |
+| **C — Full (demo / beta)** | Real browser UX: redirects, downloads, locale — **not** replaceable by pytest alone | [SMOKE_MATURITY_ASSESSMENT_POC.md](../../ops/SMOKE_MATURITY_ASSESSMENT_POC.md) §D checkboxes (§E optional); record date + commit in **`docs/private/`** or a dated **today-mode** note if you want a paper trail **without** editing public plans |
 
 **Agent / CI:** Safe to claim **Level A + B** when smoke + USAGE + ADR match shipped code. **Level C** requires an **operator** pass — do not mark “full POC ready” in release prose without §D.
 
@@ -45,16 +45,16 @@ Use this table so **agents / CI** do not promise what only a **human operator** 
 | --- | --- | --- |
 | **1** CI / smoke subset | **Yes** | `scripts/smoke-maturity-assessment-poc.ps1` (or full `check-all.ps1` / CI) runs `tests/test_api_assessment_poc.py`, `tests/test_maturity_assessment_integrity.py`, `tests/test_database.py::test_maturity_assessment_batch_summaries_newest_first`, `tests/test_audit_export.py::test_build_audit_trail_maturity_integrity_matches_verify`. |
 | **2** Config documented | **Docs only** | [USAGE.md](../USAGE.md) (+ pt-BR) documents flags, pack path, tier; operator still applies a **local** `config.yaml` for manual §D. |
-| **3** Happy path (§D) | **No** | Browser steps in [SMOKE_MATURITY_ASSESSMENT_POC.md](../ops/SMOKE_MATURITY_ASSESSMENT_POC.md) — **required** to declare **full** “POC ready” for demos. |
+| **3** Happy path (§D) | **No** | Browser steps in [SMOKE_MATURITY_ASSESSMENT_POC.md](../../ops/SMOKE_MATURITY_ASSESSMENT_POC.md) — **required** to declare **full** “POC ready” for demos. |
 | **4** Integrity (§E) | **Partial** | HMAC + `/status` + audit export are **covered by tests**; **§E** remains the **live** lab check with env secret + running process. |
-| **5** Docs / ADR | **Yes** | USAGE, [ADR 0032](../adr/ADR-0032-maturity-assessment-batch-history-sqlite.md), this plan, runbook EN + pt-BR. |
+| **5** Docs / ADR | **Yes** | USAGE, [ADR 0032](../../adr/ADR-0032-maturity-assessment-batch-history-sqlite.md), this plan, runbook EN + pt-BR. |
 
 **Working definitions:**
 
 - **“POC ready — automated gates”** — gate **1** green on `main` + gate **5** satisfied (already true when docs match code). Safe for **release notes / CI** language.
 - **“POC ready — full (demo/beta)”** — above + operator completes runbook **§D** (and **§E** if the story includes integrity demo).
 
-**Mapping runbook §D to pytest:** see [SMOKE_MATURITY_ASSESSMENT_POC.md](../ops/SMOKE_MATURITY_ASSESSMENT_POC.md) § *Pytest coverage vs browser checklist* — API contract and templates are exercised without a browser; §D is still the **UX** gate.
+**Mapping runbook §D to pytest:** see [SMOKE_MATURITY_ASSESSMENT_POC.md](../../ops/SMOKE_MATURITY_ASSESSMENT_POC.md) § *Pytest coverage vs browser checklist* — API contract and templates are exercised without a browser; §D is still the **UX** gate.
 
 **Explicitly not required for “POC ready”:** GitHub **#86** (session / WebAuthn / RBAC), **tenant-scoped** batch lists, **`licensing.mode: enforced`** + JWT in production, **DOCX→YAML** private import, legal/commercial one-pager, report-bundle annex.
 
@@ -65,14 +65,14 @@ Use this table so **agents / CI** do not promise what only a **human operator** 
 | Topic | Boundary |
 | ----- | -------- |
 | **In scope for this slice** | Prove **`maturity_self_assessment_poc`** respects `Tier.PRO` when `licensing.mode: enforced` and token carries `dbtier` (e.g. community → **404** on assessment routes; pro → **200**). **Done:** `tests/test_api_assessment_poc.py` (`test_assessment_enforced_jwt_dbtier_*`). **USAGE** already states JWT `dbtier` when enforced; precedence over YAML is explicit there. Optional: cross-link from [LICENSING_SPEC.md](../LICENSING_SPEC.md) “future extensions” to this plan. |
-| **Out of scope (still #86 / later)** | Browser **session**, **passwordless** / WebAuthn, **per-route RBAC**, **identity** for tenant-scoped history, **middleware** reorder — see [PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md](PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md). |
+| **Out of scope (still #86 / later)** | Browser **session**, **passwordless** / WebAuthn, **per-route RBAC**, **identity** for tenant-scoped history, **middleware** reorder — see [PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md](../PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md). |
 | **Branch / merge discipline** | Implement on a **dedicated feature branch**; **do not** combine with **#86 Phase 1** PRs — merge order remains: maturity POC checkpoint **→** tier/JWT slice **→** **#86** when scheduled ([SPRINTS_AND_MILESTONES.md](SPRINTS_AND_MILESTONES.md) §4.2). |
 
 **Code anchors:** `core/licensing/tier_features.py` (`maturity_self_assessment_poc` → **Pro**); `core/licensing/guard.py` (`dbtier` on context); tests in `tests/test_tier_features_open_core_subscription.py`, `tests/test_licensing.py`.
 
 ### Operator sequencing — prerequisites done; POC **A** shipped (SQLite + HMAC + scoring + history + export; **POC ready** = smoke + manual runbook)
 
-**M-LOCALE-V1 (dashboard i18n):** ✅ **shipped on `main`** (**2026-04**) — path-prefixed HTML, `en` + `pt-BR` catalogs, negotiation. See [PLAN_DASHBOARD_I18N.md](completed/PLAN_DASHBOARD_I18N.md) and [PLANS_TODO.md](PLANS_TODO.md) (Dashboard i18n section).
+**M-LOCALE-V1 (dashboard i18n):** ✅ **shipped on `main`** (**2026-04**) — path-prefixed HTML, `en` + `pt-BR` catalogs, negotiation. See [PLAN_DASHBOARD_I18N.md](PLAN_DASHBOARD_I18N.md) and [PLANS_TODO.md](../PLANS_TODO.md) (Dashboard i18n section).
 
 **Version signal for testers (do not rely on git inference alone):** **Published** stable line is **`v1.7.3`** / Python **`1.7.3`** (Hub / GitHub Release); **`main`** after publish may already show the next **`-beta`** ([VERSIONING.md](../VERSIONING.md)). Callouts: [CHANGELOG.md](../../CHANGELOG.md), [docs/releases/1.7.3.md](../releases/1.7.3.md), README **Current release**. Prior golden: [docs/releases/1.7.2-safe.md](../releases/1.7.2-safe.md). Prior feature notes: [docs/releases/1.7.1.md](../releases/1.7.1.md). For a frozen tree, **`git checkout v1.7.3`** — not only `git log` on moving **`main`**.
 
@@ -87,16 +87,16 @@ Use this table so **agents / CI** do not promise what only a **human operator** 
 | **3** | **C** — Companion app + API/SSO | Separation / white-label; evaluate **after** A/B learnings. |
 | **4** | **D** — PDF/export-only narrative | Simplicity vs interactivity; last in the **comparison chain**, not “never”. |
 
-**POC scaffolding (ongoing):** feature-flag + tier / JWT gates; optional YAML pack from **`api.maturity_assessment_pack_path`** — **no** proprietary questionnaire text in the **public** repo (curate privately; see `tests/fixtures/maturity_assessment/sample_pack.yaml` for shape). Routes use the same **`/{locale_slug}/…`** pattern as the rest of the dashboard HTML ([PLAN_DASHBOARD_I18N.md](completed/PLAN_DASHBOARD_I18N.md)).
+**POC scaffolding (ongoing):** feature-flag + tier / JWT gates; optional YAML pack from **`api.maturity_assessment_pack_path`** — **no** proprietary questionnaire text in the **public** repo (curate privately; see `tests/fixtures/maturity_assessment/sample_pack.yaml` for shape). Routes use the same **`/{locale_slug}/…`** pattern as the rest of the dashboard HTML ([PLAN_DASHBOARD_I18N.md](PLAN_DASHBOARD_I18N.md)).
 
 **Remember:** proceed **A → B → C → D** as **evaluation spikes**, not four full products—pick one shipping path after spikes unless counsel/commercial demands otherwise.
 
 ### After this track (operator sequencing — do not lose the thread)
 
-1. **[PLAN_PRODUCT_TIERS_AND_OPEN_CORE.md](PLAN_PRODUCT_TIERS_AND_OPEN_CORE.md)** — **Technical enforcement roadmap:** only **Phase 0** is done (claims sketched in **LICENSING_SPEC**, JWT path exists). **Phases 1–6** ( **`dbtier` / `dbfeatures` in tokens**, `check_feature()`, gates in connectors/reports, Partner/Enterprise rules) are **not started** — depends on **legal review** and issuer work; promote when GRC/maturity and commercial packaging need real entitlements (not just `licensing.effective_tier` lab simulation).
-2. **[PLAN_PDF_GRC_REPORT.md](PLAN_PDF_GRC_REPORT.md)** — **Different artefact:** PDF “em prosa” for **technical scan findings** (exec summary, priority matrix like a **cyber/GRC vulnerability-style** report). **Not** the org questionnaire; it complements technical evidence. Priority band **B** in that plan; still **planned** (Phases 1–2 unchecked).
-3. **[PLAN_SCOPE_IMPORT_FROM_EXPORTS.md](PLAN_SCOPE_IMPORT_FROM_EXPORTS.md)** — **After** maturity/DOCX is under control: bootstrap **customer asset inventory** from **exports** — **minimum** acceptable is a **manual CSV** (“everything the client remembers”: hosts, paths, tags) mapped to the **canonical schema** → merge-safe config fragments. Live ITSM APIs are **not** required for v1.
-4. **Dashboard RBAC — [GitHub #86](https://github.com/FabioLeitao/data-boar/issues/86)** (still **OPEN** as of plan updates): **Phase 1** = browser **session** + **Bitwarden Passwordless.dev** (minimum viable human auth) on the same **`/{locale}/…`** paths as i18n; then role/group gates for `/reports` and downloads per [PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md](PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md). **Order (2026-04):** **M-LOCALE-V1** ✅ → **maturity POC “POC ready” closure** (smoke + manual runbook) → **#86 Phase 1** on a dedicated branch → **scope import** — adjust only if a **security exception** forces early guards (then budget a migration slice).
+1. **[PLAN_PRODUCT_TIERS_AND_OPEN_CORE.md](../PLAN_PRODUCT_TIERS_AND_OPEN_CORE.md)** — **Technical enforcement roadmap:** only **Phase 0** is done (claims sketched in **LICENSING_SPEC**, JWT path exists). **Phases 1–6** ( **`dbtier` / `dbfeatures` in tokens**, `check_feature()`, gates in connectors/reports, Partner/Enterprise rules) are **not started** — depends on **legal review** and issuer work; promote when GRC/maturity and commercial packaging need real entitlements (not just `licensing.effective_tier` lab simulation).
+2. **[PLAN_PDF_GRC_REPORT.md](../PLAN_PDF_GRC_REPORT.md)** — **Different artefact:** PDF “em prosa” for **technical scan findings** (exec summary, priority matrix like a **cyber/GRC vulnerability-style** report). **Not** the org questionnaire; it complements technical evidence. Priority band **B** in that plan; still **planned** (Phases 1–2 unchecked).
+3. **[PLAN_SCOPE_IMPORT_FROM_EXPORTS.md](../PLAN_SCOPE_IMPORT_FROM_EXPORTS.md)** — **After** maturity/DOCX is under control: bootstrap **customer asset inventory** from **exports** — **minimum** acceptable is a **manual CSV** (“everything the client remembers”: hosts, paths, tags) mapped to the **canonical schema** → merge-safe config fragments. Live ITSM APIs are **not** required for v1.
+4. **Dashboard RBAC — [GitHub #86](https://github.com/FabioLeitao/data-boar/issues/86)** (still **OPEN** as of plan updates): **Phase 1** = browser **session** + **Bitwarden Passwordless.dev** (minimum viable human auth) on the same **`/{locale}/…`** paths as i18n; then role/group gates for `/reports` and downloads per [PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md](../PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md). **Order (2026-04):** **M-LOCALE-V1** ✅ → **maturity POC “POC ready” closure** (smoke + manual runbook) → **#86 Phase 1** on a dedicated branch → **scope import** — adjust only if a **security exception** forces early guards (then budget a migration slice).
 
 ## Problem statement
 
@@ -113,7 +113,7 @@ Operators and consultants need **organizational** visibility (roles, processes, 
 - **Aligned:** Same “evidence and governance” story: technical scan shows **where** data lives; maturity form shows **how prepared** the organization claims to be—both feed the DPO/consultant narrative in sales and delivery.
 - **Not aligned with open core:** This is **process/GRC content**, heavy UX, and ongoing content maintenance—natural fit for **commercial / partner** tier or a **separate product**, not the BSD AGPL community baseline.
 
-**Branding:** Can share **Data Boar** / **dashBOARd** chrome if embedded; must not blur **legal conclusions**—copy must repeat that output is **self-reported maturity signal**, not certification (see [ADR 0025](../adr/ADR-0025-compliance-positioning-evidence-inventory-not-legal-conclusion-engine.md) posture).
+**Branding:** Can share **Data Boar** / **dashBOARd** chrome if embedded; must not blur **legal conclusions**—copy must repeat that output is **self-reported maturity signal**, not certification (see [ADR 0025](../../adr/ADR-0025-compliance-positioning-evidence-inventory-not-legal-conclusion-engine.md) posture).
 
 ## Architecture options (decision later)
 
@@ -150,18 +150,18 @@ Feasible: treat **question banks** and **weights** as data (like **compliance sa
 
 ## Next steps (ordered; POC-first)
 
-1. **POC A — done for persistence + integrity + rubric + download export + in-dashboard batch history:** SQLite + YAML pack (optional **`scores`**) + HMAC + `/status` + audit export ✅; **post-submit summary** on `GET /{locale}/assessment?saved=1&batch=…` (row count + rubric + HMAC counts for that batch) ✅; **recent submissions** table on `GET /{locale}/assessment` (per `batch_id`, newest first) ✅; **`GET /{locale}/assessment/export?batch=…&format=csv|md`** ✅; **tier/JWT** API tests ✅. **POC ready closure:** `scripts/smoke-maturity-assessment-poc.ps1` + [SMOKE_MATURITY_ASSESSMENT_POC.md](../ops/SMOKE_MATURITY_ASSESSMENT_POC.md) manual §D (§E optional).
-2. **Product sequencing (2026-04):** After the smoke checkpoint, **prioritise [GitHub #86](https://github.com/FabioLeitao/data-boar/issues/86) Phase 1** (session + passwordless on `/{locale}/…`) on a **dedicated branch** — see [PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md](PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md). **Revisit maturity POC** only when needed (DOCX→YAML curation for a **tenant**, export annex, consultant UX).
+1. **POC A — done for persistence + integrity + rubric + download export + in-dashboard batch history:** SQLite + YAML pack (optional **`scores`**) + HMAC + `/status` + audit export ✅; **post-submit summary** on `GET /{locale}/assessment?saved=1&batch=…` (row count + rubric + HMAC counts for that batch) ✅; **recent submissions** table on `GET /{locale}/assessment` (per `batch_id`, newest first) ✅; **`GET /{locale}/assessment/export?batch=…&format=csv|md`** ✅; **tier/JWT** API tests ✅. **POC ready closure:** `scripts/smoke-maturity-assessment-poc.ps1` + [SMOKE_MATURITY_ASSESSMENT_POC.md](../../ops/SMOKE_MATURITY_ASSESSMENT_POC.md) manual §D (§E optional).
+2. **Product sequencing (2026-04):** After the smoke checkpoint, **prioritise [GitHub #86](https://github.com/FabioLeitao/data-boar/issues/86) Phase 1** (session + passwordless on `/{locale}/…`) on a **dedicated branch** — see [PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md](../PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md). **Revisit maturity POC** only when needed (DOCX→YAML curation for a **tenant**, export annex, consultant UX).
 3. **DOCX → YAML (private):** Curate sections/questions under **`docs/private/`**, then author YAML matching `core/maturity_assessment/pack.py` — **no** proprietary strings in public Git; promote when a **customer/tenant** pack is in scope (same workflow as § *DOCX → YAML workflow* above).
 4. Legal/commercial one-pager: positioning vs audit; consent for storing responses.
-5. **Architecture lock:** spike **A** remains default; revisit **C** only after A/B learnings — align with [PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md](PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md) and API key / future SSO (#86).
-6. MVP: **bundle** org answers into report annex or narrative export (distinct from technical **[PLAN_PDF_GRC_REPORT.md](PLAN_PDF_GRC_REPORT.md)** PDF stream).
+5. **Architecture lock:** spike **A** remains default; revisit **C** only after A/B learnings — align with [PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md](../PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md) and API key / future SSO (#86).
+6. MVP: **bundle** org answers into report annex or narrative export (distinct from technical **[PLAN_PDF_GRC_REPORT.md](../PLAN_PDF_GRC_REPORT.md)** PDF stream).
 
 ## Relationship to other plans
 
-- **[PLAN_PRODUCT_TIERS_AND_OPEN_CORE.md](PLAN_PRODUCT_TIERS_AND_OPEN_CORE.md)** — subscription / partner tier boundaries; maturity assessment is **not** open core — enforcement phases **1+** apply when moving past POC/lab gates.
-- **[PLAN_PDF_GRC_REPORT.md](PLAN_PDF_GRC_REPORT.md)** — **Scan output** PDF (exec + detailed + priority matrix); **not** the org self-assessment form — cross-sell in GRC narratives only.
-- **[PLAN_SCOPE_IMPORT_FROM_EXPORTS.md](PLAN_SCOPE_IMPORT_FROM_EXPORTS.md)** — complementary “bootstrap from existing tools” story; assessment is **people/process**, scope import is **technical inventory**.
+- **[PLAN_PRODUCT_TIERS_AND_OPEN_CORE.md](../PLAN_PRODUCT_TIERS_AND_OPEN_CORE.md)** — subscription / partner tier boundaries; maturity assessment is **not** open core — enforcement phases **1+** apply when moving past POC/lab gates.
+- **[PLAN_PDF_GRC_REPORT.md](../PLAN_PDF_GRC_REPORT.md)** — **Scan output** PDF (exec + detailed + priority matrix); **not** the org self-assessment form — cross-sell in GRC narratives only.
+- **[PLAN_SCOPE_IMPORT_FROM_EXPORTS.md](../PLAN_SCOPE_IMPORT_FROM_EXPORTS.md)** — complementary “bootstrap from existing tools” story; assessment is **people/process**, scope import is **technical inventory**.
 - **Dashboard RBAC / #86** — required if multi-user tenants fill forms.
 
 ---

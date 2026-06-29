@@ -2,11 +2,11 @@
 
 **English:** [SMOKE_MATURITY_ASSESSMENT_POC.md](SMOKE_MATURITY_ASSESSMENT_POC.md)
 
-**Plano:** [PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md](../plans/PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md) (checklist POC ready).
+**Plano:** [PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md](../plans/completed/PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md) (checklist POC ready).
 
 Este runbook cobre os itens **manuais** **3** (happy path) e **4** (integridade opcional). O gate **1** automatizado fica na CI e no script **`scripts/smoke-maturity-assessment-poc.ps1`** (subconjunto de pytest).
 
-**Níveis de evidência (A/B/C):** [PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md](../plans/PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md) secao *POC ready — evidence levels* — **A** = este script + CI; **B** = USAGE + ADR; **C** = secao D abaixo.
+**Níveis de evidência (A/B/C):** [PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md](../plans/completed/PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md) secao *POC ready — evidence levels* — **A** = este script + CI; **B** = USAGE + ADR; **C** = secao D abaixo.
 
 ---
 
@@ -33,7 +33,7 @@ Os testes automatizados exercitam as **mesmas rotas e persistencia** que a secao
 | D5 — export CSV / Markdown | Assercoes de export dentro de `test_assessment_post_persists_answers` |
 | D6 — locale `pt-br` | `test_assessment_placeholder_200_when_flag_on_open_tier` (GET `/pt-br/assessment`) |
 
-**Por que D ainda e obrigatorio para “POC ready completo”:** estilo, acessibilidade e download real nao substituem uma **passada do operador** no runbook — ver [PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md](../plans/PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md) secao *Autonomous vs operator*.
+**Por que D ainda e obrigatorio para “POC ready completo”:** estilo, acessibilidade e download real nao substituem uma **passada do operador** no runbook — ver [PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md](../plans/completed/PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md) secao *Autonomous vs operator*.
 
 ---
 

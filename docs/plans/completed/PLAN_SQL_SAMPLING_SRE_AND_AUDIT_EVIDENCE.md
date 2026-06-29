@@ -1,15 +1,15 @@
 # Plan: SQL column sampling — SRE posture, audit evidence, and statistical “pre-wiring”
 
-**Status:** Completed
+**Status:** Completed (archived under `docs/plans/completed/`)
 **Date:** 2026-04-26
 **Authors:** Fabio Leitao
 **Priority:** H2
 **Depends on:** ADR-0043
 
-**Synced with:** [PLANS_TODO.md](PLANS_TODO.md) (*Integration / active threads*), [ADR 0043](../adr/ADR-0043-sql-column-sampling-non-null-and-strategy-hook.md)
+**Synced with:** [PLANS_TODO.md](../PLANS_TODO.md) (*Integration / active threads*), [ADR 0043](../../adr/ADR-0043-sql-column-sampling-non-null-and-strategy-hook.md)
 
 <!-- plans-hub-summary: SRE-safe SQL column sampling: non-null TOP/LIMIT today; roadmap for metadata-driven caps, TABLESAMPLE, audit coverage signals. -->
-<!-- plans-hub-related: PLAN_ADDITIONAL_DETECTION_TECHNIQUES_AND_FN_REDUCTION.md, ../TOPOLOGY.md -->
+<!-- plans-hub-related: PLAN_ADDITIONAL_DETECTION_TECHNIQUES_AND_FN_REDUCTION.md, ../../TOPOLOGY.md -->
 
 ## Purpose
 
@@ -59,5 +59,5 @@ Use this block when scoping refactors or demos so paths match the repo (not hypo
 
 ## References
 
-- [ADR 0043](../adr/ADR-0043-sql-column-sampling-non-null-and-strategy-hook.md) — decision record.
-- [PLAN_ADDITIONAL_DETECTION_TECHNIQUES_AND_FN_REDUCTION.md](PLAN_ADDITIONAL_DETECTION_TECHNIQUES_AND_FN_REDUCTION.md) — FN / incomplete-sample narrative.
+- [ADR 0043](../../adr/ADR-0043-sql-column-sampling-non-null-and-strategy-hook.md) — decision record.
+- [PLAN_ADDITIONAL_DETECTION_TECHNIQUES_AND_FN_REDUCTION.md](../PLAN_ADDITIONAL_DETECTION_TECHNIQUES_AND_FN_REDUCTION.md) — FN / incomplete-sample narrative.

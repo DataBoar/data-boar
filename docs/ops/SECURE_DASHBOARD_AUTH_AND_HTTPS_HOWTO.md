@@ -4,7 +4,7 @@
 
 **Audience:** Technicians who will turn on **API key protection** and **TLS** for the Data Boar web dashboard (`main.py --web`). This complements (does not replace) [USAGE.md](../USAGE.md) ([pt-BR](../USAGE.pt_BR.md)), root [SECURITY.md](../../SECURITY.md) ([pt-BR](../../SECURITY.pt_BR.md)), and [deploy/DEPLOY.md](../deploy/DEPLOY.md) ([pt-BR](../deploy/DEPLOY.pt_BR.md)).
 
-**Related runbooks:** [API_KEY_FROM_ENV_OPERATOR_STEPS.md](API_KEY_FROM_ENV_OPERATOR_STEPS.md) (env wiring detail), [SECURE_BY_DEFAULT_BLOCKERS_AND_MIGRATION.md](SECURE_BY_DEFAULT_BLOCKERS_AND_MIGRATION.md) ([pt-BR](SECURE_BY_DEFAULT_BLOCKERS_AND_MIGRATION.pt_BR.md)) (rollout order), [PLAN_DASHBOARD_HTTPS_BY_DEFAULT_AND_HTTP_EXPLICIT_RISK.md](../plans/PLAN_DASHBOARD_HTTPS_BY_DEFAULT_AND_HTTP_EXPLICIT_RISK.md) (product rationale and anti-patterns).
+**Related runbooks:** [API_KEY_FROM_ENV_OPERATOR_STEPS.md](API_KEY_FROM_ENV_OPERATOR_STEPS.md) (env wiring detail), [SECURE_BY_DEFAULT_BLOCKERS_AND_MIGRATION.md](SECURE_BY_DEFAULT_BLOCKERS_AND_MIGRATION.md) ([pt-BR](SECURE_BY_DEFAULT_BLOCKERS_AND_MIGRATION.pt_BR.md)) (rollout order), [PLAN_DASHBOARD_HTTPS_BY_DEFAULT_AND_HTTP_EXPLICIT_RISK.md](../plans/completed/PLAN_DASHBOARD_HTTPS_BY_DEFAULT_AND_HTTP_EXPLICIT_RISK.md) (product rationale and anti-patterns).
 
 **Optional WebAuthn JSON (Phase 1a):** When **`api.webauthn.enabled: true`** and the token secret env (default **`DATA_BOAR_WEBAUTHN_TOKEN_SECRET`**) is set before startup, the API exposes **`/auth/webauthn/*`** for **FIDO2 / passkey** registration and authentication ([ADR 0033](../adr/ADR-0033-webauthn-open-relying-party-json-endpoints.md)). **`api.require_api_key`** does **not** apply to those paths. This does **not** require login for the HTML dashboard yet; browser session gates and RBAC are **[#86](https://github.com/FabioLeitao/data-boar/issues/86)** follow-up. Pytest subset: [SMOKE_WEBAUTHN_JSON.md](SMOKE_WEBAUTHN_JSON.md).
 
@@ -144,7 +144,7 @@ api:
 
 ### B.4 Self-signed certificates (alternative — lab / QA / UAT only)
 
-**Not** the default recommendation for production user trust. Browsers will warn unless you install a trust anchor (see anti-patterns in [PLAN_DASHBOARD_HTTPS_BY_DEFAULT_AND_HTTP_EXPLICIT_RISK.md](../plans/PLAN_DASHBOARD_HTTPS_BY_DEFAULT_AND_HTTP_EXPLICIT_RISK.md)).
+**Not** the default recommendation for production user trust. Browsers will warn unless you install a trust anchor (see anti-patterns in [PLAN_DASHBOARD_HTTPS_BY_DEFAULT_AND_HTTP_EXPLICIT_RISK.md](../plans/completed/PLAN_DASHBOARD_HTTPS_BY_DEFAULT_AND_HTTP_EXPLICIT_RISK.md)).
 
 ## Quick openssl example (localhost-focused, 365 days):
 

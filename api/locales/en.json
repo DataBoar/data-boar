@@ -50,7 +50,7 @@
     "answer_no": "No",
     "answer_na": "Not applicable",
     "lead": "This page is an optional product placeholder. The open repository does not ship proprietary questionnaire items.",
-    "body_p1": "Scope and architecture options are described in docs/plans/PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md.",
+    "body_p1": "Scope and architecture options are described in docs/plans/completed/PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md.",
     "body_p2": "Any future output is a self-reported maturity signal only—not legal advice, audit, or certification."
   },
   "dashboard": {

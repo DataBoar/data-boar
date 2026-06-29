@@ -5,7 +5,7 @@
 **Authors:** Fabio Leitao
 **Priority:** H2
 
-**Synced with:** [PLANS_TODO.md](PLANS_TODO.md), [PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md](PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md) (Tier 3b / “sniffing for hidden ingredients” umbrella)
+**Synced with:** [PLANS_TODO.md](PLANS_TODO.md), [PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md](completed/PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md) (Tier 3b / “sniffing for hidden ingredients” umbrella)
 
 ## Purpose
 
@@ -125,7 +125,7 @@ discovery:
 
 ## Cross-references
 
-- **Tier 3b / hidden ingredients:** [PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md](PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md) § Tier 3b and Tier 4 (network strings **inside** files vs this plan: **live** port hints).
+- **Tier 3b / hidden ingredients:** [PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md](completed/PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md) § Tier 3b and Tier 4 (network strings **inside** files vs this plan: **live** port hints).
 - **Data source inventory:** Existing report sheet can reference hinted services once a real target is configured.
-- **Dashboard HTTPS / trust:** Transport and audit posture in [PLAN_DASHBOARD_HTTPS_BY_DEFAULT_AND_HTTP_EXPLICIT_RISK.md](PLAN_DASHBOARD_HTTPS_BY_DEFAULT_AND_HTTP_EXPLICIT_RISK.md).
-- **Audit export:** When [PLAN_DASHBOARD_HTTPS_BY_DEFAULT_AND_HTTP_EXPLICIT_RISK.md](PLAN_DASHBOARD_HTTPS_BY_DEFAULT_AND_HTTP_EXPLICIT_RISK.md) **phase 4** ships, consider appending **probe summary counts** (no raw banners) to the same JSON export if this feature is enabled — separate schema bump.
+- **Dashboard HTTPS / trust:** Transport and audit posture in [PLAN_DASHBOARD_HTTPS_BY_DEFAULT_AND_HTTP_EXPLICIT_RISK.md](completed/PLAN_DASHBOARD_HTTPS_BY_DEFAULT_AND_HTTP_EXPLICIT_RISK.md).
+- **Audit export:** When [PLAN_DASHBOARD_HTTPS_BY_DEFAULT_AND_HTTP_EXPLICIT_RISK.md](completed/PLAN_DASHBOARD_HTTPS_BY_DEFAULT_AND_HTTP_EXPLICIT_RISK.md) **phase 4** ships, consider appending **probe summary counts** (no raw banners) to the same JSON export if this feature is enabled — separate schema bump.

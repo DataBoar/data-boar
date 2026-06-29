@@ -7,7 +7,7 @@
 **Authors:** Fabio Leitao (operator); draft RO vault + execução Cursor
 **Priority:** H1
 **GitHub:** [#1028](https://github.com/FabioLeitao/data-boar/issues/1028) `[P2][build][security]`
-**Related:** [#856](https://github.com/FabioLeitao/data-boar/issues/856) (integrity/trust) · [PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md](PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md) · [ADR-0074](../adr/ADR-0074-supply-chain-layer1-digest-pins-and-rust-sca.md) (digest pins) · release machinery [#75](https://github.com/FabioLeitao/data-boar/issues/75)
+**Related:** [#856](https://github.com/FabioLeitao/data-boar/issues/856) (integrity/trust) · [PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md](../PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md) · [ADR-0074](../adr/ADR-0074-supply-chain-layer1-digest-pins-and-rust-sca.md) (digest pins) · release machinery [#75](https://github.com/FabioLeitao/data-boar/issues/75)
 
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md)
 

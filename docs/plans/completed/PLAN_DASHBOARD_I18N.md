@@ -2,7 +2,7 @@
 
 **Status:** **Complete (archived)** — **Target architecture agreed**; **D-WEB** ✅; **M-LOCALE-V1** ✅ on **`main`** (**2026-04**). This file lives in **`docs/plans/completed/`** for reference. **Next dashboard-web priority:** [#86](https://github.com/FabioLeitao/data-boar/issues/86) **Phase 1** (session + passwordless) on **stable** `/{locale}/…` routes — see § *Meshing with dashboard reports RBAC*.
 
-**Next `feature` session (when scheduled):** [#86](https://github.com/FabioLeitao/data-boar/issues/86) Phase 1 per **PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md**, or [GRC maturity POC](../PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md) when promoted in **PLANS_TODO.md** — **do not** bundle unrelated tracks in one PR unless the operator explicitly combines them.
+**Next `feature` session (when scheduled):** [#86](https://github.com/FabioLeitao/data-boar/issues/86) Phase 1 per **PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md**, or [GRC maturity POC](PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md) when promoted in **PLANS_TODO.md** — **do not** bundle unrelated tracks in one PR unless the operator explicitly combines them.
 
 **Synced with:** [PLANS_TODO.md](../PLANS_TODO.md), [SPRINTS_AND_MILESTONES.md](../SPRINTS_AND_MILESTONES.md), [PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md](../PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md) (**#86**). **Future public website** (marketing + doc hub) should **reuse the same locale model** (path prefix, cookie, `Accept-Language`, JSON catalogs) — see [PLAN_WEBSITE_AND_DOCS_I18N_FUTURE.md](../PLAN_WEBSITE_AND_DOCS_I18N_FUTURE.md) §2.2.
 

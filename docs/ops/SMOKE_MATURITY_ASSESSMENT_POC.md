@@ -2,11 +2,11 @@
 
 **Portuguese (Brazil):** [SMOKE_MATURITY_ASSESSMENT_POC.pt_BR.md](SMOKE_MATURITY_ASSESSMENT_POC.pt_BR.md)
 
-**Plan:** [PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md](../plans/PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md) (POC ready checklist).
+**Plan:** [PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md](../plans/completed/PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md) (POC ready checklist).
 
 This runbook closes **manual** checklist items **3** (happy path) and **4** (optional integrity). **Automated** gate **1** is covered by CI and by `scripts/smoke-maturity-assessment-poc.ps1` (subset of pytest).
 
-**Evidence levels (A/B/C):** [PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md](../plans/PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md) § *POC ready — evidence levels* — **A** = this script + CI; **B** = USAGE + ADR; **C** = §D below.
+**Evidence levels (A/B/C):** [PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md](../plans/completed/PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md) § *POC ready — evidence levels* — **A** = this script + CI; **B** = USAGE + ADR; **C** = §D below.
 
 ---
 
@@ -33,7 +33,7 @@ Automated tests exercise the **same routes and persistence** as §D without a br
 | D5 — CSV / Markdown export | CSV and Markdown export assertions inside `test_assessment_post_persists_answers` |
 | D6 — `pt-br` locale | `test_assessment_placeholder_200_when_flag_on_open_tier` (GET `/pt-br/assessment`) |
 
-**Why §D is still required for “full POC ready”:** Styling, accessibility, and real download behaviour are not a substitute for one **operator pass** through the runbook — see [PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md](../plans/PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md) § *Autonomous vs operator*.
+**Why §D is still required for “full POC ready”:** Styling, accessibility, and real download behaviour are not a substitute for one **operator pass** through the runbook — see [PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md](../plans/completed/PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md) § *Autonomous vs operator*.
 
 ---
 

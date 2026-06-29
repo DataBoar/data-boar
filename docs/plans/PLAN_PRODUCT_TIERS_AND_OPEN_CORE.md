@@ -29,7 +29,7 @@
 > The `dbtier` claim is already planned in `LICENSING_SPEC.md` §Future extensions.
 > Enforcement of feature gates per tier is NOT yet implemented — this plan drives that work.
 
-**Related product tracks (keep separate):** [PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md](PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md) (org/process questionnaire — commercial POC) and [PLAN_PDF_GRC_REPORT.md](PLAN_PDF_GRC_REPORT.md) (technical findings PDF “em prosa” — Pro tier). Both depend on **tier semantics** from this plan once **Phases 1–2** ship.
+**Related product tracks (keep separate):** [PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md](completed/PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md) (org/process questionnaire — commercial POC) and [PLAN_PDF_GRC_REPORT.md](PLAN_PDF_GRC_REPORT.md) (technical findings PDF “em prosa” — Pro tier). Both depend on **tier semantics** from this plan once **Phases 1–2** ship.
 
 ---
 

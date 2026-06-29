@@ -7,7 +7,7 @@
 
 ## Context
 
-- The GRC maturity POC stores answers in SQLite (`maturity_assessment_answers`) with a client-generated **`batch_id`** per submission ([PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md](../plans/PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md)).
+- The GRC maturity POC stores answers in SQLite (`maturity_assessment_answers`) with a client-generated **`batch_id`** per submission ([PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md](../plans/completed/PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md)).
 - Operators need to see **more than one** submission without querying SQLite by hand: a **bounded, newest-first** list on `GET /{locale}/assessment` complements the existing post-submit summary and CSV/Markdown export.
 - **RBAC / per-tenant isolation** is **not** implemented ([GitHub #86](https://github.com/FabioLeitao/data-boar/issues/86), [PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md](../plans/PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md)). Today, anyone who can open the assessment page sees **all** batches stored in the same DB file—the same trust model as the rest of the dashboard when `api.require_api_key` is off.
 
@@ -31,6 +31,6 @@
 
 ## References
 
-- [PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md](../plans/PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md)
+- [PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md](../plans/completed/PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md)
 - [PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md](../plans/PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md) — Phase 0 route matrix; target **`authenticated`** for assessment routes.
 - [docs/USAGE.md](../USAGE.md) — operator-facing table row for the assessment page.

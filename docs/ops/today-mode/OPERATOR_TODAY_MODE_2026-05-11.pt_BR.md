@@ -60,7 +60,7 @@ Fonte: fila *Post-`1.7.4` short-sprint closure* em `**docs/plans/PLANS_TODO.md`*
 
 | Sprint | Fatia                      | Saída (resumo)                                    | Plano                                                                                                  |
 | ------ | -------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| **S3** | **CNPJ fase 5 (checksum)** | Caminho opt-in; **5.1–5.3**; regex padrão intacto | [PLAN_CNPJ_ALPHANUMERIC_FORMAT_VALIDATION.md](../../plans/PLAN_CNPJ_ALPHANUMERIC_FORMAT_VALIDATION.md) |
+| **S3** | **CNPJ fase 5 (checksum)** | Caminho opt-in; **5.1–5.3**; regex padrão intacto | [PLAN_CNPJ_ALPHANUMERIC_FORMAT_VALIDATION.md](../../plans/completed/PLAN_CNPJ_ALPHANUMERIC_FORMAT_VALIDATION.md) |
 | **S1** | **Bandit fase 3**          | Gate `**-ll -ii`**; triagem low; arquivar plano   | [PLAN_BANDIT_SECURITY_LINTER.md](../../plans/completed/PLAN_BANDIT_SECURITY_LINTER.md)                           |
 | **S2** | **Scope import fase E**    | Adapter GLPI-like + fixtures                      | [PLAN_SCOPE_IMPORT_FROM_EXPORTS.md](../../plans/PLAN_SCOPE_IMPORT_FROM_EXPORTS.md)                     |
 

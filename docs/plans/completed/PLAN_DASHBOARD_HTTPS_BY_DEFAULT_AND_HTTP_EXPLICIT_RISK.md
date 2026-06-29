@@ -1,11 +1,11 @@
 # Plan: Dashboard HTTPS-by-default with explicit HTTP risk mode
 
-**Status:** Completed
+**Status:** Completed (archived under `docs/plans/completed/`)
 **Date:** 2026-03-25
 **Authors:** Fabio Leitao
 **Priority:** H2
 
-**Synced with:** [PLANS_TODO.md](PLANS_TODO.md)
+**Synced with:** [PLANS_TODO.md](../PLANS_TODO.md)
 
 ## Purpose
 
@@ -56,7 +56,7 @@ Make dashboard traffic **encrypted by default** (TLS >= 1.2) even without an ups
 - At export time, call `get_dashboard_transport_snapshot()` from `core.dashboard_transport` (same dict as `/status`).
 - Add top-level key **`dashboard_transport`** to the payload (or nest under **`runtime_context`** next to `runtime_trust` if you prefer one bucket).
 - Fields to persist: at minimum `mode`, `tls_active`, `insecure_http_explicit_opt_in`, `summary` (already in snapshot); omit file paths to certs in export if policy prefers **boolean only** (`cert_configured: true`).
-- If **`AUDIT_TRAIL_SCHEMA_VERSION`** bumps, document in release notes and [PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md](PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md) if integrity signing references the export.
+- If **`AUDIT_TRAIL_SCHEMA_VERSION`** bumps, document in release notes and [PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md](../PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md) if integrity signing references the export.
 - **Tests:** extend `tests/test_audit_export.py` (or add) to set env vars before `build_audit_trail_payload` and assert `dashboard_transport["mode"]` matches.
 
 **Note:** Snapshot reflects **process env** at export time. For one-shot CLI export without starting `main.py --web`, expect `mode: not_configured` unless you later set env in a documented operator workflow.
@@ -99,7 +99,7 @@ When secure mode is enabled, the app should detect if TLS/certificate capabiliti
 1. Show a prominent dashboard warning banner.
 1. Persist trust/tamper event in internal DB/audit trail.
 1. Mark generated reports as **tinted/untrusted** and restrict output content (summary-only mode) per existing tamper-response direction.
-1. Mark runtime/build identity with a downgraded suffix/state (for example, force `-alpha`-style trust marker) aligned with [PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md](PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md).
+1. Mark runtime/build identity with a downgraded suffix/state (for example, force `-alpha`-style trust marker) aligned with [PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md](../PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md).
 
 ### Non-goal
 

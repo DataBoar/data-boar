@@ -10,7 +10,7 @@
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md)
 
 <!-- plans-hub-summary: Medium-term Pro/Ent-shaped backlog: (1) lakehouse tables as scan targets via Databricks SQL; (2) UC or curated tables as source of target list / scope metadata—aligned with CSV scope import and data soup formats. -->
-<!-- plans-hub-related: PLAN_SCOPE_IMPORT_FROM_EXPORTS.md, PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md, PLAN_ENTERPRISE_HR_SST_ERP_CONNECTORS.md, PLAN_OBJECT_STORAGE_CLOUD_CONNECTORS.md, PLAN_FINDINGS_CORPORATE_REPOSITORY_EXPORT.md, ADDING_CONNECTORS.md -->
+<!-- plans-hub-related: PLAN_SCOPE_IMPORT_FROM_EXPORTS.md, completed/PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md, PLAN_ENTERPRISE_HR_SST_ERP_CONNECTORS.md, PLAN_OBJECT_STORAGE_CLOUD_CONNECTORS.md, PLAN_FINDINGS_CORPORATE_REPOSITORY_EXPORT.md, ADDING_CONNECTORS.md -->
 
 ---
 
@@ -36,7 +36,7 @@
 | Plan | Relationship |
 | ---- | ------------- |
 | [PLAN_SCOPE_IMPORT_FROM_EXPORTS.md](PLAN_SCOPE_IMPORT_FROM_EXPORTS.md) | **Track B** extends the same **bootstrap scope** story: catalog or warehouse tables **feed** canonical targets + `scope_import` breadcrumbs; CSV remains the **v1** operator path. |
-| [PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md](PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md) | **Track A** aligns with **Parquet / ORC / columnar** “soup” already in the format roadmap; lakehouse tables are often those formats under SQL. |
+| [PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md](completed/PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md) | **Track A** aligns with **Parquet / ORC / columnar** “soup” already in the format roadmap; lakehouse tables are often those formats under SQL. |
 | [PLAN_ENTERPRISE_HR_SST_ERP_CONNECTORS.md](PLAN_ENTERPRISE_HR_SST_ERP_CONNECTORS.md) | **Distinct:** live HR/ERP/helpdesk **sampling** vs **this** plan’s focus on **Databricks as a technical substrate** (SQL + metadata). Overlap only if a customer stores CMDB exports **in** UC-managed tables. |
 | [PLAN_OBJECT_STORAGE_CLOUD_CONNECTORS.md](PLAN_OBJECT_STORAGE_CLOUD_CONNECTORS.md) | **Complementary:** UC **external locations** / cloud paths may eventually need **object-store** connectors for file-shaped soup, not SQL alone. |
 | [PLAN_FINDINGS_CORPORATE_REPOSITORY_EXPORT.md](PLAN_FINDINGS_CORPORATE_REPOSITORY_EXPORT.md) | **Orthogonal sink:** customers may want **findings** in a **lakehouse** or **warehouse** they operate — **export/sync** track is separate from using Databricks **only** as a scan **source**. |

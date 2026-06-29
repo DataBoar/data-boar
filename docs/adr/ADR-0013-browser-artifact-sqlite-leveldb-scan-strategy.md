@@ -91,7 +91,7 @@ This ADR records the decision and reserves the `file_scan.scan_leveldb` config k
 ### 3. HAR, vCard, iCalendar, plist — see data soup plan (Tier 5)
 
 These are Tier 5 format additions documented in
-[PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md](../plans/PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md) Sec 5B-5C.
+[PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md](../plans/completed/PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md) Sec 5B-5C.
 They do not require a separate ADR; they follow the same pattern as existing Tier 1 format
 additions (add extension, add extractor, run sensitivity detection).
 
@@ -120,7 +120,7 @@ additions (add extension, add extractor, run sensitivity detection).
 
 ## References
 
-- [PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md](../plans/PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md) Tier 5
+- [PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md](../plans/completed/PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md) Tier 5
 - [PLAN_HEIC_APPLE_IMAGE_SUPPORT.md](../plans/PLAN_HEIC_APPLE_IMAGE_SUPPORT.md) — analogous
   opt-in pattern for `pillow-heif`
 - [PLAN_COMPRESSED_FILES.md](../plans/PLAN_COMPRESSED_FILES.md) — opt-in pattern for archives

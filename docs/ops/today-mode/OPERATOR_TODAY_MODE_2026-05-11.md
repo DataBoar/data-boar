@@ -62,7 +62,7 @@ Source: **`docs/plans/PLANS_TODO.md`** *Post-`1.7.4` short-sprint closure queue*
 
 | Sprint | Slice | Exit checklist (summary) | Plan |
 | ------ | ----- | ---------------------- | ---- |
-| **S3** | **CNPJ Phase 5 (checksum layer)** | Opt-in checksum path; phases **5.1–5.3**; default regex behaviour unchanged; EN + pt-BR docs | [PLAN_CNPJ_ALPHANUMERIC_FORMAT_VALIDATION.md](../../plans/PLAN_CNPJ_ALPHANUMERIC_FORMAT_VALIDATION.md) |
+| **S3** | **CNPJ Phase 5 (checksum layer)** | Opt-in checksum path; phases **5.1–5.3**; default regex behaviour unchanged; EN + pt-BR docs | [PLAN_CNPJ_ALPHANUMERIC_FORMAT_VALIDATION.md](../../plans/completed/PLAN_CNPJ_ALPHANUMERIC_FORMAT_VALIDATION.md) |
 | **S1** | **Bandit Phase 3 closure** | **`-ll -ii`** gate green; low findings triaged; plan → **`completed/`** when done | [PLAN_BANDIT_SECURITY_LINTER.md](../../plans/completed/PLAN_BANDIT_SECURITY_LINTER.md) |
 | **S2** | **Scope import Phase E (light)** | First GLPI-like adapter + fixtures + tests; no live-integration overpromise | [PLAN_SCOPE_IMPORT_FROM_EXPORTS.md](../../plans/PLAN_SCOPE_IMPORT_FROM_EXPORTS.md) |
 

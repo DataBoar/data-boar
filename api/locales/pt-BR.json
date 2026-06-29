@@ -50,7 +50,7 @@
     "answer_no": "Não",
     "answer_na": "Não se aplica",
     "lead": "Esta página é um placeholder opcional do produto. O repositório aberto não inclui itens proprietários de questionário.",
-    "body_p1": "Escopo e opções de arquitetura estão em docs/plans/PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md.",
+    "body_p1": "Escopo e opções de arquitetura estão em docs/plans/completed/PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md.",
     "body_p2": "Qualquer saída futura é apenas um sinal de maturidade autodeclarado — não é assessoria jurídica, auditoria ou certificação."
   },
   "dashboard": {
