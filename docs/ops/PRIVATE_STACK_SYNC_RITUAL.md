@@ -18,7 +18,7 @@
 ## Typical flow (high level)
 
 1. When the private tree has meaningful edits, ensure **`docs/private/`** is in a state you are willing to record (same idea as “honest commit” on `main`).
-2. From the **product repo root**, run **`scripts/private-git-sync.ps1`** (Windows) or **`scripts/private-git-sync.sh --push`** (Linux/macOS); add **`-Push`** / **`--push`** when your policy pushes the stacked repo to **non-GitHub** remotes. **Bare lab mirrors** use the canonical host list in the script (**mini-bt, latitude, t14, alpine-emachines**); **pi3b is excluded** (fragile SD card).
+2. From the **product repo root**, run **`scripts/private-git-sync.ps1`** (Windows) or **`scripts/private-git-sync.sh --push`** (Linux/macOS); add **`-Push`** / **`--push`** when your policy pushes the stacked repo to **non-GitHub** remotes. **Bare lab mirrors** follow the manifest-driven host list in the script (primary x86 lab nodes); the **low-power ARM-class lab node** is excluded from bare push — validation target, not mirror sink.
 3. If your workflow uses **encrypted local storage** for that tree, follow the **mount → work → unmount** discipline documented in **`docs/ops/PRIVATE_LOCAL_VERSIONING.md`** and your **private** homelab runbooks (not duplicated here).
 
 ### Homelab env secrets (`-Push`)

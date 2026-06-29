@@ -27,6 +27,7 @@ Alguns **gates de desenvolvimento** e **wrappers finos** existem em **duas forma
 | Gate Grype da imagem de release (`--fail-on high --only-fixed` + `.grype.yaml`) | `scripts/grype-image-gate.ps1` | `scripts/grype-image-gate.sh` |
 | Dispatch PyPI (OIDC via `publish-pypi.yml`; sem token na estação) | `scripts/pypi-publish.ps1` | `scripts/pypi-publish.sh` |
 | Sync do repo privado empilhado (`docs/private/`) | `scripts/private-git-sync.ps1` | `scripts/private-git-sync.sh` |
+| Atestacao SSH do trailer de gate (`Gate-*-Approved-By:` assinatura decorativa) | `scripts/gate-trailer-attest.ps1` | `scripts/gate-trailer-attest.sh` |
 
 **Nota:** o **`check-all.ps1`** chama **`gatekeeper-audit.ps1`**, o **guard Rust**, **`plans-stats.py --write`**, **`check_hubs.py`**, **`run-pester.ps1`**, delega ao **`pre-commit-and-tests.ps1`**, depois **`check-all-security-scans.*`** (Bandit + Zizmor; Semgrep opcional com **`-Enforced`** / **`--enforced`** — issue **#1044**, fail-collect). O **`check-all.sh`** espelha essa ordem (PII via **`gatekeeper_audit.py`**, Rust, planos, hubs, Pester quando há **`pwsh`**, **`pre-commit-and-tests.sh`**, **`check-all-security-scans.sh`**). Os **`pre-commit-and-tests.*`** ignoram *gatekeeper*, Rust e *plans-stats* de propósito; executam primeiro **`tests/security/test_mem_integrity.py`** (Hypothesis + PyO3) e depois o *pytest* completo com **`--deselect`** nesse arquivo.
 
