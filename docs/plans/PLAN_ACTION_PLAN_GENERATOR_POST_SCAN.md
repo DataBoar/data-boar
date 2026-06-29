@@ -5,10 +5,10 @@
 **Authors:** Fabio Leitao
 **Priority:** H1
 
-**Synced with:** [PLANS_TODO.md](PLANS_TODO.md) (*Integration / active threads*), [ADR 0025](../adr/ADR-0025-compliance-positioning-evidence-inventory-not-legal-conclusion-engine.md) (evidence positioning), [PLAN_SQL_SAMPLING_SRE_AND_AUDIT_EVIDENCE.md](PLAN_SQL_SAMPLING_SRE_AND_AUDIT_EVIDENCE.md) (Slice 4 — coverage / confidence metadata), [PLAN_PDF_GRC_REPORT.md](PLAN_PDF_GRC_REPORT.md) (executive PDF narrative), [PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md](PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md) (audit trail / tamper posture)
+**Synced with:** [PLANS_TODO.md](PLANS_TODO.md) (*Integration / active threads*), [ADR 0025](../adr/ADR-0025-compliance-positioning-evidence-inventory-not-legal-conclusion-engine.md) (evidence positioning), [PLAN_SQL_SAMPLING_SRE_AND_AUDIT_EVIDENCE.md](completed/PLAN_SQL_SAMPLING_SRE_AND_AUDIT_EVIDENCE.md) (Slice 4 — coverage / confidence metadata), [PLAN_PDF_GRC_REPORT.md](PLAN_PDF_GRC_REPORT.md) (executive PDF narrative), [PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md](PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md) (audit trail / tamper posture)
 
 <!-- plans-hub-summary: Post-scan Action Plan Generator: triage tiers, suggested mitigations, optional JSON/SQL snippets and evidence log—evidence for diligence, not legal conclusions. -->
-<!-- plans-hub-related: PLAN_SYNTHETIC_DATA_AND_CONFIDENCE_VALIDATION.md, PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md, ../REPORTS_AND_COMPLIANCE_OUTPUTS.md -->
+<!-- plans-hub-related: PLAN_SYNTHETIC_DATA_AND_CONFIDENCE_VALIDATION.md, completed/PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md, ../REPORTS_AND_COMPLIANCE_OUTPUTS.md -->
 
 ## Purpose
 

@@ -80,7 +80,7 @@ This gives reviewers concrete runtime deltas, not only roadmap prose.
 
 ## Optional backlog cross-link (privacy / rich media)
 
-- **Tier 3b embedded tracker heuristics** (opt-in; Meta/TikTok-style references in rich media): [PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md](PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md) § Tier 3b. Fits enterprise narrative (governance + optional advanced mode) without blocking core trust work.
+- **Tier 3b embedded tracker heuristics** (opt-in; Meta/TikTok-style references in rich media): [PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md](completed/PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md) § Tier 3b. Fits enterprise narrative (governance + optional advanced mode) without blocking core trust work.
 
 ## Token-aware execution notes
 

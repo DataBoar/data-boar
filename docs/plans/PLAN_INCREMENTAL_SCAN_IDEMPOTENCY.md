@@ -5,7 +5,7 @@
 **Authors:** Fabio Leitao
 **Priority:** H2
 **Depends on:** ADR-0051 (this plan's own decision record)
-**Related:** [PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md](PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md) (SQLite anchor, startup re-verify), [PLAN_SQL_SAMPLING_SRE_AND_AUDIT_EVIDENCE.md](PLAN_SQL_SAMPLING_SRE_AND_AUDIT_EVIDENCE.md) (audit evidence pattern)
+**Related:** [PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md](PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md) (SQLite anchor, startup re-verify), [PLAN_SQL_SAMPLING_SRE_AND_AUDIT_EVIDENCE.md](completed/PLAN_SQL_SAMPLING_SRE_AND_AUDIT_EVIDENCE.md) (audit evidence pattern)
 
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md)
 

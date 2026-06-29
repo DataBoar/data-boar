@@ -10,9 +10,10 @@
 
 | Field | Value |
 | ----- | ----- |
-| **Verified** | **2026-06-26** |
-| **`pyproject.toml` on `main`** | **`1.7.4`** (merged via PR **#1024**; **published** stable **1.7.4**) |
-| **GitHub Release Latest** | [**v1.7.4**](https://github.com/FabioLeitao/data-boar/releases/tag/v1.7.4) (notes: **`docs/releases/1.7.4.md`**, **`CHANGELOG.md`**) |
+| **Verified** | **2026-06-29** |
+| **`pyproject.toml` on `main`** | **`1.7.4.post1`** (packaging slice **#1047** / **#1052** OIDC publish; stable marketing release remains **1.7.4**) |
+| **PyPI** | [**data-boar `1.7.4.post1`**](https://pypi.org/project/data-boar/1.7.4.post1/) — `pip install data-boar` (published **2026-06-27**, Trusted Publishing via **`publish-pypi.yml`**) |
+| **GitHub Release Latest** | [**v1.7.4**](https://github.com/FabioLeitao/data-boar/releases/tag/v1.7.4) (notes: **`docs/releases/1.7.4.md`**, **`docs/releases/1.7.4.post1.md`**, **`CHANGELOG.md`**) |
 | **Docker Hub** | **`fabioleitao/data_boar:1.7.4`** + **`latest`** (published **2026-06-26**) |
 | **Next public version** | **`1.8.0-beta`** per [VERSIONING.md](../VERSIONING.md) + ADR-0073 |
 
@@ -29,7 +30,7 @@ grep -n '^version' pyproject.toml
 gh release list --repo FabioLeitao/data-boar --limit 5
 ```
 
-Docker Hub: confirm **`1.7.4`** and **`latest`** on [hub.docker.com/r/fabioleitao/data_boar/tags](https://hub.docker.com/r/fabioleitao/data_boar/tags) or the Registry API; **Full description** matches **[`docs/ops/DOCKER_HUB_REPOSITORY_DESCRIPTION.md`](../DOCKER_HUB_REPOSITORY_DESCRIPTION.md)**. **GitHub:** **`v1.7.4`** Release exists.
+Docker Hub: confirm **`1.7.4`** and **`latest`** on [hub.docker.com/r/fabioleitao/data_boar/tags](https://hub.docker.com/r/fabioleitao/data_boar/tags) or the Registry API; **Full description** matches **[`docs/ops/DOCKER_HUB_REPOSITORY_DESCRIPTION.md`](../DOCKER_HUB_REPOSITORY_DESCRIPTION.md)**. **GitHub:** **`v1.7.4`** Release exists. **PyPI:** [project page](https://pypi.org/project/data-boar/) shows **`1.7.4.post1`** as latest.
 
 ---
 

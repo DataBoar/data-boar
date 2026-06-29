@@ -4,6 +4,7 @@
 **Date:** 2026-06-18
 **Authors:** Fabio Leitao
 **Priority:** H0 / U0
+**GitHub:** [#944](https://github.com/FabioLeitao/data-boar/issues/944) (self-protecting gate — closed; ongoing maintenance per ADR-0071)
 
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md) · [ADR 0071](../adr/ADR-0071-self-protecting-pii-gate.md) · [ADR 0018](../adr/ADR-0018-pii-anti-recurrence-guardrails-for-tracked-files-and-branch-history.md) · [ADR 0020](../adr/ADR-0020-ci-full-git-history-pii-gate.md) · [ADR 0049](../adr/ADR-0049-no-brittle-mitigations-robust-input-handling.md)
 

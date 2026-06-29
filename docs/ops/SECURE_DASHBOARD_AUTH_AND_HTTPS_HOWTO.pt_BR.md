@@ -4,7 +4,7 @@
 
 **Público:** Técnicos que vão ligar **proteção por chave de API** e **TLS** no dashboard web do Data Boar (`main.py --web`). Este guia **complementa** (não substitui) [USAGE.md](../USAGE.md) ([EN](../USAGE.md)), [SECURITY.md](../../SECURITY.md) ([EN](../../SECURITY.md)) na raiz e [deploy/DEPLOY.md](../deploy/DEPLOY.md) ([EN](../deploy/DEPLOY.md)).
 
-**Runbooks relacionados:** [API_KEY_FROM_ENV_OPERATOR_STEPS.md](API_KEY_FROM_ENV_OPERATOR_STEPS.md) (detalhe de variável de ambiente; **somente EN**), [SECURE_BY_DEFAULT_BLOCKERS_AND_MIGRATION.pt_BR.md](SECURE_BY_DEFAULT_BLOCKERS_AND_MIGRATION.pt_BR.md) (ordem de rollout), [PLAN_DASHBOARD_HTTPS_BY_DEFAULT_AND_HTTP_EXPLICIT_RISK.md](../plans/PLAN_DASHBOARD_HTTPS_BY_DEFAULT_AND_HTTP_EXPLICIT_RISK.md) (racional e anti-padrões).
+**Runbooks relacionados:** [API_KEY_FROM_ENV_OPERATOR_STEPS.md](API_KEY_FROM_ENV_OPERATOR_STEPS.md) (detalhe de variável de ambiente; **somente EN**), [SECURE_BY_DEFAULT_BLOCKERS_AND_MIGRATION.pt_BR.md](SECURE_BY_DEFAULT_BLOCKERS_AND_MIGRATION.pt_BR.md) (ordem de rollout), [PLAN_DASHBOARD_HTTPS_BY_DEFAULT_AND_HTTP_EXPLICIT_RISK.md](../plans/completed/PLAN_DASHBOARD_HTTPS_BY_DEFAULT_AND_HTTP_EXPLICIT_RISK.md) (racional e anti-padrões).
 
 **WebAuthn JSON opcional (fase 1a):** Com **`api.webauthn.enabled: true`** e o segredo de token no ambiente (padrão **`DATA_BOAR_WEBAUTHN_TOKEN_SECRET`**) antes da subida, a API expõe **`/auth/webauthn/*`** para registro e autenticação **FIDO2 / passkey** ([ADR 0033](../adr/ADR-0033-webauthn-open-relying-party-json-endpoints.md)). **`api.require_api_key`** **não** se aplica a esses caminhos. O **HTML do painel** **ainda não** exige login por isso; sessão no browser e RBAC ficam no **[#86](https://github.com/FabioLeitao/data-boar/issues/86)**. Subconjunto pytest: [SMOKE_WEBAUTHN_JSON.pt_BR.md](SMOKE_WEBAUTHN_JSON.pt_BR.md).
 
@@ -144,7 +144,7 @@ api:
 
 ### B.4 Certificado autoassinado (alternativa — só lab / QA / UAT)
 
-**Não** é a recomendação padrão para confiança de usuário em produção. O navegador alerta salvo instalação de âncora de confiança (anti-padrões em [PLAN_DASHBOARD_HTTPS_BY_DEFAULT_AND_HTTP_EXPLICIT_RISK.md](../plans/PLAN_DASHBOARD_HTTPS_BY_DEFAULT_AND_HTTP_EXPLICIT_RISK.md)).
+**Não** é a recomendação padrão para confiança de usuário em produção. O navegador alerta salvo instalação de âncora de confiança (anti-padrões em [PLAN_DASHBOARD_HTTPS_BY_DEFAULT_AND_HTTP_EXPLICIT_RISK.md](../plans/completed/PLAN_DASHBOARD_HTTPS_BY_DEFAULT_AND_HTTP_EXPLICIT_RISK.md)).
 
 ## Exemplo rápido com openssl (foco em localhost, 365 dias):
 

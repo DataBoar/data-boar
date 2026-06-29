@@ -7,7 +7,7 @@
 **Depends on:** ADR-0037, ADR-0048, ADR-0049
 
 <!-- plans-hub-summary: Customer-facing run manifest: structured execution summary (connectors, counts, skips, errors, version) emitted per scan as an Excel sheet and optional JSON file. Closes the gap between host-bound audit log and customer-visible evidence. -->
-<!-- plans-hub-related: PLAN_SQL_SAMPLING_SRE_AND_AUDIT_EVIDENCE.md, PLAN_ADDITIONAL_DETECTION_TECHNIQUES_AND_FN_REDUCTION.md -->
+<!-- plans-hub-related: completed/PLAN_SQL_SAMPLING_SRE_AND_AUDIT_EVIDENCE.md, PLAN_ADDITIONAL_DETECTION_TECHNIQUES_AND_FN_REDUCTION.md -->
 
 ## Purpose
 

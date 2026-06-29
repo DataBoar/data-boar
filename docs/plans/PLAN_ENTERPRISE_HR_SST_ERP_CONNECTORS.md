@@ -7,7 +7,7 @@
 
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md)
 
-**Related plans:** [PLAN_SAP_CONNECTOR.md](PLAN_SAP_CONNECTOR.md) (SAP in the data soup), [PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md](PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md) (file formats), [PLAN_SCOPE_IMPORT_FROM_EXPORTS.md](PLAN_SCOPE_IMPORT_FROM_EXPORTS.md) (bootstrap scope from ITSM/monitoring **exports** — not live ERP sampling), [PLAN_DATABRICKS_UNITY_LAKEHOUSE_SCOPE_AND_SCAN.md](PLAN_DATABRICKS_UNITY_LAKEHOUSE_SCOPE_AND_SCAN.md) (lakehouse SQL scan + catalog-driven scope — **substrate**, not live HR/ERP APIs), existing REST/SQL connector patterns in [ADDING_CONNECTORS.md](../ADDING_CONNECTORS.md).
+**Related plans:** [PLAN_SAP_CONNECTOR.md](PLAN_SAP_CONNECTOR.md) (SAP in the data soup), [PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md](completed/PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md) (file formats), [PLAN_SCOPE_IMPORT_FROM_EXPORTS.md](PLAN_SCOPE_IMPORT_FROM_EXPORTS.md) (bootstrap scope from ITSM/monitoring **exports** — not live ERP sampling), [PLAN_DATABRICKS_UNITY_LAKEHOUSE_SCOPE_AND_SCAN.md](PLAN_DATABRICKS_UNITY_LAKEHOUSE_SCOPE_AND_SCAN.md) (lakehouse SQL scan + catalog-driven scope — **substrate**, not live HR/ERP APIs), existing REST/SQL connector patterns in [ADDING_CONNECTORS.md](../ADDING_CONNECTORS.md).
 
 **When implementing any step:** update USAGE / TECH_GUIDE / SECURITY as needed, add tests, then update this file and PLANS_TODO.md.
 

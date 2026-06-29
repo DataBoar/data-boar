@@ -5,6 +5,7 @@
 **Authors:** Fabio Leitao
 **Priority:** H2
 **Depends on:** ADR-0048
+**GitHub:** [#1058](https://github.com/FabioLeitao/data-boar/issues/1058) (v1.8.x findings-export / catalog format)
 
 **Horizon:** **[H2]** medium-term; **expedite** only when a **named prospect or contract** requires a concrete sink (MongoDB, a given SQL engine, object storage + lake ingestion, etc.).
 

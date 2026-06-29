@@ -6,8 +6,9 @@
 **Date:** 2026-05-25
 **Authors:** Fabio Leitao
 **Priority:** H2
+**GitHub:** [#736](https://github.com/FabioLeitao/data-boar/issues/736) (`_ensure_*` convention; filesystem_findings Phase 1 follow-up)
 **Replaces:** Schema migration gap called out in [PLAN_SELF_UPGRADE_AND_VERSION_CHECK.md](PLAN_SELF_UPGRADE_AND_VERSION_CHECK.md) (local DB evolution before remote upgrade UX)
-**Related:** [PLAN_INCREMENTAL_SCAN_IDEMPOTENCY.md](PLAN_INCREMENTAL_SCAN_IDEMPOTENCY.md) (Phase 1 columns on `filesystem_findings`), [PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md](PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md), GitHub issue **#736**
+**Related:** [PLAN_INCREMENTAL_SCAN_IDEMPOTENCY.md](PLAN_INCREMENTAL_SCAN_IDEMPOTENCY.md) (Phase 1 columns on `filesystem_findings`), [PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md](PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md)
 
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md)
 

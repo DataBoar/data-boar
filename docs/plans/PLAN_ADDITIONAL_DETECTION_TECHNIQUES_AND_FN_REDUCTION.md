@@ -1,10 +1,10 @@
 # Plan: Additional detection techniques and false-negative reduction
 
-**Status:** Completed (priorities 1–11 POC on `main`); **v1.8.0 slice active** ([#1056](https://github.com/FabioLeitao/data-boar/issues/1056))
+**Status:** Active (POC priorities 1–11 on `main`; v1.8.0 survey [#1056](https://github.com/FabioLeitao/data-boar/issues/1056) enriches this plan — do not archive)
 **Date:** 2026-03-15 (v1.8.0 wave: 2026-06-21)
 **Authors:** Fabio Leitao
 **Priority:** H2
-**Milestone:** v1.8.0
+**Milestone:** v1.8.0 (survey slice)
 **GitHub:** [#1056](https://github.com/FabioLeitao/data-boar/issues/1056)
 **Depends on:** ADR-0043 · optional: [PLAN_YAML_PLUGIN_SYSTEM.md](PLAN_YAML_PLUGIN_SYSTEM.md) (Phase 1b / [#865](https://github.com/FabioLeitao/data-boar/issues/865) registrable validators)
 

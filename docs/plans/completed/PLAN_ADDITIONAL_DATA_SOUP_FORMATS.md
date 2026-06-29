@@ -1,13 +1,13 @@
 ﻿# Plan: Additional "data soup" formats and rich media
 
-**Status:** Completed
+**Status:** Completed (archived under `docs/plans/completed/`)
 **Date:** 2026-03-15
 **Authors:** Fabio Leitao
 **Priority:** H2
 
-**Synced with:** [PLANS_TODO.md](PLANS_TODO.md)
+**Synced with:** [PLANS_TODO.md](../PLANS_TODO.md)
 
-**Related plans:** [PLAN_COMPRESSED_FILES.md](completed/PLAN_COMPRESSED_FILES.md) (scan inside archives), [PLAN_CONTENT_TYPE_AND_CLOAKING_DETECTION.md](completed/PLAN_CONTENT_TYPE_AND_CLOAKING_DETECTION.md) (magic-byte/cloaking), [PLAN_CONTENT_TYPE_AND_CLOAKING_DETECTION.md](PLAN_CONTENT_TYPE_AND_CLOAKING_DETECTION.md#steganography-future--optional) (steganography as future phase).
+**Related plans:** [PLAN_COMPRESSED_FILES.md](PLAN_COMPRESSED_FILES.md) (scan inside archives), [PLAN_CONTENT_TYPE_AND_CLOAKING_DETECTION.md](PLAN_CONTENT_TYPE_AND_CLOAKING_DETECTION.md) (magic-byte/cloaking), [PLAN_CONTENT_TYPE_AND_CLOAKING_DETECTION.md](PLAN_CONTENT_TYPE_AND_CLOAKING_DETECTION.md#steganography-future--optional) (steganography as future phase).
 
 This plan catalogues **additional file formats** that are often present in production and could become "data soup ingredients"—either as **first-class scan targets** (we extract text/structure and run sensitivity detection), as **members inside compressed files** (covered by the compressed-files plan), as **cloaked/renamed files** (covered by the content-type plan), or as **containers for steganography** (images, audio, video where data may be hidden). The goal is to have a single place to prioritise and design format additions and to align with compressed, cloaking, and stego work.
 
@@ -22,8 +22,8 @@ Production “soup” is not only obvious `.csv` and `.pdf` trees. It includes *
 | Signal | Direction in this repo |
 | ------ | ------------------------ |
 | **Files on disk / in shares** | Magic-byte cloaking, compressed innards, rich media metadata, optional **stego**, **Tier 3b** telemetry strings, **Tier 4** document tricks—see sections below. |
-| **Breadcrumbs from other tools** | Offline exports → canonical scope hints — [PLAN_SCOPE_IMPORT_FROM_EXPORTS.md](PLAN_SCOPE_IMPORT_FROM_EXPORTS.md). **Medium-term:** lakehouse **inventory / UC-backed** tables as another channel for the same target list — [PLAN_DATABRICKS_UNITY_LAKEHOUSE_SCOPE_AND_SCAN.md](PLAN_DATABRICKS_UNITY_LAKEHOUSE_SCOPE_AND_SCAN.md). |
-| **Listeners not in any inventory** | Allowlisted TCP connect + short read (technician-flagged) — [PLAN_OPT_IN_NETWORK_PORT_SERVICE_HINTS.md](PLAN_OPT_IN_NETWORK_PORT_SERVICE_HINTS.md) (incl. worst-case zero-inventory). |
+| **Breadcrumbs from other tools** | Offline exports → canonical scope hints — [PLAN_SCOPE_IMPORT_FROM_EXPORTS.md](../PLAN_SCOPE_IMPORT_FROM_EXPORTS.md). **Medium-term:** lakehouse **inventory / UC-backed** tables as another channel for the same target list — [PLAN_DATABRICKS_UNITY_LAKEHOUSE_SCOPE_AND_SCAN.md](../PLAN_DATABRICKS_UNITY_LAKEHOUSE_SCOPE_AND_SCAN.md). |
+| **Listeners not in any inventory** | Allowlisted TCP connect + short read (technician-flagged) — [PLAN_OPT_IN_NETWORK_PORT_SERVICE_HINTS.md](../PLAN_OPT_IN_NETWORK_PORT_SERVICE_HINTS.md) (incl. worst-case zero-inventory). |
 
 **Guardrail:** “Sniff harder” is **not** covert or boundary-less; it is **explicitly enabled**, rate-limited, and auditable where the plan says so.
 
@@ -32,8 +32,8 @@ Production “soup” is not only obvious `.csv` and `.pdf` trees. It includes *
 ## How formats can show up in production
 
 1. **On disk or share (by extension):** We already support many text and document formats; see `SUPPORTED_EXTENSIONS` in the filesystem connector. Gaps below.
-1. **Inside compressed files:** When [PLAN_COMPRESSED_FILES](completed/PLAN_COMPRESSED_FILES.md) is implemented, we will see **inner members** with various extensions (e.g. `.csv`, `.xlsx`, `.pdf` inside `.zip`). The same format list and extractors apply; no extra format work unless we add a **new** format we don’t yet support.
-1. **Cloaked or renamed:** A file may have a misleading extension (e.g. `.pdf` renamed to `.txt`). [Content-type / cloaking](completed/PLAN_CONTENT_TYPE_AND_CLOAKING_DETECTION.md) uses magic bytes to detect the real type and scan accordingly. Again, the set of formats we can **extract** is the same; the plan just ensures we recognise them when extension is wrong.
+1. **Inside compressed files:** When [PLAN_COMPRESSED_FILES](PLAN_COMPRESSED_FILES.md) is implemented, we will see **inner members** with various extensions (e.g. `.csv`, `.xlsx`, `.pdf` inside `.zip`). The same format list and extractors apply; no extra format work unless we add a **new** format we don’t yet support.
+1. **Cloaked or renamed:** A file may have a misleading extension (e.g. `.pdf` renamed to `.txt`). [Content-type / cloaking](PLAN_CONTENT_TYPE_AND_CLOAKING_DETECTION.md) uses magic bytes to detect the real type and scan accordingly. Again, the set of formats we can **extract** is the same; the plan just ensures we recognise them when extension is wrong.
 1. **Steganography:** Data can be **hidden inside** images (e.g. PNG, JPEG, BMP), **audio** (WAV, MP3, FLAC), or **video** (MP4, AVI). The "file" is a valid image/audio/video, but extra payload is embedded. Detecting or extracting that is a **separate, compute-heavy** capability (stego detection tools, entropy analysis). This plan treats **rich media as potential stego containers** and lists them so we can later add an optional "scan for hidden content" phase without forgetting formats.
 
 ---
@@ -76,8 +76,8 @@ These are common in production and would need an **extractor** in `_read_text_sa
 
 These are either **already supported** or will be **reached** by compressed-file scan or content-type detection. We only need to **list them** so operators know they’re covered (or will be).
 
-- **Inside archives:** Any format we already support (.txt, .csv, .pdf, .docx, .xlsx, …) will be scanned when it appears **inside** a .zip, .tar.gz, .7z, etc. once [PLAN_COMPRESSED_FILES](completed/PLAN_COMPRESSED_FILES.md) is done. Password-protected archives: use `file_passwords` (reminder in that plan).
-- **Cloaked:** Once [content-type detection](completed/PLAN_CONTENT_TYPE_AND_CLOAKING_DETECTION.md) is on, a file renamed to the wrong extension (e.g. .pdf → .txt) will be detected by magic bytes and scanned as PDF. No new format; same extractors.
+- **Inside archives:** Any format we already support (.txt, .csv, .pdf, .docx, .xlsx, …) will be scanned when it appears **inside** a .zip, .tar.gz, .7z, etc. once [PLAN_COMPRESSED_FILES](PLAN_COMPRESSED_FILES.md) is done. Password-protected archives: use `file_passwords` (reminder in that plan).
+- **Cloaked:** Once [content-type detection](PLAN_CONTENT_TYPE_AND_CLOAKING_DETECTION.md) is on, a file renamed to the wrong extension (e.g. .pdf → .txt) will be detected by magic bytes and scanned as PDF. No new format; same extractors.
 - **Legacy Office / text we already support:** .doc (binary; we currently return empty but path/name still analysed), .rtf, .csv, .xml, .html, etc. Improvements to .doc extraction could be a small follow-up.
 
 ---
@@ -135,11 +135,11 @@ In production, **images**, **audio**, and **video** files are common. We do **no
    - **Operator surfaces:** at least **WARNING** to **stdout**, **stderr**, and **application log** so unattended runs and CI still see the signal.
 1. **Licensing (future):** Candidate for **enterprise / advanced** entitlement in `LICENSING_SPEC.md` (feature flag + doc-only until product decides). Not a commitment to ship as paid-only until validated.
 
-**Dependencies:** Builds on existing **Tier 3 rich media** metadata/subtitle paths; does not require full video decode for a **first slice** (string/metadata heuristics first). Link: [SECURITY_INSPIRATION_GRC_SECURITY_NOW.md](../ops/SECURITY_INSPIRATION_GRC_SECURITY_NOW.md).
+**Dependencies:** Builds on existing **Tier 3 rich media** metadata/subtitle paths; does not require full video decode for a **first slice** (string/metadata heuristics first). Link: [SECURITY_INSPIRATION_GRC_SECURITY_NOW.md](../../ops/SECURITY_INSPIRATION_GRC_SECURITY_NOW.md).
 
-**Program umbrella:** Treat **Tier 3b** as the **network/telemetry string** slice of a larger **“sniffing for hidden ingredients”** track—together with **Tier 4** (document tricks) and **stego** (payload hiding), plus **imports** ([PLAN_SCOPE_IMPORT_FROM_EXPORTS.md](PLAN_SCOPE_IMPORT_FROM_EXPORTS.md)) and **allowlisted port hints** ([PLAN_OPT_IN_NETWORK_PORT_SERVICE_HINTS.md](PLAN_OPT_IN_NETWORK_PORT_SERVICE_HINTS.md)) for **legacy / shadow / never-documented** scope. One phased roadmap avoids promising a single “magic toggle” that does everything.
+**Program umbrella:** Treat **Tier 3b** as the **network/telemetry string** slice of a larger **“sniffing for hidden ingredients”** track—together with **Tier 4** (document tricks) and **stego** (payload hiding), plus **imports** ([PLAN_SCOPE_IMPORT_FROM_EXPORTS.md](../PLAN_SCOPE_IMPORT_FROM_EXPORTS.md)) and **allowlisted port hints** ([PLAN_OPT_IN_NETWORK_PORT_SERVICE_HINTS.md](../PLAN_OPT_IN_NETWORK_PORT_SERVICE_HINTS.md)) for **legacy / shadow / never-documented** scope. One phased roadmap avoids promising a single “magic toggle” that does everything.
 
-**Live host / port hints (optional, allowlisted):** For **operator-declared** hosts and well-known ports—**bounded** TCP connect + short banner read, not a stealth scanner—see [PLAN_OPT_IN_NETWORK_PORT_SERVICE_HINTS.md](PLAN_OPT_IN_NETWORK_PORT_SERVICE_HINTS.md). Complements Tier 3b (strings **inside** files) by surfacing **possibly relevant listeners** the customer did not add as formal targets.
+**Live host / port hints (optional, allowlisted):** For **operator-declared** hosts and well-known ports—**bounded** TCP connect + short banner read, not a stealth scanner—see [PLAN_OPT_IN_NETWORK_PORT_SERVICE_HINTS.md](../PLAN_OPT_IN_NETWORK_PORT_SERVICE_HINTS.md). Complements Tier 3b (strings **inside** files) by surfacing **possibly relevant listeners** the customer did not add as formal targets.
 
 ---
 
@@ -170,7 +170,7 @@ This section raises **“ingesting and digesting the data soup”** and **“sni
 
 | Area                              | Note                                                                                                                                                        |                                                                                                                      |
 | ----                              | ----                                                                                                                                                        |                                                                                                                      |
-| **Images, audio, video payloads** | Covered in **Tier 3** and [PLAN_CONTENT_TYPE_AND_CLOAKING_DETECTION.md](completed/PLAN_CONTENT_TYPE_AND_CLOAKING_DETECTION.md). Remains **opt-in** and compute-heavy. |                                                                                                                      |
+| **Images, audio, video payloads** | Covered in **Tier 3** and [PLAN_CONTENT_TYPE_AND_CLOAKING_DETECTION.md](PLAN_CONTENT_TYPE_AND_CLOAKING_DETECTION.md). Remains **opt-in** and compute-heavy. |                                                                                                                      |
 | **Polyglot files**                | Single file valid as two types; may bypass extension or magic-byte assumptions                                                                              | Align with **content-type** and archive plans; optional “polyglot suspicion” only with strong signals to avoid noise |
 
 ### D. Network- and tracking-adjacent strings inside documents
@@ -207,7 +207,7 @@ This section raises **“ingesting and digesting the data soup”** and **“sni
 | **Unused / reserved chunks**                      | PNG ancillary chunks, APP markers in JPEG | Sometimes misused for payload                                                          | Parser-specific; only with explicit stego phase                                              |
 | **High-entropy segments in “beneath” containers** | Appended data after EOF, polyglot tricks  | May indicate tooling abuse                                                             | Align with **polyglot** and **content-type** plans; avoid noisy global entropy on every file |
 
-Tier **G** stays **light in this doc**: implementation detail belongs in [PLAN_CONTENT_TYPE_AND_CLOAKING_DETECTION.md](completed/PLAN_CONTENT_TYPE_AND_CLOAKING_DETECTION.md) stego subsection and in `file_scan.scan_for_stego` when that ships.
+Tier **G** stays **light in this doc**: implementation detail belongs in [PLAN_CONTENT_TYPE_AND_CLOAKING_DETECTION.md](PLAN_CONTENT_TYPE_AND_CLOAKING_DETECTION.md) stego subsection and in `file_scan.scan_for_stego` when that ships.
 
 ### Reporting and “exposure” narrative (design target)
 
@@ -392,7 +392,7 @@ directories, append to `paths` before scan.
 | 20  | **Tier 5 - Jupyter Notebooks (.ipynb):** Parse JSON; extract cell outputs (DataFrames with PII); very common in data science. | ⬜ |
 | 21  | **Tier 5 - MHTML (.mhtml, .mht):** Saved web pages; MIME multipart; headers reveal origin domain + embedded PII. | ⬜ |
 | 22  | **Tier 5 - NDJSON/JSONL (.ndjson, .jsonl):** Newline-delimited JSON (logging, Kafka exports, AI datasets); stream-sample first N lines. | ⬜ |
-**Sync:** When a step is done, update this table and [PLANS_TODO.md](PLANS_TODO.md). This plan remains a **backlog/catalogue** until we prioritise a specific phase.
+**Sync:** When a step is done, update this table and [PLANS_TODO.md](../PLANS_TODO.md). This plan remains a **backlog/catalogue** until we prioritise a specific phase.
 
 ---
 

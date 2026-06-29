@@ -1,11 +1,11 @@
 # Plan: CNPJ alphanumeric format – understanding, validation, and compatibility
 
-**Status:** Completed
+**Status:** Completed (archived under `docs/plans/completed/`)
 **Date:** 2026-03-15
 **Authors:** Fabio Leitao
 **Priority:** H3
 
-**Synced with:** [PLANS_TODO.md](PLANS_TODO.md) (central to-do list)
+**Synced with:** [PLANS_TODO.md](../PLANS_TODO.md) (central to-do list)
 
 ## When implementing steps: update docs and tests; then update PLANS_TODO.md and this file.
 
@@ -26,14 +26,14 @@ This plan uses the app’s **existing scan capabilities** across multiple data s
 
 ## Current state (app)
 
-- **Built-in CNPJ:** [core/detector.py](../core/detector.py) defines `LGPD_CNPJ` as **numeric only**:
+- **Built-in CNPJ:** [core/detector.py](../../../core/detector.py) defines `LGPD_CNPJ` as **numeric only**:
 
   `\b\d{2}\.?\d{3}\.?\d{3}/?\d{4}-?\d{2}\b`
 
   (14 digits with optional `.` `/` `-`). This matches the **legacy** format only.
 
-- **Overrides:** [regex_overrides_file](SENSITIVITY_DETECTION.md) and [regex_overrides.example.yaml](regex_overrides.example.yaml) allow adding or overriding patterns (name, pattern, norm_tag). So an **alphanumeric CNPJ pattern can be added via config** without code change.
-- **ML/DL:** [ml_patterns_file](SENSITIVITY_DETECTION.md) and [sensitivity_detection.ml_terms](USAGE.md) (and DL equivalents) can include terms like `cnpj` for column-name/sample context. They do not define the **value format**; regex does.
+- **Overrides:** [regex_overrides_file](../../SENSITIVITY_DETECTION.md) and [regex_overrides.example.yaml](regex_overrides.example.yaml) allow adding or overriding patterns (name, pattern, norm_tag). So an **alphanumeric CNPJ pattern can be added via config** without code change.
+- **ML/DL:** [ml_patterns_file](../../SENSITIVITY_DETECTION.md) and [sensitivity_detection.ml_terms](../../USAGE.md) (and DL equivalents) can include terms like `cnpj` for column-name/sample context. They do not define the **value format**; regex does.
 - **Scan:** All connectors (SQL, MongoDB, Redis, filesystem, REST, SMB, etc.) use the same detector; any new or overridden pattern applies to **all data sources** in the “data soup” once loaded.
 - **Report:** Findings show `pattern_detected` (e.g. `LGPD_CNPJ`); we could add a distinct pattern name for alphanumeric CNPJ (e.g. `LGPD_CNPJ_ALPHA`) and optionally a small “CNPJ format compatibility” summary in the report.
 
@@ -122,7 +122,7 @@ This is **pattern-based compatibility** (format of allowed or found data), not s
 1. **Optional:** Add ML term `cnpj` or `cnpj alfanumérico` in your `ml_patterns_file` or `sensitivity_detection.ml_terms` to improve column-name context (same as for legacy CNPJ).
 1. **Report:** Use the Excel report “Recommendations” sheet and, when available, the CNPJ format compatibility summary to see where legacy vs alphanumeric data appears across the data soup.
 
-See [USAGE.md](USAGE.md) (EN) and [USAGE.pt_BR.md](USAGE.pt_BR.md) (pt-BR) for config keys and examples.
+See [USAGE.md](../../USAGE.md) (EN) and [USAGE.pt_BR.md](../../USAGE.pt_BR.md) (pt-BR) for config keys and examples.
 
 ---
 
@@ -145,7 +145,7 @@ See [USAGE.md](USAGE.md) (EN) and [USAGE.pt_BR.md](USAGE.pt_BR.md) (pt-BR) for c
 ## Conflict and placement in roadmap
 
 - **No conflicts** with other plans. This is additive (new pattern and optional report summary).
-- **Recommended placement:** Can be done in parallel with Compliance samples or after; depends only on having the format specified. See [PLANS_TODO.md](PLANS_TODO.md) for the full sequence.
+- **Recommended placement:** Can be done in parallel with Compliance samples or after; depends only on having the format specified. See [PLANS_TODO.md](../PLANS_TODO.md) for the full sequence.
 
 ---
 

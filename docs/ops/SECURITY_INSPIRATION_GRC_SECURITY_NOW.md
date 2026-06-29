@@ -47,7 +47,7 @@ This is a living guide. We update it incrementally as we extract high-signal les
 1. Keep migration-safe security rollout patterns (warn -> dual mode -> enforce).
 1. Convert lessons into tests/guardrails, not only prose.
 1. Track high-risk themes in backlog with "critical-first" handling when they affect integrity/confidentiality.
-1. When external discussion highlights **embedded trackers** in rich media (e.g. platform telemetry URLs in images/video metadata), capture it as a **backlog slice** with opt-in detection and clear reporting — see [PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md](../plans/PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md) (Tier 3b).
+1. When external discussion highlights **embedded trackers** in rich media (e.g. platform telemetry URLs in images/video metadata), capture it as a **backlog slice** with opt-in detection and clear reporting — see [PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md](../plans/completed/PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md) (Tier 3b).
 
 ## Candidate guardrails to maintain
 
@@ -87,8 +87,8 @@ This is a living guide. We update it incrementally as we extract high-signal les
 
 ## Related docs
 
-- [PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md](../plans/PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md) (Tier 3b embedded trackers / rich media)
-- [PLAN_DASHBOARD_HTTPS_BY_DEFAULT_AND_HTTP_EXPLICIT_RISK.md](../plans/PLAN_DASHBOARD_HTTPS_BY_DEFAULT_AND_HTTP_EXPLICIT_RISK.md)
+- [PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md](../plans/completed/PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md) (Tier 3b embedded trackers / rich media)
+- [PLAN_DASHBOARD_HTTPS_BY_DEFAULT_AND_HTTP_EXPLICIT_RISK.md](../plans/completed/PLAN_DASHBOARD_HTTPS_BY_DEFAULT_AND_HTTP_EXPLICIT_RISK.md)
 - [SECURE_BY_DEFAULT_BLOCKERS_AND_MIGRATION.md](SECURE_BY_DEFAULT_BLOCKERS_AND_MIGRATION.md)
 - [SECURITY.md](../SECURITY.md)
 - [COMMIT_AND_PR.md](COMMIT_AND_PR.md)

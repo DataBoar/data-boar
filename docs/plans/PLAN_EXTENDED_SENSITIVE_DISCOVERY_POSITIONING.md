@@ -5,7 +5,7 @@
 **Authors:** Fabio Leitao
 **Priority:** H2
 **Milestone:** v1.8.0
-**GitHub:** [#1056](https://github.com/FabioLeitao/data-boar/issues/1056)
+**GitHub:** [#1055](https://github.com/FabioLeitao/data-boar/issues/1055) (compliance / sensitive-discovery expansion) · [#1056](https://github.com/FabioLeitao/data-boar/issues/1056) (entity taxonomy — overlaps secrets / ID hints)
 
 <!-- plans-hub-summary: Buyer/DPO positioning for clinical adjacency, IP, and security artifacts; wave 2 adds explicit entity taxonomy (SWIFT, IBAN, VIN, MAC, CVV, AWS keys, PIN) tied to #1056. -->
 <!-- plans-hub-related: PLAN_ADDITIONAL_DETECTION_TECHNIQUES_AND_FN_REDUCTION.md, PLAN_YAML_PLUGIN_SYSTEM.md -->

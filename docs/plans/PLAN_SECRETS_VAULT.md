@@ -1,12 +1,12 @@
 # Plan: Secrets and password protection (vault and alternatives)
 
-**Status:** Completed
+**Status:** Active (Phase A shipped on `main`; Phases B–C backlog)
 **Date:** 2026-03-15
 **Authors:** Fabio Leitao
 **Priority:** H3
 **Depends on:** ADR-0005
 
-**Synced with:** [PLANS_TODO.md](PLANS_TODO.md) (central to-do list)
+<!-- plans-hub-summary: Phase A shipped (env refs, config redaction, docs); Phases B-C local vault + re-import remain backlog. -->
 
 ## When implementing steps: update docs and tests; then update PLANS_TODO.md and this file.
 

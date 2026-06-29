@@ -33,7 +33,7 @@ Extension of **ISO/IEC 27001** for privacy information management. Annex **B** m
 | 8.2.x (operational controls) | Run technical measures | CLI, API, dashBOARd, rate limits |
 | Annex B (GDPR mapping) | Align to GDPR articles | Built-in **GDPR** norm tags + EU samples in `compliance-samples/` |
 
-**(roadmap)** Deeper PIMS **control checklist packs** in the maturity questionnaire content packs — see [PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md](PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md).
+**(roadmap)** Deeper PIMS **control checklist packs** in the maturity questionnaire content packs — see [PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md](completed/PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md).
 
 ---
 
