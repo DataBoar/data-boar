@@ -15,12 +15,12 @@ Offer an **optional**, **explicitly authorized** capability to probe **already-i
 
 - **On brand:** Fits the **data soup** narrative—expand **known ingredients** without claiming omniscience. Output is **hints and inventory classifiers**, not legal verdicts.
 - **Different from core Boar:** Today the product **ingests configured targets** (DBs, paths, APIs). This plan adds a **bounded network reconnaissance adjunct** that only runs when the operator enables it and constrains scope.
-- **See also (passive seed vs active probe):** [PLAN_SCOPE_IMPORT_FROM_EXPORTS.md](PLAN_SCOPE_IMPORT_FROM_EXPORTS.md) — **offline exports** (ITSM, monitoring, assessment) mapped to config **breadcrumbs**; no TCP probes unless this plan is enabled.
+- **See also (passive seed vs active probe):** [PLAN_SCOPE_IMPORT_FROM_EXPORTS.md](completed/PLAN_SCOPE_IMPORT_FROM_EXPORTS.md) — **offline exports** (ITSM, monitoring, assessment) mapped to config **breadcrumbs**; no TCP probes unless this plan is enabled.
 - **Not a replacement for nmap / ASV / pentest:** Scope is **narrow** (allowed hosts + allowlisted ports + rate limits + timeouts). **No** default internet-wide discovery, **no** exploitation, **no** credential stuffing.
 
 ## Worst case: customer has no inventory (servers, services, network map)
 
-Some engagements start with **no reliable CMDB, no exports, and no owner map**. [PLAN_SCOPE_IMPORT_FROM_EXPORTS.md](PLAN_SCOPE_IMPORT_FROM_EXPORTS.md) helps when **any** breadcrumbs exist; when there are **none**, this plan is the **optional, last-resort adjunct**: **technician-enabled** TCP connect + short read on **allowlisted** hosts/ports only—**never** on by default and **never** without written scope (ticket/SOW).
+Some engagements start with **no reliable CMDB, no exports, and no owner map**. [PLAN_SCOPE_IMPORT_FROM_EXPORTS.md](completed/PLAN_SCOPE_IMPORT_FROM_EXPORTS.md) helps when **any** breadcrumbs exist; when there are **none**, this plan is the **optional, last-resort adjunct**: **technician-enabled** TCP connect + short read on **allowlisted** hosts/ports only—**never** on by default and **never** without written scope (ticket/SOW).
 
 **Operational bias (product, not legal advice):** Hints are intentionally **inclusive of candidates** (expect **false positives**): banner/substring matches on well-known ports should be labeled **“candidate — verify”** so humans can **discard noise** rather than assuming silence means “nothing to see.” That supports **discovery completeness** workflows; it does **not** substitute for **legal/regulatory** advice, **DPIA**, or **authority-specific** breach/notification rules—**do not** market this feature as guaranteeing avoidance of **false-negative** regulatory outcomes.
 

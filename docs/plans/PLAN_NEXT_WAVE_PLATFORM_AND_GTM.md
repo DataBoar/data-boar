@@ -21,7 +21,7 @@ Define the next three execution fronts after:
 ### N2 — Modular connector/runtime architecture roadmap
 
 - Define connector capability tiers and dependency packs (`core` / `plus` / `full`) with explicit operational and licensing boundaries.
-- **Scope import (distinct from live connectors):** optional **export → canonical schema → YAML/JSON config fragments** for inventory bootstrap (monitoring, ITSM, assessment breadcrumbs) — see [PLAN_SCOPE_IMPORT_FROM_EXPORTS.md](PLAN_SCOPE_IMPORT_FROM_EXPORTS.md); partner-friendly “accelerator” narrative alongside open-core baseline.
+- **Scope import (distinct from live connectors):** optional **export → canonical schema → YAML/JSON config fragments** for inventory bootstrap (monitoring, ITSM, assessment breadcrumbs) — see [PLAN_SCOPE_IMPORT_FROM_EXPORTS.md](completed/PLAN_SCOPE_IMPORT_FROM_EXPORTS.md); partner-friendly “accelerator” narrative alongside open-core baseline.
 - Document interoperability path for polyglot modules when justified (Python-first orchestration with optional constrained sidecar services).
 - Tie to least-privilege and auditability controls before expansion.
 

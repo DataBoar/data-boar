@@ -1,6 +1,6 @@
 # Plan: CLI — config validation, session diff, DSAR-oriented export
 
-**Status:** In progress (slices A–B complete; slice C complete on branch)
+**Status:** Completed (archived under `docs/plans/completed/`)
 **Date:** 2026-05-18
 **Authors:** Fabio Leitao
 **Priority:** H1 U1
@@ -22,8 +22,8 @@ Together they close the gap between “I changed config / upgraded / rescoped ta
 
 ## Relationship to other plans
 
-- **[PLAN_SCAN_RUN_MANIFEST_AND_EXECUTION_SUMMARY.md](PLAN_SCAN_RUN_MANIFEST_AND_EXECUTION_SUMMARY.md)** — When a per-run manifest or `_Run Summary` sheet exists, **`--diff`** and **`--export-dsar`** should **reuse** the same stable field names and versioning rules where feasible (ADR-0048 / ADR-0049 alignment).
-- **[PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md](PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md)** — Audit export and integrity signals on **`--export-audit-trail`** should remain consistent; DSAR export must **not** weaken tamper-evidence narrative.
+- **[PLAN_SCAN_RUN_MANIFEST_AND_EXECUTION_SUMMARY.md](../PLAN_SCAN_RUN_MANIFEST_AND_EXECUTION_SUMMARY.md)** — When a per-run manifest or `_Run Summary` sheet exists, **`--diff`** and **`--export-dsar`** should **reuse** the same stable field names and versioning rules where feasible (ADR-0048 / ADR-0049 alignment).
+- **[PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md](../PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md)** — Audit export and integrity signals on **`--export-audit-trail`** should remain consistent; DSAR export must **not** weaken tamper-evidence narrative.
 
 ## Non-goals
 
@@ -54,4 +54,4 @@ Together they close the gap between “I changed config / upgraded / rescoped ta
 
 Ship as **thin PRs** (one slice or one sub-slice per PR when large), **`check-all` green**, then close the corresponding issue with evidence links.
 
-**Synced with:** [PLANS_TODO.md](PLANS_TODO.md)
+**Synced with:** [PLANS_TODO.md](../PLANS_TODO.md)

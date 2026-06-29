@@ -7,7 +7,7 @@
 **Depends on:** ADR-0025
 
 <!-- plans-hub-summary: POC on main: gated /{locale}/assessment + YAML rubric scores + SQLite + HMAC + post-submit summary + per-batch history table + GET /assessment/export (CSV/Markdown); evidence levels A/B/C (smoke vs full demo); SMOKE runbook; RBAC + report-bundle backlog; not legal audit. -->
-<!-- plans-hub-related: PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md, LICENSING_OPEN_CORE_AND_COMMERCIAL.md (future tier features), PLAN_SCOPE_IMPORT_FROM_EXPORTS.md (inventory bootstrap narrative) -->
+<!-- plans-hub-related: PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md, completed/PLAN_SCOPE_IMPORT_FROM_EXPORTS.md -->
 
 **Horizon / urgency:** `[H3]` or `[H4]` · `[U3]` for the **complete** product slice; next code slices: **tenant/history model** when clear, then **RBAC** (#86) alignment.
 
@@ -95,7 +95,7 @@ Use this table so **agents / CI** do not promise what only a **human operator** 
 
 1. **[PLAN_PRODUCT_TIERS_AND_OPEN_CORE.md](../PLAN_PRODUCT_TIERS_AND_OPEN_CORE.md)** — **Technical enforcement roadmap:** only **Phase 0** is done (claims sketched in **LICENSING_SPEC**, JWT path exists). **Phases 1–6** ( **`dbtier` / `dbfeatures` in tokens**, `check_feature()`, gates in connectors/reports, Partner/Enterprise rules) are **not started** — depends on **legal review** and issuer work; promote when GRC/maturity and commercial packaging need real entitlements (not just `licensing.effective_tier` lab simulation).
 2. **[PLAN_PDF_GRC_REPORT.md](../PLAN_PDF_GRC_REPORT.md)** — **Different artefact:** PDF “em prosa” for **technical scan findings** (exec summary, priority matrix like a **cyber/GRC vulnerability-style** report). **Not** the org questionnaire; it complements technical evidence. Priority band **B** in that plan; still **planned** (Phases 1–2 unchecked).
-3. **[PLAN_SCOPE_IMPORT_FROM_EXPORTS.md](../PLAN_SCOPE_IMPORT_FROM_EXPORTS.md)** — **After** maturity/DOCX is under control: bootstrap **customer asset inventory** from **exports** — **minimum** acceptable is a **manual CSV** (“everything the client remembers”: hosts, paths, tags) mapped to the **canonical schema** → merge-safe config fragments. Live ITSM APIs are **not** required for v1.
+3. **[PLAN_SCOPE_IMPORT_FROM_EXPORTS.md](PLAN_SCOPE_IMPORT_FROM_EXPORTS.md)** — **After** maturity/DOCX is under control: bootstrap **customer asset inventory** from **exports** — **minimum** acceptable is a **manual CSV** (“everything the client remembers”: hosts, paths, tags) mapped to the **canonical schema** → merge-safe config fragments. Live ITSM APIs are **not** required for v1.
 4. **Dashboard RBAC — [GitHub #86](https://github.com/FabioLeitao/data-boar/issues/86)** (still **OPEN** as of plan updates): **Phase 1** = browser **session** + **Bitwarden Passwordless.dev** (minimum viable human auth) on the same **`/{locale}/…`** paths as i18n; then role/group gates for `/reports` and downloads per [PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md](../PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md). **Order (2026-04):** **M-LOCALE-V1** ✅ → **maturity POC “POC ready” closure** (smoke + manual runbook) → **#86 Phase 1** on a dedicated branch → **scope import** — adjust only if a **security exception** forces early guards (then budget a migration slice).
 
 ## Problem statement
@@ -161,7 +161,7 @@ Feasible: treat **question banks** and **weights** as data (like **compliance sa
 
 - **[PLAN_PRODUCT_TIERS_AND_OPEN_CORE.md](../PLAN_PRODUCT_TIERS_AND_OPEN_CORE.md)** — subscription / partner tier boundaries; maturity assessment is **not** open core — enforcement phases **1+** apply when moving past POC/lab gates.
 - **[PLAN_PDF_GRC_REPORT.md](../PLAN_PDF_GRC_REPORT.md)** — **Scan output** PDF (exec + detailed + priority matrix); **not** the org self-assessment form — cross-sell in GRC narratives only.
-- **[PLAN_SCOPE_IMPORT_FROM_EXPORTS.md](../PLAN_SCOPE_IMPORT_FROM_EXPORTS.md)** — complementary “bootstrap from existing tools” story; assessment is **people/process**, scope import is **technical inventory**.
+- **[PLAN_SCOPE_IMPORT_FROM_EXPORTS.md](PLAN_SCOPE_IMPORT_FROM_EXPORTS.md)** — complementary “bootstrap from existing tools” story; assessment is **people/process**, scope import is **technical inventory**.
 - **Dashboard RBAC / #86** — required if multi-user tenants fill forms.
 
 ---
