@@ -66,6 +66,45 @@ no `git reset`, no `gh`):
 | C | Runs offline in `check-all` (pytest auto-discovery; no net, no `gh`) | ✅ Done |
 | D | Plan + `plans_hub_sync --write` + `PLANS_TODO.md` entry | ✅ Done |
 | E | (future) refine feature↔gate with AST constant resolution → promote to hard-gate | ⬜ Pending |
+| F | **Hotspot Rust pré-filtro** — benchmark pinado `rust_prefilter_hotspot_v1` + pytest evidence + `benchmark:` em `CLAIMS.yml` (`rust-prefilter-speedup`); spec operador em vault `docs/private/partnerships/BENCHMARK_RUST_PREFILTER_PIN.pt_BR.md` | ✅ Done |
+| G | **Archive integrity** — `tests/test_plan_archive_integrity.py`: unqualified `Completed` + open `⬜` in `docs/plans/completed/` fails CI; qualified Status on tier-A drift plans (2026-06-29) | ✅ Done |
+
+### Phase G — archived plan overclaim guard (2026-06-29)
+
+**Problem:** Plans moved to `docs/plans/completed/` with bare **Completed** headers while
+phase tables still had open `⬜` rows — readers assume 100% delivery.
+
+**Deliverables:**
+
+1. Qualify **Status** on tier-A archives: `PLAN_ADDITIONAL_DATA_SOUP_FORMATS`,
+   `PLAN_DASHBOARD_HTTPS_BY_DEFAULT_AND_HTTP_EXPLICIT_RISK`,
+   `PLAN_CNPJ_ALPHANUMERIC_FORMAT_VALIDATION` — relabel backlog as *Deferred (post-archive)*.
+2. `tests/test_plan_archive_integrity.py` — fails when unqualified Completed coexists with
+   open `⬜` (not Deferred/N/A/Optional).
+
+**Not in scope:** Proving every ✅ row matches code (see phase F benchmark / future
+`plan-completion-audit.py`).
+
+### Phase F — pinned prefilter hotspot benchmark (2026-06-29)
+
+**Problem:** `rust-prefilter-speedup` (~11–13×) is headline in `CLAIMS.yml` but CI only verified
+`ProPreFilter` exists (`note:`). `official_benchmark_200k.json` pins a **different** profile
+(composite Pro worker path, stale 0.574×) — must not back the Rust hotspot claim.
+
+**Deliverables:**
+
+1. `tests/benchmarks/run_rust_prefilter_hotspot_bench.py` — OpenCore Python vs `filter_batch` on same batch.
+2. `tests/benchmarks/rust_prefilter_hotspot.json` — pinned artifact (`benchmark: rust_prefilter_hotspot_v1`).
+3. `tests/test_rust_prefilter_hotspot_evidence.py` — schema + parity + speedup > 1.0 (mode A).
+4. `CLAIMS.yml` — add `benchmark:` and `test:` under `rust-prefilter-speedup`.
+5. `tests/benchmarks/README.md` — scope table: `official_pro_v1` vs `rust_prefilter_hotspot_v1`.
+
+**CI posture:** `importorskip("boar_fast_filter")` — skipped without built extension; no false green.
+
+**Pinned primary Linux reference (2026-06-29):** ~3.98× on 200k seeded rows (`linux-x86_64`). Headline ~11–13×
+remains operator-calibrated on other hosts; pytest enforces direction + parity, not a tight 11.0 floor.
+
+**Not in scope:** Maestro gate (#1021), end-to-end scan wall-clock, regenerating `official_benchmark_200k.json`.
 
 ## Acceptance criteria
 
@@ -77,6 +116,8 @@ no `git reset`, no `gh`):
   entry in `docs/plans/PLANS_TODO.md`.
 - [x] References the on-demand `claim-audit` (lab-op) as the HEAVY/manual counterpart; this test
   = the LIGHT/automatic one.
+- [x] Phase G: `tests/test_plan_archive_integrity.py` green; tier-A completed plans use qualified Status.
+- [x] Phase F: `rust_prefilter_hotspot_v1` pinned JSON + evidence test; `CLAIMS.yml` `benchmark:` + `test:`.
 
 ## Notes
 

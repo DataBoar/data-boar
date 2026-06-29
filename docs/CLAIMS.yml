@@ -38,7 +38,9 @@ claims:
     tier: pro
     backed_by:
       - symbol: "pro/prefilter.py::ProPreFilter"
-      - note: "PERF claim — código verificável; o número exige benchmark/perf-test, não só presença."
+      - benchmark: tests/benchmarks/rust_prefilter_hotspot.json
+      - test: tests/test_rust_prefilter_hotspot_evidence.py
+      - note: "PERF: número no JSON pinado; pytest valida schema + direção (speedup > 1.0) + paridade hits."
 
   - id: sbom-generation
     text: "Gera SBOM (CycloneDX) para visibilidade de supply-chain / IR."
