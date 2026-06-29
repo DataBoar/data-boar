@@ -1,6 +1,6 @@
 ﻿# Plan: Additional "data soup" formats and rich media
 
-**Status:** Completed (archived under `docs/plans/completed/`)
+**Status:** Completed (catalogue — Tier 1 + rich-media metadata shipped; items 6–22 deferred post-archive)
 **Date:** 2026-03-15
 **Authors:** Fabio Leitao
 **Priority:** H2
@@ -365,7 +365,9 @@ directories, append to `paths` before scan.
 5. **LevelDB** — opt-in `[browserartifacts]` extra; `plyvel`; flag `scan_leveldb: true`.
 6. **PST/OST / EVTX** — long tail; opt-in, heavy dependencies.
 
-## To-dos (backlog; not sequential until we pick a phase)
+## To-dos (backlog catalogue — deferred post-archive)
+
+Rows **6–22** are **not** part of the archived delivery slice; promote to `PLANS_TODO` or a new plan when prioritised.
 
 | #   | To-do                                                                                                                                                                                                | Status                                                                                                                                                            |
 | --- | --------------------------------------------------------------------------------------------------------------------------------                                                                     | ------                                                                                                                                                            |
@@ -374,24 +376,24 @@ directories, append to `paths` before scan.
 | 3   | **Tier 1 – ORC / Feather:** Add .orc, .feather; read via pyarrow; run scanner on column names and sample values.                                                                                     | ✅ Done (`sample_orc_text`, `sample_feather_text` in `connectors/data_soup_formats.py`)                                                                          |
 | 4   | **Tier 1 – DBF:** Add .dbf; extract column names + sample rows; run scanner.                                                                                                                         | ✅ Done (`sample_dbf_text` in `connectors/data_soup_formats.py`)                                                                                                 |
 | 5   | **Tier 3 – Metadata only:** Optional extractors for image EXIF/XMP, audio ID3, video metadata/subtitles (no stego).                                                                                  | ✅ Done (`file_scan.scan_rich_media_metadata`, `scan_image_ocr`, sidecar `.srt`/`.vtt`/`.ass`/`.ssa`; mutagen/ffprobe/Tesseract optional; see USAGE / TECH_GUIDE). |
-| 6   | **Stego phase (future):** Document image/audio/video as stego containers; design opt-in `scan_for_stego`; CLI `--scan-stego` and web/dashboard option; implement or defer.                           | ⬜                                                                                                                                                                 |
-| 7   | **Tier 3b – Embedded trackers (Meta/TikTok-style):** Opt-in CLI + config + optional dashboard; heuristic detection in rich media; warnings to stdout/stderr/log + report section; see Tier 3b above. | ⬜                                                                                                                                                                 |
+| 6   | **Stego phase (future):** Document image/audio/video as stego containers; design opt-in `scan_for_stego`; CLI `--scan-stego` and web/dashboard option; implement or defer.                           | ⬜ Deferred (post-archive)                                                                                                                                                                 |
+| 7   | **Tier 3b – Embedded trackers (Meta/TikTok-style):** Opt-in CLI + config + optional dashboard; heuristic detection in rich media; warnings to stdout/stderr/log + report section; see Tier 3b above. | ⬜ Deferred (post-archive)                                                                                                                                                                 |
 | 8   | **Docs:** When adding formats, update USAGE, TECH_GUIDE, SUPPORTED_EXTENSIONS list; note behaviour inside compressed and when cloaked.                                                               | ✅ Updated for rich media slice; revisit when Tier 1 formats land.                                                                                                 |
-| 9   | **Tier 4 – Unicode / cloaking pass:** Config-gated normalisation or reporting for zero-width, bidi, homoglyph risk; integrate with detector sample budget.                                           | ⬜                                                                                                                                                                 |
-| 10  | **Tier 4 – Document “hidden structure” signals:** Hidden sheets/columns, out-of-bounds text, low-contrast/micro text where extractors support it; report exposure class.                             | ⬜                                                                                                                                                                 |
-| 11  | **Tier 4 – Embedded objects / PDF attachments:** Bounded recursion consistent with compressed-file limits; exposure class `embedded_object`.                                                         | ⬜                                                                                                                                                                 |
+| 9   | **Tier 4 – Unicode / cloaking pass:** Config-gated normalisation or reporting for zero-width, bidi, homoglyph risk; integrate with detector sample budget.                                           | ⬜ Deferred (post-archive)                                                                                                                                                                 |
+| 10  | **Tier 4 – Document “hidden structure” signals:** Hidden sheets/columns, out-of-bounds text, low-contrast/micro text where extractors support it; report exposure class.                             | ⬜ Deferred (post-archive)                                                                                                                                                                 |
+| 11  | **Tier 4 – Embedded objects / PDF attachments:** Bounded recursion consistent with compressed-file limits; exposure class `embedded_object`.                                                         | ⬜ Deferred (post-archive)                                                                                                                                                                 |
 
-| 12  | **Tier 5 - HAR (.har):** Add to _DATA_EXTENSIONS; parse as JSON; sample headers and cookies; document as high-sensitivity. | ⬜ |
-| 13  | **Tier 5 - vCard (.vcf) and iCalendar (.ics):** Text-based parsers; extract name/email/phone/address fields. | ⬜ |
-| 14  | **Tier 5 - Apple plist (.plist):** plistlib (stdlib); flatten key-value tree; handle binary plist. | ⬜ |
-| 15  | **Tier 5 - mbox (.mbox):** Streaming/chunked; header-only first; body sampling with size budget. | ⬜ |
-| 16  | **Tier 5 - Browser artifact USAGE docs:** Chrome/Firefox SQLite via scan_sqlite_as_db; locked file guidance; ADR 0013. | ⬜ |
-| 17  | **Tier 5 - LevelDB (opt-in):** scan_leveldb: true; [browserartifacts] extra; plyvel; Chrome localStorage/IndexedDB. | ⬜ |
-| 18  | **Tier 5 - Firefox/Safari derivatives and Linux browsers:** Profile path discovery + browser-family mapping (see §5E). | ⬜ |
-| 19  | **Tier 5 - .eml / .emlx (single email files):** RFC 2822 parser; headers + body sampling; simpler than mbox. | ⬜ |
-| 20  | **Tier 5 - Jupyter Notebooks (.ipynb):** Parse JSON; extract cell outputs (DataFrames with PII); very common in data science. | ⬜ |
-| 21  | **Tier 5 - MHTML (.mhtml, .mht):** Saved web pages; MIME multipart; headers reveal origin domain + embedded PII. | ⬜ |
-| 22  | **Tier 5 - NDJSON/JSONL (.ndjson, .jsonl):** Newline-delimited JSON (logging, Kafka exports, AI datasets); stream-sample first N lines. | ⬜ |
+| 12  | **Tier 5 - HAR (.har):** Add to _DATA_EXTENSIONS; parse as JSON; sample headers and cookies; document as high-sensitivity. | ⬜ Deferred (post-archive) |
+| 13  | **Tier 5 - vCard (.vcf) and iCalendar (.ics):** Text-based parsers; extract name/email/phone/address fields. | ⬜ Deferred (post-archive) |
+| 14  | **Tier 5 - Apple plist (.plist):** plistlib (stdlib); flatten key-value tree; handle binary plist. | ⬜ Deferred (post-archive) |
+| 15  | **Tier 5 - mbox (.mbox):** Streaming/chunked; header-only first; body sampling with size budget. | ⬜ Deferred (post-archive) |
+| 16  | **Tier 5 - Browser artifact USAGE docs:** Chrome/Firefox SQLite via scan_sqlite_as_db; locked file guidance; ADR 0013. | ⬜ Deferred (post-archive) |
+| 17  | **Tier 5 - LevelDB (opt-in):** scan_leveldb: true; [browserartifacts] extra; plyvel; Chrome localStorage/IndexedDB. | ⬜ Deferred (post-archive) |
+| 18  | **Tier 5 - Firefox/Safari derivatives and Linux browsers:** Profile path discovery + browser-family mapping (see §5E). | ⬜ Deferred (post-archive) |
+| 19  | **Tier 5 - .eml / .emlx (single email files):** RFC 2822 parser; headers + body sampling; simpler than mbox. | ⬜ Deferred (post-archive) |
+| 20  | **Tier 5 - Jupyter Notebooks (.ipynb):** Parse JSON; extract cell outputs (DataFrames with PII); very common in data science. | ⬜ Deferred (post-archive) |
+| 21  | **Tier 5 - MHTML (.mhtml, .mht):** Saved web pages; MIME multipart; headers reveal origin domain + embedded PII. | ⬜ Deferred (post-archive) |
+| 22  | **Tier 5 - NDJSON/JSONL (.ndjson, .jsonl):** Newline-delimited JSON (logging, Kafka exports, AI datasets); stream-sample first N lines. | ⬜ Deferred (post-archive) |
 **Sync:** When a step is done, update this table and [PLANS_TODO.md](../PLANS_TODO.md). This plan remains a **backlog/catalogue** until we prioritise a specific phase.
 
 ---
