@@ -4,6 +4,7 @@
 **Date:** 2026-03-23
 **Authors:** Fabio Leitao
 **Priority:** H2
+**GitHub:** [#856](https://github.com/FabioLeitao/data-boar/issues/856) (Phase E core landed; Phase C.4 signed manifest + `--reverify-integrity` pending)
 **Depends on:** ADR-0034
 
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md)

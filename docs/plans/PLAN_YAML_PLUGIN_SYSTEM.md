@@ -6,6 +6,7 @@
 **Priority:** H1
 **Tags:** extensibility, plugin, yaml, schema, patterns, ADR-0052
 **Depends on:** ADR-0052
+**GitHub:** [#865](https://github.com/FabioLeitao/data-boar/issues/865) (Boar Plugin SDK — formal contract; complements YAML schema phases here)
 
 <!-- plans-hub-summary: Centralized YAML schema + validator for operator pattern plugins; unified patterns_plugin_file; Phase 1b (context gates, PCI) queued as S4b. -->
 <!-- plans-hub-related: PLAN_ADDITIONAL_DETECTION_TECHNIQUES_AND_FN_REDUCTION.md -->

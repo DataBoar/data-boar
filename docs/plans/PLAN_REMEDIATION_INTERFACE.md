@@ -7,7 +7,9 @@
 **Authors:** Fabio Leitao
 **Priority:** H1
 
-**Synced with:** [PLANS_TODO.md](PLANS_TODO.md) · GitHub **#601** · **#606**
+**GitHub:** [#601](https://github.com/FabioLeitao/data-boar/issues/601) · [#606](https://github.com/FabioLeitao/data-boar/issues/606) · [#1057](https://github.com/FabioLeitao/data-boar/issues/1057) (v1.8.x anonymizer / policy enrichment)
+
+**Synced with:** [PLANS_TODO.md](PLANS_TODO.md)
 
 **Related:** [USE_CASE_SCAN_AND_REMEDIATE.md](../use-cases/USE_CASE_SCAN_AND_REMEDIATE.md), [USE_CASE_TOKENIZED_FINDINGS.md](../use-cases/USE_CASE_TOKENIZED_FINDINGS.md), [PLAN_G_TIER.md](PLAN_G_TIER.md)
 

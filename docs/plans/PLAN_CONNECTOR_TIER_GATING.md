@@ -4,10 +4,11 @@
 **Date:** 2026-06-11
 **Authors:** Fabio Leitao
 **Priority:** H0
+**GitHub:** [#843](https://github.com/FabioLeitao/data-boar/issues/843) (registry + `FEATURE_TIER_MAP`; cluster **#705**, **#704**, **#719**, **#610**)
 **Depends on:** #719 (env bypass removed), #704 (licensing matrix green)
 
 **Owner:** Fabio Leitao
-**Relates to:** `PLAN_PRODUCT_TIERS_AND_OPEN_CORE.md`, `LICENSING_SPEC.md`, issues #843, #705, #610 (pricing docs)
+**Relates to:** `PLAN_PRODUCT_TIERS_AND_OPEN_CORE.md`, `LICENSING_SPEC.md`
 **Tier:** boundary definition — Community vs Pro connectors
 
 ---

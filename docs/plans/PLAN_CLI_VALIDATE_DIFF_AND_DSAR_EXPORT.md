@@ -5,6 +5,7 @@
 **Authors:** Fabio Leitao
 **Priority:** H1 U1
 **Depends on:** Stable config loader and CLI entry (`main.py`); optional alignment with scan run manifest / execution summary output
+**GitHub:** [#520](https://github.com/FabioLeitao/data-boar/issues/520) · [#521](https://github.com/FabioLeitao/data-boar/issues/521) · [#522](https://github.com/FabioLeitao/data-boar/issues/522) · **Related:** [#1061](https://github.com/FabioLeitao/data-boar/issues/1061) (DSAR tombstone / crypto attestation)
 
 <!-- plans-hub-summary: Operator CLI: validate YAML/config before scans, diff two scan sessions for regressions, and export DSAR-oriented evidence bundles (metadata-first) with documented limits—not legal advice. -->
 <!-- plans-hub-related: PLAN_SCAN_RUN_MANIFEST_AND_EXECUTION_SUMMARY.md, PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md -->

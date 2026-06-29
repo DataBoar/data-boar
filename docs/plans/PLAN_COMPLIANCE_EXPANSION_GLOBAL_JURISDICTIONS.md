@@ -9,6 +9,7 @@ Authors: Fabio Leitao
 Priority: H1
 Tags: compliance, global, jurisdictions, privacy, yaml, expansion, gdpr, hipaa, pipl, ferpa, latam, apac, emea
 Depends on: PLAN_YAML_PLUGIN_SYSTEM.md
+**GitHub:** [#1055](https://github.com/FabioLeitao/data-boar/issues/1055) (global privacy + sectoral expansion — config-first)
 
 ---
 
