@@ -1,12 +1,15 @@
 # Plan: Additional detection techniques and false-negative reduction
 
-**Status:** Completed
-**Date:** 2026-03-15
+**Status:** Completed (priorities 1–11 POC on `main`); **v1.8.0 slice active** ([#1056](https://github.com/FabioLeitao/data-boar/issues/1056))
+**Date:** 2026-03-15 (v1.8.0 wave: 2026-06-21)
 **Authors:** Fabio Leitao
 **Priority:** H2
-**Depends on:** ADR-0043
+**Milestone:** v1.8.0
+**GitHub:** [#1056](https://github.com/FabioLeitao/data-boar/issues/1056)
+**Depends on:** ADR-0043 · optional: [PLAN_YAML_PLUGIN_SYSTEM.md](PLAN_YAML_PLUGIN_SYSTEM.md) (Phase 1b / [#865](https://github.com/FabioLeitao/data-boar/issues/865) registrable validators)
 
-<!-- plans-hub-summary: POC detection baseline on main (priorities 1-5 shipped); priorities 6+ (aggregated modes, dictionaries, NER) stay optional backlog. -->
+<!-- plans-hub-summary: POC priorities 1-11 on main; v1.8.0 #1056 adds entity taxonomy, country checksum gates, span-alignment, plugin validators; priorities 5-7 NER/dictionaries still backlog. -->
+<!-- plans-hub-related: PLAN_EXTENDED_SENSITIVE_DISCOVERY_POSITIONING.md, PLAN_YAML_PLUGIN_SYSTEM.md, PLAN_SYNTHETIC_DATA_AND_CONFIDENCE_VALIDATION.md -->
 
 **Goal:** Explore techniques, frameworks, and libraries (beyond Regex, ML, and DL) to improve report quality, with emphasis on **reducing false negatives** (missed PII) even at the cost of more false positives (which can be handled later by human review).
 
@@ -200,6 +203,69 @@ Overall: **yes, it is possible** to add several techniques that improve quality 
 | ML (current)             | `scikit-learn` (TF-IDF, RandomForest)                                                                       | No change.                                                                                       |
 
 All new dependencies should be **optional** (extras in pyproject.toml, e.g. `[detection-fuzzy]`) so default install and CI remain light.
+
+---
+
+## v1.8.0 wave — competitive survey entity taxonomy ([#1056](https://github.com/FabioLeitao/data-boar/issues/1056))
+
+**Driver:** Landscape survey (private competitive dossier, 2026-06). **Docs-first** in this PR; implementation follows in thin code PRs with the same compliance-sample discipline as existing `docs/compliance-samples/compliance-sample-*.yaml` packs.
+
+**Non-claims (align with [COMPLIANCE_AND_LEGAL.md](../COMPLIANCE_AND_LEGAL.md)):** `norm_tag` values and recommendation text are **inventory and technical-mapping aids** — not legal advice, not a determination that a matched string is personal data in your jurisdiction, and not proof of regulatory compliance. Operators tune overrides with counsel; checksum gates **reduce false positives** on shape-only hits; they do **not** prove validity for enforcement purposes.
+
+### Execution table (doc-first → code slices)
+
+| Step | Deliverable | Status |
+| ---- | ----------- | ------ |
+| D1 | This plan section + [PLAN_EXTENDED_SENSITIVE_DISCOVERY_POSITIONING.md](PLAN_EXTENDED_SENSITIVE_DISCOVERY_POSITIONING.md) wave 2; `plans_hub_sync` + `PLANS_TODO` | ✅ Done (docs PR) |
+| D2 | Sketch `docs/compliance-samples/compliance-sample-global_identifiers.yaml` (or extend existing packs): `regex` rows + `recommendation_overrides` + header disclaimers | ⬜ Pending |
+| D3 | Built-in or override entity-types: SWIFT/BIC, IBAN, VIN, MAC, CVV/expiry (separate from PAN), AWS access/secret key shapes, PIN — distinct `pattern` names in `DEFAULT_PATTERNS` / overrides | ⬜ Pending |
+| D4 | Country checksum validators: UK NHS (final-digit checksum); CA SIN (Luhn) — **format matches but DV fails → suppress** (same contract as CPF Mod-11 in `core/brazilian_cpf.py`) | ⬜ Pending |
+| D5 | Span-alignment post-process in `boar_fast_filter` (Rust): multi-token entities (e.g. compound names) emit as one contiguous span | ⬜ Pending |
+| D6 | Registrable checksum/validator hooks via Plugin SDK ([#865](https://github.com/FabioLeitao/data-boar/issues/865)) + `plugin_schema` extension (coordinate with `PLANS_TODO` **S4b**) | ⬜ Pending |
+| D7 | `docs/SENSITIVITY_DETECTION.md` FP-scope note for new digit-heavy patterns; tests + `check-all` | ⬜ Pending |
+
+### Entity-types to distinguish (today generic or absent)
+
+| Entity | Detection intent | `norm_tag` / framing | FP-scope note |
+| ------ | ---------------- | -------------------- | --------------- |
+| **SWIFT/BIC** | Bank identifier (8 or 11 chars) | PCI / financial inventory or sector override | Not account numbers; validate BIC structure where implemented |
+| **IBAN** | International bank account | GDPR / PSD2-adjacent inventory | Country check digits; suppress on failed mod-97 when validator ships |
+| **VIN** | Vehicle identifier (17 chars) | Sector / motor registry hints | Exclude I/O/Q; checksum digit where applicable |
+| **MAC** | Hardware address | Security / asset inventory | High FP in logs and hex dumps — prefer context or length bounds |
+| **CVV / expiry** | Card security code / expiry (not PAN) | PCI-DSS sample alignment | **Separate** from `CREDIT_CARD` / Luhn PAN path ([compliance-sample-pci_dss.yaml](../compliance-samples/compliance-sample-pci_dss.yaml)) |
+| **AWS access / secret keys** | Cloud credential shapes | Secrets / security artifact (see extended discovery plan) | Pair with extended discovery positioning; not exhaustive vs dedicated secret scanners |
+| **PIN** | Short numeric secrets | PCI / auth inventory | Very high FP on counters and ordinals — checksum or context gate required |
+
+Secrets and IP column semantics stay aligned with [PLAN_EXTENDED_SENSITIVE_DISCOVERY_POSITIONING.md](PLAN_EXTENDED_SENSITIVE_DISCOVERY_POSITIONING.md) (wave 2 table).
+
+### Country checksum gates (suppress shape-only false positives)
+
+Follow the **CPF Mod-11** precedent documented in [SENSITIVITY_DETECTION.md](../SENSITIVITY_DETECTION.md): regex (or plugin) may match **shape**; an optional validator runs **after** match; **invalid check digit → drop finding** (not downgrade to LOW).
+
+| Identifier | Gate | Reference pattern |
+| ---------- | ---- | ----------------- |
+| **BR CPF** | Modulo-11 | `core/brazilian_cpf.py` (`cpf_checksum_valid`) — shipped for lab/contracts; wire into detector path in implementation slice |
+| **UK NHS number** | Checksum on final digit | Compliance-sample row + registrable validator ([#865](https://github.com/FabioLeitao/data-boar/issues/865)) |
+| **CA SIN** | Luhn | Extend [compliance-sample-pipeda.yaml](../compliance-samples/compliance-sample-pipeda.yaml) `SIN_CA` with validator gate (shape already present; Luhn reduces FP on random 9-digit runs) |
+
+### Span-alignment (multi-token entities)
+
+**Problem:** Fast prefilter may emit adjacent token hits (e.g. given + family name) as separate spans; reports and aggregation treat them as unrelated.
+
+**Direction:** Post-processing in `boar_fast_filter` merges compatible adjacent spans into one **entity span** before Python detector enrichment. Configurable gap (whitespace/punctuation) and category allowlist; default off until benchmarks show FN reduction without report noise.
+
+### Compliance-sample methodology (mandatory for new patterns)
+
+1. Add rows to `regex:` with explicit `name`, `pattern`, `norm_tag` (framework label — **not** legal conclusion).
+2. Merge matching bullets into `report.recommendation_overrides` in operator config (see sample file footers).
+3. File header: operator must merge overrides; counsel reviews production patterns.
+4. Document digit-heavy patterns under **Generic digit patterns and false-positive scope** in [SENSITIVITY_DETECTION.md](../SENSITIVITY_DETECTION.md).
+5. No weakening of built-in gates to pass CI; false positives → tighten pattern or add checksum gate ([ADR-0049](../adr/ADR-0049-no-brittle-mitigations-robust-input-handling.md)).
+
+### Revisit (completed plans — survey notes only)
+
+- [PLAN_SENSITIVE_CATEGORIES_ML_DL.md](completed/PLAN_SENSITIVE_CATEGORIES_ML_DL.md): optional taxonomy enrichment when entity-types above ship (ML/DL terms for `FINANCIAL_ID`, `VEHICLE_ID`, `NETWORK_ID` buckets) — **no reopen** unless operator promotes a new slice.
+- [PLAN_CONTENT_TYPE_AND_CLOAKING_DETECTION.md](completed/PLAN_CONTENT_TYPE_AND_CLOAKING_DETECTION.md): hidden metadata (EXIF GPS = location), steg hints, anti-cloaking via pHash/bHash ([#884](https://github.com/FabioLeitao/data-boar/issues/884)) — **evaluate separately** from #1056; addendum only unless operator reopens.
 
 ---
 
