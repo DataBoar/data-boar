@@ -10,7 +10,7 @@
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md)
 
 <!-- plans-hub-summary: Medium-term Pro/Ent-shaped backlog: (1) lakehouse tables as scan targets via Databricks SQL; (2) UC or curated tables as source of target list / scope metadata—aligned with CSV scope import and data soup formats. -->
-<!-- plans-hub-related: PLAN_SCOPE_IMPORT_FROM_EXPORTS.md, completed/PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md, PLAN_ENTERPRISE_HR_SST_ERP_CONNECTORS.md, PLAN_OBJECT_STORAGE_CLOUD_CONNECTORS.md, PLAN_FINDINGS_CORPORATE_REPOSITORY_EXPORT.md, ADDING_CONNECTORS.md -->
+<!-- plans-hub-related: completed/PLAN_SCOPE_IMPORT_FROM_EXPORTS.md, completed/PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md, PLAN_ENTERPRISE_HR_SST_ERP_CONNECTORS.md, PLAN_OBJECT_STORAGE_CLOUD_CONNECTORS.md, PLAN_FINDINGS_CORPORATE_REPOSITORY_EXPORT.md, ADDING_CONNECTORS.md -->
 
 ---
 
@@ -25,7 +25,7 @@
 | Track | Metaphor | What it means for Data Boar | Primary dependency today |
 | ----- | -------- | ---------------------------- | ------------------------- |
 | **A — Soup ingredient** | Data you **scan** | Managed / external **tables** (often **Delta / Parquet** behind UC), **views**, and (later) **volumes** paths—same **discover → sample → detect → finding** loop as other SQL sources. | First-class **Databricks SQL** path (driver, auth, SQLAlchemy `inspect` behaviour for **catalog.schema.table**), timeouts, least-privilege docs. See [ADDING_CONNECTORS.md](../ADDING_CONNECTORS.md), `connectors/sql_connector.py` patterns (incl. Snowflake-style schema skipping). |
-| **B — Recipe / inventory** | Where to **point** the scanner | **Curated catalog**: UC metadata, **inventory tables** in the lakehouse, or ETL outputs that list hosts, paths, DB endpoints, `source_system`, confidence—**normalized into** the same **target list** model as [PLAN_SCOPE_IMPORT_FROM_EXPORTS.md](PLAN_SCOPE_IMPORT_FROM_EXPORTS.md) (CSV → YAML fragments today). | **No** automatic equivalence to “GLPI export” unless the customer **lands** ITAM/ITSM exports (or integrations) **into** UC or tables; then we **import** via CSV pipeline, SQL-driven code generation, or a **future** UC REST adapter. |
+| **B — Recipe / inventory** | Where to **point** the scanner | **Curated catalog**: UC metadata, **inventory tables** in the lakehouse, or ETL outputs that list hosts, paths, DB endpoints, `source_system`, confidence—**normalized into** the same **target list** model as [PLAN_SCOPE_IMPORT_FROM_EXPORTS.md](completed/PLAN_SCOPE_IMPORT_FROM_EXPORTS.md) (CSV → YAML fragments today). | **No** automatic equivalence to “GLPI export” unless the customer **lands** ITAM/ITSM exports (or integrations) **into** UC or tables; then we **import** via CSV pipeline, SQL-driven code generation, or a **future** UC REST adapter. |
 
 **Key message:** Unity Catalog is **governance + discovery metadata**, not a replacement for **GLPI / ManageEngine / Snipe-IT / Contributor-Ati / Service Management** exports. It becomes the **same slot as “inventory”** when the organisation **chooses the lakehouse as the system of record** for normalized scope.
 
@@ -35,7 +35,7 @@
 
 | Plan | Relationship |
 | ---- | ------------- |
-| [PLAN_SCOPE_IMPORT_FROM_EXPORTS.md](PLAN_SCOPE_IMPORT_FROM_EXPORTS.md) | **Track B** extends the same **bootstrap scope** story: catalog or warehouse tables **feed** canonical targets + `scope_import` breadcrumbs; CSV remains the **v1** operator path. |
+| [PLAN_SCOPE_IMPORT_FROM_EXPORTS.md](completed/PLAN_SCOPE_IMPORT_FROM_EXPORTS.md) | **Track B** extends the same **bootstrap scope** story: catalog or warehouse tables **feed** canonical targets + `scope_import` breadcrumbs; CSV remains the **v1** operator path. |
 | [PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md](completed/PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md) | **Track A** aligns with **Parquet / ORC / columnar** “soup” already in the format roadmap; lakehouse tables are often those formats under SQL. |
 | [PLAN_ENTERPRISE_HR_SST_ERP_CONNECTORS.md](PLAN_ENTERPRISE_HR_SST_ERP_CONNECTORS.md) | **Distinct:** live HR/ERP/helpdesk **sampling** vs **this** plan’s focus on **Databricks as a technical substrate** (SQL + metadata). Overlap only if a customer stores CMDB exports **in** UC-managed tables. |
 | [PLAN_OBJECT_STORAGE_CLOUD_CONNECTORS.md](PLAN_OBJECT_STORAGE_CLOUD_CONNECTORS.md) | **Complementary:** UC **external locations** / cloud paths may eventually need **object-store** connectors for file-shaped soup, not SQL alone. |

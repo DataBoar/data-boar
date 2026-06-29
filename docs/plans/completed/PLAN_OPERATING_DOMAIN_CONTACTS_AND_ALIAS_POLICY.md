@@ -1,6 +1,6 @@
 # Plan: Operating-domain contacts and alias policy
 
-**Status:** Pending
+**Status:** Completed (archived under `docs/plans/completed/`)
 **Date:** 2026-05-14
 **Authors:** Fabio Leitao
 **Priority:** H1 U1
@@ -28,13 +28,13 @@ This plan **does not** record real addresses or registrar data in the **tracked*
 
 ## Acceptance criteria
 
-- [ ] **SECURITY.md** + **SECURITY.pt_BR.md** show **consistent** contact semantics (no contradictory addresses).
-- [ ] **CODE_OF_CONDUCT** pair matches escalation paths.
-- [ ] **CONTRIBUTING** pair points to **`SECURITY.md`** for vulnerability reporting.
-- [ ] **#483** closed with a short comment referencing this plan and the files touched.
+- [x] **SECURITY.md** + **SECURITY.pt_BR.md** show **consistent** contact semantics (no contradictory addresses).
+- [x] **CODE_OF_CONDUCT** pair matches escalation paths.
+- [x] **CONTRIBUTING** pair points to **`SECURITY.md`** for vulnerability reporting.
+- [x] **#483** closed with a short comment referencing this plan and the files touched.
 
 ## Sequencing
 
 Execute as a **docs-only** PR (or paired with **`houseclean`**), **`lint-only`** / **`check-all`** per change size; run **`uv run pytest tests/test_docs_pt_br_locale.py -v`** if pt-BR prose changes materially.
 
-**Synced with:** [PLANS_TODO.md](PLANS_TODO.md)
+**Synced with:** [PLANS_TODO.md](../PLANS_TODO.md)

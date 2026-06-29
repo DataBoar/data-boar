@@ -19,7 +19,7 @@ A single product toggle that “discovers everything” would be **misleading**,
 
 1. Treat **enterprise-style discovery** as **three complementary tracks**, each with its own plan, guardrails, and opt-in posture:
    - **File / data soup:** richer formats, cloaking, Tier 3b/4 heuristics, optional stego — [PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md](../plans/completed/PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md).
-   - **Offline scope import:** exports → canonical schema → merge-safe config fragments — [PLAN_SCOPE_IMPORT_FROM_EXPORTS.md](../plans/PLAN_SCOPE_IMPORT_FROM_EXPORTS.md).
+   - **Offline scope import:** exports → canonical schema → merge-safe config fragments — [PLAN_SCOPE_IMPORT_FROM_EXPORTS.md](../plans/completed/PLAN_SCOPE_IMPORT_FROM_EXPORTS.md).
    - **Opt-in network hints:** allowlisted TCP connect + short read — [PLAN_OPT_IN_NETWORK_PORT_SERVICE_HINTS.md](../plans/PLAN_OPT_IN_NETWORK_PORT_SERVICE_HINTS.md).
 
 2. **Do not** promise one **magic** control that enables all three; **stack** explicit flags / phases as each plan defines.

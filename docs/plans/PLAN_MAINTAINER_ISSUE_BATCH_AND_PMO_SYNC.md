@@ -7,7 +7,7 @@
 **Depends on:** `CONTRIBUTING.md` + `docs/ops/COMMIT_AND_PR.md` workflow; `gh` CLI for triage
 
 <!-- plans-hub-summary: Maintainer workflow: batch open GitHub issues into thin PRs, promote durable work into PLAN_*.md + PLANS_TODO + PLANS_HUB sync so the repo index matches reality. -->
-<!-- plans-hub-related: PLAN_CLI_VALIDATE_DIFF_AND_DSAR_EXPORT.md, PLAN_OPERATING_DOMAIN_CONTACTS_AND_ALIAS_POLICY.md -->
+<!-- plans-hub-related: completed/PLAN_CLI_VALIDATE_DIFF_AND_DSAR_EXPORT.md, completed/PLAN_OPERATING_DOMAIN_CONTACTS_AND_ALIAS_POLICY.md -->
 
 ## Purpose
 

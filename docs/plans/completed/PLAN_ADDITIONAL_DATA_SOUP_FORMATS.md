@@ -22,7 +22,7 @@ Production “soup” is not only obvious `.csv` and `.pdf` trees. It includes *
 | Signal | Direction in this repo |
 | ------ | ------------------------ |
 | **Files on disk / in shares** | Magic-byte cloaking, compressed innards, rich media metadata, optional **stego**, **Tier 3b** telemetry strings, **Tier 4** document tricks—see sections below. |
-| **Breadcrumbs from other tools** | Offline exports → canonical scope hints — [PLAN_SCOPE_IMPORT_FROM_EXPORTS.md](../PLAN_SCOPE_IMPORT_FROM_EXPORTS.md). **Medium-term:** lakehouse **inventory / UC-backed** tables as another channel for the same target list — [PLAN_DATABRICKS_UNITY_LAKEHOUSE_SCOPE_AND_SCAN.md](../PLAN_DATABRICKS_UNITY_LAKEHOUSE_SCOPE_AND_SCAN.md). |
+| **Breadcrumbs from other tools** | Offline exports → canonical scope hints — [PLAN_SCOPE_IMPORT_FROM_EXPORTS.md](PLAN_SCOPE_IMPORT_FROM_EXPORTS.md). **Medium-term:** lakehouse **inventory / UC-backed** tables as another channel for the same target list — [PLAN_DATABRICKS_UNITY_LAKEHOUSE_SCOPE_AND_SCAN.md](../PLAN_DATABRICKS_UNITY_LAKEHOUSE_SCOPE_AND_SCAN.md). |
 | **Listeners not in any inventory** | Allowlisted TCP connect + short read (technician-flagged) — [PLAN_OPT_IN_NETWORK_PORT_SERVICE_HINTS.md](../PLAN_OPT_IN_NETWORK_PORT_SERVICE_HINTS.md) (incl. worst-case zero-inventory). |
 
 **Guardrail:** “Sniff harder” is **not** covert or boundary-less; it is **explicitly enabled**, rate-limited, and auditable where the plan says so.
@@ -137,7 +137,7 @@ In production, **images**, **audio**, and **video** files are common. We do **no
 
 **Dependencies:** Builds on existing **Tier 3 rich media** metadata/subtitle paths; does not require full video decode for a **first slice** (string/metadata heuristics first). Link: [SECURITY_INSPIRATION_GRC_SECURITY_NOW.md](../../ops/SECURITY_INSPIRATION_GRC_SECURITY_NOW.md).
 
-**Program umbrella:** Treat **Tier 3b** as the **network/telemetry string** slice of a larger **“sniffing for hidden ingredients”** track—together with **Tier 4** (document tricks) and **stego** (payload hiding), plus **imports** ([PLAN_SCOPE_IMPORT_FROM_EXPORTS.md](../PLAN_SCOPE_IMPORT_FROM_EXPORTS.md)) and **allowlisted port hints** ([PLAN_OPT_IN_NETWORK_PORT_SERVICE_HINTS.md](../PLAN_OPT_IN_NETWORK_PORT_SERVICE_HINTS.md)) for **legacy / shadow / never-documented** scope. One phased roadmap avoids promising a single “magic toggle” that does everything.
+**Program umbrella:** Treat **Tier 3b** as the **network/telemetry string** slice of a larger **“sniffing for hidden ingredients”** track—together with **Tier 4** (document tricks) and **stego** (payload hiding), plus **imports** ([PLAN_SCOPE_IMPORT_FROM_EXPORTS.md](PLAN_SCOPE_IMPORT_FROM_EXPORTS.md)) and **allowlisted port hints** ([PLAN_OPT_IN_NETWORK_PORT_SERVICE_HINTS.md](../PLAN_OPT_IN_NETWORK_PORT_SERVICE_HINTS.md)) for **legacy / shadow / never-documented** scope. One phased roadmap avoids promising a single “magic toggle” that does everything.
 
 **Live host / port hints (optional, allowlisted):** For **operator-declared** hosts and well-known ports—**bounded** TCP connect + short banner read, not a stealth scanner—see [PLAN_OPT_IN_NETWORK_PORT_SERVICE_HINTS.md](../PLAN_OPT_IN_NETWORK_PORT_SERVICE_HINTS.md). Complements Tier 3b (strings **inside** files) by surfacing **possibly relevant listeners** the customer did not add as formal targets.
 
