@@ -267,6 +267,15 @@ Follow the **CPF Mod-11** precedent documented in [SENSITIVITY_DETECTION.md](../
 - [PLAN_SENSITIVE_CATEGORIES_ML_DL.md](completed/PLAN_SENSITIVE_CATEGORIES_ML_DL.md): optional taxonomy enrichment when entity-types above ship (ML/DL terms for `FINANCIAL_ID`, `VEHICLE_ID`, `NETWORK_ID` buckets) — **no reopen** unless operator promotes a new slice.
 - [PLAN_CONTENT_TYPE_AND_CLOAKING_DETECTION.md](completed/PLAN_CONTENT_TYPE_AND_CLOAKING_DETECTION.md): hidden metadata (EXIF GPS = location), steg hints, anti-cloaking via pHash/bHash ([#884](https://github.com/FabioLeitao/data-boar/issues/884)) — **evaluate separately** from #1056; addendum only unless operator reopens.
 
+### External research — destination as risk (sink context) — [#1066](https://github.com/FabioLeitao/data-boar/issues/1066)
+
+Off-band readonly review (Privado-style SAST data-flow) **confirms a known gap**, not a new priority:
+
+- Today `sensitivity_level` reflects **data category** from content/column analysis (`core/detector.py`), not **where** the data sits (e.g. unencrypted log vs database column with ACL).
+- Competitors in the **shift-left** category score **sink / destination** exposure; Data Boar is **shift-right** (production, legacy, shadow data code scans miss).
+- **Complementary axis** — a mature buyer may want both; **no finding schema change** in this note. A future implementation slice (orthogonal `exposure_band` or report-only derivation from connector + path heuristics) would be a **separate issue** if promoted.
+- RoPA-by-evidence priority is already tracked in [#837](https://github.com/FabioLeitao/data-boar/issues/837) (auditor reinforcement via issue comment — not duplicated here).
+
 ---
 
 ## References
