@@ -65,7 +65,7 @@ RUN chmod +x /tmp/collect-runtime-rootfs.sh && /tmp/collect-runtime-rootfs.sh /r
 # -----------------------------------------------------------------------------
 # gcr.io/distroless/cc-debian13:nonroot — Debian 13 matches python:3.13-slim glibc (not cc-debian12).
 # Human tag comment: cc-debian13:nonroot (#1028 / PLAN_IMAGE_HARDENING.md).
-FROM gcr.io/distroless/cc-debian13:nonroot@sha256:7f2a0e5b50575d355720a9d7ca9c871124780eb6a1dc0dbd70a67d5fd11629d2
+FROM gcr.io/distroless/cc-debian13:nonroot@sha256:d3cda6e91129130d7229a1806b6a73d292ef245ab032da7851907798024cefba
 
 LABEL org.opencontainers.image.description="LGPD/GDPR/CCPA audit. Default: web API and frontend on port 8088. Override command for CLI one-shot."
 
