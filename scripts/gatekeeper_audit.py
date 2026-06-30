@@ -47,13 +47,39 @@ def load_allowlist(path: Path) -> list[tuple[str, str]]:
     return entries
 
 
+# Partial IPv4 prefixes (e.g. RFC1918 octet pairs) must not match longer literals
+# such as 192.168.40.0/24 when git grep -w treats the dot as a word boundary.
+_PREFIX_OCTET_SEED_RE = re.compile(r"^\d{1,3}\.\d{1,3}$")
+
+
+def _seed_boundary_pattern(seed: str) -> re.Pattern[str]:
+    escaped = re.escape(seed)
+    if _PREFIX_OCTET_SEED_RE.match(seed.strip()):
+        return re.compile(r"(?<!\w)" + escaped + r"(?!\.\d)")
+    return re.compile(r"(?<!\w)" + escaped + r"(?!\w)")
+
+
 def _seeds_in_line(content: str, strict_seeds: list[str]) -> set[str]:
     """Strict seeds present in a line under word-boundary semantics (mirror -w)."""
     found: set[str] = set()
     for seed in strict_seeds:
-        if re.search(r"(?<!\w)" + re.escape(seed) + r"(?!\w)", content):
+        if _seed_boundary_pattern(seed).search(content):
             found.add(seed)
     return found
+
+
+def refine_strict_seed_hits(hit_text: str, strict_seeds: list[str]) -> str:
+    """Drop git grep lines that are only -w false positives for prefix IP seeds."""
+    kept: list[str] = []
+    for line in hit_text.splitlines():
+        m = re.match(r"^(.*?):(\d+):(.*)$", line)
+        if not m:
+            kept.append(line)
+            continue
+        content = m.group(3)
+        if _seeds_in_line(content, strict_seeds):
+            kept.append(line)
+    return "\n".join(kept)
 
 
 def filter_allowlisted(
@@ -80,6 +106,8 @@ def filter_allowlisted(
         path = m.group(1).replace("\\", "/")
         content = m.group(3)
         seeds_here = _seeds_in_line(content, strict_seeds)
+        if not seeds_here:
+            continue
         allowed = allow_by_path.get(path, set())
         if seeds_here and not (seeds_here - allowed):
             continue  # every matched seed is an approved FP at this path
@@ -189,6 +217,7 @@ def git_grep_strict_seeds(
             stdout = proc.stdout.strip()
             if proc.returncode == 0:
                 if stdout:
+                    stdout = refine_strict_seed_hits(stdout, strict_seeds)
                     filtered = filter_allowlisted(stdout, strict_seeds, allowlist)
                     if filtered.strip():
                         kept_all.append(filtered)

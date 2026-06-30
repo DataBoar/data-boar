@@ -31,12 +31,14 @@ class RedisConnector:
         scanner: Any,
         db_manager: Any,
         sample_limit: int = 100,
+        value_sample_limit: int = 100,
         detection_config: dict[str, Any] | None = None,
     ):
         self.config = target_config
         self.scanner = scanner
         self.db_manager = db_manager
         self.sample_limit = sample_limit
+        self.value_sample_limit = max(1, value_sample_limit)
         self.detection_config = detection_config or {}
         self._client = None
 
@@ -89,14 +91,39 @@ class RedisConnector:
                 if len(keys) >= self.sample_limit:
                     break
             combined = " ".join(keys)
-            for key in keys[:50]:  # per-key classification
+            per_key_limit = min(50, len(keys))
+            values_sampled = 0
+            for key in keys[:per_key_limit]:  # per-key classification
                 res = self.scanner.scan_column(key, combined)
                 res = augment_low_id_like_for_persist(res, key, self.detection_config)
                 if (
                     res["sensitivity_level"] == "LOW"
                     and res.get("pattern_detected") != SUGGESTED_REVIEW_PATTERN
                 ):
-                    continue
+                    # Bounded value sampling (audit v2): inspect key payloads when names are clean.
+                    if values_sampled < self.value_sample_limit:
+                        try:
+                            raw_val = self._client.get(key)
+                        except Exception:
+                            raw_val = None
+                        if raw_val:
+                            values_sampled += 1
+                            val_preview = str(raw_val)[:500]
+                            vres = self.scanner.scan_column(f"{key}:value", val_preview)
+                            vres = augment_low_id_like_for_persist(
+                                vres, val_preview, self.detection_config
+                            )
+                            if (
+                                vres["sensitivity_level"] != "LOW"
+                                or vres.get("pattern_detected")
+                                == SUGGESTED_REVIEW_PATTERN
+                            ):
+                                res = vres
+                    if (
+                        res["sensitivity_level"] == "LOW"
+                        and res.get("pattern_detected") != SUGGESTED_REVIEW_PATTERN
+                    ):
+                        continue
                 self.db_manager.save_finding(
                     source_type="database",
                     target_name=target_name,

@@ -35,9 +35,15 @@ def map_dbtier_string_to_tier(raw: str) -> Tier:
         return Tier.OPEN
     if r in ("enterprise", "ent"):
         return Tier.ENTERPRISE
-    if r in ("pro", "professional", "consultant", "partner", "trial"):
+    if r in ("partner", "partner_custom", "whitelabel", "white_label"):
+        return Tier.PARTNER
+    if r in ("pro_plus", "pro+", "proplus"):
+        return Tier.PRO_PLUS
+    if r in ("pro", "professional", "consultant", "trial"):
         return Tier.PRO
-    if r in ("community", "standard", "oss", "open_core"):
+    if r in ("std", "standard", "boar_std", "boar-std"):
+        return Tier.STD
+    if r in ("community", "oss", "open_core"):
         return Tier.COMMUNITY
     return Tier.COMMUNITY
 

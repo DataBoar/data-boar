@@ -18,8 +18,11 @@ from core.licensing.tier_features import (
 
 _TIER_LABEL = {
     Tier.COMMUNITY: "Community",
+    Tier.STD: "Std",
     Tier.PRO: "Pro",
+    Tier.PRO_PLUS: "Pro+",
     Tier.ENTERPRISE: "Enterprise",
+    Tier.PARTNER: "Partner",
     Tier.OPEN: "Open",
 }
 
