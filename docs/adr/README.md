@@ -93,6 +93,9 @@ Short, durable notes that capture **why** the project chose an approach—not on
 | 0072 | [Commit Gate vs Release Gate: distinct criteria](ADR-0072-commit-gate-vs-release-gate-distinct-criteria.md) | Accepted |
 | 0073 | [Version scheme: octet-maturity side-channel + release-line roadmap](ADR-0073-version-scheme-octet-maturity-and-roadmap.md) | Accepted |
 | 0075 | [Plugin authentication — file-based license vs Bearer](ADR-0075-plugin-auth-file-based-vs-bearer.md) | Proposed |
+| 0076 | [OPA/Rego as CI tier drift linter (not runtime)](ADR-0076-opa-rego-ci-tier-drift-linter-not-runtime.md) | Proposed |
+| 0077 | [Filesystem scan does not honor client `.gitignore`](ADR-0077-filesystem-scan-no-client-gitignore-by-design.md) | Accepted |
+| 0078 | [Multi-pattern regex: RegexSet before Vectorscan (benchmark gate)](ADR-0078-multi-pattern-regex-benchmark-gate-regexset-before-vectorscan.md) | Proposed |
 
 ## Related docs
 
