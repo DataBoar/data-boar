@@ -7,6 +7,8 @@ um núcleo totalmente funcional disponível a todos, com camadas comerciais que 
 
 > **Nota:** Preços exatos, datas de disponibilidade e atribuição de funcionalidades por camada são definidos pela equipe de produto.
 > Esta página é apenas uma visão estrutural. Para preços atuais, entre em contato com o mantenedor ou consulte o site (quando disponível).
+>
+> **Nomenclatura:** **Boar Std** (token `std`) é a faixa comercial de entrada do Data Boar — **não** é Oracle Database Standard Edition nem outro SKU "Standard" de terceiros.
 
 ## Divisão de licença (open core vs módulos comerciais)
 
@@ -24,10 +26,13 @@ um núcleo totalmente funcional disponível a todos, com camadas comerciais que 
 ```mermaid
 flowchart LR
     C["Community (open · sem licença)<br/>FS + SQL/NoSQL self-hosted<br/>compressed · REST genérico<br/>detectores · XLSX/HTML<br/>SEM RBAC · uso interno"]
-    P["Pro (+ Community)<br/>conectores corporativos<br/>OCR · PDF · scheduled<br/>RBAC: roles FIXOS<br/>direito comercial"]
+    S["Std (+ Community)<br/>direito comercial<br/>suporte · sem wait de cortesia"]
+    P["Pro (+ Std)<br/>conectores corporativos<br/>OCR · PDF · scheduled<br/>RBAC: roles FIXOS"]
     PP["Pro+ (+ Pro)<br/>RBAC: roles CUSTOM<br/>push SARIF/SIEM · RoPA<br/>deploy pack (1 lic / N fp)"]
     E["Enterprise (+ Pro+)<br/>plugin/partner · CMDB · sink<br/>white-label · SSO/OIDC/LDAP<br/>RBAC: por recurso<br/>workers ilimitados"]
-    C --> P --> PP --> E
+    PT["Partner / White-label<br/>(canal custom)<br/>entrega multi-cliente"]
+    C --> S --> P --> PP --> E
+    E -. canal .-> PT
 ```
 
 ## Dois movimentos de go-to-market
@@ -50,8 +55,9 @@ flowchart TB
 | Camada | Público-alvo | Token de licença | Diferencial principal |
 |---|---|---|---|
 | **Community** | DPOs internos, pesquisadores, estudantes, uso individual | Não exigido (modo open) | Funcionalidade completa do open-core; sem custo |
-| **Trial / POC** | Avaliações pré-vendas, prova de conceito | Token assinado com prazo | Relatório com limite de linhas; marca d'água; converte para Pro/Pro+ |
-| **Pro / Consultor** | Consultores independentes, MSSPs individuais, compradores de organização única | Token anual assinado | Direito de entrega comercial; conectores corporativos; roles RBAC fixos |
+| **Std** | Equipes pequenas que compram direito comercial antes dos conectores Pro | Token anual assinado | Direito de entrega comercial; suporte; **sem wait de cortesia** (Boar Std — não Oracle DB Standard Edition) |
+| **Trial / POC** | Avaliações pré-vendas, prova de conceito | Token assinado com prazo | Relatório com limite de linhas; marca d'água; converte para Std/Pro/Pro+ |
+| **Pro / Consultor** | Consultores independentes, MSSPs individuais, compradores de organização única | Token anual assinado | Conectores corporativos; roles RBAC fixos |
 | **Pro+** | Times que precisam de RBAC custom, integração SIEM/GRC, packs multi-footprint | Token anual assinado (claim-driven) | Roles RBAC custom; push SARIF/SIEM; export RoPA; deploy pack |
 | **Enterprise** | Grandes organizações, setores regulados, OEM | Acordo empresarial personalizado | Arquitetura plugin/partner + CMDB + sink + white-label + SSO/LDAP + RBAC por recurso |
 | **Partner** (custom) | Integradores, MSPs, revendedores multi-cliente | Acordo organizacional custom | Entrega multi-cliente; canal co-marca/white-label para muitas PMEs |

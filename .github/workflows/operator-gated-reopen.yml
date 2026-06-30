@@ -2,8 +2,8 @@
 #
 # Issues labeled `operator-gated` (e.g. release gate #406) cannot stay CLOSED unless:
 #   (a) label `gate-close-approved` is present at close time, OR
-#   (b) the **latest** issue comment starts with the deliberate trailer (close comment):
-#         Gate-Close-Approved-By: @FabioLeitao
+#   (b) the **latest** issue comment starts with the deliberate trailer AND includes a
+#       file-namespace SSHSIG block verified via gate_trailer_attest.py (ADR-0056).
 #
 # Do NOT scan issue body or comment history — a protocol doc comment citing the trailer
 # in backticks would otherwise allow any close (fatal false negative).
@@ -13,6 +13,7 @@ name: Operator-gated issue reopen
 
 permissions:
   issues: write
+  contents: read
 
 on:
   issues:
@@ -23,15 +24,35 @@ jobs:
     name: Reopen without close approval
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout (SSHSIG verify)
+        uses: actions/checkout@de0fac2e93aed2066c531a69177474906a2fae52 # v6.0.2
+        with:
+          sparse-checkout: |
+            scripts/gate_trailer_attest.py
+            docs/adr/allowed_signers
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b3a37ed9102738c8e3c5c0c03e8e2a2b0 # v6.2.0
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+
       - name: Enforce operator-gated close contract
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
         with:
           script: |
+            const fs = require("fs");
+            const { execSync } = require("child_process");
             const OPERATOR_GATED_LABEL = "operator-gated";
             const APPROVED_CLOSE_LABEL = "gate-close-approved";
-            // Trailer must open the close comment — not a doc line citing it in backticks.
             const CLOSE_MARKER =
               /^\s*Gate-Close-Approved-By:\s*@?FabioLeitao\b/im;
+            const SIG_BLOCK =
+              /-----BEGIN SSH SIGNATURE-----[\s\S]+-----END SSH SIGNATURE-----/;
 
             const issue = context.payload.issue;
             const labels = (issue.labels || []).map((l) => l.name);
@@ -62,6 +83,7 @@ jobs:
               }
             );
 
+            let latestBody = "";
             if (comments.length === 0) {
               core.warning(
                 `Issue #${issue_number}: no comments — cannot verify close trailer`
@@ -70,26 +92,41 @@ jobs:
               const sorted = [...comments].sort(
                 (a, b) => new Date(b.created_at) - new Date(a.created_at)
               );
-              const latestBody = sorted[0].body || "";
-              if (CLOSE_MARKER.test(latestBody)) {
-                core.info(
-                  `Issue #${issue_number}: latest comment has Gate-Close-Approved-By — close allowed`
+              latestBody = sorted[0].body || "";
+              if (
+                CLOSE_MARKER.test(latestBody) &&
+                SIG_BLOCK.test(latestBody)
+              ) {
+                const commentPath = "close-comment.md";
+                fs.writeFileSync(commentPath, latestBody);
+                try {
+                  execSync(
+                    "uv run python scripts/gate_trailer_attest.py verify --message-file close-comment.md",
+                    { cwd: process.env.GITHUB_WORKSPACE, stdio: "pipe" }
+                  );
+                  core.info(
+                    `Issue #${issue_number}: trailer + verified SSHSIG — close allowed`
+                  );
+                  return;
+                } catch (err) {
+                  core.warning(
+                    `Issue #${issue_number}: SSHSIG verify failed — ${err.message}`
+                  );
+                }
+              } else if (CLOSE_MARKER.test(latestBody)) {
+                core.warning(
+                  `Issue #${issue_number}: trailer without valid SSHSIG block`
                 );
-                return;
               }
             }
 
             const notice =
               "Auto-reopened: issue `operator-gated` fechada sem aprovação válida. " +
               "Use **uma** destas opções na próxima tentativa:\n" +
-              "1. Comentário de fechamento cuja **primeira linha** seja " +
-              "`Gate-Close-Approved-By: @FabioLeitao — <evidência>` " +
-              "(ex.: `gh issue close " +
-              issue_number +
-              " --comment \"Gate-Close-Approved-By: @FabioLeitao — …\"`), ou\n" +
+              "1. Comentário de fechamento com **trailer + bloco SSHSIG** verificável " +
+              "(`gate_trailer_attest.py verify --message-file …`; ver ADR-0056 / ADR-0072), ou\n" +
               "2. Label `gate-close-approved` antes de fechar.\n\n" +
-              "O workflow **não** varre corpo da issue nem comentários antigos — " +
-              "citar o protocolo em doc não libera fechamento (FASE 3, ADR-0072).";
+              "Texto do trailer **sozinho** não basta — exige assinatura SSH file-namespace.";
 
             await github.rest.issues.createComment({
               owner,

@@ -7,6 +7,8 @@ a fully functional open core available to all, with commercial tiers that unlock
 
 > **Note:** Exact pricing, availability dates, and feature assignments per tier are determined by the product team.
 > This page is a structural overview only. For current pricing, contact the maintainer or see the website (when available).
+>
+> **Naming:** **Boar Std** (tier token `std`) is the Data Boar commercial entry band — it is **not** Oracle Database Standard Edition or any other vendor "Standard" SKU.
 
 ## License split (open core vs commercial modules)
 
@@ -24,10 +26,13 @@ a fully functional open core available to all, with commercial tiers that unlock
 ```mermaid
 flowchart LR
     C["Community (open · no license)<br/>FS + self-hosted SQL/NoSQL<br/>compressed · generic REST<br/>detectors · XLSX/HTML<br/>no RBAC · internal use"]
-    P["Pro (+ Community)<br/>corporate connectors<br/>OCR · PDF · scheduled<br/>RBAC: FIXED roles<br/>commercial right"]
+    S["Std (+ Community)<br/>commercial delivery right<br/>support · courtesy wait off"]
+    P["Pro (+ Std)<br/>corporate connectors<br/>OCR · PDF · scheduled<br/>RBAC: FIXED roles"]
     PP["Pro+ (+ Pro)<br/>RBAC: CUSTOM roles<br/>SARIF/SIEM push · RoPA<br/>deploy pack (1 lic / N fp)"]
     E["Enterprise (+ Pro+)<br/>plugin/partner · CMDB · sink<br/>white-label · SSO/OIDC/LDAP<br/>RBAC: per-resource<br/>unlimited workers"]
-    C --> P --> PP --> E
+    PT["Partner / White-label<br/>(custom channel)<br/>multi-client delivery"]
+    C --> S --> P --> PP --> E
+    E -. channel .-> PT
 ```
 
 ## Two go-to-market motions
@@ -50,8 +55,9 @@ flowchart TB
 | Tier | Intended audience | License token | Key differentiator |
 |---|---|---|---|
 | **Community** | Internal DPOs, researchers, students, individual use | Not required (open mode) | Full open-core functionality; no cost |
-| **Trial / POC** | Pre-sales evaluations, proof-of-concept | Time-limited signed token | Row-capped report; watermarked; converts to Pro/Pro+ |
-| **Pro / Consultant** | Independent consultants, solo MSSPs, single-org buyers | Annual signed token | Commercial delivery right; corporate connectors; fixed RBAC roles |
+| **Std** | Small teams buying commercial rights before full Pro connectors | Annual signed token | Commercial delivery right; support; **no courtesy upgrade wait** (Boar-Std — not Oracle DB Standard Edition) |
+| **Trial / POC** | Pre-sales evaluations, proof-of-concept | Time-limited signed token | Row-capped report; watermarked; converts to Std/Pro/Pro+ |
+| **Pro / Consultant** | Independent consultants, solo MSSPs, single-org buyers | Annual signed token | Corporate connectors; fixed RBAC roles |
 | **Pro+** | Teams needing custom RBAC, SIEM/GRC integration, multi-footprint packs | Annual signed token (claim-driven) | Custom RBAC roles; SARIF/SIEM push; RoPA export; deploy pack |
 | **Enterprise** | Large organisations, regulated industries, OEM | Custom enterprise agreement | Plugin/partner arch + CMDB + sink + white-label + SSO/LDAP + per-resource RBAC |
 | **Partner** (custom) | System integrators, MSPs, multi-client resellers | Custom org agreement | Multi-client delivery; co-brand/white-label channel to many SMBs |

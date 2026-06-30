@@ -233,9 +233,9 @@ if ($IdempotentTwice) {
 "`n=== GR LINES ===" | Add-Content $log
 Get-Content $log | Select-String -Pattern 'GR host=' | ForEach-Object { $_.Line.Trim() } | Tee-Object -FilePath $log -Append
 
-$totalFails = (@($summary) | Where-Object { $_.Handlers -like 'FAIL:*' }).Count
+$totalFails = @(@($summary) | Where-Object { $_.Handlers -like 'FAIL:*' }).Count
 if ($IdempotentTwice) {
-    $totalFails += (@($summary2) | Where-Object { $_.Handlers -like 'FAIL:*' }).Count
+    $totalFails += @(@($summary2) | Where-Object { $_.Handlers -like 'FAIL:*' }).Count
 }
 if ($totalFails -gt 0) { exit 1 }
 exit 0

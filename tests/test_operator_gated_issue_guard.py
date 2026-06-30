@@ -49,8 +49,22 @@ def test_close_allowed_via_dedicated_label_without_comment() -> None:
 
 
 def test_close_allowed_via_latest_comment_not_historical_marker() -> None:
+    latest = (
+        "Gate-Close-Approved-By: @FabioLeitao — maestro 5 hosts OK\n\n"
+        "```\n"
+        "-----BEGIN SSH SIGNATURE-----\n"
+        "AAAA\n"
+        "-----END SSH SIGNATURE-----\n"
+        "```"
+    )
+    # Without a real signature this stays blocked — SSHSIG required, not text alone.
+    assert not close_allowed(["operator-gated"], latest)
+
+
+def test_close_allowed_via_latest_comment_requires_sshsig_not_text_only() -> None:
     latest = "Gate-Close-Approved-By: @FabioLeitao — maestro 5 hosts OK"
-    assert close_allowed(["operator-gated"], latest)
+    assert close_trailer_in_latest_comment(latest)
+    assert not close_allowed(["operator-gated"], latest)
 
 
 def test_close_not_allowed_when_latest_lacks_trailer_even_if_label_missing() -> None:
