@@ -3,13 +3,13 @@
 <!-- plans-hub-summary: Optional configurable subject-category axis (Bearer-style subject_mapping) complementing norm_tag; audit #1069 gap; candidate v1.9.0. -->
 <!-- plans-hub-related: PLAN_TAXONOMY_AXES.md, PLAN_COMPLIANCE_EXPANSION_GLOBAL_JURISDICTIONS.md, PLAN_ADDITIONAL_DETECTION_TECHNIQUES_AND_FN_REDUCTION.md -->
 
-**Status:** Pending
+**Status:** Pending — **superseded for implementation** by [PLAN_NORM_TAG_HIERARCHY_AND_DATA_SUBJECT.md](PLAN_NORM_TAG_HIERARCHY_AND_DATA_SUBJECT.md) ([#1071](https://github.com/FabioLeitao/data-boar/issues/1071) hybrid slice 1). Retained as Bearer-audit reference; do not implement #1072 separately.
 **Date:** 2026-06-30
 **Authors:** Fabio Leitao
 **Priority:** H2 · candidate **v1.9.0**
 **Tags:** detection, taxonomy, LGPD, norm_tag, subject-mapping, DPO-facing
 **GitHub audit:** [#1069](https://github.com/FabioLeitao/data-boar/issues/1069) (closed — gap confirmed, no code)
-**GitHub implementation:** [#1072](https://github.com/FabioLeitao/data-boar/issues/1072)
+**GitHub implementation:** [#1072](https://github.com/FabioLeitao/data-boar/issues/1072) (closed) → **superseded by [#1074](https://github.com/FabioLeitao/data-boar/issues/1074)**
 **Related evaluation:** [#1071](https://github.com/FabioLeitao/data-boar/issues/1071) (Fideslang / IAB Tech Lab taxonomy — strategic input, not a runtime dependency)
 
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md), [PLAN_TAXONOMY_AXES.md](PLAN_TAXONOMY_AXES.md)
