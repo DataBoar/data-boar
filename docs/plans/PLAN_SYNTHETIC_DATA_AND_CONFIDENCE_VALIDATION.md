@@ -136,6 +136,18 @@ Ground truth: for each fixture (file, table/column, API response), a **manifest*
 
 ---
 
+## Far horizon (H3/H4) — federated calibration research ([#1067](https://github.com/FabioLeitao/data-boar/issues/1067))
+
+Off-band readonly review of privacy-preserving ML stacks (e.g. OpenMined/PySyft). **Pattern registration only** — **no roadmap commitment**, no new dependencies, no FL/DP code.
+
+**Hypothetical Enterprise scenario:** if we ever improve ML/DL **calibration** (confidence thresholds, FN reduction) by aggregating **signals across multiple Enterprise customers** without centralising anyone’s raw data, **federated learning** with proper **differential privacy composition** is the architecturally correct shape. Natural packaging candidate: `dbtier: enterprise` (“cross-tenant model improvement with provable isolation”).
+
+> **Technical caveat (do not simplify):** PySyft alone is **not** ready-made differential privacy. Real DP requires composition with **Opacus** (PyTorch) or TF-Privacy on the training path. Treat PySyft as an **architectural reference**, not a drop-in privacy dependency.
+
+**Adjacent academic framing (operator thesis context, no repo action):** static dataset anonymisation (e.g. k-anonymity / l-diversity tooling such as ARX) and federated training address **different** privacy-engineering stages; Data Boar’s deterministic discovery stack remains a **third category** (inventory of where sensitive data lives).
+
+---
+
 ## Dependencies and constraints
 
 - **Fixtures are optional:** Main app and default tests do not depend on the full synthetic dataset; it is for validation and operator training. CI can run a subset if desired.
