@@ -1,0 +1,26 @@
+{
+  "benchmark_id": "filesystem_phase_breakdown_v1",
+  "generated_at_utc": "2026-06-30T06:23:35.772738+00:00",
+  "git_sha": "a5d11258",
+  "host": "Linux-6.12.94+deb13-amd64-x86_64-with-glibc2.41",
+  "file_count": 2000,
+  "iterations": 3,
+  "max_chars": 12000,
+  "seconds": {
+    "walk_glob": 0.006223199345792334,
+    "read_sample": 0.01712814497295767,
+    "detect_delta": 8.224179534707218,
+    "total_estimated": 8.247530879025968
+  },
+  "percent_of_total": {
+    "walk_glob": 0.08,
+    "read_sample": 0.21,
+    "detect_matching": 99.72
+  },
+  "gate_notes": {
+    "vectorscan_threshold_pct": 15,
+    "parallel_walk_threshold_pct": 15,
+    "matching_below_vectorscan_gate": false,
+    "walk_below_parallel_gate": true
+  }
+}
