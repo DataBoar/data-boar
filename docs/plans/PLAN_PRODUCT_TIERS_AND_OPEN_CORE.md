@@ -238,3 +238,34 @@ Listed in priority order from a "partner trying to steal value" perspective:
 | 5 | ~~Create `tools/license-studio` private repo~~ → **`FabioLeitao/license-studio`** (done 2026-06-25) | [H2] |
 | 6 | Define academic/thesis exception policy | [H3] |
 | 7 | Add `dbfeatures` to LICENSING_SPEC.md claims table | [H2] |
+
+---
+
+## Engineering Notes (external research, 2026-06-28)
+
+Off-band readonly review of open-source identity/federation stacks (e.g. Logto) against this plan and
+the repo state. **Does not add product work or dependencies** — craft notes for when Phases 1–2
+(JWT `dbtier` / `dbfeatures` + `LicenseGuard.check_feature()`) unblock SSO, multi-tenant, and
+Enterprise RBAC. EPIC [#865](https://github.com/FabioLeitao/data-boar/issues/865) (Plugin SDK)
+remains the connector boundary reference.
+
+1. **OIDC/SAML via certified library** — never hand-roll federation handshake or token parsing;
+   use a maintained stack (e.g. `authlib` in Python) or equivalent. Same doctrine as Ed25519
+   signing: standard library, not bespoke crypto extended to auth federation.
+2. **Connector/plugin = minimal surface, never core** — federation connectors should expose only a
+   small kit API (Logto’s `@logto/connector-kit` pattern). Validates the L1/L2/L3 design in **#865**;
+   external confirmation, not a new action item.
+3. **Tenant isolation as a structural object** — per-tenant connection pool or isolator (e.g.
+   `TenantPool`), not ad-hoc `WHERE tenant_id = ?` scattered through queries (avoids entire
+   classes of forgotten-filter bugs).
+4. **Migration compatibility test in CI** — before SQLite schema changes (relevant to GAP-009
+   findings attestation): assert current code still reads data produced during rollout, not only
+   that “the migration runs.”
+5. **Encryption-at-rest fail-closed in production** — if findings/config SQLite ever stores
+   connector secrets, require an operator key (e.g. `SECRET_VAULT_KEK`); boot fails without it,
+   never silent unencrypted operation.
+6. **JIT provisioning on SSO** — first login via the customer IdP provisions account + role from
+   claims without manual admin onboarding (Enterprise procurement checklist item).
+
+**Out of scope for this note:** implementing SSO/OIDC/multi-tenant/RBAC, new dependencies,
+submodules, or changes to Pending Task #2 (Phase 1–2 JWT enforcement).

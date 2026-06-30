@@ -1,0 +1,14 @@
+{
+  "benchmark": "rust_prefilter_hotspot_v1",
+  "rows": 200000,
+  "warmup_iterations": 2,
+  "measure_iterations": 5,
+  "python_seconds": 0.156998,
+  "rust_seconds": 0.03942,
+  "speedup_rust_vs_python": 3.9828,
+  "python_hit_count": 100000,
+  "rust_hit_count": 100000,
+  "host_profile": "linux-x86_64",
+  "git_sha": "085f5994",
+  "generated_at": "2026-06-29T19:05:31.586178+00:00"
+}

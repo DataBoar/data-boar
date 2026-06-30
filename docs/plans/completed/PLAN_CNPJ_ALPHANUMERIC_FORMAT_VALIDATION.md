@@ -1,6 +1,6 @@
 # Plan: CNPJ alphanumeric format – understanding, validation, and compatibility
 
-**Status:** Completed (archived under `docs/plans/completed/`)
+**Status:** Completed (format compatibility phases 1–4; checksum phase 5 deferred post-archive)
 **Date:** 2026-03-15
 **Authors:** Fabio Leitao
 **Priority:** H3
@@ -105,13 +105,15 @@ This is **pattern-based compatibility** (format of allowed or found data), not s
 | 4.2 | Update PLANS_TODO.md and this plan when steps are completed; ensure SENSITIVITY_DETECTION and USAGE docs (EN + pt_BR) are in sync.                                                                                                                                                                                                          | ✅ Done                                                                      |
 | 4.3 | Regression: full test suite passes; existing LGPD_CNPJ behaviour unchanged when alphanumeric is not enabled.                                                                                                                                                                                                                                | ✅ Done                                                                      |
 
-### Phase 5: Future checksum validation (CNPJ, CPF and other Brazilian IDs)
+### Phase 5: Future checksum validation (CNPJ, CPF and other Brazilian IDs) — deferred post-archive
+
+Not part of the archived delivery; pattern-based compatibility (phases 1–4) is what shipped.
 
 | #   | To-do                                                                                                                                                                                                                           | Status |
 | --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
-| 5.1 | Research official checksum algorithms for numeric and alphanumeric CNPJ, CPF and other Brazilian identifiers already covered by regex (e.g. PIS/PASEP), and document them in a detector-logic design note.                      | ⬜      |
-| 5.2 | Design how checksum validation would integrate with the existing detector pipeline (e.g. optional flag or config section that adds a second “validated” pass after regex) without breaking current behaviour or performance.    | ⬜      |
-| 5.3 | When/if implemented, update SENSITIVITY_DETECTION docs and PLANS_TODO.md to reflect that format compatibility (regex) and checksum validation are distinct, opt-in layers.                                                      | ⬜      |
+| 5.1 | Research official checksum algorithms for numeric and alphanumeric CNPJ, CPF and other Brazilian identifiers already covered by regex (e.g. PIS/PASEP), and document them in a detector-logic design note.                      | ⬜ Deferred (post-archive)      |
+| 5.2 | Design how checksum validation would integrate with the existing detector pipeline (e.g. optional flag or config section that adds a second “validated” pass after regex) without breaking current behaviour or performance.    | ⬜ Deferred (post-archive)      |
+| 5.3 | When/if implemented, update SENSITIVITY_DETECTION docs and PLANS_TODO.md to reflect that format compatibility (regex) and checksum validation are distinct, opt-in layers.                                                      | ⬜ Deferred (post-archive)      |
 
 ---
 

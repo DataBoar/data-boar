@@ -41,6 +41,13 @@ Natural enterprise channel that complements **N2's** partner-friendly accelerato
 - **Buyer-facing narrative (generic, no vendor names):** [../use-cases/BACKUP_AND_DATA_PROTECTION_ESTATE_CRITICALITY.md](../use-cases/BACKUP_AND_DATA_PROTECTION_ESTATE_CRITICALITY.md) ([pt-BR](../use-cases/BACKUP_AND_DATA_PROTECTION_ESTATE_CRITICALITY.pt_BR.md)).
 - **Promotion gate:** stays a thesis until **repeatable revenue evidence** appears; only then promote a row in `PLANS_TODO.md` (*Partner / sector demand*) — do **not** add buyer-facing links into `docs/plans/`.
 
+### Complementary category — shift-left SAST (Privado-class) — [#1066](https://github.com/FabioLeitao/data-boar/issues/1066)
+
+**Shift-left** tools trace PII **through source code** (CI of the dev pipeline); Data Boar traces **where data already lives** (production, backups, shares, shadow imports). They are **adjacent, not substitutes**.
+
+- **GTM angle:** compliance artefacts built from **evidence**, not human memory, have proven demand (RoPA / app-store data-safety narratives). A team already using shift-left PII SAST in CI is a **natural lead** for production inventory with Data Boar.
+- **No product action here:** do not add Code Property Graph, Joern, or Privado as dependencies; Semgrep in `check-all` remains **generic security SAST**, not data-flow PII inventory.
+
 ## Deliverables
 
 - One tracked doc slice per front.

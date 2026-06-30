@@ -21,7 +21,7 @@ alwaysApply: false
 
 1. **Goal:** **`docs/plans/`** holds **in-progress and upcoming** `PLAN_*.md` files only. **Delivered** plans belong in **`docs/plans/completed/`** so the folder is quick to scan.
 
-1. **When to move:** The plan’s **Status** and **PLANS_TODO.md** narrative agree the work is **done** (or the doc-only / CI slice is **complete**), with no misleading **⬜** rows left for that theme.
+1. **When to move:** The plan’s **Status** and **PLANS_TODO.md** narrative agree the work is **done** (or the doc-only / CI slice is **complete**), with no misleading **⬜** rows left for that theme. Use a **qualified** Status (*Core complete*, *catalogue*, *phase N*, *doc-only*) when backlog rows remain — label them **Deferred (post-archive)**. CI: `tests/test_plan_archive_integrity.py`.
 
 1. **How (same merge / follow-up commit):**
    - `git mv docs/plans/PLAN_FOO.md docs/plans/completed/`

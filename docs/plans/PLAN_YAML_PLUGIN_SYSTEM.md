@@ -41,6 +41,10 @@ Allow operators to add custom discovery patterns without modifying the Data Boar
 - **Follow-up — ML/DL backfill (defaults + samples):** align built-in `DEFAULT_ML_TERMS` / DL prototype paths with **compliance-sample-*.yaml** vocabulary (geo and sector terms); add optional `dl_patterns:` blocks in samples when operators need embedding parity — thin slices, no big-bang.
 - **Follow-up — U.S. retail + health samples:** optional new files mirroring the **LGPD** export model (core `DEFAULT_*` stays canonical): e.g. `compliance-sample-us_ca_cpra.yaml` (CCPA as amended / CPRA inventory framing) and `compliance-sample-us_hipaa_phi.yaml` (PHI-oriented patterns and terms) for counsel-tuned overrides.
 
+### Future research — declarative policy format ([#865](https://github.com/FabioLeitao/data-boar/issues/865) / [#1066](https://github.com/FabioLeitao/data-boar/issues/1066))
+
+If the Plugin SDK later needs **operator-authored gates** without Python plugins (e.g. “severity G3 in a column named `log` blocks merge”), [json-logic](https://github.com/jwadhams/json-logic-py) is a **reference format** for lightweight, auditable rules — more approachable than regex-only expressions, safer than `eval()`. **No dependency or implementation** until a concrete requirement appears in a future phase.
+
 ### Phase 2 — Rust Passthrough (future)
 
 - Export compiled regex patterns from the plugin file to the Rust `boar_fast_filter` layer so custom regexes benefit from Rust-speed matching.
