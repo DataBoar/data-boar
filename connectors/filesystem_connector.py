@@ -7,8 +7,10 @@ Scans all compatible/supported file types by extension; unknown types get path/n
 
 import hashlib
 import os
+import stat
 import tempfile
 import zipfile
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
@@ -43,6 +45,90 @@ def _file_content_fingerprint(raw_bytes: bytes | None) -> str | None:
     if not raw_bytes:
         return None
     return hashlib.blake2s(raw_bytes, digest_size=8).hexdigest()
+
+
+def _dir_inode_key(path: Path) -> tuple[int, int] | None:
+    """Return (st_dev, st_ino) for a directory, or None if stat fails."""
+    try:
+        st = path.stat()
+    except OSError:
+        return None
+    if not stat.S_ISDIR(st.st_mode):
+        return None
+    return (st.st_dev, st.st_ino)
+
+
+def _file_inode_key(path: Path) -> tuple[int, int] | None:
+    """Return (st_dev, st_ino) for a regular file (symlink not followed)."""
+    try:
+        st = path.stat(follow_symlinks=False)
+    except OSError:
+        return None
+    if not stat.S_ISREG(st.st_mode):
+        return None
+    return (st.st_dev, st.st_ino)
+
+
+def iter_scan_files(root: Path, *, recursive: bool) -> Iterator[Path]:
+    """
+    Yield files under *root* for filesystem scans.
+
+    - Does not follow directory symlinks (avoids circular walk loops).
+    - Skips duplicate regular files reachable via multiple hard links / symlink aliases.
+    """
+    root = root.resolve()
+    seen_dirs: set[tuple[int, int]] = set()
+    seen_files: set[tuple[int, int]] = set()
+
+    def _walk_dir(directory: Path) -> Iterator[Path]:
+        dkey = _dir_inode_key(directory)
+        if dkey is None:
+            return
+        if dkey in seen_dirs:
+            return
+        seen_dirs.add(dkey)
+        try:
+            with os.scandir(directory) as it:
+                for entry in it:
+                    try:
+                        if entry.is_symlink():
+                            if entry.is_file(follow_symlinks=True):
+                                fpath = Path(entry.path)
+                                fkey = _file_inode_key(fpath)
+                                if fkey is not None and fkey not in seen_files:
+                                    seen_files.add(fkey)
+                                    yield fpath
+                            continue
+                        if entry.is_file(follow_symlinks=False):
+                            fpath = Path(entry.path)
+                            fkey = _file_inode_key(fpath)
+                            if fkey is not None and fkey not in seen_files:
+                                seen_files.add(fkey)
+                                yield fpath
+                        elif recursive and entry.is_dir(follow_symlinks=False):
+                            yield from _walk_dir(Path(entry.path))
+                    except OSError:
+                        continue
+        except OSError:
+            return
+
+    if recursive:
+        yield from _walk_dir(root)
+    else:
+        try:
+            with os.scandir(root) as it:
+                for entry in it:
+                    try:
+                        if entry.is_file(follow_symlinks=False):
+                            fpath = Path(entry.path)
+                            fkey = _file_inode_key(fpath)
+                            if fkey is not None and fkey not in seen_files:
+                                seen_files.add(fkey)
+                                yield fpath
+                    except OSError:
+                        continue
+        except OSError:
+            return
 
 
 # Plain text and markup (read as text with errors=replace)
@@ -623,10 +709,7 @@ class FilesystemConnector:
             )
         except Exception:
             pass
-        pattern = "**/*" if recursive else "*"
-        for file_path in path.glob(pattern):
-            if not file_path.is_file():
-                continue
+        for file_path in iter_scan_files(path, recursive=recursive):
             ext = file_path.suffix.lower()
             if ext not in self.extensions and not (
                 self.scan_compressed and ext in self.compressed_extensions
