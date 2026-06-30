@@ -4,9 +4,12 @@ tier_features.py
 Feature-to-tier mapping for Data Boar.
 
 STRATEGY (internal — not yet public):
-  Community  — open source, self-hosted, unlimited scans, core detectors, XLSX/HTML reports
-  Pro        — PDF reports, advanced connectors, scheduled scans, API key management, support SLA
-  Enterprise — custom branding, digital signatures, multi-tenant, SSO, priority support
+  Community  — open source, self-hosted, core detectors, XLSX/HTML reports
+  Std        — paid entry (Boar-Std; not Oracle Database Standard Edition): commercial right, support
+  Pro        — PDF reports, corporate connectors, scheduled scans, fixed RBAC, support SLA
+  Pro+       — custom RBAC, SARIF/SIEM push, RoPA export, deploy pack (claim-driven workers)
+  Enterprise — plugin/partner arch, CMDB, sink, white-label, SSO, per-resource RBAC
+  Partner    — channel / multi-client delivery (custom agreement; capability ≥ Pro+)
 
 CONNECTOR BOUNDARY (operator decision, ratified 2026-06-11 — #843):
   Open-core stays useful: filesystem, self-hosted SQL/NoSQL (sqlite/postgres/
@@ -30,8 +33,11 @@ from enum import Enum
 
 class Tier(str, Enum):
     COMMUNITY = "community"
+    STD = "std"  # Boar-Std product tier — not Oracle DB "Standard Edition"
     PRO = "pro"
+    PRO_PLUS = "pro_plus"
     ENTERPRISE = "enterprise"
+    PARTNER = "partner"
     OPEN = "open"  # enforcement off (dev / unlicensed)
 
 
@@ -130,8 +136,11 @@ FEATURE_TIER_MAP: dict[str, Tier] = {
 # ---------------------------------------------------------------------------
 _TIER_ORDER = {
     Tier.COMMUNITY: 0,
-    Tier.PRO: 1,
-    Tier.ENTERPRISE: 2,
+    Tier.STD: 1,
+    Tier.PRO: 2,
+    Tier.PRO_PLUS: 3,
+    Tier.ENTERPRISE: 4,
+    Tier.PARTNER: 5,
     Tier.OPEN: 99,  # OPEN bypasses all checks
 }
 

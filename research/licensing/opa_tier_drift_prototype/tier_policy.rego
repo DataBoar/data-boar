@@ -5,8 +5,11 @@ import rego.v1
 # Illustrative ladder — mirrors FEATURE_TIER_MAP intent (#854 connector boundary).
 tier_rank := {
 	"community": 1,
-	"pro": 2,
-	"enterprise": 3,
+	"std": 2,
+	"pro": 3,
+	"pro_plus": 4,
+	"enterprise": 5,
+	"partner": 6,
 	"open": 99,
 }
 

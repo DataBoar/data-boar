@@ -121,8 +121,11 @@ def _parse_dbmfp_claim(raw: Any) -> list[str] | None:
 _TIER_DEFAULT_WORKER_CAP: dict[Tier, int | None] = {
     Tier.OPEN: None,
     Tier.COMMUNITY: 2,
+    Tier.STD: 3,
     Tier.PRO: 4,
+    Tier.PRO_PLUS: 8,
     Tier.ENTERPRISE: None,  # unlimited — Enterprise perk
+    Tier.PARTNER: None,  # contract-driven; treat as unlimited unless claim caps
 }
 
 _guard_instance: LicenseGuard | None = None

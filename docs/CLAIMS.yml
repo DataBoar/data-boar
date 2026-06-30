@@ -34,7 +34,7 @@ claims:
       - issue: 854
 
   - id: rust-prefilter-speedup
-    text: "Pré-filtro Rust (Pro) acelera o hotspot ~11–13x vs Python, com paridade de findings."
+    text: "Pré-filtro Rust (Pro) acelera o hotspot ~4–5× vs Python no perfil pinado, com paridade de findings."
     tier: pro
     backed_by:
       - symbol: "pro/prefilter.py::ProPreFilter"

@@ -467,6 +467,7 @@ def test_operator_gated_reopen_workflow_present_and_valid() -> None:
     assert "operator-gated" in text
     assert "gate-close-approved" in text
     assert "Gate-Close-Approved-By" in text
+    assert "SSHSIG" in text or "SSH SIGNATURE" in text
     assert "sorted[0]" in text or "latest" in text.lower()
     assert "issue.body" not in text.replace("latestBody", "")
     assert "actions/github-script@" in text
