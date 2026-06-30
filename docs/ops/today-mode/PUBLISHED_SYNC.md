@@ -10,8 +10,8 @@
 
 | Field | Value |
 | ----- | ----- |
-| **Verified** | **2026-06-29** |
-| **`pyproject.toml` on `main`** | **`1.7.4.post1`** (packaging slice **#1047** / **#1052** OIDC publish; stable marketing release remains **1.7.4**) |
+| **Verified** | **2026-06-30** |
+| **`pyproject.toml` on `main`** | **`1.7.4.post1`** — post-GA dev slices on `main` (e.g. **#1097** licensing) without semver bump until next release ritual |
 | **PyPI** | [**data-boar `1.7.4.post1`**](https://pypi.org/project/data-boar/1.7.4.post1/) — `pip install data-boar` (published **2026-06-27**, Trusted Publishing via **`publish-pypi.yml`**) |
 | **GitHub Release Latest** | [**v1.7.4**](https://github.com/FabioLeitao/data-boar/releases/tag/v1.7.4) (notes: **`docs/releases/1.7.4.md`**, **`docs/releases/1.7.4.post1.md`**, **`CHANGELOG.md`**) |
 | **Docker Hub** | **`fabioleitao/data_boar:1.7.4`** + **`latest`** (published **2026-06-26**) |
