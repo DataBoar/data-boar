@@ -310,6 +310,10 @@ def main() -> None:
             "  python main.py --config config.yaml --web --allow-insecure-http --port 9090\n"
             "  python main.py --config config.yaml --web --allow-insecure-http --host 0.0.0.0\n"
             "\n"
+            "  # Zero-config demo (synthetic corpus, loopback dashboard — no config.yaml)\n"
+            "  python main.py --demo\n"
+            "  data-boar --demo\n"
+            "\n"
             "Once a one-shot scan finishes, an Excel report and heatmap PNG are written under\n"
             "the configured report.output_dir (default: current directory). When the API is\n"
             "running, you can navigate to the documented endpoints (see README.md) to trigger\n"
@@ -322,6 +326,16 @@ def main() -> None:
         action="version",
         version=_cli_public_version_line(),
         help="Show the public product version and exit (no scan or API startup).",
+    )
+    parser.add_argument(
+        "--demo",
+        action="store_true",
+        help=(
+            "Zero-config demo: generate a synthetic filesystem corpus in a temp directory, "
+            "run an initial scan, and start the dashboard on loopback (127.0.0.1) with "
+            "plaintext HTTP (--allow-insecure-http). Does not require --config. "
+            "Temp files are removed when the process exits."
+        ),
     )
     parser.add_argument(
         "--config",
@@ -529,6 +543,41 @@ def main() -> None:
     )
     args = parser.parse_args()
 
+    demo_mode = bool(getattr(args, "demo", False))
+    demo_dir: Path | None = None
+
+    if demo_mode:
+        demo_incompatible = (
+            args.validate_config
+            or args.reset_data
+            or args.export_audit_trail is not None
+            or args.export_dsar is not None
+            or args.diff_sessions
+        )
+        if demo_incompatible:
+            print(
+                "Cannot combine --demo with --validate-config, --reset-data, "
+                "--export-audit-trail, --export-dsar, or --diff.",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        from core.demo.runtime import prepare_demo_workspace, print_demo_banner
+
+        demo_dir, config_path, _preloaded = prepare_demo_workspace(
+            port=args.port,
+            register_cleanup=True,
+        )
+        args.config = str(config_path)
+        args.web = True
+        args.allow_insecure_http = True
+        if args.host and args.host not in ("127.0.0.1", "localhost", "::1"):
+            print(
+                f"[demo] Ignoring --host {args.host!r}; demo binds loopback only.",
+                file=sys.stderr,
+            )
+        args.host = "127.0.0.1"
+        print_demo_banner(args.port, demo_dir)
+
     if args.validate_config and (
         args.web
         or args.reset_data
@@ -582,6 +631,11 @@ def main() -> None:
         config = load_config(args.config)
     except FileNotFoundError as e:
         print(f"Config not found: {e}")
+        if not demo_mode:
+            print(
+                "Tip: run `data-boar --demo` for a zero-config synthetic demo "
+                "(no config.yaml required)."
+            )
         print("Probable cause: The config file path is wrong or the file was moved.")
         print(
             "What to do: Check the path, use --config to point to your YAML/JSON, or create config.yaml in the current directory."
@@ -693,6 +747,28 @@ def main() -> None:
         return
 
     if args.web and not args.reset_data:
+        if demo_mode:
+            from core.validation import sanitize_tenant_technician
+
+            engine = AuditEngine(config)
+            try:
+                _emit_runtime_trust_info(runtime_trust, to_stdout=True, to_stderr=True)
+                tenant = sanitize_tenant_technician(args.tenant)
+                technician = sanitize_tenant_technician(args.technician)
+                session_id = engine.start_audit(
+                    tenant_name=tenant,
+                    technician_name=technician,
+                    jurisdiction_hint=bool(args.jurisdiction_hint),
+                )
+                print(f"[demo] Scan session: {session_id}")
+                report_path = engine.generate_final_reports(session_id)
+                if report_path:
+                    print(f"[demo] Report written: {report_path}")
+                else:
+                    print("[demo] No findings to report.")
+            finally:
+                engine.db_manager.dispose()
+
         _emit_runtime_trust_info(runtime_trust, to_stdout=True, to_stderr=True)
         import uvicorn
         from api.routes import app
@@ -707,6 +783,9 @@ def main() -> None:
         )
 
         api_cfg = config.get("api", {})
+        if demo_mode:
+            api_cfg = {**api_cfg, "host": "127.0.0.1", "allow_insecure_http": True}
+            config["api"] = api_cfg
         if bool(api_cfg.get("require_api_key")) and not effective_api_key_configured(
             api_cfg
         ):
