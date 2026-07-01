@@ -239,7 +239,14 @@ def test_gitleaks_workflow_present_and_valid() -> None:
         if isinstance(step, dict) and step.get("uses")
     ]
     assert any("actions/checkout@" in line for line in uses_lines)
-    assert any("gitleaks/gitleaks-action@" in line for line in uses_lines)
+    run_blob = "\n".join(
+        str(step.get("run", ""))
+        for step in steps
+        if isinstance(step, dict) and step.get("run")
+    )
+    assert "gitleaks_${VER}_linux_x64.tar.gz" in run_blob
+    assert "sha256sum -c" in run_blob
+    assert "./gitleaks git ." in run_blob
 
 
 def test_gitleaks_yml_pins_actions_to_shas() -> None:
@@ -252,7 +259,7 @@ def test_gitleaks_yml_pins_actions_to_shas() -> None:
             continue
         if "./.github/workflows/" in code:
             continue
-        if not any(p in code for p in ("actions/", "github/", "gitleaks/")):
+        if not any(p in code for p in ("actions/", "github/")):
             continue
         assert sha_40.search(code), (
             f"expected full commit SHA in uses line: {line.strip()!r}"

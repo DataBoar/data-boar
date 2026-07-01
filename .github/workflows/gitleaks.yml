@@ -38,11 +38,18 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Gitleaks
-        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
-        env:
-          # GITLEAKS_LICENSE only needed for org features; OSS works without.
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # gitleaks BINARIO (open-source, gratis) — evita a licenca que a Action exige em ORG.
+      # Ver DataBoar/maestro#10. Confirmar VER com a release atual antes do merge.
+      - name: gitleaks (binary, no org-license)
+        run: |
+          VER="8.30.1"
+          BASE="https://github.com/gitleaks/gitleaks/releases/download/v${VER}"
+          TARBALL="gitleaks_${VER}_linux_x64.tar.gz"
+          curl -sSfL "${BASE}/${TARBALL}" -o "${TARBALL}"
+          curl -sSfL "${BASE}/gitleaks_${VER}_checksums.txt" -o gl.sums
+          grep " ${TARBALL}$" gl.sums | sha256sum -c -
+          tar -xzf "${TARBALL}" gitleaks
+          ./gitleaks git . --no-banner --redact --exit-code 1
 
   slack-notify-on-failure:
     name: Slack CI failure notify
