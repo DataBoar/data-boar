@@ -43,11 +43,12 @@ Faixas do octeto quando `maturity_build` estiver em uso (ferramentas operador/be
 
 | Faixa octeto | Significado |
 | --- | --- |
-| **0–127** | maturidade beta (inclusivo — **0** é válido) |
-| **128–199** | maturidade rc (inclusivo) |
-| **200–255** | maturidade release (`.200` = GA na linha, `.201` = primeiro fix pós-GA, …) |
+| **1–126** | maturidade beta (contador começa em **1** — primeiro beta = `.1`; teto forgiving) |
+| **127–199** | maturidade rc |
+| **200–254** | release / GA + fix (`.200` = GA na linha, `.201` = primeiro fix pós-GA, …) |
+| **255** | sentinela de overflow — consultar TXT beacon |
 
-**Limites inclusivos e base 0** (não `1–126` / `127–199`). Se o modelo mental usava `1–126` para beta, desloque um — o **regime** é o mesmo.
+**A contagem começa em 1** (nada é `.0`) por clareza para não técnicos. Os tetos de faixa são **forgiving** — o TXT do beacon absorve overflow; não trate o topo da faixa como limite rígido.
 
 ### Nova linha pública — reset da faixa de maturidade
 
@@ -55,9 +56,9 @@ Ao abrir uma **nova linha semver** (ex.: **`1.8.0`** após **`1.7.4`**), **`matu
 
 | `[project] version` na nova linha | Faixa `maturity_build` | Âncora típica |
 | --- | --- | --- |
-| **`X.Y.Z-beta`** (ou `-beta.N`) | **0–127** | Reinício baixo na faixa (ex.: **`1`**) — registrar nas release notes |
-| **`X.Y.Z-rc`** (ou `-rc.N`) | **128–199** | Reinício baixo na faixa (ex.: **`128`**) |
-| **`X.Y.Z`** stable (GA) | **200–255** | **`.200`** = GA na linha; **`.201`** = primeiro fix, … |
+| **`X.Y.Z-beta`** (ou `-beta.N`) | **1–126** | Reinício em **`1`** (primeiro beta = `.1`) — registrar nas release notes |
+| **`X.Y.Z-rc`** (ou `-rc.N`) | **127–199** | Reinício baixo na faixa (ex.: **`127`** ou **`128`**) |
+| **`X.Y.Z`** stable (GA) | **200–254** | **`.200`** = GA na linha; **`.201`** = primeiro fix, … |
 
 **`.postN` no PyPI** aplica-se só na faixa **release** (republicação fix-line na **mesma** linha pública, ex. `1.7.4.post2`). **Não** carrega para **`1.8.0-beta`**.
 
