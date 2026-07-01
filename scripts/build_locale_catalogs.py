@@ -205,7 +205,13 @@ def _en() -> dict:
                 "python main.py). Full flag list: python main.py --help. Packaged installs: "
                 "man 1 data-boar (command) and man 5 data-boar (config file format)."
             ),
-            "run_cli_oneshot": "One-shot audit (same targets as a dashboard scan):",
+            "run_cli_oneshot": (
+                "One-shot audit (config-driven; same targets as a dashboard scan with your config.yaml):"
+            ),
+            "run_cli_demo": (
+                "Zero-config demo (synthetic config + corpus under /tmp/data_boar_demo/; "
+                "ignores config.yaml in the CWD):"
+            ),
             "run_cli_api": "Start the API / dashBOARd (no scan until you use the browser or HTTP):",
             "run_cli_tls": (
                 "You must either terminate TLS at the process (--https-cert-file + --https-key-file, "
@@ -583,7 +589,11 @@ def _pt_br(en: dict) -> dict:
         "man 1 data-boar (comando) e man 5 data-boar (formato do arquivo de configuração)."
     )
     base["help"]["run_cli_oneshot"] = (
-        "Auditoria pontual (mesmos alvos que uma varredura pelo painel):"
+        "Auditoria pontual (orientada ao config; mesmos alvos que uma varredura pelo painel com o seu config.yaml):"
+    )
+    base["help"]["run_cli_demo"] = (
+        "Demonstração zero-config (config + corpus sintéticos em /tmp/data_boar_demo/; "
+        "ignora o config.yaml do diretório atual):"
     )
     base["help"]["run_cli_api"] = (
         "Subir a API / dashBOARd (sem varredura até usar o navegador ou HTTP):"
