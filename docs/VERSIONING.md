@@ -43,9 +43,23 @@ Octet bands when using `maturity_build` (operator/beacon tooling — **not** the
 
 | Octet range | Meaning |
 | --- | --- |
-| **0–127** | beta maturity |
-| **128–199** | rc maturity |
-| **200–255** | release maturity (`.200` = GA maturity, `.201` = fix-1 maturity, …) |
+| **0–127** | beta maturity (inclusive — **0** is valid) |
+| **128–199** | rc maturity (inclusive) |
+| **200–255** | release maturity (`.200` = GA on that line, `.201` = first post-GA fix, …) |
+
+**Band boundaries are inclusive and 0-based** (not `1–126` / `127–199`). If a mental model used `1–126` for beta, shift by one — the **regime** is the same.
+
+### New public line — maturity band reset
+
+When the project opens a **new semver line** (e.g. **`1.8.0`** after **`1.7.4`**), **`maturity_build` does not continue** from `.208` on the old line. It **resets into the Gibson band** that matches the **pre-release suffix** on `[project] version`:
+
+| `[project] version` on the new line | `maturity_build` band | Typical anchor |
+| --- | --- | --- |
+| **`X.Y.Z-beta`** (or `-beta.N`) | **0–127** | Restart low in band (e.g. **`1`**) — record in release notes |
+| **`X.Y.Z-rc`** (or `-rc.N`) | **128–199** | Restart low in band (e.g. **`128`**) |
+| **`X.Y.Z`** stable (GA) | **200–255** | **`.200`** = GA maturity on that line; **`.201`** = first fix, … |
+
+**`.postN` PyPI counters apply only on a GA release band** (fix-line republication on the **same** public line, e.g. `1.7.4.post2`). They do **not** carry across to **`1.8.0-beta`**.
 
 Suffixes (`-beta`, `-rc`, `-rc-N`) are required on `main` while a **release gate** issue (e.g. GitHub #406) is **open**. A green **commit gate** (`check-all`) never authorizes removing them — see ADR-0072. Gate **#406** closed with **1.7.4** stable (PR **#1024**).
 
@@ -76,8 +90,8 @@ When **`1.7.4`** is already on PyPI and a packaging fix must ship without a new 
 
 | Counter | Field | Rule |
 | --- | --- | --- |
-| **Publication** | `[project] version` **`.postN`**, About, PyPI | One increment per **PyPI upload** (not per local build) |
-| **Maturity** | `[tool.databoar] maturity_build` | Octet side-channel; may advance on unpublished builds |
+| **Publication** | `[project] version` **`.postN`**, About, PyPI | One increment per **PyPI upload** (not per fix on `main`) |
+| **Maturity** | `[tool.databoar] maturity_build` | Octet side-channel; +1 per **discrete fix** to installed/runtime behavior (may run ahead of `postN`) |
 
 **Marketing line** stays **`1.7.4`** (README, man); **build line** is **`1.7.4.postN`**. Maintain the **`postN ↔ maturity_build` map** in [`docs/releases/`](releases/) — e.g. [`1.7.4.post1.md`](releases/1.7.4.post1.md): `1.7.4=.201 · 1.7.4.post1=.202`.
 
