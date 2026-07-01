@@ -268,6 +268,7 @@ _SHEET_HEATMAP_DATA = "Heatmap data"
 _SHEET_DATA_SOURCE_INVENTORY = "Data source inventory"
 # LOW findings persisted for ID-like column names (FN reduction); see core.suggested_review
 _SHEET_SUGGESTED_REVIEW = "Suggested review (LOW)"
+_SHEET_PRAISE_CONTROLS = _excel_safe_sheet_title("Praise / existing controls")
 _REPORT_INFO_CNPJ_FORMAT_COMPAT = "CNPJ format compatibility"
 
 
@@ -1042,7 +1043,7 @@ def _write_excel_sheets(
     praise = _praise_rows(db_rows_for_sheets, fs_rows_for_sheets)
     if praise:
         _excel_safe_dataframe(praise).to_excel(
-            writer, sheet_name="Praise / existing controls", index=False
+            writer, sheet_name=_SHEET_PRAISE_CONTROLS, index=False
         )
     trends = _trends_rows(
         db_manager, session_id, current_db, current_fs, current_fail, current_started_at

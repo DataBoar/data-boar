@@ -53,9 +53,16 @@ _MAN_FAIL_ON_NEW_HIGH = r"\-\-fail\-on\-new\-high"
 _MAN_EXPORT_DSAR = r"\-\-export\-dsar"
 _MAN_DSAR_OUTPUT = r"\-\-dsar\-output"
 _MAN_DSAR_INCLUDE_SAMPLES = r"\-\-dsar\-include\-samples"
+_MAN_DEMO = r"\-\-demo"
 
 OPERATOR_HELP_MARKERS: tuple[OperatorHelpMarker, ...] = (
     OperatorHelpMarker("config", "--config", "config.yaml", _MAN_CONFIG),
+    OperatorHelpMarker(
+        "demo",
+        "--demo",
+        "--demo",
+        _MAN_DEMO,
+    ),
     OperatorHelpMarker("web", "--web", "--web", _MAN_WEB),
     OperatorHelpMarker("host", "--host", "--host", _MAN_HOST),
     OperatorHelpMarker(
