@@ -41,6 +41,7 @@ This repository is the **canonical UMADR regency** for the ecosystem. Satellite 
 | **Canonical + reference-stub** | **data-boar** holds the full house rule (this ADR + [ADR 0045](ADR-0045-adr-metadata-and-format-standardization.md)). Satellites add a **short reference-stub ADR** that links here — no duplicate constitution text. |
 | **Genesis ADR-0000 (satellites)** | **Origin / birth / rebrand only** — charter pointers, not agent modus operandi, security gate recipes, or private operator ritual. |
 | **Greenfield birth-triplet** | New repos SHOULD seed, in the first governance commit: **0000** genesis (Accepted), **0001** mission charter (Accepted), **0002** UMADR reference-stub → this ADR (Accepted or Referenced). Optional **0003** language/R&D posture (Proposed) only when relevant. |
+| **Engineering rigor canon** | Shared HITL rigor (RCA, gates, tests, PowerShell invariants) is **[ADR 0079](ADR-0079-ecosystem-engineering-rigor-canon.md)** — satellites reference; do not duplicate. |
 
 **Stable public URL for reference-stubs:**
 
@@ -65,4 +66,5 @@ Normalization playbook (operator vault, not tracked): issue **#994**; per-repo a
 - [ADR 0045 — ADR metadata and format standardization (UMADR)](ADR-0045-adr-metadata-and-format-standardization.md)
 - [ADR 0014 — Rename repository and package (rebrand pattern)](ADR-0014-rename-repo-and-package-python3-lgpd-crawler-to-data-boar.md)
 - [ADR 0056 — Cryptographic ADR inventory](ADR-0056-cryptographic-adr-inventory-inv-adr-ssh-attestation.md)
+- [ADR 0079 — Ecosystem engineering rigor canon (satellites)](ADR-0079-ecosystem-engineering-rigor-canon.md)
 - GitHub issue [#994](https://github.com/FabioLeitao/data-boar/issues/994) — ecosystem UMADR normalization
