@@ -18,7 +18,7 @@ Short, durable notes that capture **why** the project chose an approach—not on
 
 | ADR   | Title                                                                                                                                                  | Status   |
 | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | -------- |
-| 0000  | [Project origin and ADR baseline](ADR-0000-project-origin-and-adr-baseline.md)                                                                             | Accepted |
+| 0000  | [Project origin, ADR baseline, and **UMADR ecosystem regency**](ADR-0000-project-origin-and-adr-baseline.md) (canonical mother for satellite repos; #994) | Accepted |
 | 0001  | [Markdown fix script, MD029, and semantic step lists](ADR-0001-markdown-fix-script-md029-and-semantic-step-lists.md)                                       | Accepted |
 | 0002  | [Operator-facing security and technical docs](ADR-0002-operator-facing-security-and-technical-docs.md)                                                      | Accepted |
 | 0003  | [SBOM roadmap — CycloneDX then Syft](ADR-0003-sbom-roadmap-cyclonedx-then-syft.md)                                                                         | Accepted |
@@ -96,6 +96,17 @@ Short, durable notes that capture **why** the project chose an approach—not on
 | 0076 | [OPA/Rego as CI tier drift linter (not runtime)](ADR-0076-opa-rego-ci-tier-drift-linter-not-runtime.md) | Proposed |
 | 0077 | [Filesystem scan does not honor client `.gitignore`](ADR-0077-filesystem-scan-no-client-gitignore-by-design.md) | Accepted |
 | 0078 | [Multi-pattern regex: RegexSet before Vectorscan (benchmark gate)](ADR-0078-multi-pattern-regex-benchmark-gate-regexset-before-vectorscan.md) | Proposed |
+
+## Ecosystem UMADR (satellite repositories)
+
+**data-boar** is the **canonical** UMADR regency ([ADR 0000](ADR-0000-project-origin-and-adr-baseline.md) + [ADR 0045](ADR-0045-adr-metadata-and-format-standardization.md)). Other Data Boar ecosystem repos SHOULD:
+
+1. Keep **ADR-0000** as **genesis only** (origin/rebrand — no operator modus operandi).
+2. Add a **reference-stub ADR** linking to the public ADR-0000 URL above (do not duplicate the full house rule).
+3. Record **rebrands** in a dedicated ADR (see [ADR 0014](ADR-0014-rename-repo-and-package-python3-lgpd-crawler-to-data-boar.md)).
+4. Use **four-digit** filenames and **English-only** ADR bodies.
+
+Tracking: GitHub [#994](https://github.com/FabioLeitao/data-boar/issues/994).
 
 ## Related docs
 
