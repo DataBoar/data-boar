@@ -59,6 +59,35 @@ Beta/rc builds stay **git-only** for external users; operators may build images 
 
 **`security/version_policy.yaml`** + **`tests/test_release_version_policy.py`** — run via **`check-all`**.
 
+## Post-release bump: `postN` + maturity (ADR-0073 § PyPI dual counters)
+
+**When:** A fix or additive slice must reach **PyPI** on the **same public line** (e.g. **`1.7.4`**) without a new stable semver or opening the release gate (**#406 CLOSED** — fix-line only).
+
+**Two independent counters** (never conflate):
+
+| Counter | Field | Advances when | Example |
+| --- | --- | --- | --- |
+| **Publication** | `[project] version` → PEP 440 **`.postN`** | Each **PyPI upload** (not each local build) | `1.7.4.post1`, `1.7.4.post2` |
+| **Maturity / build** | `[tool.databoar] maturity_build` (octet side-channel) | Each maturity-tagged build (published or not) | `.202`, `.204` |
+
+**Guardrails (intact):**
+
+- **`.postN` is never the octet** — no fourth semver segment (`1.7.4.202` is invalid).
+- **Public line** (README, man `.TH`, stakeholder copy) stays **`X.Y.Z`** — no `.postN` in marketing surfaces.
+- **`.postN` is stable** (no `-beta`/`-rc`) → **PyPI-eligible**; Docker/tag choreography per **`release-publish-sequencing.mdc`** when operator runs **release-ritual**.
+- **Release gate** does **not** reopen for post-line bumps.
+
+### Procedure (agent / operator)
+
+1. **`[project] version`** → next **`.postN`** on the current public line (`1.7.4.post1` → `1.7.4.post2`).
+2. **`maturity_build`** → next octet paired per the **mandatory map** and real build count (see ADR-0073 divergence rule: local `.203` may exist unpublished; next PyPI pair is often **`.post2` ↔ `.204`**).
+3. **Release note:** create **`docs/releases/X.Y.Z.postN.md`** from the molde [`docs/releases/1.7.4.post1.md`](../../docs/releases/1.7.4.post1.md) — extend the **`postN ↔ maturity_build`** table (do not drop prior rows).
+4. **Sync:** `core/about.py` dev fallback, `tests/test_pyproject_sql_extras.py` (or successor), **`uv lock`** after `pyproject.toml` version change.
+5. **Do not** bump public marketing line, invent **`1.7.5`**, or remove `-beta` on a pre-release train without release gate + operator FASE 3.
+6. **Publish:** operator runs **`publish-pypi.yml`** / **release-ritual** after merge — agent does **not** autonomous PyPI push.
+
+**Canonical molde + map:** [`docs/releases/1.7.4.post1.md`](../../docs/releases/1.7.4.post1.md) · **ADR-0073** § *PyPI dual counters* · **#1047**.
+
 ## Canonical refs
 
-- **`docs/VERSIONING.md`** · **ADR-0072** · **ADR-0073** · **#970** · **#772** · **#978**
+- **`docs/VERSIONING.md`** · **ADR-0072** · **ADR-0073** · **#970** · **#772** · **#978** · **#1047**
