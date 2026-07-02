@@ -1686,11 +1686,15 @@ async def scan_database(config: DatabaseConfig, background_tasks: BackgroundTask
 @app.get("/{locale_slug}/help", response_class=HTMLResponse)
 async def help_page(request: Request, locale_slug: LocaleSlug):
     """Help and documentation page: quickstart, config example, links to README/USAGE docs."""
+    from utils.cli_presentation import cli_help_context
+
     tag = _locale_tag_from_slug(locale_slug.value)
     return templates.TemplateResponse(
         request=request,
         name="help.html",
-        context=_i18n_template_context(request, locale_slug.value, tag, {}),
+        context=_i18n_template_context(
+            request, locale_slug.value, tag, cli_help_context()
+        ),
     )
 
 
