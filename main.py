@@ -263,7 +263,11 @@ def _run_session_diff_cli(
 
 
 def main() -> None:
+    from utils.cli_presentation import build_cli_epilog, cli_prog_name
+
+    _cli_prog = cli_prog_name()
     parser = argparse.ArgumentParser(
+        prog=_cli_prog,
         description=(
             "Data Boar — enterprise data discovery and risk governance engine. "
             "Loads YAML/JSON config, scans configured databases/filesystems/APIs/shares, "
@@ -271,54 +275,7 @@ def main() -> None:
             "Run once from the CLI or start a REST API dashboard (LGPD/GDPR/CCPA-aware patterns; "
             "additional frameworks via config)."
         ),
-        epilog=(
-            "Configuration:\n"
-            "  - Main config file (YAML or JSON) defines targets (databases, filesystems, APIs, shares),\n"
-            "    detection options and report settings. Default is 'config.yaml' in the current directory.\n"
-            "  - See docs/USAGE.md for a full schema and examples.\n"
-            "\n"
-            "CLI examples:\n"
-            "  # One-shot audit with the default config.yaml\n"
-            "  python main.py --config config.yaml\n"
-            "\n"
-            "  # One-shot audit tagging tenant/customer and technician/operator\n"
-            '  python main.py --config config.yaml --tenant "ACME Corp" --technician "Alice"\n'
-            "\n"
-            "  # One-shot with archive scan + content-type detection (this run only)\n"
-            "  python main.py --config config.yaml --scan-compressed --content-type-check\n"
-            "\n"
-            "  # Validate config only (loader checks; no scan or API startup)\n"
-            "  python main.py --config config.yaml --validate-config\n"
-            "\n"
-            "  # Compare two scan sessions (CI: add --fail-on-new-high)\n"
-            "  python main.py --config config.yaml --diff <session_a> <session_b>\n"
-            "\n"
-            "  # DSAR-oriented JSON export for one session (stdout or --dsar-output)\n"
-            "  python main.py --config config.yaml --export-dsar <session_id>\n"
-            "\n"
-            "  # Wipe all collected data and generated reports (dangerous, see SECURITY.md)\n"
-            "  python main.py --config config.yaml --reset-data\n"
-            "\n"
-            "Web/API examples:\n"
-            "  # HTTPS: PEM cert + key (TLS >= 1.2)\n"
-            "  python main.py --config config.yaml --web --https-cert-file server.crt --https-key-file server.key\n"
-            "\n"
-            "  # Plaintext HTTP (explicit risk acceptance; required when not using TLS)\n"
-            "  python main.py --config config.yaml --web --allow-insecure-http\n"
-            "\n"
-            "  # Explicit port or bind (same flags as before, still need TLS or --allow-insecure-http)\n"
-            "  python main.py --config config.yaml --web --allow-insecure-http --port 9090\n"
-            "  python main.py --config config.yaml --web --allow-insecure-http --host 0.0.0.0\n"
-            "\n"
-            "  # Zero-config demo (synthetic corpus, loopback dashboard — no config.yaml)\n"
-            "  python main.py --demo\n"
-            "  data-boar --demo\n"
-            "\n"
-            "Once a one-shot scan finishes, an Excel report and heatmap PNG are written under\n"
-            "the configured report.output_dir (default: current directory). When the API is\n"
-            "running, you can navigate to the documented endpoints (see README.md) to trigger\n"
-            "scans, list sessions and download the latest reports through the browser."
-        ),
+        epilog=build_cli_epilog(),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
