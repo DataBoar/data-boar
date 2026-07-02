@@ -5,8 +5,8 @@ When you add a user-visible CLI flag, dashboard toggle, or in-app help callout t
 operators should discover from `--help` or `/help`, add or adjust a row below and
 update the surfaces listed in `docs/OPERATOR_HELP_AUDIT.md`.
 
-Use ``None`` for a surface that intentionally does not carry that cue (e.g. `uv run`
-is documented on `/help` and README, not in argparse text).
+Use ``None`` for a surface that intentionally does not carry that cue (e.g. dev-only
+``uv run`` flows live in repo docs, not in dashBOARd ``/help`` or installed ``--help``).
 
 Canonical detail stays in docs/USAGE*.md, man pages, and the repo README — this
 file only pins a minimal substring set so tests fail if copy disappears.
@@ -158,8 +158,6 @@ OPERATOR_HELP_MARKERS: tuple[OperatorHelpMarker, ...] = (
         "--jurisdiction-hint",
         _MAN_JURISDICTION_HINT,
     ),
-    # Web /help recommends uv; full docs in README — not duplicated in argparse.
-    OperatorHelpMarker("uv_run", None, "uv run", None),
     OperatorHelpMarker("api_host_env", "API_HOST", "API_HOST", "API_HOST"),
     OperatorHelpMarker("bind_loopback", "127.0.0.1", "127.0.0.1", "127.0.0.1"),
     OperatorHelpMarker(
