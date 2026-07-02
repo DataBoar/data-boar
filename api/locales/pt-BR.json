@@ -172,7 +172,7 @@
     "run_web_shot_caption": "Painel — campos opcionais de cliente/técnico e Iniciar varredura (sem shell).",
     "run_auto_h3": "Para automação / scripting",
     "run_cli_h3": "Pela CLI",
-    "run_cli_p1": "Na raiz do repositório, prefira uv run python main.py (ou ative o venv e execute python main.py). Lista completa de flags: python main.py --help. Instalações empacotadas: man 1 data-boar (comando) e man 5 data-boar (formato do arquivo de configuração).",
+    "run_cli_p1": "Execute data-boar em qualquer terminal no PATH. Lista completa de flags: data-boar --help. Referência: man 1 data-boar (comando) e man 5 data-boar (formato do arquivo de configuração).",
     "run_cli_oneshot": "Auditoria pontual (mesmos alvos que uma varredura pelo painel):",
     "run_cli_api": "Subir a API / dashBOARd (sem varredura até usar o navegador ou HTTP):",
     "run_cli_tls": "É preciso terminar TLS no processo (--https-cert-file + --https-key-file, ou o mesmo em api: na config) ou aceitar explicitamente texto claro com --allow-insecure-http (ou api.allow_insecure_http: true). A imagem Docker oficial passa --allow-insecure-http por padrão; monte certificados e remova para HTTPS.",
