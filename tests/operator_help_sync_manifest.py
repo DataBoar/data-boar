@@ -14,7 +14,50 @@ file only pins a minimal substring set so tests fail if copy disappears.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
+from pathlib import Path
+
+MAN_OPERATOR_PAGE_REL_PATHS: tuple[str, ...] = (
+    "docs/data_boar.1",
+    "docs/data_boar.5",
+)
+
+# Installed-user man pages: bold (.B) command examples must use data-boar, not dev entrypoints.
+_MAN_B_LINE_DEV_INVOCATION = re.compile(
+    r"^\s*\.B\b.*(?:\buv run\b|python main\.py|\bmain\.py\s+\\-)",
+    re.IGNORECASE,
+)
+
+
+def collect_man_operator_dev_invocation_violations(
+    repo_root: Path | None = None,
+) -> list[str]:
+    """Return violations if operator man troff sources show dev-only CLI invocations."""
+    root = repo_root or Path(__file__).resolve().parents[1]
+    violations: list[str] = []
+    for rel in MAN_OPERATOR_PAGE_REL_PATHS:
+        path = root / rel
+        if not path.is_file():
+            violations.append(f"{rel}: missing man page source")
+            continue
+        for lineno, line in enumerate(
+            path.read_text(encoding="utf-8").splitlines(), start=1
+        ):
+            stripped = line.strip()
+            if stripped.startswith(".BR python (1)"):
+                continue
+            if "uv run" in line:
+                violations.append(f"{rel}:{lineno}: uv run in operator man page")
+            if "python main.py" in line:
+                violations.append(
+                    f"{rel}:{lineno}: python main.py in operator man page"
+                )
+            if _MAN_B_LINE_DEV_INVOCATION.search(line):
+                violations.append(
+                    f"{rel}:{lineno}: dev invocation in .B example line: {stripped!r}"
+                )
+    return violations
 
 
 @dataclass(frozen=True)

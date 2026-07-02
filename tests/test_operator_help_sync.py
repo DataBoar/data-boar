@@ -12,7 +12,10 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from tests.operator_help_sync_manifest import OPERATOR_HELP_MARKERS
+from tests.operator_help_sync_manifest import (
+    OPERATOR_HELP_MARKERS,
+    collect_man_operator_dev_invocation_violations,
+)
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 _MAN1_PATH = _REPO_ROOT / "docs" / "data_boar.1"
@@ -106,3 +109,13 @@ def test_operator_help_markers_in_man1(man1_text: str) -> None:
             f"(expected troff substring {marker.man1_troff_substring!r}); "
             "update man page and tests/operator_help_sync_manifest.py"
         )
+
+
+def test_man_pages_no_dev_cli_invocation() -> None:
+    """Operator man pages target installed ``data-boar`` (#1131 anti-drift)."""
+    violations = collect_man_operator_dev_invocation_violations(_REPO_ROOT)
+    assert not violations, (
+        "Operator man pages must not show uv run / python main.py "
+        "(use data-boar in .B examples); dev flows stay in README/CONTRIBUTING:\n"
+        + "\n".join(violations)
+    )
