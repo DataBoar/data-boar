@@ -49,7 +49,7 @@ is accepted as an alias; both names refer to the same application.
 The actual entry point is:
 .br
 .RS 4
-.B python main.py
+.B data-boar
 [
 .I OPTIONS
 ]
@@ -563,19 +563,19 @@ The "Start scan" button triggers
 .TP
 Minimal scan with default config:
 .RS
-.B python main.py \-\-config config.yaml
+.B data-boar \-\-config config.yaml
 .RE
 .
 .TP
 Scan with tenant and technician metadata:
 .RS
-.B python main.py \-\-config config.yaml \-\-tenant "Acme Corp" \-\-technician "Alice Colleague-V"
+.B data-boar \-\-config config.yaml \-\-tenant "Acme Corp" \-\-technician "Alice Colleague-V"
 .RE
 .
 .TP
 Wipe all sessions, findings and generated reports (dangerous):
 .RS
-.B python main.py \-\-config config.yaml \-\-reset\-data
+.B data-boar \-\-config config.yaml \-\-reset\-data
 .RE
 .
 .SS Web API
@@ -589,20 +589,18 @@ in the configuration) for plaintext HTTP.
 Zero\-config demo (no configuration file):
 .RS
 .B data-boar \-\-demo
-.br
-.B python main.py \-\-demo
 .RE
 .
 .TP
 Start the API on port 8088 (plaintext, explicit opt\-in):
 .RS
-.B python main.py \-\-config config.yaml \-\-web \-\-allow\-insecure\-http \-\-port 8088
+.B data-boar \-\-config config.yaml \-\-web \-\-allow\-insecure\-http \-\-port 8088
 .RE
 .
 .TP
 HTTPS (PEM cert + key; TLS >= 1.2):
 .RS
-.B python main.py \-\-config config.yaml \-\-web \-\-https\-cert\-file server.crt \-\-https\-key\-file server.key
+.B data-boar \-\-config config.yaml \-\-web \-\-https\-cert\-file server.crt \-\-https\-key\-file server.key
 .RE
 .
 .TP
@@ -610,14 +608,14 @@ Use CONFIG_PATH and start the server:
 .RS
 .nf
 export CONFIG_PATH=/etc/lgpd\-audit/config.yaml
-python main.py \-\-web \-\-allow\-insecure\-http \-\-port 8088
+data-boar \-\-web \-\-allow\-insecure\-http \-\-port 8088
 .fi
 .RE
 .
 .TP
 Listen on all interfaces (e.g.\& LAN or container without Docker env); use only with network controls:
 .RS
-.B python main.py \-\-config config.yaml \-\-web \-\-allow\-insecure\-http \-\-host 0.0.0.0 \-\-port 8088
+.B data-boar \-\-config config.yaml \-\-web \-\-allow\-insecure\-http \-\-host 0.0.0.0 \-\-port 8088
 .RE
 .
 .SS curl \- API examples
