@@ -212,7 +212,9 @@ def resolve_effective_roles_for_request(
             auth = request.headers.get("authorization", "").strip()
             if auth.lower().startswith("bearer "):
                 provided = auth[7:].strip()
-        if provided and hmac.compare_digest(provided, expected):
+        if provided and hmac.compare_digest(
+            provided.encode("utf-8"), expected.encode("utf-8")
+        ):
             return _normalize_role_list(api_key_roles, default_roles)
 
     wa = webauthn_block(cfg)

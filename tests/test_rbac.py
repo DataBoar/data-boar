@@ -211,6 +211,17 @@ def test_rbac_api_key_compare_uses_hmac_compare_digest(rbac_pro_client):
 
     with patch("api.rbac.hmac.compare_digest", return_value=True) as mock_digest:
         roles = resolve_effective_roles_for_request(request, cfg, engine.db_manager)
-        mock_digest.assert_called_once()
+        mock_digest.assert_called_once_with(b"test-secret-key", b"test-secret-key")
     assert roles is not None
     assert "dashboard" in roles
+
+
+def test_rbac_non_ascii_api_key_returns_401_not_500(rbac_pro_client):
+    """#1150: non-ASCII X-API-Key must not crash compare_digest (401, not 500)."""
+    client, _ = rbac_pro_client
+    # httpx rejects non-ASCII str headers; send UTF-8 bytes like a real client may.
+    r = client.get(
+        "/status",
+        headers=[(b"x-api-key", "café-🔑".encode("utf-8"))],
+    )
+    assert r.status_code == 401
