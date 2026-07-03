@@ -933,6 +933,16 @@ def scan_archive_at_path(
                 ext_use = choose_effective_rich_media_extension(
                     ext_use, use_content_type, tmp_path
                 )
+
+                def _on_read_barrier(
+                    reason: str, details: str, *, _member: str = member_name
+                ) -> None:
+                    db_manager.save_failure(
+                        target_name,
+                        reason,
+                        f"{archive_display_name}|{_member}: {details}",
+                    )
+
                 content = _read_text_sample(
                     tmp_path,
                     ext_use,
@@ -943,6 +953,7 @@ def scan_archive_at_path(
                     ocr_max_dimension=ocr_max_dimension,
                     ocr_lang=ocr_lang,
                     scan_for_stego=scan_for_stego,
+                    on_read_barrier=_on_read_barrier,
                 )
                 res = scanner.scan_file_content(content, member_name)
                 if res is None:

@@ -9,6 +9,7 @@ from connectors.filesystem_connector import FilesystemConnector, scan_archive_at
 from core.archives import (
     SCAN_FAILURE_REASON_ENCRYPTED_NO_PASSWORD,
     SCAN_FAILURE_REASON_WRONG_PASSWORD,
+    classify_7z_member_read_failure,
     classify_zip_member_read_failure,
 )
 from core.scanner import DataScanner
@@ -40,6 +41,84 @@ def test_classify_zip_member_read_failure_wrong_password():
         classify_zip_member_read_failure(err, encrypted=True, password_provided=True)
         == SCAN_FAILURE_REASON_WRONG_PASSWORD
     )
+
+
+def test_classify_zip_member_read_failure_bad_crc32_wrong_password():
+    err = zipfile.BadZipFile("Bad CRC-32 for file 'inner.txt'")
+    assert (
+        classify_zip_member_read_failure(err, encrypted=True, password_provided=True)
+        == SCAN_FAILURE_REASON_WRONG_PASSWORD
+    )
+
+
+def test_classify_7z_member_read_failure_password_required():
+    pytest.importorskip("py7zr")
+    from py7zr.exceptions import PasswordRequired
+
+    assert (
+        classify_7z_member_read_failure(PasswordRequired(), password_provided=False)
+        == SCAN_FAILURE_REASON_ENCRYPTED_NO_PASSWORD
+    )
+
+
+def test_classify_7z_member_read_failure_crc_wrong_password():
+    pytest.importorskip("py7zr")
+    from py7zr.exceptions import CrcError
+
+    assert (
+        classify_7z_member_read_failure(
+            CrcError(0, 1, "member.txt"), password_provided=True
+        )
+        == SCAN_FAILURE_REASON_WRONG_PASSWORD
+    )
+    assert (
+        classify_7z_member_read_failure(
+            OSError("crc check failed"), password_provided=True
+        )
+        == SCAN_FAILURE_REASON_WRONG_PASSWORD
+    )
+
+
+def test_scan_archive_at_path_inner_sample_uses_on_read_barrier(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+):
+    """Encrypted PDF inside a zip must record scan_failures via on_read_barrier (#828)."""
+    import connectors.filesystem_connector as fs_mod
+
+    zip_path = tmp_path / "bundle.zip"
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("inner.pdf", b"%PDF-1.4")
+
+    db = _DummyDB()
+    scanner = MagicMock()
+    scanner.scan_file_content.return_value = None
+
+    def _capture_barrier_read(*_args, **kwargs):  # type: ignore[no-untyped-def]
+        barrier = kwargs.get("on_read_barrier")
+        if barrier is not None:
+            barrier("encrypted_no_password", "encrypted inner pdf")
+        return ""
+
+    monkeypatch.setattr(fs_mod, "_read_text_sample", _capture_barrier_read)
+
+    scan_archive_at_path(
+        archive_path=zip_path,
+        archive_display_name=zip_path.name,
+        target_name="T",
+        path_display=str(tmp_path),
+        scanner=scanner,
+        db_manager=db,
+        extensions={".pdf"},
+        max_inner_size=1_000_000,
+        file_passwords={},
+        file_sample_max_chars=5000,
+    )
+
+    encrypted = [
+        f for f in db.failures if f[1] == SCAN_FAILURE_REASON_ENCRYPTED_NO_PASSWORD
+    ]
+    assert len(encrypted) == 1
+    assert "bundle.zip|inner.pdf" in encrypted[0][2]
 
 
 def test_scan_compressed_encrypted_zip_member_records_failure(
