@@ -97,6 +97,7 @@ Short, durable notes that capture **why** the project chose an approach—not on
 | 0077 | [Filesystem scan does not honor client `.gitignore`](ADR-0077-filesystem-scan-no-client-gitignore-by-design.md) | Accepted |
 | 0078 | [Multi-pattern regex: RegexSet before Vectorscan (benchmark gate)](ADR-0078-multi-pattern-regex-benchmark-gate-regexset-before-vectorscan.md) | Proposed |
 | 0079 | [Ecosystem engineering rigor canon (UMADR satellites)](ADR-0079-ecosystem-engineering-rigor-canon.md) | Proposed |
+| 0080 | [Local validation gate is inviolable: full check-all before any push or PR](ADR-0080-local-validation-gate-inviolable.md) | Accepted |
 
 ## Related docs
 
