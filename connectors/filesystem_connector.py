@@ -10,13 +10,15 @@ import os
 import stat
 import tempfile
 import zipfile
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import Any
 
 from core.connector_registry import register
 from core.archives import (
     ArchiveUnsupportedError,
+    SCAN_FAILURE_REASON_ENCRYPTED_NO_PASSWORD,
+    SCAN_FAILURE_REASON_WRONG_PASSWORD,
     default_compressed_extensions,
     detect_archive_type,
     iter_archive_members,
@@ -287,6 +289,7 @@ def _read_text_sample(
     ocr_max_dimension: int = 2000,
     ocr_lang: str = "eng",
     scan_for_stego: bool = False,
+    on_read_barrier: Callable[[str, str], None] | None = None,
 ) -> str:
     """Extract text from file for sensitivity scan; return empty on error. No content stored after return.
 
@@ -346,8 +349,18 @@ def _read_text_sample(
             if reader.is_encrypted:
                 password = pw.get(ext) or pw.get("default")
                 if password:
-                    reader.decrypt(password)
+                    decrypt_status = reader.decrypt(password)
+                    if decrypt_status == 0:
+                        if on_read_barrier is not None:
+                            on_read_barrier(
+                                SCAN_FAILURE_REASON_WRONG_PASSWORD, str(path)
+                            )
+                        return finalize("")
                 else:
+                    if on_read_barrier is not None:
+                        on_read_barrier(
+                            SCAN_FAILURE_REASON_ENCRYPTED_NO_PASSWORD, str(path)
+                        )
                     return finalize("")
             return finalize(
                 " ".join(p.extract_text() or "" for p in reader.pages[:5])[:max_chars]
@@ -778,6 +791,10 @@ class FilesystemConnector:
                 _size = _stat.st_size
             except OSError:  # noqa: BLE001
                 pass  # stat() best-effort for file-identity metadata
+
+            def _record_read_barrier(reason: str, details: str) -> None:
+                self.db_manager.save_failure(target_name, reason, details)
+
             content = _read_text_sample(
                 file_path,
                 effective_ext,
@@ -788,6 +805,7 @@ class FilesystemConnector:
                 ocr_max_dimension=self.ocr_max_dimension,
                 ocr_lang=self.ocr_lang,
                 scan_for_stego=self.scan_for_stego,
+                on_read_barrier=_record_read_barrier,
             )
             res = self.scanner.scan_file_content(content, file_path)
             if res is None:
@@ -891,12 +909,17 @@ def scan_archive_at_path(
     except (TypeError, ValueError):
         max_size = DEFAULT_MAX_INNER_SIZE
     try:
+
+        def _on_member_read_failure(reason: str, member: str, details: str) -> None:
+            db_manager.save_failure(target_name, reason, details)
+
         for member_name, data in iter_archive_members(
             archive_path,
             archive_type,
             max_size,
             extensions,
             file_passwords,
+            on_member_read_failure=_on_member_read_failure,
         ):
             ext = Path(member_name).suffix.lower()
             tmp_path: Path | None = None
