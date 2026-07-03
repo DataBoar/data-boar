@@ -466,7 +466,7 @@ class SQLConnector:
                     msg += " notes=%s" % (plan.audit_notes,)
                 get_logger().info(msg)
             except Exception:
-                pass
+                pass  # best-effort audit logging — never break sampling for a log line
         try:
             with self._connection.begin():
                 if dialect in ("postgresql", "postgres") and to:

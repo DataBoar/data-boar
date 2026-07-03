@@ -315,3 +315,48 @@ def test_process_one_finding_sampling_error_skips_scan_column():
     connector._process_one_finding("T", "localhost", "sqlite", "", "t1", "c1", "TEXT")
 
     scanner.scan_column.assert_not_called()
+
+
+def test_minor_full_scan_sample_error_keeps_first_pass_dob_and_records_failure():
+    """Full-scan ColumnSampleError must not discard DOB_POSSIBLE_MINOR from the first pass (#1140)."""
+    target = {"type": "database", "driver": "sqlite", "name": "MinorDB"}
+    scanner = MagicMock()
+    scanner.scan_column.return_value = {
+        "sensitivity_level": "MEDIUM",
+        "pattern_detected": "DOB_POSSIBLE_MINOR",
+        "norm_tag": "",
+        "ml_confidence": 50,
+    }
+    db_manager = MagicMock()
+    connector = SQLConnector(
+        target,
+        scanner,
+        db_manager,
+        detection_config={"minor_full_scan": True, "minor_full_scan_limit": 100},
+    )
+
+    def sample_side_effect(schema, table, cname, limit=None):
+        if limit is not None:
+            db_manager.save_failure(
+                "MinorDB",
+                SCAN_FAILURE_REASON_SAMPLING_ERROR,
+                "dbo.minors.dob dialect=sqlite: ProgrammingError: full scan failed",
+            )
+            raise ColumnSampleError()
+        return "2005-01-01"
+
+    connector.sample = MagicMock(side_effect=sample_side_effect)
+
+    connector._process_one_finding(
+        "MinorDB", "localhost", "sqlite", "", "minors", "dob", "DATE"
+    )
+
+    db_manager.save_failure.assert_called_once_with(
+        "MinorDB",
+        SCAN_FAILURE_REASON_SAMPLING_ERROR,
+        "dbo.minors.dob dialect=sqlite: ProgrammingError: full scan failed",
+    )
+    db_manager.save_finding.assert_called_once()
+    finding_kwargs = db_manager.save_finding.call_args.kwargs
+    assert "DOB_POSSIBLE_MINOR" in finding_kwargs["pattern_detected"]
+    assert "(full-scan confirmed)" not in (finding_kwargs.get("norm_tag") or "")
