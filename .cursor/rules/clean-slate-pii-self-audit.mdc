@@ -1,7 +1,10 @@
 ---
-description: Where clean-slate lives, how it fits PII self-audit vs filter-repo; assistants must not simulate runs — use real guards or point to PII guide H.9–H.10; primary Windows dev PC never runs destructive clean-slate / rewrite
-globs: ["**/*"]
-alwaysApply: true
+description: clean-slate + PII self-audit memory hook. Situational — `pii-fresh-audit` token or globs below; @clean-slate-pii-self-audit.mdc.
+globs:
+  - docs/ops/PII_FRESH_CLONE*
+  - docs/ops/PII_PUBLIC_TREE*
+  - scripts/pii-fresh-clone*
+alwaysApply: false
 ---
 
 # `clean-slate` + PII — memory hook (no simulation)

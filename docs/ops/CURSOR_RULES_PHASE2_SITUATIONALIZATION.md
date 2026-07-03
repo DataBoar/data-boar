@@ -88,9 +88,43 @@ So: **locale = strong forced contextual behaviour** in the sense of **non-negoti
 2. **Release sequencing is already situational:** **`release-publish-sequencing.mdc`** binds on **`release-ritual`** / release **`globs`**. The **always-on** rule covers the **cross-cutting** “clean up after yourself” layer that also applies **outside** a full publish (local experiments, CI debugging).
 3. **Failure mode:** If situationalized, assistants often **skip** prune/smoke cleanup in threads where only `main.py` is open—exactly when disk and tag hygiene still matter.
 
-## Tier B — evaluation backlog (not committed)
+## Tier B — situationalized (issue #1154, 2026-07)
 
-Candidates are **always-on today** (or broad) and *might* be narrowed **later** after per-rule review. **Do not** batch-flip without checking blast radius.
+**Meta:** reduce baseline noise; **not** a magic target of ~13 always-on rules. Rollback: `git revert` the Tier B commit.
+
+| Rule file | Latch (token / `@` / globs) |
+| --------- | --------------------------- |
+| **`agent-autonomous-merge-and-lab-ops.mdc`** | **`completao`**, **`homelab`**, `scripts/pr-merge-when-green*`, `scripts/lab-op*` |
+| **`ats-locale-aware-recommendations.mdc`** | **`talent-ats`**, `docs/ops/LINKEDIN_ATS_PLAYBOOK*` |
+| **`audience-segmentation-docs.mdc`** | **`docs`**, **`feature`**, `docs/**` |
+| **`clean-slate-pii-self-audit.mdc`** | **`pii-fresh-audit`**, `docs/ops/PII_*` |
+| **`collaboration-maintainer-contributor.mdc`** | `CONTRIBUTING.md`, `docs/COLLABORATION_TEAM*` |
+| **`cursor-browser-social-sso-hygiene.mdc`** | browser MCP / social tokens; **`@cursor-browser-social-sso-hygiene.mdc`** |
+| **`cursor-markdown-preview-guardrail.mdc`** | `docs/ops/CURSOR_MARKDOWN_PREVIEW*` |
+| **`git-pr-sync-before-advice.mdc`** | `docs/ops/COMMIT_AND_PR*`, `scripts/commit-or-pr*` |
+| **`operator-browser-warm-session.mdc`** | browser/social tasks; **`@operator-browser-warm-session.mdc`** |
+| **`operator-career-private-layout.mdc`** | **`operator-sli-check`**, `docs/ops/LINKEDIN_ATS*` |
+| **`operator-evidence-backup-no-rhetorical-asks.mdc`** | **`private-stack-sync`**, `scripts/private-git-sync*` |
+| **`pre-commit-ruff.mdc`** | `**/*.py`, `.pre-commit-config.yaml` |
+| **`repo-scripts-wrapper-ritual.mdc`** | `scripts/**`, `docs/ops/TOKEN_AWARE_SCRIPTS*` |
+| **`agent-session-ritual-sync-main-and-private-stack.mdc`** | **`carryover-sweep`**, **`eod-sync`**, **`private-stack-sync`**, `docs/ops/today-mode/**` |
+
+### Merged (redundancy — not new always-on)
+
+- **`operator-chat-language.mdc`** → **`operator-chat-language-pt-br.mdc`** (situational; **`docs-locale-pt-br-contract.mdc`** stays always-on).
+- **`persona-rigor.mdc`** → **`linguistic-rigor-and-performance.mdc`** (situational).
+
+### Workstation protection — reframed, still always-on
+
+- **`primary-linux-workstation-protected-no-destructive-repo-ops.mdc`** and **`primary-windows-workstation-protected-no-destructive-repo-ops.mdc`** — **main dev box** vs **secondary** (Linux / L-series) naming; **same destructive-repo rigor** on whichever machine holds the canonical clone.
+
+### Borderline — left always-on (judgment)
+
+- **`check-all-gate.mdc`**, **`execution-priority-and-pr-batching.mdc`**, **`operator-investigation-before-blocking.mdc`**, **`operator-mandate-vs-external-limits.mdc`**
+
+## Tier B — evaluation backlog (superseded by wave above)
+
+_The table below is **historical** pre-#1154; use the [Tier B situationalized](#tier-b--situationalized-issue-1154-2026-07) inventory for current state._
 
 | Rule (examples) | Why it might be Tier B later | Why wait / caution |
 | --------------- | ---------------------------- | ------------------- |

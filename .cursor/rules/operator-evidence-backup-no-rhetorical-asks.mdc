@@ -1,7 +1,9 @@
 ---
-description: Private progress history and backups — update every configured mirror without asking obvious permission; hope is not a plan.
+description: Private evidence mirrors — full mirror set on sync. Situational — `private-stack-sync` token or globs below; @operator-evidence-backup-no-rhetorical-asks.mdc.
 globs:
-alwaysApply: true
+  - docs/ops/PRIVATE_STACK_SYNC*
+  - scripts/private-git-sync*
+alwaysApply: false
 ---
 
 # Evidence, private Git history, and redundant mirrors

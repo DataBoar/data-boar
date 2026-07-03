@@ -4,6 +4,8 @@ Human-readable summary of user-facing changes. **Detailed release notes:** [docs
 
 ## Unreleased (`main`)
 
+- **Cursor rules — Tier B situationalization (#1154):** 14 workflow rules → `alwaysApply: false` + globs/tokens; merged `operator-chat-language` + `persona-rigor` duplicates; workstation rules reframed (main dev box / secondary, same rigor). Rollback: `git revert` the Tier B commit. Inventory: `docs/ops/CURSOR_RULES_PHASE2_SITUATIONALIZATION.md`.
+
 **Targeting (next dev line):** **`1.8.0-beta`** (#772) — after operator **release-ritual** for **1.7.4** (PR **#1024**).
 
 ---
