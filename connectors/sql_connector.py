@@ -363,16 +363,19 @@ class SQLConnector:
             try:
                 full_sample = self.sample(schema, table, cname, limit=full_scan_limit)
             except ColumnSampleError:
-                return
-            full_res = self.scanner.scan_column(
-                cname, full_sample, connector_data_type=ctype
-            )
-            if "DOB_POSSIBLE_MINOR" in (full_res.get("pattern_detected") or ""):
-                res = full_res
-                suffix = " (full-scan confirmed)"
-                norm_tag = (
-                    (norm_tag or "").rstrip() + suffix if norm_tag else suffix.lstrip()
+                pass
+            else:
+                full_res = self.scanner.scan_column(
+                    cname, full_sample, connector_data_type=ctype
                 )
+                if "DOB_POSSIBLE_MINOR" in (full_res.get("pattern_detected") or ""):
+                    res = full_res
+                    suffix = " (full-scan confirmed)"
+                    norm_tag = (
+                        (norm_tag or "").rstrip() + suffix
+                        if norm_tag
+                        else suffix.lstrip()
+                    )
         self.db_manager.save_finding(
             source_type="database",
             target_name=target_name,
