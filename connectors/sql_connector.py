@@ -98,6 +98,26 @@ _SNOWFLAKE_SKIP_SCHEMAS: frozenset[str] = frozenset(
     }
 )
 
+# scan_failures reason for column sampling errors (#1140; taxonomy shared with #828).
+SCAN_FAILURE_REASON_SAMPLING_ERROR = "sampling_error"
+
+
+class ColumnSampleError(RuntimeError):
+    """Column sampling failed; the connector persisted a scan_failures row."""
+
+
+def format_column_sample_failure_details(
+    *,
+    schema: str,
+    table: str,
+    column_name: str,
+    dialect: str,
+    exc: BaseException,
+) -> str:
+    """Stable detail string for scan_failures when SQL column sampling fails."""
+    loc = f"{schema}.{table}.{column_name}" if schema else f"{table}.{column_name}"
+    return f"{loc} dialect={dialect}: {type(exc).__name__}: {exc}"
+
 
 def _get_skip_schemas(dialect: str) -> frozenset[str]:
     """Return schema names to skip when discovering (dialect-specific blacklist)."""
@@ -324,7 +344,10 @@ class SQLConnector:
         """Sample column, run detection, optionally full-scan for minor; save finding and log."""
         if self._inter_query_delay_s > 0:
             time.sleep(self._inter_query_delay_s)
-        sample = self.sample(schema, table, cname)
+        try:
+            sample = self.sample(schema, table, cname)
+        except ColumnSampleError:
+            return
         res = self.scanner.scan_column(cname, sample, connector_data_type=ctype)
         res = augment_low_id_like_for_persist(res, cname, self.detection_config)
         if (
@@ -337,7 +360,10 @@ class SQLConnector:
             res.get("pattern_detected") or ""
         ) and self.detection_config.get("minor_full_scan"):
             full_scan_limit = self.detection_config.get("minor_full_scan_limit", 100)
-            full_sample = self.sample(schema, table, cname, limit=full_scan_limit)
+            try:
+                full_sample = self.sample(schema, table, cname, limit=full_scan_limit)
+            except ColumnSampleError:
+                return
             full_res = self.scanner.scan_column(
                 cname, full_sample, connector_data_type=ctype
             )
@@ -397,59 +423,71 @@ class SQLConnector:
         safe_col = column_name.replace('"', '""')
         safe_table = table.replace('"', '""')
         safe_schema = (schema or "").replace('"', '""')
-        try:
-            tkey = (schema or "", table)
-            if tkey not in self._table_row_cache:
+        tkey = (schema or "", table)
+        if tkey not in self._table_row_cache:
+            try:
                 from connectors.sql_table_row_estimate import estimate_table_rows
 
                 self._table_row_cache[tkey] = estimate_table_rows(
                     self._connection, dialect, schema or "", table
                 )
-            est = self._table_row_cache[tkey]
-            table_meta = TableSamplingMetadata(estimated_row_count=est)
-            to = self._sample_statement_timeout_ms
-            plan = SamplingManager.build_column_sample(
-                dialect,
-                safe_col=safe_col,
-                safe_table=safe_table,
-                safe_schema=safe_schema,
-                schema=schema,
-                limit=use_limit,
-                table_metadata=table_meta,
-                statement_timeout_ms=to,
-            )
-            audit_key = f"{schema or ''}.{table}"
-            if self._sql_sampling_audit_key != audit_key:
-                self._sql_sampling_audit_key = audit_key
-                try:
-                    from utils.logger import get_logger
+            except Exception:
+                self._table_row_cache[tkey] = None
+        est = self._table_row_cache[tkey]
+        table_meta = TableSamplingMetadata(estimated_row_count=est)
+        to = self._sample_statement_timeout_ms
+        plan = SamplingManager.build_column_sample(
+            dialect,
+            safe_col=safe_col,
+            safe_table=safe_table,
+            safe_schema=safe_schema,
+            schema=schema,
+            limit=use_limit,
+            table_metadata=table_meta,
+            statement_timeout_ms=to,
+        )
+        audit_key = f"{schema or ''}.{table}"
+        if self._sql_sampling_audit_key != audit_key:
+            self._sql_sampling_audit_key = audit_key
+            try:
+                from utils.logger import get_logger
 
-                    human = plan.human_strategy or plan.strategy_label
-                    msg = "Sampling %s using %s strategy (label=%s dialect=%s)" % (
-                        audit_key,
-                        human,
-                        plan.strategy_label,
-                        dialect,
-                    )
-                    if plan.audit_notes:
-                        msg += " notes=%s" % (plan.audit_notes,)
-                    get_logger().info(msg)
-                except Exception:
-                    pass
+                human = plan.human_strategy or plan.strategy_label
+                msg = "Sampling %s using %s strategy (label=%s dialect=%s)" % (
+                    audit_key,
+                    human,
+                    plan.strategy_label,
+                    dialect,
+                )
+                if plan.audit_notes:
+                    msg += " notes=%s" % (plan.audit_notes,)
+                get_logger().info(msg)
+            except Exception:
+                pass
+        try:
             with self._connection.begin():
                 if dialect in ("postgresql", "postgres") and to:
                     self._connection.execute(
                         text("SET LOCAL statement_timeout = :mt").bindparams(mt=int(to))
                     )
                 rows = self._connection.execute(plan.query).fetchall()
-            parts = [str(r[0])[:200] for r in rows if r[0] is not None]
-            return " ".join(parts)
         except Exception as e:
+            target_name = str(self.config.get("name") or "database")
+            details = format_column_sample_failure_details(
+                schema=schema or "",
+                table=table,
+                column_name=column_name,
+                dialect=dialect,
+                exc=e,
+            )
+            self.db_manager.save_failure(
+                target_name, SCAN_FAILURE_REASON_SAMPLING_ERROR, details
+            )
             try:
                 from utils.logger import get_logger
 
                 get_logger().warning(
-                    "sample_skipped schema=%s table=%s col=%s dialect=%s err=%s",
+                    "sample_failed schema=%s table=%s col=%s dialect=%s err=%s",
                     schema or "",
                     table,
                     column_name,
@@ -458,7 +496,9 @@ class SQLConnector:
                 )
             except Exception:
                 pass
-            return ""
+            raise ColumnSampleError from e
+        parts = [str(r[0])[:200] for r in rows if r[0] is not None]
+        return " ".join(parts)
 
     def run(self) -> None:
         """Connect, discover, sample each column, detect, save_finding; on error save_failure."""
