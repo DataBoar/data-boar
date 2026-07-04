@@ -6,6 +6,8 @@ Human-readable summary of user-facing changes. **Detailed release notes:** [docs
 
 **Targeting (next dev line):** **`1.8.0-beta`** (#772) — after operator **release-ritual** for **1.7.4** (PR **#1024**).
 
+- **ADR governance (Phase 1, #1162):** deterministic tests T1/T2/T5/T6 for ADR-0045 (`tests/test_adr_governance_phase1.py`); pre-commit hook `adr-governance-phase1`; plan [PLAN_ADR_GOVERNANCE_ENFORCEMENT.md](docs/plans/PLAN_ADR_GOVERNANCE_ENFORCEMENT.md).
+
 ---
 
 ## 1.7.4 (2026-06-26)
