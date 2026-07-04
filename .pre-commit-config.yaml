@@ -74,6 +74,22 @@ repos:
         entry: uv run pytest tests/test_adr_governance_phase1.py -q -W error
         language: system
         pass_filenames: false
+      - id: commit-msg-strip-coauthor
+        name: strip injected Co-authored-by from commit message (forward-only)
+        entry: .githooks/commit-msg
+        language: script
+        stages: [commit-msg]
+        pass_filenames: true
+      - id: no-coauthorship-commit-messages
+        name: no co-authorship in commit messages (kombi)
+        entry: uv run pytest tests/test_commit_no_tool_coauthorship.py -q -W error
+        language: system
+        pass_filenames: false
+      - id: gitleaks-detect-config
+        name: gitleaks detect with repo .gitleaks.toml (kombi)
+        entry: uv run pytest tests/test_gitleaks_config.py -q -W error
+        language: system
+        pass_filenames: false
       - id: workflow-security-lint
         name: zizmor workflow security lint (optional manual stage)
         entry: pwsh -NoProfile -File scripts/workflow-security-lint.ps1 -SkipIfMissing
