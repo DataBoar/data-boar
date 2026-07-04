@@ -71,6 +71,7 @@
   "ADR-0071-self-protecting-pii-gate.md": "- **Date (UTC):** 2026-06-18",
   "ADR-0072-commit-gate-vs-release-gate-distinct-criteria.md": "- **Date (UTC):** 2026-06-21",
   "ADR-0073-version-scheme-octet-maturity-and-roadmap.md": "- **Date (UTC):** 2026-06-21",
+  "ADR-0074-supply-chain-layer1-digest-pins-and-rust-sca.md": "- **Date (UTC):** 2026-06-23",
   "ADR-0075-plugin-auth-file-based-vs-bearer.md": "- **Date (UTC):** 2026-06-21",
   "ADR-0076-opa-rego-ci-tier-drift-linter-not-runtime.md": "- **Date (UTC):** 2026-06-30",
   "ADR-0077-filesystem-scan-no-client-gitignore-by-design.md": "- **Date (UTC):** 2026-06-30",
