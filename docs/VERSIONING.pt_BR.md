@@ -43,9 +43,23 @@ Faixas do octeto quando `maturity_build` estiver em uso (ferramentas operador/be
 
 | Faixa octeto | Significado |
 | --- | --- |
-| **0–127** | maturidade beta |
-| **128–199** | maturidade rc |
-| **200–255** | maturidade release (`.200` = GA, `.201` = fix-1, …) |
+| **0–127** | maturidade beta (inclusivo — **0** é válido) |
+| **128–199** | maturidade rc (inclusivo) |
+| **200–255** | maturidade release (`.200` = GA na linha, `.201` = primeiro fix pós-GA, …) |
+
+**Limites inclusivos e base 0** (não `1–126` / `127–199`). Se o modelo mental usava `1–126` para beta, desloque um — o **regime** é o mesmo.
+
+### Nova linha pública — reset da faixa de maturidade
+
+Ao abrir uma **nova linha semver** (ex.: **`1.8.0`** após **`1.7.4`**), **`maturity_build` não continua** a partir de `.208` na linha antiga. **Reinicia na faixa Gibson** que corresponde ao **sufixo pre-release** em `[project] version`:
+
+| `[project] version` na nova linha | Faixa `maturity_build` | Âncora típica |
+| --- | --- | --- |
+| **`X.Y.Z-beta`** (ou `-beta.N`) | **0–127** | Reinício baixo na faixa (ex.: **`1`**) — registrar nas release notes |
+| **`X.Y.Z-rc`** (ou `-rc.N`) | **128–199** | Reinício baixo na faixa (ex.: **`128`**) |
+| **`X.Y.Z`** stable (GA) | **200–255** | **`.200`** = GA na linha; **`.201`** = primeiro fix, … |
+
+**`.postN` no PyPI** aplica-se só na faixa **release** (republicação fix-line na **mesma** linha pública, ex. `1.7.4.post2`). **Não** carrega para **`1.8.0-beta`**.
 
 Sufixos (`-beta`, `-rc`, `-rc-N`) são obrigatórios em `main` enquanto um issue de **release gate** (ex.: GitHub #406) estiver **aberto**. **Commit gate** verde (`check-all`) **não** autoriza removê-los — ver ADR-0072. Gate **#406** fechado com **1.7.4** stable (PR **#1024**).
 
@@ -76,8 +90,8 @@ Quando **`1.7.4`** já está no PyPI e um fix de empacotamento precisa sair sem 
 
 | Contador | Campo | Regra |
 | --- | --- | --- |
-| **Publicação** | `[project] version` **`.postN`**, About, PyPI | Um incremento por **upload PyPI** (não por build local) |
-| **Maturidade** | `[tool.databoar] maturity_build` | Octeto side-channel; pode avançar em builds não publicados |
+| **Publicação** | `[project] version` **`.postN`**, About, PyPI | Um incremento por **upload PyPI** (não por fix em `main`) |
+| **Maturidade** | `[tool.databoar] maturity_build` | Octeto side-channel; +1 por **fix discreto** no comportamento instalado/runtime (pode correr à frente do `postN`) |
 
 **Linha pública** permanece **`1.7.4`** (README, man); **linha de build** é **`1.7.4.postN`**. Manter o **mapa `postN ↔ maturity_build`** em [`docs/releases/`](releases/) — ex.: [`1.7.4.post1.md`](releases/1.7.4.post1.md): `1.7.4=.201 · 1.7.4.post1=.202`.
 

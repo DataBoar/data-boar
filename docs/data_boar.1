@@ -7,6 +7,9 @@ data-boar, data_boar, lgpd_crawler \- enterprise data discovery and risk governa
 .SH SYNOPSIS
 .B data-boar
 [
+.B \-\-demo
+]
+[
 .B \-\-config
 .I FILE
 ]
@@ -102,6 +105,16 @@ and
 (Security and hardening) for details.
 .
 .SH OPTIONS
+.TP
+.B \-\-demo
+Zero\-config demonstration mode: generate a synthetic filesystem corpus in a temporary directory, run an initial scan, and start the dashboard on loopback (\fB127.0.0.1\fR) with plaintext HTTP. Does not require
+.BR \-\-config .
+Implies
+.BR \-\-web
+and
+.BR \-\-allow\-insecure\-http .
+Temporary files are removed when the process exits.
+.
 .TP
 .BI "\-\-config " FILE
 Path to the configuration file (YAML or JSON).
@@ -571,6 +584,14 @@ Without TLS certificate and key paths, you must pass
 (or set
 .B api.allow_insecure_http
 in the configuration) for plaintext HTTP.
+.
+.TP
+Zero\-config demo (no configuration file):
+.RS
+.B data-boar \-\-demo
+.br
+.B python main.py \-\-demo
+.RE
 .
 .TP
 Start the API on port 8088 (plaintext, explicit opt\-in):

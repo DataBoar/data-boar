@@ -29,6 +29,21 @@ O Data Boar **não substitui** assessoria jurídica; produz **sinais técnicos**
 
 ---
 
+## Caminho 0 — Zero-config (recomendado no Windows após `pip install data-boar`)
+
+Sem `config.yaml`, sem Docker, sem YAML — corpus **sintético** embutido:
+
+```powershell
+pip install data-boar
+data-boar --demo
+```
+
+Abra [http://127.0.0.1:8088/pt-br/](http://127.0.0.1:8088/pt-br/) — achados de demonstração já carregados.
+
+**No clone (desenvolvimento):** `uv sync` na raiz, depois `uv run python main.py --demo` ou `.\scripts\demo.sh`.
+
+---
+
 ## Caminho A — Docker (menos fricção para não desenvolvedores)
 
 Execute na **raiz do clone** (ajuste o caminho do repositório):

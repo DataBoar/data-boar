@@ -24,19 +24,18 @@ def test_demo_sh_exists_and_is_executable() -> None:
 
 
 def test_demo_sh_uses_synthetic_corpus_generator() -> None:
-    """Anti-regression #834: demo.sh must delegate corpus generation to generate_synthetic_poc_corpus.py."""
+    """Anti-regression #834/#1113: demo delegates to ``data-boar --demo`` or core.demo."""
     demo = (_repo_root() / "scripts" / "demo.sh").read_text(encoding="utf-8")
-    assert "generate_synthetic_poc_corpus.py" in demo, (
-        "scripts/demo.sh must call generate_synthetic_poc_corpus.py to produce "
-        "the demo corpus without requiring real data (#834)"
+    assert "main.py --demo" in demo or "data-boar --demo" in demo, (
+        "scripts/demo.sh must call main.py --demo (#1113)"
     )
 
 
 def test_demo_sh_starts_web_dashboard() -> None:
-    """Anti-regression #834: demo.sh must start the dashboard (main.py --web)."""
+    """Anti-regression #834/#1113: default path uses --demo (implies --web)."""
     demo = (_repo_root() / "scripts" / "demo.sh").read_text(encoding="utf-8")
-    assert "--web" in demo, (
-        "scripts/demo.sh must include main.py --web so the dashboard opens (#834)"
+    assert "--demo" in demo, (
+        "scripts/demo.sh must invoke --demo so the dashboard opens (#1113)"
     )
 
 

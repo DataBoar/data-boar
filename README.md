@@ -1,6 +1,6 @@
 # Data Boar
 
-> **Try it in 30 seconds (no real data) — any OS (Docker):** `docker run --rm -p 8088:8088 fabioleitao/data_boar:latest demo` → open `http://127.0.0.1:8088/pt-br/`. **Linux/macOS shell (local `uv`, no Docker):** `./scripts/demo.sh` (requires `uv` — [install](https://docs.astral.sh/uv/getting-started/installation/)). **Windows or step-by-step:** [5-min QuickStart](QUICKSTART.md). All demo paths use synthetic data and plaintext loopback (`--allow-insecure-http`).
+> **Try it in 30 seconds (no real data):** `data-boar --demo` (or `python main.py --demo`) → open `http://127.0.0.1:8088/pt-br/`. **Docker:** `docker run --rm -p 8088:8088 fabioleitao/data_boar:latest demo`. **Shell wrapper:** `./scripts/demo.sh` (requires `uv`). **Windows step-by-step:** [5-min QuickStart](QUICKSTART.md). Synthetic data only; loopback plaintext (`--allow-insecure-http`).
 
 **Data Boar** — enterprise data discovery and risk governance: compliance-aware mapping of personal and sensitive data across your data soup (intelligence engine, not a single-jurisdiction “audit app”).
 
