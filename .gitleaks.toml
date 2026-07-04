@@ -10,6 +10,7 @@ description = "Confirmed FP 2026-05-18 — synthetic test data and operator howt
 # FP: chave demo sintetica + fingerprint GPG PUBLICO, nao segredo (allowlist por VALOR, nunca por path)
 regexes = [
   '''correct-key-12345''',
+  '''(?i)wrong-key''',  # FP: chave FAKE demo (curl-auth-header) no synthetic_corpus:778, commit historico b902a2ce.
   '''D6F81740\s*AA5FAB8A\s*CE5716AF\s*871542E6\s*F789F64F''',
   '''D6F81740AA5FAB8ACE5716AF871542E6F789F64F''',
 ]
