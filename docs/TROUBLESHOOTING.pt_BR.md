@@ -70,6 +70,41 @@ Muitas implantações usam a **imagem Docker**. O container precisa conseguir al
 
 ---
 
+## Casos de borda no onboarding via PyPI/pipx (Linux)
+
+Em hosts **Debian/Ubuntu** e **Fedora** com **Python >=3.12** disponível, `pipx install data-boar` costuma ser sem atrito.
+
+Hoje, dois caminhos Linux exigem 1 passo extra:
+
+### Família RHEL9 (AlmaLinux/Rocky/Oracle 9): `python3` padrão pode ficar em 3.9
+
+Quando o `pipx` resolve para `python3=3.9`, a instalação pode falhar com:
+
+- `ERROR: Ignored ... Requires-Python >=3.12`
+- `ERROR: No matching distribution found for data-boar`
+
+Use Python 3.12 de forma explícita:
+
+```bash
+sudo dnf install -y python3.12
+pipx install --python python3.12 data-boar
+```
+
+### Alpine/musl: fallback para build do source exige toolchain
+
+Neste caminho, `scikit-learn` pode cair em compilação a partir do source no musl. Sem toolchain de build, `pipx install data-boar` pode falhar com `metadata-generation-failed`.
+
+Instale os pré-requisitos antes:
+
+```bash
+apk add build-base gfortran openblas-dev
+pipx install data-boar
+```
+
+Este passo extra no Alpine deve melhorar quando o esforço de wheelhouse musllinux no-AVX pousar ([#929](https://github.com/DataBoar/data-boar/issues/929)).
+
+---
+
 ## O Data Boar é útil para sua organização?
 
 - **Com consultor treinado:** Um consultor pode instalar, configurar e ajustar o Data Boar na sua rede; definir credenciais e alvos; executar varreduras e interpretar relatórios. É a forma de menor risco quando a maturidade de TI/conformidade/DPO ainda está crescendo.
