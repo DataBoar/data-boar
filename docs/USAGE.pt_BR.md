@@ -9,7 +9,7 @@ Esta página é o **guia de uso do operador**: **CLI**, **API web e dashboard**,
 O documento descreve, em português, como:
 
 - Executar a aplicação via **CLI** e **API web**;
-- Entender os parâmetros (`--config`, `--web`, `--port`, `--host`, `--https-cert-file`, `--https-key-file`, `--allow-insecure-http`, `--validate-config`, `--tenant`, `--technician`, `--scan-compressed`, `--content-type-check`, `--scan-stego`, `--jurisdiction-hint`);
+- Entender os parâmetros (`--demo`, `--config`, `--web`, `--port`, `--host`, `--https-cert-file`, `--https-key-file`, `--allow-insecure-http`, `--validate-config`, `--tenant`, `--technician`, `--scan-compressed`, `--content-type-check`, `--scan-stego`, `--jurisdiction-hint`);
 - Navegar pelo **dashboard web**;
 - Iniciar varreduras e baixar relatórios/heatmaps usando **curl**.
 
@@ -28,6 +28,7 @@ O ponto de entrada é `main.py`.
 <!-- markdownlint-disable MD060 -->
 | Argumento               | Padrão               | Descrição                                                                                                                                                                                                                                                                                |
 | ---                     | ---                  | ---                                                                                                                                                                                                                                                                                      |
+| `--demo`                | *(flag)*             | **Demonstração zero-config:** cria workspace temporário em `/tmp/data_boar_demo/` (ou diretório temp do SO) com `demo.config.yaml`, corpus sintético de filesystem, relatórios e SQLite; executa varredura inicial e sobe o dashboard em loopback. **Ignora o `config.yaml` do diretório atual.** Implica `--web` e `--allow-insecure-http`. Arquivos temporários são removidos ao sair. Incompatível com `--validate-config`, `--reset-data`, `--export-audit-trail`, `--export-dsar` e `--diff`. |
 | `--config`              | `config.yaml`        | Caminho do arquivo de configuração (YAML ou JSON). Usado em varredura única e para resolver `api.port` / `api.host` ao subir a API.                                                                                                                                                      |
 | `--web`                 | *(flag)*             | Inicia o servidor FastAPI em vez de executar uma varredura única.                                                                                                                                                                                                                        |
 | `--port`                | `8088`               | Porta da API quando `--web` é usado. Pode ser sobrescrita por `api.port` no config, salvo se você passar `--port` explicitamente. Ignorado em modo varredura única.                                                                                                                      |
@@ -61,6 +62,19 @@ Implantações corporativas podem exigir *hooks* de **tamper-evidence** paralelo
 **Roadmap:** *anchor* SQLite, re-hash na inicialização e degradação de confiança além da camada de licenciamento continuam **planejadas** (**`docs/plans/PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md`** — export **E.11** via **`--export-audit-trail`** ✅; *anchors* ⬜).
 
 ### Resultados
+
+#### Demonstração zero-config (`--demo`)
+
+```bash
+data-boar --demo
+# ou a partir do clone:
+uv run python main.py --demo
+```
+
+- **Não** é varredura pontual orientada ao seu config: `--demo` **não** lê o `config.yaml` do diretório atual.
+- Prepara `/tmp/data_boar_demo/` (temp do SO + `data_boar_demo/`) com `demo.config.yaml`, corpus sintético, `reports/` e `audit_results.db`, executa varredura inicial e mantém o dashboard em **`127.0.0.1`** com HTTP em texto plano.
+- **Saída:** banner no console com caminho do workspace e URL do dashboard (porta padrão **8088**). A árvore temporária é removida ao encerrar o processo.
+- Veja também [QUICKSTART.md](../QUICKSTART.md) (*Caminho 0*) e `man 1 data-boar` (`--demo`).
 
 #### Varredura única (sem `--web`)
 
