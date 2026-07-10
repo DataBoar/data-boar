@@ -302,8 +302,7 @@ __marimo__/
 /*.txt
 
 # OPSEC: operator-local paths — never `git add -A` (explicit `git add <path>` only).
-# docs/ops/today-mode/ hub files already on origin stay tracked; this blocks new untracked drafts.
-docs/ops/today-mode/
+# docs/ops/today-mode/ stays PUBLIC (#1147) — methodology/lore on origin; explicit git add only.
 scripts/beastie-ecosystem-sync.ps1
 scripts/beastie-ecosystem-sync.sh
 api/static/mascot/bata_boar_mascot_pot.png
