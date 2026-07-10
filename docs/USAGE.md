@@ -139,7 +139,7 @@ sudo apt install ansible
 ansible-galaxy collection install community.docker
 
 # 2. Clone the repo
-git clone https://github.com/FabioLeitao/data-boar.git
+git clone https://github.com/DataBoar/data-boar.git
 cd data-boar/deploy/ansible
 
 # 3. Configure your inventory
@@ -170,6 +170,7 @@ See `deploy/ansible/README.md` for variables, multi-node Swarm, and troubleshoot
 Pre-built images are on Docker Hub: `fabioleitao/data_boar:latest` ([hub.docker.com/r/fabioleitao/data_boar](https://hub.docker.com/r/fabioleitao/data_boar)). Pull and run with a mounted config at `/data/config.yaml` (see README “Deploy with Docker” and [docs/deploy/DEPLOY.md](deploy/DEPLOY.md) ([pt-BR](deploy/DEPLOY.pt_BR.md))). You can use this instanced container instead of installing from source.
 
 1. **Install** the application and optional dependencies (e.g. `.[postgres]`, `.[sql-all]`, `.[nosql]`, `.[shares]`) as in the README and [TECH_GUIDE.md](TECH_GUIDE.md) (*Supported databases*).
+1. **Cross-distro `pipx` reality check (Linux):** before rollout on RHEL/Void/musl/no-AVX fleets, read [TROUBLESHOOTING.md](TROUBLESHOOTING.md) and the matrix in [ops/OS_COMPATIBILITY_TESTING_MATRIX.md](ops/OS_COMPATIBILITY_TESTING_MATRIX.md) (RHEL 8/9 explicit Python 3.12 step; Void-musl/no-AVX wheelhouse-or-Docker path; RHEL/CentOS 7 Docker-only).
 1. **Prepare** a config file (e.g. `config.yaml`) with `targets`, `file_scan`, `report`, and optionally `api.port`.
 1. **Set config path** (optional):
 
