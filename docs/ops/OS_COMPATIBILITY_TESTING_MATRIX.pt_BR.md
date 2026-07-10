@@ -10,13 +10,18 @@
 
 **Tier 1 (testar primeiro):** **RHEL 9** / **AlmaLinux 9** / **Rocky 9** (empresarial, `dnf`), **Fedora 40+** (upstream RHEL). **Tier 2:** **Arch** / **Manjaro** / **BigLinux** (`pacman`), **openSUSE Tumbleweed** (`zypper`). **Tier 3:** **Gentoo** (`emerge`, source-based), **Void** / **Alpine** (musl).
 
-**Gaps de onboarding pipx confirmados (2026-07-09):**
-- **Família RHEL9 (Alma/Rocky/Oracle 9):** em alguns hosts o `python3` padrão ainda cai em 3.9; para `pipx`, use Python 3.12 explícito:
+**Matriz de instalação `pipx` provada (1.7.4.post3):**
+- **RHEL 8 e RHEL 9 (inclui Alma):** exigem Python 3.12 explícito no caminho `pipx`:
   - `sudo dnf install -y python3.12`
   - `pipx install --python python3.12 data-boar`
-- **Alpine/musl:** no caminho atual o `scikit-learn` pode cair em build do source e falhar com `metadata-generation-failed` sem toolchain:
+- **RHEL/Alma/Rocky/Oracle 10:** caminho padrão sem atrito (`pipx install data-boar`).
+- **Void-glibc:** passa no caminho padrão (PyPI publica wheel `cp314`).
+- **Void-musl:** falha no caminho padrão; wheelhouse atual é `cp312` e não casa com Python 3.14 local. Precisa wheelhouse `cp314` ([#1182](https://github.com/DataBoar/data-boar/issues/1182)) ou Docker.
+- **Alpine/musl:** sem wheelhouse adequado, pode cair em build de source e falhar com `metadata-generation-failed`; usar wheelhouse (`--find-links`) ou pré-instalar toolchain:
   - `apk add build-base gfortran openblas-dev`
   - `pipx install data-boar`
+- **Hosts sem AVX:** caminho recomendado é wheelhouse ou Docker (sem overclaim de caminho padrão).
+- **RHEL/CentOS 7:** EOL (repositórios mortos + `requires-python>=3.12` inalcançável) - usar somente Docker.
 - Fonte operacional e contexto atualizado: [TROUBLESHOOTING.pt_BR.md](../TROUBLESHOOTING.pt_BR.md).
 
 **Ordem sugerida:** AlmaLinux 9 → Arch/Manjaro → Void/Alpine (musl) → Gentoo (se houver tempo) → **illumos** (ex. OpenIndiana) / legado **OpenSolaris** só **depois** (Tier 4; OpenSolaris oficial é histórico; preferir **illumos** atual).

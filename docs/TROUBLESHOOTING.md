@@ -56,7 +56,7 @@ Data Boar **will not** implement native body extraction for OLE2/CFBF (Compound 
 - **Use `.docx` output from your DMS:** Configure your Document Management System to export in `.docx`/PDF when feeding Data Boar.
 - **Filename path already scanned:** Even without body content, Data Boar still flags the file via its path and filename if PII is present there (e.g. `CPF_000000000-00_contract.doc`).
 
-This decision is tracked at GitHub issue [#671](https://github.com/FabioLeitao/data-boar/issues/671). No ADR is required — this is a won't-fix scope boundary, not an architectural trade-off.
+This decision is tracked at GitHub issue [#671](https://github.com/DataBoar/data-boar/issues/671). No ADR is required — this is a won't-fix scope boundary, not an architectural trade-off.
 
 ---
 
@@ -72,13 +72,13 @@ Many deployments use the **Docker image**. The container must be able to reach y
 
 ## PyPI/pipx onboarding edge cases (Linux)
 
-On **Debian/Ubuntu** and **Fedora** hosts that already provide **Python >=3.12**, `pipx install data-boar` is usually frictionless.
+On **Debian/Ubuntu**, **Fedora**, and **RHEL/Alma/Rocky/Oracle 10**, the default `pipx install data-boar` path is currently frictionless when the host already resolves Python >=3.12.
 
-Two Linux paths currently need one extra step:
+For other Linux paths, use the split below (no overclaim):
 
-### RHEL9-family (AlmaLinux/Rocky/Oracle 9): default `python3` may still be 3.9
+### RHEL 8 and RHEL 9 (including Alma): force Python 3.12 in `pipx`
 
-When `pipx` resolves to system `python3=3.9`, install can fail with:
+These hosts can still resolve default `python3` below the package floor and fail with:
 
 - `ERROR: Ignored ... Requires-Python >=3.12`
 - `ERROR: No matching distribution found for data-boar`
@@ -90,18 +90,31 @@ sudo dnf install -y python3.12
 pipx install --python python3.12 data-boar
 ```
 
-### Alpine/musl: source-build fallback needs a toolchain
+### Void-glibc vs Void-musl
+
+- **Void-glibc:** currently passes in the default path (`pipx install data-boar`) because PyPI publishes a compatible `cp314` wheel.
+- **Void-musl:** currently not frictionless in the same path; available wheelhouse is `cp312` while host Python is 3.14. Use Docker, or wait for `cp314` wheelhouse coverage in [#1182](https://github.com/DataBoar/data-boar/issues/1182).
+
+### Alpine/musl: wheelhouse or build toolchain
 
 In this path, `scikit-learn` can fall back to source build on musl. Without build tools, `pipx install data-boar` may fail with `metadata-generation-failed`.
 
-Install toolchain prerequisites first:
+If no wheelhouse is available, install prerequisites first:
 
 ```bash
 apk add build-base gfortran openblas-dev
 pipx install data-boar
 ```
 
-This extra Alpine step is expected to improve once the musllinux no-AVX wheelhouse effort lands ([#929](https://github.com/DataBoar/data-boar/issues/929)).
+This path should improve as musllinux wheelhouse coverage evolves ([#929](https://github.com/DataBoar/data-boar/issues/929), [#1182](https://github.com/DataBoar/data-boar/issues/1182)).
+
+### no-AVX hosts
+
+Do not assume a smooth default PyPI path. Use wheelhouse (`--find-links`) or Docker.
+
+### RHEL 7 / CentOS 7 (EOL)
+
+Treat native `pipx` install as unsupported for current builds (EOL repositories and unreachable Python floor). Use Docker.
 
 ---
 

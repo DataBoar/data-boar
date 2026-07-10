@@ -141,7 +141,7 @@ sudo apt install ansible
 ansible-galaxy collection install community.docker
 
 # 2. Clone o repositório
-git clone https://github.com/FabioLeitao/data-boar.git
+git clone https://github.com/DataBoar/data-boar.git
 cd data-boar/deploy/ansible
 
 # 3. Configure o inventário
@@ -169,6 +169,8 @@ Veja `deploy/ansible/README.md` para variáveis, Swarm multi-nó e solução de 
 ## Opção: executar via Docker (sem clonar o Git)
 
 Imagens pré-construídas estão no Docker Hub: `fabioleitao/data_boar:latest` ([hub.docker.com/r/fabioleitao/data_boar](https://hub.docker.com/r/fabioleitao/data_boar)). Faça pull e execute com um config montado em `/data/config.yaml` (veja o README “Deploy com Docker” e [docs/deploy/DEPLOY.pt_BR.md](deploy/DEPLOY.pt_BR.md) ([EN](deploy/DEPLOY.md))). Você pode usar esse container em vez de instalar a partir do código.
+
+**Instalação `pipx` por distro (Linux):** antes de rollout em frotas RHEL/Void/musl/no-AVX, confira [TROUBLESHOOTING.pt_BR.md](TROUBLESHOOTING.pt_BR.md) e a matriz [ops/OS_COMPATIBILITY_TESTING_MATRIX.pt_BR.md](ops/OS_COMPATIBILITY_TESTING_MATRIX.pt_BR.md) (RHEL 8/9 com passo explícito de Python 3.12; Void-musl/no-AVX em caminho wheelhouse-ou-Docker; RHEL/CentOS 7 somente Docker).
 
 ### URLs principais
 
