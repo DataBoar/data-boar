@@ -10,6 +10,23 @@ Human-readable summary of user-facing changes. **Detailed release notes:** [docs
 
 ---
 
+## 1.7.4.post3 (pending PyPI dispatch)
+
+> Post-release on the **`1.7.4`** public line. **`[project] version = 1.7.4.post3`** and **`[tool.databoar] maturity_build = 211`** (ADR-0073 dual counter policy).
+
+### Fixed (post3)
+
+- **Dependency security:** `soupsieve` **2.8.3 → 2.8.4** to remove findings for **CVE-2026-49476** and **CVE-2026-49477** ([#1177](https://github.com/FabioLeitao/data-boar/pull/1177)).
+- **SQL connector observability:** SQL sampling failures now surface in `scan_failures` (bundle includes [#1144](https://github.com/FabioLeitao/data-boar/pull/1144), issue [#1140](https://github.com/FabioLeitao/data-boar/issues/1140)).
+- **Archive observability:** encrypted/corrupt archive members now surface in `scan_failures` (bundle includes [#1146](https://github.com/FabioLeitao/data-boar/pull/1146), issue [#828](https://github.com/FabioLeitao/data-boar/issues/828)).
+
+### Changed (post3)
+
+- **Onboarding docs (`pipx`):** RHEL9-family (`python3.12`) and Alpine/musl (toolchain prerequisites) edge cases documented ([#1175](https://github.com/FabioLeitao/data-boar/pull/1175)).
+- **Contributor command docs:** canonical `uv export --frozen --no-emit-project -o requirements.txt` guidance applied in EN/pt-BR ([#1179](https://github.com/FabioLeitao/data-boar/pull/1179), issue [#1176](https://github.com/FabioLeitao/data-boar/issues/1176)).
+
+---
+
 ## 1.7.4 (2026-06-26)
 
 > **Stable GA** on the **`1.7.4` line** — release gate **#406** closed with Maestro Deep 5-host completão evidence ([#1021](https://github.com/FabioLeitao/data-boar/issues/1021)). **#970** was a **premature** stable bump/tag **without** the gate — corrected by **ADR-0072**; **`1.7.4` is not VOID**. Public version **`1.7.4`**; **`[tool.databoar] maturity_build = 201`** (side-channel per **ADR-0073** — #976, #977).
