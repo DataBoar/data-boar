@@ -16,7 +16,7 @@
   - `pipx install --python python3.12 data-boar`
 - **RHEL/Alma/Rocky/Oracle 10:** caminho padrão sem atrito (`pipx install data-boar`).
 - **Void-glibc:** passa no caminho padrão (PyPI publica wheel `cp314`).
-- **Void-musl (py3.14.6):** com toolchain (`xbps-install -S python3-devel gcc gcc-fortran openblas-devel`), `pipx install` funciona e `--demo` fecha em **26 findings** (paridade de runtime com glibc). Sem toolchain, a falha atual fica concentrada no build de source do `scikit-learn==1.9.0`; `numpy` e `pandas` já têm wheel `musllinux` no PyPI, `scipy` não é dependência e `odfpy` é pure Python. Gap remanescente para caminho pipx-puro sem toolchain: wheel `cp314 musllinux` de `scikit-learn` ([#1182](https://github.com/DataBoar/data-boar/issues/1182)).
+- **Void-musl (py3.14.6):** com toolchain (`xbps-install -S python3-devel gcc gcc-fortran openblas-devel`), `pipx install` funciona e `--demo` fecha em **26 findings** (paridade de runtime com glibc). Sem toolchain, a falha atual fica concentrada no build de source do `scikit-learn==1.9.0`; `numpy` e `pandas` já têm wheel `musllinux` no PyPI, `scipy` (dependência direta) também tem wheel `musllinux` no PyPI, e `odfpy` é pure Python. Gap remanescente para caminho pipx-puro sem toolchain: wheel `cp314 musllinux` de `scikit-learn` ([#1182](https://github.com/DataBoar/data-boar/issues/1182)).
 - **Alpine/musl:** sem wheelhouse adequado, pode cair em build de source e falhar com `metadata-generation-failed`; usar wheelhouse (`--find-links`) ou pré-instalar toolchain:
   - `apk add build-base gfortran openblas-dev`
   - `pipx install data-boar`
