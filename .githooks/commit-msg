@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# .githooks/commit-msg — auto-strip de co-autoria injetada (A.I.I.D.C.O.B.P.P. v1.4).
+#
+# POR QUE: neste repo NAO existe co-autoria (um autor por commit). A IDE do Cursor
+# injeta 'Co-authored-by: Cursor' MESMO com o toggle 'Commit Attribution' OFF —
+# a Anysphere admite "toggles sao sugestoes, nao enforceables" (forum #161253, SEV-1).
+# Este hook enforca MECANICAMENTE no repo do operador o que o toggle do vendor recusa.
+#
+# FORWARD-ONLY: mexe so na mensagem do commit ATUAL; nunca reescreve history (a
+# evidencia do incidente Cursor no history fica preservada — analise Anysphere/Anthropic).
+# BACKSTOP: o gate pytest (tests/test_commit_no_tool_coauthorship.py) e a rede LOUD
+# se este hook falhar. Cinturao + suspensorio (nao e "silent fix").
+#
+# NAO usa --no-verify pra pular isto (proibido ao agente, matriz v1.4). So o HITL,
+# na mao, se algum dia quiser um co-autor humano real (raro).
+set -euo pipefail
+
+MSG_FILE="${1:?commit-msg hook: falta o arquivo da mensagem}"
+
+# Remove QUALQUER linha 'Co-authored-by:' (case-insensitive). Fail-closed = igual ao gate.
+if grep -qiE '^[[:space:]]*Co-authored-by:[[:space:]]*\S' "$MSG_FILE"; then
+  stripped="$(grep -viE '^[[:space:]]*Co-authored-by:[[:space:]]*\S' "$MSG_FILE")"
+  printf '%s\n' "$stripped" > "$MSG_FILE"
+  echo "[commit-msg] co-autoria injetada removida (repo nao co-autora; ver forum #161253)." >&2
+fi
+exit 0

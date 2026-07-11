@@ -9,10 +9,18 @@ is enabled.
 from __future__ import annotations
 
 import zipfile
+from collections.abc import Callable
 from pathlib import Path
 from typing import Iterable, Iterator
 
 import tarfile
+
+# scan_failures reasons for unreadable archive members (#828; shared taxonomy with SQL sampling_error).
+SCAN_FAILURE_REASON_ENCRYPTED_NO_PASSWORD = "encrypted_no_password"
+SCAN_FAILURE_REASON_WRONG_PASSWORD = "wrong_password"
+SCAN_FAILURE_REASON_ARCHIVE_READ_ERROR = "archive_read_error"
+
+MemberReadFailureCallback = Callable[[str, str, str], None]
 
 
 # Tier 1 – stdlib-backed formats (see PLAN_COMPRESSED_FILES.md)
@@ -201,12 +209,55 @@ class ArchiveUnsupportedError(Exception):
     pass
 
 
+def classify_zip_member_read_failure(
+    exc: BaseException,
+    *,
+    encrypted: bool,
+    password_provided: bool,
+) -> str:
+    """Map zipfile member read errors to scan_failures reason codes (#828)."""
+    if encrypted and not password_provided:
+        return SCAN_FAILURE_REASON_ENCRYPTED_NO_PASSWORD
+    if encrypted and password_provided:
+        msg = str(exc).lower()
+        if (
+            "bad password" in msg
+            or "incorrect password" in msg
+            or "bad crc-32" in msg
+            or "bad crc" in msg
+        ):
+            return SCAN_FAILURE_REASON_WRONG_PASSWORD
+    return SCAN_FAILURE_REASON_ARCHIVE_READ_ERROR
+
+
+def classify_7z_member_read_failure(
+    exc: BaseException,
+    *,
+    password_provided: bool,
+) -> str:
+    """Map py7zr member read errors to scan_failures reason codes (#828)."""
+    try:
+        from py7zr import exceptions as py7zr_exc
+    except ImportError:
+        py7zr_exc = None  # type: ignore[misc, assignment]
+    if py7zr_exc is not None and isinstance(exc, py7zr_exc.PasswordRequired):
+        return SCAN_FAILURE_REASON_ENCRYPTED_NO_PASSWORD
+    if password_provided:
+        if py7zr_exc is not None and isinstance(exc, py7zr_exc.CrcError):
+            return SCAN_FAILURE_REASON_WRONG_PASSWORD
+        msg = str(exc).lower()
+        if "password" in msg or "wrong" in msg or "crc" in msg:
+            return SCAN_FAILURE_REASON_WRONG_PASSWORD
+    return SCAN_FAILURE_REASON_ARCHIVE_READ_ERROR
+
+
 def iter_archive_members(
     path: Path,
     archive_type: str,
     max_inner_size: int,
     allowed_extensions: Iterable[str] | set[str],
     file_passwords: dict[str, str] | None = None,
+    on_member_read_failure: MemberReadFailureCallback | None = None,
 ) -> Iterator[tuple[str, bytes]]:
     """
     Yield (member_name, content_bytes) for each file inside the archive whose
@@ -238,7 +289,19 @@ def iter_archive_members(
                         continue
                     try:
                         data = z.read(name)
-                    except (RuntimeError, zipfile.BadZipFile):
+                    except (RuntimeError, zipfile.BadZipFile) as e:
+                        if on_member_read_failure is not None:
+                            encrypted = bool(info.flag_bits & 0x1)
+                            reason = classify_zip_member_read_failure(
+                                e,
+                                encrypted=encrypted,
+                                password_provided=bool(pwd),
+                            )
+                            on_member_read_failure(
+                                reason,
+                                name,
+                                f"{path.name}|{name}: {type(e).__name__}: {e}",
+                            )
                         continue
                     yield (name, data)
         except (zipfile.BadZipFile, OSError):
@@ -278,6 +341,8 @@ def iter_archive_members(
                 "on a host without liblzma see issue #926"
             )
         pwd = pw.get(".7z") or pw.get("default") or None
+        from py7zr.exceptions import PasswordRequired
+
         try:
             with py7zr.SevenZipFile(path, "r", password=pwd) as archive:
                 # py7zr >= 0.22: use list(); older docs used files_list (removed in 1.x).
@@ -296,8 +361,25 @@ def iter_archive_members(
                         if bio is not None:
                             data = bio.read()
                             yield (member.filename, data)
-                    except (Exception, OSError):
+                    except (Exception, OSError) as e:
+                        if on_member_read_failure is not None:
+                            reason = classify_7z_member_read_failure(
+                                e, password_provided=bool(pwd)
+                            )
+                            on_member_read_failure(
+                                reason,
+                                member.filename,
+                                f"{path.name}|{member.filename}: {type(e).__name__}: {e}",
+                            )
                         continue
+        except PasswordRequired as e:
+            if on_member_read_failure is not None:
+                on_member_read_failure(
+                    SCAN_FAILURE_REASON_ENCRYPTED_NO_PASSWORD,
+                    path.name,
+                    f"{path.name}: {type(e).__name__}: {e}",
+                )
+            return
         except (py7zr.Bad7zFile, OSError):
             return
 

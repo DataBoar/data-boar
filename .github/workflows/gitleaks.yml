@@ -49,7 +49,7 @@ jobs:
           curl -sSfL "${BASE}/gitleaks_${VER}_checksums.txt" -o gl.sums
           grep " ${TARBALL}$" gl.sums | sha256sum -c -
           tar -xzf "${TARBALL}" gitleaks
-          ./gitleaks git . --no-banner --redact --exit-code 1
+          ./gitleaks git . --config .gitleaks.toml --no-banner --redact --exit-code 1
 
   slack-notify-on-failure:
     name: Slack CI failure notify

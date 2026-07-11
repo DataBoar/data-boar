@@ -357,9 +357,8 @@ def _plan_mssql_column_sample(
     # SQL Server has **no** query-level execution-time hint equivalent to
     # MySQL's ``/*+ MAX_EXECUTION_TIME(N) */``; ``OPTION (MAX_EXECUTION_TIME = …)``
     # is *not* valid T-SQL and emitting it makes every sample fail with a
-    # syntax error -- which the connector's broad ``except Exception`` then
-    # swallows, returning empty samples and producing **silent zero-finding
-    # scans** on every SQL Server target. Statement-time bounds for MSSQL
+    # syntax error -- the connector records ``scan_failures`` (reason
+    # ``sampling_error``) and skips detection for that column (#1140). Statement-time bounds for MSSQL
     # come from the SQLAlchemy connection-level ``connect_timeout`` (set via
     # ``_connect_args_from_target``); for finer per-statement budgets a
     # dedicated ADR + driver-level ``LOCK_TIMEOUT`` or session option is the
