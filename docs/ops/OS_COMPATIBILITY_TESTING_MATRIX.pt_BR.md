@@ -20,6 +20,7 @@
 - **Alpine/musl:** sem wheelhouse adequado, pode cair em build de source e falhar com `metadata-generation-failed`; usar wheelhouse (`--find-links`) ou pré-instalar toolchain:
   - `apk add build-base gfortran openblas-dev`
   - `pipx install data-boar`
+- **Paridade de runtime no musl (post3):** com smoke aguardando o fim do scan (sem timeout prematuro), Alpine-musl igualou Debian-glibc com 26 findings. O "13 findings" anterior foi artefato de harness (timeout), não gap de detector/parser.
 - **Hosts sem AVX:** caminho recomendado é wheelhouse ou Docker (sem overclaim de caminho padrão).
 - **RHEL/CentOS 7:** EOL (repositórios mortos + `requires-python>=3.12` inalcançável) - usar somente Docker.
 - Fonte operacional e contexto atualizado: [TROUBLESHOOTING.pt_BR.md](../TROUBLESHOOTING.pt_BR.md).
