@@ -1,22 +1,22 @@
 # Plan: Two-week execution sprint (no regressions, low toil, fast delivery)
 
 **Status:** Active
-**Date:** 2026-03-25
+**Date:** 2026-07-11
 **Authors:** Fabio Leitao
 **Priority:** H0
 
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md)
 
-**Previous template cycles:** Earlier uses of this file without a dated closure are **superseded** by the [Integration / active threads](PLANS_TODO.md) narrative (S0 closed, **S1 – Lab proof** selected). Close each cycle with: green `main`, explicit carryover rows, and one release or demo note if you shipped user-visible slices.
+**Previous template cycles:** Earlier windows in this file are **superseded** by the current sequencing in [PLANS_TODO.md](PLANS_TODO.md) (*Integration / active threads* + *What to start next*). Close each cycle with: green `main`, explicit carryover rows, and one short outcome note.
 
-### This cycle — focus (2026-04-21 → 2026-05-04)
+### This cycle — focus (2026-07-11 → 2026-07-24)
 
 | Week | Theme | Outcomes |
 | ---- | ----- | -------- |
-| **1** | **Enterprise demo signal** | Transport + trust + global access surface exposed as **`enterprise_surface`** on **`GET /status`** / **`GET /health`** (paired slice; **not** full RBAC — see [PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md](PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md)). Dashboard tinted banner when license trust is **degraded**/**untrusted** or API key is misconfigured. |
-| **2** | **Open-core POC / beta readiness** | **`v1.7.3`** ✅ stable baseline — next patch **`1.7.4`**: pick **one** primary (**maturity POC ready** closure **or** first scope-import vendor adapter **or** small governance slice per [PLANS_TODO.md](PLANS_TODO.md)); optional **–1L** lab proof still operator-paced. |
+| **1** | **Post3 stabilization + branch hygiene** | Keep docs-only and behavior slices separated (e.g. docs split PR without RBAC coupling), close/supersede stale overlap PRs, and leave one clean canonical track per theme. |
+| **2** | **One selected delivery slice, no regression** | Ship one primary row from [PLANS_TODO.md](PLANS_TODO.md) (*S2a trust-state* **or** one **M-PILOT-READY** blocker), with tests and docs in the same slice and no broadened scope. |
 
-**Definition of done (this cycle):** At least one merged PR with tests for the governance bundle; **`check-all`** green; docs or plan rows updated; **no** silent deferral of **A3** Hub hygiene (operator) or **–1b** Scout if you touched deps/Docker.
+**Definition of done (this cycle):** At least one merged PR for the selected slice; **`check-all --enforced`** green before publish/merge; docs/plan rows updated when scope moves; no silent carryover.
 
 ---
 
@@ -35,38 +35,34 @@ Deliver a short, realistic 2-week sprint that keeps **tests green**, avoids regr
 
 ## Two-week scope (essential only)
 
-### Week 1 — Stability and anti-regression baseline
+### Week 1 — Stabilization and anti-overlap baseline
 
 1. PR hygiene baseline:
-   - Ensure all active PRs are either merged, updated, or closed as superseded.
-   - Require green checks before merge decisions (`gh pr checks` + mergeable state).
+   - Ensure active PRs are either merged, updated, or closed as superseded.
+   - Keep one canonical PR per concern (docs-only vs RBAC/API behavior vs governance).
 1. Automation hardening:
-   - Keep `commit-or-pr` and `check-all` as default gate.
-   - Eliminate one additional repeated manual step with script support (if any hotspot appears during the week).
+   - Keep `check-all --enforced` as pre-push/pre-merge proof.
+   - Keep script-first execution (`check-all`, `lint-only`, `quick-test`, `commit-or-pr`) over ad-hoc command sequences.
 1. Tests where it matters:
-   - For each bugfix in the week, add one targeted regression test.
-   - Avoid broad test rewrites; prioritize deterministic tests around changed behavior.
-1. Corporate-Entity-C progression:
-   - Pick one Corporate-Entity-C recommendation row and ship one evidence-backed slice.
-1. Storage/backup urgency checkpoint (P0):
-   - Execute Time Machine USB recovery triage in read-only mode and decide copy path.
-   - Only repurpose disk after recovered data is validated.
-1. Slack channel B (AFK awareness):
-   - `SLACK_WEBHOOK_URL` set; manual ping once; **Slack CI failure notify** validated or accepted (see `OPERATOR_NOTIFICATION_CHANNELS.md` §4.1).
+   - For each behavior change, keep one targeted regression test in the same PR.
+   - Avoid broad rewrites; prioritize deterministic tests around changed paths.
+1. Branch divergence control:
+   - Prefer merge-main-in for protected branches where force-push is blocked.
+   - Park operator-gated PRs when they require non-autonomous approvals.
 
-### Week 2 — Delivery and demo readiness
+### Week 2 — Delivery and checkpoint closure
 
 1. One production-relevant feature slice:
-   - Choose one small feature with direct demo impact and bounded risk.
+   - Choose one small slice from `PLANS_TODO` with direct demo/ops impact and bounded risk.
    - Include docs and tests in the same slice.
 1. Beta-readiness checklist pass:
-   - Run `check-all`, validate docs consistency, and confirm no pending critical warnings.
+   - Run `check-all --enforced`, validate docs consistency, and confirm no pending critical warnings.
    - Perform one homelab validation pass if environment/time allows.
 1. Toil reduction checkpoint:
    - List top 3 recurring frictions from these two weeks.
    - Convert at least one into automation or documented runbook command.
 1. Delivery artifact:
-   - End week 2 with one clear release-ready summary (what changed, why it matters, what is next).
+   - End week 2 with one concise summary (what shipped, what stayed carryover, what starts next).
 
 ## Daily execution template (very short)
 
@@ -116,8 +112,8 @@ When the operator has limited attention/time, run this order:
    - One targeted test + one script/check execution.
 1. Stop clean:
    - Leave explicit next step (one-liner) to resume tomorrow without re-discovery.
-1. If Slack is not yet verified:
-   - Run **Actions → Slack operator ping** once; confirm message in your ops channel (secret `SLACK_WEBHOOK_URL`).
+1. If a branch is operator-gated or protected:
+   - Prefer status report + park over risky history rewrites.
 
 ## PMO shorthand alignment
 
