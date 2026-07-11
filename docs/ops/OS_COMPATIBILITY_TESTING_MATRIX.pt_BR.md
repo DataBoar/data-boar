@@ -16,10 +16,11 @@
   - `pipx install --python python3.12 data-boar`
 - **RHEL/Alma/Rocky/Oracle 10:** caminho padrão sem atrito (`pipx install data-boar`).
 - **Void-glibc:** passa no caminho padrão (PyPI publica wheel `cp314`).
-- **Void-musl:** falha no caminho padrão; wheelhouse atual é `cp312` e não casa com Python 3.14 local. Precisa wheelhouse `cp314` ([#1182](https://github.com/DataBoar/data-boar/issues/1182)) ou Docker.
+- **Void-musl (py3.14.6):** com toolchain (`xbps-install -S python3-devel gcc gcc-fortran openblas-devel`), `pipx install` funciona e `--demo` fecha em **26 findings** (paridade de runtime com glibc). Sem toolchain, a falha atual fica concentrada no build de source do `scikit-learn==1.9.0`; `numpy` e `pandas` já têm wheel `musllinux` no PyPI, `scipy` (dependência direta) também tem wheel `musllinux` no PyPI, e `odfpy` é pure Python. Gap remanescente para caminho pipx-puro sem toolchain: wheel `cp314 musllinux` de `scikit-learn` ([#1182](https://github.com/DataBoar/data-boar/issues/1182)).
 - **Alpine/musl:** sem wheelhouse adequado, pode cair em build de source e falhar com `metadata-generation-failed`; usar wheelhouse (`--find-links`) ou pré-instalar toolchain:
   - `apk add build-base gfortran openblas-dev`
   - `pipx install data-boar`
+- **Paridade de runtime no musl (post3):** com smoke aguardando o fim do scan (sem timeout prematuro), Alpine-musl igualou Debian-glibc com 26 findings. O "13 findings" anterior foi artefato de harness (timeout), não gap de detector/parser.
 - **Hosts sem AVX:** caminho recomendado é wheelhouse ou Docker (sem overclaim de caminho padrão).
 - **RHEL/CentOS 7:** EOL (repositórios mortos + `requires-python>=3.12` inalcançável) - usar somente Docker.
 - Fonte operacional e contexto atualizado: [TROUBLESHOOTING.pt_BR.md](../TROUBLESHOOTING.pt_BR.md).
