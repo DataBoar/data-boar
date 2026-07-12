@@ -1,6 +1,9 @@
 ---
-description: Cursor IDE browser — same workstation as SSH: all operator social + Gmail + dashboards; try MCP then Google SSO when cold; only escalate to operator after a real failed attempt
-alwaysApply: true
+description: Cursor IDE browser — SSO/social/Gmail. Situational — browser MCP tasks or @cursor-browser-social-sso-hygiene.mdc.
+globs:
+  - .cursor/skills/cursor-browser-social-session/**
+  - docs/ops/OPERATOR_NOTIFICATION_CHANNELS*
+alwaysApply: false
 ---
 
 # Cursor browser (redes, Patreon, pesquisa)

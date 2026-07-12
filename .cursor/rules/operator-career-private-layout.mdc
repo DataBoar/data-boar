@@ -1,6 +1,9 @@
 ---
-description: Where to place operator career, LinkedIn, ATS, and SLI private files (not talent-pool candidates).
-alwaysApply: true
+description: Operator career / LinkedIn / ATS private layout. Situational — career globs or @operator-career-private-layout.mdc.
+globs:
+  - docs/private.example/author_info/**
+  - docs/ops/LINKEDIN_ATS*
+alwaysApply: false
 ---
 
 # Operator career / LinkedIn / ATS / SLI — private layout

@@ -6,7 +6,7 @@
 
 ## Resumo
 
-- **Regras:** 74 arquivos `.mdc` (36 always-on, 38 situacionais).
+- **Regras:** 72 arquivos `.mdc` (18 always-on, 54 situacionais).
 - **Skills:** 31 pastas com `SKILL.md`.
 - **Keywords de sessão:** 7 tokens em `session-mode-keywords.mdc`.
 

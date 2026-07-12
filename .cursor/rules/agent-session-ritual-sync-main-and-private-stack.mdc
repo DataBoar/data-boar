@@ -1,6 +1,10 @@
 ---
-description: Start sessions with git fetch/status; pull main when behind; integrate origin/main on feature branches; private-git-sync after meaningful docs/private changes; next steps without redundant asks; sidequest exception; protect canonical primary dev clone.
-alwaysApply: true
+description: Session ritual — synced main, private stack, today-mode. Situational — `carryover-sweep` / `eod-sync` / `private-stack-sync` or globs below; @agent-session-ritual-sync-main-and-private-stack.mdc.
+globs:
+  - docs/ops/today-mode/**
+  - docs/ops/PRIVATE_STACK_SYNC*
+  - AGENTS.md
+alwaysApply: false
 ---
 
 # Agent session ritual — synced `main`, private stack, next steps

@@ -9,7 +9,7 @@ those rules are active when they may be silently ignored by the current Cursor
 version.
 
 Migration completed: 2026-05-12. Reference: commit 817cdf5.
-See `.cursor/rules/persona-rigor.mdc`, `.cursor/rules/linguistic-rigor-and-performance.mdc`,
+See `.cursor/rules/linguistic-rigor-and-performance.mdc`,
 `.cursor/rules/operator-notification-channels.mdc`, ADR-0047, ADR-0048, ADR-0049,
 and `.cursor/skills/linguistic-rigor-active-voice/SKILL.md`.
 """

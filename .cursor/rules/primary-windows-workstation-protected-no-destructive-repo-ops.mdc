@@ -1,5 +1,5 @@
 ---
-description: primary Windows dev PC primary dev workstation — never run clean-slate, history rewrite, or destructive repo reset here; assistants never simulate destructive outcomes against canonical clone
+description: Windows dev workstation (L-series) — same destructive-repo prohibitions when this machine holds the canonical clone; secondary today, may become main dev box again.
 globs: ["**/*"]
 alwaysApply: true
 ---
@@ -8,7 +8,7 @@ alwaysApply: true
 
 ## Scope
 
-- **L-series** means the operator’s **primary Windows dev workstation** (hardware: typically ThinkPad **L-series**) where the **canonical** `data-boar` working tree, **evidence**, and **long-lived Git history** must stay intact. Tracked docs use **L-series** as a **role label** (not a hostname to paste into commits).
+- **Windows dev workstation (L-series):** **Secondary** today while canonical clone lives on Linux; **same rigor** as main dev box when this machine holds the canonical tree (may become **main dev box** again after repair). Tracked docs use **role labels** (not hostnames in commits).
 - **lab-op** and other **manifest SSH hosts** are **not** the primary dev PC canonical tree: **`git reset --hard`**, **`lab-op-git-align-main`**, **`lab-op-git-ensure-ref -Mode Reset`**, and similar **only** apply to **`repoPaths`** on those remote hosts — **never** to the operator’s primary clone path opened in Cursor on Windows — see **`docs/ops/LAB_COMPLETAO_RUNBOOK.md`** (*Blast radius*) and **`docs/ops/PRIMARY_WINDOWS_WORKSTATION_PROTECTION.md`**.
 - **Container images** (Docker / Swarm / Podman / Kubernetes): re-pull from **Docker Hub** (or configured registry) is **normal** and **reversible** for lab work — not the same blast radius as rewriting Git history on the primary dev PC.
 

@@ -1,6 +1,9 @@
 ---
-description: Keep Markdown preview opening as a normal tab (not forced side-by-side split) in Cursor/VS Code on Windows.
-alwaysApply: true
+description: Markdown preview — avoid forced split. Situational — CURSOR_MARKDOWN_PREVIEW docs or @cursor-markdown-preview-guardrail.mdc.
+globs:
+  - docs/ops/CURSOR_MARKDOWN_PREVIEW*
+  - scripts/check-cursor-markdown*
+alwaysApply: false
 ---
 
 # Markdown preview: avoid forced GUI split (operator workstation)

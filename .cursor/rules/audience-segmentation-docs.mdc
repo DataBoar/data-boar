@@ -1,6 +1,10 @@
 ---
-description: Audience segmentation for docs navigation and link boundaries (external vs internal vs private-secrets)
-alwaysApply: true
+description: Audience segmentation for docs. Situational — `docs` / `feature` tokens or docs/** globs; @audience-segmentation-docs.mdc when globs miss.
+globs:
+  - docs/**
+  - README.md
+  - CONTRIBUTING.md
+alwaysApply: false
 ---
 
 # Audience segmentation guardrail (docs and training materials)

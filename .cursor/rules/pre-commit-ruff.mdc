@@ -1,7 +1,7 @@
 ---
 description: Recommend and enforce pre-commit (Ruff + plans-stats + doc guards) before commits and PRs; CI runs the same bundle.
 globs: ["**/*.py", ".pre-commit-config.yaml"]
-alwaysApply: true
+alwaysApply: false
 ---
 
 # Pre-commit and Ruff (recommended before every commit)

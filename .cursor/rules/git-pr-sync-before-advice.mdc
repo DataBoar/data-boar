@@ -1,7 +1,12 @@
 ---
-description: Refresh git/gh state before merge/PR advice or sharing PR URLs (avoid stale PR numbers)
-globs: ["**/*"]
-alwaysApply: true
+description: Refresh git/gh before merge/PR advice. Situational — commit/PR scripts and COMMIT_AND_PR docs; @git-pr-sync-before-advice.mdc when globs miss.
+globs:
+  - docs/ops/COMMIT_AND_PR*
+  - CONTRIBUTING.md
+  - scripts/commit-or-pr*
+  - scripts/create-pr*
+  - scripts/preview-commit*
+alwaysApply: false
 ---
 
 # Git / GitHub PR state — sync before advice
