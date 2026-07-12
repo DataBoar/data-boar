@@ -36,13 +36,24 @@ class ProScanner:
         *,
         deep_scan_fn: Callable[[list[str]], Any] | None = None,
         legacy_scan_fn: Callable[[list[str]], Any] | None = None,
+        profile_terms: Sequence[str] | None = None,
+        profile_regexes: Sequence[str] | None = None,
     ) -> None:
-        self._fallback = OpenCorePreFilter()
+        self._profile_signals_active = bool(profile_terms or profile_regexes)
+        self._fallback = OpenCorePreFilter(
+            profile_terms=profile_terms,
+            profile_regexes=profile_regexes,
+            recall_first_passthrough_on_profile=True,
+        )
         self._deep_scan_fn = deep_scan_fn
         self._legacy_scan_fn = legacy_scan_fn
         self.fast_filter = FastFilter() if RUST_AVAILABLE and FastFilter else None
 
     def scan(self, data_batch: list[str]) -> Any:
+        if self._profile_signals_active:
+            if self._deep_scan_fn is None:
+                return data_batch
+            return self._deep_scan_fn(data_batch)
         if self.fast_filter is not None:
             suspect_indices = self.fast_filter.filter_batch(data_batch)
             filtered_data = [
@@ -60,7 +71,9 @@ class ProScanner:
         return self._legacy_scan_fn(filtered_data)
 
 
-def process_chunk_worker(chunk: Sequence[str]) -> list[str]:
+def process_chunk_worker(
+    chunk: Sequence[str], profile_signals_active: bool = False
+) -> list[str]:
     """
     Process worker entrypoint for ``ProcessPoolExecutor``.
 
@@ -105,6 +118,9 @@ def process_chunk_worker(chunk: Sequence[str]) -> list[str]:
 
     if _worker_filter_instance is None and RUST_AVAILABLE and FastFilter is not None:
         _worker_filter_instance = FastFilter()
+
+    if profile_signals_active:
+        return deep_ml_analysis(data_batch)
 
     if _worker_filter_instance is not None:
         suspect_indices = _worker_filter_instance.filter_batch(data_batch)

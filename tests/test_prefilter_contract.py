@@ -30,3 +30,14 @@ def test_pro_prefilter_fallback_without_rust() -> None:
 def test_get_prefilter_switch() -> None:
     assert get_prefilter(enable_pro=False).name == "open_core_regex_prefilter_v1"
     assert get_prefilter(enable_pro=True).name == "pro_prefilter_auto_v1"
+
+
+def test_prefilter_recall_first_passthrough_when_profile_terms_active() -> None:
+    rows = ["clean text", "diagnóstico oncológico", "biometric_template"]
+    oc = OpenCorePreFilter(
+        profile_terms=["diagnóstico oncológico"],
+        recall_first_passthrough_on_profile=True,
+    )
+    pro = ProPreFilter(profile_terms=["diagnóstico oncológico"])
+    assert oc.filter_candidates(rows) == rows
+    assert pro.filter_candidates(rows) == rows

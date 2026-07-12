@@ -39,6 +39,8 @@ class BoarDiscovery:
         target_latency_ms: float = 200.0,
         sleep_fn: Any = time.sleep,
         enable_pro_prefilter: bool = False,
+        profile_terms: Sequence[str] | None = None,
+        profile_regexes: Sequence[str] | None = None,
     ) -> None:
         self.db = DataDiscoveryEngine(db_url)
         self.validator = PIIValidator()
@@ -50,7 +52,11 @@ class BoarDiscovery:
             target_latency_ms=target_latency_ms,
             max_workers=self.worker_processes,
         )
-        self.prefilter: PreFilter = get_prefilter(enable_pro=enable_pro_prefilter)
+        self.prefilter: PreFilter = get_prefilter(
+            enable_pro=enable_pro_prefilter,
+            profile_terms=profile_terms,
+            profile_regexes=profile_regexes,
+        )
 
     def run_full_scan(self) -> dict[str, Any]:
         """
@@ -163,6 +169,7 @@ class BoarOrchestrator:
         target_latency_ms: float = 250.0,
         batch_limit: int = 1000,
         sleep_fn: Any = time.sleep,
+        profile_signals_active: bool = False,
     ) -> None:
         resolved_workers = max(1, int(max_workers or 1))
         self.db = DataDiscoveryEngine(db_url)
@@ -173,6 +180,7 @@ class BoarOrchestrator:
         )
         self.results: list[str] = []
         self.sleep_fn = sleep_fn
+        self.profile_signals_active = bool(profile_signals_active)
 
     def run_discovery(self, table_name: str) -> list[str]:
         """
@@ -191,7 +199,9 @@ class BoarOrchestrator:
             while len(futures) >= allowed:
                 self._collect_completed(futures)
 
-            future = executor.submit(process_chunk_pro, batch)
+            future = executor.submit(
+                process_chunk_pro, batch, self.profile_signals_active
+            )
             futures[future] = None
             self._collect_completed(futures)
 

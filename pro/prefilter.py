@@ -7,6 +7,7 @@ Open Core filter so the pipeline stays functional.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 
 from core.prefilter import OpenCorePreFilter, PreFilter
@@ -21,8 +22,18 @@ class ProPreFilter:
 
     name = "pro_prefilter_auto_v1"
 
-    def __init__(self) -> None:
-        self._fallback = OpenCorePreFilter()
+    def __init__(
+        self,
+        *,
+        profile_terms: Sequence[str] | None = None,
+        profile_regexes: Sequence[str] | None = None,
+    ) -> None:
+        self._profile_signals_active = bool(profile_terms or profile_regexes)
+        self._fallback = OpenCorePreFilter(
+            profile_terms=profile_terms,
+            profile_regexes=profile_regexes,
+            recall_first_passthrough_on_profile=True,
+        )
         self._rust_impl = self._load_rust_impl()
 
     @staticmethod
@@ -41,6 +52,9 @@ class ProPreFilter:
             return None
 
     def filter_candidates(self, payloads: list[str]) -> list[str]:
+        if self._profile_signals_active:
+            # Recall-first parity: custom profile signals loaded => do not eliminate rows.
+            return list(payloads)
         if self._rust_impl is None:
             return self._fallback.filter_candidates(payloads)
         try:
@@ -56,12 +70,23 @@ class ProPreFilter:
         return self._fallback.filter_candidates(payloads)
 
 
-def get_prefilter(*, enable_pro: bool = False) -> PreFilter:
+def get_prefilter(
+    *,
+    enable_pro: bool = False,
+    profile_terms: Sequence[str] | None = None,
+    profile_regexes: Sequence[str] | None = None,
+) -> PreFilter:
     """
     Return active pre-filter implementation.
 
     ``enable_pro=False`` keeps Open Core behavior; ``True`` tries Pro+ then fallback.
     """
     if enable_pro:
-        return ProPreFilter()
-    return OpenCorePreFilter()
+        return ProPreFilter(
+            profile_terms=profile_terms,
+            profile_regexes=profile_regexes,
+        )
+    return OpenCorePreFilter(
+        profile_terms=profile_terms,
+        profile_regexes=profile_regexes,
+    )
