@@ -3,11 +3,18 @@
 from __future__ import annotations
 
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 import yaml
 from fastapi.testclient import TestClient
 
+from api.rbac import (
+    RouteRbacClass,
+    classify_route_rbac,
+    iter_fastapi_route_specs,
+    resolve_effective_roles_for_request,
+)
 from core.rbac_settings import rbac_enforcement_active
 from core.webauthn_rp.session_cookie import sign_session
 from core.webauthn_rp.settings import user_id_bytes, webauthn_block
@@ -164,3 +171,57 @@ def test_rbac_webauthn_session_roles_json_reports_only(rbac_pro_client):
 
     assert client.get("/en/reports").status_code == 200
     assert client.get("/en/").status_code == 403
+
+
+def test_all_registered_routes_classified_for_rbac():
+    """#1133 invariant: every app route is public or explicitly role-mapped."""
+    import api.routes as routes
+
+    unclassified: list[str] = []
+    for method, path in iter_fastapi_route_specs(routes.app):
+        kind, _roles = classify_route_rbac(method, path)
+        if kind == RouteRbacClass.UNCLASSIFIED:
+            unclassified.append(f"{method} {path}")
+    assert not unclassified, (
+        "Unclassified routes (default-deny when RBAC active):\n"
+        + "\n".join(unclassified)
+    )
+
+
+def test_rbac_findings_requires_role_when_enforced(rbac_pro_client):
+    client, _ = rbac_pro_client
+    assert client.get("/findings").status_code == 401
+    h = {"X-API-Key": "test-secret-key"}
+    assert client.get("/findings", headers=h).status_code == 403
+
+
+def test_rbac_api_key_compare_uses_hmac_compare_digest(rbac_pro_client):
+    """#1134: API key path in rbac must use hmac.compare_digest, not ==."""
+    client, routes_mod = rbac_pro_client
+    cfg = routes_mod._get_config()
+    engine = routes_mod._get_engine()
+    request = type(
+        "Req",
+        (),
+        {
+            "headers": {"x-api-key": "test-secret-key"},
+            "cookies": {},
+        },
+    )()
+
+    with patch("api.rbac.hmac.compare_digest", return_value=True) as mock_digest:
+        roles = resolve_effective_roles_for_request(request, cfg, engine.db_manager)
+        mock_digest.assert_called_once_with(b"test-secret-key", b"test-secret-key")
+    assert roles is not None
+    assert "dashboard" in roles
+
+
+def test_rbac_non_ascii_api_key_returns_401_not_500(rbac_pro_client):
+    """#1150: non-ASCII X-API-Key must not crash compare_digest (401, not 500)."""
+    client, _ = rbac_pro_client
+    # httpx rejects non-ASCII str headers; send UTF-8 bytes like a real client may.
+    r = client.get(
+        "/status",
+        headers=[(b"x-api-key", "café-🔑".encode("utf-8"))],
+    )
+    assert r.status_code == 401
