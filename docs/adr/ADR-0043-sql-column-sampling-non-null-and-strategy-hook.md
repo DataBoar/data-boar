@@ -5,6 +5,11 @@
 - **Authors:** Fabio Leitao
 - **Deciders:** Fabio Leitao
 
+### Status history
+
+- 2026-04-26 — Accepted
+- 2026-07-12 — Amended: SQL connector now uses short-lived transactional connections for version probe and per-column sampling to avoid SQLAlchemy 2.0 autobegin collisions that could cause silent zero-findings runs (#1194).
+
 ## Context
 
 SQL and Snowflake connectors sample up to **`file_scan.sample_limit`** cell values per column to feed regex / ML / DL detection. The legacy pattern was effectively **TOP-N without `ORDER BY`**, which is gentle on production I/O but:
@@ -25,6 +30,7 @@ Operators also need a **break-glass** way to cap reads without editing YAML duri
 - **Positive:** Better detector input on sparse columns without increasing the nominal row cap; MSSQL gets syntactically valid **`TOP`** sampling; one module owns evolution toward metadata-first / statistical sampling ([`PLAN_SQL_SAMPLING_SRE_AND_AUDIT_EVIDENCE.md`](../plans/completed/PLAN_SQL_SAMPLING_SRE_AND_AUDIT_EVIDENCE.md)).
 - **Trade-off:** `WHERE col IS NOT NULL` can still force a scan on some engines if the optimiser cannot short-circuit; the default **small *n*** keeps this aligned with the existing “light probe” contract.
 - **Compliance:** Outputs are still **sample-based**, not exhaustive; reports should continue to state incomplete-population limits (existing generator strings and [`PLAN_ADDITIONAL_DETECTION_TECHNIQUES_AND_FN_REDUCTION.md`](../plans/PLAN_ADDITIONAL_DETECTION_TECHNIQUES_AND_FN_REDUCTION.md)).
+- **Detection behavior hardening (#1194):** Inventory version probes and sampling now execute in isolated short-lived connection scopes (`with engine.connect() as conn: with conn.begin(): ...`), preventing cross-step transaction leakage that previously could suppress findings and emit only `sampling_error`.
 - **Watch:** When `DATA_BOAR_SQL_SAMPLE_LIMIT` is set to an invalid value and ignored, a WARNING log must be emitted — silent ignore defeats the break-glass use case and leaves the operator unaware that the configured YAML limit is in effect instead of their override.
 - **Ongoing:** New SQL dialects must implement their column-sample SQL via `SqlColumnSampleQueryBuilder` — never by duplicating LIMIT syntax or identifier-escaping logic directly in the connector.
 

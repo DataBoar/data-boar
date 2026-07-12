@@ -285,6 +285,7 @@ class SQLConnector:
         self.sampling_policy = sampling_policy
         self.detection_config = detection_config or {}
         self.engine = None
+        # Compatibility shim: legacy tests/helpers may still patch this attribute.
         self._connection = None
         self._sql_sampling_audit_key: str | None = None
         self._table_row_cache: dict[tuple[str, str], int | None] = {}
@@ -301,7 +302,6 @@ class SQLConnector:
         url = _build_url(self.config)
         connect_args = _connect_args_from_target(self.config)
         self.engine = create_engine(url, pool_pre_ping=True, connect_args=connect_args)
-        self._connection = self.engine.connect()
         self._table_row_cache = {}
 
     def close(self) -> None:
@@ -427,53 +427,61 @@ class SQLConnector:
         safe_table = table.replace('"', '""')
         safe_schema = (schema or "").replace('"', '""')
         tkey = (schema or "", table)
-        if tkey not in self._table_row_cache:
-            try:
-                from connectors.sql_table_row_estimate import estimate_table_rows
-
-                self._table_row_cache[tkey] = estimate_table_rows(
-                    self._connection, dialect, schema or "", table
-                )
-            except Exception:
-                self._table_row_cache[tkey] = None
-        est = self._table_row_cache[tkey]
-        table_meta = TableSamplingMetadata(estimated_row_count=est)
         to = self._sample_statement_timeout_ms
-        plan = SamplingManager.build_column_sample(
-            dialect,
-            safe_col=safe_col,
-            safe_table=safe_table,
-            safe_schema=safe_schema,
-            schema=schema,
-            limit=use_limit,
-            table_metadata=table_meta,
-            statement_timeout_ms=to,
-        )
         audit_key = f"{schema or ''}.{table}"
-        if self._sql_sampling_audit_key != audit_key:
-            self._sql_sampling_audit_key = audit_key
-            try:
-                from utils.logger import get_logger
-
-                human = plan.human_strategy or plan.strategy_label
-                msg = "Sampling %s using %s strategy (label=%s dialect=%s)" % (
-                    audit_key,
-                    human,
-                    plan.strategy_label,
-                    dialect,
-                )
-                if plan.audit_notes:
-                    msg += " notes=%s" % (plan.audit_notes,)
-                get_logger().info(msg)
-            except Exception:
-                pass  # best-effort audit logging — never break sampling for a log line
         try:
-            with self._connection.begin():
-                if dialect in ("postgresql", "postgres") and to:
-                    self._connection.execute(
-                        text("SET LOCAL statement_timeout = :mt").bindparams(mt=int(to))
+            with self.engine.connect() as conn:
+                with conn.begin():
+                    if tkey not in self._table_row_cache:
+                        try:
+                            from connectors.sql_table_row_estimate import (
+                                estimate_table_rows,
+                            )
+
+                            self._table_row_cache[tkey] = estimate_table_rows(
+                                conn, dialect, schema or "", table
+                            )
+                        except Exception:
+                            self._table_row_cache[tkey] = None
+                    est = self._table_row_cache[tkey]
+                    table_meta = TableSamplingMetadata(estimated_row_count=est)
+                    plan = SamplingManager.build_column_sample(
+                        dialect,
+                        safe_col=safe_col,
+                        safe_table=safe_table,
+                        safe_schema=safe_schema,
+                        schema=schema,
+                        limit=use_limit,
+                        table_metadata=table_meta,
+                        statement_timeout_ms=to,
                     )
-                rows = self._connection.execute(plan.query).fetchall()
+                    if self._sql_sampling_audit_key != audit_key:
+                        self._sql_sampling_audit_key = audit_key
+                        try:
+                            from utils.logger import get_logger
+
+                            human = plan.human_strategy or plan.strategy_label
+                            msg = (
+                                "Sampling %s using %s strategy (label=%s dialect=%s)"
+                                % (
+                                    audit_key,
+                                    human,
+                                    plan.strategy_label,
+                                    dialect,
+                                )
+                            )
+                            if plan.audit_notes:
+                                msg += " notes=%s" % (plan.audit_notes,)
+                            get_logger().info(msg)
+                        except Exception:
+                            pass  # best-effort audit logging — never break sampling for a log line
+                    if dialect in ("postgresql", "postgres") and to:
+                        conn.execute(
+                            text("SET LOCAL statement_timeout = :mt").bindparams(
+                                mt=int(to)
+                            )
+                        )
+                    rows = conn.execute(plan.query).fetchall()
         except Exception as e:
             target_name = str(self.config.get("name") or "database")
             details = format_column_sample_failure_details(
@@ -502,6 +510,66 @@ class SQLConnector:
             raise ColumnSampleError from e
         parts = [str(r[0])[:200] for r in rows if r[0] is not None]
         return " ".join(parts)
+
+    def _probe_product_version(self, engine_name: str) -> str | None:
+        if not self.engine:
+            return None
+        probe_sql = {
+            "postgresql": text("SELECT version()"),
+            "mysql": text("SELECT VERSION()"),
+            "mariadb": text("SELECT VERSION()"),
+            "sqlite": text("SELECT sqlite_version()"),
+            "mssql": text("SELECT @@VERSION"),
+            "oracle": text("SELECT banner FROM v$version WHERE ROWNUM = 1"),
+        }
+        stmt = probe_sql.get(engine_name)
+        if stmt is None:
+            return None
+        try:
+            # Keep probe transaction scope local so sampling starts from a clean connection state.
+            with self.engine.connect() as conn:
+                with conn.begin():
+                    value = conn.execute(stmt).scalar()
+            return str(value or "")
+        except Exception:
+            return None
+
+    def _save_inventory_snapshot(self, target_name: str, engine_name: str) -> None:
+        """
+        Persist one best-effort inventory row (product/version/protocol/transport).
+
+        Phase 1 intentionally keeps this lightweight and resilient: failures here must not
+        break scanning.
+        """
+        if not hasattr(self.db_manager, "save_data_source_inventory"):
+            return
+        product_version = self._probe_product_version(engine_name)
+        raw_details: dict[str, str] = {}
+        raw_details["driver"] = (self.config.get("driver") or "").strip()
+        if product_version:
+            raw_details["version_probe"] = product_version[:500]
+
+        sslmode = str(self.config.get("sslmode") or "").strip().lower()
+        if sslmode:
+            transport_security = f"sslmode={sslmode}"
+        elif "sslmode=" in str(self.config.get("url") or "").lower():
+            transport_security = "sslmode(from-url)"
+        else:
+            transport_security = "unknown"
+
+        try:
+            self.db_manager.save_data_source_inventory(
+                target_name=target_name,
+                source_type="database",
+                product=engine_name,
+                product_version=product_version,
+                protocol_or_api_version=engine_name,
+                transport_security=transport_security,
+                raw_details=json.dumps(raw_details, ensure_ascii=False),
+            )
+        except Exception:
+            # Never fail a scan because inventory persistence failed.
+            pass
 
     def run(self) -> None:
         """Connect, discover, sample each column, detect, save_finding; on error save_failure."""
@@ -539,71 +607,6 @@ class SQLConnector:
             self.db_manager.save_failure(target_name, "error", str(e))
         finally:
             self.close()
-
-    def _save_inventory_snapshot(self, target_name: str, engine_name: str) -> None:
-        """
-        Persist one best-effort inventory row (product/version/protocol/transport).
-
-        Phase 1 intentionally keeps this lightweight and resilient: failures here must not
-        break scanning.
-        """
-        if not hasattr(self.db_manager, "save_data_source_inventory"):
-            return
-        product_version = None
-        raw_details: dict[str, str] = {}
-        try:
-            if engine_name == "postgresql":
-                product_version = str(
-                    self._connection.execute(text("SELECT version()")).scalar() or ""
-                )
-            elif engine_name in ("mysql", "mariadb"):
-                product_version = str(
-                    self._connection.execute(text("SELECT VERSION()")).scalar() or ""
-                )
-            elif engine_name == "sqlite":
-                product_version = str(
-                    self._connection.execute(text("SELECT sqlite_version()")).scalar()
-                    or ""
-                )
-            elif engine_name == "mssql":
-                product_version = str(
-                    self._connection.execute(text("SELECT @@VERSION")).scalar() or ""
-                )
-            elif engine_name == "oracle":
-                product_version = str(
-                    self._connection.execute(
-                        text("SELECT banner FROM v$version WHERE ROWNUM = 1")
-                    ).scalar()
-                    or ""
-                )
-        except Exception:
-            # Inventory is best effort; keep scanner execution stable.
-            product_version = None
-        raw_details["driver"] = (self.config.get("driver") or "").strip()
-        if product_version:
-            raw_details["version_probe"] = product_version[:500]
-
-        sslmode = str(self.config.get("sslmode") or "").strip().lower()
-        if sslmode:
-            transport_security = f"sslmode={sslmode}"
-        elif "sslmode=" in str(self.config.get("url") or "").lower():
-            transport_security = "sslmode(from-url)"
-        else:
-            transport_security = "unknown"
-
-        try:
-            self.db_manager.save_data_source_inventory(
-                target_name=target_name,
-                source_type="database",
-                product=engine_name,
-                product_version=product_version,
-                protocol_or_api_version=engine_name,
-                transport_security=transport_security,
-                raw_details=json.dumps(raw_details, ensure_ascii=False),
-            )
-        except Exception:
-            # Never fail a scan because inventory persistence failed.
-            pass
 
 
 # Register for common SQL engines
