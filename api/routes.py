@@ -973,9 +973,10 @@ def _date_fallback_log_for_session(log_dir: Path, session_id: str) -> Path | Non
     day = _session_day_from_session_id(session_id)
     if day is None:
         return None
-    candidate = log_dir / f"audit_{day}.log"
-    if candidate.exists() and candidate.is_file():
-        return candidate
+    wanted_name = f"audit_{day}.log"
+    for candidate in _audit_log_candidates(log_dir):
+        if candidate.name == wanted_name:
+            return candidate
     return None
 
 
@@ -1001,6 +1002,23 @@ def _emit_audit_log_download_event(
     except Exception:
         # Download path must stay resilient if logger transport is unavailable.
         return
+
+
+def _audit_log_file_response(path: Path) -> Response:
+    """
+    Return audit log file content as attachment without FileResponse(path) sink.
+    """
+    try:
+        body = path.read_bytes()
+    except OSError as e:
+        raise HTTPException(
+            status_code=404, detail=f"Audit log file is not readable: {path.name}"
+        ) from e
+    return Response(
+        content=body,
+        media_type="text/plain; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{quote(path.name)}"'},
+    )
 
 
 # Max request body size (1 MB) for JSON/config and scan start body to reduce DoS via huge payloads
@@ -1748,7 +1766,7 @@ async def download_latest_log(request: Request):
         session_id=None,
         roles=roles,
     )
-    return FileResponse(latest, filename=latest.name, media_type="text/plain")
+    return _audit_log_file_response(latest)
 
 
 @app.get("/logs/{session_id}", responses=_SESSION_RESPONSES)
@@ -1781,7 +1799,7 @@ async def download_log_for_session(session_id: str, request: Request):
                 session_id=session_id,
                 roles=roles,
             )
-            return FileResponse(p, filename=p.name, media_type="text/plain")
+            return _audit_log_file_response(p)
     by_day = _date_fallback_log_for_session(log_dir, session_id)
     if by_day is not None:
         _emit_audit_log_download_event(
@@ -1790,7 +1808,7 @@ async def download_log_for_session(session_id: str, request: Request):
             session_id=session_id,
             roles=roles,
         )
-        return FileResponse(by_day, filename=by_day.name, media_type="text/plain")
+        return _audit_log_file_response(by_day)
     raise HTTPException(
         status_code=404, detail=f"No log file contains session_id {session_id}."
     )
