@@ -40,7 +40,7 @@ jobs:
           enable-cache: true
 
       - name: Regenerate requirements.txt
-        run: uv export --no-emit-package pyproject.toml -o requirements.txt
+        run: uv export --frozen --no-emit-project -o requirements.txt
 
       - name: Commit and push changes
         run: |
