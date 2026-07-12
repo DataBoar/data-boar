@@ -106,3 +106,18 @@ def test_operator_help_markers_in_man1(man1_text: str) -> None:
             f"(expected troff substring {marker.man1_troff_substring!r}); "
             "update man page and tests/operator_help_sync_manifest.py"
         )
+
+
+def test_cli_help_uses_dev_canonical_invocation(cli_help_text: str) -> None:
+    assert "usage: python main.py" in cli_help_text
+    assert "python main.py --config config.yaml" in cli_help_text
+    assert "--validate-config" in cli_help_text
+
+
+def test_web_help_uses_runtime_prog_and_concrete_home_path(tmp_path: Path) -> None:
+    html = _web_help_html(tmp_path)
+    expected_docs_path = str(Path.home() / "Documents" / "LGPD")
+    assert "python main.py --config config.yaml" in html
+    assert "uv run python main.py" not in html
+    assert expected_docs_path in html
+    assert "~/Documents/LGPD" not in html

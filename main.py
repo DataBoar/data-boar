@@ -262,8 +262,18 @@ def _run_session_diff_cli(
         mgr.dispose()
 
 
+def _display_prog(argv0: str | None = None) -> str:
+    """Return the operator-facing command form for this runtime."""
+    name = Path(argv0 or sys.argv[0] or "").name.lower()
+    if name in {"data-boar", "data-boar.exe"}:
+        return "data-boar"
+    return "python main.py"
+
+
 def main() -> None:
+    prog = _display_prog()
     parser = argparse.ArgumentParser(
+        prog=prog,
         description=(
             "Data Boar — enterprise data discovery and risk governance engine. "
             "Loads YAML/JSON config, scans configured databases/filesystems/APIs/shares, "
@@ -279,40 +289,39 @@ def main() -> None:
             "\n"
             "CLI examples:\n"
             "  # One-shot audit with the default config.yaml\n"
-            "  python main.py --config config.yaml\n"
+            f"  {prog} --config config.yaml\n"
             "\n"
             "  # One-shot audit tagging tenant/customer and technician/operator\n"
-            '  python main.py --config config.yaml --tenant "ACME Corp" --technician "Alice"\n'
+            f'  {prog} --config config.yaml --tenant "ACME Corp" --technician "Alice"\n'
             "\n"
             "  # One-shot with archive scan + content-type detection (this run only)\n"
-            "  python main.py --config config.yaml --scan-compressed --content-type-check\n"
+            f"  {prog} --config config.yaml --scan-compressed --content-type-check\n"
             "\n"
             "  # Validate config only (loader checks; no scan or API startup)\n"
-            "  python main.py --config config.yaml --validate-config\n"
+            f"  {prog} --config config.yaml --validate-config\n"
             "\n"
             "  # Compare two scan sessions (CI: add --fail-on-new-high)\n"
-            "  python main.py --config config.yaml --diff <session_a> <session_b>\n"
+            f"  {prog} --config config.yaml --diff <session_a> <session_b>\n"
             "\n"
             "  # DSAR-oriented JSON export for one session (stdout or --dsar-output)\n"
-            "  python main.py --config config.yaml --export-dsar <session_id>\n"
+            f"  {prog} --config config.yaml --export-dsar <session_id>\n"
             "\n"
             "  # Wipe all collected data and generated reports (dangerous, see SECURITY.md)\n"
-            "  python main.py --config config.yaml --reset-data\n"
+            f"  {prog} --config config.yaml --reset-data\n"
             "\n"
             "Web/API examples:\n"
             "  # HTTPS: PEM cert + key (TLS >= 1.2)\n"
-            "  python main.py --config config.yaml --web --https-cert-file server.crt --https-key-file server.key\n"
+            f"  {prog} --config config.yaml --web --https-cert-file server.crt --https-key-file server.key\n"
             "\n"
             "  # Plaintext HTTP (explicit risk acceptance; required when not using TLS)\n"
-            "  python main.py --config config.yaml --web --allow-insecure-http\n"
+            f"  {prog} --config config.yaml --web --allow-insecure-http\n"
             "\n"
             "  # Explicit port or bind (same flags as before, still need TLS or --allow-insecure-http)\n"
-            "  python main.py --config config.yaml --web --allow-insecure-http --port 9090\n"
-            "  python main.py --config config.yaml --web --allow-insecure-http --host 0.0.0.0\n"
+            f"  {prog} --config config.yaml --web --allow-insecure-http --port 9090\n"
+            f"  {prog} --config config.yaml --web --allow-insecure-http --host 0.0.0.0\n"
             "\n"
             "  # Zero-config demo (synthetic corpus, loopback dashboard — no config.yaml)\n"
-            "  python main.py --demo\n"
-            "  data-boar --demo\n"
+            f"  {prog} --demo\n"
             "\n"
             "Once a one-shot scan finishes, an Excel report and heatmap PNG are written under\n"
             "the configured report.output_dir (default: current directory). When the API is\n"

@@ -34,25 +34,24 @@
   <h3>{{ t('help.run_auto_h3') }}</h3>
   <p class="muted">{{ t('help.run_cli_p1') }}</p>
   <p><strong>{{ t('help.run_cli_demo') }}</strong></p>
-  <pre><code>uv run python main.py --demo
-data-boar --demo</code></pre>
+  <pre><code>{{ prog }} --demo</code></pre>
   <p><strong>{{ t('help.run_cli_oneshot') }}</strong></p>
-  <pre><code>uv run python main.py --config config.yaml
-uv run python main.py --config config.yaml --validate-config
-uv run python main.py --config config.yaml --diff &lt;session_a&gt; &lt;session_b&gt;
-uv run python main.py --config config.yaml --diff &lt;session_a&gt; &lt;session_b&gt; --fail-on-new-high
-uv run python main.py --config config.yaml --export-dsar &lt;session_id&gt;
-uv run python main.py --config config.yaml --export-dsar &lt;session_id&gt; --dsar-output dsar.json
-uv run python main.py --config config.yaml --tenant "Acme Corp" --technician "Alice Colleague-V"
+  <pre><code>{{ prog }} --config config.yaml
+{{ prog }} --config config.yaml --validate-config
+{{ prog }} --config config.yaml --diff &lt;session_a&gt; &lt;session_b&gt;
+{{ prog }} --config config.yaml --diff &lt;session_a&gt; &lt;session_b&gt; --fail-on-new-high
+{{ prog }} --config config.yaml --export-dsar &lt;session_id&gt;
+{{ prog }} --config config.yaml --export-dsar &lt;session_id&gt; --dsar-output dsar.json
+{{ prog }} --config config.yaml --tenant "Acme Corp" --technician "Alice Colleague-V"
 # Same optional toggles as the dashboard checkboxes (this run only):
-uv run python main.py --config config.yaml --scan-compressed --content-type-check --scan-stego --jurisdiction-hint</code></pre>
+{{ prog }} --config config.yaml --scan-compressed --content-type-check --scan-stego --jurisdiction-hint</code></pre>
   <p><strong>{{ t('help.run_cli_api') }}</strong></p>
   <p class="muted">{{ t('help.run_cli_tls') }}</p>
-  <pre><code>uv run python main.py --config config.yaml --web --https-cert-file server.crt --https-key-file server.key
+  <pre><code>{{ prog }} --config config.yaml --web --https-cert-file server.crt --https-key-file server.key
 # Lab / loopback only — explicit plaintext:
-uv run python main.py --config config.yaml --web --allow-insecure-http
+{{ prog }} --config config.yaml --web --allow-insecure-http
 # Default bind is loopback (127.0.0.1). Listen on all interfaces only with network controls:
-uv run python main.py --config config.yaml --web --allow-insecure-http --host 0.0.0.0 --port 8088</code></pre>
+{{ prog }} --config config.yaml --web --allow-insecure-http --host 0.0.0.0 --port 8088</code></pre>
   <p class="muted">{{ t('help.run_cli_bind') }}</p>
   <p><strong>{{ t('help.run_cli_danger') }}</strong></p>
   <p><strong>{{ t('help.run_cli_audit') }}</strong></p>
@@ -119,7 +118,7 @@ curl -o findings.csv   http://&lt;host&gt;:&lt;port&gt;/findings/&lt;session_id&
 
   - name: "Documentos_LGPD"
     type: filesystem
-    path: /home/user/Documents/LGPD
+    path: {{ home_docs_example }}
     recursive: true
 
 file_scan:
