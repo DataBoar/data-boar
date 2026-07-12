@@ -97,7 +97,7 @@ meaning if the internal label silently changed to "Deep Scan" in a refactor.
 
 ## References
 
-- [`persona-rigor.mdc`](../../.cursor/rules/persona-rigor.mdc) — frozen domain vocabulary contract
+- [`linguistic-rigor-and-performance.mdc`](../../.cursor/rules/linguistic-rigor-and-performance.mdc) — frozen domain vocabulary + NASA voice + perf gate (situational)
 - [`operator-help-sync.mdc`](../../.cursor/rules/operator-help-sync.mdc) — CLI flag and help-text sync procedure
 - [`docs/GLOSSARY.md`](../GLOSSARY.md) — canonical product terminology
 - [`docs/OPERATOR_HELP_AUDIT.md`](../OPERATOR_HELP_AUDIT.md) — drift guard for CLI surface

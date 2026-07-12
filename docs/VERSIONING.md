@@ -43,11 +43,12 @@ Octet bands when using `maturity_build` (operator/beacon tooling — **not** the
 
 | Octet range | Meaning |
 | --- | --- |
-| **0–127** | beta maturity (inclusive — **0** is valid) |
-| **128–199** | rc maturity (inclusive) |
-| **200–255** | release maturity (`.200` = GA on that line, `.201` = first post-GA fix, …) |
+| **1–126** | beta maturity (counter starts at **1** — first beta = `.1`; forgiving ceiling) |
+| **127–199** | rc maturity |
+| **200–254** | release / GA + fix (`.200` = GA on that line, `.201` = first post-GA fix, …) |
+| **255** | overflow sentinel — consult TXT beacon |
 
-**Band boundaries are inclusive and 0-based** (not `1–126` / `127–199`). If a mental model used `1–126` for beta, shift by one — the **regime** is the same.
+**Counting starts at 1** (nothing is `.0`) for non-technical clarity. Band ceilings are **forgiving** — beacon TXT absorbs overflow; do not treat band tops as rigid hard limits.
 
 ### New public line — maturity band reset
 
@@ -55,9 +56,9 @@ When the project opens a **new semver line** (e.g. **`1.8.0`** after **`1.7.4`**
 
 | `[project] version` on the new line | `maturity_build` band | Typical anchor |
 | --- | --- | --- |
-| **`X.Y.Z-beta`** (or `-beta.N`) | **0–127** | Restart low in band (e.g. **`1`**) — record in release notes |
-| **`X.Y.Z-rc`** (or `-rc.N`) | **128–199** | Restart low in band (e.g. **`128`**) |
-| **`X.Y.Z`** stable (GA) | **200–255** | **`.200`** = GA maturity on that line; **`.201`** = first fix, … |
+| **`X.Y.Z-beta`** (or `-beta.N`) | **1–126** | Restart at **`1`** (first beta = `.1`) — record in release notes |
+| **`X.Y.Z-rc`** (or `-rc.N`) | **127–199** | Restart low in band (e.g. **`127`** or **`128`**) |
+| **`X.Y.Z`** stable (GA) | **200–254** | **`.200`** = GA maturity on that line; **`.201`** = first fix, … |
 
 **`.postN` PyPI counters apply only on a GA release band** (fix-line republication on the **same** public line, e.g. `1.7.4.post2`). They do **not** carry across to **`1.8.0-beta`**.
 

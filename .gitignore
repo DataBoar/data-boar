@@ -301,6 +301,12 @@ __marimo__/
 /e agora*.txt
 /*.txt
 
+# OPSEC: operator-local paths — never `git add -A` (explicit `git add <path>` only).
+# docs/ops/today-mode/ stays PUBLIC (#1147) — methodology/lore on origin; explicit git add only.
+scripts/beastie-ecosystem-sync.ps1
+scripts/beastie-ecosystem-sync.sh
+api/static/mascot/bata_boar_mascot_pot.png
+
 # Generated POC test corpus (on-demand, not tracked)
 tests/synthetic_corpus/
 .cursor/rules/dossier-update-on-evidence.mdc

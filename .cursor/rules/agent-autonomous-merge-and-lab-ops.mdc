@@ -1,6 +1,11 @@
 ---
-description: When safe (CI green, mergeable, docs aligned), complete PR merge via scripts/ without asking permission; run LAB-OP SSH collection scripts from terminal; escalate on failures or regressions.
-alwaysApply: true
+description: Autonomous merge when green and LAB-OP SSH collection. Situational — `completao` / `homelab` tokens or @agent-autonomous-merge-and-lab-ops.mdc when globs miss.
+globs:
+  - scripts/pr-merge-when-green.ps1
+  - scripts/lab-op*
+  - scripts/lab-completao*
+  - docs/ops/LAB_COMPLETAO*
+alwaysApply: false
 ---
 
 # Autonomous merge + LAB-OP (operator trust)

@@ -15,7 +15,8 @@ Accepted
 - 2026-06-23 — Proposed (amended): destensionar octeto da versão pública; regras (1)–(4) abaixo; TBD pós-GA aberto (#977 auditoria RO)
 - 2026-06-25 — Accepted: resolve #977 — post-GA public fixes stay on the **same public line** (`1.7.4`); **`maturity_build`** octet distinguishes fix maturity; **`1.7.5` does not exist**; next **public** line = **`1.8.0`** (#971)
 - 2026-06-27 — Amended: cláusula de distribuição PyPI (#1047) — post-release como publish-counter. (ratificado pelo operador)
-- 2026-07-01 — Amended: faixas Gibson **inclusivas 0-based**; reset de `maturity_build` em nova linha semver; octeto na fix-line avança por **fix discreto** (não por merge/build/docs) — alinhado a `release-versioning.mdc` e `docs/releases/1.7.4.post2.md`.
+- 2026-07-01 — Amended: reset de `maturity_build` em nova linha semver; octeto na fix-line avança por **fix discreto** (não por merge/build/docs) — ver `docs/releases/1.7.4.post2.md`.
+- 2026-07-01 — Amended (band-fix): contador Gibson **começa em 1** (primeiro beta = `.1`; **0** não usado); tetos de faixa **forgiving** (overflow → TXT beacon). Corrige redação 0-based que derivara do `.mdc` em vez desta ADR.
 
 ## Context
 
@@ -29,9 +30,9 @@ A richer scheme (vault `self-upgrade-beacon-heartbeat-design-2026-06-15`, Gibson
 ## Decision
 
 1. **Public version (release line):** `major.minor.build` (**three segments only**) + optional PEP 440 pre-release suffix (`-beta[.N]` / `-rc[.N]`) or **none**. **Never a fourth semver segment** (e.g. `1.7.4.201` is invalid). PEP 440 **`.postN`** on PyPI is **not** that fourth segment — see § *PyPI dual counters* below.
-2. **Octet-maturity (Gibson DNS-beacon bands):** lives in a **separate derived field** — `[tool.databoar] maturity_build` — a **side-channel** (release notes, beacon, operator tooling). Bands (**inclusive, 0-based**): **0–127** beta · **128–199** rc · **200–255** release (`.200` = GA maturity on that line, `.201` = fix-1, …). **Never** copy this octet into `[project] version` or any version string. **`.postN` is never the octet** — rule (1) stays intact.
+2. **Octet-maturity (Gibson DNS-beacon bands):** lives in a **separate derived field** — `[tool.databoar] maturity_build` — a **side-channel** (release notes, beacon, operator tooling). Counter **starts at 1** (first beta = `.1`; **0** unused). Bands (ceilings **forgiving** — overflow → TXT): **1–126** beta · **127–199** rc · **200–254** GA + fix (`.200` = GA maturity on that line, `.201` = fix-1, …; e.g. `.208` valid) · **255** = overflow sentinel (consult TXT). **Never** copy this octet into `[project] version` or any version string. **`.postN` is never the octet** — rule (1) stays intact.
 
-   **New public line (e.g. `1.8.0`):** `maturity_build` **resets into the band** matching the pre-release suffix — beta → **0–127**, rc → **128–199**, GA → **`.200`** anchor — it does **not** continue from the previous line (e.g. `.208` on `1.7.4`). **`.postN`** applies only on the **release band** of a given public line.
+   **New public line (e.g. `1.8.0`):** `maturity_build` **resets into the band** matching the pre-release suffix — beta → **1–126** (starts at **`1`**), rc → **127–199**, GA → **`.200`** anchor — it does **not** continue from the previous line (e.g. `.208` on `1.7.4`). **`.postN`** applies only on the **release band** of a given public line.
 
    **On a fix-line (post-GA):** octet **+1 per discrete fix** to installed/runtime behavior (bug, CVE, dangling feature completion); **not** docs/ADR/chore/ci/test/rito-only. **`postN`** advances only on PyPI upload when fixes warrant republication.
 3. **`-alpha` suffix:** tamper-detection axis only (GitHub #856), **not** a maturity band — separate from beta/rc/release.

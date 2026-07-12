@@ -19,6 +19,7 @@ The main entry point is `main.py`.
 <!-- markdownlint-disable MD060 -->
 | Argument                | Default           | Description                                                                                                                                                                                                                                                                         |
 | ---                     | ---               | ---                                                                                                                                                                                                                                                                                 |
+| `--demo`                | *(flag)*          | **Zero-config demo:** creates a temp workspace under `/tmp/data_boar_demo/` (or the OS temp dir) with `demo.config.yaml`, a synthetic filesystem corpus, reports, and SQLite DB; runs an initial scan and starts the dashboard on loopback. **Ignores `config.yaml` in the current working directory.** Implies `--web` and `--allow-insecure-http`. Temp files are removed on exit. Incompatible with `--validate-config`, `--reset-data`, `--export-audit-trail`, `--export-dsar`, and `--diff`. |
 | `--config`              | `config.yaml`     | Path to the configuration file (YAML or JSON). Used for both one-shot audit and to resolve `api.port` / `api.host` when starting the web server.                                                                                                                                    |
 | `--web`                 | *(flag)*          | Start the REST API server instead of running a one-shot audit.                                                                                                                                                                                                                      |
 | `--port`                | `8088`            | Port for the API when `--web` is set. Can be overridden by `api.port` in config unless you pass `--port` explicitly. Ignored in one-shot mode.                                                                                                                                      |
@@ -52,6 +53,19 @@ Some enterprise deployments require explicit **tamper-evidence hooks** beside `l
 **Roadmap:** **SQLite anchor**, **startup re-verify**, and **trust-level downgrade** unrelated to licensing-only checks remain **planned** (**`docs/plans/PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md`** — Phase **E.11** JSON export ✅; anchors ⬜).
 
 ### Outcomes
+
+## Zero-config demo (`--demo`)
+
+```bash
+data-boar --demo
+# or from a clone:
+uv run python main.py --demo
+```
+
+- **Not** a config-driven one-shot audit: `--demo` **does not** read `config.yaml` from the current working directory.
+- Prepares `/tmp/data_boar_demo/` (platform temp dir + `data_boar_demo/`) with `demo.config.yaml`, synthetic corpus, `reports/`, and `audit_results.db`, then runs an initial scan and keeps the dashboard on **`127.0.0.1`** with plaintext HTTP.
+- **Output:** Console banner with workspace path and dashboard URL (default port **8088**). Temp tree is removed when the process exits.
+- See also [QUICKSTART.md](../QUICKSTART.md) (*Caminho 0*) and `man 1 data-boar` (`--demo`).
 
 ## One-shot audit (no `--web`)
 
@@ -125,7 +139,7 @@ sudo apt install ansible
 ansible-galaxy collection install community.docker
 
 # 2. Clone the repo
-git clone https://github.com/FabioLeitao/data-boar.git
+git clone https://github.com/DataBoar/data-boar.git
 cd data-boar/deploy/ansible
 
 # 3. Configure your inventory
@@ -156,6 +170,7 @@ See `deploy/ansible/README.md` for variables, multi-node Swarm, and troubleshoot
 Pre-built images are on Docker Hub: `fabioleitao/data_boar:latest` ([hub.docker.com/r/fabioleitao/data_boar](https://hub.docker.com/r/fabioleitao/data_boar)). Pull and run with a mounted config at `/data/config.yaml` (see README “Deploy with Docker” and [docs/deploy/DEPLOY.md](deploy/DEPLOY.md) ([pt-BR](deploy/DEPLOY.pt_BR.md))). You can use this instanced container instead of installing from source.
 
 1. **Install** the application and optional dependencies (e.g. `.[postgres]`, `.[sql-all]`, `.[nosql]`, `.[shares]`) as in the README and [TECH_GUIDE.md](TECH_GUIDE.md) (*Supported databases*).
+1. **Cross-distro `pipx` reality check (Linux):** before rollout on RHEL/Void/musl/no-AVX fleets, read [TROUBLESHOOTING.md](TROUBLESHOOTING.md) and the matrix in [ops/OS_COMPATIBILITY_TESTING_MATRIX.md](ops/OS_COMPATIBILITY_TESTING_MATRIX.md) (RHEL 8/9 explicit Python 3.12 step; Void-musl/no-AVX wheelhouse-or-Docker path; RHEL/CentOS 7 Docker-only).
 1. **Prepare** a config file (e.g. `config.yaml`) with `targets`, `file_scan`, `report`, and optionally `api.port`.
 1. **Set config path** (optional):
 

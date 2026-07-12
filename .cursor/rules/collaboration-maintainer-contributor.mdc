@@ -1,7 +1,9 @@
 ---
-description: Maintainer vs contributor collaboration — Git identity, no implicit "who is typing", follow AGENTS.md
-globs: ["**/*"]
-alwaysApply: true
+description: Maintainer vs contributor collaboration. Situational — CONTRIBUTING / COLLABORATION_TEAM globs or @collaboration-maintainer-contributor.mdc.
+globs:
+  - docs/COLLABORATION_TEAM*
+  - CONTRIBUTING.md
+alwaysApply: false
 ---
 
 # Maintainer / contributor collaboration (Cursor)

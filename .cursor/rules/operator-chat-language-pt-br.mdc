@@ -1,7 +1,9 @@
 ---
-description: Operator conversational language — Brazilian Portuguese (pt-BR) or English; never European Portuguese (pt-PT).
+description: Operator chat language (pt-BR default, EN when asked). Situational — conversational turns; hard pt-BR contract is docs-locale-pt-br-contract.mdc (always-on). @operator-chat-language-pt-br.mdc when globs miss.
 globs:
-alwaysApply: true
+  - docs/private.example/**
+  - AGENTS.md
+alwaysApply: false
 ---
 
 # Operator chat language (this workspace)
@@ -11,11 +13,15 @@ When talking **conversationally** with the project operator **in Portuguese**:
 1. Use **Brazilian Portuguese (pt-BR)** only — **same lexical and style bar** as **`*.pt_BR.md`** and **`.cursor/rules/docs-pt-br-locale.mdc`** (e.g. **arquivo**, **compartilhar**, **seção**, **usuário**, **precisa/tem que** for obligation — not *ficheiro*, *partilhar*, *secção*, *utilizador*, *tem de*). Prefer **você** (or neutral phrasing) and Brazilian verb agreement (**você tem**, **você faz**, **está**).
 1. **English in the same message is OK** where it helps: **commands**, **API paths**, **flags**, **product/brand names**, and **stable technical jargon** the repo already keeps in English — **code-switch** naturally; do not force awkward literal translations of terms that are idiomatically left in EN in this project.
 1. **Do not** write in **European Portuguese (pt-PT)** — avoid **tu** + **tens/fazes/trazes**, PT-only vocabulary, or conjugations that read as Portugal unless the operator **explicitly** asks for pt-PT for a specific purpose.
-1. If the operator’s message is in **English**, or Portuguese would be ambiguous, reply in **English** for that turn — acceptable and often clearer for technical work.
+1. If the operator's message is in **English**, or Portuguese would be ambiguous, reply in **English** for that turn — acceptable and often clearer for technical work.
+1. If the operator says they prefer **English** in this thread, use **English** for narrative until they switch back.
 1. **Tracked documentation:** EN is canonical written source; **pt-BR** mirrors EN. When editing or suggesting pt-BR doc text, keep it **Brazilian**. Hard contract: **`.cursor/rules/docs-locale-pt-br-contract.mdc`** (always applied). CI-style guard: **`tests/test_docs_pt_br_locale.py`**.
 1. **Private drafts and operator Markdown (`docs/private/`, including `social_drafts/`):** Any **Portuguese** prose should follow the **same pt-BR** lexical bar as **`docs-pt-br-locale.mdc`** (not pt-PT), even when the filename is not **`*.pt_BR.md`**.
 1. **Explicitly English content:** When writing or revising **English-only** prose (not just inline jargon), prefer **`en-US`** spelling and conventions for narrative text.
+1. **Unchanged in any language:** File paths, `code`, **Conventional Commits** types/scopes, CLI flags, API names, and **English-only** plan tokens (`deps`, `feature`, `homelab`, …) stay **English**.
 
 **Skill (optional reminder for the operator):** `.cursor/skills/operator-dialogue-pt-br/SKILL.md`.
 
 If unsure, **default to English** for the reply rather than mixing pt-PT habits into pt-BR.
+
+See **`AGENTS.md`** (chat language bullet) and **`docs/PRIVATE_OPERATOR_NOTES.md`** §5.1.

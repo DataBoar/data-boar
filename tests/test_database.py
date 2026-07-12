@@ -219,6 +219,9 @@ def test_failure_hint_other_reasons():
     )
     assert "auth" in failure_hint("auth_failed").lower()
     assert "permission" in failure_hint("permission_denied").lower()
+    assert "sampling" in failure_hint("sampling_error").lower()
+    assert "encrypted" in failure_hint("encrypted_no_password").lower()
+    assert "password" in failure_hint("wrong_password").lower()
     assert (
         "unexpected" in failure_hint("unknown").lower()
         or "error" in failure_hint("unknown").lower()
