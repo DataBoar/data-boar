@@ -58,6 +58,7 @@ from pydantic import BaseModel
 from core.about import get_about_info
 from core.dashboard_transport import get_dashboard_transport_snapshot
 from core.enterprise_surface_posture import get_enterprise_surface_posture
+from core.forwarded_headers import forwarded_proto_posture
 from core.host_resolution import effective_api_key_configured
 from core.licensing.runtime_feature_tier import get_runtime_tier_for_features
 from core.licensing.tier_features import is_feature_available
@@ -849,16 +850,99 @@ def _check_rate_limit(source: str) -> None:
     _raise_if_interval_limit_exceeded(dbm, min_interval, grace, source)
 
 
+_AUDIT_LOGS_READ_PERMISSION = "audit_logs.read"
+
+
+def _audit_logs_settings(cfg: dict | None = None) -> dict[str, object]:
+    """Return normalized audit-log download settings from config."""
+    config = cfg or _get_config()
+    api_cfg = config.get("api") if isinstance(config.get("api"), dict) else {}
+    raw = api_cfg.get("audit_logs")
+    if not isinstance(raw, dict):
+        raw = {}
+    directory = str(raw.get("directory") or "").strip() or None
+    return {
+        "enabled": bool(raw.get("enabled", False)),
+        "directory": directory,
+    }
+
+
+def _resolve_audit_logs_directory(settings: dict[str, object]) -> Path:
+    """Resolve configured audit log directory (relative paths anchored to config dir)."""
+    directory = settings.get("directory")
+    if not isinstance(directory, str) or not directory.strip():
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Audit log downloads are enabled but api.audit_logs.directory is not configured."
+            ),
+        )
+    root = Path(directory)
+    if not root.is_absolute():
+        root = (Path(_config_path).resolve().parent / root).resolve()
+    if not root.exists() or not root.is_dir():
+        raise HTTPException(
+            status_code=503,
+            detail=f"Configured api.audit_logs.directory does not exist: {root}",
+        )
+    return root
+
+
+def _authorize_audit_log_download(request: Request) -> list[str]:
+    """Require authenticated principal with audit_logs.read or admin role."""
+    from api.rbac import resolve_effective_roles_for_request
+
+    cfg = _get_config()
+    roles = resolve_effective_roles_for_request(request, cfg, _get_engine().db_manager)
+    if roles is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Authentication required for audit log downloads.",
+        )
+    if "admin" in roles or _AUDIT_LOGS_READ_PERMISSION in roles:
+        return roles
+    raise HTTPException(
+        status_code=403,
+        detail=f"Missing required permission: {_AUDIT_LOGS_READ_PERMISSION}",
+    )
+
+
+def _audit_log_candidates(log_dir: Path) -> list[Path]:
+    return sorted(
+        log_dir.glob("audit_*.log"), key=lambda p: p.stat().st_mtime, reverse=True
+    )
+
+
+def _emit_audit_log_download_event(
+    request: Request, *, filename: str, session_id: str | None, roles: list[str]
+) -> None:
+    """Best-effort audit event for /logs downloads."""
+    try:
+        from utils.logger import get_logger
+
+        client_host = request.client.host if request.client else "unknown"
+        sid = session_id or "-"
+        roles_summary = ",".join(sorted(set(roles))) if roles else "-"
+        get_logger().info(
+            "AuditLogDownload: file=%s session_id=%s client=%s roles=%s",
+            filename,
+            sid,
+            client_host,
+            roles_summary,
+        )
+    except Exception:
+        # Download path must stay resilient if logger transport is unavailable.
+        return
+
+
 # Max request body size (1 MB) for JSON/config and scan start body to reduce DoS via huge payloads
 MAX_REQUEST_BODY_BYTES = 1_000_000
 
 
 def _is_secure_request(request: Request) -> bool:
-    """True if request was made over HTTPS (direct or via trusted proxy X-Forwarded-Proto)."""
-    proto = request.headers.get("x-forwarded-proto", "").strip().lower()
-    if proto == "https":
-        return True
-    return request.url.scheme == "https"
+    """True if request is HTTPS after trusted-proxy evaluation."""
+    posture = forwarded_proto_posture(request, _get_config())
+    return posture.get("effective_scheme") == "https"
 
 
 @app.middleware("http")
@@ -1235,7 +1319,7 @@ async def scan_pdf():
 
 
 @app.get("/status")
-async def get_status():
+async def get_status(request: Request):
     """Return running, current_session_id, findings_count, and declarative ``audit_log`` (sampling posture)."""
     engine = _get_engine()
     runtime_trust = get_runtime_trust_snapshot(_get_config())
@@ -1247,6 +1331,7 @@ async def get_status():
         "current_session_id": engine.db_manager.current_session_id,
         "findings_count": engine.get_current_findings_count(),
         "audit_log": engine.get_scan_audit_log(),
+        "forwarded_headers": forwarded_proto_posture(request, cfg),
         "runtime_trust": runtime_trust,
         "dashboard_transport": get_dashboard_transport_snapshot(),
         "enterprise_surface": get_enterprise_surface_posture(cfg),
@@ -1573,33 +1658,40 @@ async def download_heatmap_by_session(session_id: str):
 
 
 @app.get("/logs", responses=_NOT_FOUND_404)
-async def download_latest_log():
+async def download_latest_log(request: Request):
     """
-    Download the most recent audit_YYYYMMDD.log file from the current working directory.
-    This file contains connection and finding logs for recent scan sessions.
+    Download the most recent audit_YYYYMMDD.log from the configured audit-log directory.
     """
-    log_dir = Path(".")
-    candidates = sorted(
-        log_dir.glob("audit_*.log"), key=lambda p: p.stat().st_mtime, reverse=True
-    )
+    settings = _audit_logs_settings()
+    if not settings.get("enabled"):
+        raise HTTPException(status_code=403, detail="Audit log download is disabled.")
+    roles = _authorize_audit_log_download(request)
+    log_dir = _resolve_audit_logs_directory(settings)
+    candidates = _audit_log_candidates(log_dir)
     if not candidates:
         raise HTTPException(status_code=404, detail="No log files found.")
     latest = candidates[0]
+    _emit_audit_log_download_event(
+        request,
+        filename=latest.name,
+        session_id=None,
+        roles=roles,
+    )
     return FileResponse(latest, filename=latest.name, media_type="text/plain")
 
 
 @app.get("/logs/{session_id}", responses=_SESSION_RESPONSES)
-async def download_log_for_session(session_id: str):
+async def download_log_for_session(session_id: str, request: Request):
     """
-    Download the first audit_YYYYMMDD.log file that contains the given session_id.
-    This allows linking scan sessions to their corresponding console/audit trace.
-    Paths used are only from glob("audit_*.log"); session_id is not used in path expressions.
+    Download the first audit_YYYYMMDD.log containing the given session_id.
     """
     _validate_session_id(session_id)
-    log_dir = Path(".")
-    candidates = sorted(
-        log_dir.glob("audit_*.log"), key=lambda p: p.stat().st_mtime, reverse=True
-    )
+    settings = _audit_logs_settings()
+    if not settings.get("enabled"):
+        raise HTTPException(status_code=403, detail="Audit log download is disabled.")
+    roles = _authorize_audit_log_download(request)
+    log_dir = _resolve_audit_logs_directory(settings)
+    candidates = _audit_log_candidates(log_dir)
     if not candidates:
         raise HTTPException(status_code=404, detail="No log files found.")
     for p in candidates:
@@ -1608,10 +1700,63 @@ async def download_log_for_session(session_id: str):
         except OSError:
             continue
         if session_id in text:
+            _emit_audit_log_download_event(
+                request,
+                filename=p.name,
+                session_id=session_id,
+                roles=roles,
+            )
             return FileResponse(p, filename=p.name, media_type="text/plain")
     raise HTTPException(
         status_code=404, detail=f"No log file contains session_id {session_id}."
     )
+
+
+def _normalized_db_driver(value: str | None) -> str:
+    return (str(value or "").split("+")[0]).strip().lower()
+
+
+def _scan_database_matches_configured_target(request_body: DatabaseConfig) -> bool:
+    """
+    True when POST /scan_database payload exactly matches a configured DB target.
+
+    Matching fields: name, driver family, host, port, user, password, database.
+    """
+    cfg = _get_config()
+    targets = cfg.get("targets") if isinstance(cfg.get("targets"), list) else []
+    for target in targets:
+        if not isinstance(target, dict):
+            continue
+        if str(target.get("type") or "").strip().lower() != "database":
+            continue
+        if str(target.get("name") or "").strip() != request_body.name:
+            continue
+        if _normalized_db_driver(target.get("driver")) != _normalized_db_driver(
+            request_body.driver
+        ):
+            continue
+        if (
+            str(target.get("host") or "").strip().lower()
+            != request_body.host.strip().lower()
+        ):
+            continue
+        try:
+            target_port = int(target.get("port"))
+        except (TypeError, ValueError):
+            continue
+        if target_port != int(request_body.port):
+            continue
+        if str(target.get("user") or "").strip() != request_body.user:
+            continue
+        target_password = str(
+            target.get("pass") or target.get("password") or ""
+        ).strip()
+        if target_password != request_body.password:
+            continue
+        if str(target.get("database") or "").strip() != request_body.database:
+            continue
+        return True
+    return False
 
 
 @app.post("/scan_database", responses=_RATE_LIMIT_429)
@@ -1626,6 +1771,18 @@ async def scan_database(config: DatabaseConfig, background_tasks: BackgroundTask
         raise HTTPException(status_code=409, detail="Audit already in progress.")
     # Apply same rate limiting as for full scans
     _check_rate_limit(source="scan_database")
+    api_cfg = (
+        _get_config().get("api") if isinstance(_get_config().get("api"), dict) else {}
+    )
+    if not bool(api_cfg.get("allow_adhoc_targets", False)):
+        if not _scan_database_matches_configured_target(config):
+            raise HTTPException(
+                status_code=403,
+                detail=(
+                    "Ad-hoc scan_database target is disabled. "
+                    "Set api.allow_adhoc_targets: true or use a pre-configured target."
+                ),
+            )
     target = {
         "name": config.name,
         "type": "database",

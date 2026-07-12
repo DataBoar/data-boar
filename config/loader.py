@@ -590,6 +590,9 @@ def normalize_config(
         out["report"]["include_suggested_review_sheet"] = bool(
             out["report"]["include_suggested_review_sheet"]
         )
+    out["report"]["include_internal_inventory_details"] = bool(
+        out["report"].get("include_internal_inventory_details", False)
+    )
 
     # Optional heuristic jurisdiction hints (Report info sheet; not legal conclusions)
     jh_raw = out["report"].get("jurisdiction_hints")
@@ -668,6 +671,27 @@ def normalize_config(
         "enabled": bool(rb_raw.get("enabled", False)),
         "default_roles": list(rb_raw.get("default_roles") or _default_rbac_roles),
         "api_key_roles": list(rb_raw.get("api_key_roles") or _default_rbac_roles),
+    }
+    # Safe-by-default for POST /scan_database: ad-hoc targets are opt-in.
+    out["api"]["allow_adhoc_targets"] = bool(
+        out["api"].get("allow_adhoc_targets", False)
+    )
+    # Trust forwarded proto headers only from explicitly trusted reverse proxies.
+    tpc_raw = out["api"].get("trusted_proxy_cidrs")
+    if isinstance(tpc_raw, list):
+        tpc_norm = [str(x).strip() for x in tpc_raw if str(x).strip()]
+    elif isinstance(tpc_raw, str) and tpc_raw.strip():
+        tpc_norm = [tpc_raw.strip()]
+    else:
+        tpc_norm = []
+    out["api"]["trusted_proxy_cidrs"] = tpc_norm
+    # Audit log download endpoint posture.
+    audit_logs_raw = out["api"].get("audit_logs")
+    if not isinstance(audit_logs_raw, dict):
+        audit_logs_raw = {}
+    out["api"]["audit_logs"] = {
+        "enabled": bool(audit_logs_raw.get("enabled", False)),
+        "directory": str(audit_logs_raw.get("directory") or "").strip() or None,
     }
 
     # Optional external pattern files (ML/DL training terms: list of { text, label } with label "sensitive"|1 or "non_sensitive"|0)

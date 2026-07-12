@@ -17,6 +17,7 @@ except ImportError:
     MongoClient = None
 
 from core.connector_registry import register
+from connectors.inventory_details import build_mongodb_inventory_details
 from core.suggested_review import (
     SUGGESTED_REVIEW_PATTERN,
     augment_low_id_like_for_persist,
@@ -155,16 +156,21 @@ class MongoDBConnector:
         if not hasattr(self.db_manager, "save_data_source_inventory"):
             return
         product_version = None
-        raw_details: dict[str, str] = {}
+        raw_details: dict[str, dict[str, str]] = {
+            "executive": {"driver": "mongodb"},
+            "technical": {},
+        }
         try:
             info = self._db.command("buildInfo")
             product_version = str(info.get("version", "") or "") or None
-            raw_details["version_probe"] = str(info)[:500]
+            details = build_mongodb_inventory_details(info)
+            raw_details["executive"].update(details.get("executive") or {})
+            raw_details["technical"].update(details.get("technical") or {})
         except Exception as e:
             # Probe is optional; preserve scan flow when buildInfo is unavailable.
-            raw_details["version_probe_error"] = str(e)[:200]
+            raw_details["technical"]["version_probe_error"] = str(e)[:200]
         transport = "tls=enabled" if self.config.get("tls") else "unknown"
-        raw_details["driver"] = "mongodb"
+        raw_details["executive"]["transport_hint"] = transport
         try:
             self.db_manager.save_data_source_inventory(
                 target_name=target_name,

@@ -78,6 +78,7 @@
   "ADR-0078-multi-pattern-regex-benchmark-gate-regexset-before-vectorscan.md": "- **Date (UTC):** 2026-06-30",
   "ADR-0079-ecosystem-engineering-rigor-canon.md": "- **Date (UTC):** 2026-07-01",
   "ADR-0080-local-validation-gate-inviolable.md": "- **Date (UTC):** 2026-07-03",
-  "ADR-0081-no-silent-ml-confidence-single-class-hardening.md": "- **Date (UTC):** 2026-07-12"
+  "ADR-0081-no-silent-ml-confidence-single-class-hardening.md": "- **Date (UTC):** 2026-07-12",
+  "ADR-0082-web-exposure-safe-by-default-boundary-controls.md": "- **Date (UTC):** 2026-07-12"
 }
 
