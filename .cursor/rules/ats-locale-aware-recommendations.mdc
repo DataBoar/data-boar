@@ -1,7 +1,10 @@
 ---
-description: Talent ATS / LinkedIn recommendations must match candidate target locale and jurisdiction (en_CA+PIPEDA for Canada, not default GDPR); verify certification pricing in local currency
-globs: ["**/*"]
-alwaysApply: true
+description: Talent ATS / LinkedIn recommendations — locale-aware. Situational — `talent-ats` token or globs below; @ats-locale-aware-recommendations.mdc.
+globs:
+  - docs/ops/LINKEDIN_ATS_PLAYBOOK*
+  - docs/private.example/commercial/**
+  - .cursor/skills/candidate-ats-evaluation/**
+alwaysApply: false
 ---
 
 # ATS / talent recommendations — locale and jurisdiction

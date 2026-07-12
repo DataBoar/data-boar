@@ -88,9 +88,11 @@ Em resumo: **locale = comportamento contextual forte** no sentido de **disciplin
 2. **A sequência de release já é situacional:** **`release-publish-sequencing.mdc`** liga com **`release-ritual`** / **globs** de release. A regra **sempre ligada** cobre a camada transversal “limpar depois de si” que também vale **fora** de publicação completa (experiências locais, depuração de CI).
 3. **Modo de falha:** Se fosse situacional, assistentes muitas vezes **saltam** prune/higiene de smoke em fios onde só `main.py` está aberto — precisamente quando disco e tags ainda importam.
 
-## Tier B — backlog de avaliação (não comprometido)
+## Tier B — situacionalizadas (issue #1154, 2026-07)
 
-Candidatos estão **sempre ligados hoje** (ou amplos) e *podem* ser estreitados **mais tarde** após revisão por regra. **Não** fazer viragem em lote sem avaliar blast radius.
+Inventário completo (EN): [Tier B situationalized](CURSOR_RULES_PHASE2_SITUATIONALIZATION.md#tier-b--situationalized-issue-1154-2026-07). **Meta:** reduzir ruído; rollback = `git revert`. **Always-on:** 36 → 18 (não meta mágica ~13).
+
+## Tier B — backlog de avaliação (histórico pré-#1154)
 
 | Regra (exemplos) | Por que poderia ser Tier B depois | Por que esperar / cuidado |
 | ---------------- | ----------------------------------- | -------------------------- |

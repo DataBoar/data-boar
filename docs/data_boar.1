@@ -107,7 +107,17 @@ and
 .SH OPTIONS
 .TP
 .B \-\-demo
-Zero\-config demonstration mode: generate a synthetic filesystem corpus in a temporary directory, run an initial scan, and start the dashboard on loopback (\fB127.0.0.1\fR) with plaintext HTTP. Does not require
+Zero\-config demonstration mode: create a temp workspace under
+.IR /tmp/data_boar_demo/
+(or the OS temp directory) with
+.IR demo.config.yaml ,
+a synthetic filesystem corpus,
+.IR reports/ ,
+and SQLite DB; run an initial scan and start the dashboard on loopback (\fB127.0.0.1\fR) with plaintext HTTP.
+Does not read
+.B config.yaml
+from the current working directory.
+Does not require
 .BR \-\-config .
 Implies
 .BR \-\-web
@@ -559,7 +569,18 @@ The "Start scan" button triggers
 (a full audit of all targets in the current config).
 .
 .SH EXAMPLES
-.SS One\-shot CLI
+.SS Zero\-config demo
+.TP
+Synthetic corpus and dashboard (ignores
+.B config.yaml
+in the CWD):
+.RS
+.B data-boar \-\-demo
+.br
+.B python main.py \-\-demo
+.RE
+.
+.SS One\-shot CLI (config\-driven)
 .TP
 Minimal scan with default config:
 .RS
@@ -584,14 +605,6 @@ Without TLS certificate and key paths, you must pass
 (or set
 .B api.allow_insecure_http
 in the configuration) for plaintext HTTP.
-.
-.TP
-Zero\-config demo (no configuration file):
-.RS
-.B data-boar \-\-demo
-.br
-.B python main.py \-\-demo
-.RE
 .
 .TP
 Start the API on port 8088 (plaintext, explicit opt\-in):

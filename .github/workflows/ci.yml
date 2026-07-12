@@ -72,6 +72,17 @@ jobs:
         # dev group: pytest, hypothesis, pre-commit stack — not shipped to end-user `uv sync` default in CI test matrix
         run: uv sync --extra shares --group dev
 
+      - name: Install gitleaks (binary; kombi PLAN_NO_COAUTHORSHIP_GATE)
+        run: |
+          VER="8.30.1"
+          BASE="https://github.com/gitleaks/gitleaks/releases/download/v${VER}"
+          TARBALL="gitleaks_${VER}_linux_x64.tar.gz"
+          curl -sSfL "${BASE}/${TARBALL}" -o "${TARBALL}"
+          curl -sSfL "${BASE}/gitleaks_${VER}_checksums.txt" -o gl.sums
+          grep " ${TARBALL}$" gl.sums | sha256sum -c -
+          tar -xzf "${TARBALL}" gitleaks
+          sudo install -m 0755 gitleaks /usr/local/bin/gitleaks
+
       - name: Run tests
         run: uv run pytest -v -W error
         # addopts in pyproject.toml also set -W error; explicit in CI so tests pass without warnings.

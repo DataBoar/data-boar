@@ -7,17 +7,22 @@ _discover_fallback_no_schemas preserve behavior so discover() returns expected t
 import sqlite3
 from unittest.mock import MagicMock
 
+import pytest
 from connectors.sql_connector import (
     DRIVER_MAP,
+    SCAN_FAILURE_REASON_SAMPLING_ERROR,
+    ColumnSampleError,
     SQLConnector,
     _connect_args_from_target,
     _discover_fallback_no_schemas,
     _get_skip_schemas,
     _resolve_sample_statement_timeout_ms,
     _should_skip_schema,
+    format_column_sample_failure_details,
 )
 from sqlalchemy import create_engine, inspect
 from sqlalchemy.engine.url import make_url
+from sqlalchemy.exc import ProgrammingError
 
 
 def test_driver_map_uses_registered_sqlalchemy_dialects():
@@ -254,3 +259,104 @@ def test_sql_connector_sample_sparse_column_prefers_non_null(tmp_path):
         connector.close()
 
     assert "marker_value" in sample
+
+
+def test_format_column_sample_failure_details_includes_location_and_dialect():
+    err = ProgrammingError("stmt", {}, Exception("Incorrect syntax near 'OPTION'"))
+    detail = format_column_sample_failure_details(
+        schema="dbo",
+        table="users",
+        column_name="email",
+        dialect="mssql",
+        exc=err,
+    )
+    assert "dbo.users.email" in detail
+    assert "dialect=mssql" in detail
+    assert "ProgrammingError" in detail
+
+
+def test_sql_connector_sample_syntax_error_records_scan_failure():
+    """Sampling SQL errors must persist scan_failures, not return empty clean samples (#1140)."""
+    target = {"type": "database", "driver": "mssql", "name": "ProdDB"}
+    scanner = MagicMock()
+    db_manager = MagicMock()
+    connector = SQLConnector(target, scanner, db_manager, sample_limit=5)
+    connector.engine = MagicMock()
+    connector.engine.dialect.name = "mssql"
+    connector._connection = MagicMock()
+    ctx = MagicMock()
+    connector._connection.begin.return_value = ctx
+    ctx.__enter__ = MagicMock(return_value=None)
+    ctx.__exit__ = MagicMock(return_value=False)
+    connector._connection.execute.side_effect = ProgrammingError(
+        "SELECT",
+        {},
+        Exception("Incorrect syntax near 'OPTION'"),
+    )
+
+    with pytest.raises(ColumnSampleError):
+        connector.sample("dbo", "users", "email")
+
+    db_manager.save_failure.assert_called_once()
+    args = db_manager.save_failure.call_args[0]
+    assert args[0] == "ProdDB"
+    assert args[1] == SCAN_FAILURE_REASON_SAMPLING_ERROR
+    assert "users" in args[2]
+
+
+def test_process_one_finding_sampling_error_skips_scan_column():
+    """Failed sampling must not run detection on an empty pseudo-clean sample."""
+    target = {"type": "database", "driver": "sqlite", "name": "T"}
+    scanner = MagicMock()
+    db_manager = MagicMock()
+    connector = SQLConnector(target, scanner, db_manager)
+    connector.sample = MagicMock(side_effect=ColumnSampleError())
+
+    connector._process_one_finding("T", "localhost", "sqlite", "", "t1", "c1", "TEXT")
+
+    scanner.scan_column.assert_not_called()
+
+
+def test_minor_full_scan_sample_error_keeps_first_pass_dob_and_records_failure():
+    """Full-scan ColumnSampleError must not discard DOB_POSSIBLE_MINOR from the first pass (#1140)."""
+    target = {"type": "database", "driver": "sqlite", "name": "MinorDB"}
+    scanner = MagicMock()
+    scanner.scan_column.return_value = {
+        "sensitivity_level": "MEDIUM",
+        "pattern_detected": "DOB_POSSIBLE_MINOR",
+        "norm_tag": "",
+        "ml_confidence": 50,
+    }
+    db_manager = MagicMock()
+    connector = SQLConnector(
+        target,
+        scanner,
+        db_manager,
+        detection_config={"minor_full_scan": True, "minor_full_scan_limit": 100},
+    )
+
+    def sample_side_effect(schema, table, cname, limit=None):
+        if limit is not None:
+            db_manager.save_failure(
+                "MinorDB",
+                SCAN_FAILURE_REASON_SAMPLING_ERROR,
+                "dbo.minors.dob dialect=sqlite: ProgrammingError: full scan failed",
+            )
+            raise ColumnSampleError()
+        return "2005-01-01"
+
+    connector.sample = MagicMock(side_effect=sample_side_effect)
+
+    connector._process_one_finding(
+        "MinorDB", "localhost", "sqlite", "", "minors", "dob", "DATE"
+    )
+
+    db_manager.save_failure.assert_called_once_with(
+        "MinorDB",
+        SCAN_FAILURE_REASON_SAMPLING_ERROR,
+        "dbo.minors.dob dialect=sqlite: ProgrammingError: full scan failed",
+    )
+    db_manager.save_finding.assert_called_once()
+    finding_kwargs = db_manager.save_finding.call_args.kwargs
+    assert "DOB_POSSIBLE_MINOR" in finding_kwargs["pattern_detected"]
+    assert "(full-scan confirmed)" not in (finding_kwargs.get("norm_tag") or "")

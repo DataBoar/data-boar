@@ -1,6 +1,8 @@
 ---
-description: Warm browser + Google SSO — try MCP on social, Gmail/webmail, Docker Hub, and other operator dashboards before permission pings or paste-only handoffs
-alwaysApply: true
+description: Warm browser + Google SSO. Situational — browser/social tasks or @operator-browser-warm-session.mdc.
+globs:
+  - .cursor/skills/cursor-browser-social-session/**
+alwaysApply: false
 ---
 
 # Operator social / browser (Cursor IDE)

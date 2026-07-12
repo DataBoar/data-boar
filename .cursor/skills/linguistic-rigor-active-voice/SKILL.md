@@ -5,7 +5,7 @@ description: Checklist for enforcing NASA-style active voice, LCM Level 1/2 verb
 
 # Linguistic Rigor — Active Voice and Lexicon Stability
 
-Policy source: `persona-rigor.mdc` + `linguistic-rigor-and-performance.mdc` (both `alwaysApply: true`).
+Policy source: `linguistic-rigor-and-performance.mdc` (situational — `@linguistic-rigor-and-performance.mdc` or docs/cursor globs).
 This skill provides a **practical checklist** for use during writing and PR review.
 
 ---
@@ -86,6 +86,6 @@ When reviewing a PR, docstring addition, or doc update, run through:
 
 ## References
 
-- [`persona-rigor.mdc`](../../.cursor/rules/persona-rigor.mdc)
+- [`linguistic-rigor-and-performance.mdc`](../../.cursor/rules/linguistic-rigor-and-performance.mdc)
 - [`linguistic-rigor-and-performance.mdc`](../../.cursor/rules/linguistic-rigor-and-performance.mdc)
 - [ADR-0048 — Operator-facing taxonomy and naming contract preservation](../../docs/adr/ADR-0048-operator-facing-taxonomy-and-naming-contract-preservation.md)

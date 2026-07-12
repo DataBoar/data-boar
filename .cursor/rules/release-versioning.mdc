@@ -31,11 +31,13 @@ alwaysApply: false
 
 ## Version facts (ADR-0073 — Accepted)
 
+> **Esta regra DERIVA de ADR-0073 (+ `docs/VERSIONING.md`). Em conflito, a ADR vence → corrigir o `.mdc`, não a ADR. Se o certo não estiver claro, PARAR e perguntar ao operador.**
+
 - **`main` today:** **`1.7.4` STABLE** (release PR **#1024**); ADR-0073 **Accepted**; release gate **#406 CLOSED**.
 - **#970:** premature stable bump/tag without release gate — corrected by **ADR-0072** + **#406**; **`1.7.4` is not VOID**.
 - **Published stable:** tag **`v1.7.4`**, GitHub Release, Docker Hub **`1.7.4`** / **`latest`** — operator **release-ritual** post-merge (not agent-autonomous).
 - **`1.7.5` does not exist.** Next dev line: **`1.8.0-beta`** (#772) **after** publish ritual completes.
-- **Maturity octet** (0–127 beta · 128–199 rc · 200–255 release): **`[tool.databoar] maturity_build = 201`** side-channel — **never** in `[project] version` or About. See **`docs/VERSIONING.md`**.
+- **Maturity octet** (1–126 beta · 127–199 rc · 200–254 GA+fix; counter starts at **`1`**): **`[tool.databoar] maturity_build = 208`** side-channel — **never** in `[project] version` or About. See **`docs/VERSIONING.md`**.
 
 ## Distribution policy (pre-release vs stable)
 
@@ -111,9 +113,9 @@ When opening **`1.8.0-beta`** (next dev line after **`1.7.4`** completes), **`ma
 
 | `[project] version` | `maturity_build` band | Typical start |
 | --- | --- | --- |
-| **`1.8.0-beta`** | **0–127** (inclusive, 0-based) | e.g. **`1`** — document in release notes |
-| **`1.8.0-rc`** | **128–199** | e.g. **`128`** |
-| **`1.8.0`** GA | **200–255** | **`.200`** GA; **`.201`** first fix on that line |
+| **`1.8.0-beta`** | **1–126** (counter starts at **`1`**; forgiving ceiling) | e.g. **`1`** — first beta = `.1`; document in release notes |
+| **`1.8.0-rc`** | **127–199** | e.g. **`127`** or **`128`** — forgiving ceiling |
+| **`1.8.0`** GA | **200–254** | **`.200`** GA; **`.201`** first fix on that line |
 
 **`.postN`** applies only on the **release band** of a line (fix-line republication). **Beta/rc bands** use the octet only — no PyPI pre-release uploads per distribution policy.
 

@@ -1,7 +1,10 @@
 ---
-description: Before long ad-hoc shell or reinvention — use documented scripts/*.ps1 wrappers, TOKEN_AWARE_SCRIPTS_HUB, and check-all-gate; notify operator if agreed automation fails (misconfiguration).
-globs: ["**/*"]
-alwaysApply: true
+description: Repo script wrappers before ad-hoc shell. Situational — scripts/** or TOKEN_AWARE_SCRIPTS_HUB globs; @repo-scripts-wrapper-ritual.mdc when globs miss.
+globs:
+  - scripts/**
+  - docs/ops/TOKEN_AWARE_SCRIPTS*
+  - docs/ops/SCRIPTS_CROSS_PLATFORM*
+alwaysApply: false
 ---
 
 # Repo scripts and wrapper ritual (token-aware, agreed automation)
