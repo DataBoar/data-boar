@@ -3,6 +3,8 @@ from __future__ import annotations
 import os
 from typing import Any
 
+from core.webauthn_rp.settings import resolve_token_secret, webauthn_block
+
 
 def effective_api_key_configured(api_cfg: dict[str, Any] | None) -> bool:
     """
@@ -84,3 +86,31 @@ def should_warn_insecure_api_bind(config: dict[str, Any], host: str) -> bool:
         if effective_api_key_configured(api_cfg):
             return False
     return True
+
+
+def auth_boundary_resolved(config: dict[str, Any]) -> bool:
+    """
+    True when at least one built-in auth mechanism is configured and usable.
+
+    This covers:
+    - API key available (literal or *_from_env), and/or
+    - WebAuthn enabled with token secret resolved from env.
+    """
+    api_cfg = config.get("api")
+    if not isinstance(api_cfg, dict):
+        api_cfg = {}
+    if effective_api_key_configured(api_cfg):
+        return True
+    wa = webauthn_block(config)
+    if wa and resolve_token_secret(wa):
+        return True
+    return False
+
+
+def should_block_non_loopback_without_auth(config: dict[str, Any], host: str) -> bool:
+    """
+    Startup hardening gate for issue #1202 confused-deputy exposure.
+    """
+    if not api_bind_exposes_non_loopback(host):
+        return False
+    return not auth_boundary_resolved(config)

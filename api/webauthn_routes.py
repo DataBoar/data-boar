@@ -28,15 +28,14 @@ from core.webauthn_rp.settings import (
     user_id_bytes,
     webauthn_block,
 )
+from core.forwarded_headers import forwarded_proto_posture
 
 router = APIRouter(prefix="/auth/webauthn", tags=["webauthn"])
 
 
 def _cookie_secure(request: Request) -> bool:
-    proto = request.headers.get("x-forwarded-proto", "").strip().lower()
-    if proto == "https":
-        return True
-    return request.url.scheme == "https"
+    posture = forwarded_proto_posture(request, _get_config())
+    return posture.get("effective_scheme") == "https"
 
 
 def _get_config() -> dict[str, Any]:

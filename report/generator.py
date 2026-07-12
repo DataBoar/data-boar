@@ -14,6 +14,7 @@ Structure: generate_report() delegates all sheet writing to _write_excel_sheets(
 so branches stay in sync with main and merge conflicts are avoided (see CONTRIBUTING.md).
 """
 
+import json
 import logging
 from collections import defaultdict
 from pathlib import Path
@@ -109,6 +110,48 @@ def _excel_sanitize_cell(value: object) -> object:
 def _excel_safe_dataframe(data: Any) -> pd.DataFrame:
     """Compatibility shim for report writers and tests."""
     return excel_safe_dataframe(data)
+
+
+def _format_inventory_details(details: dict[str, Any]) -> str:
+    parts: list[str] = []
+    for key in sorted(details):
+        value = details.get(key)
+        if value is None:
+            continue
+        key_s = str(key).strip()
+        value_s = str(value).replace("\n", " ").replace("\r", " ").strip()
+        if not key_s or not value_s:
+            continue
+        parts.append(f"{key_s}={value_s}")
+    return "; ".join(parts)
+
+
+def _split_inventory_details(raw_details: object) -> tuple[str, str]:
+    """
+    Return (executive_details, technical_details) from persisted raw_details payload.
+
+    Backward compatibility:
+    - non-JSON payloads are treated as executive details;
+    - JSON payloads without executive/technical keys are rendered as executive details.
+    """
+    raw = str(raw_details or "").strip()
+    if not raw:
+        return "", ""
+    try:
+        payload = json.loads(raw)
+    except (json.JSONDecodeError, TypeError, ValueError):
+        return raw, ""
+    if not isinstance(payload, dict):
+        return raw, ""
+    executive_raw = payload.get("executive")
+    technical_raw = payload.get("technical")
+    executive_map = executive_raw if isinstance(executive_raw, dict) else {}
+    technical_map = technical_raw if isinstance(technical_raw, dict) else {}
+    if executive_map or technical_map:
+        return _format_inventory_details(executive_map), _format_inventory_details(
+            technical_map
+        )
+    return _format_inventory_details(payload), ""
 
 
 def _filter_by_min_sensitivity(rows: list[dict], min_sensitivity: str) -> list[dict]:
@@ -262,6 +305,7 @@ _SHEET_SCAN_FAILURES = "Scan failures"
 _SHEET_REPORT_INFO = "Report info"
 _SHEET_HEATMAP_DATA = "Heatmap data"
 _SHEET_DATA_SOURCE_INVENTORY = "Data source inventory"
+_SHEET_DATA_SOURCE_INVENTORY_INTERNAL = "Data source inv - internal"
 # LOW findings persisted for ID-like column names (FN reduction); see core.suggested_review
 _SHEET_SUGGESTED_REVIEW = "Suggested review (LOW)"
 _SHEET_PRAISE_CONTROLS = _excel_safe_sheet_title("Praise / existing controls")
@@ -1008,21 +1052,46 @@ def _write_excel_sheets(
     if hasattr(db_manager, "get_data_source_inventory"):
         inv_rows = db_manager.get_data_source_inventory(session_id) or []
     if inv_rows:
-        inv_sheet_rows = [
-            {
-                "Target": r.get("target_name", ""),
-                "Source type": r.get("source_type", ""),
-                "Product": r.get("product", "") or "",
-                "Product version": r.get("product_version", "") or "",
-                "Protocol/API version": r.get("protocol_or_api_version", "") or "",
-                "Transport security": r.get("transport_security", "") or "",
-                "Raw details": r.get("raw_details", "") or "",
-            }
-            for r in inv_rows
-        ]
+        include_internal_inventory_details = bool(
+            report_cfg.get("include_internal_inventory_details", False)
+        )
+        inv_sheet_rows = []
+        internal_inv_rows = []
+        for r in inv_rows:
+            executive_details, technical_details = _split_inventory_details(
+                r.get("raw_details", "") or ""
+            )
+            inv_sheet_rows.append(
+                {
+                    "Target": r.get("target_name", ""),
+                    "Source type": r.get("source_type", ""),
+                    "Product": r.get("product", "") or "",
+                    "Product version": r.get("product_version", "") or "",
+                    "Protocol/API version": r.get("protocol_or_api_version", "") or "",
+                    "Transport security": r.get("transport_security", "") or "",
+                    "Inventory details (executive)": executive_details,
+                }
+            )
+            if technical_details:
+                internal_inv_rows.append(
+                    {
+                        "Target": r.get("target_name", ""),
+                        "Source type": r.get("source_type", ""),
+                        "Product": r.get("product", "") or "",
+                        "Product version": r.get("product_version", "") or "",
+                        "Protocol/API version": r.get("protocol_or_api_version", "")
+                        or "",
+                        "Transport security": r.get("transport_security", "") or "",
+                        "Inventory details (technical)": technical_details,
+                    }
+                )
         _excel_safe_dataframe(inv_sheet_rows).to_excel(
             writer, sheet_name=_SHEET_DATA_SOURCE_INVENTORY, index=False
         )
+        if include_internal_inventory_details and internal_inv_rows:
+            _excel_safe_dataframe(internal_inv_rows).to_excel(
+                writer, sheet_name=_SHEET_DATA_SOURCE_INVENTORY_INTERNAL, index=False
+            )
     overrides = report_cfg.get("recommendation_overrides", [])
     recs = _recommendations_rows(
         db_rows_for_sheets,

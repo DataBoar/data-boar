@@ -100,6 +100,7 @@ Short, durable notes that capture **why** the project chose an approach—not on
 | 0079 | [Ecosystem engineering rigor canon (UMADR satellites)](ADR-0079-ecosystem-engineering-rigor-canon.md) | Proposed |
 | 0080 | [Local validation gate is inviolable: full check-all before any push or PR](ADR-0080-local-validation-gate-inviolable.md) | Proposed |
 | 0081 | [No silent ML confidence failures on single-class compliance profiles](ADR-0081-no-silent-ml-confidence-single-class-hardening.md) | Proposed |
+| 0082 | [Web exposure safe-by-default boundary controls](ADR-0082-web-exposure-safe-by-default-boundary-controls.md) | Proposed |
 
 ## Related docs
 

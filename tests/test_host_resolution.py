@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from core.host_resolution import (
+    auth_boundary_resolved,
     api_bind_exposes_non_loopback,
     resolve_api_host,
+    should_block_non_loopback_without_auth,
     should_warn_insecure_api_bind,
 )
 
@@ -72,3 +74,27 @@ def test_should_warn_insecure_api_bind_false_when_key_from_env(
         }
     }
     assert should_warn_insecure_api_bind(cfg, "0.0.0.0") is False
+
+
+def test_auth_boundary_resolved_with_api_key() -> None:
+    cfg = {"api": {"api_key": "secret"}}
+    assert auth_boundary_resolved(cfg) is True
+
+
+def test_auth_boundary_resolved_with_webauthn_secret(monkeypatch) -> None:
+    monkeypatch.setenv("DATA_BOAR_WEBAUTHN_TOKEN_SECRET", "secret-min-16")
+    cfg = {
+        "api": {
+            "webauthn": {
+                "enabled": True,
+                "token_secret_from_env": "DATA_BOAR_WEBAUTHN_TOKEN_SECRET",
+            }
+        }
+    }
+    assert auth_boundary_resolved(cfg) is True
+
+
+def test_should_block_non_loopback_without_auth() -> None:
+    cfg = {"api": {"require_api_key": False}}
+    assert should_block_non_loopback_without_auth(cfg, "0.0.0.0") is True
+    assert should_block_non_loopback_without_auth(cfg, "127.0.0.1") is False

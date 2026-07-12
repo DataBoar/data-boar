@@ -26,13 +26,21 @@ from core.webauthn_rp import session_cookie
 from core.webauthn_rp.settings import resolve_token_secret, webauthn_block
 
 KNOWN_ROLES = frozenset(
-    {"admin", "dashboard", "scanner", "reports_reader", "config_admin"}
+    {
+        "admin",
+        "dashboard",
+        "scanner",
+        "reports_reader",
+        "config_admin",
+        "audit_logs.read",
+    }
 )
 
 SCAN = frozenset({"scanner", "admin"})
 REP = frozenset({"reports_reader", "admin"})
 DASH = frozenset({"dashboard", "admin"})
 CFG = frozenset({"config_admin", "admin"})
+AUD_LOGS = frozenset({"audit_logs.read", "admin"})
 
 
 class RouteRbacClass(str, Enum):
@@ -152,7 +160,7 @@ def classify_route_rbac(
     if concrete.startswith("/docs/") and m in ("GET", "HEAD"):
         return RouteRbacClass.PROTECTED, DASH
     if concrete.startswith("/logs") and m in ("GET", "HEAD"):
-        return RouteRbacClass.PROTECTED, DASH
+        return RouteRbacClass.PROTECTED, AUD_LOGS
     if concrete.startswith("/sessions/") and m == "PATCH":
         return RouteRbacClass.PROTECTED, DASH
 

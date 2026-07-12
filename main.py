@@ -779,6 +779,7 @@ def main() -> None:
         from core.host_resolution import (
             effective_api_key_configured,
             resolve_api_host,
+            should_block_non_loopback_without_auth,
             should_warn_insecure_api_bind,
         )
 
@@ -800,6 +801,15 @@ def main() -> None:
         port = api_cfg.get("port", args.port)
         workers = int(api_cfg.get("workers", 1))
         host = resolve_api_host(config, cli_host=args.host)
+        if should_block_non_loopback_without_auth(config, host):
+            print(
+                "ERROR: Refusing startup with non-loopback API bind and unresolved auth boundary. "
+                "Set host to 127.0.0.1 or configure built-in auth (api.api_key/api_key_from_env "
+                "or api.webauthn with token secret).",
+                file=sys.stderr,
+                flush=True,
+            )
+            sys.exit(2)
         try:
             mode, cert_path, key_path, insecure_explicit = resolve_web_listen_options(
                 allow_insecure_http_cli=args.allow_insecure_http,
