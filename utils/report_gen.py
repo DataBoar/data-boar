@@ -3,6 +3,8 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from datetime import datetime
 
+from report.excel_sanitizer import excel_safe_dataframe
+
 
 def _create_heatmap(self, df):
     plt.figure(figsize=(12, 8))
@@ -58,9 +60,9 @@ class ReportGenerator:
         file_name = f"Relatorio_Compliance_{datetime.now().strftime('%Y%m%d')}.xlsx"
         with pd.ExcelWriter(file_name, engine="openpyxl") as writer:
             # Aba Principal: Todos os achados
-            df.sort_values(by="timestamp", ascending=False).to_excel(
-                writer, sheet_name="Inventário Completo", index=False
-            )
+            excel_safe_dataframe(
+                df.sort_values(by="timestamp", ascending=False)
+            ).to_excel(writer, sheet_name="Inventário Completo", index=False)
 
             # Aba de Resumo Executivo
             summary = (
@@ -68,10 +70,14 @@ class ReportGenerator:
                 .size()
                 .reset_index(name="Total")
             )
-            summary.to_excel(writer, sheet_name="Resumo de Riscos", index=False)
+            excel_safe_dataframe(summary).to_excel(
+                writer, sheet_name="Resumo de Riscos", index=False
+            )
 
             # Aba de Evolução Temporal
-            evolution.to_excel(writer, sheet_name="Evolução Temporal")
+            excel_safe_dataframe(evolution).to_excel(
+                writer, sheet_name="Evolução Temporal"
+            )
 
         print(f"Relatório gerado com sucesso: {file_name}")
 

@@ -20,6 +20,7 @@ from reportlab.lib.units import cm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from app.grc_dashboard_model import grc_remediation_table_rows
+from report.excel_sanitizer import excel_safe_dataframe
 
 
 def build_remediation_dataframe(data: dict[str, Any]) -> pd.DataFrame:
@@ -32,7 +33,7 @@ def export_grc_xlsx(data: dict[str, Any], path: Path) -> None:
     """Write remediation-style XLSX (one row per ``pii_types`` line)."""
     path.parent.mkdir(parents=True, exist_ok=True)
     df = build_remediation_dataframe(data)
-    df.to_excel(path, index=False, engine="openpyxl")
+    excel_safe_dataframe(df).to_excel(path, index=False, engine="openpyxl")
 
 
 def _p(text: str) -> str:
