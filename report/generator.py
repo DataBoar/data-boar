@@ -27,6 +27,8 @@ from core.about import get_about_info
 from core.aggregated_identification import run_aggregation
 from core.database import failure_hint
 from core.suggested_review import SUGGESTED_REVIEW_PATTERN
+from report.excel_sanitizer import excel_safe_dataframe
+from report.excel_sanitizer import excel_sanitize_cell
 from report.scan_evidence import write_scan_evidence_artifacts
 
 _logger = logging.getLogger(__name__)
@@ -99,20 +101,14 @@ def _excel_safe_sheet_title(title: str) -> str:
     return cleaned[:31]
 
 
-_FORMULA_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
-
-
 def _excel_sanitize_cell(value: object) -> object:
-    """Prefix formula-like strings so Excel/openpyxl treat them as literal text (CWE-1236)."""
-    if isinstance(value, str) and value.startswith(_FORMULA_PREFIXES):
-        return "'" + value
-    return value
+    """Compatibility shim for tests/importers; use shared report.excel_sanitizer."""
+    return excel_sanitize_cell(value)
 
 
 def _excel_safe_dataframe(data: Any) -> pd.DataFrame:
-    """Build a DataFrame with cell values sanitized against Excel formula injection."""
-    df = pd.DataFrame(data)
-    return df.map(_excel_sanitize_cell)
+    """Compatibility shim for report writers and tests."""
+    return excel_safe_dataframe(data)
 
 
 def _filter_by_min_sensitivity(rows: list[dict], min_sensitivity: str) -> list[dict]:
@@ -1062,7 +1058,9 @@ def _write_excel_sheets(
             .size()
             .unstack(fill_value=0)
         )
-        summary.to_excel(writer, sheet_name=_SHEET_HEATMAP_DATA)
+        _excel_safe_dataframe(summary.reset_index()).to_excel(
+            writer, sheet_name=_SHEET_HEATMAP_DATA, index=False
+        )
         # Embed heatmap image below the table (no overlap); scale to fit letter/A4 when printed
         safe_heatmap = (
             _heatmap_path_under_output_dir(heatmap_path, output_dir)

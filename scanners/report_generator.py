@@ -2,6 +2,8 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
+from report.excel_sanitizer import excel_safe_dataframe
+
 
 class ReportGenerator:
     def __init__(self, data):
@@ -9,7 +11,7 @@ class ReportGenerator:
 
     def generate_report(self, output_path="report.xlsx"):
         df = pd.DataFrame(self.data)
-        df.to_excel(output_path, index=False)
+        excel_safe_dataframe(df).to_excel(output_path, index=False)
 
         # Heatmap de sensibilidade
         plt.figure(figsize=(10, 6))
