@@ -51,7 +51,9 @@ _CARD_PATTERN = re.compile(r"\b(?:\d[ -]?){13,19}\b")
 _filter_instance: Any = None
 
 
-def process_chunk_pro(chunk: Sequence[Any]) -> list[str]:
+def process_chunk_pro(
+    chunk: Sequence[Any], profile_signals_active: bool = False
+) -> list[str]:
     """
     Process one chunk in a worker process.
 
@@ -68,6 +70,9 @@ def process_chunk_pro(chunk: Sequence[Any]) -> list[str]:
 
     if HAS_RUST and _filter_instance is None and FastFilter is not None:
         _filter_instance = FastFilter()
+
+    if profile_signals_active:
+        return data_strings
 
     if HAS_RUST and _filter_instance is not None:
         suspect_indices = _filter_instance.filter_batch(data_strings)
