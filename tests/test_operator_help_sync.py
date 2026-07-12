@@ -16,6 +16,7 @@ from tests.operator_help_sync_manifest import OPERATOR_HELP_MARKERS
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 _MAN1_PATH = _REPO_ROOT / "docs" / "data_boar.1"
+_MAN5_PATH = _REPO_ROOT / "docs" / "data_boar.5"
 
 
 def _cli_help_stdout() -> str:
@@ -74,6 +75,12 @@ def man1_text() -> str:
     return _MAN1_PATH.read_text(encoding="utf-8")
 
 
+@pytest.fixture(scope="module")
+def man5_text() -> str:
+    assert _MAN5_PATH.is_file(), f"missing {_MAN5_PATH}"
+    return _MAN5_PATH.read_text(encoding="utf-8")
+
+
 def test_operator_help_markers_in_cli_help(cli_help_text: str) -> None:
     for marker in OPERATOR_HELP_MARKERS:
         if marker.cli_help_substring is None:
@@ -121,3 +128,17 @@ def test_web_help_uses_runtime_prog_and_concrete_home_path(tmp_path: Path) -> No
     assert "uv run python main.py" not in html
     assert expected_docs_path in html
     assert "~/Documents/LGPD" not in html
+
+
+def test_man_pages_use_installed_invocation_contract(
+    man1_text: str, man5_text: str
+) -> None:
+    """
+    #1131: man pages are user-facing installed docs (man 1/5), so they must not
+    drift back to source-run wrappers.
+    """
+    for name, body in (("data_boar.1", man1_text), ("data_boar.5", man5_text)):
+        assert "uv run" not in body, f"{name} must not include uv-run wrappers"
+        assert "python main.py" not in body, (
+            f"{name} must use installed invocation (data-boar)"
+        )
