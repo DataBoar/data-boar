@@ -851,6 +851,7 @@ def _check_rate_limit(source: str) -> None:
 
 
 _AUDIT_LOGS_READ_PERMISSION = "audit_logs.read"
+_resolve_effective_roles_for_request_fn = None
 
 
 def _audit_logs_settings(cfg: dict | None = None) -> dict[str, object]:
@@ -890,10 +891,14 @@ def _resolve_audit_logs_directory(settings: dict[str, object]) -> Path:
 
 def _authorize_audit_log_download(request: Request) -> list[str]:
     """Require authenticated principal with audit_logs.read or admin role."""
-    from api.rbac import resolve_effective_roles_for_request
-
     cfg = _get_config()
-    roles = resolve_effective_roles_for_request(request, cfg, _get_engine().db_manager)
+    resolve_roles = _resolve_effective_roles_for_request_fn
+    if resolve_roles is None:
+        raise HTTPException(
+            status_code=503,
+            detail="RBAC resolver unavailable for audit log download.",
+        )
+    roles = resolve_roles(request, cfg, _get_engine().db_manager)
     if roles is None:
         raise HTTPException(
             status_code=401,
@@ -921,14 +926,16 @@ def _emit_audit_log_download_event(
         from utils.logger import get_logger
 
         client_host = request.client.host if request.client else "unknown"
-        sid = session_id or "-"
-        roles_summary = ",".join(sorted(set(roles))) if roles else "-"
+        session_filter = "session" if session_id else "latest"
+        # Avoid log injection and avoid recording path/user-controlled artifacts verbatim.
+        safe_client = str(client_host).replace("\n", "").replace("\r", "").strip()
+        safe_filename = str(filename).replace("\n", "").replace("\r", "").strip()
+        _ = roles
         get_logger().info(
-            "AuditLogDownload: file=%s session_id=%s client=%s roles=%s",
-            filename,
-            sid,
-            client_host,
-            roles_summary,
+            "AuditLogDownload: file=%s mode=%s client=%s",
+            safe_filename,
+            session_filter,
+            safe_client,
         )
     except Exception:
         # Download path must stay resilient if logger transport is unavailable.
@@ -952,7 +959,10 @@ async def rbac_middleware(request: Request, call_next):
     locale HTML routes (Phase 2, GitHub #86). Registered before the WebAuthn HTML gate so it runs
     **after** session authentication on the inner stack (closest to the route handler).
     """
-    from api.rbac import rbac_middleware_handler
+    from api.rbac import rbac_middleware_handler, resolve_effective_roles_for_request
+
+    global _resolve_effective_roles_for_request_fn
+    _resolve_effective_roles_for_request_fn = resolve_effective_roles_for_request
 
     return await rbac_middleware_handler(request, call_next, _get_config, _get_engine)
 
