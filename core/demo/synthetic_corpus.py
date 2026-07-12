@@ -770,11 +770,14 @@ def gen_config_errors(base: Path) -> None:
                 "targets": [
                     {"type": "filesystem", "path": "./tests/synthetic_corpus/1_happy"}
                 ],
-                "api": {"require_api_key": True, "api_key": "correct-key-12345"},
+                "api": {
+                    "require_api_key": True,
+                    "api_key": "EXAMPLE-PLACEHOLDER-NOT-A-KEY",
+                },
                 "report": {"output_dir": "./reports"},
             },
             "expected_error": "HTTP 401 Unauthorized when calling API with wrong key",
-            "troubleshoot": "Use X-API-Key: correct-key-12345 no header. "
+            "troubleshoot": "Use X-API-Key: EXAMPLE-PLACEHOLDER-NOT-A-KEY no header. "
             "Para testar: curl -H 'X-API-Key: wrong-key' http://localhost:8088/api/v1/scan",
             "test_curl": (
                 "curl -s -o /dev/null -w '%{http_code}' "
