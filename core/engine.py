@@ -8,6 +8,7 @@ Exposes db_manager, is_running, get_current_findings_count() for API.
 
 import hashlib
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
 from typing import Any
 
 from config.scan_defaults import DEFAULT_FILE_SAMPLE_MAX_CHARS
@@ -89,6 +90,7 @@ from core.database import LocalDBManager
 from core.sampling import SamplingPolicy
 from core.scanner import DataScanner
 from core.session import new_session_id
+from utils.logger import configure_audit_log_directory
 
 _CONNECTOR_SAMPLING_POLICY_BASES: tuple[type, ...] = (SQLConnector,)
 try:
@@ -100,8 +102,14 @@ except ImportError:  # noqa: BLE001
 
 
 class AuditEngine:
-    def __init__(self, config: dict[str, Any], db_path: str | None = None):
+    def __init__(
+        self,
+        config: dict[str, Any],
+        db_path: str | None = None,
+        config_path: str | None = None,
+    ):
         self.config = config
+        self._configure_audit_log_directory(config_path=config_path)
         self._sampling_policy = SamplingPolicy.from_config(config)
         self.db_path = db_path or config.get("sqlite_path", "audit_results.db")
         self.db_manager = LocalDBManager(self.db_path)
@@ -142,6 +150,31 @@ class AuditEngine:
         self._crypto_signals: list[tuple[str, set[StrongCryptoSignal]]] = []
         # Declarative sampling / SRE posture for API ``audit_log`` (refreshed after each scan).
         self._scan_audit_log: dict[str, Any] | None = None
+
+    def _configure_audit_log_directory(self, *, config_path: str | None) -> None:
+        """
+        Align logger write destination with ``api.audit_logs.directory`` when configured.
+
+        Relative directories are resolved against the config file parent when available.
+        """
+        api_cfg = (
+            self.config.get("api") if isinstance(self.config.get("api"), dict) else {}
+        )
+        audit_cfg = (
+            api_cfg.get("audit_logs")
+            if isinstance(api_cfg.get("audit_logs"), dict)
+            else {}
+        )
+        directory = str(audit_cfg.get("directory") or "").strip()
+        if not directory:
+            configure_audit_log_directory(None)
+            return
+        resolved = Path(directory)
+        if not resolved.is_absolute() and config_path:
+            resolved = (Path(config_path).resolve().parent / resolved).resolve()
+        else:
+            resolved = resolved.resolve()
+        configure_audit_log_directory(resolved)
 
     @property
     def is_running(self) -> bool:

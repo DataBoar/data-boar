@@ -256,7 +256,7 @@ The **Start scan** button sends `POST /scan` and triggers a **full audit of all 
 | `GET`   | `/list`                             | List past sessions (JSON). For the HTML list, use `/en/reports` or `/pt-br/reports` (locale prefix). Each entry includes tenant/technician when set.   |
 | `GET`   | `/reports/{session_id}`             | **Regenerate** and download the Excel report for that session.                                                                                         |
 | `GET`   | `/heatmap/{session_id}`             | **Regenerate** the report (if needed) and download the heatmap PNG for that session.                                                                   |
-| `GET`   | `/logs/{session_id}`                | Download the first audit log file that contains that `session_id`, for session-level trace analysis.                                                   |
+| `GET`   | `/logs/{session_id}`                | Download the audit log for that `session_id` (content match first; UTC-day fallback to `audit_YYYYMMDD.log` when needed), for session-level trace analysis. |
 | `POST`  | `/auth/webauthn/registration/options` | **Optional.** When **`api.webauthn.enabled`**, returns WebAuthn creation options JSON plus opaque `state` (see ADR 0033). |
 | `POST`  | `/auth/webauthn/registration/verify` | **Optional.** Verify registration response; stores passkey in SQLite; sets session cookie. |
 | `POST`  | `/auth/webauthn/authentication/options` | **Optional.** Authentication options JSON + `state`. |

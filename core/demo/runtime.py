@@ -22,7 +22,9 @@ def _default_demo_root() -> Path:
 def _write_demo_config(demo_dir: Path, port: int) -> Path:
     corpus = demo_dir / "corpus"
     reports = demo_dir / "reports"
+    audit_logs = demo_dir / "audit_logs"
     reports.mkdir(parents=True, exist_ok=True)
+    audit_logs.mkdir(parents=True, exist_ok=True)
     config_path = demo_dir / "demo.config.yaml"
     config_path.write_text(
         (
@@ -41,6 +43,9 @@ def _write_demo_config(demo_dir: Path, port: int) -> Path:
             f"  port: {port}\n"
             "  host: 127.0.0.1\n"
             "  allow_insecure_http: true\n"
+            "  audit_logs:\n"
+            "    enabled: true\n"
+            f"    directory: {audit_logs}\n"
         ),
         encoding="utf-8",
     )
