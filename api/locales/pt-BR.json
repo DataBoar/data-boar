@@ -172,7 +172,7 @@
     "run_web_shot_caption": "Painel — campos opcionais de cliente/técnico e Iniciar varredura (sem shell).",
     "run_auto_h3": "Para automação / scripting",
     "run_cli_h3": "Pela CLI",
-    "run_cli_p1": "Na raiz do repositório, prefira uv run python main.py (ou ative o venv e execute python main.py). Lista completa de flags: python main.py --help. Instalações empacotadas: man 1 data-boar (comando) e man 5 data-boar (formato do arquivo de configuração).",
+    "run_cli_p1": "Na raiz do repositório, use python main.py como invocação canônica de desenvolvimento (ativar venv é opcional). Lista completa de flags: python main.py --help. Após instalação, use data-boar como entry point. Veja man 1 data-boar (comando) e man 5 data-boar (formato do arquivo de configuração).",
     "run_cli_oneshot": "Auditoria pontual (orientada ao config; mesmos alvos que uma varredura pelo painel com o seu config.yaml):",
     "run_cli_demo": "Demonstração zero-config (config + corpus sintéticos em /tmp/data_boar_demo/; ignora o config.yaml do diretório atual):",
     "run_cli_api": "Subir a API / dashBOARd (sem varredura até usar o navegador ou HTTP):",

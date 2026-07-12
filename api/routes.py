@@ -34,6 +34,7 @@ import io
 import os
 import re
 import secrets
+import sys
 import time
 from urllib.parse import quote
 from contextlib import asynccontextmanager
@@ -149,6 +150,14 @@ def _html_lang_attr(locale_tag: str) -> str:
 
 def _locale_tag_from_slug(slug: str) -> str:
     return LOCALE_TAG_BY_SLUG.get(slug.lower(), "en")
+
+
+def _display_prog(argv0: str | None = None) -> str:
+    """Return the operator-facing command form for this runtime."""
+    name = Path(argv0 or sys.argv[0] or "").name.lower()
+    if name in {"data-boar", "data-boar.exe"}:
+        return "data-boar"
+    return "python main.py"
 
 
 def _maturity_self_assessment_poc_allowed(cfg: dict) -> bool:
@@ -1858,10 +1867,20 @@ async def scan_database(config: DatabaseConfig, background_tasks: BackgroundTask
 async def help_page(request: Request, locale_slug: LocaleSlug):
     """Help and documentation page: quickstart, config example, links to README/USAGE docs."""
     tag = _locale_tag_from_slug(locale_slug.value)
+    home = Path.home()
     return templates.TemplateResponse(
         request=request,
         name="help.html",
-        context=_i18n_template_context(request, locale_slug.value, tag, {}),
+        context=_i18n_template_context(
+            request,
+            locale_slug.value,
+            tag,
+            {
+                "prog": _display_prog(),
+                "home_example": str(home),
+                "home_docs_example": str(home / "Documents" / "LGPD"),
+            },
+        ),
     )
 
 

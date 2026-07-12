@@ -158,8 +158,13 @@ OPERATOR_HELP_MARKERS: tuple[OperatorHelpMarker, ...] = (
         "--jurisdiction-hint",
         _MAN_JURISDICTION_HINT,
     ),
-    # Web /help recommends uv; full docs in README — not duplicated in argparse.
-    OperatorHelpMarker("uv_run", None, "uv run", None),
+    # Dev canonical invocation is python main.py; installed entry point is data-boar.
+    OperatorHelpMarker(
+        "python_main_invocation",
+        "python main.py --config config.yaml",
+        "python main.py --config config.yaml",
+        "python main.py",
+    ),
     OperatorHelpMarker("api_host_env", "API_HOST", "API_HOST", "API_HOST"),
     OperatorHelpMarker("bind_loopback", "127.0.0.1", "127.0.0.1", "127.0.0.1"),
     OperatorHelpMarker(
