@@ -460,6 +460,106 @@ def test_merge_config_on_save_preserves_secrets_when_submitted_is_placeholder():
     assert merged2["targets"][0]["pass"] == "newpass"
 
 
+def test_merge_config_on_save_preserves_current_when_submitted_is_redacted_dsn():
+    """Round-trip save keeps current DSN when submitted value is redacted display form."""
+    from config.redact_config import merge_config_on_save
+
+    current = {
+        "targets": [
+            {
+                "name": "db1",
+                "url": (
+                    "postgresql://db_user:RealSecret@db.example.com:5432/appdb"
+                    "?token=sensitive-token"
+                ),
+            }
+        ]
+    }
+    submitted = {
+        "targets": [
+            {
+                "name": "db1",
+                "url": ("postgresql://db_user:***@db.example.com:5432/appdb?token=***"),
+            }
+        ]
+    }
+    merged = merge_config_on_save(submitted, current)
+    assert merged["targets"][0]["url"] == current["targets"][0]["url"]
+
+
+def test_redact_config_for_display_masks_dsn_userinfo_and_query_secrets():
+    """DSN/URL credential fragments are redacted even when key name is not secret-like."""
+    from config.redact_config import redact_config_for_display
+
+    data = {
+        "targets": [
+            {
+                "name": "db1",
+                "type": "database",
+                "connection_string": (
+                    "postgresql://audit_user:UltraSecretPwd@db.example.com:5432/audit_db"
+                    "?sslmode=require&token=abc123&password=hidden-value"
+                ),
+            }
+        ],
+        "api": {"token_url": "https://idp.example.com/oauth/token"},
+    }
+    redacted = redact_config_for_display(data)
+    dsn = redacted["targets"][0]["connection_string"]
+    assert "UltraSecretPwd" not in dsn
+    assert "abc123" not in dsn
+    assert "hidden-value" not in dsn
+    assert "db.example.com:5432/audit_db" in dsn
+    assert "audit_user:***@" in dsn
+    assert "token=***" in dsn
+    assert "password=***" in dsn
+    # token_url key remains allowlisted by name when it only carries endpoint path.
+    assert redacted["api"]["token_url"] == "https://idp.example.com/oauth/token"
+
+
+def test_config_get_never_exposes_password_in_dsn_url(tmp_path):
+    """GET /config must not render DSN/URL passwords in the HTML editor payload."""
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        f"""targets:
+  - name: db1
+    type: database
+    url: postgresql://db_user:SuperSecretPass@db.example.com:5432/appdb?token=abc123
+report:
+  output_dir: {tmp_path}
+api:
+  port: 8088
+  require_api_key: true
+  api_key: secret123
+sqlite_path: {tmp_path}/audit.db
+""",
+        encoding="utf-8",
+    )
+    import api.routes as routes
+
+    orig_path = routes._config_path
+    orig_cfg = routes._config
+    orig_engine = routes._audit_engine
+    try:
+        routes._config_path = str(config_path)
+        routes._config = None
+        routes._audit_engine = None
+        from fastapi.testclient import TestClient
+
+        client = TestClient(routes.app)
+        resp = client.get("/config", headers={"X-API-Key": "secret123"})
+        assert resp.status_code == 200
+        html = resp.text
+        assert "SuperSecretPass" not in html
+        assert "abc123" not in html
+        assert "db.example.com:5432/appdb" in html
+        assert "db_user:***@" in html
+    finally:
+        routes._config_path = orig_path
+        routes._config = orig_cfg
+        routes._audit_engine = orig_engine
+
+
 def test_normalize_config_resolves_pass_from_env_and_user_from_env(monkeypatch):
     """Loader resolves pass_from_env, password_from_env, user_from_env for targets."""
     from config.loader import normalize_config
