@@ -18,6 +18,16 @@ from core.webauthn_rp import session_cookie
 from core.webauthn_rp.html_csrf import issue_html_csrf_token, verify_html_csrf_token
 from core.webauthn_rp.settings import resolve_token_secret, webauthn_block
 
+_routes_get_config: Any | None = None
+_routes_get_engine: Any | None = None
+
+
+def configure_routes_context(get_config: Any, get_engine: Any) -> None:
+    """Inject route-layer config/engine resolvers without importing api.routes."""
+    global _routes_get_config, _routes_get_engine
+    _routes_get_config = get_config
+    _routes_get_engine = get_engine
+
 
 def locale_path_segments(path: str) -> tuple[str | None, list[str]]:
     """
@@ -71,9 +81,9 @@ def safe_next_path(next_q: str | None, fallback: str) -> str:
 
 
 def _routes_config_engine():
-    import api.routes as routes_mod
-
-    return routes_mod._get_config(), routes_mod._get_engine()
+    if _routes_get_config is None or _routes_get_engine is None:
+        raise RuntimeError("webauthn_html_gate route context was not configured")
+    return _routes_get_config(), _routes_get_engine()
 
 
 def csrf_context_for_request(request: Request) -> dict[str, str]:

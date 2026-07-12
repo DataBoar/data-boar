@@ -85,6 +85,7 @@ from api.locale_i18n import (
     negotiate_locale_tag,
 )
 from api.webauthn_html_gate import (
+    configure_routes_context as configure_webauthn_html_gate_context,
     csrf_context_for_request,
     is_locale_login_get,
     safe_next_path,
@@ -672,6 +673,9 @@ def _get_engine():
         _audit_engine = AuditEngine(cfg)
         get_license_guard(cfg)
     return _audit_engine
+
+
+configure_webauthn_html_gate_context(_get_config, _get_engine)
 
 
 def _license_public_dict() -> dict:
