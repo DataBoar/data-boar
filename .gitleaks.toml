@@ -1,7 +1,19 @@
 title = "data-boar gitleaks config"
 
+# extend + useDefault: mantém TODAS as regras default de segredo (não regride a detecção)
+# e ADICIONA a regra de governança abaixo. Sem isso, [[rules]] custom SUBSTITUIria as defaults.
+[extend]
+useDefault = true
+
 [allowlist]
 description = "Confirmed FP 2026-05-18 — synthetic test data and operator howto curl examples"
+# FP: chave demo sintetica + fingerprint GPG PUBLICO, nao segredo (allowlist por VALOR, nunca por path)
+regexes = [
+  '''correct-key-12345''',
+  '''(?i)wrong-key''',  # FP: chave FAKE demo (curl-auth-header) no synthetic_corpus:778, commit historico b902a2ce.
+  '''D6F81740\s*AA5FAB8A\s*CE5716AF\s*871542E6\s*F789F64F''',
+  '''D6F81740AA5FAB8ACE5716AF871542E6F789F64F''',
+]
 paths = [
   '''scripts/generate_synthetic_poc_corpus\.py''',
   '''docs/ops/API_KEY_FROM_ENV_OPERATOR_STEPS\.md''',
@@ -10,3 +22,14 @@ paths = [
   '''docs/ops/SECURE_DASHBOARD_AUTH_AND_HTTPS_HOWTO\.pt_BR\.md''',
   '''docs/OPERATOR_NOTIFICATION_CHANNELS\.md'''
 ]
+
+# ── Governança: NÃO EXISTE CO-AUTORIA (fail-closed, defense-in-depth) ──
+# Um commit = UM autor (quem fez). Review != co-autoria. IA = FERRAMENTA, nunca co-autora.
+# QUALQUER Co-authored-by = FAIL (sem allowlist — nome de humano é forjável; o agente
+# escreveria "Fabio" e furaria). Gitleaks varre CONTEÚDO/diff; a commit-MESSAGE é coberta
+# pelo pytest tests/test_commit_no_tool_coauthorship.py (a kombi).
+[[rules]]
+id = "no-coauthorship-at-all"
+description = "PROIBIDO: NAO existe co-autoria neste repo — todo commit tem UM autor (quem fez). IA e FERRAMENTA (nunca co-autora); review != co-autoria. QUALQUER 'Co-authored-by:' = FAIL. Usar o nome do operador/humano sem ser ele = FORJA de identidade = impersonation = crime (org DataBoar). CONSERTE INDO PRA FRENTE: releia git log + ADRs 0046/0047/0049/0079 NA INTEGRA e amend forward SEM o trailer. NUNCA --no-verify nem skip (proibido ao agente). So o HITL, na mao, se precisar."
+regex = '''(?im)^[ \t]*Co-authored-by:[ \t]*\S'''
+tags = ["governance", "no-coauthorship", "fail-closed", "hitl", "adr-0049", "adr-0079"]

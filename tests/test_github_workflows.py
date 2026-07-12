@@ -247,6 +247,7 @@ def test_gitleaks_workflow_present_and_valid() -> None:
     assert "gitleaks_${VER}_linux_x64.tar.gz" in run_blob
     assert "sha256sum -c" in run_blob
     assert "./gitleaks git ." in run_blob
+    assert "--config .gitleaks.toml" in run_blob
 
 
 def test_gitleaks_yml_pins_actions_to_shas() -> None:

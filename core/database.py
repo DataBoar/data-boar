@@ -131,7 +131,7 @@ class ScanFailure(Base):
     target_name = Column(String(100))
     reason = Column(
         String(50)
-    )  # unreachable, auth_failed, permission_denied, timeout, error
+    )  # unreachable, auth_failed, permission_denied, timeout, sampling_error, error
     details = Column(Text, nullable=True)
     created_at = Column(DateTime, default=_utc_now)
 
@@ -162,6 +162,23 @@ def failure_hint(reason: str) -> str:
             "Operation timed out. Check for high latency, overloaded target, or too strict timeouts. "
             "Consider increasing timeout values and re-running during off-peak hours. "
             "You can set timeouts in config (timeouts.connect_seconds, timeouts.read_seconds) or per target; see USAGE.md."
+        )
+    if r == "sampling_error":
+        return (
+            "Column sampling failed (SQL syntax, permissions, or connectivity). The column was not "
+            "evaluated — this is not a clean result. Check dialect-specific sampling notes, credentials, "
+            "and the detailed message; fix the target or sampling plan before re-running."
+        )
+    if r == "encrypted_no_password":
+        return (
+            "File or archive member is encrypted and no password was configured. This is not a clean "
+            "result — add the password under file_scan.file_passwords (or the matching extension key) "
+            "and re-run, or exclude the path if decryption is out of scope."
+        )
+    if r == "wrong_password":
+        return (
+            "Password was provided but decryption failed. Verify file_scan.file_passwords for this "
+            "extension; a wrong password is not a clean scan result."
         )
     return (
         "Unexpected error. Review the detailed message and audit log, verify the target configuration "

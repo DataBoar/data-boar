@@ -56,7 +56,7 @@ Data Boar **will not** implement native body extraction for OLE2/CFBF (Compound 
 - **Use `.docx` output from your DMS:** Configure your Document Management System to export in `.docx`/PDF when feeding Data Boar.
 - **Filename path already scanned:** Even without body content, Data Boar still flags the file via its path and filename if PII is present there (e.g. `CPF_000000000-00_contract.doc`).
 
-This decision is tracked at GitHub issue [#671](https://github.com/FabioLeitao/data-boar/issues/671). No ADR is required — this is a won't-fix scope boundary, not an architectural trade-off.
+This decision is tracked at GitHub issue [#671](https://github.com/DataBoar/data-boar/issues/671). No ADR is required — this is a won't-fix scope boundary, not an architectural trade-off.
 
 ---
 
@@ -67,6 +67,54 @@ Many deployments use the **Docker image**. The container must be able to reach y
 - **Remote databases:** Use the **host IP or FQDN** of the DB server in config (not `localhost` unless the DB runs in the same container). From the host, test with `psql`, `mysql`, or similar; from the container, ensure the container network can reach that host (no extra host networking required unless you use `host.docker.internal` or similar).
 - **NFS / SMB from container:** Two common approaches: (1) **Mount the share on the host** and bind-mount that path into the container (e.g. `-v /mnt/nfs-share:/data/shares`), then point a **filesystem** target at `/data/shares`; (2) **Use NFS/SMB targets** in config and ensure the container network can reach the NFS/SMB server (install `.[shares]` in the image, open firewall for NFS/SMB ports). For step-by-step and pitfalls, see [TROUBLESHOOTING_DOCKER_DEPLOYMENT.md](ops/TROUBLESHOOTING_DOCKER_DEPLOYMENT.md).
 - **DNS:** If config uses hostnames, the container must resolve them (same DNS as host or `--dns`). See [TROUBLESHOOTING_DOCKER_DEPLOYMENT.md](ops/TROUBLESHOOTING_DOCKER_DEPLOYMENT.md).
+
+---
+
+## PyPI/pipx onboarding edge cases (Linux)
+
+On **Debian/Ubuntu**, **Fedora**, and **RHEL/Alma/Rocky/Oracle 10**, the default `pipx install data-boar` path is currently frictionless when the host already resolves Python >=3.12.
+
+For other Linux paths, use the split below (no overclaim):
+
+### RHEL 8 and RHEL 9 (including Alma): force Python 3.12 in `pipx`
+
+These hosts can still resolve default `python3` below the package floor and fail with:
+
+- `ERROR: Ignored ... Requires-Python >=3.12`
+- `ERROR: No matching distribution found for data-boar`
+
+Use Python 3.12 explicitly:
+
+```bash
+sudo dnf install -y python3.12
+pipx install --python python3.12 data-boar
+```
+
+### Void-glibc vs Void-musl
+
+- **Void-glibc:** currently passes in the default path (`pipx install data-boar`) because PyPI publishes a compatible `cp314` wheel.
+- **Void-musl:** currently not frictionless in the same path; available wheelhouse is `cp312` while host Python is 3.14. Use Docker, or wait for `cp314` wheelhouse coverage in [#1182](https://github.com/DataBoar/data-boar/issues/1182).
+
+### Alpine/musl: wheelhouse or build toolchain
+
+In this path, `scikit-learn` can fall back to source build on musl. Without build tools, `pipx install data-boar` may fail with `metadata-generation-failed`.
+
+If no wheelhouse is available, install prerequisites first:
+
+```bash
+apk add build-base gfortran openblas-dev
+pipx install data-boar
+```
+
+This path should improve as musllinux wheelhouse coverage evolves ([#929](https://github.com/DataBoar/data-boar/issues/929), [#1182](https://github.com/DataBoar/data-boar/issues/1182)).
+
+### no-AVX hosts
+
+Do not assume a smooth default PyPI path. Use wheelhouse (`--find-links`) or Docker.
+
+### RHEL 7 / CentOS 7 (EOL)
+
+Treat native `pipx` install as unsupported for current builds (EOL repositories and unreachable Python floor). Use Docker.
 
 ---
 
