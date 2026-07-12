@@ -186,3 +186,63 @@ def test_compliance_sample_unicode_terms_loadable():
         assert "sensitivity_level" in result
     finally:
         path.unlink(missing_ok=True)
+
+
+def test_single_class_compliance_terms_detect_declared_exact_term():
+    """
+    Regression #1195: one-class compliance terms must still detect exact declared terms.
+
+    This test intentionally uses only ``sensitive`` labels to exercise the previous
+    single-class ``predict_proba`` shape trap.
+    """
+    from core.scanner import DataScanner
+
+    sample = {
+        "terms": [
+            {"text": "個人情報", "label": "sensitive"},
+            {"text": "renseignements personnels", "label": "sensitive"},
+        ]
+    }
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix=".yaml", encoding="utf-8", delete=False
+    ) as f:
+        path = Path(f.name)
+    try:
+        path.write_text(
+            yaml.dump(
+                sample, default_flow_style=False, allow_unicode=True, sort_keys=False
+            ),
+            encoding="utf-8",
+        )
+        scanner = DataScanner(
+            ml_patterns_path=str(path),
+            file_encoding="utf-8",
+        )
+        result = scanner.scan_column("notes", "個人情報")
+        assert result["sensitivity_level"] in ("MEDIUM", "HIGH")
+        assert result["pattern_detected"] != "GENERAL"
+    finally:
+        path.unlink(missing_ok=True)
+
+
+def test_ml_patterns_file_is_merged_with_default_terms():
+    """Regression #1195: profile ml_patterns must extend defaults, not replace them."""
+    from core.detector import _ml_terms_from_inline_or_file
+
+    sample = {"terms": [{"text": "個人情報", "label": "sensitive"}]}
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix=".yaml", encoding="utf-8", delete=False
+    ) as f:
+        path = Path(f.name)
+    try:
+        path.write_text(
+            yaml.dump(
+                sample, default_flow_style=False, allow_unicode=True, sort_keys=False
+            ),
+            encoding="utf-8",
+        )
+        terms = _ml_terms_from_inline_or_file(None, str(path), encoding="utf-8")
+        assert ("個人情報", 1) in terms
+        assert ("email", 1) in terms
+    finally:
+        path.unlink(missing_ok=True)

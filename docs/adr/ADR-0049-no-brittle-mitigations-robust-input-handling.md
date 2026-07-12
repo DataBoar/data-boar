@@ -5,6 +5,11 @@
 - **Authors:** Fabio Leitao
 - **Deciders:** Fabio Leitao
 
+### Status history
+
+- 2026-05-12 — Accepted
+- 2026-07-12 — Amended: detector ML path now avoids single-class `predict_proba` silent failures, merges profile ML terms with defaults, and adds deterministic declared-term fallback for exact matches outside entertainment contexts (#1195).
+
 ## Context
 
 Data Boar processes inputs from environments it does not control: filesystems with
@@ -76,6 +81,7 @@ call site.
   and log line — reviewers check for bare `except: continue`, `except Exception: pass`, or
   silent `None` returns in connector paths. Bandit rules B110 and B112 catch a subset of
   these automatically.
+- **Detection hardening (#1195):** the detector no longer swallows one-class ML probability indexing errors. When profile ML terms provide only one class, ML training is skipped with warning and declared exact terms still produce deterministic detection outside entertainment contexts.
 - **Watch:** Skipped items that affect the completeness of a compliance report must
   appear in the report output, not only in the session log — customers cannot read
   host-bound audit logs. Logging to `audit_YYYYMMDD.log` alone does not satisfy

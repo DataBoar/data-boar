@@ -831,29 +831,58 @@ def _load_ml_patterns(
     return out
 
 
+def _inline_ml_terms(
+    inline: list[dict[str, Any]] | list[tuple[str, int]] | None,
+) -> list[tuple[str, int]]:
+    """Normalize inline ml_terms into (text_lower, label_int) tuples."""
+    if not inline:
+        return []
+    out = []
+    for t in inline:
+        if isinstance(t, dict):
+            text = (t.get("text") or "").strip().lower()
+            label = 1 if t.get("label", "sensitive") in ("sensitive", 1, "1") else 0
+            if text:
+                out.append((text, label))
+        elif isinstance(t, (list, tuple)) and len(t) >= 2:
+            text = str(t[0]).strip().lower()
+            label = 1 if t[1] in (1, "1", "sensitive") else 0
+            if text:
+                out.append((text, label))
+    return out
+
+
+def _merge_ml_terms(*sources: list[tuple[str, int]]) -> list[tuple[str, int]]:
+    """
+    Merge ML terms preserving first-seen order, with later sources overriding labels.
+
+    Order is deterministic and additive: defaults + file + inline.
+    """
+    merged: dict[str, int] = {}
+    for src in sources:
+        for text, label in src:
+            if not text:
+                continue
+            norm = str(text).strip().lower()
+            if not norm:
+                continue
+            if norm not in merged:
+                merged[norm] = int(label)
+            else:
+                merged[norm] = int(label)
+    return list(merged.items())
+
+
 def _ml_terms_from_inline_or_file(
     inline: list[dict[str, Any]] | list[tuple[str, int]] | None,
     path: str | None,
     encoding: str = "utf-8",
     errors: str = "replace",
 ) -> list[tuple[str, int]]:
-    """ML training terms: prefer inline when non-empty; else file; else DEFAULT_ML_TERMS."""
-    if inline:
-        out = []
-        for t in inline:
-            if isinstance(t, dict):
-                text = (t.get("text") or "").strip().lower()
-                label = 1 if t.get("label", "sensitive") in ("sensitive", 1, "1") else 0
-                if text:
-                    out.append((text, label))
-            elif isinstance(t, (list, tuple)) and len(t) >= 2:
-                text = str(t[0]).strip().lower()
-                label = 1 if t[1] in (1, "1", "sensitive") else 0
-                if text:
-                    out.append((text, label))
-        if out:
-            return out
-    return _load_ml_patterns(path, encoding=encoding, errors=errors) or DEFAULT_ML_TERMS
+    """ML training terms are additive: defaults + file + inline."""
+    file_terms = _load_ml_patterns(path, encoding=encoding, errors=errors)
+    inline_terms = _inline_ml_terms(inline)
+    return _merge_ml_terms(DEFAULT_ML_TERMS, file_terms, inline_terms)
 
 
 def _load_dl_terms(
@@ -1156,9 +1185,13 @@ class SensitivityDetector:
             name: re.compile(pat) for name, (pat, _) in self.patterns.items()
         }
 
-        # ML terms: inline overrides file; file overrides default
+        # ML terms are additive: defaults + file + inline.
         ml_terms = _ml_terms_from_inline_or_file(
             ml_terms_inline, ml_patterns_path, encoding=enc, errors=err
+        )
+        declared_terms = _merge_ml_terms(
+            _load_ml_patterns(ml_patterns_path, encoding=enc, errors=err),
+            _inline_ml_terms(ml_terms_inline),
         )
         self._ml_available = False
         self._vectorizer = None
@@ -1166,11 +1199,23 @@ class SensitivityDetector:
         if _ML_AVAILABLE and ml_terms:
             texts = [t[0] for t in ml_terms]
             labels = [t[1] for t in ml_terms]
-            self._vectorizer = TfidfVectorizer(ngram_range=(1, 2), min_df=1)
-            X = self._vectorizer.fit_transform(texts)
-            self._model = RandomForestClassifier(n_estimators=100, random_state=42)
-            self._model.fit(X, labels)
-            self._ml_available = True
+            unique_labels = set(labels)
+            if len(unique_labels) < 2:
+                try:
+                    from utils.logger import get_logger
+
+                    get_logger().warning(
+                        "ML terms include only one class (%s); skipping ML training and using deterministic declared-term matching.",
+                        sorted(unique_labels),
+                    )
+                except Exception:
+                    pass
+            else:
+                self._vectorizer = TfidfVectorizer(ngram_range=(1, 2), min_df=1)
+                X = self._vectorizer.fit_transform(texts)
+                self._model = RandomForestClassifier(n_estimators=100, random_state=42)
+                self._model.fit(X, labels)
+                self._ml_available = True
 
         # DL terms: inline or from dl_patterns_path (same file format as ML)
         dl_terms = _load_dl_terms(
@@ -1237,6 +1282,11 @@ class SensitivityDetector:
         self._medium_confidence_threshold = max(
             1, min(69, self._medium_confidence_threshold)
         )
+        self._warned_single_class_ml = False
+        self._warned_ml_predict_proba = False
+        self._declared_sensitive_terms = tuple(
+            text for text, label in declared_terms if int(label) == 1
+        )
         # Optional: normalize column name (accents/separators) for ML/DL input only; default off.
         self._normalize_column_name_for_ml = bool(
             det.get("column_name_normalize_for_ml", False)
@@ -1276,6 +1326,61 @@ class SensitivityDetector:
         self._embedding_prototype_hint_min_similarity = max(
             50, min(100, self._embedding_prototype_hint_min_similarity)
         )
+
+    def _predict_ml_confidence(self, ml_dl_text: str) -> int:
+        """Return ML confidence in [0,100] with explicit single-class safeguards."""
+        if not (self._ml_available and self._model and self._vectorizer):
+            return 0
+        try:
+            X = self._vectorizer.transform([ml_dl_text.lower()])
+            proba = self._model.predict_proba(X)
+            classes = list(getattr(self._model, "classes_", []))
+            if not classes:
+                return 0
+            if len(classes) == 1:
+                cls = int(classes[0])
+                if not self._warned_single_class_ml:
+                    try:
+                        from utils.logger import get_logger
+
+                        get_logger().warning(
+                            "ML predict_proba produced single-class output (%s); using class-aware confidence mapping.",
+                            classes,
+                        )
+                    except Exception:
+                        pass
+                    self._warned_single_class_ml = True
+                if cls == 1:
+                    return int(round(float(proba[0][0]) * 100))
+                return 0
+            if 1 not in classes:
+                return 0
+            positive_idx = classes.index(1)
+            return int(round(float(proba[0][positive_idx]) * 100))
+        except Exception as exc:
+            if not self._warned_ml_predict_proba:
+                try:
+                    from utils.logger import get_logger
+
+                    get_logger().warning(
+                        "ML predict_proba fallback to zero confidence due to %s: %s",
+                        type(exc).__name__,
+                        str(exc)[:200],
+                    )
+                except Exception:
+                    pass
+                self._warned_ml_predict_proba = True
+            return 0
+
+    def _declared_sensitive_term_match(self, text: str) -> bool:
+        """Deterministic fallback: exact declared sensitive term appears in scan text."""
+        haystack = (text or "").lower()
+        if not haystack:
+            return False
+        for term in self._declared_sensitive_terms:
+            if term and term in haystack:
+                return True
+        return False
 
     def analyze(
         self,
@@ -1326,14 +1431,7 @@ class SensitivityDetector:
                 continue
             found_patterns.append((name, norm_tag))
 
-        ml_confidence = 0
-        if self._ml_available and self._model and self._vectorizer:
-            try:
-                X = self._vectorizer.transform([ml_dl_text.lower()])
-                prob = self._model.predict_proba(X)[0][1]
-                ml_confidence = int(round(prob * 100))
-            except Exception:
-                pass
+        ml_confidence = self._predict_ml_confidence(ml_dl_text)
 
         # Hybrid DL step: when available, combine with ML (take max to avoid missing semantic matches)
         dl_confidence = 0
@@ -1374,6 +1472,17 @@ class SensitivityDetector:
                 "HIGH",
                 "DOB_POSSIBLE_MINOR",
                 "LGPD Art. 14 – possible minor data; GDPR Art. 8",
+                max(combined_confidence, 80),
+            )
+        if (
+            not entertainment_context
+            and not found_patterns
+            and self._declared_sensitive_term_match(ml_dl_text)
+        ):
+            return (
+                "HIGH",
+                "DECLARED_TERM_MATCH",
+                "Declared compliance term exact match",
                 max(combined_confidence, 80),
             )
         # Ambiguous column names (doc_id, document_id, etc.): flag for review but MEDIUM priority and ask operator to confirm.
