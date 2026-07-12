@@ -24,6 +24,8 @@ python scripts/plans_hub_sync.py --write
 
 **Tabela completa:** abra **[PLANS_HUB.md](PLANS_HUB.md)** (Markdown Preview recomendado para linhas largas).
 
+**Snapshot PMO (2026-07-12):** trust-floor do post4 fechado com merge das issues **#1194 #1195 #1201 #1202 #1137 #1198 #1130** via PRs **#1203–#1209** e **#1214**; follow-ups **#1210** (merge-secrets), **#1211** (integrity fail-open) e **#1212** (GRACE) estão na fila de open issues em **PLANS_TODO**.
+
 **Documentos meta** (papéis): ver a seção *Meta documents* no **PLANS_HUB.md** em inglês.
 
 **Narrativa de posicionamento (sem valor jurídico):** metáfora **data soup** + ingredientes “esquecidos” e descoberta **opt-in** empilhada — ver parágrafo **Positioning narrative** no [PLANS_HUB.md](PLANS_HUB.md) e bullet correspondente em [PLANS_TODO.md](PLANS_TODO.md) (**Integration / active threads**).
