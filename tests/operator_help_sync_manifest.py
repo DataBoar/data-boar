@@ -159,11 +159,12 @@ OPERATOR_HELP_MARKERS: tuple[OperatorHelpMarker, ...] = (
         _MAN_JURISDICTION_HINT,
     ),
     # Dev canonical invocation is python main.py; installed entry point is data-boar.
+    # Man pages document installed usage, so man1 is intentionally skipped here.
     OperatorHelpMarker(
         "python_main_invocation",
         "python main.py --config config.yaml",
         "python main.py --config config.yaml",
-        "python main.py",
+        None,
     ),
     OperatorHelpMarker("api_host_env", "API_HOST", "API_HOST", "API_HOST"),
     OperatorHelpMarker("bind_loopback", "127.0.0.1", "127.0.0.1", "127.0.0.1"),
