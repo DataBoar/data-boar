@@ -8,7 +8,9 @@ Used by Phase A of the secrets plan: UI never shows or writes plain secrets.
 from __future__ import annotations
 
 import copy
+import re
 from typing import Any
+from urllib.parse import parse_qsl, quote, urlencode, urlsplit, urlunsplit
 
 # Placeholder shown in UI instead of secret values; also used to detect "do not overwrite" on save
 REDACTED_PLACEHOLDER = "# REDACTED - set via env or vault"
@@ -31,6 +33,13 @@ _SECRET_SUBSTRINGS = frozenset(
 
 # Keys that contain a substring above but are not secrets (e.g. OAuth token_url is a URL).
 _SECRET_KEY_ALLOWLIST = frozenset({"token_url"})
+_INLINE_SECRET_PLACEHOLDER = "***"
+_URL_QUERY_SECRET_SUBSTRINGS = frozenset(
+    {"password", "pwd", "secret", "token", "api_key", "apikey", "pass"}
+)
+_GENERIC_KV_SECRET_RE = re.compile(
+    r"(?i)(\b(?:password|pwd|secret|token|api_key|apikey|pass)\b\s*[:=]\s*)([^;\s,&]+)"
+)
 
 
 def _is_secret_key(key: str) -> bool:
@@ -38,6 +47,48 @@ def _is_secret_key(key: str) -> bool:
     if k in _SECRET_KEY_ALLOWLIST:
         return False
     return any(sub in k for sub in _SECRET_SUBSTRINGS)
+
+
+def _is_sensitive_query_key(key: str) -> bool:
+    k = key.strip().lower()
+    return any(sub in k for sub in _URL_QUERY_SECRET_SUBSTRINGS)
+
+
+def _redact_url_like_string(value: str) -> str:
+    if "://" not in value:
+        return value
+    split = urlsplit(value)
+    if not split.scheme:
+        return value
+    out_netloc = split.netloc
+    if split.username is not None and split.password is not None:
+        username = quote(split.username, safe="")
+        host = split.hostname or ""
+        if ":" in host and not host.startswith("["):
+            host = f"[{host}]"
+        port_part = f":{split.port}" if split.port is not None else ""
+        out_netloc = f"{username}:{_INLINE_SECRET_PLACEHOLDER}@{host}{port_part}"
+    pairs = parse_qsl(split.query, keep_blank_values=True)
+    if pairs:
+        redacted_pairs = [
+            (k, _INLINE_SECRET_PLACEHOLDER if _is_sensitive_query_key(k) else v)
+            for k, v in pairs
+        ]
+        out_query = urlencode(redacted_pairs, doseq=True)
+    else:
+        out_query = split.query
+    return urlunsplit((split.scheme, out_netloc, split.path, out_query, split.fragment))
+
+
+def _redact_generic_key_value_pairs(value: str) -> str:
+    return _GENERIC_KV_SECRET_RE.sub(
+        lambda m: f"{m.group(1)}{_INLINE_SECRET_PLACEHOLDER}", value
+    )
+
+
+def _redact_inline_string_secrets(value: str) -> str:
+    url_redacted = _redact_url_like_string(value)
+    return _redact_generic_key_value_pairs(url_redacted)
 
 
 def _redact_value(val: Any) -> Any:
@@ -68,9 +119,12 @@ def _walk_redact(obj: Any, in_api: bool = False) -> Any:
                 else:
                     out[k] = copy.deepcopy(v)
             else:
-                out[k] = _walk_redact(
-                    v, in_api=(in_api or (isinstance(k, str) and k == "api"))
-                )
+                if isinstance(v, str):
+                    out[k] = _redact_inline_string_secrets(v)
+                else:
+                    out[k] = _walk_redact(
+                        v, in_api=(in_api or (isinstance(k, str) and k == "api"))
+                    )
         return out
     if isinstance(obj, list):
         return [_walk_redact(i, in_api) for i in obj]
@@ -104,6 +158,12 @@ def _walk_merge(
         ):
             return current
         return submitted
+
+    if isinstance(submitted, str) and isinstance(current, str):
+        if submitted.strip() == REDACTED_PLACEHOLDER:
+            return current
+        if submitted == _redact_inline_string_secrets(current):
+            return current
 
     if isinstance(submitted, dict) and isinstance(current, dict):
         out = dict(current)
