@@ -243,7 +243,7 @@ O Excel é salvo na pasta de downloads do navegador; o mapa de calor PNG é gera
 | `GET`   | `/list`                             | Lista sessões anteriores (JSON). A lista HTML fica em `/en/reports` ou `/pt-br/reports`.                |
 | `GET`   | `/reports/{session_id}`             | Gera (se necessário) e baixa o relatório Excel para a sessão indicada.                                  |
 | `GET`   | `/heatmap/{session_id}`             | Gera (se necessário) e baixa o heatmap PNG para a sessão indicada.                                      |
-| `GET`   | `/logs/{session_id}`                | Baixa o primeiro arquivo de log que contiver o `session_id` informado (análise detalhada da sessão).    |
+| `GET`   | `/logs/{session_id}`                | Baixa o log da sessão (`match` por conteúdo primeiro; fallback por dia UTC para `audit_YYYYMMDD.log` quando necessário), para análise detalhada da sessão. |
 | `POST`  | `/auth/webauthn/registration/options` | **Opcional.** Com **`api.webauthn.enabled`**, devolve JSON de criação WebAuthn + `state` opaco (ADR 0033, EN). |
 | `POST`  | `/auth/webauthn/registration/verify` | **Opcional.** Verifica registro; grava passkey no SQLite; define cookie de sessão. |
 | `POST`  | `/auth/webauthn/authentication/options` | **Opcional.** Opções de autenticação + `state`. |

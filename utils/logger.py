@@ -5,6 +5,7 @@ On violation: log and print to console immediately so operator is notified on th
 
 import logging
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 from core.validation import sanitize_log_text
@@ -12,6 +13,32 @@ from utils.audit_log_display import sanitize_target_name_for_audit_log
 
 _LOGGER: logging.Logger | None = None
 _VIOLATION_HANDLER: logging.Handler | None = None
+_AUDIT_LOG_DIR: Path | None = None
+
+
+def configure_audit_log_directory(log_dir: str | Path | None) -> None:
+    """
+    Configure the directory used by the unified audit logger.
+
+    Passing ``None`` restores default behaviour (current working directory).
+    Reconfiguring resets handlers so subsequent writes use the new destination.
+    """
+    global _LOGGER, _AUDIT_LOG_DIR
+    resolved: Path | None = None
+    if log_dir is not None:
+        raw = Path(str(log_dir).strip())
+        if str(raw):
+            resolved = raw.resolve()
+    if resolved == _AUDIT_LOG_DIR:
+        return
+    _AUDIT_LOG_DIR = resolved
+    if _LOGGER is not None:
+        for handler in list(_LOGGER.handlers):
+            try:
+                handler.close()
+            finally:
+                _LOGGER.removeHandler(handler)
+        _LOGGER = None
 
 
 def get_logger(session_id: str | None = None) -> logging.Logger:
@@ -21,7 +48,12 @@ def get_logger(session_id: str | None = None) -> logging.Logger:
         _LOGGER = logging.getLogger("LGPDAudit")
         _LOGGER.setLevel(logging.INFO)
         _LOGGER.handlers.clear()
-        log_file = f"audit_{datetime.now(timezone.utc).strftime('%Y%m%d')}.log"
+        log_name = f"audit_{datetime.now(timezone.utc).strftime('%Y%m%d')}.log"
+        log_file = (
+            _AUDIT_LOG_DIR / log_name if _AUDIT_LOG_DIR is not None else Path(log_name)
+        )
+        if _AUDIT_LOG_DIR is not None:
+            _AUDIT_LOG_DIR.mkdir(parents=True, exist_ok=True)
         fh = logging.FileHandler(log_file, encoding="utf-8")
         ch = logging.StreamHandler()
         formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")

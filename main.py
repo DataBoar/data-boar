@@ -700,7 +700,7 @@ def main() -> None:
         _emit_runtime_trust_info(runtime_trust, to_stdout=False, to_stderr=True)
         from core.dsar_export import build_dsar_payload
 
-        engine = AuditEngine(config)
+        engine = AuditEngine(config, config_path=args.config)
         try:
             payload = build_dsar_payload(
                 engine.db_manager,
@@ -735,7 +735,7 @@ def main() -> None:
             sys.exit(2)
         from core.audit_export import build_audit_trail_payload
 
-        engine = AuditEngine(config)
+        engine = AuditEngine(config, config_path=args.config)
         try:
             sqlite_path = config.get("sqlite_path", "audit_results.db")
             payload = build_audit_trail_payload(
@@ -759,7 +759,7 @@ def main() -> None:
         if demo_mode:
             from core.validation import sanitize_tenant_technician
 
-            engine = AuditEngine(config)
+            engine = AuditEngine(config, config_path=args.config)
             try:
                 _emit_runtime_trust_info(runtime_trust, to_stdout=True, to_stderr=True)
                 tenant = sanitize_tenant_technician(args.tenant)
@@ -887,7 +887,7 @@ def main() -> None:
         uvicorn.run(app, **uvicorn_kwargs)
         return
 
-    engine = AuditEngine(config)
+    engine = AuditEngine(config, config_path=args.config)
 
     if args.reset_data:
         _emit_runtime_trust_info(runtime_trust, to_stdout=True, to_stderr=True)
