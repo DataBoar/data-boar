@@ -162,6 +162,7 @@ Use this section for **narrative** ties that are awkward to express per row. Kee
 
 - **Detection & reporting:** sensitivity, FN reduction, content-type, aggregated identification, minors, notifications — see hub rows and **PLANS_TODO** detection cluster.
 - **Security & supply chain:** **PyPI path:** **`uv.lock`** + CI **`pip-audit`** + **Dependabot**; **GitHub Actions** pinned to **commit SHAs** in CI/CodeQL/Semgrep/slack-ops-digest (bump via Dependabot). Plus Semgrep, Bandit, secrets/vault, HTTPS/dashboard risk, release integrity, **SBOM** roadmap (**ADR 0003**) — align with **Priority band A** in **PLANS_TODO**.
+- **PMO snapshot (2026-07-12):** post4 trust-floor closure merged issues **#1194 #1195 #1201 #1202 #1137 #1198 #1130** via PRs **#1203–#1209** and **#1214**; queued follow-ups **#1210** (merge-secrets), **#1211** (integrity fail-open), **#1212** (GRACE) are now tracked in **PLANS_TODO** open-issues rows.
 - **Connectors & data soup:** object storage, SAP, HR/ERP, compressed files, additional formats — often sequenced after core stability; check **PLANS_TODO** order.
 
 **See also:** [README.md](../README.md) documentation index (**Internal and reference**), [CONTRIBUTING.md](../../CONTRIBUTING.md), [AGENTS.md](../../AGENTS.md).
