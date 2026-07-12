@@ -174,6 +174,45 @@ def test_sql_connector_run_saves_inventory_row(tmp_path):
     assert kwargs["product"] == "sqlite"
 
 
+def test_sql_connector_run_sqlite_sampling_persists_findings_without_sampling_error(
+    tmp_path,
+):
+    """Regression #1194: sampling must produce findings without sampling_error side effects."""
+    db_path = tmp_path / "sampling_scan.db"
+    conn = sqlite3.connect(str(db_path))
+    conn.execute("CREATE TABLE people (email TEXT)")
+    conn.execute("INSERT INTO people VALUES ('alice@example.com')")
+    conn.execute("INSERT INTO people VALUES ('bob@example.com')")
+    conn.commit()
+    conn.close()
+
+    target = {
+        "type": "database",
+        "driver": "sqlite",
+        "database": str(db_path),
+        "name": "SQLiteSamplingTarget",
+    }
+    scanner = MagicMock()
+    scanner.scan_column.return_value = {
+        "sensitivity_level": "HIGH",
+        "pattern_detected": "EMAIL",
+        "norm_tag": "Personal email",
+        "ml_confidence": 95,
+    }
+    db_manager = MagicMock()
+    connector = SQLConnector(target, scanner, db_manager)
+    connector.run()
+
+    scanner.scan_column.assert_called()
+    db_manager.save_finding.assert_called()
+    sampling_failures = [
+        call.args[1]
+        for call in db_manager.save_failure.call_args_list
+        if len(call.args) >= 2
+    ]
+    assert SCAN_FAILURE_REASON_SAMPLING_ERROR not in sampling_failures
+
+
 def test_discover_fallback_no_schemas_returns_list():
     """_discover_fallback_no_schemas returns a list (empty or with tables)."""
     engine = create_engine("sqlite:///:memory:")
@@ -283,12 +322,16 @@ def test_sql_connector_sample_syntax_error_records_scan_failure():
     connector = SQLConnector(target, scanner, db_manager, sample_limit=5)
     connector.engine = MagicMock()
     connector.engine.dialect.name = "mssql"
-    connector._connection = MagicMock()
-    ctx = MagicMock()
-    connector._connection.begin.return_value = ctx
-    ctx.__enter__ = MagicMock(return_value=None)
-    ctx.__exit__ = MagicMock(return_value=False)
-    connector._connection.execute.side_effect = ProgrammingError(
+    conn_ctx = MagicMock()
+    conn = MagicMock()
+    connector.engine.connect.return_value = conn_ctx
+    conn_ctx.__enter__.return_value = conn
+    conn_ctx.__exit__.return_value = False
+    tx_ctx = MagicMock()
+    conn.begin.return_value = tx_ctx
+    tx_ctx.__enter__.return_value = None
+    tx_ctx.__exit__.return_value = False
+    conn.execute.side_effect = ProgrammingError(
         "SELECT",
         {},
         Exception("Incorrect syntax near 'OPTION'"),
