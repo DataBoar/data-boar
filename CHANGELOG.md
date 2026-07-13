@@ -12,6 +12,29 @@ Human-readable summary of user-facing changes. **Detailed release notes:** [docs
 
 ---
 
+## 1.7.4.post4 (pending PyPI dispatch)
+
+> Post-release on the **`1.7.4`** public line. **`[project] version = 1.7.4.post4`** and **`[tool.databoar] maturity_build = 225`** (`N=14` fixes since post3 baseline, ADR-0073 dual counter policy).
+
+### Fixed (post4)
+
+- **API logs hardening / demo retrieval:** fixed `/logs` fallback path-injection sink and resolved demo session audit-log retrieval on `/logs/{session_id}`.
+- **Help invocation contract:** aligned help text for dev (`python main.py`) vs installed (`data-boar`) usage surfaces.
+- **Prefilter recall parity:** prefilter now preserves findings parity when profile signals are active.
+- **Config redaction:** DSN/URL embedded credentials are now redacted in `/config`.
+- **Web exposure hardening:** safe-by-default API exposure updates and follow-up import-cycle/logging remediations.
+- **Report safety:** all XLSX exports route through formula-injection sanitization.
+- **Detector hardening:** one-class compliance-term detection is stabilized.
+- **SQL connector robustness:** sampling transaction isolation per connection.
+- **CI governance:** operator-gated reopen action pins restored.
+- **RBAC hardening:** default-deny route map and `compare_digest` byte-safe checks.
+
+### Notes
+
+- Full fix set used for `N=14` is listed in [docs/releases/1.7.4.post4.md](docs/releases/1.7.4.post4.md).
+
+---
+
 ## 1.7.4.post3 (pending PyPI dispatch)
 
 > Post-release on the **`1.7.4`** public line. **`[project] version = 1.7.4.post3`** and **`[tool.databoar] maturity_build = 211`** (ADR-0073 dual counter policy).
