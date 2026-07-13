@@ -76,7 +76,7 @@ dependencies = [
     "openpyxl>=3.1.5",
     "packaging>=26.1",
     "pandas>=3.0.3",
-    "pillow>=12.2.0",
+    "pillow>=12.3.0",
     "pycparser>=3.0 ; implementation_name != 'PyPy' and platform_python_implementation != 'PyPy'",
     "pydantic>=2.13.2",
     "pydantic-core>=2.46.2",
@@ -304,4 +304,4 @@ dev = [
 # Operator-only maturity octet (ADR-0073). Never copy into [project].version.
 # postN <-> maturity_build map: docs/releases/1.7.4.post3.md (canonical; includes post1/post2 rows).
 [tool.databoar]
-maturity_build = 225
+maturity_build = 226

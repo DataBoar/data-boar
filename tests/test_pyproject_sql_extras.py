@@ -64,7 +64,7 @@ def test_sql_optional_extras_present() -> None:
 def test_maturity_build_bumped_for_packaging_fix() -> None:
     data = _load_pyproject()
     maturity = data.get("tool", {}).get("databoar", {}).get("maturity_build")
-    assert maturity == 225
+    assert maturity == 226
 
 
 def test_version_is_174_post_release_not_semver_bump() -> None:
