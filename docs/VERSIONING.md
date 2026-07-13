@@ -96,6 +96,9 @@ When **`1.7.4`** is already on PyPI and a packaging fix must ship without a new 
 
 **Marketing line** stays **`1.7.4`** (README, man); **build line** is **`1.7.4.postN`**. Maintain the **`postN ↔ maturity_build` map** in [`docs/releases/`](releases/) — e.g. [`1.7.4.post1.md`](releases/1.7.4.post1.md): `1.7.4=.201 · 1.7.4.post1=.202`.
 
+For every **new** `X.Y.Z.postN` note, make the unpublished interval explicit: add one row per intermediate `maturity_build` as `*(fix, unpublished on PyPI)*` between `post(N-1)` and `postN`. Do not compress that interval into a single “N fixes” summary.
+In that map, keep **Notes** as short effect prose (with `#issue` when known), not raw commit subjects. Keep git-literal proof (`fix(...)` subjects + hashes) only in an **Appendix — Fix set (N=...)** section.
+
 ---
 
 ## Pre-release flow (`-beta` / `-rc`) before final publish
