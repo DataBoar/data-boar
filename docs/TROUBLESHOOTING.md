@@ -93,7 +93,14 @@ pipx install --python python3.12 data-boar
 ### Void-glibc vs Void-musl
 
 - **Void-glibc:** currently passes in the default path (`pipx install data-boar`) because PyPI publishes a compatible `cp314` wheel.
-- **Void-musl:** currently not frictionless in the same path; available wheelhouse is `cp312` while host Python is 3.14. Use Docker, or wait for `cp314` wheelhouse coverage in [#1182](https://github.com/DataBoar/data-boar/issues/1182).
+- **Void-musl:** wheelhouse seed is now available for the missing musllinux `cp314` wheel (`scikit-learn`, auditwheel-repaired). Use:
+
+```bash
+pipx install data-boar \
+  --pip-args="--find-links https://github.com/DataBoar/data-boar-site/releases/download/wheelhouse-2026-07-12/scikit_learn-1.9.0-cp314-cp314-musllinux_1_2_x86_64.whl"
+```
+
+If this wheelhouse URL is unavailable in your environment, use Docker or install local build prerequisites.
 
 ### Alpine/musl: wheelhouse or build toolchain
 
