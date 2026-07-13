@@ -96,6 +96,9 @@ Quando **`1.7.4`** já está no PyPI e um fix de empacotamento precisa sair sem 
 
 **Linha pública** permanece **`1.7.4`** (README, man); **linha de build** é **`1.7.4.postN`**. Manter o **mapa `postN ↔ maturity_build`** em [`docs/releases/`](releases/) — ex.: [`1.7.4.post1.md`](releases/1.7.4.post1.md): `1.7.4=.201 · 1.7.4.post1=.202`.
 
+Para cada nota nova `X.Y.Z.postN`, deixe o intervalo unpublished explícito: inclua uma linha por `maturity_build` intermediário como `*(fix, unpublished on PyPI)*` entre `post(N-1)` e `postN`. Não comprima esse intervalo em uma linha única de “N fixes”.
+Nesse mapa, mantenha a coluna **Notes** em prosa curta de efeito (com `#issue` quando houver), não em subject cru de commit. A prova git-literal (`fix(...)` + hash) fica apenas no **Appendix — Fix set (N=...)**.
+
 ---
 
 ## Fluxo de pré-release (`-beta` / `-rc`) antes do publish final
