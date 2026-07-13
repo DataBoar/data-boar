@@ -64,11 +64,11 @@ def test_sql_optional_extras_present() -> None:
 def test_maturity_build_bumped_for_packaging_fix() -> None:
     data = _load_pyproject()
     maturity = data.get("tool", {}).get("databoar", {}).get("maturity_build")
-    assert maturity == 211
+    assert maturity == 225
 
 
 def test_version_is_174_post_release_not_semver_bump() -> None:
     version = _load_pyproject().get("project", {}).get("version")
-    assert version == "1.7.4.post3"
+    assert version == "1.7.4.post4"
     assert not str(version).startswith("1.7.5")
     assert not str(version).startswith("1.8.")
