@@ -121,4 +121,4 @@ docs/private/homelab/
   reports/                     <- snapshots JSON LAB-ROUTER-01 + host reports
 ```
 
-See also: `.cursor/skills/homelab-lab-op-data/SKILL.md` (workflow detalhado por sistema).
+See also: `.cursor/private/skills/homelab-lab-op-data/SKILL.md` (workflow detalhado por sistema).

@@ -27,5 +27,5 @@ Any **talent-ats** output, **LinkedIn/ATS recommendation** for pool candidates, 
 ## Canonical references
 
 - **`docs/ops/LINKEDIN_ATS_PLAYBOOK.md`** section **8** (EN) / **`.pt_BR.md`** (pt-BR).
-- **`.cursor/skills/candidate-ats-evaluation/SKILL.md`** — Locale subsection.
+- **`.cursor/private/skills/candidate-ats-evaluation/SKILL.md`** — Locale subsection.
 - Session keyword **`talent-ats`** in **`.cursor/rules/session-mode-keywords.mdc`**.

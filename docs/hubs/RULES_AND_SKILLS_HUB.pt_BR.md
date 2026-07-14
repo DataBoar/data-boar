@@ -6,8 +6,10 @@
 
 ## Resumo
 
+Runbooks só do operador ficam em **gitignored** `.cursor/private/skills/` (#1191).
+
 - **Regras:** 72 arquivos `.mdc` (18 always-on, 54 situacionais).
-- **Skills:** 31 pastas com `SKILL.md`.
+- **Skills:** 26 pastas com `SKILL.md`.
 - **Keywords de sessão:** 7 tokens em `session-mode-keywords.mdc`.
 
 Abra o arquivo em inglês para a tabela completa (evita drift entre dois corpos grandes).
