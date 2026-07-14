@@ -175,7 +175,7 @@ foreach ($pdf in $pdfs) {
         "## 5. Observacoes do Operador"
         ""
         "> **NOTA:** Gerado automaticamente por ``scripts/ats-candidate-import.ps1``."
-        "> Para avaliacao detalhada, analise o PDF com o agente de IA e a skill ``candidate-ats-evaluation``."
+        "> Para avaliacao detalhada, analise o PDF com o agente de IA e a skill ``.cursor/private/skills/candidate-ats-evaluation/SKILL.md``."
         ""
         "_(Campo livre para anotacoes adicionais)_"
     ) -join "`n"
