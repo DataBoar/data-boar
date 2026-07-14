@@ -197,6 +197,7 @@ Write-Host ""
 Write-Host "Gerados: $gerados  |  Ja existiam: $existentes  |  Erros: $erros" -ForegroundColor White
 Write-Host ""
 Write-Host "Proximo passo: revise os arquivos em $OutDir" -ForegroundColor Yellow
-Write-Host "Para analise detalhada: use .cursor/skills/candidate-ats-evaluation/SKILL.md" -ForegroundColor Yellow
+        Write-Host "Para analise detalhada: use .cursor/private/skills/candidate-ats-evaluation/SKILL.md" -ForegroundColor Yellow
+
 
 Pop-Location

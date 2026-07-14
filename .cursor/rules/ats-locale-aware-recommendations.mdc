@@ -3,7 +3,8 @@ description: Talent ATS / LinkedIn recommendations — locale-aware. Situational
 globs:
   - docs/ops/LINKEDIN_ATS_PLAYBOOK*
   - docs/private.example/commercial/**
-  - .cursor/skills/candidate-ats-evaluation/**
+  - .cursor/private/skills/candidate-ats-evaluation/**
+
 alwaysApply: false
 ---
 

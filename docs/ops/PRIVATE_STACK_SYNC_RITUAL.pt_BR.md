@@ -41,4 +41,5 @@ Quando o operador pedir **conferir alinhamento**, **drift**, **sync do históric
 - **`docs/ops/PRIVATE_LOCAL_VERSIONING.md`**
 - **`scripts/private-git-sync.ps1`**
 - **`docs/PRIVATE_OPERATOR_NOTES.md`**
-- **Skill:** **`.cursor/skills/stacked-private-sync/SKILL.md`**
+- **Skill (template público):** **`.cursor/skills/stacked-private-sync/SKILL.md`**.
+- **Runbook do operador (gitignored):** **`.cursor/private/skills/stacked-private-sync/SKILL.md`** (#1191).

@@ -41,4 +41,6 @@ When the operator asks to **verify alignment**, **check drift**, **sync private 
 - **`docs/ops/PRIVATE_LOCAL_VERSIONING.md`** — nested Git pattern and safety.
 - **`scripts/private-git-sync.ps1`** — feedback inbox mirror + commit + optional push.
 - **`docs/PRIVATE_OPERATOR_NOTES.md`** — layout and confidentiality.
-- **Skill:** **`.cursor/skills/stacked-private-sync/SKILL.md`**.
+- **Skill (public template):** **`.cursor/skills/stacked-private-sync/SKILL.md`**.
+- **Operator runbook (gitignored):** **`.cursor/private/skills/stacked-private-sync/SKILL.md`** (#1191).
+
