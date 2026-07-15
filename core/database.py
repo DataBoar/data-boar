@@ -5,6 +5,8 @@ Session id comes from core.session (UUID + timestamp); set via set_current_sessi
 """
 
 from datetime import datetime, timezone
+import os
+import socket
 from typing import Any
 
 from sqlalchemy import (
@@ -44,7 +46,10 @@ class ScanSession(Base):
     session_id = Column(String(64), unique=True, nullable=False, index=True)
     started_at = Column(DateTime, default=_utc_now)
     finished_at = Column(DateTime, nullable=True)
-    status = Column(String(20), default="running")  # running, completed, failed
+    status = Column(
+        String(20), default="running"
+    )  # running, completed, failed, interrupted
+
     tenant_name = Column(
         String(255), nullable=True
     )  # optional customer/tenant for this scan
@@ -57,6 +62,9 @@ class ScanSession(Base):
     jurisdiction_hint = Column(
         Integer, default=0
     )  # 1 = operator opted in to heuristic jurisdiction Report info rows for this session
+    # Process liveness for orphan reaper (#1251). NULL = legacy / unknown → reapable.
+    pid = Column(Integer, nullable=True)
+    owner_hostname = Column(String(255), nullable=True)
 
 
 class DatabaseFinding(Base):
@@ -316,6 +324,7 @@ class LocalDBManager:
         self._ensure_technician_column()
         self._ensure_config_scope_hash_column()
         self._ensure_jurisdiction_hint_column()
+        self._ensure_session_pid_columns()
         self._ensure_data_source_inventory_table()
         self._ensure_notification_send_log_table()
         self._ensure_maturity_assessment_answers_table()
@@ -327,6 +336,8 @@ class LocalDBManager:
         self._ensure_content_fingerprint_column()
         self._session_factory = sessionmaker(bind=self.engine, expire_on_commit=False)
         self._current_session_id: str | None = None
+        # Crash-recovery: mark dead-PID / legacy-NULL orphans as interrupted (#1251).
+        self.reap_orphaned_running_sessions()
 
     def _ensure_tenant_column(self) -> None:
         """Add tenant_name column to scan_sessions if missing (migration for existing DBs)."""
@@ -391,6 +402,25 @@ class LocalDBManager:
                     )
                 )
                 conn.commit()
+
+    def _ensure_session_pid_columns(self) -> None:
+        """Add pid / owner_hostname for orphan reaper (#1251)."""
+        with self.engine.connect() as conn:
+            cols = {
+                row[1]
+                for row in conn.execute(
+                    text("PRAGMA table_info(scan_sessions)")
+                ).fetchall()
+            }
+            if "pid" not in cols:
+                conn.execute(text("ALTER TABLE scan_sessions ADD COLUMN pid INTEGER"))
+            if "owner_hostname" not in cols:
+                conn.execute(
+                    text(
+                        "ALTER TABLE scan_sessions ADD COLUMN owner_hostname VARCHAR(255)"
+                    )
+                )
+            conn.commit()
 
     def _ensure_aggregated_table(self) -> None:
         """Create aggregated_identification_risk table if it does not exist."""
@@ -1380,6 +1410,8 @@ class LocalDBManager:
                     technician_name=(technician_name or None),
                     config_scope_hash=(config_scope_hash or None),
                     jurisdiction_hint=1 if jurisdiction_hint else 0,
+                    pid=os.getpid(),
+                    owner_hostname=socket.gethostname() or None,
                 )
             )
             session.commit()
@@ -1448,6 +1480,7 @@ class LocalDBManager:
             session.close()
 
     def finish_session(self, session_id: str, status: str = "completed") -> None:
+        """Mark a session terminal. Does not overwrite a session that already left ``running`` (#1251)."""
         session = self._session_factory()
         try:
             rec = (
@@ -1455,7 +1488,7 @@ class LocalDBManager:
                 .filter(ScanSession.session_id == session_id)
                 .first()
             )
-            if rec:
+            if rec and rec.status == "running":
                 rec.finished_at = datetime.now(timezone.utc)
                 rec.status = status
                 session.commit()
@@ -1464,6 +1497,72 @@ class LocalDBManager:
             raise
         finally:
             session.close()
+
+    @staticmethod
+    def pid_is_alive(pid: int | None) -> bool:
+        """True if ``pid`` refers to a live process (PermissionError = alive other-user)."""
+        if pid is None or int(pid) <= 0:
+            return False
+        try:
+            os.kill(int(pid), 0)
+        except ProcessLookupError:
+            return False
+        except PermissionError:
+            return True
+        except OSError:
+            return False
+        return True
+
+    def reap_orphaned_running_sessions(self) -> int:
+        """
+        Mark ``running`` sessions as ``interrupted`` when their owner PID is dead or
+        unknown (NULL legacy rows). Never reap a live PID on this host (#1251).
+
+        Uses a conditional ``UPDATE … WHERE status='running'`` so a concurrent
+        ``finish_session(..., completed)`` cannot be overwritten (TOCTOU-safe).
+
+        Sessions with ``owner_hostname`` set to a *different* host are left alone
+        (shared DB / multi-host safe).
+        """
+        local_host = socket.gethostname() or ""
+        session = self._session_factory()
+        reaped = 0
+        try:
+            rows = (
+                session.query(ScanSession).filter(ScanSession.status == "running").all()
+            )
+            now = datetime.now(timezone.utc)
+            for rec in rows:
+                host = getattr(rec, "owner_hostname", None)
+                if host and local_host and host != local_host:
+                    continue
+                pid = getattr(rec, "pid", None)
+                if self.pid_is_alive(pid):
+                    continue
+                # Atomic terminal write: skip if status already left running.
+                result = session.execute(
+                    text(
+                        "UPDATE scan_sessions SET status = :st, finished_at = :fa "
+                        "WHERE session_id = :sid AND status = 'running'"
+                    ),
+                    {
+                        "st": "interrupted",
+                        # ISO string avoids sqlite3 datetime adapter DeprecationWarning
+                        # on Python 3.12+ when binding via raw text().
+                        "fa": now.isoformat(),
+                        "sid": rec.session_id,
+                    },
+                )
+                if result.rowcount:
+                    reaped += 1
+            if reaped:
+                session.commit()
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
+        return reaped
 
     def get_current_findings_count(self) -> int:
         sid = self._current_session_id

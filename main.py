@@ -28,6 +28,28 @@ def _cli_public_version_line() -> str:
     return f"Data Boar {_package_version()}"
 
 
+def _install_scan_interrupt_signal_handlers() -> None:
+    """Map SIGTERM to KeyboardInterrupt so engine finally marks ``interrupted`` (#1251)."""
+    import signal
+
+    def _raise_keyboard_interrupt(signum, frame):  # type: ignore[no-untyped-def]
+        raise KeyboardInterrupt()
+
+    if hasattr(signal, "SIGTERM"):
+        try:
+            signal.signal(signal.SIGTERM, _raise_keyboard_interrupt)
+        except (ValueError, OSError):
+            # Not the main thread / platform rejects — best-effort only.
+            pass
+
+
+def _finish_session_interrupted_if_running(engine: AuditEngine) -> None:
+    """Mark current session interrupted when still ``running`` (idempotent vs engine finally)."""
+    sid = engine.db_manager.current_session_id
+    if sid:
+        engine.db_manager.finish_session(sid, "interrupted")
+
+
 def _emit_runtime_trust_info(
     snapshot: dict[str, Any], *, to_stdout: bool = True, to_stderr: bool = True
 ) -> None:
@@ -759,6 +781,7 @@ def main() -> None:
         if demo_mode:
             from core.validation import sanitize_tenant_technician
 
+            _install_scan_interrupt_signal_handlers()
             engine = AuditEngine(config, config_path=args.config)
             try:
                 _emit_runtime_trust_info(runtime_trust, to_stdout=True, to_stderr=True)
@@ -775,6 +798,10 @@ def main() -> None:
                     print(f"[demo] Report written: {report_path}")
                 else:
                     print("[demo] No findings to report.")
+            except KeyboardInterrupt:
+                _finish_session_interrupted_if_running(engine)
+                print("[demo] Scan interrupted.", file=sys.stderr)
+                sys.exit(130)
             finally:
                 engine.db_manager.dispose()
 
@@ -986,6 +1013,7 @@ def main() -> None:
     tenant = sanitize_tenant_technician(args.tenant)
     technician = sanitize_tenant_technician(args.technician)
     # scan_compressed / use_content_type already merged above when CLI flags were passed
+    _install_scan_interrupt_signal_handlers()
     try:
         _emit_runtime_trust_info(runtime_trust, to_stdout=True, to_stderr=True)
         session_id = engine.start_audit(
@@ -1002,6 +1030,10 @@ def main() -> None:
         from utils.notify import notify_scan_complete_background
 
         notify_scan_complete_background(engine.config, engine.db_manager, session_id)
+    except KeyboardInterrupt:
+        _finish_session_interrupted_if_running(engine)
+        print("Scan interrupted.", file=sys.stderr)
+        sys.exit(130)
     except FileNotFoundError as e:
         print(f"Error: {e}")
         print(

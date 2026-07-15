@@ -1920,11 +1920,15 @@ async def scan_database(config: DatabaseConfig, background_tasks: BackgroundTask
 
     def run_one_target():
         engine._is_running = True
+        status = "completed"
         try:
             engine._run_target(target)
+        except KeyboardInterrupt:
+            status = "interrupted"
+            raise
         finally:
             engine._is_running = False
-            engine.db_manager.finish_session(session_id, "completed")
+            engine.db_manager.finish_session(session_id, status)
             if jh_db:
                 engine.config.setdefault("report", {}).setdefault(
                     "jurisdiction_hints", {}

@@ -807,3 +807,166 @@ def test_get_object_state_missing_returns_none(tmp_path):
         assert result is None
     finally:
         db.dispose()
+
+
+def test_reap_orphaned_running_null_pid(tmp_path):
+    """Legacy running rows with pid NULL are marked interrupted (#1251)."""
+    from core.database import LocalDBManager, ScanSession
+
+    db = LocalDBManager(str(tmp_path / "reap_null.db"))
+    try:
+        with db._session_factory() as s:
+            s.add(
+                ScanSession(
+                    session_id="orphan-null",
+                    status="running",
+                    pid=None,
+                    owner_hostname=None,
+                )
+            )
+            s.commit()
+        n = db.reap_orphaned_running_sessions()
+        assert n == 1
+        with db._session_factory() as s:
+            rec = s.query(ScanSession).filter_by(session_id="orphan-null").one()
+            assert rec.status == "interrupted"
+            assert rec.finished_at is not None
+    finally:
+        db.dispose()
+
+
+def test_reap_orphaned_running_dead_pid(tmp_path):
+    """running rows whose PID is not alive are reaped (#1251)."""
+    from core.database import LocalDBManager, ScanSession
+
+    db = LocalDBManager(str(tmp_path / "reap_dead.db"))
+    try:
+        with db._session_factory() as s:
+            s.add(
+                ScanSession(
+                    session_id="orphan-dead",
+                    status="running",
+                    pid=2_147_483_647,  # unlikely live PID
+                    owner_hostname=None,
+                )
+            )
+            s.commit()
+        n = db.reap_orphaned_running_sessions()
+        assert n == 1
+        with db._session_factory() as s:
+            rec = s.query(ScanSession).filter_by(session_id="orphan-dead").one()
+            assert rec.status == "interrupted"
+            assert rec.finished_at is not None
+    finally:
+        db.dispose()
+
+
+def test_reap_skips_live_pid(tmp_path):
+    """Concurrency-safe: never reap a session owned by a live PID (#1251)."""
+    import os
+
+    from core.database import LocalDBManager, ScanSession
+
+    db = LocalDBManager(str(tmp_path / "reap_live.db"))
+    try:
+        with db._session_factory() as s:
+            s.add(
+                ScanSession(
+                    session_id="alive-sess",
+                    status="running",
+                    pid=os.getpid(),
+                    owner_hostname=None,
+                )
+            )
+            s.commit()
+        n = db.reap_orphaned_running_sessions()
+        assert n == 0
+        with db._session_factory() as s:
+            rec = s.query(ScanSession).filter_by(session_id="alive-sess").one()
+            assert rec.status == "running"
+            assert rec.finished_at is None
+    finally:
+        db.dispose()
+
+
+def test_reap_does_not_overwrite_completed_after_finish(tmp_path, monkeypatch):
+    """TOCTOU: finish_session(completed) mid-reap must not become interrupted (#1251)."""
+    from core.database import LocalDBManager, ScanSession
+
+    db = LocalDBManager(str(tmp_path / "reap_race.db"))
+    try:
+        with db._session_factory() as s:
+            s.add(
+                ScanSession(
+                    session_id="race-sess",
+                    status="running",
+                    pid=2_147_483_647,
+                    owner_hostname=None,
+                )
+            )
+            s.commit()
+
+        def _finish_then_dead(_pid):
+            db.finish_session("race-sess", "completed")
+            return False
+
+        monkeypatch.setattr(
+            LocalDBManager, "pid_is_alive", staticmethod(_finish_then_dead)
+        )
+        n = db.reap_orphaned_running_sessions()
+        assert n == 0
+        with db._session_factory() as s:
+            rec = s.query(ScanSession).filter_by(session_id="race-sess").one()
+            assert rec.status == "completed"
+            assert rec.finished_at is not None
+    finally:
+        db.dispose()
+
+
+def test_session_pid_column_migrates_legacy_db(tmp_path):
+    """DBs created without pid still migrate and reap (#1251)."""
+    import sqlite3
+
+    from sqlalchemy import text
+
+    from core.database import LocalDBManager
+
+    db_path = tmp_path / "legacy_no_pid.db"
+    con = sqlite3.connect(str(db_path))
+    try:
+        con.execute(
+            "CREATE TABLE scan_sessions ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+            "session_id VARCHAR(64) NOT NULL UNIQUE,"
+            "started_at DATETIME,"
+            "finished_at DATETIME,"
+            "status VARCHAR(20)"
+            ")"
+        )
+        con.execute(
+            "INSERT INTO scan_sessions (session_id, status) VALUES ('legacy-orphan', 'running')"
+        )
+        con.commit()
+    finally:
+        con.close()
+
+    db = LocalDBManager(str(db_path))
+    try:
+        with db.engine.connect() as conn:
+            cols = {
+                row[1]
+                for row in conn.execute(
+                    text("PRAGMA table_info(scan_sessions)")
+                ).fetchall()
+            }
+        assert "pid" in cols
+        assert "owner_hostname" in cols
+        # Init already reaped NULL-pid legacy running rows
+        with db._session_factory() as s:
+            from core.database import ScanSession
+
+            rec = s.query(ScanSession).filter_by(session_id="legacy-orphan").one()
+            assert rec.status == "interrupted"
+            assert rec.finished_at is not None
+    finally:
+        db.dispose()
