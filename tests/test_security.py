@@ -585,6 +585,65 @@ def test_normalize_config_resolves_pass_from_env_and_user_from_env(monkeypatch):
     assert out["targets"][1]["user"] == "env-user"
 
 
+def test_normalize_config_secret_binding_is_by_identity_not_position(monkeypatch):
+    """#1210 — credential-from-env binds to the same target dict (identity), never list index.
+
+    Reordering targets must not swap secrets. Distinct env vars → distinct values per name.
+    """
+    from config.loader import normalize_config
+
+    monkeypatch.setenv("SECRET_ALPHA", "alpha-secret-value")
+    monkeypatch.setenv("SECRET_BETA", "beta-secret-value")
+    monkeypatch.setenv("PASS_ALPHA", "alpha-pass")
+    monkeypatch.setenv("PASS_BETA", "beta-pass")
+
+    def _by_name(targets: list) -> dict:
+        return {t["name"]: t for t in targets}
+
+    data = {
+        "targets": [
+            {
+                "name": "alpha",
+                "type": "rest_api",
+                "client_secret_from_env": "SECRET_ALPHA",
+                "pass_from_env": "PASS_ALPHA",
+            },
+            {
+                "name": "beta",
+                "type": "rest_api",
+                "client_secret_from_env": "SECRET_BETA",
+                "pass_from_env": "PASS_BETA",
+            },
+        ],
+        "api": {},
+        "report": {"output_dir": "."},
+    }
+    out = normalize_config(data)
+    named = _by_name(out["targets"])
+    assert named["alpha"]["client_secret"] == "alpha-secret-value"
+    assert named["beta"]["client_secret"] == "beta-secret-value"
+    assert named["alpha"]["pass"] == "alpha-pass"
+    assert named["beta"]["pass"] == "beta-pass"
+
+    reordered = {
+        "targets": [
+            dict(data["targets"][1]),
+            dict(data["targets"][0]),
+        ],
+        "api": {},
+        "report": {"output_dir": "."},
+    }
+    out2 = normalize_config(reordered)
+    named2 = _by_name(out2["targets"])
+    assert named2["alpha"]["client_secret"] == "alpha-secret-value"
+    assert named2["beta"]["client_secret"] == "beta-secret-value"
+    assert named2["alpha"]["pass"] == "alpha-pass"
+    assert named2["beta"]["pass"] == "beta-pass"
+    # Position 0 after reorder is beta — must carry beta's secret, not alpha's.
+    assert out2["targets"][0]["name"] == "beta"
+    assert out2["targets"][0]["client_secret"] == "beta-secret-value"
+
+
 def test_normalize_config_warns_when_pass_from_env_unset_then_falls_back(monkeypatch):
     """Issue #508: missing env for pass_from_env emits UserWarning; inline pass still applies."""
     import warnings
