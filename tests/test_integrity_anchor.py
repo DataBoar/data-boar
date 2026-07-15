@@ -41,9 +41,11 @@ from core.integrity_anchor import (
     OPEN_MODE_WORKER_CAP,
     VALIDATOR_VERSION,
     _manifest_content_hash,
+    alpha_version_suffix,
     compute_module_hashes,
     ensure_integrity_anchor,
     get_integrity_snapshot,
+    is_tampered,
     list_integrity_events,
     reset_integrity_anchor_for_tests,
 )
@@ -166,11 +168,15 @@ def test_release_upgrade_rebaselines_without_tamper(tmp_path, monkeypatch):
     drifted["core/engine.py"] = "a" * 64
     monkeypatch.setattr("core.integrity_anchor.compute_module_hashes", lambda: drifted)
     monkeypatch.setattr("core.integrity_anchor._release_label", lambda: "1.7.4.post5")
+    reset_integrity_anchor_for_tests()
     snap = ensure_integrity_anchor(cfg)
     assert snap["integrity_state"] == "validated"
     assert snap["trust_level"] == "expected"
     assert snap["release_label"] == "1.7.4.post5"
     assert snap["mismatched_files"] == []
+    # User-visible watermark must stay clean after legitimate upgrade.
+    assert is_tampered() is False
+    assert alpha_version_suffix() == ""
 
     with contextlib.closing(sqlite3.connect(cfg["sqlite_path"])) as conn:
         rows = conn.execute(
@@ -195,10 +201,14 @@ def test_same_release_label_still_detects_tamper(tmp_path, monkeypatch):
     ensure_integrity_anchor(cfg)
     _tamper(monkeypatch)
     monkeypatch.setattr("core.integrity_anchor._release_label", lambda: "1.7.4.post5")
+    reset_integrity_anchor_for_tests()
     snap = ensure_integrity_anchor(cfg)
     assert snap["integrity_state"] == "tampered"
     assert snap["trust_level"] == "adulterated"
     assert "core/engine.py" in snap["mismatched_files"]
+    # User-visible watermark must still tint on real same-version tamper.
+    assert is_tampered() is True
+    assert alpha_version_suffix() == "-alpha"
     assert any(e["event_type"] == "tamper" for e in list_integrity_events(cfg))
     assert not any(e["event_type"] == "re-baseline" for e in list_integrity_events(cfg))
 
