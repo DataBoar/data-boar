@@ -316,3 +316,12 @@ _audit_data-boar/
 /data-boar/
 /uv.lock.gpg
 
+# Per-dev agent/tool installs + venvs — not versioned (#1240)
+.locust_env/
+.jolli/
+.gemini/
+.tours/
+.agents/
+.claude/settings.local.json
+.vscode/launch.json
+
