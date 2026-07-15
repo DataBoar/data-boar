@@ -190,7 +190,8 @@ if ($Service -in @("all","linkedin")) {
         Write-Info "  talent.ps1 linkedin candidate_d"
         Write-Info ""
         Write-Info "Checklist ATS: ver headlines, Open to Work, certificacoes novas"
-        Write-Info "Skill: .cursor/skills/candidate-ats-evaluation/SKILL.md (Passo 4)"
+        Write-Info "Skill: .cursor/private/skills/candidate-ats-evaluation/SKILL.md (Passo 4)"
+
         $state.linkedin = (Get-Date -Format "o")
         Save-State $state
         Write-Ok "LinkedIn: checklist exibido -- executar manualmente com browser warm"

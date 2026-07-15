@@ -175,7 +175,7 @@ foreach ($pdf in $pdfs) {
         "## 5. Observacoes do Operador"
         ""
         "> **NOTA:** Gerado automaticamente por ``scripts/ats-candidate-import.ps1``."
-        "> Para avaliacao detalhada, analise o PDF com o agente de IA e a skill ``candidate-ats-evaluation``."
+        "> Para avaliacao detalhada, analise o PDF com o agente de IA e a skill ``.cursor/private/skills/candidate-ats-evaluation/SKILL.md``."
         ""
         "_(Campo livre para anotacoes adicionais)_"
     ) -join "`n"
@@ -197,6 +197,7 @@ Write-Host ""
 Write-Host "Gerados: $gerados  |  Ja existiam: $existentes  |  Erros: $erros" -ForegroundColor White
 Write-Host ""
 Write-Host "Proximo passo: revise os arquivos em $OutDir" -ForegroundColor Yellow
-Write-Host "Para analise detalhada: use .cursor/skills/candidate-ats-evaluation/SKILL.md" -ForegroundColor Yellow
+        Write-Host "Para analise detalhada: use .cursor/private/skills/candidate-ats-evaluation/SKILL.md" -ForegroundColor Yellow
+
 
 Pop-Location

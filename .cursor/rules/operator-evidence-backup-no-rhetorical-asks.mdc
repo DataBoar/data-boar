@@ -14,4 +14,5 @@ alwaysApply: false
 
 3. **If a mirror is unreachable:** Report **facts** (which push succeeded, which path was missing, SSH error, **`safe.directory`** / dubious ownership on a local bare). **Do not** substitute permission theatre for a technical blocker. **Do not** paste passphrases, keyfiles, or volume secrets.
 
-4. **Canonical prose:** **`docs/ops/PRIVATE_STACK_SYNC_RITUAL.md`** (and **`.pt_BR.md`**), **`scripts/private-git-sync.ps1`** (**`-Push`**), **`.cursor/skills/stacked-private-sync/SKILL.md`**, **`operator-direct-execution.mdc`**, **`agent-session-ritual-sync-main-and-private-stack.mdc`**, root **`AGENTS.md`**, **[ADR 0040](../../docs/adr/ADR-0040-assistant-private-stack-evidence-mirrors-default.md)**.
+4. **Canonical prose:** **`docs/ops/PRIVATE_STACK_SYNC_RITUAL.md`** (and **`.pt_BR.md`**), **`scripts/private-git-sync.ps1`** (**`-Push`**), **`.cursor/skills/stacked-private-sync/SKILL.md`** (public template) + **`.cursor/private/skills/stacked-private-sync/SKILL.md`** (operator runbook, #1191), **`operator-direct-execution.mdc`**, **`agent-session-ritual-sync-main-and-private-stack.mdc`**, root **`AGENTS.md`**, **[ADR 0040](../../docs/adr/ADR-0040-assistant-private-stack-evidence-mirrors-default.md)**.
+
