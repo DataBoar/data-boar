@@ -8,6 +8,7 @@ is enabled.
 
 from __future__ import annotations
 
+import contextlib
 import math
 import zipfile
 from collections.abc import Callable
@@ -405,6 +406,7 @@ def iter_archive_members(
     elif archive_type == "7z":
         try:
             import py7zr
+            from py7zr.io import BytesIOFactory
         except ImportError:
             raise ArchiveUnsupportedError(
                 "7z support requires py7zr: `uv sync --extra compressed` (uv) "
@@ -417,6 +419,9 @@ def iter_archive_members(
         try:
             with py7zr.SevenZipFile(path, "r", password=pwd) as archive:
                 # py7zr >= 0.22: use list(); older docs used files_list (removed in 1.x).
+                # Collect desired members first, then ONE extract() — solid archives
+                # re-decompress per extract call (#1250 / #1248).
+                desired: list[str] = []
                 for member in archive.list():
                     if member.is_directory:
                         continue
@@ -428,12 +433,43 @@ def iter_archive_members(
                     ext = Path(member.filename).suffix.lower()
                     if ext not in allowed:
                         continue
+                    desired.append(member.filename)
+
+                if not desired:
+                    return
+
+                # SevenZipFile is stateful after list(); reset before extract.
+                with contextlib.suppress(Exception):
+                    archive.reset()
+
+                try:
+                    # Per-stream memory cap matches the per-member size filter above.
+                    fac = BytesIOFactory(max_inner_size)
+                    archive.extract(targets=desired, factory=fac)
+                except PasswordRequired:
+                    raise
+                except (Exception, OSError) as e:
+                    if on_member_read_failure is not None:
+                        reason = classify_7z_member_read_failure(
+                            e, password_provided=bool(pwd)
+                        )
+                        # Batch extract failed as a whole — record one failure per target
+                        # so scan_failures still surfaces the reason for each member.
+                        for name in desired:
+                            on_member_read_failure(
+                                reason,
+                                name,
+                                f"{path.name}|{name}: {type(e).__name__}: {e}",
+                            )
+                    return
+
+                for name in desired:
+                    bio = fac.products.get(name)
+                    if bio is None:
+                        continue
                     try:
-                        files = archive.read(targets=[member.filename])
-                        bio = files.get(member.filename)
-                        if bio is not None:
-                            data = bio.read()
-                            yield (member.filename, data)
+                        bio.seek(0)
+                        data = bio.read()
                     except (Exception, OSError) as e:
                         if on_member_read_failure is not None:
                             reason = classify_7z_member_read_failure(
@@ -441,10 +477,11 @@ def iter_archive_members(
                             )
                             on_member_read_failure(
                                 reason,
-                                member.filename,
-                                f"{path.name}|{member.filename}: {type(e).__name__}: {e}",
+                                name,
+                                f"{path.name}|{name}: {type(e).__name__}: {e}",
                             )
                         continue
+                    yield (name, data)
         except PasswordRequired as e:
             if on_member_read_failure is not None:
                 on_member_read_failure(
