@@ -130,9 +130,19 @@ def _validate_config_and_exit(config: dict[str, Any], config_path: str) -> None:
                     f'target "{name}": auth.{field}={_mask_env_name(field, env_name)!r} — env var not set'
                 )
 
-        kind = target.get("type", "?")
+        # Offline optional SQL driver probe (reuse sql_driver_deps; no connect) — #1246
+        kind = (target.get("type") or "").strip().lower()
+        if kind == "database":
+            from connectors.sql_driver_deps import ensure_sql_driver_available
+
+            driver = target.get("driver") or "postgresql"
+            try:
+                ensure_sql_driver_available(driver)
+            except ImportError as exc:
+                warnings.append(f'target "{name}": {exc}')
+
         driver = target.get("driver", "")
-        label = f"type={kind}" + (f" driver={driver}" if driver else "")
+        label = f"type={kind or '?'}" + (f" driver={driver}" if driver else "")
         print(f'  OK    target[{i}] "{name}"  {label}')
 
     for w in warnings:
@@ -442,7 +452,8 @@ def main() -> None:
         action="store_true",
         help=(
             "Validate config structure, connector types, and required keys per target; "
-            "warn on unset *_from_env vars. No connections, scan, or --web. "
+            "warn on unset *_from_env vars and missing optional SQL driver packages "
+            "(offline import probe). No connections, scan, or --web. "
             "Exit 0 when valid, 1 on errors. Incompatible with --web, --reset-data, "
             "and --export-audit-trail."
         ),
