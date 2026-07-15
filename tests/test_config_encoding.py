@@ -185,6 +185,24 @@ def test_normalize_config_archive_budget_validation():
     assert out4["file_scan"]["max_total_uncompressed"] is None
     assert out4["file_scan"]["max_expansion_ratio"] is None
 
+    out5 = normalize_config(
+        {
+            "targets": [],
+            "report": {"output_dir": "."},
+            "file_scan": {"max_expansion_ratio": "nan"},
+        }
+    )
+    assert out5["file_scan"]["max_expansion_ratio"] is None
+
+    out6 = normalize_config(
+        {
+            "targets": [],
+            "report": {"output_dir": "."},
+            "file_scan": {"max_expansion_ratio": "inf"},
+        }
+    )
+    assert out6["file_scan"]["max_expansion_ratio"] is None
+
 
 def test_normalize_config_file_sample_max_chars_default():
     """file_scan.file_sample_max_chars defaults for plain-text read budget; clamped when invalid."""

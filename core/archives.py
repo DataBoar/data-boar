@@ -8,6 +8,7 @@ is enabled.
 
 from __future__ import annotations
 
+import math
 import zipfile
 from collections.abc import Callable
 from pathlib import Path
@@ -321,6 +322,7 @@ def iter_archive_members(
         if (
             max_expansion_ratio is not None
             and compressed_size > 0
+            and math.isfinite(float(max_expansion_ratio))
             and (total_uncompressed / compressed_size) > float(max_expansion_ratio)
         ):
             ratio = total_uncompressed / compressed_size

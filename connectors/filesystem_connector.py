@@ -6,6 +6,7 @@ Scans all compatible/supported file types by extension; unknown types get path/n
 """
 
 import hashlib
+import math
 import os
 import stat
 import tempfile
@@ -69,6 +70,8 @@ def _clamp_max_expansion_ratio(raw: float | int | None) -> float:
     try:
         n = float(raw) if raw is not None else DEFAULT_MAX_EXPANSION_RATIO
     except (TypeError, ValueError):
+        return DEFAULT_MAX_EXPANSION_RATIO
+    if not math.isfinite(n):
         return DEFAULT_MAX_EXPANSION_RATIO
     return max(MIN_MAX_EXPANSION_RATIO, min(MAX_MAX_EXPANSION_RATIO, n))
 

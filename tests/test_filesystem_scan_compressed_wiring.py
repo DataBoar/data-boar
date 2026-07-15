@@ -211,6 +211,20 @@ def test_archive_budget_config_clamped_on_connector():
     assert connector.max_expansion_ratio == 1.0
 
 
+def test_clamp_max_expansion_ratio_rejects_non_finite():
+    """nan/inf must not survive clamp as a broken ratio (use DEFAULT instead)."""
+    from connectors.filesystem_connector import (
+        DEFAULT_MAX_EXPANSION_RATIO,
+        _clamp_max_expansion_ratio,
+    )
+
+    assert _clamp_max_expansion_ratio(float("nan")) == DEFAULT_MAX_EXPANSION_RATIO
+    assert _clamp_max_expansion_ratio(float("inf")) == DEFAULT_MAX_EXPANSION_RATIO
+    assert _clamp_max_expansion_ratio(float("-inf")) == DEFAULT_MAX_EXPANSION_RATIO
+    assert _clamp_max_expansion_ratio("nan") == DEFAULT_MAX_EXPANSION_RATIO
+    assert _clamp_max_expansion_ratio("inf") == DEFAULT_MAX_EXPANSION_RATIO
+
+
 def test_scan_archive_at_path_applies_default_budgets_when_omitted(tmp_path):
     """Defaults apply even when caller omits budget kwargs (share connectors)."""
     from unittest.mock import MagicMock, patch

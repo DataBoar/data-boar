@@ -10,6 +10,7 @@ pattern_files_encoding key (default utf-8) with errors=replace to avoid crashes.
 """
 
 import logging
+import math
 import warnings
 from pathlib import Path
 from typing import Any
@@ -444,6 +445,8 @@ def normalize_config(
         try:
             n = float(val)
         except (TypeError, ValueError):
+            return None
+        if not math.isfinite(n):
             return None
         if n < _MIN_MAX_EXPANSION_RATIO:
             return _MIN_MAX_EXPANSION_RATIO
