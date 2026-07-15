@@ -12,6 +12,25 @@ Human-readable summary of user-facing changes. **Detailed release notes:** [docs
 
 ---
 
+## 1.7.4.post5 (pending PyPI dispatch)
+
+> Post-release on the **`1.7.4`** public line. **`[project] version = 1.7.4.post5`** and **`[tool.databoar] maturity_build = 240`** (`N=14` `fix(` commits since post4 merge `656fdc3d`, ADR-0073). **PyPI-only** — no Git tag, no GitHub Release, no container.
+
+### Fixed / hardened (post5)
+
+- **Archives (.7z):** content scan via py7zr `BytesIOFactory` + pre-budget member extract (#1250, #1248).
+- **Sessions:** orphan `running` reaper (PID liveness, TOCTOU-safe conditional UPDATE) + interrupt → `interrupted` (#1251).
+- **CLI:** `--validate-config` **WARN** when optional SQL driver deps are missing (offline probe) (#1246).
+- **Security:** standalone HTML form CSRF (#1231); Dataverse `org_url` / `token_url` SSRF guards (#1232); aggregate archive decompression budgets (#1233); secret-by-identity lock + reachable JWT GRACE (#1210, #1212); non-numeric / non-finite license/budget hardening; drop `Invoke-Expression` from `external-review-pack.ps1` (#1192).
+- **Integrity:** honest `build_digest_matched` (no `signature_ok` overclaim) + legacy migrate zeroing (#1211).
+- **OPSEC / lint:** LICENSING_SPEC evasion-vector redaction (#1234, #1235); markdown-lint git-tracked only (#1240); skills OPSEC / ATS footer path (#1191).
+
+### Notes (post5)
+
+- Full `N=14` fix set and `postN` ↔ `maturity_build` map: [docs/releases/1.7.4.post5.md](docs/releases/1.7.4.post5.md).
+
+---
+
 ## 1.7.4.post4 (pending PyPI dispatch)
 
 > Post-release on the **`1.7.4`** public line. **`[project] version = 1.7.4.post4`** and **`[tool.databoar] maturity_build = 225`** (`N=14` fixes since post3 baseline, ADR-0073 dual counter policy).
