@@ -22,6 +22,8 @@ Contract under test:
 8. ``build_digest_matched`` (#1211): True only when expected digest set and
    matches; unset env → False (no signature overclaim).
 9. Legacy DB column ``signature_ok`` migrates to ``build_digest_matched``.
+10. Release upgrade (#1262): ``release_label`` change re-baselines; same-label
+    hash drift still tampers.
 """
 
 from __future__ import annotations
@@ -152,6 +154,53 @@ def test_tamper_detected_in_open_mode_without_licensing_config(tmp_path, monkeyp
     ensure_integrity_anchor(cfg)
     _tamper(monkeypatch)
     assert ensure_integrity_anchor(cfg)["integrity_state"] == "tampered"
+
+
+def test_release_upgrade_rebaselines_without_tamper(tmp_path, monkeypatch):
+    """#1262: release_label change + new hashes → re-baseline, not tampered."""
+    cfg = _cfg(tmp_path)
+    monkeypatch.setattr("core.integrity_anchor._release_label", lambda: "1.7.4.post4")
+    ensure_integrity_anchor(cfg)
+
+    drifted = compute_module_hashes()
+    drifted["core/engine.py"] = "a" * 64
+    monkeypatch.setattr("core.integrity_anchor.compute_module_hashes", lambda: drifted)
+    monkeypatch.setattr("core.integrity_anchor._release_label", lambda: "1.7.4.post5")
+    snap = ensure_integrity_anchor(cfg)
+    assert snap["integrity_state"] == "validated"
+    assert snap["trust_level"] == "expected"
+    assert snap["release_label"] == "1.7.4.post5"
+    assert snap["mismatched_files"] == []
+
+    with contextlib.closing(sqlite3.connect(cfg["sqlite_path"])) as conn:
+        rows = conn.execute(
+            "SELECT release_label, file_hashes_json FROM build_integrity_anchor"
+        ).fetchall()
+    assert len(rows) == 1
+    assert rows[0][0] == "1.7.4.post5"
+    stored = json.loads(rows[0][1])
+    assert stored["core/engine.py"] == "a" * 64
+
+    events = list_integrity_events(cfg)
+    assert any(e["event_type"] == "re-baseline" for e in events)
+    re_bl = next(e for e in events if e["event_type"] == "re-baseline")
+    assert "1.7.4.post4 -> 1.7.4.post5" in re_bl["detail"]
+    assert not any(e["event_type"] == "tamper" for e in events)
+
+
+def test_same_release_label_still_detects_tamper(tmp_path, monkeypatch):
+    """#1262 regression: same label + hash drift remains tampered (not softened)."""
+    cfg = _cfg(tmp_path)
+    monkeypatch.setattr("core.integrity_anchor._release_label", lambda: "1.7.4.post5")
+    ensure_integrity_anchor(cfg)
+    _tamper(monkeypatch)
+    monkeypatch.setattr("core.integrity_anchor._release_label", lambda: "1.7.4.post5")
+    snap = ensure_integrity_anchor(cfg)
+    assert snap["integrity_state"] == "tampered"
+    assert snap["trust_level"] == "adulterated"
+    assert "core/engine.py" in snap["mismatched_files"]
+    assert any(e["event_type"] == "tamper" for e in list_integrity_events(cfg))
+    assert not any(e["event_type"] == "re-baseline" for e in list_integrity_events(cfg))
 
 
 # --- 4. survives wipe_all_data (--reset-data) ------------------------------------

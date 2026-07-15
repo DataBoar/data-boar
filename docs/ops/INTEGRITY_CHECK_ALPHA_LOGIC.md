@@ -70,7 +70,13 @@ Append a structured record to `security_alert.log` (or SIEM sink):
    scan tables only.
 2. **Startup re-verify (E.3):** every start (CLI and web, **any** licensing
    mode including `open`) recomputes the hashes and compares to the anchor.
-   Mismatch → `integrity_state=tampered` / `trust_level=adulterated`.
+   - **Same `release_label` + hash mismatch** → `integrity_state=tampered` /
+     `trust_level=adulterated` (unchanged; do not soften).
+   - **`release_label` changed (legitimate package upgrade)** → **re-baseline**
+     the single anchor row to the new hashes / label, append a `re-baseline`
+     event, and stay `validated` / `expected` ([#1262](https://github.com/DataBoar/data-boar/issues/1262)).
+     A PyPI/wheel upgrade that changes `CRITICAL_MODULES` is expected; treating
+     it as tamper breaks every `pip install -U` that reuses the SQLite DB.
 3. **TINTED / `-alpha` (E.4):** the adulterated state forces the
    `-alpha (development / not CI-validated)` label on the report Info sheet
    (`Build trust` / `Integrity state` rows), dashboard footer, `GET /about`,
@@ -81,18 +87,20 @@ Append a structured record to `security_alert.log` (or SIEM sink):
    `OPEN_MODE_WORKER_CAP = 2` in open mode. The clamp lives inside the hashed
    allowlist — removing it changes `core/engine.py` and tints the build.
 5. **Forensics (E.5):** `integrity_events` is an append-only table
-   (validation / re-verify / tamper) preserved across data wipes.
+   (validation / re-verify / re-baseline / tamper) preserved across data wipes.
 
 ### Honest threat model (E.6)
 
 This is **tamper-EVIDENT, not tamper-PROOF.** An attacker with write access to
 both the code tree **and** the SQLite anchor file can delete or re-baseline the
-anchor (the app then re-runs first validation or shows `unknown`). Mitigations:
-file permissions, read-only DB mounts in high-assurance deploys, and the
-**signed manifest** (Sigstore / CI OIDC — Phase C.4 of
-`PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY`) as the next hardening layer. The local
-anchor reliably catches casual edits, forks with gates removed, and silent
-deploy drift — which is the Alpha-detection goal.
+anchor (the app then re-runs first validation or shows `unknown`). The
+**release-upgrade re-baseline** path only runs when `release_label` changes;
+same-version hash drift still tints. Unexpected upgrades remain visible in the
+append-only `re-baseline` event trail. Mitigations: file permissions, read-only
+DB mounts in high-assurance deploys, and the **signed manifest** (Sigstore /
+CI OIDC — Phase C.4 of `PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY`) as the next
+hardening layer. The local anchor reliably catches casual edits, forks with
+gates removed, and silent deploy drift — which is the Alpha-detection goal.
 
 ## Related
 
