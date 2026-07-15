@@ -106,6 +106,49 @@ def test_enforced_valid_token(ed25519_priv, tmp_path):
     assert g.context.customer_name == "Test Customer"
 
 
+def test_enforced_grace_when_past_exp_before_dbgrace(ed25519_priv, tmp_path):
+    """#1212 — GRACE is reachable when exp < now <= dbgrace (PyJWT must not block on exp)."""
+    pem = _pem_public(ed25519_priv)
+    now = datetime.now(timezone.utc)
+    grace_ts = int((now + timedelta(days=7)).timestamp())
+    lic = tmp_path / "grace.lic"
+    lic.write_text(
+        _make_token(
+            ed25519_priv,
+            exp_delta_days=-1,
+            extra={"dbgrace": grace_ts},
+        ),
+        encoding="utf-8",
+    )
+    cfg = {"licensing": {"mode": "enforced", "license_path": str(lic)}}
+    os.environ["DATA_BOAR_LICENSE_PUBLIC_KEY_PEM"] = pem
+    g = LicenseGuard(cfg)
+    assert g.context.state == "GRACE"
+    assert g.allows_scan() is True
+    assert g.context.state in ("OPEN", "VALID", "GRACE")
+
+
+def test_enforced_expired_when_past_dbgrace(ed25519_priv, tmp_path):
+    """#1212 — past both exp and dbgrace → EXPIRED (grace boundary)."""
+    pem = _pem_public(ed25519_priv)
+    now = datetime.now(timezone.utc)
+    past_grace = int((now - timedelta(days=1)).timestamp())
+    lic = tmp_path / "expired.lic"
+    lic.write_text(
+        _make_token(
+            ed25519_priv,
+            exp_delta_days=-3,
+            extra={"dbgrace": past_grace},
+        ),
+        encoding="utf-8",
+    )
+    cfg = {"licensing": {"mode": "enforced", "license_path": str(lic)}}
+    os.environ["DATA_BOAR_LICENSE_PUBLIC_KEY_PEM"] = pem
+    g = LicenseGuard(cfg)
+    assert g.context.state == "EXPIRED"
+    assert g.allows_scan() is False
+
+
 def test_enforced_token_dbtier_claim_exposed(ed25519_priv, tmp_path):
     """JWT ``dbtier`` is stored for feature gates (e.g. maturity POC) — see LICENSING_SPEC.md."""
     pem = _pem_public(ed25519_priv)

@@ -33,6 +33,10 @@ def load_public_key_from_path(path: str) -> Any:
 def decode_license_jwt(token: str, public_key: Any) -> dict[str, Any]:
     """
     Verify signature and return claims. Raises jwt.PyJWTError on failure.
+
+    ``exp`` / ``dbgrace`` time windows are evaluated in ``LicenseGuard`` (VALID →
+    GRACE → EXPIRED). PyJWT must not reject an expired signature before that
+    chain runs — otherwise GRACE is unreachable (#1212).
     """
     return jwt.decode(
         token,
@@ -40,6 +44,7 @@ def decode_license_jwt(token: str, public_key: Any) -> dict[str, Any]:
         algorithms=["EdDSA"],
         options={
             "verify_aud": False,
+            "verify_exp": False,
             "require": ["exp", "sub"],
         },
     )
