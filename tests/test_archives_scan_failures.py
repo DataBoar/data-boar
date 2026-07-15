@@ -416,3 +416,43 @@ def test_7z_encrypted_without_password_is_encrypted_no_password(tmp_path):
     assert all(r == SCAN_FAILURE_REASON_ENCRYPTED_NO_PASSWORD for r, _, _ in failures)
     assert all(r != SCAN_FAILURE_REASON_ARCHIVE_READ_ERROR for r, _, _ in failures)
     assert not any("AttributeError" in d for _, _, d in failures)
+
+
+def test_7z_budget_max_members_yields_pre_budget_then_stops(tmp_path):
+    """#1253 Bugbot HIGH: budget stop must extract desired[], not return empty (ZIP parity)."""
+    pytest.importorskip("py7zr")
+    import py7zr
+
+    from core.archives import (
+        SCAN_FAILURE_REASON_ARCHIVE_BUDGET_EXCEEDED,
+        iter_archive_members,
+    )
+
+    seven = tmp_path / "budget.7z"
+    n_members = 6
+    with py7zr.SevenZipFile(seven, "w") as z:
+        for i in range(n_members):
+            z.writestr(f"payload-{i}".encode(), f"m{i:02d}.txt")
+
+    failures: list[tuple[str, str, str]] = []
+    materialized: list[str] = []
+
+    def _on_fail(reason: str, member: str, details: str) -> None:
+        failures.append((reason, member, details))
+
+    for name, _data in iter_archive_members(
+        seven,
+        "7z",
+        max_inner_size=1_000_000,
+        allowed_extensions={".txt"},
+        on_member_read_failure=_on_fail,
+        max_members=3,
+        max_total_uncompressed=1_000_000_000,
+        max_expansion_ratio=10_000.0,
+    ):
+        materialized.append(name)
+
+    assert len(materialized) == 3
+    assert len(materialized) < n_members
+    assert materialized  # pre-budget members must not vanish
+    assert any(r == SCAN_FAILURE_REASON_ARCHIVE_BUDGET_EXCEEDED for r, _, _ in failures)

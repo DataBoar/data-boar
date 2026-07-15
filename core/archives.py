@@ -427,7 +427,9 @@ def iter_archive_members(
                         continue
                     size = getattr(member, "uncompressed", 0) or 0
                     if _after_examine(member.filename, size):
-                        return
+                        # Stop collecting; still extract members already in desired
+                        # (ZIP/TAR parity — do not discard the pre-budget queue).
+                        break
                     if size > max_inner_size:
                         continue
                     ext = Path(member.filename).suffix.lower()
