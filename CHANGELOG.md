@@ -12,6 +12,20 @@ Human-readable summary of user-facing changes. **Detailed release notes:** [docs
 
 ---
 
+## 1.7.4.post6 (pending PyPI dispatch)
+
+> Post-release on the **`1.7.4`** public line. **`[project] version = 1.7.4.post6`** and **`[tool.databoar] maturity_build = 241`** (`N=1` `fix(` commit since post5 `b7de32ba`, ADR-0073). **PyPI-only** — no Git tag, no GitHub Release, no container.
+
+### Fixed / hardened (post6)
+
+- **Integrity:** re-baseline the SQLite integrity anchor on a **legitimate** release upgrade — `pip install -U` / `pipx upgrade` reusing the same SQLite DB no longer false-tints as tampered/`-alpha`; same `release_label` + hash drift still = `tampered` (real detection preserved) (#1262, #1263).
+
+### Notes (post6)
+
+- Full `N=1` fix set and `postN` ↔ `maturity_build` map: [docs/releases/1.7.4.post6.md](docs/releases/1.7.4.post6.md).
+
+---
+
 ## 1.7.4.post5 (pending PyPI dispatch)
 
 > Post-release on the **`1.7.4`** public line. **`[project] version = 1.7.4.post5`** and **`[tool.databoar] maturity_build = 240`** (`N=14` `fix(` commits since post4 merge `656fdc3d`, ADR-0073). **PyPI-only** — no Git tag, no GitHub Release, no container.
