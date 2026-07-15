@@ -6,9 +6,25 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+function Assert-ExternalReviewDateStamp {
+    <#
+    .SYNOPSIS
+      Reject DateStamp values that are not YYYY-MM-DD (#1192).
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Value
+    )
+    if ($Value -notmatch '^\d{4}-\d{2}-\d{2}$') {
+        throw "Invalid -DateStamp '$Value' - expected YYYY-MM-DD."
+    }
+}
+
 if ([string]::IsNullOrWhiteSpace($DateStamp)) {
     $DateStamp = (Get-Date).ToString("yyyy-MM-dd")
 }
+
+Assert-ExternalReviewDateStamp -Value $DateStamp
 
 $bundlePath = "docs/private/gemini_bundles/public_bundle_$DateStamp.txt"
 
@@ -16,20 +32,21 @@ Write-Host "=== External review pack ==="
 Write-Host "Bundle date: $DateStamp"
 Write-Host ""
 
-$cmd = @(
-    "uv run python scripts/export_public_gemini_bundle.py",
-    "--output `"$bundlePath`"",
+$argv = @(
+    "run",
+    "python",
+    "scripts/export_public_gemini_bundle.py",
+    "--output", $bundlePath,
     "--compliance-yaml",
     "--verify"
 )
 
-if ($IncludePlans) { $cmd += "--plans" }
-if ($IncludeCursor) { $cmd += "--cursor" }
+if ($IncludePlans) { $argv += "--plans" }
+if ($IncludeCursor) { $argv += "--cursor" }
 
-$joined = $cmd -join " "
 Write-Host "[1/3] Building Gemini bundle"
-Write-Host $joined
-Invoke-Expression $joined
+Write-Host "uv $($argv -join ' ')"
+& uv @argv
 if ($LASTEXITCODE -ne 0) {
     throw "Bundle generation/verification failed (exit code $LASTEXITCODE)."
 }
