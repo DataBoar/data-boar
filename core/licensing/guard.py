@@ -340,7 +340,20 @@ class LicenseGuard:
             return
 
         now = utc_now_ts()
-        exp = float(claims.get("exp", 0))
+        try:
+            exp = float(claims.get("exp", 0))
+        except (TypeError, ValueError):
+            # verify_exp is False in decode_license_jwt (#1212); require[] only
+            # checks presence. Non-numeric exp must fail CLOSED — never crash.
+            self._context = LicenseContext(
+                state="INVALID",
+                mode="enforced",
+                license_id=lic_id,
+                machine_fingerprint=mfp,
+                detail="malformed_exp_claim",
+                watermark="INVALID_TOKEN",
+            )
+            return
         grace_until = claims.get("dbgrace")
         try:
             grace_ts = float(grace_until) if grace_until is not None else 0.0
