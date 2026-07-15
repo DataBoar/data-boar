@@ -206,6 +206,7 @@ def test_sharepoint_connector_rejects_private_site_url() -> None:
         "connectors/powerbi_connector.py",
         "connectors/sharepoint_connector.py",
         "connectors/webdav_connector.py",
+        "connectors/dataverse_connector.py",
     ],
 )
 def test_connector_sources_call_url_guard(connector_file: str) -> None:

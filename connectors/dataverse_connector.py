@@ -16,6 +16,8 @@ from core.suggested_review import (
     augment_low_id_like_for_persist,
 )
 
+from .url_guard import target_allows_private, validate_outbound_url
+
 try:
     import httpx
 
@@ -62,6 +64,15 @@ def _dataverse_token(target: dict[str, Any]) -> str | None:
         auth.get("token_url")
         or f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
     )
+    # SSRF guard (#1232 / #832): custom token_url receives the client_secret via POST —
+    # never let it point at link-local/private hosts without explicit opt-in.
+    err = validate_outbound_url(
+        token_url,
+        allow_private=target_allows_private(target),
+        label="auth.token_url",
+    )
+    if err:
+        raise ValueError(err)
     resp = httpx.post(
         token_url,
         data={
@@ -124,6 +135,16 @@ class DataverseConnector:
         org_url = self.config.get("org_url") or self.config.get("environment_url", "")
         if not org_url:
             raise ValueError("Dataverse requires org_url (or environment_url)")
+        # SSRF guard (#1232): validate the raw org_url from config before any HTTP —
+        # including before token POST. Do not validate `_api_base()` output: it rewrites
+        # hosts (e.g. 169.254.169.254 → 169.api.crm.dynamics.com) and would miss link-local.
+        err = validate_outbound_url(
+            org_url,
+            allow_private=target_allows_private(self.config),
+            label="org_url",
+        )
+        if err:
+            raise ValueError(err)
         self._token = _dataverse_token(self.config)
         if not self._token:
             raise ValueError(
