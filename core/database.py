@@ -1518,6 +1518,9 @@ class LocalDBManager:
         Mark ``running`` sessions as ``interrupted`` when their owner PID is dead or
         unknown (NULL legacy rows). Never reap a live PID on this host (#1251).
 
+        Uses a conditional ``UPDATE … WHERE status='running'`` so a concurrent
+        ``finish_session(..., completed)`` cannot be overwritten (TOCTOU-safe).
+
         Sessions with ``owner_hostname`` set to a *different* host are left alone
         (shared DB / multi-host safe).
         """
@@ -1536,9 +1539,22 @@ class LocalDBManager:
                 pid = getattr(rec, "pid", None)
                 if self.pid_is_alive(pid):
                     continue
-                rec.status = "interrupted"
-                rec.finished_at = now
-                reaped += 1
+                # Atomic terminal write: skip if status already left running.
+                result = session.execute(
+                    text(
+                        "UPDATE scan_sessions SET status = :st, finished_at = :fa "
+                        "WHERE session_id = :sid AND status = 'running'"
+                    ),
+                    {
+                        "st": "interrupted",
+                        # ISO string avoids sqlite3 datetime adapter DeprecationWarning
+                        # on Python 3.12+ when binding via raw text().
+                        "fa": now.isoformat(),
+                        "sid": rec.session_id,
+                    },
+                )
+                if result.rowcount:
+                    reaped += 1
             if reaped:
                 session.commit()
         except Exception:

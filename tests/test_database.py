@@ -889,6 +889,40 @@ def test_reap_skips_live_pid(tmp_path):
         db.dispose()
 
 
+def test_reap_does_not_overwrite_completed_after_finish(tmp_path, monkeypatch):
+    """TOCTOU: finish_session(completed) mid-reap must not become interrupted (#1251)."""
+    from core.database import LocalDBManager, ScanSession
+
+    db = LocalDBManager(str(tmp_path / "reap_race.db"))
+    try:
+        with db._session_factory() as s:
+            s.add(
+                ScanSession(
+                    session_id="race-sess",
+                    status="running",
+                    pid=2_147_483_647,
+                    owner_hostname=None,
+                )
+            )
+            s.commit()
+
+        def _finish_then_dead(_pid):
+            db.finish_session("race-sess", "completed")
+            return False
+
+        monkeypatch.setattr(
+            LocalDBManager, "pid_is_alive", staticmethod(_finish_then_dead)
+        )
+        n = db.reap_orphaned_running_sessions()
+        assert n == 0
+        with db._session_factory() as s:
+            rec = s.query(ScanSession).filter_by(session_id="race-sess").one()
+            assert rec.status == "completed"
+            assert rec.finished_at is not None
+    finally:
+        db.dispose()
+
+
 def test_session_pid_column_migrates_legacy_db(tmp_path):
     """DBs created without pid still migrate and reap (#1251)."""
     import sqlite3
