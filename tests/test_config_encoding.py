@@ -133,6 +133,59 @@ def test_normalize_config_max_inner_size_validation():
     assert out5["file_scan"]["max_inner_size"] is None
 
 
+def test_normalize_config_archive_budget_validation():
+    """max_members / max_total_uncompressed / max_expansion_ratio clamp; invalid -> None."""
+    out = normalize_config({"targets": [], "report": {"output_dir": "."}})
+    assert out["file_scan"].get("max_members") is None
+    assert out["file_scan"].get("max_total_uncompressed") is None
+    assert out["file_scan"].get("max_expansion_ratio") is None
+
+    out2 = normalize_config(
+        {
+            "targets": [],
+            "report": {"output_dir": "."},
+            "file_scan": {
+                "max_members": 500,
+                "max_total_uncompressed": 50_000_000,
+                "max_expansion_ratio": 100,
+            },
+        }
+    )
+    assert out2["file_scan"]["max_members"] == 500
+    assert out2["file_scan"]["max_total_uncompressed"] == 50_000_000
+    assert out2["file_scan"]["max_expansion_ratio"] == 100.0
+
+    out3 = normalize_config(
+        {
+            "targets": [],
+            "report": {"output_dir": "."},
+            "file_scan": {
+                "max_members": 0,
+                "max_total_uncompressed": 100,
+                "max_expansion_ratio": 0.5,
+            },
+        }
+    )
+    assert out3["file_scan"]["max_members"] == 1
+    assert out3["file_scan"]["max_total_uncompressed"] == 1_000_000
+    assert out3["file_scan"]["max_expansion_ratio"] == 1.0
+
+    out4 = normalize_config(
+        {
+            "targets": [],
+            "report": {"output_dir": "."},
+            "file_scan": {
+                "max_members": "nope",
+                "max_total_uncompressed": "x",
+                "max_expansion_ratio": "y",
+            },
+        }
+    )
+    assert out4["file_scan"]["max_members"] is None
+    assert out4["file_scan"]["max_total_uncompressed"] is None
+    assert out4["file_scan"]["max_expansion_ratio"] is None
+
+
 def test_normalize_config_file_sample_max_chars_default():
     """file_scan.file_sample_max_chars defaults for plain-text read budget; clamped when invalid."""
     out = normalize_config({"targets": [], "report": {"output_dir": "."}})

@@ -30,15 +30,15 @@ Use these tags in headings to keep priorities explicit and machine-countable:
 
 Do not edit this block manually; refresh with `python scripts/plans-stats.py --write`.
 
-- **Status rows counted:** 205  (Done: 125 | Incomplete: 80)
-- **Incomplete breakdown:** Pending `⬜`=73, Tracked `🔄` / `Tracked (partially done)`=7, Under consideration=0, Backlog-marked rows=0
+- **Status rows counted:** 209  (Done: 130 | Incomplete: 79)
+- **Incomplete breakdown:** Pending `⬜`=72, Tracked `🔄` / `Tracked (partially done)`=7, Under consideration=0, Backlog-marked rows=0
 
 | Horizon | Total rows | Done | Incomplete |
 | ------- | ----------: | ----: | ----------: |
 | `H0` | 45 | 31 | 14 |
 | `H1` | 39 | 30 | 9 |
 | `H2` | 0 | 0 | 0 |
-| `H3` | 114 | 57 | 57 |
+| `H3` | 118 | 62 | 56 |
 | `H4` | 0 | 0 | 0 |
 | `H5` | 0 | 0 | 0 |
 | `UNSPECIFIED` | 7 | 7 | 0 |
@@ -770,7 +770,18 @@ Core flow first (sections 1–7); then optional Phase 9 (complexity/gain: high c
 | 7–11 | Engine/API/dashboard; share connectors; tests; docs (EN + pt-BR)                                          | ✅ Done    |        |
 | 12   | Resource exhaustion: max_inner_size, temp caps; user warning when enabling (disk, I/O, run time)          | ✅ Done    |        |
 | 13   | Follow-up: password-protected archive sample (or programmatic test) to validate file_passwords for ZIP/7z | ⬜ Pending |        |
-| 14   | Follow-up: optional max members per archive (e.g. 1000) as extra guard                                    | ⬜ Pending |        |
+| 14   | Follow-up: optional max members per archive (e.g. 1000) as extra guard                                    | ✅ Done (#1233 / [PLAN_ARCHIVE_BUDGET.md](PLAN_ARCHIVE_BUDGET.md)) |        |
+| 15   | Aggregate budgets: max_total_uncompressed + max_expansion_ratio + `archive_budget_exceeded`               | ✅ Done (#1233 / [PLAN_ARCHIVE_BUDGET.md](PLAN_ARCHIVE_BUDGET.md)) |        |
+
+---
+
+### Aggregate archive decompression budgets – [PLAN_ARCHIVE_BUDGET.md](PLAN_ARCHIVE_BUDGET.md)
+
+| # | To-do                                                                                         | Status  |
+| - | -----                                                                                         | ------  |
+| 1 | Choke-point budgets in `iter_archive_members` + reason `archive_budget_exceeded`              | ✅ Done |
+| 2 | Connector defaults/clamp + config loader + SMB/SharePoint/WebDAV wiring                       | ✅ Done |
+| 3 | Tests (members, ratio, config clamp) + USAGE / man                                           | ✅ Done |
 
 ---
 

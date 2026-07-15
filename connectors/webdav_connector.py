@@ -111,6 +111,9 @@ class WebDAVConnector:
         fs_opts = target_config.get("file_scan") or {}
         self.scan_compressed = bool(fs_opts.get("scan_compressed"))
         self.max_inner_size = fs_opts.get("max_inner_size")
+        self.max_members = fs_opts.get("max_members")
+        self.max_total_uncompressed = fs_opts.get("max_total_uncompressed")
+        self.max_expansion_ratio = fs_opts.get("max_expansion_ratio")
         self.compressed_extensions = normalize_compressed_extensions(
             fs_opts.get("compressed_extensions") or default_compressed_extensions()
         )
@@ -245,6 +248,9 @@ class WebDAVConnector:
                         db_manager=self.db_manager,
                         extensions=self.extensions,
                         max_inner_size=self.max_inner_size,
+                        max_members=self.max_members,
+                        max_total_uncompressed=self.max_total_uncompressed,
+                        max_expansion_ratio=self.max_expansion_ratio,
                         file_passwords=self.file_passwords,
                         file_sample_max_chars=self.file_sample_max_chars,
                         rich_media_metadata=self.scan_rich_media_metadata,

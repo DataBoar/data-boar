@@ -404,6 +404,53 @@ def normalize_config(
             return _MAX_MAX_INNER
         return n
 
+    # Aggregate archive budgets (#1233); invalid/missing -> None (connector defaults).
+    _MIN_MAX_MEMBERS = 1
+    _MAX_MAX_MEMBERS = 100_000
+    _MIN_MAX_TOTAL_UNCOMPRESSED = 1_000_000
+    _MAX_MAX_TOTAL_UNCOMPRESSED = 50_000_000_000
+    _MIN_MAX_EXPANSION_RATIO = 1.0
+    _MAX_MAX_EXPANSION_RATIO = 10_000.0
+
+    def _normalize_max_members(val: Any) -> int | None:
+        if val is None:
+            return None
+        try:
+            n = int(val)
+        except (TypeError, ValueError):
+            return None
+        if n < _MIN_MAX_MEMBERS:
+            return _MIN_MAX_MEMBERS
+        if n > _MAX_MAX_MEMBERS:
+            return _MAX_MAX_MEMBERS
+        return n
+
+    def _normalize_max_total_uncompressed(val: Any) -> int | None:
+        if val is None:
+            return None
+        try:
+            n = int(val)
+        except (TypeError, ValueError):
+            return None
+        if n < _MIN_MAX_TOTAL_UNCOMPRESSED:
+            return _MIN_MAX_TOTAL_UNCOMPRESSED
+        if n > _MAX_MAX_TOTAL_UNCOMPRESSED:
+            return _MAX_MAX_TOTAL_UNCOMPRESSED
+        return n
+
+    def _normalize_max_expansion_ratio(val: Any) -> float | None:
+        if val is None:
+            return None
+        try:
+            n = float(val)
+        except (TypeError, ValueError):
+            return None
+        if n < _MIN_MAX_EXPANSION_RATIO:
+            return _MIN_MAX_EXPANSION_RATIO
+        if n > _MAX_MAX_EXPANSION_RATIO:
+            return _MAX_MAX_EXPANSION_RATIO
+        return n
+
     _default_extensions = [
         ".txt",
         ".csv",
@@ -470,6 +517,15 @@ def normalize_config(
         # invalid or missing -> None (connector uses default).
         "max_inner_size": _normalize_max_inner_size(
             fs_cfg.get("max_inner_size") or fs_cfg.get("scan_compressed_max_inner_size")
+        ),
+        # Aggregate budgets (#1233): member count, declared uncompressed sum, expansion ratio.
+        # Invalid/missing -> None (scan_archive_at_path applies connector defaults).
+        "max_members": _normalize_max_members(fs_cfg.get("max_members")),
+        "max_total_uncompressed": _normalize_max_total_uncompressed(
+            fs_cfg.get("max_total_uncompressed")
+        ),
+        "max_expansion_ratio": _normalize_max_expansion_ratio(
+            fs_cfg.get("max_expansion_ratio")
         ),
         # Optional: restrict which archive types to open; if omitted, engine/connector
         # will use a sensible default Tier 1 + Tier 2 list (see PLAN_COMPRESSED_FILES.md).

@@ -910,6 +910,11 @@ file_scan:
   # Optional: max uncompressed size per archive member (bytes). Valid range 1 MB–500 MB; default 10 MB if omitted.
   # Members larger than this are skipped to reduce memory and I/O. Alias: scan_compressed_max_inner_size.
   # max_inner_size: 50_000_000   # e.g. 50 MB
+  # Aggregate budgets (#1233): stop opening further members when exceeded (fail-closed → scan_failures
+  # reason archive_budget_exceeded). Checked from declared sizes before materializing member bytes.
+  # max_members: 1000                  # default 1000; clamped 1–100000
+  # max_total_uncompressed: 1000000000 # default 1 GiB; sum of declared member sizes
+  # max_expansion_ratio: 200           # default 200; total_uncompressed / archive file size
   # Optional: restrict which archive types to open; if omitted, a sensible default list is used.
   # compressed_extensions: [".zip", ".tar", ".gz", ".tgz", ".bz2", ".xz", ".7z"]
   # For .7z support install the optional extra: pip install -e ".[compressed]" (or uv sync --extra compressed).
@@ -943,7 +948,7 @@ sql_sampling:
       "*_logs": 50
 ```
 
-**Scan inside compressed files (`scan_compressed`, `max_inner_size`):** Enabling **`scan_compressed: true`** may **significantly increase run time, disk I/O and temporary space**. Use it only when you need to inspect contents of archives; when first enabling it, consider a smaller target scope (e.g. one directory or a limited set of paths). The **`max_inner_size`** value is validated and clamped to 1 MB–500 MB; if invalid or omitted, a safe default (10 MB) is used so that very large inner members are skipped.
+**Scan inside compressed files (`scan_compressed`, `max_inner_size`, aggregate budgets):** Enabling **`scan_compressed: true`** may **significantly increase run time, disk I/O and temporary space**. Use it only when you need to inspect contents of archives; when first enabling it, consider a smaller target scope (e.g. one directory or a limited set of paths). The **`max_inner_size`** value is validated and clamped to 1 MB–500 MB; if invalid or omitted, a safe default (10 MB) is used so that very large inner members are skipped. **Aggregate budgets** (anti zip-bomb / DoS) always apply when scanning archives: **`max_members`** (default **1000**), **`max_total_uncompressed`** (default **1 GiB** of declared sizes), and **`max_expansion_ratio`** (default **200** = declared uncompressed total ÷ archive file size). Exceeding any limit records **`scan_failures`** with reason **`archive_budget_exceeded`** and stops further members in that archive (fail-closed; no silent skip). Nested archives remain one level only for v1.
 
 **Password-protected files (`file_passwords`):** Some PDFs and ZIP-based documents (e.g. `.docx`, `.pptx`) can be encrypted with a password. If you need to scan such files, set **`file_scan.file_passwords`** to a dict mapping extension keys (e.g. `".pdf"`, `".pptx"`) or `"default"` to the password string. Keys are normalized to lowercase with a leading dot. Without a matching password, encrypted files are skipped (no content is extracted). **Limitations:** Workbook-level encrypted Excel (`.xlsx`/`.xlsm`) is not supported; the standard library `zipfile` only supports ZipCrypto for ZIP-based formats (AES-encrypted ZIP may require additional support). Use environment variables or a secrets manager for production so passwords are not stored in the config file.
 
