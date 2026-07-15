@@ -79,7 +79,7 @@ Custom claims (namespaced to avoid collisions):
 | `dbmax_deployments` | int | Max distinct **licensed production sites** (fingerprints) for this token (#846). **Issuance-enforced:** the issuer emits the `dbmfp` pack with at most this many entries; runtime reads the claim into `LicenseContext.max_deployments` (audit/report surface) and validates only its **own** fingerprint ∈ pack. **0** may mean **unlimited** when contract allows (Enterprise). Pro default = **2** (operator-ratified 2026-06-11: on-prem + 1 cloud/branch) — see `DEFAULT_PRO_DEPLOYMENTS` in `core/licensing/guard.py`. |
 | `dbdeployment_pack_id` | string | Id of a **commercial add-on** (e.g. “+5 sites”) for audit/refill trail (#846); surfaced in `LicenseContext.deployment_pack_id`. Issuer: `scripts/issue_dev_license_jwt.py --dbmfp-pack <hex,hex,...> [--pack-id ...]`. |
 
-**Multi-site verification (honest boundary, #718 + #846):** Implemented via option (1) — **array** of allowed fingerprints in the `dbmfp` claim (deployment pack). Runtime validates only that **its own** `compute_machine_fingerprint()` (hostname + optional `DATA_BOAR_MACHINE_SEED`) is in the pack — the **global** deploy count is enforced at **issuance** (the issuer signs a pack of at most `dbmax_deployments` fingerprints); the runtime cannot count other sites. Alternatives kept for reference: (2) **online** registration (privacy + ops cost); (3) **multiple JWTs** same `dbcid`, one fingerprint each. See [LICENSING_OPEN_CORE_AND_COMMERCIAL.md](LICENSING_OPEN_CORE_AND_COMMERCIAL.md) §Deployments, copies, and sites.
+**Multi-site verification (honest boundary, #718 + #846):** Implemented via option (1) — **array** of allowed fingerprints in the `dbmfp` claim (deployment pack). Runtime validates only that **its own** `compute_machine_fingerprint()` (hostname + optional `DATA_BOAR_MACHINE_SEED`) is in the pack — the **global** deploy count is enforced at **issuance** (the issuer signs a pack of at most `dbmax_deployments` fingerprints). Alternatives kept for reference: (2) **online** registration (privacy + ops cost); (3) **multiple JWTs** same `dbcid`, one fingerprint each. See [LICENSING_OPEN_CORE_AND_COMMERCIAL.md](LICENSING_OPEN_CORE_AND_COMMERCIAL.md) §Deployments, copies, and sites.
 
 ## Lifecycle states
 
@@ -117,7 +117,7 @@ JSON:
 
 **Kill-switch matching (#717):** each entry may name a **license id** (`sub` claim), a **token id** (`jti` claim), or a **signing key id** (`dbkid` claim). Any match fails **closed**: state `REVOKED`, watermark `REVOKED`, effective tier capped to **Community**, plus a dedicated `license_revoked` audit event (WARNING) with the matched field (`license_revoked:sub|jti|dbkid`). Revoking a `dbkid` disables **every** token signed with that key — the emergency lever for a compromised signing key.
 
-**Distribution:** the list is read from `DATA_BOAR_LICENSE_REVOCATION_PATH` (env) or `licensing.revocation_list_path` (YAML) at evaluation time (startup / re-evaluate) — **no hot-reload by design**; restart the process (or container) to pick up an updated list. A local file is the air-gapped-friendly default.
+**Distribution:** the list is read from `DATA_BOAR_LICENSE_REVOCATION_PATH` (env) or `licensing.revocation_list_path` (YAML) at license evaluation time. To apply an updated revocation list, re-evaluate the license (e.g. restart the process or container). The path may point at a local file (air-gapped-friendly) or an operator-managed distribution.
 
 ## Trial / POC behaviour
 
