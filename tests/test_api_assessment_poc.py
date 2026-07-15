@@ -16,6 +16,12 @@ from core.database import LocalDBManager
 from core.licensing.guard import reset_license_guard_for_tests
 
 
+def _csrf_token_from_html(html: str) -> str:
+    m = re.search(r'name="csrf_token"\s+value="([^"]+)"', html)
+    assert m is not None, "expected csrf_token on assessment GET HTML"
+    return m.group(1)
+
+
 def _pem_public(priv: Ed25519PrivateKey) -> str:
     pub = priv.public_key()
     return (
@@ -245,6 +251,7 @@ def test_assessment_post_persists_answers_with_integrity_secret(tmp_path, monkey
             data={
                 "assessment_batch_id": bid,
                 "pack_version": "1",
+                "csrf_token": _csrf_token_from_html(r.text),
                 "answer__sample_dpo": "yes",
                 "answer__sample_policy": "no",
             },
@@ -306,6 +313,7 @@ def test_assessment_post_persists_answers(tmp_path):
             data={
                 "assessment_batch_id": bid,
                 "pack_version": "1",
+                "csrf_token": _csrf_token_from_html(r.text),
                 "answer__sample_dpo": "yes",
                 "answer__sample_policy": "no",
             },

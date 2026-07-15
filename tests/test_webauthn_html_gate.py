@@ -148,3 +148,79 @@ def test_csrf_required_on_config_post_when_gate_on(webauthn_gate_client):
         data={"yaml": "targets: []\n"},
     )
     assert r.status_code == 403
+
+
+@pytest.fixture
+def html_csrf_gate_off_client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    """Default out-of-box: no WebAuthn gate — CSRF must still fail closed (#1231)."""
+    monkeypatch.setenv("DATA_BOAR_HTML_CSRF_SECRET", "unit-test-html-csrf-secret")
+    cfg = tmp_path / "config.yaml"
+    db = tmp_path / "audit.db"
+    cfg.write_text(
+        f"""targets: []
+report:
+  output_dir: {tmp_path}
+sqlite_path: {db}
+api:
+  port: 8088
+scan:
+  max_workers: 1
+""",
+        encoding="utf-8",
+    )
+    import api.routes as routes
+
+    prev_path = routes._config_path
+    prev_cfg = routes._config
+    prev_eng = routes._audit_engine
+    routes._config_path = str(cfg)
+    routes._config = None
+    routes._audit_engine = None
+    client = TestClient(routes.app)
+    yield client, routes
+    routes._config_path = prev_path
+    routes._config = prev_cfg
+    routes._audit_engine = prev_eng
+    monkeypatch.delenv("DATA_BOAR_HTML_CSRF_SECRET", raising=False)
+
+
+def test_csrf_required_on_config_post_when_gate_off(html_csrf_gate_off_client):
+    client, _routes = html_csrf_gate_off_client
+    r = client.post("/en/config", data={"yaml": "targets: []\n"})
+    assert r.status_code == 403
+
+
+def test_config_get_emits_csrf_when_gate_off(html_csrf_gate_off_client):
+    client, _routes = html_csrf_gate_off_client
+    r = client.get("/en/config")
+    assert r.status_code == 200
+    assert 'name="csrf_token"' in r.text
+    assert 'value="' in r.text
+
+
+def test_config_post_accepts_valid_csrf_when_gate_off(html_csrf_gate_off_client):
+    import re
+
+    client, _routes = html_csrf_gate_off_client
+    page = client.get("/en/config")
+    assert page.status_code == 200
+    m = re.search(r'name="csrf_token"\s+value="([^"]+)"', page.text)
+    assert m, "expected csrf_token hidden field on config GET"
+    token = m.group(1)
+    r = client.post(
+        "/en/config",
+        data={"yaml": "targets: []\n", "csrf_token": token},
+        follow_redirects=False,
+    )
+    assert r.status_code == 303
+    assert "/en/config?saved=1" in r.headers.get("location", "")
+
+
+def test_config_post_rejects_forged_csrf_when_gate_off(html_csrf_gate_off_client):
+    client, _routes = html_csrf_gate_off_client
+    r = client.post(
+        "/en/config",
+        data={"yaml": "targets: []\n", "csrf_token": "forged.not.valid"},
+        follow_redirects=False,
+    )
+    assert r.status_code == 403

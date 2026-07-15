@@ -6,7 +6,7 @@
 {% if config_save_error %}<p class="error">{{ t('config.error_prefix') }} {{ config_save_error }}</p>{% endif %}
 {% if config_saved %}<p class="success">{{ t('config.saved_ok') }}</p>{% endif %}
 <form method="post" action="{{ base_path }}/config" class="config-form">
-  {% if csrf_token %}<input type="hidden" name="csrf_token" value="{{ csrf_token }}" />{% endif %}
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
   <div class="form-group">
     <label for="yaml">{{ t('config.yaml_label') }}</label>
     <textarea id="yaml" name="yaml" rows="24" class="mono">{{ config_yaml }}</textarea>

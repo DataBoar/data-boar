@@ -1,7 +1,9 @@
 """
 WebAuthn HTML session gate (#86 Phase 1b): require signed session cookie for locale-prefixed
-dashboard pages when at least one passkey is registered; public GETs for help, about, login;
-CSRF tokens for mutating HTML forms.
+dashboard pages when at least one passkey is registered; public GETs for help, about, login.
+
+HTML form CSRF (#1231): signed synchronizer tokens are always issued and verified for
+mutative locale form POSTs — independent of whether the WebAuthn gate is enforced.
 """
 
 from __future__ import annotations
@@ -15,7 +17,11 @@ from starlette.responses import JSONResponse, RedirectResponse
 
 from api.locale_i18n import VALID_SLUGS
 from core.webauthn_rp import session_cookie
-from core.webauthn_rp.html_csrf import issue_html_csrf_token, verify_html_csrf_token
+from core.webauthn_rp.html_csrf import (
+    issue_html_csrf_token,
+    resolve_html_csrf_signing_secret,
+    verify_html_csrf_token,
+)
 from core.webauthn_rp.settings import resolve_token_secret, webauthn_block
 
 _routes_get_config: Any | None = None
@@ -87,33 +93,21 @@ def _routes_config_engine():
 
 
 def csrf_context_for_request(request: Request) -> dict[str, str]:
-    """Issue CSRF token for templates when gate is on and the user has a valid session."""
-    cfg, engine = _routes_config_engine()
-    if not webauthn_html_gate_should_enforce(cfg, engine.db_manager):
-        return {}
-    wa = webauthn_block(cfg)
-    secret = resolve_token_secret(wa or {})
-    if not secret:
-        return {}
-    if not request_has_webauthn_session(request, secret):
-        return {}
+    """Always issue a CSRF token for mutative HTML form pages (#1231 standalone)."""
+    cfg, _engine = _routes_config_engine()
+    secret = resolve_html_csrf_signing_secret(cfg)
     return {"csrf_token": issue_html_csrf_token(secret)}
 
 
 def verify_html_form_csrf_or_raise(request: Request, form: Any) -> None:
     """
-    When the HTML gate is active, require a valid ``csrf_token`` form field.
-    Call from POST handlers that mutate state via HTML forms.
+    Require a valid ``csrf_token`` form field on HTML POSTs that mutate state.
+
+    Fail-closed independently of the WebAuthn HTML session gate (#1231). Call from
+    every locale-prefixed form POST that writes config or assessment data.
     """
-    cfg, engine = _routes_config_engine()
-    if not webauthn_html_gate_should_enforce(cfg, engine.db_manager):
-        return
-    wa = webauthn_block(cfg)
-    secret = resolve_token_secret(wa or {})
-    if not secret:
-        return
-    if not request_has_webauthn_session(request, secret):
-        return
+    cfg, _engine = _routes_config_engine()
+    secret = resolve_html_csrf_signing_secret(cfg)
     token = form.get("csrf_token")
     if not verify_html_csrf_token(secret, str(token) if token is not None else None):
         raise HTTPException(status_code=403, detail="Invalid or missing CSRF token.")
