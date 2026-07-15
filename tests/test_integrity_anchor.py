@@ -404,8 +404,11 @@ def test_migrates_legacy_signature_ok_column(tmp_path):
     assert snap["integrity_state"] == "validated"
     assert snap["trust_level"] == "expected"
     assert "build_digest_matched" in snap
-    assert snap["build_digest_matched"] is True  # preserved migrated flag
+    # Rename alone would keep the legacy overclaim bit (1); migration must
+    # zero it — under-claim until an honest re-baseline.
+    assert snap["build_digest_matched"] is False
     assert "signature_ok" not in snap
+    assert snap["mismatched_files"] == []  # module-hash baseline intact
 
     with contextlib.closing(sqlite3.connect(db)) as conn:
         cols = {
@@ -414,9 +417,15 @@ def test_migrates_legacy_signature_ok_column(tmp_path):
                 "PRAGMA table_info(build_integrity_anchor)"
             ).fetchall()
         }
+        bit = conn.execute(
+            "SELECT build_digest_matched FROM build_integrity_anchor "
+            "WHERE anchor_version = ?",
+            (ANCHOR_VERSION,),
+        ).fetchone()
         event_count = conn.execute("SELECT COUNT(*) FROM integrity_events").fetchone()[
             0
         ]
     assert "build_digest_matched" in cols
     assert "signature_ok" not in cols
+    assert bit is not None and bit[0] == 0
     assert event_count >= 1  # integrity_events preserved across migration

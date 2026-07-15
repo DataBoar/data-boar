@@ -113,6 +113,11 @@ def _migrate_legacy_signature_ok_column(conn: sqlite3.Connection) -> None:
             "ALTER TABLE build_integrity_anchor "
             "RENAME COLUMN signature_ok TO build_digest_matched"
         )
+        # Legacy values were written under the old default-true overclaim
+        # (nothing verified ≠ matched). One-time reset to 0 (under-claim);
+        # module-hash baseline rows stay intact; next honest baseline uses
+        # _build_digest_matched().
+        conn.execute("UPDATE build_integrity_anchor SET build_digest_matched = 0")
 
 
 def _ensure_tables(conn: sqlite3.Connection) -> None:
