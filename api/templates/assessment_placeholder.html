@@ -77,7 +77,7 @@
 <section class="card">
   <p>{{ t('assessment.pack_intro') }}</p>
   <form method="post" action="{{ base_path }}assessment" class="assessment-form">
-    {% if csrf_token %}<input type="hidden" name="csrf_token" value="{{ csrf_token }}" />{% endif %}
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
     <input type="hidden" name="assessment_batch_id" value="{{ assessment_batch_id }}" />
     <input type="hidden" name="pack_version" value="{{ maturity_pack_version }}" />
   {% for sec in maturity_pack_sections %}
