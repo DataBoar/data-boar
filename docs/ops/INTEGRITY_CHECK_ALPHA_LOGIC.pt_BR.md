@@ -62,9 +62,14 @@ Anexar registro estruturado a `security_alert.log` (ou destino SIEM):
    comportamento (`main.py`, `core/detector.py`, `core/engine.py`,
    `core/integrity_anchor.py`, `core/licensing/guard.py`, `api/routes.py`) →
    persistido na tabela SQLite `build_integrity_anchor` (`release_label`,
-   hashes por arquivo, `validated_at`, `signature_ok`, `validator_version`).
-   A âncora **sobrevive ao `--reset-data`**: `wipe_all_data()` limpa apenas as
-   tabelas de scan.
+   hashes por arquivo, `validated_at`, `build_digest_matched`,
+   `validator_version`).
+   **`build_digest_matched` é um flag de match de build-digest, não uma
+   assinatura criptográfica** (#1211): `True` só quando
+   `DATA_BOAR_EXPECTED_BUILD_DIGEST` estava definido e casou com o digest
+   embutido; env unset → `False` (nada verificado ≠ “ok”). A âncora
+   **sobrevive ao `--reset-data`**: `wipe_all_data()` limpa apenas as tabelas
+   de scan.
 2. **Re-verificação no startup (E.3):** todo start (CLI e web, **qualquer**
    modo de licenciamento, incluindo `open`) recomputa os hashes e compara com
    a âncora. Divergência → `integrity_state=tampered` /

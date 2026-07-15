@@ -17,19 +17,28 @@ Contract under test:
 6. Open-mode worker clamp: engine caps ``scan.max_workers`` at
    ``OPEN_MODE_WORKER_CAP=2`` in open mode; enforced mode keeps licensing
    caps (#551) instead.
-7. Fail-soft: unwritable anchor path → state ``unknown``, no crash.
+7. Fail-soft: unwritable anchor path → state ``unknown``, no crash
+   (never ``validated`` / ``expected``).
+8. ``build_digest_matched`` (#1211): True only when expected digest set and
+   matches; unset env → False (no signature overclaim).
+9. Legacy DB column ``signature_ok`` migrates to ``build_digest_matched``.
 """
 
 from __future__ import annotations
 
 import contextlib
+import json
 import logging
 import sqlite3
+from datetime import datetime, timezone
 
 import pytest
 
 from core.integrity_anchor import (
+    ANCHOR_VERSION,
     OPEN_MODE_WORKER_CAP,
+    VALIDATOR_VERSION,
+    _manifest_content_hash,
     compute_module_hashes,
     ensure_integrity_anchor,
     get_integrity_snapshot,
@@ -54,7 +63,8 @@ def _cfg(tmp_path) -> dict:
 # --- 1./2. first run + re-verify ------------------------------------------------
 
 
-def test_first_run_creates_anchor_and_validation_event(tmp_path):
+def test_first_run_creates_anchor_and_validation_event(tmp_path, monkeypatch):
+    monkeypatch.delenv("DATA_BOAR_EXPECTED_BUILD_DIGEST", raising=False)
     cfg = _cfg(tmp_path)
     snap = ensure_integrity_anchor(cfg)
     assert snap["integrity_state"] == "validated"
@@ -62,15 +72,28 @@ def test_first_run_creates_anchor_and_validation_event(tmp_path):
     assert snap["release_label"] not in ("", "unknown")
     assert snap["validated_at"]
     assert snap["mismatched_files"] == []
+    assert snap["build_digest_matched"] is False
+    assert "signature_ok" not in snap
 
     with contextlib.closing(sqlite3.connect(cfg["sqlite_path"])) as conn:
         row = conn.execute(
-            "SELECT release_label, validator_version FROM build_integrity_anchor"
+            "SELECT release_label, validator_version, build_digest_matched "
+            "FROM build_integrity_anchor"
         ).fetchone()
+        cols = {
+            r[1]
+            for r in conn.execute(
+                "PRAGMA table_info(build_integrity_anchor)"
+            ).fetchall()
+        }
     assert row is not None
+    assert row[2] == 0
+    assert "build_digest_matched" in cols
+    assert "signature_ok" not in cols
 
     events = list_integrity_events(cfg)
     assert events[-1]["event_type"] == "validation"
+    assert "build_digest_matched=" in events[-1]["detail"]
 
 
 def test_second_run_reverifies_ok(tmp_path):
@@ -257,7 +280,7 @@ def test_open_mode_below_cap_untouched(tmp_path, caplog):
     )
 
 
-# --- 7. fail-soft -----------------------------------------------------------------
+# --- 7. fail-soft / fail-closed (#1211) -------------------------------------------
 
 
 def test_unwritable_anchor_path_is_fail_soft(tmp_path):
@@ -265,4 +288,144 @@ def test_unwritable_anchor_path_is_fail_soft(tmp_path):
     bad.parent.write_text("not a directory", encoding="utf-8")  # block mkdir
     snap = ensure_integrity_anchor({"sqlite_path": str(bad)})
     assert snap["integrity_state"] == "unknown"
-    assert get_integrity_snapshot()["integrity_state"] == "unknown"
+    assert snap["trust_level"] == "unknown"
+    assert snap["build_digest_matched"] is False
+    assert snap["integrity_state"] not in ("validated", "tampered")
+    assert snap["trust_level"] not in ("expected", "adulterated")
+    cached = get_integrity_snapshot()
+    assert cached["integrity_state"] == "unknown"
+    assert cached["trust_level"] == "unknown"
+    assert cached["build_digest_matched"] is False
+
+
+def test_sqlite_error_on_ensure_never_looks_trusted(tmp_path, monkeypatch):
+    """Error path must never surface validated/expected (fail-closed honesty)."""
+    cfg = _cfg(tmp_path)
+
+    def _boom(*_a, **_k):
+        raise sqlite3.OperationalError("simulated db failure")
+
+    monkeypatch.setattr("core.integrity_anchor.sqlite3.connect", _boom)
+    snap = ensure_integrity_anchor(cfg)
+    assert snap["integrity_state"] == "unknown"
+    assert snap["trust_level"] == "unknown"
+    assert snap["build_digest_matched"] is False
+    assert "error" in snap
+
+
+def test_list_integrity_events_fail_closed_on_error(tmp_path, monkeypatch):
+    def _boom(*_a, **_k):
+        raise OSError("simulated open failure")
+
+    monkeypatch.setattr("core.integrity_anchor.sqlite3.connect", _boom)
+    assert list_integrity_events(_cfg(tmp_path)) == []
+
+
+# --- 8. build_digest_matched honesty (#1211) --------------------------------------
+
+
+def test_build_digest_matched_false_when_no_expected_digest(tmp_path, monkeypatch):
+    monkeypatch.delenv("DATA_BOAR_EXPECTED_BUILD_DIGEST", raising=False)
+    snap = ensure_integrity_anchor(_cfg(tmp_path))
+    assert snap["build_digest_matched"] is False
+
+
+def test_build_digest_matched_true_on_match(tmp_path, monkeypatch):
+    from core.licensing.integrity import _embedded_build_digest
+
+    dig = _embedded_build_digest()
+    monkeypatch.setenv("DATA_BOAR_EXPECTED_BUILD_DIGEST", dig)
+    snap = ensure_integrity_anchor(_cfg(tmp_path))
+    assert snap["build_digest_matched"] is True
+
+
+def test_build_digest_matched_false_on_mismatch(tmp_path, monkeypatch):
+    monkeypatch.setenv(
+        "DATA_BOAR_EXPECTED_BUILD_DIGEST",
+        "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+    )
+    snap = ensure_integrity_anchor(_cfg(tmp_path))
+    assert snap["build_digest_matched"] is False
+
+
+# --- 9. legacy signature_ok → build_digest_matched migration ----------------------
+
+
+def test_migrates_legacy_signature_ok_column(tmp_path):
+    db = tmp_path / "legacy.db"
+    hashes = compute_module_hashes()
+    now = datetime.now(timezone.utc).isoformat()
+    with contextlib.closing(sqlite3.connect(db)) as conn:
+        conn.execute(
+            """
+            CREATE TABLE build_integrity_anchor (
+                anchor_version INTEGER PRIMARY KEY,
+                release_label TEXT NOT NULL,
+                manifest_content_hash TEXT NOT NULL,
+                file_hashes_json TEXT NOT NULL,
+                validated_at TEXT NOT NULL,
+                signature_ok INTEGER NOT NULL,
+                validator_version TEXT NOT NULL
+            )
+            """
+        )
+        conn.execute(
+            "INSERT INTO build_integrity_anchor (anchor_version, release_label, "
+            "manifest_content_hash, file_hashes_json, validated_at, signature_ok, "
+            "validator_version) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (
+                ANCHOR_VERSION,
+                "1.0.0-test",
+                _manifest_content_hash(hashes),
+                json.dumps(hashes, sort_keys=True),
+                now,
+                1,
+                VALIDATOR_VERSION,
+            ),
+        )
+        conn.execute(
+            """
+            CREATE TABLE integrity_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                created_at TEXT NOT NULL,
+                event_type TEXT NOT NULL,
+                detail TEXT NOT NULL
+            )
+            """
+        )
+        conn.execute(
+            "INSERT INTO integrity_events (created_at, event_type, detail) "
+            "VALUES (?, ?, ?)",
+            (now, "validation", "legacy seed"),
+        )
+        conn.commit()
+
+    snap = ensure_integrity_anchor({"sqlite_path": str(db)})
+    assert snap["integrity_state"] == "validated"
+    assert snap["trust_level"] == "expected"
+    assert "build_digest_matched" in snap
+    # Rename alone would keep the legacy overclaim bit (1); migration must
+    # zero it — under-claim until an honest re-baseline.
+    assert snap["build_digest_matched"] is False
+    assert "signature_ok" not in snap
+    assert snap["mismatched_files"] == []  # module-hash baseline intact
+
+    with contextlib.closing(sqlite3.connect(db)) as conn:
+        cols = {
+            r[1]
+            for r in conn.execute(
+                "PRAGMA table_info(build_integrity_anchor)"
+            ).fetchall()
+        }
+        bit = conn.execute(
+            "SELECT build_digest_matched FROM build_integrity_anchor "
+            "WHERE anchor_version = ?",
+            (ANCHOR_VERSION,),
+        ).fetchone()
+        event_count = conn.execute("SELECT COUNT(*) FROM integrity_events").fetchone()[
+            0
+        ]
+    assert "build_digest_matched" in cols
+    assert "signature_ok" not in cols
+    assert bit is not None and bit[0] == 0
+    assert event_count >= 1  # integrity_events preserved across migration

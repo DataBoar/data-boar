@@ -11,9 +11,12 @@ Flow (E.1–E.5):
 
 1. First run: hash the behaviour-critical allowlist (CRITICAL_MODULES) →
    persist ``build_integrity_anchor`` (release_label, per-file hashes,
-   manifest_content_hash, validated_at, signature_ok, validator_version) in the
-   SAME SQLite file as scan data — ``wipe_all_data()`` / ``--reset-data`` only
-   delete ORM scan tables, so the anchor SURVIVES a data wipe by design.
+   manifest_content_hash, validated_at, build_digest_matched, validator_version)
+   in the SAME SQLite file as scan data — ``wipe_all_data()`` / ``--reset-data``
+   only delete ORM scan tables, so the anchor SURVIVES a data wipe by design.
+   ``build_digest_matched`` is a **digest compare** flag (not a cryptographic
+   signature): True only when ``DATA_BOAR_EXPECTED_BUILD_DIGEST`` was set and
+   matched the embedded digest (#1211).
 2. Every later startup (ANY mode, including ``open``): recompute hashes,
    compare to the anchor. Mismatch → ``integrity_state=tampered`` /
    ``trust_level=adulterated`` and every user-visible surface (report Info
@@ -99,6 +102,24 @@ def _db_path_from_config(config: dict[str, Any] | None) -> str:
     return str(cfg.get("sqlite_path", "audit_results.db"))
 
 
+def _migrate_legacy_signature_ok_column(conn: sqlite3.Connection) -> None:
+    """#1211 — rename signature_ok → build_digest_matched on legacy DBs (SQLite 3.25+)."""
+    cols = {
+        row[1]
+        for row in conn.execute("PRAGMA table_info(build_integrity_anchor)").fetchall()
+    }
+    if "signature_ok" in cols and "build_digest_matched" not in cols:
+        conn.execute(
+            "ALTER TABLE build_integrity_anchor "
+            "RENAME COLUMN signature_ok TO build_digest_matched"
+        )
+        # Legacy values were written under the old default-true overclaim
+        # (nothing verified ≠ matched). One-time reset to 0 (under-claim);
+        # module-hash baseline rows stay intact; next honest baseline uses
+        # _build_digest_matched().
+        conn.execute("UPDATE build_integrity_anchor SET build_digest_matched = 0")
+
+
 def _ensure_tables(conn: sqlite3.Connection) -> None:
     conn.execute(
         """
@@ -108,11 +129,12 @@ def _ensure_tables(conn: sqlite3.Connection) -> None:
             manifest_content_hash TEXT NOT NULL,
             file_hashes_json TEXT NOT NULL,
             validated_at TEXT NOT NULL,
-            signature_ok INTEGER NOT NULL,
+            build_digest_matched INTEGER NOT NULL,
             validator_version TEXT NOT NULL
         )
         """
     )
+    _migrate_legacy_signature_ok_column(conn)
     conn.execute(
         """
         CREATE TABLE IF NOT EXISTS integrity_events (
@@ -143,13 +165,17 @@ def _release_label() -> str:
         return "unknown"
 
 
-def _signature_ok() -> bool:
-    """Best-effort release signature signal (build digest + optional manifest)."""
+def _build_digest_matched() -> bool:
+    """True only when an expected build digest was configured and matched (#1211).
+
+    This is a **digest compare**, not a cryptographic signature verification.
+    ``no_expected_digest`` (env unset) returns False — nothing verified ≠ matched.
+    """
     try:
         from core.licensing.integrity import check_build_digest_expected
 
-        ok, _detail = check_build_digest_expected()
-        return bool(ok)
+        ok, detail = check_build_digest_expected()
+        return bool(ok) and detail == "digest_match"
     except Exception:  # pragma: no cover
         return False
 
@@ -177,7 +203,7 @@ def ensure_integrity_anchor(config: dict[str, Any] | None = None) -> dict[str, A
             _ensure_tables(conn)
             row = conn.execute(
                 "SELECT release_label, manifest_content_hash, file_hashes_json, "
-                "validated_at, signature_ok FROM build_integrity_anchor "
+                "validated_at, build_digest_matched FROM build_integrity_anchor "
                 "WHERE anchor_version = ?",
                 (ANCHOR_VERSION,),
             ).fetchone()
@@ -185,11 +211,11 @@ def ensure_integrity_anchor(config: dict[str, Any] | None = None) -> dict[str, A
             if row is None:
                 # E.1/E.2 — first-run validation: persist the anchor baseline.
                 label = _release_label()
-                sig_ok = _signature_ok()
+                digest_matched = _build_digest_matched()
                 conn.execute(
                     "INSERT INTO build_integrity_anchor (anchor_version, "
                     "release_label, manifest_content_hash, file_hashes_json, "
-                    "validated_at, signature_ok, validator_version) "
+                    "validated_at, build_digest_matched, validator_version) "
                     "VALUES (?, ?, ?, ?, ?, ?, ?)",
                     (
                         ANCHOR_VERSION,
@@ -197,7 +223,7 @@ def ensure_integrity_anchor(config: dict[str, Any] | None = None) -> dict[str, A
                         _manifest_content_hash(current),
                         json.dumps(current, sort_keys=True),
                         now_iso,
-                        1 if sig_ok else 0,
+                        1 if digest_matched else 0,
                         VALIDATOR_VERSION,
                     ),
                 )
@@ -205,19 +231,19 @@ def ensure_integrity_anchor(config: dict[str, Any] | None = None) -> dict[str, A
                     conn,
                     "validation",
                     f"first-run anchor created: release_label={label} "
-                    f"files={len(current)} signature_ok={sig_ok}",
+                    f"files={len(current)} build_digest_matched={digest_matched}",
                 )
                 snapshot = {
                     "integrity_state": "validated",
                     "trust_level": "expected",
                     "release_label": label,
                     "validated_at": now_iso,
-                    "signature_ok": sig_ok,
+                    "build_digest_matched": digest_matched,
                     "mismatched_files": [],
                 }
             else:
                 # E.3 — startup re-verify against the stored anchor.
-                label, _stored_manifest, stored_json, validated_at, sig_ok = row
+                label, _stored_manifest, stored_json, validated_at, digest_flag = row
                 stored: dict[str, str] = json.loads(stored_json)
                 mismatched = sorted(
                     set(stored) | set(current),
@@ -236,7 +262,7 @@ def ensure_integrity_anchor(config: dict[str, Any] | None = None) -> dict[str, A
                         "trust_level": "adulterated",
                         "release_label": label,
                         "validated_at": validated_at,
-                        "signature_ok": bool(sig_ok),
+                        "build_digest_matched": bool(digest_flag),
                         "mismatched_files": mismatched,
                     }
                 else:
@@ -246,7 +272,7 @@ def ensure_integrity_anchor(config: dict[str, Any] | None = None) -> dict[str, A
                         "trust_level": "expected",
                         "release_label": label,
                         "validated_at": validated_at,
-                        "signature_ok": bool(sig_ok),
+                        "build_digest_matched": bool(digest_flag),
                         "mismatched_files": [],
                     }
             conn.commit()
@@ -257,7 +283,7 @@ def ensure_integrity_anchor(config: dict[str, Any] | None = None) -> dict[str, A
             "trust_level": "unknown",
             "release_label": "unknown",
             "validated_at": "",
-            "signature_ok": False,
+            "build_digest_matched": False,
             "mismatched_files": [],
             "error": str(e),
         }
@@ -288,7 +314,7 @@ def get_integrity_snapshot() -> dict[str, Any]:
             "trust_level": "unknown",
             "release_label": "unknown",
             "validated_at": "",
-            "signature_ok": False,
+            "build_digest_matched": False,
             "mismatched_files": [],
         }
     return dict(_SNAPSHOT)
