@@ -8,6 +8,7 @@ is enabled.
 
 from __future__ import annotations
 
+import math
 import zipfile
 from collections.abc import Callable
 from pathlib import Path
@@ -19,6 +20,7 @@ import tarfile
 SCAN_FAILURE_REASON_ENCRYPTED_NO_PASSWORD = "encrypted_no_password"
 SCAN_FAILURE_REASON_WRONG_PASSWORD = "wrong_password"
 SCAN_FAILURE_REASON_ARCHIVE_READ_ERROR = "archive_read_error"
+SCAN_FAILURE_REASON_ARCHIVE_BUDGET_EXCEEDED = "archive_budget_exceeded"
 
 MemberReadFailureCallback = Callable[[str, str, str], None]
 
@@ -258,16 +260,80 @@ def iter_archive_members(
     allowed_extensions: Iterable[str] | set[str],
     file_passwords: dict[str, str] | None = None,
     on_member_read_failure: MemberReadFailureCallback | None = None,
+    *,
+    max_members: int | None = None,
+    max_total_uncompressed: int | None = None,
+    max_expansion_ratio: float | None = None,
 ) -> Iterator[tuple[str, bytes]]:
     """
     Yield (member_name, content_bytes) for each file inside the archive whose
     extension is in allowed_extensions and uncompressed size <= max_inner_size.
     Skips directories. Member names use forward slashes.
+
+    Aggregate budgets (#1233): optional ``max_members``, ``max_total_uncompressed``,
+    and ``max_expansion_ratio`` are checked from declared sizes **before** materializing
+    member bytes. Exceeding any limit invokes ``on_member_read_failure`` with
+    ``archive_budget_exceeded`` and stops iteration (fail-closed).
     """
     allowed = _norm_content_extensions(allowed_extensions)
     if not allowed:
         return
     pw = file_passwords or {}
+
+    try:
+        compressed_size = max(int(path.stat().st_size), 0)
+    except OSError:
+        compressed_size = 0
+
+    examined = 0
+    total_uncompressed = 0
+
+    def _budget_exceeded(member_label: str, detail: str) -> bool:
+        """True when a budget was hit; caller must stop iteration without materializing."""
+        if on_member_read_failure is not None:
+            on_member_read_failure(
+                SCAN_FAILURE_REASON_ARCHIVE_BUDGET_EXCEEDED,
+                member_label,
+                f"{path.name}|{member_label}: {detail}",
+            )
+        return True
+
+    def _after_examine(member_label: str, declared_size: int) -> bool:
+        """Increment counters; return True if iteration must stop (budget exceeded)."""
+        nonlocal examined, total_uncompressed
+        examined += 1
+        total_uncompressed += max(int(declared_size), 0)
+        if max_members is not None and examined > max_members:
+            return _budget_exceeded(
+                member_label,
+                f"max_members exceeded (examined={examined} > {max_members})",
+            )
+        if (
+            max_total_uncompressed is not None
+            and total_uncompressed > max_total_uncompressed
+        ):
+            return _budget_exceeded(
+                member_label,
+                (
+                    f"max_total_uncompressed exceeded "
+                    f"(total={total_uncompressed} > {max_total_uncompressed})"
+                ),
+            )
+        if (
+            max_expansion_ratio is not None
+            and compressed_size > 0
+            and math.isfinite(float(max_expansion_ratio))
+            and (total_uncompressed / compressed_size) > float(max_expansion_ratio)
+        ):
+            ratio = total_uncompressed / compressed_size
+            return _budget_exceeded(
+                member_label,
+                (
+                    f"max_expansion_ratio exceeded "
+                    f"(ratio={ratio:.1f} > {max_expansion_ratio})"
+                ),
+            )
+        return False
 
     if archive_type == "zip":
         pwd = (pw.get(".zip") or pw.get("default") or "").encode("utf-8") or None
@@ -282,6 +348,8 @@ def iter_archive_members(
                         info = z.getinfo(name)
                     except KeyError:
                         continue
+                    if _after_examine(name, info.file_size):
+                        return
                     if info.file_size > max_inner_size:
                         continue
                     ext = Path(name).suffix.lower()
@@ -320,7 +388,10 @@ def iter_archive_members(
                 for member in tar.getmembers():
                     if not member.isfile():
                         continue
-                    if getattr(member, "size", 0) > max_inner_size:
+                    declared = int(getattr(member, "size", 0) or 0)
+                    if _after_examine(member.name, declared):
+                        return
+                    if declared > max_inner_size:
                         continue
                     ext = Path(member.name).suffix.lower()
                     if ext not in allowed:
@@ -350,6 +421,8 @@ def iter_archive_members(
                     if member.is_directory:
                         continue
                     size = getattr(member, "uncompressed", 0) or 0
+                    if _after_examine(member.filename, size):
+                        return
                     if size > max_inner_size:
                         continue
                     ext = Path(member.filename).suffix.lower()

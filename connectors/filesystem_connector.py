@@ -6,6 +6,7 @@ Scans all compatible/supported file types by extension; unknown types get path/n
 """
 
 import hashlib
+import math
 import os
 import stat
 import tempfile
@@ -36,6 +37,43 @@ DEFAULT_MAX_INNER_SIZE = 10_000_000
 # Clamp range for max_inner_size (config may be validated in loader; this is defense-in-depth).
 MIN_MAX_INNER_SIZE = 1_000_000  # 1 MB
 MAX_MAX_INNER_SIZE = 500_000_000  # 500 MB
+
+# Aggregate archive budgets (#1233) — anti zip-bomb / DoS; applied even when caller omits kwargs.
+DEFAULT_MAX_MEMBERS = 1000
+MIN_MAX_MEMBERS = 1
+MAX_MAX_MEMBERS = 100_000
+DEFAULT_MAX_TOTAL_UNCOMPRESSED = 1_000_000_000  # 1 GB
+MIN_MAX_TOTAL_UNCOMPRESSED = 1_000_000  # 1 MB
+MAX_MAX_TOTAL_UNCOMPRESSED = 50_000_000_000  # 50 GB
+DEFAULT_MAX_EXPANSION_RATIO = 200.0
+MIN_MAX_EXPANSION_RATIO = 1.0
+MAX_MAX_EXPANSION_RATIO = 10_000.0
+
+
+def _clamp_max_members(raw: int | None) -> int:
+    try:
+        n = int(raw) if raw is not None else DEFAULT_MAX_MEMBERS
+    except (TypeError, ValueError):
+        return DEFAULT_MAX_MEMBERS
+    return max(MIN_MAX_MEMBERS, min(MAX_MAX_MEMBERS, n))
+
+
+def _clamp_max_total_uncompressed(raw: int | None) -> int:
+    try:
+        n = int(raw) if raw is not None else DEFAULT_MAX_TOTAL_UNCOMPRESSED
+    except (TypeError, ValueError):
+        return DEFAULT_MAX_TOTAL_UNCOMPRESSED
+    return max(MIN_MAX_TOTAL_UNCOMPRESSED, min(MAX_MAX_TOTAL_UNCOMPRESSED, n))
+
+
+def _clamp_max_expansion_ratio(raw: float | int | None) -> float:
+    try:
+        n = float(raw) if raw is not None else DEFAULT_MAX_EXPANSION_RATIO
+    except (TypeError, ValueError):
+        return DEFAULT_MAX_EXPANSION_RATIO
+    if not math.isfinite(n):
+        return DEFAULT_MAX_EXPANSION_RATIO
+    return max(MIN_MAX_EXPANSION_RATIO, min(MAX_MAX_EXPANSION_RATIO, n))
 
 
 def _file_content_fingerprint(raw_bytes: bytes | None) -> str | None:
@@ -619,6 +657,10 @@ class FilesystemConnector:
         )  # default False when not present
         # max_inner_size may be None -> meaning "use engine/connector default" in later phases
         self.max_inner_size = fs_opts.get("max_inner_size")
+        # Aggregate budgets (#1233); None -> scan_archive_at_path applies defaults.
+        self.max_members = fs_opts.get("max_members")
+        self.max_total_uncompressed = fs_opts.get("max_total_uncompressed")
+        self.max_expansion_ratio = fs_opts.get("max_expansion_ratio")
         self.compressed_extensions = normalize_compressed_extensions(
             fs_opts.get("compressed_extensions") or default_compressed_extensions()
         )
@@ -677,6 +719,9 @@ class FilesystemConnector:
             db_manager=self.db_manager,
             extensions=self.extensions,
             max_inner_size=self.max_inner_size,
+            max_members=self.max_members,
+            max_total_uncompressed=self.max_total_uncompressed,
+            max_expansion_ratio=self.max_expansion_ratio,
             file_passwords=self.file_passwords,
             file_sample_max_chars=self.file_sample_max_chars,
             rich_media_metadata=self.scan_rich_media_metadata,
@@ -889,6 +934,9 @@ def scan_archive_at_path(
     use_content_type: bool = False,
     scan_root: Path | None = None,
     audit_log_name: str | None = None,
+    max_members: int | None = None,
+    max_total_uncompressed: int | None = None,
+    max_expansion_ratio: float | int | None = None,
 ) -> None:
     """
     Open archive at path and scan inner members; save findings with file_name like archive.zip|inner/path.txt.
@@ -908,6 +956,9 @@ def scan_archive_at_path(
         max_size = max(MIN_MAX_INNER_SIZE, min(MAX_MAX_INNER_SIZE, max_size))
     except (TypeError, ValueError):
         max_size = DEFAULT_MAX_INNER_SIZE
+    members_cap = _clamp_max_members(max_members)
+    total_cap = _clamp_max_total_uncompressed(max_total_uncompressed)
+    ratio_cap = _clamp_max_expansion_ratio(max_expansion_ratio)
     try:
 
         def _on_member_read_failure(reason: str, member: str, details: str) -> None:
@@ -920,6 +971,9 @@ def scan_archive_at_path(
             extensions,
             file_passwords,
             on_member_read_failure=_on_member_read_failure,
+            max_members=members_cap,
+            max_total_uncompressed=total_cap,
+            max_expansion_ratio=ratio_cap,
         ):
             ext = Path(member_name).suffix.lower()
             tmp_path: Path | None = None

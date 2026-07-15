@@ -211,6 +211,16 @@ above).
 optionally
 .I scan_compressed
 (bool, scan inside zip/tar/7z when supported),
+.I max_inner_size
+(bytes per member; clamped 1 MB–500 MB),
+.I max_members
+.IR /
+.I max_total_uncompressed
+.IR /
+.I max_expansion_ratio
+(aggregate archive budgets; defaults 1000 / 1 GiB / 200; exceed records
+.B archive_budget_exceeded
+in scan_failures),
 .I use_content_type
 (bool, magic\-byte / content\-type detection for renamed or cloaked files; extra I/O).
 .TP
@@ -465,6 +475,9 @@ Example main config (excerpt):
   scan_sqlite_as_db: true
   sample_limit: 5
   # scan_compressed: false   # optional: scan inside archives
+  # max_members: 1000         # aggregate budgets (anti zip-bomb)
+  # max_total_uncompressed: 1000000000
+  # max_expansion_ratio: 200
   # use_content_type: false   # optional: magic-byte detection (renamed files)
 
 \fBreport:\fR

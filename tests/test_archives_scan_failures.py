@@ -121,6 +121,104 @@ def test_scan_archive_at_path_inner_sample_uses_on_read_barrier(
     assert "bundle.zip|inner.pdf" in encrypted[0][2]
 
 
+def test_archive_budget_max_members_stops_and_records_failure(tmp_path):
+    """Many small members: stop at max_members; fail-closed with archive_budget_exceeded (#1233)."""
+    from core.archives import (
+        SCAN_FAILURE_REASON_ARCHIVE_BUDGET_EXCEEDED,
+        iter_archive_members,
+    )
+
+    zip_path = tmp_path / "many.zip"
+    n_members = 20
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_STORED) as z:
+        for i in range(n_members):
+            z.writestr(f"m{i:02d}.txt", f"payload-{i}")
+
+    failures: list[tuple[str, str, str]] = []
+    materialized: list[str] = []
+
+    def _on_fail(reason: str, member: str, details: str) -> None:
+        failures.append((reason, member, details))
+
+    for name, _data in iter_archive_members(
+        zip_path,
+        "zip",
+        max_inner_size=1_000_000,
+        allowed_extensions={".txt"},
+        on_member_read_failure=_on_fail,
+        max_members=5,
+        max_total_uncompressed=1_000_000_000,
+        max_expansion_ratio=10_000.0,
+    ):
+        materialized.append(name)
+
+    assert len(materialized) == 5
+    assert len(materialized) < n_members
+    assert any(r == SCAN_FAILURE_REASON_ARCHIVE_BUDGET_EXCEEDED for r, _, _ in failures)
+
+    db = _DummyDB()
+    scan_archive_at_path(
+        archive_path=zip_path,
+        archive_display_name=zip_path.name,
+        target_name="T",
+        path_display=str(tmp_path),
+        scanner=MagicMock(scan_file_content=MagicMock(return_value=None)),
+        db_manager=db,
+        extensions={".txt"},
+        max_inner_size=1_000_000,
+        file_passwords={},
+        file_sample_max_chars=5000,
+        max_members=5,
+        max_total_uncompressed=1_000_000_000,
+        max_expansion_ratio=10_000.0,
+    )
+    budget = [
+        f for f in db.failures if f[1] == SCAN_FAILURE_REASON_ARCHIVE_BUDGET_EXCEEDED
+    ]
+    assert len(budget) >= 1
+
+
+def test_archive_budget_expansion_ratio_before_materialize(tmp_path):
+    """High declared/compressed ratio trips before reading remaining members (#1233)."""
+    from core.archives import (
+        SCAN_FAILURE_REASON_ARCHIVE_BUDGET_EXCEEDED,
+        iter_archive_members,
+    )
+
+    zip_path = tmp_path / "ratio.zip"
+    # Highly compressible payloads → tiny archive, large declared uncompressed total.
+    payload = b"0" * 200_000
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as z:
+        for i in range(8):
+            z.writestr(f"big{i}.txt", payload)
+
+    compressed = zip_path.stat().st_size
+    assert compressed > 0
+    assert (8 * len(payload)) / compressed > 50
+
+    failures: list[tuple[str, str, str]] = []
+    materialized: list[str] = []
+
+    def _on_fail(reason: str, member: str, details: str) -> None:
+        failures.append((reason, member, details))
+
+    for name, _data in iter_archive_members(
+        zip_path,
+        "zip",
+        max_inner_size=10_000_000,
+        allowed_extensions={".txt"},
+        on_member_read_failure=_on_fail,
+        max_members=1000,
+        max_total_uncompressed=1_000_000_000,
+        max_expansion_ratio=20.0,
+    ):
+        materialized.append(name)
+
+    assert len(materialized) < 8
+    assert any(r == SCAN_FAILURE_REASON_ARCHIVE_BUDGET_EXCEEDED for r, _, _ in failures)
+    assert any("max_expansion_ratio" in d for _, _, d in failures)
+
+
 def test_scan_compressed_encrypted_zip_member_records_failure(
     tmp_path, monkeypatch: pytest.MonkeyPatch
 ):
