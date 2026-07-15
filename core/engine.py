@@ -338,12 +338,17 @@ class AuditEngine:
                                 # Best effort: persist failures when possible, but don't break session flow.
                                 _ = str(save_err)
                             final_status = "completed_errors"
+        except KeyboardInterrupt:
+            # Ctrl+C / SIGTERM→KeyboardInterrupt: terminal "interrupted", not orphan running (#1251).
+            final_status = "interrupted"
+            raise
         finally:
             self._is_running = False
             from core.scan_audit_log import build_scan_audit_log
 
             self._scan_audit_log = build_scan_audit_log(self.config)
-            self.db_manager.finish_session(session_id, final_status)
+            if session_id:
+                self.db_manager.finish_session(session_id, final_status)
 
     def _run_target(self, target: dict[str, Any]) -> None:
         """Run one target: resolve connector, instantiate, run()."""
