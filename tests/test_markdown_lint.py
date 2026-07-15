@@ -13,10 +13,13 @@ Checks project .md and .mdc files for:
 - Table (compact): No space to the left of pipe (e.g. |col not | col)
 
 Excludes: paths in MARKDOWN_LINT_EXCLUDE only (.git, node_modules, .venv, **private**, etc.) by default.
+Collection uses **git-tracked** ``*.md`` / ``*.mdc`` (``git ls-files``) so local equals CI (#1240);
+filesystem ``rglob`` is a fallback only when git is unavailable.
 Pass **``pytest --include-private``** or set **``INCLUDE_PRIVATE_LINT=1``** to lint **``docs/private/``** too (see ``tests/conftest.py``). .cursor/ is included so rules and skills (.mdc, SKILL.md) comply with MD031, MD060, etc.
 """
 
 import re
+import subprocess
 from pathlib import Path
 
 
@@ -24,8 +27,8 @@ def _project_root() -> Path:
     return Path(__file__).resolve().parent.parent
 
 
-def _collect_md_files(root: Path, exclude_dirs: frozenset[str]) -> list[Path]:
-    """Return all .md and .mdc files under root, excluding given dir names."""
+def _collect_md_files_via_rglob(root: Path, exclude_dirs: frozenset[str]) -> list[Path]:
+    """Filesystem walk fallback when git is unavailable (e.g. tarball tree)."""
     out: list[Path] = []
     for ext in ("*.md", "*.mdc"):
         for path in root.rglob(ext):
@@ -36,6 +39,34 @@ def _collect_md_files(root: Path, exclude_dirs: frozenset[str]) -> list[Path]:
             if any(part in exclude_dirs for part in rel.parts):
                 continue
             out.append(path)
+    return out
+
+
+def _collect_md_files(root: Path, exclude_dirs: frozenset[str]) -> list[Path]:
+    """Return .md/.mdc paths under root that are git-tracked (local == CI).
+
+    Falls back to ``rglob`` when ``git ls-files`` is unavailable (#1240), so
+    tarball / non-git trees still lint. Always honor ``exclude_dirs`` (e.g.
+    conditional ``private``).
+    """
+    out: list[Path] = []
+    try:
+        proc = subprocess.run(
+            ["git", "ls-files", "-z", "*.md", "*.mdc"],
+            cwd=root,
+            check=True,
+            capture_output=True,
+        )
+        raw = proc.stdout.split(b"\0")
+        for entry in raw:
+            if not entry:
+                continue
+            rel = Path(entry.decode("utf-8", errors="replace"))
+            if any(part in exclude_dirs for part in rel.parts):
+                continue
+            out.append(root / rel)
+    except (FileNotFoundError, subprocess.CalledProcessError, OSError):
+        out = _collect_md_files_via_rglob(root, exclude_dirs)
     return sorted(set(out))
 
 
