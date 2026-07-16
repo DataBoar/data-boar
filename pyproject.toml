@@ -117,10 +117,10 @@ data-boar = "main:main"
 data-boar-report = "cli.reporter:main"
 
 [project.urls]
-Homepage = "https://github.com/FabioLeitao/data-boar"
-Repository = "https://github.com/FabioLeitao/data-boar"
-Issues = "https://github.com/FabioLeitao/data-boar/issues"
-Changelog = "https://github.com/FabioLeitao/data-boar/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/DataBoar/data-boar"
+Repository = "https://github.com/DataBoar/data-boar"
+Issues = "https://github.com/DataBoar/data-boar/issues"
+Changelog = "https://github.com/DataBoar/data-boar/blob/main/CHANGELOG.md"
 "Docker Hub" = "https://hub.docker.com/r/fabioleitao/data_boar"
 
 [project.optional-dependencies]

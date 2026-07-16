@@ -249,7 +249,7 @@ def ensure_integrity_anchor(config: dict[str, Any] | None = None) -> dict[str, A
                 label, _stored_manifest, stored_json, validated_at, digest_flag = row
                 current_label = _release_label()
                 if label != current_label:
-                    # Release upgrade (#1262): new signed/released bits are the
+                    # Release upgrade (#1262): new released bits are the
                     # new baseline. Same-label hash drift still = tamper below.
                     # Tamper-EVIDENT (E.6): append-only ``re-baseline`` event.
                     digest_matched = _build_digest_matched()

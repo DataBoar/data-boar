@@ -47,7 +47,7 @@ Human-readable summary of user-facing changes. **Detailed release notes:** [docs
 
 ## 1.7.4.post4 (pending PyPI dispatch)
 
-> Post-release on the **`1.7.4`** public line. **`[project] version = 1.7.4.post4`** and **`[tool.databoar] maturity_build = 225`** (`N=14` fixes since post3 baseline, ADR-0073 dual counter policy).
+> Post-release on the **`1.7.4`** public line. **`[project] version = 1.7.4.post4`** and **`[tool.databoar] maturity_build = 226`** (`N=15` fixes since post3 baseline, ADR-0073 dual counter policy).
 
 ### Fixed (post4)
 
