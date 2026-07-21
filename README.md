@@ -86,6 +86,8 @@ Data Boar runs as a **one-shot CLI** audit or as a **REST API** (default port 80
 
 **Quick start:** the [5-min QuickStart](QUICKSTART.md) walks through both paths (Docker or local `uv`, copy-paste); the full flag and configuration reference is in [USAGE.md](docs/USAGE.md). For Linux distro caveats (including current RHEL9-family and Alpine/musl `pipx` onboarding pre-steps), see [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) and the [OS compatibility matrix](docs/ops/OS_COMPATIBILITY_TESTING_MATRIX.md). On **Linux (native, not Docker)**, install system libraries **before** `uv sync` — see [Technical guide — Requirements and environment preparation](docs/TECH_GUIDE.md#requirements-and-environment-preparation). **Do not commit** root `config.yaml` (`.gitignore`); it may contain LAN paths and secrets — see [CONTRIBUTING.md](CONTRIBUTING.md#public-repo-hygiene-lan-credentials).
 
+**SQL drivers:** match each target's `driver` to an optional extra — default MSSQL uses `mssql` / `mssql+pymssql` with `data-boar[mssql-pymssql]`; set `driver: mssql+pyodbc` and install `data-boar[mssql]` when ODBC is required (see [USAGE.md — Targets: databases](docs/USAGE.md#targets-databases)). For open-core self-hosted SQL (PostgreSQL, MySQL, MariaDB; SQLite is core), install `data-boar[sql-community]`; use `data-boar[sql-all]` for every SQL driver bundle including MSSQL/Oracle — installing a driver does not bypass tier gating for Pro-gated database targets.
+
 **Full documentation index** (browse all topics and languages): [docs/README.md](docs/README.md) · [docs/README.pt_BR.md](docs/README.pt_BR.md).
 
 **Glossary** (terms and domain language): [docs/GLOSSARY.md](docs/GLOSSARY.md) · [docs/GLOSSARY.pt_BR.md](docs/GLOSSARY.pt_BR.md).
