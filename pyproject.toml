@@ -40,7 +40,7 @@ dependencies = [
     # direct constraint so Dependabot/uv stop trying to bump past 4.14 until
     # upstream extract-msg relaxes its `beautifulsoup4<4.14` requirement.
     # See: https://pypi.org/project/extract-msg/0.55.0/ (requires_dist).
-    "beautifulsoup4>=4.13.5,<4.14",
+    "beautifulsoup4>=4.13.5,<4.16",
     "blinker>=1.9.0",
     "certifi>=2026.5.20",
     "cffi>=2.0.0 ; platform_python_implementation != 'PyPy'",
