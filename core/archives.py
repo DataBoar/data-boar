@@ -17,6 +17,8 @@ from typing import Iterable, Iterator
 
 import tarfile
 
+from core.validation import clean_error
+
 # scan_failures reasons for unreadable archive members (#828; shared taxonomy with SQL sampling_error).
 SCAN_FAILURE_REASON_ENCRYPTED_NO_PASSWORD = "encrypted_no_password"
 SCAN_FAILURE_REASON_WRONG_PASSWORD = "wrong_password"
@@ -461,7 +463,7 @@ def iter_archive_members(
                             on_member_read_failure(
                                 reason,
                                 name,
-                                f"{path.name}|{name}: {type(e).__name__}: {e}",
+                                f"{path.name}|{name}: {type(e).__name__}: {clean_error(e)}",
                             )
                     return
 
@@ -480,7 +482,7 @@ def iter_archive_members(
                             on_member_read_failure(
                                 reason,
                                 name,
-                                f"{path.name}|{name}: {type(e).__name__}: {e}",
+                                f"{path.name}|{name}: {type(e).__name__}: {clean_error(e)}",
                             )
                         continue
                     yield (name, data)
