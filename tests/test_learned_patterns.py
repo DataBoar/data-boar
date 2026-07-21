@@ -103,6 +103,28 @@ def test_collect_filesystem_extracts_table_column():
     assert entries[0]["text"] == "users.cpf"
 
 
+def test_collect_filesystem_skips_bare_filename():
+    """#1259: generic filenames must not become learned ML terms."""
+    fs = [
+        {
+            "file_name": "/repo/main.yml",
+            "sensitivity_level": "HIGH",
+            "pattern_detected": "DOB_POSSIBLE_MINOR",
+            "norm_tag": "Minor",
+            "ml_confidence": 82,
+        },
+        {
+            "file_name": "CONTRIBUTORS.txt",
+            "sensitivity_level": "HIGH",
+            "pattern_detected": "ML_POTENTIAL_ENTERTAINMENT",
+            "norm_tag": "",
+            "ml_confidence": 90,
+        },
+    ]
+    entries = collect_learned_entries([], fs, min_sensitivity="HIGH")
+    assert entries == []
+
+
 def test_write_learned_patterns_disabled_returns_none(tmp_path):
     class MockDB:
         def get_findings(self, session_id):
@@ -157,3 +179,73 @@ def test_write_learned_patterns_writes_yaml(tmp_path):
     content = out_file.read_text(encoding="utf-8")
     assert "cpf_cliente" in content
     assert "sensitive" in content
+
+
+def test_write_learned_patterns_resolves_relative_output_against_report_dir(tmp_path):
+    """#1260: relative output_file lands under report.output_dir, not cwd."""
+
+    class MockDB:
+        def get_findings(self, session_id):
+            return (
+                [
+                    {
+                        "column_name": "cpf_cliente",
+                        "sensitivity_level": "HIGH",
+                        "pattern_detected": "LGPD_CPF",
+                        "norm_tag": "LGPD",
+                        "ml_confidence": 88,
+                    }
+                ],
+                [],
+                [],
+            )
+
+    report_dir = tmp_path / "reports" / "demo"
+    report_dir.mkdir(parents=True)
+    config = {
+        "report": {"output_dir": str(report_dir)},
+        "learned_patterns": {
+            "enabled": True,
+            "output_file": "learned_patterns.yaml",
+            "append": False,
+        },
+        "ml_patterns_file": "",
+    }
+    out = write_learned_patterns(MockDB(), "s1", config)
+    expected = report_dir / "learned_patterns.yaml"
+    assert out == str(expected)
+    assert expected.exists()
+
+
+def test_write_learned_patterns_keeps_absolute_output_path(tmp_path):
+    """#1260: explicit absolute output_file is not rewritten under report.output_dir."""
+
+    class MockDB:
+        def get_findings(self, session_id):
+            return (
+                [
+                    {
+                        "column_name": "cpf_cliente",
+                        "sensitivity_level": "HIGH",
+                        "pattern_detected": "LGPD_CPF",
+                        "norm_tag": "LGPD",
+                        "ml_confidence": 88,
+                    }
+                ],
+                [],
+                [],
+            )
+
+    absolute_out = tmp_path / "custom" / "learned.yaml"
+    config = {
+        "report": {"output_dir": str(tmp_path / "reports")},
+        "learned_patterns": {
+            "enabled": True,
+            "output_file": str(absolute_out),
+            "append": False,
+        },
+        "ml_patterns_file": "",
+    }
+    out = write_learned_patterns(MockDB(), "s1", config)
+    assert out == str(absolute_out)
+    assert absolute_out.exists()

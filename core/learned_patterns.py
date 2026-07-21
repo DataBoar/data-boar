@@ -45,12 +45,12 @@ def _extract_term(row: dict, source: str) -> str | None:
     if source == "database":
         term = (row.get("column_name") or "").strip()
     else:
-        # Filesystem: file_name can be "path.db | table.column" or a path
+        # Filesystem: only learn structured db-like locations ("path | table.column").
+        # Bare filenames (e.g. main.yml) do not generalize across projects (#1259).
         fn = (row.get("file_name") or "").strip()
-        if " | " in fn:
-            term = fn.split(" | ")[-1].strip()  # e.g. table.column
-        else:
-            term = Path(fn).name if fn else ""
+        if " | " not in fn:
+            return None
+        term = fn.split(" | ")[-1].strip()  # e.g. table.column
     return term if term else None
 
 
@@ -147,6 +147,17 @@ def _load_existing_ml_texts(path: str | Path | None) -> set[str]:
     return out
 
 
+def _resolve_learned_patterns_output_path(lp: dict, config: dict[str, Any]) -> Path:
+    """Resolve learned_patterns.output_file; relative paths anchor to report.output_dir (#1260)."""
+    out_path = Path(lp.get("output_file", "learned_patterns.yaml"))
+    if out_path.is_absolute():
+        return out_path
+    output_dir = str((config.get("report") or {}).get("output_dir") or "").strip()
+    if output_dir:
+        return Path(output_dir) / out_path
+    return out_path
+
+
 def write_learned_patterns(
     db_manager: Any,
     session_id: str | None,
@@ -157,7 +168,7 @@ def write_learned_patterns(
     write YAML. Returns path to written file or None if disabled / no entries.
     Config under config["learned_patterns"]:
       enabled: bool (default True if key present)
-      output_file: str (default "learned_patterns.yaml")
+      output_file: str (default "learned_patterns.yaml"; relative paths resolve under report.output_dir)
       min_sensitivity: "HIGH" | "MEDIUM" (default "HIGH")
       min_confidence: int (default 70)
       min_term_length: int (default 3)
@@ -168,7 +179,7 @@ def write_learned_patterns(
     lp = config.get("learned_patterns") or {}
     if not lp.get("enabled", False):
         return None
-    out_path = Path(lp.get("output_file", "learned_patterns.yaml"))
+    out_path = _resolve_learned_patterns_output_path(lp, config)
     min_sensitivity = lp.get("min_sensitivity", "HIGH")
     min_confidence = int(lp.get("min_confidence", 70))
     min_term_length = int(lp.get("min_term_length", 3))
