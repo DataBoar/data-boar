@@ -50,17 +50,49 @@ logger = logging.getLogger(__name__)
 ANCHOR_VERSION = 1
 VALIDATOR_VERSION = "1"
 
-# Behaviour-critical modules (#856): gates, clamps, detection, API surface.
-# Paths are repo-root-relative. Changing ANY of these after the first
-# validated run marks the runtime as adulterated (-alpha).
-CRITICAL_MODULES: tuple[str, ...] = (
+# Behaviour-critical spine (#856) — always hashed.
+_CRITICAL_MODULE_SPINE: tuple[str, ...] = (
     "main.py",
     "core/detector.py",
     "core/engine.py",
     "core/integrity_anchor.py",
-    "core/licensing/guard.py",
     "api/routes.py",
 )
+
+# Auto-protect new connectors/licensing modules (#1298) — glob at resolve time.
+_CRITICAL_MODULE_GLOBS: tuple[str, ...] = (
+    "connectors/*.py",
+    "core/licensing/*.py",
+)
+
+# Explicit paths outside globs (#1298).
+_CRITICAL_MODULE_EXTRAS: tuple[str, ...] = (
+    "core/connector_registry.py",
+    "core/validation.py",
+    "utils/logger.py",
+    "api/webauthn_routes.py",
+    "api/webauthn_html_gate.py",
+)
+
+
+def _repo_root() -> Path:
+    return Path(__file__).resolve().parent.parent
+
+
+def resolve_critical_modules() -> tuple[str, ...]:
+    """Repo-root-relative paths in the behaviour-critical allowlist (sorted, deduped)."""
+    root = _repo_root()
+    paths: set[str] = set(_CRITICAL_MODULE_SPINE)
+    paths.update(_CRITICAL_MODULE_EXTRAS)
+    for pattern in _CRITICAL_MODULE_GLOBS:
+        for p in sorted(root.glob(pattern)):
+            if p.is_file():
+                paths.add(p.relative_to(root).as_posix())
+    return tuple(sorted(paths))
+
+
+# Resolved once at import; release upgrade re-baselines on next process start.
+CRITICAL_MODULES: tuple[str, ...] = resolve_critical_modules()
 
 # Open-mode worker clamp (#856): in ``licensing.mode: open`` the engine runs at
 # most this many parallel scan workers. Behaviour-critical — part of the
@@ -72,10 +104,6 @@ ALPHA_NOTE = "development / not CI-validated"
 
 _LOCK = threading.Lock()
 _SNAPSHOT: dict[str, Any] | None = None
-
-
-def _repo_root() -> Path:
-    return Path(__file__).resolve().parent.parent
 
 
 def compute_module_hashes() -> dict[str, str]:

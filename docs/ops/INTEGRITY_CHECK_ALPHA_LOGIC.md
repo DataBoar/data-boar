@@ -59,8 +59,10 @@ Append a structured record to `security_alert.log` (or SIEM sink):
 `core/integrity_anchor.py` implements the Alpha-detection spine:
 
 1. **First run (E.1–E.2):** SHA-256 of the behaviour-critical allowlist
-   (`main.py`, `core/detector.py`, `core/engine.py`, `core/integrity_anchor.py`,
-   `core/licensing/guard.py`, `api/routes.py`) → persisted in the
+   (spine + `connectors/*.py` + `core/licensing/*.py` + explicit extras —
+   see `resolve_critical_modules()` in `core/integrity_anchor.py` and
+   [PLAN_INTEGRITY_HARDENING.md](../plans/PLAN_INTEGRITY_HARDENING.md) § *behaviour-critical criterion*)
+   → persisted in the
    `build_integrity_anchor` SQLite table (`release_label`, per-file hashes,
    `validated_at`, `build_digest_matched`, `validator_version`).
    **`build_digest_matched` is a build-digest match flag, not a cryptographic
@@ -80,7 +82,8 @@ Append a structured record to `security_alert.log` (or SIEM sink):
 3. **TINTED / `-alpha` (E.4):** the adulterated state forces the
    `-alpha (development / not CI-validated)` label on the report Info sheet
    (`Build trust` / `Integrity state` rows), dashboard footer, `GET /about`,
-   `GET /status`, `/health`, and startup logs (CRITICAL log + stderr banner).
+   `GET /status`, `/health`, startup logs (CRITICAL log + stderr banner), and
+   **`--version`** / **`--validate-config`** CLI preflight ([#1298](https://github.com/DataBoar/data-boar/issues/1298)).
    `enterprise_surface` severity goes `elevated` with reason
    `integrity_tampered` (ADR-0066 alignment).
 4. **Open-mode worker clamp:** `core/engine.py` caps `scan.max_workers` at

@@ -38,6 +38,7 @@ import pytest
 
 from core.integrity_anchor import (
     ANCHOR_VERSION,
+    CRITICAL_MODULES,
     OPEN_MODE_WORKER_CAP,
     VALIDATOR_VERSION,
     _manifest_content_hash,
@@ -116,11 +117,16 @@ def test_hashes_cover_behaviour_critical_modules():
         "core/detector.py",
         "core/engine.py",
         "core/integrity_anchor.py",
+        "connectors/sql_connector.py",
+        "core/licensing/verify.py",
         "core/licensing/guard.py",
         "api/routes.py",
+        "core/validation.py",
+        "utils/logger.py",
     ):
         assert rel in hashes
         assert hashes[rel] != "missing"
+    assert len(hashes) == len(CRITICAL_MODULES)
 
 
 # --- 3. tamper detection ---------------------------------------------------------
