@@ -24,8 +24,24 @@ from core.runtime_trust import get_runtime_trust_snapshot
 def _cli_public_version_line() -> str:
     """Public CLI --version string (no maturity_build octet; see ADR-0073)."""
     from core.about import _package_version
+    from core.integrity_anchor import alpha_version_suffix
 
-    return f"Data Boar {_package_version()}"
+    return f"Data Boar {_package_version()}{alpha_version_suffix()}"
+
+
+def _run_startup_integrity_check(config: dict[str, Any] | None) -> dict[str, Any]:
+    """First-run validate / startup re-verify (#856); stderr banner when tampered."""
+    from core.integrity_anchor import ALPHA_LABEL, ALPHA_NOTE, ensure_integrity_anchor
+
+    snap = ensure_integrity_anchor(config)
+    if snap.get("integrity_state") == "tampered":
+        print(
+            "*** INTEGRITY: behaviour-critical modules diverge from the "
+            f"validated anchor — runtime self-marked {ALPHA_LABEL} ({ALPHA_NOTE}). "
+            f"Mismatched: {', '.join(snap.get('mismatched_files', []))} ***",
+            file=sys.stderr,
+        )
+    return snap
 
 
 def _install_scan_interrupt_signal_handlers() -> None:
@@ -364,8 +380,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--version",
-        action="version",
-        version=_cli_public_version_line(),
+        action="store_true",
         help="Show the public product version and exit (no scan or API startup).",
     )
     parser.add_argument(
@@ -585,6 +600,11 @@ def main() -> None:
     )
     args = parser.parse_args()
 
+    if args.version:
+        _run_startup_integrity_check({"sqlite_path": "audit_results.db"})
+        print(_cli_public_version_line())
+        sys.exit(0)
+
     demo_mode = bool(getattr(args, "demo", False))
     demo_dir: Path | None = None
 
@@ -692,6 +712,9 @@ def main() -> None:
         sys.exit(1)
 
     if args.validate_config:
+        _integrity = _run_startup_integrity_check(config)
+        runtime_trust = get_runtime_trust_snapshot(config)
+        _emit_runtime_trust_info(runtime_trust, to_stdout=True, to_stderr=True)
         _validate_config_and_exit(config, args.config)
 
     if args.diff_sessions:
@@ -716,16 +739,7 @@ def main() -> None:
 
     # #856 (Phase E): integrity anchor first-run validation / startup re-verify.
     # Runs in ANY licensing mode (including open); fail-soft (state=unknown).
-    from core.integrity_anchor import ALPHA_NOTE, ensure_integrity_anchor
-
-    _integrity = ensure_integrity_anchor(config)
-    if _integrity.get("integrity_state") == "tampered":
-        print(
-            "*** INTEGRITY: behaviour-critical modules diverge from the "
-            f"validated anchor — runtime self-marked -alpha ({ALPHA_NOTE}). "
-            f"Mismatched: {', '.join(_integrity.get('mismatched_files', []))} ***",
-            file=sys.stderr,
-        )
+    _integrity = _run_startup_integrity_check(config)
 
     runtime_trust = get_runtime_trust_snapshot(config)
 

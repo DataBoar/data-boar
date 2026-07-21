@@ -59,9 +59,11 @@ Anexar registro estruturado a `security_alert.log` (ou destino SIEM):
 `core/integrity_anchor.py` implementa a espinha da detecção Alpha:
 
 1. **Primeira execução (E.1–E.2):** SHA-256 da allowlist crítica de
-   comportamento (`main.py`, `core/detector.py`, `core/engine.py`,
-   `core/integrity_anchor.py`, `core/licensing/guard.py`, `api/routes.py`) →
-   persistido na tabela SQLite `build_integrity_anchor` (`release_label`,
+   comportamento (spine + `connectors/*.py` + `core/licensing/*.py` + extras
+   explícitos — ver `resolve_critical_modules()` em
+   `core/integrity_anchor.py` e
+   [PLAN_INTEGRITY_HARDENING.md](../plans/PLAN_INTEGRITY_HARDENING.md) § *behaviour-critical criterion*)
+   → persistido na tabela SQLite `build_integrity_anchor` (`release_label`,
    hashes por arquivo, `validated_at`, `build_digest_matched`,
    `validator_version`).
    **`build_digest_matched` é um flag de match de build-digest, não uma
@@ -84,8 +86,10 @@ Anexar registro estruturado a `security_alert.log` (ou destino SIEM):
 3. **TINTED / `-alpha` (E.4):** o estado adulterado força o rótulo
    `-alpha (development / not CI-validated)` na aba Info do report (linhas
    `Build trust` / `Integrity state`), no rodapé do dashboard, em
-   `GET /about`, `GET /status`, `/health` e nos logs de startup (log CRITICAL
-   + banner no stderr). A severidade de `enterprise_surface` sobe para
+   `GET /about`, `GET /status`, `/health`, logs de startup (log CRITICAL
+   + banner no stderr), e preflight CLI **`--version`** /
+   **`--validate-config`** ([#1298](https://github.com/DataBoar/data-boar/issues/1298)).
+   A severidade de `enterprise_surface` sobe para
    `elevated` com a razão `integrity_tampered` (alinhado ao ADR-0066).
 4. **Clamp de workers em modo open:** `core/engine.py` limita
    `scan.max_workers` a `OPEN_MODE_WORKER_CAP = 2` no modo open. O clamp fica
