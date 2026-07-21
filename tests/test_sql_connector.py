@@ -290,6 +290,18 @@ def test_connect_args_from_target_mysql():
     assert "options" not in args
 
 
+def test_connect_args_from_target_mssql_pymssql():
+    """_connect_args_from_target uses pymssql login_timeout/timeout (not connect_timeout)."""
+    target = {
+        "driver": "mssql",
+        "connect_timeout_seconds": 20,
+        "read_timeout_seconds": 80,
+    }
+    args = _connect_args_from_target(target)
+    assert args == {"login_timeout": 20, "timeout": 80}
+    assert "connect_timeout" not in args
+
+
 def test_connect_args_from_target_sqlite():
     """_connect_args_from_target returns timeout (lock wait) for SQLite."""
     target = {"driver": "sqlite", "read_timeout_seconds": 30}
