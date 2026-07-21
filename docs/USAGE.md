@@ -169,7 +169,7 @@ See `deploy/ansible/README.md` for variables, multi-node Swarm, and troubleshoot
 
 Pre-built images are on Docker Hub: `fabioleitao/data_boar:latest` ([hub.docker.com/r/fabioleitao/data_boar](https://hub.docker.com/r/fabioleitao/data_boar)). Pull and run with a mounted config at `/data/config.yaml` (see README “Deploy with Docker” and [docs/deploy/DEPLOY.md](deploy/DEPLOY.md) ([pt-BR](deploy/DEPLOY.pt_BR.md))). You can use this instanced container instead of installing from source.
 
-1. **Install** the application and optional dependencies (e.g. `.[postgres]`, `.[sql-all]`, `.[nosql]`, `.[shares]`) as in the README and [TECH_GUIDE.md](TECH_GUIDE.md) (*Supported databases*).
+1. **Install** the application and optional dependencies (e.g. `.[sql-community]` for open-core SQL drivers, `.[sql-all]` for every SQL driver including MSSQL/Oracle, `.[nosql]`, `.[shares]`) as in the README and [TECH_GUIDE.md](TECH_GUIDE.md) (*Supported databases*). Installing a driver extra does not grant tier access — Pro-gated database targets still require the appropriate license tier.
 1. **Cross-distro `pipx` reality check (Linux):** before rollout on RHEL/Void/musl/no-AVX fleets, read [TROUBLESHOOTING.md](TROUBLESHOOTING.md) and the matrix in [ops/OS_COMPATIBILITY_TESTING_MATRIX.md](ops/OS_COMPATIBILITY_TESTING_MATRIX.md) (RHEL 8/9 explicit Python 3.12 step; Void-musl/no-AVX wheelhouse path; RHEL/CentOS 7 Docker-only). Docker remains a fallback deployment option, not the primary wheelhouse route.
 1. **Prepare** a config file (e.g. `config.yaml`) with `targets`, `file_scan`, `report`, and optionally `api.port`.
 1. **Set config path** (optional):

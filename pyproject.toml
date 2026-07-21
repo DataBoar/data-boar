@@ -131,6 +131,11 @@ mariadb = ["mariadb>=1.1.14"]
 mssql = ["pyodbc>=5.3.0"]
 mssql-pymssql = ["pymssql>=2.3.0"]
 oracle = ["oracledb>=4.0.1"]
+sql-community = [
+    "psycopg2-binary>=2.9.11",
+    "pymysql>=1.2.0",
+    "mariadb>=1.1.14",
+]
 sql-all = [
     "psycopg2-binary>=2.9.11",
     "pymysql>=1.2.0",
