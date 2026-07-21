@@ -42,6 +42,7 @@ Human-readable summary of user-facing changes. **Detailed release notes:** [docs
 ### Notes (post5)
 
 - Full `N=14` fix set and `postN` ↔ `maturity_build` map: [docs/releases/1.7.4.post5.md](docs/releases/1.7.4.post5.md).
+- **Accounting (ADR-0073):** `N` for post5 uses the **published** post4 row **`maturity_build = 226`** (`656fdc3d`), not the preceding unpublished fix row **`.225`** — hence `226 + 14 = 240` (not `225 + 15`).
 
 ---
 
