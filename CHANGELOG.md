@@ -12,6 +12,24 @@ Human-readable summary of user-facing changes. **Detailed release notes:** [docs
 
 ---
 
+## 1.7.4.post7 (pending PyPI dispatch)
+
+> Post-release on the **`1.7.4`** public line. **`[project] version = 1.7.4.post7`** and **`[tool.databoar] maturity_build = 245`** (`N=4` discrete fixes since post6 baseline `6dc54642`, ADR-0073). **PyPI-only** — no Git tag, no GitHub Release, no container.
+
+### Fixed / hardened (post7)
+
+- **Archives (.7z):** batch-extract and post-extract read failures route through `clean_error()` instead of raw `str(e)` (#1257).
+- **API / WebAuthn:** valid WebAuthn session cookie satisfies `require_api_key` on JSON routes (#1258).
+- **learned_patterns:** skip bare filesystem filenames; anchor relative `output_file` under `report.output_dir` (#1259, #1260).
+- **SQL / MSSQL:** honor explicit `dialect+driver`; default `mssql` to `mssql+pymssql` (hardcoded ODBC was the defect) + `sql-community` extra for free-tier drivers (#1289, #1290 — operator reclassified from `feat(` as defect-fix).
+
+### Notes (post7)
+
+- **Accounting (#1261):** post5 `maturity_build` baseline documentation only — does **not** advance `maturity_build`.
+- Full `N=4` fix set and `postN` ↔ `maturity_build` map: [docs/releases/1.7.4.post7.md](docs/releases/1.7.4.post7.md).
+
+---
+
 ## 1.7.4.post6 (pending PyPI dispatch)
 
 > Post-release on the **`1.7.4`** public line. **`[project] version = 1.7.4.post6`** and **`[tool.databoar] maturity_build = 241`** (`N=1` `fix(` commit since post5 `b7de32ba`, ADR-0073). **PyPI-only** — no Git tag, no GitHub Release, no container.
