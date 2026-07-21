@@ -456,3 +456,98 @@ def test_7z_budget_max_members_yields_pre_budget_then_stops(tmp_path):
     assert len(materialized) < n_members
     assert materialized  # pre-budget members must not vanish
     assert any(r == SCAN_FAILURE_REASON_ARCHIVE_BUDGET_EXCEEDED for r, _, _ in failures)
+
+
+def test_7z_batch_extract_failure_details_use_clean_error(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+):
+    """#1257: batch extract() must not persist raw str(e) in scan_failures details."""
+    pytest.importorskip("py7zr")
+    import py7zr
+
+    from core.archives import iter_archive_members
+
+    seven = tmp_path / "batch-fail.7z"
+    with py7zr.SevenZipFile(seven, "w") as z:
+        z.writestr(b"payload", "inner.txt")
+
+    failures: list[tuple[str, str, str]] = []
+
+    def _on_fail(reason: str, member: str, details: str) -> None:
+        failures.append((reason, member, details))
+
+    def _boom_extract(self, targets=None, factory=None, **kwargs):  # type: ignore[no-untyped-def]
+        raise RuntimeError(
+            "decode failed near CPF 123.456.789-00 and user@leak.example.com"
+        )
+
+    monkeypatch.setattr(py7zr.SevenZipFile, "extract", _boom_extract)
+
+    got = list(
+        iter_archive_members(
+            seven,
+            "7z",
+            max_inner_size=1_000_000,
+            allowed_extensions={".txt"},
+            on_member_read_failure=_on_fail,
+        )
+    )
+    assert got == []
+    assert failures
+    assert all("inner.txt" in d for _, _, d in failures)
+    assert all("123.456.789-00" not in d for _, _, d in failures)
+    assert all("user@leak.example.com" not in d for _, _, d in failures)
+
+
+def test_7z_post_extract_read_failure_details_use_clean_error(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+):
+    """#1257: post-extract bio.read() failures must sanitize exception text."""
+    pytest.importorskip("py7zr")
+    import py7zr
+    from io import BytesIO
+
+    from core.archives import iter_archive_members
+
+    seven = tmp_path / "read-fail.7z"
+    with py7zr.SevenZipFile(seven, "w") as z:
+        z.writestr(b"payload", "inner.txt")
+
+    failures: list[tuple[str, str, str]] = []
+
+    def _on_fail(reason: str, member: str, details: str) -> None:
+        failures.append((reason, member, details))
+
+    class _FakeFactory:
+        def __init__(self, _max_size: int) -> None:
+            bio = BytesIO(b"payload")
+
+            def _leaky_read(*_args, **_kwargs):  # type: ignore[no-untyped-def]
+                raise OSError(
+                    "read stalled on password=SuperSecret and CPF 529.982.247-25"
+                )
+
+            bio.read = _leaky_read  # type: ignore[method-assign]
+            self.products = {"inner.txt": bio}
+
+    def _noop_extract(self, targets=None, factory=None, **kwargs):  # type: ignore[no-untyped-def]
+        return None
+
+    monkeypatch.setattr(py7zr.SevenZipFile, "extract", _noop_extract)
+    monkeypatch.setattr("py7zr.io.BytesIOFactory", _FakeFactory)
+
+    got = list(
+        iter_archive_members(
+            seven,
+            "7z",
+            max_inner_size=1_000_000,
+            allowed_extensions={".txt"},
+            on_member_read_failure=_on_fail,
+        )
+    )
+    assert got == []
+    assert failures
+    assert failures[0][1] == "inner.txt"
+    assert "SuperSecret" not in failures[0][2]
+    assert "529.982.247-25" not in failures[0][2]
+    assert "inner.txt" in failures[0][2]
