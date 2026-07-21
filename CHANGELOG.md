@@ -12,6 +12,23 @@ Human-readable summary of user-facing changes. **Detailed release notes:** [docs
 
 ---
 
+## 1.7.4.post8 (pending PyPI dispatch)
+
+> Post-release on the **`1.7.4`** public line. **`[project] version = 1.7.4.post8`** and **`[tool.databoar] maturity_build = 247`** (`N=2` `fix(` commits since post7 baseline `b5054d55`, ADR-0073). **PyPI-only** — no Git tag, no GitHub Release, no container.
+>
+> **Field-caught on-site (2026-07-21):** both fixes in this drop were discovered during the same customer engagement — native MSSQL connector first run (#1297) and integrity anchor false-negative (#1298).
+
+### Fixed / hardened (post8)
+
+- **SQL / MSSQL (native pymssql):** map `connect_timeout_seconds` / `read_timeout_seconds` to pymssql `login_timeout` / `timeout` instead of unsupported `connect_timeout` — first field run ingested zero rows before this fix ([#1297](https://github.com/DataBoar/data-boar/pull/1297)).
+- **Integrity anchor:** expand behaviour-critical allowlist via `connectors/*.py` + `core/licensing/*.py` globs (42 modules, was 6); `--version` and `--validate-config` surface `-alpha` / `runtime-trust` before scan ([#1298](https://github.com/DataBoar/data-boar/pull/1298)).
+
+### Notes (post8)
+
+- Full `N=2` fix set and `postN` ↔ `maturity_build` map: [docs/releases/1.7.4.post8.md](docs/releases/1.7.4.post8.md).
+
+---
+
 ## 1.7.4.post7 (pending PyPI dispatch)
 
 > Post-release on the **`1.7.4`** public line. **`[project] version = 1.7.4.post7`** and **`[tool.databoar] maturity_build = 245`** (`N=4` discrete fixes since post6 baseline `6dc54642`, ADR-0073). **PyPI-only** — no Git tag, no GitHub Release, no container.
