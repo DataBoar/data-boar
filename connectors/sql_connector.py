@@ -31,7 +31,7 @@ DRIVER_MAP = {
     "mysql": "mysql+pymysql",
     "mariadb": "mariadb+mariadbconnector",
     "sqlite": "sqlite",
-    "mssql": "mssql+pyodbc",
+    "mssql": "mssql+pymssql",
     "oracle": "oracle+oracledb",
 }
 
@@ -187,6 +187,24 @@ def _discover_fallback_no_schemas(inspector: Any) -> list[dict[str, Any]]:
     return out
 
 
+def _resolve_driver(target_driver: str | None) -> tuple[str, str]:
+    """
+    Return (sqlalchemy_drivername, base_engine_key) from config driver.
+
+    When the config includes a dialect+driver suffix (e.g. ``mssql+pymssql``),
+    the full string is used as the SQLAlchemy drivername. Bare engine keys
+    (e.g. ``mssql``) resolve through DRIVER_MAP.
+    """
+    raw = (target_driver or "postgresql").strip()
+    if "+" in raw:
+        base = raw.split("+", 1)[0].lower()
+        drivername = raw.lower()
+    else:
+        base = raw.lower()
+        drivername = DRIVER_MAP.get(base, base)
+    return drivername, base
+
+
 def _quote_userinfo(value: str) -> str:
     """URL-encode user or password for use in connection URL userinfo. Prevents special chars (@, :, /, #) from breaking URL parsing."""
     if not value:
@@ -196,12 +214,11 @@ def _quote_userinfo(value: str) -> str:
 
 def _build_url(target: dict[str, Any]) -> str:
     """Build SQLAlchemy URL from target config. User and password are URL-encoded to avoid injection or misparsing when they contain @, :, /, #."""
-    driver = (target.get("driver") or "postgresql").split("+")[0].lower()
-    drivername = DRIVER_MAP.get(driver, f"{driver}")
+    drivername, base = _resolve_driver(target.get("driver"))
     # Allow full URL override
     if target.get("url"):
         return target["url"]
-    if driver == "sqlite":
+    if base == "sqlite":
         return f"sqlite:///{target.get('database', 'audit.db')}"
     user = _quote_userinfo(target.get("user", ""))
     password = _quote_userinfo(target.get("pass", target.get("password", "")))
@@ -223,18 +240,18 @@ def _connect_args_from_target(target: dict[str, Any]) -> dict[str, Any]:
     """
     connect_s = int(target.get("connect_timeout_seconds", 25))
     read_s = int(target.get("read_timeout_seconds", 90))
-    driver = (target.get("driver") or "postgresql").split("+")[0].lower()
+    _, base = _resolve_driver(target.get("driver"))
     connect_s = max(1, connect_s)
     read_s = max(1, read_s)
-    if driver == "sqlite":
+    if base == "sqlite":
         return {"timeout": read_s}
-    if driver == "postgresql":
+    if base == "postgresql":
         # statement_timeout in PostgreSQL is in milliseconds
         return {
             "connect_timeout": connect_s,
             "options": f"-c statement_timeout={read_s * 1000}",
         }
-    if driver in ("mysql", "mariadb"):
+    if base in ("mysql", "mariadb"):
         return {"connect_timeout": connect_s}
     # mssql, oracle, others: pass connect_timeout when driver supports it
     return {"connect_timeout": connect_s}
@@ -297,8 +314,7 @@ class SQLConnector:
         )
 
     def connect(self) -> None:
-        driver_key = (self.config.get("driver") or "postgresql").split("+")[0].lower()
-        ensure_sql_driver_available(driver_key)
+        ensure_sql_driver_available(self.config.get("driver"))
         url = _build_url(self.config)
         connect_args = _connect_args_from_target(self.config)
         self.engine = create_engine(url, pool_pre_ping=True, connect_args=connect_args)

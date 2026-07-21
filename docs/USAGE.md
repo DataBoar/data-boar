@@ -651,7 +651,7 @@ The web API and dashboard send **security headers** on every response (see [SECU
 
 ### Targets: databases
 
-Each target is an object in `targets` with at least `name` and `type`. For SQL databases use `type: database` and the appropriate `driver`. **Scan payload:** There is no hard limit on the number of targets per scan; very large lists (e.g. hundreds of databases or APIs) may increase scan duration and memory use. Consider a reasonable scope per scan for your environment to avoid resource exhaustion.
+Each target is an object in `targets` with at least `name` and `type`. For SQL databases use `type: database` and the appropriate `driver`. Match the driver string to the optional extra: default MSSQL is `mssql` or `mssql+pymssql` with `data-boar[mssql-pymssql]`; use `mssql+pyodbc` with `data-boar[mssql]` when ODBC is required. **Scan payload:** There is no hard limit on the number of targets per scan; very large lists (e.g. hundreds of databases or APIs) may increase scan duration and memory use. Consider a reasonable scope per scan for your environment to avoid resource exhaustion.
 
 ```yaml
 targets:

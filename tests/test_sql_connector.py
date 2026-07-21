@@ -13,9 +13,11 @@ from connectors.sql_connector import (
     SCAN_FAILURE_REASON_SAMPLING_ERROR,
     ColumnSampleError,
     SQLConnector,
+    _build_url,
     _connect_args_from_target,
     _discover_fallback_no_schemas,
     _get_skip_schemas,
+    _resolve_driver,
     _resolve_sample_statement_timeout_ms,
     _should_skip_schema,
     format_column_sample_failure_details,
@@ -36,6 +38,47 @@ def test_driver_map_uses_registered_sqlalchemy_dialects():
         dialect = make_url(url_str).get_dialect()
         assert dialect is not None, f"{driver} -> {drivername}"
     assert DRIVER_MAP["mariadb"] == "mariadb+mariadbconnector"
+    assert DRIVER_MAP["mssql"] == "mssql+pymssql"
+
+
+def test_resolve_driver_honors_explicit_dialect_plus_driver() -> None:
+    drivername, base = _resolve_driver("mssql+pyodbc")
+    assert drivername == "mssql+pyodbc"
+    assert base == "mssql"
+
+
+def test_resolve_driver_maps_bare_mssql_to_pymssql() -> None:
+    drivername, base = _resolve_driver("mssql")
+    assert drivername == "mssql+pymssql"
+    assert base == "mssql"
+
+
+def test_build_url_honors_explicit_mssql_pyodbc() -> None:
+    url = _build_url(
+        {
+            "driver": "mssql+pyodbc",
+            "host": "sql.example.com",
+            "port": 1433,
+            "user": "u",
+            "password": "p",
+            "database": "db",
+        }
+    )
+    assert url.startswith("mssql+pyodbc://")
+
+
+def test_build_url_maps_bare_mssql_to_pymssql() -> None:
+    url = _build_url(
+        {
+            "driver": "mssql",
+            "host": "sql.example.com",
+            "port": 1433,
+            "user": "u",
+            "password": "p",
+            "database": "db",
+        }
+    )
+    assert url.startswith("mssql+pymssql://")
 
 
 def test_resolve_sample_statement_timeout_ms_default():
