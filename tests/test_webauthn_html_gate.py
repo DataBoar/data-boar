@@ -224,3 +224,84 @@ def test_config_post_rejects_forged_csrf_when_gate_off(html_csrf_gate_off_client
         follow_redirects=False,
     )
     assert r.status_code == 403
+
+
+def test_require_api_key_satisfied_by_webauthn_session_on_json_route(
+    webauthn_gate_client,
+):
+    """#1258: valid WebAuthn session cookie must satisfy api.require_api_key on /status."""
+    client, routes_mod = webauthn_gate_client
+    cfg_path = Path(routes_mod._config_path)
+    cfg = yaml.safe_load(cfg_path.read_text(encoding="utf-8"))
+    cfg.setdefault("api", {})["require_api_key"] = True
+    cfg["api"]["api_key"] = "automation-secret"
+    cfg_path.write_text(yaml.dump(cfg, sort_keys=False), encoding="utf-8")
+    routes_mod._config = None
+
+    wa = webauthn_block(cfg)
+    assert wa is not None
+    uid = user_id_bytes(wa)
+    secret = "unit-test-webauthn-secret-min-16"
+    dbm = routes_mod._get_engine().db_manager
+    dbm.webauthn_save_credential(
+        user_id=uid,
+        credential_id=b"unit-test-credential-id-32bytes!!",
+        public_key=b"k" * 64,
+        sign_count=0,
+    )
+    client.cookies.set(COOKIE_NAME, sign_session(secret, uid))
+
+    resp = client.get("/status")
+    assert resp.status_code == 200
+
+
+def test_require_api_key_still_rejects_without_session_when_webauthn_on(
+    webauthn_gate_client,
+):
+    """#1258: api-key gate stays enforced for JSON when no session and no key."""
+    client, routes_mod = webauthn_gate_client
+    cfg_path = Path(routes_mod._config_path)
+    cfg = yaml.safe_load(cfg_path.read_text(encoding="utf-8"))
+    cfg.setdefault("api", {})["require_api_key"] = True
+    cfg["api"]["api_key"] = "automation-secret"
+    cfg_path.write_text(yaml.dump(cfg, sort_keys=False), encoding="utf-8")
+    routes_mod._config = None
+
+    wa = webauthn_block(cfg)
+    uid = user_id_bytes(wa)
+    dbm = routes_mod._get_engine().db_manager
+    dbm.webauthn_save_credential(
+        user_id=uid,
+        credential_id=b"unit-test-credential-id-32bytes!!",
+        public_key=b"k" * 64,
+        sign_count=0,
+    )
+
+    resp = client.get("/status")
+    assert resp.status_code == 401
+
+
+def test_require_api_key_accepts_session_over_wrong_api_key(webauthn_gate_client):
+    """#1258: wrong X-API-Key must not block a valid WebAuthn browser session."""
+    client, routes_mod = webauthn_gate_client
+    cfg_path = Path(routes_mod._config_path)
+    cfg = yaml.safe_load(cfg_path.read_text(encoding="utf-8"))
+    cfg.setdefault("api", {})["require_api_key"] = True
+    cfg["api"]["api_key"] = "automation-secret"
+    cfg_path.write_text(yaml.dump(cfg, sort_keys=False), encoding="utf-8")
+    routes_mod._config = None
+
+    wa = webauthn_block(cfg)
+    uid = user_id_bytes(wa)
+    secret = "unit-test-webauthn-secret-min-16"
+    dbm = routes_mod._get_engine().db_manager
+    dbm.webauthn_save_credential(
+        user_id=uid,
+        credential_id=b"unit-test-credential-id-32bytes!!",
+        public_key=b"k" * 64,
+        sign_count=0,
+    )
+    client.cookies.set(COOKIE_NAME, sign_session(secret, uid))
+
+    resp = client.get("/status", headers={"X-API-Key": "wrong-key"})
+    assert resp.status_code == 200

@@ -92,6 +92,7 @@ from api.webauthn_html_gate import (
     safe_next_path,
     verify_html_form_csrf_or_raise,
     webauthn_html_session_middleware as webauthn_html_session_gate,
+    webauthn_session_satisfies_require_api_key,
 )
 from api.webauthn_routes import register_webauthn_routes
 
@@ -1103,7 +1104,8 @@ async def optional_api_key_middleware(request: Request, call_next):
     """
     When ``api.require_api_key`` is true and a key is available (literal or resolved from
     ``api_key_from_env`` at config load), require **X-API-Key** or **Authorization: Bearer**
-    for every path except **GET /health** (liveness: must stay unauthenticated).
+    for every path except **GET /health** (liveness: must stay unauthenticated). A valid
+    **WebAuthn session cookie** also satisfies this gate when WebAuthn is enabled (#1258).
 
     Responses: **401** if the key is missing or wrong; **503** if the operator enabled
     ``require_api_key`` but no key could be resolved (misconfiguration).
@@ -1136,6 +1138,8 @@ async def optional_api_key_middleware(request: Request, call_next):
         if auth.lower().startswith("bearer "):
             provided = auth[7:].strip()
     if not provided or not hmac.compare_digest(provided, expected):
+        if webauthn_session_satisfies_require_api_key(cfg, request):
+            return await call_next(request)
         return JSONResponse(
             status_code=401, content={"detail": "Missing or invalid API key"}
         )

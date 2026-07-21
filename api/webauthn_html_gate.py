@@ -69,6 +69,22 @@ def request_has_webauthn_session(request: Request, token_secret: str) -> bool:
     return session_cookie.verify_session_cookie(token_secret, raw) is not None
 
 
+def webauthn_session_satisfies_require_api_key(cfg: dict, request: Request) -> bool:
+    """
+    True when WebAuthn is enabled and the request carries a valid signed session cookie.
+
+    Lets browser dashboard JSON calls (e.g. ``/status``, ``/scan``) coexist with
+    ``api.require_api_key`` without turning off API-key protection for automation (#1258).
+    """
+    wa = webauthn_block(cfg)
+    if wa is None:
+        return False
+    secret = resolve_token_secret(wa)
+    if not secret:
+        return False
+    return request_has_webauthn_session(request, secret)
+
+
 def is_locale_html_public_unauthenticated(method: str, rest: list[str]) -> bool:
     """Pages reachable without WebAuthn session when gate is on (GET only)."""
     return method == "GET" and len(rest) == 1 and rest[0] in ("help", "about", "login")
