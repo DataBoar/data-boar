@@ -236,7 +236,7 @@ def _connect_args_from_target(target: dict[str, Any]) -> dict[str, Any]:
     """
     Build SQLAlchemy connect_args from target timeouts (config loader merges global + per-target).
     Uses connect_timeout_seconds for connect; read_timeout_seconds for statement_timeout (PostgreSQL)
-    or SQLite lock timeout.
+    or SQLite lock timeout, or pymssql ``timeout`` for MSSQL.
     """
     connect_s = int(target.get("connect_timeout_seconds", 25))
     read_s = int(target.get("read_timeout_seconds", 90))
@@ -253,7 +253,10 @@ def _connect_args_from_target(target: dict[str, Any]) -> dict[str, Any]:
         }
     if base in ("mysql", "mariadb"):
         return {"connect_timeout": connect_s}
-    # mssql, oracle, others: pass connect_timeout when driver supports it
+    if base == "mssql":
+        # pymssql (default mssql driver) uses login_timeout/timeout, not connect_timeout.
+        return {"login_timeout": connect_s, "timeout": read_s}
+    # oracle, others: pass connect_timeout when driver supports it
     return {"connect_timeout": connect_s}
 
 
