@@ -10,7 +10,7 @@ For operational governance (scope, minimization, retention, traceability), use [
 
 | File                                           | Purpose                                                                                                                                                             |
 | ------                                         | ---------                                                                                                                                                           |
-| **compliance-sample-lgpd.yaml**                | LGPD (Brazil): bilingual PT-BR + EN terms (e.g. documento oficial / official document, RG, CNH / Driver License); RG/CEP regex; **precise geolocation** regex (same geometry as VCDPA / EU GDPR sample); for Brazilian deployments.          |
+| **compliance-sample-lgpd.yaml**                | LGPD (Brazil): bilingual PT-BR + EN terms; RG/CEP regex; **precise geolocation**; field-validated column patterns (#1288) for criminal records (Art. 11), CNH/RG, bank account/branch, geolocation columns, emergency contact.          |
 | **compliance-sample-br_insurance_lgpd_anchor.yaml** | Brazil insurance sector: **skeleton** EN-header sample with generic insurance terms and LGPD-inventory **`norm_tag`** strings; **not** SUSEP/CNSP certification — see [COMPLIANCE_FRAMEWORKS.md](../COMPLIANCE_FRAMEWORKS.md#brazil-insurance-sector-lgpd-anchoring-prudential-references). |
 | **compliance-sample-brazil_felca.yaml**        | Brazil FELCA (Lei 15.211/2025 — Estatuto Digital da Criança e do Adolescente, in force 17 March 2026): inventory signals for minor-related fields on digital platforms; **pair with** full LGPD sample; **not** age verification or legal conclusion — see [COMPLIANCE_FRAMEWORKS.md](../COMPLIANCE_FRAMEWORKS.md). |
 | **compliance-sample-brazil_saude.yaml**        | Brazil health sector (LGPD Art. 5/11 sensitive health data): CRM, CRF, CRO, COREN, CNS, ANVISA RMS, ANS, prescription and record-number patterns; PT-BR + EN terms; **pair with** [compliance-sample-lgpd.yaml](compliance-sample-lgpd.yaml). |
@@ -69,7 +69,7 @@ When choosing or authoring a sample, consider the **language(s)** of the target 
 
 | Regulation / region               | Recommended language(s) for terms and labels                                                                   |
 | -------------------               | ---------------------------------------------                                                                  |
-| **LGPD (Brazil)**                 | Portuguese (BR) and English (e.g. "documento oficial" and "official document", "CNH" and "Driver License").    |
+| **LGPD (Brazil)**                 | Portuguese (BR) and English (e.g. documento oficial / official document, CNH / Driver License, antecedentes criminais / criminal record, conta bancária / bank account, contato de emergência / emergency contact).    |
 | **Brazil (insurance — LGPD skeleton)** | Portuguese (BR) and English for policy/claims/brokerage column names; merge with full LGPD sample for national IDs. |
 | **PIPEDA (Canada)**               | English and French (e.g. "personal information" and "renseignements personnels") where scanning Canadian data. |
 | **Quebec (Law 25)**               | English and French (Quebec private sector; complements PIPEDA for operational wording in Quebec).               |

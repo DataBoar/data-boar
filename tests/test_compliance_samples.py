@@ -246,3 +246,62 @@ def test_ml_patterns_file_is_merged_with_default_terms():
         assert ("email", 1) in terms
     finally:
         path.unlink(missing_ok=True)
+
+
+LGPD_SAMPLE = COMPLIANCE_SAMPLES_DIR / "compliance-sample-lgpd.yaml"
+
+
+@pytest.fixture
+def lgpd_scanner():
+    """Detector loaded with the LGPD compliance sample (#1288)."""
+    from core.scanner import DataScanner
+
+    path = str(LGPD_SAMPLE.resolve())
+    return DataScanner(regex_overrides_path=path, ml_patterns_path=path)
+
+
+def test_lgpd_criminal_records_regex_matches_underscore_column_suffix(lgpd_scanner):
+    """
+    Regression #1288: trailing \\b after criminal_records fails on underscore suffixes.
+
+    ``\\bcriminal_records\\b`` does not match ``criminal_records_consulted_at`` because
+    underscore is a word character. The sample uses ``criminal_records?\\w*`` instead.
+    """
+    import re
+
+    column = "criminal_records_consulted_at"
+    assert not re.search(r"\bcriminal_records\b", column)
+    result = lgpd_scanner.scan_column(column, "")
+    assert result["sensitivity_level"] == "HIGH"
+    assert "LGPD_CRIMINAL_RECORDS" in result["pattern_detected"]
+    assert "Art. 11" in result["norm_tag"]
+
+
+@pytest.mark.parametrize(
+    "column_name,expected_pattern",
+    [
+        ("cnh_expiry_date", "LGPD_CNH"),
+        ("numero_rg_emitido_em", "LGPD_RG_IDENTITY"),
+        ("agencia_bancaria_codigo", "LGPD_BANK_ACCOUNT"),
+        ("latitude_last_seen", "LGPD_GEOLOCATION"),
+        ("emergency_contact_phone", "LGPD_EMERGENCY_CONTACT"),
+        # Prefix recall: leading \\b misses these; (?:^|_) matches after underscore.
+        ("titular_cnh", "LGPD_CNH"),
+        ("cliente_conta_bancaria", "LGPD_BANK_ACCOUNT"),
+        ("user_latitude", "LGPD_GEOLOCATION"),
+        ("func_contato_emergencia", "LGPD_EMERGENCY_CONTACT"),
+    ],
+)
+def test_lgpd_field_validated_column_headers_detect_high(
+    lgpd_scanner, column_name: str, expected_pattern: str
+):
+    """#1288 field-caught categories fire on representative column headers."""
+    result = lgpd_scanner.scan_column(column_name, "")
+    assert result["sensitivity_level"] == "HIGH"
+    assert expected_pattern in result["pattern_detected"]
+
+
+def test_lgpd_geolocation_does_not_match_platitude_midword(lgpd_scanner):
+    """(?:^|_) avoids mid-word false positives (platitude ≠ latitude)."""
+    result = lgpd_scanner.scan_column("platitude", "")
+    assert "LGPD_GEOLOCATION" not in result["pattern_detected"]

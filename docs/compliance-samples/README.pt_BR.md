@@ -10,7 +10,7 @@ Para governança operacional (escopo, minimização, retenção e rastreabilidad
 
 | Arquivo                                        | Finalidade                                                                                                                                                                                          |
 | ---------                                      | ------------                                                                                                                                                                                        |
-| **compliance-sample-lgpd.yaml**                | LGPD (Brasil): termos bilíngues PT-BR + EN (ex.: documento oficial / official document, RG, CNH / Driver License); regex RG/CEP; regex de **geolocalização precisa** (mesma geometria das amostras VCDPA / RGPD UE); para implantações brasileiras.                                     |
+| **compliance-sample-lgpd.yaml**                | LGPD (Brasil): termos bilíngues PT-BR + EN; regex RG/CEP; **geolocalização precisa**; padrões de coluna validados em campo (#1288): antecedentes criminais (Art. 11), CNH/RG, conta/agência bancária, geolocalização, contato de emergência.                                     |
 | **compliance-sample-br_insurance_lgpd_anchor.yaml** | Setor segurador (Brasil): amostra **esqueleto** (cabeçalho EN) com termos genéricos e **`norm_tag`** de inventário ancorada na LGPD; **não** certifica SUSEP/CNSP — ver [COMPLIANCE_FRAMEWORKS.pt_BR.md](../COMPLIANCE_FRAMEWORKS.pt_BR.md#setor-segurador-brasil-lgpd-referencias-prudenciais). |
 | **compliance-sample-brazil_felca.yaml**        | Brasil FELCA (Lei 15.211/2025 — Estatuto Digital da Criança e do Adolescente, vigência 17 mar 2026): sinais de inventário para campos ligados a menores em plataformas digitais; **mescle** com a amostra LGPD completa; **não** é verificação de idade nem conclusão jurídica — ver [COMPLIANCE_FRAMEWORKS.pt_BR.md](../COMPLIANCE_FRAMEWORKS.pt_BR.md). |
 | **compliance-sample-brazil_saude.yaml**        | Brasil setor saúde (LGPD Art. 5/11 — dados sensíveis de saúde): CRM, CRF, CRO, COREN, CNS, RMS ANVISA, ANS, receituário e prontuário (heurísticas); termos PT-BR + EN; **mescle** com [compliance-sample-lgpd.yaml](compliance-sample-lgpd.yaml). |
@@ -59,7 +59,7 @@ Ao escolher ou criar uma amostra, considere o(s) **idioma(s)** da região alvo p
 
 | Regulamento / região             | Idioma(s) recomendado(s) para termos e rótulos                                                             |
 | --------------------             | ------------------------------------------------                                                           |
-| **LGPD (Brasil)**                | Português (BR) e inglês (ex.: "documento oficial" e "official document", "CNH" e "Driver License").        |
+| **LGPD (Brasil)**                | Português (BR) e inglês (ex.: documento oficial / official document, antecedentes criminais / criminal record, conta bancária / bank account, contato de emergência / emergency contact, CNH / Driver License).        |
 | **Brasil (seguros — esqueleto LGPD)** | Português (BR) e inglês para nomes de colunas de apólice/sinistro/corretagem; mescle com a amostra LGPD completa para identificadores nacionais. |
 | **PIPEDA (Canadá)**              | Inglês e francês (ex.: "personal information" e "renseignements personnels") ao varrer dados canadenses.   |
 | **Québec (Lei 25)**              | Inglês e francês (setor privado de QC; complementa PIPEDA para vocabulário operacional).                  |
