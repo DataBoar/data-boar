@@ -1,9 +1,12 @@
 # LGPD – sample compliance profile (Brazil; Lei Geral de Proteção de Dados)
 #
-# Target audience: Brazilian deployments and LGPD compliance. This sample includes
+# Target audience: Brazilian deployments and LGPD compliance. Bilingual PT-BR + EN
+# terms (see .cursor/rules/compliance-samples-language.mdc). This sample includes
 # the same regex and ML terms as the app's built-in defaults (so using this file
 # as regex_overrides_file and ml_patterns_file does not reduce coverage), plus
-# extra Brazilian regex (RG, CEP, PIS/PASEP) and bilingual (PT-BR + EN) terms.
+# extra Brazilian regex (RG, CEP, PIS/PASEP), precise geolocation, and field-
+# validated column-header patterns (#1288): criminal records (Art. 11), CNH/RG,
+# bank account/branch, geolocation columns, emergency contact.
 #
 # How to use:
 #   1. Set in your main config:
@@ -82,6 +85,28 @@ regex:
   - name: "LGPD_QUERYSTRING_LAT_LONG"
     pattern: "(?i)latitude=[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*&\\s*longitude=[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
     norm_tag: "LGPD Art. 5"
+  # Field-validated column-header patterns (#1288).
+  # - No trailing \\b after stems that may take underscore suffixes (\\b fails before '_').
+  # - Leading (?:^|_) anchors at start-or-underscore so prefixed columns match
+  #   (user_latitude, titular_cnh) without mid-word hits (platitude).
+  - name: "LGPD_CRIMINAL_RECORDS"
+    pattern: "(?i)(?:criminal_records?\\w*|antecedentes?_?criminal\\w*|certidao_?negativa(?:_?criminal)?\\w*|criminal_?background\\w*)"
+    norm_tag: "dado SENSIVEL - antecedentes criminais (Art. 11)"
+  - name: "LGPD_CNH"
+    pattern: "(?i)(?:^|_)(?:cnh\\w*|carteira_?de_?habilitacao\\w*|driver_?licen[cs]e\\w*|driving_?licen[cs]e\\w*)"
+    norm_tag: "LGPD Art. 5 (documento — CNH)"
+  - name: "LGPD_RG_IDENTITY"
+    pattern: "(?i)(?:^|_)(?:rg_?(?:number|numero)?\\w*|numero_?rg\\w*|registro_?geral\\w*|carteira_?de_?identidade\\w*|identity_?(?:card|doc(?:ument)?)\\w*)"
+    norm_tag: "LGPD Art. 5 (documento — RG/identidade)"
+  - name: "LGPD_BANK_ACCOUNT"
+    pattern: "(?i)(?:^|_)(?:bank_?account\\w*|conta_?(?:bancaria|corrente)\\w*|numero_?(?:da_?)?conta\\w*|agencia_?(?:bancaria)?\\w*|codigo_?agencia\\w*|account_?(?:number|no)\\w*|branch_?(?:number|code)\\w*)"
+    norm_tag: "LGPD Art. 5 (dado financeiro — conta/agência bancária)"
+  - name: "LGPD_GEOLOCATION"
+    pattern: "(?i)(?:^|_)(?:latitude\\w*|longitude\\w*|geo_?loc(?:ation)?\\w*|coordenadas?_?(?:gps|geograficas)\\w*|precise_?location\\w*)"
+    norm_tag: "LGPD Art. 5 (geolocalização precisa — re-ID)"
+  - name: "LGPD_EMERGENCY_CONTACT"
+    pattern: "(?i)(?:^|_)(?:emergency_?contact\\w*|contato_?(?:de_?)?emergencia\\w*|next_?of_?kin\\w*)"
+    norm_tag: "LGPD Art. 5 (dado de terceiro — contato de emergência)"
 
 # ML/DL terms: full set matching app defaults (core/detector.py DEFAULT_ML_TERMS) plus
 # LGPD-specific extras. When this file is used as ml_patterns_file, coverage is at least
@@ -532,8 +557,84 @@ terms:
     label: sensitive
   - text: "identity"
     label: sensitive
+  - text: "antecedentes criminais"
+    label: sensitive
+  - text: "criminal record"
+    label: sensitive
+  - text: "criminal background"
+    label: sensitive
+  - text: "certidão negativa"
+    label: sensitive
+  - text: "certidao negativa"
+    label: sensitive
+  - text: "negative criminal certificate"
+    label: sensitive
+  - text: "conta bancária"
+    label: sensitive
+  - text: "conta bancaria"
+    label: sensitive
+  - text: "bank account"
+    label: sensitive
+  - text: "bank account number"
+    label: sensitive
+  - text: "agência bancária"
+    label: sensitive
+  - text: "agencia bancaria"
+    label: sensitive
+  - text: "bank branch"
+    label: sensitive
+  - text: "branch number"
+    label: sensitive
+  - text: "contato de emergência"
+    label: sensitive
+  - text: "contato de emergencia"
+    label: sensitive
+  - text: "emergency contact"
+    label: sensitive
+  - text: "next of kin"
+    label: sensitive
+  - text: "numero rg"
+    label: sensitive
+  - text: "rg number"
+    label: sensitive
 
 recommendation_overrides:
+  - norm_tag_pattern: "antecedentes criminais (Art. 11)"
+    base_legal: "LGPD Art. 11 — dado pessoal sensível (antecedentes criminais)"
+    risk: "Antecedentes criminais são dado sensível; tratamento exige base legal específica do Art. 11 e controles reforçados. Exposição indevida pode gerar discriminação e violação de sigilo."
+    recommendation: "Confirmar base legal do Art. 11 (ex.: consentimento específico, tutela da saúde, procedimento legal). Restringir acesso, criptografar, minimizar retenção e registrar finalidade. Consultar DPO e jurídico — não é conclusão legal."
+    priority: "ALTA"
+    relevant_for: "DPO, Encarregado LGPD, Jurídico, Segurança da Informação"
+  - norm_tag_pattern: "documento — CNH"
+    base_legal: "LGPD Art. 5 — documento de identificação (CNH)"
+    risk: "CNH identifica o titular e pode ser usada para fraude documental ou acesso indevido a serviços."
+    recommendation: "Aplicar minimização, controle de acesso e bases legais da LGPD; mascarar em relatórios quando possível."
+    priority: "ALTA"
+    relevant_for: "DPO, Operador, Segurança da Informação"
+  - norm_tag_pattern: "documento — RG/identidade"
+    base_legal: "LGPD Art. 5 — documento de identidade"
+    risk: "RG ou equivalente identifica pessoa natural; exposição facilita fraude e reidentificação."
+    recommendation: "Restringir acesso, criptografar em repouso/trânsito e documentar finalidade e base legal."
+    priority: "ALTA"
+    relevant_for: "DPO, Operador, Segurança da Informação"
+  - norm_tag_pattern: "conta/agência bancária"
+    base_legal: "LGPD Art. 5 — dado financeiro (conta/agência)"
+    risk: "Conta e agência bancária permitem vincular titular a instituição financeira; risco de fraude e vazamento financeiro."
+    recommendation: "Mascarar em relatórios, restringir acesso e alinhar com políticas de segurança financeira e LGPD."
+    priority: "ALTA"
+    relevant_for: "DPO, CISO, Operador financeiro"
+  - norm_tag_pattern: "geolocalização precisa"
+    base_legal: "LGPD Art. 5 — localização precisa (vetor de reidentificação)"
+    risk: "Coordenadas ou colunas de latitude/longitude precisas permitem rastrear ou reidentificar titulares."
+    recommendation: "Avaliar necessidade de precisão; agregar ou anonimizar quando possível; restringir acesso e retenção."
+    priority: "ALTA"
+    relevant_for: "DPO, Arquitetura de dados, Segurança da Informação"
+  - norm_tag_pattern: "contato de emergência"
+    base_legal: "LGPD Art. 5 — dado pessoal de terceiro (contato de emergência)"
+    risk: "Contato de emergência é dado de terceiro sem relação direta com o titular principal; exige transparência e base legal adequada."
+    recommendation: "Informar finalidade ao titular; obter consentimento quando aplicável; restringir uso à finalidade declarada."
+    priority: "MÉDIA"
+    relevant_for: "DPO, RH, Operador"
   - norm_tag_pattern: "PII_AMBIGUOUS"
     base_legal: "Identificador genérico – confirmar manualmente"
     risk: "Nome de coluna genérico (doc_id, document_id, id_number, etc.). Pode ser PII ou ID interno."
