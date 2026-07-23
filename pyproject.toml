@@ -77,6 +77,9 @@ dependencies = [
     "packaging>=26.1",
     "pandas>=3.0.3",
     "pillow>=12.3.0",
+    # pyasn1 is transitive (pyopenssl/crypto); direct floor so uv resolves the
+    # security fix for PYSEC-2026-3455, PYSEC-2026-3456, PYSEC-2026-3457.
+    "pyasn1>=0.6.4",
     "pycparser>=3.0 ; implementation_name != 'PyPy' and platform_python_implementation != 'PyPy'",
     "pydantic>=2.13.2",
     "pydantic-core>=2.46.2",
