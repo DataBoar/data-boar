@@ -39,6 +39,7 @@ Quando o PC Windows principal voltar do reparo, retome **`docs/ops/PRIMARY_WINDO
 | **Git normal** | `git fetch`, `git pull`, merge/rebase, stash, branches de feature |
 | **Pre-commit + gate de PR** | **`uv run pre-commit install`** uma vez por clone; **`./scripts/check-all.sh`** antes de cada PR (ver **`docs/ops/COMMIT_AND_PR.pt_BR.md`**) |
 | **Busca só leitura de arquivo / caminho** | Ver **Busca de arquivos (Linux)** abaixo — **não** Voidtools **`es.exe`**. |
+| **tmux remoto (Cursor + Claude)** | **`./scripts/primary-linux-agent-sessions.sh start`** — sessões worker + `/rc`; **`install-systemd`** + **`loginctl enable-linger`** para sobreviver a logout/boot |
 
 ---
 

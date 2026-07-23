@@ -66,6 +66,7 @@
 | `run-pii-history-rewrite.ps1` | Reescrita de histórico (perigoso) | Guia PII Parte II — **não** rotina no PC Windows principal de desenvolvimento; **`PRIMARY_WINDOWS_WORKSTATION_PROTECTION.md`** |
 | `gate-trailer-attest.ps1` / `gate-trailer-attest.sh` | Verificar/assinar assinatura SSH decorativa em namespace **file** nas linhas `Gate-Change-Approved-By:` / `Gate-Close-Approved-By:` (`gate_trailer_attest.py`) | **ADR-0071**, **ADR-0056** (`docs/adr/allowed_signers`); complementa **`gate_change_tripwire.py`** (só regex) + **`git verify-commit`** (namespace `git`) |
 | `es-find.ps1` | Busca por nome (**`es.exe`**, opcional **`-FallbackPowerShell`**) | SKILL **`everything-es-search`**, **`docs/ops/EVERYTHING_ES_PRIMARY_WINDOWS_DEV_LAB.md`**, **`es-find`** |
+| `primary-linux-agent-sessions.sh` | **Só Linux primary:** tmux **`databoar-cursor`** (`agent worker start`) + **`databoar-claude`** (`claude` → `/rc`); unit **systemd user** opcional | **`PRIMARY_LINUX_WORKSTATION_PROTECTION.md`**, **`agent-roles-executor-vs-auditor.mdc`** (Cursor executor × Claude auditor) |
 | `social-x-pace-remind.ps1` | Linhas X em atraso vs `SOCIAL_HUB.md` (privado); Slack opcional | **`x-pace-check`**, **`x-posted`**; **`OPERATOR_NOTIFICATION_CHANNELS.md`** §6; privado **`OPERATOR_X_PACE_AND_VALIDATION.pt_BR.md`** |
 | `social_x_thread_lengths.py` | Valida blocos em crases sob `## Thread pronta` em `2026*_x_*.md` (máx. 279 por padrão) | Privado **`SOCIAL_HUB.md`**, **`X_PLATFORM_LIMITS_AND_PREMIUM.pt_BR.md`**; `uv run python scripts/social_x_thread_lengths.py` |
 
