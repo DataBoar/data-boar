@@ -12,6 +12,7 @@
 #   TMUX_SESSION_CURSOR  default: databoar-cursor
 #   TMUX_SESSION_CLAUDE  default: databoar-claude
 #   CURSOR_AGENT_MODE    worker | interactive  (default: worker)
+#   CURSOR_AGENT_BIN     override agent binary (default: agent, then cursor-agent)
 #   SKIP_CLAUDE=1        skip Claude tmux session on start
 #   SKIP_CURSOR=1        skip Cursor tmux session on start
 #
@@ -72,12 +73,53 @@ warm_path() {
     # shellcheck source=/dev/null
     source /etc/profile.d/zz-local-bin.sh
   fi
-  export PATH="/usr/local/bin:${HOME}/.local/bin:${PATH}"
+  # Operator default on Linux primary (T14): Cursor/Claude CLIs in ~/.local/bin
+  export PATH="${HOME}/.local/bin:/usr/local/bin:${PATH}"
   for _d in "${HOME}/.local/share/flatpak/exports/bin" "/var/lib/flatpak/exports/bin"; do
     if [[ -d "${_d}" ]]; then
       case ":${PATH}:" in *:"${_d}":*) ;; *) export PATH="${_d}:${PATH}" ;; esac
     fi
   done
+}
+
+# Cursor agent CLI: prefer `agent`, then `cursor-agent` (both often symlinked under ~/.local/bin).
+# The `cursor` binary is the editor launcher — not used for worker/interactive agent unless
+# CURSOR_AGENT_BIN is set explicitly by the operator.
+resolve_cursor_agent_bin() {
+  local candidate
+  if [[ -n "${CURSOR_AGENT_BIN:-}" ]]; then
+    if command -v "${CURSOR_AGENT_BIN}" >/dev/null 2>&1; then
+      command -v "${CURSOR_AGENT_BIN}"
+      return 0
+    fi
+    die "CURSOR_AGENT_BIN=${CURSOR_AGENT_BIN} not found on PATH"
+  fi
+  for candidate in agent cursor-agent; do
+    if command -v "${candidate}" >/dev/null 2>&1; then
+      command -v "${candidate}"
+      return 0
+    fi
+  done
+  for candidate in "${HOME}/.local/bin/agent" "${HOME}/.local/bin/cursor-agent"; do
+    if [[ -x "${candidate}" ]]; then
+      printf '%s\n' "${candidate}"
+      return 0
+    fi
+  done
+  return 1
+}
+
+cursor_agent_exec_line() {
+  local mode="$1"
+  local bin
+  if ! bin="$(resolve_cursor_agent_bin)"; then
+    return 1
+  fi
+  case "${mode}" in
+    worker) printf 'exec %s worker start' "${bin}" ;;
+    interactive) printf 'exec %s' "${bin}" ;;
+    *) die "internal: bad cursor mode ${mode}" ;;
+  esac
 }
 
 resolve_repo_root() {
@@ -93,20 +135,23 @@ resolve_repo_root() {
 }
 
 cursor_start_cmd() {
+  local line
   case "${CURSOR_AGENT_MODE}" in
     worker)
-      if command -v agent >/dev/null 2>&1; then
-        printf '%s\n' "exec agent worker start"
+      if line="$(cursor_agent_exec_line worker)"; then
+        printf '%s\n' "${line}"
       else
-        warn "agent not on PATH — starting shell in ${TMUX_SESSION_CURSOR}; run: agent worker start"
+        warn "agent/cursor-agent not on PATH (checked ~/.local/bin) — shell only in ${TMUX_SESSION_CURSOR}"
+        warn "Install: curl https://cursor.com/install -fsS | bash"
+        warn "Note: ~/.local/bin/cursor is the editor launcher, not the agent CLI"
         printf '%s\n' "exec bash -l"
       fi
       ;;
     interactive)
-      if command -v agent >/dev/null 2>&1; then
-        printf '%s\n' "exec agent"
+      if line="$(cursor_agent_exec_line interactive)"; then
+        printf '%s\n' "${line}"
       else
-        warn "agent not on PATH — starting shell; run: agent"
+        warn "agent/cursor-agent not on PATH — shell only; run: agent (after install)"
         printf '%s\n' "exec bash -l"
       fi
       ;;
@@ -210,13 +255,33 @@ cmd_status() {
   done
 
   echo
-  for bin in agent claude tmux; do
+  local bin cursor_bin
+  for bin in agent cursor-agent claude cursor tmux; do
     if command -v "${bin}" >/dev/null 2>&1; then
       echo "binary ${bin}: $(command -v "${bin}")"
+      if command -v readlink >/dev/null 2>&1; then
+        readlink -f "$(command -v "${bin}")" 2>/dev/null | sed 's/^/  -> /' || true
+      fi
     else
       echo "binary ${bin}: missing"
     fi
   done
+
+  echo
+  echo "~/.local/bin:"
+  local f
+  for f in agent cursor-agent cursor claude; do
+    if [[ -e "${HOME}/.local/bin/${f}" ]]; then
+      ls -la "${HOME}/.local/bin/${f}" 2>/dev/null || true
+    fi
+  done
+
+  if cursor_bin="$(resolve_cursor_agent_bin 2>/dev/null)"; then
+    echo "cursor agent CLI (selected): ${cursor_bin}"
+  else
+    echo "cursor agent CLI (selected): missing — install with: curl https://cursor.com/install -fsS | bash"
+    echo "  (~/.local/bin/cursor alone is the editor; worker needs agent or cursor-agent)"
+  fi
 
   if loginctl show-user "${USER}" -p Linger 2>/dev/null | grep -q 'yes'; then
     echo "systemd linger: enabled"
