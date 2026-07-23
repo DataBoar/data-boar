@@ -276,6 +276,8 @@ def test_connect_args_from_target_postgresql():
     assert args["connect_timeout"] == 15
     assert "options" in args
     assert "statement_timeout=120000" in args["options"]
+    assert "login_timeout" not in args
+    assert "tcp_connect_timeout" not in args
 
 
 def test_connect_args_from_target_mysql():
@@ -288,10 +290,12 @@ def test_connect_args_from_target_mysql():
     args = _connect_args_from_target(target)
     assert args["connect_timeout"] == 10
     assert "options" not in args
+    assert "login_timeout" not in args
+    assert "tcp_connect_timeout" not in args
 
 
-def test_connect_args_from_target_mssql_pymssql():
-    """_connect_args_from_target uses pymssql login_timeout/timeout (not connect_timeout)."""
+def test_connect_args_from_target_mssql_bare_maps_to_pymssql():
+    """Bare mssql resolves to mssql+pymssql → login_timeout/timeout (not connect_timeout)."""
     target = {
         "driver": "mssql",
         "connect_timeout_seconds": 20,
@@ -302,11 +306,66 @@ def test_connect_args_from_target_mssql_pymssql():
     assert "connect_timeout" not in args
 
 
+def test_connect_args_from_target_mssql_pymssql_explicit():
+    """Explicit mssql+pymssql keeps login_timeout/timeout (#1297 / #1302)."""
+    target = {
+        "driver": "mssql+pymssql",
+        "connect_timeout_seconds": 20,
+        "read_timeout_seconds": 80,
+    }
+    args = _connect_args_from_target(target)
+    assert args == {"login_timeout": 20, "timeout": 80}
+    assert "connect_timeout" not in args
+    assert "login_timeout" in args
+
+
+def test_connect_args_from_target_mssql_pyodbc():
+    """mssql+pyodbc uses pyodbc timeout only — never login_timeout (#1302)."""
+    target = {
+        "driver": "mssql+pyodbc",
+        "connect_timeout_seconds": 20,
+        "read_timeout_seconds": 80,
+    }
+    args = _connect_args_from_target(target)
+    assert args == {"timeout": 20}
+    assert "login_timeout" not in args
+    assert "connect_timeout" not in args
+
+
+def test_connect_args_from_target_oracle_oracledb():
+    """oracle+oracledb uses tcp_connect_timeout — never connect_timeout (#1302)."""
+    target = {
+        "driver": "oracle+oracledb",
+        "connect_timeout_seconds": 30,
+        "read_timeout_seconds": 90,
+    }
+    args = _connect_args_from_target(target)
+    assert args == {"tcp_connect_timeout": 30}
+    assert "connect_timeout" not in args
+
+
+def test_connect_args_from_target_oracle_bare():
+    """Bare oracle maps to oracle+oracledb → tcp_connect_timeout."""
+    target = {
+        "driver": "oracle",
+        "connect_timeout_seconds": 12,
+    }
+    args = _connect_args_from_target(target)
+    assert args == {"tcp_connect_timeout": 12}
+    assert "connect_timeout" not in args
+
+
 def test_connect_args_from_target_sqlite():
     """_connect_args_from_target returns timeout (lock wait) for SQLite."""
-    target = {"driver": "sqlite", "read_timeout_seconds": 30}
+    target = {
+        "driver": "sqlite",
+        "connect_timeout_seconds": 25,
+        "read_timeout_seconds": 30,
+    }
     args = _connect_args_from_target(target)
-    assert args["timeout"] == 30
+    assert args == {"timeout": 30}
+    assert "connect_timeout" not in args
+    assert "login_timeout" not in args
 
 
 def test_connect_args_from_target_defaults():
