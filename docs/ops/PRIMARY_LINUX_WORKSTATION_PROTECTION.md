@@ -39,6 +39,7 @@ When the Windows primary dev workstation returns from repair, resume **`docs/ops
 | **Normal Git** | `git fetch`, `git pull`, merge/rebase, stash, feature branches |
 | **Pre-commit + PR gate** | One-time **`uv run pre-commit install`** per clone; **`./scripts/check-all.sh`** before every PR (see **`docs/ops/COMMIT_AND_PR.md`**) |
 | **Read-only filename / path search** | See **File search (Linux)** below — **not** Voidtools **`es.exe`**. |
+| **Remote agent tmux (Cursor + Claude)** | **`./scripts/primary-linux-agent-sessions.sh start`** — worker + `/rc` sessions; **`install-systemd`** + **`loginctl enable-linger`** for boot/logout survival |
 
 ---
 
