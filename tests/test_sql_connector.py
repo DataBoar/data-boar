@@ -98,6 +98,19 @@ def test_get_skip_schemas_oracle_uses_system_schemas():
     assert "SYSTEM" in skip
 
 
+def test_get_skip_schemas_oracle_includes_12c_plus_system_schemas():
+    """Oracle 12c+/23c maintained schemas skipped (issue #1315 — AUDSYS cascade)."""
+    skip = _get_skip_schemas("oracle")
+    assert "AUDSYS" in skip
+    assert "GGSYS" in skip
+    assert "SYSBACKUP" in skip
+    assert "PDBADMIN" in skip
+    # Already present before #1315 — must not regress
+    assert "DVF" in skip
+    assert "DVSYS" in skip
+    assert "GSMADMIN_INTERNAL" in skip
+
+
 def test_get_skip_schemas_non_oracle_uses_default():
     """_get_skip_schemas for postgresql/mysql returns default skip set."""
     skip = _get_skip_schemas("postgresql")
