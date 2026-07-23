@@ -65,6 +65,15 @@ ORACLE_SYSTEM_SCHEMAS = frozenset(
         "MDDATA",
         "REMOTE_SCHEDULER_AGENT",
         "DBSFWUSER",
+        # 12c+/19c/23c Oracle-maintained (issue #1315; AUDSYS = unified audit trail noise)
+        "AUDSYS",
+        "SYS$UMF",
+        "GGSYS",
+        "SYSBACKUP",
+        "SYSDG",
+        "SYSKM",
+        "SYSRAC",
+        "PDBADMIN",
     }
 )
 
