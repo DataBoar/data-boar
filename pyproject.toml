@@ -314,4 +314,4 @@ dev = [
 # Operator-only maturity octet (ADR-0073). Never copy into [project].version.
 # postN <-> maturity_build map: docs/releases/1.7.4.post8.md (canonical; includes post1–post7 rows).
 [tool.databoar]
-maturity_build = 247
+maturity_build = 250
