@@ -99,6 +99,18 @@ When **`1.7.4`** is already on PyPI and a packaging fix must ship without a new 
 For every **new** `X.Y.Z.postN` note, make the unpublished interval explicit: add one row per intermediate `maturity_build` as `*(fix, unpublished on PyPI)*` between `post(N-1)` and `postN`. Do not compress that interval into a single “N fixes” summary.
 In that map, keep **Notes** as short effect prose (with `#issue` when known), not raw commit subjects. Keep git-literal proof (`fix(...)` subjects + hashes) only in an **Appendix — Fix set (N=...)** section.
 
+### Post-GA tag / GitHub Release / Docker cadence (CVE vs planned deferral)
+
+After a line reaches **GA** (release gate closed — see [ADR-0072](adr/ADR-0072-commit-gate-vs-release-gate-distinct-criteria.md)), the operator may run a **deliberate pause** on **Git tag**, **GitHub Release**, and **Docker Hub** while the **PyPI `.postN` fix-line** stabilizes on `main`. That pause is a **publish rhythm** choice; it is **not** the same question as commit gate vs release gate. ADR-0072 names those gates; this subsection records **when to break or hold** the post-GA tag/Release/container pace.
+
+| Situation | Tag + GitHub Release + Docker Hub | PyPI `.postN` / `maturity_build` on `main` |
+| --- | --- | --- |
+| **CVE or real bug** (exploitable risk, user-visible incorrect behavior, dependency CVE with an actionable **fixed** upstream) | **Break the pause immediately** — run **release-ritual** for the fix-line upload and refresh Hub/tags as needed | Advance per the dual-counter table above and [ADR-0073](adr/ADR-0073-version-scheme-octet-maturity-and-roadmap.md) |
+| **Planned rigor** (operator-perceived hardening still in flight) or a fix **intentionally deferred** before rc→GA | **Hold the agreed pace** — do not accelerate tag/Release/container for perception or backlog grooming alone | Land fixes on `main`; octet / `.postN` only when runnable substance warrants |
+| **Docs / ADR / plans / chore / ci / test-only** | No automatic tag/Release/Docker bump | **Does not** increment `maturity_build` |
+
+**Roster doctrine (origin):** [data-boar-shared#14](https://github.com/DataBoar/data-boar-shared/issues/14) (2026-07-13). **Related gate taxonomy:** [ADR-0072](adr/ADR-0072-commit-gate-vs-release-gate-distinct-criteria.md) — commit gate ≠ release gate; it does **not** subsume this CVE-vs-planned distinction.
+
 ---
 
 ## Pre-release flow (`-beta` / `-rc`) before final publish

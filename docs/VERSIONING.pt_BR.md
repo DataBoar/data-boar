@@ -99,6 +99,18 @@ Quando **`1.7.4`** já está no PyPI e um fix de empacotamento precisa sair sem 
 Para cada nota nova `X.Y.Z.postN`, deixe o intervalo unpublished explícito: inclua uma linha por `maturity_build` intermediário como `*(fix, unpublished on PyPI)*` entre `post(N-1)` e `postN`. Não comprima esse intervalo em uma linha única de “N fixes”.
 Nesse mapa, mantenha a coluna **Notes** em prosa curta de efeito (com `#issue` quando houver), não em subject cru de commit. A prova git-literal (`fix(...)` + hash) fica apenas no **Appendix — Fix set (N=...)**.
 
+### Cadência pós-GA de tag / GitHub Release / Docker (CVE vs adiado de propósito)
+
+Depois que uma linha atinge **GA** (release gate fechado — ver [ADR-0072](adr/ADR-0072-commit-gate-vs-release-gate-distinct-criteria.md)), o operador pode adotar uma **pausa deliberada** em **tag Git**, **GitHub Release** e **Docker Hub** enquanto a **fix-line `.postN` no PyPI** estabiliza em `main`. Essa pausa é escolha de **ritmo de publicação**; **não** é a mesma pergunta que commit gate vs release gate. A ADR-0072 nomeia esses gates; esta subseção registra **quando quebrar ou manter** o compasso pós-GA de tag/Release/container.
+
+| Situação | Tag + GitHub Release + Docker Hub | PyPI `.postN` / `maturity_build` em `main` |
+| --- | --- | --- |
+| **CVE ou bug real** (risco explorável, comportamento incorreto visível ao usuário, CVE de dependência com correção **acionável** no upstream) | **Quebra a pausa imediatamente** — executar **release-ritual** para o upload da fix-line e atualizar Hub/tags conforme necessário | Avançar conforme a tabela de dois contadores acima e a [ADR-0073](adr/ADR-0073-version-scheme-octet-maturity-and-roadmap.md) |
+| **Rigor planejado** (endurecimento percebido pelo operador ainda em curso) ou fix **adiado de propósito** antes de rc→GA | **Mantém o compasso combinado** — não acelerar tag/Release/container por percepção ou higiene de backlog sozinha | Fixes em `main`; octeto / `.postN` só quando houver substância executável |
+| **Docs / ADR / plans / chore / ci / só teste** | Sem bump automático de tag/Release/Docker | **Não** incrementa `maturity_build` |
+
+**Doutrina de roster (origem):** [data-boar-shared#14](https://github.com/DataBoar/data-boar-shared/issues/14) (2026-07-13). **Taxonomia de gate relacionada:** [ADR-0072](adr/ADR-0072-commit-gate-vs-release-gate-distinct-criteria.md) — commit gate ≠ release gate; **não** cobre esta distinção CVE-vs-planejado.
+
 ---
 
 ## Fluxo de pré-release (`-beta` / `-rc`) antes do publish final
