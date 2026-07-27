@@ -1418,3 +1418,51 @@ def generate_report(
             "Falha ao gravar manifest/POC_SUMMARY (evidência + APG); Excel já foi emitido."
         )
     return str(out_path)
+
+
+def generate_session_heatmap(
+    db_manager: Any,
+    session_id: str,
+    output_dir: str = ".",
+    config: dict | None = None,
+) -> str | None:
+    """
+    PNG heatmap only for a session (no Excel). Uses the same row filters as ``generate_report``.
+    """
+    db_rows, fs_rows, fail_rows = db_manager.get_findings(session_id)
+    if not db_rows and not fs_rows:
+        return None
+    report_cfg, db_rows_for_sheets, fs_rows_for_sheets = (
+        _get_report_config_and_filtered_rows(config, db_rows, fs_rows)
+    )
+    lic_ctx = None
+    if config:
+        from core.licensing.guard import get_license_guard
+
+        lic_ctx = get_license_guard(config).context
+        cap = None
+        if (
+            lic_ctx.state in ("VALID", "GRACE", "OPEN")
+            and lic_ctx.trial
+            and lic_ctx.max_report_rows > 0
+        ):
+            cap = lic_ctx.max_report_rows
+        if cap:
+            db_rows_for_sheets, fs_rows_for_sheets = _apply_trial_row_cap(
+                db_rows_for_sheets, fs_rows_for_sheets, cap
+            )
+    db_rows_for_sheets, fs_rows_for_sheets = _remove_suggested_review_from_main_sheets(
+        db_rows_for_sheets, fs_rows_for_sheets, report_cfg
+    )
+    lic_footer = None
+    if lic_ctx is not None:
+        lic_footer = f"License: {lic_ctx.state}"
+        if lic_ctx.watermark:
+            lic_footer = f"{lic_footer} ({lic_ctx.watermark})"
+    return _create_heatmap(
+        db_rows_for_sheets,
+        fs_rows_for_sheets,
+        output_dir,
+        session_id,
+        license_footer=lic_footer,
+    )

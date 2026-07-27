@@ -1,21 +1,15 @@
 """
-CLI ``data-boar-report``: executive Markdown from local SQLite (same core as ``POC_SUMMARY_*.md``).
+CLI ``data-boar-report``: session report export from local SQLite (#1326).
 
+Formats: md, docx, pdf, xlsx, heatmap, dsar, json, audit-trail, all.
 
 Enterprise data discovery & risk governance desk output — no live connector required.
 
 Doctrine references:
 
-- ``docs/ops/inspirations/DEFENSIVE_SCANNING_MANIFESTO.md`` §1 — the regen path is
-  read-only against the customer SQLite. No DDL, no temp objects, no surprise side
-  effects on the customer database. The CLI never opens a network connection.
-- ``docs/ops/inspirations/INTERNAL_DIAGNOSTIC_AESTHETICS.md`` §2.2 / §3 — failures
-  emit an RCA block (which step, which input, narrowed hypothesis, next manual
-  command), not a one-line ``Traceback`` dump. Sysinternals bar: short, technical,
-  factual; no invented numbers; one concept per line.
-- ``docs/ops/inspirations/THE_ART_OF_THE_FALLBACK.md`` §3 — every demotion has a
-  diagnostic. The reporter never falls through to a partial Markdown silently;
-  if any step fails, we surface the RCA and exit non-zero.
+- ``docs/ops/inspirations/DEFENSIVE_SCANNING_MANIFESTO.md`` §1 — read-only against SQLite.
+- ``docs/ops/inspirations/INTERNAL_DIAGNOSTIC_AESTHETICS.md`` §2.2 / §3 — RCA block on failure.
+- ``docs/ops/inspirations/THE_ART_OF_THE_FALLBACK.md`` §3 — no silent partial export.
 """
 
 from __future__ import annotations
@@ -24,41 +18,9 @@ import argparse
 import sys
 import traceback
 from pathlib import Path
-from typing import Any
 
-from config.loader import load_config
-from core.about import get_about_info
-from core.database import LocalDBManager
-from report.executive_report import generate_executive_report
-from report.safe_prefix import safe_session_prefix
-from report.scan_evidence import _aggregate_apg, _build_manifest
+from report.session_export import ALL_FORMATS, SINGLE_FORMATS, export_session_formats
 
-
-def _session_meta(db_manager: LocalDBManager, session_id: str) -> dict[str, Any]:
-    for s in db_manager.list_sessions() or []:
-        if s.get("session_id") == session_id:
-            return {
-                "started_at": s.get("started_at"),
-                "finished_at": s.get("finished_at"),
-                "tenant_name": s.get("tenant_name"),
-                "technician_name": s.get("technician_name"),
-                "config_scope_hash": s.get("config_scope_hash"),
-                "jurisdiction_hint": bool(s.get("jurisdiction_hint")),
-            }
-    return {
-        "started_at": None,
-        "finished_at": None,
-        "tenant_name": None,
-        "technician_name": None,
-        "config_scope_hash": None,
-        "jurisdiction_hint": False,
-    }
-
-
-# Pipeline step labels surfaced inside the RCA block. Keep stable so DBAs/SREs
-# can grep operator transcripts; new steps must be appended (not reordered) to
-# preserve the "additive" audit contract documented in
-# INTERNAL_DIAGNOSTIC_AESTHETICS.md §2.3.
 _STEP_PARSE_ARGS = "parse_args"
 _STEP_LOAD_CONFIG = "load_config"
 _STEP_OPEN_SQLITE = "open_sqlite"
@@ -66,6 +28,9 @@ _STEP_FETCH_FINDINGS = "fetch_findings"
 _STEP_BUILD_MANIFEST = "build_manifest"
 _STEP_RENDER_MARKDOWN = "render_markdown"
 _STEP_WRITE_OUTPUT = "write_output"
+_STEP_EXPORT = "export_formats"
+
+_FORMAT_CHOICES = (*SINGLE_FORMATS, "all")
 
 
 def _emit_rca_block(
@@ -76,26 +41,9 @@ def _emit_rca_block(
     sqlite_path: str,
     session_id: str,
     output_path: Path | None,
+    export_format: str,
 ) -> None:
-    """
-    Print a Sysinternals-style RCA block to stderr.
-
-    Why this exists (Julia Evans-style note):
-
-    - A bare Python traceback tells the reader *where in the source tree* an
-      exception was raised. It does **not** tell the operator which **stage of
-      the regen pipeline** failed, which input to suspect first, or which
-      manual command would reproduce the failure on this same SQLite.
-    - The RCA block answers those three questions without paging the
-      maintainer. It mirrors the post-mortem shape used by Cloudflare and
-      NASA SEL: state the symptom, name the narrowed hypothesis, give the
-      next manual command. See
-      ``docs/ops/inspirations/DEFENSIVE_SCANNING_MANIFESTO.md`` §1 and
-      ``docs/ops/inspirations/INTERNAL_DIAGNOSTIC_AESTHETICS.md`` §2.2.
-    - Output goes to **stderr** so it never contaminates a piped Markdown
-      capture; stdout remains reserved for stakeholder content.
-    """
-    sid_show = safe_session_prefix(session_id, max_len=16) if session_id else "(empty)"
+    sid_show = session_id[:16] if session_id else "(empty)"
     error_type = type(error).__name__
     error_msg = (
         str(error).strip().splitlines()[0] if str(error).strip() else "(no message)"
@@ -108,12 +56,14 @@ def _emit_rca_block(
         config_path=config_path,
         sqlite_path=sqlite_path,
         session_id=session_id,
+        export_format=export_format,
     )
 
     lines = [
         "",
-        "[data-boar-report] RCA — executive Markdown regeneration failed",
+        "[data-boar-report] RCA — session report export failed",
         f"  step              {step}",
+        f"  format            {export_format}",
         f"  error_type        {error_type}",
         f"  error_message     {error_msg}",
         f"  config_path       {config_path}",
@@ -131,15 +81,9 @@ def _emit_rca_block(
 
 
 def _narrow_hypothesis(*, step: str, error: BaseException) -> str:
-    """
-    Map ``(step, exception type)`` to a one-line, factual hypothesis.
-
-    The mapping is intentionally narrow: we name *only* what the symptom
-    supports. Wider speculation belongs in the operator runbook, not the RCA.
-    """
     error_type = type(error).__name__
     if step == _STEP_PARSE_ARGS:
-        return "caller omitted --session-id or passed whitespace-only value"
+        return "caller omitted --session-id, invalid --format, or incompatible -o with --format all"
     if step == _STEP_LOAD_CONFIG:
         if error_type in {"FileNotFoundError", "PermissionError"}:
             return "config YAML missing or unreadable on this workstation"
@@ -148,8 +92,12 @@ def _narrow_hypothesis(*, step: str, error: BaseException) -> str:
         return (
             "sqlite_path resolved but driver could not open the file (path, lock, fs)"
         )
-    if step == _STEP_FETCH_FINDINGS:
-        return "session_id absent in this SQLite, or schema older than reporter expects"
+    if step in {_STEP_FETCH_FINDINGS, _STEP_EXPORT}:
+        if "Unknown session" in str(error):
+            return "session_id absent in this SQLite"
+        if "No findings" in str(error):
+            return "session exists but has no findings for xlsx/heatmap export"
+        return "export pipeline rejected session or finding shape"
     if step == _STEP_BUILD_MANIFEST:
         return (
             "manifest builder rejected config or finding shape (audit_trail invariants)"
@@ -169,13 +117,14 @@ def _next_manual_command(
     config_path: Path,
     sqlite_path: str,
     session_id: str,
+    export_format: str,
 ) -> str:
-    """Suggest the smallest deterministic command that reproduces the failure."""
+    base = (
+        f"python -m cli.reporter --config {config_path} "
+        f"--session-id {session_id or '<session>'} --format {export_format}"
+    )
     if step == _STEP_PARSE_ARGS:
-        return (
-            f"python -m cli.reporter --config {config_path} "
-            "--session-id <UUID-from-scan_sessions>"
-        )
+        return base.replace(session_id or "<session>", "<UUID-from-scan_sessions>")
     if step == _STEP_LOAD_CONFIG:
         return f"python -c 'from config.loader import load_config; load_config({str(config_path)!r})'"
     if step in {_STEP_OPEN_SQLITE, _STEP_FETCH_FINDINGS}:
@@ -184,22 +133,14 @@ def _next_manual_command(
             f"m=LocalDBManager({sqlite_path!r}); "
             f"print(len(m.list_sessions())); m.dispose()'"
         )
-    if step == _STEP_BUILD_MANIFEST or step == _STEP_RENDER_MARKDOWN:
-        return (
-            f"python -m cli.reporter --config {config_path} "
-            f"--session-id {session_id or '<session>'}"
-        )
-    if step == _STEP_WRITE_OUTPUT:
-        return f"ls -ld {config_path.parent} && touch {config_path.parent}/.write_probe"
-    return f"python -m cli.reporter --config {config_path} --session-id {session_id or '<session>'}"
+    return base
 
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(
         description=(
-            "Data Boar — enterprise data discovery & risk governance: regenerate executive Markdown "
-            "(methodology, security evidence, full APG inventory, Top 3 priorities) from local SQLite "
-            "for a completed scan session."
+            "Data Boar — export session reports from local SQLite (no re-scan, no --web). "
+            "Formats: md, docx, pdf, xlsx, heatmap, dsar, json, audit-trail, all."
         )
     )
     p.add_argument(
@@ -214,13 +155,27 @@ def main(argv: list[str] | None = None) -> int:
         help="ID da sessão (UUID) gravado em scan_sessions.",
     )
     p.add_argument(
+        "--format",
+        default="md",
+        choices=_FORMAT_CHOICES,
+        help=(
+            "Formato de saída (default: md). "
+            "'all' grava md, docx, pdf, xlsx, heatmap, dsar, json e audit-trail."
+        ),
+    )
+    p.add_argument(
         "-o",
         "--output",
         default="",
         help=(
-            "Arquivo .md de saída. Se omitido, grava ao lado do YAML de config: "
-            "`executive_report_<prefix>.md` (evita expor relatório em stdout/logs de CI)."
+            "Arquivo de saída para um único formato (md, docx, pdf, dsar, json, audit-trail). "
+            "Incompatível com --format all ou xlsx/heatmap."
         ),
+    )
+    p.add_argument(
+        "--output-dir",
+        default="",
+        help="Diretório de saída (default: report.output_dir do config).",
     )
     p.add_argument(
         "--sqlite",
@@ -233,17 +188,23 @@ def main(argv: list[str] | None = None) -> int:
         help="Propaga nota de linhas limitadas no Excel (licença trial).",
     )
     p.add_argument(
+        "--dsar-include-samples",
+        action="store_true",
+        help="Com --format dsar ou all: inclui amostras brutas quando presentes no SQLite.",
+    )
+    p.add_argument(
         "--debug-traceback",
         action="store_true",
-        help=(
-            "Após o bloco RCA, imprime o traceback completo no stderr. Útil em "
-            "lab; em produção a mensagem narrowed do RCA já é suficiente."
-        ),
+        help="Após o bloco RCA, imprime traceback completo no stderr.",
     )
     args = p.parse_args(argv)
 
     cfg_path = Path(args.config).expanduser().resolve()
     sid = (args.session_id or "").strip()
+    fmt = args.format
+    out_arg = (args.output or "").strip()
+    out_dir_arg = (args.output_dir or "").strip()
+
     if not sid:
         print("session-id vazio", file=sys.stderr)
         _emit_rca_block(
@@ -253,77 +214,76 @@ def main(argv: list[str] | None = None) -> int:
             sqlite_path="",
             session_id="",
             output_path=None,
+            export_format=fmt,
         )
         return 2
 
-    # Track which pipeline step is in flight so the RCA block can name it
-    # without relying on traceback frame inspection (which is fragile across
-    # Python versions and minifiers). Mirrors the "step k/N" convention in
-    # INTERNAL_DIAGNOSTIC_AESTHETICS.md §2.2.
-    current_step = _STEP_LOAD_CONFIG
-    out_for_rca: Path | None = None
+    if fmt == "all" and out_arg:
+        print("Cannot use -o/--output with --format all", file=sys.stderr)
+        _emit_rca_block(
+            step=_STEP_PARSE_ARGS,
+            error=ValueError("--output incompatible with --format all"),
+            config_path=cfg_path,
+            sqlite_path="",
+            session_id=sid,
+            output_path=Path(out_arg),
+            export_format=fmt,
+        )
+        return 2
+
+    if out_arg and fmt in {"xlsx", "heatmap", "all"}:
+        print(
+            f"Cannot use -o/--output with --format {fmt}",
+            file=sys.stderr,
+        )
+        _emit_rca_block(
+            step=_STEP_PARSE_ARGS,
+            error=ValueError(f"--output incompatible with --format {fmt}"),
+            config_path=cfg_path,
+            sqlite_path="",
+            session_id=sid,
+            output_path=Path(out_arg),
+            export_format=fmt,
+        )
+        return 2
+
+    formats = list(ALL_FORMATS) if fmt == "all" else [fmt]
+    output_file = Path(out_arg).expanduser().resolve() if out_arg else None
+    output_dir = Path(out_dir_arg).expanduser().resolve() if out_dir_arg else None
+
+    current_step = _STEP_EXPORT
+    out_for_rca: Path | None = output_file
     db_path = ""
-    mgr: LocalDBManager | None = None
 
     try:
-        cfg = load_config(cfg_path)
-        db_path = (args.sqlite or "").strip() or str(
-            cfg.get("sqlite_path") or "audit_results.db"
-        )
-
-        current_step = _STEP_OPEN_SQLITE
-        mgr = LocalDBManager(db_path)
-
-        current_step = _STEP_FETCH_FINDINGS
-        db_rows, fs_rows, fail_rows = mgr.get_findings(sid)
-        meta = _session_meta(mgr, sid)
-        about = get_about_info()
-
-        current_step = _STEP_BUILD_MANIFEST
-        manifest = _build_manifest(
+        written = export_session_formats(
+            config_path=cfg_path,
             session_id=sid,
-            meta=meta,
-            about=about,
-            config=cfg if isinstance(cfg, dict) else {},
-            db_rows=db_rows,
-            fs_rows=fs_rows,
-            fail_rows=fail_rows,
-            report_rows_capped=bool(args.trial_rows_capped),
+            formats=formats,
+            sqlite_path=(args.sqlite or "").strip() or None,
+            output_dir=output_dir,
+            output_file=output_file,
+            trial_rows_capped=bool(args.trial_rows_capped),
+            dsar_include_samples=bool(args.dsar_include_samples),
         )
-        apg_rows = _aggregate_apg(db_rows, fs_rows)
-
-        current_step = _STEP_RENDER_MARKDOWN
-        md = generate_executive_report(
-            session_id=sid,
-            about=about,
-            manifest=manifest,
-            db_rows=db_rows,
-            fs_rows=fs_rows,
-            _fail_rows=fail_rows,
-            apg_rows=apg_rows,
-            report_rows_capped=bool(args.trial_rows_capped),
-        )
-
-        current_step = _STEP_WRITE_OUTPUT
-        out_arg = (args.output or "").strip()
-        if out_arg:
-            out = Path(out_arg).expanduser().resolve()
-        else:
-            prefix = safe_session_prefix(sid, max_len=8)
-            base = cfg_path.parent.resolve()
-            out = (base / f"executive_report_{prefix}.md").resolve()
-            if not out.is_relative_to(base):
-                # Sandbox guard: refuse to write outside the config dir, even
-                # if Path.resolve produces a surprising parent. Same posture as
-                # report/scan_evidence.py output_dir join check.
-                raise ValueError("refuse output path outside config directory")
-        out_for_rca = out
-        out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(md, encoding="utf-8")
+        for label, path in written.items():
+            print(f"Wrote {label}: {path}")
         return 0
     except BaseException as exc:  # noqa: BLE001 — RCA must observe every failure mode
         if isinstance(exc, (KeyboardInterrupt, SystemExit)):
             raise
+        if isinstance(exc, FileNotFoundError):
+            msg = str(exc)
+            if str(cfg_path) in msg or "Config file not found" in msg:
+                current_step = _STEP_LOAD_CONFIG
+            else:
+                current_step = _STEP_WRITE_OUTPUT
+        elif "Unknown session" in str(exc):
+            current_step = _STEP_FETCH_FINDINGS
+            print(str(exc), file=sys.stderr)
+            return 2
+        elif "No findings" in str(exc):
+            current_step = _STEP_EXPORT
         _emit_rca_block(
             step=current_step,
             error=exc,
@@ -331,6 +291,7 @@ def main(argv: list[str] | None = None) -> int:
             sqlite_path=db_path,
             session_id=sid,
             output_path=out_for_rca,
+            export_format=fmt,
         )
         if args.debug_traceback:
             sys.stderr.write("\n[data-boar-report] full traceback (debug):\n")
@@ -338,8 +299,7 @@ def main(argv: list[str] | None = None) -> int:
         return 3
 
     finally:
-        if mgr is not None:
-            mgr.dispose()
+        pass
 
 
 if __name__ == "__main__":
