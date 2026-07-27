@@ -184,6 +184,7 @@ def test_ssl_create_default_context_uses_minimum_tls_version():
     exclude_dirs = {
         ".cursor",
         ".git",
+        ".locust_env",
         ".venv",
         "venv",
         "__pycache__",

@@ -216,6 +216,13 @@ class AuditEngine:
         """
         Run audit for all targets (sequential or parallel). Returns session_id (UUID + timestamp).
         """
+        from core.output_paths import OutputPathError, ensure_config_output_directories
+
+        try:
+            ensure_config_output_directories(self.config, sqlite_path=self.db_path)
+        except OutputPathError as e:
+            raise OSError(str(e)) from e
+
         from core.licensing import LicenseBlockedError, get_license_guard
 
         guard = get_license_guard(self.config)

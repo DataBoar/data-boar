@@ -16,6 +16,7 @@ from typing import Any
 
 from core.prefilter import OpenCorePreFilter
 from pro.engine import process_chunk_worker
+from tests.benchmarks.benchmark_gate import evaluate_official_pro_v1, format_gate_report
 
 
 def generate_test_data(rows: int = 200_000) -> list[str]:
@@ -66,7 +67,7 @@ def run_benchmark(rows: int, workers: int) -> dict[str, Any]:
     print(f"GANHO DE PERFORMANCE: {speedup:.2f}x")
     print("-" * 40)
 
-    return {
+    artifact: dict[str, Any] = {
         "benchmark": "official_pro_v1",
         "rows": len(data),
         "workers": max(1, int(workers)),
@@ -78,6 +79,10 @@ def run_benchmark(rows: int, workers: int) -> dict[str, Any]:
         "rust_worker_path": True,
         "generated_at_epoch": time.time(),
     }
+    gate = evaluate_official_pro_v1(artifact)
+    artifact["gate"] = gate.to_gate_dict()
+    print(format_gate_report(gate))
+    return artifact
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -87,6 +92,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--rows", type=int, default=200_000)
     parser.add_argument("--workers", type=int, default=8)
     parser.add_argument("--output", default="tests/benchmarks/official_benchmark.json")
+    parser.add_argument(
+        "--enforce-gate",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Exit 1 when speed or safe axis fails (default: on)",
+    )
     args = parser.parse_args(argv)
 
     artifact = run_benchmark(
@@ -96,6 +107,11 @@ def main(argv: list[str] | None = None) -> int:
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(artifact, indent=2), encoding="utf-8")
     print(f"[OK] Benchmark artifact: {output}")
+    gate = artifact.get("gate") or {}
+    if args.enforce_gate and gate.get("safe_axis") == "fail":
+        return 1
+    if args.enforce_gate and gate.get("speed_axis") == "fail":
+        return 1
     return 0
 
 

@@ -183,6 +183,14 @@ def _validate_config_and_exit(config: dict[str, Any], config_path: str) -> None:
         label = f"type={kind or '?'}" + (f" driver={driver}" if driver else "")
         print(f'  OK    target[{i}] "{name}"  {label}')
 
+    from core.output_paths import OutputPathError, ensure_config_output_directories
+
+    try:
+        for msg in ensure_config_output_directories(config):
+            print(f"  OK    {msg}")
+    except OutputPathError as e:
+        errors.append(str(e))
+
     for w in warnings:
         print(f"  WARN  {w}")
     for e in errors:
@@ -310,6 +318,39 @@ def _run_session_diff_cli(
         mgr.dispose()
 
 
+def _run_regenerate_report_cli(
+    config: dict[str, Any], config_path: str, session_id: str
+) -> None:
+    """Regenerate Excel + heatmap (+ learned patterns) from SQLite without re-scan."""
+    from core.engine import AuditEngine
+    from core.output_paths import OutputPathError, ensure_config_output_directories
+
+    sid = (session_id or "").strip()
+    if not sid:
+        print("Session error: empty session id", file=sys.stderr)
+        sys.exit(2)
+
+    try:
+        ensure_config_output_directories(config)
+    except OutputPathError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    engine = AuditEngine(config, config_path=config_path)
+    try:
+        known = {row["session_id"] for row in engine.db_manager.list_sessions()}
+        if sid not in known:
+            print(f"Session error: Unknown session: {sid}", file=sys.stderr)
+            sys.exit(2)
+        report_path = engine.generate_final_reports(sid)
+        if report_path:
+            print(f"Report written: {report_path}")
+        else:
+            print("No findings to report.")
+    finally:
+        engine.db_manager.dispose()
+
+
 def _display_prog(argv0: str | None = None) -> str:
     """Return the operator-facing command form for this runtime."""
     name = Path(argv0 or sys.argv[0] or "").name.lower()
@@ -353,6 +394,9 @@ def main() -> None:
             "\n"
             "  # DSAR-oriented JSON export for one session (stdout or --dsar-output)\n"
             f"  {prog} --config config.yaml --export-dsar <session_id>\n"
+            "\n"
+            "  # Regenerate Excel + heatmap for an existing session (SQLite only; no re-scan)\n"
+            f"  {prog} --config config.yaml --regenerate-report <session_id>\n"
             "\n"
             "  # Wipe all collected data and generated reports (dangerous, see SECURITY.md)\n"
             f"  {prog} --config config.yaml --reset-data\n"
@@ -544,6 +588,18 @@ def main() -> None:
         ),
     )
     parser.add_argument(
+        "--regenerate-report",
+        metavar="SESSION_ID",
+        dest="regenerate_report",
+        default=None,
+        help=(
+            "Regenerate Excel workbook and heatmap PNG for SESSION_ID from the "
+            "configured SQLite database (also writes learned_patterns when enabled). "
+            "No live target scan and no --web. Incompatible with --web, --reset-data, "
+            "--validate-config, --diff, --export-dsar, and --export-audit-trail."
+        ),
+    )
+    parser.add_argument(
         "--tenant",
         default=None,
         help=(
@@ -615,11 +671,12 @@ def main() -> None:
             or args.export_audit_trail is not None
             or args.export_dsar is not None
             or args.diff_sessions
+            or args.regenerate_report is not None
         )
         if demo_incompatible:
             print(
                 "Cannot combine --demo with --validate-config, --reset-data, "
-                "--export-audit-trail, --export-dsar, or --diff.",
+                "--export-audit-trail, --export-dsar, --diff, or --regenerate-report.",
                 file=sys.stderr,
             )
             sys.exit(2)
@@ -645,10 +702,11 @@ def main() -> None:
         or args.reset_data
         or args.export_audit_trail is not None
         or args.export_dsar is not None
+        or args.regenerate_report is not None
     ):
         print(
             "Cannot combine --validate-config with --web, --reset-data, "
-            "--export-audit-trail, or --export-dsar.",
+            "--export-audit-trail, --export-dsar, or --regenerate-report.",
             file=sys.stderr,
         )
         sys.exit(2)
@@ -659,10 +717,11 @@ def main() -> None:
         or args.export_audit_trail is not None
         or args.validate_config
         or args.export_dsar is not None
+        or args.regenerate_report is not None
     ):
         print(
             "Cannot combine --diff with --web, --reset-data, --export-audit-trail, "
-            "--export-dsar, or --validate-config.",
+            "--export-dsar, --validate-config, or --regenerate-report.",
             file=sys.stderr,
         )
         sys.exit(2)
@@ -673,10 +732,26 @@ def main() -> None:
         or args.export_audit_trail is not None
         or args.validate_config
         or args.diff_sessions
+        or args.regenerate_report is not None
     ):
         print(
             "Cannot combine --export-dsar with --web, --reset-data, "
-            "--export-audit-trail, --validate-config, or --diff.",
+            "--export-audit-trail, --validate-config, --diff, or --regenerate-report.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+
+    if args.regenerate_report is not None and (
+        args.web
+        or args.reset_data
+        or args.export_audit_trail is not None
+        or args.validate_config
+        or args.diff_sessions
+        or args.export_dsar is not None
+    ):
+        print(
+            "Cannot combine --regenerate-report with --web, --reset-data, "
+            "--export-audit-trail, --validate-config, --diff, or --export-dsar.",
             file=sys.stderr,
         )
         sys.exit(2)
@@ -763,6 +838,11 @@ def main() -> None:
                 sys.stdout.write(body)
         finally:
             engine.db_manager.dispose()
+        return
+
+    if args.regenerate_report is not None:
+        _emit_runtime_trust_info(runtime_trust, to_stdout=False, to_stderr=True)
+        _run_regenerate_report_cli(config, args.config, args.regenerate_report)
         return
 
     if args.export_audit_trail is not None:

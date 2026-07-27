@@ -14,18 +14,22 @@ Human-readable summary of user-facing changes. **Detailed release notes:** [docs
 
 ## 1.7.4.post8 (pending PyPI dispatch)
 
-> Post-release on the **`1.7.4`** public line. **`[project] version = 1.7.4.post8`** and **`[tool.databoar] maturity_build = 247`** (`N=2` `fix(` commits since post7 baseline `b5054d55`, ADR-0073). **PyPI-only** — no Git tag, no GitHub Release, no container.
+> Post-release on the **`1.7.4`** public line. **`[project] version = 1.7.4.post8`** and **`[tool.databoar] maturity_build = 250`** (`N=5` `fix(` commits since post7 baseline `b5054d55`, ADR-0073). **PyPI-only** — no Git tag, no GitHub Release, no container.
 >
-> **Field-caught on-site (2026-07-21):** both fixes in this drop were discovered during the same customer engagement — native MSSQL connector first run (#1297) and integrity anchor false-negative (#1298).
+> **Honesty:** early post8 prep documented only `N=2` / `247` (#1297–#1298); three more `fix(` commits landed on `main` before upload — this entry reflects the full set at publish time.
 
 ### Fixed / hardened (post8)
 
 - **SQL / MSSQL (native pymssql):** map `connect_timeout_seconds` / `read_timeout_seconds` to pymssql `login_timeout` / `timeout` instead of unsupported `connect_timeout` — first field run ingested zero rows before this fix ([#1297](https://github.com/DataBoar/data-boar/pull/1297)).
 - **Integrity anchor:** expand behaviour-critical allowlist via `connectors/*.py` + `core/licensing/*.py` globs (42 modules, was 6); `--version` and `--validate-config` surface `-alpha` / `runtime-trust` before scan ([#1298](https://github.com/DataBoar/data-boar/pull/1298)).
+- **Dependencies:** `pyasn1` → `0.6.4` (PYSEC-2026-3455/3456/3457) ([#1304](https://github.com/DataBoar/data-boar/pull/1304)).
+- **SQL connect_args (per driver):** `oracle+oracledb` uses `tcp_connect_timeout`; `mssql+pyodbc` passes `timeout` only (pyodbc rejects `login_timeout`); pymssql path unchanged ([#1310](https://github.com/DataBoar/data-boar/pull/1310) / [#1302](https://github.com/DataBoar/data-boar/issues/1302)).
+- **Oracle discovery:** skip `AUDSYS` and other 12c+ system schemas that raise permission errors during enumeration ([#1316](https://github.com/DataBoar/data-boar/pull/1316) / [#1315](https://github.com/DataBoar/data-boar/issues/1315)).
 
 ### Notes (post8)
 
-- Full `N=2` fix set and `postN` ↔ `maturity_build` map: [docs/releases/1.7.4.post8.md](docs/releases/1.7.4.post8.md).
+- **Not in `N`:** LGPD compliance sample enrichment ([#1288](https://github.com/DataBoar/data-boar/pull/1288), docs); MSSQL no-ODBC default was **post7** ([#1290](https://github.com/DataBoar/data-boar/pull/1290)).
+- Full `N=5` fix set and `postN` ↔ `maturity_build` map: [docs/releases/1.7.4.post8.md](docs/releases/1.7.4.post8.md).
 
 ---
 

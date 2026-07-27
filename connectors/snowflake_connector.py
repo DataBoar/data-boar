@@ -29,6 +29,10 @@ from connectors.sql_sampling import (
     column_sample_sql_for_cursor,
     resolve_sql_sample_limit,
 )
+from connectors.sample_value_dedup import (
+    join_distinct_sample,
+    resolve_fetch_row_budget,
+)
 from core.connector_registry import register
 from core.sampling import SamplingPolicy
 from core.suggested_review import (
@@ -189,13 +193,14 @@ class SnowflakeConnector:
                 global_limit=base,
             )
         lim = resolve_sql_sample_limit(base)
+        fetch_budget = resolve_fetch_row_budget(lim)
         sql, _binds, strategy_label, _notes, human = column_sample_sql_for_cursor(
             "snowflake",
             safe_col=safe_col,
             safe_table=safe_table,
             safe_schema=safe_schema,
             schema=schema or None,
-            limit=lim,
+            limit=fetch_budget,
             table_metadata=None,
             statement_timeout_ms=self._sample_statement_timeout_ms,
         )
@@ -214,12 +219,12 @@ class SnowflakeConnector:
             except Exception:
                 pass
         cur = self._conn.cursor()
-        parts: list[str] = []
         try:
             cur.execute(sql)
-            for row in cur.fetchmany(lim):
-                if row and row[0] is not None:
-                    parts.append(str(row[0])[:200])
+            rows = cur.fetchmany(fetch_budget)
+            return join_distinct_sample(
+                (row[0] for row in rows if row), distinct_cap=lim
+            )
         except Exception:
             return ""
         finally:
@@ -227,7 +232,6 @@ class SnowflakeConnector:
                 cur.close()
             except Exception:
                 pass
-        return " ".join(parts)
 
     def run(self) -> None:
         from utils.audit_log_display import audit_log_target_label

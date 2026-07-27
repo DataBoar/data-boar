@@ -5,7 +5,7 @@ Regenerate only with intent — commit artifact and prose together.
 
 | Benchmark id | Runner | What it measures | What it does **not** measure |
 | ------------ | ------ | ---------------- | ---------------------------- |
-| `official_pro_v1` | `run_official_bench.py` | OpenCore Python vs Pro+ `ProcessPoolExecutor` + `process_chunk_worker` on 200k seeded rows | Rust `filter_batch` hotspot; end-to-end scan |
+| `official_pro_v1` | `run_official_bench.py` | OpenCore Python vs Pro+ `ProcessPoolExecutor` + `process_chunk_worker` on 200k seeded rows; **speed + safe gate** (`benchmark_gate.py`) | Rust `filter_batch` hotspot; end-to-end scan |
 | `rust_prefilter_hotspot_v1` | `run_rust_prefilter_hotspot_bench.py` | `OpenCorePreFilter.filter_candidates` vs `FastFilter.filter_batch` on the same batch | Worker pool, ML/DL, connectors, Maestro gate (#1021) |
 | `filesystem_phase_breakdown_v1` | `run_filesystem_phase_breakdown_bench.py` | Walk/glob vs read sample vs detect on synthetic `.txt` tree (local disk) | SMB/NFS, PDF extraction, parallel walk decisions (#1080) |
 
@@ -33,6 +33,11 @@ uv run pytest tests/test_official_benchmark_200k_evidence.py -v
 
 The 200k artifact records Pro **slower** than OpenCore in that composite profile (~0.574×).
 Do **not** use it for the Rust prefilter ~11–13× headline — use `rust_prefilter_hotspot_v1`.
+
+**Safe axis (#1338):** `benchmark_gate.py` blocks when `opencore_hits != pro_hits` or
+`speedup_vs_opencore < 0.574`. Reference manifest:
+`tests/benchmarks/reference_manifests/official_pro_v1_200k.json`. Plan:
+`docs/plans/PLAN_BENCHMARK_SAFE_AXIS.md`.
 
 ## Regenerate `filesystem_phase_breakdown_v1`
 
