@@ -18,6 +18,10 @@ except ImportError:
 
 from core.connector_registry import register
 from connectors.inventory_details import build_mongodb_inventory_details
+from connectors.sample_value_dedup import (
+    resolve_fetch_row_budget,
+)
+from connectors.sql_sampling import resolve_sql_sample_limit
 from core.suggested_review import (
     SUGGESTED_REVIEW_PATTERN,
     augment_low_id_like_for_persist,
@@ -93,21 +97,32 @@ class MongoDBConnector:
 
             log_connection(audit_name, "mongodb", self.config.get("host", "localhost"))
             self._save_inventory_snapshot(target_name)
+            distinct_cap = resolve_sql_sample_limit(int(self.sample_limit))
+            fetch_budget = resolve_fetch_row_budget(distinct_cap)
             for coll_name in self._db.list_collection_names():
                 coll = self._db[coll_name]
-                sample_docs = list(coll.find().limit(self.sample_limit))
+                sample_docs = list(coll.find().limit(fetch_budget))
                 if not sample_docs:
                     continue
-                # Flatten keys from sample docs
-                all_keys = set()
-                sample_texts = []
+                all_keys: set[str] = set()
+                field_values: dict[str, list[str]] = {}
                 for doc in sample_docs:
                     for k, v in doc.items():
                         if k.startswith("_"):
                             continue
                         all_keys.add(k)
-                        if v is not None:
-                            sample_texts.append(f"{k} {str(v)[:100]}")
+                        if v is None:
+                            continue
+                        bucket = field_values.setdefault(k, [])
+                        sv = str(v)[:100]
+                        if sv in bucket:
+                            continue
+                        if len(bucket) >= distinct_cap:
+                            continue
+                        bucket.append(sv)
+                sample_texts = [
+                    f"{k} {v}" for k, vals in field_values.items() for v in vals
+                ]
                 combined = " ".join(sample_texts)
                 for key in all_keys:
                     res = self.scanner.scan_column(key, combined)

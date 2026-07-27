@@ -63,7 +63,7 @@ A change that is **30% faster** but **drops one hit** → **FAIL** (`safe_axis`)
 | 1 | PLAN + hub sync + PLANS_TODO row | ✅ Done |
 | 2 | `benchmark_gate.py` + manifest + `run_official_bench.py` gate block | ✅ Done |
 | 3 | Pytest gate proofs (`test_benchmark_safe_axis_gate.py`) | ✅ Done |
-| 4 | #1337 sampling dedup — only after #1338 merged | ⬜ Blocked on #1338 |
+| 4 | #1337 sampling dedup — only after #1338 merged | ✅ Done ([#1337](https://github.com/DataBoar/data-boar/issues/1337)) |
 
 ## Acceptance (#1338)
 

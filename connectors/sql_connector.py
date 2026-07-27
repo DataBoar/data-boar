@@ -18,6 +18,10 @@ from connectors.sql_sampling import (
     TableSamplingMetadata,
     resolve_sql_sample_limit,
 )
+from connectors.sample_value_dedup import (
+    join_distinct_sample,
+    resolve_fetch_row_budget,
+)
 from core.connector_registry import register
 from core.sampling import SamplingPolicy
 from core.suggested_review import (
@@ -492,13 +496,16 @@ class SQLConnector:
                             self._table_row_cache[tkey] = None
                     est = self._table_row_cache[tkey]
                     table_meta = TableSamplingMetadata(estimated_row_count=est)
+                    fetch_budget = resolve_fetch_row_budget(
+                        use_limit, estimated_row_count=est
+                    )
                     plan = SamplingManager.build_column_sample(
                         dialect,
                         safe_col=safe_col,
                         safe_table=safe_table,
                         safe_schema=safe_schema,
                         schema=schema,
-                        limit=use_limit,
+                        limit=fetch_budget,
                         table_metadata=table_meta,
                         statement_timeout_ms=to,
                     )
@@ -555,8 +562,7 @@ class SQLConnector:
             except Exception:
                 pass
             raise ColumnSampleError from e
-        parts = [str(r[0])[:200] for r in rows if r[0] is not None]
-        return " ".join(parts)
+        return join_distinct_sample((r[0] for r in rows), distinct_cap=use_limit)
 
     def _probe_product_version(self, engine_name: str) -> str | None:
         if not self.engine:

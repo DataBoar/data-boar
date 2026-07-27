@@ -18,6 +18,11 @@ class NFSConnector:
     Scan a path that is expected to be an NFS mount point. Requires the operator to mount
     the NFS share locally (e.g. mount -t nfs server:/export /mnt/nfs) and set path to that directory.
     Findings are tagged with target name and host/export_path for DPO reporting.
+
+    **Sampling (#1337):** no NFS-specific sampling code. ``sample_limit`` is passed to
+    :class:`~connectors.filesystem_connector.FilesystemConnector` in ``__init__``; ``run()``
+    delegates to ``self._fs.run()`` (SQLite-as-DB and file paths use the same dedup-before-cap
+    path as local filesystem scans).
     """
 
     def __init__(

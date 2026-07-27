@@ -551,6 +551,10 @@ def _scan_sqlite_file_as_db(
     from sqlalchemy import create_engine, inspect
 
     from connectors.sql_sampling import SamplingManager, resolve_sql_sample_limit
+    from connectors.sample_value_dedup import (
+        join_distinct_sample,
+        resolve_fetch_row_budget,
+    )
 
     findings = []
     try:
@@ -560,6 +564,7 @@ def _scan_sqlite_file_as_db(
     try:
         inspector = inspect(engine)
         eff_limit = resolve_sql_sample_limit(sample_limit)
+        fetch_budget = resolve_fetch_row_budget(eff_limit)
         sqlite_logged: set[str] = set()
         with engine.connect() as conn:
             for table in inspector.get_table_names():
@@ -570,7 +575,6 @@ def _scan_sqlite_file_as_db(
                 for col in columns:
                     cname = col["name"]
                     ctype = str(col["type"])
-                    sample_parts = []
                     try:
                         safe_table = table.replace('"', '""')
                         safe_col = cname.replace('"', '""')
@@ -580,7 +584,7 @@ def _scan_sqlite_file_as_db(
                             safe_table=safe_table,
                             safe_schema="",
                             schema=None,
-                            limit=eff_limit,
+                            limit=fetch_budget,
                             table_metadata=None,
                         )
                         log_key = f"{file_path.name}:{table}"
@@ -597,12 +601,11 @@ def _scan_sqlite_file_as_db(
                             except Exception:
                                 pass
                         row = conn.execute(plan.query)
-                        for r in row:
-                            if r[0] is not None:
-                                sample_parts.append(str(r[0])[:200])
+                        sample = join_distinct_sample(
+                            (r[0] for r in row), distinct_cap=eff_limit
+                        )
                     except Exception:
-                        pass
-                    sample = " ".join(sample_parts)
+                        sample = ""
                     res = scanner.scan_column(cname, sample, connector_data_type=ctype)
                     if res["sensitivity_level"] == "LOW":
                         continue
