@@ -54,6 +54,7 @@ _MAN_EXPORT_DSAR = r"\-\-export\-dsar"
 _MAN_DSAR_OUTPUT = r"\-\-dsar\-output"
 _MAN_DSAR_INCLUDE_SAMPLES = r"\-\-dsar\-include\-samples"
 _MAN_DEMO = r"\-\-demo"
+_MAN_REGENERATE_REPORT = r"\-\-regenerate\-report"
 
 OPERATOR_HELP_MARKERS: tuple[OperatorHelpMarker, ...] = (
     OperatorHelpMarker("config", "--config", "config.yaml", _MAN_CONFIG),
@@ -118,6 +119,12 @@ OPERATOR_HELP_MARKERS: tuple[OperatorHelpMarker, ...] = (
         "--dsar-include-samples",
         None,
         _MAN_DSAR_INCLUDE_SAMPLES,
+    ),
+    OperatorHelpMarker(
+        "regenerate_report",
+        "--regenerate-report",
+        "--regenerate-report",
+        _MAN_REGENERATE_REPORT,
     ),
     OperatorHelpMarker("port", "--port", "--port", _MAN_PORT),
     OperatorHelpMarker(

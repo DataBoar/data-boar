@@ -201,7 +201,15 @@ in the configuration instead of this flag. The default Docker image command pass
 .B \-\-validate\-config
 Pre\-flight validation: parse the main configuration file (YAML or JSON), check connector type/driver recognition and required keys per target; warn on unset
 .BR *_from_env
-variables and on missing optional SQL driver packages (offline import probe only; no network or DB connect). Exit
+variables and on missing optional SQL driver packages (offline import probe only; no network or DB connect). Also creates missing output directories for
+.BR report.output_dir ,
+the parent of
+.BR sqlite_path ,
+and (when
+.B learned_patterns.enabled
+is true) the parent of
+.BR learned_patterns.output_file .
+Exit
 .B 0
 with
 .BR [OK]
@@ -210,7 +218,7 @@ or
 with
 .BR [INVALID] .
 Cannot be combined with
-.BR \-\-web ", " \-\-reset\-data ", or " \-\-export\-audit\-trail .
+.BR \-\-web ", " \-\-reset\-data ", " \-\-export\-audit\-trail ", " \-\-export\-dsar ", or " \-\-regenerate\-report .
 .
 .TP
 .B \-\-diff SESSION_A SESSION_B
@@ -258,6 +266,19 @@ instead of stdout. Requires
 With
 .BR \-\-export\-dsar :
 include raw sample fields from stored finding rows when present (SQLite stores metadata only by default).
+.
+.TP
+.B \-\-regenerate\-report SESSION_ID
+Regenerate the Excel workbook and heatmap PNG for
+.B SESSION_ID
+from the configured SQLite database (also writes
+.B learned_patterns
+when enabled in config). No live target scan and no
+.BR \-\-web .
+Unknown session UUID exits
+.B 2 .
+Cannot be combined with
+.BR \-\-web ", " \-\-reset\-data ", " \-\-export\-audit\-trail ", " \-\-validate\-config ", " \-\-diff ", or " \-\-export\-dsar .
 .
 .TP
 .B \-\-scan\-compressed
