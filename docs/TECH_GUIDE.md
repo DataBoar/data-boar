@@ -184,6 +184,8 @@ api:
 sqlite_path: audit_results.db
 scan:
   max_workers: 1   # 1 = sequential; >1 = parallel
+  # adaptive_rate_limit: true   # optional ARL — see USAGE.md §Adaptive rate limiting
+  # target_latency_ms: 200
 
 # Optional: external pattern files (no code change)
 ml_patterns_file: ml_patterns.yaml
@@ -250,6 +252,8 @@ rate_limit:
   min_interval_seconds: 0
   grace_for_running_status: 0
 ```
+
+**Adaptive rate limiting (ARL):** optional `scan.adaptive_rate_limit: true` tunes effective `max_workers` from per-target latency in the production engine path (`core/engine.py`). Default is **off** (fixed pool). See [USAGE.md](USAGE.md) § *Adaptive rate limiting (ARL)* for mechanics, defaults, and interaction with licensing worker caps (#551).
 
 When `enabled` is true, API endpoints that start scans (`POST /scan`, `/start`, `/scan_database`) may respond with **HTTP 429** and a JSON payload describing the reason (e.g. too many running scans or minimum interval not elapsed). The CLI only prints warnings using the same logic, so existing scripts keep working. See [USAGE.md](USAGE.md) and [data_boar.5](data_boar.5) for full configuration details and examples.
 

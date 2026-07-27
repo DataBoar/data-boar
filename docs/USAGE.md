@@ -639,9 +639,40 @@ Recommendations so scans stay robust without overloading targets or waiting fore
 
 1. **Don’t wait forever:** Set connect and read timeouts so one stuck target does not block the whole scan. Use report failure hints to spot timeout failures and which target failed.
 1. **Don’t be too aggressive:** Too-low timeouts cause false timeouts on busy or slow networks (e.g. during backup). If you see many timeouts, **increase** `connect_seconds` and `read_seconds` (or per-target `connect_timeout` / `read_timeout`) and consider re-running during off-peak.
-1. **Avoid DoS and "too much, too fast":** Use **rate_limit** (e.g. `max_concurrent_scans: 1`, `min_interval_seconds: 5`) and **scan.max_workers: 1** (or 2) so the scanner does not open many connections at once. This reduces load on targets and avoids amplifying slowness or causing DoS.
+1. **Avoid DoS and "too much, too fast":** Use **rate_limit** (e.g. `max_concurrent_scans: 1`, `min_interval_seconds: 5`) and **scan.max_workers: 1** (or 2) so the scanner does not open many connections at once. This reduces load on targets and avoids amplifying slowness or causing DoS. For fragile production databases where fixed workers are either too aggressive or too slow, prefer **adaptive rate limiting (ARL)** — see [Adaptive rate limiting (ARL)](#adaptive-rate-limiting-arl) below instead of guessing a static `max_workers`.
 1. **Backup or maintenance windows:** If scans run during backup or maintenance, increase timeouts and keep parallelism low; or schedule scans outside those windows.
 1. **Per-target overrides:** For one slow database or API, set `connect_timeout` / `read_timeout` (or `timeout`) on that target instead of raising global defaults for everyone.
+
+### Adaptive rate limiting (ARL)
+
+**Default:** `scan.adaptive_rate_limit: false` — the engine uses a fixed `scan.max_workers` pool (unchanged behaviour).
+
+When **enabled**, the production `--config` scan path (`core/engine.py`) uses `BoarThrottler` to adjust **effective** parallel target workers from observed per-target latency:
+
+| Signal | Action |
+| ------ | ------ |
+| Moving average latency **&lt; 80%** of `target_latency_ms` | Increase workers by 1 (up to `scan.max_workers`) |
+| Average **&gt;** `target_latency_ms` | Decrease workers by 1 (minimum 1) |
+| Average **&gt; 2×** `target_latency_ms` | Halve workers (minimum 1) + optional cool-off sleep |
+
+**Config (under `scan:`):**
+
+```yaml
+scan:
+  max_workers: 4              # ceiling for ARL and fixed mode
+  adaptive_rate_limit: true   # default false — opt-in
+  target_latency_ms: 200      # default 200; feedback target in milliseconds
+```
+
+**Interactions:**
+
+- **Licensing worker cap (#551):** `guard.worker_cap()` still clamps `scan.max_workers` before the scan starts; ARL never exceeds that hard ceiling.
+- **`rate_limit`:** API/dashboard scan-start throttling is orthogonal — it limits how many **scan sessions** start; ARL limits how many **targets** run in parallel inside one session.
+- **Manual freio:** Fixed `max_workers: 1` (or 2) remains valid when you want a static cap; ARL is for when latency feedback should tune concurrency automatically.
+
+**When to use:** Production SQL Server / RDS / other fragile hosts without swap, where `max_workers: 8` risks overload but `max_workers: 1` wastes wall-clock on healthy latency.
+
+See also [TECH_GUIDE.md](TECH_GUIDE.md) (detection / performance) and [TROUBLESHOOTING_CONNECTIVITY.md](TROUBLESHOOTING_CONNECTIVITY.md) (timeouts and load).
 
 ### API and security (CSP, headers)
 
