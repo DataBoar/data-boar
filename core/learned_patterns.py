@@ -31,13 +31,42 @@ _GENERIC_TERMS = frozenset(
         "remarks",
         "status",
         "flag",
+        # Audit / migration metadata (#1327) — exact column-name tokens only.
+        "created_at",
+        "updated_at",
+        "created_by",
+        "updated_by",
+        "started_at",
+        "finished_at",
+        "deleted_at",
+        "checksum",
+        "hash",
+        "version",
+        "migration_name",
+        "rolled_back_at",
+        "applied_steps_count",
+        "logs",
     }
 )
+
+# Suffix rule (separate from exact-match frozenset): audit/migration columns often end
+# in ``_log`` (e.g. schema_migrate_log). Exact ``_log`` tokens cannot cover all variants
+# without regex inside the set; suffix check is O(1) and predictable.
+_GENERIC_TERM_SUFFIXES = ("_log",)
 
 
 def _normalize_term(raw: str) -> str:
     """Lowercase, strip; for dedupe and blocklist check."""
     return (raw or "").strip().lower()
+
+
+def _is_generic_term(normalized: str) -> bool:
+    """True when a column term is too generic for learned ML patterns."""
+    if not normalized:
+        return False
+    if normalized in _GENERIC_TERMS:
+        return True
+    return any(normalized.endswith(suffix) for suffix in _GENERIC_TERM_SUFFIXES)
 
 
 def _extract_term(row: dict, source: str) -> str | None:
@@ -98,7 +127,7 @@ def collect_learned_entries(
             continue
         norm = (row.get("norm_tag") or "").strip()
         key = _normalize_term(term)
-        if exclude_generic and key in _GENERIC_TERMS:
+        if exclude_generic and _is_generic_term(key):
             continue
         if key in seen:
             seen[key]["count"] = seen[key].get("count", 1) + 1

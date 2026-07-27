@@ -53,6 +53,13 @@ regex:
   - name: "BR_SAUDE_PRONTUARIO"
     pattern: "(?i)\\b(?:prontuario|n[o°]?\\s+prontuario|medical\\s+record|MRN)[\\s:\\-]*[A-Z0-9]{4,12}\\b"
     norm_tag: "LGPD Art. 5 (dado de saúde — prontuário)"
+  # Field-validated column headers (#1318): diagnosis codes and health-plan identifiers.
+  - name: "PHI_CID10_COL"
+    pattern: "(?i)(?:^|_)(?:cid[_\\-]?10\\w*|codigo_?cid\\w*|icd[_\\-]?10\\w*|diagnosis_?code\\w*|codigo_?diagnostico\\w*)"
+    norm_tag: "LGPD Art. 11 (dado de saúde — CID-10)"
+  - name: "PHI_HEALTH_PLAN"
+    pattern: "(?i)(?:^|_)(?:plano_?(?:de_?)?saude\\w*|health_?plan\\w*|carteirinha\\w*|num_?ans\\w*|convenio\\w*|insurance_?member_?id\\w*|beneficiary_?card\\w*)"
+    norm_tag: "LGPD Art. 11 (dado de saúde — plano/operadora)"
 
 terms:
   - { text: "CRM", label: sensitive }
@@ -116,6 +123,14 @@ terms:
   - { text: "cobertura do plano", label: sensitive }
   - { text: "health plan", label: sensitive }
   - { text: "health insurance number", label: sensitive }
+  - { text: "medication", label: sensitive }
+  - { text: "medicamento", label: sensitive }
+  - { text: "lab result", label: sensitive }
+  - { text: "resultado de exame", label: sensitive }
+  - { text: "exame", label: sensitive }
+  - { text: "convenio", label: sensitive }
+  - { text: "convênio", label: sensitive }
+  - { text: "registro ans", label: sensitive }
   - { text: "product_sku", label: non_sensitive }
   - { text: "batch_code_internal", label: non_sensitive }
   - { text: "item_ref", label: non_sensitive }
@@ -148,3 +163,17 @@ recommendation_overrides:
     recommendation: "Tratar dados de receituário como sensíveis (LGPD Art. 11). Criptografar e restringir acesso. Alinhar retenção a obrigações sanitárias aplicáveis. Consultar DPO, CISO e jurídico/regulatório."
     priority: "ALTA"
     relevant_for: "DPO, CISO, farmácias, hospitais, distribuidoras, indústria farmacêutica"
+
+  - norm_tag_pattern: "LGPD Art. 11 (dado de saúde — CID-10)"
+    base_legal: "LGPD Art. 5, XI + Art. 11 — diagnóstico codificado (CID-10) é dado de saúde sensível."
+    risk: "Coluna de código CID-10 ou diagnóstico livre vincula titular a condição clínica; tratamento reforçado e bases legais do Art. 11."
+    recommendation: "Tratar como dado sensível: minimizar, restringir acesso, criptografar e documentar finalidade. Consultar DPO e jurídico — não é conclusão legal."
+    priority: "ALTA"
+    relevant_for: "DPO, CISO, TI hospitalar, jurídico"
+
+  - norm_tag_pattern: "LGPD Art. 11 (dado de saúde — plano/operadora)"
+    base_legal: "LGPD Art. 5, XI + Art. 11 — plano de saúde, carteirinha e registro ANS identificam beneficiário em contexto sensível."
+    risk: "Identificadores de plano/operadora permitem vincular pessoa a cobertura e histórico de saúde; dado sensível sob Art. 11."
+    recommendation: "Aplicar controles de dado sensível: acesso restrito, criptografia, bases legais do Art. 11 e retenção mínima. Consultar DPO."
+    priority: "ALTA"
+    relevant_for: "DPO, CISO, operadoras de saúde, jurídico"
