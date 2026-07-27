@@ -7,7 +7,9 @@ Exposes db_manager, is_running, get_current_findings_count() for API.
 """
 
 import hashlib
-from concurrent.futures import ThreadPoolExecutor, as_completed
+import logging
+import time
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, as_completed, wait
 from pathlib import Path
 from typing import Any
 
@@ -90,6 +92,7 @@ from core.database import LocalDBManager
 from core.sampling import SamplingPolicy
 from core.scanner import DataScanner
 from core.session import new_session_id
+from core.throttler import BoarThrottler
 from utils.logger import configure_audit_log_directory
 
 _CONNECTOR_SAMPLING_POLICY_BASES: tuple[type, ...] = (SQLConnector,)
@@ -143,7 +146,14 @@ class AuditEngine:
         )
         self._is_running = False
         self._last_report_path: str | None = None
-        self._max_workers = int(config.get("scan", {}).get("max_workers", 1))
+        scan_cfg = config.get("scan") if isinstance(config.get("scan"), dict) else {}
+        self._max_workers = int(scan_cfg.get("max_workers", 1))
+        self._adaptive_rate_limit = bool(scan_cfg.get("adaptive_rate_limit", False))
+        try:
+            self._target_latency_ms = float(scan_cfg.get("target_latency_ms", 200.0))
+        except (TypeError, ValueError):
+            self._target_latency_ms = 200.0
+        self._target_latency_ms = max(1.0, self._target_latency_ms)
         self._extensions = config.get("file_scan", {}).get("extensions", [])
         # Internal: best-effort strong-crypto signals collected per-target during this run.
         # Phase 1: populated for database-style targets only; not yet persisted or exposed.
@@ -237,7 +247,6 @@ class AuditEngine:
         # Enforced mode only (open mode returns None = no cap). Fail-soft: a cap
         # resolution error must never abort a scan the license gate already
         # allowed — warn and run uncapped instead.
-        import logging
 
         try:
             cap = guard.worker_cap()
@@ -295,6 +304,86 @@ class AuditEngine:
         self._run_audit_targets()
         return session_id
 
+    def _record_parallel_worker_failure(
+        self,
+        *,
+        target: dict[str, Any],
+        exc: BaseException,
+        session_id: str | None,
+    ) -> None:
+        """Log and persist uncaught worker failures (parallel target runs)."""
+        tname = target.get("name", "unknown") if isinstance(target, dict) else "unknown"
+        try:
+            from utils.logger import get_logger
+
+            get_logger().exception(
+                "Parallel target worker failed: session=%s",
+                session_id,
+            )
+        except Exception as log_err:
+            _ = str(log_err)
+        try:
+            from core.validation import clean_error
+
+            self.db_manager.save_failure(
+                tname,
+                "error",
+                f"Uncaught worker error: {clean_error(exc)}",
+            )
+        except Exception as save_err:
+            _ = str(save_err)
+
+    def _run_audit_targets_adaptive(self, targets: list[dict[str, Any]]) -> str:
+        """
+        Run targets with BoarThrottler feedback (#1320).
+
+        Effective concurrency is ``throttler.current_workers`` (1 .. scan.max_workers),
+        already clamped to licensing tier in ``start_audit``.
+        """
+        final_status = "completed"
+        throttler = BoarThrottler(
+            target_latency_ms=self._target_latency_ms,
+            max_workers=max(1, self._max_workers),
+        )
+        session_id = self.db_manager.current_session_id
+
+        def _timed_run(target: dict[str, Any]) -> float:
+            started = time.perf_counter()
+            self._run_target(target)
+            return time.perf_counter() - started
+
+        pending = list(targets)
+        in_flight: dict[Any, dict[str, Any]] = {}
+        pool_cap = max(1, self._max_workers)
+
+        with ThreadPoolExecutor(max_workers=pool_cap) as ex:
+            while pending or in_flight:
+                limit = max(1, int(throttler.current_workers))
+                while pending and len(in_flight) < limit:
+                    tgt = pending.pop(0)
+                    fut = ex.submit(_timed_run, tgt)
+                    in_flight[fut] = tgt
+
+                if not in_flight:
+                    break
+
+                done, _ = wait(tuple(in_flight.keys()), return_when=FIRST_COMPLETED)
+                for fut in done:
+                    tgt = in_flight.pop(fut)
+                    try:
+                        elapsed = float(fut.result())
+                    except Exception as e:
+                        self._record_parallel_worker_failure(
+                            target=tgt, exc=e, session_id=session_id
+                        )
+                        final_status = "completed_errors"
+                        elapsed = 0.0
+                    throttler.record_latency(elapsed)
+                    cool = throttler.get_sleep_time()
+                    if cool > 0:
+                        time.sleep(cool)
+        return final_status
+
     def _run_audit_targets(self) -> None:
         """Run all targets; caller must set session_id and create_session_record before."""
         self._is_running = True
@@ -302,7 +391,9 @@ class AuditEngine:
         targets = self.config.get("targets", [])
         final_status = "completed"
         try:
-            if self._max_workers <= 1:
+            if self._adaptive_rate_limit:
+                final_status = self._run_audit_targets_adaptive(targets)
+            elif self._max_workers <= 1:
                 for target in targets:
                     self._run_target(target)
             else:
@@ -314,36 +405,12 @@ class AuditEngine:
                         try:
                             fut.result()
                         except Exception as e:
-                            # Target-level errors are usually caught inside _run_target; this
-                            # path handles unexpected worker failures so sessions are not
-                            # silently marked completed without trace.
                             tgt = futures.get(fut) or {}
-                            tname = (
-                                tgt.get("name", "unknown")
-                                if isinstance(tgt, dict)
-                                else "unknown"
+                            self._record_parallel_worker_failure(
+                                target=tgt if isinstance(tgt, dict) else {},
+                                exc=e,
+                                session_id=session_id,
                             )
-                            try:
-                                from utils.logger import get_logger
-
-                                get_logger().exception(
-                                    "Parallel target worker failed: session=%s",
-                                    session_id,
-                                )
-                            except Exception as log_err:
-                                # Best effort: logging failures must not interrupt worker cleanup.
-                                _ = str(log_err)
-                            try:
-                                from core.validation import clean_error
-
-                                self.db_manager.save_failure(
-                                    tname,
-                                    "error",
-                                    f"Uncaught worker error: {clean_error(e)}",
-                                )
-                            except Exception as save_err:
-                                # Best effort: persist failures when possible, but don't break session flow.
-                                _ = str(save_err)
                             final_status = "completed_errors"
         except KeyboardInterrupt:
             # Ctrl+C / SIGTERM→KeyboardInterrupt: terminal "interrupted", not orphan running (#1251).

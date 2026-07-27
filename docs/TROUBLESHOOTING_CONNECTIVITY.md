@@ -46,6 +46,7 @@ This document helps you diagnose and fix **unreachable**, **timeout**, and **per
 1. **Timeout too low in config:** REST/API targets support a `timeout` (seconds). Default is often 30; increase if the target is slow (e.g. `timeout: 60` or 120).
 1. **Network latency:** Cross-region or congested path; increase timeout or run the scanner closer to the target.
 1. **Large discovery:** Some connectors (e.g. Power BI, Dataverse) do many API calls; total time can exceed a single-request timeout. Increase timeout and/or reduce scope if possible.
+1. **Fragile production database under parallel scan:** If the host has little memory or no swap, high `scan.max_workers` can amplify latency or look like DoS. Try `scan.adaptive_rate_limit: true` with a realistic `target_latency_ms` (default 200) so the engine throttles target concurrency from observed latency — see [USAGE.md](USAGE.md) § *Adaptive rate limiting (ARL)*. Fixed `max_workers: 1` remains the manual alternative.
 
 ### 3.2 Steps to fix
 

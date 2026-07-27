@@ -580,9 +580,40 @@ Recomendações para que as varreduras permaneçam estáveis sem sobrecarregar o
 
 1. **Não espere para sempre:** Defina timeouts de conexão e de leitura para que um alvo travado não bloqueie toda a varredura. Use as dicas de falha no relatório para identificar falhas por timeout e qual alvo falhou.
 1. **Não seja agressivo demais:** Timeouts muito baixos geram falsos timeouts em redes ocupadas ou lentas (ex.: durante backup). Se aparecerem muitos timeouts, **aumente** `connect_seconds` e `read_seconds` (ou por alvo `connect_timeout` / `read_timeout`) e considere reexecutar em horário de menor uso.
-1. **Evite DoS e “muito rápido demais”:** Use **rate_limit** (ex.: `max_concurrent_scans: 1`, `min_interval_seconds: 5`) e **scan.max_workers: 1** (ou 2) para que o scanner não abra muitas conexões ao mesmo tempo. Isso reduz carga nos alvos e evita amplificar lentidão ou causar DoS.
+1. **Evite DoS e “muito rápido demais”:** Use **rate_limit** (ex.: `max_concurrent_scans: 1`, `min_interval_seconds: 5`) e **scan.max_workers: 1** (ou 2) para que o scanner não abra muitas conexões ao mesmo tempo. Isso reduz carga nos alvos e evita amplificar lentidão ou causar DoS. Em bancos de produção frágeis, prefira **limitação de taxa adaptativa (ARL)** — veja [Limitação de taxa adaptativa (ARL)](#limitação-de-taxa-adaptativa-arl) abaixo em vez de chutar um `max_workers` fixo.
 1. **Janelas de backup ou manutenção:** Se as varreduras rodarem durante backup ou manutenção, aumente os timeouts e mantenha o paralelismo baixo; ou agende varreduras fora dessas janelas.
 1. **Sobrescrita por alvo:** Para um banco ou API lento, defina `connect_timeout` / `read_timeout` (ou `timeout`) nesse alvo em vez de aumentar os padrões globais para todos.
+
+### Limitação de taxa adaptativa (ARL)
+
+**Padrão:** `scan.adaptive_rate_limit: false` — o engine usa pool fixo de `scan.max_workers` (comportamento atual).
+
+Com **ARL ligado**, o caminho de produção `--config` (`core/engine.py`) usa `BoarThrottler` para ajustar workers **efetivos** por alvo a partir da latência observada:
+
+| Sinal | Ação |
+| ----- | ---- |
+| Média móvel **&lt; 80%** de `target_latency_ms` | Aumenta workers em 1 (até `scan.max_workers`) |
+| Média **&gt;** `target_latency_ms` | Reduz workers em 1 (mínimo 1) |
+| Média **&gt; 2×** `target_latency_ms` | Divide workers pela metade (mín. 1) + cool-off opcional |
+
+**Config (em `scan:`):**
+
+```yaml
+scan:
+  max_workers: 4
+  adaptive_rate_limit: true   # padrão false — opt-in
+  target_latency_ms: 200
+```
+
+**Interações:**
+
+- **Teto de licença (#551):** `guard.worker_cap()` ainda limita `scan.max_workers` antes do scan; ARL não ultrapassa esse teto.
+- **`rate_limit`:** limita **sessões** de scan na API; ARL limita **alvos** em paralelo dentro de uma sessão.
+- **Freio manual:** `max_workers: 1` (ou 2) fixo continua válido; ARL é para quando o feedback de latência deve ajustar a concorrência.
+
+**Quando usar:** SQL Server / RDS em produção frágil, sem swap — `max_workers: 8` arrisca sobrecarga; `max_workers: 1` desperdiça tempo quando a latência está boa.
+
+Veja também [TECH_GUIDE.pt_BR.md](TECH_GUIDE.pt_BR.md) e [TROUBLESHOOTING_CONNECTIVITY.pt_BR.md](TROUBLESHOOTING_CONNECTIVITY.pt_BR.md).
 
 ### API e segurança (CSP, cabeçalhos)
 

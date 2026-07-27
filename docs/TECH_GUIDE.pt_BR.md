@@ -184,6 +184,8 @@ api:
 sqlite_path: audit_results.db
 scan:
   max_workers: 1   # 1 = sequential; >1 = parallel
+  # adaptive_rate_limit: true   # ARL opcional — veja USAGE.pt_BR.md §Limitação de taxa adaptativa
+  # target_latency_ms: 200
 
 # Optional: external pattern files (no code change)
 ml_patterns_file: ml_patterns.yaml
@@ -250,6 +252,8 @@ rate_limit:
   min_interval_seconds: 0
   grace_for_running_status: 0
 ```
+
+**Limitação de taxa adaptativa (ARL):** `scan.adaptive_rate_limit: true` (padrão **false**) ajusta workers efetivos a partir da latência por alvo no engine de produção. Veja [USAGE.pt_BR.md](USAGE.pt_BR.md) § *Limitação de taxa adaptativa (ARL)* e interação com o teto de licença (#551).
 
 Quando `enabled` é true, os endpoints da API que iniciam varreduras (`POST /scan`, `/start`, `/scan_database`) podem responder com **HTTP 429** e um payload JSON descrevendo o motivo (ex.: muitas varreduras em execução ou intervalo mínimo não decorrido). A CLI apenas imprime avisos com a mesma lógica, então scripts existentes continuam funcionando. Veja [USAGE.md](USAGE.md) e [data_boar.5](data_boar.5) para detalhes e exemplos completos de configuração.
 

@@ -42,6 +42,7 @@ Corrija DNS (use IP ou servidor DNS correto); abra firewall para a porta necess�
 1. **Alvo lento ou sobrecarregado:** Alta latência ou carga no DB/API; tente em horário de menor uso.
 1. **Timeout baixo no config:** Alvos REST/API aceitam `timeout` (segundos). Aumente (ex.: 60 ou 120) se o alvo for lento.
 1. **Latência de rede:** Caminho entre regiões ou congestionado; aumente timeout ou rode o scanner mais perto do alvo.
+1. **Banco de produção frágil com scan paralelo:** Pouca memória ou sem swap — `scan.max_workers` alto pode amplificar latência ou parecer DoS. Tente `scan.adaptive_rate_limit: true` com `target_latency_ms` realista (padrão 200); veja [USAGE.pt_BR.md](USAGE.pt_BR.md) § *Limitação de taxa adaptativa (ARL)*. `max_workers: 1` fixo continua sendo a alternativa manual.
 
 ### 3.2 Passos para corrigir
 

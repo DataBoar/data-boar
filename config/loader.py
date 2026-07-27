@@ -1016,6 +1016,14 @@ def normalize_config(
     if mw > 32:
         mw = 32
     out["scan"]["max_workers"] = mw
+    out["scan"]["adaptive_rate_limit"] = bool(
+        out["scan"].get("adaptive_rate_limit", False)
+    )
+    try:
+        tlm = float(out["scan"].get("target_latency_ms", 200.0))
+    except (TypeError, ValueError):
+        tlm = 200.0
+    out["scan"]["target_latency_ms"] = max(1.0, min(tlm, 60_000.0))
 
     # SQLite path for audit results
     out["sqlite_path"] = data.get("sqlite_path", "audit_results.db")
