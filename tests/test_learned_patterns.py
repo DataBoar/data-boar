@@ -51,6 +51,39 @@ def test_collect_excludes_generic_term():
     assert len(entries) == 0
 
 
+def test_collect_excludes_audit_log_suffix_generic_term():
+    """#1327: ``*_log`` suffix columns are audit noise, not learnable PII terms."""
+    db = [
+        {
+            "column_name": "schema_migrate_log",
+            "sensitivity_level": "HIGH",
+            "pattern_detected": "ML_DETECTED",
+            "norm_tag": "LGPD",
+            "ml_confidence": 80,
+        },
+    ]
+    entries = collect_learned_entries(
+        db, [], min_sensitivity="HIGH", exclude_generic=True
+    )
+    assert len(entries) == 0
+
+
+def test_collect_excludes_created_at_exact_generic_term():
+    db = [
+        {
+            "column_name": "created_at",
+            "sensitivity_level": "HIGH",
+            "pattern_detected": "ML_DETECTED",
+            "norm_tag": "LGPD",
+            "ml_confidence": 80,
+        },
+    ]
+    entries = collect_learned_entries(
+        db, [], min_sensitivity="HIGH", exclude_generic=True
+    )
+    assert len(entries) == 0
+
+
 def test_collect_excludes_when_require_pattern_and_general():
     db = [
         {
