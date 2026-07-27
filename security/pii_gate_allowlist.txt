@@ -19,3 +19,5 @@
 #   docs/ops/SOME_RUNBOOK.md|ExampleModelToken|FP: hardware model name, not a person -- approved @FabioLeitao
 #
 # --- Active exceptions (operator-approved) ---
+docs/compliance-samples/compliance-sample-lgpd.yaml|latitude|FP: geolocation column-header pattern in public compliance sample (#1288/#1327) — not operational LAN data
+security/pii_gate_allowlist.txt|latitude|FP: allowlist seed token for sanctioned lgpd geolocation pattern entry (#1318/#1327)

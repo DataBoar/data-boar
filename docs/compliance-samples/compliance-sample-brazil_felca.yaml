@@ -60,6 +60,10 @@ regex:
     # Profile-type fields specific to child accounts.
     pattern: "(?i)\\b(perfil[_\\s]?crianca|child[_\\s]?profile|kid[_\\s]?account|conta[_\\s]?menor|perfil[_\\s]?menor|junior[_\\s]?account)\\b"
     norm_tag: "FELCA Art. 14 (dado de menor)"
+  # Field-validated column headers (#1327): prefixed minor fields (user_age, profile_dob).
+  - name: "FELCA_MINOR_COLUMN"
+    pattern: "(?i)(?:^|_)(?:idade\\w*|age\\w*|data[_\\s-]?nasc(?:imento)?\\w*|birth[_\\s-]?date\\w*|dob\\w*|is[_\\s]?minor\\w*|eh[_\\s]?menor\\w*|menor\\w*|responsavel\\w*|guardian\\w*|parental[_\\s]?consent\\w*|matricula[_\\s]?escolar\\w*)"
+    norm_tag: "FELCA Art. 14 (dado de menor)"
 
 terms:
   # --- FELCA / minor-protection vocabulary (PT-BR primary, EN secondary) ---
