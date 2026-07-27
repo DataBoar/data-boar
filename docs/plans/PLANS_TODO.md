@@ -30,12 +30,12 @@ Use these tags in headings to keep priorities explicit and machine-countable:
 
 Do not edit this block manually; refresh with `python scripts/plans-stats.py --write`.
 
-- **Status rows counted:** 210  (Done: 131 | Incomplete: 79)
+- **Status rows counted:** 211  (Done: 132 | Incomplete: 79)
 - **Incomplete breakdown:** Pending `⬜`=72, Tracked `🔄` / `Tracked (partially done)`=7, Under consideration=0, Backlog-marked rows=0
 
 | Horizon | Total rows | Done | Incomplete |
 | ------- | ----------: | ----: | ----------: |
-| `H0` | 45 | 31 | 14 |
+| `H0` | 46 | 32 | 14 |
 | `H1` | 39 | 30 | 9 |
 | `H2` | 0 | 0 | 0 |
 | `H3` | 118 | 62 | 56 |
@@ -342,6 +342,7 @@ After **A1–A3** (minimum), you can **resume token-aware pace** on Tier 2 featu
 | 6     | **Data source versions & hardening**                                | Phase 1: `data_source_inventory` schema + save + one connector (e.g. SQL) + report sheet; one clear slice.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | 7     | **Notifications (off-band + scan-complete)**                        | Phase 1: config shape + notifier module + one channel (e.g. webhook); docs and examples; medium scope.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | 7a    | **Incremental filesystem scan idempotency** — Phase 1 ✅, Phase 2 ✅ — ScanObjectState table + upsert/get per ADR-0051; Phase 3 = skip-unchanged opt-in (planned). [PLAN_INCREMENTAL_SCAN_IDEMPOTENCY.md](PLAN_INCREMENTAL_SCAN_IDEMPOTENCY.md), [ADR-0051](../adr/ADR-0051-incremental-filesystem-scan-file-identity-fingerprint.md). |
+| 7b    | **Unified session report export CLI (#1326)** | `data-boar-report --format` (md/docx/pdf/xlsx/heatmap/dsar/json/audit-trail/all) + thin wrappers; `main.py --regenerate-report` kept. [PLAN_UNIFIED_REPORT_EXPORT_CLI.md](PLAN_UNIFIED_REPORT_EXPORT_CLI.md). ✅ Done |
 
 **Deferred (larger or later):** Secrets Phase B, Version check & self-upgrade (incl. optional Phase 9: .deb/apt repo, signed packages, bytecode-only install, winget-like), Selenium QA, Synthetic data, SAP connector, **M-LOCALE-PLUS** (extra dashboard locales). **Backlog:** Additional data soup **Tier 3b** embedded-tracker heuristics + **Tier 4** ([PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md](completed/PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md)); **Tier 1** + **stego hints** + **Tier 3 rich media** are on **`main`** (see **Integration / active threads**). **Databricks / Unity Catalog** lakehouse scan + catalog-driven scope — [PLAN_DATABRICKS_UNITY_LAKEHOUSE_SCOPE_AND_SCAN.md](PLAN_DATABRICKS_UNITY_LAKEHOUSE_SCOPE_AND_SCAN.md) (**[H2]**, customer-pull, Pro/Ent-shaped). **Findings export / corporate repository** — [PLAN_FINDINGS_CORPORATE_REPOSITORY_EXPORT.md](PLAN_FINDINGS_CORPORATE_REPOSITORY_EXPORT.md) (**[H2]**, customer-pull; expedite if security review demands).
 

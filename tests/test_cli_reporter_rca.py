@@ -62,16 +62,10 @@ def test_reporter_empty_session_id_emits_rca_without_traceback(
     assert "Traceback" not in err
 
 
-def test_reporter_missing_session_returns_zero_when_sqlite_resolvable(
+def test_reporter_missing_session_exits_two_when_sqlite_resolvable(
     tmp_path: Path, cfg_yaml: Path
 ) -> None:
-    """Sanity: a *resolvable* config + non-existent session_id is not a fatal RCA path.
-
-    ``LocalDBManager.get_findings`` returns ``([], [], [])`` for an unknown
-    ``session_id`` and the renderer accepts empty rows. We pin this behavior
-    so the RCA path is reserved for *real* failures (config parse, sqlite open,
-    write permission, sandbox guard).
-    """
+    """Unknown ``session_id`` must exit 2 with a clear message (#1326)."""
     rc = reporter_main(
         [
             "--config",
@@ -80,7 +74,7 @@ def test_reporter_missing_session_returns_zero_when_sqlite_resolvable(
             "session-that-does-not-exist",
         ]
     )
-    assert rc == 0
+    assert rc == 2
 
 
 def test_reporter_emits_rca_block_when_config_missing(
@@ -108,23 +102,44 @@ def test_reporter_emits_rca_block_when_config_missing(
 
 
 def test_reporter_emits_rca_block_when_output_dir_unwritable(
-    tmp_path: Path, cfg_yaml: Path, capsys: pytest.CaptureFixture[str]
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """A write failure must be classified as ``write_output`` step."""
+    """A write failure must be classified as ``export_formats`` step."""
+    from core.database import LocalDBManager
+
+    db_path = tmp_path / "audit.db"
+    cfg_path = tmp_path / "cfg.yaml"
+    cfg_path.write_text(
+        f"sqlite_path: {db_path}\ntargets:\n  - name: t1\n    type: database\n",
+        encoding="utf-8",
+    )
+    sid = "session-write-target"
+    mgr = LocalDBManager(str(db_path))
+    mgr.set_current_session_id(sid)
+    mgr.create_session_record(sid)
+    mgr.save_finding(
+        "database",
+        target_name="T1",
+        column_name="c1",
+        sensitivity_level="LOW",
+        pattern_detected="GENERIC",
+        norm_tag="",
+        ml_confidence=0,
+    )
+    mgr.finish_session(sid)
+    mgr.dispose()
+
     bogus = tmp_path / "this" / "subtree" / "should" / "not" / "exist.md"
     rc = reporter_main(
         [
             "--config",
-            str(cfg_yaml),
+            str(cfg_path),
             "--session-id",
-            "session-write-target",
+            sid,
             "--output",
             str(bogus),
         ]
     )
-    # The reporter creates parents on demand, so this path actually succeeds.
-    # Pinning the success guards against a regression where the sandbox path
-    # accidentally rejected absolute paths the operator owns.
     assert rc == 0
     assert bogus.exists()
 

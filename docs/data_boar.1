@@ -902,6 +902,63 @@ or
 .BR "man 5 lgpd_crawler" .
 On Unix/Linux/BSD, section 1 is for programs and commands; section 5 is for file formats and conventions.
 .
+.SH REPORT EXPORT CLI (data-boar-report)
+.PP
+In addition to
+.BR main.py ,
+the package installs
+.B data-boar-report
+and thin per-format wrappers that read a completed scan session from the configured SQLite database
+(no live target scan, no
+.BR \-\-web ).
+.PP
+.RS
+.B data-boar-report \-\-config CONFIG \-\-session-id SESSION_ID [\-\-format FORMAT]
+.RE
+.PP
+.B FORMAT
+may be
+.BR md " (default), "
+.BR docx ", "
+.BR pdf ", "
+.BR xlsx ", "
+.BR heatmap ", "
+.BR dsar ", "
+.BR json ", "
+.BR audit\-trail ", or "
+.B all
+(full bundle).
+Output files are written under
+.B report.output_dir
+unless
+.B \-\-output\-dir
+is set.
+For a single text/JSON format you may pass
+.BR \-o " / "
+.B \-\-output PATH
+instead of the default filename.
+.PP
+Wrapper entry points (each equivalent to
+.B data-boar-report \-\-format
+with the same name):
+.BR data\-boar\-xlsx ", "
+.BR data\-boar\-pdf ", "
+.BR data\-boar\-docx ", "
+.BR data\-boar\-heatmap ", "
+.BR data\-boar\-dsar ", and "
+.BR data\-boar\-audit
+(audit-trail JSON).
+.PP
+The legacy shortcut
+.BR main.py " "
+.BR \-\-regenerate\-report SESSION_ID
+still regenerates Excel + heatmap (+
+.B learned_patterns
+when enabled) and remains supported for backward compatibility.
+See
+.IR docs/USAGE.md
+section 5.
+.
 .SH SEE ALSO
 .BR data-boar (5),
 .BR data_boar (5),

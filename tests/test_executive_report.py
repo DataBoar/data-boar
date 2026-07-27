@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from core.database import LocalDBManager
 from report.executive_report import generate_executive_report
 
@@ -116,10 +118,19 @@ def test_cli_reporter_default_output_md(tmp_path) -> None:
     from cli.reporter import main
     from report.safe_prefix import safe_session_prefix
 
+    repo_root = Path(__file__).resolve().parents[1]
+    root_reports_before = set(repo_root.glob("executive_report_*.md"))
+
     db_path = str(tmp_path / "audit.db")
     cfg_path = tmp_path / "cfg.yaml"
     cfg_path.write_text(
-        f"sqlite_path: {db_path}\ntargets:\n  - name: t1\n    type: database\n",
+        f"""sqlite_path: {db_path}
+report:
+  output_dir: {tmp_path.as_posix()}
+targets:
+  - name: t1
+    type: database
+""",
         encoding="utf-8",
     )
     mgr = LocalDBManager(db_path)
@@ -158,3 +169,8 @@ def test_cli_reporter_default_output_md(tmp_path) -> None:
     assert "inteligência e governança de risco" in out
     assert "Metodologia e segurança" in out
     assert "t_user" not in out
+    root_reports_after = set(repo_root.glob("executive_report_*.md"))
+    assert root_reports_after == root_reports_before, (
+        "executive_report_*.md must not appear in repo root "
+        f"(before={root_reports_before}, after={root_reports_after})"
+    )

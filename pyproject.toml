@@ -118,6 +118,12 @@ build-backend = "hatchling.build"
 [project.scripts]
 data-boar = "main:main"
 data-boar-report = "cli.reporter:main"
+data-boar-xlsx = "cli.format_entrypoints:main_xlsx"
+data-boar-pdf = "cli.format_entrypoints:main_pdf"
+data-boar-docx = "cli.format_entrypoints:main_docx"
+data-boar-heatmap = "cli.format_entrypoints:main_heatmap"
+data-boar-dsar = "cli.format_entrypoints:main_dsar"
+data-boar-audit = "cli.format_entrypoints:main_audit"
 
 [project.urls]
 Homepage = "https://github.com/DataBoar/data-boar"
