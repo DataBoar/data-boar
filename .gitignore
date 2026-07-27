@@ -22,6 +22,9 @@ data/lab_completao_benchmark.db
 bench/
 # Git checkout A/B harness (scripts/benchmark-ab.ps1)
 benchmark_runs/
+# Local default output from tests/benchmarks/run_official_bench.py (--output); machine-specific timing.
+# Pinned CI/operator evidence: tests/benchmarks/official_benchmark_200k.json (+ manifest).
+tests/benchmarks/official_benchmark.json
 # Maestro / completão container bundles at repo root (ephemeral; rsync also excludes data-boar-*.tar)
 /data-boar-*-beta.tar
 /data-boar-*-rc.tar
