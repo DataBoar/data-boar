@@ -12,6 +12,7 @@ import pytest
 
 from core.database import LocalDBManager
 from report import generator as report_generator
+from report.session_export import resolve_output_dir
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 SESSION_ID = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
@@ -152,3 +153,19 @@ def test_format_wrapper_xlsx_invokes_report_cli(tmp_path):
     )
     assert rc == 0
     assert list(out_dir.glob("Relatorio_Auditoria_*.xlsx"))
+
+
+def test_resolve_output_dir_uses_config_parent_not_repo_cwd(tmp_path):
+    """Regression: default report.output_dir '.' must not resolve to process CWD (#1326)."""
+    cfg_path = tmp_path / "nested" / "cfg.yaml"
+    cfg_path.parent.mkdir(parents=True)
+    cfg_path.write_text(
+        "targets: []\nreport:\n  output_dir: .\nsqlite_path: audit.db\n",
+        encoding="utf-8",
+    )
+    from config.loader import load_config
+
+    cfg = load_config(cfg_path)
+    out = resolve_output_dir(cfg, None, config_path=cfg_path)
+    assert out == cfg_path.parent.resolve()
+    assert out != _REPO_ROOT.resolve()
