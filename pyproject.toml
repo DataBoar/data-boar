@@ -1,6 +1,6 @@
 [project]
 name = "data-boar"
-version = "1.7.4.post8"
+version = "1.7.4.post9"
 description = "Data Boar — compliance-aware discovery and mapping of personal and sensitive data across databases, files, and APIs (LGPD, GDPR, CCPA, and configurable frameworks)."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -318,6 +318,6 @@ dev = [
 ]
 
 # Operator-only maturity octet (ADR-0073). Never copy into [project].version.
-# postN <-> maturity_build map: docs/releases/1.7.4.post8.md (canonical; includes post1–post7 rows).
+# postN <-> maturity_build map: docs/releases/1.7.4.post9.md (canonical; includes post1–post8 rows).
 [tool.databoar]
-maturity_build = 250
+maturity_build = 257

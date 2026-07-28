@@ -12,7 +12,30 @@ Human-readable summary of user-facing changes. **Detailed release notes:** [docs
 
 ---
 
-## 1.7.4.post8 (pending PyPI dispatch)
+## 1.7.4.post9 (pending PyPI dispatch)
+
+> Post-release on the **`1.7.4`** public line. **`[project] version = 1.7.4.post9`** and **`[tool.databoar] maturity_build = 257`** (`N=7` discrete fixes since post8 baseline `8527b0a4`, ADR-0073). **PyPI-only** — no Git tag, no GitHub Release, no container.
+>
+> **Milestone:** closes **11 issues** across **7 PRs** ([#1339](https://github.com/DataBoar/data-boar/pull/1339), [#1341](https://github.com/DataBoar/data-boar/pull/1341), [#1343](https://github.com/DataBoar/data-boar/pull/1343), [#1344](https://github.com/DataBoar/data-boar/pull/1344), [#1345](https://github.com/DataBoar/data-boar/pull/1345), [#1346](https://github.com/DataBoar/data-boar/pull/1346), [#1347](https://github.com/DataBoar/data-boar/pull/1347)) — post9 field-train bundle after post8.
+
+### Fixed / hardened (post9)
+
+- **CLI output paths:** pre-flight writable checks for report/output dirs; `--regenerate-report` rebuilds from SQLite without a full rescan ([#1324](https://github.com/DataBoar/data-boar/issues/1324), [#1325](https://github.com/DataBoar/data-boar/issues/1325), [#1339](https://github.com/DataBoar/data-boar/pull/1339)).
+- **SQL sampling:** deduplicate column values before applying `sample_limit` cap — fewer redundant round-trips ([#1337](https://github.com/DataBoar/data-boar/issues/1337), [#1343](https://github.com/DataBoar/data-boar/pull/1343)).
+- **Scan engine:** optional adaptive rate limiting (`BoarThrottler`) wired into the production `ThreadPoolExecutor` target loop ([#1320](https://github.com/DataBoar/data-boar/issues/1320), [#1344](https://github.com/DataBoar/data-boar/pull/1344)).
+- **Learned patterns:** audit/migration anti-generic blocklist so field column patterns are not over-broad ([#1327](https://github.com/DataBoar/data-boar/issues/1327), [#1345](https://github.com/DataBoar/data-boar/pull/1345)).
+- **Report export:** unified session export CLI with per-format wrappers (JSON/CSV/XLSX/HTML/PDF/DOCX) ([#1326](https://github.com/DataBoar/data-boar/issues/1326), [#1346](https://github.com/DataBoar/data-boar/pull/1346)).
+- **Live progress:** periodic stderr progress lines (target/table/percent/ETA when discovery yields totals) ([#1328](https://github.com/DataBoar/data-boar/issues/1328), [#1347](https://github.com/DataBoar/data-boar/pull/1347)); remote DB latency operator docs ([#1323](https://github.com/DataBoar/data-boar/issues/1323), same PR).
+- **Dependencies:** `pypdf` `6.13.3` → `6.14.2` — four DoS CVEs reachable via filesystem PDF scan path (`connectors/filesystem_connector.py` `PdfReader` on target files): CVE-2026-59935, CVE-2026-59936, CVE-2026-59937, CVE-2026-59938 ([#1336](https://github.com/DataBoar/data-boar/pull/1336)).
+
+### Notes (post9)
+
+- **Not in `N` (wheel unchanged):** benchmark safe-axis docs/tests ([#1338](https://github.com/DataBoar/data-boar/pull/1341) / `19e268c7`); PCI/saúde/LGPD compliance **samples** under `docs/compliance-samples/` + `security/` (`a9678874` — operator: samples count as docs); report `resolve_output_dir` regression test only (`1baa76b5`); `.gitignore` for local benchmark artefact (`2979c99b`); distroless base image bump (`55c6b75d` — Dockerfile; postN is PyPI-only).
+- Full `N=7` fix set and `postN` ↔ `maturity_build` map: [docs/releases/1.7.4.post9.md](docs/releases/1.7.4.post9.md).
+
+---
+
+## 1.7.4.post8 (published PyPI **2026-07-23 13:52:06 UTC**)
 
 > Post-release on the **`1.7.4`** public line. **`[project] version = 1.7.4.post8`** and **`[tool.databoar] maturity_build = 250`** (`N=5` `fix(` commits since post7 baseline `b5054d55`, ADR-0073). **PyPI-only** — no Git tag, no GitHub Release, no container.
 >
