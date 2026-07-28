@@ -9,11 +9,17 @@ import json
 
 try:
     import redis
+    from redis.exceptions import ConnectionError as RedisConnectionError
+    from redis.exceptions import ResponseError as RedisResponseError
+    from redis.exceptions import TimeoutError as RedisTimeoutError
 
     _REDIS_AVAILABLE = True
 except ImportError:
     _REDIS_AVAILABLE = False
     redis = None
+    RedisConnectionError = Exception  # type: ignore[misc, assignment]
+    RedisResponseError = Exception  # type: ignore[misc, assignment]
+    RedisTimeoutError = Exception  # type: ignore[misc, assignment]
 
 from core.connector_registry import register
 from connectors.inventory_details import build_redis_inventory_details
@@ -21,6 +27,8 @@ from core.suggested_review import (
     SUGGESTED_REVIEW_PATTERN,
     augment_low_id_like_for_persist,
 )
+
+REDIS_SCAN_FAILURE_VALUE_NOT_SAMPLED = "redis_value_not_sampled"
 
 
 class RedisConnector:
@@ -91,10 +99,13 @@ class RedisConnector:
                 keys.append(k)
                 if len(keys) >= self.sample_limit:
                     break
+            # Pass the sampled keyspace as shared context for name-based detection on
+            # each key (cross-key co-occurrence in this SCAN window).
             combined = " ".join(keys)
-            per_key_limit = min(50, len(keys))
+            per_key_limit = min(self.sample_limit, len(keys))
             values_sampled = 0
-            for key in keys[:per_key_limit]:  # per-key classification
+            value_not_sampled_by_type: dict[str, int] = {}
+            for key in keys[:per_key_limit]:
                 res = self.scanner.scan_column(key, combined)
                 res = augment_low_id_like_for_persist(res, key, self.detection_config)
                 if (
@@ -105,7 +116,26 @@ class RedisConnector:
                     if values_sampled < self.value_sample_limit:
                         try:
                             raw_val = self._client.get(key)
-                        except Exception:
+                        except RedisResponseError as exc:
+                            if "WRONGTYPE" in str(exc).upper():
+                                key_type = str(self._client.type(key) or "unknown")
+                                value_not_sampled_by_type[key_type] = (
+                                    value_not_sampled_by_type.get(key_type, 0) + 1
+                                )
+                                raw_val = None
+                            else:
+                                self.db_manager.save_failure(
+                                    target_name, "redis_error", f"{key}: {exc}"
+                                )
+                                raw_val = None
+                        except (
+                            RedisConnectionError,
+                            RedisTimeoutError,
+                            OSError,
+                        ) as exc:
+                            self.db_manager.save_failure(
+                                target_name, "unreachable", f"{key}: {exc}"
+                            )
                             raw_val = None
                         if raw_val:
                             values_sampled += 1
@@ -152,6 +182,20 @@ class RedisConnector:
                 except Exception:
                     # Finding log is optional telemetry and must not fail the connector flow.
                     continue
+            if value_not_sampled_by_type:
+                self.db_manager.save_failure(
+                    target_name,
+                    REDIS_SCAN_FAILURE_VALUE_NOT_SAMPLED,
+                    json.dumps(
+                        {
+                            "keys_discovered": len(keys),
+                            "keys_name_classified": per_key_limit,
+                            "values_sampled": values_sampled,
+                            "value_not_sampled_by_type": value_not_sampled_by_type,
+                        },
+                        ensure_ascii=False,
+                    ),
+                )
         except Exception as e:
             self.db_manager.save_failure(target_name, "error", str(e))
         finally:

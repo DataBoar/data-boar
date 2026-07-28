@@ -1,6 +1,8 @@
 # OS compatibility testing matrix (homelab expansion)
 
-**Purpose:** Guide **which Linux distributions** to test Data Boar on in the homelab, prioritized by **production relevance**, **Python 3.12+ availability**, and **package manager** differences. This helps expand **documented support** beyond the current **Debian/Ubuntu** baseline.
+**Product scope:** Data Boar is **platform-agnostic** — recent **Linux**, **macOS**, **Windows**, and **container** deployments are all in scope. **This document** covers only the **Linux homelab expansion axis** (distro matrix, `dnf`/`pacman`/`apk`, etc.). Windows, macOS, FreeBSD, and illumos validation live under epic **#1171** and other ops docs — not here.
+
+**Purpose:** Guide **which Linux distributions** to test Data Boar on in the homelab, prioritized by **production relevance**, **Python 3.12+ availability**, and **package manager** differences. This helps expand **documented Linux homelab coverage** beyond the **most-documented install path** (Debian/Ubuntu examples in [TECH_GUIDE.md](../TECH_GUIDE.md)).
 
 **Related:** [HOMELAB_VALIDATION.md](HOMELAB_VALIDATION.md) · [SECURITY.md](../../SECURITY.md) (Python 3.12+ requirement) · [TECH_GUIDE.md](../TECH_GUIDE.md) (install examples)
 
@@ -8,8 +10,8 @@
 
 ## 1. Current baseline (documented)
 
-- **Primary:** **Ubuntu 24.04 LTS** / **Debian 13** (recommended in [TECH_GUIDE.md](../TECH_GUIDE.md)).
-- **Python:** **3.12+** required ([SECURITY.md](../../SECURITY.md)); CI tests **3.12 and 3.13** on Ubuntu.
+- **Most-documented install path:** **Ubuntu 24.04 LTS** / **Debian 13** (recommended) or a recent Linux/macOS/Windows — per [TECH_GUIDE.md](../TECH_GUIDE.md) (§ Requirements and environment preparation).
+- **Python:** **3.12+** required ([SECURITY.md](../../SECURITY.md)); **CI** uses the **default GitHub Actions runner** (`ubuntu-latest`, currently Ubuntu) and tests **3.12 and 3.13** there — that is **CI infrastructure**, not a product platform limit.
 - **Package manager:** Examples use **`apt`**; **`uv`** (or `pip`) handles Python deps.
 
 ---

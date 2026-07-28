@@ -1,12 +1,17 @@
 # Matriz de compatibilidade de SO (expansão do homelab)
 
-**Objetivo:** Guiar **quais distribuições Linux** testar o Data Boar no homelab, priorizadas por **relevância em produção**, **disponibilidade de Python 3.12+** e diferenças de **gerenciador de pacotes**.
+**Escopo do produto:** o Data Boar é **agnóstico de plataforma** — **Linux**, **macOS**, **Windows** e **container** estão no escopo. **Este arquivo** trata só do **eixo Linux do homelab** (matriz de distros, `dnf`/`pacman`/`apk`, etc.). Validação em Windows, macOS, FreeBSD e illumos fica no épico **#1171** e em outros ops docs — não aqui.
+
+**Objetivo:** Guiar **quais distribuições Linux** testar o Data Boar no homelab, priorizadas por **relevância em produção**, **disponibilidade de Python 3.12+** e diferenças de **gerenciador de pacotes**. Ajuda a expandir a **cobertura documentada do homelab Linux** além do **caminho de instalação mais documentado** (exemplos Debian/Ubuntu no [TECH_GUIDE.md](../TECH_GUIDE.md)).
 
 **Documento completo (EN, tabelas e comandos):** [OS_COMPATIBILITY_TESTING_MATRIX.md](OS_COMPATIBILITY_TESTING_MATRIX.md)
 
 ---
 
-## Resumo
+## Linha de base documentada (resumo)
+
+- **Caminho de instalação mais documentado:** **Ubuntu 24.04 LTS** / **Debian 13** (recomendado) ou Linux/macOS/Windows recente — conforme [TECH_GUIDE.md](../TECH_GUIDE.md) (§ Requirements and environment preparation).
+- **Python:** **3.12+** obrigatório; o **CI** usa o runner padrão do **GitHub Actions** (`ubuntu-latest`) com **3.12 e 3.13** — isso é **infraestrutura de CI**, não limite de plataforma do produto.
 
 **Tier 1 (testar primeiro):** **RHEL 9** / **AlmaLinux 9** / **Rocky 9** (empresarial, `dnf`), **Fedora 40+** (upstream RHEL). **Tier 2:** **Arch** / **Manjaro** / **BigLinux** (`pacman`), **openSUSE Tumbleweed** (`zypper`). **Tier 3:** **Gentoo** (`emerge`, source-based), **Void** / **Alpine** (musl).
 

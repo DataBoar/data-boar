@@ -18,13 +18,16 @@ from typing import Any
 from core.connector_registry import register
 from core.archives import (
     ArchiveUnsupportedError,
+    SCAN_FAILURE_REASON_ARCHIVE_TYPE_MISMATCH,
     SCAN_FAILURE_REASON_ENCRYPTED_NO_PASSWORD,
     SCAN_FAILURE_REASON_WRONG_PASSWORD,
     default_compressed_extensions,
+    describe_archive_type_mismatch,
     detect_archive_type,
     iter_archive_members,
     is_supported_archive,
     normalize_compressed_extensions,
+    path_has_compressed_extension,
 )
 from core.content_type import (
     choose_effective_pdf_extension,
@@ -772,9 +775,10 @@ class FilesystemConnector:
             pass
         for file_path in iter_scan_files(path, recursive=recursive):
             ext = file_path.suffix.lower()
-            if ext not in self.extensions and not (
-                self.scan_compressed and ext in self.compressed_extensions
-            ):
+            has_archive_ext = self.scan_compressed and path_has_compressed_extension(
+                file_path, self.compressed_extensions
+            )
+            if ext not in self.extensions and not has_archive_ext:
                 continue
             if not os.access(file_path, os.R_OK):
                 self.db_manager.save_failure(
@@ -782,10 +786,21 @@ class FilesystemConnector:
                 )
                 continue
             # When scan_compressed is enabled, open archive and scan inner members.
-            if self.scan_compressed and is_supported_archive(
-                file_path, exts=self.compressed_extensions
-            ):
-                self._scan_archive_contents(file_path, target_name, path, audit_name)
+            if has_archive_ext:
+                if is_supported_archive(file_path, exts=self.compressed_extensions):
+                    self._scan_archive_contents(
+                        file_path, target_name, path, audit_name
+                    )
+                    continue
+                mismatch = describe_archive_type_mismatch(
+                    file_path, self.compressed_extensions
+                )
+                if mismatch:
+                    self.db_manager.save_failure(
+                        target_name,
+                        SCAN_FAILURE_REASON_ARCHIVE_TYPE_MISMATCH,
+                        f"{file_path}:{mismatch}",
+                    )
                 continue
             # 2.6: treat .sqlite/.sqlite3/.db as DBs when scan_sqlite_as_db is True
             if self.scan_sqlite_as_db and ext in self.SQLITE_EXTENSIONS:
