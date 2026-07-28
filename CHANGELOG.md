@@ -12,7 +12,7 @@ Human-readable summary of user-facing changes. **Detailed release notes:** [docs
 
 ---
 
-## 1.7.4.post9 (pending PyPI dispatch)
+## 1.7.4.post9 (published PyPI **2026-07-28 10:34:16 UTC**)
 
 > Post-release on the **`1.7.4`** public line. **`[project] version = 1.7.4.post9`** and **`[tool.databoar] maturity_build = 257`** (`N=7` discrete fixes since post8 baseline `8527b0a4`, ADR-0073). **PyPI-only** — no Git tag, no GitHub Release, no container.
 >
