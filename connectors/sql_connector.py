@@ -347,6 +347,7 @@ class SQLConnector:
         self._inter_query_delay_s = max(
             0.0, float(self.config.get("inter_query_delay_ms", 0) or 0) / 1000.0
         )
+        self._scan_progress = target_config.get("_scan_progress")
 
     def connect(self) -> None:
         ensure_sql_driver_available(self.config.get("driver"))
@@ -642,9 +643,20 @@ class SQLConnector:
             log_connection(audit_name, "database", server_ip or "local")
             engine_name = self.engine.dialect.name if self.engine else "sql"
             self._save_inventory_snapshot(target_name, engine_name)
-            for item in self.discover():
+            discovered = self.discover()
+            progress = self._scan_progress
+            if progress is not None and getattr(progress, "enabled", False):
+                progress.set_tables_total(len(discovered), target_name=target_name)
+            for table_index, item in enumerate(discovered, start=1):
                 schema = item["schema"]
                 table = item["table"]
+                table_label = f"{schema}.{table}" if schema else table
+                if progress is not None and getattr(progress, "enabled", False):
+                    progress.advance_table(
+                        table_index,
+                        table_label=table_label,
+                        target_name=target_name,
+                    )
                 for col in item["columns"]:
                     self._process_one_finding(
                         target_name,

@@ -255,6 +255,10 @@ rate_limit:
 
 **Limitação de taxa adaptativa (ARL):** `scan.adaptive_rate_limit: true` (padrão **false**) ajusta workers efetivos a partir da latência por alvo no engine de produção. Veja [USAGE.pt_BR.md](USAGE.pt_BR.md) § *Limitação de taxa adaptativa (ARL)* e interação com o teto de licença (#551).
 
+**Progresso ao vivo (#1328):** com `scan.progress` true (padrão), stderr mostra `target X/Y · table N/M · ~Z% · ETA` em scans SQL longos. Totais vêm da discovery do conector — não são chutados. CLI: `--progress` / `--no-progress`. Veja [USAGE.pt_BR.md](USAGE.pt_BR.md) § *Progresso ao vivo do scan*.
+
+**Latência de banco remoto:** scans cross-region (ex.: Brasil → RDS `us-east-1`) costumam ser limitados por **RTT** — CPU baixa no servidor com scan longo indica espera de rede, não GIL. Co-localize quando possível. `scan.max_workers` paraleliza só **targets** hoje ([#1322](https://github.com/DataBoar/data-boar/issues/1322) — milestone 1.8.x, trabalho futuro). Veja [USAGE.pt_BR.md](USAGE.pt_BR.md) e [TROUBLESHOOTING_CONNECTIVITY.pt_BR.md](TROUBLESHOOTING_CONNECTIVITY.pt_BR.md).
+
 Quando `enabled` é true, os endpoints da API que iniciam varreduras (`POST /scan`, `/start`, `/scan_database`) podem responder com **HTTP 429** e um payload JSON descrevendo o motivo (ex.: muitas varreduras em execução ou intervalo mínimo não decorrido). A CLI apenas imprime avisos com a mesma lógica, então scripts existentes continuam funcionando. Veja [USAGE.md](USAGE.md) e [data_boar.5](data_boar.5) para detalhes e exemplos completos de configuração.
 
 ## Executar

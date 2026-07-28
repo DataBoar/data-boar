@@ -48,6 +48,16 @@ Corrija DNS (use IP ou servidor DNS correto); abra firewall para a porta necess�
 
 No config, defina `timeout` maior para o alvo que falha (veja [USAGE.pt_BR.md](USAGE.pt_BR.md)). Reexecute em horário de menor uso ou de um host/região mais próxima do alvo.
 
+### 3.3 Latência de banco remoto (scan limitado por RTT)
+
+**Sintomas:** varredura de dezenas de minutos; CloudWatch (ou equivalente) com **CPU baixa** e **ReadLatency** ociosa no banco, enquanto o operador está longe (outra região).
+
+**Causa:** cada amostragem de coluna paga pelo menos um round trip. O tempo escala com **(consultas × RTT)**, não com banda do link.
+
+**Diagnóstico:** CPU/latência de leitura baixas no servidor **não** indicam GIL nem servidor sobrecarregado neste padrão — verifique RTT e conexões no cliente (`ss -tn dst :<porta>`).
+
+**Mitigações:** (1) **co-localizar** scanner e banco na mesma VPC/região; (2) reduzir escopo/amostragem; (3) `scan.max_workers` só paraleliza **targets**, não tabelas dentro de um único RDS — comportamento atual; [#1322](https://github.com/DataBoar/data-boar/issues/1322) rastreia paralelismo por tabela/coluna (milestone 1.8.x, sem promessa de data). **Progresso ao vivo:** `scan.progress` ou `--progress` — veja [USAGE.pt_BR.md](USAGE.pt_BR.md) § *Progresso ao vivo do scan*.
+
 ---
 
 ## 4. Permission denied

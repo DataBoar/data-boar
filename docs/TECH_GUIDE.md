@@ -255,6 +255,10 @@ rate_limit:
 
 **Adaptive rate limiting (ARL):** optional `scan.adaptive_rate_limit: true` tunes effective `max_workers` from per-target latency in the production engine path (`core/engine.py`). Default is **off** (fixed pool). See [USAGE.md](USAGE.md) § *Adaptive rate limiting (ARL)* for mechanics, defaults, and interaction with licensing worker caps (#551).
 
+**Live scan progress (#1328):** when `scan.progress` is true (default), stderr shows `target X/Y · table N/M · ~Z% · ETA` during long SQL scans. Table totals come from connector discovery after `discover()` — not guessed. CLI: `--progress` / `--no-progress`. See [USAGE.md](USAGE.md) § *Live scan progress*.
+
+**Remote DB latency:** cross-region scans (e.g. Brazil → `us-east-1` RDS) are often **RTT-bound** — low server CPU with long wall-clock usually means network wait, not Python GIL. Co-locate scanner and DB when possible. `scan.max_workers` parallelizes **targets only** today ([#1322](https://github.com/DataBoar/data-boar/issues/1322) tracks per-table/column parallelism for a future milestone). See [USAGE.md](USAGE.md) § *Remote database latency* and [TROUBLESHOOTING_CONNECTIVITY.md](TROUBLESHOOTING_CONNECTIVITY.md).
+
 When `enabled` is true, API endpoints that start scans (`POST /scan`, `/start`, `/scan_database`) may respond with **HTTP 429** and a JSON payload describing the reason (e.g. too many running scans or minimum interval not elapsed). The CLI only prints warnings using the same logic, so existing scripts keep working. See [USAGE.md](USAGE.md) and [data_boar.5](data_boar.5) for full configuration details and examples.
 
 ## Run

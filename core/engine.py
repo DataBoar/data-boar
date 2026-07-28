@@ -8,6 +8,7 @@ Exposes db_manager, is_running, get_current_findings_count() for API.
 
 import hashlib
 import logging
+import threading
 import time
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, as_completed, wait
 from pathlib import Path
@@ -89,6 +90,7 @@ except ImportError:  # noqa: BLE001
 from core.connector_registry import connector_for_target
 from core.crypto_audit import StrongCryptoSignal, summarize_crypto_from_connection_info
 from core.database import LocalDBManager
+from core.scan_progress import scan_progress_from_config
 from core.sampling import SamplingPolicy
 from core.scanner import DataScanner
 from core.session import new_session_id
@@ -160,6 +162,14 @@ class AuditEngine:
         self._crypto_signals: list[tuple[str, set[StrongCryptoSignal]]] = []
         # Declarative sampling / SRE posture for API ``audit_log`` (refreshed after each scan).
         self._scan_audit_log: dict[str, Any] | None = None
+        self._scan_progress = scan_progress_from_config(config)
+        self._target_seq = 0
+        self._target_seq_lock = threading.Lock()
+
+    def _next_target_index(self) -> int:
+        with self._target_seq_lock:
+            self._target_seq += 1
+            return self._target_seq
 
     def _configure_audit_log_directory(self, *, config_path: str | None) -> None:
         """
@@ -389,6 +399,8 @@ class AuditEngine:
         self._is_running = True
         session_id = self.db_manager.current_session_id
         targets = self.config.get("targets", [])
+        self._target_seq = 0
+        self._scan_progress.start_run(len(targets))
         final_status = "completed"
         try:
             if self._adaptive_rate_limit:
@@ -426,6 +438,16 @@ class AuditEngine:
 
     def _run_target(self, target: dict[str, Any]) -> None:
         """Run one target: resolve connector, instantiate, run()."""
+
+        target_index = self._next_target_index()
+        target_name_for_progress = str(target.get("name") or "unknown")
+        self._scan_progress.begin_target(target_index, target_name_for_progress)
+        try:
+            self._run_target_inner(target)
+        finally:
+            self._scan_progress.end_target(target_name_for_progress)
+
+    def _run_target_inner(self, target: dict[str, Any]) -> None:
         from core.connector_registry import require_connector_allowed
         from core.licensing.errors import FeatureTierBlockedError
 
@@ -455,7 +477,11 @@ class AuditEngine:
         t = target.get("type")
         fs_config = self.config.get("file_scan", {})
         # Inject file_scan into target so connectors (filesystem, shares) see scan_compressed, etc.
-        target_with_fs = {**target, "file_scan": fs_config}
+        target_with_fs = {
+            **target,
+            "file_scan": fs_config,
+            "_scan_progress": self._scan_progress,
+        }
         scan_sqlite_as_db = fs_config.get("scan_sqlite_as_db", True)
         sample_limit = fs_config.get("sample_limit", 5)
         file_sample_max_chars = int(
@@ -501,7 +527,7 @@ class AuditEngine:
                 )
             elif t in ("powerbi", "dataverse", "powerapps"):
                 connector = connector_class(
-                    target,
+                    target_with_fs,
                     self.scanner,
                     self.db_manager,
                     sample_limit=sample_limit,
@@ -514,7 +540,7 @@ class AuditEngine:
                 if issubclass(connector_class, _CONNECTOR_SAMPLING_POLICY_BASES):
                     extra_kw["sampling_policy"] = self._sampling_policy
                 connector = connector_class(
-                    target,
+                    target_with_fs,
                     self.scanner,
                     self.db_manager,
                     sample_limit=sample_limit,

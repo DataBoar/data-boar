@@ -78,6 +78,7 @@ class SnowflakeConnector:
         self._inter_query_delay_s = max(
             0.0, float(self.config.get("inter_query_delay_ms", 0) or 0) / 1000.0
         )
+        self._scan_progress = target_config.get("_scan_progress")
 
     def connect(self) -> None:
         if not _SNOWFLAKE_AVAILABLE:
@@ -252,9 +253,19 @@ class SnowflakeConnector:
             except Exception:
                 pass
             tables = self._list_tables()
-            for t in tables:
+            progress = self._scan_progress
+            if progress is not None and getattr(progress, "enabled", False):
+                progress.set_tables_total(len(tables), target_name=target_name)
+            for table_index, t in enumerate(tables, start=1):
                 schema = t["schema"]
                 table = t["table"]
+                table_label = f"{schema}.{table}" if schema else table
+                if progress is not None and getattr(progress, "enabled", False):
+                    progress.advance_table(
+                        table_index,
+                        table_label=table_label,
+                        target_name=target_name,
+                    )
                 columns = self._get_columns(schema, table)
                 for col in columns:
                     if self._inter_query_delay_s > 0:

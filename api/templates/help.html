@@ -45,7 +45,9 @@
 {{ prog }} --config config.yaml --regenerate-report &lt;session_id&gt;
 {{ prog }} --config config.yaml --tenant "Acme Corp" --technician "Alice Colleague-V"
 # Same optional toggles as the dashboard checkboxes (this run only):
-{{ prog }} --config config.yaml --scan-compressed --content-type-check --scan-stego --jurisdiction-hint</code></pre>
+{{ prog }} --config config.yaml --scan-compressed --content-type-check --scan-stego --jurisdiction-hint --progress
+# Disable live progress lines for this run:
+{{ prog }} --config config.yaml --no-progress</code></pre>
   <p><strong>{{ t('help.run_cli_api') }}</strong></p>
   <p class="muted">{{ t('help.run_cli_tls') }}</p>
   <pre><code>{{ prog }} --config config.yaml --web --https-cert-file server.crt --https-key-file server.key
