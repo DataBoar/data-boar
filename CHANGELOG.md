@@ -56,7 +56,7 @@ Human-readable summary of user-facing changes. **Detailed release notes:** [docs
 
 ---
 
-## 1.7.4.post7 (pending PyPI dispatch)
+## 1.7.4.post7 (published PyPI **2026-07-21 12:03:52 UTC**)
 
 > Post-release on the **`1.7.4`** public line. **`[project] version = 1.7.4.post7`** and **`[tool.databoar] maturity_build = 245`** (`N=4` discrete fixes since post6 baseline `6dc54642`, ADR-0073). **PyPI-only** — no Git tag, no GitHub Release, no container.
 
@@ -74,7 +74,7 @@ Human-readable summary of user-facing changes. **Detailed release notes:** [docs
 
 ---
 
-## 1.7.4.post6 (pending PyPI dispatch)
+## 1.7.4.post6 (published PyPI **2026-07-15 22:48:46 UTC**)
 
 > Post-release on the **`1.7.4`** public line. **`[project] version = 1.7.4.post6`** and **`[tool.databoar] maturity_build = 241`** (`N=1` `fix(` commit since post5 `b7de32ba`, ADR-0073). **PyPI-only** — no Git tag, no GitHub Release, no container.
 
@@ -88,7 +88,7 @@ Human-readable summary of user-facing changes. **Detailed release notes:** [docs
 
 ---
 
-## 1.7.4.post5 (pending PyPI dispatch)
+## 1.7.4.post5 (published PyPI **2026-07-15 21:44:36 UTC**)
 
 > Post-release on the **`1.7.4`** public line. **`[project] version = 1.7.4.post5`** and **`[tool.databoar] maturity_build = 240`** (`N=14` `fix(` commits since post4 merge `656fdc3d`, ADR-0073). **PyPI-only** — no Git tag, no GitHub Release, no container.
 
@@ -108,7 +108,7 @@ Human-readable summary of user-facing changes. **Detailed release notes:** [docs
 
 ---
 
-## 1.7.4.post4 (pending PyPI dispatch)
+## 1.7.4.post4 (published PyPI **2026-07-13 16:29:05 UTC**)
 
 > Post-release on the **`1.7.4`** public line. **`[project] version = 1.7.4.post4`** and **`[tool.databoar] maturity_build = 226`** (`N=15` fixes since post3 baseline, ADR-0073 dual counter policy).
 
@@ -131,7 +131,7 @@ Human-readable summary of user-facing changes. **Detailed release notes:** [docs
 
 ---
 
-## 1.7.4.post3 (pending PyPI dispatch)
+## 1.7.4.post3 (published PyPI **2026-07-10 21:58:29 UTC**)
 
 > Post-release on the **`1.7.4`** public line. **`[project] version = 1.7.4.post3`** and **`[tool.databoar] maturity_build = 211`** (ADR-0073 dual counter policy).
 
