@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import html
-import re
 from pathlib import Path
 
 from reportlab.lib import colors
@@ -12,9 +10,11 @@ from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import cm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 
-
-def _escape(text: str) -> str:
-    return html.escape(text or "", quote=False).replace("\n", "<br/>")
+from report.executive_markdown_render import (
+    LineKind,
+    markdown_inline_to_reportlab,
+    parse_executive_line,
+)
 
 
 def write_executive_pdf(markdown_text: str, path: Path) -> None:
@@ -36,32 +36,48 @@ def write_executive_pdf(markdown_text: str, path: Path) -> None:
         spaceBefore=8,
         spaceAfter=4,
     )
+    h3 = ParagraphStyle(
+        "ExecH3",
+        parent=h2,
+        fontSize=11,
+        textColor=colors.HexColor("#2c6496"),
+    )
     body = ParagraphStyle("ExecBody", parent=styles["Normal"], fontSize=10, leading=13)
     bullet = ParagraphStyle(
         "ExecBullet", parent=body, leftIndent=12, bulletIndent=0, spaceBefore=2
     )
 
+    heading_styles = {
+        LineKind.H1: h1,
+        LineKind.H2: h2,
+        LineKind.H3: h3,
+        LineKind.H4: h3,
+        LineKind.H5: h3,
+    }
+
     story: list = []
     for raw_line in markdown_text.splitlines():
-        line = raw_line.rstrip()
-        if not line.strip():
+        parsed = parse_executive_line(raw_line)
+        if parsed.kind == LineKind.BLANK:
             story.append(Spacer(1, 0.15 * cm))
             continue
-        if line.startswith("# "):
-            story.append(Paragraph(_escape(line[2:].strip()), h1))
+        if parsed.kind in heading_styles:
+            story.append(
+                Paragraph(
+                    markdown_inline_to_reportlab(parsed.text),
+                    heading_styles[parsed.kind],
+                )
+            )
             continue
-        if line.startswith("## "):
-            story.append(Paragraph(_escape(line[3:].strip()), h2))
+        if parsed.kind == LineKind.BULLET:
+            story.append(
+                Paragraph(
+                    f"• {markdown_inline_to_reportlab(parsed.text)}",
+                    bullet,
+                )
+            )
             continue
-        if line.startswith("### "):
-            story.append(Paragraph(_escape(line[4:].strip()), h2))
-            continue
-        plain = re.sub(r"`([^`]+)`", r"\1", line)
-        plain = re.sub(r"\*\*([^*]+)\*\*", r"<b>\1</b>", plain)
-        if line.startswith("- "):
-            story.append(Paragraph(f"• {_escape(line[2:].strip())}", bullet))
-        else:
-            story.append(Paragraph(plain, body))
+        story.append(Paragraph(markdown_inline_to_reportlab(parsed.text), body))
 
     doc = SimpleDocTemplate(
         str(path),

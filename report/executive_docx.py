@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 
 from docx import Document
 from docx.shared import Pt
+
+from report.executive_markdown_render import (
+    LineKind,
+    append_markdown_runs_to_paragraph,
+    parse_executive_line,
+)
 
 
 def write_executive_docx(markdown_text: str, path: Path) -> None:
@@ -16,25 +21,27 @@ def write_executive_docx(markdown_text: str, path: Path) -> None:
     style = doc.styles["Normal"]
     style.font.size = Pt(11)
 
+    heading_levels = {
+        LineKind.H1: 1,
+        LineKind.H2: 2,
+        LineKind.H3: 3,
+        LineKind.H4: 4,
+        LineKind.H5: 5,
+    }
+
     for raw_line in markdown_text.splitlines():
-        line = raw_line.rstrip()
-        if not line.strip():
+        parsed = parse_executive_line(raw_line)
+        if parsed.kind == LineKind.BLANK:
             continue
-        if line.startswith("# "):
-            doc.add_heading(line[2:].strip(), level=1)
+        if parsed.kind in heading_levels:
+            heading = doc.add_heading("", level=heading_levels[parsed.kind])
+            append_markdown_runs_to_paragraph(heading, parsed.text)
             continue
-        if line.startswith("## "):
-            doc.add_heading(line[3:].strip(), level=2)
+        if parsed.kind == LineKind.BULLET:
+            paragraph = doc.add_paragraph(style="List Bullet")
+            append_markdown_runs_to_paragraph(paragraph, parsed.text)
             continue
-        if line.startswith("### "):
-            doc.add_heading(line[4:].strip(), level=3)
-            continue
-        if line.startswith("- "):
-            doc.add_paragraph(line[2:].strip(), style="List Bullet")
-            continue
-        plain = re.sub(r"`([^`]+)`", r"\1", line)
-        plain = re.sub(r"\*\*([^*]+)\*\*", r"\1", plain)
-        plain = plain.replace("*", "")
-        doc.add_paragraph(plain)
+        paragraph = doc.add_paragraph()
+        append_markdown_runs_to_paragraph(paragraph, parsed.text)
 
     doc.save(str(path))

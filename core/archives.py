@@ -24,6 +24,7 @@ SCAN_FAILURE_REASON_ENCRYPTED_NO_PASSWORD = "encrypted_no_password"
 SCAN_FAILURE_REASON_WRONG_PASSWORD = "wrong_password"
 SCAN_FAILURE_REASON_ARCHIVE_READ_ERROR = "archive_read_error"
 SCAN_FAILURE_REASON_ARCHIVE_BUDGET_EXCEEDED = "archive_budget_exceeded"
+SCAN_FAILURE_REASON_ARCHIVE_TYPE_MISMATCH = "archive_type_mismatch"
 
 MemberReadFailureCallback = Callable[[str, str, str], None]
 
@@ -166,6 +167,109 @@ def detect_archive_type(path: Path) -> str | None:
     if ext == ".7z" and is_7z_magic(magic):
         return "7z"
 
+    return None
+
+
+def path_has_compressed_extension(
+    path: Path, exts: Iterable[str] | None = None
+) -> bool:
+    """Return True when the path suffix matches a configured compressed extension."""
+    allowed = normalize_compressed_extensions(exts)
+    suffixes = [s.lower() for s in path.suffixes]
+    if not suffixes:
+        return False
+    if len(suffixes) >= 2:
+        full_suffix = "".join(suffixes[-2:])
+        if full_suffix in allowed:
+            return True
+    return suffixes[-1] in allowed
+
+
+def _extension_archive_label(path: Path, allowed: set[str]) -> str | None:
+    """Label implied by the filename suffix when it is a configured archive extension."""
+    suffixes = [s.lower() for s in path.suffixes]
+    if not suffixes:
+        return None
+    pairs: list[tuple[str, str]] = []
+    if len(suffixes) >= 2:
+        full = "".join(suffixes[-2:])
+        if full in allowed:
+            pairs.append((full, full))
+    last = suffixes[-1]
+    if last in allowed:
+        pairs.append((last, last))
+    for ext, _ in pairs:
+        if ext in {".tar.gz", ".tgz"}:
+            return "tar.gz"
+        if ext in {".tar.bz2", ".tbz2"}:
+            return "tar.bz2"
+        if ext in {".tar.xz", ".txz"}:
+            return "tar.xz"
+        if ext == ".zip":
+            return "zip"
+        if ext == ".tar":
+            return "tar"
+        if ext == ".gz":
+            return "gz"
+        if ext == ".bz2":
+            return "bz2"
+        if ext == ".xz":
+            return "xz"
+        if ext == ".7z":
+            return "7z"
+    return None
+
+
+def _magic_archive_label(magic: bytes) -> str | None:
+    if is_zip_magic(magic):
+        return "zip"
+    if is_bzip2_magic(magic):
+        return "bzip2"
+    if is_gzip_magic(magic):
+        return "gzip"
+    if is_xz_magic(magic):
+        return "xz"
+    if is_7z_magic(magic):
+        return "7z"
+    return None
+
+
+_MAGIC_EXPECTED_FOR_EXTENSION: dict[str, str] = {
+    "zip": "zip",
+    "tar.gz": "gzip",
+    "gz": "gzip",
+    "tar.bz2": "bzip2",
+    "bz2": "bzip2",
+    "tar.xz": "xz",
+    "xz": "xz",
+    "7z": "7z",
+}
+
+
+def describe_archive_type_mismatch(
+    path: Path, exts: Iterable[str] | None = None
+) -> str | None:
+    """
+    When extension claims a supported archive but magic disagrees, return details.
+
+    Plain non-archive files and conjunctive matches return None (no report noise).
+    """
+    allowed = normalize_compressed_extensions(exts)
+    ext_label = _extension_archive_label(path, allowed)
+    if ext_label is None:
+        return None
+    if detect_archive_type(path) is not None:
+        return None
+    if ext_label == "tar":
+        return None
+    magic_label = _magic_archive_label(read_magic(path, 8))
+    if magic_label is None:
+        return f"extension={ext_label}; magic=unrecognized"
+    expected = _MAGIC_EXPECTED_FOR_EXTENSION.get(ext_label)
+    if expected and magic_label != expected:
+        return f"extension={ext_label}; magic={magic_label}"
+    if expected is None:
+        return f"extension={ext_label}; magic={magic_label}"
     return None
 
 
