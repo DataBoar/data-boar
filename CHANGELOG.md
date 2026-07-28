@@ -12,6 +12,26 @@ Human-readable summary of user-facing changes. **Detailed release notes:** [docs
 
 ---
 
+## 1.7.4.post10 (release prep — PyPI upload pending)
+
+> Post-release on the **`1.7.4`** public line. **`[project] version = 1.7.4.post10`** and **`[tool.databoar] maturity_build = 261`** (`N=4` discrete fixes since post9 baseline `9fa991c2`, ADR-0073). **PyPI-only** — no Git tag, no GitHub Release, no container. Operator runs **`publish-pypi`** after merge.
+
+### Fixed / hardened (post10)
+
+- **Executive export:** PDF/DOCX session reports render Markdown inline (headings, bold, monospace) via shared `report/executive_markdown_render.py` — fixes raw `**` / `` ` `` / `####` in board/DPO deliverables ([#1353](https://github.com/DataBoar/data-boar/issues/1353), [#1357](https://github.com/DataBoar/data-boar/pull/1357)).
+- **Redis visibility (Part A):** `WRONGTYPE` on `GET` is distinguished from connection failures; `scan_failures` records per-type value-not-sampled counts; key classification cap follows `sample_limit` ([#1348](https://github.com/DataBoar/data-boar/issues/1348) Part A — Part B → 1.8.x).
+- **Archives visibility (Part A):** `archive_type_mismatch` when compressed extension and magic bytes disagree — file is not expanded but failure is visible ([#1354](https://github.com/DataBoar/data-boar/issues/1354) Part A — Part B → 1.8.x).
+- **Dependencies:** `pypdf` floor raised to `>=6.14.2` so future resolves cannot slip below the post9 CVE pin ([#1340](https://github.com/DataBoar/data-boar/issues/1340)).
+
+### Notes (post10)
+
+- **Visibility theme:** post10 fixes change **reporting**, not scan read semantics (except the `pypdf` floor, which affects what a fresh install can resolve).
+- **Not in `N`:** [#1349](https://github.com/DataBoar/data-boar/issues/1349) OS compatibility matrix docs ([#1357](https://github.com/DataBoar/data-boar/pull/1357)); lab-smoke seeds / `.gitignore` ([#1355](https://github.com/DataBoar/data-boar/pull/1355)); release-status doc commits only.
+- **Issues left open:** [#1348](https://github.com/DataBoar/data-boar/issues/1348) and [#1354](https://github.com/DataBoar/data-boar/issues/1354) remain open until Part B ships on **1.8.x**.
+- Full `N=4` fix set and `postN` ↔ `maturity_build` map: [docs/releases/1.7.4.post10.md](docs/releases/1.7.4.post10.md).
+
+---
+
 ## 1.7.4.post9 (published PyPI **2026-07-28 10:34:16 UTC**)
 
 > Post-release on the **`1.7.4`** public line. **`[project] version = 1.7.4.post9`** and **`[tool.databoar] maturity_build = 257`** (`N=7` discrete fixes since post8 baseline `8527b0a4`, ADR-0073). **PyPI-only** — no Git tag, no GitHub Release, no container.
