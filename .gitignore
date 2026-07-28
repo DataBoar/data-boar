@@ -30,9 +30,9 @@ tests/benchmarks/official_benchmark.json
 /data-boar-*-rc.tar
 Relatorio_Auditoria_*.xlsx
 heatmap*.png
-# Executive desk outputs at repo root (local runs; regenerate via data-boar-report — USAGE.md section 5)
-/POC_SUMMARY_*.md
-/scan_manifest_*.yaml
+# Executive desk outputs under report.output_dir (any depth; regenerate via data-boar-report — USAGE.md section 5)
+POC_SUMMARY_*.md
+scan_manifest_*.yaml
 config.yaml
 config.local.yaml
 # Ephemeral LAB completão filesystem scan configs (soup paths); keep local only

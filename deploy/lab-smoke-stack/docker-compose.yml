@@ -9,6 +9,9 @@
 # Published ports (avoid clashing with local DBs):
 #   PostgreSQL: 55432 -> 5432
 #   MariaDB:    33306 -> 3306
+#   MSSQL:      14333 -> 1433
+#   Oracle XE:  15211 -> 1521
+#   Redis:      56379 -> 6379
 #
 # See: docs/ops/LAB_SMOKE_MULTI_HOST.md
 #
@@ -47,3 +50,65 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+
+  lab-mssql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${LAB_MSSQL_SA_PASSWORD:-Lab_Smoke_Change_Me1!}
+      MSSQL_PID: Developer
+    ports:
+      - "${LAB_MSSQL_PORT:-14333}:1433"
+    volumes:
+      - ./init/mssql:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          '/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$$MSSQL_SA_PASSWORD" -C -Q "SELECT 1" -b -o /dev/null || exit 1',
+        ]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  lab-oracle:
+    image: gvenzl/oracle-xe:21-slim
+    environment:
+      ORACLE_PASSWORD: ${LAB_ORACLE_PASSWORD:-lab_smoke_oracle_change_me}
+      APP_USER: ${LAB_ORACLE_USER:-lab_smoke}
+      APP_USER_PASSWORD: ${LAB_ORACLE_PASSWORD:-lab_smoke_change_me}
+    ports:
+      - "${LAB_ORACLE_PORT:-15211}:1521"
+    volumes:
+      - ./init/oracle:/container-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
+
+  lab-redis:
+    image: redis:7-alpine
+    ports:
+      - "${LAB_REDIS_PORT:-56379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+  lab-redis-init:
+    image: redis:7-alpine
+    depends_on:
+      lab-redis:
+        condition: service_healthy
+    environment:
+      REDIS_HOST: lab-redis
+      REDIS_PORT: "6379"
+    volumes:
+      - ./init/redis:/seed:ro
+    entrypoint: ["/bin/sh", "/seed/01_lab_smoke_seed.sh"]
+    restart: "no"

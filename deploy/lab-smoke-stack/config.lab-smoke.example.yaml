@@ -7,7 +7,7 @@
 # - host.docker.internal (Data Boar in Docker Desktop / same host as DB containers)
 # - Docker DNS name if Data Boar joins the same Compose network as lab-postgres / lab-mariadb
 #
-# Ports must match env (default 55432 PostgreSQL, 33306 MariaDB).
+# Ports must match env (default 55432 PostgreSQL, 33306 MariaDB, 14333 MSSQL, 15211 Oracle, 56379 Redis).
 
 targets:
 
@@ -28,6 +28,30 @@ targets:
     user: lab_smoke
     pass: lab_smoke_change_me
     database: lab_smoke_my
+
+  - name: "Lab_MSSQL_Synthetic"
+    type: database
+    driver: mssql+pymssql
+    host: "REPLACE_WITH_LAB_HOST_IP"
+    port: 14333
+    user: sa
+    pass: Lab_Smoke_Change_Me1!
+    database: lab_smoke_mssql
+
+  - name: "Lab_OracleXE_Synthetic"
+    type: database
+    driver: oracle+oracledb
+    host: "REPLACE_WITH_LAB_HOST_IP"
+    port: 15211
+    user: lab_smoke
+    pass: lab_smoke_oracle_change_me
+    database: XEPDB1
+
+  - name: "Lab_Redis_Synthetic"
+    type: database
+    driver: redis
+    host: "REPLACE_WITH_LAB_HOST_IP"
+    port: 56379
 
   # Optional: mount repo tests/data read-only into the container (two paths = two targets).
   - name: "Lab_FS_Compressed_Samples"
