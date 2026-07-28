@@ -16,6 +16,8 @@ POST6_MATURITY_BUILD = 241
 POST7_MATURITY_BUILD = 245
 POST8_FIX_COUNT = 5
 POST8_MATURITY_BUILD = 250
+POST9_FIX_COUNT = 7
+POST9_MATURITY_BUILD = 257
 
 
 def _load_pyproject() -> dict:
@@ -31,8 +33,9 @@ def test_post5_maturity_build_accounting_uses_post4_publish_row_not_225() -> Non
     assert (POST5_MATURITY_BUILD - 225) != POST5_FIX_COUNT
 
 
-def test_pyproject_maturity_build_matches_post8_canonical_map() -> None:
+def test_pyproject_maturity_build_matches_post9_canonical_map() -> None:
     data = _load_pyproject()
     maturity = data.get("tool", {}).get("databoar", {}).get("maturity_build")
-    assert maturity == POST8_MATURITY_BUILD
+    assert maturity == POST9_MATURITY_BUILD
+    assert POST8_MATURITY_BUILD + POST9_FIX_COUNT == POST9_MATURITY_BUILD
     assert POST7_MATURITY_BUILD + POST8_FIX_COUNT == POST8_MATURITY_BUILD
