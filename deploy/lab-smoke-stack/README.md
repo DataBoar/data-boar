@@ -1,8 +1,8 @@
-# Lab smoke stack (PostgreSQL + MariaDB + optional MongoDB)
+# Lab smoke stack (PostgreSQL + MariaDB + MSSQL + Oracle XE + Redis + optional MongoDB)
 
 Docker Compose bundle for **LAN-only** multi-host Data Boar tests. See **[docs/ops/LAB_SMOKE_MULTI_HOST.md](../../docs/ops/LAB_SMOKE_MULTI_HOST.md)** for host order, firewall, and checklist.
 
-**MongoDB:** not included in the default `docker compose up -d`; add **`docker compose -f docker-compose.yml -f docker-compose.mongo.yml up -d`** (or only `docker-compose.mongo.yml` if you need Mongo alone). Data Boar needs **`uv sync --extra nosql`** for `driver: mongodb`.
+**MongoDB:** not included in the default `docker compose up -d`; add **`docker compose -f docker-compose.yml -f docker-compose.mongo.yml up -d`** (or only `docker-compose.mongo.yml` if you need Mongo alone). Data Boar needs **`uv sync --extra nosql`** for `driver: mongodb` and **`driver: redis`**.
 
 **Quick start:**
 
@@ -20,9 +20,23 @@ docker compose -f docker-compose.mongo.yml up -d
 
 **Config example for Data Boar:** `config.lab-smoke.example.yaml` (copy elsewhere, set hub host IP, mount `tests/data/compressed` and `tests/data/homelab_synthetic` as documented). External/public API + DB eval: **`docs/ops/LAB_EXTERNAL_CONNECTIVITY_EVAL.md`**.
 
-**SQL seeds:** `init/postgres/` and `init/mariadb/` — `01_*` base tables, `02_*` linkage + minor-adjacent + shared-phone rows.
+**SQL seeds:** `init/postgres/`, `init/mariadb/`, `init/mssql/`, and `init/oracle/` — `01_*` base tables, `02_*` linkage + minor-adjacent + shared-phone rows (same semantic corpus as the postgres seed).
 
 **Mongo seed:** `init/mongodb/01_lab_smoke_seed.js` (database `lab_smoke_mongo`).
+
+**Redis seed:** `init/redis/01_lab_smoke_seed.sh` — loaded by one-shot service **`lab-redis-init`** after **`lab-redis`** is healthy (opaque string keys, hash/list/set fixtures, talkative-key control, audit/migration negative controls). Designed to **expose [#1348](https://github.com/DataBoar/data-boar/issues/1348)**: today `redis_connector.py` uses `GET` only; PII in hash fields should **not** appear until the connector is fixed — that is the expected baseline, not a seed bug.
+
+**Engines and default published ports:**
+
+| Service | Image | Port (host) | Data Boar `driver` |
+| --- | --- | --- | --- |
+| `lab-postgres` | `postgres:16-alpine` | 55432 | `postgresql+psycopg2` |
+| `lab-mariadb` | `mariadb:11` | 33306 | `mysql+pymysql` |
+| `lab-mssql` | `mcr.microsoft.com/mssql/server:2022-latest` | 14333 | `mssql+pymssql` (extras: `sql-all` or `mssql`) |
+| `lab-oracle` | `gvenzl/oracle-xe:21-slim` | 15211 | `oracle+oracledb` (extras: `sql-all` or `oracle`) |
+| `lab-redis` | `redis:7-alpine` | 56379 | `redis` (extras: `nosql`) |
+
+**Init permissions:** If `init/*` dirs are not world-readable after SCP/rsync, run `chmod -R a+rX init/postgres init/mariadb init/mssql init/oracle init/redis` on the hub, or use **`ops/automation/ansible/playbooks/lab-smoke-stack-init-perms.yml`**. Maestro **`stage_lab_db_init`** stages SQL dirs to `/tmp` with `a+rX` before `podman run` — same pattern for new engines.
 
 ---
 
