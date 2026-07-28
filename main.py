@@ -385,6 +385,7 @@ def main() -> None:
             "\n"
             "  # One-shot with archive scan + content-type detection (this run only)\n"
             f"  {prog} --config config.yaml --scan-compressed --content-type-check\n"
+            f"  {prog} --config config.yaml --progress\n"
             "\n"
             "  # Validate config only (loader checks; no scan or API startup)\n"
             f"  {prog} --config config.yaml --validate-config\n"
@@ -654,6 +655,23 @@ def main() -> None:
             "for this process and stores the opt-in on the session."
         ),
     )
+    progress_group = parser.add_mutually_exclusive_group()
+    progress_group.add_argument(
+        "--progress",
+        action="store_true",
+        dest="scan_progress",
+        default=None,
+        help=(
+            "Emit periodic scan progress to stderr (target X/Y, table N/M, percent, ETA). "
+            "Default when omitted: scan.progress in config (true unless disabled)."
+        ),
+    )
+    progress_group.add_argument(
+        "--no-progress",
+        action="store_false",
+        dest="scan_progress",
+        help="Disable live scan progress lines for this run.",
+    )
     args = parser.parse_args()
 
     if args.version:
@@ -811,6 +829,8 @@ def main() -> None:
     if args.jurisdiction_hint:
         config.setdefault("report", {}).setdefault("jurisdiction_hints", {})
         config["report"]["jurisdiction_hints"]["enabled"] = True
+    if getattr(args, "scan_progress", None) is not None:
+        config.setdefault("scan", {})["progress"] = bool(args.scan_progress)
 
     # #856 (Phase E): integrity anchor first-run validation / startup re-verify.
     # Runs in ANY licensing mode (including open); fail-soft (state=unknown).

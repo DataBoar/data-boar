@@ -345,6 +345,17 @@ Not a legal conclusion; also configurable under
 .BR report.jurisdiction_hints .
 Stored on the session when set via CLI or API.
 .
+.TP
+.B \-\-progress
+Emit periodic scan progress to stderr (target X/Y, table N/M, percent, ETA when known).
+Default follows
+.B scan.progress
+in config (on unless disabled).
+.
+.TP
+.B \-\-no\-progress
+Disable live scan progress lines for this run.
+.
 .SH CONFIGURATION
 The main config file (YAML or JSON) defines:
 .IP \(bu 2
@@ -374,7 +385,14 @@ optionally require_api_key, api_key or api_key_from_env for API key protection (
 .IR audit_results.db ).
 .IP \(bu 2
 .B scan
-\- max_workers for parallelism.
+\- max_workers for parallelism;
+.B adaptive_rate_limit
+(opt\-in; default false) tunes effective workers from per\-target latency;
+.B target_latency_ms
+(default 200) is the ARL feedback target in milliseconds when ARL is enabled;
+.B progress
+(default true) enables periodic stderr progress lines (override with
+.BR \-\-progress / \-\-no\-progress ).
 .IP \(bu 2
 Optional:
 .B rate_limit

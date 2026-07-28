@@ -54,6 +54,27 @@ This document helps you diagnose and fix **unreachable**, **timeout**, and **per
 - Re-run during off-peak or from a host/region closer to the target.
 - Check the audit log for which operation timed out (e.g. connect vs read); that tells you whether to focus on network or target performance.
 
+### 3.3 Remote database latency (RTT-bound scans)
+
+**Symptoms:** Scan runs for tens of minutes; CloudWatch (or equivalent) shows **low CPU** and **low ReadLatency** on the database, while the operator workstation is far away (different region or continent).
+
+**Cause:** Each column sample in SQL connectors issues at least one round trip. Wall-clock time scales with **(number of queries × RTT)**, not link bandwidth. The server can be idle while the client waits on the network.
+
+**Diagnosis checklist:**
+
+1. **Server not overloaded:** CPU and read latency metrics stay low — this is **not** “the DB cannot keep up” and **not** Python GIL on the scanner host for this pattern.
+2. **Client wait:** Threads blocked on I/O; `ss -tn dst :<db-port>` shows open connections during the scan.
+3. **High RTT:** Measure TCP RTT between scanner host and DB endpoint (same path the scan uses).
+
+**Mitigations (in order):**
+
+1. **Co-locate** — run Data Boar in the **same VPC/region** as the database (jump box, CI runner, lab VM). This removes most cross-region RTT.
+2. **Reduce scope** — fewer schemas/tables, tighter `sample_limit`, or dedicated audit replica in-region.
+3. **`scan.max_workers`** — increases **parallel targets only**. It does **not** parallelize tables inside one PostgreSQL/RDS target today. Future per-table parallelism is tracked in [#1322](https://github.com/DataBoar/data-boar/issues/1322) (1.8.x milestone; not scheduled for the current release line).
+4. **ARL** — `scan.adaptive_rate_limit: true` tunes target concurrency from latency; it does not remove RTT per query.
+
+**Live progress:** enable `scan.progress` (default) or `--progress` so stderr shows `target X/Y · table N/M` without manual log archaeology — see [USAGE.md](USAGE.md) § *Live scan progress*.
+
 ---
 
 ## 4. Permission denied

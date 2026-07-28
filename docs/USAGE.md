@@ -674,6 +674,40 @@ scan:
 
 See also [TECH_GUIDE.md](TECH_GUIDE.md) (detection / performance) and [TROUBLESHOOTING_CONNECTIVITY.md](TROUBLESHOOTING_CONNECTIVITY.md) (timeouts and load).
 
+### Live scan progress (stderr, #1328)
+
+Long database scans can run for tens of minutes. Data Boar emits **periodic progress lines** to **stderr** (and the audit log when configured) so operators do not need to reverse-engineer table order from logs.
+
+**Format (example):** `target 2/5 (prod-rds) · table 120/450 (public.users) · ~27% · ETA ~12 min`
+
+- **Target X/Y** — position among configured `targets` in this session.
+- **Table N/M** — after SQL discovery lists tables for the current target (`SQLConnector.discover()` / Snowflake `_list_tables()`). **M is known only after discovery** for that target — not from `tables_override_count` in audit logs.
+- **~Z%** and **ETA** — linear estimate from elapsed time per table **after at least two tables** on that target. Omitted when the table total is not yet known (non-SQL targets show `table N` without percent/ETA).
+
+**Enable / tune:**
+
+| Knob | Default | Meaning |
+| ---- | ------- | ------- |
+| `scan.progress` | `true` | Master switch |
+| `scan.progress_interval_seconds` | `30` | Minimum seconds between lines |
+| `scan.progress_interval_tables` | `5` | Also emit every N tables |
+| `--progress` / `--no-progress` | (config) | CLI override for one run |
+
+Progress is **observability only** — it does not change findings, sampling, or reports.
+
+### Remote database latency (cross-region)
+
+When the scanner and the database are in **different regions** (e.g. Brazil workstation → `us-east-1` RDS), wall-clock time is often dominated by **network round-trip time (RTT)**, not CPU on the server.
+
+- **Cost model:** Each column sample pays at least **one RTT** (often more). Total time scales roughly with **(queries × RTT)**, not link throughput.
+- **Symptoms:** CloudWatch **CPUUtilization** low (e.g. ~7%), **ReadLatency** near idle (~1 ms on the server), but the scan still takes tens of minutes — the client spends time **waiting on the network**.
+- **Not GIL / not “server overloaded”:** Python GIL does not explain multi-minute SQL scans with idle server CPU; check client-side wait and RTT first.
+- **Recommendation #1:** **Co-locate** the scanner with the database — same **VPC/region** as RDS (jump host, CI runner, or lab VM in that region).
+- **`scan.max_workers` caveat (current behaviour):** Database parallelism is **per target**, not per table or column within one database. `max_workers: 8` helps only when you have **many targets**; it does **not** speed up a single large RDS with one target. Finer-grained DB parallelism is tracked as future work ([#1322](https://github.com/DataBoar/data-boar/issues/1322) — 1.8.x milestone; not promised for the current release line).
+- **How to measure:** Client concurrency `ss -tn dst :<port>`; server **DatabaseConnections**, **ReadLatency**, **CPUUtilization** (CloudWatch or equivalent); baseline **TCP RTT** (`ping` / `mtr` — interpret with care through firewalls).
+
+See [TROUBLESHOOTING_CONNECTIVITY.md](TROUBLESHOOTING_CONNECTIVITY.md) § *Remote database latency* and [TECH_GUIDE.md](TECH_GUIDE.md).
+
 ### API and security (CSP, headers)
 
 The web API and dashboard send **security headers** on every response (see [SECURITY.md](../SECURITY.md)): X-Content-Type-Options, X-Frame-Options, **Content-Security-Policy (CSP)**, Referrer-Policy, Permissions-Policy, and HSTS when the request is considered HTTPS.

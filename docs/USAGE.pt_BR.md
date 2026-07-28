@@ -615,6 +615,33 @@ scan:
 
 Veja também [TECH_GUIDE.pt_BR.md](TECH_GUIDE.pt_BR.md) e [TROUBLESHOOTING_CONNECTIVITY.pt_BR.md](TROUBLESHOOTING_CONNECTIVITY.pt_BR.md).
 
+### Progresso ao vivo do scan (stderr, #1328)
+
+Varreduras longas em banco podem levar dezenas de minutos. O Data Boar emite **linhas periódicas de progresso** em **stderr** (e no audit log quando configurado) para o operador não precisar estimar ETA cruzando ordem alfabética de tabelas com o SQLite.
+
+**Formato (exemplo):** `target 2/5 (prod-rds) · table 120/450 (public.users) · ~27% · ETA ~12 min`
+
+- **Target X/Y** — posição entre os `targets` desta sessão.
+- **Table N/M** — após a descoberta SQL listar as tabelas do alvo atual (`SQLConnector.discover()` / Snowflake `_list_tables()`). **M só é conhecido depois da discovery** — não confundir com `tables_override_count` nos logs de auditoria.
+- **~Z%** e **ETA** — estimativa linear após **pelo menos duas tabelas** no mesmo alvo. Sem total conhecido (alvos não-SQL), mostra `table N` sem percentual/ETA.
+
+**Ativar / ajustar:** `scan.progress` (padrão `true`), `scan.progress_interval_seconds` (30), `scan.progress_interval_tables` (5), ou `--progress` / `--no-progress` na CLI.
+
+Somente **observabilidade** — não altera achados, amostragem nem relatório.
+
+### Latência de banco remoto (cross-region)
+
+Com scanner e banco em **regiões diferentes** (ex.: estação no Brasil → RDS `us-east-1`), o tempo costuma ser dominado pelo **RTT de rede**, não pela CPU do servidor.
+
+- **Modelo de custo:** cada amostragem de coluna paga pelo menos **1 RTT**; tempo ≈ **(consultas × RTT)**, não throughput do link.
+- **Sintomas:** **CPUUtilization** baixa no CloudWatch, **ReadLatency** ~ociosa no servidor, scan ainda lento — o cliente fica em **espera de rede**.
+- **Não é GIL / servidor sobrecarregado:** com CPU ociosa no RDS, investigue RTT e filas no cliente primeiro.
+- **Recomendação #1:** **Co-localizar** scanner e banco — mesma **VPC/região** (jump host, runner de CI ou VM de lab na região).
+- **Caveat `scan.max_workers` (comportamento atual):** paralelismo de DB é **por target**, não por tabela/coluna. `max_workers` alto só ajuda com **vários targets**; não acelera um único RDS grande. Paralelismo fino dentro do DB está em [#1322](https://github.com/DataBoar/data-boar/issues/1322) (milestone 1.8.x — trabalho futuro, sem promessa de data).
+- **Como medir:** `ss -tn dst :<porta>` no cliente; **DatabaseConnections**, **ReadLatency**, **CPUUtilization** no servidor; RTT TCP de referência.
+
+Veja [TROUBLESHOOTING_CONNECTIVITY.pt_BR.md](TROUBLESHOOTING_CONNECTIVITY.pt_BR.md) § *Latência de banco remoto* e [TECH_GUIDE.pt_BR.md](TECH_GUIDE.pt_BR.md).
+
 ### API e segurança (CSP, cabeçalhos)
 
 A API web e o dashboard enviam **cabeçalhos de segurança** em toda resposta (veja [SECURITY.md](../SECURITY.md)): X-Content-Type-Options, X-Frame-Options, **Content-Security-Policy (CSP)**, Referrer-Policy, Permissions-Policy e HSTS quando a requisição é considerada HTTPS.

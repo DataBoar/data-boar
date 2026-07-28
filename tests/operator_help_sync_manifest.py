@@ -44,6 +44,7 @@ _MAN_EXPORT_AUDIT = r"\-\-export\-audit\-trail"
 _MAN_TENANT = r"\-\-tenant"
 _MAN_TECH = r"\-\-technician"
 _MAN_JURISDICTION_HINT = r"\-\-jurisdiction\-hint"
+_MAN_SCAN_PROGRESS = r"\-\-progress"
 _MAN_HTTPS_CERT = r"\-\-https\-cert\-file"
 _MAN_HTTPS_KEY = r"\-\-https\-key\-file"
 _MAN_ALLOW_INSECURE_HTTP = r"\-\-allow\-insecure\-http"
@@ -164,6 +165,18 @@ OPERATOR_HELP_MARKERS: tuple[OperatorHelpMarker, ...] = (
         "--jurisdiction-hint",
         "--jurisdiction-hint",
         _MAN_JURISDICTION_HINT,
+    ),
+    OperatorHelpMarker(
+        "scan_progress",
+        "--progress",
+        "--progress",
+        _MAN_SCAN_PROGRESS,
+    ),
+    OperatorHelpMarker(
+        "scan_no_progress",
+        "--no-progress",
+        "--no-progress",
+        None,
     ),
     # Dev canonical invocation is python main.py; installed entry point is data-boar.
     # Man pages document installed usage, so man1 is intentionally skipped here.
