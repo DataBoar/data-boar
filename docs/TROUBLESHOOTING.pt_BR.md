@@ -93,31 +93,95 @@ pipx install --python python3.12 data-boar
 ### Void-glibc vs Void-musl
 
 - **Void-glibc:** hoje passa no caminho padrão (`pipx install data-boar`) porque o PyPI publica wheel compatível `cp314`.
-- **Void-musl:** o seed de wheelhouse já está disponível para o wheel musllinux `cp314` faltante (`scikit-learn`, reparado com auditwheel). Use:
-
-```bash
-pipx install data-boar \
-  --pip-args="--find-links https://github.com/DataBoar/data-boar-site/releases/download/wheelhouse-2026-07-12/scikit_learn-1.9.0-cp314-cp314-musllinux_1_2_x86_64.whl"
-```
-
-Se essa URL de wheelhouse não estiver acessível no seu ambiente, use Docker ou instale os pré-requisitos de build locais.
+- **Void-musl:** o upstream **não** publica wheel `scikit-learn` musllinux em nenhum `cpXXX`. O passo 1 abaixo ainda exige pasta local de wheels (ou **URL direta de `.whl`** — não a página de release do GitHub). O passo 2 é obrigatório para o stack de ML; em CPU **x86-64-v1** o passo 2 também troca o numpy do PyPI (ver [x86-64-v1 / instalação via wheelhouse](#x86-64-v1--instalação-via-wheelhouse-musl-sem-avx-e-hosts-min-spec)).
 
 ### Alpine/musl: wheelhouse ou toolchain de build
 
 Nesse caminho, `scikit-learn` pode cair em compilação via source no musl. Sem toolchain de build, `pipx install data-boar` pode falhar com `metadata-generation-failed`.
 
-Se não houver wheelhouse disponível, instale pré-requisitos antes:
+Compilar localmente com toolchain (`apk add build-base gfortran openblas-dev`) resolve lacunas musl, mas **não** resolve CPU **x86-64-v1** — wheels numpy/scipy do PyPI ainda dão SIGILL. Em hardware x86 anterior a 2011, use o [caminho wheelhouse](#x86-64-v1--instalação-via-wheelhouse-musl-sem-avx-e-hosts-min-spec) em vez de assumir que compilar = stack binário funcional.
+
+Se não houver wheelhouse e a CPU for moderna, instale pré-requisitos antes:
 
 ```bash
 apk add build-base gfortran openblas-dev
 pipx install data-boar
 ```
 
-Esse caminho tende a melhorar com a evolução da cobertura musllinux no wheelhouse ([#929](https://github.com/DataBoar/data-boar/issues/929), [#1182](https://github.com/DataBoar/data-boar/issues/1182)).
+Evolução do wheelhouse: [#929](https://github.com/DataBoar/data-boar/issues/929) e [#1182](https://github.com/DataBoar/data-boar/issues/1182).
 
-### Hosts sem AVX
+### x86-64-v1 / instalação via wheelhouse (musl, sem AVX e hosts min-spec)
 
-Não assuma caminho padrão PyPI sem atrito. Use wheelhouse (`--find-links`) ou Docker.
+Use quando **qualquer** destes casos se aplicar:
+
+- **musl** (Alpine, Void-musl) e você precisa do stack de ML completo sem toolchain Fortran local.
+- **CPU x86 anterior a 2011** onde `import numpy` morre com **`Illegal instruction`** (classe Core 2 / Celeron / Pentium — só `ssse3`, sem SSE4.2/POPCNT). O piso é **`x86-64-v1`**, não só “sem AVX”: wheels do PyPI miram **`x86-64-v2`** ou superior; variáveis de ambiente (`NPY_DISABLE_CPU_FEATURES`, `OPENBLAS_CORETYPE`) **não** ajudam porque o crash está na **baseline compilada**, não no despacho em runtime ([#929](https://github.com/DataBoar/data-boar/issues/929)).
+- Instalação **air-gapped** ou com egress restrito que precisa resolver offline.
+
+**Release hospedado (verificado):** [wheelhouse-x86-64-v1-2026-07-29](https://github.com/DataBoar/data-boar-site/releases/tag/wheelhouse-x86-64-v1-2026-07-29) em `DataBoar/data-boar-site` — 41 wheels, `SHA256SUMS` anexo. Texto completo de instalação/verificação também no asset `README.md` do release.
+
+**`boar_fast_filter` não está no PyPI.** O wheel publicado de `data-boar` é `py3-none-any` com **zero** extensões compiladas — toda instalação só-PyPI usa o fallback de pré-filtro em Python puro. Hoje o wheelhouse é o **único** canal do acelerador Rust (`cp38-abi3`, um wheel por libc).
+
+#### `--find-links` adiciona um índice; não prefere
+
+Os nomes de arquivo batem com o PyPI (`numpy-2.5.1-cp312-cp312-musllinux_1_2_x86_64.whl`, etc.), então o pip ainda pode escolher o wheel **upstream** no passo 1. A instalação real tem **dois passos forçados** após o download (mais inject do acelerador):
+
+- `--find-links` aceita **pasta local**, **URL direta de `.whl`** ou **página HTML de links** — **não** a página de **release** do GitHub. Com ~40 wheels, baixe para uma pasta primeiro.
+
+```bash
+TAG=wheelhouse-x86-64-v1-2026-07-29
+mkdir -p ~/wheelhouse-v1
+gh release download "$TAG" --repo DataBoar/data-boar-site \
+  --pattern '*musllinux*' --pattern '*-none-any.whl' --dir ~/wheelhouse-v1
+# hosts glibc: troque *musllinux* por *manylinux*
+# sem gh: baixe os mesmos assets na página do release (navegador ou curl -LO)
+
+# armadilha tmpfs — veja abaixo antes de qualquer passo pip que possa compilar
+export TMPDIR="${TMPDIR:-/var/tmp/data-boar-build}"
+mkdir -p "$TMPDIR"
+
+pipx install data-boar --pip-args="--find-links $HOME/wheelhouse-v1"
+pipx runpip data-boar install --no-index --find-links $HOME/wheelhouse-v1 \
+  --force-reinstall numpy scipy scikit-learn pandas
+pipx inject data-boar boar_fast_filter --pip-args="--no-index --find-links $HOME/wheelhouse-v1"
+```
+
+**`--find-links` com um único `.whl`** (só uma célula musllinux faltando) pode destravar o passo 1, mas **não** substitui o numpy do PyPI em CPU v1 — ainda precisa do `--force-reinstall` offline.
+
+#### `TMPDIR` em tmpfs (hosts min-spec)
+
+Se a instalação falhar com `[Errno 28] No space left on device` com disco livre na raiz, confira se `/tmp` é **tmpfs** pequeno (padrão: metade da RAM). Build de `scikit-learn` pode não caber mesmo com centenas de GB livres no disco. Aponte o scratch do pip para armazenamento real **antes** do passo 1:
+
+```bash
+export TMPDIR=/var/tmp/data-boar-build && mkdir -p "$TMPDIR"
+```
+
+**Interação com `--demo`:** o relatório do demo vai para **`$TMPDIR/data_boar_demo`**. Se você definiu `TMPDIR` na instalação, procure o relatório lá — não só em `/tmp`.
+
+#### Verificar que a troca pegou
+
+```bash
+python -c "from core import detector; print(detector._ML_AVAILABLE)"   # deve imprimir True
+python -c "
+import glob, os, numpy
+so = glob.glob(os.path.join(numpy.__path__[0], '_core', '_multiarray_umath*.so'))[0]
+print(os.path.getsize(so), 'bytes')
+"
+# este wheelhouse: ~5–5,3 MB; numpy PyPI na mesma tag: ~10,8 MB (SIGILL em v1)
+objdump -d "$(python -c 'import glob,os,numpy;print(glob.glob(os.path.join(numpy.__path__[0],"_core","_multiarray_umath*.so"))[0])')" \
+  | grep -c popcnt   # deve imprimir 0
+```
+
+**Paridade de campo (1.7.4.post10, `--demo`):** **26 achados**, `_ML_AVAILABLE=True` — mesma contagem dos caminhos Debian/Fedora/Alma glibc quando o harness espera o relatório (ver matriz). Em metal: Intel Celeron 900, Alpine/musl, caminho wheelhouse offline.
+
+#### Armadilhas de automação com `--demo`
+
+- **`data-boar --demo` não encerra** após o scan — sobe a API em **`127.0.0.1:8088`** e fica em **LISTEN**. Espere o **relatório** em `$TMPDIR/data_boar_demo`, não o fim do processo.
+- Se você mudou `TMPDIR` na instalação (contorno tmpfs), o relatório do demo segue **`$TMPDIR`** — não procure só em `/tmp/data_boar_demo`.
+
+### Hosts sem AVX (ponteiro)
+
+Não assuma caminho PyPI sem atrito. Use a [instalação wheelhouse x86-64-v1](#x86-64-v1--instalação-via-wheelhouse-musl-sem-avx-e-hosts-min-spec) ou Docker.
 
 ### RHEL 7 / CentOS 7 (EOL)
 

@@ -49,22 +49,52 @@
 | Distro           | Why test                                                                             | Python 3.12+ status                                                           | Package manager    | Notes                                                                                                                                                                                                                                                                   |
 | ------           | --------                                                                             | -------------------                                                           | ----------------   | -----                                                                                                                                                                                                                                                                   |
 | **Gentoo**       | **Source-based**; **USE flags**; catches **compile-time** issues; **advanced** users | **Gentoo** can compile **any** Python version; **ebuilds** for 3.12+ exist    | **`emerge`**       | **System deps:** `emerge -av dev-lang/python:3.12 dev-libs/openssl dev-libs/libffi dev-db/postgresql` (adjust USE flags). **`uv`** may work; **pip** fallback if wheels fail. **Gentoo** is **slow** to install; use for **final** compatibility pass, not first smoke. |
-| **Void Linux**   | **musl** option; **xbps** package manager; **lightweight**                           | **Void** has Python 3.12+; **musl** vs **glibc** can affect **native wheels** | **`xbps-install`** | **Proven split (1.7.4.post3 retest):** **Void-glibc** passes in default `pipx install data-boar` (PyPI publishes `cp314` wheel). **Void-musl (py3.14.6):** runtime parity (**26 findings**) is now proven with wheelhouse seed `cp314` + `auditwheel repair` (`scikit_learn-1.9.0-cp314-cp314-musllinux_1_2_x86_64.whl`, release `wheelhouse-2026-07-12`). Fallback path remains toolchain install (`xbps-install -S python3-devel gcc gcc-fortran openblas-devel`) when wheelhouse access is unavailable. |
-| **Alpine Linux** | **musl** + **apk**; **Docker** base images; **minimal**                              | **Alpine** has Python 3.12+; **musl** + **small** libc can break some wheels  | **`apk add`**      | **System deps:** `apk add python3 py3-pip gcc musl-dev openssl-dev libffi-dev postgresql-dev unixodbc-dev`. **Onboarding gap (pipx):** in this musl path, `scikit-learn` may fall back to source build and fail with `metadata-generation-failed` without toolchain. Use wheelhouse (`--find-links`) when available, or pre-step `apk add build-base gfortran openblas-dev` before `pipx install data-boar` (until wheelhouse work in #929 and #1182). **Runtime parity note:** once install succeeds and smoke waits for scan completion, Alpine-musl matched Debian-glibc at 26 findings in the 1.7.4.post3 retest; the earlier 13-count was a harness timeout artifact, not a detector/parser gap. |
+| **Void Linux**   | **musl** option; **xbps** package manager; **lightweight**                           | **Void** has Python 3.12+; **musl** vs **glibc** can affect **native wheels** | **`xbps-install`** | **Proven split (1.7.4.post10):** **Void-glibc** passes in default `pipx install data-boar`. **Void-musl:** runtime parity (**26 findings**, `_ML_AVAILABLE=True`) via [wheelhouse x86-64-v1](https://github.com/DataBoar/data-boar-site/releases/tag/wheelhouse-x86-64-v1-2026-07-29) two-step install ([TROUBLESHOOTING.md](../TROUBLESHOOTING.md) §x86-64-v1). Toolchain-only path remains when wheelhouse is unavailable. **CPU baseline is orthogonal to libc** — container musl on an AVX host validates musl, not v1 (see §2.1). |
+| **Alpine Linux** | **musl** + **apk**; **Docker** base images; **minimal**                              | **Alpine** has Python 3.12+; **musl** + **small** libc can break some wheels  | **`apk add`**      | **Wheelhouse path (1.7.4.post10):** [wheelhouse-x86-64-v1-2026-07-29](https://github.com/DataBoar/data-boar-site/releases/tag/wheelhouse-x86-64-v1-2026-07-29) — download folder + two-step `pipx` + `boar_fast_filter` inject ([TROUBLESHOOTING.md](../TROUBLESHOOTING.md)). Toolchain path (`apk add build-base gfortran openblas-dev`) fixes musl gaps but **not** x86-64-v1 SIGILL from PyPI numpy. **`--demo`:** 26 findings when harness waits for report under `$TMPDIR/data_boar_demo` (process stays on `127.0.0.1:8088`). |
 
 **Recommendation:** **Void** or **Alpine** (musl) is **higher** priority than **Gentoo** if you want **musl** coverage; **Gentoo** is **educational** but **time-consuming**.
 
 ---
 
-### Tier 3.5: Proven `pipx` install outcomes (1.7.4.post3 retest)
+## 2.1 CPU baseline vs libc (orthogonal axes)
+
+**libc** (glibc vs musl) and **CPU ISA baseline** (PyPI `x86-64-v2` vs wheelhouse `x86-64-v1`) are **independent**. A host can be musl-only, v1-only, or both — the lab node **alpine-emachines** (Celeron 900, Alpine/musl) exercises **both** at once.
+
+| Axis | What breaks on PyPI-only `pipx` | Wheelhouse slice |
+| ---- | ------------------------------ | ---------------- |
+| **musl** | Missing `scikit-learn` musllinux wheels; source build / `metadata-generation-failed` | `musllinux_1_2_x86_64` cells in [wheelhouse-x86-64-v1-2026-07-29](https://github.com/DataBoar/data-boar-site/releases/tag/wheelhouse-x86-64-v1-2026-07-29) |
+| **x86-64-v1** (pre-2011, no SSE4.2/POPCNT) | `import numpy` → **SIGILL**; not fixable via env vars | Same release — numpy/scipy rebuilt with `popcnt=0` gate |
+| **Container on AVX host** | musl path testable in `python:*-alpine` | **Does not** prove v1 — inherits host CPU features |
+
+Install contract (two-step `pipx` + offline ML swap + `boar_fast_filter` inject): [TROUBLESHOOTING.md](../TROUBLESHOOTING.md) §x86-64-v1.
+
+---
+
+### Tier 3.5: Proven `pipx` install outcomes (1.7.4.post10)
 
 | Path | Current status | Required action |
 | ---- | -------------- | --------------- |
 | **Debian / Fedora / RHEL10-family / Void-glibc** | Frictionless | `pipx install data-boar` |
 | **RHEL 8 / RHEL 9** | Extra step required | `dnf install -y python3.12` then `pipx install --python python3.12 data-boar` |
-| **Void-musl** | Parity via wheelhouse `cp314` + `auditwheel repair` | `pipx install data-boar --pip-args="--find-links https://github.com/DataBoar/data-boar-site/releases/download/wheelhouse-2026-07-12/scikit_learn-1.9.0-cp314-cp314-musllinux_1_2_x86_64.whl"`; fallback: build prerequisites (`python3-devel gcc gcc-fortran openblas-devel`) |
-| **Alpine musl / no-AVX hosts** | Default path not frictionless | Use wheelhouse (`--find-links`) or distro build prerequisites; fall back to Docker when wheelhouse is unavailable |
+| **Void-musl / Alpine musl / x86-64-v1** | Parity via wheelhouse v1 | Download [wheelhouse-x86-64-v1-2026-07-29](https://github.com/DataBoar/data-boar-site/releases/tag/wheelhouse-x86-64-v1-2026-07-29) to a folder; two-step install + `boar_fast_filter` inject — [TROUBLESHOOTING.md](../TROUBLESHOOTING.md) |
 | **RHEL 7 / CentOS 7** | Native `pipx` path not viable | Docker-only path (EOL repos + Python floor mismatch) |
+
+### Tier 3.6: `--demo` parity matrix (1.7.4.post10)
+
+**Acceptance signal:** **26 findings** and `core.detector._ML_AVAILABLE is True` on every cell below (harness must wait for the report — `--demo` keeps listening on `127.0.0.1:8088`).
+
+| Cell | libc | CPython | CPU / notes |
+| ---- | ---- | ------- | ----------- |
+| Debian | glibc | 3.12+ | default pipx |
+| Fedora | glibc | 3.12+ | default pipx |
+| AlmaLinux 9 | glibc | 3.12 | `pipx --python python3.12` |
+| Void-glibc | glibc | 3.14 | default pipx |
+| Void-musl | musl | 3.14 | wheelhouse v1 |
+| Alpine | musl | 3.12 / 3.13 / 3.14 | wheelhouse v1 |
+| Debian arm64 | glibc | 3.12+ | QEMU lab row |
+| alpine-emachines (metal) | musl | 3.12 | Celeron 900, v1 + musl; offline wheelhouse |
+
+**Redis / DB lab smoke** (separate checklist): Postgres/MariaDB/MSSQL/Oracle synthetic targets **20 findings each**; Redis **5** — see `deploy/lab-smoke-stack/`.
 
 ---
 
