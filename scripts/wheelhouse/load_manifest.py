@@ -65,10 +65,12 @@ def main() -> int:
         build = data["build"]
         meson = " ".join(f"-C setup-args={a}" for a in build["numpy_meson_args"])
         pure = " ".join(pkgs["pure_wheels"])
-        print(f"export NUMPY_SPEC={pkgs['numpy']!r}")
-        print(f"export SCIPY_SPEC={pkgs['scipy']!r}")
-        print(f"export SKLEARN_SPEC={pkgs['scikit-learn']!r}")
-        print(f"export PANDAS_SPEC={pkgs['pandas']!r}")
+        # Manifest stores bare version specs; pip needs "name>=…". Compose here so
+        # shell scripts never invent package names (scikit-learn keeps the hyphen).
+        print("export NUMPY_SPEC={!r}".format("numpy" + pkgs["numpy"]))
+        print("export SCIPY_SPEC={!r}".format("scipy" + pkgs["scipy"]))
+        print("export SKLEARN_SPEC={!r}".format("scikit-learn" + pkgs["scikit-learn"]))
+        print("export PANDAS_SPEC={!r}".format("pandas" + pkgs["pandas"]))
         print(f"export PURE_WHEELS={pure!r}")
         print(f"export NUMPY_MESON_PIP_ARGS={meson!r}")
         print(f"export GATE_POPCNT_MAX={gates['numpy_popcnt_max']}")

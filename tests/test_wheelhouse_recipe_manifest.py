@@ -67,6 +67,26 @@ def test_workflow_does_not_hardcode_connector_sha256() -> None:
     assert "matrix-cell" in jobs
 
 
+def test_export_build_env_composes_package_name_with_spec() -> None:
+    """pip rejects a bare '>=2.4.6' — export must be 'numpy>=2.4.6' (#1380 CI)."""
+    import subprocess
+    import sys
+
+    out = subprocess.check_output(
+        [
+            sys.executable,
+            str(REPO / "scripts" / "wheelhouse" / "load_manifest.py"),
+            "--export-build-env",
+        ],
+        text=True,
+    )
+    assert "NUMPY_SPEC='numpy>=2.4.6'" in out
+    assert "SCIPY_SPEC='scipy>=" in out
+    assert "SKLEARN_SPEC='scikit-learn>=" in out
+    assert "PANDAS_SPEC='pandas>=" in out
+    assert "NUMPY_SPEC='>=2.4.6'" not in out
+
+
 def test_build_scripts_preserve_grep_c_and_platform_lessons() -> None:
     musl = BUILD_MUSL.read_text(encoding="utf-8")
     assert "grep -c popcnt || true" in musl
