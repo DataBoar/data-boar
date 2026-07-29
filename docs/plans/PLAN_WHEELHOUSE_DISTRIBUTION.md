@@ -1,13 +1,13 @@
 # Plan: Wheelhouse distribution via GitHub Releases (pan-ABI matrix) (#1182)
 
-<!-- plans-hub-summary: Pan-ABI wheelhouse matrix — cp312/cp313/cp314 × (manylinux|musllinux) × (x86_64|arm64) for non-abi3 third-party deps; ONE cp38-abi3 wheel per (libc×arch) for boar_fast_filter; seed via DataBoar/data-boar-site Releases; hold Troubleshooting/matrix URLs until hosting verified. -->
+<!-- plans-hub-summary: Pan-ABI wheelhouse matrix — cp312/cp313/cp314 × (manylinux|musllinux) × (x86_64|arm64) × CPU baseline (x86-64-v1); abi3 boar_fast_filter per (libc×arch); hosted release wheelhouse-x86-64-v1-2026-07-29 verified; Troubleshooting/matrix URLs live (#1365). -->
 <!-- plans-hub-related: PLAN_PACKAGING_EXTRAS.md, PLAN_QUICKSTART.md -->
 
-- **Status:** In progress
-- **Date:** 2026-07-12 (scope rewrite 2026-07-22 — pan-ABI / full matrix)
+- **Status:** In progress (x86-64-v1 slice shipped + user docs rolled out; arm64 + PEP 503 index pending)
+- **Date:** 2026-07-12 (scope rewrite 2026-07-22; v1 release + doc rollout 2026-07-29 — [#1365](https://github.com/DataBoar/data-boar/issues/1365))
 - **Authors:** Fabio Leitao (operator); Cursor executor
 - **Priority:** H1 (packaging / distribution)
-- **GitHub:** [#1182](https://github.com/DataBoar/data-boar/issues/1182) `[P1][packaging]` · cross-ref [#782](https://github.com/DataBoar/data-boar/issues/782) (abi3 wheel matrix) · **GAP-001** (wheel-matrix / maturin)
+- **GitHub:** [#1182](https://github.com/DataBoar/data-boar/issues/1182) `[P1][packaging]` · cross-ref [#782](https://github.com/DataBoar/data-boar/issues/782) (abi3 wheel matrix) · **GAP-001** (wheel-matrix / maturin) · doc slice [#1365](https://github.com/DataBoar/data-boar/issues/1365)
 
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md)
 
@@ -15,16 +15,16 @@
 
 ## Problem
 
-PyPI coverage on **musl / no-AVX** (and other edge corners) stays asymmetric: some compiled dependencies ship incomplete platform tags (classic gap: `scikit-learn` musllinux on newer CPython tags). A **wheelhouse** fills those upstream holes so `pipx install data-boar` works without a local toolchain.
+PyPI coverage on **musl / no-AVX / x86-64-v1** (and other edge corners) stays asymmetric: some compiled dependencies ship incomplete platform tags or ISA baselines too high for pre-2011 CPUs. A **wheelhouse** fills those upstream holes so `pipx install data-boar` works without a local toolchain — **and** is today the **only** channel for the `boar_fast_filter` Rust accelerator (PyPI `data-boar` wheel is `py3-none-any` with zero compiled extensions).
 
 Two **orthogonal** packaging tracks must not be confused:
 
 | Track | ABI model | What the wheelhouse / release matrix must publish |
 | ----- | --------- | ------------------------------------------------- |
-| **`boar_fast_filter`** (our Rust/PyO3 ext) | **abi3-py38** (`rust/boar_fast_filter/Cargo.toml`) | **ONE** `cp38-abi3` wheel per `(libc × arch)` — serves **all** CPython **3.8+**. **Do not** emit per-`cpXXX` wheels for this extension. Tracked as [#782](https://github.com/DataBoar/data-boar/issues/782) / **GAP-001**. |
-| **Third-party compiled deps** (numpy, pandas, scipy, scikit-learn, pydantic-core, cryptography, pillow, …) | **Not** abi3 (stable ABI) for the scientific / ML stack we care about | **Per-`cpXXX`:** `cp312` + `cp313` + `cp314`, each × `(manylinux/glibc \| musllinux/musl)` × `(x86_64 \| arm64)`. Wheelhouse priority = **fill upstream gaps** (e.g. sklearn `cp314` musllinux). |
+| **`boar_fast_filter`** (our Rust/PyO3 ext) | **abi3-py38** (`rust/boar_fast_filter/Cargo.toml`) | **ONE** `cp38-abi3` wheel per `(libc × arch)` — serves **all** CPython **3.8+**. **Do not** emit per-`cpXXX` wheels for this extension. **Not distributed on PyPI today.** Tracked as [#782](https://github.com/DataBoar/data-boar/issues/782) / **GAP-001**. |
+| **Third-party compiled deps** (numpy, pandas, scipy, scikit-learn, pydantic-core, cryptography, pillow, …) | **Not** abi3 (stable ABI) for the scientific / ML stack we care about | **Per-`cpXXX`:** `cp312` + `cp313` + `cp314`, each × `(manylinux/glibc \| musllinux/musl)` × `(x86_64 \| arm64)`. Wheelhouse priority = **fill upstream gaps** and **x86-64-v1** rebuilds where PyPI baseline is too high. |
 
-The first hosted seed (2026-07-12) proved the **HTTPS + `--find-links`** path for **one** gap artifact (`scikit-learn` `cp314` musllinux). That seed is **not** the end state — the plan target is the **full pan-ABI matrix** above.
+The first hosted seed (2026-07-12) proved **HTTPS + `--find-links`** for **one** gap artifact (`scikit-learn` `cp314` musllinux). The **x86-64-v1** release (2026-07-29) is the first **full dependency-closed** slice for x86_64.
 
 **CI gating note:** `cp314` remains **signal-only** in CI gating (compat / foresight), not a hard release gate. The wheelhouse still **builds and hosts** `cp314` cells so musl/no-AVX hosts on 3.14 do not fall back to source builds.
 
@@ -34,32 +34,17 @@ The first hosted seed (2026-07-12) proved the **HTTPS + `--find-links`** path fo
 
 Use a phased wheelhouse distribution model (same direction tracked in #1182 comments):
 
-1. **GitHub Releases assets** (immediate HTTPS seed path).
+1. **GitHub Releases assets** (immediate HTTPS seed path) — **live for x86-64-v1**.
 2. **GitHub Pages + CDN** (`simple/` index path).
 3. **R2/S3 static index** as scalable mirror.
 
-### ABI rules (non-negotiable)
-
-1. **`boar_fast_filter` → abi3 only**
-   - Source of truth: `pyo3` feature **`abi3-py38`** in `rust/boar_fast_filter/Cargo.toml`.
-   - Publish **one** `cp38-abi3` wheel per `(manylinux|musllinux) × (x86_64|arm64)` (typically 3–4 wheels; see #782).
-   - **Never** generate `cp312` / `cp313` / `cp314` tagged wheels for this crate — they waste CI and mislead operators about ABI collapse.
-   - Cross-ref: issue **#782**, internal gap id **GAP-001** (wheel-matrix / maturin).
-
-2. **Third-party compiled deps → per-CPython tag**
-   - Matrix axes:
-     - **CPython:** `cp312`, `cp313`, `cp314`
-     - **libc:** `manylinux` (glibc), `musllinux` (musl)
-     - **arch:** `x86_64`, `arm64` / `aarch64`
-   - Prefer consuming **upstream PyPI** wheels when present; wheelhouse **only** publishes cells that upstream lacks or that need `auditwheel repair` / no-AVX rebuilds.
-   - Example gap class: `scikit-learn` **cp314 musllinux** (seed already hosted).
-
-### Target matrix (third-party deps)
+### Matrix axes (four dimensions)
 
 ```text
 {cp312, cp313, cp314}
   × {manylinux (glibc), musllinux (musl)}
   × {x86_64, arm64}
+  × {CPU baseline: PyPI default vs x86-64-v1 where needed}
 ```
 
 Plus, separately (not multiplied by cpXXX):
@@ -68,38 +53,85 @@ Plus, separately (not multiplied by cpXXX):
 boar_fast_filter: cp38-abi3 × {manylinux, musllinux} × {x86_64, arm64}
 ```
 
-### Current seed release (slice already shipped — cp314 musllinux gap)
+**libc vs CPU baseline are orthogonal.** Container musl on an AVX laptop proves musl, not v1. Metal **alpine-emachines** (Celeron 900) proves both.
 
-- Site repo: **`DataBoar/data-boar-site`**
-- Tag: **`wheelhouse-2026-07-12`**
-- Release URL: <https://github.com/DataBoar/data-boar-site/releases/tag/wheelhouse-2026-07-12>
-- Asset uploaded:
-  - `scikit_learn-1.9.0-cp314-cp314-musllinux_1_2_x86_64.whl`
+### ABI rules (non-negotiable)
 
-### Install command (real path for this seed)
+1. **`boar_fast_filter` → abi3 only** — one wheel per `(manylinux|musllinux) × (x86_64|arm64)`; never per-`cpXXX` ([#782](https://github.com/DataBoar/data-boar/issues/782) / **GAP-001**).
+2. **Third-party compiled deps → per-CPython tag** — fill upstream gaps; v1 rebuilds use gated builds (`popcnt=0` on numpy baseline).
+3. **`--find-links` adds an index; it does not prefer.** Identical filenames to PyPI mean step 1 alone can still install upstream AVX wheels. **Required user contract:** offline `--force-reinstall` for numpy/scipy/scikit-learn/pandas, then `pipx inject` for `boar_fast_filter` — documented in [TROUBLESHOOTING.md](../TROUBLESHOOTING.md) and release `README.md`.
+
+### Hosted release — x86-64-v1 (verified 2026-07-29)
+
+| Field | Value |
+| ----- | ----- |
+| Site repo | **`DataBoar/data-boar-site`** |
+| Tag | **`wheelhouse-x86-64-v1-2026-07-29`** |
+| Release URL | <https://github.com/DataBoar/data-boar-site/releases/tag/wheelhouse-x86-64-v1-2026-07-29> |
+| Assets | 41 wheels + `SHA256SUMS` + `README.md` (install + verification en_US / pt_BR) |
+| Offline proof | Operator re-downloaded; **28/28** checksums matched; clean-container offline install |
+
+### Install command (verified on metal — musl example)
+
+`--find-links` accepts a **local folder**, a **direct `.whl` URL**, or an **HTML links page** — **not** a GitHub release page. Download wheels first:
 
 ```bash
-pipx install data-boar \
-  --pip-args="--find-links https://github.com/DataBoar/data-boar-site/releases/download/wheelhouse-2026-07-12/scikit_learn-1.9.0-cp314-cp314-musllinux_1_2_x86_64.whl"
+TAG=wheelhouse-x86-64-v1-2026-07-29
+mkdir -p ~/wheelhouse-v1
+gh release download "$TAG" --repo DataBoar/data-boar-site \
+  --pattern '*musllinux*' --pattern '*-none-any.whl' --dir ~/wheelhouse-v1
+
+export TMPDIR="${TMPDIR:-/var/tmp/data-boar-build}"
+mkdir -p "$TMPDIR"
+
+pipx install data-boar --pip-args="--find-links $HOME/wheelhouse-v1"
+pipx runpip data-boar install --no-index --find-links $HOME/wheelhouse-v1 \
+  --force-reinstall numpy scipy scikit-learn pandas
+pipx inject data-boar boar_fast_filter --pip-args="--no-index --find-links $HOME/wheelhouse-v1"
 ```
 
-### Proof run (Alpine musl + cp314)
+Full verification steps (`.so` size, `objdump popcnt`, `_ML_AVAILABLE`, `--demo` traps): release `README.md` and [TROUBLESHOOTING.md](../TROUBLESHOOTING.md) §x86-64-v1.
 
-`podman` validation completed on `python:3.14-alpine`:
+### Proof runs
 
-- `pipx install data-boar` succeeded with the `--find-links` wheel URL above.
-- `data-boar --demo --port 18088` produced findings (log lines with `Finding:` and `Connected:` observed).
+| Run | musl | x86-64-v1 (no AVX) | Notes |
+| --- | ---- | ------------------ | ----- |
+| Seed `wheelhouse-2026-07-12` (Alpine container on AVX host) | ✅ | ❌ not exercised | Proved single-wheel `--find-links` for sklearn gap only |
+| **`wheelhouse-x86-64-v1-2026-07-29`** (metal Celeron 900, Alpine) | ✅ | ✅ | **26** `--demo` findings, `_ML_AVAILABLE=True`; 13 ML-path findings |
+| **`--demo` matrix 1.7.4.post10** (10 cells) | ✅ void-musl + Alpine cp312/313/314 | ✅ alpine-emachines metal | See [OS_COMPATIBILITY_TESTING_MATRIX.md](../ops/OS_COMPATIBILITY_TESTING_MATRIX.md) §Tier 3.6 |
+
+### PEP 503 index trap (record before building `simple/`)
+
+Hosting a **`simple/`** index **alone** does **not** remove the two-step install while PyPI remains reachable with **same version + same platform tag**:
+
+- Our numpy and PyPI numpy are both **`2.5.1`** with the same manylinux/musllinux tag → **version tie**.
+- **Tie-breaker:** PEP 440 **local version** segment — e.g. **`2.5.1+x86v1`** sorts above public **`2.5.1`** and still satisfies `numpy==2.5.1` (`==` ignores local segment).
+- **`--extra-index-url` without local versions** merges candidate lists; it does **not** guarantee the wheelhouse wheel wins.
+
+**Operator decision:** ship **`+x86v1`** (or equivalent) **together with** the index — not index-first expecting a one-liner.
+
+### Build decisions (versioned here — full runbook may stay in operator vault)
+
+Three decisions that make v1 builds work (from release `README.md`):
+
+1. **`-Dcpu-baseline=none -Dcpu-dispatch=none`** on the numpy meson build.
+2. **`--no-build-isolation`** on `pip wheel` — without it, `-C setup-args` never reach meson and the wheel matches PyPI byte-for-byte.
+3. **System OpenBLAS** (`apk add openblas-dev` / `dnf install openblas-devel`), never PyPI `scipy-openblas` — distro builds use `DYNAMIC_ARCH`.
+
+**Container base:** `manylinux_2_28` for glibc (numpy 2.5 requires gcc ≥ 10.3; `manylinux2014` toolchain is too old). Aligns with RHEL 7 / CentOS 7 Docker-only stance in Troubleshooting.
+
+Publication gate: build **aborts** if numpy baseline contains any `popcnt` instruction.
 
 ---
 
-## Anti-link-dead gate (mandatory sequencing)
+## Anti-link-dead gate
 
-Do **not** update the following user-facing docs with hosting URL commands until release hosting is verified for the intended channel and final URL contract:
+**Satisfied for x86-64-v1 (2026-07-29):** release verified, checksums re-checked, offline install proven. User-facing URLs updated in:
 
 - `docs/TROUBLESHOOTING.md` (+ `.pt_BR.md`)
-- `docs/ops/OS_COMPATIBILITY_TESTING_MATRIX.md`
+- `docs/ops/OS_COMPATIBILITY_TESTING_MATRIX.md` (+ `.pt_BR.md`)
 
-This avoids dead links and premature command publication.
+Future releases must repeat verify-before-link for new tags.
 
 ---
 
@@ -113,18 +145,33 @@ This avoids dead links and premature command publication.
 | 4 | Record real `pipx install` command with `--pip-args --find-links` | ✅ |
 | 5 | Prove install + demo in Alpine musl (`podman`) | ✅ |
 | 6 | Add plan + `PLANS_TODO` entry + run `plans_hub_sync.py --write` | ✅ |
-| 7 | Post-hosting docs rollout in Troubleshooting/matrix with stable URL | ⬜ |
-| 8 | Expand from the cp314 musllinux seed to the **full** third-party matrix (`cp312` + `cp313` + `cp314`) × `(manylinux\|musllinux)` × `(x86_64\|arm64)`, filling upstream gaps; keep `boar_fast_filter` on **abi3-only** (#782 / GAP-001). Note: **cp314 = signal-only** in CI gating | ⬜ |
+| 7 | Post-hosting docs rollout in Troubleshooting/matrix with stable URL (**x86-64-v1**) | ✅ ([#1365](https://github.com/DataBoar/data-boar/issues/1365)) |
+| 8 | Expand arm64 slice + hosted PEP 503 `simple/` index with **`+x86v1`** local versions | ⬜ |
+| 9 | Optional: copy full build runbook from vault into `docs/ops/` | ⬜ |
 
 ---
 
-## Acceptance criteria for this slice
+## Acceptance criteria
 
-- [x] Site release exists with tag `wheelhouse-2026-07-12`.
-- [x] cp314 musllinux wheel asset published in that release.
-- [x] Real install command documented in this plan.
-- [x] Alpine musl proof (`pipx install` + `--demo`) captured.
+- [x] Site release exists with tag `wheelhouse-2026-07-12` (seed).
+- [x] Site release exists with tag **`wheelhouse-x86-64-v1-2026-07-29`** (full x86_64 v1 slice).
+- [x] Real two-step install + `boar_fast_filter` inject documented with verified URL.
+- [x] Alpine musl + **metal v1** proof (`pipx` + `--demo` ≥ 20 findings, `_ML_AVAILABLE=True`).
 - [x] `PLANS_HUB` and `PLANS_TODO` synchronized.
-- [x] No premature update to Troubleshooting / OS compatibility matrix URLs.
-- [ ] Plan scope documents **pan-ABI** rules: abi3 for `boar_fast_filter`; per-`cp312`/`cp313`/`cp314` for third-party compiled deps.
-- [ ] Full matrix artifacts + hosted index (`simple/` or equivalent) before broad doc rollout (step 7).
+- [x] Troubleshooting / OS compatibility matrix URLs live (anti-link-dead satisfied).
+- [x] Plan documents pan-ABI rules + **fourth CPU baseline axis** + PEP 503 local-version trap.
+- [x] `boar_fast_filter` non-distribution on PyPI recorded.
+- [ ] arm64 wheelhouse + `simple/` index (#1182 remainder).
+
+---
+
+## Historical seed reference (`wheelhouse-2026-07-12`)
+
+Single-wheel URL (sklearn cp314 musllinux gap only — **does not** fix v1 numpy):
+
+```bash
+pipx install data-boar \
+  --pip-args="--find-links https://github.com/DataBoar/data-boar-site/releases/download/wheelhouse-2026-07-12/scikit_learn-1.9.0-cp314-cp314-musllinux_1_2_x86_64.whl"
+```
+
+Superseded for production musl/v1 paths by **`wheelhouse-x86-64-v1-2026-07-29`**.

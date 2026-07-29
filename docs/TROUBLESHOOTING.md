@@ -93,31 +93,95 @@ pipx install --python python3.12 data-boar
 ### Void-glibc vs Void-musl
 
 - **Void-glibc:** currently passes in the default path (`pipx install data-boar`) because PyPI publishes a compatible `cp314` wheel.
-- **Void-musl:** wheelhouse seed is now available for the missing musllinux `cp314` wheel (`scikit-learn`, auditwheel-repaired). Use:
-
-```bash
-pipx install data-boar \
-  --pip-args="--find-links https://github.com/DataBoar/data-boar-site/releases/download/wheelhouse-2026-07-12/scikit_learn-1.9.0-cp314-cp314-musllinux_1_2_x86_64.whl"
-```
-
-If this wheelhouse URL is unavailable in your environment, use Docker or install local build prerequisites.
+- **Void-musl:** upstream publishes **no** `scikit-learn` musllinux wheel on any CPython tag. Step 1 below still needs a local wheel folder (or a **direct `.whl` URL** — not a GitHub release page). Step 2 is required for the ML stack; on **x86-64-v1** CPUs step 2 is also required to replace PyPI numpy (see [x86-64-v1 / wheelhouse install](#x86-64-v1--wheelhouse-install-musl-no-avx-and-min-spec-hosts)).
 
 ### Alpine/musl: wheelhouse or build toolchain
 
 In this path, `scikit-learn` can fall back to source build on musl. Without build tools, `pipx install data-boar` may fail with `metadata-generation-failed`.
 
-If no wheelhouse is available, install prerequisites first:
+A local **toolchain build** (`apk add build-base gfortran openblas-dev`) fixes musl gaps but **does not** fix **x86-64-v1** CPUs — PyPI numpy/scipy wheels still SIGILL there. For pre-2011 x86 hardware, use the [wheelhouse path](#x86-64-v1--wheelhouse-install-musl-no-avx-and-min-spec-hosts) instead of assuming a successful compile equals a working binary stack.
+
+If no wheelhouse is available and the CPU is modern, install prerequisites first:
 
 ```bash
 apk add build-base gfortran openblas-dev
 pipx install data-boar
 ```
 
-This path should improve as musllinux wheelhouse coverage evolves ([#929](https://github.com/DataBoar/data-boar/issues/929), [#1182](https://github.com/DataBoar/data-boar/issues/1182)).
+See [#929](https://github.com/DataBoar/data-boar/issues/929) and [#1182](https://github.com/DataBoar/data-boar/issues/1182) for wheelhouse evolution.
 
-### no-AVX hosts
+### x86-64-v1 / wheelhouse install (musl, no-AVX, and min-spec hosts)
 
-Do not assume a smooth default PyPI path. Use wheelhouse (`--find-links`) or Docker.
+Use this when **any** of the following apply:
+
+- **musl** (Alpine, Void-musl) and you need the full ML stack without a local Fortran toolchain.
+- **Pre-2011 x86 CPUs** where `import numpy` dies with **`Illegal instruction`** (Intel Core 2 / Celeron / Pentium class — `ssse3` only, no SSE4.2/POPCNT). The floor is **`x86-64-v1`**, not merely “no AVX”: PyPI wheels target **`x86-64-v2`** or higher; environment variables (`NPY_DISABLE_CPU_FEATURES`, `OPENBLAS_CORETYPE`) do **not** help because the crash is in **compiled baseline** code, not runtime dispatch ([#929](https://github.com/DataBoar/data-boar/issues/929)).
+- **Air-gapped** or egress-restricted installs that must resolve offline.
+
+**Hosted release (verified):** [wheelhouse-x86-64-v1-2026-07-29](https://github.com/DataBoar/data-boar-site/releases/tag/wheelhouse-x86-64-v1-2026-07-29) on `DataBoar/data-boar-site` — 41 wheels, `SHA256SUMS` attached. Full install/verification prose also ships in the release `README.md` asset.
+
+**`boar_fast_filter` is not on PyPI.** The published `data-boar` wheel is `py3-none-any` with **zero** compiled extensions — every PyPI-only install uses the pure-Python pre-filter fallback. The wheelhouse is today the **only** distribution channel for the Rust accelerator (`cp38-abi3`, one wheel per libc).
+
+#### `--find-links` adds an index; it does not prefer
+
+Filenames match PyPI (`numpy-2.5.1-cp312-cp312-musllinux_1_2_x86_64.whl`, etc.), so pip can still pick the **upstream** wheel on step 1. The install is **two forced steps** after download (plus accelerator inject):
+
+- `--find-links` accepts a **local directory**, a **direct URL to a `.whl`**, or an **HTML page of links** — **not** a GitHub **release** page. With ~40 wheels, download to a folder first.
+
+```bash
+TAG=wheelhouse-x86-64-v1-2026-07-29
+mkdir -p ~/wheelhouse-v1
+gh release download "$TAG" --repo DataBoar/data-boar-site \
+  --pattern '*musllinux*' --pattern '*-none-any.whl' --dir ~/wheelhouse-v1
+# glibc hosts: swap *musllinux* for *manylinux*
+# without gh: download the same assets from the release page (browser or curl -LO)
+
+# tmpfs trap — see below before any pip step that may compile
+export TMPDIR="${TMPDIR:-/var/tmp/data-boar-build}"
+mkdir -p "$TMPDIR"
+
+pipx install data-boar --pip-args="--find-links $HOME/wheelhouse-v1"
+pipx runpip data-boar install --no-index --find-links $HOME/wheelhouse-v1 \
+  --force-reinstall numpy scipy scikit-learn pandas
+pipx inject data-boar boar_fast_filter --pip-args="--no-index --find-links $HOME/wheelhouse-v1"
+```
+
+**Single-wheel `--find-links`** (one missing musllinux cell only) can unblock step 1 but does **not** replace PyPI numpy on v1 CPUs — you still need the offline `--force-reinstall` step.
+
+#### `TMPDIR` on tmpfs (min-spec hosts)
+
+If install fails with `[Errno 28] No space left on device` while root disk has free space, check whether `/tmp` is a small **tmpfs** (default: half of RAM). A `scikit-learn` source build may not fit even on hosts with hundreds of GB on disk. Point pip scratch space at real storage **before** step 1:
+
+```bash
+export TMPDIR=/var/tmp/data-boar-build && mkdir -p "$TMPDIR"
+```
+
+**Interaction with `--demo`:** demo report output goes to **`$TMPDIR/data_boar_demo`**. If you set `TMPDIR` for install, look for the report there — not only under `/tmp`.
+
+#### Verify the swap worked
+
+```bash
+python -c "from core import detector; print(detector._ML_AVAILABLE)"   # must print True
+python -c "
+import glob, os, numpy
+so = glob.glob(os.path.join(numpy.__path__[0], '_core', '_multiarray_umath*.so'))[0]
+print(os.path.getsize(so), 'bytes')
+"
+# this wheelhouse: ~5–5.3 MB; PyPI numpy on same tag: ~10.8 MB (SIGILL on v1)
+objdump -d "$(python -c 'import glob,os,numpy;print(glob.glob(os.path.join(numpy.__path__[0],"_core","_multiarray_umath*.so"))[0])')" \
+  | grep -c popcnt   # must print 0
+```
+
+**Field parity (1.7.4.post10, `--demo`):** **26 findings**, `_ML_AVAILABLE=True` — same count as Debian/Fedora/Alma glibc paths when the harness waits for the report (see matrix doc). On metal: Intel Celeron 900, Alpine/musl, offline wheelhouse path.
+
+#### `--demo` automation traps
+
+- **`data-boar --demo` does not exit** after the scan — it starts the API on **`127.0.0.1:8088`** and stays in **LISTEN**. Wait for the **report** under `$TMPDIR/data_boar_demo`, not for the process to return.
+- If you changed `TMPDIR` for install (tmpfs workaround), the demo report follows **`$TMPDIR`** — do not search only `/tmp/data_boar_demo`.
+
+### no-AVX hosts (pointer)
+
+Do not assume a smooth default PyPI path. Use the [x86-64-v1 wheelhouse install](#x86-64-v1--wheelhouse-install-musl-no-avx-and-min-spec-hosts) or Docker.
 
 ### RHEL 7 / CentOS 7 (EOL)
 
