@@ -1,0 +1,106 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# config-db.yaml — LAYER 2 of the comparable matrix (#1368)
+#
+# Targets: deploy/lab-smoke-stack synthetic engines (LAN hub).
+# Replace REPLACE_WITH_LAB_HOST_IP in every host: field.
+# Credentials: ONLY pass_from_env — never commit passwords.
+#   Export names match deploy/lab-smoke-stack/env.example (or inject from Bitwarden).
+#
+# Fix each target exercises:
+#   Lab_Postgres_Synthetic  -> SQL baseline / control (LAN latency)
+#   Lab_MariaDB_Synthetic   -> MySQL-family driver path
+#   Lab_MSSQL_Synthetic     -> #1297 / #1299 (HML-class timeouts; pymssql)
+#   Lab_OracleXE_Synthetic  -> #1310 / #1316 / #1370 (restricted user, identifiers)
+#   Lab_Redis_Synthetic     -> #1348 Part A (mixed types; GET-only today)
+#   scan.adaptive_rate_limit -> #1320 BoarThrottler (has something to adapt on LAN)
+#
+# Optional cloud lane (commented): Supabase sa-east-1 for genuine remote latency
+# (#1237 / #1337). Keep host/user as operator-local env; never commit real project ids.
+#
+# Baseline measured 2026-07-29 (after #1369 sidecars + #1370 Oracle fix):
+#   Postgres 20 · MariaDB 20 · MSSQL 20 · Oracle 20 · Redis 5 · scan_failures: none
+# Redis=5 is the CORRECT baseline, not a seed bug: seed exposes #1348 (connector
+# uses GET only; PII in hash/list/set must not appear until the fix).
+# ─────────────────────────────────────────────────────────────────────────────
+targets:
+  - name: Lab_Postgres_Synthetic
+    type: database
+    driver: postgresql+psycopg2
+    host: REPLACE_WITH_LAB_HOST_IP
+    port: 55432
+    user: lab_smoke
+    pass_from_env: LAB_PG_PASSWORD
+    database: lab_smoke_pg
+    connect_timeout_seconds: 25
+    read_timeout_seconds: 90
+
+  - name: Lab_MariaDB_Synthetic
+    type: database
+    driver: mysql+pymysql
+    host: REPLACE_WITH_LAB_HOST_IP
+    port: 33306
+    user: lab_smoke
+    pass_from_env: LAB_MY_PASSWORD
+    database: lab_smoke_my
+    connect_timeout_seconds: 25
+    read_timeout_seconds: 90
+
+  - name: Lab_MSSQL_Synthetic
+    type: database
+    driver: mssql+pymssql
+    host: REPLACE_WITH_LAB_HOST_IP
+    port: 14333
+    user: sa
+    pass_from_env: LAB_MSSQL_SA_PASSWORD
+    database: lab_smoke_mssql
+    connect_timeout_seconds: 25
+    read_timeout_seconds: 90
+
+  - name: Lab_OracleXE_Synthetic
+    type: database
+    driver: oracle+oracledb
+    host: REPLACE_WITH_LAB_HOST_IP
+    port: 15211
+    user: lab_smoke
+    pass_from_env: LAB_ORACLE_PASSWORD
+    database: XEPDB1
+    connect_timeout_seconds: 25
+    read_timeout_seconds: 90
+
+  - name: Lab_Redis_Synthetic
+    type: database
+    driver: redis
+    host: REPLACE_WITH_LAB_HOST_IP
+    port: 56379
+    # Redis lab image has no auth by default; leave pass_from_env unset unless
+    # you enable requirepass. When set, export LAB_REDIS_PASSWORD.
+
+  # Optional remote latency lane (#1237 / #1337) — fill from operator vault, not git:
+  # - name: Cloud_Postgres_Remote
+  #   type: database
+  #   driver: postgresql+psycopg2
+  #   host: REPLACE_WITH_REMOTE_PG_HOST
+  #   port: 6543
+  #   user: REPLACE_WITH_REMOTE_PG_USER
+  #   pass_from_env: DATABOAR_REMOTE_PG_PASS
+  #   database: postgres
+  #   connect_timeout_seconds: 25
+  #   read_timeout_seconds: 90
+
+file_scan:
+  sample_limit: 5
+
+report:
+  output_dir: ./out-db
+
+sqlite_path: ./out-db/matrix-db.db
+
+scan:
+  # Same invariants as layer 1 — comparability, not performance.
+  max_workers: 1
+  adaptive_rate_limit: true
+
+api:
+  port: 8099
+  host: 127.0.0.1
+  require_api_key: false
