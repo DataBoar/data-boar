@@ -59,8 +59,6 @@ services:
       MSSQL_PID: Developer
     ports:
       - "${LAB_MSSQL_PORT:-14333}:1433"
-    volumes:
-      - ./init/mssql:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test:
         [
@@ -72,6 +70,20 @@ services:
       retries: 10
       start_period: 60s
 
+  lab-mssql-init:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    depends_on:
+      lab-mssql:
+        condition: service_healthy
+    environment:
+      MSSQL_HOST: lab-mssql
+      MSSQL_PORT: "1433"
+      MSSQL_SA_PASSWORD: ${LAB_MSSQL_SA_PASSWORD:-Lab_Smoke_Change_Me1!}
+    volumes:
+      - ./init/mssql:/seed:ro
+    entrypoint: ["/bin/bash", "/seed/apply_lab_smoke.sh"]
+    restart: "no"
+
   lab-oracle:
     image: gvenzl/oracle-xe:21-slim
     environment:
@@ -80,14 +92,28 @@ services:
       APP_USER_PASSWORD: ${LAB_ORACLE_PASSWORD:-lab_smoke_change_me}
     ports:
       - "${LAB_ORACLE_PORT:-15211}:1521"
-    volumes:
-      - ./init/oracle:/container-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD", "healthcheck.sh"]
       interval: 15s
       timeout: 10s
       retries: 10
       start_period: 120s
+
+  lab-oracle-init:
+    image: gvenzl/oracle-xe:21-slim
+    depends_on:
+      lab-oracle:
+        condition: service_healthy
+    environment:
+      ORACLE_HOST: lab-oracle
+      ORACLE_PORT: "1521"
+      ORACLE_SERVICE: XEPDB1
+      APP_USER: ${LAB_ORACLE_USER:-lab_smoke}
+      APP_USER_PASSWORD: ${LAB_ORACLE_PASSWORD:-lab_smoke_change_me}
+    volumes:
+      - ./init/oracle:/seed:ro
+    entrypoint: ["/bin/bash", "/seed/apply_lab_smoke_pdb.sh"]
+    restart: "no"
 
   lab-redis:
     image: redis:7-alpine

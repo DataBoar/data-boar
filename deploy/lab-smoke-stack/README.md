@@ -20,7 +20,7 @@ docker compose -f docker-compose.mongo.yml up -d
 
 **Config example for Data Boar:** `config.lab-smoke.example.yaml` (copy elsewhere, set hub host IP, mount `tests/data/compressed` and `tests/data/homelab_synthetic` as documented). External/public API + DB eval: **`docs/ops/LAB_EXTERNAL_CONNECTIVITY_EVAL.md`**.
 
-**SQL seeds:** `init/postgres/`, `init/mariadb/`, `init/mssql/`, and `init/oracle/` — `01_*` base tables, `02_*` linkage + minor-adjacent + shared-phone rows (same semantic corpus as the postgres seed).
+**SQL seeds:** `init/postgres/` and `init/mariadb/` load via each image’s `/docker-entrypoint-initdb.d` hook. **`init/mssql/`** and **`init/oracle/`** load via one-shot **`lab-mssql-init`** and **`lab-oracle-init`** (same pattern as **`lab-redis-init`**) — the official MSSQL image has no auto-init mount, and gvenzl Oracle hooks run as SYS on the CDB root instead of `XEPDB1`. Scripts: `init/mssql/apply_lab_smoke.sh`, `init/oracle/apply_lab_smoke_pdb.sh`. Corpus: `01_*` base tables, `02_*` linkage + minor-adjacent + shared-phone rows.
 
 **Mongo seed:** `init/mongodb/01_lab_smoke_seed.js` (database `lab_smoke_mongo`).
 
