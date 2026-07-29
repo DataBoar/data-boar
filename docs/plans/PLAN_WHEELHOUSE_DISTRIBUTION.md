@@ -1,13 +1,13 @@
 # Plan: Wheelhouse distribution via GitHub Releases (pan-ABI matrix) (#1182)
 
-<!-- plans-hub-summary: Pan-ABI wheelhouse matrix — cp312/cp313/cp314 × (manylinux|musllinux) × (x86_64|arm64) × CPU baseline (x86-64-v1); abi3 boar_fast_filter per (libc×arch); hosted release wheelhouse-x86-64-v1-2026-07-29 verified; Troubleshooting/matrix URLs live (#1365). -->
+<!-- plans-hub-summary: Pan-ABI wheelhouse matrix — cp312/cp313/cp314 × (manylinux|musllinux) × (x86_64|arm64) × CPU baseline (x86-64-v1); abi3 boar_fast_filter per (libc×arch); hosted release wheelhouse-x86-64-v1-2026-07-29 verified; mariadb glibc x86_64 recipe pinned (#1367); aarch64 mariadb still #1366. -->
 <!-- plans-hub-related: PLAN_PACKAGING_EXTRAS.md, PLAN_QUICKSTART.md -->
 
-- **Status:** In progress (x86-64-v1 slice shipped + user docs rolled out; arm64 + PEP 503 index pending)
-- **Date:** 2026-07-12 (scope rewrite 2026-07-22; v1 release + doc rollout 2026-07-29 — [#1365](https://github.com/DataBoar/data-boar/issues/1365))
+- **Status:** In progress (x86-64-v1 slice shipped + user docs rolled out; mariadb x86_64 both libcs published; arm64 + PEP 503 index pending)
+- **Date:** 2026-07-12 (scope rewrite 2026-07-22; v1 release + doc rollout 2026-07-29 — [#1365](https://github.com/DataBoar/data-boar/issues/1365); mariadb glibc recipe 2026-07-29 — [#1367](https://github.com/DataBoar/data-boar/issues/1367))
 - **Authors:** Fabio Leitao (operator); Cursor executor
 - **Priority:** H1 (packaging / distribution)
-- **GitHub:** [#1182](https://github.com/DataBoar/data-boar/issues/1182) `[P1][packaging]` · cross-ref [#782](https://github.com/DataBoar/data-boar/issues/782) (abi3 wheel matrix) · **GAP-001** (wheel-matrix / maturin) · doc slice [#1365](https://github.com/DataBoar/data-boar/issues/1365)
+- **GitHub:** [#1182](https://github.com/DataBoar/data-boar/issues/1182) `[P1][packaging]` · cross-ref [#782](https://github.com/DataBoar/data-boar/issues/782) (abi3 wheel matrix) · **GAP-001** (wheel-matrix / maturin) · doc slice [#1365](https://github.com/DataBoar/data-boar/issues/1365) · mariadb glibc recipe [#1367](https://github.com/DataBoar/data-boar/issues/1367) · aarch64 axis [#1366](https://github.com/DataBoar/data-boar/issues/1366)
 
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md)
 
@@ -68,8 +68,8 @@ boar_fast_filter: cp38-abi3 × {manylinux, musllinux} × {x86_64, arm64}
 | Site repo | **`DataBoar/data-boar-site`** |
 | Tag | **`wheelhouse-x86-64-v1-2026-07-29`** |
 | Release URL | <https://github.com/DataBoar/data-boar-site/releases/tag/wheelhouse-x86-64-v1-2026-07-29> |
-| Assets | 41 wheels + `SHA256SUMS` + `README.md` (install + verification en_US / pt_BR) |
-| Offline proof | Operator re-downloaded; **28/28** checksums matched; clean-container offline install |
+| Assets | **46** wheels + `SHA256SUMS` + `README.md` (install + verification en_US / pt_BR); ~470 MB — includes `mariadb` on both libcs × cp312/313/314 |
+| Offline proof | Operator re-downloaded; checksums matched (incl. 3 new glibc `mariadb` wheels); clean-container offline install |
 
 ### Install command (verified on metal — musl example)
 
@@ -122,6 +122,71 @@ Three decisions that make v1 builds work (from release `README.md`):
 
 Publication gate: build **aborts** if numpy baseline contains any `popcnt` instruction.
 
+### `mariadb` (extra `sql-community`) — reproducible glibc recipe (#1367)
+
+PyPI publishes **no** `mariadb` wheels on any platform — sdist only. Every `.[sql-community]` install compiles from source and needs MariaDB Connector/C headers on the host. This is **universal** (not musl-specific, not min-spec) and hits the **open-core / free** tier.
+
+**musl x86_64** was already buildable (Alpine ships a compatible `mariadb-connector-c-dev`) and published. **glibc** blocked on `manylinux_2_28` because the image ships Connector/C **3.1.11** while the Python driver requires **≥ 3.3.1**.
+
+#### Path chosen by measured elimination (2026-07-29)
+
+| Option | Verdict | Why |
+| ------ | ------- | --- |
+| Base `manylinux_2_34` / AlmaLinux 9 | **Dead** | Ships `mariadb-connector-c-devel` **3.2.6**; driver still needs **≥ 3.3.1**. Raising the glibc floor would cost reach and would **not** fix the version gap. |
+| Official MariaDB repo via `curl \| bash` | **Rejected** | Unverified remote script inside the chain that produces a distributable artifact. |
+| **Build Connector/C from source** (pinned tarball + checksum) | **Chosen** | Auditable inputs; no third-party package repo in the build chain. |
+
+#### Pinned inputs (exact — do not “upgrade casually”)
+
+| Field | Value |
+| ----- | ----- |
+| Source tarball | <https://github.com/mariadb-corporation/mariadb-connector-c/archive/refs/tags/v3.4.6.tar.gz> |
+| **sha256** | `27b57790896b7464e1b87fb29bad49e31ee36fdb6942e5c86284c6af9630be0e` |
+| Container base | `quay.io/pypa/manylinux_2_28_x86_64` |
+| cmake flags | `-DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local -DWITH_SSL=OPENSSL -DWITH_UNIT_TESTS=OFF -DWITH_EXTERNAL_ZLIB=ON -DCMAKE_POLICY_VERSION_MINIMUM=3.5` |
+
+Then: `pip wheel --no-deps --no-binary mariadb mariadb` per `cp312` / `cp313` / `cp314`, `auditwheel repair --plat manylinux_2_28_x86_64`, publication gate `objdump` (no forbidden ISA).
+
+#### Trap — embedded zlib vs modern CMake
+
+The **bundled** zlib inside Connector/C declares `cmake_minimum_required` older than 3.5. Modern CMake rejects that with: `Compatibility with CMake < 3.5 has been removed`.
+
+- **`-DWITH_EXTERNAL_ZLIB=ON`** uses system zlib and avoids the failure — and reduces what gets embedded in the wheel.
+- **`-DCMAKE_POLICY_VERSION_MINIMUM=3.5`** remains a safety net for any leftover ancient submodules.
+
+#### Tag gain — wheel reaches below the build base
+
+`auditwheel` reported the repaired wheel needs only **glibc 2.17**, not 2.28. Final platform tag:
+
+```text
+manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64
+```
+
+So the wheel reaches **farther** than the build image — including RHEL 7–class glibc floors that [TROUBLESHOOTING.md](../TROUBLESHOOTING.md) marks as unsupported for **native product install**. That is a packaging reach win for this cell, not a change to the product’s supported-install story.
+
+#### Verification (real DB, not compile-only)
+
+Clean-container offline install + connect to **lab-mariadb** from `deploy/lab-smoke-stack`:
+
+```text
+MARIADB OK | driver 1.1.14 | lab_customers = 5
+```
+
+`objdump` gate executed — no forbidden instructions. The three glibc wheels are on **`wheelhouse-x86-64-v1-2026-07-29`**; `SHA256SUMS` updated; operator re-download matched all three checksums. Release now **46 assets / ~470 MB** with `mariadb` complete on both libcs × cp312/313/314.
+
+Operator build script (vault reference, not required in-repo): `no-avx-toolkit/scripts/build-v1-mariadb-glibc.sh`.
+
+### Coverage matrix — `mariadb` 1.1.14 (wheelhouse vs PyPI gap)
+
+PyPI: **no wheels anywhere**. Wheelhouse fills cells below.
+
+| | musllinux | manylinux (glibc) |
+| --- | :---: | :---: |
+| **x86_64** cp312/313/314 | ✅ published | ✅ published (#1367 recipe) |
+| **aarch64** cp312/313/314 | ❌ gap | ❌ gap — same fix path under [#1366](https://github.com/DataBoar/data-boar/issues/1366) |
+
+#1367 records the **glibc x86_64 recipe**; it does **not** close until aarch64 is decided (tracked on #1366).
+
 ---
 
 ## Anti-link-dead gate
@@ -146,6 +211,7 @@ Future releases must repeat verify-before-link for new tags.
 | 5 | Prove install + demo in Alpine musl (`podman`) | ✅ |
 | 6 | Add plan + `PLANS_TODO` entry + run `plans_hub_sync.py --write` | ✅ |
 | 7 | Post-hosting docs rollout in Troubleshooting/matrix with stable URL (**x86-64-v1**) | ✅ ([#1365](https://github.com/DataBoar/data-boar/issues/1365)) |
+| 7b | Pin reproducible `mariadb` glibc build (Connector/C from source) + publish cp312/313/314 | ✅ ([#1367](https://github.com/DataBoar/data-boar/issues/1367) — recipe; aarch64 → [#1366](https://github.com/DataBoar/data-boar/issues/1366)) |
 | 8 | Expand arm64 slice + hosted PEP 503 `simple/` index with **`+x86v1`** local versions | ⬜ |
 | 9 | Optional: copy full build runbook from vault into `docs/ops/` | ⬜ |
 
@@ -161,6 +227,8 @@ Future releases must repeat verify-before-link for new tags.
 - [x] Troubleshooting / OS compatibility matrix URLs live (anti-link-dead satisfied).
 - [x] Plan documents pan-ABI rules + **fourth CPU baseline axis** + PEP 503 local-version trap.
 - [x] `boar_fast_filter` non-distribution on PyPI recorded.
+- [x] `mariadb` glibc x86_64 recipe pinned (tarball URL + sha256 + cmake flags) and wheels published (#1367).
+- [ ] `mariadb` aarch64 both libcs (#1366).
 - [ ] arm64 wheelhouse + `simple/` index (#1182 remainder).
 
 ---
