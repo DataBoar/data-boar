@@ -1,10 +1,13 @@
 """Tests for SQL column sampling helpers (non-null filter, env cap, dialect SQL shape)."""
 
+from sqlalchemy.sql.elements import quoted_name
+
 from connectors.sql_sampling import (
     SamplingManager,
     SqlColumnSampleQueryBuilder,
     TableSamplingMetadata,
     column_sample_sql_for_cursor,
+    oracle_sql_identifier,
     resolve_sql_sample_limit,
     resolve_statement_timeout_ms_for_sampling,
 )
@@ -74,7 +77,59 @@ def test_build_oracle_subquery_rownum():
     s = str(q)
     assert "IS NOT NULL" in s
     assert "ROWNUM" in s
+    assert "S.T" in s
+    assert '"' not in s
     assert q.compile().params.get("lim") == 4
+
+
+def test_oracle_sql_identifier_reflected_lowercase_unquoted():
+    assert oracle_sql_identifier("lab_customers") == "LAB_CUSTOMERS"
+    assert oracle_sql_identifier("id") == "ID"
+    assert oracle_sql_identifier("LAB_CUSTOMERS") == "LAB_CUSTOMERS"
+
+
+def test_oracle_sql_identifier_quoted_lowercase_preserved():
+    qn = quoted_name("lab_customers", quote=True)
+    assert oracle_sql_identifier(qn) == '"lab_customers"'
+
+
+def test_oracle_sql_identifier_mixed_case_quoted():
+    assert oracle_sql_identifier("Lab_Customers") == '"Lab_Customers"'
+
+
+def test_build_oracle_reflected_lowercase_emits_unquoted_upper():
+    """Regression #1370: quoted lowercase breaks ORA-00942 on default Oracle objects."""
+    q = SqlColumnSampleQueryBuilder.build(
+        "oracle",
+        safe_col="id",
+        safe_table="lab_customers",
+        safe_schema="lab_smoke",
+        schema="lab_smoke",
+        limit=4,
+    )
+    s = str(q)
+    assert '"lab_smoke"' not in s
+    assert '"lab_customers"' not in s
+    assert '"id"' not in s
+    assert "LAB_SMOKE.LAB_CUSTOMERS" in s
+    assert "ID IS NOT NULL" in s
+
+
+def test_build_oracle_quoted_lowercase_table_preserved():
+    qn_table = quoted_name("lab_customers", quote=True)
+    q = SqlColumnSampleQueryBuilder.build(
+        "oracle",
+        safe_col="national_id",
+        safe_table="lab_customers",
+        safe_schema="lab_smoke",
+        schema="lab_smoke",
+        limit=2,
+        raw_table=qn_table,
+    )
+    s = str(q)
+    assert '"lab_customers"' in s
+    assert "LAB_SMOKE" in s
+    assert "NATIONAL_ID IS NOT NULL" in s
 
 
 def test_build_mssql_top_nolock():
@@ -238,5 +293,7 @@ def test_column_sample_sql_for_cursor_oracle_literal_rownum():
     assert sql.startswith("-- Data Boar Compliance Scan\n")
     assert "ROWNUM" in sql
     assert "<= 5" in sql
+    assert "S.T" in sql
+    assert '"s"' not in sql
     assert label == "non_null_rownum_oracle"
     assert human == "ROWNUM inner filter (Oracle)"

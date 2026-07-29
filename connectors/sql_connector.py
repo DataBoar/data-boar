@@ -500,6 +500,9 @@ class SQLConnector:
                     fetch_budget = resolve_fetch_row_budget(
                         use_limit, estimated_row_count=est
                     )
+                    oracle_raw = {"raw_col": column_name, "raw_table": table}
+                    if schema:
+                        oracle_raw["raw_schema"] = schema
                     plan = SamplingManager.build_column_sample(
                         dialect,
                         safe_col=safe_col,
@@ -509,6 +512,7 @@ class SQLConnector:
                         limit=fetch_budget,
                         table_metadata=table_meta,
                         statement_timeout_ms=to,
+                        **(oracle_raw if (dialect or "").lower() == "oracle" else {}),
                     )
                     if self._sql_sampling_audit_key != audit_key:
                         self._sql_sampling_audit_key = audit_key
