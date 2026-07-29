@@ -96,6 +96,17 @@ Install contract (two-step `pipx` + offline ML swap + `boar_fast_filter` inject)
 
 **Redis / DB lab smoke** (separate checklist): Postgres/MariaDB/MSSQL/Oracle synthetic targets **20 findings each**; Redis **5** — see `deploy/lab-smoke-stack/`.
 
+### Tier 3.7: Comparable config-ref (connectors / archives) — [#1368](https://github.com/DataBoar/data-boar/issues/1368)
+
+`--demo` (Tier 3.6) proves **install**. It does **not** run connector code or the post-GA archive/`scan_failures` surface.
+
+Tracked harness: **[`deploy/compat-matrix-config-ref/`](../../deploy/compat-matrix-config-ref/)** — two layers (files / lab-smoke DBs), dual measures (**findings** + **`scan_failures` by reason**), `max_workers: 1`, `adaptive_rate_limit: true`, credentials only via `pass_from_env`.
+
+| Layer | Signal (2026-07-29) |
+| ----- | ------------------- |
+| **1 — files** | **19** findings on 6 corners without `[compressed]`; `archive_unsupported=1` + `archive_type_mismatch=1`. With py7zr: **26** / only mismatch. Lost 7 findings stay visible as `archive_unsupported`. |
+| **2 — DBs** | lab-smoke: Postgres/MariaDB/MSSQL/Oracle **20** each; Redis **5** (correct #1348 baseline); `scan_failures`: none |
+
 ---
 
 ### Tier 4: Solaris lineage (**illumos**) — historical OpenSolaris / exploratory

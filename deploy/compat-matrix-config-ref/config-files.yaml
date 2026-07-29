@@ -1,0 +1,53 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# config-files.yaml — LAYER 1 of the comparable matrix (#1368)
+#
+# Runs on ANY corner, including the Celeron 900 floor, with ZERO credentials.
+# This is the layer that produces a comparable number across hosts — the
+# equivalent of `--demo`, but exercising the post-GA archive/file surface.
+#
+# Corpus: fixtures from THIS REPO (tests/data/), extracted from origin/main by
+# the runner. Do NOT invent a new corpus — the sample3.tgz / sample4.tar.bz2
+# pair has the SAME BYTES and a deliberate lying extension; that is the
+# canonical #1354 bait.
+#
+# What each path exercises:
+#   sample1.zip / sample2.7z / sample3.tgz  -> compressed read (#828, #1250, #1257)
+#   sample4.tar.bz2 (gzip with .bz2 suffix) -> archive_type_mismatch (#1354 Part A)
+#   homelab_synthetic/                       -> baseline PII/ML findings
+# ─────────────────────────────────────────────────────────────────────────────
+targets:
+  - name: corpus_compressed
+    type: filesystem
+    path: ./corpus/compressed
+
+  - name: corpus_synthetic
+    type: filesystem
+    path: ./corpus/homelab_synthetic
+
+file_scan:
+  extensions: [.txt, .csv, .pdf, .docx, .xlsx, .md, .json, .yaml, .log]
+  recursive: true
+  scan_compressed: true
+  scan_sqlite_as_db: true
+  # Intentionally low sample_limit: makes #1337 dedupe measurable when layer 2
+  # (databases) joins with columns of repeated values.
+  sample_limit: 5
+  file_sample_max_chars: 12000
+
+report:
+  output_dir: ./out
+
+sqlite_path: ./out/matrix.db
+
+scan:
+  # 1 worker: the matrix floor is single-core (Celeron 900). Comparability
+  # requires the SAME parallelism on every corner — not a performance tweak.
+  max_workers: 1
+  # #1320 — BoarThrottler. On a local target it has nothing to adapt; kept ON
+  # on purpose to prove that enabled does NOT change the RESULT (only pace).
+  adaptive_rate_limit: true
+
+api:
+  port: 8099
+  host: 127.0.0.1
+  require_api_key: false

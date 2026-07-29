@@ -14,6 +14,7 @@ Contents of this folder:
 - `ansible/` — Ansible playbooks for Debian/Ubuntu hosts (Docker Compose stack or full install); see `ansible/README.md`.
 - `opentofu/` — OpenTofu/Terraform module for container runtime, ports, and volumes (application config via Ansible).
 - `lab-smoke-stack/` — Docker Compose bundle for LAN-only multi-DB lab smoke tests (PostgreSQL, MariaDB, optional MongoDB).
+- `compat-matrix-config-ref/` — Comparable post-GA config harness across OS corners (files + lab-smoke DBs); see `compat-matrix-config-ref/README.md` (#1368).
 - `samples/` — Tracked starter configs for evaluators (LGPD starter YAML and scope-import pointers); see `samples/README.md`.
 
 All paths in the deploy guides assume you run commands from the **repository root** or from this folder as indicated.

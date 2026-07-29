@@ -34,6 +34,8 @@ Release verificado: [wheelhouse-x86-64-v1-2026-07-29](https://github.com/DataBoa
 
 **Lab-smoke DB/Redis (checklist separado):** Postgres/MariaDB/MSSQL/Oracle **20 achados cada**; Redis **5** — `deploy/lab-smoke-stack/`.
 
+**Config-ref comparável (conectores / arquivos) — [#1368](https://github.com/DataBoar/data-boar/issues/1368):** o `--demo` prova **instalação**, não conectores. Harness versionado em [`deploy/compat-matrix-config-ref/`](../../deploy/compat-matrix-config-ref/) — duas camadas, duas medidas (achados + `scan_failures` por razão), `max_workers: 1`, `adaptive_rate_limit: true`, só `pass_from_env`. Camada 1: **19** achados idênticos em 6 cantos (sem py7zr); com `[compressed]`: **26**. Camada 2 (lab-smoke): 20/20/20/20 e Redis **5** (baseline correta da #1348).
+
 - Fonte operacional: [TROUBLESHOOTING.pt_BR.md](../TROUBLESHOOTING.pt_BR.md).
 
 **Ordem sugerida:** AlmaLinux 9 → Arch/Manjaro → Void/Alpine (musl) → Gentoo (se houver tempo) → **illumos** (ex. OpenIndiana) / legado **OpenSolaris** só **depois** (Tier 4; OpenSolaris oficial é histórico; preferir **illumos** atual).
