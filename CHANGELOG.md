@@ -12,6 +12,26 @@ Human-readable summary of user-facing changes. **Detailed release notes:** [docs
 
 ---
 
+## 1.7.4.post11 (release prep — PyPI upload pending)
+
+> Post-release on the **`1.7.4`** public line. **`[project] version = 1.7.4.post11`** and **`[tool.databoar] maturity_build = 262`** (`N=1` discrete fix since post10 baseline `.261`, ADR-0073). **PyPI-only** — no Git tag, no GitHub Release, no container. Operator runs **`publish-pypi`** after merge.
+
+### Fixed / hardened (post11, N=1)
+
+- **Oracle sampling identifiers (#1370):** stop emitting lowercase quoted schema/table/column names on the Oracle dialect path — Oracle folds unquoted identifiers to UPPERCASE, so `"lab_smoke"."lab_customers"` raised `ORA-00942` on **every** column sample while discovery still worked (zero findings vs 20 on peer engines). Validated on lab-smoke: Postgres/MariaDB/MSSQL/Oracle **20** · Redis **5** · `scan_failures` none ([#1372](https://github.com/DataBoar/data-boar/pull/1372)).
+
+### Notes (post11 — not in N)
+
+- **[#1369](https://github.com/DataBoar/data-boar/issues/1369)** — lab-smoke MSSQL/Oracle one-shot init sidecars (test infra).
+- **[#1371](https://github.com/DataBoar/data-boar/issues/1371)** — `#1332` CREDIT_CARD FP fixture with `xfail(strict=True)`.
+- **[#1368](https://github.com/DataBoar/data-boar/issues/1368)** — comparable config-ref harness under `deploy/compat-matrix-config-ref/`.
+- **[#1365](https://github.com/DataBoar/data-boar/issues/1365)** — wheelhouse `x86-64-v1` troubleshooting docs (TROUBLESHOOTING + matrix + PLAN).
+- **Refs [#1367](https://github.com/DataBoar/data-boar/issues/1367)** — reproducible `mariadb` glibc recipe in PLAN ([#1377](https://github.com/DataBoar/data-boar/pull/1377)).
+- **[#1379](https://github.com/DataBoar/data-boar/issues/1379)** — wheelhouse recipe CI ([#1380](https://github.com/DataBoar/data-boar/pull/1380)); wheelhouse remains a **`data-boar-site`** release, not part of this PyPI wheel.
+- Full `N=1` fix set and `postN` ↔ `maturity_build` map: [docs/releases/1.7.4.post11.md](docs/releases/1.7.4.post11.md).
+
+---
+
 ## 1.7.4.post10 (published PyPI **2026-07-28 16:37:23 UTC**)
 
 > Post-release on the **`1.7.4`** public line. **`[project] version = 1.7.4.post10`** and **`[tool.databoar] maturity_build = 261`** (`N=4` discrete fixes since post9 baseline `9fa991c2`, ADR-0073). **PyPI-only** — no Git tag, no GitHub Release, no container. Operator runs **`publish-pypi`** after merge.
