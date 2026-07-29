@@ -12,6 +12,22 @@ Human-readable summary of user-facing changes. **Detailed release notes:** [docs
 
 ---
 
+## 1.7.4.post12 (release prep — PyPI upload pending)
+
+> Post-release on the **`1.7.4`** public line. **`[project] version = 1.7.4.post12`** and **`[tool.databoar] maturity_build = 263`** (`N=1` discrete fix since post11 baseline `.262`, ADR-0073). **PyPI-only** — no Git tag, no GitHub Release, no container. Operator runs **`publish-pypi`** after merge.
+
+### Fixed / hardened (post12, N=1)
+
+- **`gitpython` floor on `[grc-dashboard]` (#1383):** add `gitpython>=3.1.55` next to streamlit/plotly so the nine Dependabot HIGH advisories (runtime via streamlit) cannot resolve below the last patched version — one advisory is only fixed in **3.1.55** (not 3.1.54). Streamlit’s declared range `gitpython!=3.1.19,<4,>=3.0.7` accepts 3.1.55+ (measured). Lock resolves to **3.1.57**. Base install without the extra is unchanged.
+
+### Notes (post12 — not in N)
+
+- **CI Action pins (SHA-exact):** `github/codeql-action` init/analyze → `99df26d4f13ea111d4ec1a7dddef6063f76b97e9` (v4.37.0) — [#1269](https://github.com/DataBoar/data-boar/pull/1269) / [#1268](https://github.com/DataBoar/data-boar/pull/1268); `actions/setup-python` → `ece7cb06caefa5fff74198d8649806c4678c61a1` (v6.3.0) — [#1107](https://github.com/DataBoar/data-boar/pull/1107). Dependabot could not rebase those PRs under the `non_fast_forward` ruleset (#1376).
+- **Not absorbed:** [#1378](https://github.com/DataBoar/data-boar/pull/1378) uv-minor-patch group (47 updates) — keep bulk lockfile churn out of this security floor post.
+- Full `N=1` fix set and `postN` ↔ `maturity_build` map: [docs/releases/1.7.4.post12.md](docs/releases/1.7.4.post12.md).
+
+---
+
 ## 1.7.4.post11 (published PyPI **2026-07-29 21:32:58 UTC**)
 
 > Post-release on the **`1.7.4`** public line. **`[project] version = 1.7.4.post11`** and **`[tool.databoar] maturity_build = 262`** (`N=1` discrete fix since post10 baseline `.261`, ADR-0073). **PyPI-only** — no Git tag, no GitHub Release, no container. Operator runs **`publish-pypi`** after merge.
