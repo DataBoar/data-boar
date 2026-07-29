@@ -19,7 +19,10 @@ place to evolve dialect-specific strategies (TABLESAMPLE, metadata-driven caps).
 
 Identifiers passed into `SamplingManager.build_column_sample` (and the legacy
 `SqlColumnSampleQueryBuilder.build`) must already be dialect-escaped (see
-`sql_connector.sample`); this module only composes SQL shape.
+`sql_connector.sample`); this module only composes SQL shape. **Oracle** is the
+exception: pass optional ``raw_col`` / ``raw_table`` / ``raw_schema`` from
+discovery (may be ``quoted_name``) so case-sensitive quoted objects are preserved;
+unquoted dictionary names are emitted without double quotes (uppercase).
 
 Architecture (orchestrator vs fixed strings):
 - `SamplingManager` picks a **strategy label** and builds a `TextClause` from
@@ -51,9 +54,10 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from typing import Any
 
 from sqlalchemy import text
-from sqlalchemy.sql.elements import TextClause
+from sqlalchemy.sql.elements import TextClause, quoted_name
 
 # Leading comment on all generated sampling SQL (pg_stat_activity / DMVs).
 #
@@ -216,6 +220,32 @@ def _ansi_quoted_table(safe_schema: str, safe_table: str, schema: str | None) ->
     return f'"{safe_schema}"."{safe_table}"' if schema else f'"{safe_table}"'
 
 
+def oracle_sql_identifier(name: Any) -> str:
+    """
+    Render an Oracle SQL identifier from a discovery/reflection name.
+
+    SQLAlchemy reflects unquoted Oracle objects as lowercase strings; wrapping
+    those in double quotes forces case-sensitive resolution and yields ORA-00942.
+    Objects created with quoted lowercase identifiers are reflected as
+    ``quoted_name(..., quote=True)`` and must keep exact case inside quotes.
+    """
+    raw = str(name)
+    safe = raw.replace('"', '""')
+    if isinstance(name, quoted_name) and getattr(name, "quote", False):
+        return f'"{safe}"'
+    if raw != raw.lower() and raw != raw.upper():
+        return f'"{safe}"'
+    return safe.upper()
+
+
+def _oracle_table_ref(schema_name: Any, table_name: Any, schema: str | None) -> str:
+    if schema:
+        return (
+            f"{oracle_sql_identifier(schema_name)}.{oracle_sql_identifier(table_name)}"
+        )
+    return oracle_sql_identifier(table_name)
+
+
 def _large_table_flags(
     table_metadata: TableSamplingMetadata | None,
 ) -> tuple[bool, str]:
@@ -286,21 +316,22 @@ def _plan_mysql_column_sample(
 
 
 def _plan_oracle_column_sample(
-    safe_col: str,
-    safe_schema: str,
-    safe_table: str,
+    col: Any,
+    schema_name: Any,
+    table_name: Any,
     schema: str | None,
     lim: int,
     large: bool,
     audit_notes: str,
 ) -> ColumnSamplePlan:
     label = _with_large_suffix("non_null_rownum_oracle", large)
-    t = _ansi_quoted_table(safe_schema, safe_table, schema)
+    t = _oracle_table_ref(schema_name, table_name, schema)
+    col_sql = oracle_sql_identifier(col)
     # Inner filter first: ROWNUM on the outer query caps non-null rows only.
     q = text(
         _tag_sql(
-            f'SELECT * FROM (SELECT "{safe_col}" FROM {t} '  # nosec B608
-            f'WHERE "{safe_col}" IS NOT NULL) WHERE ROWNUM <= :lim'
+            f"SELECT * FROM (SELECT {col_sql} FROM {t} "  # nosec B608
+            f"WHERE {col_sql} IS NOT NULL) WHERE ROWNUM <= :lim"
         )
     ).bindparams(lim=lim)
     return ColumnSamplePlan(
@@ -501,6 +532,9 @@ class SamplingManager:
         limit: int,
         table_metadata: TableSamplingMetadata | None = None,
         statement_timeout_ms: int | None = None,
+        raw_col: Any | None = None,
+        raw_table: Any | None = None,
+        raw_schema: Any | None = None,
     ) -> ColumnSamplePlan:
         lim = _clamp_limit(limit)
         d = (dialect or "").lower()
@@ -524,7 +558,13 @@ class SamplingManager:
             )
         if d == "oracle":
             return _plan_oracle_column_sample(
-                safe_col, safe_schema, safe_table, schema, lim, large, audit_notes
+                raw_col if raw_col is not None else safe_col,
+                raw_schema if raw_schema is not None else safe_schema,
+                raw_table if raw_table is not None else safe_table,
+                schema,
+                lim,
+                large,
+                audit_notes,
             )
         if d in ("mssql", "microsoft sql server"):
             return _plan_mssql_column_sample(
@@ -605,6 +645,9 @@ class SqlColumnSampleQueryBuilder:
         limit: int,
         table_metadata: TableSamplingMetadata | None = None,
         statement_timeout_ms: int | None = None,
+        raw_col: Any | None = None,
+        raw_table: Any | None = None,
+        raw_schema: Any | None = None,
     ) -> TextClause:
         return SamplingManager.build_column_sample(
             dialect,
@@ -615,6 +658,9 @@ class SqlColumnSampleQueryBuilder:
             limit=limit,
             table_metadata=table_metadata,
             statement_timeout_ms=statement_timeout_ms,
+            raw_col=raw_col,
+            raw_table=raw_table,
+            raw_schema=raw_schema,
         ).query
 
 
@@ -628,6 +674,9 @@ def column_sample_sql_for_cursor(
     limit: int,
     table_metadata: TableSamplingMetadata | None = None,
     statement_timeout_ms: int | None = None,
+    raw_col: Any | None = None,
+    raw_table: Any | None = None,
+    raw_schema: Any | None = None,
 ) -> tuple[str, dict[str, object], str, str, str]:
     """
     For DB-API drivers without SQLAlchemy execution (e.g. Snowflake connector).
@@ -647,14 +696,21 @@ def column_sample_sql_for_cursor(
         limit=limit,
         table_metadata=table_metadata,
         statement_timeout_ms=to,
+        raw_col=raw_col,
+        raw_table=raw_table,
+        raw_schema=raw_schema,
     )
     d = (dialect or "").lower()
     if d == "oracle":
         lim_v = _clamp_limit(limit)
-        t = _ansi_quoted_table(safe_schema, safe_table, schema)
+        col = raw_col if raw_col is not None else safe_col
+        sch = raw_schema if raw_schema is not None else safe_schema
+        tbl = raw_table if raw_table is not None else safe_table
+        t = _oracle_table_ref(sch, tbl, schema)
+        col_sql = oracle_sql_identifier(col)
         sql = _tag_sql(
-            f'SELECT * FROM (SELECT "{safe_col}" FROM {t} '  # nosec B608
-            f'WHERE "{safe_col}" IS NOT NULL) WHERE ROWNUM <= {lim_v}'
+            f"SELECT * FROM (SELECT {col_sql} FROM {t} "  # nosec B608
+            f"WHERE {col_sql} IS NOT NULL) WHERE ROWNUM <= {lim_v}"
         )
         human = plan.human_strategy or plan.strategy_label
         return sql, {}, plan.strategy_label, plan.audit_notes, human
