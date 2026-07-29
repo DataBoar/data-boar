@@ -169,6 +169,7 @@ Use after **§1** host order. Tick when done on your lab sheet.
 | ---- | -------- |
 | `init/*/01_lab_smoke.sql` | `lab_customers`, `lab_notes` — happy path, borderline, FP-bait, innocuous row. |
 | `init/*/02_lab_smoke_linkage.sql` | `lab_guardians`, `lab_minors_synthetic` (DOB/idade column names for **possible minor** heuristics), `lab_phone_directory`, extra customer/note rows for **shared phone** linkage. |
+| `init/*/03_lab_fp_numeric_ids.sql` | `lab_fp_numeric_ids` — **#1332** repro: INTEGER identity columns whose space-joined sample mimics **CREDIT_CARD** when `sample_limit >= 4`; negative controls `ctrl_3digit` / `ctrl_5digit`. Expected **CREDIT_CARD = 0** after fix (today **4** column hits on `id`, `ref_a`, `ref_b`, `ref_c`). See `deploy/lab-smoke-stack/README.md`. |
 
 Re-seed requires recreating volumes or running manual DDL on existing DBs — for a clean slate, `docker compose down -v` and `up -d` (destructive).
 

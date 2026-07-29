@@ -20,7 +20,17 @@ docker compose -f docker-compose.mongo.yml up -d
 
 **Config example for Data Boar:** `config.lab-smoke.example.yaml` (copy elsewhere, set hub host IP, mount `tests/data/compressed` and `tests/data/homelab_synthetic` as documented). External/public API + DB eval: **`docs/ops/LAB_EXTERNAL_CONNECTIVITY_EVAL.md`**.
 
-**SQL seeds:** `init/postgres/` and `init/mariadb/` load via each image’s `/docker-entrypoint-initdb.d` hook. **`init/mssql/`** and **`init/oracle/`** load via one-shot **`lab-mssql-init`** and **`lab-oracle-init`** (same pattern as **`lab-redis-init`**) — the official MSSQL image has no auto-init mount, and gvenzl Oracle hooks run as SYS on the CDB root instead of `XEPDB1`. Scripts: `init/mssql/apply_lab_smoke.sh`, `init/oracle/apply_lab_smoke_pdb.sh`. Corpus: `01_*` base tables, `02_*` linkage + minor-adjacent + shared-phone rows.
+**SQL seeds:** `init/postgres/` and `init/mariadb/` load via each image’s `/docker-entrypoint-initdb.d` hook. **`init/mssql/`** and **`init/oracle/`** load via one-shot **`lab-mssql-init`** and **`lab-oracle-init`** (same pattern as **`lab-redis-init`**) — the official MSSQL image has no auto-init mount, and gvenzl Oracle hooks run as SYS on the CDB root instead of `XEPDB1`. Scripts: `init/mssql/apply_lab_smoke.sh`, `init/oracle/apply_lab_smoke_pdb.sh`. Corpus: `01_*` base tables, `02_*` linkage + minor-adjacent + shared-phone rows, `03_*` **#1332** INTEGER false-positive repro (`lab_fp_numeric_ids`).
+
+### Expected detector signal — `lab_fp_numeric_ids` ([#1332](https://github.com/DataBoar/data-boar/issues/1332) / [#1371](https://github.com/DataBoar/data-boar/issues/1371))
+
+| Table / scope | `sample_limit` | `CREDIT_CARD` column findings (today → after #1332 fix) |
+| --- | --- | --- |
+| `lab_fp_numeric_ids` (`id`, `ref_a`, `ref_b`, `ref_c`) | **≥ 4** | **4 → 0** (one per INT column; joined sample crosses value boundaries) |
+| `lab_fp_numeric_ids` (`ctrl_3digit`, `ctrl_5digit`) | ≥ 4 | **0 → 0** (negative control — 3- and 5-digit values must not match card regex) |
+| `lab_fp_numeric_ids` (`id`, …) | **1** | **0 → 0** (too few distinct values to close the four-group pattern) |
+
+Same semantics on **PostgreSQL, MariaDB, MSSQL, and Oracle** (`init/*/03_lab_fp_numeric_ids.sql`). Rest of the SQL corpus (`01_*`, `02_*`) must keep detecting **LGPD_CPF**, **EMAIL**, **PHONE_BR**, and **DOB_POSSIBLE_MINOR** — guarded by `tests/test_lab_smoke_fp_numeric_ids.py`.
 
 **Mongo seed:** `init/mongodb/01_lab_smoke_seed.js` (database `lab_smoke_mongo`).
 

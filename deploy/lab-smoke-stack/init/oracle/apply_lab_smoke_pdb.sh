@@ -37,7 +37,10 @@ run_sql_file() {
 
 wait_for_oracle
 
-for sql_file in "$SEED_DIR"/01_lab_smoke.sql "$SEED_DIR"/02_lab_smoke_linkage.sql; do
+for sql_file in \
+  "$SEED_DIR"/01_lab_smoke.sql \
+  "$SEED_DIR"/02_lab_smoke_linkage.sql \
+  "$SEED_DIR"/03_lab_fp_numeric_ids.sql; do
   if [ ! -f "$sql_file" ]; then
     echo "lab-oracle-init: missing $sql_file" >&2
     exit 1
