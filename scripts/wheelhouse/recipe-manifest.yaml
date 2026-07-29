@@ -1,0 +1,67 @@
+# Canonical pinned inputs for the x86-64-v1 wheelhouse build (#1379).
+# Referenced by docs/plans/PLAN_WHEELHOUSE_DISTRIBUTION.md.
+# CI MUST load values from this file — never hard-code pins in workflow YAML.
+
+schema_version: 1
+
+gates:
+  # Signature of a poisoned (PyPI) numpy, measured 2026-06 and 2026-07-28:
+  #   _multiarray_umath.so ≈ 10_759_961 B · popcnt = 1453
+  # Correct v1 wheel: ≈ 5.1 MB · popcnt = 0
+  numpy_popcnt_max: 0
+  numpy_umath_so_max_bytes: 8000000
+  scipy_forbid_libscipy_openblas: true
+
+build:
+  require_no_build_isolation: true
+  require_no_deps_on_pip_wheel: true
+  numpy_meson_args:
+    - "-Dblas=openblas"
+    - "-Dlapack=openblas"
+    - "-Dcpu-baseline=none"
+    - "-Dcpu-dispatch=none"
+  docker_platform: "linux/amd64"
+
+packages:
+  numpy: ">=2.4.6"
+  scipy: ">=1.17.0"
+  scikit-learn: ">=1.9.0"
+  pandas: ">=3.0.3"
+  pure_wheels:
+    - python-dateutil
+    - six
+    - pytz
+    - tzdata
+    - joblib
+    - threadpoolctl
+    - narwhals
+
+containers:
+  musl:
+    image_template: "docker.io/library/python:{pyver}-alpine"
+    auditwheel_plat: "musllinux_1_2_x86_64"
+  glibc:
+    image: "quay.io/pypa/manylinux_2_28_x86_64"
+    auditwheel_plat: "manylinux_2_28_x86_64"
+
+# PR / push path filter: one cell (~10–25 min; scipy dominates).
+canary:
+  libc: musl
+  python: "3.12"
+
+# Weekly / workflow_dispatch scope=full.
+matrix:
+  python: ["3.12", "3.13", "3.14"]
+  libc: [musl, glibc]
+
+mariadb_connector_c:
+  version: "3.4.6"
+  tarball_url: "https://github.com/mariadb-corporation/mariadb-connector-c/archive/refs/tags/v3.4.6.tar.gz"
+  sha256: "27b57790896b7464e1b87fb29bad49e31ee36fdb6942e5c86284c6af9630be0e"
+  cmake_flags:
+    - "-DCMAKE_BUILD_TYPE=Release"
+    - "-DCMAKE_INSTALL_PREFIX=/usr/local"
+    - "-DWITH_SSL=OPENSSL"
+    - "-DWITH_UNIT_TESTS=OFF"
+    - "-DWITH_EXTERNAL_ZLIB=ON"
+    - "-DCMAKE_POLICY_VERSION_MINIMUM=3.5"

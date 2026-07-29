@@ -1,13 +1,13 @@
 # Plan: Wheelhouse distribution via GitHub Releases (pan-ABI matrix) (#1182)
 
-<!-- plans-hub-summary: Pan-ABI wheelhouse matrix — cp312/cp313/cp314 × (manylinux|musllinux) × (x86_64|arm64) × CPU baseline (x86-64-v1); abi3 boar_fast_filter per (libc×arch); hosted release wheelhouse-x86-64-v1-2026-07-29 verified; mariadb glibc x86_64 recipe pinned (#1367); aarch64 mariadb still #1366. -->
+<!-- plans-hub-summary: Pan-ABI wheelhouse matrix — cp312/cp313/cp314 × (manylinux|musllinux) × (x86_64|arm64) × CPU baseline (x86-64-v1); abi3 boar_fast_filter per (libc×arch); hosted release wheelhouse-x86-64-v1-2026-07-29 verified; mariadb glibc recipe + CI recipe gates (#1367/#1379); aarch64 mariadb still #1366. -->
 <!-- plans-hub-related: PLAN_PACKAGING_EXTRAS.md, PLAN_QUICKSTART.md -->
 
-- **Status:** In progress (x86-64-v1 slice shipped + user docs rolled out; mariadb x86_64 both libcs published; arm64 + PEP 503 index pending)
-- **Date:** 2026-07-12 (scope rewrite 2026-07-22; v1 release + doc rollout 2026-07-29 — [#1365](https://github.com/DataBoar/data-boar/issues/1365); mariadb glibc recipe 2026-07-29 — [#1367](https://github.com/DataBoar/data-boar/issues/1367))
+- **Status:** In progress (x86-64-v1 slice shipped; recipe CI gates live; arm64 + PEP 503 index pending)
+- **Date:** 2026-07-12 (scope rewrite 2026-07-22; v1 release + doc rollout 2026-07-29 — [#1365](https://github.com/DataBoar/data-boar/issues/1365); mariadb glibc recipe 2026-07-29 — [#1367](https://github.com/DataBoar/data-boar/issues/1367); recipe CI 2026-07-29 — [#1379](https://github.com/DataBoar/data-boar/issues/1379))
 - **Authors:** Fabio Leitao (operator); Cursor executor
 - **Priority:** H1 (packaging / distribution)
-- **GitHub:** [#1182](https://github.com/DataBoar/data-boar/issues/1182) `[P1][packaging]` · cross-ref [#782](https://github.com/DataBoar/data-boar/issues/782) (abi3 wheel matrix) · **GAP-001** (wheel-matrix / maturin) · doc slice [#1365](https://github.com/DataBoar/data-boar/issues/1365) · mariadb glibc recipe [#1367](https://github.com/DataBoar/data-boar/issues/1367) · aarch64 axis [#1366](https://github.com/DataBoar/data-boar/issues/1366)
+- **GitHub:** [#1182](https://github.com/DataBoar/data-boar/issues/1182) `[P1][packaging]` · cross-ref [#782](https://github.com/DataBoar/data-boar/issues/782) (abi3 wheel matrix) · **GAP-001** (wheel-matrix / maturin) · doc slice [#1365](https://github.com/DataBoar/data-boar/issues/1365) · mariadb glibc recipe [#1367](https://github.com/DataBoar/data-boar/issues/1367) · recipe CI [#1379](https://github.com/DataBoar/data-boar/issues/1379) · aarch64 axis [#1366](https://github.com/DataBoar/data-boar/issues/1366)
 
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md)
 
@@ -112,6 +112,8 @@ Hosting a **`simple/`** index **alone** does **not** remove the two-step install
 
 ### Build decisions (versioned here — full runbook may stay in operator vault)
 
+**Machine-readable source of truth:** [`scripts/wheelhouse/recipe-manifest.yaml`](../../scripts/wheelhouse/recipe-manifest.yaml). CI loads pins from that file only ([#1379](https://github.com/DataBoar/data-boar/issues/1379)). Tables below are human mirrors — if prose and manifest disagree, **fix the manifest and update prose**.
+
 Three decisions that make v1 builds work (from release `README.md`):
 
 1. **`-Dcpu-baseline=none -Dcpu-dispatch=none`** on the numpy meson build.
@@ -121,6 +123,17 @@ Three decisions that make v1 builds work (from release `README.md`):
 **Container base:** `manylinux_2_28` for glibc (numpy 2.5 requires gcc ≥ 10.3; `manylinux2014` toolchain is too old). Aligns with RHEL 7 / CentOS 7 Docker-only stance in Troubleshooting.
 
 Publication gate: build **aborts** if numpy baseline contains any `popcnt` instruction.
+
+### CI — recipe guaranteed, not only documented (#1379)
+
+Documented ≠ guaranteed. Without CI, a silent recipe regression ships a wheel that **installs** and then `Illegal instruction`s on the client. Poisoned signature (measured twice): `_multiarray_umath.so` ≈ **10.7 MB / popcnt=1453** vs correct ≈ **5.1 MB / popcnt=0**.
+
+| Trigger | What runs | Why |
+| ------- | --------- | --- |
+| **PR / push** touching `scripts/wheelhouse/**`, this PLAN, or the workflow | Connector/C checksum + **canary** `musl` × `cp312` (~10–25 min) | Full matrix ≈ **1 h** (scipy ≈ 70%) — not every PR |
+| **Weekly cron** + `workflow_dispatch` `scope=full` | All `musl\|glibc` × `cp312/313/314` cells in parallel | Catches cross-cell drift without blocking day-to-day PRs |
+
+Workflow: [`.github/workflows/wheelhouse-recipe.yml`](../../.github/workflows/wheelhouse-recipe.yml). Scripts: [`scripts/wheelhouse/`](../../scripts/wheelhouse/). Hard-fail gates (ported from vault `build-v1-*.sh`): `popcnt == 0`, umath `.so` size `< 8_000_000`, scipy has no `libscipy_openblas`, Connector/C sha256 matches the manifest.
 
 ### `mariadb` (extra `sql-community`) — reproducible glibc recipe (#1367)
 
@@ -137,6 +150,8 @@ PyPI publishes **no** `mariadb` wheels on any platform — sdist only. Every `.[
 | **Build Connector/C from source** (pinned tarball + checksum) | **Chosen** | Auditable inputs; no third-party package repo in the build chain. |
 
 #### Pinned inputs (exact — do not “upgrade casually”)
+
+Canonical file: [`scripts/wheelhouse/recipe-manifest.yaml`](../../scripts/wheelhouse/recipe-manifest.yaml) key `mariadb_connector_c` (CI checksum job reads that file, not this table).
 
 | Field | Value |
 | ----- | ----- |
@@ -212,6 +227,7 @@ Future releases must repeat verify-before-link for new tags.
 | 6 | Add plan + `PLANS_TODO` entry + run `plans_hub_sync.py --write` | ✅ |
 | 7 | Post-hosting docs rollout in Troubleshooting/matrix with stable URL (**x86-64-v1**) | ✅ ([#1365](https://github.com/DataBoar/data-boar/issues/1365)) |
 | 7b | Pin reproducible `mariadb` glibc build (Connector/C from source) + publish cp312/313/314 | ✅ ([#1367](https://github.com/DataBoar/data-boar/issues/1367) — recipe; aarch64 → [#1366](https://github.com/DataBoar/data-boar/issues/1366)) |
+| 7c | CI rebuilds recipe from manifest; hard-fail objdump / size / openblas / Connector/C checksum | ✅ ([#1379](https://github.com/DataBoar/data-boar/issues/1379)) |
 | 8 | Expand arm64 slice + hosted PEP 503 `simple/` index with **`+x86v1`** local versions | ⬜ |
 | 9 | Optional: copy full build runbook from vault into `docs/ops/` | ⬜ |
 
@@ -228,6 +244,7 @@ Future releases must repeat verify-before-link for new tags.
 - [x] Plan documents pan-ABI rules + **fourth CPU baseline axis** + PEP 503 local-version trap.
 - [x] `boar_fast_filter` non-distribution on PyPI recorded.
 - [x] `mariadb` glibc x86_64 recipe pinned (tarball URL + sha256 + cmake flags) and wheels published (#1367).
+- [x] CI executes recipe from `recipe-manifest.yaml` with hard-fail gates (#1379).
 - [ ] `mariadb` aarch64 both libcs (#1366).
 - [ ] arm64 wheelhouse + `simple/` index (#1182 remainder).
 
