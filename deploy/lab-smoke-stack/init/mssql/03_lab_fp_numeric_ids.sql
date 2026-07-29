@@ -1,0 +1,24 @@
+-- #1332 / #1371: INTEGER identity columns whose sampled join mimics CREDIT_CARD (no real card data).
+-- Negative controls: ctrl_3digit (3-digit values) and ctrl_5digit (5-digit values) must not match CREDIT_CARD.
+-- Requires sample_limit >= 4 on column scan for the false positive to appear.
+
+USE lab_smoke_mssql;
+GO
+
+CREATE TABLE dbo.lab_fp_numeric_ids (
+    id INT IDENTITY(1001, 1) NOT NULL PRIMARY KEY,
+    ref_a INT NULL,
+    ref_b INT NULL,
+    ref_c INT NULL,
+    ctrl_3digit INT NULL,
+    ctrl_5digit INT NULL
+);
+GO
+
+INSERT INTO dbo.lab_fp_numeric_ids (ref_a, ref_b, ref_c, ctrl_3digit, ctrl_5digit) VALUES
+    (2001, 3001, 4001, 101, 10001),
+    (2002, 3002, 4002, 102, 10002),
+    (2003, 3003, 4003, 103, 10003),
+    (2004, 3004, 4004, 104, 10004),
+    (2005, 3005, 4005, 105, 10005);
+GO

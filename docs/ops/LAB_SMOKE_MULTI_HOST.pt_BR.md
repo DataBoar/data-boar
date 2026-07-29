@@ -169,6 +169,7 @@ Usar depois da ordem de hosts da **§1**. Marcar na tua folha de laboratório.
 | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `init/*/01_lab_smoke.sql`         | `lab_customers`, `lab_notes` — caminho feliz, borderline, isco de FP, linha inócua.                                                                                                                      |
 | `init/*/02_lab_smoke_linkage.sql` | `lab_guardians`, `lab_minors_synthetic` (nomes de coluna data_nascimento/idade para heurísticas de **possível menor**), `lab_phone_directory`, linhas extra para ligação por **telefone compartilhado**. |
+| `init/*/03_lab_fp_numeric_ids.sql` | `lab_fp_numeric_ids` — repro **#1332**: colunas INTEGER cuja amostra unida por espaço imita **CREDIT_CARD** com `sample_limit >= 4`; controles negativos `ctrl_3digit` / `ctrl_5digit`. Esperado **CREDIT_CARD = 0** após o fix (hoje **4** hits de coluna em `id`, `ref_a`, `ref_b`, `ref_c`). Ver `deploy/lab-smoke-stack/README.md`. |
 
 Re-seed implica recriar volumes ou DDL manual em bases existentes — para estado limpo, `docker compose down -v` e `up -d` (destrutivo).
 
