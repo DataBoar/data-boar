@@ -91,7 +91,10 @@ jobs:
         env:
           WHEELHOUSE_OUT: ${{ runner.temp }}/wheelhouse
           DOCKER: docker
-        run: bash scripts/wheelhouse/run_cell.sh "${{ steps.canary.outputs.libc }}" "${{ steps.canary.outputs.py }}"
+          # Env (not run-script interpolation) — avoids zizmor template-injection on outputs.
+          CELL_LIBC: ${{ steps.canary.outputs.libc }}
+          CELL_PY: ${{ steps.canary.outputs.py }}
+        run: bash scripts/wheelhouse/run_cell.sh "$CELL_LIBC" "$CELL_PY"
 
   matrix-cell:
     name: Full cell ${{ matrix.libc }} × ${{ matrix.py }}
@@ -123,4 +126,6 @@ jobs:
         env:
           WHEELHOUSE_OUT: ${{ runner.temp }}/wheelhouse
           DOCKER: docker
-        run: bash scripts/wheelhouse/run_cell.sh "${{ matrix.libc }}" "${{ matrix.py }}"
+          CELL_LIBC: ${{ matrix.libc }}
+          CELL_PY: ${{ matrix.py }}
+        run: bash scripts/wheelhouse/run_cell.sh "$CELL_LIBC" "$CELL_PY"
