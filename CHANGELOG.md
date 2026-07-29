@@ -12,7 +12,7 @@ Human-readable summary of user-facing changes. **Detailed release notes:** [docs
 
 ---
 
-## 1.7.4.post11 (release prep — PyPI upload pending)
+## 1.7.4.post11 (published PyPI **2026-07-29 21:32:58 UTC**)
 
 > Post-release on the **`1.7.4`** public line. **`[project] version = 1.7.4.post11`** and **`[tool.databoar] maturity_build = 262`** (`N=1` discrete fix since post10 baseline `.261`, ADR-0073). **PyPI-only** — no Git tag, no GitHub Release, no container. Operator runs **`publish-pypi`** after merge.
 
