@@ -1,13 +1,13 @@
 # Plan: Post-scan remediation plugin interface (Enterprise)
 
-<!-- plans-hub-summary: Enterprise hook for third-party tokenization, masking, and field crypto after discovery -->
+<!-- plans-hub-summary: Enterprise remediation bridge — #649 manifest export shipped; #606 plugin hook skeleton still open -->
 
 **Status:** Active
 **Date:** 2026-05-19
 **Authors:** Fabio Leitao
 **Priority:** H1
 
-**GitHub:** [#601](https://github.com/FabioLeitao/data-boar/issues/601) · [#606](https://github.com/FabioLeitao/data-boar/issues/606) · [#1057](https://github.com/FabioLeitao/data-boar/issues/1057) (v1.8.x anonymizer / policy enrichment)
+**GitHub:** [#601](https://github.com/FabioLeitao/data-boar/issues/601) · [#606](https://github.com/FabioLeitao/data-boar/issues/606) · [#649](https://github.com/DataBoar/data-boar/issues/649) · [#1057](https://github.com/FabioLeitao/data-boar/issues/1057) (v1.8.x anonymizer / policy enrichment)
 
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md)
 
@@ -38,7 +38,8 @@ Define an **Enterprise-tier** post-scan hook that:
 | Phase | Deliverable | Status |
 | ----- | ----------- | ------ |
 | **0 – Docs** | Use cases + this plan | 🔄 In progress (**#602–605**, **#601**) |
-| **1 – Hook skeleton** | Minimal plugin registry + no-op driver | ⬜ **#606** |
+| **1 – Remediation manifest export** | CLI `--export-remediation-manifest` + schema v1 JSON (bridge for third-party plugins) | ✅ **#649** |
+| **1b – Hook skeleton** | Minimal plugin registry + no-op driver (`RemediationPlugin`) | ⬜ **#606** (still required before in-process plugin invoke) |
 | **2 – Export path** | Tokenized findings JSONL option | ⬜ |
 | **3 – Re-scan job** | Scoped verify after plugin run | ⬜ |
 
@@ -54,5 +55,6 @@ Define an **Enterprise-tier** post-scan hook that:
 ## Acceptance (plan)
 
 - [x] Use-case docs published under `docs/use-cases/`
+- [x] Remediation manifest JSON export (`--session` + `--export-remediation-manifest`) — **#649**
 - [ ] Plugin interface ADR when shape stabilises
 - [ ] Code hook merged per **#606**
