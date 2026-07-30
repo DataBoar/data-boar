@@ -1,10 +1,10 @@
 # Plan: Wheelhouse distribution via GitHub Releases (pan-ABI matrix) (#1182)
 
-<!-- plans-hub-summary: Pan-ABI wheelhouse matrix — cp312/cp313/cp314 × (manylinux|musllinux) × (x86_64|arm64) × CPU baseline (x86-64-v1); abi3 boar_fast_filter per (libc×arch); hosted release wheelhouse-x86-64-v1-2026-07-29 verified; mariadb glibc recipe + CI recipe gates (#1367/#1379); aarch64 mariadb still #1366. -->
+<!-- plans-hub-summary: Pan-ABI wheelhouse matrix — cp312/cp313/cp314 + cp314t (no-GIL) × (manylinux|musllinux) × (x86_64|arm64) × CPU baseline (x86-64-v1 for GIL cells); hosted wheelhouse-x86-64-v1-2026-07-29 = 56 assets (10× cp314t); mariadb glibc recipe + CI recipe gates (#1367/#1379); aarch64 mariadb still #1366. -->
 <!-- plans-hub-related: PLAN_PACKAGING_EXTRAS.md, PLAN_QUICKSTART.md -->
 
 - **Status:** In progress (x86-64-v1 slice shipped; recipe CI gates live; arm64 + PEP 503 index pending)
-- **Date:** 2026-07-12 (scope rewrite 2026-07-22; v1 release + doc rollout 2026-07-29 — [#1365](https://github.com/DataBoar/data-boar/issues/1365); mariadb glibc recipe 2026-07-29 — [#1367](https://github.com/DataBoar/data-boar/issues/1367); recipe CI 2026-07-29 — [#1379](https://github.com/DataBoar/data-boar/issues/1379))
+- **Date:** 2026-07-12 (scope rewrite 2026-07-22; v1 release + doc rollout 2026-07-29 — [#1365](https://github.com/DataBoar/data-boar/issues/1365); mariadb glibc recipe 2026-07-29 — [#1367](https://github.com/DataBoar/data-boar/issues/1367); recipe CI 2026-07-29 — [#1379](https://github.com/DataBoar/data-boar/issues/1379); **cp314t / no-GIL cells 2026-07-30**)
 - **Authors:** Fabio Leitao (operator); Cursor executor
 - **Priority:** H1 (packaging / distribution)
 - **GitHub:** [#1182](https://github.com/DataBoar/data-boar/issues/1182) `[P1][packaging]` · cross-ref [#782](https://github.com/DataBoar/data-boar/issues/782) (abi3 wheel matrix) · **GAP-001** (wheel-matrix / maturin) · doc slice [#1365](https://github.com/DataBoar/data-boar/issues/1365) · mariadb glibc recipe [#1367](https://github.com/DataBoar/data-boar/issues/1367) · recipe CI [#1379](https://github.com/DataBoar/data-boar/issues/1379) · aarch64 axis [#1366](https://github.com/DataBoar/data-boar/issues/1366)
@@ -22,11 +22,11 @@ Two **orthogonal** packaging tracks must not be confused:
 | Track | ABI model | What the wheelhouse / release matrix must publish |
 | ----- | --------- | ------------------------------------------------- |
 | **`boar_fast_filter`** (our Rust/PyO3 ext) | **abi3-py38** (`rust/boar_fast_filter/Cargo.toml`) | **ONE** `cp38-abi3` wheel per `(libc × arch)` — serves **all** CPython **3.8+**. **Do not** emit per-`cpXXX` wheels for this extension. **Not distributed on PyPI today.** Tracked as [#782](https://github.com/DataBoar/data-boar/issues/782) / **GAP-001**. |
-| **Third-party compiled deps** (numpy, pandas, scipy, scikit-learn, pydantic-core, cryptography, pillow, …) | **Not** abi3 (stable ABI) for the scientific / ML stack we care about | **Per-`cpXXX`:** `cp312` + `cp313` + `cp314`, each × `(manylinux/glibc \| musllinux/musl)` × `(x86_64 \| arm64)`. Wheelhouse priority = **fill upstream gaps** and **x86-64-v1** rebuilds where PyPI baseline is too high. |
+| **Third-party compiled deps** (numpy, pandas, scipy, scikit-learn, pydantic-core, cryptography, pillow, …) | **Not** abi3 (stable ABI) for the scientific / ML stack we care about | **Per-`cpXXX`:** `cp312` + `cp313` + `cp314` (+ **`cp314t`** free-threaded / no-GIL where hosted), each × `(manylinux/glibc \| musllinux/musl)` × `(x86_64 \| arm64)`. Wheelhouse priority = **fill upstream gaps** and **x86-64-v1** rebuilds where PyPI baseline is too high. |
 
-The first hosted seed (2026-07-12) proved **HTTPS + `--find-links`** for **one** gap artifact (`scikit-learn` `cp314` musllinux). The **x86-64-v1** release (2026-07-29) is the first **full dependency-closed** slice for x86_64.
+The first hosted seed (2026-07-12) proved **HTTPS + `--find-links`** for **one** gap artifact (`scikit-learn` `cp314` musllinux). The **x86-64-v1** release (2026-07-29) is the first **full dependency-closed** slice for x86_64. On **2026-07-30** the same tag gained **10× `cp314t`** free-threaded cells (see below) — **56** assets total.
 
-**CI gating note:** `cp314` remains **signal-only** in CI gating (compat / foresight), not a hard release gate. The wheelhouse still **builds and hosts** `cp314` cells so musl/no-AVX hosts on 3.14 do not fall back to source builds.
+**CI gating note:** `cp314` remains **signal-only** in CI gating (compat / foresight), not a hard release gate. The wheelhouse still **builds and hosts** `cp314` (+ `cp314t`) cells so musl/no-AVX hosts on 3.14 (GIL) and free-threaded foresight hosts do not fall back to source builds.
 
 ---
 
@@ -41,19 +41,21 @@ Use a phased wheelhouse distribution model (same direction tracked in #1182 comm
 ### Matrix axes (four dimensions)
 
 ```text
-{cp312, cp313, cp314}
+{cp312, cp313, cp314, cp314t}
   × {manylinux (glibc), musllinux (musl)}
   × {x86_64, arm64}
-  × {CPU baseline: PyPI default vs x86-64-v1 where needed}
+  × {CPU baseline: x86-64-v1 for GIL cells where needed; cp314t = upstream/default ISA (not v1)}
 ```
 
-Plus, separately (not multiplied by cpXXX):
+Plus, separately:
 
 ```text
-boar_fast_filter: cp38-abi3 × {manylinux, musllinux} × {x86_64, arm64}
+boar_fast_filter:
+  · cp38-abi3 × {manylinux, musllinux} × {x86_64, arm64}   # GIL 3.8+ — does NOT load on free-threaded
+  · cp314-cp314t × {manylinux, musllinux} × x86_64         # dedicated free-threaded build (maturin --interpreter python3.14t)
 ```
 
-**libc vs CPU baseline are orthogonal.** Container musl on an AVX laptop proves musl, not v1. Metal **alpine-emachines** (Celeron 900) proves both.
+**libc vs CPU baseline are orthogonal.** Container musl on an AVX laptop proves musl, not v1. Metal **alpine-emachines** (Celeron 900) proves both. **`cp314` and `cp314t` are not interchangeable** (`SOABI=cpython-314-…` vs `cpython-314t-…`).
 
 ### ABI rules (non-negotiable)
 
@@ -68,8 +70,31 @@ boar_fast_filter: cp38-abi3 × {manylinux, musllinux} × {x86_64, arm64}
 | Site repo | **`DataBoar/data-boar-site`** |
 | Tag | **`wheelhouse-x86-64-v1-2026-07-29`** |
 | Release URL | <https://github.com/DataBoar/data-boar-site/releases/tag/wheelhouse-x86-64-v1-2026-07-29> |
-| Assets | **46** wheels + `SHA256SUMS` + `README.md` (install + verification en_US / pt_BR); ~470 MB — includes `mariadb` on both libcs × cp312/313/314 |
+| Assets | **56** wheels + `SHA256SUMS` + `README.md` (install + verification en_US / pt_BR) — original **46** GIL/v1 cells + **10× `cp314t`** (2026-07-30); includes `mariadb` on both libcs × cp312/313/314 |
 | Offline proof | Operator re-downloaded; checksums matched (incl. 3 new glibc `mariadb` wheels); clean-container offline install |
+
+### Free-threaded / no-GIL — `cp314t` cells (added 2026-07-30)
+
+Ten wheels on the same release tag for CPython **3.14 free-threaded** (`python3.14t`, PEP 703). Operator already refreshed the **site-repo release description**; this plan records the measured matrix and CPU-contract decision.
+
+| Package | manylinux | musllinux | Upstream / build note |
+| ------- | --------- | --------- | --------------------- |
+| **numpy** 2.5.1 | ✅ | ✅ | Upstream publishes cp314t (15/15 variants measured upstream) |
+| **scipy** 1.18.0 | ✅ | ✅ | Upstream publishes cp314t (10/10) |
+| **pandas** 3.0.5 | ✅ | ✅ | Upstream publishes cp314t (10/10) |
+| **scikit-learn** 1.9.0 | ✅ | ✅ | Upstream: manylinux **4** variants; **musllinux = 0 for every variant** — musl cell **built here from source** (`SK_OK`, **10 325 434** bytes) |
+| **boar_fast_filter** 0.1.0 | ✅ `cp314-cp314t` | ✅ `cp314-cp314t` | Built with **maturin `--interpreter python3.14t`**, one wheel per libc. The release **`cp38-abi3` does not load** on free-threaded. |
+
+**`popcnt` measured (2026-07-30):**
+
+| Wheel | popcnt | CPU contract |
+| ----- | ------ | ------------ |
+| numpy **cp314t** | **1477** | Requires **x86-64-v2+** (not a v1 baseline rebuild) |
+| scipy / pandas / sklearn **cp314t** | **0** | No popcnt in those trees (measured) |
+
+**Operator decision (recorded):** free-threaded cells **do not** need an x86-64-v1 baseline rebuild. The min-spec host (Celeron 900, 2 cores, 2009) gains nothing from real parallelism and is not a container free-threaded target. The two sets coexist with **declared CPU contracts**: GIL **`cp312`/`cp313`/`cp314`** = v1 / `popcnt=0` (Celeron-safe); **`cp314t`** = parallelism on v2+ hardware.
+
+**ABI:** `cp314` `SOABI=cpython-314-…` vs `cp314t` `SOABI=cpython-314t-…` — **not interchangeable**.
 
 ### Install command (verified on metal — musl example)
 
