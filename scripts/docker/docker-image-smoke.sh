@@ -8,7 +8,8 @@ set -euo pipefail
 IMAGE="${1:?image ref required (e.g. data_boar:lab)}"
 VERSION="${2:-}"
 
-PYTHON="/usr/local/bin/python3.13"
+# Dockerfile assembler always symlinks python3 → versioned binary (3.14 / 3.13…).
+PYTHON="/usr/local/bin/python3"
 RUN=(podman run --rm "${IMAGE}" "${PYTHON}")
 
 if ! command -v podman >/dev/null 2>&1; then

@@ -81,15 +81,36 @@ add_deps_from() {
     collect_ldd_paths "${target}" >> "${DEPS_FILE}"
 }
 
+# Derive lib dir from the assembler interpreter (python3.13 → python3.14 on base bump).
+# Hardcoding python3.13 leaves the find empty on 3.14 and trips the libsqlite3 fail-close.
+PY_BIN=""
+for candidate in /usr/local/bin/python3 /usr/local/bin/python; do
+    if [[ -x "${candidate}" ]]; then
+        PY_BIN="${candidate}"
+        break
+    fi
+done
+if [[ -z "${PY_BIN}" ]]; then
+    echo "collect-runtime-rootfs: FATAL no python3/python under /usr/local/bin" >&2
+    exit 1
+fi
+PY_XY="$("${PY_BIN}" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
+PY_LIB="/usr/local/lib/python${PY_XY}"
+PY_VER_BIN="/usr/local/bin/python${PY_XY}"
+if [[ ! -d "${PY_LIB}/lib-dynload" ]]; then
+    echo "collect-runtime-rootfs: FATAL missing ${PY_LIB}/lib-dynload (ABI path)" >&2
+    exit 1
+fi
+
 # Extension modules and interpreter (site-packages + stdlib lib-dynload — e.g. _sqlite3 → libsqlite3).
 while IFS= read -r -d '' so; do
     add_deps_from "${so}"
 done < <(
-    find /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/lib-dynload \
+    find "${PY_LIB}/site-packages" "${PY_LIB}/lib-dynload" \
         -name '*.so' -print0 2>/dev/null || true
 )
 
-for py in /usr/local/bin/python3.13 /usr/local/bin/python3; do
+for py in "${PY_VER_BIN}" "${PY_BIN}"; do
     add_deps_from "${py}"
 done
 
