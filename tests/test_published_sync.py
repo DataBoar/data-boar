@@ -109,7 +109,8 @@ def test_published_sync_optional_network_py_pi_and_hub() -> None:
             body = resp.read().decode("utf-8", errors="replace")
     except (urllib.error.URLError, TimeoutError) as exc:
         pytest.skip(f"PyPI unreachable: {exc}")
-    assert version in body, f"PyPI simple index missing {version}"
+    else:
+        assert version in body, f"PyPI simple index missing {version}"
 
     hub_url = (
         f"https://hub.docker.com/v2/repositories/fabioleitao/data_boar/tags/{version}"
@@ -119,4 +120,5 @@ def test_published_sync_optional_network_py_pi_and_hub() -> None:
             hub_body = resp.read().decode("utf-8", errors="replace")
     except (urllib.error.URLError, TimeoutError) as exc:
         pytest.skip(f"Docker Hub unreachable: {exc}")
-    assert "name" in hub_body and version in hub_body
+    else:
+        assert "name" in hub_body and version in hub_body
