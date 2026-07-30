@@ -22,6 +22,24 @@ ignore:
       (medido). NAO subir para 3.15.0a6/b3: Python pre-release em imagem de release esta
       PROIBIDO pelo operador. Revisar quando 3.15.0 sair estavel ou houver backport.
 
+  - vulnerability: CVE-2026-11940
+    package:
+      name: python
+      type: binary
+    reason: >-
+      CPython binary (GIL slim e free-threaded 3.14.6). Unico fix declarado e 3.15.0b4
+      (beta) — remediacao indisponivel como release estavel. NAO subir para pre-release:
+      PROIBIDO pelo operador. Revisar quando 3.15.0 sair estavel ou houver backport.
+
+  - vulnerability: CVE-2026-11972
+    package:
+      name: python
+      type: binary
+    reason: >-
+      CPython binary (GIL slim e free-threaded 3.14.6). Unico fix declarado e 3.15.0b4
+      (beta) — remediacao indisponivel como release estavel. NAO subir para pre-release:
+      PROIBIDO pelo operador. Revisar quando 3.15.0 sair estavel ou houver backport.
+
   # --- glibc (distroless cc-debian13 runtime) ---
   - package:
       name: libc6

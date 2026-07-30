@@ -15,7 +15,7 @@
 Use one line (adjust version when you bump):
 
 ```text
-Data Boar — PII discovery (LGPD/GDPR). 3.14-slim distroless, popcnt=0. Tags: latest, 1.7.4.post12.
+Data Boar — PII discovery (LGPD/GDPR). GIL popcnt=0 + optional -nogil (x86-64-v2+).
 ```
 
 ---
@@ -39,7 +39,9 @@ Copy from the block below into **Repository → Edit** on Docker Hub.
 
 **Also on Hub (historical, not `latest`):** immutable June GA tag **`1.7.4`** (`sha256:04b4cd7d…`) — left untouched when post12 published. Prefer **`1.7.4.post12`** / **`latest`** for new deploys unless you intentionally pin the June digest.
 
-Confirm **`pyproject.toml`** and **[GitHub Releases](https://github.com/DataBoar/data-boar/releases)** for the exact pairing. Free-threaded (**no-GIL** / **`cp314t`**) wheels for lab / Enterprise foresight live in the **[wheelhouse release](https://github.com/DataBoar/data-boar-site/releases/tag/wheelhouse-x86-64-v1-2026-07-29)** (not inside this container — image uses GIL **`cp314`**).
+**Free-threaded companion tag (optional):** **`1.7.4.post12-nogil`** — CPython **3.14t** (no-GIL) via `uv`-installed python-build-standalone (there is **no** `python:3.14t-slim` on Docker Hub). Uses wheelhouse **`cp314t`** cells + **`boar_fast_filter` cp314t** (`abi3` does **not** load). **CPU: x86-64-v2+** (numpy cp314t measured `popcnt=1477`) — **does not** run on alpine-emachines / Celeron-class hosts. **Does not** move **`latest`**. Build file: **`Dockerfile.nogil`**.
+
+Confirm **`pyproject.toml`** and **[GitHub Releases](https://github.com/DataBoar/data-boar/releases)** for the exact pairing. Wheelhouse assets: **[wheelhouse-x86-64-v1-2026-07-29](https://github.com/DataBoar/data-boar-site/releases/tag/wheelhouse-x86-64-v1-2026-07-29)**.
 
 ### Copyright and maintainer
 
@@ -51,8 +53,9 @@ Confirm **`pyproject.toml`** and **[GitHub Releases](https://github.com/DataBoar
 
 | Tag | Role |
 | --- | ---- |
-| **`fabioleitao/data_boar:latest`** | Newest published build (same digest as **`1.7.4.post12`**) |
-| **`fabioleitao/data_boar:1.7.4.post12`** | Current immutable post-release image (Python **3.14** / distroless / **popcnt=0**) |
+| **`fabioleitao/data_boar:latest`** | Newest **GIL** published build (same digest as **`1.7.4.post12`**) — **never** the `-nogil` image |
+| **`fabioleitao/data_boar:1.7.4.post12`** | Current GIL image (Python **3.14** / distroless / **popcnt=0** / any x86-64) |
+| **`fabioleitao/data_boar:1.7.4.post12-nogil`** | Free-threaded companion (**3.14t** / **cp314t** / **x86-64-v2+** only) |
 | **`fabioleitao/data_boar:1.7.4`** | June 2026 GA image (historical; **not** retagged by post12) |
 
 ### Quick start (web API + dashboard on port 8088)
@@ -89,8 +92,11 @@ docker run --rm -v "$(pwd)/data:/data" fabioleitao/data_boar:latest \
 From the repo root, after tests pass and you are logged in to Docker Hub (daemonless ritual on Linux):
 
 ```bash
-# Canonical local ritual (build → smoke → grype --fail-on high --only-fixed → push)
+# GIL / universal (moves :latest)
 ~/.local/bin/build-push-podman.sh 1.7.4.post12 --debug
+
+# Free-threaded companion (local validate; operator pushes :…-nogil only — never :latest)
+./scripts/docker/build-nogil-local.sh 1.7.4.post12-nogil
 ```
 
 Windows / Docker Desktop path: see [DOCKER_IMAGE_RELEASE_ORDER.md](https://github.com/DataBoar/data-boar/blob/main/docs/ops/DOCKER_IMAGE_RELEASE_ORDER.md). After push, **replace the entire Full description** on Hub from this file so **Supported tags** stay in sync with the **Tags** tab.

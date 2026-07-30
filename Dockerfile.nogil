@@ -1,0 +1,117 @@
+# Free-threaded (no-GIL) release image variant — tag suffix `-nogil`.
+# Multi-stage: builder (uv-installed 3.14t) → runtime-assembler → distroless nonroot.
+#
+# Why a separate file: there is no `python:3.14t-slim` on Docker Hub (404). We keep
+# the GIL image on stock `python:3.14-slim` and install CPython free-threaded via
+# `uv python install` (python-build-standalone) for this variant only.
+#
+# CPU contract: x86-64-v2+ (numpy cp314t has popcnt≠0). Does NOT target alpine-emachines.
+# Do NOT retag `:latest` or `:1.7.4` when publishing this image.
+
+# -----------------------------------------------------------------------------
+# Stage 1: free-threaded interpreter + deps + cp314t wheelhouse
+# -----------------------------------------------------------------------------
+FROM python:3.14-slim@sha256:cea0e6040540fb2b965b6e7fb5ffa00871e632eef63719f0ea54bca189ce14a6 AS builder
+
+# uv 0.11.x cannot fetch cpython-3.14.6+freethreaded; pin 0.12.0 + sha256 of the
+# official linux-gnu tarball (measured 2026-07-30).
+ARG UV_VERSION=0.12.0
+ARG UV_SHA256=eaf842262aa1c418d8ecc5605f02ee1ebfd369124fa48548e85f9481a47831a9
+ARG UV_PYTHON=3.14.6+freethreaded
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential gcc g++ pkg-config curl ca-certificates binutils \
+    libpq-dev libffi-dev libssl-dev unixodbc-dev default-libmysqlclient-dev \
+    && rm -rf /var/lib/apt/lists/* \
+    && curl -fsSL \
+        "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/uv-x86_64-unknown-linux-gnu.tar.gz" \
+        -o /tmp/uv.tgz \
+    && echo "${UV_SHA256}  /tmp/uv.tgz" | sha256sum -c - \
+    && tar -xzf /tmp/uv.tgz -C /tmp \
+    && install -m 0755 /tmp/uv-x86_64-unknown-linux-gnu/uv /usr/local/bin/uv \
+    && rm -rf /tmp/uv.tgz /tmp/uv-x86_64-unknown-linux-gnu
+
+# Install free-threaded CPython into a staging dir, then overlay onto /usr/local
+# so collect-runtime-rootfs + distroless see a normal prefix layout.
+ENV UV_PYTHON_INSTALL_DIR=/opt/uv-pythons
+RUN uv python install "${UV_PYTHON}" \
+    && PYROOT="$(find /opt/uv-pythons -maxdepth 1 -type d -name 'cpython-*freethreaded*' | sort | tail -1)" \
+    && test -n "${PYROOT}" \
+    && test -x "${PYROOT}/bin/python3.14t" \
+    && rm -rf /usr/local/lib/python3.14 /usr/local/lib/python3.14t \
+    && cp -a "${PYROOT}/bin/." /usr/local/bin/ \
+    && cp -a "${PYROOT}/lib/." /usr/local/lib/ \
+    && cp -a "${PYROOT}/include/." /usr/local/include/ \
+    && ln -sf python3.14t /usr/local/bin/python3 \
+    && ln -sf python3.14t /usr/local/bin/python \
+    && python -c 'import sys; assert sys._is_gil_enabled() is False, sys.version' \
+    && rm -f /usr/local/lib/python3.14t/EXTERNALLY-MANAGED \
+    && python -m ensurepip --upgrade
+
+WORKDIR /app
+COPY requirements.txt /app/requirements.txt
+COPY . /app
+
+ARG WHEELHOUSE_TAG=wheelhouse-x86-64-v1-2026-07-29
+
+# Container owns /usr/local; PEP 668 marker removed above after uv overlay.
+RUN pip uninstall -y wheel || true && \
+    pip install --no-cache-dir --upgrade "pip>=25.3" && \
+    pip install --no-cache-dir --force-reinstall "wheel>=0.46.2" && \
+    python -c "import wheel; import sys; sys.exit(0 if tuple(map(int, wheel.__version__.split('.'))) >= (0,46,2) else 1)" && \
+    pip install --no-cache-dir -r /app/requirements.txt && \
+    pip install --no-cache-dir --no-deps -e /app && \
+    pip install --no-cache-dir \
+        "psycopg2-binary>=2.9.11" "pymysql>=1.2.0" "mariadb>=1.1.14" \
+        "pyodbc>=5.3.0" "oracledb>=4.0.1" && \
+    WHEELHOUSE_TAG="${WHEELHOUSE_TAG}" bash /app/scripts/docker/apply_wheelhouse_v1.sh && \
+    PY_LIB="$(python -c 'import sysconfig; from pathlib import Path; print(Path(sysconfig.get_path("stdlib")))')" && \
+    rm -rf /tmp/wheelhouse-v1-glibc-cp314t && \
+    (find "${PY_LIB}/site-packages" -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true) && \
+    (find "${PY_LIB}/site-packages" -name "*.pyc" -delete 2>/dev/null || true)
+
+# -----------------------------------------------------------------------------
+# Stage 2: assemble runtime rootfs (shell stage — not shipped)
+# -----------------------------------------------------------------------------
+FROM python:3.14-slim@sha256:cea0e6040540fb2b965b6e7fb5ffa00871e632eef63719f0ea54bca189ce14a6 AS runtime-assembler
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq5 libffi8 unixodbc libmariadb3 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /usr/local /usr/local
+
+RUN ln -sf python3.14t /usr/local/bin/python3 && \
+    ln -sf python3.14t /usr/local/bin/python && \
+    python -c 'import sys; assert sys._is_gil_enabled() is False'
+
+# No pip/wheel/setuptools in the release image (#1028).
+RUN /usr/local/bin/python3.14t -m pip uninstall -y pip wheel setuptools 2>/dev/null || true && \
+    rm -f /usr/local/bin/pip /usr/local/bin/pip3 /usr/local/bin/pip3.14 /usr/local/bin/pip3.14t \
+          /usr/local/bin/wheel /usr/local/bin/uv 2>/dev/null || true
+
+COPY scripts/docker/collect-runtime-rootfs.sh /tmp/collect-runtime-rootfs.sh
+RUN chmod +x /tmp/collect-runtime-rootfs.sh && /tmp/collect-runtime-rootfs.sh /rootfs
+
+# -----------------------------------------------------------------------------
+# Stage 3: minimal distroless runtime (nonroot uid 65532, no shell/apt)
+# -----------------------------------------------------------------------------
+FROM gcr.io/distroless/cc-debian13:nonroot@sha256:d97bc0a941b8d4be647dc0ee75b264ddbb772f1ac5ba690a4309c00723b23775
+
+LABEL org.opencontainers.image.description="LGPD/GDPR/CCPA audit (free-threaded / no-GIL). Requires x86-64-v2+. Not interchangeable with the GIL image."
+
+WORKDIR /app
+
+COPY --from=runtime-assembler /rootfs /
+COPY --chown=65532:65532 . .
+
+ENV CONFIG_PATH=/data/config.yaml
+ENV PYTHONUNBUFFERED=1
+ENV API_HOST=0.0.0.0
+ENV PATH=/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+USER 65532:65532
+
+EXPOSE 8088
+
+CMD ["/usr/local/bin/python3.14t", "main.py", "--config", "/data/config.yaml", "--web", "--port", "8088", "--allow-insecure-http"]

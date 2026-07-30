@@ -2,7 +2,7 @@
 
 **English:** [DOCKER_IMAGE_RELEASE_ORDER.md](DOCKER_IMAGE_RELEASE_ORDER.md)
 
-**Contexto:** Após o **PR #99**, o repo usa **`python:3.13-slim`** no Dockerfile. Os operadores ainda precisam de uma **sequência repetível** para manter tags do Hub, versão do app e Scout alinhados. Esta doc define a sequência padrão e as variantes.
+**Contexto:** A imagem **universal (GIL)** usa **`Dockerfile`** → **`python:3.14-slim`** → distroless. A variante **free-threaded (no-GIL)** usa **`Dockerfile.nogil`** (instala `3.14t` via **uv**; não existe `python:3.14t-slim` no Hub). Os operadores ainda precisam de uma **sequência repetível** para manter tags do Hub, versão do app e gate alinhados.
 
 **Relacionado:** [scripts/docker/README.md](../../scripts/docker/README.md), [VERSIONING.md](../VERSIONING.md), [PLANS_TODO.md](../plans/PLANS_TODO.md) (ordens **–1**, **–1b**), [HOMELAB_VALIDATION.md](HOMELAB_VALIDATION.md) (ordem **–1L** para segundo ambiente), [DOCKER_HUB_REPOSITORY_DESCRIPTION.md](DOCKER_HUB_REPOSITORY_DESCRIPTION.md) (texto do Hub — colar após publicar).
 
@@ -26,6 +26,24 @@ Use quando quiser **uma imagem publicada** correspondendo a **uma versão do app
 | 9. **Hub UI**  | **Docker Hub → Repositório → Editar:** cole **Short** + **Full** de [DOCKER_HUB_REPOSITORY_DESCRIPTION.md](DOCKER_HUB_REPOSITORY_DESCRIPTION.md); atualize [today-mode/PUBLISHED_SYNC.md](today-mode/PUBLISHED_SYNC.md) |
 
 **Por que fazer o bump antes do build/push:** A imagem usa `COPY . .`, que inclui `pyproject.toml`. Fazer o build *depois* do bump garante que o app *dentro do contêiner* reporta a mesma versão que a tag semver publicada no Hub.
+
+---
+
+## Duas variantes de imagem (contratos de CPU)
+
+| Variante | Arquivo | Tag Hub (exemplo) | Interpretador | Wheelhouse | CPU | Move `:latest`? |
+| -------- | ------- | ----------------- | ------------- | ---------- | --- | --------------- |
+| **Universal (GIL)** | `Dockerfile` | `1.7.4.post12`, `latest` | `python:3.14-slim` (GIL) | `cp314` + `boar_fast_filter` **abi3**; gate **`popcnt=0`** | **qualquer x86-64** (incl. Celeron / alpine-emachines) | **Sim** (só esta) |
+| **Free-threaded (no-GIL)** | `Dockerfile.nogil` | `1.7.4.post12-nogil` | `uv python install 3.14.6+freethreaded` → `python3.14t` | `cp314t` + `boar_fast_filter` **cp314t** (abi3 **não** carrega) | **x86-64-v2+** (numpy cp314t tem `popcnt≠0` — proposital) | **Não** |
+
+Build/validação local da variante no-GIL (sem push):
+
+```bash
+./scripts/docker/build-nogil-local.sh 1.7.4.post12-nogil
+# operador, depois do login: podman push localhost/data_boar:1.7.4.post12-nogil docker.io/fabioleitao/data_boar:1.7.4.post12-nogil
+```
+
+**Não** retague `:latest` nem a tag de junho `:1.7.4` ao publicar `-nogil`.
 
 ---
 
