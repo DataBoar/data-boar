@@ -28,14 +28,20 @@ Use this when you want **one published image** to match **one released app versi
 
 ---
 
-## Two image variants (CPU contracts)
+## Two image variants (choice + ritual)
 
-| Variant | File | Hub tag (example) | Interpreter | Wheelhouse | CPU | Moves `:latest`? |
-| ------- | ---- | ----------------- | ----------- | ---------- | --- | ---------------- |
-| **Universal (GIL)** | `Dockerfile` | `1.7.4.post12`, `latest` | `python:3.14-slim` (GIL) | `cp314` + `boar_fast_filter` **abi3**; **`popcnt=0`** gate | **any x86-64** (incl. Celeron / alpine-emachines) | **Yes** (this only) |
-| **Free-threaded (no-GIL)** | `Dockerfile.nogil` | `1.7.4.post12-nogil` | `uv python install 3.14.6+freethreaded` → `python3.14t` | `cp314t` + `boar_fast_filter` **cp314t** (abi3 **does not** load) | **x86-64-v2+** (numpy cp314t has `popcnt≠0` — deliberate) | **No** |
+The default ritual (**steps 4–6** above / `build-push-podman.sh`) publishes the **universal GIL** image and moves **`:latest`** with it. The **`-nogil`** companion is a **separate** build (`Dockerfile.nogil` / `build-nogil-local.sh`) and a **separate** Hub tag. **`:latest` never points at `-nogil`.**
 
-Local build/validate (no push):
+| Variant | When to choose it | Ritual publishes? | Moves `:latest`? |
+| ------- | ----------------- | ----------------- | ---------------- |
+| **Universal GIL** (`1.7.4.post12`, `latest`) | Default: unknown/old/mixed CPU; need `popcnt=0` floor (any x86-64, incl. Celeron 900). `abi3` filter. | **Yes** — main ritual | **Yes** |
+| **Free-threaded** (`1.7.4.post12-nogil`) | Modern **x86-64-v2+** CPU **and** several workers **and** regex-bound detection ([#551](https://github.com/DataBoar/data-boar/issues/551)). `cp314t` wheels; abi3 filter does **not** load. | **Opt-in only** — never via the `:latest` ritual | **No** |
+
+**Mechanism (no invented speedup):** GIL serializes pure-Python regex workers (`core/detector.py`) even with high `max_workers`; free-threaded removes that. `boar_fast_filter` already releases the GIL (smaller gain). I/O-bound workers: marginal. Publish numbers only with a reproducible command. Worker **ceiling** remains the license tier (`core/engine.py` / `#551`), not the image tag.
+
+Hub copy must explain this **choice** (not only list tags): [DOCKER_HUB_REPOSITORY_DESCRIPTION.md](DOCKER_HUB_REPOSITORY_DESCRIPTION.md) § *Which image should I pull?* · [pt-BR](DOCKER_HUB_REPOSITORY_DESCRIPTION.pt_BR.md).
+
+Local build/validate `-nogil` (no push):
 
 ```bash
 ./scripts/docker/build-nogil-local.sh 1.7.4.post12-nogil

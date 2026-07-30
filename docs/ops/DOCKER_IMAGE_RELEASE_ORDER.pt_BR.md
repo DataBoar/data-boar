@@ -29,14 +29,20 @@ Use quando quiser **uma imagem publicada** correspondendo a **uma versão do app
 
 ---
 
-## Duas variantes de imagem (contratos de CPU)
+## Duas variantes de imagem (escolha + ritual)
 
-| Variante | Arquivo | Tag Hub (exemplo) | Interpretador | Wheelhouse | CPU | Move `:latest`? |
-| -------- | ------- | ----------------- | ------------- | ---------- | --- | --------------- |
-| **Universal (GIL)** | `Dockerfile` | `1.7.4.post12`, `latest` | `python:3.14-slim` (GIL) | `cp314` + `boar_fast_filter` **abi3**; gate **`popcnt=0`** | **qualquer x86-64** (incl. Celeron / alpine-emachines) | **Sim** (só esta) |
-| **Free-threaded (no-GIL)** | `Dockerfile.nogil` | `1.7.4.post12-nogil` | `uv python install 3.14.6+freethreaded` → `python3.14t` | `cp314t` + `boar_fast_filter` **cp314t** (abi3 **não** carrega) | **x86-64-v2+** (numpy cp314t tem `popcnt≠0` — proposital) | **Não** |
+O ritual padrão (**passos 4–6** / `build-push-podman.sh`) publica a imagem **universal GIL** e move **`:latest`** com ela. A companheira **`-nogil`** é build **separado** (`Dockerfile.nogil` / `build-nogil-local.sh`) e tag Hub **separada**. **`:latest` nunca aponta para `-nogil`.**
 
-Build/validação local da variante no-GIL (sem push):
+| Variante | Quando escolher | O ritual publica? | Move `:latest`? |
+| -------- | --------------- | ----------------- | --------------- |
+| **Universal GIL** (`1.7.4.post12`, `latest`) | Default: CPU antiga/mista/desconhecida; piso `popcnt=0` (qualquer x86-64, incl. Celeron 900). Filter `abi3`. | **Sim** — ritual principal | **Sim** |
+| **Free-threaded** (`1.7.4.post12-nogil`) | CPU moderna **x86-64-v2+** **e** vários workers **e** detecção regex-bound ([#551](https://github.com/DataBoar/data-boar/issues/551)). Wheels `cp314t`; abi3 **não** carrega. | **Só sob pedido** — nunca pelo ritual de `:latest` | **Não** |
+
+**Mecanismo (sem multiplicador inventado):** o GIL serializa workers de regex em Python puro (`core/detector.py`) mesmo com `max_workers` alto; free-threaded remove isso. `boar_fast_filter` já libera o GIL (ganho menor). I/O-bound: marginal. Número só com comando reproduzível. O **teto** de workers continua sendo o **tier de licença** (`core/engine.py` / `#551`), não a tag da imagem.
+
+A cópia do Hub deve explicar a **escolha** (não só listar tags): [DOCKER_HUB_REPOSITORY_DESCRIPTION.md](DOCKER_HUB_REPOSITORY_DESCRIPTION.md) · [pt-BR — Qual imagem puxar?](DOCKER_HUB_REPOSITORY_DESCRIPTION.pt_BR.md).
+
+Build/validação local da `-nogil` (sem push):
 
 ```bash
 ./scripts/docker/build-nogil-local.sh 1.7.4.post12-nogil
