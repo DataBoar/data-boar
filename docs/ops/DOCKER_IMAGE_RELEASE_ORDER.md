@@ -35,9 +35,9 @@ The default ritual (**steps 4–6** above / `build-push-podman.sh`) publishes th
 | Variant | When to choose it | Ritual publishes? | Moves `:latest`? |
 | ------- | ----------------- | ----------------- | ---------------- |
 | **Universal GIL** (`1.7.4.post12`, `latest`) | Default: unknown/old/mixed CPU; need `popcnt=0` floor (any x86-64, incl. Celeron 900). `abi3` filter. | **Yes** — main ritual | **Yes** |
-| **Free-threaded** (`1.7.4.post12-nogil`) | Modern **x86-64-v2+** CPU **and** several workers **and** regex-bound detection ([#551](https://github.com/DataBoar/data-boar/issues/551)). `cp314t` wheels; abi3 filter does **not** load. | **Opt-in only** — never via the `:latest` ritual | **No** |
+| **Free-threaded** (`1.7.4.post12-nogil`) | Modern **x86-64-v2+** CPU **and** several workers **and** regex-bound detection ([#551](https://github.com/DataBoar/data-boar/issues/551)). `cp314t` wheels; abi3 filter does **not** load; **SQLAlchemy pure-Python** (`DISABLE_SQLALCHEMY_CEXT=1`) so cext cannot re-enable the GIL. | **Opt-in only** — never via the `:latest` ritual | **No** |
 
-**Mechanism (no invented speedup):** GIL serializes pure-Python regex workers (`core/detector.py`) even with high `max_workers`; free-threaded removes that. `boar_fast_filter` already releases the GIL (smaller gain). I/O-bound workers: marginal. Publish numbers only with a reproducible command. Worker **ceiling** remains the license tier (`core/engine.py` / `#551`), not the image tag.
+**Mechanism:** GIL serializes pure-Python regex workers (`core/detector.py`); free-threaded removes that. Stock SQLAlchemy cext **re-enables the GIL** — `-nogil` must ship pure-Python sqlalchemy (measured: ~5.3× regex parallel vs ~+21% SELECT; microbenchmark ≠ `--demo`). Never force `PYTHON_GIL=0` to keep cext. Worker **ceiling** remains the license tier (`core/engine.py` / `#551`).
 
 Hub copy must explain this **choice** (not only list tags): [DOCKER_HUB_REPOSITORY_DESCRIPTION.md](DOCKER_HUB_REPOSITORY_DESCRIPTION.md) § *Which image should I pull?* · [pt-BR](DOCKER_HUB_REPOSITORY_DESCRIPTION.pt_BR.md).
 

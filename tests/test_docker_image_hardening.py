@@ -93,6 +93,13 @@ def test_dockerfile_nogil_pins_and_uv_freethreaded() -> None:
     assert "uv python install" in text
     assert "freethreaded" in text
     assert "python3.14t" in text
+    assert "DISABLE_SQLALCHEMY_CEXT=1" in text
+    assert "--no-binary sqlalchemy" in text
+    # Must not force GIL off over undeclared-safe C exts (comments may mention the forbid).
+    assert "ENV PYTHON_GIL" not in text
+    assert "PYTHON_GIL=0" not in [
+        ln.strip() for ln in text.splitlines() if not ln.lstrip().startswith("#")
+    ]
     assert "distroless/cc-debian13:nonroot@" in text
     # No floating/official 3.14t-slim base (404 on Hub) — only comment may mention it.
     from_lines = [

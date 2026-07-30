@@ -49,9 +49,10 @@ This is the image you want unless you have a concrete reason to opt into free-th
 
 #### `1.7.4.post12-nogil` — real parallelism (opt-in)
 
-- Python **3.14t free-threaded** (PEP 703). Inside the container: `sys._is_gil_enabled()` → **False**.
+- Python **3.14t free-threaded** (PEP 703). Inside the container: `sys._is_gil_enabled()` → **False** — **including after `import sqlalchemy`** (see below).
 - Same ML versions, but wheels are **`cp314t`**. **`cp314` and `cp314t` are not interchangeable** (different `SOABI`).
 - **`boar_fast_filter`** is built **native for `cp314t`** — the **`abi3`** wheel from the GIL image **does not load** here.
+- **SQLAlchemy is pure-Python in this image** (`DISABLE_SQLALCHEMY_CEXT=1`, no `sqlalchemy/**/*.so`). The stock cyextension `.so` **re-enables the GIL** on import (undeclared free-threaded safety) and would cancel the point of `-nogil`. The GIL image (`latest` / `1.7.4.post12`) **keeps** the cext — correct there.
 - **Requires x86-64-v2+.** Upstream **numpy cp314t** uses **`popcnt`** (**1477** hits measured). **Will not run** on CPUs without SSE4.2/POPCNT (e.g. alpine-emachines / Celeron 900).
 - **`:latest` never points here.** Publishing `-nogil` must not retag `:latest` or the June GA `:1.7.4`.
 
@@ -59,15 +60,22 @@ This is the image you want unless you have a concrete reason to opt into free-th
 
 **Do not use when:** hardware is old/unknown, or you run **one worker** (no parallelism to unlock).
 
-#### What “faster” means here (no invented multipliers)
+#### What “faster” means here (measured microbenchmark + mechanism)
 
-Do **not** expect a marketed “N× speedup” without a published benchmark. The mechanism ([#551](https://github.com/DataBoar/data-boar/issues/551)):
+Mechanism ([#551](https://github.com/DataBoar/data-boar/issues/551)): workers in **pure-Python regex** (`core/detector.py`) are **serialized by the GIL** even with high `max_workers`; free-threaded removes that. **`boar_fast_filter`** (PyO3) **already releases the GIL** — smaller gain there. **I/O-bound** workers: marginal.
 
-- Workers that spend time in **pure-Python regex** (`core/detector.py`) are **serialized by the GIL** even when `max_workers` is high. Free-threaded CPython removes that serialization so those workers can run together.
-- **`boar_fast_filter`** (PyO3) **already releases the GIL** — gain on that path is smaller.
-- **I/O-bound** workers were never GIL-bound — expect only marginal change.
+**Measured inside the nogil builder** (microbenchmark — **not** a substitute for a real `--demo` run):
 
-If a reproducible benchmark is measured on both images, publish the number **with the exact command**. Without a measurement, there is no number.
+| | SQLAlchemy **with** cext | SQLAlchemy **pure-Python** (`DISABLE_SQLALCHEMY_CEXT=1`) |
+| --- | --- | --- |
+| GIL after `import sqlalchemy` | **True** (defeats `-nogil`) | **False** |
+| regex 8 threads vs 1 thread | **0.90×** (slower than 1 thread) | **5.30×** |
+| sqlalchemy SELECT 300 rows | baseline | **+21%** wall |
+| sqlalchemy INSERT 3k | unchanged | unchanged |
+
+So the image pays a measured **~21%** on that SELECT path to keep **~5.3×** on the real detection bottleneck. Do **not** invent other multipliers. If you publish a full `--demo` comparison, include the exact command.
+
+**Do not** force `PYTHON_GIL=0` / `-Xgil=0` to keep cext: that runs C extensions that did **not** declare free-threaded safety — silent data races on findings are worse than a slower SELECT.
 
 #### License tier still caps workers
 

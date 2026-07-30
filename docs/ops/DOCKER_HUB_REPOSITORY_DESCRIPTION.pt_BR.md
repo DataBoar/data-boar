@@ -26,9 +26,10 @@ Use esta a menos que tenha motivo concreto para free-threading.
 
 ### `1.7.4.post12-nogil` — paralelismo real (opt-in)
 
-- Python **3.14t free-threaded** (PEP 703); `sys._is_gil_enabled()` → **False**.
+- Python **3.14t free-threaded** (PEP 703); `sys._is_gil_enabled()` → **False** — **inclusive depois de `import sqlalchemy`**.
 - Mesmo ML, wheels **`cp314t`** — **`cp314` e `cp314t` não são intercambiáveis**.
 - **`boar_fast_filter`** compilado **nativo para `cp314t`** (não abi3).
+- **SQLAlchemy é puro-Python nesta imagem** (`DISABLE_SQLALCHEMY_CEXT=1`, zero `.so` em `sqlalchemy/**`). O cyextension de estoque **religa o GIL** no import e anularia o propósito da `-nogil`. Na imagem GIL (`latest` / `post12`) o cext **permanece** — correto lá.
 - **Exige x86-64-v2+** — o **numpy cp314t** de upstream usa **`popcnt`** (**1477** ocorrências, medido). **Não roda** em CPU sem SSE4.2/POPCNT.
 - **`:latest` nunca aponta para esta tag.**
 
@@ -36,15 +37,11 @@ Use esta a menos que tenha motivo concreto para free-threading.
 
 **Não use se:** hardware antigo/desconhecido, ou **1 worker** (não há ganho).
 
-### O que “mais rápido” significa (sem número inventado)
+### O que “mais rápido” significa (microbenchmark medido + mecanismo)
 
-Não prometa “N× mais rápido” sem benchmark publicado. O mecanismo ([#551](https://github.com/DataBoar/data-boar/issues/551)):
+Mecanismo ([#551](https://github.com/DataBoar/data-boar/issues/551)): workers em **regex Python puro** (`core/detector.py`) são **serializados pelo GIL**; free-threaded remove isso. **`boar_fast_filter`** já libera o GIL (ganho menor). I/O-bound: marginal.
 
-- Workers em **regex Python puro** (`core/detector.py`) são **serializados pelo GIL** mesmo com `max_workers` alto; free-threaded remove essa serialização.
-- **`boar_fast_filter`** (PyO3) **já libera o GIL** — ganho menor nesse caminho.
-- Workers **I/O-bound**: o GIL nunca foi o gargalo — ganho marginal.
-
-Se medir nas duas imagens, publique o número **com o comando que reproduz**. Sem medição, sem número.
+**Medido no builder nogil** (microbenchmark — **não** substitui `--demo` real): com cext, GIL volta a **True** e regex 8 threads fica **0,90×** (pior que 1 thread); sem cext, GIL fica **False** e regex 8 threads fica **5,30×**, com SELECT ~**+21%** e INSERT igual. A imagem paga esse SELECT para não anular o paralelismo da detecção. Sem outros multiplicadores inventados. **Não** use `PYTHON_GIL=0` / `-Xgil=0` para manter o cext.
 
 ### Tier de licença ainda limita workers
 

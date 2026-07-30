@@ -53,6 +53,11 @@ COPY requirements.txt /app/requirements.txt
 COPY . /app
 
 ARG WHEELHOUSE_TAG=wheelhouse-x86-64-v1-2026-07-29
+# SQLAlchemy cyextension .so re-enables the GIL on import (undeclared free-threaded
+# safety). Force pure-Python sqlalchemy so the -nogil image keeps GIL=False after
+# app imports (core/database*.py import sqlalchemy at module level). Do NOT use
+# PYTHON_GIL=0 / -Xgil=0 — that would run unsafe C extensions (operator forbid).
+ENV DISABLE_SQLALCHEMY_CEXT=1
 
 # Container owns /usr/local; PEP 668 marker removed above after uv overlay.
 RUN pip uninstall -y wheel || true && \
@@ -60,6 +65,8 @@ RUN pip uninstall -y wheel || true && \
     pip install --no-cache-dir --force-reinstall "wheel>=0.46.2" && \
     python -c "import wheel; import sys; sys.exit(0 if tuple(map(int, wheel.__version__.split('.'))) >= (0,46,2) else 1)" && \
     pip install --no-cache-dir -r /app/requirements.txt && \
+    pip install --no-cache-dir --force-reinstall --no-binary sqlalchemy "sqlalchemy==2.0.50" && \
+    python -c 'import pathlib, site, sqlalchemy, sys; root=pathlib.Path(site.getsitepackages()[0])/"sqlalchemy"; sos=list(root.rglob("*.so")); assert not sos, sos; assert sys._is_gil_enabled() is False, "GIL re-enabled after sqlalchemy"' && \
     pip install --no-cache-dir --no-deps -e /app && \
     pip install --no-cache-dir \
         "psycopg2-binary>=2.9.11" "pymysql>=1.2.0" "mariadb>=1.1.14" \
@@ -109,6 +116,8 @@ ENV CONFIG_PATH=/data/config.yaml
 ENV PYTHONUNBUFFERED=1
 ENV API_HOST=0.0.0.0
 ENV PATH=/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+# Build-time contract reminder (cext absent in this image); harmless at runtime.
+ENV DISABLE_SQLALCHEMY_CEXT=1
 
 USER 65532:65532
 

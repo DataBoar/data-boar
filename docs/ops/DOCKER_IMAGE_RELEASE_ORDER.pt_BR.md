@@ -36,9 +36,9 @@ O ritual padrão (**passos 4–6** / `build-push-podman.sh`) publica a imagem **
 | Variante | Quando escolher | O ritual publica? | Move `:latest`? |
 | -------- | --------------- | ----------------- | --------------- |
 | **Universal GIL** (`1.7.4.post12`, `latest`) | Default: CPU antiga/mista/desconhecida; piso `popcnt=0` (qualquer x86-64, incl. Celeron 900). Filter `abi3`. | **Sim** — ritual principal | **Sim** |
-| **Free-threaded** (`1.7.4.post12-nogil`) | CPU moderna **x86-64-v2+** **e** vários workers **e** detecção regex-bound ([#551](https://github.com/DataBoar/data-boar/issues/551)). Wheels `cp314t`; abi3 **não** carrega. | **Só sob pedido** — nunca pelo ritual de `:latest` | **Não** |
+| **Free-threaded** (`1.7.4.post12-nogil`) | CPU moderna **x86-64-v2+** **e** vários workers **e** detecção regex-bound ([#551](https://github.com/DataBoar/data-boar/issues/551)). Wheels `cp314t`; abi3 **não** carrega; **SQLAlchemy puro-Python** (`DISABLE_SQLALCHEMY_CEXT=1`) para o cext não religar o GIL. | **Só sob pedido** — nunca pelo ritual de `:latest` | **Não** |
 
-**Mecanismo (sem multiplicador inventado):** o GIL serializa workers de regex em Python puro (`core/detector.py`) mesmo com `max_workers` alto; free-threaded remove isso. `boar_fast_filter` já libera o GIL (ganho menor). I/O-bound: marginal. Número só com comando reproduzível. O **teto** de workers continua sendo o **tier de licença** (`core/engine.py` / `#551`), não a tag da imagem.
+**Mecanismo:** o GIL serializa workers de regex em Python puro (`core/detector.py`); free-threaded remove isso. O cext do SQLAlchemy de estoque **religa o GIL** — a `-nogil` deve embarcar sqlalchemy puro-Python (medido: ~5,3× regex paralelo vs ~+21% SELECT; microbenchmark ≠ `--demo`). Nunca forçar `PYTHON_GIL=0` para manter o cext. O **teto** de workers continua sendo o **tier de licença** (`core/engine.py` / `#551`).
 
 A cópia do Hub deve explicar a **escolha** (não só listar tags): [DOCKER_HUB_REPOSITORY_DESCRIPTION.md](DOCKER_HUB_REPOSITORY_DESCRIPTION.md) · [pt-BR — Qual imagem puxar?](DOCKER_HUB_REPOSITORY_DESCRIPTION.pt_BR.md).
 
