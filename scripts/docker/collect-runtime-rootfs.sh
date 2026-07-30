@@ -32,12 +32,24 @@ usrmerge_dest() {
 
 copy_lib_path() {
     local src="$1"
-    [[ -f "${src}" ]] || return 0
+    [[ -f "${src}" || -L "${src}" ]] || return 0
     local dest_path
     dest_path="$(usrmerge_dest "${src}")"
     local dest="${EXPORT}${dest_path}"
     mkdir -p "$(dirname "${dest}")"
     cp -a "${src}" "${dest}"
+    # ldd often reports the SONAME symlink; ship the real object too or the link is dangling in distroless.
+    if [[ -L "${src}" ]]; then
+        local real
+        real="$(readlink -f "${src}" || true)"
+        if [[ -n "${real}" && -f "${real}" && "${real}" != "${src}" ]]; then
+            local real_dest_path real_dest
+            real_dest_path="$(usrmerge_dest "${real}")"
+            real_dest="${EXPORT}${real_dest_path}"
+            mkdir -p "$(dirname "${real_dest}")"
+            cp -a "${real}" "${real_dest}"
+        fi
+    fi
 }
 
 # Python install + console scripts (pip/wheel already removed in Dockerfile RUN).
@@ -69,10 +81,13 @@ add_deps_from() {
     collect_ldd_paths "${target}" >> "${DEPS_FILE}"
 }
 
-# Extension modules and interpreter.
+# Extension modules and interpreter (site-packages + stdlib lib-dynload — e.g. _sqlite3 → libsqlite3).
 while IFS= read -r -d '' so; do
     add_deps_from "${so}"
-done < <(find /usr/local/lib/python3.13/site-packages -name '*.so' -print0 2>/dev/null || true)
+done < <(
+    find /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/lib-dynload \
+        -name '*.so' -print0 2>/dev/null || true
+)
 
 for py in /usr/local/bin/python3.13 /usr/local/bin/python3; do
     add_deps_from "${py}"
@@ -92,8 +107,9 @@ done < <(
     \) -print0 2>/dev/null || true
 )
 
-sort -u "${DEPS_FILE}" | while read -r lib; do
-    [[ -n "${lib}" && -f "${lib}" ]] || continue
+# Avoid pipe-subshell: copy every ldd dependency (and SONAME symlink targets) into EXPORT.
+while read -r lib; do
+    [[ -n "${lib}" && -e "${lib}" ]] || continue
     # Distroless cc-debian13 ships glibc; skip core libc to avoid clobbering the base.
     case "${lib}" in
         /lib/*/libc.so.*|/lib/*/libm.so.*|/lib/*/libpthread.so.*|/lib/*/libdl.so.*|/lib/*/librt.so.*|/lib/*/libresolv.so.*|/usr/lib/*/libc.so.*|/usr/lib/*/libm.so.*|/usr/lib/*/libpthread.so.*|/usr/lib/*/libdl.so.*|/usr/lib/*/librt.so.*|/usr/lib/*/libresolv.so.*)
@@ -101,7 +117,7 @@ sort -u "${DEPS_FILE}" | while read -r lib; do
             ;;
     esac
     copy_lib_path "${lib}"
-done
+done < <(sort -u "${DEPS_FILE}")
 
 # Writable data mount point (nonroot uid 65532 = distroless :nonroot).
 mkdir -p "${EXPORT}/data"
@@ -112,3 +128,27 @@ if [[ -d "${EXPORT}/lib" || -d "${EXPORT}/lib64" ]]; then
     echo "collect-runtime-rootfs: refusing usr-merge conflict (${EXPORT}/lib or lib64 is a directory)" >&2
     exit 1
 fi
+
+# Fail closed: CPython sqlite3 (integrity_anchor / data-boar --version) needs a resolvable libsqlite3.
+# SONAME symlink alone is not enough — the real object must be present (distroless has no apt).
+sqlite_link=""
+for candidate in \
+    "${EXPORT}/usr/lib/x86_64-linux-gnu/libsqlite3.so.0" \
+    "${EXPORT}/lib/x86_64-linux-gnu/libsqlite3.so.0"; do
+    if [[ -e "${candidate}" || -L "${candidate}" ]]; then
+        sqlite_link="${candidate}"
+        break
+    fi
+done
+if [[ -z "${sqlite_link}" ]]; then
+    echo "collect-runtime-rootfs: FATAL missing libsqlite3.so.0 (ldd lib-dynload/_sqlite3*.so)" >&2
+    exit 1
+fi
+if [[ -L "${sqlite_link}" ]]; then
+    sqlite_real="$(readlink -f "${sqlite_link}" || true)"
+    if [[ -z "${sqlite_real}" || ! -f "${sqlite_real}" ]]; then
+        echo "collect-runtime-rootfs: FATAL dangling libsqlite3.so.0 -> ${sqlite_real:-unresolved}" >&2
+        exit 1
+    fi
+fi
+echo "collect-runtime-rootfs: OK libsqlite3 via ${sqlite_link}"

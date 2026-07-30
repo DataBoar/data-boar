@@ -13,6 +13,7 @@ All scripts assume the **repository root** is the parent of `scripts/` (run them
 | [../grype-image-gate.sh](../grype-image-gate.sh) / [../grype-image-gate.ps1](../grype-image-gate.ps1) | Grype gate (#1028): **`--fail-on high --only-fixed`** + repo [`.grype.yaml`](../../.grype.yaml) VEX; actionable High/Critical only. |
 | [docker-image-smoke.sh](docker-image-smoke.sh) / [docker-image-smoke.ps1](docker-image-smoke.ps1) | Post-build smoke (#1028): public version, no octet leak, `boar_fast_filter` import, **TLS** probe (`httpx` → `https://example.com`). |
 | [collect-runtime-rootfs.sh](collect-runtime-rootfs.sh) | Bundle `/usr/local`, DB/TLS `.so`, CA certs for distroless runtime (#1028). |
+| [apply_wheelhouse_v1.sh](apply_wheelhouse_v1.sh) | Builder helper (#1387): force-reinstall numpy/scipy/sklearn/pandas + `boar_fast_filter` from hosted **x86-64-v1** wheelhouse (`--no-index`), with `popcnt`/umath size gates. |
 | [DataBoarDockerCommon.ps1](DataBoarDockerCommon.ps1)                   | Shared helpers (dot-sourced only).                                                                                                                  |
 
 ## Typical flows
