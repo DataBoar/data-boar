@@ -5,9 +5,10 @@
 # -----------------------------------------------------------------------------
 # Stage 1: build Python extensions and install dependencies
 # -----------------------------------------------------------------------------
-# Rolling 3.13 slim (Debian 13 / trixie): aligns with CI, requires-python >=3.12.
+# Rolling 3.14 slim (Debian 13 / trixie): aligns with CI matrix + field-tested
+# wheelhouse cells; licensing enforcement gate green (#551 / cluster closed).
 # Digest pin (ADR-0074 / #988): Dependabot docker ecosystem proposes digest bumps.
-FROM python:3.13-slim@sha256:3a2c25932e66f706172de831a1b283d491c53ef876cd7fc55a62bcf9a6dd2c61 AS builder
+FROM python:3.14-slim@sha256:cea0e6040540fb2b965b6e7fb5ffa00871e632eef63719f0ea54bca189ce14a6 AS builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential gcc g++ pkg-config curl ca-certificates binutils \
@@ -31,14 +32,15 @@ RUN pip uninstall -y wheel || true && \
         "psycopg2-binary>=2.9.11" "pymysql>=1.2.0" "mariadb>=1.1.14" \
         "pyodbc>=5.3.0" "oracledb>=4.0.1" && \
     WHEELHOUSE_TAG="${WHEELHOUSE_TAG}" bash /app/scripts/docker/apply_wheelhouse_v1.sh && \
-    rm -rf /tmp/wheelhouse-v1-glibc-cp313 && \
-    (find /usr/local/lib/python3.13/site-packages -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true) && \
-    (find /usr/local/lib/python3.13/site-packages -name "*.pyc" -delete 2>/dev/null || true)
+    PY_XY="$(python -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')" && \
+    rm -rf "/tmp/wheelhouse-v1-glibc-cp$(python -c 'import sys; print(f"{sys.version_info.major}{sys.version_info.minor}")')" && \
+    (find "/usr/local/lib/python${PY_XY}/site-packages" -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true) && \
+    (find "/usr/local/lib/python${PY_XY}/site-packages" -name "*.pyc" -delete 2>/dev/null || true)
 
 # -----------------------------------------------------------------------------
 # Stage 2: assemble runtime rootfs (shell stage — not shipped)
 # -----------------------------------------------------------------------------
-FROM python:3.13-slim@sha256:3a2c25932e66f706172de831a1b283d491c53ef876cd7fc55a62bcf9a6dd2c61 AS runtime-assembler
+FROM python:3.14-slim@sha256:cea0e6040540fb2b965b6e7fb5ffa00871e632eef63719f0ea54bca189ce14a6 AS runtime-assembler
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 libffi8 unixodbc libmariadb3 \
@@ -46,11 +48,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY --from=builder /usr/local /usr/local
 
-RUN ln -sf python3.13 /usr/local/bin/python3 && ln -sf python3.13 /usr/local/bin/python
+RUN PY_XY="$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')" && \
+    ln -sf "python${PY_XY}" /usr/local/bin/python3 && \
+    ln -sf "python${PY_XY}" /usr/local/bin/python
 
 # No pip/wheel/setuptools in the release image (app does not install packages at runtime, #1028).
-RUN /usr/local/bin/python3.13 -m pip uninstall -y pip wheel setuptools 2>/dev/null || true && \
-    rm -f /usr/local/bin/pip /usr/local/bin/pip3 /usr/local/bin/pip3.13 /usr/local/bin/wheel 2>/dev/null || true
+RUN PY_XY="$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')" && \
+    "/usr/local/bin/python${PY_XY}" -m pip uninstall -y pip wheel setuptools 2>/dev/null || true && \
+    rm -f /usr/local/bin/pip /usr/local/bin/pip3 "/usr/local/bin/pip${PY_XY}" /usr/local/bin/wheel 2>/dev/null || true
 
 COPY scripts/docker/collect-runtime-rootfs.sh /tmp/collect-runtime-rootfs.sh
 RUN chmod +x /tmp/collect-runtime-rootfs.sh && /tmp/collect-runtime-rootfs.sh /rootfs
@@ -58,7 +63,7 @@ RUN chmod +x /tmp/collect-runtime-rootfs.sh && /tmp/collect-runtime-rootfs.sh /r
 # -----------------------------------------------------------------------------
 # Stage 3: minimal distroless runtime (nonroot uid 65532, no shell/apt)
 # -----------------------------------------------------------------------------
-# gcr.io/distroless/cc-debian13:nonroot — Debian 13 matches python:3.13-slim glibc (not cc-debian12).
+# gcr.io/distroless/cc-debian13:nonroot — Debian 13 matches python:3.14-slim (trixie) glibc.
 # Human tag comment: cc-debian13:nonroot (#1028 / PLAN_IMAGE_HARDENING.md).
 FROM gcr.io/distroless/cc-debian13:nonroot@sha256:d97bc0a941b8d4be647dc0ee75b264ddbb772f1ac5ba690a4309c00723b23775
 
@@ -78,4 +83,4 @@ USER 65532:65532
 
 EXPOSE 8088
 
-CMD ["/usr/local/bin/python3.13", "main.py", "--config", "/data/config.yaml", "--web", "--port", "8088", "--allow-insecure-http"]
+CMD ["/usr/local/bin/python3.14", "main.py", "--config", "/data/config.yaml", "--web", "--port", "8088", "--allow-insecure-http"]

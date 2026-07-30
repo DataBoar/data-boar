@@ -36,14 +36,14 @@ def test_dockerfile_pins_all_from_images_by_digest() -> None:
         assert "@sha256:" in line, f"expected digest pin in FROM line: {line!r}"
     joined = "\n".join(from_lines)
     assert "distroless/cc-debian13" in joined
-    assert "python:3.13-slim" in joined
+    assert "python:3.14-slim" in joined
 
 
 def test_dockerfile_distroless_nonroot_and_exec_cmd() -> None:
     text = DOCKERFILE.read_text(encoding="utf-8")
     assert "distroless/cc-debian13:nonroot@" in text
     assert "USER 65532:65532" in text
-    assert 'CMD ["/usr/local/bin/python3.13"' in text
+    assert 'CMD ["/usr/local/bin/python3.14"' in text
 
 
 def test_collect_runtime_rootfs_script_bundles_tls_and_db_libs() -> None:
@@ -76,19 +76,32 @@ def test_dockerfile_applies_wheelhouse_v1_in_builder() -> None:
     assert "popcnt" in body
     assert "boar_fast_filter" in body
     assert "wheelhouse-x86-64-v1-2026-07-29" in body
+    # ABI must follow the builder interpreter (cp314 on 3.14-slim), not a hardcode.
+    assert 'CP="cp${PY_MM}"' in body or "cp${PY_MM}" in body
+    assert "sys.version_info" in body
 
 
 def test_grype_vex_config_has_documented_ignore_rules() -> None:
-    """PR-B #1028: .grype.yaml documents wont-fix base classes with reason (audit posture)."""
+    """PR-B #1028: .grype.yaml documents wont-fix base classes + CVE VEX with reason."""
     assert GRYPE_CONFIG.is_file()
     data = yaml.safe_load(GRYPE_CONFIG.read_text(encoding="utf-8"))
     rules = data.get("ignore") or []
     assert len(rules) >= 5
+    cve_rules = [r for r in rules if r.get("vulnerability")]
+    deb_rules = [r for r in rules if not r.get("vulnerability")]
     for rule in rules:
         assert rule.get("reason"), f"ignore rule missing reason: {rule!r}"
+        assert rule.get("package", {}).get("name"), (
+            f"ignore rule missing package.name: {rule!r}"
+        )
+    for rule in deb_rules:
         assert rule.get("fix-state") == "wont-fix"
         assert rule.get("package", {}).get("type") == "deb"
-    names = {r["package"]["name"] for r in rules}
+    assert any(r.get("vulnerability") == "CVE-2026-15308" for r in cve_rules)
+    cve_pkg = next(r for r in cve_rules if r["vulnerability"] == "CVE-2026-15308")
+    assert cve_pkg.get("package", {}).get("type") == "binary"
+    assert cve_pkg.get("package", {}).get("name") == "python"
+    names = {r["package"]["name"] for r in deb_rules}
     assert "libc6" in names
     assert "mariadb" in names
 
@@ -135,7 +148,7 @@ def test_docker_image_smoke_script_passes_on_built_image() -> None:
                 "run",
                 "--rm",
                 image,
-                "/usr/local/bin/python3.13",
+                "/usr/local/bin/python3",
                 "-c",
                 "from core.about import _package_version; print(_package_version())",
             ],

@@ -6,8 +6,9 @@
 # SSSE3-only, gate #821). `--find-links` alone does not prefer wheelhouse —
 # force-reinstall with --no-index is required (same contract as pipx path).
 #
-# Image is glibc (python:3.13-slim → distroless cc-debian13): use manylinux
-# cp313 cells from DataBoar/data-boar-site release wheelhouse-x86-64-v1-*.
+# Image is glibc (python:*-slim → distroless cc-debian13): use manylinux
+# cpXXX cells matching the builder interpreter ABI from
+# DataBoar/data-boar-site release wheelhouse-x86-64-v1-*.
 #
 # Usage (inside builder stage, after pip install -r requirements.txt):
 #   bash scripts/docker/apply_wheelhouse_v1.sh
@@ -20,23 +21,34 @@ set -euo pipefail
 
 WHEELHOUSE_TAG="${WHEELHOUSE_TAG:-wheelhouse-x86-64-v1-2026-07-29}"
 BASE_URL="${WHEELHOUSE_BASE_URL:-https://github.com/DataBoar/data-boar-site/releases/download/${WHEELHOUSE_TAG}}"
-WORKDIR="${WHEELHOUSE_DIR:-/tmp/wheelhouse-v1-glibc-cp313}"
 
-# Filenames must match the hosted release assets (manylinux / cp313).
+# Derive ABI tag from the builder interpreter (cp313, cp314, …). Hardcoding
+# cp313 against a 3.14 base installs the wrong wheel or fails force-reinstall.
+PY_MM="$(python -c 'import sys; print(f"{sys.version_info.major}{sys.version_info.minor}")')"
+CP="cp${PY_MM}"
+WORKDIR="${WHEELHOUSE_DIR:-/tmp/wheelhouse-v1-glibc-${CP}}"
+
+# Filenames must match the hosted release assets (manylinux / ${CP}).
+# boar_fast_filter is abi3 (cp38) — same asset for all CPython 3.x builders.
 WHEELS=(
-  "numpy-2.5.1-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl"
-  "scipy-1.18.0-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl"
-  "scikit_learn-1.9.0-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl"
-  "pandas-3.0.5-cp313-cp313-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl"
+  "numpy-2.5.1-${CP}-${CP}-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl"
+  "scipy-1.18.0-${CP}-${CP}-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl"
+  "scikit_learn-1.9.0-${CP}-${CP}-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl"
+  "pandas-3.0.5-${CP}-${CP}-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl"
   "boar_fast_filter-0.1.0-cp38-abi3-manylinux_2_28_x86_64.whl"
 )
 
 # Expected sha256 from release SHA256SUMS (wheelhouse-x86-64-v1-2026-07-29).
+# Keyed by full filename so cp313 and cp314 cells can coexist offline.
 declare -A EXPECTED_SHA=(
   ["numpy-2.5.1-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl"]="d301efd02e390bd2d135205c25cd7b7fc82ec353aa3985528745601bfb67c2d6"
   ["scipy-1.18.0-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl"]="a9c3a1ae4de02b8eff37b87a7d5af19bfdbb029cc62b855fd8813acc2775c5bf"
   ["scikit_learn-1.9.0-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl"]="0d28c1b992d7a6c0951869560d0090c24ccfe44282fb2f5d7b3814b4232de418"
   ["pandas-3.0.5-cp313-cp313-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl"]="4b11c36e218331d0387cbe3a0a5f75162357a1d92d57b2b08a336ff94b19b2be"
+  ["numpy-2.5.1-cp314-cp314-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl"]="0277af072c85878e95f14e6f5b5ac7f32b4376cfa007f0bf08bbeb9f09a6f600"
+  ["scipy-1.18.0-cp314-cp314-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl"]="096c50481f7e78353d82ce1cdd01256ac379443d8b5b9a5b0a1408cbf990000a"
+  ["scikit_learn-1.9.0-cp314-cp314-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl"]="1f2c048e96ad44db5775adc80d7d0c1f3db7c5c7e837950b4b0a42afa28ffdcb"
+  ["pandas-3.0.5-cp314-cp314-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl"]="9e94c2c5ca43bd3ca32bf64d32308887b65e5f9bfd8023ea52755107a999f93b"
   ["boar_fast_filter-0.1.0-cp38-abi3-manylinux_2_28_x86_64.whl"]="f664cb016fed2d530e94fa9946bb783c294e052ef19ceae4dd80bd6d12a9125a"
 )
 
@@ -55,7 +67,7 @@ for whl in "${WHEELS[@]}"; do
 done
 
 if [[ "$need_download" -eq 1 ]]; then
-  echo "=== downloading ${WHEELHOUSE_TAG} manylinux cp313 wheels ==="
+  echo "=== downloading ${WHEELHOUSE_TAG} manylinux ${CP} wheels ==="
   for whl in "${WHEELS[@]}"; do
     if [[ ! -f "$whl" ]]; then
       curl -fsSL -o "$whl" "${BASE_URL}/${whl}"
@@ -66,7 +78,11 @@ fi
 echo "=== verifying wheel sha256 ==="
 for whl in "${WHEELS[@]}"; do
   got="$(sha256sum "$whl" | awk '{print $1}')"
-  want="${EXPECTED_SHA[$whl]}"
+  want="${EXPECTED_SHA[$whl]:-}"
+  if [[ -z "$want" ]]; then
+    echo "FATAL: no EXPECTED_SHA entry for $whl (ABI ${CP})" >&2
+    exit 1
+  fi
   if [[ "$got" != "$want" ]]; then
     echo "FATAL: sha256 mismatch for $whl" >&2
     echo "  want $want" >&2
