@@ -12,7 +12,7 @@ permissions:
   push:
     tags: ["v*"]
   release:
-    types: [published]
+    types: [published, created]
   pull_request:
     branches: [main, master]
     paths:
@@ -138,7 +138,11 @@ jobs:
             TAG="${GITHUB_REF#refs/tags/}"
           fi
           if ! gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
-            echo "No GitHub Release for $TAG yet — artifacts remain on the workflow run only."
+            echo "::warning title=SBOM nao anexado::Release $TAG nao existe ainda; assets ficaram apenas no run. Crie a Release para disparar o upload."
+            {
+              echo "### SBOM nao anexado"
+              echo "Release \`$TAG\` inexistente no momento do push da tag."
+            } >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
           gh release upload "$TAG" sbom-python.cdx.json sbom-docker-image.cdx.json build-digest.txt release-manifest.json \
