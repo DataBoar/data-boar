@@ -10,13 +10,16 @@
 FROM python:3.13-slim@sha256:3a2c25932e66f706172de831a1b283d491c53ef876cd7fc55a62bcf9a6dd2c61 AS builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential gcc g++ pkg-config curl ca-certificates \
+    build-essential gcc g++ pkg-config curl ca-certificates binutils \
     libpq-dev libffi-dev libssl-dev unixodbc-dev default-libmysqlclient-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 COPY requirements.txt /app/requirements.txt
 COPY . /app
+
+# Hosted x86-64-v1 wheelhouse (DataBoar/data-boar-site). Override for offline builds.
+ARG WHEELHOUSE_TAG=wheelhouse-x86-64-v1-2026-07-29
 
 RUN pip uninstall -y wheel || true && \
     pip install --no-cache-dir --upgrade "pip>=25.3" && \
@@ -27,18 +30,10 @@ RUN pip uninstall -y wheel || true && \
     pip install --no-cache-dir \
         "psycopg2-binary>=2.9.11" "pymysql>=1.2.0" "mariadb>=1.1.14" \
         "pyodbc>=5.3.0" "oracledb>=4.0.1" && \
+    WHEELHOUSE_TAG="${WHEELHOUSE_TAG}" bash /app/scripts/docker/apply_wheelhouse_v1.sh && \
+    rm -rf /tmp/wheelhouse-v1-glibc-cp313 && \
     (find /usr/local/lib/python3.13/site-packages -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true) && \
     (find /usr/local/lib/python3.13/site-packages -name "*.pyc" -delete 2>/dev/null || true)
-
-# boar_fast_filter (PyO3): build against glibc in builder; wheel lands in site-packages (#1028 PR-A).
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable \
-    && . /root/.cargo/env \
-    && pip install --no-cache-dir "maturin>=1.14.0" \
-    && cd /app/rust/boar_fast_filter \
-    && maturin build --release -o /tmp/boar-wheels \
-    && pip install --no-cache-dir /tmp/boar-wheels/boar_fast_filter*.whl \
-    && python -c "import boar_fast_filter" \
-    && rm -rf /root/.cargo/registry /root/.cargo/git /tmp/boar-wheels
 
 # -----------------------------------------------------------------------------
 # Stage 2: assemble runtime rootfs (shell stage — not shipped)

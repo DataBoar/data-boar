@@ -54,12 +54,28 @@ def test_collect_runtime_rootfs_script_bundles_tls_and_db_libs() -> None:
     assert "libmariadb.so" in text
     assert "usrmerge_dest" in text or "copy_lib_path" in text
     assert "refusing usr-merge conflict" in text
+    # stdlib extension deps (e.g. _sqlite3 → libsqlite3) live in lib-dynload, not site-packages.
+    assert "lib-dynload" in text
+    assert "libsqlite3" in text
+    assert (
+        "readlink" in text
+    )  # SONAME symlink → real .so (avoid dangling in distroless)
 
 
-def test_dockerfile_builds_boar_fast_filter_in_builder() -> None:
+def test_dockerfile_applies_wheelhouse_v1_in_builder() -> None:
+    """#1387: release image must force-reinstall ML stack from x86-64-v1 wheelhouse."""
     text = DOCKERFILE.read_text(encoding="utf-8")
-    assert "maturin build --release" in text
-    assert "import boar_fast_filter" in text
+    assert "apply_wheelhouse_v1.sh" in text
+    assert "WHEELHOUSE_TAG" in text
+    assert "binutils" in text  # objdump popcnt gate
+    script = REPO_ROOT / "scripts" / "docker" / "apply_wheelhouse_v1.sh"
+    assert script.is_file()
+    body = script.read_text(encoding="utf-8")
+    assert "--force-reinstall" in body
+    assert "--no-index" in body
+    assert "popcnt" in body
+    assert "boar_fast_filter" in body
+    assert "wheelhouse-x86-64-v1-2026-07-29" in body
 
 
 def test_grype_vex_config_has_documented_ignore_rules() -> None:
