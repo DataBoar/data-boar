@@ -1,6 +1,6 @@
 [project]
 name = "data-boar"
-version = "1.7.4.post11"
+version = "1.7.4.post12"
 description = "Data Boar — compliance-aware discovery and mapping of personal and sensitive data across databases, files, and APIs (LGPD, GDPR, CCPA, and configurable frameworks)."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -174,7 +174,9 @@ dataformats = ["pyarrow>=14.0.0", "fastavro>=1.9.0", "dbfread>=2.0.7"]
 # Legacy ".doc" samples: mammoth reads ZIP-based OOXML; binary Word 97-2003 often yields empty content (see docs/TROUBLESHOOTING.md).
 legacy-doc = ["mammoth>=1.6.0"]
 # GRC executive JSON dashboard (Streamlit + Plotly). Run: ``streamlit run app/dashboard.py``.
-grc-dashboard = ["streamlit>=1.58.0", "plotly>=6.8.0"]
+# gitpython floor: streamlit pulls GitPython; pin so resolves cannot slip below
+# 3.1.55 (nine Dependabot HIGH advisories; one only fixed in 3.1.55 — not 3.1.54).
+grc-dashboard = ["streamlit>=1.58.0", "plotly>=6.8.0", "gitpython>=3.1.55"]
 
 [tool.uv]
 # rpds-py is transitive (referencing -> jsonschema). Upstream pivoted to CalVer at
@@ -318,6 +320,6 @@ dev = [
 ]
 
 # Operator-only maturity octet (ADR-0073). Never copy into [project].version.
-# postN <-> maturity_build map: docs/releases/1.7.4.post11.md (canonical; includes post1–post10 rows).
+# postN <-> maturity_build map: docs/releases/1.7.4.post12.md (canonical; includes post1–post11 rows).
 [tool.databoar]
-maturity_build = 262
+maturity_build = 263
