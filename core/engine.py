@@ -145,7 +145,14 @@ class AuditEngine:
             dl_terms_inline=sens.get("dl_terms") or None,
             detection_config=detection,
             file_encoding=config.get("pattern_files_encoding", "utf-8"),
+            licensing_config=config,
         )
+        # #1412 — expose detection_prefilter status (name/backend/tier/reason) to scan_manifest.
+        runtime = config.setdefault("_runtime", {})
+        if isinstance(runtime, dict):
+            runtime["prefilter"] = dict(
+                getattr(self.scanner, "prefilter_status", {}) or {}
+            )
         self._is_running = False
         self._last_report_path: str | None = None
         scan_cfg = config.get("scan") if isinstance(config.get("scan"), dict) else {}

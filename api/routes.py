@@ -63,6 +63,7 @@ from core.forwarded_headers import forwarded_proto_posture
 from core.host_resolution import effective_api_key_configured
 from core.licensing.runtime_feature_tier import get_runtime_tier_for_features
 from core.licensing.tier_features import is_feature_available
+from core.rbac_settings import rbac_enforcement_active
 from core.runtime_trust import get_runtime_trust_snapshot
 from core.maturity_assessment.integrity import (
     load_integrity_secret_from_config,
@@ -905,8 +906,18 @@ def _resolve_audit_logs_directory(settings: dict[str, object]) -> Path:
 
 
 def _authorize_audit_log_download(request: Request) -> list[str]:
-    """Require authenticated principal with audit_logs.read or admin role."""
+    """
+    When RBAC is active (``api.rbac.enabled`` and tier allows ``dashboard_rbac`` —
+    same gate as ``rbac_middleware``), require a principal with ``audit_logs.read``
+    or ``admin``.
+
+    When RBAC is not active, do not require a principal here — ``/logs`` matches
+    ``/findings`` / ``/report`` (still subject to ``api.require_api_key`` middleware
+    and ``api.audit_logs.enabled`` / directory). See #1190 / ADR-0082 Decision 3.
+    """
     cfg = _get_config()
+    if not rbac_enforcement_active(cfg):
+        return []
     resolve_roles = _resolve_effective_roles_for_request_fn
     if resolve_roles is None:
         raise HTTPException(
@@ -1419,6 +1430,20 @@ async def get_status(request: Request):
     cfg = _get_config()
     sec = load_integrity_secret_from_config(cfg)
     maturity_integrity = engine.db_manager.verify_maturity_assessment_integrity(sec)
+    # #1411 — detection_prefilter / rust-regex-stage readiness next to runtime_trust.
+    pf_status = {}
+    try:
+        runtime = cfg.get("_runtime") if isinstance(cfg.get("_runtime"), dict) else {}
+        pf_status = (
+            dict(runtime.get("prefilter") or {})
+            if isinstance(runtime.get("prefilter"), dict)
+            else {}
+        )
+        if not pf_status and hasattr(engine, "scanner"):
+            pf_status = dict(getattr(engine.scanner, "prefilter_status", {}) or {})
+    except Exception:  # noqa: BLE001
+        pf_status = {}
+
     return {
         "running": engine.is_running,
         "current_session_id": engine.db_manager.current_session_id,
@@ -1426,6 +1451,7 @@ async def get_status(request: Request):
         "audit_log": engine.get_scan_audit_log(),
         "forwarded_headers": forwarded_proto_posture(request, cfg),
         "runtime_trust": runtime_trust,
+        "detection_prefilter": pf_status,
         "dashboard_transport": get_dashboard_transport_snapshot(),
         "enterprise_surface": get_enterprise_surface_posture(cfg),
         "maturity_assessment_integrity": maturity_integrity,

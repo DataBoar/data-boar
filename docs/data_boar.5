@@ -363,6 +363,31 @@ See
 .I quasi_identifier_mapping
 (list).
 .TP
+.B licensing
+(optional) License mode and effective tier.
+Optional Rust acceleration of the detector regex stage (#1414) is gated to paid
+tiers
+.BR pro_plus / enterprise / partner
+(see
+.B FEATURE_TIER_MAP
+/
+.BR pro_prefilter_accel
+legacy key name). The product path runs the same YAML/built\-in patterns with
+equivalent verdicts — it does
+.B not
+skip non\-suspect rows before ML/DL, so there is no zero\-regression latch.
+Status appears in
+.B detection_prefilter
+on
+.B GET /status
+and in
+.B scan_manifest_*.yaml
+(#1411 / #1412 — observability only).
+See
+.I docs/USAGE.md
+and
+.IR docs/TECH_GUIDE.md .
+.TP
 .B sensitivity_detection.connector_format_id_hint
 (optional, bool, default false) When true, connectors pass declared SQL type
 and length metadata (for example VARCHAR(N) on ID-like column names), which

@@ -53,6 +53,7 @@ def test_logs_endpoint_requires_specific_permission(tmp_path: Path):
     config = {
         "targets": [],
         "report": {"output_dir": str(tmp_path)},
+        "licensing": {"effective_tier": "pro"},
         "api": {
             "port": 8088,
             "api_key": "secret123",
@@ -60,7 +61,10 @@ def test_logs_endpoint_requires_specific_permission(tmp_path: Path):
                 "enabled": True,
                 "directory": str(logs_dir),
             },
-            "rbac": {"api_key_roles": ["dashboard"]},
+            "rbac": {
+                "enabled": True,
+                "api_key_roles": ["dashboard"],
+            },
         },
         "sqlite_path": str(tmp_path / "audit.db"),
     }
@@ -68,7 +72,9 @@ def test_logs_endpoint_requires_specific_permission(tmp_path: Path):
     try:
         resp = client.get("/logs", headers={"X-API-Key": "secret123"})
         assert resp.status_code == 403
-        assert "audit_logs.read" in (resp.json().get("detail") or "")
+        detail = resp.json().get("detail") or ""
+        # Middleware role map or handler permission message — either is fail-closed.
+        assert "Insufficient role" in detail or "audit_logs.read" in detail
     finally:
         _teardown(routes, previous)
 
@@ -83,6 +89,7 @@ def test_logs_endpoint_allows_audit_logs_read_permission(tmp_path: Path):
     config = {
         "targets": [],
         "report": {"output_dir": str(tmp_path)},
+        "licensing": {"effective_tier": "pro"},
         "api": {
             "port": 8088,
             "api_key": "secret123",
@@ -90,7 +97,10 @@ def test_logs_endpoint_allows_audit_logs_read_permission(tmp_path: Path):
                 "enabled": True,
                 "directory": str(logs_dir),
             },
-            "rbac": {"api_key_roles": ["audit_logs.read"]},
+            "rbac": {
+                "enabled": True,
+                "api_key_roles": ["audit_logs.read"],
+            },
         },
         "sqlite_path": str(tmp_path / "audit.db"),
     }

@@ -87,6 +87,8 @@ def test_prepare_demo_workspace_loopback_host() -> None:
         assert config_path.exists()
         assert config["api"]["host"] == "127.0.0.1"
         assert (demo_dir / "corpus").is_dir()
+        assert not (config["api"].get("api_key") or "").strip()
+        assert config["api"].get("audit_logs", {}).get("enabled") is True
     finally:
         import shutil
 

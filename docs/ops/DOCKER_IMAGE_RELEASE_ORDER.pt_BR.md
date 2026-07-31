@@ -2,7 +2,7 @@
 
 **English:** [DOCKER_IMAGE_RELEASE_ORDER.md](DOCKER_IMAGE_RELEASE_ORDER.md)
 
-**Contexto:** Após o **PR #99**, o repo usa **`python:3.13-slim`** no Dockerfile. Os operadores ainda precisam de uma **sequência repetível** para manter tags do Hub, versão do app e Scout alinhados. Esta doc define a sequência padrão e as variantes.
+**Contexto:** A imagem **universal (GIL)** usa **`Dockerfile`** → **`python:3.14-slim`** → distroless. A variante **free-threaded (no-GIL)** usa **`Dockerfile.nogil`** (instala `3.14t` via **uv**; não existe `python:3.14t-slim` no Hub). Os operadores ainda precisam de uma **sequência repetível** para manter tags do Hub, versão do app e gate alinhados.
 
 **Relacionado:** [scripts/docker/README.md](../../scripts/docker/README.md), [VERSIONING.md](../VERSIONING.md), [PLANS_TODO.md](../plans/PLANS_TODO.md) (ordens **–1**, **–1b**), [HOMELAB_VALIDATION.md](HOMELAB_VALIDATION.md) (ordem **–1L** para segundo ambiente), [DOCKER_HUB_REPOSITORY_DESCRIPTION.md](DOCKER_HUB_REPOSITORY_DESCRIPTION.md) (texto do Hub — colar após publicar).
 
@@ -26,6 +26,30 @@ Use quando quiser **uma imagem publicada** correspondendo a **uma versão do app
 | 9. **Hub UI**  | **Docker Hub → Repositório → Editar:** cole **Short** + **Full** de [DOCKER_HUB_REPOSITORY_DESCRIPTION.md](DOCKER_HUB_REPOSITORY_DESCRIPTION.md); atualize [today-mode/PUBLISHED_SYNC.md](today-mode/PUBLISHED_SYNC.md) |
 
 **Por que fazer o bump antes do build/push:** A imagem usa `COPY . .`, que inclui `pyproject.toml`. Fazer o build *depois* do bump garante que o app *dentro do contêiner* reporta a mesma versão que a tag semver publicada no Hub.
+
+---
+
+## Duas variantes de imagem (escolha + ritual)
+
+O ritual padrão (**passos 4–6** / `build-push-podman.sh`) publica a imagem **universal GIL** e move **`:latest`** com ela. A companheira **`-nogil`** é build **separado** (`Dockerfile.nogil` / `build-nogil-local.sh`) e tag Hub **separada**. **`:latest` nunca aponta para `-nogil`.**
+
+| Variante | Quando escolher | O ritual publica? | Move `:latest`? |
+| -------- | --------------- | ----------------- | --------------- |
+| **Universal GIL** (`1.7.4.post12`, `latest`) | Default: CPU antiga/mista/desconhecida; piso `popcnt=0` (qualquer x86-64, incl. Celeron 900). Filter `abi3`. | **Sim** — ritual principal | **Sim** |
+| **Free-threaded** (`1.7.4.post12-nogil`) | CPU moderna **x86-64-v2+** **e** vários workers **e** detecção regex-bound ([#551](https://github.com/DataBoar/data-boar/issues/551)). Wheels `cp314t`; abi3 **não** carrega; **SQLAlchemy puro-Python** (`DISABLE_SQLALCHEMY_CEXT=1`) para o cext não religar o GIL. | **Só sob pedido** — nunca pelo ritual de `:latest` | **Não** |
+
+**Mecanismo:** o GIL serializa workers de regex em Python puro (`core/detector.py`); free-threaded remove isso. O cext do SQLAlchemy de estoque **religa o GIL** — a `-nogil` deve embarcar sqlalchemy puro-Python (medido: ~5,3× regex paralelo vs ~+21% SELECT; microbenchmark ≠ `--demo`). Nunca forçar `PYTHON_GIL=0` para manter o cext. O **teto** de workers continua sendo o **tier de licença** (`core/engine.py` / `#551`).
+
+A cópia do Hub deve explicar a **escolha** (não só listar tags): [DOCKER_HUB_REPOSITORY_DESCRIPTION.md](DOCKER_HUB_REPOSITORY_DESCRIPTION.md) · [pt-BR — Qual imagem puxar?](DOCKER_HUB_REPOSITORY_DESCRIPTION.pt_BR.md).
+
+Build/validação local da `-nogil` (sem push):
+
+```bash
+./scripts/docker/build-nogil-local.sh 1.7.4.post12-nogil
+# operador, depois do login: podman push localhost/data_boar:1.7.4.post12-nogil docker.io/fabioleitao/data_boar:1.7.4.post12-nogil
+```
+
+**Não** retague `:latest` nem a tag de junho `:1.7.4` ao publicar `-nogil`.
 
 ---
 

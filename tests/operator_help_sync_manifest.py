@@ -49,6 +49,7 @@ _MAN_HTTPS_CERT = r"\-\-https\-cert\-file"
 _MAN_HTTPS_KEY = r"\-\-https\-key\-file"
 _MAN_ALLOW_INSECURE_HTTP = r"\-\-allow\-insecure\-http"
 _MAN_VALIDATE_CONFIG = r"\-\-validate\-config"
+_MAN_PREFILTER_STATUS = r"\-\-prefilter\-status"
 _MAN_DIFF = r"\-\-diff"
 _MAN_FAIL_ON_NEW_HIGH = r"\-\-fail\-on\-new\-high"
 _MAN_EXPORT_DSAR = r"\-\-export\-dsar"
@@ -90,6 +91,12 @@ OPERATOR_HELP_MARKERS: tuple[OperatorHelpMarker, ...] = (
         "--validate-config",
         "--validate-config",
         _MAN_VALIDATE_CONFIG,
+    ),
+    OperatorHelpMarker(
+        "prefilter_status",
+        "--prefilter-status",
+        "--prefilter-status",
+        _MAN_PREFILTER_STATUS,
     ),
     OperatorHelpMarker(
         "diff_sessions",

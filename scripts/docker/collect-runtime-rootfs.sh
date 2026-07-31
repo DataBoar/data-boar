@@ -81,15 +81,37 @@ add_deps_from() {
     collect_ldd_paths "${target}" >> "${DEPS_FILE}"
 }
 
+# Derive lib dir from the assembler interpreter via sysconfig (not version math).
+# Free-threaded installs live under python3.14t — hardcoding python3.14 leaves
+# the find empty and trips the libsqlite3 fail-close.
+PY_BIN=""
+for candidate in /usr/local/bin/python3 /usr/local/bin/python; do
+    if [[ -x "${candidate}" ]]; then
+        PY_BIN="${candidate}"
+        break
+    fi
+done
+if [[ -z "${PY_BIN}" ]]; then
+    echo "collect-runtime-rootfs: FATAL no python3/python under /usr/local/bin" >&2
+    exit 1
+fi
+PY_LIB="$("${PY_BIN}" -c 'import sysconfig; from pathlib import Path; print(Path(sysconfig.get_path("stdlib")))')"
+PY_VER_BIN="$("${PY_BIN}" -c 'import sys; print(sys.executable)')"
+if [[ ! -d "${PY_LIB}/lib-dynload" ]]; then
+    echo "collect-runtime-rootfs: FATAL missing ${PY_LIB}/lib-dynload (ABI path)" >&2
+    exit 1
+fi
+echo "collect-runtime-rootfs: PY_BIN=${PY_BIN} PY_LIB=${PY_LIB}"
+
 # Extension modules and interpreter (site-packages + stdlib lib-dynload — e.g. _sqlite3 → libsqlite3).
 while IFS= read -r -d '' so; do
     add_deps_from "${so}"
 done < <(
-    find /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/lib-dynload \
+    find "${PY_LIB}/site-packages" "${PY_LIB}/lib-dynload" \
         -name '*.so' -print0 2>/dev/null || true
 )
 
-for py in /usr/local/bin/python3.13 /usr/local/bin/python3; do
+for py in "${PY_VER_BIN}" "${PY_BIN}"; do
     add_deps_from "${py}"
 done
 
@@ -129,7 +151,9 @@ if [[ -d "${EXPORT}/lib" || -d "${EXPORT}/lib64" ]]; then
     exit 1
 fi
 
-# Fail closed: CPython sqlite3 (integrity_anchor / data-boar --version) needs a resolvable libsqlite3.
+# Fail closed: CPython sqlite3 (integrity_anchor / data-boar --version) needs a
+# resolvable libsqlite3 — OR a builtin/static _sqlite3 (python-build-standalone
+# free-threaded builds ship sqlite in-process; no libsqlite3.so.0 to collect).
 # SONAME symlink alone is not enough — the real object must be present (distroless has no apt).
 sqlite_link=""
 for candidate in \
@@ -141,14 +165,19 @@ for candidate in \
     fi
 done
 if [[ -z "${sqlite_link}" ]]; then
-    echo "collect-runtime-rootfs: FATAL missing libsqlite3.so.0 (ldd lib-dynload/_sqlite3*.so)" >&2
-    exit 1
-fi
-if [[ -L "${sqlite_link}" ]]; then
-    sqlite_real="$(readlink -f "${sqlite_link}" || true)"
-    if [[ -z "${sqlite_real}" || ! -f "${sqlite_real}" ]]; then
-        echo "collect-runtime-rootfs: FATAL dangling libsqlite3.so.0 -> ${sqlite_real:-unresolved}" >&2
+    if "${PY_BIN}" -c 'import sys, sqlite3; assert "_sqlite3" in sys.builtin_module_names; sqlite3.connect(":memory:").execute("select 1")'; then
+        echo "collect-runtime-rootfs: OK sqlite3 via builtin/static (no shared libsqlite3.so.0)"
+    else
+        echo "collect-runtime-rootfs: FATAL missing libsqlite3.so.0 (ldd lib-dynload/_sqlite3*.so)" >&2
         exit 1
     fi
+else
+    if [[ -L "${sqlite_link}" ]]; then
+        sqlite_real="$(readlink -f "${sqlite_link}" || true)"
+        if [[ -z "${sqlite_real}" || ! -f "${sqlite_real}" ]]; then
+            echo "collect-runtime-rootfs: FATAL dangling libsqlite3.so.0 -> ${sqlite_real:-unresolved}" >&2
+            exit 1
+        fi
+    fi
+    echo "collect-runtime-rootfs: OK libsqlite3 via ${sqlite_link}"
 fi
-echo "collect-runtime-rootfs: OK libsqlite3 via ${sqlite_link}"

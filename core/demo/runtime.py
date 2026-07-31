@@ -1,4 +1,4 @@
-"""Demo workspace preparation for ``data-boar --demo`` (#1113, #834)."""
+"""Demo workspace preparation for ``data-boar --demo`` (#1113, #834, #1190)."""
 
 from __future__ import annotations
 
@@ -20,6 +20,13 @@ def _default_demo_root() -> Path:
 
 
 def _write_demo_config(demo_dir: Path, port: int) -> Path:
+    """
+    Write demo.config.yaml.
+
+    Enables ``api.audit_logs`` under the demo temp tree (#1218). Does **not**
+    provision ``api.api_key`` or enable RBAC — OPEN/Community ``/logs`` follows
+    the same auth posture as ``/findings`` (#1190 root fix).
+    """
     corpus = demo_dir / "corpus"
     reports = demo_dir / "reports"
     audit_logs = demo_dir / "audit_logs"
@@ -73,6 +80,7 @@ def register_demo_cleanup(demo_dir: Path) -> None:
 
 
 def print_demo_banner(port: int, demo_dir: Path) -> None:
+    """Print demo startup banner (workspace + dashboard URL)."""
     print("")
     print("╔══════════════════════════════════════════════════════════╗")
     print("║  Data Boar — Demo (synthetic corpus, zero real data)     ║")
