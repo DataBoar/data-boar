@@ -113,7 +113,11 @@ Zero\-config demonstration mode: create a temp workspace under
 .IR demo.config.yaml ,
 a synthetic filesystem corpus,
 .IR reports/ ,
+.IR audit_logs/ ,
 and SQLite DB; run an initial scan and start the dashboard on loopback (\fB127.0.0.1\fR) with plaintext HTTP.
+Does not provision an API key; with RBAC inactive,
+.B GET /logs/{session_id}
+is reachable like other dashboard download routes.
 Does not read
 .B config.yaml
 from the current working directory.
@@ -201,7 +205,11 @@ in the configuration instead of this flag. The default Docker image command pass
 .B \-\-validate\-config
 Pre\-flight validation: parse the main configuration file (YAML or JSON), check connector type/driver recognition and required keys per target; warn on unset
 .BR *_from_env
-variables and on missing optional SQL driver packages (offline import probe only; no network or DB connect). Also creates missing output directories for
+variables and on missing optional SQL driver packages (offline import probe only; no network or DB connect).
+Also reports rust\-regex\-stage / accelerator readiness (#1411 / #1414) and warns when the optional Rust accelerator
+.B boar_fast_filter
+is not installed (PyPI installs use the pure\-Python fallback; wheelhouse is the distribution channel).
+Also creates missing output directories for
 .BR report.output_dir ,
 the parent of
 .BR sqlite_path ,
@@ -218,7 +226,20 @@ or
 with
 .BR [INVALID] .
 Cannot be combined with
-.BR \-\-web ", " \-\-reset\-data ", " \-\-export\-audit\-trail ", " \-\-export\-dsar ", or " \-\-regenerate\-report .
+.BR \-\-web ", " \-\-reset\-data ", " \-\-export\-audit\-trail ", " \-\-export\-dsar ", " \-\-regenerate\-report ", or " \-\-prefilter\-status .
+.
+.TP
+.B \-\-prefilter\-status
+Print rust\-regex\-stage / accelerator readiness for this configuration as JSON
+.RB ( active ", " name ", " backend ", " tier ", " reason ", " engine ,
+and
+.BR rust_accelerator_installed )
+and exit.
+Reports readiness of the optional Rust accelerator for the regex matching stage
+(#1411 / #1414). Product path executes the same patterns as the detector
+(no skip\-before\-ML; latch does not apply). Observability only — does not change findings.
+Cannot be combined with
+.BR \-\-web ", " \-\-reset\-data ", " \-\-export\-audit\-trail ", " \-\-export\-dsar ", " \-\-regenerate\-report ", " \-\-diff ", or " \-\-validate\-config .
 .
 .TP
 .B \-\-diff SESSION_A SESSION_B
@@ -556,7 +577,12 @@ Download the Excel report for the latest session.
 Download the heatmap PNG for the latest session.
 .TP
 .B /logs
-Download the audit log for the latest session.
+Download the audit log for the latest session (requires
+.B api.audit_logs.enabled
+and directory; when RBAC is active, role
+.B audit_logs.read
+or
+.BR admin ).
 .TP
 .BI /reports/ session_id
 Excel report for
@@ -569,7 +595,12 @@ Heatmap PNG for
 .TP
 .BI /logs/ session_id
 Audit log for
-.IR session_id .
+.IR session_id
+(same
+.B audit_logs
+gates and
+.B audit_logs.read
+role when RBAC is active).
 .TP
 .BI "PATCH /sessions/" session_id
 Update tenant/customer; JSON body uses a

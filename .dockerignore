@@ -15,10 +15,17 @@ docs/private.example/**
 .gitignore
 .github
 .venv
+**/.venv
 venv
+**/venv
 env
 __pycache__
+**/__pycache__
 *.pyc
+rust/**/target
+**/.ruff_cache
+**/.mypy_cache
+**/.pytest_cache
 .pytest_cache
 .ruff_cache
 .mypy_cache

@@ -7,10 +7,39 @@
 #
 # REVIEW: re-run full grype and revisit every rule when bumping:
 #   - gcr.io/distroless/cc-debian13:nonroot digest (Dockerfile stage 3)
-#   - python:3.13-slim digest (builder / runtime-assembler)
+#   - python:3.14-slim digest (builder / runtime-assembler)
 # See ADR-0074, PLAN_IMAGE_HARDENING (completed), docs/ops/evidence/GRYPE_DISTROLESS_GATE_SAMPLE.md
 
 ignore:
+  # --- CPython binary (builder/runtime; no stable vendor fix yet) ---
+  - vulnerability: CVE-2026-15308
+    package:
+      name: python
+      type: binary
+    reason: >-
+      CPython no builder/runtime. Unico fix declarado e 3.15.0, que NAO existe como release
+      estavel — remediacao indisponivel, nao acionavel. Afeta identicamente 3.13.14 e 3.14.6
+      (medido). NAO subir para 3.15.0a6/b3: Python pre-release em imagem de release esta
+      PROIBIDO pelo operador. Revisar quando 3.15.0 sair estavel ou houver backport.
+
+  - vulnerability: CVE-2026-11940
+    package:
+      name: python
+      type: binary
+    reason: >-
+      CPython binary (GIL slim e free-threaded 3.14.6). Unico fix declarado e 3.15.0b4
+      (beta) — remediacao indisponivel como release estavel. NAO subir para pre-release:
+      PROIBIDO pelo operador. Revisar quando 3.15.0 sair estavel ou houver backport.
+
+  - vulnerability: CVE-2026-11972
+    package:
+      name: python
+      type: binary
+    reason: >-
+      CPython binary (GIL slim e free-threaded 3.14.6). Unico fix declarado e 3.15.0b4
+      (beta) — remediacao indisponivel como release estavel. NAO subir para pre-release:
+      PROIBIDO pelo operador. Revisar quando 3.15.0 sair estavel ou houver backport.
+
   # --- glibc (distroless cc-debian13 runtime) ---
   - package:
       name: libc6

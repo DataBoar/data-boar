@@ -36,14 +36,14 @@ def test_dockerfile_pins_all_from_images_by_digest() -> None:
         assert "@sha256:" in line, f"expected digest pin in FROM line: {line!r}"
     joined = "\n".join(from_lines)
     assert "distroless/cc-debian13" in joined
-    assert "python:3.13-slim" in joined
+    assert "python:3.14-slim" in joined
 
 
 def test_dockerfile_distroless_nonroot_and_exec_cmd() -> None:
     text = DOCKERFILE.read_text(encoding="utf-8")
     assert "distroless/cc-debian13:nonroot@" in text
     assert "USER 65532:65532" in text
-    assert 'CMD ["/usr/local/bin/python3.13"' in text
+    assert 'CMD ["/usr/local/bin/python3.14"' in text
 
 
 def test_collect_runtime_rootfs_script_bundles_tls_and_db_libs() -> None:
@@ -54,25 +54,85 @@ def test_collect_runtime_rootfs_script_bundles_tls_and_db_libs() -> None:
     assert "libmariadb.so" in text
     assert "usrmerge_dest" in text or "copy_lib_path" in text
     assert "refusing usr-merge conflict" in text
+    # stdlib extension deps (e.g. _sqlite3 → libsqlite3) live in lib-dynload, not site-packages.
+    assert "lib-dynload" in text
+    assert "libsqlite3" in text
+    assert "sysconfig.get_path" in text  # derive python3.14 / python3.14t
+    assert (
+        "readlink" in text
+    )  # SONAME symlink → real .so (avoid dangling in distroless)
 
 
-def test_dockerfile_builds_boar_fast_filter_in_builder() -> None:
+def test_dockerfile_applies_wheelhouse_v1_in_builder() -> None:
+    """#1387: release image must force-reinstall ML stack from x86-64-v1 wheelhouse."""
     text = DOCKERFILE.read_text(encoding="utf-8")
-    assert "maturin build --release" in text
-    assert "import boar_fast_filter" in text
+    assert "apply_wheelhouse_v1.sh" in text
+    assert "WHEELHOUSE_TAG" in text
+    assert "binutils" in text  # objdump popcnt gate
+    script = REPO_ROOT / "scripts" / "docker" / "apply_wheelhouse_v1.sh"
+    assert script.is_file()
+    body = script.read_text(encoding="utf-8")
+    assert "--force-reinstall" in body
+    assert "--no-index" in body
+    assert "popcnt" in body
+    assert "boar_fast_filter" in body
+    assert "wheelhouse-x86-64-v1-2026-07-29" in body
+    # ABI must follow the builder interpreter (cp314 / cp314t), not a hardcode.
+    assert "Py_GIL_DISABLED" in body or "SOABI" in body
+    assert "sys.version_info" in body
+    assert "cp314t" in body  # free-threaded wheel cells + EXPECTED_SHA
+
+
+def test_dockerfile_nogil_pins_and_uv_freethreaded() -> None:
+    """Free-threaded variant: no 3.14t-slim tag; uv-installed 3.14t; does not steal :latest."""
+    nogil = REPO_ROOT / "Dockerfile.nogil"
+    assert nogil.is_file()
+    text = nogil.read_text(encoding="utf-8")
+    assert "python:3.14-slim@" in text
+    assert "@sha256:" in text
+    assert "uv python install" in text
+    assert "freethreaded" in text
+    assert "python3.14t" in text
+    assert "DISABLE_SQLALCHEMY_CEXT=1" in text
+    assert "--no-binary sqlalchemy" in text
+    # Must not force GIL off over undeclared-safe C exts (comments may mention the forbid).
+    assert "ENV PYTHON_GIL" not in text
+    assert "PYTHON_GIL=0" not in [
+        ln.strip() for ln in text.splitlines() if not ln.lstrip().startswith("#")
+    ]
+    assert "distroless/cc-debian13:nonroot@" in text
+    # No floating/official 3.14t-slim base (404 on Hub) — only comment may mention it.
+    from_lines = [
+        ln.strip() for ln in text.splitlines() if ln.strip().upper().startswith("FROM ")
+    ]
+    assert all("3.14t-slim" not in ln for ln in from_lines)
+    assert all("@sha256:" in ln for ln in from_lines)
+    collect = COLLECT_SCRIPT.read_text(encoding="utf-8")
+    assert "sysconfig.get_path" in collect  # python3.14t lib dir
 
 
 def test_grype_vex_config_has_documented_ignore_rules() -> None:
-    """PR-B #1028: .grype.yaml documents wont-fix base classes with reason (audit posture)."""
+    """PR-B #1028: .grype.yaml documents wont-fix base classes + CVE VEX with reason."""
     assert GRYPE_CONFIG.is_file()
     data = yaml.safe_load(GRYPE_CONFIG.read_text(encoding="utf-8"))
     rules = data.get("ignore") or []
     assert len(rules) >= 5
+    cve_rules = [r for r in rules if r.get("vulnerability")]
+    deb_rules = [r for r in rules if not r.get("vulnerability")]
     for rule in rules:
         assert rule.get("reason"), f"ignore rule missing reason: {rule!r}"
+        assert rule.get("package", {}).get("name"), (
+            f"ignore rule missing package.name: {rule!r}"
+        )
+    for rule in deb_rules:
         assert rule.get("fix-state") == "wont-fix"
         assert rule.get("package", {}).get("type") == "deb"
-    names = {r["package"]["name"] for r in rules}
+    for cve_id in ("CVE-2026-15308", "CVE-2026-11940", "CVE-2026-11972"):
+        assert any(r.get("vulnerability") == cve_id for r in cve_rules), cve_id
+        cve_pkg = next(r for r in cve_rules if r["vulnerability"] == cve_id)
+        assert cve_pkg.get("package", {}).get("type") == "binary"
+        assert cve_pkg.get("package", {}).get("name") == "python"
+    names = {r["package"]["name"] for r in deb_rules}
     assert "libc6" in names
     assert "mariadb" in names
 
@@ -119,7 +179,7 @@ def test_docker_image_smoke_script_passes_on_built_image() -> None:
                 "run",
                 "--rm",
                 image,
-                "/usr/local/bin/python3.13",
+                "/usr/local/bin/python3",
                 "-c",
                 "from core.about import _package_version; print(_package_version())",
             ],

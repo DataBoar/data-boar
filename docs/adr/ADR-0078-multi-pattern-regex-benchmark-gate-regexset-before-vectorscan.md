@@ -11,6 +11,7 @@ Proposed
 ### Status history
 
 - 2026-06-30 — Proposed (research closure GitHub #1078)
+- 2026-07-31 — **Amended:** RegexSet spike on ~284 real patterns **failed** the performance gate (5.7× slower than a loop of cached `Regex`; default `size_limit` 10 MiB did not compile — needed ≥20 MiB). Next engineering step is **cached individual `Regex` + Python translator** per [PLAN_RUST_REGEX_STAGE.md](../plans/PLAN_RUST_REGEX_STAGE.md) / [#1414](https://github.com/DataBoar/data-boar/issues/1414) — not RegexSet as default. Vectorscan gate unchanged in spirit (see Decision).
 
 ## Context
 
@@ -27,24 +28,28 @@ Off-band research (#1078) proposed **Vectorscan** (Hyperscan fork) for SIMD mult
 | `rust_prefilter_hotspot_v1` | Rust `filter_batch` ~**4.7×** vs Python prefilter on 200k rows (pinned JSON refreshed) |
 | `filesystem_phase_breakdown_v1` | On 2k local `.txt` files: **~99.7%** wall time in detect/matching vs **~0.1%** walk — walk parallelization **not** justified on this profile (#1080 🟡) |
 
-Matching **is** the hotspot for text-heavy local profiles, but **Rust prefilter already addresses the batch hot path**. Further wins should prefer **`RegexSet` in `boar_fast_filter`** (no new dep) before Vectorscan FFI.
+Matching **is** the hotspot for text-heavy local profiles, but **Rust prefilter already addresses the batch hot path**. The original recommendation preferred a **`RegexSet` spike** before Vectorscan FFI.
+
+**RegexSet spike (2026-07-31, probe outside repo — bus #1413):** On the **detector-stage** workload (~284 patterns, identical hit counts 119182), a loop of compiled `Regex` took **0.686 s** vs `RegexSet::matches` **3.907 s** (**5.7× slower** for Set). Cause: `matches()` evaluates **all** patterns — no early exit. Set also failed to compile under the crate default **10 MiB** `size_limit` (needed ≥20 MiB). Therefore RegexSet is **not** the next shipping path for the open-domain YAML regex stage.
 
 ## Decision
 
 1. **No Vectorscan / Hyperscan dependency** on `main` until:
-   - `RegexSet` prototype on a **feature branch** fails to meet targets; **and**
+   - the **chosen** multi-pattern acceleration path (now: **cached individual `Regex` loop** + Python pattern translator for `re`↔crate parity — see PLAN_RUST_REGEX_STAGE / #1414) fails to meet targets on a feature branch; **and**
    - benchmark on a **representative mixed corpus** (PDF + text + connector path) still shows matching ≥ **10–15%** of end-to-end time.
-2. **Next engineering step (when scheduled):** spike `RegexSet` in `rust/boar_fast_filter` with parity tests — **not** Vectorscan.
+2. **Next engineering step:** implement the detector regex stage with **`Vec<Regex>` cached per detector instance** and a **Python-side translator** (port `translate.py` from the 2026-07-31 probe) — **not** Vectorscan, and **not** `RegexSet` as the default engine for that stage. RegexSet remains available in the dependency tree for other experiments; it is **rejected** for this call site based on the spike above.
 3. If Vectorscan is ever adopted: **Enterprise-tier optional**, **graceful degrade** to current path on no-AVX hosts — never hard dependency of open-core.
-4. Pin benchmark artifacts under `tests/benchmarks/` when re-run; do not cite ADR-0007 for perf (synthetic corpus ADR — RO correction #1078).
+4. Pin benchmark artifacts under `tests/benchmarks/` when re-run; do not cite ADR-0007 for perf (synthetic corpus ADR — RO correction #1078). Cite detector-stage numbers with declared scope (isolated matching ≠ prefilter 3-pattern hotspot).
 
 ## Consequences
 
-- **Positive:** Avoids premature FFI/build blast radius; keeps min-spec story intact.
-- **Negative:** Pattern count growth may still pressure detector until RegexSet ships.
-- **Watch:** Re-run `filesystem_phase_breakdown` on SMB/NFS lab host before enabling parallel walk (#1080).
+- **Positive:** Avoids premature FFI/build blast radius; keeps min-spec story intact; avoids shipping a multi-pattern path measured **slower** than a simple Regex loop.
+- **Negative:** Pattern count growth still pressures detector until the cached-Regex + translator path ships (#1414).
+- **Watch:** Re-run `filesystem_phase_breakdown` on SMB/NFS lab host before enabling parallel walk (#1080). Re-evaluate RegexSet only if a future API gains early-exit semantics that change the 5.7× result.
 
 ## References
 
-- GitHub **#1078**, **#1080** (perf front)
+- GitHub **#1078**, **#1080** (perf front); **#1413** (bus), **#1414** (mother — Rust regex stage)
+- [PLAN_RUST_REGEX_STAGE.md](../plans/PLAN_RUST_REGEX_STAGE.md)
 - `tests/benchmarks/README.md`, `run_rust_prefilter_hotspot_bench.py`, `run_filesystem_phase_breakdown_bench.py`
+- Local probe (not tracked): `~/data-boar-drafts/regex-parity-probe-2026-07-31/` (`regex_stage_parity_bench.json`)

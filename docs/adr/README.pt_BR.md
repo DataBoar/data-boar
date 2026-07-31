@@ -25,6 +25,7 @@ Notas curtas e duradouras que registram **por que** o projeto escolheu um caminh
 | 0004 | [Information architecture — external-tier docs must not link into `plans/`](ADR-0004-external-docs-no-markdown-links-to-plans.md) | Aceito |
 | 0005 | [CI and GitHub Actions supply chain — pinned SHAs and pinned uv CLI](ADR-0005-ci-github-actions-supply-chain-pins.md)              | Aceito |
 | 0006 | [Operator today-mode layout and published-release sync](ADR-0006-operator-today-mode-layout-and-published-sync.md)                 | Aceito |
+| 0083 | [Estágio regex Rust: aceite forma B (findings superset)](ADR-0083-rust-regex-stage-superset-accept-form-b.md) | Aceito |
 
 ## Docs relacionados
 
@@ -82,4 +83,3 @@ Notas curtas e duradouras que registram **por que** o projeto escolheu um caminh
 ## Índice geral da documentação
 
 Veja [docs/README.pt_BR.md](../README.pt_BR.md) para o mapa completo.
-

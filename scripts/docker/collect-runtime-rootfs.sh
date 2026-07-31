@@ -32,12 +32,24 @@ usrmerge_dest() {
 
 copy_lib_path() {
     local src="$1"
-    [[ -f "${src}" ]] || return 0
+    [[ -f "${src}" || -L "${src}" ]] || return 0
     local dest_path
     dest_path="$(usrmerge_dest "${src}")"
     local dest="${EXPORT}${dest_path}"
     mkdir -p "$(dirname "${dest}")"
     cp -a "${src}" "${dest}"
+    # ldd often reports the SONAME symlink; ship the real object too or the link is dangling in distroless.
+    if [[ -L "${src}" ]]; then
+        local real
+        real="$(readlink -f "${src}" || true)"
+        if [[ -n "${real}" && -f "${real}" && "${real}" != "${src}" ]]; then
+            local real_dest_path real_dest
+            real_dest_path="$(usrmerge_dest "${real}")"
+            real_dest="${EXPORT}${real_dest_path}"
+            mkdir -p "$(dirname "${real_dest}")"
+            cp -a "${real}" "${real_dest}"
+        fi
+    fi
 }
 
 # Python install + console scripts (pip/wheel already removed in Dockerfile RUN).
@@ -69,12 +81,37 @@ add_deps_from() {
     collect_ldd_paths "${target}" >> "${DEPS_FILE}"
 }
 
-# Extension modules and interpreter.
+# Derive lib dir from the assembler interpreter via sysconfig (not version math).
+# Free-threaded installs live under python3.14t — hardcoding python3.14 leaves
+# the find empty and trips the libsqlite3 fail-close.
+PY_BIN=""
+for candidate in /usr/local/bin/python3 /usr/local/bin/python; do
+    if [[ -x "${candidate}" ]]; then
+        PY_BIN="${candidate}"
+        break
+    fi
+done
+if [[ -z "${PY_BIN}" ]]; then
+    echo "collect-runtime-rootfs: FATAL no python3/python under /usr/local/bin" >&2
+    exit 1
+fi
+PY_LIB="$("${PY_BIN}" -c 'import sysconfig; from pathlib import Path; print(Path(sysconfig.get_path("stdlib")))')"
+PY_VER_BIN="$("${PY_BIN}" -c 'import sys; print(sys.executable)')"
+if [[ ! -d "${PY_LIB}/lib-dynload" ]]; then
+    echo "collect-runtime-rootfs: FATAL missing ${PY_LIB}/lib-dynload (ABI path)" >&2
+    exit 1
+fi
+echo "collect-runtime-rootfs: PY_BIN=${PY_BIN} PY_LIB=${PY_LIB}"
+
+# Extension modules and interpreter (site-packages + stdlib lib-dynload — e.g. _sqlite3 → libsqlite3).
 while IFS= read -r -d '' so; do
     add_deps_from "${so}"
-done < <(find /usr/local/lib/python3.13/site-packages -name '*.so' -print0 2>/dev/null || true)
+done < <(
+    find "${PY_LIB}/site-packages" "${PY_LIB}/lib-dynload" \
+        -name '*.so' -print0 2>/dev/null || true
+)
 
-for py in /usr/local/bin/python3.13 /usr/local/bin/python3; do
+for py in "${PY_VER_BIN}" "${PY_BIN}"; do
     add_deps_from "${py}"
 done
 
@@ -92,8 +129,9 @@ done < <(
     \) -print0 2>/dev/null || true
 )
 
-sort -u "${DEPS_FILE}" | while read -r lib; do
-    [[ -n "${lib}" && -f "${lib}" ]] || continue
+# Avoid pipe-subshell: copy every ldd dependency (and SONAME symlink targets) into EXPORT.
+while read -r lib; do
+    [[ -n "${lib}" && -e "${lib}" ]] || continue
     # Distroless cc-debian13 ships glibc; skip core libc to avoid clobbering the base.
     case "${lib}" in
         /lib/*/libc.so.*|/lib/*/libm.so.*|/lib/*/libpthread.so.*|/lib/*/libdl.so.*|/lib/*/librt.so.*|/lib/*/libresolv.so.*|/usr/lib/*/libc.so.*|/usr/lib/*/libm.so.*|/usr/lib/*/libpthread.so.*|/usr/lib/*/libdl.so.*|/usr/lib/*/librt.so.*|/usr/lib/*/libresolv.so.*)
@@ -101,7 +139,7 @@ sort -u "${DEPS_FILE}" | while read -r lib; do
             ;;
     esac
     copy_lib_path "${lib}"
-done
+done < <(sort -u "${DEPS_FILE}")
 
 # Writable data mount point (nonroot uid 65532 = distroless :nonroot).
 mkdir -p "${EXPORT}/data"
@@ -111,4 +149,35 @@ chown 65532:65532 "${EXPORT}/data"
 if [[ -d "${EXPORT}/lib" || -d "${EXPORT}/lib64" ]]; then
     echo "collect-runtime-rootfs: refusing usr-merge conflict (${EXPORT}/lib or lib64 is a directory)" >&2
     exit 1
+fi
+
+# Fail closed: CPython sqlite3 (integrity_anchor / data-boar --version) needs a
+# resolvable libsqlite3 — OR a builtin/static _sqlite3 (python-build-standalone
+# free-threaded builds ship sqlite in-process; no libsqlite3.so.0 to collect).
+# SONAME symlink alone is not enough — the real object must be present (distroless has no apt).
+sqlite_link=""
+for candidate in \
+    "${EXPORT}/usr/lib/x86_64-linux-gnu/libsqlite3.so.0" \
+    "${EXPORT}/lib/x86_64-linux-gnu/libsqlite3.so.0"; do
+    if [[ -e "${candidate}" || -L "${candidate}" ]]; then
+        sqlite_link="${candidate}"
+        break
+    fi
+done
+if [[ -z "${sqlite_link}" ]]; then
+    if "${PY_BIN}" -c 'import sys, sqlite3; assert "_sqlite3" in sys.builtin_module_names; sqlite3.connect(":memory:").execute("select 1")'; then
+        echo "collect-runtime-rootfs: OK sqlite3 via builtin/static (no shared libsqlite3.so.0)"
+    else
+        echo "collect-runtime-rootfs: FATAL missing libsqlite3.so.0 (ldd lib-dynload/_sqlite3*.so)" >&2
+        exit 1
+    fi
+else
+    if [[ -L "${sqlite_link}" ]]; then
+        sqlite_real="$(readlink -f "${sqlite_link}" || true)"
+        if [[ -z "${sqlite_real}" || ! -f "${sqlite_real}" ]]; then
+            echo "collect-runtime-rootfs: FATAL dangling libsqlite3.so.0 -> ${sqlite_real:-unresolved}" >&2
+            exit 1
+        fi
+    fi
+    echo "collect-runtime-rootfs: OK libsqlite3 via ${sqlite_link}"
 fi
