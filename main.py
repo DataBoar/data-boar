@@ -183,6 +183,39 @@ def _validate_config_and_exit(config: dict[str, Any], config_path: str) -> None:
         label = f"type={kind or '?'}" + (f" driver={driver}" if driver else "")
         print(f'  OK    target[{i}] "{name}"  {label}')
 
+    # #1411 — Pro accelerator observability (same class of WARN as missing SQL driver).
+    from core.pro_scan_path import (
+        resolve_pro_scan_path,
+        rust_accelerator_installed,
+    )
+
+    _, pf_status = resolve_pro_scan_path(config)
+    paid_prefilter_tier = pf_status.get("tier") in (
+        "pro_plus",
+        "enterprise",
+        "partner",
+    )
+    # Same class as optional SQL-driver WARN, but only when the tier could use
+    # the accelerator (OPEN/Community never activate paid accel — avoid noise).
+    if paid_prefilter_tier and not rust_accelerator_installed():
+        warnings.append(
+            "boar_fast_filter (Rust accelerator) is not installed — "
+            "PyPI installs use the pure-Python regex-stage fallback; "
+            "wheelhouse is the only distribution channel (see TROUBLESHOOTING.md)"
+        )
+    if pf_status.get("active"):
+        print(
+            "  OK    rust-regex-stage readiness ACTIVE "
+            f"backend={pf_status.get('backend')} tier={pf_status.get('tier')}"
+        )
+    else:
+        # Status JSON may still carry legacy reason codes from WIP routing;
+        # product framing (#1414): observability only — no skip/latch narrative.
+        print(
+            "  OK    rust-regex-stage readiness inactive "
+            f"(reason={pf_status.get('reason') or 'n/a'} tier={pf_status.get('tier')})"
+        )
+
     from core.output_paths import OutputPathError, ensure_config_output_directories
 
     try:
@@ -390,6 +423,9 @@ def main() -> None:
             "  # Validate config only (loader checks; no scan or API startup)\n"
             f"  {prog} --config config.yaml --validate-config\n"
             "\n"
+            "  # Show rust-regex-stage readiness (paid-tier accelerator; observability)\n"
+            f"  {prog} --config config.yaml --prefilter-status\n"
+            "\n"
             "  # Compare two scan sessions (CI: add --fail-on-new-high)\n"
             f"  {prog} --config config.yaml --diff <session_a> <session_b>\n"
             "\n"
@@ -537,9 +573,19 @@ def main() -> None:
         help=(
             "Validate config structure, connector types, and required keys per target; "
             "warn on unset *_from_env vars and missing optional SQL driver packages "
-            "(offline import probe). No connections, scan, or --web. "
+            "(offline import probe). Also reports rust-regex-stage / accelerator "
+            "readiness (#1411 / #1414; observability only). No connections, scan, or --web. "
             "Exit 0 when valid, 1 on errors. Incompatible with --web, --reset-data, "
             "and --export-audit-trail."
+        ),
+    )
+    parser.add_argument(
+        "--prefilter-status",
+        action="store_true",
+        help=(
+            "Print rust-regex-stage / prefilter readiness for this config as JSON "
+            "(active, name, backend rust|python, tier, reason, engine) and exit. "
+            "Observability only — does not change findings (#1411 / #1412)."
         ),
     )
     parser.add_argument(
@@ -687,6 +733,7 @@ def main() -> None:
     if demo_mode:
         demo_incompatible = (
             args.validate_config
+            or args.prefilter_status
             or args.reset_data
             or args.export_audit_trail is not None
             or args.export_dsar is not None
@@ -695,8 +742,9 @@ def main() -> None:
         )
         if demo_incompatible:
             print(
-                "Cannot combine --demo with --validate-config, --reset-data, "
-                "--export-audit-trail, --export-dsar, --diff, or --regenerate-report.",
+                "Cannot combine --demo with --validate-config, --prefilter-status, "
+                "--reset-data, --export-audit-trail, --export-dsar, --diff, "
+                "or --regenerate-report.",
                 file=sys.stderr,
             )
             sys.exit(2)
@@ -724,10 +772,27 @@ def main() -> None:
         or args.export_audit_trail is not None
         or args.export_dsar is not None
         or args.regenerate_report is not None
+        or args.prefilter_status
     ):
         print(
             "Cannot combine --validate-config with --web, --reset-data, "
-            "--export-audit-trail, --export-dsar, or --regenerate-report.",
+            "--export-audit-trail, --export-dsar, --regenerate-report, "
+            "or --prefilter-status.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+
+    if args.prefilter_status and (
+        args.web
+        or args.reset_data
+        or args.export_audit_trail is not None
+        or args.export_dsar is not None
+        or args.regenerate_report is not None
+        or args.diff_sessions
+    ):
+        print(
+            "Cannot combine --prefilter-status with --web, --reset-data, "
+            "--export-audit-trail, --export-dsar, --regenerate-report, or --diff.",
             file=sys.stderr,
         )
         sys.exit(2)
@@ -812,6 +877,17 @@ def main() -> None:
         runtime_trust = get_runtime_trust_snapshot(config)
         _emit_runtime_trust_info(runtime_trust, to_stdout=True, to_stderr=True)
         _validate_config_and_exit(config, args.config)
+
+    if args.prefilter_status:
+        from core.pro_scan_path import resolve_pro_scan_path, rust_accelerator_installed
+
+        _, pf_status = resolve_pro_scan_path(config)
+        payload = {
+            **pf_status,
+            "rust_accelerator_installed": rust_accelerator_installed(),
+        }
+        print(json.dumps(payload, indent=2, sort_keys=True))
+        sys.exit(0)
 
     if args.diff_sessions:
         session_a, session_b = args.diff_sessions

@@ -554,15 +554,26 @@ To support a new data source (e.g. another database driver or API), see **[ADDIN
 
 ## Rust acceleration module (`boar_fast_filter`) and encoding boundary
 
-The optional `boar_fast_filter` Rust extension (built with [maturin](https://github.com/PyO3/maturin) + PyO3) provides a fast pre-filter stage: it receives a **batch of Python `str` objects** and returns the indexes of rows that contain CPF-like patterns, e-mail addresses, or potential credit-card sequences. Rows without any of those patterns are skipped before the slower ML/DL pipeline.
+The optional `boar_fast_filter` Rust extension (built with [maturin](https://github.com/PyO3/maturin) + PyO3) accelerates **pattern × text** matching on decoded Python `str` values. Product direction (**#1414**, accept form **B** — [ADR 0083](adr/ADR-0083-rust-regex-stage-superset-accept-form-b.md)): Rust **runs the same regex stage** as `SensitivityDetector` (built-ins + YAML / plugins), with the **same verdict semantics** where engines are equivalent — **not** a prefilter that skips rows before ML/DL. There is **no skip → no zero-regression latch**. (An older `ProScanner` + `filter_batch` “gate ML” sketch remains in-tree for ProcessPool / QA legacy only; it is **not** the shipping design for the open-domain YAML regex stage.)
+
+**CLI / observability (#1411 / #1412):** the open-core path is ``AuditEngine`` → ``DataScanner`` → ``SensitivityDetector``. Paid tiers (Pro+ / Enterprise / Partner) may expose Rust acceleration status via ``core.pro_scan_path``; **OPEN** and **Community** never activate paid accel. Tier gating uses `get_runtime_tier_for_features` — not `check_feature` (which bypasses restrictions under OPEN). Surfaces below report engine/backend readiness and evidence fields for the scan manifest — **observability only**; they do not invent a skip/latch trade-off.
+
+**How to see status (observability only — does not change findings):**
+
+- CLI: ``data-boar --config config.yaml --prefilter-status`` (JSON: `active`, `name`, `backend`, `tier`, `reason`, `engine`)
+- CLI: ``--validate-config`` prints Pro / Rust accelerator OK/WARN lines (same class as missing optional SQL drivers)
+- API: ``GET /status`` → ``detection_prefilter`` next to ``runtime_trust``
+- Scan evidence: ``scan_manifest_*.yaml`` → ``detection_prefilter`` (#1412 — engine, counts, fallback reasons when the regex stage ships)
+
+**Deterministic regex** (built-in + ``regex_overrides_file`` / compliance samples under ``docs/compliance-samples/``) remains the catalogue authority (open domain — not only the three legacy CPF/e-mail/card shapes). When Rust acceleration is on under form **B**, findings must satisfy ``findings(Rust) ⊇ findings(Python)`` with attributable extras — never a silent subset from skipping text.
 
 **Encoding boundary (important for malformed-byte files):**
 
-The Rust module operates exclusively on decoded Python strings — it never receives raw bytes. All file-reading and encoding resolution happens on the **Python side** before `filter_batch` is called:
+The Rust module operates exclusively on decoded Python strings — it never receives raw bytes. All file-reading and encoding resolution happens on the **Python side** before text is passed into the extension:
 
 - The filesystem connector reads text files with `errors="replace"` (default). Malformed byte sequences become the Unicode replacement character `U+FFFD` (`?`). The file is **not skipped** — it is analyzed with replacement characters in place.
 - If you need stricter behavior (e.g., skip files with encoding errors instead of silently replacing bytes), set `targets[].encoding_errors: "strict"` in your config. A `ScanFailure` entry is written to the SQLite audit log for every file where a `UnicodeDecodeError` occurs in strict mode.
-- The Rust pre-filter inherits whichever `str` the Python layer produces. If a CPF or e-mail straddles a replaced byte, the pattern may not match — this is a known, acceptable trade-off; the deterministic regex stage on the Python side still runs on the full replacement-substituted text.
+- The Rust match path inherits whichever `str` the Python layer produces. If a pattern straddles a replaced byte, it may not match — a known, acceptable trade-off; the Python `re` path still runs on the full replacement-substituted text when that pattern is on fallback.
 - For binary or truly undecodable files, the connector records them as `scan_failures` rather than silently excluding them from the audit log.
 
 **Build notes (lab environments):**
