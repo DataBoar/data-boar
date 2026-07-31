@@ -63,6 +63,7 @@ from core.forwarded_headers import forwarded_proto_posture
 from core.host_resolution import effective_api_key_configured
 from core.licensing.runtime_feature_tier import get_runtime_tier_for_features
 from core.licensing.tier_features import is_feature_available
+from core.rbac_settings import rbac_enforcement_active
 from core.runtime_trust import get_runtime_trust_snapshot
 from core.maturity_assessment.integrity import (
     load_integrity_secret_from_config,
@@ -905,8 +906,18 @@ def _resolve_audit_logs_directory(settings: dict[str, object]) -> Path:
 
 
 def _authorize_audit_log_download(request: Request) -> list[str]:
-    """Require authenticated principal with audit_logs.read or admin role."""
+    """
+    When RBAC is active (``api.rbac.enabled`` and tier allows ``dashboard_rbac`` —
+    same gate as ``rbac_middleware``), require a principal with ``audit_logs.read``
+    or ``admin``.
+
+    When RBAC is not active, do not require a principal here — ``/logs`` matches
+    ``/findings`` / ``/report`` (still subject to ``api.require_api_key`` middleware
+    and ``api.audit_logs.enabled`` / directory). See #1190 / ADR-0082 Decision 3.
+    """
     cfg = _get_config()
+    if not rbac_enforcement_active(cfg):
+        return []
     resolve_roles = _resolve_effective_roles_for_request_fn
     if resolve_roles is None:
         raise HTTPException(

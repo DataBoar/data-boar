@@ -34,7 +34,11 @@ opt-in for remote-risk surfaces, and auditable access for sensitive operational 
    require:
    - `api.audit_logs.enabled: true`;
    - explicit `api.audit_logs.directory`;
-   - authenticated role `audit_logs.read` (or `admin`);
+   - authenticated role `audit_logs.read` (or `admin`) **only when RBAC enforcement is
+     active** — same condition as the dashboard RBAC middleware
+     (`api.rbac.enabled` and tier allows `dashboard_rbac`). When RBAC is not active,
+     `/logs` follows the same auth posture as `/findings` / `/report` (still subject to
+     optional `api.require_api_key`); Community cannot enable in-product RBAC (#1190);
    - best-effort audit event on download.
 4. **Forwarded header trust boundary:** `X-Forwarded-Proto` is only trusted when request
    client IP matches `api.trusted_proxy_cidrs`; trust posture is exposed in `/status`.
@@ -46,7 +50,8 @@ opt-in for remote-risk surfaces, and auditable access for sensitive operational 
 
 - **Positive:** remote exposure without auth is blocked at process start.
 - **Positive:** ad-hoc DB scan abuse surface is closed by default.
-- **Positive:** audit logs become explicit, role-gated, and auditable.
+- **Positive:** audit logs become explicit, opt-in (`audit_logs.enabled`), and role-gated
+  when RBAC is active; Community/OPEN are not permanently locked out of their own trail.
 - **Positive:** proxy-header spoofing risk is reduced to explicit trusted CIDR chains.
 - **Positive:** inventory snapshots avoid over-collection while preserving diagnostics.
 - **Trade-off:** operators must explicitly configure `audit_logs` and trusted proxies for

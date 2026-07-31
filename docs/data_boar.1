@@ -113,16 +113,11 @@ Zero\-config demonstration mode: create a temp workspace under
 .IR demo.config.yaml ,
 a synthetic filesystem corpus,
 .IR reports/ ,
+.IR audit_logs/ ,
 and SQLite DB; run an initial scan and start the dashboard on loopback (\fB127.0.0.1\fR) with plaintext HTTP.
-Provisions a per\-run
-.B api.api_key
-with role
-.B audit_logs.read
-only (printed in the startup banner with a
-.B curl
-example for
-.BR GET\ /logs/{session_id} );
-requests without that key still receive HTTP 401 (RBAC default\-deny).
+Does not provision an API key; with RBAC inactive,
+.B GET /logs/{session_id}
+is reachable like other dashboard download routes.
 Does not read
 .B config.yaml
 from the current working directory.
@@ -582,7 +577,12 @@ Download the Excel report for the latest session.
 Download the heatmap PNG for the latest session.
 .TP
 .B /logs
-Download the audit log for the latest session.
+Download the audit log for the latest session (requires
+.B api.audit_logs.enabled
+and directory; when RBAC is active, role
+.B audit_logs.read
+or
+.BR admin ).
 .TP
 .BI /reports/ session_id
 Excel report for
@@ -595,7 +595,12 @@ Heatmap PNG for
 .TP
 .BI /logs/ session_id
 Audit log for
-.IR session_id .
+.IR session_id
+(same
+.B audit_logs
+gates and
+.B audit_logs.read
+role when RBAC is active).
 .TP
 .BI "PATCH /sessions/" session_id
 Update tenant/customer; JSON body uses a
