@@ -258,6 +258,20 @@ def _build_manifest(
     if isinstance(finished, datetime):
         finished = finished.isoformat()
 
+    # #1412 — rust-regex-stage / detection_prefilter observability (does not change findings).
+    runtime = config.get("_runtime") if isinstance(config.get("_runtime"), dict) else {}
+    pf_raw = (
+        runtime.get("prefilter") if isinstance(runtime.get("prefilter"), dict) else {}
+    )
+    detection_prefilter = {
+        "active": bool(pf_raw.get("active")),
+        "name": pf_raw.get("name"),
+        "backend": pf_raw.get("backend"),  # rust | python | null
+        "tier": pf_raw.get("tier"),
+        "reason": pf_raw.get("reason"),
+        "engine": pf_raw.get("engine"),  # pro | core
+    }
+
     return {
         "evidence_schema_version": EVIDENCE_SCHEMA_VERSION,
         "kind": "data_boar_scan_manifest",
@@ -276,6 +290,7 @@ def _build_manifest(
                 str(finished) if finished else None,
             ),
         },
+        "detection_prefilter": detection_prefilter,
         "audit_trail": collector.to_manifest_dict(),
         "safety_tags": {
             "sampling_row_cap_resolved": effective_limit,

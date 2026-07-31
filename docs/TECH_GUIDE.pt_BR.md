@@ -556,6 +556,17 @@ Para suportar uma nova fonte de dados (ex.: outro driver de banco ou API), veja 
 
 A extensão Rust opcional `boar_fast_filter` (construída com [maturin](https://github.com/PyO3/maturin) + PyO3) é um pré-filtro rápido. O `maturin` é uma **dependência de desenvolvimento** (`[dependency-groups].dev` no `pyproject.toml`; adicionado via `uv add --dev maturin`). Compilar a extensão consome RAM e CPU, então o caminho de build é dividido por classe de host:
 
+A extensão opcional `boar_fast_filter` acelera o casamento **padrão × texto** em `str` Python já decodificado. Direção de produto (**#1414**, forma **B** — [ADR 0083](adr/ADR-0083-rust-regex-stage-superset-accept-form-b.md)): o Rust **executa o mesmo estágio de regex** do `SensitivityDetector` (built-ins + YAML / plugins), com o **mesmo veredito** onde os motores são equivalentes — **não** um prefiltro que pula linhas antes do ML/DL. **Sem skip → sem latch de zero-regressão.** (`ProScanner` + `filter_batch` “porteia ML” permanece só como legado ProcessPool / QA; **não** é o desenho de ship do estágio YAML de domínio aberto.)
+
+**CLI / observabilidade (#1411 / #1412):** o caminho open-core é ``AuditEngine`` → ``DataScanner`` → ``SensitivityDetector``. Tiers pagos (Pro+ / Enterprise / Partner) podem expor status de aceleração Rust via ``core.pro_scan_path``; **OPEN** e **Community** nunca ativam. O gate usa `get_runtime_tier_for_features` — não `check_feature`. As superfícies abaixo são **só observabilidade** (prontidão do motor / evidência de manifesto) — não descrevem trade-off de skip/latch.
+
+**Como ver o status (só observabilidade — não muda achados):**
+
+- CLI: ``data-boar --config config.yaml --prefilter-status``
+- CLI: ``--validate-config`` imprime linhas OK/WARN do acelerador Pro / Rust
+- API: ``GET /status`` → ``detection_prefilter``
+- Evidência: ``scan_manifest_*.yaml`` → ``detection_prefilter`` (#1412 — motor, contagens, motivos de fallback quando o estágio de regex embarcar)
+
 | Classe do host | Caminho | Comando |
 | -------------- | ------- | ------- |
 | **Capaz** (≥4 GB de RAM; dev/lab/CI) | Compila a partir do código | `uv sync` e depois `uv run maturin develop --release` |

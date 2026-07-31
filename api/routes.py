@@ -1419,6 +1419,20 @@ async def get_status(request: Request):
     cfg = _get_config()
     sec = load_integrity_secret_from_config(cfg)
     maturity_integrity = engine.db_manager.verify_maturity_assessment_integrity(sec)
+    # #1411 — detection_prefilter / rust-regex-stage readiness next to runtime_trust.
+    pf_status = {}
+    try:
+        runtime = cfg.get("_runtime") if isinstance(cfg.get("_runtime"), dict) else {}
+        pf_status = (
+            dict(runtime.get("prefilter") or {})
+            if isinstance(runtime.get("prefilter"), dict)
+            else {}
+        )
+        if not pf_status and hasattr(engine, "scanner"):
+            pf_status = dict(getattr(engine.scanner, "prefilter_status", {}) or {})
+    except Exception:  # noqa: BLE001
+        pf_status = {}
+
     return {
         "running": engine.is_running,
         "current_session_id": engine.db_manager.current_session_id,
@@ -1426,6 +1440,7 @@ async def get_status(request: Request):
         "audit_log": engine.get_scan_audit_log(),
         "forwarded_headers": forwarded_proto_posture(request, cfg),
         "runtime_trust": runtime_trust,
+        "detection_prefilter": pf_status,
         "dashboard_transport": get_dashboard_transport_snapshot(),
         "enterprise_surface": get_enterprise_surface_posture(cfg),
         "maturity_assessment_integrity": maturity_integrity,
