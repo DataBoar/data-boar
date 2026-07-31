@@ -432,6 +432,10 @@ def main() -> None:
             "  # DSAR-oriented JSON export for one session (stdout or --dsar-output)\n"
             f"  {prog} --config config.yaml --export-dsar <session_id>\n"
             "\n"
+            "  # Remediation manifest JSON for a third-party plugin (#649)\n"
+            f"  {prog} --config config.yaml --session <session_id> "
+            f"--export-remediation-manifest remediation.json\n"
+            "\n"
             "  # Regenerate Excel + heatmap for an existing session (SQLite only; no re-scan)\n"
             f"  {prog} --config config.yaml --regenerate-report <session_id>\n"
             "\n"
@@ -635,6 +639,29 @@ def main() -> None:
         ),
     )
     parser.add_argument(
+        "--session",
+        metavar="SESSION_ID",
+        dest="session_id",
+        default=None,
+        help=(
+            "Scan session UUID for session-scoped exports. Required with "
+            "--export-remediation-manifest."
+        ),
+    )
+    parser.add_argument(
+        "--export-remediation-manifest",
+        metavar="PATH",
+        dest="export_remediation_manifest",
+        default=None,
+        help=(
+            "Write a remediation-plugin JSON manifest (schema v1) for --session to PATH. "
+            "Metadata only (connection_ref, locations, pii_type) — no raw PII and no "
+            "credentials. Enterprise-tier feature (open in licensing.mode off / OPEN). "
+            "Incompatible with --web, --reset-data, --export-audit-trail, --export-dsar, "
+            "--validate-config, --diff, and --regenerate-report."
+        ),
+    )
+    parser.add_argument(
         "--regenerate-report",
         metavar="SESSION_ID",
         dest="regenerate_report",
@@ -643,7 +670,8 @@ def main() -> None:
             "Regenerate Excel workbook and heatmap PNG for SESSION_ID from the "
             "configured SQLite database (also writes learned_patterns when enabled). "
             "No live target scan and no --web. Incompatible with --web, --reset-data, "
-            "--validate-config, --diff, --export-dsar, and --export-audit-trail."
+            "--validate-config, --diff, --export-dsar, --export-remediation-manifest, "
+            "and --export-audit-trail."
         ),
     )
     parser.add_argument(
@@ -735,14 +763,15 @@ def main() -> None:
             or args.reset_data
             or args.export_audit_trail is not None
             or args.export_dsar is not None
+            or args.export_remediation_manifest is not None
             or args.diff_sessions
             or args.regenerate_report is not None
         )
         if demo_incompatible:
             print(
                 "Cannot combine --demo with --validate-config, --prefilter-status, "
-                "--reset-data, --export-audit-trail, --export-dsar, --diff, "
-                "or --regenerate-report.",
+                "--reset-data, --export-audit-trail, --export-dsar, "
+                "--export-remediation-manifest, --diff, or --regenerate-report.",
                 file=sys.stderr,
             )
             sys.exit(2)
@@ -768,13 +797,14 @@ def main() -> None:
         or args.reset_data
         or args.export_audit_trail is not None
         or args.export_dsar is not None
+        or args.export_remediation_manifest is not None
         or args.regenerate_report is not None
         or args.prefilter_status
     ):
         print(
             "Cannot combine --validate-config with --web, --reset-data, "
-            "--export-audit-trail, --export-dsar, --regenerate-report, "
-            "or --prefilter-status.",
+            "--export-audit-trail, --export-dsar, --export-remediation-manifest, "
+            "--regenerate-report, or --prefilter-status.",
             file=sys.stderr,
         )
         sys.exit(2)
@@ -784,12 +814,14 @@ def main() -> None:
         or args.reset_data
         or args.export_audit_trail is not None
         or args.export_dsar is not None
+        or args.export_remediation_manifest is not None
         or args.regenerate_report is not None
         or args.diff_sessions
     ):
         print(
             "Cannot combine --prefilter-status with --web, --reset-data, "
-            "--export-audit-trail, --export-dsar, --regenerate-report, or --diff.",
+            "--export-audit-trail, --export-dsar, --export-remediation-manifest, "
+            "--regenerate-report, or --diff.",
             file=sys.stderr,
         )
         sys.exit(2)
@@ -800,11 +832,13 @@ def main() -> None:
         or args.export_audit_trail is not None
         or args.validate_config
         or args.export_dsar is not None
+        or args.export_remediation_manifest is not None
         or args.regenerate_report is not None
     ):
         print(
             "Cannot combine --diff with --web, --reset-data, --export-audit-trail, "
-            "--export-dsar, --validate-config, or --regenerate-report.",
+            "--export-dsar, --export-remediation-manifest, --validate-config, "
+            "or --regenerate-report.",
             file=sys.stderr,
         )
         sys.exit(2)
@@ -815,11 +849,31 @@ def main() -> None:
         or args.export_audit_trail is not None
         or args.validate_config
         or args.diff_sessions
+        or args.export_remediation_manifest is not None
         or args.regenerate_report is not None
     ):
         print(
             "Cannot combine --export-dsar with --web, --reset-data, "
-            "--export-audit-trail, --validate-config, --diff, or --regenerate-report.",
+            "--export-audit-trail, --validate-config, --diff, "
+            "--export-remediation-manifest, or --regenerate-report.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+
+    if args.export_remediation_manifest is not None and (
+        args.web
+        or args.reset_data
+        or args.export_audit_trail is not None
+        or args.validate_config
+        or args.diff_sessions
+        or args.export_dsar is not None
+        or args.prefilter_status
+        or args.regenerate_report is not None
+    ):
+        print(
+            "Cannot combine --export-remediation-manifest with --web, --reset-data, "
+            "--export-audit-trail, --validate-config, --diff, --export-dsar, "
+            "--prefilter-status, or --regenerate-report.",
             file=sys.stderr,
         )
         sys.exit(2)
@@ -831,10 +885,12 @@ def main() -> None:
         or args.validate_config
         or args.diff_sessions
         or args.export_dsar is not None
+        or args.export_remediation_manifest is not None
     ):
         print(
             "Cannot combine --regenerate-report with --web, --reset-data, "
-            "--export-audit-trail, --validate-config, --diff, or --export-dsar.",
+            "--export-audit-trail, --validate-config, --diff, --export-dsar, "
+            "or --export-remediation-manifest.",
             file=sys.stderr,
         )
         sys.exit(2)
@@ -845,6 +901,22 @@ def main() -> None:
 
     if args.dsar_include_samples and args.export_dsar is None:
         print("--dsar-include-samples requires --export-dsar.", file=sys.stderr)
+        sys.exit(2)
+
+    if args.export_remediation_manifest is not None and not (
+        args.session_id and str(args.session_id).strip()
+    ):
+        print(
+            "--export-remediation-manifest requires --session <session_id>.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+
+    if args.session_id and args.export_remediation_manifest is None:
+        print(
+            "--session requires --export-remediation-manifest <path.json>.",
+            file=sys.stderr,
+        )
         sys.exit(2)
 
     try:
@@ -932,6 +1004,45 @@ def main() -> None:
                 print(f"DSAR export written to {dest}", file=sys.stderr)
             else:
                 sys.stdout.write(body)
+        finally:
+            engine.db_manager.dispose()
+        return
+
+    if args.export_remediation_manifest is not None:
+        _emit_runtime_trust_info(runtime_trust, to_stdout=False, to_stderr=True)
+        from core.licensing.errors import FeatureTierBlockedError
+        from core.licensing.feature_gate import require_feature
+        from core.remediation_manifest import build_remediation_manifest
+
+        try:
+            require_feature(config, "remediation_manifest_export")
+        except FeatureTierBlockedError as e:
+            print(f"Licensing: {e}", file=sys.stderr)
+            sys.exit(2)
+
+        engine = AuditEngine(config, config_path=args.config)
+        try:
+            try:
+                payload = build_remediation_manifest(
+                    engine.db_manager,
+                    session_id=str(args.session_id),
+                    config=config,
+                )
+            except ValueError as e:
+                print(f"Error: {e}", file=sys.stderr)
+                sys.exit(1)
+            body = json.dumps(payload, indent=2, ensure_ascii=False) + "\n"
+            dest = Path(args.export_remediation_manifest)
+            try:
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                dest.write_text(body, encoding="utf-8")
+            except OSError as e:
+                print(
+                    f"Error: cannot write remediation manifest to {dest}: {e}",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+            print(f"Remediation manifest written to {dest}", file=sys.stderr)
         finally:
             engine.db_manager.dispose()
         return
@@ -1276,6 +1387,11 @@ def main() -> None:
         )
         sys.exit(2)
     except Exception as e:
+        from core.licensing.errors import FeatureTierBlockedError
+
+        if isinstance(e, FeatureTierBlockedError):
+            print(f"Licensing: {e}", file=sys.stderr)
+            sys.exit(2)
         print(f"Error: {e}")
         print("Probable cause: Unexpected failure during scan or report generation.")
         print(
