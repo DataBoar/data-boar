@@ -123,6 +123,15 @@ Implies
 .BR \-\-web
 and
 .BR \-\-allow\-insecure\-http .
+Provisions a per\-run
+.B api.api_key
+with role
+.B audit_logs.read
+only (printed in the startup banner with a
+.B curl
+example for
+.BR GET\ /logs/{session_id} );
+requests without that key still receive HTTP 401 (RBAC default\-deny).
 Temporary files are removed when the process exits.
 .
 .TP
