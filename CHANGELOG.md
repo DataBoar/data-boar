@@ -4,6 +4,8 @@ Human-readable summary of user-facing changes. **Detailed release notes:** [docs
 
 ## Unreleased (`main`)
 
+- **`/logs` auth aligns with RBAC middleware (#1190):** role check in `_authorize_audit_log_download` runs only when `rbac_enforcement_active` (`api.rbac.enabled` and tier allows `dashboard_rbac`). Community/OPEN and Pro+ without RBAC reach `/logs` like `/findings`; lock with `api.require_api_key`. `--demo` no longer provisions or prints a per-run API key (removes clear-text credential in YAML/banner). ADR-0082 Decision 3 amended.
+
 - **Cursor rules — Tier B situationalization (#1154):** 14 workflow rules → `alwaysApply: false` + globs/tokens; merged `operator-chat-language` + `persona-rigor` duplicates; workstation rules reframed (main dev box / secondary, same rigor). Rollback: `git revert` the Tier B commit. Inventory: `docs/ops/CURSOR_RULES_PHASE2_SITUATIONALIZATION.md`.
 
 **Targeting (next dev line):** **`1.8.0-beta`** (#772) — after operator **release-ritual** for **1.7.4** (PR **#1024**).

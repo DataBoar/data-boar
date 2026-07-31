@@ -66,12 +66,6 @@ OPERATOR_HELP_MARKERS: tuple[OperatorHelpMarker, ...] = (
         "--demo",
         _MAN_DEMO,
     ),
-    OperatorHelpMarker(
-        "demo_audit_logs_read",
-        "audit_logs.read",
-        "audit_logs.read",
-        "audit_logs.read",
-    ),
     OperatorHelpMarker("web", "--web", "--web", _MAN_WEB),
     OperatorHelpMarker("host", "--host", "--host", _MAN_HOST),
     OperatorHelpMarker(

@@ -1,4 +1,4 @@
-"""Regression tests for demo audit trail /logs (#1218 path + #1190 RBAC)."""
+"""Regression tests for demo audit trail /logs (#1218 path + #1190 RBAC align)."""
 
 from __future__ import annotations
 
@@ -33,58 +33,8 @@ def _teardown(routes, previous):
     configure_audit_log_directory(None)
 
 
-def test_demo_workspace_provisions_audit_logs_read_api_key(tmp_path: Path):
-    """#1190: --demo config must ship a per-run key with audit_logs.read only (not admin)."""
-    demo_root = tmp_path / "demo_workspace"
-    demo_dir, _config_path, config = prepare_demo_workspace(
-        port=18088,
-        demo_root=demo_root,
-        register_cleanup=False,
-    )
-    try:
-        api_cfg = config["api"]
-        key = api_cfg.get("api_key") or ""
-        assert isinstance(key, str) and len(key) == 64
-        assert all(c in "0123456789abcdef" for c in key)
-        roles = (api_cfg.get("rbac") or {}).get("api_key_roles") or []
-        assert roles == ["audit_logs.read"]
-        assert "admin" not in roles
-    finally:
-        shutil.rmtree(demo_dir, ignore_errors=True)
-
-
-def test_demo_session_log_requires_api_key_401(tmp_path: Path):
-    """#1190: without the demo API key, GET /logs/{session_id} stays default-deny 401."""
-    demo_root = tmp_path / "demo_workspace"
-    demo_dir, config_path, _config = prepare_demo_workspace(
-        port=18088,
-        demo_root=demo_root,
-        register_cleanup=False,
-    )
-    try:
-        routes, client, previous = _setup_client_with_config(config_path)
-        try:
-            engine = routes._get_engine()
-            session_id = engine.start_audit()
-            engine.generate_final_reports(session_id)
-
-            resp = client.get(f"/logs/{session_id}")
-            assert resp.status_code == 401
-            detail = resp.json().get("detail") or ""
-            assert "Authentication required" in detail
-        finally:
-            _teardown(routes, previous)
-    finally:
-        shutil.rmtree(demo_dir, ignore_errors=True)
-
-
-def test_demo_session_log_is_downloadable_via_logs_endpoint(tmp_path: Path):
-    """
-    --demo sessions must be retrievable by session_id on /logs/{session_id}.
-
-    #1218: path alignment (writer/reader same demo audit_logs dir).
-    #1190: use the provisioned demo API key (RBAC default-deny still holds without it).
-    """
+def test_demo_workspace_has_no_api_key(tmp_path: Path):
+    """#1190: --demo must not provision api.api_key / RBAC roles (OPEN loopback)."""
     demo_root = tmp_path / "demo_workspace"
     demo_dir, config_path, config = prepare_demo_workspace(
         port=18088,
@@ -92,9 +42,31 @@ def test_demo_session_log_is_downloadable_via_logs_endpoint(tmp_path: Path):
         register_cleanup=False,
     )
     try:
-        api_key = str((config.get("api") or {}).get("api_key") or "")
-        assert api_key, "demo workspace must provision api.api_key"
+        api_cfg = config["api"]
+        assert not (api_cfg.get("api_key") or "").strip()
+        assert not (api_cfg.get("rbac") or {}).get("enabled")
+        yaml_text = config_path.read_text(encoding="utf-8")
+        assert "api_key:" not in yaml_text
+        assert "api_key_roles:" not in yaml_text
+        assert api_cfg.get("audit_logs", {}).get("enabled") is True
+    finally:
+        shutil.rmtree(demo_dir, ignore_errors=True)
 
+
+def test_demo_session_log_downloadable_without_api_key(tmp_path: Path):
+    """
+    --demo sessions must be retrievable by session_id on /logs/{session_id}.
+
+    #1218: path alignment (writer/reader same demo audit_logs dir).
+    #1190: without RBAC active, no principal required (same as /findings).
+    """
+    demo_root = tmp_path / "demo_workspace"
+    demo_dir, config_path, _config = prepare_demo_workspace(
+        port=18088,
+        demo_root=demo_root,
+        register_cleanup=False,
+    )
+    try:
         routes, client, previous = _setup_client_with_config(config_path)
         try:
             engine = routes._get_engine()
@@ -112,10 +84,7 @@ def test_demo_session_log_is_downloadable_via_logs_endpoint(tmp_path: Path):
                 "regression contract: fallback must work even when session_id is absent in log body"
             )
 
-            resp = client.get(
-                f"/logs/{session_id}",
-                headers={"X-API-Key": api_key},
-            )
+            resp = client.get(f"/logs/{session_id}")
             assert resp.status_code == 200
             assert resp.headers.get("content-type", "").startswith("text/plain")
             assert "Finding:" in resp.text or "Connected:" in resp.text
@@ -125,14 +94,17 @@ def test_demo_session_log_is_downloadable_via_logs_endpoint(tmp_path: Path):
         shutil.rmtree(demo_dir, ignore_errors=True)
 
 
-def test_print_demo_banner_shows_key_and_curl(capsys) -> None:
-    """#1190: banner must print the per-run key and a curl example."""
+def test_print_demo_banner_has_no_secret(capsys) -> None:
+    """Banner shows workspace/URL only — no API key or curl secret."""
     from core.demo.runtime import print_demo_banner
 
-    key = "a" * 64
-    print_demo_banner(8088, Path("/tmp/data_boar_demo"), api_key=key)
+    print_demo_banner(8088, Path("/tmp/data_boar_demo"))
     out = capsys.readouterr().out
-    assert key in out
-    assert "X-API-Key" in out
-    assert "/logs/<session_id>" in out
-    assert "401" in out
+    assert "Dashboard:" in out
+    assert "Workspace:" in out
+    assert "X-API-Key" not in out
+    assert "api_key" not in out.lower()
+    assert not any(
+        len(tok) == 64 and all(c in "0123456789abcdef" for c in tok)
+        for tok in out.split()
+    )

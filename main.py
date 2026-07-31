@@ -470,10 +470,8 @@ def main() -> None:
         help=(
             "Zero-config demo: generate a synthetic filesystem corpus in a temp directory, "
             "run an initial scan, and start the dashboard on loopback (127.0.0.1) with "
-            "plaintext HTTP (--allow-insecure-http). Provisions a per-run API key "
-            "(audit_logs.read only) printed in the banner for GET /logs/{session_id}; "
-            "requests without that key still return HTTP 401 (RBAC default-deny). "
-            "Does not require --config. Temp files are removed when the process exits."
+            "plaintext HTTP (--allow-insecure-http). Does not require --config. "
+            "Temp files are removed when the process exits."
         ),
     )
     parser.add_argument(
@@ -750,7 +748,7 @@ def main() -> None:
             sys.exit(2)
         from core.demo.runtime import prepare_demo_workspace, print_demo_banner
 
-        demo_dir, config_path, preloaded = prepare_demo_workspace(
+        demo_dir, config_path, _preloaded = prepare_demo_workspace(
             port=args.port,
             register_cleanup=True,
         )
@@ -763,8 +761,7 @@ def main() -> None:
                 file=sys.stderr,
             )
         args.host = "127.0.0.1"
-        demo_api_key = str((preloaded.get("api") or {}).get("api_key") or "")
-        print_demo_banner(args.port, demo_dir, api_key=demo_api_key)
+        print_demo_banner(args.port, demo_dir)
 
     if args.validate_config and (
         args.web
