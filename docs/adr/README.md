@@ -16,6 +16,8 @@ Short, durable notes that capture **why** the project chose an approach—not on
 
 ## Index
 
+Canonical completeness of numbered ADR files is enforced for this table **and** the pt-BR mirror (`README.pt_BR.md` → `## Índice`) by `tests/test_adr_readme_index_sync.py`.
+
 | ADR   | Title                                                                                                                                                  | Status   |
 | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | -------- |
 | 0000  | [Project origin, ADR baseline, and UMADR ecosystem regency](ADR-0000-project-origin-and-adr-baseline.md) (canonical mother; #994) | Accepted |
@@ -101,7 +103,6 @@ Short, durable notes that capture **why** the project chose an approach—not on
 | 0080 | [Local validation gate is inviolable: full check-all before any push or PR](ADR-0080-local-validation-gate-inviolable.md) | Proposed |
 | 0081 | [No silent ML confidence failures on single-class compliance profiles](ADR-0081-no-silent-ml-confidence-single-class-hardening.md) | Proposed |
 | 0082 | [Web exposure safe-by-default boundary controls](ADR-0082-web-exposure-safe-by-default-boundary-controls.md) | Proposed |
-
 | 0083 | [Rust regex stage: accept form B (findings superset)](ADR-0083-rust-regex-stage-superset-accept-form-b.md) | Accepted |
 | 0084 | [Native package: embed CPython by channel (Enterprise vs community)](ADR-0084-native-package-embedded-cpython-by-channel.md) | Proposed |
 
