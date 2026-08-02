@@ -18,23 +18,21 @@ def _project_version_from_pyproject() -> str:
 
 
 def _fallback_version_in_about_source() -> str:
-    """String used when importlib.metadata has no distribution (see docs/VERSIONING.md)."""
+    """``_FALLBACK_VERSION`` in core/about.py (see docs/VERSIONING.md)."""
     root = Path(__file__).resolve().parent.parent
     text = (root / "core" / "about.py").read_text(encoding="utf-8")
-    m = re.search(r"except Exception:\s*\n\s*return \"([^\"]+)\"", text)
-    assert m is not None, (
-        'expected fallback `return "..."` after `except Exception:` in core/about.py '
-        "(_package_version)"
-    )
+    m = re.search(r'_FALLBACK_VERSION\s*=\s*"([^"]+)"', text)
+    assert m is not None, 'expected _FALLBACK_VERSION = "..." in core/about.py'
     return m.group(1)
 
 
 def test_about_version_matches_pyproject() -> None:
-    """Installed/metadata path must agree with repo `version =` (see docs/VERSIONING.md)."""
-    from core.about import get_about_info
+    """Runtime version equals pyproject.toml ``[project].version`` (VERSIONING.md SSOT)."""
+    from core.about import _package_version, get_about_info
 
     expected = _project_version_from_pyproject()
-    # importlib.metadata returns PEP 440-normalized strings (e.g. 1.7.2b0 vs 1.7.2-beta in pyproject).
+    assert _package_version() == expected
+    assert get_about_info()["version"] == expected
     assert Version(get_about_info()["version"]) == Version(expected)
 
 
