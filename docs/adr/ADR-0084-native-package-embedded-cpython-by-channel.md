@@ -40,7 +40,7 @@ Container extras inventory ([#1401](https://github.com/DataBoar/data-boar/issues
 
 Community capped at **2 workers** does **not** harvest free-threaded scale even if the binary tree contains `cp314t`. The interpreter is a **delivery substrate**; entitlement remains **cap + feature gates**, not “presence of freethreaded CPython on disk.”
 
-Related governance: [ADR 0027](ADR-0027-licensing-mode-default-and-fail-closed.md) (fail-closed licensing posture where applicable), [ADR 0064](ADR-0064-open-core-vs-commercial-boundary.md) (open-core vs commercial boundary), [ADR 0073](ADR-0073-version-scheme-octet-maturity-and-roadmap.md) (version / maturity lines), [ADR 0083](ADR-0083-rust-regex-stage-superset-accept-form-b.md) (paid/accelerated regex path vs Community refuse-and-warn).
+Related governance: [ADR 0027](ADR-0027-commercial-tier-boundaries-licensing-docs-and-future-jwt-claims.md) (commercial tier boundaries — licensing docs and future JWT claims), [ADR 0064](ADR-0064-license-enforcement-additive-model.md) (license enforcement — additive open-core + JWT Pro/Enterprise), [ADR 0073](ADR-0073-version-scheme-octet-maturity-and-roadmap.md) (version / maturity lines), [ADR 0083](ADR-0083-rust-regex-stage-superset-accept-form-b.md) (paid/accelerated regex path vs Community refuse-and-warn).
 
 ## Decision
 

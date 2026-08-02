@@ -7,7 +7,7 @@
 **Authors:** Fabio Leitao (operator); Cursor executor
 **Priority:** H1 (packaging / Enterprise air-gap channel)
 **GitHub:** [#1406](https://github.com/DataBoar/data-boar/issues/1406) `[P1][1.8.x][packaging][decision]` · **Blocked until decision:** [#1403](https://github.com/DataBoar/data-boar/issues/1403) (nfpm) · **Related:** [#1398](https://github.com/DataBoar/data-boar/issues/1398) · [#1401](https://github.com/DataBoar/data-boar/issues/1401) · [#551](https://github.com/DataBoar/data-boar/issues/551)
-**Related:** [ADR-0084](../adr/ADR-0084-native-package-embedded-cpython-by-channel.md) · [ADR-0027](../adr/ADR-0027-licensing-mode-default-and-fail-closed.md) · [ADR-0064](../adr/ADR-0064-open-core-vs-commercial-boundary.md) · [ADR-0073](../adr/ADR-0073-version-scheme-octet-maturity-and-roadmap.md) · [ADR-0083](../adr/ADR-0083-rust-regex-stage-superset-accept-form-b.md) · [PLAN_PACKAGING_EXTRAS.md](PLAN_PACKAGING_EXTRAS.md)
+**Related:** [ADR-0084](../adr/ADR-0084-native-package-embedded-cpython-by-channel.md) · [ADR-0027](../adr/ADR-0027-commercial-tier-boundaries-licensing-docs-and-future-jwt-claims.md) · [ADR-0064](../adr/ADR-0064-license-enforcement-additive-model.md) · [ADR-0073](../adr/ADR-0073-version-scheme-octet-maturity-and-roadmap.md) · [ADR-0083](../adr/ADR-0083-rust-regex-stage-superset-accept-form-b.md) · [PLAN_PACKAGING_EXTRAS.md](PLAN_PACKAGING_EXTRAS.md)
 
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md)
 
