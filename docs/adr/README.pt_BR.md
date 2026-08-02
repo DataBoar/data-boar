@@ -26,6 +26,7 @@ Notas curtas e duradouras que registram **por que** o projeto escolheu um caminh
 | 0005 | [CI and GitHub Actions supply chain — pinned SHAs and pinned uv CLI](ADR-0005-ci-github-actions-supply-chain-pins.md)              | Aceito |
 | 0006 | [Operator today-mode layout and published-release sync](ADR-0006-operator-today-mode-layout-and-published-sync.md)                 | Aceito |
 | 0083 | [Estágio regex Rust: aceite forma B (findings superset)](ADR-0083-rust-regex-stage-superset-accept-form-b.md) | Aceito |
+| 0084 | [Pacote nativo: CPython embarcado por canal (Enterprise vs comunidade)](ADR-0084-native-package-embedded-cpython-by-channel.md) | Proposto |
 
 ## Docs relacionados
 
