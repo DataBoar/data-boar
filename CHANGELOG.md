@@ -4,11 +4,25 @@ Human-readable summary of user-facing changes. **Detailed release notes:** [docs
 
 ## Unreleased (`main`)
 
+Empty while the working tree carries **`1.8.0-beta`** (see section below).
+
+---
+
+## 1.8.0-beta (working line on `main` — git-only)
+
+> Opens the **`1.8.0`** public line. **`[project] version = 1.8.0-beta`** (ADR-0073 PEP 440 hyphen form). **`[tool.databoar] maturity_build = 1`** — octet **resets** into beta band **1–126** (first beta = `.1`); does **not** continue from **`1.7.4.post12` / `.263`**. **Not** on PyPI or Docker Hub **`latest`** (distribution policy: pre-release = git-only). Notes: [docs/releases/1.8.0-beta.md](docs/releases/1.8.0-beta.md).
+
+### Included since `1.7.4.post12`
+
 - **`/logs` auth aligns with RBAC middleware (#1190):** role check in `_authorize_audit_log_download` runs only when `rbac_enforcement_active` (`api.rbac.enabled` and tier allows `dashboard_rbac`). Community/OPEN and Pro+ without RBAC reach `/logs` like `/findings`; lock with `api.require_api_key`. `--demo` no longer provisions or prints a per-run API key (removes clear-text credential in YAML/banner). ADR-0082 Decision 3 amended.
 
-- **Cursor rules — Tier B situationalization (#1154):** 14 workflow rules → `alwaysApply: false` + globs/tokens; merged `operator-chat-language` + `persona-rigor` duplicates; workstation rules reframed (main dev box / secondary, same rigor). Rollback: `git revert` the Tier B commit. Inventory: `docs/ops/CURSOR_RULES_PHASE2_SITUATIONALIZATION.md`.
+- **Route matrix collector walks nested `include_router` (#1426):** FastAPI **0.139+** stores `include_router` as `_IncludedRouter`; snapshot collector recurses so endpoint-loss detection still works. **`EXPECTED_HTTP_ROUTES` unchanged.**
 
-**Targeting (next dev line):** **`1.8.0-beta`** (#772) — after operator **release-ritual** for **1.7.4** (PR **#1024**).
+- **uv minor/patch bump + requirements sync (#1428):** maintainer branch replaces Dependabot tip (#1423); avoids close/recreate loop under `required_signatures` (#1419).
+
+- **Remediation manifest export (#649 / #1394):** `--session` + `--export-remediation-manifest` (Enterprise feature).
+
+- **Cursor rules — Tier B situationalization (#1154):** 14 workflow rules → `alwaysApply: false` + globs/tokens; merged `operator-chat-language` + `persona-rigor` duplicates; workstation rules reframed (main dev box / secondary, same rigor). Rollback: `git revert` the Tier B commit. Inventory: `docs/ops/CURSOR_RULES_PHASE2_SITUATIONALIZATION.md`.
 
 - **ADR governance (Phase 1, #1162):** deterministic tests T1/T2/T5/T6 for ADR-0045 (`tests/test_adr_governance_phase1.py`); pre-commit hook `adr-governance-phase1`; plan [PLAN_ADR_GOVERNANCE_ENFORCEMENT.md](docs/plans/PLAN_ADR_GOVERNANCE_ENFORCEMENT.md).
 
