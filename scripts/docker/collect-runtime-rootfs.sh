@@ -55,6 +55,13 @@ copy_lib_path() {
 # Python install + console scripts (pip/wheel already removed in Dockerfile RUN).
 copy_path /usr/local
 
+# Runtime extras extension point (#1400): empty dir owned by nonroot for VOLUME mount.
+if [[ -d /extras ]]; then
+    copy_path /extras
+else
+    mkdir -p "${EXPORT}/extras"
+    chown 65532:65532 "${EXPORT}/extras" 2>/dev/null || true
+fi
 # TLS for httpx / connectors (PLAN_IMAGE_HARDENING.md gap: verify TLS smoke in PR-A).
 copy_path /etc/ssl/certs/ca-certificates.crt
 # tzdata: not bundled yet — container defaults to UTC unless operator sets TZ= (see PLAN gap table).

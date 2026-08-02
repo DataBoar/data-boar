@@ -140,10 +140,15 @@ class WebDAVConnector:
 
     def run(self) -> None:
         if not _WEBDAV_AVAILABLE:
+            from core.extras_runtime import missing_optional_message
+
             self.db_manager.save_failure(
                 self.config.get("name", "WebDAV"),
-                "error",
-                'webdavclient3 not installed. Install with: pip install webdavclient3 or uv pip install -e ".[shares]"',
+                "missing_optional_dependency",
+                missing_optional_message(
+                    subject="WebDAV connector",
+                    extra="shares",
+                ),
             )
             return
         target_name = self.config.get("name", "WebDAV")
@@ -317,5 +322,5 @@ class WebDAVConnector:
                     pass
 
 
-if _WEBDAV_AVAILABLE:
-    register("webdav", WebDAVConnector, ["name", "base_url"])
+# Always register so YAML resolves; run() fails with named extra (#1402).
+register("webdav", WebDAVConnector, ["name", "base_url"])

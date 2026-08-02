@@ -46,6 +46,20 @@ def test_dockerfile_distroless_nonroot_and_exec_cmd() -> None:
     assert 'CMD ["/usr/local/bin/python3.14"' in text
 
 
+def test_dockerfile_extras_runtime_extension_point() -> None:
+    """#1400: lean base + /extras mount; no fat image of all optional extras."""
+    text = DOCKERFILE.read_text(encoding="utf-8")
+    assert 'VOLUME ["/extras"]' in text
+    assert "ENV PYTHONPATH=/extras:/app" in text
+    assert "DATA_BOAR_MACHINE_SEED" in text
+    assert '"/app[sql-community,mssql,oracle]"' in text
+    assert "generate_extras_manifest.py" in text
+    # Must not silently expand to all 18 extras in the image.
+    assert "sql-all,nosql,shares" not in text
+    smoke = SMOKE_SH.read_text(encoding="utf-8")
+    assert "assert_in_artifact_imports" in smoke
+
+
 def test_collect_runtime_rootfs_script_bundles_tls_and_db_libs() -> None:
     text = COLLECT_SCRIPT.read_text(encoding="utf-8")
     assert "ca-certificates.crt" in text

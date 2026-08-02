@@ -30,15 +30,13 @@ def test_registry_has_nfs_connector():
     assert resolved is not None
 
 
-def test_registry_has_smb_when_shares_extra_installed():
-    """SMB/CIFS use smbprotocol (optional `.[shares]`); register when import succeeds."""
+def test_registry_has_smb_always_registered():
+    """SMB/CIFS always register; missing smbprotocol fails at run() with named extra (#1402)."""
     import connectors.smb_connector  # noqa: F401
 
     types = list_connector_types()
-    if "smb" not in types:
-        pytest.skip(
-            "SMB/CIFS connectors not registered (install: uv sync --extra shares)"
-        )
+    assert "smb" in types
+    assert "cifs" in types
     assert (
         connector_for_target(
             {

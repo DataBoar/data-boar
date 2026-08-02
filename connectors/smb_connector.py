@@ -116,10 +116,15 @@ class SMBConnector:
 
     def run(self) -> None:
         if not _SMB_AVAILABLE:
+            from core.extras_runtime import missing_optional_message
+
             self.db_manager.save_failure(
                 self.config.get("name", "SMB"),
-                "error",
-                'smbprotocol not installed. Install with: pip install smbprotocol or uv pip install -e ".[shares]"',
+                "missing_optional_dependency",
+                missing_optional_message(
+                    subject="SMB/CIFS connector",
+                    extra="shares",
+                ),
             )
             return
         target_name = self.config.get("name", "SMB")
@@ -287,6 +292,6 @@ class SMBConnector:
                         pass
 
 
-if _SMB_AVAILABLE:
-    register("smb", SMBConnector, ["name", "host", "share"])
-    register("cifs", SMBConnector, ["name", "host", "share"])
+# Always register so YAML resolves; run() fails with named extra (#1402).
+register("smb", SMBConnector, ["name", "host", "share"])
+register("cifs", SMBConnector, ["name", "host", "share"])
