@@ -469,6 +469,15 @@ def main() -> None:
         help="Show the public product version and exit (no scan or API startup).",
     )
     parser.add_argument(
+        "--check-extras",
+        action="store_true",
+        help=(
+            "List optional extras × status × origin (image vs /extras mount) and exit. "
+            "First step when a connector fails for missing dependencies "
+            "(see docs/DOCKER_SETUP.md, docs/USAGE.md)."
+        ),
+    )
+    parser.add_argument(
         "--demo",
         action="store_true",
         help=(
@@ -753,6 +762,19 @@ def main() -> None:
         print(_cli_public_version_line())
         sys.exit(0)
 
+    if args.check_extras:
+        from core.extras_manifest import format_check_extras_table
+        from core.extras_runtime import verify_extras_abi_or_exit
+
+        verify_extras_abi_or_exit()
+        print(format_check_extras_table(), end="")
+        sys.exit(0)
+
+    # Fail closed when a mounted /extras pack does not match this interpreter ABI (#1400).
+    from core.extras_runtime import verify_extras_abi_or_exit
+
+    verify_extras_abi_or_exit()
+
     demo_mode = bool(getattr(args, "demo", False))
     demo_dir: Path | None = None
 
@@ -760,6 +782,7 @@ def main() -> None:
         demo_incompatible = (
             args.validate_config
             or args.prefilter_status
+            or args.check_extras
             or args.reset_data
             or args.export_audit_trail is not None
             or args.export_dsar is not None
@@ -770,7 +793,7 @@ def main() -> None:
         if demo_incompatible:
             print(
                 "Cannot combine --demo with --validate-config, --prefilter-status, "
-                "--reset-data, --export-audit-trail, --export-dsar, "
+                "--check-extras, --reset-data, --export-audit-trail, --export-dsar, "
                 "--export-remediation-manifest, --diff, or --regenerate-report.",
                 file=sys.stderr,
             )

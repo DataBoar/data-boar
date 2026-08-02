@@ -206,6 +206,16 @@ in the configuration instead of this flag. The default Docker image command pass
 Pre\-flight validation: parse the main configuration file (YAML or JSON), check connector type/driver recognition and required keys per target; warn on unset
 .BR *_from_env
 variables and on missing optional SQL driver packages (offline import probe only; no network or DB connect).
+.
+.TP
+.B \-\-check\-extras
+List optional extras (from
+.BR pyproject.toml )
+with status and origin (image site\-packages vs
+.B /extras
+mount). Use as the first troubleshooting step when a connector fails for missing dependencies. See
+.BR DOCKER_SETUP.md .
+.
 Also reports rust\-regex\-stage / accelerator readiness (#1411 / #1414) and warns when the optional Rust accelerator
 .B boar_fast_filter
 is not installed (PyPI installs use the pure\-Python fallback; wheelhouse is the distribution channel).

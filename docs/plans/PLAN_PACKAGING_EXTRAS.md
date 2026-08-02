@@ -1,12 +1,12 @@
 # Plan: SQL connector extras + lean core install (#1047)
 
-<!-- plans-hub-summary: Move SQL C-extension drivers out of core dependencies into PEP 508 extras; lazy-import with clear install hints; PyPI republish via 1.7.4.postN + maturity_build side-channel per ADR-0073 PyPI clause. -->
+<!-- plans-hub-summary: SQL extras + lean core (#1047); container delivery via runtime /extras+PYTHONPATH mount, EXTRAS_MANIFEST + --check-extras (#1400/#1401/#1399/#1402) — not fat image. -->
 
 **Status:** In progress
 **Date:** 2026-06-27
 **Authors:** Fabio Leitao (operator); Cursor executor
 **Priority:** H1 (packaging / wide-install ICP)
-**GitHub:** [#1047](https://github.com/FabioLeitao/data-boar/issues/1047) `[P2][packaging]` · **Related:** [#1059](https://github.com/FabioLeitao/data-boar/issues/1059) (`[noavx]` / capability profiles; see [#929](https://github.com/FabioLeitao/data-boar/issues/929))
+**GitHub:** [#1047](https://github.com/FabioLeitao/data-boar/issues/1047) `[P2][packaging]` · **Related:** [#1059](https://github.com/FabioLeitao/data-boar/issues/1059) (`[noavx]` / capability profiles; see [#929](https://github.com/FabioLeitao/data-boar/issues/929)) · **Container slice:** [#1400](https://github.com/DataBoar/data-boar/issues/1400) · [#1401](https://github.com/DataBoar/data-boar/issues/1401) · [#1399](https://github.com/DataBoar/data-boar/issues/1399) · [#1402](https://github.com/DataBoar/data-boar/issues/1402)
 **Related:** [ADR-0031](../adr/ADR-0031-pypi-packaging-hatchling-flat-layout.md) · [ADR-0073](../adr/ADR-0073-version-scheme-octet-maturity-and-roadmap.md) · [#1042](https://github.com/FabioLeitao/data-boar/issues/1042) (PyPI publish) · [CONTRIBUTING.md](../../CONTRIBUTING.md)
 
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md)
@@ -83,10 +83,26 @@ PyPI is **immutable per version**; there is **no** `maturity_build` side-channel
 
 ---
 
-## Out of scope (this slice)
+## Out of scope (#1047 library slice only)
 
 - ML/plot stack (`numpy`/`pandas`/…) as extras — issue #1047 secondary note; track separately.
 - PyPI publish run itself — operator **release-ritual** after merge.
+
+---
+
+## Container as delivery artifact (in scope — #1400 / #1401 / #1399 / #1402)
+
+**Operator decision (1.8.x):** keep the **distroless base lean**; extend connectors at **runtime** by mounting prebuilt ABI-compatible wheels at **`/extras`** with **`PYTHONPATH=/extras`**. **No** fat image of all 18 extras, **no** image matrix, **no** requiring customers to `Dockerfile FROM` our image and rebuild.
+
+| Step | Scope | Status |
+| ---- | ----- | ------ |
+| **C0** | `/extras` + `PYTHONPATH` + `VOLUME` + `DATA_BOAR_MACHINE_SEED=` on `Dockerfile` / `Dockerfile.nogil`; nonroot 65532 | ✅ |
+| **C1** | Base image installs only `sql-community,mssql,oracle` from pyproject (not hand-written package list; not all 18) | ✅ |
+| **C2** | `EXTRAS_MANIFEST.json` generated from `[project.optional-dependencies]` + import probe; `--check-extras`; smoke fails on `in_artifact` drift | ✅ |
+| **C3** | ABI fail-closed when mounted pack mismatches interpreter; missing-connector messages name extra + `/extras` path (#1402) | ✅ |
+| **C4** | Docs EN+pt-BR (`DOCKER_SETUP`, `USAGE`); this plan; `PLANS_TODO`; `plans_hub_sync` | ✅ |
+
+**Still out of this container slice:** publishing a signed, versioned extras-pack artifact per ABI (follow-on to #1400).
 
 ---
 
@@ -94,5 +110,6 @@ PyPI is **immutable per version**; there is **no** `maturity_build` side-channel
 
 | Item | Notes |
 | ---- | ----- |
-| Post-merge PyPI upload | `1.7.4.post1` via `publish-pypi.yml` |
+| Post-merge PyPI upload | `1.7.4.post1` via `publish-pypi.yml` (library slice) |
 | Operator smoke | `pipx install data-boar==1.7.4.post1` on constrained py3.14 lab host |
+| Container smoke | `docker-image-smoke.sh` after lab build; mount `/extras` pack without `--user 0` |

@@ -28,9 +28,10 @@ RUN pip uninstall -y wheel || true && \
     python -c "import wheel; import sys; sys.exit(0 if tuple(map(int, wheel.__version__.split('.'))) >= (0,46,2) else 1)" && \
     pip install --no-cache-dir -r /app/requirements.txt && \
     pip install --no-cache-dir --no-deps -e /app && \
-    pip install --no-cache-dir \
-        "psycopg2-binary>=2.9.11" "pymysql>=1.2.0" "mariadb>=1.1.14" \
-        "pyodbc>=5.3.0" "oracledb>=4.0.1" && \
+    # Lean base only: sql-community + mssql (pyodbc) + oracle from pyproject extras.
+    # Remaining extras: mount ABI-compatible wheels at /extras (#1400/#1399) — not fat image.
+    pip install --no-cache-dir "/app[sql-community,mssql,oracle]" && \
+    python /app/scripts/generate_extras_manifest.py --probe --write /app/EXTRAS_MANIFEST.json && \
     WHEELHOUSE_TAG="${WHEELHOUSE_TAG}" bash /app/scripts/docker/apply_wheelhouse_v1.sh && \
     PY_XY="$(python -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')" && \
     rm -rf "/tmp/wheelhouse-v1-glibc-cp$(python -c 'import sys; print(f"{sys.version_info.major}{sys.version_info.minor}")')" && \
@@ -51,6 +52,9 @@ COPY --from=builder /usr/local /usr/local
 RUN PY_XY="$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')" && \
     ln -sf "python${PY_XY}" /usr/local/bin/python3 && \
     ln -sf "python${PY_XY}" /usr/local/bin/python
+
+# Runtime extras mount point (#1400): owned by distroless nonroot (65532); no --user 0.
+RUN mkdir -p /extras && chown 65532:65532 /extras
 
 # No pip/wheel/setuptools in the release image (app does not install packages at runtime, #1028).
 RUN PY_XY="$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')" && \
@@ -73,11 +77,17 @@ WORKDIR /app
 
 COPY --from=runtime-assembler /rootfs /
 COPY --chown=65532:65532 . .
+COPY --from=builder --chown=65532:65532 /app/EXTRAS_MANIFEST.json /app/EXTRAS_MANIFEST.json
 
 ENV CONFIG_PATH=/data/config.yaml
 ENV PYTHONUNBUFFERED=1
 ENV API_HOST=0.0.0.0
 ENV PATH=/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+# Runtime extras extension (#1400): mount prebuilt ABI-compatible wheels here.
+ENV PYTHONPATH=/extras
+# Stable fingerprint in container pools (Enterprise); empty = hostname-derived (Pro/Pro+).
+ENV DATA_BOAR_MACHINE_SEED=
+VOLUME ["/extras"]
 
 USER 65532:65532
 

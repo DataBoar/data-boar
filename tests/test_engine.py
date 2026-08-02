@@ -110,3 +110,4 @@ def test_unknown_target_type_creates_failure(tmp_path, monkeypatch) -> None:
     assert recorded[0][0] == "snow"
     assert recorded[0][1] == "unknown_connector_type"
     assert "unknowntype_xyz" in recorded[0][2]
+    assert "typo" in recorded[0][2].lower()

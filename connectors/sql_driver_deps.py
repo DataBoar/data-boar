@@ -55,8 +55,9 @@ def ensure_sql_driver_available(driver: str) -> None:
     if any(_module_available(name) for name in modules):
         return
     label = raw.split("+", 1)[0].lower() if "+" in raw else key
+    from core.extras_runtime import install_hint_for_extra
+
     raise ImportError(
         f"SQL connector '{label}' requires optional dependencies. "
-        f"Install with: pip install 'data-boar[{extra}]' "
-        f'(or: uv pip install -e ".[{extra}]").'
+        f"{install_hint_for_extra(extra)}"
     )

@@ -9,7 +9,8 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$python = "/usr/local/bin/python3.13"
+# Assembler always symlinks python3 → versioned binary (3.14 / 3.14t…).
+$python = "/usr/local/bin/python3"
 
 if (-not (Get-Command podman -ErrorAction SilentlyContinue)) {
     Write-Error "podman not in PATH"
@@ -30,6 +31,15 @@ if ($Version) {
 }
 
 podman run --rm $Image $python -c "import boar_fast_filter; print('boar_fast_filter:', boar_fast_filter.__name__)"
+
+# #1401: in_artifact extras must import
+$extras = @'
+from core.extras_manifest import assert_in_artifact_imports, load_manifest
+m = load_manifest()
+assert_in_artifact_imports(m)
+print("extras_manifest: ok in_artifact=", sum(1 for e in m.get("extras", {}).values() if e.get("in_artifact")))
+'@
+podman run --rm $Image $python -c $extras
 
 $tls = @'
 import httpx

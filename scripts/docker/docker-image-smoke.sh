@@ -35,6 +35,14 @@ fi
 
 "${RUN[@]}" -c "import boar_fast_filter; print('boar_fast_filter:', boar_fast_filter.__name__)"
 
+# #1401: every extra marked in_artifact must import (guards Dockerfile ↔ pyproject drift).
+"${RUN[@]}" -c "
+from core.extras_manifest import assert_in_artifact_imports, load_manifest
+m = load_manifest()
+assert_in_artifact_imports(m)
+print('extras_manifest: ok in_artifact=', sum(1 for e in m.get('extras', {}).values() if e.get('in_artifact')))
+"
+
 "${RUN[@]}" -c "
 import httpx
 resp = httpx.get('https://example.com', timeout=20.0, follow_redirects=True)
