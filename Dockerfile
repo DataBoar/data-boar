@@ -84,7 +84,7 @@ ENV PYTHONUNBUFFERED=1
 ENV API_HOST=0.0.0.0
 ENV PATH=/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 # Runtime extras extension (#1400): mount prebuilt ABI-compatible wheels here.
-ENV PYTHONPATH=/extras
+ENV PYTHONPATH=/extras:/app
 # Stable fingerprint in container pools (Enterprise); empty = hostname-derived (Pro/Pro+).
 ENV DATA_BOAR_MACHINE_SEED=
 VOLUME ["/extras"]

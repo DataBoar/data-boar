@@ -50,7 +50,7 @@ def test_dockerfile_extras_runtime_extension_point() -> None:
     """#1400: lean base + /extras mount; no fat image of all optional extras."""
     text = DOCKERFILE.read_text(encoding="utf-8")
     assert 'VOLUME ["/extras"]' in text
-    assert "ENV PYTHONPATH=/extras" in text
+    assert "ENV PYTHONPATH=/extras:/app" in text
     assert "DATA_BOAR_MACHINE_SEED" in text
     assert '"/app[sql-community,mssql,oracle]"' in text
     assert "generate_extras_manifest.py" in text

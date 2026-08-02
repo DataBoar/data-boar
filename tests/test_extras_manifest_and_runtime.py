@@ -151,14 +151,14 @@ def test_smb_and_redis_always_registered() -> None:
 def test_dockerfile_has_extras_runtime_extension() -> None:
     text = (REPO / "Dockerfile").read_text(encoding="utf-8")
     assert 'VOLUME ["/extras"]' in text
-    assert "ENV PYTHONPATH=/extras" in text
+    assert "ENV PYTHONPATH=/extras:/app" in text
     assert "DATA_BOAR_MACHINE_SEED" in text
     assert '"/app[sql-community,mssql,oracle]"' in text
     assert "generate_extras_manifest.py" in text
     assert "EXTRAS_MANIFEST.json" in text
     nogil = (REPO / "Dockerfile.nogil").read_text(encoding="utf-8")
     assert 'VOLUME ["/extras"]' in nogil
-    assert "ENV PYTHONPATH=/extras" in nogil
+    assert "ENV PYTHONPATH=/extras:/app" in nogil
 
 
 def test_docker_smoke_scripts_guard_in_artifact() -> None:

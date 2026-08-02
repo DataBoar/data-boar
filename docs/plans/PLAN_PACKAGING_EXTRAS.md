@@ -92,7 +92,7 @@ PyPI is **immutable per version**; there is **no** `maturity_build` side-channel
 
 ## Container as delivery artifact (in scope — #1400 / #1401 / #1399 / #1402)
 
-**Operator decision (1.8.x):** keep the **distroless base lean**; extend connectors at **runtime** by mounting prebuilt ABI-compatible wheels at **`/extras`** with **`PYTHONPATH=/extras`**. **No** fat image of all 18 extras, **no** image matrix, **no** requiring customers to `Dockerfile FROM` our image and rebuild.
+**Operator decision (1.8.x):** keep the **distroless base lean**; extend connectors at **runtime** by mounting prebuilt ABI-compatible wheels at **`/extras`** with **`PYTHONPATH=/extras:/app`** (`/extras` first). **No** fat image of all 18 extras, **no** image matrix, **no** requiring customers to `Dockerfile FROM` our image and rebuild.
 
 | Step | Scope | Status |
 | ---- | ----- | ------ |

@@ -38,7 +38,7 @@ The published image is **lean on purpose**: it installs only the **base SQL grou
 
 1. Build an ABI-compatible wheel pack on a host that matches the image Python (e.g. **cp314** for the GIL image, **cp314t** for `-nogil`) — typically `pip install --target ./extras-pack 'data-boar[nosql,shares,…]'` or equivalent wheels from the project wheelhouse channel.
 2. Mount read-only: `-v /path/to/extras-pack:/extras:ro` (nonroot uid **65532**; no `--user 0`).
-3. The image sets **`PYTHONPATH=/extras`** and **`VOLUME ["/extras"]`**.
+3. The image sets **`PYTHONPATH=/extras:/app`** (`/extras` first, then `/app`) and **`VOLUME ["/extras"]`**.
 
 **Diagnose first:** `python main.py --check-extras` (or the same flag as container entrypoint override) lists each extra × status × origin (image vs `/extras`). Post-build smoke (`scripts/docker/docker-image-smoke.sh`) **fails** if any extra marked `in_artifact: true` in `EXTRAS_MANIFEST.json` cannot import.
 

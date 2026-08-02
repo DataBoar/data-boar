@@ -38,7 +38,7 @@ A imagem publicada é **enxuta de propósito**: instala só os grupos SQL base d
 
 1. Monte um pack de wheels ABI-compatível com o Python da imagem (ex.: **cp314** na imagem GIL, **cp314t** na `-nogil`) — tipicamente `pip install --target ./extras-pack 'data-boar[nosql,shares,…]'` ou wheels do canal wheelhouse do projeto.
 2. Monte somente leitura: `-v /caminho/extras-pack:/extras:ro` (uid nonroot **65532**; sem `--user 0`).
-3. A imagem define **`PYTHONPATH=/extras`** e **`VOLUME ["/extras"]`**.
+3. A imagem define **`PYTHONPATH=/extras:/app`** (`/extras` primeiro, depois `/app`) e **`VOLUME ["/extras"]`**.
 
 **Diagnóstico primeiro:** `python main.py --check-extras` lista cada extra × estado × origem (imagem vs `/extras`). O smoke pós-build (`scripts/docker/docker-image-smoke.sh`) **falha** se algum extra com `in_artifact: true` no `EXTRAS_MANIFEST.json` não importar.
 

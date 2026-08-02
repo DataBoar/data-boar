@@ -122,7 +122,7 @@ ENV API_HOST=0.0.0.0
 ENV PATH=/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 # Build-time contract reminder (cext absent in this image); harmless at runtime.
 ENV DISABLE_SQLALCHEMY_CEXT=1
-ENV PYTHONPATH=/extras
+ENV PYTHONPATH=/extras:/app
 ENV DATA_BOAR_MACHINE_SEED=
 VOLUME ["/extras"]
 
