@@ -64,15 +64,16 @@ Ao abrir uma **nova linha semver** (ex.: **`1.8.0`** após **`1.7.4`**), **`matu
 
 Sufixos (`-beta`, `-rc`, `-rc-N`) são obrigatórios em `main` enquanto um issue de **release gate** (ex.: GitHub #406) estiver **aberto**. **Commit gate** verde (`check-all`) **não** autoriza removê-los — ver ADR-0072. Gate **#406** fechado com **1.7.4** stable (PR **#1024**).
 
-### Linha 1.7.4 atual
+### Linhas atuais (`1.7.4` publicado · `1.8.0-beta` working)
 
 | Rótulo | Status |
 | --- | --- |
-| **Working tree `main`** | **`1.7.4`** no `pyproject.toml` na branch **`release/1.7.4`** (PR **#1024**); publish (tag/Hub) após merge do operador + **release-ritual** |
+| **Working tree `main`** | **`1.8.0-beta`** no `pyproject.toml` (`maturity_build = 1` — reset da faixa beta na nova linha). Só git para consumidores. |
+| **Canais publicados** | **`1.7.4.post12`** / **`v1.7.4.post12`** no PyPI + Hub (+ GA histórico **`1.7.4`**) até ritual futuro de **`1.8.0`** |
 | **#970** | Bump/tag stable prematuro sem release gate — corrigido por **ADR-0072** + gate **#406**; **`1.7.4` não é VOID** |
-| **Numeração pública pós-GA** | **Resolvido** (#977) — linha pública permanece **`1.7.4`**; octeto **`maturity_build`** distingue fixes; próxima linha pública **`1.8.0`** |
+| **Numeração pública pós-GA** | **Resolvido** (#977) — fix-line **`1.7.4`** usou **`.postN`** + octeto; **`.postN` não carrega** para **`1.8.0-beta`** |
 
-Escada (histórico): `1.7.4-beta` → `1.7.4-rc` → `1.7.4-rc-2` → **`1.7.4`** (stable alvo, PR **#1024**).
+Escada (histórico `1.7.4`): `1.7.4-beta` → `1.7.4-rc` → `1.7.4-rc-2` → **`1.7.4`** (GA, PR **#1024**) → **`.postN`**. Próximo: **`1.8.0-beta`** → **`1.8.0-rc`** → **`1.8.0`**.
 
 ### Roadmap de linha (intenção — sem incremento ingênuo)
 

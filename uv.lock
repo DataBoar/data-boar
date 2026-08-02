@@ -819,7 +819,7 @@ validation = [
 
 [[package]]
 name = "data-boar"
-version = "1.7.4.post12"
+version = "1.8.0b0"
 source = { editable = "." }
 dependencies = [
     { name = "annotated-doc" },

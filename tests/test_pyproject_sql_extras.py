@@ -61,14 +61,14 @@ def test_sql_optional_extras_present() -> None:
     assert not missing, f"missing SQL extras in pyproject.toml: {missing}"
 
 
-def test_maturity_build_bumped_for_packaging_fix() -> None:
+def test_maturity_build_reset_for_180_beta_line() -> None:
+    """ADR-0073: new public line resets maturity_build into beta band (first beta = 1)."""
     data = _load_pyproject()
     maturity = data.get("tool", {}).get("databoar", {}).get("maturity_build")
-    assert maturity == 263
+    assert maturity == 1
 
 
-def test_version_is_174_post_release_not_semver_bump() -> None:
+def test_version_is_180_beta_not_phantom_175() -> None:
     version = _load_pyproject().get("project", {}).get("version")
-    assert version == "1.7.4.post12"
+    assert version == "1.8.0-beta"
     assert not str(version).startswith("1.7.5")
-    assert not str(version).startswith("1.8.")

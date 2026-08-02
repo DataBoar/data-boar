@@ -64,15 +64,16 @@ When the project opens a **new semver line** (e.g. **`1.8.0`** after **`1.7.4`**
 
 Suffixes (`-beta`, `-rc`, `-rc-N`) are required on `main` while a **release gate** issue (e.g. GitHub #406) is **open**. A green **commit gate** (`check-all`) never authorizes removing them — see ADR-0072. Gate **#406** closed with **1.7.4** stable (PR **#1024**).
 
-### Current 1.7.4 line
+### Current lines (`1.7.4` published · `1.8.0-beta` working)
 
 | Label | Status |
 | --- | --- |
-| **`main` working tree** | **`1.7.4`** in `pyproject.toml` on release branch **`release/1.7.4`** (PR **#1024**); publish (tag/Hub) follows operator merge + **release-ritual** |
+| **`main` working tree** | **`1.8.0-beta`** in `pyproject.toml` (`maturity_build = 1` — new-line beta band reset). Git-only for consumers. |
+| **Published customer channels** | **`1.7.4.post12`** / **`v1.7.4.post12`** on PyPI + Hub (+ historical GA **`1.7.4`**) until a later **`1.8.0`** release-ritual |
 | **#970** | Premature stable bump/tag without release gate — corrected by **ADR-0072** + gate **#406**; **`1.7.4` is not VOID** |
-| **Post-GA public fix numbering** | **Resolved** (#977) — public line stays **`1.7.4`**; **`maturity_build`** octet distinguishes fixes; next public line **`1.8.0`** |
+| **Post-GA public fix numbering** | **Resolved** (#977) — **`1.7.4`** fix-line used **`.postN`** + octet; **`.postN` does not carry** onto **`1.8.0-beta`** |
 
-Ladder (historic): `1.7.4-beta` → `1.7.4-rc` → `1.7.4-rc-2` → **`1.7.4`** (stable target, release PR **#1024**).
+Ladder (historic `1.7.4`): `1.7.4-beta` → `1.7.4-rc` → `1.7.4-rc-2` → **`1.7.4`** (GA, PR **#1024**) → **`.postN`** fix-line. Next: **`1.8.0-beta`** → **`1.8.0-rc`** → **`1.8.0`**.
 
 ### Release-line roadmap (intent — not naive semver increment)
 
