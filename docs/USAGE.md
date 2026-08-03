@@ -55,6 +55,10 @@ Some enterprise deployments require explicit **tamper-evidence hooks** beside `l
 
 **Roadmap:** **SQLite anchor**, **startup re-verify**, and **trust-level downgrade** unrelated to licensing-only checks remain **planned** (**`docs/plans/PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md`** — Phase **E.11** JSON export ✅; anchors ⬜).
 
+### Enterprise remediation plugin (optional)
+
+Opt-in YAML `remediation:` loads a partner `RemediationPlugin` after report generation (**Enterprise** feature `remediation_plugin`, or **OPEN** lab). Fail-graceful: plugin errors never abort the scan. Partner authoring guide: **[PLUGIN_SDK.md](PLUGIN_SDK.md)** ([pt-BR](PLUGIN_SDK.pt_BR.md)). Example block: `deploy/config.example.yaml`.
+
 ### Outcomes
 
 ## Zero-config demo (`--demo`)
@@ -1138,6 +1142,14 @@ api:
 # Optional: simulate commercial tier in lab (community | pro | enterprise). Omits OPEN dev behaviour for feature gates.
 # licensing:
 #   effective_tier: pro
+
+# Optional Enterprise: post-scan remediation plugin (L1 in-process). See PLUGIN_SDK.md.
+# Requires effective_tier: enterprise (or OPEN lab). Fail-graceful — never aborts the scan.
+# remediation:
+#   enabled: false
+#   plugin: null           # "module.path:ClassName"
+#   verify_after: true
+#   config: {}
 
 # Optional: possible minor data detection (LGPD Art. 14, GDPR Art. 8). See MINOR_DETECTION.md.
 # detection:

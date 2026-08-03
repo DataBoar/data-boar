@@ -64,6 +64,10 @@ Implantações corporativas podem exigir *hooks* de **tamper-evidence** paralelo
 
 **Roadmap:** *anchor* SQLite, re-hash na inicialização e degradação de confiança além da camada de licenciamento continuam **planejadas** (**`docs/plans/PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md`** — export **E.11** via **`--export-audit-trail`** ✅; *anchors* ⬜).
 
+### Plugin de remediação Enterprise (opcional)
+
+YAML opt-in `remediation:` carrega um `RemediationPlugin` de parceiro após a geração de relatório (feature **Enterprise** `remediation_plugin`, ou lab **OPEN**). Fail-graceful: erros do plugin nunca abortam o scan. Guia do autor: **[PLUGIN_SDK.pt_BR.md](PLUGIN_SDK.pt_BR.md)** ([EN](PLUGIN_SDK.md)). Bloco de exemplo: `deploy/config.example.yaml`.
+
 ### Resultados
 
 #### Demonstração zero-config (`--demo`)

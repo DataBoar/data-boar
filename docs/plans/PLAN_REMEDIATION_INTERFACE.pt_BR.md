@@ -9,7 +9,7 @@
 
 **Sincronizado com:** [PLANS_TODO.md](PLANS_TODO.md) · GitHub **#601** · **#606** · **#649**
 
-**Relacionado:** [USE_CASE_SCAN_AND_REMEDIATE.pt_BR.md](../use-cases/USE_CASE_SCAN_AND_REMEDIATE.pt_BR.md), [USE_CASE_TOKENIZED_FINDINGS.pt_BR.md](../use-cases/USE_CASE_TOKENIZED_FINDINGS.pt_BR.md), [PLAN_G_TIER.pt_BR.md](PLAN_G_TIER.pt_BR.md)
+**Relacionado:** [USE_CASE_SCAN_AND_REMEDIATE.pt_BR.md](../use-cases/USE_CASE_SCAN_AND_REMEDIATE.pt_BR.md), [USE_CASE_TOKENIZED_FINDINGS.pt_BR.md](../use-cases/USE_CASE_TOKENIZED_FINDINGS.pt_BR.md), [PLAN_G_TIER.pt_BR.md](PLAN_G_TIER.pt_BR.md), [PLAN_PLUGIN_SDK.md](PLAN_PLUGIN_SDK.md) (guia do parceiro **#611**)
 
 ---
 
