@@ -65,6 +65,20 @@ def test_core_has_no_depends_python3_and_layer2_overrides() -> None:
     assert "xbps" not in NFPM_PACKAGERS
 
 
+def test_core_layer2_does_not_require_p7zip() -> None:
+    """`.7z` uses optional py7zr; p7zip is not a core binary dep (Rocky EPEL trap)."""
+    for deps in LAYER2_DEPENDS.values():
+        joined = " ".join(deps).lower()
+        assert "p7zip" not in joined
+    docs = render_all_nfpm_docs(
+        manifest=build_manifest(probe=False, include_embedded_interpreter=True)
+    )
+    core = docs[f"{CORE_PACKAGE}.yaml"]
+    for packager in NFPM_PACKAGERS:
+        joined = " ".join(core["overrides"][packager]["depends"]).lower()
+        assert "p7zip" not in joined
+
+
 def test_embedded_interpreter_in_native_manifest() -> None:
     m = build_manifest(probe=False, include_embedded_interpreter=True)
     emb = m["embedded_interpreter"]

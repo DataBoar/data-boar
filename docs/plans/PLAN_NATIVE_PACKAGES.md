@@ -42,7 +42,7 @@ Community at 2 workers does **not** harvest free-threaded scale. See [#551](http
 | Layer | Content | Rule |
 | ----- | ------- | ---- |
 | **1** | core + detection stack + `boar_fast_filter` (cp314t native) | **vendored + pinned** (wheelhouse `#1182`) |
-| **2** | libc / OpenSSL / zlib / libffi / tesseract / p7zip | **`Depends:` of the distro** (nfpm overrides per packager) |
+| **2** | libc / OpenSSL / zlib / libffi / tesseract | **`Depends:` of the distro** (nfpm overrides per packager; no `p7zip*` — `.7z` is optional `py7zr`) |
 | **3** | connector extras | **subpackages** generated from `EXTRAS_MANIFEST` |
 
 ### Artifact inventory (channel a)

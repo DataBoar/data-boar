@@ -588,11 +588,28 @@ def test_native_packages_workflow_present_and_valid() -> None:
     assert "debian:bookworm" in str(smoke_deb.get("container") or "")
     smoke_deb_runs = "\n".join(_ci_step_run_texts(smoke_deb))
     assert "-m data_boar --version" in smoke_deb_runs
+    # bookworm-slim /bin/sh is dash — install step must use bash for pipefail.
+    deb_steps = smoke_deb.get("steps") or []
+    launcher_steps = [
+        s
+        for s in deb_steps
+        if isinstance(s, dict) and "apt install .deb" in str(s.get("name") or "")
+    ]
+    assert launcher_steps, "expected apt install .deb step"
+    assert launcher_steps[0].get("shell") == "bash"
 
     smoke_rpm = jobs["smoke-rpm"]
     assert "rockylinux:9" in str(smoke_rpm.get("container") or "")
     smoke_rpm_runs = "\n".join(_ci_step_run_texts(smoke_rpm))
     assert "-m data_boar --version" in smoke_rpm_runs
+    rpm_steps = smoke_rpm.get("steps") or []
+    rpm_launcher = [
+        s
+        for s in rpm_steps
+        if isinstance(s, dict) and "dnf install .rpm" in str(s.get("name") or "")
+    ]
+    assert rpm_launcher, "expected dnf install .rpm step"
+    assert rpm_launcher[0].get("shell") == "bash"
 
 
 def test_native_packages_yml_pins_actions_to_shas() -> None:

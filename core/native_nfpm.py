@@ -27,6 +27,8 @@ NFPM_PACKAGERS: tuple[str, ...] = ("deb", "rpm", "apk", "archlinux")
 CORE_PACKAGE = "data-boar"
 
 # Layer-2 plumbing — distro package names differ; overrides supply the truth.
+# No p7zip*: .7z scanning uses optional pure-Python py7zr ([compressed] extra),
+# not the system 7z binary. Hard-requiring p7zip also breaks Rocky/RHEL (EPEL-only).
 LAYER2_DEPENDS: dict[str, list[str]] = {
     "deb": [
         "libc6",
@@ -34,28 +36,24 @@ LAYER2_DEPENDS: dict[str, list[str]] = {
         "zlib1g",
         "libffi8 | libffi7 | libffi6",
         "tesseract-ocr",
-        "p7zip-full",
     ],
     "rpm": [
         "openssl-libs",
         "zlib",
         "libffi",
         "tesseract",
-        "p7zip",
     ],
     "apk": [
         "libssl3",
         "zlib",
         "libffi",
         "tesseract-ocr",
-        "p7zip",
     ],
     "archlinux": [
         "openssl",
         "zlib",
         "libffi",
         "tesseract",
-        "p7zip",
     ],
 }
 

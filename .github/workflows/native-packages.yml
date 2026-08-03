@@ -127,11 +127,16 @@ jobs:
           name: native-packages-x86_64-glibc
           path: /tmp/pkgs
 
+      # bookworm-slim /bin/sh is dash — no `pipefail`. Install bash first (dash-safe).
+      - name: Install bash and ca-certificates
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends bash ca-certificates
+
       - name: apt install .deb and run launcher
+        shell: bash
         run: |
           set -euo pipefail
-          apt-get update
-          apt-get install -y --no-install-recommends ca-certificates
           deb="$(ls /tmp/pkgs/*.deb | head -1)"
           test -n "${deb}"
           # Resolves Layer-2 Depends from overrides (libc/openssl/tesseract/…).
@@ -157,6 +162,7 @@ jobs:
           path: /tmp/pkgs
 
       - name: dnf install .rpm and run launcher
+        shell: bash
         run: |
           set -euo pipefail
           rpm="$(ls /tmp/pkgs/*.rpm | head -1)"

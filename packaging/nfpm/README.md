@@ -43,7 +43,7 @@ The real interpreter tree is **not** committed (repo `.gitignore` `lib/` + expli
 ## Layers
 
 1. **Vendored + pinned** — core, detection stack, `boar_fast_filter` (cp314t) from wheelhouse.
-2. **Distro `Depends:`** — libc / OpenSSL / zlib / libffi / tesseract / p7zip via nfpm `overrides` per packager.
+2. **Distro `Depends:`** — libc / OpenSSL / zlib / libffi / tesseract via nfpm `overrides` per packager (no `p7zip*` — `.7z` is optional `py7zr` in `[compressed]`).
 3. **Connector subpackages** — generated from `EXTRAS_MANIFEST` extras (`mssql-pymssql`, `nosql`, …).
 
 Embedded CPython is **`cp314t`** under `/usr/lib/data-boar/` (no `Depends: python3`). Registered on the native EXTRAS_MANIFEST as `embedded_interpreter`.
