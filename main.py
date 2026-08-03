@@ -380,6 +380,9 @@ def _run_regenerate_report_cli(
             print(f"Report written: {report_path}")
         else:
             print("No findings to report.")
+        from core.plugins.hook import maybe_run_remediation_hook
+
+        maybe_run_remediation_hook(config, sid)
     finally:
         engine.db_manager.dispose()
 
@@ -1133,6 +1136,9 @@ def main() -> None:
                     print(f"[demo] Report written: {report_path}")
                 else:
                     print("[demo] No findings to report.")
+                from core.plugins.hook import maybe_run_remediation_hook
+
+                maybe_run_remediation_hook(config, session_id)
             except KeyboardInterrupt:
                 _finish_session_interrupted_if_running(engine)
                 print("[demo] Scan interrupted.", file=sys.stderr)
@@ -1362,6 +1368,9 @@ def main() -> None:
             print(f"Report written: {report_path}")
         else:
             print("No findings to report.")
+        from core.plugins.hook import maybe_run_remediation_hook
+
+        maybe_run_remediation_hook(config, session_id)
         from utils.notify import notify_scan_complete_background
 
         notify_scan_complete_background(engine.config, engine.db_manager, session_id)

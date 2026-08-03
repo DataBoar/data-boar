@@ -134,6 +134,8 @@ FEATURE_TIER_MAP: dict[str, Tier] = {
     "partner_provider_driver": Tier.ENTERPRISE,  # stealthization via partner provider — see #696
     # Remediation manifest JSON export for third-party plugins (#649).
     "remediation_manifest_export": Tier.ENTERPRISE,
+    # Post-scan remediation plugin host hook (#606 / ADR-0059).
+    "remediation_plugin": Tier.ENTERPRISE,
 }
 
 # ---------------------------------------------------------------------------
