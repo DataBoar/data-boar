@@ -1,6 +1,6 @@
 # Plano: Interface de plugin de remediação pós-scan (Enterprise)
 
-<!-- plans-hub-summary: Ponte Enterprise de remediação — export do manifest #649 entregue; esqueleto do hook #606 ainda aberto -->
+<!-- plans-hub-summary: Ponte Enterprise de remediação — #649 manifest + #606 hook do host entregues; fases 2–3 (export/verify) abertas -->
 
 **Status:** Ativo
 **Data:** 2026-05-19
@@ -37,7 +37,7 @@ Definir hook **Enterprise** pós-scan que:
 | ---- | ---------- | ------ |
 | **0 – Docs** | Use cases + este plano | 🔄 Em progresso (**#602–605**, **#601**) |
 | **1 – Export do remediation manifest** | CLI `--export-remediation-manifest` + JSON schema v1 (ponte para plugins terceiros) | ✅ **#649** |
-| **1b – Esqueleto do hook** | Registro mínimo de plugin + driver no-op (`RemediationPlugin`) | ⬜ **#606** (ainda necessário antes de invocar plugin in-process) |
+| **1b – Esqueleto do hook** | Registro mínimo de plugin + hook do host (`RemediationPlugin` / ADR-0059) | ✅ **#606** |
 | **2 – Caminho de export** | Opção JSONL de findings tokenizados | ⬜ |
 | **3 – Job de re-scan** | Verificação no escopo após plugin | ⬜ |
 
@@ -54,5 +54,5 @@ Definir hook **Enterprise** pós-scan que:
 
 - [x] Docs de use case em `docs/use-cases/`
 - [x] Export JSON do remediation manifest (`--session` + `--export-remediation-manifest`) — **#649**
-- [ ] ADR de interface quando o formato estabilizar
-- [ ] Hook em código conforme **#606**
+- [x] ADR de interface — [ADR-0059](../adr/ADR-0059-remediation-plugin-architecture.md) (revisar nas fases 2–3)
+- [x] Hook em código conforme **#606** (link do PR quando aberto)

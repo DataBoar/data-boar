@@ -68,3 +68,12 @@ scan:
 #   dl_terms:
 #     - { text: "customer name", label: sensitive }
 #     - { text: "internal id", label: non_sensitive }
+
+# Enterprise tier — post-scan remediation plugin (optional)
+# Requires licensing.effective_tier: enterprise (or OPEN for dev/lab).
+# plugin format: "module.path:ClassName"
+remediation:
+  enabled: false
+  plugin: null           # e.g. "myorg.stealthizer:StealthizerPlugin"
+  verify_after: true     # re-scan after remediation to confirm PII removed
+  config: {}             # passed as-is to plugin.remediate()
