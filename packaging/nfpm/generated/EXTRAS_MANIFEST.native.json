@@ -1,0 +1,235 @@
+{
+  "schema_version": 1,
+  "source": "pyproject.toml [project.optional-dependencies]",
+  "python": "3.13",
+  "abi_tokens": [
+    "cp313"
+  ],
+  "image_base_extras": [
+    "mssql",
+    "oracle",
+    "sql-community"
+  ],
+  "extras": {
+    "bigdata": {
+      "packages": [
+        "snowflake-connector-python>=4.6.0"
+      ],
+      "modules": [
+        "snowflake.connector"
+      ],
+      "in_artifact": false,
+      "modules_present": null
+    },
+    "compressed": {
+      "packages": [
+        "py7zr>=1.1.3"
+      ],
+      "modules": [
+        "py7zr"
+      ],
+      "in_artifact": false,
+      "modules_present": null
+    },
+    "dataformats": {
+      "packages": [
+        "pyarrow>=14.0.0",
+        "fastavro>=1.9.0",
+        "dbfread>=2.0.7"
+      ],
+      "modules": [
+        "pyarrow",
+        "fastavro",
+        "dbfread"
+      ],
+      "in_artifact": false,
+      "modules_present": null
+    },
+    "detection-fuzzy": {
+      "packages": [
+        "rapidfuzz>=3.9.0"
+      ],
+      "modules": [
+        "rapidfuzz"
+      ],
+      "in_artifact": false,
+      "modules_present": null
+    },
+    "dl": {
+      "packages": [
+        "sentence-transformers>=5.5.1"
+      ],
+      "modules": [
+        "sentence_transformers"
+      ],
+      "in_artifact": false,
+      "modules_present": null
+    },
+    "grc-dashboard": {
+      "packages": [
+        "streamlit>=1.58.0",
+        "plotly>=6.8.0",
+        "gitpython>=3.1.55"
+      ],
+      "modules": [
+        "streamlit",
+        "plotly",
+        "git"
+      ],
+      "in_artifact": false,
+      "modules_present": null
+    },
+    "legacy-doc": {
+      "packages": [
+        "mammoth>=1.6.0"
+      ],
+      "modules": [
+        "mammoth"
+      ],
+      "in_artifact": false,
+      "modules_present": null
+    },
+    "mariadb": {
+      "packages": [
+        "mariadb>=1.1.14"
+      ],
+      "modules": [
+        "mariadb"
+      ],
+      "in_artifact": false,
+      "modules_present": null
+    },
+    "mssql": {
+      "packages": [
+        "pyodbc>=5.3.0"
+      ],
+      "modules": [
+        "pyodbc"
+      ],
+      "in_artifact": true,
+      "modules_present": null
+    },
+    "mssql-pymssql": {
+      "packages": [
+        "pymssql>=2.3.0"
+      ],
+      "modules": [
+        "pymssql"
+      ],
+      "in_artifact": false,
+      "modules_present": null
+    },
+    "mysql": {
+      "packages": [
+        "pymysql>=1.2.0"
+      ],
+      "modules": [
+        "pymysql"
+      ],
+      "in_artifact": false,
+      "modules_present": null
+    },
+    "nosql": {
+      "packages": [
+        "pymongo>=4.0",
+        "redis>=8.0.0"
+      ],
+      "modules": [
+        "pymongo",
+        "redis"
+      ],
+      "in_artifact": false,
+      "modules_present": null
+    },
+    "oracle": {
+      "packages": [
+        "oracledb>=4.0.1"
+      ],
+      "modules": [
+        "oracledb"
+      ],
+      "in_artifact": true,
+      "modules_present": null
+    },
+    "postgres": {
+      "packages": [
+        "psycopg2-binary>=2.9.11"
+      ],
+      "modules": [
+        "psycopg2"
+      ],
+      "in_artifact": false,
+      "modules_present": null
+    },
+    "richmedia": {
+      "packages": [
+        "mutagen>=1.47.0",
+        "pillow-heif>=0.16.0",
+        "pytesseract>=0.3.13"
+      ],
+      "modules": [
+        "mutagen",
+        "pillow_heif",
+        "pytesseract"
+      ],
+      "in_artifact": false,
+      "modules_present": null
+    },
+    "shares": {
+      "packages": [
+        "smbprotocol>=1.2.0",
+        "webdavclient3>=0.14.0",
+        "requests_ntlm>=1.2.0"
+      ],
+      "modules": [
+        "smbprotocol",
+        "webdav3.client",
+        "requests_ntlm"
+      ],
+      "in_artifact": false,
+      "modules_present": null
+    },
+    "sql-all": {
+      "packages": [
+        "psycopg2-binary>=2.9.11",
+        "pymysql>=1.2.0",
+        "mariadb>=1.1.14",
+        "pymssql>=2.3.0",
+        "pyodbc>=5.3.0",
+        "oracledb>=4.0.1"
+      ],
+      "modules": [
+        "psycopg2",
+        "pymysql",
+        "mariadb",
+        "pymssql",
+        "pyodbc",
+        "oracledb"
+      ],
+      "in_artifact": false,
+      "modules_present": null
+    },
+    "sql-community": {
+      "packages": [
+        "psycopg2-binary>=2.9.11",
+        "pymysql>=1.2.0",
+        "mariadb>=1.1.14"
+      ],
+      "modules": [
+        "psycopg2",
+        "pymysql",
+        "mariadb"
+      ],
+      "in_artifact": true,
+      "modules_present": null
+    }
+  },
+  "embedded_interpreter": {
+    "channel": "a_native_enterprise",
+    "version": "3.14",
+    "abi_tag": "cp314t",
+    "freethreaded": true,
+    "prefix": "/usr/lib/data-boar",
+    "python_bin": "/usr/lib/data-boar/python3.14t/bin/python3.14t"
+  }
+}

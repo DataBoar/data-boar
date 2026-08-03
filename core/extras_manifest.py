@@ -17,6 +17,17 @@ from typing import Any
 # Base image installs these optional-dependency groups only (lean container; #1399/#1400).
 IMAGE_BASE_EXTRAS: frozenset[str] = frozenset({"sql-community", "mssql", "oracle"})
 
+# Channel (a) native / Enterprise embed — ADR-0084 / #1403. Inventory only; does not
+# grant Enterprise scale (worker caps + pro_prefilter_accel remain the gates).
+EMBEDDED_INTERPRETER_NATIVE: dict[str, Any] = {
+    "channel": "a_native_enterprise",
+    "version": "3.14",
+    "abi_tag": "cp314t",
+    "freethreaded": True,
+    "prefix": "/usr/lib/data-boar",
+    "python_bin": "/usr/lib/data-boar/python3.14t/bin/python3.14t",
+}
+
 # Package name → importable top-level module (when they differ).
 _PACKAGE_IMPORT_ALIASES: dict[str, str] = {
     "psycopg2-binary": "psycopg2",
@@ -109,6 +120,7 @@ def build_manifest(
     *,
     pyproject: Path | None = None,
     probe: bool = False,
+    include_embedded_interpreter: bool = False,
 ) -> dict[str, Any]:
     extras_raw = read_optional_dependencies(pyproject)
     extras: dict[str, Any] = {}
@@ -125,7 +137,7 @@ def build_manifest(
             "in_artifact": bool(in_artifact),
             "modules_present": present if probe else None,
         }
-    return {
+    out: dict[str, Any] = {
         "schema_version": 1,
         "source": "pyproject.toml [project.optional-dependencies]",
         "python": f"{sys.version_info.major}.{sys.version_info.minor}",
@@ -133,6 +145,9 @@ def build_manifest(
         "image_base_extras": sorted(IMAGE_BASE_EXTRAS),
         "extras": extras,
     }
+    if include_embedded_interpreter:
+        out["embedded_interpreter"] = dict(EMBEDDED_INTERPRETER_NATIVE)
+    return out
 
 
 def write_manifest(
@@ -140,8 +155,13 @@ def write_manifest(
     *,
     pyproject: Path | None = None,
     probe: bool = True,
+    include_embedded_interpreter: bool = False,
 ) -> dict[str, Any]:
-    manifest = build_manifest(pyproject=pyproject, probe=probe)
+    manifest = build_manifest(
+        pyproject=pyproject,
+        probe=probe,
+        include_embedded_interpreter=include_embedded_interpreter,
+    )
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"

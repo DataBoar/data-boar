@@ -6,10 +6,11 @@
 
 ## Status
 
-Proposed
+Accepted
 
 ### Status history
 
+- 2026-08-02 — Accepted (operator).
 - 2026-08-02 — Proposed (born Proposed per ADR-0045 / Phase 1 T1; records operator decision on [#1406](https://github.com/DataBoar/data-boar/issues/1406); promotes to Accepted when operator accepts). Unblocks nfpm design [#1403](https://github.com/DataBoar/data-boar/issues/1403) only after this record is Accepted and the plan row is synced — **this ADR does not ship nfpm**.
 
 ## Context

@@ -1,0 +1,2 @@
+#!/bin/sh
+exec /usr/lib/data-boar/python3.14t/bin/python3.14t -m data_boar "$@"

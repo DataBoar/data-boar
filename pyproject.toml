@@ -202,13 +202,17 @@ norecursedirs = [
 [tool.ruff]
 # Legacy dirs now linted: utils/, scanners/, logging_custom/ — cleaned 2026-05-14.
 # db/ still excluded (deeper structural issues; see docs/plans/completed/PLAN_BANDIT_SECURITY_LINTER.md).
-extend-exclude = ["db"]
+# Markdown: ruff format rewrites fenced Python and breaks MD012; keep lint via pytest markdown guard.
+extend-exclude = ["db", "**/*.md"]
 
 [tool.ruff.lint.per-file-ignores]
 # Connectors must register before we import connector_for_target; optional deps in try/except
 "core/engine.py" = ["E402"]
 # Streamlit entry: repo root must be on ``sys.path`` before ``app.*`` imports.
 "app/dashboard.py" = ["E402"]
+# Thin CLIs: insert repo root on sys.path before importing ``core.*``.
+"scripts/generate_extras_manifest.py" = ["E402"]
+"scripts/generate_nfpm_packages.py" = ["E402"]
 # Legacy complexity: these functions are I/O-heavy and have large dispatch tables.
 # Tracked in docs/plans/PLAN_LAB_OP_CAPEX_OPEX_PROCUREMENT.md and SonarQube; refactor when safe.
 # New code in these files must NOT add complexity violations — only existing ones are exempted.
