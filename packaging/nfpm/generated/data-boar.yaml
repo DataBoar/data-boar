@@ -31,25 +31,21 @@ overrides:
     - zlib1g
     - libffi8 | libffi7 | libffi6
     - tesseract-ocr
-    - p7zip-full
   rpm:
     depends:
     - openssl-libs
     - zlib
     - libffi
     - tesseract
-    - p7zip
   apk:
     depends:
     - libssl3
     - zlib
     - libffi
     - tesseract-ocr
-    - p7zip
   archlinux:
     depends:
     - openssl
     - zlib
     - libffi
     - tesseract
-    - p7zip

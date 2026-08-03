@@ -556,3 +556,74 @@ def test_publish_pypi_yml_pins_actions_to_shas() -> None:
         assert sha_40.search(code), (
             f"expected full commit SHA in uses line: {line.strip()!r}"
         )
+
+
+def test_native_packages_workflow_present_and_valid() -> None:
+    """#1437: nfpm CI build for deb/rpm x86-64 glibc (real payload, fail-closed)."""
+    data = _load_workflow("native-packages.yml")
+    assert data.get("name") == "Native packages"
+    on = data.get("on") or {}
+    assert "workflow_dispatch" in on
+    assert "pull_request" in on
+    env = data.get("env") or {}
+    assert env.get("WHEELHOUSE_TAG") == "wheelhouse-x86-64-v1-2026-07-29"
+    assert env.get("UV_PYTHON") == "3.14.6+freethreaded"
+    assert env.get("NFPM_VERSION") == "2.47.0"
+    assert re.fullmatch(r"[0-9a-f]{64}", str(env.get("NFPM_SHA256") or ""))
+    assert re.fullmatch(r"[0-9a-f]{64}", str(env.get("UV_SHA256") or ""))
+
+    jobs = data.get("jobs") or {}
+    assert "build-deb-rpm" in jobs
+    assert "smoke-deb" in jobs
+    assert "smoke-rpm" in jobs
+    build = jobs["build-deb-rpm"]
+    runs = "\n".join(_ci_step_run_texts(build))
+    assert "native-nfpm-populate-staging.sh" in runs
+    assert "nfpm package" in runs
+    assert "--packager deb" in runs
+    assert "--packager rpm" in runs
+    assert "refusing to package placeholder" in runs
+
+    smoke_deb = jobs["smoke-deb"]
+    assert "debian:bookworm" in str(smoke_deb.get("container") or "")
+    smoke_deb_runs = "\n".join(_ci_step_run_texts(smoke_deb))
+    assert "-m data_boar --version" in smoke_deb_runs
+    # bookworm-slim /bin/sh is dash — install step must use bash for pipefail.
+    deb_steps = smoke_deb.get("steps") or []
+    launcher_steps = [
+        s
+        for s in deb_steps
+        if isinstance(s, dict) and "apt install .deb" in str(s.get("name") or "")
+    ]
+    assert launcher_steps, "expected apt install .deb step"
+    assert launcher_steps[0].get("shell") == "bash"
+
+    smoke_rpm = jobs["smoke-rpm"]
+    assert "rockylinux:9" in str(smoke_rpm.get("container") or "")
+    smoke_rpm_runs = "\n".join(_ci_step_run_texts(smoke_rpm))
+    assert "-m data_boar --version" in smoke_rpm_runs
+    rpm_steps = smoke_rpm.get("steps") or []
+    rpm_launcher = [
+        s
+        for s in rpm_steps
+        if isinstance(s, dict) and "dnf install .rpm" in str(s.get("name") or "")
+    ]
+    assert rpm_launcher, "expected dnf install .rpm step"
+    assert rpm_launcher[0].get("shell") == "bash"
+
+
+def test_native_packages_yml_pins_actions_to_shas() -> None:
+    """#1437 / ADR-0005: native-packages.yml pins third-party Actions to full SHAs."""
+    text = (WORKFLOWS / "native-packages.yml").read_text(encoding="utf-8")
+    sha_40 = re.compile(r"@[0-9a-f]{40}")
+    for line in text.splitlines():
+        code = line.split("#", 1)[0]
+        if "uses:" not in code or "docker://" in code:
+            continue
+        if "./.github/workflows/" in code:
+            continue
+        if not any(p in code for p in ("actions/", "github/", "astral-sh/")):
+            continue
+        assert sha_40.search(code), (
+            f"expected full commit SHA in uses line: {line.strip()!r}"
+        )

@@ -1,0 +1,176 @@
+# Build real native packages (deb + rpm) for x86-64 glibc (#1437 / ADR-0084).
+#
+# Embeds cp314t (uv / python-build-standalone) + layer-1 wheels from the hosted
+# wheelhouse (#1182). Commercial clause intact: cp314t presence ≠ Enterprise unlock.
+#
+# Out of scope here: apk/musl, arm64, pacman metal, xbps (#1404), signed repo publish.
+name: Native packages
+
+permissions:
+  contents: read
+
+'on':
+  pull_request:
+    branches: [main, master]
+    paths:
+      - "packaging/nfpm/**"
+      - "scripts/native-nfpm-populate-staging.sh"
+      - "scripts/generate_nfpm_packages.py"
+      - "scripts/docker/apply_wheelhouse_v1.sh"
+      - "data_boar/**"
+      - "core/native_nfpm.py"
+      - "core/extras_manifest.py"
+      - ".github/workflows/native-packages.yml"
+  push:
+    branches: [main, master]
+    paths:
+      - "packaging/nfpm/**"
+      - "scripts/native-nfpm-populate-staging.sh"
+      - "scripts/generate_nfpm_packages.py"
+      - "scripts/docker/apply_wheelhouse_v1.sh"
+      - "data_boar/**"
+      - "core/native_nfpm.py"
+      - "core/extras_manifest.py"
+      - ".github/workflows/native-packages.yml"
+  workflow_dispatch:
+
+env:
+  WHEELHOUSE_TAG: wheelhouse-x86-64-v1-2026-07-29
+  UV_VERSION: "0.12.0"
+  UV_SHA256: eaf842262aa1c418d8ecc5605f02ee1ebfd369124fa48548e85f9481a47831a9
+  UV_PYTHON: "3.14.6+freethreaded"
+  NFPM_VERSION: "2.47.0"
+  NFPM_SHA256: 0660ca602b2d2d2ae4781a06c692b3eeb9d437ffea05b831d76e41f4a3188783
+  NFPM_ARCH: amd64
+  DISABLE_SQLALCHEMY_CEXT: "1"
+
+jobs:
+  build-deb-rpm:
+    name: Build data-boar .deb + .rpm (x86-64 glibc)
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+
+      - name: Install build tools
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            curl ca-certificates binutils file build-essential
+
+      - name: Populate staging (cp314t + wheelhouse — fail-closed)
+        run: bash scripts/native-nfpm-populate-staging.sh
+
+      - name: nfpm generated manifests still in sync
+        run: |
+          set -euo pipefail
+          PY="packaging/nfpm/staging/usr/lib/data-boar/python3.14t/bin/python3.14t"
+          test -x "${PY}"
+          "${PY}" scripts/generate_nfpm_packages.py --check
+
+      - name: Install nfpm (pinned)
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          curl -fsSL \
+            "https://github.com/goreleaser/nfpm/releases/download/v${NFPM_VERSION}/nfpm_${NFPM_VERSION}_Linux_x86_64.tar.gz" \
+            -o "${tmp}/nfpm.tgz"
+          echo "${NFPM_SHA256}  ${tmp}/nfpm.tgz" | sha256sum -c -
+          tar -xzf "${tmp}/nfpm.tgz" -C "${tmp}"
+          sudo install -m 0755 "${tmp}/nfpm" /usr/local/bin/nfpm
+          nfpm --version
+          rm -rf "${tmp}"
+
+      - name: Package deb + rpm (core data-boar)
+        working-directory: packaging/nfpm
+        run: |
+          set -euo pipefail
+          mkdir -p "${GITHUB_WORKSPACE}/dist/native-packages"
+          # Refuse to package if embed is still a text placeholder.
+          file staging/usr/lib/data-boar/python3.14t/bin/python3.14t | tee /tmp/py-file.txt
+          if grep -Eiq 'ASCII text|empty|Unicode text' /tmp/py-file.txt; then
+            echo "ERROR: refusing to package placeholder interpreter" >&2
+            exit 1
+          fi
+          export NFPM_ARCH
+          nfpm package \
+            --config generated/data-boar.yaml \
+            --packager deb \
+            --target "${GITHUB_WORKSPACE}/dist/native-packages/"
+          nfpm package \
+            --config generated/data-boar.yaml \
+            --packager rpm \
+            --target "${GITHUB_WORKSPACE}/dist/native-packages/"
+          ls -lah "${GITHUB_WORKSPACE}/dist/native-packages/"
+
+      - name: Upload package artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: native-packages-x86_64-glibc
+          path: dist/native-packages/*
+          if-no-files-found: error
+          retention-days: 14
+
+  smoke-deb:
+    name: Install-smoke .deb (debian bookworm)
+    needs: [build-deb-rpm]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container: debian:bookworm-slim
+    steps:
+      - name: Download package artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: native-packages-x86_64-glibc
+          path: /tmp/pkgs
+
+      # bookworm-slim /bin/sh is dash — no `pipefail`. Install bash first (dash-safe).
+      - name: Install bash and ca-certificates
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends bash ca-certificates
+
+      - name: apt install .deb and run launcher
+        shell: bash
+        run: |
+          set -euo pipefail
+          deb="$(ls /tmp/pkgs/*.deb | head -1)"
+          test -n "${deb}"
+          # Resolves Layer-2 Depends from overrides (libc/openssl/tesseract/…).
+          apt-get install -y "${deb}"
+          test -x /usr/bin/data-boar
+          test -x /usr/lib/data-boar/python3.14t/bin/python3.14t
+          /usr/lib/data-boar/python3.14t/bin/python3.14t -c \
+            'import sys; assert sys._is_gil_enabled() is False, sys.version'
+          /usr/lib/data-boar/python3.14t/bin/python3.14t -m data_boar --version
+          /usr/bin/data-boar --version
+
+  smoke-rpm:
+    name: Install-smoke .rpm (Rocky Linux 9)
+    needs: [build-deb-rpm]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container: rockylinux:9
+    steps:
+      - name: Download package artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: native-packages-x86_64-glibc
+          path: /tmp/pkgs
+
+      - name: dnf install .rpm and run launcher
+        shell: bash
+        run: |
+          set -euo pipefail
+          rpm="$(ls /tmp/pkgs/*.rpm | head -1)"
+          test -n "${rpm}"
+          dnf install -y "${rpm}"
+          test -x /usr/bin/data-boar
+          test -x /usr/lib/data-boar/python3.14t/bin/python3.14t
+          /usr/lib/data-boar/python3.14t/bin/python3.14t -c \
+            'import sys; assert sys._is_gil_enabled() is False, sys.version'
+          /usr/lib/data-boar/python3.14t/bin/python3.14t -m data_boar --version
+          /usr/bin/data-boar --version
