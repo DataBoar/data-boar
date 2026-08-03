@@ -79,7 +79,7 @@ Os títulos na tabela abaixo ficam em **inglês** (canônicos, iguais ao [README
 | 0056  | [Cryptographic ADR inventory (inv-adr.ps1 + SSH ed25519 attestation)](ADR-0056-cryptographic-adr-inventory-inv-adr-ssh-attestation.md) | Aceito |
 | 0057  | [Lightweight hub index (co-located links, no file moves)](ADR-0057-lightweight-hub-index-co-located-links.md) | Aceito |
 | 0058  | [Primer hub registration ritual](ADR-0058-primer-hub-registration-ritual.md) | Aceito |
-| 0059  | *Reservado* — minimal plugin hook infrastructure (GitHub #606, 1.8.x) | Reservado |
+| 0059  | [Arquitetura de plugin de remediação (hook mínimo do host)](ADR-0059-remediation-plugin-architecture.md) | Proposto |
 | 0060 | [`db/` Ruff and Bandit exclusion — risk accepted](ADR-0060-db-lint-bandit-exclusion-risk-accepted.md) | Aceito |
 | 0061 | [ADR-0061 U-axis issue sub-order and cross-milestone gate](ADR-0061-u-axis-issue-suborder-and-cross-milestone-gate.md) | Aceito |
 | 0062 | [ADR-0062 Agent containment: triple-audit offband pattern](ADR-0062-agent-containment-triple-audit-offband-pingpong.md) | Aceito |

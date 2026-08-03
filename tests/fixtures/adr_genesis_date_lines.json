@@ -58,6 +58,7 @@
   "ADR-0056-cryptographic-adr-inventory-inv-adr-ssh-attestation.md": "- **Date (UTC):** 2026-05-20",
   "ADR-0057-lightweight-hub-index-co-located-links.md": "- **Date (UTC):** 2026-05-20",
   "ADR-0058-primer-hub-registration-ritual.md": "- **Date (UTC):** 2026-05-20",
+  "ADR-0059-remediation-plugin-architecture.md": "- **Date (UTC):** 2026-08-03",
   "ADR-0060-db-lint-bandit-exclusion-risk-accepted.md": "- **Date (UTC):** 2026-06-21",
   "ADR-0061-u-axis-issue-suborder-and-cross-milestone-gate.md": "- **Date (UTC):** 2026-05-22",
   "ADR-0062-agent-containment-triple-audit-offband-pingpong.md": "- **Date (UTC):** 2026-05-22",

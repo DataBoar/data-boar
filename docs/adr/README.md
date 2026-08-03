@@ -79,7 +79,7 @@ Canonical completeness of numbered ADR files is enforced for this table **and** 
 | 0056  | [Cryptographic ADR inventory (inv-adr.ps1 + SSH ed25519 attestation)](ADR-0056-cryptographic-adr-inventory-inv-adr-ssh-attestation.md) | Accepted |
 | 0057  | [Lightweight hub index (co-located links, no file moves)](ADR-0057-lightweight-hub-index-co-located-links.md) | Accepted |
 | 0058  | [Primer hub registration ritual](ADR-0058-primer-hub-registration-ritual.md) | Accepted |
-| 0059  | *Reserved* — minimal plugin hook infrastructure (GitHub #606, 1.8.x) | Reserved |
+| 0059  | [Remediation plugin architecture (minimal host hook)](ADR-0059-remediation-plugin-architecture.md) | Proposed |
 | 0060 | [`db/` Ruff and Bandit exclusion — risk accepted](ADR-0060-db-lint-bandit-exclusion-risk-accepted.md) | Accepted |
 | 0061 | [ADR-0061 U-axis issue sub-order and cross-milestone gate](ADR-0061-u-axis-issue-suborder-and-cross-milestone-gate.md) | Accepted |
 | 0062 | [ADR-0062 Agent containment: triple-audit offband pattern](ADR-0062-agent-containment-triple-audit-offband-pingpong.md) | Accepted |
