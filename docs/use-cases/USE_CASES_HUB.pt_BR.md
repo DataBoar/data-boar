@@ -23,6 +23,12 @@ Os **storyboards de workshop** (narrativas por setor para pré-vendas) continuam
 | -------- | ------ |
 | [USE_CASE_BIOMETRIC_DATA_PROTECTION.pt_BR.md](USE_CASE_BIOMETRIC_DATA_PROTECTION.pt_BR.md) | Descobrir e governar biometria (LGPD art. 11 / GDPR art. 9) |
 
+## Modelos de deployment
+
+| Use case | Resumo |
+| -------- | ------ |
+| [USE_CASE_MANAGED_SAAS_MULTI_TENANT.pt_BR.md](USE_CASE_MANAGED_SAAS_MULTI_TENANT.pt_BR.md) ([EN](USE_CASE_MANAGED_SAAS_MULTI_TENANT.md)) | SaaS gerenciado opt-in: subdomínio → instância dedicada, runner BYO-cloud ou hospedado, findings só como metadata (ângulo distinto do [storyboard MSP](MSP_IT_CONSULTANCY_MULTI_TENANT_SMB.pt_BR.md)) |
+
 ## Storyboards por setor (workshop)
 
 | Hub | Resumo |

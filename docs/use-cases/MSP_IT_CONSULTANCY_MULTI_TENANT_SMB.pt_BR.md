@@ -4,6 +4,8 @@
 
 Storyboard em documentação para descoberta **repetível** em **vários pequenos clientes** (compartilhamentos, árvores de backup, exportações). **Não** substitui contrato de SOC/MDR nem certificação de fornecedor.
 
+**Ângulo diferente:** tenancy **gerenciada / SaaS** operada pelo provedor (subdomínio → instância dedicada) está em [USE_CASE_MANAGED_SAAS_MULTI_TENANT.pt_BR.md](USE_CASE_MANAGED_SAAS_MULTI_TENANT.pt_BR.md) ([EN](USE_CASE_MANAGED_SAAS_MULTI_TENANT.md)) — isso **não** é “MSP escaneia as PMEs dele”.
+
 ## Elenco (papéis genéricos)
 
 - **Organização:** MSP regional ou consultoria de TI com **playbooks padrão** por cliente (AD/M365, Google Workspace, SQL de linha de negócio, replicação em NAS).
@@ -37,6 +39,7 @@ Quando a demanda de MSP sobe, priorize capacidades que **multipliquem entre inqu
 ## Documentação relacionada
 
 - [use-cases/README.pt_BR.md](README.pt_BR.md) ([EN](README.md))
+- [USE_CASE_MANAGED_SAAS_MULTI_TENANT.pt_BR.md](USE_CASE_MANAGED_SAAS_MULTI_TENANT.pt_BR.md) ([EN](USE_CASE_MANAGED_SAAS_MULTI_TENANT.md))
 - [SERVICE_TIERS_SCOPE_TEMPLATE.pt_BR.md](../ops/SERVICE_TIERS_SCOPE_TEMPLATE.pt_BR.md) ([EN](../ops/SERVICE_TIERS_SCOPE_TEMPLATE.md))
 - [DECISION_MAKER_VALUE_BRIEF.pt_BR.md](../DECISION_MAKER_VALUE_BRIEF.pt_BR.md) ([EN](../DECISION_MAKER_VALUE_BRIEF.md))
 - [USAGE.pt_BR.md](../USAGE.pt_BR.md) ([EN](../USAGE.md))
