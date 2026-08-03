@@ -282,6 +282,7 @@ packages = [
     "config",
     "connectors",
     "core",
+    "data_boar",
     "database",
     "db",
     "file_scan",

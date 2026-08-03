@@ -1,2 +1,5 @@
 #!/bin/sh
+# Native Enterprise channel launcher (ADR-0084). Presence of cp314t does NOT
+# unlock Enterprise — worker caps (#551) + pro_prefilter_accel remain the gates.
+export DISABLE_SQLALCHEMY_CEXT=1
 exec /usr/lib/data-boar/python3.14t/bin/python3.14t -m data_boar "$@"

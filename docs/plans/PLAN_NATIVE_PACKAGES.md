@@ -1,13 +1,13 @@
-# Plan: Native OS packages — interpreter ownership and nfpm (#1406 / #1403)
+# Plan: Native OS packages — interpreter ownership and nfpm (#1406 / #1403 / #1437)
 
-<!-- plans-hub-summary: Native/Enterprise embeds CPython (cp314t); ADR-0084 Accepted; nfpm foundation (#1403) generates deb/rpm/apk/pacman + connector subpackages from EXTRAS_MANIFEST; commercial protection = worker caps (#551), not interpreter presence. -->
+<!-- plans-hub-summary: Native/Enterprise embeds CPython (cp314t); ADR-0084 Accepted; nfpm foundation + CI build (#1437) for deb/rpm x86-64 glibc from wheelhouse; commercial protection = worker caps (#551), not interpreter presence. -->
 
 **Status:** In progress
 **Date:** 2026-08-02
 **Authors:** Fabio Leitao (operator); Cursor executor
 **Priority:** H1 (packaging / Enterprise air-gap channel)
-**GitHub:** [#1406](https://github.com/DataBoar/data-boar/issues/1406) `[P1][1.8.x][packaging][decision]` · [#1403](https://github.com/DataBoar/data-boar/issues/1403) (nfpm foundation) · **Related:** [#1398](https://github.com/DataBoar/data-boar/issues/1398) · [#1401](https://github.com/DataBoar/data-boar/issues/1401) · [#551](https://github.com/DataBoar/data-boar/issues/551) · [#1404](https://github.com/DataBoar/data-boar/issues/1404) (xbps)
-**Related:** [ADR-0084](../adr/ADR-0084-native-package-embedded-cpython-by-channel.md) · [ADR-0027](../adr/ADR-0027-commercial-tier-boundaries-licensing-docs-and-future-jwt-claims.md) · [ADR-0064](../adr/ADR-0064-license-enforcement-additive-model.md) · [ADR-0073](../adr/ADR-0073-version-scheme-octet-maturity-and-roadmap.md) · [ADR-0083](../adr/ADR-0083-rust-regex-stage-superset-accept-form-b.md) · [PLAN_PACKAGING_EXTRAS.md](PLAN_PACKAGING_EXTRAS.md)
+**GitHub:** [#1406](https://github.com/DataBoar/data-boar/issues/1406) · [#1403](https://github.com/DataBoar/data-boar/issues/1403) (foundation ✅) · [#1437](https://github.com/DataBoar/data-boar/issues/1437) (CI build) · **Related:** [#1182](https://github.com/DataBoar/data-boar/issues/1182) · [#1401](https://github.com/DataBoar/data-boar/issues/1401) · [#551](https://github.com/DataBoar/data-boar/issues/551) · [#1404](https://github.com/DataBoar/data-boar/issues/1404) (xbps)
+**Related:** [ADR-0084](../adr/ADR-0084-native-package-embedded-cpython-by-channel.md) · [PLAN_WHEELHOUSE_DISTRIBUTION.md](PLAN_WHEELHOUSE_DISTRIBUTION.md) · [PLAN_PACKAGING_EXTRAS.md](PLAN_PACKAGING_EXTRAS.md)
 
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md)
 
@@ -41,7 +41,7 @@ Community at 2 workers does **not** harvest free-threaded scale. See [#551](http
 
 | Layer | Content | Rule |
 | ----- | ------- | ---- |
-| **1** | core + detection stack + `boar_fast_filter` (abi3) | **vendored + pinned** (wheelhouse) |
+| **1** | core + detection stack + `boar_fast_filter` (cp314t native) | **vendored + pinned** (wheelhouse `#1182`) |
 | **2** | libc / OpenSSL / zlib / libffi / tesseract / p7zip | **`Depends:` of the distro** (nfpm overrides per packager) |
 | **3** | connector extras | **subpackages** generated from `EXTRAS_MANIFEST` |
 
@@ -60,18 +60,22 @@ Community at 2 workers does **not** harvest free-threaded scale. See [#551](http
 | ---- | ----- | ------ |
 | **0** | ADR-0084 Proposed + this plan + PLANS_TODO + `plans_hub_sync` | ✅ (closed #1406) |
 | **1** | Operator accepts ADR-0084 (Status → Accepted) | ✅ |
-| **2** | nfpm foundation (#1403): generated deb/rpm/apk/pacman manifests + connector subpackages + embed metadata | 🔄 in progress |
-| **3** | Wire embedded interpreter into runtime integrity / CI package build | ⬜ follow-up (not this foundation slice) |
-| **4** | Lab metal validation matrix (5 hosts) + xbps (#1404) | ⬜ deferred / separate issues |
+| **2** | nfpm foundation (#1403): generated deb/rpm/apk/pacman manifests + connector subpackages + embed metadata | ✅ (merged #1436) |
+| **3** | CI package build (#1437): populate staging with real cp314t + wheelhouse; `nfpm package` deb+rpm; install-smoke; artifacts | 🔄 |
+| **4** | Lab metal validation matrix (5 hosts) + apk/musl/arm64 + xbps (#1404) | ⬜ deferred / separate issues |
 
 ---
 
-## Out of scope (foundation #1403 PR)
+## CI build (#1437)
 
-- Real package build in CI and lab metal install matrix.
-- **xbps** / Void (`#1404`).
-- Debian proper / Alpine aports / AUR official sponsorship.
-- Changing runtime worker-cap enforcement (already owned by #551 lineage).
+Workflow: [`.github/workflows/native-packages.yml`](../../.github/workflows/native-packages.yml)
+
+1. `scripts/native-nfpm-populate-staging.sh` — `uv python install 3.14.6+freethreaded` → `/usr/lib/data-boar/python3.14t`; install product + `requirements.txt`; apply hosted wheelhouse tag `wheelhouse-x86-64-v1-2026-07-29` (cp314t cells); **fail-closed** if assets are not downloadable.
+2. `nfpm package` for **deb** + **rpm** (core `data-boar`; x86-64 glibc).
+3. Install-smoke: debian bookworm (`.deb`) + Rocky 9 (`.rpm`) run `/usr/lib/data-boar/.../python3.14t -m data_boar --version`.
+4. Upload `native-packages-x86_64-glibc` artifacts.
+
+**Out of scope for #1437:** apk/musl, arm64, pacman metal, five-host matrix, xbps, signed repo publish.
 
 ---
 
@@ -88,9 +92,16 @@ Community at 2 workers does **not** harvest free-threaded scale. See [#551](http
 ## Acceptance (foundation #1403)
 
 - [x] nfpm manifests for **deb / rpm / apk / archlinux (pacman)** (not xbps)
-- [x] Connector subpackages **generated** from `EXTRAS_MANIFEST` (mssql / nosql / shares / compressed / dataformats / richmedia)
+- [x] Connector subpackages **generated** from `EXTRAS_MANIFEST`
 - [x] Deterministic generator + test that fails on drift
-- [x] Layer-2 Depends via packager overrides; no `Depends: python3` (embed prefix)
+- [x] Layer-2 Depends via packager overrides; no `Depends: python3`
 - [x] Embedded interpreter registered in EXTRAS_MANIFEST schema
 - [x] Commercial protection: presence of `cp314t` does not unlock Enterprise
-- [ ] CI build + metal validation (next slices)
+
+## Acceptance (CI build #1437)
+
+- [x] Workflow + populate script land in repo (fail-closed; no fake payload path)
+- [x] Plan + PLANS_TODO + `plans_hub_sync` updated
+- [x] `tests/test_native_nfpm_foundation.py` remains green (generator drift)
+- [ ] CI run green: `.deb` + `.rpm` artifacts + install-smoke (debian / Rocky) — verify on the #1437 PR
+- [ ] Full metal matrix / apk / arm64 / xbps (later slices)
