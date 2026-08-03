@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from core.extras_manifest import write_manifest  # noqa: E402
+from core.extras_manifest import write_manifest
 
 
 def main() -> int:
@@ -43,12 +43,22 @@ def main() -> int:
         action="store_true",
         help="Mark in_artifact from IMAGE_BASE_EXTRAS only (no import probe)",
     )
+    parser.add_argument(
+        "--native-embed",
+        action="store_true",
+        help="Include embedded_interpreter (cp314t / channel a) for native packages (#1403)",
+    )
     args = parser.parse_args()
     probe = bool(args.probe) and not bool(args.no_probe)
     if not args.probe and not args.no_probe:
         probe = True  # default: probe (Docker build / CI)
-    write_manifest(args.write, pyproject=args.pyproject, probe=probe)
-    print(f"wrote {args.write} (probe={probe})")
+    write_manifest(
+        args.write,
+        pyproject=args.pyproject,
+        probe=probe,
+        include_embedded_interpreter=bool(args.native_embed),
+    )
+    print(f"wrote {args.write} (probe={probe}, native_embed={bool(args.native_embed)})")
     return 0
 
 
