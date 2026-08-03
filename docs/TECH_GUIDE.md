@@ -685,6 +685,8 @@ Full steps (build, push, single container, Compose, Swarm, Kubernetes): **[deplo
 
 The application explicitly references **LGPD**, **GDPR**, **CCPA**, **HIPAA**, and **GLBA** in built-in patterns and report labels. We provide **sample configuration and config-file examples** (e.g. [regex_overrides.example.yaml](regex_overrides.example.yaml), recommendation overrides in [USAGE.md](USAGE.md)) so you can extend to **UK GDPR**, **PIPEDA**, **POPIA**, **APPI**, **PCI-DSS**, or custom norms without code changes: set **`norm_tag`** in [regex overrides](SENSITIVITY_DETECTION.md#custom-regex-patterns-detecting-new-personalsensitive-values) or custom connectors to any framework label, and use **`report.recommendation_overrides`** in config to tailor recommendation text. We can **assist with tuning** (tailored configs or slight code changes) for further compatibility when you reach out. See **[COMPLIANCE_FRAMEWORKS.md](COMPLIANCE_FRAMEWORKS.md)** ([pt-BR](COMPLIANCE_FRAMEWORKS.pt_BR.md)) for the full list of supported regulations, sample files, and extensibility.
 
+**Enterprise remediation plugins (L1):** partners implement `RemediationPlugin` (`core/plugins/`) and register it under YAML `remediation:` — see **[PLUGIN_SDK.md](PLUGIN_SDK.md)** ([pt-BR](PLUGIN_SDK.pt_BR.md)). Distinct from **YAML pattern plugins** (custom regex/ML/DL terms via [ADR-0052](adr/ADR-0052-yaml-plugin-system-centralized-schema.md)).
+
 ## Security and compliance
 
 - No raw sampled content is persisted; only metadata (location, pattern, sensitivity, norm tag).
