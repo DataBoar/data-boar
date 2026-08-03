@@ -4,6 +4,8 @@
 
 Documentation storyboard for **repeatable** discovery across **many small tenants** (file shares, backup trees, exports). **Not** a managed-security operations contract or vendor certification.
 
+**Different angle:** provider-operated **managed / SaaS** tenancy (subdomain → dedicated instance) is documented in [USE_CASE_MANAGED_SAAS_MULTI_TENANT.md](USE_CASE_MANAGED_SAAS_MULTI_TENANT.md) ([pt-BR](USE_CASE_MANAGED_SAAS_MULTI_TENANT.pt_BR.md)) — that is **not** “MSP scans its SMB clients.”
+
 ## Cast (generic roles)
 
 - **Organisation:** Regional MSP or IT consultancy with **standard playbooks** per client (AD/M365, Google Workspace, line-of-business SQL, NAS replication).
@@ -37,6 +39,7 @@ When MSP demand spikes, prioritise capabilities that **multiply across tenants**
 ## Related docs
 
 - [use-cases/README.md](README.md) ([pt-BR](README.pt_BR.md))
+- [USE_CASE_MANAGED_SAAS_MULTI_TENANT.md](USE_CASE_MANAGED_SAAS_MULTI_TENANT.md) ([pt-BR](USE_CASE_MANAGED_SAAS_MULTI_TENANT.pt_BR.md))
 - [SERVICE_TIERS_SCOPE_TEMPLATE.md](../ops/SERVICE_TIERS_SCOPE_TEMPLATE.md) ([pt-BR](../ops/SERVICE_TIERS_SCOPE_TEMPLATE.pt_BR.md))
 - [DECISION_MAKER_VALUE_BRIEF.md](../DECISION_MAKER_VALUE_BRIEF.md) ([pt-BR](../DECISION_MAKER_VALUE_BRIEF.pt_BR.md))
 - [USAGE.md](../USAGE.md) ([pt-BR](../USAGE.pt_BR.md))
