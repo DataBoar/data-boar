@@ -1,6 +1,6 @@
 # Plan: Post-scan remediation plugin interface (Enterprise)
 
-<!-- plans-hub-summary: Enterprise remediation bridge — #649 manifest + #606 host hook shipped; phases 2–3 (export/verify) open -->
+<!-- plans-hub-summary: Enterprise remediation bridge — #649 manifest + #606 hook + #1443 host findings JSONL; Phase 2 FPE samples and Phase 3 verify still open -->
 
 **Status:** Active
 **Date:** 2026-05-19
@@ -40,7 +40,7 @@ Define an **Enterprise-tier** post-scan hook that:
 | **0 – Docs** | Use cases + this plan | 🔄 In progress (**#602–605**, **#601**) |
 | **1 – Remediation manifest export** | CLI `--export-remediation-manifest` + schema v1 JSON (bridge for third-party plugins) | ✅ **#649** |
 | **1b – Hook skeleton** | Minimal plugin registry + host hook (`RemediationPlugin` / ADR-0059) | ✅ **#606** |
-| **2 – Export path** | Tokenized findings JSONL option | ⬜ |
+| **2 – Export path** | Host findings JSONL before plugin (`findings_{session_id}.jsonl`, #649 taxonomy) | ✅ **#1443** (host write); ⬜ FPE / tokenized samples |
 | **3 – Re-scan job** | Scoped verify after plugin run | ⬜ |
 
 ---

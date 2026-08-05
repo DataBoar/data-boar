@@ -1,6 +1,6 @@
 # Plano: Interface de plugin de remediação pós-scan (Enterprise)
 
-<!-- plans-hub-summary: Ponte Enterprise de remediação — #649 manifest + #606 hook do host entregues; fases 2–3 (export/verify) abertas -->
+<!-- plans-hub-summary: Ponte Enterprise de remediação — #649 manifest + #606 hook + #1443 JSONL no host; Phase 2 FPE e Phase 3 verify ainda abertos -->
 
 **Status:** Ativo
 **Data:** 2026-05-19
@@ -38,7 +38,7 @@ Definir hook **Enterprise** pós-scan que:
 | **0 – Docs** | Use cases + este plano | 🔄 Em progresso (**#602–605**, **#601**) |
 | **1 – Export do remediation manifest** | CLI `--export-remediation-manifest` + JSON schema v1 (ponte para plugins terceiros) | ✅ **#649** |
 | **1b – Esqueleto do hook** | Registro mínimo de plugin + hook do host (`RemediationPlugin` / ADR-0059) | ✅ **#606** |
-| **2 – Caminho de export** | Opção JSONL de findings tokenizados | ⬜ |
+| **2 – Caminho de export** | JSONL de findings pelo host antes do plugin (`findings_{session_id}.jsonl`, taxonomia #649) | ✅ **#1443** (escrita no host); ⬜ FPE / samples tokenizados |
 | **3 – Job de re-scan** | Verificação no escopo após plugin | ⬜ |
 
 ---
