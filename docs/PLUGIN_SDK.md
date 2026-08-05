@@ -49,11 +49,11 @@ The host never imports your business logic into core. You ship a Python module; 
 
 ### `findings_path: Path`
 
-- Intended shape: newline-delimited JSON (**JSONL**), one finding object per line (location metadata such as path / table / column / finding id — exact keys depend on the export the host wires).
+- Shape: newline-delimited JSON (**JSONL**), one finding object per line.
+- Path: `{report.output_dir}/findings_{session_id}.jsonl`.
+- **Host wiring (#1443):** after report generation, `maybe_run_remediation_hook(..., db_manager=...)` writes this file from SQLite using the same metadata-only **`remediation_targets`** taxonomy as `--export-remediation-manifest` (#649) — keys such as `finding_id`, `source_type`, `connection_ref`, `schema`, `table`, `column`, `pii_type`, `suggested_profile` (no raw PII samples).
 - **Read-only:** copy or stream; never rewrite the findings file in place.
-- **Honesty — automatic wiring (follow-up #1443):** the post-scan hook currently builds
-  `{report.output_dir}/findings_{session_id}.jsonl`
-  by convention. **That path is not yet written by the normal scan pipeline.** With `remediation.enabled: true`, a plugin may receive a path to a **missing** file until #1443 lands. Fail-graceful still protects the scan. For development **today**, call `remediate()` yourself with a findings file **you** provide (see [Test locally](#test-locally)).
+- Unknown/empty session → host skips (Safe-Hold); scan still succeeds.
 
 ### `config: dict`
 
@@ -153,10 +153,12 @@ Feature key: `"remediation_plugin"` in `FEATURE_TIER_MAP` (`Tier.ENTERPRISE`). R
 
 ## Fail-graceful host behaviour
 
-`maybe_run_remediation_hook(config, session_id)`:
+`maybe_run_remediation_hook(config, session_id, db_manager=None)`:
 
 - No-op when `remediation.enabled` is false / missing.
 - Community/Pro → log skip to stderr; return.
+- With `db_manager`: write `findings_{session_id}.jsonl` then call `remediate`.
+- Without `db_manager` and missing JSONL → skip (stderr); do not invent a ghost path.
 - Load / `remediate` failures → `[remediation] plugin error: …` on stderr; **never** raises into the scan worker.
 - When `verify_after` is true and remediate succeeded, logs
   `[remediation] post-remediation verification pending (see #653)`

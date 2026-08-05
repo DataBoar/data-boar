@@ -49,11 +49,11 @@ O host não importa a lógica de negócio no core. Você entrega um módulo Pyth
 
 ### `findings_path: Path`
 
-- Forma pretendida: JSON delimitado por linha (**JSONL**), um objeto de finding por linha (metadata de localização: path / tabela / coluna / id — chaves exatas dependem do export que o host fiar).
+- Forma: JSON delimitado por linha (**JSONL**), um objeto de finding por linha.
+- Path: `{report.output_dir}/findings_{session_id}.jsonl`.
+- **Fiação do host (#1443):** após o relatório, `maybe_run_remediation_hook(..., db_manager=...)` escreve esse arquivo a partir do SQLite com a mesma taxonomia **só de metadados** de `remediation_targets` do `--export-remediation-manifest` (#649) — chaves como `finding_id`, `source_type`, `connection_ref`, `schema`, `table`, `column`, `pii_type`, `suggested_profile` (sem samples de PII brutos).
 - **Somente leitura:** copie ou faça stream; nunca reescreva o arquivo de findings in-place.
-- **Honestidade — fiação automática (follow-up #1443):** o hook pós-scan hoje monta
-  `{report.output_dir}/findings_{session_id}.jsonl`
-  por convenção. **Esse path ainda não é escrito pelo pipeline normal de scan.** Com `remediation.enabled: true`, o plugin pode receber um path para um arquivo **inexistente** até o #1443. O fail-graceful ainda protege o scan. Para desenvolver **hoje**, chame `remediate()` você mesmo com um arquivo de findings **que você fornece** (veja [Testar localmente](#testar-localmente)).
+- Sessão desconhecida/vazia → o host pula (Safe-Hold); o scan ainda conclui.
 
 ### `config: dict`
 
@@ -153,10 +153,12 @@ Chave: `"remediation_plugin"` em `FEATURE_TIER_MAP` (`Tier.ENTERPRISE`). Tier de
 
 ## Comportamento fail-graceful do host
 
-`maybe_run_remediation_hook(config, session_id)`:
+`maybe_run_remediation_hook(config, session_id, db_manager=None)`:
 
 - No-op se `remediation.enabled` for false / ausente.
 - Community/Pro → log de skip em stderr; retorna.
+- Com `db_manager`: escreve `findings_{session_id}.jsonl` e chama `remediate`.
+- Sem `db_manager` e JSONL ausente → skip (stderr); não inventa path fantasma.
 - Falhas de load / `remediate` → `[remediation] plugin error: …` em stderr; **nunca** propaga para o worker de scan.
 - Com `verify_after` true e remediate ok, loga
   `[remediation] post-remediation verification pending (see #653)`

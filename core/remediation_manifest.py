@@ -8,8 +8,10 @@ remediation plugins. Metadata only — never embeds raw PII samples or credentia
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 from core.about import _package_version
@@ -265,3 +267,40 @@ def build_remediation_manifest(
         "exported_at": datetime.now(timezone.utc).isoformat(),
         "remediation_targets": remediation_targets,
     }
+
+
+def write_findings_jsonl(
+    db_manager: Any,
+    *,
+    session_id: str,
+    path: Path | str,
+    config: dict[str, Any] | None = None,
+) -> Path | None:
+    """
+    Write metadata-only findings JSONL for the remediation plugin hook (#1443).
+
+    Each line is one ``remediation_targets`` object from
+    :func:`build_remediation_manifest` (same taxonomy as #649). Never embeds
+    raw PII samples or credentials.
+
+    Returns
+    -------
+    Path
+        The written file path (may contain zero lines when the session has no
+        findings).
+    None
+        Safe-Hold skip when ``session_id`` is empty/unknown (does not raise).
+    """
+    out = Path(path)
+    try:
+        payload = build_remediation_manifest(
+            db_manager, session_id=session_id, config=config
+        )
+    except ValueError:
+        return None
+
+    out.parent.mkdir(parents=True, exist_ok=True)
+    with out.open("w", encoding="utf-8") as fh:
+        for target in payload["remediation_targets"]:
+            fh.write(json.dumps(target, ensure_ascii=False) + "\n")
+    return out
