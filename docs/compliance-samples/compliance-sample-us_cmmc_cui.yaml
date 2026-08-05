@@ -1,0 +1,234 @@
+# US CMMC / CUI — sample compliance profile (inventory and triage signals)
+#
+# Target audience: US defense industrial base (DIB) suppliers, primes, and
+# subcontractors that may handle Controlled Unclassified Information (CUI) under
+# DFARS / NARA CUI Program framing, and teams preparing CMMC-related evidence
+# packs under counsel.
+#
+# How to use:
+#   1. Set in your main config:
+#        regex_overrides_file: path/to/compliance-sample-us_cmmc_cui.yaml
+#        ml_patterns_file: path/to/compliance-sample-us_cmmc_cui.yaml
+#   2. Merge the recommendation_overrides list below into your config under
+#      report.recommendation_overrides.
+#
+# Legal / programme scope (summary — not legal advice):
+#   - CUI is a US federal information category (NARA CUI Program; 32 CFR Part 2002
+#     framing). Markings, category labels, and dissemination controls that appear
+#     in documents, shares, tickets, or exports are **inventory signals**.
+#   - CMMC (Cybersecurity Maturity Model Certification) is a maturity programme
+#     that often **depends on** correct CUI handling. Data Boar **supports CMMC
+#     evidence / CUI discovery** (where markings and related vocabulary concentrate).
+#     It does **not** certify CMMC, assess a CMMC level, score controls, or issue
+#     an assessment determination.
+#   - ITAR / EAR (and related USML / CCL vocabulary) appear here only as
+#     **export-control triage signals** in text. The scanner does **not** determine
+#     ITAR/EAR applicability, jurisdiction, license need, or exportability.
+#
+# Regex design (contextual — avoid bare \bCUI\b in free prose):
+#   - Banner / marking lines: CUI//…, CONTROLLED UNCLASSIFIED INFORMATION,
+#     CUI Category / CUI Marking column-style labels.
+#   - Dissemination controls: NOFORN, REL TO, FED ONLY, NOCON, DISPLAY ONLY
+#     (word-boundary / labeled forms).
+#   - Export-control labels: ITAR, EAR, USML, CCL, EAR99, "export controlled"
+#     with nearby control vocabulary — triage only.
+#
+# Use double-quoted YAML with escaped backslashes.
+
+regex:
+  # --- CUI markings / banners (contextual) ---
+  - name: "US_CMMC_CUI_BANNER_SLASH"
+    # Portion marking style: CUI//SP-EXPT/NOFORN or CUI//BASIC
+    pattern: "(?i)\\bCUI\\s*//\\s*[A-Z0-9][A-Z0-9\\-\\s/]{0,80}"
+    norm_tag: "CMMC CUI"
+  - name: "US_CMMC_CUI_FULL_BANNER"
+    pattern: "(?i)\\bCONTROLLED\\s+UNCLASSIFIED\\s+INFORMATION\\b"
+    norm_tag: "CMMC CUI"
+  - name: "US_CMMC_CUI_MARKING_LABEL"
+    pattern: "(?i)\\b(?:cui\\s+marking|portion\\s+mark(?:ing)?|banner\\s+mark(?:ing)?)\\s*[:#]\\s*\\S+"
+    norm_tag: "CMMC CUI"
+  - name: "US_CMMC_CUI_CATEGORY_LABEL"
+    # Column/header style: "CUI Category: SP-PRIV" — not bare CUI alone
+    pattern: "(?i)\\bcui\\s+categor(?:y|ies)\\s*[:#]\\s*[A-Z]{2,4}(?:-[A-Z0-9]{2,8})?"
+    norm_tag: "CMMC CUI"
+  - name: "US_CMMC_CUI_DESIGNATION_LABEL"
+    pattern: "(?i)\\b(?:cui\\s+designation|designated\\s+as\\s+cui|cui\\s+specified)\\s*[:#]?\\s*\\w+"
+    norm_tag: "CMMC CUI"
+  # --- Dissemination controls ---
+  - name: "US_CMMC_DISSEM_NOFORN"
+    pattern: "(?i)\\b(?:NOFORN|NO\\s+FOREIGN\\s+NATIONALS)\\b"
+    norm_tag: "CMMC CUI"
+  - name: "US_CMMC_DISSEM_REL_TO"
+    pattern: "(?i)\\bREL\\s+TO\\s+[A-Z]{2,4}(?:\\s*,\\s*[A-Z]{2,4}){0,8}\\b"
+    norm_tag: "CMMC CUI"
+  - name: "US_CMMC_DISSEM_FED_ONLY"
+    pattern: "(?i)\\b(?:FED\\s+ONLY|FEDERAL\\s+EMPLOYEES\\s+ONLY)\\b"
+    norm_tag: "CMMC CUI"
+  - name: "US_CMMC_DISSEM_NOCON"
+    pattern: "(?i)\\bNOCON\\b"
+    norm_tag: "CMMC CUI"
+  - name: "US_CMMC_DISSEM_DISPLAY_ONLY"
+    pattern: "(?i)\\bDISPLAY\\s+ONLY\\b"
+    norm_tag: "CMMC CUI"
+  - name: "US_CMMC_DISSEM_CONTROL_LABEL"
+    pattern: "(?i)\\b(?:dissemination\\s+control|limited\\s+dissemination)\\s*[:#]\\s*\\S+"
+    norm_tag: "CMMC CUI"
+  # --- Export-controlled triage signals (ITAR / EAR) ---
+  - name: "US_CMMC_ITAR_LABEL"
+    pattern: "(?i)\\b(?:ITAR|international\\s+traffic\\s+in\\s+arms)\\s*(?:controlled|restricted|regulated)?\\b"
+    norm_tag: "ITAR/EAR"
+  - name: "US_CMMC_EAR_LABEL"
+    pattern: "(?i)\\b(?:EAR|export\\s+administration\\s+regulations)\\s*(?:controlled|restricted)?\\b"
+    norm_tag: "ITAR/EAR"
+  - name: "US_CMMC_EAR99"
+    pattern: "(?i)\\bEAR99\\b"
+    norm_tag: "ITAR/EAR"
+  - name: "US_CMMC_USML"
+    pattern: "(?i)\\b(?:USML|united\\s+states\\s+munitions\\s+list)\\b"
+    norm_tag: "ITAR/EAR"
+  - name: "US_CMMC_CCL"
+    pattern: "(?i)\\b(?:commerce\\s+control\\s+list|CCL)\\b(?:\\s+categor(?:y|ies))?\\s*[:#]?\\s*[A-Z0-9.\\-]{0,12}"
+    norm_tag: "ITAR/EAR"
+  - name: "US_CMMC_EXPORT_CONTROLLED_PHRASE"
+    pattern: "(?i)\\bexport[-\\s]?controlled(?:\\s+(?:information|data|technology|technical\\s+data))?\\b"
+    norm_tag: "ITAR/EAR"
+
+terms:
+  - text: "controlled unclassified information"
+    label: sensitive
+  - text: "CUI Program"
+    label: sensitive
+  - text: "CUI Registry"
+    label: sensitive
+  - text: "NARA CUI"
+    label: sensitive
+  - text: "32 CFR Part 2002"
+    label: sensitive
+  - text: "CUI marking"
+    label: sensitive
+  - text: "CUI banner"
+    label: sensitive
+  - text: "portion marking"
+    label: sensitive
+  - text: "CUI category"
+    label: sensitive
+  - text: "CUI Specified"
+    label: sensitive
+  - text: "CUI Basic"
+    label: sensitive
+  - text: "limited dissemination control"
+    label: sensitive
+  - text: "dissemination control"
+    label: sensitive
+  - text: "NOFORN"
+    label: sensitive
+  - text: "no foreign nationals"
+    label: sensitive
+  - text: "REL TO"
+    label: sensitive
+  - text: "FED ONLY"
+    label: sensitive
+  - text: "NOCON"
+    label: sensitive
+  - text: "DISPLAY ONLY"
+    label: sensitive
+  - text: "CMMC"
+    label: sensitive
+  - text: "cybersecurity maturity model certification"
+    label: sensitive
+  - text: "CMMC assessment"
+    label: sensitive
+  - text: "CMMC Level"
+    label: sensitive
+  - text: "DFARS"
+    label: sensitive
+  - text: "DFARS 252.204-7012"
+    label: sensitive
+  - text: "NIST SP 800-171"
+    label: sensitive
+  - text: "controlled technical information"
+    label: sensitive
+  - text: "CTI"
+    label: sensitive
+  - text: "SP-CTI"
+    label: sensitive
+  - text: "SP-EXPT"
+    label: sensitive
+  - text: "SP-PRIV"
+    label: sensitive
+  - text: "SP-PRVCY"
+    label: sensitive
+  - text: "SP-HLTH"
+    label: sensitive
+  - text: "SP-PROCURE"
+    label: sensitive
+  - text: "defense industrial base"
+    label: sensitive
+  - text: "covered defense information"
+    label: sensitive
+  - text: "CDI"
+    label: sensitive
+  - text: "federal contract information"
+    label: sensitive
+  - text: "FCI"
+    label: sensitive
+  - text: "ITAR"
+    label: sensitive
+  - text: "international traffic in arms"
+    label: sensitive
+  - text: "EAR"
+    label: sensitive
+  - text: "export administration regulations"
+    label: sensitive
+  - text: "EAR99"
+    label: sensitive
+  - text: "USML"
+    label: sensitive
+  - text: "united states munitions list"
+    label: sensitive
+  - text: "commerce control list"
+    label: sensitive
+  - text: "CCL category"
+    label: sensitive
+  - text: "export controlled"
+    label: sensitive
+  - text: "export-controlled technical data"
+    label: sensitive
+  - text: "technical data package"
+    label: sensitive
+  - text: "dual-use technology"
+    label: sensitive
+  - text: "deemed export"
+    label: sensitive
+  - text: "export license"
+    label: sensitive
+  - text: "DDTC"
+    label: sensitive
+  - text: "BIS export"
+    label: sensitive
+  - text: "CUI handling"
+    label: sensitive
+  - text: "CUI destruction"
+    label: sensitive
+  - text: "CUI decontrol"
+    label: sensitive
+  - text: "safeguarding CUI"
+    label: sensitive
+  - text: "CUI repository"
+    label: sensitive
+  - text: "CUI share"
+    label: sensitive
+
+recommendation_overrides:
+  - norm_tag_pattern: "CMMC CUI"
+    base_legal: "US CUI Program (NARA; 32 CFR Part 2002 framing); CMMC programme context and DFARS safeguarding expectations as cited by the organisation — technical inventory only."
+    risk: "CUI markings, category labels, or dissemination controls (e.g. CUI//… banners, NOFORN, REL TO) — inventory signals that Controlled Unclassified Information vocabulary may be present in configured sources. Does not determine whether information is CUI, whether a marking is valid, or whether CMMC obligations apply."
+    recommendation: "Treat findings as a catalog of where CUI-related markings and vocabulary concentrate; map to information owners and contract flow-downs with counsel; use for evidence packs and remediation prioritisation. Data Boar does not certify CMMC, assess a CMMC level, or replace a C3PAO / assessor engagement."
+    priority: "ALTA"
+    relevant_for: "CUI Program Manager, ISSM, Contracts, Legal, DPO, Defense supply-chain compliance"
+  - norm_tag_pattern: "ITAR/EAR"
+    base_legal: "US export-control vocabulary (ITAR / EAR / USML / CCL) as it appears in text — triage signals only; not a jurisdiction or licensing determination."
+    risk: "Export-control labels or phrases (ITAR, EAR, USML, CCL, EAR99, export-controlled) — inventory signals for possible controlled technical data or related artefacts. Does not determine ITAR/EAR applicability, license requirements, or exportability."
+    recommendation: "Escalate hits to export-compliance / counsel for classification review; document locations for access control and retention. Do not treat scanner tags as an export determination."
+    priority: "ALTA"
+    relevant_for: "Export Compliance Officer, Legal, Engineering, Contracts, ISSM"
