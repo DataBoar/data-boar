@@ -40,7 +40,7 @@ US defense industrial base buyers need **Controlled Unclassified Information (CU
 | 3 | `compliance-samples/README.md` (+ pt-BR) table row | ✅ |
 | 4 | `COMPLIANCE_AND_LEGAL.md` (+ pt-BR) short US CMMC/CUI paragraph | ✅ |
 | 5 | This plan + `plans_hub_sync.py --write` + `PLANS_TODO` entry | ✅ |
-| 6 | Local gates (`test_compliance_samples`, locale, lint/check-all) + signed PR `Closes #1453` | ⬜ |
+| 6 | Local gates (`test_compliance_samples`, locale, lint/check-all) + signed PR `Closes #1453` | ✅ |
 
 ---
 
