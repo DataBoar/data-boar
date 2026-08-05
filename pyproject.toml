@@ -48,7 +48,7 @@ dependencies = [
     "click>=8.4.1",
     "colorama>=0.4.6 ; sys_platform == 'win32'",
     "contourpy>=1.3.3",
-    "cryptography>=48.0.1,<49",
+    "cryptography>=50.0.0,<51",
     "cycler>=0.12.1",
     "defusedxml>=0.7.1",
     # ebcdic is a transitive dep of extract-msg; pinned here so Dependabot sees
