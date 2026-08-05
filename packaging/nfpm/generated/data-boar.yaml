@@ -1,0 +1,51 @@
+name: data-boar
+arch: ${NFPM_ARCH}
+platform: linux
+version: 1.8.0-beta
+version_schema: none
+release: '1'
+section: utils
+priority: optional
+maintainer: Data Boar maintainers <contact@databoar.com.br>
+description: 'Data Boar — sensitive-data discovery (native Enterprise channel).
+
+  ADR-0084: embedded cp314t does NOT unlock Enterprise. Entitlement remains worker caps (#551) + pro_prefilter_accel.'
+vendor: Data Boar
+homepage: https://github.com/DataBoar/data-boar
+license: AGPL-3.0-or-later
+depends: []
+contents:
+- src: staging/usr/lib/data-boar/
+  dst: /usr/lib/data-boar/
+  type: tree
+- src: staging/usr/bin/data-boar
+  dst: /usr/bin/data-boar
+- src: staging/etc/data-boar/config.example.yaml
+  dst: /etc/data-boar/config.example.yaml
+  type: config|noreplace
+overrides:
+  deb:
+    depends:
+    - libc6
+    - libssl3 | libssl1.1
+    - zlib1g
+    - libffi8 | libffi7 | libffi6
+    - tesseract-ocr
+  rpm:
+    depends:
+    - openssl-libs
+    - zlib
+    - libffi
+    - tesseract
+  apk:
+    depends:
+    - libssl3
+    - zlib
+    - libffi
+    - tesseract-ocr
+  archlinux:
+    depends:
+    - openssl
+    - zlib
+    - libffi
+    - tesseract

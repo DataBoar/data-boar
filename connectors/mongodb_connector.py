@@ -48,8 +48,13 @@ class MongoDBConnector:
 
     def connect(self) -> None:
         if not _MONGO_AVAILABLE:
+            from core.extras_runtime import missing_optional_message
+
             raise RuntimeError(
-                "pymongo is not installed. Install with: pip install pymongo"
+                missing_optional_message(
+                    subject="MongoDB connector",
+                    extra="nosql",
+                )
             )
         host = self.config.get("host", "localhost")
         port = int(self.config.get("port", 27017))

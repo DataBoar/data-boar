@@ -1,0 +1,11 @@
+# Package name → pyproject optional-dependency extra (#1403).
+# Dependency *lists* are never hand-written here — they come from EXTRAS_MANIFEST.
+# Edit this map only when the packaging contract (#1403 table) changes.
+
+[subpackages]
+"data-boar-mssql" = "mssql-pymssql"
+"data-boar-nosql" = "nosql"
+"data-boar-shares" = "shares"
+"data-boar-compressed" = "compressed"
+"data-boar-dataformats" = "dataformats"
+"data-boar-richmedia" = "richmedia"

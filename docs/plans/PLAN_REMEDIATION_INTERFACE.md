@@ -1,17 +1,17 @@
 # Plan: Post-scan remediation plugin interface (Enterprise)
 
-<!-- plans-hub-summary: Enterprise hook for third-party tokenization, masking, and field crypto after discovery -->
+<!-- plans-hub-summary: Enterprise remediation bridge — #649 manifest + #606 host hook shipped; phases 2–3 (export/verify) open -->
 
 **Status:** Active
 **Date:** 2026-05-19
 **Authors:** Fabio Leitao
 **Priority:** H1
 
-**GitHub:** [#601](https://github.com/FabioLeitao/data-boar/issues/601) · [#606](https://github.com/FabioLeitao/data-boar/issues/606) · [#1057](https://github.com/FabioLeitao/data-boar/issues/1057) (v1.8.x anonymizer / policy enrichment)
+**GitHub:** [#601](https://github.com/FabioLeitao/data-boar/issues/601) · [#606](https://github.com/FabioLeitao/data-boar/issues/606) · [#649](https://github.com/DataBoar/data-boar/issues/649) · [#1057](https://github.com/FabioLeitao/data-boar/issues/1057) (v1.8.x anonymizer / policy enrichment)
 
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md)
 
-**Related:** [USE_CASE_SCAN_AND_REMEDIATE.md](../use-cases/USE_CASE_SCAN_AND_REMEDIATE.md), [USE_CASE_TOKENIZED_FINDINGS.md](../use-cases/USE_CASE_TOKENIZED_FINDINGS.md), [PLAN_G_TIER.md](PLAN_G_TIER.md)
+**Related:** [USE_CASE_SCAN_AND_REMEDIATE.md](../use-cases/USE_CASE_SCAN_AND_REMEDIATE.md), [USE_CASE_TOKENIZED_FINDINGS.md](../use-cases/USE_CASE_TOKENIZED_FINDINGS.md), [PLAN_G_TIER.md](PLAN_G_TIER.md), [PLAN_PLUGIN_SDK.md](PLAN_PLUGIN_SDK.md) (partner guide **#611**)
 
 ---
 
@@ -38,7 +38,8 @@ Define an **Enterprise-tier** post-scan hook that:
 | Phase | Deliverable | Status |
 | ----- | ----------- | ------ |
 | **0 – Docs** | Use cases + this plan | 🔄 In progress (**#602–605**, **#601**) |
-| **1 – Hook skeleton** | Minimal plugin registry + no-op driver | ⬜ **#606** |
+| **1 – Remediation manifest export** | CLI `--export-remediation-manifest` + schema v1 JSON (bridge for third-party plugins) | ✅ **#649** |
+| **1b – Hook skeleton** | Minimal plugin registry + host hook (`RemediationPlugin` / ADR-0059) | ✅ **#606** |
 | **2 – Export path** | Tokenized findings JSONL option | ⬜ |
 | **3 – Re-scan job** | Scoped verify after plugin run | ⬜ |
 
@@ -54,5 +55,6 @@ Define an **Enterprise-tier** post-scan hook that:
 ## Acceptance (plan)
 
 - [x] Use-case docs published under `docs/use-cases/`
-- [ ] Plugin interface ADR when shape stabilises
-- [ ] Code hook merged per **#606**
+- [x] Remediation manifest JSON export (`--session` + `--export-remediation-manifest`) — **#649**
+- [x] Plugin interface ADR — [ADR-0059](../adr/ADR-0059-remediation-plugin-architecture.md) (revise on phases 2–3)
+- [x] Code hook merged per **#606** (PR links when opened)

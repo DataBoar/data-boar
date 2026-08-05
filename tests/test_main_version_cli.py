@@ -8,8 +8,6 @@ import sys
 import tomllib
 from pathlib import Path
 
-from core.about import _package_version
-
 
 def _repo_root() -> Path:
     return Path(__file__).resolve().parents[1]
@@ -20,9 +18,15 @@ def _maturity_build_octet() -> int:
         return int(tomllib.load(f)["tool"]["databoar"]["maturity_build"])
 
 
+def _pyproject_version() -> str:
+    with (_repo_root() / "pyproject.toml").open("rb") as f:
+        return str(tomllib.load(f)["project"]["version"])
+
+
 def test_main_version_prints_public_version_exit_zero(tmp_path):
     """--version must not require config.yaml and must not leak maturity_build."""
     repo = _repo_root()
+    public = _pyproject_version()
     # Run from an empty dir so default config.yaml is absent.
     r = subprocess.run(
         [sys.executable, str(repo / "main.py"), "--version"],
@@ -33,7 +37,7 @@ def test_main_version_prints_public_version_exit_zero(tmp_path):
         check=False,
     )
     assert r.returncode == 0, r.stderr
-    expected = f"Data Boar {_package_version()}"
+    expected = f"Data Boar {public}"
     assert r.stdout.strip() == expected
     assert r.stderr == ""
 

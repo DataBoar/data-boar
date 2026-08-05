@@ -53,8 +53,13 @@ class RedisConnector:
 
     def connect(self) -> None:
         if not _REDIS_AVAILABLE:
+            from core.extras_runtime import missing_optional_message
+
             raise RuntimeError(
-                "redis is not installed. Install with: pip install redis"
+                missing_optional_message(
+                    subject="Redis connector",
+                    extra="nosql",
+                )
             )
         host = self.config.get("host", "localhost")
         port = int(self.config.get("port", 6379))
@@ -236,5 +241,5 @@ class RedisConnector:
             return
 
 
-if _REDIS_AVAILABLE:
-    register("redis", RedisConnector, ["name", "type"])
+# Always register so YAML resolves; connect() fails with named extra (#1402).
+register("redis", RedisConnector, ["name", "type"])

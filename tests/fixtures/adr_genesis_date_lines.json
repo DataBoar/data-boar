@@ -58,6 +58,7 @@
   "ADR-0056-cryptographic-adr-inventory-inv-adr-ssh-attestation.md": "- **Date (UTC):** 2026-05-20",
   "ADR-0057-lightweight-hub-index-co-located-links.md": "- **Date (UTC):** 2026-05-20",
   "ADR-0058-primer-hub-registration-ritual.md": "- **Date (UTC):** 2026-05-20",
+  "ADR-0059-remediation-plugin-architecture.md": "- **Date (UTC):** 2026-08-03",
   "ADR-0060-db-lint-bandit-exclusion-risk-accepted.md": "- **Date (UTC):** 2026-06-21",
   "ADR-0061-u-axis-issue-suborder-and-cross-milestone-gate.md": "- **Date (UTC):** 2026-05-22",
   "ADR-0062-agent-containment-triple-audit-offband-pingpong.md": "- **Date (UTC):** 2026-05-22",
@@ -80,6 +81,6 @@
   "ADR-0080-local-validation-gate-inviolable.md": "- **Date (UTC):** 2026-07-03",
   "ADR-0081-no-silent-ml-confidence-single-class-hardening.md": "- **Date (UTC):** 2026-07-12",
   "ADR-0082-web-exposure-safe-by-default-boundary-controls.md": "- **Date (UTC):** 2026-07-12",
-  "ADR-0083-rust-regex-stage-superset-accept-form-b.md": "- **Date (UTC):** 2026-07-31"
+  "ADR-0083-rust-regex-stage-superset-accept-form-b.md": "- **Date (UTC):** 2026-07-31",
+  "ADR-0084-native-package-embedded-cpython-by-channel.md": "- **Date (UTC):** 2026-08-02"
 }
-

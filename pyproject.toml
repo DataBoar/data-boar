@@ -1,6 +1,6 @@
 [project]
 name = "data-boar"
-version = "1.7.4.post12"
+version = "1.8.0-beta"
 description = "Data Boar — compliance-aware discovery and mapping of personal and sensitive data across databases, files, and APIs (LGPD, GDPR, CCPA, and configurable frameworks)."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -40,7 +40,7 @@ dependencies = [
     # direct constraint so Dependabot/uv stop trying to bump past 4.14 until
     # upstream extract-msg relaxes its `beautifulsoup4<4.14` requirement.
     # See: https://pypi.org/project/extract-msg/0.55.0/ (requires_dist).
-    "beautifulsoup4>=4.13.5,<4.14",
+    "beautifulsoup4>=4.13.5,<4.16",
     "blinker>=1.9.0",
     "certifi>=2026.5.20",
     "cffi>=2.0.0 ; platform_python_implementation != 'PyPy'",
@@ -202,13 +202,17 @@ norecursedirs = [
 [tool.ruff]
 # Legacy dirs now linted: utils/, scanners/, logging_custom/ — cleaned 2026-05-14.
 # db/ still excluded (deeper structural issues; see docs/plans/completed/PLAN_BANDIT_SECURITY_LINTER.md).
-extend-exclude = ["db"]
+# Markdown: ruff format rewrites fenced Python and breaks MD012; keep lint via pytest markdown guard.
+extend-exclude = ["db", "**/*.md"]
 
 [tool.ruff.lint.per-file-ignores]
 # Connectors must register before we import connector_for_target; optional deps in try/except
 "core/engine.py" = ["E402"]
 # Streamlit entry: repo root must be on ``sys.path`` before ``app.*`` imports.
 "app/dashboard.py" = ["E402"]
+# Thin CLIs: insert repo root on sys.path before importing ``core.*``.
+"scripts/generate_extras_manifest.py" = ["E402"]
+"scripts/generate_nfpm_packages.py" = ["E402"]
 # Legacy complexity: these functions are I/O-heavy and have large dispatch tables.
 # Tracked in docs/plans/PLAN_LAB_OP_CAPEX_OPEX_PROCUREMENT.md and SonarQube; refactor when safe.
 # New code in these files must NOT add complexity violations — only existing ones are exempted.
@@ -278,6 +282,7 @@ packages = [
     "config",
     "connectors",
     "core",
+    "data_boar",
     "database",
     "db",
     "file_scan",
@@ -320,6 +325,7 @@ dev = [
 ]
 
 # Operator-only maturity octet (ADR-0073). Never copy into [project].version.
-# postN <-> maturity_build map: docs/releases/1.7.4.post12.md (canonical; includes post1–post11 rows).
+# New public line 1.8.0: maturity_build resets to beta band (1–126); first beta = 1.
+# Map / notes: docs/releases/1.8.0-beta.md (prior 1.7.4.postN maps remain under docs/releases/).
 [tool.databoar]
-maturity_build = 263
+maturity_build = 1

@@ -16,6 +16,8 @@ Short, durable notes that capture **why** the project chose an approach—not on
 
 ## Index
 
+Canonical completeness of numbered ADR files is enforced for this table **and** the pt-BR mirror (`README.pt_BR.md` → `## Índice`) by `tests/test_adr_readme_index_sync.py`.
+
 | ADR   | Title                                                                                                                                                  | Status   |
 | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | -------- |
 | 0000  | [Project origin, ADR baseline, and UMADR ecosystem regency](ADR-0000-project-origin-and-adr-baseline.md) (canonical mother; #994) | Accepted |
@@ -77,7 +79,7 @@ Short, durable notes that capture **why** the project chose an approach—not on
 | 0056  | [Cryptographic ADR inventory (inv-adr.ps1 + SSH ed25519 attestation)](ADR-0056-cryptographic-adr-inventory-inv-adr-ssh-attestation.md) | Accepted |
 | 0057  | [Lightweight hub index (co-located links, no file moves)](ADR-0057-lightweight-hub-index-co-located-links.md) | Accepted |
 | 0058  | [Primer hub registration ritual](ADR-0058-primer-hub-registration-ritual.md) | Accepted |
-| 0059  | *Reserved* — minimal plugin hook infrastructure (GitHub #606, 1.8.x) | Reserved |
+| 0059  | [Remediation plugin architecture (minimal host hook)](ADR-0059-remediation-plugin-architecture.md) | Proposed |
 | 0060 | [`db/` Ruff and Bandit exclusion — risk accepted](ADR-0060-db-lint-bandit-exclusion-risk-accepted.md) | Accepted |
 | 0061 | [ADR-0061 U-axis issue sub-order and cross-milestone gate](ADR-0061-u-axis-issue-suborder-and-cross-milestone-gate.md) | Accepted |
 | 0062 | [ADR-0062 Agent containment: triple-audit offband pattern](ADR-0062-agent-containment-triple-audit-offband-pingpong.md) | Accepted |
@@ -101,8 +103,8 @@ Short, durable notes that capture **why** the project chose an approach—not on
 | 0080 | [Local validation gate is inviolable: full check-all before any push or PR](ADR-0080-local-validation-gate-inviolable.md) | Proposed |
 | 0081 | [No silent ML confidence failures on single-class compliance profiles](ADR-0081-no-silent-ml-confidence-single-class-hardening.md) | Proposed |
 | 0082 | [Web exposure safe-by-default boundary controls](ADR-0082-web-exposure-safe-by-default-boundary-controls.md) | Proposed |
-
 | 0083 | [Rust regex stage: accept form B (findings superset)](ADR-0083-rust-regex-stage-superset-accept-form-b.md) | Accepted |
+| 0084 | [Native package: embed CPython by channel (Enterprise vs community)](ADR-0084-native-package-embedded-cpython-by-channel.md) | Accepted |
 
 ## Related docs
 

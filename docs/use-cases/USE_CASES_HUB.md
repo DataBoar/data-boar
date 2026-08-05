@@ -23,6 +23,12 @@ Entry point for **concrete product scenarios** (discovery, remediation hand-off,
 | -------- | ------- |
 | [USE_CASE_BIOMETRIC_DATA_PROTECTION.md](USE_CASE_BIOMETRIC_DATA_PROTECTION.md) ([pt-BR](USE_CASE_BIOMETRIC_DATA_PROTECTION.pt_BR.md)) | Discover and govern biometric data (LGPD Art. 11 / GDPR Art. 9) |
 
+## Deployment models
+
+| Use case | Summary |
+| -------- | ------- |
+| [USE_CASE_MANAGED_SAAS_MULTI_TENANT.md](USE_CASE_MANAGED_SAAS_MULTI_TENANT.md) ([pt-BR](USE_CASE_MANAGED_SAAS_MULTI_TENANT.pt_BR.md)) | Opt-in managed / SaaS: subdomain → dedicated instance, BYO-cloud or hosted runner, no-retention findings metadata (distinct from [MSP storyboard](MSP_IT_CONSULTANCY_MULTI_TENANT_SMB.md)) |
+
 ## Sector storyboards (workshop flows)
 
 | Hub | Summary |

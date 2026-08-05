@@ -3,15 +3,26 @@ Application about information (name, version, author, license) for reports, API 
 Single source of truth aligned with LICENSE and README in the repository.
 """
 
+from __future__ import annotations
+
+import tomllib
+from pathlib import Path
+
+# docs/VERSIONING.md checklist §2 — keep identical to pyproject.toml ``[project].version``.
+_FALLBACK_VERSION = "1.8.0-beta"
+
 
 def _package_version() -> str:
-    """Installed distribution version, or the same fallback string as get_about_info."""
+    """Return ``[project].version`` from ``pyproject.toml`` (VERSIONING.md source of truth)."""
+    path = Path(__file__).resolve().parents[1] / "pyproject.toml"
     try:
-        from importlib.metadata import version
-
-        return version("data-boar")
-    except Exception:
-        return "1.7.4.post12"
+        with path.open("rb") as handle:
+            ver = tomllib.load(handle).get("project", {}).get("version")
+        if ver:
+            return str(ver)
+    except (OSError, tomllib.TOMLDecodeError, TypeError, ValueError):
+        pass
+    return _FALLBACK_VERSION
 
 
 def get_http_user_agent() -> str:

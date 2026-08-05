@@ -26,6 +26,28 @@ docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.override.ym
 
 Repeat this whenever you want to pick up a new version pushed to Docker Hub (e.g. after releases or updates to the repo).
 
+## Extras and pool licensing (`/extras` + `DATA_BOAR_MACHINE_SEED`)
+
+The published image is **lean on purpose**: it installs only the **base SQL groups** from `pyproject.toml` — **`sql-community`**, **`mssql`** (pyodbc), and **`oracle`**. It does **not** ship all optional extras (no fat image, no image matrix, no `FROM` our image + rebuild for each customer pack).
+
+| In the image (base) | Via runtime mount |
+| ------------------- | ----------------- |
+| `sql-community`, `mssql`, `oracle` (and their packages) | `nosql`, `shares`, `mssql-pymssql`, `compressed`, `dataformats`, `richmedia`, `dl`, `bigdata`, `grc-dashboard`, … |
+
+**Runtime extension (no shell, no pip in the image):**
+
+1. Build an ABI-compatible wheel pack on a host that matches the image Python (e.g. **cp314** for the GIL image, **cp314t** for `-nogil`) — typically `pip install --target ./extras-pack 'data-boar[nosql,shares,…]'` or equivalent wheels from the project wheelhouse channel.
+2. Mount read-only: `-v /path/to/extras-pack:/extras:ro` (nonroot uid **65532**; no `--user 0`).
+3. The image sets **`PYTHONPATH=/extras:/app`** (`/extras` first, then `/app`) and **`VOLUME ["/extras"]`**.
+
+**Diagnose first:** `python main.py --check-extras` (or the same flag as container entrypoint override) lists each extra × status × origin (image vs `/extras`). Post-build smoke (`scripts/docker/docker-image-smoke.sh`) **fails** if any extra marked `in_artifact: true` in `EXTRAS_MANIFEST.json` cannot import.
+
+**ABI mismatch:** a pack built for the wrong CPython minor/variant fails **loud at startup** (fail-closed), not as a silent missing connector.
+
+**`DATA_BOAR_MACHINE_SEED`:** declared on the image (empty by default). Set a stable secret for **Enterprise** container pools so fingerprint does not change every `docker run`. Leave empty for **Pro / Pro+** machine-count binding (hostname-derived). See [LICENSING_SPEC.md](LICENSING_SPEC.md).
+
+Related GitHub issues: **#1400**, **#1401**, **#1399**, **#1402**.
+
 ---
 
 ## 1. Connect Cursor to Docker Desktop MCP

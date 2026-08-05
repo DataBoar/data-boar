@@ -7,15 +7,37 @@ EXPECTED_HTTP_ROUTES below to match `api.routes.app`.
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Sequence
+from typing import Any
+
 from starlette.routing import Mount
 
 from api.routes import app
 from fastapi.routing import APIRoute
 
 
-def _registered_http_routes() -> list[str]:
-    rows: list[str] = []
-    for route in app.routes:
+def _nested_route_list(route: Any) -> Sequence[Any] | None:
+    """Child routes for nested/include_router wrappers (version-agnostic).
+
+    FastAPI 0.139+ stores ``include_router`` as ``_IncludedRouter`` with
+    ``original_router.routes`` instead of flattening ``APIRoute`` onto ``app.routes``.
+    Older FastAPI already flattens; those nodes have no nested list here.
+    """
+    if isinstance(route, (APIRoute, Mount)):
+        return None
+    original = getattr(route, "original_router", None)
+    if original is not None:
+        nested = getattr(original, "routes", None)
+        if nested is not None:
+            return nested
+    nested = getattr(route, "routes", None)
+    if nested is not None:
+        return nested
+    return None
+
+
+def _collect_http_routes(routes: Iterable[Any], rows: list[str]) -> None:
+    for route in routes:
         if isinstance(route, APIRoute):
             for method in sorted(route.methods):
                 if method == "HEAD":
@@ -23,6 +45,15 @@ def _registered_http_routes() -> list[str]:
                 rows.append(f"{method} {route.path}")
         elif isinstance(route, Mount):
             rows.append(f"MOUNT {route.path}")
+        else:
+            nested = _nested_route_list(route)
+            if nested is not None:
+                _collect_http_routes(nested, rows)
+
+
+def _registered_http_routes() -> list[str]:
+    rows: list[str] = []
+    _collect_http_routes(app.routes, rows)
     return sorted(rows)
 
 

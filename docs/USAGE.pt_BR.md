@@ -37,6 +37,7 @@ O ponto de entrada é `main.py`.
 | `--https-key-file`      | *(vazio)*            | Caminho PEM da chave privada para TLS com `--web`; pareado com `--https-cert-file` ou as chaves `api.*` correspondentes.                                                                                                                                                                 |
 | `--allow-insecure-http` | *(flag)*             | **Aceite explícito de risco:** servir o dashboard em **HTTP em texto plano** (risco de interceptação/alteração). Em produção, prefira TLS ou proxy reverso. Equivale a `api.allow_insecure_http: true`. A imagem **Docker** padrão passa essa flag para rodar sem certificados montados. |
 | `--validate-config`     | *(flag)*             | Pré-voo: analisa o config, reconhece conectores e chaves obrigatórias por target; **WARN** em `*_from_env` ausentes e em pacotes opcionais de driver SQL ausentes (probe de import offline; ex.: `psycopg2` / `data-boar[postgres]`). Também **WARN**/OK de prontidão do estágio de regex / acelerador Rust (#1411 / #1414); em tiers pagos, **WARN** se `boar_fast_filter` estiver ausente (mesma classe dos drivers SQL opcionais; PyPI usa fallback Python puro). **Cria** diretórios ausentes de `report.output_dir`, do pai de `sqlite_path` e (com `learned_patterns.enabled`) do pai de `learned_patterns.output_file`. Sem rede nem DB. Sai **0** com `[OK]` ou **1** com `[INVALID]`. Incompatível com `--web`, `--reset-data`, `--export-audit-trail`, `--export-dsar`, `--regenerate-report` e `--prefilter-status`. |
+| `--check-extras`        | *(flag)*             | Lista extras opcionais × estado × origem (site-packages da imagem vs montagem `/extras`) e sai. **Primeiro passo de troubleshooting** quando um conector falha por dependência ausente. Veja [DOCKER_SETUP.pt_BR.md](DOCKER_SETUP.pt_BR.md) (*Extras e licenciamento em pool*). |
 | `--prefilter-status`    | *(flag)*             | Imprime JSON de prontidão do acelerador Rust / estágio de regex (`active`, `name`, `backend` rust\|python, `tier`, `reason`, `engine`, `rust_accelerator_installed`) e sai. Só observabilidade — **não** muda achados (#1411 / #1414). Incompatível com `--web`, `--reset-data`, `--export-audit-trail`, `--export-dsar`, `--regenerate-report`, `--diff` e `--validate-config`. |
 | `--diff`                | `SESSION_A SESSION_B` | Compara achados entre dois UUIDs de sessão no SQLite; imprime novos, resolvidos e mudanças de severidade. Sai **0**, salvo `--fail-on-new-high` com novo **HIGH** (sai **1**). Sessão inexistente → sai **2**. Incompatível com `--web`, `--reset-data`, `--export-audit-trail` e `--validate-config`. |
 | `--fail-on-new-high`    | *(flag)*             | Com `--diff`: sai **1** se `SESSION_B` tiver achado **HIGH** novo em relação a `SESSION_A` (gate de regressão em CI). |
@@ -62,6 +63,10 @@ Implantações corporativas podem exigir *hooks* de **tamper-evidence** paralelo
 - **`DATA_BOAR_RELEASE_MANIFEST_PATH`** ou **`licensing.manifest_path`** — JSON opcional de SHA-256 de arquivos críticos verificado na subida (**mesmo documento**).
 
 **Roadmap:** *anchor* SQLite, re-hash na inicialização e degradação de confiança além da camada de licenciamento continuam **planejadas** (**`docs/plans/PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md`** — export **E.11** via **`--export-audit-trail`** ✅; *anchors* ⬜).
+
+### Plugin de remediação Enterprise (opcional)
+
+YAML opt-in `remediation:` carrega um `RemediationPlugin` de parceiro após a geração de relatório (feature **Enterprise** `remediation_plugin`, ou lab **OPEN**). Fail-graceful: erros do plugin nunca abortam o scan. Guia do autor: **[PLUGIN_SDK.pt_BR.md](PLUGIN_SDK.pt_BR.md)** ([EN](PLUGIN_SDK.md)). Bloco de exemplo: `deploy/config.example.yaml`.
 
 ### Resultados
 

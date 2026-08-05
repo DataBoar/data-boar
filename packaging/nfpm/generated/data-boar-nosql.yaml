@@ -1,0 +1,34 @@
+name: data-boar-nosql
+arch: ${NFPM_ARCH}
+platform: linux
+version: 1.8.0-beta
+version_schema: none
+release: '1'
+section: utils
+priority: optional
+maintainer: Data Boar maintainers <contact@databoar.com.br>
+description: 'Data Boar connector extra [nosql] (packages: pymongo>=4.0, redis>=8.0.0).
+
+  ADR-0084: embedded cp314t does NOT unlock Enterprise. Entitlement remains worker caps (#551) + pro_prefilter_accel.'
+vendor: Data Boar
+homepage: https://github.com/DataBoar/data-boar
+license: AGPL-3.0-or-later
+depends:
+- data-boar (= 1.8.0-beta-1)
+contents:
+- src: staging/usr/lib/data-boar/extras/nosql/
+  dst: /usr/lib/data-boar/extras/nosql/
+  type: tree
+overrides:
+  deb:
+    depends:
+    - data-boar (= 1.8.0-beta-1)
+  rpm:
+    depends:
+    - data-boar = 1.8.0-beta-1
+  apk:
+    depends:
+    - data-boar=1.8.0-beta-r1
+  archlinux:
+    depends:
+    - data-boar=1.8.0-beta-1

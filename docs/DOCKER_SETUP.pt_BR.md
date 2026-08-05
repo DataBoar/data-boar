@@ -26,6 +26,28 @@ docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.override.ym
 
 Repita sempre que quiser usar uma nova versão publicada no Docker Hub (ex.: após releases ou atualizações no repositório).
 
+## Extras e licenciamento em pool (`/extras` + `DATA_BOAR_MACHINE_SEED`)
+
+A imagem publicada é **enxuta de propósito**: instala só os grupos SQL base do `pyproject.toml` — **`sql-community`**, **`mssql`** (pyodbc) e **`oracle`**. **Não** embute todos os extras opcionais (sem fat image, sem matriz de imagens, sem exigir `FROM` da nossa imagem + rebuild por cliente).
+
+| Na imagem (base) | Via montagem em runtime |
+| ---------------- | ----------------------- |
+| `sql-community`, `mssql`, `oracle` (e pacotes) | `nosql`, `shares`, `mssql-pymssql`, `compressed`, `dataformats`, `richmedia`, `dl`, `bigdata`, `grc-dashboard`, … |
+
+**Extensão em runtime (sem shell, sem pip na imagem):**
+
+1. Monte um pack de wheels ABI-compatível com o Python da imagem (ex.: **cp314** na imagem GIL, **cp314t** na `-nogil`) — tipicamente `pip install --target ./extras-pack 'data-boar[nosql,shares,…]'` ou wheels do canal wheelhouse do projeto.
+2. Monte somente leitura: `-v /caminho/extras-pack:/extras:ro` (uid nonroot **65532**; sem `--user 0`).
+3. A imagem define **`PYTHONPATH=/extras:/app`** (`/extras` primeiro, depois `/app`) e **`VOLUME ["/extras"]`**.
+
+**Diagnóstico primeiro:** `python main.py --check-extras` lista cada extra × estado × origem (imagem vs `/extras`). O smoke pós-build (`scripts/docker/docker-image-smoke.sh`) **falha** se algum extra com `in_artifact: true` no `EXTRAS_MANIFEST.json` não importar.
+
+**ABI incompatível:** pack da minor/variante errada falha **alto na inicialização** (fail-closed), não como conector ausente em silêncio.
+
+**`DATA_BOAR_MACHINE_SEED`:** declarado na imagem (vazio por padrão). Defina um segredo estável para pools **Enterprise** para o fingerprint não mudar a cada `docker run`. Deixe vazio em **Pro / Pro+** (contagem por hostname). Veja [LICENSING_SPEC.pt_BR.md](LICENSING_SPEC.pt_BR.md).
+
+Issues relacionadas: **#1400**, **#1401**, **#1399**, **#1402**.
+
 ---
 
 ## 1. Conectar o Cursor ao Docker Desktop MCP
