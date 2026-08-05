@@ -1,4 +1,4 @@
-"""Fail-graceful host wiring for the Enterprise remediation hook (#606).
+"""Fail-graceful host wiring for the Enterprise remediation hook (#606 / #1443).
 
 Never raises into the scan worker: plugin absence, load failure, non-conformance,
 or remediate() errors are logged and skipped (Safe-Hold of the scan target).
@@ -11,12 +11,19 @@ from pathlib import Path
 from typing import Any
 
 
-def maybe_run_remediation_hook(config: dict[str, Any], session_id: str) -> None:
+def maybe_run_remediation_hook(
+    config: dict[str, Any],
+    session_id: str,
+    db_manager: Any | None = None,
+) -> None:
     """
     Opt-in post-scan remediation when ``remediation.enabled`` and Enterprise
     (or OPEN lab) tier grants ``remediation_plugin``.
 
-    Fail-graceful: all plugin errors go to stderr; scan outcome is unchanged.
+    When ``db_manager`` is provided, writes
+    ``{report.output_dir}/findings_{session_id}.jsonl`` from SQLite using the
+    #649 remediation-target taxonomy, then calls the plugin. Fail-graceful:
+    all plugin errors go to stderr; scan outcome is unchanged.
     """
     remediation_cfg = config.get("remediation") if isinstance(config, dict) else None
     if not isinstance(remediation_cfg, dict) or not remediation_cfg.get("enabled"):
@@ -46,6 +53,31 @@ def maybe_run_remediation_hook(config: dict[str, Any], session_id: str) -> None:
     report_cfg = config.get("report") if isinstance(config.get("report"), dict) else {}
     output_dir = Path(str(report_cfg.get("output_dir") or "."))
     findings_path = output_dir / f"findings_{session_id}.jsonl"
+
+    if db_manager is None:
+        if not findings_path.is_file():
+            print(
+                "[remediation] skipped — findings JSONL not written (no db_manager) "
+                f"and missing: {findings_path}",
+                file=sys.stderr,
+            )
+            return
+    else:
+        from core.remediation_manifest import write_findings_jsonl
+
+        written = write_findings_jsonl(
+            db_manager,
+            session_id=session_id,
+            path=findings_path,
+            config=config if isinstance(config, dict) else None,
+        )
+        if written is None:
+            print(
+                "[remediation] skipped — could not write findings JSONL "
+                "(unknown or empty session_id)",
+                file=sys.stderr,
+            )
+            return
 
     try:
         plugin = load_remediation_plugin(plugin_path)

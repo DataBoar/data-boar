@@ -20,7 +20,8 @@ class RemediationPlugin(Protocol):
         config: dict,
     ) -> Path:
         """
-        Receives findings JSONL path, returns remediation_report.json path.
+        Receives findings JSONL path (host-written from SQLite when the hook
+        runs with db_manager — #1443), returns remediation_report.json path.
         Must not modify findings_path in place.
         """
         ...

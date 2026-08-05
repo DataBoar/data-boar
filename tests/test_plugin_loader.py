@@ -1,4 +1,4 @@
-"""Tests for Enterprise remediation plugin host (#606 / ADR-0059)."""
+"""Tests for Enterprise remediation plugin host (#606 / ADR-0059 / #1443)."""
 
 from __future__ import annotations
 
@@ -6,9 +6,30 @@ from pathlib import Path
 
 import pytest
 
+from core.database import LocalDBManager
 from core.licensing.tier_features import Tier, is_feature_available
 from core.plugins import PluginError, RemediationPlugin, load_remediation_plugin
 from core.plugins.hook import maybe_run_remediation_hook
+
+
+def _seed_db_for_hook(tmp_path: Path, sid: str) -> LocalDBManager:
+    """SQLite session with one finding — host must write JSONL (no pre-seed file)."""
+    db_path = str(tmp_path / f"{sid}.db")
+    mgr = LocalDBManager(db_path)
+    mgr.create_session_record(sid)
+    mgr.set_current_session_id(sid)
+    mgr.save_finding(
+        "database",
+        target_name="primary_db",
+        schema_name="public",
+        table_name="customers",
+        column_name="email",
+        sensitivity_level="HIGH",
+        pattern_detected="EMAIL",
+        norm_tag="LGPD Art. 5(I)",
+    )
+    mgr.finish_session(sid)
+    return mgr
 
 
 class _ValidRemediationPlugin:
@@ -131,8 +152,9 @@ def test_hook_enterprise_loads_valid_plugin(
     mod.ValidPlugin = _ValidRemediationPlugin  # type: ignore[attr-defined]
     monkeypatch.setitem(__import__("sys").modules, mod.__name__, mod)
 
-    findings = tmp_path / "findings_sess-ent.jsonl"
-    findings.write_text("{}\n", encoding="utf-8")
+    sid = "sess-ent"
+    findings = tmp_path / f"findings_{sid}.jsonl"
+    assert not findings.exists()
 
     cfg = {
         "licensing": {"mode": "open", "effective_tier": "enterprise"},
@@ -144,10 +166,16 @@ def test_hook_enterprise_loads_valid_plugin(
             "config": {},
         },
     }
-    maybe_run_remediation_hook(cfg, "sess-ent")
+    mgr = _seed_db_for_hook(tmp_path, sid)
+    try:
+        maybe_run_remediation_hook(cfg, sid, db_manager=mgr)
+    finally:
+        mgr.dispose()
     out = capsys.readouterr().out
     assert "Remediation complete:" in out
     assert "post-remediation verification pending (see #653)" in out
+    assert findings.is_file()
+    assert findings.read_text(encoding="utf-8").strip()
     assert (tmp_path / "remediation_report.json").is_file()
 
 
@@ -162,8 +190,9 @@ def test_hook_open_tier_loads_valid_plugin(
     mod.ValidPlugin = _ValidRemediationPlugin  # type: ignore[attr-defined]
     monkeypatch.setitem(__import__("sys").modules, mod.__name__, mod)
 
-    findings = tmp_path / "findings_sess-open.jsonl"
-    findings.write_text("{}\n", encoding="utf-8")
+    sid = "sess-open"
+    findings = tmp_path / f"findings_{sid}.jsonl"
+    assert not findings.exists()
 
     cfg = {
         "licensing": {"mode": "open", "effective_tier": ""},
@@ -175,9 +204,15 @@ def test_hook_open_tier_loads_valid_plugin(
             "config": {},
         },
     }
-    maybe_run_remediation_hook(cfg, "sess-open")
+    mgr = _seed_db_for_hook(tmp_path, sid)
+    try:
+        maybe_run_remediation_hook(cfg, sid, db_manager=mgr)
+    finally:
+        mgr.dispose()
     out = capsys.readouterr().out
     assert "Remediation complete:" in out
+    assert findings.is_file()
+    assert findings.read_text(encoding="utf-8").strip()
 
 
 def test_hook_non_conformant_contained_no_crash(
@@ -191,6 +226,7 @@ def test_hook_non_conformant_contained_no_crash(
     mod.BadPlugin = _NonConformantPlugin  # type: ignore[attr-defined]
     monkeypatch.setitem(__import__("sys").modules, mod.__name__, mod)
 
+    sid = "sess-bad"
     cfg = {
         "licensing": {"mode": "open", "effective_tier": "enterprise"},
         "report": {"output_dir": str(tmp_path)},
@@ -201,6 +237,10 @@ def test_hook_non_conformant_contained_no_crash(
             "config": {},
         },
     }
-    maybe_run_remediation_hook(cfg, "sess-bad")  # must not raise
+    mgr = _seed_db_for_hook(tmp_path, sid)
+    try:
+        maybe_run_remediation_hook(cfg, sid, db_manager=mgr)  # must not raise
+    finally:
+        mgr.dispose()
     err = capsys.readouterr().err
     assert "[remediation] plugin error:" in err
