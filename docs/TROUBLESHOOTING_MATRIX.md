@@ -252,7 +252,7 @@ After `run_poc_error_scenarios.py`, share the JSON output. For manual findings:
 }
 ```
 
-Open a GitHub issue at <https://github.com/FabioLeitao/data-boar/issues> with the JSON.
+Open a GitHub issue at <https://github.com/DataBoar/data-boar/issues> with the JSON.
 
 ---
 

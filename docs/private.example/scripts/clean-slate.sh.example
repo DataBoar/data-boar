@@ -5,7 +5,7 @@
 
 set -euo pipefail
 
-ORIGIN_URL="${ORIGIN_URL:-https://github.com/FabioLeitao/data-boar.git}"
+ORIGIN_URL="${ORIGIN_URL:-https://github.com/DataBoar/data-boar.git}"
 BRANCH="${BRANCH:-main}"
 DATA_BOAR_ROOT="${DATA_BOAR_ROOT:-${HOME}/Projects/dev/data-boar}"
 SEEDS_HOME="${SEEDS_HOME:-${HOME}/.config/PII/PII_LOCAL_SEEDS.txt}"

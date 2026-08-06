@@ -271,7 +271,7 @@ When implementing **scan inside compressed files**, ensure we do **not** run int
 Follow-ups or optional improvements, **ordered by recommended execution** under typical token/session constraints (smallest-scope, high-value first):
 
 1. **Password-protected archives:** Add a test (and optionally sample data) that uses `file_scan.file_passwords` for ZIP/7z so we validate the config path end-to-end. (Focused change; existing config.)
-1. **Max members per archive:** **Done** in [#1233](https://github.com/FabioLeitao/data-boar/issues/1233) / [PLAN_ARCHIVE_BUDGET.md](../PLAN_ARCHIVE_BUDGET.md) (`file_scan.max_members`, default 1000).
+1. **Max members per archive:** **Done** in [#1233](https://github.com/DataBoar/data-boar/issues/1233) / [PLAN_ARCHIVE_BUDGET.md](../PLAN_ARCHIVE_BUDGET.md) (`file_scan.max_members`, default 1000).
 1. **Optional max temp / total uncompressed:** Aggregate **declared** uncompressed sum + expansion ratio shipped with #1233 (`max_total_uncompressed`, `max_expansion_ratio`). Optional disk/temp cleanup policy remains follow-up.
 1. **Nested archives:** Zip-inside-zip (and tar inside zip) with a depth limit and size limit; document “one level only” for v1 or add recursion with a cap. (Larger design/code scope.)
 1. **Tier 3 archives:** LHA, ARJ, ZOO, PAK, ARC, ACE — via patool + external tools or dedicated libs; document and gate behind the same `scan_compressed` option. (New deps/formats.)

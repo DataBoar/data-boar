@@ -8,8 +8,8 @@
 **Authors:** Fabio Leitao
 **Priority:** H2 · candidate **v1.9.x** (slice **2 of 3** — hybrid #1071)
 **Tags:** taxonomy, data-use, purpose, finalidade, LGPD, DPO-facing
-**GitHub evaluation:** [#1071](https://github.com/FabioLeitao/data-boar/issues/1071) (closed — hybrid approved)
-**GitHub implementation:** [#1075](https://github.com/FabioLeitao/data-boar/issues/1075)
+**GitHub evaluation:** [#1071](https://github.com/DataBoar/data-boar/issues/1071) (closed — hybrid approved)
+**GitHub implementation:** [#1075](https://github.com/DataBoar/data-boar/issues/1075)
 **Depends on (soft):** [PLAN_NORM_TAG_HIERARCHY_AND_DATA_SUBJECT.md](PLAN_NORM_TAG_HIERARCHY_AND_DATA_SUBJECT.md) slice 1 shipped or parallel only if shared config loader is stable
 
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md), [PLAN_TAXONOMY_AXES.md](PLAN_TAXONOMY_AXES.md)
@@ -18,7 +18,7 @@
 
 ## Motivation
 
-**Evaluation [#1071](https://github.com/FabioLeitao/data-boar/issues/1071):** Fideslang’s **Data Use** axis models **purpose / finalidade** (GDPR lawful basis class, LGPD Art. 6 bases and Art. 7 consent where applicable). Bearer and current Data Boar **do not** classify findings by **why** data is processed — only **what** (`norm_tag`) and (after slice 1) **whose** (Data-Subject).
+**Evaluation [#1071](https://github.com/DataBoar/data-boar/issues/1071):** Fideslang’s **Data Use** axis models **purpose / finalidade** (GDPR lawful basis class, LGPD Art. 6 bases and Art. 7 consent where applicable). Bearer and current Data Boar **do not** classify findings by **why** data is processed — only **what** (`norm_tag`) and (after slice 1) **whose** (Data-Subject).
 
 **Hybrid slice 2** adds an **optional**, **operator-configured** Data-Use label on findings — **heuristic**, derived from table/column naming, config overrides, or future connector metadata — **not** automated legal basis determination.
 

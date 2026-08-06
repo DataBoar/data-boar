@@ -3,14 +3,14 @@
 <!-- plans-hub-summary: Optional configurable subject-category axis (Bearer-style subject_mapping) complementing norm_tag; audit #1069 gap; candidate v1.9.0. -->
 <!-- plans-hub-related: PLAN_TAXONOMY_AXES.md, PLAN_COMPLIANCE_EXPANSION_GLOBAL_JURISDICTIONS.md, PLAN_ADDITIONAL_DETECTION_TECHNIQUES_AND_FN_REDUCTION.md -->
 
-**Status:** Pending — **superseded for implementation** by [PLAN_NORM_TAG_HIERARCHY_AND_DATA_SUBJECT.md](PLAN_NORM_TAG_HIERARCHY_AND_DATA_SUBJECT.md) ([#1071](https://github.com/FabioLeitao/data-boar/issues/1071) hybrid slice 1). Retained as Bearer-audit reference; do not implement #1072 separately.
+**Status:** Pending — **superseded for implementation** by [PLAN_NORM_TAG_HIERARCHY_AND_DATA_SUBJECT.md](PLAN_NORM_TAG_HIERARCHY_AND_DATA_SUBJECT.md) ([#1071](https://github.com/DataBoar/data-boar/issues/1071) hybrid slice 1). Retained as Bearer-audit reference; do not implement #1072 separately.
 **Date:** 2026-06-30
 **Authors:** Fabio Leitao
 **Priority:** H2 · candidate **v1.9.0**
 **Tags:** detection, taxonomy, LGPD, norm_tag, subject-mapping, DPO-facing
-**GitHub audit:** [#1069](https://github.com/FabioLeitao/data-boar/issues/1069) (closed — gap confirmed, no code)
-**GitHub implementation:** [#1072](https://github.com/FabioLeitao/data-boar/issues/1072) (closed) → **superseded by [#1074](https://github.com/FabioLeitao/data-boar/issues/1074)**
-**Related evaluation:** [#1071](https://github.com/FabioLeitao/data-boar/issues/1071) (Fideslang / IAB Tech Lab taxonomy — strategic input, not a runtime dependency)
+**GitHub audit:** [#1069](https://github.com/DataBoar/data-boar/issues/1069) (closed — gap confirmed, no code)
+**GitHub implementation:** [#1072](https://github.com/DataBoar/data-boar/issues/1072) (closed) → **superseded by [#1074](https://github.com/DataBoar/data-boar/issues/1074)**
+**Related evaluation:** [#1071](https://github.com/DataBoar/data-boar/issues/1071) (Fideslang / IAB Tech Lab taxonomy — strategic input, not a runtime dependency)
 
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md), [PLAN_TAXONOMY_AXES.md](PLAN_TAXONOMY_AXES.md)
 
@@ -20,7 +20,7 @@
 
 External privacy-SAST tooling (Bearer-class) separates **data type** (phone, email, national ID) from **data-subject category** (employee, customer, patient, minor) via operator-configurable mapping files. Data Boar today classifies findings primarily on **type** (`norm_tag`) and **sensitivity** — not on **whose** data the column or field likely represents in context.
 
-**Audit conclusion ([#1069](https://github.com/FabioLeitao/data-boar/issues/1069), RO-verified):** `SensitivityDetector.analyze()` returns `(sensitivity_level, pattern_detected, norm_tag, confidence)` with **no titular/subject dimension**. Table/schema/column context does not feed a subject category. The `data_subject` field in DSAR export is the **requester** of a DSAR (GDPR Art. 15 sense), not a finding-classification axis.
+**Audit conclusion ([#1069](https://github.com/DataBoar/data-boar/issues/1069), RO-verified):** `SensitivityDetector.analyze()` returns `(sensitivity_level, pattern_detected, norm_tag, confidence)` with **no titular/subject dimension**. Table/schema/column context does not feed a subject category. The `data_subject` field in DSAR export is the **requester** of a DSAR (GDPR Art. 15 sense), not a finding-classification axis.
 
 **Why it matters (LGPD-oriented example, not legal advice):** The same `norm_tag` (e.g. phone) in an HR table vs a customer table vs a health context can imply **different compliance narratives** (employment law, consumer relationship, health-sector rules, **Art. 14** minors). Today both phones receive **identical severity** when only type is scored — a gap a technical DPO/CISO reviewer can defend.
 
@@ -33,7 +33,7 @@ This plan adds an **optional**, **configurable** subject-category axis **alongsi
 | Plan / issue | Relationship |
 | ------------ | ------------ |
 | [PLAN_TAXONOMY_AXES.md](PLAN_TAXONOMY_AXES.md) | New **orthogonal axis** (subject category vs type vs gravity **G**); document in taxonomy map when shipped. |
-| [#1071](https://github.com/FabioLeitao/data-boar/issues/1071) | Strategic eval: Fideslang **Data Subject** / **Data Use** interop vs in-house hierarchy — **input before Phase 2 naming**, not a platform dependency. |
+| [#1071](https://github.com/DataBoar/data-boar/issues/1071) | Strategic eval: Fideslang **Data Subject** / **Data Use** interop vs in-house hierarchy — **input before Phase 2 naming**, not a platform dependency. |
 | [PLAN_ADDITIONAL_DETECTION_TECHNIQUES_AND_FN_REDUCTION.md](PLAN_ADDITIONAL_DETECTION_TECHNIQUES_AND_FN_REDUCTION.md) | Complementary; subject axis does not replace FN reduction engines. |
 | [PLAN_ACTION_PLAN_GENERATOR_POST_SCAN.md](PLAN_ACTION_PLAN_GENERATOR_POST_SCAN.md) | Future APG tiers may reference subject category in suggested actions (later phase). |
 | **#1069 Frente 2** (`--report=security\|privacy\|dataflow`) | **Out of scope** — Markdown-centric `data-boar-report` is an **enhancement**, not this plan; defer unless operator opens a reporter plan. |

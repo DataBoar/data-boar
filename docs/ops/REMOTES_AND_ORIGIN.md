@@ -4,6 +4,8 @@
 
 This repo uses **data-boar** as the only push/PR destination. **Product name:** **Data Boar**. An optional second remote may still use a **long historical label** in `.git/config` pointing at an archived GitHub URL — that is a **Git convenience** for fetch-only history, not the public product identity.
 
+Note: the former GitHub path `FabioLeitao/data-boar` still redirects to the canonical `DataBoar/data-boar`.
+
 The following is stored in local `.git/config` and can be checked or changed from the terminal.
 
 ## Verify current remotes
@@ -17,7 +19,7 @@ git remote -v
 
 You should see:
 
-- **origin** → `git@github.com:FabioLeitao/data-boar.git` (fetch and push)
+- **origin** → `git@github.com:DataBoar/data-boar.git` (fetch and push)
 - **python3-lgpd-crawler-legacy-and-history-only** → `git@github.com:FabioLeitao/python3-lgpd-crawler.git` (fetch only); push URL is `no-push` so push is disabled
 
 ## Change where `origin` points (manual)
@@ -26,10 +28,10 @@ If you ever need to set or change the destination URL from the terminal:
 
 ```bash
 # Set origin to data-boar (SSH)
-git remote set-url origin git@github.com:FabioLeitao/data-boar.git
+git remote set-url origin git@github.com:DataBoar/data-boar.git
 
 # Or with HTTPS:
-# git remote set-url origin https://github.com/FabioLeitao/data-boar.git
+# git remote set-url origin https://github.com/DataBoar/data-boar.git
 
 # Confirm
 git remote -v

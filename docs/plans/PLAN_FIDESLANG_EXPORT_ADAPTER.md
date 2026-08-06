@@ -8,8 +8,8 @@
 **Authors:** Fabio Leitao
 **Priority:** H3 · **customer-pull** (slice **3 of 3** — hybrid #1071)
 **Tags:** interop, fideslang, export, catalog-tagging, taxonomy, IAB
-**GitHub evaluation:** [#1071](https://github.com/FabioLeitao/data-boar/issues/1071) (closed — hybrid approved)
-**GitHub implementation:** [#1076](https://github.com/FabioLeitao/data-boar/issues/1076)
+**GitHub evaluation:** [#1071](https://github.com/DataBoar/data-boar/issues/1071) (closed — hybrid approved)
+**GitHub implementation:** [#1076](https://github.com/DataBoar/data-boar/issues/1076)
 **SWOT:** closes **W-novo-1** (catalog-tagging output) when shipped
 **Depends on:** Internal taxonomy from [PLAN_NORM_TAG_HIERARCHY_AND_DATA_SUBJECT.md](PLAN_NORM_TAG_HIERARCHY_AND_DATA_SUBJECT.md) (slice 1 minimum); [PLAN_DATA_USE_AXIS.md](PLAN_DATA_USE_AXIS.md) optional for richer mapping
 
@@ -19,7 +19,7 @@
 
 ## Motivation
 
-**Evaluation [#1071](https://github.com/FabioLeitao/data-boar/issues/1071):** **Direction A** alone is **lossy** for BR tags (CPF → generic `user.government_id`). **Hybrid:** keep **full internal model** (Direction B) and add **border adapter** (Direction A) — optional `data_category` (and related fields) in **export JSON/CSV only**, mapped from internal `norm_tag` / hierarchy.
+**Evaluation [#1071](https://github.com/DataBoar/data-boar/issues/1071):** **Direction A** alone is **lossy** for BR tags (CPF → generic `user.government_id`). **Hybrid:** keep **full internal model** (Direction B) and add **border adapter** (Direction A) — optional `data_category` (and related fields) in **export JSON/CSV only**, mapped from internal `norm_tag` / hierarchy.
 
 **Credibility:** Fideslang (Ethyca → **IAB Tech Lab**) is an industry taxonomy reference — emitting compatible fields helps customers with Fides-class governance stacks **without** adopting the ethyca-fides **platform**.
 

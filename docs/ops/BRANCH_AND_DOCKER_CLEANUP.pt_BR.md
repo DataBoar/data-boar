@@ -4,7 +4,7 @@
 
 **Objetivo:** Liberar espaço e reduzir ruído **sem** perder histórico que já está no `main`, e sem apagar trabalho não integrado. **Apagar uma branch não apaga commits** que já foram mergeados no `main` — eles permanecem no histórico. Só há risco para commits **exclusivos** no topo de uma branch **não mergeada**, se você apagá-la sem backup.
 
-**Repositórios:** O trabalho cotidiano é no **`FabioLeitao/data-boar`** (`origin`). O remote **`python3-lgpd-crawler-legacy-and-history-only`** é legado; trate as branches dele separadamente.
+**Repositórios:** O trabalho cotidiano é no **`DataBoar/data-boar`** (`origin`). O remote **`python3-lgpd-crawler-legacy-and-history-only`** é legado; trate as branches dele separadamente.
 
 ---
 
@@ -44,8 +44,8 @@ git branch -D nome-da-branch
 ## 2. GitHub (`data-boar`): branches remotas obsoletas
 
 ```powershell
-gh api repos/FabioLeitao/data-boar/branches --paginate -q ".[].name"
-gh pr list --repo FabioLeitao/data-boar --state open
+gh api repos/DataBoar/data-boar/branches --paginate -q ".[].name"
+gh pr list --repo DataBoar/data-boar --state open
 git fetch origin
 git log origin/main..origin/NOME-DA-BRANCH
 ```

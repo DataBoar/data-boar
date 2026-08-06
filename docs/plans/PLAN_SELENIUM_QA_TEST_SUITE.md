@@ -31,7 +31,7 @@ This plan adds a **Selenium-based test suite** that acts as **robots** to valida
 
 ## Current state
 
-- **Unit/integration tests:** [tests/](https://github.com/FabioLeitao/data-boar/tree/main/tests) use pytest; they hit the API with `TestClient` (no browser). No Selenium or Playwright in the project today.
+- **Unit/integration tests:** [tests/](https://github.com/DataBoar/data-boar/tree/main/tests) use pytest; they hit the API with `TestClient` (no browser). No Selenium or Playwright in the project today.
 - **Web app:** FastAPI app in [api/routes.py](../api/routes.py): GET /, /config, /reports, /help, /about; POST /scan, /start, /config; GET /status, /report, /heatmap, /list, /reports/{session_id}, /heatmap/{session_id}, /logs/{session_id}; PATCH /sessions/{session_id}, /sessions/{session_id}/technician; POST /scan_database. Report and heatmap downloads return FileResponse (Excel, PNG).
 - **Dependencies:** [pyproject.toml](../pyproject.toml) has no Selenium or browser-automation dependency. The plan will add an **optional** dependency group (e.g. `[qa]` or `[selenium]`) so the main install stays unchanged.
 

@@ -20,7 +20,7 @@ This document helps **students, advisors, and examiners** use the **public** Dat
 - **Open-core license (public tree):** [LICENSE](../LICENSE) — **BSD 3-Clause** (permissive; retain copyright notice and license text on redistribution — see the license file for exact conditions).
 - **Optional commercial enforcement** (runtime tokens) is specified in [LICENSING_SPEC.md](LICENSING_SPEC.md); **default** development and academic replication typically use **`open`** mode (no paid token required). See also [LICENSING_OPEN_CORE_AND_COMMERCIAL.md](LICENSING_OPEN_CORE_AND_COMMERCIAL.md) for the intended product boundary.
 - **How to cite the software** in a thesis (adapt to your institution’s style):
-- **Repository:** canonical Git URL (e.g. GitHub `FabioLeitao/data-boar` or successor), **commit hash** or **release tag**, and **date accessed**.
+- **Repository:** canonical Git URL (e.g. GitHub `DataBoar/data-boar` or successor), **commit hash** or **release tag**, and **date accessed**.
 - **Version:** match [VERSIONING.md](VERSIONING.md) / `pyproject.toml` when you freeze a reproduction baseline.
 - **License:** name **BSD 3-Clause** and point to the root **`LICENSE`** file (some programmes ask for a license appendix).
 

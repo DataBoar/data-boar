@@ -130,4 +130,4 @@ See [docs/README.md](../README.md) for the full documentation map.
 3. Record **rebrands** in a dedicated ADR (see [ADR 0014](ADR-0014-rename-repo-and-package-python3-lgpd-crawler-to-data-boar.md)).
 4. Use **four-digit** filenames and **English-only** ADR bodies.
 
-Tracking: GitHub [#994](https://github.com/FabioLeitao/data-boar/issues/994).
+Tracking: GitHub [#994](https://github.com/DataBoar/data-boar/issues/994).

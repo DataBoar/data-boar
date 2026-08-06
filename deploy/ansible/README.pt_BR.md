@@ -20,7 +20,7 @@ sudo apt install ansible          # Debian/Ubuntu
 ansible-galaxy collection install community.docker
 
 # Clone o repositório Data Boar
-git clone https://github.com/FabioLeitao/data-boar.git
+git clone https://github.com/DataBoar/data-boar.git
 cd data-boar/deploy/ansible
 
 # Crie o inventário

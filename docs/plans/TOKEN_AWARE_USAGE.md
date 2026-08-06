@@ -46,7 +46,7 @@ Summary:
 
 - **This repo (Data Boar):** Main compliance/LGPD artifact; Docker image `fabioleitao/data_boar`; Dockerfile in repo root.
 - **Docker Hub:** Public pages fetched for data_boar, wildfly_t1r, uptk (tags, sizes, links). Authoritative list: `docs/private/From Docker hub list of repositories.md`.
-- **GitHub:** FabioLeitao/data-boar, wf_t1r, and other public repos; profile and repo list in PORTFOLIO_AND_EVIDENCE_SOURCES.
+- **GitHub:** DataBoar/data-boar, wf_t1r, and other public repos; profile and repo list in PORTFOLIO_AND_EVIDENCE_SOURCES.
 - **Certifications / community:** LPIC-1 (101); Ubuntu tester/collaborator. Add others in PORTFOLIO_AND_EVIDENCE_SOURCES §3.
 - **CWL courses (paid, in progress):** Listed and prioritised in PORTFOLIO_AND_EVIDENCE_SOURCES §3.2 (from `docs/private/` images). **Study is your task;** use the recommended order there (BTF → C3SA → MCBTA → PTF → …) and slot fixed study blocks after Dependabot/Scout and one feature slice; one cert at a time for max value.
 - **Private docs (git-ignored):** CV, TCC, LinkedIn PDFs in `docs/private/`; reference by filename only.

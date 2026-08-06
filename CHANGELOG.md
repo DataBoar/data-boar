@@ -209,20 +209,20 @@ Empty while the working tree carries **`1.8.0-beta`** (see section below).
 
 ### Fixed (post3)
 
-- **Dependency security:** `soupsieve` **2.8.3 → 2.8.4** to remove findings for **CVE-2026-49476** and **CVE-2026-49477** ([#1177](https://github.com/FabioLeitao/data-boar/pull/1177)).
-- **SQL connector observability:** SQL sampling failures now surface in `scan_failures` (bundle includes [#1144](https://github.com/FabioLeitao/data-boar/pull/1144), issue [#1140](https://github.com/FabioLeitao/data-boar/issues/1140)).
-- **Archive observability:** encrypted/corrupt archive members now surface in `scan_failures` (bundle includes [#1146](https://github.com/FabioLeitao/data-boar/pull/1146), issue [#828](https://github.com/FabioLeitao/data-boar/issues/828)).
+- **Dependency security:** `soupsieve` **2.8.3 → 2.8.4** to remove findings for **CVE-2026-49476** and **CVE-2026-49477** ([#1177](https://github.com/DataBoar/data-boar/pull/1177)).
+- **SQL connector observability:** SQL sampling failures now surface in `scan_failures` (bundle includes [#1144](https://github.com/DataBoar/data-boar/pull/1144), issue [#1140](https://github.com/DataBoar/data-boar/issues/1140)).
+- **Archive observability:** encrypted/corrupt archive members now surface in `scan_failures` (bundle includes [#1146](https://github.com/DataBoar/data-boar/pull/1146), issue [#828](https://github.com/DataBoar/data-boar/issues/828)).
 
 ### Changed (post3)
 
-- **Onboarding docs (`pipx`):** RHEL9-family (`python3.12`) and Alpine/musl (toolchain prerequisites) edge cases documented ([#1175](https://github.com/FabioLeitao/data-boar/pull/1175)).
-- **Contributor command docs:** canonical `uv export --frozen --no-emit-project -o requirements.txt` guidance applied in EN/pt-BR ([#1179](https://github.com/FabioLeitao/data-boar/pull/1179), issue [#1176](https://github.com/FabioLeitao/data-boar/issues/1176)).
+- **Onboarding docs (`pipx`):** RHEL9-family (`python3.12`) and Alpine/musl (toolchain prerequisites) edge cases documented ([#1175](https://github.com/DataBoar/data-boar/pull/1175)).
+- **Contributor command docs:** canonical `uv export --frozen --no-emit-project -o requirements.txt` guidance applied in EN/pt-BR ([#1179](https://github.com/DataBoar/data-boar/pull/1179), issue [#1176](https://github.com/DataBoar/data-boar/issues/1176)).
 
 ---
 
 ## 1.7.4 (2026-06-26)
 
-> **Stable GA** on the **`1.7.4` line** — release gate **#406** closed with Maestro Deep 5-host completão evidence ([#1021](https://github.com/FabioLeitao/data-boar/issues/1021)). **#970** was a **premature** stable bump/tag **without** the gate — corrected by **ADR-0072**; **`1.7.4` is not VOID**. Public version **`1.7.4`**; **`[tool.databoar] maturity_build = 201`** (side-channel per **ADR-0073** — #976, #977).
+> **Stable GA** on the **`1.7.4` line** — release gate **#406** closed with Maestro Deep 5-host completão evidence ([#1021](https://github.com/DataBoar/data-boar/issues/1021)). **#970** was a **premature** stable bump/tag **without** the gate — corrected by **ADR-0072**; **`1.7.4` is not VOID**. Public version **`1.7.4`**; **`[tool.databoar] maturity_build = 201`** (side-channel per **ADR-0073** — #976, #977).
 
 ### Added
 
@@ -299,14 +299,14 @@ Full release notes and Docker publish commands: **[docs/releases/1.7.4.md](docs/
 
 - **Dashboard auth (Phase 1a — WebAuthn JSON core):** Optional **`api.webauthn`** + **`DATA_BOAR_WEBAUTHN_TOKEN_SECRET`** — [ADR 0033](docs/adr/ADR-0033-webauthn-open-relying-party-json-endpoints.md), `tests/test_webauthn_rp.py`, **`scripts/smoke-webauthn-json.ps1`** + [SMOKE_WEBAUTHN_JSON.md](docs/ops/SMOKE_WEBAUTHN_JSON.md). Default **disabled**.
 - **Dashboard auth (Phase 1b — HTML session + CSRF minimal):** WebAuthn session + CSRF on gated routes — `tests/test_webauthn_html_gate.py`, `tests/test_html_csrf.py`.
-- **Dashboard RBAC (Phase 2 — GitHub [#86](https://github.com/FabioLeitao/data-boar/issues/86)):** Optional **`api.rbac.enabled`** — `tests/test_rbac.py`. **Phase 3** (enterprise SSO/OIDC) remains future work.
+- **Dashboard RBAC (Phase 2 — GitHub [#86](https://github.com/DataBoar/data-boar/issues/86)):** Optional **`api.rbac.enabled`** — `tests/test_rbac.py`. **Phase 3** (enterprise SSO/OIDC) remains future work.
 - **Filesystem “data soup” Tier 1 + stego hints:** **`SUPPORTED_EXTENSIONS`** + **`file_scan.scan_for_stego`** / CLI **`--scan-stego`**; import fix in **`connectors/filesystem_connector._read_text_sample`** for **`RICH_MEDIA_SCAN_EXTENSIONS`**.
 
 ## 1.7.1 (2026-04-21)
 
 - **Scope import (CSV):** `scripts/scope_import_csv.py` + `config/scope_import_csv.py` emit a YAML **`targets`** fragment from a canonical CSV for operator review and merge; see [USAGE.md](docs/USAGE.md#scope-import-from-csv-config-fragment), `deploy/scope_import.example.csv`, [docs/ops/SCOPE_IMPORT_QUICKSTART.md](docs/ops/SCOPE_IMPORT_QUICKSTART.md), [PLAN_SCOPE_IMPORT_FROM_EXPORTS.md](docs/plans/completed/PLAN_SCOPE_IMPORT_FROM_EXPORTS.md).
 - **Ops (maturity POC):** [docs/ops/SMOKE_MATURITY_ASSESSMENT_POC.md](docs/ops/SMOKE_MATURITY_ASSESSMENT_POC.md) (+ pt-BR) documents **autonomous** pytest smoke (`scripts/smoke-maturity-assessment-poc.ps1`) and **manual** browser/integrity steps for the **POC ready** checklist; indexed from [docs/ops/README.md](docs/ops/README.md).
-- **Dashboard (maturity POC):** `GET /{locale}/assessment` shows a **recent submissions** table (per **batch**, newest first) when the SQLite DB has stored answers; links reuse the post-submit summary URL and CSV export. Documented in [ADR 0032](docs/adr/ADR-0032-maturity-assessment-batch-history-sqlite.md). Per-tenant RBAC for this list remains **[#86](https://github.com/FabioLeitao/data-boar/issues/86)** follow-up.
+- **Dashboard (maturity POC):** `GET /{locale}/assessment` shows a **recent submissions** table (per **batch**, newest first) when the SQLite DB has stored answers; links reuse the post-submit summary URL and CSV export. Documented in [ADR 0032](docs/adr/ADR-0032-maturity-assessment-batch-history-sqlite.md). Per-tenant RBAC for this list remains **[#86](https://github.com/DataBoar/data-boar/issues/86)** follow-up.
 - **Licensing / maturity POC:** API tests assert **`licensing.mode: enforced`** + JWT **`dbtier`** (community vs pro) gates `/{locale}/assessment` (and export) consistent with YAML `effective_tier` override — see `tests/test_api_assessment_poc.py` (`test_assessment_enforced_jwt_dbtier_*`).
 
 ## 1.7.0 (2026-04-17)

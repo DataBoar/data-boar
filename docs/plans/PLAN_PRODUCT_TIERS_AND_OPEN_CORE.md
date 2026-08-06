@@ -246,7 +246,7 @@ Listed in priority order from a "partner trying to steal value" perspective:
 Off-band readonly review of open-source identity/federation stacks (e.g. Logto) against this plan and
 the repo state. **Does not add product work or dependencies** — craft notes for when Phases 1–2
 (JWT `dbtier` / `dbfeatures` + `LicenseGuard.check_feature()`) unblock SSO, multi-tenant, and
-Enterprise RBAC. EPIC [#865](https://github.com/FabioLeitao/data-boar/issues/865) (Plugin SDK)
+Enterprise RBAC. EPIC [#865](https://github.com/DataBoar/data-boar/issues/865) (Plugin SDK)
 remains the connector boundary reference.
 
 1. **OIDC/SAML via certified library** — never hand-roll federation handshake or token parsing;

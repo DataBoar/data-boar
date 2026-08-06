@@ -73,7 +73,7 @@ Confira a data **Atualizado em** e o histórico em git deste arquivo.
 
 ## 9. Contato
 
-Abra uma [issue no GitHub](https://github.com/FabioLeitao/data-boar/issues) para
+Abra uma [issue no GitHub](https://github.com/DataBoar/data-boar/issues) para
 perguntas gerais. Para licenciamento comercial, contate o mantenedor pelo GitHub.
 
 ---

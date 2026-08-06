@@ -6,7 +6,7 @@
 **Date:** 2026-07-15
 **Authors:** Fabio Leitao
 **Priority:** H1 / P2 security
-**GitHub:** [#1233](https://github.com/FabioLeitao/data-boar/issues/1233)
+**GitHub:** [#1233](https://github.com/DataBoar/data-boar/issues/1233)
 **Promotes:** Notes #2/#3 in [PLAN_COMPRESSED_FILES.md](completed/PLAN_COMPRESSED_FILES.md) (*Notes to remind later*)
 **Related:** #828 `scan_failures` taxonomy; per-member `max_inner_size` (unchanged)
 

@@ -110,7 +110,7 @@ Atualizaremos a data **Atualizado em** acima e registraremos a mudança no chang
 
 Para questões de privacidade sobre este projeto:
 
-- Abra uma [issue no GitHub](https://github.com/FabioLeitao/data-boar/issues) (preferível para perguntas gerais)
+- Abra uma [issue no GitHub](https://github.com/DataBoar/data-boar/issues) (preferível para perguntas gerais)
 - Para assuntos sensíveis, contate o mantenedor diretamente pelo e-mail indicado no perfil do GitHub
 
 ---
