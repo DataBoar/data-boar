@@ -20,7 +20,7 @@ Este documento ajuda **estudantes, orientadores e bancas** a usar a documentaç�
 - **Licença do open core (árvore pública):** [LICENSE](../LICENSE) — **BSD 3-Clause** (permissiva; em redistribuições, manter aviso de copyright e texto da licença — veja o arquivo para condições exatas).
 - **Enforcement comercial opcional** (tokens em runtime) está em [LICENSING_SPEC.md](LICENSING_SPEC.md) *(EN)*; em desenvolvimento e replicação acadêmica costuma usar-se o modo **`open`** (sem token pago). Veja também [LICENSING_OPEN_CORE_AND_COMMERCIAL.md](LICENSING_OPEN_CORE_AND_COMMERCIAL.md) *(EN)* para o desenho pretendido do produto.
 - **Como citar o software** na tese (adapta ao estilo da instituição):
-- **Repositório:** URL Git canônica (ex.: GitHub `FabioLeitao/data-boar` ou sucessor), **hash de commit** ou **tag de release**, e **data de acesso**.
+- **Repositório:** URL Git canônica (ex.: GitHub `DataBoar/data-boar` ou sucessor), **hash de commit** ou **tag de release**, e **data de acesso**.
 - **Versão:** alinha com [VERSIONING.pt_BR.md](VERSIONING.pt_BR.md) / `pyproject.toml` quando congelares uma linha de reprodução.
 - **Licença:** indica **BSD 3-Clause** e aponta para o arquivo **`LICENSE`** na raiz (alguns programas pedem anexo de licenças).
 

@@ -73,7 +73,7 @@ Check the `Last updated` date and the git history of this file.
 
 ## 9. Contact
 
-Open a [GitHub Issue](https://github.com/FabioLeitao/data-boar/issues) for
+Open a [GitHub Issue](https://github.com/DataBoar/data-boar/issues) for
 general questions. For commercial licensing enquiries, contact the maintainer via GitHub.
 
 ---

@@ -59,9 +59,9 @@ This complements **PR batching**: many **local** commits can still ship as **one
 - **When to batch:** End of a sprint — group related commits into **one PR** with a summary description, or **split** into two PRs if one slice is risky and another is docs-only.
 - **Merge strategy on GitHub:** **Merge commit** preserves per-commit history on `main`; **squash** collapses the PR to one commit — choose per team preference; this repo does not mandate one style in docs.
 
-### Large GitHub issues: keep PRs separable (example: [#86](https://github.com/FabioLeitao/data-boar/issues/86))
+### Large GitHub issues: keep PRs separable (example: [#86](https://github.com/DataBoar/data-boar/issues/86))
 
-**Recommendation:** Work that targets **[#86](https://github.com/FabioLeitao/data-boar/issues/86)** (dashboard **session** / **passwordless** / **RBAC** per [PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md](../plans/PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md)) should usually live in its **own branch and PR**. Avoid mixing it with unrelated dashboard slices (for example **maturity self-assessment** questionnaire features) in the same PR unless you **explicitly** want one combined review — smaller PRs are easier to revert and match the plan’s phased delivery.
+**Recommendation:** Work that targets **[#86](https://github.com/DataBoar/data-boar/issues/86)** (dashboard **session** / **passwordless** / **RBAC** per [PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md](../plans/PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md)) should usually live in its **own branch and PR**. Avoid mixing it with unrelated dashboard slices (for example **maturity self-assessment** questionnaire features) in the same PR unless you **explicitly** want one combined review — smaller PRs are easier to revert and match the plan’s phased delivery.
 
 ### Thin slices, priority bands, and when to ping the operator
 
@@ -124,10 +124,12 @@ $body = @"
 
 ## Which repository to use (data-boar only)
 
-- **`origin`** points to **FabioLeitao/data-boar** — this is the **only** repo you push to and open PRs in. All new work and branding live here.
+Note: the former GitHub path `FabioLeitao/data-boar` still redirects to the canonical `DataBoar/data-boar`.
+
+- **`origin`** points to **DataBoar/data-boar** — this is the **only** repo you push to and open PRs in. All new work and branding live here.
 - A **second remote** (optional), kept for **legacy history and fetch only** — often named with a `*-legacy-and-history-only` suffix pointing at the archived GitHub URL. Do **not** push to it; push is disabled so accidental pushes fail safely. Details: [BRANCH_AND_DOCKER_CLEANUP.md](BRANCH_AND_DOCKER_CLEANUP.md) §7.
 - When you open the PR in the browser (compare page or `gh pr create --web`), ensure:
-- **Base repository:** `FabioLeitao/data-boar`
+- **Base repository:** `DataBoar/data-boar`
 - **Base branch:** `main`
 - **Compare/head:** your branch (e.g. `2026-03-14-3i1y`) in **data-boar**
 - If GitHub suggests “you may need to fork,” it usually means the **base** dropdown is set to another repo (e.g. the old one). Change the base to **data-boar** and base branch to **main** so the PR is “same repo” and no fork is needed.

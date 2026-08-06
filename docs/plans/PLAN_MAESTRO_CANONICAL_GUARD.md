@@ -3,7 +3,7 @@
 <!-- plans-hub-summary: Fail-closed guard — canonical/maestro regent never align or WorkingTree overwrite; ephemeral refs under /tmp/databoar_bench. -->
 
 **Status:** In progress
-**Issue:** [#948](https://github.com/FabioLeitao/data-boar/issues/948)
+**Issue:** [#948](https://github.com/DataBoar/data-boar/issues/948)
 **ADR:** [ADR-0068](../adr/ADR-0068-primary-linux-dev-workstation-temporary.md) (amended)
 
 ## Goal

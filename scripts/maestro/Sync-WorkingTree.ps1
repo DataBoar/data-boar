@@ -189,7 +189,7 @@ if ($Ref -eq "WorkingTree") {
     # Novo Fluxo: Git Remote Fetch (Efêmero)
     # Remove stale origin if present from a previous ephemeral checkout (local or remote URL),
     # then re-add origin (per-node git_origin override or canonical GitHub) before fetching the ref.
-    $gitOrigin = "git@github.com:FabioLeitao/data-boar.git"
+    $gitOrigin = "git@github.com:DataBoar/data-boar.git"
     if ($Node.PSObject.Properties['git_origin'] -and $Node.git_origin) {
         $gitOrigin = $Node.git_origin
     }

@@ -4,7 +4,7 @@
 **Date:** 2026-06-09
 **Authors:** Fabio Leitao
 **Priority:** P1
-**GitHub:** [#801](https://github.com/FabioLeitao/data-boar/issues/801)
+**GitHub:** [#801](https://github.com/DataBoar/data-boar/issues/801)
 
 <!-- plans-hub-summary: proteção do clone canônico no Linux primary, pre-commit, check-all.sh, busca find/fd/plocate/git grep — temporário até Windows primary voltar -->
 <!-- plans-hub-related: docs/ops/PRIMARY_LINUX_WORKSTATION_PROTECTION.md, ADR-0068-primary-linux-dev-workstation-temporary.md, docs/ops/PRIMARY_WINDOWS_WORKSTATION_PROTECTION.md -->

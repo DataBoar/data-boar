@@ -46,7 +46,7 @@
     .\scripts\new-b2-verify.ps1 -TargetUserSegment contractorX
 #>
 param(
-    [string]$RepoUrl = "https://github.com/FabioLeitao/data-boar.git",
+    [string]$RepoUrl = "https://github.com/DataBoar/data-boar.git",
     [string]$TempCloneName = "data-boar-reaudit-short",
     [switch]$KeepClone,
     [switch]$RunCheckAll,

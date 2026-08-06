@@ -1,12 +1,12 @@
 # Plan: Additional detection techniques and false-negative reduction
 
-**Status:** Active (POC priorities 1–11 on `main`; v1.8.0 survey [#1056](https://github.com/FabioLeitao/data-boar/issues/1056) enriches this plan — do not archive)
+**Status:** Active (POC priorities 1–11 on `main`; v1.8.0 survey [#1056](https://github.com/DataBoar/data-boar/issues/1056) enriches this plan — do not archive)
 **Date:** 2026-03-15 (v1.8.0 wave: 2026-06-21)
 **Authors:** Fabio Leitao
 **Priority:** H2
 **Milestone:** v1.8.0 (survey slice)
-**GitHub:** [#1056](https://github.com/FabioLeitao/data-boar/issues/1056)
-**Depends on:** ADR-0043 · optional: [PLAN_YAML_PLUGIN_SYSTEM.md](PLAN_YAML_PLUGIN_SYSTEM.md) (Phase 1b / [#865](https://github.com/FabioLeitao/data-boar/issues/865) registrable validators)
+**GitHub:** [#1056](https://github.com/DataBoar/data-boar/issues/1056)
+**Depends on:** ADR-0043 · optional: [PLAN_YAML_PLUGIN_SYSTEM.md](PLAN_YAML_PLUGIN_SYSTEM.md) (Phase 1b / [#865](https://github.com/DataBoar/data-boar/issues/865) registrable validators)
 
 <!-- plans-hub-summary: POC priorities 1-11 on main; v1.8.0 #1056 adds entity taxonomy, country checksum gates, span-alignment, plugin validators; priorities 5-7 NER/dictionaries still backlog. -->
 <!-- plans-hub-related: PLAN_EXTENDED_SENSITIVE_DISCOVERY_POSITIONING.md, PLAN_YAML_PLUGIN_SYSTEM.md, PLAN_SYNTHETIC_DATA_AND_CONFIDENCE_VALIDATION.md -->
@@ -206,7 +206,7 @@ All new dependencies should be **optional** (extras in pyproject.toml, e.g. `[de
 
 ---
 
-## v1.8.0 wave — competitive survey entity taxonomy ([#1056](https://github.com/FabioLeitao/data-boar/issues/1056))
+## v1.8.0 wave — competitive survey entity taxonomy ([#1056](https://github.com/DataBoar/data-boar/issues/1056))
 
 **Driver:** Landscape survey (private competitive dossier, 2026-06). **Docs-first** in this PR; implementation follows in thin code PRs with the same compliance-sample discipline as existing `docs/compliance-samples/compliance-sample-*.yaml` packs.
 
@@ -221,7 +221,7 @@ All new dependencies should be **optional** (extras in pyproject.toml, e.g. `[de
 | D3 | Built-in or override entity-types: SWIFT/BIC, IBAN, VIN, MAC, CVV/expiry (separate from PAN), AWS access/secret key shapes, PIN — distinct `pattern` names in `DEFAULT_PATTERNS` / overrides | ⬜ Pending |
 | D4 | Country checksum validators: UK NHS (final-digit checksum); CA SIN (Luhn) — **format matches but DV fails → suppress** (same contract as CPF Mod-11 in `core/brazilian_cpf.py`) | ⬜ Pending |
 | D5 | Span-alignment post-process in `boar_fast_filter` (Rust): multi-token entities (e.g. compound names) emit as one contiguous span | ⬜ Pending |
-| D6 | Registrable checksum/validator hooks via Plugin SDK ([#865](https://github.com/FabioLeitao/data-boar/issues/865)) + `plugin_schema` extension (coordinate with `PLANS_TODO` **S4b**) | ⬜ Pending |
+| D6 | Registrable checksum/validator hooks via Plugin SDK ([#865](https://github.com/DataBoar/data-boar/issues/865)) + `plugin_schema` extension (coordinate with `PLANS_TODO` **S4b**) | ⬜ Pending |
 | D7 | `docs/SENSITIVITY_DETECTION.md` FP-scope note for new digit-heavy patterns; tests + `check-all` | ⬜ Pending |
 
 ### Entity-types to distinguish (today generic or absent)
@@ -245,7 +245,7 @@ Follow the **CPF Mod-11** precedent documented in [SENSITIVITY_DETECTION.md](../
 | Identifier | Gate | Reference pattern |
 | ---------- | ---- | ----------------- |
 | **BR CPF** | Modulo-11 | `core/brazilian_cpf.py` (`cpf_checksum_valid`) — shipped for lab/contracts; wire into detector path in implementation slice |
-| **UK NHS number** | Checksum on final digit | Compliance-sample row + registrable validator ([#865](https://github.com/FabioLeitao/data-boar/issues/865)) |
+| **UK NHS number** | Checksum on final digit | Compliance-sample row + registrable validator ([#865](https://github.com/DataBoar/data-boar/issues/865)) |
 | **CA SIN** | Luhn | Extend [compliance-sample-pipeda.yaml](../compliance-samples/compliance-sample-pipeda.yaml) `SIN_CA` with validator gate (shape already present; Luhn reduces FP on random 9-digit runs) |
 
 ### Span-alignment (multi-token entities)
@@ -265,16 +265,16 @@ Follow the **CPF Mod-11** precedent documented in [SENSITIVITY_DETECTION.md](../
 ### Revisit (completed plans — survey notes only)
 
 - [PLAN_SENSITIVE_CATEGORIES_ML_DL.md](completed/PLAN_SENSITIVE_CATEGORIES_ML_DL.md): optional taxonomy enrichment when entity-types above ship (ML/DL terms for `FINANCIAL_ID`, `VEHICLE_ID`, `NETWORK_ID` buckets) — **no reopen** unless operator promotes a new slice.
-- [PLAN_CONTENT_TYPE_AND_CLOAKING_DETECTION.md](completed/PLAN_CONTENT_TYPE_AND_CLOAKING_DETECTION.md): hidden metadata (EXIF GPS = location), steg hints, anti-cloaking via pHash/bHash ([#884](https://github.com/FabioLeitao/data-boar/issues/884)) — **evaluate separately** from #1056; addendum only unless operator reopens.
+- [PLAN_CONTENT_TYPE_AND_CLOAKING_DETECTION.md](completed/PLAN_CONTENT_TYPE_AND_CLOAKING_DETECTION.md): hidden metadata (EXIF GPS = location), steg hints, anti-cloaking via pHash/bHash ([#884](https://github.com/DataBoar/data-boar/issues/884)) — **evaluate separately** from #1056; addendum only unless operator reopens.
 
-### External research — destination as risk (sink context) — [#1066](https://github.com/FabioLeitao/data-boar/issues/1066)
+### External research — destination as risk (sink context) — [#1066](https://github.com/DataBoar/data-boar/issues/1066)
 
 Off-band readonly review (Privado-style SAST data-flow) **confirms a known gap**, not a new priority:
 
 - Today `sensitivity_level` reflects **data category** from content/column analysis (`core/detector.py`), not **where** the data sits (e.g. unencrypted log vs database column with ACL).
 - Competitors in the **shift-left** category score **sink / destination** exposure; Data Boar is **shift-right** (production, legacy, shadow data code scans miss).
 - **Complementary axis** — a mature buyer may want both; **no finding schema change** in this note. A future implementation slice (orthogonal `exposure_band` or report-only derivation from connector + path heuristics) would be a **separate issue** if promoted.
-- RoPA-by-evidence priority is already tracked in [#837](https://github.com/FabioLeitao/data-boar/issues/837) (auditor reinforcement via issue comment — not duplicated here).
+- RoPA-by-evidence priority is already tracked in [#837](https://github.com/DataBoar/data-boar/issues/837) (auditor reinforcement via issue comment — not duplicated here).
 
 ---
 

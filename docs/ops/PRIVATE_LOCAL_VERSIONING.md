@@ -13,7 +13,7 @@
 - Nothing under that path is committed when you work in the product repo.
 - A **nested** **`.git`** directory inside **`docs/private/`** is also ignored by the parent repo (same ignore rule). It becomes a **separate Git repository** whose history stays **local** (or on **your** backup remote), not on `origin` of this project.
 
-You still get a **single workspace** in Cursor: **`data-boar/`** (clone of **FabioLeitao/data-boar**) with **`docs/private/`** inside it—only **two** Git histories if you choose to init the inner repo.
+You still get a **single workspace** in Cursor: **`data-boar/`** (clone of **DataBoar/data-boar**) with **`docs/private/`** inside it—only **two** Git histories if you choose to init the inner repo.
 
 ---
 

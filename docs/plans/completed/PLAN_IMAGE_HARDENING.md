@@ -6,8 +6,8 @@
 **Date:** 2026-06-27
 **Authors:** Fabio Leitao (operator); draft RO vault + execução Cursor
 **Priority:** H1
-**GitHub:** [#1028](https://github.com/FabioLeitao/data-boar/issues/1028) `[P2][build][security]`
-**Related:** [#856](https://github.com/FabioLeitao/data-boar/issues/856) (integrity/trust) · [PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md](../PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md) · [ADR-0074](../adr/ADR-0074-supply-chain-layer1-digest-pins-and-rust-sca.md) (digest pins) · release machinery [#75](https://github.com/FabioLeitao/data-boar/issues/75)
+**GitHub:** [#1028](https://github.com/DataBoar/data-boar/issues/1028) `[P2][build][security]`
+**Related:** [#856](https://github.com/DataBoar/data-boar/issues/856) (integrity/trust) · [PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md](../PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md) · [ADR-0074](../adr/ADR-0074-supply-chain-layer1-digest-pins-and-rust-sca.md) (digest pins) · release machinery [#75](https://github.com/DataBoar/data-boar/issues/75)
 
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md)
 
@@ -17,7 +17,7 @@
 
 GA release image scan (**grype**, release-ritual v2, **1.7.4**, 2026-06-26) reported **~10 Critical + ~25 High** — **zero** with an available fix. Noise comes from **`python:3.13-slim`** (Debian 13) base packages (`perl-base`, `libc6`, `libmariadb3`, `ncurses`, `util-linux`, …). None is application code; none is actionable under `--only-fixed`. The product ships to partners (weAi/Futurex) as a **compliance/security** tool — base Criticals hurt optics even when not exploitable in our threat model.
 
-**Evidence (operator-local):** grype log from release-ritual **1.7.4** scan (2026-06-26); path stays on the operator workstation — see issue [#1028](https://github.com/FabioLeitao/data-boar/issues/1028).
+**Evidence (operator-local):** grype log from release-ritual **1.7.4** scan (2026-06-26); path stays on the operator workstation — see issue [#1028](https://github.com/DataBoar/data-boar/issues/1028).
 
 | Severity | Total (approx.) | With fix (`FIXED IN`) |
 | -------- | ---------------: | --------------------- |

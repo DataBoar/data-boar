@@ -6,7 +6,7 @@
 **Priority:** H1
 **Tags:** extensibility, plugin, yaml, schema, patterns, ADR-0052
 **Depends on:** ADR-0052
-**GitHub:** [#865](https://github.com/FabioLeitao/data-boar/issues/865) (Boar Plugin SDK — formal contract; complements YAML schema phases here)
+**GitHub:** [#865](https://github.com/DataBoar/data-boar/issues/865) (Boar Plugin SDK — formal contract; complements YAML schema phases here)
 
 <!-- plans-hub-summary: Centralized YAML schema + validator for operator pattern plugins; unified patterns_plugin_file; Phase 1b (context gates, PCI) queued as S4b. -->
 <!-- plans-hub-related: PLAN_ADDITIONAL_DETECTION_TECHNIQUES_AND_FN_REDUCTION.md -->
@@ -41,7 +41,7 @@ Allow operators to add custom discovery patterns without modifying the Data Boar
 - **Follow-up — ML/DL backfill (defaults + samples):** align built-in `DEFAULT_ML_TERMS` / DL prototype paths with **compliance-sample-*.yaml** vocabulary (geo and sector terms); add optional `dl_patterns:` blocks in samples when operators need embedding parity — thin slices, no big-bang.
 - **Follow-up — U.S. retail + health samples:** optional new files mirroring the **LGPD** export model (core `DEFAULT_*` stays canonical): e.g. `compliance-sample-us_ca_cpra.yaml` (CCPA as amended / CPRA inventory framing) and `compliance-sample-us_hipaa_phi.yaml` (PHI-oriented patterns and terms) for counsel-tuned overrides.
 
-### Future research — declarative policy format ([#865](https://github.com/FabioLeitao/data-boar/issues/865) / [#1066](https://github.com/FabioLeitao/data-boar/issues/1066))
+### Future research — declarative policy format ([#865](https://github.com/DataBoar/data-boar/issues/865) / [#1066](https://github.com/DataBoar/data-boar/issues/1066))
 
 If the Plugin SDK later needs **operator-authored gates** without Python plugins (e.g. “severity G3 in a column named `log` blocks merge”), [json-logic](https://github.com/jwadhams/json-logic-py) is a **reference format** for lightweight, auditable rules — more approachable than regex-only expressions, safer than `eval()`. **No dependency or implementation** until a concrete requirement appears in a future phase.
 

@@ -11,7 +11,7 @@
 
 ## Purpose
 
-**[#512](https://github.com/FabioLeitao/data-boar/issues/512)** coordinates **P0/P1** hygiene: closing or superseding issues without losing **traceability** in the **same** repository that ships the product.
+**[#512](https://github.com/DataBoar/data-boar/issues/512)** coordinates **P0/P1** hygiene: closing or superseding issues without losing **traceability** in the **same** repository that ships the product.
 
 **Problem:** `PLANS_TODO.md` mirrors execution order, and **`PLANS_HUB.md`** indexes every **`PLAN_*.md`**. Work that exists **only** in issues or chat is **not** indexed—collaborators and future sessions cannot treat it as a **committed** plan.
 

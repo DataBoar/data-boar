@@ -28,4 +28,4 @@ Consulte a tabela em [SMOKE_WEBAUTHN_JSON.md](SMOKE_WEBAUTHN_JSON.md) (mesmos te
 
 1. Defina **`api.webauthn.enabled: true`**, **`api.webauthn.origin`** / **`rp_id`** alinhados à origem HTTPS, e **`DATA_BOAR_WEBAUTHN_TOKEN_SECRET`** antes de **`main.py --web`**.
 1. Use um **front-end** mínimo ou devtools para exercitar WebAuthn contra os endpoints JSON; veja [USAGE.md](../USAGE.pt_BR.md) e [SECURE_DASHBOARD_AUTH_AND_HTTPS_HOWTO.pt_BR.md](SECURE_DASHBOARD_AUTH_AND_HTTPS_HOWTO.pt_BR.md).
-1. O **HTML do painel** **ainda não** exige login por este cookie até a fase **1b+** do **[#86](https://github.com/FabioLeitao/data-boar/issues/86)**.
+1. O **HTML do painel** **ainda não** exige login por este cookie até a fase **1b+** do **[#86](https://github.com/DataBoar/data-boar/issues/86)**.

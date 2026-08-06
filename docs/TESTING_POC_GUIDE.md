@@ -15,7 +15,7 @@ interpret and document findings.
 
 ```bash
 # 1. Clone and set up
-git clone https://github.com/FabioLeitao/data-boar.git
+git clone https://github.com/DataBoar/data-boar.git
 cd data-boar
 
 # 2. Install dependencies
@@ -333,7 +333,7 @@ docker run --rm hello-world
 
 ```bash
 # Inside Ubuntu WSL terminal
-git clone https://github.com/FabioLeitao/data-boar.git
+git clone https://github.com/DataBoar/data-boar.git
 cd data-boar
 pip install uv
 uv sync

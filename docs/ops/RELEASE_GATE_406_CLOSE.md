@@ -1,6 +1,6 @@
 # Release gate #406 — close evidence (1.7.4 GA)
 
-**Gate issue:** [GitHub #406](https://github.com/FabioLeitao/data-boar/issues/406)
+**Gate issue:** [GitHub #406](https://github.com/DataBoar/data-boar/issues/406)
 
 **Close train:** PR **#1024** (`release/1.7.4`)
 
@@ -14,7 +14,7 @@
 | --- | --- |
 | **Finding parity** | A/B benchmark 2026-05-13: v1.7.3 vs v1.7.4-rc — **26 findings each**, zero regression |
 | **No regression in CI** | `check-all` green on release branch; ratio 0.955x on 10-file corpus (above Safe-Hold 0.574x — small corpus, not threshold breach) |
-| **Maestro / completão (5 hosts)** | [#1021](https://github.com/FabioLeitao/data-boar/issues/1021) / PR #1022 — Maestro Deep 5-host gate: **4 SUMMARY passes**, idempotency match, DB oracle live |
+| **Maestro / completão (5 hosts)** | [#1021](https://github.com/DataBoar/data-boar/issues/1021) / PR #1022 — Maestro Deep 5-host gate: **4 SUMMARY passes**, idempotency match, DB oracle live |
 | **ADR-0073 ratified** | Accepted in release train; public **`1.7.4`** + `[tool.databoar] maturity_build = 201` |
 | **Version bump authorized** | Stable **`1.7.4`** in `pyproject.toml` (FASE 2–3 commits) |
 

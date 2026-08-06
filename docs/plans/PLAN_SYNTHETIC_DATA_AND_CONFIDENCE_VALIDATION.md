@@ -136,7 +136,7 @@ Ground truth: for each fixture (file, table/column, API response), a **manifest*
 
 ---
 
-## Far horizon (H3/H4) — federated calibration research ([#1067](https://github.com/FabioLeitao/data-boar/issues/1067))
+## Far horizon (H3/H4) — federated calibration research ([#1067](https://github.com/DataBoar/data-boar/issues/1067))
 
 Off-band readonly review of privacy-preserving ML stacks (e.g. OpenMined/PySyft). **Pattern registration only** — **no roadmap commitment**, no new dependencies, no FL/DP code.
 

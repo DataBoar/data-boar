@@ -7,7 +7,7 @@
 **Authors:** Fabio Leitao
 **Priority:** H1
 
-**GitHub:** [#601](https://github.com/FabioLeitao/data-boar/issues/601) · [#606](https://github.com/FabioLeitao/data-boar/issues/606) · [#649](https://github.com/DataBoar/data-boar/issues/649) · [#1057](https://github.com/FabioLeitao/data-boar/issues/1057) (v1.8.x anonymizer / policy enrichment)
+**GitHub:** [#601](https://github.com/DataBoar/data-boar/issues/601) · [#606](https://github.com/DataBoar/data-boar/issues/606) · [#649](https://github.com/DataBoar/data-boar/issues/649) · [#1057](https://github.com/DataBoar/data-boar/issues/1057) (v1.8.x anonymizer / policy enrichment)
 
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md)
 

@@ -6,7 +6,7 @@
 **Date:** 2026-06-09
 **Authors:** Fabio Leitao
 **Priority:** P0
-**GitHub:** [#803](https://github.com/FabioLeitao/data-boar/issues/803)
+**GitHub:** [#803](https://github.com/DataBoar/data-boar/issues/803)
 **Related ADR:** [ADR 0045](../adr/ADR-0045-adr-metadata-and-format-standardization.md)
 
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md)
@@ -92,4 +92,4 @@ a constitution, not an essay.
 - [ADR 0045](../adr/ADR-0045-adr-metadata-and-format-standardization.md)
 - [ADR 0056](../adr/ADR-0056-cryptographic-adr-inventory-inv-adr-ssh-attestation.md)
 - **ADR 0068** (temporary primary Linux workstation — edge-case context; may land via #801)
-- GitHub [#803](https://github.com/FabioLeitao/data-boar/issues/803)
+- GitHub [#803](https://github.com/DataBoar/data-boar/issues/803)

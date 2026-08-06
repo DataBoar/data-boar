@@ -149,7 +149,7 @@ Ver `**docs/private.example/homelab/lab-op-hosts.manifest.example.json`** para c
 
 ## Nós com hardware limitado (LAB-NODE-04, LAB-NODE-03 Void, Alpine/musl; Kubernetes adiado)
 
-- **Host Alpine Linux / musl (eMachines E527 — 5º host, [#821](https://github.com/FabioLeitao/data-boar/issues/821)):** Celeron 900, 3,8 GB RAM. Libc musl exige pacotes compilados para musl (`apk add` — não `apt`/`dnf`). Pontos críticos para completão:
+- **Host Alpine Linux / musl (eMachines E527 — 5º host, [#821](https://github.com/DataBoar/data-boar/issues/821)):** Celeron 900, 3,8 GB RAM. Libc musl exige pacotes compilados para musl (`apk add` — não `apt`/`dnf`). Pontos críticos para completão:
   - Wheels Python com extensões C podem exigir **wheels compatíveis com musl** ou compilação a partir do código-fonte — defina `completaoSkipEngineImport: true` no manifesto e valide via contêiner ou caminho passivo até confirmar o import nativo do motor.
   - CPU lenta: se o smoke script atingir o prazo de `HealthTimeoutSec`, **aumente o timeout** para este host via campo do manifesto `completaoHealthTimeoutSec` ou passando `--health-timeout N` ao smoke script. Comece com **60 s** e reduza somente após uma corrida bem-sucedida.
   - Pacotes `apk` padrão: `python3`, `py3-pip`, `docker`, `openssh`.

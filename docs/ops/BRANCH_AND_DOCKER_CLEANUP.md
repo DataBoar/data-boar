@@ -4,7 +4,7 @@
 
 **Purpose:** Free disk space and reduce clutter **without** losing Git history that is already on `main`, and without deleting work that is not merged. **Deleting a branch does not delete commits** that were merged into `main`—those commits remain in history. **Unmerged** branch tips are the only commits at risk if you delete a branch without merging or without pushing a backup ref.
 
-**Repositories:** Day-to-day work targets **`FabioLeitao/data-boar`** (`origin`). The **`python3-lgpd-crawler-legacy-and-history-only`** remote is legacy; treat its branches separately (do not mix cleanup policies).
+**Repositories:** Day-to-day work targets **`DataBoar/data-boar`** (`origin`). The **`python3-lgpd-crawler-legacy-and-history-only`** remote is legacy; treat its branches separately (do not mix cleanup policies).
 
 ---
 
@@ -70,13 +70,13 @@ git pull origin main
 **List branches on the remote** (requires GitHub CLI `gh auth login`):
 
 ```powershell
-gh api repos/FabioLeitao/data-boar/branches --paginate -q ".[].name"
+gh api repos/DataBoar/data-boar/branches --paginate -q ".[].name"
 ```
 
 **Open PRs** (do not delete branches that still have open PRs until PR is closed/merged):
 
 ```powershell
-gh pr list --repo FabioLeitao/data-boar --state open
+gh pr list --repo DataBoar/data-boar --state open
 ```
 
 **Check whether a remote branch is fully merged into `main`** (no unique commits):
@@ -172,7 +172,7 @@ docker builder prune -af
 
 ## 7. Legacy remote only (`python3-lgpd-crawler-legacy-and-history-only`)
 
-**Backlog / non-blocking.** Day-to-day work and pushes belong to **`FabioLeitao/data-boar`** (`origin`). The extra remote ([REMOTES_AND_ORIGIN.md](REMOTES_AND_ORIGIN.md)) points at an **archived** GitHub repository URL (fetch-only, `pushurl = no-push`).
+**Backlog / non-blocking.** Day-to-day work and pushes belong to **`DataBoar/data-boar`** (`origin`). The extra remote ([REMOTES_AND_ORIGIN.md](REMOTES_AND_ORIGIN.md)) points at an **archived** GitHub repository URL (fetch-only, `pushurl = no-push`).
 
 ### Tidy-up goals
 

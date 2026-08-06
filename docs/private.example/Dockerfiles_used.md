@@ -6,7 +6,7 @@
 
 | Image / context | Citable evidence |
 | ----- | ----- |
-| **data_boar** | [Dockerfile in data-boar repo](https://github.com/FabioLeitao/data-boar/blob/main/Dockerfile) |
+| **data_boar** | [Dockerfile in data-boar repo](https://github.com/DataBoar/data-boar/blob/main/Dockerfile) |
 | **wildfly_t1r** | [Dockerfile in wf_t1r repo](https://github.com/FabioLeitao/wf_t1r/blob/main/Dockerfile) |
 
 ## Private or unpublished

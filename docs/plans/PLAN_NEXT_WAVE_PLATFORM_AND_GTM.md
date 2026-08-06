@@ -41,7 +41,7 @@ Natural enterprise channel that complements **N2's** partner-friendly accelerato
 - **Buyer-facing narrative (generic, no vendor names):** [../use-cases/BACKUP_AND_DATA_PROTECTION_ESTATE_CRITICALITY.md](../use-cases/BACKUP_AND_DATA_PROTECTION_ESTATE_CRITICALITY.md) ([pt-BR](../use-cases/BACKUP_AND_DATA_PROTECTION_ESTATE_CRITICALITY.pt_BR.md)).
 - **Promotion gate:** stays a thesis until **repeatable revenue evidence** appears; only then promote a row in `PLANS_TODO.md` (*Partner / sector demand*) — do **not** add buyer-facing links into `docs/plans/`.
 
-### Complementary category — shift-left SAST (Privado-class) — [#1066](https://github.com/FabioLeitao/data-boar/issues/1066)
+### Complementary category — shift-left SAST (Privado-class) — [#1066](https://github.com/DataBoar/data-boar/issues/1066)
 
 **Shift-left** tools trace PII **through source code** (CI of the dev pipeline); Data Boar traces **where data already lives** (production, backups, shares, shadow imports). They are **adjacent, not substitutes**.
 

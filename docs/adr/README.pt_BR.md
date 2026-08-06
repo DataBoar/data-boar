@@ -130,4 +130,4 @@ O **data-boar** é a regência UMADR **canônica** ([ADR 0000](ADR-0000-project-
 3. Registrar **rebrands** em ADR dedicado (ver [ADR 0014](ADR-0014-rename-repo-and-package-python3-lgpd-crawler-to-data-boar.md)).
 4. Usar nomes com **quatro dígitos** e corpos de ADR **somente em inglês**.
 
-Acompanhamento: GitHub [#994](https://github.com/FabioLeitao/data-boar/issues/994).
+Acompanhamento: GitHub [#994](https://github.com/DataBoar/data-boar/issues/994).

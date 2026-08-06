@@ -31,7 +31,7 @@ This plan adds an **optional** mode, enabled by a **CLI flag** and/or **web dash
 ## Current state
 
 - **CLI:** [main.py](../main.py) uses argparse: `--config`, `--web`, `--port`, `--reset-data`, `--tenant`, `--technician`. No scan-mode flags today.
-- **API:** POST `/scan` and POST `/scan_database` accept optional body with `tenant` and `technician` ([ScanStartBody](https://github.com/FabioLeitao/data-boar/blob/main/api/routes.py)). No option for “validate crypto” or “audit controls”.
+- **API:** POST `/scan` and POST `/scan_database` accept optional body with `tenant` and `technician` ([ScanStartBody](https://github.com/DataBoar/data-boar/blob/main/api/routes.py)). No option for “validate crypto” or “audit controls”.
 - **Dashboard:** Scan is triggered from the dashboard; no checkbox for extra audit modes.
 - **Connectors:** Connections are made with existing drivers (SQLAlchemy, pymongo, redis, httpx, smbclient, etc.). TLS is often used (e.g. HTTPS, postgresql+psycopg2 over SSL) but the app does not currently **validate** minimum TLS version or cipher strength, nor report it per target.
 - **Data source versions plan:** [PLAN_DATA_SOURCE_VERSIONS_AND_HARDENING.md](PLAN_DATA_SOURCE_VERSIONS_AND_HARDENING.md) will add transport_security to the inventory; this plan **complements** it by adding an explicit **validation** step (strong crypto) and **control inference** (anonymisation hints), both optional and gated by a flag.
