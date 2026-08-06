@@ -98,7 +98,7 @@ Os títulos na tabela abaixo ficam em **inglês** (canônicos, iguais ao [README
 | 0075 | [Plugin authentication — file-based license vs Bearer](ADR-0075-plugin-auth-file-based-vs-bearer.md) | Proposto |
 | 0076 | [OPA/Rego as CI tier drift linter (not runtime)](ADR-0076-opa-rego-ci-tier-drift-linter-not-runtime.md) | Proposto |
 | 0077 | [Filesystem scan does not honor client `.gitignore`](ADR-0077-filesystem-scan-no-client-gitignore-by-design.md) | Aceito |
-| 0078 | [Multi-pattern regex: RegexSet before Vectorscan (benchmark gate; 2026-07-31 amend — RegexSet spike failed, cached Regex loop next)](ADR-0078-multi-pattern-regex-benchmark-gate-regexset-before-vectorscan.md) | Proposto |
+| 0078 | [Multi-pattern regex: RegexSet before Vectorscan (benchmark gate; #1415 amend — premissa falsa CLI/prefilter corrigida; spike RegexSet falhou; próximo = Regex cacheado; status Proposed)](ADR-0078-multi-pattern-regex-benchmark-gate-regexset-before-vectorscan.md) | Proposto |
 | 0079 | [Ecosystem engineering rigor canon (UMADR satellites)](ADR-0079-ecosystem-engineering-rigor-canon.md) | Proposto |
 | 0080 | [Local validation gate is inviolable: full check-all before any push or PR](ADR-0080-local-validation-gate-inviolable.md) | Proposto |
 | 0081 | [No silent ML confidence failures on single-class compliance profiles](ADR-0081-no-silent-ml-confidence-single-class-hardening.md) | Proposto |
