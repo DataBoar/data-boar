@@ -105,6 +105,7 @@ Canonical completeness of numbered ADR files is enforced for this table **and** 
 | 0082 | [Web exposure safe-by-default boundary controls](ADR-0082-web-exposure-safe-by-default-boundary-controls.md) | Proposed |
 | 0083 | [Rust regex stage: accept form B (findings superset)](ADR-0083-rust-regex-stage-superset-accept-form-b.md) | Accepted |
 | 0084 | [Native package: embed CPython by channel (Enterprise vs community)](ADR-0084-native-package-embedded-cpython-by-channel.md) | Accepted |
+| 0085 | [Install priority ladder (native-first when shipped; pipx today)](ADR-0085-install-priority-ladder.md) | Proposed |
 
 ## Related docs
 
