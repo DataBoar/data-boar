@@ -8,7 +8,7 @@
 **Authors:** Fabio Leitao
 **Priority:** H1
 
-**GitHub:** [#611](https://github.com/FabioLeitao/data-boar/issues/611) · depends on [#606](https://github.com/FabioLeitao/data-boar/issues/606) · epic [#865](https://github.com/FabioLeitao/data-boar/issues/865) (L2/L3) · follow-up [#1443](https://github.com/FabioLeitao/data-boar/issues/1443)
+**GitHub:** [#611](https://github.com/DataBoar/data-boar/issues/611) · depends on [#606](https://github.com/DataBoar/data-boar/issues/606) · epic [#865](https://github.com/DataBoar/data-boar/issues/865) (L2/L3) · follow-up [#1443](https://github.com/DataBoar/data-boar/issues/1443)
 
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md)
 
@@ -18,7 +18,7 @@
 
 ## Problem
 
-[#606](https://github.com/FabioLeitao/data-boar/issues/606) shipped `core/plugins/` (`RemediationPlugin`, loader, fail-graceful hook, Enterprise gate). Without a partner-facing SDK guide, third parties cannot build against the real contract — the hook exists but the ecosystem cannot grow.
+[#606](https://github.com/DataBoar/data-boar/issues/606) shipped `core/plugins/` (`RemediationPlugin`, loader, fail-graceful hook, Enterprise gate). Without a partner-facing SDK guide, third parties cannot build against the real contract — the hook exists but the ecosystem cannot grow.
 
 ---
 

@@ -6,8 +6,8 @@
 **Date:** 2026-06-27
 **Authors:** Fabio Leitao (operator); Cursor executor
 **Priority:** H1 (packaging / wide-install ICP)
-**GitHub:** [#1047](https://github.com/FabioLeitao/data-boar/issues/1047) `[P2][packaging]` · **Related:** [#1059](https://github.com/FabioLeitao/data-boar/issues/1059) (`[noavx]` / capability profiles; see [#929](https://github.com/FabioLeitao/data-boar/issues/929)) · **Container slice:** [#1400](https://github.com/DataBoar/data-boar/issues/1400) · [#1401](https://github.com/DataBoar/data-boar/issues/1401) · [#1399](https://github.com/DataBoar/data-boar/issues/1399) · [#1402](https://github.com/DataBoar/data-boar/issues/1402)
-**Related:** [ADR-0031](../adr/ADR-0031-pypi-packaging-hatchling-flat-layout.md) · [ADR-0073](../adr/ADR-0073-version-scheme-octet-maturity-and-roadmap.md) · [#1042](https://github.com/FabioLeitao/data-boar/issues/1042) (PyPI publish) · [CONTRIBUTING.md](../../CONTRIBUTING.md)
+**GitHub:** [#1047](https://github.com/DataBoar/data-boar/issues/1047) `[P2][packaging]` · **Related:** [#1059](https://github.com/DataBoar/data-boar/issues/1059) (`[noavx]` / capability profiles; see [#929](https://github.com/DataBoar/data-boar/issues/929)) · **Container slice:** [#1400](https://github.com/DataBoar/data-boar/issues/1400) · [#1401](https://github.com/DataBoar/data-boar/issues/1401) · [#1399](https://github.com/DataBoar/data-boar/issues/1399) · [#1402](https://github.com/DataBoar/data-boar/issues/1402)
+**Related:** [ADR-0031](../adr/ADR-0031-pypi-packaging-hatchling-flat-layout.md) · [ADR-0073](../adr/ADR-0073-version-scheme-octet-maturity-and-roadmap.md) · [#1042](https://github.com/DataBoar/data-boar/issues/1042) (PyPI publish) · [CONTRIBUTING.md](../../CONTRIBUTING.md)
 
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md)
 

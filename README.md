@@ -38,7 +38,7 @@ Multilingual and legacy encodings are supported; **configurable timeouts** and *
 
 **Typical scenarios:** Preparing for an audit or regulator request; mapping data before a migration or DLP rollout; raising compliance awareness without a full war room; supporting data privacy consultants as the technical evidence layer in LGPD adequacy engagements.
 
-> **Current release & changelog:** [CHANGELOG.md](CHANGELOG.md) · full notes under [docs/releases/](docs/releases/) · [GitHub Releases](https://github.com/FabioLeitao/data-boar/releases). **Docker Hub:** [fabioleitao/data_boar](https://hub.docker.com/r/fabioleitao/data_boar) (`latest` + pinned tags).
+> **Current release & changelog:** [CHANGELOG.md](CHANGELOG.md) · full notes under [docs/releases/](docs/releases/) · [GitHub Releases](https://github.com/DataBoar/data-boar/releases). **Docker Hub:** [fabioleitao/data_boar](https://hub.docker.com/r/fabioleitao/data_boar) (`latest` + pinned tags).
 
 ---
 
@@ -75,7 +75,7 @@ Data Boar runs as a **one-shot CLI** audit or as a **REST API** (default port 80
 | Compliance frameworks, samples, legal summary (DPOs, procurement) | [COMPLIANCE_FRAMEWORKS.md](docs/COMPLIANCE_FRAMEWORKS.md) · [COMPLIANCE_AND_LEGAL.md](docs/COMPLIANCE_AND_LEGAL.md) · [compliance-samples/](docs/compliance-samples/) ([frameworks index](docs/COMPLIANCE_FRAMEWORKS.md#compliance-samples)) |
 | Compliance methodology (verification modules, ROPA-style automation priorities) | [COMPLIANCE_METHODOLOGY.md](docs/COMPLIANCE_METHODOLOGY.md) · [pt-BR](docs/COMPLIANCE_METHODOLOGY.pt_BR.md) |
 | Reports and compliance outputs (XLSX, heatmap, audit JSON, maturity export; PDF roadmap) | [REPORTS_AND_COMPLIANCE_OUTPUTS.md](docs/REPORTS_AND_COMPLIANCE_OUTPUTS.md) · [pt-BR](docs/REPORTS_AND_COMPLIANCE_OUTPUTS.pt_BR.md) |
-| Product direction and release cadence                             | [docs/releases/](docs/releases/) · [GitHub Releases](https://github.com/FabioLeitao/data-boar/releases)                                                                                                                                      |
+| Product direction and release cadence                             | [docs/releases/](docs/releases/) · [GitHub Releases](https://github.com/DataBoar/data-boar/releases)                                                                                                                                      |
 | Install, run, CLI/API reference, connectors, deploy               | [Technical guide (EN)](docs/TECH_GUIDE.md) · [Guia técnico (pt-BR)](docs/TECH_GUIDE.pt_BR.md)                                                                                                                                                |
 | Configuration schema, credentials, examples                       | [USAGE.md](docs/USAGE.md) · [USAGE.pt_BR.md](docs/USAGE.pt_BR.md)                                                                                                                                                                            |
 | Deploy (Docker, Compose, Kubernetes)                              | [deploy/DEPLOY.md](docs/deploy/DEPLOY.md) · [deploy/DEPLOY.pt_BR.md](docs/deploy/DEPLOY.pt_BR.md)                                                                                                                                            |

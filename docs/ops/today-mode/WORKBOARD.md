@@ -14,7 +14,7 @@
 | Plan index/map | [../../plans/PLANS_HUB.md](../../plans/PLANS_HUB.md) | Fast lookup of `PLAN_*.md` files |
 | Sprint and milestones view | [../../plans/SPRINTS_AND_MILESTONES.md](../../plans/SPRINTS_AND_MILESTONES.md) | Theme-level sequencing and milestone semantics |
 | Carryover queue (rolling) | [CARRYOVER.md](CARRYOVER.md) | Open items crossing days/blocks |
-| WRB follow-up (token window) | [GitHub issue #189](https://github.com/FabioLeitao/data-boar/issues/189) | Resume external review cycle now that tokens are available |
+| WRB follow-up (token window) | [GitHub issue #189](https://github.com/DataBoar/data-boar/issues/189) | Resume external review cycle now that tokens are available |
 | Dated execution checklist | [README.md](README.md) + `OPERATOR_TODAY_MODE_YYYY-MM-DD.md` | Daily focus and closure flow |
 | Publish alignment | [PUBLISHED_SYNC.md](PUBLISHED_SYNC.md) | Repo version vs GitHub Release vs Docker Hub |
 | Private rhythm/reminders | `docs/private/TODAY_MODE_CARRYOVER_AND_FOUNDER_RHYTHM.md` | Operator-only reminders and cadence |

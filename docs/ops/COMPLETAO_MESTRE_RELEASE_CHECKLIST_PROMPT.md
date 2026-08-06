@@ -144,7 +144,7 @@ Priorize a integridade do Windows dev workstation; ele é sua base de comando. S
 
 ## Release 1.7.4 final — README checklist (migrated from README, #945)
 
-Moved out of the landing `README.md` (audience: evaluator / CISO, not internal release process — see #945). **Do not** tick these until release gate **[#406](https://github.com/FabioLeitao/data-boar/issues/406)** completes and **`1.7.4`** final is published ([issue #425](https://github.com/FabioLeitao/data-boar/issues/425)).
+Moved out of the landing `README.md` (audience: evaluator / CISO, not internal release process — see #945). **Do not** tick these until release gate **[#406](https://github.com/DataBoar/data-boar/issues/406)** completes and **`1.7.4`** final is published ([issue #425](https://github.com/DataBoar/data-boar/issues/425)).
 
 - [ ] **Current release** banner: **1.7.3** → **1.7.4**
 - [ ] **Docker Hub:** confirm **`fabioleitao/data_boar:1.7.4`** and consumer **`latest`** moved per **[VERSIONING.md](../VERSIONING.md)** / **[DOCKER_IMAGE_RELEASE_ORDER.md](DOCKER_IMAGE_RELEASE_ORDER.md)**

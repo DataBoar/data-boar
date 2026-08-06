@@ -9,7 +9,7 @@ Obrigado por considerar contribuir. Este documento cobre a configuração local,
 ## Repositório e identidade de instalação (Data Boar)
 
 - **Produto e marca:** **Data Boar** — use esse nome em texto, issues e títulos de PR.
-- **Repositório upstream:** **[github.com/FabioLeitao/data-boar](https://github.com/FabioLeitao/data-boar)** — faça fork ou clone a partir daí (troque pelo seu fork se aplicável).
+- **Repositório upstream:** **[github.com/DataBoar/data-boar](https://github.com/DataBoar/data-boar)** — faça fork ou clone a partir daí (troque pelo seu fork se aplicável).
 - **Nome da distribuição PyPI:** o `pyproject.toml` declara **`name = "data-boar"`**. Quando houver publicação no índice de pacotes Python, a instalação será:
 
   ```bash
@@ -55,7 +55,7 @@ Instalações via PyPI expõem **dois** entry points de console de **mesmo níve
 1. **Clone e entre no repositório**
 
    ```bash
-   git clone https://github.com/FabioLeitao/data-boar.git
+   git clone https://github.com/DataBoar/data-boar.git
    cd data-boar
    ```
 

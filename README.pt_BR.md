@@ -36,7 +36,7 @@ Idiomas e encodings legados são suportados; **timeouts configuráveis** e **end
 
 **Cenários típicos:** Preparação para auditoria ou pedido do regulador; mapeamento de dados antes de migração ou implantação de DLP; conscientização de conformidade sem war room completo.
 
-> **Release atual e changelog:** [CHANGELOG.md](CHANGELOG.md) · notas completas em [docs/releases/](docs/releases/) · [Releases no GitHub](https://github.com/FabioLeitao/data-boar/releases). **Docker Hub:** [fabioleitao/data_boar](https://hub.docker.com/r/fabioleitao/data_boar) (`latest` + tags fixas).
+> **Release atual e changelog:** [CHANGELOG.md](CHANGELOG.md) · notas completas em [docs/releases/](docs/releases/) · [Releases no GitHub](https://github.com/DataBoar/data-boar/releases). **Docker Hub:** [fabioleitao/data_boar](https://hub.docker.com/r/fabioleitao/data_boar) (`latest` + tags fixas).
 
 ---
 
@@ -73,7 +73,7 @@ Se você precisa de:
 - **Frameworks de conformidade, amostras, resumo jurídico (DPOs, compras):** [COMPLIANCE_FRAMEWORKS.pt_BR.md](docs/COMPLIANCE_FRAMEWORKS.pt_BR.md) · [COMPLIANCE_AND_LEGAL.pt_BR.md](docs/COMPLIANCE_AND_LEGAL.pt_BR.md) · [compliance-samples/](docs/compliance-samples/) ([índice de amostras](docs/COMPLIANCE_FRAMEWORKS.pt_BR.md#amostras-de-conformidade))
 - **Metodologia de compliance (módulos de verificação, prioridades estilo ROPA):** [COMPLIANCE_METHODOLOGY.pt_BR.md](docs/COMPLIANCE_METHODOLOGY.pt_BR.md) · [EN](docs/COMPLIANCE_METHODOLOGY.md)
 - **Relatórios e saídas de compliance (XLSX, heatmap, JSON de auditoria, export de maturidade; roadmap PDF):** [REPORTS_AND_COMPLIANCE_OUTPUTS.pt_BR.md](docs/REPORTS_AND_COMPLIANCE_OUTPUTS.pt_BR.md) · [EN](docs/REPORTS_AND_COMPLIANCE_OUTPUTS.md)
-- **Direção do produto e cadência de releases:** [docs/releases/](docs/releases/) · [GitHub Releases](https://github.com/FabioLeitao/data-boar/releases)
+- **Direção do produto e cadência de releases:** [docs/releases/](docs/releases/) · [GitHub Releases](https://github.com/DataBoar/data-boar/releases)
 - **Instalação, execução, referência CLI/API, conectores, deploy:** [Guia técnico (pt-BR)](docs/TECH_GUIDE.pt_BR.md) · [Technical guide (EN)](docs/TECH_GUIDE.md)
 - **Esquema de configuração, credenciais, exemplos:** [USAGE.pt_BR.md](docs/USAGE.pt_BR.md) · [USAGE.md](docs/USAGE.md)
 - **Deploy (Docker, Compose, Kubernetes):** [deploy/DEPLOY.pt_BR.md](docs/deploy/DEPLOY.pt_BR.md) · [deploy/DEPLOY.md](docs/deploy/DEPLOY.md)

@@ -101,7 +101,7 @@ Write-Host "Mirror backup: $mirrorPath"
 # Prune or delete those branches on GitHub, then git fetch --prune locally.
 
 if ($Push) {
-    $originUrl = "https://github.com/FabioLeitao/data-boar.git"
+    $originUrl = "https://github.com/DataBoar/data-boar.git"
     Write-Host "Pushing to $originUrl (force)..." -ForegroundColor Yellow
     Push-Location $workPath
     try {

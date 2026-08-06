@@ -4,7 +4,7 @@
 **Date:** 2026-06-03
 **Authors:** Fabio Leitao
 **Priority:** H1
-**GitHub:** [#786](https://github.com/FabioLeitao/data-boar/issues/786)
+**GitHub:** [#786](https://github.com/DataBoar/data-boar/issues/786)
 
 <!-- plans-hub-summary: portabilização do Maestro para orquestrador Linux (wsl.exe→bash nativo, podman fallback, git_origin no inventory) -->
 <!-- plans-hub-related: PLAN_MAESTRO_BENCHMARK_METRICS_AND_FIX.md, docs/ops/LAB_COMPLETAO_RUNBOOK.md -->
@@ -36,7 +36,7 @@ Nodes that cannot reach GitHub directly (e.g. air-gapped lab, LAN-only fetch) ma
 }
 ```
 
-When absent, Ref-fetch keeps the canonical default: `git@github.com:FabioLeitao/data-boar.git`.
+When absent, Ref-fetch keeps the canonical default: `git@github.com:DataBoar/data-boar.git`.
 
 ## Implementation checklist
 

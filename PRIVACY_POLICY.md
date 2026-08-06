@@ -113,7 +113,7 @@ in the repository changelog.
 
 For privacy-related questions about this project:
 
-- Open a [GitHub Issue](https://github.com/FabioLeitao/data-boar/issues) (preferred for general questions)
+- Open a [GitHub Issue](https://github.com/DataBoar/data-boar/issues) (preferred for general questions)
 - For sensitive matters, contact the maintainer directly via the email on their GitHub profile
 
 ---

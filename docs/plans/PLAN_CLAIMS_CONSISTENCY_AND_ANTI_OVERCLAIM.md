@@ -4,7 +4,7 @@
 **Date:** 2026-06-16
 **Authors:** Fabio Leitao
 **Priority:** H1
-**GitHub:** [#894](https://github.com/FabioLeitao/data-boar/issues/894)
+**GitHub:** [#894](https://github.com/DataBoar/data-boar/issues/894)
 
 <!-- plans-hub-summary: gate determinístico offline anti-overclaim — invariante connector↔tier (build-time do #854) + manifesto docs/CLAIMS.yml com backed_by verificável; contraparte light do auditor on-demand claim-audit (lab-op) -->
 <!-- plans-hub-related: PLAN_CONNECTOR_TIER_GATING.md, PLAN_PRODUCT_TIERS_AND_OPEN_CORE.md -->

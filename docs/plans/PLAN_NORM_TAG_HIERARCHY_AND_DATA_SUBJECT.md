@@ -8,10 +8,10 @@
 **Authors:** Fabio Leitao
 **Priority:** H2 · candidate **v1.9.0** (slice **1 of 3** — hybrid #1071)
 **Tags:** detection, taxonomy, norm_tag, hierarchy, data-subject, LGPD, BR-vocabulary
-**GitHub evaluation:** [#1071](https://github.com/FabioLeitao/data-boar/issues/1071) (closed — hybrid approved)
-**GitHub audit (titular gap):** [#1069](https://github.com/FabioLeitao/data-boar/issues/1069) (closed)
-**GitHub implementation:** [#1074](https://github.com/FabioLeitao/data-boar/issues/1074)
-**Supersedes narrow track:** [#1072](https://github.com/FabioLeitao/data-boar/issues/1072) + [PLAN_SUBJECT_CATEGORY_AXIS.md](PLAN_SUBJECT_CATEGORY_AXIS.md) (Bearer-only subject mapping absorbed here)
+**GitHub evaluation:** [#1071](https://github.com/DataBoar/data-boar/issues/1071) (closed — hybrid approved)
+**GitHub audit (titular gap):** [#1069](https://github.com/DataBoar/data-boar/issues/1069) (closed)
+**GitHub implementation:** [#1074](https://github.com/DataBoar/data-boar/issues/1074)
+**Supersedes narrow track:** [#1072](https://github.com/DataBoar/data-boar/issues/1072) + [PLAN_SUBJECT_CATEGORY_AXIS.md](PLAN_SUBJECT_CATEGORY_AXIS.md) (Bearer-only subject mapping absorbed here)
 
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md), [PLAN_TAXONOMY_AXES.md](PLAN_TAXONOMY_AXES.md)
 
@@ -19,7 +19,7 @@
 
 ## Motivation
 
-**Evaluation [#1071](https://github.com/FabioLeitao/data-boar/issues/1071)** (RO-verified, not re-done here): Data Boar’s **BR/LGPD vocabulary** (CPF, CNPJ, NIS/PIS, PEP, Mod-11 checks) **exceeds** generic industry taxonomies. **Hybrid decision:** internal model (**Direction B**) preserves depth; Fideslang interop stays **export-only** (slice 3).
+**Evaluation [#1071](https://github.com/DataBoar/data-boar/issues/1071)** (RO-verified, not re-done here): Data Boar’s **BR/LGPD vocabulary** (CPF, CNPJ, NIS/PIS, PEP, Mod-11 checks) **exceeds** generic industry taxonomies. **Hybrid decision:** internal model (**Direction B**) preserves depth; Fideslang interop stays **export-only** (slice 3).
 
 **Slice 1** delivers the **highest-value** gap closure from **#1069**: optional **Data-Subject** axis (employee / customer / patient / minor / …) **plus** **hierarchical `norm_tag`** (parent category → subcategory with inheritance), without lossy collapse of BR-specific tags.
 

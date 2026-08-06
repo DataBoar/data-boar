@@ -11,7 +11,7 @@
 
 ## Purpose
 
-**[#483](https://github.com/FabioLeitao/data-boar/issues/483)** (P1) tracks **decisions** about **public** contact surfaces: which **mailbox** or **alias** appears on **`SECURITY.md`**, **`CODE_OF_CONDUCT.md`**, **`CONTRIBUTING.md`**, and related **operator-facing** stubs—especially when an operator-owned **domain** or **DNS** alias is introduced.
+**[#483](https://github.com/DataBoar/data-boar/issues/483)** (P1) tracks **decisions** about **public** contact surfaces: which **mailbox** or **alias** appears on **`SECURITY.md`**, **`CODE_OF_CONDUCT.md`**, **`CONTRIBUTING.md`**, and related **operator-facing** stubs—especially when an operator-owned **domain** or **DNS** alias is introduced.
 
 This plan **does not** record real addresses or registrar data in the **tracked** motivation text; the maintainer keeps canonical values in the actual policy files after the decision.
 

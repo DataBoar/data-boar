@@ -13,7 +13,7 @@
 - Nada dali entra no commit quando você trabalha no repo do produto.
 - Um diretório **`.git` aninhado** dentro de **`docs/private/`** também fica fora do Git pai (mesma regra de ignore). Vira um **repositório Git separado**, com histórico **local** (ou no **seu** remoto de backup), não no `origin` deste projeto.
 
-No Cursor você continua com **um workspace** só: **`data-boar/`** (clone de **FabioLeitao/data-boar**) com **`docs/private/`** dentro—são **dois** históricos Git **só se** você fizer `git init` na pasta privada.
+No Cursor você continua com **um workspace** só: **`data-boar/`** (clone de **DataBoar/data-boar**) com **`docs/private/`** dentro—são **dois** históricos Git **só se** você fizer `git init` na pasta privada.
 
 ---
 

@@ -9,7 +9,7 @@ Thank you for considering contributing. This document covers local setup, workfl
 ## Repository and install identity (Data Boar)
 
 - **Product and brand:** **Data Boar** — use this name in prose, issues, and PR titles.
-- **Upstream repository:** **[github.com/FabioLeitao/data-boar](https://github.com/FabioLeitao/data-boar)** — fork or clone from there (replace `YOUR_FORK` if you use a fork).
+- **Upstream repository:** **[github.com/DataBoar/data-boar](https://github.com/DataBoar/data-boar)** — fork or clone from there (replace `YOUR_FORK` if you use a fork).
 - **PyPI distribution name:** `pyproject.toml` declares **`name = "data-boar"`**. When published to the Python Package Index, installs will use:
 
   ```bash
@@ -55,7 +55,7 @@ PyPI installs expose two **first-class** console entry points (same package, sam
 1. **Clone and enter the repo**
 
    ```bash
-   git clone https://github.com/FabioLeitao/data-boar.git
+   git clone https://github.com/DataBoar/data-boar.git
    cd data-boar
    ```
 

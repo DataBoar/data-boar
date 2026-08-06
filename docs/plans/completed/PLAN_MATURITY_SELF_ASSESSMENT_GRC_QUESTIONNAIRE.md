@@ -15,7 +15,7 @@
 
 ### POC ready — minimum checklist (definition of done)
 
-Use this list to declare the **maturity POC “ready”** for demos, beta notes, or a checkpoint before the **tier/JWT** slice and long before **[#86](https://github.com/FabioLeitao/data-boar/issues/86)**. All items are **verifiable**; none require production SSO, RBAC, or multi-tenant storage.
+Use this list to declare the **maturity POC “ready”** for demos, beta notes, or a checkpoint before the **tier/JWT** slice and long before **[#86](https://github.com/DataBoar/data-boar/issues/86)**. All items are **verifiable**; none require production SSO, RBAC, or multi-tenant storage.
 
 | # | Gate | How to verify |
 | --- | --- | --- |
@@ -25,7 +25,7 @@ Use this list to declare the **maturity POC “ready”** for demos, beta notes,
 | 4 | **Integrity (optional demo)** | Same runbook §E — **`DATA_BOAR_MATURITY_INTEGRITY_SECRET`** at submit time; **`GET /status`** and **`--export-audit-trail`** ([ADR 0015](../../adr/ADR-0015-poc-test-infrastructure-synthetic-corpus-and-api-testing.md) test posture). |
 | 5 | **Docs / ADR** | Operator-facing text in [USAGE.md](../USAGE.md) (+ pt-BR) for assessment + batch history; [ADR 0032](../../adr/ADR-0032-maturity-assessment-batch-history-sqlite.md) for history behaviour. |
 
-**Checkpoint closed:** run **`smoke-maturity-assessment-poc.ps1`** + complete runbook §D (and §E if you need integrity demo). Then proceed to **[#86](https://github.com/FabioLeitao/data-boar/issues/86)** on a dedicated branch; **return** to maturity (DOCX→YAML per tenant, consultant UX) when packaging or customer needs require it — see § *Next steps* below.
+**Checkpoint closed:** run **`smoke-maturity-assessment-poc.ps1`** + complete runbook §D (and §E if you need integrity demo). Then proceed to **[#86](https://github.com/DataBoar/data-boar/issues/86)** on a dedicated branch; **return** to maturity (DOCX→YAML per tenant, consultant UX) when packaging or customer needs require it — see § *Next steps* below.
 
 ### POC ready — evidence levels (what agents vs operators sign off)
 
@@ -82,7 +82,7 @@ Use this table so **agents / CI** do not promise what only a **human operator** 
 
 | Step | Architecture | Intent |
 | --- | --- | --- |
-| **1** | **A** — Routes under **`/{locale}/…/assessment`** + optional YAML pack ✅; **SQLite persistence + answers** ✅; **optional HMAC row integrity** ✅ (`GET /status`, **`--export-audit-trail`**) | **First** in-app spike: single app, same audit story; align with RBAC [#86](https://github.com/FabioLeitao/data-boar/issues/86) later. |
+| **1** | **A** — Routes under **`/{locale}/…/assessment`** + optional YAML pack ✅; **SQLite persistence + answers** ✅; **optional HMAC row integrity** ✅ (`GET /status`, **`--export-audit-trail`**) | **First** in-app spike: single app, same audit story; align with RBAC [#86](https://github.com/DataBoar/data-boar/issues/86) later. |
 | **2** | **B** — Excel sheet + formula scoring | Fast tabular path; compare UX vs A for consultant workflows. |
 | **3** | **C** — Companion app + API/SSO | Separation / white-label; evaluate **after** A/B learnings. |
 | **4** | **D** — PDF/export-only narrative | Simplicity vs interactivity; last in the **comparison chain**, not “never”. |
@@ -96,7 +96,7 @@ Use this table so **agents / CI** do not promise what only a **human operator** 
 1. **[PLAN_PRODUCT_TIERS_AND_OPEN_CORE.md](../PLAN_PRODUCT_TIERS_AND_OPEN_CORE.md)** — **Technical enforcement roadmap:** only **Phase 0** is done (claims sketched in **LICENSING_SPEC**, JWT path exists). **Phases 1–6** ( **`dbtier` / `dbfeatures` in tokens**, `check_feature()`, gates in connectors/reports, Partner/Enterprise rules) are **not started** — depends on **legal review** and issuer work; promote when GRC/maturity and commercial packaging need real entitlements (not just `licensing.effective_tier` lab simulation).
 2. **[PLAN_PDF_GRC_REPORT.md](../PLAN_PDF_GRC_REPORT.md)** — **Different artefact:** PDF “em prosa” for **technical scan findings** (exec summary, priority matrix like a **cyber/GRC vulnerability-style** report). **Not** the org questionnaire; it complements technical evidence. Priority band **B** in that plan; still **planned** (Phases 1–2 unchecked).
 3. **[PLAN_SCOPE_IMPORT_FROM_EXPORTS.md](PLAN_SCOPE_IMPORT_FROM_EXPORTS.md)** — **After** maturity/DOCX is under control: bootstrap **customer asset inventory** from **exports** — **minimum** acceptable is a **manual CSV** (“everything the client remembers”: hosts, paths, tags) mapped to the **canonical schema** → merge-safe config fragments. Live ITSM APIs are **not** required for v1.
-4. **Dashboard RBAC — [GitHub #86](https://github.com/FabioLeitao/data-boar/issues/86)** (still **OPEN** as of plan updates): **Phase 1** = browser **session** + **Bitwarden Passwordless.dev** (minimum viable human auth) on the same **`/{locale}/…`** paths as i18n; then role/group gates for `/reports` and downloads per [PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md](../PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md). **Order (2026-04):** **M-LOCALE-V1** ✅ → **maturity POC “POC ready” closure** (smoke + manual runbook) → **#86 Phase 1** on a dedicated branch → **scope import** — adjust only if a **security exception** forces early guards (then budget a migration slice).
+4. **Dashboard RBAC — [GitHub #86](https://github.com/DataBoar/data-boar/issues/86)** (still **OPEN** as of plan updates): **Phase 1** = browser **session** + **Bitwarden Passwordless.dev** (minimum viable human auth) on the same **`/{locale}/…`** paths as i18n; then role/group gates for `/reports` and downloads per [PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md](../PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md). **Order (2026-04):** **M-LOCALE-V1** ✅ → **maturity POC “POC ready” closure** (smoke + manual runbook) → **#86 Phase 1** on a dedicated branch → **scope import** — adjust only if a **security exception** forces early guards (then budget a migration slice).
 
 ## Problem statement
 
@@ -151,7 +151,7 @@ Feasible: treat **question banks** and **weights** as data (like **compliance sa
 ## Next steps (ordered; POC-first)
 
 1. **POC A — done for persistence + integrity + rubric + download export + in-dashboard batch history:** SQLite + YAML pack (optional **`scores`**) + HMAC + `/status` + audit export ✅; **post-submit summary** on `GET /{locale}/assessment?saved=1&batch=…` (row count + rubric + HMAC counts for that batch) ✅; **recent submissions** table on `GET /{locale}/assessment` (per `batch_id`, newest first) ✅; **`GET /{locale}/assessment/export?batch=…&format=csv|md`** ✅; **tier/JWT** API tests ✅. **POC ready closure:** `scripts/smoke-maturity-assessment-poc.ps1` + [SMOKE_MATURITY_ASSESSMENT_POC.md](../../ops/SMOKE_MATURITY_ASSESSMENT_POC.md) manual §D (§E optional).
-2. **Product sequencing (2026-04):** After the smoke checkpoint, **prioritise [GitHub #86](https://github.com/FabioLeitao/data-boar/issues/86) Phase 1** (session + passwordless on `/{locale}/…`) on a **dedicated branch** — see [PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md](../PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md). **Revisit maturity POC** only when needed (DOCX→YAML curation for a **tenant**, export annex, consultant UX).
+2. **Product sequencing (2026-04):** After the smoke checkpoint, **prioritise [GitHub #86](https://github.com/DataBoar/data-boar/issues/86) Phase 1** (session + passwordless on `/{locale}/…`) on a **dedicated branch** — see [PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md](../PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md). **Revisit maturity POC** only when needed (DOCX→YAML curation for a **tenant**, export annex, consultant UX).
 3. **DOCX → YAML (private):** Curate sections/questions under **`docs/private/`**, then author YAML matching `core/maturity_assessment/pack.py` — **no** proprietary strings in public Git; promote when a **customer/tenant** pack is in scope (same workflow as § *DOCX → YAML workflow* above).
 4. Legal/commercial one-pager: positioning vs audit; consent for storing responses.
 5. **Architecture lock:** spike **A** remains default; revisit **C** only after A/B learnings — align with [PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md](../PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md) and API key / future SSO (#86).

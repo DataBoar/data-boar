@@ -5,7 +5,7 @@
 **Authors:** Fabio Leitao
 **Priority:** H1 U1
 **Depends on:** Stable config loader and CLI entry (`main.py`); optional alignment with scan run manifest / execution summary output
-**GitHub:** [#520](https://github.com/FabioLeitao/data-boar/issues/520) · [#521](https://github.com/FabioLeitao/data-boar/issues/521) · [#522](https://github.com/FabioLeitao/data-boar/issues/522) · **Related:** [#1061](https://github.com/FabioLeitao/data-boar/issues/1061) (DSAR tombstone / crypto attestation)
+**GitHub:** [#520](https://github.com/DataBoar/data-boar/issues/520) · [#521](https://github.com/DataBoar/data-boar/issues/521) · [#522](https://github.com/DataBoar/data-boar/issues/522) · **Related:** [#1061](https://github.com/DataBoar/data-boar/issues/1061) (DSAR tombstone / crypto attestation)
 
 <!-- plans-hub-summary: Operator CLI: validate YAML/config before scans, diff two scan sessions for regressions, and export DSAR-oriented evidence bundles (metadata-first) with documented limits—not legal advice. -->
 <!-- plans-hub-related: PLAN_SCAN_RUN_MANIFEST_AND_EXECUTION_SUMMARY.md, PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md -->
@@ -14,9 +14,9 @@
 
 GitHub tracks three related operator-facing capabilities:
 
-- **[#520](https://github.com/FabioLeitao/data-boar/issues/520)** — **`--validate-config`** (or equivalent): fail fast on invalid YAML, unknown keys where the product defines strictness, broken connector prerequisites, and other **pre-flight** checks **without** running a full scan.
-- **[#521](https://github.com/FabioLeitao/data-boar/issues/521)** — **`--diff`** (or equivalent): compare **two** saved scan sessions (SQLite paths or export bundles) and emit a **structured delta** (e.g. new/removed/changed findings counts, per-target drift) for regression triage and audit narration.
-- **[#522](https://github.com/FabioLeitao/data-boar/issues/522)** — **`--export-dsar`** (or equivalent): produce a **bounded** export package suitable for **data-subject / DSAR-style** handoff—**metadata and findings summaries** by default, with **explicit** opt-in for any raw samples, and clear documentation that the tool assists **technical inventory**, not legal determination of rights or exemptions.
+- **[#520](https://github.com/DataBoar/data-boar/issues/520)** — **`--validate-config`** (or equivalent): fail fast on invalid YAML, unknown keys where the product defines strictness, broken connector prerequisites, and other **pre-flight** checks **without** running a full scan.
+- **[#521](https://github.com/DataBoar/data-boar/issues/521)** — **`--diff`** (or equivalent): compare **two** saved scan sessions (SQLite paths or export bundles) and emit a **structured delta** (e.g. new/removed/changed findings counts, per-target drift) for regression triage and audit narration.
+- **[#522](https://github.com/DataBoar/data-boar/issues/522)** — **`--export-dsar`** (or equivalent): produce a **bounded** export package suitable for **data-subject / DSAR-style** handoff—**metadata and findings summaries** by default, with **explicit** opt-in for any raw samples, and clear documentation that the tool assists **technical inventory**, not legal determination of rights or exemptions.
 
 Together they close the gap between “I changed config / upgraded / rescoped targets” and “I can prove what changed in outcomes” for operators, DPOs, and security teams.
 

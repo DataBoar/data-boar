@@ -40,9 +40,9 @@ Isso complementa o **PR em lote**: muitos commits **locais** podem virar **um PR
 - **Quando agrupar:** fim de sprint — um PR com descrição resumindo o conjunto, ou **dois PRs** se uma fatia for arriscada e outra só documentação.
 - **Estratégia de merge no GitHub:** **merge commit** preserva commits no `main`; **squash** colapsa o PR em um commit — escolha conforme a equipe; o repositório não impõe um estilo só nestes docs.
 
-### Issues grandes no GitHub: manter PRs separáveis (ex.: [#86](https://github.com/FabioLeitao/data-boar/issues/86))
+### Issues grandes no GitHub: manter PRs separáveis (ex.: [#86](https://github.com/DataBoar/data-boar/issues/86))
 
-**Recomendação:** Trabalho que mira **[#86](https://github.com/FabioLeitao/data-boar/issues/86)** (**sessão** no painel / **passwordless** / **RBAC**, conforme [PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md](../plans/PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md)) costuma ficar melhor num **branch e PR próprios**. Evite misturar com outras fatias do dashboard (por exemplo funcionalidades do questionário de **maturity**) no mesmo PR, salvo se você **quiser de propósito** uma revisão única — PRs menores são mais fáceis de reverter e batem com a entrega em fases do plano.
+**Recomendação:** Trabalho que mira **[#86](https://github.com/DataBoar/data-boar/issues/86)** (**sessão** no painel / **passwordless** / **RBAC**, conforme [PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md](../plans/PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md)) costuma ficar melhor num **branch e PR próprios**. Evite misturar com outras fatias do dashboard (por exemplo funcionalidades do questionário de **maturity**) no mesmo PR, salvo se você **quiser de propósito** uma revisão única — PRs menores são mais fáceis de reverter e batem com a entrega em fases do plano.
 
 ### Fatias finas, faixas de prioridade e quando chamar o operador
 
@@ -105,10 +105,12 @@ O GitHub guarda títulos e descrições por muito tempo. Para alinhar com **LGPD
 
 ## Qual repositório usar (apenas data-boar)
 
-- **`origin`** aponta para **FabioLeitao/data-boar** — é o **único** repositório para onde você faz push e abre PRs. Todo o trabalho novo e a identidade do projeto ficam aqui.
+Nota: o path antigo do GitHub `FabioLeitao/data-boar` ainda redireciona para o canônico `DataBoar/data-boar`.
+
+- **`origin`** aponta para **DataBoar/data-boar** — é o **único** repositório para onde você faz push e abre PRs. Todo o trabalho novo e a identidade do projeto ficam aqui.
 - Um **segundo remote** (opcional), mantido só para **histórico legado e fetch** — costuma ter sufixo `*-legacy-and-history-only` apontando para o URL antigo no GitHub. **Não** faça push para ele; o push está desabilitado para evitar envios acidentais. Detalhes: [BRANCH_AND_DOCKER_CLEANUP.pt_BR.md](BRANCH_AND_DOCKER_CLEANUP.pt_BR.md) §7.
 - Ao abrir o PR no navegador (página de compare ou `gh pr create --web`), confira:
-- **Repositório base:** `FabioLeitao/data-boar`
+- **Repositório base:** `DataBoar/data-boar`
 - **Branch base:** `main`
 - **Comparar/head:** seu branch (ex.: `2026-03-14-3i1y`) em **data-boar**
 - Se o GitHub sugerir “you may need to fork”, em geral o **base** está em outro repositório (ex.: o antigo). Altere o base para **data-boar** e o branch base para **main** para que o PR seja “mesmo repositório” e nenhum fork seja necessário.

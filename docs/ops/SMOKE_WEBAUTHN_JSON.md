@@ -38,4 +38,4 @@ Full gate before merge remains **`.\scripts\check-all.ps1`** (not replaced by th
 
 1. Set **`api.webauthn.enabled: true`**, **`api.webauthn.origin`** / **`rp_id`** to match your HTTPS origin, and **`DATA_BOAR_WEBAUTHN_TOKEN_SECRET`** before **`main.py --web`**.
 1. Use a **small front-end** or devtools to run WebAuthn against the JSON endpoints; align with [USAGE.md](../USAGE.md) and [SECURE_DASHBOARD_AUTH_AND_HTTPS_HOWTO.md](SECURE_DASHBOARD_AUTH_AND_HTTPS_HOWTO.md).
-1. **HTML dashboard** is **not** gated by this cookie until **[#86](https://github.com/FabioLeitao/data-boar/issues/86)** Phase **1b+**.
+1. **HTML dashboard** is **not** gated by this cookie until **[#86](https://github.com/DataBoar/data-boar/issues/86)** Phase **1b+**.

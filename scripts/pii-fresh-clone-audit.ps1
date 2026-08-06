@@ -34,7 +34,7 @@
     .\scripts\pii-fresh-clone-audit.ps1 -KeepClone -IncludeTalentGuards
 #>
 param(
-    [string]$RepoUrl = "https://github.com/FabioLeitao/data-boar.git",
+    [string]$RepoUrl = "https://github.com/DataBoar/data-boar.git",
     [string]$TempCloneName = "",
     [switch]$KeepClone,
     [switch]$IncludeTalentGuards,

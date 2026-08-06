@@ -32,7 +32,7 @@ This plan adds a way for the app to **check for a stable new release** (GitHub),
 - **Wipe:** `--reset-data` wipes SQLite sessions/findings/failures and deletes report/heatmap files; **data_wipe_log** records reason and timestamp. Upgrade must **never** call wipe logic unless the user explicitly runs `--reset-data`.
 - **Config:** Loaded from YAML/JSON; paths for `regex_overrides_file`, `ml_patterns_file`, `dl_patterns_file`; config can contain credentials (see [PLAN_SECRETS_VAULT.md](PLAN_SECRETS_VAULT.md)).
 - **Deploy:** Docker Hub `fabioleitao/data_boar:latest` and version tags (e.g. `1.5.1`); Kubernetes uses same image. Upgrading in containers is “pull new image and replace container/pod”.
-- **Releases:** GitHub repo (e.g. FabioLeitao/data-boar); releases/tags and [GitHub Releases](https://github.com/FabioLeitao/data-boar/releases) page. Release notes in `docs/releases/*.md`.
+- **Releases:** GitHub repo (e.g. DataBoar/data-boar); releases/tags and [GitHub Releases](https://github.com/DataBoar/data-boar/releases) page. Release notes in `docs/releases/*.md`.
 
 ---
 
@@ -40,14 +40,14 @@ This plan adds a way for the app to **check for a stable new release** (GitHub),
 
 **Recommended scheme:** Use **GitHub Releases API** as the source of “stable” version.
 
-- **Endpoint:** `GET <https://api.github.com/repos/FabioLeitao/data-boar/releases/lates>t` (or a specific repo URL from config/env so forks can point to their own repo). Response includes `tag_name` (e.g. `v1.5.2` or `1.5.2`) and `body` (release notes).
-- **Alternative:** A well-known file in the repo (e.g. `VERSION` or `docs/STABLE_VERSION`) that contains the current stable version string; the app would fetch the raw file from the default branch (e.g. `<https://raw.githubusercontent.com/FabioLeitao/data-boar/main/VERSIO>N`). Prefer **Releases API** so we get tags and notes in one call.
+- **Endpoint:** `GET <https://api.github.com/repos/DataBoar/data-boar/releases/lates>t` (or a specific repo URL from config/env so forks can point to their own repo). Response includes `tag_name` (e.g. `v1.5.2` or `1.5.2`) and `body` (release notes).
+- **Alternative:** A well-known file in the repo (e.g. `VERSION` or `docs/STABLE_VERSION`) that contains the current stable version string; the app would fetch the raw file from the default branch (e.g. `<https://raw.githubusercontent.com/DataBoar/data-boar/main/VERSIO>N`). Prefer **Releases API** so we get tags and notes in one call.
 - **Version comparison:** Parse current (from `core/about.py`) and latest (from API or file) as `major.minor.build`; “newer” means strictly greater (no downgrade unless `--force`).
 - **Stability:** Consider only **latest** release as “stable” (GitHub “latest” release), or allow config to pin to a specific version channel (e.g. “only notify for 1.x”) in a later iteration.
 
 | #   | To-do                                                                                                                                                                                                                  | Status    |
 | --- | -----                                                                                                                                                                                                                  | ------    |
-| 1.1 | Define repo URL for version check (config or env, e.g. `upgrade.repo_url` or `GITHUB_REPO`; default FabioLeitao/data-boar).                                                                                            | ⬜ Pending |
+| 1.1 | Define repo URL for version check (config or env, e.g. `upgrade.repo_url` or `GITHUB_REPO`; default DataBoar/data-boar).                                                                                            | ⬜ Pending |
 | 1.2 | Implement version fetch: call GitHub Releases API (or fetch well-known file), parse latest tag/version, compare with current from `core/about.py`. Handle network errors and rate limits (cache result for N minutes). | ⬜ Pending |
 | 1.3 | Expose “current” and “latest” (if newer) and “release notes” (short excerpt, e.g. first 500 chars of body) for CLI and API.                                                                                            | ⬜ Pending |
 

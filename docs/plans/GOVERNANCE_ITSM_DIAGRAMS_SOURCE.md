@@ -5,7 +5,7 @@
 Diagramas originais para uso nos primers e pitches do repo.
 Wording próprio do produto. Inspiração conceitual: ISO/IEC 38500, COBIT 2019, ITIL 4, ISO/IEC 20000.
 
-**Related issues:** [#629](https://github.com/FabioLeitao/data-boar/issues/629) (IT governance frameworks primer), [#630](https://github.com/FabioLeitao/data-boar/issues/630) (ITSM frameworks primer), [#631](https://github.com/FabioLeitao/data-boar/issues/631) (pitch), [#632](https://github.com/FabioLeitao/data-boar/issues/632) (glossary).
+**Related issues:** [#629](https://github.com/DataBoar/data-boar/issues/629) (IT governance frameworks primer), [#630](https://github.com/DataBoar/data-boar/issues/630) (ITSM frameworks primer), [#631](https://github.com/DataBoar/data-boar/issues/631) (pitch), [#632](https://github.com/DataBoar/data-boar/issues/632) (glossary).
 
 **Site / static exports:** SVG and HTML widget copies live under operator-private `docs/private/ops/governance_diagrams/` (not on GitHub `origin`). Prefer Mermaid blocks below for tracked docs; use SVG on public site builds.
 

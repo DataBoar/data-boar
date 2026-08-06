@@ -8,7 +8,7 @@
 
 **Horizon / urgency:** `[H2]` / `[U2]` — after **Priority band A** and when multi-tenant / multi-user dashboard exposure is real, not before core scan stability.
 
-**GitHub:** [Issue #86](https://github.com/FabioLeitao/data-boar/issues/86) (feature request; migrated narrative from Redmine-reports context).
+**GitHub:** [Issue #86](https://github.com/DataBoar/data-boar/issues/86) (feature request; migrated narrative from Redmine-reports context).
 
 **Where to read this topic:** This file is the **single planning source** for dashboard **access control**, **RBAC**, and **identity sequencing** (passwordless WebAuthn first, enterprise **SSO/OIDC** later). Related operator runbooks: [SECURE_DASHBOARD_AUTH_AND_HTTPS_HOWTO.md](../ops/SECURE_DASHBOARD_AUTH_AND_HTTPS_HOWTO.md) (API key + TLS today), [PLAN_OPERATOR_API_KEY_FIRST_AUTH_UX.md](PLAN_OPERATOR_API_KEY_FIRST_AUTH_UX.md) (ergonomics spike).
 
@@ -73,7 +73,7 @@ See [SECURITY.md](../SECURITY.md), [USAGE.md](../USAGE.md), [TECH_GUIDE.md](../T
 | Limits | Challenge `state` is **in-memory** (single-worker); **one** registration while a credential row exists (**403** on second registration attempt) |
 | Tests + smoke | `tests/test_webauthn_rp.py`, `tests/test_webauthn_session_cookie.py`; operator pytest subset: [SMOKE_WEBAUTHN_JSON.md](../ops/SMOKE_WEBAUTHN_JSON.md) |
 
-**Explicitly not in 1a:** Gating **HTML** dashboard routes, **RBAC**, **CSRF** policy for locale-prefixed forms, **Bitwarden Passwordless.dev** adapter, **multi-worker** challenge store — HTML gate + form CSRF shipped in **1b** (minimal); **RBAC**, Bitwarden adapter, shared challenge store remain **Phase 2+** / [#86](https://github.com/FabioLeitao/data-boar/issues/86).
+**Explicitly not in 1a:** Gating **HTML** dashboard routes, **RBAC**, **CSRF** policy for locale-prefixed forms, **Bitwarden Passwordless.dev** adapter, **multi-worker** challenge store — HTML gate + form CSRF shipped in **1b** (minimal); **RBAC**, Bitwarden adapter, shared challenge store remain **Phase 2+** / [#86](https://github.com/DataBoar/data-boar/issues/86).
 
 ### Phase 0 (D-WEB) — documentation-only slice (no WebAuthn yet)
 
@@ -264,7 +264,7 @@ Details and anti-footgun rules: **PLAN_DASHBOARD_I18N.md** § *Meshing with dash
 | [SECURITY.md](../SECURITY.md), [USAGE.md](../USAGE.md)                           | Deployment and `api.require_api_key`.                                                | **Phase 0** of this plan extends those docs; no separate “security plan” file required.                                                                                                                                  |
 | [PLAN_OPERATOR_API_KEY_FIRST_AUTH_UX.md](PLAN_OPERATOR_API_KEY_FIRST_AUTH_UX.md) | Reducing JWT/manual-Bearer **toil** before RBAC complexity.                          | Exploratory spike: env + API key patterns for automation; **coordinate** if HTML flows need cookie/header UX (Phase 1 here).                                                                                             |
 
-**Why keep a dedicated plan file:** Issue [#86](https://github.com/FabioLeitao/data-boar/issues/86) is a **trackable product ask** with its own phases and completion checklist. Folding it only into i18n or licensing would hide it from the **GitHub issues queue** table in [PLANS_TODO.md](PLANS_TODO.md).
+**Why keep a dedicated plan file:** Issue [#86](https://github.com/DataBoar/data-boar/issues/86) is a **trackable product ask** with its own phases and completion checklist. Folding it only into i18n or licensing would hide it from the **GitHub issues queue** table in [PLANS_TODO.md](PLANS_TODO.md).
 
 ---
 
