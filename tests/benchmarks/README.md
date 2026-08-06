@@ -8,9 +8,6 @@ Regenerate only with intent — commit artifact and prose together.
 | `official_pro_v1` | `run_official_bench.py` | OpenCore Python vs Pro+ `ProcessPoolExecutor` + `process_chunk_worker` on 200k seeded rows; **speed + safe gate** (`benchmark_gate.py`) | Rust `filter_batch` hotspot; end-to-end scan |
 | `rust_prefilter_hotspot_v1` | `run_rust_prefilter_hotspot_bench.py` | `OpenCorePreFilter.filter_candidates` vs `FastFilter.filter_batch` on the same batch | Worker pool, ML/DL, connectors, Maestro gate (#1021) |
 | `filesystem_phase_breakdown_v1` | `run_filesystem_phase_breakdown_bench.py` | Walk/glob vs read sample vs detect on synthetic `.txt` tree (local disk) | SMB/NFS, PDF extraction, parallel walk decisions (#1080) |
-| `regex_stage_parity_v1` | Probe outside repo (2026-07-31); artifact pinned — no in-tree runner yet | Isolated detector-stage matching: Rust `Regex::is_match` loop vs Python `re.search` (~284 patterns, hit parity) | End-to-end CLI/filesystem scan; `filter_batch` / `rust_prefilter_hotspot_v1`; Vectorscan |
-
-**Anti-conflation (`regex_stage_parity_v1`):** The pinned **~2.66×** is **isolated** matching only. **Do not** compare it to `rust_prefilter_hotspot_v1` (~**4.69×**) — that measures `filter_batch` vs `filter_candidates` with **3** patterns on 200k rows. See ADR-0078 (#1415) and the `nota` field in `regex_stage_parity_bench.json`.
 
 ## Regenerate `rust_prefilter_hotspot_v1`
 
