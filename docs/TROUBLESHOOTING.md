@@ -118,15 +118,35 @@ Use this when **any** of the following apply:
 - **Pre-2011 x86 CPUs** where `import numpy` dies with **`Illegal instruction`** (Intel Core 2 / Celeron / Pentium class — `ssse3` only, no SSE4.2/POPCNT). The floor is **`x86-64-v1`**, not merely “no AVX”: PyPI wheels target **`x86-64-v2`** or higher; environment variables (`NPY_DISABLE_CPU_FEATURES`, `OPENBLAS_CORETYPE`) do **not** help because the crash is in **compiled baseline** code, not runtime dispatch ([#929](https://github.com/DataBoar/data-boar/issues/929)).
 - **Air-gapped** or egress-restricted installs that must resolve offline.
 
-**Hosted release (verified):** [wheelhouse-x86-64-v1-2026-07-29](https://github.com/DataBoar/data-boar-site/releases/tag/wheelhouse-x86-64-v1-2026-07-29) on `DataBoar/data-boar-site` — 41 wheels, `SHA256SUMS` attached. Full install/verification prose also ships in the release `README.md` asset.
+**Hosted release (verified):** [wheelhouse-x86-64-v1-2026-07-29](https://github.com/DataBoar/data-boar-site/releases/tag/wheelhouse-x86-64-v1-2026-07-29) on `DataBoar/data-boar-site` — **54** `.whl` assets, `SHA256SUMS` attached. Full install/verification prose also ships in the release `README.md` asset.
 
 **`boar_fast_filter` is not on PyPI.** The published `data-boar` wheel is `py3-none-any` with **zero** compiled extensions — every PyPI-only install uses the pure-Python pre-filter fallback. The wheelhouse is today the **only** distribution channel for the Rust accelerator (`cp38-abi3`, one wheel per libc).
+
+#### Remote index (--extra-index-url)
+
+A PEP 503 **`simple/`** index for the hosted wheelhouse ships from **`DataBoar/data-boar-site`** ([PR #21](https://github.com/DataBoar/data-boar-site/pull/21); product tracking [#1445](https://github.com/DataBoar/data-boar/issues/1445)). Canonical URL:
+
+`https://databoar.com.br/simple/`
+
+(`https://databoar.github.io/data-boar-site/simple/` redirects to the same apex path.)
+
+```bash
+# Resolve a wheelhouse package by normalized name (example: Rust accelerator)
+pip install --extra-index-url https://databoar.com.br/simple/ boar-fast-filter
+
+# After pipx installed data-boar — inject from the remote index
+pipx runpip data-boar install --extra-index-url https://databoar.com.br/simple/ boar-fast-filter
+```
+
+**Tie-breaker:** `--extra-index-url` **merges** candidates with PyPI; it does **not** prefer the wheelhouse. When both publish the **same version and platform tag** (e.g. numpy `2.5.1` manylinux/musllinux), pip may still install the **PyPI** wheel (x86-64-v2+ / SIGILL on min-spec hosts). For the ML stack on musl or **x86-64-v1**, keep the two-step `--force-reinstall` / `--no-index` contract in the next subsection (local folder or downloaded wheels). PEP 440 local versions (`+x86v1`) remain a separate #1182 remainder — the index alone does not close that gap.
+
+Regenerate the HTML tree in the **site** repo (`scripts/build-wheelhouse-index.py`) after each wheelhouse release. The product tree does **not** host a duplicate builder.
 
 #### `--find-links` adds an index; it does not prefer
 
 Filenames match PyPI (`numpy-2.5.1-cp312-cp312-musllinux_1_2_x86_64.whl`, etc.), so pip can still pick the **upstream** wheel on step 1. The install is **two forced steps** after download (plus accelerator inject):
 
-- `--find-links` accepts a **local directory**, a **direct URL to a `.whl`**, or an **HTML page of links** — **not** a GitHub **release** page. With ~40 wheels, download to a folder first.
+- `--find-links` accepts a **local directory**, a **direct URL to a `.whl`**, or an **HTML page of links** — **not** a GitHub **release** page. With ~50 wheels, download to a folder first (or use the [remote index](#remote-index---extra-index-url) for name resolution, then still force-reinstall the ML stack as below).
 
 ```bash
 TAG=wheelhouse-x86-64-v1-2026-07-29
