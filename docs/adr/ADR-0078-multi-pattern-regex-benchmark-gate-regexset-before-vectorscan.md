@@ -12,6 +12,7 @@ Proposed
 
 - 2026-06-30 — Proposed (research closure GitHub #1078)
 - 2026-07-31 — **Amended:** RegexSet spike on ~284 real patterns **failed** the performance gate (5.7× slower than a loop of cached `Regex`; default `size_limit` 10 MiB did not compile — needed ≥20 MiB). Next engineering step is **cached individual `Regex` + Python translator** per [PLAN_RUST_REGEX_STAGE.md](../plans/PLAN_RUST_REGEX_STAGE.md) / [#1414](https://github.com/DataBoar/data-boar/issues/1414) — not RegexSet as default. Vectorscan gate unchanged in spirit (see Decision).
+- 2026-08-06 — **#1415 withdrawn:** a proposed Context amend that called the batch-hot-path premise “false” (citing [#1411](https://github.com/DataBoar/data-boar/issues/1411)) is **RETIRADO** — that claim was born from a false #1411 narrative; Context below is restored to the pre-#1415 text. Status remains **Proposed**.
 
 ## Context
 
