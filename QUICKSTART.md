@@ -29,14 +29,18 @@ O Data Boar **não substitui** assessoria jurídica; produz **sinais técnicos**
 
 ---
 
-## Caminho 0 — Zero-config (recomendado no Windows após `pip install data-boar`)
+## Caminho 0 — Zero-config (`pip` / `pipx` + `--demo`)
 
-Sem `config.yaml`, sem Docker, sem YAML — corpus **sintético** embutido:
+> **Windows e nunca usou terminal/Python?** Use o guia completo **sem Docker** (passo a passo): **[docs/QUICKSTART_WINDOWS.md](docs/QUICKSTART_WINDOWS.md)**.
+
+Sem `config.yaml`, sem Docker, sem YAML — corpus **sintético** embutido (atalho para quem já tem Python no PATH):
 
 ```powershell
 pip install data-boar
 data-boar --demo
 ```
+
+No Windows, o fluxo **recomendado** para não-técnicos é **pipx** — veja o [guia Windows](docs/QUICKSTART_WINDOWS.md).
 
 **Linux via pipx:** em Debian/Ubuntu e Fedora com Python >=3.12 disponível, `pipx install data-boar` costuma ser direto. Na família RHEL9 e em Alpine/musl há 1 pré-passo de onboarding — veja [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) antes do `pipx install`.
 
