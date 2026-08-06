@@ -1,13 +1,13 @@
 # Plan: Wheelhouse distribution via GitHub Releases (pan-ABI matrix) (#1182)
 
-<!-- plans-hub-summary: Pan-ABI wheelhouse matrix — cp312/cp313/cp314 + cp314t (no-GIL) × (manylinux|musllinux) × (x86_64|arm64) × CPU baseline (x86-64-v1 for GIL cells); hosted wheelhouse-x86-64-v1-2026-07-29 = 56 assets (10× cp314t); mariadb glibc recipe + CI recipe gates (#1367/#1379); aarch64 mariadb still #1366. -->
+<!-- plans-hub-summary: Pan-ABI wheelhouse matrix — cp312/cp313/cp314 + cp314t (no-GIL) × (manylinux|musllinux) × (x86_64|arm64) × CPU baseline (x86-64-v1 for GIL cells); hosted wheelhouse-x86-64-v1-2026-07-29 = 54 wheels (incl. cp314t); PEP 503 simple/ live on data-boar-site (#21 / #1445); mariadb glibc recipe + CI recipe gates (#1367/#1379); aarch64 + +x86v1 still open. -->
 <!-- plans-hub-related: PLAN_PACKAGING_EXTRAS.md, PLAN_QUICKSTART.md -->
 
-- **Status:** In progress (x86-64-v1 slice shipped; recipe CI gates live; arm64 + PEP 503 index pending)
-- **Date:** 2026-07-12 (scope rewrite 2026-07-22; v1 release + doc rollout 2026-07-29 — [#1365](https://github.com/DataBoar/data-boar/issues/1365); mariadb glibc recipe 2026-07-29 — [#1367](https://github.com/DataBoar/data-boar/issues/1367); recipe CI 2026-07-29 — [#1379](https://github.com/DataBoar/data-boar/issues/1379); **cp314t / no-GIL cells 2026-07-30**)
+- **Status:** In progress (x86-64-v1 slice shipped; recipe CI gates live; PEP 503 `simple/` index live via [data-boar-site#21](https://github.com/DataBoar/data-boar-site/pull/21) / [#1445](https://github.com/DataBoar/data-boar/issues/1445); arm64 + `+x86v1` local versions pending)
+- **Date:** 2026-07-12 (scope rewrite 2026-07-22; v1 release + doc rollout 2026-07-29 — [#1365](https://github.com/DataBoar/data-boar/issues/1365); mariadb glibc recipe 2026-07-29 — [#1367](https://github.com/DataBoar/data-boar/issues/1367); recipe CI 2026-07-29 — [#1379](https://github.com/DataBoar/data-boar/issues/1379); **cp314t / no-GIL cells 2026-07-30**; PEP 503 index docs 2026-08-05 — [#1445](https://github.com/DataBoar/data-boar/issues/1445))
 - **Authors:** Fabio Leitao (operator); Cursor executor
 - **Priority:** H1 (packaging / distribution)
-- **GitHub:** [#1182](https://github.com/DataBoar/data-boar/issues/1182) `[P1][packaging]` · cross-ref [#782](https://github.com/DataBoar/data-boar/issues/782) (abi3 wheel matrix) · **GAP-001** (wheel-matrix / maturin) · doc slice [#1365](https://github.com/DataBoar/data-boar/issues/1365) · mariadb glibc recipe [#1367](https://github.com/DataBoar/data-boar/issues/1367) · recipe CI [#1379](https://github.com/DataBoar/data-boar/issues/1379) · aarch64 axis [#1366](https://github.com/DataBoar/data-boar/issues/1366)
+- **GitHub:** [#1182](https://github.com/DataBoar/data-boar/issues/1182) `[P1][packaging]` · cross-ref [#782](https://github.com/DataBoar/data-boar/issues/782) (abi3 wheel matrix) · **GAP-001** (wheel-matrix / maturin) · doc slice [#1365](https://github.com/DataBoar/data-boar/issues/1365) · mariadb glibc recipe [#1367](https://github.com/DataBoar/data-boar/issues/1367) · recipe CI [#1379](https://github.com/DataBoar/data-boar/issues/1379) · aarch64 axis [#1366](https://github.com/DataBoar/data-boar/issues/1366) · PEP 503 index [#1445](https://github.com/DataBoar/data-boar/issues/1445) / [data-boar-site#21](https://github.com/DataBoar/data-boar-site/pull/21)
 
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md)
 
@@ -24,7 +24,7 @@ Two **orthogonal** packaging tracks must not be confused:
 | **`boar_fast_filter`** (our Rust/PyO3 ext) | **abi3-py38** (`rust/boar_fast_filter/Cargo.toml`) | **ONE** `cp38-abi3` wheel per `(libc × arch)` — serves **all** CPython **3.8+**. **Do not** emit per-`cpXXX` wheels for this extension. **Not distributed on PyPI today.** Tracked as [#782](https://github.com/DataBoar/data-boar/issues/782) / **GAP-001**. |
 | **Third-party compiled deps** (numpy, pandas, scipy, scikit-learn, pydantic-core, cryptography, pillow, …) | **Not** abi3 (stable ABI) for the scientific / ML stack we care about | **Per-`cpXXX`:** `cp312` + `cp313` + `cp314` (+ **`cp314t`** free-threaded / no-GIL where hosted), each × `(manylinux/glibc \| musllinux/musl)` × `(x86_64 \| arm64)`. Wheelhouse priority = **fill upstream gaps** and **x86-64-v1** rebuilds where PyPI baseline is too high. |
 
-The first hosted seed (2026-07-12) proved **HTTPS + `--find-links`** for **one** gap artifact (`scikit-learn` `cp314` musllinux). The **x86-64-v1** release (2026-07-29) is the first **full dependency-closed** slice for x86_64. On **2026-07-30** the same tag gained **10× `cp314t`** free-threaded cells (see below) — **56** assets total.
+The first hosted seed (2026-07-12) proved **HTTPS + `--find-links`** for **one** gap artifact (`scikit-learn` `cp314` musllinux). The **x86-64-v1** release (2026-07-29) is the first **full dependency-closed** slice for x86_64. On **2026-07-30** the same tag gained **10× `cp314t`** free-threaded cells (see below) — **54** `.whl` assets on the current release tag (verified 2026-08-05).
 
 **CI gating note:** `cp314` remains **signal-only** in CI gating (compat / foresight), not a hard release gate. The wheelhouse still **builds and hosts** `cp314` (+ `cp314t`) cells so musl/no-AVX hosts on 3.14 (GIL) and free-threaded foresight hosts do not fall back to source builds.
 
@@ -35,7 +35,7 @@ The first hosted seed (2026-07-12) proved **HTTPS + `--find-links`** for **one**
 Use a phased wheelhouse distribution model (same direction tracked in #1182 comments):
 
 1. **GitHub Releases assets** (immediate HTTPS seed path) — **live for x86-64-v1**.
-2. **GitHub Pages + CDN** (`simple/` index path).
+2. **GitHub Pages + CDN** (`simple/` index path) — **live** for x86-64-v1 via [data-boar-site#21](https://github.com/DataBoar/data-boar-site/pull/21); canonical operator URL `https://databoar.com.br/simple/` (product docs [#1445](https://github.com/DataBoar/data-boar/issues/1445)). Generator: site repo `scripts/build-wheelhouse-index.py` — **not** duplicated in the product tree.
 3. **R2/S3 static index** as scalable mirror.
 
 ### Matrix axes (four dimensions)
@@ -70,7 +70,7 @@ boar_fast_filter:
 | Site repo | **`DataBoar/data-boar-site`** |
 | Tag | **`wheelhouse-x86-64-v1-2026-07-29`** |
 | Release URL | <https://github.com/DataBoar/data-boar-site/releases/tag/wheelhouse-x86-64-v1-2026-07-29> |
-| Assets | **56** wheels + `SHA256SUMS` + `README.md` (install + verification en_US / pt_BR) — original **46** GIL/v1 cells + **10× `cp314t`** (2026-07-30); includes `mariadb` on both libcs × cp312/313/314 |
+| Assets | **54** `.whl` + `SHA256SUMS` + `README.md` (install + verification en_US / pt_BR) — GIL/v1 cells + **`cp314t`** (2026-07-30); includes `mariadb` on both libcs × cp312/313/314; PEP 503 `simple/` indexes these assets |
 | Offline proof | Operator re-downloaded; checksums matched (incl. 3 new glibc `mariadb` wheels); clean-container offline install |
 
 ### Free-threaded / no-GIL — `cp314t` cells (added 2026-07-30)
@@ -125,15 +125,15 @@ Full verification steps (`.so` size, `objdump popcnt`, `_ML_AVAILABLE`, `--demo`
 | **`wheelhouse-x86-64-v1-2026-07-29`** (metal Celeron 900, Alpine) | ✅ | ✅ | **26** `--demo` findings, `_ML_AVAILABLE=True`; 13 ML-path findings |
 | **`--demo` matrix 1.7.4.post10** (10 cells) | ✅ void-musl + Alpine cp312/313/314 | ✅ alpine-emachines metal | See [OS_COMPATIBILITY_TESTING_MATRIX.md](../ops/OS_COMPATIBILITY_TESTING_MATRIX.md) §Tier 3.6 |
 
-### PEP 503 index trap (record before building `simple/`)
+### PEP 503 index trap (still true after `simple/` shipped)
 
-Hosting a **`simple/`** index **alone** does **not** remove the two-step install while PyPI remains reachable with **same version + same platform tag**:
+The **`simple/`** index is **live** ([data-boar-site#21](https://github.com/DataBoar/data-boar-site/pull/21); operator URL `https://databoar.com.br/simple/`). Hosting it **alone** still does **not** remove the two-step install while PyPI remains reachable with **same version + same platform tag**:
 
 - Our numpy and PyPI numpy are both **`2.5.1`** with the same manylinux/musllinux tag → **version tie**.
 - **Tie-breaker:** PEP 440 **local version** segment — e.g. **`2.5.1+x86v1`** sorts above public **`2.5.1`** and still satisfies `numpy==2.5.1` (`==` ignores local segment).
 - **`--extra-index-url` without local versions** merges candidate lists; it does **not** guarantee the wheelhouse wheel wins.
 
-**Operator decision:** ship **`+x86v1`** (or equivalent) **together with** the index — not index-first expecting a one-liner.
+**Operator decision:** ship **`+x86v1`** (or equivalent) as a **follow-on** to the index — not “index alone = one-liner for v1 ML stack.” User-facing contract: [TROUBLESHOOTING.md](../TROUBLESHOOTING.md) § *Remote index* + § *`--find-links`*.
 
 ### Build decisions (versioned here — full runbook may stay in operator vault)
 
@@ -253,7 +253,8 @@ Future releases must repeat verify-before-link for new tags.
 | 7 | Post-hosting docs rollout in Troubleshooting/matrix with stable URL (**x86-64-v1**) | ✅ ([#1365](https://github.com/DataBoar/data-boar/issues/1365)) |
 | 7b | Pin reproducible `mariadb` glibc build (Connector/C from source) + publish cp312/313/314 | ✅ ([#1367](https://github.com/DataBoar/data-boar/issues/1367) — recipe; aarch64 → [#1366](https://github.com/DataBoar/data-boar/issues/1366)) |
 | 7c | CI rebuilds recipe from manifest; hard-fail objdump / size / openblas / Connector/C checksum | ✅ ([#1379](https://github.com/DataBoar/data-boar/issues/1379)) |
-| 8 | Expand arm64 slice + hosted PEP 503 `simple/` index with **`+x86v1`** local versions | ⬜ |
+| 8a | Hosted PEP 503 `simple/` index for x86-64-v1 (site generator + Pages; product docs `--extra-index-url`) | ✅ ([data-boar-site#21](https://github.com/DataBoar/data-boar-site/pull/21) / [#1445](https://github.com/DataBoar/data-boar/issues/1445)) |
+| 8b | Expand arm64 slice + **`+x86v1`** local versions (tie-breaker vs PyPI) | ⬜ |
 | 9 | Optional: copy full build runbook from vault into `docs/ops/` | ⬜ |
 
 ---
@@ -270,8 +271,9 @@ Future releases must repeat verify-before-link for new tags.
 - [x] `boar_fast_filter` non-distribution on PyPI recorded.
 - [x] `mariadb` glibc x86_64 recipe pinned (tarball URL + sha256 + cmake flags) and wheels published (#1367).
 - [x] CI executes recipe from `recipe-manifest.yaml` with hard-fail gates (#1379).
+- [x] PEP 503 `simple/` index hosted and documented (`https://databoar.com.br/simple/`; site#21 / #1445).
 - [ ] `mariadb` aarch64 both libcs (#1366).
-- [ ] arm64 wheelhouse + `simple/` index (#1182 remainder).
+- [ ] arm64 wheelhouse + **`+x86v1`** local versions (#1182 remainder).
 
 ---
 
