@@ -105,6 +105,7 @@ Os títulos na tabela abaixo ficam em **inglês** (canônicos, iguais ao [README
 | 0082 | [Web exposure safe-by-default boundary controls](ADR-0082-web-exposure-safe-by-default-boundary-controls.md) | Proposto |
 | 0083 | [Rust regex stage: accept form B (findings superset)](ADR-0083-rust-regex-stage-superset-accept-form-b.md) | Aceito |
 | 0084 | [Native package: embed CPython by channel (Enterprise vs community)](ADR-0084-native-package-embedded-cpython-by-channel.md) | Aceito |
+| 0085 | [Install priority ladder (native-first when shipped; pipx today)](ADR-0085-install-priority-ladder.md) | Proposto |
 
 ## Docs relacionados
 
