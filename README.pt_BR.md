@@ -10,6 +10,8 @@
 
 **English:** [README.md](README.md) · [docs/USAGE.md](docs/USAGE.md) · **5 min (pt-BR):** [QUICKSTART.md](QUICKSTART.md)
 
+**Não é de TI e está no Windows?** → **[Guia Windows sem Docker](docs/QUICKSTART_WINDOWS.md)** (passo a passo, pipx + `--demo`).
+
 ---
 
 ## Para gestores e líderes de conformidade
