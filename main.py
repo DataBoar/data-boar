@@ -1208,6 +1208,16 @@ def main() -> None:
             cert_path=cert_str,
             key_path=key_str,
         )
+        from core.canonical_trust import get_canonical_trust_snapshot
+
+        _canonical = get_canonical_trust_snapshot(config)
+        _canonical_line = (
+            "[INFO] trust_state="
+            f"{_canonical['trust_state']} "
+            f"reasons={_canonical['trust_reasons']} "
+            f"output_confidence={_canonical['output_confidence']}"
+        )
+        print(_canonical_line, file=sys.stderr, flush=True)
 
         if mode == "https":
             info = (

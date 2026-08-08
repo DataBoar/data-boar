@@ -13,7 +13,9 @@ from datetime import datetime, timezone
 from typing import Any
 
 from core.about import get_about_info
+from core.canonical_trust import get_canonical_trust_snapshot
 from core.dashboard_transport import get_dashboard_transport_snapshot
+from core.enterprise_surface_posture import get_enterprise_surface_posture
 from core.maturity_assessment.integrity import load_integrity_secret_from_config
 from core.runtime_trust import get_runtime_trust_snapshot
 
@@ -51,6 +53,8 @@ def build_audit_trail_payload(
     about = get_about_info()
     runtime_trust = get_runtime_trust_snapshot(config)
     dashboard_transport = get_dashboard_transport_snapshot()
+    canonical = get_canonical_trust_snapshot(config)
+    enterprise_surface = get_enterprise_surface_posture(config)
     wipe_rows = db_manager.list_data_wipe_log_entries()
     session_summary = db_manager.get_scan_sessions_summary()
     sec = load_integrity_secret_from_config(config)
@@ -69,8 +73,12 @@ def build_audit_trail_payload(
             "config": config_path,
             "sqlite": sqlite_path,
         },
+        "trust_state": canonical["trust_state"],
+        "trust_reasons": canonical["trust_reasons"],
+        "output_confidence": canonical["output_confidence"],
         "runtime_trust": runtime_trust,
         "dashboard_transport": dashboard_transport,
+        "enterprise_surface": enterprise_surface,
         "data_wipe_log": wipe_rows,
         "scan_sessions_summary": session_summary,
         # Same structure as GET /status (POC): HMAC row counts for maturity answers.
@@ -86,7 +94,10 @@ def build_audit_trail_payload(
             "PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY Phase E. "
             "data_wipe_log rows are append-only and are never removed by "
             "wipe_all_data() / --reset-data. "
-            "runtime_trust marks if this execution context looked unexpected."
+            "runtime_trust marks if this execution context looked unexpected. "
+            "trust_state / trust_reasons / output_confidence are the S2a canonical "
+            "contract (license + integrity + transport); enterprise_surface pairs "
+            "transport with access posture for demos."
         ),
     }
     return payload

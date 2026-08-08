@@ -1,6 +1,6 @@
 # Plan: Dashboard HTTPS-by-default with explicit HTTP risk mode
 
-**Status:** Core complete (phases 1–6 shipped; phase 7 tamper/trust deferred post-archive)
+**Status:** Core complete (phases 1–6 shipped; phase 7 wave-1 partial — canonical `trust_state` folds transport; fingerprint/cipher/report tint deferred)
 **Date:** 2026-03-25
 **Authors:** Fabio Leitao
 **Priority:** H2
@@ -45,7 +45,7 @@ Make dashboard traffic **encrypted by default** (TLS >= 1.2) even without an ups
 | 4. Audit trail and evidence               | Record insecure transport mode in audit trail / exported audit JSON so risk acceptance is traceable.                                                                                                                       | ✅ Done (export-audit-trail includes `dashboard_transport`)                             |
 | 5. Tests (both scenarios)                 | Add tests for HTTPS mode and HTTP override mode, including warning text, status flags, and banner rendering. Keep CI stable and deterministic.                                                                             | Done (unit + CLI subprocess smoke)                                                     |
 | 6. Docs and legal/compliance wording      | Update USAGE/TECH_GUIDE/SECURITY (+ pt-BR), COMPLIANCE_AND_LEGAL wording, and operator runbooks with concrete setup and risk statements.                                                                                   | USAGE + man + help done; broader legal/compliance pass optional                        |
-| 7. Transport integrity/tamper trust state | Detect unexpected changes in cert/crypto runtime capability and mark runtime as untrusted/tinted (logs, status, dashboard, DB/audit, report output restrictions, version marker).                                          | ⬜ Deferred (post-archive)                                                              |
+| 7. Transport integrity/tamper trust state | Detect unexpected changes in cert/crypto runtime capability and mark runtime as untrusted/tinted (logs, status, dashboard, DB/audit, report output restrictions, version marker).                                          | 🔄 Partial — **wave-1 (S2a):** canonical `trust_state` / `trust_reasons` / `output_confidence` on `/status`, `/health`, `--export-audit-trail` folds plaintext HTTP + license + integrity tamper (`core/canonical_trust.py`). **Deferred:** cert fingerprint baseline, cipher/capability probe, report summary-only tint, `-alpha` force from transport alone. |
 
 ### Phase 4 — Audit trail (implemented)
 

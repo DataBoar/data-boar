@@ -125,9 +125,9 @@ api:
   https_key_file: "/etc/data-boar/certs/privkey.pem"
 ```
 
-**3.** Open **`https://<host>:<port>/`**. Use **`GET /status`** or **`GET /health`** and check **`dashboard_transport`** in JSON (`mode`, `tls_active`, `summary`).
+**3.** Open **`https://<host>:<port>/`**. Use **`GET /status`** or **`GET /health`** and check **`dashboard_transport`** in JSON (`mode`, `tls_active`, `summary`) **and** canonical **`trust_state`** / **`trust_reasons`** / **`output_confidence`**.
 
-**4.** Optional evidence: **`python main.py --export-audit-trail -`** (without `--web`) includes **`dashboard_transport`** in the exported JSON for governance snapshots.
+**4.** Optional evidence: **`python main.py --export-audit-trail -`** (without `--web`) includes **`dashboard_transport`**, **`trust_state`**, and **`enterprise_surface`** in the exported JSON for governance snapshots.
 
 ### B.3 Let’s Encrypt (public or DNS-validated hosts)
 
@@ -171,9 +171,21 @@ Exact Compose/Kubernetes patterns live next to your orchestration files; see [de
 
 | Check            | What to look for                                                                                                                                                                                               |
 | -----            | ----------------                                                                                                                                                                                               |
-| **Runtime**      | `GET /status` and `GET /health` → **`dashboard_transport`** reflects **`https`** vs explicit **http** opt-in.                                                                                                  |
-| **Audit export** | `python main.py --export-audit-trail -` → JSON field **`dashboard_transport`** (export runs without `--web`; values reflect env/process unless you document a workflow that sets transport env before export). |
+| **Runtime**      | `GET /status` and `GET /health` → **`dashboard_transport`** reflects **`https`** vs explicit **http** opt-in; **`trust_state`** is the canonical combined signal.                                              |
+| **Audit export** | `python main.py --export-audit-trail -` → JSON fields **`dashboard_transport`**, **`trust_state`**, **`enterprise_surface`** (export runs without `--web`; transport may be `not_configured` unless env is set). |
 | **Auth**         | With **`require_api_key`**, **`/health`** = no key; **`/status`** = key required.                                                                                                                              |
+
+### B.7 S2a demo script (transport + trust together)
+
+**Goal:** Show buyers/reviewers that transport posture and trust are one coherent story (open-core POC).
+
+1. **TLS path (preferred):** start with PEM cert/key (native HTTPS) **or** terminate TLS on a reverse proxy and document that path (keep the app loopback HTTP only behind the proxy).
+1. Call **`GET /status`** (API key if required) and/or **`GET /health`** (always public). Confirm:
+   - `dashboard_transport.mode` is `https` (native) or explain proxy TLS when the process is `http` behind the proxy;
+   - top-level **`trust_state`**, **`trust_reasons`**, **`output_confidence`** are present;
+   - **`enterprise_surface`** summarizes transport + license + access/RBAC.
+1. Export evidence: **`python main.py --export-audit-trail -`** — same fields appear for governance snapshots (`trust_state` + `dashboard_transport` + `enterprise_surface`).
+1. **Negative check (lab only):** with **`--allow-insecure-http`**, canonical **`trust_state` must not stay `trusted`** (expect `degraded` with reason `plaintext_http_explicit` when license/integrity are otherwise fine).
 
 ---
 
