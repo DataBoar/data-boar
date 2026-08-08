@@ -134,7 +134,11 @@ def test_not_configured_transport_does_not_degrade(monkeypatch):
 
 def test_stale_tls_posture_env_ignored_when_transport_not_configured(monkeypatch):
     """Leftover DATA_BOAR_TLS_POSTURE must not degrade trust without HTTPS."""
-    from core.tls_posture import REASON_CIPHER, clear_tls_posture_snapshot, set_tls_posture_snapshot
+    from core.tls_posture import (
+        REASON_CIPHER,
+        clear_tls_posture_snapshot,
+        set_tls_posture_snapshot,
+    )
 
     clear_tls_posture_snapshot()
     set_tls_posture_snapshot(
