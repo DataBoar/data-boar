@@ -112,7 +112,11 @@ def test_snapshot_after_configure():
 
 
 def test_snapshot_includes_tls_posture_when_set():
-    from core.tls_posture import clear_tls_posture_snapshot, set_tls_posture_snapshot
+    from core.tls_posture import (
+        ENV_TLS_POSTURE,
+        clear_tls_posture_snapshot,
+        set_tls_posture_snapshot,
+    )
 
     configure_dashboard_transport(
         mode="https",
@@ -133,9 +137,11 @@ def test_snapshot_includes_tls_posture_when_set():
         assert snap["mode"] == "https"
         assert snap["tls_posture"]["ok"] is True
         assert snap["tls_posture"]["summary"] == "TLS posture OK"
+        assert ENV_TLS_POSTURE in os.environ
     finally:
         clear_tls_posture_snapshot()
         os.environ.pop("DATA_BOAR_DASHBOARD_TRANSPORT", None)
         os.environ.pop("DATA_BOAR_DASHBOARD_INSECURE_OPT_IN", None)
         os.environ.pop("DATA_BOAR_HTTPS_CERT_FILE", None)
         os.environ.pop("DATA_BOAR_HTTPS_KEY_FILE", None)
+        os.environ.pop(ENV_TLS_POSTURE, None)

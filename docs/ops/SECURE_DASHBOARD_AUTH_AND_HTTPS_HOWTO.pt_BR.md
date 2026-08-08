@@ -168,7 +168,7 @@ Padrões em [deploy/DEPLOY.md](../deploy/DEPLOY.pt_BR.md) e [deploy/kubernetes/R
 
 | Verificação             | O que observar                                                                                                                                                         |
 | -----------             | --------------                                                                                                                                                         |
-| **Runtime**             | `GET /status` e `GET /health` → **`dashboard_transport`** com **`https`** vs **http** com opt-in; **`trust_state`** é o sinal canônico combinado. Em HTTPS nativo, **`dashboard_transport.tls_posture`** traz o self-check de cipher/protocolo (S2a wave-2a); postura fraca adiciona **`tls_cipher_baseline_weak`** / **`tls_protocol_below_baseline`** em **`trust_reasons`**. |
+| **Runtime**             | `GET /status` e `GET /health` → **`dashboard_transport`** com **`https`** vs **http** com opt-in; **`trust_state`** é o sinal canônico combinado. Em HTTPS nativo, **`dashboard_transport.tls_posture`** traz o self-check de cipher/protocolo (S2a wave-2a; publicado via env para os **workers** do uvicorn); postura fraca adiciona **`tls_cipher_baseline_weak`** / **`tls_protocol_below_baseline`** em **`trust_reasons`**. |
 | **Export de auditoria** | `python main.py --export-audit-trail -` → JSON com **`dashboard_transport`**, **`trust_state`** e **`enterprise_surface`** (export sem `--web`; transporte pode ficar `not_configured` sem env). |
 | **Auth**                | Com **`require_api_key`**, **`/health`** sem chave; **`/status`** com chave.                                                                                           |
 

@@ -4,10 +4,15 @@ Dashboard TLS posture self-check (S2a wave-2a / GRC A3 thin).
 Probes the HTTPS ``SSLContext`` for minimum protocol and weak cipher names.
 Results feed ``dashboard_transport.tls_posture`` and canonical ``trust_reasons``.
 No network bind — inspects the context OpenSSL will use for the listener.
+
+Publish via ``os.environ`` (same pattern as ``configure_dashboard_transport``)
+so uvicorn worker processes that fork after startup still see the probe result.
 """
 
 from __future__ import annotations
 
+import json
+import os
 import ssl
 from typing import Any
 
@@ -33,24 +38,38 @@ _WEAK_CIPHER_TOKENS = (
 REASON_PROTOCOL = "tls_protocol_below_baseline"
 REASON_CIPHER = "tls_cipher_baseline_weak"
 
-_last_snapshot: dict[str, Any] | None = None
+# Survives uvicorn worker fork (unlike a module-global only).
+ENV_TLS_POSTURE = "DATA_BOAR_TLS_POSTURE"
 
 
 def clear_tls_posture_snapshot() -> None:
-    """Drop process-local posture (HTTP mode or tests)."""
-    global _last_snapshot
-    _last_snapshot = None
+    """Drop published posture (HTTP mode or tests)."""
+    os.environ.pop(ENV_TLS_POSTURE, None)
 
 
 def set_tls_posture_snapshot(snapshot: dict[str, Any]) -> None:
-    """Publish posture for status/health/audit within this process."""
-    global _last_snapshot
-    _last_snapshot = dict(snapshot)
+    """Publish posture to the environment (read by API workers and status)."""
+    os.environ[ENV_TLS_POSTURE] = json.dumps(
+        snapshot, separators=(",", ":"), sort_keys=True
+    )
 
 
 def get_tls_posture_snapshot() -> dict[str, Any] | None:
-    """Return last probe result, or None if HTTPS was not configured this run."""
-    return None if _last_snapshot is None else dict(_last_snapshot)
+    """
+    Return last probe result from the environment, or None if unset / invalid.
+
+    Workers must not rely on supervisor-only memory — always read ``ENV_TLS_POSTURE``.
+    """
+    raw = os.environ.get(ENV_TLS_POSTURE)
+    if not raw:
+        return None
+    try:
+        data = json.loads(raw)
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return None
+    if not isinstance(data, dict):
+        return None
+    return dict(data)
 
 
 def find_weak_cipher_names(cipher_names: list[str]) -> list[str]:

@@ -2,10 +2,16 @@
 
 from __future__ import annotations
 
+import os
 import ssl
+import subprocess
+import sys
+from pathlib import Path
 from unittest.mock import MagicMock
 
 import core.tls_posture as tp
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_find_weak_cipher_names_flags_denylist():
@@ -64,7 +70,9 @@ def test_probe_ssl_context_flags_weak_ciphers():
 def test_set_get_clear_tls_posture_snapshot():
     tp.clear_tls_posture_snapshot()
     assert tp.get_tls_posture_snapshot() is None
+    assert tp.ENV_TLS_POSTURE not in os.environ
     tp.set_tls_posture_snapshot({"checked": True, "ok": True, "trust_reasons": []})
+    assert tp.ENV_TLS_POSTURE in os.environ
     got = tp.get_tls_posture_snapshot()
     assert got is not None
     assert got["ok"] is True
@@ -73,3 +81,47 @@ def test_set_get_clear_tls_posture_snapshot():
     assert tp.get_tls_posture_snapshot()["ok"] is True
     tp.clear_tls_posture_snapshot()
     assert tp.get_tls_posture_snapshot() is None
+    assert tp.ENV_TLS_POSTURE not in os.environ
+
+
+def test_tls_posture_readable_in_child_process_like_uvicorn_worker():
+    """
+    api.workers>1: workers fork after supervisor set_tls_posture_snapshot.
+    Child must see reasons via env (not supervisor-only module memory).
+    """
+    tp.clear_tls_posture_snapshot()
+    tp.set_tls_posture_snapshot(
+        {
+            "checked": True,
+            "ok": False,
+            "trust_reasons": [tp.REASON_CIPHER],
+            "weak_ciphers": ["RC4-MD5"],
+            "summary": "TLS posture below baseline: weak_ciphers=RC4-MD5",
+        }
+    )
+    try:
+        child = r"""
+import os, sys
+sys.path.insert(0, os.environ["DATA_BOAR_REPO_ROOT"])
+from core.tls_posture import ENV_TLS_POSTURE, REASON_CIPHER, get_tls_posture_snapshot
+assert ENV_TLS_POSTURE in os.environ, "env missing in child"
+snap = get_tls_posture_snapshot()
+assert snap is not None
+assert snap["ok"] is False
+assert REASON_CIPHER in snap["trust_reasons"]
+print("worker_ok")
+"""
+        env = os.environ.copy()
+        env["DATA_BOAR_REPO_ROOT"] = str(REPO_ROOT)
+        proc = subprocess.run(
+            [sys.executable, "-c", child],
+            env=env,
+            capture_output=True,
+            text=True,
+            cwd=str(REPO_ROOT),
+            check=False,
+        )
+        assert proc.returncode == 0, proc.stderr
+        assert "worker_ok" in proc.stdout
+    finally:
+        tp.clear_tls_posture_snapshot()
