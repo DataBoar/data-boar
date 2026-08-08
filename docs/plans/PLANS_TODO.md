@@ -725,7 +725,7 @@ Counted rows below celebrate the **maintenance + publish** sprint; see **`docs/r
 | 4     | Audit/export trail marks insecure dashboard traffic when override is enabled                                    | ✅ Done    |
 | 5     | Tests for HTTPS + HTTP override paths (flags, warnings, status fields, banner rendering)                        | ✅ Done    |
 | 6     | Docs sync (USAGE/TECH_GUIDE/SECURITY + pt-BR) and compliance/legal wording update after implementation baseline | ✅ Done    |
-| 7     | Transport integrity/tamper trust state (certificate/trust monitoring; tinted runtime)                           | 🔄 Partial — S2a wave-1 trust contract + wave-2a **cipher/protocol probe** (`tls_posture`); fingerprint + report tint still deferred |
+| 7     | Transport integrity/tamper trust state (certificate/trust monitoring; tinted runtime)                           | 🔄 Partial — S2a wave-1: canonical `trust_state` (+ reasons / `output_confidence`) on status/health/audit; fingerprint/cipher/report tint deferred |
 
 ---
 

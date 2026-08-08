@@ -68,20 +68,13 @@ def get_dashboard_transport_snapshot() -> dict[str, Any]:
         )
     else:
         summary = f"Dashboard transport mode={mode!r}."
-    out: dict[str, Any] = {
+    return {
         "mode": mode,
         "tls_active": tls_active,
         "insecure_http_explicit_opt_in": insecure,
         "summary": summary,
         "show_insecure_banner": show_banner,
     }
-    # S2a wave-2a: optional cipher/protocol probe (set by main.py after SSLContext).
-    from core.tls_posture import get_tls_posture_snapshot
-
-    tls_posture = get_tls_posture_snapshot()
-    if tls_posture is not None:
-        out["tls_posture"] = tls_posture
-    return out
 
 
 def resolve_web_listen_options(
