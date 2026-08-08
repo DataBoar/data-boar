@@ -171,7 +171,7 @@ Exact Compose/Kubernetes patterns live next to your orchestration files; see [de
 
 | Check            | What to look for                                                                                                                                                                                               |
 | -----            | ----------------                                                                                                                                                                                               |
-| **Runtime**      | `GET /status` and `GET /health` → **`dashboard_transport`** reflects **`https`** vs explicit **http** opt-in; **`trust_state`** is the canonical combined signal.                                              |
+| **Runtime**      | `GET /status` and `GET /health` → **`dashboard_transport`** reflects **`https`** vs explicit **http** opt-in; **`trust_state`** is the canonical combined signal. On native HTTPS, **`dashboard_transport.tls_posture`** reports the cipher/protocol self-check (S2a wave-2a; published via env so uvicorn **workers** see it); weak posture adds **`tls_cipher_baseline_weak`** / **`tls_protocol_below_baseline`** to **`trust_reasons`**. |
 | **Audit export** | `python main.py --export-audit-trail -` → JSON fields **`dashboard_transport`**, **`trust_state`**, **`enterprise_surface`** (export runs without `--web`; transport may be `not_configured` unless env is set). |
 | **Auth**         | With **`require_api_key`**, **`/health`** = no key; **`/status`** = key required.                                                                                                                              |
 
