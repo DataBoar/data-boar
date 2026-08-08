@@ -47,7 +47,12 @@ def test_build_audit_trail_payload_structure(tmp_path, monkeypatch):
     assert payload["paths"]["sqlite"] == db_path
     assert payload["runtime_trust"]["trust_level"] == "expected"
     assert payload["runtime_trust"]["trust_state"] == "trusted"
+    assert payload["trust_state"] == "trusted"
+    assert payload["trust_reasons"] == []
+    assert payload["output_confidence"] == "full"
     assert payload["dashboard_transport"]["mode"] == "not_configured"
+    assert "enterprise_surface" in payload
+    assert payload["enterprise_surface"]["access_surface"]["mode"] == "open_html"
     assert len(payload["data_wipe_log"]) == 1
     assert "first wipe for test" in payload["data_wipe_log"][0]["reason"]
     assert payload["scan_sessions_summary"]["count"] == 0
@@ -125,6 +130,9 @@ scan:
     assert data["schema_version"] == AUDIT_TRAIL_SCHEMA_VERSION
     assert data["runtime_trust"]["license_state"] == "OPEN"
     assert data["runtime_trust"]["trust_state"] == "trusted"
+    assert data["trust_state"] == "trusted"
+    assert data["output_confidence"] == "full"
+    assert "enterprise_surface" in data
     assert data["scan_sessions_summary"]["count"] == 0
     assert data["dashboard_transport"]["mode"] == "not_configured"
     assert "[INFO] runtime-trust:" in r.stderr

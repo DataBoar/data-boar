@@ -40,6 +40,8 @@ We still need a stronger "trust evidence loop" in runtime behavior:
 
 **Why now:** creates single-source-of-truth semantics for all later security work.
 
+**Status (S2a wave-1):** ✅ Contract landed in `core/canonical_trust.py` — `trust_state` + `trust_reasons` on `GET /status`, `GET /health`, `--export-audit-trail`, plus stderr line on `--web`. Folds license trust, integrity tamper, and plaintext HTTP opt-in. Report-body metadata / DB audit rows for every scan remain follow-up.
+
 ### A2 — Output confidence policy
 
 - Add deterministic policy for degraded trust:
@@ -48,6 +50,8 @@ We still need a stronger "trust evidence loop" in runtime behavior:
 - strict minimal output in `untrusted`.
 
 **Why now:** aligns with enterprise expectation that risky states do not emit normal-looking evidence.
+
+**Status (S2a wave-1):** 🔄 Partial — JSON marker `output_confidence` (`full` \| `reduced` \| `minimal`) on status/health/audit. Full report/API content gating (summary-only) deferred to M-TRUST-02.
 
 ### A3 — Crypto/runtime baseline self-check
 

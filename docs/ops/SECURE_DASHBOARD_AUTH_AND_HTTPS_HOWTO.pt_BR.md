@@ -125,9 +125,9 @@ api:
   https_key_file: "/etc/data-boar/certs/privkey.pem"
 ```
 
-**3.** Abra **`https://<host>:<port>/`**. Use **`GET /status`** ou **`GET /health`** e confira **`dashboard_transport`** no JSON (`mode`, `tls_active`, `summary`).
+**3.** Abra **`https://<host>:<port>/`**. Use **`GET /status`** ou **`GET /health`** e confira **`dashboard_transport`** no JSON (`mode`, `tls_active`, `summary`) **e** os campos canônicos **`trust_state`** / **`trust_reasons`** / **`output_confidence`**.
 
-**4.** Evidência opcional: **`python main.py --export-audit-trail -`** (sem `--web`) inclui **`dashboard_transport`** no JSON exportado.
+**4.** Evidência opcional: **`python main.py --export-audit-trail -`** (sem `--web`) inclui **`dashboard_transport`**, **`trust_state`** e **`enterprise_surface`** no JSON exportado.
 
 ### B.3 Let’s Encrypt (host público ou DNS validável)
 
@@ -168,9 +168,21 @@ Padrões em [deploy/DEPLOY.md](../deploy/DEPLOY.pt_BR.md) e [deploy/kubernetes/R
 
 | Verificação             | O que observar                                                                                                                                                         |
 | -----------             | --------------                                                                                                                                                         |
-| **Runtime**             | `GET /status` e `GET /health` → campo **`dashboard_transport`** com **`https`** vs **http** com opt-in explícito.                                                      |
-| **Export de auditoria** | `python main.py --export-audit-trail -` → JSON com **`dashboard_transport`** (export roda sem `--web`; valores refletem ambiente/processo salvo workflow documentado). |
+| **Runtime**             | `GET /status` e `GET /health` → **`dashboard_transport`** com **`https`** vs **http** com opt-in; **`trust_state`** é o sinal canônico combinado.                     |
+| **Export de auditoria** | `python main.py --export-audit-trail -` → JSON com **`dashboard_transport`**, **`trust_state`** e **`enterprise_surface`** (export sem `--web`; transporte pode ficar `not_configured` sem env). |
 | **Auth**                | Com **`require_api_key`**, **`/health`** sem chave; **`/status`** com chave.                                                                                           |
+
+### B.7 Roteiro de demo S2a (transporte + confiança juntos)
+
+**Objetivo:** mostrar a compradores/revisores que postura de transporte e confiança formam uma história coerente (POC open core).
+
+1. **Caminho TLS (preferido):** suba com certificado/chave PEM (HTTPS nativo) **ou** termine TLS no proxy reverso e documente esse caminho (app só em HTTP de loopback atrás do proxy).
+1. Chame **`GET /status`** (chave de API se exigida) e/ou **`GET /health`** (sempre público). Confirme:
+   - `dashboard_transport.mode` é `https` (nativo) ou explique TLS no proxy quando o processo estiver em `http` atrás do proxy;
+   - existem no topo **`trust_state`**, **`trust_reasons`** e **`output_confidence`**;
+   - **`enterprise_surface`** resume transporte + licença + acesso/RBAC.
+1. Exporte evidência: **`python main.py --export-audit-trail -`** — os mesmos campos aparecem no snapshot de governança (`trust_state` + `dashboard_transport` + `enterprise_surface`).
+1. **Checagem negativa (só lab):** com **`--allow-insecure-http`**, o **`trust_state` canônico não deve permanecer `trusted`** (espere `degraded` com motivo `plaintext_http_explicit` quando licença/integridade estiverem ok).
 
 ---
 

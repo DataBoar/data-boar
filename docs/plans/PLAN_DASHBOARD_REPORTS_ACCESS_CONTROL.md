@@ -54,7 +54,7 @@ See [SECURITY.md](../SECURITY.md), [USAGE.md](../USAGE.md), [TECH_GUIDE.md](../T
 
 | Phase | Scope | Outcome |
 | ----- | ----- | ------- |
-| **0** | Docs + **D-WEB** | Route matrix (what is public vs protected); proxy recipes; **middleware order** diagram with [PLAN_DASHBOARD_I18N.md](completed/PLAN_DASHBOARD_I18N.md) (`API key` → `locale` for HTML → `session` → `RBAC`). **2026-04:** `GET /status` and `GET /health` expose **`enterprise_surface`** (transport + license trust + global API-key surface + explicit `rbac: not_implemented`) for demo/enterprise narrative — not a substitute for Phase 2 RBAC. |
+| **0** | Docs + **D-WEB** | Route matrix (what is public vs protected); proxy recipes; **middleware order** diagram with [PLAN_DASHBOARD_I18N.md](completed/PLAN_DASHBOARD_I18N.md) (`API key` → `locale` for HTML → `session` → `RBAC`). **2026-04:** `GET /status` and `GET /health` expose **`enterprise_surface`** (transport + license trust + global API-key surface). **S2a wave-1:** also expose canonical **`trust_state`** / **`trust_reasons`** / **`output_confidence`**; `access_surface.rbac` is **`enabled`** when Phase 2 RBAC is active, else **`not_implemented`**. |
 | **1** | **Session + passwordless (minimum)** | **HTTPS required** for WebAuthn. After successful WebAuthn (via Passwordless.dev or equivalent), issue **opaque server session** (**httpOnly cookie** + CSRF strategy) or short-lived internal JWT **separate** from commercial license JWT. **Global `api.require_api_key`** can remain for automation / break-glass; **browser** flows use session. **Schedule after [M-LOCALE-V1](completed/PLAN_DASHBOARD_I18N.md)** so HTML routes are already under `/{locale}/…`. |
 | **2** | **RBAC** | Named roles (`scanner`, `reports_reader`, `config_admin`, …) bound to **authenticated subject**; route/resource gates on prefixed HTML paths; optional machine keys for API with role claims (design TBD). |
 | **3** | **Enterprise SSO (optional)** | **OIDC** (SAML later if needed): map IdP groups → product roles; **coexist** with passwordless (e.g. local passkeys for break-glass, SSO for staff). |
@@ -126,7 +126,7 @@ See [SECURITY.md](../SECURITY.md), [USAGE.md](../USAGE.md), [TECH_GUIDE.md](../T
 | `POST` | `/{locale_slug}/config` | HTML | Save config | `admin` or mutating role |
 | `GET` | `/{locale_slug}/reports` | HTML | Session list | `authenticated` |
 | `POST` | `/scan`, `/start` | JSON | Start background scan | `scanner` or `authenticated` |
-| `GET` | `/status` | JSON | Runtime status + `enterprise_surface` | `authenticated` or automation via API key |
+| `GET` | `/status` | JSON | Runtime status + canonical `trust_state` / `trust_reasons` / `output_confidence` + `enterprise_surface` + `dashboard_transport` | `authenticated` or automation via API key |
 | `GET` | `/report` | XLSX | Last report download | `reports_reader`+ |
 | `GET` | `/heatmap` | PNG | Last heatmap | `reports_reader`+ |
 | `GET` | `/list` | JSON | List API | `authenticated` / automation |
@@ -143,7 +143,9 @@ See [SECURITY.md](../SECURITY.md), [USAGE.md](../USAGE.md), [TECH_GUIDE.md](../T
 | `GET` | `/findings/{session_id}` | JSON | Findings for a specific session | `reports_reader`+ |
 | `GET` | `/findings/{session_id}/csv` | CSV | Findings for a specific session as CSV download | `reports_reader`+ |
 
-Static: `GET /static/...` (long cache; same process). **Today:** no per-route RBAC — global `api.require_api_key` only when enabled. **Locale:** see [PLAN_DASHBOARD_I18N.md](completed/PLAN_DASHBOARD_I18N.md) (M-LOCALE-V1); unprefixed legacy HTML paths (`/config`, `/reports`, `/help`, `/about`) redirect the same way as `/`.
+Static: `GET /static/...` (long cache; same process). **Today:** optional **per-route RBAC** when `api.rbac.enabled` and tier allows `dashboard_rbac` (Phase 2 shipped — see `enterprise_surface.access_surface.rbac`: `enabled` vs `not_implemented`); otherwise global `api.require_api_key` only when that flag is on. **Locale:** see [PLAN_DASHBOARD_I18N.md](completed/PLAN_DASHBOARD_I18N.md) (M-LOCALE-V1); unprefixed legacy HTML paths (`/config`, `/reports`, `/help`, `/about`) redirect the same way as `/`.
+
+**S2a trust pairing (wave-1):** Demo and enterprise review should read **`trust_state` + `trust_reasons` + `dashboard_transport` together** on `GET /status` / `GET /health` and on `--export-audit-trail` (which also includes `enterprise_surface`). Canonical vocabulary: [PLAN_GRC_INSPIRED_ENTERPRISE_TRUST_ACCELERATORS.md](PLAN_GRC_INSPIRED_ENTERPRISE_TRUST_ACCELERATORS.md) §A1–A2. Plaintext HTTP with explicit opt-in must not appear as a clean `trusted` canonical state.
 
 ### Middleware order (as implemented in `api/routes.py`)
 

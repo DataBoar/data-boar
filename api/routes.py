@@ -57,6 +57,7 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
 from core.about import get_about_info
+from core.canonical_trust import get_canonical_trust_snapshot
 from core.dashboard_transport import get_dashboard_transport_snapshot
 from core.enterprise_surface_posture import get_enterprise_surface_posture
 from core.forwarded_headers import forwarded_proto_posture
@@ -1277,10 +1278,15 @@ async def health():
     Semantics: **always unauthenticated** (no API key). Returns minimal JSON for
     orchestrators; see SECURITY.md / USAGE.md for difference vs protected routes.
     """
+    cfg = _get_config()
+    canonical = get_canonical_trust_snapshot(cfg)
     body: dict = {"status": "ok"}
     body["license"] = _license_public_dict()
+    body["trust_state"] = canonical["trust_state"]
+    body["trust_reasons"] = canonical["trust_reasons"]
+    body["output_confidence"] = canonical["output_confidence"]
     body["dashboard_transport"] = get_dashboard_transport_snapshot()
-    body["enterprise_surface"] = get_enterprise_surface_posture(_get_config())
+    body["enterprise_surface"] = get_enterprise_surface_posture(cfg)
     body["integrity"] = _integrity_snapshot()
     return body
 
@@ -1444,12 +1450,16 @@ async def get_status(request: Request):
     except Exception:  # noqa: BLE001
         pf_status = {}
 
+    canonical = get_canonical_trust_snapshot(cfg)
     return {
         "running": engine.is_running,
         "current_session_id": engine.db_manager.current_session_id,
         "findings_count": engine.get_current_findings_count(),
         "audit_log": engine.get_scan_audit_log(),
         "forwarded_headers": forwarded_proto_posture(request, cfg),
+        "trust_state": canonical["trust_state"],
+        "trust_reasons": canonical["trust_reasons"],
+        "output_confidence": canonical["output_confidence"],
         "runtime_trust": runtime_trust,
         "detection_prefilter": pf_status,
         "dashboard_transport": get_dashboard_transport_snapshot(),
