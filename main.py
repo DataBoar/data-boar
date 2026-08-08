@@ -1209,16 +1209,13 @@ def main() -> None:
             key_path=key_str,
         )
         from core.canonical_trust import get_canonical_trust_snapshot
-
-        _canonical = get_canonical_trust_snapshot(config)
-        _canonical_line = (
-            "[INFO] trust_state="
-            f"{_canonical['trust_state']} "
-            f"reasons={_canonical['trust_reasons']} "
-            f"output_confidence={_canonical['output_confidence']}"
+        from core.tls_posture import (
+            clear_tls_posture_snapshot,
+            probe_ssl_context,
+            set_tls_posture_snapshot,
         )
-        print(_canonical_line, file=sys.stderr, flush=True)
 
+        ssl_ctx: ssl.SSLContext | None = None
         if mode == "https":
             info = (
                 "[INFO] Dashboard transport: HTTPS (TLS >= 1.2) — "
@@ -1229,7 +1226,25 @@ def main() -> None:
             ssl_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
             ssl_ctx.minimum_version = ssl.TLSVersion.TLSv1_2
             ssl_ctx.load_cert_chain(certfile=cert_str, keyfile=key_str)
+            # S2a wave-2a: cipher/protocol probe before trust snapshot (no bind).
+            _tls_posture = probe_ssl_context(ssl_ctx)
+            set_tls_posture_snapshot(_tls_posture)
+            print(
+                f"[INFO] tls_posture ok={_tls_posture.get('ok')} "
+                f"reasons={_tls_posture.get('trust_reasons')} "
+                f"summary={_tls_posture.get('summary')}",
+                file=sys.stderr,
+                flush=True,
+            )
+            if not _tls_posture.get("ok"):
+                print(
+                    "WARNING: Dashboard TLS posture below baseline — "
+                    f"{_tls_posture.get('summary')}",
+                    file=sys.stderr,
+                    flush=True,
+                )
         else:
+            clear_tls_posture_snapshot()
             banner = (
                 "======================================================================\n"
                 "WARNING: DASHBOARD PLAINTEXT HTTP — EXPLICIT OPT-IN\n"
@@ -1243,7 +1258,15 @@ def main() -> None:
             print(
                 "[INFO] dashboard_transport=insecure_http", file=sys.stderr, flush=True
             )
-            ssl_ctx = None
+
+        _canonical = get_canonical_trust_snapshot(config)
+        _canonical_line = (
+            "[INFO] trust_state="
+            f"{_canonical['trust_state']} "
+            f"reasons={_canonical['trust_reasons']} "
+            f"output_confidence={_canonical['output_confidence']}"
+        )
+        print(_canonical_line, file=sys.stderr, flush=True)
 
         if should_warn_insecure_api_bind(config, host):
             print(
