@@ -7,7 +7,7 @@ release: '1'
 section: utils
 priority: optional
 maintainer: Data Boar maintainers <contact@databoar.com.br>
-description: 'Data Boar connector extra [nosql] (packages: pymongo>=4.0, redis>=8.0.0).
+description: 'Data Boar connector extra [nosql] (packages: pymongo>=4.0, redis>=8.1.0).
 
   ADR-0084: embedded cp314t does NOT unlock Enterprise. Entitlement remains worker caps (#551) + pro_prefilter_accel.'
 vendor: Data Boar
