@@ -1263,7 +1263,11 @@ def main() -> None:
             "workers": workers,
         }
         if ssl_ctx is not None:
-            uvicorn_kwargs["ssl"] = ssl_ctx
+            # uvicorn>=0.52 removed run(..., ssl=ctx); keep TLS>=1.2 via factory.
+            def _ssl_context_factory(config, create_default_context, _ctx=ssl_ctx):
+                return _ctx
+
+            uvicorn_kwargs["ssl_context_factory"] = _ssl_context_factory
         uvicorn.run(app, **uvicorn_kwargs)
         return
 
