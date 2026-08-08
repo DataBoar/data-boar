@@ -75,12 +75,14 @@ def get_dashboard_transport_snapshot() -> dict[str, Any]:
         "summary": summary,
         "show_insecure_banner": show_banner,
     }
-    # S2a wave-2a: optional cipher/protocol probe (set by main.py after SSLContext).
-    from core.tls_posture import get_tls_posture_snapshot
+    # S2a wave-2a: cipher/protocol probe (set by main.py after SSLContext).
+    # Only nest under HTTPS — ignore leftover DATA_BOAR_TLS_POSTURE on HTTP.
+    if tls_active:
+        from core.tls_posture import get_tls_posture_snapshot
 
-    tls_posture = get_tls_posture_snapshot()
-    if tls_posture is not None:
-        out["tls_posture"] = tls_posture
+        tls_posture = get_tls_posture_snapshot()
+        if tls_posture is not None:
+            out["tls_posture"] = tls_posture
     return out
 
 

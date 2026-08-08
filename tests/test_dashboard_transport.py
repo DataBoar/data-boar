@@ -145,3 +145,28 @@ def test_snapshot_includes_tls_posture_when_set():
         os.environ.pop("DATA_BOAR_HTTPS_CERT_FILE", None)
         os.environ.pop("DATA_BOAR_HTTPS_KEY_FILE", None)
         os.environ.pop(ENV_TLS_POSTURE, None)
+
+
+def test_snapshot_omits_tls_posture_on_http_even_if_env_set():
+    from core.tls_posture import clear_tls_posture_snapshot, set_tls_posture_snapshot
+
+    configure_dashboard_transport(
+        mode="http",
+        insecure_explicit_opt_in=True,
+    )
+    set_tls_posture_snapshot(
+        {
+            "checked": True,
+            "ok": False,
+            "trust_reasons": ["tls_cipher_baseline_weak"],
+            "summary": "stale",
+        }
+    )
+    try:
+        snap = get_dashboard_transport_snapshot()
+        assert snap["mode"] == "http"
+        assert "tls_posture" not in snap
+    finally:
+        clear_tls_posture_snapshot()
+        os.environ.pop("DATA_BOAR_DASHBOARD_TRANSPORT", None)
+        os.environ.pop("DATA_BOAR_DASHBOARD_INSECURE_OPT_IN", None)

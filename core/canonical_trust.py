@@ -67,11 +67,15 @@ def get_canonical_trust_snapshot(config: dict[str, Any]) -> dict[str, Any]:
         state = _worse(state, "degraded")
         reasons.append("plaintext_http_explicit")
 
-    # Prefer nested tls_posture on transport snapshot; fall back to process probe.
+    # TLS posture only applies when dashboard HTTPS is active. Prefer nested
+    # tls_posture on the transport snapshot; fall back to env probe for workers.
+    # Do not honor a leftover DATA_BOAR_TLS_POSTURE when transport is
+    # not_configured / plaintext HTTP (avoids contradicting enterprise_surface).
+    tls_active = bool(dt.get("tls_active")) or mode == "https"
     posture = dt.get("tls_posture")
     if not isinstance(posture, dict):
-        posture = get_tls_posture_snapshot() or {}
-    if posture.get("checked") and not posture.get("ok"):
+        posture = (get_tls_posture_snapshot() or {}) if tls_active else {}
+    if tls_active and posture.get("checked") and not posture.get("ok"):
         state = _worse(state, "degraded")
         for r in posture.get("trust_reasons") or []:
             if r in (REASON_PROTOCOL, REASON_CIPHER) and r not in reasons:

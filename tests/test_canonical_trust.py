@@ -132,6 +132,45 @@ def test_not_configured_transport_does_not_degrade(monkeypatch):
     assert "plaintext_http_explicit" not in snap["trust_reasons"]
 
 
+def test_stale_tls_posture_env_ignored_when_transport_not_configured(monkeypatch):
+    """Leftover DATA_BOAR_TLS_POSTURE must not degrade trust without HTTPS."""
+    from core.tls_posture import REASON_CIPHER, clear_tls_posture_snapshot, set_tls_posture_snapshot
+
+    clear_tls_posture_snapshot()
+    set_tls_posture_snapshot(
+        {
+            "checked": True,
+            "ok": False,
+            "trust_reasons": [REASON_CIPHER],
+            "summary": "stale",
+        }
+    )
+    try:
+        monkeypatch.setattr(
+            ct,
+            "get_dashboard_transport_snapshot",
+            lambda: {
+                "mode": "not_configured",
+                "tls_active": False,
+                "insecure_http_explicit_opt_in": False,
+            },
+        )
+        monkeypatch.setattr(
+            ct,
+            "get_runtime_trust_snapshot",
+            lambda _cfg: {"trust_state": "trusted", "license_state": "OPEN"},
+        )
+        monkeypatch.setattr(
+            "core.integrity_anchor.get_integrity_snapshot",
+            lambda: {"integrity_state": "ok"},
+        )
+        snap = ct.get_canonical_trust_snapshot({})
+        assert snap["trust_state"] == "trusted"
+        assert REASON_CIPHER not in snap["trust_reasons"]
+    finally:
+        clear_tls_posture_snapshot()
+
+
 def test_canonical_degraded_on_weak_tls_cipher_posture(monkeypatch):
     monkeypatch.setattr(
         ct,
