@@ -60,8 +60,6 @@ We still need a stronger "trust evidence loop" in runtime behavior:
 
 **Why now:** operationalizes existing "non-negotiable crypto baseline" intent.
 
-**Status (S2a wave-2a):** 🔄 Partial — dashboard HTTPS **cipher/protocol probe** in `core/tls_posture.py` (no bind); nested under `dashboard_transport.tls_posture`; folds into canonical `trust_reasons` (`tls_protocol_below_baseline`, `tls_cipher_baseline_weak`). Cert fingerprint baseline and report tint remain deferred (wave-2b / M-TRUST-02).
-
 ### A4 — Evidence packet for review cycles
 
 - Create one compact "review packet" template per milestone:
