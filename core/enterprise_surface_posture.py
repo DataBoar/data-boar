@@ -23,6 +23,8 @@ def _severity_from_reasons(reasons: list[str]) -> str:
         or "license_trust_untrusted" in reasons
         or "api_key_required_but_unresolved" in reasons
         or "integrity_tampered" in reasons
+        or "tls_protocol_below_baseline" in reasons
+        or "tls_cipher_baseline_weak" in reasons
     ):
         return "elevated"
     if "license_trust_degraded" in reasons:
@@ -62,6 +64,19 @@ def get_enterprise_surface_posture(config: dict[str, Any]) -> dict[str, Any]:
         reasons.append("license_trust_degraded")
     if access_mode == "api_key_misconfigured":
         reasons.append("api_key_required_but_unresolved")
+
+    posture = dt.get("tls_posture") if isinstance(dt.get("tls_posture"), dict) else None
+    if posture and posture.get("checked") and not posture.get("ok"):
+        for r in posture.get("trust_reasons") or []:
+            if (
+                r
+                in (
+                    "tls_protocol_below_baseline",
+                    "tls_cipher_baseline_weak",
+                )
+                and r not in reasons
+            ):
+                reasons.append(r)
 
     # #856: tampered integrity anchor tints the whole posture (ADR-0066).
     from core.integrity_anchor import get_integrity_snapshot
