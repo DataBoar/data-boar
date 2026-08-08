@@ -132,7 +132,7 @@
     "nosql": {
       "packages": [
         "pymongo>=4.0",
-        "redis>=8.0.0"
+        "redis>=8.1.0"
       ],
       "modules": [
         "pymongo",
