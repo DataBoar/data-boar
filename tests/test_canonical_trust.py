@@ -130,3 +130,33 @@ def test_not_configured_transport_does_not_degrade(monkeypatch):
     snap = ct.get_canonical_trust_snapshot({})
     assert snap["trust_state"] == "trusted"
     assert "plaintext_http_explicit" not in snap["trust_reasons"]
+
+
+def test_canonical_degraded_on_weak_tls_cipher_posture(monkeypatch):
+    monkeypatch.setattr(
+        ct,
+        "get_dashboard_transport_snapshot",
+        lambda: {
+            "mode": "https",
+            "tls_active": True,
+            "insecure_http_explicit_opt_in": False,
+            "tls_posture": {
+                "checked": True,
+                "ok": False,
+                "trust_reasons": ["tls_cipher_baseline_weak"],
+            },
+        },
+    )
+    monkeypatch.setattr(
+        ct,
+        "get_runtime_trust_snapshot",
+        lambda _cfg: {"trust_state": "trusted", "license_state": "OPEN"},
+    )
+    monkeypatch.setattr(
+        "core.integrity_anchor.get_integrity_snapshot",
+        lambda: {"integrity_state": "ok"},
+    )
+    snap = ct.get_canonical_trust_snapshot({})
+    assert snap["trust_state"] == "degraded"
+    assert snap["trust_reasons"] == ["tls_cipher_baseline_weak"]
+    assert snap["output_confidence"] == "reduced"
