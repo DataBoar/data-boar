@@ -1,12 +1,12 @@
 # Data Boar — OpenTelemetry instrumentation (RED + traces)
 
-**Status:** Active (opt-in POC)
-**Date:** 2026-08-09
+**Status:** Done (opt-in shipped on `main` via #1503)
+**Date:** 2026-08-09 (closed)
 **Authors:** Fabio Leitao
 **Priority:** H2 / P2
 **Issue:** [#1500](https://github.com/DataBoar/data-boar/issues/1500)
 
-**Related (infra plan, receiving end):** [PLAN_LAB_OP_OBSERVABILITY_STACK.md](PLAN_LAB_OP_OBSERVABILITY_STACK.md) — Phase **F** (Tempo / OTel). Distinct from GenAI/MCP agent observability ([#1457](https://github.com/DataBoar/data-boar/issues/1457) / [#1455](https://github.com/DataBoar/data-boar/issues/1455)).
+**Related (infra plan, receiving end):** [PLAN_LAB_OP_OBSERVABILITY_STACK.md](../PLAN_LAB_OP_OBSERVABILITY_STACK.md) — Phase **F** (Tempo / OTel). Distinct from GenAI/MCP agent observability ([#1457](https://github.com/DataBoar/data-boar/issues/1457) / [#1455](https://github.com/DataBoar/data-boar/issues/1455)).
 
 ## Purpose
 

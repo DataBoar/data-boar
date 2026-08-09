@@ -7,7 +7,7 @@
 
 **Português (Brasil):** [PLAN_LAB_OP_OBSERVABILITY_STACK.pt_BR.md](PLAN_LAB_OP_OBSERVABILITY_STACK.pt_BR.md)
 
-**Product emit (code in this repo):** [PLAN_DATABOAR_OTEL_INSTRUMENTATION.md](PLAN_DATABOAR_OTEL_INSTRUMENTATION.md) — FastAPI/SQLAlchemy OTLP opt-in; does not replace operator-side collector/Grafana deploy.
+**Product emit (code in this repo):** [PLAN_DATABOAR_OTEL_INSTRUMENTATION.md](completed/PLAN_DATABOAR_OTEL_INSTRUMENTATION.md) — FastAPI/SQLAlchemy OTLP opt-in; does not replace operator-side collector/Grafana deploy.
 
 **Purpose:** Sequence **optional** homelab instrumentation—**Grafana**, time-series DBs, **centralized logs**—without blocking Data Boar development or **–1L** validation. **No** implementation in this repo; operator deploys via Compose, k3s Helm, or vendor appliances on **lab-op** hosts (ThinkPad LAB-NODE-01, LAB-NODE-02, Proxmox guests).
 
