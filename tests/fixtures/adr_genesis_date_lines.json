@@ -83,5 +83,6 @@
   "ADR-0082-web-exposure-safe-by-default-boundary-controls.md": "- **Date (UTC):** 2026-07-12",
   "ADR-0083-rust-regex-stage-superset-accept-form-b.md": "- **Date (UTC):** 2026-07-31",
   "ADR-0084-native-package-embedded-cpython-by-channel.md": "- **Date (UTC):** 2026-08-02",
-  "ADR-0085-install-priority-ladder.md": "- **Date (UTC):** 2026-08-06"
+  "ADR-0085-install-priority-ladder.md": "- **Date (UTC):** 2026-08-06",
+  "ADR-0086-plugin-sdk-language-neutral-contract.md": "- **Date (UTC):** 2026-08-09"
 }
