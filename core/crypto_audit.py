@@ -6,6 +6,8 @@ Phase 2a: result criteria, SQLAlchemy post-connect probe facts, evaluation
 to ok/warning/fail/not_available/not_applicable (no secrets in details).
 Phase 2c: MongoDB / Redis TLS connect intent + post-connect probe facts
 (allowlisted tokens only — never raw URI/DSN fragments in details).
+Phase 2d: SMB signing/encryption from smbprotocol Session after connect
+(allowlisted dialect/signing/encryption tokens only).
 """
 
 from __future__ import annotations
@@ -46,6 +48,10 @@ class CryptoProbeFacts:
     cipher: str | None = None
     sslmode: str | None = None
     source: str = ""
+    # Phase 2d SMB — allowlisted tokens only (never UNC paths or credentials).
+    smb_dialect: str | None = None
+    smb_signing: str | None = None
+    smb_encryption: str | None = None
 
 
 def _lower_or_empty(value: Any) -> str:
@@ -265,6 +271,75 @@ def _ssl_socket_probe(sock: Any) -> tuple[str | None, str | None]:
     return tls_version, cipher
 
 
+# smbprotocol Dialects revision values → canonical labels (allowlist only).
+_SMB_DIALECT_BY_REV: dict[int, str] = {
+    0x0202: "SMB_2_0_2",
+    0x0210: "SMB_2_1_0",
+    0x0300: "SMB_3_0_0",
+    0x0302: "SMB_3_0_2",
+    0x0311: "SMB_3_1_1",
+}
+_KNOWN_SMB_DIALECTS = frozenset(_SMB_DIALECT_BY_REV.values())
+_KNOWN_SMB_SIGNING = frozenset({"required", "disabled"})
+_KNOWN_SMB_ENCRYPTION = frozenset({"on", "off", "unsupported"})
+_SMB3_DIALECTS = frozenset({"SMB_3_0_0", "SMB_3_0_2", "SMB_3_1_1"})
+_SMB2_DIALECTS = frozenset({"SMB_2_0_2", "SMB_2_1_0"})
+
+
+def _canonical_smb_dialect(raw: Any) -> str | None:
+    """Map dialect revision int or name to an allowlisted SMB dialect label."""
+    if raw is None:
+        return None
+    if isinstance(raw, int):
+        return _SMB_DIALECT_BY_REV.get(raw)
+    token = str(raw).strip().upper().replace("-", "_").replace(".", "_")
+    for sep in (" ", "\t", "&", ";", "\n", "\r"):
+        if sep in token:
+            token = token.split(sep, 1)[0].strip()
+    if token in _KNOWN_SMB_DIALECTS:
+        return token
+    # Accept bare "SMB_311" style typos? No — allowlist only.
+    return None
+
+
+def _canonical_smb_signing(raw: Any) -> str | None:
+    token = _lower_or_empty(raw)
+    for sep in (" ", "\t", "&", ";", "\n", "\r"):
+        if sep in token:
+            token = token.split(sep, 1)[0].strip()
+    if token in _KNOWN_SMB_SIGNING:
+        return token
+    return None
+
+
+def _canonical_smb_encryption(raw: Any) -> str | None:
+    token = _lower_or_empty(raw)
+    for sep in (" ", "\t", "&", ";", "\n", "\r"):
+        if sep in token:
+            token = token.split(sep, 1)[0].strip()
+    if token in _KNOWN_SMB_ENCRYPTION:
+        return token
+    return None
+
+
+def resolve_smb_connect_options(
+    target_config: dict[str, Any],
+) -> tuple[bool | None, bool | None]:
+    """
+    Resolve optional SMB connect kwargs for smbclient.register_session.
+
+    Returns ``(encrypt, require_signing)`` where ``None`` means “leave library
+    default” (encrypt unset; require_signing defaults to True in smbclient).
+    """
+    encrypt = _config_truthy_flag(
+        target_config, "encrypt", "smb_encrypt", "require_encryption"
+    )
+    require_signing = _config_truthy_flag(
+        target_config, "require_signing", "smb_signing"
+    )
+    return encrypt, require_signing
+
+
 def validate_crypto_enabled(config: dict[str, Any] | None) -> bool:
     """
     Return True when optional strong-crypto / controls validation is enabled.
@@ -363,12 +438,83 @@ def _normalize_tls_version(raw: str | None) -> str | None:
     return s[:40]
 
 
+def _evaluate_smb_strong_crypto(
+    facts: CryptoProbeFacts,
+) -> tuple[StrongCryptoResult, str]:
+    """SMB signing/encryption criteria (Phase 2d); allowlisted tokens only."""
+    dialect = _canonical_smb_dialect(facts.smb_dialect)
+    signing = _canonical_smb_signing(facts.smb_signing)
+    encryption = _canonical_smb_encryption(facts.smb_encryption)
+    detail_parts: list[str] = []
+    if facts.source:
+        # Keep source short and allowlisted-looking (smb_* prefixes only).
+        src = (facts.source or "").strip()
+        if src.lower().startswith("smb"):
+            detail_parts.append(f"source={src[:40]}")
+    if dialect:
+        detail_parts.append(f"dialect={dialect}")
+    if signing:
+        detail_parts.append(f"signing={signing}")
+    if encryption:
+        detail_parts.append(f"encryption={encryption}")
+
+    def _details(extra: str = "") -> str:
+        base = "; ".join(detail_parts) if detail_parts else "no probe details"
+        return f"{base}; {extra}" if extra else base
+
+    if not dialect and not signing and encryption is None:
+        return (
+            StrongCryptoResult.NOT_AVAILABLE,
+            _details("SMB session did not expose signing/encryption attributes"),
+        )
+
+    if signing == "disabled":
+        return (
+            StrongCryptoResult.FAIL,
+            _details("SMB signing disabled"),
+        )
+
+    if encryption == "on" and signing == "required" and dialect in _SMB3_DIALECTS:
+        return (StrongCryptoResult.OK, _details("SMB 3.x signing+encryption"))
+
+    if encryption == "on" and signing == "required":
+        return (StrongCryptoResult.OK, _details("SMB signing+encryption"))
+
+    if signing == "required" and encryption in ("off", "unsupported"):
+        if dialect in _SMB3_DIALECTS:
+            return (
+                StrongCryptoResult.WARNING,
+                _details("SMB 3.x signed without encryption"),
+            )
+        if dialect in _SMB2_DIALECTS:
+            return (
+                StrongCryptoResult.WARNING,
+                _details("SMB 2.x signed; encryption not available"),
+            )
+        return (
+            StrongCryptoResult.WARNING,
+            _details("SMB signed without encryption"),
+        )
+
+    if signing == "required":
+        return (
+            StrongCryptoResult.WARNING,
+            _details("SMB signing required; encryption state unknown"),
+        )
+
+    return (
+        StrongCryptoResult.NOT_AVAILABLE,
+        _details("SMB crypto posture incomplete"),
+    )
+
+
 def evaluate_strong_crypto(facts: CryptoProbeFacts) -> tuple[StrongCryptoResult, str]:
     """
     Apply Phase 2 strong-crypto criteria to probe facts.
 
     Criteria (best-effort, not a compliance certification):
     - Local / N/A dialects (source=sqlite): not_applicable
+    - SMB (source smb_* or smb_* fields): signing/encryption dialect rules
     - TLS disabled or sslmode=disable: fail
     - TLS 1.0 / 1.1: fail
     - TLS 1.2 / 1.3: ok (note warning if sslmode is require without verify-*)
@@ -381,6 +527,14 @@ def evaluate_strong_crypto(facts: CryptoProbeFacts) -> tuple[StrongCryptoResult,
             StrongCryptoResult.NOT_APPLICABLE,
             "SQLite is local; TLS validation does not apply",
         )
+
+    if (
+        source.startswith("smb")
+        or facts.smb_dialect
+        or facts.smb_signing
+        or facts.smb_encryption
+    ):
+        return _evaluate_smb_strong_crypto(facts)
 
     # Allowlist again at evaluate time so details never echo arbitrary DSN text.
     sslmode = _canonical_sslmode(facts.sslmode)
@@ -682,4 +836,53 @@ def collect_redis_crypto_facts(
         cipher=cipher,
         sslmode=sslmode or None,
         source=source,
+    )
+
+
+def collect_smb_crypto_facts(
+    session: Any, target_config: dict[str, Any] | None = None
+) -> CryptoProbeFacts:
+    """
+    Best-effort SMB signing/encryption facts from an smbprotocol Session.
+
+    Prefer live Session / Connection attributes after ``register_session``.
+    Never returns passwords, UNC paths, hostnames, or algorithm key material.
+    """
+    _ = target_config  # reserved for future allowlisted config fallbacks
+    if session is None:
+        return CryptoProbeFacts(source="unavailable")
+
+    dialect = None
+    signing = None
+    encryption = None
+    source = "smb_session"
+
+    try:
+        connection = getattr(session, "connection", None)
+        if connection is not None:
+            dialect = _canonical_smb_dialect(getattr(connection, "dialect", None))
+        signing_required = getattr(session, "signing_required", None)
+        if signing_required is None and connection is not None:
+            signing_required = getattr(connection, "require_signing", None)
+        if isinstance(signing_required, bool):
+            signing = "required" if signing_required else "disabled"
+
+        enc = getattr(session, "encrypt_data", None)
+        if isinstance(enc, bool):
+            encryption = "on" if enc else "off"
+        elif connection is not None:
+            supports = getattr(connection, "supports_encryption", None)
+            if supports is False:
+                encryption = "unsupported"
+    except Exception:
+        return CryptoProbeFacts(source="unavailable")
+
+    if dialect is None and signing is None and encryption is None:
+        return CryptoProbeFacts(source="unavailable")
+
+    return CryptoProbeFacts(
+        source=source,
+        smb_dialect=dialect,
+        smb_signing=signing,
+        smb_encryption=encryption,
     )
