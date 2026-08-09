@@ -44,6 +44,7 @@ The main entry point is `main.py`.
 | `--content-type-check`  | *(flag)*          | One-shot override: enable magic-byte / content-type inference as if `file_scan.use_content_type` were true (extension vs true format — simple cloaking).                                                                                                                                                 |
 | `--scan-stego`          | *(flag)*          | One-shot override: enable rich-media stego **hints** as if `file_scan.scan_for_stego` were true (byte-entropy heuristic on image/audio/video — not proof of hidden data). May increase reads on those files.                                                                                                |
 | `--jurisdiction-hint`   | *(flag)*          | Opt-in for this run: enable heuristic jurisdiction notes on the Excel **Report info** sheet (e.g. US-CA CCPA/CPRA, Colorado, Japan APPI) when metadata signals suggest possible relevance. Not a legal conclusion. Same effect as `report.jurisdiction_hints.enabled: true` for this process; stores the opt-in on the session. |
+| `--validate-crypto`     | *(flag)*          | Opt-in for this run: enable strong-crypto / controls validation wiring (`scan.validate_crypto`). Off by default. Phase 1 wires the flag and gates existing coarse crypto-signal collection; full per-connector TLS checks and anonymisation heuristics land in later phases. CLI overrides config when this flag is set. Same opt-in via dashboard checkbox or `POST /scan` / `POST /scan_database` with `"validate_crypto": true`. |
 <!-- markdownlint-enable MD060 -->
 
 ### Optional licensing tamper-evidence (enforced installs)
@@ -671,7 +672,10 @@ scan:
   max_workers: 4              # ceiling for ARL and fixed mode
   adaptive_rate_limit: true   # default false — opt-in
   target_latency_ms: 200      # default 200; feedback target in milliseconds
+  # validate_crypto: false    # optional: strong-crypto / controls validation wiring (off by default)
 ```
+
+**Strong crypto / controls (`scan.validate_crypto`, `--validate-crypto`):** Opt-in only. When `false` or absent, crypto/controls validation logic is skipped (no behaviour change). When enabled via config, CLI **`--validate-crypto`**, dashboard checkbox, or API body **`validate_crypto: true`**, the engine runs the wired strong-crypto signal path for that run. CLI / API / dashboard override config for that run. Phase 1 is flag + wiring; fuller TLS and control heuristics follow later phases.
 
 **Interactions:**
 
@@ -1168,6 +1172,7 @@ api:
 sqlite_path: audit_results.db
 scan:
   max_workers: 1   # 1 = sequential; >1 = parallel targets (I/O-bound)
+  # validate_crypto: false   # optional: strong-crypto / controls validation (off by default; CLI --validate-crypto overrides)
 ```
 
 ---

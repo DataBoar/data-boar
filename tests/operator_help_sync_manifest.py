@@ -44,6 +44,7 @@ _MAN_EXPORT_AUDIT = r"\-\-export\-audit\-trail"
 _MAN_TENANT = r"\-\-tenant"
 _MAN_TECH = r"\-\-technician"
 _MAN_JURISDICTION_HINT = r"\-\-jurisdiction\-hint"
+_MAN_VALIDATE_CRYPTO = r"\-\-validate\-crypto"
 _MAN_SCAN_PROGRESS = r"\-\-progress"
 _MAN_HTTPS_CERT = r"\-\-https\-cert\-file"
 _MAN_HTTPS_KEY = r"\-\-https\-key\-file"
@@ -179,6 +180,12 @@ OPERATOR_HELP_MARKERS: tuple[OperatorHelpMarker, ...] = (
         "--jurisdiction-hint",
         "--jurisdiction-hint",
         _MAN_JURISDICTION_HINT,
+    ),
+    OperatorHelpMarker(
+        "validate_crypto",
+        "--validate-crypto",
+        "--validate-crypto",
+        _MAN_VALIDATE_CRYPTO,
     ),
     OperatorHelpMarker(
         "scan_progress",

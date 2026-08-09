@@ -47,7 +47,7 @@
 {{ prog }} --config config.yaml --regenerate-report &lt;session_id&gt;
 {{ prog }} --config config.yaml --tenant "Acme Corp" --technician "Alice Colleague-V"
 # Same optional toggles as the dashboard checkboxes (this run only):
-{{ prog }} --config config.yaml --scan-compressed --content-type-check --scan-stego --jurisdiction-hint --progress
+{{ prog }} --config config.yaml --scan-compressed --content-type-check --scan-stego --jurisdiction-hint --validate-crypto --progress
 # Disable live progress lines for this run:
 {{ prog }} --config config.yaml --no-progress</code></pre>
   <p><strong>{{ t('help.run_cli_api') }}</strong></p>
@@ -143,7 +143,8 @@ api:
 
 sqlite_path: audit_results.db
 scan:
-  max_workers: 1</code></pre>
+  max_workers: 1
+  # validate_crypto: true   # optional: strong-crypto / controls wiring (matches dashboard checkbox)</code></pre>
   <p class="muted">{{ t('help.cfg_tail') }}</p>
 </section>
 

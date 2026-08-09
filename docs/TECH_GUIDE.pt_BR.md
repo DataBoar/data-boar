@@ -301,7 +301,7 @@ uvicorn api.routes:app --host 0.0.0.0 --port 8088
 
 ## Argumentos da CLI (referência)
 
-**A referência completa e autoritativa da CLI (todas as 22 flags — `--config`, `--web`, `--host`, `--port`, `--https-cert-file` / `--https-key-file`, `--allow-insecure-http`, `--validate-config`, `--diff`, `--fail-on-new-high`, `--export-dsar` / `--dsar-output`, `--export-audit-trail`, `--scan-compressed`, `--content-type-check`, `--scan-stego`, `--jurisdiction-hint`, `--reset-data`, `--tenant`, `--technician`, …) está em [USAGE.pt_BR.md §1 — Interface de linha de comando](USAGE.pt_BR.md#1-interface-de-linha-de-comando-cli).** É a única fonte de verdade (mantida em sincronia com `main.py`); este guia não duplica uma cópia parcial. A lista viva é sempre `uv run python main.py --help`.
+**A referência completa e autoritativa da CLI (todas as flags — `--config`, `--web`, `--host`, `--port`, `--https-cert-file` / `--https-key-file`, `--allow-insecure-http`, `--validate-config`, `--diff`, `--fail-on-new-high`, `--export-dsar` / `--dsar-output`, `--export-audit-trail`, `--scan-compressed`, `--content-type-check`, `--scan-stego`, `--jurisdiction-hint`, `--validate-crypto`, `--reset-data`, `--tenant`, `--technician`, …) está em [USAGE.pt_BR.md §1 — Interface de linha de comando](USAGE.pt_BR.md#1-interface-de-linha-de-comando-cli).** É a única fonte de verdade (mantida em sincronia com `main.py`); este guia não duplica uma cópia parcial. A lista viva é sempre `uv run python main.py --help`.
 
 Orientação rápida para as mais comuns:
 
@@ -542,6 +542,8 @@ Todos os tipos de share usam as mesmas configurações **file_scan** (extensions
 Com `file_scan.use_content_type: true`, os conectores de **compartilhamento** usam o mesmo helper que o filesystem. **Disfarce simples** aqui é quando a **extensão do nome** não bate com o **formato real** (ex.: bytes de PDF atrás de `.txt` ou de extensão **não textual** como `.mp3`). Quem só segue a extensão erra; os *magic bytes* ainda mostram `%PDF-...` ou assinatura de mídia rica — daí PDFs seguem o fluxo de PDF na extração e **imagem/áudio/vídeo** com extensão enganosa são remapeados pela mesma tabela. `scan_rich_media_metadata` / `scan_image_ocr` valem para SMB, WebDAV e SharePoint (e dentro de arquivos compactados quando o membro interno for elegível). Continua **opt-in**; com o flag desligado, a escolha de tipo segue a extensão (salvo inclusão explícita de extensões rich media quando esses flags ampliam o conjunto).
 
 Para **uma única execução** sem alterar o config gravado: CLI **`--content-type-check`**, ou **`POST /scan`** / **`POST /start`** com **`content_type_check: true`**, ou a caixa no dashboard (mesma ideia que **`--scan-compressed`** / **`scan_compressed`** para arquivos compactados).
+
+**Validação de criptografia forte / controles (`scan.validate_crypto`, `--validate-crypto`):** Flag opt-in (desligada por padrão). Quando ativa via config, CLI, caixa no dashboard ou corpo da API **`validate_crypto: true`**, o motor liga o wiring de validação de criptografia forte / controles nessa execução (CLI / API / dashboard sobrescrevem o config). Quando off ou ausente, esse caminho é ignorado — sem mudança de comportamento. A Fase 1 é só flag + wiring; ver [USAGE.pt_BR.md](USAGE.pt_BR.md) e o parágrafo correspondente em [USAGE.md](USAGE.md) (*Strong crypto / controls*).
 
 ## Adicionando novos conectores
 

@@ -1,6 +1,6 @@
 # Plan: Optional strong-crypto validation and inference of anonymisation/controls
 
-**Status:** Deferred
+**Status:** Active (Phase 1 wiring)
 **Date:** 2026-03-15
 **Authors:** Fabio Leitao
 **Priority:** H3
@@ -30,11 +30,10 @@ This plan adds an **optional** mode, enabled by a **CLI flag** and/or **web dash
 
 ## Current state
 
-- **CLI:** [main.py](../main.py) uses argparse: `--config`, `--web`, `--port`, `--reset-data`, `--tenant`, `--technician`. No scan-mode flags today.
-- **API:** POST `/scan` and POST `/scan_database` accept optional body with `tenant` and `technician` ([ScanStartBody](https://github.com/DataBoar/data-boar/blob/main/api/routes.py)). No option for “validate crypto” or “audit controls”.
-- **Dashboard:** Scan is triggered from the dashboard; no checkbox for extra audit modes.
-- **Connectors:** Connections are made with existing drivers (SQLAlchemy, pymongo, redis, httpx, smbclient, etc.). TLS is often used (e.g. HTTPS, postgresql+psycopg2 over SSL) but the app does not currently **validate** minimum TLS version or cipher strength, nor report it per target.
-- **Data source versions plan:** [PLAN_DATA_SOURCE_VERSIONS_AND_HARDENING.md](PLAN_DATA_SOURCE_VERSIONS_AND_HARDENING.md) will add transport_security to the inventory; this plan **complements** it by adding an explicit **validation** step (strong crypto) and **control inference** (anonymisation hints), both optional and gated by a flag.
+- **Phase 1 (done):** CLI `--validate-crypto`, optional `scan.validate_crypto`, API body `validate_crypto` on POST `/scan` / `/scan_database`, dashboard checkbox, engine gate via `validate_crypto_enabled()` — off by default; CLI/API/dashboard override config for that run. Coarse crypto-signal collection in the engine runs only when the flag is on.
+- **Still open (Phases 2–4):** Full per-connector TLS/cipher criteria, anonymisation/control heuristics, dedicated “Crypto & controls” report sheet, and persistence table.
+- **Connectors:** Connections use existing drivers (SQLAlchemy, pymongo, redis, httpx, smbclient, etc.). TLS is often used but the app does not yet **validate** minimum TLS version or cipher strength per target beyond Phase 1 coarse signals.
+- **Data source versions plan:** [PLAN_DATA_SOURCE_VERSIONS_AND_HARDENING.md](PLAN_DATA_SOURCE_VERSIONS_AND_HARDENING.md) will add transport_security to the inventory; this plan **complements** it with explicit **validation** and **control inference**, both optional and gated by the flag.
 
 ---
 
@@ -79,13 +78,13 @@ All validation and inference is **best-effort**: if the driver or API does not e
 
 | #   | To-do                                                                                                                | Status |
 | --- | ---------------------------------------------------------------------                                                | ------ |
-| 1.1 | Add CLI flag `--validate-crypto` in main.py; pass through to config or engine                                        | ⬜      |
-| 1.2 | Optional config key `scan.validate_crypto`; CLI overrides when set                                                   | ⬜      |
-| 1.3 | Extend API scan body (POST /scan, POST /scan_database) with optional `validate_crypto: bool`; wire to engine         | ⬜      |
-| 1.4 | Dashboard: add checkbox “Validate strong crypto and infer controls”; send flag in scan request                       | ⬜      |
-| 1.5 | Engine: accept validate_crypto and pass to connectors or post-processing; when false, skip all crypto/controls logic | ⬜      |
-| 1.6 | Tests: CLI flag and API body; engine receives flag; no new behaviour when flag false                                 | ⬜      |
-| 1.7 | Docs: USAGE and TECH_GUIDE describe flag and config; dashboard help text                                             | ⬜      |
+| 1.1 | Add CLI flag `--validate-crypto` in main.py; pass through to config or engine                                        | ✅      |
+| 1.2 | Optional config key `scan.validate_crypto`; CLI overrides when set                                                   | ✅      |
+| 1.3 | Extend API scan body (POST /scan, POST /scan_database) with optional `validate_crypto: bool`; wire to engine         | ✅      |
+| 1.4 | Dashboard: add checkbox “Validate strong crypto and infer controls”; send flag in scan request                       | ✅      |
+| 1.5 | Engine: accept validate_crypto and pass to connectors or post-processing; when false, skip all crypto/controls logic | ✅      |
+| 1.6 | Tests: CLI flag and API body; engine receives flag; no new behaviour when flag false                                 | ✅      |
+| 1.7 | Docs: USAGE and TECH_GUIDE describe flag and config; dashboard help text                                             | ✅      |
 
 ### Phase 2: Strong-crypto validation per connection
 

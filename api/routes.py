@@ -523,6 +523,9 @@ class DatabaseConfig(BaseModel):
     jurisdiction_hint: bool | None = (
         None  # when True, heuristic jurisdiction Report info rows for this session
     )
+    validate_crypto: bool | None = (
+        None  # when True, enable scan.validate_crypto for this run only
+    )
 
 
 class ScanStartBody(BaseModel):
@@ -538,6 +541,9 @@ class ScanStartBody(BaseModel):
     )
     jurisdiction_hint: bool | None = (
         None  # when True, opt-in to heuristic jurisdiction notes on Report info for this session
+    )
+    validate_crypto: bool | None = (
+        None  # when True, set scan.validate_crypto for this run only (strong-crypto / controls wiring)
     )
     scan_for_stego: bool | None = (
         None  # when True, merge into file_scan for this run only (entropy hints on rich media)
@@ -1340,7 +1346,7 @@ _SESSION_RESPONSES = {
 async def start_scan(
     background_tasks: BackgroundTasks, body: ScanStartBody | None = None
 ):
-    """Start audit in background. Optional body: tenant, technician, scan_compressed, content_type_check, scan_for_stego, scheduled, jurisdiction_hint. Returns session_id."""
+    """Start audit in background. Optional body: tenant, technician, scan_compressed, content_type_check, scan_for_stego, scheduled, jurisdiction_hint, validate_crypto. Returns session_id."""
     _raise_if_license_blocks_scan()
     if body and getattr(body, "scheduled", None) is True:
         _raise_if_feature_blocked("scheduled_scans")
@@ -1356,6 +1362,7 @@ async def start_scan(
     tenant = sanitize_tenant_technician((body.tenant if body else None) or None)
     technician = sanitize_tenant_technician((body.technician if body else None) or None)
     jh = bool(body and body.jurisdiction_hint)
+    vc = bool(body and body.validate_crypto)
     engine.db_manager.set_current_session_id(session_id)
     engine.db_manager.create_session_record(
         session_id,
@@ -1369,6 +1376,8 @@ async def start_scan(
     prev_scan_compressed = fs.get("scan_compressed")
     prev_use_content_type = fs.get("use_content_type")
     prev_scan_for_stego = fs.get("scan_for_stego")
+    _scan_prev = engine.config.get("scan") or {}
+    prev_validate_crypto = _scan_prev.get("validate_crypto")
     _rep_prev = engine.config.get("report") or {}
     _jh_prev = _rep_prev.get("jurisdiction_hints")
     prev_jurisdiction_hints_enabled = (
@@ -1384,6 +1393,9 @@ async def start_scan(
     if jh:
         engine.config.setdefault("report", {}).setdefault("jurisdiction_hints", {})
         engine.config["report"]["jurisdiction_hints"]["enabled"] = True
+    if vc:
+        # Body overrides scan.validate_crypto for this run only.
+        engine.config.setdefault("scan", {})["validate_crypto"] = True
 
     def run_targets():
         try:
@@ -1408,6 +1420,13 @@ async def start_scan(
                 engine.config.setdefault("report", {}).setdefault(
                     "jurisdiction_hints", {}
                 )["enabled"] = prev_jurisdiction_hints_enabled
+            if vc:
+                if prev_validate_crypto is None:
+                    engine.config.setdefault("scan", {}).pop("validate_crypto", None)
+                else:
+                    engine.config.setdefault("scan", {})["validate_crypto"] = (
+                        prev_validate_crypto
+                    )
         from utils.notify import notify_scan_complete_background
 
         notify_scan_complete_background(engine.config, engine.db_manager, session_id)
@@ -1942,14 +1961,19 @@ async def scan_database(config: DatabaseConfig, background_tasks: BackgroundTask
     tenant = sanitize_tenant_technician(config.tenant)
     technician = sanitize_tenant_technician(config.technician)
     jh_db = bool(config.jurisdiction_hint)
+    vc_db = bool(config.validate_crypto)
     _rep_prev = engine.config.get("report") or {}
     _jh_prev = _rep_prev.get("jurisdiction_hints")
     prev_jurisdiction_hints_enabled_db = (
         bool(_jh_prev.get("enabled")) if isinstance(_jh_prev, dict) else False
     )
+    _scan_prev_db = engine.config.get("scan") or {}
+    prev_validate_crypto_db = _scan_prev_db.get("validate_crypto")
     if jh_db:
         engine.config.setdefault("report", {}).setdefault("jurisdiction_hints", {})
         engine.config["report"]["jurisdiction_hints"]["enabled"] = True
+    if vc_db:
+        engine.config.setdefault("scan", {})["validate_crypto"] = True
     engine.db_manager.set_current_session_id(session_id)
     engine.db_manager.create_session_record(
         session_id,
@@ -1973,6 +1997,13 @@ async def scan_database(config: DatabaseConfig, background_tasks: BackgroundTask
                 engine.config.setdefault("report", {}).setdefault(
                     "jurisdiction_hints", {}
                 )["enabled"] = prev_jurisdiction_hints_enabled_db
+            if vc_db:
+                if prev_validate_crypto_db is None:
+                    engine.config.setdefault("scan", {}).pop("validate_crypto", None)
+                else:
+                    engine.config.setdefault("scan", {})["validate_crypto"] = (
+                        prev_validate_crypto_db
+                    )
         from utils.notify import notify_scan_complete_background
 
         notify_scan_complete_background(engine.config, engine.db_manager, session_id)

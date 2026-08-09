@@ -88,7 +88,11 @@ except ImportError:  # noqa: BLE001
     pass  # optional connector not installed
 
 from core.connector_registry import connector_for_target
-from core.crypto_audit import StrongCryptoSignal, summarize_crypto_from_connection_info
+from core.crypto_audit import (
+    StrongCryptoSignal,
+    summarize_crypto_from_connection_info,
+    validate_crypto_enabled,
+)
 from core.database import LocalDBManager
 from core.scan_progress import scan_progress_from_config
 from core.sampling import SamplingPolicy
@@ -549,21 +553,22 @@ class AuditEngine:
                     detection_config=self.config.get("detection"),
                     **extra_kw,
                 )
-                # Phase 1: inspect connection info to collect coarse crypto/transport hints.
-                name = (target.get("name") or "").strip() or "database"
-                driver = (target.get("driver") or "").strip()
-                dsn = (target.get("dsn") or "").strip()
-                sslmode = (target.get("sslmode") or "").strip()
-                conn_info = {
-                    "type": "database",
-                    "name": name,
-                    "driver": driver,
-                    "dsn": dsn,
-                    "sslmode": sslmode,
-                }
-                signals = summarize_crypto_from_connection_info(conn_info)
-                if signals:
-                    self._crypto_signals.append((name, signals))
+                # Opt-in only (scan.validate_crypto): coarse crypto/transport hints.
+                if validate_crypto_enabled(self.config):
+                    name = (target.get("name") or "").strip() or "database"
+                    driver = (target.get("driver") or "").strip()
+                    dsn = (target.get("dsn") or "").strip()
+                    sslmode = (target.get("sslmode") or "").strip()
+                    conn_info = {
+                        "type": "database",
+                        "name": name,
+                        "driver": driver,
+                        "dsn": dsn,
+                        "sslmode": sslmode,
+                    }
+                    signals = summarize_crypto_from_connection_info(conn_info)
+                    if signals:
+                        self._crypto_signals.append((name, signals))
             connector.run()
         except Exception as e:
             self.db_manager.save_failure(
