@@ -543,7 +543,7 @@ When you enable `file_scan.use_content_type: true`, the share connectors use the
 
 For a **single run** without editing the saved config, use CLI **`--content-type-check`**, or **`POST /scan`** / **`POST /start`** with **`content_type_check: true`**, or the dashboard checkbox next to **Start scan** (same semantics as **`--scan-compressed`** / **`scan_compressed`** for archives).
 
-**Strong crypto / controls validation (`scan.validate_crypto`, `--validate-crypto`):** Opt-in flag (off by default). When enabled via config, CLI, dashboard checkbox, or API body **`validate_crypto: true`**, the engine enables strong-crypto validation for that run (CLI / API / dashboard override config). When off or absent, that path is skipped — no behaviour change. **Phase 2a + 2c:** SQL, MongoDB, and Redis connectors honor TLS connect options where configured, probe TLS after connect, and persist rows in **`crypto_controls_audit`**; Excel sheet **Crypto & controls** (allowlisted details only — no secrets). See [USAGE.md](USAGE.md) (*Strong crypto / controls*).
+**Strong crypto / controls validation (`scan.validate_crypto`, `--validate-crypto`):** Opt-in flag (off by default). When enabled via config, CLI, dashboard checkbox, or API body **`validate_crypto: true`**, the engine enables strong-crypto validation for that run (CLI / API / dashboard override config). When off or absent, that path is skipped — no behaviour change. **Phase 2a–2d:** SQL, MongoDB, Redis, and SMB connectors honor transport crypto connect options where configured, probe after connect, and persist rows in **`crypto_controls_audit`**; Excel sheet **Crypto & controls** (allowlisted details only — no secrets). See [USAGE.md](USAGE.md) (*Strong crypto / controls*).
 
 ## Adding new connectors
 

@@ -7,15 +7,18 @@ from sqlalchemy import create_engine
 from core.crypto_audit import (
     CryptoProbeFacts,
     StrongCryptoResult,
+    _canonical_smb_dialect,
     _canonical_ssl_cert_reqs,
     _canonical_sslmode,
     _normalize_tls_version,
     _sslmode_from_connection_string,
     collect_mongodb_crypto_facts,
     collect_redis_crypto_facts,
+    collect_smb_crypto_facts,
     collect_sql_crypto_facts,
     evaluate_strong_crypto,
     resolve_nosql_tls_connect_options,
+    resolve_smb_connect_options,
     summarize_crypto_from_connection_info,
 )
 
@@ -285,3 +288,94 @@ def test_collect_redis_crypto_facts_from_ssl_socket() -> None:
     result, details = evaluate_strong_crypto(facts)
     assert result is StrongCryptoResult.OK
     assert "TLSv1.3" in details
+
+
+def test_canonical_smb_dialect_allowlist() -> None:
+    assert _canonical_smb_dialect(0x0311) == "SMB_3_1_1"
+    assert _canonical_smb_dialect("SMB_3_0_2") == "SMB_3_0_2"
+    assert _canonical_smb_dialect("SMB_3_1_1 password=secret") == "SMB_3_1_1"
+    assert _canonical_smb_dialect(0x9999) is None
+    assert _canonical_smb_dialect("not-a-dialect") is None
+
+
+def test_resolve_smb_connect_options() -> None:
+    assert resolve_smb_connect_options({}) == (None, None)
+    assert resolve_smb_connect_options({"encrypt": True}) == (True, None)
+    assert resolve_smb_connect_options(
+        {"smb_encrypt": False, "require_signing": False}
+    ) == (False, False)
+
+
+def test_smb_3_signing_encryption_is_ok() -> None:
+    result, details = evaluate_strong_crypto(
+        CryptoProbeFacts(
+            source="smb_session",
+            smb_dialect="SMB_3_1_1",
+            smb_signing="required",
+            smb_encryption="on",
+        )
+    )
+    assert result is StrongCryptoResult.OK
+    assert "SMB_3_1_1" in details
+    assert "encryption=on" in details
+
+
+def test_smb_signing_without_encryption_is_warning() -> None:
+    result, details = evaluate_strong_crypto(
+        CryptoProbeFacts(
+            source="smb_session",
+            smb_dialect="SMB_3_0_2",
+            smb_signing="required",
+            smb_encryption="off",
+        )
+    )
+    assert result is StrongCryptoResult.WARNING
+    assert "signed without encryption" in details.lower() or "encryption=off" in details
+
+
+def test_smb_signing_disabled_is_fail() -> None:
+    result, _details = evaluate_strong_crypto(
+        CryptoProbeFacts(
+            source="smb_session",
+            smb_dialect="SMB_3_1_1",
+            smb_signing="disabled",
+            smb_encryption="off",
+        )
+    )
+    assert result is StrongCryptoResult.FAIL
+
+
+def test_collect_smb_crypto_facts_and_password_never_leaks() -> None:
+    secret = "smb-super-secret-password-XYZ"
+
+    class _Conn:
+        dialect = 0x0311
+        require_signing = True
+        supports_encryption = True
+
+    class _Session:
+        connection = _Conn()
+        signing_required = True
+        encrypt_data = True
+        username = f"user\\\\with\\\\{secret}"
+        password = secret
+
+    facts = collect_smb_crypto_facts(
+        _Session(),
+        {
+            "password": secret,
+            "pass": secret,
+            "host": "fileserver.example.com",
+            "share": "secretshare",
+        },
+    )
+    assert facts.source == "smb_session"
+    assert facts.smb_dialect == "SMB_3_1_1"
+    assert facts.smb_signing == "required"
+    assert facts.smb_encryption == "on"
+    result, details = evaluate_strong_crypto(facts)
+    assert secret not in details
+    assert "password=" not in details.lower()
+    assert "fileserver" not in details
+    assert "secretshare" not in details
+    assert result is StrongCryptoResult.OK

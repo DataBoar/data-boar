@@ -10,6 +10,7 @@ import openpyxl
 
 from connectors.mongodb_connector import MongoDBConnector
 from connectors.redis_connector import RedisConnector
+from connectors.smb_connector import SMBConnector
 from connectors.sql_connector import SQLConnector
 from core.crypto_audit import collect_sql_crypto_facts
 from core.database import LocalDBManager
@@ -270,6 +271,93 @@ def test_redis_connector_saves_crypto_audit_when_flag_on() -> None:
     assert kwargs["strong_crypto_result"] == "fail"  # plaintext
     details = kwargs["strong_crypto_details"] or ""
     assert "password=" not in details.lower()
+
+
+def test_smb_connect_honors_encrypt_and_signing() -> None:
+    target = {
+        "name": "smb-tls",
+        "host": "files.example.com",
+        "share": "data",
+        "user": "u",
+        "password": "p",
+        "encrypt": True,
+        "require_signing": True,
+        "_validate_crypto": False,
+    }
+    scanner = MagicMock()
+    db_manager = MagicMock()
+    session = MagicMock()
+    session.signing_required = True
+    session.encrypt_data = True
+    session.connection.dialect = 0x0311
+    session.connection.supports_encryption = True
+    fake_smb = MagicMock()
+    fake_smb.register_session.return_value = session
+    fake_smb.walk.return_value = []
+    connector = SMBConnector(target, scanner, db_manager)
+    with patch("connectors.smb_connector._SMB_AVAILABLE", True):
+        with patch("connectors.smb_connector.smbclient", fake_smb):
+            connector.run()
+    kwargs = fake_smb.register_session.call_args.kwargs
+    assert kwargs.get("encrypt") is True
+    assert kwargs.get("require_signing") is True
+
+
+def test_smb_connector_saves_crypto_audit_when_flag_on() -> None:
+    secret = "must-not-appear-in-crypto-details"
+    target = {
+        "name": "smb-crypto",
+        "host": "files.example.com",
+        "share": "data",
+        "user": "u",
+        "password": secret,
+        "encrypt": True,
+        "_validate_crypto": True,
+    }
+    scanner = MagicMock()
+    db_manager = MagicMock()
+    session = MagicMock()
+    session.signing_required = True
+    session.encrypt_data = True
+    session.connection.dialect = 0x0311
+    session.connection.supports_encryption = True
+    fake_smb = MagicMock()
+    fake_smb.register_session.return_value = session
+    fake_smb.walk.return_value = []
+    connector = SMBConnector(target, scanner, db_manager)
+    with patch("connectors.smb_connector._SMB_AVAILABLE", True):
+        with patch("connectors.smb_connector.smbclient", fake_smb):
+            connector.run()
+    assert db_manager.save_crypto_controls_audit.called
+    kwargs = db_manager.save_crypto_controls_audit.call_args.kwargs
+    assert kwargs["target_name"] == "smb-crypto"
+    assert kwargs["connection_type"] == "smb"
+    assert kwargs["strong_crypto_result"] == "ok"
+    details = kwargs["strong_crypto_details"] or ""
+    assert secret not in details
+    assert "password=" not in details.lower()
+
+
+def test_smb_connector_skips_crypto_audit_when_flag_off() -> None:
+    target = {
+        "name": "smb-off",
+        "host": "files.example.com",
+        "share": "data",
+        "user": "u",
+        "password": "p",
+        "_validate_crypto": False,
+    }
+    scanner = MagicMock()
+    db_manager = MagicMock()
+    session = MagicMock()
+    fake_smb = MagicMock()
+    fake_smb.register_session.return_value = session
+    fake_smb.walk.return_value = []
+    connector = SMBConnector(target, scanner, db_manager)
+    with patch("connectors.smb_connector._SMB_AVAILABLE", True):
+        with patch("connectors.smb_connector.smbclient", fake_smb):
+            connector.run()
+    assert not db_manager.save_crypto_controls_audit.called
 
 
 def test_mongodb_connector_skips_crypto_audit_when_flag_off() -> None:
