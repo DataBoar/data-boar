@@ -123,9 +123,16 @@ Or in YAML:
 api:
   https_cert_file: "/etc/data-boar/certs/fullchain.pem"
   https_key_file: "/etc/data-boar/certs/privkey.pem"
+  # Optional (S2a wave-2b): allow-list of leaf cert SHA-256 digests (hex).
+  # Omit = observe/display current fingerprint only (no trust downgrade).
+  # List = match any (supports rotation); mismatch → trust_reasons includes
+  # tls_cert_fingerprint_mismatch.
+  # https_cert_fingerprint_sha256:
+  #   - "aabbccdd…64 hex chars…"
+  #   - "old-cert-still-valid-during-rotation…"
 ```
 
-**3.** Open **`https://<host>:<port>/`**. Use **`GET /status`** or **`GET /health`** and check **`dashboard_transport`** in JSON (`mode`, `tls_active`, `summary`) **and** canonical **`trust_state`** / **`trust_reasons`** / **`output_confidence`**.
+**3.** Open **`https://<host>:<port>/`**. Use **`GET /status`** or **`GET /health`** and check **`dashboard_transport`** in JSON (`mode`, `tls_active`, `summary`, optional nested **`tls_posture`**) **and** canonical **`trust_state`** / **`trust_reasons`** / **`output_confidence`**.
 
 **4.** Optional evidence: **`python main.py --export-audit-trail -`** (without `--web`) includes **`dashboard_transport`**, **`trust_state`**, and **`enterprise_surface`** in the exported JSON for governance snapshots.
 
@@ -171,7 +178,7 @@ Exact Compose/Kubernetes patterns live next to your orchestration files; see [de
 
 | Check            | What to look for                                                                                                                                                                                               |
 | -----            | ----------------                                                                                                                                                                                               |
-| **Runtime**      | `GET /status` and `GET /health` → **`dashboard_transport`** reflects **`https`** vs explicit **http** opt-in; **`trust_state`** is the canonical combined signal. On native HTTPS, **`dashboard_transport.tls_posture`** reports the cipher/protocol self-check (S2a wave-2a; published via env so uvicorn **workers** see it); weak posture adds **`tls_cipher_baseline_weak`** / **`tls_protocol_below_baseline`** to **`trust_reasons`**. |
+| **Runtime**      | `GET /status` and `GET /health` → **`dashboard_transport`** reflects **`https`** vs explicit **http** opt-in; **`trust_state`** is the canonical combined signal. On native HTTPS, **`dashboard_transport.tls_posture`** reports cipher/protocol + leaf cert SHA-256 (S2a wave-2a/2b; published via env so uvicorn **workers** see it). Weak ciphers/protocol add **`tls_cipher_baseline_weak`** / **`tls_protocol_below_baseline`**; configured fingerprint allow-list mismatch adds **`tls_cert_fingerprint_mismatch`**. Without **`api.https_cert_fingerprint_sha256`**, fingerprint is observe-only (no trust downgrade). |
 | **Audit export** | `python main.py --export-audit-trail -` → JSON fields **`dashboard_transport`**, **`trust_state`**, **`enterprise_surface`** (export runs without `--web`; transport may be `not_configured` unless env is set). |
 | **Auth**         | With **`require_api_key`**, **`/health`** = no key; **`/status`** = key required.                                                                                                                              |
 

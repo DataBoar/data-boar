@@ -1,8 +1,8 @@
 """
-Canonical runtime trust_state (S2a / GRC A1–A2 marker + A3 thin cipher probe).
+Canonical runtime trust_state (S2a / GRC A1–A2 marker + A3 thin TLS posture).
 
 Combines license trust, integrity tamper, dashboard transport insecurity, and
-TLS posture (protocol/cipher baseline) into one operator-facing
+TLS posture (protocol/cipher/fingerprint baseline) into one operator-facing
 ``trusted`` | ``degraded`` | ``untrusted`` contract for ``GET /status``,
 ``GET /health``, and ``--export-audit-trail``.
 
@@ -16,7 +16,12 @@ from typing import Any
 
 from core.dashboard_transport import get_dashboard_transport_snapshot
 from core.runtime_trust import get_runtime_trust_snapshot
-from core.tls_posture import REASON_CIPHER, REASON_PROTOCOL, get_tls_posture_snapshot
+from core.tls_posture import (
+    REASON_CIPHER,
+    REASON_FINGERPRINT,
+    REASON_PROTOCOL,
+    get_tls_posture_snapshot,
+)
 
 _STATE_RANK = {"trusted": 0, "degraded": 1, "untrusted": 2}
 _CONFIDENCE = {
@@ -78,7 +83,10 @@ def get_canonical_trust_snapshot(config: dict[str, Any]) -> dict[str, Any]:
     if tls_active and posture.get("checked") and not posture.get("ok"):
         state = _worse(state, "degraded")
         for r in posture.get("trust_reasons") or []:
-            if r in (REASON_PROTOCOL, REASON_CIPHER) and r not in reasons:
+            if (
+                r in (REASON_PROTOCOL, REASON_CIPHER, REASON_FINGERPRINT)
+                and r not in reasons
+            ):
                 reasons.append(r)
 
     # Stable order for tests / demos
@@ -89,6 +97,7 @@ def get_canonical_trust_snapshot(config: dict[str, Any]) -> dict[str, Any]:
         "plaintext_http_explicit",
         REASON_PROTOCOL,
         REASON_CIPHER,
+        REASON_FINGERPRINT,
     )
     ordered = [r for r in reason_order if r in reasons]
     for r in reasons:

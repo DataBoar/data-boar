@@ -73,6 +73,7 @@ def get_enterprise_surface_posture(config: dict[str, Any]) -> dict[str, Any]:
                 in (
                     "tls_protocol_below_baseline",
                     "tls_cipher_baseline_weak",
+                    "tls_cert_fingerprint_mismatch",
                 )
                 and r not in reasons
             ):

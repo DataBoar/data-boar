@@ -1211,6 +1211,7 @@ def main() -> None:
         from core.canonical_trust import get_canonical_trust_snapshot
         from core.tls_posture import (
             clear_tls_posture_snapshot,
+            expected_fingerprints_from_api_cfg,
             probe_ssl_context,
             set_tls_posture_snapshot,
         )
@@ -1226,8 +1227,12 @@ def main() -> None:
             ssl_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
             ssl_ctx.minimum_version = ssl.TLSVersion.TLSv1_2
             ssl_ctx.load_cert_chain(certfile=cert_str, keyfile=key_str)
-            # S2a wave-2a: cipher/protocol probe before trust snapshot (no bind).
-            _tls_posture = probe_ssl_context(ssl_ctx)
+            # S2a wave-2a/2b: cipher/protocol + optional cert fingerprint (no bind).
+            _tls_posture = probe_ssl_context(
+                ssl_ctx,
+                cert_path=cert_str,
+                expected_fingerprints=expected_fingerprints_from_api_cfg(api_cfg),
+            )
             set_tls_posture_snapshot(_tls_posture)
             print(
                 f"[INFO] tls_posture ok={_tls_posture.get('ok')} "
