@@ -113,7 +113,9 @@ def test_generate_report_prepends_watermark_when_degraded(tmp_path, monkeypatch)
         "report.generator._create_heatmap",
         lambda *_a, **_k: None,
     )
-    path = generate_report(_Mgr(), "sess-tint-degraded", output_dir=str(tmp_path), config={})
+    path = generate_report(
+        _Mgr(), "sess-tint-degraded", output_dir=str(tmp_path), config={}
+    )
     assert path
     info = pd.read_excel(path, sheet_name="Report info")
     assert info.iloc[0]["Field"] == "TRUST WATERMARK"
