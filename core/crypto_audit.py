@@ -4,6 +4,8 @@ Helpers for strong crypto / controls validation (Order 5).
 Phase 1: coarse connection-info signals + ``validate_crypto_enabled``.
 Phase 2a: result criteria, SQLAlchemy post-connect probe facts, evaluation
 to ok/warning/fail/not_available/not_applicable (no secrets in details).
+Phase 2c: MongoDB / Redis TLS connect intent + post-connect probe facts
+(allowlisted tokens only — never raw URI/DSN fragments in details).
 """
 
 from __future__ import annotations
@@ -93,6 +95,174 @@ def _sslmode_from_connection_string(raw: Any) -> str | None:
         if sep in part:
             part = part.split(sep, 1)[0]
     return _canonical_sslmode(part)
+
+
+# redis-py / ssl module cert requirement tokens only.
+_KNOWN_SSL_CERT_REQS = frozenset({"none", "optional", "required"})
+
+# URI / config bool tokens accepted for tls=/ssl= query-style values.
+_KNOWN_BOOL_TOKENS = {
+    "true": True,
+    "1": True,
+    "yes": True,
+    "on": True,
+    "false": False,
+    "0": False,
+    "no": False,
+    "off": False,
+}
+
+
+def _canonical_ssl_cert_reqs(raw: Any) -> str | None:
+    """Return a known ssl_cert_reqs token, or None (never raw URI tails)."""
+    token = _lower_or_empty(raw)
+    if not token:
+        return None
+    for sep in (" ", "\t", "&", ";", "\n", "\r"):
+        if sep in token:
+            token = token.split(sep, 1)[0].strip()
+    if token in _KNOWN_SSL_CERT_REQS:
+        return token
+    return None
+
+
+def _canonical_bool_token(raw: Any) -> bool | None:
+    """Map allowlisted bool spellings to bool; reject anything else."""
+    token = _lower_or_empty(raw)
+    if not token:
+        return None
+    for sep in (" ", "\t", "&", ";", "\n", "\r"):
+        if sep in token:
+            token = token.split(sep, 1)[0].strip()
+    return _KNOWN_BOOL_TOKENS.get(token)
+
+
+def _query_param_bool(text: str, key: str) -> bool | None:
+    """
+    Extract ``key=<allowlisted-bool>`` from a URI/query string.
+
+    Stops at ``&`` / space / ``;`` and allowlists the value — never returns
+    arbitrary DSN/URI remainder (password tails, etc.).
+    """
+    lowered = _lower_or_empty(text)
+    needle = f"{key}="
+    if needle not in lowered:
+        return None
+    part = lowered.split(needle, 1)[1]
+    for sep in (" ", "\t", "&", ";", "\n", "\r"):
+        if sep in part:
+            part = part.split(sep, 1)[0]
+    return _canonical_bool_token(part)
+
+
+def _config_truthy_flag(config: dict[str, Any], *keys: str) -> bool | None:
+    """Return True/False when a config key is an explicit bool-like value."""
+    for key in keys:
+        if key not in config:
+            continue
+        val = config.get(key)
+        if isinstance(val, bool):
+            return val
+        parsed = _canonical_bool_token(val)
+        if parsed is not None:
+            return parsed
+    return None
+
+
+def _uri_implies_tls(uri: Any) -> bool | None:
+    """Detect TLS intent from URI scheme / allowlisted tls|ssl query params."""
+    text = _lower_or_empty(uri)
+    if not text:
+        return None
+    if text.startswith("mongodb+srv://") or text.startswith("rediss://"):
+        return True
+    for key in ("tls", "ssl"):
+        parsed = _query_param_bool(text, key)
+        if parsed is not None:
+            return parsed
+    return None
+
+
+def resolve_nosql_tls_connect_options(
+    target_config: dict[str, Any],
+) -> tuple[bool, str | None, str | None]:
+    """
+    Resolve whether to enable TLS on Mongo/Redis connect.
+
+    Returns ``(tls_enabled, sslmode_posture, ssl_cert_reqs)`` where:
+    - ``sslmode_posture`` is an allowlisted libpq-style token for evaluation
+      (``verify-full`` when certs are verified, ``require`` when TLS without
+      verification, ``disable`` when TLS is off).
+    - ``ssl_cert_reqs`` is an allowlisted redis-py token or None.
+    """
+    uri = (
+        target_config.get("uri")
+        or target_config.get("url")
+        or target_config.get("connection_string")
+        or target_config.get("dsn")
+        or ""
+    )
+    tls_flag = _config_truthy_flag(target_config, "tls", "ssl")
+    if tls_flag is None:
+        tls_flag = _uri_implies_tls(uri)
+
+    insecure = _config_truthy_flag(
+        target_config,
+        "tls_insecure",
+        "tlsInsecure",
+        "tls_allow_invalid_certificates",
+        "tlsAllowInvalidCertificates",
+    )
+    if insecure is None:
+        insecure = _query_param_bool(str(uri), "tlsinsecure")
+
+    cert_reqs = _canonical_ssl_cert_reqs(target_config.get("ssl_cert_reqs"))
+    if cert_reqs is None:
+        # Allowlisted extraction only — never persist raw query tails.
+        text = _lower_or_empty(uri)
+        if "ssl_cert_reqs=" in text:
+            part = text.split("ssl_cert_reqs=", 1)[1]
+            for sep in (" ", "\t", "&", ";", "\n", "\r"):
+                if sep in part:
+                    part = part.split(sep, 1)[0]
+            cert_reqs = _canonical_ssl_cert_reqs(part)
+
+    if tls_flag is False:
+        return False, "disable", cert_reqs
+
+    if tls_flag is not True and cert_reqs is None and insecure is not True:
+        # No TLS intent — connect plaintext; probe will report fail/not_available.
+        return False, None, None
+
+    # TLS on (explicit flag, rediss/mongodb+srv, or ssl_cert_reqs present).
+    tls_enabled = True
+    if insecure is True or cert_reqs == "none":
+        return tls_enabled, "require", cert_reqs or "none"
+    if cert_reqs == "optional":
+        return tls_enabled, "prefer", cert_reqs
+    # Default when TLS is requested: expect certificate verification.
+    return tls_enabled, "verify-full", cert_reqs or "required"
+
+
+def _ssl_socket_probe(sock: Any) -> tuple[str | None, str | None]:
+    """Best-effort TLS version + cipher name from an SSLSocket-like object."""
+    tls_version = None
+    cipher = None
+    try:
+        if hasattr(sock, "version"):
+            tls_version = _normalize_tls_version(sock.version())
+    except Exception:
+        tls_version = None
+    try:
+        if hasattr(sock, "cipher"):
+            info = sock.cipher()
+            if isinstance(info, tuple) and info:
+                cipher = str(info[0]).strip()[:80] or None
+            elif isinstance(info, str):
+                cipher = info.strip()[:80] or None
+    except Exception:
+        cipher = None
+    return tls_version, cipher
 
 
 def validate_crypto_enabled(config: dict[str, Any] | None) -> bool:
@@ -366,4 +536,150 @@ def collect_sql_crypto_facts(
     return CryptoProbeFacts(
         sslmode=sslmode or None,
         source="config_sslmode" if sslmode else "unavailable",
+    )
+
+
+def collect_mongodb_crypto_facts(
+    client: Any, target_config: dict[str, Any]
+) -> CryptoProbeFacts:
+    """
+    Best-effort TLS facts from a live PyMongo client + allowlisted config.
+
+    Prefers live SSL socket attributes when reachable; otherwise records
+    connect-time TLS intent (``tls`` / URI scheme) mapped to sslmode posture.
+    Never returns URI fragments, credentials, or PEMs.
+    """
+    tls_enabled, sslmode, _cert = resolve_nosql_tls_connect_options(target_config)
+
+    tls_version = None
+    cipher = None
+    live_tls: bool | None = None
+    source = "config_tls" if tls_enabled or sslmode else "unavailable"
+
+    # Prefer client options when PyMongo exposes them.
+    try:
+        opts = getattr(client, "options", None)
+        if opts is not None:
+            opt_tls = getattr(opts, "tls", None)
+            if opt_tls is None and hasattr(opts, "_options"):
+                opt_tls = getattr(opts._options, "tls", None)
+            if isinstance(opt_tls, bool):
+                live_tls = opt_tls
+                source = "mongodb_client_options"
+    except Exception:
+        pass
+
+    # Best-effort: inspect one pooled socket after a cheap server ping.
+    try:
+        if client is not None:
+            client.admin.command("ping")
+            sock_info = None
+            topo = getattr(client, "_topology", None)
+            if topo is not None:
+                servers = getattr(topo, "_servers", None) or {}
+                for server in list(servers.values()):
+                    pool = getattr(server, "_pool", None)
+                    if pool is None:
+                        continue
+                    sock_info = getattr(pool, "socket_info", None) or getattr(
+                        pool, "_socket_info", None
+                    )
+                    if sock_info is not None:
+                        break
+                    # PyMongo 4.x Pool may expose sockets via gen contexts — skip if opaque.
+            sock = None
+            if sock_info is not None:
+                sock = getattr(sock_info, "sock", None) or getattr(
+                    sock_info, "socket", None
+                )
+            if sock is not None and hasattr(sock, "version"):
+                tls_version, cipher = _ssl_socket_probe(sock)
+                live_tls = True
+                source = "mongodb_ssl_socket"
+    except Exception:
+        pass
+
+    if live_tls is None:
+        live_tls = True if tls_enabled else False
+
+    if not live_tls and not tls_enabled:
+        return CryptoProbeFacts(
+            tls_in_use=False,
+            sslmode=sslmode or "disable",
+            source=source if source != "unavailable" else "mongodb_plaintext",
+        )
+
+    return CryptoProbeFacts(
+        tls_in_use=True if live_tls else tls_enabled,
+        tls_version=tls_version,
+        cipher=cipher,
+        sslmode=sslmode or None,
+        source=source,
+    )
+
+
+def collect_redis_crypto_facts(
+    client: Any, target_config: dict[str, Any]
+) -> CryptoProbeFacts:
+    """
+    Best-effort TLS facts from a live redis-py client + allowlisted config.
+
+    Borrows one pool connection to read ``SSLSocket.version()`` / ``cipher()``
+    when available. Never returns URL fragments, passwords, or PEMs.
+    """
+    tls_enabled, sslmode, _cert = resolve_nosql_tls_connect_options(target_config)
+
+    tls_version = None
+    cipher = None
+    live_tls: bool | None = None
+    source = "config_tls" if tls_enabled or sslmode else "unavailable"
+
+    conn = None
+    pool = None
+    try:
+        pool = getattr(client, "connection_pool", None)
+        if pool is not None:
+            conn = pool.get_connection("_")
+            try:
+                if getattr(conn, "_sock", None) is None and hasattr(conn, "connect"):
+                    conn.connect()
+                sock = getattr(conn, "_sock", None) or getattr(conn, "sock", None)
+                if sock is not None and hasattr(sock, "version"):
+                    tls_version, cipher = _ssl_socket_probe(sock)
+                    live_tls = True
+                    source = "redis_ssl_socket"
+                elif sock is not None:
+                    # Connected socket without SSL API → plaintext TCP.
+                    live_tls = False
+                    source = "redis_tcp_socket"
+                elif bool(getattr(conn, "ssl", False) or getattr(conn, "_ssl", False)):
+                    live_tls = True
+                    source = "redis_connection_ssl_flag"
+            finally:
+                if conn is not None and pool is not None:
+                    pool.release(conn)
+                    conn = None
+    except Exception:
+        if conn is not None and pool is not None:
+            try:
+                pool.release(conn)
+            except Exception:
+                pass
+
+    if live_tls is None:
+        live_tls = True if tls_enabled else False
+
+    if not live_tls and not tls_enabled:
+        return CryptoProbeFacts(
+            tls_in_use=False,
+            sslmode=sslmode or "disable",
+            source=source if source != "unavailable" else "redis_plaintext",
+        )
+
+    return CryptoProbeFacts(
+        tls_in_use=True if live_tls else tls_enabled,
+        tls_version=tls_version,
+        cipher=cipher,
+        sslmode=sslmode or None,
+        source=source,
     )

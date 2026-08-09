@@ -17,6 +17,11 @@ except ImportError:
     MongoClient = None
 
 from core.connector_registry import register
+from core.crypto_audit import (
+    collect_mongodb_crypto_facts,
+    evaluate_strong_crypto,
+    resolve_nosql_tls_connect_options,
+)
 from connectors.inventory_details import build_mongodb_inventory_details
 from connectors.sample_value_dedup import (
     resolve_fetch_row_budget,
@@ -45,6 +50,7 @@ class MongoDBConnector:
         self.sample_limit = sample_limit
         self.detection_config = detection_config or {}
         self._client = None
+        self._tls_enabled = False
 
     def connect(self) -> None:
         if not _MONGO_AVAILABLE:
@@ -70,12 +76,21 @@ class MongoDBConnector:
             uri = f"mongodb://{host}:{port}"
         connect_s = max(1, int(self.config.get("connect_timeout_seconds", 25)))
         read_s = max(1, int(self.config.get("read_timeout_seconds", 90)))
-        self._client = MongoClient(
-            uri,
-            serverSelectionTimeoutMS=connect_s * 1000,
-            connectTimeoutMS=connect_s * 1000,
-            socketTimeoutMS=read_s * 1000,
+        tls_enabled, sslmode_posture, _cert = resolve_nosql_tls_connect_options(
+            self.config
         )
+        self._tls_enabled = bool(tls_enabled)
+        client_kwargs: dict[str, Any] = {
+            "serverSelectionTimeoutMS": connect_s * 1000,
+            "connectTimeoutMS": connect_s * 1000,
+            "socketTimeoutMS": read_s * 1000,
+        }
+        if tls_enabled:
+            client_kwargs["tls"] = True
+            # require / prefer → encrypted without full CA/hostname verify.
+            if sslmode_posture in ("require", "prefer", "allow"):
+                client_kwargs["tlsAllowInvalidCertificates"] = True
+        self._client = MongoClient(uri, **client_kwargs)
         self._db = self._client[database]
 
     def close(self) -> None:
@@ -102,6 +117,7 @@ class MongoDBConnector:
 
             log_connection(audit_name, "mongodb", self.config.get("host", "localhost"))
             self._save_inventory_snapshot(target_name)
+            self._save_crypto_controls_audit(target_name)
             distinct_cap = resolve_sql_sample_limit(int(self.sample_limit))
             fetch_budget = resolve_fetch_row_budget(distinct_cap)
             for coll_name in self._db.list_collection_names():
@@ -171,6 +187,28 @@ class MongoDBConnector:
         finally:
             self.close()
 
+    def _save_crypto_controls_audit(self, target_name: str) -> None:
+        """Opt-in strong-crypto validation after connect (Order 5 Phase 2c)."""
+        if not self.config.get("_validate_crypto"):
+            return
+        if not hasattr(self.db_manager, "save_crypto_controls_audit"):
+            return
+        if not self._client:
+            return
+        try:
+            facts = collect_mongodb_crypto_facts(self._client, self.config)
+            result, details = evaluate_strong_crypto(facts)
+            self.db_manager.save_crypto_controls_audit(
+                target_name=target_name,
+                connection_type="mongodb",
+                strong_crypto_result=result.value,
+                strong_crypto_details=details[:512],
+                inferred_controls_summary=None,
+            )
+        except Exception:
+            # Fail-soft: probe/persist errors never fail the scan.
+            pass
+
     def _save_inventory_snapshot(self, target_name: str) -> None:
         """Persist one MongoDB inventory row (best effort; must not break scanning)."""
         if not hasattr(self.db_manager, "save_data_source_inventory"):
@@ -189,7 +227,10 @@ class MongoDBConnector:
         except Exception as e:
             # Probe is optional; preserve scan flow when buildInfo is unavailable.
             raw_details["technical"]["version_probe_error"] = str(e)[:200]
-        transport = "tls=enabled" if self.config.get("tls") else "unknown"
+        if self._tls_enabled or self.config.get("tls"):
+            transport = "tls=enabled"
+        else:
+            transport = "tls=disabled"
         raw_details["executive"]["transport_hint"] = transport
         try:
             self.db_manager.save_data_source_inventory(

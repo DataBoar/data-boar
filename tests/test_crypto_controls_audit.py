@@ -1,13 +1,15 @@
-"""Phase 2a: crypto_controls_audit persistence + SQL probe wiring + report sheet."""
+"""Phase 2a/2c: crypto_controls_audit persistence + connector wiring + report sheet."""
 
 from __future__ import annotations
 
 import sqlite3
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import openpyxl
 
+from connectors.mongodb_connector import MongoDBConnector
+from connectors.redis_connector import RedisConnector
 from connectors.sql_connector import SQLConnector
 from core.crypto_audit import collect_sql_crypto_facts
 from core.database import LocalDBManager
@@ -156,6 +158,143 @@ def test_sql_connector_skips_crypto_audit_when_flag_off(tmp_path: Path) -> None:
     connector = SQLConnector(target, scanner, db_manager)
     connector.run()
 
+    assert not db_manager.save_crypto_controls_audit.called
+
+
+def test_mongodb_connect_honors_tls_flag() -> None:
+    target = {
+        "name": "mongo-tls",
+        "host": "localhost",
+        "port": 27017,
+        "database": "test",
+        "tls": True,
+    }
+    connector = MongoDBConnector(target, MagicMock(), MagicMock())
+    with patch("connectors.mongodb_connector.MongoClient") as mongo_mock:
+        with patch("connectors.mongodb_connector._MONGO_AVAILABLE", True):
+            mongo_mock.return_value = MagicMock()
+            connector.connect()
+    assert connector._tls_enabled is True
+    assert mongo_mock.call_args.kwargs.get("tls") is True
+
+
+def test_redis_connect_honors_tls_and_cert_reqs() -> None:
+    target = {
+        "name": "redis-tls",
+        "host": "localhost",
+        "port": 6379,
+        "tls": True,
+        "ssl_cert_reqs": "required",
+    }
+    connector = RedisConnector(target, MagicMock(), MagicMock())
+    fake_redis = MagicMock()
+    fake_redis.Redis.return_value = MagicMock()
+    with patch("connectors.redis_connector._REDIS_AVAILABLE", True):
+        with patch("connectors.redis_connector.redis", fake_redis):
+            connector.connect()
+    assert connector._tls_enabled is True
+    kwargs = fake_redis.Redis.call_args.kwargs
+    assert kwargs.get("ssl") is True
+    assert kwargs.get("ssl_cert_reqs") == "required"
+
+
+def test_mongodb_connector_saves_crypto_audit_when_flag_on() -> None:
+    target = {
+        "name": "mongo-crypto",
+        "host": "localhost",
+        "port": 27017,
+        "database": "test",
+        "tls": True,
+        "_validate_crypto": True,
+    }
+    scanner = MagicMock()
+    scanner.scan_column.return_value = {
+        "sensitivity_level": "LOW",
+        "pattern_detected": "NONE",
+        "norm_tag": "",
+        "ml_confidence": 0,
+    }
+    db_manager = MagicMock()
+    client = MagicMock()
+    client.__getitem__.return_value = MagicMock()
+    client.__getitem__.return_value.list_collection_names.return_value = []
+    client.__getitem__.return_value.command.return_value = {"version": "7.0.0"}
+    connector = MongoDBConnector(target, scanner, db_manager)
+    with patch("connectors.mongodb_connector.MongoClient", return_value=client):
+        with patch("connectors.mongodb_connector._MONGO_AVAILABLE", True):
+            connector.run()
+    assert db_manager.save_crypto_controls_audit.called
+    kwargs = db_manager.save_crypto_controls_audit.call_args.kwargs
+    assert kwargs["target_name"] == "mongo-crypto"
+    assert kwargs["connection_type"] == "mongodb"
+    assert kwargs["strong_crypto_result"] in {
+        "ok",
+        "warning",
+        "fail",
+        "not_available",
+        "not_applicable",
+    }
+    details = kwargs["strong_crypto_details"] or ""
+    assert "password=" not in details.lower()
+
+
+def test_redis_connector_saves_crypto_audit_when_flag_on() -> None:
+    target = {
+        "name": "redis-crypto",
+        "host": "localhost",
+        "port": 6379,
+        "tls": False,
+        "_validate_crypto": True,
+    }
+    scanner = MagicMock()
+    scanner.scan_column.return_value = {
+        "sensitivity_level": "LOW",
+        "pattern_detected": "NONE",
+        "norm_tag": "",
+        "ml_confidence": 0,
+    }
+    db_manager = MagicMock()
+    client = MagicMock()
+    client.info.return_value = {"redis_version": "7.2.0"}
+    client.scan_iter.return_value = iter([])
+    fake_redis = MagicMock()
+    fake_redis.Redis.return_value = client
+    connector = RedisConnector(target, scanner, db_manager)
+    with patch("connectors.redis_connector._REDIS_AVAILABLE", True):
+        with patch("connectors.redis_connector.redis", fake_redis):
+            connector.run()
+    assert db_manager.save_crypto_controls_audit.called
+    kwargs = db_manager.save_crypto_controls_audit.call_args.kwargs
+    assert kwargs["target_name"] == "redis-crypto"
+    assert kwargs["connection_type"] == "redis"
+    assert kwargs["strong_crypto_result"] == "fail"  # plaintext
+    details = kwargs["strong_crypto_details"] or ""
+    assert "password=" not in details.lower()
+
+
+def test_mongodb_connector_skips_crypto_audit_when_flag_off() -> None:
+    target = {
+        "name": "mongo-off",
+        "host": "localhost",
+        "database": "test",
+        "_validate_crypto": False,
+    }
+    scanner = MagicMock()
+    scanner.scan_column.return_value = {
+        "sensitivity_level": "LOW",
+        "pattern_detected": "NONE",
+        "norm_tag": "",
+        "ml_confidence": 0,
+    }
+    db_manager = MagicMock()
+    client = MagicMock()
+    client.__getitem__.return_value = MagicMock()
+    client.__getitem__.return_value.list_collection_names.return_value = []
+    client.__getitem__.return_value.command.return_value = {"version": "7.0.0"}
+    connector = MongoDBConnector(target, scanner, db_manager)
+    with patch("connectors.mongodb_connector.MongoClient", return_value=client):
+        with patch("connectors.mongodb_connector._MONGO_AVAILABLE", True):
+            connector.run()
     assert not db_manager.save_crypto_controls_audit.called
 
 

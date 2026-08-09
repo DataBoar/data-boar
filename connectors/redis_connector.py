@@ -22,6 +22,11 @@ except ImportError:
     RedisTimeoutError = Exception  # type: ignore[misc, assignment]
 
 from core.connector_registry import register
+from core.crypto_audit import (
+    collect_redis_crypto_facts,
+    evaluate_strong_crypto,
+    resolve_nosql_tls_connect_options,
+)
 from connectors.inventory_details import build_redis_inventory_details
 from core.suggested_review import (
     SUGGESTED_REVIEW_PATTERN,
@@ -50,6 +55,7 @@ class RedisConnector:
         self.value_sample_limit = max(1, value_sample_limit)
         self.detection_config = detection_config or {}
         self._client = None
+        self._tls_enabled = False
 
     def connect(self) -> None:
         if not _REDIS_AVAILABLE:
@@ -66,14 +72,23 @@ class RedisConnector:
         password = self.config.get("pass") or self.config.get("password")
         connect_s = max(1, int(self.config.get("connect_timeout_seconds", 25)))
         read_s = max(1, int(self.config.get("read_timeout_seconds", 90)))
-        self._client = redis.Redis(
-            host=host,
-            port=port,
-            password=password or None,
-            decode_responses=True,
-            socket_connect_timeout=connect_s,
-            socket_timeout=read_s,
+        tls_enabled, _sslmode, cert_reqs = resolve_nosql_tls_connect_options(
+            self.config
         )
+        self._tls_enabled = bool(tls_enabled)
+        client_kwargs: dict[str, Any] = {
+            "host": host,
+            "port": port,
+            "password": password or None,
+            "decode_responses": True,
+            "socket_connect_timeout": connect_s,
+            "socket_timeout": read_s,
+        }
+        if tls_enabled:
+            client_kwargs["ssl"] = True
+            if cert_reqs is not None:
+                client_kwargs["ssl_cert_reqs"] = cert_reqs
+        self._client = redis.Redis(**client_kwargs)
 
     def close(self) -> None:
         if self._client:
@@ -99,6 +114,7 @@ class RedisConnector:
 
             log_connection(audit_name, "redis", self.config.get("host", "localhost"))
             self._save_inventory_snapshot(target_name)
+            self._save_crypto_controls_audit(target_name)
             keys = []
             for k in self._client.scan_iter(count=self.sample_limit):
                 keys.append(k)
@@ -206,6 +222,28 @@ class RedisConnector:
         finally:
             self.close()
 
+    def _save_crypto_controls_audit(self, target_name: str) -> None:
+        """Opt-in strong-crypto validation after connect (Order 5 Phase 2c)."""
+        if not self.config.get("_validate_crypto"):
+            return
+        if not hasattr(self.db_manager, "save_crypto_controls_audit"):
+            return
+        if not self._client:
+            return
+        try:
+            facts = collect_redis_crypto_facts(self._client, self.config)
+            result, details = evaluate_strong_crypto(facts)
+            self.db_manager.save_crypto_controls_audit(
+                target_name=target_name,
+                connection_type="redis",
+                strong_crypto_result=result.value,
+                strong_crypto_details=details[:512],
+                inferred_controls_summary=None,
+            )
+        except Exception:
+            # Fail-soft: probe/persist errors never fail the scan.
+            pass
+
     def _save_inventory_snapshot(self, target_name: str) -> None:
         """Persist one Redis inventory row (best effort)."""
         if not hasattr(self.db_manager, "save_data_source_inventory"):
@@ -224,7 +262,10 @@ class RedisConnector:
         except Exception as e:
             # Probe is optional; preserve scan flow when INFO is unavailable.
             raw_details["technical"]["version_probe_error"] = str(e)[:200]
-        transport = "tls=enabled" if self.config.get("tls") else "unknown"
+        if self._tls_enabled or self.config.get("tls"):
+            transport = "tls=enabled"
+        else:
+            transport = "tls=disabled"
         raw_details["executive"]["transport_hint"] = transport
         try:
             self.db_manager.save_data_source_inventory(
