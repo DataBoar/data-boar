@@ -741,6 +741,17 @@ def main() -> None:
             "for this process and stores the opt-in on the session."
         ),
     )
+    parser.add_argument(
+        "--validate-crypto",
+        action="store_true",
+        dest="validate_crypto",
+        help=(
+            "Opt-in for this run: enable strong-crypto / controls validation wiring "
+            "(scan.validate_crypto). Off by default. Phase 1 wires the flag only; "
+            "full per-connector TLS checks and anonymisation heuristics land in later phases. "
+            "CLI overrides config when this flag is set."
+        ),
+    )
     progress_group = parser.add_mutually_exclusive_group()
     progress_group.add_argument(
         "--progress",
@@ -1003,6 +1014,9 @@ def main() -> None:
     if args.jurisdiction_hint:
         config.setdefault("report", {}).setdefault("jurisdiction_hints", {})
         config["report"]["jurisdiction_hints"]["enabled"] = True
+    if getattr(args, "validate_crypto", False):
+        # CLI overrides scan.validate_crypto when the flag is present.
+        config.setdefault("scan", {})["validate_crypto"] = True
     if getattr(args, "scan_progress", None) is not None:
         config.setdefault("scan", {})["progress"] = bool(args.scan_progress)
 

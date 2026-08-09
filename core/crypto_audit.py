@@ -33,6 +33,22 @@ def _lower_or_empty(value: Any) -> str:
     return str(value or "").strip().lower()
 
 
+def validate_crypto_enabled(config: dict[str, Any] | None) -> bool:
+    """
+    Return True when optional strong-crypto / controls validation is enabled.
+
+    Config key: ``scan.validate_crypto`` (bool). Off by default. CLI
+    ``--validate-crypto`` and API/dashboard ``validate_crypto: true`` set this
+    for the current run (see PLAN_OPTIONAL_STRONG_CRYPTO_AND_CONTROLS_VALIDATION).
+    """
+    if not isinstance(config, dict):
+        return False
+    scan = config.get("scan")
+    if not isinstance(scan, dict):
+        return False
+    return bool(scan.get("validate_crypto"))
+
+
 def summarize_crypto_from_connection_info(
     info: dict[str, Any],
 ) -> Set[StrongCryptoSignal]:

@@ -9,7 +9,7 @@ Esta página é o **guia de uso do operador**: **CLI**, **API web e dashboard**,
 O documento descreve, em português, como:
 
 - Executar a aplicação via **CLI** e **API web**;
-- Entender os parâmetros (`--demo`, `--config`, `--web`, `--port`, `--host`, `--https-cert-file`, `--https-key-file`, `--allow-insecure-http`, `--validate-config`, `--prefilter-status`, `--tenant`, `--technician`, `--scan-compressed`, `--content-type-check`, `--scan-stego`, `--jurisdiction-hint`);
+- Entender os parâmetros (`--demo`, `--config`, `--web`, `--port`, `--host`, `--https-cert-file`, `--https-key-file`, `--allow-insecure-http`, `--validate-config`, `--prefilter-status`, `--tenant`, `--technician`, `--scan-compressed`, `--content-type-check`, `--scan-stego`, `--jurisdiction-hint`, `--validate-crypto`);
 - Navegar pelo **dashboard web**;
 - Iniciar varreduras e baixar relatórios/heatmaps usando **curl**.
 
@@ -53,6 +53,7 @@ O ponto de entrada é `main.py`.
 | `--content-type-check`  | *(flag)*             | Sobrescrita pontual: inferência por magic bytes como se `file_scan.use_content_type` estivesse true (extensão vs formato real — disfarce simples).                                                                                                                                                       |
 | `--scan-stego`          | *(flag)*             | Sobrescrita pontual: dicas de esteganografia (heurística de entropia de bytes) como se `file_scan.scan_for_stego` estivesse true — não prova dado oculto; pode aumentar leitura em imagens/áudio/vídeo.                                                                                                    |
 | `--jurisdiction-hint`   | *(flag)*             | Opt-in nesta execução: notas heurísticas de jurisdição na planilha **Report info** (ex.: EUA-CA CCPA/CPRA, Colorado, Japão APPI) quando metadados sugerem relevância. Não é conclusão jurídica. Equivale a `report.jurisdiction_hints.enabled: true` neste processo e grava o opt-in na sessão. |
+| `--validate-crypto`     | *(flag)*             | Opt-in nesta execução: ativa o wiring de validação de criptografia forte / controles (`scan.validate_crypto`). Desligado por padrão. A Fase 1 liga a flag e controla a coleta grosseira de sinais crypto; checagens TLS por conector e heurísticas de anonimização vêm depois. A CLI sobrescreve o config quando a flag está presente. Mesmo opt-in via caixa no dashboard ou `"validate_crypto": true` em **`POST /scan`** / **`POST /scan_database`**. |
 <!-- markdownlint-enable MD060 -->
 
 ### Evidência opcional de adulteração na camada de licenciamento (`licensing.mode: enforced`)
@@ -443,6 +444,7 @@ O `data-boar-report` lê **apenas** o artefato **SQLite local** da varredura (`s
 - **Dicas de esteganografia (opt-in):** `file_scan.scan_for_stego: true`, **`--scan-stego`**, caixa no dashboard ou `scan_for_stego: true` em **`POST /scan`** acrescenta uma linha de **entropia de bytes** em imagens/áudio/vídeo (heurística fraca; não é extração de stego). Mesmo padrão de restauração após a execução que `scan_compressed` / `use_content_type`.
 - `report` – `output_dir` para relatórios/heatmaps; opcionalmente `recommendation_overrides` (lista de mapeamentos por `norm_tag` para Base legal, Risco, Recomendação, Prioridade, Relevante para). Exemplo completo em [USAGE.md](USAGE.md) (seção 4, Global options); exemplo para categorias sensíveis (saúde, religião, política, PEP, raça, sindicato, genético, biométrico, vida sexual) em [USAGE.md#recommendation_overrides](USAGE.md) e abaixo em pt-BR (ver também [SENSITIVITY_DETECTION.pt_BR.md](SENSITIVITY_DETECTION.pt_BR.md)).
 - **`jurisdiction_hints` (opt-in):** notas heurísticas na planilha **Report info** para DPO/advogado quando **metadados dos achados** (nomes de coluna/arquivo/caminho, tags) sugerem possível relevância a **EUA-CA (CCPA/CPRA)**, **Colorado** ou **Japão (APPI)**. Não é conclusão jurídica; taxa alta de falso positivo/negativo. Ative com `report.jurisdiction_hints.enabled: true`, **`--jurisdiction-hint`** na CLI, caixa no dashboard ou `"jurisdiction_hint": true` em **`POST /scan`**. Sub-chaves: `us_ca`, `us_co`, `jp` e limiares `min_score_*`. Não altera níveis de sensibilidade. Detalhes: [USAGE.md](USAGE.md) (Global options / file_scan — mesmo tema em inglês no parágrafo sobre **jurisdiction hints**).
+- **`scan.validate_crypto` / `--validate-crypto` (opt-in):** wiring de validação de criptografia forte / controles. Desligado por padrão; sem mudança de comportamento quando off. Ative com `scan.validate_crypto: true`, CLI **`--validate-crypto`**, caixa no dashboard ou `"validate_crypto": true` em **`POST /scan`** / **`POST /scan_database`**. CLI / API / dashboard sobrescrevem o config nessa execução. Fase 1 = flag + wiring; ver [USAGE.md](USAGE.md) (*Strong crypto / controls*).
 - `api` – porta da API; opcionalmente `require_api_key`, `api_key` ou `api_key_from_env` para exigir chave de API (cabeçalho X-API-Key ou Authorization: Bearer); GET /health permanece público. **Em produção recomenda-se** `require_api_key: true` e chave forte via variável de ambiente (ex.: `api.api_key_from_env: "AUDIT_API_KEY"`) para não armazenar a chave no config. Ver [SECURITY.md](../SECURITY.md).
 - Por padrão, quando você inicia a API via CLI (`python main.py --web ...`), o servidor web faz bind em **`127.0.0.1` (loopback)**. No container oficial (Docker image), ele define `API_HOST=0.0.0.0` para que a porta publicada funcione a partir de fora do Docker Desktop/WSL.
 
@@ -611,6 +613,7 @@ Com **ARL ligado**, o caminho de produção `--config` (`core/engine.py`) usa `B
 scan:
   max_workers: 4
   adaptive_rate_limit: true   # padrão false — opt-in
+  # validate_crypto: false    # opcional: wiring de criptografia forte / controles (off por padrão)
   target_latency_ms: 200
 ```
 

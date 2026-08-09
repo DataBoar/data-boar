@@ -301,7 +301,7 @@ uvicorn api.routes:app --host 0.0.0.0 --port 8088
 
 ## CLI arguments (reference)
 
-**The full, authoritative CLI reference (all 22 flags — `--config`, `--web`, `--host`, `--port`, `--https-cert-file` / `--https-key-file`, `--allow-insecure-http`, `--validate-config`, `--diff`, `--fail-on-new-high`, `--export-dsar` / `--dsar-output`, `--export-audit-trail`, `--scan-compressed`, `--content-type-check`, `--scan-stego`, `--jurisdiction-hint`, `--reset-data`, `--tenant`, `--technician`, …) lives in [USAGE.md §1 — Command-line interface](USAGE.md#1-command-line-interface-cli).** It is the single source of truth (kept in sync with `main.py`); this guide does not duplicate a partial copy. The live list is always `uv run python main.py --help`.
+**The full, authoritative CLI reference (all flags — `--config`, `--web`, `--host`, `--port`, `--https-cert-file` / `--https-key-file`, `--allow-insecure-http`, `--validate-config`, `--diff`, `--fail-on-new-high`, `--export-dsar` / `--dsar-output`, `--export-audit-trail`, `--scan-compressed`, `--content-type-check`, `--scan-stego`, `--jurisdiction-hint`, `--validate-crypto`, `--reset-data`, `--tenant`, `--technician`, …) lives in [USAGE.md §1 — Command-line interface](USAGE.md#1-command-line-interface-cli).** It is the single source of truth (kept in sync with `main.py`); this guide does not duplicate a partial copy. The live list is always `uv run python main.py --help`.
 
 Quick orientation for the most common ones:
 
@@ -542,6 +542,8 @@ All share types use the same **file_scan** settings (extensions, recursive, scan
 When you enable `file_scan.use_content_type: true`, the share connectors use the same helper as the filesystem connector. **Simple cloaking** here means the **filename extension** does not match the **real** container (e.g. PDF bytes behind a `.txt` or **non-text** extension such as `.mp3`). Extension-only tools route wrong; magic bytes still expose `%PDF-...` or a rich-media signature, so PDFs are treated as PDF for extraction, and **image/audio/video** with misleading extensions are remapped via the shared magic-byte table. **`scan_rich_media_metadata`** / **`scan_image_ocr`** apply to SMB, WebDAV, and SharePoint the same way (and inside **scan_compressed** archives when those members match). This remains **opt-in**; with the flag disabled, scanning stays extension-based for type choice (aside from explicit rich-media extensions when those flags add them to the effective extension set).
 
 For a **single run** without editing the saved config, use CLI **`--content-type-check`**, or **`POST /scan`** / **`POST /start`** with **`content_type_check: true`**, or the dashboard checkbox next to **Start scan** (same semantics as **`--scan-compressed`** / **`scan_compressed`** for archives).
+
+**Strong crypto / controls validation (`scan.validate_crypto`, `--validate-crypto`):** Opt-in flag (off by default). When enabled via config, CLI, dashboard checkbox, or API body **`validate_crypto: true`**, the engine enables the strong-crypto / controls validation wiring for that run (CLI / API / dashboard override config). When off or absent, that path is skipped — no behaviour change. Phase 1 is flag + wiring only; see [USAGE.md](USAGE.md) (*Strong crypto / controls*).
 
 ## Adding new connectors
 

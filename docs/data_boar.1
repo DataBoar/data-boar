@@ -377,6 +377,14 @@ Not a legal conclusion; also configurable under
 Stored on the session when set via CLI or API.
 .
 .TP
+.B \-\-validate\-crypto
+Opt\-in for this run: enable strong\-crypto / controls validation wiring
+.RB ( scan.validate_crypto ).
+Off by default.
+Phase 1 wires the flag only; full per\-connector TLS checks and anonymisation heuristics land in later phases.
+CLI and API/dashboard body override config when set for that run.
+.
+.TP
 .B \-\-progress
 Emit periodic scan progress to stderr (target X/Y, table N/M, percent, ETA when known).
 Default follows
@@ -574,7 +582,7 @@ List scan sessions (metadata) as JSON.
 .TP
 .B POST /scan
 Start a full audit of all targets in the current configuration. Optional JSON body may include
-.BR tenant ", " technician ", " scan_compressed ", " content_type_check ", " scan_for_stego ", " jurisdiction_hint
+.BR tenant ", " technician ", " scan_compressed ", " content_type_check ", " scan_for_stego ", " jurisdiction_hint ", " validate_crypto
 (see OpenAPI at
 .B /docs
 and

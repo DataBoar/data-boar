@@ -21,6 +21,8 @@ def test_audit_engine_collects_crypto_signals_for_postgres_like_target(
             "extensions": [".txt"],
         },
         "detection": {},
+        # Opt-in: crypto signal collection is gated behind scan.validate_crypto.
+        "scan": {"validate_crypto": True},
     }
 
     # Stub connector_for_target to avoid hitting real connectors or databases.
