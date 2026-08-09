@@ -177,6 +177,15 @@ legacy-doc = ["mammoth>=1.6.0"]
 # gitpython floor: streamlit pulls GitPython; pin so resolves cannot slip below
 # 3.1.55 (nine Dependabot HIGH advisories; one only fixed in 3.1.55 — not 3.1.54).
 grc-dashboard = ["streamlit>=1.58.0", "plotly>=6.8.0", "gitpython>=3.1.55"]
+# OpenTelemetry RED metrics + traces (#1500). Opt-in: DATA_BOAR_OTEL_ENABLED=1.
+# Never required for ``python main.py``. See docs/plans/PLAN_DATABOAR_OTEL_INSTRUMENTATION.md.
+otel = [
+    "opentelemetry-api>=1.27.0",
+    "opentelemetry-sdk>=1.27.0",
+    "opentelemetry-exporter-otlp>=1.27.0",
+    "opentelemetry-instrumentation-fastapi>=0.48b0",
+    "opentelemetry-instrumentation-sqlalchemy>=0.48b0",
+]
 
 [tool.uv]
 # rpds-py is transitive (referencing -> jsonschema). Upstream pivoted to CalVer at
