@@ -725,7 +725,7 @@ Counted rows below celebrate the **maintenance + publish** sprint; see **`docs/r
 | 4     | Audit/export trail marks insecure dashboard traffic when override is enabled                                    | ✅ Done    |
 | 5     | Tests for HTTPS + HTTP override paths (flags, warnings, status fields, banner rendering)                        | ✅ Done    |
 | 6     | Docs sync (USAGE/TECH_GUIDE/SECURITY + pt-BR) and compliance/legal wording update after implementation baseline | ✅ Done    |
-| 7     | Transport integrity/tamper trust state (certificate/trust monitoring; tinted runtime)                           | 🔄 Partial — S2a wave-1 trust contract + wave-2a cipher/protocol + wave-2b **cert fingerprint allow-list** (`tls_posture`); report tint still deferred |
+| 7     | Transport integrity/tamper trust state (certificate/trust monitoring; tinted runtime)                           | 🔄 Partial — S2a wave-1–2b trust/TLS + wave-2c **Excel trust tint** (`report/trust_tint.py`); PDF/API download gating still deferred |
 
 ---
 

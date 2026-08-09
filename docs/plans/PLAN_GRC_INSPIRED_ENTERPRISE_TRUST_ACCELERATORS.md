@@ -51,7 +51,7 @@ We still need a stronger "trust evidence loop" in runtime behavior:
 
 **Why now:** aligns with enterprise expectation that risky states do not emit normal-looking evidence.
 
-**Status (S2a wave-1):** 🔄 Partial — JSON marker `output_confidence` (`full` \| `reduced` \| `minimal`) on status/health/audit. Full report/API content gating (summary-only) deferred to M-TRUST-02.
+**Status (S2a wave-2c / M-TRUST-02 thin):** 🔄 Partial — JSON marker `output_confidence` on status/health/audit; Excel Report info **TRUST WATERMARK** when `degraded`/`untrusted`; `untrusted` detail sheets present as stubs (0 finding rows + retention notice) via `report/trust_tint.py`. PDF/DOCX/dashboard download gating deferred.
 
 ### A3 — Crypto/runtime baseline self-check
 
@@ -60,7 +60,7 @@ We still need a stronger "trust evidence loop" in runtime behavior:
 
 **Why now:** operationalizes existing "non-negotiable crypto baseline" intent.
 
-**Status (S2a wave-2a+2b):** 🔄 Partial — dashboard HTTPS **cipher/protocol probe** + **leaf cert SHA-256 allow-list** in `core/tls_posture.py` (no bind); published via `DATA_BOAR_TLS_POSTURE` env (survives uvicorn workers); nested under `dashboard_transport.tls_posture`; folds into canonical `trust_reasons` (`tls_protocol_below_baseline`, `tls_cipher_baseline_weak`, `tls_cert_fingerprint_mismatch`). Config: `api.https_cert_fingerprint_sha256` (scalar or list — any match OK for rotation); omit = observe-only. Report tint / content gating remain deferred (M-TRUST-02).
+**Status (S2a wave-2a+2b):** ✅ Cipher/protocol probe + leaf cert SHA-256 allow-list in `core/tls_posture.py` (env publish; nested under `dashboard_transport.tls_posture`). Report tint: see A2 wave-2c.
 
 ### A4 — Evidence packet for review cycles
 
