@@ -288,9 +288,24 @@ Tracking: create via `scripts/new-adr.ps1` when Fatia B/#865 starts code; link t
 
 ---
 
+## Transport prior art (latch before #865 Fatia B)
+
+Do **not** invent host↔plugin handshake / capability negotiation from scratch. Same envelope; wire is an adapter. Tier is chosen **by environment policy** up front (not reactive “fallback after error”). Canonical discussion: [data-boar-sdk#6](https://github.com/DataBoar/data-boar-sdk/issues/6) (comment 2026-08-09) · ladder [#1199](https://github.com/DataBoar/data-boar/issues/1199) · epic [#865](https://github.com/DataBoar/data-boar/issues/865).
+
+| Prior art | Reuse | Maps to |
+| --------- | ----- | ------- |
+| **HashiCorp `go-plugin`** | Versioned handshake, health-check, gRPC plugin protocol, local bind defaults, deadlines/cancel → Safe-Hold | L2 / F3.gRPC |
+| **Connect-RPC (buf.build)** | One `.proto` serves gRPC + HTTP/JSON (no duplicate gateway) | F4 same service definition |
+| **JSON-RPC over stdio** (LSP / **MCP**) | Air-gap, no network, line protocol over stdin/stdout | F2 JSONL/stdio |
+
+Fatia B must align negotiation and health with **go-plugin-shaped** versioning; keep F2 **MCP/LSP-shaped** stdio first-class; treat protobuf as a **projection** of the JSON Schema envelope (or HITL proto-first with Schema export — decide in #865/#6).
+
+---
+
 ## Non-goals
 
 - Implementing HTTP clients, sidecars, or Futurex/Nightfall/Varonis SDKs in this PR.
 - Changing `RemediationPlugin` Protocol signatures.
 - Claiming partner product certifications.
 - Bidirectional guest-Boar mesh (#1116 / GAP-010) — document only as later phase.
+- Reinventing handshake/negotiation already solved by go-plugin / Connect-RPC / JSON-RPC-stdio.
