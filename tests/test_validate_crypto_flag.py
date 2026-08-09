@@ -12,7 +12,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from core.crypto_audit import StrongCryptoSignal, validate_crypto_enabled
+from core.crypto_audit import validate_crypto_enabled
 from core.engine import AuditEngine
 
 
