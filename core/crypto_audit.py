@@ -50,6 +50,51 @@ def _lower_or_empty(value: Any) -> str:
     return str(value or "").strip().lower()
 
 
+# libpq / psycopg sslmode values only — never persist arbitrary DSN fragments.
+_KNOWN_SSLMODES = frozenset(
+    {
+        "disable",
+        "allow",
+        "prefer",
+        "require",
+        "verify-ca",
+        "verify-full",
+    }
+)
+
+
+def _canonical_sslmode(raw: Any) -> str | None:
+    """
+    Return a known sslmode token, or None.
+
+    Rejects anything that is not exactly one of the libpq sslmode values so
+    DSN leftovers (e.g. ``password=...`` after a space-separated parse) never
+    enter ``strong_crypto_details`` or other persisted/report fields.
+    """
+    token = _lower_or_empty(raw)
+    if not token:
+        return None
+    # Defensive: take first whitespace/&/;-delimited piece before allowlist check.
+    for sep in (" ", "\t", "&", ";", "\n", "\r"):
+        if sep in token:
+            token = token.split(sep, 1)[0].strip()
+    if token in _KNOWN_SSLMODES:
+        return token
+    return None
+
+
+def _sslmode_from_connection_string(raw: Any) -> str | None:
+    """Extract sslmode from a DSN/URL only when the value is a known token."""
+    text = _lower_or_empty(raw)
+    if "sslmode=" not in text:
+        return None
+    part = text.split("sslmode=", 1)[1]
+    for sep in (" ", "\t", "&", ";", "\n", "\r"):
+        if sep in part:
+            part = part.split(sep, 1)[0]
+    return _canonical_sslmode(part)
+
+
 def validate_crypto_enabled(config: dict[str, Any] | None) -> bool:
     """
     Return True when optional strong-crypto / controls validation is enabled.
@@ -98,7 +143,9 @@ def summarize_crypto_from_connection_info(
     # --- Database-style hints (PostgreSQL-like for now) ---
     driver = _lower_or_empty(info.get("driver"))
     dsn = _lower_or_empty(info.get("dsn"))
-    sslmode = _lower_or_empty(info.get("sslmode"))
+    sslmode = _canonical_sslmode(info.get("sslmode"))
+    if not sslmode:
+        sslmode = _sslmode_from_connection_string(dsn)
 
     # Roughly identify Postgres-style connections so sslmode hints make sense.
     is_postgres_like = any(
@@ -106,13 +153,7 @@ def summarize_crypto_from_connection_info(
         for token in ("postgresql", "postgres+psycopg2", "postgres")
     )
 
-    if is_postgres_like:
-        # sslmode from explicit field or embedded in DSN/query string
-        if not sslmode and "sslmode=" in dsn:
-            # naive parse: take text after first "sslmode="
-            part = dsn.split("sslmode=", 1)[1]
-            sslmode = part.split("&", 1)[0]
-
+    if is_postgres_like and sslmode:
         strong_modes: Iterable[str] = ("require", "verify-ca", "verify-full")
         weak_modes: Iterable[str] = ("disable", "allow")
 
@@ -171,7 +212,8 @@ def evaluate_strong_crypto(facts: CryptoProbeFacts) -> tuple[StrongCryptoResult,
             "SQLite is local; TLS validation does not apply",
         )
 
-    sslmode = _lower_or_empty(facts.sslmode)
+    # Allowlist again at evaluate time so details never echo arbitrary DSN text.
+    sslmode = _canonical_sslmode(facts.sslmode)
     tls_version = _normalize_tls_version(facts.tls_version)
     detail_parts: list[str] = []
     if facts.source:
@@ -255,16 +297,14 @@ def collect_sql_crypto_facts(
     SQLite: source=sqlite (evaluator → not_applicable).
     Else: sslmode from target config only.
     """
-    sslmode = _lower_or_empty(target_config.get("sslmode"))
+    # Never accept raw DSN fragments as sslmode (allowlist only).
+    sslmode = _canonical_sslmode(target_config.get("sslmode"))
     if not sslmode:
-        dsn = _lower_or_empty(
+        sslmode = _sslmode_from_connection_string(
             target_config.get("dsn")
             or target_config.get("url")
             or target_config.get("connection_string")
         )
-        if "sslmode=" in dsn:
-            part = dsn.split("sslmode=", 1)[1]
-            sslmode = part.split("&", 1)[0].strip()
 
     dialect = ""
     try:
