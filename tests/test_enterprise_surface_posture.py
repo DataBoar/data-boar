@@ -58,6 +58,41 @@ def test_enterprise_surface_elevated_plaintext(monkeypatch):
     assert out["reasons"] == ["plaintext_http_explicit"]
 
 
+def test_enterprise_surface_elevated_on_fingerprint_mismatch(monkeypatch):
+    monkeypatch.setattr(
+        esp_mod,
+        "get_dashboard_transport_snapshot",
+        lambda: {
+            "mode": "https",
+            "tls_active": True,
+            "insecure_http_explicit_opt_in": False,
+            "show_insecure_banner": False,
+            "tls_posture": {
+                "checked": True,
+                "ok": False,
+                "trust_reasons": ["tls_cert_fingerprint_mismatch"],
+            },
+        },
+    )
+    monkeypatch.setattr(
+        esp_mod,
+        "get_runtime_trust_snapshot",
+        lambda _cfg: {
+            "trust_state": "trusted",
+            "trust_level": "expected",
+            "license_state": "OPEN",
+            "license_mode": "open",
+        },
+    )
+    monkeypatch.setattr(
+        "core.integrity_anchor.get_integrity_snapshot",
+        lambda: {"integrity_state": "ok"},
+    )
+    out = esp_mod.get_enterprise_surface_posture({"api": {"require_api_key": False}})
+    assert out["severity"] == "elevated"
+    assert "tls_cert_fingerprint_mismatch" in out["reasons"]
+
+
 def test_enterprise_surface_elevated_api_key_misconfigured(monkeypatch):
     monkeypatch.setattr(
         esp_mod,
