@@ -9,12 +9,14 @@ from __future__ import annotations
 import logging
 import os
 from typing import Any
+from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
 
 _ENV_ENABLED = "DATA_BOAR_OTEL_ENABLED"
 _ENV_ENDPOINT = "OTEL_EXPORTER_OTLP_ENDPOINT"
 _DEFAULT_ENDPOINT = "http://127.0.0.1:4317"
+_LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
 
 
 def otel_enabled() -> bool:
@@ -26,6 +28,12 @@ def otel_enabled() -> bool:
 def otel_endpoint() -> str:
     """OTLP endpoint; override via ``OTEL_EXPORTER_OTLP_ENDPOINT`` (no lab hostname hardcoded)."""
     return (os.environ.get(_ENV_ENDPOINT) or "").strip() or _DEFAULT_ENDPOINT
+
+
+def otlp_insecure_for_endpoint(endpoint: str) -> bool:
+    """Allow plaintext OTLP only for loopback hosts; remote collectors use TLS."""
+    host = (urlparse(endpoint).hostname or "").strip().lower()
+    return host in _LOOPBACK_HOSTS
 
 
 def maybe_setup_otel(app: Any | None = None) -> bool:
@@ -67,14 +75,15 @@ def maybe_setup_otel(app: Any | None = None) -> bool:
                 "service.namespace": "databoar",
             }
         )
+        insecure = otlp_insecure_for_endpoint(endpoint)
         tracer_provider = TracerProvider(resource=resource)
         tracer_provider.add_span_processor(
-            BatchSpanProcessor(OTLPSpanExporter(endpoint=endpoint, insecure=True))
+            BatchSpanProcessor(OTLPSpanExporter(endpoint=endpoint, insecure=insecure))
         )
         trace.set_tracer_provider(tracer_provider)
 
         metric_reader = PeriodicExportingMetricReader(
-            OTLPMetricExporter(endpoint=endpoint, insecure=True)
+            OTLPMetricExporter(endpoint=endpoint, insecure=insecure)
         )
         metrics.set_meter_provider(
             MeterProvider(resource=resource, metric_readers=[metric_reader])
@@ -91,8 +100,9 @@ def maybe_setup_otel(app: Any | None = None) -> bool:
             logger.info("OTel SQLAlchemy instrumentation skipped: %s", sqlalchemy_exc)
 
         logger.info(
-            "OpenTelemetry enabled (endpoint=%s). Set %s=0 to disable.",
+            "OpenTelemetry enabled (endpoint=%s, insecure=%s). Set %s=0 to disable.",
             endpoint,
+            insecure,
             _ENV_ENABLED,
         )
         return True

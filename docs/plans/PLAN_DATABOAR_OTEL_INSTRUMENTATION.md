@@ -37,6 +37,8 @@ Install: `uv sync --extra otel` (or `pip install '.[otel]'`).
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://127.0.0.1:4317` | Collector endpoint when enabled |
 | `OTEL_SERVICE_NAME` | `data-boar` | Resource `service.name` |
 
+**TLS:** OTLP gRPC exporters use **TLS by default**. Plaintext (`insecure=True`) is allowed **only** when the endpoint host is loopback (`127.0.0.1`, `localhost`, `::1`). Remote collectors must present a valid TLS endpoint.
+
 When disabled or packages missing: **no-op** (log warning if enabled-but-missing; never block startup).
 
 ## Code hook

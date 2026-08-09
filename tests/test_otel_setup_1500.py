@@ -6,7 +6,12 @@ import os
 
 import pytest
 
-from core.otel_setup import maybe_setup_otel, otel_enabled, otel_endpoint
+from core.otel_setup import (
+    maybe_setup_otel,
+    otel_enabled,
+    otel_endpoint,
+    otlp_insecure_for_endpoint,
+)
 
 
 def test_otel_disabled_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -28,14 +33,26 @@ def test_otel_endpoint_default_and_override(monkeypatch: pytest.MonkeyPatch) -> 
     assert otel_endpoint() == "http://example.invalid:4317"
 
 
+@pytest.mark.parametrize(
+    ("endpoint", "expect_insecure"),
+    [
+        ("http://127.0.0.1:4317", True),
+        ("http://localhost:4317", True),
+        ("http://[::1]:4317", True),
+        ("https://otel.example.com:4317", False),
+        ("http://otel.example.com:4317", False),
+    ],
+)
+def test_otlp_insecure_only_for_loopback(endpoint: str, expect_insecure: bool) -> None:
+    assert otlp_insecure_for_endpoint(endpoint) is expect_insecure
+
+
 def test_otel_enabled_call_does_not_raise(monkeypatch: pytest.MonkeyPatch) -> None:
     """Enabled path must never crash startup (True if packages present, else False)."""
     monkeypatch.setenv("DATA_BOAR_OTEL_ENABLED", "1")
     monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://127.0.0.1:4317")
-    try:
-        result = maybe_setup_otel(app=None)
-    except Exception as exc:  # pragma: no cover
-        pytest.fail(f"maybe_setup_otel raised: {exc}")
+    # maybe_setup_otel never raises by contract — assign before assert (CodeQL).
+    result = maybe_setup_otel(app=None)
     assert result in {True, False}
     monkeypatch.delenv("DATA_BOAR_OTEL_ENABLED", raising=False)
     assert maybe_setup_otel(app=None) is False
