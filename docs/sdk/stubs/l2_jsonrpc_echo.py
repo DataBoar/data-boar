@@ -21,7 +21,9 @@ from typing import Any
 SDK_CONTRACT_VERSION = "1.0.0"
 
 
-def _safe_hold_decision(request_id: Any, params: dict[str, Any] | None = None) -> dict[str, Any]:
+def _safe_hold_decision(
+    request_id: Any, params: dict[str, Any] | None = None
+) -> dict[str, Any]:
     params = params if isinstance(params, dict) else {}
     session_id = str(params.get("session_id") or "sess_stub")
     return {
