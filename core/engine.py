@@ -483,10 +483,12 @@ class AuditEngine:
         t = target.get("type")
         fs_config = self.config.get("file_scan", {})
         # Inject file_scan into target so connectors (filesystem, shares) see scan_compressed, etc.
+        # _validate_crypto: opt-in Phase 2 strong-crypto probe inside connectors.
         target_with_fs = {
             **target,
             "file_scan": fs_config,
             "_scan_progress": self._scan_progress,
+            "_validate_crypto": validate_crypto_enabled(self.config),
         }
         scan_sqlite_as_db = fs_config.get("scan_sqlite_as_db", True)
         sample_limit = fs_config.get("sample_limit", 5)

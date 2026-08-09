@@ -23,6 +23,7 @@ from connectors.sample_value_dedup import (
     resolve_fetch_row_budget,
 )
 from core.connector_registry import register
+from core.crypto_audit import collect_sql_crypto_facts, evaluate_strong_crypto
 from core.sampling import SamplingPolicy
 from core.suggested_review import (
     SUGGESTED_REVIEW_PATTERN,
@@ -629,6 +630,31 @@ class SQLConnector:
             # Never fail a scan because inventory persistence failed.
             pass
 
+    def _save_crypto_controls_audit(self, target_name: str) -> None:
+        """
+        Opt-in strong-crypto validation after connect (Order 5 Phase 2a).
+
+        Fail-soft: probe/persist errors never fail the scan. No PEMs or DSNs in details.
+        """
+        if not self.config.get("_validate_crypto"):
+            return
+        if not hasattr(self.db_manager, "save_crypto_controls_audit"):
+            return
+        if not self.engine:
+            return
+        try:
+            facts = collect_sql_crypto_facts(self.engine, self.config)
+            result, details = evaluate_strong_crypto(facts)
+            self.db_manager.save_crypto_controls_audit(
+                target_name=target_name,
+                connection_type="database",
+                strong_crypto_result=result.value,
+                strong_crypto_details=details[:512],
+                inferred_controls_summary=None,
+            )
+        except Exception:
+            pass
+
     def run(self) -> None:
         """Connect, discover, sample each column, detect, save_finding; on error save_failure."""
         from utils.audit_log_display import audit_log_target_label
@@ -647,6 +673,7 @@ class SQLConnector:
             log_connection(audit_name, "database", server_ip or "local")
             engine_name = self.engine.dialect.name if self.engine else "sql"
             self._save_inventory_snapshot(target_name, engine_name)
+            self._save_crypto_controls_audit(target_name)
             discovered = self.discover()
             progress = self._scan_progress
             if progress is not None and getattr(progress, "enabled", False):

@@ -306,6 +306,7 @@ _SHEET_REPORT_INFO = "Report info"
 _SHEET_HEATMAP_DATA = "Heatmap data"
 _SHEET_DATA_SOURCE_INVENTORY = "Data source inventory"
 _SHEET_DATA_SOURCE_INVENTORY_INTERNAL = "Data source inv - internal"
+_SHEET_CRYPTO_CONTROLS = _excel_safe_sheet_title("Crypto & controls")
 # LOW findings persisted for ID-like column names (FN reduction); see core.suggested_review
 _SHEET_SUGGESTED_REVIEW = "Suggested review (LOW)"
 _SHEET_PRAISE_CONTROLS = _excel_safe_sheet_title("Praise / existing controls")
@@ -1142,6 +1143,38 @@ def _write_excel_sheets(
             _excel_safe_dataframe(internal_inv_rows).to_excel(
                 writer, sheet_name=_SHEET_DATA_SOURCE_INVENTORY_INTERNAL, index=False
             )
+    # Opt-in strong-crypto sheet (Order 5): only when rows exist (flag was on).
+    crypto_rows: list[dict] = []
+    if hasattr(db_manager, "get_crypto_controls_audit"):
+        crypto_rows = db_manager.get_crypto_controls_audit(session_id) or []
+    if crypto_rows:
+        crypto_sheet = [
+            {
+                "Target": r.get("target_name", "") or "",
+                "Connection type": r.get("connection_type", "") or "",
+                "Strong crypto": r.get("strong_crypto_result", "") or "",
+                "Details": r.get("strong_crypto_details", "") or "",
+                "Inferred controls": r.get("inferred_controls_summary", "") or "",
+            }
+            for r in crypto_rows
+        ]
+        # Phase 3 fills inferred controls; Phase 2a leaves the column empty with a disclaimer row.
+        crypto_sheet.insert(
+            0,
+            {
+                "Target": "(note)",
+                "Connection type": "",
+                "Strong crypto": "",
+                "Details": (
+                    "Best-effort TLS/crypto validation when scan.validate_crypto was enabled. "
+                    "Not a compliance certification. Inferred controls (Phase 3) are heuristic only."
+                ),
+                "Inferred controls": "",
+            },
+        )
+        _excel_safe_dataframe(crypto_sheet).to_excel(
+            writer, sheet_name=_SHEET_CRYPTO_CONTROLS, index=False
+        )
     if stub_detail:
         _excel_safe_dataframe(
             stub_detail_sheet_rows(
