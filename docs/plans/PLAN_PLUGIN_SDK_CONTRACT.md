@@ -15,7 +15,7 @@ L1 Python remediation is shipped. Epic #865 needs a **versioned, language-neutra
 | ----- | ----- | ----------- |
 | A | #695 | Partner interface plan (transport prior art latch) |
 | **B (this)** | **#865** | Schema + SDK.md + ADR-0086 + Safe-Hold conformance + thin L2 stub |
-| C | #1116 | Bidirectional / guest-side (later) |
+| C | #1116 | Bidirectional / guest-side — [PLAN_SDK_BIDIRECTIONAL.md](PLAN_SDK_BIDIRECTIONAL.md) |
 
 ## Phases
 

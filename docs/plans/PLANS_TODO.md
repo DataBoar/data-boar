@@ -30,12 +30,12 @@ Use these tags in headings to keep priorities explicit and machine-countable:
 
 Do not edit this block manually; refresh with `python scripts/plans-stats.py --write`.
 
-- **Status rows counted:** 219  (Done: 138 | Incomplete: 81)
-- **Incomplete breakdown:** Pending `⬜`=69, Tracked `🔄` / `Tracked (partially done)`=12, Under consideration=0, Backlog-marked rows=0
+- **Status rows counted:** 220  (Done: 138 | Incomplete: 82)
+- **Incomplete breakdown:** Pending `⬜`=69, Tracked `🔄` / `Tracked (partially done)`=13, Under consideration=0, Backlog-marked rows=0
 
 | Horizon | Total rows | Done | Incomplete |
 | ------- | ----------: | ----: | ----------: |
-| `H0` | 50 | 33 | 17 |
+| `H0` | 51 | 33 | 18 |
 | `H1` | 39 | 30 | 9 |
 | `H2` | 0 | 0 | 0 |
 | `H3` | 118 | 63 | 55 |
@@ -357,6 +357,7 @@ After **A1–A3** (minimum), you can **resume token-aware pace** on Tier 2 featu
 | 7c    | **Plugin SDK guide (Enterprise remediation L1) — [#611](https://github.com/DataBoar/data-boar/issues/611)** | Bilingual `docs/PLUGIN_SDK.md` grounded in `core/plugins/` (#606); [PLAN_PLUGIN_SDK.md](PLAN_PLUGIN_SDK.md). Findings JSONL host wiring **#1443**. L2/L3 → #865. ✅ L1 guide |
 | 7d    | **Plugin partner interface L1/L2/L3 (doc) — [#695](https://github.com/DataBoar/data-boar/issues/695)** | [PLAN_PLUGIN_PARTNER_INTERFACE.md](PLAN_PLUGIN_PARTNER_INTERFACE.md) — hierarchy, L3 payload/receipt schemas, driver skeleton, Enterprise + ADR prereq. Runtime → #865. 🔄 |
 | 7e    | **Plugin SDK language-neutral contract — [#865](https://github.com/DataBoar/data-boar/issues/865)** | [PLAN_PLUGIN_SDK_CONTRACT.md](PLAN_PLUGIN_SDK_CONTRACT.md) · `docs/SDK.md` · `docs/sdk/PLUGIN_CONTRACT.schema.json` · ADR-0086. Fatia B: schema + Safe-Hold conformance + L2 stub. Bidirectional → #1116. 🔄 |
+| 7f    | **Plugin SDK bidirectional zero-trust mesh — [#1116](https://github.com/DataBoar/data-boar/issues/1116)** | [PLAN_SDK_BIDIRECTIONAL.md](PLAN_SDK_BIDIRECTIONAL.md) · ADR-0087 · `core/sdk/mutual_attestation.py` · dogfood `boar_fast_filter`. Host-tinted → guest refuses; guest-violates → contained. 🔄 |
 
 **Deferred (larger or later):** Secrets Phase B, Version check & self-upgrade (incl. optional Phase 9: .deb/apt repo, signed packages, bytecode-only install, winget-like), Selenium QA, Synthetic data, SAP connector, **M-LOCALE-PLUS** (extra dashboard locales). **Backlog:** Additional data soup **Tier 3b** embedded-tracker heuristics + **Tier 4** ([PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md](completed/PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md)); **Tier 1** + **stego hints** + **Tier 3 rich media** are on **`main`** (see **Integration / active threads**). **Databricks / Unity Catalog** lakehouse scan + catalog-driven scope — [PLAN_DATABRICKS_UNITY_LAKEHOUSE_SCOPE_AND_SCAN.md](PLAN_DATABRICKS_UNITY_LAKEHOUSE_SCOPE_AND_SCAN.md) (**[H2]**, customer-pull, Pro/Ent-shaped). **Findings export / corporate repository** — [PLAN_FINDINGS_CORPORATE_REPOSITORY_EXPORT.md](PLAN_FINDINGS_CORPORATE_REPOSITORY_EXPORT.md) (**[H2]**, customer-pull; expedite if security review demands).
 

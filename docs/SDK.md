@@ -37,7 +37,24 @@ All messages carry:
 - `targets[]` — metadata-only remediation targets (no raw PII samples by default)
 - optional `capabilities[]` — go-plugin-shaped negotiation tokens
 
-**Plugin → host decision** carries per-finding `action` + `reason`. Status `rejected_host_trust` / `safe_hold` means the plugin refused to act (bilateral doctrine; guest-side enforcement expands in [#1116](https://github.com/DataBoar/data-boar/issues/1116)).
+**Plugin → host decision** carries per-finding `action` + `reason`. Status `rejected_host_trust` / `safe_hold` means the plugin refused to act.
+
+## Bidirectional mesh (#1116)
+
+Topology is a **mesh**, not a one-way host chain: Boar may be **host** or **guest-plugin**. Same `trust_level` enum on both roles.
+
+| Message | Schema const | Role |
+| ------- | ------------ | ---- |
+| Challenge | `databoar.attestation.challenge` | host or guest |
+| Response | `databoar.attestation.response` | host or guest (Ed25519 `signature_b64`) |
+
+Examples: [`sdk/example-attestation-challenge.json`](sdk/example-attestation-challenge.json), [`sdk/example-attestation-response.json`](sdk/example-attestation-response.json).
+
+**Dogfood:** `boar_fast_filter` is the first in-house guest (`core/sdk/boar_fast_filter_dogfood.py` + Rust `guest_accepts_host_trust`). Mutual attestation must succeed before filter batches cross the boundary.
+
+**Anti-overclaim:** envelopes are **C2PA-inspired** — not CAI / C2PA certified.
+
+Implementation: [ADR-0087](adr/ADR-0087-plugin-sdk-bidirectional-zero-trust-mesh.md) · issue [#1116](https://github.com/DataBoar/data-boar/issues/1116).
 
 ## Fail-graceful (Safe-Hold)
 
@@ -45,6 +62,7 @@ Invariant: a plugin that crashes, hangs, returns invalid output, or rejects trus
 
 - **L1 today:** `maybe_run_remediation_hook` catches `PluginError` and other exceptions → stderr + skip ([ADR-0059](adr/ADR-0059-remediation-plugin-architecture.md)).
 - **L2/L3 (planned):** hard timeout, kill → Safe-Hold, schema validation of decision/receipt before applying side effects ([ADR-0086](adr/ADR-0086-plugin-sdk-language-neutral-contract.md)).
+- **Bidirectional:** guest refuses tinted host; host contains guest crypto/runtime violations ([ADR-0087](adr/ADR-0087-plugin-sdk-bidirectional-zero-trust-mesh.md)).
 
 ## Transport prior art (do not reinvent)
 
@@ -73,6 +91,7 @@ Protobuf (when used) is a **projection** of this JSON Schema envelope — not a 
 ## Related ADRs / issues
 
 - [ADR-0059](adr/ADR-0059-remediation-plugin-architecture.md) — L1 in-process hook
-- [ADR-0086](adr/ADR-0086-plugin-sdk-language-neutral-contract.md) — language-neutral contract (this epic)
-- Epic [#865](https://github.com/DataBoar/data-boar/issues/865) · partner interface [#695](https://github.com/DataBoar/data-boar/issues/695) · L1 guide [#611](https://github.com/DataBoar/data-boar/issues/611) · bidirectional [#1116](https://github.com/DataBoar/data-boar/issues/1116)
+- [ADR-0086](adr/ADR-0086-plugin-sdk-language-neutral-contract.md) — language-neutral host contract
+- [ADR-0087](adr/ADR-0087-plugin-sdk-bidirectional-zero-trust-mesh.md) — bidirectional / guest-side mesh
+- Epic [#865](https://github.com/DataBoar/data-boar/issues/865) · partner [#695](https://github.com/DataBoar/data-boar/issues/695) · L1 guide [#611](https://github.com/DataBoar/data-boar/issues/611) · bidirectional [#1116](https://github.com/DataBoar/data-boar/issues/1116)
 - Maintainer plan index: [docs/README.md](README.md) (*Internal and reference*)

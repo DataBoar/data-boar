@@ -2,11 +2,13 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://databoar.com.br/schemas/plugin-contract/1.0.0/PLUGIN_CONTRACT.schema.json",
   "title": "Data Boar Plugin SDK contract envelope",
-  "description": "Language-neutral host↔plugin envelope (issue #865). Transport adapters (JSON-RPC/stdio≈MCP, gRPC/go-plugin-shaped, Connect-RPC HTTP/JSON) carry this model; they do not redefine negotiation. See docs/SDK.md and data-boar-sdk#6 prior art.",
+  "description": "Language-neutral host↔plugin envelope (issues #865 / #1116). Symmetric mesh: host-side and guest-side share trust_level. Mutual attestation messages are C2PA-inspired (not CAI-certified). Transport adapters carry this model; they do not redefine negotiation. See docs/SDK.md.",
   "oneOf": [
     { "$ref": "#/$defs/request" },
     { "$ref": "#/$defs/decision" },
-    { "$ref": "#/$defs/receipt" }
+    { "$ref": "#/$defs/receipt" },
+    { "$ref": "#/$defs/attestation_challenge" },
+    { "$ref": "#/$defs/attestation_response" }
   ],
   "$defs": {
     "semver": {
@@ -16,6 +18,11 @@
     "trust_level": {
       "type": "string",
       "enum": ["trusted", "degraded", "untrusted", "adulterated", "unknown"]
+    },
+    "mesh_role": {
+      "type": "string",
+      "enum": ["host", "guest"],
+      "description": "Symmetric roles (#1116): Boar may be host or guest-plugin."
     },
     "integrity_state": {
       "type": "string",
@@ -243,6 +250,74 @@
             "code": { "type": "string" },
             "message": { "type": "string" }
           }
+        }
+      }
+    },
+    "attestation_challenge": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Mutual attestation challenge (Ed25519 nonce). Present on both host and guest roles (#1116).",
+      "required": [
+        "sdk_contract_version",
+        "schema",
+        "role",
+        "party",
+        "nonce",
+        "trust_level",
+        "issued_at"
+      ],
+      "properties": {
+        "sdk_contract_version": { "$ref": "#/$defs/semver" },
+        "schema": {
+          "const": "databoar.attestation.challenge"
+        },
+        "role": { "$ref": "#/$defs/mesh_role" },
+        "party": { "type": "string", "minLength": 1 },
+        "nonce": { "type": "string", "minLength": 16 },
+        "trust_level": { "$ref": "#/$defs/trust_level" },
+        "integrity_state": { "$ref": "#/$defs/integrity_state" },
+        "issued_at": { "type": "string", "format": "date-time" },
+        "release_label": { "type": "string" }
+      }
+    },
+    "attestation_response": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Signed attestation response echoing the peer nonce. C2PA-inspired Content Credential shape — not CAI-certified.",
+      "required": [
+        "sdk_contract_version",
+        "schema",
+        "role",
+        "party",
+        "nonce_echo",
+        "trust_level",
+        "integrity_anchor",
+        "release_label",
+        "issued_at",
+        "signature_b64"
+      ],
+      "properties": {
+        "sdk_contract_version": { "$ref": "#/$defs/semver" },
+        "schema": {
+          "const": "databoar.attestation.response"
+        },
+        "role": { "$ref": "#/$defs/mesh_role" },
+        "party": { "type": "string", "minLength": 1 },
+        "nonce_echo": { "type": "string", "minLength": 16 },
+        "trust_level": { "$ref": "#/$defs/trust_level" },
+        "integrity_state": { "$ref": "#/$defs/integrity_state" },
+        "integrity_anchor": { "type": "string", "minLength": 1 },
+        "release_label": { "type": "string", "minLength": 1 },
+        "issued_at": { "type": "string", "format": "date-time" },
+        "signature_b64": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Ed25519 signature over canonical attestation payload (base64)."
+        },
+        "counter_nonce": {
+          "type": "string",
+          "minLength": 16,
+          "description": "Optional counter-challenge nonce for the peer."
         }
       }
     }

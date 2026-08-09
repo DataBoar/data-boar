@@ -107,6 +107,7 @@ Os títulos na tabela abaixo ficam em **inglês** (canônicos, iguais ao [README
 | 0084 | [Native package: embed CPython by channel (Enterprise vs community)](ADR-0084-native-package-embedded-cpython-by-channel.md) | Aceito |
 | 0085 | [Install priority ladder (native-first when shipped; pipx today)](ADR-0085-install-priority-ladder.md) | Proposto |
 | 0086 | [Contrato language-neutral do Plugin SDK (L1/L2/L3)](ADR-0086-plugin-sdk-language-neutral-contract.md) | Proposto |
+| 0087 | [Malha bidirecional zero-trust do Plugin SDK](ADR-0087-plugin-sdk-bidirectional-zero-trust-mesh.md) | Proposto |
 
 ## Docs relacionados
 
