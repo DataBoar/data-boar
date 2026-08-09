@@ -1,11 +1,13 @@
 # Stack de observabilidade no lab-op — métricas, logs, dashboards (só plano)
 
-**Status:** Pending
-**Date:** 2026-03-24
+**Status:** Active (Fase A + parte da F no ar no lab; emit do produto = [#1500](https://github.com/DataBoar/data-boar/issues/1500))
+**Date:** 2026-08-09
 **Authors:** Fabio Leitao
 **Priority:** H2
 
 **English:** [PLAN_LAB_OP_OBSERVABILITY_STACK.md](PLAN_LAB_OP_OBSERVABILITY_STACK.md)
+
+**Emit do produto (código neste repo):** [PLAN_DATABOAR_OTEL_INSTRUMENTATION.md](PLAN_DATABOAR_OTEL_INSTRUMENTATION.md) — OTLP opt-in FastAPI/SQLAlchemy; não substitui o deploy do collector/Grafana no lado do operador.
 
 **Objetivo:** Ordenar instrumentação **opcional** do homelab — **Grafana**, bases de séries temporais, **centralização de logs** — sem bloquear desenvolvimento do Data Boar nem a validação **–1L**. **Sem** implementação neste repositório; o operador instala via Compose, Helm no k3s ou appliance na **lab-op** (LAB-NODE-01, LAB-NODE-02, VMs Proxmox).
 

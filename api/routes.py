@@ -777,6 +777,14 @@ app = FastAPI(
     lifespan=_lifespan,
 )
 
+# OpenTelemetry: opt-in via DATA_BOAR_OTEL_ENABLED (see core/otel_setup.py / #1500).
+try:
+    from core.otel_setup import maybe_setup_otel
+
+    maybe_setup_otel(app)
+except Exception:  # noqa: BLE001 — never block API import
+    pass
+
 
 def _list_sessions_cached() -> list[dict]:
     """Return list of sessions; use short-TTL in-memory cache when no scan is running to reduce DB reads."""
