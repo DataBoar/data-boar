@@ -1,8 +1,8 @@
 # PLAN — Plugin SDK language-neutral contract (#865)
 
-**Status:** 🟡 In progress  
-**Issue:** [#865](https://github.com/DataBoar/data-boar/issues/865)  
-**ADR:** [ADR-0086](../adr/ADR-0086-plugin-sdk-language-neutral-contract.md)  
+**Status:** 🟡 In progress
+**Issue:** [#865](https://github.com/DataBoar/data-boar/issues/865)
+**ADR:** [ADR-0086](../adr/ADR-0086-plugin-sdk-language-neutral-contract.md)
 **Hub doc:** [docs/SDK.md](../SDK.md)
 
 ## Motivation

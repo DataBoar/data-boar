@@ -11,7 +11,7 @@
 | **Sidecar** | Runtime that executes (in-process, OS process, or remote API) |
 | **Transport** | Adapter carrying the same envelope (stdio / gRPC / HTTP) — not a parallel protocol |
 
-Machine schema: [`sdk/PLUGIN_CONTRACT.schema.json`](sdk/PLUGIN_CONTRACT.schema.json)  
+Machine schema: [`sdk/PLUGIN_CONTRACT.schema.json`](sdk/PLUGIN_CONTRACT.schema.json)
 Examples: [`sdk/example-request.json`](sdk/example-request.json), [`sdk/example-decision.json`](sdk/example-decision.json)
 
 ## Tiers (L1 / L2 / L3)
