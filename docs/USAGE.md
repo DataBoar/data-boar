@@ -675,7 +675,9 @@ scan:
   # validate_crypto: false    # optional: strong-crypto / controls validation wiring (off by default)
 ```
 
-**Strong crypto / controls (`scan.validate_crypto`, `--validate-crypto`):** Opt-in only. When `false` or absent, crypto/controls validation logic is skipped (no behaviour change). When enabled via config, CLI **`--validate-crypto`**, dashboard checkbox, or API body **`validate_crypto: true`**, the engine runs the wired strong-crypto signal path for that run. CLI / API / dashboard override config for that run. Phase 1 is flag + wiring; fuller TLS and control heuristics follow later phases.
+**Strong crypto / controls (`scan.validate_crypto`, `--validate-crypto`):** Opt-in only. When `false` or absent, crypto/controls validation logic is skipped (no behaviour change). When enabled via config, CLI **`--validate-crypto`**, dashboard checkbox, or API body **`validate_crypto: true`**, the engine runs strong-crypto validation for that run. CLI / API / dashboard override config for that run.
+
+**Phase 2a (SQL):** After a successful SQL connect, Data Boar probes TLS best-effort (PostgreSQL `pg_stat_ssl`, MySQL/MariaDB `Ssl_version` / `Ssl_cipher` when available; SQLite → `not_applicable`; otherwise config `sslmode` fallback). Results are stored in SQLite table **`crypto_controls_audit`** and appear on the Excel sheet **Crypto & controls** (result: `ok` / `warning` / `fail` / `not_available` / `not_applicable`, plus short details — no certificates or connection strings). Criteria: prefer TLS ≥ 1.2; `sslmode=disable` or TLS &lt; 1.2 → fail; `sslmode=require` with live TLS ≥ 1.2 → warning (cert not verify-full). Probe failures never fail the scan. Mongo/Redis/REST/SMB probes and anonymisation inference are later phases.
 
 **Interactions:**
 
