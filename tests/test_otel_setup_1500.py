@@ -11,6 +11,7 @@ from core.otel_setup import (
     otel_enabled,
     otel_endpoint,
     otlp_insecure_for_endpoint,
+    sanitize_otlp_endpoint_for_log,
 )
 
 
@@ -45,6 +46,23 @@ def test_otel_endpoint_default_and_override(monkeypatch: pytest.MonkeyPatch) -> 
 )
 def test_otlp_insecure_only_for_loopback(endpoint: str, expect_insecure: bool) -> None:
     assert otlp_insecure_for_endpoint(endpoint) is expect_insecure
+
+
+@pytest.mark.parametrize(
+    ("endpoint", "expected"),
+    [
+        (
+            "https://user:secret@otel.example.com:4317/v1/traces?token=abc",
+            "https://otel.example.com:4317",
+        ),
+        ("http://127.0.0.1:4317", "http://127.0.0.1:4317"),
+        ("http://[::1]:4317", "http://[::1]:4317"),
+        ("https://otel.example.com", "https://otel.example.com"),
+        ("not-a-url", "<invalid-endpoint>"),
+    ],
+)
+def test_sanitize_otlp_endpoint_for_log(endpoint: str, expected: str) -> None:
+    assert sanitize_otlp_endpoint_for_log(endpoint) == expected
 
 
 def test_otel_enabled_call_does_not_raise(monkeypatch: pytest.MonkeyPatch) -> None:

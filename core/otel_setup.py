@@ -36,6 +36,21 @@ def otlp_insecure_for_endpoint(endpoint: str) -> bool:
     return host in _LOOPBACK_HOSTS
 
 
+def sanitize_otlp_endpoint_for_log(endpoint: str) -> str:
+    """Return scheme://host[:port] only — strip userinfo, path, query, fragment."""
+    parsed = urlparse(endpoint)
+    scheme = (parsed.scheme or "").strip().lower()
+    host = (parsed.hostname or "").strip()
+    if not scheme or not host:
+        return "<invalid-endpoint>"
+    # Bracket IPv6 for unambiguous host:port form.
+    if ":" in host and not host.startswith("["):
+        host = f"[{host}]"
+    if parsed.port is not None:
+        return f"{scheme}://{host}:{parsed.port}"
+    return f"{scheme}://{host}"
+
+
 def maybe_setup_otel(app: Any | None = None) -> bool:
     """Initialize OTel exporters + instrument FastAPI (and SQLAlchemy when available).
 
@@ -101,7 +116,7 @@ def maybe_setup_otel(app: Any | None = None) -> bool:
 
         logger.info(
             "OpenTelemetry enabled (endpoint=%s, insecure=%s). Set %s=0 to disable.",
-            endpoint,
+            sanitize_otlp_endpoint_for_log(endpoint),
             insecure,
             _ENV_ENABLED,
         )
