@@ -7,7 +7,7 @@
 
 **English:** [PLAN_LAB_OP_OBSERVABILITY_STACK.md](PLAN_LAB_OP_OBSERVABILITY_STACK.md)
 
-**Emit do produto (código neste repo):** [PLAN_DATABOAR_OTEL_INSTRUMENTATION.md](PLAN_DATABOAR_OTEL_INSTRUMENTATION.md) — OTLP opt-in FastAPI/SQLAlchemy; não substitui o deploy do collector/Grafana no lado do operador.
+**Emit do produto (código neste repo):** [PLAN_DATABOAR_OTEL_INSTRUMENTATION.md](completed/PLAN_DATABOAR_OTEL_INSTRUMENTATION.md) — OTLP opt-in FastAPI/SQLAlchemy; não substitui o deploy do collector/Grafana no lado do operador.
 
 **Objetivo:** Ordenar instrumentação **opcional** do homelab — **Grafana**, bases de séries temporais, **centralização de logs** — sem bloquear desenvolvimento do Data Boar nem a validação **–1L**. **Sem** implementação neste repositório; o operador instala via Compose, Helm no k3s ou appliance na **lab-op** (LAB-NODE-01, LAB-NODE-02, VMs Proxmox).
 
