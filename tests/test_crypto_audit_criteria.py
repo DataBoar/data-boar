@@ -7,11 +7,15 @@ from sqlalchemy import create_engine
 from core.crypto_audit import (
     CryptoProbeFacts,
     StrongCryptoResult,
+    _canonical_ssl_cert_reqs,
     _canonical_sslmode,
     _normalize_tls_version,
     _sslmode_from_connection_string,
+    collect_mongodb_crypto_facts,
+    collect_redis_crypto_facts,
     collect_sql_crypto_facts,
     evaluate_strong_crypto,
+    resolve_nosql_tls_connect_options,
     summarize_crypto_from_connection_info,
 )
 
@@ -149,3 +153,135 @@ def test_libpq_dsn_password_after_sslmode_never_leaks_into_details() -> None:
     blob = " ".join(sorted(s.value for s in signals))
     assert secret not in blob
     assert "password=" not in blob
+
+
+def test_resolve_nosql_tls_from_config_and_uri_scheme() -> None:
+    enabled, posture, cert = resolve_nosql_tls_connect_options({"tls": True})
+    assert enabled is True
+    assert posture == "verify-full"
+    assert cert == "required"
+
+    enabled, posture, cert = resolve_nosql_tls_connect_options(
+        {"tls": True, "tls_insecure": True}
+    )
+    assert enabled is True
+    assert posture == "require"
+    assert cert == "none"
+
+    enabled, posture, _ = resolve_nosql_tls_connect_options(
+        {"uri": "mongodb+srv://cluster.example.com"}
+    )
+    assert enabled is True
+    assert posture == "verify-full"
+
+    enabled, posture, cert = resolve_nosql_tls_connect_options(
+        {"url": "rediss://localhost:6666"}
+    )
+    assert enabled is True
+    assert posture == "verify-full"
+    assert cert == "required"
+
+    enabled, posture, _ = resolve_nosql_tls_connect_options({"tls": False})
+    assert enabled is False
+    assert posture == "disable"
+
+
+def test_canonical_ssl_cert_reqs_allowlist() -> None:
+    assert _canonical_ssl_cert_reqs("required") == "required"
+    assert _canonical_ssl_cert_reqs("none&password=secret") == "none"
+    assert _canonical_ssl_cert_reqs("required password=secret") == "required"
+    assert _canonical_ssl_cert_reqs("not-a-real-mode") is None
+
+
+def test_nosql_uri_password_after_tls_never_leaks_into_details() -> None:
+    """
+    Regression (Phase 2c): space/ampersand-naive URI parse must not put
+    password=... into sslmode / strong_crypto_details.
+    """
+    secret = "nosql-super-secret-password-ABC"
+    mongo_uri = (
+        f"mongodb://app:{secret}@db.example.com:27017/appdb?tls=true&authSource=admin"
+    )
+    # Contaminated libpq-style tail after tls= (same class as sslmode bug).
+    dirty = f"tls=true password={secret} ssl_cert_reqs=none"
+
+    enabled, posture, cert = resolve_nosql_tls_connect_options({"uri": mongo_uri})
+    assert enabled is True
+    assert posture in ("verify-full", "require", "prefer")
+    assert secret not in (posture or "")
+    assert secret not in (cert or "")
+
+    enabled2, posture2, cert2 = resolve_nosql_tls_connect_options({"uri": dirty})
+    assert enabled2 is True
+    assert secret not in (posture2 or "")
+    assert secret not in (cert2 or "")
+    assert cert2 in (None, "none", "optional", "required")
+
+    class _BoomClient:
+        """Collector must not need a live server; ping may fail."""
+
+        @property
+        def options(self):
+            raise RuntimeError("no options")
+
+        @property
+        def admin(self):
+            raise RuntimeError("no admin")
+
+        @property
+        def connection_pool(self):
+            raise RuntimeError("no pool")
+
+    facts_m = collect_mongodb_crypto_facts(
+        _BoomClient(), {"uri": mongo_uri, "tls": True}
+    )
+    facts_r = collect_redis_crypto_facts(
+        _BoomClient(),
+        {"url": f"rediss://:{secret}@localhost:6666", "ssl_cert_reqs": "none"},
+    )
+    for facts in (facts_m, facts_r):
+        assert secret not in (facts.sslmode or "")
+        assert secret not in (facts.source or "")
+        assert secret not in (facts.cipher or "")
+        result, details = evaluate_strong_crypto(facts)
+        assert secret not in details
+        assert "password=" not in details.lower()
+        assert secret not in result.value
+
+
+def test_collect_redis_crypto_facts_from_ssl_socket() -> None:
+    class _FakeSSLSock:
+        def version(self):
+            return "TLSv1.3"
+
+        def cipher(self):
+            return ("TLS_AES_256_GCM_SHA384", "TLSv1.3", 256)
+
+    class _FakeConn:
+        _sock = _FakeSSLSock()
+        ssl = True
+
+    class _FakePool:
+        def __init__(self):
+            self._conn = _FakeConn()
+
+        def get_connection(self, *_a, **_k):
+            return self._conn
+
+        def release(self, *_a, **_k):
+            return None
+
+    class _FakeRedis:
+        connection_pool = _FakePool()
+
+    facts = collect_redis_crypto_facts(
+        _FakeRedis(), {"tls": True, "ssl_cert_reqs": "required"}
+    )
+    assert facts.source == "redis_ssl_socket"
+    assert facts.tls_in_use is True
+    assert facts.tls_version == "TLSv1.3"
+    assert facts.cipher == "TLS_AES_256_GCM_SHA384"
+    assert facts.sslmode == "verify-full"
+    result, details = evaluate_strong_crypto(facts)
+    assert result is StrongCryptoResult.OK
+    assert "TLSv1.3" in details
