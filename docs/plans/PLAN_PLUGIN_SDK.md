@@ -12,7 +12,7 @@
 
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md)
 
-**Related:** [PLAN_REMEDIATION_INTERFACE.md](PLAN_REMEDIATION_INTERFACE.md) (host hook + manifest), [PLAN_YAML_PLUGIN_SYSTEM.md](PLAN_YAML_PLUGIN_SYSTEM.md) (YAML **pattern** plugins — different surface), [ADR-0059](../adr/ADR-0059-remediation-plugin-architecture.md)
+**Related:** [PLAN_REMEDIATION_INTERFACE.md](PLAN_REMEDIATION_INTERFACE.md) (host hook + manifest), [PLAN_PLUGIN_PARTNER_INTERFACE.md](PLAN_PLUGIN_PARTNER_INTERFACE.md) (L1/L2/L3 partner hierarchy + L3 schemas — **#695**), [PLAN_YAML_PLUGIN_SYSTEM.md](PLAN_YAML_PLUGIN_SYSTEM.md) (YAML **pattern** plugins — different surface), [ADR-0059](../adr/ADR-0059-remediation-plugin-architecture.md)
 
 ---
 
@@ -42,8 +42,9 @@ Public paths: `docs/PLUGIN_SDK.md` + `docs/PLUGIN_SDK.pt_BR.md` (no pricing / co
 | Phase | Deliverable | Status |
 | ----- | ----------- | ------ |
 | **1 – L1 SDK guide** | EN + pt-BR PLUGIN_SDK, hub/README/USAGE/TECH_GUIDE cross-refs, this plan | 🔄 **#611** (this PR) |
-| **2 – Findings path honesty** | After **#1443**, refresh “test locally / automatic wiring” sections | ⬜ |
-| **3 – L2/L3 SDK chapters** | Document sandbox / sidecar when epic **#865** lands APIs | ⬜ |
+| **2 – Findings path honesty** | After **#1443**, refresh “test locally / automatic wiring” sections | ✅ **#1443** on `main` (refresh prose if any drift remains) |
+| **3 – L2/L3 partner interface (doc)** | Hierarchy + L3 schemas — [PLAN_PLUGIN_PARTNER_INTERFACE.md](PLAN_PLUGIN_PARTNER_INTERFACE.md) / **#695** | 🔄 |
+| **4 – L2/L3 SDK runtime chapters** | Document sandbox / sidecar when epic **#865** lands APIs | ⬜ |
 
 ---
 
