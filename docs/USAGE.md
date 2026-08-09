@@ -24,7 +24,7 @@ The main entry point is `main.py`.
 | `--web`                 | *(flag)*          | Start the REST API server instead of running a one-shot audit.                                                                                                                                                                                                                      |
 | `--port`                | `8088`            | Port for the API when `--web` is set. Can be overridden by `api.port` in config unless you pass `--port` explicitly. Ignored in one-shot mode.                                                                                                                                      |
 | `--host`                | *(resolved)*      | Bind address when `--web` is set (e.g. `127.0.0.1`, `0.0.0.0`). **Overrides** `api.host` and `API_HOST`. If omitted: `api.host` → `API_HOST` → default **`127.0.0.1`**. Ignored in one-shot mode. See §2.                                                                           |
-| `--https-cert-file`     | *(none)*          | PEM certificate path for TLS when `--web` is set; requires `--https-key-file` (or `api.https_cert_file` / `api.https_key_file`). TLS **≥ 1.2**. Without both files, startup **fails** unless you pass `--allow-insecure-http`.                                                      |
+| `--https-cert-file`     | *(none)*          | PEM certificate path for TLS when `--web` is set; requires `--https-key-file` (or `api.https_cert_file` / `api.https_key_file`). TLS **≥ 1.2**. Without both files, startup **fails** unless you pass `--allow-insecure-http`. Optional `api.https_cert_fingerprint_sha256` (hex scalar or list) allow-lists the leaf cert SHA-256; omit = observe-only; any list match OK (rotation). |
 | `--https-key-file`      | *(none)*          | PEM private key path for TLS when `--web` is set; paired with `--https-cert-file` or config keys above.                                                                                                                                                                             |
 | `--allow-insecure-http` | *(flag)*          | **Explicit risk acceptance:** serve the dashboard over **plaintext HTTP** (sniffing/tampering risk). Prefer TLS or a reverse proxy in production. Same effect as `api.allow_insecure_http: true`. The default **Docker** `CMD` passes this so the image runs without mounted certs. |
 | `--validate-config`     | *(flag)*          | Pre-flight: parse config, check each target’s connector type/driver and required keys; **WARN** on unset `*_from_env` vars and missing optional SQL driver packages (offline import probe; e.g. `psycopg2` / `data-boar[postgres]`). Also **WARN**/OK for rust-regex-stage / accelerator readiness (#1411 / #1414); on paid tiers, **WARN** if `boar_fast_filter` is missing (same class as optional SQL drivers; PyPI uses pure-Python fallback). **Creates** missing directories for `report.output_dir`, the parent of `sqlite_path`, and (when `learned_patterns.enabled`) the parent of `learned_patterns.output_file`. No network or DB. Exit **0** with `[OK]` or **1** with `[INVALID]`. Incompatible with `--web`, `--reset-data`, `--export-audit-trail`, `--export-dsar`, `--regenerate-report`, and `--prefilter-status`. |
@@ -1128,6 +1128,13 @@ report:
 api:
   port: 8088
   workers: 1       # uvicorn workers; 1 = minimal, 2+ for concurrent API traffic
+  # Optional HTTPS PEM paths (same as --https-cert-file / --https-key-file)
+  # https_cert_file: "/etc/data-boar/certs/fullchain.pem"
+  # https_key_file: "/etc/data-boar/certs/privkey.pem"
+  # Optional leaf cert SHA-256 allow-list (hex; scalar or list). Omit = observe-only.
+  # Any listed digest matches (safe during cert rotation). Mismatch → trust degraded.
+  # https_cert_fingerprint_sha256:
+  #   - "aabbccdd…64 hex chars…"
   # Optional: require API key for all endpoints except GET /health (X-API-Key or Authorization: Bearer)
   # require_api_key: true
   # api_key: "your-secret-key"              # or use api_key_from_env to read from environment

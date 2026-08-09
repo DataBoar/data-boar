@@ -1,9 +1,12 @@
 """
-Dashboard TLS posture self-check (S2a wave-2a / GRC A3 thin).
+Dashboard TLS posture self-check (S2a wave-2a/2b / GRC A3 thin).
 
-Probes the HTTPS ``SSLContext`` for minimum protocol and weak cipher names.
+Probes the HTTPS ``SSLContext`` for minimum protocol and weak cipher names,
+and optionally the leaf cert SHA-256 fingerprint against a configured allow-list
+(rotation-safe: any listed digest matches).
+
 Results feed ``dashboard_transport.tls_posture`` and canonical ``trust_reasons``.
-No network bind — inspects the context OpenSSL will use for the listener.
+No network bind — inspects the context / PEM OpenSSL will use for the listener.
 
 Publish via ``os.environ`` (same pattern as ``configure_dashboard_transport``)
 so uvicorn worker processes that fork after startup still see the probe result.
@@ -11,10 +14,16 @@ so uvicorn worker processes that fork after startup still see the probe result.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
+import re
 import ssl
+from pathlib import Path
 from typing import Any
+
+from cryptography import x509
+from cryptography.hazmat.primitives import serialization
 
 # Substrings matched against OpenSSL cipher *names* (case-insensitive).
 # Keep conservative: only clearly weak / export / NULL suites.
@@ -37,9 +46,14 @@ _WEAK_CIPHER_TOKENS = (
 
 REASON_PROTOCOL = "tls_protocol_below_baseline"
 REASON_CIPHER = "tls_cipher_baseline_weak"
+REASON_FINGERPRINT = "tls_cert_fingerprint_mismatch"
+
+_TLS_TRUST_REASONS = (REASON_PROTOCOL, REASON_CIPHER, REASON_FINGERPRINT)
 
 # Survives uvicorn worker fork (unlike a module-global only).
 ENV_TLS_POSTURE = "DATA_BOAR_TLS_POSTURE"
+
+_HEX64 = re.compile(r"^[0-9a-f]{64}$")
 
 
 def clear_tls_posture_snapshot() -> None:
@@ -85,6 +99,55 @@ def find_weak_cipher_names(cipher_names: list[str]) -> list[str]:
     return weak
 
 
+def normalize_cert_fingerprints(raw: Any) -> list[str]:
+    """
+    Normalize ``api.https_cert_fingerprint_sha256`` to unique lowercase hex digests.
+
+    Accepts a single string or a list of strings. Colons/spaces/hyphens are stripped.
+    Invalid entries (not 64 hex chars after normalize) are dropped.
+    """
+    if raw is None:
+        return []
+    items: list[Any]
+    if isinstance(raw, str):
+        items = [raw]
+    elif isinstance(raw, (list, tuple)):
+        items = list(raw)
+    else:
+        return []
+    out: list[str] = []
+    seen: set[str] = set()
+    for item in items:
+        if not isinstance(item, str):
+            continue
+        cleaned = re.sub(r"[\s:\-]", "", item.strip()).lower()
+        if not _HEX64.match(cleaned):
+            continue
+        if cleaned not in seen:
+            seen.add(cleaned)
+            out.append(cleaned)
+    return out
+
+
+def expected_fingerprints_from_api_cfg(api_cfg: dict[str, Any] | None) -> list[str]:
+    """Read and normalize ``api.https_cert_fingerprint_sha256`` (list or scalar)."""
+    if not api_cfg:
+        return []
+    return normalize_cert_fingerprints(api_cfg.get("https_cert_fingerprint_sha256"))
+
+
+def sha256_fingerprint_pem_file(path: str | Path) -> str:
+    """
+    Return lowercase hex SHA-256 of the leaf certificate DER from a PEM file.
+
+    Uses the first certificate in the file (leaf / end-entity).
+    """
+    data = Path(path).read_bytes()
+    cert = x509.load_pem_x509_certificate(data)
+    der = cert.public_bytes(serialization.Encoding.DER)
+    return hashlib.sha256(der).hexdigest()
+
+
 def _tls_version_label(version: ssl.TLSVersion | int | None) -> str:
     if version is None:
         return "unknown"
@@ -94,9 +157,19 @@ def _tls_version_label(version: ssl.TLSVersion | int | None) -> str:
         return str(version)
 
 
-def probe_ssl_context(ctx: ssl.SSLContext) -> dict[str, Any]:
+def probe_ssl_context(
+    ctx: ssl.SSLContext,
+    *,
+    cert_path: str | Path | None = None,
+    expected_fingerprints: Any = None,
+) -> dict[str, Any]:
     """
-    Inspect ``ctx`` for TLS >= 1.2 and absence of weak cipher names.
+    Inspect ``ctx`` for TLS >= 1.2, weak cipher names, and optional cert fingerprint.
+
+    Fingerprint baseline (wave-2b):
+    - No configured baseline → observe/display current fingerprint only (no trust downgrade).
+    - Baseline list present → match **any** digest (rotation window); else
+      ``tls_cert_fingerprint_mismatch``.
 
     Returns a JSON-serializable snapshot with ``ok``, ``issues``, and
     ``trust_reasons`` suitable for canonical trust folding.
@@ -126,17 +199,48 @@ def probe_ssl_context(ctx: ssl.SSLContext) -> dict[str, Any]:
         issues.append("weak_ciphers=" + ",".join(weak[:12]))
         trust_reasons.append(REASON_CIPHER)
 
+    baseline = normalize_cert_fingerprints(expected_fingerprints)
+    current_fp: str | None = None
+    fp_match: bool | None = None
+    if cert_path is not None:
+        try:
+            current_fp = sha256_fingerprint_pem_file(cert_path)
+        except (OSError, ValueError, TypeError) as exc:
+            issues.append(f"cert_fingerprint_unreadable={exc.__class__.__name__}")
+            if baseline:
+                trust_reasons.append(REASON_FINGERPRINT)
+                fp_match = False
+        else:
+            if baseline:
+                fp_match = current_fp in baseline
+                if not fp_match:
+                    issues.append(
+                        "cert_fingerprint_mismatch="
+                        f"current={current_fp[:16]}… "
+                        f"baseline_count={len(baseline)}"
+                    )
+                    trust_reasons.append(REASON_FINGERPRINT)
+            # else: observe-only — fp_match stays None
+
     ok = not trust_reasons
     if ok:
+        fp_note = (
+            f", fingerprint={current_fp[:16]}… (observe)"
+            if current_fp and fp_match is None
+            else (
+                f", fingerprint_match=true (baseline={len(baseline)})"
+                if current_fp and fp_match is True
+                else ""
+            )
+        )
         summary = (
             f"TLS posture OK (minimum={min_label}, "
-            f"ciphers_checked={len(cipher_names)}, weak=0)."
+            f"ciphers_checked={len(cipher_names)}, weak=0{fp_note})."
         )
     else:
         summary = "TLS posture below baseline: " + "; ".join(issues)
 
-    # Stable reason order
-    ordered = [r for r in (REASON_PROTOCOL, REASON_CIPHER) if r in trust_reasons]
+    ordered = [r for r in _TLS_TRUST_REASONS if r in trust_reasons]
 
     return {
         "checked": True,
@@ -144,6 +248,9 @@ def probe_ssl_context(ctx: ssl.SSLContext) -> dict[str, Any]:
         "minimum_tls_version": min_label,
         "cipher_count": len(cipher_names),
         "weak_ciphers": weak,
+        "cert_fingerprint_sha256": current_fp,
+        "cert_fingerprint_baseline": baseline,
+        "cert_fingerprint_match": fp_match,
         "issues": issues,
         "trust_reasons": ordered,
         "summary": summary,

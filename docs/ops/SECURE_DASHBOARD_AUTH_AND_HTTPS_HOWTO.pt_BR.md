@@ -123,9 +123,16 @@ Ou no YAML:
 api:
   https_cert_file: "/etc/data-boar/certs/fullchain.pem"
   https_key_file: "/etc/data-boar/certs/privkey.pem"
+  # Opcional (S2a wave-2b): lista de SHA-256 (hex) do certificado leaf.
+  # Sem chave = só observa/exibe o fingerprint atual (sem downgrade de trust).
+  # Com lista = basta bater com QUALQUER valor (rotação); mismatch →
+  # trust_reasons inclui tls_cert_fingerprint_mismatch.
+  # https_cert_fingerprint_sha256:
+  #   - "aabbccdd…64 caracteres hex…"
+  #   - "cert-antigo-ainda-valido-na-transicao…"
 ```
 
-**3.** Abra **`https://<host>:<port>/`**. Use **`GET /status`** ou **`GET /health`** e confira **`dashboard_transport`** no JSON (`mode`, `tls_active`, `summary`) **e** os campos canônicos **`trust_state`** / **`trust_reasons`** / **`output_confidence`**.
+**3.** Abra **`https://<host>:<port>/`**. Use **`GET /status`** ou **`GET /health`** e confira **`dashboard_transport`** no JSON (`mode`, `tls_active`, `summary`, **`tls_posture`** opcional aninhado) **e** os campos canônicos **`trust_state`** / **`trust_reasons`** / **`output_confidence`**.
 
 **4.** Evidência opcional: **`python main.py --export-audit-trail -`** (sem `--web`) inclui **`dashboard_transport`**, **`trust_state`** e **`enterprise_surface`** no JSON exportado.
 
@@ -168,7 +175,7 @@ Padrões em [deploy/DEPLOY.md](../deploy/DEPLOY.pt_BR.md) e [deploy/kubernetes/R
 
 | Verificação             | O que observar                                                                                                                                                         |
 | -----------             | --------------                                                                                                                                                         |
-| **Runtime**             | `GET /status` e `GET /health` → **`dashboard_transport`** com **`https`** vs **http** com opt-in; **`trust_state`** é o sinal canônico combinado. Em HTTPS nativo, **`dashboard_transport.tls_posture`** traz o self-check de cipher/protocolo (S2a wave-2a; publicado via env para os **workers** do uvicorn); postura fraca adiciona **`tls_cipher_baseline_weak`** / **`tls_protocol_below_baseline`** em **`trust_reasons`**. |
+| **Runtime**             | `GET /status` e `GET /health` → **`dashboard_transport`** com **`https`** vs **http** com opt-in; **`trust_state`** é o sinal canônico combinado. Em HTTPS nativo, **`dashboard_transport.tls_posture`** traz cipher/protocolo + SHA-256 do cert leaf (S2a wave-2a/2b; publicado via env para os **workers** do uvicorn). Cipher/protocolo fracos adicionam **`tls_cipher_baseline_weak`** / **`tls_protocol_below_baseline`**; mismatch da allow-list de fingerprint adiciona **`tls_cert_fingerprint_mismatch`**. Sem **`api.https_cert_fingerprint_sha256`**, o fingerprint é só observação (sem downgrade de trust). |
 | **Export de auditoria** | `python main.py --export-audit-trail -` → JSON com **`dashboard_transport`**, **`trust_state`** e **`enterprise_surface`** (export sem `--web`; transporte pode ficar `not_configured` sem env). |
 | **Auth**                | Com **`require_api_key`**, **`/health`** sem chave; **`/status`** com chave.                                                                                           |
 

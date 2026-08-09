@@ -60,7 +60,7 @@ We still need a stronger "trust evidence loop" in runtime behavior:
 
 **Why now:** operationalizes existing "non-negotiable crypto baseline" intent.
 
-**Status (S2a wave-2a):** 🔄 Partial — dashboard HTTPS **cipher/protocol probe** in `core/tls_posture.py` (no bind); published via `DATA_BOAR_TLS_POSTURE` env (survives uvicorn workers, same pattern as dashboard transport); nested under `dashboard_transport.tls_posture`; folds into canonical `trust_reasons` (`tls_protocol_below_baseline`, `tls_cipher_baseline_weak`). Cert fingerprint baseline and report tint remain deferred (wave-2b / M-TRUST-02).
+**Status (S2a wave-2a+2b):** 🔄 Partial — dashboard HTTPS **cipher/protocol probe** + **leaf cert SHA-256 allow-list** in `core/tls_posture.py` (no bind); published via `DATA_BOAR_TLS_POSTURE` env (survives uvicorn workers); nested under `dashboard_transport.tls_posture`; folds into canonical `trust_reasons` (`tls_protocol_below_baseline`, `tls_cipher_baseline_weak`, `tls_cert_fingerprint_mismatch`). Config: `api.https_cert_fingerprint_sha256` (scalar or list — any match OK for rotation); omit = observe-only. Report tint / content gating remain deferred (M-TRUST-02).
 
 ### A4 — Evidence packet for review cycles
 

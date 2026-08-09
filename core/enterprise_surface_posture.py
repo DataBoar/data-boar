@@ -25,6 +25,7 @@ def _severity_from_reasons(reasons: list[str]) -> str:
         or "integrity_tampered" in reasons
         or "tls_protocol_below_baseline" in reasons
         or "tls_cipher_baseline_weak" in reasons
+        or "tls_cert_fingerprint_mismatch" in reasons
     ):
         return "elevated"
     if "license_trust_degraded" in reasons:
@@ -73,6 +74,7 @@ def get_enterprise_surface_posture(config: dict[str, Any]) -> dict[str, Any]:
                 in (
                     "tls_protocol_below_baseline",
                     "tls_cipher_baseline_weak",
+                    "tls_cert_fingerprint_mismatch",
                 )
                 and r not in reasons
             ):
