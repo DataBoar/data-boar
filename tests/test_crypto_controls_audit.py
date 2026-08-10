@@ -8,13 +8,38 @@ from unittest.mock import MagicMock, patch
 
 import openpyxl
 
+from connectors.dataverse_connector import DataverseConnector
 from connectors.mongodb_connector import MongoDBConnector
+from connectors.powerbi_connector import PowerBIConnector
 from connectors.redis_connector import RedisConnector
+from connectors.rest_connector import RESTConnector
 from connectors.smb_connector import SMBConnector
 from connectors.sql_connector import SQLConnector
 from core.crypto_audit import collect_sql_crypto_facts
 from core.database import LocalDBManager
 from report.generator import generate_report
+
+
+def _mock_httpx_tls_client(base_url: str = "https://api.example.com") -> MagicMock:
+    """httpx.Client mock with TLS socket extras for collect_httpx_crypto_facts."""
+    sock = MagicMock()
+    sock.version.return_value = "TLSv1.3"
+    sock.cipher.return_value = ("TLS_AES_256_GCM_SHA384", "TLSv1.3", 256)
+    net = MagicMock()
+    net.get_extra_info.side_effect = lambda name: sock if name == "socket" else None
+    stream_resp = MagicMock()
+    stream_resp.extensions = {"network_stream": net}
+    stream_resp.__enter__.return_value = stream_resp
+    stream_resp.__exit__.return_value = False
+    client = MagicMock()
+    client.base_url = base_url
+    client.stream.return_value = stream_resp
+    get_resp = MagicMock()
+    get_resp.raise_for_status = MagicMock()
+    get_resp.json.return_value = {"value": [], "ok": True}
+    get_resp.text = "{}"
+    client.get.return_value = get_resp
+    return client
 
 
 def test_crypto_controls_audit_save_and_get(tmp_path: Path) -> None:
@@ -358,6 +383,137 @@ def test_smb_connector_skips_crypto_audit_when_flag_off() -> None:
         with patch("connectors.smb_connector.smbclient", fake_smb):
             connector.run()
     assert not db_manager.save_crypto_controls_audit.called
+
+
+def test_rest_connector_honors_verify_and_saves_crypto_audit() -> None:
+    secret = "must-not-appear-in-rest-crypto-details"
+    target = {
+        "name": "rest-crypto",
+        "base_url": "https://api.example.com",
+        "paths": ["/health"],
+        "verify": False,
+        "auth": {"type": "bearer", "token": secret},
+        "_validate_crypto": True,
+    }
+    scanner = MagicMock()
+    scanner.scan_column.return_value = {
+        "sensitivity_level": "LOW",
+        "pattern_detected": "NONE",
+        "norm_tag": "",
+        "ml_confidence": 0,
+    }
+    db_manager = MagicMock()
+    client = _mock_httpx_tls_client("https://api.example.com")
+    fake_httpx = MagicMock()
+    fake_httpx.Timeout = MagicMock(return_value=MagicMock())
+    fake_httpx.Client.return_value = client
+    fake_httpx.BasicAuth = MagicMock()
+    connector = RESTConnector(target, scanner, db_manager)
+    with patch("connectors.rest_connector._HTTPX_AVAILABLE", True):
+        with patch("connectors.rest_connector.httpx", fake_httpx):
+            connector.run()
+    assert fake_httpx.Client.call_args.kwargs.get("verify") is False
+    assert db_manager.save_crypto_controls_audit.called
+    kwargs = db_manager.save_crypto_controls_audit.call_args.kwargs
+    assert kwargs["target_name"] == "rest-crypto"
+    assert kwargs["connection_type"] == "rest"
+    details = kwargs["strong_crypto_details"] or ""
+    assert secret not in details
+    assert "Bearer" not in details
+    assert "token=" not in details.lower()
+
+
+def test_rest_connector_skips_crypto_audit_when_flag_off() -> None:
+    target = {
+        "name": "rest-off",
+        "base_url": "https://api.example.com",
+        "paths": ["/health"],
+        "_validate_crypto": False,
+    }
+    scanner = MagicMock()
+    scanner.scan_column.return_value = {
+        "sensitivity_level": "LOW",
+        "pattern_detected": "NONE",
+        "norm_tag": "",
+        "ml_confidence": 0,
+    }
+    db_manager = MagicMock()
+    client = _mock_httpx_tls_client()
+    fake_httpx = MagicMock()
+    fake_httpx.Timeout = MagicMock(return_value=MagicMock())
+    fake_httpx.Client.return_value = client
+    connector = RESTConnector(target, scanner, db_manager)
+    with patch("connectors.rest_connector._HTTPX_AVAILABLE", True):
+        with patch("connectors.rest_connector.httpx", fake_httpx):
+            connector.run()
+    assert not db_manager.save_crypto_controls_audit.called
+
+
+def test_powerbi_connector_saves_crypto_audit_when_flag_on() -> None:
+    secret = "pbi-client-secret-must-not-leak"
+    target = {
+        "name": "pbi-crypto",
+        "tenant_id": "tenant",
+        "client_id": "cid",
+        "client_secret": secret,
+        "verify_ssl": True,
+        "_validate_crypto": True,
+    }
+    scanner = MagicMock()
+    db_manager = MagicMock()
+    client = _mock_httpx_tls_client("https://api.powerbi.com/v1.0")
+    fake_httpx = MagicMock()
+    fake_httpx.Timeout = MagicMock(return_value=MagicMock())
+    fake_httpx.Client.return_value = client
+    connector = PowerBIConnector(target, scanner, db_manager)
+    with patch("connectors.powerbi_connector._HTTPX_AVAILABLE", True):
+        with patch(
+            "connectors.powerbi_connector._get_access_token",
+            return_value="access-token",
+        ):
+            with patch("connectors.powerbi_connector.httpx", fake_httpx):
+                connector.run()
+    assert fake_httpx.Client.call_args.kwargs.get("verify") is True
+    assert db_manager.save_crypto_controls_audit.called
+    kwargs = db_manager.save_crypto_controls_audit.call_args.kwargs
+    assert kwargs["connection_type"] == "powerbi"
+    details = kwargs["strong_crypto_details"] or ""
+    assert secret not in details
+    assert "access-token" not in details
+
+
+def test_dataverse_connector_saves_crypto_audit_when_flag_on() -> None:
+    secret = "dv-client-secret-must-not-leak"
+    target = {
+        "name": "dv-crypto",
+        "org_url": "https://org.crm.dynamics.com",
+        "tenant_id": "tenant",
+        "client_id": "cid",
+        "client_secret": secret,
+        "verify": True,
+        "_validate_crypto": True,
+    }
+    scanner = MagicMock()
+    db_manager = MagicMock()
+    client = _mock_httpx_tls_client("https://org.api.crm.dynamics.com/api/data/v9.2")
+    fake_httpx = MagicMock()
+    fake_httpx.Timeout = MagicMock(return_value=MagicMock())
+    fake_httpx.Client.return_value = client
+    connector = DataverseConnector(target, scanner, db_manager)
+    with patch("connectors.dataverse_connector._HTTPX_AVAILABLE", True):
+        with patch(
+            "connectors.dataverse_connector._dataverse_token", return_value="dv-token"
+        ):
+            with patch("connectors.dataverse_connector.httpx", fake_httpx):
+                connector.run()
+    assert fake_httpx.Client.call_args.kwargs.get("verify") is True
+    assert db_manager.save_crypto_controls_audit.called
+    kwargs = db_manager.save_crypto_controls_audit.call_args.kwargs
+    assert kwargs["connection_type"] == "dataverse"
+    details = kwargs["strong_crypto_details"] or ""
+    assert secret not in details
+    assert "dv-token" not in details
+    assert "crm.dynamics.com" not in details
 
 
 def test_mongodb_connector_skips_crypto_audit_when_flag_off() -> None:

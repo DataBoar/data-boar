@@ -1,6 +1,6 @@
 # Plan: Optional strong-crypto validation and inference of anonymisation/controls
 
-**Status:** Active (Phase 2d — SQL + Mongo/Redis + SMB + crypto_controls_audit)
+**Status:** Active (Phase 2 connectors done — SQL + Mongo/Redis + SMB + REST/BI + crypto_controls_audit)
 **Date:** 2026-03-15
 **Authors:** Fabio Leitao
 **Priority:** H3
@@ -34,7 +34,8 @@ This plan adds an **optional** mode, enabled by a **CLI flag** and/or **web dash
 - **Phase 2a (done):** Criteria module (`StrongCryptoResult` / `evaluate_strong_crypto`); SQL live TLS probe after connect; dedicated table **`crypto_controls_audit`**; Excel sheet **Crypto & controls**.
 - **Phase 2c (done):** MongoDB / Redis honor TLS on connect; post-connect probe; allowlisted details only (same secret-hygiene as sslmode fix).
 - **Phase 2d (done):** SMB honor `encrypt` / `require_signing` on connect; probe session dialect + signing + encryption when `smbprotocol` exposes them.
-- **Still open:** Phase 2.4 (REST/BI), Phase 3 inference, Phase 4 polish.
+- **Phase 2.4 (done):** REST / Power BI / Dataverse honor `verify` / `verify_ssl` on httpx; probe HTTPS + TLS version/cipher (allowlisted details only — no URLs/tokens).
+- **Still open:** Phase 3 inference, Phase 4 polish. SharePoint/WebDAV remain out of this connector slice.
 - **Data source versions plan:** [PLAN_DATA_SOURCE_VERSIONS_AND_HARDENING.md](PLAN_DATA_SOURCE_VERSIONS_AND_HARDENING.md) inventory remains separate; crypto validation uses its own table/sheet.
 
 ---
@@ -95,11 +96,11 @@ All validation and inference is **best-effort**: if the driver or API does not e
 | 2.1 | Define “strong crypto” criteria (e.g. TLS &gt;= 1.2, cert validation; SMB signing/encryption) in a small rule set or module        | ✅      |
 | 2.2 | SQL connector: when validate_crypto, after connect get TLS version and cert validation from connection if available; record result | ✅      |
 | 2.3 | MongoDB / Redis: TLS and cert from client/session; record result                                                                   | ✅      |
-| 2.4 | REST / Power BI / Dataverse: HTTPS + TLS from httpx client; record                                                                 | ⬜      |
+| 2.4 | REST / Power BI / Dataverse: HTTPS + TLS from httpx client; record                                                                 | ✅      |
 | 2.5 | SMB: when library exposes it, detect signing/encryption; record                                                                    | ✅      |
-| 2.6 | Persist results (new table or extend inventory); add “Crypto & controls” report sheet with strong-crypto column                    | ✅ (table `crypto_controls_audit` + sheet; SQL + Mongo/Redis + SMB) |
-| 2.7 | Tests: unit tests for criteria; integration test with mock or real TLS connection; report sheet present when flag on               | ✅ (Phase 2a–2d: criteria + SQL/Mongo/Redis/SMB mocks + sheet) |
-| 2.8 | Docs: what is validated, limitations, link to SECURITY or hardening                                                                | ✅ (Phase 2a–2d scope in USAGE/TECH_GUIDE) |
+| 2.6 | Persist results (new table or extend inventory); add “Crypto & controls” report sheet with strong-crypto column                    | ✅ (table `crypto_controls_audit` + sheet; SQL + Mongo/Redis + SMB + REST/BI) |
+| 2.7 | Tests: unit tests for criteria; integration test with mock or real TLS connection; report sheet present when flag on               | ✅ (Phase 2a–2d+2.4: criteria + SQL/Mongo/Redis/SMB/REST/BI mocks + sheet) |
+| 2.8 | Docs: what is validated, limitations, link to SECURITY or hardening                                                                | ✅ (Phase 2 connectors scope in USAGE/TECH_GUIDE) |
 
 ### Phase 3: Inference of anonymisation and controls
 
