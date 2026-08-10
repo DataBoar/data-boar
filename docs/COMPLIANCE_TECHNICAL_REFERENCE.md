@@ -26,6 +26,8 @@ Configuration and pattern files support **UTF-8** (recommended), **UTF-8 with BO
 
 **Unicode in scanned data:** Findings and Excel output treat text as **Unicode**—**Latin**, **Cyrillic**, **CJK** (e.g. Japanese), **Arabic script**, and mixed corpora are in scope at the character level. **Byte-level decoding** of sources depends on connectors and file formats; **sniffing and heuristics** can be **tuned** per deployment. **Operator dashboard UI** and **full documentation** in many additional human languages are **not** all shipped yet; direction is **roadmapped** (short- to mid-term) with **en** + **pt-BR** first—see [COMPLIANCE_FRAMEWORKS.md](COMPLIANCE_FRAMEWORKS.md#multi-language-multi-encoding-and-multi-regional-operation) and the **Roadmap — internationalization and regional depth** paragraph in the repository **[README.md](../README.md)**. **Compliance YAML samples** must be **re-reviewed periodically** as regulations and wording change—see [compliance-samples/README.md](compliance-samples/README.md#sample-maintenance).
 
+**Policy (anti-overclaim):** “Any encoding” means **operator-tunable** config and Unicode-aware detection where implemented—not a guarantee that every connector decodes every on-disk or wire representation the same way, nor that the engine performs **universal mojibake repair** or NFC/homoglyph normalisation on all paths. Treat residual decode ambiguity as a **coverage limitation** (document or surface via `scan_failures` / connector behaviour), not as “clean.”
+
 Step-by-step: [USAGE.md — File encoding, config, and pattern files](USAGE.md#file-encoding-config-and-pattern-files) ([pt-BR](USAGE.pt_BR.md)).
 
 ---
@@ -50,12 +52,13 @@ Off-band, after a scan **completes**, the app can send a **short summary** (Slac
 
 ## Related documents
 
-| Topic                                        | Document                                             |
-| -----                                        | --------                                             |
-| Legal / compliance summary (decision-makers) | [COMPLIANCE_AND_LEGAL.md](COMPLIANCE_AND_LEGAL.md)   |
-| Frameworks, samples, YAML profiles           | [COMPLIANCE_FRAMEWORKS.md](COMPLIANCE_FRAMEWORKS.md) |
-| Full config schema, credentials, CLI         | [USAGE.md](USAGE.md)                                 |
-| Connectors, architecture, deploy             | [TECH_GUIDE.md](TECH_GUIDE.md)                       |
-| Detection patterns, ML/DL                    | [SENSITIVITY_DETECTION.md](SENSITIVITY_DETECTION.md) |
+| Topic                                        | Document                                                                   |
+| -----                                        | --------                                                                   |
+| Legal / compliance summary (decision-makers) | [COMPLIANCE_AND_LEGAL.md](COMPLIANCE_AND_LEGAL.md)                         |
+| Methodology (discovery, risk, ROPA-style)    | [COMPLIANCE_METHODOLOGY.md](COMPLIANCE_METHODOLOGY.md)                     |
+| Frameworks, samples, YAML profiles           | [COMPLIANCE_FRAMEWORKS.md](COMPLIANCE_FRAMEWORKS.md)                       |
+| Full config schema, credentials, CLI         | [USAGE.md](USAGE.md)                                                       |
+| Connectors, architecture, deploy             | [TECH_GUIDE.md](TECH_GUIDE.md)                                             |
+| Detection patterns, ML/DL                    | [SENSITIVITY_DETECTION.md](SENSITIVITY_DETECTION.md)                       |
 
 Full index: [README.md](README.md) · [README.pt_BR.md](README.pt_BR.md).
