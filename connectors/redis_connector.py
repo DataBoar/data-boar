@@ -25,6 +25,7 @@ from core.connector_registry import register
 from core.crypto_audit import (
     collect_redis_crypto_facts,
     evaluate_strong_crypto,
+    infer_controls_from_identifiers,
     resolve_nosql_tls_connect_options,
 )
 from connectors.inventory_details import build_redis_inventory_details
@@ -217,10 +218,30 @@ class RedisConnector:
                         ensure_ascii=False,
                     ),
                 )
+            self._save_inferred_controls_summary(target_name, keys)
         except Exception as e:
             self.db_manager.save_failure(target_name, "error", str(e))
         finally:
             self.close()
+
+    def _save_inferred_controls_summary(
+        self, target_name: str, identifier_names: list[Any]
+    ) -> None:
+        """Phase 3: attach count-by-category inference to the crypto audit row."""
+        if not self.config.get("_validate_crypto"):
+            return
+        if not hasattr(self.db_manager, "update_crypto_controls_inferred_summary"):
+            return
+        try:
+            summary = infer_controls_from_identifiers(identifier_names)
+            if not summary:
+                return
+            self.db_manager.update_crypto_controls_inferred_summary(
+                target_name, summary
+            )
+        except Exception:
+            # Fail-soft: inference never fails the scan.
+            pass
 
     def _save_crypto_controls_audit(self, target_name: str) -> None:
         """Opt-in strong-crypto validation after connect (Order 5 Phase 2c)."""

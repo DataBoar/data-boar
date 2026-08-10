@@ -187,6 +187,81 @@ def test_sql_connector_skips_crypto_audit_when_flag_off(tmp_path: Path) -> None:
     assert not db_manager.save_crypto_controls_audit.called
 
 
+def test_sql_connector_updates_inferred_controls_when_flag_on(tmp_path: Path) -> None:
+    secret_col = "customer_cpf_hash"
+    db_path = tmp_path / "scan_infer.db"
+    conn = sqlite3.connect(str(db_path))
+    conn.execute(
+        f'CREATE TABLE t1 (email TEXT, "{secret_col}" TEXT, email_masked TEXT)'
+    )
+    conn.execute(
+        "INSERT INTO t1 VALUES (?, ?, ?)",
+        ("a@example.com", "should-not-appear", "m***"),
+    )
+    conn.commit()
+    conn.close()
+
+    target = {
+        "type": "database",
+        "driver": "sqlite",
+        "database": str(db_path),
+        "name": "SQLiteInfer",
+        "_validate_crypto": True,
+    }
+    scanner = MagicMock()
+    scanner.scan_column.return_value = {
+        "sensitivity_level": "LOW",
+        "pattern_detected": "NONE",
+        "norm_tag": "",
+        "ml_confidence": 0,
+    }
+    db_manager = MagicMock()
+    connector = SQLConnector(target, scanner, db_manager)
+    connector.run()
+
+    assert db_manager.save_crypto_controls_audit.called
+    assert db_manager.update_crypto_controls_inferred_summary.called
+    args = db_manager.update_crypto_controls_inferred_summary.call_args
+    assert (
+        args.args[0] == "SQLiteInfer" or args.kwargs.get("target_name") == "SQLiteInfer"
+    )
+    summary = (
+        args.args[1]
+        if len(args.args) > 1
+        else args.kwargs.get("inferred_controls_summary")
+    )
+    assert summary
+    assert "hashing" in summary
+    assert "masking" in summary
+    assert secret_col not in summary
+    assert "cpf" not in summary
+    assert "should-not-appear" not in summary
+    assert "a@example.com" not in summary
+
+
+def test_update_crypto_controls_inferred_summary_persists(tmp_path: Path) -> None:
+    db_path = str(tmp_path / "crypto_infer.db")
+    mgr = LocalDBManager(db_path)
+    try:
+        mgr.set_current_session_id("infer-sess-1")
+        mgr.create_session_record("infer-sess-1")
+        mgr.save_crypto_controls_audit(
+            target_name="pg-main",
+            connection_type="database",
+            strong_crypto_result="ok",
+            strong_crypto_details="source=pg_stat_ssl; tls=TLSv1.3",
+        )
+        mgr.update_crypto_controls_inferred_summary(
+            "pg-main",
+            "2 names suggest hashing (heuristic; not verified — human review required)",
+        )
+        rows = mgr.get_crypto_controls_audit("infer-sess-1")
+        assert len(rows) == 1
+        assert "hashing" in (rows[0]["inferred_controls_summary"] or "")
+    finally:
+        mgr.dispose()
+
+
 def test_mongodb_connect_honors_tls_flag() -> None:
     target = {
         "name": "mongo-tls",
@@ -564,6 +639,9 @@ def test_generate_report_includes_crypto_controls_sheet(tmp_path: Path) -> None:
             connection_type="database",
             strong_crypto_result="warning",
             strong_crypto_details="source=config_sslmode; sslmode=require",
+            inferred_controls_summary=(
+                "2 names suggest hashing (heuristic; not verified — human review required)"
+            ),
         )
         mgr.finish_session("rep-crypto")
         path = generate_report(mgr, "rep-crypto", output_dir=out_dir, config={})
@@ -573,8 +651,13 @@ def test_generate_report_includes_crypto_controls_sheet(tmp_path: Path) -> None:
         ws = wb["Crypto & controls"]
         values = [[c.value for c in row] for row in ws.iter_rows(min_row=1, max_row=4)]
         assert values[0][0] == "Target"
+        assert any(row[0] == "(note)" for row in values[1:])
+        note = next(row for row in values[1:] if row[0] == "(note)")
+        assert "human review" in (note[4] or "").lower()
+        assert "compliance" in (note[4] or "").lower()
         assert any(row[0] == "pg1" for row in values[1:])
         assert any(row[2] == "warning" for row in values[1:])
+        assert any("hashing" in (row[4] or "") for row in values[1:])
     finally:
         mgr.dispose()
 

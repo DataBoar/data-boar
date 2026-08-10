@@ -10,10 +10,13 @@ Phase 2d: SMB signing/encryption from smbprotocol Session after connect
 (allowlisted dialect/signing/encryption tokens only).
 Phase 2.4: REST / Power BI / Dataverse HTTPS + TLS via httpx (allowlisted
 scheme/tls/cipher/verify posture only — never URLs, tokens, or query strings).
+Phase 3: heuristic anonymisation/control inference from identifier *name
+patterns only* (counts by category — never sample values or raw column lists).
 """
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Iterable, Set
@@ -417,6 +420,113 @@ def validate_crypto_enabled(config: dict[str, Any] | None) -> bool:
     if not isinstance(scan, dict):
         return False
     return bool(scan.get("validate_crypto"))
+
+
+# Phase 3 — identifier name heuristics (category label → match callables).
+# One category per name (first match wins). Never persist the raw identifier.
+_INFER_CATEGORY_ORDER = (
+    "hashing",
+    "masking",
+    "tokenization",
+    "anonymization",
+)
+_INFER_PREFIXES: dict[str, tuple[str, ...]] = {
+    "hashing": ("hash_",),
+    "masking": ("mask_", "masked_"),
+    "tokenization": ("token_", "tok_"),
+    "anonymization": ("anon_", "anonymous_", "pseudonym_", "pseudo_"),
+}
+_INFER_SUFFIXES: dict[str, tuple[str, ...]] = {
+    "hashing": ("_hash", "_hashed"),
+    "masking": ("_masked", "_mask"),
+    "tokenization": ("_token", "_tok"),
+    "anonymization": ("_anon", "_anonymous", "_pseudonym", "_pseudo"),
+}
+_INFER_SUMMARY_MAX = 480
+_INFER_DISCLAIMER = "heuristic; not verified — human review required"
+# Allowlisted metadata hint tokens only (never persist free-text comments).
+_INFER_METADATA_HINTS = frozenset(
+    {"masking", "mask", "hashing", "hashed", "tokenization", "tokenised", "tokenized"}
+)
+_IDENTIFIER_NORMALIZE_RE = re.compile(r"[^a-z0-9_]+")
+
+
+def _normalize_identifier_name(raw: Any) -> str | None:
+    """Normalize an identifier for pattern matching; reject empty/oversized."""
+    if isinstance(raw, (bytes, bytearray)):
+        try:
+            raw = bytes(raw).decode("utf-8", errors="ignore")
+        except Exception:
+            return None
+    text = str(raw or "").strip().lower()
+    if not text or len(text) > 256:
+        return None
+    # Flatten Redis-style separators so token_user and token:user both match.
+    text = text.replace("-", "_").replace(".", "_").replace(":", "_").replace("/", "_")
+    text = _IDENTIFIER_NORMALIZE_RE.sub("_", text).strip("_")
+    return text or None
+
+
+def _category_for_identifier(name: str) -> str | None:
+    for category in _INFER_CATEGORY_ORDER:
+        for prefix in _INFER_PREFIXES.get(category, ()):
+            if name.startswith(prefix):
+                return category
+        for suffix in _INFER_SUFFIXES.get(category, ()):
+            if name.endswith(suffix):
+                return category
+    return None
+
+
+def infer_controls_from_identifiers(
+    names: Iterable[Any],
+    *,
+    metadata_hints: Iterable[Any] | None = None,
+) -> str | None:
+    """
+    Best-effort inference of anonymisation/control *hints* from identifier names.
+
+    Returns a short count-by-category summary, or None when nothing matched.
+    Never includes sample values or the raw identifier list — only allowlisted
+    category labels and counts. Not a compliance certification.
+    """
+    counts: dict[str, int] = {c: 0 for c in _INFER_CATEGORY_ORDER}
+    seen: set[str] = set()
+    for raw in names:
+        normalized = _normalize_identifier_name(raw)
+        if not normalized or normalized in seen:
+            continue
+        seen.add(normalized)
+        category = _category_for_identifier(normalized)
+        if category:
+            counts[category] += 1
+
+    meta_hits = 0
+    if metadata_hints:
+        for hint in metadata_hints:
+            token = _lower_or_empty(hint)
+            if token in _INFER_METADATA_HINTS:
+                meta_hits += 1
+
+    parts: list[str] = []
+    for category in _INFER_CATEGORY_ORDER:
+        n = counts[category]
+        if n <= 0:
+            continue
+        noun = "name" if n == 1 else "names"
+        parts.append(f"{n} {noun} suggest {category}")
+    if meta_hits:
+        parts.append(
+            f"{meta_hits} metadata hint"
+            + ("s" if meta_hits != 1 else "")
+            + " (allowlisted)"
+        )
+    if not parts:
+        return None
+    summary = "; ".join(parts) + f" ({_INFER_DISCLAIMER})"
+    if len(summary) > _INFER_SUMMARY_MAX:
+        summary = summary[: _INFER_SUMMARY_MAX - 1].rstrip() + "…"
+    return summary
 
 
 def summarize_crypto_from_connection_info(

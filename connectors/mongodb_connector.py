@@ -20,6 +20,7 @@ from core.connector_registry import register
 from core.crypto_audit import (
     collect_mongodb_crypto_facts,
     evaluate_strong_crypto,
+    infer_controls_from_identifiers,
     resolve_nosql_tls_connect_options,
 )
 from connectors.inventory_details import build_mongodb_inventory_details
@@ -120,6 +121,7 @@ class MongoDBConnector:
             self._save_crypto_controls_audit(target_name)
             distinct_cap = resolve_sql_sample_limit(int(self.sample_limit))
             fetch_budget = resolve_fetch_row_budget(distinct_cap)
+            identifier_names: list[str] = []
             for coll_name in self._db.list_collection_names():
                 coll = self._db[coll_name]
                 sample_docs = list(coll.find().limit(fetch_budget))
@@ -141,6 +143,7 @@ class MongoDBConnector:
                         if len(bucket) >= distinct_cap:
                             continue
                         bucket.append(sv)
+                identifier_names.extend(all_keys)
                 sample_texts = [
                     f"{k} {v}" for k, vals in field_values.items() for v in vals
                 ]
@@ -182,10 +185,30 @@ class MongoDBConnector:
                     except Exception:
                         # Finding log is optional telemetry and must not fail the connector flow.
                         continue
+            self._save_inferred_controls_summary(target_name, identifier_names)
         except Exception as e:
             self.db_manager.save_failure(target_name, "error", str(e))
         finally:
             self.close()
+
+    def _save_inferred_controls_summary(
+        self, target_name: str, identifier_names: list[str]
+    ) -> None:
+        """Phase 3: attach count-by-category inference to the crypto audit row."""
+        if not self.config.get("_validate_crypto"):
+            return
+        if not hasattr(self.db_manager, "update_crypto_controls_inferred_summary"):
+            return
+        try:
+            summary = infer_controls_from_identifiers(identifier_names)
+            if not summary:
+                return
+            self.db_manager.update_crypto_controls_inferred_summary(
+                target_name, summary
+            )
+        except Exception:
+            # Fail-soft: inference never fails the scan.
+            pass
 
     def _save_crypto_controls_audit(self, target_name: str) -> None:
         """Opt-in strong-crypto validation after connect (Order 5 Phase 2c)."""
