@@ -1,11 +1,11 @@
 # Plan: Optional strong-crypto validation and inference of anonymisation/controls
 
-**Status:** Active (Phase 3 inference done — Phase 4 polish open)
+**Status:** Done (Phases 1–4 complete — archived)
 **Date:** 2026-03-15
 **Authors:** Fabio Leitao
 **Priority:** H3
 
-**Synced with:** [PLANS_TODO.md](PLANS_TODO.md) (central to-do list)
+**Synced with:** [PLANS_TODO.md](../PLANS_TODO.md) (central to-do list)
 
 ## When implementing steps: update docs and tests; then update PLANS_TODO.md and this file.
 
@@ -36,8 +36,8 @@ This plan adds an **optional** mode, enabled by a **CLI flag** and/or **web dash
 - **Phase 2d (done):** SMB honor `encrypt` / `require_signing` on connect; probe session dialect + signing + encryption when `smbprotocol` exposes them.
 - **Phase 2.4 (done):** REST / Power BI / Dataverse honor `verify` / `verify_ssl` on httpx; probe HTTPS + TLS version/cipher (allowlisted details only — no URLs/tokens).
 - **Phase 3 (done):** SQL / Mongo / Redis name-pattern inference (count-by-category into `inferred_controls_summary`); sheet disclaimer strengthened. Dialect metadata comments deferred (optional follow-up).
-- **Still open:** Phase 4 polish. SharePoint/WebDAV remain out of this connector slice.
-- **Data source versions plan:** [PLAN_DATA_SOURCE_VERSIONS_AND_HARDENING.md](PLAN_DATA_SOURCE_VERSIONS_AND_HARDENING.md) inventory remains separate; crypto validation uses its own table/sheet.
+- **Phase 4 (done):** Fail-soft regression tests (crypto probe exceptions do not abort scan); Crypto sheet note points to **Data source inventory** (same workbook). Hardening recommendations sheet link deferred until that plan ships that sheet. SharePoint/WebDAV remain out of this connector slice.
+- **Data source versions plan:** [PLAN_DATA_SOURCE_VERSIONS_AND_HARDENING.md](../PLAN_DATA_SOURCE_VERSIONS_AND_HARDENING.md) inventory remains separate; crypto validation uses its own table/sheet.
 
 ---
 
@@ -68,7 +68,7 @@ All validation and inference is **best-effort**: if the driver or API does not e
 
 ## Data model and report
 
-- **Storage:** Either extend the existing “data source inventory” (from [PLAN_DATA_SOURCE_VERSIONS_AND_HARDENING.md](PLAN_DATA_SOURCE_VERSIONS_AND_HARDENING.md)) with columns for crypto result and inferred controls, or add a small dedicated table, e.g. `crypto_controls_audit` (session_id, target_name, connection_type, strong_crypto_result, strong_crypto_details, inferred_controls_summary, created_at). Choice can be made at implementation time to avoid duplication with inventory.
+- **Storage:** Either extend the existing “data source inventory” (from [PLAN_DATA_SOURCE_VERSIONS_AND_HARDENING.md](../PLAN_DATA_SOURCE_VERSIONS_AND_HARDENING.md)) with columns for crypto result and inferred controls, or add a small dedicated table, e.g. `crypto_controls_audit` (session_id, target_name, connection_type, strong_crypto_result, strong_crypto_details, inferred_controls_summary, created_at). Choice can be made at implementation time to avoid duplication with inventory.
 - **Report:** A dedicated sheet **“Crypto & controls”** (or a section in “Data source inventory” / “Hardening recommendations” when those exist) with:
 - Target name, connection type, strong-crypto result (OK / warning / not available / fail), details (e.g. “TLS 1.2”, “SMB signing enabled”), inferred controls (short text, e.g. “Column names suggest hashing/masking; not verified”).
 - Disclaimer in the report or in docs: “Inferred controls are heuristic only; the application does not verify that data is actually anonymised or that controls are effective.”
@@ -118,9 +118,9 @@ All validation and inference is **best-effort**: if the driver or API does not e
 
 | #   | To-do                                                                                                               | Status |
 | --- | ---------------------------------------------------------------------                                               | ------ |
-| 4.1 | Ensure crypto check failures do not fail the scan; only record and report                                           | ⬜      |
-| 4.2 | Full test suite passes; mark plan steps in PLANS_TODO.md                                                            | ⬜      |
-| 4.3 | Optional: link “Crypto & controls” to “Data source inventory” / “Hardening” when both features exist (same session) | ⬜      |
+| 4.1 | Ensure crypto check failures do not fail the scan; only record and report                                           | ✅ (design + regression tests SQL/REST) |
+| 4.2 | Full test suite passes; mark plan steps in PLANS_TODO.md                                                            | ✅      |
+| 4.3 | Optional: link “Crypto & controls” to “Data source inventory” / “Hardening” when both features exist (same session) | ✅ (inventory note on Crypto sheet; Hardening sheet N/A until data-source plan) |
 
 ---
 
@@ -136,7 +136,7 @@ All validation and inference is **best-effort**: if the driver or API does not e
 ## Conflict and placement in roadmap
 
 - **No conflicts** with Security hardening, Secrets vault, Version check, Compliance samples, Compressed files, Dashboard i18n, or Data source versions & hardening.
-- **Recommended placement:** After **Data source versions & hardening** (so transport_security and report structure exist and can be reused or extended), or in parallel if we keep a separate “Crypto & controls” sheet. See [PLANS_TODO.md](PLANS_TODO.md) for the full sequence.
+- **Recommended placement:** After **Data source versions & hardening** (so transport_security and report structure exist and can be reused or extended), or in parallel if we keep a separate “Crypto & controls” sheet. See [PLANS_TODO.md](../PLANS_TODO.md) for the full sequence.
 
 ---
 
