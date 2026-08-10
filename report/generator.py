@@ -1167,7 +1167,9 @@ def _write_excel_sheets(
                 "Strong crypto": "",
                 "Details": (
                     "Best-effort TLS/crypto validation when scan.validate_crypto was enabled. "
-                    "Not a compliance certification."
+                    "Not a compliance certification. "
+                    "See also the Data source inventory sheet (same workbook) for "
+                    "product/version/transport."
                 ),
                 "Inferred controls": (
                     "Inferred controls are heuristic name-pattern counts only "

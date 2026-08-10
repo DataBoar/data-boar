@@ -412,7 +412,7 @@ def validate_crypto_enabled(config: dict[str, Any] | None) -> bool:
 
     Config key: ``scan.validate_crypto`` (bool). Off by default. CLI
     ``--validate-crypto`` and API/dashboard ``validate_crypto: true`` set this
-    for the current run (see PLAN_OPTIONAL_STRONG_CRYPTO_AND_CONTROLS_VALIDATION).
+    for the current run (see completed/PLAN_OPTIONAL_STRONG_CRYPTO_AND_CONTROLS_VALIDATION).
     """
     if not isinstance(config, dict):
         return False

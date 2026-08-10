@@ -159,6 +159,43 @@ def test_sql_connector_saves_crypto_audit_when_flag_on(tmp_path: Path) -> None:
     assert kwargs["strong_crypto_result"] == "not_applicable"
 
 
+def test_sql_crypto_probe_exception_does_not_abort_scan(tmp_path: Path) -> None:
+    """Phase 4.1: crypto collect/evaluate/persist errors must not stop sampling."""
+    db_path = tmp_path / "scan_failsoft.db"
+    conn = sqlite3.connect(str(db_path))
+    conn.execute("CREATE TABLE t1 (a TEXT)")
+    conn.execute("INSERT INTO t1 VALUES ('x')")
+    conn.commit()
+    conn.close()
+
+    target = {
+        "type": "database",
+        "driver": "sqlite",
+        "database": str(db_path),
+        "name": "SQLiteFailSoft",
+        "_validate_crypto": True,
+    }
+    scanner = MagicMock()
+    scanner.scan_column.return_value = {
+        "sensitivity_level": "HIGH",
+        "pattern_detected": "EMAIL",
+        "norm_tag": "",
+        "ml_confidence": 90,
+    }
+    db_manager = MagicMock()
+    connector = SQLConnector(target, scanner, db_manager)
+    with patch(
+        "connectors.sql_connector.collect_sql_crypto_facts",
+        side_effect=RuntimeError("probe boom"),
+    ):
+        connector.run()
+
+    assert not db_manager.save_crypto_controls_audit.called
+    assert scanner.scan_column.called
+    assert db_manager.save_finding.called
+    assert not db_manager.save_failure.called
+
+
 def test_sql_connector_skips_crypto_audit_when_flag_off(tmp_path: Path) -> None:
     db_path = tmp_path / "scan_off.db"
     conn = sqlite3.connect(str(db_path))
@@ -601,6 +638,46 @@ def test_rest_connector_honors_verify_and_saves_crypto_audit() -> None:
     assert "token=" not in details.lower()
 
 
+def test_rest_crypto_probe_exception_does_not_abort_scan() -> None:
+    """Phase 4.1: httpx crypto probe errors must not stop path sampling."""
+    target = {
+        "name": "rest-failsoft",
+        "base_url": "https://api.example.com",
+        "paths": ["/health"],
+        "_validate_crypto": True,
+    }
+    scanner = MagicMock()
+    scanner.scan_column.return_value = {
+        "sensitivity_level": "HIGH",
+        "pattern_detected": "EMAIL",
+        "norm_tag": "",
+        "ml_confidence": 90,
+    }
+    db_manager = MagicMock()
+    client = _mock_httpx_tls_client("https://api.example.com")
+    client.get.return_value.json.return_value = {"email": "a@example.com"}
+    fake_httpx = MagicMock()
+    fake_httpx.Timeout = MagicMock(return_value=MagicMock())
+    fake_httpx.Client.return_value = client
+    connector = RESTConnector(target, scanner, db_manager)
+    with patch("connectors.rest_connector._HTTPX_AVAILABLE", True):
+        with patch("connectors.rest_connector.httpx", fake_httpx):
+            with patch(
+                "connectors.rest_connector.collect_httpx_crypto_facts",
+                side_effect=RuntimeError("probe boom"),
+            ):
+                connector.run()
+
+    assert not db_manager.save_crypto_controls_audit.called
+    assert client.get.called
+    assert db_manager.save_finding.called
+    failure_msgs = [
+        str(c.args[2]) if len(c.args) > 2 else str(c.kwargs)
+        for c in db_manager.save_failure.call_args_list
+    ]
+    assert not any("probe boom" in m for m in failure_msgs)
+
+
 def test_rest_connector_skips_crypto_audit_when_flag_off() -> None:
     target = {
         "name": "rest-off",
@@ -758,6 +835,7 @@ def test_generate_report_includes_crypto_controls_sheet(tmp_path: Path) -> None:
         note = next(row for row in values[1:] if row[0] == "(note)")
         assert "human review" in (note[4] or "").lower()
         assert "compliance" in (note[4] or "").lower()
+        assert "data source inventory" in (note[3] or "").lower()
         assert any(row[0] == "pg1" for row in values[1:])
         assert any(row[2] == "warning" for row in values[1:])
         assert any("hashing" in (row[4] or "") for row in values[1:])
