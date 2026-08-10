@@ -239,6 +239,109 @@ def test_sql_connector_updates_inferred_controls_when_flag_on(tmp_path: Path) ->
     assert "a@example.com" not in summary
 
 
+def test_sql_inferred_controls_saved_when_mid_loop_raises(tmp_path: Path) -> None:
+    """Bugbot: mid-loop exceptions must not skip Phase 3 inferred summary."""
+    db_path = tmp_path / "scan_infer_boom.db"
+    conn = sqlite3.connect(str(db_path))
+    conn.execute(
+        "CREATE TABLE t1 (email TEXT, customer_cpf_hash TEXT, email_masked TEXT)"
+    )
+    conn.execute("INSERT INTO t1 VALUES ('a@x.com', 'h', 'm')")
+    conn.commit()
+    conn.close()
+
+    target = {
+        "type": "database",
+        "driver": "sqlite",
+        "database": str(db_path),
+        "name": "SQLiteInferBoom",
+        "_validate_crypto": True,
+    }
+    scanner = MagicMock()
+    db_manager = MagicMock()
+    connector = SQLConnector(target, scanner, db_manager)
+
+    def _boom(*_a, **_k):
+        _boom.n = getattr(_boom, "n", 0) + 1
+        if _boom.n >= 2:
+            raise RuntimeError("mid-loop boom")
+
+    with patch.object(SQLConnector, "_process_one_finding", side_effect=_boom):
+        connector.run()
+
+    assert db_manager.save_crypto_controls_audit.called
+    assert db_manager.save_failure.called
+    assert db_manager.update_crypto_controls_inferred_summary.called
+    summary = db_manager.update_crypto_controls_inferred_summary.call_args.args[1]
+    assert "hashing" in summary
+    assert "customer_cpf_hash" not in summary
+
+
+def test_mongodb_inferred_controls_saved_when_mid_loop_raises() -> None:
+    target = {
+        "name": "mongo-infer-boom",
+        "host": "localhost",
+        "port": 27017,
+        "database": "test",
+        "tls": True,
+        "_validate_crypto": True,
+    }
+    scanner = MagicMock()
+    scanner.scan_column.side_effect = RuntimeError("mid-loop boom")
+    db_manager = MagicMock()
+    coll = MagicMock()
+    coll.find.return_value.limit.return_value = [
+        {"email": "a@x.com", "customer_cpf_hash": "h", "email_masked": "m"}
+    ]
+    db = MagicMock()
+    db.list_collection_names.return_value = ["people"]
+    db.__getitem__.return_value = coll
+    db.command.return_value = {"version": "7.0.0"}
+    client = MagicMock()
+    client.__getitem__.return_value = db
+    connector = MongoDBConnector(target, scanner, db_manager)
+    with patch("connectors.mongodb_connector.MongoClient", return_value=client):
+        with patch("connectors.mongodb_connector._MONGO_AVAILABLE", True):
+            connector.run()
+
+    assert db_manager.save_crypto_controls_audit.called
+    assert db_manager.save_failure.called
+    assert db_manager.update_crypto_controls_inferred_summary.called
+    summary = db_manager.update_crypto_controls_inferred_summary.call_args.args[1]
+    assert "hashing" in summary
+    assert "customer_cpf_hash" not in summary
+
+
+def test_redis_inferred_controls_saved_when_mid_loop_raises() -> None:
+    target = {
+        "name": "redis-infer-boom",
+        "host": "localhost",
+        "port": 6379,
+        "tls": False,
+        "_validate_crypto": True,
+    }
+    scanner = MagicMock()
+    scanner.scan_column.side_effect = RuntimeError("mid-loop boom")
+    db_manager = MagicMock()
+    client = MagicMock()
+    client.info.return_value = {"redis_version": "7.2.0"}
+    client.scan_iter.return_value = iter(["user_hash", "session_token", "plain"])
+    fake_redis = MagicMock()
+    fake_redis.Redis.return_value = client
+    connector = RedisConnector(target, scanner, db_manager)
+    with patch("connectors.redis_connector._REDIS_AVAILABLE", True):
+        with patch("connectors.redis_connector.redis", fake_redis):
+            connector.run()
+
+    assert db_manager.save_crypto_controls_audit.called
+    assert db_manager.save_failure.called
+    assert db_manager.update_crypto_controls_inferred_summary.called
+    summary = db_manager.update_crypto_controls_inferred_summary.call_args.args[1]
+    assert "hashing" in summary
+    assert "tokenization" in summary
+    assert "user_hash" not in summary
+
+
 def test_update_crypto_controls_inferred_summary_persists(tmp_path: Path) -> None:
     db_path = str(tmp_path / "crypto_infer.db")
     mgr = LocalDBManager(db_path)

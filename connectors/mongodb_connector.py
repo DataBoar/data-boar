@@ -113,6 +113,7 @@ class MongoDBConnector:
         except Exception as e:
             self.db_manager.save_failure(target_name, "unreachable", str(e))
             return
+        identifier_names: list[str] = []
         try:
             from utils.logger import log_connection
 
@@ -121,7 +122,6 @@ class MongoDBConnector:
             self._save_crypto_controls_audit(target_name)
             distinct_cap = resolve_sql_sample_limit(int(self.sample_limit))
             fetch_budget = resolve_fetch_row_budget(distinct_cap)
-            identifier_names: list[str] = []
             for coll_name in self._db.list_collection_names():
                 coll = self._db[coll_name]
                 sample_docs = list(coll.find().limit(fetch_budget))
@@ -185,10 +185,11 @@ class MongoDBConnector:
                     except Exception:
                         # Finding log is optional telemetry and must not fail the connector flow.
                         continue
-            self._save_inferred_controls_summary(target_name, identifier_names)
         except Exception as e:
             self.db_manager.save_failure(target_name, "error", str(e))
         finally:
+            # Best-effort even when mid-loop sampling/detection raises.
+            self._save_inferred_controls_summary(target_name, identifier_names)
             self.close()
 
     def _save_inferred_controls_summary(

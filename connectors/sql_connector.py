@@ -690,6 +690,7 @@ class SQLConnector:
         except Exception as e:
             self.db_manager.save_failure(target_name, "unreachable", str(e))
             return
+        identifier_names: list[str] = []
         try:
             from utils.logger import log_connection
 
@@ -701,7 +702,6 @@ class SQLConnector:
             progress = self._scan_progress
             if progress is not None and getattr(progress, "enabled", False):
                 progress.set_tables_total(len(discovered), target_name=target_name)
-            identifier_names: list[str] = []
             for table_index, item in enumerate(discovered, start=1):
                 schema = item["schema"]
                 table = item["table"]
@@ -726,10 +726,11 @@ class SQLConnector:
                         col["type"],
                         audit_log_name=audit_name,
                     )
-            self._save_inferred_controls_summary(target_name, identifier_names)
         except Exception as e:
             self.db_manager.save_failure(target_name, "error", str(e))
         finally:
+            # Best-effort even when mid-loop sampling/detection raises.
+            self._save_inferred_controls_summary(target_name, identifier_names)
             self.close()
 
 
