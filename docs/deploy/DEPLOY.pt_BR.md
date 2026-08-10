@@ -88,7 +88,7 @@ Copie `deploy/config.example.yaml`, edite e use volume ou bind mount para `/data
 
 ### Segurança e endurecimento (opcional)
 
-Práticas opcionais para endurecer a implantação. Veja [SECURITY.md](../../SECURITY.md). A imagem já roda como usuário não-root (`appuser`, UID 1000). Para Kubernetes, você pode adicionar securityContext, NetworkPolicy e PDB (exemplos em `deploy/kubernetes/`). **Em produção**, defina `api.require_api_key: true` e use uma chave forte via variável de ambiente (ex.: `api.api_key_from_env: "AUDIT_API_KEY"`) para não armazenar credenciais no config.
+Práticas opcionais para endurecer a implantação. Veja [SECURITY.md](../../SECURITY.md). A imagem já roda como **nonroot** distroless (**UID/GID 65532**); não existe conta `appuser` nessa imagem. Para Kubernetes, use `runAsUser`/`runAsGroup` **65532**, NetworkPolicy e PDB (exemplos em `deploy/kubernetes/`). Em bind mount de `/data` no host, alinhe dono com `chown -R 65532:65532` — volume nomeado (Compose canônico) costuma evitar essa confusão. **Em produção**, defina `api.require_api_key: true` e use uma chave forte via variável de ambiente (ex.: `api.api_key_from_env: "AUDIT_API_KEY"`) para não armazenar credenciais no config.
 
 ## 3. Executar como container único (docker run)
 
@@ -96,6 +96,9 @@ Práticas opcionais para endurecer a implantação. Veja [SECURITY.md](../../SEC
 mkdir -p data
 cp deploy/config.example.yaml data/config.yaml
 # Edite data/config.yaml
+# Bind mount: alinhe o dono ao nonroot da imagem (distroless):
+#   sudo chown -R 65532:65532 data
+# Volume nomeado (Compose canônico) costuma evitar essa etapa.
 
 docker build -t data_boar:latest .
 docker run -d --name data-boar-audit \
@@ -105,7 +108,7 @@ docker run -d --name data-boar-audit \
   data_boar:latest
 ```
 
-Acesso: <http://localhost:8088/> (dashboard), <http://localhost:8088/docs> (API). Parar: `docker stop data-boar-audit && docker rm data-boar-audit`.
+Acesso: <http://localhost:8088/> (dashboard), <http://localhost:8088/docs> (API). O processo roda como **UID 65532**; se o bind mount de `/data` for dono de UID 1000 (ou só root), erros como “config not found” / “unable to open database file” podem ser só permissão. Prefira volume nomeado ou `chown 65532:65532`. Parar: `docker stop data-boar-audit && docker rm data-boar-audit`.
 
 ## 4. Executar com Docker Compose
 
@@ -195,7 +198,7 @@ Em implantações típicas, o estado fica sob **`/data`** (volume ou bind mount)
 
 1. Parar o container, stack Compose, serviço Swarm ou escalar o Deployment para zero.
 1. Restaurar os arquivos no mesmo caminho de montagem (`/data` dentro do container).
-1. Garantir **permissões/dono** compatíveis com o usuário da imagem (**UID 1000** / `appuser`) em bind mounts em Linux.
+1. Garantir **permissões/dono** compatíveis com o usuário da imagem (**UID/GID 65532**, nonroot distroless) em bind mounts em Linux.
 1. Subir de novo; verificar **`GET /health`** e um scan curto ou o dashboard.
 
 #### Notas operacionais
