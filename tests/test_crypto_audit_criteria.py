@@ -7,16 +7,20 @@ from sqlalchemy import create_engine
 from core.crypto_audit import (
     CryptoProbeFacts,
     StrongCryptoResult,
+    _canonical_http_scheme,
     _canonical_smb_dialect,
     _canonical_ssl_cert_reqs,
     _canonical_sslmode,
     _normalize_tls_version,
+    _safe_httpx_probe_path,
     _sslmode_from_connection_string,
+    collect_httpx_crypto_facts,
     collect_mongodb_crypto_facts,
     collect_redis_crypto_facts,
     collect_smb_crypto_facts,
     collect_sql_crypto_facts,
     evaluate_strong_crypto,
+    resolve_httpx_tls_connect_options,
     resolve_nosql_tls_connect_options,
     resolve_smb_connect_options,
     summarize_crypto_from_connection_info,
@@ -379,3 +383,117 @@ def test_collect_smb_crypto_facts_and_password_never_leaks() -> None:
     assert "fileserver" not in details
     assert "secretshare" not in details
     assert result is StrongCryptoResult.OK
+
+
+def test_resolve_httpx_tls_and_scheme_allowlist() -> None:
+    assert resolve_httpx_tls_connect_options({}) is None
+    assert resolve_httpx_tls_connect_options({"verify": True}) is True
+    assert resolve_httpx_tls_connect_options({"verify_ssl": False}) is False
+    assert _canonical_http_scheme("https://api.example.com/v1") == "https"
+    assert _canonical_http_scheme("http://legacy.example.com") == "http"
+    assert (
+        _canonical_http_scheme("https://api.example.com/?token=secret-value") == "https"
+    )
+    assert _canonical_http_scheme("ftp://files.example.com") is None
+    assert _safe_httpx_probe_path("/users") == "/users"
+    assert _safe_httpx_probe_path("/users?token=abc") == "/"
+    assert _safe_httpx_probe_path("https://evil.example/path") == "/"
+
+
+def test_collect_httpx_plaintext_is_fail() -> None:
+    class _Client:
+        base_url = "http://api.example.com"
+
+        def stream(self, *_a, **_k):  # pragma: no cover - must not be called
+            raise AssertionError("plaintext must not open TLS stream")
+
+    facts = collect_httpx_crypto_facts(
+        _Client(), {"base_url": "http://api.example.com"}
+    )
+    assert facts.tls_in_use is False
+    assert facts.source == "httpx_plaintext"
+    result, details = evaluate_strong_crypto(facts)
+    assert result is StrongCryptoResult.FAIL
+    assert "httpx_plaintext" in details
+
+
+def test_collect_httpx_https_and_secrets_never_leak() -> None:
+    secret = "Bearer-leak-token-XYZ-9f3a"
+    client_secret = "oauth-client-secret-LEAK-42"
+
+    class _Sock:
+        def version(self):
+            return "TLSv1.3"
+
+        def cipher(self):
+            return ("TLS_AES_256_GCM_SHA384", "TLSv1.3", 256)
+
+    class _Net:
+        def get_extra_info(self, name):
+            if name == "socket":
+                return _Sock()
+            return None
+
+    class _Resp:
+        extensions = {"network_stream": _Net()}
+
+        def read(self):
+            return b""
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_a):
+            return False
+
+    class _Client:
+        base_url = f"https://api.example.com/tenant?token={secret}"
+
+        def stream(self, method, path, params=None):
+            assert method == "GET"
+            # Contaminated probe must be sanitized before request.
+            assert "?" not in path
+            assert secret not in path
+            assert params is None or secret not in str(params)
+            return _Resp()
+
+    facts = collect_httpx_crypto_facts(
+        _Client(),
+        {
+            "base_url": f"https://api.example.com/?token={secret}",
+            "client_secret": client_secret,
+            "auth": {"type": "bearer", "token": secret},
+            "verify": True,
+        },
+        probe_url=f"/v1/me?access_token={secret}",
+    )
+    assert facts.source == "httpx_ssl_socket"
+    assert facts.tls_version == "TLSv1.3"
+    assert facts.sslmode == "verify-full"
+    result, details = evaluate_strong_crypto(facts)
+    assert result is StrongCryptoResult.OK
+    assert secret not in details
+    assert client_secret not in details
+    assert "Bearer" not in details
+    assert "token=" not in details.lower()
+    assert "client_secret" not in details.lower()
+    assert "api.example.com" not in details
+    assert "access_token" not in details
+
+
+def test_collect_httpx_verify_false_maps_to_require() -> None:
+    class _Client:
+        base_url = "https://api.example.com"
+
+        def stream(self, *_a, **_k):
+            raise OSError("offline")
+
+    facts = collect_httpx_crypto_facts(
+        _Client(),
+        {"base_url": "https://api.example.com", "verify_ssl": False},
+    )
+    assert facts.sslmode == "require"
+    assert facts.tls_in_use is True
+    result, details = evaluate_strong_crypto(facts)
+    assert result is StrongCryptoResult.WARNING
+    assert "require" in details

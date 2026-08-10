@@ -8,6 +8,8 @@ Phase 2c: MongoDB / Redis TLS connect intent + post-connect probe facts
 (allowlisted tokens only — never raw URI/DSN fragments in details).
 Phase 2d: SMB signing/encryption from smbprotocol Session after connect
 (allowlisted dialect/signing/encryption tokens only).
+Phase 2.4: REST / Power BI / Dataverse HTTPS + TLS via httpx (allowlisted
+scheme/tls/cipher/verify posture only — never URLs, tokens, or query strings).
 """
 
 from __future__ import annotations
@@ -338,6 +340,67 @@ def resolve_smb_connect_options(
         target_config, "require_signing", "smb_signing"
     )
     return encrypt, require_signing
+
+
+_KNOWN_HTTP_SCHEMES = frozenset({"http", "https"})
+
+
+def _canonical_http_scheme(raw: Any) -> str | None:
+    """
+    Return ``http`` or ``https`` only.
+
+    Accepts a bare scheme or a URL prefix. Never returns host, path, query,
+    userinfo, or any other URI fragment.
+    """
+    text = _lower_or_empty(raw)
+    if not text:
+        return None
+    if text.startswith("https://") or text == "https":
+        return "https"
+    if text.startswith("http://") or text == "http":
+        return "http"
+    # Bare token with junk after it (e.g. "https password=...") — allowlist first piece.
+    for sep in (" ", "\t", "&", ";", "\n", "\r", "?", "#", "/"):
+        if sep in text:
+            text = text.split(sep, 1)[0].strip()
+            break
+    if text in _KNOWN_HTTP_SCHEMES:
+        return text
+    return None
+
+
+def resolve_httpx_tls_connect_options(
+    target_config: dict[str, Any],
+) -> bool | None:
+    """
+    Resolve httpx ``verify`` for Client construction.
+
+    ``None`` means leave the library default (True). Explicit False disables
+    certificate verification (maps to sslmode=require at evaluate time).
+    """
+    return _config_truthy_flag(target_config, "verify", "verify_ssl")
+
+
+def _safe_httpx_probe_path(raw: Any) -> str:
+    """
+    Return a path-only probe target (leading ``/``).
+
+    Rejects absolute URLs, query strings, and fragments so credentials or
+    tokens in query never become part of persisted crypto details.
+    """
+    text = str(raw or "").strip()
+    if not text:
+        return "/"
+    lower = text.lower()
+    if "://" in lower or "?" in text or "#" in text or "\n" in text or "\r" in text:
+        return "/"
+    if not text.startswith("/"):
+        text = "/" + text.lstrip("/")
+    # Defensive: drop anything after whitespace.
+    for sep in (" ", "\t"):
+        if sep in text:
+            text = text.split(sep, 1)[0]
+    return text or "/"
 
 
 def validate_crypto_enabled(config: dict[str, Any] | None) -> bool:
@@ -885,4 +948,92 @@ def collect_smb_crypto_facts(
         smb_dialect=dialect,
         smb_signing=signing,
         smb_encryption=encryption,
+    )
+
+
+def collect_httpx_crypto_facts(
+    client: Any,
+    target_config: dict[str, Any] | None = None,
+    *,
+    probe_url: str = "/",
+    probe_params: dict[str, Any] | None = None,
+) -> CryptoProbeFacts:
+    """
+    Best-effort HTTPS/TLS facts from a live httpx.Client.
+
+    Probes TLS version/cipher via an open stream's network_stream socket when
+    available. Never stores URLs, Authorization headers, tokens, query strings,
+    or response bodies — only allowlisted scheme/tls/cipher/sslmode tokens.
+    """
+    cfg = target_config if isinstance(target_config, dict) else {}
+    scheme = None
+    try:
+        base = getattr(client, "base_url", None)
+        if base is not None:
+            scheme = _canonical_http_scheme(str(base))
+    except Exception:
+        scheme = None
+    if scheme is None:
+        scheme = _canonical_http_scheme(
+            cfg.get("base_url")
+            or cfg.get("url")
+            or cfg.get("org_url")
+            or cfg.get("environment_url")
+            or ""
+        )
+
+    verify_opt = resolve_httpx_tls_connect_options(cfg)
+    if verify_opt is False:
+        sslmode = "require"
+    elif scheme == "https":
+        # Default httpx verify=True when unset.
+        sslmode = "verify-full"
+    else:
+        sslmode = "disable" if scheme == "http" else None
+
+    if scheme == "http":
+        return CryptoProbeFacts(
+            tls_in_use=False,
+            sslmode=sslmode or "disable",
+            source="httpx_plaintext",
+        )
+
+    if scheme != "https":
+        return CryptoProbeFacts(
+            sslmode=sslmode,
+            source="unavailable",
+        )
+
+    tls_version = None
+    cipher = None
+    source = "httpx_https_scheme"
+    path = _safe_httpx_probe_path(probe_url)
+    try:
+        if client is not None:
+            with client.stream("GET", path, params=probe_params) as resp:
+                extensions = getattr(resp, "extensions", None) or {}
+                net = extensions.get("network_stream")
+                sock = None
+                if net is not None and hasattr(net, "get_extra_info"):
+                    sock = net.get_extra_info("socket")
+                    if sock is None:
+                        sock = net.get_extra_info("ssl_object")
+                if sock is not None:
+                    tls_version, cipher = _ssl_socket_probe(sock)
+                    if tls_version or cipher:
+                        source = "httpx_ssl_socket"
+                # Drain lightly so the connection can close cleanly.
+                try:
+                    resp.read()
+                except Exception:
+                    pass
+    except Exception:
+        pass
+
+    return CryptoProbeFacts(
+        tls_in_use=True,
+        tls_version=tls_version,
+        cipher=cipher,
+        sslmode=sslmode,
+        source=source,
     )

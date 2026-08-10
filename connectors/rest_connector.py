@@ -11,6 +11,11 @@ import json
 
 from core.about import get_http_user_agent
 from core.connector_registry import register
+from core.crypto_audit import (
+    collect_httpx_crypto_facts,
+    evaluate_strong_crypto,
+    resolve_httpx_tls_connect_options,
+)
 from core.suggested_review import (
     SUGGESTED_REVIEW_PATTERN,
     augment_low_id_like_for_persist,
@@ -66,20 +71,23 @@ def _build_auth(client: "httpx.Client", target: dict[str, Any]) -> None:
         scope = auth.get("scope", "")
         if token_url and client_id and client_secret:
             # One-off request to token endpoint (no client auth)
-            resp = httpx.post(
-                token_url,
-                data={
+            token_kwargs: dict[str, Any] = {
+                "data": {
                     "grant_type": "client_credentials",
                     "client_id": client_id,
                     "client_secret": client_secret,
                     **({"scope": scope} if scope else {}),
                 },
-                headers={
+                "headers": {
                     "Accept": "application/json",
                     "User-Agent": get_http_user_agent(),
                 },
-                timeout=30.0,
-            )
+                "timeout": 30.0,
+            }
+            verify_opt = resolve_httpx_tls_connect_options(target)
+            if verify_opt is not None:
+                token_kwargs["verify"] = verify_opt
+            resp = httpx.post(token_url, **token_kwargs)
             resp.raise_for_status()
             data = resp.json()
             access_token = data.get("access_token")
@@ -221,9 +229,15 @@ class RESTConnector:
         default_headers: dict[str, str] = {}
         if not has_ua:
             default_headers["User-Agent"] = get_http_user_agent()
-        self._client = httpx.Client(
-            base_url=base_url, timeout=timeout, headers=default_headers or None
-        )
+        client_kwargs: dict[str, Any] = {
+            "base_url": base_url,
+            "timeout": timeout,
+            "headers": default_headers or None,
+        }
+        verify_opt = resolve_httpx_tls_connect_options(self.config)
+        if verify_opt is not None:
+            client_kwargs["verify"] = verify_opt
+        self._client = httpx.Client(**client_kwargs)
         _build_auth(self._client, self.config)
         # Optional extra headers (e.g. API key, negotiated token); may override User-Agent.
         for key, value in cfg_headers.items():
@@ -277,15 +291,28 @@ class RESTConnector:
                         self.config.get("name", "api"), "error", f"Discover failed: {e}"
                     )
                     return
+            target_name = self.config.get("name", "API")
             if not paths:
+                self._save_crypto_controls_audit(target_name, probe_url="/")
                 self.db_manager.save_failure(
-                    self.config.get("name", "api"),
+                    target_name,
                     "error",
                     "No paths or discover_url configured",
                 )
                 return
-            target_name = self.config.get("name", "API")
             self._save_inventory_snapshot(target_name)
+            probe = "/"
+            first = paths[0]
+            first_path = (
+                first
+                if isinstance(first, str)
+                else (first.get("path") or first.get("url") or "")
+            )
+            if first_path:
+                probe = (
+                    first_path if str(first_path).startswith("/") else f"/{first_path}"
+                )
+            self._save_crypto_controls_audit(target_name, probe_url=probe)
             seen_path_key: set[tuple[str, str]] = (
                 set()
             )  # (path_str, key) to avoid duplicate findings per field
@@ -361,6 +388,32 @@ class RESTConnector:
                         _save_if_sensitive(key, sample, raw_scalar)
         finally:
             self.close()
+
+    def _save_crypto_controls_audit(
+        self, target_name: str, *, probe_url: str = "/"
+    ) -> None:
+        """Opt-in strong-crypto validation after REST connect (Order 5 Phase 2.4)."""
+        if not self.config.get("_validate_crypto"):
+            return
+        if not hasattr(self.db_manager, "save_crypto_controls_audit"):
+            return
+        if not self._client:
+            return
+        try:
+            facts = collect_httpx_crypto_facts(
+                self._client, self.config, probe_url=probe_url
+            )
+            result, details = evaluate_strong_crypto(facts)
+            self.db_manager.save_crypto_controls_audit(
+                target_name=target_name,
+                connection_type="rest",
+                strong_crypto_result=result.value,
+                strong_crypto_details=details[:512],
+                inferred_controls_summary=None,
+            )
+        except Exception:
+            # Fail-soft: probe/persist errors never fail the scan.
+            pass
 
     def _save_inventory_snapshot(self, target_name: str) -> None:
         """Persist one REST/API inventory row with API version hints."""
