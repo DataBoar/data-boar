@@ -500,6 +500,51 @@ def test_collect_httpx_verify_false_maps_to_require() -> None:
     assert "require" in details
 
 
+def test_collect_httpx_probe_does_not_read_response_body() -> None:
+    """Hostile/large bodies must not be drained during the TLS socket probe."""
+
+    class _Sock:
+        def version(self):
+            return "TLSv1.3"
+
+        def cipher(self):
+            return ("TLS_AES_256_GCM_SHA384", "TLSv1.3", 256)
+
+    class _Net:
+        def get_extra_info(self, name):
+            return _Sock() if name == "socket" else None
+
+    class _Resp:
+        def __init__(self) -> None:
+            self.extensions = {"network_stream": _Net()}
+            self.read_calls = 0
+
+        def read(self):
+            self.read_calls += 1
+            return b"x" * (8 * 1024 * 1024)
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_a):
+            return False
+
+    resp = _Resp()
+
+    class _Client:
+        base_url = "https://api.example.com"
+
+        def stream(self, *_a, **_k):
+            return resp
+
+    facts = collect_httpx_crypto_facts(
+        _Client(), {"base_url": "https://api.example.com"}
+    )
+    assert facts.source == "httpx_ssl_socket"
+    assert facts.tls_version == "TLSv1.3"
+    assert resp.read_calls == 0
+
+
 def test_infer_controls_from_identifiers_counts_without_listing_names() -> None:
     sensitive_name = "customer_cpf_hash"
     summary = infer_controls_from_identifiers(

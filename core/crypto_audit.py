@@ -832,6 +832,7 @@ def collect_sql_crypto_facts(
                     source="pg_stat_ssl",
                 )
         except Exception:
+            # Fail-soft: live SQL TLS probe must never fail the scan.
             pass
 
     if dialect in ("mysql", "mariadb"):
@@ -858,6 +859,7 @@ def collect_sql_crypto_facts(
                     source="mysql_ssl_status",
                 )
         except Exception:
+            # Fail-soft: live SQL TLS probe must never fail the scan.
             pass
 
     return CryptoProbeFacts(
@@ -894,6 +896,7 @@ def collect_mongodb_crypto_facts(
                 live_tls = opt_tls
                 source = "mongodb_client_options"
     except Exception:
+        # Fail-soft: client-option introspection must never fail the scan.
         pass
 
     # Best-effort: inspect one pooled socket after a cheap server ping.
@@ -924,6 +927,7 @@ def collect_mongodb_crypto_facts(
                 live_tls = True
                 source = "mongodb_ssl_socket"
     except Exception:
+        # Fail-soft: Mongo live TLS probe must never fail the scan.
         pass
 
     if live_tls is None:
@@ -987,10 +991,12 @@ def collect_redis_crypto_facts(
                     pool.release(conn)
                     conn = None
     except Exception:
+        # Fail-soft: Redis live TLS probe must never fail the scan.
         if conn is not None and pool is not None:
             try:
                 pool.release(conn)
             except Exception:
+                # Fail-soft: pool release during probe cleanup is best-effort.
                 pass
 
     if live_tls is None:
@@ -1048,6 +1054,7 @@ def collect_smb_crypto_facts(
             if supports is False:
                 encryption = "unsupported"
     except Exception:
+        # Fail-soft: SMB attribute probe must never fail the scan.
         return CryptoProbeFacts(source="unavailable")
 
     if dialect is None and signing is None and encryption is None:
@@ -1132,12 +1139,11 @@ def collect_httpx_crypto_facts(
                     tls_version, cipher = _ssl_socket_probe(sock)
                     if tls_version or cipher:
                         source = "httpx_ssl_socket"
-                # Drain lightly so the connection can close cleanly.
-                try:
-                    resp.read()
-                except Exception:
-                    pass
+                # Do not resp.read(): probe only needs TLS socket metadata;
+                # draining the body could use unbounded memory on a hostile host.
+                # Closing the stream context is enough.
     except Exception:
+        # Fail-soft: httpx TLS probe must never fail the scan.
         pass
 
     return CryptoProbeFacts(
