@@ -96,9 +96,19 @@ impl FastFilter {
     }
 }
 
+/// Guest-side trust gate for SDK mesh dogfood (#1116 / GAP-010).
+///
+/// ``boar_fast_filter`` refuses a tinted/adulterated host before filter work.
+/// Pure function — no network; complements Ed25519 mutual attestation in Python.
+#[pyfunction]
+fn guest_accepts_host_trust(trust_level: &str) -> bool {
+    matches!(trust_level, "trusted" | "degraded" | "unknown")
+}
+
 #[pymodule]
 fn boar_fast_filter(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<FastFilter>()?;
+    m.add_function(wrap_pyfunction!(guest_accepts_host_trust, m)?)?;
     Ok(())
 }
 
@@ -112,6 +122,14 @@ mod tests {
 
     fn s(items: &[&str]) -> Vec<String> {
         items.iter().map(|x| (*x).to_string()).collect()
+    }
+
+    #[test]
+    fn guest_accepts_trusted_and_rejects_adulterated() {
+        assert!(guest_accepts_host_trust("trusted"));
+        assert!(guest_accepts_host_trust("degraded"));
+        assert!(!guest_accepts_host_trust("adulterated"));
+        assert!(!guest_accepts_host_trust("untrusted"));
     }
 
     // ----- Luhn ---------------------------------------------------------

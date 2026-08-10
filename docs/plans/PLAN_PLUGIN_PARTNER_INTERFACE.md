@@ -71,7 +71,7 @@ L3 — External API (decoupled output feed)
 | Remediation manifest export | ✅ #649 | `--export-remediation-manifest` |
 | L2 sidecar contract | ⬜ #865 | Planned — schema + sandbox |
 | L3 HTTP drivers | ⬜ #865 + this plan’s schema | Planned — `driver:` block below |
-| Bidirectional / guest Boar | ⬜ #1116 | After host contract stable |
+| Bidirectional / guest Boar | 🔄 #1116 | [PLAN_SDK_BIDIRECTIONAL.md](PLAN_SDK_BIDIRECTIONAL.md) / ADR-0087 |
 
 ---
 
@@ -270,7 +270,7 @@ Tracking: create via `scripts/new-adr.ps1` when Fatia B/#865 starts code; link t
 | **A – This plan (#695)** | Hierarchy, L3 schemas, driver skeleton, PLANS hub/TODO | 🔄 This PR |
 | **B – Contract files (#865)** | `docs/sdk/*.schema.json`, `docs/SDK.md`, conformance tests | ⬜ |
 | **C – First L3 driver** | Demand-pulled `custom_webhook` or `partner_provider` | ⬜ |
-| **D – Bidirectional (#1116)** | Guest-side + dogfood attestation | ⬜ |
+| **D – Bidirectional (#1116)** | Guest-side + dogfood attestation | 🔄 Fatia C — [PLAN_SDK_BIDIRECTIONAL.md](PLAN_SDK_BIDIRECTIONAL.md) |
 
 ---
 

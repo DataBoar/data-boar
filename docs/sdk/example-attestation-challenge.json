@@ -1,0 +1,11 @@
+{
+  "sdk_contract_version": "1.0.0",
+  "schema": "databoar.attestation.challenge",
+  "role": "host",
+  "party": "data-boar-core",
+  "nonce": "0123456789abcdef0123456789abcdef",
+  "trust_level": "trusted",
+  "integrity_state": "ok",
+  "issued_at": "2026-08-09T20:00:00Z",
+  "release_label": "data-boar-1.7.4"
+}
