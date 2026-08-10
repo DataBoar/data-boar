@@ -77,9 +77,8 @@ def _get_access_token(target: dict[str, Any]) -> str | None:
         },
         "timeout": 30.0,
     }
-    verify_opt = resolve_httpx_tls_connect_options(target)
-    if verify_opt is not None:
-        token_kwargs["verify"] = verify_opt
+    # Token exchange carries client_secret + returns bearer — never honor
+    # target verify=False here (httpx default verify=True).
     resp = httpx.post(token_url, **token_kwargs)
     resp.raise_for_status()
     data = resp.json()

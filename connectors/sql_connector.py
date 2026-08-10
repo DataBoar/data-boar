@@ -657,6 +657,7 @@ class SQLConnector:
                 inferred_controls_summary=None,
             )
         except Exception:
+            # Fail-soft: crypto probe/persist errors never fail the scan.
             pass
 
     def _save_inferred_controls_summary(
