@@ -110,13 +110,13 @@ class RedisConnector:
         except Exception as e:
             self.db_manager.save_failure(target_name, "unreachable", str(e))
             return
+        keys: list[Any] = []
         try:
             from utils.logger import log_connection
 
             log_connection(audit_name, "redis", self.config.get("host", "localhost"))
             self._save_inventory_snapshot(target_name)
             self._save_crypto_controls_audit(target_name)
-            keys = []
             for k in self._client.scan_iter(count=self.sample_limit):
                 keys.append(k)
                 if len(keys) >= self.sample_limit:
@@ -218,10 +218,11 @@ class RedisConnector:
                         ensure_ascii=False,
                     ),
                 )
-            self._save_inferred_controls_summary(target_name, keys)
         except Exception as e:
             self.db_manager.save_failure(target_name, "error", str(e))
         finally:
+            # Best-effort even when mid-loop sampling/detection raises.
+            self._save_inferred_controls_summary(target_name, keys)
             self.close()
 
     def _save_inferred_controls_summary(
