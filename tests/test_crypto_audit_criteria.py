@@ -20,6 +20,7 @@ from core.crypto_audit import (
     collect_smb_crypto_facts,
     collect_sql_crypto_facts,
     evaluate_strong_crypto,
+    infer_controls_from_identifiers,
     resolve_httpx_tls_connect_options,
     resolve_nosql_tls_connect_options,
     resolve_smb_connect_options,
@@ -497,3 +498,46 @@ def test_collect_httpx_verify_false_maps_to_require() -> None:
     result, details = evaluate_strong_crypto(facts)
     assert result is StrongCryptoResult.WARNING
     assert "require" in details
+
+
+def test_infer_controls_from_identifiers_counts_without_listing_names() -> None:
+    sensitive_name = "customer_cpf_hash"
+    summary = infer_controls_from_identifiers(
+        [
+            sensitive_name,
+            "email_masked",
+            "token_session",
+            "anon_user_id",
+            "pseudonym_ref",
+            "plain_email",
+            "id",
+            b"hash_payload",
+        ]
+    )
+    assert summary is not None
+    assert "3 names suggest hashing" in summary or "2 names suggest hashing" in summary
+    # hashing: customer_cpf_hash + hash_payload = 2; masking 1; tokenization 1; anonymization 2
+    assert "hashing" in summary
+    assert "masking" in summary
+    assert "tokenization" in summary
+    assert "anonymization" in summary
+    assert "human review required" in summary
+    assert sensitive_name not in summary
+    assert "cpf" not in summary
+    assert "email_masked" not in summary
+    assert "plain_email" not in summary
+
+
+def test_infer_controls_from_identifiers_empty_when_no_match() -> None:
+    assert infer_controls_from_identifiers(["email", "phone", "created_at"]) is None
+
+
+def test_infer_controls_metadata_hints_allowlisted_only() -> None:
+    summary = infer_controls_from_identifiers(
+        ["id"],
+        metadata_hints=["masking", "DROP TABLE users; --", "masking"],
+    )
+    assert summary is not None
+    assert "metadata hint" in summary
+    assert "DROP" not in summary
+    assert "users" not in summary

@@ -1158,7 +1158,7 @@ def _write_excel_sheets(
             }
             for r in crypto_rows
         ]
-        # Phase 3 fills inferred controls; Phase 2a leaves the column empty with a disclaimer row.
+        # Disclaimer row: TLS probe + Phase 3 name heuristics are best-effort only.
         crypto_sheet.insert(
             0,
             {
@@ -1167,9 +1167,13 @@ def _write_excel_sheets(
                 "Strong crypto": "",
                 "Details": (
                     "Best-effort TLS/crypto validation when scan.validate_crypto was enabled. "
-                    "Not a compliance certification. Inferred controls (Phase 3) are heuristic only."
+                    "Not a compliance certification."
                 ),
-                "Inferred controls": "",
+                "Inferred controls": (
+                    "Inferred controls are heuristic name-pattern counts only "
+                    "(not verified anonymisation). Not a LGPD/GDPR compliance claim — "
+                    "human review required."
+                ),
             },
         )
         _excel_safe_dataframe(crypto_sheet).to_excel(

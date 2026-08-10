@@ -23,7 +23,11 @@ from connectors.sample_value_dedup import (
     resolve_fetch_row_budget,
 )
 from core.connector_registry import register
-from core.crypto_audit import collect_sql_crypto_facts, evaluate_strong_crypto
+from core.crypto_audit import (
+    collect_sql_crypto_facts,
+    evaluate_strong_crypto,
+    infer_controls_from_identifiers,
+)
 from core.sampling import SamplingPolicy
 from core.suggested_review import (
     SUGGESTED_REVIEW_PATTERN,
@@ -655,6 +659,25 @@ class SQLConnector:
         except Exception:
             pass
 
+    def _save_inferred_controls_summary(
+        self, target_name: str, identifier_names: list[str]
+    ) -> None:
+        """Phase 3: attach count-by-category inference to the crypto audit row."""
+        if not self.config.get("_validate_crypto"):
+            return
+        if not hasattr(self.db_manager, "update_crypto_controls_inferred_summary"):
+            return
+        try:
+            summary = infer_controls_from_identifiers(identifier_names)
+            if not summary:
+                return
+            self.db_manager.update_crypto_controls_inferred_summary(
+                target_name, summary
+            )
+        except Exception:
+            # Fail-soft: inference never fails the scan.
+            pass
+
     def run(self) -> None:
         """Connect, discover, sample each column, detect, save_finding; on error save_failure."""
         from utils.audit_log_display import audit_log_target_label
@@ -678,6 +701,7 @@ class SQLConnector:
             progress = self._scan_progress
             if progress is not None and getattr(progress, "enabled", False):
                 progress.set_tables_total(len(discovered), target_name=target_name)
+            identifier_names: list[str] = []
             for table_index, item in enumerate(discovered, start=1):
                 schema = item["schema"]
                 table = item["table"]
@@ -689,16 +713,20 @@ class SQLConnector:
                         target_name=target_name,
                     )
                 for col in item["columns"]:
+                    cname = col["name"]
+                    if cname:
+                        identifier_names.append(str(cname))
                     self._process_one_finding(
                         target_name,
                         server_ip,
                         engine_name,
                         schema,
                         table,
-                        col["name"],
+                        cname,
                         col["type"],
                         audit_log_name=audit_name,
                     )
+            self._save_inferred_controls_summary(target_name, identifier_names)
         except Exception as e:
             self.db_manager.save_failure(target_name, "error", str(e))
         finally:

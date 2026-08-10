@@ -265,7 +265,7 @@ class CryptoControlsAudit(Base):
     strong_crypto_details = Column(String(512), nullable=True)
     inferred_controls_summary = Column(
         Text, nullable=True
-    )  # Phase 3; empty in Phase 2a
+    )  # Phase 3: count-by-category heuristics only
     created_at = Column(DateTime, default=_utc_now)
 
 
@@ -1326,6 +1326,44 @@ class LocalDBManager:
                     inferred_controls_summary=inferred_controls_summary,
                 )
             )
+            sess.commit()
+        except Exception:
+            sess.rollback()
+            raise
+        finally:
+            sess.close()
+
+    def update_crypto_controls_inferred_summary(
+        self,
+        target_name: str,
+        inferred_controls_summary: str | None,
+    ) -> None:
+        """
+        Attach Phase 3 inferred-controls summary to the latest crypto audit row
+        for ``(session_id, target_name)``. Fail-soft callers should catch errors.
+        """
+        sid = self._current_session_id
+        if not sid or not target_name or not inferred_controls_summary:
+            return
+        text = str(inferred_controls_summary).strip()
+        if not text:
+            return
+        # Bound persisted text (summary builder already caps; belt-and-suspenders).
+        text = text[:2000]
+        sess = self._session_factory()
+        try:
+            row = (
+                sess.query(CryptoControlsAudit)
+                .filter(
+                    CryptoControlsAudit.session_id == sid,
+                    CryptoControlsAudit.target_name == target_name,
+                )
+                .order_by(CryptoControlsAudit.id.desc())
+                .first()
+            )
+            if row is None:
+                return
+            row.inferred_controls_summary = text
             sess.commit()
         except Exception:
             sess.rollback()

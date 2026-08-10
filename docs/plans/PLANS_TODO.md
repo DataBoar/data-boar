@@ -30,15 +30,15 @@ Use these tags in headings to keep priorities explicit and machine-countable:
 
 Do not edit this block manually; refresh with `python scripts/plans-stats.py --write`.
 
-- **Status rows counted:** 220  (Done: 139 | Incomplete: 81)
-- **Incomplete breakdown:** Pending `⬜`=69, Tracked `🔄` / `Tracked (partially done)`=12, Under consideration=0, Backlog-marked rows=0
+- **Status rows counted:** 220  (Done: 140 | Incomplete: 80)
+- **Incomplete breakdown:** Pending `⬜`=68, Tracked `🔄` / `Tracked (partially done)`=12, Under consideration=0, Backlog-marked rows=0
 
 | Horizon | Total rows | Done | Incomplete |
 | ------- | ----------: | ----: | ----------: |
 | `H0` | 51 | 33 | 18 |
 | `H1` | 39 | 30 | 9 |
 | `H2` | 0 | 0 | 0 |
-| `H3` | 118 | 64 | 54 |
+| `H3` | 118 | 65 | 53 |
 | `H4` | 0 | 0 | 0 |
 | `H5` | 0 | 0 | 0 |
 | `UNSPECIFIED` | 12 | 12 | 0 |
@@ -175,7 +175,7 @@ Post–PR **#118**: clarified **`private-layout`** vs **`docs/private/homelab`**
 | Dashboard i18n                                 | **D-WEB** ✅; **M-LOCALE-V1** ✅ on **`main`** (**2026-04**)                                                                                    | None           | **#86** Phase 1 next (session/passwordless on **`/{locale}/…`**). Optional **M-LOCALE-PLUS** (`es`/`fr`/…) + gettext backlog — [PLAN_DASHBOARD_I18N.md](completed/PLAN_DASHBOARD_I18N.md). |
 | Dashboard mobile responsive                    | None — can ship before **D-WEB** / i18n                                                                                                | None           | CSS-first responsive layout + touch-friendly nav/tables; **M-MOBILE-V1** — [PLAN_DASHBOARD_MOBILE_RESPONSIVE.md](PLAN_DASHBOARD_MOBILE_RESPONSIVE.md). Retest after locale prefixes or **#86**. |
 | Data source versions & hardening               | —                                                                                                                                     | None           | Additive: new table data_source_inventory, new report sheets; optional CVE lookup.                                                                                                                                                                                        |
-| Strong crypto & controls validation            | Phase 1 ✅; Phase 2 connectors ✅ (SQL/Mongo/Redis/SMB/REST/BI); Phases 3–4 ⬜                                                       | None           | Optional flag (CLI + dashboard); table crypto_controls_audit; report sheet "Crypto & controls"; inference best-effort.                                                                                                                                                    |
+| Strong crypto & controls validation            | Phase 1–3 ✅ (connectors + name-pattern inference); Phase 4 polish ⬜                                                                | None           | Optional flag (CLI + dashboard); table crypto_controls_audit; report sheet "Crypto & controls"; inference best-effort.                                                                                                                                                    |
 | CNPJ alphanumeric format validation            | —                                                                                                                                     | None           | Format spec + regex/override; optional built-in or config flag; compatibility report; no change to legacy LGPD_CNPJ.                                                                                                                                                      |
 | Selenium QA test suite                         | —                                                                                                                                     | None           | On-demand; optional [qa] deps; tests_qa/; report + recommendations; exclude from default pytest.                                                                                                                                                                          |
 | Synthetic data & confidence validation         | —                                                                                                                                     | None           | Fixtures (files, SQL, NoSQL, shares); FP/FN + ground truth; confidence bands + operator guidance; timeouts/connectivity docs.                                                                                                                                             |
@@ -836,8 +836,8 @@ Core flow first (sections 1–7); then optional Phase 9 (complexity/gain: high c
 | Phase   | To-do                                                                                                                                 | Status    |
 | -----   | -----                                                                                                                                 | ------    |
 | 1.1–1.7 | CLI --validate-crypto; optional config scan.validate_crypto; API body validate_crypto; dashboard checkbox; engine wiring; tests; docs | ✅ Done (Phase 1 wiring) |
-| 2.1–2.8 | Strong-crypto criteria; SQL/Mongo/Redis/REST/SMB validation; persist results; "Crypto & controls" sheet; tests; docs                  | ✅ Phase 2 connectors done (2.1–2.8); Phases 3–4 pending |
-| 3.1–3.6 | Anonymisation/controls heuristics (column/field names, metadata); store summary; disclaimer in report; tests; docs                    | ⬜ Pending |
+| 2.1–2.8 | Strong-crypto criteria; SQL/Mongo/Redis/REST/SMB validation; persist results; "Crypto & controls" sheet; tests; docs                  | ✅ Phase 2 connectors done |
+| 3.1–3.6 | Anonymisation/controls heuristics (column/field names, metadata); store summary; disclaimer in report; tests; docs                    | ✅ Phase 3 done (name-pattern counts; dialect metadata deferred); Phase 4 polish pending |
 | 4.1–4.3 | Crypto failures do not fail scan; full regression; optional link to Data source inventory                                             | ⬜ Pending |
 
 ---

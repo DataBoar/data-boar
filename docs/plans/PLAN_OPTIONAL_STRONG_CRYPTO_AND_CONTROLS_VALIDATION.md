@@ -1,6 +1,6 @@
 # Plan: Optional strong-crypto validation and inference of anonymisation/controls
 
-**Status:** Active (Phase 2 connectors done — SQL + Mongo/Redis + SMB + REST/BI + crypto_controls_audit)
+**Status:** Active (Phase 3 inference done — Phase 4 polish open)
 **Date:** 2026-03-15
 **Authors:** Fabio Leitao
 **Priority:** H3
@@ -35,7 +35,8 @@ This plan adds an **optional** mode, enabled by a **CLI flag** and/or **web dash
 - **Phase 2c (done):** MongoDB / Redis honor TLS on connect; post-connect probe; allowlisted details only (same secret-hygiene as sslmode fix).
 - **Phase 2d (done):** SMB honor `encrypt` / `require_signing` on connect; probe session dialect + signing + encryption when `smbprotocol` exposes them.
 - **Phase 2.4 (done):** REST / Power BI / Dataverse honor `verify` / `verify_ssl` on httpx; probe HTTPS + TLS version/cipher (allowlisted details only — no URLs/tokens).
-- **Still open:** Phase 3 inference, Phase 4 polish. SharePoint/WebDAV remain out of this connector slice.
+- **Phase 3 (done):** SQL / Mongo / Redis name-pattern inference (count-by-category into `inferred_controls_summary`); sheet disclaimer strengthened. Dialect metadata comments deferred (optional follow-up).
+- **Still open:** Phase 4 polish. SharePoint/WebDAV remain out of this connector slice.
 - **Data source versions plan:** [PLAN_DATA_SOURCE_VERSIONS_AND_HARDENING.md](PLAN_DATA_SOURCE_VERSIONS_AND_HARDENING.md) inventory remains separate; crypto validation uses its own table/sheet.
 
 ---
@@ -106,12 +107,12 @@ All validation and inference is **best-effort**: if the driver or API does not e
 
 | #   | To-do                                                                                                                                                           | Status |
 | --- | ---------------------------------------------------------------------                                                                                           | ------ |
-| 3.1 | Define heuristics: column/field/key name patterns (e.g. *_hash, *_masked, anon_*, pseudonym_*); optional DB metadata (e.g. “masking”) when exposed              | ⬜      |
-| 3.2 | SQL connector: when validate_crypto, run name heuristics on discovered column names; optionally query metadata for masking/encryption hints if dialect supports | ⬜      |
-| 3.3 | MongoDB / Redis: field/key name heuristics; record short summary (e.g. “3 field names suggest hashing”)                                                         | ⬜      |
-| 3.4 | Store inferred-controls summary per target; add column to “Crypto & controls” sheet; include disclaimer in sheet or report footer                               | ⬜      |
-| 3.5 | Tests: heuristics on sample names; disclaimer present in report                                                                                                 | ⬜      |
-| 3.6 | Docs: inference is best-effort and not a guarantee; for compliance, human review required                                                                       | ⬜      |
+| 3.1 | Define heuristics: column/field/key name patterns (e.g. *_hash, *_masked, anon_*, pseudonym_*); optional DB metadata (e.g. “masking”) when exposed              | ✅ (name patterns; metadata hints API ready, dialect comment probe deferred) |
+| 3.2 | SQL connector: when validate_crypto, run name heuristics on discovered column names; optionally query metadata for masking/encryption hints if dialect supports | ✅ (names; dialect metadata deferred) |
+| 3.3 | MongoDB / Redis: field/key name heuristics; record short summary (e.g. “3 field names suggest hashing”)                                                         | ✅      |
+| 3.4 | Store inferred-controls summary per target; add column to “Crypto & controls” sheet; include disclaimer in sheet or report footer                               | ✅      |
+| 3.5 | Tests: heuristics on sample names; disclaimer present in report                                                                                                 | ✅      |
+| 3.6 | Docs: inference is best-effort and not a guarantee; for compliance, human review required                                                                       | ✅      |
 
 ### Phase 4: Polish and regression
 
