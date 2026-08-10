@@ -3,7 +3,11 @@ Dashboard (uvicorn) transport mode for operator visibility: HTTPS vs explicit in
 
 Set by ``main.py`` before ``uvicorn.run`` via environment variables so worker processes
 and FastAPI see consistent state. :func:`get_dashboard_transport_snapshot` feeds
-``GET /status``, ``GET /health``, and dashboard templates.
+``GET /status``, ``GET /health``, and dashboard templates (process-level truth).
+
+Request-scoped edge TLS (trusted reverse proxy) is composed via
+:func:`effective_dashboard_transport` — see GitHub #1515 /
+``docs/plans/PLAN_DASHBOARD_TRUSTED_PROXY_TLS.md``.
 """
 
 from __future__ import annotations
@@ -11,6 +15,8 @@ from __future__ import annotations
 import os
 from pathlib import Path
 from typing import Any
+
+from core.forwarded_headers import forwarded_proto_posture
 
 ENV_MODE = "DATA_BOAR_DASHBOARD_TRANSPORT"
 ENV_INSECURE = "DATA_BOAR_DASHBOARD_INSECURE_OPT_IN"
@@ -84,6 +90,63 @@ def get_dashboard_transport_snapshot() -> dict[str, Any]:
         if tls_posture is not None:
             out["tls_posture"] = tls_posture
     return out
+
+
+def effective_dashboard_transport(
+    request: Any, config: dict[str, Any]
+) -> dict[str, Any]:
+    """
+    Compose process-level transport with request-scoped trusted-proxy posture (#1515).
+
+    ``get_dashboard_transport_snapshot()`` stays process-canonical (listener truth).
+    Banner suppression requires both ``forwarded_proto_trusted`` and
+    ``effective_scheme == "https"`` — CIDR config alone never suppresses risk UI.
+    """
+    upstream = get_dashboard_transport_snapshot()
+    forwarded = forwarded_proto_posture(request, config)
+    trusted_edge_tls = bool(
+        forwarded.get("forwarded_proto_trusted")
+        and forwarded.get("effective_scheme") == "https"
+    )
+    upstream_banner = bool(upstream.get("show_insecure_banner"))
+    show_insecure_banner = upstream_banner and not trusted_edge_tls
+    upstream_mode = str(upstream.get("mode") or "unknown")
+    tls_active = bool(upstream.get("tls_active"))
+
+    if tls_active:
+        external_scheme = "https"
+        tls_termination = "native"
+        summary = "Client-facing HTTPS via native application TLS."
+    elif trusted_edge_tls:
+        external_scheme = "https"
+        tls_termination = "trusted_proxy"
+        summary = (
+            "HTTPS terminated at a trusted reverse proxy; "
+            "the Data Boar upstream connection is local HTTP."
+        )
+    else:
+        external_scheme = str(forwarded.get("effective_scheme") or "http")
+        tls_termination = "none"
+        summary = str(upstream.get("summary") or f"mode={upstream_mode!r}")
+
+    effective_external = {
+        "scheme": external_scheme,
+        "tls_termination": tls_termination,
+        "upstream_transport": upstream_mode,
+        "trusted_proxy_match": bool(forwarded.get("trusted_proxy_match")),
+        "forwarded_proto_trusted": bool(forwarded.get("forwarded_proto_trusted")),
+        "summary": summary,
+    }
+    return {
+        "upstream": upstream,
+        "forwarded": forwarded,
+        "trusted_edge_tls": trusted_edge_tls,
+        "show_insecure_banner": show_insecure_banner,
+        "show_trusted_proxy_tls_info": bool(
+            trusted_edge_tls and upstream_mode == "http" and upstream_banner
+        ),
+        "effective_external_transport": effective_external,
+    }
 
 
 def resolve_web_listen_options(
