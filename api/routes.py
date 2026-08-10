@@ -58,7 +58,10 @@ from pydantic import BaseModel
 
 from core.about import get_about_info
 from core.canonical_trust import get_canonical_trust_snapshot
-from core.dashboard_transport import get_dashboard_transport_snapshot
+from core.dashboard_transport import (
+    effective_dashboard_transport,
+    get_dashboard_transport_snapshot,
+)
 from core.enterprise_surface_posture import get_enterprise_surface_posture
 from core.forwarded_headers import forwarded_proto_posture
 from core.host_resolution import effective_api_key_configured
@@ -131,16 +134,25 @@ def _about_info() -> dict:
     return get_about_info()
 
 
-def _template_context(base: dict) -> dict:
-    """Merge dashboard transport snapshot into Jinja context (banner, /status parity)."""
+def _template_context(base: dict, request: Request | None = None) -> dict:
+    """Merge dashboard transport into Jinja context (banner; request-scoped edge TLS)."""
     snap = get_dashboard_transport_snapshot()
     esp = get_enterprise_surface_posture(_get_config())
     ctx = dict(base)
     ctx["dashboard_transport"] = snap
     ctx["enterprise_surface"] = esp
-    ctx["show_insecure_banner"] = bool(snap.get("show_insecure_banner"))
+    show_insecure = bool(snap.get("show_insecure_banner"))
+    show_proxy_info = False
+    if request is not None:
+        eff = effective_dashboard_transport(request, _get_config())
+        show_insecure = bool(eff.get("show_insecure_banner"))
+        show_proxy_info = bool(eff.get("show_trusted_proxy_tls_info"))
+        ctx["effective_external_transport"] = eff.get("effective_external_transport")
+    ctx["show_insecure_banner"] = show_insecure
+    ctx["show_trusted_proxy_tls_info"] = show_proxy_info
     reasons = list(esp.get("reasons") or [])
     only_plaintext = reasons == ["plaintext_http_explicit"]
+    # Keep governance/trust banners independent of plaintext-banner suppression (#1515).
     ctx["show_trust_governance_banner"] = (
         esp.get("severity") in ("caution", "elevated") and not only_plaintext
     )
@@ -258,7 +270,7 @@ def _i18n_template_context(
     default = loc.get("default_locale") or "en"
     catalogs: dict = {}
     t_call = make_t(locale_tag, supported, default, catalogs)
-    ctx = _template_context(base)
+    ctx = _template_context(base, request)
     ctx["t"] = t_call
     ctx["locale_slug"] = locale_slug
     ctx["locale_tag"] = locale_tag
@@ -1285,7 +1297,7 @@ app.mount("/static", StaticFiles(directory=str(_api_dir / "static")), name="stat
 
 
 @app.get("/health")
-async def health():
+async def health(request: Request):
     """
     Liveness/readiness probe for Docker, Swarm and Kubernetes.
 
@@ -1294,12 +1306,15 @@ async def health():
     """
     cfg = _get_config()
     canonical = get_canonical_trust_snapshot(cfg)
+    eff = effective_dashboard_transport(request, cfg)
     body: dict = {"status": "ok"}
     body["license"] = _license_public_dict()
     body["trust_state"] = canonical["trust_state"]
     body["trust_reasons"] = canonical["trust_reasons"]
     body["output_confidence"] = canonical["output_confidence"]
     body["dashboard_transport"] = get_dashboard_transport_snapshot()
+    body["forwarded_headers"] = eff["forwarded"]
+    body["effective_external_transport"] = eff["effective_external_transport"]
     body["enterprise_surface"] = get_enterprise_surface_posture(cfg)
     body["integrity"] = _integrity_snapshot()
     return body
@@ -1478,12 +1493,14 @@ async def get_status(request: Request):
         pf_status = {}
 
     canonical = get_canonical_trust_snapshot(cfg)
+    eff = effective_dashboard_transport(request, cfg)
     return {
         "running": engine.is_running,
         "current_session_id": engine.db_manager.current_session_id,
         "findings_count": engine.get_current_findings_count(),
         "audit_log": engine.get_scan_audit_log(),
-        "forwarded_headers": forwarded_proto_posture(request, cfg),
+        "forwarded_headers": eff["forwarded"],
+        "effective_external_transport": eff["effective_external_transport"],
         "trust_state": canonical["trust_state"],
         "trust_reasons": canonical["trust_reasons"],
         "output_confidence": canonical["output_confidence"],

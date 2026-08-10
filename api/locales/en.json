@@ -11,7 +11,9 @@
   },
   "banner": {
     "insecure_title": "Plaintext HTTP",
-    "insecure_body": "this dashboard is not using TLS. Traffic can be read or modified on the network path. Use --https-cert-file / --https-key-file or terminate TLS on a reverse proxy. See GET /status (dashboard_transport).",
+    "insecure_body": "this dashboard is not using TLS. Traffic can be read or modified on the network path. Use --https-cert-file / --https-key-file or terminate TLS on a reverse proxy with api.trusted_proxy_cidrs. See GET /status (dashboard_transport, effective_external_transport).",
+    "trusted_proxy_tls_title": "HTTPS at trusted reverse proxy",
+    "trusted_proxy_tls_body": "HTTPS terminated at a trusted reverse proxy; the Data Boar upstream connection is local HTTP. Process listener remains plaintext — see GET /status (effective_external_transport).",
     "gov_title": "Governance / trust",
     "gov_body": "severity {severity} (license {license_state}). Global API key surface: {mode}. Optional per-route RBAC (api.rbac, Pro+ dashboard_rbac) — see GET /status (enterprise_surface.access_surface.rbac)."
   },

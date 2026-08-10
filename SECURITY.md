@@ -125,7 +125,7 @@ The application adds the following headers to all web and API responses by defau
 - **Permissions-Policy** – disables browser features not needed by the app (camera, microphone, geolocation, etc.).
 - **Strict-Transport-Security (HSTS)** – set only when the request is considered HTTPS (direct or via `X-Forwarded-Proto: https` from a trusted proxy), so HTTP-only deployments are not locked out. When present, it uses `max-age=31536000; includeSubDomains; preload`.
 
-When the app is behind a reverse proxy (e.g. nginx, Caddy, load balancer), ensure the proxy sets **X-Forwarded-Proto: https** for TLS-terminated requests so HSTS is applied correctly. Do not enable HSTS at the app layer for plain HTTP; the proxy can add HSTS when serving over HTTPS.
+When the app is behind a reverse proxy (e.g. nginx, Caddy, load balancer), ensure the proxy sets **X-Forwarded-Proto: https** for TLS-terminated requests so HSTS is applied correctly. Configure **`api.trusted_proxy_cidrs`** to the CIDR(s) of the **direct** proxy peer; without a match, `X-Forwarded-*` headers are ignored (fail-safe). When the peer matches and the forwarded proto is trusted `https`, the dashboard suppresses the plaintext-risk banner for that request and **`GET /status`** / **`GET /health`** expose **`effective_external_transport`** with `tls_termination: trusted_proxy` — process-level **`dashboard_transport`** still reports upstream HTTP honestly. Do not enable HSTS at the app layer for plain HTTP; the proxy can add HSTS when serving over HTTPS.
 
 ## Optional API key (enterprise)
 

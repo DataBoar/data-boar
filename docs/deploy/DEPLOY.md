@@ -526,7 +526,7 @@ You can use **Docker Compose** or **Kubernetes** as alternatives to Docker Swarm
 
 The application runs correctly when placed behind **NAT**, a **load balancer**, or a **reverse proxy** (nginx, Traefik, Caddy, or similar). No code or config change is required for basic operation.
 
-- **TLS at the proxy:** If HTTPS is terminated at the proxy (recommended), set **X-Forwarded-Proto: https** on requests to the app so that security headers (e.g. HSTS) and scheme detection work correctly. See [SECURITY.md](../../SECURITY.md) for HTTP security headers.
+- **TLS at the proxy:** If HTTPS is terminated at the proxy (recommended), set **X-Forwarded-Proto: https** on requests to the app so that security headers (e.g. HSTS) and scheme detection work correctly. Also set **`api.trusted_proxy_cidrs`** to the CIDR(s) of the direct proxy peer; otherwise forwarded headers are ignored and the dashboard may still show the plaintext-HTTP risk banner. With a trusted peer + `https`, **`GET /status`** exposes **`effective_external_transport`** (`tls_termination: trusted_proxy`) while process-level **`dashboard_transport`** remains HTTP. See [SECURITY.md](../../SECURITY.md) and [SECURE_DASHBOARD_AUTH_AND_HTTPS_HOWTO.md](../ops/SECURE_DASHBOARD_AUTH_AND_HTTPS_HOWTO.md) §B.1.
 - **Client IP and host:** If you need the real client IP or original host in logs or logic, configure your proxy to send **X-Forwarded-For** and **X-Forwarded-Host**; the app can be extended to trust these when needed.
 - **Subpath:** If the app is served under a path prefix (e.g. <https://example.com/audit/>), configure the proxy to strip or rewrite the prefix so the app still sees paths starting at `/`; or use the proxy's rewrite rules to map `/audit/` to the container root.
 

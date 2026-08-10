@@ -11,7 +11,9 @@
   },
   "banner": {
     "insecure_title": "HTTP em texto claro",
-    "insecure_body": "este painel não está usando TLS. O tráfego pode ser lido ou alterado no caminho da rede. Use --https-cert-file / --https-key-file ou termine TLS em um proxy reverso. Veja GET /status (dashboard_transport).",
+    "insecure_body": "este painel não está usando TLS. O tráfego pode ser lido ou alterado no caminho da rede. Use --https-cert-file / --https-key-file ou termine TLS em um proxy reverso com api.trusted_proxy_cidrs. Veja GET /status (dashboard_transport, effective_external_transport).",
+    "trusted_proxy_tls_title": "HTTPS no proxy reverso confiável",
+    "trusted_proxy_tls_body": "HTTPS terminado em um proxy reverso confiável; a conexão upstream do Data Boar é HTTP local. O listener do processo permanece em texto claro — veja GET /status (effective_external_transport).",
     "gov_title": "Governança / confiança",
     "gov_body": "severidade {severity} (licença {license_state}). Superfície de API key global: {mode}. RBAC por rota opcional (api.rbac, Pro+ dashboard_rbac) — veja GET /status (enterprise_surface.access_surface.rbac)."
   },

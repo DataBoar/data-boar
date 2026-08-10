@@ -102,6 +102,19 @@ Para Internet ou LAN com vários clientes, prefira:
 1. Bind do app em **loopback** (`127.0.0.1` ou interface só do container).
 1. **TLS** em **nginx**, **Traefik**, **Caddy** ou load balancer gerenciado.
 1. **`X-Forwarded-Proto: https`** a partir do proxy para cabeçalhos de segurança (ex.: HSTS) funcionarem certo.
+1. Configure **`api.trusted_proxy_cidrs`** com o(s) CIDR(s) do peer **direto** do proxy (ex.: `127.0.0.1/32` em loopback, ou a rede bridge do Docker até o app). Sem essa allow-list, cabeçalhos forwarded são **ignorados** (fail-safe).
+
+Exemplo YAML:
+
+```yaml
+api:
+  host: "127.0.0.1"
+  allow_insecure_http: true   # listener upstream é HTTP local atrás do proxy
+  trusted_proxy_cidrs:
+    - "127.0.0.1/32"
+```
+
+Com peer correspondente **e** `X-Forwarded-Proto: https` confiável, o painel suprime o banner vermelho de risco de texto claro e expõe **`effective_external_transport`** por requisição (`tls_termination: trusted_proxy`) em **`GET /status`** / **`GET /health`**. O **`dashboard_transport`** a nível de processo permanece `mode: http` / `tls_active: false` — honestidade sobre o listener Uvicorn, não alegação de TLS nativo no app. Veja [#1515](https://github.com/DataBoar/data-boar/issues/1515) / [PLAN_DASHBOARD_TRUSTED_PROXY_TLS.md](../plans/PLAN_DASHBOARD_TRUSTED_PROXY_TLS.md).
 
 Veja [deploy/DEPLOY.md](../deploy/DEPLOY.pt_BR.md) e **SECURITY.md** na raiz.
 

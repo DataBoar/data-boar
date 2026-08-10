@@ -1277,6 +1277,21 @@ def main() -> None:
             print(
                 "[INFO] dashboard_transport=insecure_http", file=sys.stderr, flush=True
             )
+            # #1515 — do not claim client-facing HTTPS at startup; edge TLS is
+            # validated per-request via api.trusted_proxy_cidrs + X-Forwarded-Proto.
+            _tpc = (
+                api_cfg.get("trusted_proxy_cidrs")
+                if isinstance(api_cfg, dict)
+                else None
+            )
+            if _tpc:
+                print(
+                    "[INFO] HTTP upstream; client-facing HTTPS reported by a "
+                    "trusted proxy is validated per-request "
+                    "(api.trusted_proxy_cidrs + X-Forwarded-Proto)",
+                    file=sys.stderr,
+                    flush=True,
+                )
 
         _canonical = get_canonical_trust_snapshot(config)
         _canonical_line = (
