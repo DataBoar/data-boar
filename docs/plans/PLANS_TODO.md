@@ -600,6 +600,8 @@ Tighten runtime defaults for the API host. Implemented: default `127.0.0.1`, opt
 
 **Cloud object storage (S3-class):** [PLAN_OBJECT_STORAGE_CLOUD_CONNECTORS.md](PLAN_OBJECT_STORAGE_CLOUD_CONNECTORS.md) – **⬜ Plan only** (implementation backlog). **Corporate-Entity-C / reviewers:** expect **no** in-app S3/Azure/GCS connector until Phase 1 of that plan ships; compressed-file and share connectors remain the current path for file-like data.
 
+**Data Soup connector gaps (CouchDB / RabbitMQ + orphaned SAP-doc candidates):** [#1537](https://github.com/DataBoar/data-boar/issues/1537) – **⬜ Research / roadmap honesty only** (no formal `PLAN_*.md` yet; not an implementation greenlight). **New gaps never previously mentioned in-repo:** CouchDB (operator Obsidian vault sync via self-hosted LiveSync — real trigger), RabbitMQ (message-broker family; PII may live in payloads). **Still orphaned** in [PLAN_SAP_CONNECTOR.md](PLAN_SAP_CONNECTOR.md) (“Other data sources to consider” — doc already said to promote into `PLANS_TODO` when ready; that never happened): ServiceNow, Salesforce, Workday, BigQuery, Elasticsearch/OpenSearch, Kafka, Confluence/Jira, Splunk. Promote **one** named candidate (or a CouchDB / brokers slice) to its own plan/row when the operator chooses — keep this catalogue line as the non-orphan pointer only.
+
 **Static analysis (Semgrep):** [PLAN_SEMGREP_CI.md](completed/PLAN_SEMGREP_CI.md) – **✅ Complete** (CI workflow + Slack `workflow_run` for failures + optional smoke steps in plan).
 
 **Bandit (Python security linter):** [PLAN_BANDIT_SECURITY_LINTER.md](completed/PLAN_BANDIT_SECURITY_LINTER.md) – **Dev + CI strict** (`ci.yml`); **Phase 3** low triage ✅ documented; plan archived under **`completed/`**.
