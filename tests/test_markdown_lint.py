@@ -10,6 +10,7 @@ Checks project .md and .mdc files for:
 - MD060: Fenced code blocks use consistent marker (all ``` or all ~~~)
 - MD031: Blanks around fences (blank line before/after fenced code blocks)
 - MD034: No bare URLs (wrap in angle brackets or use [text](url); skip inside code blocks)
+- FRONTMATTER01: Leading ``---`` must close within ~40 lines and parse as a YAML mapping
 - Table (compact): No space to the left of pipe (e.g. |col not | col)
 
 Excludes: paths in MARKDOWN_LINT_EXCLUDE only (.git, node_modules, .venv, **private**, etc.) by default.
@@ -21,6 +22,8 @@ Pass **``pytest --include-private``** or set **``INCLUDE_PRIVATE_LINT=1``** to l
 import re
 import subprocess
 from pathlib import Path
+
+import yaml
 
 
 def _project_root() -> Path:
@@ -344,6 +347,48 @@ def _check_table_pipe_space(_text: str) -> list[tuple[int, str]]:
     return []
 
 
+# --- FRONTMATTER01: leading --- must close and parse as YAML mapping ---
+_FRONTMATTER_CLOSE_WINDOW = 40
+_FRONTMATTER01_MSG = "FRONTMATTER01: leading --- without valid closing YAML frontmatter"
+
+
+def _check_frontmatter_integrity(text: str) -> list[tuple[int, str]]:
+    """If the first non-empty line is ``---``, require a closing ``---`` soon and a YAML dict.
+
+    Catches the ISSUE_QUEUE_SEQUENCING_MAP class of bug: a lone leading ``---``
+    is treated as YAML frontmatter by preview tools and then chokes on Markdown
+    (e.g. ``**bold**``) before any closing fence.
+    """
+    lines = text.splitlines()
+    start_idx: int | None = None
+    for i, line in enumerate(lines):
+        if line.strip() == "":
+            continue
+        if line.strip() == "---":
+            start_idx = i
+        break
+    if start_idx is None:
+        return []
+
+    end_idx: int | None = None
+    window_end = min(len(lines), start_idx + 1 + _FRONTMATTER_CLOSE_WINDOW)
+    for j in range(start_idx + 1, window_end):
+        if lines[j].strip() == "---":
+            end_idx = j
+            break
+    if end_idx is None:
+        return [(start_idx + 1, _FRONTMATTER01_MSG)]
+
+    body = "\n".join(lines[start_idx + 1 : end_idx])
+    try:
+        loaded = yaml.safe_load(body) if body.strip() else None
+    except yaml.YAMLError:
+        return [(start_idx + 1, _FRONTMATTER01_MSG)]
+    if not isinstance(loaded, dict):
+        return [(start_idx + 1, _FRONTMATTER01_MSG)]
+    return []
+
+
 def _lint_one(path: Path) -> list[tuple[int, str]]:
     """Run all checks on one file. Returns list of (line, message)."""
     text = _read_md(path)
@@ -356,13 +401,44 @@ def _lint_one(path: Path) -> list[tuple[int, str]]:
     out.extend(_check_md060(text))
     out.extend(_check_md031(text))
     out.extend(_check_md034(text))
+    out.extend(_check_frontmatter_integrity(text))
     out.extend(_check_table_pipe_space(text))
     return out
 
 
+def test_frontmatter01_valid_skill_style_passes() -> None:
+    """SKILL.md-style closed frontmatter must not violate FRONTMATTER01."""
+    text = "---\nname: example\ndescription: unit test fixture\n---\n\n# Body\n"
+    assert _check_frontmatter_integrity(text) == []
+
+
+def test_frontmatter01_broken_leading_hr_fails() -> None:
+    """Lone leading --- then Markdown (e.g. **field**) must violate FRONTMATTER01."""
+    text = "---\n# Title\n**Campo:** valor\n\nMore body.\n"
+    violations = _check_frontmatter_integrity(text)
+    assert violations
+    assert violations[0][0] == 1
+    assert "FRONTMATTER01" in violations[0][1]
+
+
+def test_frontmatter01_no_leading_fence_is_inert() -> None:
+    """Files without a leading --- are out of scope for FRONTMATTER01."""
+    text = "# Title\n\n**Campo:** valor\n"
+    assert _check_frontmatter_integrity(text) == []
+
+
+def test_frontmatter01_closed_but_invalid_yaml_fails() -> None:
+    """Closing --- with non-mapping / invalid YAML between fences still fails."""
+    text = "---\n**Campo:** valor\n---\n\n# Body\n"
+    violations = _check_frontmatter_integrity(text)
+    assert violations
+    assert "FRONTMATTER01" in violations[0][1]
+
+
 def test_markdown_lint_no_violations(include_private_lint: bool):
     """
-    All project .md files (except excluded dirs) pass MD009, MD012, MD024, MD036, MD051, MD060, MD031, MD034.
+    All project .md files (except excluded dirs) pass MD009, MD012, MD024, MD036,
+    MD051, MD060, MD031, MD034, FRONTMATTER01.
     Table style: SonarQube MD060 (aligned) is enforced via scripts/fix_markdown_sonar.py; test does not check table pipes.
 
     SonarQube / markdownlint-style quality so CI catches regressions.
