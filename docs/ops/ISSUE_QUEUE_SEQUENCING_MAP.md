@@ -1,4 +1,3 @@
----
 # Issue Queue Sequencing Map
 <!-- auto-maintained: refresh when new issues are added or NÃO INICIAR chains change -->
 **Última atualização:** 2026-08-10
@@ -67,5 +66,3 @@ Removed from the previous map: `#406 → #606` (both closed; classic release-gat
 | Milestone v1.8.0 / backlog / (none) | 98 / 31 / 202 |
 | U0 / U1 / U2 / U3 / sem U (body marker) | 1 / 2 / 14 / 11 / 303 |
 | Active hard-blocker edges | 4 (all `#539 →` Phase B–E) |
-
----
