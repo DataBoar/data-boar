@@ -1,13 +1,13 @@
 # Plan: Native OS packages — interpreter ownership and nfpm (#1406 / #1403 / #1437)
 
-<!-- plans-hub-summary: Native/Enterprise embeds CPython (cp314t); ADR-0084 Accepted; nfpm foundation + CI build (#1437) for deb/rpm x86-64 glibc from wheelhouse; commercial protection = worker caps (#551), not interpreter presence. -->
+<!-- plans-hub-summary: Native/Enterprise embeds CPython (cp314t); ADR-0084 Accepted; Linux nfpm CI (#1437) + Windows MSI/winget (#1467, blocked by Windows CI #1427) + macOS Homebrew (#1425); commercial protection = worker caps (#551), not interpreter presence. -->
 
 **Status:** In progress
-**Date:** 2026-08-02
+**Date:** 2026-08-12
 **Authors:** Fabio Leitao (operator); Cursor executor
 **Priority:** H1 (packaging / Enterprise air-gap channel)
-**GitHub:** [#1406](https://github.com/DataBoar/data-boar/issues/1406) · [#1403](https://github.com/DataBoar/data-boar/issues/1403) (foundation ✅) · [#1437](https://github.com/DataBoar/data-boar/issues/1437) (CI build) · **Related:** [#1182](https://github.com/DataBoar/data-boar/issues/1182) · [#1401](https://github.com/DataBoar/data-boar/issues/1401) · [#551](https://github.com/DataBoar/data-boar/issues/551) · [#1404](https://github.com/DataBoar/data-boar/issues/1404) (xbps)
-**Related:** [ADR-0084](../adr/ADR-0084-native-package-embedded-cpython-by-channel.md) · [PLAN_WHEELHOUSE_DISTRIBUTION.md](PLAN_WHEELHOUSE_DISTRIBUTION.md) · [PLAN_PACKAGING_EXTRAS.md](PLAN_PACKAGING_EXTRAS.md)
+**GitHub:** [#1406](https://github.com/DataBoar/data-boar/issues/1406) · [#1403](https://github.com/DataBoar/data-boar/issues/1403) (foundation ✅) · [#1437](https://github.com/DataBoar/data-boar/issues/1437) (CI build) · **Related:** [#1182](https://github.com/DataBoar/data-boar/issues/1182) · [#1401](https://github.com/DataBoar/data-boar/issues/1401) · [#551](https://github.com/DataBoar/data-boar/issues/551) · [#1404](https://github.com/DataBoar/data-boar/issues/1404) (xbps) · [#1467](https://github.com/DataBoar/data-boar/issues/1467) (MSI/winget) · [#1425](https://github.com/DataBoar/data-boar/issues/1425) (Homebrew) · [#1427](https://github.com/DataBoar/data-boar/issues/1427) (Windows CI blocker) · [#1478](https://github.com/DataBoar/data-boar/issues/1478) (ADR-0085 brew honesty) · [#1541](https://github.com/DataBoar/data-boar/issues/1541) (this cross-link refresh)
+**Related:** [ADR-0084](../adr/ADR-0084-native-package-embedded-cpython-by-channel.md) · [ADR-0085](../adr/ADR-0085-install-priority-ladder.md) · [PLAN_WHEELHOUSE_DISTRIBUTION.md](PLAN_WHEELHOUSE_DISTRIBUTION.md) · [PLAN_PACKAGING_EXTRAS.md](PLAN_PACKAGING_EXTRAS.md)
 
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md)
 
@@ -23,9 +23,18 @@ Before writing an nfpm (or equivalent) manifest for native packages (#1403), the
 
 | Channel | Interpreter | no-GIL (`cp314t`) | Notes |
 | ------- | ----------- | ----------------- | ----- |
-| **(a) Native / Enterprise / air-gapped** | **Embed CPython** under product prefix | **Reachable** on any distro | Matrix: `(libc × arch)`; correction invariant structural |
+| **(a) Native / Enterprise / air-gapped** | **Embed CPython** under product prefix | **Reachable** on any distro | Matrix: `(libc × arch)`; correction invariant structural. **Surfaces:** Linux nfpm (**deb/rpm** in CI; apk/pacman/xbps later) · **Windows MSI/winget** ([#1467](https://github.com/DataBoar/data-boar/issues/1467)) · **macOS Homebrew** ([#1425](https://github.com/DataBoar/data-boar/issues/1425)) — see sibling table below |
 | **(b) Community / distro upstream** | Distro `python3` | **Not offered** (document per build minor) | **Deferred**; must not be marketed as (a) |
 | **(c) postinst rebuild** | N/A | N/A | **Rejected** (breaks air-gap) |
+
+### Sibling native surfaces (same channel-a policy; not Linux-nfpm-only)
+
+| Surface | Tracker | Status (plan view) |
+| ------- | ------- | ------------------ |
+| **Linux nfpm** (deb/rpm first; apk/pacman/xbps later) | [#1403](https://github.com/DataBoar/data-boar/issues/1403) · [#1437](https://github.com/DataBoar/data-boar/issues/1437) · [#1404](https://github.com/DataBoar/data-boar/issues/1404) | Foundation ✅; CI build 🔄; metal matrix deferred |
+| **Windows MSI + winget** (embed `cp314` / `cp314t`) | [#1467](https://github.com/DataBoar/data-boar/issues/1467) (canonical; #1471 was a dup) | **Planned** — blocked on Windows CI ([#1427](https://github.com/DataBoar/data-boar/issues/1427): no `windows-latest` job yet) |
+| **macOS Homebrew** (own tap; formula/cask) | [#1425](https://github.com/DataBoar/data-boar/issues/1425) | **Planned** — cheapest missing consumer path; **no** published formula/cask yet |
+| **Install ladder honesty** | [ADR-0085](../adr/ADR-0085-install-priority-ladder.md) · [#1478](https://github.com/DataBoar/data-boar/issues/1478) | Recommend only what exists **today** (`pipx`); native / `brew` are **when published** — do not treat `brew install data-boar` as live |
 
 ### Commercial protection (normative)
 
@@ -63,6 +72,11 @@ Community at 2 workers does **not** harvest free-threaded scale. See [#551](http
 | **2** | nfpm foundation (#1403): generated deb/rpm/apk/pacman manifests + connector subpackages + embed metadata | ✅ (merged #1436) |
 | **3** | CI package build (#1437): populate staging with real cp314t + wheelhouse; `nfpm package` deb+rpm; install-smoke; artifacts | 🔄 |
 | **4** | Lab metal validation matrix (5 hosts) + apk/musl/arm64 + xbps (#1404) | ⬜ deferred / separate issues |
+| **5** | Windows CI job (`windows-latest`) so MSI/winget work is testable (#1427) | ⬜ planned — **blocks** #1467 narrative hardening |
+| **6** | Windows MSI + winget embed payload (#1467) | ⬜ planned (after #1427) |
+| **7** | macOS Homebrew tap (#1425) | ⬜ planned |
+
+Cross-link hygiene for this table: [#1541](https://github.com/DataBoar/data-boar/issues/1541).
 
 ---
 
