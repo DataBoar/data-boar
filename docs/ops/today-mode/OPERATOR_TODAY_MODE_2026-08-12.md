@@ -1,22 +1,24 @@
-# Operator today mode — 2026-08-12 (mid-flight recovery + observability doc catch-up)
+# Operator today mode — 2026-08-12 (OTel product ship + Maestro #8 spinout close)
 
 **Português (Brasil):** [OPERATOR_TODAY_MODE_2026-08-12.pt_BR.md](OPERATOR_TODAY_MODE_2026-08-12.pt_BR.md)
 
-**Headline:** Gap since **2026-08-10** today-mode; lab observability session (**2026-08-11→12**) left **plan/doc drift** and product OTel gaps open. Prefer **closing almost-done docs** before new research waves. Dependabot still dangling.
+**Headline (EOD):** Product OTel gaps **#1529 / #1535 / #1540** closed on data-boar; **Maestro spinout companion** [PR #1551](https://github.com/DataBoar/data-boar/pull/1551) merged (`69c8ee0d`) — `scripts/maestro/` purged; [DataBoar/maestro#8](https://github.com/DataBoar/maestro/issues/8) **CLOSED**; [#32](https://github.com/DataBoar/maestro/issues/32) unblocked for OTel preflight **code**. Operator still owns **ADR-0001 Proposed → Accepted**.
 
 ---
 
-## Block 0 — Reality (morning)
+## Block 0 — Reality (EOD)
 
-1. **`main`:** sync (`git fetch` / `git pull origin main`) — local was behind; pull before edits.
-2. **Closed since 2026-08-10 (do not reopen):**
-   - [#1517](https://github.com/DataBoar/data-boar/issues/1517) UID 65532 → PR **#1530**
-   - [#1526](https://github.com/DataBoar/data-boar/issues/1526) methodology cross-links → PR **#1531**
-   - [#1524](https://github.com/DataBoar/data-boar/issues/1524) issue-queue map → PR **#1533**
-   - [#1537](https://github.com/DataBoar/data-boar/issues/1537) connector-gaps catalogue → PR **#1539**
-   - CARRYOVER Maestro phase-1 → PR **#1532**
-3. **In-flight / mid-done (priority today):** see sequencing below + [CARRYOVER.md](CARRYOVER.md).
-4. - [ ] **`block-close`** when pausing lab/VC; **`eod-sync`** for calendar EOD.
+1. **`main`:** at merge of #1551 — pull before next edits (`git pull origin main`).
+2. **Closed today (do not reopen):**
+   - [#1529](https://github.com/DataBoar/data-boar/issues/1529) LoggerProvider → PR **#1544**
+   - [#1535](https://github.com/DataBoar/data-boar/issues/1535) CLI oneshot OTel → PR **#1547**
+   - [#1540](https://github.com/DataBoar/data-boar/issues/1540) Maestro OTel preflight **plan** → PR **#1548** (implementation = maestro#32)
+   - [#1541](https://github.com/DataBoar/data-boar/issues/1541) native packages plan links → closed
+   - [#1542](https://github.com/DataBoar/data-boar/issues/1542) lab observability plan Status → PR **#1545**
+   - Dependabot **#1492** virtualenv → merged earlier
+   - **Maestro** [#8](https://github.com/DataBoar/maestro/issues/8) incomplete spinout → companion **data-boar#1551** + parity **maestro#33/#34**
+3. **Still open / next:** see carryover + sequencing below.
+4. - [x] **`eod-sync`** this boundary · **`block-close`** if pausing lab/VC after.
 
 **Live queue:** [CARRYOVER.md](CARRYOVER.md) · **Published:** [PUBLISHED_SYNC.md](PUBLISHED_SYNC.md)
 
@@ -26,74 +28,66 @@
 
 ---
 
-## Mid-flight inventory (stuck or almost ready)
+## Mid-flight inventory (after today's ships)
 
 | Band | Item | State | Next thin slice |
 | ---- | ---- | ----- | --------------- |
-| **Docs almost ready** | [#1542](https://github.com/DataBoar/data-boar/issues/1542) — refresh `PLAN_LAB_OP_OBSERVABILITY_STACK` Status + native receivers | ✅ merged **#1545** | Status + §1.1 receivers on `main` |
-| **Docs drift** | [#1538](https://github.com/DataBoar/data-boar/issues/1538) — product tiers / open-core plan stale | OPEN · `no-code-yet` | Thin docs when band allows |
-| **Docs drift** | [#1541](https://github.com/DataBoar/data-boar/issues/1541) — `PLAN_NATIVE_PACKAGES` missing MSI/Homebrew/Windows-CI links | In PR — Related + sibling table + ADR-0085 brew hedge | Merge docs/ADR PR |
-| **Product OTel gaps** | [#1529](https://github.com/DataBoar/data-boar/issues/1529) LoggerProvider → Loki | ✅ merged **#1544** | Evidence under `docs/ops/evidence/otel_1529_*` |
-| **Product OTel gaps** | [#1535](https://github.com/DataBoar/data-boar/issues/1535) OTel only on `--web`/`--demo` | OPEN | Design slice: oneshot CLI / exports visibility |
-| **Maestro / lab trust** | [#1540](https://github.com/DataBoar/data-boar/issues/1540) preflight that gate trusts wired OTel | OPEN | Verify, do not assume |
-| **Packaging P1** | [#1427](https://github.com/DataBoar/data-boar/issues/1427) Windows CI zero jobs | OPEN · P1 | Blocks MSI/winget story with [#1467](https://github.com/DataBoar/data-boar/issues/1467) |
-| **Partial product** | [#828](https://github.com/DataBoar/data-boar/issues/828) scan_failures Pro-tier residual | Partial on `main` | Fixtures / plan close when sequenced |
+| **Maestro OTel** | [maestro#32](https://github.com/DataBoar/maestro/issues/32) preflight code | OPEN · unblocked | Implement in DataBoar/maestro `core/`/`engine/` (not data-boar) |
+| **ADR human gate** | Maestro ADR-0001 | Proposed | Operator: **Accepted** when ready |
+| **Docs drift** | [#1538](https://github.com/DataBoar/data-boar/issues/1538) product tiers / open-core | OPEN · `no-code-yet` | Thin docs when band allows |
+| **Packaging P1** | [#1427](https://github.com/DataBoar/data-boar/issues/1427) Windows CI zero jobs | OPEN · P1 | Blocks MSI/winget with [#1467](https://github.com/DataBoar/data-boar/issues/1467) |
+| **Partial product** | [#828](https://github.com/DataBoar/data-boar/issues/828) scan_failures Pro residual | Partial on `main` | Fixtures / plan close when sequenced |
 | **Lab hygiene** | [#756](https://github.com/DataBoar/data-boar/issues/756) disk ~90% + `bw` Ansible | Pending | SSH free-space before completão on that host |
-| **deps dangling** | PRs **#1492** virtualenv · **#1487** reportlab · **#1485** webauthn · **#1484** pyarrow | OPEN | Triage skill — **no blind merge** |
+| **deps dangling** | PRs **#1487** reportlab · **#1485** webauthn · **#1484** pyarrow | OPEN | Triage skill — **no blind merge** |
 | **Bestiary** | #994 sidequest (7 repos left) | In progress | One PR/repo when focus returns |
-| **Research park** | #1518 / #1520 / #1521 | `no-code-yet` | **Not** today unless operator reprioritizes |
-
-**Lab note (private evidence, not a tracked claim):** Grafana Cloud + PDC + OpenLIT/Strix path exercised; filelog path had a real UID/permissions fix in lab — product LoggerProvider (#1529) still separate.
+| **Research park** | #1518 / #1520 / #1521 | `no-code-yet` | **Not** default tomorrow unless reprioritized |
+| **Lab deploy** | Hosts still on pre-#1551 trees | Ops | Pull data-boar + set `MAESTRO_ROOT` / sibling `../maestro` |
 
 ---
 
-## Suggested sequencing (2026-08-12)
+## Suggested sequencing (tomorrow / next block)
 
-### A — Finish almost-done first
+### A — Maestro follow-through
 
-1. **[#1542](https://github.com/DataBoar/data-boar/issues/1542)** — plan Status + receiver inventory (docs-only, closes lab↔plan gap).
-2. Optional thin: **#1541** packaging plan links **or** one Dependabot if green + skill says go.
+1. Operator: **ADR-0001 → Accepted** (if decision is locked).
+2. [maestro#32](https://github.com/DataBoar/maestro/issues/32) OTel preflight implementation (thin PR in maestro repo).
+3. Lab hosts: pull `main` + ensure Maestro clone path for wrappers.
 
-### B — Observability product (after A, or if A blocked)
+### B — Packaging / deps (when not on Maestro)
 
-| Order | Issue | Why |
-| ----- | ----- | --- |
-| B1 | [#1529](https://github.com/DataBoar/data-boar/issues/1529) LoggerProvider | Unblocks Loki proof for product |
-| B2 | [#1535](https://github.com/DataBoar/data-boar/issues/1535) CLI oneshot OTel | Same theme; larger design |
-| B3 | [#1540](https://github.com/DataBoar/data-boar/issues/1540) Maestro OTel trust preflight | Lab gate honesty |
+1. [#1427](https://github.com/DataBoar/data-boar/issues/1427) Windows CI job — or one Dependabot if skill says go.
+2. Optional thin: [#1538](https://github.com/DataBoar/data-boar/issues/1538) docs drift.
 
-### C — Packaging / Windows (when packaging focus)
-
-1. [#1427](https://github.com/DataBoar/data-boar/issues/1427) Windows CI job — prerequisite narrative for [#1467](https://github.com/DataBoar/data-boar/issues/1467) MSI/winget.
-
-### D — Explicitly **not** default today
+### C — Explicitly **not** default
 
 - Research waves #1518 / #1520 / #1521
 - Full bestiary burn-down (unless one named repo)
-- Graylog / Phase D adoption (explicitly out of scope per #1542)
+- Reintroducing `data-boar/scripts/maestro/` (forbidden — closed #8)
 
 ---
 
 ## Carryover — day rows
 
-- [x] Sync `main` (this session)
-- [ ] Land or schedule **#1542** docs PR
-- [ ] Refresh [CARRYOVER.md](CARRYOVER.md) observability + deps rows (this PR)
-- [ ] At most **one** of: deps triage · #1541 · B1 #1529 spike
+- [x] Sync `main` / land observability docs (#1542 / #1545)
+- [x] Ship OTel product slices (#1529 / #1535 / #1540 plan)
+- [x] Maestro companion purge #1551 + close maestro#8 + ping #32
+- [x] Refresh [CARRYOVER.md](CARRYOVER.md) (this EOD)
+- [ ] Operator: ADR-0001 Accepted
+- [ ] At most **one** of: maestro#32 code · deps triage · #1427
 - [ ] No new inspiration issues without AIIDCOBPP trailing + P* label
 
 ---
 
 ## End of day
 
-- `block-close` / `eod-sync` per boundary
-- Draft `OPERATOR_TODAY_MODE_2026-08-13.md` only if A–C sequencing changes
+- `eod-sync` / `block-close` as needed
+- Draft `OPERATOR_TODAY_MODE_2026-08-13.md` if A sequencing is the next day focus
 
 ---
 
 ## Quick refs
 
-- `docs/ops/TOKEN_AWARE_SCRIPTS_HUB.md`
-- `.cursor/rules/session-mode-keywords.mdc` (`pmo-view`, `today-mode`, `carryover-sweep`)
+- `docs/ops/TOKEN_AWARE_SCRIPTS_HUB.md` · `scripts/Resolve-MaestroRoot.ps1`
+- `.cursor/rules/session-mode-keywords.mdc` (`pmo-view`, `today-mode`, `eod-sync`)
 - `docs/ops/COMMIT_AND_PR.md`
-- `docs/plans/PLAN_LAB_OP_OBSERVABILITY_STACK.md`
+- [DataBoar/maestro](https://github.com/DataBoar/maestro)
