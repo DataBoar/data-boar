@@ -1,16 +1,23 @@
-"""Optional OpenTelemetry setup for FastAPI + SQLAlchemy (issue #1500 / #1529).
+"""Optional OpenTelemetry setup for FastAPI + SQLAlchemy + CLI (#1500 / #1529 / #1535).
 
 Opt-in only. When disabled or packages missing, this module is a no-op so
 ``python main.py`` never depends on OTel.
 
 Signals when enabled: traces, metrics, and **logs** (``LoggerProvider`` +
 stdlib ``logging`` bridge → OTLP → collector → Loki on the lab LGTM stack).
+
+CLI / oneshot (#1535): call ``maybe_setup_otel(app=None)`` early from ``main.py``;
+pass ``app`` later for FastAPI. Setup is idempotent. Short-lived processes
+register ``atexit`` force-flush so Batch exporters still ship.
 """
 
 from __future__ import annotations
 
+import atexit
 import logging
 import os
+from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import Any
 from urllib.parse import urlparse
 
@@ -20,9 +27,13 @@ _ENV_ENABLED = "DATA_BOAR_OTEL_ENABLED"
 _ENV_ENDPOINT = "OTEL_EXPORTER_OTLP_ENDPOINT"
 _DEFAULT_ENDPOINT = "http://127.0.0.1:4317"
 _LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
+_TRACER_NAME = "data-boar"
 
 # Root handler attached once per process when OTel logs are enabled (#1529).
 _otel_logging_handlers: list[logging.Handler] = []
+_otel_providers_ready = False
+_fastapi_instrumented = False
+_atexit_flush_registered = False
 
 
 def otel_enabled() -> bool:
@@ -77,14 +88,90 @@ def _emit_boar_fast_filter_status_log() -> None:
     )
 
 
-def maybe_setup_otel(app: Any | None = None) -> bool:
-    """Initialize OTel exporters + instrument FastAPI (and SQLAlchemy when available).
+def _force_flush_otel() -> None:
+    """Best-effort flush for short-lived CLI processes (#1535)."""
+    try:
+        from opentelemetry import metrics, trace
+        from opentelemetry._logs import get_logger_provider
 
-    Returns True if instrumentation was applied; False when skipped (default).
+        tp = trace.get_tracer_provider()
+        if hasattr(tp, "force_flush"):
+            tp.force_flush()
+        mp = metrics.get_meter_provider()
+        if hasattr(mp, "force_flush"):
+            mp.force_flush()
+        lp = get_logger_provider()
+        if hasattr(lp, "force_flush"):
+            lp.force_flush()
+    except Exception:  # noqa: BLE001 — never block process exit
+        pass
+
+
+def get_tracer() -> Any:
+    """Return tracer ``data-boar``, or a no-op object when OTel SDK is absent."""
+    try:
+        from opentelemetry import trace
+
+        return trace.get_tracer(_TRACER_NAME)
+    except Exception:  # noqa: BLE001
+
+        class _NoopSpan:
+            def __enter__(self) -> _NoopSpan:
+                return self
+
+            def __exit__(self, *args: object) -> None:
+                return None
+
+            def set_attribute(self, *_a: object, **_k: object) -> None:
+                return None
+
+        class _NoopTracer:
+            def start_as_current_span(self, *_a: object, **_k: object) -> _NoopSpan:
+                return _NoopSpan()
+
+        return _NoopTracer()
+
+
+@contextmanager
+def otel_span(name: str, **attributes: Any) -> Iterator[Any]:
+    """Context manager for a manual span; no-op when providers are not ready."""
+    if not _otel_providers_ready:
+        yield None
+        return
+    tracer = get_tracer()
+    with tracer.start_as_current_span(name) as span:
+        if span is not None:
+            for key, value in attributes.items():
+                if value is not None and hasattr(span, "set_attribute"):
+                    try:
+                        span.set_attribute(key, value)
+                    except Exception:  # noqa: BLE001
+                        pass
+        yield span
+
+
+def maybe_setup_otel(app: Any | None = None) -> bool:
+    """Initialize OTel exporters + optionally instrument FastAPI.
+
+    Returns True if providers are ready (or already were); False when skipped.
     Never raises into the caller for missing optional deps or setup failures.
+    Idempotent: a second call with ``app`` only attaches FastAPI instrumentation.
     """
+    global _otel_providers_ready, _fastapi_instrumented, _atexit_flush_registered
+
     if not otel_enabled():
         return False
+
+    if _otel_providers_ready:
+        if app is not None and not _fastapi_instrumented:
+            try:
+                from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
+                FastAPIInstrumentor.instrument_app(app)
+                _fastapi_instrumented = True
+            except Exception as exc:  # noqa: BLE001
+                logger.info("OTel FastAPI instrumentation skipped: %s", exc)
+        return True
 
     endpoint = otel_endpoint()
     try:
@@ -156,6 +243,7 @@ def maybe_setup_otel(app: Any | None = None) -> bool:
 
         if app is not None:
             FastAPIInstrumentor.instrument_app(app)
+            _fastapi_instrumented = True
 
         try:
             from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
@@ -163,6 +251,11 @@ def maybe_setup_otel(app: Any | None = None) -> bool:
             SQLAlchemyInstrumentor().instrument()
         except Exception as sqlalchemy_exc:  # noqa: BLE001 — optional path
             logger.info("OTel SQLAlchemy instrumentation skipped: %s", sqlalchemy_exc)
+
+        _otel_providers_ready = True
+        if not _atexit_flush_registered:
+            atexit.register(_force_flush_otel)
+            _atexit_flush_registered = True
 
         logger.info(
             "OpenTelemetry enabled (endpoint=%s, insecure=%s, signals=traces+metrics+logs). "

@@ -95,6 +95,20 @@ def _emit_runtime_trust_info(
         print(attention_line, file=sys.stderr)
 
 
+def _maybe_init_otel_for_cli() -> None:
+    """Opt-in OTel for CLI / oneshot / exports before FastAPI import (#1535).
+
+    Fail-soft: never block the CLI. Reuses ``maybe_setup_otel(app=None)``;
+    ``api.routes`` may call again with ``app`` (idempotent).
+    """
+    try:
+        from core.otel_setup import maybe_setup_otel
+
+        maybe_setup_otel(app=None)
+    except Exception:  # noqa: BLE001 — never block CLI
+        pass
+
+
 _ENV_FIELDS_TARGET = (
     "pass_from_env",
     "user_from_env",
@@ -1026,26 +1040,33 @@ def main() -> None:
 
     runtime_trust = get_runtime_trust_snapshot(config)
 
+    # #1535 — OTel opt-in for CLI / exports / demo scan (before api.routes import).
+    # Skipped for --version / --check-extras (those exit earlier). Out of scope
+    # for license-only / runtime-trust-only paths that never reach here with work.
+    _maybe_init_otel_for_cli()
+    from core.otel_setup import otel_span
+
     if args.export_dsar is not None:
         _emit_runtime_trust_info(runtime_trust, to_stdout=False, to_stderr=True)
         from core.dsar_export import build_dsar_payload
 
-        engine = AuditEngine(config, config_path=args.config)
-        try:
-            payload = build_dsar_payload(
-                engine.db_manager,
-                session_id=args.export_dsar,
-                include_samples=args.dsar_include_samples,
-            )
-            body = json.dumps(payload, indent=2, ensure_ascii=False) + "\n"
-            dest = args.dsar_output
-            if dest:
-                Path(dest).write_text(body, encoding="utf-8")
-                print(f"DSAR export written to {dest}", file=sys.stderr)
-            else:
-                sys.stdout.write(body)
-        finally:
-            engine.db_manager.dispose()
+        with otel_span("export.dsar", session_id=str(args.export_dsar)):
+            engine = AuditEngine(config, config_path=args.config)
+            try:
+                payload = build_dsar_payload(
+                    engine.db_manager,
+                    session_id=args.export_dsar,
+                    include_samples=args.dsar_include_samples,
+                )
+                body = json.dumps(payload, indent=2, ensure_ascii=False) + "\n"
+                dest = args.dsar_output
+                if dest:
+                    Path(dest).write_text(body, encoding="utf-8")
+                    print(f"DSAR export written to {dest}", file=sys.stderr)
+                else:
+                    sys.stdout.write(body)
+            finally:
+                engine.db_manager.dispose()
         return
 
     if args.export_remediation_manifest is not None:
@@ -1060,36 +1081,44 @@ def main() -> None:
             print(f"Licensing: {e}", file=sys.stderr)
             sys.exit(2)
 
-        engine = AuditEngine(config, config_path=args.config)
-        try:
+        with otel_span(
+            "export.remediation_manifest",
+            session_id=str(args.session_id),
+        ):
+            engine = AuditEngine(config, config_path=args.config)
             try:
-                payload = build_remediation_manifest(
-                    engine.db_manager,
-                    session_id=str(args.session_id),
-                    config=config,
-                )
-            except ValueError as e:
-                print(f"Error: {e}", file=sys.stderr)
-                sys.exit(1)
-            body = json.dumps(payload, indent=2, ensure_ascii=False) + "\n"
-            dest = Path(args.export_remediation_manifest)
-            try:
-                dest.parent.mkdir(parents=True, exist_ok=True)
-                dest.write_text(body, encoding="utf-8")
-            except OSError as e:
-                print(
-                    f"Error: cannot write remediation manifest to {dest}: {e}",
-                    file=sys.stderr,
-                )
-                sys.exit(1)
-            print(f"Remediation manifest written to {dest}", file=sys.stderr)
-        finally:
-            engine.db_manager.dispose()
+                try:
+                    payload = build_remediation_manifest(
+                        engine.db_manager,
+                        session_id=str(args.session_id),
+                        config=config,
+                    )
+                except ValueError as e:
+                    print(f"Error: {e}", file=sys.stderr)
+                    sys.exit(1)
+                body = json.dumps(payload, indent=2, ensure_ascii=False) + "\n"
+                dest = Path(args.export_remediation_manifest)
+                try:
+                    dest.parent.mkdir(parents=True, exist_ok=True)
+                    dest.write_text(body, encoding="utf-8")
+                except OSError as e:
+                    print(
+                        f"Error: cannot write remediation manifest to {dest}: {e}",
+                        file=sys.stderr,
+                    )
+                    sys.exit(1)
+                print(f"Remediation manifest written to {dest}", file=sys.stderr)
+            finally:
+                engine.db_manager.dispose()
         return
 
     if args.regenerate_report is not None:
         _emit_runtime_trust_info(runtime_trust, to_stdout=False, to_stderr=True)
-        _run_regenerate_report_cli(config, args.config, args.regenerate_report)
+        with otel_span(
+            "export.regenerate_report",
+            session_id=str(args.regenerate_report),
+        ):
+            _run_regenerate_report_cli(config, args.config, args.regenerate_report)
         return
 
     if args.export_audit_trail is not None:
@@ -1109,24 +1138,25 @@ def main() -> None:
             sys.exit(2)
         from core.audit_export import build_audit_trail_payload
 
-        engine = AuditEngine(config, config_path=args.config)
-        try:
-            sqlite_path = config.get("sqlite_path", "audit_results.db")
-            payload = build_audit_trail_payload(
-                engine.db_manager,
-                config=config,
-                config_path=args.config,
-                sqlite_path=sqlite_path,
-            )
-            body = json.dumps(payload, indent=2, ensure_ascii=False) + "\n"
-            dest = args.export_audit_trail
-            if dest in ("-", None):
-                sys.stdout.write(body)
-            else:
-                Path(dest).write_text(body, encoding="utf-8")
-                print(f"Audit trail exported to {dest}", file=sys.stderr)
-        finally:
-            engine.db_manager.dispose()
+        with otel_span("export.audit_trail"):
+            engine = AuditEngine(config, config_path=args.config)
+            try:
+                sqlite_path = config.get("sqlite_path", "audit_results.db")
+                payload = build_audit_trail_payload(
+                    engine.db_manager,
+                    config=config,
+                    config_path=args.config,
+                    sqlite_path=sqlite_path,
+                )
+                body = json.dumps(payload, indent=2, ensure_ascii=False) + "\n"
+                dest = args.export_audit_trail
+                if dest in ("-", None):
+                    sys.stdout.write(body)
+                else:
+                    Path(dest).write_text(body, encoding="utf-8")
+                    print(f"Audit trail exported to {dest}", file=sys.stderr)
+            finally:
+                engine.db_manager.dispose()
         return
 
     if args.web and not args.reset_data:
@@ -1139,22 +1169,23 @@ def main() -> None:
                 _emit_runtime_trust_info(runtime_trust, to_stdout=True, to_stderr=True)
                 tenant = sanitize_tenant_technician(args.tenant)
                 technician = sanitize_tenant_technician(args.technician)
-                session_id = engine.start_audit(
-                    tenant_name=tenant,
-                    technician_name=technician,
-                    jurisdiction_hint=bool(args.jurisdiction_hint),
-                )
-                print(f"[demo] Scan session: {session_id}")
-                report_path = engine.generate_final_reports(session_id)
-                if report_path:
-                    print(f"[demo] Report written: {report_path}")
-                else:
-                    print("[demo] No findings to report.")
-                from core.plugins.hook import maybe_run_remediation_hook
+                with otel_span("scan", mode="demo"):
+                    session_id = engine.start_audit(
+                        tenant_name=tenant,
+                        technician_name=technician,
+                        jurisdiction_hint=bool(args.jurisdiction_hint),
+                    )
+                    print(f"[demo] Scan session: {session_id}")
+                    report_path = engine.generate_final_reports(session_id)
+                    if report_path:
+                        print(f"[demo] Report written: {report_path}")
+                    else:
+                        print("[demo] No findings to report.")
+                    from core.plugins.hook import maybe_run_remediation_hook
 
-                maybe_run_remediation_hook(
-                    config, session_id, db_manager=engine.db_manager
-                )
+                    maybe_run_remediation_hook(
+                        config, session_id, db_manager=engine.db_manager
+                    )
             except KeyboardInterrupt:
                 _finish_session_interrupted_if_running(engine)
                 print("[demo] Scan interrupted.", file=sys.stderr)
@@ -1430,23 +1461,26 @@ def main() -> None:
     _install_scan_interrupt_signal_handlers()
     try:
         _emit_runtime_trust_info(runtime_trust, to_stdout=True, to_stderr=True)
-        session_id = engine.start_audit(
-            tenant_name=tenant,
-            technician_name=technician,
-            jurisdiction_hint=bool(args.jurisdiction_hint),
-        )
-        print(f"Scan session: {session_id}")
-        report_path = engine.generate_final_reports(session_id)
-        if report_path:
-            print(f"Report written: {report_path}")
-        else:
-            print("No findings to report.")
-        from core.plugins.hook import maybe_run_remediation_hook
+        with otel_span("scan", mode="oneshot"):
+            session_id = engine.start_audit(
+                tenant_name=tenant,
+                technician_name=technician,
+                jurisdiction_hint=bool(args.jurisdiction_hint),
+            )
+            print(f"Scan session: {session_id}")
+            report_path = engine.generate_final_reports(session_id)
+            if report_path:
+                print(f"Report written: {report_path}")
+            else:
+                print("No findings to report.")
+            from core.plugins.hook import maybe_run_remediation_hook
 
-        maybe_run_remediation_hook(config, session_id, db_manager=engine.db_manager)
-        from utils.notify import notify_scan_complete_background
+            maybe_run_remediation_hook(config, session_id, db_manager=engine.db_manager)
+            from utils.notify import notify_scan_complete_background
 
-        notify_scan_complete_background(engine.config, engine.db_manager, session_id)
+            notify_scan_complete_background(
+                engine.config, engine.db_manager, session_id
+            )
     except KeyboardInterrupt:
         _finish_session_interrupted_if_running(engine)
         print("Scan interrupted.", file=sys.stderr)
