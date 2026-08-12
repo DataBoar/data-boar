@@ -1,14 +1,14 @@
 # Maestro — OpenTelemetry preflight (trust before deep scan)
 
-<!-- plans-hub-summary: Checkable Maestro preflight for OTel wire-up: env gate, invocation mode wired|not-wired, OTLP endpoint present/parseable; redacted lessons suggest only. Product CLI coverage #1535; Maestro code lives in private repo. -->
+<!-- plans-hub-summary: Checkable Maestro preflight for OTel wire-up: env gate, invocation mode wired|not-wired, OTLP endpoint present/parseable; redacted lessons suggest only. Product CLI coverage #1535; impl destination DataBoar/maestro (maestro#32, blocked by #8). -->
 
-**Status:** Active (plan accepted — Maestro implementation TBD in private Maestro repo)
+**Status:** Active (plan accepted — implementation TBD in [DataBoar/maestro](https://github.com/DataBoar/maestro) via [maestro#32](https://github.com/DataBoar/maestro/issues/32))
 **Date:** 2026-08-12
 **Authors:** Fabio Leitao
 **Priority:** H2 / P2
 **Issue:** [#1540](https://github.com/DataBoar/data-boar/issues/1540)
 
-**Related:** Product emit [PLAN_DATABOAR_OTEL_INSTRUMENTATION.md](completed/PLAN_DATABOAR_OTEL_INSTRUMENTATION.md) · CLI / oneshot coverage [PLAN_OTEL_CLI_COVERAGE.md](completed/PLAN_OTEL_CLI_COVERAGE.md) ([#1535](https://github.com/DataBoar/data-boar/issues/1535) / **#1547**) · Lab receive [PLAN_LAB_OP_OBSERVABILITY_STACK.md](PLAN_LAB_OP_OBSERVABILITY_STACK.md)
+**Related:** Product emit [PLAN_DATABOAR_OTEL_INSTRUMENTATION.md](completed/PLAN_DATABOAR_OTEL_INSTRUMENTATION.md) · CLI / oneshot coverage [PLAN_OTEL_CLI_COVERAGE.md](completed/PLAN_OTEL_CLI_COVERAGE.md) ([#1535](https://github.com/DataBoar/data-boar/issues/1535) / **#1547**) · Lab receive [PLAN_LAB_OP_OBSERVABILITY_STACK.md](PLAN_LAB_OP_OBSERVABILITY_STACK.md) · Companion [maestro#32](https://github.com/DataBoar/maestro/issues/32) (blocked by [maestro#8](https://github.com/DataBoar/maestro/issues/8))
 
 ## Purpose
 
@@ -35,11 +35,14 @@ Before a Maestro deep / completão-style run, answer **“is this invocation ins
 
 ## Implementation locus
 
+These are **two different places** — do not collapse them into one path:
+
 | Layer | Where |
 | ----- | ----- |
 | This plan + hub | **data-boar** (this PR / issue AC) |
-| Preflight script / Maestro handler | **Private Maestro repo** / `scripts/maestro/*` — follow-up, not this PR |
-| Product emit | Already in `core/otel_setup.py` + `main.py` (#1500 / #1529 / #1535) |
+| Preflight / handler (**destination**) | **[DataBoar/maestro](https://github.com/DataBoar/maestro)** — `core/` / handlers (and related engine surfaces). Tracked as [maestro#32](https://github.com/DataBoar/maestro/issues/32) (companion of data-boar#1540); **blocked by [maestro#8](https://github.com/DataBoar/maestro/issues/8)** until spinout parity is real |
+| Legacy tree (**not the destination**) | **data-boar** `scripts/maestro/` — old in-tree copy that **should have been removed** after spinout; still present and **diverges** from DataBoar/maestro (see [maestro#8](https://github.com/DataBoar/maestro/issues/8)). Do **not** implement OTel preflight here |
+| Product emit | Already in data-boar `core/otel_setup.py` + `main.py` (#1500 / #1529 / #1535) |
 
 ## Non-goals
 
@@ -52,7 +55,7 @@ Before a Maestro deep / completão-style run, answer **“is this invocation ins
 
 - [x] This plan file with checkable table
 - [x] Entry in `PLANS_TODO.md` + `plans_hub_sync.py --write`
-- [ ] Maestro handler / script implementation (private repo follow-up)
-- [ ] Optional: link follow-up issue once Maestro work is filed
+- [x] Companion issue filed: [maestro#32](https://github.com/DataBoar/maestro/issues/32) (blocked by [maestro#8](https://github.com/DataBoar/maestro/issues/8))
+- [ ] Preflight implementation in **DataBoar/maestro** (not in data-boar `scripts/maestro/`) — after #8
 
-**Close policy:** Landing this plan satisfies the tracked-repo AC for #1540; Maestro code is a separate follow-up.
+**Close policy:** Landing this plan satisfies the tracked-repo AC for #1540; code lands in DataBoar/maestro per maestro#32.
