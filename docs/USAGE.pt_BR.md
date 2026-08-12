@@ -104,6 +104,10 @@ python main.py --config config.yaml --tenant "Acme Corp" --technician "Alice V."
 - `Scan session: <session_id>`
 - `Report written: <caminho_do_relatorio>`
 
+##### OpenTelemetry opcional (opt-in)
+
+Quando **`DATA_BOAR_OTEL_ENABLED`** for `1` / `true` / `yes` / `on` e o extra opcional **`[otel]`** estiver instalado (`uv sync --extra otel`), o Data Boar exporta traces, métricas e logs via OTLP (`OTEL_EXPORTER_OTLP_ENDPOINT`, padrão `http://127.0.0.1:4317`). O mesmo gate cobre **`--web`**, varredura única (CLI), scan do **`--demo`** e flags de export/regenerate (`--export-dsar`, `--export-remediation-manifest`, `--regenerate-report`, `--export-audit-trail`). **`--version`** e **`--check-extras`** permanecem sem instrumentação.
+
 #### Servidor API (`--web`)
 
 **Transporte:** é preciso usar **HTTPS** (certificado + chave PEM na CLI ou em `api` no config) ou **aceitar explicitamente** texto plano com **`--allow-insecure-http`** (ou `api.allow_insecure_http: true`). Caso contrário, `main.py --web` termina com código **2**. **`GET /status`** e **`GET /health`** incluem `dashboard_transport`, **`enterprise_surface`** (transporte + confiança da licença + postura global da chave de API; **RBAC** opcional por rota aparece em **`enterprise_surface.access_surface.rbac`** — **`enabled`** quando `api.rbac` está ligado e o tier permite **`dashboard_rbac`**, senão **`not_implemented`**) e os campos canônicos **`trust_state`** / **`trust_reasons`** / **`output_confidence`** (licença + integridade + transporte — opt-in HTTP nunca fica `trusted` limpo); em HTTP texto plano há **faixa de aviso** nas páginas do dashboard. **`GET /status`** também inclui **`detection_prefilter`** (prontidão do estágio de regex / acelerador: `active`, `name`, `backend`, `tier`, `reason`, `engine`) ao lado de **`runtime_trust`** — só observabilidade; não muda achados (#1411 / #1412).

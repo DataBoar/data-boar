@@ -1,4 +1,4 @@
-"""Regression for optional OpenTelemetry gate (#1500)."""
+"""Regression for optional OpenTelemetry gate (#1500 / #1529 / #1535)."""
 
 from __future__ import annotations
 
@@ -6,13 +6,33 @@ import os
 
 import pytest
 
+import core.otel_setup as otel_setup
 from core.otel_setup import (
+    get_tracer,
     maybe_setup_otel,
     otel_enabled,
     otel_endpoint,
+    otel_span,
     otlp_insecure_for_endpoint,
     sanitize_otlp_endpoint_for_log,
 )
+
+
+@pytest.fixture(autouse=True)
+def _reset_otel_module_state() -> None:
+    """Keep module-level OTel flags isolated across tests in this file."""
+    otel_setup._otel_providers_ready = False
+    otel_setup._fastapi_instrumented = False
+    # Leave logging handlers list alone if already attached (process-wide);
+    # clear so LoggingHandler can be re-asserted when packages are present.
+    root = __import__("logging").getLogger()
+    for handler in list(otel_setup._otel_logging_handlers):
+        try:
+            root.removeHandler(handler)
+        except Exception:  # noqa: BLE001
+            pass
+    otel_setup._otel_logging_handlers.clear()
+    yield
 
 
 def test_otel_disabled_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -75,6 +95,33 @@ def test_otel_enabled_call_does_not_raise(monkeypatch: pytest.MonkeyPatch) -> No
     monkeypatch.delenv("DATA_BOAR_OTEL_ENABLED", raising=False)
     assert maybe_setup_otel(app=None) is False
     assert os.environ.get("DATA_BOAR_OTEL_ENABLED") in (None, "")
+
+
+def test_otel_cli_early_setup_app_none_idempotent(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """#1535: early CLI call with app=None; second call stays True when packages present."""
+    monkeypatch.setenv("DATA_BOAR_OTEL_ENABLED", "1")
+    monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://127.0.0.1:4317")
+    first = maybe_setup_otel(app=None)
+    second = maybe_setup_otel(app=None)
+    assert first in {True, False}
+    assert second == first
+    if first:
+        assert otel_setup._otel_providers_ready is True
+
+
+def test_otel_span_noop_when_providers_not_ready(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Manual spans must not raise when OTel is off."""
+    monkeypatch.delenv("DATA_BOAR_OTEL_ENABLED", raising=False)
+    assert maybe_setup_otel(app=None) is False
+    with otel_span("scan", mode="oneshot") as span:
+        assert span is None
+    tracer = get_tracer()
+    with tracer.start_as_current_span("noop"):
+        pass
 
 
 def test_otel_logger_provider_and_stdlib_bridge(
