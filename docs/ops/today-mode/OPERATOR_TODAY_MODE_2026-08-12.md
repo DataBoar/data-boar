@@ -30,9 +30,9 @@
 
 | Band | Item | State | Next thin slice |
 | ---- | ---- | ----- | --------------- |
-| **Docs almost ready** | [#1542](https://github.com/DataBoar/data-boar/issues/1542) — refresh `PLAN_LAB_OP_OBSERVABILITY_STACK` Status + native receivers | In PR (docs branch) — Status + §1.1 receivers | Merge docs PR; closes lab↔plan gap |
+| **Docs almost ready** | [#1542](https://github.com/DataBoar/data-boar/issues/1542) — refresh `PLAN_LAB_OP_OBSERVABILITY_STACK` Status + native receivers | ✅ merged **#1545** | Status + §1.1 receivers on `main` |
 | **Docs drift** | [#1538](https://github.com/DataBoar/data-boar/issues/1538) — product tiers / open-core plan stale | OPEN · `no-code-yet` | Thin docs when band allows |
-| **Docs drift** | [#1541](https://github.com/DataBoar/data-boar/issues/1541) — `PLAN_NATIVE_PACKAGES` missing MSI/Homebrew/Windows-CI links | OPEN | Linkage-only PR |
+| **Docs drift** | [#1541](https://github.com/DataBoar/data-boar/issues/1541) — `PLAN_NATIVE_PACKAGES` missing MSI/Homebrew/Windows-CI links | In PR — Related + sibling table + ADR-0085 brew hedge | Merge docs/ADR PR |
 | **Product OTel gaps** | [#1529](https://github.com/DataBoar/data-boar/issues/1529) LoggerProvider → Loki | ✅ merged **#1544** | Evidence under `docs/ops/evidence/otel_1529_*` |
 | **Product OTel gaps** | [#1535](https://github.com/DataBoar/data-boar/issues/1535) OTel only on `--web`/`--demo` | OPEN | Design slice: oneshot CLI / exports visibility |
 | **Maestro / lab trust** | [#1540](https://github.com/DataBoar/data-boar/issues/1540) preflight that gate trusts wired OTel | OPEN | Verify, do not assume |

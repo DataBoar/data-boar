@@ -8,7 +8,7 @@
 **Priority:** H2 / P2
 **Issue:** [#1540](https://github.com/DataBoar/data-boar/issues/1540)
 
-**Related:** Product emit [PLAN_DATABOAR_OTEL_INSTRUMENTATION.md](completed/PLAN_DATABOAR_OTEL_INSTRUMENTATION.md) · CLI / oneshot coverage [#1535](https://github.com/DataBoar/data-boar/issues/1535) (plan + code in sibling PR) · Lab receive [PLAN_LAB_OP_OBSERVABILITY_STACK.md](PLAN_LAB_OP_OBSERVABILITY_STACK.md)
+**Related:** Product emit [PLAN_DATABOAR_OTEL_INSTRUMENTATION.md](completed/PLAN_DATABOAR_OTEL_INSTRUMENTATION.md) · CLI / oneshot coverage [PLAN_OTEL_CLI_COVERAGE.md](completed/PLAN_OTEL_CLI_COVERAGE.md) ([#1535](https://github.com/DataBoar/data-boar/issues/1535) / **#1547**) · Lab receive [PLAN_LAB_OP_OBSERVABILITY_STACK.md](PLAN_LAB_OP_OBSERVABILITY_STACK.md)
 
 ## Purpose
 

@@ -12,6 +12,7 @@ Proposed
 ### Status history
 
 - 2026-08-06 — Proposed (born Proposed per ADR-0045; records maintainer install-order convention from [#1467](https://github.com/DataBoar/data-boar/issues/1467) / [#1470](https://github.com/DataBoar/data-boar/issues/1470). Accepted only via HITL ratification per ADR-0056; Date (UTC) immutable; Status history append-only).
+- 2026-08-12 — Clarifying amendment (still Proposed): hedge `brew` in Decision §1.2 as **when published**, matching §1.1 macOS wording and [#1478](https://github.com/DataBoar/data-boar/issues/1478); cross-links [#1425](https://github.com/DataBoar/data-boar/issues/1425) / [#1427](https://github.com/DataBoar/data-boar/issues/1427). Plan hub: [PLAN_NATIVE_PACKAGES.md](../plans/PLAN_NATIVE_PACKAGES.md) ([#1541](https://github.com/DataBoar/data-boar/issues/1541)).
 
 ## Context
 
@@ -35,7 +36,7 @@ Product facts for agents already state Docker is optional and `pipx install data
       - Linux: deb / rpm (and apk / other families when published).
       - macOS: pkg / Homebrew cask (or formula) when published.
       - FreeBSD: native packages when published.
-   2. **Non-container fallbacks:** `pipx` → `pip` → `brew` (user-oriented install where it fits) → `git clone` + `uv sync` (dev/contributor checkout) → other managers only if needed.
+   2. **Non-container fallbacks:** `pipx` → `pip` → `brew` **(when a product formula/cask is published — none yet; see [#1425](https://github.com/DataBoar/data-boar/issues/1425) / [#1478](https://github.com/DataBoar/data-boar/issues/1478))** → `git clone` + `uv sync` (dev/contributor checkout) → other managers only if needed.
    3. **Virtualization / orchestration last** (documented for deploy/lab, not the default “start here”): Docker → Podman → Compose/Swarm → Kubernetes-class.
 
 2. **Platform presentation order in guides**
@@ -59,7 +60,7 @@ Product facts for agents already state Docker is optional and `pipx install data
 - Matches maintainer-confirmed convention (2026-08-06) on [#1467](https://github.com/DataBoar/data-boar/issues/1467) / [#1470](https://github.com/DataBoar/data-boar/issues/1470).
 - Separates **policy** (native-first when real) from **current truth** (pipx), preventing overclaim.
 - Keeps ADR 0084 commercial clause intact: embed / installer ≠ Enterprise entitlement ([#551](https://github.com/DataBoar/data-boar/issues/551)).
-- `brew` before `git+uv`: brew is a user-oriented install path; `git clone` + `uv sync` is a developer checkout.
+- `brew` before `git+uv` **once published**: brew is a user-oriented install path; until a formula/cask exists, agents must skip it (honesty rule / [#1478](https://github.com/DataBoar/data-boar/issues/1478)). `git clone` + `uv sync` remains the developer checkout.
 
 ## Consequences
 
@@ -85,6 +86,9 @@ Product facts for agents already state Docker is optional and `pipx install data
 ## References
 
 - [#1467](https://github.com/DataBoar/data-boar/issues/1467) — Windows MSI + winget (canonical packaging tracker).
+- [#1425](https://github.com/DataBoar/data-boar/issues/1425) — macOS Homebrew tap (planned; not published).
+- [#1427](https://github.com/DataBoar/data-boar/issues/1427) — Windows CI (`windows-latest`) blocker for MSI/winget.
+- [#1478](https://github.com/DataBoar/data-boar/issues/1478) — `brew` in §1.2 must stay hedged until published (fixed in this ADR).
 - [#1403](https://github.com/DataBoar/data-boar/issues/1403) / [#1437](https://github.com/DataBoar/data-boar/issues/1437) — nfpm Linux foundation + CI.
 - [#1470](https://github.com/DataBoar/data-boar/issues/1470) — docs/discoverability; install-order convention thread.
 - [#1474](https://github.com/DataBoar/data-boar/pull/1474) — Windows non-tech quickstart (**PR in progress**; consumer of this ladder; out of scope for this ADR file).
