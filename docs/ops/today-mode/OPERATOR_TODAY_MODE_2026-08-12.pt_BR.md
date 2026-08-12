@@ -30,9 +30,9 @@
 
 | Faixa | Item | Estado | Próxima fatia |
 | ----- | ---- | ------ | ------------- |
-| **Docs quase prontos** | [#1542](https://github.com/DataBoar/data-boar/issues/1542) — Status do `PLAN_LAB_OP_OBSERVABILITY_STACK` + receivers nativos | Em PR (branch docs) — Status + §1.1 | Merge do PR de docs; fecha gap lab↔plano |
+| **Docs quase prontos** | [#1542](https://github.com/DataBoar/data-boar/issues/1542) — Status do `PLAN_LAB_OP_OBSERVABILITY_STACK` + receivers nativos | ✅ merge **#1545** | Status + §1.1 no `main` |
 | **Drift docs** | [#1538](https://github.com/DataBoar/data-boar/issues/1538) tiers / open-core | OPEN | Docs fino |
-| **Drift docs** | [#1541](https://github.com/DataBoar/data-boar/issues/1541) links MSI/Homebrew/Windows-CI no plano de packaging | OPEN | PR só links |
+| **Drift docs** | [#1541](https://github.com/DataBoar/data-boar/issues/1541) links MSI/Homebrew/Windows-CI no plano de packaging | Em PR — Related + tabela irmã + hedge brew no ADR-0085 | Merge do PR docs/ADR |
 | **Gaps OTel produto** | [#1529](https://github.com/DataBoar/data-boar/issues/1529) LoggerProvider → Loki | ✅ merge **#1544** | Evidência em `docs/ops/evidence/otel_1529_*` |
 | **Gaps OTel produto** | [#1535](https://github.com/DataBoar/data-boar/issues/1535) OTel só em `--web`/`--demo` | OPEN | Design: oneshot CLI |
 | **Maestro / lab** | [#1540](https://github.com/DataBoar/data-boar/issues/1540) preflight OTel no gate | OPEN | Verificar, não assumir |
