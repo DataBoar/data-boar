@@ -52,7 +52,9 @@ When absent, Ref-fetch keeps the canonical default: `git@github.com:DataBoar/dat
 
 ```powershell
 # From repo root on the Linux orchestrator host (pwsh 7.6+)
-pwsh -NoProfile -File scripts/maestro/Maestro.ps1 -WhatIf   # if supported
+# Requires MAESTRO_ROOT or sibling ../maestro (DataBoar/maestro)
+pwsh -NoProfile -File "$env:MAESTRO_ROOT/core/Maestro.ps1" -WhatIf   # if supported
+$env:MAESTRO_ROOT = (Resolve-Path ../maestro).Path
 uv run pytest tests/test_maestro_scripts.py -q
 ```
 

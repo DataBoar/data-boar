@@ -298,7 +298,7 @@ The handlers are the boar's tusks: each one specialized for a specific substrate
 | [COMPLETAO_OPERATOR_PROMPT_LIBRARY.md](COMPLETAO_OPERATOR_PROMPT_LIBRARY.md) | Failure classification, follow-up blocks, pre-canned briefs |
 | [LAB_SMOKE_MULTI_HOST.md](LAB_SMOKE_MULTI_HOST.md) | Manual multi-host checklist (steps A–M) |
 | [LAB_LESSONS_LEARNED.md](LAB_LESSONS_LEARNED.md) | Rolling public hub for completão findings |
-| `scripts/maestro/` | All Maestro handler and orchestrator code |
+| [DataBoar/maestro](https://github.com/DataBoar/maestro) (`MAESTRO_ROOT` / sibling `../maestro`) | Canonical Maestro handler and orchestrator code (spinout; data-boar wrappers only) |
 | `scripts/lab-completao-host-smoke.sh` | Per-host smoke script (runs in tmux on lab hosts) |
 | `scripts/maestro-benchmark-ab.ps1` | A/B benchmark wrapper |
 | `docs/plans/PLAN_MAESTRO_BENCHMARK_METRICS_AND_FIX.md` | Bug fixes + full test matrix roadmap |

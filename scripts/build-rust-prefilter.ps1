@@ -15,8 +15,21 @@ if (-not (Test-Path -LiteralPath $manifestPath)) {
     throw "Rust manifest not found: $manifestPath"
 }
 
-. (Join-Path $PSScriptRoot "maestro/Lab-MaestroCommon.ps1")
-Initialize-MaestroLoginToolPath
+# PATH prelude (was Initialize-MaestroLoginToolPath in Lab-MaestroCommon; inlined so
+# rust builds do not require a sibling DataBoar/maestro clone - maestro#8 purge).
+$homeDir = if ($env:HOME) { $env:HOME } else { $env:USERPROFILE }
+if ($homeDir) {
+    $cargoEnv = Join-Path (Join-Path $homeDir ".cargo") "env"
+    if (Test-Path -LiteralPath $cargoEnv) { . $cargoEnv }
+    foreach ($dir in @(
+            (Join-Path (Join-Path $homeDir ".local") "bin"),
+            (Join-Path (Join-Path $homeDir ".cargo") "bin")
+        )) {
+        if (Test-Path -LiteralPath $dir) {
+            $env:PATH = "$dir$([IO.Path]::PathSeparator)$env:PATH"
+        }
+    }
+}
 
 Push-Location $repoRoot
 try {

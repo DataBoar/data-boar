@@ -110,21 +110,20 @@ $repoRoot = if ($ProjectRoot) {
     (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..")).Path
 }
 
-$maestro = Join-Path $repoRoot "scripts\maestro\Maestro.ps1"
-$getLabStatus = Join-Path $repoRoot "scripts\maestro\Get-LabStatus.ps1"
+. (Join-Path $PSScriptRoot "Resolve-MaestroRoot.ps1")
+try {
+    $maestroRoot = Resolve-MaestroRoot -ConsumerRoot $repoRoot
+    $maestro = Resolve-MaestroCoreScript -ScriptName "Maestro.ps1" -MaestroRoot $maestroRoot
+    $getLabStatus = Resolve-MaestroCoreScript -ScriptName "Get-LabStatus.ps1" -MaestroRoot $maestroRoot
+} catch {
+    Write-Error $_
+    exit 2
+}
+$env:DATA_BOAR_CONSUMER_ROOT = $repoRoot
 $inventoryPath = Join-Path $repoRoot "docs\private\homelab\data\inventory.json"
 $pyprojectPath = Join-Path $repoRoot "pyproject.toml"
 $tarTag = Get-VersionTagFromPyproject -PyprojectPath $pyprojectPath
 $tarPath = Join-Path $repoRoot ("data-boar-{0}.tar" -f $tarTag)
-
-if (-not (Test-Path -LiteralPath $maestro)) {
-    Write-Error "Maestro.ps1 not found: $maestro"
-    exit 2
-}
-if (-not (Test-Path -LiteralPath $getLabStatus)) {
-    Write-Error "Get-LabStatus.ps1 not found: $getLabStatus"
-    exit 2
-}
 if (-not (Test-Path -LiteralPath $inventoryPath)) {
     Write-Error "inventory.json not found: $inventoryPath"
     exit 2
