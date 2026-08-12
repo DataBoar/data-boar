@@ -22,10 +22,11 @@ Emit classical **RED** signals (request rate / errors / duration) and **distribu
 
 | Package | Role |
 | ------- | ---- |
-| `opentelemetry-api` / `opentelemetry-sdk` | Tracer + meter providers |
-| `opentelemetry-exporter-otlp` | OTLP gRPC/HTTP exporters |
+| `opentelemetry-api` / `opentelemetry-sdk` | Tracer + meter + **logger** providers |
+| `opentelemetry-exporter-otlp` | OTLP gRPC/HTTP exporters (traces / metrics / **logs**) |
 | `opentelemetry-instrumentation-fastapi` | HTTP RED + spans |
 | `opentelemetry-instrumentation-sqlalchemy` | DB spans when engines exist |
+| `opentelemetry-instrumentation-logging` | Stdlib ``logging`` → OTLP bridge (`LoggingHandler`) — [#1529](https://github.com/DataBoar/data-boar/issues/1529) |
 
 Install: `uv sync --extra otel` (or `pip install '.[otel]'`).
 
@@ -45,7 +46,8 @@ When disabled or packages missing: **no-op** (log warning if enabled-but-missing
 
 - Module: `core/otel_setup.py` (`maybe_setup_otel(app)`).
 - Wired after FastAPI app creation in `api/routes.py`.
-- Tests: `tests/test_otel_setup_1500.py` (default-off + endpoint override).
+- Tests: `tests/test_otel_setup_1500.py` (default-off + endpoint override + LoggerProvider bridge).
+- **Logs (#1529):** `LoggerProvider` + `OTLPLogExporter` + root `LoggingHandler` (same opt-in / fail-soft / loopback-insecure policy as traces/metrics). Emits a `boar_fast_filter status installed=…` line after setup so Loki can prove accelerator presence when enabled.
 
 ## Roll-out
 
@@ -59,3 +61,4 @@ When disabled or packages missing: **no-op** (log warning if enabled-but-missing
 - [x] Lab observability plan status refresh + hub / PLANS_TODO entry
 - [x] Opt-in wiring + `[otel]` extra
 - [x] E2E evidence — `docs/ops/evidence/otel_1500_smoke_2026-08-09.json` (setup_ok + OTLP HTTP `200` `partialSuccess` on local collector `:4318`)
+- [x] Logs bridge (#1529) — `docs/ops/evidence/otel_1529_loggerprovider_loki_2026-08-12.json` (stdlib → OTLP → collector → Loki `service_name=data-boar`)
