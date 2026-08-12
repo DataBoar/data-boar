@@ -295,7 +295,7 @@ Os Capos são as presas do javali: cada um especializado num substrato específi
 | [LAB_COMPLETAO_RUNBOOK.pt_BR.md](LAB_COMPLETAO_RUNBOOK.pt_BR.md) | Contrato do operador: o que é a completão, raio de explosão, acesso do assistente |
 | [LAB_COMPLETAO_FRESH_AGENT_BRIEF.pt_BR.md](LAB_COMPLETAO_FRESH_AGENT_BRIEF.pt_BR.md) | Prompts prontos para sessões de agente sem contexto |
 | [COMPLETAO_OPERATOR_PROMPT_LIBRARY.pt_BR.md](COMPLETAO_OPERATOR_PROMPT_LIBRARY.pt_BR.md) | Classificação de falhas, blocos de follow-up, briefs pré-prontos |
-| `scripts/maestro/` | Todo o código de handler e orquestrador do Maestro |
+| [DataBoar/maestro](https://github.com/DataBoar/maestro) (`MAESTRO_ROOT` / sibling `../maestro`) | Código canônico de handlers e orquestrador do Maestro (spinout; data-boar só wrappers) |
 | `scripts/lab-completao-host-smoke.sh` | Script de smoke por host (roda em tmux nos hosts do lab) |
 | `scripts/maestro-benchmark-ab.ps1` | Wrapper de benchmark A/B |
 | `docs/plans/PLAN_MAESTRO_BENCHMARK_METRICS_AND_FIX.md` | Correção de bugs + roadmap de matriz de testes completa |

@@ -45,11 +45,15 @@ $repoRoot = if ($ProjectRoot) {
     (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..")).Path
 }
 
-$maestroPath = Join-Path $repoRoot "scripts\maestro\Maestro.ps1"
-if (-not (Test-Path -LiteralPath $maestroPath)) {
-    Write-Error "Maestro.ps1 not found: $maestroPath"
+. (Join-Path $PSScriptRoot "Resolve-MaestroRoot.ps1")
+try {
+    $maestroRoot = Resolve-MaestroRoot -ConsumerRoot $repoRoot
+    $maestroPath = Resolve-MaestroCoreScript -ScriptName "Maestro.ps1" -MaestroRoot $maestroRoot
+} catch {
+    Write-Error $_
     exit 2
 }
+$env:DATA_BOAR_CONSUMER_ROOT = $repoRoot
 
 $privateReportsDir = Join-Path $repoRoot "docs\private\homelab\reports"
 if (-not (Test-Path -LiteralPath $privateReportsDir)) {

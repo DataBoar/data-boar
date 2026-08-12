@@ -1,8 +1,9 @@
 """
-CI guardrails for scripts/maestro (Maestro + handlers).
+CI guardrails for DataBoar/maestro orchestration (consumer-side).
 
-Parse-only PowerShell validation (same contract as tests/test_scripts.py) plus
-static anti-regressions for known handler bugs (GitHub issues #329/#330 family).
+After spinout (maestro#8), orchestration .ps1 lives in the sibling Maestro clone
+(MAESTRO_ROOT or ../maestro). Tests that need those files skip when the clone is
+absent (typical public CI). Wrapper/resolver contracts stay in this repo.
 """
 
 from __future__ import annotations
@@ -15,6 +16,8 @@ import subprocess
 import tempfile
 from pathlib import Path
 
+import pytest
+
 from tests.test_scripts import _parse_powershell_script, _project_root
 
 
@@ -26,24 +29,88 @@ def _find_pwsh() -> str | None:
     return None
 
 
-def _maestro_ps1_paths(root: Path) -> list[Path]:
-    base = root / "scripts" / "maestro"
-    if not base.is_dir():
-        return []
-    return sorted(base.rglob("*.ps1"))
+def _maestro_root(consumer: Path | None = None) -> Path | None:
+    """Resolve DataBoar/maestro checkout, or None if unavailable."""
+    env = (os.environ.get("MAESTRO_ROOT") or "").strip()
+    if env:
+        cand = Path(env)
+        if (cand / "core" / "Maestro.ps1").is_file():
+            return cand.resolve()
+    consumer = consumer or _project_root()
+    parent = consumer.parent
+    for name in ("maestro", "Maestro"):
+        cand = parent / name
+        if (cand / "core" / "Maestro.ps1").is_file():
+            return cand.resolve()
+    return None
+
+
+def _require_maestro() -> Path:
+    root = _maestro_root()
+    if root is None:
+        pytest.skip(
+            "DataBoar/maestro clone not found (set MAESTRO_ROOT or sibling ../maestro)"
+        )
+    return root
+
+
+def _maestro_ps1_paths(maestro: Path) -> list[Path]:
+    maestro = _require_maestro()
+    paths: list[Path] = []
+    for sub in ("core", "handlers", "engine"):
+        base = maestro / sub
+        if base.is_dir():
+            paths.extend(sorted(base.rglob("*.ps1")))
+    return paths
+
+
+def test_resolve_maestro_root_script_exists() -> None:
+    """Consumer stub that wrappers use after scripts/maestro/ purge."""
+    root = _project_root()
+    stub = root / "scripts" / "Resolve-MaestroRoot.ps1"
+    assert stub.is_file()
+    text = stub.read_text(encoding="utf-8", errors="replace")
+    assert "MAESTRO_ROOT" in text
+    assert "scripts/maestro" in text  # fail-closed message mentions removed path
+    assert "core/Maestro.ps1" in text
+
+
+def test_wrappers_do_not_hardcode_legacy_scripts_maestro() -> None:
+    """Token-aware wrappers must resolve Maestro via Resolve-MaestroRoot."""
+    root = _project_root()
+    for rel in (
+        "scripts/maestro-deep-rc-monitor-collect.ps1",
+        "scripts/maestro-benchmark-ab.ps1",
+        "scripts/lab-op-git-ensure-ref.ps1",
+    ):
+        text = (root / rel).read_text(encoding="utf-8", errors="replace")
+        assert "Resolve-MaestroRoot" in text, rel
+        assert "scripts\\maestro\\Maestro.ps1" not in text, rel
+        assert "scripts/maestro/Maestro-CanonicalGuard.ps1" not in text, rel
+
+
+def test_legacy_scripts_maestro_tree_removed() -> None:
+    """Spinout complete: vulnerable/diverged copy must not remain tracked."""
+    root = _project_root()
+    legacy = root / "scripts" / "maestro"
+    assert not legacy.exists(), (
+        "scripts/maestro/ must be removed — use DataBoar/maestro (maestro#8)"
+    )
 
 
 def test_all_maestro_powershell_scripts_parse(warm_pwsh) -> None:
-    """Every tracked .ps1 under scripts/maestro/ parses under pwsh/PowerShell Parser.
+    """Every tracked .ps1 under DataBoar/maestro core/handlers/engine parses.
 
     ``warm_pwsh`` (#860): session-scoped warm-up absorbs the pwsh cold-start
     once, so the per-file ParseFile timeout never flakes after a fresh boot.
+    Skips when the Maestro clone is not available (public CI).
     """
-    root = _project_root()
+    maestro = _require_maestro()
+    _project_root()
     failures: list[str] = []
-    for script in _maestro_ps1_paths(root):
-        if not _parse_powershell_script(script, root):
-            failures.append(str(script.relative_to(root)))
+    for script in _maestro_ps1_paths(maestro):
+        if not _parse_powershell_script(script, maestro):
+            failures.append(str(script))
     assert not failures, (
         "Maestro PowerShell parse failed (install pwsh on CI if empty list is wrong): "
         + ", ".join(failures)
@@ -51,13 +118,14 @@ def test_all_maestro_powershell_scripts_parse(warm_pwsh) -> None:
 
 
 def test_maestro_embeds_private_inventory_path() -> None:
-    """Maestro.ps1 keeps the private inventory contract (no PII in path text)."""
-    root = _project_root()
-    text = (root / "scripts" / "maestro" / "Maestro.ps1").read_text(
+    """Maestro keeps the private inventory contract (no PII in path text)."""
+    maestro = _require_maestro()
+    text = (maestro / "core" / "Maestro.ps1").read_text(
         encoding="utf-8", errors="replace"
     )
-    assert "docs/private/homelab/data/inventory.json" in text
-    assert "Handle-$persona.ps1" in text or "Handle-$persona" in text
+    # Path may be built via MaestroPaths helper; contract is still the private relative path.
+    assert "inventory.json" in text or "Get-MaestroInventoryPath" in text
+    assert "Handle-$persona" in text
 
 
 def test_benchmark_rc_config_exists_for_deep_mode() -> None:
@@ -69,35 +137,38 @@ def test_benchmark_rc_config_exists_for_deep_mode() -> None:
 
 def test_target_cifs_handler_exists() -> None:
     """Inventory persona target_cifs must have a dedicated handler."""
-    root = _project_root()
-    handler = root / "scripts" / "maestro" / "handlers" / "Handle-target_cifs.ps1"
+    _project_root()
+    maestro = _require_maestro()
+    handler = maestro / "handlers" / "Handle-target_cifs.ps1"
     assert handler.is_file(), "Missing handler for persona target_cifs"
 
 
 def test_db_target_handlers_exist() -> None:
     """Inventory DB personas must have dedicated handlers."""
-    root = _project_root()
+    _project_root()
+    maestro = _require_maestro()
     for name in (
         "Handle-target_mariadb.ps1",
         "Handle-target_postgres.ps1",
         "Handle-target_mongodb.ps1",
     ):
-        handler = root / "scripts" / "maestro" / "handlers" / name
+        handler = maestro / "handlers" / name
         assert handler.is_file(), f"Missing handler for persona {name}"
 
 
 def test_db_target_handlers_use_compose_contract() -> None:
     """DB target handlers should use compose services from deploy/lab-smoke-stack."""
-    root = _project_root()
-    mariadb = (
-        root / "scripts" / "maestro" / "handlers" / "Handle-target_mariadb.ps1"
-    ).read_text(encoding="utf-8", errors="replace")
-    postgres = (
-        root / "scripts" / "maestro" / "handlers" / "Handle-target_postgres.ps1"
-    ).read_text(encoding="utf-8", errors="replace")
-    mongo = (
-        root / "scripts" / "maestro" / "handlers" / "Handle-target_mongodb.ps1"
-    ).read_text(encoding="utf-8", errors="replace")
+    _project_root()
+    maestro = _require_maestro()
+    mariadb = (maestro / "handlers" / "Handle-target_mariadb.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    postgres = (maestro / "handlers" / "Handle-target_postgres.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    mongo = (maestro / "handlers" / "Handle-target_mongodb.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
     assert "lab-mariadb" in mariadb
     assert "lab-postgres" in postgres
     assert "docker-compose.mongo.yml" in mongo
@@ -144,8 +215,9 @@ def test_db_target_handlers_use_compose_contract() -> None:
 
 def test_confirm_target_db_synthetic_data_contract() -> None:
     """#1021 R9c/R11: post-READY oracle; R11 splits seed_empty vs confirm_unreachable."""
-    root = _project_root()
-    common = (root / "scripts" / "maestro" / "Lab-MaestroCommon.ps1").read_text(
+    _project_root()
+    maestro = _require_maestro()
+    common = (maestro / "core" / "Lab-MaestroCommon.ps1").read_text(
         encoding="utf-8", errors="replace"
     )
     assert "function Confirm-TargetDbSyntheticData" in common
@@ -166,13 +238,14 @@ def test_confirm_target_db_synthetic_data_contract() -> None:
 
 def test_db_handlers_stage_init_for_podman() -> None:
     """#1021 R11: podman bind-mount uses staged a+rX init, not 660 repo files."""
-    root = _project_root()
+    _project_root()
+    maestro = _require_maestro()
     for name, token in (
         ("Handle-target_postgres.ps1", "PG_INIT"),
         ("Handle-target_mariadb.ps1", "MY_INIT"),
         ("Handle-target_mongodb.ps1", "MONGO_INIT"),
     ):
-        text = (root / "scripts" / "maestro" / "handlers" / name).read_text(
+        text = (maestro / "handlers" / name).read_text(
             encoding="utf-8", errors="replace"
         )
         assert "__DB_INIT_STAGE__" in text or "stage_lab_db_init" in text
@@ -182,8 +255,9 @@ def test_db_handlers_stage_init_for_podman() -> None:
 
 def test_maestro_deep_gate_detach_tmux() -> None:
     """#1021 R11/R12/R12.1: re-Deep harness tmux detach + idempotent compare + row guard."""
-    root = _project_root()
-    text = (root / "scripts" / "maestro" / "Maestro-Deep-5Host-Gate.ps1").read_text(
+    _project_root()
+    maestro = _require_maestro()
+    text = (maestro / "engine" / "Maestro-Deep-5Host-Gate.ps1").read_text(
         encoding="utf-8", errors="replace"
     )
     assert "[switch]$Detach" in text or "[switch]`$Detach" in text
@@ -205,8 +279,9 @@ def test_maestro_deep_gate_detach_tmux() -> None:
 
 def test_handle_web_health_contract() -> None:
     """Anti-regression: web persona targets API port 8088 and GET /health (not legacy 8080 /api/status)."""
-    root = _project_root()
-    text = (root / "scripts" / "maestro" / "handlers" / "Handle-web.ps1").read_text(
+    _project_root()
+    maestro = _require_maestro()
+    text = (maestro / "handlers" / "Handle-web.ps1").read_text(
         encoding="utf-8", errors="replace"
     )
     assert '-Name "web_port" -DefaultValue 8088' in text
@@ -228,8 +303,9 @@ def test_handle_web_health_contract() -> None:
 
 def test_maestro_dispatch_orders_container_before_web() -> None:
     """Container personas must execute before web checks for readiness coherence."""
-    root = _project_root()
-    text = (root / "scripts" / "maestro" / "Maestro.ps1").read_text(
+    _project_root()
+    maestro = _require_maestro()
+    text = (maestro / "core" / "Maestro.ps1").read_text(
         encoding="utf-8", errors="replace"
     )
     assert "$orderedPersonas" in text
@@ -240,8 +316,9 @@ def test_maestro_dispatch_orders_container_before_web() -> None:
 
 def test_sync_working_tree_uses_explicit_sync_result() -> None:
     """Sync flow should rely on syncOk, avoiding false success from unrelated ssh exit codes."""
-    root = _project_root()
-    text = (root / "scripts" / "maestro" / "Sync-WorkingTree.ps1").read_text(
+    _project_root()
+    maestro = _require_maestro()
+    text = (maestro / "core" / "Sync-WorkingTree.ps1").read_text(
         encoding="utf-8", errors="replace"
     )
     assert "$syncOk = $false" in text
@@ -269,8 +346,9 @@ def test_gitignore_ignores_maestro_ephemeral_tar_bundles() -> None:
 
 def test_maestro_skips_handlers_when_sync_fails() -> None:
     """Maestro must not run handlers after a failed mandatory sync."""
-    root = _project_root()
-    text = (root / "scripts" / "maestro" / "Maestro.ps1").read_text(
+    _project_root()
+    maestro = _require_maestro()
+    text = (maestro / "core" / "Maestro.ps1").read_text(
         encoding="utf-8", errors="replace"
     )
     assert '$syncOk = [bool](& "$PSScriptRoot/Sync-WorkingTree.ps1"' in text
@@ -280,9 +358,10 @@ def test_maestro_skips_handlers_when_sync_fails() -> None:
 
 def test_container_handlers_define_modo_texto_for_payload() -> None:
     """Anti-regression #329: docker/podman/swarm must define $modoTexto before $payload uses it."""
-    root = _project_root()
+    _project_root()
+    maestro = _require_maestro()
     for name in ("Handle-docker.ps1", "Handle-podman.ps1", "Handle-dockerswarm.ps1"):
-        path = root / "scripts" / "maestro" / "handlers" / name
+        path = maestro / "handlers" / name
         body = path.read_text(encoding="utf-8", errors="replace")
         assert "$modoTexto" in body, (
             f"{name} must define $modoTexto for Deep smoke labelling"
@@ -300,10 +379,11 @@ def test_container_handlers_define_modo_texto_for_payload() -> None:
 
 def test_handle_microk8s_fallback_tmux_sends_expanded_payload() -> None:
     """Anti-regression: fallback branch must not escape $payload into a literal for tmux."""
-    root = _project_root()
-    text = (
-        root / "scripts" / "maestro" / "handlers" / "Handle-microk8s.ps1"
-    ).read_text(encoding="utf-8", errors="replace")
+    _project_root()
+    maestro = _require_maestro()
+    text = (maestro / "handlers" / "Handle-microk8s.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
     assert "`$payload" not in text, (
         "Do not escape $payload in tmux send-keys; remote shell must see the real command"
     )
@@ -321,8 +401,9 @@ def test_maestro_deep_rc_monitor_collect_wrapper_parse(warm_pwsh) -> None:
 
 def test_maestro_collect_exit_semantics_warn_without_hard_fail() -> None:
     """Collect mode tracks warnings but keeps hard-fail exit reserved for critical cases."""
-    root = _project_root()
-    text = (root / "scripts" / "maestro" / "Maestro.ps1").read_text(
+    _project_root()
+    maestro = _require_maestro()
+    text = (maestro / "core" / "Maestro.ps1").read_text(
         encoding="utf-8", errors="replace"
     )
     assert "$warningCount = 0" in text
@@ -335,8 +416,9 @@ def test_maestro_collect_exit_semantics_warn_without_hard_fail() -> None:
 
 def test_maestro_benchmark_context_is_opt_in_and_forwarded() -> None:
     """Maestro exposes benchmark context flags and forwards them to handlers."""
-    root = _project_root()
-    text = (root / "scripts" / "maestro" / "Maestro.ps1").read_text(
+    _project_root()
+    maestro = _require_maestro()
+    text = (maestro / "core" / "Maestro.ps1").read_text(
         encoding="utf-8", errors="replace"
     )
     assert "[string]$BenchTrack" in text
@@ -353,7 +435,8 @@ def test_maestro_benchmark_context_is_opt_in_and_forwarded() -> None:
 
 def test_container_handlers_forward_benchmark_flags_to_host_smoke() -> None:
     """Container-oriented handlers pass bench track/run id and compare flags to smoke script."""
-    root = _project_root()
+    _project_root()
+    maestro = _require_maestro()
     for name in (
         "Handle-baremetal.ps1",
         "Handle-docker.ps1",
@@ -362,7 +445,7 @@ def test_container_handlers_forward_benchmark_flags_to_host_smoke() -> None:
         "Handle-lxd.ps1",
         "Handle-microk8s.ps1",
     ):
-        body = (root / "scripts" / "maestro" / "handlers" / name).read_text(
+        body = (maestro / "handlers" / name).read_text(
             encoding="utf-8", errors="replace"
         )
         assert "[string]$BenchTrack" in body, f"{name}: missing BenchTrack param"
@@ -392,8 +475,9 @@ def test_wrapper_has_optional_web_readiness_gate() -> None:
 
 def test_build_container_artefact_has_container_engine_fallback_policy() -> None:
     """Build script should rebuild when docker/podman is up and fallback to tar when both are down."""
-    root = _project_root()
-    text = (root / "scripts" / "maestro" / "Build-ContainerArtefact.ps1").read_text(
+    _project_root()
+    maestro = _require_maestro()
+    text = (maestro / "core" / "Build-ContainerArtefact.ps1").read_text(
         encoding="utf-8", errors="replace"
     )
     assert "Test-ContainerEngineReady" in text
@@ -418,9 +502,10 @@ def test_wrapper_docker_precheck_accepts_tar_fallback() -> None:
 
 def test_container_handlers_enable_lab_stack_up_in_deep_mode() -> None:
     """Deep container personas pass --lab-stack-up into host smoke payload."""
-    root = _project_root()
+    _project_root()
+    maestro = _require_maestro()
     for name in ("Handle-docker.ps1", "Handle-podman.ps1", "Handle-dockerswarm.ps1"):
-        body = (root / "scripts" / "maestro" / "handlers" / name).read_text(
+        body = (maestro / "handlers" / name).read_text(
             encoding="utf-8", errors="replace"
         )
         assert "$stackArg" in body, f"{name} should define $stackArg"
@@ -505,8 +590,9 @@ def test_invoke_api_post_status_uses_numeric_status_not_locale_string() -> None:
     'redirect' in the message text is unreliable.  The fix reads
     $_.Exception.Response.StatusCode (an integer) instead.
     """
-    root = _project_root()
-    text = (root / "scripts" / "maestro" / "Handle-LicensingMatrix.ps1").read_text(
+    _project_root()
+    maestro = _require_maestro()
+    text = (maestro / "handlers" / "Handle-LicensingMatrix.ps1").read_text(
         encoding="utf-8", errors="replace"
     )
     assert "[Rr]edirect" not in text, (
@@ -525,8 +611,9 @@ def test_stop_matrix_api_process_is_cross_platform() -> None:
     """Anti-regression #820: Stop-MatrixApiProcess must not use Windows-only taskkill
     or unconditional Get-NetTCPConnection; cross-platform kill and port poll required.
     """
-    root = _project_root()
-    text = (root / "scripts" / "maestro" / "Handle-LicensingMatrix.ps1").read_text(
+    _project_root()
+    maestro = _require_maestro()
+    text = (maestro / "handlers" / "Handle-LicensingMatrix.ps1").read_text(
         encoding="utf-8", errors="replace"
     )
     assert "& taskkill" not in text, (
@@ -570,8 +657,9 @@ def test_start_matrix_api_process_guards_window_style_linux() -> None:
     Hidden — it does NOT silently ignore the parameter as an older comment claimed.
     The fix conditionally adds WindowStyle only on Windows via a splatted hashtable.
     """
-    root = _project_root()
-    text = (root / "scripts" / "maestro" / "Handle-LicensingMatrix.ps1").read_text(
+    _project_root()
+    maestro = _require_maestro()
+    text = (maestro / "handlers" / "Handle-LicensingMatrix.ps1").read_text(
         encoding="utf-8", errors="replace"
     )
     # -WindowStyle must either be absent or guarded by $IsWindows
@@ -593,8 +681,9 @@ def test_start_matrix_api_process_propagates_spawn_failure() -> None:
     Previously Start-Process exceptions were unhandled, causing the function to return null
     and the caller to silently continue (masking spawn failures as exit 0).
     """
-    root = _project_root()
-    text = (root / "scripts" / "maestro" / "Handle-LicensingMatrix.ps1").read_text(
+    _project_root()
+    maestro = _require_maestro()
+    text = (maestro / "handlers" / "Handle-LicensingMatrix.ps1").read_text(
         encoding="utf-8", errors="replace"
     )
     # Must have try/catch guarding Start-Process
@@ -624,7 +713,9 @@ _SMOKE_HANDLER_PERSONAS = [
 
 
 def _handler_text(root: Path, persona: str) -> str:
-    path = root / "scripts" / "maestro" / "handlers" / f"Handle-{persona}.ps1"
+    maestro = _require_maestro()
+    maestro = _maestro_root(root) or _require_maestro()
+    path = maestro / "handlers" / f"Handle-{persona}.ps1"
     return path.read_text(encoding="utf-8", errors="replace")
 
 
@@ -703,10 +794,10 @@ def test_smoke_handlers_write_sentinel_file() -> None:
 
 def test_wait_handler_sentinel_exists_and_parses(warm_pwsh) -> None:
     """Anti-regression #831: Wait-HandlerSentinel.ps1 must exist and parse cleanly."""
-    root = _project_root()
-    sentinel_script = root / "scripts" / "maestro" / "Wait-HandlerSentinel.ps1"
+    maestro = _require_maestro()
+    sentinel_script = maestro / "core" / "Wait-HandlerSentinel.ps1"
     assert sentinel_script.exists(), (
-        "scripts/maestro/Wait-HandlerSentinel.ps1 must exist to generalize "
+        "DataBoar/maestro core/Wait-HandlerSentinel.ps1 must exist to generalize "
         "the baremetal sentinel pattern to all handler personas (#831)"
     )
     text = sentinel_script.read_text(encoding="utf-8", errors="replace")
@@ -724,8 +815,9 @@ def test_build_container_artefact_degrades_without_hub() -> None:
     tar (never assume Docker Hub), and emit an actionable error when no engine and
     no cached artefact are available.
     """
-    root = _project_root()
-    text = (root / "scripts" / "maestro" / "Build-ContainerArtefact.ps1").read_text(
+    _project_root()
+    maestro = _require_maestro()
+    text = (maestro / "core" / "Build-ContainerArtefact.ps1").read_text(
         encoding="utf-8", errors="replace"
     )
     assert "podman" in text and "docker" in text, (
@@ -756,8 +848,9 @@ def test_sync_container_artefact_scp_fallback_is_actionable() -> None:
     and surface failures (missing artefact / scp failure) as actionable errors
     instead of silently swallowing them.
     """
-    root = _project_root()
-    text = (root / "scripts" / "maestro" / "Sync-ContainerArtefact.ps1").read_text(
+    _project_root()
+    maestro = _require_maestro()
+    text = (maestro / "core" / "Sync-ContainerArtefact.ps1").read_text(
         encoding="utf-8", errors="replace"
     )
     assert "scp " in text, (
@@ -784,8 +877,9 @@ def test_handle_web_reconciles_exit_code_after_recovery() -> None:
     and the final post-fallback failure path must also exit non-zero (no silent
     fall-through to exit 0).
     """
-    root = _project_root()
-    text = (root / "scripts" / "maestro" / "handlers" / "Handle-web.ps1").read_text(
+    _project_root()
+    maestro = _require_maestro()
+    text = (maestro / "handlers" / "Handle-web.ps1").read_text(
         encoding="utf-8", errors="replace"
     )
     # Ground-truth signal is captured (remote loopback curl result).
@@ -817,34 +911,53 @@ def _run_maestro_build_decision(pwsh: str, personas: list[str], tmp: Path) -> bo
     Lab-free (#950): the Get-LabStatus stub returns SSH=DOWN, so the node dispatch
     loop is a no-op (no SSH, no sync, no handlers). Only the top-level container-build
     decision and the final report run. The Build stub writes a marker we can observe.
+
+    Copies core scripts into a temp layout that mirrors the Maestro clone (core/).
     """
-    root = _project_root()
-    maestro_src = root / "scripts" / "maestro" / "Maestro.ps1"
-    mdir = tmp / "scripts" / "maestro"
+    maestro = _require_maestro()
+    maestro_src = maestro / "core" / "Maestro.ps1"
+    mdir = tmp / "core"
     mdir.mkdir(parents=True)
+    (tmp / "handlers").mkdir(parents=True, exist_ok=True)
     data_dir = tmp / "docs" / "private" / "homelab" / "data"
     data_dir.mkdir(parents=True)
 
     shutil.copyfile(maestro_src, mdir / "Maestro.ps1")
+    shutil.copyfile(maestro / "core" / "MaestroPaths.ps1", mdir / "MaestroPaths.ps1")
     marker = mdir / "build_invoked.marker"
     (mdir / "Build-ContainerArtefact.ps1").write_text(
         'Set-Content -LiteralPath "$PSScriptRoot/build_invoked.marker" -Value built\n',
         encoding="utf-8",
     )
     (mdir / "Get-LabStatus.ps1").write_text(
-        "param($TargetHost, $TargetUser)\n"
+        "param($TargetHost, $TargetUser, $RunMarker)\n"
         "[pscustomobject]@{ SSH = 'DOWN'; Tmux = ''; Node = $null; Host = $TargetHost }\n",
+        encoding="utf-8",
+    )
+    (mdir / "Lab-MaestroCommon.ps1").write_text(
+        "function Reset-LabOpStatus { param($Node, $RunMarker) }\n"
+        "function Invoke-LabopGateReadiness { param($Node, [switch]$Deep) return $true }\n",
         encoding="utf-8",
     )
     inv = {"lab_members": [{"hostname": "h1", "user": "u", "personas": personas}]}
     (data_dir / "inventory.json").write_text(json.dumps(inv), encoding="utf-8")
 
     proc = subprocess.run(
-        [pwsh, "-NoProfile", "-NonInteractive", "-File", str(mdir / "Maestro.ps1")],
+        [
+            pwsh,
+            "-NoProfile",
+            "-NonInteractive",
+            "-File",
+            str(mdir / "Maestro.ps1"),
+            "-ConsumerRoot",
+            str(tmp),
+        ],
         cwd=str(tmp),
         capture_output=True,
         text=True,
         timeout=120,
+        env={**os.environ, "DATA_BOAR_CONSUMER_ROOT": str(tmp)},
+        check=False,
     )
     assert proc.returncode == 0, (
         f"Maestro.ps1 exited {proc.returncode}\nSTDOUT:\n{proc.stdout}\nSTDERR:\n{proc.stderr}"
@@ -903,10 +1016,11 @@ _TMUX_SMOKE_HANDLERS = [
 
 def test_handlers_no_shared_completao_cc_clobber() -> None:
     """#955: multi-persona nodes must not C-c the shared 'completao' session."""
-    root = _project_root()
+    _project_root()
+    maestro = _require_maestro()
     hits: list[str] = []
     for name in _TMUX_SMOKE_HANDLERS:
-        text = (root / "scripts" / "maestro" / "handlers" / name).read_text(
+        text = (maestro / "handlers" / name).read_text(
             encoding="utf-8", errors="replace"
         )
         if "send-keys -t completao C-c" in text:
@@ -916,9 +1030,10 @@ def test_handlers_no_shared_completao_cc_clobber() -> None:
 
 def test_handlers_use_per_persona_tmux_helper() -> None:
     """#955: handlers dot-source Lab-MaestroCommon and inject via Invoke-HandlerTmuxPayload."""
-    root = _project_root()
+    _project_root()
+    maestro = _require_maestro()
     for name in _TMUX_SMOKE_HANDLERS:
-        text = (root / "scripts" / "maestro" / "handlers" / name).read_text(
+        text = (maestro / "handlers" / name).read_text(
             encoding="utf-8", errors="replace"
         )
         assert "Lab-MaestroCommon.ps1" in text, (
@@ -931,12 +1046,13 @@ def test_handlers_use_per_persona_tmux_helper() -> None:
 
 def test_target_nfs_cifs_use_priv_env_bash_ensure() -> None:
     """#954/#1021 R8: ensure uses .labop-gate context + canonical bash (no env-prefix on priv argv)."""
-    root = _project_root()
-    common = (root / "scripts" / "maestro" / "Lab-MaestroCommon.ps1").read_text(
+    _project_root()
+    maestro = _require_maestro()
+    common = (maestro / "core" / "Lab-MaestroCommon.ps1").read_text(
         encoding="utf-8", errors="replace"
     )
     for name in ("Handle-target_nfs.ps1", "Handle-target_cifs.ps1"):
-        text = (root / "scripts" / "maestro" / "handlers" / name).read_text(
+        text = (maestro / "handlers" / name).read_text(
             encoding="utf-8", errors="replace"
         )
         assert "Build-EnsureRemoteCommand" in text
@@ -962,8 +1078,9 @@ def test_nfs_smb_ensure_read_labop_gate_context() -> None:
 
 def test_maestro_gate_invoke_canonical_bash_no_env_prefix() -> None:
     """#1021 R8: Invoke-LabopGateReadiness uses .labop-gate + canonical bash, not env bash."""
-    root = _project_root()
-    common = (root / "scripts" / "maestro" / "Lab-MaestroCommon.ps1").read_text(
+    _project_root()
+    maestro = _require_maestro()
+    common = (maestro / "core" / "Lab-MaestroCommon.ps1").read_text(
         encoding="utf-8", errors="replace"
     )
     assert "Get-LabCanonicalBashProbe" in common
@@ -973,8 +1090,9 @@ def test_maestro_gate_invoke_canonical_bash_no_env_prefix() -> None:
 
 def test_handle_web_post_fallback_retry_backoff() -> None:
     """#1021 R8: web handler retries localhost curl + external health after fallback start."""
-    root = _project_root()
-    text = (root / "scripts" / "maestro" / "handlers" / "Handle-web.ps1").read_text(
+    _project_root()
+    maestro = _require_maestro()
+    text = (maestro / "handlers" / "Handle-web.ps1").read_text(
         encoding="utf-8", errors="replace"
     )
     assert "web_check_post_fallback_retries" in text
@@ -984,10 +1102,11 @@ def test_handle_web_post_fallback_retry_backoff() -> None:
 
 def test_target_nfs_deep_apply_fail_is_real_fail() -> None:
     """#954/#949: Deep ensure --apply hard failure (exit 1) must exit non-zero; exit 3 = graceful."""
-    root = _project_root()
-    text = (
-        root / "scripts" / "maestro" / "handlers" / "Handle-target_nfs.ps1"
-    ).read_text(encoding="utf-8", errors="replace")
+    _project_root()
+    maestro = _require_maestro()
+    text = (maestro / "handlers" / "Handle-target_nfs.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
     assert "elseif ($Deep)" in text
     assert "[REAL FAIL] NFS ensure --apply" in text
     assert "elseif ($ensureExit -eq 3)" in text
@@ -1014,10 +1133,11 @@ def test_nfs_smb_ensure_graceful_alarm_exit_3() -> None:
 
 
 def test_target_cifs_graceful_alarm_on_exit_3() -> None:
-    root = _project_root()
-    text = (
-        root / "scripts" / "maestro" / "handlers" / "Handle-target_cifs.ps1"
-    ).read_text(encoding="utf-8", errors="replace")
+    _project_root()
+    maestro = _require_maestro()
+    text = (maestro / "handlers" / "Handle-target_cifs.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
     assert "elseif ($ensureExit -eq 3)" in text
     assert "exit 3" in text
     assert "Get-EnsureAlarmFromOutput" in text
@@ -1025,39 +1145,42 @@ def test_target_cifs_graceful_alarm_on_exit_3() -> None:
 
 def test_maestro_handler_exit_3_alarm_tally() -> None:
     """#1021 R9b: exit 3 = ALARM tally; exit 1 = REAL FAIL; summary ALARM:N."""
-    root = _project_root()
-    common = (root / "scripts" / "maestro" / "Lab-MaestroCommon.ps1").read_text(
+    _project_root()
+    maestro = _require_maestro()
+    common = (maestro / "core" / "Lab-MaestroCommon.ps1").read_text(
         encoding="utf-8", errors="replace"
     )
-    maestro = (root / "scripts" / "maestro" / "Maestro.ps1").read_text(
+    maestro_ps1 = (maestro / "core" / "Maestro.ps1").read_text(
         encoding="utf-8", errors="replace"
     )
-    deep = (root / "scripts" / "maestro" / "Maestro-Deep-5Host-Gate.ps1").read_text(
+    deep = (maestro / "engine" / "Maestro-Deep-5Host-Gate.ps1").read_text(
         encoding="utf-8", errors="replace"
     )
     assert "Add-MaestroHandlerExitTally" in common
     assert "Format-MaestroHandlersSummary" in common
     assert 'return "ALARM:$HandlerAlarms"' in common
-    assert "$handlerAlarmCount" in maestro
-    assert "$LASTEXITCODE -eq 3" in maestro
+    assert "$handlerAlarmCount" in maestro_ps1
+    assert "$LASTEXITCODE -eq 3" in maestro_ps1
     assert "Add-MaestroHandlerExitTally" in deep
     assert "Format-MaestroHandlersSummary" in deep
 
 
 def test_target_cifs_skips_server_ensure_on_maestro_orchestrator() -> None:
     """#1021: maestro orchestrator is CIFS client-only; no LABOP_SMB_SERVER grant needed."""
-    root = _project_root()
-    text = (
-        root / "scripts" / "maestro" / "handlers" / "Handle-target_cifs.ps1"
-    ).read_text(encoding="utf-8", errors="replace")
+    _project_root()
+    maestro = _require_maestro()
+    text = (maestro / "handlers" / "Handle-target_cifs.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
     assert "maestro" in text
     assert "Skip server ensure on maestro orchestrator" in text
 
 
 def test_collect_artifacts_uses_repo_log_path() -> None:
     """#956/#968: post-flight collect pulls from <repo>/log/; Join-Path; REAL FAIL if empty."""
-    root = _project_root()
-    text = (root / "scripts" / "maestro" / "Collect-Artifacts.ps1").read_text(
+    _project_root()
+    maestro = _require_maestro()
+    text = (maestro / "core" / "Collect-Artifacts.ps1").read_text(
         encoding="utf-8", errors="replace"
     )
     assert "/log/*.log" in text
@@ -1072,8 +1195,9 @@ def test_collect_artifacts_uses_repo_log_path() -> None:
 
 def test_sync_working_tree_tar_fallback_on_rsync_failure() -> None:
     """#969: rsync failure triggers scp+tar then tar|ssh fallback with same exclude set."""
-    root = _project_root()
-    text = (root / "scripts" / "maestro" / "Sync-WorkingTree.ps1").read_text(
+    _project_root()
+    maestro = _require_maestro()
+    text = (maestro / "core" / "Sync-WorkingTree.ps1").read_text(
         encoding="utf-8", errors="replace"
     )
     assert "Invoke-SyncScpTarFallback" in text
@@ -1088,10 +1212,11 @@ def test_sync_working_tree_tar_fallback_on_rsync_failure() -> None:
 def test_maestro_canonical_guard_fail_closed() -> None:
     """#948: canonical/maestro nodes skip WorkingTree overwrite; ephemeral under /tmp/databoar_bench."""
     root = _project_root()
-    guard = (root / "scripts" / "maestro" / "Maestro-CanonicalGuard.ps1").read_text(
+    maestro = _require_maestro()
+    guard = (maestro / "core" / "Maestro-CanonicalGuard.ps1").read_text(
         encoding="utf-8", errors="replace"
     )
-    sync = (root / "scripts" / "maestro" / "Sync-WorkingTree.ps1").read_text(
+    sync = (maestro / "core" / "Sync-WorkingTree.ps1").read_text(
         encoding="utf-8", errors="replace"
     )
     ensure = (root / "scripts" / "lab-op-git-ensure-ref.ps1").read_text(
@@ -1109,29 +1234,31 @@ def test_maestro_canonical_guard_fail_closed() -> None:
 
 def test_maestro_resets_labop_status_each_turn() -> None:
     """#969: per-host ~/.labop-status reset at turn start; refresh after handlers."""
-    root = _project_root()
-    maestro = (root / "scripts" / "maestro" / "Maestro.ps1").read_text(
+    _project_root()
+    maestro = _require_maestro()
+    maestro_ps1 = (maestro / "core" / "Maestro.ps1").read_text(
         encoding="utf-8", errors="replace"
     )
-    common = (root / "scripts" / "maestro" / "Lab-MaestroCommon.ps1").read_text(
+    common = (maestro / "core" / "Lab-MaestroCommon.ps1").read_text(
         encoding="utf-8", errors="replace"
     )
-    status = (root / "scripts" / "maestro" / "Get-LabStatus.ps1").read_text(
+    status = (maestro / "core" / "Get-LabStatus.ps1").read_text(
         encoding="utf-8", errors="replace"
     )
     assert "Reset-LabOpStatus" in common
     assert "NOT_RUN maestro=" in common
-    assert "MaestroRunMarker" in maestro
-    assert "Reset-LabOpStatus -Node" in maestro
-    assert "-RunMarker $script:MaestroRunMarker" in maestro
+    assert "MaestroRunMarker" in maestro_ps1
+    assert "Reset-LabOpStatus -Node" in maestro_ps1
+    assert "-RunMarker $script:MaestroRunMarker" in maestro_ps1
     assert "STALE (" in status
     assert '"NOT_RUN"' in status
 
 
 def test_maestro_calls_wait_handler_sentinel_for_real_results() -> None:
     """#949: Maestro polls Wait-HandlerSentinel after dispatch (real pass/fail, not inject-only)."""
-    root = _project_root()
-    text = (root / "scripts" / "maestro" / "Maestro.ps1").read_text(
+    _project_root()
+    maestro = _require_maestro()
+    text = (maestro / "core" / "Maestro.ps1").read_text(
         encoding="utf-8", errors="replace"
     )
     assert "Wait-HandlerSentinel.ps1" in text
@@ -1142,8 +1269,9 @@ def test_maestro_calls_wait_handler_sentinel_for_real_results() -> None:
 
 def test_wait_handler_sentinel_supports_only_hosts_filter() -> None:
     """#949: limit polling to hosts that ran this Maestro turn."""
-    root = _project_root()
-    text = (root / "scripts" / "maestro" / "Wait-HandlerSentinel.ps1").read_text(
+    _project_root()
+    maestro = _require_maestro()
+    text = (maestro / "core" / "Wait-HandlerSentinel.ps1").read_text(
         encoding="utf-8", errors="replace"
     )
     assert "OnlyHosts" in text
@@ -1314,20 +1442,21 @@ def test_labop_fw_guard_subnet_file_and_reversible_sshguard() -> None:
 
 def test_maestro_invokes_gate_readiness_before_handlers() -> None:
     """#960: Maestro runs Invoke-LabopGateReadiness after sync, before handlers."""
-    root = _project_root()
-    maestro = (root / "scripts" / "maestro" / "Maestro.ps1").read_text(
+    _project_root()
+    maestro = _require_maestro()
+    maestro_ps1 = (maestro / "core" / "Maestro.ps1").read_text(
         encoding="utf-8", errors="replace"
     )
-    common = (root / "scripts" / "maestro" / "Lab-MaestroCommon.ps1").read_text(
+    common = (maestro / "core" / "Lab-MaestroCommon.ps1").read_text(
         encoding="utf-8", errors="replace"
     )
     assert "Invoke-LabopGateReadiness" in common
     assert "labop-gate-readiness.sh" in common
-    assert "Invoke-LabopGateReadiness -Node" in maestro
+    assert "Invoke-LabopGateReadiness -Node" in maestro_ps1
     assert "[ALARM] Gate readiness" in common
-    sync_idx = maestro.index("Sync-WorkingTree.ps1")
-    gate_idx = maestro.index("Invoke-LabopGateReadiness")
-    handler_idx = maestro.index("foreach ($persona in $orderedPersonas)")
+    sync_idx = maestro_ps1.index("Sync-WorkingTree.ps1")
+    gate_idx = maestro_ps1.index("Invoke-LabopGateReadiness")
+    handler_idx = maestro_ps1.index("foreach ($persona in $orderedPersonas)")
     assert sync_idx < gate_idx < handler_idx
 
 
@@ -1348,13 +1477,14 @@ def test_check_all_login_env_cargo_bootstrap() -> None:
 def test_maestro_handlers_login_env_parity_1003() -> None:
     """#1003: Handle-* and tmux payloads bootstrap login PATH before uv/cargo/maturin."""
     root = _project_root()
-    common = (root / "scripts" / "maestro" / "Lab-MaestroCommon.ps1").read_text(
+    maestro = _require_maestro()
+    common = (maestro / "core" / "Lab-MaestroCommon.ps1").read_text(
         encoding="utf-8", errors="replace"
     )
-    licensing = (root / "scripts" / "maestro" / "Handle-LicensingMatrix.ps1").read_text(
+    licensing = (maestro / "handlers" / "Handle-LicensingMatrix.ps1").read_text(
         encoding="utf-8", errors="replace"
     )
-    web = (root / "scripts" / "maestro" / "handlers" / "Handle-web.ps1").read_text(
+    web = (maestro / "handlers" / "Handle-web.ps1").read_text(
         encoding="utf-8", errors="replace"
     )
     rust_ps1 = (root / "scripts" / "build-rust-prefilter.ps1").read_text(
@@ -1368,9 +1498,9 @@ def test_maestro_handlers_login_env_parity_1003() -> None:
         "& uv run python"
     )
     assert ".local/bin" in web and "bash -lc" in web
-    assert rust_ps1.index("Initialize-MaestroLoginToolPath") < rust_ps1.index(
-        "uv run maturin"
-    )
+    # Consumer rust build inlines PATH (no Lab-MaestroCommon) after maestro#8 purge.
+    assert ".cargo" in rust_ps1 and ".local" in rust_ps1
+    assert rust_ps1.index(".cargo") < rust_ps1.index("uv run maturin")
 
 
 def _run_fw_guard_subnet_check(
@@ -1462,18 +1592,18 @@ def test_labop_gate_readiness_validates_rfc1918_on_write() -> None:
 
 def test_sync_working_tree_canonical_guard_dot_source() -> None:
     """#1022: Sync-WorkingTree dots Maestro-CanonicalGuard from PSScriptRoot."""
-    root = _project_root()
-    text = (root / "scripts" / "maestro/Sync-WorkingTree.ps1").read_text(
+    maestro = _require_maestro()
+    text = (maestro / "core" / "Sync-WorkingTree.ps1").read_text(
         encoding="utf-8", errors="replace"
     )
-    assert "$PSScriptRoot/Maestro-CanonicalGuard.ps1" in text
+    assert "Maestro-CanonicalGuard.ps1" in text
     assert "maestro/maestro/Maestro-CanonicalGuard" not in text
 
 
 def test_lab_maestro_common_remote_repo_path_expands_tilde() -> None:
     """#1022: SSH gate cd uses $HOME instead of literal ~."""
-    root = _project_root()
-    text = (root / "scripts/maestro/Lab-MaestroCommon.ps1").read_text(
+    maestro = _require_maestro()
+    text = (maestro / "core" / "Lab-MaestroCommon.ps1").read_text(
         encoding="utf-8", errors="replace"
     )
     assert "function Get-MaestroRemoteRepoPath" in text

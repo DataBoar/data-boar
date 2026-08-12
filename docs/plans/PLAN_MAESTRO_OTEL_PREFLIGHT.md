@@ -38,7 +38,7 @@ Before a Maestro deep / completão-style run, answer **“is this invocation ins
 | Layer | Where |
 | ----- | ----- |
 | This plan + hub | **data-boar** (this PR / issue AC) |
-| Preflight script / Maestro handler | **Private Maestro repo** / `scripts/maestro/*` — follow-up, not this PR |
+| Preflight script / Maestro handler | **[DataBoar/maestro](https://github.com/DataBoar/maestro)** ([#32](https://github.com/DataBoar/maestro/issues/32)) — follow-up, not this PR |
 | Product emit | Already in `core/otel_setup.py` + `main.py` (#1500 / #1529 / #1535) |
 
 ## Non-goals

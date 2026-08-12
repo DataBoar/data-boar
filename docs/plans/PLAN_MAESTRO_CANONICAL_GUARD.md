@@ -23,8 +23,8 @@ Encode in code (not agent runtime judgment) that the **orchestrator / canonical 
 
 | Location | Behaviour |
 | -------- | --------- |
-| `scripts/maestro/Maestro-CanonicalGuard.ps1` | Shared predicates |
-| `scripts/maestro/Sync-WorkingTree.ps1` | Guard **before** rsync; ephemeral path |
+| DataBoar/maestro `core/Maestro-CanonicalGuard.ps1` | Shared predicates |
+| DataBoar/maestro `core/Sync-WorkingTree.ps1` | Guard **before** rsync; ephemeral path |
 | `scripts/lab-op-git-ensure-ref.ps1` | Skip `Reset` on protected `repoPaths` |
 | `docs/private/.../inventory.json` | `protect_canonical` on regent host (private git) |
 

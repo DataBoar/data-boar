@@ -12,12 +12,29 @@ Regression tests for critical/high severity issues so they are not reintroduced:
 - Config endpoint: when require_api_key is true, /config requires valid API key (no raw secret exposure).
 """
 
+import os
 import sqlite3
 import tempfile
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 
 import pytest
+
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+
+
+def _resolve_maestro_root() -> Path | None:
+    """DataBoar/maestro clone after spinout (maestro#8); never scripts/maestro/."""
+    env = (os.environ.get("MAESTRO_ROOT") or "").strip()
+    candidates: list[Path] = []
+    if env:
+        candidates.append(Path(env))
+    parent = _REPO_ROOT.parent
+    candidates.extend([parent / "maestro", parent / "Maestro"])
+    for root in candidates:
+        if (root / "core" / "Maestro.ps1").is_file():
+            return root.resolve()
+    return None
 
 
 # --- SQL injection: identifier escaping (sql_connector pattern) ---
@@ -716,11 +733,14 @@ def test_sync_working_tree_excludes_dotenv_from_rsync() -> None:
     Without these excludes, rsync could exfiltrate operator secrets (API keys, passwords)
     stored in .env files to remote lab-op hosts during sync.
     """
-    from pathlib import Path
-
-    sync_text = (
-        Path(__file__).parent.parent / "scripts" / "maestro" / "Sync-WorkingTree.ps1"
-    ).read_text(encoding="utf-8", errors="replace")
+    maestro = _resolve_maestro_root()
+    if maestro is None:
+        pytest.skip(
+            "DataBoar/maestro clone not found (set MAESTRO_ROOT or sibling ../maestro)"
+        )
+    sync_text = (maestro / "core" / "Sync-WorkingTree.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
     assert "--exclude='.env'" in sync_text or "--exclude=.env" in sync_text, (
         "Sync-WorkingTree.ps1 rsync command must exclude '.env' files to prevent "
         "secret exfiltration to lab-op hosts (#825 finding-3)"
@@ -775,11 +795,14 @@ def test_maestro_aggregates_real_failures_in_exit() -> None:
     Previously Maestro always exited 0 even when handlers returned non-zero exit codes,
     masking genuine failures. Offline-skips and Safe-Hold are excluded from the failure count.
     """
-    from pathlib import Path
-
-    maestro_text = (
-        Path(__file__).parent.parent / "scripts" / "maestro" / "Maestro.ps1"
-    ).read_text(encoding="utf-8", errors="replace")
+    maestro = _resolve_maestro_root()
+    if maestro is None:
+        pytest.skip(
+            "DataBoar/maestro clone not found (set MAESTRO_ROOT or sibling ../maestro)"
+        )
+    maestro_text = (maestro / "core" / "Maestro.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
     assert "realFailCount" in maestro_text, (
         "Maestro.ps1 must track real handler failures in $realFailCount (#825 finding-5)"
     )
