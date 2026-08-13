@@ -109,6 +109,8 @@ Os títulos na tabela abaixo ficam em **inglês** (canônicos, iguais ao [README
 | 0086 | [Contrato language-neutral do Plugin SDK (L1/L2/L3)](ADR-0086-plugin-sdk-language-neutral-contract.md) | Proposto |
 | 0087 | [Malha bidirecional zero-trust do Plugin SDK](ADR-0087-plugin-sdk-bidirectional-zero-trust-mesh.md) | Proposto |
 
+| 0088 | [Verifique o verificador: checagens de integridade/autorização não podem depender do artefato que verificam](ADR-0088-verify-the-verifier-no-self-referential-trust-chain.md) | Proposto |
+
 ## Docs relacionados
 
 | Doc | Notas |
@@ -134,3 +136,4 @@ O **data-boar** é a regência UMADR **canônica** ([ADR 0000](ADR-0000-project-
 4. Usar nomes com **quatro dígitos** e corpos de ADR **somente em inglês**.
 
 Acompanhamento: GitHub [#994](https://github.com/DataBoar/data-boar/issues/994).
+
