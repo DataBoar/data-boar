@@ -5,6 +5,33 @@ from typing import Any
 
 from core.webauthn_rp.settings import resolve_token_secret, webauthn_block
 
+# Effective listen host from ``main.py --web`` (``--host`` / resolved bind).
+# Request handlers cannot see uvicorn's bind; without this, CLI ``--host 0.0.0.0``
+# while ``api.host`` stays loopback would incorrectly allow key-free bootstrap.
+_effective_api_listen_host: str | None = None
+
+
+def set_effective_api_listen_host(host: str | None) -> None:
+    """Record the process listen bind for WebAuthn bootstrap (#1553)."""
+    global _effective_api_listen_host
+    value = (host or "").strip()
+    _effective_api_listen_host = value or None
+
+
+def get_effective_api_listen_host(
+    config: dict[str, Any],
+    *,
+    cli_host: str | None = None,
+) -> str:
+    """
+    Bind address used for bootstrap trust.
+
+    Prefer the host recorded at ``--web`` startup; else ``resolve_api_host``.
+    """
+    if _effective_api_listen_host:
+        return _effective_api_listen_host
+    return resolve_api_host(config, cli_host=cli_host)
+
 
 def is_loopback_client_host(host: str | None) -> bool:
     """
@@ -25,24 +52,54 @@ def is_loopback_client_host(host: str | None) -> bool:
     return h in ("127.0.0.1", "::1", "localhost")
 
 
+def http_host_header_hostname(host_header: str | None) -> str | None:
+    """
+    Hostname from an HTTP ``Host`` header (port stripped).
+
+    Handles ``127.0.0.1:8088`` and ``[::1]:8088``. Empty → ``None``.
+    """
+    if not host_header:
+        return None
+    h = host_header.strip().lower()
+    if not h:
+        return None
+    if h.startswith("["):
+        end = h.find("]")
+        if end == -1:
+            return None
+        return h[1:end] or None
+    # Bare IPv6 without brackets rarely appears in Host; split on last ":" for port.
+    if h.count(":") == 1:
+        return h.split(":", 1)[0] or None
+    return h
+
+
 def allows_key_free_webauthn_bootstrap(
     peer_host: str | None,
     config: dict[str, Any],
     *,
     cli_host: str | None = None,
+    http_host: str | None = None,
 ) -> bool:
     """
     True when first-passkey registration may proceed without an API key.
 
-    Requires a loopback TCP peer **and** a loopback-only API bind
-    (``resolve_api_host`` + ``api_bind_exposes_non_loopback``). When the
-    process listens beyond loopback (``0.0.0.0``, LAN IP, …), a loopback
-    peer alone is not trusted — local reverse proxies / same-host upstreams
-    often present every client as ``127.0.0.1`` (#1553 security review).
+    Requires:
+    - loopback TCP peer,
+    - loopback-only **effective** API listen bind (startup ``--host`` / recorded
+      listen host, else ``resolve_api_host``),
+    - loopback HTTP ``Host`` hostname when provided (public Host via reverse
+      proxy denies key-free even without ``X-Forwarded-*``).
+
+    When the process listens beyond loopback, a loopback peer alone is not
+    trusted (#1553 security review).
     """
     if not is_loopback_client_host(peer_host):
         return False
-    bind = resolve_api_host(config, cli_host=cli_host)
+    # Missing or public Host denies key-free (reverse proxy often keeps public Host).
+    if not is_loopback_client_host(http_host_header_hostname(http_host)):
+        return False
+    bind = get_effective_api_listen_host(config, cli_host=cli_host)
     if api_bind_exposes_non_loopback(bind):
         return False
     return True

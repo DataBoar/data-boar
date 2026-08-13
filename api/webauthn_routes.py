@@ -93,18 +93,19 @@ def _enforce_first_passkey_registration_auth(request: Request) -> None:
     Gate first-passkey registration against network hijack (#1553).
 
     No-op when a credential already exists (caller still returns 403 for options).
-    Key-free bootstrap is allowed only for a loopback TCP peer when the API bind
-    is loopback-only and the request does not carry reverse-proxy client headers.
-    Otherwise require a configured, matching API key (``X-API-Key`` or Bearer).
+    Key-free bootstrap requires loopback TCP peer, loopback-only **effective**
+    listen bind (including CLI ``--host``), loopback HTTP ``Host``, and no
+    reverse-proxy client headers. Otherwise require API key.
     """
     dbm = _get_engine().db_manager
     if dbm.webauthn_credential_count() > 0:
         return
     cfg = _get_config()
     peer = request.client.host if request.client else None
-    if allows_key_free_webauthn_bootstrap(peer, cfg) and not (
-        request_has_forwarded_client_headers(request.headers)
-    ):
+    http_host = request.headers.get("host")
+    if allows_key_free_webauthn_bootstrap(
+        peer, cfg, http_host=http_host
+    ) and not request_has_forwarded_client_headers(request.headers):
         return
     api_cfg = cfg.get("api") or {}
     if not isinstance(api_cfg, dict):
@@ -113,10 +114,11 @@ def _enforce_first_passkey_registration_auth(request: Request) -> None:
         raise HTTPException(
             status_code=503,
             detail=(
-                "First passkey registration requires an API key unless the API "
-                "bind is loopback-only and the TCP peer is loopback (no reverse-"
-                "proxy client headers). Set api.api_key or api.api_key_from_env, "
-                "then retry with X-API-Key (or Authorization: Bearer). (#1553)"
+                "First passkey registration requires an API key unless the "
+                "effective API bind is loopback-only, the TCP peer and HTTP "
+                "Host are loopback, and there are no reverse-proxy client "
+                "headers. Set api.api_key or api.api_key_from_env, then retry "
+                "with X-API-Key (or Authorization: Bearer). (#1553)"
             ),
         )
     expected = (api_cfg.get("api_key") or "").strip()
@@ -126,8 +128,7 @@ def _enforce_first_passkey_registration_auth(request: Request) -> None:
             status_code=401,
             detail=(
                 "Missing or invalid API key for first passkey registration "
-                "(non-loopback bind, non-loopback peer, or proxied request). "
-                "(#1553)"
+                "(non-loopback bind/peer/Host, or proxied request). (#1553)"
             ),
         )
 

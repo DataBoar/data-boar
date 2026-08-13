@@ -47,9 +47,15 @@ scan:
     routes._config_path = str(cfg)
     routes._config = None
     routes._audit_engine = None
-    # Loopback peer: first-passkey bootstrap (#1553) allows registration without API key.
-    client = TestClient(routes.app, client=("127.0.0.1", 50000))
+    from core.host_resolution import set_effective_api_listen_host
+
+    set_effective_api_listen_host("127.0.0.1")
+    # Loopback peer + Host: first-passkey bootstrap (#1553) allows registration without API key.
+    client = TestClient(
+        routes.app, base_url="http://127.0.0.1", client=("127.0.0.1", 50000)
+    )
     yield client, routes
+    set_effective_api_listen_host(None)
     routes._config_path = prev_path
     routes._config = prev_cfg
     routes._audit_engine = prev_eng
