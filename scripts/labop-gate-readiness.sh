@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # scripts/labop-gate-readiness.sh
 # Per-node Maestro pre-flight readiness (#960): ALARM (--check) / REMEDIATE (--apply).
-# Parses: lines "GR check=<name> status=<OK|ALARM|REMEDIATE> ..."
+# Parses: lines "GR check=<name> status=<OK|ALARM|REMEDIATE|WARN> ..."
 #
 # Usage:
 #   bash labop-gate-readiness.sh --check --personas baremetal,target_nfs,web
@@ -71,13 +71,20 @@ _ensure_login_path() {
 
 _ensure_login_path
 
-# Narrow sudoers/doas grants match a literal bash path (#1021 ROUND 5/6).
-# Prefer /usr/bin/bash and /bin/bash (grant-canonical) before command -v bash,
-# which may resolve to /usr/sbin/bash via secure_path and miss the grant (#1021 R6 RCA).
+# Narrow sudoers/doas grants match a literal bash path (#1021 ROUND 5/6, maestro#6).
+# Prefer canonical /usr/bin/bash|/bin/bash via readlink -f (usrmerge: same inode,
+# different path-string misses grant-match). Cover BOTH paths in sudoers templates.
 _resolve_bash_bin() {
   local candidate resolved
   for candidate in /usr/bin/bash /bin/bash; do
     if [[ -x "$candidate" ]]; then
+      resolved="$(readlink -f "$candidate" 2>/dev/null || printf '%s' "$candidate")"
+      case "$resolved" in
+        /usr/bin/bash|/bin/bash)
+          printf '%s' "$resolved"
+          return 0
+          ;;
+      esac
       printf '%s' "$candidate"
       return 0
     fi
@@ -116,6 +123,8 @@ fi
 
 # shellcheck source=labop-rfc1918-cidr-lib.sh
 . "$SCRIPT_DIR/labop-rfc1918-cidr-lib.sh"
+# shellcheck source=labop-sudoers-load-order-lib.sh
+. "$SCRIPT_DIR/labop-sudoers-load-order-lib.sh"
 
 _is_rfc1918_lab_subnet() {
   labop_is_rfc1918_cidr "$1"
@@ -303,7 +312,22 @@ if [[ -n "$LABOP_BASH_BIN" ]]; then
     FAIL=1
   else
     _gr privilege OK "$PRIV" "${_PRIV_DETAIL:-}"
+    # maestro#6: sudo -l can list NOPASSWD while a later %wheel forces a password on RUN.
+    if [[ "${_PRIV_DETAIL:-}" == "sudo_l" ]]; then
+      echo "[GateReadiness] WARN: privilege detail=sudo_l — sudo -l is not proof; test RUN (sudo -n) and sudoers.d load-order" >&2
+    fi
   fi
+fi
+
+# --- sudoers.d load-order (maestro#6): WARN only — last rule wins vs %wheel ---
+if command -v sudo >/dev/null 2>&1; then
+  while IFS= read -r _sudoers_gr_line; do
+    [[ -n "$_sudoers_gr_line" ]] || continue
+    printf '%s\n' "$_sudoers_gr_line"
+    if [[ "$_sudoers_gr_line" == *'status=WARN'* ]]; then
+      echo "[GateReadiness] WARN: sudoers.d load-order — narrow Maestro grant loads BEFORE generic %wheel/%sudo; rename grant to z-* so it wins (last-match). Lesson: test RUN, not sudo -l." >&2
+    fi
+  done < <(labop_sudoers_emit_gate_lines "$HOST" /etc/sudoers.d)
 fi
 
 # --- Per-persona binaries ---

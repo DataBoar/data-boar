@@ -30,6 +30,13 @@ Describe 'labop-gate-readiness privilege probe (#1022)' {
         $raw | Should -Match 'no_narrow_grant'
         $raw | Should -Match '_FW_GUARD_PROBE_DONE'
     }
+
+    It 'wires sudoers.d load-order WARN preflight (maestro#6)' {
+        $raw = Get-ScriptRaw 'scripts/labop-gate-readiness.sh'
+        $raw | Should -Match 'labop-sudoers-load-order-lib\.sh'
+        $raw | Should -Match 'labop_sudoers_emit_gate_lines'
+        $raw | Should -Match 'readlink -f'
+    }
 }
 
 Describe 'Maestro login-env parity (#1003)' {
