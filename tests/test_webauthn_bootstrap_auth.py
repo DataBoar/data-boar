@@ -16,6 +16,7 @@ def bootstrap_app(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv(
         "DATA_BOAR_WEBAUTHN_TOKEN_SECRET", "unit-test-webauthn-secret-min-16"
     )
+    monkeypatch.delenv("API_HOST", raising=False)
     cfg = tmp_path / "config.yaml"
     db = tmp_path / "audit.db"
     cfg.write_text(
@@ -24,6 +25,7 @@ report:
   output_dir: {tmp_path}
 sqlite_path: {db}
 api:
+  host: 127.0.0.1
   port: 8088
   api_key: bootstrap-secret-key
   webauthn:
@@ -72,6 +74,7 @@ def test_remote_bootstrap_options_without_configured_key_returns_503(
     monkeypatch.setenv(
         "DATA_BOAR_WEBAUTHN_TOKEN_SECRET", "unit-test-webauthn-secret-min-16"
     )
+    monkeypatch.delenv("API_HOST", raising=False)
     cfg = tmp_path / "config.yaml"
     db = tmp_path / "audit.db"
     cfg.write_text(
@@ -80,6 +83,7 @@ report:
   output_dir: {tmp_path}
 sqlite_path: {db}
 api:
+  host: 127.0.0.1
   port: 8088
   webauthn:
     enabled: true
@@ -132,6 +136,80 @@ def test_loopback_bootstrap_options_without_key_succeeds(bootstrap_app):
     r = client.post("/auth/webauthn/registration/options")
     assert r.status_code == 200
     assert "state" in r.json()
+
+
+def test_loopback_peer_with_open_bind_requires_api_key(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    # regression-anchor: #1553 — non-loopback bind defeats peer-loopback trust
+    # (local reverse proxy / Docker API_HOST=0.0.0.0).
+    monkeypatch.setenv(
+        "DATA_BOAR_WEBAUTHN_TOKEN_SECRET", "unit-test-webauthn-secret-min-16"
+    )
+    monkeypatch.delenv("API_HOST", raising=False)
+    cfg = tmp_path / "config.yaml"
+    db = tmp_path / "audit.db"
+    cfg.write_text(
+        f"""targets: []
+report:
+  output_dir: {tmp_path}
+sqlite_path: {db}
+api:
+  host: 0.0.0.0
+  port: 8088
+  api_key: bootstrap-secret-key
+  webauthn:
+    enabled: true
+    rp_id: localhost
+    origin: http://testserver
+scan:
+  max_workers: 1
+""",
+        encoding="utf-8",
+    )
+    import api.routes as routes
+
+    prev_path, prev_cfg, prev_eng = (
+        routes._config_path,
+        routes._config,
+        routes._audit_engine,
+    )
+    routes._config_path = str(cfg)
+    routes._config = None
+    routes._audit_engine = None
+    try:
+        client = TestClient(routes.app, client=("127.0.0.1", 54321))
+        denied = client.post("/auth/webauthn/registration/options")
+        assert denied.status_code == 401
+        ok = client.post(
+            "/auth/webauthn/registration/options",
+            headers={"X-API-Key": "bootstrap-secret-key"},
+        )
+        assert ok.status_code == 200
+    finally:
+        routes._config_path = prev_path
+        routes._config = prev_cfg
+        routes._audit_engine = prev_eng
+        monkeypatch.delenv("DATA_BOAR_WEBAUTHN_TOKEN_SECRET", raising=False)
+
+
+def test_loopback_peer_with_forwarded_headers_requires_api_key(bootstrap_app):
+    # regression-anchor: #1553 — proxied traffic must not use key-free bootstrap.
+    routes_mod, _cfg = bootstrap_app
+    client = _client(routes_mod, "127.0.0.1")
+    denied = client.post(
+        "/auth/webauthn/registration/options",
+        headers={"X-Forwarded-For": "203.0.113.9"},
+    )
+    assert denied.status_code == 401
+    ok = client.post(
+        "/auth/webauthn/registration/options",
+        headers={
+            "X-Forwarded-For": "203.0.113.9",
+            "X-API-Key": "bootstrap-secret-key",
+        },
+    )
+    assert ok.status_code == 200
 
 
 def test_registration_verify_toctou_rejects_when_credential_appears(bootstrap_app):

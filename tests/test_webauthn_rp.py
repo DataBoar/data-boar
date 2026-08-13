@@ -17,6 +17,7 @@ def webauthn_client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv(
         "DATA_BOAR_WEBAUTHN_TOKEN_SECRET", "unit-test-webauthn-secret-min-16"
     )
+    monkeypatch.delenv("API_HOST", raising=False)
     cfg = tmp_path / "config.yaml"
     db = tmp_path / "audit.db"
     cfg.write_text(
@@ -25,6 +26,7 @@ report:
   output_dir: {tmp_path}
 sqlite_path: {db}
 api:
+  host: 127.0.0.1
   port: 8088
   webauthn:
     enabled: true

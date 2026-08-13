@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from core.host_resolution import (
+    allows_key_free_webauthn_bootstrap,
     auth_boundary_resolved,
     api_bind_exposes_non_loopback,
     is_loopback_client_host,
+    request_has_forwarded_client_headers,
     resolve_api_host,
     should_block_non_loopback_without_auth,
     should_warn_insecure_api_bind,
@@ -24,6 +26,22 @@ def test_is_loopback_client_host_rejects_remote_and_empty() -> None:
     assert is_loopback_client_host("testclient") is False
     assert is_loopback_client_host(None) is False
     assert is_loopback_client_host("") is False
+
+
+def test_allows_key_free_webauthn_bootstrap_requires_loopback_bind() -> None:
+    # regression-anchor: #1553 — peer loopback alone is insufficient when bind is open.
+    loopback_cfg = {"api": {"host": "127.0.0.1"}}
+    open_cfg = {"api": {"host": "0.0.0.0"}}
+    assert allows_key_free_webauthn_bootstrap("127.0.0.1", loopback_cfg) is True
+    assert allows_key_free_webauthn_bootstrap("127.0.0.1", open_cfg) is False
+    assert allows_key_free_webauthn_bootstrap("10.0.0.5", loopback_cfg) is False
+
+
+def test_request_has_forwarded_client_headers_presence_only() -> None:
+    assert request_has_forwarded_client_headers({}) is False
+    assert request_has_forwarded_client_headers({"x-forwarded-for": "1.2.3.4"}) is True
+    assert request_has_forwarded_client_headers({"x-real-ip": "1.2.3.4"}) is True
+    assert request_has_forwarded_client_headers({"forwarded": "for=1.2.3.4"}) is True
 
 
 def test_resolve_api_host_prefers_cli_host_when_provided() -> None:

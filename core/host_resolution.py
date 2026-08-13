@@ -10,8 +10,8 @@ def is_loopback_client_host(host: str | None) -> bool:
     """
     True when *host* is a loopback TCP peer (127.0.0.1 / ::1 / localhost).
 
-    Used for WebAuthn first-passkey bootstrap (#1553): only the TCP peer is
-    trusted — do **not** open bootstrap based on ``X-Forwarded-For``.
+    Used for WebAuthn first-passkey bootstrap (#1553). Do **not** open
+    bootstrap based on ``X-Forwarded-For`` / ``X-Real-IP`` values.
     """
     if not host:
         return False
@@ -23,6 +23,48 @@ def is_loopback_client_host(host: str | None) -> bool:
     if h.startswith("[") and h.endswith("]"):
         h = h[1:-1]
     return h in ("127.0.0.1", "::1", "localhost")
+
+
+def allows_key_free_webauthn_bootstrap(
+    peer_host: str | None,
+    config: dict[str, Any],
+    *,
+    cli_host: str | None = None,
+) -> bool:
+    """
+    True when first-passkey registration may proceed without an API key.
+
+    Requires a loopback TCP peer **and** a loopback-only API bind
+    (``resolve_api_host`` + ``api_bind_exposes_non_loopback``). When the
+    process listens beyond loopback (``0.0.0.0``, LAN IP, …), a loopback
+    peer alone is not trusted — local reverse proxies / same-host upstreams
+    often present every client as ``127.0.0.1`` (#1553 security review).
+    """
+    if not is_loopback_client_host(peer_host):
+        return False
+    bind = resolve_api_host(config, cli_host=cli_host)
+    if api_bind_exposes_non_loopback(bind):
+        return False
+    return True
+
+
+def request_has_forwarded_client_headers(headers: Any) -> bool:
+    """
+    True when common reverse-proxy client headers are present.
+
+    Presence only — values are never used to *grant* bootstrap trust.
+    Used to deny key-free first-passkey registration when traffic was
+    clearly forwarded (local upstream peer can still be loopback).
+    """
+    if headers is None:
+        return False
+    get = getattr(headers, "get", None)
+    if not callable(get):
+        return False
+    for name in ("x-forwarded-for", "x-real-ip", "forwarded"):
+        if (get(name) or "").strip():
+            return True
+    return False
 
 
 def effective_api_key_configured(api_cfg: dict[str, Any] | None) -> bool:

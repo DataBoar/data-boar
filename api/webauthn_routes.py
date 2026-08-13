@@ -27,8 +27,9 @@ from webauthn import (
 from webauthn.helpers.structs import PublicKeyCredentialDescriptor
 
 from core.host_resolution import (
+    allows_key_free_webauthn_bootstrap,
     effective_api_key_configured,
-    is_loopback_client_host,
+    request_has_forwarded_client_headers,
 )
 from core.webauthn_rp import challenges, session_cookie
 from core.webauthn_rp.settings import (
@@ -92,16 +93,19 @@ def _enforce_first_passkey_registration_auth(request: Request) -> None:
     Gate first-passkey registration against network hijack (#1553).
 
     No-op when a credential already exists (caller still returns 403 for options).
-    Loopback TCP peers may bootstrap without an API key. Non-loopback peers must
-    present a configured, matching API key (``X-API-Key`` or Bearer).
+    Key-free bootstrap is allowed only for a loopback TCP peer when the API bind
+    is loopback-only and the request does not carry reverse-proxy client headers.
+    Otherwise require a configured, matching API key (``X-API-Key`` or Bearer).
     """
     dbm = _get_engine().db_manager
     if dbm.webauthn_credential_count() > 0:
         return
-    peer = request.client.host if request.client else None
-    if is_loopback_client_host(peer):
-        return
     cfg = _get_config()
+    peer = request.client.host if request.client else None
+    if allows_key_free_webauthn_bootstrap(peer, cfg) and not (
+        request_has_forwarded_client_headers(request.headers)
+    ):
+        return
     api_cfg = cfg.get("api") or {}
     if not isinstance(api_cfg, dict):
         api_cfg = {}
@@ -109,10 +113,10 @@ def _enforce_first_passkey_registration_auth(request: Request) -> None:
         raise HTTPException(
             status_code=503,
             detail=(
-                "First passkey registration from a non-loopback client requires an "
-                "API key. Set api.api_key or api.api_key_from_env, then retry with "
-                "X-API-Key (or Authorization: Bearer). Loopback clients may register "
-                "without a key. (#1553)"
+                "First passkey registration requires an API key unless the API "
+                "bind is loopback-only and the TCP peer is loopback (no reverse-"
+                "proxy client headers). Set api.api_key or api.api_key_from_env, "
+                "then retry with X-API-Key (or Authorization: Bearer). (#1553)"
             ),
         )
     expected = (api_cfg.get("api_key") or "").strip()
@@ -121,8 +125,9 @@ def _enforce_first_passkey_registration_auth(request: Request) -> None:
         raise HTTPException(
             status_code=401,
             detail=(
-                "Missing or invalid API key for first passkey registration from a "
-                "non-loopback client. (#1553)"
+                "Missing or invalid API key for first passkey registration "
+                "(non-loopback bind, non-loopback peer, or proxied request). "
+                "(#1553)"
             ),
         )
 
