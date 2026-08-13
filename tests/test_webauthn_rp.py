@@ -11,6 +11,8 @@ from fastapi.testclient import TestClient
 
 from core.webauthn_rp.settings import user_id_bytes, webauthn_block
 
+_WA_KEY = {"X-API-Key": "webauthn-test-api-key"}
+
 
 @pytest.fixture
 def webauthn_client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
@@ -28,6 +30,7 @@ sqlite_path: {db}
 api:
   host: 127.0.0.1
   port: 8088
+  api_key: webauthn-test-api-key
   webauthn:
     enabled: true
     rp_id: localhost
@@ -47,15 +50,9 @@ scan:
     routes._config_path = str(cfg)
     routes._config = None
     routes._audit_engine = None
-    from core.host_resolution import set_effective_api_listen_host
-
-    set_effective_api_listen_host("127.0.0.1")
-    # Loopback peer + Host: first-passkey bootstrap (#1553) allows registration without API key.
-    client = TestClient(
-        routes.app, base_url="http://127.0.0.1", client=("127.0.0.1", 50000)
-    )
+    # First-passkey bootstrap (#1553) requires API key on registration routes.
+    client = TestClient(routes.app)
     yield client, routes
-    set_effective_api_listen_host(None)
     routes._config_path = prev_path
     routes._config = prev_cfg
     routes._audit_engine = prev_eng
@@ -96,7 +93,7 @@ scan:
 
 def test_webauthn_registration_options_returns_options_and_state(webauthn_client):
     client, _routes = webauthn_client
-    r = client.post("/auth/webauthn/registration/options")
+    r = client.post("/auth/webauthn/registration/options", headers=_WA_KEY)
     assert r.status_code == 200
     data = r.json()
     assert "options" in data and "state" in data
@@ -134,7 +131,7 @@ def test_webauthn_registration_options_403_when_credential_exists(webauthn_clien
         public_key=b"k" * 64,
         sign_count=0,
     )
-    r = client.post("/auth/webauthn/registration/options")
+    r = client.post("/auth/webauthn/registration/options", headers=_WA_KEY)
     assert r.status_code == 403
     assert "already registered" in r.json()["detail"].lower()
 
@@ -143,6 +140,7 @@ def test_webauthn_registration_verify_rejects_bad_state(webauthn_client):
     client, _routes = webauthn_client
     r = client.post(
         "/auth/webauthn/registration/verify",
+        headers=_WA_KEY,
         json={"state": "not-a-valid-token", "credential": {"rawId": "abc"}},
     )
     assert r.status_code == 400

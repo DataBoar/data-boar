@@ -4,9 +4,9 @@ JSON endpoints for vendor-neutral WebAuthn (Phase 1). Mounted under ``/auth/weba
 Disabled unless ``api.webauthn.enabled`` is true. Session cookie feeds the Phase 1b HTML gate when
 credentials exist (#86); RBAC remains future work.
 
-First-passkey bootstrap (#1553): registration options/verify from a non-loopback
-TCP peer require a valid API key when no credential exists yet (middleware still
-exempts ``/auth/webauthn`` so authentication ceremony stays key-free).
+First-passkey bootstrap (#1553): registration options/verify always require a
+valid API key when no credential exists yet (middleware still exempts
+``/auth/webauthn`` so authentication ceremony stays key-free).
 """
 
 from __future__ import annotations
@@ -26,11 +26,7 @@ from webauthn import (
 )
 from webauthn.helpers.structs import PublicKeyCredentialDescriptor
 
-from core.host_resolution import (
-    allows_key_free_webauthn_bootstrap,
-    effective_api_key_configured,
-    request_has_forwarded_client_headers,
-)
+from core.host_resolution import effective_api_key_configured
 from core.webauthn_rp import challenges, session_cookie
 from core.webauthn_rp.settings import (
     expected_origins,
@@ -93,20 +89,15 @@ def _enforce_first_passkey_registration_auth(request: Request) -> None:
     Gate first-passkey registration against network hijack (#1553).
 
     No-op when a credential already exists (caller still returns 403 for options).
-    Key-free bootstrap requires loopback TCP peer, loopback-only **effective**
-    listen bind (including CLI ``--host``), loopback HTTP ``Host``, and no
-    reverse-proxy client headers. Otherwise require API key.
+    The first passkey **always** requires a configured, matching API key
+    (``X-API-Key`` or Bearer). Loopback-only exemptions are unsafe behind a
+    same-host reverse proxy that presents peer/Host as ``127.0.0.1`` without
+    forwarded-client headers — so key-free bootstrap is not offered.
     """
     dbm = _get_engine().db_manager
     if dbm.webauthn_credential_count() > 0:
         return
     cfg = _get_config()
-    peer = request.client.host if request.client else None
-    http_host = request.headers.get("host")
-    if allows_key_free_webauthn_bootstrap(
-        peer, cfg, http_host=http_host
-    ) and not request_has_forwarded_client_headers(request.headers):
-        return
     api_cfg = cfg.get("api") or {}
     if not isinstance(api_cfg, dict):
         api_cfg = {}
@@ -114,11 +105,9 @@ def _enforce_first_passkey_registration_auth(request: Request) -> None:
         raise HTTPException(
             status_code=503,
             detail=(
-                "First passkey registration requires an API key unless the "
-                "effective API bind is loopback-only, the TCP peer and HTTP "
-                "Host are loopback, and there are no reverse-proxy client "
-                "headers. Set api.api_key or api.api_key_from_env, then retry "
-                "with X-API-Key (or Authorization: Bearer). (#1553)"
+                "First passkey registration requires an API key. Set "
+                "api.api_key or api.api_key_from_env, then retry with "
+                "X-API-Key (or Authorization: Bearer). (#1553)"
             ),
         )
     expected = (api_cfg.get("api_key") or "").strip()
@@ -127,8 +116,7 @@ def _enforce_first_passkey_registration_auth(request: Request) -> None:
         raise HTTPException(
             status_code=401,
             detail=(
-                "Missing or invalid API key for first passkey registration "
-                "(non-loopback bind/peer/Host, or proxied request). (#1553)"
+                "Missing or invalid API key for first passkey registration. (#1553)"
             ),
         )
 

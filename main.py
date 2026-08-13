@@ -1203,7 +1203,6 @@ def main() -> None:
         from core.host_resolution import (
             effective_api_key_configured,
             resolve_api_host,
-            set_effective_api_listen_host,
             should_block_non_loopback_without_auth,
             should_warn_insecure_api_bind,
         )
@@ -1226,8 +1225,6 @@ def main() -> None:
         port = api_cfg.get("port", args.port)
         workers = int(api_cfg.get("workers", 1))
         host = resolve_api_host(config, cli_host=args.host)
-        # So WebAuthn bootstrap (#1553) sees CLI --host / resolved bind, not only yaml.
-        set_effective_api_listen_host(host)
         if should_block_non_loopback_without_auth(config, host):
             print(
                 "ERROR: Refusing startup with non-loopback API bind and unresolved auth boundary. "

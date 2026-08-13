@@ -1,90 +1,12 @@
 from __future__ import annotations
 
 from core.host_resolution import (
-    allows_key_free_webauthn_bootstrap,
     auth_boundary_resolved,
     api_bind_exposes_non_loopback,
-    http_host_header_hostname,
-    is_loopback_client_host,
-    request_has_forwarded_client_headers,
     resolve_api_host,
-    set_effective_api_listen_host,
     should_block_non_loopback_without_auth,
     should_warn_insecure_api_bind,
 )
-
-
-def test_is_loopback_client_host_accepts_loopback_forms() -> None:
-    # regression-anchor: #1553 — TCP peer loopback only (not X-Forwarded-For).
-    assert is_loopback_client_host("127.0.0.1") is True
-    assert is_loopback_client_host("::1") is True
-    assert is_loopback_client_host("localhost") is True
-    assert is_loopback_client_host("LOCALHOST") is True
-    assert is_loopback_client_host("[::1]") is True
-
-
-def test_is_loopback_client_host_rejects_remote_and_empty() -> None:
-    assert is_loopback_client_host("10.0.0.1") is False
-    assert is_loopback_client_host("testclient") is False
-    assert is_loopback_client_host(None) is False
-    assert is_loopback_client_host("") is False
-
-
-def test_allows_key_free_webauthn_bootstrap_requires_loopback_bind() -> None:
-    # regression-anchor: #1553 — peer loopback alone is insufficient when bind is open.
-    set_effective_api_listen_host(None)
-    loopback_cfg = {"api": {"host": "127.0.0.1"}}
-    open_cfg = {"api": {"host": "0.0.0.0"}}
-    assert (
-        allows_key_free_webauthn_bootstrap(
-            "127.0.0.1", loopback_cfg, http_host="127.0.0.1:8088"
-        )
-        is True
-    )
-    assert (
-        allows_key_free_webauthn_bootstrap(
-            "127.0.0.1", open_cfg, http_host="127.0.0.1:8088"
-        )
-        is False
-    )
-    assert (
-        allows_key_free_webauthn_bootstrap(
-            "10.0.0.5", loopback_cfg, http_host="127.0.0.1:8088"
-        )
-        is False
-    )
-    assert (
-        allows_key_free_webauthn_bootstrap(
-            "127.0.0.1", loopback_cfg, http_host="passkeys.example.com"
-        )
-        is False
-    )
-
-
-def test_effective_listen_host_overrides_yaml_for_bootstrap() -> None:
-    # regression-anchor: #1553 — CLI --host recorded at startup.
-    set_effective_api_listen_host("0.0.0.0")
-    try:
-        cfg = {"api": {"host": "127.0.0.1"}}
-        assert (
-            allows_key_free_webauthn_bootstrap("127.0.0.1", cfg, http_host="127.0.0.1")
-            is False
-        )
-    finally:
-        set_effective_api_listen_host(None)
-
-
-def test_http_host_header_hostname_strips_port() -> None:
-    assert http_host_header_hostname("127.0.0.1:8088") == "127.0.0.1"
-    assert http_host_header_hostname("[::1]:8088") == "::1"
-    assert http_host_header_hostname("localhost") == "localhost"
-
-
-def test_request_has_forwarded_client_headers_presence_only() -> None:
-    assert request_has_forwarded_client_headers({}) is False
-    assert request_has_forwarded_client_headers({"x-forwarded-for": "1.2.3.4"}) is True
-    assert request_has_forwarded_client_headers({"x-real-ip": "1.2.3.4"}) is True
-    assert request_has_forwarded_client_headers({"forwarded": "for=1.2.3.4"}) is True
 
 
 def test_resolve_api_host_prefers_cli_host_when_provided() -> None:
