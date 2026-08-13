@@ -21,7 +21,13 @@ from core.suggested_review import (
     augment_low_id_like_for_persist,
 )
 
-from .url_guard import target_allows_private, validate_outbound_url
+from .url_guard import (
+    build_pinned_httpx_client,
+    merge_host_pins,
+    pinned_httpx_request,
+    resolve_and_validate_outbound_url,
+    target_allows_private,
+)
 
 try:
     import httpx
@@ -70,7 +76,9 @@ def _build_auth(client: "httpx.Client", target: dict[str, Any]) -> None:
             client_secret = os.environ.get(client_secret[2:-1], "")
         scope = auth.get("scope", "")
         if token_url and client_id and client_secret:
-            # One-off request to token endpoint (no client auth)
+            # One-off request to token endpoint (no client auth).
+            # Pin peer IPs at request time (#1552) — never honor verify=False
+            # on token exchange (httpx default verify=True).
             token_kwargs: dict[str, Any] = {
                 "data": {
                     "grant_type": "client_credentials",
@@ -84,9 +92,13 @@ def _build_auth(client: "httpx.Client", target: dict[str, Any]) -> None:
                 },
                 "timeout": 30.0,
             }
-            # Token exchange carries client_secret + returns bearer — never
-            # honor target verify=False here (httpx default verify=True).
-            resp = httpx.post(token_url, **token_kwargs)
+            resp = pinned_httpx_request(
+                "POST",
+                token_url,
+                allow_private=target_allows_private(target),
+                label="auth.token_url",
+                **token_kwargs,
+            )
             resp.raise_for_status()
             data = resp.json()
             access_token = data.get("access_token")
@@ -206,19 +218,24 @@ class RESTConnector:
         base_url = (self.config.get("base_url") or self.config.get("url", "")).rstrip(
             "/"
         )
-        # SSRF guard (#832): reject link-local/private/loopback hosts unless the
-        # target config opts in with allow_private_networks: true.
+        # SSRF guard (#832 / #1552): reject link-local/private/loopback hosts
+        # unless allow_private_networks; fail-closed on DNS failure; pin peer IPs
+        # so request-time DNS rebinding cannot change the TCP peer.
         allow_private = target_allows_private(self.config)
+        host_pins: dict[str, list[str]] = {}
         for candidate, label in (
             (base_url, "base_url"),
             (self.config.get("discover_url", ""), "discover_url"),
             ((self.config.get("auth") or {}).get("token_url", ""), "auth.token_url"),
         ):
-            err = validate_outbound_url(
+            if not candidate:
+                continue
+            err, ips = resolve_and_validate_outbound_url(
                 candidate, allow_private=allow_private, label=label
             )
             if err:
                 raise ValueError(err)
+            merge_host_pins(host_pins, candidate, ips)
         connect_s = float(self.config.get("connect_timeout_seconds", 25))
         read_s = float(self.config.get("read_timeout_seconds", 90))
         # Default (first arg) used for write/pool; connect and read set explicitly (httpx requires default or all four).
@@ -236,7 +253,7 @@ class RESTConnector:
         verify_opt = resolve_httpx_tls_connect_options(self.config)
         if verify_opt is not None:
             client_kwargs["verify"] = verify_opt
-        self._client = httpx.Client(**client_kwargs)
+        self._client = build_pinned_httpx_client(host_to_ips=host_pins, **client_kwargs)
         _build_auth(self._client, self.config)
         # Optional extra headers (e.g. API key, negotiated token); may override User-Agent.
         for key, value in cfg_headers.items():

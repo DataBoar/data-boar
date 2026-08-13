@@ -55,7 +55,7 @@ def test_rest_connector_uses_httpx_timeout_from_config():
         "read_timeout_seconds": 60,
     }
     connector = RESTConnector(target, MagicMock(), MagicMock())
-    with patch("connectors.rest_connector.httpx.Client") as mock_client:
+    with patch("connectors.rest_connector.build_pinned_httpx_client") as mock_client:
         connector.connect()
         mock_client.assert_called_once()
         call_kw = mock_client.call_args[1]
@@ -76,7 +76,7 @@ def test_rest_connector_sets_prospector_user_agent():
     target["connect_timeout_seconds"] = 25
     target["read_timeout_seconds"] = 90
     connector = RESTConnector(target, MagicMock(), MagicMock())
-    with patch("connectors.rest_connector.httpx.Client") as mock_client:
+    with patch("connectors.rest_connector.build_pinned_httpx_client") as mock_client:
         connector.connect()
         headers = mock_client.call_args[1].get("headers") or {}
         assert "User-Agent" in headers
@@ -94,7 +94,7 @@ def test_rest_connector_timeout_defaults_when_not_in_config():
     target["connect_timeout_seconds"] = 25
     target["read_timeout_seconds"] = 90
     connector = RESTConnector(target, MagicMock(), MagicMock())
-    with patch("connectors.rest_connector.httpx.Client") as mock_client:
+    with patch("connectors.rest_connector.build_pinned_httpx_client") as mock_client:
         connector.connect()
         timeout = mock_client.call_args[1]["timeout"]
         assert timeout.connect == 25

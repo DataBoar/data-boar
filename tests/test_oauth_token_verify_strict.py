@@ -24,9 +24,10 @@ def _token_response(access_token: str = "access-token-xyz") -> MagicMock:
 def test_rest_oauth_token_post_never_gets_verify_false() -> None:
     captured: dict = {}
 
-    def fake_post(url, **kwargs):
+    def fake_pinned(method, url, *, allow_private=False, label="url", **kwargs):
         captured["url"] = url
         captured["kwargs"] = kwargs
+        captured["method"] = method
         return _token_response()
 
     client = MagicMock()
@@ -41,10 +42,12 @@ def test_rest_oauth_token_post_never_gets_verify_false() -> None:
             "client_secret": "csecret",
         },
     }
-    with patch("connectors.rest_connector.httpx") as hx:
-        hx.post.side_effect = fake_post
+    with patch(
+        "connectors.rest_connector.pinned_httpx_request", side_effect=fake_pinned
+    ):
         _build_auth(client, target)
 
+    assert captured["method"] == "POST"
     assert "verify" not in captured["kwargs"]
     assert captured["kwargs"].get("verify") is not False
     assert client.headers.get("Authorization") == "Bearer access-token-xyz"
@@ -53,8 +56,9 @@ def test_rest_oauth_token_post_never_gets_verify_false() -> None:
 def test_powerbi_token_post_never_gets_verify_false() -> None:
     captured: dict = {}
 
-    def fake_post(url, **kwargs):
+    def fake_pinned(method, url, *, allow_private=False, label="url", **kwargs):
         captured["kwargs"] = kwargs
+        captured["method"] = method
         return _token_response("pbi-token")
 
     target = {
@@ -64,11 +68,13 @@ def test_powerbi_token_post_never_gets_verify_false() -> None:
         "verify": False,
         "verify_ssl": False,
     }
-    with patch("connectors.powerbi_connector.httpx") as hx:
-        hx.post.side_effect = fake_post
+    with patch(
+        "connectors.powerbi_connector.pinned_httpx_request", side_effect=fake_pinned
+    ):
         token = _get_access_token(target)
 
     assert token == "pbi-token"
+    assert captured["method"] == "POST"
     assert "verify" not in captured["kwargs"]
     assert captured["kwargs"].get("verify") is not False
 
@@ -76,8 +82,9 @@ def test_powerbi_token_post_never_gets_verify_false() -> None:
 def test_dataverse_token_post_never_gets_verify_false() -> None:
     captured: dict = {}
 
-    def fake_post(url, **kwargs):
+    def fake_pinned(method, url, *, allow_private=False, label="url", **kwargs):
         captured["kwargs"] = kwargs
+        captured["method"] = method
         return _token_response("dv-token")
 
     target = {
@@ -88,10 +95,12 @@ def test_dataverse_token_post_never_gets_verify_false() -> None:
         "verify": False,
         "verify_ssl": False,
     }
-    with patch("connectors.dataverse_connector.httpx") as hx:
-        hx.post.side_effect = fake_post
+    with patch(
+        "connectors.dataverse_connector.pinned_httpx_request", side_effect=fake_pinned
+    ):
         token = _dataverse_token(target)
 
     assert token == "dv-token"
+    assert captured["method"] == "POST"
     assert "verify" not in captured["kwargs"]
     assert captured["kwargs"].get("verify") is not False
