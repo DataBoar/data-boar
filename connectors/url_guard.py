@@ -268,12 +268,21 @@ def build_pinned_httpx_client(
     host_to_ips: dict[str, list[str]],
     **client_kwargs: Any,
 ) -> Any:
-    """Construct an ``httpx.Client`` that pins TCP peers to *host_to_ips* (#1552)."""
+    """Construct an ``httpx.Client`` that pins TCP peers to *host_to_ips* (#1552).
+
+    TLS kwargs (``verify`` / ``cert`` / ``trust_env``) must be applied on the
+    inner ``HTTPTransport`` — with a custom ``transport=``, httpx does **not**
+    forward Client-level ``verify`` into that transport (Bugbot / #1552).
+    """
     import httpx
 
     # Redirects to a new host would bypass the pin map — keep them off.
     client_kwargs.setdefault("follow_redirects", False)
-    transport = PinnedIPTransport(host_to_ips)
+    transport_kwargs: dict[str, Any] = {}
+    for key in ("verify", "cert", "trust_env"):
+        if key in client_kwargs:
+            transport_kwargs[key] = client_kwargs.pop(key)
+    transport = PinnedIPTransport(host_to_ips, **transport_kwargs)
     return httpx.Client(transport=transport, **client_kwargs)
 
 

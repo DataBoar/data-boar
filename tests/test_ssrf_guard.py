@@ -12,7 +12,7 @@ validated at guard time (no request-time DNS rebinding).
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -139,6 +139,28 @@ def test_resolve_and_validate_returns_pins_for_literal_global_ip() -> None:
     )
     assert err is None
     assert [str(i) for i in ips] == ["1.1.1.1"]
+
+
+def test_build_pinned_httpx_client_forwards_verify_to_transport() -> None:
+    # regression-anchor: #1552 / Bugbot — custom transport must receive verify.
+    import httpx
+
+    from connectors.url_guard import build_pinned_httpx_client
+
+    captured: dict = {}
+
+    class _CapturingTransport(httpx.HTTPTransport):
+        def __init__(self, **kwargs):
+            captured.update(kwargs)
+            super().__init__(**kwargs)
+
+    with patch("httpx.HTTPTransport", _CapturingTransport):
+        client = build_pinned_httpx_client(
+            host_to_ips={"example.com": ["93.184.216.34"]},
+            verify=False,
+        )
+        client.close()
+    assert captured.get("verify") is False
 
 
 def test_target_allows_private_reads_config_flag() -> None:
