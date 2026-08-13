@@ -21,7 +21,13 @@ from core.suggested_review import (
     augment_low_id_like_for_persist,
 )
 
-from .url_guard import target_allows_private, validate_outbound_url
+from .url_guard import (
+    build_pinned_httpx_client,
+    merge_host_pins,
+    pinned_httpx_request,
+    resolve_and_validate_outbound_url,
+    target_allows_private,
+)
 
 try:
     import httpx
@@ -55,15 +61,8 @@ def _get_access_token(target: dict[str, Any]) -> str | None:
     token_url = auth.get("token_url") or _AZURE_TOKEN_URL_TMPL.format(
         tenant_id=tenant_id
     )
-    # SSRF guard (#832): a custom token_url receives the client_secret via POST —
-    # never let it point at link-local/private hosts without explicit opt-in.
-    err = validate_outbound_url(
-        token_url,
-        allow_private=target_allows_private(target),
-        label="auth.token_url",
-    )
-    if err:
-        raise ValueError(err)
+    # SSRF guard (#832 / #1552): custom token_url receives client_secret via POST —
+    # validate + pin peer IPs (no DNS rebinding on the secret-bearing request).
     token_kwargs: dict[str, Any] = {
         "data": {
             "grant_type": "client_credentials",
@@ -77,9 +76,14 @@ def _get_access_token(target: dict[str, Any]) -> str | None:
         },
         "timeout": 30.0,
     }
-    # Token exchange carries client_secret + returns bearer — never honor
-    # target verify=False here (httpx default verify=True).
-    resp = httpx.post(token_url, **token_kwargs)
+    # Never honor target verify=False on token exchange.
+    resp = pinned_httpx_request(
+        "POST",
+        token_url,
+        allow_private=target_allows_private(target),
+        label="auth.token_url",
+        **token_kwargs,
+    )
     resp.raise_for_status()
     data = resp.json()
     return data.get("access_token")
@@ -118,6 +122,14 @@ class PowerBIConnector:
             raise ValueError(
                 "Power BI auth failed: provide tenant_id, client_id, client_secret (or auth block)"
             )
+        allow_private = target_allows_private(self.config)
+        err, ips = resolve_and_validate_outbound_url(
+            _PBI_BASE, allow_private=allow_private, label="api_base"
+        )
+        if err:
+            raise ValueError(err)
+        host_pins: dict[str, list[str]] = {}
+        merge_host_pins(host_pins, _PBI_BASE, ips)
         connect_s = float(self.config.get("connect_timeout_seconds", 25))
         read_s = float(self.config.get("read_timeout_seconds", 90))
         timeout = httpx.Timeout(read_s, connect=connect_s, read=read_s)
@@ -133,7 +145,7 @@ class PowerBIConnector:
         verify_opt = resolve_httpx_tls_connect_options(self.config)
         if verify_opt is not None:
             client_kwargs["verify"] = verify_opt
-        self._client = httpx.Client(**client_kwargs)
+        self._client = build_pinned_httpx_client(host_to_ips=host_pins, **client_kwargs)
 
     def close(self) -> None:
         if self._client:
