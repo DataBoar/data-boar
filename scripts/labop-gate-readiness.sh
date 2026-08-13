@@ -314,18 +314,18 @@ if [[ -n "$LABOP_BASH_BIN" ]]; then
     _gr privilege OK "$PRIV" "${_PRIV_DETAIL:-}"
     # maestro#6: sudo -l can list NOPASSWD while a later %wheel forces a password on RUN.
     if [[ "${_PRIV_DETAIL:-}" == "sudo_l" ]]; then
-      echo "[GateReadiness] WARN: privilege detail=sudo_l — sudo -l is not proof; test RUN (sudo -n) and sudoers.d load-order" >&2
+      echo "[GateReadiness] WARN: privilege detail=sudo_l - sudo -l is not proof; test RUN (sudo -n) and sudoers.d load-order" >&2
     fi
   fi
 fi
 
-# --- sudoers.d load-order (maestro#6): WARN only — last rule wins vs %wheel ---
+# --- sudoers.d load-order (maestro#6): WARN only - last rule wins vs %wheel ---
 if command -v sudo >/dev/null 2>&1; then
   while IFS= read -r _sudoers_gr_line; do
     [[ -n "$_sudoers_gr_line" ]] || continue
     printf '%s\n' "$_sudoers_gr_line"
     if [[ "$_sudoers_gr_line" == *'status=WARN'* ]]; then
-      echo "[GateReadiness] WARN: sudoers.d load-order — narrow Maestro grant loads BEFORE generic %wheel/%sudo; rename grant to z-* so it wins (last-match). Lesson: test RUN, not sudo -l." >&2
+      echo "[GateReadiness] WARN: sudoers.d load-order - narrow Maestro grant loads BEFORE generic %wheel/%sudo; rename grant to z-* so it wins (last-match). Lesson: test RUN, not sudo -l." >&2
     fi
   done < <(labop_sudoers_emit_gate_lines "$HOST" /etc/sudoers.d)
 fi

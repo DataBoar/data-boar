@@ -5,9 +5,9 @@
 # Doctrine:
 #   - Files in /etc/sudoers.d/ are read in lexical order; the LAST matching rule wins.
 #   - A generic %wheel/%sudo ALL=ALL (password) that loads AFTER a narrow labop grant
-#     silently overrides NOPASSWD — sudo -l still lists NOPASSWD (masks the failure).
+#     silently overrides NOPASSWD - sudo -l still lists NOPASSWD (masks the failure).
 #   - Maestro narrow drop-ins MUST sort AFTER generic wheel (convention: z-labop-*).
-#   - Test the RUN (sudo -n …), not only sudo -l.
+#   - Test the RUN (sudo -n ...), not only sudo -l.
 #
 # Sourced by labop-gate-readiness.sh; also unit-tested via fixture directories.
 
@@ -44,7 +44,7 @@ labop_sudoers_classify_dropin() {
   fi
   content="$(tr -d '\r' <"$path" 2>/dev/null || true)"
 
-  # Generic password (or blanket) group grant — last-match overrides prior NOPASSWD.
+  # Generic password (or blanket) group grant - last-match overrides prior NOPASSWD.
   if grep -Eq '^[[:space:]]*%(wheel|sudo)[[:space:]]+ALL[[:space:]]*=\(?ALL' <<<"$content"; then
     printf '%s\n' generic_wheel
     return 0
