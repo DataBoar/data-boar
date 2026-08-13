@@ -45,7 +45,8 @@ scan:
     routes._config_path = str(cfg)
     routes._config = None
     routes._audit_engine = None
-    client = TestClient(routes.app)
+    # Loopback peer: first-passkey bootstrap (#1553) allows registration without API key.
+    client = TestClient(routes.app, client=("127.0.0.1", 50000))
     yield client, routes
     routes._config_path = prev_path
     routes._config = prev_cfg

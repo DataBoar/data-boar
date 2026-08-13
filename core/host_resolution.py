@@ -6,6 +6,25 @@ from typing import Any
 from core.webauthn_rp.settings import resolve_token_secret, webauthn_block
 
 
+def is_loopback_client_host(host: str | None) -> bool:
+    """
+    True when *host* is a loopback TCP peer (127.0.0.1 / ::1 / localhost).
+
+    Used for WebAuthn first-passkey bootstrap (#1553): only the TCP peer is
+    trusted — do **not** open bootstrap based on ``X-Forwarded-For``.
+    """
+    if not host:
+        return False
+    h = host.strip().lower()
+    # Strip IPv6 zone id if present (e.g. fe80::1%eth0) — loopback has no zone.
+    if "%" in h:
+        h = h.split("%", 1)[0]
+    # Bracketed IPv6 literals from some stacks.
+    if h.startswith("[") and h.endswith("]"):
+        h = h[1:-1]
+    return h in ("127.0.0.1", "::1", "localhost")
+
+
 def effective_api_key_configured(api_cfg: dict[str, Any] | None) -> bool:
     """
     True when an API key is available after the same rules as ``config.loader``:

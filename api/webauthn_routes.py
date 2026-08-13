@@ -3,10 +3,15 @@ JSON endpoints for vendor-neutral WebAuthn (Phase 1). Mounted under ``/auth/weba
 
 Disabled unless ``api.webauthn.enabled`` is true. Session cookie feeds the Phase 1b HTML gate when
 credentials exist (#86); RBAC remains future work.
+
+First-passkey bootstrap (#1553): registration options/verify from a non-loopback
+TCP peer require a valid API key when no credential exists yet (middleware still
+exempts ``/auth/webauthn`` so authentication ceremony stays key-free).
 """
 
 from __future__ import annotations
 
+import hmac
 import json
 from typing import Any
 
@@ -21,6 +26,10 @@ from webauthn import (
 )
 from webauthn.helpers.structs import PublicKeyCredentialDescriptor
 
+from core.host_resolution import (
+    effective_api_key_configured,
+    is_loopback_client_host,
+)
 from core.webauthn_rp import challenges, session_cookie
 from core.webauthn_rp.settings import (
     expected_origins,
@@ -68,8 +77,58 @@ def _wa_or_404() -> dict[str, Any]:
     return wa
 
 
+def _provided_api_key(request: Request) -> str:
+    provided = (request.headers.get("x-api-key") or "").strip()
+    if provided:
+        return provided
+    auth = (request.headers.get("authorization") or "").strip()
+    if auth.lower().startswith("bearer "):
+        return auth[7:].strip()
+    return ""
+
+
+def _enforce_first_passkey_registration_auth(request: Request) -> None:
+    """
+    Gate first-passkey registration against network hijack (#1553).
+
+    No-op when a credential already exists (caller still returns 403 for options).
+    Loopback TCP peers may bootstrap without an API key. Non-loopback peers must
+    present a configured, matching API key (``X-API-Key`` or Bearer).
+    """
+    dbm = _get_engine().db_manager
+    if dbm.webauthn_credential_count() > 0:
+        return
+    peer = request.client.host if request.client else None
+    if is_loopback_client_host(peer):
+        return
+    cfg = _get_config()
+    api_cfg = cfg.get("api") or {}
+    if not isinstance(api_cfg, dict):
+        api_cfg = {}
+    if not effective_api_key_configured(api_cfg):
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "First passkey registration from a non-loopback client requires an "
+                "API key. Set api.api_key or api.api_key_from_env, then retry with "
+                "X-API-Key (or Authorization: Bearer). Loopback clients may register "
+                "without a key. (#1553)"
+            ),
+        )
+    expected = (api_cfg.get("api_key") or "").strip()
+    provided = _provided_api_key(request)
+    if not provided or not hmac.compare_digest(provided, expected):
+        raise HTTPException(
+            status_code=401,
+            detail=(
+                "Missing or invalid API key for first passkey registration from a "
+                "non-loopback client. (#1553)"
+            ),
+        )
+
+
 @router.post("/registration/options")
-async def registration_options() -> JSONResponse:
+async def registration_options(request: Request) -> JSONResponse:
     """Return PublicKeyCredentialCreationOptions JSON plus opaque ``state`` for the verify step."""
     wa, _secret = _wa_secret_or_raise()
     dbm = _get_engine().db_manager
@@ -78,6 +137,7 @@ async def registration_options() -> JSONResponse:
             status_code=403,
             detail="A passkey is already registered. Use authentication or wipe credentials.",
         )
+    _enforce_first_passkey_registration_auth(request)
     uid = user_id_bytes(wa)
     rp_id = str(wa.get("rp_id") or "localhost")
     rp_name = str(wa.get("rp_name") or "Data Boar")
@@ -112,6 +172,8 @@ async def registration_options() -> JSONResponse:
 @router.post("/registration/verify")
 async def registration_verify(request: Request) -> JSONResponse:
     wa, secret = _wa_secret_or_raise()
+    # Bootstrap auth before consuming challenge state (#1553).
+    _enforce_first_passkey_registration_auth(request)
     body = await request.json()
     if not isinstance(body, dict):
         raise HTTPException(status_code=400, detail="Expected JSON object.")
@@ -137,6 +199,12 @@ async def registration_verify(request: Request) -> JSONResponse:
         ) from e
     uid = user_id_bytes(wa)
     dbm = _get_engine().db_manager
+    # TOCTOU: another client may have registered between options and save (#1553).
+    if dbm.webauthn_credential_count() > 0:
+        raise HTTPException(
+            status_code=403,
+            detail="A passkey is already registered. Use authentication or wipe credentials.",
+        )
     dbm.webauthn_save_credential(
         user_id=uid,
         credential_id=verified.credential_id,

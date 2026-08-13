@@ -3,10 +3,27 @@ from __future__ import annotations
 from core.host_resolution import (
     auth_boundary_resolved,
     api_bind_exposes_non_loopback,
+    is_loopback_client_host,
     resolve_api_host,
     should_block_non_loopback_without_auth,
     should_warn_insecure_api_bind,
 )
+
+
+def test_is_loopback_client_host_accepts_loopback_forms() -> None:
+    # regression-anchor: #1553 — TCP peer loopback only (not X-Forwarded-For).
+    assert is_loopback_client_host("127.0.0.1") is True
+    assert is_loopback_client_host("::1") is True
+    assert is_loopback_client_host("localhost") is True
+    assert is_loopback_client_host("LOCALHOST") is True
+    assert is_loopback_client_host("[::1]") is True
+
+
+def test_is_loopback_client_host_rejects_remote_and_empty() -> None:
+    assert is_loopback_client_host("10.0.0.1") is False
+    assert is_loopback_client_host("testclient") is False
+    assert is_loopback_client_host(None) is False
+    assert is_loopback_client_host("") is False
 
 
 def test_resolve_api_host_prefers_cli_host_when_provided() -> None:
