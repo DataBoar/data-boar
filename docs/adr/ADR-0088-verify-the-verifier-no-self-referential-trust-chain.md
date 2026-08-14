@@ -6,11 +6,12 @@
 
 ## Status
 
-Proposed
+Accepted
 
 ### Status history
 
 - 2026-08-13 — Proposed (born Proposed per ADR-0045; Accepted only via HITL ratification / SSHSIG per ADR-0056).
+- 2026-08-14 — Accepted (operator ratification).
 
 ## Context
 
