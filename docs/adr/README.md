@@ -109,7 +109,7 @@ Canonical completeness of numbered ADR files is enforced for this table **and** 
 | 0086 | [Plugin SDK language-neutral contract (L1/L2/L3)](ADR-0086-plugin-sdk-language-neutral-contract.md) | Proposed |
 | 0087 | [Plugin SDK bidirectional zero-trust mesh](ADR-0087-plugin-sdk-bidirectional-zero-trust-mesh.md) | Proposed |
 
-| 0088 | [Verify the verifier: integrity/authorization checks must not depend on the artifact they are verifying](ADR-0088-verify-the-verifier-no-self-referential-trust-chain.md) | Proposed |
+| 0088 | [Verify the verifier: integrity/authorization checks must not depend on the artifact they are verifying](ADR-0088-verify-the-verifier-no-self-referential-trust-chain.md) | Accepted |
 
 ## Related docs
 
