@@ -6,7 +6,7 @@
 
 ## Status
 
-Proposed
+Accepted
 
 ### Status history
 
@@ -16,6 +16,7 @@ Proposed
   Consequences and References updated for GitHub `#1553`/`#1564` and `#1552`/`#1563`
   (issue [#1567](https://github.com/DataBoar/data-boar/issues/1567)). Status remains
   Proposed; genesis Date (UTC) unchanged.
+- 2026-08-14 — Accepted (operator ratification).
 
 ## Context
 
