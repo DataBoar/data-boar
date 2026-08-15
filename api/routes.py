@@ -41,6 +41,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
+from typing import Any
 
 import yaml
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Query, Request
@@ -530,6 +531,7 @@ class DatabaseConfig(BaseModel):
     password: str
     database: str
     driver: str = "postgresql+psycopg2"
+    allow_private_networks: bool = False
     tenant: str | None = None  # optional customer/tenant name for this scan
     technician: str | None = None  # optional technician/operator name for this scan
     jurisdiction_hint: bool | None = (
@@ -1902,9 +1904,11 @@ def _normalized_db_driver(value: str | None) -> str:
     return (str(value or "").split("+")[0]).strip().lower()
 
 
-def _scan_database_matches_configured_target(request_body: DatabaseConfig) -> bool:
+def _find_matching_configured_db_target(
+    request_body: DatabaseConfig,
+) -> dict[str, Any] | None:
     """
-    True when POST /scan_database payload exactly matches a configured DB target.
+    Return the configured database target that exactly matches *request_body*, or None.
 
     Matching fields: name, driver family, host, port, user, password, database.
     """
@@ -1941,8 +1945,13 @@ def _scan_database_matches_configured_target(request_body: DatabaseConfig) -> bo
             continue
         if str(target.get("database") or "").strip() != request_body.database:
             continue
-        return True
-    return False
+        return target
+    return None
+
+
+def _scan_database_matches_configured_target(request_body: DatabaseConfig) -> bool:
+    """True when POST /scan_database payload exactly matches a configured DB target."""
+    return _find_matching_configured_db_target(request_body) is not None
 
 
 @app.post("/scan_database", responses=_RATE_LIMIT_429)
@@ -1979,6 +1988,22 @@ async def scan_database(config: DatabaseConfig, background_tasks: BackgroundTask
         "pass": config.password,
         "database": config.database,
     }
+    if config.allow_private_networks:
+        target["allow_private_networks"] = True
+    else:
+        # Inherit opt-in only from a *fully* matching configured target (#1556).
+        # Name-only match would let an ad-hoc body reuse another target's name and
+        # steal allow_private_networks (Security Agent HIGH on PR #1584).
+        matched = _find_matching_configured_db_target(config)
+        if matched and bool(matched.get("allow_private_networks", False)):
+            target["allow_private_networks"] = True
+    # Defense-in-depth SSRF guard before background work (#1556).
+    from connectors.sql_connector import _build_url, _guard_sql_connection_url
+
+    try:
+        _guard_sql_connection_url(_build_url(target), target)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     from core.session import new_session_id
     from core.validation import sanitize_tenant_technician
 
