@@ -250,58 +250,104 @@ def _build_url(target: dict[str, Any]) -> str:
     return f"{drivername}://{user}:{password}@{host}:{port}/{database}"
 
 
-# Query-string keys that can redirect the TCP peer away from URL authority (#1556).
-# libpq: host / hostaddr; MySQL connectors: unix_socket / unix_socket_dir / socket.
-_SQL_PEER_OVERRIDE_QUERY_KEYS = frozenset(
-    {
-        "host",
-        "hostaddr",
-        "unix_socket",
-        "unix_socket_dir",
-        "socket",
-    }
-)
+# Per-dialect allowlist of SQLAlchemy URL query keys that cannot redirect the
+# TCP/unix peer (#1556). Anything else is rejected — blocklists of dangerous
+# keys (host, hostaddr, odbc_connect, DSN, …) do not scale across dialects.
+# Dialects absent from this map: any non-empty query string is rejected.
+_SQL_SAFE_QUERY_KEYS_BY_DIALECT: dict[str, frozenset[str]] = {
+    "postgresql": frozenset(
+        {
+            "sslmode",
+            "sslrootcert",
+            "sslcert",
+            "sslkey",
+            "sslcrl",
+            "connect_timeout",
+            "application_name",
+            "client_encoding",
+            "target_session_attrs",
+            "gssencmode",
+            "channel_binding",
+        }
+    ),
+    "mysql": frozenset(
+        {
+            "charset",
+            "charset_connector",
+            "connect_timeout",
+            "compress",
+            "ssl_ca",
+            "ssl_cert",
+            "ssl_key",
+            "ssl_disabled",
+            "ssl_verify_cert",
+            "ssl_verify_identity",
+        }
+    ),
+    "mssql": frozenset(
+        {
+            "driver",
+            "encrypt",
+            "trustservercertificate",
+            "timeout",
+            "login timeout",
+            "login_timeout",
+        }
+    ),
+    "oracle": frozenset(
+        {
+            # Produced by _build_url for service_name databases.
+            "service_name",
+            "encoding",
+            "nencoding",
+        }
+    ),
+}
 
 
-def _is_sql_unix_socket_path(value: str) -> bool:
-    """True when *value* is a filesystem/abstract unix-socket path, not a host/IP.
+def _sql_url_dialect_family(drivername: str | None) -> str:
+    base = (drivername or "").split("+")[0].strip().lower()
+    if base == "mariadb":
+        return "mysql"
+    return base
 
-    libpq accepts ``host=/var/run/postgresql`` (directory) as a unix-domain peer.
-    Absolute paths and Linux abstract-namespace sockets (``@name``) count; bare
-    hostnames and IPs do not.
+
+def _guard_sql_url_query_params(parsed: Any) -> None:
+    """Reject peer-redirecting or unknown URL query keys (#1556).
+
+    Strategy: allowlist per vetted dialect family. Unknown dialects may not
+    carry a query string at all. Keys such as ``host``, ``hostaddr``,
+    ``odbc_connect``, ``DSN``, and unix-socket selectors are never allowlisted.
     """
-    peer = value.strip()
-    if not peer:
-        return False
-    if peer.startswith("/"):
-        return True
-    # Linux abstract unix socket names are written with a leading '@'.
-    if peer.startswith("@") and "/" not in peer[1:]:
-        return True
-    return False
-
-
-def _reject_unix_socket_peer_without_opt_in(*, key: str, allow_private: bool) -> None:
-    if allow_private:
+    query = getattr(parsed, "query", None) or {}
+    if not query:
         return
-    raise ValueError(
-        f"host rejected: query '{key}' selects a local unix socket "
-        f"peer. Scanning internal/private networks requires explicit "
-        f"opt-in — add 'allow_private_networks: true' to this target. "
-        f"(#1556)"
-    )
+    family = _sql_url_dialect_family(getattr(parsed, "drivername", None))
+    allowed = _SQL_SAFE_QUERY_KEYS_BY_DIALECT.get(family)
+    if allowed is None:
+        raise ValueError(
+            f"host rejected: SQL URL query string is not allowed for dialect "
+            f"'{family or 'unknown'}' (unvetted — refuse peer overrides). (#1556)"
+        )
+    allowed_l = {k.lower() for k in allowed}
+    for key in query:
+        key_l = str(key).lower()
+        if key_l not in allowed_l:
+            raise ValueError(
+                f"host rejected: SQL URL query parameter '{key}' is not in the "
+                f"allowlist for dialect '{family}' (peer-override / unknown keys "
+                f"are refuse-by-default). (#1556)"
+            )
 
 
 def _guard_sql_connection_url(url: str, target: dict[str, Any]) -> None:
     """Reject non-global SQL hosts unless allow_private_networks (#1556).
 
     Runs on the *final* URL from ``_build_url`` so both discrete host/port fields
-    and a full ``url`` override are covered. Also validates query-string peer
-    overrides (``host`` / ``hostaddr`` / unix socket keys) so a public authority
-    cannot smuggle a private peer via ``?host=…`` (#1556 / Security Agent).
-
-    libpq ``host=/path`` (unix socket directory) is treated as a socket peer, not
-    a DNS name — require opt-in, do not fail closed on resolution (Bugbot).
+    and a full ``url`` override are covered. Query strings use a per-dialect
+    **allowlist** (unknown key or unvetted dialect → reject) so peer overrides
+    such as ``?host=``, ``?hostaddr=``, ``?odbc_connect=``, or ``?DSN=`` cannot
+    bypass the authority check (#1556 / Bugbot).
     """
     if not url or url.startswith("sqlite:"):
         return
@@ -311,6 +357,7 @@ def _guard_sql_connection_url(url: str, target: dict[str, Any]) -> None:
 
     allow_private = target_allows_private(target)
     parsed = make_url(url)
+    _guard_sql_url_query_params(parsed)
     host = parsed.host
     if not host:
         raise ValueError("host rejected: no host found in SQL connection URL. (#1556)")
@@ -323,35 +370,6 @@ def _guard_sql_connection_url(url: str, target: dict[str, Any]) -> None:
     )
     if err:
         raise ValueError(err)
-
-    # SQLAlchemy URL.query values are str | tuple[str, ...] depending on dialect.
-    query = getattr(parsed, "query", None) or {}
-    for key, raw in query.items():
-        key_l = str(key).lower()
-        if key_l not in _SQL_PEER_OVERRIDE_QUERY_KEYS:
-            continue
-        values = raw if isinstance(raw, (list, tuple)) else (raw,)
-        for value in values:
-            if value is None or str(value).strip() == "":
-                continue
-            peer = str(value).strip()
-            if key_l in {"unix_socket", "unix_socket_dir", "socket"} or (
-                key_l == "host" and _is_sql_unix_socket_path(peer)
-            ):
-                # Unix sockets are always local — require explicit opt-in.
-                # libpq also uses host=/dir for the socket directory (Bugbot).
-                _reject_unix_socket_peer_without_opt_in(
-                    key=key_l, allow_private=allow_private
-                )
-                continue
-            # host / hostaddr — hostname or IP; validate the peer alone.
-            peer_err = validate_outbound_url(
-                peer,
-                allow_private=allow_private,
-                label=f"query.{key_l}",
-            )
-            if peer_err:
-                raise ValueError(peer_err)
 
 
 def _connect_args_from_target(target: dict[str, Any]) -> dict[str, Any]:

@@ -604,10 +604,10 @@ def test_sql_connect_allows_private_with_opt_in_before_engine() -> None:
 
 
 def test_sql_guard_rejects_private_peer_via_query_host_override() -> None:
-    # regression-anchor: #1556 / Security Agent — ?host= must not bypass authority check.
+    # regression-anchor: #1556 — query peer overrides are not allowlisted.
     from connectors.sql_connector import _guard_sql_connection_url
 
-    with pytest.raises(ValueError, match="#832|#1556"):
+    with pytest.raises(ValueError, match="#1556"):
         _guard_sql_connection_url(
             "postgresql+psycopg2://x:x@1.1.1.1:5432/db?host=169.254.169.254",
             {"name": "probe"},
@@ -617,50 +617,84 @@ def test_sql_guard_rejects_private_peer_via_query_host_override() -> None:
 def test_sql_guard_rejects_private_peer_via_query_hostaddr() -> None:
     from connectors.sql_connector import _guard_sql_connection_url
 
-    with pytest.raises(ValueError, match="#832|#1556"):
+    with pytest.raises(ValueError, match="#1556"):
         _guard_sql_connection_url(
             "postgresql+psycopg2://x:x@1.1.1.1:5432/db?hostaddr=10.0.0.9",
             {"name": "probe"},
         )
 
 
-def test_sql_guard_rejects_unix_socket_query_without_opt_in() -> None:
+def test_sql_guard_rejects_unix_socket_query() -> None:
     from connectors.sql_connector import _guard_sql_connection_url
+    from connectors.url_guard import OPT_IN_KEY
 
+    # Socket selectors are never allowlisted (opt-in does not reopen peer overrides).
     with pytest.raises(ValueError, match="#1556"):
         _guard_sql_connection_url(
             "postgresql+psycopg2://x:x@1.1.1.1:5432/db?unix_socket=/var/run/postgresql",
-            {"name": "probe"},
+            {"name": "probe", OPT_IN_KEY: True},
         )
 
 
-def test_sql_guard_rejects_libpq_host_socket_path_without_opt_in() -> None:
-    # regression-anchor: Bugbot — libpq host=/dir is a unix socket, not DNS.
+def test_sql_guard_rejects_libpq_host_socket_path() -> None:
+    # regression-anchor: Bugbot — libpq host=/dir is a peer override, not allowlisted.
+    from connectors.sql_connector import _guard_sql_connection_url
+    from connectors.url_guard import OPT_IN_KEY
+
+    with pytest.raises(ValueError, match="#1556"):
+        _guard_sql_connection_url(
+            "postgresql+psycopg2://x:x@127.0.0.1:5432/db?host=/var/run/postgresql",
+            {"name": "lab", OPT_IN_KEY: True},
+        )
+
+
+def test_sql_guard_rejects_odbc_connect_and_dsn_query() -> None:
+    # regression-anchor: Bugbot round 3 — pyodbc odbc_connect / DSN bypass.
+    from connectors.sql_connector import _guard_sql_connection_url
+    from connectors.url_guard import OPT_IN_KEY
+
+    for url in (
+        "mssql+pyodbc://x:x@1.1.1.1:1433/db?odbc_connect=DRIVER%3D%7BODBC%20Driver%7D%3BSERVER%3D169.254.169.254",
+        "mssql+pyodbc://x:x@1.1.1.1:1433/db?DSN=evil",
+    ):
+        with pytest.raises(ValueError, match="#1556"):
+            _guard_sql_connection_url(url, {"name": "probe", OPT_IN_KEY: True})
+
+
+def test_sql_guard_rejects_query_on_unvetted_dialect() -> None:
     from connectors.sql_connector import _guard_sql_connection_url
 
     with pytest.raises(ValueError, match="#1556"):
         _guard_sql_connection_url(
-            "postgresql+psycopg2://x:x@1.1.1.1:5432/db?host=/var/run/postgresql",
+            "somethingdb://x:x@1.1.1.1:1234/db?sslmode=require",
             {"name": "probe"},
         )
 
 
-def test_sql_guard_allows_libpq_host_socket_path_with_opt_in() -> None:
+def test_sql_guard_allows_safe_postgresql_query() -> None:
     from connectors.sql_connector import _guard_sql_connection_url
-    from connectors.url_guard import OPT_IN_KEY
 
     _guard_sql_connection_url(
-        "postgresql+psycopg2://x:x@127.0.0.1:5432/db?host=/var/run/postgresql",
-        {"name": "lab", OPT_IN_KEY: True},
+        "postgresql+psycopg2://x:x@1.1.1.1:5432/db?sslmode=require",
+        {"name": "ok"},
     )
 
 
-def test_sql_guard_allows_query_host_override_with_opt_in() -> None:
-    from connectors.sql_connector import _guard_sql_connection_url
+def test_sql_guard_allows_oracle_service_name_query() -> None:
+    # _build_url emits ?service_name= for Oracle — must stay allowlisted.
+    from connectors.sql_connector import _build_url, _guard_sql_connection_url
     from connectors.url_guard import OPT_IN_KEY
 
-    # Both authority and query peer are private; opt-in must pass.
-    _guard_sql_connection_url(
-        "postgresql+psycopg2://x:x@10.0.0.1:5432/db?host=10.0.0.2",
-        {"name": "lab", OPT_IN_KEY: True},
+    url = _build_url(
+        {
+            "driver": "oracle+oracledb",
+            "host": "10.0.0.8",
+            "port": 1521,
+            "user": "u",
+            "pass": "p",
+            "database": "ORCL",
+            OPT_IN_KEY: True,
+        }
     )
+    assert "service_name=" in url
+    _guard_sql_connection_url(url, {"name": "lab", OPT_IN_KEY: True})
