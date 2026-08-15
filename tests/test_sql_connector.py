@@ -634,6 +634,27 @@ def test_sql_guard_rejects_unix_socket_query_without_opt_in() -> None:
         )
 
 
+def test_sql_guard_rejects_libpq_host_socket_path_without_opt_in() -> None:
+    # regression-anchor: Bugbot — libpq host=/dir is a unix socket, not DNS.
+    from connectors.sql_connector import _guard_sql_connection_url
+
+    with pytest.raises(ValueError, match="#1556"):
+        _guard_sql_connection_url(
+            "postgresql+psycopg2://x:x@1.1.1.1:5432/db?host=/var/run/postgresql",
+            {"name": "probe"},
+        )
+
+
+def test_sql_guard_allows_libpq_host_socket_path_with_opt_in() -> None:
+    from connectors.sql_connector import _guard_sql_connection_url
+    from connectors.url_guard import OPT_IN_KEY
+
+    _guard_sql_connection_url(
+        "postgresql+psycopg2://x:x@127.0.0.1:5432/db?host=/var/run/postgresql",
+        {"name": "lab", OPT_IN_KEY: True},
+    )
+
+
 def test_sql_guard_allows_query_host_override_with_opt_in() -> None:
     from connectors.sql_connector import _guard_sql_connection_url
     from connectors.url_guard import OPT_IN_KEY

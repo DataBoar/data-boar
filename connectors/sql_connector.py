@@ -263,6 +263,35 @@ _SQL_PEER_OVERRIDE_QUERY_KEYS = frozenset(
 )
 
 
+def _is_sql_unix_socket_path(value: str) -> bool:
+    """True when *value* is a filesystem/abstract unix-socket path, not a host/IP.
+
+    libpq accepts ``host=/var/run/postgresql`` (directory) as a unix-domain peer.
+    Absolute paths and Linux abstract-namespace sockets (``@name``) count; bare
+    hostnames and IPs do not.
+    """
+    peer = value.strip()
+    if not peer:
+        return False
+    if peer.startswith("/"):
+        return True
+    # Linux abstract unix socket names are written with a leading '@'.
+    if peer.startswith("@") and "/" not in peer[1:]:
+        return True
+    return False
+
+
+def _reject_unix_socket_peer_without_opt_in(*, key: str, allow_private: bool) -> None:
+    if allow_private:
+        return
+    raise ValueError(
+        f"host rejected: query '{key}' selects a local unix socket "
+        f"peer. Scanning internal/private networks requires explicit "
+        f"opt-in — add 'allow_private_networks: true' to this target. "
+        f"(#1556)"
+    )
+
+
 def _guard_sql_connection_url(url: str, target: dict[str, Any]) -> None:
     """Reject non-global SQL hosts unless allow_private_networks (#1556).
 
@@ -270,6 +299,9 @@ def _guard_sql_connection_url(url: str, target: dict[str, Any]) -> None:
     and a full ``url`` override are covered. Also validates query-string peer
     overrides (``host`` / ``hostaddr`` / unix socket keys) so a public authority
     cannot smuggle a private peer via ``?host=…`` (#1556 / Security Agent).
+
+    libpq ``host=/path`` (unix socket directory) is treated as a socket peer, not
+    a DNS name — require opt-in, do not fail closed on resolution (Bugbot).
     """
     if not url or url.startswith("sqlite:"):
         return
@@ -303,17 +335,16 @@ def _guard_sql_connection_url(url: str, target: dict[str, Any]) -> None:
             if value is None or str(value).strip() == "":
                 continue
             peer = str(value).strip()
-            if key_l in {"unix_socket", "unix_socket_dir", "socket"}:
+            if key_l in {"unix_socket", "unix_socket_dir", "socket"} or (
+                key_l == "host" and _is_sql_unix_socket_path(peer)
+            ):
                 # Unix sockets are always local — require explicit opt-in.
-                if not allow_private:
-                    raise ValueError(
-                        f"host rejected: query '{key_l}' selects a local unix socket "
-                        f"peer. Scanning internal/private networks requires explicit "
-                        f"opt-in — add 'allow_private_networks: true' to this target. "
-                        f"(#1556)"
-                    )
+                # libpq also uses host=/dir for the socket directory (Bugbot).
+                _reject_unix_socket_peer_without_opt_in(
+                    key=key_l, allow_private=allow_private
+                )
                 continue
-            # host / hostaddr — may omit port; validate the peer hostname/IP alone.
+            # host / hostaddr — hostname or IP; validate the peer alone.
             peer_err = validate_outbound_url(
                 peer,
                 allow_private=allow_private,
