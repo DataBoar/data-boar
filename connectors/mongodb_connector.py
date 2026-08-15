@@ -52,6 +52,7 @@ class MongoDBConnector:
         self.detection_config = detection_config or {}
         self._client = None
         self._tls_enabled = False
+        self._dns_pin = None
 
     def connect(self) -> None:
         if not _MONGO_AVAILABLE:
@@ -65,10 +66,13 @@ class MongoDBConnector:
             )
         host = self.config.get("host", "localhost")
         port = int(self.config.get("port", 27017))
-        from .url_guard import target_allows_private, validate_outbound_url
+        from .tcp_pin import HostResolutionPin
+        from .url_guard import resolve_and_validate_outbound_url, target_allows_private
 
         # SSRF guard (#1559): bare host:port — do not use tcp:// (not in allowlist).
-        err = validate_outbound_url(
+        # Capture validated IPs for TCP pin (#1586) so pymongo cannot re-resolve
+        # to a different peer after the guard.
+        err, pin_ips = resolve_and_validate_outbound_url(
             f"{host}:{port}",
             allow_private=target_allows_private(self.config),
             label="host",
@@ -101,8 +105,17 @@ class MongoDBConnector:
             # require / prefer → encrypted without full CA/hostname verify.
             if sslmode_posture in ("require", "prefer", "allow"):
                 client_kwargs["tlsAllowInvalidCertificates"] = True
-        self._client = MongoClient(uri, **client_kwargs)
-        self._db = self._client[database]
+        # Pin before MongoClient so pool connect/reconnect uses guard IPs;
+        # URI keeps hostname for TLS server_hostname (#1586).
+        pin = HostResolutionPin(str(host), [str(ip) for ip in pin_ips]).install()
+        self._dns_pin = pin
+        try:
+            self._client = MongoClient(uri, **client_kwargs)
+            self._db = self._client[database]
+        except Exception:
+            pin.release()
+            self._dns_pin = None
+            raise
 
     def close(self) -> None:
         if self._client:
@@ -110,8 +123,12 @@ class MongoDBConnector:
                 self._client.close()
             except Exception:
                 # Best-effort close: ignore client shutdown errors.
-                return
+                pass
             self._client = None
+        pin = getattr(self, "_dns_pin", None)
+        if pin is not None:
+            pin.release()
+            self._dns_pin = None
 
     def run(self) -> None:
         from utils.audit_log_display import audit_log_target_label
