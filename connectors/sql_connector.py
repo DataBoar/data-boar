@@ -250,6 +250,33 @@ def _build_url(target: dict[str, Any]) -> str:
     return f"{drivername}://{user}:{password}@{host}:{port}/{database}"
 
 
+def _guard_sql_connection_url(url: str, target: dict[str, Any]) -> None:
+    """Reject non-global SQL hosts unless allow_private_networks (#1556).
+
+    Runs on the *final* URL from ``_build_url`` so both discrete host/port fields
+    and a full ``url`` override are covered.
+    """
+    if not url or url.startswith("sqlite:"):
+        return
+    from sqlalchemy.engine.url import make_url
+
+    from .url_guard import target_allows_private, validate_outbound_url
+
+    parsed = make_url(url)
+    host = parsed.host
+    if not host:
+        raise ValueError("host rejected: no host found in SQL connection URL. (#1556)")
+    port = parsed.port
+    candidate = f"{host}:{port}" if port is not None else host
+    err = validate_outbound_url(
+        candidate,
+        allow_private=target_allows_private(target),
+        label="host",
+    )
+    if err:
+        raise ValueError(err)
+
+
 def _connect_args_from_target(target: dict[str, Any]) -> dict[str, Any]:
     """
     Build SQLAlchemy ``connect_args`` from target timeouts (config loader merges global + per-target).
@@ -357,6 +384,7 @@ class SQLConnector:
     def connect(self) -> None:
         ensure_sql_driver_available(self.config.get("driver"))
         url = _build_url(self.config)
+        _guard_sql_connection_url(url, self.config)
         connect_args = _connect_args_from_target(self.config)
         self.engine = create_engine(url, pool_pre_ping=True, connect_args=connect_args)
         self._table_row_cache = {}

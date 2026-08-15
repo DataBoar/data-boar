@@ -70,6 +70,16 @@ class RedisConnector:
             )
         host = self.config.get("host", "localhost")
         port = int(self.config.get("port", 6379))
+        from .url_guard import target_allows_private, validate_outbound_url
+
+        # SSRF guard (#1559): bare host:port — do not use tcp:// (not in allowlist).
+        err = validate_outbound_url(
+            f"{host}:{port}",
+            allow_private=target_allows_private(self.config),
+            label="host",
+        )
+        if err:
+            raise ValueError(err)
         password = self.config.get("pass") or self.config.get("password")
         connect_s = max(1, int(self.config.get("connect_timeout_seconds", 25)))
         read_s = max(1, int(self.config.get("read_timeout_seconds", 90)))

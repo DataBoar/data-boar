@@ -530,6 +530,7 @@ class DatabaseConfig(BaseModel):
     password: str
     database: str
     driver: str = "postgresql+psycopg2"
+    allow_private_networks: bool = False
     tenant: str | None = None  # optional customer/tenant name for this scan
     technician: str | None = None  # optional technician/operator name for this scan
     jurisdiction_hint: bool | None = (
@@ -1979,6 +1980,30 @@ async def scan_database(config: DatabaseConfig, background_tasks: BackgroundTask
         "pass": config.password,
         "database": config.database,
     }
+    if config.allow_private_networks:
+        target["allow_private_networks"] = True
+    else:
+        # Inherit opt-in from a matching pre-configured target (#1556).
+        cfg_full = _get_config()
+        for configured in (
+            cfg_full.get("targets") if isinstance(cfg_full.get("targets"), list) else []
+        ):
+            if not isinstance(configured, dict):
+                continue
+            if str(configured.get("type") or "").strip().lower() != "database":
+                continue
+            if str(configured.get("name") or "").strip() != config.name:
+                continue
+            if bool(configured.get("allow_private_networks", False)):
+                target["allow_private_networks"] = True
+            break
+    # Defense-in-depth SSRF guard before background work (#1556).
+    from connectors.sql_connector import _build_url, _guard_sql_connection_url
+
+    try:
+        _guard_sql_connection_url(_build_url(target), target)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     from core.session import new_session_id
     from core.validation import sanitize_tenant_technician
 
