@@ -163,6 +163,7 @@ def test_scan_database_allows_adhoc_target_when_opted_in(tmp_path: Path):
                 "password": "p",
                 "database": "d",
                 "driver": "postgresql+psycopg2",
+                "allow_private_networks": True,
             },
         )
         assert resp.status_code == 200
