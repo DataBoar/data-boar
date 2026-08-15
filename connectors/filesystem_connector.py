@@ -112,16 +112,49 @@ def _file_inode_key(path: Path) -> tuple[int, int] | None:
     return (st.st_dev, st.st_ino)
 
 
+def _symlink_target_inode_key(entry: os.DirEntry[str]) -> tuple[int, int] | None:
+    """Return (st_dev, st_ino) of a symlink's target regular file (#1579)."""
+    try:
+        st = entry.stat(follow_symlinks=True)
+    except OSError:
+        return None
+    if not stat.S_ISREG(st.st_mode):
+        return None
+    return (st.st_dev, st.st_ino)
+
+
+def _path_contained_under_root(path: Path, root: Path) -> bool:
+    """True when *path* resolves to a location under *root* (#1579 / #1560)."""
+    try:
+        resolved = path.resolve()
+        return resolved.is_relative_to(root)
+    except (OSError, ValueError):
+        return False
+
+
 def iter_scan_files(root: Path, *, recursive: bool) -> Iterator[Path]:
     """
     Yield files under *root* for filesystem scans.
 
     - Does not follow directory symlinks (avoids circular walk loops).
     - Skips duplicate regular files reachable via multiple hard links / symlink aliases.
+    - File symlinks: yield the symlink path when the *target* inode is new and the
+      resolved target stays under *root* (#1579).
     """
     root = root.resolve()
     seen_dirs: set[tuple[int, int]] = set()
     seen_files: set[tuple[int, int]] = set()
+
+    def _maybe_yield_file_symlink(entry: os.DirEntry[str]) -> Iterator[Path]:
+        if not entry.is_file(follow_symlinks=True):
+            return
+        fpath = Path(entry.path)
+        if not _path_contained_under_root(fpath, root):
+            return
+        fkey = _symlink_target_inode_key(entry)
+        if fkey is not None and fkey not in seen_files:
+            seen_files.add(fkey)
+            yield fpath
 
     def _walk_dir(directory: Path) -> Iterator[Path]:
         dkey = _dir_inode_key(directory)
@@ -135,12 +168,7 @@ def iter_scan_files(root: Path, *, recursive: bool) -> Iterator[Path]:
                 for entry in it:
                     try:
                         if entry.is_symlink():
-                            if entry.is_file(follow_symlinks=True):
-                                fpath = Path(entry.path)
-                                fkey = _file_inode_key(fpath)
-                                if fkey is not None and fkey not in seen_files:
-                                    seen_files.add(fkey)
-                                    yield fpath
+                            yield from _maybe_yield_file_symlink(entry)
                             continue
                         if entry.is_file(follow_symlinks=False):
                             fpath = Path(entry.path)
@@ -162,6 +190,9 @@ def iter_scan_files(root: Path, *, recursive: bool) -> Iterator[Path]:
             with os.scandir(root) as it:
                 for entry in it:
                     try:
+                        if entry.is_symlink():
+                            yield from _maybe_yield_file_symlink(entry)
+                            continue
                         if entry.is_file(follow_symlinks=False):
                             fpath = Path(entry.path)
                             fkey = _file_inode_key(fpath)
