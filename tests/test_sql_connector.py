@@ -601,3 +601,45 @@ def test_sql_connect_allows_private_with_opt_in_before_engine() -> None:
         connector.connect()
         mock_engine.assert_called_once()
         connector.close()
+
+
+def test_sql_guard_rejects_private_peer_via_query_host_override() -> None:
+    # regression-anchor: #1556 / Security Agent — ?host= must not bypass authority check.
+    from connectors.sql_connector import _guard_sql_connection_url
+
+    with pytest.raises(ValueError, match="#832|#1556"):
+        _guard_sql_connection_url(
+            "postgresql+psycopg2://x:x@1.1.1.1:5432/db?host=169.254.169.254",
+            {"name": "probe"},
+        )
+
+
+def test_sql_guard_rejects_private_peer_via_query_hostaddr() -> None:
+    from connectors.sql_connector import _guard_sql_connection_url
+
+    with pytest.raises(ValueError, match="#832|#1556"):
+        _guard_sql_connection_url(
+            "postgresql+psycopg2://x:x@1.1.1.1:5432/db?hostaddr=10.0.0.9",
+            {"name": "probe"},
+        )
+
+
+def test_sql_guard_rejects_unix_socket_query_without_opt_in() -> None:
+    from connectors.sql_connector import _guard_sql_connection_url
+
+    with pytest.raises(ValueError, match="#1556"):
+        _guard_sql_connection_url(
+            "postgresql+psycopg2://x:x@1.1.1.1:5432/db?unix_socket=/var/run/postgresql",
+            {"name": "probe"},
+        )
+
+
+def test_sql_guard_allows_query_host_override_with_opt_in() -> None:
+    from connectors.sql_connector import _guard_sql_connection_url
+    from connectors.url_guard import OPT_IN_KEY
+
+    # Both authority and query peer are private; opt-in must pass.
+    _guard_sql_connection_url(
+        "postgresql+psycopg2://x:x@10.0.0.1:5432/db?host=10.0.0.2",
+        {"name": "lab", OPT_IN_KEY: True},
+    )

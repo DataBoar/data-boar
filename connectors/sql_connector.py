@@ -250,11 +250,26 @@ def _build_url(target: dict[str, Any]) -> str:
     return f"{drivername}://{user}:{password}@{host}:{port}/{database}"
 
 
+# Query-string keys that can redirect the TCP peer away from URL authority (#1556).
+# libpq: host / hostaddr; MySQL connectors: unix_socket / unix_socket_dir / socket.
+_SQL_PEER_OVERRIDE_QUERY_KEYS = frozenset(
+    {
+        "host",
+        "hostaddr",
+        "unix_socket",
+        "unix_socket_dir",
+        "socket",
+    }
+)
+
+
 def _guard_sql_connection_url(url: str, target: dict[str, Any]) -> None:
     """Reject non-global SQL hosts unless allow_private_networks (#1556).
 
     Runs on the *final* URL from ``_build_url`` so both discrete host/port fields
-    and a full ``url`` override are covered.
+    and a full ``url`` override are covered. Also validates query-string peer
+    overrides (``host`` / ``hostaddr`` / unix socket keys) so a public authority
+    cannot smuggle a private peer via ``?host=…`` (#1556 / Security Agent).
     """
     if not url or url.startswith("sqlite:"):
         return
@@ -262,6 +277,7 @@ def _guard_sql_connection_url(url: str, target: dict[str, Any]) -> None:
 
     from .url_guard import target_allows_private, validate_outbound_url
 
+    allow_private = target_allows_private(target)
     parsed = make_url(url)
     host = parsed.host
     if not host:
@@ -270,11 +286,41 @@ def _guard_sql_connection_url(url: str, target: dict[str, Any]) -> None:
     candidate = f"{host}:{port}" if port is not None else host
     err = validate_outbound_url(
         candidate,
-        allow_private=target_allows_private(target),
+        allow_private=allow_private,
         label="host",
     )
     if err:
         raise ValueError(err)
+
+    # SQLAlchemy URL.query values are str | tuple[str, ...] depending on dialect.
+    query = getattr(parsed, "query", None) or {}
+    for key, raw in query.items():
+        key_l = str(key).lower()
+        if key_l not in _SQL_PEER_OVERRIDE_QUERY_KEYS:
+            continue
+        values = raw if isinstance(raw, (list, tuple)) else (raw,)
+        for value in values:
+            if value is None or str(value).strip() == "":
+                continue
+            peer = str(value).strip()
+            if key_l in {"unix_socket", "unix_socket_dir", "socket"}:
+                # Unix sockets are always local — require explicit opt-in.
+                if not allow_private:
+                    raise ValueError(
+                        f"host rejected: query '{key_l}' selects a local unix socket "
+                        f"peer. Scanning internal/private networks requires explicit "
+                        f"opt-in — add 'allow_private_networks: true' to this target. "
+                        f"(#1556)"
+                    )
+                continue
+            # host / hostaddr — may omit port; validate the peer hostname/IP alone.
+            peer_err = validate_outbound_url(
+                peer,
+                allow_private=allow_private,
+                label=f"query.{key_l}",
+            )
+            if peer_err:
+                raise ValueError(peer_err)
 
 
 def _connect_args_from_target(target: dict[str, Any]) -> dict[str, Any]:

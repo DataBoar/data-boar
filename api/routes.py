@@ -41,6 +41,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
+from typing import Any
 
 import yaml
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Query, Request
@@ -1903,9 +1904,11 @@ def _normalized_db_driver(value: str | None) -> str:
     return (str(value or "").split("+")[0]).strip().lower()
 
 
-def _scan_database_matches_configured_target(request_body: DatabaseConfig) -> bool:
+def _find_matching_configured_db_target(
+    request_body: DatabaseConfig,
+) -> dict[str, Any] | None:
     """
-    True when POST /scan_database payload exactly matches a configured DB target.
+    Return the configured database target that exactly matches *request_body*, or None.
 
     Matching fields: name, driver family, host, port, user, password, database.
     """
@@ -1942,8 +1945,13 @@ def _scan_database_matches_configured_target(request_body: DatabaseConfig) -> bo
             continue
         if str(target.get("database") or "").strip() != request_body.database:
             continue
-        return True
-    return False
+        return target
+    return None
+
+
+def _scan_database_matches_configured_target(request_body: DatabaseConfig) -> bool:
+    """True when POST /scan_database payload exactly matches a configured DB target."""
+    return _find_matching_configured_db_target(request_body) is not None
 
 
 @app.post("/scan_database", responses=_RATE_LIMIT_429)
@@ -1983,20 +1991,12 @@ async def scan_database(config: DatabaseConfig, background_tasks: BackgroundTask
     if config.allow_private_networks:
         target["allow_private_networks"] = True
     else:
-        # Inherit opt-in from a matching pre-configured target (#1556).
-        cfg_full = _get_config()
-        for configured in (
-            cfg_full.get("targets") if isinstance(cfg_full.get("targets"), list) else []
-        ):
-            if not isinstance(configured, dict):
-                continue
-            if str(configured.get("type") or "").strip().lower() != "database":
-                continue
-            if str(configured.get("name") or "").strip() != config.name:
-                continue
-            if bool(configured.get("allow_private_networks", False)):
-                target["allow_private_networks"] = True
-            break
+        # Inherit opt-in only from a *fully* matching configured target (#1556).
+        # Name-only match would let an ad-hoc body reuse another target's name and
+        # steal allow_private_networks (Security Agent HIGH on PR #1584).
+        matched = _find_matching_configured_db_target(config)
+        if matched and bool(matched.get("allow_private_networks", False)):
+            target["allow_private_networks"] = True
     # Defense-in-depth SSRF guard before background work (#1556).
     from connectors.sql_connector import _build_url, _guard_sql_connection_url
 

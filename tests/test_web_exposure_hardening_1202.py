@@ -172,6 +172,49 @@ def test_scan_database_allows_adhoc_target_when_opted_in(tmp_path: Path):
         _teardown(routes, previous)
 
 
+def test_scan_database_does_not_inherit_private_opt_in_by_name_only(
+    tmp_path: Path,
+) -> None:
+    # regression-anchor: #1556 / Security Agent — full match required to inherit opt-in.
+    config = {
+        "targets": [
+            {
+                "name": "shared-name",
+                "type": "database",
+                "driver": "postgresql+psycopg2",
+                "host": "10.0.0.5",
+                "port": 5432,
+                "user": "lab",
+                "pass": "lab-secret",
+                "database": "labdb",
+                "allow_private_networks": True,
+            }
+        ],
+        "report": {"output_dir": str(tmp_path)},
+        "api": {"port": 8088, "allow_adhoc_targets": True},
+        "sqlite_path": str(tmp_path / "audit.db"),
+    }
+    routes, client, previous = _setup_client(tmp_path, config)
+    try:
+        resp = client.post(
+            "/scan_database",
+            json={
+                "name": "shared-name",  # same name only
+                "host": "127.0.0.1",
+                "port": 5432,
+                "user": "attacker",
+                "password": "x",
+                "database": "x",
+                "driver": "postgresql+psycopg2",
+            },
+        )
+        assert resp.status_code == 400
+        detail = resp.json().get("detail") or ""
+        assert "#832" in detail or "private" in detail.lower() or "loopback" in detail
+    finally:
+        _teardown(routes, previous)
+
+
 def test_status_reflects_forwarded_header_trust_posture(tmp_path: Path):
     config = {
         "targets": [],
