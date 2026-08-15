@@ -65,6 +65,16 @@ class MongoDBConnector:
             )
         host = self.config.get("host", "localhost")
         port = int(self.config.get("port", 27017))
+        from .url_guard import target_allows_private, validate_outbound_url
+
+        # SSRF guard (#1559): bare host:port — do not use tcp:// (not in allowlist).
+        err = validate_outbound_url(
+            f"{host}:{port}",
+            allow_private=target_allows_private(self.config),
+            label="host",
+        )
+        if err:
+            raise ValueError(err)
         user = self.config.get("user") or self.config.get("username")
         password = self.config.get("pass") or self.config.get("password")
         database = self.config.get("database", "test")

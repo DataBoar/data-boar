@@ -319,6 +319,9 @@ def test_sharepoint_connector_rejects_private_site_url() -> None:
         "connectors/sharepoint_connector.py",
         "connectors/webdav_connector.py",
         "connectors/dataverse_connector.py",
+        "connectors/mongodb_connector.py",
+        "connectors/redis_connector.py",
+        "connectors/sql_connector.py",
     ],
 )
 def test_connector_sources_call_url_guard(connector_file: str) -> None:
@@ -333,6 +336,7 @@ def test_connector_sources_call_url_guard(connector_file: str) -> None:
         "validate_outbound_url(" in source
         or "resolve_and_validate_outbound_url(" in source
         or "pinned_httpx_request(" in source
+        or "_guard_sql_connection_url(" in source
     )
     assert has_guard, f"{connector_file} lost its SSRF guard call (#832 / #1552)"
     assert "target_allows_private(" in source, (
