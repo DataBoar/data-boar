@@ -1,0 +1,1 @@
+# HubSpot synthetic fixtures package

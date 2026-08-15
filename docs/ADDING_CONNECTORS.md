@@ -334,7 +334,32 @@ targets:
 
 ---
 
-## 7. Checklist
+## 7. Example: HubSpot CRM connector (#1229)
+
+Managed SaaS CRM (Pro tier). Discovers **all** property names (including custom fields
+where CPF/CNPJ often hide), then samples objects with pagination and rate-limit backoff.
+
+- **Module:** `connectors/hubspot_connector.py`
+- **Auth:** Private App Token via env ``HUBSPOT_PRIVATE_APP_TOKEN`` (never commit tokens).
+  Read-only scopes: `crm.objects.*.read` + `crm.schemas.*.read` for contacts/companies/deals.
+- **SSRF:** All outbound HTTP uses `connectors/url_guard.py` host pinning (#1552) — same
+  posture as the REST connector.
+
+Config example:
+
+```yaml
+targets:
+  - name: crm-hubspot
+    type: hubspot
+    objects: [contacts, companies, deals]
+```
+
+Optional keys: `base_url` (default `https://api.hubapi.com`), `token_from_env`
+(override env var name), `allow_private_networks` (lab only).
+
+---
+
+## 8. Checklist
 
 - [ ] New module under `connectors/<name>_connector.py`.
 - [ ] Class with `run()`, and optionally `connect()`/`close()`.

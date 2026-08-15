@@ -61,7 +61,7 @@ def _resolve_database_connector(
 # Connector tier boundary (#843, operator-ratified 2026-06-11; #854 fail-closed):
 # - Open-core (Community): filesystem, self-hosted SQL/NoSQL (sqlite/postgres/
 #   mysql/mariadb/mongo/redis), compressed files, generic REST/API.
-# - Pro: managed corporate infrastructure (PowerBI, SharePoint, Dataverse,
+# - Pro: managed corporate infrastructure (PowerBI, HubSpot, SharePoint, Dataverse,
 #   WebDAV, SMB/CIFS, NFS, MSSQL, Oracle) + cloud connectors.
 # #854 anti-leak: this map is EXHAUSTIVE for registered connector types. A
 # type (or database driver) absent from this map has NO tier decision and is
@@ -88,6 +88,7 @@ _CONNECTOR_TIER_FEATURES: dict[str, str] = {
     "gcs": "connector_gcs",
     # Managed corporate infrastructure (Pro)
     "powerbi": "connector_powerbi",
+    "hubspot": "connector_hubspot",
     "sharepoint": "connector_sharepoint",
     "dataverse": "connector_dataverse",
     "powerapps": "connector_dataverse",  # same connector family as dataverse
@@ -198,6 +199,8 @@ def connector_for_target(target: dict[str, Any]) -> tuple[Type[Any], list[str]] 
         return _try_get_connector(t)
     if t in ("powerbi", "dataverse", "powerapps"):
         return _try_get_connector(t)
+    if t == "hubspot":
+        return _try_get_connector("hubspot")
     if t == "database":
         return _resolve_database_connector(target)
     return None

@@ -315,6 +315,7 @@ def test_sharepoint_connector_rejects_private_site_url() -> None:
     [
         "connectors/rest_connector.py",
         "connectors/powerbi_connector.py",
+        "connectors/hubspot_connector.py",
         "connectors/sharepoint_connector.py",
         "connectors/webdav_connector.py",
         "connectors/dataverse_connector.py",
