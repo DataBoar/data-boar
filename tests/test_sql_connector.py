@@ -600,7 +600,96 @@ def test_sql_connect_allows_private_with_opt_in_before_engine() -> None:
         )
         connector.connect()
         mock_engine.assert_called_once()
+        call_kw = mock_engine.call_args.kwargs
+        assert call_kw["connect_args"]["hostaddr"] == "10.0.0.8"
         connector.close()
+
+
+def test_sql_postgres_connect_pins_hostaddr_from_guard_dns(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """#1586 slice A: hostname stays in URL; TCP peer is guard-validated hostaddr."""
+    import ipaddress
+    import socket
+
+    from connectors import sql_connector
+
+    def fake_getaddrinfo(host, *args, **kwargs):
+        if host == "db.example.com":
+            return [
+                (
+                    socket.AF_INET,
+                    socket.SOCK_STREAM,
+                    6,
+                    "",
+                    ("1.1.1.1", 0),
+                ),
+                (
+                    socket.AF_INET6,
+                    socket.SOCK_STREAM,
+                    6,
+                    "",
+                    ("2606:4700:4700::1111", 0, 0, 0),
+                ),
+            ]
+        raise socket.gaierror(f"unexpected host {host!r}")
+
+    monkeypatch.setattr(socket, "getaddrinfo", fake_getaddrinfo)
+    # url_guard imports socket at module level for _resolve_host_ips
+    monkeypatch.setattr(
+        "connectors.url_guard.socket.getaddrinfo",
+        fake_getaddrinfo,
+    )
+
+    with (
+        patch.object(sql_connector, "ensure_sql_driver_available"),
+        patch.object(sql_connector, "create_engine") as mock_engine,
+    ):
+        mock_engine.return_value = MagicMock()
+        connector = sql_connector.SQLConnector(
+            {
+                "name": "pg-pin",
+                "driver": "postgresql+psycopg2",
+                "host": "db.example.com",
+                "port": 5432,
+                "user": "u",
+                "pass": "p",
+                "database": "db",
+            },
+            scanner=MagicMock(),
+            db_manager=MagicMock(),
+        )
+        connector.connect()
+        mock_engine.assert_called_once()
+        (url,) = mock_engine.call_args.args
+        call_kw = mock_engine.call_args.kwargs
+        assert "db.example.com" in url
+        assert "1.1.1.1" not in url
+        assert call_kw["connect_args"]["hostaddr"] == "1.1.1.1"
+        assert "hostaddr=" not in url
+        # Prefer IPv4 pin (same order as HTTP #1565 / _prefer_pin_order)
+        assert call_kw["connect_args"]["hostaddr"] != str(
+            ipaddress.IPv6Address("2606:4700:4700::1111")
+        )
+        connector.close()
+
+
+def test_apply_postgres_hostaddr_pin_formats_ipv6() -> None:
+    from connectors.sql_connector import _apply_postgres_hostaddr_pin
+
+    out = _apply_postgres_hostaddr_pin(
+        {"connect_timeout": 5},
+        ["2001:db8::1"],
+    )
+    assert out["hostaddr"] == "2001:db8::1"
+    assert "[" not in out["hostaddr"]
+
+
+def test_tcp_pin_primary_pin_str_empty_raises() -> None:
+    from connectors.tcp_pin import primary_pin_str
+
+    with pytest.raises(ValueError, match="#1586"):
+        primary_pin_str([])
 
 
 def test_sql_guard_rejects_private_peer_via_query_host_override() -> None:

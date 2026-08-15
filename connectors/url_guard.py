@@ -35,6 +35,10 @@ mongodb_connector / redis_connector (host:port), sql_connector (connection URL h
 #1565: ``PinnedIPHTTPAdapter`` / ``build_pinned_requests_session`` pin
 ``requests`` peers the same way ``PinnedIPTransport`` pins httpx (SharePoint,
 WebDAV).
+
+#1586 (SQL slice A): ``sql_connector`` pins PostgreSQL TCP peers via libpq
+``hostaddr`` in ``connect_args`` (see ``connectors.tcp_pin``) using the same
+resolved IPs from :func:`resolve_and_validate_outbound_url`.
 """
 
 from __future__ import annotations

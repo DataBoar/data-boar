@@ -340,7 +340,7 @@ def _guard_sql_url_query_params(parsed: Any) -> None:
             )
 
 
-def _guard_sql_connection_url(url: str, target: dict[str, Any]) -> None:
+def _guard_sql_connection_url(url: str, target: dict[str, Any]) -> list[str]:
     """Reject non-global SQL hosts unless allow_private_networks (#1556).
 
     Runs on the *final* URL from ``_build_url`` so both discrete host/port fields
@@ -348,12 +348,15 @@ def _guard_sql_connection_url(url: str, target: dict[str, Any]) -> None:
     **allowlist** (unknown key or unvetted dialect → reject) so peer overrides
     such as ``?host=``, ``?hostaddr=``, ``?odbc_connect=``, or ``?DSN=`` cannot
     bypass the authority check (#1556 / Bugbot).
+
+    Returns the guard-validated pin IP strings (preferred order) for TCP pinning
+    (#1586). Empty list for sqlite / empty URL (no network peer).
     """
     if not url or url.startswith("sqlite:"):
-        return
+        return []
     from sqlalchemy.engine.url import make_url
 
-    from .url_guard import target_allows_private, validate_outbound_url
+    from .url_guard import resolve_and_validate_outbound_url, target_allows_private
 
     allow_private = target_allows_private(target)
     parsed = make_url(url)
@@ -363,13 +366,32 @@ def _guard_sql_connection_url(url: str, target: dict[str, Any]) -> None:
         raise ValueError("host rejected: no host found in SQL connection URL. (#1556)")
     port = parsed.port
     candidate = f"{host}:{port}" if port is not None else host
-    err = validate_outbound_url(
+    err, ips = resolve_and_validate_outbound_url(
         candidate,
         allow_private=allow_private,
         label="host",
     )
     if err:
         raise ValueError(err)
+    return [str(ip) for ip in ips]
+
+
+def _apply_postgres_hostaddr_pin(
+    connect_args: dict[str, Any],
+    pin_ips: list[str],
+) -> dict[str, Any]:
+    """Inject libpq ``hostaddr`` from guard pins (#1586 slice A).
+
+    Keeps SQLAlchemy URL ``host`` as the original hostname for TLS/SCRAM
+    identity. Never put ``hostaddr`` in the URL query (#1556 allowlist).
+    """
+    if not pin_ips:
+        return connect_args
+    from .tcp_pin import format_libpq_hostaddr, primary_pin_str
+
+    out = dict(connect_args)
+    out["hostaddr"] = format_libpq_hostaddr(primary_pin_str(pin_ips))
+    return out
 
 
 def _connect_args_from_target(target: dict[str, Any]) -> dict[str, Any]:
@@ -385,7 +407,8 @@ def _connect_args_from_target(target: dict[str, Any]) -> dict[str, Any]:
 
     Driver → connect_args mapping::
 
-        postgresql[+…]       connect_timeout, options=-c statement_timeout=… (ms)
+        postgresql[+…]       connect_timeout, options=-c statement_timeout=… (ms);
+                             ``hostaddr`` is added separately from guard pins (#1586)
         mysql[+…] / mariadb  connect_timeout
         sqlite               timeout  (lock wait; read_timeout_seconds)
         mssql+pymssql        login_timeout, timeout  (#1297; bare ``mssql`` maps here)
@@ -479,8 +502,11 @@ class SQLConnector:
     def connect(self) -> None:
         ensure_sql_driver_available(self.config.get("driver"))
         url = _build_url(self.config)
-        _guard_sql_connection_url(url, self.config)
+        pin_ips = _guard_sql_connection_url(url, self.config)
         connect_args = _connect_args_from_target(self.config)
+        _, base = _resolve_driver(self.config.get("driver"))
+        if base == "postgresql":
+            connect_args = _apply_postgres_hostaddr_pin(connect_args, pin_ips)
         self.engine = create_engine(url, pool_pre_ping=True, connect_args=connect_args)
         self._table_row_cache = {}
 
