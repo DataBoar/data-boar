@@ -44,6 +44,7 @@ def _clean_guard():
         # #843 — connectors
         ("connector_rest", Tier.COMMUNITY),
         ("connector_powerbi", Tier.PRO),
+        ("connector_hubspot", Tier.PRO),
         ("connector_sharepoint", Tier.PRO),
         ("connector_dataverse", Tier.PRO),
         ("connector_webdav", Tier.PRO),
@@ -70,6 +71,7 @@ def test_feature_tier_map_entries(feature, tier):
     ("target", "expected"),
     [
         ({"type": "powerbi"}, "connector_powerbi"),
+        ({"type": "hubspot"}, "connector_hubspot"),
         ({"type": "sharepoint"}, "connector_sharepoint"),
         ({"type": "dataverse"}, "connector_dataverse"),
         ({"type": "powerapps"}, "connector_dataverse"),

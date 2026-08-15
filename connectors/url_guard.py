@@ -29,8 +29,8 @@ DNS posture (#1552):
 
 Shared by: rest_connector, powerbi_connector (token_url),
 sharepoint_connector (site_url), webdav_connector (base_url),
-dataverse_connector (org_url / token_url), mongodb_connector / redis_connector
-(host:port), sql_connector (connection URL host).
+dataverse_connector (org_url / token_url), hubspot_connector (api.hubapi.com),
+mongodb_connector / redis_connector (host:port), sql_connector (connection URL host).
 
 #1565: ``PinnedIPHTTPAdapter`` / ``build_pinned_requests_session`` pin
 ``requests`` peers the same way ``PinnedIPTransport`` pins httpx (SharePoint,
