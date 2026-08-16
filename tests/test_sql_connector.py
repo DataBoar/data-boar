@@ -611,11 +611,14 @@ def test_sql_postgres_connect_pins_hostaddr_from_guard_dns(
     """#1586 slice A: hostname stays in URL; TCP peer is guard-validated hostaddr."""
     import ipaddress
     import socket
+    from urllib.parse import urlsplit
 
     from connectors import sql_connector
 
-    def fake_getaddrinfo(host, *args, **kwargs):
-        if host == "db.example.com":
+    host = "db.example.com"
+
+    def fake_getaddrinfo(name, *args, **kwargs):
+        if name == host:
             return [
                 (
                     socket.AF_INET,
@@ -632,7 +635,7 @@ def test_sql_postgres_connect_pins_hostaddr_from_guard_dns(
                     ("2606:4700:4700::1111", 0, 0, 0),
                 ),
             ]
-        raise socket.gaierror(f"unexpected host {host!r}")
+        raise socket.gaierror(f"unexpected host {name!r}")
 
     monkeypatch.setattr(socket, "getaddrinfo", fake_getaddrinfo)
     # url_guard imports socket at module level for _resolve_host_ips
@@ -650,7 +653,7 @@ def test_sql_postgres_connect_pins_hostaddr_from_guard_dns(
             {
                 "name": "pg-pin",
                 "driver": "postgresql+psycopg2",
-                "host": "db.example.com",
+                "host": host,
                 "port": 5432,
                 "user": "u",
                 "pass": "p",
@@ -663,10 +666,11 @@ def test_sql_postgres_connect_pins_hostaddr_from_guard_dns(
         mock_engine.assert_called_once()
         (url,) = mock_engine.call_args.args
         call_kw = mock_engine.call_args.kwargs
-        assert "db.example.com" in url
-        assert "1.1.1.1" not in url
+        parsed = urlsplit(url)
+        # Authority hostname (not substring) — precise vs pin IP; CodeQL-safe.
+        assert parsed.hostname == host
         assert call_kw["connect_args"]["hostaddr"] == "1.1.1.1"
-        assert "hostaddr=" not in url
+        assert "hostaddr" not in (parsed.query or "")
         # Prefer IPv4 pin (same order as HTTP #1565 / _prefer_pin_order)
         assert call_kw["connect_args"]["hostaddr"] != str(
             ipaddress.IPv6Address("2606:4700:4700::1111")
