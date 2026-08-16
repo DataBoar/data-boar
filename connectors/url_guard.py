@@ -52,6 +52,12 @@ TCP peers via ``make_pinned_redis_connection_class`` (redis-py
 :class:`~connectors.tcp_pin.HostResolutionPin` (Python ``getaddrinfo``). Native
 MySQL/MariaDB connectors fail-closed on hostname targets; Oracle thin remains
 deferred (native resolve).
+
+#1586 (MSSQL slice E): ``sql_connector`` rewrites the URL hostname to a
+guard-pinned IP for ``mssql+pymssql`` (FreeTDS) and ``mssql+pyodbc`` (plus
+``HostNameInCertificate`` for ODBC 18+ TLS). Native resolve cannot use
+:class:`~connectors.tcp_pin.HostResolutionPin`; other mssql DBAPIs fail-closed
+on hostname targets.
 """
 
 from __future__ import annotations
