@@ -130,11 +130,16 @@ class SharePointConnector:
                 "Missing site_url (e.g. https://host/sites/sitename)",
             )
             return
-        # SSRF guard (#832): reject link-local/private/loopback hosts unless the
-        # target config opts in with allow_private_networks: true.
-        from .url_guard import target_allows_private, validate_outbound_url
+        # SSRF guard (#832 / #1565): reject private hosts unless opted in; pin
+        # requests peers to IPs validated here so DNS rebinding cannot steal NTLM.
+        from .url_guard import (
+            build_pinned_requests_session,
+            host_pins_from_url,
+            resolve_and_validate_outbound_url,
+            target_allows_private,
+        )
 
-        err = validate_outbound_url(
+        err, ips = resolve_and_validate_outbound_url(
             site_url,
             allow_private=target_allows_private(self.config),
             label="site_url",
@@ -153,7 +158,9 @@ class SharePointConnector:
             "",
         )
         verify_ssl = self.config.get("verify_ssl", True)
-        session = requests.Session()
+        session = build_pinned_requests_session(
+            host_to_ips=host_pins_from_url(site_url, ips)
+        )
         session.headers["User-Agent"] = get_http_user_agent()
         session.verify = verify_ssl
         if use_ntlm and user and password:

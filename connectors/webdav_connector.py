@@ -165,11 +165,16 @@ class WebDAVConnector:
                 target_name, "error", "Missing base_url or url (e.g. https://host/path)"
             )
             return
-        # SSRF guard (#832): reject link-local/private/loopback hosts unless the
-        # target config opts in with allow_private_networks: true.
-        from .url_guard import target_allows_private, validate_outbound_url
+        # SSRF guard (#832 / #1565): reject private hosts unless opted in; pin
+        # the underlying requests.Session so WebDAV cannot rebind DNS after guard.
+        from .url_guard import (
+            build_pinned_requests_session,
+            host_pins_from_url,
+            resolve_and_validate_outbound_url,
+            target_allows_private,
+        )
 
-        err = validate_outbound_url(
+        err, ips = resolve_and_validate_outbound_url(
             base_url,
             allow_private=target_allows_private(self.config),
             label="base_url",
@@ -190,6 +195,11 @@ class WebDAVConnector:
             options["webdav_verify"] = False
         try:
             client = WebDAVClient(options)
+            # webdav3 always builds its own Session in __init__; replace with a
+            # pinned session so TCP peers stay on IPs validated above (#1565).
+            client.session = build_pinned_requests_session(
+                host_to_ips=host_pins_from_url(base_url, ips)
+            )
         except Exception as e:
             self.db_manager.save_failure(target_name, "error", str(e))
             return

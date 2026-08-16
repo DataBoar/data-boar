@@ -213,6 +213,7 @@ def test_mongodb_connector_uri_encodes_password_special_chars():
         "database": "testdb",
         "user": "admin",
         "password": "p@ss:word",
+        "allow_private_networks": True,
     }
     from connectors.mongodb_connector import MongoDBConnector
 

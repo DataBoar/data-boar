@@ -93,6 +93,7 @@ FEATURE_TIER_MAP: dict[str, Tier] = {
     "connector_gcs": Tier.PRO,
     # Managed corporate infrastructure connectors (#843 boundary)
     "connector_powerbi": Tier.PRO,
+    "connector_hubspot": Tier.PRO,  # managed SaaS CRM (#1229)
     "connector_sharepoint": Tier.PRO,
     "connector_dataverse": Tier.PRO,
     "connector_webdav": Tier.PRO,

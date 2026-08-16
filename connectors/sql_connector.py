@@ -250,6 +250,150 @@ def _build_url(target: dict[str, Any]) -> str:
     return f"{drivername}://{user}:{password}@{host}:{port}/{database}"
 
 
+# Per-dialect allowlist of SQLAlchemy URL query keys that cannot redirect the
+# TCP/unix peer (#1556). Anything else is rejected — blocklists of dangerous
+# keys (host, hostaddr, odbc_connect, DSN, …) do not scale across dialects.
+# Dialects absent from this map: any non-empty query string is rejected.
+_SQL_SAFE_QUERY_KEYS_BY_DIALECT: dict[str, frozenset[str]] = {
+    "postgresql": frozenset(
+        {
+            "sslmode",
+            "sslrootcert",
+            "sslcert",
+            "sslkey",
+            "sslcrl",
+            "connect_timeout",
+            "application_name",
+            "client_encoding",
+            "target_session_attrs",
+            "gssencmode",
+            "channel_binding",
+        }
+    ),
+    "mysql": frozenset(
+        {
+            "charset",
+            "charset_connector",
+            "connect_timeout",
+            "compress",
+            "ssl_ca",
+            "ssl_cert",
+            "ssl_key",
+            "ssl_disabled",
+            "ssl_verify_cert",
+            "ssl_verify_identity",
+        }
+    ),
+    "mssql": frozenset(
+        {
+            "driver",
+            "encrypt",
+            "trustservercertificate",
+            "timeout",
+            "login timeout",
+            "login_timeout",
+        }
+    ),
+    "oracle": frozenset(
+        {
+            # Produced by _build_url for service_name databases.
+            "service_name",
+            "encoding",
+            "nencoding",
+        }
+    ),
+}
+
+
+def _sql_url_dialect_family(drivername: str | None) -> str:
+    base = (drivername or "").split("+")[0].strip().lower()
+    if base == "mariadb":
+        return "mysql"
+    return base
+
+
+def _guard_sql_url_query_params(parsed: Any) -> None:
+    """Reject peer-redirecting or unknown URL query keys (#1556).
+
+    Strategy: allowlist per vetted dialect family. Unknown dialects may not
+    carry a query string at all. Keys such as ``host``, ``hostaddr``,
+    ``odbc_connect``, ``DSN``, and unix-socket selectors are never allowlisted.
+    """
+    query = getattr(parsed, "query", None) or {}
+    if not query:
+        return
+    family = _sql_url_dialect_family(getattr(parsed, "drivername", None))
+    allowed = _SQL_SAFE_QUERY_KEYS_BY_DIALECT.get(family)
+    if allowed is None:
+        raise ValueError(
+            f"host rejected: SQL URL query string is not allowed for dialect "
+            f"'{family or 'unknown'}' (unvetted — refuse peer overrides). (#1556)"
+        )
+    allowed_l = {k.lower() for k in allowed}
+    for key in query:
+        key_l = str(key).lower()
+        if key_l not in allowed_l:
+            raise ValueError(
+                f"host rejected: SQL URL query parameter '{key}' is not in the "
+                f"allowlist for dialect '{family}' (peer-override / unknown keys "
+                f"are refuse-by-default). (#1556)"
+            )
+
+
+def _guard_sql_connection_url(url: str, target: dict[str, Any]) -> list[str]:
+    """Reject non-global SQL hosts unless allow_private_networks (#1556).
+
+    Runs on the *final* URL from ``_build_url`` so both discrete host/port fields
+    and a full ``url`` override are covered. Query strings use a per-dialect
+    **allowlist** (unknown key or unvetted dialect → reject) so peer overrides
+    such as ``?host=``, ``?hostaddr=``, ``?odbc_connect=``, or ``?DSN=`` cannot
+    bypass the authority check (#1556 / Bugbot).
+
+    Returns the guard-validated pin IP strings (preferred order) for TCP pinning
+    (#1586). Empty list for sqlite / empty URL (no network peer).
+    """
+    if not url or url.startswith("sqlite:"):
+        return []
+    from sqlalchemy.engine.url import make_url
+
+    from .url_guard import resolve_and_validate_outbound_url, target_allows_private
+
+    allow_private = target_allows_private(target)
+    parsed = make_url(url)
+    _guard_sql_url_query_params(parsed)
+    host = parsed.host
+    if not host:
+        raise ValueError("host rejected: no host found in SQL connection URL. (#1556)")
+    port = parsed.port
+    candidate = f"{host}:{port}" if port is not None else host
+    err, ips = resolve_and_validate_outbound_url(
+        candidate,
+        allow_private=allow_private,
+        label="host",
+    )
+    if err:
+        raise ValueError(err)
+    return [str(ip) for ip in ips]
+
+
+def _apply_postgres_hostaddr_pin(
+    connect_args: dict[str, Any],
+    pin_ips: list[str],
+) -> dict[str, Any]:
+    """Inject libpq ``hostaddr`` from guard pins (#1586 slice A).
+
+    Keeps SQLAlchemy URL ``host`` as the original hostname for TLS/SCRAM
+    identity. Never put ``hostaddr`` in the URL query (#1556 allowlist).
+    """
+    if not pin_ips:
+        return connect_args
+    from .tcp_pin import format_libpq_hostaddr, primary_pin_str
+
+    out = dict(connect_args)
+    out["hostaddr"] = format_libpq_hostaddr(primary_pin_str(pin_ips))
+    return out
+
+
 def _connect_args_from_target(target: dict[str, Any]) -> dict[str, Any]:
     """
     Build SQLAlchemy ``connect_args`` from target timeouts (config loader merges global + per-target).
@@ -263,7 +407,8 @@ def _connect_args_from_target(target: dict[str, Any]) -> dict[str, Any]:
 
     Driver → connect_args mapping::
 
-        postgresql[+…]       connect_timeout, options=-c statement_timeout=… (ms)
+        postgresql[+…]       connect_timeout, options=-c statement_timeout=… (ms);
+                             ``hostaddr`` is added separately from guard pins (#1586)
         mysql[+…] / mariadb  connect_timeout
         sqlite               timeout  (lock wait; read_timeout_seconds)
         mssql+pymssql        login_timeout, timeout  (#1297; bare ``mssql`` maps here)
@@ -357,7 +502,11 @@ class SQLConnector:
     def connect(self) -> None:
         ensure_sql_driver_available(self.config.get("driver"))
         url = _build_url(self.config)
+        pin_ips = _guard_sql_connection_url(url, self.config)
         connect_args = _connect_args_from_target(self.config)
+        _, base = _resolve_driver(self.config.get("driver"))
+        if base == "postgresql":
+            connect_args = _apply_postgres_hostaddr_pin(connect_args, pin_ips)
         self.engine = create_engine(url, pool_pre_ping=True, connect_args=connect_args)
         self._table_row_cache = {}
 
