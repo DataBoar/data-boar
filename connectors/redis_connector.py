@@ -9,6 +9,9 @@ from typing import Any
 
 try:
     import redis
+    from redis.connection import Connection as _RedisConnection
+    from redis.connection import ConnectionPool as _RedisConnectionPool
+    from redis.connection import SSLConnection as _RedisSSLConnection
     from redis.exceptions import ConnectionError as RedisConnectionError
     from redis.exceptions import ResponseError as RedisResponseError
     from redis.exceptions import TimeoutError as RedisTimeoutError
@@ -17,6 +20,9 @@ try:
 except ImportError:
     _REDIS_AVAILABLE = False
     redis = None
+    _RedisConnection = None  # type: ignore[misc, assignment]
+    _RedisConnectionPool = None  # type: ignore[misc, assignment]
+    _RedisSSLConnection = None  # type: ignore[misc, assignment]
     RedisConnectionError = Exception  # type: ignore[misc, assignment]
     RedisResponseError = Exception  # type: ignore[misc, assignment]
     RedisTimeoutError = Exception  # type: ignore[misc, assignment]
@@ -90,9 +96,27 @@ class RedisConnector:
             self.config
         )
         self._tls_enabled = bool(tls_enabled)
-        from redis.connection import Connection, ConnectionPool, SSLConnection
+        # Connection types come from the optional redis import at module load.
+        # CI matrices without the nosql extra still run crypto tests that stub
+        # ``redis`` + ``_REDIS_AVAILABLE`` — fall back to Redis(**kwargs) then
+        # (no pin subclass without real connection classes).
+        if _RedisConnectionPool is None or _RedisConnection is None:
+            client_kwargs: dict[str, Any] = {
+                "host": host,
+                "port": port,
+                "password": password or None,
+                "decode_responses": True,
+                "socket_connect_timeout": connect_s,
+                "socket_timeout": read_s,
+            }
+            if tls_enabled:
+                client_kwargs["ssl"] = True
+                if cert_reqs is not None:
+                    client_kwargs["ssl_cert_reqs"] = cert_reqs
+            self._client = redis.Redis(**client_kwargs)
+            return
 
-        base_cls: type = SSLConnection if tls_enabled else Connection
+        base_cls: type = _RedisSSLConnection if tls_enabled else _RedisConnection
         # Hostname stays on the connection for TLS server_hostname; pin TCP peers
         # via connection_class (#1586). IP literals have no DNS rebinding window.
         if is_ip_literal(str(host)):
@@ -110,7 +134,7 @@ class RedisConnector:
         }
         if tls_enabled and cert_reqs is not None:
             pool_kwargs["ssl_cert_reqs"] = cert_reqs
-        self._client = redis.Redis(connection_pool=ConnectionPool(**pool_kwargs))
+        self._client = redis.Redis(connection_pool=_RedisConnectionPool(**pool_kwargs))
 
     def close(self) -> None:
         if self._client:
