@@ -78,14 +78,17 @@ def test_mongodb_connect_pins_dns_keeps_hostname_in_uri(
 ) -> None:
     """#1586 — URI keeps hostname (TLS identity); getaddrinfo only returns pin."""
     import ipaddress
+    from urllib.parse import urlsplit
 
-    def fake_resolve(host: str):
-        if host == "mongo.example.com":
+    host = "mongo.example.com"
+
+    def fake_resolve(name: str):
+        if name == host:
             return [
                 ipaddress.ip_address("1.1.1.1"),
                 ipaddress.ip_address("2606:4700:4700::1111"),
             ]
-        raise OSError(f"unexpected {host}")
+        raise OSError(f"unexpected {name}")
 
     monkeypatch.setattr(
         "connectors.url_guard._resolve_host_ips",
@@ -99,9 +102,7 @@ def test_mongodb_connect_pins_dns_keeps_hostname_in_uri(
             captured["uri"] = uri
             captured["kwargs"] = kwargs
             # While client is "open", pool would call getaddrinfo(hostname).
-            infos = socket.getaddrinfo(
-                "mongo.example.com", 27017, type=socket.SOCK_STREAM
-            )
+            infos = socket.getaddrinfo(host, 27017, type=socket.SOCK_STREAM)
             captured["peer_ips"] = {info[4][0] for info in infos}
 
         def __getitem__(self, name: str) -> MagicMock:
@@ -118,7 +119,7 @@ def test_mongodb_connect_pins_dns_keeps_hostname_in_uri(
     conn = MongoDBConnector(
         {
             "name": "m",
-            "host": "mongo.example.com",
+            "host": host,
             "port": 27017,
             "database": "app",
             "user": "u",
@@ -130,8 +131,8 @@ def test_mongodb_connect_pins_dns_keeps_hostname_in_uri(
     try:
         conn.connect()
         uri = str(captured["uri"])
-        assert "mongo.example.com" in uri
-        assert "1.1.1.1" not in uri
+        # Authority hostname (not substring) — CodeQL-safe and precise vs pin IP.
+        assert urlsplit(uri).hostname == host
         assert captured["peer_ips"] == {"1.1.1.1", "2606:4700:4700::1111"}
     finally:
         conn.close()
