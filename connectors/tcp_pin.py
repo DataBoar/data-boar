@@ -22,6 +22,9 @@ from .url_guard import IpAddr
 # guard-validated addresses (hostname string stays in the URI for TLS SNI).
 _PIN_LOCK = threading.RLock()
 _HOST_PINS: dict[str, tuple[str, ...]] = {}
+# Holders that called install() for an equivalent peer set (#1586 Bugbot).
+# release() only clears ``_HOST_PINS`` when this drops to zero.
+_HOST_PIN_REFS: dict[str, int] = {}
 _ORIG_GETADDRINFO = socket.getaddrinfo
 _GETADDRINFO_PATCHED = False
 
@@ -156,11 +159,14 @@ class HostResolutionPin:
         holds a **different** IP set for the same hostname, raise instead of
         silently overwriting (concurrent targets / reconnect must not inherit
         another scan's validated peers). Idempotent install of the **same**
-        peer set is allowed (order-independent — getaddrinfo order may vary).
+        peer set is allowed (order-independent) and is **reference-counted**:
+        the process-wide pin stays until every holder ``release()``s.
         """
         if self._key is None:
             return self
         with _PIN_LOCK:
+            if self._active:
+                return self
             existing = _HOST_PINS.get(self._key)
             if existing is not None and not _pins_equivalent(existing, self._pins):
                 raise ValueError(
@@ -170,6 +176,9 @@ class HostResolutionPin:
                 )
             if existing is None:
                 _HOST_PINS[self._key] = self._pins
+                _HOST_PIN_REFS[self._key] = 1
+            else:
+                _HOST_PIN_REFS[self._key] = _HOST_PIN_REFS.get(self._key, 0) + 1
             self._active = True
         _ensure_getaddrinfo_patched()
         return self
@@ -178,9 +187,16 @@ class HostResolutionPin:
         if not self._active or self._key is None:
             return
         with _PIN_LOCK:
+            if not self._active:
+                return
             current = _HOST_PINS.get(self._key)
             if current is not None and _pins_equivalent(current, self._pins):
-                _HOST_PINS.pop(self._key, None)
+                refs = _HOST_PIN_REFS.get(self._key, 1) - 1
+                if refs <= 0:
+                    _HOST_PINS.pop(self._key, None)
+                    _HOST_PIN_REFS.pop(self._key, None)
+                else:
+                    _HOST_PIN_REFS[self._key] = refs
             self._active = False
         _maybe_unpatch_getaddrinfo()
 

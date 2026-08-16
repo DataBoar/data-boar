@@ -124,6 +124,48 @@ def test_host_resolution_pin_idempotent_same_set_different_order() -> None:
         a.release()
 
 
+def test_host_resolution_pin_refcount_survives_first_release() -> None:
+    """#1586 — first release must not drop the pin while another holder is active."""
+    import connectors.tcp_pin as tcp_pin
+
+    host = "refcount.example.com"
+    key = tcp_pin.normalize_pin_hostname(host)
+    a = HostResolutionPin(host, ["1.1.1.1"])
+    b = HostResolutionPin(host, ["1.1.1.1"])
+    a.install()
+    b.install()
+    try:
+        assert tcp_pin._HOST_PIN_REFS.get(key) == 2
+        a.release()
+        assert key in tcp_pin._HOST_PINS
+        assert tcp_pin._HOST_PIN_REFS.get(key) == 1
+        infos = socket.getaddrinfo(host, 27017, type=socket.SOCK_STREAM)
+        assert {info[4][0] for info in infos} == {"1.1.1.1"}
+    finally:
+        if a._active:
+            a.release()
+        if b._active:
+            b.release()
+    assert key not in tcp_pin._HOST_PINS
+    assert key not in tcp_pin._HOST_PIN_REFS
+
+
+def test_host_resolution_pin_double_install_same_instance_is_noop() -> None:
+    """install() twice on one instance must not double-count refs."""
+    import connectors.tcp_pin as tcp_pin
+
+    host = "once.example.com"
+    key = tcp_pin.normalize_pin_hostname(host)
+    pin = HostResolutionPin(host, ["1.1.1.1"])
+    pin.install()
+    pin.install()
+    try:
+        assert tcp_pin._HOST_PIN_REFS.get(key) == 1
+    finally:
+        pin.release()
+    assert key not in tcp_pin._HOST_PINS
+
+
 def test_host_resolution_pin_allows_new_set_after_release() -> None:
     first = HostResolutionPin("rotate.example.com", ["1.1.1.1"])
     first.install()
