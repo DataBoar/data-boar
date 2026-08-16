@@ -340,10 +340,43 @@ Managed SaaS CRM (Pro tier). Discovers **all** property names (including custom 
 where CPF/CNPJ often hide), then samples objects with pagination and rate-limit backoff.
 
 - **Module:** `connectors/hubspot_connector.py`
-- **Auth:** Private App Token via env ``HUBSPOT_PRIVATE_APP_TOKEN`` (never commit tokens).
-  Read-only scopes: `crm.objects.*.read` + `crm.schemas.*.read` for contacts/companies/deals.
+- **Auth:** Private App Token via env (never commit tokens). See setup below.
 - **SSRF:** All outbound HTTP uses `connectors/url_guard.py` host pinning (#1552) — same
   posture as the REST connector.
+
+### Create the Private App token (HubSpot UI, as of 2026-08)
+
+1. In HubSpot: **Settings → Integrations → Private Apps**.
+   If the product UI has moved Private Apps under **Legacy Apps**, open that entry and
+   continue — the credential type is still a **Private** app token (not a public OAuth app).
+2. Create (or open) an app and choose **Private** (not **Public**).
+3. **Do not** use a **Service Key** for Data Boar. Service keys are broader credentials
+   without the granular CRM scopes this connector expects.
+4. Under scopes, enable **exactly** these six **read** scopes (no write, no webhooks):
+
+   | Scope | Why |
+   | ----- | --- |
+   | `crm.objects.contacts.read` | Sample contact property **values** |
+   | `crm.objects.companies.read` | Sample company property **values** |
+   | `crm.objects.deals.read` | Sample deal property **values** |
+   | `crm.schemas.contacts.read` | Discover contact property **names** (incl. custom) |
+   | `crm.schemas.companies.read` | Discover company property **names** (incl. custom) |
+   | `crm.schemas.deals.read` | Discover deal property **names** (incl. custom) |
+
+5. Create the token and store it only in an environment variable / secret manager — never
+   in committed YAML.
+
+**Least privilege:** the connector is **read-only and on-demand** (no HubSpot webhooks).
+`crm.objects.*.read` returns field values; `crm.schemas.*.read` is required for property
+**discovery**. Without the schema scopes, custom fields (where CPF/CNPJ often live) are
+never listed, so they are never sampled — a silent coverage gap.
+
+> **Env var name must match exactly.** The connector reads
+> ``HUBSPOT_PRIVATE_APP_TOKEN`` by default (or the name you set in ``token_from_env`` /
+> ``auth.token_from_env``). A *similar but wrong* name (for example ``HUBSPOT_ACCESS_TOKEN``)
+> does **not** raise a clear “wrong variable” error: ``connect()`` still runs, the API
+> returns **401**, and findings stay empty — the most common setup friction observed when
+> wiring this connector. Confirm the exported name before debugging scopes.
 
 Config example:
 
