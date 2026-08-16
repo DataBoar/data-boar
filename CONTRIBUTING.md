@@ -24,7 +24,8 @@ Thank you for considering contributing. This document covers local setup, workfl
 pip install 'data-boar[postgres]'   # PostgreSQL
 pip install 'data-boar[mysql]'        # MySQL (pymysql)
 pip install 'data-boar[mariadb]'     # MariaDB Connector/C
-pip install 'data-boar[mssql]'       # SQL Server
+pip install 'data-boar[mssql]'       # SQL Server (pymssql; default driver: mssql)
+pip install 'data-boar[mssql-pyodbc]' # SQL Server via ODBC (driver: mssql+pyodbc)
 pip install 'data-boar[oracle]'       # Oracle
 pip install 'data-boar[sql-all]'     # all SQL extras (Docker / lab)
 ```

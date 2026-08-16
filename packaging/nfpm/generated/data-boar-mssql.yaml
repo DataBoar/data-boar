@@ -7,7 +7,7 @@ release: '1'
 section: utils
 priority: optional
 maintainer: Data Boar maintainers <contact@databoar.com.br>
-description: 'Data Boar connector extra [mssql-pymssql] (packages: pymssql>=2.3.0).
+description: 'Data Boar connector extra [mssql] (packages: pymssql>=2.3.0).
 
   ADR-0084: embedded cp314t does NOT unlock Enterprise. Entitlement remains worker caps (#551) + pro_prefilter_accel.'
 vendor: Data Boar
@@ -16,8 +16,8 @@ license: AGPL-3.0-or-later
 depends:
 - data-boar (= 1.8.0-beta-1)
 contents:
-- src: staging/usr/lib/data-boar/extras/mssql-pymssql/
-  dst: /usr/lib/data-boar/extras/mssql-pymssql/
+- src: staging/usr/lib/data-boar/extras/mssql/
+  dst: /usr/lib/data-boar/extras/mssql/
   type: tree
 overrides:
   deb:

@@ -9,13 +9,15 @@ _SQL_DRIVER_EXTRAS: dict[str, tuple[str, tuple[str, ...]]] = {
     "postgresql": ("postgres", ("psycopg2",)),
     "mysql": ("mysql", ("pymysql",)),
     "mariadb": ("mariadb", ("mariadb",)),
-    "mssql": ("mssql-pymssql", ("pymssql",)),
+    # Bare ``mssql`` → pymssql; pyproject extra ``mssql`` installs the same (#1588).
+    "mssql": ("mssql", ("pymssql",)),
     "oracle": ("oracle", ("oracledb",)),
 }
 
 # Explicit dialect+driver strings that differ from the bare-engine default extra.
 _EXPLICIT_DRIVER_EXTRAS: dict[str, tuple[str, tuple[str, ...]]] = {
-    "mssql+pyodbc": ("mssql", ("pyodbc",)),
+    # ODBC path — extra renamed mssql-pyodbc so bare ``mssql`` stays pymssql (#1588).
+    "mssql+pyodbc": ("mssql-pyodbc", ("pyodbc",)),
     "mssql+pymssql": ("mssql-pymssql", ("pymssql",)),
 }
 
