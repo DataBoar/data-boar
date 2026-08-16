@@ -88,7 +88,7 @@ def test_host_resolution_pin_fails_closed_on_conflicting_active_pins() -> None:
 
 
 def test_host_resolution_pin_idempotent_same_pins_allowed() -> None:
-    """Same pin tuple for the same hostname may install again (no conflict)."""
+    """Same pin set for the same hostname may install again (no conflict)."""
     a = HostResolutionPin("same.example.com", ["1.1.1.1"])
     b = HostResolutionPin("same.example.com", ["1.1.1.1"])
     a.install()
@@ -96,6 +96,29 @@ def test_host_resolution_pin_idempotent_same_pins_allowed() -> None:
         b.install()
         infos = socket.getaddrinfo("same.example.com", 27017, type=socket.SOCK_STREAM)
         assert {info[4][0] for info in infos} == {"1.1.1.1"}
+    finally:
+        b.release()
+        a.release()
+
+
+def test_host_resolution_pin_idempotent_same_set_different_order() -> None:
+    """Same peers in different order must not raise (Bugbot: order-sensitive !=)."""
+    a = HostResolutionPin(
+        "order.example.com",
+        ["1.1.1.1", "2606:4700:4700::1111"],
+    )
+    b = HostResolutionPin(
+        "order.example.com",
+        ["2606:4700:4700::1111", "1.1.1.1"],
+    )
+    a.install()
+    try:
+        b.install()
+        infos = socket.getaddrinfo("order.example.com", 27017, type=socket.SOCK_STREAM)
+        assert {info[4][0] for info in infos} == {
+            "1.1.1.1",
+            "2606:4700:4700::1111",
+        }
     finally:
         b.release()
         a.release()

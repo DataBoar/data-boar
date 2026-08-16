@@ -50,6 +50,11 @@ def normalize_pin_hostname(host: str) -> str:
     return (host or "").strip().rstrip(".").lower()
 
 
+def _pins_equivalent(a: tuple[str, ...], b: tuple[str, ...]) -> bool:
+    """True when *a* and *b* name the same peer set (order-independent)."""
+    return frozenset(a) == frozenset(b)
+
+
 def _is_ip_literal(host: str) -> bool:
     try:
         ipaddress.ip_address(host)
@@ -151,19 +156,20 @@ class HostResolutionPin:
         holds a **different** IP set for the same hostname, raise instead of
         silently overwriting (concurrent targets / reconnect must not inherit
         another scan's validated peers). Idempotent install of the **same**
-        pin tuple is allowed.
+        peer set is allowed (order-independent — getaddrinfo order may vary).
         """
         if self._key is None:
             return self
         with _PIN_LOCK:
             existing = _HOST_PINS.get(self._key)
-            if existing is not None and existing != self._pins:
+            if existing is not None and not _pins_equivalent(existing, self._pins):
                 raise ValueError(
                     f"active TCP peer pin conflict for hostname {self._key!r} "
                     "(#1586): another HostResolutionPin already holds a "
                     "different pin set; release it before installing a new one"
                 )
-            _HOST_PINS[self._key] = self._pins
+            if existing is None:
+                _HOST_PINS[self._key] = self._pins
             self._active = True
         _ensure_getaddrinfo_patched()
         return self
@@ -173,7 +179,7 @@ class HostResolutionPin:
             return
         with _PIN_LOCK:
             current = _HOST_PINS.get(self._key)
-            if current == self._pins:
+            if current is not None and _pins_equivalent(current, self._pins):
                 _HOST_PINS.pop(self._key, None)
             self._active = False
         _maybe_unpatch_getaddrinfo()
