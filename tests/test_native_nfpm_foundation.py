@@ -23,7 +23,7 @@ from core.native_nfpm import (
 
 def test_subpackage_map_matches_issue_1403_table() -> None:
     expected = {
-        "data-boar-mssql": "mssql-pymssql",
+        "data-boar-mssql": "mssql",
         "data-boar-nosql": "nosql",
         "data-boar-shares": "shares",
         "data-boar-compressed": "compressed",

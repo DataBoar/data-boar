@@ -47,7 +47,7 @@
       ]
     },
     "data-boar-mssql": {
-      "extra": "mssql-pymssql",
+      "extra": "mssql",
       "packages": [
         "pymssql>=2.3.0"
       ],
