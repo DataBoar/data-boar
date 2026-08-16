@@ -72,6 +72,48 @@ def test_host_resolution_pin_noop_for_ip_literal() -> None:
         pin.release()
 
 
+def test_host_resolution_pin_fails_closed_on_conflicting_active_pins() -> None:
+    """#1586 — install must not overwrite a different active pin for the same host."""
+    first = HostResolutionPin("shared.example.com", ["1.1.1.1"])
+    first.install()
+    try:
+        second = HostResolutionPin("shared.example.com", ["1.0.0.1"])
+        with pytest.raises(ValueError, match="pin conflict|#1586"):
+            second.install()
+        # Original pin must still be the only peer returned.
+        infos = socket.getaddrinfo("shared.example.com", 27017, type=socket.SOCK_STREAM)
+        assert {info[4][0] for info in infos} == {"1.1.1.1"}
+    finally:
+        first.release()
+
+
+def test_host_resolution_pin_idempotent_same_pins_allowed() -> None:
+    """Same pin tuple for the same hostname may install again (no conflict)."""
+    a = HostResolutionPin("same.example.com", ["1.1.1.1"])
+    b = HostResolutionPin("same.example.com", ["1.1.1.1"])
+    a.install()
+    try:
+        b.install()
+        infos = socket.getaddrinfo("same.example.com", 27017, type=socket.SOCK_STREAM)
+        assert {info[4][0] for info in infos} == {"1.1.1.1"}
+    finally:
+        b.release()
+        a.release()
+
+
+def test_host_resolution_pin_allows_new_set_after_release() -> None:
+    first = HostResolutionPin("rotate.example.com", ["1.1.1.1"])
+    first.install()
+    first.release()
+    second = HostResolutionPin("rotate.example.com", ["1.0.0.1"])
+    second.install()
+    try:
+        infos = socket.getaddrinfo("rotate.example.com", 27017, type=socket.SOCK_STREAM)
+        assert {info[4][0] for info in infos} == {"1.0.0.1"}
+    finally:
+        second.release()
+
+
 @pytest.mark.skipif(not _has_module("pymongo"), reason="pymongo not installed")
 def test_mongodb_connect_pins_dns_keeps_hostname_in_uri(
     monkeypatch: pytest.MonkeyPatch,

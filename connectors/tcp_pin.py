@@ -145,9 +145,24 @@ class HostResolutionPin:
         self._active = False
 
     def install(self) -> HostResolutionPin:
+        """Register this hostname→IP pin set for the process.
+
+        Fail-closed (#1586 / PR #1591 audit): if another *active* pin already
+        holds a **different** IP set for the same hostname, raise instead of
+        silently overwriting (concurrent targets / reconnect must not inherit
+        another scan's validated peers). Idempotent install of the **same**
+        pin tuple is allowed.
+        """
         if self._key is None:
             return self
         with _PIN_LOCK:
+            existing = _HOST_PINS.get(self._key)
+            if existing is not None and existing != self._pins:
+                raise ValueError(
+                    f"active TCP peer pin conflict for hostname {self._key!r} "
+                    "(#1586): another HostResolutionPin already holds a "
+                    "different pin set; release it before installing a new one"
+                )
             _HOST_PINS[self._key] = self._pins
             self._active = True
         _ensure_getaddrinfo_patched()
