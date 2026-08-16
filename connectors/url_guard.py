@@ -43,6 +43,10 @@ resolved IPs from :func:`resolve_and_validate_outbound_url`.
 #1586 (Mongo slice): ``mongodb_connector`` keeps the hostname in the URI for
 TLS ``server_hostname`` and pins DNS via :class:`connectors.tcp_pin.HostResolutionPin`
 (pymongo sync resolves with ``socket.getaddrinfo`` on each pool connect).
+
+#1586 (Redis slice): ``redis_connector`` keeps ``host`` for TLS SNI and pins
+TCP peers via ``make_pinned_redis_connection_class`` (redis-py
+``Connection._connect`` would otherwise re-``getaddrinfo`` the hostname).
 """
 
 from __future__ import annotations

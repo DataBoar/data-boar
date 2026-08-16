@@ -66,6 +66,11 @@ def _is_ip_literal(host: str) -> bool:
         return False
 
 
+def is_ip_literal(host: str) -> bool:
+    """True when *host* is a literal IPv4/IPv6 address (no DNS rebinding window)."""
+    return _is_ip_literal((host or "").strip().rstrip("."))
+
+
 def _synthetic_addrinfo(
     pins: tuple[str, ...],
     port: Any,
@@ -205,3 +210,78 @@ class HostResolutionPin:
 
     def __exit__(self, *exc: object) -> None:
         self.release()
+
+
+def _redis_peer_connect(conn: Any, pins: tuple[str, ...]) -> socket.socket:
+    """Mimic ``redis.connection.Connection._connect`` against fixed peer IPs.
+
+    Keeps ``conn.host`` unchanged so TLS ``server_hostname`` stays the
+    configured hostname (#1586 Redis slice).
+    """
+    err: OSError | None = None
+    for res in _synthetic_addrinfo(
+        pins,
+        conn.port,
+        getattr(conn, "socket_type", 0) or 0,
+        socket.SOCK_STREAM,
+        0,
+    ):
+        family, socktype, proto, _canon, socket_address = res
+        sock: socket.socket | None = None
+        try:
+            sock = socket.socket(family, socktype, proto)
+            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+            if getattr(conn, "socket_keepalive", False):
+                sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+                opts = getattr(conn, "socket_keepalive_options", None) or {}
+                for k, v in opts.items():
+                    sock.setsockopt(socket.IPPROTO_TCP, k, v)
+            sock.settimeout(getattr(conn, "socket_connect_timeout", None))
+            sock.connect(socket_address)
+            sock.settimeout(getattr(conn, "socket_timeout", None))
+            return sock
+        except OSError as exc:
+            err = exc
+            if sock is not None:
+                try:
+                    sock.shutdown(socket.SHUT_RDWR)
+                except OSError:
+                    pass
+                sock.close()
+    if err is not None:
+        raise err
+    raise OSError("pinned TCP peer list empty (#1586)")
+
+
+def make_pinned_redis_connection_class(
+    base_cls: type,
+    pin_ips: list[IpAddr] | list[str],
+) -> type:
+    """Return a ``connection_class`` that dials only *pin_ips* (#1586 Redis).
+
+    ``base_cls`` is typically ``redis.connection.Connection`` or
+    ``SSLConnection``. Hostname remains on the connection for TLS SNI;
+    TCP peers are the guard-validated addresses only.
+    """
+    if not pin_ips:
+        raise ValueError("no pin IPs available for TCP peer pinning (#1586)")
+    pins = tuple(str(ipaddress.ip_address(str(ip))) for ip in pin_ips)
+
+    class PinnedRedisConnection(base_cls):  # type: ignore[misc,valid-type]
+        """Connection that never re-resolves hostname after the SSRF guard."""
+
+        def _connect(self) -> socket.socket:
+            sock = _redis_peer_connect(self, pins)
+            wrap = getattr(self, "_wrap_socket_with_ssl", None)
+            if wrap is None:
+                return sock
+            try:
+                return wrap(sock)
+            except OSError:
+                sock.close()
+                raise
+
+    base_name = getattr(base_cls, "__name__", "Connection")
+    PinnedRedisConnection.__name__ = f"Pinned{base_name}"
+    PinnedRedisConnection.__qualname__ = PinnedRedisConnection.__name__
+    return PinnedRedisConnection
