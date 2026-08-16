@@ -434,14 +434,31 @@ def test_redis_connect_honors_tls_and_cert_reqs() -> None:
     }
     connector = RedisConnector(target, MagicMock(), MagicMock())
     fake_redis = MagicMock()
-    fake_redis.Redis.return_value = MagicMock()
+    fake_client = MagicMock()
+    fake_redis.Redis.return_value = fake_client
+    # Patch Redis factory; when redis package is installed the connector builds a
+    # real ConnectionPool (pin path). Without the nosql extra (some CI cells),
+    # it falls back to Redis(**kwargs) with ssl= True.
     with patch("connectors.redis_connector._REDIS_AVAILABLE", True):
         with patch("connectors.redis_connector.redis", fake_redis):
-            connector.connect()
+            with patch(
+                "connectors.url_guard._resolve_host_ips",
+                return_value=[__import__("ipaddress").ip_address("127.0.0.1")],
+            ):
+                connector.connect()
     assert connector._tls_enabled is True
+    assert fake_redis.Redis.called
     kwargs = fake_redis.Redis.call_args.kwargs
-    assert kwargs.get("ssl") is True
-    assert kwargs.get("ssl_cert_reqs") == "required"
+    pool = kwargs.get("connection_pool")
+    if pool is not None:
+        from redis.connection import SSLConnection
+
+        assert issubclass(pool.connection_class, SSLConnection)
+        assert pool.connection_kwargs.get("host") == "localhost"
+        assert pool.connection_kwargs.get("ssl_cert_reqs") == "required"
+    else:
+        assert kwargs.get("ssl") is True
+        assert kwargs.get("ssl_cert_reqs") == "required"
 
 
 def test_mongodb_connector_saves_crypto_audit_when_flag_on() -> None:

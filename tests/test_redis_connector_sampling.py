@@ -141,3 +141,115 @@ def test_redis_connect_allows_private_with_opt_in() -> None:
         pass
     finally:
         conn.close()
+
+
+def test_make_pinned_redis_connection_class_dials_only_pin_ips(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """#1586 — redis connection_class never getaddrinfo(hostname) for TCP peer."""
+    if not _has_module("redis"):
+        pytest.skip("redis not installed")
+    import socket
+
+    from redis.connection import Connection
+
+    from connectors.tcp_pin import make_pinned_redis_connection_class
+
+    host = "redis.example.com"
+    seen_connect: list[tuple[str, int]] = []
+    real_getaddrinfo = socket.getaddrinfo
+
+    def boom_getaddrinfo(name, *args, **kwargs):  # type: ignore[no-untyped-def]
+        if name == host:
+            raise AssertionError(
+                "pinned class must not resolve hostname via getaddrinfo"
+            )
+        return real_getaddrinfo(name, *args, **kwargs)
+
+    monkeypatch.setattr(socket, "getaddrinfo", boom_getaddrinfo)
+
+    class FakeSock:
+        def setsockopt(self, *a: object, **k: object) -> None:
+            return None
+
+        def settimeout(self, *a: object, **k: object) -> None:
+            return None
+
+        def connect(self, address: tuple[object, ...]) -> None:
+            seen_connect.append((str(address[0]), int(address[1])))
+
+        def shutdown(self, *a: object, **k: object) -> None:
+            return None
+
+        def close(self) -> None:
+            return None
+
+    monkeypatch.setattr(socket, "socket", lambda *a, **k: FakeSock())
+
+    cls = make_pinned_redis_connection_class(Connection, ["1.1.1.1"])
+    conn = cls(host=host, port=6379, socket_connect_timeout=1, socket_timeout=1)
+    sock = conn._connect()
+    assert sock is not None
+    assert seen_connect == [("1.1.1.1", 6379)]
+    assert conn.host == host
+
+
+def test_redis_connect_pins_hostname_keeps_host_for_tls(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """#1586 — pool host stays hostname; connection_class is pin subclass."""
+    if not _has_module("redis"):
+        pytest.skip("redis not installed")
+    import ipaddress
+
+    from redis.connection import Connection, SSLConnection
+
+    host = "redis.example.com"
+
+    def fake_resolve(name: str):
+        if name == host:
+            return [
+                ipaddress.ip_address("1.1.1.1"),
+                ipaddress.ip_address("2606:4700:4700::1111"),
+            ]
+        raise OSError(f"unexpected {name}")
+
+    monkeypatch.setattr("connectors.url_guard._resolve_host_ips", fake_resolve)
+
+    captured: dict[str, object] = {}
+
+    class FakeRedis:
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            captured["kwargs"] = kwargs
+            pool = kwargs.get("connection_pool")
+            captured["pool"] = pool
+
+        def close(self) -> None:
+            return None
+
+    monkeypatch.setattr("connectors.redis_connector.redis.Redis", FakeRedis)
+
+    conn = RedisConnector(
+        {
+            "name": "r",
+            "host": host,
+            "port": 6379,
+            "tls": True,
+            "ssl_cert_reqs": "required",
+            "connect_timeout_seconds": 1,
+            "read_timeout_seconds": 1,
+        },
+        scanner=_mk_scanner(),
+        db_manager=MagicMock(),
+    )
+    conn.connect()
+    try:
+        pool = captured["pool"]
+        assert pool is not None
+        assert pool.connection_kwargs["host"] == host  # type: ignore[index]
+        assert issubclass(pool.connection_class, SSLConnection)  # type: ignore[union-attr]
+        assert pool.connection_class is not SSLConnection  # type: ignore[union-attr]
+        assert pool.connection_class is not Connection  # type: ignore[union-attr]
+        assert pool.connection_kwargs.get("ssl_cert_reqs") == "required"  # type: ignore[union-attr]
+    finally:
+        conn.close()
