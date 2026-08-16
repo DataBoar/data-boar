@@ -394,6 +394,30 @@ def _apply_postgres_hostaddr_pin(
     return out
 
 
+def _install_mysql_host_resolution_pin(
+    url: str,
+    pin_ips: list[str],
+) -> Any:
+    """Pin pymysql DNS for *url* hostname to *pin_ips* (#1586 MySQL slice).
+
+    pymysql uses ``socket.create_connection((host, port))`` and TLS
+    ``server_hostname=self.host``, so we keep the URL hostname and restrict
+    ``getaddrinfo`` via :class:`~connectors.tcp_pin.HostResolutionPin`.
+    Returns the pin object (caller must ``release`` on close) or ``None``
+    when there is nothing to pin (no host / empty pins).
+    """
+    if not pin_ips:
+        return None
+    from sqlalchemy.engine.url import make_url
+
+    from .tcp_pin import HostResolutionPin
+
+    host = make_url(url).host
+    if not host:
+        return None
+    return HostResolutionPin(str(host), pin_ips).install()
+
+
 def _connect_args_from_target(target: dict[str, Any]) -> dict[str, Any]:
     """
     Build SQLAlchemy ``connect_args`` from target timeouts (config loader merges global + per-target).
@@ -409,11 +433,12 @@ def _connect_args_from_target(target: dict[str, Any]) -> dict[str, Any]:
 
         postgresql[+…]       connect_timeout, options=-c statement_timeout=… (ms);
                              ``hostaddr`` is added separately from guard pins (#1586)
-        mysql[+…] / mariadb  connect_timeout
+        mysql[+…] / mariadb  connect_timeout; DNS pinned via HostResolutionPin (#1586)
         sqlite               timeout  (lock wait; read_timeout_seconds)
         mssql+pymssql        login_timeout, timeout  (#1297; bare ``mssql`` maps here)
         mssql+pyodbc         timeout only  (pyodbc.connect accepts ``timeout``; not login_timeout)
         oracle+oracledb      tcp_connect_timeout  (oracledb; not connect_timeout)
+                             TCP pin deferred — thin client resolves in native code
         other                connect_timeout  (best-effort)
     """
     connect_s = int(target.get("connect_timeout_seconds", 25))
@@ -489,6 +514,7 @@ class SQLConnector:
         self.engine = None
         # Compatibility shim: legacy tests/helpers may still patch this attribute.
         self._connection = None
+        self._dns_pin = None
         self._sql_sampling_audit_key: str | None = None
         self._table_row_cache: dict[tuple[str, str], int | None] = {}
         self._sample_statement_timeout_ms = _resolve_sample_statement_timeout_ms(
@@ -507,7 +533,18 @@ class SQLConnector:
         _, base = _resolve_driver(self.config.get("driver"))
         if base == "postgresql":
             connect_args = _apply_postgres_hostaddr_pin(connect_args, pin_ips)
-        self.engine = create_engine(url, pool_pre_ping=True, connect_args=connect_args)
+        dns_pin = None
+        if base in ("mysql", "mariadb"):
+            dns_pin = _install_mysql_host_resolution_pin(url, pin_ips)
+        try:
+            self.engine = create_engine(
+                url, pool_pre_ping=True, connect_args=connect_args
+            )
+        except Exception:
+            if dns_pin is not None:
+                dns_pin.release()
+            raise
+        self._dns_pin = dns_pin
         self._table_row_cache = {}
 
     def close(self) -> None:
@@ -520,6 +557,11 @@ class SQLConnector:
         if self.engine:
             self.engine.dispose()
             self.engine = None
+        # Release after dispose so pool reconnects during teardown still see pins.
+        pin = getattr(self, "_dns_pin", None)
+        if pin is not None:
+            pin.release()
+            self._dns_pin = None
 
     def discover(self) -> list[dict[str, Any]]:
         """Return list of {schema, table, columns: [{name, type}]}. For Oracle, skips system schemas."""

@@ -678,6 +678,117 @@ def test_sql_postgres_connect_pins_hostaddr_from_guard_dns(
         connector.close()
 
 
+def test_sql_mysql_connect_installs_host_resolution_pin(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """#1586 MySQL: URL hostname kept; getaddrinfo only returns guard pins."""
+    import socket
+    from urllib.parse import urlsplit
+
+    from connectors import sql_connector
+
+    host = "mysql.example.com"
+
+    def fake_getaddrinfo(name, *args, **kwargs):
+        if name == host:
+            return [
+                (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("1.1.1.1", 0)),
+                (
+                    socket.AF_INET6,
+                    socket.SOCK_STREAM,
+                    6,
+                    "",
+                    ("2606:4700:4700::1111", 0, 0, 0),
+                ),
+            ]
+        raise socket.gaierror(f"unexpected host {name!r}")
+
+    monkeypatch.setattr(socket, "getaddrinfo", fake_getaddrinfo)
+    monkeypatch.setattr(
+        "connectors.url_guard.socket.getaddrinfo",
+        fake_getaddrinfo,
+    )
+
+    with (
+        patch.object(sql_connector, "ensure_sql_driver_available"),
+        patch.object(sql_connector, "create_engine") as mock_engine,
+    ):
+        mock_engine.return_value = MagicMock()
+        connector = sql_connector.SQLConnector(
+            {
+                "name": "mysql-pin",
+                "driver": "mysql",
+                "host": host,
+                "port": 3306,
+                "user": "u",
+                "pass": "p",
+                "database": "db",
+            },
+            scanner=MagicMock(),
+            db_manager=MagicMock(),
+        )
+        connector.connect()
+        mock_engine.assert_called_once()
+        (url,) = mock_engine.call_args.args
+        assert urlsplit(url).hostname == host
+        peers = {info[4][0] for info in socket.getaddrinfo(host, 3306)}
+        assert peers == {"1.1.1.1", "2606:4700:4700::1111"}
+        assert connector._dns_pin is not None
+        connector.close()
+        assert getattr(connector, "_dns_pin", None) is None
+
+
+def test_sql_mysql_pin_released_when_create_engine_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """#1586 — failed create_engine must not leave a process-wide DNS pin."""
+    import socket
+
+    import connectors.tcp_pin as tcp_pin
+    from connectors import sql_connector
+    from connectors.tcp_pin import normalize_pin_hostname
+
+    host = "mysql-fail.example.com"
+    key = normalize_pin_hostname(host)
+
+    def fake_getaddrinfo(name, *args, **kwargs):
+        if name == host:
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("1.1.1.1", 0))]
+        raise socket.gaierror(f"unexpected host {name!r}")
+
+    monkeypatch.setattr(socket, "getaddrinfo", fake_getaddrinfo)
+    monkeypatch.setattr(
+        "connectors.url_guard.socket.getaddrinfo",
+        fake_getaddrinfo,
+    )
+
+    with (
+        patch.object(sql_connector, "ensure_sql_driver_available"),
+        patch.object(
+            sql_connector,
+            "create_engine",
+            side_effect=RuntimeError("boom"),
+        ),
+    ):
+        connector = sql_connector.SQLConnector(
+            {
+                "name": "mysql-fail",
+                "driver": "mysql+pymysql",
+                "host": host,
+                "port": 3306,
+                "user": "u",
+                "pass": "p",
+                "database": "db",
+            },
+            scanner=MagicMock(),
+            db_manager=MagicMock(),
+        )
+        with pytest.raises(RuntimeError, match="boom"):
+            connector.connect()
+    assert key not in tcp_pin._HOST_PINS
+    assert getattr(connector, "_dns_pin", None) is None
+
+
 def test_apply_postgres_hostaddr_pin_formats_ipv6() -> None:
     from connectors.sql_connector import _apply_postgres_hostaddr_pin
 

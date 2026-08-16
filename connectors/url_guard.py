@@ -43,6 +43,11 @@ resolved IPs from :func:`resolve_and_validate_outbound_url`.
 #1586 (Mongo slice): ``mongodb_connector`` keeps the hostname in the URI for
 TLS ``server_hostname`` and pins DNS via :class:`connectors.tcp_pin.HostResolutionPin`
 (pymongo sync resolves with ``socket.getaddrinfo`` on each pool connect).
+
+#1586 (MySQL slice): ``sql_connector`` (mysql/mariadb + pymysql) keeps the URL
+hostname for TLS ``server_hostname`` and installs
+:class:`~connectors.tcp_pin.HostResolutionPin` for the engine lifetime
+(pymysql ``socket.create_connection`` → ``getaddrinfo``).
 """
 
 from __future__ import annotations
