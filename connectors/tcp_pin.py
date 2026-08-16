@@ -66,6 +66,11 @@ def _is_ip_literal(host: str) -> bool:
         return False
 
 
+def is_ip_literal(host: str) -> bool:
+    """True when *host* is a literal IPv4/IPv6 address (no DNS rebinding window)."""
+    return _is_ip_literal((host or "").strip().rstrip("."))
+
+
 def _synthetic_addrinfo(
     pins: tuple[str, ...],
     port: Any,

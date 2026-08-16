@@ -394,26 +394,56 @@ def _apply_postgres_hostaddr_pin(
     return out
 
 
+def _mysql_family_python_dns_pin_supported(drivername: str) -> bool:
+    """True when the DBAPI resolves TCP peers via Python ``getaddrinfo`` (#1586).
+
+    ``HostResolutionPin`` only intercepts Python ``socket.getaddrinfo``. Drivers
+    such as ``mariadb+mariadbconnector``, ``mysql+mysqldb``, and
+    ``mysql+mysqlconnector`` resolve in native code — installing the pin would
+    be a no-op and falsely suggest peers are pinned for the engine lifetime.
+    """
+    if not drivername or "+" not in drivername:
+        return False
+    return drivername.rsplit("+", 1)[-1].lower() == "pymysql"
+
+
 def _install_mysql_host_resolution_pin(
     url: str,
     pin_ips: list[str],
+    *,
+    drivername: str,
 ) -> Any:
     """Pin pymysql DNS for *url* hostname to *pin_ips* (#1586 MySQL slice).
 
     pymysql uses ``socket.create_connection((host, port))`` and TLS
     ``server_hostname=self.host``, so we keep the URL hostname and restrict
     ``getaddrinfo`` via :class:`~connectors.tcp_pin.HostResolutionPin`.
-    Returns the pin object (caller must ``release`` on close) or ``None``
-    when there is nothing to pin (no host / empty pins).
+
+    Fail-closed for MySQL/MariaDB drivers that resolve outside Python (Security
+    Agent MEDIUM on #1597): raise rather than install a no-op pin. Literal IP
+    hosts need no pin (no DNS rebinding window).
+
+    Returns the pin object (caller must ``release`` on close) or ``None`` when
+    there is nothing to pin.
     """
-    if not pin_ips:
-        return None
     from sqlalchemy.engine.url import make_url
 
-    from .tcp_pin import HostResolutionPin
+    from .tcp_pin import HostResolutionPin, is_ip_literal
 
     host = make_url(url).host
     if not host:
+        return None
+    if is_ip_literal(str(host)):
+        return None
+    if not _mysql_family_python_dns_pin_supported(drivername):
+        raise ValueError(
+            "TCP peer pin (#1586) requires a Python-socket MySQL/MariaDB driver "
+            f"(…+pymysql); got {drivername!r}. Use mysql+pymysql or "
+            "mariadb+pymysql, or a literal IP host (no DNS rebinding). "
+            "Native connectors (mariadbconnector, mysqldb, mysqlconnector) "
+            "resolve outside Python getaddrinfo — same class as Oracle thin."
+        )
+    if not pin_ips:
         return None
     return HostResolutionPin(str(host), pin_ips).install()
 
@@ -433,7 +463,8 @@ def _connect_args_from_target(target: dict[str, Any]) -> dict[str, Any]:
 
         postgresql[+…]       connect_timeout, options=-c statement_timeout=… (ms);
                              ``hostaddr`` is added separately from guard pins (#1586)
-        mysql[+…] / mariadb  connect_timeout; DNS pinned via HostResolutionPin (#1586)
+        mysql+pymysql /       connect_timeout; DNS pinned via HostResolutionPin (#1586)
+        mariadb+pymysql       only — other mysql/mariadb drivers fail-closed on hostname
         sqlite               timeout  (lock wait; read_timeout_seconds)
         mssql+pymssql        login_timeout, timeout  (#1297; bare ``mssql`` maps here)
         mssql+pyodbc         timeout only  (pyodbc.connect accepts ``timeout``; not login_timeout)
@@ -530,12 +561,14 @@ class SQLConnector:
         url = _build_url(self.config)
         pin_ips = _guard_sql_connection_url(url, self.config)
         connect_args = _connect_args_from_target(self.config)
-        _, base = _resolve_driver(self.config.get("driver"))
+        drivername, base = _resolve_driver(self.config.get("driver"))
         if base == "postgresql":
             connect_args = _apply_postgres_hostaddr_pin(connect_args, pin_ips)
         dns_pin = None
         if base in ("mysql", "mariadb"):
-            dns_pin = _install_mysql_host_resolution_pin(url, pin_ips)
+            dns_pin = _install_mysql_host_resolution_pin(
+                url, pin_ips, drivername=drivername
+            )
         try:
             self.engine = create_engine(
                 url, pool_pre_ping=True, connect_args=connect_args

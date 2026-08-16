@@ -789,6 +789,140 @@ def test_sql_mysql_pin_released_when_create_engine_fails(
     assert getattr(connector, "_dns_pin", None) is None
 
 
+def test_sql_mariadb_default_driver_fails_closed_without_python_pin(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """#1586 / #1597 Security: bare mariadb → mariadbconnector must not no-op pin."""
+    import socket
+
+    from connectors import sql_connector
+
+    host = "mariadb.example.com"
+
+    def fake_getaddrinfo(name, *args, **kwargs):
+        if name == host:
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("1.1.1.1", 0))]
+        raise socket.gaierror(f"unexpected host {name!r}")
+
+    monkeypatch.setattr(socket, "getaddrinfo", fake_getaddrinfo)
+    monkeypatch.setattr(
+        "connectors.url_guard.socket.getaddrinfo",
+        fake_getaddrinfo,
+    )
+
+    with patch.object(sql_connector, "ensure_sql_driver_available"):
+        connector = sql_connector.SQLConnector(
+            {
+                "name": "mdb",
+                "driver": "mariadb",
+                "host": host,
+                "port": 3306,
+                "user": "u",
+                "pass": "p",
+                "database": "db",
+            },
+            scanner=MagicMock(),
+            db_manager=MagicMock(),
+        )
+        with pytest.raises(ValueError, match="#1586|pymysql|mariadbconnector"):
+            connector.connect()
+
+
+def test_sql_mysql_mysqldb_fails_closed_without_python_pin(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """#1586 — mysql+mysqldb uses libc resolve; refuse hostname targets."""
+    import socket
+
+    from connectors import sql_connector
+
+    host = "mysql-native.example.com"
+
+    def fake_getaddrinfo(name, *args, **kwargs):
+        if name == host:
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("1.1.1.1", 0))]
+        raise socket.gaierror(f"unexpected host {name!r}")
+
+    monkeypatch.setattr(socket, "getaddrinfo", fake_getaddrinfo)
+    monkeypatch.setattr(
+        "connectors.url_guard.socket.getaddrinfo",
+        fake_getaddrinfo,
+    )
+
+    with patch.object(sql_connector, "ensure_sql_driver_available"):
+        connector = sql_connector.SQLConnector(
+            {
+                "name": "mysqldb",
+                "driver": "mysql+mysqldb",
+                "host": host,
+                "port": 3306,
+                "user": "u",
+                "pass": "p",
+                "database": "db",
+            },
+            scanner=MagicMock(),
+            db_manager=MagicMock(),
+        )
+        with pytest.raises(ValueError, match="#1586|pymysql"):
+            connector.connect()
+
+
+def test_sql_mariadb_pymysql_installs_host_resolution_pin(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """#1586 — explicit mariadb+pymysql is pin-capable like mysql+pymysql."""
+    import socket
+    from urllib.parse import urlsplit
+
+    from connectors import sql_connector
+
+    host = "mariadb-py.example.com"
+
+    def fake_getaddrinfo(name, *args, **kwargs):
+        if name == host:
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("1.1.1.1", 0))]
+        raise socket.gaierror(f"unexpected host {name!r}")
+
+    monkeypatch.setattr(socket, "getaddrinfo", fake_getaddrinfo)
+    monkeypatch.setattr(
+        "connectors.url_guard.socket.getaddrinfo",
+        fake_getaddrinfo,
+    )
+
+    with (
+        patch.object(sql_connector, "ensure_sql_driver_available"),
+        patch.object(sql_connector, "create_engine") as mock_engine,
+    ):
+        mock_engine.return_value = MagicMock()
+        connector = sql_connector.SQLConnector(
+            {
+                "name": "mdb-py",
+                "driver": "mariadb+pymysql",
+                "host": host,
+                "port": 3306,
+                "user": "u",
+                "pass": "p",
+                "database": "db",
+            },
+            scanner=MagicMock(),
+            db_manager=MagicMock(),
+        )
+        connector.connect()
+        assert urlsplit(mock_engine.call_args.args[0]).hostname == host
+        assert connector._dns_pin is not None
+        connector.close()
+
+
+def test_mysql_family_python_dns_pin_supported() -> None:
+    from connectors.sql_connector import _mysql_family_python_dns_pin_supported
+
+    assert _mysql_family_python_dns_pin_supported("mysql+pymysql") is True
+    assert _mysql_family_python_dns_pin_supported("mariadb+pymysql") is True
+    assert _mysql_family_python_dns_pin_supported("mariadb+mariadbconnector") is False
+    assert _mysql_family_python_dns_pin_supported("mysql+mysqldb") is False
+    assert _mysql_family_python_dns_pin_supported("mysql") is False
+
+
 def test_apply_postgres_hostaddr_pin_formats_ipv6() -> None:
     from connectors.sql_connector import _apply_postgres_hostaddr_pin
 

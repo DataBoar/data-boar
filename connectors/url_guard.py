@@ -44,10 +44,10 @@ resolved IPs from :func:`resolve_and_validate_outbound_url`.
 TLS ``server_hostname`` and pins DNS via :class:`connectors.tcp_pin.HostResolutionPin`
 (pymongo sync resolves with ``socket.getaddrinfo`` on each pool connect).
 
-#1586 (MySQL slice): ``sql_connector`` (mysql/mariadb + pymysql) keeps the URL
-hostname for TLS ``server_hostname`` and installs
-:class:`~connectors.tcp_pin.HostResolutionPin` for the engine lifetime
-(pymysql ``socket.create_connection`` → ``getaddrinfo``).
+#1586 (MySQL slice): ``sql_connector`` pins **only** ``…+pymysql`` drivers via
+:class:`~connectors.tcp_pin.HostResolutionPin` (Python ``getaddrinfo``). Native
+MySQL/MariaDB connectors fail-closed on hostname targets; Oracle thin remains
+deferred (native resolve).
 """
 
 from __future__ import annotations
