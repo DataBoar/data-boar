@@ -47,6 +47,11 @@ TLS ``server_hostname`` and pins DNS via :class:`connectors.tcp_pin.HostResoluti
 #1586 (Redis slice): ``redis_connector`` keeps ``host`` for TLS SNI and pins
 TCP peers via ``make_pinned_redis_connection_class`` (redis-py
 ``Connection._connect`` would otherwise re-``getaddrinfo`` the hostname).
+
+#1586 (MySQL slice): ``sql_connector`` pins **only** ``…+pymysql`` drivers via
+:class:`~connectors.tcp_pin.HostResolutionPin` (Python ``getaddrinfo``). Native
+MySQL/MariaDB connectors fail-closed on hostname targets; Oracle thin remains
+deferred (native resolve).
 """
 
 from __future__ import annotations
