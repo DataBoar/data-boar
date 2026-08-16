@@ -277,7 +277,9 @@ def make_pinned_redis_connection_class(
                 return sock
             try:
                 return wrap(sock)
-            except OSError:
+            except Exception:
+                # Match redis-py SSLConnection: close plain sock on any wrap
+                # failure (OSError, RedisError, ssl.SSLError, …) (#1586 Bugbot).
                 sock.close()
                 raise
 
