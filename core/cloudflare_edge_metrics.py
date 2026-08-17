@@ -227,6 +227,8 @@ def post_graphql(
     """POST GraphQL with retries on 429/5xx. Token never logged."""
     if not token or not token.strip():
         raise ValueError("CLOUDFLARE_API_TOKEN is required for live GraphQL calls")
+    # B310: allowlist HTTPS api.cloudflare.com GraphQL only before urlopen.
+    safe_url = validate_cloudflare_graphql_url(url)
     body = json.dumps({"query": query, "variables": variables}).encode("utf-8")
     headers = {
         "Authorization": f"Bearer {token.strip()}",
@@ -236,9 +238,12 @@ def post_graphql(
     }
     last_err: Exception | None = None
     for attempt in range(max_retries + 1):
-        req = urllib.request.Request(url, data=body, headers=headers, method="POST")
+        req = urllib.request.Request(
+            safe_url, data=body, headers=headers, method="POST"
+        )
         try:
-            with urllib.request.urlopen(req, timeout=timeout_s) as resp:  # noqa: S310 — URL from env/default HTTPS
+            # B310: HTTPS + host/path allowlist enforced via validate_cloudflare_graphql_url.
+            with urllib.request.urlopen(req, timeout=timeout_s) as resp:  # nosec B310
                 raw = resp.read().decode("utf-8")
                 payload = json.loads(raw)
         except urllib.error.HTTPError as exc:
@@ -279,7 +284,8 @@ def post_graphql(
             # GraphQL may return 200 with errors — surface without dumping secrets.
             raise RuntimeError(f"Cloudflare GraphQL errors: {payload['errors']!r}")
         return payload
-    assert last_err is not None
+    if last_err is None:
+        raise RuntimeError("Cloudflare GraphQL retries exhausted without an error")
     raise last_err
 
 
