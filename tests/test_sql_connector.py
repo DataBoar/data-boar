@@ -1106,6 +1106,143 @@ def test_sql_guard_allows_mssql_hostnameincertificate_query() -> None:
     )
 
 
+def test_apply_oracle_tcp_peer_pin_rewrites_hostname_to_ip() -> None:
+    """#1586 slice F — oracledb Thin dials the guard IP; no HostResolutionPin."""
+    from connectors.sql_connector import _apply_oracle_tcp_peer_pin
+
+    out = _apply_oracle_tcp_peer_pin(
+        "oracle+oracledb://u:p@ora.example.com:1521/?service_name=ORCL",
+        ["1.1.1.1", "2606:4700:4700::1111"],
+    )
+    assert out == "oracle+oracledb://u:p@1.1.1.1:1521/?service_name=ORCL"
+
+
+def test_apply_oracle_tcp_peer_pin_formats_ipv6() -> None:
+    from connectors.sql_connector import _apply_oracle_tcp_peer_pin
+
+    out = _apply_oracle_tcp_peer_pin(
+        "oracle+oracledb://u:p@ora.example.com:1521/?service_name=ORCL",
+        ["2606:4700:4700::1111"],
+    )
+    assert out == (
+        "oracle+oracledb://u:p@[2606:4700:4700::1111]:1521/?service_name=ORCL"
+    )
+
+
+def test_apply_oracle_tcp_peer_pin_literal_ip_noop() -> None:
+    from connectors.sql_connector import _apply_oracle_tcp_peer_pin
+
+    url = "oracle+oracledb://u:p@1.1.1.1:1521/?service_name=ORCL"
+    assert _apply_oracle_tcp_peer_pin(url, ["9.9.9.9"]) == url
+
+
+def test_apply_oracle_tcp_peer_pin_cx_oracle_fails_closed() -> None:
+    from connectors.sql_connector import _apply_oracle_tcp_peer_pin
+
+    with pytest.raises(ValueError, match="#1586|oracledb"):
+        _apply_oracle_tcp_peer_pin(
+            "oracle+cx_oracle://u:p@ora.example.com:1521/?service_name=ORCL",
+            ["1.1.1.1"],
+        )
+
+
+def test_sql_oracle_oracledb_connect_rewrites_url_host_to_pin(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """#1586 — bare oracle → oracledb; create_engine sees pin IP, not hostname."""
+    import socket
+    from urllib.parse import urlsplit
+
+    from connectors import sql_connector
+
+    host = "ora.example.com"
+
+    def fake_getaddrinfo(name, *args, **kwargs):
+        if name == host:
+            return [
+                (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("1.1.1.1", 0)),
+                (
+                    socket.AF_INET6,
+                    socket.SOCK_STREAM,
+                    6,
+                    "",
+                    ("2606:4700:4700::1111", 0, 0, 0),
+                ),
+            ]
+        raise socket.gaierror(f"unexpected host {name!r}")
+
+    monkeypatch.setattr(socket, "getaddrinfo", fake_getaddrinfo)
+    monkeypatch.setattr(
+        "connectors.url_guard.socket.getaddrinfo",
+        fake_getaddrinfo,
+    )
+
+    with (
+        patch.object(sql_connector, "ensure_sql_driver_available"),
+        patch.object(sql_connector, "create_engine") as mock_engine,
+    ):
+        mock_engine.return_value = MagicMock()
+        connector = sql_connector.SQLConnector(
+            {
+                "name": "oracle-pin",
+                "driver": "oracle",
+                "host": host,
+                "port": 1521,
+                "user": "u",
+                "pass": "p",
+                "database": "ORCL",
+            },
+            scanner=MagicMock(),
+            db_manager=MagicMock(),
+        )
+        connector.connect()
+        mock_engine.assert_called_once()
+        (url,) = mock_engine.call_args.args
+        assert urlsplit(url).hostname == "1.1.1.1"
+        assert "service_name=ORCL" in url
+        assert connector._dns_pin is None
+        connector.close()
+
+
+def test_sql_oracle_cx_oracle_fails_closed_without_python_pin(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """#1586 — oracle+cx_oracle uses native resolve; refuse hostname targets."""
+    import socket
+
+    from connectors import sql_connector
+
+    host = "ora-cx.example.com"
+
+    def fake_getaddrinfo(name, *args, **kwargs):
+        if name == host:
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("1.1.1.1", 0))]
+        raise socket.gaierror(f"unexpected host {name!r}")
+
+    monkeypatch.setattr(socket, "getaddrinfo", fake_getaddrinfo)
+    monkeypatch.setattr(
+        "connectors.url_guard.socket.getaddrinfo",
+        fake_getaddrinfo,
+    )
+
+    with patch.object(sql_connector, "ensure_sql_driver_available"):
+        connector = sql_connector.SQLConnector(
+            {
+                "name": "ora-cx",
+                "driver": "oracle+cx_oracle",
+                "host": host,
+                "port": 1521,
+                "user": "u",
+                "pass": "p",
+                "database": "ORCL",
+            },
+            scanner=MagicMock(),
+            db_manager=MagicMock(),
+        )
+        with pytest.raises(ValueError, match="#1586|oracledb"):
+            connector.connect()
+
+
 def test_apply_postgres_hostaddr_pin_formats_ipv6() -> None:
     from connectors.sql_connector import _apply_postgres_hostaddr_pin
 

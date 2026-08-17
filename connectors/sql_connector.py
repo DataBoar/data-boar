@@ -507,6 +507,58 @@ def _apply_mssql_tcp_peer_pin(url: str, pin_ips: list[str]) -> str:
     return new_u.render_as_string(hide_password=False)
 
 
+# oracledb Thin resolves outside Python getaddrinfo — pin by rewriting URL host
+# (#1586 slice F). HostResolutionPin would be a no-op (same class as FreeTDS).
+_ORACLE_URL_IP_PIN_DBAPIS = frozenset({"oracledb"})
+
+
+def _oracle_dbapi_name(drivername: str) -> str:
+    """Return the SQLAlchemy DBAPI suffix for an oracle drivername."""
+    raw = (drivername or "").strip().lower()
+    if "+" in raw:
+        return raw.rsplit("+", 1)[-1]
+    return "oracledb"
+
+
+def _apply_oracle_tcp_peer_pin(url: str, pin_ips: list[str]) -> str:
+    """Rewrite Oracle URL host to a guard-pinned IP (#1586 slice F).
+
+    ``oracle+oracledb`` Thin dials TCP in native code, so
+    :class:`~connectors.tcp_pin.HostResolutionPin` cannot close the
+    validate→connect rebinding window. Putting the validated IP in the URL
+    authority forces the dial peer to the guard-approved address.
+
+    TCPS / DN match then uses the IP (or operator-supplied
+    ``ssl_server_cert_dn`` via ``connect_args``). Hostname certs without an IP
+    SAN may need that DN override — same trade-off as pymssql encrypt-to-IP.
+
+    Literal IP hosts are unchanged. ``cx_oracle`` and other DBAPIs fail-closed.
+    """
+    from sqlalchemy.engine.url import make_url
+
+    from .tcp_pin import is_ip_literal, primary_pin_str
+
+    if not pin_ips:
+        return url
+    u = make_url(url)
+    dbapi = _oracle_dbapi_name(u.drivername or "")
+    if dbapi not in _ORACLE_URL_IP_PIN_DBAPIS:
+        raise ValueError(
+            "TCP peer pin (#1586) for oracle requires oracledb "
+            f"(got {u.drivername!r}). Use oracle+oracledb or a literal IP host "
+            "(no DNS rebinding). cx_Oracle / Thick Client resolve outside "
+            "Python getaddrinfo — same class as Oracle thin before this pin."
+        )
+    host = u.host
+    if not host:
+        return url
+    host_s = str(host)
+    if is_ip_literal(host_s):
+        return url
+    pin = primary_pin_str(pin_ips)
+    return u.set(host=pin).render_as_string(hide_password=False)
+
+
 def _connect_args_from_target(target: dict[str, Any]) -> dict[str, Any]:
     """
     Build SQLAlchemy ``connect_args`` from target timeouts (config loader merges global + per-target).
@@ -529,8 +581,8 @@ def _connect_args_from_target(target: dict[str, Any]) -> dict[str, Any]:
                              TCP pin via URL host→guard IP (#1586 slice E; FreeTDS)
         mssql+pyodbc         timeout only  (pyodbc.connect accepts ``timeout``; not login_timeout);
                              TCP pin via URL host→IP + HostNameInCertificate (#1586)
-        oracle+oracledb      tcp_connect_timeout  (oracledb; not connect_timeout)
-                             TCP pin deferred — thin client resolves in native code
+        oracle+oracledb      tcp_connect_timeout  (oracledb; not connect_timeout);
+                             TCP pin via URL host→guard IP (#1586 slice F; Thin)
         other                connect_timeout  (best-effort)
     """
     connect_s = int(target.get("connect_timeout_seconds", 25))
@@ -632,6 +684,8 @@ class SQLConnector:
             )
         if base == "mssql":
             url = _apply_mssql_tcp_peer_pin(url, pin_ips)
+        if base == "oracle":
+            url = _apply_oracle_tcp_peer_pin(url, pin_ips)
         try:
             self.engine = create_engine(
                 url, pool_pre_ping=True, connect_args=connect_args

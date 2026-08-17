@@ -5,7 +5,7 @@ approved by :func:`connectors.url_guard.resolve_and_validate_outbound_url`.
 
 This is **not** an HTTP adapter — each connector applies pins with its own
 driver mechanism (libpq ``hostaddr``, redis ``connection_class``,
-pymongo via :class:`HostResolutionPin`, MSSQL URL host→IP rewrite, etc.).
+pymongo via :class:`HostResolutionPin`, MSSQL/Oracle URL host→IP rewrite, etc.).
 """
 
 from __future__ import annotations
