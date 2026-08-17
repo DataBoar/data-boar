@@ -1,0 +1,68 @@
+{
+  "dashboard": {
+    "uid": "databoar-site-faro-rum",
+    "title": "DataBoar Site — Faro RUM",
+    "tags": ["databoar", "faro", "rum", "frontend"],
+    "timezone": "browser",
+    "schemaVersion": 39,
+    "version": 1,
+    "refresh": "30s",
+    "time": {"from": "now-14d", "to": "now"},
+    "templating": {"list": []},
+    "panels": [
+      {
+        "id": 1,
+        "type": "stat",
+        "title": "RUM events",
+        "gridPos": {"h": 5, "w": 8, "x": 0, "y": 0},
+        "datasource": {"type": "loki", "uid": "grafanacloud-logs"},
+        "targets": [{"refId": "A", "expr": "sum(count_over_time({service_name=\"DataBoar Site\"}[$__range]))", "queryType": "instant", "editorMode": "code"}],
+        "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+        "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "orientation": "auto", "textMode": "auto", "colorMode": "value"}
+      },
+      {
+        "id": 2,
+        "type": "stat",
+        "title": "Exceptions",
+        "gridPos": {"h": 5, "w": 8, "x": 8, "y": 0},
+        "datasource": {"type": "loki", "uid": "grafanacloud-logs"},
+        "targets": [{"refId": "A", "expr": "sum(count_over_time({service_name=\"DataBoar Site\",kind=\"exception\"}[$__range]))", "queryType": "instant", "editorMode": "code"}],
+        "fieldConfig": {"defaults": {"unit": "short", "thresholds": {"mode": "absolute", "steps": [{"color": "green"}, {"color": "orange", "value": 1}, {"color": "red", "value": 10}]}}, "overrides": []},
+        "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "orientation": "auto", "textMode": "auto", "colorMode": "value"}
+      },
+      {
+        "id": 3,
+        "type": "stat",
+        "title": "Measurements",
+        "gridPos": {"h": 5, "w": 8, "x": 16, "y": 0},
+        "datasource": {"type": "loki", "uid": "grafanacloud-logs"},
+        "targets": [{"refId": "A", "expr": "sum(count_over_time({service_name=\"DataBoar Site\",kind=\"measurement\"}[$__range]))", "queryType": "instant", "editorMode": "code"}],
+        "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+        "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "orientation": "auto", "textMode": "auto", "colorMode": "value"}
+      },
+      {
+        "id": 4,
+        "type": "timeseries",
+        "title": "RUM volume by kind",
+        "gridPos": {"h": 9, "w": 16, "x": 0, "y": 5},
+        "datasource": {"type": "loki", "uid": "grafanacloud-logs"},
+        "targets": [{"refId": "A", "expr": "sum by (kind) (count_over_time({service_name=\"DataBoar Site\"}[$__interval]))", "queryType": "range", "editorMode": "code", "legendFormat": "{{kind}}"}],
+        "fieldConfig": {"defaults": {"unit": "short", "custom": {"drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "stacking": {"mode": "normal", "group": "A"}}}, "overrides": []},
+        "options": {"legend": {"displayMode": "list", "placement": "bottom", "calcs": ["sum"]}, "tooltip": {"mode": "multi", "sort": "desc"}}
+      },
+      {
+        "id": 5,
+        "type": "table",
+        "title": "RUM volume by environment",
+        "gridPos": {"h": 9, "w": 8, "x": 16, "y": 5},
+        "datasource": {"type": "loki", "uid": "grafanacloud-logs"},
+        "targets": [{"refId": "A", "expr": "sum by (deployment_environment) (count_over_time({service_name=\"DataBoar Site\"}[$__range]))", "queryType": "instant", "editorMode": "code", "format": "table"}],
+        "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+        "options": {"showHeader": true}
+      }
+    ]
+  },
+  "folderUid": "afutccy88qtj4c",
+  "overwrite": true,
+  "message": "Create dedicated Faro RUM dashboard"
+}
