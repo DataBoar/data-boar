@@ -9,6 +9,7 @@ Validates the demo entrypoint contract:
 - Docker variant hint is present.
 """
 
+import sys
 from pathlib import Path
 
 
@@ -17,9 +18,19 @@ def _repo_root() -> Path:
 
 
 def test_demo_sh_exists_and_is_executable() -> None:
-    """Anti-regression #834: scripts/demo.sh must exist and be executable."""
+    """Anti-regression #834: scripts/demo.sh must exist and be executable.
+
+    On Windows, checkout often drops the +x bit (NTFS / ``core.filemode``).
+    Assert shebang presence there; assert filesystem +x on POSIX (#1427).
+    """
     demo = _repo_root() / "scripts" / "demo.sh"
     assert demo.exists(), "scripts/demo.sh must exist (#834)"
+    if sys.platform == "win32":
+        head = demo.read_text(encoding="utf-8", errors="replace").lstrip()
+        assert head.startswith("#!"), (
+            "scripts/demo.sh must keep a shebang on Windows checkout (#834/#1427)"
+        )
+        return
     assert demo.stat().st_mode & 0o111, "scripts/demo.sh must be executable (#834)"
 
 

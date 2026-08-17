@@ -323,6 +323,8 @@ def test_private_git_sync_lab_hosts_exclude_fragile_sd():
 
 def test_private_git_sync_sh_syntax():
     """scripts/private-git-sync.sh passes bash -n."""
+    if sys.platform == "win32":
+        return  # bare `bash` on GHA Windows is the WSL stub (#1427)
     root = _project_root()
     script = root / "scripts" / "private-git-sync.sh"
     if not script.exists():

@@ -1213,7 +1213,9 @@ class SensitivityDetector:
             else:
                 self._vectorizer = TfidfVectorizer(ngram_range=(1, 2), min_df=1)
                 X = self._vectorizer.fit_transform(texts)
-                self._model = RandomForestClassifier(n_estimators=100, random_state=42)
+                self._model = RandomForestClassifier(
+                    n_estimators=100, random_state=42, n_jobs=1
+                )
                 self._model.fit(X, labels)
                 self._ml_available = True
 

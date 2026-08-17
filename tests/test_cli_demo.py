@@ -35,8 +35,24 @@ def test_main_py_demo_flag_in_help() -> None:
     assert "--demo" in proc.stdout
 
 
-def test_demo_headless_scan_completes() -> None:
-    """Headless demo path must finish scan with exit 0 and write a report."""
+def test_demo_headless_script_completes() -> None:
+    """Cross-platform headless demo (#1427 CI + local) must exit 0 with a report."""
+    proc = subprocess.run(
+        [sys.executable, str(REPO_ROOT / "scripts" / "demo_headless.py")],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        timeout=300,
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stderr or proc.stdout
+    combined = proc.stdout + proc.stderr
+    assert "Report written:" in combined
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="demo.sh is bash-only")
+def test_demo_sh_headless_scan_completes() -> None:
+    """Headless demo.sh path must finish scan with exit 0 and write a report."""
     proc = subprocess.run(
         ["/bin/bash", str(REPO_ROOT / "scripts" / "demo.sh"), "--headless"],
         cwd=REPO_ROOT,

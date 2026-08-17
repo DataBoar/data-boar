@@ -11,6 +11,7 @@ class MLSensitivityScanner:
             random_state=42,
             min_samples_leaf=1,
             max_features="sqrt",
+            n_jobs=1,
         )
         self.is_trained = False
         self._load_or_train_initial_model()

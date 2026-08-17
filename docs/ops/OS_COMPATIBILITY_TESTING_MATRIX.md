@@ -1,6 +1,8 @@
 # OS compatibility testing matrix (homelab expansion)
 
-**Product scope:** Data Boar is **platform-agnostic** — recent **Linux**, **macOS**, **Windows**, and **container** deployments are all in scope. **This document** covers only the **Linux homelab expansion axis** (distro matrix, `dnf`/`pacman`/`apk`, etc.). Windows, macOS, FreeBSD, and illumos validation live under epic **#1171** and other ops docs — not here.
+**Product scope:** Data Boar is **platform-agnostic** — recent **Linux**, **macOS**, **Windows**, and **container** deployments are all in scope. **This document** covers primarily the **Linux homelab expansion axis** (distro matrix, `dnf`/`pacman`/`apk`, etc.). macOS, FreeBSD, and illumos validation live under epic **#1171** and other ops docs.
+
+**Windows (CI-tested, not only declared):** GitHub Actions job **`test-windows`** on **`windows-latest`** (Python **3.12**) runs pytest, a native **`pip install .`** smoke (`data-boar --version`), and a headless demo scan via **`scripts/demo_headless.py`** (same outcome as `scripts/demo.sh --headless`). Tracker: [#1427](https://github.com/DataBoar/data-boar/issues/1427) · [PLAN_WINDOWS_CI_ENABLEMENT.md](../plans/PLAN_WINDOWS_CI_ENABLEMENT.md). This does **not** replace MSI/winget packaging ([#1467](https://github.com/DataBoar/data-boar/issues/1467)).
 
 **Purpose:** Guide **which Linux distributions** to test Data Boar on in the homelab, prioritized by **production relevance**, **Python 3.12+ availability**, and **package manager** differences. This helps expand **documented Linux homelab coverage** beyond the **most-documented install path** (Debian/Ubuntu examples in [TECH_GUIDE.md](../TECH_GUIDE.md)).
 
@@ -11,7 +13,7 @@
 ## 1. Current baseline (documented)
 
 - **Most-documented install path:** **Ubuntu 24.04 LTS** / **Debian 13** (recommended) or a recent Linux/macOS/Windows — per [TECH_GUIDE.md](../TECH_GUIDE.md) (§ Requirements and environment preparation).
-- **Python:** **3.12+** required ([SECURITY.md](../../SECURITY.md)); **CI** uses the **default GitHub Actions runner** (`ubuntu-latest`, currently Ubuntu) and tests **3.12 and 3.13** there — that is **CI infrastructure**, not a product platform limit.
+- **Python:** **3.12+** required ([SECURITY.md](../../SECURITY.md)); **CI** uses **`ubuntu-latest`** (Python **3.12** / **3.13** blocking; **3.14** signal-only) **and** **`windows-latest`** (Python **3.12**, job `test-windows`) — that is **CI infrastructure**, not a product platform limit.
 - **Package manager:** Examples use **`apt`**; **`uv`** (or `pip`) handles Python deps.
 
 ---
