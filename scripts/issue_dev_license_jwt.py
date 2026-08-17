@@ -55,6 +55,24 @@ def _load_private_key_pem() -> str:
     sys.exit(1)
 
 
+def _stdin_is_interactive() -> bool:
+    """True only when a real console is attached (never block under pytest/CI).
+
+    On Windows, ``subprocess.DEVNULL`` as stdin can still make
+    ``sys.stdin.isatty()`` return True; prefer ``os.isatty(fileno)``.
+    """
+    if os.environ.get("CI", "").strip().lower() in {"1", "true", "yes"}:
+        return False
+    try:
+        fd = sys.stdin.fileno()
+    except (AttributeError, OSError, ValueError):
+        return False
+    try:
+        return bool(os.isatty(fd))
+    except OSError:
+        return False
+
+
 def _resolve_key_password(pem: str) -> bytes | None:
     """Resolve the signing-key passphrase for ``load_pem_private_key`` (#910).
 
@@ -63,7 +81,7 @@ def _resolve_key_password(pem: str) -> bytes | None:
 
     1. ``DATA_BOAR_LICENSE_ISSUER_PRIVATE_KEY_PASSWORD`` env var (non-interactive
        path — Maestro / automation set this before calling the issuer).
-    2. Interactive ``getpass`` prompt when stdin is a TTY (operator issuing a
+    2. Interactive ``getpass`` prompt when stdin is a real TTY (operator issuing a
        real license at the keyboard).
     3. Encrypted key with neither env var nor a TTY: exit with an actionable
        message instead of a raw ``TypeError`` traceback from cryptography.
@@ -72,7 +90,7 @@ def _resolve_key_password(pem: str) -> bytes | None:
     if pw:
         return pw.encode("utf-8")
     if "ENCRYPTED" in pem:
-        if sys.stdin.isatty():
+        if _stdin_is_interactive():
             entered = getpass("License signing key passphrase: ").strip()
             if entered:
                 return entered.encode("utf-8")

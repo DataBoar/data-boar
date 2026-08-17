@@ -81,9 +81,9 @@ def _module_origin(module: str) -> str:
     try:
         spec = importlib.util.find_spec(module)
     except (ModuleNotFoundError, ValueError):
-        return "—"
+        return "-"
     if spec is None or not spec.origin:
-        return "—"
+        return "-"
     origin = str(spec.origin).replace("\\", "/")
     if "/extras/" in origin or origin.startswith("/extras"):
         return "/extras"
@@ -235,8 +235,9 @@ def check_extras_rows(manifest: dict[str, Any] | None = None) -> list[dict[str, 
             _module_origin(m) for m, ok in zip(modules, present, strict=True) if ok
         }
         origins.discard("—")
+        origins.discard("-")
         if not origins:
-            origem = "—"
+            origem = "-"
         elif origins == {"/extras"}:
             origem = "/extras"
         elif "imagem" in origins and "/extras" in origins:
@@ -247,16 +248,17 @@ def check_extras_rows(manifest: dict[str, Any] | None = None) -> list[dict[str, 
             origem = "ambiente"
 
         if estado == "OK":
-            acao = "—"
+            acao = "-"
         else:
             acao = (
                 f"pip install 'data-boar[{name}]' "
                 f'(or: uv pip install -e ".[{name}]"); '
                 "container: mount ABI-compatible wheels at /extras "
-                "(PYTHONPATH=/extras) — see docs/DOCKER_SETUP.md"
+                "(PYTHONPATH=/extras) - see docs/DOCKER_SETUP.md"
             )
             if faltam:
-                acao = f"falta: {', '.join(faltam)}  →  {acao}"
+                # ASCII arrow: Windows cp1252 consoles cannot encode U+2192 (#1427).
+                acao = f"falta: {', '.join(faltam)}  ->  {acao}"
         rows.append(
             {
                 "extra": name,
@@ -283,7 +285,7 @@ def format_check_extras_table(rows: list[dict[str, str]] | None = None) -> str:
         for c in cols:
             val = row[c]
             if c == "acao" and len(val) > widths["acao"]:
-                val = val[: widths["acao"] - 1] + "…"
+                val = val[: widths["acao"] - 1] + "..."
             parts.append(val.ljust(widths[c]))
         lines.append("  ".join(parts))
     return "\n".join(lines) + "\n"
