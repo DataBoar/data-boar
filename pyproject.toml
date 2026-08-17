@@ -93,7 +93,7 @@ dependencies = [
     "python-multipart>=0.0.32",
     "pyyaml>=6.0.3",
     "regex>=2026.5.9",
-    "reportlab>=4.5.1",
+    "reportlab>=5.0.0",
     "requests>=2.34.2",
     "scikit-learn>=1.9.0",
     "scipy>=1.17.0",
@@ -106,7 +106,7 @@ dependencies = [
     "urllib3>=2.6.3",
     "uvicorn>=0.52.0",
     "werkzeug>=3.1.6",
-    "webauthn>=2.2.0",
+    "webauthn>=3.0.0",
 ]
 
 [build-system]
