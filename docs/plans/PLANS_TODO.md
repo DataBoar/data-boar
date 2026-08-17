@@ -31,7 +31,7 @@ Use these tags in headings to keep priorities explicit and machine-countable:
 Do not edit this block manually; refresh with `python scripts/plans-stats.py --write`.
 
 - **Status rows counted:** 222  (Done: 142 | Incomplete: 80)
-- **Incomplete breakdown:** Pending `⬜`=68, Tracked `🔄` / `Tracked (partially done)`=12, Under consideration=0, Backlog-marked rows=0
+- **Incomplete breakdown:** Pending `⬜`=67, Tracked `🔄` / `Tracked (partially done)`=13, Under consideration=0, Backlog-marked rows=0
 
 | Horizon | Total rows | Done | Incomplete |
 | ------- | ----------: | ----: | ----------: |
@@ -366,7 +366,7 @@ After **A1–A3** (minimum), you can **resume token-aware pace** on Tier 2 featu
 | 7d    | **Plugin partner interface L1/L2/L3 (doc) — [#695](https://github.com/DataBoar/data-boar/issues/695)** | [PLAN_PLUGIN_PARTNER_INTERFACE.md](PLAN_PLUGIN_PARTNER_INTERFACE.md) — hierarchy, L3 payload/receipt schemas, driver skeleton, Enterprise + ADR prereq. Runtime → #865. 🔄 |
 | 7e    | **Plugin SDK language-neutral contract — [#865](https://github.com/DataBoar/data-boar/issues/865)** | [PLAN_PLUGIN_SDK_CONTRACT.md](PLAN_PLUGIN_SDK_CONTRACT.md) · `docs/SDK.md` · `docs/sdk/PLUGIN_CONTRACT.schema.json` · ADR-0086. Fatia B: schema + Safe-Hold conformance + L2 stub. Bidirectional → #1116. 🔄 |
 | 7f    | **Plugin SDK bidirectional zero-trust mesh — [#1116](https://github.com/DataBoar/data-boar/issues/1116)** | [PLAN_SDK_BIDIRECTIONAL.md](PLAN_SDK_BIDIRECTIONAL.md) · ADR-0087 · `core/sdk/mutual_attestation.py` · dogfood `boar_fast_filter`. Host-tinted → guest refuses; guest-violates → contained. 🔄 |
-| 7w    | **Windows CI enablement — [#1427](https://github.com/DataBoar/data-boar/issues/1427)** | [PLAN_WINDOWS_CI_ENABLEMENT.md](PLAN_WINDOWS_CI_ENABLEMENT.md) — `windows-latest` + pip/pipx + `--demo`; unblocks [#1467](https://github.com/DataBoar/data-boar/issues/1467). ⬜ Pending |
+| 7w    | **Windows CI enablement — [#1427](https://github.com/DataBoar/data-boar/issues/1427)** | [PLAN_WINDOWS_CI_ENABLEMENT.md](PLAN_WINDOWS_CI_ENABLEMENT.md) — `windows-latest` + pip/pipx + headless demo; unblocks [#1467](https://github.com/DataBoar/data-boar/issues/1467). 🔄 In progress |
 
 **Deferred (larger or later):** Secrets Phase B, Version check & self-upgrade (incl. optional Phase 9: .deb/apt repo, signed packages, bytecode-only install, winget-like), Selenium QA, Synthetic data, SAP connector, **M-LOCALE-PLUS** (extra dashboard locales). **Backlog:** Additional data soup **Tier 3b** embedded-tracker heuristics + **Tier 4** ([PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md](completed/PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md)); **Tier 1** + **stego hints** + **Tier 3 rich media** are on **`main`** (see **Integration / active threads**). **Databricks / Unity Catalog** lakehouse scan + catalog-driven scope — [PLAN_DATABRICKS_UNITY_LAKEHOUSE_SCOPE_AND_SCAN.md](PLAN_DATABRICKS_UNITY_LAKEHOUSE_SCOPE_AND_SCAN.md) (**[H2]**, customer-pull, Pro/Ent-shaped). **Findings export / corporate repository** — [PLAN_FINDINGS_CORPORATE_REPOSITORY_EXPORT.md](PLAN_FINDINGS_CORPORATE_REPOSITORY_EXPORT.md) (**[H2]**, customer-pull; expedite if security review demands).
 

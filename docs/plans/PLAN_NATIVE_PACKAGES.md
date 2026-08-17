@@ -72,7 +72,7 @@ Community at 2 workers does **not** harvest free-threaded scale. See [#551](http
 | **2** | nfpm foundation (#1403): generated deb/rpm/apk/pacman manifests + connector subpackages + embed metadata | ✅ (merged #1436) |
 | **3** | CI package build (#1437): populate staging with real cp314t + wheelhouse; `nfpm package` deb+rpm; install-smoke; artifacts | 🔄 |
 | **4** | Lab metal validation matrix (5 hosts) + apk/musl/arm64 + xbps (#1404) | ⬜ deferred / separate issues |
-| **5** | Windows CI job (`windows-latest`) so MSI/winget work is testable (#1427) | ⬜ planned — **[PLAN_WINDOWS_CI_ENABLEMENT.md](PLAN_WINDOWS_CI_ENABLEMENT.md)** — **blocks** #1467 |
+| **5** | Windows CI job (`windows-latest`) so MSI/winget work is testable (#1427) | 🔄 [PLAN_WINDOWS_CI_ENABLEMENT.md](PLAN_WINDOWS_CI_ENABLEMENT.md) — PR in flight; **blocks** #1467 until green on `main` |
 | **6** | Windows MSI + winget embed payload (#1467) | ⬜ planned (after #1427) |
 | **7** | macOS Homebrew tap (#1425) | ⬜ planned |
 
