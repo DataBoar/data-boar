@@ -392,7 +392,9 @@ targets:
     objects: [contacts, companies, deals]
 ```
 
-Chaves opcionais: `base_url` (padrão `https://api.hubapi.com`), `token_from_env`
+Chaves opcionais: `base_url` (padrão `https://api.hubapi.com`; hosts **na allowlist**
+apenas — `api.hubapi.com` ou `api-<região>.hubapi.com` como `api-eu1.hubapi.com` —
+#1607), `token_from_env`
 (nome da env var), `allow_private_networks` (somente lab).
 
 ### Formulários de marketing / site → o que o Data Boar enxerga
