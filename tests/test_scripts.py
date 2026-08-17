@@ -112,12 +112,17 @@ def test_commit_or_pr_ps1_has_param_block():
 
 def _parse_powershell_script(script_path: Path, root: Path) -> bool:
     """Return True if script has valid PowerShell syntax (Parser::ParseFile)."""
-    rel = script_path.relative_to(root)
-    path_expr = (
-        "[System.IO.Path]::GetFullPath((Join-Path (Get-Location) '"
-        + str(rel.as_posix())
-        + "'))"
-    )
+    # Scripts may live outside the consumer repo (DataBoar/maestro after spinout #8).
+    try:
+        rel = script_path.resolve().relative_to(root.resolve())
+        path_expr = (
+            "[System.IO.Path]::GetFullPath((Join-Path (Get-Location) '"
+            + str(rel.as_posix())
+            + "'))"
+        )
+    except ValueError:
+        abs_posix = script_path.resolve().as_posix().replace("'", "''")
+        path_expr = f"'{abs_posix}'"
     parse_script = (
         f"$path = {path_expr}; "
         "$errors = $null; "
@@ -134,6 +139,7 @@ def _parse_powershell_script(script_path: Path, root: Path) -> bool:
                 # #860: 60s absorbs pwsh cold-start on slow runners; callers in
                 # parse loops should also request the ``warm_pwsh`` fixture.
                 timeout=60,
+                check=False,
             )
         except FileNotFoundError:
             continue
@@ -1221,11 +1227,28 @@ def test_pypi_publish_oidc_dispatch_wrapper() -> None:
     assert "testpypi" in sh and "pypi" in sh
 
 
+def _maestro_get_lab_status_script():
+    """Resolve DataBoar/maestro core/Get-LabStatus.ps1 when the clone is present."""
+    import os
+
+    env = (os.environ.get("MAESTRO_ROOT") or "").strip()
+    candidates: list[Path] = []
+    if env:
+        candidates.append(Path(env))
+    parent = _project_root().parent
+    candidates.extend([parent / "maestro", parent / "Maestro"])
+    for root in candidates:
+        script = root / "core" / "Get-LabStatus.ps1"
+        if script.is_file():
+            return script
+    return None
+
+
 def test_get_lab_status_ps1_syntax():
-    """scripts/maestro/Get-LabStatus.ps1 has valid PowerShell syntax (parse-only, #952)."""
+    """DataBoar/maestro core/Get-LabStatus.ps1 has valid PowerShell syntax (parse-only, #952)."""
     root = _project_root()
-    script = root / "scripts" / "maestro" / "Get-LabStatus.ps1"
-    if not script.exists():
+    script = _maestro_get_lab_status_script()
+    if script is None:
         return
     assert _parse_powershell_script(script, root), "Get-LabStatus.ps1 parse failed"
 
@@ -1238,9 +1261,8 @@ def test_get_lab_status_probes_ssh_independent_of_icmp():
     skip the node. We assert the ssh probe line is at top-level indentation (column 0),
     i.e. not gated behind the Test-Connection ``if`` block.
     """
-    root = _project_root()
-    script = root / "scripts" / "maestro" / "Get-LabStatus.ps1"
-    if not script.exists():
+    script = _maestro_get_lab_status_script()
+    if script is None:
         return
     lines = script.read_text(encoding="utf-8").splitlines()
     ssh_probe = [ln for ln in lines if "$rawOutput = ssh " in ln]

@@ -3,7 +3,8 @@
 # Edit this map only when the packaging contract (#1403 table) changes.
 
 [subpackages]
-"data-boar-mssql" = "mssql-pymssql"
+"data-boar-mssql" = "mssql"
+
 "data-boar-nosql" = "nosql"
 "data-boar-shares" = "shares"
 "data-boar-compressed" = "compressed"

@@ -1,18 +1,26 @@
 """
-Anti-regression tests for the SSRF guard on outbound connector URLs (#832).
+Anti-regression tests for the SSRF guard on outbound connector URLs (#832, #1552).
 
 Default posture: reject link-local (cloud metadata), loopback, and private
 hosts in base_url / discover_url / token_url / site_url. Each target config
 may opt in with ``allow_private_networks: true`` — internal scanning is a
 legitimate Data Boar use case, but it must be explicit.
+
+#1552: DNS resolution failure is fail-closed; httpx peers are pinned to IPs
+validated at guard time (no request-time DNS rebinding).
 """
 
 from __future__ import annotations
+
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from connectors.url_guard import (
     OPT_IN_KEY,
+    PinnedIPHTTPAdapter,
+    PinnedIPTransport,
+    resolve_and_validate_outbound_url,
     target_allows_private,
     validate_outbound_url,
 )
@@ -82,13 +90,116 @@ def test_guard_rejects_non_http_schemes(url: str) -> None:
     )
 
 
-def test_guard_allows_empty_and_unresolvable_urls() -> None:
+def test_guard_allows_empty_url() -> None:
     # Empty: nothing to guard (connector handles missing-url errors itself).
     assert validate_outbound_url("") is None
-    # Unresolvable DNS: no availability regression — connection fails later.
-    assert (
-        validate_outbound_url("https://nonexistent.invalid.example-tld-x/api") is None
+
+
+def test_guard_fail_closed_on_unresolvable_dns() -> None:
+    # regression-anchor: #1552 — DNS failure must not skip address checks.
+    err = validate_outbound_url(
+        "https://nonexistent.invalid.example-tld-x/api", label="base_url"
     )
+    assert err is not None
+    assert "#1552" in err
+    assert "DNS" in err or "resolv" in err.lower()
+
+
+def test_pinned_transport_rejects_host_not_in_pin_map() -> None:
+    # regression-anchor: #1552 — no second DNS path for unexpected hosts.
+    import httpx
+
+    if not hasattr(httpx, "Client"):
+        pytest.skip("httpx not installed")
+    transport = PinnedIPTransport({"api.example.com": ["203.0.113.10"]})
+    req = httpx.Request("GET", "https://evil.example.com/x")
+    with pytest.raises(ValueError, match="#1552"):
+        transport.handle_request(req)
+
+
+def test_pinned_transport_rewrites_url_host_to_pin() -> None:
+    # regression-anchor: #1552 — TCP peer is the pre-validated IP.
+    import httpx
+
+    inner = MagicMock()
+    inner.handle_request.return_value = httpx.Response(200, text="ok")
+    transport = PinnedIPTransport({"api.example.com": ["203.0.113.10"]})
+    transport._inner = inner
+    req = httpx.Request("GET", "https://api.example.com/v1")
+    transport.handle_request(req)
+    pinned_req = inner.handle_request.call_args.args[0]
+    assert pinned_req.url.host == "203.0.113.10"
+    assert pinned_req.headers.get("host") == "api.example.com"
+    assert pinned_req.extensions.get("sni_hostname") == "api.example.com"
+
+
+def test_pinned_requests_adapter_rejects_host_not_in_pin_map() -> None:
+    # regression-anchor: #1565 — requests path has no second DNS for unexpected hosts.
+    import requests
+    from requests.adapters import HTTPAdapter
+
+    adapter = PinnedIPHTTPAdapter({"api.example.com": ["203.0.113.10"]})
+    req = requests.Request("GET", "https://evil.example.com/x").prepare()
+    with (
+        pytest.raises(ValueError, match="#1552"),
+        patch.object(HTTPAdapter, "send") as mock_send,
+    ):
+        adapter.send(req)
+    mock_send.assert_not_called()
+
+
+def test_pinned_requests_adapter_rewrites_url_host_to_pin() -> None:
+    # regression-anchor: #1565 — TCP peer is the pre-validated IP; Host/SNI preserved.
+    import requests
+    from requests.adapters import HTTPAdapter
+
+    adapter = PinnedIPHTTPAdapter({"api.example.com": ["203.0.113.10"]})
+    req = requests.Request("GET", "https://api.example.com/v1").prepare()
+    fake_response = MagicMock()
+    with patch.object(HTTPAdapter, "send", return_value=fake_response) as mock_send:
+        out = adapter.send(req)
+    assert out is fake_response
+    sent_req = mock_send.call_args.args[0]
+    assert "203.0.113.10" in sent_req.url
+    assert "api.example.com" not in urlparse_host(sent_req.url)
+    assert sent_req.headers.get("Host") == "api.example.com"
+
+
+def urlparse_host(url: str) -> str:
+    from urllib.parse import urlparse
+
+    return urlparse(url).hostname or ""
+
+
+def test_resolve_and_validate_returns_pins_for_literal_global_ip() -> None:
+    # 1.1.1.1 is global; TEST-NET 203.0.113.0/24 is is_private in Python ipaddress.
+    err, ips = resolve_and_validate_outbound_url(
+        "https://1.1.1.1/api", allow_private=False, label="base_url"
+    )
+    assert err is None
+    assert [str(i) for i in ips] == ["1.1.1.1"]
+
+
+def test_build_pinned_httpx_client_forwards_verify_to_transport() -> None:
+    # regression-anchor: #1552 / Bugbot — custom transport must receive verify.
+    import httpx
+
+    from connectors.url_guard import build_pinned_httpx_client
+
+    captured: dict = {}
+
+    class _CapturingTransport(httpx.HTTPTransport):
+        def __init__(self, **kwargs):
+            captured.update(kwargs)
+            super().__init__(**kwargs)
+
+    with patch("httpx.HTTPTransport", _CapturingTransport):
+        client = build_pinned_httpx_client(
+            host_to_ips={"example.com": ["93.184.216.34"]},
+            verify=False,
+        )
+        client.close()
+    assert captured.get("verify") is False
 
 
 def test_target_allows_private_reads_config_flag() -> None:
@@ -147,12 +258,12 @@ def test_rest_connector_guards_discover_and_token_url() -> None:
     for cfg in (
         {
             "name": "d",
-            "base_url": "https://api.example.com",
+            "base_url": "https://example.com",
             "discover_url": "http://192.168.0.1/paths",
         },
         {
             "name": "t",
-            "base_url": "https://api.example.com",
+            "base_url": "https://example.com",
             "auth": {"type": "oauth2_client", "token_url": "http://10.1.1.1/token"},
         },
     ):
@@ -204,9 +315,13 @@ def test_sharepoint_connector_rejects_private_site_url() -> None:
     [
         "connectors/rest_connector.py",
         "connectors/powerbi_connector.py",
+        "connectors/hubspot_connector.py",
         "connectors/sharepoint_connector.py",
         "connectors/webdav_connector.py",
         "connectors/dataverse_connector.py",
+        "connectors/mongodb_connector.py",
+        "connectors/redis_connector.py",
+        "connectors/sql_connector.py",
     ],
 )
 def test_connector_sources_call_url_guard(connector_file: str) -> None:
@@ -217,9 +332,13 @@ def test_connector_sources_call_url_guard(connector_file: str) -> None:
     source = (Path(__file__).resolve().parents[1] / connector_file).read_text(
         encoding="utf-8"
     )
-    assert "validate_outbound_url(" in source, (
-        f"{connector_file} lost its SSRF guard call (#832)"
+    has_guard = (
+        "validate_outbound_url(" in source
+        or "resolve_and_validate_outbound_url(" in source
+        or "pinned_httpx_request(" in source
+        or "_guard_sql_connection_url(" in source
     )
+    assert has_guard, f"{connector_file} lost its SSRF guard call (#832 / #1552)"
     assert "target_allows_private(" in source, (
         f"{connector_file} lost its allow_private_networks opt-in wiring (#832)"
     )

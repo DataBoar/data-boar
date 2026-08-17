@@ -1,9 +1,23 @@
 # ADR 0033 — WebAuthn open Relying Party — JSON endpoints (Phase 1)
 
-- **Status:** Accepted
 - **Date (UTC):** 2026-04-21
 - **Authors:** Fabio Leitao
 - **Deciders:** Fabio Leitao
+
+## Status
+
+Accepted
+
+### Status history
+
+- 2026-04-21 — Accepted (Phase 1 WebAuthn RP on main behind `api.webauthn.enabled`, default false).
+- 2026-08-13 — Narrowing note (append-only): Decision item 5 still exempts ongoing
+  `/auth/webauthn/*` ceremonies from `api.require_api_key`. First-passkey
+  **registration** (bootstrap / no existing credential) now requires a configured
+  API key when the peer is not a trusted local operator path — see GitHub
+  [#1553](https://github.com/DataBoar/data-boar/issues/1553) / PR
+  [#1564](https://github.com/DataBoar/data-boar/pull/1564) and ADR-0082 Decision #6.
+  Ongoing authentication and already-established trust are unchanged.
 
 ## Context
 

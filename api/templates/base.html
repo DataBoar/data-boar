@@ -13,6 +13,10 @@
   <div class="insecure-transport-banner" role="status">
     <strong>{{ t('banner.insecure_title') }}</strong> — {{ t('banner.insecure_body') }}
   </div>
+  {% elif show_trusted_proxy_tls_info %}
+  <div class="trusted-proxy-tls-banner" role="status">
+    <strong>{{ t('banner.trusted_proxy_tls_title') }}</strong> — {{ t('banner.trusted_proxy_tls_body') }}
+  </div>
   {% endif %}
   {% if show_trust_governance_banner %}
   <div class="governance-trust-banner" role="status">

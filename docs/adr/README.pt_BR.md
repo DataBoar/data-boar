@@ -102,10 +102,14 @@ Os títulos na tabela abaixo ficam em **inglês** (canônicos, iguais ao [README
 | 0079 | [Ecosystem engineering rigor canon (UMADR satellites)](ADR-0079-ecosystem-engineering-rigor-canon.md) | Proposto |
 | 0080 | [Local validation gate is inviolable: full check-all before any push or PR](ADR-0080-local-validation-gate-inviolable.md) | Proposto |
 | 0081 | [No silent ML confidence failures on single-class compliance profiles](ADR-0081-no-silent-ml-confidence-single-class-hardening.md) | Proposto |
-| 0082 | [Web exposure safe-by-default boundary controls](ADR-0082-web-exposure-safe-by-default-boundary-controls.md) | Proposto |
+| 0082 | [Web exposure safe-by-default boundary controls](ADR-0082-web-exposure-safe-by-default-boundary-controls.md) | Aceito |
 | 0083 | [Rust regex stage: accept form B (findings superset)](ADR-0083-rust-regex-stage-superset-accept-form-b.md) | Aceito |
 | 0084 | [Native package: embed CPython by channel (Enterprise vs community)](ADR-0084-native-package-embedded-cpython-by-channel.md) | Aceito |
 | 0085 | [Install priority ladder (native-first when shipped; pipx today)](ADR-0085-install-priority-ladder.md) | Proposto |
+| 0086 | [Contrato language-neutral do Plugin SDK (L1/L2/L3)](ADR-0086-plugin-sdk-language-neutral-contract.md) | Proposto |
+| 0087 | [Malha bidirecional zero-trust do Plugin SDK](ADR-0087-plugin-sdk-bidirectional-zero-trust-mesh.md) | Proposto |
+
+| 0088 | [Verifique o verificador: checagens de integridade/autorização não podem depender do artefato que verificam](ADR-0088-verify-the-verifier-no-self-referential-trust-chain.md) | Aceito |
 
 ## Docs relacionados
 
@@ -132,3 +136,4 @@ O **data-boar** é a regência UMADR **canônica** ([ADR 0000](ADR-0000-project-
 4. Usar nomes com **quatro dígitos** e corpos de ADR **somente em inglês**.
 
 Acompanhamento: GitHub [#994](https://github.com/DataBoar/data-boar/issues/994).
+

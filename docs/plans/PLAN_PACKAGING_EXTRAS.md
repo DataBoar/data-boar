@@ -30,7 +30,9 @@ Evidence: multi-node smoke 2026-06-27 (py3.12 lab host OK; constrained py3.14 la
 | `postgres` | `psycopg2-binary` | `postgresql` / `postgresql+psycopg2` |
 | `mysql` | `pymysql` (pure Python) | `mysql` / `mysql+pymysql` |
 | `mariadb` | `mariadb` (Connector/C) | `mariadb` / `mariadb+mariadbconnector` |
-| `mssql` | `pyodbc` | `mssql` / `mssql+pyodbc` |
+| `mssql` | `pymssql` | `mssql` / `mssql+pymssql` (default bare driver) |
+| `mssql-pymssql` | `pymssql` | alias of `mssql` (#1588) |
+| `mssql-pyodbc` | `pyodbc` | `mssql+pyodbc` only |
 | `oracle` | `oracledb` | `oracle` / `oracle+oracledb` |
 | `sql-all` | union of the above | convenience meta-extra (Docker / lab images) |
 

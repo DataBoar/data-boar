@@ -11,7 +11,7 @@
 | **Maestro / lab orchestration** | Session taxonomy keywords `completao`, `homelab`; *LAB-OP batch inventory*; *Homelab access* bullets |
 | **dashBOARd (`api/`)** | *Plans* bullet; `docs/USAGE.md`; `docs/TECH_GUIDE.md` |
 | **Plans hierarchy** | *Plans* bullet (active under `docs/plans/`, done under `docs/plans/completed/`); `PLANS_TODO.md`; `PLANS_HUB.md` |
-| **Licensing / Maestro matrix** | Session keyword `release-ritual`; `scripts/maestro/Handle-LicensingMatrix.ps1` |
+| **Licensing / Maestro matrix** | Session keyword `release-ritual`; DataBoar/maestro `handlers/Handle-LicensingMatrix.ps1` (`MAESTRO_ROOT`) |
 | **Private docs (`docs/private/`)** | Bullet *`docs/private/` — agent access (non-negotiable)*; `.cursor/rules/agent-docs-private-read-access.mdc` |
 
 ## Agent role for Claude Code (READ-ONLY auditor)

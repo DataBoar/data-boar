@@ -1,22 +1,22 @@
 # Plan: Two-week execution sprint (no regressions, low toil, fast delivery)
 
 **Status:** Active
-**Date:** 2026-07-11
+**Date:** 2026-08-16
 **Authors:** Fabio Leitao
 **Priority:** H0
 
-**Synced with:** [PLANS_TODO.md](PLANS_TODO.md)
+**Synced with:** [PLANS_TODO.md](PLANS_TODO.md) · carryover [CARRYOVER.md](../ops/today-mode/CARRYOVER.md) · day anchor [OPERATOR_TODAY_MODE_2026-08-16.md](../ops/today-mode/OPERATOR_TODAY_MODE_2026-08-16.md)
 
-**Previous template cycles:** Earlier windows in this file are **superseded** by the current sequencing in [PLANS_TODO.md](PLANS_TODO.md) (*Integration / active threads* + *What to start next*). Close each cycle with: green `main`, explicit carryover rows, and one short outcome note.
+**Previous template cycles:** Earlier windows in this file (including **2026-07-11 → 2026-07-24**) are **superseded** by the current sequencing in [PLANS_TODO.md](PLANS_TODO.md) (*Integration / active threads* + *What to start next*). Close each cycle with: green `main`, explicit carryover rows, and one short outcome note.
 
-### This cycle — focus (2026-07-11 → 2026-07-24)
+### This cycle — focus (2026-08-16 → 2026-08-29)
 
 | Week | Theme | Outcomes |
 | ---- | ----- | -------- |
-| **1** | **Post3 stabilization + branch hygiene** | Keep docs-only and behavior slices separated (e.g. docs split PR without RBAC coupling), close/supersede stale overlap PRs, and leave one clean canonical track per theme. |
-| **2** | **One selected delivery slice, no regression** | Ship one primary row from [PLANS_TODO.md](PLANS_TODO.md) (*S2a trust-state* **or** one **M-PILOT-READY** blocker), with tests and docs in the same slice and no broadened scope. |
+| **1** | **Land open tracks + supply-chain hygiene** | Merge docs PR **[#1602](https://github.com/DataBoar/data-boar/pull/1602)** (cross-surface observability gates) when CI green; triage Dependabot (**Actions** first — e.g. **#1573** — then majors one-at-a-time with skill + `check-all`); continue **[#1586](https://github.com/DataBoar/data-boar/issues/1586)** TCP peer-pin residual (**Redis** → MySQL/Oracle as capacity allows). Keep docs-only vs behavior PRs separated. |
+| **2** | **One selected delivery slice, no regression** | Ship **one** primary from [PLANS_TODO.md](PLANS_TODO.md): privacy-first dashBOARd RUM pilot phase (**[#1601](https://github.com/DataBoar/data-boar/issues/1601)** — plan file lands with **#1602**) **or** CMMC/CUI sample (**[#1453](https://github.com/DataBoar/data-boar/issues/1453)**) **or** one **M-PILOT-READY** blocker (e.g. licensing **#704** / lab **#756**) if operator names it — tests + docs in the same slice; no scope sprawl. |
 
-**Definition of done (this cycle):** At least one merged PR for the selected slice; **`check-all --enforced`** green before publish/merge; docs/plan rows updated when scope moves; no silent carryover.
+**Definition of done (this cycle):** At least one merged PR for the selected Week-2 slice (or Week-1 #1602 + one Dependabot/TCP-pin merge if Week-2 slips); **`check-all --enforced`** green before publish/merge; docs/plan/carryover rows updated when scope moves; no silent carryover.
 
 ---
 

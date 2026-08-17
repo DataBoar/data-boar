@@ -195,6 +195,14 @@ sqlite_path: {tmp_path}/audit.db
         body = resp.json()
         assert "enterprise_surface" in body
         assert body["enterprise_surface"]["access_surface"]["rbac"] == "not_implemented"
+        assert body["trust_state"] in ("trusted", "degraded", "untrusted")
+        assert isinstance(body["trust_reasons"], list)
+        assert body["output_confidence"] in ("full", "reduced", "minimal")
+        health = client.get("/health")
+        assert health.status_code == 200
+        hbody = health.json()
+        assert hbody["trust_state"] == body["trust_state"]
+        assert "dashboard_transport" in hbody
     finally:
         routes._config_path = orig_path
         routes._config = orig_cfg

@@ -16,6 +16,8 @@ O Data Boar responde a perguntas **técnicas** com **evidência repetível**:
 
 Isso **não** equivale a declarar **adequação jurídica** (por exemplo, que determinado tratamento é lícito) nem a preencher sozinho todas as colunas de um **registro de atividades de tratamento** (ROPA / enfoque **RIPD** sob a LGPD). A metodologia abaixo mantém essa fronteira explícita e oferece **módulos de verificação** para mapear em aulas, auditorias ou checklists internos — inclusive índices que você mantém fora deste repositório.
 
+Perfis de regime são de **distância YAML** (*YAML-distance* — qualquer mistura configurada de amostras / jurisdições) — não uma aplicação de auditoria de um único país. A evidência permanece técnica; a assessoria jurídica e o DPO detêm as conclusões legais.
+
 ---
 
 ## Alinhar seu próprio índice de adequação (ex.: modelo Word de diagnóstico)
@@ -39,6 +41,8 @@ Estes módulos descrevem **o que o software verifica ou sinaliza hoje** (ou em t
 | **M7 — Retenção em contexto lacrado / adjacente à alfândega** | A **retenção** de artefatos é **do operador**, sem etiquetas automáticas de “base legal”? | [ADR 0039](adr/ADR-0039-retention-evidence-posture-bonded-customs-adjacent-contexts.md) |
 
 **Nível de risco** nesta metodologia significa **risco técnico e de triagem** (exposição, força da categoria, risco de combinação) — **não** substitui seu registro de risco empresarial nem conclusão jurídica.
+
+**Honestidade de cobertura:** Uma sessão com **zero achados** não prova que todo alvo configurado foi plenamente observado. Operadores devem revisar **`scan_failures`** (e metadados de sessão relacionados) junto com os achados — veja [CANONICAL_PRODUCT_FACTS.pt_BR.md](CANONICAL_PRODUCT_FACTS.pt_BR.md) e a planilha Excel “Scan failures”. Pesquisa de produto sobre um envelope de evidência mais forte e completude de observabilidade está nas issues [#1504](https://github.com/DataBoar/data-boar/issues/1504), [#1521](https://github.com/DataBoar/data-boar/issues/1521) e [#1525](https://github.com/DataBoar/data-boar/issues/1525) (apenas pesquisa — não são garantias entregues).
 
 ---
 
@@ -69,4 +73,6 @@ Para a próxima fatia de **produto**, em geral o maior retorno é: **(1)** expor
 
 - [COMPLIANCE_AND_LEGAL.pt_BR.md](COMPLIANCE_AND_LEGAL.pt_BR.md) — o que o produto faz e não reivindica.
 - [philosophy/THE_WHY.pt_BR.md](philosophy/THE_WHY.pt_BR.md) — postura evidência primeiro.
-- [COMPLIANCE_TECHNICAL_REFERENCE.pt_BR.md](COMPLIANCE_TECHNICAL_REFERENCE.pt_BR.md) — limites, amostragem, timeouts.
+- [COMPLIANCE_TECHNICAL_REFERENCE.pt_BR.md](COMPLIANCE_TECHNICAL_REFERENCE.pt_BR.md) — limites, amostragem, timeouts, encodings.
+- [compliance-samples/OPERATOR_GOVERNANCE_CHECKLIST.pt_BR.md](compliance-samples/OPERATOR_GOVERNANCE_CHECKLIST.pt_BR.md) — cadência do operador para habilitar e revalidar amostras.
+- Pesquisa (não são garantias de produto): [#1504](https://github.com/DataBoar/data-boar/issues/1504) envelope de evidência · [#1521](https://github.com/DataBoar/data-boar/issues/1521) completude de observabilidade · [#1525](https://github.com/DataBoar/data-boar/issues/1525) inventário de cobertura / amostra / encoding.

@@ -32,7 +32,39 @@ def test_iter_scan_files_deduplicates_same_inode_via_symlink(
 
     files = list(iter_scan_files(root, recursive=True))
     assert len(files) == 1
-    assert files[0].name == "data.txt"
+    assert files[0].resolve() == real.resolve()
+
+
+def test_iter_scan_files_yields_sole_path_symlink_inside_root(
+    tmp_path: Path,
+) -> None:
+    # regression-anchor: #1579 — content reachable only via symlink must be scanned.
+    root = tmp_path / "root"
+    hidden = root / "hidden"
+    hidden.mkdir(parents=True)
+    real = hidden / "secret.txt"
+    real.write_text("sole-via-symlink", encoding="utf-8")
+    link = root / "visible.txt"
+    os.symlink(real, link)
+
+    files = list(iter_scan_files(root, recursive=False))
+    assert len(files) == 1
+    assert files[0].name == "visible.txt"
+    assert files[0].read_text(encoding="utf-8") == "sole-via-symlink"
+
+
+def test_iter_scan_files_skips_symlink_escaping_root(
+    tmp_path: Path,
+) -> None:
+    # regression-anchor: #1579 / #1560 — outside-root symlink targets are not scanned.
+    root = tmp_path / "root"
+    root.mkdir()
+    outside = tmp_path / "outside.txt"
+    outside.write_text("escaped", encoding="utf-8")
+    os.symlink(outside, root / "escape.txt")
+
+    files = list(iter_scan_files(root, recursive=True))
+    assert files == []
 
 
 def test_iter_scan_files_non_recursive_only_top_level(tmp_path: Path) -> None:

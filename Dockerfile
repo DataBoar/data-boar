@@ -28,8 +28,9 @@ RUN pip uninstall -y wheel || true && \
     python -c "import wheel; import sys; sys.exit(0 if tuple(map(int, wheel.__version__.split('.'))) >= (0,46,2) else 1)" && \
     pip install --no-cache-dir -r /app/requirements.txt && \
     pip install --no-cache-dir --no-deps -e /app && \
-    # Lean base only: sql-community + mssql (pyodbc) + oracle from pyproject extras.
+    # Lean base only: sql-community + mssql (pymssql) + oracle from pyproject extras.
     # Remaining extras: mount ABI-compatible wheels at /extras (#1400/#1399) — not fat image.
+    # ODBC MSSQL: mount ``mssql-pyodbc`` wheels at runtime (#1588).
     pip install --no-cache-dir "/app[sql-community,mssql,oracle]" && \
     python /app/scripts/generate_extras_manifest.py --probe --write /app/EXTRAS_MANIFEST.json && \
     WHEELHOUSE_TAG="${WHEELHOUSE_TAG}" bash /app/scripts/docker/apply_wheelhouse_v1.sh && \

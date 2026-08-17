@@ -124,7 +124,7 @@ A aplicação adiciona os seguintes cabeçalhos a todas as respostas web e da AP
 - **Permissions-Policy** — desabilita recursos do navegador não usados pelo app (câmera, microfone, geolocalização, etc.).
 - **Strict-Transport-Security (HSTS)** — definido apenas quando a requisição é considerada HTTPS (direta ou via `X-Forwarded-Proto: https` de um proxy confiável), para que implantações somente HTTP não fiquem bloqueadas. Quando presente, usa `max-age=31536000; includeSubDomains; preload`.
 
-Quando o app estiver atrás de um proxy reverso (ex.: nginx, Caddy, load balancer), garanta que o proxy defina **X-Forwarded-Proto: https** para requisições com TLS terminado para que o HSTS seja aplicado corretamente. Não habilite HSTS na camada do app para HTTP puro; o proxy pode adicionar HSTS ao servir via HTTPS.
+Quando o app estiver atrás de um proxy reverso (ex.: nginx, Caddy, load balancer), garanta que o proxy defina **X-Forwarded-Proto: https** para requisições com TLS terminado para que o HSTS seja aplicado corretamente. Configure **`api.trusted_proxy_cidrs`** com o(s) CIDR(s) do peer **direto** do proxy; sem correspondência, cabeçalhos `X-Forwarded-*` são ignorados (fail-safe). Quando o peer corresponde e o proto forwarded confiável é `https`, o painel suprime o banner de risco de texto claro nessa requisição e **`GET /status`** / **`GET /health`** expõem **`effective_external_transport`** com `tls_termination: trusted_proxy` — o **`dashboard_transport`** a nível de processo continua reportando HTTP upstream com honestidade. Não habilite HSTS na camada do app para HTTP puro; o proxy pode adicionar HSTS ao servir via HTTPS.
 
 ## Chave de API opcional (empresarial)
 

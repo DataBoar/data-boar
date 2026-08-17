@@ -160,6 +160,8 @@
         var scanStego = scanStegoEl && scanStegoEl.checked;
         var jurisdictionHintEl = document.getElementById('scan-jurisdiction-hint');
         var jurisdictionHint = jurisdictionHintEl && jurisdictionHintEl.checked;
+        var validateCryptoEl = document.getElementById('scan-validate-crypto');
+        var validateCrypto = validateCryptoEl && validateCryptoEl.checked;
 
         var starting = i18n.starting || 'Starting\u2026';
         if (feedback) feedback.textContent = starting;
@@ -172,6 +174,7 @@
         if (contentTypeCheck) body.content_type_check = true;
         if (scanStego) body.scan_for_stego = true;
         if (jurisdictionHint) body.jurisdiction_hint = true;
+        if (validateCrypto) body.validate_crypto = true;
 
         var opts = {
           method: 'POST',

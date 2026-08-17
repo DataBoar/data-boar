@@ -28,11 +28,11 @@ Repeat this whenever you want to pick up a new version pushed to Docker Hub (e.g
 
 ## Extras and pool licensing (`/extras` + `DATA_BOAR_MACHINE_SEED`)
 
-The published image is **lean on purpose**: it installs only the **base SQL groups** from `pyproject.toml` — **`sql-community`**, **`mssql`** (pyodbc), and **`oracle`**. It does **not** ship all optional extras (no fat image, no image matrix, no `FROM` our image + rebuild for each customer pack).
+The published image is **lean on purpose**: it installs only the **base SQL groups** from `pyproject.toml` — **`sql-community`**, **`mssql`** (pymssql), and **`oracle`**. It does **not** ship all optional extras (no fat image, no image matrix, no `FROM` our image + rebuild for each customer pack). ODBC SQL Server uses the **`mssql-pyodbc`** extra (mount at `/extras` when needed — #1588).
 
 | In the image (base) | Via runtime mount |
 | ------------------- | ----------------- |
-| `sql-community`, `mssql`, `oracle` (and their packages) | `nosql`, `shares`, `mssql-pymssql`, `compressed`, `dataformats`, `richmedia`, `dl`, `bigdata`, `grc-dashboard`, … |
+| `sql-community`, `mssql`, `oracle` (and their packages) | `nosql`, `shares`, `mssql-pyodbc`, `mssql-pymssql` (alias), `compressed`, `dataformats`, `richmedia`, `dl`, `bigdata`, `grc-dashboard`, … |
 
 **Runtime extension (no shell, no pip in the image):**
 

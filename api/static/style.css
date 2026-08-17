@@ -26,6 +26,15 @@ body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg);
   border-radius: 4px;
   font-size: 0.85em;
 }
+.trusted-proxy-tls-banner {
+  background: #0f2a24;
+  color: #b6e6d4;
+  border-bottom: 1px solid #2f6b57;
+  padding: 0.55rem 1.25rem;
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+.trusted-proxy-tls-banner strong { color: #8fd9bb; }
 .governance-trust-banner {
   background: #2a1f3d;
   color: #e6d9f5;

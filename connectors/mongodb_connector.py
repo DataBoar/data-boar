@@ -17,6 +17,12 @@ except ImportError:
     MongoClient = None
 
 from core.connector_registry import register
+from core.crypto_audit import (
+    collect_mongodb_crypto_facts,
+    evaluate_strong_crypto,
+    infer_controls_from_identifiers,
+    resolve_nosql_tls_connect_options,
+)
 from connectors.inventory_details import build_mongodb_inventory_details
 from connectors.sample_value_dedup import (
     resolve_fetch_row_budget,
@@ -45,6 +51,8 @@ class MongoDBConnector:
         self.sample_limit = sample_limit
         self.detection_config = detection_config or {}
         self._client = None
+        self._tls_enabled = False
+        self._dns_pin = None
 
     def connect(self) -> None:
         if not _MONGO_AVAILABLE:
@@ -58,6 +66,19 @@ class MongoDBConnector:
             )
         host = self.config.get("host", "localhost")
         port = int(self.config.get("port", 27017))
+        from .tcp_pin import HostResolutionPin
+        from .url_guard import resolve_and_validate_outbound_url, target_allows_private
+
+        # SSRF guard (#1559): bare host:port — do not use tcp:// (not in allowlist).
+        # Capture validated IPs for TCP pin (#1586) so pymongo cannot re-resolve
+        # to a different peer after the guard.
+        err, pin_ips = resolve_and_validate_outbound_url(
+            f"{host}:{port}",
+            allow_private=target_allows_private(self.config),
+            label="host",
+        )
+        if err:
+            raise ValueError(err)
         user = self.config.get("user") or self.config.get("username")
         password = self.config.get("pass") or self.config.get("password")
         database = self.config.get("database", "test")
@@ -70,13 +91,31 @@ class MongoDBConnector:
             uri = f"mongodb://{host}:{port}"
         connect_s = max(1, int(self.config.get("connect_timeout_seconds", 25)))
         read_s = max(1, int(self.config.get("read_timeout_seconds", 90)))
-        self._client = MongoClient(
-            uri,
-            serverSelectionTimeoutMS=connect_s * 1000,
-            connectTimeoutMS=connect_s * 1000,
-            socketTimeoutMS=read_s * 1000,
+        tls_enabled, sslmode_posture, _cert = resolve_nosql_tls_connect_options(
+            self.config
         )
-        self._db = self._client[database]
+        self._tls_enabled = bool(tls_enabled)
+        client_kwargs: dict[str, Any] = {
+            "serverSelectionTimeoutMS": connect_s * 1000,
+            "connectTimeoutMS": connect_s * 1000,
+            "socketTimeoutMS": read_s * 1000,
+        }
+        if tls_enabled:
+            client_kwargs["tls"] = True
+            # require / prefer → encrypted without full CA/hostname verify.
+            if sslmode_posture in ("require", "prefer", "allow"):
+                client_kwargs["tlsAllowInvalidCertificates"] = True
+        # Pin before MongoClient so pool connect/reconnect uses guard IPs;
+        # URI keeps hostname for TLS server_hostname (#1586).
+        pin = HostResolutionPin(str(host), [str(ip) for ip in pin_ips]).install()
+        self._dns_pin = pin
+        try:
+            self._client = MongoClient(uri, **client_kwargs)
+            self._db = self._client[database]
+        except Exception:
+            pin.release()
+            self._dns_pin = None
+            raise
 
     def close(self) -> None:
         if self._client:
@@ -84,8 +123,12 @@ class MongoDBConnector:
                 self._client.close()
             except Exception:
                 # Best-effort close: ignore client shutdown errors.
-                return
+                pass
             self._client = None
+        pin = getattr(self, "_dns_pin", None)
+        if pin is not None:
+            pin.release()
+            self._dns_pin = None
 
     def run(self) -> None:
         from utils.audit_log_display import audit_log_target_label
@@ -97,11 +140,13 @@ class MongoDBConnector:
         except Exception as e:
             self.db_manager.save_failure(target_name, "unreachable", str(e))
             return
+        identifier_names: list[str] = []
         try:
             from utils.logger import log_connection
 
             log_connection(audit_name, "mongodb", self.config.get("host", "localhost"))
             self._save_inventory_snapshot(target_name)
+            self._save_crypto_controls_audit(target_name)
             distinct_cap = resolve_sql_sample_limit(int(self.sample_limit))
             fetch_budget = resolve_fetch_row_budget(distinct_cap)
             for coll_name in self._db.list_collection_names():
@@ -125,6 +170,7 @@ class MongoDBConnector:
                         if len(bucket) >= distinct_cap:
                             continue
                         bucket.append(sv)
+                identifier_names.extend(all_keys)
                 sample_texts = [
                     f"{k} {v}" for k, vals in field_values.items() for v in vals
                 ]
@@ -169,7 +215,50 @@ class MongoDBConnector:
         except Exception as e:
             self.db_manager.save_failure(target_name, "error", str(e))
         finally:
+            # Best-effort even when mid-loop sampling/detection raises.
+            self._save_inferred_controls_summary(target_name, identifier_names)
             self.close()
+
+    def _save_inferred_controls_summary(
+        self, target_name: str, identifier_names: list[str]
+    ) -> None:
+        """Phase 3: attach count-by-category inference to the crypto audit row."""
+        if not self.config.get("_validate_crypto"):
+            return
+        if not hasattr(self.db_manager, "update_crypto_controls_inferred_summary"):
+            return
+        try:
+            summary = infer_controls_from_identifiers(identifier_names)
+            if not summary:
+                return
+            self.db_manager.update_crypto_controls_inferred_summary(
+                target_name, summary
+            )
+        except Exception:
+            # Fail-soft: inference never fails the scan.
+            pass
+
+    def _save_crypto_controls_audit(self, target_name: str) -> None:
+        """Opt-in strong-crypto validation after connect (Order 5 Phase 2c)."""
+        if not self.config.get("_validate_crypto"):
+            return
+        if not hasattr(self.db_manager, "save_crypto_controls_audit"):
+            return
+        if not self._client:
+            return
+        try:
+            facts = collect_mongodb_crypto_facts(self._client, self.config)
+            result, details = evaluate_strong_crypto(facts)
+            self.db_manager.save_crypto_controls_audit(
+                target_name=target_name,
+                connection_type="mongodb",
+                strong_crypto_result=result.value,
+                strong_crypto_details=details[:512],
+                inferred_controls_summary=None,
+            )
+        except Exception:
+            # Fail-soft: probe/persist errors never fail the scan.
+            pass
 
     def _save_inventory_snapshot(self, target_name: str) -> None:
         """Persist one MongoDB inventory row (best effort; must not break scanning)."""
@@ -189,7 +278,10 @@ class MongoDBConnector:
         except Exception as e:
             # Probe is optional; preserve scan flow when buildInfo is unavailable.
             raw_details["technical"]["version_probe_error"] = str(e)[:200]
-        transport = "tls=enabled" if self.config.get("tls") else "unknown"
+        if self._tls_enabled or self.config.get("tls"):
+            transport = "tls=enabled"
+        else:
+            transport = "tls=disabled"
         raw_details["executive"]["transport_hint"] = transport
         try:
             self.db_manager.save_data_source_inventory(

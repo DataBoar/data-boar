@@ -10,6 +10,11 @@ from pathlib import Path
 from typing import Any
 
 from core.connector_registry import register
+from core.crypto_audit import (
+    collect_smb_crypto_facts,
+    evaluate_strong_crypto,
+    resolve_smb_connect_options,
+)
 from core.archives import (
     default_compressed_extensions,
     is_supported_archive,
@@ -104,6 +109,27 @@ class SMBConnector:
             self.extensions = set(self.extensions) | set(RICH_MEDIA_SCAN_EXTENSIONS)
         elif self.scan_image_ocr:
             self.extensions = set(self.extensions) | set(IMAGE_EXTENSIONS)
+        self._smb_session: Any = None
+
+    def _save_crypto_controls_audit(self, target_name: str) -> None:
+        """Opt-in strong-crypto validation after SMB session (Order 5 Phase 2d)."""
+        if not self.config.get("_validate_crypto"):
+            return
+        if not hasattr(self.db_manager, "save_crypto_controls_audit"):
+            return
+        try:
+            facts = collect_smb_crypto_facts(self._smb_session, self.config)
+            result, details = evaluate_strong_crypto(facts)
+            self.db_manager.save_crypto_controls_audit(
+                target_name=target_name,
+                connection_type="smb",
+                strong_crypto_result=result.value,
+                strong_crypto_details=details[:512],
+                inferred_controls_summary=None,
+            )
+        except Exception:
+            # Fail-soft: probe/persist errors never fail the scan.
+            pass
 
     def _unc_path(self, *parts: str) -> str:
         host = self.config.get("host", "").strip()
@@ -152,13 +178,23 @@ class SMBConnector:
         )
         recursive = self.config.get("recursive", True)
         try:
-            smbclient.register_session(
-                host, username=user, password=password, port=port
-            )
+            session_kwargs: dict[str, Any] = {
+                "server": host,
+                "username": user,
+                "password": password,
+                "port": port,
+            }
+            encrypt, require_signing = resolve_smb_connect_options(self.config)
+            if encrypt is not None:
+                session_kwargs["encrypt"] = encrypt
+            if require_signing is not None:
+                session_kwargs["require_signing"] = require_signing
+            self._smb_session = smbclient.register_session(**session_kwargs)
             self._session_registered = True
         except Exception as e:
             self.db_manager.save_failure(target_name, "auth_failed", str(e))
             return
+        self._save_crypto_controls_audit(target_name)
         root_unc = (
             self._unc_path(path_in_share) if path_in_share else self._unc_path("")
         )

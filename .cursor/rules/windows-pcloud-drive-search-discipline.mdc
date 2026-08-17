@@ -1,5 +1,5 @@
 ---
-description: Windows dev PC — pCloud on P: (often); default filename/path search on large trees = scripts/es-find.ps1 (es.exe); if es fails notify operator then native fallback (e.g. capped Get-ChildItem). Avoid opening with unbounded -Recurse on huge sync roots.
+description: "Windows dev PC — pCloud on P: (often); default filename/path search on large trees = scripts/es-find.ps1 (es.exe); if es fails notify operator then native fallback (e.g. capped Get-ChildItem). Avoid opening with unbounded -Recurse on huge sync roots."
 globs: ["**/*"]
 alwaysApply: true
 ---

@@ -102,6 +102,19 @@ For internet-facing or multi-tenant LAN deployments, prefer:
 1. Bind the app to **loopback** (`127.0.0.1` or a container-only interface).
 1. Terminate **TLS** on **nginx**, **Traefik**, **Caddy**, or a cloud load balancer.
 1. Set **`X-Forwarded-Proto: https`** from the proxy so security headers (e.g. HSTS) behave correctly.
+1. Configure **`api.trusted_proxy_cidrs`** to the CIDR(s) of the **direct** proxy peer (e.g. `127.0.0.1/32` for loopback, or the Docker/bridge network that reaches the app). Without this allow-list, forwarded headers are **ignored** (fail-safe).
+
+Example YAML:
+
+```yaml
+api:
+  host: "127.0.0.1"
+  allow_insecure_http: true   # upstream listener is local HTTP behind the proxy
+  trusted_proxy_cidrs:
+    - "127.0.0.1/32"
+```
+
+With a matching peer **and** trusted `X-Forwarded-Proto: https`, the dashboard suppresses the red plaintext-risk banner and reports request-scoped **`effective_external_transport`** (`tls_termination: trusted_proxy`) on **`GET /status`** / **`GET /health`**. Process-level **`dashboard_transport`** stays `mode: http` / `tls_active: false` — that is intentional honesty about the Uvicorn listener, not a claim of native app TLS. See [#1515](https://github.com/DataBoar/data-boar/issues/1515) / [PLAN_DASHBOARD_TRUSTED_PROXY_TLS.md](../plans/PLAN_DASHBOARD_TRUSTED_PROXY_TLS.md).
 
 See [deploy/DEPLOY.md](../deploy/DEPLOY.md) ([pt-BR](../deploy/DEPLOY.pt_BR.md)) and root **SECURITY.md** for hardening context.
 
@@ -123,11 +136,18 @@ Or in YAML:
 api:
   https_cert_file: "/etc/data-boar/certs/fullchain.pem"
   https_key_file: "/etc/data-boar/certs/privkey.pem"
+  # Optional (S2a wave-2b): allow-list of leaf cert SHA-256 digests (hex).
+  # Omit = observe/display current fingerprint only (no trust downgrade).
+  # List = match any (supports rotation); mismatch → trust_reasons includes
+  # tls_cert_fingerprint_mismatch.
+  # https_cert_fingerprint_sha256:
+  #   - "aabbccdd…64 hex chars…"
+  #   - "old-cert-still-valid-during-rotation…"
 ```
 
-**3.** Open **`https://<host>:<port>/`**. Use **`GET /status`** or **`GET /health`** and check **`dashboard_transport`** in JSON (`mode`, `tls_active`, `summary`).
+**3.** Open **`https://<host>:<port>/`**. Use **`GET /status`** or **`GET /health`** and check **`dashboard_transport`** in JSON (`mode`, `tls_active`, `summary`, optional nested **`tls_posture`**) **and** canonical **`trust_state`** / **`trust_reasons`** / **`output_confidence`**.
 
-**4.** Optional evidence: **`python main.py --export-audit-trail -`** (without `--web`) includes **`dashboard_transport`** in the exported JSON for governance snapshots.
+**4.** Optional evidence: **`python main.py --export-audit-trail -`** (without `--web`) includes **`dashboard_transport`**, **`trust_state`**, and **`enterprise_surface`** in the exported JSON for governance snapshots.
 
 ### B.3 Let’s Encrypt (public or DNS-validated hosts)
 
@@ -171,9 +191,21 @@ Exact Compose/Kubernetes patterns live next to your orchestration files; see [de
 
 | Check            | What to look for                                                                                                                                                                                               |
 | -----            | ----------------                                                                                                                                                                                               |
-| **Runtime**      | `GET /status` and `GET /health` → **`dashboard_transport`** reflects **`https`** vs explicit **http** opt-in.                                                                                                  |
-| **Audit export** | `python main.py --export-audit-trail -` → JSON field **`dashboard_transport`** (export runs without `--web`; values reflect env/process unless you document a workflow that sets transport env before export). |
+| **Runtime**      | `GET /status` and `GET /health` → **`dashboard_transport`** reflects **`https`** vs explicit **http** opt-in; **`trust_state`** is the canonical combined signal. On native HTTPS, **`dashboard_transport.tls_posture`** reports cipher/protocol + leaf cert SHA-256 (S2a wave-2a/2b; published via env so uvicorn **workers** see it). Weak ciphers/protocol add **`tls_cipher_baseline_weak`** / **`tls_protocol_below_baseline`**; configured fingerprint allow-list mismatch adds **`tls_cert_fingerprint_mismatch`**. Without **`api.https_cert_fingerprint_sha256`**, fingerprint is observe-only (no trust downgrade). |
+| **Audit export** | `python main.py --export-audit-trail -` → JSON fields **`dashboard_transport`**, **`trust_state`**, **`enterprise_surface`** (export runs without `--web`; transport may be `not_configured` unless env is set). |
 | **Auth**         | With **`require_api_key`**, **`/health`** = no key; **`/status`** = key required.                                                                                                                              |
+
+### B.7 S2a demo script (transport + trust together)
+
+**Goal:** Show buyers/reviewers that transport posture and trust are one coherent story (open-core POC).
+
+1. **TLS path (preferred):** start with PEM cert/key (native HTTPS) **or** terminate TLS on a reverse proxy and document that path (keep the app loopback HTTP only behind the proxy).
+1. Call **`GET /status`** (API key if required) and/or **`GET /health`** (always public). Confirm:
+   - `dashboard_transport.mode` is `https` (native) or explain proxy TLS when the process is `http` behind the proxy;
+   - top-level **`trust_state`**, **`trust_reasons`**, **`output_confidence`** are present;
+   - **`enterprise_surface`** summarizes transport + license + access/RBAC.
+1. Export evidence: **`python main.py --export-audit-trail -`** — same fields appear for governance snapshots (`trust_state` + `dashboard_transport` + `enterprise_surface`).
+1. **Negative check (lab only):** with **`--allow-insecure-http`**, canonical **`trust_state` must not stay `trusted`** (expect `degraded` with reason `plaintext_http_explicit` when license/integrity are otherwise fine).
 
 ---
 
