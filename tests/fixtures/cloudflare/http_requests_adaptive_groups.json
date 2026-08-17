@@ -1,0 +1,52 @@
+{
+  "data": {
+    "viewer": {
+      "zones": [
+        {
+          "series": [
+            {
+              "count": 120,
+              "sum": {
+                "visits": 40,
+                "edgeResponseBytes": 512000
+              },
+              "dimensions": {
+                "datetimeHour": "2026-08-16T18:00:00Z",
+                "clientRequestHTTPHost": "databoar.com.br",
+                "cacheStatus": "HIT",
+                "edgeResponseStatus": 200
+              }
+            },
+            {
+              "count": 8,
+              "sum": {
+                "visits": 2,
+                "edgeResponseBytes": 4096
+              },
+              "dimensions": {
+                "datetimeHour": "2026-08-16T18:00:00Z",
+                "clientRequestHTTPHost": "databoar.com.br",
+                "cacheStatus": "MISS",
+                "edgeResponseStatus": 404
+              }
+            },
+            {
+              "count": 3,
+              "sum": {
+                "visits": 1,
+                "edgeResponseBytes": 1024
+              },
+              "dimensions": {
+                "datetimeHour": "2026-08-16T18:00:00Z",
+                "clientRequestHTTPHost": "other.example",
+                "cacheStatus": "DYNAMIC",
+                "edgeResponseStatus": 503
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "errors": null
+}
