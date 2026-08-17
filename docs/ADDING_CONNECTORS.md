@@ -392,7 +392,9 @@ targets:
     objects: [contacts, companies, deals]
 ```
 
-Optional keys: `base_url` (default `https://api.hubapi.com`), `token_from_env`
+Optional keys: `base_url` (default `https://api.hubapi.com`; **allowlisted** hosts only —
+`api.hubapi.com` or `api-<region>.hubapi.com` such as `api-eu1.hubapi.com` — #1607),
+`token_from_env`
 (override env var name), `allow_private_networks` (lab only).
 
 ### Marketing / website forms → what Data Boar can see

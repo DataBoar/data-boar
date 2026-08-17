@@ -13,6 +13,7 @@ from connectors.hubspot_connector import (
     _DEFAULT_TOKEN_ENV,
     _HTTPX_AVAILABLE,
     HubSpotConnector,
+    normalize_hubspot_api_base_url,
 )
 from tests.fixtures.hubspot.synthetic_crm import (
     SYNTHETIC_CPF_FORMATTED,
@@ -212,9 +213,57 @@ def test_uses_url_guard_not_raw_httpx(
 
 
 def test_connect_rejects_private_base_url_without_opt_in(hubspot_token):
+    # Private literal IP fails host allowlist (#1607) before SSRF private-IP path.
     cfg = _cfg(base_url="http://10.0.0.5")
-    with pytest.raises(ValueError, match="#832|private|blocked|base_url"):
+    with pytest.raises(ValueError, match="#1607|#832|private|blocked|base_url|https"):
         HubSpotConnector(cfg, _mk_scanner_mock(), MagicMock()).connect()
+
+
+def test_normalize_hubspot_api_base_url_defaults_and_regionals():
+    assert normalize_hubspot_api_base_url(None) == "https://api.hubapi.com"
+    assert normalize_hubspot_api_base_url("") == "https://api.hubapi.com"
+    assert (
+        normalize_hubspot_api_base_url("https://api.hubapi.com/")
+        == "https://api.hubapi.com"
+    )
+    assert (
+        normalize_hubspot_api_base_url("https://API-EU1.hubapi.com")
+        == "https://api-eu1.hubapi.com"
+    )
+    assert (
+        normalize_hubspot_api_base_url("https://api-na2.hubapi.com")
+        == "https://api-na2.hubapi.com"
+    )
+
+
+def test_normalize_hubspot_api_base_url_rejects_token_exfil_hosts():
+    """#1607: free-form public hosts must not receive the Private App Bearer."""
+    for bad in (
+        "https://evil.example",
+        "https://api.hubapi.com.evil.example",
+        "https://not-hubapi.com",
+        "http://api.hubapi.com",
+        "https://user:pass@api.hubapi.com",
+        "https://api.hubapi.com:8443",
+        "https://api.hubapi.com/crm",
+        "https://api.hubapi.com?x=1",
+        "https://api_hubapi.com",
+    ):
+        with pytest.raises(ValueError, match="#1607"):
+            normalize_hubspot_api_base_url(bad)
+
+
+@patch("connectors.hubspot_connector.build_pinned_httpx_client")
+@patch("connectors.hubspot_connector.resolve_and_validate_outbound_url")
+def test_connect_rejects_public_non_hubspot_host_before_client(
+    mock_resolve, mock_client_cls, hubspot_token
+):
+    """Bearer must never be attached for a non-allowlisted public base_url (#1607)."""
+    cfg = _cfg(base_url="https://attacker.example")
+    with pytest.raises(ValueError, match="#1607"):
+        HubSpotConnector(cfg, _mk_scanner_mock(), MagicMock()).connect()
+    mock_resolve.assert_not_called()
+    mock_client_cls.assert_not_called()
 
 
 def test_connect_requires_token_env():

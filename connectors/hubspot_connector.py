@@ -17,17 +17,19 @@ Outbound HTTP uses ``connectors.url_guard`` host pinning (#1552) — same postur
 ``rest_connector`` / Power BI. Never use raw httpx/requests without the guard.
 
 Target type: ``hubspot``. Required config keys: ``name``, ``type``.
-Optional: ``objects`` (default contacts/companies/deals), ``base_url``,
+Optional: ``objects`` (default contacts/companies/deals), ``base_url`` (only
+``https://api.hubapi.com`` or ``https://api-<region>.hubapi.com`` — #1607),
 ``token_from_env``, ``allow_private_networks``.
 """
 
 from __future__ import annotations
 
 import os
+import re
 import time
 from collections import defaultdict
 from typing import Any
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse
 
 from core.about import get_http_user_agent
 from core.connector_registry import register
@@ -55,6 +57,50 @@ _DEFAULT_API_BASE = "https://api.hubapi.com"
 _DEFAULT_OBJECTS = ("contacts", "companies", "deals")
 _DEFAULT_TOKEN_ENV = "HUBSPOT_PRIVATE_APP_TOKEN"
 _MAX_429_RETRIES = 5
+
+# Canonical HubSpot CRM API hosts only (#1607). Reject free-form base_url so a
+# malicious/misconfigured target cannot exfiltrate the Private App Bearer token
+# to an arbitrary public host (url_guard alone only blocks private IPs).
+# Matches api.hubapi.com and regional api-<id>.hubapi.com (eu1, na1, ap1, …).
+_HUBSPOT_API_HOST_RE = re.compile(
+    r"^(?:api|api-[a-z0-9]+)\.hubapi\.com$", re.IGNORECASE
+)
+
+
+def normalize_hubspot_api_base_url(raw: str | None) -> str:
+    """Return a normalized HubSpot API base URL or raise ``ValueError`` (#1607).
+
+    Allows only ``https://api.hubapi.com`` and ``https://api-<region>.hubapi.com``.
+    No userinfo, no non-default ports, no path/query/fragment that would change
+    the origin used for Bearer auth.
+    """
+    candidate = (raw or "").strip() or _DEFAULT_API_BASE
+    parsed = urlparse(candidate)
+    if parsed.scheme.lower() != "https":
+        raise ValueError(
+            "HubSpot base_url must use https:// and a canonical api*.hubapi.com "
+            "host (#1607); refusing free-form base_url that would receive the "
+            "Private App Bearer token."
+        )
+    host = (parsed.hostname or "").lower()
+    if not host or not _HUBSPOT_API_HOST_RE.match(host):
+        raise ValueError(
+            f"HubSpot base_url host {host!r} is not an allowlisted HubSpot API "
+            "host (api.hubapi.com or api-<region>.hubapi.com) (#1607)."
+        )
+    if parsed.username or parsed.password:
+        raise ValueError("HubSpot base_url must not include userinfo (#1607).")
+    if parsed.port not in (None, 443):
+        raise ValueError("HubSpot base_url must use default HTTPS port 443 (#1607).")
+    path = parsed.path or ""
+    if path not in ("", "/"):
+        raise ValueError(
+            "HubSpot base_url must not include a path (#1607); "
+            "object paths are appended by the connector."
+        )
+    if parsed.query or parsed.fragment:
+        raise ValueError("HubSpot base_url must not include query or fragment (#1607).")
+    return f"https://{host}"
 
 
 def _token_from_config(target: dict[str, Any]) -> str | None:
@@ -94,13 +140,16 @@ class HubSpotConnector:
         self.sample_limit = min(max(int(sample_limit), 1), 100)
         self.detection_config = detection_config or {}
         self._client: httpx.Client | None = None
-        self._base_url = (self.config.get("base_url") or _DEFAULT_API_BASE).rstrip("/")
+        # Normalized in connect(); keep a provisional default for tests/inspect.
+        self._base_url = _DEFAULT_API_BASE
 
     def connect(self) -> None:
         if not _HTTPX_AVAILABLE:
             raise RuntimeError(
                 "httpx is required for HubSpot connector. Install with: pip install httpx"
             )
+        # Host allowlist BEFORE attaching the Bearer token (#1607).
+        self._base_url = normalize_hubspot_api_base_url(self.config.get("base_url"))
         token = _token_from_config(self.config)
         if not token:
             raise ValueError(
