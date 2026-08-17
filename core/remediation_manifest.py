@@ -151,6 +151,11 @@ def _source_type_for_row(
 ) -> str:
     if kind == "filesystem":
         return "filesystem"
+    if kind in ("application", "api", "crm", "saas"):
+        name = row.get("target_name") or ""
+        if name in target_types:
+            return target_types[name]
+        return "application"
     name = row.get("target_name") or ""
     if name in target_types:
         return target_types[name]
@@ -196,6 +201,7 @@ def _fs_target(
     *,
     session_id: str,
     target_types: dict[str, str],
+    kind: str = "filesystem",
 ) -> dict[str, Any]:
     pii_type = pattern_to_pii_type(row.get("pattern_detected"))
     path = row.get("path")
@@ -210,9 +216,7 @@ def _fs_target(
             path=path,
             file_name=file_name,
         ),
-        "source_type": _source_type_for_row(
-            row, kind="filesystem", target_types=target_types
-        ),
+        "source_type": _source_type_for_row(row, kind=kind, target_types=target_types),
         "connection_ref": row.get("target_name") or "unknown",
         "schema": None,
         "table": None,
@@ -246,7 +250,7 @@ def build_remediation_manifest(
     if not db_manager._session_exists(sid):
         raise ValueError(f"Unknown session: {sid}")
 
-    db_rows, fs_rows, _failures = db_manager.get_findings(sid)
+    db_rows, fs_rows, app_rows, _failures = db_manager.get_findings(sid)
     target_types = _target_type_map(config)
 
     remediation_targets: list[dict[str, Any]] = []
@@ -257,6 +261,12 @@ def build_remediation_manifest(
     for row in fs_rows:
         remediation_targets.append(
             _fs_target(row, session_id=sid, target_types=target_types)
+        )
+    for row in app_rows:
+        remediation_targets.append(
+            _fs_target(
+                row, session_id=sid, target_types=target_types, kind="application"
+            )
         )
 
     return {

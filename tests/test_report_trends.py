@@ -53,12 +53,14 @@ def test_report_includes_trends_sheet(tmp_path):
         with pd.ExcelFile(path) as xl:
             assert "Trends - Session comparison" in xl.sheet_names
             df = pd.read_excel(xl, sheet_name="Trends - Session comparison")
-        assert len(df) == 4
+        assert len(df) == 5
         assert (
             "Metric" in df.columns and "Note" in df.columns and "Change" in df.columns
         )
         # Total findings: 1 this run vs 2 previous -> improvement
-        total_row = df[df["Metric"] == "Total findings (DB + filesystem)"].iloc[0]
+        total_row = df[
+            df["Metric"] == "Total findings (DB + filesystem + application)"
+        ].iloc[0]
         assert (
             "Improvement" in str(total_row["Note"])
             or "reduced" in str(total_row["Note"]).lower()
@@ -179,7 +181,9 @@ def test_trends_sheet_shows_up_to_three_previous_runs(tmp_path):
             df = pd.read_excel(xl, sheet_name="Trends - Session comparison")
         assert "Prev run 1 (count)" in df.columns and "Prev run 1 (date)" in df.columns
         assert "Prev run 2 (count)" in df.columns and "Prev run 3 (count)" in df.columns
-        total_row = df[df["Metric"] == "Total findings (DB + filesystem)"].iloc[0]
+        total_row = df[
+            df["Metric"] == "Total findings (DB + filesystem + application)"
+        ].iloc[0]
         assert total_row["This run (count)"] == 1
         assert total_row["Prev run 1 (count)"] == 1
         assert total_row["Prev run 2 (count)"] == 2

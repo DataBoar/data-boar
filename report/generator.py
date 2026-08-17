@@ -172,8 +172,9 @@ def _create_heatmap(
     output_dir: str,
     session_id: str,
     license_footer: str | None = None,
+    app_rows: list[dict] | None = None,
 ) -> str | None:
-    """Build sensitivity/risk heatmap from DB + filesystem findings; save PNG with about footer. Return path or None."""
+    """Build sensitivity/risk heatmap from DB + FS + application findings; save PNG. Return path or None."""
     if not _PLOT_AVAILABLE:
         return None
     rows = []
@@ -190,6 +191,14 @@ def _create_heatmap(
             {
                 "target": r.get("target_name", ""),
                 "source": "filesystem",
+                "sensitivity": r.get("sensitivity_level", "LOW"),
+            }
+        )
+    for r in app_rows or []:
+        rows.append(
+            {
+                "target": r.get("target_name", ""),
+                "source": "application",
                 "sensitivity": r.get("sensitivity_level", "LOW"),
             }
         )
@@ -293,14 +302,16 @@ _TREND_PREV_2_DATE = "Prev run 2 (date)"
 _TREND_PREV_3_COUNT = "Prev run 3 (count)"
 _TREND_PREV_3_DATE = "Prev run 3 (date)"
 _MAX_PREV_RUNS = 3
-_METRIC_TOTAL_FINDINGS = "Total findings (DB + filesystem)"
+_METRIC_TOTAL_FINDINGS = "Total findings (DB + filesystem + application)"
 _METRIC_TOTAL_FINDINGS_LABEL = "Total findings"
 _METRIC_DB_FINDINGS = "Database findings"
 _METRIC_FS_FINDINGS = "Filesystem findings"
+_METRIC_APP_FINDINGS = "Application findings"
 _METRIC_SCAN_FAILURES = "Scan failures (targets not scanned)"
 _METRIC_SCAN_FAILURES_LABEL = "Scan failures"
 _SHEET_DB_FINDINGS = "Database findings"
 _SHEET_FS_FINDINGS = "Filesystem findings"
+_SHEET_APP_FINDINGS = "Application findings"
 _SHEET_SCAN_FAILURES = "Scan failures"
 _SHEET_REPORT_INFO = "Report info"
 _SHEET_HEATMAP_DATA = "Heatmap data"
@@ -478,15 +489,21 @@ def _apply_minor_confidence_column(
         r["Minor confidence"] = "high (cross-ref)" if k in high_confidence_keys else ""
 
 
-def _praise_rows(db_rows: list[dict], fs_rows: list[dict]) -> list[dict]:
+def _praise_rows(
+    db_rows: list[dict],
+    fs_rows: list[dict],
+    app_rows: list[dict] | None = None,
+) -> list[dict]:
     """
     Build rows for "Praise / existing controls": findings where column name or pattern_detected
     suggests existing protections (encryption, hashing, tokenization, masking, etc.).
     """
     rows = []
-    for r, source in [(x, "database") for x in db_rows] + [
-        (x, "filesystem") for x in fs_rows
-    ]:
+    for r, source in (
+        [(x, "database") for x in db_rows]
+        + [(x, "filesystem") for x in fs_rows]
+        + [(x, "application") for x in (app_rows or [])]
+    ):
         col = (r.get("column_name") or r.get("file_name") or "").lower()
         pat = (r.get("pattern_detected") or "").lower()
         combined = f"{col} {pat}"
@@ -682,6 +699,7 @@ def _trends_rows(
     current_fs: int,
     current_fail: int,
     current_started_at: str | None,
+    current_app: int = 0,
 ) -> list[dict]:
     """
     Build rows for "Trends - Session comparison": compare this run with up to 3 previous runs
@@ -696,10 +714,14 @@ def _trends_rows(
         if prev:
             prev_runs = [prev]
 
-    total_current = current_db + current_fs
+    total_current = current_db + current_fs + current_app
 
     def total_findings(s: dict) -> int:
-        return (s.get("database_findings") or 0) + (s.get("filesystem_findings") or 0)
+        return (
+            (s.get("database_findings") or 0)
+            + (s.get("filesystem_findings") or 0)
+            + (s.get("application_findings") or 0)
+        )
 
     rows: list[dict] = []
     rows.append(
@@ -730,6 +752,16 @@ def _trends_rows(
             prev_runs,
             lambda s: s.get("filesystem_findings") or 0,
             _METRIC_FS_FINDINGS,
+        )
+    )
+    rows.append(
+        _one_trend_row(
+            _METRIC_APP_FINDINGS,
+            current_app,
+            current_started_at,
+            prev_runs,
+            lambda s: s.get("application_findings") or 0,
+            _METRIC_APP_FINDINGS,
         )
     )
     rows.append(
@@ -771,6 +803,7 @@ def _build_suggested_review_rows(
     db_rows: list[dict],
     fs_rows: list[dict],
     config: dict | None,
+    app_rows: list[dict] | None = None,
 ) -> list[dict]:
     """
     Rows for the Suggested review sheet: findings stored as LOW with SUGGESTED_REVIEW_ID_LIKE.
@@ -817,6 +850,23 @@ def _build_suggested_review_rows(
                 "ML confidence": r.get("ml_confidence", ""),
             }
         )
+    for r in app_rows or []:
+        if r.get("pattern_detected") != SUGGESTED_REVIEW_PATTERN:
+            continue
+        out.append(
+            {
+                "Source": "application",
+                "Target": r.get("target_name", ""),
+                "Schema": "",
+                "Table": r.get("path", ""),
+                "Column": r.get("file_name", ""),
+                "Data type": r.get("data_type", ""),
+                "Sensitivity": r.get("sensitivity_level", ""),
+                "Pattern": r.get("pattern_detected", ""),
+                "Norm / note": r.get("norm_tag", ""),
+                "ML confidence": r.get("ml_confidence", ""),
+            }
+        )
     return out
 
 
@@ -824,43 +874,54 @@ def _remove_suggested_review_from_main_sheets(
     db_rows: list[dict],
     fs_rows: list[dict],
     report_cfg: dict,
-) -> tuple[list[dict], list[dict]]:
+    app_rows: list[dict] | None = None,
+) -> tuple[list[dict], list[dict], list[dict]]:
     """
     When the Suggested review sheet is enabled, drop SUGGESTED_REVIEW_ID_LIKE rows from
-    Database/Filesystem findings so they are not duplicated (they remain on Suggested review).
+    Database/Filesystem/Application findings so they are not duplicated (they remain on Suggested review).
     """
+    app = list(app_rows or [])
     if not report_cfg.get("include_suggested_review_sheet", True):
-        return db_rows, fs_rows
+        return db_rows, fs_rows, app
 
     def _keep(r: dict) -> bool:
         return r.get("pattern_detected") != SUGGESTED_REVIEW_PATTERN
 
-    return [r for r in db_rows if _keep(r)], [r for r in fs_rows if _keep(r)]
+    return (
+        [r for r in db_rows if _keep(r)],
+        [r for r in fs_rows if _keep(r)],
+        [r for r in app if _keep(r)],
+    )
 
 
 def _get_report_config_and_filtered_rows(
     config: dict | None,
     db_rows: list[dict],
     fs_rows: list[dict],
-) -> tuple[dict, list[dict], list[dict]]:
-    """Return (report_cfg, db_rows_for_sheets, fs_rows_for_sheets) with min_sensitivity applied."""
+    app_rows: list[dict] | None = None,
+) -> tuple[dict, list[dict], list[dict], list[dict]]:
+    """Return (report_cfg, db, fs, app) rows for sheets with min_sensitivity applied."""
     cfg = config or {}
     report_cfg = cfg.get("report", {}) if isinstance(cfg.get("report"), dict) else {}
+    app = list(app_rows or [])
     min_sens = (report_cfg.get("min_sensitivity") or "LOW").upper()
     if min_sens != "LOW":
         return (
             report_cfg,
             _filter_by_min_sensitivity(db_rows, min_sens),
             _filter_by_min_sensitivity(fs_rows, min_sens),
+            _filter_by_min_sensitivity(app, min_sens),
         )
-    return report_cfg, db_rows, fs_rows
+    return report_cfg, db_rows, fs_rows, app
 
 
 def _build_executive_summary_rows(
-    db_rows: list[dict], fs_rows: list[dict]
+    db_rows: list[dict],
+    fs_rows: list[dict],
+    app_rows: list[dict] | None = None,
 ) -> list[dict]:
     """Build rows for Executive summary sheet: by sensitivity, by norm_tag, top targets."""
-    all_findings = db_rows + fs_rows
+    all_findings = db_rows + fs_rows + list(app_rows or [])
     exec_rows: list[dict] = []
     for level in ("HIGH", "MEDIUM", "LOW"):
         count = sum(
@@ -991,12 +1052,18 @@ def _write_excel_sheets(
     heatmap_path: str | None = None,
     suggested_review_rows: list[dict] | None = None,
     trust_tint: dict | None = None,
+    app_rows_for_sheets: list[dict] | None = None,
+    current_app: int = 0,
 ) -> None:
     """Write all Excel sheets (Report info, Executive summary, findings, recommendations, trends, heatmap data)."""
     from report.trust_tint import stub_detail_sheet_rows
 
     tint = trust_tint or {}
     stub_detail = bool(tint.get("detail_sheets_stub"))
+    app_rows_for_sheets = list(app_rows_for_sheets or [])
+    detail_count = (
+        len(db_rows_for_sheets) + len(fs_rows_for_sheets) + len(app_rows_for_sheets)
+    )
 
     _excel_safe_dataframe(report_info).to_excel(
         writer, sheet_name=_SHEET_REPORT_INFO, index=False
@@ -1019,7 +1086,7 @@ def _write_excel_sheets(
             _excel_safe_dataframe(
                 stub_detail_sheet_rows(
                     sheet_label="Executive summary",
-                    retained_count=len(db_rows_for_sheets) + len(fs_rows_for_sheets),
+                    retained_count=detail_count,
                     tint=tint,
                 )
             ).to_excel(writer, sheet_name="Executive summary", index=False)
@@ -1030,13 +1097,22 @@ def _write_excel_sheets(
                 tint=tint,
             )
         ).to_excel(writer, sheet_name=_SHEET_DB_FINDINGS, index=False)
-        _excel_safe_dataframe(
-            stub_detail_sheet_rows(
-                sheet_label=_SHEET_FS_FINDINGS,
-                retained_count=len(fs_rows_for_sheets),
-                tint=tint,
-            )
-        ).to_excel(writer, sheet_name=_SHEET_FS_FINDINGS, index=False)
+        if fs_rows_for_sheets or current_fs:
+            _excel_safe_dataframe(
+                stub_detail_sheet_rows(
+                    sheet_label=_SHEET_FS_FINDINGS,
+                    retained_count=len(fs_rows_for_sheets),
+                    tint=tint,
+                )
+            ).to_excel(writer, sheet_name=_SHEET_FS_FINDINGS, index=False)
+        if app_rows_for_sheets or current_app:
+            _excel_safe_dataframe(
+                stub_detail_sheet_rows(
+                    sheet_label=_SHEET_APP_FINDINGS,
+                    retained_count=len(app_rows_for_sheets),
+                    tint=tint,
+                )
+            ).to_excel(writer, sheet_name=_SHEET_APP_FINDINGS, index=False)
         if suggested_review_rows:
             _excel_safe_dataframe(
                 stub_detail_sheet_rows(
@@ -1057,13 +1133,16 @@ def _write_excel_sheets(
         db_high_keys, fs_high_keys = set(), set()
     else:
         if report_cfg.get("include_executive_summary", False) and (
-            db_rows_for_sheets or fs_rows_for_sheets
+            db_rows_for_sheets or fs_rows_for_sheets or app_rows_for_sheets
         ):
             _excel_safe_dataframe(
-                _build_executive_summary_rows(db_rows_for_sheets, fs_rows_for_sheets)
+                _build_executive_summary_rows(
+                    db_rows_for_sheets, fs_rows_for_sheets, app_rows_for_sheets
+                )
             ).to_excel(writer, sheet_name="Executive summary", index=False)
+        path_like = list(fs_rows_for_sheets) + list(app_rows_for_sheets)
         db_high_keys, fs_high_keys = _apply_minor_confidence_and_return_keys(
-            db_rows_for_sheets, fs_rows_for_sheets, config
+            db_rows_for_sheets, path_like, config
         )
         if db_rows_for_sheets:
             _excel_safe_dataframe(db_rows_for_sheets).to_excel(
@@ -1072,6 +1151,10 @@ def _write_excel_sheets(
         if fs_rows_for_sheets:
             _excel_safe_dataframe(fs_rows_for_sheets).to_excel(
                 writer, sheet_name=_SHEET_FS_FINDINGS, index=False
+            )
+        if app_rows_for_sheets:
+            _excel_safe_dataframe(app_rows_for_sheets).to_excel(
+                writer, sheet_name=_SHEET_APP_FINDINGS, index=False
             )
         sr = suggested_review_rows or []
         if sr:
@@ -1185,15 +1268,16 @@ def _write_excel_sheets(
         _excel_safe_dataframe(
             stub_detail_sheet_rows(
                 sheet_label="Recommendations",
-                retained_count=len(db_rows_for_sheets) + len(fs_rows_for_sheets),
+                retained_count=detail_count,
                 tint=tint,
             )
         ).to_excel(writer, sheet_name="Recommendations", index=False)
     else:
         overrides = report_cfg.get("recommendation_overrides", [])
+        path_like_sheets = list(fs_rows_for_sheets) + list(app_rows_for_sheets)
         recs = _recommendations_rows(
             db_rows_for_sheets,
-            fs_rows_for_sheets,
+            path_like_sheets,
             recommendation_overrides=overrides if overrides else None,
         )
         if agg_rows:
@@ -1203,13 +1287,21 @@ def _write_excel_sheets(
         _excel_safe_dataframe(recs).to_excel(
             writer, sheet_name="Recommendations", index=False
         )
-        praise = _praise_rows(db_rows_for_sheets, fs_rows_for_sheets)
+        praise = _praise_rows(
+            db_rows_for_sheets, fs_rows_for_sheets, app_rows_for_sheets
+        )
         if praise:
             _excel_safe_dataframe(praise).to_excel(
                 writer, sheet_name=_SHEET_PRAISE_CONTROLS, index=False
             )
     trends = _trends_rows(
-        db_manager, session_id, current_db, current_fs, current_fail, current_started_at
+        db_manager,
+        session_id,
+        current_db,
+        current_fs,
+        current_fail,
+        current_started_at,
+        current_app=current_app,
     )
     _excel_safe_dataframe(trends).to_excel(
         writer, sheet_name="Trends - Session comparison", index=False
@@ -1218,7 +1310,7 @@ def _write_excel_sheets(
         _excel_safe_dataframe(
             stub_detail_sheet_rows(
                 sheet_label=_SHEET_HEATMAP_DATA,
-                retained_count=len(db_rows_for_sheets) + len(fs_rows_for_sheets),
+                retained_count=detail_count,
                 tint=tint,
             )
         ).to_excel(writer, sheet_name=_SHEET_HEATMAP_DATA, index=False)
@@ -1226,7 +1318,7 @@ def _write_excel_sheets(
     else:
         heatmap_rows = [
             {"target": r.get("target_name"), "sensitivity": r.get("sensitivity_level")}
-            for r in db_rows_for_sheets + fs_rows_for_sheets
+            for r in db_rows_for_sheets + fs_rows_for_sheets + app_rows_for_sheets
         ]
     if heatmap_rows:
         summary = (
@@ -1263,18 +1355,24 @@ def _write_excel_sheets(
 
 
 def _apply_trial_row_cap(
-    db_rows: list[dict], fs_rows: list[dict], cap: int
-) -> tuple[list[dict], list[dict]]:
+    db_rows: list[dict],
+    fs_rows: list[dict],
+    cap: int,
+    app_rows: list[dict] | None = None,
+) -> tuple[list[dict], list[dict], list[dict]]:
     """
-    Limit combined DB + filesystem finding rows for trial/POC licenses; append one watermark row.
+    Limit combined DB + filesystem + application finding rows for trial/POC licenses;
+    append one watermark row.
     """
+    app = list(app_rows or [])
     if cap <= 0:
-        return db_rows, fs_rows
-    total = len(db_rows) + len(fs_rows)
+        return db_rows, fs_rows, app
+    total = len(db_rows) + len(fs_rows) + len(app)
     if total <= cap:
-        return db_rows, fs_rows
+        return db_rows, fs_rows, app
     out_db: list[dict] = []
     out_fs: list[dict] = []
+    out_app: list[dict] = []
     remaining = cap
     for r in db_rows:
         if remaining <= 0:
@@ -1286,7 +1384,14 @@ def _apply_trial_row_cap(
             break
         out_fs.append(r)
         remaining -= 1
-    sample = fs_rows[0] if fs_rows else (db_rows[0] if db_rows else {})
+    for r in app:
+        if remaining <= 0:
+            break
+        out_app.append(r)
+        remaining -= 1
+    sample = (
+        app[0] if app else (fs_rows[0] if fs_rows else (db_rows[0] if db_rows else {}))
+    )
     if sample:
         teaser = {k: "" for k in sample}
         teaser["target_name"] = "[Data Boar trial]"
@@ -1297,8 +1402,11 @@ def _apply_trial_row_cap(
         teaser["sample_value"] = (
             "POC: full discovery requires a paid license. Contact sales."
         )
-        out_fs = list(out_fs) + [teaser]
-    return out_db, out_fs
+        if app or (not fs_rows and not db_rows):
+            out_app = list(out_app) + [teaser]
+        else:
+            out_fs = list(out_fs) + [teaser]
+    return out_db, out_fs, out_app
 
 
 def _build_report_info(
@@ -1309,6 +1417,7 @@ def _build_report_info(
     fs_rows: list[dict],
     license_ctx: Any | None = None,
     config: dict | None = None,
+    app_rows: list[dict] | None = None,
 ) -> list[dict]:
     """Build the Report info sheet rows (session + tenant/technician + about + brief compatibility notes)."""
     report_info: list[dict] = []
@@ -1348,7 +1457,8 @@ def _build_report_info(
     )
     from report.jurisdiction_hints import build_jurisdiction_hint_report_rows
 
-    _hint_rows = build_jurisdiction_hint_report_rows(db_rows, fs_rows, config, meta)
+    path_like = list(fs_rows) + list(app_rows or [])
+    _hint_rows = build_jurisdiction_hint_report_rows(db_rows, path_like, config, meta)
     if _hint_rows:
         report_info.extend(_hint_rows)
     if meta.get("config_scope_hash"):
@@ -1375,7 +1485,7 @@ def _build_report_info(
     # Count distinct columns that have findings with LGPD_CNPJ and/or LGPD_CNPJ_ALNUM patterns.
     cnpj_numeric_columns: set[tuple[str, str]] = set()
     cnpj_alnum_columns: set[tuple[str, str]] = set()
-    for row in list(db_rows) + list(fs_rows):
+    for row in list(db_rows) + list(fs_rows) + list(app_rows or []):
         pat = (row.get("pattern_detected") or "").upper()
         if not pat:
             continue
@@ -1421,28 +1531,32 @@ def generate_report(
     config: dict | None = None,
 ) -> str | None:
     """
-    Read session from db_manager (database_findings, filesystem_findings, scan_failures);
+    Read session from db_manager (database, filesystem, application findings, scan_failures);
     write Excel and heatmap. Return path to Excel file or None.
     Includes "Report info" (session + tenant), "Trends - Session comparison" when previous run exists.
     Optional config: if provided, report.recommendation_overrides and other report options are applied.
     """
-    db_rows, fs_rows, fail_rows = db_manager.get_findings(session_id)
-    if not db_rows and not fs_rows and not fail_rows:
+    db_rows, fs_rows, app_rows, fail_rows = db_manager.get_findings(session_id)
+    if not db_rows and not fs_rows and not app_rows and not fail_rows:
         return None
+    path_like = list(fs_rows) + list(app_rows)
     if (
         (config or {})
         .get("detection", {})
         .get("aggregated_identification_enabled", True)
     ):
-        agg_records = run_aggregation(db_rows, fs_rows, session_id, config)
+        agg_records = run_aggregation(db_rows, path_like, session_id, config)
         db_manager.save_aggregated_identification_risks(session_id, agg_records)
     current_db = len(db_rows)
     current_fs = len(fs_rows)
+    current_app = len(app_rows)
     current_fail = len(fail_rows)
-    report_cfg, db_rows_for_sheets, fs_rows_for_sheets = (
-        _get_report_config_and_filtered_rows(config, db_rows, fs_rows)
+    report_cfg, db_rows_for_sheets, fs_rows_for_sheets, app_rows_for_sheets = (
+        _get_report_config_and_filtered_rows(config, db_rows, fs_rows, app_rows)
     )
-    suggested_review_rows = _build_suggested_review_rows(db_rows, fs_rows, config)
+    suggested_review_rows = _build_suggested_review_rows(
+        db_rows, fs_rows, config, app_rows
+    )
     lic_ctx = None
     report_rows_capped = False
     if config:
@@ -1457,12 +1571,16 @@ def generate_report(
         ):
             cap = lic_ctx.max_report_rows
         if cap:
-            db_rows_for_sheets, fs_rows_for_sheets = _apply_trial_row_cap(
-                db_rows_for_sheets, fs_rows_for_sheets, cap
+            db_rows_for_sheets, fs_rows_for_sheets, app_rows_for_sheets = (
+                _apply_trial_row_cap(
+                    db_rows_for_sheets, fs_rows_for_sheets, cap, app_rows_for_sheets
+                )
             )
             report_rows_capped = True
-    db_rows_for_sheets, fs_rows_for_sheets = _remove_suggested_review_from_main_sheets(
-        db_rows_for_sheets, fs_rows_for_sheets, report_cfg
+    db_rows_for_sheets, fs_rows_for_sheets, app_rows_for_sheets = (
+        _remove_suggested_review_from_main_sheets(
+            db_rows_for_sheets, fs_rows_for_sheets, report_cfg, app_rows_for_sheets
+        )
     )
     meta = _get_session_metadata(db_manager, session_id)
     current_started_at = meta["started_at"]
@@ -1475,6 +1593,7 @@ def generate_report(
         fs_rows_for_sheets,
         license_ctx=lic_ctx,
         config=config,
+        app_rows=app_rows_for_sheets,
     )
     # S2a wave-2c / M-TRUST-02: Excel trust watermark + untrusted detail stubs.
     from report.trust_tint import resolve_excel_trust_tint, trust_tint_report_info_rows
@@ -1499,6 +1618,7 @@ def generate_report(
             output_dir,
             session_id,
             license_footer=lic_footer,
+            app_rows=app_rows_for_sheets,
         )
     with pd.ExcelWriter(out_path, engine="openpyxl") as writer:
         _write_excel_sheets(
@@ -1519,6 +1639,8 @@ def generate_report(
             heatmap_path=heatmap_path,
             suggested_review_rows=suggested_review_rows,
             trust_tint=trust_tint,
+            app_rows_for_sheets=app_rows_for_sheets,
+            current_app=current_app,
         )
     try:
         write_scan_evidence_artifacts(
@@ -1531,6 +1653,7 @@ def generate_report(
             fs_rows=fs_rows,
             fail_rows=fail_rows,
             report_rows_capped=report_rows_capped,
+            app_rows=app_rows,
         )
     except Exception:
         _logger.exception(
@@ -1548,11 +1671,11 @@ def generate_session_heatmap(
     """
     PNG heatmap only for a session (no Excel). Uses the same row filters as ``generate_report``.
     """
-    db_rows, fs_rows, fail_rows = db_manager.get_findings(session_id)
-    if not db_rows and not fs_rows:
+    db_rows, fs_rows, app_rows, _fail_rows = db_manager.get_findings(session_id)
+    if not db_rows and not fs_rows and not app_rows:
         return None
-    report_cfg, db_rows_for_sheets, fs_rows_for_sheets = (
-        _get_report_config_and_filtered_rows(config, db_rows, fs_rows)
+    report_cfg, db_rows_for_sheets, fs_rows_for_sheets, app_rows_for_sheets = (
+        _get_report_config_and_filtered_rows(config, db_rows, fs_rows, app_rows)
     )
     lic_ctx = None
     if config:
@@ -1567,11 +1690,15 @@ def generate_session_heatmap(
         ):
             cap = lic_ctx.max_report_rows
         if cap:
-            db_rows_for_sheets, fs_rows_for_sheets = _apply_trial_row_cap(
-                db_rows_for_sheets, fs_rows_for_sheets, cap
+            db_rows_for_sheets, fs_rows_for_sheets, app_rows_for_sheets = (
+                _apply_trial_row_cap(
+                    db_rows_for_sheets, fs_rows_for_sheets, cap, app_rows_for_sheets
+                )
             )
-    db_rows_for_sheets, fs_rows_for_sheets = _remove_suggested_review_from_main_sheets(
-        db_rows_for_sheets, fs_rows_for_sheets, report_cfg
+    db_rows_for_sheets, fs_rows_for_sheets, app_rows_for_sheets = (
+        _remove_suggested_review_from_main_sheets(
+            db_rows_for_sheets, fs_rows_for_sheets, report_cfg, app_rows_for_sheets
+        )
     )
     lic_footer = None
     if lic_ctx is not None:
@@ -1584,4 +1711,5 @@ def generate_session_heatmap(
         output_dir,
         session_id,
         license_footer=lic_footer,
+        app_rows=app_rows_for_sheets,
     )

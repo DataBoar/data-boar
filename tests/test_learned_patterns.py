@@ -173,6 +173,7 @@ def test_write_learned_patterns_disabled_returns_none(tmp_path):
                 ],
                 [],
                 [],
+                [],
             )
 
     config = {"learned_patterns": {"enabled": False}, "ml_patterns_file": ""}
@@ -193,6 +194,7 @@ def test_write_learned_patterns_writes_yaml(tmp_path):
                         "ml_confidence": 88,
                     }
                 ],
+                [],
                 [],
                 [],
             )
@@ -231,6 +233,7 @@ def test_write_learned_patterns_resolves_relative_output_against_report_dir(tmp_
                 ],
                 [],
                 [],
+                [],
             )
 
     report_dir = tmp_path / "reports" / "demo"
@@ -265,6 +268,7 @@ def test_write_learned_patterns_keeps_absolute_output_path(tmp_path):
                         "ml_confidence": 88,
                     }
                 ],
+                [],
                 [],
                 [],
             )

@@ -83,7 +83,7 @@ def test_generate_report_prepends_watermark_when_degraded(tmp_path, monkeypatch)
                     "sample_value": "***",
                 }
             ]
-            return db, [], []
+            return db, [], [], []
 
         def save_aggregated_identification_risks(self, *_a, **_k):
             return None
@@ -142,7 +142,7 @@ def test_generate_report_stubs_findings_when_untrusted(tmp_path, monkeypatch):
                     "sample_value": "***",
                 }
             ]
-            return db, [], []
+            return db, [], [], []
 
         def save_aggregated_identification_risks(self, *_a, **_k):
             return None
@@ -178,6 +178,7 @@ def test_generate_report_stubs_findings_when_untrusted(tmp_path, monkeypatch):
     assert list(db.columns) == ["Field", "Value"]
     assert db.iloc[0]["Field"] == "Output withheld"
     assert db.iloc[1]["Value"] == "1"
-    fs = pd.read_excel(path, sheet_name="Filesystem findings")
-    assert fs.iloc[0]["Field"] == "Output withheld"
-    assert fs.iloc[1]["Value"] == "0"
+    # Untrusted stubs omit empty Filesystem / Application sheets (#1613).
+    with pd.ExcelFile(path) as xl:
+        assert "Filesystem findings" not in xl.sheet_names
+        assert "Application findings" not in xl.sheet_names

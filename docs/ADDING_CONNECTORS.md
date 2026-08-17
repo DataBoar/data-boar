@@ -29,7 +29,7 @@ So a connector must:
 | **Constructor**             | `__init__(self, target_config, scanner, db_manager, **kwargs)`. For database/API connectors the engine only passes these three; for filesystem and share connectors it may also pass `extensions`, `scan_sqlite_as_db`, `sample_limit`. |
 | **`run()`**                 | Entry point. Connect, discover/sample, call `scanner.scan_column(name, sample)`, then `db_manager.save_finding(...)` or `save_failure(...)`. Close resources when done.                                                                 |
 | **`connect()` / `close()`** | Optional but recommended. Use in `run()` so connections are released.                                                                                                                                                                   |
-| **Findings**                | Use `save_finding(source_type="database", ...)` for DB-like sources (schema, table, column) or `save_finding(source_type="filesystem", ...)` for file/API-like (path, file_name).                                                       |
+| **Findings**                | Use `save_finding(source_type="database", ...)` for DB-like sources; `save_finding(source_type="filesystem", ...)` for file/share; `save_finding(source_type="application", ...)` (or `api`/`crm`/`saas`) for REST/CRM — **Application findings** sheet. |
 | **Failures**                | Use `save_failure(target_name, reason, details)` on unreachable targets or errors.                                                                                                                                                      |
 
 ---
@@ -130,16 +130,18 @@ In the README (or this doc), add:
 
 ---
 
-## 4. Database vs filesystem/API findings
+## 4. Database vs filesystem vs application findings
 
 - **Database-like sources** (tables and columns): use `save_finding(source_type="database", ...)` and pass at least:
 - `target_name`, `server_ip` (or host), `schema_name`, `table_name`, `column_name`, `data_type`
 - `sensitivity_level`, `pattern_detected`, `norm_tag`, `ml_confidence`
 - Other DB fields are optional but useful for reports.
 
-- **File/API-like sources** (paths, endpoints, keys): use `save_finding(source_type="filesystem", ...)` and pass:
-- `target_name`, `path`, `file_name` (e.g. endpoint + field), `data_type`
+- **Filesystem / share sources** (local paths, SMB, NFS, WebDAV downloads): use `save_finding(source_type="filesystem", ...)` and pass:
+- `target_name`, `path`, `file_name`, `data_type`
 - `sensitivity_level`, `pattern_detected`, `norm_tag`, `ml_confidence`
+
+- **Application / API / CRM / SaaS** (REST, HubSpot, and similar; future ERP): use `save_finding(source_type="application", ...)` (aliases: `api`, `crm`, `saas`) with the same path-like shape as filesystem (`path` + `file_name`), e.g. CRM object type + property name, or `GET /users | email`. These appear on the Excel sheet **Application findings**, not **Filesystem findings**.
 
 The scanner returns a dict with at least `sensitivity_level`, `pattern_detected`, `norm_tag`, `ml_confidence`; pass those through to `save_finding`. Skip or do not report rows where `sensitivity_level == "LOW"` if you want to match existing behavior.
 
@@ -302,7 +304,7 @@ except ImportError:
 
 ---
 
-## 6. Example: REST/API connector (filesystem-style)
+## 6. Example: REST/API connector (application findings)
 
 For an API that returns JSON, you use **filesystem** findings and a single `run()` that fetches endpoints, flattens JSON, and runs `scan_column` on field names and sample values. See `connectors/rest_connector.py` for the full pattern:
 
