@@ -5,7 +5,7 @@
 **Authors:** Fabio Leitao
 **Priority:** H0
 
-**Synced with:** [PLANS_TODO.md](PLANS_TODO.md) · carryover [CARRYOVER.md](../ops/today-mode/CARRYOVER.md) · day anchor [OPERATOR_TODAY_MODE_2026-08-16.md](../ops/today-mode/OPERATOR_TODAY_MODE_2026-08-16.md)
+**Synced with:** [PLANS_TODO.md](PLANS_TODO.md) · carryover [CARRYOVER.md](../ops/today-mode/CARRYOVER.md) · day anchor [OPERATOR_TODAY_MODE_2026-08-17.md](../ops/today-mode/OPERATOR_TODAY_MODE_2026-08-17.md) (cycle opened [2026-08-16](../ops/today-mode/OPERATOR_TODAY_MODE_2026-08-16.md))
 
 **Previous template cycles:** Earlier windows in this file (including **2026-07-11 → 2026-07-24**) are **superseded** by the current sequencing in [PLANS_TODO.md](PLANS_TODO.md) (*Integration / active threads* + *What to start next*). Close each cycle with: green `main`, explicit carryover rows, and one short outcome note.
 
@@ -13,10 +13,10 @@
 
 | Week | Theme | Outcomes |
 | ---- | ----- | -------- |
-| **1** | **Land open tracks + supply-chain hygiene** | Merge docs PR **[#1602](https://github.com/DataBoar/data-boar/pull/1602)** (cross-surface observability gates) when CI green; triage Dependabot (**Actions** first — e.g. **#1573** — then majors one-at-a-time with skill + `check-all`); continue **[#1586](https://github.com/DataBoar/data-boar/issues/1586)** TCP peer-pin residual (**Redis** → MySQL/Oracle as capacity allows). Keep docs-only vs behavior PRs separated. |
-| **2** | **One selected delivery slice, no regression** | Ship **one** primary from [PLANS_TODO.md](PLANS_TODO.md): privacy-first dashBOARd RUM pilot phase (**[#1601](https://github.com/DataBoar/data-boar/issues/1601)** — plan file lands with **#1602**) **or** CMMC/CUI sample (**[#1453](https://github.com/DataBoar/data-boar/issues/1453)**) **or** one **M-PILOT-READY** blocker (e.g. licensing **#704** / lab **#756**) if operator names it — tests + docs in the same slice; no scope sprawl. |
+| **1** | **Land open tracks + supply-chain hygiene** | ✅ Docs **[#1602](https://github.com/DataBoar/data-boar/pull/1602)** + cycle refresh **[#1604](https://github.com/DataBoar/data-boar/pull/1604)** on `main`. ✅ TCP peer-pin mother **[#1586](https://github.com/DataBoar/data-boar/issues/1586)** **closed** (**#1589–#1603** matrix). **Still open:** Dependabot triage (**Actions** **#1573** first, then majors **#1487 / #1485 / #1484** one-at-a-time with skill + `check-all`). Keep docs-only vs behavior PRs separated. |
+| **2** | **One selected delivery slice, no regression** | Ship **one** primary from [PLANS_TODO.md](PLANS_TODO.md): privacy-first dashBOARd RUM pilot (**[#1601](https://github.com/DataBoar/data-boar/issues/1601)** — gates already on `main` via **#1602**) **or** CMMC/CUI sample (**[#1453](https://github.com/DataBoar/data-boar/issues/1453)**) **or** one **M-PILOT-READY** blocker (e.g. licensing **#719** / lab **#756**) if operator names it — tests + docs in the same slice; no scope sprawl. |
 
-**Definition of done (this cycle):** At least one merged PR for the selected Week-2 slice (or Week-1 #1602 + one Dependabot/TCP-pin merge if Week-2 slips); **`check-all --enforced`** green before publish/merge; docs/plan/carryover rows updated when scope moves; no silent carryover.
+**Definition of done (this cycle):** At least one merged PR for the selected Week-2 slice (or ≥1 Dependabot merge if Week-2 slips); **`check-all --enforced`** green before publish/merge; docs/plan/carryover rows updated when scope moves; no silent carryover.
 
 ---
 
