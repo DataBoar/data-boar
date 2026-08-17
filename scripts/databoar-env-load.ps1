@@ -4,9 +4,9 @@
     Load Data Boar runtime secrets from XDG-style config env files into the session.
 
 .DESCRIPTION
-    Product contract (stable): YAML *_from_env → OS environment at process start.
+    Product contract (stable): YAML *_from_env -> OS environment at process start.
     Vaults (Bitwarden CLI today; Phase B @vault: / enterprise vaults later) inject
-    into that same env layer — they do not replace *_from_env in tracked YAML.
+    into that same env layer - they do not replace *_from_env in tracked YAML.
 
     Canonical dir (override with $env:DATA_BOAR_ENV_DIR):
       $env:USERPROFILE\.config\databoar\   (Windows)
@@ -16,11 +16,11 @@
       . .\scripts\databoar-env-load.ps1
       . .\scripts\databoar-env-load.ps1 -Name hubspot
 
-    Prefer vault → env when available; on-disk *.env is an optional bridge.
+    Prefer vault -> env when available; on-disk *.env is an optional bridge.
     Docs: docs/ops/OPERATOR_CREDENTIALS_FROM_ENV.md
 
 .PARAMETER Name
-    Stem of a single file (hubspot → hubspot.env). Omit to load all *.env.
+    Stem of a single file (hubspot -> hubspot.env). Omit to load all *.env.
 
 .PARAMETER List
     List matching files; do not export.
