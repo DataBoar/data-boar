@@ -76,7 +76,7 @@ This plan is **docs/backlog only**. It does **not** implement loaders, collector
 ## Sequencing vs other observability work
 
 1. Keep **backend OTel** healthy (already on `main`).
-2. Accept **this plan** + open **dashBOARd RUM pilot** child issue (P2).
+2. Accept **this plan** — dashBOARd RUM pilot child issue is **[#1601](https://github.com/DataBoar/data-boar/issues/1601)** (P2).
 3. Implement Phase 1 in a **dedicated code PR** (not this docs PR).
 4. Leave **#1599** (Cloudflare → OTLP) on its own track.
 5. Keep **#1457** for GenAI/MCP + Sensor docs — cross-link, do not subsume.
