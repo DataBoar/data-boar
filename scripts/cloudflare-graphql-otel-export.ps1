@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Thin Windows wrapper for Cloudflare GraphQL → OTLP edge metrics exporter (#1599).
+  Thin Windows wrapper for Cloudflare GraphQL -> OTLP edge metrics exporter (#1599).
 
 .EXAMPLE
   .\scripts\cloudflare-graphql-otel-export.ps1 -Fixture tests\fixtures\cloudflare\http_requests_adaptive_groups.json -DryRun
