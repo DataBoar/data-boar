@@ -248,6 +248,27 @@ class DataSourceInventory(Base):
     created_at = Column(DateTime, default=_utc_now)
 
 
+class CryptoControlsAudit(Base):
+    """
+    Opt-in strong-crypto / controls validation results per target (Order 5 Phase 2).
+
+    Populated only when ``scan.validate_crypto`` is enabled. Never stores PEMs,
+    keys, or connection strings — only short result enums and detail summaries.
+    """
+
+    __tablename__ = "crypto_controls_audit"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    session_id = Column(String(64), nullable=False, index=True)
+    target_name = Column(String(100), nullable=False)
+    connection_type = Column(String(40), nullable=False)  # database, api, share, …
+    strong_crypto_result = Column(String(32), nullable=False)  # ok|warning|fail|…
+    strong_crypto_details = Column(String(512), nullable=True)
+    inferred_controls_summary = Column(
+        Text, nullable=True
+    )  # Phase 3: count-by-category heuristics only
+    created_at = Column(DateTime, default=_utc_now)
+
+
 class ScanObjectState(Base):
     """Cross-session file identity index — Phase 2 of incremental scan (ADR-0051).
 
@@ -326,6 +347,7 @@ class LocalDBManager:
         self._ensure_jurisdiction_hint_column()
         self._ensure_session_pid_columns()
         self._ensure_data_source_inventory_table()
+        self._ensure_crypto_controls_audit_table()
         self._ensure_notification_send_log_table()
         self._ensure_maturity_assessment_answers_table()
         self._ensure_maturity_row_hmac_column()
@@ -429,6 +451,10 @@ class LocalDBManager:
     def _ensure_data_source_inventory_table(self) -> None:
         """Create data_source_inventory table if it does not exist."""
         DataSourceInventory.__table__.create(self.engine, checkfirst=True)
+
+    def _ensure_crypto_controls_audit_table(self) -> None:
+        """Create crypto_controls_audit table if it does not exist."""
+        CryptoControlsAudit.__table__.create(self.engine, checkfirst=True)
 
     def _ensure_notification_send_log_table(self) -> None:
         """Create notification_send_log table if it does not exist (additive migration)."""
@@ -1276,6 +1302,97 @@ class LocalDBManager:
         finally:
             sess.close()
 
+    def save_crypto_controls_audit(
+        self,
+        target_name: str,
+        connection_type: str,
+        strong_crypto_result: str,
+        strong_crypto_details: str | None = None,
+        inferred_controls_summary: str | None = None,
+    ) -> None:
+        """Persist one crypto/controls audit row for the current session."""
+        sid = self._current_session_id
+        if not sid:
+            return
+        sess = self._session_factory()
+        try:
+            sess.add(
+                CryptoControlsAudit(
+                    session_id=sid,
+                    target_name=target_name,
+                    connection_type=connection_type,
+                    strong_crypto_result=strong_crypto_result,
+                    strong_crypto_details=strong_crypto_details,
+                    inferred_controls_summary=inferred_controls_summary,
+                )
+            )
+            sess.commit()
+        except Exception:
+            sess.rollback()
+            raise
+        finally:
+            sess.close()
+
+    def update_crypto_controls_inferred_summary(
+        self,
+        target_name: str,
+        inferred_controls_summary: str | None,
+    ) -> None:
+        """
+        Attach Phase 3 inferred-controls summary to the latest crypto audit row
+        for ``(session_id, target_name)``. Fail-soft callers should catch errors.
+        """
+        sid = self._current_session_id
+        if not sid or not target_name or not inferred_controls_summary:
+            return
+        text = str(inferred_controls_summary).strip()
+        if not text:
+            return
+        # Bound persisted text (summary builder already caps; belt-and-suspenders).
+        text = text[:2000]
+        sess = self._session_factory()
+        try:
+            row = (
+                sess.query(CryptoControlsAudit)
+                .filter(
+                    CryptoControlsAudit.session_id == sid,
+                    CryptoControlsAudit.target_name == target_name,
+                )
+                .order_by(CryptoControlsAudit.id.desc())
+                .first()
+            )
+            if row is None:
+                return
+            row.inferred_controls_summary = text
+            sess.commit()
+        except Exception:
+            sess.rollback()
+            raise
+        finally:
+            sess.close()
+
+    def get_crypto_controls_audit(self, session_id: str | None = None) -> list[dict]:
+        """Return crypto_controls_audit rows for session_id or current session."""
+        sid = session_id or self._current_session_id
+        if not sid:
+            return []
+        sess = self._session_factory()
+        try:
+            rows = (
+                sess.query(CryptoControlsAudit)
+                .filter(CryptoControlsAudit.session_id == sid)
+                .all()
+            )
+            return [
+                {
+                    c.key: getattr(r, c.key)
+                    for c in CryptoControlsAudit.__table__.columns
+                }
+                for r in rows
+            ]
+        finally:
+            sess.close()
+
     def get_data_source_inventory(self, session_id: str | None = None) -> list[dict]:
         """Return inventory rows for session_id or current session."""
         sid = session_id or self._current_session_id
@@ -1653,6 +1770,7 @@ class LocalDBManager:
                 synchronize_session=False
             )
             session.query(DataSourceInventory).delete(synchronize_session=False)
+            session.query(CryptoControlsAudit).delete(synchronize_session=False)
             session.query(ScanFailure).delete(synchronize_session=False)
             # Delete all scan session rows
             session.query(ScanSession).delete(synchronize_session=False)

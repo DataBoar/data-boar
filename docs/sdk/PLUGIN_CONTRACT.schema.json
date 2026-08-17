@@ -1,0 +1,325 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://databoar.com.br/schemas/plugin-contract/1.0.0/PLUGIN_CONTRACT.schema.json",
+  "title": "Data Boar Plugin SDK contract envelope",
+  "description": "Language-neutral host↔plugin envelope (issues #865 / #1116). Symmetric mesh: host-side and guest-side share trust_level. Mutual attestation messages are C2PA-inspired (not CAI-certified). Transport adapters carry this model; they do not redefine negotiation. See docs/SDK.md.",
+  "oneOf": [
+    { "$ref": "#/$defs/request" },
+    { "$ref": "#/$defs/decision" },
+    { "$ref": "#/$defs/receipt" },
+    { "$ref": "#/$defs/attestation_challenge" },
+    { "$ref": "#/$defs/attestation_response" }
+  ],
+  "$defs": {
+    "semver": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+([.-][A-Za-z0-9.-]+)?$"
+    },
+    "trust_level": {
+      "type": "string",
+      "enum": ["trusted", "degraded", "untrusted", "adulterated", "unknown"]
+    },
+    "mesh_role": {
+      "type": "string",
+      "enum": ["host", "guest"],
+      "description": "Symmetric roles (#1116): Boar may be host or guest-plugin."
+    },
+    "integrity_state": {
+      "type": "string",
+      "enum": ["ok", "degraded", "tampered", "unknown"]
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["finding_id", "source_type", "pii_type"],
+      "properties": {
+        "finding_id": { "type": "string", "minLength": 1 },
+        "source_type": { "type": "string", "minLength": 1 },
+        "connection_ref": { "type": "string" },
+        "schema": { "type": "string" },
+        "table": { "type": "string" },
+        "column": { "type": "string" },
+        "path": { "type": "string" },
+        "pii_type": { "type": "string", "minLength": 1 },
+        "severity": { "type": "string" },
+        "suggested_profile": { "type": "string" },
+        "norm_tag": { "type": "string" }
+      }
+    },
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sdk_contract_version",
+        "schema",
+        "session_id",
+        "issued_at",
+        "trust_level",
+        "source",
+        "targets"
+      ],
+      "properties": {
+        "sdk_contract_version": { "$ref": "#/$defs/semver" },
+        "schema": {
+          "const": "databoar.remediation.l3.request"
+        },
+        "session_id": { "type": "string", "minLength": 1 },
+        "issued_at": { "type": "string", "format": "date-time" },
+        "trust_level": { "$ref": "#/$defs/trust_level" },
+        "integrity_state": { "$ref": "#/$defs/integrity_state" },
+        "source": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["product", "version"],
+          "properties": {
+            "product": { "const": "data-boar" },
+            "version": { "type": "string", "minLength": 1 }
+          }
+        },
+        "filter": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "min_severity": { "type": "string" },
+            "pii_types": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          }
+        },
+        "targets": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/target" }
+        },
+        "callback": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode", "correlation_id"],
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": ["none", "webhook", "poll_url"]
+            },
+            "webhook_url": { "type": "string" },
+            "correlation_id": { "type": "string", "minLength": 1 }
+          }
+        },
+        "capabilities": {
+          "type": "array",
+          "description": "go-plugin-shaped capability tokens offered/required (negotiation).",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sdk_contract_version",
+        "schema",
+        "session_id",
+        "plugin",
+        "status",
+        "decided_at",
+        "results"
+      ],
+      "properties": {
+        "sdk_contract_version": { "$ref": "#/$defs/semver" },
+        "schema": {
+          "const": "databoar.plugin.decision"
+        },
+        "session_id": { "type": "string", "minLength": 1 },
+        "request_id": { "type": "string" },
+        "idempotency_key": { "type": "string" },
+        "plugin": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "version"],
+          "properties": {
+            "name": { "type": "string", "minLength": 1 },
+            "version": { "type": "string", "minLength": 1 },
+            "tier": {
+              "type": "string",
+              "enum": ["L1", "L2", "L3"]
+            }
+          }
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "completed",
+            "partial",
+            "failed",
+            "safe_hold",
+            "rejected_host_trust"
+          ]
+        },
+        "decided_at": { "type": "string", "format": "date-time" },
+        "host_trust_level_observed": { "$ref": "#/$defs/trust_level" },
+        "results": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["finding_id", "action", "reason"],
+            "properties": {
+              "finding_id": { "type": "string", "minLength": 1 },
+              "action": {
+                "type": "string",
+                "enum": [
+                  "tokenized",
+                  "masked",
+                  "skipped",
+                  "failed",
+                  "safe_hold",
+                  "deferred"
+                ]
+              },
+              "reason": { "type": "string", "minLength": 1 },
+              "partner_ref": { "type": "string" }
+            }
+          }
+        },
+        "error": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "code": { "type": "string" },
+            "message": { "type": "string" }
+          }
+        }
+      }
+    },
+    "receipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sdk_contract_version",
+        "schema",
+        "correlation_id",
+        "session_id",
+        "partner",
+        "status",
+        "completed_at"
+      ],
+      "properties": {
+        "sdk_contract_version": { "$ref": "#/$defs/semver" },
+        "schema": {
+          "const": "databoar.remediation.l3.receipt"
+        },
+        "correlation_id": { "type": "string", "minLength": 1 },
+        "session_id": { "type": "string", "minLength": 1 },
+        "partner": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["driver", "name", "version"],
+          "properties": {
+            "driver": { "type": "string" },
+            "name": { "type": "string" },
+            "version": { "type": "string" }
+          }
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "accepted",
+            "completed",
+            "partial",
+            "failed",
+            "safe_hold"
+          ]
+        },
+        "completed_at": { "type": "string", "format": "date-time" },
+        "results": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["finding_id", "action"],
+            "properties": {
+              "finding_id": { "type": "string" },
+              "action": { "type": "string" },
+              "partner_ref": { "type": "string" }
+            }
+          }
+        },
+        "error": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "code": { "type": "string" },
+            "message": { "type": "string" }
+          }
+        }
+      }
+    },
+    "attestation_challenge": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Mutual attestation challenge (Ed25519 nonce). Present on both host and guest roles (#1116).",
+      "required": [
+        "sdk_contract_version",
+        "schema",
+        "role",
+        "party",
+        "nonce",
+        "trust_level",
+        "issued_at"
+      ],
+      "properties": {
+        "sdk_contract_version": { "$ref": "#/$defs/semver" },
+        "schema": {
+          "const": "databoar.attestation.challenge"
+        },
+        "role": { "$ref": "#/$defs/mesh_role" },
+        "party": { "type": "string", "minLength": 1 },
+        "nonce": { "type": "string", "minLength": 16 },
+        "trust_level": { "$ref": "#/$defs/trust_level" },
+        "integrity_state": { "$ref": "#/$defs/integrity_state" },
+        "issued_at": { "type": "string", "format": "date-time" },
+        "release_label": { "type": "string" }
+      }
+    },
+    "attestation_response": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Signed attestation response echoing the peer nonce. C2PA-inspired Content Credential shape — not CAI-certified.",
+      "required": [
+        "sdk_contract_version",
+        "schema",
+        "role",
+        "party",
+        "nonce_echo",
+        "trust_level",
+        "integrity_anchor",
+        "release_label",
+        "issued_at",
+        "signature_b64"
+      ],
+      "properties": {
+        "sdk_contract_version": { "$ref": "#/$defs/semver" },
+        "schema": {
+          "const": "databoar.attestation.response"
+        },
+        "role": { "$ref": "#/$defs/mesh_role" },
+        "party": { "type": "string", "minLength": 1 },
+        "nonce_echo": { "type": "string", "minLength": 16 },
+        "trust_level": { "$ref": "#/$defs/trust_level" },
+        "integrity_state": { "$ref": "#/$defs/integrity_state" },
+        "integrity_anchor": { "type": "string", "minLength": 1 },
+        "release_label": { "type": "string", "minLength": 1 },
+        "issued_at": { "type": "string", "format": "date-time" },
+        "signature_b64": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Ed25519 signature over canonical attestation payload (base64)."
+        },
+        "counter_nonce": {
+          "type": "string",
+          "minLength": 16,
+          "description": "Optional counter-challenge nonce for the peer."
+        }
+      }
+    }
+  }
+}

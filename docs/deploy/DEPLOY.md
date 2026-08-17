@@ -140,7 +140,7 @@ The following are **optional** practices to harden deployments. They do not repl
 
 ### Docker
 
-- **Non-root:** The image already runs as user `appuser` (UID 1000). To enforce at runtime: `docker run --user 1000 ...` (or keep the Dockerfile `USER appuser`).
+- **Non-root:** The image already runs as distroless **nonroot** (**UID/GID 65532**). To enforce at runtime: `docker run --user 65532:65532 ...` (matches `USER 65532:65532` in the Dockerfile). There is no `appuser` account name in the image (`/etc/passwd` is not populated with that name).
 - **Resource limits:** Use `--cpus` and `--memory` for plain Docker (e.g. `--memory 1g`). In Compose, set `deploy.resources.limits` (e.g. `cpus: '1'`, `memory: 1G`).
 - **Healthchecks:** The image can be used with Docker `HEALTHCHECK`; for API mode, probe `GET /health`. Compose and Kubernetes examples in this repo already use `/health` for liveness/readiness. For observability, SLO/SLI/SLA, and SRE alignment (runbooks, error budgets, optional metrics), see [OBSERVABILITY_SRE.md](../OBSERVABILITY_SRE.md).
 - **DevSecOps:** Combine with API key (`api.require_api_key`), rate limiting (`rate_limit` in config), and CSP/security headers (see [SECURITY.md](../../SECURITY.md)). Run behind a reverse proxy with TLS and, when exposed externally, consider a WAF. **For production, set `api.require_api_key: true` and use a strong key from an environment variable** (e.g. `api.api_key_from_env: "AUDIT_API_KEY"`) so credentials are not stored in the config file.
@@ -154,7 +154,8 @@ You can tighten the Deployment with a **securityContext** and add a **NetworkPol
 ```yaml
       securityContext:
         runAsNonRoot: true
-        runAsUser: 1000
+        runAsUser: 65532
+        runAsGroup: 65532
         seccompProfile:
           type: RuntimeDefault
       containers:
@@ -172,7 +173,7 @@ You can tighten the Deployment with a **securityContext** and add a **NetworkPol
           # ... rest of container spec; ensure /data is a writable volumeMount so the app can write SQLite and reports
 ```
 
-The image runs as UID 1000 (`appuser`). Use a writable volume for `/data` (e.g. PVC or emptyDir) so SQLite and report output work with `readOnlyRootFilesystem: true`.
+The image runs as **UID/GID 65532** (Google distroless `:nonroot`). Use a writable volume for `/data` (e.g. PVC or emptyDir) so SQLite and report output work with `readOnlyRootFilesystem: true`.
 
 - **NetworkPolicy:** To restrict ingress to the API (e.g. only from an ingress controller or a specific namespace), use an example like `deploy/kubernetes/network-policy.example.yaml`. Apply it only if your cluster supports NetworkPolicy.
 
@@ -190,6 +191,9 @@ docker build -t data_boar:latest .
 mkdir -p data
 cp deploy/config.example.yaml data/config.yaml
 # Edit data/config.yaml as needed
+# Bind-mount ownership must match the image user (distroless nonroot):
+#   sudo chown -R 65532:65532 data
+# Named volumes (see Compose below) are usually initialized with the correct UID.
 
 docker run -d --name data-boar-audit \
   -p 8088:8088 \
@@ -198,7 +202,7 @@ docker run -d --name data-boar-audit \
   data_boar:latest
 ```
 
-Access: <http://localhost:8088/> (dashboard), <http://localhost:8088/docs> (API). In Docker and Kubernetes examples, the service is exposed via container/Service port bindings, so it is safe to keep the internal API binding on `0.0.0.0` inside the container while still using `127.0.0.1` as the default when running the CLI directly on a workstation. To stop: `docker stop data-boar-audit && docker rm data-boar-audit`.
+Access: <http://localhost:8088/> (dashboard), <http://localhost:8088/docs> (API). In Docker and Kubernetes examples, the process runs as **UID 65532**; if a bind-mounted `/data` is owned by UID 1000 (or root-only), you may see misleading failures such as “config not found” or “unable to open database file” that are really permission errors. Prefer a **named volume** (Compose default) or `chown 65532:65532` on the host path. The service is exposed via container/Service port bindings, so it is safe to keep the internal API binding on `0.0.0.0` inside the container while still using `127.0.0.1` as the default when running the CLI directly on a workstation. To stop: `docker stop data-boar-audit && docker rm data-boar-audit`.
 
 ## 4. Run with Docker Compose
 
@@ -416,7 +420,7 @@ Typical deployments keep all durable state under **`/data`** (volume or bind mou
 
 1. Stop the container, Compose stack, Swarm service, or scale the Kubernetes Deployment to zero.
 1. Restore files onto a new volume or directory at the same mount path (`/data` inside the container).
-1. Ensure **file ownership** is compatible with the image user (**UID 1000** / `appuser`) when using bind mounts on Linux hosts.
+1. Ensure **file ownership** is compatible with the image user (**UID/GID 65532**, distroless nonroot) when using bind mounts on Linux hosts.
 1. Start the workload again; verify **`GET /health`**, then run a short scan or open the dashboard to confirm SQLite and reports are visible.
 
 #### Operational notes
@@ -526,7 +530,7 @@ You can use **Docker Compose** or **Kubernetes** as alternatives to Docker Swarm
 
 The application runs correctly when placed behind **NAT**, a **load balancer**, or a **reverse proxy** (nginx, Traefik, Caddy, or similar). No code or config change is required for basic operation.
 
-- **TLS at the proxy:** If HTTPS is terminated at the proxy (recommended), set **X-Forwarded-Proto: https** on requests to the app so that security headers (e.g. HSTS) and scheme detection work correctly. See [SECURITY.md](../../SECURITY.md) for HTTP security headers.
+- **TLS at the proxy:** If HTTPS is terminated at the proxy (recommended), set **X-Forwarded-Proto: https** on requests to the app so that security headers (e.g. HSTS) and scheme detection work correctly. Also set **`api.trusted_proxy_cidrs`** to the CIDR(s) of the direct proxy peer; otherwise forwarded headers are ignored and the dashboard may still show the plaintext-HTTP risk banner. With a trusted peer + `https`, **`GET /status`** exposes **`effective_external_transport`** (`tls_termination: trusted_proxy`) while process-level **`dashboard_transport`** remains HTTP. See [SECURITY.md](../../SECURITY.md) and [SECURE_DASHBOARD_AUTH_AND_HTTPS_HOWTO.md](../ops/SECURE_DASHBOARD_AUTH_AND_HTTPS_HOWTO.md) §B.1.
 - **Client IP and host:** If you need the real client IP or original host in logs or logic, configure your proxy to send **X-Forwarded-For** and **X-Forwarded-Host**; the app can be extended to trust these when needed.
 - **Subpath:** If the app is served under a path prefix (e.g. <https://example.com/audit/>), configure the proxy to strip or rewrite the prefix so the app still sees paths starting at `/`; or use the proxy's rewrite rules to map `/audit/` to the container root.
 

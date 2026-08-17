@@ -11,12 +11,23 @@ import json
 
 from core.about import get_http_user_agent
 from core.connector_registry import register
+from core.crypto_audit import (
+    collect_httpx_crypto_facts,
+    evaluate_strong_crypto,
+    resolve_httpx_tls_connect_options,
+)
 from core.suggested_review import (
     SUGGESTED_REVIEW_PATTERN,
     augment_low_id_like_for_persist,
 )
 
-from .url_guard import target_allows_private, validate_outbound_url
+from .url_guard import (
+    build_pinned_httpx_client,
+    merge_host_pins,
+    pinned_httpx_request,
+    resolve_and_validate_outbound_url,
+    target_allows_private,
+)
 
 try:
     import httpx
@@ -65,20 +76,28 @@ def _build_auth(client: "httpx.Client", target: dict[str, Any]) -> None:
             client_secret = os.environ.get(client_secret[2:-1], "")
         scope = auth.get("scope", "")
         if token_url and client_id and client_secret:
-            # One-off request to token endpoint (no client auth)
-            resp = httpx.post(
-                token_url,
-                data={
+            # One-off request to token endpoint (no client auth).
+            # Pin peer IPs at request time (#1552) — never honor verify=False
+            # on token exchange (httpx default verify=True).
+            token_kwargs: dict[str, Any] = {
+                "data": {
                     "grant_type": "client_credentials",
                     "client_id": client_id,
                     "client_secret": client_secret,
                     **({"scope": scope} if scope else {}),
                 },
-                headers={
+                "headers": {
                     "Accept": "application/json",
                     "User-Agent": get_http_user_agent(),
                 },
-                timeout=30.0,
+                "timeout": 30.0,
+            }
+            resp = pinned_httpx_request(
+                "POST",
+                token_url,
+                allow_private=target_allows_private(target),
+                label="auth.token_url",
+                **token_kwargs,
             )
             resp.raise_for_status()
             data = resp.json()
@@ -199,19 +218,24 @@ class RESTConnector:
         base_url = (self.config.get("base_url") or self.config.get("url", "")).rstrip(
             "/"
         )
-        # SSRF guard (#832): reject link-local/private/loopback hosts unless the
-        # target config opts in with allow_private_networks: true.
+        # SSRF guard (#832 / #1552): reject link-local/private/loopback hosts
+        # unless allow_private_networks; fail-closed on DNS failure; pin peer IPs
+        # so request-time DNS rebinding cannot change the TCP peer.
         allow_private = target_allows_private(self.config)
+        host_pins: dict[str, list[str]] = {}
         for candidate, label in (
             (base_url, "base_url"),
             (self.config.get("discover_url", ""), "discover_url"),
             ((self.config.get("auth") or {}).get("token_url", ""), "auth.token_url"),
         ):
-            err = validate_outbound_url(
+            if not candidate:
+                continue
+            err, ips = resolve_and_validate_outbound_url(
                 candidate, allow_private=allow_private, label=label
             )
             if err:
                 raise ValueError(err)
+            merge_host_pins(host_pins, candidate, ips)
         connect_s = float(self.config.get("connect_timeout_seconds", 25))
         read_s = float(self.config.get("read_timeout_seconds", 90))
         # Default (first arg) used for write/pool; connect and read set explicitly (httpx requires default or all four).
@@ -221,9 +245,15 @@ class RESTConnector:
         default_headers: dict[str, str] = {}
         if not has_ua:
             default_headers["User-Agent"] = get_http_user_agent()
-        self._client = httpx.Client(
-            base_url=base_url, timeout=timeout, headers=default_headers or None
-        )
+        client_kwargs: dict[str, Any] = {
+            "base_url": base_url,
+            "timeout": timeout,
+            "headers": default_headers or None,
+        }
+        verify_opt = resolve_httpx_tls_connect_options(self.config)
+        if verify_opt is not None:
+            client_kwargs["verify"] = verify_opt
+        self._client = build_pinned_httpx_client(host_to_ips=host_pins, **client_kwargs)
         _build_auth(self._client, self.config)
         # Optional extra headers (e.g. API key, negotiated token); may override User-Agent.
         for key, value in cfg_headers.items():
@@ -277,15 +307,28 @@ class RESTConnector:
                         self.config.get("name", "api"), "error", f"Discover failed: {e}"
                     )
                     return
+            target_name = self.config.get("name", "API")
             if not paths:
+                self._save_crypto_controls_audit(target_name, probe_url="/")
                 self.db_manager.save_failure(
-                    self.config.get("name", "api"),
+                    target_name,
                     "error",
                     "No paths or discover_url configured",
                 )
                 return
-            target_name = self.config.get("name", "API")
             self._save_inventory_snapshot(target_name)
+            probe = "/"
+            first = paths[0]
+            first_path = (
+                first
+                if isinstance(first, str)
+                else (first.get("path") or first.get("url") or "")
+            )
+            if first_path:
+                probe = (
+                    first_path if str(first_path).startswith("/") else f"/{first_path}"
+                )
+            self._save_crypto_controls_audit(target_name, probe_url=probe)
             seen_path_key: set[tuple[str, str]] = (
                 set()
             )  # (path_str, key) to avoid duplicate findings per field
@@ -361,6 +404,32 @@ class RESTConnector:
                         _save_if_sensitive(key, sample, raw_scalar)
         finally:
             self.close()
+
+    def _save_crypto_controls_audit(
+        self, target_name: str, *, probe_url: str = "/"
+    ) -> None:
+        """Opt-in strong-crypto validation after REST connect (Order 5 Phase 2.4)."""
+        if not self.config.get("_validate_crypto"):
+            return
+        if not hasattr(self.db_manager, "save_crypto_controls_audit"):
+            return
+        if not self._client:
+            return
+        try:
+            facts = collect_httpx_crypto_facts(
+                self._client, self.config, probe_url=probe_url
+            )
+            result, details = evaluate_strong_crypto(facts)
+            self.db_manager.save_crypto_controls_audit(
+                target_name=target_name,
+                connection_type="rest",
+                strong_crypto_result=result.value,
+                strong_crypto_details=details[:512],
+                inferred_controls_summary=None,
+            )
+        except Exception:
+            # Fail-soft: probe/persist errors never fail the scan.
+            pass
 
     def _save_inventory_snapshot(self, target_name: str) -> None:
         """Persist one REST/API inventory row with API version hints."""

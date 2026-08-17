@@ -88,7 +88,7 @@ Copie `deploy/config.example.yaml`, edite e use volume ou bind mount para `/data
 
 ### Segurança e endurecimento (opcional)
 
-Práticas opcionais para endurecer a implantação. Veja [SECURITY.md](../../SECURITY.md). A imagem já roda como usuário não-root (`appuser`, UID 1000). Para Kubernetes, você pode adicionar securityContext, NetworkPolicy e PDB (exemplos em `deploy/kubernetes/`). **Em produção**, defina `api.require_api_key: true` e use uma chave forte via variável de ambiente (ex.: `api.api_key_from_env: "AUDIT_API_KEY"`) para não armazenar credenciais no config.
+Práticas opcionais para endurecer a implantação. Veja [SECURITY.md](../../SECURITY.md). A imagem já roda como **nonroot** distroless (**UID/GID 65532**); não existe conta `appuser` nessa imagem. Para Kubernetes, use `runAsUser`/`runAsGroup` **65532**, NetworkPolicy e PDB (exemplos em `deploy/kubernetes/`). Em bind mount de `/data` no host, alinhe dono com `chown -R 65532:65532` — volume nomeado (Compose canônico) costuma evitar essa confusão. **Em produção**, defina `api.require_api_key: true` e use uma chave forte via variável de ambiente (ex.: `api.api_key_from_env: "AUDIT_API_KEY"`) para não armazenar credenciais no config.
 
 ## 3. Executar como container único (docker run)
 
@@ -96,6 +96,9 @@ Práticas opcionais para endurecer a implantação. Veja [SECURITY.md](../../SEC
 mkdir -p data
 cp deploy/config.example.yaml data/config.yaml
 # Edite data/config.yaml
+# Bind mount: alinhe o dono ao nonroot da imagem (distroless):
+#   sudo chown -R 65532:65532 data
+# Volume nomeado (Compose canônico) costuma evitar essa etapa.
 
 docker build -t data_boar:latest .
 docker run -d --name data-boar-audit \
@@ -105,7 +108,7 @@ docker run -d --name data-boar-audit \
   data_boar:latest
 ```
 
-Acesso: <http://localhost:8088/> (dashboard), <http://localhost:8088/docs> (API). Parar: `docker stop data-boar-audit && docker rm data-boar-audit`.
+Acesso: <http://localhost:8088/> (dashboard), <http://localhost:8088/docs> (API). O processo roda como **UID 65532**; se o bind mount de `/data` for dono de UID 1000 (ou só root), erros como “config not found” / “unable to open database file” podem ser só permissão. Prefira volume nomeado ou `chown 65532:65532`. Parar: `docker stop data-boar-audit && docker rm data-boar-audit`.
 
 ## 4. Executar com Docker Compose
 
@@ -195,7 +198,7 @@ Em implantações típicas, o estado fica sob **`/data`** (volume ou bind mount)
 
 1. Parar o container, stack Compose, serviço Swarm ou escalar o Deployment para zero.
 1. Restaurar os arquivos no mesmo caminho de montagem (`/data` dentro do container).
-1. Garantir **permissões/dono** compatíveis com o usuário da imagem (**UID 1000** / `appuser`) em bind mounts em Linux.
+1. Garantir **permissões/dono** compatíveis com o usuário da imagem (**UID/GID 65532**, nonroot distroless) em bind mounts em Linux.
 1. Subir de novo; verificar **`GET /health`** e um scan curto ou o dashboard.
 
 #### Notas operacionais
@@ -292,6 +295,6 @@ Licoes operacionais de implantacoes de lab (LAB-NODE-02, LMDE 7) serao documenta
 
 ## Atrás de NAT, load balancer ou proxy reverso
 
-A aplicação funciona corretamente atrás de **NAT**, **load balancer** ou **proxy reverso** (nginx, Traefik, Caddy). Se HTTPS for terminado no proxy, defina **X-Forwarded-Proto: https** nas requisições. Veja [SECURITY.md](../../SECURITY.md) para cabeçalhos de segurança HTTP. Nos exemplos de Docker e Kubernetes, a porta 8088 é exposta via bindings do container/Service, então é seguro manter o bind interno da API em `0.0.0.0` **dentro do container**, enquanto, em estações de trabalho (CLI direto), o padrão recomendado é `127.0.0.1` (loopback), com `api.host: 0.0.0.0` usado apenas quando o ambiente estiver devidamente cercado por políticas de rede, Ingress ou proxy reverso.
+A aplicação funciona corretamente atrás de **NAT**, **load balancer** ou **proxy reverso** (nginx, Traefik, Caddy). Se HTTPS for terminado no proxy, defina **X-Forwarded-Proto: https** nas requisições e configure **`api.trusted_proxy_cidrs`** com o CIDR do peer direto do proxy; sem isso os cabeçalhos forwarded são ignorados e o banner de HTTP em texto claro pode permanecer. Com peer confiável + `https`, **`GET /status`** expõe **`effective_external_transport`** (`tls_termination: trusted_proxy`) enquanto **`dashboard_transport`** no processo permanece HTTP. Veja [SECURITY.md](../../SECURITY.md) e [SECURE_DASHBOARD_AUTH_AND_HTTPS_HOWTO.pt_BR.md](../ops/SECURE_DASHBOARD_AUTH_AND_HTTPS_HOWTO.pt_BR.md) §B.1. Nos exemplos de Docker e Kubernetes, a porta 8088 é exposta via bindings do container/Service, então é seguro manter o bind interno da API em `0.0.0.0` **dentro do container**, enquanto, em estações de trabalho (CLI direto), o padrão recomendado é `127.0.0.1` (loopback), com `api.host: 0.0.0.0` usado apenas quando o ambiente estiver devidamente cercado por políticas de rede, Ingress ou proxy reverso.
 
 **Índice da documentação** (todos os tópicos, ambos os idiomas): [../README.md](../README.md) · [../README.pt_BR.md](../README.pt_BR.md). **Guia técnico:** [../TECH_GUIDE.md](../TECH_GUIDE.md) · [../TECH_GUIDE.pt_BR.md](../TECH_GUIDE.pt_BR.md).

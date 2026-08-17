@@ -1,0 +1,28 @@
+{
+  "sdk_contract_version": "1.0.0",
+  "schema": "databoar.plugin.decision",
+  "session_id": "sess_example",
+  "request_id": "req_001",
+  "idempotency_key": "idem_001",
+  "plugin": {
+    "name": "example-remediator",
+    "version": "0.1.0",
+    "tier": "L2"
+  },
+  "status": "completed",
+  "decided_at": "2026-08-09T18:00:00Z",
+  "host_trust_level_observed": "trusted",
+  "results": [
+    {
+      "finding_id": "f-001",
+      "action": "tokenized",
+      "reason": "matched partner tokenize profile for cpf",
+      "partner_ref": "tok_abc123"
+    },
+    {
+      "finding_id": "f-002",
+      "action": "skipped",
+      "reason": "severity below partner threshold"
+    }
+  ]
+}

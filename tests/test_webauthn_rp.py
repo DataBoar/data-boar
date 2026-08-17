@@ -11,12 +11,15 @@ from fastapi.testclient import TestClient
 
 from core.webauthn_rp.settings import user_id_bytes, webauthn_block
 
+_WA_KEY = {"X-API-Key": "webauthn-test-api-key"}
+
 
 @pytest.fixture
 def webauthn_client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv(
         "DATA_BOAR_WEBAUTHN_TOKEN_SECRET", "unit-test-webauthn-secret-min-16"
     )
+    monkeypatch.delenv("API_HOST", raising=False)
     cfg = tmp_path / "config.yaml"
     db = tmp_path / "audit.db"
     cfg.write_text(
@@ -25,7 +28,9 @@ report:
   output_dir: {tmp_path}
 sqlite_path: {db}
 api:
+  host: 127.0.0.1
   port: 8088
+  api_key: webauthn-test-api-key
   webauthn:
     enabled: true
     rp_id: localhost
@@ -45,6 +50,7 @@ scan:
     routes._config_path = str(cfg)
     routes._config = None
     routes._audit_engine = None
+    # First-passkey bootstrap (#1553) requires API key on registration routes.
     client = TestClient(routes.app)
     yield client, routes
     routes._config_path = prev_path
@@ -87,7 +93,7 @@ scan:
 
 def test_webauthn_registration_options_returns_options_and_state(webauthn_client):
     client, _routes = webauthn_client
-    r = client.post("/auth/webauthn/registration/options")
+    r = client.post("/auth/webauthn/registration/options", headers=_WA_KEY)
     assert r.status_code == 200
     data = r.json()
     assert "options" in data and "state" in data
@@ -125,7 +131,7 @@ def test_webauthn_registration_options_403_when_credential_exists(webauthn_clien
         public_key=b"k" * 64,
         sign_count=0,
     )
-    r = client.post("/auth/webauthn/registration/options")
+    r = client.post("/auth/webauthn/registration/options", headers=_WA_KEY)
     assert r.status_code == 403
     assert "already registered" in r.json()["detail"].lower()
 
@@ -134,6 +140,7 @@ def test_webauthn_registration_verify_rejects_bad_state(webauthn_client):
     client, _routes = webauthn_client
     r = client.post(
         "/auth/webauthn/registration/verify",
+        headers=_WA_KEY,
         json={"state": "not-a-valid-token", "credential": {"rawId": "abc"}},
     )
     assert r.status_code == 400

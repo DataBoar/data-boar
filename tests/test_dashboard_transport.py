@@ -103,8 +103,70 @@ def test_snapshot_after_configure():
         assert snap["tls_active"] is False
         assert snap["insecure_http_explicit_opt_in"] is True
         assert snap["show_insecure_banner"] is True
+        assert "tls_posture" not in snap
     finally:
         os.environ.pop("DATA_BOAR_DASHBOARD_TRANSPORT", None)
         os.environ.pop("DATA_BOAR_DASHBOARD_INSECURE_OPT_IN", None)
         os.environ.pop("DATA_BOAR_HTTPS_CERT_FILE", None)
         os.environ.pop("DATA_BOAR_HTTPS_KEY_FILE", None)
+
+
+def test_snapshot_includes_tls_posture_when_set():
+    from core.tls_posture import (
+        ENV_TLS_POSTURE,
+        clear_tls_posture_snapshot,
+        set_tls_posture_snapshot,
+    )
+
+    configure_dashboard_transport(
+        mode="https",
+        insecure_explicit_opt_in=False,
+        cert_path="/tmp/demo-cert.pem",
+        key_path="/tmp/demo-key.pem",
+    )
+    set_tls_posture_snapshot(
+        {
+            "checked": True,
+            "ok": True,
+            "trust_reasons": [],
+            "summary": "TLS posture OK",
+        }
+    )
+    try:
+        snap = get_dashboard_transport_snapshot()
+        assert snap["mode"] == "https"
+        assert snap["tls_posture"]["ok"] is True
+        assert snap["tls_posture"]["summary"] == "TLS posture OK"
+        assert ENV_TLS_POSTURE in os.environ
+    finally:
+        clear_tls_posture_snapshot()
+        os.environ.pop("DATA_BOAR_DASHBOARD_TRANSPORT", None)
+        os.environ.pop("DATA_BOAR_DASHBOARD_INSECURE_OPT_IN", None)
+        os.environ.pop("DATA_BOAR_HTTPS_CERT_FILE", None)
+        os.environ.pop("DATA_BOAR_HTTPS_KEY_FILE", None)
+        os.environ.pop(ENV_TLS_POSTURE, None)
+
+
+def test_snapshot_omits_tls_posture_on_http_even_if_env_set():
+    from core.tls_posture import clear_tls_posture_snapshot, set_tls_posture_snapshot
+
+    configure_dashboard_transport(
+        mode="http",
+        insecure_explicit_opt_in=True,
+    )
+    set_tls_posture_snapshot(
+        {
+            "checked": True,
+            "ok": False,
+            "trust_reasons": ["tls_cipher_baseline_weak"],
+            "summary": "stale",
+        }
+    )
+    try:
+        snap = get_dashboard_transport_snapshot()
+        assert snap["mode"] == "http"
+        assert "tls_posture" not in snap
+    finally:
+        clear_tls_posture_snapshot()
+        os.environ.pop("DATA_BOAR_DASHBOARD_TRANSPORT", None)
+        os.environ.pop("DATA_BOAR_DASHBOARD_INSECURE_OPT_IN", None)

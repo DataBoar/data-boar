@@ -86,9 +86,17 @@ try:
     import connectors.dataverse_connector  # noqa: F401
 except ImportError:  # noqa: BLE001
     pass  # optional connector not installed
+try:
+    import connectors.hubspot_connector  # noqa: F401
+except ImportError:  # noqa: BLE001
+    pass  # optional connector not installed
 
 from core.connector_registry import connector_for_target
-from core.crypto_audit import StrongCryptoSignal, summarize_crypto_from_connection_info
+from core.crypto_audit import (
+    StrongCryptoSignal,
+    summarize_crypto_from_connection_info,
+    validate_crypto_enabled,
+)
 from core.database import LocalDBManager
 from core.scan_progress import scan_progress_from_config
 from core.sampling import SamplingPolicy
@@ -479,10 +487,12 @@ class AuditEngine:
         t = target.get("type")
         fs_config = self.config.get("file_scan", {})
         # Inject file_scan into target so connectors (filesystem, shares) see scan_compressed, etc.
+        # _validate_crypto: opt-in Phase 2 strong-crypto probe inside connectors.
         target_with_fs = {
             **target,
             "file_scan": fs_config,
             "_scan_progress": self._scan_progress,
+            "_validate_crypto": validate_crypto_enabled(self.config),
         }
         scan_sqlite_as_db = fs_config.get("scan_sqlite_as_db", True)
         sample_limit = fs_config.get("sample_limit", 5)
@@ -527,7 +537,7 @@ class AuditEngine:
                     file_sample_max_chars=file_sample_max_chars,
                     file_passwords=file_passwords,
                 )
-            elif t in ("powerbi", "dataverse", "powerapps"):
+            elif t in ("powerbi", "dataverse", "powerapps", "hubspot"):
                 connector = connector_class(
                     target_with_fs,
                     self.scanner,
@@ -549,21 +559,22 @@ class AuditEngine:
                     detection_config=self.config.get("detection"),
                     **extra_kw,
                 )
-                # Phase 1: inspect connection info to collect coarse crypto/transport hints.
-                name = (target.get("name") or "").strip() or "database"
-                driver = (target.get("driver") or "").strip()
-                dsn = (target.get("dsn") or "").strip()
-                sslmode = (target.get("sslmode") or "").strip()
-                conn_info = {
-                    "type": "database",
-                    "name": name,
-                    "driver": driver,
-                    "dsn": dsn,
-                    "sslmode": sslmode,
-                }
-                signals = summarize_crypto_from_connection_info(conn_info)
-                if signals:
-                    self._crypto_signals.append((name, signals))
+                # Opt-in only (scan.validate_crypto): coarse crypto/transport hints.
+                if validate_crypto_enabled(self.config):
+                    name = (target.get("name") or "").strip() or "database"
+                    driver = (target.get("driver") or "").strip()
+                    dsn = (target.get("dsn") or "").strip()
+                    sslmode = (target.get("sslmode") or "").strip()
+                    conn_info = {
+                        "type": "database",
+                        "name": name,
+                        "driver": driver,
+                        "dsn": dsn,
+                        "sslmode": sslmode,
+                    }
+                    signals = summarize_crypto_from_connection_info(conn_info)
+                    if signals:
+                        self._crypto_signals.append((name, signals))
             connector.run()
         except Exception as e:
             self.db_manager.save_failure(

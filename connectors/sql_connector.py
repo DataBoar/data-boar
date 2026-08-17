@@ -23,6 +23,11 @@ from connectors.sample_value_dedup import (
     resolve_fetch_row_budget,
 )
 from core.connector_registry import register
+from core.crypto_audit import (
+    collect_sql_crypto_facts,
+    evaluate_strong_crypto,
+    infer_controls_from_identifiers,
+)
 from core.sampling import SamplingPolicy
 from core.suggested_review import (
     SUGGESTED_REVIEW_PATTERN,
@@ -245,6 +250,315 @@ def _build_url(target: dict[str, Any]) -> str:
     return f"{drivername}://{user}:{password}@{host}:{port}/{database}"
 
 
+# Per-dialect allowlist of SQLAlchemy URL query keys that cannot redirect the
+# TCP/unix peer (#1556). Anything else is rejected — blocklists of dangerous
+# keys (host, hostaddr, odbc_connect, DSN, …) do not scale across dialects.
+# Dialects absent from this map: any non-empty query string is rejected.
+_SQL_SAFE_QUERY_KEYS_BY_DIALECT: dict[str, frozenset[str]] = {
+    "postgresql": frozenset(
+        {
+            "sslmode",
+            "sslrootcert",
+            "sslcert",
+            "sslkey",
+            "sslcrl",
+            "connect_timeout",
+            "application_name",
+            "client_encoding",
+            "target_session_attrs",
+            "gssencmode",
+            "channel_binding",
+        }
+    ),
+    "mysql": frozenset(
+        {
+            "charset",
+            "charset_connector",
+            "connect_timeout",
+            "compress",
+            "ssl_ca",
+            "ssl_cert",
+            "ssl_key",
+            "ssl_disabled",
+            "ssl_verify_cert",
+            "ssl_verify_identity",
+        }
+    ),
+    "mssql": frozenset(
+        {
+            "driver",
+            "encrypt",
+            "trustservercertificate",
+            "timeout",
+            "login timeout",
+            "login_timeout",
+            # MS ODBC 18+: TLS name when SERVER= is a pin IP (#1586 slice E).
+            "hostnameincertificate",
+        }
+    ),
+    "oracle": frozenset(
+        {
+            # Produced by _build_url for service_name databases.
+            "service_name",
+            "encoding",
+            "nencoding",
+        }
+    ),
+}
+
+
+def _sql_url_dialect_family(drivername: str | None) -> str:
+    base = (drivername or "").split("+")[0].strip().lower()
+    if base == "mariadb":
+        return "mysql"
+    return base
+
+
+def _guard_sql_url_query_params(parsed: Any) -> None:
+    """Reject peer-redirecting or unknown URL query keys (#1556).
+
+    Strategy: allowlist per vetted dialect family. Unknown dialects may not
+    carry a query string at all. Keys such as ``host``, ``hostaddr``,
+    ``odbc_connect``, ``DSN``, and unix-socket selectors are never allowlisted.
+    """
+    query = getattr(parsed, "query", None) or {}
+    if not query:
+        return
+    family = _sql_url_dialect_family(getattr(parsed, "drivername", None))
+    allowed = _SQL_SAFE_QUERY_KEYS_BY_DIALECT.get(family)
+    if allowed is None:
+        raise ValueError(
+            f"host rejected: SQL URL query string is not allowed for dialect "
+            f"'{family or 'unknown'}' (unvetted — refuse peer overrides). (#1556)"
+        )
+    allowed_l = {k.lower() for k in allowed}
+    for key in query:
+        key_l = str(key).lower()
+        if key_l not in allowed_l:
+            raise ValueError(
+                f"host rejected: SQL URL query parameter '{key}' is not in the "
+                f"allowlist for dialect '{family}' (peer-override / unknown keys "
+                f"are refuse-by-default). (#1556)"
+            )
+
+
+def _guard_sql_connection_url(url: str, target: dict[str, Any]) -> list[str]:
+    """Reject non-global SQL hosts unless allow_private_networks (#1556).
+
+    Runs on the *final* URL from ``_build_url`` so both discrete host/port fields
+    and a full ``url`` override are covered. Query strings use a per-dialect
+    **allowlist** (unknown key or unvetted dialect → reject) so peer overrides
+    such as ``?host=``, ``?hostaddr=``, ``?odbc_connect=``, or ``?DSN=`` cannot
+    bypass the authority check (#1556 / Bugbot).
+
+    Returns the guard-validated pin IP strings (preferred order) for TCP pinning
+    (#1586). Empty list for sqlite / empty URL (no network peer).
+    """
+    if not url or url.startswith("sqlite:"):
+        return []
+    from sqlalchemy.engine.url import make_url
+
+    from .url_guard import resolve_and_validate_outbound_url, target_allows_private
+
+    allow_private = target_allows_private(target)
+    parsed = make_url(url)
+    _guard_sql_url_query_params(parsed)
+    host = parsed.host
+    if not host:
+        raise ValueError("host rejected: no host found in SQL connection URL. (#1556)")
+    port = parsed.port
+    candidate = f"{host}:{port}" if port is not None else host
+    err, ips = resolve_and_validate_outbound_url(
+        candidate,
+        allow_private=allow_private,
+        label="host",
+    )
+    if err:
+        raise ValueError(err)
+    return [str(ip) for ip in ips]
+
+
+def _apply_postgres_hostaddr_pin(
+    connect_args: dict[str, Any],
+    pin_ips: list[str],
+) -> dict[str, Any]:
+    """Inject libpq ``hostaddr`` from guard pins (#1586 slice A).
+
+    Keeps SQLAlchemy URL ``host`` as the original hostname for TLS/SCRAM
+    identity. Never put ``hostaddr`` in the URL query (#1556 allowlist).
+    """
+    if not pin_ips:
+        return connect_args
+    from .tcp_pin import format_libpq_hostaddr, primary_pin_str
+
+    out = dict(connect_args)
+    out["hostaddr"] = format_libpq_hostaddr(primary_pin_str(pin_ips))
+    return out
+
+
+def _mysql_family_python_dns_pin_supported(drivername: str) -> bool:
+    """True when the DBAPI resolves TCP peers via Python ``getaddrinfo`` (#1586).
+
+    ``HostResolutionPin`` only intercepts Python ``socket.getaddrinfo``. Drivers
+    such as ``mariadb+mariadbconnector``, ``mysql+mysqldb``, and
+    ``mysql+mysqlconnector`` resolve in native code — installing the pin would
+    be a no-op and falsely suggest peers are pinned for the engine lifetime.
+    """
+    if not drivername or "+" not in drivername:
+        return False
+    return drivername.rsplit("+", 1)[-1].lower() == "pymysql"
+
+
+def _install_mysql_host_resolution_pin(
+    url: str,
+    pin_ips: list[str],
+    *,
+    drivername: str,
+) -> Any:
+    """Pin pymysql DNS for *url* hostname to *pin_ips* (#1586 MySQL slice).
+
+    pymysql uses ``socket.create_connection((host, port))`` and TLS
+    ``server_hostname=self.host``, so we keep the URL hostname and restrict
+    ``getaddrinfo`` via :class:`~connectors.tcp_pin.HostResolutionPin`.
+
+    Fail-closed for MySQL/MariaDB drivers that resolve outside Python (Security
+    Agent MEDIUM on #1597): raise rather than install a no-op pin. Literal IP
+    hosts need no pin (no DNS rebinding window).
+
+    Returns the pin object (caller must ``release`` on close) or ``None`` when
+    there is nothing to pin.
+    """
+    from sqlalchemy.engine.url import make_url
+
+    from .tcp_pin import HostResolutionPin, is_ip_literal
+
+    host = make_url(url).host
+    if not host:
+        return None
+    if is_ip_literal(str(host)):
+        return None
+    if not _mysql_family_python_dns_pin_supported(drivername):
+        raise ValueError(
+            "TCP peer pin (#1586) requires a Python-socket MySQL/MariaDB driver "
+            f"(…+pymysql); got {drivername!r}. Use mysql+pymysql or "
+            "mariadb+pymysql, or a literal IP host (no DNS rebinding). "
+            "Native connectors (mariadbconnector, mysqldb, mysqlconnector) "
+            "resolve outside Python getaddrinfo — same class as Oracle thin."
+        )
+    if not pin_ips:
+        return None
+    return HostResolutionPin(str(host), pin_ips).install()
+
+
+# FreeTDS / ODBC resolve outside Python getaddrinfo — pin by rewriting URL host
+# to a guard-validated IP (#1586 slice E). HostResolutionPin would be a no-op.
+_MSSQL_URL_IP_PIN_DBAPIS = frozenset({"pymssql", "pyodbc"})
+
+
+def _mssql_dbapi_name(drivername: str) -> str:
+    """Return the SQLAlchemy DBAPI suffix for an mssql drivername."""
+    raw = (drivername or "").strip().lower()
+    if "+" in raw:
+        return raw.rsplit("+", 1)[-1]
+    return "pymssql"
+
+
+def _apply_mssql_tcp_peer_pin(url: str, pin_ips: list[str]) -> str:
+    """Rewrite MSSQL URL host to a guard-pinned IP (#1586 slice E).
+
+    ``pymssql`` (FreeTDS ``dbopen``) and ``pyodbc`` resolve TCP peers in native
+    code, so :class:`~connectors.tcp_pin.HostResolutionPin` cannot close the
+    validate→connect rebinding window. Putting the validated IP in the URL
+    authority forces the dial peer to the guard-approved address.
+
+    For ``mssql+pyodbc``, inject ``HostNameInCertificate`` with the original
+    hostname when missing so MS ODBC 18+ can verify TLS against the DNS name
+    while connecting to the pin IP. pymssql/FreeTDS has no equivalent knob;
+    encrypting to an IP may need an IP SAN or ``TrustServerCertificate``.
+
+    Literal IP hosts are unchanged. Unsupported mssql DBAPIs fail-closed.
+    """
+    from sqlalchemy.engine.url import make_url
+
+    from .tcp_pin import is_ip_literal, primary_pin_str
+
+    if not pin_ips:
+        return url
+    u = make_url(url)
+    dbapi = _mssql_dbapi_name(u.drivername or "")
+    if dbapi not in _MSSQL_URL_IP_PIN_DBAPIS:
+        raise ValueError(
+            "TCP peer pin (#1586) for mssql requires pymssql or pyodbc "
+            f"(got {u.drivername!r}). Use mssql+pymssql, mssql+pyodbc, or a "
+            "literal IP host (no DNS rebinding)."
+        )
+    host = u.host
+    if not host:
+        return url
+    host_s = str(host)
+    if is_ip_literal(host_s):
+        return url
+    pin = primary_pin_str(pin_ips)
+    new_u = u.set(host=pin)
+    if dbapi == "pyodbc" and not is_ip_literal(host_s):
+        q = dict(new_u.query)
+        if "hostnameincertificate" not in {str(k).lower() for k in q}:
+            new_u = new_u.update_query_dict({"HostNameInCertificate": host_s})
+    return new_u.render_as_string(hide_password=False)
+
+
+# oracledb Thin resolves outside Python getaddrinfo — pin by rewriting URL host
+# (#1586 slice F). HostResolutionPin would be a no-op (same class as FreeTDS).
+_ORACLE_URL_IP_PIN_DBAPIS = frozenset({"oracledb"})
+
+
+def _oracle_dbapi_name(drivername: str) -> str:
+    """Return the SQLAlchemy DBAPI suffix for an oracle drivername."""
+    raw = (drivername or "").strip().lower()
+    if "+" in raw:
+        return raw.rsplit("+", 1)[-1]
+    return "oracledb"
+
+
+def _apply_oracle_tcp_peer_pin(url: str, pin_ips: list[str]) -> str:
+    """Rewrite Oracle URL host to a guard-pinned IP (#1586 slice F).
+
+    ``oracle+oracledb`` Thin dials TCP in native code, so
+    :class:`~connectors.tcp_pin.HostResolutionPin` cannot close the
+    validate→connect rebinding window. Putting the validated IP in the URL
+    authority forces the dial peer to the guard-approved address.
+
+    TCPS / DN match then uses the IP (or operator-supplied
+    ``ssl_server_cert_dn`` via ``connect_args``). Hostname certs without an IP
+    SAN may need that DN override — same trade-off as pymssql encrypt-to-IP.
+
+    Literal IP hosts are unchanged. ``cx_oracle`` and other DBAPIs fail-closed.
+    """
+    from sqlalchemy.engine.url import make_url
+
+    from .tcp_pin import is_ip_literal, primary_pin_str
+
+    if not pin_ips:
+        return url
+    u = make_url(url)
+    dbapi = _oracle_dbapi_name(u.drivername or "")
+    if dbapi not in _ORACLE_URL_IP_PIN_DBAPIS:
+        raise ValueError(
+            "TCP peer pin (#1586) for oracle requires oracledb "
+            f"(got {u.drivername!r}). Use oracle+oracledb or a literal IP host "
+            "(no DNS rebinding). cx_Oracle / Thick Client resolve outside "
+            "Python getaddrinfo — same class as Oracle thin before this pin."
+        )
+    host = u.host
+    if not host:
+        return url
+    host_s = str(host)
+    if is_ip_literal(host_s):
+        return url
+    pin = primary_pin_str(pin_ips)
+    return u.set(host=pin).render_as_string(hide_password=False)
+
+
 def _connect_args_from_target(target: dict[str, Any]) -> dict[str, Any]:
     """
     Build SQLAlchemy ``connect_args`` from target timeouts (config loader merges global + per-target).
@@ -258,12 +572,17 @@ def _connect_args_from_target(target: dict[str, Any]) -> dict[str, Any]:
 
     Driver → connect_args mapping::
 
-        postgresql[+…]       connect_timeout, options=-c statement_timeout=… (ms)
-        mysql[+…] / mariadb  connect_timeout
+        postgresql[+…]       connect_timeout, options=-c statement_timeout=… (ms);
+                             ``hostaddr`` is added separately from guard pins (#1586)
+        mysql+pymysql /       connect_timeout; DNS pinned via HostResolutionPin (#1586)
+        mariadb+pymysql       only — other mysql/mariadb drivers fail-closed on hostname
         sqlite               timeout  (lock wait; read_timeout_seconds)
-        mssql+pymssql        login_timeout, timeout  (#1297; bare ``mssql`` maps here)
-        mssql+pyodbc         timeout only  (pyodbc.connect accepts ``timeout``; not login_timeout)
-        oracle+oracledb      tcp_connect_timeout  (oracledb; not connect_timeout)
+        mssql+pymssql        login_timeout, timeout  (#1297; bare ``mssql`` maps here);
+                             TCP pin via URL host→guard IP (#1586 slice E; FreeTDS)
+        mssql+pyodbc         timeout only  (pyodbc.connect accepts ``timeout``; not login_timeout);
+                             TCP pin via URL host→IP + HostNameInCertificate (#1586)
+        oracle+oracledb      tcp_connect_timeout  (oracledb; not connect_timeout);
+                             TCP pin via URL host→guard IP (#1586 slice F; Thin)
         other                connect_timeout  (best-effort)
     """
     connect_s = int(target.get("connect_timeout_seconds", 25))
@@ -339,6 +658,7 @@ class SQLConnector:
         self.engine = None
         # Compatibility shim: legacy tests/helpers may still patch this attribute.
         self._connection = None
+        self._dns_pin = None
         self._sql_sampling_audit_key: str | None = None
         self._table_row_cache: dict[tuple[str, str], int | None] = {}
         self._sample_statement_timeout_ms = _resolve_sample_statement_timeout_ms(
@@ -352,8 +672,29 @@ class SQLConnector:
     def connect(self) -> None:
         ensure_sql_driver_available(self.config.get("driver"))
         url = _build_url(self.config)
+        pin_ips = _guard_sql_connection_url(url, self.config)
         connect_args = _connect_args_from_target(self.config)
-        self.engine = create_engine(url, pool_pre_ping=True, connect_args=connect_args)
+        drivername, base = _resolve_driver(self.config.get("driver"))
+        if base == "postgresql":
+            connect_args = _apply_postgres_hostaddr_pin(connect_args, pin_ips)
+        dns_pin = None
+        if base in ("mysql", "mariadb"):
+            dns_pin = _install_mysql_host_resolution_pin(
+                url, pin_ips, drivername=drivername
+            )
+        if base == "mssql":
+            url = _apply_mssql_tcp_peer_pin(url, pin_ips)
+        if base == "oracle":
+            url = _apply_oracle_tcp_peer_pin(url, pin_ips)
+        try:
+            self.engine = create_engine(
+                url, pool_pre_ping=True, connect_args=connect_args
+            )
+        except Exception:
+            if dns_pin is not None:
+                dns_pin.release()
+            raise
+        self._dns_pin = dns_pin
         self._table_row_cache = {}
 
     def close(self) -> None:
@@ -366,6 +707,11 @@ class SQLConnector:
         if self.engine:
             self.engine.dispose()
             self.engine = None
+        # Release after dispose so pool reconnects during teardown still see pins.
+        pin = getattr(self, "_dns_pin", None)
+        if pin is not None:
+            pin.release()
+            self._dns_pin = None
 
     def discover(self) -> list[dict[str, Any]]:
         """Return list of {schema, table, columns: [{name, type}]}. For Oracle, skips system schemas."""
@@ -629,6 +975,51 @@ class SQLConnector:
             # Never fail a scan because inventory persistence failed.
             pass
 
+    def _save_crypto_controls_audit(self, target_name: str) -> None:
+        """
+        Opt-in strong-crypto validation after connect (Order 5 Phase 2a).
+
+        Fail-soft: probe/persist errors never fail the scan. No PEMs or DSNs in details.
+        """
+        if not self.config.get("_validate_crypto"):
+            return
+        if not hasattr(self.db_manager, "save_crypto_controls_audit"):
+            return
+        if not self.engine:
+            return
+        try:
+            facts = collect_sql_crypto_facts(self.engine, self.config)
+            result, details = evaluate_strong_crypto(facts)
+            self.db_manager.save_crypto_controls_audit(
+                target_name=target_name,
+                connection_type="database",
+                strong_crypto_result=result.value,
+                strong_crypto_details=details[:512],
+                inferred_controls_summary=None,
+            )
+        except Exception:
+            # Fail-soft: crypto probe/persist errors never fail the scan.
+            pass
+
+    def _save_inferred_controls_summary(
+        self, target_name: str, identifier_names: list[str]
+    ) -> None:
+        """Phase 3: attach count-by-category inference to the crypto audit row."""
+        if not self.config.get("_validate_crypto"):
+            return
+        if not hasattr(self.db_manager, "update_crypto_controls_inferred_summary"):
+            return
+        try:
+            summary = infer_controls_from_identifiers(identifier_names)
+            if not summary:
+                return
+            self.db_manager.update_crypto_controls_inferred_summary(
+                target_name, summary
+            )
+        except Exception:
+            # Fail-soft: inference never fails the scan.
+            pass
+
     def run(self) -> None:
         """Connect, discover, sample each column, detect, save_finding; on error save_failure."""
         from utils.audit_log_display import audit_log_target_label
@@ -641,12 +1032,14 @@ class SQLConnector:
         except Exception as e:
             self.db_manager.save_failure(target_name, "unreachable", str(e))
             return
+        identifier_names: list[str] = []
         try:
             from utils.logger import log_connection
 
             log_connection(audit_name, "database", server_ip or "local")
             engine_name = self.engine.dialect.name if self.engine else "sql"
             self._save_inventory_snapshot(target_name, engine_name)
+            self._save_crypto_controls_audit(target_name)
             discovered = self.discover()
             progress = self._scan_progress
             if progress is not None and getattr(progress, "enabled", False):
@@ -662,19 +1055,24 @@ class SQLConnector:
                         target_name=target_name,
                     )
                 for col in item["columns"]:
+                    cname = col["name"]
+                    if cname:
+                        identifier_names.append(str(cname))
                     self._process_one_finding(
                         target_name,
                         server_ip,
                         engine_name,
                         schema,
                         table,
-                        col["name"],
+                        cname,
                         col["type"],
                         audit_log_name=audit_name,
                     )
         except Exception as e:
             self.db_manager.save_failure(target_name, "error", str(e))
         finally:
+            # Best-effort even when mid-loop sampling/detection raises.
+            self._save_inferred_controls_summary(target_name, identifier_names)
             self.close()
 
 

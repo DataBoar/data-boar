@@ -145,11 +145,29 @@ def test_bound_license_rejected_on_other_machine(keypair, tmp_path):
     assert g.allows_scan() is False
 
 
+def _maestro_handler_licensing_matrix() -> Path | None:
+    """DataBoar/maestro handlers/Handle-LicensingMatrix.ps1 (spinout #8)."""
+    env = (os.environ.get("MAESTRO_ROOT") or "").strip()
+    candidates: list[Path] = []
+    if env:
+        candidates.append(Path(env))
+    parent = REPO_ROOT.parent
+    candidates.extend([parent / "maestro", parent / "Maestro"])
+    for root in candidates:
+        path = root / "handlers" / "Handle-LicensingMatrix.ps1"
+        if path.is_file():
+            return path
+    return None
+
+
 def test_maestro_handler_issues_60d_machine_bound():
     """Handle-LicensingMatrix.ps1 passes --days 60 and --dbmfp auto (#719)."""
-    src = (REPO_ROOT / "scripts" / "maestro" / "Handle-LicensingMatrix.ps1").read_text(
-        encoding="utf-8"
-    )
+    path = _maestro_handler_licensing_matrix()
+    if path is None:
+        pytest.skip(
+            "DataBoar/maestro clone not found (set MAESTRO_ROOT or sibling ../maestro)"
+        )
+    src = path.read_text(encoding="utf-8")
     assert "--days 60" in src
     assert "--dbmfp auto" in src
 

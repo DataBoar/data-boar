@@ -54,6 +54,13 @@
     </label>
     <p class="muted" style="margin: 0.25rem 0 0 0; font-size: 0.85rem;">{{ t('dashboard.jurisdiction_hint') }}</p>
   </div>
+  <div class="form-group" style="margin-bottom: 0.75rem;">
+    <label class="checkbox-label" style="display: flex; align-items: flex-start; gap: 0.5rem; cursor: pointer;">
+      <input type="checkbox" id="scan-validate-crypto" name="validate_crypto" value="1" style="margin-top: 0.25rem;">
+      <span>{{ t('dashboard.validate_crypto') }}</span>
+    </label>
+    <p class="muted" style="margin: 0.25rem 0 0 0; font-size: 0.85rem;">{{ t('dashboard.validate_crypto_hint') }}</p>
+  </div>
   <div class="actions">
     <button type="button" class="btn btn-primary" id="btn-start-scan" {% if status.running %}disabled{% endif %}>{{ t('dashboard.start_scan') }}</button>
     <span id="scan-feedback" class="feedback"></span>

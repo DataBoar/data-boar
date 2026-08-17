@@ -41,6 +41,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
+from typing import Any
 
 import yaml
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Query, Request
@@ -57,7 +58,11 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
 from core.about import get_about_info
-from core.dashboard_transport import get_dashboard_transport_snapshot
+from core.canonical_trust import get_canonical_trust_snapshot
+from core.dashboard_transport import (
+    effective_dashboard_transport,
+    get_dashboard_transport_snapshot,
+)
 from core.enterprise_surface_posture import get_enterprise_surface_posture
 from core.forwarded_headers import forwarded_proto_posture
 from core.host_resolution import effective_api_key_configured
@@ -130,16 +135,25 @@ def _about_info() -> dict:
     return get_about_info()
 
 
-def _template_context(base: dict) -> dict:
-    """Merge dashboard transport snapshot into Jinja context (banner, /status parity)."""
+def _template_context(base: dict, request: Request | None = None) -> dict:
+    """Merge dashboard transport into Jinja context (banner; request-scoped edge TLS)."""
     snap = get_dashboard_transport_snapshot()
     esp = get_enterprise_surface_posture(_get_config())
     ctx = dict(base)
     ctx["dashboard_transport"] = snap
     ctx["enterprise_surface"] = esp
-    ctx["show_insecure_banner"] = bool(snap.get("show_insecure_banner"))
+    show_insecure = bool(snap.get("show_insecure_banner"))
+    show_proxy_info = False
+    if request is not None:
+        eff = effective_dashboard_transport(request, _get_config())
+        show_insecure = bool(eff.get("show_insecure_banner"))
+        show_proxy_info = bool(eff.get("show_trusted_proxy_tls_info"))
+        ctx["effective_external_transport"] = eff.get("effective_external_transport")
+    ctx["show_insecure_banner"] = show_insecure
+    ctx["show_trusted_proxy_tls_info"] = show_proxy_info
     reasons = list(esp.get("reasons") or [])
     only_plaintext = reasons == ["plaintext_http_explicit"]
+    # Keep governance/trust banners independent of plaintext-banner suppression (#1515).
     ctx["show_trust_governance_banner"] = (
         esp.get("severity") in ("caution", "elevated") and not only_plaintext
     )
@@ -257,7 +271,7 @@ def _i18n_template_context(
     default = loc.get("default_locale") or "en"
     catalogs: dict = {}
     t_call = make_t(locale_tag, supported, default, catalogs)
-    ctx = _template_context(base)
+    ctx = _template_context(base, request)
     ctx["t"] = t_call
     ctx["locale_slug"] = locale_slug
     ctx["locale_tag"] = locale_tag
@@ -517,10 +531,14 @@ class DatabaseConfig(BaseModel):
     password: str
     database: str
     driver: str = "postgresql+psycopg2"
+    allow_private_networks: bool = False
     tenant: str | None = None  # optional customer/tenant name for this scan
     technician: str | None = None  # optional technician/operator name for this scan
     jurisdiction_hint: bool | None = (
         None  # when True, heuristic jurisdiction Report info rows for this session
+    )
+    validate_crypto: bool | None = (
+        None  # when True, enable scan.validate_crypto for this run only
     )
 
 
@@ -537,6 +555,9 @@ class ScanStartBody(BaseModel):
     )
     jurisdiction_hint: bool | None = (
         None  # when True, opt-in to heuristic jurisdiction notes on Report info for this session
+    )
+    validate_crypto: bool | None = (
+        None  # when True, set scan.validate_crypto for this run only (strong-crypto / controls wiring)
     )
     scan_for_stego: bool | None = (
         None  # when True, merge into file_scan for this run only (entropy hints on rich media)
@@ -769,6 +790,14 @@ app = FastAPI(
     version=get_about_info()["version"],
     lifespan=_lifespan,
 )
+
+# OpenTelemetry: opt-in via DATA_BOAR_OTEL_ENABLED (see core/otel_setup.py / #1500).
+try:
+    from core.otel_setup import maybe_setup_otel
+
+    maybe_setup_otel(app)
+except Exception:  # noqa: BLE001 — never block API import
+    pass
 
 
 def _list_sessions_cached() -> list[dict]:
@@ -1270,17 +1299,25 @@ app.mount("/static", StaticFiles(directory=str(_api_dir / "static")), name="stat
 
 
 @app.get("/health")
-async def health():
+async def health(request: Request):
     """
     Liveness/readiness probe for Docker, Swarm and Kubernetes.
 
     Semantics: **always unauthenticated** (no API key). Returns minimal JSON for
     orchestrators; see SECURITY.md / USAGE.md for difference vs protected routes.
     """
+    cfg = _get_config()
+    canonical = get_canonical_trust_snapshot(cfg)
+    eff = effective_dashboard_transport(request, cfg)
     body: dict = {"status": "ok"}
     body["license"] = _license_public_dict()
+    body["trust_state"] = canonical["trust_state"]
+    body["trust_reasons"] = canonical["trust_reasons"]
+    body["output_confidence"] = canonical["output_confidence"]
     body["dashboard_transport"] = get_dashboard_transport_snapshot()
-    body["enterprise_surface"] = get_enterprise_surface_posture(_get_config())
+    body["forwarded_headers"] = eff["forwarded"]
+    body["effective_external_transport"] = eff["effective_external_transport"]
+    body["enterprise_surface"] = get_enterprise_surface_posture(cfg)
     body["integrity"] = _integrity_snapshot()
     return body
 
@@ -1334,7 +1371,7 @@ _SESSION_RESPONSES = {
 async def start_scan(
     background_tasks: BackgroundTasks, body: ScanStartBody | None = None
 ):
-    """Start audit in background. Optional body: tenant, technician, scan_compressed, content_type_check, scan_for_stego, scheduled, jurisdiction_hint. Returns session_id."""
+    """Start audit in background. Optional body: tenant, technician, scan_compressed, content_type_check, scan_for_stego, scheduled, jurisdiction_hint, validate_crypto. Returns session_id."""
     _raise_if_license_blocks_scan()
     if body and getattr(body, "scheduled", None) is True:
         _raise_if_feature_blocked("scheduled_scans")
@@ -1350,6 +1387,7 @@ async def start_scan(
     tenant = sanitize_tenant_technician((body.tenant if body else None) or None)
     technician = sanitize_tenant_technician((body.technician if body else None) or None)
     jh = bool(body and body.jurisdiction_hint)
+    vc = bool(body and body.validate_crypto)
     engine.db_manager.set_current_session_id(session_id)
     engine.db_manager.create_session_record(
         session_id,
@@ -1363,6 +1401,8 @@ async def start_scan(
     prev_scan_compressed = fs.get("scan_compressed")
     prev_use_content_type = fs.get("use_content_type")
     prev_scan_for_stego = fs.get("scan_for_stego")
+    _scan_prev = engine.config.get("scan") or {}
+    prev_validate_crypto = _scan_prev.get("validate_crypto")
     _rep_prev = engine.config.get("report") or {}
     _jh_prev = _rep_prev.get("jurisdiction_hints")
     prev_jurisdiction_hints_enabled = (
@@ -1378,6 +1418,9 @@ async def start_scan(
     if jh:
         engine.config.setdefault("report", {}).setdefault("jurisdiction_hints", {})
         engine.config["report"]["jurisdiction_hints"]["enabled"] = True
+    if vc:
+        # Body overrides scan.validate_crypto for this run only.
+        engine.config.setdefault("scan", {})["validate_crypto"] = True
 
     def run_targets():
         try:
@@ -1402,6 +1445,13 @@ async def start_scan(
                 engine.config.setdefault("report", {}).setdefault(
                     "jurisdiction_hints", {}
                 )["enabled"] = prev_jurisdiction_hints_enabled
+            if vc:
+                if prev_validate_crypto is None:
+                    engine.config.setdefault("scan", {}).pop("validate_crypto", None)
+                else:
+                    engine.config.setdefault("scan", {})["validate_crypto"] = (
+                        prev_validate_crypto
+                    )
         from utils.notify import notify_scan_complete_background
 
         notify_scan_complete_background(engine.config, engine.db_manager, session_id)
@@ -1444,12 +1494,18 @@ async def get_status(request: Request):
     except Exception:  # noqa: BLE001
         pf_status = {}
 
+    canonical = get_canonical_trust_snapshot(cfg)
+    eff = effective_dashboard_transport(request, cfg)
     return {
         "running": engine.is_running,
         "current_session_id": engine.db_manager.current_session_id,
         "findings_count": engine.get_current_findings_count(),
         "audit_log": engine.get_scan_audit_log(),
-        "forwarded_headers": forwarded_proto_posture(request, cfg),
+        "forwarded_headers": eff["forwarded"],
+        "effective_external_transport": eff["effective_external_transport"],
+        "trust_state": canonical["trust_state"],
+        "trust_reasons": canonical["trust_reasons"],
+        "output_confidence": canonical["output_confidence"],
         "runtime_trust": runtime_trust,
         "detection_prefilter": pf_status,
         "dashboard_transport": get_dashboard_transport_snapshot(),
@@ -1848,9 +1904,11 @@ def _normalized_db_driver(value: str | None) -> str:
     return (str(value or "").split("+")[0]).strip().lower()
 
 
-def _scan_database_matches_configured_target(request_body: DatabaseConfig) -> bool:
+def _find_matching_configured_db_target(
+    request_body: DatabaseConfig,
+) -> dict[str, Any] | None:
     """
-    True when POST /scan_database payload exactly matches a configured DB target.
+    Return the configured database target that exactly matches *request_body*, or None.
 
     Matching fields: name, driver family, host, port, user, password, database.
     """
@@ -1887,8 +1945,13 @@ def _scan_database_matches_configured_target(request_body: DatabaseConfig) -> bo
             continue
         if str(target.get("database") or "").strip() != request_body.database:
             continue
-        return True
-    return False
+        return target
+    return None
+
+
+def _scan_database_matches_configured_target(request_body: DatabaseConfig) -> bool:
+    """True when POST /scan_database payload exactly matches a configured DB target."""
+    return _find_matching_configured_db_target(request_body) is not None
 
 
 @app.post("/scan_database", responses=_RATE_LIMIT_429)
@@ -1925,6 +1988,22 @@ async def scan_database(config: DatabaseConfig, background_tasks: BackgroundTask
         "pass": config.password,
         "database": config.database,
     }
+    if config.allow_private_networks:
+        target["allow_private_networks"] = True
+    else:
+        # Inherit opt-in only from a *fully* matching configured target (#1556).
+        # Name-only match would let an ad-hoc body reuse another target's name and
+        # steal allow_private_networks (Security Agent HIGH on PR #1584).
+        matched = _find_matching_configured_db_target(config)
+        if matched and bool(matched.get("allow_private_networks", False)):
+            target["allow_private_networks"] = True
+    # Defense-in-depth SSRF guard before background work (#1556).
+    from connectors.sql_connector import _build_url, _guard_sql_connection_url
+
+    try:
+        _guard_sql_connection_url(_build_url(target), target)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     from core.session import new_session_id
     from core.validation import sanitize_tenant_technician
 
@@ -1932,14 +2011,19 @@ async def scan_database(config: DatabaseConfig, background_tasks: BackgroundTask
     tenant = sanitize_tenant_technician(config.tenant)
     technician = sanitize_tenant_technician(config.technician)
     jh_db = bool(config.jurisdiction_hint)
+    vc_db = bool(config.validate_crypto)
     _rep_prev = engine.config.get("report") or {}
     _jh_prev = _rep_prev.get("jurisdiction_hints")
     prev_jurisdiction_hints_enabled_db = (
         bool(_jh_prev.get("enabled")) if isinstance(_jh_prev, dict) else False
     )
+    _scan_prev_db = engine.config.get("scan") or {}
+    prev_validate_crypto_db = _scan_prev_db.get("validate_crypto")
     if jh_db:
         engine.config.setdefault("report", {}).setdefault("jurisdiction_hints", {})
         engine.config["report"]["jurisdiction_hints"]["enabled"] = True
+    if vc_db:
+        engine.config.setdefault("scan", {})["validate_crypto"] = True
     engine.db_manager.set_current_session_id(session_id)
     engine.db_manager.create_session_record(
         session_id,
@@ -1963,6 +2047,13 @@ async def scan_database(config: DatabaseConfig, background_tasks: BackgroundTask
                 engine.config.setdefault("report", {}).setdefault(
                     "jurisdiction_hints", {}
                 )["enabled"] = prev_jurisdiction_hints_enabled_db
+            if vc_db:
+                if prev_validate_crypto_db is None:
+                    engine.config.setdefault("scan", {}).pop("validate_crypto", None)
+                else:
+                    engine.config.setdefault("scan", {})["validate_crypto"] = (
+                        prev_validate_crypto_db
+                    )
         from utils.notify import notify_scan_complete_background
 
         notify_scan_complete_background(engine.config, engine.db_manager, session_id)

@@ -11,12 +11,23 @@ import json
 
 from core.about import get_http_user_agent
 from core.connector_registry import register
+from core.crypto_audit import (
+    collect_httpx_crypto_facts,
+    evaluate_strong_crypto,
+    resolve_httpx_tls_connect_options,
+)
 from core.suggested_review import (
     SUGGESTED_REVIEW_PATTERN,
     augment_low_id_like_for_persist,
 )
 
-from .url_guard import target_allows_private, validate_outbound_url
+from .url_guard import (
+    build_pinned_httpx_client,
+    merge_host_pins,
+    pinned_httpx_request,
+    resolve_and_validate_outbound_url,
+    target_allows_private,
+)
 
 try:
     import httpx
@@ -64,28 +75,27 @@ def _dataverse_token(target: dict[str, Any]) -> str | None:
         auth.get("token_url")
         or f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
     )
-    # SSRF guard (#1232 / #832): custom token_url receives the client_secret via POST —
-    # never let it point at link-local/private hosts without explicit opt-in.
-    err = validate_outbound_url(
-        token_url,
-        allow_private=target_allows_private(target),
-        label="auth.token_url",
-    )
-    if err:
-        raise ValueError(err)
-    resp = httpx.post(
-        token_url,
-        data={
+    # SSRF guard (#1232 / #832 / #1552): custom token_url receives client_secret —
+    # validate + pin peer IPs (no DNS rebinding on the secret-bearing request).
+    token_kwargs: dict[str, Any] = {
+        "data": {
             "grant_type": "client_credentials",
             "client_id": client_id,
             "client_secret": client_secret,
             "scope": scope,
         },
-        headers={
+        "headers": {
             "Accept": "application/json",
             "User-Agent": get_http_user_agent(),
         },
-        timeout=30.0,
+        "timeout": 30.0,
+    }
+    resp = pinned_httpx_request(
+        "POST",
+        token_url,
+        allow_private=target_allows_private(target),
+        label="auth.token_url",
+        **token_kwargs,
     )
     resp.raise_for_status()
     data = resp.json()
@@ -95,7 +105,10 @@ def _dataverse_token(target: dict[str, Any]) -> str | None:
 def _api_base(org_url: str) -> str:
     """Derive Web API base from org URL (e.g. https://org.crm.dynamics.com -> https://org.api.crm.dynamics.com/api/data/v9.2)."""
     url = org_url.rstrip("/")
-    if not url.startswith(_HTTPS_PREFIX):
+    # Normalize http→https without producing https://http://… (breaks host parse).
+    if url.lower().startswith("http://"):
+        url = _HTTPS_PREFIX + url[7:]
+    elif not url.startswith(_HTTPS_PREFIX):
         url = _HTTPS_PREFIX + url
     host = url.replace(_HTTPS_PREFIX, "").split("/")[0]
     if ".api." in host:
@@ -135,13 +148,14 @@ class DataverseConnector:
         org_url = self.config.get("org_url") or self.config.get("environment_url", "")
         if not org_url:
             raise ValueError("Dataverse requires org_url (or environment_url)")
-        # SSRF guard (#1232): validate the raw org_url from config before any HTTP —
-        # including before token POST. Do not validate `_api_base()` output: it rewrites
-        # hosts (e.g. 169.254.169.254 → 169.api.crm.dynamics.com) and would miss link-local.
-        err = validate_outbound_url(
-            org_url,
-            allow_private=target_allows_private(self.config),
-            label="org_url",
+        # SSRF guard (#1232 / #1552): validate the raw org_url from config before any
+        # HTTP — including before token POST. Do not validate `_api_base()` for the
+        # private-range check alone: it rewrites hosts (e.g. 169.254.169.254 →
+        # 169.api.crm.dynamics.com) and would miss link-local. Pin the rewritten API
+        # host separately after org_url clears the guard.
+        allow_private = target_allows_private(self.config)
+        err, _org_ips = resolve_and_validate_outbound_url(
+            org_url, allow_private=allow_private, label="org_url"
         )
         if err:
             raise ValueError(err)
@@ -151,20 +165,31 @@ class DataverseConnector:
                 "Dataverse auth failed: provide tenant_id, client_id, client_secret (or auth block)"
             )
         base = _api_base(org_url)
+        err_base, base_ips = resolve_and_validate_outbound_url(
+            base, allow_private=allow_private, label="api_base"
+        )
+        if err_base:
+            raise ValueError(err_base)
+        host_pins: dict[str, list[str]] = {}
+        merge_host_pins(host_pins, base, base_ips)
         connect_s = float(self.config.get("connect_timeout_seconds", 25))
         read_s = float(self.config.get("read_timeout_seconds", 90))
         timeout = httpx.Timeout(read_s, connect=connect_s, read=read_s)
-        self._client = httpx.Client(
-            base_url=base,
-            headers={
+        client_kwargs: dict[str, Any] = {
+            "base_url": base,
+            "headers": {
                 "User-Agent": get_http_user_agent(),
                 "Authorization": f"Bearer {self._token}",
                 "Accept": "application/json",
                 "OData-MaxVersion": "4.0",
                 "OData-Version": "4.0",
             },
-            timeout=timeout,
-        )
+            "timeout": timeout,
+        }
+        verify_opt = resolve_httpx_tls_connect_options(self.config)
+        if verify_opt is not None:
+            client_kwargs["verify"] = verify_opt
+        self._client = build_pinned_httpx_client(host_to_ips=host_pins, **client_kwargs)
 
     def close(self) -> None:
         if self._client:
@@ -218,6 +243,7 @@ class DataverseConnector:
             return
         try:
             self._save_inventory_snapshot(target_name)
+            self._save_crypto_controls_audit(target_name)
             entities = self._get_entity_definitions()
             for ent in entities:
                 logical = ent.get("LogicalName", "")
@@ -292,6 +318,36 @@ class DataverseConnector:
             self.db_manager.save_failure(target_name, "error", str(e))
         finally:
             self.close()
+
+    def _save_crypto_controls_audit(self, target_name: str) -> None:
+        """Opt-in strong-crypto validation after Dataverse connect (Order 5 Phase 2.4)."""
+        if not self.config.get("_validate_crypto"):
+            return
+        if not hasattr(self.db_manager, "save_crypto_controls_audit"):
+            return
+        if not self._client:
+            return
+        try:
+            facts = collect_httpx_crypto_facts(
+                self._client,
+                self.config,
+                probe_url="/EntityDefinitions",
+                probe_params={
+                    "$select": "LogicalName",
+                    "$top": "1",
+                },
+            )
+            result, details = evaluate_strong_crypto(facts)
+            self.db_manager.save_crypto_controls_audit(
+                target_name=target_name,
+                connection_type="dataverse",
+                strong_crypto_result=result.value,
+                strong_crypto_details=details[:512],
+                inferred_controls_summary=None,
+            )
+        except Exception:
+            # Fail-soft: probe/persist errors never fail the scan.
+            pass
 
     def _save_inventory_snapshot(self, target_name: str) -> None:
         """Persist one Dataverse API inventory row."""

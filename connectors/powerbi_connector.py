@@ -11,12 +11,23 @@ import json
 
 from core.about import get_http_user_agent
 from core.connector_registry import register
+from core.crypto_audit import (
+    collect_httpx_crypto_facts,
+    evaluate_strong_crypto,
+    resolve_httpx_tls_connect_options,
+)
 from core.suggested_review import (
     SUGGESTED_REVIEW_PATTERN,
     augment_low_id_like_for_persist,
 )
 
-from .url_guard import target_allows_private, validate_outbound_url
+from .url_guard import (
+    build_pinned_httpx_client,
+    merge_host_pins,
+    pinned_httpx_request,
+    resolve_and_validate_outbound_url,
+    target_allows_private,
+)
 
 try:
     import httpx
@@ -50,28 +61,28 @@ def _get_access_token(target: dict[str, Any]) -> str | None:
     token_url = auth.get("token_url") or _AZURE_TOKEN_URL_TMPL.format(
         tenant_id=tenant_id
     )
-    # SSRF guard (#832): a custom token_url receives the client_secret via POST —
-    # never let it point at link-local/private hosts without explicit opt-in.
-    err = validate_outbound_url(
-        token_url,
-        allow_private=target_allows_private(target),
-        label="auth.token_url",
-    )
-    if err:
-        raise ValueError(err)
-    resp = httpx.post(
-        token_url,
-        data={
+    # SSRF guard (#832 / #1552): custom token_url receives client_secret via POST —
+    # validate + pin peer IPs (no DNS rebinding on the secret-bearing request).
+    token_kwargs: dict[str, Any] = {
+        "data": {
             "grant_type": "client_credentials",
             "client_id": client_id,
             "client_secret": client_secret,
             "scope": _PBI_SCOPE,
         },
-        headers={
+        "headers": {
             "Accept": "application/json",
             "User-Agent": get_http_user_agent(),
         },
-        timeout=30.0,
+        "timeout": 30.0,
+    }
+    # Never honor target verify=False on token exchange.
+    resp = pinned_httpx_request(
+        "POST",
+        token_url,
+        allow_private=target_allows_private(target),
+        label="auth.token_url",
+        **token_kwargs,
     )
     resp.raise_for_status()
     data = resp.json()
@@ -111,18 +122,30 @@ class PowerBIConnector:
             raise ValueError(
                 "Power BI auth failed: provide tenant_id, client_id, client_secret (or auth block)"
             )
+        allow_private = target_allows_private(self.config)
+        err, ips = resolve_and_validate_outbound_url(
+            _PBI_BASE, allow_private=allow_private, label="api_base"
+        )
+        if err:
+            raise ValueError(err)
+        host_pins: dict[str, list[str]] = {}
+        merge_host_pins(host_pins, _PBI_BASE, ips)
         connect_s = float(self.config.get("connect_timeout_seconds", 25))
         read_s = float(self.config.get("read_timeout_seconds", 90))
         timeout = httpx.Timeout(read_s, connect=connect_s, read=read_s)
-        self._client = httpx.Client(
-            base_url=_PBI_BASE,
-            headers={
+        client_kwargs: dict[str, Any] = {
+            "base_url": _PBI_BASE,
+            "headers": {
                 "User-Agent": get_http_user_agent(),
                 "Authorization": f"Bearer {self._token}",
                 "Content-Type": "application/json",
             },
-            timeout=timeout,
-        )
+            "timeout": timeout,
+        }
+        verify_opt = resolve_httpx_tls_connect_options(self.config)
+        if verify_opt is not None:
+            client_kwargs["verify"] = verify_opt
+        self._client = build_pinned_httpx_client(host_to_ips=host_pins, **client_kwargs)
 
     def close(self) -> None:
         if self._client:
@@ -205,6 +228,7 @@ class PowerBIConnector:
             return
         try:
             self._save_inventory_snapshot(target_name)
+            self._save_crypto_controls_audit(target_name)
             workspace_ids = self._get_workspace_ids()
             if not workspace_ids:
                 workspace_ids = [None]
@@ -321,6 +345,30 @@ class PowerBIConnector:
             self.db_manager.save_failure(target_name, "error", str(e))
         finally:
             self.close()
+
+    def _save_crypto_controls_audit(self, target_name: str) -> None:
+        """Opt-in strong-crypto validation after Power BI connect (Order 5 Phase 2.4)."""
+        if not self.config.get("_validate_crypto"):
+            return
+        if not hasattr(self.db_manager, "save_crypto_controls_audit"):
+            return
+        if not self._client:
+            return
+        try:
+            facts = collect_httpx_crypto_facts(
+                self._client, self.config, probe_url="/myorg/groups"
+            )
+            result, details = evaluate_strong_crypto(facts)
+            self.db_manager.save_crypto_controls_audit(
+                target_name=target_name,
+                connection_type="powerbi",
+                strong_crypto_result=result.value,
+                strong_crypto_details=details[:512],
+                inferred_controls_summary=None,
+            )
+        except Exception:
+            # Fail-soft: probe/persist errors never fail the scan.
+            pass
 
     def _save_inventory_snapshot(self, target_name: str) -> None:
         """Persist one Power BI API inventory row."""

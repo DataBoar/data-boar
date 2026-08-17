@@ -102,10 +102,14 @@ Canonical completeness of numbered ADR files is enforced for this table **and** 
 | 0079 | [Ecosystem engineering rigor canon (UMADR satellites)](ADR-0079-ecosystem-engineering-rigor-canon.md) | Proposed |
 | 0080 | [Local validation gate is inviolable: full check-all before any push or PR](ADR-0080-local-validation-gate-inviolable.md) | Proposed |
 | 0081 | [No silent ML confidence failures on single-class compliance profiles](ADR-0081-no-silent-ml-confidence-single-class-hardening.md) | Proposed |
-| 0082 | [Web exposure safe-by-default boundary controls](ADR-0082-web-exposure-safe-by-default-boundary-controls.md) | Proposed |
+| 0082 | [Web exposure safe-by-default boundary controls](ADR-0082-web-exposure-safe-by-default-boundary-controls.md) | Accepted |
 | 0083 | [Rust regex stage: accept form B (findings superset)](ADR-0083-rust-regex-stage-superset-accept-form-b.md) | Accepted |
 | 0084 | [Native package: embed CPython by channel (Enterprise vs community)](ADR-0084-native-package-embedded-cpython-by-channel.md) | Accepted |
 | 0085 | [Install priority ladder (native-first when shipped; pipx today)](ADR-0085-install-priority-ladder.md) | Proposed |
+| 0086 | [Plugin SDK language-neutral contract (L1/L2/L3)](ADR-0086-plugin-sdk-language-neutral-contract.md) | Proposed |
+| 0087 | [Plugin SDK bidirectional zero-trust mesh](ADR-0087-plugin-sdk-bidirectional-zero-trust-mesh.md) | Proposed |
+
+| 0088 | [Verify the verifier: integrity/authorization checks must not depend on the artifact they are verifying](ADR-0088-verify-the-verifier-no-self-referential-trust-chain.md) | Accepted |
 
 ## Related docs
 
@@ -132,3 +136,4 @@ See [docs/README.md](../README.md) for the full documentation map.
 4. Use **four-digit** filenames and **English-only** ADR bodies.
 
 Tracking: GitHub [#994](https://github.com/DataBoar/data-boar/issues/994).
+

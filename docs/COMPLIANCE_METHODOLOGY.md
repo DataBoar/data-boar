@@ -16,6 +16,8 @@ Data Boar is built to answer **technical** questions with **repeatable evidence*
 
 That is **not** the same as declaring **legal adequacy** (e.g. that a given processing is lawful) or filling every column of a **Record of processing activities** (ROPA / **RIPD**-style inventory under LGPD) without human ownership. The methodology below keeps that boundary explicit while giving you **verification modules** you can map to coursework, audits, or internal checklists—including checklists you maintain outside this repo.
 
+Regime profiles are **YAML-distance** (any configured sample / jurisdiction mix)—not a single-country audit application. Evidence remains technical; counsel and the DPO own legal conclusions.
+
 ---
 
 ## Aligning your own adequacy index (e.g. a diagnostic Word template)
@@ -39,6 +41,8 @@ These modules describe **what the software can verify or signal today** (or in c
 | **M7 — Retention in sealed / customs-adjacent contexts** | Is **retention** of artefacts understood as **operator-owned**, without automated “legal basis” tags? | [ADR 0039](adr/ADR-0039-retention-evidence-posture-bonded-customs-adjacent-contexts.md) |
 
 **Risk level in this methodology** means **technical and triage risk** (exposure, category strength, combination risk)—**not** a substitute for your enterprise risk register or legal conclusion.
+
+**Coverage honesty:** A session with **zero findings** is not proof that every configured target was fully observed. Operators should review **`scan_failures`** (and related session metadata) alongside findings—see [CANONICAL_PRODUCT_FACTS.md](CANONICAL_PRODUCT_FACTS.md) and the Excel “Scan failures” sheet. Product research on a stronger evidence envelope and observability completeness is tracked in issues [#1504](https://github.com/DataBoar/data-boar/issues/1504), [#1521](https://github.com/DataBoar/data-boar/issues/1521), and [#1525](https://github.com/DataBoar/data-boar/issues/1525) (research only—not shipped guarantees).
 
 ---
 
@@ -69,4 +73,6 @@ If you want the next **product** slice, the highest leverage is usually: **(1)**
 
 - [COMPLIANCE_AND_LEGAL.md](COMPLIANCE_AND_LEGAL.md) — what the product does and does not claim.
 - [philosophy/THE_WHY.md](philosophy/THE_WHY.md) — evidence-first posture.
-- [COMPLIANCE_TECHNICAL_REFERENCE.md](COMPLIANCE_TECHNICAL_REFERENCE.md) — limits, sampling, timeouts.
+- [COMPLIANCE_TECHNICAL_REFERENCE.md](COMPLIANCE_TECHNICAL_REFERENCE.md) — limits, sampling, timeouts, encodings.
+- [compliance-samples/OPERATOR_GOVERNANCE_CHECKLIST.md](compliance-samples/OPERATOR_GOVERNANCE_CHECKLIST.md) — operator cadence for enabling and revalidating samples.
+- Research (not product guarantees): [#1504](https://github.com/DataBoar/data-boar/issues/1504) evidence envelope · [#1521](https://github.com/DataBoar/data-boar/issues/1521) observability completeness · [#1525](https://github.com/DataBoar/data-boar/issues/1525) coverage / sample / encoding inventory.

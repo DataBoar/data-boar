@@ -306,6 +306,7 @@ _SHEET_REPORT_INFO = "Report info"
 _SHEET_HEATMAP_DATA = "Heatmap data"
 _SHEET_DATA_SOURCE_INVENTORY = "Data source inventory"
 _SHEET_DATA_SOURCE_INVENTORY_INTERNAL = "Data source inv - internal"
+_SHEET_CRYPTO_CONTROLS = _excel_safe_sheet_title("Crypto & controls")
 # LOW findings persisted for ID-like column names (FN reduction); see core.suggested_review
 _SHEET_SUGGESTED_REVIEW = "Suggested review (LOW)"
 _SHEET_PRAISE_CONTROLS = _excel_safe_sheet_title("Praise / existing controls")
@@ -989,8 +990,14 @@ def _write_excel_sheets(
     output_dir: str,
     heatmap_path: str | None = None,
     suggested_review_rows: list[dict] | None = None,
+    trust_tint: dict | None = None,
 ) -> None:
     """Write all Excel sheets (Report info, Executive summary, findings, recommendations, trends, heatmap data)."""
+    from report.trust_tint import stub_detail_sheet_rows
+
+    tint = trust_tint or {}
+    stub_detail = bool(tint.get("detail_sheets_stub"))
+
     _excel_safe_dataframe(report_info).to_excel(
         writer, sheet_name=_SHEET_REPORT_INFO, index=False
     )
@@ -1005,45 +1012,89 @@ def _write_excel_sheets(
             ws.add_image(img, "D1")
         except Exception:
             pass
-    if report_cfg.get("include_executive_summary", False) and (
-        db_rows_for_sheets or fs_rows_for_sheets
-    ):
+
+    if stub_detail:
+        # Untrusted: keep sheet names present as stubs (0 finding rows + notice).
+        if report_cfg.get("include_executive_summary", False):
+            _excel_safe_dataframe(
+                stub_detail_sheet_rows(
+                    sheet_label="Executive summary",
+                    retained_count=len(db_rows_for_sheets) + len(fs_rows_for_sheets),
+                    tint=tint,
+                )
+            ).to_excel(writer, sheet_name="Executive summary", index=False)
         _excel_safe_dataframe(
-            _build_executive_summary_rows(db_rows_for_sheets, fs_rows_for_sheets)
-        ).to_excel(writer, sheet_name="Executive summary", index=False)
-    db_high_keys, fs_high_keys = _apply_minor_confidence_and_return_keys(
-        db_rows_for_sheets, fs_rows_for_sheets, config
-    )
-    if db_rows_for_sheets:
-        _excel_safe_dataframe(db_rows_for_sheets).to_excel(
-            writer, sheet_name=_SHEET_DB_FINDINGS, index=False
+            stub_detail_sheet_rows(
+                sheet_label=_SHEET_DB_FINDINGS,
+                retained_count=len(db_rows_for_sheets),
+                tint=tint,
+            )
+        ).to_excel(writer, sheet_name=_SHEET_DB_FINDINGS, index=False)
+        _excel_safe_dataframe(
+            stub_detail_sheet_rows(
+                sheet_label=_SHEET_FS_FINDINGS,
+                retained_count=len(fs_rows_for_sheets),
+                tint=tint,
+            )
+        ).to_excel(writer, sheet_name=_SHEET_FS_FINDINGS, index=False)
+        if suggested_review_rows:
+            _excel_safe_dataframe(
+                stub_detail_sheet_rows(
+                    sheet_label=_SHEET_SUGGESTED_REVIEW,
+                    retained_count=len(suggested_review_rows),
+                    tint=tint,
+                )
+            ).to_excel(writer, sheet_name=_SHEET_SUGGESTED_REVIEW, index=False)
+        agg_rows = db_manager.get_aggregated_identification_risks(session_id)
+        if agg_rows:
+            _excel_safe_dataframe(
+                stub_detail_sheet_rows(
+                    sheet_label="Cross-ref data – ident. risk",
+                    retained_count=len(agg_rows),
+                    tint=tint,
+                )
+            ).to_excel(writer, sheet_name="Cross-ref data – ident. risk", index=False)
+        db_high_keys, fs_high_keys = set(), set()
+    else:
+        if report_cfg.get("include_executive_summary", False) and (
+            db_rows_for_sheets or fs_rows_for_sheets
+        ):
+            _excel_safe_dataframe(
+                _build_executive_summary_rows(db_rows_for_sheets, fs_rows_for_sheets)
+            ).to_excel(writer, sheet_name="Executive summary", index=False)
+        db_high_keys, fs_high_keys = _apply_minor_confidence_and_return_keys(
+            db_rows_for_sheets, fs_rows_for_sheets, config
         )
-    if fs_rows_for_sheets:
-        _excel_safe_dataframe(fs_rows_for_sheets).to_excel(
-            writer, sheet_name=_SHEET_FS_FINDINGS, index=False
-        )
-    sr = suggested_review_rows or []
-    if sr:
-        _excel_safe_dataframe(sr).to_excel(
-            writer, sheet_name=_SHEET_SUGGESTED_REVIEW, index=False
-        )
-    agg_rows = db_manager.get_aggregated_identification_risks(session_id)
-    if agg_rows:
-        sheet_data = [
-            {
-                "Target": r.get("target_name", ""),
-                "Source": r.get("source_type", ""),
-                "Table / File": r.get("table_or_file", ""),
-                "Columns involved": r.get("columns_involved", ""),
-                "Categories": r.get("categories", ""),
-                "Explanation": r.get("explanation", ""),
-            }
-            for r in agg_rows
-        ]
-        sheet_with_note = [_AGGREGATED_CROSSREF_SAMPLE_NOTE_ROW] + sheet_data
-        _excel_safe_dataframe(sheet_with_note).to_excel(
-            writer, sheet_name="Cross-ref data – ident. risk", index=False
-        )
+        if db_rows_for_sheets:
+            _excel_safe_dataframe(db_rows_for_sheets).to_excel(
+                writer, sheet_name=_SHEET_DB_FINDINGS, index=False
+            )
+        if fs_rows_for_sheets:
+            _excel_safe_dataframe(fs_rows_for_sheets).to_excel(
+                writer, sheet_name=_SHEET_FS_FINDINGS, index=False
+            )
+        sr = suggested_review_rows or []
+        if sr:
+            _excel_safe_dataframe(sr).to_excel(
+                writer, sheet_name=_SHEET_SUGGESTED_REVIEW, index=False
+            )
+        agg_rows = db_manager.get_aggregated_identification_risks(session_id)
+        if agg_rows:
+            sheet_data = [
+                {
+                    "Target": r.get("target_name", ""),
+                    "Source": r.get("source_type", ""),
+                    "Table / File": r.get("table_or_file", ""),
+                    "Columns involved": r.get("columns_involved", ""),
+                    "Categories": r.get("categories", ""),
+                    "Explanation": r.get("explanation", ""),
+                }
+                for r in agg_rows
+            ]
+            sheet_with_note = [_AGGREGATED_CROSSREF_SAMPLE_NOTE_ROW] + sheet_data
+            _excel_safe_dataframe(sheet_with_note).to_excel(
+                writer, sheet_name="Cross-ref data – ident. risk", index=False
+            )
     if fail_rows:
         _excel_safe_dataframe(_enrich_failures(fail_rows)).to_excel(
             writer, sheet_name=_SHEET_SCAN_FAILURES, index=False
@@ -1092,34 +1143,91 @@ def _write_excel_sheets(
             _excel_safe_dataframe(internal_inv_rows).to_excel(
                 writer, sheet_name=_SHEET_DATA_SOURCE_INVENTORY_INTERNAL, index=False
             )
-    overrides = report_cfg.get("recommendation_overrides", [])
-    recs = _recommendations_rows(
-        db_rows_for_sheets,
-        fs_rows_for_sheets,
-        recommendation_overrides=overrides if overrides else None,
-    )
-    if agg_rows:
-        recs.insert(0, _aggregated_identification_recommendation_row())
-    if db_high_keys or fs_high_keys:
-        recs.insert(0, _minor_crossref_recommendation_row())
-    _excel_safe_dataframe(recs).to_excel(
-        writer, sheet_name="Recommendations", index=False
-    )
-    praise = _praise_rows(db_rows_for_sheets, fs_rows_for_sheets)
-    if praise:
-        _excel_safe_dataframe(praise).to_excel(
-            writer, sheet_name=_SHEET_PRAISE_CONTROLS, index=False
+    # Opt-in strong-crypto sheet (Order 5): only when rows exist (flag was on).
+    crypto_rows: list[dict] = []
+    if hasattr(db_manager, "get_crypto_controls_audit"):
+        crypto_rows = db_manager.get_crypto_controls_audit(session_id) or []
+    if crypto_rows:
+        crypto_sheet = [
+            {
+                "Target": r.get("target_name", "") or "",
+                "Connection type": r.get("connection_type", "") or "",
+                "Strong crypto": r.get("strong_crypto_result", "") or "",
+                "Details": r.get("strong_crypto_details", "") or "",
+                "Inferred controls": r.get("inferred_controls_summary", "") or "",
+            }
+            for r in crypto_rows
+        ]
+        # Disclaimer row: TLS probe + Phase 3 name heuristics are best-effort only.
+        crypto_sheet.insert(
+            0,
+            {
+                "Target": "(note)",
+                "Connection type": "",
+                "Strong crypto": "",
+                "Details": (
+                    "Best-effort TLS/crypto validation when scan.validate_crypto was enabled. "
+                    "Not a compliance certification. "
+                    "See also the Data source inventory sheet (same workbook) for "
+                    "product/version/transport."
+                ),
+                "Inferred controls": (
+                    "Inferred controls are heuristic name-pattern counts only "
+                    "(not verified anonymisation). Not a LGPD/GDPR compliance claim — "
+                    "human review required."
+                ),
+            },
         )
+        _excel_safe_dataframe(crypto_sheet).to_excel(
+            writer, sheet_name=_SHEET_CRYPTO_CONTROLS, index=False
+        )
+    if stub_detail:
+        _excel_safe_dataframe(
+            stub_detail_sheet_rows(
+                sheet_label="Recommendations",
+                retained_count=len(db_rows_for_sheets) + len(fs_rows_for_sheets),
+                tint=tint,
+            )
+        ).to_excel(writer, sheet_name="Recommendations", index=False)
+    else:
+        overrides = report_cfg.get("recommendation_overrides", [])
+        recs = _recommendations_rows(
+            db_rows_for_sheets,
+            fs_rows_for_sheets,
+            recommendation_overrides=overrides if overrides else None,
+        )
+        if agg_rows:
+            recs.insert(0, _aggregated_identification_recommendation_row())
+        if db_high_keys or fs_high_keys:
+            recs.insert(0, _minor_crossref_recommendation_row())
+        _excel_safe_dataframe(recs).to_excel(
+            writer, sheet_name="Recommendations", index=False
+        )
+        praise = _praise_rows(db_rows_for_sheets, fs_rows_for_sheets)
+        if praise:
+            _excel_safe_dataframe(praise).to_excel(
+                writer, sheet_name=_SHEET_PRAISE_CONTROLS, index=False
+            )
     trends = _trends_rows(
         db_manager, session_id, current_db, current_fs, current_fail, current_started_at
     )
     _excel_safe_dataframe(trends).to_excel(
         writer, sheet_name="Trends - Session comparison", index=False
     )
-    heatmap_rows = [
-        {"target": r.get("target_name"), "sensitivity": r.get("sensitivity_level")}
-        for r in db_rows_for_sheets + fs_rows_for_sheets
-    ]
+    if stub_detail:
+        _excel_safe_dataframe(
+            stub_detail_sheet_rows(
+                sheet_label=_SHEET_HEATMAP_DATA,
+                retained_count=len(db_rows_for_sheets) + len(fs_rows_for_sheets),
+                tint=tint,
+            )
+        ).to_excel(writer, sheet_name=_SHEET_HEATMAP_DATA, index=False)
+        heatmap_rows = []
+    else:
+        heatmap_rows = [
+            {"target": r.get("target_name"), "sensitivity": r.get("sensitivity_level")}
+            for r in db_rows_for_sheets + fs_rows_for_sheets
+        ]
     if heatmap_rows:
         summary = (
             pd.DataFrame(heatmap_rows)
@@ -1368,6 +1476,13 @@ def generate_report(
         license_ctx=lic_ctx,
         config=config,
     )
+    # S2a wave-2c / M-TRUST-02: Excel trust watermark + untrusted detail stubs.
+    from report.trust_tint import resolve_excel_trust_tint, trust_tint_report_info_rows
+
+    trust_tint = resolve_excel_trust_tint(config)
+    tint_rows = trust_tint_report_info_rows(trust_tint)
+    if tint_rows:
+        report_info = tint_rows + report_info
     lic_footer = None
     if lic_ctx is not None:
         lic_footer = f"License: {lic_ctx.state}"
@@ -1375,13 +1490,16 @@ def generate_report(
             lic_footer = f"{lic_footer} ({lic_ctx.watermark})"
     out_path = Path(output_dir) / f"Relatorio_Auditoria_{session_id[:16]}.xlsx"
     # Create heatmap PNG first so we can embed it in the Heatmap data sheet
-    heatmap_path = _create_heatmap(
-        db_rows_for_sheets,
-        fs_rows_for_sheets,
-        output_dir,
-        session_id,
-        license_footer=lic_footer,
-    )
+    # (skip when untrusted stubs — no detail findings exported).
+    heatmap_path = None
+    if not trust_tint.get("detail_sheets_stub"):
+        heatmap_path = _create_heatmap(
+            db_rows_for_sheets,
+            fs_rows_for_sheets,
+            output_dir,
+            session_id,
+            license_footer=lic_footer,
+        )
     with pd.ExcelWriter(out_path, engine="openpyxl") as writer:
         _write_excel_sheets(
             writer,
@@ -1400,6 +1518,7 @@ def generate_report(
             output_dir,
             heatmap_path=heatmap_path,
             suggested_review_rows=suggested_review_rows,
+            trust_tint=trust_tint,
         )
     try:
         write_scan_evidence_artifacts(

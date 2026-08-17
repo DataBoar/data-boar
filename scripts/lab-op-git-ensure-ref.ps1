@@ -136,10 +136,9 @@ function Invoke-SshRemoteCapture {
     }
 }
 
-$guardScript = Join-Path $RepoRoot "scripts/maestro/Maestro-CanonicalGuard.ps1"
-if (-not (Test-Path -LiteralPath $guardScript)) {
-    throw "Missing $guardScript (#948 canonical guard)."
-}
+. (Join-Path $PSScriptRoot "Resolve-MaestroRoot.ps1")
+$maestroRoot = Resolve-MaestroRoot -ConsumerRoot $RepoRoot
+$guardScript = Resolve-MaestroCoreScript -ScriptName "Maestro-CanonicalGuard.ps1" -MaestroRoot $maestroRoot
 . $guardScript
 $script:MaestroOrchestratorHost = Get-MaestroOrchestratorHostname
 
