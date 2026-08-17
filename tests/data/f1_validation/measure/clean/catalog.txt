@@ -1,0 +1,4 @@
+Catalogo de produtos sinteticos (sem PII)
+SKU-1001  Parafuso M6  qty=500  bin=A-12
+SKU-1002  Arruela 8mm  qty=200  bin=B-03
+Versao firmware 2.4.11  build 2024.03

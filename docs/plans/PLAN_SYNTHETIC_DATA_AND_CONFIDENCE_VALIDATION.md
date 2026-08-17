@@ -1,10 +1,11 @@
 # Plan: Synthetic and true-like data sources, confidence scoring, and operator guidance
 
-**Status:** Deferred
+**Status:** In Progress
 **Date:** 2026-03-15
 **Authors:** Fabio Leitao
 **Priority:** H3
 **Depends on:** ADR-0007
+**Issue:** [#835](https://github.com/DataBoar/data-boar/issues/835) (Phase 1 + 5.1 baseline F1)
 
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md) (central to-do list)
 
@@ -41,7 +42,7 @@ This plan enables **creation of synthetic and possible "true" data sources** tha
 - **File formats:** [connectors/filesystem_connector.py](../connectors/filesystem_connector.py) and text extraction support txt, csv, tsv, json, xml, html, pdf, docx, odt, xlsx, ods, odp, msg, eml, etc. (SUPPORTED_EXTENSIONS).
 - **Connectors:** SQL (PostgreSQL, MySQL, MariaDB, SQLite, MSSQL, Oracle), MongoDB, Redis, Snowflake, SMB, NFS, WebDAV, SharePoint, Power BI, Dataverse, REST API (see [TOPOLOGY.md](TOPOLOGY.md)).
 - **Detection:** [core/detector.py](../core/detector.py) returns sensitivity_level, pattern_detected, norm_tag, ml_confidence (0–100). Report includes recommendations sheet and failure hints ([core/database.py](../core/database.py) `failure_hint(reason)`).
-- **No shared synthetic dataset:** Tests use ad-hoc fixtures (e.g. in-memory SQLite, temp files). There is no single “synthetic + true-like” dataset with ground truth and intentional FP/FN for validation and confidence scoring.
+- **No shared synthetic dataset with measured P/R/F1:** Phase 1 (#835) adds `tests/data/f1_validation/` + `scripts/validate_detection_f1.py` and publishes numbers in [VALIDATION.md](../VALIDATION.md). POC scenario corpus (`generate_synthetic_poc_corpus.py` / EXPECTED.txt) remains complementary. Phases 2–4 (SQL/NoSQL/shares, report confidence bands) still open.
 - **Report:** Recommendations and scan failures already show hints; there is no explicit **discovery confidence band** (e.g. “probably nothing serious” vs “high risk, tune ML/DL”) nor a dedicated “operator guidance” section for manual verification and tuning.
 
 ---
@@ -91,13 +92,13 @@ Ground truth: for each fixture (file, table/column, API response), a **manifest*
 
 ### Phase 1: Fixture structure and file-format coverage
 
-| #   | To-do                                                                                                                                                                                  | Status |    |                               |   |
-| --- | ---------------------------------------------------------------------                                                                                                                  | ------ |    |                               |   |
-| 1.1 | Create fixture root (e.g. `fixtures/synthetic_data/` or `test_data/validation/`) with subdirs: files/, sql/, nosql/, shares/ (or doc for shares).                                      | ⬜      |    |                               |   |
-| 1.2 | Add sample files for all compatible extensions (txt, csv, json, pdf, docx, xlsx, odt, etc.): some with real PII, some with no PII, some FP (e.g. lyrics/dates), some FN (e.g. masked). | ⬜      |    |                               |   |
-| 1.3 | Ground-truth manifest (YAML/JSON): path or identifier → label (pii                                                                                                                     | no_pii | fp | fn) and optional description. | ⬜ |
-| 1.4 | Doc: how to run a scan against the fixture root and compare results to manifest (manual or script).                                                                                    | ⬜      |    |                               |   |
-| 1.5 | Tests: optional pytest that runs detector on a subset of fixtures and asserts expected sensitivity or counts; or doc-only.                                                             | ⬜      |    |                               |   |
+| #   | To-do                                                                                                                                                                                  | Status |
+| --- | ---------------------------------------------------------------------                                                                                                                  | ------ |
+| 1.1 | Create fixture root (e.g. `fixtures/synthetic_data/` or `test_data/validation/`) with subdirs: files/, sql/, nosql/, shares/ (or doc for shares).                                      | ✅ Done (`tests/data/f1_validation/` measure+calibrate; sql/nosql/shares → Phase 2–3) |
+| 1.2 | Add sample files for all compatible extensions (txt, csv, json, pdf, docx, xlsx, odt, etc.): some with real PII, some with no PII, some FP (e.g. lyrics/dates), some FN (e.g. masked). | ✅ Partial — text formats txt/csv/tsv/json/xml/html + 4 classes; binary/office later |
+| 1.3 | Ground-truth manifest (YAML/JSON): path → label (`pii` / `clean` / `tricky_fp` / `tricky_fn`) + `expected_miss` + disjoint measure/calibrate templates. | ✅ Done (`ground_truth.yaml`) |
+| 1.4 | Doc: how to run a scan against the fixture root and compare results to manifest (manual or script).                                                                                    | ✅ Done ([VALIDATION.md](../VALIDATION.md) + harness) |
+| 1.5 | Tests: optional pytest that runs detector on a subset of fixtures and asserts expected sensitivity or counts; or doc-only.                                                             | ✅ Done (`tests/test_validate_detection_f1.py` — structure/anti-leakage/clear-PII; F1 numbers published not asserted) |
 
 ### Phase 2: SQL and NoSQL fixtures
 
@@ -130,9 +131,9 @@ Ground truth: for each fixture (file, table/column, API response), a **manifest*
 
 | #   | To-do                                                                                                                                       | Status |
 | --- | ---------------------------------------------------------------------                                                                       | ------ |
-| 5.1 | Optional script: run scan on full fixture set, compare to manifest, output precision/recall/F1 and per-pattern stats; can be run on-demand. | ⬜      |
-| 5.2 | Document how to use fixture set and scoring to tune config (add regex, ML terms, adjust min_sensitivity) and re-run to improve.             | ⬜      |
-| 5.3 | Update PLANS_TODO.md and this plan; ensure “timeouts and connectivity” and “manual verify / tune” are in operator-facing docs.              | ⬜      |
+| 5.1 | Optional script: run scan on full fixture set, compare to manifest, output precision/recall/F1 and per-pattern stats; can be run on-demand. | ✅ Done (`scripts/validate_detection_f1.py`; baseline in [VALIDATION.md](../VALIDATION.md)) |
+| 5.2 | Document how to use fixture set and scoring to tune config (add regex, ML terms, adjust min_sensitivity) and re-run to improve.             | ⬜ Pending |
+| 5.3 | Update PLANS_TODO.md and this plan; ensure “timeouts and connectivity” and “manual verify / tune” are in operator-facing docs.              | 🔄 Partial — plan + PLANS_TODO + VALIDATION for Phase 1/5.1; timeouts guidance still Phase 3 |
 
 ---
 
