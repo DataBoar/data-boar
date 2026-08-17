@@ -28,6 +28,8 @@
 | `pr-merge-when-green.ps1` | Merge when CI green | **`.cursor/rules/agent-autonomous-merge-and-lab-ops.mdc`**, **`autonomous-merge-and-lab`** SKILL |
 | `safe-workspace-snapshot.ps1` | Pre-commit snapshot | Session **`safe-commit`** |
 | `smoke-maturity-assessment-poc.ps1` | Fast pytest subset (maturity POC gate 1) | [PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md](../plans/PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md), [SMOKE_MATURITY_ASSESSMENT_POC.md](SMOKE_MATURITY_ASSESSMENT_POC.md) |
+| `generate_f1_validation_fixtures.py` | Labeled F1 fixtures + `ground_truth.yaml` (measure vs calibrate anti-leakage) | [VALIDATION.md](../VALIDATION.md), #835, [PLAN_SYNTHETIC_DATA_AND_CONFIDENCE_VALIDATION.md](../plans/PLAN_SYNTHETIC_DATA_AND_CONFIDENCE_VALIDATION.md) |
+| `validate_detection_f1.py` | Precision/recall/F1 vs detector tuple (default `--split measure`) | Same; `uv run python scripts/validate_detection_f1.py` |
 
 ### 1b. GitHub Actions YAML contract (pytest — not under `scripts/`)
 
