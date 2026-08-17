@@ -33,7 +33,7 @@ JSON do dashboard (somente edge): [`dashboards/cloudflare-edge-metrics.json`](da
 | `CLOUDFLARE_GRAPHQL_URL` | Padrão `https://api.cloudflare.com/client/v4/graphql` |
 | `CLOUDFLARE_HOSTNAME_ALLOWLIST` | Lista opcional (ex.: `databoar.com.br`) |
 | `CLOUDFLARE_EXPORT_LOOKBACK_MINUTES` | Padrão `60` sem watermark |
-| `CLOUDFLARE_EXPORT_OVERLAP_MINUTES` | Padrão `5` |
+| `CLOUDFLARE_EXPORT_OVERLAP_MINUTES` | Padrão `0` (evita double-count em counters OTLP) |
 | `CLOUDFLARE_EXPORT_LAG_MINUTES` | Padrão `5` (atraso de frescor da Analytics) |
 | `CLOUDFLARE_EXPORT_LIMIT` | `limit` GraphQL (padrão `1000`, teto `5000`) |
 | `CLOUDFLARE_EXPORT_WATERMARK_PATH` | Padrão `~/.cache/data-boar/cloudflare_edge_watermark.txt` |

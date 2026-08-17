@@ -23,6 +23,7 @@ from core.cloudflare_edge_metrics import (
     redact_headers_for_log,
     resolve_credentials_from_env,
     status_class,
+    validate_cloudflare_graphql_url,
     write_watermark,
 )
 
@@ -92,6 +93,18 @@ def test_fixture_normalize_with_allowlist() -> None:
         if p.metric == "cloudflare.edge.http.requests"
     }
     assert classes == {"2xx", "4xx"}
+    assert all("cloudflare.datetime_hour" in p.attributes for p in batch.points)
+
+
+def test_graphql_url_allowlist() -> None:
+    assert (
+        validate_cloudflare_graphql_url("https://api.cloudflare.com/client/v4/graphql")
+        == "https://api.cloudflare.com/client/v4/graphql"
+    )
+    with pytest.raises(ValueError, match="https"):
+        validate_cloudflare_graphql_url("http://api.cloudflare.com/client/v4/graphql")
+    with pytest.raises(ValueError, match="api.cloudflare.com"):
+        validate_cloudflare_graphql_url("https://evil.example/client/v4/graphql")
 
 
 def test_points_json_notes_not_traces() -> None:

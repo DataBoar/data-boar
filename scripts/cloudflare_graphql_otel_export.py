@@ -72,7 +72,8 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument(
         "--overlap-minutes",
         type=int,
-        default=int(os.environ.get("CLOUDFLARE_EXPORT_OVERLAP_MINUTES") or "5"),
+        default=int(os.environ.get("CLOUDFLARE_EXPORT_OVERLAP_MINUTES") or "0"),
+        help="Watermark overlap (default 0). Non-zero can double-count OTLP counters.",
     )
     p.add_argument(
         "--lag-minutes",
@@ -123,6 +124,11 @@ def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
     allowlist = parse_hostname_allowlist(args.hostname_allowlist or None)
     watermark = None if args.no_watermark else read_watermark(args.watermark)
+    if args.overlap_minutes > 0:
+        logger.warning(
+            "overlap-minutes=%s can double-count OTLP counters for re-exported buckets",
+            args.overlap_minutes,
+        )
     window = compute_window(
         lookback=timedelta(minutes=max(1, args.lookback_minutes)),
         overlap=timedelta(minutes=max(0, args.overlap_minutes)),

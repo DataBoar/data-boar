@@ -33,7 +33,7 @@ Dashboard JSON (edge only): [`dashboards/cloudflare-edge-metrics.json`](dashboar
 | `CLOUDFLARE_GRAPHQL_URL` | Default `https://api.cloudflare.com/client/v4/graphql` |
 | `CLOUDFLARE_HOSTNAME_ALLOWLIST` | Optional comma list (e.g. `databoar.com.br`) |
 | `CLOUDFLARE_EXPORT_LOOKBACK_MINUTES` | Default `60` when no watermark |
-| `CLOUDFLARE_EXPORT_OVERLAP_MINUTES` | Default `5` (watermark re-read overlap) |
+| `CLOUDFLARE_EXPORT_OVERLAP_MINUTES` | Default `0` (avoid counter double-count). Non-zero re-reads prior buckets — gap-fill only. |
 | `CLOUDFLARE_EXPORT_LAG_MINUTES` | Default `5` (analytics freshness lag) |
 | `CLOUDFLARE_EXPORT_LIMIT` | GraphQL `limit` (default `1000`, capped at `5000`) |
 | `CLOUDFLARE_EXPORT_WATERMARK_PATH` | Default `~/.cache/data-boar/cloudflare_edge_watermark.txt` |
@@ -75,7 +75,9 @@ Windows: `.\scripts\cloudflare-graphql-otel-export.ps1` (thin wrapper).
 
 ### Scheduling
 
-Cron / systemd timer / Task Scheduler: invoke the script every 5–15 minutes. Watermark + overlap avoids gaps; lag avoids reading incomplete Analytics buckets. Respect Cloudflare **rate limits** (exporter retries on HTTP 429 / 5xx with `Retry-After` when present).
+Cron / systemd timer / Task Scheduler: invoke the script every 5–15 minutes. Watermark advances the window start; **default overlap is 0** so OTLP counters are not double-counted. Non-zero overlap is for deliberate rebuilds only. Lag avoids reading incomplete Analytics buckets. Respect Cloudflare **rate limits** (exporter retries on HTTP 429 / 5xx with `Retry-After` when present).
+
+`CLOUDFLARE_GRAPHQL_URL` is optional and **must** remain `https://api.cloudflare.com/client/v4/graphql` (HTTPS + that host/path only) so the bearer token is not sent elsewhere.
 
 ### Retention / sampling
 

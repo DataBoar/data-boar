@@ -142,11 +142,16 @@ def compute_window(
     *,
     now: datetime | None = None,
     lookback: timedelta = timedelta(hours=1),
-    overlap: timedelta = timedelta(minutes=5),
+    overlap: timedelta = timedelta(0),
     lag: timedelta = timedelta(minutes=5),
     watermark: datetime | None = None,
 ) -> ExportWindow:
-    """Half-open [start, end) with Cloudflare analytics lag and optional watermark overlap."""
+    """Half-open [start, end) with Cloudflare analytics lag and optional watermark overlap.
+
+    Default overlap is **zero** so OTLP **counters** do not double-count when the
+    watermark advances. Non-zero overlap is for deliberate gap-fill / rebuilds —
+    callers must accept duplicate counter adds for overlapped buckets.
+    """
     now_utc = now or datetime.now(UTC)
     if now_utc.tzinfo is None:
         now_utc = now_utc.replace(tzinfo=UTC)
@@ -320,12 +325,23 @@ def normalize_series(
         except (TypeError, ValueError):
             status_i = None
         cache = normalize_cache_status(dims.get("cacheStatus"))
+        ts_raw = dims.get("datetimeHour")
+        ts: datetime | None = None
+        hour_label = "unknown"
+        if isinstance(ts_raw, str) and ts_raw:
+            hour_label = ts_raw.strip() or "unknown"
+            try:
+                ts = datetime.fromisoformat(ts_raw.replace("Z", "+00:00"))
+            except ValueError:
+                ts = None
         attrs = {
             "service.name": SERVICE_NAME,
             "cloudflare.zone_scope": "configured",
             "http.host": host,
             "http.status_class": status_class(status_i),
             "cloudflare.cache_status": cache,
+            # Preserve Analytics hour bucket as a label (OTLP Counter.add is wall-clock).
+            "cloudflare.datetime_hour": hour_label,
             "telemetry.source": "cloudflare-graphql",
             "telemetry.signal": "edge-aggregate",
         }
@@ -340,13 +356,6 @@ def normalize_series(
         sums = row.get("sum") or {}
         visits = float(sums.get("visits") or 0)
         bytes_ = float(sums.get("edgeResponseBytes") or 0)
-        ts_raw = dims.get("datetimeHour")
-        ts: datetime | None = None
-        if isinstance(ts_raw, str) and ts_raw:
-            try:
-                ts = datetime.fromisoformat(ts_raw.replace("Z", "+00:00"))
-            except ValueError:
-                ts = None
 
         if count:
             batch.points.append(
@@ -391,8 +400,32 @@ def resolve_credentials_from_env(
 
 
 def graphql_url_from_env(environ: dict[str, str] | None = None) -> str:
+    """Return GraphQL URL; only the official Cloudflare HTTPS endpoint is allowed."""
     env = environ if environ is not None else dict(os.environ)
-    return (env.get(_ENV_URL) or "").strip() or GRAPHQL_URL_DEFAULT
+    raw = (env.get(_ENV_URL) or "").strip() or GRAPHQL_URL_DEFAULT
+    return validate_cloudflare_graphql_url(raw)
+
+
+def validate_cloudflare_graphql_url(url: str) -> str:
+    """Refuse non-HTTPS or non-Cloudflare hosts so the bearer token is not exfiltrated."""
+    from urllib.parse import urlparse
+
+    parsed = urlparse(url.strip())
+    scheme = (parsed.scheme or "").lower()
+    host = (parsed.hostname or "").lower()
+    path = (parsed.path or "").rstrip("/") or "/"
+    if scheme != "https":
+        raise ValueError("CLOUDFLARE_GRAPHQL_URL must use https")
+    if host != "api.cloudflare.com":
+        raise ValueError(
+            "CLOUDFLARE_GRAPHQL_URL host must be api.cloudflare.com "
+            "(refusing alternate hosts to protect the API token)"
+        )
+    if path != "/client/v4/graphql":
+        raise ValueError("CLOUDFLARE_GRAPHQL_URL path must be /client/v4/graphql")
+    if parsed.username or parsed.password:
+        raise ValueError("CLOUDFLARE_GRAPHQL_URL must not embed credentials")
+    return "https://api.cloudflare.com/client/v4/graphql"
 
 
 def points_as_jsonable(batch: NormalizedBatch) -> dict[str, Any]:
@@ -484,6 +517,11 @@ def emit_otlp_metrics(batch: NormalizedBatch, *, endpoint: str | None = None) ->
         attrs = {k: v for k, v in point.attributes.items() if k != "service.name"}
         counter.add(point.value, attributes=attrs)
 
-    provider.force_flush(timeout_millis=15_000)
+    flushed = provider.force_flush(timeout_millis=15_000)
     provider.shutdown(timeout_millis=5_000)
+    if not flushed:
+        logger.error(
+            "OTLP force_flush reported failure — not treating export as success"
+        )
+        return False
     return True
