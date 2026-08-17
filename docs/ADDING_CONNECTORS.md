@@ -365,8 +365,11 @@ where CPF/CNPJ often hide), then samples objects with pagination and rate-limit 
    | `crm.schemas.companies.read` | Discover company property **names** (incl. custom) |
    | `crm.schemas.deals.read` | Discover deal property **names** (incl. custom) |
 
-5. Create the token and store it only in an environment variable / secret manager — never
-   in committed YAML.
+5. Create the token and store it only in an environment variable / secret manager —
+   never in committed YAML. Prefer an operator vault (e.g. Bitwarden) that **injects**
+   `HUBSPOT_PRIVATE_APP_TOKEN` at process start; optional local file
+   `~/.config/databoar/hubspot.env` (`chmod 0600`) is only a bridge — see
+   [OPERATOR_CREDENTIALS_FROM_ENV.md](ops/OPERATOR_CREDENTIALS_FROM_ENV.md).
 
 **Least privilege:** the connector is **read-only and on-demand** (no HubSpot webhooks).
 `crm.objects.*.read` returns field values; `crm.schemas.*.read` is required for property
@@ -391,6 +394,85 @@ targets:
 
 Optional keys: `base_url` (default `https://api.hubapi.com`), `token_from_env`
 (override env var name), `allow_private_networks` (lab only).
+
+### Marketing / website forms → what Data Boar can see
+
+HubSpot **Forms** (public embed / Forms API) and Data Boar’s **CRM connector** are
+different surfaces. The connector only calls CRM objects (`contacts`, `companies`,
+`deals` by default). It does **not** call the Forms submissions archive, email
+workflows, or Gmail.
+
+| Lead-capture path | Visible to `type: hubspot`? | Why |
+| ----------------- | --------------------------- | --- |
+| Form fields mapped to **Contact** properties (standard or custom) | **Yes** (if scopes + property names match) | Connector discovers `/crm/v3/properties/contacts` and samples `/crm/v3/objects/contacts` |
+| Form creates a Contact, then HubSpot emails you (workflow) | Contact **yes**; the email body **no** | Mail is outside CRM object sampling |
+| Data only in **Form submissions** UI / export, never written to Contact properties | **No** | Wrong API surface for this connector |
+| Conversations / tickets / custom objects not listed in `objects:` | **No** until you add that object type (and scopes) | Defaults are contacts/companies/deals only |
+
+**Operator checklist (portal + Data Boar):**
+
+1. In HubSpot, open a recent demo lead → **Contact** record. Confirm each form field
+   exists as a **contact property** with a value (not only on the form submission
+   timeline). Typical demo-request mapping:
+
+   | Form intent | Contact property `name` (internal) |
+   | ----------- | ---------------------------------- |
+   | First / last name | `firstname`, `lastname` |
+   | Work email | `email` |
+   | Company | `company` |
+   | Job title | `cargo` / `jobtitle` (must match the form’s HubSpot field `name`) |
+   | Phone / WhatsApp | `phone` |
+   | Industry / vertical | `industry` (create custom property if missing) |
+   | Challenge + preferred slots | often one `message` (or textarea) property |
+
+2. Private App scopes must include **both** `crm.objects.contacts.read` **and**
+   `crm.schemas.contacts.read` (see table above). Schema scope missing ⇒ custom
+   fields never discovered ⇒ never sampled.
+
+3. Data Boar YAML: `type: hubspot` with `objects: [contacts]` (add companies/deals
+   if needed). Set `HUBSPOT_PRIVATE_APP_TOKEN` in the **process environment** —
+   never in Git. Optional bridge: `~/.config/databoar/hubspot.env` +
+   `. ./scripts/databoar-env-load.sh hubspot`. Vault-first (Bitwarden → same env
+   name) is preferred when available — see
+   [OPERATOR_CREDENTIALS_FROM_ENV.md](ops/OPERATOR_CREDENTIALS_FROM_ENV.md).
+
+4. Run a **oneshot** scan (not `--demo`). In the report, findings appear as
+   filesystem-style rows with `path=contacts` and `file_name=<property>`. Expect
+   **email** / **phone** to surface as HIGH/MEDIUM when samples contain real
+   values; free-text `message` / names may be MEDIUM, LOW, or **suggested review**
+   depending on detectors — absence of a finding is not proof the property was
+   unread (empty sample or below threshold).
+
+5. Increase `sample_limit` on the target (connector caps at 100) if the portal is
+   large and the lead you care about is not among the first non-empty samples
+   collected per property.
+
+**Customer-facing tip:** document in your runbook which HubSpot properties the
+website form writes. If marketing adds a field on the form but forgets the matching
+Contact property (or the Private App schema scope), Data Boar will look “blind”
+even though HubSpot email notifications still work.
+
+### Paid-tier engagement (support / consulting)
+
+`hubspot` is a **Pro+** connector (`connector_hubspot` in the licensing feature map).
+Typical customer path: they open a **paid support / engagement** ticket; you help them
+(1) wire Private App + env token, (2) confirm Contacts actually hold the fields, and
+(3) run discovery under **their** YAML detection posture — not a HubSpot-only special
+case.
+
+| Layer | What the customer turns on | What you verify on HubSpot |
+| ----- | -------------------------- | -------------------------- |
+| **Connect** | `type: hubspot`, token, scopes, `objects:` | 401/scopes, property discovery, samples non-empty |
+| **Evaluate** | Same global detection stack as SQL/FS: built-in patterns, `regex_overrides`, compliance samples / `norm_tag`, recommendation overrides, sensitivity thresholds | Findings on `path=contacts` (etc.) carry the **active** norms — LGPD is the common BR baseline, but GDPR, CCPA/CPRA, HIPAA labels, custom `norm_tag`, and client overrides all apply when enabled in config |
+| **Out of band** | Email workflows, Gmail, Forms-only archives | Out of connector scope — say so explicitly so “HubSpot emailed me” ≠ “Data Boar scanned it” |
+
+Success for support is **both**: connection green **and** at least one finding (or an
+explicit empty-sample explanation) under the ruleset they paid you to interpret — not
+merely “API ping OK”.
+
+> **Security:** keep `base_url` at the default HubSpot API host unless you have a
+> documented allowlist change. See issue discussion on host allowlisting for
+> Bearer-token exfiltration risk when `base_url` is attacker-controlled.
 
 ---
 

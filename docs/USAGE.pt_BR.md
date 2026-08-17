@@ -460,6 +460,10 @@ O `data-boar-report` lê **apenas** o artefato **SQLite local** da varredura (`s
 - Opcionais: **`sql_sampling`** (tetos hierárquicos de amostragem SQL/Snowflake; ver bullet `file_scan` acima e [USAGE.md](USAGE.md)), `ml_patterns_file`, `dl_patterns_file`, `regex_overrides_file`, `sensitivity_detection` (termos ML/DL inline), `learned_patterns` (export de termos classificados), **`pattern_files_encoding`** (encoding dos arquivos de padrões; ver abaixo).
 - **Pedindo acesso à TI:** Quando for preciso solicitar permissões à equipe de TI (ex.: pastas compartilhadas, contas de banco, tokens de API), solicite o **mínimo** necessário. Veja [OPERATOR_IT_REQUIREMENTS.pt_BR.md](ops/OPERATOR_IT_REQUIREMENTS.pt_BR.md) para o checklist por fonte (somente leitura, sem admin), o que não precisamos e uma breve justificativa, alinhada a zero-trust ou IAM restrito. ([EN](ops/OPERATOR_IT_REQUIREMENTS.md))
 
+### Credenciais a partir do ambiente (segredos fora do config)
+
+Para manter segredos **fora do arquivo de config**, use chaves **`*_from_env`**: o YAML guarda só o **nome** da variável; o valor entra no **ambiente do processo** na subida. Esse é o contrato estável — vaults (Bitwarden hoje; Fase B `@vault:` / vaults corporativos depois) devem **injetar na mesma camada de env**. Ponte opcional: `~/.config/databoar/*.env` + `scripts/databoar-env-load.sh` / `.ps1`. Detalhe: [OPERATOR_CREDENTIALS_FROM_ENV.pt_BR.md](ops/OPERATOR_CREDENTIALS_FROM_ENV.pt_BR.md) ([EN](ops/OPERATOR_CREDENTIALS_FROM_ENV.md)). Bitwarden como fonte humana: [OPERATOR_SECRETS_BITWARDEN.pt_BR.md](ops/OPERATOR_SECRETS_BITWARDEN.pt_BR.md).
+
 ### Config inicial (copiar e colar) e onde começar {#config-inicial-exemplos}
 
 Se você está **começando agora** (jurídico, DPO, liderança de auditoria ou **validação de capacidades**) e precisa de **um único arquivo** para alinhar com a TI **sem** ler todos os guias primeiro:

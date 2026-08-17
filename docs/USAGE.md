@@ -524,6 +524,8 @@ ml_patterns_file: docs/compliance-samples/compliance-sample-pipeda.yaml
 
 To keep secrets **out of the config file**, use **`*_from_env`** keys so the application reads values from environment variables at load time. This is the recommended pattern for production and for config files that may be shared or versioned.
 
+**Stable contract:** YAML holds **variable names**; the process environment holds **values**. Operator vaults (Bitwarden today; Phase B `@vault:` / enterprise vaults later) should **inject into that same env layer** — see [OPERATOR_CREDENTIALS_FROM_ENV.md](ops/OPERATOR_CREDENTIALS_FROM_ENV.md) ([pt-BR](ops/OPERATOR_CREDENTIALS_FROM_ENV.pt_BR.md)). Optional local files under `~/.config/databoar/*.env` plus `scripts/databoar-env-load.sh` / `.ps1` are a convenience bridge, not a second product API.
+
 **Requesting access from IT:** When you need to ask the IT team for permissions (e.g. shared folders, database accounts, API tokens), use the **minimal** access required. See [OPERATOR_IT_REQUIREMENTS.md](ops/OPERATOR_IT_REQUIREMENTS.md) for a per-source checklist of what to ask for (read-only, no admin), what we do *not* need, and a short justification so the request aligns with zero-trust or strict IAM. ([pt-BR](ops/OPERATOR_IT_REQUIREMENTS.pt_BR.md))
 
 - **API key:** `api.api_key_from_env: "AUDIT_API_KEY"` (see Authentication above).
@@ -533,7 +535,7 @@ To keep secrets **out of the config file**, use **`*_from_env`** keys so the app
 - **REST / OAuth:** In the target’s `auth` block: `token_from_env: "REST_TOKEN"`, `client_secret_from_env: "CLIENT_SECRET"`.
 - **Power BI / Dataverse:** At target level: `client_secret_from_env: "PBI_SECRET"`, or in `auth`: `client_secret_from_env: "PBI_SECRET"`.
 
-When a `*_from_env` key is set, the resolved value is used for the connection; the config file can omit the literal secret. Restrict config file permissions and **do not commit** config files that contain credentials; see [SECURITY.md](../SECURITY.md) (Config file and secrets).
+When a `*_from_env` key is set, the resolved value is used for the connection; the config file can omit the literal secret. Restrict config file permissions and **do not commit** config files that contain credentials; see [SECURITY.md](../SECURITY.md) (Config file and secrets). Bitwarden as human source of truth: [OPERATOR_SECRETS_BITWARDEN.md](ops/OPERATOR_SECRETS_BITWARDEN.md).
 
 ### Sensitivity detection: ML and DL training terms
 
