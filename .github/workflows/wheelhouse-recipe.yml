@@ -58,6 +58,25 @@ jobs:
       - name: Verify Connector/C checksum from recipe-manifest.yaml
         run: bash scripts/wheelhouse/verify_connector_c_checksum.sh
 
+  hosted-sha256sums-parity:
+    name: Hosted release SHA256SUMS covers every .whl (#1410)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Fail if SHA256SUMS line count != .whl count on hosted tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          # Keep in sync with scripts/docker/apply_wheelhouse_v1.sh DEFAULT / PLAN tag.
+          WHEELHOUSE_TAG: wheelhouse-x86-64-v1-2026-07-29
+          WHEELHOUSE_REPO: DataBoar/data-boar-site
+        run: |
+          bash scripts/wheelhouse/verify_release_sha256sums.sh \
+            --repo "$WHEELHOUSE_REPO" --tag "$WHEELHOUSE_TAG"
+
   canary-musl-cp312:
     name: Canary musl × CPython 3.12 (gates hard-fail)
     # PR/push path hits + manual canary. Schedule uses matrix-cell (includes this cell).
