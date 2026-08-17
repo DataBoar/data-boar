@@ -1,6 +1,8 @@
 # Matriz de compatibilidade de SO (expansão do homelab)
 
-**Escopo do produto:** o Data Boar é **agnóstico de plataforma** — **Linux**, **macOS**, **Windows** e **container** estão no escopo. **Este arquivo** trata só do **eixo Linux do homelab** (matriz de distros, `dnf`/`pacman`/`apk`, etc.). Validação em Windows, macOS, FreeBSD e illumos fica no épico **#1171** e em outros ops docs — não aqui.
+**Escopo do produto:** o Data Boar é **agnóstico de plataforma** — **Linux**, **macOS**, **Windows** e **container** estão no escopo. **Este arquivo** resume o **eixo Linux do homelab** (matriz de distros). macOS / FreeBSD / illumos: épico **#1171** e outros ops docs.
+
+**Windows (testado em CI, não só declarado):** job **`test-windows`** em **`windows-latest`** (Python **3.12**) — pytest, `pip install .`, demo headless (`scripts/demo_headless.py`). Ver [#1427](https://github.com/DataBoar/data-boar/issues/1427) e o plano EN `PLAN_WINDOWS_CI_ENABLEMENT.md`. Não substitui MSI/winget ([#1467](https://github.com/DataBoar/data-boar/issues/1467)).
 
 **Objetivo:** Guiar **quais distribuições Linux** testar o Data Boar no homelab, priorizadas por **relevância em produção**, **disponibilidade de Python 3.12+** e diferenças de **gerenciador de pacotes**. Ajuda a expandir a **cobertura documentada do homelab Linux** além do **caminho de instalação mais documentado** (exemplos Debian/Ubuntu no [TECH_GUIDE.md](../TECH_GUIDE.md)).
 
@@ -11,7 +13,7 @@
 ## Linha de base documentada (resumo)
 
 - **Caminho de instalação mais documentado:** **Ubuntu 24.04 LTS** / **Debian 13** (recomendado) ou Linux/macOS/Windows recente — conforme [TECH_GUIDE.md](../TECH_GUIDE.md) (§ Requirements and environment preparation).
-- **Python:** **3.12+** obrigatório; o **CI** usa o runner padrão do **GitHub Actions** (`ubuntu-latest`) com **3.12 e 3.13** — isso é **infraestrutura de CI**, não limite de plataforma do produto.
+- **Python:** **3.12+** obrigatório; o **CI** usa **`ubuntu-latest`** (3.12/3.13 bloqueantes; 3.14 sinal) **e** **`windows-latest`** (3.12, job `test-windows`) — isso é **infraestrutura de CI**, não limite de plataforma do produto.
 
 **Tier 1 (testar primeiro):** **RHEL 9** / **AlmaLinux 9** / **Rocky 9** (empresarial, `dnf`), **Fedora 40+** (upstream RHEL). **Tier 2:** **Arch** / **Manjaro** / **BigLinux** (`pacman`), **openSUSE Tumbleweed** (`zypper`). **Tier 3:** **Gentoo** (`emerge`, source-based), **Void** / **Alpine** (musl).
 

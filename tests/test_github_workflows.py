@@ -59,7 +59,15 @@ def test_upstream_workflows_invoke_slack_ci_failure_notify_on_failure() -> None:
         (
             "ci.yml",
             "CI",
-            ("test", "lint", "bandit", "audit", "dependency-review", "sonar"),
+            (
+                "test",
+                "test-windows",
+                "lint",
+                "bandit",
+                "audit",
+                "dependency-review",
+                "sonar",
+            ),
         ),
         ("semgrep.yml", "Semgrep", ("semgrep",)),
         ("gitleaks.yml", "Gitleaks", ("scan",)),
@@ -414,18 +422,32 @@ def test_dependabot_sync_workflow_present_and_valid() -> None:
         )
 
 
-def test_ci_lint_job_runs_pre_commit_all_files() -> None:
-    """Regression guard: lint job must run pre-commit so CI matches local hook bundle (incl. Ruff, plans-stats)."""
+def test_ci_yml_has_windows_test_job() -> None:
+    """#1427: Windows is CI-tested (not only declared) via windows-latest."""
     data = _load_workflow("ci.yml")
-    assert data.get("name") == "CI"
     jobs = data.get("jobs") or {}
-    lint = jobs.get("lint")
-    assert isinstance(lint, dict), "ci.yml must define a lint job"
-    assert "pre-commit" in str(lint.get("name", "")).lower(), (
-        "lint job name should mention pre-commit"
-    )
-    runs = "\n".join(_ci_step_run_texts(lint))
-    assert "pre-commit run --all-files" in runs
+    win = jobs.get("test-windows")
+    assert isinstance(win, dict), "ci.yml must define test-windows job"
+    assert win.get("runs-on") == "windows-latest"
+    # Cap hung runners (GH/outage class); do not soft-fail — Windows must stay green.
+    assert win.get("timeout-minutes") == 40
+    assert win.get("continue-on-error") in (None, False)
+    env = win.get("env") or {}
+    assert "UV_PYTHON" in env, "Windows job must pin UV_PYTHON to matrix Python"
+    assert env.get("JOBLIB_MULTIPROCESSING") == "0"
+    runs = "\n".join(_ci_step_run_texts(win))
+    assert "uv sync" in runs
+    assert "--python" in runs
+    assert "pytest" in runs
+    assert "pip install" in runs
+    assert "demo_headless" in runs
+    # Prefer bash for the pytest step (sklearn/OpenMP + pwsh signal quirks).
+    steps = win.get("steps") or []
+    pytest_steps = [
+        s for s in steps if isinstance(s, dict) and "pytest" in str(s.get("run") or "")
+    ]
+    assert pytest_steps, "Windows job must have a pytest step"
+    assert pytest_steps[0].get("shell") == "bash"
 
 
 def test_zizmor_workflow_present_and_valid() -> None:

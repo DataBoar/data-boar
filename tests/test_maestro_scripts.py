@@ -13,6 +13,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -1545,6 +1546,10 @@ def _run_fw_guard_subnet_check(
 
 def test_labop_fw_guard_rfc1918_subnet_accepts_private_cidr() -> None:
     """#1020 zero-trust: fw-guard accepts RFC1918 CIDR (not exit 2)."""
+    if sys.platform == "win32":
+        pytest.skip(
+            "labop-fw-guard is Linux bash; GHA Windows `bash` is WSL stub (#1427)"
+        )
     root = _project_root()
     for subnet in ("192.168.40.0/24", "10.0.0.0/8", "172.16.0.0/12"):
         proc = _run_fw_guard_subnet_check(root, subnet)
@@ -1556,6 +1561,10 @@ def test_labop_fw_guard_rfc1918_subnet_accepts_private_cidr() -> None:
 
 def test_labop_fw_guard_rfc1918_subnet_rejects_non_private() -> None:
     """#1020 zero-trust: fw-guard exit 2 for public, wildcard, or garbage CIDR."""
+    if sys.platform == "win32":
+        pytest.skip(
+            "labop-fw-guard is Linux bash; GHA Windows `bash` is WSL stub (#1427)"
+        )
     root = _project_root()
     for subnet in ("0.0.0.0/0", "1.2.3.0/24", "192.168.40.0/0", "not-a-cidr", ""):
         if subnet == "":
