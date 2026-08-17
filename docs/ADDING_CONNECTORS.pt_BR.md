@@ -366,7 +366,10 @@ customizados onde CPF/CNPJ costumam aparecer) e amostra objetos com paginação 
    | `crm.schemas.deals.read` | Descobrir **nomes** de propriedades de negócio (incl. custom) |
 
 5. Gere o token e guarde só em variável de ambiente / cofre de segredos — nunca em YAML
-   commitado.
+   commitado. Prefira vault do operador (ex.: Bitwarden) que **injeta**
+   `HUBSPOT_PRIVATE_APP_TOKEN` na subida do processo; arquivo local opcional
+   `~/.config/databoar/hubspot.env` (`chmod 0600`) é só ponte — ver
+   [OPERATOR_CREDENTIALS_FROM_ENV.pt_BR.md](ops/OPERATOR_CREDENTIALS_FROM_ENV.pt_BR.md).
 
 **Least privilege:** o conector é **somente leitura e sob demanda** (sem webhooks HubSpot).
 `crm.objects.*.read` devolve valores de campo; `crm.schemas.*.read` é obrigatório para a
@@ -391,6 +394,79 @@ targets:
 
 Chaves opcionais: `base_url` (padrão `https://api.hubapi.com`), `token_from_env`
 (nome da env var), `allow_private_networks` (somente lab).
+
+### Formulários de marketing / site → o que o Data Boar enxerga
+
+**Forms** do HubSpot (embed público / Forms API) e o conector CRM do Data Boar são
+superfícies diferentes. O conector só chama objetos CRM (`contacts`, `companies`,
+`deals` por padrão). **Não** lê o arquivo de submissions do formulário, workflows de
+e-mail nem Gmail.
+
+| Caminho do lead | Visível em `type: hubspot`? | Por quê |
+| --------------- | --------------------------- | ------- |
+| Campos do form mapeados para propriedades de **Contact** | **Sim** (scopes + nomes batendo) | Descobre `/crm/v3/properties/contacts` e amostra `/crm/v3/objects/contacts` |
+| Form cria Contact e o HubSpot te avisa por e-mail | Contact **sim**; corpo do e-mail **não** | E-mail fora da amostragem CRM |
+| Dado só em **Form submissions**, nunca na ficha do Contact | **Não** | API errada para este conector |
+| Conversas / tickets / objetos fora de `objects:` | **Não** até incluir o tipo (+ scopes) | Defaults = contacts/companies/deals |
+
+**Checklist operador (portal + Data Boar):**
+
+1. No HubSpot, abra um lead recente de demo → ficha **Contact**. Confirme que cada
+   campo do form existe como **propriedade de contato** com valor (não só na linha do
+   tempo do formulário). Mapeamento típico de “agendar demonstração”:
+
+   | Intenção no form | Propriedade interna |
+   | ---------------- | ------------------- |
+   | Nome / sobrenome | `firstname`, `lastname` |
+   | E-mail | `email` |
+   | Empresa | `company` |
+   | Cargo | `jobtitle` (ou o `name` exato do campo no HubSpot) |
+   | Telefone / WhatsApp | `phone` |
+   | Indústria / vertical | `industry` (criar custom se faltar) |
+   | Desafio + horários | em geral um `message` (textarea) |
+
+2. Private App com **os dois**: `crm.objects.contacts.read` **e**
+   `crm.schemas.contacts.read`. Sem schema → custom fields nunca entram na lista.
+
+3. YAML Data Boar: `type: hubspot`, `objects: [contacts]` (+ companies/deals se
+   precisar). Token só em `HUBSPOT_PRIVATE_APP_TOKEN` no **ambiente do processo** —
+   nunca no Git. Ponte opcional: `~/.config/databoar/hubspot.env` +
+   `. ./scripts/databoar-env-load.sh hubspot`. Vault primeiro (Bitwarden → mesmo
+   nome de env) quando disponível — ver
+   [OPERATOR_CREDENTIALS_FROM_ENV.pt_BR.md](ops/OPERATOR_CREDENTIALS_FROM_ENV.pt_BR.md).
+
+4. Scan **oneshot** (não `--demo`). No relatório: `path=contacts`,
+   `file_name=<propriedade>`. Espere **email** / **phone** em HIGH/MEDIUM com
+   amostras reais; texto livre / nomes podem ser MEDIUM, LOW ou *suggested review*.
+   Sem finding ≠ propriedade não lida (amostra vazia ou abaixo do limiar).
+
+5. Aumente `sample_limit` no target (teto 100) se o portal for grande e o lead
+   desejado não estiver entre as primeiras amostras não vazias por propriedade.
+
+**Dica para clientes:** documente no runbook quais propriedades o form do site
+grava. Se marketing cria campo no form e esquece a propriedade no Contact (ou o
+scope de schema), o Data Boar parece “cego” mesmo com e-mail do HubSpot funcionando.
+
+### Engajamento paid-tier (suporte / consultoria)
+
+`hubspot` é conector **Pro+** (`connector_hubspot` no mapa de features). Caminho
+típico: o cliente abre ticket de **suporte pago / engajamento**; você ajuda a
+(1) ligar Private App + token no env, (2) confirmar que os Contacts realmente
+carregam os campos, e (3) rodar discovery com a **postura de detecção do YAML
+deles** — não um caso especial só-HubSpot.
+
+| Camada | O que o cliente liga | O que você valida no HubSpot |
+| ------ | -------------------- | ---------------------------- |
+| **Conectar** | `type: hubspot`, token, scopes, `objects:` | 401/scopes, discovery de properties, amostras não vazias |
+| **Avaliar** | Mesmo stack global de SQL/FS: padrões embutidos, `regex_overrides`, samples de compliance / `norm_tag`, recommendation overrides, limiares | Findings em `path=contacts` (etc.) carregam as normas **ativas** — LGPD é o basicão BR, mas GDPR, CCPA/CPRA, rótulos HIPAA, `norm_tag` custom e overrides do cliente valem quando ligados no config |
+| **Fora de banda** | Workflows de e-mail, Gmail, arquivo só-Forms | Fora do conector — diga isso: “HubSpot me avisou” ≠ “o Data Boar escaneou” |
+
+Sucesso de suporte = **os dois**: conexão OK **e** ao menos um finding (ou
+explicação explícita de amostra vazia) sob o ruleset que eles te pagaram para
+interpretar — não só “API ping OK”.
+
+> **Segurança:** mantenha `base_url` no host padrão da API HubSpot, salvo mudança
+> documentada com allowlist. `base_url` arbitrário + Bearer = risco de exfiltração.
 
 ---
 

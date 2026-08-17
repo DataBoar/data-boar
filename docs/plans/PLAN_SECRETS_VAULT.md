@@ -34,7 +34,7 @@ This plan aims to **reduce risk** around passwords and other secrets used for da
 
 Config is loaded in **config/loader.py** and **normalize_config()**; connectors read credentials from the normalized target/config dict (e.g. **connectors/sql_connector.py**, **mongodb_connector.py**, **rest_connector.py**, **powerbi_connector.py**, **dataverse_connector.py**, **smb_connector.py**, **sharepoint_connector.py**, **webdav_connector.py**, **snowflake_connector.py**, **redis_connector.py**).
 
-**Operator password manager (Bitwarden, etc.):** Independent of Phase B, you can keep **master copies** of passwords and API keys in **Bitwarden** (free tier is usually enough for a solo operator) and **paste or inject** into env at runtime — see **[../ops/OPERATOR_SECRETS_BITWARDEN.md](../ops/OPERATOR_SECRETS_BITWARDEN.md)**. That does **not** replace `pass_from_env` or future `@vault:` resolution inside the app.
+**Operator password manager (Bitwarden, etc.):** Independent of Phase B, you can keep **master copies** of passwords and API keys in **Bitwarden** (free tier is usually enough for a solo operator) and **paste or inject** into env at runtime — see **[../ops/OPERATOR_SECRETS_BITWARDEN.md](../ops/OPERATOR_SECRETS_BITWARDEN.md)** and the vault-forward env contract in **[../ops/OPERATOR_CREDENTIALS_FROM_ENV.md](../ops/OPERATOR_CREDENTIALS_FROM_ENV.md)**. That does **not** replace `pass_from_env` or future `@vault:` resolution inside the app.
 
 ---
 

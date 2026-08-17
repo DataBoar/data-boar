@@ -51,4 +51,9 @@
 
 ## Ver também
 
+- [OPERATOR_CREDENTIALS_FROM_ENV.pt_BR.md](OPERATOR_CREDENTIALS_FROM_ENV.pt_BR.md) — camada env + ponte XDG + **vault no tempo** (Bitwarden → env → `*_from_env`; Fase B depois).
 - [OPERATOR_PACKAGE_MAINTENANCE_AND_BW_CLI.pt_BR.md](OPERATOR_PACKAGE_MAINTENANCE_AND_BW_CLI.pt_BR.md) — hábitos de pacotes no Windows / WSL / Linux, instalação do `bw`, Topgrade e `gta`.
+- [SECURITY.md](../../SECURITY.md) — redação, segredos via env, higiene de `config.yaml`.
+- [PLAN_SECRETS_VAULT.md](../plans/PLAN_SECRETS_VAULT.md) — Fase B vault in-app (trilha separada).
+- [CONTRIBUTING.md](../../CONTRIBUTING.md) — não versionar credenciais.
+- [OPERATOR_SECRETS_BITWARDEN.md](OPERATOR_SECRETS_BITWARDEN.md) — English.

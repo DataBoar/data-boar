@@ -122,6 +122,7 @@ dpkg-query -W -f='${Status}\t${Package}\t${Version}\n' bitwarden-cli 2>/dev/null
 
 ## See also
 
+- [OPERATOR_CREDENTIALS_FROM_ENV.md](OPERATOR_CREDENTIALS_FROM_ENV.md) — env layer + XDG bridge + **vault-forward** (Bitwarden → env → `*_from_env`; Phase B later).
 - [OPERATOR_PACKAGE_MAINTENANCE_AND_BW_CLI.md](OPERATOR_PACKAGE_MAINTENANCE_AND_BW_CLI.md) — Windows / WSL / Linux package hygiene, `bw` install, Topgrade and `gta`.
 - [SECURITY.md](../../SECURITY.md) — redaction, env-based secrets, `config.yaml` hygiene.
 - [PLAN_SECRETS_VAULT.md](../plans/PLAN_SECRETS_VAULT.md) — Phase B in-app vault (separate track).
