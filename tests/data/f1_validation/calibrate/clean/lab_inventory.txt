@@ -1,0 +1,2 @@
+Inventario de lab: rack U12, switch port 24, VLAN lab-pb
+build_id=calibrate-only-2026

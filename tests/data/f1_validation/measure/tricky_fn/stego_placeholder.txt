@@ -1,0 +1,3 @@
+STEGO PLACEHOLDER (Phase 1 text-only)
+Um CPF valido foi escondido em LSB de imagem em cenarios POC;
+neste arquivo nao ha digitos de CPF colados — esperado NAO detectar.

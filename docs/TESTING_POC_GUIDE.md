@@ -31,6 +31,8 @@ uv run python main.py --config deploy/config.example.yaml \
 
 # 5. Compare findings to expected results
 # Each sub-folder in tests/synthetic_corpus/ has an EXPECTED.txt file.
+# For measured precision/recall/F1 vs a labeled ground-truth manifest, see
+# docs/VALIDATION.md and: uv run python scripts/validate_detection_f1.py
 ```
 
 ---
