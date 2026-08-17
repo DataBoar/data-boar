@@ -247,7 +247,7 @@ def test_local_db_manager(tmp_path):
             norm_tag="LGPD",
             ml_confidence=90,
         )
-        db_findings, _, _ = mgr.get_findings("test-session-123")
+        db_findings, _, _, _ = mgr.get_findings("test-session-123")
         assert len(db_findings) == 1
         assert db_findings[0]["column_name"] == "c"
         mgr.finish_session("test-session-123")
@@ -406,7 +406,7 @@ def test_wipe_all_data_logs_and_clears(tmp_path):
 
         # Sanity check: we have sessions and findings
         assert mgr.list_sessions()
-        db_rows, _, _ = mgr.get_findings("s1")
+        db_rows, _, _, _ = mgr.get_findings("s1")
         assert db_rows
 
         # Wipe everything and ensure sessions/findings are gone but a wipe log exists
@@ -653,7 +653,7 @@ def test_filesystem_finding_has_file_identity_columns(tmp_path):
             source_size=1024,
             content_fingerprint="abcdef0123456789",
         )
-        _, fs_findings, _ = mgr.get_findings(session_id)
+        _, fs_findings, _, _ = mgr.get_findings(session_id)
         assert len(fs_findings) == 1
         f = fs_findings[0]
         assert f.get("source_mtime_ns") == 1_700_000_000_000_000_000
@@ -687,7 +687,7 @@ def test_filesystem_finding_identity_nullable(tmp_path):
             ml_confidence=0,
             # No source_mtime_ns / source_size / content_fingerprint
         )
-        _, fs_findings, _ = mgr.get_findings(session_id)
+        _, fs_findings, _, _ = mgr.get_findings(session_id)
         assert len(fs_findings) == 1
         f = fs_findings[0]
         assert f.get("source_mtime_ns") is None

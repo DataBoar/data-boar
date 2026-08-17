@@ -75,8 +75,9 @@ class HubSpotConnector:
       1. GET /crm/v3/properties/{objectType} — all property names (incl. custom).
       2. GET /crm/v3/objects/{objectType}?properties=... — paginate via ``after``.
 
-    Each property is treated as a column: ``scan_column`` → filesystem-style finding
-    with ``path=object_type`` and ``file_name=prop_name``.
+    Each property is treated as a column: ``scan_column`` → application finding
+    (``save_finding("application", …)``) with ``path=object_type`` and ``file_name=prop_name``.
+    Excel sheet: **Application findings** (not Filesystem findings — #1613).
     """
 
     def __init__(
@@ -254,7 +255,7 @@ class HubSpotConnector:
             if not hi_med and not suggested:
                 continue
             self.db_manager.save_finding(
-                "filesystem",
+                "application",
                 target_name=target_name,
                 path=object_type,
                 file_name=prop_name,

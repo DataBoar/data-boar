@@ -192,7 +192,8 @@ class RESTConnector:
     """
     Connect to REST/API endpoints with configurable auth (basic, bearer, OAuth2 client, custom headers),
     GET configured paths, parse JSON responses, and run sensitivity detection on field names and sample values.
-    Findings are saved as filesystem_findings with file_name encoding path and field (e.g. "GET /users | email").
+    Findings are saved as application findings with file_name encoding path and field
+    (e.g. "GET /users | email") — Excel sheet **Application findings** (#1613), not Filesystem.
     """
 
     def __init__(
@@ -374,7 +375,7 @@ class RESTConnector:
                         return
                     seen_path_key.add((path_str, key))
                     self.db_manager.save_finding(
-                        "filesystem",
+                        "application",
                         target_name=target_name,
                         path=self.config.get("base_url", "") + path_str,
                         file_name=f"GET {path_str} | {key}",

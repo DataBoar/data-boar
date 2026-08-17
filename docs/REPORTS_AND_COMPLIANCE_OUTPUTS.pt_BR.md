@@ -28,7 +28,7 @@
 1. A **varredura** grava linhas **só com metadados** no SQLite (`database_findings`, `filesystem_findings`, `scan_failures`, tabelas de sessão, cruzamento agregado opcional, inventário de fonte de dados opcional — quando existir para a sessão).
 2. **`generate_report`** (`report/generator.py`) lê essas linhas e monta:
    - Planilha **Executive summary** (visão agregada).
-   - Planilhas **Database findings** / **Filesystem findings** (detalhe colunar: alvo, localização, padrão, sensibilidade, `norm_tag`, texto de recomendação quando configurado).
+   - Planilhas **Database findings** / **Filesystem findings** / **Application findings** (detalhe colunar: alvo, localização, padrão, sensibilidade, `norm_tag`, texto de recomendação quando configurado). Achados de API/CRM não vão para Filesystem. Planilhas de filesystem vazias são omitidas.
    - **Report info** (sessão, versão, notas opcionais de jurisdição quando habilitadas — heurística, não conclusão jurídica).
    - Planilhas opcionais: **Trends**, **Cross-ref data – ident. risk**, **Suggested review (LOW)**, **Data source inventory**, **Scan failures**.
 3. A imagem do **heatmap** é gravada junto ao workbook.

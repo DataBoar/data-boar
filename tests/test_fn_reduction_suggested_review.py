@@ -127,11 +127,11 @@ def test_remove_suggested_review_from_main_only_when_sheet_enabled() -> None:
         "pattern_detected": SUGGESTED_REVIEW_PATTERN,
         "column_name": "x",
     }
-    out_on, _ = _remove_suggested_review_from_main_sheets(
+    out_on, _, _ = _remove_suggested_review_from_main_sheets(
         [dict(row)], [], {"include_suggested_review_sheet": True}
     )
     assert out_on == []
-    out_off, _ = _remove_suggested_review_from_main_sheets(
+    out_off, _, _ = _remove_suggested_review_from_main_sheets(
         [dict(row)], [], {"include_suggested_review_sheet": False}
     )
     assert len(out_off) == 1
