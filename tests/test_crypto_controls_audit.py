@@ -15,6 +15,7 @@ from connectors.redis_connector import RedisConnector
 from connectors.rest_connector import RESTConnector
 from connectors.smb_connector import SMBConnector
 from connectors.sql_connector import SQLConnector
+from connectors.url_guard import OPT_IN_KEY
 from core.crypto_audit import collect_sql_crypto_facts
 from core.database import LocalDBManager
 from report.generator import generate_report
@@ -318,6 +319,7 @@ def test_mongodb_inferred_controls_saved_when_mid_loop_raises() -> None:
     target = {
         "name": "mongo-infer-boom",
         "host": "localhost",
+        OPT_IN_KEY: True,
         "port": 27017,
         "database": "test",
         "tls": True,
@@ -353,6 +355,7 @@ def test_redis_inferred_controls_saved_when_mid_loop_raises() -> None:
     target = {
         "name": "redis-infer-boom",
         "host": "localhost",
+        OPT_IN_KEY: True,
         "port": 6379,
         "tls": False,
         "_validate_crypto": True,
@@ -406,6 +409,7 @@ def test_mongodb_connect_honors_tls_flag() -> None:
     target = {
         "name": "mongo-tls",
         "host": "localhost",
+        OPT_IN_KEY: True,
         "port": 27017,
         "database": "test",
         "tls": True,
@@ -423,26 +427,45 @@ def test_redis_connect_honors_tls_and_cert_reqs() -> None:
     target = {
         "name": "redis-tls",
         "host": "localhost",
+        OPT_IN_KEY: True,
         "port": 6379,
         "tls": True,
         "ssl_cert_reqs": "required",
     }
     connector = RedisConnector(target, MagicMock(), MagicMock())
     fake_redis = MagicMock()
-    fake_redis.Redis.return_value = MagicMock()
+    fake_client = MagicMock()
+    fake_redis.Redis.return_value = fake_client
+    # Patch Redis factory; when redis package is installed the connector builds a
+    # real ConnectionPool (pin path). Without the nosql extra (some CI cells),
+    # it falls back to Redis(**kwargs) with ssl= True.
     with patch("connectors.redis_connector._REDIS_AVAILABLE", True):
         with patch("connectors.redis_connector.redis", fake_redis):
-            connector.connect()
+            with patch(
+                "connectors.url_guard._resolve_host_ips",
+                return_value=[__import__("ipaddress").ip_address("127.0.0.1")],
+            ):
+                connector.connect()
     assert connector._tls_enabled is True
+    assert fake_redis.Redis.called
     kwargs = fake_redis.Redis.call_args.kwargs
-    assert kwargs.get("ssl") is True
-    assert kwargs.get("ssl_cert_reqs") == "required"
+    pool = kwargs.get("connection_pool")
+    if pool is not None:
+        from redis.connection import SSLConnection
+
+        assert issubclass(pool.connection_class, SSLConnection)
+        assert pool.connection_kwargs.get("host") == "localhost"
+        assert pool.connection_kwargs.get("ssl_cert_reqs") == "required"
+    else:
+        assert kwargs.get("ssl") is True
+        assert kwargs.get("ssl_cert_reqs") == "required"
 
 
 def test_mongodb_connector_saves_crypto_audit_when_flag_on() -> None:
     target = {
         "name": "mongo-crypto",
         "host": "localhost",
+        OPT_IN_KEY: True,
         "port": 27017,
         "database": "test",
         "tls": True,
@@ -483,6 +506,7 @@ def test_redis_connector_saves_crypto_audit_when_flag_on() -> None:
     target = {
         "name": "redis-crypto",
         "host": "localhost",
+        OPT_IN_KEY: True,
         "port": 6379,
         "tls": False,
         "_validate_crypto": True,
@@ -790,6 +814,7 @@ def test_mongodb_connector_skips_crypto_audit_when_flag_off() -> None:
     target = {
         "name": "mongo-off",
         "host": "localhost",
+        OPT_IN_KEY: True,
         "database": "test",
         "_validate_crypto": False,
     }

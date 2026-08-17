@@ -323,7 +323,9 @@ def test_sync_working_tree_uses_explicit_sync_result() -> None:
     )
     assert "$syncOk = $false" in text
     assert "if ($syncOk)" in text
-    assert "if ($LASTEXITCODE -eq 0) {" in text
+    # Capture rsync exit before any later ssh overwrites $LASTEXITCODE (#969 / syncOk).
+    assert "$exitCode = $LASTEXITCODE" in text
+    assert "if ($exitCode -eq 0) {" in text
     assert "Hash check OK" in text
     assert "return [bool]$syncOk" in text
     assert "--exclude='data-boar-*.tar'" in text
@@ -924,6 +926,11 @@ def _run_maestro_build_decision(pwsh: str, personas: list[str], tmp: Path) -> bo
 
     shutil.copyfile(maestro_src, mdir / "Maestro.ps1")
     shutil.copyfile(maestro / "core" / "MaestroPaths.ps1", mdir / "MaestroPaths.ps1")
+    # maestro#21: Maestro.ps1 dotsources Get-MaestroVersion.ps1 before Lab-MaestroCommon.
+    shutil.copyfile(
+        maestro / "core" / "Get-MaestroVersion.ps1",
+        mdir / "Get-MaestroVersion.ps1",
+    )
     marker = mdir / "build_invoked.marker"
     (mdir / "Build-ContainerArtefact.ps1").write_text(
         'Set-Content -LiteralPath "$PSScriptRoot/build_invoked.marker" -Value built\n',
@@ -936,9 +943,17 @@ def _run_maestro_build_decision(pwsh: str, personas: list[str], tmp: Path) -> bo
     )
     (mdir / "Lab-MaestroCommon.ps1").write_text(
         "function Reset-LabOpStatus { param($Node, $RunMarker) }\n"
-        "function Invoke-LabopGateReadiness { param($Node, [switch]$Deep) return $true }\n",
+        "function Invoke-LabopGateReadiness { param($Node, [switch]$Deep) return $true }\n"
+        "function Assert-MaestroBenchParams { param($BenchRunId, $BenchHealthUrl) }\n"
+        "function Assert-MaestroInventoryNodePaths { param($Inventory) }\n",
         encoding="utf-8",
     )
+    (mdir / "Test-MaestroOtelPreflight.ps1").write_text(
+        "# stub for lab-free #950 harness\n",
+        encoding="utf-8",
+    )
+    # Self-integrity warn path reads VERSION under maestro root (= tmp).
+    (tmp / "VERSION").write_text("0.0.0-test\n", encoding="utf-8")
     inv = {"lab_members": [{"hostname": "h1", "user": "u", "personas": personas}]}
     (data_dir / "inventory.json").write_text(json.dumps(inv), encoding="utf-8")
 

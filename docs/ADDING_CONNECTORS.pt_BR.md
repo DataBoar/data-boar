@@ -334,7 +334,65 @@ targets:
 
 ---
 
-## 7. Checklist
+## 7. Exemplo: conector HubSpot CRM (#1229)
+
+CRM SaaS gerenciado (tier Pro). Descobre **todos** os nomes de propriedade (incluindo campos
+customizados onde CPF/CNPJ costumam aparecer) e amostra objetos com paginação e backoff em 429.
+
+- **Módulo:** `connectors/hubspot_connector.py`
+- **Auth:** Private App Token via env (nunca commitar o token). Ver setup abaixo.
+- **SSRF:** Todo HTTP de saída usa pin de host em `connectors/url_guard.py` (#1552) — mesma
+  postura do conector REST.
+
+### Criar o token de Private App (UI HubSpot, em 2026-08)
+
+1. No HubSpot: **Settings → Integrations → Private Apps**.
+   Se a UI tiver movido Private Apps para **Legacy Apps**, abra esse caminho e siga —
+   o tipo de credencial continua sendo token de app **Private** (não app OAuth público).
+2. Crie (ou abra) um app e escolha **Private** (não **Public**).
+3. **Não** use **Service Key** no Data Boar. Service key é credencial ampla demais, sem os
+   escopos CRM granulares que este conector espera.
+4. Em escopos, marque **exatamente** estes seis escopos **.read** (sem write, sem webhooks):
+
+   | Escopo | Para quê |
+   | ------ | -------- |
+   | `crm.objects.contacts.read` | Amostrar **valores** de propriedades de contato |
+   | `crm.objects.companies.read` | Amostrar **valores** de propriedades de empresa |
+   | `crm.objects.deals.read` | Amostrar **valores** de propriedades de negócio |
+   | `crm.schemas.contacts.read` | Descobrir **nomes** de propriedades de contato (incl. custom) |
+   | `crm.schemas.companies.read` | Descobrir **nomes** de propriedades de empresa (incl. custom) |
+   | `crm.schemas.deals.read` | Descobrir **nomes** de propriedades de negócio (incl. custom) |
+
+5. Gere o token e guarde só em variável de ambiente / cofre de segredos — nunca em YAML
+   commitado.
+
+**Least privilege:** o conector é **somente leitura e sob demanda** (sem webhooks HubSpot).
+`crm.objects.*.read` devolve valores de campo; `crm.schemas.*.read` é obrigatório para a
+**descoberta** de propriedades. Sem os escopos de schema, campos customizados (onde CPF/CNPJ
+costumam ficar) nem entram na lista — e portanto nunca são amostrados (lacuna silenciosa).
+
+> **O nome da env var tem que bater exatamente.** Por padrão o conector lê
+> ``HUBSPOT_PRIVATE_APP_TOKEN`` (ou o nome em ``token_from_env`` /
+> ``auth.token_from_env``). Um nome *parecido mas errado* (por exemplo ``HUBSPOT_ACCESS_TOKEN``)
+> **não** gera erro claro de “variável errada”: o ``connect()`` roda, a API responde **401**,
+> e não há findings — a maior fonte de atrito ao configurar este conector. Confirme o nome
+> exportado antes de depurar escopos.
+
+Exemplo de config:
+
+```yaml
+targets:
+  - name: crm-hubspot
+    type: hubspot
+    objects: [contacts, companies, deals]
+```
+
+Chaves opcionais: `base_url` (padrão `https://api.hubapi.com`), `token_from_env`
+(nome da env var), `allow_private_networks` (somente lab).
+
+---
+
+## 8. Checklist
 
 - [ ] Novo módulo em `connectors/<nome>_connector.py`.
 - [ ] Classe com `run()`, e opcionalmente `connect()`/`close()`.

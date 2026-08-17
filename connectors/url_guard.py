@@ -29,7 +29,38 @@ DNS posture (#1552):
 
 Shared by: rest_connector, powerbi_connector (token_url),
 sharepoint_connector (site_url), webdav_connector (base_url),
-dataverse_connector (org_url / token_url).
+dataverse_connector (org_url / token_url), hubspot_connector (api.hubapi.com),
+mongodb_connector / redis_connector (host:port), sql_connector (connection URL host).
+
+#1565: ``PinnedIPHTTPAdapter`` / ``build_pinned_requests_session`` pin
+``requests`` peers the same way ``PinnedIPTransport`` pins httpx (SharePoint,
+WebDAV).
+
+#1586 (SQL slice A): ``sql_connector`` pins PostgreSQL TCP peers via libpq
+``hostaddr`` in ``connect_args`` (see ``connectors.tcp_pin``) using the same
+resolved IPs from :func:`resolve_and_validate_outbound_url`.
+
+#1586 (Mongo slice): ``mongodb_connector`` keeps the hostname in the URI for
+TLS ``server_hostname`` and pins DNS via :class:`connectors.tcp_pin.HostResolutionPin`
+(pymongo sync resolves with ``socket.getaddrinfo`` on each pool connect).
+
+#1586 (Redis slice): ``redis_connector`` keeps ``host`` for TLS SNI and pins
+TCP peers via ``make_pinned_redis_connection_class`` (redis-py
+``Connection._connect`` would otherwise re-``getaddrinfo`` the hostname).
+
+#1586 (MySQL slice): ``sql_connector`` pins **only** ``…+pymysql`` drivers via
+:class:`~connectors.tcp_pin.HostResolutionPin` (Python ``getaddrinfo``). Native
+MySQL/MariaDB connectors fail-closed on hostname targets.
+
+#1586 (MSSQL slice E): ``sql_connector`` rewrites the URL hostname to a
+guard-pinned IP for ``mssql+pymssql`` (FreeTDS) and ``mssql+pyodbc`` (plus
+``HostNameInCertificate`` for ODBC 18+ TLS). Native resolve cannot use
+:class:`~connectors.tcp_pin.HostResolutionPin`; other mssql DBAPIs fail-closed
+on hostname targets.
+
+#1586 (Oracle slice F): ``sql_connector`` rewrites the URL hostname to a
+guard-pinned IP for ``oracle+oracledb`` (Thin). Other oracle DBAPIs fail-closed
+on hostname targets.
 """
 
 from __future__ import annotations
@@ -37,7 +68,7 @@ from __future__ import annotations
 import ipaddress
 import socket
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlunparse
 
 _ALLOWED_SCHEMES = frozenset(("http", "https"))
 
@@ -303,3 +334,154 @@ def pinned_httpx_request(
     pins = host_pins_from_url(url, ips)
     with build_pinned_httpx_client(host_to_ips=pins) as client:
         return client.request(method, url, **request_kwargs)
+
+
+def _format_pinned_netloc(parsed: Any, pinned_ip: str) -> str:
+    """Build netloc for *pinned_ip*, preserving userinfo and port from *parsed*."""
+    try:
+        ipaddress.IPv6Address(pinned_ip)
+        host_part = f"[{pinned_ip}]"
+    except ipaddress.AddressValueError:
+        host_part = pinned_ip
+    userinfo = ""
+    if parsed.username is not None:
+        from urllib.parse import quote
+
+        user = quote(parsed.username, safe="")
+        if parsed.password is not None:
+            userinfo = f"{user}:{quote(parsed.password, safe='')}@"
+        else:
+            userinfo = f"{user}@"
+    if parsed.port is not None:
+        return f"{userinfo}{host_part}:{parsed.port}"
+    return f"{userinfo}{host_part}"
+
+
+def rewrite_url_host_to_pin(url: str, pinned_ip: str) -> str:
+    """Rewrite *url*'s host to *pinned_ip* (IPv6 bracketed); keep path/query/userinfo."""
+    parsed = urlparse(url)
+    return urlunparse(parsed._replace(netloc=_format_pinned_netloc(parsed, pinned_ip)))
+
+
+def _make_pinned_ip_http_adapter_class() -> type:
+    """Build PinnedIPHTTPAdapter subclass (requests is a hard dependency)."""
+    from requests.adapters import HTTPAdapter
+
+    class PinnedIPHTTPAdapter(HTTPAdapter):
+        """requests adapter that connects only to pre-validated peer IPs (#1565).
+
+        Rewrites the request URL host to the pinned IP while keeping the original
+        ``Host`` header and setting urllib3 ``server_hostname`` / ``assert_hostname``
+        so TLS SNI and cert checks still use the configured hostname. Unexpected
+        hosts (not in the pin map) are rejected fail-closed — no second DNS lookup
+        on the hot path.
+        """
+
+        def __init__(
+            self,
+            host_to_ips: dict[str, list[str]],
+            **adapter_kwargs: Any,
+        ) -> None:
+            self._host_to_ips = {
+                k.lower(): list(v) for k, v in host_to_ips.items() if v
+            }
+            self._pending_tls_hostname: str | None = None
+            super().__init__(**adapter_kwargs)
+
+        def send(  # type: ignore[no-untyped-def]
+            self,
+            request,
+            stream=False,
+            timeout=None,
+            verify=True,
+            cert=None,
+            proxies=None,
+        ):
+            parsed = urlparse(request.url)
+            host = parsed.hostname
+            if not host:
+                raise ValueError("SSRF pin: request has no host (#1552)")
+            key = host.lower()
+            pins = self._host_to_ips.get(key)
+            if not pins:
+                raise ValueError(
+                    f"SSRF pin: host '{host}' was not pre-validated "
+                    f"(no DNS rebinding path). (#1552)"
+                )
+            pinned_ip = pins[0]
+            try:
+                if str(ipaddress.ip_address(host)) == pinned_ip:
+                    return super().send(
+                        request,
+                        stream=stream,
+                        timeout=timeout,
+                        verify=verify,
+                        cert=cert,
+                        proxies=proxies,
+                    )
+            except ValueError:
+                pass
+
+            port = parsed.port
+            if "Host" not in request.headers and "host" not in request.headers:
+                if port and port not in (80, 443):
+                    request.headers["Host"] = f"{host}:{port}"
+                else:
+                    request.headers["Host"] = host
+
+            request.url = rewrite_url_host_to_pin(request.url, pinned_ip)
+            self._pending_tls_hostname = host
+            try:
+                return super().send(
+                    request,
+                    stream=stream,
+                    timeout=timeout,
+                    verify=verify,
+                    cert=cert,
+                    proxies=proxies,
+                )
+            finally:
+                self._pending_tls_hostname = None
+
+        def get_connection_with_tls_context(  # type: ignore[no-untyped-def]
+            self,
+            request,
+            verify,
+            proxies=None,
+            cert=None,
+        ):
+            pool = super().get_connection_with_tls_context(
+                request, verify, proxies=proxies, cert=cert
+            )
+            hostname = self._pending_tls_hostname
+            if hostname:
+                pool.assert_hostname = hostname
+                conn_kw = dict(getattr(pool, "conn_kw", None) or {})
+                conn_kw["server_hostname"] = hostname
+                pool.conn_kw = conn_kw
+            return pool
+
+    return PinnedIPHTTPAdapter
+
+
+PinnedIPHTTPAdapter = _make_pinned_ip_http_adapter_class()
+
+
+def build_pinned_requests_session(
+    *,
+    host_to_ips: dict[str, list[str]],
+    **session_kwargs: Any,
+) -> Any:
+    """Construct a ``requests.Session`` that pins TCP peers to *host_to_ips* (#1565).
+
+    Mounts :class:`PinnedIPHTTPAdapter` for ``http://`` and ``https://``.
+    """
+    import requests
+
+    session = requests.Session()
+    for key, value in session_kwargs.items():
+        setattr(session, key, value)
+    adapter = PinnedIPHTTPAdapter(host_to_ips)
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
+    return session

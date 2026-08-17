@@ -86,6 +86,10 @@ try:
     import connectors.dataverse_connector  # noqa: F401
 except ImportError:  # noqa: BLE001
     pass  # optional connector not installed
+try:
+    import connectors.hubspot_connector  # noqa: F401
+except ImportError:  # noqa: BLE001
+    pass  # optional connector not installed
 
 from core.connector_registry import connector_for_target
 from core.crypto_audit import (
@@ -533,7 +537,7 @@ class AuditEngine:
                     file_sample_max_chars=file_sample_max_chars,
                     file_passwords=file_passwords,
                 )
-            elif t in ("powerbi", "dataverse", "powerapps"):
+            elif t in ("powerbi", "dataverse", "powerapps", "hubspot"):
                 connector = connector_class(
                     target_with_fs,
                     self.scanner,

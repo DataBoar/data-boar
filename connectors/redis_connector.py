@@ -4,11 +4,14 @@ Register as type 'redis'. Install: pip install redis
 Config target: type: database, driver: redis, host, port, (optional password).
 """
 
-from typing import Any
 import json
+from typing import Any
 
 try:
     import redis
+    from redis.connection import Connection as _RedisConnection
+    from redis.connection import ConnectionPool as _RedisConnectionPool
+    from redis.connection import SSLConnection as _RedisSSLConnection
     from redis.exceptions import ConnectionError as RedisConnectionError
     from redis.exceptions import ResponseError as RedisResponseError
     from redis.exceptions import TimeoutError as RedisTimeoutError
@@ -17,10 +20,14 @@ try:
 except ImportError:
     _REDIS_AVAILABLE = False
     redis = None
+    _RedisConnection = None  # type: ignore[misc, assignment]
+    _RedisConnectionPool = None  # type: ignore[misc, assignment]
+    _RedisSSLConnection = None  # type: ignore[misc, assignment]
     RedisConnectionError = Exception  # type: ignore[misc, assignment]
     RedisResponseError = Exception  # type: ignore[misc, assignment]
     RedisTimeoutError = Exception  # type: ignore[misc, assignment]
 
+from connectors.inventory_details import build_redis_inventory_details
 from core.connector_registry import register
 from core.crypto_audit import (
     collect_redis_crypto_facts,
@@ -28,7 +35,6 @@ from core.crypto_audit import (
     infer_controls_from_identifiers,
     resolve_nosql_tls_connect_options,
 )
-from connectors.inventory_details import build_redis_inventory_details
 from core.suggested_review import (
     SUGGESTED_REVIEW_PATTERN,
     augment_low_id_like_for_persist,
@@ -70,6 +76,19 @@ class RedisConnector:
             )
         host = self.config.get("host", "localhost")
         port = int(self.config.get("port", 6379))
+        from .tcp_pin import is_ip_literal, make_pinned_redis_connection_class
+        from .url_guard import resolve_and_validate_outbound_url, target_allows_private
+
+        # SSRF guard (#1559): bare host:port — do not use tcp:// (not in allowlist).
+        # Capture validated IPs for TCP pin (#1586) so redis-py cannot re-resolve
+        # to a different peer after the guard (Connection._connect → getaddrinfo).
+        err, pin_ips = resolve_and_validate_outbound_url(
+            f"{host}:{port}",
+            allow_private=target_allows_private(self.config),
+            label="host",
+        )
+        if err:
+            raise ValueError(err)
         password = self.config.get("pass") or self.config.get("password")
         connect_s = max(1, int(self.config.get("connect_timeout_seconds", 25)))
         read_s = max(1, int(self.config.get("read_timeout_seconds", 90)))
@@ -77,7 +96,35 @@ class RedisConnector:
             self.config
         )
         self._tls_enabled = bool(tls_enabled)
-        client_kwargs: dict[str, Any] = {
+        # Connection types come from the optional redis import at module load.
+        # CI matrices without the nosql extra still run crypto tests that stub
+        # ``redis`` + ``_REDIS_AVAILABLE`` — fall back to Redis(**kwargs) then
+        # (no pin subclass without real connection classes).
+        if _RedisConnectionPool is None or _RedisConnection is None:
+            client_kwargs: dict[str, Any] = {
+                "host": host,
+                "port": port,
+                "password": password or None,
+                "decode_responses": True,
+                "socket_connect_timeout": connect_s,
+                "socket_timeout": read_s,
+            }
+            if tls_enabled:
+                client_kwargs["ssl"] = True
+                if cert_reqs is not None:
+                    client_kwargs["ssl_cert_reqs"] = cert_reqs
+            self._client = redis.Redis(**client_kwargs)
+            return
+
+        base_cls: type = _RedisSSLConnection if tls_enabled else _RedisConnection
+        # Hostname stays on the connection for TLS server_hostname; pin TCP peers
+        # via connection_class (#1586). IP literals have no DNS rebinding window.
+        if is_ip_literal(str(host)):
+            connection_class = base_cls
+        else:
+            connection_class = make_pinned_redis_connection_class(base_cls, pin_ips)
+        pool_kwargs: dict[str, Any] = {
+            "connection_class": connection_class,
             "host": host,
             "port": port,
             "password": password or None,
@@ -85,11 +132,9 @@ class RedisConnector:
             "socket_connect_timeout": connect_s,
             "socket_timeout": read_s,
         }
-        if tls_enabled:
-            client_kwargs["ssl"] = True
-            if cert_reqs is not None:
-                client_kwargs["ssl_cert_reqs"] = cert_reqs
-        self._client = redis.Redis(**client_kwargs)
+        if tls_enabled and cert_reqs is not None:
+            pool_kwargs["ssl_cert_reqs"] = cert_reqs
+        self._client = redis.Redis(connection_pool=_RedisConnectionPool(**pool_kwargs))
 
     def close(self) -> None:
         if self._client:

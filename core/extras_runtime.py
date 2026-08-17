@@ -22,7 +22,7 @@ KNOWN_OPTIONAL_BY_DRIVER: dict[str, str] = {
     "postgresql": "postgres",
     "mysql": "mysql",
     "mariadb": "mariadb",
-    "mssql": "mssql-pymssql",
+    "mssql": "mssql",
     "oracle": "oracle",
     "snowflake": "bigdata",
 }
