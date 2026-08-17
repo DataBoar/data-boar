@@ -923,6 +923,326 @@ def test_mysql_family_python_dns_pin_supported() -> None:
     assert _mysql_family_python_dns_pin_supported("mysql") is False
 
 
+def test_apply_mssql_tcp_peer_pin_rewrites_hostname_to_ip() -> None:
+    """#1586 slice E — FreeTDS dials the guard IP; no HostResolutionPin."""
+    from connectors.sql_connector import _apply_mssql_tcp_peer_pin
+
+    out = _apply_mssql_tcp_peer_pin(
+        "mssql+pymssql://u:p@sql.example.com:1433/db",
+        ["1.1.1.1", "2606:4700:4700::1111"],
+    )
+    assert out == "mssql+pymssql://u:p@1.1.1.1:1433/db"
+
+
+def test_apply_mssql_tcp_peer_pin_formats_ipv6() -> None:
+    from connectors.sql_connector import _apply_mssql_tcp_peer_pin
+
+    out = _apply_mssql_tcp_peer_pin(
+        "mssql+pymssql://u:p@sql.example.com:1433/db",
+        ["2606:4700:4700::1111"],
+    )
+    assert out == "mssql+pymssql://u:p@[2606:4700:4700::1111]:1433/db"
+
+
+def test_apply_mssql_tcp_peer_pin_pyodbc_injects_hostname_in_certificate() -> None:
+    from connectors.sql_connector import _apply_mssql_tcp_peer_pin
+    from sqlalchemy.engine.url import make_url
+
+    out = _apply_mssql_tcp_peer_pin(
+        "mssql+pyodbc://u:p@sql.example.com:1433/db"
+        "?driver=ODBC+Driver+18+for+SQL+Server",
+        ["1.1.1.1"],
+    )
+    parsed = make_url(out)
+    assert parsed.host == "1.1.1.1"
+    q = {str(k).lower(): v for k, v in parsed.query.items()}
+    assert q["hostnameincertificate"] == "sql.example.com"
+    assert "driver" in q
+
+
+def test_apply_mssql_tcp_peer_pin_preserves_existing_hostname_in_certificate() -> None:
+    from connectors.sql_connector import _apply_mssql_tcp_peer_pin
+    from sqlalchemy.engine.url import make_url
+
+    out = _apply_mssql_tcp_peer_pin(
+        "mssql+pyodbc://u:p@sql.example.com:1433/db"
+        "?HostNameInCertificate=custom.cert.name",
+        ["1.1.1.1"],
+    )
+    parsed = make_url(out)
+    assert parsed.host == "1.1.1.1"
+    q = {str(k).lower(): v for k, v in parsed.query.items()}
+    assert q["hostnameincertificate"] == "custom.cert.name"
+
+
+def test_apply_mssql_tcp_peer_pin_literal_ip_noop() -> None:
+    from connectors.sql_connector import _apply_mssql_tcp_peer_pin
+
+    url = "mssql+pymssql://u:p@1.1.1.1:1433/db"
+    assert _apply_mssql_tcp_peer_pin(url, ["9.9.9.9"]) == url
+
+
+def test_apply_mssql_tcp_peer_pin_unsupported_dbapi_fails_closed() -> None:
+    from connectors.sql_connector import _apply_mssql_tcp_peer_pin
+
+    with pytest.raises(ValueError, match="#1586|pymssql|pyodbc"):
+        _apply_mssql_tcp_peer_pin(
+            "mssql+adodbapi://u:p@sql.example.com:1433/db",
+            ["1.1.1.1"],
+        )
+
+
+def test_sql_mssql_pymssql_connect_rewrites_url_host_to_pin(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """#1586 — bare mssql → pymssql; create_engine sees pin IP, not hostname."""
+    import socket
+    from urllib.parse import urlsplit
+
+    from connectors import sql_connector
+
+    host = "mssql.example.com"
+
+    def fake_getaddrinfo(name, *args, **kwargs):
+        if name == host:
+            return [
+                (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("1.1.1.1", 0)),
+                (
+                    socket.AF_INET6,
+                    socket.SOCK_STREAM,
+                    6,
+                    "",
+                    ("2606:4700:4700::1111", 0, 0, 0),
+                ),
+            ]
+        raise socket.gaierror(f"unexpected host {name!r}")
+
+    monkeypatch.setattr(socket, "getaddrinfo", fake_getaddrinfo)
+    monkeypatch.setattr(
+        "connectors.url_guard.socket.getaddrinfo",
+        fake_getaddrinfo,
+    )
+
+    with (
+        patch.object(sql_connector, "ensure_sql_driver_available"),
+        patch.object(sql_connector, "create_engine") as mock_engine,
+    ):
+        mock_engine.return_value = MagicMock()
+        connector = sql_connector.SQLConnector(
+            {
+                "name": "mssql-pin",
+                "driver": "mssql",
+                "host": host,
+                "port": 1433,
+                "user": "u",
+                "pass": "p",
+                "database": "db",
+            },
+            scanner=MagicMock(),
+            db_manager=MagicMock(),
+        )
+        connector.connect()
+        mock_engine.assert_called_once()
+        (url,) = mock_engine.call_args.args
+        assert urlsplit(url).hostname == "1.1.1.1"
+        assert connector._dns_pin is None
+        connector.close()
+
+
+def test_sql_mssql_pyodbc_connect_pins_ip_and_tls_name(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """#1586 — pyodbc: SERVER=pin IP + HostNameInCertificate=hostname."""
+    import socket
+
+    from connectors import sql_connector
+    from sqlalchemy.engine.url import make_url
+
+    host = "mssql-odbc.example.com"
+
+    def fake_getaddrinfo(name, *args, **kwargs):
+        if name == host:
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("1.1.1.1", 0))]
+        raise socket.gaierror(f"unexpected host {name!r}")
+
+    monkeypatch.setattr(socket, "getaddrinfo", fake_getaddrinfo)
+    monkeypatch.setattr(
+        "connectors.url_guard.socket.getaddrinfo",
+        fake_getaddrinfo,
+    )
+
+    with (
+        patch.object(sql_connector, "ensure_sql_driver_available"),
+        patch.object(sql_connector, "create_engine") as mock_engine,
+    ):
+        mock_engine.return_value = MagicMock()
+        connector = sql_connector.SQLConnector(
+            {
+                "name": "mssql-odbc-pin",
+                "driver": "mssql+pyodbc",
+                "host": host,
+                "port": 1433,
+                "user": "u",
+                "pass": "p",
+                "database": "db",
+            },
+            scanner=MagicMock(),
+            db_manager=MagicMock(),
+        )
+        connector.connect()
+        parsed = make_url(mock_engine.call_args.args[0])
+        assert parsed.host == "1.1.1.1"
+        q = {str(k).lower(): v for k, v in parsed.query.items()}
+        assert q["hostnameincertificate"] == host
+        connector.close()
+
+
+def test_sql_guard_allows_mssql_hostnameincertificate_query() -> None:
+    from connectors.sql_connector import _guard_sql_connection_url
+
+    _guard_sql_connection_url(
+        "mssql+pyodbc://x:x@1.1.1.1:1433/db?HostNameInCertificate=sql.example.com",
+        {"name": "ok"},
+    )
+
+
+def test_apply_oracle_tcp_peer_pin_rewrites_hostname_to_ip() -> None:
+    """#1586 slice F — oracledb Thin dials the guard IP; no HostResolutionPin."""
+    from connectors.sql_connector import _apply_oracle_tcp_peer_pin
+
+    out = _apply_oracle_tcp_peer_pin(
+        "oracle+oracledb://u:p@ora.example.com:1521/?service_name=ORCL",
+        ["1.1.1.1", "2606:4700:4700::1111"],
+    )
+    assert out == "oracle+oracledb://u:p@1.1.1.1:1521/?service_name=ORCL"
+
+
+def test_apply_oracle_tcp_peer_pin_formats_ipv6() -> None:
+    from connectors.sql_connector import _apply_oracle_tcp_peer_pin
+
+    out = _apply_oracle_tcp_peer_pin(
+        "oracle+oracledb://u:p@ora.example.com:1521/?service_name=ORCL",
+        ["2606:4700:4700::1111"],
+    )
+    assert out == (
+        "oracle+oracledb://u:p@[2606:4700:4700::1111]:1521/?service_name=ORCL"
+    )
+
+
+def test_apply_oracle_tcp_peer_pin_literal_ip_noop() -> None:
+    from connectors.sql_connector import _apply_oracle_tcp_peer_pin
+
+    url = "oracle+oracledb://u:p@1.1.1.1:1521/?service_name=ORCL"
+    assert _apply_oracle_tcp_peer_pin(url, ["9.9.9.9"]) == url
+
+
+def test_apply_oracle_tcp_peer_pin_cx_oracle_fails_closed() -> None:
+    from connectors.sql_connector import _apply_oracle_tcp_peer_pin
+
+    with pytest.raises(ValueError, match="#1586|oracledb"):
+        _apply_oracle_tcp_peer_pin(
+            "oracle+cx_oracle://u:p@ora.example.com:1521/?service_name=ORCL",
+            ["1.1.1.1"],
+        )
+
+
+def test_sql_oracle_oracledb_connect_rewrites_url_host_to_pin(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """#1586 — bare oracle → oracledb; create_engine sees pin IP, not hostname."""
+    import socket
+    from urllib.parse import urlsplit
+
+    from connectors import sql_connector
+
+    host = "ora.example.com"
+
+    def fake_getaddrinfo(name, *args, **kwargs):
+        if name == host:
+            return [
+                (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("1.1.1.1", 0)),
+                (
+                    socket.AF_INET6,
+                    socket.SOCK_STREAM,
+                    6,
+                    "",
+                    ("2606:4700:4700::1111", 0, 0, 0),
+                ),
+            ]
+        raise socket.gaierror(f"unexpected host {name!r}")
+
+    monkeypatch.setattr(socket, "getaddrinfo", fake_getaddrinfo)
+    monkeypatch.setattr(
+        "connectors.url_guard.socket.getaddrinfo",
+        fake_getaddrinfo,
+    )
+
+    with (
+        patch.object(sql_connector, "ensure_sql_driver_available"),
+        patch.object(sql_connector, "create_engine") as mock_engine,
+    ):
+        mock_engine.return_value = MagicMock()
+        connector = sql_connector.SQLConnector(
+            {
+                "name": "oracle-pin",
+                "driver": "oracle",
+                "host": host,
+                "port": 1521,
+                "user": "u",
+                "pass": "p",
+                "database": "ORCL",
+            },
+            scanner=MagicMock(),
+            db_manager=MagicMock(),
+        )
+        connector.connect()
+        mock_engine.assert_called_once()
+        (url,) = mock_engine.call_args.args
+        assert urlsplit(url).hostname == "1.1.1.1"
+        assert "service_name=ORCL" in url
+        assert connector._dns_pin is None
+        connector.close()
+
+
+def test_sql_oracle_cx_oracle_fails_closed_without_python_pin(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """#1586 — oracle+cx_oracle uses native resolve; refuse hostname targets."""
+    import socket
+
+    from connectors import sql_connector
+
+    host = "ora-cx.example.com"
+
+    def fake_getaddrinfo(name, *args, **kwargs):
+        if name == host:
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("1.1.1.1", 0))]
+        raise socket.gaierror(f"unexpected host {name!r}")
+
+    monkeypatch.setattr(socket, "getaddrinfo", fake_getaddrinfo)
+    monkeypatch.setattr(
+        "connectors.url_guard.socket.getaddrinfo",
+        fake_getaddrinfo,
+    )
+
+    with patch.object(sql_connector, "ensure_sql_driver_available"):
+        connector = sql_connector.SQLConnector(
+            {
+                "name": "ora-cx",
+                "driver": "oracle+cx_oracle",
+                "host": host,
+                "port": 1521,
+                "user": "u",
+                "pass": "p",
+                "database": "ORCL",
+            },
+            scanner=MagicMock(),
+            db_manager=MagicMock(),
+        )
+        with pytest.raises(ValueError, match="#1586|oracledb"):
+            connector.connect()
+
+
 def test_apply_postgres_hostaddr_pin_formats_ipv6() -> None:
     from connectors.sql_connector import _apply_postgres_hostaddr_pin
 

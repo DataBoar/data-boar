@@ -11,13 +11,16 @@ Describe 'labop-sudoers-load-order-lib (maestro#6)' {
                 [Parameter(Mandatory = $true)][string]$BashSnippet
             )
             $libUnix = ($script:Lib -replace '\\', '/')
-            $scriptBody = @(
+            # Normalize CRLF → LF: pwsh here-strings may embed `r; bash then treats
+            # `path`r` as a missing file (first classify → other; last line often OK).
+            $scriptBody = (@(
                 'set -euo pipefail'
                 ". '$libUnix'"
                 $BashSnippet
-            ) -join "`n"
+            ) -join "`n") -replace "`r`n", "`n" -replace "`r", "`n"
             $tmp = Join-Path ([System.IO.Path]::GetTempPath()) ("sudoers-lib-" + [guid]::NewGuid().ToString('n') + '.sh')
-            [System.IO.File]::WriteAllText($tmp, $scriptBody)
+            $utf8NoBom = New-Object System.Text.UTF8Encoding $false
+            [System.IO.File]::WriteAllText($tmp, $scriptBody, $utf8NoBom)
             try {
                 $out = & bash "$tmp" 2>&1
                 return [pscustomobject]@{
