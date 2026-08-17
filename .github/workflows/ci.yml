@@ -211,6 +211,10 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.12"]
+    env:
+      # Hosted images ship multiple CPythons; without this, `uv sync` may pick
+      # 3.13+ despite setup-python installing the matrix version (#1427).
+      UV_PYTHON: ${{ matrix.python-version }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -229,10 +233,10 @@ jobs:
 
       - name: Install dependencies
         # shares: SMB/WebDAV extras (wheels on Windows; no libmariadb apt).
-        run: uv sync --extra shares --group dev
+        run: uv sync --python ${{ matrix.python-version }} --extra shares --group dev
 
       - name: Run tests
-        run: uv run pytest -v -W error
+        run: uv run --python ${{ matrix.python-version }} pytest -v -W error
         # Same warning posture as Linux test job.
 
       - name: Native pip install smoke

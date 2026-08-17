@@ -432,8 +432,11 @@ def test_ci_yml_has_windows_test_job() -> None:
     # Cap hung runners (GH/outage class); do not soft-fail — Windows must stay green.
     assert win.get("timeout-minutes") == 40
     assert win.get("continue-on-error") in (None, False)
+    env = win.get("env") or {}
+    assert "UV_PYTHON" in env, "Windows job must pin UV_PYTHON to matrix Python"
     runs = "\n".join(_ci_step_run_texts(win))
     assert "uv sync" in runs
+    assert "--python" in runs
     assert "pytest" in runs
     assert "pip install" in runs
     assert "demo_headless" in runs
