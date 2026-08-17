@@ -429,9 +429,9 @@ def test_ci_yml_has_windows_test_job() -> None:
     win = jobs.get("test-windows")
     assert isinstance(win, dict), "ci.yml must define test-windows job"
     assert win.get("runs-on") == "windows-latest"
-    # Hang mitigation: timeout forces frozen runners to fail; soft-fail keeps PR mergeable.
-    assert win.get("timeout-minutes") == 25
-    assert win.get("continue-on-error") is True
+    # Cap hung runners (GH/outage class); do not soft-fail — Windows must stay green.
+    assert win.get("timeout-minutes") == 40
+    assert win.get("continue-on-error") in (None, False)
     runs = "\n".join(_ci_step_run_texts(win))
     assert "uv sync" in runs
     assert "pytest" in runs

@@ -9,6 +9,8 @@ Validates the demo entrypoint contract:
 - Docker variant hint is present.
 """
 
+import subprocess
+import sys
 from pathlib import Path
 
 
@@ -17,10 +19,24 @@ def _repo_root() -> Path:
 
 
 def test_demo_sh_exists_and_is_executable() -> None:
-    """Anti-regression #834: scripts/demo.sh must exist and be executable."""
-    demo = _repo_root() / "scripts" / "demo.sh"
+    """Anti-regression #834: scripts/demo.sh must exist and be executable.
+
+    On Windows, checkout often drops the +x bit even when Git tracks ``100755``.
+    Assert the tracked mode everywhere; assert filesystem +x on POSIX only (#1427).
+    """
+    root = _repo_root()
+    demo = root / "scripts" / "demo.sh"
     assert demo.exists(), "scripts/demo.sh must exist (#834)"
-    assert demo.stat().st_mode & 0o111, "scripts/demo.sh must be executable (#834)"
+    tracked = subprocess.check_output(
+        ["git", "ls-files", "-s", "--", "scripts/demo.sh"],
+        cwd=root,
+        text=True,
+    ).strip()
+    assert tracked.startswith("100755"), (
+        f"scripts/demo.sh must be tracked as executable (100755), got: {tracked!r} (#834)"
+    )
+    if sys.platform != "win32":
+        assert demo.stat().st_mode & 0o111, "scripts/demo.sh must be executable (#834)"
 
 
 def test_demo_sh_uses_synthetic_corpus_generator() -> None:

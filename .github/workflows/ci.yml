@@ -202,15 +202,11 @@ jobs:
 
   # Windows native path (#1427 / PLAN_WINDOWS_CI_ENABLEMENT) — unblocks MSI/winget #1467.
   # MVP: one Python, pytest, pip install smoke, headless --demo equivalent (no dashboard hang).
-  # Note: this job runs `uv run pytest` (not local check-all). UI "25%" is step progress, not
-  # Sonar. continue-on-error alone does nothing while a runner is frozen — timeout-minutes
-  # forces the hang into a failure, then continue-on-error keeps the PR unblocked (soft signal).
-  # Revisit when GitHub Actions is healthy and Windows is green without soft-fail.
+  # Runs `uv run pytest` (not local check-all). timeout-minutes caps hung runners.
   test-windows:
     name: Test Windows (Python ${{ matrix.python-version }})
     runs-on: windows-latest
-    timeout-minutes: 25
-    continue-on-error: true
+    timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
