@@ -97,8 +97,10 @@ def _executive_markdown(
     fs_rows: list[dict],
     fail_rows: list[dict],
     report_rows_capped: bool,
+    app_rows: list[dict] | None = None,
 ) -> str:
-    apg_rows = _aggregate_apg(db_rows, fs_rows)
+    app = list(app_rows or [])
+    apg_rows = _aggregate_apg(db_rows, list(fs_rows) + app)
     return generate_executive_report(
         session_id=session_id,
         about=about,
@@ -108,6 +110,7 @@ def _executive_markdown(
         _fail_rows=fail_rows,
         apg_rows=apg_rows,
         report_rows_capped=report_rows_capped,
+        app_rows=app,
     )
 
 
@@ -121,7 +124,9 @@ def _build_manifest_dict(
     fs_rows: list[dict],
     fail_rows: list[dict],
     report_rows_capped: bool,
+    app_rows: list[dict] | None = None,
 ) -> dict[str, Any]:
+    app = list(app_rows or [])
     manifest = _build_manifest(
         session_id=session_id,
         meta=meta,
@@ -131,8 +136,9 @@ def _build_manifest_dict(
         fs_rows=fs_rows,
         fail_rows=fail_rows,
         report_rows_capped=report_rows_capped,
+        app_rows=app,
     )
-    manifest["apg_phase_a"] = _aggregate_apg(db_rows, fs_rows)
+    manifest["apg_phase_a"] = _aggregate_apg(db_rows, list(fs_rows) + app)
     return manifest
 
 
@@ -169,7 +175,7 @@ def export_session_formats(
         if sid not in known:
             raise ValueError(f"Unknown session: {sid}")
 
-        db_rows, fs_rows, fail_rows = mgr.get_findings(sid)
+        db_rows, fs_rows, app_rows, fail_rows = mgr.get_findings(sid)
         meta = _session_meta(mgr, sid)
         about = get_about_info()
         manifest = _build_manifest_dict(
@@ -181,6 +187,7 @@ def export_session_formats(
             fs_rows=fs_rows,
             fail_rows=fail_rows,
             report_rows_capped=trial_rows_capped,
+            app_rows=app_rows,
         )
         written: dict[str, Path] = {}
 
@@ -214,6 +221,7 @@ def export_session_formats(
                     fs_rows=fs_rows,
                     fail_rows=fail_rows,
                     report_rows_capped=trial_rows_capped,
+                    app_rows=app_rows,
                 )
                 write_executive_docx(md, dest)
                 written["docx"] = dest
@@ -229,6 +237,7 @@ def export_session_formats(
                     fs_rows=fs_rows,
                     fail_rows=fail_rows,
                     report_rows_capped=trial_rows_capped,
+                    app_rows=app_rows,
                 )
                 write_executive_pdf(md, dest)
                 written["pdf"] = dest

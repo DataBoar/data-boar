@@ -35,6 +35,7 @@ def _executive_status_emoji_and_label(
     db_rows: list[dict],
     apg_rows: list[dict[str, Any]],
     filesystem_findings: int,
+    application_findings: int = 0,
 ) -> tuple[str, str]:
     critical_patterns = {
         "CREDIT_CARD",
@@ -65,7 +66,7 @@ def _executive_status_emoji_and_label(
             "🔴",
             "Risco elevado detectado (dados sensíveis / PCI / identificadores fortes).",
         )
-    if apg_rows or db_rows or filesystem_findings > 0:
+    if apg_rows or db_rows or filesystem_findings > 0 or application_findings > 0:
         return "🟡", "Risco moderado — priorizar mitigação e validação com negócio/DPO."
     return "🟢", "Nenhum achado catalogado nesta sessão."
 
@@ -80,6 +81,7 @@ def generate_executive_report(
     _fail_rows: list[dict],
     apg_rows: list[dict[str, Any]],
     report_rows_capped: bool,
+    app_rows: list[dict] | None = None,
 ) -> str:
     """
     Produz Markdown executivo: status, achados agregados por sensibilidade (só padrões e
@@ -90,11 +92,14 @@ def generate_executive_report(
     ``_fail_rows`` reserva-se para alinhar a assinatura ao armazenamento da sessão; as contagens
     de falha expostas ao stakeholder vêm do manifest (sem detalhes de erro crus).
     """
+    app_rows = list(app_rows or [])
     fc = manifest["scope_snapshot"]["findings_counts"]
+    app_count = int(fc.get("application_findings") or len(app_rows) or 0)
     emoji, status_label = _executive_status_emoji_and_label(
         db_rows,
         apg_rows,
         int(fc.get("filesystem_findings") or 0),
+        application_findings=app_count,
     )
     tables_n = manifest["scope_snapshot"]["unique_database_tables_with_findings"]
     dur = manifest["scan_window"].get("duration_minutes")
@@ -106,7 +111,7 @@ def generate_executive_report(
         else "— (defina `finished_at` na sessão para estimar duração)"
     )
 
-    by_risk = group_findings_by_risk(db_rows, fs_rows)
+    by_risk = group_findings_by_risk(db_rows, list(fs_rows) + app_rows)
     labels = {
         "HIGH": "Alta sensibilidade",
         "MEDIUM": "Média sensibilidade",
@@ -131,7 +136,9 @@ def generate_executive_report(
         "",
         f"- **Tabelas (BD) com pelo menos um achado:** {tables_n}",
         f"- **Volume agregado:** {fc['database_findings']} achados em base · "
-        f"{fc['filesystem_findings']} em arquivos · {fc['scan_failures']} falhas de alvo",
+        f"{fc['filesystem_findings']} em arquivos · "
+        f"{app_count} em aplicações/API/CRM · "
+        f"{fc['scan_failures']} falhas de alvo",
         "",
         "## 2. Achados por nível de sensibilidade (apenas padrões e contagens)",
         "",

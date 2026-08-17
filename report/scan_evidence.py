@@ -185,6 +185,7 @@ def _build_poc_summary_markdown(
     fail_rows: list[dict],
     apg_rows: list[dict[str, Any]],
     report_rows_capped: bool,
+    app_rows: list[dict] | None = None,
 ) -> str:
     return generate_executive_report(
         session_id=session_id,
@@ -195,6 +196,7 @@ def _build_poc_summary_markdown(
         _fail_rows=fail_rows,
         apg_rows=apg_rows,
         report_rows_capped=report_rows_capped,
+        app_rows=app_rows,
     )
 
 
@@ -237,7 +239,9 @@ def _build_manifest(
     fs_rows: list[dict],
     fail_rows: list[dict],
     report_rows_capped: bool,
+    app_rows: list[dict] | None = None,
 ) -> dict[str, Any]:
+    app_rows = list(app_rows or [])
     file_scan = (
         config.get("file_scan") if isinstance(config.get("file_scan"), dict) else {}
     )
@@ -315,6 +319,7 @@ def _build_manifest(
             "findings_counts": {
                 "database_findings": len(db_rows),
                 "filesystem_findings": len(fs_rows),
+                "application_findings": len(app_rows),
                 "scan_failures": len(fail_rows),
             },
             "unique_database_tables_with_findings": len(
@@ -351,6 +356,7 @@ def write_scan_evidence_artifacts(
     fs_rows: list[dict],
     fail_rows: list[dict],
     report_rows_capped: bool = False,
+    app_rows: list[dict] | None = None,
 ) -> tuple[str, str]:
     """
     Write ``scan_manifest_<session_prefix>.yaml`` and ``POC_SUMMARY_<prefix>.md``.
@@ -361,6 +367,8 @@ def write_scan_evidence_artifacts(
     prefix = safe_session_prefix(session_id, max_len=16)
     out = Path(output_dir).expanduser().resolve()
     out.mkdir(parents=True, exist_ok=True)
+    app = list(app_rows or [])
+    path_like = list(fs_rows) + app
 
     manifest = _build_manifest(
         session_id=session_id,
@@ -371,8 +379,9 @@ def write_scan_evidence_artifacts(
         fs_rows=fs_rows,
         fail_rows=fail_rows,
         report_rows_capped=report_rows_capped,
+        app_rows=app,
     )
-    apg_rows = _aggregate_apg(db_rows, fs_rows)
+    apg_rows = _aggregate_apg(db_rows, path_like)
     manifest["apg_phase_a"] = apg_rows
 
     man_path = (out / f"scan_manifest_{prefix}.yaml").resolve()
@@ -404,6 +413,7 @@ def write_scan_evidence_artifacts(
             fail_rows=fail_rows,
             apg_rows=apg_rows,
             report_rows_capped=report_rows_capped,
+            app_rows=app,
         ),
         encoding="utf-8",
     )

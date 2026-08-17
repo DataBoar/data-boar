@@ -28,7 +28,7 @@
 1. **Scan** writes **metadata-only** rows into SQLite (`database_findings`, `filesystem_findings`, `scan_failures`, session tables, optional aggregated cross-ref, optional data-source inventory—when implemented for the session).
 2. **`generate_report`** (`report/generator.py`) reads those rows and builds:
    - **Executive summary** sheet (aggregated view).
-   - **Database findings** / **Filesystem findings** sheets (columnar detail: target, location, pattern, sensitivity, `norm_tag`, recommendation text where configured).
+   - **Database findings** / **Filesystem findings** / **Application findings** sheets (columnar detail: target, location, pattern, sensitivity, `norm_tag`, recommendation text where configured). Application/API/CRM findings are not listed under Filesystem. Empty filesystem sheets are omitted when the session has no FS findings.
    - **Report info** (session, version, optional jurisdiction-hint notes when enabled—heuristic, not legal conclusion).
    - Optional sheets: **Trends**, **Cross-ref data – ident. risk**, **Suggested review (LOW)**, **Data source inventory**, **Scan failures**.
 3. **Heatmap** image is written alongside the workbook.

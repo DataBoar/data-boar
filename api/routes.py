@@ -1338,7 +1338,11 @@ def _build_chart_data(sessions: list[dict]) -> list[dict]:
     ordered = list(reversed(sessions))  # chronological order for time axis
     out = []
     for s in ordered:
-        total = s["database_findings"] + s["filesystem_findings"]
+        total = (
+            s["database_findings"]
+            + s["filesystem_findings"]
+            + s.get("application_findings", 0)
+        )
         score = min(100, total * 2 + s["scan_failures"] * 5)
         started = s.get("started_at") or ""
         # Short label for axis (date only if ISO format)
@@ -1606,9 +1610,11 @@ _FINDINGS_CSV_MEDIA_TYPE = "text/csv; charset=utf-8"
 
 
 def _findings_to_unified(
-    db_findings: list[dict], fs_findings: list[dict]
+    db_findings: list[dict],
+    fs_findings: list[dict],
+    app_findings: list[dict] | None = None,
 ) -> list[dict]:
-    """Merge database + filesystem findings into the unified schema for export.
+    """Merge database + filesystem + application findings into the unified schema for export.
 
     Fields present only in one source type are filled with None in the other.
     ``source_type`` is added so consumers can distinguish origin.
@@ -1626,6 +1632,13 @@ def _findings_to_unified(
         row = dict.fromkeys(_FINDINGS_UNIFIED_FIELDS)
         row.update(f)
         row["source_type"] = "filesystem"
+        if isinstance(row.get("created_at"), datetime):
+            row["created_at"] = row["created_at"].isoformat()
+        rows.append({k: row.get(k) for k in _FINDINGS_UNIFIED_FIELDS})
+    for f in app_findings or []:
+        row = dict.fromkeys(_FINDINGS_UNIFIED_FIELDS)
+        row.update(f)
+        row["source_type"] = "application"
         if isinstance(row.get("created_at"), datetime):
             row["created_at"] = row["created_at"].isoformat()
         rows.append({k: row.get(k) for k in _FINDINGS_UNIFIED_FIELDS})
@@ -1675,8 +1688,8 @@ async def get_findings_latest():
     sid = _resolve_session_for_findings(engine, None)
     if not sid:
         raise HTTPException(status_code=404, detail="No scan sessions found.")
-    db_f, fs_f, _ = engine.db_manager.get_findings(sid)
-    rows = _findings_to_unified(db_f, fs_f)
+    db_f, fs_f, app_f, _ = engine.db_manager.get_findings(sid)
+    rows = _findings_to_unified(db_f, fs_f, app_f)
     return {"session_id": sid, "count": len(rows), "findings": rows}
 
 
@@ -1687,8 +1700,8 @@ async def get_findings_latest_csv():
     sid = _resolve_session_for_findings(engine, None)
     if not sid:
         raise HTTPException(status_code=404, detail="No scan sessions found.")
-    db_f, fs_f, _ = engine.db_manager.get_findings(sid)
-    rows = _findings_to_unified(db_f, fs_f)
+    db_f, fs_f, app_f, _ = engine.db_manager.get_findings(sid)
+    rows = _findings_to_unified(db_f, fs_f, app_f)
     csv_content = _build_findings_csv(rows)
     safe_sid = re.sub(r"[^\w-]", "_", sid)[:64]
     filename = f"findings_{safe_sid}.csv"
@@ -1707,13 +1720,13 @@ async def get_findings_by_session(session_id: str):
     """
     _validate_session_id(session_id)
     engine = _get_engine()
-    db_f, fs_f, _ = engine.db_manager.get_findings(session_id)
-    if not db_f and not fs_f:
+    db_f, fs_f, app_f, _ = engine.db_manager.get_findings(session_id)
+    if not db_f and not fs_f and not app_f:
         raise HTTPException(
             status_code=404,
             detail=f"No findings for session {session_id}.",
         )
-    rows = _findings_to_unified(db_f, fs_f)
+    rows = _findings_to_unified(db_f, fs_f, app_f)
     return {"session_id": session_id, "count": len(rows), "findings": rows}
 
 
@@ -1722,8 +1735,8 @@ async def get_findings_by_session_csv(session_id: str):
     """Download all findings for ``session_id`` as a UTF-8 CSV attachment."""
     _validate_session_id(session_id)
     engine = _get_engine()
-    db_f, fs_f, _ = engine.db_manager.get_findings(session_id)
-    rows = _findings_to_unified(db_f, fs_f)
+    db_f, fs_f, app_f, _ = engine.db_manager.get_findings(session_id)
+    rows = _findings_to_unified(db_f, fs_f, app_f)
     csv_content = _build_findings_csv(rows)
     safe_sid = re.sub(r"[^\w-]", "_", session_id)[:64]
     filename = f"findings_{safe_sid}.csv"

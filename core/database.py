@@ -113,6 +113,32 @@ class FilesystemFinding(Base):
     created_at = Column(DateTime, default=_utc_now)
 
 
+class ApplicationFinding(Base):
+    """Finding from API / CRM / SaaS / future ERP-style targets (not filesystem).
+
+    Same location shape as filesystem (``path`` + ``file_name``) so report helpers
+    can treat path-like rows uniformly, but a separate table and Excel sheet so
+    HubSpot-only scans do not appear under **Filesystem findings** (#1613).
+    """
+
+    __tablename__ = "application_findings"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    session_id = Column(String(64), nullable=False, index=True)
+    target_name = Column(String(100))
+    path = Column(String(512))  # e.g. CRM object type or API path prefix
+    file_name = Column(String(255))  # e.g. property / field name
+    data_type = Column(String(50))
+    sensitivity_level = Column(String(20))
+    pattern_detected = Column(String(100))
+    norm_tag = Column(String(100))
+    ml_confidence = Column(Integer)
+    created_at = Column(DateTime, default=_utc_now)
+
+
+# save_finding aliases → ApplicationFinding (#1613)
+_APPLICATION_SOURCE_TYPES = frozenset({"application", "api", "crm", "saas"})
+
+
 class NotificationSendLog(Base):
     """
     Append-only log of outbound notification attempts (webhooks).
@@ -351,6 +377,7 @@ class LocalDBManager:
         self._ensure_notification_send_log_table()
         self._ensure_maturity_assessment_answers_table()
         self._ensure_maturity_row_hmac_column()
+        self._ensure_application_findings_table()
         self._ensure_webauthn_credentials_table()
         self._ensure_webauthn_roles_json_column()
         self._ensure_source_mtime_ns_column()
@@ -447,6 +474,10 @@ class LocalDBManager:
     def _ensure_aggregated_table(self) -> None:
         """Create aggregated_identification_risk table if it does not exist."""
         AggregatedIdentificationRisk.__table__.create(self.engine, checkfirst=True)
+
+    def _ensure_application_findings_table(self) -> None:
+        """Create application_findings when missing (API/CRM bucket — #1613)."""
+        ApplicationFinding.__table__.create(self.engine, checkfirst=True)
 
     def _ensure_data_source_inventory_table(self) -> None:
         """Create data_source_inventory table if it does not exist."""
@@ -886,16 +917,27 @@ class LocalDBManager:
             return
         session = self._session_factory()
         try:
-            if source_type == "database":
+            kind = (source_type or "").strip().lower()
+            if kind == "database":
                 kwargs["session_id"] = sid
                 finding = DatabaseFinding(
                     **{k: v for k, v in kwargs.items() if hasattr(DatabaseFinding, k)}
                 )
                 session.add(finding)
-            elif source_type == "filesystem":
+            elif kind == "filesystem":
                 kwargs["session_id"] = sid
                 finding = FilesystemFinding(
                     **{k: v for k, v in kwargs.items() if hasattr(FilesystemFinding, k)}
+                )
+                session.add(finding)
+            elif kind in _APPLICATION_SOURCE_TYPES:
+                kwargs["session_id"] = sid
+                finding = ApplicationFinding(
+                    **{
+                        k: v
+                        for k, v in kwargs.items()
+                        if hasattr(ApplicationFinding, k)
+                    }
                 )
                 session.add(finding)
             session.commit()
@@ -1030,11 +1072,14 @@ class LocalDBManager:
 
     def get_findings(
         self, session_id: str | None = None
-    ) -> tuple[list[dict], list[dict], list[dict]]:
-        """Return (database_findings, filesystem_findings, failures) for session_id or current."""
+    ) -> tuple[list[dict], list[dict], list[dict], list[dict]]:
+        """Return (database, filesystem, application, failures) for session_id or current.
+
+        Application findings are API/CRM/SaaS-style rows (#1613), not filesystem.
+        """
         sid = session_id or self._current_session_id
         if not sid:
-            return [], [], []
+            return [], [], [], []
         session = self._session_factory()
         try:
             db_rows = (
@@ -1047,17 +1092,23 @@ class LocalDBManager:
                 .filter(FilesystemFinding.session_id == sid)
                 .all()
             )
+            app_rows = (
+                session.query(ApplicationFinding)
+                .filter(ApplicationFinding.session_id == sid)
+                .all()
+            )
             fail_rows = (
                 session.query(ScanFailure).filter(ScanFailure.session_id == sid).all()
             )
 
-            def db_to_dict(r):
+            def row_to_dict(r):
                 return {c.key: getattr(r, c.key) for c in r.__table__.columns}
 
             return (
-                [db_to_dict(r) for r in db_rows],
-                [db_to_dict(r) for r in fs_rows],
-                [db_to_dict(r) for r in fail_rows],
+                [row_to_dict(r) for r in db_rows],
+                [row_to_dict(r) for r in fs_rows],
+                [row_to_dict(r) for r in app_rows],
+                [row_to_dict(r) for r in fail_rows],
             )
         finally:
             session.close()
@@ -1096,6 +1147,9 @@ class LocalDBManager:
         def _fs_key(f: FilesystemFinding) -> tuple:
             return (f.target_name, f.path, f.file_name, f.pattern_detected)
 
+        def _app_key(f: ApplicationFinding) -> tuple:
+            return (f.target_name, f.path, f.file_name, f.pattern_detected)
+
         session = self._session_factory()
         try:
             db_a = {
@@ -1122,6 +1176,18 @@ class LocalDBManager:
                 .filter(FilesystemFinding.session_id == b)
                 .all()
             }
+            app_a = {
+                _app_key(f): f
+                for f in session.query(ApplicationFinding)
+                .filter(ApplicationFinding.session_id == a)
+                .all()
+            }
+            app_b = {
+                _app_key(f): f
+                for f in session.query(ApplicationFinding)
+                .filter(ApplicationFinding.session_id == b)
+                .all()
+            }
         finally:
             session.close()
 
@@ -1139,10 +1205,13 @@ class LocalDBManager:
 
         db_new, db_resolved, db_changed = _diff(db_a, db_b)
         fs_new, fs_resolved, fs_changed = _diff(fs_a, fs_b)
+        app_new, app_resolved, app_changed = _diff(app_a, app_b)
 
         new_high_count = sum(
             1
-            for f in list(db_new.values()) + list(fs_new.values())
+            for f in list(db_new.values())
+            + list(fs_new.values())
+            + list(app_new.values())
             if (f.sensitivity_level or "").upper() == "HIGH"
         )
 
@@ -1158,6 +1227,11 @@ class LocalDBManager:
                 "new": fs_new,
                 "resolved": fs_resolved,
                 "changed": fs_changed,
+            },
+            "application": {
+                "new": app_new,
+                "resolved": app_resolved,
+                "changed": app_changed,
             },
             "new_high_count": new_high_count,
         }
@@ -1195,7 +1269,7 @@ class LocalDBManager:
                 out["tenant_name"] = rec.tenant_name
                 out["technician_name"] = rec.technician_name
             buckets = {"HIGH": 0, "MEDIUM": 0, "LOW": 0}
-            for model in (DatabaseFinding, FilesystemFinding):
+            for model in (DatabaseFinding, FilesystemFinding, ApplicationFinding):
                 rows = (
                     session.query(model.sensitivity_level, func.count(model.id))
                     .filter(model.session_id == sid)
@@ -1226,7 +1300,17 @@ class LocalDBManager:
                 )
                 .scalar()
             )
-            out["dob_possible_minor"] = int(dob_db or 0) + int(dob_fs or 0)
+            dob_app = (
+                session.query(func.count(ApplicationFinding.id))
+                .filter(
+                    ApplicationFinding.session_id == sid,
+                    ApplicationFinding.pattern_detected.like("%DOB_POSSIBLE_MINOR%"),
+                )
+                .scalar()
+            )
+            out["dob_possible_minor"] = (
+                int(dob_db or 0) + int(dob_fs or 0) + int(dob_app or 0)
+            )
             fail_n = (
                 session.query(func.count(ScanFailure.id))
                 .filter(ScanFailure.session_id == sid)
@@ -1460,6 +1544,11 @@ class LocalDBManager:
                     .filter(FilesystemFinding.session_id == s.session_id)
                     .count()
                 )
+                app_count = (
+                    session.query(ApplicationFinding)
+                    .filter(ApplicationFinding.session_id == s.session_id)
+                    .count()
+                )
                 fail_count = (
                     session.query(ScanFailure)
                     .filter(ScanFailure.session_id == s.session_id)
@@ -1481,6 +1570,7 @@ class LocalDBManager:
                         "jurisdiction_hint": bool(getattr(s, "jurisdiction_hint", 0)),
                         "database_findings": db_count,
                         "filesystem_findings": fs_count,
+                        "application_findings": app_count,
                         "scan_failures": fail_count,
                     }
                 )
@@ -1697,7 +1787,12 @@ class LocalDBManager:
                 .filter(FilesystemFinding.session_id == sid)
                 .count()
             )
-            return db_c + fs_c
+            app_c = (
+                session.query(ApplicationFinding)
+                .filter(ApplicationFinding.session_id == sid)
+                .count()
+            )
+            return db_c + fs_c + app_c
         finally:
             session.close()
 
@@ -1766,6 +1861,7 @@ class LocalDBManager:
             # Delete findings and failures for all sessions
             session.query(DatabaseFinding).delete(synchronize_session=False)
             session.query(FilesystemFinding).delete(synchronize_session=False)
+            session.query(ApplicationFinding).delete(synchronize_session=False)
             session.query(AggregatedIdentificationRisk).delete(
                 synchronize_session=False
             )

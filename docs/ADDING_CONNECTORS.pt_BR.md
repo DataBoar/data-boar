@@ -29,7 +29,7 @@ Um conector deve:
 | **Construtor**              | `__init__(self, target_config, scanner, db_manager, **kwargs)`. Para conectores de banco/API o engine só passa esses três; para filesystem e shares pode passar também `extensions`, `scan_sqlite_as_db`, `sample_limit`. |
 | **`run()`**                 | Ponto de entrada. Conectar, descobrir/amostrar, chamar `scanner.scan_column(name, sample)`, depois `db_manager.save_finding(...)` ou `save_failure(...)`. Fechar recursos ao terminar.                                    |
 | **`connect()` / `close()`** | Opcional, mas recomendado. Usar em `run()` para liberar conexões.                                                                                                                                                         |
-| **Achados**                 | Usar `save_finding(source_type="database", ...)` para fontes tipo banco (schema, table, column) ou `save_finding(source_type="filesystem", ...)` para arquivo/API (path, file_name).                                      |
+| **Achados**                 | Usar `save_finding(source_type="database", ...)` para fontes tipo banco; `save_finding(source_type="filesystem", ...)` para arquivo/share; `save_finding(source_type="application", ...)` (ou `api`/`crm`/`saas`) para REST/CRM — planilha **Application findings**. |
 | **Falhas**                  | Usar `save_failure(target_name, reason, details)` quando o alvo for inacessível ou houver erro.                                                                                                                           |
 
 ---
@@ -130,16 +130,18 @@ No README (ou neste doc), inclua:
 
 ---
 
-## 4. Achados tipo database vs filesystem/API
+## 4. Achados tipo database vs filesystem vs application
 
 - **Fontes tipo banco** (tabelas e colunas): use `save_finding(source_type="database", ...)` e passe pelo menos:
 - `target_name`, `server_ip` (ou host), `schema_name`, `table_name`, `column_name`, `data_type`
 - `sensitivity_level`, `pattern_detected`, `norm_tag`, `ml_confidence`
 - Outros campos de DB são opcionais mas úteis nos relatórios.
 
-- **Fontes tipo arquivo/API** (paths, endpoints, chaves): use `save_finding(source_type="filesystem", ...)` e passe:
-- `target_name`, `path`, `file_name` (ex.: endpoint + campo), `data_type`
+- **Fontes tipo filesystem / share** (caminhos locais, SMB, NFS, WebDAV): use `save_finding(source_type="filesystem", ...)` e passe:
+- `target_name`, `path`, `file_name`, `data_type`
 - `sensitivity_level`, `pattern_detected`, `norm_tag`, `ml_confidence`
+
+- **Application / API / CRM / SaaS** (REST, HubSpot e similares; ERP no futuro): use `save_finding(source_type="application", ...)` (aliases: `api`, `crm`, `saas`) com o mesmo formato path-like (`path` + `file_name`), ex.: tipo de objeto CRM + propriedade, ou `GET /users | email`. Aparecem na planilha Excel **Application findings**, não em **Filesystem findings**.
 
 O scanner retorna um dict com pelo menos `sensitivity_level`, `pattern_detected`, `norm_tag`, `ml_confidence`; repasse-os para `save_finding`. Ignore ou não reporte linhas com `sensitivity_level == "LOW"` se quiser manter o comportamento atual.
 

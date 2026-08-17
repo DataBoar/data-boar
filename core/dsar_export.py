@@ -79,7 +79,7 @@ def build_dsar_payload(
     sid = (session_id or "").strip()
     about = get_about_info()
 
-    db_rows, fs_rows, _failures = db_manager.get_findings(sid)
+    db_rows, fs_rows, app_rows, _failures = db_manager.get_findings(sid)
 
     findings_by_source: dict[str, Any] = {}
 
@@ -105,7 +105,19 @@ def build_dsar_payload(
             )
         )
 
-    all_rows = list(db_rows) + list(fs_rows)
+    for row in app_rows:
+        target = row.get("target_name") or "unknown"
+        bucket = findings_by_source.setdefault(
+            target,
+            {"source_type": "application", "findings": []},
+        )
+        bucket["findings"].append(
+            _finding_entry(
+                row, source_type="application", include_samples=include_samples
+            )
+        )
+
+    all_rows = list(db_rows) + list(fs_rows) + list(app_rows)
     total = len(all_rows)
     high = sum(1 for r in all_rows if r.get("sensitivity_level") == "HIGH")
 

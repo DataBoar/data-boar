@@ -216,10 +216,10 @@ def write_learned_patterns(
     append = lp.get("append", True)
     exclude_in_ml = lp.get("exclude_if_in_ml_patterns", True)
 
-    db_rows, fs_rows, _ = db_manager.get_findings(session_id)
+    db_rows, fs_rows, app_rows, _ = db_manager.get_findings(session_id)
     entries = collect_learned_entries(
         db_rows,
-        fs_rows,
+        list(fs_rows) + list(app_rows),
         min_sensitivity=min_sensitivity,
         min_confidence=min_confidence,
         min_term_length=min_term_length,
