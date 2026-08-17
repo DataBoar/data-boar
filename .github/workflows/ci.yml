@@ -215,6 +215,13 @@ jobs:
       # Hosted images ship multiple CPythons; without this, `uv sync` may pick
       # 3.13+ despite setup-python installing the matrix version (#1427).
       UV_PYTHON: ${{ matrix.python-version }}
+      # Windows runners: OpenMP/joblib multi-thread fits have produced
+      # KeyboardInterrupt mid-RandomForest during full pytest (#1427).
+      OMP_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
+      NUMEXPR_NUM_THREADS: "1"
+      JOBLIB_MULTIPROCESSING: "0"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -236,7 +243,9 @@ jobs:
         run: uv sync --python ${{ matrix.python-version }} --extra shares --group dev
 
       - name: Run tests
-        run: uv run --python ${{ matrix.python-version }} pytest -v -W error
+        # bash avoids pwsh console CTRL_C quirks seen with sklearn on windows-latest.
+        shell: bash
+        run: uv run --python ${{ matrix.python-version }} pytest -v -W error --tb=short
         # Same warning posture as Linux test job.
 
       - name: Native pip install smoke
