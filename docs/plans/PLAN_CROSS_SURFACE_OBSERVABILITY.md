@@ -33,7 +33,7 @@ This plan is **docs/backlog only**. It does **not** implement loaders, collector
 | ----- | ----------------- |
 | [#1458](https://github.com/DataBoar/data-boar/issues/1458) | Epic: Observability + Memory (Sensor, MemPalace, OTel GenAI) — **parent coordination** |
 | [#1457](https://github.com/DataBoar/data-boar/issues/1457) | Docs north-star: GenAI/MCP OTel + ADR Sensor — **architecture narrative**; this plan covers **product GUI RUM**, not agent forensics |
-| [#1599](https://github.com/DataBoar/data-boar/issues/1599) | Cloudflare GraphQL → OTLP/Grafana — **edge analytics export**; **orthogonal**; do **not** fold into the RUM pilot |
+| [#1599](https://github.com/DataBoar/data-boar/issues/1599) | Cloudflare GraphQL → OTLP/Grafana — **edge analytics export**; **orthogonal**; do **not** fold into the RUM pilot. Runbook: [CLOUDFLARE_GRAPHQL_OTLP_EXPORT.md](../ops/CLOUDFLARE_GRAPHQL_OTLP_EXPORT.md). |
 
 ## Non-goals (this plan file)
 
