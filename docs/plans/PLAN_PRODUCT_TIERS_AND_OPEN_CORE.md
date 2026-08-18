@@ -31,6 +31,8 @@
 
 **Related product tracks (keep separate):** [PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md](completed/PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md) (org/process questionnaire — commercial POC) and [PLAN_PDF_GRC_REPORT.md](PLAN_PDF_GRC_REPORT.md) (technical findings PDF “em prosa” — Pro tier). Both depend on **tier semantics** from this plan once **Phases 1–2** ship.
 
+**Enterprise subscription capabilities (process / governance packs):** canonical backlog is [ENT_CAPABILITY_ROADMAP.md](ENT_CAPABILITY_ROADMAP.md) ([pt-BR](ENT_CAPABILITY_ROADMAP.pt_BR.md), hub [PLAN_ENT_CAPABILITY_ROADMAP.md](PLAN_ENT_CAPABILITY_ROADMAP.md), issue [#643](https://github.com/DataBoar/data-boar/issues/643)). That roadmap lists ENT-only features (role-based reports, multi-entity, audit-grade evidence, etc.); this plan keeps the **tier matrix** and JWT enforcement phases. Do not implement ENT capabilities without an operator-approved ADR.
+
 ---
 
 ## Feature Matrix
@@ -181,6 +183,7 @@ For large organizations deploying internally at scale, regulated industries (ban
 terminals), and OEM partners embedding Data Boar in their own product suite.
 All features, SLA, dedicated support, white-label rights as an add-on.
 **Revenue model:** Annual enterprise agreement; custom pricing based on scope, users, connectors.
+**Capability roadmap (subscription packs beyond the matrix above):** [ENT_CAPABILITY_ROADMAP.md](ENT_CAPABILITY_ROADMAP.md).
 
 ---
 
