@@ -67,3 +67,6 @@ If the Plugin SDK later needs **operator-authored gates** without Python plugins
 - ADR-0052 (architectural decision)
 - `docs/SENSITIVITY_DETECTION.md` — add `patterns_plugin_file` to operator reference
 - `config/regex_overrides.example.yaml` — already valid under new schema
+- [ADR-0090](../adr/ADR-0090-open-core-plugin-boundary-pro-auditability-reference-sample.md) / [PLAN_PRO_PLUGIN_AUDITABILITY.md](PLAN_PRO_PLUGIN_AUDITABILITY.md) — SDK **reference sample** + Pro artifact auditability (#811); distinct from this YAML pattern schema
+- [ADR-0086](../adr/ADR-0086-plugin-sdk-language-neutral-contract.md) — L1/L2/L3 envelope (sample CI target)
+- Related issues: [#769](https://github.com/DataBoar/data-boar/issues/769), [#784](https://github.com/DataBoar/data-boar/issues/784), [#785](https://github.com/DataBoar/data-boar/issues/785)

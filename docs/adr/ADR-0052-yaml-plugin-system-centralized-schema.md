@@ -12,6 +12,7 @@ Accepted
 
 - 2026-05-14 — Accepted
 - 2026-06-11 — Amended: retrofit to ADR-0045 UMADR format (metadata list, Authors, Status history) — GitHub #675
+- 2026-08-18 — Amended: cross-ref [ADR 0090](ADR-0090-open-core-plugin-boundary-pro-auditability-reference-sample.md) — public **SDK reference sample** + CI conformance is distinct from this YAML **pattern** schema — GitHub #811
 
 ## Context
 
@@ -90,3 +91,4 @@ As the number of operator deployments grows, this informal approach becomes a ma
 - `config/plugin_schema.yaml`, `config/plugin_validator.py`
 - `docs/SENSITIVITY_DETECTION.md` (operator reference)
 - `config/regex_overrides.example.yaml` — example that must pass validation
+- [ADR 0090](ADR-0090-open-core-plugin-boundary-pro-auditability-reference-sample.md) — SDK **reference sample** plugin (executable + CI) is **not** this pattern-schema work; [ADR 0086](ADR-0086-plugin-sdk-language-neutral-contract.md) owns the L1/L2/L3 envelope
