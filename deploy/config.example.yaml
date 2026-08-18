@@ -44,6 +44,13 @@ api:
 # licensing:
 #   effective_tier: pro
 
+# Optional: Governance Lens — GRC control-gap sheet in Excel (Pro+; heuristic only, not legal advice).
+# OSS ships config/governance_framework_map_pro.example.yaml; licensees may point map_file at a private curated map.
+# governance:
+#   enabled: false
+#   tier: pro
+#   map_file: config/governance_framework_map_pro.example.yaml
+
 sqlite_path: /data/audit_results.db
 scan:
   # Parallel targets: 1 = sequential (minimal), 2–4 for many DB/FS targets (I/O-bound; network/disk are the bottleneck)
