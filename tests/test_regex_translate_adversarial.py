@@ -93,3 +93,34 @@ def test_compound_inline_flags_force_python_fallback(pattern: str) -> None:
     rust_pattern, reason = translate(pattern)
     assert rust_pattern is None
     assert reason == "compound_inline_flags"
+
+
+@pytest.mark.parametrize(
+    "pattern",
+    [
+        "(?m)^foo$",
+        "(?s)token$",
+    ],
+)
+def test_single_inline_flag_with_dollar_anchor_forces_python_fallback(
+    pattern: str,
+) -> None:
+    """Non-(?i) leading flags + $ must not strip (?m)/(?s) during anchor translation."""
+    rust_pattern, reason = translate(pattern)
+    assert rust_pattern is None
+    assert reason == "unhandled_inline_flags"
+
+
+def test_single_multiline_flag_without_dollar_stays_direct() -> None:
+    rust_pattern, reason = translate("(?m)^foo")
+    assert rust_pattern == "(?m)^foo"
+    assert reason == "direct"
+
+
+def test_multiline_dollar_pattern_python_fallback_preserves_match() -> None:
+    pattern = "(?m)^foo$"
+    rust_pattern, reason = translate(pattern)
+    assert rust_pattern is None
+    assert reason == "unhandled_inline_flags"
+    text = "bar\nfoo\nbaz"
+    assert re.search(pattern, text) is not None

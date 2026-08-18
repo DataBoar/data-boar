@@ -251,8 +251,12 @@ def translate(pattern: str) -> tuple[str | None, str]:
         translated_ci = True
     elif flag_group is not None and "i" in flag_group[2:-1]:
         return None, "compound_inline_flags"
-    elif flag_group is None:
-        body = pattern
+    elif flag_group is not None:
+        # Leading (?m)/(?s)/… pass through to Rust when unchanged. Translating $
+        # after stripping the flag drops multiline semantics silently (#1644).
+        if _translate_dollar_anchor(body) != body:
+            return None, "unhandled_inline_flags"
+        return pattern, "direct"
 
     new_body = _translate_dollar_anchor(body)
     dollar_changed = new_body != body
