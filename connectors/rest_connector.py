@@ -219,9 +219,10 @@ class RESTConnector:
         base_url = (self.config.get("base_url") or self.config.get("url", "")).rstrip(
             "/"
         )
-        # SSRF guard (#832 / #1552): reject link-local/private/loopback hosts
-        # unless allow_private_networks; fail-closed on DNS failure; pin peer IPs
-        # so request-time DNS rebinding cannot change the TCP peer.
+        # SSRF guard (#832 / #1552 / #1554): reject link-local/private/loopback hosts
+        # unless allow_private_networks; fail-closed on DNS failure; pin peer IPs via
+        # PinnedIPTransport (HTTP sibling of HostResolutionPin used by Mongo/SQL —
+        # httpx must not re-resolve DNS at request time).
         allow_private = target_allows_private(self.config)
         host_pins: dict[str, list[str]] = {}
         for candidate, label in (

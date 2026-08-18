@@ -6,12 +6,14 @@ hosts in base_url / discover_url / token_url / site_url. Each target config
 may opt in with ``allow_private_networks: true`` — internal scanning is a
 legitimate Data Boar use case, but it must be explicit.
 
-#1552: DNS resolution failure is fail-closed; httpx peers are pinned to IPs
-validated at guard time (no request-time DNS rebinding).
+#1552 / #1554: DNS resolution failure is fail-closed; httpx peers are pinned to IPs
+validated at guard time (no request-time DNS rebinding). REST uses
+``build_pinned_httpx_client`` (PinnedIPTransport); Mongo/SQL use HostResolutionPin.
 """
 
 from __future__ import annotations
 
+import ipaddress
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -206,6 +208,65 @@ def test_target_allows_private_reads_config_flag() -> None:
     assert target_allows_private({OPT_IN_KEY: True}) is True
     assert target_allows_private({OPT_IN_KEY: False}) is False
     assert target_allows_private({}) is False
+
+
+def test_rest_connector_connect_passes_guard_pins_to_httpx_client() -> None:
+    """#1554: REST must pin httpx peers to guard-validated IPs (no rebind TOCTOU).
+
+    TCP connectors use HostResolutionPin; REST/httpx uses build_pinned_httpx_client
+    (PinnedIPTransport) — same threat class, HTTP-appropriate mechanism (#1552).
+    """
+    from connectors.rest_connector import _HTTPX_AVAILABLE, RESTConnector
+
+    if not _HTTPX_AVAILABLE:
+        pytest.skip("httpx not installed")
+
+    fake_client = MagicMock()
+    fake_client.headers = {}
+    captured: dict = {}
+
+    def _fake_build(*, host_to_ips, **kwargs):
+        captured["host_to_ips"] = host_to_ips
+        captured["kwargs"] = kwargs
+        return fake_client
+
+    with (
+        patch(
+            "connectors.rest_connector.resolve_and_validate_outbound_url",
+            return_value=(None, [ipaddress.ip_address("203.0.113.10")]),
+        ),
+        patch(
+            "connectors.rest_connector.build_pinned_httpx_client",
+            side_effect=_fake_build,
+        ),
+    ):
+        conn = RESTConnector(
+            {
+                "name": "pin-probe",
+                "base_url": "https://api.example.com",
+                "paths": ["/x"],
+            },
+            scanner=None,
+            db_manager=_FailureRecorder(),
+        )
+        conn.connect()
+
+    pins = captured.get("host_to_ips") or {}
+    assert "api.example.com" in pins
+    assert pins["api.example.com"] == ["203.0.113.10"]
+    assert captured.get("kwargs", {}).get("base_url") == "https://api.example.com"
+
+
+def test_rest_connector_source_requires_pinned_httpx_client() -> None:
+    """#1554 anti-regression: REST must keep the httpx pin constructor."""
+    from pathlib import Path
+
+    source = (
+        Path(__file__).resolve().parents[1] / "connectors" / "rest_connector.py"
+    ).read_text(encoding="utf-8")
+    assert "build_pinned_httpx_client(" in source
+    assert "merge_host_pins(" in source
+    assert "resolve_and_validate_outbound_url(" in source
 
 
 def test_rest_connector_rejects_metadata_base_url() -> None:
