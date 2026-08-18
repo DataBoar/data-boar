@@ -15,10 +15,10 @@ similar) introduce a different exposure vector: PII **in motion**, entered
 into prompts and potentially surfaced in outputs, logs, or third-party
 training pipelines — invisible to a data-at-rest scan.
 
-**Origin:** raised during the Madruga (MTIS) Google Workspace request
-(#1230) — his specific pain is PII leakage risk via Gemini output inside his
+**Origin:** raised during Client A's (port logistics operator) Google Workspace request
+(#1230) — that client's specific pain is PII leakage risk via Gemini output inside their
 Workspace tenant. The operator flagged that this is likely not
-Gemini-specific or Madruga-specific: other current/future clients may need
+Gemini-specific or client-specific: other current/future clients may need
 the same governance for whichever LLM their organization uses.
 
 **Goal:** define whether/how Data Boar can extend its "data soup" governance
@@ -32,13 +32,13 @@ text).
 ## Why this, why now
 
 - **Market:** any org using an LLM assistant (which is now most SaaS-adjacent
-  companies) has the same blind spot Madruga described — DPOs have no
+  companies) has the same blind spot the #1230 client case described — DPOs have no
   visibility into what PII employees paste into prompts.
 - **Differentiator:** existing DLP/CASB tools focus on network egress;
   fewer focus on the specific "did this prompt/response contain PII" question
   the way Data Boar already answers it for files/DBs.
 - **Risk if we don't scope it now:** solving this once, narrowly, for
-  Gemini/Madruga (inside #1230) risks a one-off implementation that doesn't
+  Gemini for a single client (inside #1230) risks a one-off implementation that doesn't
   generalize — same trap as building a feature for one client instead of an
   "ingredient."
 
@@ -54,7 +54,7 @@ text).
      question, but availability varies wildly by provider: some expose
      conversation logs via admin API (enterprise tiers), most consumer-tier
      products don't expose content to admins at all.
-   - #1230 already resolved this for the Gemini/Madruga case: it's **content**,
+   - #1230 already resolved this for the Gemini / Google Workspace client case: it's **content**,
      not just usage. Unclear if that generalizes to every provider/client, or
      if Data Boar has to degrade gracefully to usage-only where content isn't
      available.
@@ -86,7 +86,7 @@ firsthand rather than assumed.
 
 ## Relation to other issues
 
-- #1230 — the concrete, client-confirmed first case (Gemini/Madruga)
+- #1230 — the concrete, client-confirmed first case (Gemini / Google Workspace, Client A)
 - #1158 / #1167 — competing technical approaches for Google Workspace
   broadly (Vault API vs. direct Drive+Reports API) — whichever wins informs
   what's realistically available for the Gemini content question too
