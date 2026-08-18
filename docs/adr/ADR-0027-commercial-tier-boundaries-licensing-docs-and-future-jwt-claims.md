@@ -13,6 +13,7 @@ Accepted
 
 - 2026-04-17 — Accepted
 - 2026-06-21 — Amended: Watch condition fulfilled by [ADR 0064](ADR-0064-license-enforcement-additive-model.md) (Proposed) — GitHub #993 / #709
+- 2026-08-18 — Amended: cross-ref [ADR 0090](ADR-0090-open-core-plugin-boundary-pro-auditability-reference-sample.md) — Pro/plugin **artifact auditability** (SBOM + provenance + NDA layers) distinct from tier/JWT docs — GitHub #811
 
 ## Context
 
@@ -41,6 +42,7 @@ The product needs a **single, reviewable place** for **open core vs Pro vs Enter
 - [ADR 0063 — ed25519 license JWT signing](ADR-0063-ed25519-license-jwt-signing.md)
 - [ADR 0064 — License enforcement additive model](ADR-0064-license-enforcement-additive-model.md) — fulfills this ADR’s deferred enforcement Watch
 - [ADR 0066 — TAMPERED state behavior (fail-closed in enforced mode)](ADR-0066-tampered-state-behavior.md) — caps effective runtime tier at Community when integrity checks fail under **enforced** licensing; open mode logs CRITICAL and continues
+- [ADR 0090 — Open-core / plugin boundary: Pro auditability, reference sample, reverse leakage guard](ADR-0090-open-core-plugin-boundary-pro-auditability-reference-sample.md) — how regulated buyers audit **Pro/plugin artifacts** without public OSS of crown jewels (#811)
 
 ## References
 

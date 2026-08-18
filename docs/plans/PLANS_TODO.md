@@ -30,13 +30,13 @@ Use these tags in headings to keep priorities explicit and machine-countable:
 
 Do not edit this block manually; refresh with `python scripts/plans-stats.py --write`.
 
-- **Status rows counted:** 226  (Done: 146 | Incomplete: 80)
-- **Incomplete breakdown:** Pending `⬜`=66, Tracked `🔄` / `Tracked (partially done)`=14, Under consideration=0, Backlog-marked rows=0
+- **Status rows counted:** 230  (Done: 146 | Incomplete: 84)
+- **Incomplete breakdown:** Pending `⬜`=68, Tracked `🔄` / `Tracked (partially done)`=16, Under consideration=0, Backlog-marked rows=0
 
 | Horizon | Total rows | Done | Incomplete |
 | ------- | ----------: | ----: | ----------: |
 | `H0` | 53 | 34 | 19 |
-| `H1` | 43 | 32 | 11 |
+| `H1` | 47 | 32 | 15 |
 | `H2` | 0 | 0 | 0 |
 | `H3` | 118 | 68 | 50 |
 | `H4` | 0 | 0 | 0 |
@@ -106,6 +106,7 @@ When **partners** or **buyers** anchor on a vertical (MSP, insurance, RPO, real 
 - **Plan checkbox discipline:** When code ships for a named plan slice, update **`PLAN_*.md`** checkboxes in the **same PR** — see **`AGENTS.md`** (*Plan checkbox discipline*); **`plans-status-pl-sync.mdc`** stays situational (plan globs only).
 - **Licensing enforcement (open issues — PMO index):** Cluster **#704** [P0] (Maestro + JWT on four lab hosts) → **#719** [P1] **`[U1]`** (silent bypass via `DATA_BOAR_ENV=development` / `DEBUG=1` — CRITICAL log + Docker doc) → **#708–#722** (issuer, trial/grace/revocation ADRs). Table below under **`[H0][U1]` Licensing enforcement**; **A6** `license-smoke` should gain a **#719** regression when the fix lands. **After** Wave 1 **#656** U0/U1 slices and **#406** release gate — not a substitute for **#606** [P0] plugin hooks unless operator reprioritizes.
 - **ENT subscription capability roadmap ([#643](https://github.com/DataBoar/data-boar/issues/643)):** Canonical backlog [ENT_CAPABILITY_ROADMAP.md](ENT_CAPABILITY_ROADMAP.md) ([pt-BR](ENT_CAPABILITY_ROADMAP.pt_BR.md); hub [PLAN_ENT_CAPABILITY_ROADMAP.md](PLAN_ENT_CAPABILITY_ROADMAP.md)) — role-based reports, multi-entity, DMBOK maturity, audit-grade evidence, PSI/DGA, ITSM/IAM. **Doc-only** until per-capability ADR; does **not** replace [PLAN_PRODUCT_TIERS_AND_OPEN_CORE.md](PLAN_PRODUCT_TIERS_AND_OPEN_CORE.md) or [SPRINTS_AND_MILESTONES.md](SPRINTS_AND_MILESTONES.md) §4.1 / **M-ACCESS**. Next related P1: open-core/plugin governance [#811](https://github.com/DataBoar/data-boar/issues/811).
+- **Open-core / Pro plugin governance ([#811](https://github.com/DataBoar/data-boar/issues/811)):** [ADR-0090](../adr/ADR-0090-open-core-plugin-boundary-pro-auditability-reference-sample.md) (Proposed) + [PLAN_PRO_PLUGIN_AUDITABILITY.md](PLAN_PRO_PLUGIN_AUDITABILITY.md) — G1 artifact auditability (SBOM+provenance / NDA), G2 public SDK sample+CI, G3 reverse leakage guard (**design**; code = child issue), G4 curation. Related: [#769](https://github.com/DataBoar/data-boar/issues/769), [#784](https://github.com/DataBoar/data-boar/issues/784), [#785](https://github.com/DataBoar/data-boar/issues/785), [#865](https://github.com/DataBoar/data-boar/issues/865) / [ADR-0086](../adr/ADR-0086-plugin-sdk-language-neutral-contract.md).
 - **LAB-OP Ansible + host hygiene ([#756](https://github.com/DataBoar/data-boar/issues/756)):** **`[H0][U1]`** one lab node's disk at **~90%** (may block completão / bare mirror on that node) · **`[H0][U2]`** install **`bw`** CLI via the lab Ansible playbook (idempotent). Issue states **no release-gate blocker** — operator-paced; see **LAB-OP** paragraph below and **M-PILOT-READY** completão row.
 - **Forensics primer — first responder ([#747](https://github.com/DataBoar/data-boar/issues/747)):** Complements parent **[#685](https://github.com/DataBoar/data-boar/issues/685)**; thin **`docs(primers)`** checklist · **`[H2][U3][P2]`** — Gemini Cold row **G-26-19** below; hub chain **#685 → #747 → #744** when primers hub expands.
 
@@ -451,6 +452,18 @@ Doc-first wave 1 shipped; **v1.8.0 wave 2 ([#1056](https://github.com/DataBoar/d
 | 2 | Wire `PLAN_PRODUCT_TIERS_AND_OPEN_CORE`, `SPRINTS_AND_MILESTONES` §4.1 (EN+pt-BR), Integration bullet, hub sync | ✅ Done |
 | 3 | Per-capability ADRs + product code | ⬜ Pending (operator-gated) |
 | 4 | Related P1: open-core/plugin governance [#811](https://github.com/DataBoar/data-boar/issues/811) | 🔄 Tracked |
+## [H1] Open-core / Pro plugin governance
+
+### Pro plugin auditability + open-core boundary – [PLAN_PRO_PLUGIN_AUDITABILITY.md](PLAN_PRO_PLUGIN_AUDITABILITY.md) · [ADR-0090](../adr/ADR-0090-open-core-plugin-boundary-pro-auditability-reference-sample.md)
+
+**`[H1][U2]`** · GitHub [#811](https://github.com/DataBoar/data-boar/issues/811). Docs/ADR first (`no-code-yet`); G3 gate code = child issue.
+
+| # | To-do | Status |
+| - | ----- | ------ |
+| 1 | ADR-0090 Proposed (G1–G4) + amend ADR-0027 / ADR-0052 | 🔄 Tracked |
+| 2 | Thin plan + hub / PLANS_TODO wiring | 🔄 Tracked |
+| 3 | G2 public SDK sample + CI canary | ⬜ Pending |
+| 4 | G3 reverse Pro→public leakage gate (implementation) | ⬜ Pending ([#1624](https://github.com/DataBoar/data-boar/issues/1624)) |
 
 ## [H1] CLI operator tools and public contact policy
 
