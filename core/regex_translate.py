@@ -45,6 +45,17 @@ _CLASS_A_MARKERS: tuple[tuple[str, str], ...] = (
 _POSSESSIVE = re.compile(r"(?<!\\)(?:\*\++|\+\++|\?\++|\}\++)")
 
 
+_INLINE_FLAGS_RE = re.compile(r"^\(\?[a-zA-Z-]+\)")
+
+
+def _split_leading_inline_flags(pattern: str) -> tuple[str | None, str]:
+    """Return ``(flag_group, rest)`` when pattern opens with ``(?flags)``."""
+    match = _INLINE_FLAGS_RE.match(pattern)
+    if not match:
+        return None, pattern
+    return match.group(0), pattern[match.end() :]
+
+
 def _class_a_reason(pattern: str) -> str | None:
     for marker, label in _CLASS_A_MARKERS:
         if marker in pattern:
@@ -234,11 +245,18 @@ def translate(pattern: str) -> tuple[str | None, str]:
     if reason_b:
         return None, reason_b
 
-    body = pattern
+    flag_group, body = _split_leading_inline_flags(pattern)
     translated_ci = False
-    if body.startswith("(?i)") and not body.startswith("(?i:"):
-        body = body[4:]
+    if flag_group == "(?i)":
         translated_ci = True
+    elif flag_group is not None and "i" in flag_group[2:-1]:
+        return None, "compound_inline_flags"
+    elif flag_group is not None:
+        # Leading (?m)/(?s)/… pass through to Rust when unchanged. Translating $
+        # after stripping the flag drops multiline semantics silently (#1644).
+        if _translate_dollar_anchor(body) != body:
+            return None, "unhandled_inline_flags"
+        return pattern, "direct"
 
     new_body = _translate_dollar_anchor(body)
     dollar_changed = new_body != body

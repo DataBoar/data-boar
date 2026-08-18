@@ -1351,10 +1351,18 @@ class SensitivityDetector:
     def _match_regex_patterns(self, combined: str) -> list[tuple[str, str]]:
         found_patterns: list[tuple[str, str]] = []
         if self._rust_stage is not None:
-            for name in self._rust_stage.match_names(combined):
-                if name in self.patterns:
-                    self._append_pattern_hit(found_patterns, name, combined)
-            for name in self._rust_stage.python_fallback_names:
+            rust_hits, rust_ok = self._rust_stage.match_names(combined)
+            if rust_ok:
+                for name in rust_hits:
+                    if name in self.patterns:
+                        self._append_pattern_hit(found_patterns, name, combined)
+                python_only = self._rust_stage.python_fallback_names
+            else:
+                python_only = (
+                    self._rust_stage.rust_pattern_names
+                    | self._rust_stage.python_fallback_names
+                )
+            for name in python_only:
                 rex = self._compiled.get(name)
                 if rex and rex.search(combined):
                     self._append_pattern_hit(found_patterns, name, combined)
