@@ -108,8 +108,8 @@ Os títulos na tabela abaixo ficam em **inglês** (canônicos, iguais ao [README
 | 0085 | [Install priority ladder (native-first when shipped; pipx today)](ADR-0085-install-priority-ladder.md) | Proposto |
 | 0086 | [Contrato language-neutral do Plugin SDK (L1/L2/L3)](ADR-0086-plugin-sdk-language-neutral-contract.md) | Proposto |
 | 0087 | [Malha bidirecional zero-trust do Plugin SDK](ADR-0087-plugin-sdk-bidirectional-zero-trust-mesh.md) | Proposto |
-
 | 0088 | [Verifique o verificador: checagens de integridade/autorização não podem depender do artefato que verificam](ADR-0088-verify-the-verifier-no-self-referential-trust-chain.md) | Aceito |
+| 0089 | [Repositório assinado de pacote nativo: hospedagem, chaves e fronteira comunidade](ADR-0089-native-package-signed-repository-hosting-keys-and-community-boundary.md) | Proposto |
 
 ## Docs relacionados
 
