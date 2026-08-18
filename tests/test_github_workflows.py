@@ -369,6 +369,11 @@ def test_ci_yml_libmariadb_install_uses_timed_composite_action() -> None:
     assert "timeout-minutes:" not in action_text
     assert "timeout " in action_text
     assert "libmariadb-dev" in action_text
+    # #1646: repoint stalled azure.archive.ubuntu.com before apt-get update.
+    assert "azure.archive.ubuntu.com" in action_text
+    assert "archive.ubuntu.com" in action_text
+    assert "/etc/apt/apt-mirrors.txt" in action_text
+    assert "timeout 240 sudo apt-get update" in action_text
 
 
 def test_ci_yml_has_dependency_review_job_on_pull_request() -> None:
