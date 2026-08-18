@@ -1,0 +1,8 @@
+---
+galaxy_info:
+  role_name: lab_node_01_shell_umask
+  description: Blockinfile umask in /etc/profile and /etc/bash.bashrc.
+  license: BSD-3-Clause
+  platforms:
+    - name: Debian
+dependencies: []

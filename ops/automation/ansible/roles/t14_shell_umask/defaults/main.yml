@@ -1,4 +1,0 @@
----
-# Ensure login shells see umask 027 (matches login.defs intent).
-lab-node-01_shell_umask_enable: true
-lab-node-01_shell_umask: "027"

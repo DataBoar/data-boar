@@ -1,5 +1,0 @@
----
-lab-node-01_ufw_enable: true
-lab-node-01_ufw_default_incoming: deny
-lab-node-01_ufw_default_outgoing: allow
-

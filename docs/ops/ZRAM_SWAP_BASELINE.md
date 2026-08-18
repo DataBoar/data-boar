@@ -8,16 +8,16 @@ Improve responsiveness on memory-constrained hosts without forcing a large disk 
 
 ## Automation (Ansible)
 
-Role: `ops/automation/ansible/roles/lab-node-01_zram`
+Role: `ops/automation/ansible/roles/lab_node_01_zram`
 
-Safe default is **opt-in** (`lab-node-01_zram_enable=false`).
+Safe default is **opt-in** (`lab_node_01_zram_enable=false`).
 
 ### Sizing policy
 
 The role computes `zram-size` based on host RAM:
 
-- `lab-node-01_zram_size_percent` of total RAM
-- bounded by `lab-node-01_zram_min_mb` and `lab-node-01_zram_max_mb`
+- `lab_node_01_zram_size_percent` of total RAM
+- bounded by `lab_node_01_zram_min_mb` and `lab_node_01_zram_max_mb`
 
 ## Validation
 

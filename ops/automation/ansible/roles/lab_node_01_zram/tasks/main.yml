@@ -1,0 +1,38 @@
+---
+- name: Compute zram size in MB (host-dependent)
+  when: lab_node_01_zram_enable | bool
+  ansible.builtin.set_fact:
+    lab_node_01_zram_size_mb: >-
+      {{
+        [
+          lab_node_01_zram_max_mb | int,
+          [
+            lab_node_01_zram_min_mb | int,
+            (
+              (ansible_memtotal_mb | int) * (lab_node_01_zram_size_percent | int) / 100
+            ) | round(0, 'ceil') | int
+          ] | max
+        ] | min
+      }}
+
+- name: Install systemd-zram-generator (best-effort)
+  when: lab_node_01_zram_enable | bool
+  ansible.builtin.apt:
+    name: systemd-zram-generator
+    state: present
+    update_cache: false
+  failed_when: false
+
+- name: Write zram-generator config
+  when: lab_node_01_zram_enable | bool
+  ansible.builtin.template:
+    src: zram-generator.conf.j2
+    dest: "{{ lab_node_01_zram_generator_conf_path }}"
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - Reload systemd
+    - Restart systemd-zram-setup@zram0
+  failed_when: false
+

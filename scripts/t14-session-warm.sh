@@ -18,7 +18,7 @@ done
 echo "== LAB-NODE-01 session warm (PATH + sudo + bw check) =="
 if [[ -n "${TMUX:-}" ]]; then
   echo "NOTE: inside tmux — panes often use non-login bash; if bw is missing, run: source /etc/bash.bashrc"
-  echo "      (role lab-node-01_bitwarden_cli adds PATH there.) Flatpak-only: alias bw in ~/.bashrc — see OPERATOR_PACKAGE_MAINTENANCE_AND_BW_CLI.md §1.2.2"
+  echo "      (role lab_node_01_bitwarden_cli adds PATH there.) Flatpak-only: alias bw in ~/.bashrc — see OPERATOR_PACKAGE_MAINTENANCE_AND_BW_CLI.md §1.2.2"
 fi
 
 _bw_ok=""
@@ -41,7 +41,7 @@ fi
 
 if [[ -z "${_bw_ok}" ]]; then
   echo "NOTE: bw not found — options:"
-  echo "      - npm: bash scripts/lab-node-01-bitwarden-cli-bootstrap.sh  (or Ansible role lab-node-01_bitwarden_cli)"
+  echo "      - npm: bash scripts/lab-node-01-bitwarden-cli-bootstrap.sh  (or Ansible role lab_node_01_bitwarden_cli)"
   echo "      - Flatpak: flatpak install flathub com.bitwarden.desktop  (+ alias — docs §1.2.2)"
 fi
 

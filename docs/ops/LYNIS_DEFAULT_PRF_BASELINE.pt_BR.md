@@ -16,8 +16,8 @@ Manter as execuções do Lynis **acionáveis**: reduzir ruído recorrente **sem*
 
 O baseline Ansible escreve um `/etc/lynis/default.prf` revisável com sugestões **apenas em comentário**:
 
-- Role: `ops/automation/ansible/roles/lab-node-01_lynis`
-- Template: `ops/automation/ansible/roles/lab-node-01_lynis/templates/default.prf.j2`
+- Role: `ops/automation/ansible/roles/lab_node_01_lynis`
+- Template: `ops/automation/ansible/roles/lab_node_01_lynis/templates/default.prf.j2`
 
 ## Como usar
 

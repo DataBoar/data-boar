@@ -1,0 +1,178 @@
+---
+# --- CLI tools ---
+- name: Install observability CLI tools
+  when: lab_node_01_obs_install_cli_tools | bool
+  ansible.builtin.apt:
+    name:
+      - iotop
+      - iftop
+      - nethogs
+      - nload
+      - sysstat
+      - lm-sensors
+      - smartmontools
+    state: present
+    update_cache: true
+
+- name: Install ctop binary (container top)
+  when: lab_node_01_obs_install_ctop | bool
+  ansible.builtin.get_url:
+    url: "https://github.com/bcicen/ctop/releases/download/v{{ lab_node_01_obs_ctop_version }}/ctop-{{ lab_node_01_obs_ctop_version }}-linux-{{ lab_node_01_obs_ctop_linux_arch }}"
+    dest: /usr/local/bin/ctop
+    mode: "0755"
+    force: false
+
+# --- Syslog forwarding ---
+- name: Configure rsyslog forwarding to central syslog/Graylog
+  when:
+    - lab_node_01_obs_syslog_forward_enabled | bool
+    - lab_node_01_obs_syslog_server_ip | length > 0
+  block:
+    - name: Ensure rsyslog is installed
+      ansible.builtin.apt:
+        name: rsyslog
+        state: present
+
+    - name: Write rsyslog forwarding config
+      ansible.builtin.template:
+        dest: /etc/rsyslog.d/99-lab-forward.conf
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          # Lab syslog forward — managed by Ansible (lab_node_01_observability role)
+          {% if lab_node_01_obs_syslog_protocol == 'tcp' %}
+          *.* @@{{ lab_node_01_obs_syslog_server_ip }}:{{ lab_node_01_obs_syslog_port }}
+          {% else %}
+          *.* @{{ lab_node_01_obs_syslog_server_ip }}:{{ lab_node_01_obs_syslog_port }}
+          {% endif %}
+      notify: Restart rsyslog
+
+    - name: Ensure rsyslog is enabled
+      ansible.builtin.service:
+        name: rsyslog
+        state: started
+        enabled: true
+      failed_when: false
+
+# --- Munin node ---
+- name: Configure munin-node
+  when: lab_node_01_obs_munin_node_enabled | bool
+  block:
+    - name: Ensure munin-node is installed
+      ansible.builtin.apt:
+        name: munin-node
+        state: present
+
+    - name: Allow Munin master IPs in munin-node.conf
+      ansible.builtin.lineinfile:
+        path: /etc/munin/munin-node.conf
+        line: "allow ^{{ item | regex_escape() }}$"
+        regexp: "^allow \\^{{ item | regex_escape() }}\\$$"
+      loop: "{{ lab_node_01_obs_munin_allowed_ips }}"
+      notify: Restart munin-node
+
+    - name: Enable and start munin-node
+      ansible.builtin.service:
+        name: munin-node
+        state: started
+        enabled: true
+      failed_when: false
+
+# --- Monit ---
+- name: Configure monit
+  when: lab_node_01_obs_monit_enabled | bool
+  block:
+    - name: Ensure monit is installed
+      ansible.builtin.apt:
+        name: monit
+        state: present
+
+    - name: Write monit web interface config (if enabled)
+      when: lab_node_01_obs_monit_web_enabled | bool
+      ansible.builtin.copy:
+        dest: /etc/monit/conf.d/99-lab-web.conf
+        owner: root
+        group: root
+        mode: "0600"
+        content: |
+          set httpd port {{ lab_node_01_obs_monit_web_port }} and
+            use address localhost
+            allow localhost
+            allow {{ lab_node_01_obs_monit_web_user }}:{{ lab_node_01_obs_monit_web_password }}
+      notify: Restart monit
+
+    - name: Enable and start monit
+      ansible.builtin.service:
+        name: monit
+        state: started
+        enabled: true
+      failed_when: false
+
+# --- Prometheus node_exporter ---
+- name: Configure prometheus-node-exporter
+  when: lab_node_01_obs_node_exporter_enabled | bool
+  block:
+    - name: Ensure prometheus-node-exporter is installed
+      ansible.builtin.apt:
+        name: prometheus-node-exporter
+        state: present
+
+    - name: Enable and start prometheus-node-exporter
+      ansible.builtin.service:
+        name: prometheus-node-exporter
+        state: started
+        enabled: true
+      failed_when: false
+
+    - name: Allow node_exporter scrape from LAN (ufw)
+      ansible.builtin.command: >
+        ufw allow from {{ lab_node_01_obs_node_exporter_ufw_allow_from }}
+        to any port 9100 proto tcp
+        comment 'Prometheus node_exporter LAN'
+      changed_when: false
+      ignore_errors: true
+
+# --- Wazuh agent ---
+- name: Install Wazuh agent
+  when:
+    - lab_node_01_obs_wazuh_agent_enabled | bool
+    - lab_node_01_obs_wazuh_manager_ip | length > 0
+  block:
+    - name: Add Wazuh GPG key
+      ansible.builtin.shell: |
+        set -euo pipefail
+        curl -s https://packages.wazuh.com/key/GPG-KEY-WAZUH \
+          | gpg --no-default-keyring \
+                --keyring gnupg-ring:/usr/share/keyrings/wazuh.gpg \
+                --import
+        chmod 644 /usr/share/keyrings/wazuh.gpg
+      args:
+        executable: /bin/bash
+        creates: /usr/share/keyrings/wazuh.gpg
+
+    - name: Add Wazuh apt repository
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/usr/share/keyrings/wazuh.gpg] https://packages.wazuh.com/{{ lab_node_01_obs_wazuh_version }}.x/apt/ stable main"
+        filename: wazuh
+        state: present
+
+    - name: Install wazuh-agent
+      ansible.builtin.apt:
+        name: wazuh-agent
+        state: present
+        update_cache: true
+
+    - name: Configure Wazuh manager address
+      ansible.builtin.replace:
+        path: /var/ossec/etc/ossec.conf
+        regexp: '<address>MANAGER_IP</address>'
+        replace: "<address>{{ lab_node_01_obs_wazuh_manager_ip }}</address>"
+      notify: Restart wazuh-agent
+
+    - name: Enable and start wazuh-agent
+      ansible.builtin.service:
+        name: wazuh-agent
+        state: started
+        enabled: true
+      failed_when: false

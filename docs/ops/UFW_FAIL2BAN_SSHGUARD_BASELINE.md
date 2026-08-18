@@ -14,12 +14,12 @@ Keep remote access protected while staying operational for LAB-OP.
 
 ## Automation
 
-- UFW baseline: `ops/automation/ansible/roles/lab-node-01_ufw`
-- Fail2ban baseline: `ops/automation/ansible/roles/lab-node-01_fail2ban`
-- sshguard baseline: `ops/automation/ansible/roles/lab-node-01_sshguard`
+- UFW baseline: `ops/automation/ansible/roles/lab_node_01_ufw`
+- Fail2ban baseline: `ops/automation/ansible/roles/lab_node_01_fail2ban`
+- sshguard baseline: `ops/automation/ansible/roles/lab_node_01_sshguard`
 
 ## Opt-in knobs
 
-- **Fail2ban ignore list**: set `lab-node-01_fail2ban_ignoreip` in inventory.
-- **sshguard whitelist**: set `lab-node-01_sshguard_whitelist_lines` in inventory.
+- **Fail2ban ignore list**: set `lab_node_01_fail2ban_ignoreip` in inventory.
+- **sshguard whitelist**: set `lab_node_01_sshguard_whitelist_lines` in inventory.
 

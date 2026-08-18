@@ -21,9 +21,9 @@ Give a **single mental map** between:
 
 ## Ansible “by role”, not by unknown distro
 
-- **Debian family** vs **Void** is already split **inside** role **`lab-node-01_podman`** (see [ops/automation/ansible/README.md](../../ops/automation/ansible/README.md)).
+- **Debian family** vs **Void** is already split **inside** role **`lab_node_01_podman`** (see [ops/automation/ansible/README.md](../../ops/automation/ansible/README.md)).
 - **Personas** decide **whether** to run Podman installs at all (**`.labop-skip-lab-node-01-podman`** on edge/bridge when you standardize on “metal = Python only”).
-- Do **not** add playbooks for distros you do not operate; extend **`lab-node-01_podman`** (or a new role) when a **new** family appears on the manifest.
+- Do **not** add playbooks for distros you do not operate; extend **`lab_node_01_podman`** (or a new role) when a **new** family appears on the manifest.
 
 ## Synthetic databases and “full” tests
 

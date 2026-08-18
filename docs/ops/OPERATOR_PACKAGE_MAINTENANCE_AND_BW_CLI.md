@@ -38,7 +38,7 @@
 
 - Pick **one** method per environment (examples — use whichever you already standardize on): **Homebrew** (`brew install bitwarden-cli`), **npm** `@bitwarden/cli`, or a **distribution** package if maintained and trusted.
 
-- **Debian/Ubuntu + npm:** Bitwarden’s [CLI documentation](https://bitwarden.com/help/cli/) states that installing via `npm` on Linux may require the **`build-essential`** metapackage (or your distribution’s equivalent) first, for example `sudo apt install build-essential`. The **`lab-node-01_bitwarden_cli`** Ansible role and **`scripts/lab-node-01-bitwarden-cli-bootstrap.sh`** install it alongside **`nodejs`** / **`npm`**.
+- **Debian/Ubuntu + npm:** Bitwarden’s [CLI documentation](https://bitwarden.com/help/cli/) states that installing via `npm` on Linux may require the **`build-essential`** metapackage (or your distribution’s equivalent) first, for example `sudo apt install build-essential`. The **`lab_node_01_bitwarden_cli`** Ansible role and **`scripts/lab-node-01-bitwarden-cli-bootstrap.sh`** install it alongside **`nodejs`** / **`npm`**.
 
 - Verify with:
 
@@ -90,7 +90,7 @@ flatpak run --command=bw com.bitwarden.desktop --version
 alias bw='flatpak run --command=bw com.bitwarden.desktop'
 ```
 
-After defining the alias, **`command -v bw`** may show `alias` (that is expected). For **LAB-NODE-01 baseline**, set **`lab-node-01_install_bitwarden_cli: false`** in inventory if you standardize on Flatpak-only **`bw`**, so Ansible does not also install **`@bitwarden/cli`** via **`npm`**.
+After defining the alias, **`command -v bw`** may show `alias` (that is expected). For **LAB-NODE-01 baseline**, set **`lab_node_01_install_bitwarden_cli: false`** in inventory if you standardize on Flatpak-only **`bw`**, so Ansible does not also install **`@bitwarden/cli`** via **`npm`**.
 
 ### 1.3 One package manager per tool (avoid duplicates)
 

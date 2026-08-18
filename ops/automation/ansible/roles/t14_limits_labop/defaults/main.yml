@@ -1,7 +1,0 @@
----
-# PAM limits.d — session limits for interactive logins (not systemd services).
-lab-node-01_limits_labop_enable: true
-lab-node-01_limits_labop_path: /etc/security/limits.d/50-labop.conf
-
-# Disable core dumps for all users (hard + soft 0).
-lab-node-01_limits_core_zero: true

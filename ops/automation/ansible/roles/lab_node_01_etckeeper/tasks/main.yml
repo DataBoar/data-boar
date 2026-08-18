@@ -1,0 +1,14 @@
+---
+- name: Ensure etckeeper package is installed
+  ansible.builtin.apt:
+    name: etckeeper
+    state: present
+    update_cache: false
+
+- name: Ensure etckeeper is initialized (best-effort)
+  when: lab_node_01_etckeeper_enable | bool
+  ansible.builtin.command: etckeeper init
+  args:
+    creates: /etc/.git
+  failed_when: false
+

@@ -16,8 +16,8 @@ Keep Lynis runs **actionable**: reduce repeated noise **without** hiding real fi
 
 The Ansible baseline writes a reviewable `/etc/lynis/default.prf` with **comment-only** suggestions:
 
-- Role: `ops/automation/ansible/roles/lab-node-01_lynis`
-- Template: `ops/automation/ansible/roles/lab-node-01_lynis/templates/default.prf.j2`
+- Role: `ops/automation/ansible/roles/lab_node_01_lynis`
+- Template: `ops/automation/ansible/roles/lab_node_01_lynis/templates/default.prf.j2`
 
 ## How to use
 

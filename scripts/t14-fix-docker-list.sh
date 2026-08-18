@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One-shot: fix docker.list permissions so user-space tools stop Errno 13 (see ansible lab-node-01_docker_ce).
+# One-shot: fix docker.list permissions so user-space tools stop Errno 13 (see ansible lab_node_01_docker_ce).
 # Run on the LAB-NODE-01: bash scripts/lab-node-01-fix-docker-list.sh
 set -eu
 DOCKER_LIST="/etc/apt/sources.list.d/docker.list"

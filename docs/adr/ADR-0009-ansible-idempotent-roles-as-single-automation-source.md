@@ -24,8 +24,8 @@ Two automation approaches were considered:
 | **Ansible roles (idempotent)** | Re-runnable; state is declared; roles composable; variables override | Requires Ansible install; YAML verbosity |
 | **OpenTofu/Terraform** | Declarative infra state; plan/apply | Needs a provider; not native for local OS config |
 
-The operator had already adopted Ansible for the hardening baseline (`lab-node-01_baseline_packages`,
-`lab-node-01_ufw`, `lab-node-01_fail2ban`, etc.). The natural extension is to cover **all** reproducible
+The operator had already adopted Ansible for the hardening baseline (`lab_node_01_baseline_packages`,
+`lab_node_01_ufw`, `lab_node_01_fail2ban`, etc.). The natural extension is to cover **all** reproducible
 configuration — not just hardening — within the same Ansible role model.
 
 ## Decision
@@ -51,10 +51,10 @@ configuration — not just hardening — within the same Ansible role model.
 
 | Role | Purpose | Default |
 |---|---|---|
-| `lab-node-01_docker_ce` | Docker CE from official repo + Compose plugin + Swarm opt-in | off |
-| `lab-node-01_podman` | Podman rootless + buildah + skopeo + podman-compose + uidmap/slirp4netns/fuse-overlayfs | on (role default; override in inventory to skip) |
-| `lab-node-01_k3s` | k3s lightweight Kubernetes (installs from get.k3s.io) | off |
-| `lab-node-01_observability` | iotop, iftop, ctop, munin-node, monit, node_exporter, rsyslog forwarding, Wazuh agent | CLI tools on; services opt-in |
+| `lab_node_01_docker_ce` | Docker CE from official repo + Compose plugin + Swarm opt-in | off |
+| `lab_node_01_podman` | Podman rootless + buildah + skopeo + podman-compose + uidmap/slirp4netns/fuse-overlayfs | on (role default; override in inventory to skip) |
+| `lab_node_01_k3s` | k3s lightweight Kubernetes (installs from get.k3s.io) | off |
+| `lab_node_01_observability` | iotop, iftop, ctop, munin-node, monit, node_exporter, rsyslog forwarding, Wazuh agent | CLI tools on; services opt-in |
 
 ## Consequences
 

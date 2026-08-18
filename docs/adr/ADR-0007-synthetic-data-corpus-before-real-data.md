@@ -59,7 +59,7 @@ Phase 4 is explicitly blocked until Phases 1-3 pass.
   and reviewed as part of the detector regression checklist.
 - When a new file format or connector is added to the compatibility matrix, a corresponding
   synthetic sample must be added to the corpus before the connector is considered production-ready.
-- Docker Compose for lab DBs relies on the Ansible `lab-node-01_docker_ce` role being enabled on the
+- Docker Compose for lab DBs relies on the Ansible `lab_node_01_docker_ce` role being enabled on the
   test host -- cross-dependency with ADR 0008.
 
 ## References

@@ -1,0 +1,7 @@
+---
+- name: Ensure baseline packages are installed
+  ansible.builtin.apt:
+    name: "{{ lab_node_01_baseline_packages }}"
+    state: present
+    update_cache: true
+

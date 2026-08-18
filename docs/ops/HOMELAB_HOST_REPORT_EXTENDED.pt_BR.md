@@ -78,19 +78,19 @@ Isto é só ilustrativo (não é imposto automaticamente). Use host/group vars p
 # ops/automation/ansible/inventory.ini (ou group_vars/ / host_vars/)
 #
 # lab-sbc (exemplo ARM):
-#   lab-node-01_zram_enable: true
-#   lab-node-01_zram_max_mb: 512
+#   lab_node_01_zram_enable: true
+#   lab_node_01_zram_max_mb: 512
 #
 # <lab-host-2>:
-#   lab-node-01_zram_enable: true
-#   lab-node-01_zram_size_percent: 25
+#   lab_node_01_zram_enable: true
+#   lab_node_01_zram_size_percent: 25
 #
 # lab-op (lab x86 principal):
-#   lab-node-01_install_docker_ce: true
-#   lab-node-01_docker_swarm_init: true
+#   lab_node_01_install_docker_ce: true
+#   lab_node_01_docker_swarm_init: true
 #
 # lab-workstation (exemplo portátil dev):
-#   lab-node-01_zram_enable: false
+#   lab_node_01_zram_enable: false
 ```
 
 ## Como rodar (em cada host)

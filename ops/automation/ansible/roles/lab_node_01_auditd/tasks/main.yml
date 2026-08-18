@@ -1,0 +1,29 @@
+---
+- name: Ensure auditd packages are installed
+  when: lab_node_01_auditd_enable | bool
+  ansible.builtin.apt:
+    name:
+      - auditd
+      - audispd-plugins
+    state: present
+    update_cache: false
+  failed_when: false
+
+- name: Write audit rules (LAB-OP baseline)
+  when: lab_node_01_auditd_enable | bool
+  ansible.builtin.template:
+    src: 99-labop.rules.j2
+    dest: "{{ lab_node_01_auditd_rules_path }}"
+    owner: root
+    group: root
+    mode: "0640"
+  failed_when: false
+
+- name: Ensure auditd is enabled
+  when: lab_node_01_auditd_enable | bool
+  ansible.builtin.service:
+    name: auditd
+    state: started
+    enabled: true
+  failed_when: false
+

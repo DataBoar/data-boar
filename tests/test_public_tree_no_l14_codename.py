@@ -1,7 +1,7 @@
 """
 Public tree must not use the retired two-letter Windows workstation codename as a word token.
 
-Ansible paths under ops/automation/ansible are excluded (unrelated lab-node-01_* role prefixes).
+Ansible paths under ops/automation/ansible are excluded (unrelated lab_node_01_* role prefixes).
 The forbidden token is built at runtime so this file stays self-clean under the same guard.
 """
 

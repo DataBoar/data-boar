@@ -30,7 +30,7 @@ fi
 PROFILED="/etc/profile.d/zz-local-bin.sh"
 echo "==> ${PROFILED}"
 sudo tee "${PROFILED}" > /dev/null <<'EOF'
-# Managed by Ansible (lab-node-01_bitwarden_cli) — Bitwarden CLI and other /usr/local/bin tools
+# Managed by Ansible (lab_node_01_bitwarden_cli) — Bitwarden CLI and other /usr/local/bin tools
 case ":${PATH}:" in
   *:/usr/local/bin:*) ;;
   *) export PATH="/usr/local/bin:${PATH}" ;;
@@ -39,21 +39,21 @@ EOF
 sudo chmod 644 "${PROFILED}"
 
 BASHRC="/etc/bash.bashrc"
-MARK_BEGIN="# BEGIN ANSIBLE MANAGED BLOCK lab-node-01_bitwarden_cli_path"
+MARK_BEGIN="# BEGIN ANSIBLE MANAGED BLOCK lab_node_01_bitwarden_cli_path"
 if ! grep -qF "${MARK_BEGIN}" "${BASHRC}" 2>/dev/null; then
   echo "==> append PATH block to ${BASHRC} (tmux / non-login bash)"
   sudo tee -a "${BASHRC}" > /dev/null <<'EOF'
 
-# BEGIN ANSIBLE MANAGED BLOCK lab-node-01_bitwarden_cli_path
+# BEGIN ANSIBLE MANAGED BLOCK lab_node_01_bitwarden_cli_path
 # Bitwarden CLI (npm -g) and other /usr/local/bin tools
 case ":${PATH}:" in
   *:/usr/local/bin:*) ;;
   *) export PATH="/usr/local/bin:${PATH}" ;;
 esac
-# END ANSIBLE MANAGED BLOCK lab-node-01_bitwarden_cli_path
+# END ANSIBLE MANAGED BLOCK lab_node_01_bitwarden_cli_path
 EOF
 else
-  echo "==> ${BASHRC} already has lab-node-01_bitwarden_cli_path block — skip"
+  echo "==> ${BASHRC} already has lab_node_01_bitwarden_cli_path block — skip"
 fi
 
 case ":${PATH}:" in

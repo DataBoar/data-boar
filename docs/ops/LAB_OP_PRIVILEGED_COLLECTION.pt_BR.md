@@ -67,7 +67,7 @@ sudo -n /bin/bash REPO_PATH/scripts/homelab-host-report.sh --privileged | head -
 
 ### Path do shell no sudoers (`/bin/bash` vs `/usr/bin/bash`)
 
-O **`sudo`** compara o **path do executável invocado literalmente**. Em alguns hosts, **`command -v bash`** devolve **`/usr/bin/bash`** (ex.: Void), enquanto você testa com **`/bin/bash`**. Se o NOPASSWD listar só um dos dois, a outra forma pede senha. **Liste os dois** no `Cmnd_Alias` (como no template acima e no role **`lab-node-01_labop_sudoers`**).
+O **`sudo`** compara o **path do executável invocado literalmente**. Em alguns hosts, **`command -v bash`** devolve **`/usr/bin/bash`** (ex.: Void), enquanto você testa com **`/bin/bash`**. Se o NOPASSWD listar só um dos dois, a outra forma pede senha. **Liste os dois** no `Cmnd_Alias` (como no template acima e no role **`lab_node_01_labop_sudoers`**).
 
 ### Checklist de setup (uma vez por host)
 
@@ -95,8 +95,8 @@ sudo -n /bin/bash "$HOME/Projects/dev/data-boar/scripts/homelab-host-report.sh" 
 
 Para evitar prompt de **BECOME** ao instalar **só** Podman via `playbooks/lab-node-01-podman.yml`,
 amplie o include do sudoers com comandos **fixos** para `scripts/lab-node-01-ansible-labop-podman-apply.sh`
-(mesmo critério do `homelab-host-report.sh`). O role **`lab-node-01_labop_sudoers`** grava
-**`LABOP_HOST_REPORT`** e **`LABOP_ANSIBLE_PODMAN`** juntos quando **`lab-node-01_labop_sudoers_enable: true`**.
+(mesmo critério do `homelab-host-report.sh`). O role **`lab_node_01_labop_sudoers`** grava
+**`LABOP_HOST_REPORT`** e **`LABOP_ANSIBLE_PODMAN`** juntos quando **`lab_node_01_labop_sudoers_enable: true`**.
 
 Exemplo (substitua `LEITAO_USER` / `REPO_PATH`):
 

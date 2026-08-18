@@ -1,6 +1,0 @@
----
-lab-node-01_auditd_enable: true
-lab-node-01_auditd_rules_path: /etc/audit/rules.d/99-labop.rules
-
-# Copy the existing LAB-OP model into a template; keep optional noisy rules commented.
-lab-node-01_auditd_profile: lab_op_fixed
