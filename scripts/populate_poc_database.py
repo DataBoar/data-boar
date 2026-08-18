@@ -157,6 +157,27 @@ def _exec_many(conn, sql: str, rows: list[tuple]) -> None:
         cur.executemany(sql, rows)
 
 
+def _encoding_stress_null_term_row(cfg: DBConfig) -> tuple[str, str]:
+    """Build the ``null_term`` encoding_stress row (dialect-specific).
+
+    PostgreSQL TEXT/VARCHAR reject literal ``0x00`` (psycopg2 raises before INSERT).
+    MariaDB keeps the literal NUL for C-style termination stress. On postgres we store
+    visible ``\\x00`` escapes so the row still exercises odd encodings without aborting
+    the population transaction.
+    """
+    cpf = _p(_CPFS, 4)
+    name = _p(_NAMES, 4)
+    if cfg.db_type == "postgres":
+        return (
+            f"CPF\\x00{cpf}\\x00Nome\\x00{name}",
+            "null-terminated C-style string (postgres TEXT: visible \\x00 escape, not literal 0x00)",
+        )
+    return (
+        f"CPF\x00{cpf}\x00Nome\x00{name}",
+        "null-terminated C-style string",
+    )
+
+
 # ---------------------------------------------------------------------------
 # Schema creation
 # ---------------------------------------------------------------------------
@@ -483,6 +504,7 @@ def populate_multilingual(conn, cfg: DBConfig) -> None:
 def populate_encoding_stress(conn, cfg: DBConfig) -> None:
     """Unusual encodings, special chars, very long strings, emoji."""
     ph = cfg.placeholder()
+    null_term_content, null_term_note = _encoding_stress_null_term_row(cfg)
     rows = [
         (
             "ocr_noise",
@@ -511,8 +533,8 @@ def populate_encoding_stress(conn, cfg: DBConfig) -> None:
         ),
         (
             "null_term",
-            f"CPF\x00{_p(_CPFS, 4)}\x00Nome\x00{_p(_NAMES, 4)}",
-            "null-terminated C-style string",
+            null_term_content,
+            null_term_note,
         ),
         (
             "base64_in_col",
