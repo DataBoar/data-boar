@@ -142,6 +142,8 @@ Escolher **só um** item—token-aware; operador valida num deploy real.
 
 A tabela **S0–S6** **ainda não** tem linha dedicada para **assinatura permanente vs lab vs consultoria**, **reforço de ativação/bloqueio em runtime** ou **autenticação / RBAC** no **dashBOARd** e nas **APIs**. Hoje a **Fase 1** de licenciamento está no repositório ([`LICENSING_SPEC.md`](../LICENSING_SPEC.md): `open` / `enforced`, JWT, trial com watermark, revogação); claims de **parceiro / tier / consultoria** estão como **extensão futura** documentada—ver faixa prioritária **A** (A4 emissor privado, A7 jurídico) em [PLANS_TODO.md](PLANS_TODO.md).
 
+**Capacidades da assinatura Enterprise (ENT)** (relatórios por persona, multi-entidade, evidência auditável, maturidade DMBOK, etc.) ficam em [ENT_CAPABILITY_ROADMAP.md](ENT_CAPABILITY_ROADMAP.md) ([pt-BR](ENT_CAPABILITY_ROADMAP.pt_BR.md), [#643](https://github.com/DataBoar/data-boar/issues/643)). Trate esse roadmap como **backlog de produto depois** de **M-ACCESS** / gating de tier honestos — **não** substitui o trabalho de entitlement e identidade desta §4.1.
+
 #### Onde encaixar na linha do tempo
 
 - **Não adie** até “depois de todo o Tier 2” se a UI/API for exposta além de **um operador de confiança** em loopback. Assim que **M-LAB** for crível e o objetivo for **assinatura paga** ou deploy em **rede compartilhada**, trate **M-ACCESS** (abaixo) como **tema de sprint**—em geral **um sprint focado** **entrelaçado com S2–S4** (ex.: após **S1** ou trocando com uma fatia Tier-2), **não** só em **S6+**.

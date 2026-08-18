@@ -141,6 +141,8 @@ Pick **exactly one** item—token-aware; operator validates on a real deploy pat
 
 The table **S0–S6** does **not** yet include a dedicated row for **subscription vs lab vs consulting SKUs**, **stronger runtime activation/blocking**, or **authentication / RBAC** on the **dashBOARd** and **API**. Today, **Phase 1** licensing is in-repo ([`LICENSING_SPEC.md`](../LICENSING_SPEC.md): `open` / `enforced`, JWT, trial watermarking, revocation); **partner / tier / consulting** claims are a **documented future** extension—see **Priority band A** (A4 private issuer, A7 legal) in [PLANS_TODO.md](PLANS_TODO.md).
 
+**Enterprise (ENT) subscription capabilities** (role-based reports, multi-entity, audit-grade evidence, DMBOK maturity packs, etc.) are tracked separately in [ENT_CAPABILITY_ROADMAP.md](ENT_CAPABILITY_ROADMAP.md) ([pt-BR](ENT_CAPABILITY_ROADMAP.pt_BR.md), [#643](https://github.com/DataBoar/data-boar/issues/643)). Treat that roadmap as **product backlog after** honest **M-ACCESS** / tier gating — not a substitute for §4.1 entitlement and identity work.
+
 #### Recommended placement in the timeline
 
 - **Do not defer** until “after all of Tier 2” if you will expose the UI/API beyond a **single trusted operator** on loopback. As soon as **M-LAB** is credible and you aim at **paid subscription** or **shared network** deploys, treat **M-ACCESS** (below) as a **first-class theme**—often **one focused sprint** **interleaved with S2–S4** (e.g. after **S1** or swapping with one Tier-2 slice), **not** only in **S6+**.
