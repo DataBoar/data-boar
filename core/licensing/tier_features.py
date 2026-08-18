@@ -116,6 +116,8 @@ FEATURE_TIER_MAP: dict[str, Tier] = {
     # Pro+ — CLI→ProScanner accelerator routing (#1411 / TECH_GUIDE).
     # Gate is explicit by tier in core/pro_scan_path.py (never check_feature — OPEN bypass).
     "pro_prefilter_accel": Tier.PRO_PLUS,
+    # Pro+ — Rust regex matching stage (#1414 / ADR-0083); same tier gate as legacy key.
+    "rust_regex_stage": Tier.PRO_PLUS,
     # GRC-style org maturity questionnaire UI (POC); not open core — see PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md
     "maturity_self_assessment_poc": Tier.PRO,
     "notifications_email": Tier.PRO,

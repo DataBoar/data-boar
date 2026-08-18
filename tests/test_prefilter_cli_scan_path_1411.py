@@ -60,15 +60,22 @@ def test_zero_regression_latch_default_on() -> None:
     assert PRO_SCAN_PATH_ZERO_REGRESSION_LATCH is True
 
 
-def test_paid_tier_latched_off_reports_status() -> None:
+def test_paid_tier_reports_rust_regex_stage_status() -> None:
     scanner = DataScanner(licensing_config=_ENT_CFG)
     st = scanner.prefilter_status
-    assert st["active"] is False
+    assert st["name"] == "rust_regex_stage"
     assert st["engine"] == "core"
-    assert st["reason"] == "zero_regression_latch"
     assert st["tier"] == "enterprise"
-    assert st["name"] == "ProScanner"
-    assert st["backend"] in ("rust", "python")
+    if st["active"]:
+        assert st["backend"] == "rust"
+        assert st["reason"] is None
+    else:
+        assert st["backend"] == "python"
+        assert st["reason"] in (
+            "rust_extension_missing",
+            "rust_compile_failed",
+            "no_rust_eligible_patterns",
+        )
     assert scanner._pro_scanner is None
 
 
@@ -187,10 +194,10 @@ def test_engine_stamps_runtime_prefilter(tmp_path: Path) -> None:
     engine = AuditEngine(cfg, db_path=str(tmp_path / "audit.db"))
     runtime = cfg.get("_runtime") or {}
     pf = runtime.get("prefilter") or {}
-    assert pf.get("reason") == "zero_regression_latch"
-    assert pf.get("active") is False
-    assert getattr(engine.scanner, "prefilter_status", {}).get("reason") == (
-        "zero_regression_latch"
+    assert pf.get("name") == "rust_regex_stage"
+    assert pf.get("active") is False or pf.get("active") is True
+    assert getattr(engine.scanner, "prefilter_status", {}).get("name") == (
+        "rust_regex_stage"
     )
 
 

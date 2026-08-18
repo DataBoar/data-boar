@@ -1,6 +1,7 @@
-use pyo3::exceptions::PyRuntimeError;
+use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 use regex::Regex;
+use regex::RegexBuilder;
 
 #[pyclass]
 pub struct FastFilter {
@@ -20,6 +21,61 @@ impl FastFilter {
     /// Panic-free by design: regex matching does not unwrap dynamic state.
     fn filter_batch(&self, batch: Vec<String>) -> PyResult<Vec<usize>> {
         Ok(self.filter_batch_pure(&batch))
+    }
+}
+
+/// Cached multi-pattern regex stage (#1414) — loop of ``Regex``, not ``RegexSet``.
+#[pyclass]
+pub struct RegexStageEngine {
+    names: Vec<String>,
+    patterns: Vec<Regex>,
+}
+
+#[pymethods]
+impl RegexStageEngine {
+    #[staticmethod]
+    #[pyo3(signature = (names, patterns, size_limit=None))]
+    fn compile_patterns(
+        names: Vec<String>,
+        patterns: Vec<String>,
+        size_limit: Option<usize>,
+    ) -> PyResult<Self> {
+        if names.len() != patterns.len() {
+            return Err(PyValueError::new_err(
+                "names and patterns must have the same length",
+            ));
+        }
+        let mut compiled = Vec::with_capacity(patterns.len());
+        for pat in patterns {
+            let mut builder = RegexBuilder::new(&pat);
+            if let Some(limit) = size_limit {
+                builder.size_limit(limit);
+            }
+            compiled.push(
+                builder
+                    .build()
+                    .map_err(|e| PyRuntimeError::new_err(format!("regex compile error: {e}")))?,
+            );
+        }
+        Ok(RegexStageEngine {
+            names,
+            patterns: compiled,
+        })
+    }
+
+    /// Return pattern names that match ``text``. Releases the GIL during matching.
+    fn match_names(&self, py: Python<'_>, text: String) -> PyResult<Vec<String>> {
+        let names = self.names.clone();
+        let patterns = self.patterns.clone();
+        Ok(py.detach(move || {
+            let mut matched = Vec::new();
+            for (name, re) in names.iter().zip(patterns.iter()) {
+                if re.is_match(&text) {
+                    matched.push(name.clone());
+                }
+            }
+            matched
+        }))
     }
 }
 
@@ -108,6 +164,7 @@ fn guest_accepts_host_trust(trust_level: &str) -> bool {
 #[pymodule]
 fn boar_fast_filter(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<FastFilter>()?;
+    m.add_class::<RegexStageEngine>()?;
     m.add_function(wrap_pyfunction!(guest_accepts_host_trust, m)?)?;
     Ok(())
 }
