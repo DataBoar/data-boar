@@ -343,7 +343,8 @@ def test_ci_yml_pins_actions_and_uv_cli() -> None:
         code = line.split("#", 1)[0]
         if "uses:" not in code or "docker://" in code:
             continue
-        if "./.github/workflows/" in code:
+        # Local reusable workflows / composite actions are not third-party pins.
+        if "./.github/workflows/" in code or "./.github/actions/" in code:
             continue
         if not any(
             p in code for p in ("actions/", "github/", "astral-sh/", "SonarSource/")
@@ -352,6 +353,21 @@ def test_ci_yml_pins_actions_and_uv_cli() -> None:
         assert sha_40.search(code), (
             f"expected full commit SHA in uses line: {line.strip()!r}"
         )
+
+
+def test_ci_yml_libmariadb_install_uses_timed_composite_action() -> None:
+    """#1627: bare apt-get libmariadb must not hang jobs; use composite with timeouts."""
+    text = (WORKFLOWS / "ci.yml").read_text(encoding="utf-8")
+    assert "sudo apt-get update && sudo apt-get install -y libmariadb-dev" not in text
+    assert text.count("./.github/actions/install-libmariadb-dev") >= 5
+
+    action = REPO_ROOT / ".github" / "actions" / "install-libmariadb-dev" / "action.yml"
+    assert action.is_file(), f"missing composite action: {action}"
+    action_text = action.read_text(encoding="utf-8")
+    # Composite steps cannot declare timeout-minutes (GHA schema); use coreutils timeout.
+    assert "timeout-minutes:" not in action_text
+    assert "timeout " in action_text
+    assert "libmariadb-dev" in action_text
 
 
 def test_ci_yml_has_dependency_review_job_on_pull_request() -> None:
