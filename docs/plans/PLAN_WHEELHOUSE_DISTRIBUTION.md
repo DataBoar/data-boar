@@ -4,7 +4,7 @@
 <!-- plans-hub-related: PLAN_PACKAGING_EXTRAS.md, PLAN_QUICKSTART.md -->
 
 - **Status:** In progress (x86-64-v1 slice shipped; recipe CI gates live; PEP 503 `simple/` index live via [data-boar-site#21](https://github.com/DataBoar/data-boar-site/pull/21) / [#1445](https://github.com/DataBoar/data-boar/issues/1445); arm64 + `+x86v1` local versions pending)
-- **Date:** 2026-07-12 (scope rewrite 2026-07-22; v1 release + doc rollout 2026-07-29 — [#1365](https://github.com/DataBoar/data-boar/issues/1365); mariadb glibc recipe 2026-07-29 — [#1367](https://github.com/DataBoar/data-boar/issues/1367); recipe CI 2026-07-29 — [#1379](https://github.com/DataBoar/data-boar/issues/1379); **cp314t / no-GIL cells 2026-07-30**; PEP 503 index docs 2026-08-05 — [#1445](https://github.com/DataBoar/data-boar/issues/1445))
+- **Date:** 2026-07-12 (scope rewrite 2026-07-22; v1 release + doc rollout 2026-07-29 — [#1365](https://github.com/DataBoar/data-boar/issues/1365); mariadb glibc recipe 2026-07-29 — [#1367](https://github.com/DataBoar/data-boar/issues/1367); recipe CI 2026-07-29 — [#1379](https://github.com/DataBoar/data-boar/issues/1379); **cp314t / no-GIL cells 2026-07-30**; PEP 503 index docs 2026-08-05 — [#1445](https://github.com/DataBoar/data-boar/issues/1445); **SHA256SUMS full coverage + cp314t offline proof 2026-08-17 — [#1410](https://github.com/DataBoar/data-boar/issues/1410)**)
 - **Authors:** Fabio Leitao (operator); Cursor executor
 - **Priority:** H1 (packaging / distribution)
 - **GitHub:** [#1182](https://github.com/DataBoar/data-boar/issues/1182) `[P1][packaging]` · cross-ref [#782](https://github.com/DataBoar/data-boar/issues/782) (abi3 wheel matrix) · **GAP-001** (wheel-matrix / maturin) · doc slice [#1365](https://github.com/DataBoar/data-boar/issues/1365) · mariadb glibc recipe [#1367](https://github.com/DataBoar/data-boar/issues/1367) · recipe CI [#1379](https://github.com/DataBoar/data-boar/issues/1379) · aarch64 axis [#1366](https://github.com/DataBoar/data-boar/issues/1366) · PEP 503 index [#1445](https://github.com/DataBoar/data-boar/issues/1445) / [data-boar-site#21](https://github.com/DataBoar/data-boar-site/pull/21)
@@ -71,7 +71,8 @@ boar_fast_filter:
 | Tag | **`wheelhouse-x86-64-v1-2026-07-29`** |
 | Release URL | <https://github.com/DataBoar/data-boar-site/releases/tag/wheelhouse-x86-64-v1-2026-07-29> |
 | Assets | **54** `.whl` + `SHA256SUMS` + `README.md` (install + verification en_US / pt_BR) — GIL/v1 cells + **`cp314t`** (2026-07-30); includes `mariadb` on both libcs × cp312/313/314; PEP 503 `simple/` indexes these assets |
-| Offline proof | Operator re-downloaded; checksums matched (incl. 3 new glibc `mariadb` wheels); clean-container offline install |
+| Offline proof (GIL/v1 + mariadb) | Operator re-downloaded; checksums matched (2026-07-29); clean-container offline install |
+| Offline proof (`cp314t` + full SUMS) | **2026-08-17** — regenerated `SHA256SUMS` covering **all 54** `.whl` (prior file had **41** lines and **0** `cp314t` entries — [#1410](https://github.com/DataBoar/data-boar/issues/1410)); `sha256sum -c` → **54/54 OK**, including **10/10** `cp314t`; publish gate `scripts/wheelhouse/verify_release_sha256sums.sh` |
 
 ### Free-threaded / no-GIL — `cp314t` cells (added 2026-07-30)
 
@@ -95,6 +96,16 @@ Ten wheels on the same release tag for CPython **3.14 free-threaded** (`python3.
 **Operator decision (recorded):** free-threaded cells **do not** need an x86-64-v1 baseline rebuild. The min-spec host (Celeron 900, 2 cores, 2009) gains nothing from real parallelism and is not a container free-threaded target. The two sets coexist with **declared CPU contracts**: GIL **`cp312`/`cp313`/`cp314`** = v1 / `popcnt=0` (Celeron-safe); **`cp314t`** = parallelism on v2+ hardware.
 
 **ABI:** `cp314` `SOABI=cpython-314-…` vs `cp314t` `SOABI=cpython-314t-…` — **not interchangeable**.
+
+**Checksum coverage (#1410):** The ten `cp314t` wheels were uploaded **2026-07-30** without regenerating `SHA256SUMS`. Fixed **2026-08-17**: full file re-uploaded on the same tag; offline verify **10/10** `cp314t` OK. Publish/CI gate: `scripts/wheelhouse/verify_release_sha256sums.sh` (also a job on `wheelhouse-recipe.yml`) fails when SUMS line count ≠ `.whl` count.
+
+### Seed release `wheelhouse-2026-07-12` (checksum gap check)
+
+| Field | Value |
+| ----- | ----- |
+| Tag | **`wheelhouse-2026-07-12`** |
+| Assets | **1** `.whl` only (`scikit_learn` cp314 musllinux) — **no** `SHA256SUMS` asset |
+| Gap class | Different from #1410: seed had **no** checksum file at all (not a lag-after-append). Do not treat as a second `cp314t` hole; optional follow-up is to attach a one-line SUMS or leave historical. |
 
 ### Install command (verified on metal — musl example)
 
