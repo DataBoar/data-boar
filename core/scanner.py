@@ -44,12 +44,17 @@ class DataScanner:
             dl_terms_inline=dl_terms_inline,
             detection_config=detection_config,
             file_encoding=file_encoding or "utf-8",
+            licensing_config=licensing_config,
         )
         self._pending: dict[str, Any] | None = None
-        self._pro_scanner, self.prefilter_status = resolve_pro_scan_path(
+        self._pro_scanner, _pro_status = resolve_pro_scan_path(
             licensing_config,
             deep_scan_fn=self._pro_deep_scan,
             legacy_scan_fn=self._pro_deep_scan,
+        )
+        # #1414 — primary observability is rust regex stage (not ProScanner skip path).
+        self.prefilter_status = (
+            self.detector.rust_regex_stage_status.to_prefilter_dict()
         )
 
     def _pro_deep_scan(self, batch: list[str]) -> list[dict[str, Any]]:

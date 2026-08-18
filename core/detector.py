@@ -1166,6 +1166,7 @@ class SensitivityDetector:
         dl_terms_inline: list[dict[str, Any]] | list[tuple[str, int]] | None = None,
         detection_config: dict[str, Any] | None = None,
         file_encoding: str = "utf-8",
+        licensing_config: dict[str, Any] | None = None,
     ):
         enc = file_encoding or "utf-8"
         err = "replace"
@@ -1329,6 +1330,45 @@ class SensitivityDetector:
             50, min(100, self._embedding_prototype_hint_min_similarity)
         )
 
+        from core.rust_regex_stage import build_rust_regex_stage
+
+        self._rust_stage, self.rust_regex_stage_status = build_rust_regex_stage(
+            self.patterns,
+            licensing_config=licensing_config,
+        )
+
+    def _append_pattern_hit(
+        self,
+        found_patterns: list[tuple[str, str]],
+        name: str,
+        combined: str,
+    ) -> None:
+        gate_fn = _CHECKSUM_GATED_PATTERNS.get(name)
+        if gate_fn is not None and not gate_fn(combined):  # type: ignore[operator]
+            return
+        found_patterns.append((name, self.patterns[name][1]))
+
+    def _match_regex_patterns(self, combined: str) -> list[tuple[str, str]]:
+        found_patterns: list[tuple[str, str]] = []
+        if self._rust_stage is not None:
+            for name in self._rust_stage.match_names(combined):
+                if name in self.patterns:
+                    self._append_pattern_hit(found_patterns, name, combined)
+            for name in self._rust_stage.python_fallback_names:
+                rex = self._compiled.get(name)
+                if rex and rex.search(combined):
+                    self._append_pattern_hit(found_patterns, name, combined)
+            return found_patterns
+        for name, (_, norm_tag) in self.patterns.items():
+            rex = self._compiled.get(name)
+            if not (rex and rex.search(combined)):
+                continue
+            gate_fn = _CHECKSUM_GATED_PATTERNS.get(name)
+            if gate_fn is not None and not gate_fn(combined):  # type: ignore[operator]
+                continue
+            found_patterns.append((name, norm_tag))
+        return found_patterns
+
     def _predict_ml_confidence(self, ml_dl_text: str) -> int:
         """Return ML confidence in [0,100] with explicit single-class safeguards."""
         if not (self._ml_available and self._model and self._vectorizer):
@@ -1419,19 +1459,7 @@ class SensitivityDetector:
             column_name, sample_only, self._minor_age_threshold
         )
 
-        found_patterns: list[tuple[str, str]] = []
-        for name, (_, norm_tag) in self.patterns.items():
-            rex = self._compiled.get(name)
-            if not (rex and rex.search(combined)):
-                continue
-            # Checksum gate: for CPF and CNPJ (numeric), require at least one
-            # match with a valid Mod-11 check digit.  This eliminates false
-            # positives from sequential IDs, counters, and test data that
-            # happen to match the 11/14-digit shape but fail the algorithm.
-            gate_fn = _CHECKSUM_GATED_PATTERNS.get(name)
-            if gate_fn is not None and not gate_fn(combined):  # type: ignore[operator]
-                continue
-            found_patterns.append((name, norm_tag))
+        found_patterns: list[tuple[str, str]] = self._match_regex_patterns(combined)
 
         ml_confidence = self._predict_ml_confidence(ml_dl_text)
 

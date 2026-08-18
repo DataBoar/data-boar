@@ -274,6 +274,13 @@ def _build_manifest(
         "tier": pf_raw.get("tier"),
         "reason": pf_raw.get("reason"),
         "engine": pf_raw.get("engine"),  # pro | core
+        "rust_accelerator_installed": pf_raw.get("rust_accelerator_installed"),
+        "accelerated_count": pf_raw.get("accelerated_count"),
+        "translated_count": pf_raw.get("translated_count"),
+        "python_fallback_count": pf_raw.get("python_fallback_count"),
+        "rust_only_count": pf_raw.get("rust_only_count"),
+        "python_fallback_reasons": pf_raw.get("python_fallback_reasons"),
+        "rust_only_patterns": pf_raw.get("rust_only_patterns"),
     }
 
     return {
