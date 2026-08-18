@@ -316,6 +316,11 @@ def test_require_api_key_accepts_session_over_wrong_api_key(webauthn_gate_client
         "///evil.com",
         "/%5Cevil.com",
         "/%5cevil.com",
+        "/\t/evil.com",
+        "/\t\\evil.com",
+        "/ /evil.com",
+        "/\v/evil.com",
+        "/\f/evil.com",
     ],
 )
 def test_safe_next_path_rejects_protocol_relative_and_backslash(malicious: str) -> None:
@@ -347,3 +352,5 @@ def test_safe_next_path_still_rejects_scheme_and_control_chars() -> None:
     assert safe_next_path("https://evil.com", fb) == fb
     assert safe_next_path("javascript:alert(1)", fb) == fb
     assert safe_next_path("/en/\n/", fb) == fb
+    # Starlette-decoded TAB between slashes (Cursor Security on #1632).
+    assert safe_next_path("/\t/evil.com", fb) == fb

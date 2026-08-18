@@ -90,23 +90,44 @@ def is_locale_html_public_unauthenticated(method: str, rest: list[str]) -> bool:
     return method == "GET" and len(rest) == 1 and rest[0] in ("help", "about", "login")
 
 
+def _looks_like_protocol_relative_path(n: str) -> bool:
+    """True for ``//host``, ``/\\host``, ``/%5Chost``, and whitespace-padded forms.
+
+    WHATWG URL resolution treats ``/\\t/evil.com`` as protocol-relative
+    (``https://evil.com/``). Starlette may decode ``next=/%09/…`` into a TAB
+    between slashes — reject after skipping leading whitespace past ``/`` (#1630).
+    """
+    if not n.startswith("/"):
+        return False
+    i = 1
+    while i < len(n) and n[i].isspace():
+        i += 1
+    rest = n[i:]
+    if not rest:
+        return False
+    if rest.startswith("/") or rest.startswith("\\"):
+        return True
+    return rest.lower().startswith("%5c")
+
+
 def safe_next_path(next_q: str | None, fallback: str) -> str:
     """Reject open redirects; allow same-origin path starting with ``/``.
 
     Protocol-relative URLs (``//host``) and backslash variants (``/\\host``)
     must be rejected — they start with ``/`` and do not contain ``://``, so
     the naive filters alone are insufficient (#1630 / CodeQL #349).
+    Also reject C0 controls and whitespace-padded ``/…/host`` (Cursor Security
+    finding on PR #1632: TAB between slashes still redirected).
     """
     if not next_q:
         return fallback
     n = next_q.strip()
-    # Protocol-relative and browser-normalized backslash forms.
-    if n.startswith("//") or n.startswith("/\\"):
+    # C0 controls (incl. TAB/CR/LF): browsers may ignore them in // resolution.
+    if any(ord(c) < 32 for c in n):
         return fallback
-    if not n.startswith("/") or "://" in n or "\n" in n or "\r" in n:
+    if not n.startswith("/") or "://" in n:
         return fallback
-    # Encoded backslash after leading slash (/%5C…) — some UAs treat like /\\.
-    if n.lower().startswith("/%5c"):
+    if _looks_like_protocol_relative_path(n):
         return fallback
     if len(n) > 2048:
         return fallback
