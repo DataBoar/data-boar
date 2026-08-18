@@ -222,14 +222,46 @@ optionally
 .B archive_budget_exceeded
 in scan_failures),
 .I use_content_type
-(bool, magic\-byte / content\-type detection for renamed or cloaked files; extra I/O).
+(bool, magic\-byte / content\-type detection for renamed or cloaked files; extra I/O),
+.I scan_for_stego
+(bool, append lightweight byte\-entropy hints for image/audio/video containers; heuristic only — not proof of hidden payload; may increase read size per rich\-media file; CLI:
+.BR \-\-scan\-stego ),
+.I compressed_extensions
+(optional list, e.g.\&
+.BR [".zip", ".tar", ".gz", ".tgz", ".bz2", ".xz", ".7z"] ;
+archive extensions scanned when
+.B scan_compressed
+is true),
+.I file_sample_max_chars
+(optional integer) Character budget for plain\-text reads per file sample on filesystem and share targets; limits how much of each file is read before sensitivity scoring (see
+.IR docs/USAGE.md ),
+.I file_passwords
+(optional mapping) Dict from extension key (e.g.\&
+.BR ".pdf" ", "
+.BR ".pptx" )
+or
+.B default
+to password string for encrypted PDFs and ZIP\-based documents; use env vars or a secrets manager in production.
 .TP
 .B report
 .I output_dir
 (path);
 optionally
 .I recommendation_overrides
-(list of norm_tag_pattern, base_legal, risk, recommendation, priority, relevant_for) to customise the Recommendations sheet per category.
+(list of norm_tag_pattern, base_legal, risk, recommendation, priority, relevant_for) to customise the Recommendations sheet per category;
+.I jurisdiction_hints
+(optional) Heuristic jurisdiction notes on the Excel Report info sheet when metadata signals suggest possible relevance (e.g.\& US\-CA CCPA/CPRA, Colorado, Japan APPI).
+Sub\-block
+.B jurisdiction_hints.enabled
+(bool; CLI
+.BR \-\-jurisdiction\-hint
+and
+.B POST /scan
+body
+.B jurisdiction_hint
+opt in for a single run).
+Not a legal conclusion; see
+.IR docs/USAGE.md .
 .TP
 .B api
 .I port
@@ -257,6 +289,32 @@ The web API also sends security headers (CSP, HSTS, Referrer-Policy, Permissions
 and
 .I docs/deploy/DEPLOY.md
 for hardening and stricter CSP.
+Optional
+.B api.webauthn
+(Phase 1 JSON API + Phase 1b HTML session): set
+.B api.webauthn.enabled
+to true and provide the env var named by
+.B api.webauthn.token_secret_from_env
+(default
+.BR DATA_BOAR_WEBAUTHN_TOKEN_SECRET )
+before startup; enables passkey endpoints under
+.BR /auth/webauthn/ .
+Optional
+.B api.rbac
+(Phase 2, Pro+
+.B dashboard_rbac
+): when
+.B api.rbac.enabled
+is true and the effective tier allows RBAC, protected routes require named roles (e.g.\&
+.BR admin ", "
+.BR dashboard ", "
+.BR scanner ", "
+.BR reports_reader ", "
+.BR config_admin ", "
+.B audit_logs.read
+for log downloads).
+See
+.IR docs/USAGE.md .
 .TP
 .B api.workers
 (optional, integer) Number of HTTP server workers (uvicorn).
@@ -314,6 +372,53 @@ Path to the SQLite database (e.g.
 .B scan
 .I max_workers
 (integer, parallelism).
+.TP
+.B sql_sampling
+(optional) Hierarchical row\-cap overrides for SQLAlchemy and Snowflake column sampling.
+Sub\-key
+.B overrides
+may set per\-target
+.I sample_limit
+, per\-table caps under
+.B targets.<name>.tables
+, and
+.B patterns
+.RB ( fnmatch ", e.g.\& "
+.B *_audit
+).
+Merged with
+.B file_scan.sample_limit
+unless
+.B DATA_BOAR_SQL_SAMPLE_LIMIT
+is set (SQL/Snowflake only).
+See ADR\-0043 and
+.IR docs/USAGE.md .
+.TP
+.B sql_sampling_file
+(optional) Path to an external YAML fragment (same schema as the
+.B sql_sampling
+block or bare
+.B overrides:
+root) merged before the inline
+.B sql_sampling
+block in the main config.
+.TP
+.B sql_sampling_files
+(optional) List of such fragment paths; merged in order before inline
+.B sql_sampling .
+.TP
+.B inter_query_delay_ms
+(optional, on each
+.B type: database
+target) Milliseconds to sleep between column samples on that target (DB load relief); default
+.BR 0 .
+Per\-target
+.B sample_statement_timeout_ms
+or
+.B sample_statement_timeout_seconds
+also tune short read budgets; env
+.B DATA_BOAR_SAMPLE_STATEMENT_TIMEOUT_MS
+overrides the timeout budget process\-wide.
 .TP
 .B rate_limit
 (optional) Global safeguards against accidental DoS or abuse:
@@ -500,6 +605,9 @@ Example main config (excerpt):
   scan_sqlite_as_db: true
   sample_limit: 5
   # scan_compressed: false   # optional: scan inside archives
+  # compressed_extensions: [".zip", ".tar", ".gz", ".tgz", ".bz2", ".xz", ".7z"]
+  # scan_for_stego: false    # optional: rich-media entropy hints
+  # file_sample_max_chars: 12000
   # max_members: 1000         # aggregate budgets (anti zip-bomb)
   # max_total_uncompressed: 1000000000
   # max_expansion_ratio: 200
@@ -507,6 +615,8 @@ Example main config (excerpt):
 
 \fBreport:\fR
   output_dir: .
+  # jurisdiction_hints:
+  #   enabled: false
   recommendation_overrides:
     \- norm_tag_pattern: "health"
       base_legal: "LGPD Art. 5 II, 11; GDPR Art. 9"
@@ -598,14 +708,21 @@ Format: a list of objects, each with:
 (required) A phrase or token (e.g. "cpf", "religious affiliation", "health condition").
 .TP
 .B label
-(required) Either
+(optional, default:
+.B sensitive )
+Allowed values (string or integer alias):
+.RS
+.IP \(bu 2
 .B sensitive
-(or
-.BR 1 )
 or
+.BR 1 " — increases sensitivity score."
+.IP \(bu 2
 .B non_sensitive
-(or
-.BR 0 ).
+or
+.BR 0 " — may suppress false positives."
+.RE
+When omitted, the loader defaults to
+.BR sensitive .
 .
 .P
 The file can be a root-level list or an object with key

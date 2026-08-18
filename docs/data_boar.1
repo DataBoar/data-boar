@@ -496,6 +496,30 @@ is true, the API key is read from this variable (alternative to
 in the config file).
 .
 .TP
+.B DATA_BOAR_WEBAUTHN_TOKEN_SECRET
+When
+.B api.webauthn.enabled
+is true, the WebAuthn session signing secret is read from the variable named by
+.B api.webauthn.token_secret_from_env
+(default:
+.B DATA_BOAR_WEBAUTHN_TOKEN_SECRET ).
+Startup fails if WebAuthn is enabled and the secret is unset.
+See
+.IR docs/USAGE.md
+(WebAuthn).
+.
+.TP
+.B DATA_BOAR_MATURITY_INTEGRITY_SECRET
+Optional HMAC\-SHA256 key for tamper\-evident maturity self\-assessment answer rows when the maturity POC API is enabled.
+May also be referenced via
+.B api.maturity_integrity_secret_from_env
+in config instead of this default name.
+See
+.IR docs/USAGE.md
+and
+.IR deploy/config.example.yaml .
+.
+.TP
 .B API_HOST
 When
 .B \-\-web
