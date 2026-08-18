@@ -305,3 +305,45 @@ def test_require_api_key_accepts_session_over_wrong_api_key(webauthn_gate_client
 
     resp = client.get("/status", headers={"X-API-Key": "wrong-key"})
     assert resp.status_code == 200
+
+
+@pytest.mark.parametrize(
+    "malicious",
+    [
+        "//evil.com",
+        "//evil.com/path",
+        "/\\evil.com",
+        "///evil.com",
+        "/%5Cevil.com",
+        "/%5cevil.com",
+    ],
+)
+def test_safe_next_path_rejects_protocol_relative_and_backslash(malicious: str) -> None:
+    """#1630: protocol-relative and /\\ variants must not become post-login redirects."""
+    from api.webauthn_html_gate import safe_next_path
+
+    fallback = "/en/"
+    assert safe_next_path(malicious, fallback) == fallback
+
+
+@pytest.mark.parametrize(
+    "ok",
+    [
+        "/en/",
+        "/en/dashboard",
+        "/pt_BR/help",
+    ],
+)
+def test_safe_next_path_allows_same_origin_paths(ok: str) -> None:
+    from api.webauthn_html_gate import safe_next_path
+
+    assert safe_next_path(ok, "/en/") == ok
+
+
+def test_safe_next_path_still_rejects_scheme_and_control_chars() -> None:
+    from api.webauthn_html_gate import safe_next_path
+
+    fb = "/en/"
+    assert safe_next_path("https://evil.com", fb) == fb
+    assert safe_next_path("javascript:alert(1)", fb) == fb
+    assert safe_next_path("/en/\n/", fb) == fb

@@ -91,11 +91,22 @@ def is_locale_html_public_unauthenticated(method: str, rest: list[str]) -> bool:
 
 
 def safe_next_path(next_q: str | None, fallback: str) -> str:
-    """Reject open redirects; allow same-origin path starting with ``/``."""
+    """Reject open redirects; allow same-origin path starting with ``/``.
+
+    Protocol-relative URLs (``//host``) and backslash variants (``/\\host``)
+    must be rejected — they start with ``/`` and do not contain ``://``, so
+    the naive filters alone are insufficient (#1630 / CodeQL #349).
+    """
     if not next_q:
         return fallback
     n = next_q.strip()
+    # Protocol-relative and browser-normalized backslash forms.
+    if n.startswith("//") or n.startswith("/\\"):
+        return fallback
     if not n.startswith("/") or "://" in n or "\n" in n or "\r" in n:
+        return fallback
+    # Encoded backslash after leading slash (/%5C…) — some UAs treat like /\\.
+    if n.lower().startswith("/%5c"):
         return fallback
     if len(n) > 2048:
         return fallback
