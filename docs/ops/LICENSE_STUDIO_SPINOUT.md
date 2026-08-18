@@ -4,7 +4,7 @@ The Go **license issuance** tool moved out of this public tree on **2026-06-25**
 
 | What | Where |
 | ---- | ----- |
-| **Operator issuer (Go)** | Private repo **`FabioLeitao/license-studio`** — clone with `gh repo clone FabioLeitao/license-studio` |
+| **Operator issuer (Go)** | Private repo **`DataBoar/license-studio`** — clone with `gh repo clone DataBoar/license-studio` |
 | **Client enforcement** | Stays here: `core/licensing/`, `license-pub-v1.pem`, ADR-0063/0064 |
 | **Dev JWT helper (Python)** | Stays here: `scripts/issue_dev_license_jwt.py` + `docs/ops/QA_LOCAL_LICENSE.md` |
 
