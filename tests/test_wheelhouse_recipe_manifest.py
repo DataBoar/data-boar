@@ -63,8 +63,11 @@ def test_workflow_does_not_hardcode_connector_sha256() -> None:
     assert "pull_request" in on
     jobs = data["jobs"]
     assert "connector-c-checksum" in jobs
+    assert "hosted-sha256sums-parity" in jobs
     assert "canary-musl-cp312" in jobs
     assert "matrix-cell" in jobs
+    assert "verify_release_sha256sums.sh" in text
+    assert "wheelhouse-x86-64-v1-2026-07-29" in text
 
 
 def test_export_build_env_composes_package_name_with_spec() -> None:

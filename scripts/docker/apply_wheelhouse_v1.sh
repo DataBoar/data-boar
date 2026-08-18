@@ -72,7 +72,8 @@ else
 fi
 
 # Expected sha256 from release assets (wheelhouse-x86-64-v1-2026-07-29).
-# Note: release SHA256SUMS may lag new cells — digests below measured from assets.
+# Hosted SHA256SUMS was regenerated 2026-08-17 to cover all 54 wheels incl. cp314t (#1410).
+# Prefer release SHA256SUMS; digests below remain a fast path for Docker apply.
 declare -A EXPECTED_SHA=(
   ["numpy-2.5.1-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl"]="d301efd02e390bd2d135205c25cd7b7fc82ec353aa3985528745601bfb67c2d6"
   ["scipy-1.18.0-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl"]="a9c3a1ae4de02b8eff37b87a7d5af19bfdbb029cc62b855fd8813acc2775c5bf"

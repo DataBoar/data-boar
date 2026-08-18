@@ -9,6 +9,7 @@
 | `build_musl_incontainer.sh` | In-container scientific stack (port of vault `build-v1-musl.sh`) |
 | `build_glibc_incontainer.sh` | In-container glibc cell (port of vault `build-v1-glibc.sh`) |
 | `verify_connector_c_checksum.sh` | Fail if Connector/C tarball ≠ manifest sha256 |
+| `verify_release_sha256sums.sh` | Fail if `SHA256SUMS` line count ≠ `.whl` count (`--dir` or `--repo`/`--tag`) — [#1410](https://github.com/DataBoar/data-boar/issues/1410) |
 
 **Gates (job failure, not warnings):** `popcnt == 0`, `_multiarray_umath*.so` size `< 8_000_000`, scipy wheel has **no** `libscipy_openblas`. Remember `grep -c … \|\| true` under `set -e`.
 
