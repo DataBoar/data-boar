@@ -6,11 +6,12 @@
 
 ## Status
 
-Proposed
+Accepted
 
 ### Status history
 
 - 2026-08-18 — Proposed (records operator decisions on [#1405](https://github.com/DataBoar/data-boar/issues/1405); born Proposed per ADR-0045. **This ADR does not generate keys, publish repos, or ship package indexes.**)
+- 2026-08-18 — Accepted (operator ratification in session; HITL). Implementation (key ceremony, publish, parity gates) remains follow-on work under [#1405](https://github.com/DataBoar/data-boar/issues/1405) — this ADR does not ship those steps.
 
 ## Context
 
