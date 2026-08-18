@@ -30,13 +30,13 @@ Use these tags in headings to keep priorities explicit and machine-countable:
 
 Do not edit this block manually; refresh with `python scripts/plans-stats.py --write`.
 
-- **Status rows counted:** 230  (Done: 146 | Incomplete: 84)
-- **Incomplete breakdown:** Pending `⬜`=68, Tracked `🔄` / `Tracked (partially done)`=16, Under consideration=0, Backlog-marked rows=0
+- **Status rows counted:** 231  (Done: 146 | Incomplete: 85)
+- **Incomplete breakdown:** Pending `⬜`=69, Tracked `🔄` / `Tracked (partially done)`=16, Under consideration=0, Backlog-marked rows=0
 
 | Horizon | Total rows | Done | Incomplete |
 | ------- | ----------: | ----: | ----------: |
 | `H0` | 53 | 34 | 19 |
-| `H1` | 47 | 32 | 15 |
+| `H1` | 48 | 32 | 16 |
 | `H2` | 0 | 0 | 0 |
 | `H3` | 118 | 68 | 50 |
 | `H4` | 0 | 0 | 0 |
@@ -580,15 +580,16 @@ Tighten runtime defaults for the API host. Implemented: default `127.0.0.1`, opt
 | 6 | **Sync strictness on failed transfer:** ensure `Sync-WorkingTree` hard-stops handler dispatch when `rsync` warns/fails (latest run had one lab laptop class host sync warning while orchestration proceeded). | ✅ Done |
 
 1. **Post-`1.7.4` short-sprint closure queue** *(healthy next slices already scoped for execution)*
-   Source plans: [`PLAN_BANDIT_SECURITY_LINTER.md`](completed/PLAN_BANDIT_SECURITY_LINTER.md), [`PLAN_CNPJ_ALPHANUMERIC_FORMAT_VALIDATION.md`](completed/PLAN_CNPJ_ALPHANUMERIC_FORMAT_VALIDATION.md), [`PLAN_SCOPE_IMPORT_FROM_EXPORTS.md`](completed/PLAN_SCOPE_IMPORT_FROM_EXPORTS.md), [`PLAN_YAML_PLUGIN_SYSTEM.md`](PLAN_YAML_PLUGIN_SYSTEM.md).
+   Source plans: [`PLAN_BANDIT_SECURITY_LINTER.md`](completed/PLAN_BANDIT_SECURITY_LINTER.md), [`PLAN_CNPJ_ALPHANUMERIC_FORMAT_VALIDATION.md`](completed/PLAN_CNPJ_ALPHANUMERIC_FORMAT_VALIDATION.md), [`PLAN_SCOPE_IMPORT_FROM_EXPORTS.md`](completed/PLAN_SCOPE_IMPORT_FROM_EXPORTS.md), [`PLAN_YAML_PLUGIN_SYSTEM.md`](PLAN_YAML_PLUGIN_SYSTEM.md), [`PLAN_CHECKSUM_VALIDATOR_REGISTRY.md`](PLAN_CHECKSUM_VALIDATOR_REGISTRY.md).
 
 | Sprint | Slice | Execution focus | Exit checklist | Status |
 | ------ | ----- | --------------- | -------------- | ------ |
 | S1 | **Bandit Phase 3 closure** | Triage low findings (`-i`) and keep strict gate (`-ll -ii`) clean with minimal-risk fixes / justified suppressions | `uv run bandit -r . -c pyproject.toml -ll -ii` green; low triage documented; `check-all` green; plan → `completed/` + `plans_hub_sync` | ✅ Done — [PLAN_BANDIT_SECURITY_LINTER.md](completed/PLAN_BANDIT_SECURITY_LINTER.md) |
 | S2 | **Scope import Phase E (light)** | First vendor-shaped adapter (GLPI-like export to canonical CSV/schema), with fixtures/tests and docs | adapter + fixtures merged; pytest for adapter green; EN+pt-BR operator docs updated; no "live integration" overpromise | ✅ Done — `config/scope_import_glpi.py`, `scripts/scope_import_glpi.py`, 12 tests |
-| S3 | **CNPJ Phase 5 (checksum layer)** | Design and optional opt-in checksum validation path (separate from regex compatibility) | Phase 5.1–5.3 addressed in plan; default behavior unchanged; tests/docs synced (EN + pt-BR) | ⬜ Pending |
+| S3 | **CNPJ Phase 5 (checksum layer)** | Design and optional opt-in checksum validation path (separate from regex compatibility) | Phase 5.1–5.3 addressed in plan; default behavior unchanged; tests/docs synced (EN + pt-BR) | ⬜ Pending — **subset of S5** [PLAN_CHECKSUM_VALIDATOR_REGISTRY.md](PLAN_CHECKSUM_VALIDATOR_REGISTRY.md) Fase 2 · [#527](https://github.com/DataBoar/data-boar/issues/527) |
 | S4 | **YAML-Based Plugin System — Phase 1** | Centralized schema (`config/plugin_schema.yaml`), validator (`config/plugin_validator.py`), unified `patterns_plugin_file` key | `validate_plugin_file()` validates all example files; 14 tests green; `lint-only` green; ADR-0052 created | ✅ Done |
 | S4b | **PCI-DSS v4 stress + YAML plugin Phase 1b (context gates)** | Extend ADR-0052 (`plugin_schema` / `plugin_validator`) and detector so optional fields (e.g. proximity keywords, metadata) are real gates—not YAML-only; PAN/Luhn path; reduce double-fire vs built-in `CREDIT_CARD`; align `docs/compliance-samples/compliance-sample-pci_dss.yaml` | `check-all` green; synthetic noisy financial corpus tests; EN operator doc touch (`SENSITIVITY_DETECTION` or compliance sample header); carryover row closed or dated defer | ⬜ Pending |
+| S5 | **Checksum validator registry (umbrella)** | Config-first named validators (`validator:` / `validator_args:` in plugin YAML); algorithm registry in `core/validators/`; phases BR / EU / NA / LATAM+ME / sectoral+secrets | Fase 1 registry + detector gate generalization; Fase 2 delivers S3/#527/#1356; issues #1639–#1642 + #1055 tracked; **no** prefilter skip/latch, **no** negative invariant tests, **no** numeric skip ceiling | ⬜ Pending — [PLAN_CHECKSUM_VALIDATOR_REGISTRY.md](PLAN_CHECKSUM_VALIDATOR_REGISTRY.md) |
 
 1. **Content type & cloaking detection – Step 1** *(small slice)*
    - Magic-byte table + read_magic / infer_content_type for supported formats; no connector change yet.
