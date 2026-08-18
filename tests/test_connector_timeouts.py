@@ -114,6 +114,8 @@ def test_mongodb_connector_receives_timeout_params():
         "host": "localhost",
         "port": 27017,
         "database": "test",
+        # Intentional loopback target — timeout wiring only (#832 opt-in).
+        "allow_private_networks": True,
         "connect_timeout_seconds": 15,
         "read_timeout_seconds": 45,
     }
@@ -133,6 +135,7 @@ def test_redis_connector_receives_socket_timeouts():
     """Redis connector connect() passes socket_connect_timeout and socket_timeout."""
     if not _has_module("redis"):
         pytest.skip("redis not installed")
+    from connectors import redis_connector as rc
     from connectors.redis_connector import RedisConnector
 
     target = {
@@ -141,18 +144,33 @@ def test_redis_connector_receives_socket_timeouts():
         "driver": "redis",
         "host": "localhost",
         "port": 6379,
+        # Intentional loopback target — timeout wiring only (#832 opt-in).
+        "allow_private_networks": True,
         "connect_timeout_seconds": 10,
         "read_timeout_seconds": 30,
     }
     connector = RedisConnector(target, MagicMock(), MagicMock())
-    with patch("connectors.redis_connector.redis.Redis") as mock_redis:
-        mock_redis.return_value = MagicMock()
-        connector.connect()
-        mock_redis.assert_called_once()
-        call_kw = mock_redis.call_args[1]
-        assert call_kw["socket_connect_timeout"] == 10
-        assert call_kw["socket_timeout"] == 30
-        connector.close()
+    if rc._RedisConnectionPool is not None:
+        with (
+            patch.object(rc, "_RedisConnectionPool") as mock_pool_cls,
+            patch.object(rc.redis, "Redis") as mock_redis,
+        ):
+            mock_pool_cls.return_value = MagicMock()
+            mock_redis.return_value = MagicMock()
+            connector.connect()
+            mock_pool_cls.assert_called_once()
+            pool_kw = mock_pool_cls.call_args[1]
+            assert pool_kw["socket_connect_timeout"] == 10
+            assert pool_kw["socket_timeout"] == 30
+    else:
+        with patch.object(rc.redis, "Redis") as mock_redis:
+            mock_redis.return_value = MagicMock()
+            connector.connect()
+            mock_redis.assert_called_once()
+            call_kw = mock_redis.call_args[1]
+            assert call_kw["socket_connect_timeout"] == 10
+            assert call_kw["socket_timeout"] == 30
+    connector.close()
 
 
 def test_sql_connector_connect_calls_create_engine_with_connect_args(tmp_path):
