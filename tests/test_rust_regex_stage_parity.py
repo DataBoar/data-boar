@@ -52,3 +52,38 @@ def test_rust_stage_superset_on_builtin_probes() -> None:
                     name = part.strip().split(" ", 1)[0]
                     if name and name in det_py.patterns:
                         assert name in str(ru[1] or "")
+
+
+def test_rust_match_fail_soft_retries_python_for_rust_routed_patterns(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pytest.importorskip(
+        "boar_fast_filter",
+        reason="Run maturin develop for boar_fast_filter",
+    )
+    det_py = SensitivityDetector(
+        licensing_config={"licensing": {"effective_tier": "community"}}
+    )
+    det_rust = SensitivityDetector(licensing_config=_ENT_CFG)
+    stage = det_rust._rust_stage
+    assert stage is not None
+    assert stage.rust_pattern_names
+
+    def _fail_match(_text: str) -> tuple[set[str], bool]:
+        return set(), False
+
+    monkeypatch.setattr(stage, "match_names", _fail_match)
+
+    probes = [
+        ("col", "390.533.447-05"),
+        ("email", "a@example.test"),
+    ]
+    for col, sample in probes:
+        py = det_py.analyze(col, sample)
+        restored = det_rust.analyze(col, sample)
+        assert py[0] == restored[0]
+        if py[1]:
+            for part in str(py[1]).split("+"):
+                name = part.strip().split(" ", 1)[0]
+                if name and name in det_py.patterns:
+                    assert name in str(restored[1] or "")

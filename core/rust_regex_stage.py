@@ -74,21 +74,24 @@ class RustRegexStage:
         *,
         engine: Any,
         routings: list[PatternRouting],
+        rust_pattern_names: set[str],
         python_fallback_names: set[str],
     ) -> None:
         self._engine = engine
         self._routings = routings
+        self.rust_pattern_names = rust_pattern_names
         self.python_fallback_names = python_fallback_names
 
-    def match_names(self, text: str) -> set[str]:
+    def match_names(self, text: str) -> tuple[set[str], bool]:
+        """Return matched pattern names and whether the Rust engine succeeded."""
         if self._engine is None:
-            return set()
+            return set(), False
         try:
             hits = self._engine.match_names(text)
         except Exception as exc:  # noqa: BLE001 — fail-soft per ADR-0083
             logger.warning("rust-regex-stage: match failed (fail-soft): %s", exc)
-            return set()
-        return set(hits or [])
+            return set(), False
+        return set(hits or []), True
 
 
 def _rust_installed() -> bool:
@@ -190,6 +193,7 @@ def build_rust_regex_stage(
     stage = RustRegexStage(
         engine=engine,
         routings=routings,
+        rust_pattern_names=set(rust_names),
         python_fallback_names=python_fallback_names,
     )
     return stage, active_status

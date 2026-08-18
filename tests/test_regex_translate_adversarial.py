@@ -78,3 +78,18 @@ def test_lgpd_cnpj_alnum_stays_python_fallback() -> None:
     rust_pattern, reason = translate(pattern)
     assert rust_pattern is None
     assert reason == "lookahead"
+
+
+@pytest.mark.parametrize(
+    "pattern",
+    [
+        "(?im)^foo",
+        "(?is)dot.",
+        "(?i-m)^x",
+        "(?mix)token",
+    ],
+)
+def test_compound_inline_flags_force_python_fallback(pattern: str) -> None:
+    rust_pattern, reason = translate(pattern)
+    assert rust_pattern is None
+    assert reason == "compound_inline_flags"
