@@ -369,10 +369,16 @@ def test_ci_yml_libmariadb_install_uses_timed_composite_action() -> None:
     assert "timeout-minutes:" not in action_text
     assert "timeout " in action_text
     assert "libmariadb-dev" in action_text
-    # #1646: repoint stalled azure.archive.ubuntu.com before apt-get update.
-    assert "azure.archive.ubuntu.com" in action_text
-    assert "archive.ubuntu.com" in action_text
-    assert "/etc/apt/apt-mirrors.txt" in action_text
+    # #1646: repoint stalled regional mirror before apt-get update.
+    # Regex on file body (not URL substring `in`) — CodeQL py/incomplete-url-substring-sanitization.
+    assert re.search(
+        r"repoint_azure /etc/apt/apt-mirrors\.txt",
+        action_text,
+    ), "missing apt-mirrors repoint hook (#1646)"
+    assert re.search(
+        r"s\|azure\\\.archive\\\.ubuntu\\\.com\|archive\.ubuntu\.com\|g",
+        action_text,
+    ), "missing azure→archive sed repoint (#1646)"
     assert "timeout 240 sudo apt-get update" in action_text
 
 
