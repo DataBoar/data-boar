@@ -17,6 +17,7 @@ Accepted
 - 2026-06-27 — Amended: cláusula de distribuição PyPI (#1047) — post-release como publish-counter. (ratificado pelo operador)
 - 2026-07-01 — Amended: reset de `maturity_build` em nova linha semver; octeto na fix-line avança por **fix discreto** (não por merge/build/docs) — ver `docs/releases/1.7.4.post2.md`.
 - 2026-07-01 — Amended (band-fix): contador Gibson **começa em 1** (primeiro beta = `.1`; **0** não usado); tetos de faixa **forgiving** (overflow → TXT beacon). Corrige redação 0-based que derivara do `.mdc` em vez desta ADR.
+- 2026-08-18 — Amended (TBD note only): documenta lacuna **beta → rc na mesma linha** (`1.8.0-beta` → `1.8.0-rc`) — reset em **127** vs contagem orgânica; decisão do operador adiada.
 
 ## Context
 
@@ -33,6 +34,8 @@ A richer scheme (vault `self-upgrade-beacon-heartbeat-design-2026-06-15`, Gibson
 2. **Octet-maturity (Gibson DNS-beacon bands):** lives in a **separate derived field** — `[tool.databoar] maturity_build` — a **side-channel** (release notes, beacon, operator tooling). Counter **starts at 1** (first beta = `.1`; **0** unused). Bands (ceilings **forgiving** — overflow → TXT): **1–126** beta · **127–199** rc · **200–254** GA + fix (`.200` = GA maturity on that line, `.201` = fix-1, …; e.g. `.208` valid) · **255** = overflow sentinel (consult TXT). **Never** copy this octet into `[project] version` or any version string. **`.postN` is never the octet** — rule (1) stays intact.
 
    **New public line (e.g. `1.8.0`):** `maturity_build` **resets into the band** matching the pre-release suffix — beta → **1–126** (starts at **`1`**), rc → **127–199**, GA → **`.200`** anchor — it does **not** continue from the previous line (e.g. `.208` on `1.7.4`). **`.postN`** applies only on the **release band** of a given public line.
+
+   **TBD — same-line pre-release promotion (operator decision deferred):** When the working version moves **`1.8.0-beta` → `1.8.0-rc`** *without* opening a new `major.minor.build` line, ADR-0073 does **not** yet specify whether `maturity_build` **jumps to the rc band floor (`127`)** or **continues organically** from the current beta count until/unless it crosses **127**. Do **not** assume either behavior in automation until this gap is closed (track: GitHub issue when opened; decide at first **`1.8.0-rc`** promotion).
 
    **On a fix-line (post-GA):** octet **+1 per discrete fix** to installed/runtime behavior (bug, CVE, dangling feature completion); **not** docs/ADR/chore/ci/test/rito-only. **`postN`** advances only on PyPI upload when fixes warrant republication.
 3. **`-alpha` suffix:** tamper-detection axis only (GitHub #856), **not** a maturity band — separate from beta/rc/release.
