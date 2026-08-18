@@ -364,8 +364,9 @@ def test_ci_yml_libmariadb_install_uses_timed_composite_action() -> None:
     action = REPO_ROOT / ".github" / "actions" / "install-libmariadb-dev" / "action.yml"
     assert action.is_file(), f"missing composite action: {action}"
     action_text = action.read_text(encoding="utf-8")
-    assert "timeout-minutes:" in action_text
-    assert "timeout " in action_text  # coreutils wall-clock on apt-get
+    # Composite steps cannot declare timeout-minutes (GHA schema); use coreutils timeout.
+    assert "timeout-minutes:" not in action_text
+    assert "timeout " in action_text
     assert "libmariadb-dev" in action_text
 
 

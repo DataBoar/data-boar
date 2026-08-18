@@ -1,7 +1,8 @@
 # Install MariaDB client headers so the `mariadb` PyPI package can build from
 # source on Ubuntu runners. Used by multiple Linux jobs in ci.yml.
 #
-# timeout-minutes + coreutils `timeout` fail fast if apt mirrors stall
+# Composite-action steps cannot set `timeout-minutes` (workflow job steps only).
+# Fail-fast for stalled apt mirrors is coreutils `timeout` around apt-get
 # (GitHub's default job timeout is 6h — see #1627).
 name: Install libmariadb-dev
 description: >-
@@ -13,9 +14,8 @@ runs:
   steps:
     - name: apt-get install libmariadb-dev
       shell: bash
-      timeout-minutes: 5
       run: |
         set -euo pipefail
-        # 240s wall clock for apt-get update+install; step timeout-minutes is the GHA backstop.
+        # 240s wall clock per apt-get invocation (composite steps have no timeout-minutes).
         timeout 240 sudo apt-get update
         timeout 240 sudo apt-get install -y libmariadb-dev pkg-config
