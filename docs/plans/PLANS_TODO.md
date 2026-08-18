@@ -30,13 +30,13 @@ Use these tags in headings to keep priorities explicit and machine-countable:
 
 Do not edit this block manually; refresh with `python scripts/plans-stats.py --write`.
 
-- **Status rows counted:** 222  (Done: 144 | Incomplete: 78)
-- **Incomplete breakdown:** Pending `⬜`=65, Tracked `🔄` / `Tracked (partially done)`=13, Under consideration=0, Backlog-marked rows=0
+- **Status rows counted:** 226  (Done: 146 | Incomplete: 80)
+- **Incomplete breakdown:** Pending `⬜`=66, Tracked `🔄` / `Tracked (partially done)`=14, Under consideration=0, Backlog-marked rows=0
 
 | Horizon | Total rows | Done | Incomplete |
 | ------- | ----------: | ----: | ----------: |
 | `H0` | 53 | 34 | 19 |
-| `H1` | 39 | 30 | 9 |
+| `H1` | 43 | 32 | 11 |
 | `H2` | 0 | 0 | 0 |
 | `H3` | 118 | 68 | 50 |
 | `H4` | 0 | 0 | 0 |
@@ -105,6 +105,7 @@ When **partners** or **buyers** anchor on a vertical (MSP, insurance, RPO, real 
 - **Hybrid taxonomy (#1071, Fideslang eval — closed 2026-06-30):** RO recommendation **B-interno + A-export-adapter** — three implementation slices (all **optional**, backward compatible): **(1)** [PLAN_NORM_TAG_HIERARCHY_AND_DATA_SUBJECT.md](PLAN_NORM_TAG_HIERARCHY_AND_DATA_SUBJECT.md) **[#1074](https://github.com/DataBoar/data-boar/issues/1074)** — hierarchical `norm_tag` + Data-Subject → closes **#1069** (supersedes [#1072](https://github.com/DataBoar/data-boar/issues/1072)); **(2)** [PLAN_DATA_USE_AXIS.md](PLAN_DATA_USE_AXIS.md) **[#1075](https://github.com/DataBoar/data-boar/issues/1075)**; **(3)** [PLAN_FIDESLANG_EXPORT_ADAPTER.md](PLAN_FIDESLANG_EXPORT_ADAPTER.md) **[#1076](https://github.com/DataBoar/data-boar/issues/1076)** → SWOT **W-novo-1** when customer-pull. Legacy Bearer-only plan: [PLAN_SUBJECT_CATEGORY_AXIS.md](PLAN_SUBJECT_CATEGORY_AXIS.md).
 - **Plan checkbox discipline:** When code ships for a named plan slice, update **`PLAN_*.md`** checkboxes in the **same PR** — see **`AGENTS.md`** (*Plan checkbox discipline*); **`plans-status-pl-sync.mdc`** stays situational (plan globs only).
 - **Licensing enforcement (open issues — PMO index):** Cluster **#704** [P0] (Maestro + JWT on four lab hosts) → **#719** [P1] **`[U1]`** (silent bypass via `DATA_BOAR_ENV=development` / `DEBUG=1` — CRITICAL log + Docker doc) → **#708–#722** (issuer, trial/grace/revocation ADRs). Table below under **`[H0][U1]` Licensing enforcement**; **A6** `license-smoke` should gain a **#719** regression when the fix lands. **After** Wave 1 **#656** U0/U1 slices and **#406** release gate — not a substitute for **#606** [P0] plugin hooks unless operator reprioritizes.
+- **ENT subscription capability roadmap ([#643](https://github.com/DataBoar/data-boar/issues/643)):** Canonical backlog [ENT_CAPABILITY_ROADMAP.md](ENT_CAPABILITY_ROADMAP.md) ([pt-BR](ENT_CAPABILITY_ROADMAP.pt_BR.md); hub [PLAN_ENT_CAPABILITY_ROADMAP.md](PLAN_ENT_CAPABILITY_ROADMAP.md)) — role-based reports, multi-entity, DMBOK maturity, audit-grade evidence, PSI/DGA, ITSM/IAM. **Doc-only** until per-capability ADR; does **not** replace [PLAN_PRODUCT_TIERS_AND_OPEN_CORE.md](PLAN_PRODUCT_TIERS_AND_OPEN_CORE.md) or [SPRINTS_AND_MILESTONES.md](SPRINTS_AND_MILESTONES.md) §4.1 / **M-ACCESS**. Next related P1: open-core/plugin governance [#811](https://github.com/DataBoar/data-boar/issues/811).
 - **LAB-OP Ansible + host hygiene ([#756](https://github.com/DataBoar/data-boar/issues/756)):** **`[H0][U1]`** one lab node's disk at **~90%** (may block completão / bare mirror on that node) · **`[H0][U2]`** install **`bw`** CLI via the lab Ansible playbook (idempotent). Issue states **no release-gate blocker** — operator-paced; see **LAB-OP** paragraph below and **M-PILOT-READY** completão row.
 - **Forensics primer — first responder ([#747](https://github.com/DataBoar/data-boar/issues/747)):** Complements parent **[#685](https://github.com/DataBoar/data-boar/issues/685)**; thin **`docs(primers)`** checklist · **`[H2][U3][P2]`** — Gemini Cold row **G-26-19** below; hub chain **#685 → #747 → #744** when primers hub expands.
 
@@ -437,6 +438,19 @@ Doc-first wave 1 shipped; **v1.8.0 wave 2 ([#1056](https://github.com/DataBoar/d
 | 1.1–1.4 | Refresh open-issue snapshot; batch thin PRs; close with evidence | 🔄 Tracked |
 | 2.1–2.2 | Promote multi-step threads into `PLAN_*.md` + dependency rows | 🔄 Tracked |
 | 3.1 | `plans_hub_sync.py --write` and `plans-stats.py --write` after hub/dashboard inputs change | ⬜ Pending |
+
+## [H1] Commercial / Enterprise subscription docs
+
+### ENT subscription capability roadmap – [ENT_CAPABILITY_ROADMAP.md](ENT_CAPABILITY_ROADMAP.md) ([pt-BR](ENT_CAPABILITY_ROADMAP.pt_BR.md)) · hub [PLAN_ENT_CAPABILITY_ROADMAP.md](PLAN_ENT_CAPABILITY_ROADMAP.md)
+
+**`[H1][U1]`** · GitHub [#643](https://github.com/DataBoar/data-boar/issues/643). Doc consolidation only; capability implementation requires per-item ADR.
+
+| # | To-do | Status |
+| - | ----- | ------ |
+| 1 | Canonical EN + pt-BR roadmap (P0–P3 backlog, open-core boundary, implementation gate) | ✅ Done |
+| 2 | Wire `PLAN_PRODUCT_TIERS_AND_OPEN_CORE`, `SPRINTS_AND_MILESTONES` §4.1 (EN+pt-BR), Integration bullet, hub sync | ✅ Done |
+| 3 | Per-capability ADRs + product code | ⬜ Pending (operator-gated) |
+| 4 | Related P1: open-core/plugin governance [#811](https://github.com/DataBoar/data-boar/issues/811) | 🔄 Tracked |
 
 ## [H1] CLI operator tools and public contact policy
 
