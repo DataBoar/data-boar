@@ -16,6 +16,37 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
+        # #1646: ubuntu-latest (24.04) uses deb822 ubuntu.sources plus
+        # /etc/apt/apt-mirrors.txt (azure priority 1); 22.04 may still use
+        # sources.list with azure.archive.ubuntu.com directly — repoint all.
+        echo "apt layout (pre-mirror-pin):"
+        if [ -f /etc/apt/apt-mirrors.txt ]; then
+          echo "  apt-mirrors.txt:"
+          grep -E 'archive|azure' /etc/apt/apt-mirrors.txt || true
+        fi
+        if [ -f /etc/apt/sources.list.d/ubuntu.sources ]; then
+          echo "  ubuntu.sources: deb822 present"
+        fi
+        if [ -f /etc/apt/sources.list ]; then
+          grep -E 'archive|azure' /etc/apt/sources.list || true
+        fi
+        repointed=0
+        repoint_azure() {
+          local f="$1"
+          if [ -f "$f" ] && grep -q 'azure\.archive\.ubuntu\.com' "$f"; then
+            sudo sed -i 's|azure\.archive\.ubuntu\.com|archive.ubuntu.com|g' "$f"
+            repointed=1
+            echo "  repointed azure mirror in $f"
+          fi
+        }
+        repoint_azure /etc/apt/apt-mirrors.txt
+        repoint_azure /etc/apt/sources.list
+        for f in /etc/apt/sources.list.d/*; do
+          repoint_azure "$f"
+        done
+        if [ "$repointed" -eq 0 ]; then
+          echo "  note: no azure.archive.ubuntu.com entries found"
+        fi
         # 240s wall clock per apt-get invocation (composite steps have no timeout-minutes).
         timeout 240 sudo apt-get update
         timeout 240 sudo apt-get install -y libmariadb-dev pkg-config
