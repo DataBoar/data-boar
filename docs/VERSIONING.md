@@ -68,7 +68,7 @@ Suffixes (`-beta`, `-rc`, `-rc-N`) are required on `main` while a **release gate
 
 | Label | Status |
 | --- | --- |
-| **`main` working tree** | **`1.8.0-beta`** in `pyproject.toml` (`maturity_build = 1` — new-line beta band reset). Git-only for consumers. |
+| **`main` working tree** | **`1.8.0-beta`** in `pyproject.toml` (`maturity_build = 69` — beta band; reconciled 2026-08-18). Git-only for consumers. |
 | **Published customer channels** | **`1.7.4.post12`** / **`v1.7.4.post12`** on PyPI + Hub (+ historical GA **`1.7.4`**) until a later **`1.8.0`** release-ritual |
 | **#970** | Premature stable bump/tag without release gate — corrected by **ADR-0072** + gate **#406**; **`1.7.4` is not VOID** |
 | **Post-GA public fix numbering** | **Resolved** (#977) — **`1.7.4`** fix-line used **`.postN`** + octet; **`.postN` does not carry** onto **`1.8.0-beta`** |

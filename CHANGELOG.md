@@ -10,7 +10,13 @@ Empty while the working tree carries **`1.8.0-beta`** (see section below).
 
 ## 1.8.0-beta (working line on `main` — git-only)
 
-> Opens the **`1.8.0`** public line. **`[project] version = 1.8.0-beta`** (ADR-0073 PEP 440 hyphen form). **`[tool.databoar] maturity_build = 1`** — octet **resets** into beta band **1–126** (first beta = `.1`); does **not** continue from **`1.7.4.post12` / `.263`**. **Not** on PyPI or Docker Hub **`latest`** (distribution policy: pre-release = git-only). Notes: [docs/releases/1.8.0-beta.md](docs/releases/1.8.0-beta.md).
+> Opens the **`1.8.0`** public line. **`[project] version = 1.8.0-beta`** (ADR-0073 PEP 440 hyphen form). **`[tool.databoar] maturity_build = 69`** — octet **resets** into beta band **1–126** at cut (`604c1b5c`, 2026-08-02); **reconciled 2026-08-18** after **68** `fix`/`feat` commits on `main` were not reflected in `pyproject.toml` during a heavy sprint (**process lapse, not a policy regression**). Does **not** continue from **`1.7.4.post12` / `.263`**. **Not** on PyPI or Docker Hub **`latest`** (distribution policy: pre-release = git-only). Notes: [docs/releases/1.8.0-beta.md](docs/releases/1.8.0-beta.md).
+
+### Maturity octet reconciliation (2026-08-18)
+
+- **Cut:** `604c1b5c` (`chore(release): cut 1.8.0-beta`) set `maturity_build = 1`.
+- **Audit:** `git log 604c1b5c..origin/main --no-merges --format='%s' | rg '^(fix|feat)(\(|:)'` → **68** commits.
+- **Applied:** `1 + 68 = 69` in `[tool.databoar] maturity_build` only — **`[project] version` stays `1.8.0-beta`** (ADR-0073 rule 1).
 
 ### Included since `1.7.4.post12`
 
