@@ -5,7 +5,7 @@ Run from repo root after review:
   uv run python scripts/strip_workstation_codename_public_index.py --dry-run
   uv run python scripts/strip_workstation_codename_public_index.py
 
-Skips ops/automation/ansible (role prefixes lab-node-01_* are unrelated).
+Skips ops/automation/ansible (role prefixes lab_node_01_* are unrelated).
 """
 
 from __future__ import annotations

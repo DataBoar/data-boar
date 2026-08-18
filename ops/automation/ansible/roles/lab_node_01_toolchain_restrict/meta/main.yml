@@ -1,0 +1,9 @@
+---
+galaxy_info:
+  role_name: lab_node_01_toolchain_restrict
+  description: Optional restriction of x86_64-linux-gnu toolchain binaries to root + dedicated group.
+  license: BSD-3-Clause
+  platforms:
+    - name: Debian
+    - name: EL
+dependencies: []

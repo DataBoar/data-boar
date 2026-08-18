@@ -1,0 +1,6 @@
+---
+lab_node_01_sshguard_enable: true
+
+# Optional whitelist additions (comment-only; adopt via inventory).
+lab_node_01_sshguard_whitelist_lines: []
+

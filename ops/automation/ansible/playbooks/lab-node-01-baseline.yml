@@ -1,0 +1,93 @@
+---
+- name: LAB-NODE-01 baseline (LMDE 7) - safe defaults
+  hosts: lab-node-01
+  become: true
+  # Uses group_vars/all.yml — apt-listbugs + unattended apt (see README + tests/test_ansible_playbooks_unattended_apt.py).
+  environment: "{{ labop_debian_unattended_apt_environment | combine(lab_node_01_play_apt_environment_extra | default({})) }}"
+  vars:
+    # Optional extra env for this play only (e.g. proxy). Merged over labop_debian_unattended_apt_environment.
+    lab_node_01_play_apt_environment_extra: {}
+
+    # Profile presets: "lab_op_fixed" (desk-bound) vs "roaming" (untrusted networks)
+    # The playbook stays safe-default: do not change remote access posture unless you opt-in.
+    host_profile: lab_op_fixed
+
+    # --- Containers (defaults tuned for dev workstation + ctop; override in inventory to disable) ---
+    # Docker CE (official Docker repo) + Compose plugin — so `docker`/`ctop` work without manual apt
+    lab_node_01_install_docker_ce: true
+    lab_node_01_docker_install_compose_plugin: true
+    # Docker Swarm (single-node manager) — enables `docker service` / `docker stack deploy`
+    lab_node_01_docker_swarm_init: true
+    # Podman (rootless containers, OCI-compatible) — lab smokes / completão may use alongside Docker CE
+    lab_node_01_install_podman: true
+    # k3s (lightweight Kubernetes — installs from get.k3s.io; opt-in deliberately)
+    lab_node_01_install_k3s: false
+
+    # --- Opt-in knobs (observability) ---
+    # Install CLI tools (iotop, iftop, ctop, munin-node, monit, node_exporter) — safe default: true
+    lab_node_01_obs_install_cli_tools: true
+    lab_node_01_obs_install_ctop: true
+    # Syslog forwarding to central server (set IP in group_vars/host_vars, never committed)
+    lab_node_01_obs_syslog_forward_enabled: false
+    lab_node_01_obs_syslog_server_ip: ""
+    # Munin node (expose to Munin master)
+    lab_node_01_obs_munin_node_enabled: true
+    lab_node_01_obs_munin_allowed_ips: []
+    # Monit (local process supervision)
+    lab_node_01_obs_monit_enabled: true
+    lab_node_01_obs_monit_web_enabled: false
+    # Prometheus node_exporter
+    lab_node_01_obs_node_exporter_enabled: true
+    # Wazuh SIEM agent (requires manager IP; off by default until lab is ready)
+    lab_node_01_obs_wazuh_agent_enabled: false
+    lab_node_01_obs_wazuh_manager_ip: ""
+
+    # Bitwarden CLI: not in Debian main. Role lab_node_01_bitwarden_cli installs npm -g @bitwarden/cli, PATH for tmux,
+    # fixes docker.list perms if present, and asserts /usr/local/bin/bw exists before the play continues.
+    lab_node_01_install_bitwarden_cli: true
+
+    # --- Opt-in knobs (snapshots / btrfs) ---
+    # Snapper: automatic BTRFS snapshots (skips gracefully if root is not btrfs)
+    lab_node_01_snapper_enabled: true
+    lab_node_01_snapper_timeline_limit_hourly: "5"
+    lab_node_01_snapper_timeline_limit_daily: "7"
+
+    # sshd LAB-OP drop-in: dev = TCP/agent forwarding on; strict = no forwarding (closer to locked laptop).
+    lab_node_01_sshd_profile: dev
+
+  roles:
+    # --- System baseline ---
+    - role: lab_node_01_baseline_packages
+    # Bitwarden CLI early: fail fast if bw cannot be installed (rest of baseline assumes optional secret workflow).
+    - role: lab_node_01_bitwarden_cli
+    - role: lab_node_01_banners
+    - role: lab_node_01_sshd_labop
+    - role: lab_node_01_editor_defaults
+    - role: lab_node_01_lynis
+    - role: lab_node_01_ufw
+    - role: lab_node_01_fail2ban
+    - role: lab_node_01_unattended_upgrades
+    - role: lab_node_01_etckeeper
+    - role: lab_node_01_login_defs
+    - role: lab_node_01_shell_umask
+    - role: lab_node_01_limits_labop
+    - role: lab_node_01_sshguard
+    - role: lab_node_01_usbguard
+    - role: lab_node_01_labop_sudoers
+    - role: lab_node_01_snmpd_v3_only
+    - role: lab_node_01_aide
+    - role: lab_node_01_auditd
+    - role: lab_node_01_zram
+    # --- Containers: Podman before Docker CE so a partial Docker/apt failure still leaves Podman
+    # (LAB completão / variety path). Docker CE remains default for ctop/Swarm per play vars.
+    - role: lab_node_01_podman
+    - role: lab_node_01_docker_ce
+    - role: lab_node_01_operator_supplementary_groups
+    - role: lab_node_01_k3s
+    # --- Observability (progressive opt-in) ---
+    - role: lab_node_01_observability
+    # --- Optional: restrict GCC/FPC-style toolchain binaries to root + group comp (see role defaults) ---
+    - role: lab_node_01_toolchain_restrict
+    # --- Snapshots (btrfs only, skips gracefully on ext4) ---
+    - role: lab_node_01_snapper
+      when: lab_node_01_snapper_enabled | bool

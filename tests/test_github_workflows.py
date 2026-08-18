@@ -67,6 +67,7 @@ def test_upstream_workflows_invoke_slack_ci_failure_notify_on_failure() -> None:
                 "audit",
                 "dependency-review",
                 "sonar",
+                "ansible-syntax",
             ),
         ),
         ("semgrep.yml", "Semgrep", ("semgrep",)),

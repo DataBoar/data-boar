@@ -1,0 +1,15 @@
+---
+- name: Ensure editor packages are installed (opt-in)
+  when: lab_node_01_editor_enable | bool and lab_node_01_editor_install | bool
+  ansible.builtin.apt:
+    name: "{{ lab_node_01_editor_packages }}"
+    state: present
+    update_cache: false
+  failed_when: false
+
+- name: Set /usr/bin/editor alternative (best-effort, non-interactive)
+  when: lab_node_01_editor_enable | bool
+  ansible.builtin.command: "update-alternatives --set editor {{ lab_node_01_editor_alternative_path }}"
+  changed_when: true
+  failed_when: false
+

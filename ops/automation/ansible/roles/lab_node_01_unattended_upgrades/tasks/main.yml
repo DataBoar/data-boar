@@ -1,0 +1,16 @@
+---
+- name: Ensure unattended-upgrades package is installed
+  ansible.builtin.apt:
+    name: unattended-upgrades
+    state: present
+    update_cache: false
+  failed_when: false
+
+- name: Ensure unattended-upgrades is enabled
+  when: lab_node_01_unattended_upgrades_enable | bool
+  ansible.builtin.service:
+    name: unattended-upgrades
+    state: started
+    enabled: true
+  failed_when: false
+

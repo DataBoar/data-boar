@@ -5,9 +5,9 @@
 # Override per host in host_vars if you need interactive listbugs during a play.
 
 # Human operator login for roles that must not target root (supplementary groups, Bitwarden bw verify).
-# Empty = auto: lab-node-01_operator_target_user override, else SUDO_USER, else ansible_user / ansible_user_id.
+# Empty = auto: lab_node_01_operator_target_user override, else SUDO_USER, else ansible_user / ansible_user_id.
 # Set e.g. leitao for localhost if facts resolve to root.
-lab-node-01_operator_target_user: ""
+lab_node_01_operator_target_user: ""
 
 labop_debian_unattended_apt_environment:
   APT_LISTBUGS_FRONTEND: "none"

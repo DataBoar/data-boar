@@ -13,7 +13,7 @@ This runbook ties together **repeatable host hardening** (Ansible in this repo) 
 5. **Sudo:** `sudo -v` so the password prompt succeeds before a long run.
 6. **Apply:** from `ops/automation/ansible/`, run **`ansible-playbook -i inventory.local.ini --ask-become-pass playbooks/lab-node-01-baseline.yml --diff`** (see **[ops/automation/ansible/README.md](../../ops/automation/ansible/README.md)** for troubleshooting).
 
-After a successful run, **`bw`** should be at **`/usr/local/bin/bw`**. Role **`lab-node-01_bitwarden_cli`** installs **`/etc/profile.d/zz-local-bin.sh`** and a block in **`/etc/bash.bashrc`** so **tmux** / non-login interactive bash gets **`PATH`**. If `bw` is still missing, open a **new tmux pane** or run **`source /etc/bash.bashrc`**, or call **`/usr/local/bin/bw`** directly.
+After a successful run, **`bw`** should be at **`/usr/local/bin/bw`**. Role **`lab_node_01_bitwarden_cli`** installs **`/etc/profile.d/zz-local-bin.sh`** and a block in **`/etc/bash.bashrc`** so **tmux** / non-login interactive bash gets **`PATH`**. If `bw` is still missing, open a **new tmux pane** or run **`source /etc/bash.bashrc`**, or call **`/usr/local/bin/bw`** directly.
 
 ## 2. Session warm-up: sudo + Bitwarden CLI (no VeraCrypt)
 

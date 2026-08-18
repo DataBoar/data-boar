@@ -1,0 +1,69 @@
+---
+- name: Skip toolchain restriction (opt-in)
+  when: not (lab_node_01_toolchain_restrict_enabled | bool)
+  ansible.builtin.debug:
+    msg: "Toolchain restriction disabled (lab_node_01_toolchain_restrict_enabled=false)."
+
+- name: Apply toolchain restriction
+  when: lab_node_01_toolchain_restrict_enabled | bool
+  block:
+    - name: Ensure toolchain group exists
+      ansible.builtin.group:
+        name: "{{ lab_node_01_toolchain_group }}"
+        state: present
+
+    - name: Find versioned / glob toolchain binaries
+      ansible.builtin.find:
+        paths: "{{ lab_node_01_toolchain_bin_dir }}"
+        file_type: file
+        patterns: "{{ lab_node_01_toolchain_glob_patterns }}"
+      register: lab_node_01_toolchain_glob_hits
+
+    - name: Stat exact toolchain paths
+      ansible.builtin.stat:
+        path: "{{ lab_node_01_toolchain_bin_dir }}/{{ item }}"
+      loop: "{{ lab_node_01_toolchain_exact_basenames }}"
+      register: lab_node_01_toolchain_exact_stat
+
+    - name: Build combined path list
+      ansible.builtin.set_fact:
+        lab_node_01_toolchain_paths: >-
+          {{
+            (
+              (lab_node_01_toolchain_glob_hits.files | default([]) | map(attribute='path') | list)
+              + (lab_node_01_toolchain_exact_stat.results | default([])
+                | selectattr('stat.exists')
+                | map(attribute='item')
+                | map('regex_replace', '^', lab_node_01_toolchain_bin_dir + '/')
+                | list)
+            ) | unique | list
+          }}
+
+    - name: Apply owner, group, mode to toolchain binaries
+      ansible.builtin.file:
+        path: "{{ item }}"
+        owner: "{{ lab_node_01_toolchain_owner }}"
+        group: "{{ lab_node_01_toolchain_group }}"
+        mode: "{{ lab_node_01_toolchain_file_mode }}"
+        follow: true
+      loop: "{{ lab_node_01_toolchain_paths }}"
+      loop_control:
+        label: "{{ item }}"
+
+    - name: Install acl package for setfacl (optional ACL tasks)
+      when: (lab_node_01_toolchain_acl_extra_groups | length) > 0
+      ansible.builtin.apt:
+        name: acl
+        state: present
+
+    - name: Add POSIX ACL entries for extra groups (rx)
+      when: (lab_node_01_toolchain_acl_extra_groups | length) > 0
+      ansible.posix.acl:
+        path: "{{ item.0 }}"
+        entity: "{{ item.1 }}"
+        etype: group
+        permissions: rx
+        state: present
+      loop: "{{ lab_node_01_toolchain_paths | product(lab_node_01_toolchain_acl_extra_groups) | list }}"
+      loop_control:
+        label: "{{ item.0 }} g:{{ item.1 }}"

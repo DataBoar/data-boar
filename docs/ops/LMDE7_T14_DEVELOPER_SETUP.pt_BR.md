@@ -916,13 +916,13 @@ Quando o LAB-NODE-01 for host de laboratório:
 
 ## 7. Contentores (lab — recomendado: Docker CE via baseline)
 
-**Fonte de verdade no repositório:** [playbooks/lab-node-01-baseline.yml](../../ops/automation/ansible/playbooks/lab-node-01-baseline.yml) com **`lab-node-01_install_docker_ce: true`** e plugin **Compose**. O papel **`lab-node-01_operator_supplementary_groups`** adiciona o login do operador ao grupo **`docker`** (e outros grupos padrão). **Depois do playbook:** novo login na sessão gráfica **ou** `newgrp docker` na shell **ou** SSH novo — senão `docker compose` falha com **permission denied** em `/var/run/docker.sock`.
+**Fonte de verdade no repositório:** [playbooks/lab-node-01-baseline.yml](../../ops/automation/ansible/playbooks/lab-node-01-baseline.yml) com **`lab_node_01_install_docker_ce: true`** e plugin **Compose**. O papel **`lab_node_01_operator_supplementary_groups`** adiciona o login do operador ao grupo **`docker`** (e outros grupos padrão). **Depois do playbook:** novo login na sessão gráfica **ou** `newgrp docker` na shell **ou** SSH novo — senão `docker compose` falha com **permission denied** em `/var/run/docker.sock`.
 
-- **Ansible (preferido):** ver [ops/automation/ansible/README.md](../../ops/automation/ansible/README.md) e variáveis como **`lab-node-01_operator_target_user`** no inventário se correres `sudo ansible-playbook` (para não aplicar grupos ao utilizador errado).
+- **Ansible (preferido):** ver [ops/automation/ansible/README.md](../../ops/automation/ansible/README.md) e variáveis como **`lab_node_01_operator_target_user`** no inventário se correres `sudo ansible-playbook` (para não aplicar grupos ao utilizador errado).
 
 - **Manual (não substitui o repo oficial Docker):** se precisares só de sanity sem Ansible, alinha com a doc Docker CE para Debian — **não** uses `docker.io` do Debian como substituto da baseline do projeto salvo decisão documentada.
 
-**Podman** (rootless) continua **opt-in** no mesmo playbook (`lab-node-01_install_podman: false` por omissão). Para stack mínima lab-op com Podman/k3s, ver [LAB_OP_MINIMAL_CONTAINER_STACK.pt_BR.md](LAB_OP_MINIMAL_CONTAINER_STACK.pt_BR.md).
+**Podman** (rootless) continua **opt-in** no mesmo playbook (`lab_node_01_install_podman: false` por omissão). Para stack mínima lab-op com Podman/k3s, ver [LAB_OP_MINIMAL_CONTAINER_STACK.pt_BR.md](LAB_OP_MINIMAL_CONTAINER_STACK.pt_BR.md).
 
 **Lab smoke multi-host:** [LAB_SMOKE_MULTI_HOST.pt_BR.md](LAB_SMOKE_MULTI_HOST.pt_BR.md) — política prática: **dois** hubs Docker (por exemplo **lab-node-02 + LAB-NODE-01**); LAB-NODE-03 e LAB-NODE-04 **sem** obrigação de Docker.
 
@@ -1012,7 +1012,7 @@ cd lab-automation/ansible
 ansible-playbook -i inventory.ini bootstrap-lab-node-01.yml
 ```
 
-**Padrao oficial neste repo (baseline LAB-OP no LAB-NODE-01):** usar **`ops/automation/ansible/README.md`** e o playbook **`ops/automation/ansible/playbooks/lab-node-01-baseline.yml`** (roles em `ops/automation/ansible/roles/`, inclui **`tmux`** no pacote base e **`lab-node-01_bitwarden_cli`** — `bw` via `npm`, porque **nao** existe pacote `bitwarden-cli` no Debian principal). No Windows, o atalho **`scripts/lab-node-01-ansible-baseline.ps1`** gera `inventory.local.ini` com `localhost` + `ansible_connection=local` e executa o playbook **no LAB-NODE-01** por SSH. **Fluxo completo** (baseline fechado, sudo warm, `bw`, VeraCrypt): [LAB-NODE-01_BASELINE_COMPLETION.pt_BR.md](LAB-NODE-01_BASELINE_COMPLETION.pt_BR.md). **Dotfiles tmux** para todos os Linux do lab: secao **5** em [OPERATOR_PACKAGE_MAINTENANCE_AND_BW_CLI.pt_BR.md](OPERATOR_PACKAGE_MAINTENANCE_AND_BW_CLI.pt_BR.md).
+**Padrao oficial neste repo (baseline LAB-OP no LAB-NODE-01):** usar **`ops/automation/ansible/README.md`** e o playbook **`ops/automation/ansible/playbooks/lab-node-01-baseline.yml`** (roles em `ops/automation/ansible/roles/`, inclui **`tmux`** no pacote base e **`lab_node_01_bitwarden_cli`** — `bw` via `npm`, porque **nao** existe pacote `bitwarden-cli` no Debian principal). No Windows, o atalho **`scripts/lab-node-01-ansible-baseline.ps1`** gera `inventory.local.ini` com `localhost` + `ansible_connection=local` e executa o playbook **no LAB-NODE-01** por SSH. **Fluxo completo** (baseline fechado, sudo warm, `bw`, VeraCrypt): [LAB-NODE-01_BASELINE_COMPLETION.pt_BR.md](LAB-NODE-01_BASELINE_COMPLETION.pt_BR.md). **Dotfiles tmux** para todos os Linux do lab: secao **5** em [OPERATOR_PACKAGE_MAINTENANCE_AND_BW_CLI.pt_BR.md](OPERATOR_PACKAGE_MAINTENANCE_AND_BW_CLI.pt_BR.md).
 
 **Alterações nos roles e no baseline** (por exemplo `apt-listbugs` em installs, D-Bus ou `systemctl` com Ansible, Snapper em btrfs, sincronizar o repo no LAB-NODE-01 antes de rodar o playbook) **não** são copiadas para este guia — ficam na secão **Troubleshooting** de **`ops/automation/ansible/README.md`** e no próprio código em **`ops/automation/ansible/`**. O exemplo `lab-automation/bootstrap-lab-node-01.yml` acima é só **ilustrativo**; o alvo de verdade é **`lab-node-01-baseline.yml`**.
 

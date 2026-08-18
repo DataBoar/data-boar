@@ -1,0 +1,57 @@
+---
+- name: Skip login.defs LAB-OP lines
+  when: not (lab_node_01_login_defs_enable | bool)
+  ansible.builtin.debug:
+    msg: "login.defs hardening disabled (lab_node_01_login_defs_enable=false)."
+
+- name: Apply login.defs LAB-OP settings
+  when: lab_node_01_login_defs_enable | bool
+  block:
+    - name: Ensure UMASK in /etc/login.defs
+      ansible.builtin.lineinfile:
+        path: /etc/login.defs
+        regexp: '^\s*UMASK\s+'
+        line: "UMASK\t{{ lab_node_01_login_umask }}"
+        create: false
+
+    - name: Ensure HOME_MODE in /etc/login.defs
+      ansible.builtin.lineinfile:
+        path: /etc/login.defs
+        regexp: '^\s*HOME_MODE\s+'
+        line: "HOME_MODE\t{{ lab_node_01_login_defs_home_mode }}"
+        create: false
+
+    - name: Ensure PASS_* aging lines in /etc/login.defs
+      ansible.builtin.lineinfile:
+        path: /etc/login.defs
+        regexp: "{{ item.regexp }}"
+        line: "{{ item.line }}"
+        create: false
+      loop:
+        - regexp: '^\s*PASS_MAX_DAYS\s+'
+          line: "PASS_MAX_DAYS\t{{ lab_node_01_login_defs_pass_max_days }}"
+        - regexp: '^\s*PASS_MIN_DAYS\s+'
+          line: "PASS_MIN_DAYS\t{{ lab_node_01_login_defs_pass_min_days }}"
+        - regexp: '^\s*PASS_WARN_AGE\s+'
+          line: "PASS_WARN_AGE\t{{ lab_node_01_login_defs_pass_warn_age }}"
+        - regexp: '^\s*LOGIN_RETRIES\s+'
+          line: "LOGIN_RETRIES\t{{ lab_node_01_login_defs_login_retries }}"
+
+    - name: Ensure ENCRYPT_METHOD in /etc/login.defs
+      ansible.builtin.lineinfile:
+        path: /etc/login.defs
+        regexp: '^\s*ENCRYPT_METHOD\s+'
+        line: "ENCRYPT_METHOD {{ lab_node_01_login_defs_encrypt_method }}"
+        create: false
+
+    - name: Ensure SHA crypt rounds in /etc/login.defs
+      ansible.builtin.lineinfile:
+        path: /etc/login.defs
+        regexp: "{{ item.regexp }}"
+        line: "{{ item.line }}"
+        create: false
+      loop:
+        - regexp: '^\s*SHA_CRYPT_MIN_ROUNDS\s+'
+          line: "SHA_CRYPT_MIN_ROUNDS {{ lab_node_01_login_defs_sha_crypt_min_rounds }}"
+        - regexp: '^\s*SHA_CRYPT_MAX_ROUNDS\s+'
+          line: "SHA_CRYPT_MAX_ROUNDS {{ lab_node_01_login_defs_sha_crypt_max_rounds }}"

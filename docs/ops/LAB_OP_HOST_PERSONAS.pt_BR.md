@@ -21,9 +21,9 @@ Um **único mapa mental** entre:
 
 ## Ansible “por papel”, não por distro imaginária
 
-- **Família Debian** vs **Void** já está separada **dentro** do role **`lab-node-01_podman`** (ver [ops/automation/ansible/README.md](../../ops/automation/ansible/README.md)).
+- **Família Debian** vs **Void** já está separada **dentro** do role **`lab_node_01_podman`** (ver [ops/automation/ansible/README.md](../../ops/automation/ansible/README.md)).
 - **Personas** decidem **se** corre instalação Podman (**`.labop-skip-lab-node-01-podman`** em edge/ponte quando padronizares “metal = só Python”).
-- **Não** adicionar playbooks para distros que não operam; estender **`lab-node-01_podman`** (ou novo role) quando uma **nova** família aparecer no manifesto.
+- **Não** adicionar playbooks para distros que não operam; estender **`lab_node_01_podman`** (ou novo role) quando uma **nova** família aparecer no manifesto.
 
 ## DBs sintéticos e testes “completos”
 

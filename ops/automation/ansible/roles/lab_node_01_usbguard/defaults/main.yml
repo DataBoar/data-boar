@@ -1,0 +1,17 @@
+---
+# usbguard is high-signal but can be disruptive; keep disabled by default.
+lab_node_01_usbguard_enable: false
+
+# Manage policy files. Default: provide a reviewable rules file with comment-only suggestions.
+lab_node_01_usbguard_manage_rules: true
+lab_node_01_usbguard_rules_path: /etc/usbguard/rules.conf
+
+# Prevent clobbering a real, generated allowlist (e.g. created by
+# `usbguard generate-policy > /etc/usbguard/rules.conf`).
+# Keep true by default to avoid surprises.
+lab_node_01_usbguard_preserve_existing_rules: true
+
+# Keep allowlist suggestions commented until operator confirms.
+lab_node_01_usbguard_comment_only: true
+
+

@@ -9,12 +9,12 @@
 
 ## Automação
 
-- Docker CE: `ops/automation/ansible/roles/lab-node-01_docker_ce`
-  - `playbooks/lab-node-01-baseline.yml` define `lab-node-01_install_docker_ce: true` e `lab-node-01_docker_swarm_init: true` por padrão (use `false` no inventory para desligar o que precisar)
+- Docker CE: `ops/automation/ansible/roles/lab_node_01_docker_ce`
+  - `playbooks/lab-node-01-baseline.yml` define `lab_node_01_install_docker_ce: true` e `lab_node_01_docker_swarm_init: true` por padrão (use `false` no inventory para desligar o que precisar)
   - opcional: escrever `/etc/docker/daemon.json`
   - Swarm: `docker swarm init` quando o nó ainda não está em Swarm (manager single-node)
-- AIDE: `ops/automation/ansible/roles/lab-node-01_aide`
-- auditd: `ops/automation/ansible/roles/lab-node-01_auditd`
+- AIDE: `ops/automation/ansible/roles/lab_node_01_aide`
+- auditd: `ops/automation/ansible/roles/lab_node_01_auditd`
 
 ## Política de exceções
 

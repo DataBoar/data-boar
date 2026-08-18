@@ -8,16 +8,16 @@ Melhorar a responsividade em hosts com pouca RAM sem depender de um swap grande 
 
 ## Automação (Ansible)
 
-Role: `ops/automation/ansible/roles/lab-node-01_zram`
+Role: `ops/automation/ansible/roles/lab_node_01_zram`
 
-O padrão é **opt-in** (`lab-node-01_zram_enable=false`).
+O padrão é **opt-in** (`lab_node_01_zram_enable=false`).
 
 ### Política de sizing
 
 A role calcula `zram-size` com base na RAM do host:
 
-- `lab-node-01_zram_size_percent` da RAM total
-- limitado por `lab-node-01_zram_min_mb` e `lab-node-01_zram_max_mb`
+- `lab_node_01_zram_size_percent` da RAM total
+- limitado por `lab_node_01_zram_min_mb` e `lab_node_01_zram_max_mb`
 
 ## Validação
 

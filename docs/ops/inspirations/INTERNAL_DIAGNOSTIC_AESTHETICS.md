@@ -106,7 +106,7 @@ Better (do):
 
 ```text
 scan finished
-  session_id        2026-04-27_lab-node-01_a993c0dc
+  session_id        2026-04-27_lab_node_01_a993c0dc
   tables_visited    248 / 248
   rows_sampled      18_412 (cap=10000/col, no overrun)
   fallback_demotions 3   (see scan_manifest_2026-04-27.yaml#fallbacks)

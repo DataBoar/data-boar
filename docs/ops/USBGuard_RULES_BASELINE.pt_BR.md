@@ -16,8 +16,8 @@ Tornar o controle de dispositivos USB repetível sem recriar allowlists em cada 
 
 O baseline Ansible escreve um arquivo inicial só com comentários:
 
-- Role: `ops/automation/ansible/roles/lab-node-01_usbguard`
-- Template: `ops/automation/ansible/roles/lab-node-01_usbguard/templates/rules.conf.j2`
+- Role: `ops/automation/ansible/roles/lab_node_01_usbguard`
+- Template: `ops/automation/ansible/roles/lab_node_01_usbguard/templates/rules.conf.j2`
 
 ## Como adotar (recomendado)
 

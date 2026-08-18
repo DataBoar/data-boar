@@ -54,7 +54,7 @@ Same semantics on **PostgreSQL, MariaDB, MSSQL, and Oracle** (`init/*/03_lab_fp_
 
 ## Podman (optional — e.g. rootless experiments on LAB-NODE-01)
 
-The same Compose files work with **Podman** on Debian/LMDE when the `podman` and `compose`/`podman-compose` stack is installed. This repo’s **Ansible baseline for LAB-NODE-01 still defaults to Docker CE** (`playbooks/lab-node-01-baseline.yml`); Podman is **opt-in** (`lab-node-01_install_podman: true`) and can **coexist** with Docker — you do **not** need to uninstall Docker to try Podman.
+The same Compose files work with **Podman** on Debian/LMDE when the `podman` and `compose`/`podman-compose` stack is installed. This repo’s **Ansible baseline for LAB-NODE-01 still defaults to Docker CE** (`playbooks/lab-node-01-baseline.yml`); Podman is **opt-in** (`lab_node_01_install_podman: true`) and can **coexist** with Docker — you do **not** need to uninstall Docker to try Podman.
 
 **Typical flow (hub host shell):**
 
@@ -68,6 +68,6 @@ podman compose -f docker-compose.mongo.yml up -d
 
 **Rootless Podman:** published ports must reach LAN clients; if binds fail, check [Podman networking docs](https://docs.podman.io/en/latest/markdown/podman-compose.1.html) and firewall. Prefer the same **hub LAN IP** in Data Boar config as with Docker.
 
-**Kubernetes (k3s):** `lab-node-01-baseline.yml` can install k3s (`lab-node-01_install_k3s: true`), but this stack is maintained as **Compose** for simplicity. Converting to Helm/manifests is a separate exercise — not required for Data Boar lab smoke.
+**Kubernetes (k3s):** `lab-node-01-baseline.yml` can install k3s (`lab_node_01_install_k3s: true`), but this stack is maintained as **Compose** for simplicity. Converting to Helm/manifests is a separate exercise — not required for Data Boar lab smoke.
 
 **If `docker` service is stopped on LAB-NODE-01:** start it with `sudo systemctl start docker` (interactive sudo) before expecting `docker compose` to work; Podman does not replace `systemd` unit `docker` unless you deliberately migrate — document that choice in operator notes, not in tracked inventory.

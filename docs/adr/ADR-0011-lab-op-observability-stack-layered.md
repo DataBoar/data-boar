@@ -29,7 +29,7 @@ Adopt a **layered** observability stack where each tool has a specific, non-over
 | **Syslog / GELF** | `rsyslog` → Graylog | Centralised log forwarding, GELF for containers | LAB-NODE-01 + Docker log-driver |
 | **Hardware sensors** | `lm-sensors`, `smartmontools` | CPU temperature, fan, disk health | LAB-NODE-01 local CLI |
 
-All services are **opt-in** via Ansible defaults (`lab-node-01_obs_*: false` for remote services) to keep
+All services are **opt-in** via Ansible defaults (`lab_node_01_obs_*: false` for remote services) to keep
 a fresh install safe. Local CLI tools are enabled by default.
 
 ## Why not a single stack?
@@ -53,7 +53,7 @@ committing to a full stack before the infrastructure is ready.
   (local), Wazuh (SIEM), and Grafana (metrics). A unified alert router (e.g., Alertmanager) is
   deferred until the lab matures.
 - **Negative:** `ctop` is not in the Debian apt repository — installed as a binary from GitHub
-  releases. This requires version pinning and manual updates (tracked in `lab-node-01_obs_ctop_version`
+  releases. This requires version pinning and manual updates (tracked in `lab_node_01_obs_ctop_version`
   Ansible variable).
 - **Watch:** As the lab adds more hosts (primary Windows dev PC, servers), the Ansible role should extend to push
   the same observability stack to all managed hosts via group_vars rather than host-specific playbooks.
@@ -61,6 +61,6 @@ committing to a full stack before the infrastructure is ready.
 ## References
 
 - [docs/ops/LMDE7_LAB-NODE-01_DEVELOPER_SETUP.pt_BR.md](../ops/LMDE7_LAB-NODE-01_DEVELOPER_SETUP.pt_BR.md) §8
-- [ops/automation/ansible/roles/lab-node-01_observability/](../../ops/automation/ansible/roles/lab-node-01_observability/)
+- [ops/automation/ansible/roles/lab_node_01_observability/](../../ops/automation/ansible/roles/lab_node_01_observability/)
 - [docs/plans/PLAN_LAB_OP_OBSERVABILITY_STACK.pt_BR.md](../plans/PLAN_LAB_OP_OBSERVABILITY_STACK.pt_BR.md)
 - [ADR 0009](ADR-0009-ansible-idempotent-roles-as-single-automation-source.md) — Ansible as automation source
