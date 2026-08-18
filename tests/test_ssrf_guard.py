@@ -252,9 +252,10 @@ def test_rest_connector_connect_passes_guard_pins_to_httpx_client() -> None:
         conn.connect()
 
     pins = captured.get("host_to_ips") or {}
-    assert "api.example.com" in pins
-    assert pins["api.example.com"] == ["203.0.113.10"]
-    assert captured.get("kwargs", {}).get("base_url") == "https://api.example.com"
+    # Dict lookup (not substring-in-URL) — avoids CodeQL py/incomplete-url-substring-sanitization FP.
+    pin_host = "api.example.com"
+    assert pins.get(pin_host) == ["203.0.113.10"]
+    assert captured.get("kwargs", {}).get("base_url") == f"https://{pin_host}"
 
 
 def test_rest_connector_source_requires_pinned_httpx_client() -> None:
