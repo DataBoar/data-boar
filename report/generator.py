@@ -1294,6 +1294,28 @@ def _write_excel_sheets(
             _excel_safe_dataframe(praise).to_excel(
                 writer, sheet_name=_SHEET_PRAISE_CONTROLS, index=False
             )
+    if config and not stub_detail:
+        from report.governance_lens import (
+            GovernanceLensGenerator,
+            apply_governance_risk_level_style,
+            governance_lens_feature_allowed,
+            governance_result_to_excel_rows,
+        )
+
+        if governance_lens_feature_allowed(config):
+            try:
+                gov_result = GovernanceLensGenerator(config).generate_from_rows(
+                    db_rows_for_sheets, fs_rows_for_sheets, app_rows_for_sheets
+                )
+                gov_sheet = "Governance View"
+                _excel_safe_dataframe(
+                    governance_result_to_excel_rows(gov_result)
+                ).to_excel(writer, sheet_name=gov_sheet, index=False)
+                apply_governance_risk_level_style(
+                    writer, gov_sheet, gov_result.risk_level
+                )
+            except Exception:
+                _logger.exception("Governance Lens sheet generation failed")
     trends = _trends_rows(
         db_manager,
         session_id,

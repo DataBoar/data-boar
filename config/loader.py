@@ -1176,4 +1176,19 @@ def normalize_config(
         "cookie_max_age_seconds": cookie_max_age,
     }
 
+    from config.governance_map_loader import DEFAULT_GOVERNANCE_MAP_FILE
+
+    gov_raw = data.get("governance") or {}
+    if not isinstance(gov_raw, dict):
+        gov_raw = {}
+    gov_tier = str(gov_raw.get("tier") or "pro").strip().lower()
+    if gov_tier not in ("pro", "enterprise"):
+        gov_tier = "pro"
+    map_file = str(gov_raw.get("map_file") or DEFAULT_GOVERNANCE_MAP_FILE).strip()
+    out["governance"] = {
+        "enabled": bool(gov_raw.get("enabled", False)),
+        "tier": gov_tier,
+        "map_file": map_file or DEFAULT_GOVERNANCE_MAP_FILE,
+    }
+
     return out

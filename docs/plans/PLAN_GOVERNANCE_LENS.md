@@ -3,7 +3,7 @@
 <!-- plans-hub-summary: Camada de tradução GRC: mapeia padrões detectados para controles COBIT 2019 / ISO 27001 / ISO 27014 / ISO 38500 / ITIL 4; gera Governance View no Excel e exporta MD→DOCX/PDF via pandoc; Pro tier. -->
 <!-- plans-hub-related: PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md, PLAN_CLI_VALIDATE_DIFF_AND_DSAR_EXPORT.md, LICENSING_SPEC.md -->
 
-- **Status:** Pending (Phase A in progress — anchor artefacts)
+- **Status:** In progress (Phase B — generator + Excel Governance View)
 - **Date:** 2026-08-18
 - **Authors:** Fabio Leitao (operator); Cursor executor
 - **Priority:** H2
@@ -30,8 +30,8 @@ Ship Governance Lens in **five phases** (A→E). Each phase is a thin, reviewabl
 
 | Phase | Deliverable | Issue | Status |
 | ----- | ----------- | ----- | ------ |
-| **A** | This plan + `config/governance_framework_map.schema.yaml` (structure + illustrative examples only) | [#539](https://github.com/DataBoar/data-boar/issues/539) | 🔄 In progress |
-| **B** | `report/governance_lens.py` — Pro-tier generator (Governance View sheet / hooks) | [#540](https://github.com/DataBoar/data-boar/issues/540) | ⬜ Pending |
+| **A** | This plan + `config/governance_framework_map.schema.yaml` (structure + illustrative examples only) | [#539](https://github.com/DataBoar/data-boar/issues/539) | ✅ Done |
+| **B** | `report/governance_lens.py` — Pro-tier generator (Governance View sheet / hooks) | [#540](https://github.com/DataBoar/data-boar/issues/540) | 🔄 In progress |
 | **C** | Pandoc-ready MD template + `pandoc` YAML + CLI `--governance-report` | [#541](https://github.com/DataBoar/data-boar/issues/541) | ⬜ Pending |
 | **D** | Operator docs: USAGE EN + pt-BR, TECH_GUIDE, pandoc quickstart | [#542](https://github.com/DataBoar/data-boar/issues/542) | ⬜ Pending |
 | **E** | Enterprise framework modules (BACEN, FEBRABAN, PCI-DSS v4.0) | [#543](https://github.com/DataBoar/data-boar/issues/543) | ⬜ Pending |
@@ -45,7 +45,7 @@ Ship Governance Lens in **five phases** (A→E). Each phase is a thin, reviewabl
 | Tier | Framework maps | Runtime behaviour |
 | ---- | -------------- | ----------------- |
 | **Community / Open Core** | **No** curated `governance_framework_map` bundles in OSS | Technical findings only (`pattern_detected`, `norm_tag`, recommendations sheet) |
-| **Pro** | Curated **Tier 1** map (`governance_framework_map_pro.yaml` — **not** committed to public Git; distributed under commercial terms) | Governance View in Excel + exports per Phases B–C |
+| **Pro** | Curated **Tier 1** map (`governance_framework_map_pro.yaml` — **not** committed to public Git; distributed under commercial terms). OSS ships **`config/governance_framework_map_pro.example.yaml`** + `governance.map_file` for lab/tests. | Governance View in Excel + exports per Phases B–C |
 | **Enterprise** | Adds **Tier 2** sectoral BR maps (`governance_framework_map_enterprise.yaml` — private) | Phase E modules; same generator pipeline as Pro |
 
 The **schema** in `config/governance_framework_map.schema.yaml` is public (structure only). **Curated entries** are the commercial asset — never ship production mappings in `origin`.
@@ -106,3 +106,12 @@ Exact control IDs and Portuguese audit phrasing live in the **curated Pro map** 
 ## Follow-ups (Phases B–E)
 
 See issues [#540](https://github.com/DataBoar/data-boar/issues/540)–[#543](https://github.com/DataBoar/data-boar/issues/543). Refresh [ISSUE_QUEUE_SEQUENCING_MAP.md](../ops/ISSUE_QUEUE_SEQUENCING_MAP.md) when the chain closes.
+
+### Acceptance (Phase B — #540)
+
+- [x] `report/governance_lens.py` + `config/governance_map_loader.py`
+- [x] `config/governance_framework_map_pro.example.yaml` (≥10 Tier-1 entries; OSS starter — not the commercial curated file)
+- [x] Excel sheet **Governance View** after Recommendations when `governance.enabled: true` + Pro license
+- [x] Config keys `governance.enabled`, `governance.tier`, `governance.map_file`
+- [x] `tests/test_governance_lens.py` (≥5 tests)
+- [x] `check-all` green before merge
