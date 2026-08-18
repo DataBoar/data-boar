@@ -9,7 +9,7 @@ mutative locale form POSTs — independent of whether the WebAuthn gate is enfor
 from __future__ import annotations
 
 from typing import Any
-from urllib.parse import quote
+from urllib.parse import quote, unquote
 
 from fastapi import HTTPException
 from starlette.requests import Request
@@ -90,6 +90,25 @@ def is_locale_html_public_unauthenticated(method: str, rest: list[str]) -> bool:
     return method == "GET" and len(rest) == 1 and rest[0] in ("help", "about", "login")
 
 
+def _fully_unquote_path(n: str, *, max_rounds: int = 8) -> str | None:
+    """Percent-decode until stable. ``None`` = nested encoding past the cap (fail closed).
+
+    Starlette decodes the query once, so ``next=/%2509/evil.com`` arrives as
+    ``/%09/evil.com``. ``window.location.href`` then decodes again; WHATWG
+    treats ``/\\t/evil.com`` as protocol-relative. Iterate ``unquote`` on the
+    value we actually emit (#1630 follow-up / Bugbot on #1632).
+    """
+    cur = n
+    for _ in range(max_rounds):
+        nxt = unquote(cur)
+        if nxt == cur:
+            return cur
+        cur = nxt
+    if unquote(cur) != cur:
+        return None
+    return cur
+
+
 def _looks_like_protocol_relative_path(n: str) -> bool:
     """True for ``//host``, ``/\\host``, ``/%5Chost``, and whitespace-padded forms.
 
@@ -118,16 +137,23 @@ def safe_next_path(next_q: str | None, fallback: str) -> str:
     the naive filters alone are insufficient (#1630 / CodeQL #349).
     Also reject C0 controls and whitespace-padded ``/…/host`` (Cursor Security
     finding on PR #1632: TAB between slashes still redirected).
+    Percent-decode nested encodings before those checks so ``/%09/…`` and
+    ``/%2509/…`` cannot survive a second decode in the browser.
     """
     if not next_q:
         return fallback
     n = next_q.strip()
+    decoded = _fully_unquote_path(n)
+    if decoded is None:
+        return fallback
     # C0 controls (incl. TAB/CR/LF): browsers may ignore them in // resolution.
-    if any(ord(c) < 32 for c in n):
+    if any(ord(c) < 32 for c in n) or any(ord(c) < 32 for c in decoded):
         return fallback
-    if not n.startswith("/") or "://" in n:
+    if not n.startswith("/") or "://" in n or "://" in decoded:
         return fallback
-    if _looks_like_protocol_relative_path(n):
+    if _looks_like_protocol_relative_path(n) or _looks_like_protocol_relative_path(
+        decoded
+    ):
         return fallback
     if len(n) > 2048:
         return fallback

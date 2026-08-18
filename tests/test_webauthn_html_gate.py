@@ -321,6 +321,11 @@ def test_require_api_key_accepts_session_over_wrong_api_key(webauthn_gate_client
         "/ /evil.com",
         "/\v/evil.com",
         "/\f/evil.com",
+        "/%09/evil.com",
+        "/%2509/evil.com",
+        "/%2Fevil.com",
+        "/%2fevil.com",
+        "/%2F%09/evil.com",
     ],
 )
 def test_safe_next_path_rejects_protocol_relative_and_backslash(malicious: str) -> None:
@@ -354,3 +359,6 @@ def test_safe_next_path_still_rejects_scheme_and_control_chars() -> None:
     assert safe_next_path("/en/\n/", fb) == fb
     # Starlette-decoded TAB between slashes (Cursor Security on #1632).
     assert safe_next_path("/\t/evil.com", fb) == fb
+    # Nested percent-encoding survives Starlette's single query decode (Bugbot on #1632).
+    assert safe_next_path("/%09/evil.com", fb) == fb
+    assert safe_next_path("/%2509/evil.com", fb) == fb
