@@ -59,3 +59,18 @@ def test_windows_path_separator_normalized() -> None:
     code, touched = t.evaluate(["scripts\\gatekeeper_audit.py"], "no marker")
     assert code == 1
     assert touched == ["scripts/gatekeeper_audit.py"]
+
+
+def test_check_all_wrappers_invoke_tripwire_and_fail_closed() -> None:
+    """#1385: local check-all must run the same tripwire as CI (ADR-0080)."""
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1]
+    sh = (root / "scripts" / "check-all.sh").read_text(encoding="utf-8")
+    ps1 = (root / "scripts" / "check-all.ps1").read_text(encoding="utf-8")
+    for text in (sh, ps1):
+        assert "gate_change_tripwire.py" in text
+        assert "--base origin/main" in text
+        assert "ABORTED by gate_change_tripwire" in text
+    assert "gate_change_tripwire.py --base origin/main || true" not in sh
+    assert "gate_change_tripwire.py --base origin/main) || true" not in sh
