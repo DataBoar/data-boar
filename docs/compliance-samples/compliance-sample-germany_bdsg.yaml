@@ -1,0 +1,120 @@
+# Germany — BDSG (Bundesdatenschutzgesetz) as GDPR national supplement
+# Pair with: compliance-sample-eu_gdpr.yaml. This file is NOT a substitute
+# for the EU GDPR sample.
+#
+# NOT LEGAL ADVICE. Technical starting point for inventory. Does NOT certify
+# compliance, DPO appointment, or Land-DPA jurisdiction.
+#
+# DPA map: BfDI covers federal public bodies and some telecom/postal tasks.
+# Private-sector supervision is fragmented across the 16 Land DPAs (seat of
+# the controller, not a single national inbox).
+#
+# Honesty note (as of 2026-08): §26 BDSG (employee data) is CONTESTED.
+# CJEU C-34/21 (30 Mar 2023) held that general clauses like §26(1) do not
+# meet GDPR Art. 88(2) "more specific rules". The Bundesarbeitsgericht has
+# treated §26(1) as inapplicable. The Oct 2024 Beschäftigtendatengesetz draft
+# lapsed when the coalition collapsed (6 Nov 2024). Do NOT treat §26 as a
+# clean standalone legal basis. Prefer GDPR Art. 6(1) mapping plus counsel.
+#
+# Identifiers use contextual column labels. No bare 11-digit Steuer-ID
+# matcher (high FP; checksum is not regex-expressible). Sozialversicherungs-
+# nummer omitted — structure not verified here (follow-up, not silent drop).
+# No querystring geo-coordinate key used in older samples (PII seed gate).
+#
+# NOTE — recommendation_overrides use distinctive BDSG §N (role) patterns.
+# Do not add a bare "Germany" or "BDSG" catch-all: _find_override_row is
+# bidirectional substring match.
+#
+# How to use:
+#   regex_overrides_file: path/to/compliance-sample-germany_bdsg.yaml
+#   ml_patterns_file:     path/to/compliance-sample-germany_bdsg.yaml
+#   Merge recommendation_overrides into report.recommendation_overrides.
+
+regex:
+  - name: "DE_FIELD_STEUER_ID_LABEL"
+    pattern: "(?i)(?:^|_|\b)(steuer[_\\s]?id|steuerliche[_\\s]?identifikationsnummer|idnr[_\\s]?(?:de|deutschland)|identifikationsnummer[_\\s]?steuer)\\w*"
+    norm_tag: "BDSG (Steuer-ID / IdNr)"
+
+  - name: "DE_FIELD_EMPLOYEE_LABEL"
+    pattern: "(?i)(?:^|_|\b)(beschaeftigtendaten|beschäftigtendaten|mitarbeiterdaten|personalakte|betriebsrat[_\\s]?zustimmung)\\w*"
+    norm_tag: "BDSG §26 (Beschäftigtendaten — contested)"
+
+  - name: "DE_FIELD_BIOMETRIC_LABEL"
+    pattern: "(?i)(?:^|_|\b)(biometrische[_\\s]?daten|gesichtserkennung|fingerabdruck[_\\s]?mitarbeiter|iris[_\\s]?scan[_\\s]?mitarbeiter)\\w*"
+    norm_tag: "BDSG + GDPR Art. 9 (biometrics)"
+
+  - name: "DE_FIELD_SCORING_LABEL"
+    pattern: "(?i)(?:^|_|\b)(bonitaetspruefung|bonitätsprüfung|credit[_\\s]?scoring[_\\s]?de|scoring[_\\s]?verfahren)\\w*"
+    norm_tag: "BDSG §31 (scoring)"
+
+  - name: "DE_BDSG_JSON_LAT_PRECISION"
+    pattern: "(?i)[\"']lat[\"']\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\b"
+    norm_tag: "BDSG (precise geolocation)"
+
+  - name: "DE_BDSG_JSON_LNG_PRECISION"
+    pattern: "(?i)[\"'](?:lng|lon)[\"']\\s*:\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}\\b"
+    norm_tag: "BDSG (precise geolocation)"
+
+  - name: "DE_BDSG_LOCATION_CSV_PAIR"
+    pattern: "(?i)\\blocation\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*,\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "BDSG (precise geolocation)"
+
+terms:
+  - { text: "personenbezogene daten", label: sensitive }
+  - { text: "personal data", label: sensitive }
+  - { text: "betroffene person", label: sensitive }
+  - { text: "data subject", label: sensitive }
+  - { text: "steuerliche identifikationsnummer", label: sensitive }
+  - { text: "beschäftigtendaten", label: sensitive }
+  - { text: "beschaeftigtendaten", label: sensitive }
+  - { text: "mitarbeiterdaten", label: sensitive }
+  - { text: "betriebsrat", label: sensitive }
+  - { text: "works council", label: sensitive }
+  - { text: "biometrische daten", label: sensitive }
+  - { text: "gesichtserkennung", label: sensitive }
+  - { text: "bonitätsprüfung", label: sensitive }
+  - { text: "bonitaetspruefung", label: sensitive }
+  - { text: "bundesdatenschutzgesetz", label: sensitive }
+  - { text: "landesdatenschutzbehörde", label: sensitive }
+  - { text: "landesdatenschutzbehoerde", label: sensitive }
+
+  - { text: "product_id", label: non_sensitive }
+  - { text: "item_code", label: non_sensitive }
+  - { text: "session_log", label: non_sensitive }
+  - { text: "debug_output", label: non_sensitive }
+
+recommendation_overrides:
+  - norm_tag_pattern: "BDSG §26 (Beschäftigtendaten — contested)"
+    base_legal: "GDPR Art. 88 + §26 BDSG — CONTESTED. CJEU C-34/21 (30 Mar 2023) and subsequent Bundesarbeitsgericht application: general clauses like §26(1) do not meet Art. 88(2). The Oct 2024 Beschäftigtendatengesetz draft lapsed (coalition collapse 6 Nov 2024). As of 2026-08 there is no replacement statute in force."
+    risk: "Employee-data columns sit on a contested national basis. Treating §26 BDSG as a self-sufficient legal ground is outdated."
+    recommendation: "Map each employee-data purpose to GDPR Art. 6(1) directly. Keep any stricter consent formality as a floor, not a ceiling. Involve the Betriebsrat where works-council co-determination applies. Consult counsel. Not a legal conclusion."
+    priority: "ALTA"
+    relevant_for: "DPO, legal, HR, Betriebsrat"
+
+  - norm_tag_pattern: "BDSG + GDPR Art. 9 (biometrics)"
+    base_legal: "GDPR Art. 9 (special category). German practice treats employee biometrics (fingerprint, facial, iris) as tightly restricted; works-council involvement is commonly required. Not a catch-all ban encoded in this scanner."
+    risk: "Biometric employee columns are high-harm special-category data. Inventory only — this does not decide lawfulness."
+    recommendation: "Verify Art. 9 + Art. 6 grounds and any Betriebsrat agreement. Prefer a non-biometric alternative. Consult counsel. Not a legal conclusion."
+    priority: "ALTA"
+    relevant_for: "DPO, legal, Betriebsrat"
+
+  - norm_tag_pattern: "BDSG §31 (scoring)"
+    base_legal: "§31 BDSG — scoring / creditworthiness assessment (national layer beside GDPR Art. 22). Revalidate the current consolidated BDSG text before relying on the section number."
+    risk: "Scoring columns may trigger §31 methodological requirements, not only a generic Art. 22 human-review discussion."
+    recommendation: "Confirm whether the use case is credit/scoring under §31 versus general automated decisions. Consult counsel. Not a legal conclusion."
+    priority: "MÉDIA"
+    relevant_for: "DPO, legal, risk"
+
+  - norm_tag_pattern: "BDSG (Steuer-ID / IdNr)"
+    base_legal: "Steuerliche Identifikationsnummer identifies a natural person (personal data under GDPR Art. 4). Shape-only inventory — this sample does not implement the IdNr check digit."
+    risk: "IdNr fields identify the data subject. A bare 11-digit matcher is intentionally omitted (high false-positive rate)."
+    recommendation: "Minimize IdNr storage. Verify a GDPR Art. 6 ground. Consult counsel. Not a legal conclusion."
+    priority: "ALTA"
+    relevant_for: "DPO, legal, finance, HR"
+
+  - norm_tag_pattern: "BDSG (precise geolocation)"
+    base_legal: "GDPR Art. 4 — precise geolocation can identify or make identifiable a natural person. BDSG applies as the German national supplement; pair with the EU GDPR sample."
+    risk: "Precise coordinates can track the data subject."
+    recommendation: "Minimize stored location precision. Review retention. Consult counsel. Heuristic inventory — not a legal conclusion."
+    priority: "MÉDIA"
+    relevant_for: "DPO, product, legal"
