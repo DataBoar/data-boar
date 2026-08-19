@@ -67,24 +67,29 @@ Section 404 is about **internal control over financial reporting** (ICFR) and th
 
 Cybersecurity policy for Brazilian **instituições financeiras** and payment institutions (consolidates / updates the former **4.658/2018** line). In force from **February 2022**. Complements **LGPD** — IFs typically need **both**. Pair [compliance-sample-brazil_bacen4893.yaml](../compliance-samples/compliance-sample-brazil_bacen4893.yaml) with the LGPD sample.
 
+Article numbers below follow **this repo’s** shipped maps ([USAGE.md — Governance Lens (Enterprise)](../USAGE.md#governance-lens-enterprise), [COMPLIANCE_FRAMEWORKS.md](../COMPLIANCE_FRAMEWORKS.md), BACEN sample `norm_tag` / `base_legal`). They are **heuristic labels for reports**, not a substitute for reading the Resolução.
+
 This primer does **not** cover Basel III (capital / liquidity). That frame is adjacent but **out of scope** for this file.
 
-### Art. 6º — map customer data and critical systems
+### Inventory inputs (customer data and critical systems)
 
-| Reference | Intent | Data Boar capability (shipped) | Notes |
-| --------- | ------ | ------------------------------ | ----- |
-| Art. 6º | Inventory customer data and critical systems | **Scope import** (CSV → YAML `targets` fragment) + discovery on those targets | [SCOPE_IMPORT_QUICKSTART.md](../ops/SCOPE_IMPORT_QUICKSTART.md) |
-| Art. 6º (field types) | Pix keys, accounts, card tokens, NSU-class fields | BACEN sample regex / ML terms (`BACEN_CHAVE_PIX`, conta/agência, card-field names) | Heuristic; confirm with the IF data dictionary |
-| Art. 6º (GRC story) | Control-gap language for CISO / auditor | Enterprise Governance Lens examples (e.g. PII on API → Art. 6º incident-plan narrative) | Lab/licensed maps — [USAGE.md](../USAGE.md#governance-lens-enterprise) |
+Mapping where customer and payment fields live is an IF programme input. This repo does **not** pin that inventory duty to Art. 6º (USAGE maps Art. 6º to the **incident action plan**; the sample uses Art. 6 for **cryptographic** policy language and Arts. 6–8 for IR activation).
 
-### Art. 11 — annual report / notification duties
+| Intent | Data Boar capability (shipped) | Notes |
+| ------ | ------------------------------ | ----- |
+| Bootstrap systems in scope | **Scope import** (CSV → YAML `targets` fragment) + discovery on those targets | [SCOPE_IMPORT_QUICKSTART.md](../ops/SCOPE_IMPORT_QUICKSTART.md) |
+| Field types (Pix, accounts, card tokens, NSU-class) | BACEN sample regex / ML terms (`BACEN_CHAVE_PIX`, conta/agência, card-field names) | Heuristic; confirm with the IF data dictionary |
 
-Resolução **4.893** also drives **incident notification** (sample header: **4 business days** to BACEN) and an **annual cybersecurity policy** cycle. Data Boar **does not generate** the official BACEN annual filing or the incident notice.
+### Article map used in product docs and samples
 
-| Reference | Intent | Data Boar capability (shipped) | Notes |
-| --------- | ------ | ------------------------------ | ----- |
-| Art. 11 (annual / policy evidence) | Show you mapped and reviewed customer-data locations | Repeatable scans + reports + **`--export-audit-trail`** as **inputs** to the IF’s own report | Counsel / CISO owns the filing |
-| Art. 11 (incident clock) | Fast locate after an event | Same discovery + **`--diff`** as PCI 12.10 | Not a SOC ticketing system |
+| Reference (repo map) | Intent in shipped docs | Data Boar capability (shipped) | Notes |
+| -------------------- | ---------------------- | ------------------------------ | ----- |
+| Art. 4º | Cybersecurity policy (USAGE Enterprise example) | Findings on customer/payment fields; `LGPD_CPF` / `CREDIT_CARD` heuristics → policy narrative | [USAGE.md](../USAGE.md#governance-lens-enterprise) |
+| Art. 6º / Arts. 6–8 | Incident **action / response** plan (USAGE); sample also cites Art. 6 for **crypto** controls | Same discovery path during IR; Enterprise Lens example: PII on an API target → Art. 6º incident-plan language | Not a SOC ticketing system |
+| Art. 11 | **Relevant-incident notification** to BACEN within **4 business days** | Sample `norm_tag` `BACEN 4893 Art. 11 (notificação incidente)` + recommendation text; locate copies via scan + **`--diff`** | Data Boar **does not send** the BACEN notice |
+| Art. 16 | IT outsourcing / third-party cybersecurity clauses | Sample `BACEN 4893 Art. 16 (terceirização)` on vendor-related fields | Contract review stays with jurídico / CISO |
+
+The BACEN sample header also mentions an **annual security-policy review** as programme cadence. That is **not** Art. 11 in this repo (Art. 11 is notification-only). Data Boar can feed **repeatable scan evidence** into the IF’s own review; it **does not** generate an official BACEN annual filing.
 
 **Disclaimer:** Output is a **technical starting point**. It does **not** certify BACEN, LGPD, or FEBRABAN compliance.
 

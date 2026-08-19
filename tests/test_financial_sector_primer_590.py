@@ -32,6 +32,9 @@ def test_financial_sector_primer_registered_and_disclaims_qsa() -> None:
     )
     assert "complements, does not replace, a QSA assessment for PCI DSS" in text
     assert "(roadmap)" in text
+    assert "Relevant-incident notification" in text
+    assert "official BACEN annual filing" in text
+    assert "does **not** pin that inventory duty to Art. 6º" in text
     lines = text.splitlines()
     indexes = [_heading_line_index(lines, heading) for heading in _HEADINGS]
     assert indexes == sorted(indexes)
