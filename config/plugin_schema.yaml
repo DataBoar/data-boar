@@ -53,8 +53,9 @@ regex_patterns:
         - no_sharing
       description: >
         Optional EU Data Governance Act (Reg. 2022/868) *sharing posture hint* for this
-        pattern — author metadata only.  The detector still emits name / pattern /
-        norm_tag on findings; it does not decide lawful reuse or issue a DGA opinion.
+        pattern — author metadata only.  Findings still expose ``pattern_detected``
+        (rule ``name``) and ``norm_tag`` only; this key is not copied onto finding
+        rows and is not a DGA legal opinion.
         shareable = typically reusable externally after your legal review;
         restricted_sharing = typically needs anonymisation / minimisation first;
         no_sharing = typically must not leave the organisation (e.g. special-category PI).
