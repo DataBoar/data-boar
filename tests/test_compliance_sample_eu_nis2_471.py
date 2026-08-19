@@ -61,6 +61,37 @@ def test_nis2_critical_infra_still_art3(nis2_scanner):
     assert "Art. 3" in result["norm_tag"]
 
 
+def test_nis2_mfa_override_does_not_steal_access_control(nis2_scanner):
+    """Bugbot #1663: MFA pattern must not be a bidirectional substring of Art. 21 AC."""
+    cred = nis2_scanner.scan_column("admin_password", "")
+    assert "NIS2_NETWORK_CREDENTIAL" in cred["pattern_detected"]
+    assert cred["norm_tag"] == "NIS2 Art. 21 (access control)"
+    assert "MFA" not in cred["norm_tag"]
+
+    mfa = nis2_scanner.scan_column("mfa_secret", "")
+    assert "NIS2_MFA_FIELD" in mfa["pattern_detected"]
+    assert mfa["norm_tag"] == "NIS2 Art. 21 (MFA / continuous authentication)"
+
+
+def test_nis2_overrides_map_distinct_art21_rows():
+    data = yaml.safe_load(NIS2_SAMPLE.read_text(encoding="utf-8"))
+    overrides = data["recommendation_overrides"]
+    cred = _find_override_row(
+        "NIS2_NETWORK_CREDENTIAL",
+        "NIS2 Art. 21 (access control)",
+        overrides,
+    )
+    mfa = _find_override_row(
+        "NIS2_MFA_FIELD",
+        "NIS2 Art. 21 (MFA / continuous authentication)",
+        overrides,
+    )
+    assert cred is not None and mfa is not None
+    assert "Art. 21(2)(i)" in cred["Base legal"]
+    assert "Art. 21(2)(j)" in mfa["Base legal"]
+    assert cred["Base legal"] != mfa["Base legal"]
+
+
 def test_nis2_overrides_map_csirt_column_to_art23_text():
     data = yaml.safe_load(NIS2_SAMPLE.read_text(encoding="utf-8"))
     overrides = data["recommendation_overrides"]

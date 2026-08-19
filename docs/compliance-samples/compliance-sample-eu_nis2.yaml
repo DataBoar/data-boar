@@ -19,7 +19,9 @@
 # NOTE — recommendation_overrides use distinctive Art. N (role) patterns.
 # Do not add a bare "NIS2" catch-all: _find_override_row is bidirectional
 # substring match and would steal every NIS2 row (and any future tag).
-# Keep "NIS2 Art. 21 (access control — MFA)" before "NIS2 Art. 21 (access control)".
+# MFA tag must not contain "access control": _find_override_row is bidirectional
+# substring match, so "NIS2 Art. 21 (access control)" would steal MFA rows (and
+# vice versa) if one tag were a prefix of the other.
 #
 # How to use:
 #   regex_overrides_file: path/to/compliance-sample-eu_nis2.yaml
@@ -51,7 +53,7 @@ regex:
 
   - name: "NIS2_MFA_FIELD"
     pattern: "(?i)\\b(mfa[_\\s]?secret|totp[_\\s]?seed|authenticator[_\\s]?key|otp[_\\s]?secret|2fa[_\\s]?token|multi[_\\s]?factor[_\\s]?seed)\\b"
-    norm_tag: "NIS2 Art. 21 (access control — MFA)"
+    norm_tag: "NIS2 Art. 21 (MFA / continuous authentication)"
 
   - name: "NIS2_ENCRYPTION_KEY_FIELD"
     pattern: "(?i)\\b(encryption[_\\s]?key|private[_\\s]?key|secret[_\\s]?key|signing[_\\s]?key|api[_\\s]?secret|client[_\\s]?secret)\\b"
@@ -130,7 +132,7 @@ recommendation_overrides:
     priority: "ALTA"
     relevant_for: "CISO, DPO, legal, incident response team, competent authority liaison"
 
-  - norm_tag_pattern: "NIS2 Art. 21 (access control — MFA)"
+  - norm_tag_pattern: "NIS2 Art. 21 (MFA / continuous authentication)"
     base_legal: "EU NIS2 Directive 2022/2555 Art. 21(2)(j) — multi-factor authentication and continuous authentication solutions required for essential/important entities. Transposition deadline: 17/10/2024; application depends on national transposition."
     risk: "MFA seed, TOTP key, or authenticator secret found in data store. These should never be stored in plaintext databases or scanned filesystems — they are equivalent to credentials."
     recommendation: "Immediately review storage of MFA secrets. Use dedicated secrets management (HSM, vault). Rotate any exposed secrets. NIS2 Art. 21 requires MFA for privileged access. Consult CISO and security team."
