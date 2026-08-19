@@ -44,7 +44,9 @@ O ponto de entrada é `main.py`.
 | `--export-dsar`         | `SESSION_ID`         | Exporta achados de uma sessão em JSON orientado a DSAR (metadados primeiro; enquadramento LGPD Art. 18 / GDPR Art. 15). Imprime em **stdout** ou use `--dsar-output PATH`. Sessão inexistente ou vazia → `findings_by_source` vazio, sai **0**. Incompatível com `--web`, `--reset-data`, `--export-audit-trail`, `--validate-config` e `--diff`. |
 | `--dsar-output`         | `PATH`               | Grava o JSON DSAR em `PATH` em vez de stdout. Exige `--export-dsar`. |
 | `--dsar-include-samples`| *(flag)*             | Com `--export-dsar`: inclui campos de amostra bruta nas linhas de achado quando existirem (SQLite guarda só metadados por padrão). |
-| `--regenerate-report`   | `SESSION_ID`         | Regenera planilha Excel + heatmap PNG de uma sessão existente a partir do SQLite (também grava `learned_patterns` quando habilitado). Sem re-varredura, sem `--web`. Sessão inexistente → sai **2**. Incompatível com `--web`, `--reset-data`, `--export-audit-trail`, `--validate-config`, `--diff` e `--export-dsar`. |
+| `--regenerate-report`   | `SESSION_ID`         | Regenera planilha Excel + heatmap PNG de uma sessão existente a partir do SQLite (também grava `learned_patterns` quando habilitado). Sem re-varredura, sem `--web`. Sessão inexistente → sai **2**. Incompatível com `--web`, `--reset-data`, `--export-audit-trail`, `--validate-config`, `--diff`, `--export-dsar` e `--governance-report`. |
+| `--governance-report`   | `[PATH]`             | Grava relatório GRC em Markdown do Governance Lens a partir do SQLite (pronto para pandoc). `PATH` opcional; padrão em `report.output_dir`. Use `--session` para escolher a sessão; caso contrário usa a mais recente. Exige `governance.enabled: true` e tier Pro+. Imprime o caminho no stdout. Sem re-varredura. Incompatível com `--web` e outros modos de export (sai **2**). |
+| `--session`             | `SESSION_ID`         | UUID da sessão para exports por sessão. Obrigatório com `--export-remediation-manifest`; opcional com `--governance-report`. |
 | `--reset-data`          | *(flag)*             | Operação de manutenção perigosa: apaga todas as sessões/achados/falhas do SQLite, remove relatórios/heatmaps em `report.output_dir` e registra o wipe na tabela `data_wipe_log`. Não inicia varredura.                                                                                   |
 | `--export-audit-trail`  | *(caminho opcional)* | Exporta Rastro de Auditoria (Audit Trail) em JSON a partir do SQLite (`data_wipe_log`, resumo de sessões, `dashboard_transport`, **`trust_state`** / **`trust_reasons`** / **`output_confidence`** canônicos, **`enterprise_surface`**, **`maturity_assessment_integrity`** quando houver linhas do POC de maturity — mesmos totais que **`GET /status`**). Sem caminho ou com `-` → **stdout**; caso contrário grava no arquivo. **Não** altera o banco. Incompatível com `--web` e `--reset-data`.                             |
 | `--tenant`              | *(vazio)*            | Nome do cliente/tenant na execução CLI; gravado na sessão e exibido em dashboard/relatórios.                                                                                                                                                                                             |
@@ -430,6 +432,49 @@ O `data-boar-report` lê **apenas** o artefato **SQLite local** da varredura (`s
 **Estrutura (contrato “mesa” do PoC):** o Markdown segue hierarquia clara (**H1–H4**): status, achados por sensibilidade, **`## 3. Metodologia e segurança`** (amostragem, timeouts, comentário de rastreio, **`WITH (NOLOCK)`** no SQL Server quando esse motor aparece na sessão, mais bullets SRE/DBA do manifesto), depois **`## 4. Plano de ação (APG)`** com **Top 3** e **inventário completo por padrão** (achado → risco → recomendação técnica).
 
 **Ver também:** [REPORTS_AND_COMPLIANCE_OUTPUTS.pt_BR.md](REPORTS_AND_COMPLIANCE_OUTPUTS.pt_BR.md) (mapa de saídas).
+
+## Governance Lens (Pro) {#governance-lens-pro}
+
+Feature **Pro / Enterprise**: mapeia achados técnicos para narrativas de **gap de controle GRC** (COBIT 2019, ISO/IEC 27001, ISO/IEC 27014, ISO/IEC 38500, ITIL 4) e gera a aba **Governance View** no Excel mais um relatório **Markdown pronto para pandoc**.
+
+**Licenciamento:** exige licença **Pro** (`governance_lens_pro`). O mapa curado de produção **`governance_framework_map_pro.yaml` não é distribuído no pacote Open Core** — licenciados recebem em termos comerciais. O OSS inclui **`config/governance_framework_map_pro.example.yaml`** para lab e testes (`governance.map_file`).
+
+**Aviso:** a saída apoia inventário técnico e narrativa GRC; **não** constitui auditoria certificada nem parecer jurídico.
+
+### Config mínima
+
+```yaml
+governance:
+  enabled: true
+  tier: pro
+  map_file: config/governance_framework_map_pro.example.yaml   # lab; use mapa licenciado em produção
+```
+
+Defina `licensing.effective_tier: pro` em lab ou sua licença em produção. Ver [LICENSING_SPEC.md](LICENSING_SPEC.md).
+
+### Gerar Markdown (CLI)
+
+```bash
+python main.py --config config.yaml --governance-report ./relatorio_grc.md
+```
+
+Sessão opcional:
+
+```bash
+python main.py --config config.yaml --session <session_id> --governance-report ./relatorio_grc.md
+```
+
+Imprime o caminho gravado no **stdout**. Usa dados existentes no SQLite — **sem nova varredura**. Incompatível com `--web` (sai **2**).
+
+### Exportar DOCX (pandoc, instalado pelo operador)
+
+```bash
+pandoc relatorio_grc.md --defaults config/pandoc_governance.yaml -o relatorio_grc.docx
+```
+
+PDF (opcional): `pandoc relatorio_grc.md --defaults config/pandoc_governance.yaml -o relatorio_grc.pdf --to=pdf -V pdf-engine=lualatex`
+
+**Passo a passo:** [ops/GOVERNANCE_LENS_QUICKSTART.pt_BR.md](ops/GOVERNANCE_LENS_QUICKSTART.pt_BR.md) ([EN](ops/GOVERNANCE_LENS_QUICKSTART.md)). **Arquitetura:** [TECH_GUIDE.pt_BR.md](TECH_GUIDE.pt_BR.md#governance-lens-architecture).
 
 ---
 
