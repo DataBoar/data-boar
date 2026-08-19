@@ -156,8 +156,12 @@ def render_template(
         f'maintainer="Data Boar maintainers <contact@databoar.com.br>"\n'
         f'license="AGPL-3.0-or-later"\n'
         f'homepage="https://github.com/DataBoar/data-boar"\n'
-        f'depends="{depends}"\n'
+        f'depends="{depends} runit"\n'
         f'subpackages="{subpackages_line}"\n'
+        f'system_accounts="databoar"\n'
+        f'databoar_homedir="/var/lib/databoar"\n'
+        f'databoar_descr="Data Boar dashboard"\n'
+        f'make_dirs="/var/lib/databoar 0750 databoar databoar"\n'
         f"\n"
         f"do_install() {{\n"
         f'\tif [ ! -x "${{FILESDIR}}/staging{python_bin}" ]; then\n'

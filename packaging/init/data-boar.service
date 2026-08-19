@@ -7,6 +7,8 @@ Wants=network-online.target
 
 [Service]
 Type=simple
+DynamicUser=yes
+StateDirectory=data-boar
 Environment=DISABLE_SQLALCHEMY_CEXT=1
 Environment=CONFIG_PATH=/etc/data-boar/config.yaml
 ExecStart=/usr/lib/data-boar/python3.14t/bin/python3.14t -m data_boar --web

@@ -15,8 +15,12 @@ short_desc="Sensitive-data discovery (native Enterprise channel)"
 maintainer="Data Boar maintainers <contact@databoar.com.br>"
 license="AGPL-3.0-or-later"
 homepage="https://github.com/DataBoar/data-boar"
-depends="openssl zlib libffi tesseract-ocr"
+depends="openssl zlib libffi tesseract-ocr runit"
 subpackages="data-boar-compressed data-boar-dataformats data-boar-mssql data-boar-nosql data-boar-richmedia data-boar-shares"
+system_accounts="databoar"
+databoar_homedir="/var/lib/databoar"
+databoar_descr="Data Boar dashboard"
+make_dirs="/var/lib/databoar 0750 databoar databoar"
 
 do_install() {
 	if [ ! -x "${FILESDIR}/staging/usr/lib/data-boar/python3.14t/bin/python3.14t" ]; then

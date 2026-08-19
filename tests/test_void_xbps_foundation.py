@@ -75,6 +75,7 @@ def test_core_has_no_depends_python3_and_void_layer2() -> None:
     assert "p7zip" not in lowered
     for dep in VOID_LAYER2_DEPENDS:
         assert dep in depends_line
+    assert "runit" in depends_line
 
 
 def test_commercial_notice_and_embed_prefix() -> None:
@@ -105,9 +106,10 @@ def test_runit_and_void_paths_never_call_systemctl() -> None:
     """Void is the init-coupling canary — overlay + product launcher stay init-neutral."""
     run_text = runit_run_source().read_text(encoding="utf-8")
     assert (
-        "exec /usr/lib/data-boar/python3.14t/bin/python3.14t -m data_boar --web"
-        in run_text
+        "exec chpst -u databoar:databoar "
+        "/usr/lib/data-boar/python3.14t/bin/python3.14t -m data_boar --web" in run_text
     )
+    assert "chpst -u databoar" in run_text
     assert "DISABLE_SQLALCHEMY_CEXT" in run_text
     assert "systemctl" not in run_text
     generated_run = (
@@ -119,6 +121,13 @@ def test_runit_and_void_paths_never_call_systemctl() -> None:
     )
     assert "systemctl" not in template
     assert "vsv data-boar" in template
+    assert 'system_accounts="databoar"' in template
+    assert "runit" in template
+    unit = (REPO / "packaging" / "init" / "data-boar.service").read_text(
+        encoding="utf-8"
+    )
+    assert "DynamicUser=yes" in unit
+    assert "User=root" not in unit
     product_roots = (REPO / "data_boar", REPO / "main.py")
     for path in product_roots:
         if path.is_file():

@@ -15,7 +15,7 @@ sudo xbps-install --repository=hostdir/binpkgs data-boar
 sudo ln -s /etc/sv/data-boar /var/service/data-boar
 ```
 
-O serviço é **runit** (`/etc/sv/data-boar/run`). Ele executa o `cp314t` embutido com `--web`. O produto **não** chama `systemctl`. Um unit systemd opcional fica em `packaging/init/data-boar.service` para outros empacotadores e **não** é obrigatório.
+O serviço é **runit** (`/etc/sv/data-boar/run`). Ele executa o `cp314t` embutido com `--web` via **`chpst -u databoar`** (`system_accounts` no xbps, não root). O produto **não** chama `systemctl`. Um unit systemd opcional fica em `packaging/init/data-boar.service` (`DynamicUser=yes`) para outros empacotadores e **não** é obrigatório.
 
 Pacotes de distro da camada 2: `openssl zlib libffi tesseract-ocr`. Sem `Depends: python3`.
 
