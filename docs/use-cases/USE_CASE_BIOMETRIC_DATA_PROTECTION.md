@@ -40,8 +40,8 @@ flowchart TD
 1. **Discovery** — scan configured databases, filesystems, and API exports for biometric-related patterns and adjacent identifiers.
 1. **Mapping** — findings name exact table/column/file paths for remediation planning.
 1. **Classification** — flag sensitive-category context for LGPD/GDPR workshops (detector + policy labels as shipped).
-1. **Remediation** — Enterprise plugin applies field encryption, vaultless tokenization, or access removal per [USE_CASE_SCAN_AND_REMEDIATE.md](USE_CASE_SCAN_AND_REMEDIATE.md).
-1. **Evidence** — immutable audit trail supports before/after demonstrations to DPO and auditors.
+1. **Remediation** — Enterprise plugin (**coming**) applies field encryption, **vaultless tokenization**, or access removal per [USE_CASE_SCAN_AND_REMEDIATE.md](USE_CASE_SCAN_AND_REMEDIATE.md) ([pt-BR](USE_CASE_SCAN_AND_REMEDIATE.pt_BR.md)). For stored biometric templates, vaultless tokenization is a strong **at-rest** fit: the stored representation is protected, and **key rotation** (where the plugin supports it) stands in for credential rotation — which the data subject cannot perform. A generic token is **not** a live biometric: matching still needs a designed control. Data Boar does not ship a matcher or a biometric algorithm.
+1. **Evidence** — audit trail (as configured) supports before/after demonstrations to DPO and auditors; this use-case does **not** claim a WORM store.
 
 ---
 
@@ -56,9 +56,26 @@ flowchart TD
 
 ---
 
+## Why vaultless tokenization matters for non-resettable data
+
+Passwords can be reset. Biometrics cannot.
+
+When a stored biometric template is compromised, the data subject has no self-service remediation path — the exposure is lasting. That makes **preventive protection of stored copies** before a breach the defensible workshop posture; discovery alone does not harden the store.
+
+Vaultless tokenization, as a **method** applied at the stored-template level (Enterprise plugin, **coming**):
+
+- Protects the representation without a **vault lookup table** (no second token database as a second breach target).
+- Can keep **field shape** for inventory, exports, and adjacent identifiers; **matching** is not automatic — a generic token is not a fingerprint.
+- Allows **key rotation** where the plugin design supports it — rotating keys can invalidate previously issued tokens without re-collecting biometrics from subjects.
+- Can produce an **audit trail** of when protection was applied, by which plugin, and confirmed by re-scan — not a WORM store unless the deployment adds one.
+
+This is workshop language for **sensitive-category** processing under **LGPD Art. 11** and **GDPR Art. 9**, plus **technical evidence** that a safeguard was applied — not only that templates were discovered. Counsel maps security-measure duties (often **LGPD Art. 46** / **GDPR Art. 32**, or GDPR Art. 9 “appropriate safeguards” where that exception applies).
+
+---
+
 ## Partner and sales angle
 
-Lead with **“you cannot rotate a fingerprint”** — discovery is the first defensible step before buying more cameras or clocks. Pair with [README.md](README.md) sector storyboards (health, HR, government) for workshop narrative.
+Lead with **“you cannot rotate a fingerprint”** — discovery is the first defensible step before buying more cameras or clocks. Pair with [README.md](README.md) sector storyboards (health, HR, government) for workshop narrative. See **Why vaultless tokenization matters for non-resettable data** above for the LGPD Art. 11 / GDPR Art. 9 technical argument — it translates into procurement language for HR tech, healthcare, and financial services buyers.
 
 ---
 
