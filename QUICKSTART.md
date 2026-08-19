@@ -1,61 +1,63 @@
-# Data Boar — início rápido (cerca de 5 minutos)
+# Data Boar — Quick start (about 5 minutes)
 
-**Público:** DPO, jurídico, compliance ou patrocinador de TI que quer **ver um resultado** antes de ler o manual completo.
+**Português (Brasil):** [QUICKSTART.pt_BR.md](QUICKSTART.pt_BR.md)
 
-**Aprofundar depois:** [docs/USAGE.md](docs/USAGE.md) (operador) · [docs/TECH_GUIDE.md](docs/TECH_GUIDE.md) (integrador) · [docs/pitch/INDEX.pt_BR.md](docs/pitch/INDEX.pt_BR.md) (narrativa por papel)
+**Audience:** DPO, legal, compliance, or an IT sponsor who wants to **see a result** before reading the full manual.
 
----
-
-## O que você vai conseguir
-
-Ao final deste roteiro você terá:
-
-1. O motor rodando (Docker **ou** Python local).
-2. Uma varredura de demonstração em pasta de teste do repositório.
-3. O **dashBOARd** no navegador com achados e mapa de calor.
-
-O Data Boar **não substitui** assessoria jurídica; produz **sinais técnicos** para triagem.
+**Go deeper later:** [docs/USAGE.md](docs/USAGE.md) (operator) · [docs/TECH_GUIDE.md](docs/TECH_GUIDE.md) (integrator) · [docs/pitch/INDEX.md](docs/pitch/INDEX.md) (narrative by role)
 
 ---
 
-## Pré-requisitos (mínimo)
+## What you will have
 
-| Caminho | Você precisa de |
-| ------- | ---------------- |
-| **A — Docker (recomendado com TI)** | [Docker Desktop](https://www.docker.com/products/docker-desktop/) instalado e em execução |
-| **B — Python local (TI no mesmo PC)** | [uv](https://docs.astral.sh/uv/) + Git; Python **3.12+** (o `uv sync` resolve o restante) |
+At the end of this walkthrough you will have:
 
-**Sem YAML do zero:** copie um [config de amostra](deploy/samples/config.starter-lgpd-eval.yaml) **ou** gere alvos a partir de planilha — [docs/ops/SCOPE_IMPORT_QUICKSTART.pt_BR.md](docs/ops/SCOPE_IMPORT_QUICKSTART.pt_BR.md).
+1. The engine running (Docker **or** local Python).
+2. A demo scan against a test folder in the repository.
+3. **dashBOARd** in the browser with findings and a heatmap.
+
+Data Boar **does not replace** legal advice; it produces **technical signals** for triage.
 
 ---
 
-## Caminho 0 — Zero-config (`pip` / `pipx` + `--demo`)
+## Prerequisites (minimum)
 
-> **Windows e nunca usou terminal/Python?** Use o guia completo **sem Docker** (passo a passo): **[docs/QUICKSTART_WINDOWS.md](docs/QUICKSTART_WINDOWS.md)**.
+| Path | You need |
+| ---- | -------- |
+| **A — Docker (recommended with IT)** | [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running |
+| **B — Local Python (IT on the same PC)** | [uv](https://docs.astral.sh/uv/) + Git; Python **3.12+** (`uv sync` resolves the rest) |
 
-Sem `config.yaml`, sem Docker, sem YAML — corpus **sintético** embutido (atalho para quem já tem Python no PATH):
+**No YAML from scratch:** copy a [sample config](deploy/samples/config.starter-lgpd-eval.yaml) **or** generate targets from a spreadsheet — [docs/ops/SCOPE_IMPORT_QUICKSTART.md](docs/ops/SCOPE_IMPORT_QUICKSTART.md).
+
+---
+
+## Path 0 — Zero-config (`pip` / `pipx` + `--demo`)
+
+> **Windows and never used a terminal/Python?** Use the full **no-Docker** walkthrough (step by step): **[docs/QUICKSTART_WINDOWS.md](docs/QUICKSTART_WINDOWS.md)** (written in pt-BR).
+
+No `config.yaml`, no Docker, no YAML — built-in **synthetic** corpus (shortcut if Python is already on PATH):
 
 ```powershell
 pip install data-boar
 data-boar --demo
 ```
 
-No Windows, o fluxo **recomendado** para não-técnicos é **pipx** — veja o [guia Windows](docs/QUICKSTART_WINDOWS.md).
+On Windows, the **recommended** flow for non-technical users is **pipx** — see the [Windows guide](docs/QUICKSTART_WINDOWS.md).
 
-**Linux via pipx:** em Debian/Ubuntu e Fedora com Python >=3.12 disponível, `pipx install data-boar` costuma ser direto. Na família RHEL9 e em Alpine/musl há 1 pré-passo de onboarding — veja [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) antes do `pipx install`.
+**Linux via pipx:** on Debian/Ubuntu and Fedora with Python >=3.12 available, `pipx install data-boar` is usually direct. On the RHEL9 family and Alpine/musl there is one onboarding pre-step — see [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) before `pipx install`.
 
-Abra [http://127.0.0.1:8088/pt-br/](http://127.0.0.1:8088/pt-br/) — achados de demonstração já carregados.
+Open [http://127.0.0.1:8088/en/](http://127.0.0.1:8088/en/) — demo findings already loaded (or `/pt-br/`).
 
-**No clone (desenvolvimento):** `uv sync` na raiz, depois `uv run python main.py --demo` ou `.\scripts\demo.sh`.
+**In the clone (development):** `uv sync` at the repo root, then `uv run python main.py --demo` or `.\scripts\demo.sh`.
 
 ---
 
-## Caminho A — Docker (menos fricção para não desenvolvedores)
+## Path A — Docker (less friction for non-developers)
 
-Execute na **raiz do clone** (ajuste o caminho do repositório):
+Run from the **clone root** (adjust the repository path):
 
 ```powershell
-cd C:\caminho\para\data-boar
+cd C:\path\to\data-boar
 mkdir -Force data | Out-Null
 Copy-Item deploy\samples\config.starter-lgpd-eval.yaml data\config.yaml
 docker pull fabioleitao/data_boar:latest
@@ -69,7 +71,7 @@ docker run -d --name data-boar-quickstart -p 8088:8088 `
 <summary>Linux / macOS (bash)</summary>
 
 ```bash
-cd /caminho/para/data-boar
+cd /path/to/data-boar
 mkdir -p data
 cp deploy/samples/config.starter-lgpd-eval.yaml data/config.yaml
 docker pull fabioleitao/data_boar:latest
@@ -81,24 +83,24 @@ docker run -d --name data-boar-quickstart -p 8088:8088 \
 
 </details>
 
-1. Peça à TI para ajustar os caminhos em `data\config.yaml` (pastas reais **ou** use o [Caminho B](#caminho-b--python-local-para-desenvolvedor--ti-técnico) com a pasta de demo).
-2. Abra no navegador: [http://localhost:8088/pt-br/](http://localhost:8088/pt-br/) (ou `/en/`).
-3. No dashBOARd, dispare uma varredura (botão de scan) ou siga a ajuda embutida em **Ajuda / Help**.
+1. Ask IT to adjust the paths in `data\config.yaml` (real folders **or** use [Path B](#path-b--local-python-for-developers--technical-it) with the demo folder).
+2. Open in the browser: [http://localhost:8088/en/](http://localhost:8088/en/) (or `/pt-br/`).
+3. In dashBOARd, start a scan (scan button) or follow the built-in help under **Help / Ajuda**.
 
-Detalhes de volume e persistência: [docs/DOCKER_SETUP.pt_BR.md](docs/DOCKER_SETUP.pt_BR.md).
+Volume and persistence details: [docs/DOCKER_SETUP.md](docs/DOCKER_SETUP.md).
 
 ---
 
-## Caminho B — Python local (para desenvolvedor / TI técnico)
+## Path B — Local Python (for developers / technical IT)
 
-Ideal para validar o produto **sem** expor dados reais: usamos a pasta sintética `tests/data/homelab_synthetic/`.
+Best for validating the product **without** exposing real data: we use the synthetic folder `tests/data/homelab_synthetic/`.
 
 ```powershell
-cd C:\caminho\para\data-boar
+cd C:\path\to\data-boar
 uv sync
 ```
 
-Crie `quickstart.config.yaml` na raiz do clone com:
+Create `quickstart.config.yaml` at the clone root with:
 
 ```yaml
 targets:
@@ -108,30 +110,30 @@ targets:
     recursive: true
 ```
 
-Suba o dashBOARd e aceite HTTP explícito em laboratório (não use em produção sem TLS):
+Start dashBOARd and accept explicit HTTP in the lab (do not use in production without TLS):
 
 ```powershell
 uv run python main.py --web --config quickstart.config.yaml --allow-insecure-http
 ```
 
-1. Abra [http://127.0.0.1:8088/pt-br/](http://127.0.0.1:8088/pt-br/).
-2. Inicie uma varredura pela interface.
-3. Confira o relatório Excel / heatmap na pasta de saída configurada (padrão relativo ao config — ver [docs/USAGE.md](docs/USAGE.md)).
+1. Open [http://127.0.0.1:8088/en/](http://127.0.0.1:8088/en/).
+2. Start a scan from the UI.
+3. Check the Excel report / heatmap in the configured output folder (default is relative to the config — see [docs/USAGE.md](docs/USAGE.md)).
 
-**Sucesso:** aparecem achados de exemplo (padrões de documento fictícios). Se a lista estiver vazia, confira se `path` aponta para a pasta correta e se a varredura terminou sem erro no log do terminal.
-
----
-
-## Próximos passos (5–30 minutos)
-
-| Objetivo | Onde ir |
-| -------- | ------- |
-| Escopo real (pastas, bancos, shares) | [deploy/samples/README.pt_BR.md](deploy/samples/README.pt_BR.md) + import CSV em [docs/ops/SCOPE_IMPORT_QUICKSTART.pt_BR.md](docs/ops/SCOPE_IMPORT_QUICKSTART.pt_BR.md) |
-| Mapa “quem lê o quê” | [docs/AUDIENCE_GUIDE.pt_BR.md](docs/AUDIENCE_GUIDE.pt_BR.md) |
-| Marco regulatório (LGPD, GDPR, amostras) | [docs/COMPLIANCE_FRAMEWORKS.pt_BR.md](docs/COMPLIANCE_FRAMEWORKS.pt_BR.md) |
-| Referência completa de flags e API | [docs/USAGE.md](docs/USAGE.md) |
-| Arquitetura e conectores | [docs/TECH_GUIDE.md](docs/TECH_GUIDE.md) |
+**Success:** sample findings appear (fictional document patterns). If the list is empty, confirm that `path` points to the correct folder and that the scan finished without an error in the terminal log.
 
 ---
 
-**Mantenedores:** gate de integridade em [CONTRIBUTING.md](CONTRIBUTING.md).
+## Next steps (5–30 minutes)
+
+| Goal | Where to go |
+| ---- | ----------- |
+| Real scope (folders, databases, shares) | [deploy/samples/README.md](deploy/samples/README.md) + CSV import in [docs/ops/SCOPE_IMPORT_QUICKSTART.md](docs/ops/SCOPE_IMPORT_QUICKSTART.md) |
+| Map of “who reads what” | [docs/AUDIENCE_GUIDE.md](docs/AUDIENCE_GUIDE.md) |
+| Regulatory frame (LGPD, GDPR, samples) | [docs/COMPLIANCE_FRAMEWORKS.md](docs/COMPLIANCE_FRAMEWORKS.md) |
+| Full flag and API reference | [docs/USAGE.md](docs/USAGE.md) |
+| Architecture and connectors | [docs/TECH_GUIDE.md](docs/TECH_GUIDE.md) |
+
+---
+
+**Maintainers:** integrity gate in [CONTRIBUTING.md](CONTRIBUTING.md).

@@ -4,7 +4,7 @@
 
 Fonte da verdade enxuta para humanos e agentes de código. Prefira **links** a repetir guias longos. Não é texto de marketing.
 
-**Relacionado:** [QUICKSTART.md](../QUICKSTART.md) · [USAGE.pt_BR.md](USAGE.pt_BR.md) · site [windows.html](https://databoar.com.br/windows.html) · issue [#1470](https://github.com/DataBoar/data-boar/issues/1470) · guard `tests/test_canonical_product_facts.py`
+**Relacionado:** [QUICKSTART.pt_BR.md](../QUICKSTART.pt_BR.md) · [USAGE.pt_BR.md](USAGE.pt_BR.md) · site [windows.html](https://databoar.com.br/windows.html) · issue [#1470](https://github.com/DataBoar/data-boar/issues/1470) · guard `tests/test_canonical_product_facts.py`
 
 ---
 
@@ -31,7 +31,7 @@ Fonte da verdade enxuta para humanos e agentes de código. Prefira **links** a r
 3. Execute: `data-boar`.
 4. Primeiro contato seguro (demo sintética, sem dados reais): `data-boar --demo`.
 5. **Docker é opcional** — caminho avançado / TI. **Não é obrigatório** no caminho nativo Windows. Não apresente Docker como único caminho ou padrão para quem não é de TI.
-6. Aprofunde no repo depois do demo: [QUICKSTART.md](../QUICKSTART.md) → [USAGE.pt_BR.md](USAGE.pt_BR.md). Narrativa de negócio fica no **site**; este repo fica no **como rodar**.
+6. Aprofunde no repo depois do demo: [QUICKSTART.pt_BR.md](../QUICKSTART.pt_BR.md) → [USAGE.pt_BR.md](USAGE.pt_BR.md). Narrativa de negócio fica no **site**; este repo fica no **como rodar**.
 
 ---
 
@@ -61,7 +61,7 @@ Fonte da verdade enxuta para humanos e agentes de código. Prefira **links** a r
 ## 5. Para agentes — não invente
 
 1. Leia **este arquivo** antes de afirmar instalação, CLI, chaves de config ou URLs de identidade.
-2. Prefira links para [windows.html](https://databoar.com.br/windows.html), [QUICKSTART.md](../QUICKSTART.md) e [USAGE.pt_BR.md](USAGE.pt_BR.md) a nomes inventados de YAML ou CLI.
+2. Prefira links para [windows.html](https://databoar.com.br/windows.html), [QUICKSTART.pt_BR.md](../QUICKSTART.pt_BR.md) e [USAGE.pt_BR.md](USAGE.pt_BR.md) a nomes inventados de YAML ou CLI.
 3. Nunca invente certificações, resultados jurídicos ou cobertura “universal” de descoberta.
 4. Se não souber → diga **desconhecido**; não preencha lacunas com ficção plausível.
 5. Mantenha **`fabioleitao/data_boar`** rotulado como **imagem Docker Hub**, nunca como repositório GitHub.

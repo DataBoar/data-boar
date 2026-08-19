@@ -8,7 +8,7 @@
 
 **LGPD — relato-testemunho (visita de campo, Brasil):** [Português (Brasil)](docs/LGPD_WITNESS_REPORT_NIO_FIELD_VISIT_2026.pt_BR.md) · [English](docs/LGPD_WITNESS_REPORT_NIO_FIELD_VISIT_2026.md)
 
-**English:** [README.md](README.md) · [docs/USAGE.md](docs/USAGE.md) · **5 min (pt-BR):** [QUICKSTART.md](QUICKSTART.md)
+**English:** [README.md](README.md) · [docs/USAGE.md](docs/USAGE.md) · **5 min:** [QUICKSTART.pt_BR.md](QUICKSTART.pt_BR.md) ([EN](QUICKSTART.md))
 
 **Não é de TI e está no Windows?** → **[Guia Windows sem Docker](docs/QUICKSTART_WINDOWS.md)** (passo a passo, pipx + `--demo`).
 
@@ -84,7 +84,7 @@ Se você precisa de:
 - **Testes, segurança, contribuição:** [docs/TESTING.pt_BR.md](docs/TESTING.pt_BR.md) · [SECURITY.pt_BR.md](SECURITY.pt_BR.md) · [CONTRIBUTING.pt_BR.md](CONTRIBUTING.pt_BR.md)
 - **pip via PyPI:** **`pip install data-boar`** quando publicado; até lá **git clone** + **`uv sync`** — veja [CONTRIBUTING.pt_BR.md — Repositório e identidade](CONTRIBUTING.pt_BR.md#repositório-e-identidade-de-instalação-data-boar). Em Debian/Ubuntu e Fedora com Python >=3.12, `pip`/`pipx` costuma ser sem atrito; em RHEL9-family e Alpine/musl há 1 passo extra de onboarding — veja [TROUBLESHOOTING.pt_BR.md](docs/TROUBLESHOOTING.pt_BR.md).
 
-**Início rápido:** o [QuickStart de 5 min](QUICKSTART.md) cobre os dois caminhos (Docker ou `uv` local, copia-e-cola); a referência completa de flags e configuração está em [USAGE.pt_BR.md](docs/USAGE.pt_BR.md). Para ressalvas por distro Linux (incluindo os pré-passos atuais de onboarding `pipx` em RHEL9-family e Alpine/musl), veja [TROUBLESHOOTING.pt_BR.md](docs/TROUBLESHOOTING.pt_BR.md) e a [matriz de compatibilidade de SO](docs/ops/OS_COMPATIBILITY_TESTING_MATRIX.pt_BR.md). Em **Linux nativo (sem Docker)**, instale as bibliotecas de sistema **antes** de `uv sync` — veja [Guia técnico — Requisitos e preparação do ambiente](docs/TECH_GUIDE.pt_BR.md#requisitos-e-preparação-do-ambiente). **Não commite** o `config.yaml` da raiz (`.gitignore`); pode conter caminhos da LAN e segredos — veja a seção **Higiene do repositório público** em [CONTRIBUTING.pt_BR.md](CONTRIBUTING.pt_BR.md).
+**Início rápido:** o [QuickStart de 5 min](QUICKSTART.pt_BR.md) cobre os dois caminhos (Docker ou `uv` local, copia-e-cola); a referência completa de flags e configuração está em [USAGE.pt_BR.md](docs/USAGE.pt_BR.md). Para ressalvas por distro Linux (incluindo os pré-passos atuais de onboarding `pipx` em RHEL9-family e Alpine/musl), veja [TROUBLESHOOTING.pt_BR.md](docs/TROUBLESHOOTING.pt_BR.md) e a [matriz de compatibilidade de SO](docs/ops/OS_COMPATIBILITY_TESTING_MATRIX.pt_BR.md). Em **Linux nativo (sem Docker)**, instale as bibliotecas de sistema **antes** de `uv sync` — veja [Guia técnico — Requisitos e preparação do ambiente](docs/TECH_GUIDE.pt_BR.md#requisitos-e-preparação-do-ambiente). **Não commite** o `config.yaml` da raiz (`.gitignore`); pode conter caminhos da LAN e segredos — veja a seção **Higiene do repositório público** em [CONTRIBUTING.pt_BR.md](CONTRIBUTING.pt_BR.md).
 
 **Índice completo da documentação** (todos os tópicos e idiomas): [docs/README.md](docs/README.md) · [docs/README.pt_BR.md](docs/README.pt_BR.md).
 
