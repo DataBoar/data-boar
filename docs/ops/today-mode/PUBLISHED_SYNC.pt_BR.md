@@ -17,7 +17,7 @@
 | **PyPI** (publicado) | [**data-boar `1.7.4.post12`**](https://pypi.org/project/data-boar/1.7.4.post12/) — `pip install data-boar` (publicado **2026-07-30 00:42:09 UTC**, Trusted Publishing via **`publish-pypi.yml`**) |
 | **GitHub Release Latest** (publicado) | [**v1.7.4.post12**](https://github.com/DataBoar/data-boar/releases/tag/v1.7.4.post12) (notas: **`docs/releases/1.7.4.post12.md`**, **`CHANGELOG.md`**; tag anotada assinada por SSH). Tag opcional de pré-release **`v1.8.0-beta`** quando o operador cortar — ver [1.8.0-beta.md](../../releases/1.8.0-beta.md). |
 | **Docker Hub** (publicado) | **`fabioleitao/data_boar:1.7.4.post12`** + **`latest`** = `sha256:ab8f5dad3e336…` (publicado **2026-07-30**; base **`python:3.14-slim`**, distroless nonroot, **`popcnt=0`**). Tag histórica de junho **`1.7.4`** intocada. **Sem** refresh de marketing Hub só por **`-beta`**. |
-| **Wheelhouse** | [**`wheelhouse-x86-64-v1-2026-07-29`**](https://github.com/DataBoar/data-boar-site/releases/tag/wheelhouse-x86-64-v1-2026-07-29) — **56** assets (incl. **10× `cp314t`** free-threaded / no-GIL) |
+| **Wheelhouse** | [**`wheelhouse-x86-64-v1-2026-07-29`**](https://github.com/DataBoar/data-boar-site/releases/tag/wheelhouse-x86-64-v1-2026-07-29) — **58** `.whl` (incl. **14× `cp314t`**: 10 ML + 4 extras SQL `linux_x86_64`) |
 | **Próximo publicável** | Promover para **`1.8.0-rc`** / estável **`1.8.0`** conforme [VERSIONING.md](../VERSIONING.md) + ADR-0072/0073 (release gate + release-ritual) |
 
 ---

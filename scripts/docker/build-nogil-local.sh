@@ -9,10 +9,18 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$REPO_ROOT"
 
-TAG="${1:-1.7.4.post12-nogil}"
+APP_VERSION="$(python3 - <<'PY'
+import tomllib
+from pathlib import Path
+print(tomllib.load(Path("pyproject.toml").open("rb"))["project"]["version"])
+PY
+)"
+TAG="${1:-${APP_VERSION}-nogil}"
 IMAGE="localhost/data_boar:${TAG}"
 # Also tag short name used in AC examples.
 ALIAS="data_boar:${TAG}"
+# Smoke/version checks use pyproject semver (tag prefix may differ for Hub pairs).
+SMOKE_VERSION="${APP_VERSION}"
 
 need_() { command -v "$1" >/dev/null 2>&1 || { echo "FATAL: $1 not in PATH" >&2; exit 127; }; }
 need_ podman
@@ -62,8 +70,7 @@ print("filter_ok", sos[0].name)
 '
 
 echo "=== AC: docker-image-smoke (public version; no GIL RuntimeWarning) ==="
-VERSION="${TAG%-nogil}"
-SMOKE_OUT="$(./scripts/docker/docker-image-smoke.sh "${ALIAS}" "${VERSION}" 2>&1)" || {
+SMOKE_OUT="$(./scripts/docker/docker-image-smoke.sh "${ALIAS}" "${SMOKE_VERSION}" 2>&1)" || {
   echo "$SMOKE_OUT" >&2
   exit 1
 }
@@ -79,7 +86,7 @@ VER_OUT="$(podman run --rm "${ALIAS}" python main.py --version 2>&1)" || {
   exit 1
 }
 echo "$VER_OUT"
-grep -qw "${VERSION}" <<<"$VER_OUT" || { echo "FATAL: version token missing" >&2; exit 1; }
+grep -qw "${SMOKE_VERSION}" <<<"$VER_OUT" || { echo "FATAL: version token missing" >&2; exit 1; }
 if grep -qiE 'RuntimeWarning|GIL has been enabled' <<<"$VER_OUT"; then
   echo "FATAL: --version emitted GIL RuntimeWarning" >&2
   exit 1
@@ -115,5 +122,21 @@ fi
 
 echo "=== AC: grype gate ==="
 ./scripts/grype-image-gate.sh "${ALIAS}"
+
+echo "=== AC: optional GIL vs nogil demo timing (manifest duration_minutes) ==="
+if podman image exists "localhost/data_boar:1.7.4.post12" 2>/dev/null; then
+  if ./scripts/docker/compare-gil-nogil-demo-timing.sh "localhost/data_boar:1.7.4.post12" "${ALIAS}"; then
+    echo "  publish_gate: nogil demo faster than local GIL reference — operator may publish after review"
+  else
+    cmp_rc=$?
+    if [[ "${cmp_rc}" -eq 3 ]]; then
+      echo "WARN: nogil demo did NOT beat GIL on manifest timing — do NOT publish -nogil (#1398 AC)" >&2
+    else
+      echo "WARN: compare-gil-nogil-demo-timing failed (rc=${cmp_rc}) — skipped publish gate" >&2
+    fi
+  fi
+else
+  echo "  skip: no local GIL reference image localhost/data_boar:1.7.4.post12 (pull/build to run compare)"
+fi
 
 echo "=== OK local nogil image ${ALIAS} (NOT pushed) ==="

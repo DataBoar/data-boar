@@ -18,9 +18,19 @@ impl FastFilter {
     }
 
     /// Return only suspect indexes from the input batch.
-    /// Panic-free by design: regex matching does not unwrap dynamic state.
-    fn filter_batch(&self, batch: Vec<String>) -> PyResult<Vec<usize>> {
-        Ok(self.filter_batch_pure(&batch))
+    /// Releases the GIL during matching (#1398 / #551).
+    fn filter_batch(&self, py: Python<'_>, batch: Vec<String>) -> PyResult<Vec<usize>> {
+        let cpf_pattern = self.cpf_pattern.clone();
+        let email_pattern = self.email_pattern.clone();
+        let credit_card_pattern = self.credit_card_pattern.clone();
+        Ok(py.detach(move || {
+            let filter = FastFilter {
+                cpf_pattern,
+                email_pattern,
+                credit_card_pattern,
+            };
+            filter.filter_batch_pure(&batch)
+        }))
     }
 }
 
