@@ -38,7 +38,7 @@ Idiomas e encodings legados são suportados; **timeouts configuráveis** e **end
 
 **Cenários típicos:** Preparação para auditoria ou pedido do regulador; mapeamento de dados antes de migração ou implantação de DLP; conscientização de conformidade sem war room completo.
 
-> **Release atual e changelog:** [CHANGELOG.md](CHANGELOG.md) · notas completas em [docs/releases/](docs/releases/) · [Releases no GitHub](https://github.com/DataBoar/data-boar/releases). **Docker Hub:** [fabioleitao/data_boar](https://hub.docker.com/r/fabioleitao/data_boar) (`latest` + tags fixas).
+> **Versão atual e changelog:** [CHANGELOG.md](CHANGELOG.md) · notas completas em [docs/releases/](docs/releases/) · [Releases no GitHub](https://github.com/DataBoar/data-boar/releases). **Docker Hub:** [fabioleitao/data_boar](https://hub.docker.com/r/fabioleitao/data_boar) (`latest` + tags fixas).
 
 ---
 
