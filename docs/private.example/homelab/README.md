@@ -99,6 +99,8 @@ Tracked **placeholders** (copy structure into private `homelab/`, then fill with
 - **[OPERATOR_RETEACH.md](OPERATOR_RETEACH.md)** (English)
 - **[OPERATOR_RETEACH.pt_BR.md](OPERATOR_RETEACH.pt_BR.md)** (Brazilian Portuguese)
 
+**Residual lab-script pitfalls (private only):** copy **[KNOWN_BUGS.md](KNOWN_BUGS.md)** to **`docs/private/homelab/KNOWN_BUGS.md`** — privileged `$HOME` vs operator home and similar notes that must **not** be reproduced in public `AGENTS.md` (#384).
+
 Your private tree may keep **one** file (e.g. only pt-BR) or **both**; either way, follow **`.cursor/rules/docs-pt-br-locale.mdc`** for Portuguese prose. **`*.pt_BR.md`** under **`docs/private/`** is included in **`tests/test_docs_pt_br_locale.py`** when the folder exists (same idea as markdown lint). Store **`homelab-host-report`** output under **`reports/`** as **`<HOST>_<YYYYMMDD_HHMM>_homelab_host_report.log`** (see **[reports/README.md](reports/README.md)**; include **WSL** under a distinct **HOST** name) for merge into **`LAB_SOFTWARE_INVENTORY.md`**. From Windows: **`scripts/collect-homelab-report-remote.ps1`**. For **POST /scan** + poll **`/status`**, use **`scripts/poll_dashboard_scan.py`** (`--base` / `DATA_BOAR_BASE`), not a hardcoded host script.
 
 ## Validation log

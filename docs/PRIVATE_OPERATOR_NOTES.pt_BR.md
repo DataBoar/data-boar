@@ -28,6 +28,7 @@
 - **Compartilhar contexto:** manter **`WHAT_TO_SHARE_WITH_AGENT.md`** e **`homelab/`** atualizados. Para **exigir** só com `@`, usar **`.cursorignore`** em `docs/private/` — **não** é o **padrão** deste repo.
 - **`docs/private/homelab/OPERATOR_SYSTEM_MAP.md`** — mapa mestre: hardware + acessos + software + diagrama Mermaid (gitignored).
 - **`docs/private/homelab/OPERATOR_RETEACH.md`** — lacunas (B1–B6); **`read_file`** após o mapa (gitignored). **Modelos rastreados (sem fatos reais):** **`docs/private.example/homelab/OPERATOR_RETEACH.md`** + **`.pt_BR.md`** — copie a estrutura; português = **pt-BR** (regra **`docs-pt-br-locale`**).
+- **`docs/private/homelab/KNOWN_BUGS.md`** — resíduo de scripts de lab (ex. `$HOME` privilegiado vs home do operador). Fora do GitHub; sem hostnames, IPs de LAN ou paths reais de home em arquivos rastreados.
 - **Windows — disco `P:` (pCloud):** no mesmo PC do Cursor, o assistente pode listar/ler **`P:\...`** no terminal ou com caminhos absolutos se o cliente pCloud estiver montado; **não** commitar caminhos reais em **arquivos** rastreados.
 - **Lint Markdown privado (opcional):** `uv run pytest --include-private` e `fix_markdown_sonar.py --include-private` — [TESTING.md](TESTING.md).
 - **Documentação rastreada:** só papéis genéricos; **sem** links Markdown para caminhos dentro de `docs/private/`; **sem** IPs/hostnames reais em **arquivos** públicos; **sem** colar dumps **`last`/`lastlog`/`w`** em docs rastreados (mesmo critério de IP/usuário).
