@@ -1,0 +1,143 @@
+# Egypt — Personal Data Protection Law No. 151 of 2020 (PDPL)
+# Executive Regulations: Minister of Communications and IT Decree No. 816/2025
+# (issued 1 Nov 2025). One-year grace; full enforcement expected 31 Oct 2026.
+# Revalidate Centre licensing-portal status before treating tags as "licensed".
+#
+# NOT LEGAL ADVICE. Technical starting point for inventory. Does NOT certify
+# PDPC licensing, DPO registration, or cross-border approval.
+#
+# Authority: Personal Data Protection Centre (PDPC / the Centre), under MCIT.
+# Controllers and processors typically need a licence or permit before
+# processing; extra permits for sensitive data, cross-border transfer,
+# CCTV, and electronic direct marketing (EDM). Processors outside Egypt
+# may need a local representative — confirm current Regulations text.
+#
+# Sensitive / special categories (PDPL + Regulations summaries): mental,
+# psychological, physical or genetic health; biometric; financial;
+# religious beliefs; political opinions; criminal status. Children's data
+# is treated as sensitive. Under 15: guardian written consent; 15+: child
+# or guardian written consent. No tracking/profiling from children's
+# games/competitions.
+#
+# Breach: notify the Centre within 72 hours of becoming aware (national-
+# security cases: without delay). Affected individuals: commonly cited as
+# three working days — revalidate the Regulations article.
+#
+# Identifiers use contextual column labels. No bare 14-digit national-ID
+# matcher (high FP). No querystring geo-coordinate key (PII seed gate).
+#
+# Arabic terms below are everyday inventory vocabulary (بيانات شخصية,
+# الرقم القومي). Not a certified legal glossary.
+#
+# Pair with: compliance-sample-uae_pdpl.yaml or compliance-sample-saudi_pdpl.yaml.
+#
+# NOTE — recommendation_overrides use distinctive Law 151 (role) patterns.
+# Do not add a bare "Egypt PDPL" catch-all: _find_override_row is bidirectional.
+#
+# How to use:
+#   regex_overrides_file: path/to/compliance-sample-egypt_pdpl.yaml
+#   ml_patterns_file:     path/to/compliance-sample-egypt_pdpl.yaml
+#   Merge recommendation_overrides into report.recommendation_overrides.
+
+regex:
+  - name: "EG_FIELD_NATIONAL_ID_LABEL"
+    pattern: "(?i)(?:^|_|\b)(national[_\\s]?id[_\\s]?(?:eg|egypt)?|egyptian[_\\s]?(?:national[_\\s]?)?id|raqm[_\\s]?qawmi|qawmi[_\\s]?(?:number|id)|numero[_\\s]?nacional[_\\s]?eg)\\w*"
+    norm_tag: "Egypt PDPL Law 151/2020 (personal data — national ID)"
+
+  - name: "EG_FIELD_HEALTH_LABEL"
+    pattern: "(?i)(?:^|_|\b)(health[_\\s]?data[_\\s]?eg|medical[_\\s]?(?:record|information)[_\\s]?eg|patient[_\\s]?record[_\\s]?eg|datos[_\\s]?salud[_\\s]?eg)\\w*"
+    norm_tag: "Egypt PDPL Law 151/2020 (sensitive — health)"
+
+  - name: "EG_FIELD_HEALTH_GENERIC_LABEL"
+    pattern: "(?i)(?:^|_|\b)(historia[_\\s]?clinica|medical[_\\s]?record|patient[_\\s]?record|health[_\\s]?data)\\w*"
+    norm_tag: "Egypt PDPL Law 151/2020 (sensitive — health)"
+
+  - name: "EG_FIELD_CHILD_LABEL"
+    pattern: "(?i)(?:^|_|\b)(child(?:ren)?[_\\s]?data|guardian[_\\s]?consent|menor[_\\s]?(?:de[_\\s]?)?15|child[_\\s]?under[_\\s]?15)\\w*"
+    norm_tag: "Egypt PDPL Law 151/2020 (sensitive — children's data)"
+
+  - name: "EG_FIELD_EDM_LABEL"
+    pattern: "(?i)(?:^|_|\b)(electronic[_\\s]?direct[_\\s]?marketing|edm[_\\s]?consent|direct[_\\s]?marketing[_\\s]?eg)\\w*"
+    norm_tag: "Egypt PDPL Law 151/2020 (electronic direct marketing)"
+
+  - name: "EG_PDPL_JSON_LAT_PRECISION"
+    pattern: "(?i)[\"']lat[\"']\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\b"
+    norm_tag: "Egypt PDPL Law 151/2020 (personal data — geolocation)"
+
+  - name: "EG_PDPL_JSON_LNG_PRECISION"
+    pattern: "(?i)[\"'](?:lng|lon)[\"']\\s*:\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}\\b"
+    norm_tag: "Egypt PDPL Law 151/2020 (personal data — geolocation)"
+
+  - name: "EG_PDPL_LOCATION_CSV_PAIR"
+    pattern: "(?i)\\blocation\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*,\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "Egypt PDPL Law 151/2020 (personal data — geolocation)"
+
+terms:
+  - { text: "personal data", label: sensitive }
+  - { text: "data subject", label: sensitive }
+  - { text: "data controller", label: sensitive }
+  - { text: "personal data protection centre", label: sensitive }
+  - { text: "personal data protection center", label: sensitive }
+  - { text: "pdpc egypt", label: sensitive }
+  - { text: "law 151 of 2020", label: sensitive }
+  - { text: "decree 816/2025", label: sensitive }
+
+  - { text: "بيانات شخصية", label: sensitive }
+  - { text: "حماية البيانات الشخصية", label: sensitive }
+  - { text: "الرقم القومي", label: sensitive }
+  - { text: "بيانات حساسة", label: sensitive }
+  - { text: "بيانات الأطفال", label: sensitive }
+
+  - { text: "national id egypt", label: sensitive }
+  - { text: "egyptian national id", label: sensitive }
+  - { text: "health data", label: sensitive }
+  - { text: "medical record", label: sensitive }
+  - { text: "biometric data", label: sensitive }
+  - { text: "children's data", label: sensitive }
+  - { text: "guardian consent", label: sensitive }
+  - { text: "electronic direct marketing", label: sensitive }
+  - { text: "religious belief", label: sensitive }
+  - { text: "political opinion", label: sensitive }
+
+  - { text: "product_id", label: non_sensitive }
+  - { text: "item_code", label: non_sensitive }
+  - { text: "session_log", label: non_sensitive }
+  - { text: "debug_output", label: non_sensitive }
+
+recommendation_overrides:
+  # Children's data before health: compound columns (e.g. guardian_consent_health_data)
+  # join both norm_tags; _find_override_row is first-match.
+  - norm_tag_pattern: "Egypt PDPL Law 151/2020 (sensitive — children's data)"
+    base_legal: "Egypt PDPL + Decree 816/2025 — children's data is sensitive. Under 15: guardian written consent; 15+: child or guardian written consent. No tracking/profiling from children's games or competitions."
+    risk: "Column names indicate children's data. This scanner does not perform age verification."
+    recommendation: "Confirm guardian-consent workflow and purpose limitation. Consult counsel. Not a legal conclusion."
+    priority: "ALTA"
+    relevant_for: "DPO, legal, product"
+
+  - norm_tag_pattern: "Egypt PDPL Law 151/2020 (sensitive — health)"
+    base_legal: "Egypt PDPL Law 151/2020 + Decree 816/2025 — health / genetic data is sensitive. Licensing/permit from the Centre typically required before processing sensitive data. Grace period ends 31 Oct 2026."
+    risk: "Health records are a statutory sensitive category. Unauthorized exposure can harm the data subject and trigger Centre scrutiny after enforcement."
+    recommendation: "Verify a lawful basis and any required Centre permit. Encrypt at rest and in transit. Confirm DPO registration where applicable. Consult counsel. Not a legal conclusion."
+    priority: "ALTA"
+    relevant_for: "DPO, legal, CISO"
+
+  - norm_tag_pattern: "Egypt PDPL Law 151/2020 (electronic direct marketing)"
+    base_legal: "Egypt PDPL + Decree 816/2025 — electronic direct marketing (EDM) generally needs prior consent and may need a specific Centre permit. Revalidate the current licence list."
+    risk: "EDM columns may indicate marketing without a documented consent or permit trail."
+    recommendation: "Confirm opt-in consent and whether an EDM permit is required. Consult counsel. Not a legal conclusion."
+    priority: "ALTA"
+    relevant_for: "DPO, legal, marketing"
+
+  - norm_tag_pattern: "Egypt PDPL Law 151/2020 (personal data — national ID)"
+    base_legal: "Egypt PDPL Law 151/2020 — a national ID (الرقم القومي) identifies a natural person. Controllers typically need a Centre licence before processing. Full enforcement expected 31 Oct 2026."
+    risk: "Egyptian national-ID fields identify the data subject. A bare 14-digit matcher is intentionally omitted (high false-positive rate)."
+    recommendation: "Minimize ID storage. Confirm licence/permit status with the Centre. Notify breaches to the Centre within 72 hours of awareness. Consult counsel. Not a legal conclusion."
+    priority: "ALTA"
+    relevant_for: "DPO, legal, CISO, operations"
+
+  - norm_tag_pattern: "Egypt PDPL Law 151/2020 (personal data — geolocation)"
+    base_legal: "Egypt PDPL Law 151/2020 — precise geolocation can identify or make identifiable a natural person. CCTV / visual monitoring may need a separate Centre permit."
+    risk: "Precise coordinates can track the data subject."
+    recommendation: "Minimize stored location precision. Review whether a visual-surveillance permit applies. Consult counsel. Heuristic inventory — not a legal conclusion."
+    priority: "MÉDIA"
+    relevant_for: "DPO, product, legal"
