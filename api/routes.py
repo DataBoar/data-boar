@@ -2159,6 +2159,10 @@ async def dashboard(request: Request, locale_slug: LocaleSlug):
 @app.get("/{locale_slug}/config", response_class=HTMLResponse)
 async def config_page(request: Request, locale_slug: LocaleSlug):
     """Configuration editor (YAML). Secret values are redacted so the UI never displays them. Query: saved=1 or error=... for feedback after POST."""
+    # SECURITY (#414 / #86): With api.rbac.enabled (Pro+ dashboard_rbac), middleware
+    # maps GET/HEAD/POST /{locale}/config to CFG (config_admin | admin) in
+    # api.rbac.classify_route_rbac. CSRF still applies to POST. Without RBAC,
+    # single-operator deployments rely on require_api_key / WebAuthn HTML gate.
     tag = _locale_tag_from_slug(locale_slug.value)
     saved = request.query_params.get("saved") == "1"
     error = request.query_params.get("error")
@@ -2179,6 +2183,8 @@ async def config_page(request: Request, locale_slug: LocaleSlug):
 @app.post("/{locale_slug}/config", response_class=HTMLResponse)
 async def config_save(request: Request, locale_slug: LocaleSlug):
     """Save configuration (form body: yaml=...). Redirects back to GET .../config with success or error."""
+    # SECURITY (#414 / #86): Runtime YAML write + engine reload. RBAC CFG gate is in
+    # middleware (see config_page); do not treat dashboard/reports_reader as enough.
     tag = _locale_tag_from_slug(locale_slug.value)
     ls = locale_slug.value
     form = await request.form()
