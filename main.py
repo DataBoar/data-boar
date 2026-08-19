@@ -798,7 +798,9 @@ def main() -> None:
         help=(
             "When set, act as if file_scan.use_content_type is true for this run: "
             "infer file format from magic bytes (first bytes of each file), not only extension—"
-            "helps find renamed or cloaked files. Adds extra I/O and CPU per file."
+            "helps find renamed or cloaked files. Does not dispatch compressed archives: "
+            "a lying archive extension still records archive_type_mismatch in scan_failures "
+            "instead of expanding. Adds extra I/O and CPU per file."
         ),
     )
     parser.add_argument(

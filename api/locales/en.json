@@ -75,7 +75,7 @@
     "scan_compressed": "Also scan inside compressed files (zip, tar, 7z, …)",
     "scan_compressed_hint": "May significantly increase run time and I/O. Use only when you need to inspect contents of archives.",
     "content_type": "Use content-type detection (magic bytes) for file format",
-    "content_type_hint": "Helps find renamed or cloaked files (e.g. PDF saved as .txt). Reads the start of each file—may increase I/O and run time.",
+    "content_type_hint": "Helps find renamed or cloaked files (e.g. PDF saved as .txt). Reads the start of each file—may increase I/O and run time. Does not expand mislabeled archives; those record archive_type_mismatch.",
     "scan_stego": "Steganography hints on rich media (entropy heuristic)",
     "scan_stego_hint": "Optional byte-entropy hint for images/audio/video—not proof of hidden data. Extra read per file; use only when investigating concealment.",
     "jurisdiction": "Heuristic jurisdiction hints (Report info — DPO / counsel)",

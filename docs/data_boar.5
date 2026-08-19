@@ -222,7 +222,9 @@ optionally
 .B archive_budget_exceeded
 in scan_failures),
 .I use_content_type
-(bool, magic\-byte / content\-type detection for renamed or cloaked files; extra I/O),
+(bool, magic\-byte / content\-type detection for renamed or cloaked files; extra I/O;
+does not dispatch compressed archives — mismatch records
+.B archive_type_mismatch ),
 .I scan_for_stego
 (bool, append lightweight byte\-entropy hints for image/audio/video containers; heuristic only — not proof of hidden payload; may increase read size per rich\-media file; CLI:
 .BR \-\-scan\-stego ),

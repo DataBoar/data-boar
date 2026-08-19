@@ -132,7 +132,7 @@ file_scan:
   scan_sqlite_as_db: true
   sample_limit: 5
   # scan_compressed: true   # optional: scan inside archives (matches dashboard checkbox)
-  # use_content_type: true   # optional: magic-byte detection (matches dashboard checkbox)
+  # use_content_type: true   # optional: magic-byte detection (not archive dispatch; mismatch → archive_type_mismatch)
 
 report:
   output_dir: .

@@ -80,3 +80,42 @@ def test_scan_compressed_records_archive_type_mismatch_for_sample4():
     assert not sample4_plain, (
         "mislabeled archive should not be scanned as a plain file when mismatch is recorded"
     )
+
+
+def test_use_content_type_does_not_expand_mislabeled_archive():
+    """#1354 option (b): use_content_type does not dispatch compressed archives."""
+    sample_dir = Path(__file__).resolve().parent / "data" / "compressed"
+    sample4 = sample_dir / "sample4.tar.bz2"
+    if not sample4.is_file():
+        pytest.skip("compressed samples not present")
+
+    db = _DummyDB()
+    scanner = DataScanner()
+    target = {
+        "name": "FS",
+        "type": "filesystem",
+        "path": str(sample_dir),
+        "recursive": False,
+        "file_scan": {"scan_compressed": True, "use_content_type": True},
+    }
+    connector = FilesystemConnector(
+        target,
+        scanner,
+        db,
+        extensions=[".tgz", ".tar.bz2", ".txt", ".yaml", ".pdf"],
+        scan_sqlite_as_db=False,
+        sample_limit=10000,
+        file_passwords={},
+    )
+    connector.run()
+
+    mismatches = [
+        f for f in db.failures if f[1] == SCAN_FAILURE_REASON_ARCHIVE_TYPE_MISMATCH
+    ]
+    assert mismatches, (
+        "use_content_type must not expand sample4; still archive_type_mismatch"
+    )
+    sample4_inner = [
+        f for f in db.findings if "sample4.tar.bz2|" in f.get("file_name", "")
+    ]
+    assert not sample4_inner, "mislabeled archive must not yield inner members"
