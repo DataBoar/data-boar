@@ -147,6 +147,8 @@ def test_podman_script_is_fail_closed() -> None:
     assert "set -eu" in inner
     assert "set -euo pipefail" not in inner
     assert "-o pipefail" not in inner
+    assert "bash" in inner
+    assert "command -v bash" in inner
 
 
 def test_void_xbps_scripts_bash_syntax() -> None:

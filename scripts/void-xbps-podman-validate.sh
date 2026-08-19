@@ -103,10 +103,12 @@ fi
 "${ENGINE}" "${ENGINE_ARGS[@]}" \
   "${IMAGE}" \
   /bin/sh -c '
-# Void images: /bin/sh is dash, bash is not installed. pipefail is a bashism.
+# Void images: /bin/sh is dash. pipefail is a bashism. Install bash for
+# void-packages ./xbps-src (shebang #!/bin/bash); missing interpreter = exit 127.
 set -eu
 command -v xbps-install >/dev/null
-xbps-install -Syu git curl ca-certificates >/dev/null
+xbps-install -Syu git curl ca-certificates bash >/dev/null
+command -v bash >/dev/null
 WORKDIR="$(mktemp -d)"
 cd "${WORKDIR}"
 git clone --depth 1 https://github.com/void-linux/void-packages.git

@@ -84,7 +84,9 @@ jobs:
             /bin/sh -c '
               set -eu
               xbps-install -Syu
-              xbps-install -y git
+              # void-packages ./xbps-src shebang is #!/bin/bash; images ship dash only.
+              xbps-install -y git bash
+              command -v bash >/dev/null
               WORKDIR="$(mktemp -d)"
               cd "${WORKDIR}"
               git clone --depth 1 https://github.com/void-linux/void-packages.git
