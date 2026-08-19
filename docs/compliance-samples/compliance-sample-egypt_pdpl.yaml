@@ -105,19 +105,21 @@ terms:
   - { text: "debug_output", label: non_sensitive }
 
 recommendation_overrides:
-  - norm_tag_pattern: "Egypt PDPL Law 151/2020 (sensitive — health)"
-    base_legal: "Egypt PDPL Law 151/2020 + Decree 816/2025 — health / genetic data is sensitive. Licensing/permit from the Centre typically required before processing sensitive data. Grace period ends 31 Oct 2026."
-    risk: "Health records are a statutory sensitive category. Unauthorized exposure can harm the data subject and trigger Centre scrutiny after enforcement."
-    recommendation: "Verify a lawful basis and any required Centre permit. Encrypt at rest and in transit. Confirm DPO registration where applicable. Consult counsel. Not a legal conclusion."
-    priority: "ALTA"
-    relevant_for: "DPO, legal, CISO"
-
+  # Children's data before health: compound columns (e.g. guardian_consent_health_data)
+  # join both norm_tags; _find_override_row is first-match.
   - norm_tag_pattern: "Egypt PDPL Law 151/2020 (sensitive — children's data)"
     base_legal: "Egypt PDPL + Decree 816/2025 — children's data is sensitive. Under 15: guardian written consent; 15+: child or guardian written consent. No tracking/profiling from children's games or competitions."
     risk: "Column names indicate children's data. This scanner does not perform age verification."
     recommendation: "Confirm guardian-consent workflow and purpose limitation. Consult counsel. Not a legal conclusion."
     priority: "ALTA"
     relevant_for: "DPO, legal, product"
+
+  - norm_tag_pattern: "Egypt PDPL Law 151/2020 (sensitive — health)"
+    base_legal: "Egypt PDPL Law 151/2020 + Decree 816/2025 — health / genetic data is sensitive. Licensing/permit from the Centre typically required before processing sensitive data. Grace period ends 31 Oct 2026."
+    risk: "Health records are a statutory sensitive category. Unauthorized exposure can harm the data subject and trigger Centre scrutiny after enforcement."
+    recommendation: "Verify a lawful basis and any required Centre permit. Encrypt at rest and in transit. Confirm DPO registration where applicable. Consult counsel. Not a legal conclusion."
+    priority: "ALTA"
+    relevant_for: "DPO, legal, CISO"
 
   - norm_tag_pattern: "Egypt PDPL Law 151/2020 (electronic direct marketing)"
     base_legal: "Egypt PDPL + Decree 816/2025 — electronic direct marketing (EDM) generally needs prior consent and may need a specific Centre permit. Revalidate the current licence list."

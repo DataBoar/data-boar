@@ -73,3 +73,19 @@ def test_egypt_bare_digits_are_not_national_id(egypt_scanner):
     detected = result.get("pattern_detected") or ""
     assert "EG_FIELD_NATIONAL_ID_LABEL" not in detected
     assert "national ID" not in (result.get("norm_tag") or "")
+
+
+def test_egypt_compound_child_health_keeps_children_first():
+    """Joined norm_tag must not let health steal the children's-data override."""
+    data = yaml.safe_load(EGYPT_SAMPLE.read_text(encoding="utf-8"))
+    patterns = [row["norm_tag_pattern"] for row in data["recommendation_overrides"]]
+    assert patterns.index(
+        "Egypt PDPL Law 151/2020 (sensitive — children's data)"
+    ) < patterns.index("Egypt PDPL Law 151/2020 (sensitive — health)")
+
+
+def test_egypt_compound_column_fires_child_and_health(egypt_scanner):
+    result = egypt_scanner.scan_column("guardian_consent_health_data", "")
+    detected = result.get("pattern_detected") or ""
+    assert "EG_FIELD_CHILD_LABEL" in detected
+    assert "EG_FIELD_HEALTH_GENERIC_LABEL" in detected
