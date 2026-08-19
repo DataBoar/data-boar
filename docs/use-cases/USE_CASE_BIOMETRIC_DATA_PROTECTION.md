@@ -33,8 +33,8 @@
 flowchart TD
   D[Discovery] --> M[Map locations]
   M --> C[Classify sensitive / biometric]
-  C --> R[Remediation via plugin]
-  R --> E[Audit trail evidence]
+  C --> R[Remediation via plugin coming]
+  R --> E[Audit trail as configured]
 ```
 
 1. **Discovery** — scan configured databases, filesystems, and API exports for biometric-related patterns and adjacent identifiers.

@@ -35,6 +35,8 @@ def test_biometric_use_case_vaultless_non_resettable() -> None:
     assert "LGPD art. 46" in pt
     assert "Enterprise plugin (**coming**)" in en
     assert "plugin Enterprise (**em breve**)" in pt
+    assert "Remediation via plugin coming" in en
+    assert "Remediação via plugin em breve" in pt
     assert "not** a live biometric" in en
     assert "não** é biometria ao vivo" in pt
     assert "Why vaultless tokenization matters for non-resettable data** above" in en

@@ -33,8 +33,8 @@
 flowchart TD
   D[Discovery] --> M[Mapeamento]
   M --> C[Classificação sensível/biométrica]
-  C --> R[Remediação via plugin]
-  R --> E[Evidência no audit trail]
+  C --> R[Remediação via plugin em breve]
+  R --> E[Trilha de auditoria conforme configurada]
 ```
 
 1. **Discovery** — scan em bases, filesystems e exportações de API configurados.
