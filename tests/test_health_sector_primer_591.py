@@ -31,6 +31,8 @@ def test_health_sector_primer_registered_and_disclaims_baa() -> None:
         in text
     )
     assert "does **not** replace access controls, encryption, or a **BAA**" in text
+    assert "do **not** emit `HIPAA` / `HIPAA PHI`" in text
+    assert "six-digit **operadora** registry" in text
     assert "compliance-sample-brazil_saude.yaml" in text
     assert "**#511**" in text
     assert "(roadmap)" in text

@@ -18,7 +18,7 @@ HIPAA (and **HITECH**) apply to **covered entities** and **business associates**
 
 | Rule | Typical ask | Data Boar capability (shipped) | Notes |
 | ---- | ----------- | ------------------------------ | ----- |
-| Privacy Rule (45 CFR Part 164 Subpart E) | Know where PHI lives; minimum necessary | Built-in tags **HIPAA** in reports; [us_hipaa_phi sample](../compliance-samples/compliance-sample-us_hipaa_phi.yaml) (`US_HIPAA_NPI`, `US_HIPAA_DEA`, `US_HIPAA_MRN`, `US_HIPAA_ICD10`, precise geolocation) | Discovery / mapping only |
+| Privacy Rule (45 CFR Part 164 Subpart E) | Know where PHI lives; minimum necessary | Enable [us_hipaa_phi sample](../compliance-samples/compliance-sample-us_hipaa_phi.yaml) — `norm_tag` **`HIPAA PHI`** on `US_HIPAA_NPI`, `US_HIPAA_DEA`, `US_HIPAA_MRN`, `US_HIPAA_ICD10`, precise geolocation | Default `DEFAULT_PATTERNS` do **not** emit `HIPAA` / `HIPAA PHI`; health ML without the sample stays LGPD/GDPR/CCPA-context |
 | Security Rule (45 CFR Part 164 Subpart C) | Administrative, physical, technical safeguards for ePHI | Repeatable scans + **`--export-audit-trail`** as **inventory evidence** | Does **not** implement access control, encryption, or risk analysis |
 | Breach Notification Rule (45 CFR §§ 164.400–414) | Notify individuals / HHS OCR (60 days); media if >500 in a state | Locate possible PHI copies; **`--diff`** between sessions | Does **not** send OCR notices or decide “breach” |
 
@@ -38,7 +38,7 @@ HHS Safe Harbor de-identification lists **18** identifier types. Coverage below 
 | 6 | Email addresses | Shipped | Built-in **`EMAIL`** | — |
 | 7 | Social Security numbers | Shipped | Built-in **`CCPA_SSN`** (`XXX-XX-XXXX`) | Other SSN punctuations need overrides |
 | 8 | Medical record numbers | Partial | HIPAA sample **`US_HIPAA_MRN`**; BR sample **`BR_SAUDE_PRONTUARIO`** (**#511**) | Institution formats vary — high FP risk |
-| 9 | Health plan beneficiary numbers | Partial | BR sample **`PHI_HEALTH_PLAN`** / **`BR_SAUDE_ANS`** (column / ANS registry) | No dedicated US member-ID regex |
+| 9 | Health plan beneficiary numbers | Partial | BR sample **`PHI_HEALTH_PLAN`** (carteirinha / member-id **column names**) | **`BR_SAUDE_ANS`** is the six-digit **operadora** registry, not a beneficiary ID; no dedicated US member-ID regex |
 | 10 | Account numbers | Roadmap | — | Do not treat **`CREDIT_CARD`** as this row |
 | 11 | Certificate / license numbers | Partial | HIPAA sample **`US_HIPAA_NPI`**, **`US_HIPAA_DEA`** (provider IDs) | Patient licences / state IDs not covered |
 | 12 | Vehicle identifiers / plates | Roadmap | Custom-regex example in [SENSITIVITY_DETECTION.md](../SENSITIVITY_DETECTION.md) | Not a default pattern |
