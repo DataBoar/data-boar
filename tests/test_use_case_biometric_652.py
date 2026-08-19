@@ -39,6 +39,8 @@ def test_biometric_use_case_vaultless_non_resettable() -> None:
     assert "Remediação via plugin em breve" in pt
     assert "not** a live biometric" in en
     assert "não** é biometria ao vivo" in pt
+    assert "ships today" in en
+    assert "entrega hoje" in pt
     assert "Why vaultless tokenization matters for non-resettable data** above" in en
     assert (
         "Por que tokenização vaultless importa para dados não resetáveis** acima" in pt

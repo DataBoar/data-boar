@@ -41,7 +41,7 @@ flowchart TD
 1. **Mapping** — findings name exact table/column/file paths for remediation planning.
 1. **Classification** — flag sensitive-category context for LGPD/GDPR workshops (detector + policy labels as shipped).
 1. **Remediation** — Enterprise plugin (**coming**) applies field encryption, **vaultless tokenization**, or access removal per [USE_CASE_SCAN_AND_REMEDIATE.md](USE_CASE_SCAN_AND_REMEDIATE.md) ([pt-BR](USE_CASE_SCAN_AND_REMEDIATE.pt_BR.md)). For stored biometric templates, vaultless tokenization is a strong **at-rest** fit: the stored representation is protected, and **key rotation** (where the plugin supports it) stands in for credential rotation — which the data subject cannot perform. A generic token is **not** a live biometric: matching still needs a designed control. Data Boar does not ship a matcher or a biometric algorithm.
-1. **Evidence** — audit trail (as configured) supports before/after demonstrations to DPO and auditors; this use-case does **not** claim a WORM store.
+1. **Evidence** — discovery and mapping evidence is what Data Boar ships today. A before/after demonstration after remediation is part of the **coming** Enterprise loop (re-scan + configured audit trail); this use-case does **not** claim a WORM store or a shipped remediator.
 
 ---
 

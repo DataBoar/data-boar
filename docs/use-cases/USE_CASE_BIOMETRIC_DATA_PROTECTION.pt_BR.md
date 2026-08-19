@@ -41,7 +41,7 @@ flowchart TD
 1. **Mapeamento** — findings nomeiam tabela/coluna/caminho exatos para planejamento.
 1. **Classificação** — contexto de categoria sensível para workshops LGPD/GDPR.
 1. **Remediação** — plugin Enterprise (**em breve**) aplica criptografia de campo, **tokenização vaultless** ou remoção de acesso conforme [USE_CASE_SCAN_AND_REMEDIATE.pt_BR.md](USE_CASE_SCAN_AND_REMEDIATE.pt_BR.md) ([EN](USE_CASE_SCAN_AND_REMEDIATE.md)). Para templates biométricos armazenados, tokenização vaultless é um encaixe forte **em repouso**: a representação fica protegida, e a **rotação de chave** (quando o plugin oferece) substitui a rotação de credencial — que o titular não consegue fazer. Um token genérico **não** é biometria ao vivo: o matching ainda precisa de um controle desenhado. O Data Boar não entrega matcher nem algoritmo biométrico.
-1. **Evidência** — trilha de auditoria (conforme configurada) apoia demonstração antes/depois a DPO e auditores; este use-case **não** afirma um repositório WORM.
+1. **Evidência** — descoberta e mapeamento são o que o Data Boar entrega hoje. Demonstração antes/depois após remediação faz parte do ciclo Enterprise **em breve** (nova varredura + trilha de auditoria configurada); este use-case **não** afirma um repositório WORM nem um remediador já enviado.
 
 ---
 
