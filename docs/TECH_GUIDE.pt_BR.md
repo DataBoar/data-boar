@@ -664,6 +664,27 @@ Prepare `/data/config.yaml` a partir de `deploy/config.example.yaml` (veja [depl
 
 Passos completos (build, push, container único, Compose, Swarm, Kubernetes): **[deploy/DEPLOY.md](deploy/DEPLOY.md)** ([pt-BR](deploy/DEPLOY.pt_BR.md)). Para MCP, construa e faça push a partir do código: [DOCKER_SETUP.md](DOCKER_SETUP.md) ([pt-BR](DOCKER_SETUP.pt_BR.md)).
 
+## Arquitetura do Governance Lens {#governance-lens-architecture}
+
+Feature **Pro** que traduz achados no SQLite em narrativas de **gap de controle GRC** e exportações opcionais via pandoc. Pipeline:
+
+```text
+findings (SQLite)
+    → GovernanceLensGenerator (report/governance_lens.py)
+    → lista ControlGap + risk_level
+    → template Jinja2 (docs/templates/GRC_GOVERNANCE_LENS_REPORT.md.j2)
+    → Markdown (+ frontmatter YAML)
+    → pandoc (instalado pelo operador) → DOCX / PDF
+```
+
+Caminho paralelo no Excel: com `governance.enabled: true` e licença `governance_lens_pro`, `report/generator.py` adiciona a aba **Governance View** após **Recommendations**.
+
+**Schema do mapa de frameworks:** [`config/governance_framework_map.schema.yaml`](../config/governance_framework_map.schema.yaml) documenta o formato YAML (`pattern_name`, `target_context` opcional, `frameworks[]` com títulos de controle e recomendações). Entradas de exemplo no OSS: `config/governance_framework_map_pro.example.yaml`.
+
+**Extensão:** para incluir ou ajustar mapeamentos, edite seu `governance_framework_map_pro.yaml` licenciado (ou o mapa de exemplo em lab) conforme o schema — cada entrada associa `pattern_name` do detector (wildcards suportados) e contexto de alvo opcional a uma ou mais linhas de gap de controle.
+
+**Quickstart do operador:** [ops/GOVERNANCE_LENS_QUICKSTART.pt_BR.md](ops/GOVERNANCE_LENS_QUICKSTART.pt_BR.md) ([EN](ops/GOVERNANCE_LENS_QUICKSTART.md)). **Uso:** [USAGE.pt_BR.md](USAGE.pt_BR.md#governance-lens-pro) ([EN](USAGE.md#governance-lens-pro)).
+
 ## Frameworks de conformidade e extensibilidade
 
 A aplicação referencia explicitamente **LGPD**, **GDPR**, **CCPA**, **HIPAA** e **GLBA** em padrões embutidos e rótulos de relatório. Oferecemos **exemplos de configuração** (ex. [regex_overrides.example.yaml](regex_overrides.example.yaml), overrides de recomendação no [USAGE.pt_BR.md](USAGE.pt_BR.md)) para estender a **UK GDPR**, **PIPEDA**, **POPIA**, **APPI**, **PCI-DSS** ou normas customizadas sem alterar código: defina **`norm_tag`** em [regex overrides](SENSITIVITY_DETECTION.pt_BR.md) ou conectores customizados para qualquer rótulo de framework e use **`report.recommendation_overrides`** na config para personalizar o texto de recomendação. Podemos **ajudar com ajuste fino** (configs sob medida ou pequenas alterações no código) para maior compatibilidade quando você entrar em contato. Veja **[COMPLIANCE_FRAMEWORKS.pt_BR.md](COMPLIANCE_FRAMEWORKS.pt_BR.md)** ([EN](COMPLIANCE_FRAMEWORKS.md)) para a lista de regulamentações suportadas, arquivos de exemplo e extensibilidade.
