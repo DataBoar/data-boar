@@ -232,23 +232,16 @@ jobs:
           TAG="${GITHUB_EVENT_RELEASE_TAG_NAME}"
           python3 scripts/native_package_release.py --dir dist/native-packages names
           python3 scripts/native_package_release.py --dir dist/native-packages checksums
-          if gh release download "$TAG" --repo "${{ github.repository }}" \
-            --pattern 'release-manifest.json' --dir /tmp/relman 2>/dev/null; then
-            cp /tmp/relman/release-manifest.json release-manifest.json
-          fi
-          python3 scripts/native_package_release.py --dir dist/native-packages \
-            merge-manifest --manifest release-manifest.json
           shopt -s nullglob
-          assets=(
+          pkg_assets=(
             dist/native-packages/*.deb
             dist/native-packages/*.rpm
             dist/native-packages/*.apk
             dist/native-packages/*.pkg.tar.zst
             dist/native-packages/*.pkg.tar.xz
             dist/native-packages/SHA256SUMS
-            release-manifest.json
           )
-          gh release upload "$TAG" "${assets[@]}" \
+          gh release upload "$TAG" "${pkg_assets[@]}" \
             --clobber --repo "${{ github.repository }}"
           if [[ -f dist/native-packages/SHA256SUMS.asc ]]; then
             gh release upload "$TAG" dist/native-packages/SHA256SUMS.asc \
@@ -256,3 +249,17 @@ jobs:
           else
             echo "::notice title=SHA256SUMS unsigned::NATIVE_PACKAGE_GPG_PRIVATE_KEY unset; #1405 key ceremony signs later. Package bytes stay the same."
           fi
+          # Fail-closed: never upload a synthesized stub (empty files[]).
+          # Download the SBOM/licensing manifest; abort if it is missing.
+          rm -rf /tmp/relman
+          mkdir -p /tmp/relman
+          if ! gh release download "$TAG" --repo "${{ github.repository }}" \
+            --pattern 'release-manifest.json' --dir /tmp/relman; then
+            echo "::error title=release-manifest download failed::Refusing to clobber with an empty stub. Re-run attach-release after the SBOM workflow publishes release-manifest.json."
+            exit 1
+          fi
+          test -s /tmp/relman/release-manifest.json
+          python3 scripts/native_package_release.py --dir dist/native-packages \
+            merge-manifest --manifest /tmp/relman/release-manifest.json
+          gh release upload "$TAG" /tmp/relman/release-manifest.json \
+            --clobber --repo "${{ github.repository }}"

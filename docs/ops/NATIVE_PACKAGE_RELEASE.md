@@ -10,6 +10,8 @@ Layer-1 wheels come from the hosted wheelhouse ([#1182](https://github.com/DataB
 
 Assets appear on a **`v*`** GitHub Release after `native-packages.yml` runs on `release: published`. They are **not** on every historic tag.
 
+`attach-release` and the SBOM upload **never** `--clobber` `release-manifest.json` with an empty stub. If the existing manifest cannot be downloaded, the job **fails** instead of wiping `files[]` or `native_packages[]`. Re-run attach after the SBOM workflow has published the licensing manifest.
+
 ## Filename convention (do not rename)
 
 Each packager parses the filename. A hyphen-only `.deb` without arch **breaks** `apt` / `reprepro` / `aptly`.

@@ -266,9 +266,40 @@ def main(argv: list[str] | None = None) -> int:
         if not dest.is_absolute():
             dest = (repo_root / dest).resolve()
         src = args.preserve_native_from
-        if src is not None and not src.is_absolute():
+        if src is None:
+            print(
+                "generate_release_manifest: --preserve-native-from is required "
+                "with --patch-native-into",
+                file=sys.stderr,
+            )
+            return 1
+        if not src.is_absolute():
             src = (repo_root / src).resolve()
-        apply_preserved_native_packages(dest, src)
+        if not src.is_file():
+            print(
+                f"generate_release_manifest: {src} missing "
+                "(refusing to clobber native_packages[])",
+                file=sys.stderr,
+            )
+            return 1
+        try:
+            source_payload = json.loads(src.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            print(f"generate_release_manifest: {src} invalid: {exc}", file=sys.stderr)
+            return 1
+        native = (
+            source_payload.get("native_packages")
+            if isinstance(source_payload, dict)
+            else None
+        )
+        updated = apply_preserved_native_packages(dest, src)
+        if isinstance(native, list) and native and not updated:
+            print(
+                "generate_release_manifest: failed to preserve native_packages[] "
+                "(refusing to upload a wipe)",
+                file=sys.stderr,
+            )
+            return 1
         if not args.quiet:
             print(f"OK: patched native_packages on {dest.as_posix()}")
         return 0

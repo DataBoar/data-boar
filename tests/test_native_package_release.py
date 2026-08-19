@@ -6,8 +6,10 @@ import json
 from pathlib import Path
 
 from scripts.generate_release_manifest import apply_preserved_native_packages
+from scripts.generate_release_manifest import main as release_manifest_main
 from scripts.native_package_release import (
     classify_package_name,
+    main as native_release_main,
     maybe_gpg_sign_sums,
     merge_native_packages,
     native_packages_payload,
@@ -71,6 +73,51 @@ def test_maybe_gpg_sign_sums_skips_without_key(tmp_path: Path) -> None:
     sums.write_text("deadbeef  data-boar_1.8.0-beta_amd64.deb\n", encoding="utf-8")
     assert maybe_gpg_sign_sums(sums) is None
     assert not (tmp_path / "SHA256SUMS.asc").exists()
+
+
+def test_merge_manifest_refuses_missing_or_empty_files(tmp_path: Path) -> None:
+    pkg = tmp_path / "data-boar_1.8.0-beta_amd64.deb"
+    pkg.write_bytes(b"deb-stub\n")
+    missing = tmp_path / "no-such-manifest.json"
+    assert (
+        native_release_main(
+            ["--dir", str(tmp_path), "merge-manifest", "--manifest", str(missing)]
+        )
+        == 1
+    )
+    stub = tmp_path / "release-manifest.json"
+    stub.write_text(
+        json.dumps({"data_boar_version": "unknown", "files": []}) + "\n",
+        encoding="utf-8",
+    )
+    assert (
+        native_release_main(
+            ["--dir", str(tmp_path), "merge-manifest", "--manifest", str(stub)]
+        )
+        == 1
+    )
+    assert json.loads(stub.read_text(encoding="utf-8"))["files"] == []
+
+
+def test_patch_native_into_fails_when_source_missing(tmp_path: Path) -> None:
+    dest = tmp_path / "release-manifest.json"
+    dest.write_text(
+        json.dumps({"files": [{"path": "main.py", "sha256": "aa" * 32}]}) + "\n",
+        encoding="utf-8",
+    )
+    missing = tmp_path / "prior.json"
+    assert (
+        release_manifest_main(
+            [
+                "--patch-native-into",
+                str(dest),
+                "--preserve-native-from",
+                str(missing),
+            ]
+        )
+        == 1
+    )
+    assert "native_packages" not in json.loads(dest.read_text(encoding="utf-8"))
 
 
 def test_apply_preserved_native_packages(tmp_path: Path) -> None:

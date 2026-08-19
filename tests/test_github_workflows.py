@@ -316,8 +316,8 @@ def test_sbom_workflow_generates_release_manifest_after_docker_build() -> None:
     assert "release-manifest.json" in text
     assert "--patch-native-into" in text
     assert "native_packages" in text
-    assert "--patch-native-into" in text
-    assert "native_packages" in text
+    assert "refusing to clobber native_packages[]" in text
+    assert "gh release view" in text
 
 
 def test_sbom_yml_pins_actions_to_shas() -> None:
@@ -672,6 +672,10 @@ def test_native_packages_workflow_present_and_valid() -> None:
     assert "SHA256SUMS" in attach_runs
     assert "merge-manifest" in attach_runs
     assert "native_package_release.py" in attach_runs
+    assert "Refusing to clobber with an empty stub" in attach_runs
+    assert attach_runs.index("gh release download") < attach_runs.rindex(
+        "gh release upload"
+    )
     rpm_steps = smoke_rpm.get("steps") or []
     rpm_launcher = [
         s

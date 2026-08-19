@@ -145,10 +145,19 @@ jobs:
             } >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
-          # #1408: keep native_packages[] if the native-packages workflow already uploaded them.
-          # Do not regenerate files[] here — that list was built inside the image.
-          if gh release download "$TAG" --repo "${{ github.repository }}" \
-            --pattern 'release-manifest.json' --dir /tmp/relman 2>/dev/null; then
+          # #1408: never --clobber release-manifest.json with a wipe.
+          # If the asset already exists, download MUST succeed and native_packages[]
+          # must be patched onto the Docker-built files[] before upload.
+          rm -rf /tmp/relman
+          mkdir -p /tmp/relman
+          if gh release view "$TAG" --repo "${{ github.repository }}" --json assets \
+            --jq '.assets[].name' | grep -Fxq 'release-manifest.json'; then
+            if ! gh release download "$TAG" --repo "${{ github.repository }}" \
+              --pattern 'release-manifest.json' --dir /tmp/relman; then
+              echo "::error title=release-manifest download failed::Asset exists on $TAG but download failed; refusing to clobber native_packages[] / files[]."
+              exit 1
+            fi
+            test -s /tmp/relman/release-manifest.json
             python3 scripts/generate_release_manifest.py \
               --patch-native-into release-manifest.json \
               --preserve-native-from /tmp/relman/release-manifest.json \

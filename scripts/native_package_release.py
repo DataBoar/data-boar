@@ -231,14 +231,27 @@ def _cmd_checksums(directory: Path) -> int:
 
 
 def _cmd_merge_manifest(manifest_path: Path, directory: Path) -> int:
-    if manifest_path.is_file():
-        payload = load_json(manifest_path)
-    else:
-        payload = {
-            "generated_at": "",
-            "data_boar_version": "unknown",
-            "files": [],
-        }
+    """Merge native_packages[] into an existing SBOM/licensing manifest.
+
+    Refuses to synthesize a stub (empty ``files[]``). A missing or empty
+    manifest must fail so CI never ``gh release upload --clobber`` a wipe.
+    """
+    if not manifest_path.is_file():
+        print(
+            f"native_package_release merge-manifest: missing {manifest_path} "
+            "(refusing to synthesize a stub)",
+            file=sys.stderr,
+        )
+        return 1
+    payload = load_json(manifest_path)
+    files = payload.get("files")
+    if not isinstance(files, list) or not files:
+        print(
+            f"native_package_release merge-manifest: {manifest_path} has no "
+            "files[] (refusing to clobber with an empty stub)",
+            file=sys.stderr,
+        )
+        return 1
     merged = merge_native_packages(payload, native_packages_payload(directory))
     write_json(manifest_path, merged)
     count = len(merged.get("native_packages") or [])
@@ -265,7 +278,7 @@ def main(argv: list[str] | None = None) -> int:
         "--manifest",
         type=Path,
         default=Path("release-manifest.json"),
-        help="Path to release-manifest.json (created if missing)",
+        help="Path to an existing release-manifest.json (must already have files[])",
     )
     args = parser.parse_args(argv)
     directory = args.dir if args.dir.is_absolute() else _repo_root() / args.dir

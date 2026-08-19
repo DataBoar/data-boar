@@ -10,6 +10,8 @@ Os wheels da camada 1 vêm do wheelhouse hospedado ([#1182](https://github.com/D
 
 Os assets aparecem numa GitHub Release **`v*`** depois que `native-packages.yml` roda em `release: published`. Eles **não** estão em toda tag antiga.
 
+O `attach-release` e o upload do SBOM **nunca** fazem `--clobber` de `release-manifest.json` com um stub vazio. Se o manifesto existente não puder ser baixado, o job **falha** em vez de apagar `files[]` ou `native_packages[]`. Rode o attach de novo depois que o workflow SBOM publicar o manifesto de licenciamento.
+
 ## Convenção de nome (não renomeie)
 
 Cada gerenciador faz parse do nome. Um `.deb` só com hífens e sem arch **quebra** `apt` / `reprepro` / `aptly`.
