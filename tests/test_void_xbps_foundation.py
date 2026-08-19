@@ -148,7 +148,14 @@ def test_podman_script_is_fail_closed() -> None:
     assert "set -euo pipefail" not in inner
     assert "-o pipefail" not in inner
     assert "bash" in inner
+    assert "util-linux" in inner
+    assert "shadow" in inner
     assert "command -v bash" in inner
+    assert "command -v getopt" in inner
+    assert "command -v useradd" in inner
+    assert "command -v runuser" in inner
+    assert "useradd -m -U builder" in inner
+    assert "runuser -u builder -- ./xbps-src show" in inner
 
 
 def test_void_xbps_scripts_bash_syntax() -> None:

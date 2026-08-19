@@ -683,8 +683,13 @@ def test_void_xbps_workflow_present_and_valid() -> None:
     assert "set -eu" in inner
     assert "set -euo pipefail" not in inner
     assert "-o pipefail" not in inner
-    assert "xbps-install -y git bash" in inner
+    assert "xbps-install -y git bash util-linux shadow" in inner
     assert "command -v bash" in inner
+    assert "command -v getopt" in inner
+    assert "command -v useradd" in inner
+    assert "command -v runuser" in inner
+    assert "useradd -m -U builder" in inner
+    assert "runuser -u builder -- ./xbps-src show data-boar" in inner
     assert "void-glibc" in str(show.get("strategy") or "")
     assert "void-musl" in str(show.get("strategy") or "")
     text = (WORKFLOWS / "void-xbps.yml").read_text(encoding="utf-8")

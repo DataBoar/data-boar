@@ -84,9 +84,15 @@ jobs:
             /bin/sh -c '
               set -eu
               xbps-install -Syu
-              # void-packages ./xbps-src shebang is #!/bin/bash; images ship dash only.
-              xbps-install -y git bash
+              # bash: xbps-src shebang #!/bin/bash (images ship dash only).
+              # util-linux: /usr/bin/getopt (xbps-query -o) and runuser.
+              # shadow: useradd. xbps-src refuses to run as root.
+              xbps-install -y git bash util-linux shadow
               command -v bash >/dev/null
+              command -v getopt >/dev/null
+              command -v useradd >/dev/null
+              command -v runuser >/dev/null
+              useradd -m -U builder
               WORKDIR="$(mktemp -d)"
               cd "${WORKDIR}"
               git clone --depth 1 https://github.com/void-linux/void-packages.git
@@ -97,5 +103,6 @@ jobs:
                 [ -n "${name}" ] || continue
                 ln -sfn data-boar "srcpkgs/${name}"
               done < /src/packaging/void/generated/srcpkgs/SUBPACKAGE_LINKS.txt
-              ./xbps-src show data-boar
+              chown -R builder:builder "${WORKDIR}"
+              runuser -u builder -- ./xbps-src show data-boar
             '

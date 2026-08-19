@@ -103,12 +103,17 @@ fi
 "${ENGINE}" "${ENGINE_ARGS[@]}" \
   "${IMAGE}" \
   /bin/sh -c '
-# Void images: /bin/sh is dash. pipefail is a bashism. Install bash for
-# void-packages ./xbps-src (shebang #!/bin/bash); missing interpreter = exit 127.
+# Void images: /bin/sh is dash. pipefail is a bashism.
+# bash: xbps-src shebang #!/bin/bash. util-linux: getopt + runuser.
+# shadow: useradd. xbps-src refuses to run as root.
 set -eu
 command -v xbps-install >/dev/null
-xbps-install -Syu git curl ca-certificates bash >/dev/null
+xbps-install -Syu git curl ca-certificates bash util-linux shadow >/dev/null
 command -v bash >/dev/null
+command -v getopt >/dev/null
+command -v useradd >/dev/null
+command -v runuser >/dev/null
+useradd -m -U builder
 WORKDIR="$(mktemp -d)"
 cd "${WORKDIR}"
 git clone --depth 1 https://github.com/void-linux/void-packages.git
@@ -123,10 +128,11 @@ while IFS= read -r name; do
   [ -n "${name}" ] || continue
   ln -sfn data-boar "srcpkgs/${name}"
 done < /src/packaging/void/generated/srcpkgs/SUBPACKAGE_LINKS.txt
-./xbps-src show data-boar
+chown -R builder:builder "${WORKDIR}"
+runuser -u builder -- ./xbps-src show data-boar
 if [ "${MODE}" = "build" ]; then
-  ./xbps-src binary-bootstrap
-  ./xbps-src pkg data-boar
+  runuser -u builder -- ./xbps-src binary-bootstrap
+  runuser -u builder -- ./xbps-src pkg data-boar
   echo "xbps-src pkg data-boar: OK"
   if [ -n "${CORPUS}" ] && [ -d "/src/${CORPUS#/}" ]; then
     echo "corpus scan is operator-side after xbps-install from hostdir/binpkgs"

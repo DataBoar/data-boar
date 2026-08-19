@@ -40,6 +40,8 @@ bash scripts/void-xbps-podman-validate.sh --build
 
 O `--build` musl exige staging populado para musl. **Não** reutilize bytes glibc em musl.
 
+O validador e os jobs de CI `xbps-src show` instalam `bash` (shebang), `util-linux` (`getopt` + `runuser`, confirmado com `xbps-query -o /usr/bin/getopt`) e `shadow` (`useradd`), e rodam `./xbps-src` como usuário `builder` não-root — `xbps-src` recusa root.
+
 ## Paridade de achados
 
 Instale o `.xbps` e rode o mesmo corpus de referência do install-smoke deb/rpm/apk. A contagem de achados precisa coincidir. O launcher é a mesma árvore embutida + wheelhouse (`/usr/lib/data-boar/.../python3.14t -m data_boar`).
