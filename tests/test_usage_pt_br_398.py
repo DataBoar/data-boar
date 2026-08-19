@@ -28,9 +28,21 @@ _CONNECTOR_HEADINGS = (
 )
 
 
+def _heading_line_index(lines: list[str], heading: str) -> int:
+    for idx, raw in enumerate(lines):
+        line = raw.rstrip()
+        if line == heading or line.startswith(f"{heading} {{#"):
+            return idx
+    raise AssertionError(f"missing heading line {heading!r}")
+
+
 def test_usage_pt_br_has_sections_5_6_7_and_connector_headings() -> None:
-    text = _USAGE_PT.read_text(encoding="utf-8")
-    for heading in _SECTION_HEADINGS:
-        assert heading in text, f"missing {heading!r}"
+    lines = _USAGE_PT.read_text(encoding="utf-8").splitlines()
+    section_indexes = [
+        _heading_line_index(lines, heading) for heading in _SECTION_HEADINGS
+    ]
+    assert section_indexes == sorted(section_indexes), (
+        "sections 5, 5.1, 6, and 7 must appear in that order"
+    )
     for heading in _CONNECTOR_HEADINGS:
-        assert heading in text, f"missing connector heading {heading!r}"
+        _heading_line_index(lines, heading)
