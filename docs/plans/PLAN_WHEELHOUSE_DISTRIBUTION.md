@@ -1,13 +1,13 @@
 # Plan: Wheelhouse distribution via GitHub Releases (pan-ABI matrix) (#1182)
 
-<!-- plans-hub-summary: Pan-ABI wheelhouse matrix — cp312/cp313/cp314 + cp314t (no-GIL) × (manylinux|musllinux) × (x86_64|arm64) × CPU baseline (x86-64-v1 for GIL cells); hosted wheelhouse-x86-64-v1-2026-07-29 = 54 wheels (incl. cp314t); PEP 503 simple/ live on data-boar-site (#21 / #1445); mariadb glibc recipe + CI recipe gates (#1367/#1379); aarch64 + +x86v1 still open. -->
+<!-- plans-hub-summary: Pan-ABI wheelhouse matrix — cp312/cp313/cp314 + cp314t (no-GIL) × (manylinux|musllinux) × (x86_64|arm64) × CPU baseline (x86-64-v1 for GIL cells); hosted wheelhouse-x86-64-v1-2026-07-29 = 58 wheels (14× cp314t: 10 ML + 4 SQL extras for -nogil only); PEP 503 simple/ live on data-boar-site (#21 / #1445 / #86); mariadb glibc recipe + CI recipe gates (#1367/#1379); aarch64 + +x86v1 still open. -->
 <!-- plans-hub-related: PLAN_PACKAGING_EXTRAS.md, PLAN_QUICKSTART.md -->
 
 - **Status:** In progress (x86-64-v1 slice shipped; recipe CI gates live; PEP 503 `simple/` index live via [data-boar-site#21](https://github.com/DataBoar/data-boar-site/pull/21) / [#1445](https://github.com/DataBoar/data-boar/issues/1445); arm64 + `+x86v1` local versions pending)
-- **Date:** 2026-07-12 (scope rewrite 2026-07-22; v1 release + doc rollout 2026-07-29 — [#1365](https://github.com/DataBoar/data-boar/issues/1365); mariadb glibc recipe 2026-07-29 — [#1367](https://github.com/DataBoar/data-boar/issues/1367); recipe CI 2026-07-29 — [#1379](https://github.com/DataBoar/data-boar/issues/1379); **cp314t / no-GIL cells 2026-07-30**; PEP 503 index docs 2026-08-05 — [#1445](https://github.com/DataBoar/data-boar/issues/1445); **SHA256SUMS full coverage + cp314t offline proof 2026-08-17 — [#1410](https://github.com/DataBoar/data-boar/issues/1410)**)
+- **Date:** 2026-07-12 (scope rewrite 2026-07-22; v1 release + doc rollout 2026-07-29 — [#1365](https://github.com/DataBoar/data-boar/issues/1365); mariadb glibc recipe 2026-07-29 — [#1367](https://github.com/DataBoar/data-boar/issues/1367); recipe CI 2026-07-29 — [#1379](https://github.com/DataBoar/data-boar/issues/1379); **cp314t / no-GIL cells 2026-07-30**; PEP 503 index docs 2026-08-05 — [#1445](https://github.com/DataBoar/data-boar/issues/1445); **SHA256SUMS full coverage + cp314t offline proof 2026-08-17 — [#1410](https://github.com/DataBoar/data-boar/issues/1410)**; **cp314t SQL extras 2026-08-18 — [#1398](https://github.com/DataBoar/data-boar/issues/1398)**)
 - **Authors:** Fabio Leitao (operator); Cursor executor
 - **Priority:** H1 (packaging / distribution)
-- **GitHub:** [#1182](https://github.com/DataBoar/data-boar/issues/1182) `[P1][packaging]` · cross-ref [#782](https://github.com/DataBoar/data-boar/issues/782) (abi3 wheel matrix) · **GAP-001** (wheel-matrix / maturin) · doc slice [#1365](https://github.com/DataBoar/data-boar/issues/1365) · mariadb glibc recipe [#1367](https://github.com/DataBoar/data-boar/issues/1367) · recipe CI [#1379](https://github.com/DataBoar/data-boar/issues/1379) · aarch64 axis [#1366](https://github.com/DataBoar/data-boar/issues/1366) · PEP 503 index [#1445](https://github.com/DataBoar/data-boar/issues/1445) / [data-boar-site#21](https://github.com/DataBoar/data-boar-site/pull/21)
+- **GitHub:** [#1182](https://github.com/DataBoar/data-boar/issues/1182) `[P1][packaging]` · cross-ref [#782](https://github.com/DataBoar/data-boar/issues/782) (abi3 wheel matrix) · **GAP-001** (wheel-matrix / maturin) · doc slice [#1365](https://github.com/DataBoar/data-boar/issues/1365) · mariadb glibc recipe [#1367](https://github.com/DataBoar/data-boar/issues/1367) · recipe CI [#1379](https://github.com/DataBoar/data-boar/issues/1379) · aarch64 axis [#1366](https://github.com/DataBoar/data-boar/issues/1366) · PEP 503 index [#1445](https://github.com/DataBoar/data-boar/issues/1445) / [data-boar-site#21](https://github.com/DataBoar/data-boar-site/pull/21) · nogil SQL extras [#1398](https://github.com/DataBoar/data-boar/issues/1398) / [data-boar-site#86](https://github.com/DataBoar/data-boar-site/pull/86)
 
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md)
 
@@ -24,7 +24,7 @@ Two **orthogonal** packaging tracks must not be confused:
 | **`boar_fast_filter`** (our Rust/PyO3 ext) | **abi3-py38** (`rust/boar_fast_filter/Cargo.toml`) | **ONE** `cp38-abi3` wheel per `(libc × arch)` — serves **all** CPython **3.8+**. **Do not** emit per-`cpXXX` wheels for this extension. **Not distributed on PyPI today.** Tracked as [#782](https://github.com/DataBoar/data-boar/issues/782) / **GAP-001**. |
 | **Third-party compiled deps** (numpy, pandas, scipy, scikit-learn, pydantic-core, cryptography, pillow, …) | **Not** abi3 (stable ABI) for the scientific / ML stack we care about | **Per-`cpXXX`:** `cp312` + `cp313` + `cp314` (+ **`cp314t`** free-threaded / no-GIL where hosted), each × `(manylinux/glibc \| musllinux/musl)` × `(x86_64 \| arm64)`. Wheelhouse priority = **fill upstream gaps** and **x86-64-v1** rebuilds where PyPI baseline is too high. |
 
-The first hosted seed (2026-07-12) proved **HTTPS + `--find-links`** for **one** gap artifact (`scikit-learn` `cp314` musllinux). The **x86-64-v1** release (2026-07-29) is the first **full dependency-closed** slice for x86_64. On **2026-07-30** the same tag gained **10× `cp314t`** free-threaded cells (see below) — **54** `.whl` assets on the current release tag (verified 2026-08-05).
+The first hosted seed (2026-07-12) proved **HTTPS + `--find-links`** for **one** gap artifact (`scikit-learn` `cp314` musllinux). The **x86-64-v1** release (2026-07-29) is the first **full dependency-closed** slice for x86_64. On **2026-07-30** the same tag gained **10× `cp314t`** free-threaded ML cells; on **2026-08-18** it gained **4× `cp314t` SQL extras** (`linux_x86_64`, `-nogil` image only — see below) — **58** `.whl` assets on the current release tag.
 
 **CI gating note:** `cp314` remains **signal-only** in CI gating (compat / foresight), not a hard release gate. The wheelhouse still **builds and hosts** `cp314` (+ `cp314t`) cells so musl/no-AVX hosts on 3.14 (GIL) and free-threaded foresight hosts do not fall back to source builds.
 
@@ -70,9 +70,10 @@ boar_fast_filter:
 | Site repo | **`DataBoar/data-boar-site`** |
 | Tag | **`wheelhouse-x86-64-v1-2026-07-29`** |
 | Release URL | <https://github.com/DataBoar/data-boar-site/releases/tag/wheelhouse-x86-64-v1-2026-07-29> |
-| Assets | **54** `.whl` + `SHA256SUMS` + `README.md` (install + verification en_US / pt_BR) — GIL/v1 cells + **`cp314t`** (2026-07-30); includes `mariadb` on both libcs × cp312/313/314; PEP 503 `simple/` indexes these assets |
+| Assets | **58** `.whl` + `SHA256SUMS` + `README.md` (install + verification en_US / pt_BR) — GIL/v1 cells + **10× `cp314t` ML** (2026-07-30) + **4× `cp314t` SQL extras** `linux_x86_64` (2026-08-18 / [#1398](https://github.com/DataBoar/data-boar/issues/1398)); includes `mariadb` on both libcs × cp312/313/314; PEP 503 `simple/` indexes these assets |
 | Offline proof (GIL/v1 + mariadb) | Operator re-downloaded; checksums matched (2026-07-29); clean-container offline install |
-| Offline proof (`cp314t` + full SUMS) | **2026-08-17** — regenerated `SHA256SUMS` covering **all 54** `.whl` (prior file had **41** lines and **0** `cp314t` entries — [#1410](https://github.com/DataBoar/data-boar/issues/1410)); `sha256sum -c` → **54/54 OK**, including **10/10** `cp314t`; publish gate `scripts/wheelhouse/verify_release_sha256sums.sh` |
+| Offline proof (`cp314t` ML + full SUMS) | **2026-08-17** — regenerated `SHA256SUMS` covering **all 54** `.whl` then present (prior file had **41** lines and **0** `cp314t` entries — [#1410](https://github.com/DataBoar/data-boar/issues/1410)); `sha256sum -c` → **54/54 OK**, including **10/10** `cp314t`; publish gate `scripts/wheelhouse/verify_release_sha256sums.sh` |
+| Offline proof (SQL extras `cp314t`) | **2026-08-18** — four wheels uploaded; `SHA256SUMS` regenerated to **58** lines; `verify_release_sha256sums.sh` OK; PEP 503 stubs in [data-boar-site#86](https://github.com/DataBoar/data-boar-site/pull/86) |
 
 ### Free-threaded / no-GIL — `cp314t` cells (added 2026-07-30)
 
@@ -98,6 +99,28 @@ Ten wheels on the same release tag for CPython **3.14 free-threaded** (`python3.
 **ABI:** `cp314` `SOABI=cpython-314-…` vs `cp314t` `SOABI=cpython-314t-…` — **not interchangeable**.
 
 **Checksum coverage (#1410):** The ten `cp314t` wheels were uploaded **2026-07-30** without regenerating `SHA256SUMS`. Fixed **2026-08-17**: full file re-uploaded on the same tag; offline verify **10/10** `cp314t` OK. Publish/CI gate: `scripts/wheelhouse/verify_release_sha256sums.sh` (also a job on `wheelhouse-recipe.yml`) fails when SUMS line count ≠ `.whl` count.
+
+### Free-threaded SQL extras — `cp314t` `linux_x86_64` (added 2026-08-18 / #1398)
+
+Four more wheels on the **same** release tag. **None** of these packages publish a free-threaded wheel on PyPI. They are hosted **only** so the Data Boar **`-nogil` Docker image** (`Dockerfile.nogil` + `scripts/docker/apply_wheelhouse_v1.sh`) can install SQL extras without compiling from sdist on every rebuild. They are **not** a general-user, air-gap, or x86-64-v1 install path.
+
+| Package | Version | Platform tag |
+| ------- | ------- | ------------ |
+| **mariadb** | 1.1.14 | `cp314-cp314t-linux_x86_64` |
+| **oracledb** | 4.0.2 | `cp314-cp314t-linux_x86_64` |
+| **psycopg2-binary** | 2.9.12 | `cp314-cp314t-linux_x86_64` (`psycopg2_binary-…` filename) |
+| **pymssql** | 2.3.13 | `cp314-cp314t-linux_x86_64` |
+
+Tag is **`linux_x86_64`** (compiled inside the nogil builder), **not** `manylinux` / `musllinux`. Same CPU-contract as the ML `cp314t` cells: **not** a v1 baseline rebuild.
+
+**Rebuild system packages** (Debian/Ubuntu-class builder) if you must compile again instead of using these wheels:
+
+| Debian/Ubuntu package | Why |
+| --------------------- | --- |
+| **`freetds-dev`** | `pymssql` needs `sqlfront.h` |
+| **`libkrb5-dev`** | `pymssql` links `-lkrb5` |
+
+`SHA256SUMS` on the tag now covers **58** `.whl` (the previous 54 plus these four). PEP 503 `simple/` stubs: [data-boar-site#86](https://github.com/DataBoar/data-boar-site/pull/86).
 
 ### Seed release `wheelhouse-2026-07-12` (checksum gap check)
 

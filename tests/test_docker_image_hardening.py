@@ -95,6 +95,8 @@ def test_dockerfile_applies_wheelhouse_v1_in_builder() -> None:
     assert "Py_GIL_DISABLED" in body or "SOABI" in body
     assert "sys.version_info" in body
     assert "cp314t" in body  # free-threaded wheel cells + EXPECTED_SHA
+    assert "mariadb-1.1.14-cp314-cp314t-linux_x86_64.whl" in body
+    assert "pymssql-2.3.13-cp314-cp314t-linux_x86_64.whl" in body
 
 
 def test_dockerfile_nogil_pins_and_uv_freethreaded() -> None:
@@ -109,6 +111,12 @@ def test_dockerfile_nogil_pins_and_uv_freethreaded() -> None:
     assert "python3.14t" in text
     assert "DISABLE_SQLALCHEMY_CEXT=1" in text
     assert "--no-binary sqlalchemy" in text
+    assert "freetds-dev" in text  # pymssql source build on cp314t (#1398 nogil builder)
+    assert "libkrb5-dev" in text
+    # GIL image must keep stock SQLAlchemy cext — change is isolated to Dockerfile.nogil (#1398).
+    gil_text = DOCKERFILE.read_text(encoding="utf-8")
+    assert "DISABLE_SQLALCHEMY_CEXT" not in gil_text
+    assert "--no-binary sqlalchemy" not in gil_text
     # Must not force GIL off over undeclared-safe C exts (comments may mention the forbid).
     assert "ENV PYTHON_GIL" not in text
     assert "PYTHON_GIL=0" not in [
@@ -123,6 +131,27 @@ def test_dockerfile_nogil_pins_and_uv_freethreaded() -> None:
     assert all("@sha256:" in ln for ln in from_lines)
     collect = COLLECT_SCRIPT.read_text(encoding="utf-8")
     assert "sysconfig.get_path" in collect  # python3.14t lib dir
+
+
+def test_boar_fast_filter_releases_gil_on_batch_and_stage() -> None:
+    """#1398 / #551: Rust hot paths must use py.detach (PyO3 ≥0.29)."""
+    lib = (REPO_ROOT / "rust" / "boar_fast_filter" / "src" / "lib.rs").read_text(
+        encoding="utf-8"
+    )
+    assert "fn filter_batch(&self, py: Python<'_>" in lib
+    assert lib.count("py.detach") >= 2
+    assert "fn match_names(&self, py: Python<'_>" in lib
+
+
+def test_compare_gil_nogil_demo_timing_script_exists() -> None:
+    """#1398 AC: manifest duration_minutes comparison helper for publish gate."""
+    path = REPO_ROOT / "scripts" / "docker" / "compare-gil-nogil-demo-timing.sh"
+    measure = REPO_ROOT / "scripts" / "docker" / "measure_demo_scan_manifest_timing.py"
+    assert path.is_file()
+    assert measure.is_file()
+    body = path.read_text(encoding="utf-8")
+    assert "duration_minutes" in body
+    assert "PUBLISH_GATE" in body
 
 
 def test_grype_vex_config_has_documented_ignore_rules() -> None:
