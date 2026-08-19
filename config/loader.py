@@ -146,33 +146,48 @@ def _normalize_sql_sampling(raw: Any) -> dict[str, Any]:
 
 
 def _resolve_path_relative_to_config(base_dir: Path, rel: str) -> Path:
-    """Resolve a config-relative path; reject ``..`` escapes for relative paths."""
+    """Resolve a fragment path; reject anything that does not stay under ``base_dir``.
+
+    Relative ``..`` escapes and **absolute** paths outside the config directory
+    are both rejected (GitHub #1550). An absolute path that resolves *inside*
+    ``base_dir`` is allowed so operators can spell a full path next to the config.
+    """
     raw = Path(rel.strip())
-    if raw.is_absolute():
-        return raw.resolve()
-    combined = (base_dir / raw).resolve()
-    try:
-        combined.relative_to(base_dir.resolve())
-    except ValueError as e:
-        raise ValueError(f"sql_sampling path escapes config directory: {rel!r}") from e
+    base = base_dir.resolve()
+    combined = raw.resolve() if raw.is_absolute() else (base / raw).resolve()
+    if not combined.is_relative_to(base):
+        raise ValueError(f"sql_sampling path escapes config directory: {rel!r}")
     return combined
+
+
+_YAML_JSON_PARSE_ERRORS: tuple[type[BaseException], ...] = (yaml.YAMLError,)
+if json is not None:
+    _YAML_JSON_PARSE_ERRORS = (yaml.YAMLError, json.JSONDecodeError)
 
 
 def _load_yaml_mapping(path: Path) -> dict[str, Any]:
     text = read_text_auto_encoding(path)
     suffix = path.suffix.lower()
-    if suffix in (".yaml", ".yml"):
-        loaded = yaml.safe_load(text)
-    elif suffix == ".json":
-        if json is None:
-            raise RuntimeError("JSON fragment requires stdlib json")
-        loaded = json.loads(text)
-    else:
-        raise ValueError(f"Unsupported sql_sampling fragment format: {path}")
+    try:
+        if suffix in (".yaml", ".yml"):
+            loaded = yaml.safe_load(text)
+        elif suffix == ".json":
+            if json is None:
+                raise RuntimeError("JSON fragment requires stdlib json")
+            loaded = json.loads(text)
+        else:
+            raise ValueError(f"Unsupported sql_sampling fragment format: {path.name}")
+    except _YAML_JSON_PARSE_ERRORS:
+        # ``from None``: PyYAML/json include file snippets in the message; clean_error
+        # walks ``__cause__`` into HTTP config-save banners (#1550).
+        kind = "JSON" if suffix == ".json" else "YAML"
+        raise ValueError(
+            f"sql_sampling fragment is not valid {kind}: {path.name}"
+        ) from None
     if loaded is None:
         return {}
     if not isinstance(loaded, dict):
-        raise ValueError(f"sql_sampling fragment must be a mapping: {path}")
+        raise ValueError(f"sql_sampling fragment must be a mapping: {path.name}")
     return loaded
 
 
