@@ -3,7 +3,7 @@
 <!-- plans-hub-summary: Camada de tradução GRC: mapeia padrões detectados para controles COBIT 2019 / ISO 27001 / ISO 27014 / ISO 38500 / ITIL 4; gera Governance View no Excel e exporta MD→DOCX/PDF via pandoc; Pro tier. -->
 <!-- plans-hub-related: PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md, PLAN_CLI_VALIDATE_DIFF_AND_DSAR_EXPORT.md, LICENSING_SPEC.md -->
 
-- **Status:** In progress (Phase B — generator + Excel Governance View)
+- **Status:** In progress (Phase C — pandoc template + CLI `--governance-report`)
 - **Date:** 2026-08-18
 - **Authors:** Fabio Leitao (operator); Cursor executor
 - **Priority:** H2
@@ -31,8 +31,8 @@ Ship Governance Lens in **five phases** (A→E). Each phase is a thin, reviewabl
 | Phase | Deliverable | Issue | Status |
 | ----- | ----------- | ----- | ------ |
 | **A** | This plan + `config/governance_framework_map.schema.yaml` (structure + illustrative examples only) | [#539](https://github.com/DataBoar/data-boar/issues/539) | ✅ Done |
-| **B** | `report/governance_lens.py` — Pro-tier generator (Governance View sheet / hooks) | [#540](https://github.com/DataBoar/data-boar/issues/540) | 🔄 In progress |
-| **C** | Pandoc-ready MD template + `pandoc` YAML + CLI `--governance-report` | [#541](https://github.com/DataBoar/data-boar/issues/541) | ⬜ Pending |
+| **B** | `report/governance_lens.py` — Pro-tier generator (Governance View sheet / hooks) | [#540](https://github.com/DataBoar/data-boar/issues/540) | ✅ Done |
+| **C** | Pandoc-ready MD template + `pandoc` YAML + CLI `--governance-report` | [#541](https://github.com/DataBoar/data-boar/issues/541) | 🔄 In progress |
 | **D** | Operator docs: USAGE EN + pt-BR, TECH_GUIDE, pandoc quickstart | [#542](https://github.com/DataBoar/data-boar/issues/542) | ⬜ Pending |
 | **E** | Enterprise framework modules (BACEN, FEBRABAN, PCI-DSS v4.0) | [#543](https://github.com/DataBoar/data-boar/issues/543) | ⬜ Pending |
 
@@ -106,6 +106,14 @@ Exact control IDs and Portuguese audit phrasing live in the **curated Pro map** 
 ## Follow-ups (Phases B–E)
 
 See issues [#540](https://github.com/DataBoar/data-boar/issues/540)–[#543](https://github.com/DataBoar/data-boar/issues/543). Refresh [ISSUE_QUEUE_SEQUENCING_MAP.md](../ops/ISSUE_QUEUE_SEQUENCING_MAP.md) when the chain closes.
+
+### Acceptance (Phase C — #541)
+
+- [x] `docs/templates/GRC_GOVERNANCE_LENS_REPORT.md.j2` + `report/governance_report.py`
+- [x] `config/pandoc_governance.yaml` + `docs/templates/governance_reference.docx`
+- [x] CLI `--governance-report [PATH]` (+ optional `--session`)
+- [x] `tests/test_governance_report_template.py` (4 named tests + pandoc defaults guard)
+- [x] `check-all` green before merge
 
 ### Acceptance (Phase B — #540)
 
