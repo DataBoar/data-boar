@@ -48,7 +48,7 @@ def test_has_nested_quantifier_allows_safe_patterns() -> None:
         r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}",  # e-mail
         r"(a+)b*",  # quantifier after group, not nested
         r"(\d+)\s+\w+",
-        r"(\+55\s?)?(\(?\d{2}\)?\s?)?\d{4,5}-?\d{4}",  # PHONE_BR: escaped \+ \( \) are literals
+        r"(\+55\s?)?\(?\d{2}\)?\s?\d{4,5}-?\d{4}",  # PHONE_BR (#393 DDD required)
         r"(a?)+",  # bounded ? inside — CPython empty-match protection, no blowup
         r"([+*]\d)+",  # quantifier chars inside a character class are literals
         r"(a{2,5})+",  # bounded brace repetition inside

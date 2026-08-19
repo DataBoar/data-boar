@@ -488,7 +488,7 @@ A aplicação já inclui estes padrões; não é preciso redefini-los a menos qu
 | `LGPD_CNPJ`   | CNPJ brasileiro (14 dígitos, formatação opcional)  | LGPD Art. 5           |
 | `EMAIL`       | Endereço de e-mail                                 | GDPR Art. 4(1)        |
 | `CREDIT_CARD` | Cartão 16 dígitos (espaços/traços opcionais)       | PCI/GLBA              |
-| `PHONE_BR`    | Telefone BR (+55, DDD opcional)                    | LGPD Art. 5           |
+| `PHONE_BR`    | Telefone BR (+55 opcional, DDD obrigatório)        | LGPD Art. 5           |
 | `CCPA_SSN`    | SSN EUA (XXX-XX-XXXX)                              | CCPA                  |
 | `DATE_DMY`    | Data d/m/a (ex.: 31/12/2024)                       | Personal data context |
 
