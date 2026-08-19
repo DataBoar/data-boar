@@ -62,6 +62,8 @@ def test_lopdp_does_not_cite_gdpr_mirrored_articles():
         ("historia_clinica", "EC_FIELD_HEALTH_LABEL", "Art. 25"),
         ("numero_ruc", "EC_FIELD_RUC_LABEL", "Art. 4"),
         ("datos_menores", "EC_FIELD_MINOR_LABEL", "Art. 25"),
+        ("cliente_numero_cedula", "EC_FIELD_CEDULA_LABEL", "Art. 4"),
+        ("patient_historia_clinica", "EC_FIELD_HEALTH_LABEL", "Art. 25"),
     ],
 )
 def test_lopdp_contextual_columns(

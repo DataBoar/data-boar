@@ -33,28 +33,28 @@
 
 regex:
   - name: "EC_FIELD_CEDULA_LABEL"
-    pattern: "(?i)\\b(cedula[_\\s]?identidad|numero[_\\s]?cedula|ci[_\\s]?ecuador|cedula[_\\s]?ecuatoriana|cédula[_\\s]?identidad)\\b"
+    pattern: "(?i)(?:^|_|\b)(cedula[_\\s]?identidad|numero[_\\s]?cedula|ci[_\\s]?ecuador|cedula[_\\s]?ecuatoriana|cédula[_\\s]?identidad)\\w*"
     norm_tag: "LOPDP Art. 4 (dato personal — cédula)"
 
   - name: "EC_FIELD_RUC_LABEL"
-    pattern: "(?i)\\b(numero[_\\s]?ruc|ruc[_\\s]?ecuador|ruc[_\\s]?contribuyente|registro[_\\s]?unico[_\\s]?contribuyentes)\\b"
+    pattern: "(?i)(?:^|_|\b)(numero[_\\s]?ruc|ruc[_\\s]?ecuador|ruc[_\\s]?contribuyente|registro[_\\s]?unico[_\\s]?contribuyentes)\\w*"
     norm_tag: "LOPDP Art. 4 (dato personal — RUC)"
 
   - name: "EC_FIELD_PASSPORT_LABEL"
-    pattern: "(?i)\\b(pasaporte[_\\s]?ecuador|numero[_\\s]?pasaporte[_\\s]?ec|passport[_\\s]?ec|ec[_\\s]?passport)\\b"
+    pattern: "(?i)(?:^|_|\b)(pasaporte[_\\s]?ecuador|numero[_\\s]?pasaporte[_\\s]?ec|passport[_\\s]?ec|ec[_\\s]?passport)\\w*"
     norm_tag: "LOPDP Art. 4 (dato personal — pasaporte)"
 
   - name: "EC_FIELD_HEALTH_LABEL"
-    pattern: "(?i)\\b(historia[_\\s]?clinica|expediente[_\\s]?medico|datos[_\\s]?salud|registro[_\\s]?medico|diagnostico[_\\s]?medico)\\b"
+    pattern: "(?i)(?:^|_|\b)(historia[_\\s]?clinica|expediente[_\\s]?medico|datos[_\\s]?salud|registro[_\\s]?medico|diagnostico[_\\s]?medico)\\w*"
     norm_tag: "LOPDP Art. 25 (categoría especial — salud)"
 
   - name: "EC_FIELD_MIGRATION_LABEL"
     # Condición migratoria is sensitive under Art. 4; Art. 25/26 govern special-category processing.
-    pattern: "(?i)\\b(estatus[_\\s]?migratorio|condicion[_\\s]?migratoria|visa[_\\s]?tipo|permiso[_\\s]?residencia|status[_\\s]?migratorio)\\b"
+    pattern: "(?i)(?:^|_|\b)(estatus[_\\s]?migratorio|condicion[_\\s]?migratoria|visa[_\\s]?tipo|permiso[_\\s]?residencia|status[_\\s]?migratorio)\\w*"
     norm_tag: "LOPDP Art. 4 y 25 (dato sensible — migratorio)"
 
   - name: "EC_FIELD_MINOR_LABEL"
-    pattern: "(?i)\\b(datos[_\\s]?menores|datos[_\\s]?ninos|consentimiento[_\\s]?parental|menor[_\\s]?edad)\\b"
+    pattern: "(?i)(?:^|_|\b)(datos[_\\s]?menores|datos[_\\s]?ninos|consentimiento[_\\s]?parental|menor[_\\s]?edad)\\w*"
     norm_tag: "LOPDP Art. 25 (categoría especial — NNA)"
 
   - name: "EC_LOPDP_JSON_LAT_PRECISION"
