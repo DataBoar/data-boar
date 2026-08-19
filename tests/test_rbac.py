@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from unittest.mock import patch
 
@@ -10,6 +11,7 @@ import yaml
 from fastapi.testclient import TestClient
 
 from api.rbac import (
+    CFG,
     RouteRbacClass,
     classify_route_rbac,
     iter_fastapi_route_specs,
@@ -225,3 +227,49 @@ def test_rbac_non_ascii_api_key_returns_401_not_500(rbac_pro_client):
         headers=[(b"x-api-key", "café-🔑".encode("utf-8"))],
     )
     assert r.status_code == 401
+
+
+def test_rbac_config_routes_require_cfg_roles() -> None:
+    """#414: GET/POST /{locale}/config maps to config_admin | admin, not dashboard."""
+    for method in ("GET", "HEAD", "POST"):
+        kind, roles = classify_route_rbac(method, "/en/config")
+        assert kind == RouteRbacClass.PROTECTED, method
+        assert roles == CFG, method
+
+
+def test_rbac_dashboard_api_key_cannot_read_or_save_config(rbac_pro_client) -> None:
+    client, _ = rbac_pro_client
+    h = {"X-API-Key": "test-secret-key"}
+    assert client.get("/en/config").status_code == 401
+    assert client.get("/en/config", headers=h).status_code == 403
+    assert (
+        client.post(
+            "/en/config",
+            headers=h,
+            data={"yaml": "targets: []\n"},
+        ).status_code
+        == 403
+    )
+
+
+def test_rbac_config_admin_api_key_can_get_and_post_config(rbac_pro_client) -> None:
+    client, routes_mod = rbac_pro_client
+    cfg_path = Path(routes_mod._config_path)
+    cfg = yaml.safe_load(cfg_path.read_text(encoding="utf-8"))
+    cfg["api"]["rbac"]["api_key_roles"] = ["config_admin"]
+    cfg_path.write_text(yaml.dump(cfg, sort_keys=False), encoding="utf-8")
+    routes_mod._config = None
+
+    h = {"X-API-Key": "test-secret-key"}
+    page = client.get("/en/config", headers=h)
+    assert page.status_code == 200
+    m = re.search(r'name="csrf_token"\s+value="([^"]+)"', page.text)
+    assert m, "expected csrf_token on config GET"
+    r = client.post(
+        "/en/config",
+        headers=h,
+        data={"yaml": "targets: []\n", "csrf_token": m.group(1)},
+        follow_redirects=False,
+    )
+    assert r.status_code == 303
+    assert "/en/config?saved=1" in r.headers.get("location", "")
