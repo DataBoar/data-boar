@@ -1,0 +1,171 @@
+# EU NIS2 Directive (Directive 2022/2555) — Network and Information Security
+# In force: October 2024 (transposition deadline; enforcement ongoing)
+#
+# NOT LEGAL ADVICE. Technical starting point for inventory of data fields
+# relevant to NIS2 cybersecurity incident reporting and supply-chain risk.
+# NIS2 is a cybersecurity directive — not a personal data protection law.
+# It complements GDPR: security incidents under NIS2 often trigger GDPR
+# breach notifications. Use alongside compliance-sample-eu_gdpr.yaml.
+#
+# Authority: ENISA (EU Agency for Cybersecurity) + national CSIRTs / CAs
+# Reference: Directive 2022/2555/EU — eur-lex.europa.eu
+#
+# Who is in scope: Essential Entities (EE) and Important Entities (IE):
+# energy, transport, banking, financial market infrastructure, health,
+# drinking water, wastewater, digital infrastructure, ICT service management,
+# public administration, space sector, and additional IE sectors.
+#
+# NOTE — recommendation_overrides use distinctive Art. N (role) patterns.
+# Do not add a bare "NIS2" catch-all: _find_override_row is bidirectional
+# substring match and would steal every NIS2 row (and any future tag).
+# Keep "NIS2 Art. 21 (access control — MFA)" before "NIS2 Art. 21 (access control)".
+#
+# How to use:
+#   regex_overrides_file: path/to/compliance-sample-eu_nis2.yaml
+#   ml_patterns_file:     path/to/compliance-sample-eu_nis2.yaml
+#   Merge recommendation_overrides into report.recommendation_overrides.
+#   Pair with: compliance-sample-eu_gdpr.yaml for full EU coverage.
+
+regex:
+  - name: "NIS2_INCIDENT_ID_FIELD"
+    pattern: "(?i)\\b(incident[_\\s]?id|event[_\\s]?id|security[_\\s]?event|cyber[_\\s]?incident|breach[_\\s]?id|nis2[_\\s]?report|csirt[_\\s]?ref)\\b"
+    norm_tag: "NIS2 Art. 23 (incident notification)"
+
+  - name: "NIS2_VULNERABILITY_FIELD"
+    pattern: "(?i)\\b(vulnerability[_\\s]?id|cve[_\\s]?id|cwe[_\\s]?id|vuln[_\\s]?ref|patch[_\\s]?status|zero[_\\s]?day|exploit[_\\s]?code)\\b"
+    norm_tag: "NIS2 Art. 12 (vulnerability disclosure)"
+
+  - name: "NIS2_SUPPLY_CHAIN_FIELD"
+    pattern: "(?i)\\b(supplier[_\\s]?risk|vendor[_\\s]?assessment|third[_\\s]?party[_\\s]?security|supply[_\\s]?chain[_\\s]?risk|ictsm[_\\s]?assessment)\\b"
+    norm_tag: "NIS2 Art. 21 (supply chain security)"
+
+  - name: "NIS2_CRITICAL_INFRA_FIELD"
+    pattern: "(?i)\\b(critical[_\\s]?infrastructure|essential[_\\s]?service|oe[_\\s]?service|nis2[_\\s]?entity|csirt[_\\s]?contact|cert[_\\s]?contact)\\b"
+    norm_tag: "NIS2 Art. 3 (essential entity)"
+
+  - name: "NIS2_NETWORK_CREDENTIAL"
+    pattern: "(?i)\\b(network[_\\s]?password|system[_\\s]?credential|admin[_\\s]?password|root[_\\s]?password|service[_\\s]?account[_\\s]?password)\\b"
+    norm_tag: "NIS2 Art. 21 (access control)"
+
+  - name: "NIS2_MFA_FIELD"
+    pattern: "(?i)\\b(mfa[_\\s]?secret|totp[_\\s]?seed|authenticator[_\\s]?key|otp[_\\s]?secret|2fa[_\\s]?token|multi[_\\s]?factor[_\\s]?seed)\\b"
+    norm_tag: "NIS2 Art. 21 (access control — MFA)"
+
+  - name: "NIS2_ENCRYPTION_KEY_FIELD"
+    pattern: "(?i)\\b(encryption[_\\s]?key|private[_\\s]?key|secret[_\\s]?key|signing[_\\s]?key|api[_\\s]?secret|client[_\\s]?secret)\\b"
+    norm_tag: "NIS2 Art. 21 (cryptographic measures)"
+
+terms:
+  - { text: "security incident", label: sensitive }
+  - { text: "cyber incident", label: sensitive }
+  - { text: "data breach", label: sensitive }
+  - { text: "breach notification", label: sensitive }
+  - { text: "incident notification", label: sensitive }
+  - { text: "significant incident", label: sensitive }
+  - { text: "incident report", label: sensitive }
+  - { text: "csirt", label: sensitive }
+  - { text: "vulnerability disclosure", label: sensitive }
+  - { text: "zero day", label: sensitive }
+  - { text: "exploit code", label: sensitive }
+  - { text: "ransomware", label: sensitive }
+  - { text: "malware", label: sensitive }
+  - { text: "attack vector", label: sensitive }
+  - { text: "threat intelligence", label: sensitive }
+  - { text: "penetration test", label: sensitive }
+  - { text: "pen test result", label: sensitive }
+  - { text: "red team", label: sensitive }
+
+  - { text: "admin credential", label: sensitive }
+  - { text: "system credential", label: sensitive }
+  - { text: "privileged account", label: sensitive }
+  - { text: "root password", label: sensitive }
+  - { text: "service account", label: sensitive }
+  - { text: "api secret", label: sensitive }
+  - { text: "client secret", label: sensitive }
+  - { text: "encryption key", label: sensitive }
+  - { text: "private key", label: sensitive }
+  - { text: "mfa secret", label: sensitive }
+  - { text: "totp seed", label: sensitive }
+  - { text: "multi-factor authentication", label: sensitive }
+  - { text: "single sign-on token", label: sensitive }
+
+  - { text: "supplier risk", label: sensitive }
+  - { text: "vendor assessment", label: sensitive }
+  - { text: "third party security", label: sensitive }
+  - { text: "supply chain risk", label: sensitive }
+  - { text: "ict service provider", label: sensitive }
+  - { text: "managed service provider", label: sensitive }
+  - { text: "outsourcing agreement", label: sensitive }
+
+  - { text: "critical infrastructure", label: sensitive }
+  - { text: "essential entity", label: sensitive }
+  - { text: "important entity", label: sensitive }
+  - { text: "nis2 entity", label: sensitive }
+  - { text: "nis2 notification", label: sensitive }
+  - { text: "network security", label: sensitive }
+  - { text: "information security", label: sensitive }
+  - { text: "cyber risk", label: sensitive }
+  - { text: "business continuity", label: sensitive }
+  - { text: "disaster recovery", label: sensitive }
+  - { text: "recovery point objective", label: sensitive }
+  - { text: "recovery time objective", label: sensitive }
+
+  - { text: "csirt contact", label: sensitive }
+  - { text: "national authority", label: sensitive }
+  - { text: "enisa", label: sensitive }
+  - { text: "competent authority contact", label: sensitive }
+
+  - { text: "product_id", label: non_sensitive }
+  - { text: "item_code", label: non_sensitive }
+  - { text: "session_log", label: non_sensitive }
+  - { text: "debug_output", label: non_sensitive }
+
+recommendation_overrides:
+  - norm_tag_pattern: "NIS2 Art. 23 (incident notification)"
+    base_legal: "EU NIS2 Directive 2022/2555 Art. 23 — significant incidents must be notified to competent authority/CSIRT within 24 hours (early warning) and 72 hours (incident notification). In force since October 2024."
+    risk: "Field contains incident identification or reporting data. NIS2 mandates timely notification to national CSIRT or competent authority. Failure to notify within timelines may result in supervisory action."
+    recommendation: "Ensure incident tracking fields are access-controlled and retained for audit. Verify 24h/72h/1-month notification workflow is documented and tested. Engage CISO and legal counsel. Not a legal conclusion."
+    priority: "ALTA"
+    relevant_for: "CISO, DPO, legal, incident response team, competent authority liaison"
+
+  - norm_tag_pattern: "NIS2 Art. 21 (access control — MFA)"
+    base_legal: "EU NIS2 Directive 2022/2555 Art. 21(2)(j) — multi-factor authentication and continuous authentication solutions required for essential/important entities. In force since October 2024."
+    risk: "MFA seed, TOTP key, or authenticator secret found in data store. These should never be stored in plaintext databases or scanned filesystems — they are equivalent to credentials."
+    recommendation: "Immediately review storage of MFA secrets. Use dedicated secrets management (HSM, vault). Rotate any exposed secrets. NIS2 Art. 21 requires MFA for privileged access. Consult CISO and security team."
+    priority: "CRÍTICA"
+    relevant_for: "CISO, security engineering, DPO"
+
+  - norm_tag_pattern: "NIS2 Art. 21 (cryptographic measures)"
+    base_legal: "EU NIS2 Directive 2022/2555 Art. 21(2)(h) — cryptography and encryption policies required. Plaintext cryptographic keys in databases/files represent a critical exposure."
+    risk: "Encryption key or private key found in scanned data. Plaintext storage of cryptographic material is a critical security control failure under NIS2 Art. 21(2)(h)."
+    recommendation: "Immediately rotate any exposed keys. Move all cryptographic material to dedicated secrets management (HSM, KMS, vault). Review key storage policy. Escalate to CISO. This is a critical finding regardless of NIS2 scope."
+    priority: "CRÍTICA"
+    relevant_for: "CISO, security engineering, DevSecOps"
+
+  - norm_tag_pattern: "NIS2 Art. 21 (access control)"
+    base_legal: "EU NIS2 Directive 2022/2555 Art. 21(2)(i) — access control policies and secure development required for essential/important entities. In force since October 2024."
+    risk: "System credential, admin password, or privileged account data found in scanned store. This represents a critical access control exposure under NIS2 Art. 21(2)(i)."
+    recommendation: "Rotate exposed credentials immediately. Implement PAM (privileged access management). Verify no credentials are stored in application databases, config files, or logs. Review access control policies per NIS2 Art. 21. Consult CISO."
+    priority: "CRÍTICA"
+    relevant_for: "CISO, security engineering, IT operations"
+
+  - norm_tag_pattern: "NIS2 Art. 21 (supply chain security)"
+    base_legal: "EU NIS2 Directive 2022/2555 Art. 21(2)(d) — supply chain security including relationships with direct suppliers and service providers. In force since October 2024."
+    risk: "Supply chain risk assessment or vendor security data found. NIS2 requires formal supply chain security policies covering ICT service providers and managed service providers."
+    recommendation: "Review vendor/supplier security assessment data for appropriate access controls and retention. Ensure third-party agreements include NIS2-compliant security requirements. Consult CISO and legal. Not a legal conclusion."
+    priority: "ALTA"
+    relevant_for: "CISO, procurement, legal, vendor management"
+
+  - norm_tag_pattern: "NIS2 Art. 12 (vulnerability disclosure)"
+    base_legal: "EU NIS2 Directive 2022/2555 Art. 12 — coordinated vulnerability disclosure policy. ENISA maintains the EUVD (EU Vulnerability Database). In force since October 2024."
+    risk: "Vulnerability ID, CVE, or exploit code found in scanned data. These may indicate unpatched vulnerabilities or active exploitation data that requires responsible disclosure."
+    recommendation: "Ensure vulnerability data is access-controlled and shared only through coordinated disclosure channels (CSIRT, ENISA EUVD). Verify patch management status for found CVEs. Consult CISO and incident response team."
+    priority: "ALTA"
+    relevant_for: "CISO, security engineering, incident response, competent authority"
+
+  - norm_tag_pattern: "NIS2 Art. 3 (essential entity)"
+    base_legal: "EU NIS2 Directive 2022/2555 Art. 3 — essential entities (energy, transport, banking, health, digital infrastructure, etc.) have heightened obligations. In force since October 2024."
+    risk: "Data field references essential entity classification or critical service. Essential entities are subject to stricter security measures, supervisory oversight, and notification obligations under NIS2."
+    recommendation: "Verify whether your organisation is classified as an Essential Entity under NIS2 and confirm compliance with Art. 21 security measures and Art. 23 notification obligations. Consult CISO and legal counsel."
+    priority: "MÉDIA"
+    relevant_for: "CISO, DPO, legal, board / executive team"
