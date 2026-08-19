@@ -44,6 +44,43 @@ regex_patterns:
       description: >
         Compliance norm tag displayed in findings (e.g. "LGPD Art. 5", "GDPR Art. 4",
         "CCPA / Personal data context").  Defaults to "Custom" when omitted.
+    dga_classification:
+      type: string
+      required: false
+      allowed_values:
+        - shareable
+        - restricted_sharing
+        - no_sharing
+      description: >
+        Optional EU Data Governance Act (Reg. 2022/868) *sharing posture hint* for this
+        pattern — author metadata only.  The detector still emits name / pattern /
+        norm_tag on findings; it does not decide lawful reuse or issue a DGA opinion.
+        shareable = typically reusable externally after your legal review;
+        restricted_sharing = typically needs anonymisation / minimisation first;
+        no_sharing = typically must not leave the organisation (e.g. special-category PI).
+    iso27001_controls:
+      type: list
+      item_type: string
+      required: false
+      description: >
+        Optional ISO/IEC 27001:2022 Annex A control IDs (e.g. A.5.12, A.5.33, A.8.3,
+        A.8.11) as *references for GRC authors* — not an ISO certification of the hit.
+        Use 2022 numbering.  ISO/IEC 27001:2013 A.8.2.1 (classification of information)
+        maps to 2022 A.5.12, not to 2022 A.8.2 (privileged access rights).
+        Typical author hints: health / special-category → A.5.33 + A.8.11;
+        access / credential-like → A.8.3; stored PI classification → A.5.12.
+    dmbok_area:
+      type: string
+      required: false
+      allowed_values:
+        - armazenamento_e_operacao
+        - integracao_e_interoperabilidade
+        - seguranca_dados
+      description: >
+        Optional DAMA-DMBOK knowledge-area hint for this pattern (not derived from the
+        live connector).  Tokens are stable keys: storage / files →
+        armazenamento_e_operacao; APIs / streams → integracao_e_interoperabilidade;
+        unclassified PI → seguranca_dados.  Advisory only — not a DMBOK assessment.
 
 # ---------------------------------------------------------------------------
 # ml_patterns
