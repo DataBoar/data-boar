@@ -998,20 +998,6 @@ Instale os extras opcionais: `uv pip install -e ".[shares]"`.
 
 Todos os tipos de *share* usam as mesmas chaves de `file_scan` (extensões, recursividade, `scan_sqlite_as_db`, `sample_limit`, `file_sample_max_chars`, `file_passwords`). Os achados entram na planilha **Filesystem findings**.
 
-### Notificações ao operador (opcional)
-
-Após o fim da varredura (CLI ou `POST /scan` / `POST /start` em segundo plano), a aplicação pode enviar um **resumo curto em pt-BR** para **Slack**, **Microsoft Teams**, um **webhook JSON genérico** (ex.: ferramentas de automação ou ponte **Signal**) ou **Telegram** (campos opcionais para instalações legadas/de terceiros). O padrão é **desligado** (`notifications.enabled: false`).
-
-- **Política do mantenedor (repositório canônico):** O mantenedor **não** usa **Telegram** para notificações ao operador do Data Boar; prefira **Slack**, **Teams** ou **webhook genérico** para **Signal**. Ver [OPERATOR_NOTIFICATION_CHANNELS.pt_BR.md](ops/OPERATOR_NOTIFICATION_CHANNELS.pt_BR.md).
-- **Config (caminho único legado):** `notifications.operator` com `slack_webhook_url`, `teams_webhook_url`, `telegram_bot_token` + `telegram_chat_id` ou `generic_webhook_url` — vale o primeiro tipo configurado (Slack → Teams → Telegram → genérico).
-- **Config (vários canais ao operador):** `notifications.operator.channels` como **lista** de objetos; cada item é **um** canal (ex.: um webhook Slack e um webhook genérico). Todos recebem a mesma mensagem (varredura concluída ou script manual).
-- **Cópia ao tenant (opcional):** `notifications.tenant.by_tenant` mapeia o nome do tenant em **minúsculas** para um bloco de webhook (ou string URL para POST genérico). `default_slack_webhook_url` / `default_generic_webhook_url` aplicam quando há `tenant_name` na sessão mas não há entrada específica. Exige `tenant_name` não vazio na sessão.
-- **Deduplicação:** `notifications.dedupe_scan_complete_per_session` (padrão `true`) evita um segundo POST para o mesmo `session_id` depois de **pelo menos um** envio bem-sucedido (por processo; use `false` só se precisar repetir em todo hook de conclusão).
-- **Registro de auditoria (opcional):** `notifications.notify_audit_log` (padrão `true`) grava uma linha por tentativa/canal na tabela SQLite **`notification_send_log`** (sessão, *trigger*, destino `operator`/`tenant`, canal, sucesso, texto de erro redigido, carimbo de tempo). **Não** armazena o corpo da mensagem. Use `false` para desligar escritas.
-- **Segredos:** URLs podem usar `${VAR_DE_AMBIENTE}`. Os POSTs repetem algumas vezes em HTTP 5xx ou erro de rede transitório.
-- **Manual / CI:** `python scripts/notify_webhook.py "mensagem"` (mesmo `config.yaml`; exige `notifications.enabled: true` e um canal configurado). Por padrão o script abre o SQLite em ``sqlite_path`` e grava auditoria por canal (como no fim de varredura); use ``--no-audit`` quando não houver banco local (ex.: alguns jobs de CI).
-- **Detalhes:** [TECH_GUIDE.pt_BR.md](TECH_GUIDE.pt_BR.md) (notificações e webhooks) e [ops/OPERATOR_NOTIFICATION_CHANNELS.pt_BR.md](ops/OPERATOR_NOTIFICATION_CHANNELS.pt_BR.md).
-
 ---
 
 ## 5. Baixando relatórios (resumo)
@@ -1072,6 +1058,20 @@ uv run data-boar-report --config config.yaml --session-id <session_id> -o Execut
 **Requisitos:** o mesmo **`config.yaml`** das varreduras (para amostragem/timeouts do manifesto baterem com a política). O **`session_id`** precisa existir em `scan_sessions` / tabelas de achados.
 
 Privacidade e estrutura do Markdown: veja [Processamento local e privacidade (`data-boar-report`)](#processamento-local-e-privacidade-data-boar-report) na seção 3 e [REPORTS_AND_COMPLIANCE_OUTPUTS.pt_BR.md](REPORTS_AND_COMPLIANCE_OUTPUTS.pt_BR.md) ([EN](REPORTS_AND_COMPLIANCE_OUTPUTS.md)).
+
+### 5.1 Notificações ao operador (opcional) {#notificações-ao-operador-opcional}
+
+Após o fim da varredura (CLI ou `POST /scan` / `POST /start` em segundo plano), a aplicação pode enviar um **resumo curto em pt-BR** para **Slack**, **Microsoft Teams**, um **webhook JSON genérico** (ex.: ferramentas de automação ou ponte **Signal**) ou **Telegram** (campos opcionais para instalações legadas/de terceiros). O padrão é **desligado** (`notifications.enabled: false`).
+
+- **Política do mantenedor (repositório canônico):** O mantenedor **não** usa **Telegram** para notificações ao operador do Data Boar; prefira **Slack**, **Teams** ou **webhook genérico** para **Signal**. Ver [OPERATOR_NOTIFICATION_CHANNELS.pt_BR.md](ops/OPERATOR_NOTIFICATION_CHANNELS.pt_BR.md).
+- **Config (caminho único legado):** `notifications.operator` com `slack_webhook_url`, `teams_webhook_url`, `telegram_bot_token` + `telegram_chat_id` ou `generic_webhook_url` — vale o primeiro tipo configurado (Slack → Teams → Telegram → genérico).
+- **Config (vários canais ao operador):** `notifications.operator.channels` como **lista** de objetos; cada item é **um** canal (ex.: um webhook Slack e um webhook genérico). Todos recebem a mesma mensagem (varredura concluída ou script manual).
+- **Cópia ao tenant (opcional):** `notifications.tenant.by_tenant` mapeia o nome do tenant em **minúsculas** para um bloco de webhook (ou string URL para POST genérico). `default_slack_webhook_url` / `default_generic_webhook_url` aplicam quando há `tenant_name` na sessão mas não há entrada específica. Exige `tenant_name` não vazio na sessão.
+- **Deduplicação:** `notifications.dedupe_scan_complete_per_session` (padrão `true`) evita um segundo POST para o mesmo `session_id` depois de **pelo menos um** envio bem-sucedido (por processo; use `false` só se precisar repetir em todo hook de conclusão).
+- **Registro de auditoria (opcional):** `notifications.notify_audit_log` (padrão `true`) grava uma linha por tentativa/canal na tabela SQLite **`notification_send_log`** (sessão, *trigger*, destino `operator`/`tenant`, canal, sucesso, texto de erro redigido, carimbo de tempo). **Não** armazena o corpo da mensagem. Use `false` para desligar escritas.
+- **Segredos:** URLs podem usar `${VAR_DE_AMBIENTE}`. Os POSTs repetem algumas vezes em HTTP 5xx ou erro de rede transitório.
+- **Manual / CI:** `python scripts/notify_webhook.py "mensagem"` (mesmo `config.yaml`; exige `notifications.enabled: true` e um canal configurado). Por padrão o script abre o SQLite em ``sqlite_path`` e grava auditoria por canal (como no fim de varredura); use ``--no-audit`` quando não houver banco local (ex.: alguns jobs de CI).
+- **Detalhes:** [TECH_GUIDE.pt_BR.md](TECH_GUIDE.pt_BR.md) (notificações e webhooks) e [ops/OPERATOR_NOTIFICATION_CHANNELS.pt_BR.md](ops/OPERATOR_NOTIFICATION_CHANNELS.pt_BR.md).
 
 ## 6. Infraestrutura como Código — OpenTofu / Terraform
 
