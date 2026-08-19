@@ -157,25 +157,25 @@ Registration order in code (first listed = innermost, closest to route):
 2. `security_headers_middleware` — CSP, HSTS when HTTPS, etc. (runs **after** inner layers return, still participates in the stack).
 3. `cache_control_middleware` — `Cache-Control` for `/static` vs no-store.
 4. `optional_api_key_middleware` — if `api.require_api_key`, require key for **all paths except** `GET /health`, `/auth/webauthn/*`, and **`GET /{locale}/login`**.
-5. `request_body_size_middleware` — reject body over 1 MB.
-6. `locale_html_middleware` — unprefixed dashboard HTML paths → `/{slug}/…`; invalid locale segment → redirect; `Set-Cookie` for `db_locale` on successful locale HTML responses (**registered last** → runs **first** on incoming request).
+5. `RequestBodySizeLimitMiddleware` (pure ASGI, `api/request_body_limit.py`) — reject body over 1 MB (**actual bytes**, including chunked / missing `Content-Length`; GitHub **#1558**). **`app.add_middleware` last** → **outermost** of the whole stack.
+6. `locale_html_middleware` — unprefixed dashboard HTML paths → `/{slug}/…`; invalid locale segment → redirect; `Set-Cookie` for `db_locale` on successful locale HTML responses (**last `@app.middleware("http")`** → outermost among HTTP middleware, **inside** the ASGI body cap).
 
 **Incoming request path (outer → inner):**
 
-`locale_html` → `request_body_size` → `optional_api_key` → `cache_control` → `security_headers` → `webauthn_html_session` → **route handler** (or static mount).
+`RequestBodySizeLimitMiddleware` → `locale_html` → `optional_api_key` → `cache_control` → `security_headers` → `webauthn_html_session` → **route handler** (or static mount).
 
 ```mermaid
 flowchart LR
   subgraph incoming["Incoming request (outer → inner)"]
+    S[RequestBodySizeLimit]
     L[locale_html]
-    A[request_body_size]
     B[optional_api_key]
     C[cache_control]
     D[security_headers]
     W[webauthn_html_session]
     R[Route / static]
   end
-  L --> A --> B --> C --> D --> W --> R
+  S --> L --> B --> C --> D --> W --> R
 ```
 
 ### Target stack (Phase 1–3 — design only)

@@ -12,6 +12,7 @@ Regression tests for critical/high severity issues so they are not reintroduced:
 - Config endpoint: when require_api_key is true, /config requires valid API key (no raw secret exposure).
 """
 
+import asyncio
 import os
 import sqlite3
 import tempfile
@@ -336,6 +337,90 @@ def test_clean_error_walks_cause_chain_and_redacts():
     assert "outer" in msg or "***REDACTED***" in msg
 
 
+def _asgi_post_body(
+    app,
+    body_chunks: list[bytes],
+    *,
+    extra_headers: list[tuple[bytes, bytes]] | None = None,
+) -> int:
+    """Drive one POST through an ASGI app; return the HTTP status from response.start."""
+    remaining = list(body_chunks)
+    sent: list[dict] = []
+
+    async def receive() -> dict:
+        if remaining:
+            chunk = remaining.pop(0)
+            return {
+                "type": "http.request",
+                "body": chunk,
+                "more_body": bool(remaining),
+            }
+        return {"type": "http.disconnect"}
+
+    async def send(message: dict) -> None:
+        sent.append(message)
+
+    headers = [(b"host", b"testserver")]
+    if extra_headers:
+        headers.extend(extra_headers)
+
+    scope = {
+        "type": "http",
+        "asgi": {"version": "3.0"},
+        "http_version": "1.1",
+        "method": "POST",
+        "scheme": "http",
+        "path": "/scan",
+        "raw_path": b"/scan",
+        "query_string": b"",
+        "headers": headers,
+        "client": ("127.0.0.1", 1),
+        "server": ("testserver", 80),
+    }
+
+    async def _run() -> None:
+        await app(scope, receive, send)
+
+    asyncio.run(_run())
+    starts = [m for m in sent if m.get("type") == "http.response.start"]
+    assert starts, f"no http.response.start in {sent!r}"
+    return int(starts[0]["status"])
+
+
+def test_request_body_size_limit_counts_chunked_bytes_without_content_length():
+    """#1558: missing Content-Length still caps cumulative http.request body bytes."""
+    from api.request_body_limit import RequestBodySizeLimitMiddleware
+
+    async def echo_app(scope, receive, send):
+        while True:
+            message = await receive()
+            if message.get("type") != "http.request":
+                break
+            if not message.get("more_body"):
+                break
+        await send(
+            {
+                "type": "http.response.start",
+                "status": 200,
+                "headers": [(b"content-type", b"text/plain")],
+            }
+        )
+        await send({"type": "http.response.body", "body": b"ok"})
+
+    capped = RequestBodySizeLimitMiddleware(echo_app, max_bytes=64)
+    under = [b"x" * 32, b"x" * 32]
+    over = [b"x" * 40, b"x" * 40]
+    assert _asgi_post_body(capped, under) == 200
+    assert (
+        _asgi_post_body(
+            capped,
+            over,
+            extra_headers=[(b"transfer-encoding", b"chunked")],
+        )
+        == 413
+    )
+
+
 def test_request_body_size_limit_returns_413_when_content_length_exceeds_1mb():
     """API returns 413 when Content-Length exceeds 1 MB (DoS mitigation)."""
     from fastapi.testclient import TestClient
@@ -360,6 +445,41 @@ def test_request_body_size_limit_returns_413_when_content_length_exceeds_1mb():
             # Send a body larger than 1 MB; client sets Content-Length automatically
             big_body = b"x" * (max_bytes + 1)
             resp = client.post("/scan", content=big_body)
+            assert resp.status_code == 413
+            assert "too large" in (resp.json().get("detail") or "").lower()
+        finally:
+            if orig_path is not None:
+                routes._config_path = orig_path
+            routes._config = orig_cfg
+            routes._audit_engine = orig_engine
+
+
+def test_request_body_size_limit_returns_413_when_streamed_body_exceeds_1mb():
+    """API returns 413 when the streamed body exceeds 1 MB with no Content-Length (#1558)."""
+    from fastapi.testclient import TestClient
+
+    import api.routes as routes
+
+    max_bytes = routes.MAX_REQUEST_BODY_BYTES
+
+    def _chunks():
+        yield b"x" * (max_bytes + 1)
+
+    with tempfile.TemporaryDirectory() as tmp:
+        config_path = Path(tmp) / "config.yaml"
+        config_path.write_text(
+            "targets: []\nreport:\n  output_dir: .\napi:\n  port: 8088\nsqlite_path: audit.db\n",
+            encoding="utf-8",
+        )
+        orig_path = getattr(routes, "_config_path", None)
+        orig_cfg = getattr(routes, "_config", None)
+        orig_engine = getattr(routes, "_audit_engine", None)
+        try:
+            routes._config_path = str(config_path)
+            routes._config = None
+            routes._audit_engine = None
+            client = TestClient(routes.app)
+            resp = client.post("/scan", content=_chunks())
             assert resp.status_code == 413
             assert "too large" in (resp.json().get("detail") or "").lower()
         finally:
