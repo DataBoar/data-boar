@@ -71,6 +71,10 @@ Implantações corporativas podem exigir *hooks* de **tamper-evidence** paralelo
 
 YAML opt-in `remediation:` carrega um `RemediationPlugin` de parceiro após a geração de relatório (feature **Enterprise** `remediation_plugin`, ou lab **OPEN**). Fail-graceful: erros do plugin nunca abortam o scan. Guia do autor: **[PLUGIN_SDK.pt_BR.md](PLUGIN_SDK.pt_BR.md)** ([EN](PLUGIN_SDK.md)). Bloco de exemplo: `deploy/config.example.yaml`.
 
+### Plugins YAML de padrões (opcional)
+
+Arquivos YAML do operador injetam termos extras de regex / ML / DL no detector (`patterns_plugin_file`, ou as chaves legadas `regex_overrides_file` / `ml_patterns_file` / `dl_patterns_file`). **Não** executam código. Guia do autor: **[PLUGIN_AUTHOR_GUIDE.pt_BR.md](PLUGIN_AUTHOR_GUIDE.pt_BR.md)** ([EN](PLUGIN_AUTHOR_GUIDE.md)). Schema: `config/plugin_schema.yaml`. How-to campo a campo: [SENSITIVITY_DETECTION.pt_BR.md](SENSITIVITY_DETECTION.pt_BR.md#padrões-regex-customizados-detectar-novos-dados-pessoaissensíveis).
+
 ### Resultados
 
 #### Demonstração zero-config (`--demo`)

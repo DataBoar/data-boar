@@ -6,7 +6,7 @@ Guide for partners who implement **post-scan remediation** plugins against the h
 
 **Scope of this document:** **L1 in-process Python** only (`RemediationPlugin`). Process isolation (L2) and language / sidecar contracts (L3) belong to epic **#865** — call them out as future evolution, not as APIs you can load today.
 
-**Not this guide:** declarative **YAML pattern plugins** (custom regex / ML / DL terms) use `config/plugin_schema.yaml` and [ADR-0052](adr/ADR-0052-yaml-plugin-system-centralized-schema.md). Those teach the detector new shapes; they do **not** run remediation code.
+**Not this guide:** declarative **YAML pattern plugins** (custom regex / ML / DL terms) use `config/plugin_schema.yaml` and [ADR-0052](adr/ADR-0052-yaml-plugin-system-centralized-schema.md). Author how-to: [PLUGIN_AUTHOR_GUIDE.md](PLUGIN_AUTHOR_GUIDE.md) ([pt-BR](PLUGIN_AUTHOR_GUIDE.pt_BR.md)). Those teach the detector new shapes; they do **not** run remediation code.
 
 ---
 
