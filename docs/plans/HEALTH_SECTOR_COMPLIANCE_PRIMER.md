@@ -38,7 +38,7 @@ HHS Safe Harbor de-identification lists **18** identifier types. Coverage below 
 | 6 | Email addresses | Shipped | Built-in **`EMAIL`** | — |
 | 7 | Social Security numbers | Shipped | Built-in **`CCPA_SSN`** (`XXX-XX-XXXX`) | Other SSN punctuations need overrides |
 | 8 | Medical record numbers | Partial | HIPAA sample **`US_HIPAA_MRN`**; BR sample **`BR_SAUDE_PRONTUARIO`** (**#511**) | Institution formats vary — high FP risk |
-| 9 | Health plan beneficiary numbers | Partial | BR sample **`PHI_HEALTH_PLAN`** (carteirinha / member-id **column names**) | **`BR_SAUDE_ANS`** is the six-digit **operadora** registry, not a beneficiary ID; no dedicated US member-ID regex |
+| 9 | Health plan beneficiary numbers | Partial | HIPAA sample-only ML (`beneficiary number`, `health plan`, `health insurance`); BR sample **`PHI_HEALTH_PLAN`** (carteirinha / member-id **column names**) | No dedicated US member-ID regex; **`BR_SAUDE_ANS`** is the six-digit **operadora** registry, not a beneficiary ID |
 | 10 | Account numbers | Roadmap | — | Do not treat **`CREDIT_CARD`** as this row |
 | 11 | Certificate / license numbers | Partial | HIPAA sample **`US_HIPAA_NPI`**, **`US_HIPAA_DEA`** (provider IDs) | Patient licences / state IDs not covered |
 | 12 | Vehicle identifiers / plates | Roadmap | Custom-regex example in [SENSITIVITY_DETECTION.md](../SENSITIVITY_DETECTION.md) | Not a default pattern |
