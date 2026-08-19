@@ -132,7 +132,7 @@ if type _fw_detect >/dev/null 2>&1; then
       if [[ $APPLY -eq 1 ]]; then
         _log "Opening port $port/tcp ephemerally for $LAB_OP_SUBNET..."
         FW_TAG="smb-${port}"
-        FW_STATE_FILE="${HOME}/.labop-fw-ephemeral-smb-${port}.json"
+        FW_STATE_FILE="${_OP_HOME}/.labop-fw-ephemeral-smb-${port}.json"
         _fw_open_ephemeral $port tcp || _warn "Ephemeral rule failed (check sudoers LABOP_SMB_SERVER)."
       else
         type _fw_troubleshoot_hint >/dev/null 2>&1 && _fw_troubleshoot_hint $port tcp "SMB/Samba"

@@ -26,3 +26,6 @@ def test_labop_ensure_scripts_resolve_operator_home_via_getent() -> None:
     assert "getent passwd" in smb
     assert "_OP_HOME" in nfs
     assert "_OP_HOME" in smb
+    for text in (nfs, smb):
+        assert 'FW_STATE_FILE="${HOME}' not in text
+        assert "FW_STATE_FILE='${HOME}" not in text
