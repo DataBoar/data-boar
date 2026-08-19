@@ -77,3 +77,62 @@ scan:
         routes._config_path = original_config_path
         routes._config = original_config
         routes._audit_engine = original_engine
+
+
+def test_post_scan_and_scan_database_409_when_slot_claimed(tmp_path):
+    """Request-time compare-and-set: overlapping starts get 409 before background work (#415)."""
+    out_dir = str(tmp_path).replace("\\", "/")
+    config_yaml = f"""targets: []
+file_scan:
+  extensions: [.txt]
+  recursive: true
+  sample_limit: 2
+report:
+  output_dir: {out_dir}
+api:
+  port: 8088
+  allow_adhoc_targets: true
+sqlite_path: {out_dir}/audit_results.db
+scan:
+  max_workers: 1
+"""
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(config_yaml, encoding="utf-8")
+
+    import api.routes as routes
+
+    original_config_path = routes._config_path
+    original_config = routes._config
+    original_engine = routes._audit_engine
+    try:
+        routes._config_path = str(config_path)
+        routes._config = None
+        routes._audit_engine = None
+
+        client = TestClient(routes.app)
+        engine = routes._get_engine()
+        assert engine.try_claim_running() is True
+        try:
+            scan_resp = client.post("/scan", json={})
+            assert scan_resp.status_code == 409, scan_resp.text
+            assert scan_resp.json().get("detail") == "Audit already in progress."
+
+            db_resp = client.post(
+                "/scan_database",
+                json={
+                    "name": "lab",
+                    "host": "127.0.0.1",
+                    "port": 5432,
+                    "user": "u",
+                    "password": "p",
+                    "database": "d",
+                },
+            )
+            assert db_resp.status_code == 409, db_resp.text
+            assert db_resp.json().get("detail") == "Audit already in progress."
+        finally:
+            engine.clear_running()
+    finally:
+        routes._config_path = original_config_path
+        routes._config = original_config
+        routes._audit_engine = original_engine

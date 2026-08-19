@@ -47,7 +47,7 @@ Textual description of modules, classes, and main functions and how they connect
 - `connector_for_target(target)` — From target type/driver resolve (connector_class, required_keys).
 
 - **core/engine.py**
-- **AuditEngine** — `__init__(config, db_path)`; holds `db_manager` (LocalDBManager), `scanner` (DataScanner). `start_audit()` → session_id (creates session, runs `_run_audit_targets()`); `_run_audit_targets()` runs each target via registry (sequential or parallel); `_run_target(target)` resolves connector and calls `connector.run()`. `generate_final_reports(session_id)` → report path via `report.generator.generate_report`; if `learned_patterns.enabled`, also calls `core.learned_patterns.write_learned_patterns()`. Properties: `is_running`, `get_current_findings_count()`, `get_last_report_path()`.
+- **AuditEngine** — `__init__(config, db_path)`; holds `db_manager` (LocalDBManager), `scanner` (DataScanner). `start_audit()` → session_id (creates session, runs `_run_audit_targets()`); `_run_audit_targets()` runs each target via registry (sequential or parallel); `_run_target(target)` resolves connector and calls `connector.run()`. `generate_final_reports(session_id)` → report path via `report.generator.generate_report`; if `learned_patterns.enabled`, also calls `core.learned_patterns.write_learned_patterns()`. Properties: `is_running`, `get_current_findings_count()`, `get_last_report_path()`. Process-wide run slot: `try_claim_running()` / `clear_running()` (API claims at request time; overlapping starts get HTTP 409).
 - Imports connectors so they register (sql_connector, filesystem_connector, optional mongodb_connector, redis_connector).
 
 - **core/learned_patterns.py**
@@ -105,7 +105,7 @@ Textual description of modules, classes, and main functions and how they connect
 ## API
 
 - **api/routes.py**
-- FastAPI `app`; startup loads config and creates AuditEngine (singleton). Static files mounted at `/static` (api/static). Jinja2 templates from api/templates.
+- FastAPI `app`; startup loads config and creates AuditEngine (singleton). Static files mounted at `/static` (api/static). Jinja2 templates from api/templates. Overlapping `POST /scan` / `/start` / `/scan_database` claim the engine run slot at request time (**HTTP 409** if busy).
 - **API:** `POST /scan`, `POST /start` — Create session_id, run `_run_audit_targets()` in background; return session_id. `POST /scan_database` — One-off scan of a single database (body: name, host, port, user, password, database, optional driver); starts in background, returns session_id. `GET /status` — running, current_session_id, findings_count. `GET /report` — Download last report file (or generate from last session). `GET /list` — List sessions (JSON). `GET /reports/{session_id}` — Regenerate report for session and return file.
 - **Web dashboard (plan: REST + file download only, no WebSocket):** `GET /` — Dashboard page (scan status, quantity/quality stats, recent sessions, start-scan button; status polling when running). `GET /reports` — Reports list page (all sessions with download links). `GET /config` — Config editor (YAML textarea). `POST /config` — Save YAML to config file (validates, then reloads in-memory config/engine). Helpers: `_get_config_path()`, `_get_config_raw()`, `_save_config_yaml()`.
 
@@ -128,7 +128,7 @@ Textual description of modules, classes, and main functions and how they connect
 1. **Engine** → core/engine creates LocalDBManager, DataScanner; for each target, connector_for_target → connector.run(). For filesystem targets, passes file_scan.scan_sqlite_as_db and sample_limit to FilesystemConnector.
 1. **Connectors** → connect, discover (and sample for DB); for filesystem, .sqlite/.db files are optionally opened as SQLite DBs and scanned (discover + sample + detect), results saved as filesystem_findings; other files use _read_text_sample and scanner; logger.log_connection / log_finding.
 1. **Report** → report/generator reads SQLite via db_manager.get_findings(session_id), writes Excel + heatmap, returns path.
-1. **API** → routes use same AuditEngine; /scan starts background _run_audit_targets; /report and /reports/{id} call generate_final_reports.
+1. **API** → routes use same AuditEngine; /scan claims the singleton slot then starts background _run_audit_targets; /report and /reports/{id} call generate_final_reports.
 
 ---
 

@@ -249,8 +249,8 @@ O Excel é salvo na pasta de downloads do navegador; o mapa de calor PNG é gera
 
 | Método  | Endpoint                            | Finalidade                                                                                              |
 | ---     | ---                                 | ---                                                                                                     |
-| `POST`  | `/scan` ou `/start`                 | Inicia uma varredura completa em background; retorna `session_id`. Corpo JSON opcional: `tenant`, `technician`, `scan_compressed`, `content_type_check`, `scan_for_stego`, `jurisdiction_hint` (booleanos pontuais por execução). |
-| `POST`  | `/scan_database`                    | Inicia varredura pontual de um único banco (body JSON). Pode incluir `tenant` e `technician`.           |
+| `POST`  | `/scan` ou `/start`                 | Inicia uma varredura completa em background; retorna `session_id`. Corpo JSON opcional: `tenant`, `technician`, `scan_compressed`, `content_type_check`, `scan_for_stego`, `jurisdiction_hint` (booleanos pontuais por execução). **HTTP 409** se já houver varredura em execução neste processo. |
+| `POST`  | `/scan_database`                    | Inicia varredura pontual de um único banco (body JSON). Pode incluir `tenant` e `technician`. **HTTP 409** se já houver varredura em execução neste processo. |
 | `GET`   | `/status`                           | Retorna `running`, `current_session_id`, `findings_count`, além de **`trust_state`** / **`trust_reasons`** / **`output_confidence`** canônicos, `runtime_trust`, **`detection_prefilter`** (#1411), `dashboard_transport`, `enterprise_surface` e **`maturity_assessment_integrity`** (resumo HMAC das respostas do POC quando configurado). |
 | `GET`   | `/report`                           | Baixa o último relatório Excel gerado (ou gera a partir da sessão mais recente).                        |
 | `GET`   | `/heatmap`                          | Baixa o último heatmap PNG gerado (sessão mais recente).                                                |
@@ -270,6 +270,8 @@ O Excel é salvo na pasta de downloads do navegador; o mapa de calor PNG é gera
 | `GET`   | `/en/about` (ou outro prefixo de locale) | Página About (HTML): aplicação, versão, autor, licença.                                            |
 | `GET`   | `/about/json`                       | Informações de about em JSON (nome, versão, autor, licença, copyright).                                 |
 | `GET`   | `/health`                           | Sonda de liveness/readiness para Docker e Kubernetes.                                                   |
+
+Um processo mantém **um** `AuditEngine`. `POST /scan`, `/start` e `/scan_database` reservam esse slot **quando a requisição é aceita**, não quando a tarefa em background começa. Um segundo início sobreposto responde **HTTP 409** (`Audit already in progress.`). O **HTTP 429** de `rate_limit` é um teto separado (SQLite). Varreduras em paralelo exigem vários processos ou instâncias.
 
 ---
 
