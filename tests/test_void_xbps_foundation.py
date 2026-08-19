@@ -143,6 +143,10 @@ def test_podman_script_is_fail_closed() -> None:
     assert "missing embedded interpreter" in script
     assert "do not reuse glibc bytes" in script
     assert "not lab metal" in script.lower() or "No lab metal" in script
+    inner = script.split("/bin/sh -c", 1)[1]
+    assert "set -eu" in inner
+    assert "set -euo pipefail" not in inner
+    assert "-o pipefail" not in inner
 
 
 def test_void_xbps_scripts_bash_syntax() -> None:

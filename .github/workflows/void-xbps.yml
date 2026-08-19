@@ -78,9 +78,11 @@ jobs:
       - name: Overlay template and xbps-src show
         run: |
           set -euo pipefail
+          # Official Void images use dash as /bin/sh and do not ship bash.
+          # pipefail is a bashism — keep POSIX set -eu inside the container.
           docker run --rm -v "${GITHUB_WORKSPACE}:/src:ro" "${{ matrix.image }}" \
             /bin/sh -c '
-              set -euo pipefail
+              set -eu
               xbps-install -Syu
               xbps-install -y git
               WORKDIR="$(mktemp -d)"

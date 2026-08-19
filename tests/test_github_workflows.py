@@ -678,6 +678,11 @@ def test_void_xbps_workflow_present_and_valid() -> None:
     show = jobs["xbps-src-show"]
     show_runs = "\n".join(_ci_step_run_texts(show))
     assert "./xbps-src show data-boar" in show_runs
+    assert "/bin/sh -c" in show_runs
+    inner = show_runs.split("/bin/sh -c", 1)[1]
+    assert "set -eu" in inner
+    assert "set -euo pipefail" not in inner
+    assert "-o pipefail" not in inner
     assert "void-glibc" in str(show.get("strategy") or "")
     assert "void-musl" in str(show.get("strategy") or "")
     text = (WORKFLOWS / "void-xbps.yml").read_text(encoding="utf-8")

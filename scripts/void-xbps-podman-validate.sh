@@ -103,7 +103,8 @@ fi
 "${ENGINE}" "${ENGINE_ARGS[@]}" \
   "${IMAGE}" \
   /bin/sh -c '
-set -euo pipefail
+# Void images: /bin/sh is dash, bash is not installed. pipefail is a bashism.
+set -eu
 command -v xbps-install >/dev/null
 xbps-install -Syu git curl ca-certificates >/dev/null
 WORKDIR="$(mktemp -d)"
