@@ -662,6 +662,39 @@ def test_native_packages_workflow_present_and_valid() -> None:
     assert rpm_launcher[0].get("shell") == "bash"
 
 
+def test_void_xbps_workflow_present_and_valid() -> None:
+    """#1404: generated overlay check + xbps-src show in Void containers."""
+    data = _load_workflow("void-xbps.yml")
+    assert data.get("name") == "Void xbps"
+    on = data.get("on") or {}
+    assert "workflow_dispatch" in on
+    assert "pull_request" in on
+    jobs = data.get("jobs") or {}
+    assert "generated-check" in jobs
+    assert "xbps-src-show" in jobs
+    check_runs = "\n".join(_ci_step_run_texts(jobs["generated-check"]))
+    assert "generate_void_xbps_packages.py --check" in check_runs
+    assert "test_void_xbps_foundation.py" in check_runs
+    show = jobs["xbps-src-show"]
+    show_runs = "\n".join(_ci_step_run_texts(show))
+    assert "./xbps-src show data-boar" in show_runs
+    assert "void-glibc" in str(show.get("strategy") or "")
+    assert "void-musl" in str(show.get("strategy") or "")
+    text = (WORKFLOWS / "void-xbps.yml").read_text(encoding="utf-8")
+    sha_40 = re.compile(r"@[0-9a-f]{40}")
+    for line in text.splitlines():
+        code = line.split("#", 1)[0]
+        if "uses:" not in code or "docker://" in code:
+            continue
+        if "./.github/workflows/" in code:
+            continue
+        if not any(p in code for p in ("actions/", "github/", "astral-sh/")):
+            continue
+        assert sha_40.search(code), (
+            f"expected full commit SHA in uses line: {line.strip()!r}"
+        )
+
+
 def test_native_packages_yml_pins_actions_to_shas() -> None:
     """#1437 / ADR-0005: native-packages.yml pins third-party Actions to full SHAs."""
     text = (WORKFLOWS / "native-packages.yml").read_text(encoding="utf-8")

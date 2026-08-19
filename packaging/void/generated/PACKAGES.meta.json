@@ -1,0 +1,106 @@
+{
+  "schema_version": 1,
+  "issue": 1404,
+  "adr": "0084",
+  "version_pep440": "1.8.0-beta",
+  "version_xbps": "1.8.0beta1",
+  "packager": "xbps",
+  "void_packages_overlay": "packaging/void/generated/srcpkgs",
+  "upstream_void_packages": "out_of_scope",
+  "validation": "podman_void",
+  "init": "runit",
+  "layer1": "vendored_pinned_wheelhouse",
+  "layer2": [
+    "openssl",
+    "zlib",
+    "libffi",
+    "tesseract-ocr"
+  ],
+  "commercial_protection": "worker_caps_and_pro_prefilter_accel",
+  "embedded_interpreter": {
+    "channel": "a_native_enterprise",
+    "version": "3.14",
+    "abi_tag": "cp314t",
+    "freethreaded": true,
+    "prefix": "/usr/lib/data-boar",
+    "python_bin": "/usr/lib/data-boar/python3.14t/bin/python3.14t"
+  },
+  "subpackages": {
+    "data-boar-compressed": {
+      "extra": "compressed",
+      "packages": [
+        "py7zr>=1.1.3"
+      ],
+      "modules": [
+        "py7zr"
+      ]
+    },
+    "data-boar-dataformats": {
+      "extra": "dataformats",
+      "packages": [
+        "pyarrow>=14.0.0",
+        "fastavro>=1.9.0",
+        "dbfread>=2.0.7"
+      ],
+      "modules": [
+        "pyarrow",
+        "fastavro",
+        "dbfread"
+      ]
+    },
+    "data-boar-mssql": {
+      "extra": "mssql",
+      "packages": [
+        "pymssql>=2.3.0"
+      ],
+      "modules": [
+        "pymssql"
+      ]
+    },
+    "data-boar-nosql": {
+      "extra": "nosql",
+      "packages": [
+        "pymongo>=4.0",
+        "redis>=8.1.0"
+      ],
+      "modules": [
+        "pymongo",
+        "redis"
+      ]
+    },
+    "data-boar-richmedia": {
+      "extra": "richmedia",
+      "packages": [
+        "mutagen>=1.47.0",
+        "pillow-heif>=0.16.0",
+        "pytesseract>=0.3.13"
+      ],
+      "modules": [
+        "mutagen",
+        "pillow_heif",
+        "pytesseract"
+      ]
+    },
+    "data-boar-shares": {
+      "extra": "shares",
+      "packages": [
+        "smbprotocol>=1.2.0",
+        "webdavclient3>=0.14.0",
+        "requests_ntlm>=1.2.0"
+      ],
+      "modules": [
+        "smbprotocol",
+        "webdav3.client",
+        "requests_ntlm"
+      ]
+    }
+  },
+  "subpackage_symlinks": [
+    "data-boar-compressed",
+    "data-boar-dataformats",
+    "data-boar-mssql",
+    "data-boar-nosql",
+    "data-boar-richmedia",
+    "data-boar-shares"
+  ]
+}

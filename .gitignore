@@ -334,4 +334,5 @@ _audit_data-boar/
 
 # Native nfpm CI payload (#1437) — real cp314t embed must not be committed
 packaging/nfpm/staging/usr/lib/data-boar/python3.14t/
+packaging/void/generated/srcpkgs/data-boar/files/staging/
 dist/native-packages/

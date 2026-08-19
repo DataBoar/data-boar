@@ -1,0 +1,7 @@
+#!/bin/sh
+# runit service for data-boar — Void systemd-coupling canary (#1404).
+# Init-neutral: no systemd manager CLI. Product code does not assume one init.
+exec 2>&1
+export DISABLE_SQLALCHEMY_CEXT="${DISABLE_SQLALCHEMY_CEXT:-1}"
+export CONFIG_PATH="${CONFIG_PATH:-/etc/data-boar/config.yaml}"
+exec /usr/lib/data-boar/python3.14t/bin/python3.14t -m data_boar --web
