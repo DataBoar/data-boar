@@ -44,7 +44,7 @@ regex:
     norm_tag: "NIS2 Art. 21 (supply chain security)"
 
   - name: "NIS2_CRITICAL_INFRA_FIELD"
-    pattern: "(?i)\\b(critical[_\\s]?infrastructure|essential[_\\s]?service|oe[_\\s]?service|nis2[_\\s]?entity)\\b"
+    pattern: "(?i)\\b(critical[_\\s]?infrastructure|essential[_\\s]?service|essential[_\\s]?entity|important[_\\s]?entity|oe[_\\s]?service|nis2[_\\s]?entity)\\b"
     norm_tag: "NIS2 Art. 3 (essential entity)"
 
   - name: "NIS2_NETWORK_CREDENTIAL"

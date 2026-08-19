@@ -55,8 +55,17 @@ def test_nis2_csirt_contact_is_art23_not_art3(nis2_scanner, column_name: str):
     assert "essential entity" not in result["norm_tag"]
 
 
-def test_nis2_critical_infra_still_art3(nis2_scanner):
-    result = nis2_scanner.scan_column("critical_infrastructure", "")
+@pytest.mark.parametrize(
+    "column_name",
+    [
+        "critical_infrastructure",
+        "essential_entity",
+        "important_entity",
+        "nis2_entity",
+    ],
+)
+def test_nis2_critical_infra_still_art3(nis2_scanner, column_name: str):
+    result = nis2_scanner.scan_column(column_name, "")
     assert "NIS2_CRITICAL_INFRA_FIELD" in result["pattern_detected"]
     assert "Art. 3" in result["norm_tag"]
 
