@@ -42,14 +42,26 @@ def test_lopdp_has_no_nude_ten_digit_matcher():
     assert r"\d{10}001" not in text
 
 
+def test_lopdp_does_not_cite_gdpr_mirrored_articles():
+    """Issue spec used GDPR-like Art. 23/35/42+72h; official LOPDP numbering differs."""
+    text = LOPDP_SAMPLE.read_text(encoding="utf-8")
+    assert "Art. 23" not in text
+    assert "Art. 35" not in text
+    assert "72h" not in text
+    assert "72 hours" not in text
+    assert "Art. 43" in text
+    assert "five days" in text
+    assert "numero[_\\s]?pasaporte)" not in text
+
+
 @pytest.mark.parametrize(
     ("column_name", "pattern_name", "art_fragment"),
     [
-        ("numero_cedula", "EC_FIELD_CEDULA_LABEL", "Art. 26"),
-        ("estatus_migratorio", "EC_FIELD_MIGRATION_LABEL", "Art. 23"),
-        ("historia_clinica", "EC_FIELD_HEALTH_LABEL", "Art. 23"),
-        ("numero_ruc", "EC_FIELD_RUC_LABEL", "Art. 26"),
-        ("datos_menores", "EC_FIELD_MINOR_LABEL", "Art. 35"),
+        ("numero_cedula", "EC_FIELD_CEDULA_LABEL", "Art. 4"),
+        ("estatus_migratorio", "EC_FIELD_MIGRATION_LABEL", "Art. 4 y 25"),
+        ("historia_clinica", "EC_FIELD_HEALTH_LABEL", "Art. 25"),
+        ("numero_ruc", "EC_FIELD_RUC_LABEL", "Art. 4"),
+        ("datos_menores", "EC_FIELD_MINOR_LABEL", "Art. 25"),
     ],
 )
 def test_lopdp_contextual_columns(
