@@ -45,6 +45,7 @@ Source → Build → Deploy → Runtime → Docs/ADR
 | [PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md](../plans/PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md) | Roadmap for build identity and stronger release integrity |
 | [release-integrity-check.ps1](../../scripts/release-integrity-check.ps1) | Post-release verification script |
 | [example-release-manifest.json](../../scripts/example-release-manifest.json) | Example signed-manifest schema |
+| [NATIVE_PACKAGE_RELEASE.md](NATIVE_PACKAGE_RELEASE.md) | Native `.deb`/`.rpm`/`.apk`/pacman on the product Release + air-gap verify (#1408) |
 
 ### 3. Evidence (private tree — legal / operator hashes)
 

@@ -27,6 +27,8 @@ O runtime pode fazer verificações **opcionais** para que instalações modific
 
   Os caminhos críticos seguem o mesmo conjunto do build digest mais `boar_fast_filter*.so` quando a extensão Rust está compilada. O workflow **SBOM** gera `release-manifest.json` **dentro** da imagem Docker (após `docker build`) para que caminhos da extensão nativa coincidam com o runtime; o arquivo vai para GitHub Releases junto com SBOMs e `build-digest.txt`.
 
+  **`native_packages[]`** (opcional, [#1408](https://github.com/DataBoar/data-boar/issues/1408)): hashes dos artefatos nfpm na mesma Release. O `--check` de licenciamento ainda verifica **somente `files[]`**. Passos air-gap: [ops/NATIVE_PACKAGE_RELEASE.pt_BR.md](ops/NATIVE_PACKAGE_RELEASE.pt_BR.md).
+
 - Defina **`DATA_BOAR_RELEASE_MANIFEST_PATH`** ou `licensing.manifest_path` no config (veja [`.env.example`](../.env.example)).
 - Na inicialização (modo enforced), os hashes são verificados; divergência → **TAMPERED**.
 - Verificação local: `uv run python scripts/generate_release_manifest.py --check dist/release-manifest.json`

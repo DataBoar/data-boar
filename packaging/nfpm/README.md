@@ -2,7 +2,7 @@
 
 **Decision:** [ADR-0084](../../docs/adr/ADR-0084-native-package-embedded-cpython-by-channel.md) (Accepted).
 
-**Plan:** [PLAN_NATIVE_PACKAGES.md](../../docs/plans/PLAN_NATIVE_PACKAGES.md) · Issues [#1403](https://github.com/DataBoar/data-boar/issues/1403) (foundation) · [#1437](https://github.com/DataBoar/data-boar/issues/1437) (CI build).
+**Plan:** [PLAN_NATIVE_PACKAGES.md](../../docs/plans/PLAN_NATIVE_PACKAGES.md) · Issues [#1403](https://github.com/DataBoar/data-boar/issues/1403) (foundation) · [#1437](https://github.com/DataBoar/data-boar/issues/1437) (CI build) · [#1408](https://github.com/DataBoar/data-boar/issues/1408) (Release assets).
 
 ## What this directory is
 
@@ -22,9 +22,11 @@ uv run python scripts/generate_nfpm_packages.py --write
 
 CI / `tests/test_native_nfpm_foundation.py` fails if `generated/` drifts from the generator + `EXTRAS_MANIFEST`.
 
-## CI build (x86-64 glibc) — #1437
+## CI build (x86-64 glibc) — #1437 / #1408
 
 Workflow: [`.github/workflows/native-packages.yml`](../../.github/workflows/native-packages.yml)
+
+Air-gap verify on the product Release: [docs/ops/NATIVE_PACKAGE_RELEASE.md](../../docs/ops/NATIVE_PACKAGE_RELEASE.md).
 
 ```bash
 # Local (Linux x86-64; downloads cp314t + wheelhouse — fail-closed):
@@ -33,10 +35,10 @@ bash scripts/native-nfpm-populate-staging.sh
 cd packaging/nfpm && nfpm package --config generated/data-boar.yaml --packager deb
 ```
 
-1. `scripts/native-nfpm-populate-staging.sh` embeds `cp314t` under `staging/usr/lib/data-boar/python3.14t`, installs product + requirements, applies hosted wheelhouse tag `wheelhouse-x86-64-v1-2026-07-29`.
-2. `nfpm package` emits **deb** + **rpm** for core `data-boar`.
-3. Install-smoke jobs: debian bookworm (`.deb`) and Rocky 9 (`.rpm`).
-4. Artifacts: `native-packages-x86_64-glibc`.
+1. `scripts/native-nfpm-populate-staging.sh` embeds `cp314t` under `staging/usr/lib/data-boar/python3.14t`, installs product + requirements, applies hosted wheelhouse tag `wheelhouse-x86-64-v1-2026-07-29` (layer 1 overlay — not free PyPI).
+2. `nfpm package` emits **deb + rpm + apk + archlinux (pacman)** for core `data-boar` from the **same glibc** staging tree.
+3. Install-smoke jobs: debian bookworm (`.deb`) and Rocky 9 (`.rpm`). apk/pacman filenames follow packager convention; musl/arm64 metal remains later.
+4. Artifacts: `native-packages-x86_64-glibc`. On a **`v*`** GitHub Release, `attach-release` uploads the same files + `SHA256SUMS` + `release-manifest.json` `native_packages[]` beside the SBOMs. The hand-built recipe-proof `.deb` is never uploaded.
 
 The real interpreter tree is **not** committed (repo `.gitignore` `lib/` + explicit staging ignore). Placeholders must never ship in the final artifact.
 
@@ -54,4 +56,4 @@ Presence of freethreaded CPython **does not** unlock Enterprise. Runtime gates r
 
 ## Out of scope here
 
-apk/musl + arm64, pacman metal, five-host matrix, xbps, signed repo publish.
+apk/musl + arm64, pacman metal, five-host matrix, xbps, signed repo **index** publish (#1405). #1408 attaches the same package files to the product Release; #1405 must not rebuild them.
