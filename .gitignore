@@ -35,6 +35,9 @@ POC_SUMMARY_*.md
 scan_manifest_*.yaml
 config.yaml
 config.local.yaml
+# Licensed Governance Lens maps (commercial; OSS ships *.example.yaml only)
+config/governance_framework_map_pro.yaml
+config/governance_framework_map_enterprise.yaml
 # Ephemeral LAB completão filesystem scan configs (soup paths); keep local only
 tmp_completao_*.yaml
 *.vault

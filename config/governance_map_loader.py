@@ -2,7 +2,8 @@
 Load Governance Lens framework mapping YAML (structure per governance_framework_map.schema.yaml).
 
 Curated commercial maps may live outside the public tree; OSS ships
-``governance_framework_map_pro.example.yaml`` for lab and tests.
+``governance_framework_map_pro.example.yaml`` and
+``governance_framework_map_enterprise.example.yaml`` for lab and tests.
 """
 
 from __future__ import annotations

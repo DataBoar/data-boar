@@ -107,6 +107,8 @@ def test_template_includes_all_framework_sections(tmp_path):
         "Anexo B",
     ):
         assert heading in md
+    assert "BACEN Res. 4893/2021" not in md
+    assert ctx["enterprise_enabled"] is False
 
 
 def test_cli_governance_report_creates_file(tmp_path):

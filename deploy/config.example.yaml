@@ -45,11 +45,13 @@ api:
 #   effective_tier: pro
 
 # Optional: Governance Lens — GRC control-gap sheet in Excel (Pro+; heuristic only, not legal advice).
-# OSS ships config/governance_framework_map_pro.example.yaml; licensees may point map_file at a private curated map.
+# OSS ships *.example.yaml maps; licensees may point map_file / enterprise_map_file at private curated maps.
+# Enterprise modules (BACEN / FEBRABAN / PCI-DSS) load only when tier: enterprise.
 # governance:
 #   enabled: false
 #   tier: pro
 #   map_file: config/governance_framework_map_pro.example.yaml
+#   enterprise_map_file: config/governance_framework_map_enterprise.example.yaml
 
 sqlite_path: /data/audit_results.db
 scan:

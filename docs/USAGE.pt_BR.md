@@ -476,6 +476,34 @@ PDF (opcional): `pandoc relatorio_grc.md --defaults config/pandoc_governance.yam
 
 **Passo a passo:** [ops/GOVERNANCE_LENS_QUICKSTART.pt_BR.md](ops/GOVERNANCE_LENS_QUICKSTART.pt_BR.md) ([EN](ops/GOVERNANCE_LENS_QUICKSTART.md)). **Arquitetura:** [TECH_GUIDE.pt_BR.md](TECH_GUIDE.pt_BR.md#governance-lens-architecture).
 
+## Governance Lens (Enterprise) {#governance-lens-enterprise}
+
+O tier **Enterprise** acrescenta módulos setoriais sobre o lens Pro: **BACEN Res. 4893/2021**, **FEBRABAN CPS 004** / Circular 3909 e **PCI-DSS v4.0** (Req. 3.4, 4.2, 10.2). Esses mapeamentos **não** entram no Open Core nem no Pro.
+
+**Licenciamento:** exige `governance.tier: enterprise` e `governance_lens_enterprise`. O arquivo curado de produção **`governance_framework_map_enterprise.yaml` não é versionado** no Git público (gitignore). O OSS inclui **`config/governance_framework_map_enterprise.example.yaml`** para lab/testes (`governance.enterprise_map_file`).
+
+Se o `tier` for **pro** e um mapa Enterprise for referenciado, o gerador registra **`Enterprise framework requires enterprise license tier`**, omite esses controles e segue (não falha).
+
+### Config mínima Enterprise
+
+```yaml
+governance:
+  enabled: true
+  tier: enterprise
+  map_file: config/governance_framework_map_pro.example.yaml
+  enterprise_map_file: config/governance_framework_map_enterprise.example.yaml   # lab; arquivo licenciado em produção
+```
+
+Defina `licensing.effective_tier: enterprise` em lab. Mesmo CLI do Pro (`--governance-report`). O template Markdown inclui seções BACEN / PCI-DSS / FEBRABAN só quando o Enterprise está habilitado.
+
+**Exemplos (heurístico — não é avaliação certificada):**
+
+- `LGPD_CPF` em alvo de banco não produtivo → BACEN 4893 Art. 4º (política de segurança cibernética).
+- PII em alvo de API → BACEN 4893 Art. 6º (plano de ação e resposta a incidentes).
+- `CREDIT_CARD` / `PCI_CARD` em qualquer alvo → BACEN 4893 Art. 4º + PCI-DSS Req. 3.4 (tornar o PAN ilegível).
+
+**Aviso:** igual ao Pro — não substitui fiscalização BACEN, auditoria FEBRABAN nem relatório de QSA PCI.
+
 ---
 
 ## 4. Notas sobre configuração

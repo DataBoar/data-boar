@@ -15,6 +15,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from core.about import get_about_info
 from report.governance_lens import (
     GovernanceLensGenerator,
+    enterprise_lens_enabled,
     governance_lens_feature_allowed,
 )
 
@@ -77,6 +78,12 @@ def _priority_band(max_sensitivity: str, risk_level: str) -> str:
 
 def _framework_bucket(framework_id: str) -> str:
     fid = (framework_id or "").upper()
+    if "BACEN" in fid or "4893" in fid:
+        return "bacen"
+    if "PCI" in fid:
+        return "pci"
+    if "FEBRABAN" in fid or "CPS004" in fid:
+        return "febraban"
     if fid.startswith("ISO38500"):
         return "iso38500"
     if fid.startswith("ISO27014"):
@@ -97,6 +104,9 @@ def _group_gaps_by_bucket(gaps: list[Any]) -> dict[str, list[dict[str, str]]]:
         "cobit": [],
         "itil": [],
         "iso27001": [],
+        "bacen": [],
+        "pci": [],
+        "febraban": [],
         "other": [],
     }
     for gap in gaps:
@@ -249,6 +259,7 @@ def build_governance_report_context(
         "roadmap": roadmap,
         "targets": targets,
         "framework_summary": lens.framework_summary,
+        "enterprise_enabled": enterprise_lens_enabled(config),
     }
 
 

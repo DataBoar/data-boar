@@ -1,0 +1,277 @@
+---
+# governance_framework_map_enterprise.example.yaml — OSS starter (lab / tests)
+#
+# Production licensees may ship a fuller curated map as
+# config/governance_framework_map_enterprise.yaml (gitignored; commercial terms).
+# Loaded only when governance.tier == enterprise and governance_lens_enterprise
+# is allowed. Shape: config/governance_framework_map.schema.yaml
+#
+# Illustrative mappings — not a certified BACEN / FEBRABAN / PCI assessment.
+
+version: "1.0"
+
+entries:
+  - pattern_name: LGPD_CPF
+    target_context: database_nonprod
+    frameworks:
+      - id: BACEN-4893-ART4
+        name: "BACEN Res. 4893/2021 — Art. 4º Política de Segurança Cibernética"
+        tier: enterprise
+        control_gap_title: "CPF em base não produtiva — política cibernética"
+        control_gap_body: >
+          CPF em homologação/lab indica cópia de dado pessoal fora do perímetro
+          de produção. Evidência técnica — não conclusão de fiscalização BACEN.
+        recommendation: "Mascarar ou eliminar CPF em não produção e registrar o tratamento na política de segurança cibernética."
+        deadline_days: 30
+
+  - pattern_name: EMAIL
+    target_context: database_nonprod
+    frameworks:
+      - id: BACEN-4893-ART4
+        name: "BACEN Res. 4893/2021 — Art. 4º Política de Segurança Cibernética"
+        tier: enterprise
+        control_gap_title: "E-mail em base não produtiva"
+        control_gap_body: >
+          Contato pessoal em ambiente de teste amplia superfície de vazamento
+          e deve constar no inventário da política de segurança cibernética.
+        recommendation: "Substituir por dados sintéticos e revisar cópias de produção."
+        deadline_days: 30
+
+  - pattern_name: PHONE_BR
+    target_context: database_nonprod
+    frameworks:
+      - id: BACEN-4893-ART4
+        name: "BACEN Res. 4893/2021 — Art. 4º Política de Segurança Cibernética"
+        tier: enterprise
+        control_gap_title: "Telefone em base não produtiva"
+        control_gap_body: >
+          Número de telefone em dataset de teste pode vazar em exports ou dumps.
+        recommendation: "Sintetizar telefones em não produção."
+        deadline_days: 45
+
+  - pattern_name: DATE_DMY
+    target_context: database_nonprod
+    frameworks:
+      - id: BACEN-4893-ART4
+        name: "BACEN Res. 4893/2021 — Art. 4º Política de Segurança Cibernética"
+        tier: enterprise
+        control_gap_title: "Data pessoal em não produção"
+        control_gap_body: >
+          Data de nascimento ou similar em homologação pode compor identificação indireta.
+        recommendation: "Generalizar ou sintetizar datas em datasets de teste."
+        deadline_days: 45
+
+  - pattern_name: "LGPD_*"
+    target_context: api
+    frameworks:
+      - id: BACEN-4893-ART6
+        name: "BACEN Res. 4893/2021 — Art. 6º Plano de Ação e Resposta a Incidentes"
+        tier: enterprise
+        control_gap_title: "PII em API sem evidência de autenticação"
+        control_gap_body: >
+          Padrão LGPD em integração/API sugere revisar se o plano de resposta
+          a incidentes cobre exposição via canal de aplicação.
+        recommendation: "Inventariar APIs, exigir autenticação evidenciada e incluir o canal no plano de incidentes."
+        deadline_days: 21
+
+  - pattern_name: EMAIL
+    target_context: api
+    frameworks:
+      - id: BACEN-4893-ART6
+        name: "BACEN Res. 4893/2021 — Art. 6º Plano de Ação e Resposta a Incidentes"
+        tier: enterprise
+        control_gap_title: "E-mail em payload de API"
+        control_gap_body: >
+          Dado de contato em API amplia superfície de incidente se logs ou proxies persistirem o campo.
+        recommendation: "Minimizar campos, redigir logs e revisar playbook de incidente."
+        deadline_days: 21
+
+  - pattern_name: PHONE_BR
+    target_context: api
+    frameworks:
+      - id: BACEN-4893-ART6
+        name: "BACEN Res. 4893/2021 — Art. 6º Plano de Ação e Resposta a Incidentes"
+        tier: enterprise
+        control_gap_title: "Telefone em payload de API"
+        control_gap_body: >
+          Telefone em integração sem evidência de autenticação no scan.
+        recommendation: "Restringir exposição e incluir o endpoint no plano de resposta."
+        deadline_days: 21
+
+  - pattern_name: LGPD_CNPJ
+    target_context: api
+    frameworks:
+      - id: BACEN-4893-ART6
+        name: "BACEN Res. 4893/2021 — Art. 6º Plano de Ação e Resposta a Incidentes"
+        tier: enterprise
+        control_gap_title: "CNPJ em integração/API"
+        control_gap_body: >
+          Identificador empresarial em API pode indicar superfície de exposição em canal de aplicação.
+        recommendation: "Revisar contratos de API, minimização e trilhas de incidente."
+        deadline_days: 30
+
+  - pattern_name: "*"
+    target_context: api
+    frameworks:
+      - id: BACEN-4893-ART7
+        name: "BACEN Res. 4893/2021 — Art. 7º Contratação de serviços de nuvem"
+        tier: enterprise
+        control_gap_title: "Canal de API / nuvem sem inventário evidenciado"
+        control_gap_body: >
+          Achado em alvo tipo API sugere revisar requisitos de contratação e
+          responsabilidade de provedores de nuvem/integração.
+        recommendation: "Inventariar provedores, cláusulas de segurança e trilhas de acesso."
+        deadline_days: 60
+      - id: FEBRABAN-CPS004-S4
+        name: "FEBRABAN CPS 004 — Seção 4 Controles de acesso lógico"
+        tier: enterprise
+        control_gap_title: "Acesso lógico em canal de API"
+        control_gap_body: >
+          Controles de acesso lógico (CPS 004 §4) devem cobrir integrações que trafegam dado sensível.
+        recommendation: "Revisar autenticação, autorização e recertificação de contas de serviço."
+        deadline_days: 30
+
+  - pattern_name: PCI_CARD
+    target_context: null
+    frameworks:
+      - id: BACEN-4893-ART4
+        name: "BACEN Res. 4893/2021 — Art. 4º Política de Segurança Cibernética"
+        tier: enterprise
+        control_gap_title: "Possível PAN — política cibernética"
+        control_gap_body: >
+          Padrão compatível com cartão exige controles reforçados na política de segurança.
+        recommendation: "Confirmar escopo, tokenizar ou remover PAN e atualizar a política."
+        deadline_days: 21
+      - id: PCI-DSS-4.0-REQ3.4
+        name: "PCI-DSS v4.0 — Req. 3.4 Render PAN unreadable"
+        tier: enterprise
+        control_gap_title: "PAN potencialmente armazenado em claro"
+        control_gap_body: >
+          Req. 3.4 exige tornar o PAN ilegível onde estiver armazenado (tokenização, truncagem ou criptografia forte).
+        recommendation: "Tokenizar ou truncar PAN; não persistir PAN completo fora do CDE."
+        deadline_days: 14
+
+  - pattern_name: CREDIT_CARD
+    target_context: null
+    frameworks:
+      - id: BACEN-4893-ART4
+        name: "BACEN Res. 4893/2021 — Art. 4º Política de Segurança Cibernética"
+        tier: enterprise
+        control_gap_title: "Possível PAN (CREDIT_CARD) — política cibernética"
+        control_gap_body: >
+          Detector nativo CREDIT_CARD (Luhn quando aplicável) — mesma narrativa que PCI_CARD.
+        recommendation: "Confirmar escopo PCI, tokenizar ou remover PAN."
+        deadline_days: 21
+      - id: PCI-DSS-4.0-REQ3.4
+        name: "PCI-DSS v4.0 — Req. 3.4 Render PAN unreadable"
+        tier: enterprise
+        control_gap_title: "PAN potencialmente armazenado em claro"
+        control_gap_body: >
+          Req. 3.4 — tornar o PAN ilegível em qualquer persistência.
+        recommendation: "Tokenizar, truncar ou criptografar PAN; revisar backups e dumps."
+        deadline_days: 14
+
+  - pattern_name: PCI_CARD
+    target_context: api
+    frameworks:
+      - id: PCI-DSS-4.0-REQ4.2
+        name: "PCI-DSS v4.0 — Req. 4.2 Strong cryptography in transit"
+        tier: enterprise
+        control_gap_title: "PAN em transmissão / API"
+        control_gap_body: >
+          Req. 4.2 — proteger PAN com criptografia forte durante a transmissão.
+        recommendation: "TLS 1.2+ ponta a ponta; nunca logar PAN em claro."
+        deadline_days: 14
+
+  - pattern_name: CREDIT_CARD
+    target_context: api
+    frameworks:
+      - id: PCI-DSS-4.0-REQ4.2
+        name: "PCI-DSS v4.0 — Req. 4.2 Strong cryptography in transit"
+        tier: enterprise
+        control_gap_title: "PAN em transmissão / API"
+        control_gap_body: >
+          CREDIT_CARD em alvo de aplicação — revisar criptografia em trânsito.
+        recommendation: "Confirmar TLS e proibir PAN em query strings ou logs."
+        deadline_days: 14
+
+  - pattern_name: CREDIT_CARD
+    target_context: filesystem
+    frameworks:
+      - id: PCI-DSS-4.0-REQ3.4
+        name: "PCI-DSS v4.0 — Req. 3.4 Render PAN unreadable"
+        tier: enterprise
+        control_gap_title: "Possível PAN em filesystem"
+        control_gap_body: >
+          Arquivo ou share com padrão de cartão — persistência fora de CDE controlado.
+        recommendation: "Remover ou tokenizar; classificar o repositório."
+        deadline_days: 14
+      - id: PCI-DSS-4.0-REQ10.2
+        name: "PCI-DSS v4.0 — Req. 10.2 Implement audit logs"
+        tier: enterprise
+        control_gap_title: "Trilha de auditoria para acesso a possível PAN"
+        control_gap_body: >
+          Req. 10.2 — registrar acesso a sistemas que armazenam ou processam dados de cartão.
+        recommendation: "Habilitar logs de acesso ao repositório e retenção alinhada ao PCI."
+        deadline_days: 30
+
+  - pattern_name: CREDIT_CARD
+    target_context: database
+    frameworks:
+      - id: PCI-DSS-4.0-REQ10.2
+        name: "PCI-DSS v4.0 — Req. 10.2 Implement audit logs"
+        tier: enterprise
+        control_gap_title: "Trilha de auditoria para coluna com possível PAN"
+        control_gap_body: >
+          Base relacional com padrão de cartão precisa de logs de acesso (Req. 10.2).
+        recommendation: "Auditar SELECT/export e restringir ACL da coluna."
+        deadline_days: 30
+
+  - pattern_name: EMAIL
+    target_context: filesystem
+    frameworks:
+      - id: FEBRABAN-CPS004-S4
+        name: "FEBRABAN CPS 004 — Seção 4 Controles de acesso lógico"
+        tier: enterprise
+        control_gap_title: "E-mail em repositório de arquivos"
+        control_gap_body: >
+          Dado de contato em filesystem — revisar ACL e recertificação (CPS 004 §4).
+        recommendation: "Aplicar ACL mínima e revisar contas com acesso ao share."
+        deadline_days: 45
+
+  - pattern_name: "LGPD_*"
+    target_context: filesystem
+    frameworks:
+      - id: FEBRABAN-CPS004-S6
+        name: "FEBRABAN CPS 004 — Seção 6 Gestão de vulnerabilidades"
+        tier: enterprise
+        control_gap_title: "PII em filesystem — superfície de vulnerabilidade"
+        control_gap_body: >
+          Dados pessoais em arquivos aumentam impacto se o share for explorado.
+        recommendation: "Incluir o repositório no ciclo de gestão de vulnerabilidades e classificação."
+        deadline_days: 45
+
+  - pattern_name: LGPD_CPF
+    target_context: filesystem
+    frameworks:
+      - id: BACEN-4893-ART4
+        name: "BACEN Res. 4893/2021 — Art. 4º Política de Segurança Cibernética"
+        tier: enterprise
+        control_gap_title: "CPF em repositório de arquivos"
+        control_gap_body: >
+          CPF em filesystem compartilhado ou backup sem classificação clara.
+        recommendation: "Classificar, restringir ACL e registrar na política cibernética."
+        deadline_days: 30
+
+  - pattern_name: LGPD_CPF
+    target_context: null
+    frameworks:
+      - id: BACEN-4893-ART11
+        name: "BACEN Res. 4893/2021 — Art. 11º Comunicação de incidentes relevantes"
+        tier: enterprise
+        control_gap_title: "CPF detectado — prontidão de comunicação ao BACEN"
+        control_gap_body: >
+          Achado de identificador pessoal deve alimentar o processo de avaliar
+          se um incidente futuro seria comunicável (Art. 11º). Heurístico.
+        recommendation: "Revisar critérios de incidente relevante e canais de comunicação ao BACEN."
+        deadline_days: 60

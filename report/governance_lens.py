@@ -6,6 +6,7 @@ Heuristic only; not legal advice. See docs/plans/PLAN_GOVERNANCE_LENS.md.
 
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -18,6 +19,12 @@ from config.governance_map_loader import (
     resolve_governance_map_path,
     target_context_matches,
 )
+
+_logger = logging.getLogger(__name__)
+
+ENTERPRISE_TIER_WARNING = "Enterprise framework requires enterprise license tier"
+DEFAULT_ENTERPRISE_MAP_FILE = "config/governance_framework_map_enterprise.example.yaml"
+LICENSED_ENTERPRISE_MAP_FILE = "config/governance_framework_map_enterprise.yaml"
 
 RiskLevelPt = Literal["alto", "medio", "baixo"]
 
@@ -93,6 +100,29 @@ def governance_lens_feature_allowed(config: dict[str, Any] | None) -> bool:
     return guard.is_allowed("governance_lens_pro")
 
 
+def enterprise_lens_enabled(config: dict[str, Any] | None) -> bool:
+    """True when config asks for Enterprise modules and the license allows them."""
+    cfg = config or {}
+    gov = cfg.get("governance") or {}
+    if str(gov.get("tier") or "").strip().lower() != "enterprise":
+        return False
+    from core.licensing.guard import get_license_guard
+
+    return get_license_guard(cfg).is_allowed("governance_lens_enterprise")
+
+
+def _looks_like_enterprise_map_file(map_file: str) -> bool:
+    name = Path(map_file).name.lower()
+    return (
+        name
+        in {
+            "governance_framework_map_enterprise.yaml",
+            "governance_framework_map_enterprise.example.yaml",
+        }
+        or "enterprise" in name
+    )
+
+
 def _framework_tier_allowed(fw_tier: str, config: dict[str, Any]) -> bool:
     from core.licensing.guard import get_license_guard
 
@@ -115,13 +145,42 @@ class GovernanceLensGenerator:
     ) -> None:
         self.config = config or {}
         self._config_path = config_path
+        self._enterprise_warned = False
         if map_entries is not None:
             self._entries = map_entries
         else:
-            gov = self.config.get("governance") or {}
-            map_file = str(gov.get("map_file") or DEFAULT_GOVERNANCE_MAP_FILE).strip()
-            map_path = resolve_governance_map_path(map_file, config_path)
-            self._entries = load_governance_map_entries(map_path)
+            self._entries = self._load_map_entries()
+
+    def _warn_enterprise_tier(self) -> None:
+        if self._enterprise_warned:
+            return
+        _logger.warning(ENTERPRISE_TIER_WARNING)
+        self._enterprise_warned = True
+
+    def _load_map_entries(self) -> list[dict[str, Any]]:
+        gov = self.config.get("governance") or {}
+        map_file = str(gov.get("map_file") or DEFAULT_GOVERNANCE_MAP_FILE).strip()
+        map_path = resolve_governance_map_path(map_file, self._config_path)
+        entries = load_governance_map_entries(map_path)
+
+        enterprise_map_file = str(gov.get("enterprise_map_file") or "").strip()
+        wants_enterprise = bool(enterprise_map_file) or _looks_like_enterprise_map_file(
+            map_file
+        )
+        if not enterprise_lens_enabled(self.config):
+            if wants_enterprise:
+                self._warn_enterprise_tier()
+            return entries
+
+        ent_file = enterprise_map_file or LICENSED_ENTERPRISE_MAP_FILE
+        ent_path = resolve_governance_map_path(ent_file, self._config_path)
+        if not ent_path.is_file() and not enterprise_map_file:
+            ent_path = resolve_governance_map_path(
+                DEFAULT_ENTERPRISE_MAP_FILE, self._config_path
+            )
+        if ent_path.is_file() and ent_path.resolve() != map_path.resolve():
+            entries = entries + load_governance_map_entries(ent_path)
+        return entries
 
     def generate_from_rows(
         self,
@@ -151,6 +210,11 @@ class GovernanceLensGenerator:
                         if not _framework_tier_allowed(
                             fw.get("tier", "pro"), self.config
                         ):
+                            if (
+                                str(fw.get("tier") or "").strip().lower()
+                                == "enterprise"
+                            ):
+                                self._warn_enterprise_tier()
                             continue
                         key = (fw["id"], fw["control_gap_title"])
                         bucket = aggregated.get(key)

@@ -3,7 +3,7 @@
 <!-- plans-hub-summary: Camada de tradução GRC: mapeia padrões detectados para controles COBIT 2019 / ISO 27001 / ISO 27014 / ISO 38500 / ITIL 4; gera Governance View no Excel e exporta MD→DOCX/PDF via pandoc; Pro tier. -->
 <!-- plans-hub-related: PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md, PLAN_CLI_VALIDATE_DIFF_AND_DSAR_EXPORT.md, LICENSING_SPEC.md -->
 
-- **Status:** In progress (Phase D — operator docs USAGE/TECH_GUIDE + pandoc quickstart)
+- **Status:** In progress (Phase E — Enterprise BACEN / FEBRABAN / PCI-DSS modules)
 - **Date:** 2026-08-18
 - **Authors:** Fabio Leitao (operator); Cursor executor
 - **Priority:** H2
@@ -33,8 +33,8 @@ Ship Governance Lens in **five phases** (A→E). Each phase is a thin, reviewabl
 | **A** | This plan + `config/governance_framework_map.schema.yaml` (structure + illustrative examples only) | [#539](https://github.com/DataBoar/data-boar/issues/539) | ✅ Done |
 | **B** | `report/governance_lens.py` — Pro-tier generator (Governance View sheet / hooks) | [#540](https://github.com/DataBoar/data-boar/issues/540) | ✅ Done |
 | **C** | Pandoc-ready MD template + `pandoc` YAML + CLI `--governance-report` | [#541](https://github.com/DataBoar/data-boar/issues/541) | ✅ Done |
-| **D** | Operator docs: USAGE EN + pt-BR, TECH_GUIDE, pandoc quickstart | [#542](https://github.com/DataBoar/data-boar/issues/542) | 🔄 In progress |
-| **E** | Enterprise framework modules (BACEN, FEBRABAN, PCI-DSS v4.0) | [#543](https://github.com/DataBoar/data-boar/issues/543) | ⬜ Pending |
+| **D** | Operator docs: USAGE EN + pt-BR, TECH_GUIDE, pandoc quickstart | [#542](https://github.com/DataBoar/data-boar/issues/542) | ✅ Done |
+| **E** | Enterprise framework modules (BACEN, FEBRABAN, PCI-DSS v4.0) | [#543](https://github.com/DataBoar/data-boar/issues/543) | 🔄 In progress |
 
 **Out of scope for Phase A:** runtime generator code, pandoc templates, USAGE prose, or Enterprise curated maps in public Git.
 
@@ -122,6 +122,16 @@ See issues [#540](https://github.com/DataBoar/data-boar/issues/540)–[#543](htt
 - [x] `docs/ops/GOVERNANCE_LENS_QUICKSTART.md` + `.pt_BR.md` (≤2 A4 pages)
 - [x] `docs/ops/README.md` quickstart table row
 - [x] `plans_hub_sync --write` + plan phase table refresh
+- [x] `check-all` green before merge
+
+### Acceptance (Phase E — #543)
+
+- [x] `config/governance_framework_map_enterprise.example.yaml` (≥15 OSS starter entries; licensed `governance_framework_map_enterprise.yaml` gitignored)
+- [x] Load Enterprise map only when `governance.tier == enterprise` + `governance_lens_enterprise`
+- [x] Pro + Enterprise map reference → warning `Enterprise framework requires enterprise license tier` (omit, no fail)
+- [x] Jinja `{% if enterprise_enabled %}` BACEN / PCI-DSS / FEBRABAN sections
+- [x] `tests/test_governance_lens_enterprise.py` (4 named tests)
+- [x] USAGE EN + pt-BR — Governance Lens (Enterprise)
 - [x] `check-all` green before merge
 
 ### Acceptance (Phase B — #540)
