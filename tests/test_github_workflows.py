@@ -314,6 +314,10 @@ def test_sbom_workflow_generates_release_manifest_after_docker_build() -> None:
     manifest_idx = text.index("Generate release manifest inside image")
     assert docker_idx < manifest_idx
     assert "release-manifest.json" in text
+    assert "--patch-native-into" in text
+    assert "native_packages" in text
+    assert "refusing to clobber native_packages[]" in text
+    assert "gh release view" in text
 
 
 def test_sbom_yml_pins_actions_to_shas() -> None:
@@ -609,16 +613,18 @@ def test_publish_pypi_yml_pins_actions_to_shas() -> None:
 
 
 def test_native_packages_workflow_present_and_valid() -> None:
-    """#1437: nfpm CI build for deb/rpm x86-64 glibc (real payload, fail-closed)."""
+    """#1437 / #1408: nfpm CI build + release attach (wheelhouse payload)."""
     data = _load_workflow("native-packages.yml")
     assert data.get("name") == "Native packages"
     on = data.get("on") or {}
     assert "workflow_dispatch" in on
     assert "pull_request" in on
+    assert "release" in on
     env = data.get("env") or {}
     assert env.get("WHEELHOUSE_TAG") == "wheelhouse-x86-64-v1-2026-07-29"
     assert env.get("UV_PYTHON") == "3.14.6+freethreaded"
     assert env.get("NFPM_VERSION") == "2.47.0"
+    assert env.get("DISABLE_SQLALCHEMY_CEXT") == "1"
     assert re.fullmatch(r"[0-9a-f]{64}", str(env.get("NFPM_SHA256") or ""))
     assert re.fullmatch(r"[0-9a-f]{64}", str(env.get("UV_SHA256") or ""))
 
@@ -626,18 +632,24 @@ def test_native_packages_workflow_present_and_valid() -> None:
     assert "build-deb-rpm" in jobs
     assert "smoke-deb" in jobs
     assert "smoke-rpm" in jobs
+    assert "attach-release" in jobs
     build = jobs["build-deb-rpm"]
     runs = "\n".join(_ci_step_run_texts(build))
     assert "native-nfpm-populate-staging.sh" in runs
     assert "nfpm package" in runs
-    assert "--packager deb" in runs
-    assert "--packager rpm" in runs
+    assert "--packager" in runs
+    assert "for packager in deb rpm apk archlinux" in runs
     assert "refusing to package placeholder" in runs
+    assert "native_package_release.py" in runs
+    assert "normalize-apk" in runs
+    assert "EXTERNALLY-MANAGED" in runs
 
     smoke_deb = jobs["smoke-deb"]
     assert "debian:bookworm" in str(smoke_deb.get("container") or "")
     smoke_deb_runs = "\n".join(_ci_step_run_texts(smoke_deb))
     assert "-m data_boar --version" in smoke_deb_runs
+    assert "EXTERNALLY-MANAGED" in smoke_deb_runs
+    assert "sqlalchemy" in smoke_deb_runs
     # bookworm-slim /bin/sh is dash — install step must use bash for pipefail.
     deb_steps = smoke_deb.get("steps") or []
     launcher_steps = [
@@ -652,6 +664,50 @@ def test_native_packages_workflow_present_and_valid() -> None:
     assert "rockylinux:9" in str(smoke_rpm.get("container") or "")
     smoke_rpm_runs = "\n".join(_ci_step_run_texts(smoke_rpm))
     assert "-m data_boar --version" in smoke_rpm_runs
+    assert "EXTERNALLY-MANAGED" in smoke_rpm_runs
+    assert "sqlalchemy" in smoke_rpm_runs
+    attach = jobs["attach-release"]
+    assert attach.get("if") == "github.event_name == 'release'"
+    attach_runs = "\n".join(_ci_step_run_texts(attach))
+    assert "gh release upload" in attach_runs
+    assert "SHA256SUMS" in attach_runs
+    assert "merge-manifest" in attach_runs
+    assert "native_package_release.py" in attach_runs
+    assert "Refusing to clobber with an empty stub" in attach_runs
+    assert attach_runs.index("gh release download") < attach_runs.rindex(
+        "gh release upload"
+    )
+    attach_env_keys = []
+    for step in attach.get("steps") or []:
+        if isinstance(step, dict):
+            attach_env_keys.extend((step.get("env") or {}).keys())
+    assert "NATIVE_PACKAGE_GPG_PRIVATE_KEY" not in attach_env_keys
+    attach_checkout = [
+        s
+        for s in (attach.get("steps") or [])
+        if isinstance(s, dict) and "actions/checkout@" in str(s.get("uses") or "")
+    ]
+    assert attach_checkout, "attach-release must checkout a trusted helper"
+    assert attach_checkout[0].get("with", {}).get("ref") == (
+        "${{ github.event.repository.default_branch }}"
+    )
+
+    sign = jobs["sign-release-sums"]
+    assert sign.get("if") == "github.event_name == 'release'"
+    assert sign.get("needs") == ["attach-release"]
+    sign_dump = yaml.dump(sign)
+    assert "NATIVE_PACKAGE_GPG_PRIVATE_KEY" in sign_dump
+    sign_checkout = [
+        s
+        for s in (sign.get("steps") or [])
+        if isinstance(s, dict) and "actions/checkout@" in str(s.get("uses") or "")
+    ]
+    assert sign_checkout, "sign-release-sums must checkout the default branch"
+    assert sign_checkout[0].get("with", {}).get("ref") == (
+        "${{ github.event.repository.default_branch }}"
+    )
+    sign_runs = "\n".join(_ci_step_run_texts(sign))
+    assert "SHA256SUMS.asc" in sign_runs
     rpm_steps = smoke_rpm.get("steps") or []
     rpm_launcher = [
         s

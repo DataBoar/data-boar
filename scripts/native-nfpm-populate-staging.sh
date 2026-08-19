@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# Populate packaging/nfpm/staging/ with a real cp314t embed + layer-1 wheelhouse (#1437).
+# Populate packaging/nfpm/staging/ with a real cp314t embed + layer-1 wheelhouse
+# (#1437 / #1408). Payload comes from the hosted wheelhouse (#1182), never free
+# PyPI resolution for layer 1. The hand-built recipe-proof .deb is not a publish candidate.
 #
 # Fail-closed: network failures or missing assets abort (no fake payload).
 # Does not commit the embed tree — CI only (see .gitignore).
@@ -65,9 +67,23 @@ if [[ ! -e "${PY_PREFIX}/bin/python" ]]; then
   ln -s python3.14t "${PY_PREFIX}/bin/python"
 fi
 
-# Drop PEP 668 marker so pip can install into the embed.
-rm -f "${PY_PREFIX}/lib/python3.14t/EXTERNALLY-MANAGED" \
-  "${PY_PREFIX}/lib/python3.14/EXTERNALLY-MANAGED" || true
+# Drop PEP 668 marker so pip can install into the embed (#1408 trap 2).
+# Save the original and restore it after layer-1 install so the delivered
+# package cannot be mutated with `pip install` inside the prefix.
+EM_SAVED="$(mktemp)"
+EM_CANDIDATES=(
+  "${PY_PREFIX}/lib/python3.14t/EXTERNALLY-MANAGED"
+  "${PY_PREFIX}/lib/python3.14/EXTERNALLY-MANAGED"
+)
+EM_RESTORE=""
+for em in "${EM_CANDIDATES[@]}"; do
+  if [[ -f "${em}" ]]; then
+    cp -a "${em}" "${EM_SAVED}"
+    EM_RESTORE="${em}"
+    break
+  fi
+done
+rm -f "${EM_CANDIDATES[@]}" || true
 "${PYBIN}" -m ensurepip --upgrade
 "${PYBIN}" -c 'import sys; assert hasattr(sys, "_is_gil_enabled") and sys._is_gil_enabled() is False, sys.version'
 
@@ -83,6 +99,8 @@ echo "=== pip install requirements + data-boar (editable-style into embed) ==="
 "${PYBIN}" -m pip install --no-cache-dir --no-deps "${ROOT}"
 
 echo "=== apply wheelhouse layer-1 + boar_fast_filter cp314t ==="
+# Layer 1 final bytes come from the hosted wheelhouse (#1182 / #1408), not from
+# the earlier pip resolve. apply_wheelhouse_v1.sh force-reinstalls --no-index.
 # Preflight: layer-1 wheels must be reachable (fail-closed, no fake payload).
 WH_BASE="https://github.com/DataBoar/data-boar-site/releases/download/${WHEELHOUSE_TAG}"
 for whl in \
@@ -101,6 +119,37 @@ WHEELHOUSE_TAG="${WHEELHOUSE_TAG}" SKIP_POPCNT_GATE=1 \
 
 "${PYBIN}" -c 'import sys; assert sys._is_gil_enabled() is False, "GIL re-enabled after wheelhouse"'
 "${PYBIN}" -c 'import numpy, scipy, sklearn, pandas, boar_fast_filter; print("layer1_ok", numpy.__version__)'
+
+# --- #1408 trap 1: SQLAlchemy C-ext re-enables GIL; assert pure-Python ---
+echo "=== assert DISABLE_SQLALCHEMY_CEXT held (no sqlalchemy *.so, GIL off) ==="
+so_count="$(find "${PY_PREFIX}" -path '*sqlalchemy*' -name '*.so' | wc -l | tr -d ' ')"
+if [[ "${so_count}" != "0" ]]; then
+  echo "ERROR: sqlalchemy C-ext present (${so_count} .so); GIL would re-enable" >&2
+  find "${PY_PREFIX}" -path '*sqlalchemy*' -name '*.so' >&2 || true
+  exit 1
+fi
+"${PYBIN}" -c '
+import sys
+import sqlalchemy
+assert sys._is_gil_enabled() is False, "GIL re-enabled after import sqlalchemy"
+print("sqlalchemy_ok", sqlalchemy.__version__, "gil", sys._is_gil_enabled())
+'
+
+# --- #1408 trap 2: restore PEP 668 so pip cannot mutate the delivered prefix ---
+echo "=== restore EXTERNALLY-MANAGED ==="
+if [[ -n "${EM_RESTORE}" && -s "${EM_SAVED}" ]]; then
+  cp -a "${EM_SAVED}" "${EM_RESTORE}"
+else
+  EM_RESTORE="${PY_PREFIX}/lib/python3.14t/EXTERNALLY-MANAGED"
+  mkdir -p "$(dirname "${EM_RESTORE}")"
+  cat > "${EM_RESTORE}" <<'EOF'
+[externally-managed]
+Error=This CPython prefix is owned by the data-boar native package.
+ Use the OS package manager (or the signed repository) to change it.
+EOF
+fi
+rm -f "${EM_SAVED}"
+test -f "${EM_RESTORE}"
 
 # --- launcher + config ---
 mkdir -p "${STAGING_ROOT}/usr/bin" "${STAGING_ROOT}/etc/data-boar"
@@ -126,5 +175,17 @@ if file "${PYBIN}" | grep -qi 'ASCII text\|empty'; then
   echo "ERROR: python3.14t still looks like a placeholder text file" >&2
   exit 1
 fi
+
+# --- #1408 trap 3: normalize modes (umask 027 must not leak into the tree) ---
+# nfpm also sets dest modes from the manifest; this keeps staging itself
+# packager-safe if someone inspects or copies the tree.
+echo "=== normalize staging modes (independent of umask) ==="
+find "${STAGING_ROOT}" -type d -exec chmod 0755 {} +
+find "${STAGING_ROOT}" -type f -exec chmod 0644 {} +
+chmod 0755 "${STAGING_ROOT}/usr/bin/data-boar"
+if [[ -d "${PY_PREFIX}/bin" ]]; then
+  find "${PY_PREFIX}/bin" -type f -exec chmod 0755 {} +
+fi
+test -f "${EM_RESTORE}"
 
 echo "=== staging populated (real cp314t + wheelhouse) ==="
