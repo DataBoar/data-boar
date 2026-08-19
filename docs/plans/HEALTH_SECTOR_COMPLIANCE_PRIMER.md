@@ -31,7 +31,7 @@ HHS Safe Harbor de-identification lists **18** identifier types. Coverage below 
 | # | Identifier | Coverage | What ships today | Gap / roadmap |
 | - | ---------- | -------- | ---------------- | ------------- |
 | 1 | Names | Partial | Default ML terms (`first name`, `last name`, `full name`, …) | No dedicated name NER |
-| 2 | Geographic subdivisions smaller than a state (address, city, ZIP, geocode) | Partial | HIPAA sample **precise geolocation** (Safe Harbor item as mapped in the sample header); ML terms `ZIP code`, `geographic subdivisions` | No street-address regex |
+| 2 | Geographic subdivisions smaller than a state (address, city, ZIP, geocode) | Partial | HIPAA sample **precise geolocation** regexes; sample-only ML terms `ZIP code`, `geographic subdivisions` (not in `DEFAULT_ML_TERMS`) | No street-address regex; default config has neither |
 | 3 | Dates (except year) related to the individual; ages over 89 | Partial | Built-in **`DATE_DMY`**; ML `birth date` / `data de nascimento`; HIPAA sample ML `admission date`, `discharge date`, `date of death` | No age-over-89 rule |
 | 4 | Telephone numbers | Partial | Built-in **`PHONE_BR`**; ML phone/contact terms | US NANP shape is override-only |
 | 5 | Fax numbers | Roadmap | — | No dedicated fax pattern |
