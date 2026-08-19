@@ -65,6 +65,8 @@ A camada 1 (numpy / scipy / scikit-learn / pandas / `boar_fast_filter`) é **rei
 
 O `SHA256SUMS` sempre vai na Release. O `SHA256SUMS.asc` destacado só é escrito quando o secret `NATIVE_PACKAGE_GPG_PRIVATE_KEY` existe (cerimônia da chave no [#1405](https://github.com/DataBoar/data-boar/issues/1405) / ADR-0089). O pipeline **não** inventa assinatura. Os bytes dos pacotes são os mesmos antes e depois da chave.
 
+O job de assinatura (`sign-release-sums`) faz checkout da **branch padrão** do repositório e injeta o secret GPG só ali. Ele **não** executa `scripts/native_package_release.py` a partir da tag lançada. O `attach-release` também fixa essa ref confiável e nunca recebe a chave privada. O nfpm pode emitir `data-boar_<ver>_<arch>.apk`; o CI renomeia para o nome Alpine `data-boar-<ver>-r<rel>.apk` antes dos checksums.
+
 ## Os mesmos arquivos no repositório assinado
 
 O `#1405` / ADR-0089 indexa **estes** assets da Release. Copie ou baixe; não rode `nfpm package` de novo para o repositório público. Paridade é igualdade de hash (`SHA256SUMS` ↔ `native_packages[]` no `release-manifest.json` ↔ índice apt/dnf/apk/pacman).

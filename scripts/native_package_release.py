@@ -25,6 +25,10 @@ from typing import Any
 _DEB = re.compile(r"^data-boar_[^/]+_(amd64|arm64|i386)\.deb$")
 _RPM = re.compile(r"^data-boar-[^/]+-[^/]+\.(x86_64|aarch64|noarch)\.rpm$")
 _APK = re.compile(r"^data-boar-[^/]+-r[0-9]+\.apk$")
+# nfpm 2.x apk default: name_version_arch.apk (underscores + arch).
+_NFPM_APK = re.compile(
+    r"^data-boar_(?P<stem>.+)_(?P<arch>x86_64|amd64|aarch64|arm64|any)\.apk$"
+)
 _PACMAN = re.compile(
     r"^data-boar-[^/]+-[0-9]+-(x86_64|aarch64|any)\.pkg\.tar(\.zst|\.xz)?$"
 )
@@ -80,6 +84,35 @@ def reject_reason(name: str) -> str:
     if ".pkg.tar" in name and not _PACMAN.fullmatch(name):
         return f"{name}: pacman must be <name>-<version>-<rel>-<arch>.pkg.tar.zst"
     return f"{name}: unrecognized native package filename"
+
+
+def alpine_apk_name_from_nfpm(name: str) -> str | None:
+    """Map nfpm ``name_ver_arch.apk`` to Alpine ``name-ver-rN.apk``.
+
+    Example: ``data-boar_1.8.0-beta-r1_x86_64.apk`` →
+    ``data-boar-1.8.0-beta-r1.apk``. Already-Alpine names return ``None``.
+    """
+    match = _NFPM_APK.fullmatch(name)
+    if match is None:
+        return None
+    return f"data-boar-{match.group('stem')}.apk"
+
+
+def normalize_nfpm_apk_filenames(directory: Path) -> list[Path]:
+    """Rename nfpm apk artifacts in ``directory`` to the #1408 Alpine contract."""
+    renamed: list[Path] = []
+    for path in sorted(directory.glob("*.apk")):
+        dest_name = alpine_apk_name_from_nfpm(path.name)
+        if dest_name is None or dest_name == path.name:
+            continue
+        dest = path.with_name(dest_name)
+        if dest.exists() and dest.resolve() != path.resolve():
+            raise FileExistsError(
+                f"cannot normalize {path.name}: {dest_name} already exists"
+            )
+        path.rename(dest)
+        renamed.append(dest)
+    return renamed
 
 
 def list_package_files(directory: Path) -> list[Path]:
@@ -202,6 +235,21 @@ def maybe_gpg_sign_sums(sums_path: Path) -> Path | None:
         return _sign(Path(tmp))
 
 
+def _cmd_normalize_apk(directory: Path) -> int:
+    try:
+        renamed = normalize_nfpm_apk_filenames(directory)
+    except OSError as err:
+        print(f"native_package_release normalize-apk: {err}", file=sys.stderr)
+        return 1
+    if renamed:
+        print(f"OK: renamed {len(renamed)} nfpm apk(s) to Alpine name-ver-rN.apk")
+        for path in renamed:
+            print(f"  {path.name}")
+    else:
+        print("OK: no nfpm underscore apk names to normalize")
+    return 0
+
+
 def _cmd_names(directory: Path) -> int:
     errors = validate_package_names(directory)
     if errors:
@@ -268,6 +316,10 @@ def main(argv: list[str] | None = None) -> int:
         help="Directory of nfpm output (default: dist/native-packages)",
     )
     sub = parser.add_subparsers(dest="cmd", required=True)
+    sub.add_parser(
+        "normalize-apk",
+        help="Rename nfpm name_ver_arch.apk to Alpine name-ver-rN.apk",
+    )
     sub.add_parser("names", help="Fail if any package filename breaks convention")
     sub.add_parser("checksums", help="Write SHA256SUMS + native-packages-manifest.json")
     merge = sub.add_parser(
@@ -283,6 +335,8 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     directory = args.dir if args.dir.is_absolute() else _repo_root() / args.dir
     directory.mkdir(parents=True, exist_ok=True)
+    if args.cmd == "normalize-apk":
+        return _cmd_normalize_apk(directory)
     if args.cmd == "names":
         return _cmd_names(directory)
     if args.cmd == "checksums":

@@ -121,6 +121,7 @@ jobs:
       - name: SHA256SUMS + packager name convention (#1408)
         run: |
           set -euo pipefail
+          python3 scripts/native_package_release.py --dir dist/native-packages normalize-apk
           python3 scripts/native_package_release.py --dir dist/native-packages names
           python3 scripts/native_package_release.py --dir dist/native-packages checksums
 
@@ -212,8 +213,12 @@ jobs:
     permissions:
       contents: write
     steps:
+      # Helper from the default branch — never the released tag. A collaborator
+      # who can create a tag must not replace native_package_release.py and then
+      # see NATIVE_PACKAGE_GPG_PRIVATE_KEY (that secret is only on sign-release-sums).
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
+          ref: ${{ github.event.repository.default_branch }}
           persist-credentials: false
 
       - name: Download package artifacts
@@ -226,10 +231,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GITHUB_EVENT_RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
-          NATIVE_PACKAGE_GPG_PRIVATE_KEY: ${{ secrets.NATIVE_PACKAGE_GPG_PRIVATE_KEY }}
         run: |
           set -euo pipefail
           TAG="${GITHUB_EVENT_RELEASE_TAG_NAME}"
+          python3 scripts/native_package_release.py --dir dist/native-packages normalize-apk
           python3 scripts/native_package_release.py --dir dist/native-packages names
           python3 scripts/native_package_release.py --dir dist/native-packages checksums
           shopt -s nullglob
@@ -243,12 +248,6 @@ jobs:
           )
           gh release upload "$TAG" "${pkg_assets[@]}" \
             --clobber --repo "${{ github.repository }}"
-          if [[ -f dist/native-packages/SHA256SUMS.asc ]]; then
-            gh release upload "$TAG" dist/native-packages/SHA256SUMS.asc \
-              --clobber --repo "${{ github.repository }}"
-          else
-            echo "::notice title=SHA256SUMS unsigned::NATIVE_PACKAGE_GPG_PRIVATE_KEY unset; #1405 key ceremony signs later. Package bytes stay the same."
-          fi
           # Fail-closed: never upload a synthesized stub (empty files[]).
           # Download the SBOM/licensing manifest; abort if it is missing.
           rm -rf /tmp/relman
@@ -263,3 +262,40 @@ jobs:
             merge-manifest --manifest /tmp/relman/release-manifest.json
           gh release upload "$TAG" /tmp/relman/release-manifest.json \
             --clobber --repo "${{ github.repository }}"
+
+  sign-release-sums:
+    name: Detached-sign SHA256SUMS from trusted ref (#1408)
+    needs: [attach-release]
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      - name: Download package artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: native-packages-x86_64-glibc
+          path: dist/native-packages
+
+      - name: Detached-sign SHA256SUMS when key is configured
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_EVENT_RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
+          NATIVE_PACKAGE_GPG_PRIVATE_KEY: ${{ secrets.NATIVE_PACKAGE_GPG_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_EVENT_RELEASE_TAG_NAME}"
+          python3 scripts/native_package_release.py --dir dist/native-packages names
+          python3 scripts/native_package_release.py --dir dist/native-packages checksums
+          if [[ -f dist/native-packages/SHA256SUMS.asc ]]; then
+            gh release upload "$TAG" dist/native-packages/SHA256SUMS.asc \
+              --clobber --repo "${{ github.repository }}"
+          else
+            echo "::notice title=SHA256SUMS unsigned::NATIVE_PACKAGE_GPG_PRIVATE_KEY unset; #1405 key ceremony signs later. Package bytes stay the same."
+          fi

@@ -67,6 +67,8 @@ Layer 1 (numpy / scipy / scikit-learn / pandas / `boar_fast_filter`) is **force-
 
 `SHA256SUMS` is always attached. Detached `SHA256SUMS.asc` is written only when the repository secret `NATIVE_PACKAGE_GPG_PRIVATE_KEY` is present (packaging key ceremony on [#1405](https://github.com/DataBoar/data-boar/issues/1405) / ADR-0089). The pipeline does **not** invent a signature. Package bytes stay the same before and after the key lands.
 
+The signing job (`sign-release-sums`) checks out the repository **default branch** and injects the GPG secret there. It does **not** run `scripts/native_package_release.py` from the released tag. `attach-release` also pins that trusted ref and never receives the private key. nfpm may emit `data-boar_<ver>_<arch>.apk`; CI renames it to the Alpine `data-boar-<ver>-r<rel>.apk` name before checksums.
+
 ## Same files for the signed repo
 
 `#1405` / ADR-0089 indexes **these** Release assets. Copy or fetch them; do not `nfpm package` again for the public repo. Parity is hash equality (`SHA256SUMS` ↔ `release-manifest.json` `native_packages[]` ↔ apt/dnf/apk/pacman index).

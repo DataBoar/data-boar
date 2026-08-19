@@ -641,6 +641,7 @@ def test_native_packages_workflow_present_and_valid() -> None:
     assert "for packager in deb rpm apk archlinux" in runs
     assert "refusing to package placeholder" in runs
     assert "native_package_release.py" in runs
+    assert "normalize-apk" in runs
     assert "EXTERNALLY-MANAGED" in runs
 
     smoke_deb = jobs["smoke-deb"]
@@ -676,6 +677,37 @@ def test_native_packages_workflow_present_and_valid() -> None:
     assert attach_runs.index("gh release download") < attach_runs.rindex(
         "gh release upload"
     )
+    attach_env_keys = []
+    for step in attach.get("steps") or []:
+        if isinstance(step, dict):
+            attach_env_keys.extend((step.get("env") or {}).keys())
+    assert "NATIVE_PACKAGE_GPG_PRIVATE_KEY" not in attach_env_keys
+    attach_checkout = [
+        s
+        for s in (attach.get("steps") or [])
+        if isinstance(s, dict) and "actions/checkout@" in str(s.get("uses") or "")
+    ]
+    assert attach_checkout, "attach-release must checkout a trusted helper"
+    assert attach_checkout[0].get("with", {}).get("ref") == (
+        "${{ github.event.repository.default_branch }}"
+    )
+
+    sign = jobs["sign-release-sums"]
+    assert sign.get("if") == "github.event_name == 'release'"
+    assert sign.get("needs") == ["attach-release"]
+    sign_dump = yaml.dump(sign)
+    assert "NATIVE_PACKAGE_GPG_PRIVATE_KEY" in sign_dump
+    sign_checkout = [
+        s
+        for s in (sign.get("steps") or [])
+        if isinstance(s, dict) and "actions/checkout@" in str(s.get("uses") or "")
+    ]
+    assert sign_checkout, "sign-release-sums must checkout the default branch"
+    assert sign_checkout[0].get("with", {}).get("ref") == (
+        "${{ github.event.repository.default_branch }}"
+    )
+    sign_runs = "\n".join(_ci_step_run_texts(sign))
+    assert "SHA256SUMS.asc" in sign_runs
     rpm_steps = smoke_rpm.get("steps") or []
     rpm_launcher = [
         s
