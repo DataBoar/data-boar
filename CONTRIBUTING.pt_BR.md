@@ -110,18 +110,6 @@ Instalações via PyPI expõem **dois** entry points de console de **mesmo níve
 - **Orientação aos planos:** [docs/plans/PLANS_HUB.md](docs/plans/PLANS_HUB.md) lista cada `PLAN_*.md` (abertos + concluídos) com resumos curtos—use para ver escopo e intenção antes de mergulhar no [docs/plans/PLANS_TODO.md](docs/plans/PLANS_TODO.md). Se você adicionar ou arquivar um plano, rode `python scripts/plans_hub_sync.py --write` e faça commit do hub atualizado (o pre-commit exige `--check`).
 - **Pull requests:** Use o [modelo de PR](.github/PULL_REQUEST_TEMPLATE.md). Antes do push, prefira **`.\scripts\check-all.ps1`** (gate completo: dashboard dos planos, pre-commit, pytest com avisos como erros)—veja [docs/ops/README.pt_BR.md](docs/ops/README.pt_BR.md) § *Antes de abrir um PR*. No mínimo: testes (`uv run pytest -v -W error`; [docs/TESTING.pt_BR.md](docs/TESTING.pt_BR.md)), lint (pre-commit / Ruff) e docs/README quando o comportamento mudar. **Modelo de layout privado (versionado):** copie de **`docs/private.example/`** para **`docs/private/`** (ignorado pelo git), conforme [docs/PRIVATE_OPERATOR_NOTES.pt_BR.md](docs/PRIVATE_OPERATOR_NOTES.pt_BR.md). Regras de merge no GitHub: **[Requisitos de pull request](#requisitos-de-pull-request)** e [docs/ops/BRANCH_PROTECTION.pt_BR.md](docs/ops/BRANCH_PROTECTION.pt_BR.md).
 
-## Requisitos de pull request
-
-**Rulesets** do GitHub mais a proteção clássica de branch valem para o **`main`**. Esta seção é a visão de quem contribui; o instantâneo do operador (clássico vs rulesets, nomes exatos dos checks, modelo de calor) está em [docs/ops/BRANCH_PROTECTION.pt_BR.md](docs/ops/BRANCH_PROTECTION.pt_BR.md) ([EN](docs/ops/BRANCH_PROTECTION.md)).
-
-- **Status checks obrigatórios** (bloqueiam merge, ruleset `main-gate-pii`): **Test (Python 3.12)**, **Test (Python 3.13)**, **Test (Python 3.14)**.
-- **Commits assinados** são obrigatórios (proteção clássica e ruleset `restriction baseline`). O Dependabot não consegue dar push sob essa regra — o mantenedor abre um PR substituto assinado ([#1419](https://github.com/DataBoar/data-boar/issues/1419)).
-- **Revisões aprovadoras** **não** são obrigatórias (`required_approving_review_count: 0`). [`.github/CODEOWNERS`](.github/CODEOWNERS) cobre os caminhos do gate de PII/segurança; o ruleset **ainda não** exige revisão de code owner.
-- **Lint, Bandit, pytest Windows, Semgrep, CodeQL, Sonar, Zizmor** costumam rodar no PR. Trate um job vermelho como pare mesmo quando o GitHub ainda permitiria merge. **`ZIZMOR_ENFORCE=true`** falha o job Zizmor em mudanças de workflow; esse job **não** é check obrigatório.
-- **Antes do push:** rode **`./scripts/check-all.sh`** ou **`.\scripts\check-all.ps1`**. Ajudas de merge: [docs/ops/COMMIT_AND_PR.pt_BR.md](docs/ops/COMMIT_AND_PR.pt_BR.md), `scripts/pr-merge-when-green.ps1`.
-
-**Não** altere as configurações de proteção do GitHub num PR só de docs. Se a UI ao vivo divergir do runbook, consulte o `gh api` de novo e atualize o runbook.
-
 ### Palavras-chave de sessão no Cursor vs CLI da aplicação
 
 Quem usa **Cursor** pode digitar **tokens em inglês** no chat (`deps`, `feature`, `docs`, …) para definir o **escopo** do assistente. Esses tokens **não** são flags do **`main.py`**. A CLI do Data Boar está em **[docs/USAGE.pt_BR.md](docs/USAGE.pt_BR.md)** ([EN](docs/USAGE.md)). Tabela **canônica**: **`.cursor/rules/session-mode-keywords.mdc`**; resumo: **[AGENTS.md](AGENTS.md)**.
@@ -157,6 +145,18 @@ O Cursor registra isso em **`.cursor/rules/git-pr-sync-before-advice.mdc`**. Vej
 
 - **Faça merge ou rebase de `main` na sua branch antes de abrir um PR.** Execute `git fetch origin main` e depois `git merge origin/main` (ou `git rebase origin/main`) e resolva conflitos localmente. Assim o PR permanece integrável e os revisores veem um diff limpo.
 - **`report/generator.py`:** A lógica de escrita das planilhas está em `_write_excel_sheets` e helpers (`_build_report_info`, `_build_executive_summary_rows`, etc.). Ao adicionar ou alterar planilhas Excel, atualize esses helpers em vez de colocar a lógica dentro de `generate_report`. Isso mantém a mesma estrutura do `main` e evita os conflitos de merge que tivemos quando o main tinha código inline e a branch tinha o refactor.
+
+## Requisitos de pull request
+
+**Rulesets** do GitHub mais a proteção clássica de branch valem para o **`main`**. Esta seção é a visão de quem contribui; o instantâneo do operador (clássico vs rulesets, nomes exatos dos checks, modelo de calor) está em [docs/ops/BRANCH_PROTECTION.pt_BR.md](docs/ops/BRANCH_PROTECTION.pt_BR.md) ([EN](docs/ops/BRANCH_PROTECTION.md)).
+
+- **Status checks obrigatórios** (bloqueiam merge, ruleset `main-gate-pii`): **Test (Python 3.12)**, **Test (Python 3.13)**, **Test (Python 3.14)**.
+- **Commits assinados** são obrigatórios (proteção clássica e ruleset `restriction baseline`). O Dependabot não consegue dar push sob essa regra — o mantenedor abre um PR substituto assinado ([#1419](https://github.com/DataBoar/data-boar/issues/1419)).
+- **Revisões aprovadoras** **não** são obrigatórias (`required_approving_review_count: 0`). [`.github/CODEOWNERS`](.github/CODEOWNERS) cobre os caminhos do gate de PII/segurança; o ruleset **ainda não** exige revisão de code owner.
+- **Lint, Bandit, pytest Windows, Semgrep, CodeQL, Sonar, Zizmor** costumam rodar no PR. Trate um job vermelho como pare mesmo quando o GitHub ainda permitiria merge. **`ZIZMOR_ENFORCE=true`** falha o job Zizmor em mudanças de workflow; esse job **não** é check obrigatório.
+- **Antes do push:** rode **`./scripts/check-all.sh`** ou **`.\scripts\check-all.ps1`**. Ajudas de merge: [docs/ops/COMMIT_AND_PR.pt_BR.md](docs/ops/COMMIT_AND_PR.pt_BR.md), `scripts/pr-merge-when-green.ps1`.
+
+**Não** altere as configurações de proteção do GitHub num PR só de docs. Se a UI ao vivo divergir do runbook, consulte o `gh api` de novo e atualize o runbook.
 
 ## Código e documentação
 

@@ -31,9 +31,18 @@ def test_branch_protection_runbook_and_contributing_section() -> None:
         assert marker in runbook, f"missing runbook marker {marker!r}"
 
     contributing = _CONTRIBUTING.read_text(encoding="utf-8").splitlines()
-    heading = "## Pull Request requirements"
-    assert any(line.rstrip() == heading for line in contributing), (
-        f"missing {heading!r}"
+    outline = [
+        "## Workflow",
+        "## Pull Request requirements",
+        "## Code and docs",
+    ]
+    indexes = []
+    for heading in outline:
+        matches = [i for i, line in enumerate(contributing) if line.rstrip() == heading]
+        assert matches, f"missing {heading!r}"
+        indexes.append(matches[0])
+    assert indexes == sorted(indexes), (
+        "PR requirements must sit between Workflow and Code and docs"
     )
     assert "docs/ops/BRANCH_PROTECTION.md" in "\n".join(contributing)
 
