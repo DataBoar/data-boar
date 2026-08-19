@@ -22,6 +22,7 @@ ARG UV_PYTHON=3.14.6+freethreaded
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential gcc g++ pkg-config curl ca-certificates binutils \
     libpq-dev libffi-dev libssl-dev unixodbc-dev default-libmysqlclient-dev \
+    freetds-dev libkrb5-dev \
     && rm -rf /var/lib/apt/lists/* \
     && curl -fsSL \
         "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/uv-x86_64-unknown-linux-gnu.tar.gz" \
@@ -68,10 +69,12 @@ RUN pip uninstall -y wheel || true && \
     pip install --no-cache-dir --force-reinstall --no-binary sqlalchemy "sqlalchemy==2.0.50" && \
     python -c 'import pathlib, site, sqlalchemy, sys; root=pathlib.Path(site.getsitepackages()[0])/"sqlalchemy"; sos=list(root.rglob("*.so")); assert not sos, sos; assert sys._is_gil_enabled() is False, "GIL re-enabled after sqlalchemy"' && \
     pip install --no-cache-dir --no-deps -e /app && \
-    # Lean base only (same groups as Dockerfile GIL image); other extras via /extras mount (#1400).
+    WHEELHOUSE_TAG="${WHEELHOUSE_TAG}" bash /app/scripts/docker/apply_wheelhouse_v1.sh && \
+    # Lean extras after wheelhouse so cp314t SQL wheels (mariadb/oracledb/psycopg2/pymssql)
+    # are already present — avoids source rebuild (#1398). freetds-dev/libkrb5-dev remain
+    # as compile fallback if a wheel is missing.
     pip install --no-cache-dir "/app[sql-community,mssql,oracle]" && \
     python /app/scripts/generate_extras_manifest.py --probe --write /app/EXTRAS_MANIFEST.json && \
-    WHEELHOUSE_TAG="${WHEELHOUSE_TAG}" bash /app/scripts/docker/apply_wheelhouse_v1.sh && \
     PY_LIB="$(python -c 'import sysconfig; from pathlib import Path; print(Path(sysconfig.get_path("stdlib")))')" && \
     rm -rf /tmp/wheelhouse-v1-glibc-cp314t && \
     (find "${PY_LIB}/site-packages" -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true) && \

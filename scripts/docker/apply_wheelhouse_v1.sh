@@ -57,6 +57,11 @@ if [[ "${FREETHREADED}" == "1" ]]; then
     "scikit_learn-1.9.0-${PY_TAG}-${ABI_TAG}-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl"
     "pandas-3.0.5-${PY_TAG}-${ABI_TAG}-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl"
     "boar_fast_filter-0.1.0-${PY_TAG}-${ABI_TAG}-manylinux_2_28_x86_64.whl"
+    # SQL extras compiled on 3.14t (no PyPI cp314t wheels) — #1398 nogil builder.
+    "mariadb-1.1.14-${PY_TAG}-${ABI_TAG}-linux_x86_64.whl"
+    "oracledb-4.0.2-${PY_TAG}-${ABI_TAG}-linux_x86_64.whl"
+    "psycopg2_binary-2.9.12-${PY_TAG}-${ABI_TAG}-linux_x86_64.whl"
+    "pymssql-2.3.13-${PY_TAG}-${ABI_TAG}-linux_x86_64.whl"
   )
   # Operator contract: cp314t numpy has popcnt≠0 (x86-64-v2+). Do not force v1.
   SKIP_POPCNT_GATE="${SKIP_POPCNT_GATE:-1}"
@@ -72,7 +77,7 @@ else
 fi
 
 # Expected sha256 from release assets (wheelhouse-x86-64-v1-2026-07-29).
-# Hosted SHA256SUMS was regenerated 2026-08-17 to cover all 54 wheels incl. cp314t (#1410).
+# Hosted SHA256SUMS covers 58 wheels (54 + 4 SQL extras cp314t linux_x86_64, #1398).
 # Prefer release SHA256SUMS; digests below remain a fast path for Docker apply.
 declare -A EXPECTED_SHA=(
   ["numpy-2.5.1-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl"]="d301efd02e390bd2d135205c25cd7b7fc82ec353aa3985528745601bfb67c2d6"
@@ -89,6 +94,10 @@ declare -A EXPECTED_SHA=(
   ["scikit_learn-1.9.0-cp314-cp314t-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl"]="5bad8f8b9950321b54c965fdcbac6c6c55e79e16646b49977bcf3668d3870a1a"
   ["pandas-3.0.5-cp314-cp314t-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl"]="ef01af4d8dc6cd2c8d6c7736f149574ef93fe043811eeb5e445f2647154b5040"
   ["boar_fast_filter-0.1.0-cp314-cp314t-manylinux_2_28_x86_64.whl"]="a28588c4fabe3c7e41e142b9477facc814d658a972f0d314c5104fedfc37af68"
+  ["mariadb-1.1.14-cp314-cp314t-linux_x86_64.whl"]="85f0031a79eedd73f3c5c3b71fcaf7d7fb880a9d16b0c19ce92c2eb4c501a31b"
+  ["oracledb-4.0.2-cp314-cp314t-linux_x86_64.whl"]="6c747bb781382d2f1c3ff852fba783592a30a6cc132aa794caaaf52c40f2f243"
+  ["psycopg2_binary-2.9.12-cp314-cp314t-linux_x86_64.whl"]="a43d050a7e546fc551fa567071946ccee4bf8d57d7d9af5fe053209b7447e55e"
+  ["pymssql-2.3.13-cp314-cp314t-linux_x86_64.whl"]="9a805dd5f4122b6eace854a6faf77173626b30f4b77f223adede1a3d194b1ff4"
 )
 
 UMATH_MAX_BYTES="${NUMPY_UMATH_SO_MAX_BYTES:-8000000}"
@@ -136,6 +145,13 @@ echo "=== force-reinstall ML stack + boar_fast_filter from wheelhouse (--no-inde
 python -m pip install --no-cache-dir --no-index --find-links "$WORKDIR" \
   --force-reinstall --no-deps \
   numpy scipy scikit-learn pandas boar_fast_filter
+
+if [[ "${FREETHREADED}" == "1" ]]; then
+  echo "=== force-reinstall SQL extras from wheelhouse (--no-index, cp314t) ==="
+  python -m pip install --no-cache-dir --no-index --find-links "$WORKDIR" \
+    --force-reinstall --no-deps \
+    mariadb oracledb psycopg2-binary pymssql
+fi
 
 python - <<'PY'
 import pathlib
