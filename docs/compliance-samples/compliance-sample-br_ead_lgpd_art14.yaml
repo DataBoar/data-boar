@@ -20,7 +20,13 @@
 # NOTE — CPF: a bare CPF digit pattern is already in the LGPD sample / built-in
 # detector. Repeating \d{3}.\d{3}.\d{3}-\d{2} here would be the same high-FP
 # class as a bare 8-digit ISPB. This sample only flags CPF when an educational
-# field keyword is present.
+# field keyword is present. Compound LMS headers (cpf_aluno_nome) use \\w*
+# after the educational token — a trailing \\b misses underscore suffixes
+# (same class as #1288 criminal_records_consulted_at).
+#
+# NOTE — recommendation_overrides: do NOT use a bare "LGPD Art. 14" pattern.
+# _find_override_row is bidirectional substring match; that prefix hijacks the
+# built-in DOB_POSSIBLE_MINOR tag ("LGPD Art. 14 – possible minor data; GDPR Art. 8").
 #
 # How to use:
 #   regex_overrides_file: path/to/compliance-sample-br_ead_lgpd_art14.yaml
@@ -42,8 +48,9 @@ regex:
     norm_tag: "LGPD Art. 14 – institutional edu email (BR)"
 
   - name: "CPF_STUDENT_CONTEXT"
-    # Field labels or keyword + CPF shape — not a standalone CPF matcher.
-    pattern: "(?i)\\b(?:cpf[_\\s-]?(?:aluno|estudante|menor|responsavel)|(?:aluno|estudante|menor)[_\\s-]?cpf|(?:aluno|estudante|matricula)[^\\n]{0,32}cpf\\s*[:\\-]?\\s*\\d{3}[.\\s]?\\d{3}[.\\s]?\\d{3}[-\\s]?\\d{2})\\b"
+    # Field labels (optional \\w* suffix for cpf_aluno_nome) or keyword + CPF shape.
+    # Not a standalone CPF matcher. (?!\\w) after digits; no trailing \\b on labels.
+    pattern: "(?i)(?:(?:^|_|\\b)(?:cpf[_\\s-]?(?:aluno|estudante|menor|responsavel)|(?:aluno|estudante|menor)[_\\s-]?cpf)\\w*|\\b(?:aluno|estudante|matricula)[^\\n]{0,32}cpf\\s*[:\\-]?\\s*\\d{3}[.\\s]?\\d{3}[.\\s]?\\d{3}[-\\s]?\\d{2}\\b)"
     norm_tag: "LGPD Art. 14 – CPF em contexto educacional"
 
 terms:
@@ -106,9 +113,16 @@ recommendation_overrides:
     priority: "ALTA"
     relevant_for: "DPO, jurídico, EdTech, TI acadêmica"
 
-  - norm_tag_pattern: "LGPD Art. 14"
-    base_legal: "LGPD Art. 14 + ECA (Lei 8.069/1990) — dados em contexto educacional brasileiro potencialmente envolvem crianças e adolescentes. Em vigor (LGPD) ago 2021. Autoridade: ANPD."
-    risk: "Dados em contexto educacional brasileiro potencialmente envolvem menores. Art. 14 exige consentimento específico e destacado do responsável legal; coleta mínima; sem repasse a terceiros sem novo consentimento. ECA complementa com proteção integral."
+  - norm_tag_pattern: "student enrollment ID"
+    base_legal: "LGPD Art. 14 + ECA (Lei 8.069/1990) — número de matrícula em contexto educacional. Autoridade: ANPD; proteção integral da criança e do adolescente (ECA)."
+    risk: "Número de matrícula identificado. Em bases EAD/LMS o titular pode ser menor; retenção e acesso ampliado sem base legal qualificada aumentam o risco de tratamento irregular."
+    recommendation: "Confirmar se o titular é menor (LGPD Art. 14). Aplicar minimização e política de retenção. Sem repasse a terceiros sem novo consentimento do responsável. Consultar DPO. Inventário heurístico — não é conclusão legal."
+    priority: "ALTA"
+    relevant_for: "DPO, jurídico, EdTech, secretaria acadêmica, ANPD"
+
+  - norm_tag_pattern: "CPF em contexto educacional"
+    base_legal: "LGPD Art. 14 + ECA (Lei 8.069/1990) — CPF em campo educacional (aluno/estudante/menor/responsável). Em vigor (LGPD) ago 2021. Autoridade: ANPD."
+    risk: "CPF em contexto educacional identificado. Se o titular for menor, Art. 14 exige consentimento específico e destacado do responsável legal; coleta mínima; sem repasse a terceiros sem novo consentimento. ECA complementa com proteção integral."
     recommendation: "Verificar se o titular é menor. Se for: (1) consentimento específico e destacado do responsável legal; (2) coleta mínima necessária; (3) não repassar a terceiros sem novo consentimento. Acionar DPO antes de qualquer tratamento ampliado. Inventário heurístico — não é verificação de idade nem conclusão legal."
     priority: "CRÍTICA"
     relevant_for: "DPO, encarregado LGPD, jurídico, EdTech, produto, ANPD"
