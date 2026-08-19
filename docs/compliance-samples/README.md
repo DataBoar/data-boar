@@ -20,7 +20,7 @@ For operational governance (scope, minimization, retention, traceability), use [
 | **compliance-sample-uk_gdpr.yaml**             | UK GDPR (UK post-Brexit + EU-like): norm_tag and recommendation overrides aligned with ICO and UK provisions; **precise geolocation** regex (same geometry as VCDPA / EU GDPR sample).                                                       |
 | **compliance-sample-eu_gdpr.yaml**             | EU GDPR (EEA): EU 2016/679 Art. 4(1), EDPB, member-state DPAs; optional EN + DE/FR terms.                                                                           |
 | **compliance-sample-eu_nis2.yaml**             | EU NIS2 Directive 2022/2555: cybersecurity for essential/important entities; incident reporting (Art. 23 — 24h/72h), supply chain security (Art. 21), vulnerability disclosure (Art. 12); credential/key/MFA-secret field detection; pairs with EU GDPR sample; transposition deadline 17/10/2024 (application depends on national transposition); EN. |
-| **compliance-sample-benelux.yaml**             | Benelux (BE, NL, LU): EU GDPR base + national IDs (BSN, NISS, Luxembourg ID) and national DPA overrides; EN + NL/FR terms.                                          |
+| **compliance-sample-benelux.yaml**             | Benelux (BE, NL, LU): EU GDPR base + national IDs (BSN, NISS, Luxembourg ID) and national DPA overrides; EN + NL/FR/DE terms (Belgium's third official language / Ostbelgien). |
 | **compliance-sample-germany_bdsg.yaml**        | Germany BDSG (GDPR national supplement): contextual Steuer-ID / employee / biometric / scoring labels (no bare 11-digit matcher); §26 Beschäftigtendaten flagged as contested (CJEU C-34/21); §31 scoring; 16 Land DPAs + BfDI; pair with EU GDPR sample; EN + DE. |
 | **compliance-sample-pipeda.yaml**              | PIPEDA (Canada, federal private sector): personal information, consent, and Canadian identifiers (e.g. SIN); **precise geolocation** regex (same geometry as VCDPA / EU GDPR sample); EN + FR.                                                        |
 | **compliance-sample-canada_qc_law25.yaml**     | Quebec Law 25 (private sector, modernized 2023): CAI; complements federal PIPEDA for QC; **precise geolocation** (4 patterns); EN + FR. |
@@ -89,7 +89,7 @@ When choosing or authoring a sample, consider the **language(s)** of the target 
 | **UK GDPR**                       | English.                                                                                                       |
 | **EU GDPR (EEA)**                 | English; optional German/French for multilingual EU data.                                                      |
 | **EU NIS2 (2022/2555)**           | English (incident, CSIRT, MFA, and key-inventory column names); pair with the EU GDPR sample.                  |
-| **Benelux (BE, NL, LU)**          | English plus Dutch and/or French (e.g. BSN, NISS, national ID column names).                                   |
+| **Benelux (BE, NL, LU)**          | English plus Dutch, French, and German (Belgium's third official language / Ostbelgien).                       |
 | **Germany (BDSG)**                | English and German (e.g. personenbezogene Daten / personal data, Beschäftigtendaten / employee data).         |
 | **POPIA (South Africa)**          | English; add local languages in terms if your data uses them.                                                  |
 | **APPI (Japan)**                  | Japanese and/or English as needed for column names.                                                            |
