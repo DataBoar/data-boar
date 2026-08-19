@@ -28,7 +28,7 @@ Educational **plan-tier** documents that explain how Data Boar aligns with exter
 
 | Primer | Summary |
 | ------ | ------- |
-| SOC2_COMPLIANCE_PRIMER.md *(planned — #598)* | SOC 2 Privacy Trust Services Criteria |
+| [SOC2_COMPLIANCE_PRIMER.md](SOC2_COMPLIANCE_PRIMER.md) | SOC 2 Privacy Trust Services Criteria |
 
 ## Financial sector
 
