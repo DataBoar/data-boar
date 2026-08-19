@@ -33,11 +33,11 @@
 
 regex:
   - name: "EC_FIELD_CEDULA_LABEL"
-    pattern: "(?i)(?:^|_|\b)(cedula[_\\s]?identidad|numero[_\\s]?cedula|ci[_\\s]?ecuador|cedula[_\\s]?ecuatoriana|cédula[_\\s]?identidad)\\w*"
+    pattern: "(?i)(?:^|_|\b)(cedula[_\\s]?(?:de[_\\s]?)?identidad|numero[_\\s]?(?:de[_\\s]?)?cedula|ci[_\\s]?ecuador|cedula[_\\s]?ecuatoriana|cédula[_\\s]?(?:de[_\\s]?)?identidad)\\w*"
     norm_tag: "LOPDP Art. 4 (dato personal — cédula)"
 
   - name: "EC_FIELD_RUC_LABEL"
-    pattern: "(?i)(?:^|_|\b)(numero[_\\s]?ruc|ruc[_\\s]?ecuador|ruc[_\\s]?contribuyente|registro[_\\s]?unico[_\\s]?contribuyentes)\\w*"
+    pattern: "(?i)(?:^|_|\b)(numero[_\\s]?(?:de[_\\s]?)?ruc|ruc[_\\s]?ecuador|ruc[_\\s]?contribuyente|registro[_\\s]?unico[_\\s]?(?:de[_\\s]?)?contribuyentes)\\w*"
     norm_tag: "LOPDP Art. 4 (dato personal — RUC)"
 
   - name: "EC_FIELD_PASSPORT_LABEL"
@@ -50,11 +50,11 @@ regex:
 
   - name: "EC_FIELD_MIGRATION_LABEL"
     # Condición migratoria is sensitive under Art. 4; Art. 25/26 govern special-category processing.
-    pattern: "(?i)(?:^|_|\b)(estatus[_\\s]?migratorio|condicion[_\\s]?migratoria|visa[_\\s]?tipo|permiso[_\\s]?residencia|status[_\\s]?migratorio)\\w*"
+    pattern: "(?i)(?:^|_|\b)(estatus[_\\s]?migratorio|condicion[_\\s]?migratoria|visa[_\\s]?tipo|permiso[_\\s]?(?:de[_\\s]?)?residencia|status[_\\s]?migratorio)\\w*"
     norm_tag: "LOPDP Art. 4 y 25 (dato sensible — migratorio)"
 
   - name: "EC_FIELD_MINOR_LABEL"
-    pattern: "(?i)(?:^|_|\b)(datos[_\\s]?menores|datos[_\\s]?ninos|consentimiento[_\\s]?parental|menor[_\\s]?edad)\\w*"
+    pattern: "(?i)(?:^|_|\b)(datos[_\\s]?menores|datos[_\\s]?ninos|consentimiento[_\\s]?parental|menor[_\\s]?(?:de[_\\s]?)?edad)\\w*"
     norm_tag: "LOPDP Art. 25 (categoría especial — NNA)"
 
   - name: "EC_LOPDP_JSON_LAT_PRECISION"
