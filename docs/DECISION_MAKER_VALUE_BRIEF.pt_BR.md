@@ -49,6 +49,7 @@ Data Boar é uma plataforma técnica configurável de descoberta e suporte a evi
 - Suporte técnico de evidências para programas mais amplos de governança e assurance.
 - Caminho de integração com controles operacionais mais estritos e ambientes segmentados.
 - Modelo compatível com serviços profissionais e evolução por fases.
+- **Ciclo de remediação (Enterprise, em breve):** os achados carregam coordenadas precisas — localização do campo, tipo de dado, identificador — para que plugins de remediação de terceiros possam aplicar tokenização, mascaramento ou criptografia de campo no próprio armazenamento; o Data Boar faz uma nova varredura para confirmar. O ciclo completo: "scan once, remediate precisely, prove it".
 
 ## Dados de crianças e menores — profundidade deliberada de produto
 
@@ -86,3 +87,5 @@ Esses resultados apoiam governança e preparo de auditoria; isoladamente, não p
 - [COMPLIANCE_TECHNICAL_REFERENCE.pt_BR.md](COMPLIANCE_TECHNICAL_REFERENCE.pt_BR.md) ([EN](COMPLIANCE_TECHNICAL_REFERENCE.md))
 - [SECURITY.pt_BR.md](SECURITY.pt_BR.md) ([EN](SECURITY.md))
 - [README.pt_BR.md](README.pt_BR.md) ([EN](README.md))
+- [use-cases/USE_CASE_SCAN_AND_REMEDIATE.pt_BR.md](use-cases/USE_CASE_SCAN_AND_REMEDIATE.pt_BR.md) ([EN](use-cases/USE_CASE_SCAN_AND_REMEDIATE.md)) — pipeline de remediação Enterprise com trilha de auditoria
+- [use-cases/USE_CASE_TOKENIZED_FINDINGS.pt_BR.md](use-cases/USE_CASE_TOKENIZED_FINDINGS.pt_BR.md) ([EN](use-cases/USE_CASE_TOKENIZED_FINDINGS.md)) — compartilhar relatórios de achados sem expor PII em claro
