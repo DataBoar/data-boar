@@ -6,7 +6,7 @@
 **Date:** 2026-05-20
 **Priority:** H1
 
-**Synced with:** [PLANS_TODO.md](PLANS_TODO.md) · GitHub **#609**
+**Synced with:** [PLANS_TODO.md](PLANS_TODO.md) · GitHub **#609** · GitHub **#645**
 
 **Related:** [SCOPE_IMPORT_QUICKSTART.md](../ops/SCOPE_IMPORT_QUICKSTART.md), [AUDIENCE_GUIDE.md](../AUDIENCE_GUIDE.md), [pitch/INDEX.md](../pitch/INDEX.md), [QUICKSTART_WINDOWS.md](../QUICKSTART_WINDOWS.md) · GitHub **#1128**, **#1126**
 
@@ -18,13 +18,14 @@ USAGE and TECH_GUIDE are complete but heavy for first contact (DPO, legal, progr
 
 ## Goal
 
-Single **root** `QUICKSTART.md` (pt-BR) — clone to visible scan outcome without assuming YAML fluency; point to USAGE / TECH_GUIDE / scope import. Plus a **separate** hand-holding Windows guide (no Docker) so the root stays terse for Linux/Mac/dev.
+Root **EN** `QUICKSTART.md` + **pt-BR** `QUICKSTART.pt_BR.md` — clone to visible scan outcome without assuming YAML fluency; point to USAGE / TECH_GUIDE / scope import. Plus a **separate** hand-holding Windows guide (no Docker) so the root stays terse for Linux/Mac/dev.
 
 ## Deliverables
 
 | Item | Status |
 | ---- | ------ |
 | `QUICKSTART.md` at repo root | ✅ |
+| EN + pt-BR pair (`QUICKSTART.md` canonical EN, `QUICKSTART.pt_BR.md`) | ✅ #645 |
 | `PLAN_QUICKSTART.md` + hub row | ✅ |
 | `PLANS_TODO.md` row | ✅ |
 | `plans_hub_sync.py --write` | ✅ with PR |
@@ -34,6 +35,5 @@ Single **root** `QUICKSTART.md` (pt-BR) — clone to visible scan outcome withou
 ## Out of scope
 
 - Duplicating USAGE.md
-- English mirror at root (AUDIENCE_GUIDE + USAGE remain EN entry for integrators)
 - MSI / embedded CPython installer ([#1467](https://github.com/DataBoar/data-boar/issues/1467)) — future; guide only points forward
 - `--install-shortcut` CLI ([#1127](https://github.com/DataBoar/data-boar/issues/1127)) — docs mention only

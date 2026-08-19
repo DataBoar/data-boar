@@ -1,7 +1,9 @@
 # Benelux – sample compliance profile (Belgium, Netherlands, Luxembourg)
 #
 # Target audience: Benelux deployments. Extends EU GDPR with national identifiers:
-# Dutch BSN, Belgian NISS/INS, Luxembourg national ID. Terms in EN + NL/FR for BE/NL/LU data.
+# Dutch BSN, Belgian NISS/INS, Luxembourg national ID.
+# Terms in EN + NL/FR/DE. German covers Belgium's third official
+# language (Ostbelgien / German-speaking Community).
 #
 # How to use:
 #   1. Set in your main config:
@@ -22,7 +24,7 @@ regex:
     pattern: "\\b\\d{13}\\b"
     norm_tag: "Benelux"
 
-# ML terms: EN + Dutch (NL) + French (BE/LU).
+# ML terms: EN + Dutch (NL) + French (BE/LU) + German (BE Ostbelgien).
 terms:
   - text: "personal data"
     label: sensitive
@@ -30,11 +32,25 @@ terms:
     label: sensitive
   - text: "données personnelles"
     label: sensitive
+  - text: "personenbezogene Daten"
+    label: sensitive
   - text: "data subject"
     label: sensitive
   - text: "betrokkene"
     label: sensitive
   - text: "personne concernée"
+    label: sensitive
+  - text: "betroffene Person"
+    label: sensitive
+  - text: "Einwilligung"
+    label: sensitive
+  - text: "Verantwortlicher"
+    label: sensitive
+  - text: "Auftragsverarbeiter"
+    label: sensitive
+  - text: "besondere Kategorien personenbezogener Daten"
+    label: sensitive
+  - text: "Aufsichtsbehörde"
     label: sensitive
   - text: "bsn"
     label: sensitive

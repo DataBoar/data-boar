@@ -1,55 +1,151 @@
-# Israel PPL – sample compliance profile (Privacy Protection Law, PPA)
+# Israel — Privacy Protection Law 5741-1981 as amended by Amendment 13 (5784-2024)
+# Knesset approved 5 Aug 2024; in force 14 Aug 2025.
 #
-# Target audience: Israel deployments. Privacy Protection Authority (PPA); database registrar.
-# Terms: personal information (EN); often used alongside EU GDPR for international deals.
+# NOT LEGAL ADVICE. Technical starting point for inventory. Does NOT certify
+# PPA registration, PPO appointment, or the 100k highly-sensitive notice.
+#
+# Authority: Privacy Protection Authority (PPA / רשות הגנת הפרטיות).
+# Amendment 13 aligns roles to Controller / Processor (was database holder).
+# Hebrew terms for those new statutory roles are omitted on purpose —
+# native legal review is recommended before adding them as production terms.
+# No Aramaic: not an administrative language for Israeli PII fields.
+#
+# Highly Sensitive Information (replaces the older "sensitive information"
+# label) includes, among counsel summaries: health/medical, genetic,
+# biometric, criminal records, geolocation / traffic, sexual orientation,
+# political opinion, religion, ethnicity, personality assessment,
+# salary / financial activity. Health databases (hospitals / HMOs) are a
+# common high-risk inventory slice — encryption, access logs, and security
+# testing are often discussed for large health bases; confirm current PPA
+# guidance.
+#
+# Controllers of databases with highly sensitive information on 100,000+
+# individuals generally must notify the PPA (identity, contact, PPO if
+# required, database-definition document). Database registration was
+# narrowed; do not treat "registrar" as the whole Amendment 13 story.
+# Civil remedies without proving harm; limitation period commonly cited
+# as extended from 2 to 7 years — revalidate the statute text.
+#
+# Identifiers use contextual column labels. No bare 9-digit matcher
+# (Israeli ID / teudat zehut is 9 digits — high FP). No querystring
+# geo-coordinate key (PII seed gate).
+#
+# Hebrew terms below are everyday inventory vocabulary, not a certified
+# legal glossary.
+#
+# NOTE — recommendation_overrides use distinctive Amd.13 (role) patterns.
+# Do not add a bare "Israel PPL" catch-all: _find_override_row is bidirectional.
 #
 # How to use:
-#   1. Set in your main config:
-#        regex_overrides_file: path/to/compliance-sample-israel_ppl.yaml
-#        ml_patterns_file: path/to/compliance-sample-israel_ppl.yaml
-#   2. Merge the recommendation_overrides list below into your config under report.recommendation_overrides.
-#
-# Israel: Privacy Protection Law 5741-1981; PPA; database registration.
+#   regex_overrides_file: path/to/compliance-sample-israel_ppl.yaml
+#   ml_patterns_file:     path/to/compliance-sample-israel_ppl.yaml
+#   Merge recommendation_overrides into report.recommendation_overrides.
 
 regex:
-  - name: "ISRAEL_ID"
-    pattern: "\\b\\d{9}\\b"
-    norm_tag: "Israel PPL"
-  - name: "ISRAEL_ID_ALT"
-    pattern: "\\b\\d{1,2}\\s?\\d{6}\\s?\\d\\b"
-    norm_tag: "Israel PPL"
+  - name: "IL_FIELD_TEUDAT_ZEHUT_LABEL"
+    pattern: "(?i)(?:^|_|\b)(teudat[_\\s]?zehut|mispar[_\\s]?zehut|israel(?:i)?[_\\s]?(?:national[_\\s]?)?id|israeli[_\\s]?id)\\w*"
+    norm_tag: "Israel PPL Amd.13 (personal data — identity number)"
 
-# ML terms: personal information, database registrar, PPA.
+  - name: "IL_FIELD_HEALTH_LABEL"
+    pattern: "(?i)(?:^|_|\b)(health[_\\s]?data[_\\s]?il|medical[_\\s]?(?:record|information)[_\\s]?il|patient[_\\s]?record[_\\s]?il)\\w*"
+    norm_tag: "Israel PPL Amd.13 (highly sensitive — health)"
+
+  - name: "IL_FIELD_HEALTH_GENERIC_LABEL"
+    pattern: "(?i)(?:^|_|\b)(medical[_\\s]?record|patient[_\\s]?record|health[_\\s]?data|mi[_\\s]?da[_\\s]?refui)\\w*"
+    norm_tag: "Israel PPL Amd.13 (highly sensitive — health)"
+
+  - name: "IL_FIELD_BIOMETRIC_LABEL"
+    pattern: "(?i)(?:^|_|\b)(biometric[_\\s]?(?:data|template)|fingerprint[_\\s]?il|face[_\\s]?print[_\\s]?il|netunim[_\\s]?biyometri)\\w*"
+    norm_tag: "Israel PPL Amd.13 (highly sensitive — biometric)"
+
+  - name: "IL_FIELD_GENETIC_LABEL"
+    pattern: "(?i)(?:^|_|\b)(genetic[_\\s]?(?:data|profile)|dna[_\\s]?(?:profile|data)[_\\s]?il|netunim[_\\s]?geneti)\\w*"
+    norm_tag: "Israel PPL Amd.13 (highly sensitive — genetic)"
+
+  - name: "IL_PPL_JSON_LAT_PRECISION"
+    pattern: "(?i)[\"']lat[\"']\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\b"
+    norm_tag: "Israel PPL Amd.13 (highly sensitive — geolocation)"
+
+  - name: "IL_PPL_JSON_LNG_PRECISION"
+    pattern: "(?i)[\"'](?:lng|lon)[\"']\\s*:\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}\\b"
+    norm_tag: "Israel PPL Amd.13 (highly sensitive — geolocation)"
+
+  - name: "IL_PPL_LOCATION_CSV_PAIR"
+    pattern: "(?i)\\blocation\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*,\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "Israel PPL Amd.13 (highly sensitive — geolocation)"
+
 terms:
-  - text: "personal information"
-    label: sensitive
-  - text: "privacy protection law"
-    label: sensitive
-  - text: "ppa"
-    label: sensitive
-  - text: "privacy protection authority"
-    label: sensitive
-  - text: "database registrar"
-    label: sensitive
-  - text: "database registration"
-    label: sensitive
-  - text: "data subject"
-    label: sensitive
-  - text: "database owner"
-    label: sensitive
-  - text: "consent"
-    label: sensitive
-  - text: "sensitive information"
-    label: sensitive
-  - text: "israel id"
-    label: sensitive
-  - text: "teudat zehut"
-    label: sensitive
+  - { text: "personal information", label: sensitive }
+  - { text: "highly sensitive information", label: sensitive }
+  - { text: "privacy protection law", label: sensitive }
+  - { text: "privacy protection authority", label: sensitive }
+  - { text: "amendment 13", label: sensitive }
+  - { text: "data subject", label: sensitive }
+  - { text: "data controller", label: sensitive }
+  - { text: "data processor", label: sensitive }
+  - { text: "privacy protection officer", label: sensitive }
+
+  - { text: "מידע אישי", label: sensitive }
+  - { text: "מידע רגיש", label: sensitive }
+  - { text: "מידע רגיש מאוד", label: sensitive }
+  - { text: "הגנת הפרטיות", label: sensitive }
+  - { text: "רשות הגנת הפרטיות", label: sensitive }
+  - { text: "הסכמה", label: sensitive }
+  - { text: "תעודת זהות", label: sensitive }
+  - { text: "מספר זהות", label: sensitive }
+  - { text: "נושא המידע", label: sensitive }
+  - { text: "מידע רפואי", label: sensitive }
+  - { text: "נתונים ביומטריים", label: sensitive }
+  - { text: "נתונים גנטיים", label: sensitive }
+
+  - { text: "teudat zehut", label: sensitive }
+  - { text: "israel id", label: sensitive }
+  - { text: "medical record", label: sensitive }
+  - { text: "health data", label: sensitive }
+  - { text: "biometric data", label: sensitive }
+  - { text: "genetic data", label: sensitive }
+  - { text: "sexual orientation", label: sensitive }
+  - { text: "political opinion", label: sensitive }
+
+  - { text: "product_id", label: non_sensitive }
+  - { text: "item_code", label: non_sensitive }
+  - { text: "session_log", label: non_sensitive }
+  - { text: "debug_output", label: non_sensitive }
 
 recommendation_overrides:
-  - norm_tag_pattern: "Israel PPL"
-    base_legal: "Privacy Protection Law 5741-1981; Privacy Protection Authority (PPA)"
-    risk: "Personal information; database registration and lawful processing."
-    recommendation: "Comply with PPL; register databases with PPA where required; implement consent and data subject rights."
+  # Health before a joined biometric/geo tag is unlikely to collide with
+  # identity-number; keep highly-sensitive roles before identity.
+  - norm_tag_pattern: "Israel PPL Amd.13 (highly sensitive — health)"
+    base_legal: "Israel PPL 5741-1981 as amended by Amendment 13 (5784-2024, in force 14 Aug 2025) — health / medical data is Highly Sensitive Information. Large health bases (hospitals / HMOs) often face heightened security expectations. PPA notice may apply at 100k+ highly-sensitive subjects."
+    risk: "Health records are a statutory highly-sensitive category. Unauthorized exposure can harm the data subject and trigger PPA scrutiny."
+    recommendation: "Verify a lawful basis and security controls (encryption, access logs). Confirm whether PPA notification or a Privacy Protection Officer applies. Consult counsel. Not a legal conclusion."
     priority: "ALTA"
-    relevant_for: "DPO, PPA, Database Owner"
+    relevant_for: "DPO, legal, CISO"
+
+  - norm_tag_pattern: "Israel PPL Amd.13 (highly sensitive — biometric)"
+    base_legal: "Israel PPL Amendment 13 — biometric data is Highly Sensitive Information."
+    risk: "Biometric templates are hard to rotate if leaked."
+    recommendation: "Minimize biometric storage. Confirm purpose limitation and security controls. Consult counsel. Not a legal conclusion."
+    priority: "ALTA"
+    relevant_for: "DPO, legal, CISO"
+
+  - norm_tag_pattern: "Israel PPL Amd.13 (highly sensitive — genetic)"
+    base_legal: "Israel PPL Amendment 13 — genetic data is Highly Sensitive Information."
+    risk: "Genetic data can reveal health and kinship beyond the data subject."
+    recommendation: "Restrict access and purpose. Consult counsel. Not a legal conclusion."
+    priority: "ALTA"
+    relevant_for: "DPO, legal, CISO"
+
+  - norm_tag_pattern: "Israel PPL Amd.13 (highly sensitive — geolocation)"
+    base_legal: "Israel PPL Amendment 13 — location / traffic data is commonly treated as Highly Sensitive Information."
+    risk: "Precise coordinates can track the data subject."
+    recommendation: "Minimize stored location precision. Consult counsel. Heuristic inventory — not a legal conclusion."
+    priority: "MÉDIA"
+    relevant_for: "DPO, product, legal"
+
+  - norm_tag_pattern: "Israel PPL Amd.13 (personal data — identity number)"
+    base_legal: "Israel PPL 5741-1981 as amended by Amendment 13 — a teudat zehut / מספר זהות identifies a natural person. A bare 9-digit matcher is intentionally omitted (high false-positive rate)."
+    risk: "Israeli identity-number fields identify the data subject."
+    recommendation: "Minimize ID storage. Confirm Controller/Processor roles and any PPA notice duty. Consult counsel. Not a legal conclusion."
+    priority: "ALTA"
+    relevant_for: "DPO, legal, CISO, operations"

@@ -60,3 +60,11 @@ def test_readme_stakeholder_pitch_headings_and_no_deck_jargon(
         f"{readme_name}: keep deck label 'Deep Boring' out of the stakeholder pitch "
         "(see ADR 0035)."
     )
+
+
+def test_readme_release_banner_en_pt_br_pair() -> None:
+    """#397 — pt-BR must mirror the EN release/changelog banner heading."""
+    en = (_REPO_ROOT / "README.md").read_text(encoding="utf-8")
+    pt = (_REPO_ROOT / "README.pt_BR.md").read_text(encoding="utf-8")
+    assert "**Current release" in en
+    assert "**Versão atual" in pt

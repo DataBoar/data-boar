@@ -1,0 +1,155 @@
+# Pakistan — Personal Data Protection Bill 2023 (PDPB / draft PDPA)
+# Draft published May 2023. As of 2026-08 this is a BILL, not an enacted Act
+# (Chambers Data Protection & Privacy 2026; DLA Piper Data Protection Laws of
+# the World). Do NOT treat tags as "in force" law. Revalidate before relying.
+#
+# NOT LEGAL ADVICE. Technical starting point for inventory of personal-data
+# fields that the draft would cover if enacted. Does NOT certify compliance.
+#
+# Proposed authority: National Commission for Personal Data Protection (NCPDP)
+# — Bill s.35 (to be established after commencement). Until then, PECA 2016
+# identity-information rules and PKCERT advisories may still apply in practice.
+#
+# Pair with: compliance-sample-india_dpdp.yaml for South Asia deployments.
+#
+# Key draft citations (May 2023 text):
+#   s.2(z)   personal data
+#   s.2(kk)  sensitive personal data — includes CNIC or passport, health,
+#            biometric, genetic, religious beliefs, criminal records, political
+#            affiliations, caste/tribe, ethnicity, and certain financial data
+#   s.14     children's data (under 18; parental consent; no tracking / ads)
+#   s.15     processing of sensitive and critical personal data
+#   s.35     NCPDP
+#
+# Identifiers use contextual column labels plus the distinctive formatted CNIC
+# (XXXXX-XXXXXXX-X). No bare 13-digit matcher (high FP). No querystring
+# geo-coordinate key used in older samples (PII seed gate).
+#
+# NOTE — recommendation_overrides use distinctive s.N (role) patterns.
+# Do not add a bare "Pakistan PDPA" catch-all: _find_override_row is bidirectional.
+#
+# How to use:
+#   regex_overrides_file: path/to/compliance-sample-pakistan_pdpa.yaml
+#   ml_patterns_file:     path/to/compliance-sample-pakistan_pdpa.yaml
+#   Merge recommendation_overrides into report.recommendation_overrides.
+
+regex:
+  - name: "PK_CNIC_FORMATTED"
+    # NADRA CNIC printed form XXXXX-XXXXXXX-X — heuristic only, no checksum.
+    pattern: "\\b\\d{5}-\\d{7}-\\d\\b"
+    norm_tag: "Pakistan PDPA Bill 2023 s.2(kk) (sensitive — CNIC)"
+
+  - name: "PK_FIELD_CNIC_LABEL"
+    pattern: "(?i)(?:^|_|\b)(cnic|nadra[_\\s]?(?:number|id|no)|national[_\\s]?identity[_\\s]?card|computerised[_\\s]?national[_\\s]?identity)\\w*"
+    norm_tag: "Pakistan PDPA Bill 2023 s.2(kk) (sensitive — CNIC)"
+
+  - name: "PK_FIELD_NTN_LABEL"
+    pattern: "(?i)(?:^|_|\b)(ntn[_\\s]?(?:number|no)?|national[_\\s]?tax[_\\s]?number|fbr[_\\s]?ntn)\\w*"
+    norm_tag: "Pakistan PDPA Bill 2023 s.2 (personal data — NTN)"
+
+  - name: "PK_FIELD_PASSPORT_LABEL"
+    pattern: "(?i)(?:^|_|\b)(pakistan[_\\s]?passport|pk[_\\s]?passport|passport[_\\s]?pk)\\w*"
+    norm_tag: "Pakistan PDPA Bill 2023 s.2(kk) (sensitive — passport)"
+
+  - name: "PK_FIELD_HEALTH_LABEL"
+    pattern: "(?i)(?:^|_|\b)(health[_\\s]?data|medical[_\\s]?(?:record|information)|patient[_\\s]?record)\\w*"
+    norm_tag: "Pakistan PDPA Bill 2023 s.2(kk) (sensitive — health)"
+
+  - name: "PK_FIELD_CHILD_LABEL"
+    pattern: "(?i)(?:^|_|\b)(child(?:ren)?[_\\s]?data|parental[_\\s]?consent|minor[_\\s]?(?:under[_\\s]?)?18)\\w*"
+    norm_tag: "Pakistan PDPA Bill 2023 s.14 (children's data)"
+
+  - name: "PK_PDPA_JSON_LAT_PRECISION"
+    pattern: "(?i)[\"']lat[\"']\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\b"
+    norm_tag: "Pakistan PDPA Bill 2023 s.2 (personal data — geolocation)"
+
+  - name: "PK_PDPA_JSON_LNG_PRECISION"
+    pattern: "(?i)[\"'](?:lng|lon)[\"']\\s*:\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}\\b"
+    norm_tag: "Pakistan PDPA Bill 2023 s.2 (personal data — geolocation)"
+
+  - name: "PK_PDPA_LOCATION_CSV_PAIR"
+    pattern: "(?i)\\blocation\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*,\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "Pakistan PDPA Bill 2023 s.2 (personal data — geolocation)"
+
+terms:
+  - { text: "personal data", label: sensitive }
+  - { text: "data subject", label: sensitive }
+  - { text: "data controller", label: sensitive }
+  - { text: "ncpdp", label: sensitive }
+  - { text: "national commission for personal data protection", label: sensitive }
+  - { text: "personal data protection bill", label: sensitive }
+  - { text: "ذاتی ڈیٹا", label: sensitive }
+
+  - { text: "computerised national identity card", label: sensitive }
+  - { text: "national identity card", label: sensitive }
+  - { text: "nadra number", label: sensitive }
+  - { text: "national tax number", label: sensitive }
+
+  - { text: "health data", label: sensitive }
+  - { text: "medical information", label: sensitive }
+  - { text: "medical record", label: sensitive }
+  - { text: "biometric data", label: sensitive }
+  - { text: "genetic data", label: sensitive }
+  - { text: "religious belief", label: sensitive }
+  - { text: "political affiliation", label: sensitive }
+  - { text: "criminal record", label: sensitive }
+  - { text: "caste or tribe", label: sensitive }
+  - { text: "ethnic origin", label: sensitive }
+
+  - { text: "children's data", label: sensitive }
+  - { text: "parental consent", label: sensitive }
+
+  - { text: "bank account", label: sensitive }
+  - { text: "credit card", label: sensitive }
+  - { text: "date of birth", label: sensitive }
+  - { text: "full name", label: sensitive }
+
+  - { text: "precise geolocation", label: sensitive }
+
+  - { text: "product_id", label: non_sensitive }
+  - { text: "item_code", label: non_sensitive }
+  - { text: "session_log", label: non_sensitive }
+  - { text: "debug_output", label: non_sensitive }
+
+recommendation_overrides:
+  - norm_tag_pattern: "Pakistan PDPA Bill 2023 s.2(kk) (sensitive — CNIC)"
+    base_legal: "Pakistan Personal Data Protection Bill 2023 (May 2023 draft) s.2(kk)(iii) — CNIC is listed as sensitive personal data. s.15 governs processing. Draft only — not yet enacted as of 2026-08. Proposed authority: NCPDP (s.35)."
+    risk: "CNIC identifies a natural person and is treated as sensitive in the draft. Exposure enables identity fraud. Do not treat this tag as current statute."
+    recommendation: "Minimize CNIC storage. Verify any processing basis against the draft s.15 and current PECA/PKCERT practice. Consult counsel. Not a legal conclusion."
+    priority: "ALTA"
+    relevant_for: "DPO, legal, CISO, operations"
+
+  - norm_tag_pattern: "Pakistan PDPA Bill 2023 s.2(kk) (sensitive — passport)"
+    base_legal: "Pakistan Personal Data Protection Bill 2023 s.2(kk)(iii) — passport is listed as sensitive personal data. Draft only — not yet enacted as of 2026-08."
+    risk: "Passport numbers identify the data subject. Combined with other fields they raise identity-fraud risk."
+    recommendation: "Prefer a verification flag over retaining the full passport number. Encrypt and apply least privilege. Consult counsel. Not a legal conclusion."
+    priority: "ALTA"
+    relevant_for: "DPO, legal, HR operations"
+
+  - norm_tag_pattern: "Pakistan PDPA Bill 2023 s.2(kk) (sensitive — health)"
+    base_legal: "Pakistan Personal Data Protection Bill 2023 s.2(kk)(ii) — health data is sensitive. s.15 requires explicit consent or a listed exception. Draft only — not yet enacted as of 2026-08."
+    risk: "Health records are a draft sensitive category. Unauthorized exposure can harm the data subject and trigger future NCPDP scrutiny if the Bill is enacted."
+    recommendation: "Verify explicit consent or another s.15 ground. Encrypt at rest and in transit. Limit access. Consult counsel. Not a legal conclusion."
+    priority: "ALTA"
+    relevant_for: "DPO, legal, CISO"
+
+  - norm_tag_pattern: "Pakistan PDPA Bill 2023 s.14 (children's data)"
+    base_legal: "Pakistan Personal Data Protection Bill 2023 s.14 — child means under 18; parental/relevant-person consent; no tracking, behavioural monitoring, or targeted advertising directed at children. Draft only — not yet enacted as of 2026-08."
+    risk: "Column names indicate children's data. The draft requires age verification and parental consent; this scanner does not perform either."
+    recommendation: "Confirm parental-consent workflow and purpose limitation. This does not certify age checks. Consult counsel. Not a legal conclusion."
+    priority: "ALTA"
+    relevant_for: "DPO, legal, product"
+
+  - norm_tag_pattern: "Pakistan PDPA Bill 2023 s.2 (personal data — NTN)"
+    base_legal: "Pakistan Personal Data Protection Bill 2023 s.2(z) — an NTN can identify a natural person. Not listed as sensitive under s.2(kk) (financial data excludes identification numbers). Draft only — not yet enacted as of 2026-08."
+    risk: "NTN fields may identify a taxpayer. Treat as personal data when they relate to an identifiable individual."
+    recommendation: "Minimize full NTN storage when a token suffices. Consult counsel. Not a legal conclusion."
+    priority: "ALTA"
+    relevant_for: "DPO, legal, finance"
+
+  - norm_tag_pattern: "Pakistan PDPA Bill 2023 s.2 (personal data — geolocation)"
+    base_legal: "Pakistan Personal Data Protection Bill 2023 s.2(z) — precise geolocation can identify or make identifiable a natural person. Draft only — not yet enacted as of 2026-08."
+    risk: "Precise coordinates can track the data subject."
+    recommendation: "Minimize stored location precision. Review retention. Consult counsel. Heuristic inventory — not a legal conclusion."
+    priority: "MÉDIA"
+    relevant_for: "DPO, product, legal"

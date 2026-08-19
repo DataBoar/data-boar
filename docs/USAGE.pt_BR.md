@@ -4,7 +4,7 @@ Esta página é o **guia de uso do operador**: **CLI**, **API web e dashboard**,
 
 **Data Boar** faz **descoberta e mapeamento com consciência de conformidade** de dados pessoais e sensíveis em bases, arquivos, APIs e compartilhamentos (**LGPD**, **GDPR**, **CCPA**, **GLBA** e *frameworks* configuráveis — não é só LGPD). Os entregáveis são **adjacentes a GRC** (narrativa executiva, prioridades estilo APG, manifestos de evidência): apoiam **avaliação de risco** e **descoberta para conformidade**; **não** substituem assessoria jurídica nem uma plataforma GRC corporativa completa. O repositório ainda contém o pacote Python histórico **`lgpd_crawler`** (imports) — detalhe de implementação, não o nome do produto.
 
-**Data warehouse e SQL corporativo:** o mesmo motor cobre alvos **SQLAlchemy** (**Microsoft SQL Server**, **PostgreSQL**, **MySQL/MariaDB**, **Oracle**, …) e **Snowflake** opcional (instale com ``uv sync --extra bigdata`` — ver [Snowflake (optional, .[bigdata])](USAGE.md#snowflake-optional-bigdata) no guia em inglês). A amostragem usa **timeouts por motor** e *hints* documentados (por exemplo **`/*+ MAX_EXECUTION_TIME(N) */`** no MySQL e **`SET LOCAL statement_timeout`** no PostgreSQL — ver **amostragem SRE** nas opções globais e bullets em [USAGE.md](USAGE.md)). Se a política do **DBA** usar leituras **read-uncommitted** (por exemplo *hints* **`NOLOCK`** no SQL do conector), registre isso em **runbooks** e no **`scan_manifest_*.yaml`** / texto de evidência para que *stakeholders* vejam a **postura atribuída**, não semântica de isolamento omitida.
+**Data warehouse e SQL corporativo:** o mesmo motor cobre alvos **SQLAlchemy** (**Microsoft SQL Server**, **PostgreSQL**, **MySQL/MariaDB**, **Oracle**, …) e **Snowflake** opcional (instale com ``uv sync --extra bigdata`` — ver [Snowflake (optional, .[bigdata])](#snowflake-optional-bigdata) abaixo). A amostragem usa **timeouts por motor** e *hints* documentados (por exemplo **`/*+ MAX_EXECUTION_TIME(N) */`** no MySQL e **`SET LOCAL statement_timeout`** no PostgreSQL — ver **amostragem SRE** nas opções globais e bullets em [USAGE.md](USAGE.md)). Se a política do **DBA** usar leituras **read-uncommitted** (por exemplo *hints* **`NOLOCK`** no SQL do conector), registre isso em **runbooks** e no **`scan_manifest_*.yaml`** / texto de evidência para que *stakeholders* vejam a **postura atribuída**, não semântica de isolamento omitida.
 
 O documento descreve, em português, como:
 
@@ -85,7 +85,7 @@ uv run python main.py --demo
 - Prepara `/tmp/data_boar_demo/` (temp do SO + `data_boar_demo/`) com `demo.config.yaml`, corpus sintético, `reports/`, `audit_logs/` e `audit_results.db`, executa varredura inicial e mantém o dashboard em **`127.0.0.1`** com HTTP em texto plano.
 - **Audit trail (#1190):** com RBAC inativo (padrão do demo), `GET /logs/{session_id}` fica acessível como `/findings` — sem chave por execução. Para trancar downloads, use `api.require_api_key: true` (qualquer tier) ou ligue RBAC Pro+ com `audit_logs.read`.
 - **Saída:** banner no console com caminho do workspace e URL do dashboard (porta padrão **8088**). A árvore temporária é removida ao encerrar o processo.
-- Veja também [QUICKSTART.md](../QUICKSTART.md) (*Caminho 0*) e `man 1 data-boar` (`--demo`).
+- Veja também [QUICKSTART.pt_BR.md](../QUICKSTART.pt_BR.md) (*Caminho 0*) e `man 1 data-boar` (`--demo`).
 
 #### Varredura única (sem `--web`)
 
@@ -755,7 +755,311 @@ Para o **CNPJ** brasileiro, o detector inclui dois padrões regex embutidos:
 
 Ambos usam o mesmo `norm_tag` (`LGPD Art. 5`). Nesta etapa a detecção é apenas por **compatibilidade de formato** (sem validação de dígito verificador); veja [SENSITIVITY_DETECTION.pt_BR.md](SENSITIVITY_DETECTION.pt_BR.md#formatos-de-cnpj-brasil-numérico-legado-e-alfanumérico) para detalhes e para saber como estender/substituir padrões via `regex_overrides_file`.
 
-### Notificações ao operador (opcional)
+### Alvos: bancos de dados
+
+Cada alvo é um objeto em `targets` com pelo menos `name` e `type`. Para SQL use `type: database` e o `driver` adequado. O driver precisa bater com o extra opcional: MSSQL padrão é `mssql` ou `mssql+pymssql` com `data-boar[mssql]` (alias `data-boar[mssql-pymssql]`); use `mssql+pyodbc` com `data-boar[mssql-pyodbc]` quando ODBC for necessário. **Carga da varredura:** não há limite rígido de alvos por sessão; listas muito grandes (centenas de bancos ou APIs) aumentam tempo e memória. Prefira um escopo razoável por varredura.
+
+```yaml
+targets:
+
+- name: "Produção_Postgres"
+
+    type: database
+    driver: postgresql+psycopg2
+    host: 10.0.0.50
+    port: 5432
+    user: audit_user
+    pass: secure_password
+    database: customers_db
+```
+
+Credenciais: `user`, `pass` (ou `password`). Opcional: `url` com URL SQLAlchemy completa no lugar de host/porta/usuário/banco.
+
+## Snowflake (optional, .[bigdata]) {#snowflake-optional-bigdata}
+
+```yaml
+targets:
+
+- name: "Warehouse_LGPD"
+
+    type: database
+    driver: snowflake
+    account: "xy12345.us-east-1"
+    user: "AUDIT_USER"
+    pass: "secret"
+    database: "COMPLIANCE_DB"
+    schema: "PUBLIC"
+    warehouse: "AUDIT_WH"
+    role: "ANALYST"   # opcional
+```
+
+Instale o extra opcional:
+
+```bash
+uv pip install -e ".[bigdata]"
+```
+
+O conector Snowflake segue o mesmo padrão dos outros motores SQL: descobre tabelas/colunas, amostra linhas (sem persistir valor cru), roda a detecção de sensibilidade e grava achados como metadados de banco (schema, tabela, coluna, tipo, sensibilidade, padrão, norm tag, confiança).
+
+### Alvos: filesystem
+
+```yaml
+
+- name: "Documentos_LGPD"
+
+    type: filesystem
+    path: /home/user/Documents/LGPD
+    recursive: true
+```
+
+Sem credenciais. Usa as chaves de `file_scan` (extensões, recursividade, `scan_sqlite_as_db`, `sample_limit`, `file_sample_max_chars`) do config.
+
+### Alvos: APIs (REST) — Basic, Bearer, OAuth2, custom
+
+Use `type: api` ou `type: rest`. Obrigatório: `name`, `base_url` (ou `url`). Opcional: `paths` ou `endpoints`, `discover_url`, `timeout`, `headers` e um bloco `auth`.
+
+**Guarda SSRF:** `base_url`, `discover_url` e `auth.token_url` apontando para link-local (metadados de nuvem `169.254.0.0/16`), loopback ou hosts privados (RFC1918/ULA) são **rejeitados por padrão**. Para varrer infraestrutura interna, acrescente `allow_private_networks: true` no alvo. A mesma guarda vale para SharePoint (`site_url`), WebDAV (`base_url`) e Power BI (`auth.token_url`).
+
+```yaml
+
+- name: "Internal API"
+
+    type: api
+    base_url: "http://10.0.0.5:8080"
+    paths: ["/users"]
+    allow_private_networks: true  # opt-in explícito para hosts privados/loopback
+```
+
+## Basic auth
+
+```yaml
+
+- name: "Legacy API"
+
+    type: api
+    base_url: "https://api.example.com"
+    paths: ["/users", "/contacts"]
+    auth:
+      type: basic
+      username: "audit_user"
+      password: "your_password"
+```
+
+## Bearer token (static or from environment)
+
+```yaml
+
+- name: "API with bearer"
+
+    type: api
+    base_url: "https://api.example.com"
+    paths: ["/data"]
+    auth:
+      type: bearer
+      token: "eyJhbGc..."   # ou token_from_env: "API_TOKEN" para ler do ambiente
+```
+
+## OAuth2 client credentials (machine-to-machine)
+
+```yaml
+
+- name: "Internal Users API"
+
+    type: api
+    base_url: "https://api.example.com"
+    paths: ["/users", "/profiles"]
+    auth:
+      type: oauth2_client
+      token_url: "https://auth.example.com/oauth/token"
+      client_id: "audit-client"
+      client_secret: "${API_OAUTH_SECRET}"   # ou segredo literal
+      scope: "read:users"
+```
+
+Defina a variável (ex.: `API_OAUTH_SECRET`) no ambiente em que o processo sobe.
+
+## Custom headers (e.g. API key or Negotiate)
+
+```yaml
+
+- name: "API with custom header"
+
+    type: api
+    base_url: "https://api.example.com"
+    paths: ["/export"]
+    auth:
+      type: custom
+      headers:
+        Authorization: "Bearer ..."
+        X-API-Key: "your-api-key"
+```
+
+Se você omitir `auth` mas definir `user`/`username` e `pass`/`password` no alvo, aplica-se **basic** auth.
+
+### Alvos: Power BI e Power Apps (Dataverse)
+
+**Power BI** e **Dataverse (Power Apps)** usam OAuth2 client credentials do Azure AD. Não precisa de pacote extra (`httpx` já é dependência).
+
+## Power BI (`type: powerbi`)
+
+- Obrigatório: `name`, `tenant_id`, `client_id`, `client_secret` (ou sob `auth:`).
+- Opcional: `workspace_ids` ou `group_ids` (lista de GUIDs de workspace) para limitar a varredura; omita para usar “My workspace” e todos os workspaces.
+- O app Azure AD precisa da permissão Power BI `Dataset.Read.All` ou `Dataset.ReadWrite.All`. Com service principal, habilite “Allow service principals to use Power BI APIs” no portal de admin do Power BI.
+
+```yaml
+
+- name: "Power BI Compliance"
+
+    type: powerbi
+    tenant_id: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    client_id: "yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy"
+    client_secret: "${POWERBI_CLIENT_SECRET}"
+    # workspace_ids: ["group-guid-1"]
+```
+
+## Dataverse / Power Apps (`type: dataverse` or `type: powerapps`)
+
+- Obrigatório: `name`, `org_url` (ou `environment_url`, ex.: `https://myorg.crm.dynamics.com`), `tenant_id`, `client_id`, `client_secret` (ou sob `auth:`).
+- O app Azure AD precisa de permissão de aplicativo no Dataverse (consentimento de admin). O *scope* deriva de `org_url`.
+
+```yaml
+
+- name: "Dataverse HR"
+
+    type: dataverse
+    org_url: "https://myorg.crm.dynamics.com"
+    tenant_id: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    client_id: "yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy"
+    client_secret: "${DATAVERSE_CLIENT_SECRET}"
+```
+
+Achados de Power BI e Dataverse entram na planilha **Database findings**. A amostragem usa `file_scan.sample_limit` (padrão 5). Metadados de inventário desses conectores (versão de API e transporte) entram na planilha **Data source inventory**.
+
+### Alvos: conteúdo compartilhado (SMB, WebDAV, SharePoint, NFS)
+
+Instale os extras opcionais: `uv pip install -e ".[shares]"`.
+
+## SMB/CIFS
+
+```yaml
+
+- name: "FileServer HR"
+
+    type: smb
+    host: "fileserver.company.local"
+    share: "HR"
+    path: "Documents"
+    user: "audit_user"
+    pass: "***"
+    domain: "COMPANY"   # opcional
+    port: 445
+    recursive: true
+```
+
+## WebDAV
+
+```yaml
+
+- name: "WebDAV Storage"
+
+    type: webdav
+    base_url: "https://webdav.company.com/dav"
+    user: "audit"
+    pass: "***"
+    path: "archive"
+    recursive: true
+    verify_ssl: true
+```
+
+## SharePoint
+
+```yaml
+
+- name: "SharePoint HR"
+
+    type: sharepoint
+    site_url: "https://sharepoint.company.com/sites/hr"
+    path: "Shared Documents"
+    user: "audit@company.com"
+    pass: "***"
+```
+
+## NFS (path = local mount point; mount NFS before scanning)
+
+```yaml
+
+- name: "NFS Export"
+
+    type: nfs
+    host: "nfs.company.local"
+    export_path: "/export/data"
+    path: "/mnt/nfs_data"   # ponto de montagem local
+```
+
+Todos os tipos de *share* usam as mesmas chaves de `file_scan` (extensões, recursividade, `scan_sqlite_as_db`, `sample_limit`, `file_sample_max_chars`, `file_passwords`). Os achados entram na planilha **Filesystem findings**.
+
+---
+
+## 5. Baixando relatórios (resumo)
+
+### Baixando relatórios (web) {#baixando-relatorios-web}
+
+Para **DPO, jurídico e outros leitores não técnicos** (veja [AUDIENCE_GUIDE.pt_BR.md](AUDIENCE_GUIDE.pt_BR.md)), use o navegador — o passo a passo com captura está também na [seção 2](#baixar-relatórios-pelo-painel-web).
+
+1. Abra **Relatórios** no menu superior (`/pt-br/reports` ou `/en/reports`).
+2. Clique em **Baixar** na linha da sessão desejada.
+
+![Página Relatórios — clique em Baixar](img/dashboard/pt-br/reports-download.png)
+
+O Excel é salvo na pasta de downloads do navegador; o mapa de calor PNG é gerado junto com a planilha quando o relatório é montado.
+
+### Para automação / scripts
+
+| Objetivo | Como |
+| --- | --- |
+| **Último relatório gerado** | `GET /report` → salve a resposta como `.xlsx`. |
+| **Relatório de uma sessão anterior** | `GET /list` para obter `session_id`s, depois `GET /reports/<session_id>` → salve como `.xlsx`. |
+| **Execução one-shot (CLI)** | Depois de `python main.py --config config.yaml`, o caminho é impresso; o arquivo fica em `report.output_dir` como `Relatorio_Auditoria_<session_id>.xlsx`. |
+| **Regenerar Excel + heatmap (CLI)** | `python main.py --config config.yaml --regenerate-report <session_id>` — só SQLite; sem re-scan. Use quando os achados já estão gravados mas os arquivos do relatório faltam ou estão velhos. |
+| **Markdown executivo + manifesto** | Gravados ao lado do Excel: `POC_SUMMARY_<session_prefix>.md` e `scan_manifest_<session_prefix>.yaml` (mesmo diretório). Se essa etapa falhar, o caminho do Excel ainda é devolvido — veja o subitem abaixo. |
+| **Só Markdown executivo (CLI)** | `data-boar-report` — lê o **SQLite local** de `sqlite_path` no config; não precisa de conector de banco ao vivo. Veja o subitem abaixo. |
+
+- Os relatórios são gerados sob demanda para uma sessão (a partir dos achados no SQLite). O PNG do mapa de calor é escrito ao lado do Excel quando o relatório é gerado.
+- Não há política de retenção embutida; os relatórios são arquivos em disco. Limpe ou arquive conforme a política local.
+
+### Evidência executiva, prioridades APG e `data-boar-report`
+
+Quando **`generate_report`** roda (CLI one-shot, **`GET /reports/{session_id}`**, **`GET /report`** ou **Baixar** no dashboard), o produto pode emitir:
+
+- **`POC_SUMMARY_<primeiros_16_chars_do_session_id>.md`** — Markdown para *stakeholder*: status, achados **agregados por sensibilidade** (só nomes de padrão e contagens), **três** prioridades de mitigação APG Fase A e um resumo curto de postura DBA/SRE. **Não** lista nomes de coluna, tabela, caminhos de arquivo nem conteúdo amostrado — dá para compartilhar com audiências que não devem ver detalhe operacional.
+- **`scan_manifest_<prefix>.yaml`** — manifesto de evidência (tetos de amostragem, timeouts, bullets de trilha de auditoria, *snapshot* de escopo, bloco opcional `apg_phase_a`).
+
+Falhar ao gravar esses arquivos é **não fatal**: Excel e heatmap ainda são gerados; veja os logs se o Markdown ou o YAML faltar.
+
+**Ponto de entrada no console** (instalado com o pacote `data-boar` em `[project.scripts]`):
+
+```bash
+uv run data-boar-report --config config.yaml --session-id <session_id>
+```
+
+Quando **`-o` / `--output` é omitido**, a CLI grava **`executive_report_<safe_prefix>.md`** ao lado do arquivo de config (evita despejar o relatório inteiro no stdout de CI). Use **`-o`** para um caminho explícito:
+
+```bash
+uv run data-boar-report --config config.yaml --session-id <session_id> -o Executive_summary.md
+```
+
+**Flags úteis:**
+
+| Flag | Significado |
+| --- | --- |
+| `--sqlite <path>` | Substitui `sqlite_path` do config (ex.: cópia do banco de auditoria no homelab). |
+| `--trial-rows-capped` | Acrescenta a mesma nota de “licença trial pode limitar linhas do Excel” do `POC_SUMMARY` empacotado quando você regenera a partir do SQLite. |
+
+**Requisitos:** o mesmo **`config.yaml`** das varreduras (para amostragem/timeouts do manifesto baterem com a política). O **`session_id`** precisa existir em `scan_sessions` / tabelas de achados.
+
+Privacidade e estrutura do Markdown: veja [Processamento local e privacidade (`data-boar-report`)](#processamento-local-e-privacidade-data-boar-report) na seção 3 e [REPORTS_AND_COMPLIANCE_OUTPUTS.pt_BR.md](REPORTS_AND_COMPLIANCE_OUTPUTS.pt_BR.md) ([EN](REPORTS_AND_COMPLIANCE_OUTPUTS.md)).
+
+### 5.1 Notificações ao operador (opcional) {#notificações-ao-operador-opcional}
 
 Após o fim da varredura (CLI ou `POST /scan` / `POST /start` em segundo plano), a aplicação pode enviar um **resumo curto em pt-BR** para **Slack**, **Microsoft Teams**, um **webhook JSON genérico** (ex.: ferramentas de automação ou ponte **Signal**) ou **Telegram** (campos opcionais para instalações legadas/de terceiros). O padrão é **desligado** (`notifications.enabled: false`).
 
@@ -769,4 +1073,49 @@ Após o fim da varredura (CLI ou `POST /scan` / `POST /start` em segundo plano),
 - **Manual / CI:** `python scripts/notify_webhook.py "mensagem"` (mesmo `config.yaml`; exige `notifications.enabled: true` e um canal configurado). Por padrão o script abre o SQLite em ``sqlite_path`` e grava auditoria por canal (como no fim de varredura); use ``--no-audit`` quando não houver banco local (ex.: alguns jobs de CI).
 - **Detalhes:** [TECH_GUIDE.pt_BR.md](TECH_GUIDE.pt_BR.md) (notificações e webhooks) e [ops/OPERATOR_NOTIFICATION_CHANNELS.pt_BR.md](ops/OPERATOR_NOTIFICATION_CHANNELS.pt_BR.md).
 
-**Documentação relacionada:** Índice completo da documentação (todos os tópicos, ambos os idiomas): [README.md](README.md) · [README.pt_BR.md](README.pt_BR.md). Guia técnico: [TECH_GUIDE.md](TECH_GUIDE.md) · [TECH_GUIDE.pt_BR.md](TECH_GUIDE.pt_BR.md). [SENSITIVITY_DETECTION.pt_BR.md](SENSITIVITY_DETECTION.pt_BR.md) (termos de treino ML/DL; [inglês](SENSITIVITY_DETECTION.md)). Para `recommendation_overrides` cobrindo categorias sensíveis (saúde, religião, política, PEP, raça, sindicato, genético, biométrico, vida sexual), veja o exemplo acima (Notas sobre configuração) e [SENSITIVITY_DETECTION.pt_BR.md](SENSITIVITY_DETECTION.pt_BR.md). Para adicionar um novo conector (banco, API, share), veja [ADDING_CONNECTORS.pt_BR.md](ADDING_CONNECTORS.pt_BR.md) ou [ADDING_CONNECTORS.md](ADDING_CONNECTORS.md) (inglês). Deploy: [deploy/DEPLOY.pt_BR.md](deploy/DEPLOY.pt_BR.md) · [deploy/DEPLOY.md](deploy/DEPLOY.md). Mais: [TESTING.pt_BR.md](TESTING.pt_BR.md) ([EN](TESTING.md)), [TOPOLOGY.pt_BR.md](TOPOLOGY.pt_BR.md) ([EN](TOPOLOGY.md)), [COMMIT_AND_PR.pt_BR.md](ops/COMMIT_AND_PR.pt_BR.md) ([EN](ops/COMMIT_AND_PR.md)), [COMPLIANCE_FRAMEWORKS.pt_BR.md](COMPLIANCE_FRAMEWORKS.pt_BR.md) ([EN](COMPLIANCE_FRAMEWORKS.md)). Em sistemas com `man`: `man data_boar` ou `man lgpd_crawler` (comando e API), e `man 5 data_boar` ou `man 5 lgpd_crawler` (config e formatos).
+## 6. Infraestrutura como Código — OpenTofu / Terraform
+
+Para ambientes corporativos que gerenciam infraestrutura com OpenTofu ou Terraform, o Data Boar traz um módulo HCL mínimo em `deploy/opentofu/`.
+
+**Fluxo recomendado para times IaC-first:**
+
+```bash
+# Passo 1 — Provisionar infraestrutura (container Docker, portas, volumes)
+cd deploy/opentofu
+tofu init
+tofu apply                       # ou: terraform apply
+
+# Passo 2 — Configurar e implantar a aplicação
+cd ../..
+ansible-playbook -i deploy/opentofu/generated_inventory.ini deploy/ansible/site.yml
+```
+
+**Com banco POC (PostgreSQL) para teste:**
+
+```bash
+tofu apply -var="db_enabled=true" -var="db_password=poc-test-123"
+uv run python scripts/populate_poc_database.py --db-type postgres --host localhost --write-config
+```
+
+Variáveis-chave: `data_boar_image`, `data_boar_port` (padrão `8088`), `data_boar_config_path`,
+`data_boar_output_dir`, `db_enabled`, `db_password`.
+
+Documentação do módulo: `deploy/opentofu/README.md` — decisão de desenho: `docs/adr/ADR-0016-opentofu-corporate-iac-path-alongside-ansible.md`.
+
+> OpenTofu >= 1.6 e Terraform >= 1.5 são compatíveis com este módulo (HCL idêntico).
+> Em hosts Docker remotos, defina `DOCKER_HOST` ou um túnel SSH antes de `tofu apply`.
+
+## 7. Referência rápida
+
+- **CLI one-shot:** `python main.py --config config.yaml`
+- **CLI sobe a API:** `python main.py --config config.yaml --web --port 8088`
+- **Config da API:** defina `CONFIG_PATH` ou coloque `config.yaml` no diretório de trabalho.
+- **Iniciar varredura:** `POST /scan` ou `POST /start`
+- **Status:** `GET /status`
+- **Listar sessões:** `GET /list` (JSON). Para a lista HTML, abra `/{locale}/reports` (ex.: `/pt-br/reports`); `/reports` sem prefixo redireciona para lá (não há lista JSON em `GET /reports`).
+- **Baixar último relatório:** `GET /report`
+- **Baixar relatório por sessão:** `GET /reports/{session_id}`
+- **Markdown executivo (SQLite local):** `uv run data-boar-report --config config.yaml --session-id <session_id>` (veja a seção 5)
+- **Docs interativos da API:** `http://<host>:<port>/docs`
+
+**Documentação relacionada:** Índice completo (todos os tópicos, ambos os idiomas): [README.md](README.md) · [README.pt_BR.md](README.pt_BR.md). Guia técnico: [TECH_GUIDE.md](TECH_GUIDE.md) · [TECH_GUIDE.pt_BR.md](TECH_GUIDE.pt_BR.md). [SENSITIVITY_DETECTION.pt_BR.md](SENSITIVITY_DETECTION.pt_BR.md) (termos de treino ML/DL; [inglês](SENSITIVITY_DETECTION.md)). Para `recommendation_overrides` cobrindo categorias sensíveis (saúde, religião, política, PEP, raça, sindicato, genético, biométrico, vida sexual), veja o exemplo acima (Notas sobre configuração) e [SENSITIVITY_DETECTION.pt_BR.md](SENSITIVITY_DETECTION.pt_BR.md). Para adicionar um novo conector (banco, API, *share*), veja [ADDING_CONNECTORS.pt_BR.md](ADDING_CONNECTORS.pt_BR.md) ou [ADDING_CONNECTORS.md](ADDING_CONNECTORS.md) (inglês). Deploy: [deploy/DEPLOY.pt_BR.md](deploy/DEPLOY.pt_BR.md) · [deploy/DEPLOY.md](deploy/DEPLOY.md). Mais: [TESTING.pt_BR.md](TESTING.pt_BR.md) ([EN](TESTING.md)), [TOPOLOGY.pt_BR.md](TOPOLOGY.pt_BR.md) ([EN](TOPOLOGY.md)), [COMMIT_AND_PR.pt_BR.md](ops/COMMIT_AND_PR.pt_BR.md) ([EN](ops/COMMIT_AND_PR.md)), [COMPLIANCE_FRAMEWORKS.pt_BR.md](COMPLIANCE_FRAMEWORKS.pt_BR.md) ([EN](COMPLIANCE_FRAMEWORKS.md)). Em sistemas com `man`: `man data_boar` ou `man lgpd_crawler` (comando e API), e `man 5 data_boar` ou `man 5 lgpd_crawler` (config e formatos).

@@ -37,6 +37,7 @@ _VALID_PLUGIN_TYPES = frozenset(
 _TYPE_CHECK: dict[str, type | tuple[type, ...]] = {
     "string": str,
     "string_or_int": (str, int),
+    "list": list,
 }
 
 # Top-level keys that a unified plugin file may have.
@@ -347,6 +348,14 @@ def _validate_item(
                 f"got {type(value).__name__} (value={value!r})."
             )
             continue
+
+        if field_type == "list" and field_def.get("item_type") == "string":
+            for el_idx, el in enumerate(value):
+                if not isinstance(el, str):
+                    issues.append(
+                        f"{location}, field '{field_name}[{el_idx}]': expected string, "
+                        f"got {type(el).__name__} (value={el!r})."
+                    )
 
         allowed: list[Any] | None = field_def.get("allowed_values")
         if allowed is not None and value not in allowed:

@@ -24,7 +24,7 @@ Este documento sugere **camadas adicionais** (ferramentas, hábitos e fluxo de t
 #### O que fazer (Ruff no CI):
 
 - Adicionar um job (ou step) de **lint** em `.github/workflows/ci.yml` que execute:
-  - `uv run ruff check .` (e opcionalmente `uv run ruff format --check .`).
+- `uv run ruff check .` (e opcionalmente `uv run ruff format --check .`).
 - Manter a config do Ruff em `pyproject.toml` (já existe `[tool.ruff.lint.per-file-ignores]`); adicionar uma seção `[tool.ruff]` com `target-version`, `line-length` e conjuntos de regras se quiser consistência.
 - Atualizar CONTRIBUTING e a regra/skill de qualidade: "Antes do PR, execute `uv run ruff check .` (e corrija ou ajuste a config)."
 
@@ -39,9 +39,9 @@ Este documento sugere **camadas adicionais** (ferramentas, hábitos e fluxo de t
 #### O que fazer (pre-commit):
 
 - Adicionar [pre-commit](https://pre-commit.com/) (ex.: no grupo de dependências de dev) e um `.pre-commit-config.yaml` com:
-  - `ruff` (check + format),
-  - `markdownlint` ou um hook que execute `scripts/fix_markdown_sonar.py` / `pytest tests/test_markdown_lint.py`,
-  - opcionalmente um subset "rápido" de pytest (ex.: `test_markdown_lint`, `test_sonarqube_python`, `test_security`) se for suficientemente veloz.
+- `ruff` (check + format),
+- `markdownlint` ou um hook que execute `scripts/fix_markdown_sonar.py` / `pytest tests/test_markdown_lint.py`,
+- opcionalmente um subset "rápido" de pytest (ex.: `test_markdown_lint`, `test_sonarqube_python`, `test_security`) se for suficientemente veloz.
 - Documentar em CONTRIBUTING: "Instale os hooks com `pre-commit install`; eles rodam no commit."
 
 **Previne:** Push de commits que vão falhar no CI; mantém local e CI sincronizados.
@@ -95,9 +95,9 @@ Este documento sugere **camadas adicionais** (ferramentas, hábitos e fluxo de t
 
 #### Tiers (`./scripts/check-all.sh` / `.\scripts\check-all.ps1`)
 
-| Tier | Quando | O quê (após gatekeeper, Rust, plans-stats, hubs, Pester, pre-commit, pytest) |
-| ---- | ------ | ---------------------------------------------------------------------------- |
-| **Padrão (offline-capable)** | Todo pré-PR / slice do agente | **Bandit** — `uv run bandit -c pyproject.toml -r api core config connectors database file_scan report main.py -ll -q`. **Zizmor** — `uvx zizmor .github/workflows/`. |
+| Tier                                  | Quando                             | O quê (após gatekeeper, Rust, plans-stats, hubs, Pester, pre-commit, pytest)                                                                                                                                         |
+| ----                                  | ------                             | ----------------------------------------------------------------------------                                                                                                                                         |
+| **Padrão (offline-capable)**          | Todo pré-PR / slice do agente      | **Bandit** — `uv run bandit -c pyproject.toml -r api core config connectors database file_scan report main.py -ll -q`. **Zizmor** — `uvx zizmor .github/workflows/`.                                                 |
 | **Opt-in `--enforced` / `-Enforced`** | Antes de PRs sensíveis à segurança | **+ Semgrep** — `uvx semgrep scan --config p/python --metrics=off` com o mesmo **`--exclude-rule`** de [`.github/workflows/semgrep.yml`](../.github/workflows/semgrep.yml), **`--error .`**. Requer rede para `uvx`. |
 
 **Fail-collect:** O tier de security scans roda **todos** os scans do tier e só então reporta **todas** as falhas (sem fail-fast entre Bandit / Zizmor / Semgrep). Gates anteriores (gatekeeper PII, Rust, pre-commit) ainda abortam imediatamente — veja **`scripts/check-all-security-scans.sh`** / **`.ps1`**.
@@ -106,9 +106,9 @@ Este documento sugere **camadas adicionais** (ferramentas, hábitos e fluxo de t
 
 #### Ondas futuras (mesmo doc — fora do escopo de #1044)
 
-| Onda | Intenção | Status |
-| ---- | -------- | ------ |
-| **Onda 2** | Hooks **pre-commit** opcionais para Bandit / Zizmor (subconjunto rápido) | Adiado |
+| Onda       | Intenção                                                                                               | Status                       |
+| ----       | --------                                                                                               | ------                       |
+| **Onda 2** | Hooks **pre-commit** opcionais para Bandit / Zizmor (subconjunto rápido)                               | Adiado                       |
 | **Onda 3** | Regra Cursor: **`check-all --enforced` antes de PR** quando o slice toca conectores, workflows ou auth | Adiado — ponteiro na **§10** |
 
 ---
@@ -117,11 +117,11 @@ Este documento sugere **camadas adicionais** (ferramentas, hábitos e fluxo de t
 
 Rodar **`check-all`** localmente (tier padrão) troca **~2–5 minutos** no PC de dev por **evitar uma volta completa no CI** (fila + matriz + container Semgrep), tipicamente **15–40+ minutos** quando Bandit ou workflow falham tarde.
 
-| Classe de achado | Sem espelho local | Com tier padrão do `check-all` |
-| ---------------- | ----------------- | ------------------------------ |
-| Bandit em connectors | Falha no job **Bandit** depois de lint+test | Surge num passe local |
-| Drift de permissão em workflow | Falha no workflow **Zizmor** (ou fica avisório) | Surge antes do push |
-| Caminho FP SQLAlchemy no Semgrep | Só com **`--enforced`** ou Semgrep no CI | Opt-in operador/agente — mesmo comando do container |
+| Classe de achado                 | Sem espelho local                               | Com tier padrão do `check-all`                      |
+| ----------------                 | -----------------                               | ------------------------------                      |
+| Bandit em connectors             | Falha no job **Bandit** depois de lint+test     | Surge num passe local                               |
+| Drift de permissão em workflow   | Falha no workflow **Zizmor** (ou fica avisório) | Surge antes do push                                 |
+| Caminho FP SQLAlchemy no Semgrep | Só com **`--enforced`** ou Semgrep no CI        | Opt-in operador/agente — mesmo comando do container |
 
 **Hábito token-aware:** Use **`./scripts/check-all.sh --skip-pre-commit`** só ao iterar testes; rode **`check-all` completo** antes de abrir o PR. Use **`--enforced`** quando o diff tocar **superfícies de segurança** da Onda 3 — não em todo slice só de docs.
 
@@ -192,6 +192,7 @@ Rodar **`check-all`** localmente (tier padrão) troca **~2–5 minutos** no PC d
 - No GitHub: **Proteção de branch** em `main` (e `master` se usado) exigindo que status checks passem antes do merge. **Checks obrigatórios recomendados** assim que estáveis: jobs **CI** **Test** (matriz), **Lint (pre-commit)** (inclui Ruff + plans-stats + markdown + pt-BR + commercial guard), **Dependency audit**, **Bandit (medium+)** e o workflow **Semgrep**; adicione **CodeQL** se quiser que a aba Security bloqueie merges.
 - **Prontidão:** Ativar proteção após o branch que carrega **Semgrep** (e outros novos workflows) estar **mergeado** e pelo menos uma execução **verde** existir para cada nome de check obrigatório.
 - No **template de PR**, tornar o checklist explícito: testes passam, `uv run pre-commit run --all-files` limpo (ou hooks instalados), docs atualizados, mudanças sensíveis à segurança consideradas. Referenciar CONTRIBUTING e TESTING.md.
+- **Instantâneo ao vivo** das regras clássicas vs rulesets e quais checks são **obrigatórios:** [docs/ops/BRANCH_PROTECTION.pt_BR.md](ops/BRANCH_PROTECTION.pt_BR.md) ([EN](ops/BRANCH_PROTECTION.md)).
 
 **Previne:** Merge de código quebrado ou inseguro e commits de correção posteriores.
 
@@ -213,21 +214,21 @@ Rodar **`check-all`** localmente (tier padrão) troca **~2–5 minutos** no PC d
 
 ## Tabela resumo
 
-| Camada                    | Objetivo                                           | Esforço | Previne                                                         |
-| ------------------        | -------------------------------                    | ------ | ---------------------------------                               |
-| Lint (pre-commit) no CI   | Mesmos hooks que `.pre-commit-config.yaml`         | Baixo  | Deriva em relação a hooks locais, job de lint falhando          |
-| Pre-commit (local)        | Capturar no `git commit`                           | Baixo  | CI falhando, retrabalho                                         |
-| Bandit                    | Padrões de segurança Python (CI **medium+**)       | Baixo  | Antipadrões que testes podem perder; triagem **low** na Phase 3 |
-| Zizmor                    | Higiene de workflows GitHub Actions                | Baixo  | Deriva de permissões/pins antes do CI                          |
-| Espelho `check-all`       | Paridade local tiered (Bandit+Zizmor+Semgrep opt.) | Baixo  | Falhas tardias no CI, loops de retrabalho                     |
-| Semgrep                   | SAST customizado + comunidade                      | Médio  | Padrões extras de vulnerabilidade/bug                           |
-| mypy                      | Segurança de tipos                                 | Médio  | Bugs de refatoração, tipos errados                              |
-| MD029 / script de correção | Evitar retrabalho em docs                         | Baixo  | Correções manuais repetidas de numeração                        |
-| ADRs / arquitetura        | Registrar o "porquê"                               | Baixo  | Refatorações erradas, erros repetidos                           |
-| SBOM                      | Inventário de cadeia de suprimentos + resposta IR  | Baixo  | Componentes ausentes de deps/imagem ao responder a incidentes   |
-| Pins de Actions / uv no CI | Reduzir deriva de tag e instalador no CI          | Baixo  | Action comprometida silenciosa ou uv flutuante sem revisão      |
-| Proteção de branch        | Bloquear merges ruins                              | Baixo  | Merge de código quebrado ou inseguro                            |
-| Estender regras/skills    | Guiar o agente em novos checks                     | Baixo  | Novas violações ao adicionar ferramentas                        |
+| Camada                     | Objetivo                                           | Esforço | Previne                                                         |
+| ------------------         | -------------------------------                    | ------  | ---------------------------------                               |
+| Lint (pre-commit) no CI    | Mesmos hooks que `.pre-commit-config.yaml`         | Baixo   | Deriva em relação a hooks locais, job de lint falhando          |
+| Pre-commit (local)         | Capturar no `git commit`                           | Baixo   | CI falhando, retrabalho                                         |
+| Bandit                     | Padrões de segurança Python (CI **medium+**)       | Baixo   | Antipadrões que testes podem perder; triagem **low** na Phase 3 |
+| Zizmor                     | Higiene de workflows GitHub Actions                | Baixo   | Deriva de permissões/pins antes do CI                           |
+| Espelho `check-all`        | Paridade local tiered (Bandit+Zizmor+Semgrep opt.) | Baixo   | Falhas tardias no CI, loops de retrabalho                       |
+| Semgrep                    | SAST customizado + comunidade                      | Médio   | Padrões extras de vulnerabilidade/bug                           |
+| mypy                       | Segurança de tipos                                 | Médio   | Bugs de refatoração, tipos errados                              |
+| MD029 / script de correção | Evitar retrabalho em docs                          | Baixo   | Correções manuais repetidas de numeração                        |
+| ADRs / arquitetura         | Registrar o "porquê"                               | Baixo   | Refatorações erradas, erros repetidos                           |
+| SBOM                       | Inventário de cadeia de suprimentos + resposta IR  | Baixo   | Componentes ausentes de deps/imagem ao responder a incidentes   |
+| Pins de Actions / uv no CI | Reduzir deriva de tag e instalador no CI           | Baixo   | Action comprometida silenciosa ou uv flutuante sem revisão      |
+| Proteção de branch         | Bloquear merges ruins                              | Baixo   | Merge de código quebrado ou inseguro                            |
+| Estender regras/skills     | Guiar o agente em novos checks                     | Baixo   | Novas violações ao adicionar ferramentas                        |
 
 ---
 
