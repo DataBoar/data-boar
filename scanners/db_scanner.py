@@ -82,11 +82,15 @@ class DatabaseScanner:  # legacy — BaseScanner was never defined in this modul
                     data_type = self._get_column_type(connection_string, table, column)
 
                     # Check for sensitive data
-                    sensitivity = self._check_sensitivity(sample_data, data_type)
+                    sensitivity = self._check_sensitivity(
+                        sample_data, data_type, table, column
+                    )
 
                     # Store result
-                    self._save_audit_record(
-                        table, column, data_type, sensitivity, sample_data
+                    results.append(
+                        self._save_audit_record(
+                            table, column, data_type, sensitivity, sample_data
+                        )
                     )
 
         except Exception as e:
@@ -111,17 +115,21 @@ class DatabaseScanner:  # legacy — BaseScanner was never defined in this modul
         """Get column data type"""
         return "VARCHAR(255)"
 
-    def _check_sensitivity(self, sample_data: str, data_type: str) -> str:
+    def _check_sensitivity(
+        self, sample_data: str, data_type: str, table: str, column: str
+    ) -> str:
         """Check if data is sensitive"""
-        # Simple regex checks for common sensitive patterns
-        pii_pattern = r"[A-Za-z0-9._%+-]+@[A-Za-z0- (?:[A-Za-z0-9-]+\\.)+[A-Za-z]{2,6}>"
+        # Simple regex checks for common sensitive patterns.
+        # Previous class `A-Za-z0- ` was an invalid range and raised re.error
+        # before the table/column branch (#703).
+        pii_pattern = r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"
         pii_match = re.search(pii_pattern, sample_data)
 
         if pii_match:
             return "PII"
         elif "password" in data_type.lower():
             return "Secret"
-        elif "document" in table.lower() or "number" in column.lower():  # noqa: F821 — legacy: table/column not in method scope; runtime NameError expected
+        elif "document" in table.lower() or "number" in column.lower():
             return "ID"
         else:
             return "General"
@@ -133,9 +141,9 @@ class DatabaseScanner:  # legacy — BaseScanner was never defined in this modul
         data_type: str,
         sensitivity: str,
         sample_data: str,
-    ):
-        """Save audit record"""
-        record = {
+    ) -> Dict[str, Any]:
+        """Build an audit record. The caller appends the return value to results."""
+        return {
             "source_type": "database",
             "source_name": "production_db",
             "table_name": table,
@@ -145,4 +153,3 @@ class DatabaseScanner:  # legacy — BaseScanner was never defined in this modul
             "data_sample": sample_data,
             "metadata": {"scan_date": datetime.now().isoformat()},
         }
-        results.append(record)  # noqa: F821 — legacy: results not in method scope; caller should use return value
