@@ -101,6 +101,75 @@ def test_sql_sampling_file_path_escape_rejected(tmp_path: Path) -> None:
         load_config(root)
 
 
+def test_sql_sampling_file_absolute_path_outside_config_dir_rejected(
+    tmp_path: Path,
+) -> None:
+    """#1550: absolute paths must still resolve under the config directory."""
+    outside = tmp_path / "outside.yaml"
+    outside.write_text(
+        yaml.dump({"overrides": {"patterns": {"x": 1}}}), encoding="utf-8"
+    )
+    cfg_dir = tmp_path / "cfg"
+    cfg_dir.mkdir()
+    root = cfg_dir / "config.yaml"
+    root.write_text(
+        yaml.dump(
+            {
+                "targets": [],
+                "report": {"output_dir": "."},
+                "sql_sampling_file": str(outside),
+            }
+        ),
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="escapes"):
+        load_config(root)
+
+
+def test_sql_sampling_file_absolute_path_inside_config_dir_ok(tmp_path: Path) -> None:
+    frag = tmp_path / "sampling_extra.yaml"
+    frag.write_text(
+        yaml.dump({"overrides": {"patterns": {"inside_*": 2}}}),
+        encoding="utf-8",
+    )
+    root = tmp_path / "config.yaml"
+    root.write_text(
+        yaml.dump(
+            {
+                "targets": [],
+                "report": {"output_dir": "."},
+                "sql_sampling_file": str(frag.resolve()),
+            }
+        ),
+        encoding="utf-8",
+    )
+    cfg = load_config(root)
+    assert cfg["sql_sampling"]["overrides"]["patterns"]["inside_*"] == 2
+
+
+def test_sql_sampling_invalid_yaml_error_omits_file_snippet(tmp_path: Path) -> None:
+    """Parse failures must not echo fragment body (YAML context / HTTP banner leak)."""
+    sentinel = "DB_SQL_SAMPLING_PARSE_SENTINEL"
+    frag = tmp_path / "broken.yaml"
+    frag.write_text(f"{sentinel}: [unclosed\n", encoding="utf-8")
+    root = tmp_path / "config.yaml"
+    root.write_text(
+        yaml.dump(
+            {
+                "targets": [],
+                "report": {"output_dir": "."},
+                "sql_sampling_file": "broken.yaml",
+            }
+        ),
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="not valid YAML") as ei:
+        load_config(root)
+    msg = str(ei.value)
+    assert sentinel not in msg
+    assert ei.value.__cause__ is None
+
+
 def test_get_effective_limit_alias() -> None:
     from core.sampling import SamplingProvider
 
