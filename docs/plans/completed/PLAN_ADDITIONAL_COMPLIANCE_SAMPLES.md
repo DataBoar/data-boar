@@ -154,7 +154,7 @@ Samples can be **single-file** (one YAML with commented sections for regex, ml_t
 
 - **UK GDPR:** Strong demand in UK and post-Brexit adequacy; minimal extra work; improves positioning for UK and EU–UK dual scope.
 - **EU GDPR:** Explicit EEA (EU 27 + EEA) scope; many RFPs and contracts require EU (not UK) alignment; EDPB and member-state DPA references; distinct from UK post-Brexit/DPDI.
-- **Benelux:** Belgium, Netherlands, Luxembourg; EU GDPR plus national IDs (BSN, NISS, Luxembourg matricule) and national DPA references; useful for Benelux-focused or multilingual (NL/FR) deployments.
+- **Benelux:** Belgium, Netherlands, Luxembourg; EU GDPR plus national IDs (BSN, NISS, Luxembourg matricule) and national DPA references; useful for Benelux-focused or multilingual (NL/FR/DE) deployments.
 - **PIPEDA:** Opens Canadian market and RFPs that require Canadian privacy mapping.
 - **POPIA:** Supports South African and pan-African engagements.
 - **APPI:** Supports Japan and APAC clients with local compliance needs.
