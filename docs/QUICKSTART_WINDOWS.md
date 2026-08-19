@@ -5,7 +5,7 @@
 > Feito para quem **nunca** usou “terminal” nem “Python”. Cada passo diz o **como** e o **porquê**. Travou? [Abra uma issue](https://github.com/DataBoar/data-boar/issues/new) (foto da tela ajuda) ou fale com a gente.
 
 **Público:** usuário final no Windows (escritório, PME, DPO sem TI profunda).
-**Não é** o caminho de desenvolvedor (`git clone` + `uv` + `python main.py`) — isso fica no [QUICKSTART.md](../QUICKSTART.md) Caminho B.
+**Não é** o caminho de desenvolvedor (`git clone` + `uv` + `python main.py`) — isso fica no [QUICKSTART.pt_BR.md](../QUICKSTART.pt_BR.md) Caminho B.
 
 ---
 
@@ -154,7 +154,7 @@ Abra `http://127.0.0.1:8088`. O caminho **pipx** acima é o **recomendado** para
 
 | Doc | Para quê |
 | --- | -------- |
-| [QUICKSTART.md](../QUICKSTART.md) | Visão geral (Docker / uv / Caminho 0 terse) |
+| [QUICKSTART.pt_BR.md](../QUICKSTART.pt_BR.md) ([EN](../QUICKSTART.md)) | Visão geral (Docker / uv / Caminho 0 terse) |
 | [AUDIENCE_GUIDE.pt_BR.md](AUDIENCE_GUIDE.pt_BR.md) | Quem lê o quê |
 | [TROUBLESHOOTING.pt_BR.md](TROUBLESHOOTING.pt_BR.md) | Problemas comuns de install |
 | Site institucional | Narrativa de negócio (quando publicado) — o **como rodar** fica neste guia |

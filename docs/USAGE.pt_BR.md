@@ -85,7 +85,7 @@ uv run python main.py --demo
 - Prepara `/tmp/data_boar_demo/` (temp do SO + `data_boar_demo/`) com `demo.config.yaml`, corpus sintético, `reports/`, `audit_logs/` e `audit_results.db`, executa varredura inicial e mantém o dashboard em **`127.0.0.1`** com HTTP em texto plano.
 - **Audit trail (#1190):** com RBAC inativo (padrão do demo), `GET /logs/{session_id}` fica acessível como `/findings` — sem chave por execução. Para trancar downloads, use `api.require_api_key: true` (qualquer tier) ou ligue RBAC Pro+ com `audit_logs.read`.
 - **Saída:** banner no console com caminho do workspace e URL do dashboard (porta padrão **8088**). A árvore temporária é removida ao encerrar o processo.
-- Veja também [QUICKSTART.md](../QUICKSTART.md) (*Caminho 0*) e `man 1 data-boar` (`--demo`).
+- Veja também [QUICKSTART.pt_BR.md](../QUICKSTART.pt_BR.md) (*Caminho 0*) e `man 1 data-boar` (`--demo`).
 
 #### Varredura única (sem `--web`)
 
