@@ -49,6 +49,7 @@ Para governança operacional (escopo, minimização, retenção e rastreabilidad
 | **compliance-sample-uae_pdpl.yaml**            | UAE PDPL (Decreto-Lei Federal 45/2021 + Regulamentos Gabinete 2023): UAE Data Office (UAEDO/TDRA); regex Emirates ID; **geolocalização precisa** (mesma geometria VCDPA / EU GDPR); categorias sensíveis (saúde, biométrico, genético, racial, religioso, criminal, financeiro, dados de crianças); nota Free Zone (DIFC/ADGM regimes separados); EN + AR. |
 | **compliance-sample-new_zealand_privacy.yaml** | Nova Zelândia Privacy Act 2020 (OPC); regex IRD/NHI/Passaporte; **geolocalização precisa** (mesma geometria VCDPA / EU GDPR); 13 IPPs; regime de Violação Notificável; categorias sensíveis (saúde, biométrico, genético, etnia, orientação sexual, financeiro); salvaguardas IPP 12 para transferência internacional; EN. |
 | **compliance-sample-philippines_dpa.yaml**     | Filipinas DPA (RA 10173 + NPC IRR 2016); NPC; regex SSS/GSIS/TIN/PhilSys; **geolocalização precisa** (mesma geometria VCDPA / EU GDPR); categorias SPI (raça, saúde, genético, vida sexual, criminal, IDs governamentais); notificação de violação em 72 h (NPC Circular 16-03); EN. |
+| **compliance-sample-ecuador_lopdp.yaml**       | Equador LOPDP (Ley Orgánica de Protección de Datos Personales, 2021): rótulos contextuais de cédula / RUC / passaporte (sem matcher nu de 10 dígitos); status migratório como dado sensível (Art. 4/25 — incomum na LatAm); geolocalização precisa (JSON lat/lng + par CSV); dados de crianças (Art. 25); notificação de violação Art. 43 (cinco dias) à APDP; influenciada pelo GDPR; vigência plena maio 2023; ES + EN. |
 
 **Lista completa** de amostras por região, nomes de arquivo e como mesclar no `config.yaml`: [COMPLIANCE_FRAMEWORKS.pt_BR.md](../COMPLIANCE_FRAMEWORKS.pt_BR.md#amostras-de-conformidade) ([EN](../COMPLIANCE_FRAMEWORKS.md#compliance-samples)). Cada amostra é autocontida (regex overrides, termos ML, recommendation overrides); novas regiões seguem o mesmo formato.
 
@@ -83,7 +84,7 @@ Ao escolher ou criar uma amostra, considere o(s) **idioma(s)** da região alvo p
 | **Singapura (PDPA)**             | Inglês.                                                                                                    |
 | **Tailândia (PDPA)**             | Inglês e tailandês para nomes de colunas e texto de política quando relevante.                               |
 | **UAE / Arábia Saudita (PDPL)**  | Inglês; opcional árabe para nomes de colunas.                                                              |
-| **Argentina / Colômbia / Chile / México** | Espanhol e inglês (ex.: datos personales / personal data).                                                 |
+| **Argentina / Colômbia / Chile / México / Equador** | Espanhol e inglês (ex.: datos personales / personal data, cédula de identidad / national id, estatus migratorio / migratory status). |
 | **Quênia / Nigéria**             | Inglês.                                                                                                    |
 | **Marrocos**                     | Francês e/ou árabe conforme relevante.                                                                     |
 | **Índia (DPDP)**                 | Inglês.                                                                                                    |

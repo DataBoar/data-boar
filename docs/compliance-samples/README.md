@@ -50,6 +50,7 @@ For operational governance (scope, minimization, retention, traceability), use [
 | **compliance-sample-colombia_1581.yaml**       | Colombia Ley 1581/2012: SIC; datos personales; ES + EN terms; CC/NIT regex.                                                                                         |
 | **compliance-sample-mexico_lfpdppp.yaml**      | Mexico LFPDPPP: INAI; datos personales / sensibles; ARCO, aviso de privacidad; contextual CURP + RFC regex; **precise geolocation** (4 patterns); ES + EN terms.   |
 | **compliance-sample-chile_privacy.yaml**       | Chile Law 19.628: datos personales; ES + EN terms; RUT regex.                                                                                                       |
+| **compliance-sample-ecuador_lopdp.yaml**       | Ecuador LOPDP (Ley Orgánica de Protección de Datos Personales, 2021): contextual cédula / RUC / passport column labels (no bare 10-digit matcher); migratory status as sensitive (Art. 4/25 — unusual in LatAm); precise geolocation (JSON lat/lng + CSV pair); children's data (Art. 25); Art. 43 breach notification (five days); GDPR-influenced; full enforcement May 2023; ES + EN. |
 | **compliance-sample-nigeria_ndpr.yaml**        | Nigeria NDPR 2019: NITDA; personal data, data controller; EN.                                                                                                       |
 | **compliance-sample-morocco_09_08.yaml**       | Morocco Law 09-08: CNDP; données à caractère personnel; FR + EN terms; CIN regex.                                                                                   |
 | **compliance-sample-switzerland_fadp.yaml**    | Switzerland revised FADP: FDPIC; personal data; EN + optional DE/FR/IT terms; AHV/UID regex.                                                                        |
@@ -93,7 +94,7 @@ When choosing or authoring a sample, consider the **language(s)** of the target 
 | **Singapore (PDPA)**              | English.                                                                                                       |
 | **Thailand (PDPA)**               | English and Thai for column names and policy text where relevant.                                               |
 | **UAE / Saudi (PDPL)**            | English; optional Arabic for column names.                                                                     |
-| **Argentina / Colombia / Chile**  | Spanish and English (e.g. datos personales / personal data).                                                   |
+| **Argentina / Colombia / Chile / Ecuador** | Spanish and English (e.g. datos personales / personal data, cédula de identidad / national id, estatus migratorio / migratory status). |
 | **Kenya / Nigeria**               | English.                                                                                                       |
 | **Morocco**                       | French and/or Arabic as relevant.                                                                              |
 | **India (DPDP)**                  | English.                                                                                                       |
