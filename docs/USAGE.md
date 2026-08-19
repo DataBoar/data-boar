@@ -1295,6 +1295,34 @@ PDF (optional): `pandoc report.md --defaults config/pandoc_governance.yaml -o re
 
 **Step-by-step:** [ops/GOVERNANCE_LENS_QUICKSTART.md](ops/GOVERNANCE_LENS_QUICKSTART.md) ([pt-BR](ops/GOVERNANCE_LENS_QUICKSTART.pt_BR.md)). **Architecture:** [TECH_GUIDE.md](TECH_GUIDE.md#governance-lens-architecture).
 
+## Governance Lens (Enterprise) {#governance-lens-enterprise}
+
+**Enterprise** adds sectoral modules on top of the Pro lens: **BACEN Res. 4893/2021**, **FEBRABAN CPS 004** / Circular 3909, and **PCI-DSS v4.0** (Req. 3.4, 4.2, 10.2). These mappings are **not** in Open Core or Pro.
+
+**Licensing:** Requires `governance.tier: enterprise` and `governance_lens_enterprise`. The curated production file **`governance_framework_map_enterprise.yaml` is not committed** to public Git (gitignored). OSS ships **`config/governance_framework_map_enterprise.example.yaml`** for lab/tests (`governance.enterprise_map_file`).
+
+If `tier` is **pro** and an Enterprise map is referenced, the generator logs **`Enterprise framework requires enterprise license tier`**, omits those controls, and continues (no hard fail).
+
+### Minimal Enterprise config
+
+```yaml
+governance:
+  enabled: true
+  tier: enterprise
+  map_file: config/governance_framework_map_pro.example.yaml
+  enterprise_map_file: config/governance_framework_map_enterprise.example.yaml   # lab; licensed file in production
+```
+
+Set `licensing.effective_tier: enterprise` in lab. Same CLI as Pro (`--governance-report`). The Markdown template adds BACEN / PCI-DSS / FEBRABAN sections only when Enterprise is enabled.
+
+**Examples (heuristic — not a certified assessment):**
+
+- `LGPD_CPF` on a non-prod database target → BACEN 4893 Art. 4º (cybersecurity policy).
+- PII on an API target → BACEN 4893 Art. 6º (incident action plan).
+- `CREDIT_CARD` / `PCI_CARD` on any target → BACEN 4893 Art. 4º + PCI-DSS Req. 3.4 (render PAN unreadable).
+
+**Disclaimer:** Same as Pro — not a BACEN inspection, FEBRABAN audit, or PCI QSA report.
+
 ### 5.1 Operator notifications (optional)
 
 After a scan finishes (CLI one-shot or `POST /scan` / `POST /start` background run), the app can **POST a short pt-BR brief** to **Slack**, **Microsoft Teams**, a **generic JSON webhook** (e.g. automation tools or a **Signal** REST bridge), or **Telegram** (optional fields for legacy/third-party installs only). Default is **off** (`notifications.enabled: false`).

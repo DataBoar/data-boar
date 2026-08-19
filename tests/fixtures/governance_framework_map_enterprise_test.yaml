@@ -1,0 +1,57 @@
+---
+# Minimal Enterprise map for tests/test_governance_lens_enterprise.py
+# Illustrative only — not a production curated map.
+
+version: "1.0"
+
+entries:
+  - pattern_name: LGPD_CPF
+    target_context: database_nonprod
+    frameworks:
+      - id: BACEN-4893-ART4
+        name: "BACEN Res. 4893/2021 — Art. 4º"
+        tier: enterprise
+        control_gap_title: "CPF em base não produtiva — BACEN Art. 4º"
+        control_gap_body: "Test body for BACEN Art. 4 CPF in nonprod."
+        recommendation: "Mascarar CPF em homologação."
+        deadline_days: 30
+
+  - pattern_name: PCI_CARD
+    target_context: null
+    frameworks:
+      - id: PCI-DSS-4.0-REQ3.4
+        name: "PCI-DSS v4.0 — Req. 3.4"
+        tier: enterprise
+        control_gap_title: "PAN potencialmente armazenado em claro"
+        control_gap_body: "Test body for PCI Req. 3.4."
+        recommendation: "Tokenizar PAN."
+        deadline_days: 14
+      - id: BACEN-4893-ART4
+        name: "BACEN Res. 4893/2021 — Art. 4º"
+        tier: enterprise
+        control_gap_title: "Possível PAN — política cibernética"
+        control_gap_body: "Test body for BACEN + PCI card."
+        recommendation: "Confirmar escopo PCI."
+        deadline_days: 21
+
+  - pattern_name: CREDIT_CARD
+    target_context: null
+    frameworks:
+      - id: PCI-DSS-4.0-REQ3.4
+        name: "PCI-DSS v4.0 — Req. 3.4"
+        tier: enterprise
+        control_gap_title: "PAN potencialmente armazenado em claro"
+        control_gap_body: "Test body for CREDIT_CARD → PCI 3.4."
+        recommendation: "Tokenizar PAN."
+        deadline_days: 14
+
+  - pattern_name: EMAIL
+    target_context: api
+    frameworks:
+      - id: BACEN-4893-ART6
+        name: "BACEN Res. 4893/2021 — Art. 6º"
+        tier: enterprise
+        control_gap_title: "E-mail em API — plano de incidentes"
+        control_gap_body: "Test body for API PII → Art. 6."
+        recommendation: "Inventariar API e autenticação."
+        deadline_days: 21
