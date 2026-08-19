@@ -31,10 +31,10 @@
 
 ```mermaid
 flowchart TD
-  D[Discovery] --> M[Map locations]
+  D[Discovery today] --> M[Map locations today]
   M --> C[Classify sensitive / biometric]
   C --> R[Remediation via plugin coming]
-  R --> E[Audit trail as configured]
+  R --> E[Before/after audit trail coming]
 ```
 
 1. **Discovery** — scan configured databases, filesystems, and API exports for biometric-related patterns and adjacent identifiers.

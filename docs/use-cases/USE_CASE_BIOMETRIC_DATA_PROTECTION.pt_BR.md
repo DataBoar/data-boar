@@ -31,10 +31,10 @@
 
 ```mermaid
 flowchart TD
-  D[Discovery] --> M[Mapeamento]
+  D[Discovery hoje] --> M[Mapeamento hoje]
   M --> C[Classificação sensível/biométrica]
   C --> R[Remediação via plugin em breve]
-  R --> E[Trilha de auditoria conforme configurada]
+  R --> E[Trilha antes/depois em breve]
 ```
 
 1. **Discovery** — scan em bases, filesystems e exportações de API configurados.
