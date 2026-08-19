@@ -127,6 +127,36 @@ def build_manifest_payload(
     }
 
 
+def apply_preserved_native_packages(
+    dest_manifest: Path,
+    source_manifest: Path | None,
+) -> bool:
+    """Copy ``native_packages`` onto ``dest_manifest`` without rewriting ``files``.
+
+    Returns True when the dest file was updated.
+    """
+    if source_manifest is None or not source_manifest.is_file():
+        return False
+    if not dest_manifest.is_file():
+        return False
+    try:
+        existing = json.loads(source_manifest.read_text(encoding="utf-8"))
+        dest = json.loads(dest_manifest.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False
+    if not isinstance(existing, dict) or not isinstance(dest, dict):
+        return False
+    native = existing.get("native_packages")
+    if not isinstance(native, list) or not native:
+        return False
+    dest["native_packages"] = native
+    dest_manifest.write_text(
+        json.dumps(dest, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    return True
+
+
 def write_release_manifest(
     repo_root: Path,
     out_path: Path,
@@ -209,9 +239,39 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Suppress stdout on success",
     )
+    parser.add_argument(
+        "--preserve-native-from",
+        type=Path,
+        default=None,
+        help=(
+            "Copy native_packages[] from an existing release-manifest.json "
+            "(#1408 — SBOM regenerate must not drop package hashes)"
+        ),
+    )
+    parser.add_argument(
+        "--patch-native-into",
+        type=Path,
+        default=None,
+        help=(
+            "Only copy native_packages onto this existing manifest "
+            "(does not regenerate files[])"
+        ),
+    )
     args = parser.parse_args(argv)
 
     repo_root = (args.repo_root or _repo_root()).resolve()
+
+    if args.patch_native_into is not None:
+        dest = args.patch_native_into
+        if not dest.is_absolute():
+            dest = (repo_root / dest).resolve()
+        src = args.preserve_native_from
+        if src is not None and not src.is_absolute():
+            src = (repo_root / src).resolve()
+        apply_preserved_native_packages(dest, src)
+        if not args.quiet:
+            print(f"OK: patched native_packages on {dest.as_posix()}")
+        return 0
 
     if args.check is not None:
         ok, msg = verify_manifest_on_disk(args.check.resolve(), repo_root)
@@ -229,6 +289,11 @@ def main(argv: list[str] | None = None) -> int:
 
     out_path = (args.out if args.out.is_absolute() else repo_root / args.out).resolve()
     write_release_manifest(repo_root, out_path, version=args.version)
+    if args.preserve_native_from is not None:
+        src = args.preserve_native_from
+        if not src.is_absolute():
+            src = (repo_root / src).resolve()
+        apply_preserved_native_packages(out_path, src)
     if not args.quiet:
         print(
             f"Wrote {out_path.relative_to(repo_root).as_posix()} "

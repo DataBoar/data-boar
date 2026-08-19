@@ -145,6 +145,15 @@ jobs:
             } >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
+          # #1408: keep native_packages[] if the native-packages workflow already uploaded them.
+          # Do not regenerate files[] here — that list was built inside the image.
+          if gh release download "$TAG" --repo "${{ github.repository }}" \
+            --pattern 'release-manifest.json' --dir /tmp/relman 2>/dev/null; then
+            python3 scripts/generate_release_manifest.py \
+              --patch-native-into release-manifest.json \
+              --preserve-native-from /tmp/relman/release-manifest.json \
+              --quiet
+          fi
           gh release upload "$TAG" sbom-python.cdx.json sbom-docker-image.cdx.json build-digest.txt release-manifest.json \
             --clobber --repo "${{ github.repository }}"
 
