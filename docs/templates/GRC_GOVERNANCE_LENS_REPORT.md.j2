@@ -1,0 +1,154 @@
+---
+title: "Relatório Governance Lens — {{ organization }}"
+lang: pt-BR
+mainfont: "DejaVu Sans"
+geometry: margin=2.5cm
+toc: true
+toc-depth: 3
+numbersections: true
+colorlinks: true
+---
+
+# Relatório Governance Lens
+
+> **Aviso:** saída heurística do Data Boar — não substitui auditoria certificada nem parecer jurídico.
+
+## 1. Informações do Levantamento
+
+| Campo | Valor |
+| ----- | ----- |
+| Organização | {{ organization }} |
+| Escopo | {{ scope }} |
+| Data do levantamento | {{ report_date }} |
+| Versão do produto | {{ product_version }} |
+| Session ID | `{{ session_id }}` |
+| Técnico / operador | {{ technician }} |
+| Frameworks habilitados | {{ frameworks_enabled | join(', ') }} |
+| Nível de risco consolidado | **{{ risk_level }}** |
+| Total de achados técnicos | {{ total_findings }} |
+| Gaps de controle mapeados | {{ total_gaps }} |
+| Falhas de scan | {{ scan_failures }} |
+
+## 2. Sumário Executivo
+
+Este relatório traduz achados técnicos da sessão `{{ session_id }}` para linguagem de governança (GRC), usando o mapa configurado de frameworks Tier 1 (COBIT 2019, ISO/IEC 27001, ISO/IEC 27014, ISO/IEC 38500, ITIL 4).
+
+**Resultado consolidado:** nível de risco **{{ risk_level }}** com **{{ total_gaps }}** gap(s) de controle identificado(s) a partir de **{{ total_findings }}** achado(s) técnico(s).
+
+### Matriz de risco (priorização)
+
+| Prioridade | Quantidade de gaps |
+| ---------- | ------------------: |
+| P0 (crítico) | {{ risk_matrix.P0 }} |
+| P1 (elevado) | {{ risk_matrix.P1 }} |
+| P2 (acompanhamento) | {{ risk_matrix.P2 }} |
+
+## 3. Avaliação por Framework
+
+### 3.1 ISO/IEC 38500 — Princípios de governança de TI
+
+| Princípio | Descrição | Situação | Evidência (gap) |
+| --------- | --------- | -------- | ---------------- |
+{% for row in iso38500_principles -%}
+| {{ row.principle }} | {{ row.description }} | {{ row.situation }} | {{ row.evidence }} |
+{% endfor %}
+
+### 3.2 ISO/IEC 27014 — Processos de governança de segurança
+
+| Processo | Gap identificado | Controle recomendado |
+| -------- | ---------------- | -------------------- |
+{% for row in iso27014_processes -%}
+| {{ row.process }} | {{ row.gap }} | {{ row.control }} |
+{% endfor %}
+
+### 3.3 COBIT 2019 — APO13, DSS05, MEA03
+
+| Controle | Título do gap | Achados | Severidade máx. |
+| -------- | ------------- | ------: | --------------- |
+{% for g in framework_buckets.cobit -%}
+| {{ g.framework_id }} | {{ g.title }} | {{ g.finding_count }} | {{ g.max_sensitivity }} |
+{% else -%}
+| — | Nenhum gap COBIT mapeado nesta sessão | 0 | — |
+{% endfor %}
+
+### 3.4 ITIL 4 — Security management (SecMan)
+
+| Prática / controle | Título do gap | Recomendação |
+| ------------------ | ------------- | ------------ |
+{% for g in framework_buckets.itil -%}
+| {{ g.framework_name }} | {{ g.title }} | {{ g.recommendation }} |
+{% else -%}
+| SecMan | Nenhum gap ITIL mapeado nesta sessão | Manter práticas de gestão de segurança |
+{% endfor %}
+
+### 3.5 ISO/IEC 27001:2022 — Controles A.8.x e correlatos
+
+| Controle | Título do gap | Prazo (dias) | Achados |
+| -------- | ------------- | -----------: | ------: |
+{% for g in framework_buckets.iso27001 -%}
+| {{ g.framework_id }} | {{ g.title }} | {{ g.deadline_days if g.deadline_days is not none else '—' }} | {{ g.finding_count }} |
+{% else -%}
+| — | Nenhum gap ISO 27001 mapeado nesta sessão | — | 0 |
+{% endfor %}
+
+## 4. Achados de Controle — Detalhamento (top {{ top_gaps | length }})
+
+{% if top_gaps %}
+{% for g in top_gaps %}
+### {{ loop.index }}. {{ g.control_gap_title }}
+
+- **Framework:** {{ g.framework_name }} (`{{ g.framework_id }}`)
+- **Severidade máxima:** {{ g.max_sensitivity }}
+- **Achados agregados:** {{ g.finding_count }}
+- **Prazo sugerido (dias):** {{ g.deadline_days if g.deadline_days is not none else '—' }}
+
+{{ g.control_gap_body }}
+
+**Recomendação:** {{ g.recommendation }}
+
+{% endfor %}
+{% else %}
+Nenhum gap de controle mapeado para esta sessão.
+{% endif %}
+
+## 5. Roadmap de Remediação
+
+| Prioridade | Ação | Framework | Prazo (dias) | Responsável |
+| ---------- | ---- | --------- | -----------: | ----------- |
+{% for row in roadmap -%}
+| {{ row.priority }} | {{ row.action }} | {{ row.framework }} | {{ row.deadline_days }} | {{ row.owner }} |
+{% else -%}
+| — | Sem itens — sessão sem gaps mapeados | — | — | — |
+{% endfor %}
+
+## 6. Metodologia e Limitações
+
+- Os achados originam-se de varredura técnica configurada (bancos, filesystem, APIs) armazenada no SQLite local.
+- O Governance Lens aplica um **mapa YAML** de padrões detectados → controles GRC; é **heurístico** e depende da qualidade do mapa e dos targets.
+- **Não** constitui auditoria certificada ISO, relatório COBIT formal, parecer jurídico LGPD/GDPR nem atestado de conformidade PCI.
+- Revisão humana por DPO, CISO, auditor interno ou assessoria jurídica é **obrigatória** antes de decisões regulatórias ou contratuais.
+
+## 7. Anexo A — Targets analisados
+
+| Target | Fonte | Severidade máx. observada |
+| ------ | ----- | ------------------------- |
+{% for t in targets -%}
+| {{ t.name }} | {{ t.source }} | {{ t.sensitivity or '—' }} |
+{% else -%}
+| — | — | — |
+{% endfor %}
+
+## 8. Anexo B — Referências normativas
+
+| Referência | Uso neste relatório |
+| ---------- | ------------------- |
+| ISO/IEC 38500:2015 | Princípios de governança de TI |
+| ISO/IEC 27014:2020 | Governança de segurança da informação |
+| COBIT 2019 | Objetivos de governança e gestão (APO13, DSS05, MEA03) |
+| ITIL 4 — Security management | Práticas operacionais de SecMan |
+| ISO/IEC 27001:2022 | Controles de segurança da informação (ex.: A.8.x) |
+| LGPD (Lei 13.709/2018) | Contexto de dados pessoais quando padrões LGPD são detectados |
+
+---
+
+*Gerado por Data Boar Governance Lens — sessão `{{ session_id }}`.*

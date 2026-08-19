@@ -401,6 +401,55 @@ def _run_regenerate_report_cli(
         engine.db_manager.dispose()
 
 
+def _run_governance_report_cli(
+    config: dict[str, Any],
+    config_path: str,
+    output_path: str | None,
+    session_id: str | None,
+) -> None:
+    """Render Governance Lens Markdown from SQLite (no re-scan)."""
+    from core.engine import AuditEngine
+    from report.governance_lens import governance_lens_feature_allowed
+    from report.governance_report import (
+        GovernanceReportError,
+        GovernanceReportSessionError,
+        default_governance_report_path,
+        resolve_governance_session_id,
+        write_governance_report,
+    )
+
+    if not governance_lens_feature_allowed(config):
+        print(
+            "Governance Lens report requires governance.enabled: true and a Pro+ "
+            "license tier (governance_lens_pro).",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+
+    engine = AuditEngine(config, config_path=config_path)
+    try:
+        try:
+            sid = resolve_governance_session_id(engine.db_manager, session_id)
+            dest = (
+                Path(output_path)
+                if output_path
+                else default_governance_report_path(config, sid)
+            )
+            written = write_governance_report(dest, config, engine.db_manager, sid)
+        except GovernanceReportSessionError as e:
+            print(str(e), file=sys.stderr)
+            sys.exit(1)
+        except GovernanceReportError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
+        except OSError as e:
+            print(f"Error: cannot write governance report: {e}", file=sys.stderr)
+            sys.exit(1)
+        print(written)
+    finally:
+        engine.db_manager.dispose()
+
+
 def _display_prog(argv0: str | None = None) -> str:
     """Return the operator-facing command form for this runtime."""
     name = Path(argv0 or sys.argv[0] or "").name.lower()
@@ -455,6 +504,9 @@ def main() -> None:
             "\n"
             "  # Regenerate Excel + heatmap for an existing session (SQLite only; no re-scan)\n"
             f"  {prog} --config config.yaml --regenerate-report <session_id>\n"
+            "\n"
+            "  # Governance Lens GRC Markdown (SQLite only; optional --session)\n"
+            f"  {prog} --config config.yaml --governance-report ./relatorio_grc.md\n"
             "\n"
             "  # Wipe all collected data and generated reports (dangerous, see SECURITY.md)\n"
             f"  {prog} --config config.yaml --reset-data\n"
@@ -671,7 +723,7 @@ def main() -> None:
         default=None,
         help=(
             "Scan session UUID for session-scoped exports. Required with "
-            "--export-remediation-manifest."
+            "--export-remediation-manifest; optional with --governance-report."
         ),
     )
     parser.add_argument(
@@ -697,7 +749,22 @@ def main() -> None:
             "configured SQLite database (also writes learned_patterns when enabled). "
             "No live target scan and no --web. Incompatible with --web, --reset-data, "
             "--validate-config, --diff, --export-dsar, --export-remediation-manifest, "
-            "and --export-audit-trail."
+            "--export-audit-trail, and --governance-report."
+        ),
+    )
+    parser.add_argument(
+        "--governance-report",
+        nargs="?",
+        const="",
+        default=None,
+        metavar="PATH",
+        dest="governance_report",
+        help=(
+            "Write a Governance Lens GRC Markdown report for an existing SQLite session "
+            "(pandoc-ready; see config/pandoc_governance.yaml). PATH is optional — "
+            "defaults under report.output_dir. Use --session to pick a session; "
+            "otherwise the latest session is used. Requires governance.enabled and "
+            "Pro+ tier. Incompatible with --web, --reset-data, and other export modes."
         ),
     )
     parser.add_argument(
@@ -817,12 +884,14 @@ def main() -> None:
             or args.export_remediation_manifest is not None
             or args.diff_sessions
             or args.regenerate_report is not None
+            or args.governance_report is not None
         )
         if demo_incompatible:
             print(
                 "Cannot combine --demo with --validate-config, --prefilter-status, "
                 "--check-extras, --reset-data, --export-audit-trail, --export-dsar, "
-                "--export-remediation-manifest, --diff, or --regenerate-report.",
+                "--export-remediation-manifest, --diff, --regenerate-report, or "
+                "--governance-report.",
                 file=sys.stderr,
             )
             sys.exit(2)
@@ -850,12 +919,13 @@ def main() -> None:
         or args.export_dsar is not None
         or args.export_remediation_manifest is not None
         or args.regenerate_report is not None
+        or args.governance_report is not None
         or args.prefilter_status
     ):
         print(
             "Cannot combine --validate-config with --web, --reset-data, "
             "--export-audit-trail, --export-dsar, --export-remediation-manifest, "
-            "--regenerate-report, or --prefilter-status.",
+            "--regenerate-report, --governance-report, or --prefilter-status.",
             file=sys.stderr,
         )
         sys.exit(2)
@@ -867,12 +937,13 @@ def main() -> None:
         or args.export_dsar is not None
         or args.export_remediation_manifest is not None
         or args.regenerate_report is not None
+        or args.governance_report is not None
         or args.diff_sessions
     ):
         print(
             "Cannot combine --prefilter-status with --web, --reset-data, "
             "--export-audit-trail, --export-dsar, --export-remediation-manifest, "
-            "--regenerate-report, or --diff.",
+            "--regenerate-report, --governance-report, or --diff.",
             file=sys.stderr,
         )
         sys.exit(2)
@@ -885,11 +956,12 @@ def main() -> None:
         or args.export_dsar is not None
         or args.export_remediation_manifest is not None
         or args.regenerate_report is not None
+        or args.governance_report is not None
     ):
         print(
             "Cannot combine --diff with --web, --reset-data, --export-audit-trail, "
             "--export-dsar, --export-remediation-manifest, --validate-config, "
-            "or --regenerate-report.",
+            "--regenerate-report, or --governance-report.",
             file=sys.stderr,
         )
         sys.exit(2)
@@ -902,11 +974,12 @@ def main() -> None:
         or args.diff_sessions
         or args.export_remediation_manifest is not None
         or args.regenerate_report is not None
+        or args.governance_report is not None
     ):
         print(
             "Cannot combine --export-dsar with --web, --reset-data, "
             "--export-audit-trail, --validate-config, --diff, "
-            "--export-remediation-manifest, or --regenerate-report.",
+            "--export-remediation-manifest, --regenerate-report, or --governance-report.",
             file=sys.stderr,
         )
         sys.exit(2)
@@ -920,11 +993,12 @@ def main() -> None:
         or args.export_dsar is not None
         or args.prefilter_status
         or args.regenerate_report is not None
+        or args.governance_report is not None
     ):
         print(
             "Cannot combine --export-remediation-manifest with --web, --reset-data, "
             "--export-audit-trail, --validate-config, --diff, --export-dsar, "
-            "--prefilter-status, or --regenerate-report.",
+            "--prefilter-status, --regenerate-report, or --governance-report.",
             file=sys.stderr,
         )
         sys.exit(2)
@@ -937,11 +1011,31 @@ def main() -> None:
         or args.diff_sessions
         or args.export_dsar is not None
         or args.export_remediation_manifest is not None
+        or args.governance_report is not None
     ):
         print(
             "Cannot combine --regenerate-report with --web, --reset-data, "
             "--export-audit-trail, --validate-config, --diff, --export-dsar, "
-            "or --export-remediation-manifest.",
+            "--export-remediation-manifest, or --governance-report.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+
+    if args.governance_report is not None and (
+        args.web
+        or args.reset_data
+        or args.export_audit_trail is not None
+        or args.validate_config
+        or args.diff_sessions
+        or args.export_dsar is not None
+        or args.export_remediation_manifest is not None
+        or args.regenerate_report is not None
+        or args.prefilter_status
+    ):
+        print(
+            "Cannot combine --governance-report with --web, --reset-data, "
+            "--export-audit-trail, --validate-config, --diff, --export-dsar, "
+            "--export-remediation-manifest, --regenerate-report, or --prefilter-status.",
             file=sys.stderr,
         )
         sys.exit(2)
@@ -963,9 +1057,14 @@ def main() -> None:
         )
         sys.exit(2)
 
-    if args.session_id and args.export_remediation_manifest is None:
+    if (
+        args.session_id
+        and args.export_remediation_manifest is None
+        and args.governance_report is None
+    ):
         print(
-            "--session requires --export-remediation-manifest <path.json>.",
+            "--session requires --export-remediation-manifest <path.json> or "
+            "--governance-report [PATH].",
             file=sys.stderr,
         )
         sys.exit(2)
@@ -1119,6 +1218,21 @@ def main() -> None:
             session_id=str(args.regenerate_report),
         ):
             _run_regenerate_report_cli(config, args.config, args.regenerate_report)
+        return
+
+    if args.governance_report is not None:
+        _emit_runtime_trust_info(runtime_trust, to_stdout=False, to_stderr=True)
+        out_path = args.governance_report.strip() or None
+        with otel_span(
+            "export.governance_report",
+            session_id=str(args.session_id or ""),
+        ):
+            _run_governance_report_cli(
+                config,
+                args.config,
+                out_path,
+                args.session_id,
+            )
         return
 
     if args.export_audit_trail is not None:

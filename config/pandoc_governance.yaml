@@ -1,0 +1,16 @@
+# pandoc_governance.yaml — config determinística para relatório GRC (Governance Lens)
+#
+# DOCX (default):
+#   pandoc report.md --defaults config/pandoc_governance.yaml -o report.docx
+#
+# PDF (override engine on CLI):
+#   pandoc report.md --defaults config/pandoc_governance.yaml -o report.pdf \
+#     --to=pdf -V pdf-engine=lualatex
+
+from: markdown
+to: docx
+toc: true
+toc-depth: 3
+number-sections: true
+highlight-style: kate
+reference-doc: docs/templates/governance_reference.docx
