@@ -12,7 +12,7 @@ When you run the image **without** overriding the command (e.g. `docker run ... 
 - **Reports:** `http://<host>:8088/reports`
 - **Configuration:** `http://<host>:8088/config`
 - **API docs:** `http://<host>:8088/docs`
-- **Health:** `http://<host>:8088/health`
+- **Health:** `http://<host>:8088/health` (image `HEALTHCHECK` probes this URL on loopback in JSON exec form — distroless has no shell)
 
 Port **8088** is exposed. Config and persistent data (SQLite, reports) live under **`/data`** (mount a volume or bind mount with `config.yaml`).
 
@@ -142,7 +142,7 @@ The following are **optional** practices to harden deployments. They do not repl
 
 - **Non-root:** The image already runs as distroless **nonroot** (**UID/GID 65532**). To enforce at runtime: `docker run --user 65532:65532 ...` (matches `USER 65532:65532` in the Dockerfile). There is no `appuser` account name in the image (`/etc/passwd` is not populated with that name).
 - **Resource limits:** Use `--cpus` and `--memory` for plain Docker (e.g. `--memory 1g`). In Compose, set `deploy.resources.limits` (e.g. `cpus: '1'`, `memory: 1G`).
-- **Healthchecks:** The image can be used with Docker `HEALTHCHECK`; for API mode, probe `GET /health`. Compose and Kubernetes examples in this repo already use `/health` for liveness/readiness. For observability, SLO/SLI/SLA, and SRE alignment (runbooks, error budgets, optional metrics), see [OBSERVABILITY_SRE.md](../OBSERVABILITY_SRE.md).
+- **Healthchecks:** The image includes a Docker `HEALTHCHECK` that probes `GET /health` on loopback via stdlib `urllib` (JSON exec form — distroless has no shell). Compose uses the same exec probe. Kubernetes examples in this repo still declare `readinessProbe`/`livenessProbe` separately. For observability, SLO/SLI/SLA, and SRE alignment (runbooks, error budgets, optional metrics), see [OBSERVABILITY_SRE.md](../OBSERVABILITY_SRE.md).
 - **DevSecOps:** Combine with API key (`api.require_api_key`), rate limiting (`rate_limit` in config), and CSP/security headers (see [SECURITY.md](../../SECURITY.md)). Run behind a reverse proxy with TLS and, when exposed externally, consider a WAF. **For production, set `api.require_api_key: true` and use a strong key from an environment variable** (e.g. `api.api_key_from_env: "AUDIT_API_KEY"`) so credentials are not stored in the config file.
 
 ### Kubernetes (optional examples)
