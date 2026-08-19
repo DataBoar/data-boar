@@ -93,9 +93,9 @@ This document suggests **additional layers** (tools, habits, and workflow) to ke
 
 ## Tiers (`./scripts/check-all.sh` / `.\scripts\check-all.ps1`)
 
-| Tier | When | What (after existing gatekeeper, Rust, plans-stats, hubs, Pester, pre-commit, pytest) |
-| ---- | ---- | ---------------------------------------------------------------------------------------- |
-| **Default (offline-capable)** | Every pre-PR / agent slice | **Bandit** — `uv run bandit -c pyproject.toml -r api core config connectors database file_scan report main.py -ll -q` (same paths as QUALITY doc + CI product scope). **Zizmor** — `uvx zizmor .github/workflows/`. |
+| Tier                                  | When                                                        | What (after existing gatekeeper, Rust, plans-stats, hubs, Pester, pre-commit, pytest)                                                                                                                                      |
+| ----                                  | ----                                                        | ----------------------------------------------------------------------------------------                                                                                                                                   |
+| **Default (offline-capable)**         | Every pre-PR / agent slice                                  | **Bandit** — `uv run bandit -c pyproject.toml -r api core config connectors database file_scan report main.py -ll -q` (same paths as QUALITY doc + CI product scope). **Zizmor** — `uvx zizmor .github/workflows/`.        |
 | **Opt-in `--enforced` / `-Enforced`** | Before security-sensitive PRs; when Semgrep CI is the worry | **+ Semgrep** — `uvx semgrep scan --config p/python --metrics=off` with the same **`--exclude-rule`** as [`.github/workflows/semgrep.yml`](../.github/workflows/semgrep.yml), **`--error .`**. Requires network for `uvx`. |
 
 **Fail-collect:** The security tier runs **all** scans in the tier, then reports **every** failure (no fail-fast within Bandit / Zizmor / Semgrep). Earlier gates (PII gatekeeper, Rust, pre-commit) still abort immediately — see **`scripts/check-all-security-scans.sh`** / **`.ps1`**.
@@ -104,9 +104,9 @@ This document suggests **additional layers** (tools, habits, and workflow) to ke
 
 ### Future waves (same doc — not implemented in #1044)
 
-| Wave | Intent | Status |
-| ---- | ------ | ------ |
-| **Wave 2** | Optional **pre-commit** hooks for Bandit / Zizmor (subset, fast) | Deferred — track in this section |
+| Wave       | Intent                                                                                                      | Status                              |
+| ----       | ------                                                                                                      | ------                              |
+| **Wave 2** | Optional **pre-commit** hooks for Bandit / Zizmor (subset, fast)                                            | Deferred — track in this section    |
 | **Wave 3** | Cursor rule: **run `check-all --enforced` before PR** when the slice touches connectors, workflows, or auth | Deferred — pointer in **§10** below |
 
 ---
@@ -115,11 +115,11 @@ This document suggests **additional layers** (tools, habits, and workflow) to ke
 
 Running **`check-all`** locally (default tier) trades **~2–5 minutes** on the dev PC for **avoiding a full CI round-trip** (queue + matrix + Semgrep container), which is typically **15–40+ minutes** wall-clock when a Bandit or workflow finding fails late.
 
-| Finding class | Without local mirror | With `check-all` default tier |
-| ------------- | ------------------- | ----------------------------- |
-| Bandit on connectors | Fails in CI **Bandit** job after lint+test already ran | Surfaces in one local pass |
-| Workflow permission drift | Fails in **Zizmor** workflow (or stays advisory until enforced) | Surfaces before push |
-| Semgrep SQLAlchemy FP path | Only when **`--enforced`** or CI Semgrep | Operator/agent opt-in — matches container command |
+| Finding class              | Without local mirror                                            | With `check-all` default tier                     |
+| -------------              | -------------------                                             | -----------------------------                     |
+| Bandit on connectors       | Fails in CI **Bandit** job after lint+test already ran          | Surfaces in one local pass                        |
+| Workflow permission drift  | Fails in **Zizmor** workflow (or stays advisory until enforced) | Surfaces before push                              |
+| Semgrep SQLAlchemy FP path | Only when **`--enforced`** or CI Semgrep                        | Operator/agent opt-in — matches container command |
 
 **Token-aware habit:** Use **`./scripts/check-all.sh --skip-pre-commit`** only when iterating on tests; run **full** `check-all` before opening the PR. Use **`--enforced`** when the diff touches **security surfaces** listed in Wave 3 — not on every docs-only slice.
 
@@ -190,6 +190,7 @@ Running **`check-all`** locally (default tier) trades **~2–5 minutes** on the 
 - In GitHub: **Branch protection** on `main` (and `master` if used) requiring status checks to pass before merge. **Recommended required checks** once stable: **CI** jobs **Test** (matrix), **Lint (pre-commit)** (includes Ruff + plans-stats + markdown + pt-BR + commercial guard), **Dependency audit**, **Bandit (medium+)**, and the **Semgrep** workflow; add **CodeQL** if you want the Security tab to block merge.
 - **Readiness:** Turn protection on after the branch that carries **Semgrep** (and any other new workflows) is **merged** and at least one **green** run exists for each required check name (GitHub shows exact check IDs in branch protection UI).
 - In the **PR template**, make the checklist explicit: tests pass, **`uv run pre-commit run --all-files`** clean (or hooks installed), docs updated, security-sensitive changes considered. Reference CONTRIBUTING and TESTING.md.
+- **Live snapshot** of classic rules vs rulesets and which checks are actually **required:** [docs/ops/BRANCH_PROTECTION.md](ops/BRANCH_PROTECTION.md) ([pt-BR](ops/BRANCH_PROTECTION.pt_BR.md)).
 - Deferred ideas (auto-merge, Environments, CODEOWNERS): [docs/ops/WORKFLOW_DEFERRED_FOLLOWUPS.md](ops/WORKFLOW_DEFERRED_FOLLOWUPS.md).
 
 **Prevents:** Merging broken or insecure code and follow-up fix commits.
@@ -212,21 +213,21 @@ Running **`check-all`** locally (default tier) trades **~2–5 minutes** on the 
 
 ## Summary table
 
-| Layer                   | Purpose                                    | Effort | Prevents                                                     |
-| ------------------      | -------------------------------            | ------ | ---------------------------------                            |
-| Lint (pre-commit) in CI | Same hooks as `.pre-commit-config.yaml`    | Low    | Drift vs local hooks, failed lint job                        |
-| Pre-commit (local)      | Catch on `git commit`                      | Low    | Failed CI, rework                                            |
-| Bandit                  | Python security patterns (CI **medium+**)  | Low    | Anti-patterns tests may miss; **low** triage in plan Phase 3 |
-| Zizmor                  | GitHub Actions workflow hygiene            | Low    | Permission/pinning drift before CI                           |
-| `check-all` mirror      | Local tiered CI parity (Bandit+Zizmor+opt Semgrep) | Low | Late CI failures, rework loops                       |
-| Semgrep                 | Custom + community SAST                    | Medium | Extra vulnerability/bug patterns                             |
-| mypy                    | Type safety                                | Medium | Refactor bugs, wrong types                                   |
-| MD029 / fix script      | Avoid doc rework                           | Low    | Repeated manual numbering fixes                              |
-| ADRs / architecture     | Record "why"                               | Low    | Wrong refactors, repeated mistakes                           |
-| SBOM                    | Supply chain + incident-response inventory | Low    | Missing deps/image components when responding to issues      |
-| CI Action / uv pins     | Reduce tag-moving & installer drift in CI  | Low    | Silent compromised action or floating uv without review        |
-| Branch protection       | Block bad merges                           | Low    | Merging broken or insecure code                              |
-| Extend rules/skills     | Guide agent on new checks                  | Low    | New violations as you add tools                              |
+| Layer                   | Purpose                                            | Effort | Prevents                                                     |
+| ------------------      | -------------------------------                    | ------ | ---------------------------------                            |
+| Lint (pre-commit) in CI | Same hooks as `.pre-commit-config.yaml`            | Low    | Drift vs local hooks, failed lint job                        |
+| Pre-commit (local)      | Catch on `git commit`                              | Low    | Failed CI, rework                                            |
+| Bandit                  | Python security patterns (CI **medium+**)          | Low    | Anti-patterns tests may miss; **low** triage in plan Phase 3 |
+| Zizmor                  | GitHub Actions workflow hygiene                    | Low    | Permission/pinning drift before CI                           |
+| `check-all` mirror      | Local tiered CI parity (Bandit+Zizmor+opt Semgrep) | Low    | Late CI failures, rework loops                               |
+| Semgrep                 | Custom + community SAST                            | Medium | Extra vulnerability/bug patterns                             |
+| mypy                    | Type safety                                        | Medium | Refactor bugs, wrong types                                   |
+| MD029 / fix script      | Avoid doc rework                                   | Low    | Repeated manual numbering fixes                              |
+| ADRs / architecture     | Record "why"                                       | Low    | Wrong refactors, repeated mistakes                           |
+| SBOM                    | Supply chain + incident-response inventory         | Low    | Missing deps/image components when responding to issues      |
+| CI Action / uv pins     | Reduce tag-moving & installer drift in CI          | Low    | Silent compromised action or floating uv without review      |
+| Branch protection       | Block bad merges                                   | Low    | Merging broken or insecure code                              |
+| Extend rules/skills     | Guide agent on new checks                          | Low    | New violations as you add tools                              |
 
 ---
 

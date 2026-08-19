@@ -306,6 +306,78 @@ def test_unknown_plugin_type_returns_invalid(tmp_path):
 # ---------------------------------------------------------------------------
 
 
+def test_regex_optional_dga_iso_dmbok_fields_pass(tmp_path):
+    """#644 — optional DGA / ISO 27001:2022 / DMBOK keys are valid on regex items."""
+    from config.plugin_validator import validate_plugin_file
+
+    path = _write_yaml(
+        tmp_path,
+        "regex_meta.yaml",
+        """
+        - name: "HEALTH_HINT"
+          pattern: "\\\\bhealth\\\\b"
+          norm_tag: "LGPD Art. 11"
+          dga_classification: "no_sharing"
+          iso27001_controls:
+            - "A.5.33"
+            - "A.8.11"
+          dmbok_area: "seguranca_dados"
+        """,
+    )
+    result = validate_plugin_file(path, plugin_type="regex_patterns")
+    assert result.valid is True
+    assert result.issues == []
+
+
+def test_regex_invalid_dga_classification_rejected(tmp_path):
+    from config.plugin_validator import validate_plugin_file
+
+    path = _write_yaml(
+        tmp_path,
+        "bad_dga.yaml",
+        """
+        - name: "X"
+          pattern: "\\\\bx\\\\b"
+          dga_classification: "public_domain"
+        """,
+    )
+    result = validate_plugin_file(path, plugin_type="regex_patterns")
+    assert result.valid is False
+    assert any("dga_classification" in issue for issue in result.issues)
+
+
+def test_regex_iso27001_controls_must_be_string_list(tmp_path):
+    from config.plugin_validator import validate_plugin_file
+
+    path = _write_yaml(
+        tmp_path,
+        "bad_iso.yaml",
+        """
+        - name: "X"
+          pattern: "\\\\bx\\\\b"
+          iso27001_controls: "A.5.12"
+        """,
+    )
+    result = validate_plugin_file(path, plugin_type="regex_patterns")
+    assert result.valid is False
+    assert any("iso27001_controls" in issue for issue in result.issues)
+
+
+def test_plugin_schema_documents_644_optional_fields():
+    """Schema file (not detector findings) is the contract for #644 metadata."""
+    import yaml
+
+    schema_path = Path(__file__).parent.parent / "config" / "plugin_schema.yaml"
+    schema = yaml.safe_load(schema_path.read_text(encoding="utf-8"))
+    fields = schema["regex_patterns"]["item_fields"]
+    assert fields["dga_classification"]["required"] is False
+    assert fields["iso27001_controls"]["type"] == "list"
+    schema_text = schema_path.read_text(encoding="utf-8")
+    assert "A.5.12" in schema_text
+    assert "maps to 2022 A.5.12" in schema_text
+    assert fields["dmbok_area"]["required"] is False
+
+
 def test_example_regex_overrides_passes_validation():
     """config/regex_overrides.example.yaml must pass regex_patterns validation."""
     from config.plugin_validator import validate_plugin_file

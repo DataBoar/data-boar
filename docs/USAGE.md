@@ -76,7 +76,7 @@ uv run python main.py --demo
 - Prepares `/tmp/data_boar_demo/` (platform temp dir + `data_boar_demo/`) with `demo.config.yaml`, synthetic corpus, `reports/`, `audit_logs/`, and `audit_results.db`, then runs an initial scan and keeps the dashboard on **`127.0.0.1`** with plaintext HTTP.
 - **Audit trail (#1190):** with RBAC inactive (demo default), `GET /logs/{session_id}` is reachable like `/findings` — no per-run API key. To lock downloads, set `api.require_api_key: true` (any tier) or enable Pro+ `api.rbac` with `audit_logs.read`.
 - **Output:** Console banner with workspace path and dashboard URL (default port **8088**). Temp tree is removed when the process exits.
-- See also [QUICKSTART.md](../QUICKSTART.md) (*Caminho 0*) and `man 1 data-boar` (`--demo`).
+- See also [QUICKSTART.md](../QUICKSTART.md) (*Path 0*) and `man 1 data-boar` (`--demo`).
 
 ## One-shot audit (no `--web`)
 

@@ -108,7 +108,7 @@ PyPI installs expose two **first-class** console entry points (same package, sam
 - **Bugs and features:** Open an issue using the [Bug report](.github/ISSUE_TEMPLATE/bug_report.md) or [Feature request](.github/ISSUE_TEMPLATE/feature_request.md) templates.
 - **Security:** Do not post exploit details publicly. Use the [Security issue](.github/ISSUE_TEMPLATE/security.md) template (high-level only) or the process in [SECURITY.md](SECURITY.md).
 - **Planning orientation:** [docs/plans/PLANS_HUB.md](docs/plans/PLANS_HUB.md) lists every `PLAN_*.md` (open + completed) with short summaries—use it to see scope and intent before diving into [docs/plans/PLANS_TODO.md](docs/plans/PLANS_TODO.md). If you add or archive a plan file, run `python scripts/plans_hub_sync.py --write` and commit the updated hub (pre-commit enforces `--check`).
-- **Pull requests:** Use the [PR template](.github/PULL_REQUEST_TEMPLATE.md). Prefer **`.\scripts\check-all.ps1`** before push (full gate: plans dashboard, pre-commit, pytest with warnings as errors)—see [docs/ops/README.md](docs/ops/README.md) § *Before you open a PR*. At minimum: tests pass (`uv run pytest -v -W error`; see [docs/TESTING.md](docs/TESTING.md)), lint passes (`uv run ruff check .` / pre-commit), and docs/README are updated when behaviour or setup changes. **Private layout template (tracked):** copy from **`docs/private.example/`** into gitignored **`docs/private/`** per [docs/PRIVATE_OPERATOR_NOTES.md](docs/PRIVATE_OPERATOR_NOTES.md).
+- **Pull requests:** Use the [PR template](.github/PULL_REQUEST_TEMPLATE.md). Prefer **`.\scripts\check-all.ps1`** before push (full gate: plans dashboard, pre-commit, pytest with warnings as errors)—see [docs/ops/README.md](docs/ops/README.md) § *Before you open a PR*. At minimum: tests pass (`uv run pytest -v -W error`; see [docs/TESTING.md](docs/TESTING.md)), lint passes (`uv run ruff check .` / pre-commit), and docs/README are updated when behaviour or setup changes. **Private layout template (tracked):** copy from **`docs/private.example/`** into gitignored **`docs/private/`** per [docs/PRIVATE_OPERATOR_NOTES.md](docs/PRIVATE_OPERATOR_NOTES.md). GitHub merge rules: **[Pull Request requirements](#pull-request-requirements)** and [docs/ops/BRANCH_PROTECTION.md](docs/ops/BRANCH_PROTECTION.md).
 
 ### Cursor session keywords vs application CLI
 
@@ -147,6 +147,18 @@ Cursor encodes this in **`.cursor/rules/git-pr-sync-before-advice.mdc`**. See al
 - **Commit locally as you go** on a feature branch (meaningful checkpoints or coherent batches—see [docs/ops/COMMIT_AND_PR.md](docs/ops/COMMIT_AND_PR.md) ([pt-BR](docs/ops/COMMIT_AND_PR.pt_BR.md)), **AGENTS.md**, `.cursor/rules/execution-priority-and-pr-batching.mdc`). Large **uncommitted** trees make conflicts and review harder at PR/release time.
 - **Merge or rebase `main` into your branch before opening a PR.** Run `git fetch origin main` then `git merge origin/main` (or `git rebase origin/main`) and fix any conflicts locally. That way the PR stays mergeable and reviewers see a clean diff. Repeat **during** long branches, not only at the end.
 - **`report/generator.py`:** Sheet-writing logic lives in `_write_excel_sheets` and helpers (`_build_report_info`, `_build_executive_summary_rows`, etc.). When adding or changing Excel sheets, update those helpers rather than inlining logic in `generate_report`. That keeps the same structure as `main` and avoids the merge conflicts we had when main had inlined code and the branch had the refactor.
+
+## Pull Request requirements
+
+GitHub **rulesets** plus classic branch protection apply to **`main`**. This section is the contributor view; the operator snapshot (classic vs rulesets, exact check names, heat model) is [docs/ops/BRANCH_PROTECTION.md](docs/ops/BRANCH_PROTECTION.md) ([pt-BR](docs/ops/BRANCH_PROTECTION.pt_BR.md)).
+
+- **Required status checks** (merge-blocking, ruleset `main-gate-pii`): **Test (Python 3.12)**, **Test (Python 3.13)**, **Test (Python 3.14)**.
+- **Signed commits** are required (classic protection and ruleset `restriction baseline`). Dependabot cannot push under that rule — maintainers open a signed supersede PR ([#1419](https://github.com/DataBoar/data-boar/issues/1419)).
+- **Approving reviews** are **not** required (`required_approving_review_count: 0`). [`.github/CODEOWNERS`](.github/CODEOWNERS) exists for PII/security gate paths; the ruleset does **not** currently require code-owner review.
+- **Lint, Bandit, Windows pytest, Semgrep, CodeQL, Sonar, Zizmor** usually run on the PR. Treat a red job as a stop even when GitHub would still allow merge. **`ZIZMOR_ENFORCE=true`** fails the Zizmor job on workflow-path changes; that job is **not** a required check.
+- **Before you push:** run **`./scripts/check-all.sh`** or **`.\scripts\check-all.ps1`**. Merge helpers: [docs/ops/COMMIT_AND_PR.md](docs/ops/COMMIT_AND_PR.md), `scripts/pr-merge-when-green.ps1`.
+
+Do **not** change GitHub protection settings from a docs PR. If the live UI disagrees with the runbook, re-query `gh api` and update the runbook.
 
 ## Code and docs
 
@@ -189,6 +201,7 @@ Before tagging a **stable release**, maintainers should:
 - **[docs/TESTING.md](docs/TESTING.md)** ([pt-BR](docs/TESTING.pt_BR.md)) — Test modules, CI, SonarQube.
 - **[docs/TOPOLOGY.md](docs/TOPOLOGY.md)** ([pt-BR](docs/TOPOLOGY.pt_BR.md)) — Application topology (modules, classes, data flow).
 - **[docs/ops/COMMIT_AND_PR.md](docs/ops/COMMIT_AND_PR.md)** ([pt-BR](docs/ops/COMMIT_AND_PR.pt_BR.md)) — Commit and PR automation.
+- **[docs/ops/BRANCH_PROTECTION.md](docs/ops/BRANCH_PROTECTION.md)** ([pt-BR](docs/ops/BRANCH_PROTECTION.pt_BR.md)) — What GitHub requires on `main`.
 - **[docs/COMPLIANCE_FRAMEWORKS.md](docs/COMPLIANCE_FRAMEWORKS.md)** ([pt-BR](docs/COMPLIANCE_FRAMEWORKS.pt_BR.md)) — Compliance labels and extensibility.
 - **[docs/COPYRIGHT_AND_TRADEMARK.md](docs/COPYRIGHT_AND_TRADEMARK.md)** ([pt-BR](docs/COPYRIGHT_AND_TRADEMARK.pt_BR.md)) — Copyright and trademark (making it official, registries). [NOTICE](NOTICE) for project notice.
 - Full doc index: [docs/README.md](docs/README.md) ([pt-BR](docs/README.pt_BR.md)).

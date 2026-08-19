@@ -68,7 +68,7 @@ Navigation map for **eleven** reader types. Full doc index: [README.md](README.m
 | **Trail** | [compliance-samples/README.md](compliance-samples/README.md) → [COMPLIANCE_METHODOLOGY.md](COMPLIANCE_METHODOLOGY.md) → [REPORTS_AND_COMPLIANCE_OUTPUTS.md](REPORTS_AND_COMPLIANCE_OUTPUTS.md) → [use-cases/USE_CASES_HUB.md](use-cases/USE_CASES_HUB.md) |
 | **Skip** | Root README marketing block (use frameworks doc instead) |
 | **Overlap** | DPO (norm tags); CISO (security controls) |
-| **Planned** | Privacy management standards primer (track GitHub **#589**); primers hub (**#593**) |
+| **Shipped** | Privacy management standards primer and primers hub — start at [hubs/INDEX.md](hubs/INDEX.md) (#589 and #593 closed) |
 
 ## Developer / integrator
 

@@ -10,7 +10,7 @@
 
 **LGPD — real-world witness report (ISP field visit, Brazil):** [English](docs/LGPD_WITNESS_REPORT_NIO_FIELD_VISIT_2026.md) · [Português (Brasil)](docs/LGPD_WITNESS_REPORT_NIO_FIELD_VISIT_2026.pt_BR.md)
 
-**Português (Brasil):** [README.pt_BR.md](README.pt_BR.md) · [docs/USAGE.pt_BR.md](docs/USAGE.pt_BR.md) · → [Audience guide](docs/AUDIENCE_GUIDE.md) — who should read which docs · **5 min (pt-BR):** [QUICKSTART.md](QUICKSTART.md)
+**Português (Brasil):** [README.pt_BR.md](README.pt_BR.md) · [docs/USAGE.pt_BR.md](docs/USAGE.pt_BR.md) · → [Audience guide](docs/AUDIENCE_GUIDE.md) — who should read which docs · **5 min:** [QUICKSTART.md](QUICKSTART.md) ([pt-BR](QUICKSTART.pt_BR.md))
 
 ---
 

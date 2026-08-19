@@ -1,0 +1,110 @@
+# Malaysia — Personal Data Protection Act 2010 (Act 709)
+# as amended by the Personal Data Protection (Amendment) Act 2024 (Act A1727)
+# Royal Assent 9 Oct 2024; gazette 17 Oct 2024.
+# Phased commencement (P.U. (B) 522): 1 Jan / 1 Apr / 1 Jun 2025 — all in force.
+#
+# NOT LEGAL ADVICE. Technical starting point for inventory. Does NOT certify
+# Commissioner registration, DPO notification, or cross-border adequacy.
+#
+# Authority: Department of Personal Data Protection (Commissioner).
+# Amendment 2024: "data user" → data controller; DPO for qualified
+# controllers/processors; mandatory personal-data-breach notice to the
+# Commissioner and affected individuals; data portability; direct security
+# duties on processors; biometric data added to sensitive personal data.
+# Revalidate current Commissioner guidelines (including cross-border).
+#
+# MyKad / NRIC is commonly printed as YYMMDD-PB-####. A formatted
+# six-two-four matcher is included. No bare 12-digit matcher (high FP).
+# No querystring geo-coordinate key (PII seed gate).
+#
+# English is the primary inventory language. Malay terms are optional later.
+#
+# NOTE — recommendation_overrides use distinctive Amd.2024 (role) patterns.
+# Do not add a bare "Malaysia PDPA" catch-all: _find_override_row is bidirectional.
+#
+# How to use:
+#   regex_overrides_file: path/to/compliance-sample-malaysia_pdpa.yaml
+#   ml_patterns_file:     path/to/compliance-sample-malaysia_pdpa.yaml
+#   Merge recommendation_overrides into report.recommendation_overrides.
+
+regex:
+  - name: "MY_MYKAD_FORMATTED"
+    pattern: "\\b\\d{6}-\\d{2}-\\d{4}\\b"
+    norm_tag: "Malaysia PDPA Amd.2024 (personal data — MyKad)"
+
+  - name: "MY_FIELD_MYKAD_LABEL"
+    pattern: "(?i)(?:^|_|\b)(mykad|nric[_\\s]?my|malaysia[_\\s]?(?:ic|nric)|malaysian[_\\s]?(?:ic|nric|id))\\w*"
+    norm_tag: "Malaysia PDPA Amd.2024 (personal data — MyKad)"
+
+  - name: "MY_FIELD_HEALTH_LABEL"
+    pattern: "(?i)(?:^|_|\b)(health[_\\s]?data[_\\s]?my|medical[_\\s]?(?:record|information)[_\\s]?my|patient[_\\s]?record[_\\s]?my)\\w*"
+    norm_tag: "Malaysia PDPA Amd.2024 (sensitive — health)"
+
+  - name: "MY_FIELD_HEALTH_GENERIC_LABEL"
+    pattern: "(?i)(?:^|_|\b)(medical[_\\s]?record|patient[_\\s]?record|health[_\\s]?data)\\w*"
+    norm_tag: "Malaysia PDPA Amd.2024 (sensitive — health)"
+
+  - name: "MY_FIELD_BIOMETRIC_LABEL"
+    pattern: "(?i)(?:^|_|\b)(biometric[_\\s]?(?:data|template)|fingerprint[_\\s]?my|face[_\\s]?print[_\\s]?my)\\w*"
+    norm_tag: "Malaysia PDPA Amd.2024 (sensitive — biometric)"
+
+  - name: "MY_PDPA_JSON_LAT_PRECISION"
+    pattern: "(?i)[\"']lat[\"']\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\b"
+    norm_tag: "Malaysia PDPA Amd.2024 (personal data — geolocation)"
+
+  - name: "MY_PDPA_JSON_LNG_PRECISION"
+    pattern: "(?i)[\"'](?:lng|lon)[\"']\\s*:\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}\\b"
+    norm_tag: "Malaysia PDPA Amd.2024 (personal data — geolocation)"
+
+  - name: "MY_PDPA_LOCATION_CSV_PAIR"
+    pattern: "(?i)\\blocation\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*,\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "Malaysia PDPA Amd.2024 (personal data — geolocation)"
+
+terms:
+  - { text: "personal data", label: sensitive }
+  - { text: "data controller", label: sensitive }
+  - { text: "data processor", label: sensitive }
+  - { text: "data protection officer", label: sensitive }
+  - { text: "personal data breach", label: sensitive }
+  - { text: "data portability", label: sensitive }
+  - { text: "sensitive personal data", label: sensitive }
+  - { text: "department of personal data protection", label: sensitive }
+  - { text: "mykad", label: sensitive }
+  - { text: "nric", label: sensitive }
+  - { text: "medical record", label: sensitive }
+  - { text: "biometric data", label: sensitive }
+  - { text: "health data", label: sensitive }
+
+  - { text: "product_id", label: non_sensitive }
+  - { text: "item_code", label: non_sensitive }
+  - { text: "session_log", label: non_sensitive }
+  - { text: "debug_output", label: non_sensitive }
+
+recommendation_overrides:
+  - norm_tag_pattern: "Malaysia PDPA Amd.2024 (sensitive — health)"
+    base_legal: "Malaysia PDPA 2010 as amended by Act A1727 (2024; all 2025 phases in force) — health data is sensitive personal data. DPO and breach-notice duties may apply. Commissioner: Department of Personal Data Protection."
+    risk: "Health records are a statutory sensitive category."
+    recommendation: "Verify a lawful basis and security controls. Confirm DPO appointment and breach-notification workflow. Consult counsel. Not a legal conclusion."
+    priority: "ALTA"
+    relevant_for: "DPO, legal, CISO"
+
+  - norm_tag_pattern: "Malaysia PDPA Amd.2024 (sensitive — biometric)"
+    base_legal: "Malaysia PDPA Amendment 2024 — biometric data is included in sensitive personal data."
+    risk: "Biometric templates are hard to rotate if leaked."
+    recommendation: "Minimize biometric storage. Confirm purpose limitation. Consult counsel. Not a legal conclusion."
+    priority: "ALTA"
+    relevant_for: "DPO, legal, CISO"
+
+  - norm_tag_pattern: "Malaysia PDPA Amd.2024 (personal data — MyKad)"
+    base_legal: "Malaysia PDPA 2010 as amended 2024 — a MyKad / NRIC identifies a natural person. Formatted YYMMDD-PB-#### is matched; a bare 12-digit matcher is intentionally omitted (high false-positive rate)."
+    risk: "National-ID fields identify the data subject."
+    recommendation: "Minimize ID storage. Confirm controller/processor roles and any Commissioner notice. Consult counsel. Not a legal conclusion."
+    priority: "ALTA"
+    relevant_for: "DPO, legal, CISO, operations"
+
+  - norm_tag_pattern: "Malaysia PDPA Amd.2024 (personal data — geolocation)"
+    base_legal: "Malaysia PDPA 2010 as amended 2024 — precise geolocation can identify or make identifiable a natural person."
+    risk: "Precise coordinates can track the data subject."
+    recommendation: "Minimize stored location precision. Consult counsel. Heuristic inventory — not a legal conclusion."
+    priority: "MÉDIA"
+    relevant_for: "DPO, product, legal"

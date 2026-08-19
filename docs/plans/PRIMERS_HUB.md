@@ -13,7 +13,7 @@ Educational **plan-tier** documents that explain how Data Boar aligns with exter
 | Primer | Summary |
 | ------ | ------- |
 | [PRIVACY_MANAGEMENT_STANDARDS_PRIMER.md](PRIVACY_MANAGEMENT_STANDARDS_PRIMER.md) | ISO/IEC 27701, ISO/IEC 27018, NIST Privacy Framework |
-| HEALTH_SECTOR_COMPLIANCE_PRIMER.md *(planned — #591)* | HIPAA/PHI, ANS, ANVISA, CFM |
+| [HEALTH_SECTOR_COMPLIANCE_PRIMER.md](HEALTH_SECTOR_COMPLIANCE_PRIMER.md) | HIPAA/PHI, ANS, ANVISA, CFM |
 | GLOBAL_PRIVACY_REGULATIONS_PRIMER.md *(planned — #600)* | PIPEDA, POPIA, APPI, Vietnam PDPD, FELCA |
 
 ## Governance and risk
@@ -28,19 +28,19 @@ Educational **plan-tier** documents that explain how Data Boar aligns with exter
 
 | Primer | Summary |
 | ------ | ------- |
-| SOC2_COMPLIANCE_PRIMER.md *(planned — #598)* | SOC 2 Privacy Trust Services Criteria |
+| [SOC2_COMPLIANCE_PRIMER.md](SOC2_COMPLIANCE_PRIMER.md) | SOC 2 Privacy Trust Services Criteria |
 
 ## Financial sector
 
 | Primer | Summary |
 | ------ | ------- |
-| FINANCIAL_SECTOR_COMPLIANCE_PRIMER.md *(planned — #590)* | PCI DSS v4.0, SOX, BACEN CMN 4.893/2021 |
+| [FINANCIAL_SECTOR_COMPLIANCE_PRIMER.md](FINANCIAL_SECTOR_COMPLIANCE_PRIMER.md) | PCI DSS v4.0, SOX, BACEN CMN 4.893/2021 |
 
 ## AI and emerging tech
 
 | Primer | Summary |
 | ------ | ------- |
-| AI_COMPLIANCE_PRIMER.md *(planned — #592)* | EU AI Act, ISO/IEC 42001, NIST AI RMF |
+| [AI_COMPLIANCE_PRIMER.md](AI_COMPLIANCE_PRIMER.md) | EU AI Act, ISO/IEC 42001, NIST AI RMF |
 
 ## Technical / onboarding primers (`docs/primers/`)
 

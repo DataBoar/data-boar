@@ -1,0 +1,128 @@
+# Brazil EAD — LGPD Art. 14 + ECA (Lei 8.069/1990) educational context
+# In force (LGPD): August 2021
+#
+# NOT LEGAL ADVICE. Technical inventory / triage only — not age verification,
+# not a legal conclusion, and not ANPD or MEC certification.
+#
+# Complements (do not replace):
+#   - compliance-sample-lgpd.yaml                 — general Brazilian PII (incl. CPF)
+#   - compliance-sample-brazil_anpd_res2_2022.yaml — ANPD Res. 2/2022 Art. 14 mechanics
+#   - compliance-sample-brazil_felca.yaml         — FELCA digital-platform design
+# Built-in minor heuristics: docs/MINOR_DETECTION.md (DOB_POSSIBLE_MINOR).
+# US education records: compliance-sample-us_ferpa.yaml (do not mix jurisdictions).
+#
+# Scope: distance-learning (EAD) and school/LMS exports in Brazil — student IDs
+# (RA / matrícula), .edu.br mailboxes, educational CPF *field* labels, grades and
+# transcripts. LGPD Art. 14 requires specific legal-guardian consent for children
+# and adolescents; ECA (Lei 8.069/1990) adds integral protection. This pack does
+# not validate consent at runtime.
+#
+# NOTE — CPF: a bare CPF digit pattern is already in the LGPD sample / built-in
+# detector. Repeating \d{3}.\d{3}.\d{3}-\d{2} here would be the same high-FP
+# class as a bare 8-digit ISPB. This sample only flags CPF when an educational
+# field keyword is present. Compound LMS headers (cpf_aluno_nome) use \\w*
+# after the educational token — a trailing \\b misses underscore suffixes
+# (same class as #1288 criminal_records_consulted_at).
+#
+# NOTE — recommendation_overrides: do NOT use a bare "LGPD Art. 14" pattern.
+# _find_override_row is bidirectional substring match; that prefix hijacks the
+# built-in DOB_POSSIBLE_MINOR tag ("LGPD Art. 14 – possible minor data; GDPR Art. 8").
+#
+# How to use:
+#   regex_overrides_file: path/to/compliance-sample-br_ead_lgpd_art14.yaml
+#   ml_patterns_file:     path/to/compliance-sample-br_ead_lgpd_art14.yaml
+#   Merge recommendation_overrides into report.recommendation_overrides.
+
+regex:
+  - name: "RA_EAD"
+    # Registro de Aluno — keyword + 6–12 digits (not a bare "RA" token).
+    pattern: "(?i)\\b(?:ra|registro[_\\s]?de[_\\s]?aluno)\\s*[:\\-]?\\s*\\d{6,12}\\b"
+    norm_tag: "LGPD Art. 14 – student ID (RA)"
+
+  - name: "MATRICULA_EDU"
+    pattern: "(?i)\\bmatr[ií]cula\\s*[:\\-]?\\s*\\d{5,15}\\b"
+    norm_tag: "LGPD Art. 14 – student enrollment ID"
+
+  - name: "EMAIL_EDU_BR"
+    pattern: "(?i)[a-zA-Z0-9._%+\\-]+@[a-zA-Z0-9.\\-]+\\.edu\\.br"
+    norm_tag: "LGPD Art. 14 – institutional edu email (BR)"
+
+  - name: "CPF_STUDENT_CONTEXT"
+    # Field labels (optional \\w* suffix for cpf_aluno_nome) or keyword + CPF shape.
+    # Not a standalone CPF matcher. (?!\\w) after digits; no trailing \\b on labels.
+    pattern: "(?i)(?:(?:^|_|\\b)(?:cpf[_\\s-]?(?:aluno|estudante|menor|responsavel)|(?:aluno|estudante|menor)[_\\s-]?cpf)\\w*|\\b(?:aluno|estudante|matricula)[^\\n]{0,32}cpf\\s*[:\\-]?\\s*\\d{3}[.\\s]?\\d{3}[.\\s]?\\d{3}[-\\s]?\\d{2}\\b)"
+    norm_tag: "LGPD Art. 14 – CPF em contexto educacional"
+
+terms:
+  # EAD / school context (PT-BR primary). Prefer distinctive phrases over
+  # ultra-generic tokens (nota, série, eca, tutor) that fire outside education.
+  - { text: "aluno", label: sensitive }
+  - { text: "aluna", label: sensitive }
+  - { text: "estudante", label: sensitive }
+  - { text: "matrícula", label: sensitive }
+  - { text: "registro de aluno", label: sensitive }
+  - { text: "responsável legal", label: sensitive }
+  - { text: "menor de idade", label: sensitive }
+  - { text: "data de nascimento", label: sensitive }
+  - { text: "rendimento escolar", label: sensitive }
+  - { text: "histórico escolar", label: sensitive }
+  - { text: "nota escolar", label: sensitive }
+  - { text: "aluno aprovado", label: sensitive }
+  - { text: "aluno reprovado", label: sensitive }
+  - { text: "série escolar", label: sensitive }
+  - { text: "turma ead", label: sensitive }
+  - { text: "polo ead", label: sensitive }
+  - { text: "curso ead", label: sensitive }
+  - { text: "estatuto da criança e do adolescente", label: sensitive }
+  - { text: "criança", label: sensitive }
+  - { text: "adolescente", label: sensitive }
+  - { text: "tutor ead", label: sensitive }
+  - { text: "tutora ead", label: sensitive }
+  - { text: "certificado escolar", label: sensitive }
+  - { text: "e-mail institucional", label: sensitive }
+
+  # EN — exported reports / mixed LMS databases
+  - { text: "student record", label: sensitive }
+  - { text: "academic record", label: sensitive }
+  - { text: "legal guardian", label: sensitive }
+  - { text: "date of birth", label: sensitive }
+  - { text: "student enrollment", label: sensitive }
+  - { text: "grade level", label: sensitive }
+  - { text: "course completion", label: sensitive }
+  - { text: "distance learning", label: sensitive }
+  - { text: "ead student", label: sensitive }
+
+  - { text: "product_id", label: non_sensitive }
+  - { text: "session_token", label: non_sensitive }
+  - { text: "log_entry", label: non_sensitive }
+  - { text: "internal_code", label: non_sensitive }
+  - { text: "test_account", label: non_sensitive }
+
+recommendation_overrides:
+  - norm_tag_pattern: "student ID"
+    base_legal: "LGPD Art. 14 + ECA (Lei 8.069/1990) — identificador de aluno (RA / matrícula) em contexto educacional. Autoridade: ANPD; proteção integral da criança e do adolescente (ECA)."
+    risk: "Identificador de aluno identificado. Em bases EAD/LMS o titular pode ser menor; retenção e acesso ampliado sem base legal qualificada aumentam o risco de tratamento irregular."
+    recommendation: "Confirmar política de retenção e acesso ao RA/matrícula. Se o titular for menor, aplicar LGPD Art. 14 (consentimento específico do responsável legal, minimização, sem repasse a terceiros sem novo consentimento). Consultar DPO. Inventário heurístico — não é conclusão legal."
+    priority: "ALTA"
+    relevant_for: "DPO, jurídico, EdTech, secretaria acadêmica, ANPD"
+
+  - norm_tag_pattern: "institutional edu email"
+    base_legal: "LGPD Art. 14 + ECA (Lei 8.069/1990) — e-mail institucional .edu.br pode identificar aluno ou responsável em ambiente educacional."
+    risk: "Caixa ou campo de e-mail educacional identificado. Ambientes .edu.br frequentemente misturam dados de menores, responsáveis e docentes."
+    recommendation: "Tratar o endereço como identificador pessoal. Verificar se a caixa pertence a menor e se há consentimento do responsável quando Art. 14 se aplica. Restringir exportes e listas de distribuição. Consultar DPO."
+    priority: "ALTA"
+    relevant_for: "DPO, jurídico, EdTech, TI acadêmica"
+
+  - norm_tag_pattern: "student enrollment ID"
+    base_legal: "LGPD Art. 14 + ECA (Lei 8.069/1990) — número de matrícula em contexto educacional. Autoridade: ANPD; proteção integral da criança e do adolescente (ECA)."
+    risk: "Número de matrícula identificado. Em bases EAD/LMS o titular pode ser menor; retenção e acesso ampliado sem base legal qualificada aumentam o risco de tratamento irregular."
+    recommendation: "Confirmar se o titular é menor (LGPD Art. 14). Aplicar minimização e política de retenção. Sem repasse a terceiros sem novo consentimento do responsável. Consultar DPO. Inventário heurístico — não é conclusão legal."
+    priority: "ALTA"
+    relevant_for: "DPO, jurídico, EdTech, secretaria acadêmica, ANPD"
+
+  - norm_tag_pattern: "CPF em contexto educacional"
+    base_legal: "LGPD Art. 14 + ECA (Lei 8.069/1990) — CPF em campo educacional (aluno/estudante/menor/responsável). Em vigor (LGPD) ago 2021. Autoridade: ANPD."
+    risk: "CPF em contexto educacional identificado. Se o titular for menor, Art. 14 exige consentimento específico e destacado do responsável legal; coleta mínima; sem repasse a terceiros sem novo consentimento. ECA complementa com proteção integral."
+    recommendation: "Verificar se o titular é menor. Se for: (1) consentimento específico e destacado do responsável legal; (2) coleta mínima necessária; (3) não repassar a terceiros sem novo consentimento. Acionar DPO antes de qualquer tratamento ampliado. Inventário heurístico — não é verificação de idade nem conclusão legal."
+    priority: "CRÍTICA"
+    relevant_for: "DPO, encarregado LGPD, jurídico, EdTech, produto, ANPD"
