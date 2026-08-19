@@ -40,7 +40,7 @@ Educational **plan-tier** documents that explain how Data Boar aligns with exter
 
 | Primer | Summary |
 | ------ | ------- |
-| AI_COMPLIANCE_PRIMER.md *(planned — #592)* | EU AI Act, ISO/IEC 42001, NIST AI RMF |
+| [AI_COMPLIANCE_PRIMER.md](AI_COMPLIANCE_PRIMER.md) | EU AI Act, ISO/IEC 42001, NIST AI RMF |
 
 ## Technical / onboarding primers (`docs/primers/`)
 
