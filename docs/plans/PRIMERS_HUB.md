@@ -34,7 +34,7 @@ Educational **plan-tier** documents that explain how Data Boar aligns with exter
 
 | Primer | Summary |
 | ------ | ------- |
-| FINANCIAL_SECTOR_COMPLIANCE_PRIMER.md *(planned — #590)* | PCI DSS v4.0, SOX, BACEN CMN 4.893/2021 |
+| [FINANCIAL_SECTOR_COMPLIANCE_PRIMER.md](FINANCIAL_SECTOR_COMPLIANCE_PRIMER.md) | PCI DSS v4.0, SOX, BACEN CMN 4.893/2021 |
 
 ## AI and emerging tech
 
