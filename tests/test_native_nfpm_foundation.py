@@ -108,6 +108,25 @@ def test_cp314t_presence_does_not_unlock_enterprise_gates() -> None:
         assert "pro_prefilter_accel" in desc
 
 
+def test_populate_script_encodes_1408_traps() -> None:
+    """Recipe-proof PoC traps must stay in the wheelhouse populate path (#1408)."""
+    from pathlib import Path
+
+    text = (
+        Path(__file__).resolve().parents[1]
+        / "scripts"
+        / "native-nfpm-populate-staging.sh"
+    ).read_text(encoding="utf-8")
+    assert "DISABLE_SQLALCHEMY_CEXT=1" in text
+    assert "sqlalchemy" in text and "*.so" in text
+    assert "EXTERNALLY-MANAGED" in text
+    assert "restore EXTERNALLY-MANAGED" in text
+    assert "chmod 0755" in text
+    assert "wheelhouse" in text.lower()
+    assert "apply_wheelhouse_v1.sh" in text
+    assert "not a publish" in text.lower()
+
+
 def test_committed_generated_yaml_files_exist() -> None:
     names = {
         "data-boar.yaml",

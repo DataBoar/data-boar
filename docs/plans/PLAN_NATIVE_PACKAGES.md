@@ -1,12 +1,12 @@
-# Plan: Native OS packages — interpreter ownership, nfpm, and Void xbps (#1406 / #1403 / #1437 / #1404)
+# Plan: Native OS packages — interpreter ownership, nfpm, Void xbps, and Release assets (#1406 / #1403 / #1437 / #1404 / #1408)
 
-<!-- plans-hub-summary: Native/Enterprise embeds CPython (cp314t); ADR-0084 Accepted; Linux nfpm CI (#1437) + Void xbps overlay (#1404, Podman) + Windows MSI/winget (#1467, blocked by Windows CI #1427 / PLAN_WINDOWS_CI_ENABLEMENT) + macOS Homebrew (#1425); commercial protection = worker caps (#551), not interpreter presence. -->
+<!-- plans-hub-summary: Native/Enterprise embeds CPython (cp314t); ADR-0084 Accepted; Linux nfpm CI (#1437) + Release assets (#1408) + Void xbps overlay (#1404, Podman) + Windows MSI/winget (#1467, blocked by Windows CI #1427 / PLAN_WINDOWS_CI_ENABLEMENT) + macOS Homebrew (#1425); commercial protection = worker caps (#551), not interpreter presence. -->
 
 **Status:** In progress
 **Date:** 2026-08-12
 **Authors:** Fabio Leitao (operator); Cursor executor
 **Priority:** H1 (packaging / Enterprise air-gap channel)
-**GitHub:** [#1406](https://github.com/DataBoar/data-boar/issues/1406) · [#1403](https://github.com/DataBoar/data-boar/issues/1403) (foundation ✅) · [#1437](https://github.com/DataBoar/data-boar/issues/1437) (CI build) · [#1404](https://github.com/DataBoar/data-boar/issues/1404) (xbps / Podman Void) · **Related:** [#1182](https://github.com/DataBoar/data-boar/issues/1182) · [#1401](https://github.com/DataBoar/data-boar/issues/1401) · [#551](https://github.com/DataBoar/data-boar/issues/551) · [#1467](https://github.com/DataBoar/data-boar/issues/1467) (MSI/winget) · [#1425](https://github.com/DataBoar/data-boar/issues/1425) (Homebrew) · [#1427](https://github.com/DataBoar/data-boar/issues/1427) (Windows CI blocker) · [#1478](https://github.com/DataBoar/data-boar/issues/1478) (ADR-0085 brew honesty) · [#1541](https://github.com/DataBoar/data-boar/issues/1541) (this cross-link refresh)
+**GitHub:** [#1406](https://github.com/DataBoar/data-boar/issues/1406) · [#1403](https://github.com/DataBoar/data-boar/issues/1403) (foundation ✅) · [#1437](https://github.com/DataBoar/data-boar/issues/1437) (CI build) · [#1408](https://github.com/DataBoar/data-boar/issues/1408) (Release assets) · [#1404](https://github.com/DataBoar/data-boar/issues/1404) (xbps / Podman Void) · **Related:** [#1182](https://github.com/DataBoar/data-boar/issues/1182) · [#1401](https://github.com/DataBoar/data-boar/issues/1401) · [#551](https://github.com/DataBoar/data-boar/issues/551) · [#1405](https://github.com/DataBoar/data-boar/issues/1405) (signed repo) · [#1467](https://github.com/DataBoar/data-boar/issues/1467) (MSI/winget) · [#1425](https://github.com/DataBoar/data-boar/issues/1425) (Homebrew) · [#1427](https://github.com/DataBoar/data-boar/issues/1427) (Windows CI blocker) · [#1478](https://github.com/DataBoar/data-boar/issues/1478) (ADR-0085 brew honesty) · [#1541](https://github.com/DataBoar/data-boar/issues/1541) (this cross-link refresh)
 **Related:** [ADR-0084](../adr/ADR-0084-native-package-embedded-cpython-by-channel.md) · [ADR-0085](../adr/ADR-0085-install-priority-ladder.md) · [PLAN_WHEELHOUSE_DISTRIBUTION.md](PLAN_WHEELHOUSE_DISTRIBUTION.md) · [PLAN_PACKAGING_EXTRAS.md](PLAN_PACKAGING_EXTRAS.md) · [PLAN_WINDOWS_CI_ENABLEMENT.md](PLAN_WINDOWS_CI_ENABLEMENT.md) (#1427)
 
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md)
@@ -31,7 +31,7 @@ Before writing an nfpm (or equivalent) manifest for native packages (#1403), the
 
 | Surface | Tracker | Status (plan view) |
 | ------- | ------- | ------------------ |
-| **Linux nfpm** (deb/rpm first; apk/pacman later) | [#1403](https://github.com/DataBoar/data-boar/issues/1403) · [#1437](https://github.com/DataBoar/data-boar/issues/1437) | Foundation ✅; CI build 🔄; metal matrix deferred |
+| **Linux nfpm** (deb/rpm first; apk/pacman later) | [#1403](https://github.com/DataBoar/data-boar/issues/1403) · [#1437](https://github.com/DataBoar/data-boar/issues/1437) · [#1408](https://github.com/DataBoar/data-boar/issues/1408) | Foundation ✅; CI build 🔄; Release attach 🔄; metal matrix deferred |
 | **Void xbps** (`void-packages` overlay, runit, Podman) | [#1404](https://github.com/DataBoar/data-boar/issues/1404) | Overlay + generator 🔄; validate in Podman Void (not metal) |
 | **Windows MSI + winget** (embed `cp314` / `cp314t`) | [#1467](https://github.com/DataBoar/data-boar/issues/1467) (canonical; #1471 was a dup) | **Planned** — blocked on Windows CI ([#1427](https://github.com/DataBoar/data-boar/issues/1427): no `windows-latest` job yet) |
 | **macOS Homebrew** (own tap; formula/cask) | [#1425](https://github.com/DataBoar/data-boar/issues/1425) | **Planned** — cheapest missing consumer path; **no** published formula/cask yet |
@@ -72,6 +72,7 @@ Community at 2 workers does **not** harvest free-threaded scale. See [#551](http
 | **1** | Operator accepts ADR-0084 (Status → Accepted) | ✅ |
 | **2** | nfpm foundation (#1403): generated deb/rpm/apk/pacman manifests + connector subpackages + embed metadata | ✅ (merged #1436) |
 | **3** | CI package build (#1437): populate staging with real cp314t + wheelhouse; `nfpm package` deb+rpm; install-smoke; artifacts | 🔄 |
+| **3b** | Publish nfpm packages as product Release assets beside SBOMs (#1408); packager names + SHA256SUMS + `native_packages[]`; hand-built PoC `.deb` never uploaded | 🔄 |
 | **4** | Lab metal validation matrix (5 hosts) + apk/musl/arm64 | ⬜ deferred / separate issues |
 | **4b** | Void xbps overlay (#1404): generated `void-packages` template + runit + Podman validate | 🔄 |
 | **5** | Windows CI job (`windows-latest`) so MSI/winget work is testable (#1427) | 🔄 [PLAN_WINDOWS_CI_ENABLEMENT.md](PLAN_WINDOWS_CI_ENABLEMENT.md) — PR in flight; **blocks** #1467 until green on `main` |
@@ -92,6 +93,18 @@ Workflow: [`.github/workflows/native-packages.yml`](../../.github/workflows/nati
 4. Upload `native-packages-x86_64-glibc` artifacts.
 
 **Out of scope for #1437:** apk/musl, arm64, pacman metal, five-host matrix, xbps, signed repo publish.
+
+---
+
+## Release assets (#1408)
+
+On `release: published` / `created`, `attach-release` uploads the **same** nfpm files that CI just built (deb/rpm/apk/pacman, packager filename convention) plus `SHA256SUMS` and a `release-manifest.json` that lists `native_packages[]`. Air-gap steps: [NATIVE_PACKAGE_RELEASE.md](../ops/NATIVE_PACKAGE_RELEASE.md).
+
+Traps from the hand-built recipe-proof PoC stay in `scripts/native-nfpm-populate-staging.sh`: `DISABLE_SQLALCHEMY_CEXT=1` (not `--no-binary` alone), restore `EXTERNALLY-MANAGED`, normalize modes. Layer 1 overlay is `apply_wheelhouse_v1.sh` (#1182). That PoC `.deb` is **not** a publish candidate.
+
+`SHA256SUMS.asc` lands when `NATIVE_PACKAGE_GPG_PRIVATE_KEY` is set (#1405 key ceremony). Signed repo (#1405) indexes **these** files — no rebuild.
+
+**Out of scope for #1408:** musl/arm64 metal, xbps, inventing a signature, publishing the hand-built recipe-proof `.deb`.
 
 ---
 
@@ -121,6 +134,18 @@ Workflow: [`.github/workflows/native-packages.yml`](../../.github/workflows/nati
 - [x] `tests/test_native_nfpm_foundation.py` remains green (generator drift)
 - [ ] CI run green: `.deb` + `.rpm` artifacts + install-smoke (debian / Rocky) — verify on the #1437 PR
 - [ ] Full metal matrix / apk / arm64 (later slices)
+
+## Acceptance (Release assets #1408)
+
+- [x] Pipeline attaches packages to the product Release with packager filename conventions
+- [x] `SHA256SUMS` written in CI; `.asc` only when packaging key secret exists (no fake signature)
+- [x] `release-manifest.json` gains `native_packages[]` (SBOM upload must not drop it)
+- [x] Layer 1 overlay from hosted wheelhouse (#1182); hand-built PoC `.deb` never uploaded
+- [x] `DISABLE_SQLALCHEMY_CEXT=1` + sqlalchemy `*.so` empty + GIL off (populate + smokes)
+- [x] `EXTERNALLY-MANAGED` restored in the delivered tree
+- [x] Staging modes normalized (independent of umask 027)
+- [x] Air-gap verify docs EN + pt-BR
+- [x] #1405 consumes the same files (documented; no rebuild)
 
 ## Acceptance (Void xbps #1404)
 

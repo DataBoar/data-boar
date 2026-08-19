@@ -34,6 +34,8 @@ Empty while the working tree carries **`1.8.0-beta`** (see section below).
 
 - **ADR governance (Phase 1, #1162):** deterministic tests T1/T2/T5/T6 for ADR-0045 (`tests/test_adr_governance_phase1.py`); pre-commit hook `adr-governance-phase1`; plan [PLAN_ADR_GOVERNANCE_ENFORCEMENT.md](docs/plans/PLAN_ADR_GOVERNANCE_ENFORCEMENT.md).
 
+- **Native packages on the product GitHub Release (#1408):** `native-packages.yml` builds deb/rpm/apk/pacman from the wheelhouse populate and, on a `v*` Release, attaches them beside SBOMs with packager filenames, `SHA256SUMS`, and `release-manifest.json` `native_packages[]`. Air-gap: [NATIVE_PACKAGE_RELEASE.md](docs/ops/NATIVE_PACKAGE_RELEASE.md). The hand-built recipe-proof `.deb` is not published.
+
 ---
 
 ## 1.7.4.post12 (published PyPI **2026-07-30 00:42:09 UTC**)

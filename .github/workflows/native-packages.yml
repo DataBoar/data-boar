@@ -1,9 +1,16 @@
-# Build real native packages (deb + rpm) for x86-64 glibc (#1437 / ADR-0084).
+# Build native packages (deb/rpm/apk/pacman) for x86-64 glibc
+# (#1437 / #1408 / ADR-0084).
 #
 # Embeds cp314t (uv / python-build-standalone) + layer-1 wheels from the hosted
-# wheelhouse (#1182). Commercial clause intact: cp314t presence ≠ Enterprise unlock.
+# wheelhouse (#1182) — never free PyPI resolution for layer 1. Commercial
+# clause intact: cp314t presence ≠ Enterprise unlock.
 #
-# Out of scope here: apk/musl, arm64, pacman metal, xbps (#1404), signed repo publish.
+# On v* tags / GitHub Release: attach packages + SHA256SUMS (+ optional
+# SHA256SUMS.asc) beside SBOMs. The signed repo (#1405) consumes these same
+# files without rebuild.
+#
+# Out of scope here: musl/arm64 metal, xbps (#1404), signed index publish (#1405).
+# Hand-built recipe-proof .deb from #1408 must never be uploaded.
 name: Native packages
 
 permissions:
@@ -15,7 +22,9 @@ permissions:
     paths:
       - "packaging/nfpm/**"
       - "scripts/native-nfpm-populate-staging.sh"
+      - "scripts/native_package_release.py"
       - "scripts/generate_nfpm_packages.py"
+      - "scripts/generate_release_manifest.py"
       - "scripts/docker/apply_wheelhouse_v1.sh"
       - "data_boar/**"
       - "core/native_nfpm.py"
@@ -26,12 +35,16 @@ permissions:
     paths:
       - "packaging/nfpm/**"
       - "scripts/native-nfpm-populate-staging.sh"
+      - "scripts/native_package_release.py"
       - "scripts/generate_nfpm_packages.py"
+      - "scripts/generate_release_manifest.py"
       - "scripts/docker/apply_wheelhouse_v1.sh"
       - "data_boar/**"
       - "core/native_nfpm.py"
       - "core/extras_manifest.py"
       - ".github/workflows/native-packages.yml"
+  release:
+    types: [published, created]
   workflow_dispatch:
 
 env:
@@ -46,7 +59,7 @@ env:
 
 jobs:
   build-deb-rpm:
-    name: Build data-boar .deb + .rpm (x86-64 glibc)
+    name: Build data-boar deb/rpm/apk/pacman (x86-64 glibc)
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
@@ -84,7 +97,7 @@ jobs:
           nfpm --version
           rm -rf "${tmp}"
 
-      - name: Package deb + rpm (core data-boar)
+      - name: Package deb rpm apk pacman (core data-boar)
         working-directory: packaging/nfpm
         run: |
           set -euo pipefail
@@ -95,16 +108,22 @@ jobs:
             echo "ERROR: refusing to package placeholder interpreter" >&2
             exit 1
           fi
+          test -f staging/usr/lib/data-boar/python3.14t/lib/python3.14t/EXTERNALLY-MANAGED
           export NFPM_ARCH
-          nfpm package \
-            --config generated/data-boar.yaml \
-            --packager deb \
-            --target "${GITHUB_WORKSPACE}/dist/native-packages/"
-          nfpm package \
-            --config generated/data-boar.yaml \
-            --packager rpm \
-            --target "${GITHUB_WORKSPACE}/dist/native-packages/"
+          for packager in deb rpm apk archlinux; do
+            nfpm package \
+              --config generated/data-boar.yaml \
+              --packager "${packager}" \
+              --target "${GITHUB_WORKSPACE}/dist/native-packages/"
+          done
           ls -lah "${GITHUB_WORKSPACE}/dist/native-packages/"
+
+      - name: SHA256SUMS + packager name convention (#1408)
+        run: |
+          set -euo pipefail
+          python3 scripts/native_package_release.py --dir dist/native-packages normalize-apk
+          python3 scripts/native_package_release.py --dir dist/native-packages names
+          python3 scripts/native_package_release.py --dir dist/native-packages checksums
 
       - name: Upload package artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -145,6 +164,11 @@ jobs:
           test -x /usr/lib/data-boar/python3.14t/bin/python3.14t
           /usr/lib/data-boar/python3.14t/bin/python3.14t -c \
             'import sys; assert sys._is_gil_enabled() is False, sys.version'
+          test -f /usr/lib/data-boar/python3.14t/lib/python3.14t/EXTERNALLY-MANAGED
+          so_count="$(find /usr/lib/data-boar/python3.14t -path '*sqlalchemy*' -name '*.so' | wc -l | tr -d ' ')"
+          test "${so_count}" = "0"
+          /usr/lib/data-boar/python3.14t/bin/python3.14t -c \
+            'import sys, sqlalchemy; assert sys._is_gil_enabled() is False, sys.version'
           /usr/lib/data-boar/python3.14t/bin/python3.14t -m data_boar --version
           /usr/bin/data-boar --version
 
@@ -172,5 +196,106 @@ jobs:
           test -x /usr/lib/data-boar/python3.14t/bin/python3.14t
           /usr/lib/data-boar/python3.14t/bin/python3.14t -c \
             'import sys; assert sys._is_gil_enabled() is False, sys.version'
+          test -f /usr/lib/data-boar/python3.14t/lib/python3.14t/EXTERNALLY-MANAGED
+          so_count="$(find /usr/lib/data-boar/python3.14t -path '*sqlalchemy*' -name '*.so' | wc -l | tr -d ' ')"
+          test "${so_count}" = "0"
+          /usr/lib/data-boar/python3.14t/bin/python3.14t -c \
+            'import sys, sqlalchemy; assert sys._is_gil_enabled() is False, sys.version'
           /usr/lib/data-boar/python3.14t/bin/python3.14t -m data_boar --version
           /usr/bin/data-boar --version
+
+  attach-release:
+    name: Attach native packages to GitHub Release (#1408)
+    needs: [build-deb-rpm, smoke-deb, smoke-rpm]
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      # Helper from the default branch — never the released tag. A collaborator
+      # who can create a tag must not replace native_package_release.py and then
+      # see NATIVE_PACKAGE_GPG_PRIVATE_KEY (that secret is only on sign-release-sums).
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      - name: Download package artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: native-packages-x86_64-glibc
+          path: dist/native-packages
+
+      - name: Merge native_packages into release-manifest.json
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_EVENT_RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_EVENT_RELEASE_TAG_NAME}"
+          python3 scripts/native_package_release.py --dir dist/native-packages normalize-apk
+          python3 scripts/native_package_release.py --dir dist/native-packages names
+          python3 scripts/native_package_release.py --dir dist/native-packages checksums
+          shopt -s nullglob
+          pkg_assets=(
+            dist/native-packages/*.deb
+            dist/native-packages/*.rpm
+            dist/native-packages/*.apk
+            dist/native-packages/*.pkg.tar.zst
+            dist/native-packages/*.pkg.tar.xz
+            dist/native-packages/SHA256SUMS
+          )
+          gh release upload "$TAG" "${pkg_assets[@]}" \
+            --clobber --repo "${{ github.repository }}"
+          # Fail-closed: never upload a synthesized stub (empty files[]).
+          # Download the SBOM/licensing manifest; abort if it is missing.
+          rm -rf /tmp/relman
+          mkdir -p /tmp/relman
+          if ! gh release download "$TAG" --repo "${{ github.repository }}" \
+            --pattern 'release-manifest.json' --dir /tmp/relman; then
+            echo "::error title=release-manifest download failed::Refusing to clobber with an empty stub. Re-run attach-release after the SBOM workflow publishes release-manifest.json."
+            exit 1
+          fi
+          test -s /tmp/relman/release-manifest.json
+          python3 scripts/native_package_release.py --dir dist/native-packages \
+            merge-manifest --manifest /tmp/relman/release-manifest.json
+          gh release upload "$TAG" /tmp/relman/release-manifest.json \
+            --clobber --repo "${{ github.repository }}"
+
+  sign-release-sums:
+    name: Detached-sign SHA256SUMS from trusted ref (#1408)
+    needs: [attach-release]
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      - name: Download package artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: native-packages-x86_64-glibc
+          path: dist/native-packages
+
+      - name: Detached-sign SHA256SUMS when key is configured
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_EVENT_RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
+          NATIVE_PACKAGE_GPG_PRIVATE_KEY: ${{ secrets.NATIVE_PACKAGE_GPG_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_EVENT_RELEASE_TAG_NAME}"
+          python3 scripts/native_package_release.py --dir dist/native-packages names
+          python3 scripts/native_package_release.py --dir dist/native-packages checksums
+          if [[ -f dist/native-packages/SHA256SUMS.asc ]]; then
+            gh release upload "$TAG" dist/native-packages/SHA256SUMS.asc \
+              --clobber --repo "${{ github.repository }}"
+          else
+            echo "::notice title=SHA256SUMS unsigned::NATIVE_PACKAGE_GPG_PRIVATE_KEY unset; #1405 key ceremony signs later. Package bytes stay the same."
+          fi
