@@ -55,5 +55,5 @@ recommendation_overrides:
     base_legal: "LGPD (Brazil) — personal and sensitive data in insurance operations; this tag marks document or field vocabulary for inventory only."
     risk: "Insurance files often combine identifiers, health or financial context, and third-party data; false positives and jurisdictional overlap are common without legal and facts review."
     recommendation: "Pair this inventory output with your LGPD RoPA/legitimate basis mapping and sector-specific obligations. Consult DPO and qualified counsel; do not treat detector labels as regulatory certification."
-    priority: "MEDIA"
+    priority: "MÉDIA"
     relevant_for: "DPO, insurance compliance, IT security, legal counsel"
