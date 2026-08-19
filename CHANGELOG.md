@@ -20,6 +20,8 @@ Empty while the working tree carries **`1.8.0-beta`** (see section below).
 
 ### Included since `1.7.4.post12`
 
+- **Void xbps overlay (#1404):** `void-packages` template generated from `EXTRAS_MANIFEST` (same connector map as nfpm), runit service, Podman/Docker Void `--show` / fail-closed `--build`. Upstream `void-packages` merge remains out of scope.
+
 - **`/logs` auth aligns with RBAC middleware (#1190):** role check in `_authorize_audit_log_download` runs only when `rbac_enforcement_active` (`api.rbac.enabled` and tier allows `dashboard_rbac`). Community/OPEN and Pro+ without RBAC reach `/logs` like `/findings`; lock with `api.require_api_key`. `--demo` no longer provisions or prints a per-run API key (removes clear-text credential in YAML/banner). ADR-0082 Decision 3 amended.
 
 - **Route matrix collector walks nested `include_router` (#1426):** FastAPI **0.139+** stores `include_router` as `_IncludedRouter`; snapshot collector recurses so endpoint-loss detection still works. **`EXPECTED_HTTP_ROUTES` unchanged.**

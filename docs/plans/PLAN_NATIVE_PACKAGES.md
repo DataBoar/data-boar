@@ -1,12 +1,12 @@
-# Plan: Native OS packages — interpreter ownership and nfpm (#1406 / #1403 / #1437)
+# Plan: Native OS packages — interpreter ownership, nfpm, and Void xbps (#1406 / #1403 / #1437 / #1404)
 
-<!-- plans-hub-summary: Native/Enterprise embeds CPython (cp314t); ADR-0084 Accepted; Linux nfpm CI (#1437) + Windows MSI/winget (#1467, blocked by Windows CI #1427 / PLAN_WINDOWS_CI_ENABLEMENT) + macOS Homebrew (#1425); commercial protection = worker caps (#551), not interpreter presence. -->
+<!-- plans-hub-summary: Native/Enterprise embeds CPython (cp314t); ADR-0084 Accepted; Linux nfpm CI (#1437) + Void xbps overlay (#1404, Podman) + Windows MSI/winget (#1467, blocked by Windows CI #1427 / PLAN_WINDOWS_CI_ENABLEMENT) + macOS Homebrew (#1425); commercial protection = worker caps (#551), not interpreter presence. -->
 
 **Status:** In progress
 **Date:** 2026-08-12
 **Authors:** Fabio Leitao (operator); Cursor executor
 **Priority:** H1 (packaging / Enterprise air-gap channel)
-**GitHub:** [#1406](https://github.com/DataBoar/data-boar/issues/1406) · [#1403](https://github.com/DataBoar/data-boar/issues/1403) (foundation ✅) · [#1437](https://github.com/DataBoar/data-boar/issues/1437) (CI build) · **Related:** [#1182](https://github.com/DataBoar/data-boar/issues/1182) · [#1401](https://github.com/DataBoar/data-boar/issues/1401) · [#551](https://github.com/DataBoar/data-boar/issues/551) · [#1404](https://github.com/DataBoar/data-boar/issues/1404) (xbps) · [#1467](https://github.com/DataBoar/data-boar/issues/1467) (MSI/winget) · [#1425](https://github.com/DataBoar/data-boar/issues/1425) (Homebrew) · [#1427](https://github.com/DataBoar/data-boar/issues/1427) (Windows CI blocker) · [#1478](https://github.com/DataBoar/data-boar/issues/1478) (ADR-0085 brew honesty) · [#1541](https://github.com/DataBoar/data-boar/issues/1541) (this cross-link refresh)
+**GitHub:** [#1406](https://github.com/DataBoar/data-boar/issues/1406) · [#1403](https://github.com/DataBoar/data-boar/issues/1403) (foundation ✅) · [#1437](https://github.com/DataBoar/data-boar/issues/1437) (CI build) · [#1404](https://github.com/DataBoar/data-boar/issues/1404) (xbps / Podman Void) · **Related:** [#1182](https://github.com/DataBoar/data-boar/issues/1182) · [#1401](https://github.com/DataBoar/data-boar/issues/1401) · [#551](https://github.com/DataBoar/data-boar/issues/551) · [#1467](https://github.com/DataBoar/data-boar/issues/1467) (MSI/winget) · [#1425](https://github.com/DataBoar/data-boar/issues/1425) (Homebrew) · [#1427](https://github.com/DataBoar/data-boar/issues/1427) (Windows CI blocker) · [#1478](https://github.com/DataBoar/data-boar/issues/1478) (ADR-0085 brew honesty) · [#1541](https://github.com/DataBoar/data-boar/issues/1541) (this cross-link refresh)
 **Related:** [ADR-0084](../adr/ADR-0084-native-package-embedded-cpython-by-channel.md) · [ADR-0085](../adr/ADR-0085-install-priority-ladder.md) · [PLAN_WHEELHOUSE_DISTRIBUTION.md](PLAN_WHEELHOUSE_DISTRIBUTION.md) · [PLAN_PACKAGING_EXTRAS.md](PLAN_PACKAGING_EXTRAS.md) · [PLAN_WINDOWS_CI_ENABLEMENT.md](PLAN_WINDOWS_CI_ENABLEMENT.md) (#1427)
 
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md)
@@ -31,7 +31,8 @@ Before writing an nfpm (or equivalent) manifest for native packages (#1403), the
 
 | Surface | Tracker | Status (plan view) |
 | ------- | ------- | ------------------ |
-| **Linux nfpm** (deb/rpm first; apk/pacman/xbps later) | [#1403](https://github.com/DataBoar/data-boar/issues/1403) · [#1437](https://github.com/DataBoar/data-boar/issues/1437) · [#1404](https://github.com/DataBoar/data-boar/issues/1404) | Foundation ✅; CI build 🔄; metal matrix deferred |
+| **Linux nfpm** (deb/rpm first; apk/pacman later) | [#1403](https://github.com/DataBoar/data-boar/issues/1403) · [#1437](https://github.com/DataBoar/data-boar/issues/1437) | Foundation ✅; CI build 🔄; metal matrix deferred |
+| **Void xbps** (`void-packages` overlay, runit, Podman) | [#1404](https://github.com/DataBoar/data-boar/issues/1404) | Overlay + generator 🔄; validate in Podman Void (not metal) |
 | **Windows MSI + winget** (embed `cp314` / `cp314t`) | [#1467](https://github.com/DataBoar/data-boar/issues/1467) (canonical; #1471 was a dup) | **Planned** — blocked on Windows CI ([#1427](https://github.com/DataBoar/data-boar/issues/1427): no `windows-latest` job yet) |
 | **macOS Homebrew** (own tap; formula/cask) | [#1425](https://github.com/DataBoar/data-boar/issues/1425) | **Planned** — cheapest missing consumer path; **no** published formula/cask yet |
 | **Install ladder honesty** | [ADR-0085](../adr/ADR-0085-install-priority-ladder.md) · [#1478](https://github.com/DataBoar/data-boar/issues/1478) | Recommend only what exists **today** (`pipx`); native / `brew` are **when published** — do not treat `brew install data-boar` as live |
@@ -71,7 +72,8 @@ Community at 2 workers does **not** harvest free-threaded scale. See [#551](http
 | **1** | Operator accepts ADR-0084 (Status → Accepted) | ✅ |
 | **2** | nfpm foundation (#1403): generated deb/rpm/apk/pacman manifests + connector subpackages + embed metadata | ✅ (merged #1436) |
 | **3** | CI package build (#1437): populate staging with real cp314t + wheelhouse; `nfpm package` deb+rpm; install-smoke; artifacts | 🔄 |
-| **4** | Lab metal validation matrix (5 hosts) + apk/musl/arm64 + xbps (#1404) | ⬜ deferred / separate issues |
+| **4** | Lab metal validation matrix (5 hosts) + apk/musl/arm64 | ⬜ deferred / separate issues |
+| **4b** | Void xbps overlay (#1404): generated `void-packages` template + runit + Podman validate | 🔄 |
 | **5** | Windows CI job (`windows-latest`) so MSI/winget work is testable (#1427) | 🔄 [PLAN_WINDOWS_CI_ENABLEMENT.md](PLAN_WINDOWS_CI_ENABLEMENT.md) — PR in flight; **blocks** #1467 until green on `main` |
 | **6** | Windows MSI + winget embed payload (#1467) | ⬜ planned (after #1427) |
 | **7** | macOS Homebrew tap (#1425) | ⬜ planned |
@@ -118,4 +120,16 @@ Workflow: [`.github/workflows/native-packages.yml`](../../.github/workflows/nati
 - [x] Plan + PLANS_TODO + `plans_hub_sync` updated
 - [x] `tests/test_native_nfpm_foundation.py` remains green (generator drift)
 - [ ] CI run green: `.deb` + `.rpm` artifacts + install-smoke (debian / Rocky) — verify on the #1437 PR
-- [ ] Full metal matrix / apk / arm64 / xbps (later slices)
+- [ ] Full metal matrix / apk / arm64 (later slices)
+
+## Acceptance (Void xbps #1404)
+
+- [x] `void-packages` template generated from `EXTRAS_MANIFEST` (same subpackage map as #1403)
+- [x] Runit service `/etc/sv/data-boar/run`; product paths do not call `systemctl`
+- [x] Template stays in this repo (`packaging/void/`); upstream `void-packages` merge out of scope
+- [x] Podman Void validate script (`--show` glibc/musl; `--build` fail-closed without staging)
+- [x] Docs EN + pt-BR (install-by-distro + ops runbook)
+- [ ] `./xbps-src pkg data-boar` green in Podman Void with populated staging (operator / CI show is parse-only)
+- [ ] Finding-count parity vs deb/rpm/apk on the reference corpus after install
+- [ ] musl `--build` when a musl staging tree exists (do not reuse glibc bytes)
+- [x] Target **1.8.x**

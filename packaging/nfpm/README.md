@@ -6,7 +6,7 @@
 
 ## What this directory is
 
-**deb / rpm / apk / archlinux (pacman)** package definitions. **xbps** is [#1404](https://github.com/DataBoar/data-boar/issues/1404) — not here.
+**deb / rpm / apk / archlinux (pacman)** package definitions. **xbps** is [#1404](https://github.com/DataBoar/data-boar/issues/1404) — overlay under [`../void/`](../void/README.md).
 
 | Artifact | Role |
 | -------- | ---- |
@@ -54,4 +54,4 @@ Presence of freethreaded CPython **does not** unlock Enterprise. Runtime gates r
 
 ## Out of scope here
 
-apk/musl + arm64, pacman metal, five-host matrix, xbps, signed repo publish.
+apk/musl + arm64, pacman metal, five-host matrix, signed repo publish. xbps lives in [`../void/`](../void/README.md).
