@@ -1,0 +1,108 @@
+# Void xbps overlay (#1404 / ADR-0084). nfpm cannot emit xbps.
+#
+# generated-check: template stays in sync with EXTRAS_MANIFEST.
+# xbps-src-show: parse the overlay in official Void containers (glibc + musl).
+# Full ./xbps-src pkg is scripts/void-xbps-podman-validate.sh --build (needs staging).
+name: Void xbps
+
+permissions:
+  contents: read
+
+'on':
+  pull_request:
+    branches: [main, master]
+    paths:
+      - "packaging/void/**"
+      - "packaging/init/**"
+      - "packaging/nfpm/native_subpackages.toml"
+      - "scripts/generate_void_xbps_packages.py"
+      - "scripts/void-xbps-podman-validate.sh"
+      - "core/void_xbps.py"
+      - "core/native_nfpm.py"
+      - "core/extras_manifest.py"
+      - "tests/test_void_xbps_foundation.py"
+      - ".github/workflows/void-xbps.yml"
+  push:
+    branches: [main, master]
+    paths:
+      - "packaging/void/**"
+      - "packaging/init/**"
+      - "packaging/nfpm/native_subpackages.toml"
+      - "scripts/generate_void_xbps_packages.py"
+      - "scripts/void-xbps-podman-validate.sh"
+      - "core/void_xbps.py"
+      - "core/native_nfpm.py"
+      - "core/extras_manifest.py"
+      - "tests/test_void_xbps_foundation.py"
+      - ".github/workflows/void-xbps.yml"
+  workflow_dispatch:
+
+jobs:
+  generated-check:
+    name: Generated overlay in sync
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          enable-cache: true
+
+      - name: generate --check + foundation tests
+        run: |
+          set -euo pipefail
+          uv sync --frozen
+          uv run python scripts/generate_void_xbps_packages.py --check
+          uv run pytest tests/test_void_xbps_foundation.py -q
+
+  xbps-src-show:
+    name: xbps-src show (${{ matrix.libc }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - libc: glibc
+            image: ghcr.io/void-linux/void-glibc:latest
+          - libc: musl
+            image: ghcr.io/void-linux/void-musl:latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Overlay template and xbps-src show
+        run: |
+          set -euo pipefail
+          # Official Void images use dash as /bin/sh and do not ship bash.
+          # pipefail is a bashism — keep POSIX set -eu inside the container.
+          docker run --rm -v "${GITHUB_WORKSPACE}:/src:ro" "${{ matrix.image }}" \
+            /bin/sh -c '
+              set -eu
+              xbps-install -Syu
+              # bash: xbps-src shebang #!/bin/bash (images ship dash only).
+              # util-linux: /usr/bin/getopt (xbps-query -o) and runuser.
+              # shadow: useradd. xbps-src refuses to run as root.
+              xbps-install -y git bash util-linux shadow
+              command -v bash >/dev/null
+              command -v getopt >/dev/null
+              command -v useradd >/dev/null
+              command -v runuser >/dev/null
+              useradd -m -U builder
+              WORKDIR="$(mktemp -d)"
+              cd "${WORKDIR}"
+              git clone --depth 1 https://github.com/void-linux/void-packages.git
+              cd void-packages
+              mkdir -p srcpkgs
+              cp -a /src/packaging/void/generated/srcpkgs/data-boar srcpkgs/data-boar
+              while IFS= read -r name; do
+                [ -n "${name}" ] || continue
+                ln -sfn data-boar "srcpkgs/${name}"
+              done < /src/packaging/void/generated/srcpkgs/SUBPACKAGE_LINKS.txt
+              chown -R builder:builder "${WORKDIR}"
+              runuser -u builder -- ./xbps-src show data-boar
+            '

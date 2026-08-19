@@ -187,6 +187,8 @@ Imagens pré-construídas estão no Docker Hub: `fabioleitao/data_boar:latest` (
 
 **Instalação `pipx` por distro (Linux):** antes de rollout em frotas RHEL/Void/musl/no-AVX, confira [TROUBLESHOOTING.pt_BR.md](TROUBLESHOOTING.pt_BR.md) e a matriz [ops/OS_COMPATIBILITY_TESTING_MATRIX.pt_BR.md](ops/OS_COMPATIBILITY_TESTING_MATRIX.pt_BR.md) (RHEL 8/9 com passo explícito de Python 3.12; Void-musl/no-AVX em caminho wheelhouse-ou-Docker; RHEL/CentOS 7 somente Docker).
 
+**Void nativo `xbps` (canal Enterprise, quando construído):** overlay em `packaging/void/` — `xbps-src` em container **Podman Void**, serviço runit em `/etc/sv/data-boar/run`. O produto não chama `systemctl`. Passos: [VOID_XBPS_PACKAGING.pt_BR.md](ops/VOID_XBPS_PACKAGING.pt_BR.md) ([EN](ops/VOID_XBPS_PACKAGING.md)).
+
 ### URLs principais
 
 As páginas HTML usam **prefixo de idioma** (`/en/…`, `/pt-br/…`). Acessar `/`, `/reports`, `/config`, `/help` ou `/about` **sem** prefixo redireciona conforme cookie `db_locale`, cabeçalho `Accept-Language` e `locale.default_locale` no YAML (veja bloco `locale` em [USAGE.md](USAGE.md)). As rotas JSON da API continuam **sem** prefixo.

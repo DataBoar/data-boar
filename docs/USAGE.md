@@ -186,6 +186,7 @@ Pre-built images are on Docker Hub: `fabioleitao/data_boar:latest` ([hub.docker.
 
 1. **Install** the application and optional dependencies (e.g. `.[sql-community]` for open-core SQL drivers, `.[sql-all]` for every SQL driver including MSSQL/Oracle, `.[nosql]`, `.[shares]`) as in the README and [TECH_GUIDE.md](TECH_GUIDE.md) (*Supported databases*). Installing a driver extra does not grant tier access — Pro-gated database targets still require the appropriate license tier.
 1. **Cross-distro `pipx` reality check (Linux):** before rollout on RHEL/Void/musl/no-AVX fleets, read [TROUBLESHOOTING.md](TROUBLESHOOTING.md) and the matrix in [ops/OS_COMPATIBILITY_TESTING_MATRIX.md](ops/OS_COMPATIBILITY_TESTING_MATRIX.md) (RHEL 8/9 explicit Python 3.12 step; Void-musl/no-AVX wheelhouse path; RHEL/CentOS 7 Docker-only). Docker remains a fallback deployment option, not the primary wheelhouse route.
+1. **Void native `xbps` (Enterprise channel, when built):** overlay under `packaging/void/` — `xbps-src` in a **Podman Void** container, runit at `/etc/sv/data-boar/run`. The product does not call `systemctl`. Operator steps: [VOID_XBPS_PACKAGING.md](ops/VOID_XBPS_PACKAGING.md) ([pt-BR](ops/VOID_XBPS_PACKAGING.pt_BR.md)).
 1. **Prepare** a config file (e.g. `config.yaml`) with `targets`, `file_scan`, `report`, and optionally `api.port`.
 1. **Set config path** (optional):
 
@@ -204,7 +205,7 @@ Pre-built images are on Docker Hub: `fabioleitao/data_boar:latest` ([hub.docker.
    ```
 
 1. **Binding:** `python main.py --web` uses the same resolution as above (`--host`, then `api.host`, then `API_HOST`, then **`127.0.0.1`**). Direct **uvicorn** defaults differ by version; pass **`--host`** explicitly if you need a specific interface.
-1. **Production:** Run behind a reverse proxy (nginx, Traefik, Caddy, or similar), use a process manager (systemd, supervisord), or a container; ensure `CONFIG_PATH` and `report.output_dir` are set appropriately and that the process can write to the output directory and the SQLite path. The application behaves correctly behind NAT, load balancers, and reverse proxies: when TLS is terminated at the proxy, set **X-Forwarded-Proto: https** so security headers (e.g. HSTS) and scheme detection work. See [SECURITY.md](../SECURITY.md) for HTTP security headers.
+1. **Production:** Run behind a reverse proxy (nginx, Traefik, Caddy, or similar), use a process manager (runit, systemd, supervisord), or a container; ensure `CONFIG_PATH` and `report.output_dir` are set appropriately and that the process can write to the output directory and the SQLite path. The application behaves correctly behind NAT, load balancers, and reverse proxies: when TLS is terminated at the proxy, set **X-Forwarded-Proto: https** so security headers (e.g. HSTS) and scheme detection work. See [SECURITY.md](../SECURITY.md) for HTTP security headers.
 
 ### Base URL and accessing the API
 

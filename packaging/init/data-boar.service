@@ -1,0 +1,18 @@
+# Optional systemd unit for non-Void packagers.
+# The product does not require systemd. Void ships runit instead (#1404 canary).
+[Unit]
+Description=Data Boar dashboard (--web)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+DynamicUser=yes
+StateDirectory=data-boar
+Environment=DISABLE_SQLALCHEMY_CEXT=1
+Environment=CONFIG_PATH=/etc/data-boar/config.yaml
+ExecStart=/usr/lib/data-boar/python3.14t/bin/python3.14t -m data_boar --web
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

@@ -32,6 +32,8 @@ Release verificado: [wheelhouse-x86-64-v1-2026-07-29](https://github.com/DataBoa
 | **Void-musl / Alpine musl / x86-64-v1** | Paridade via wheelhouse v1 | Pasta local + dois passos + inject — [TROUBLESHOOTING.pt_BR.md](../TROUBLESHOOTING.pt_BR.md) |
 | **RHEL/CentOS 7** | Fora de escopo nativo | Somente Docker |
 
+**xbps nativo (canal Enterprise, #1404):** overlay `void-packages` no repo; validar com **Podman Void** (imagens glibc e musl) — [VOID_XBPS_PACKAGING.pt_BR.md](VOID_XBPS_PACKAGING.pt_BR.md).
+
 **Sinal de aceite `--demo`:** **26 achados** e `_ML_AVAILABLE=True` em Debian, Fedora, Alma 9, Void-glibc/musl, Alpine cp312/313/314, Debian arm64 (QEMU) e metal Celeron. O processo **não encerra** — espere o relatório em `$TMPDIR/data_boar_demo`.
 
 **Lab-smoke DB/Redis (checklist separado):** Postgres/MariaDB/MSSQL/Oracle **20 achados cada**; Redis **5** — `deploy/lab-smoke-stack/`.

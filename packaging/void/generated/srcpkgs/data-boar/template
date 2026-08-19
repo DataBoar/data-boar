@@ -1,0 +1,109 @@
+# Template file for 'data-boar'
+# Generated — do not hand-edit. Run:
+#   uv run python scripts/generate_void_xbps_packages.py --write
+# ADR-0084: embedded cp314t does NOT unlock Enterprise. Entitlement remains worker caps (#551) + pro_prefilter_accel.
+# Overlay lives in this product repo (packaging/void/). Upstream
+# void-packages submission is out of scope for #1404.
+# Validation: Podman Void — not lab metal. glibc staging is x86_64 only.
+pkgname=data-boar
+version=1.8.0beta1
+revision=1
+archs="x86_64"
+create_wrksrc=yes
+nocross=yes
+short_desc="Sensitive-data discovery (native Enterprise channel)"
+maintainer="Data Boar maintainers <contact@databoar.com.br>"
+license="AGPL-3.0-or-later"
+homepage="https://github.com/DataBoar/data-boar"
+depends="openssl zlib libffi tesseract-ocr runit"
+subpackages="data-boar-compressed data-boar-dataformats data-boar-mssql data-boar-nosql data-boar-richmedia data-boar-shares"
+system_accounts="databoar"
+databoar_homedir="/var/lib/databoar"
+databoar_descr="Data Boar dashboard"
+make_dirs="/var/lib/databoar 0750 databoar databoar"
+
+do_install() {
+	if [ ! -x "${FILESDIR}/staging/usr/lib/data-boar/python3.14t/bin/python3.14t" ]; then
+		msg_error "missing embedded interpreter in FILESDIR/staging (ADR-0084)\n"
+	fi
+	vmkdir usr/lib
+	cp -a "${FILESDIR}/staging/usr/lib/data-boar" "${DESTDIR}/usr/lib/data-boar"
+	vbin "${FILESDIR}/staging/usr/bin/data-boar"
+	vmkdir etc/data-boar
+	if [ -f "${FILESDIR}/staging/etc/data-boar/config.example.yaml" ]; then
+		vinstall "${FILESDIR}/staging/etc/data-boar/config.example.yaml" 644 etc/data-boar
+	fi
+	vsv data-boar
+}
+
+data-boar-compressed_package() {
+	depends="${sourcepkg}>=${version}_${revision}"
+	short_desc+=" - compressed connector extra"
+	# EXTRAS_MANIFEST packages: py7zr>=1.1.3
+	pkg_install() {
+		if [ ! -d "${DESTDIR}/usr/lib/data-boar/extras/compressed" ]; then
+			msg_error "extras/compressed missing from staging — refuse empty subpackage\n"
+		fi
+		vmove usr/lib/data-boar/extras/compressed
+	}
+}
+
+data-boar-dataformats_package() {
+	depends="${sourcepkg}>=${version}_${revision}"
+	short_desc+=" - dataformats connector extra"
+	# EXTRAS_MANIFEST packages: pyarrow>=14.0.0, fastavro>=1.9.0, dbfread>=2.0.7
+	pkg_install() {
+		if [ ! -d "${DESTDIR}/usr/lib/data-boar/extras/dataformats" ]; then
+			msg_error "extras/dataformats missing from staging — refuse empty subpackage\n"
+		fi
+		vmove usr/lib/data-boar/extras/dataformats
+	}
+}
+
+data-boar-mssql_package() {
+	depends="${sourcepkg}>=${version}_${revision}"
+	short_desc+=" - mssql connector extra"
+	# EXTRAS_MANIFEST packages: pymssql>=2.3.0
+	pkg_install() {
+		if [ ! -d "${DESTDIR}/usr/lib/data-boar/extras/mssql" ]; then
+			msg_error "extras/mssql missing from staging — refuse empty subpackage\n"
+		fi
+		vmove usr/lib/data-boar/extras/mssql
+	}
+}
+
+data-boar-nosql_package() {
+	depends="${sourcepkg}>=${version}_${revision}"
+	short_desc+=" - nosql connector extra"
+	# EXTRAS_MANIFEST packages: pymongo>=4.0, redis>=8.1.0
+	pkg_install() {
+		if [ ! -d "${DESTDIR}/usr/lib/data-boar/extras/nosql" ]; then
+			msg_error "extras/nosql missing from staging — refuse empty subpackage\n"
+		fi
+		vmove usr/lib/data-boar/extras/nosql
+	}
+}
+
+data-boar-richmedia_package() {
+	depends="${sourcepkg}>=${version}_${revision}"
+	short_desc+=" - richmedia connector extra"
+	# EXTRAS_MANIFEST packages: mutagen>=1.47.0, pillow-heif>=0.16.0, pytesseract>=0.3.13
+	pkg_install() {
+		if [ ! -d "${DESTDIR}/usr/lib/data-boar/extras/richmedia" ]; then
+			msg_error "extras/richmedia missing from staging — refuse empty subpackage\n"
+		fi
+		vmove usr/lib/data-boar/extras/richmedia
+	}
+}
+
+data-boar-shares_package() {
+	depends="${sourcepkg}>=${version}_${revision}"
+	short_desc+=" - shares connector extra"
+	# EXTRAS_MANIFEST packages: smbprotocol>=1.2.0, webdavclient3>=0.14.0, requests_ntlm>=1.2.0
+	pkg_install() {
+		if [ ! -d "${DESTDIR}/usr/lib/data-boar/extras/shares" ]; then
+			msg_error "extras/shares missing from staging — refuse empty subpackage\n"
+		fi
+		vmove usr/lib/data-boar/extras/shares
+	}
+}
