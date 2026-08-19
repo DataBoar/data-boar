@@ -771,10 +771,41 @@ def test_native_packages_yml_pins_actions_to_shas() -> None:
         code = line.split("#", 1)[0]
         if "uses:" not in code or "docker://" in code:
             continue
-        if "./.github/workflows/" in code:
+        # Local reusable workflows / composite actions are not third-party pins.
+        if "./.github/workflows/" in code or "./.github/actions/" in code:
             continue
         if not any(p in code for p in ("actions/", "github/", "astral-sh/")):
             continue
         assert sha_40.search(code), (
             f"expected full commit SHA in uses line: {line.strip()!r}"
         )
+
+
+def test_native_packages_build_job_pins_ubuntu_apt_mirror() -> None:
+    """build-deb-rpm is ubuntu-latest: same azure.archive flake as #1648 / #1702."""
+    data = _load_workflow("native-packages.yml")
+    build = data["jobs"]["build-deb-rpm"]
+    uses = [
+        str(s.get("uses") or "")
+        for s in (build.get("steps") or [])
+        if isinstance(s, dict)
+    ]
+    assert any("./.github/actions/install-libmariadb-dev" in u for u in uses)
+    runs = _ci_step_run_texts(build)
+    assert not any("apt-get update" in r for r in runs)
+    assert any(
+        "timeout 240 sudo apt-get install" in r and "build-essential" in r for r in runs
+    )
+
+
+def test_native_packages_smoke_deb_uses_debian_cdn_not_ubuntu_azure_pin() -> None:
+    """smoke-deb runs in debian:bookworm-slim — Ubuntu apt-mirrors pin does not apply."""
+    text = (WORKFLOWS / "native-packages.yml").read_text(encoding="utf-8")
+    assert "deb.debian.org" in text
+    data = _load_workflow("native-packages.yml")
+    smoke = data["jobs"]["smoke-deb"]
+    assert "debian:bookworm-slim" in str(smoke.get("container") or "")
+    dump = yaml.dump(smoke)
+    assert "apt-mirrors.txt" not in dump
+    runs = _ci_step_run_texts(smoke)
+    assert any("apt-get update" in r for r in runs)
