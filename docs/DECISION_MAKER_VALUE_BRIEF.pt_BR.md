@@ -87,5 +87,5 @@ Esses resultados apoiam governança e preparo de auditoria; isoladamente, não p
 - [COMPLIANCE_TECHNICAL_REFERENCE.pt_BR.md](COMPLIANCE_TECHNICAL_REFERENCE.pt_BR.md) ([EN](COMPLIANCE_TECHNICAL_REFERENCE.md))
 - [SECURITY.pt_BR.md](SECURITY.pt_BR.md) ([EN](SECURITY.md))
 - [README.pt_BR.md](README.pt_BR.md) ([EN](README.md))
-- [use-cases/USE_CASE_SCAN_AND_REMEDIATE.pt_BR.md](use-cases/USE_CASE_SCAN_AND_REMEDIATE.pt_BR.md) ([EN](use-cases/USE_CASE_SCAN_AND_REMEDIATE.md)) — pipeline de remediação Enterprise com trilha de auditoria
-- [use-cases/USE_CASE_TOKENIZED_FINDINGS.pt_BR.md](use-cases/USE_CASE_TOKENIZED_FINDINGS.pt_BR.md) ([EN](use-cases/USE_CASE_TOKENIZED_FINDINGS.md)) — compartilhar relatórios de achados sem expor PII em claro
+- [use-cases/USE_CASE_SCAN_AND_REMEDIATE.pt_BR.md](use-cases/USE_CASE_SCAN_AND_REMEDIATE.pt_BR.md) ([EN](use-cases/USE_CASE_SCAN_AND_REMEDIATE.md)) — pipeline de remediação Enterprise com trilha de auditoria (em breve; use-case ilustrativo)
+- [use-cases/USE_CASE_TOKENIZED_FINDINGS.pt_BR.md](use-cases/USE_CASE_TOKENIZED_FINDINGS.pt_BR.md) ([EN](use-cases/USE_CASE_TOKENIZED_FINDINGS.md)) — compartilhar relatórios de achados sem expor PII em claro (em breve; use-case ilustrativo)

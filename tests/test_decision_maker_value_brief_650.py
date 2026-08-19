@@ -32,6 +32,10 @@ def test_value_brief_enterprise_remediation_hook() -> None:
     assert "Enterprise, em breve" in pt
     assert "tokenization, masking, or field encryption" in en
     assert "tokenização, mascaramento ou criptografia de campo" in pt
+    assert "(coming; illustrative use-case)" in en
+    assert en.count("(coming; illustrative use-case)") == 2
+    assert "(em breve; use-case ilustrativo)" in pt
+    assert pt.count("(em breve; use-case ilustrativo)") == 2
     for text in (en, pt):
         assert "USE_CASE_SCAN_AND_REMEDIATE.md" in text
         assert "USE_CASE_TOKENIZED_FINDINGS.md" in text

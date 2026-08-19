@@ -87,5 +87,5 @@ These outcomes support governance and audit preparation; they do not, by themsel
 - [COMPLIANCE_TECHNICAL_REFERENCE.md](COMPLIANCE_TECHNICAL_REFERENCE.md) ([pt-BR](COMPLIANCE_TECHNICAL_REFERENCE.pt_BR.md))
 - [SECURITY.md](SECURITY.md) ([pt-BR](SECURITY.pt_BR.md))
 - [README.md](README.md) ([pt-BR](README.pt_BR.md))
-- [use-cases/USE_CASE_SCAN_AND_REMEDIATE.md](use-cases/USE_CASE_SCAN_AND_REMEDIATE.md) ([pt-BR](use-cases/USE_CASE_SCAN_AND_REMEDIATE.pt_BR.md)) — Enterprise remediation pipeline with audit trail
-- [use-cases/USE_CASE_TOKENIZED_FINDINGS.md](use-cases/USE_CASE_TOKENIZED_FINDINGS.md) ([pt-BR](use-cases/USE_CASE_TOKENIZED_FINDINGS.pt_BR.md)) — share findings reports without exposing live PII
+- [use-cases/USE_CASE_SCAN_AND_REMEDIATE.md](use-cases/USE_CASE_SCAN_AND_REMEDIATE.md) ([pt-BR](use-cases/USE_CASE_SCAN_AND_REMEDIATE.pt_BR.md)) — Enterprise remediation pipeline with audit trail (coming; illustrative use-case)
+- [use-cases/USE_CASE_TOKENIZED_FINDINGS.md](use-cases/USE_CASE_TOKENIZED_FINDINGS.md) ([pt-BR](use-cases/USE_CASE_TOKENIZED_FINDINGS.pt_BR.md)) — share findings reports without exposing live PII (coming; illustrative use-case)
