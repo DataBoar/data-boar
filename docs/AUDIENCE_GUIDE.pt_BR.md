@@ -68,7 +68,7 @@ Mapa de navegação para **onze** perfis de leitor. Índice completo: [README.md
 | **Trilha** | [compliance-samples/README.md](compliance-samples/README.md) → [COMPLIANCE_METHODOLOGY.pt_BR.md](COMPLIANCE_METHODOLOGY.pt_BR.md) → [REPORTS_AND_COMPLIANCE_OUTPUTS.pt_BR.md](REPORTS_AND_COMPLIANCE_OUTPUTS.pt_BR.md) → [use-cases/USE_CASES_HUB.pt_BR.md](use-cases/USE_CASES_HUB.pt_BR.md) |
 | **Evitar** | Bloco de marketing do README raiz |
 | **Sobreposição** | DPO (tags de norma); CISO (controles) |
-| **Planejado** | Primer de padrões de privacidade (**#589**); hub de primers (**#593**) |
+| **Entregue** | Primer de padrões de privacidade e hub de primers — comece em [hubs/INDEX.md](hubs/INDEX.md) (#589 e #593 fechadas) |
 
 ## Desenvolvedor / integrador
 
