@@ -70,6 +70,22 @@ def test_bdsg_contextual_columns(
     assert art_fragment in result["norm_tag"]
 
 
+def test_bdsg_compound_column_fires_employee_and_biometric(bdsg_scanner):
+    result = bdsg_scanner.scan_column("mitarbeiterdaten_gesichtserkennung", "")
+    detected = result.get("pattern_detected") or ""
+    assert "DE_FIELD_EMPLOYEE_LABEL" in detected
+    assert "DE_FIELD_BIOMETRIC_LABEL" in detected
+
+
+def test_bdsg_compound_employee_biometric_keeps_art9_first():
+    """Joined norm_tag must not let §26 steal the Art. 9 override (list order)."""
+    data = yaml.safe_load(BDSG_SAMPLE.read_text(encoding="utf-8"))
+    patterns = [row["norm_tag_pattern"] for row in data["recommendation_overrides"]]
+    assert patterns.index("BDSG + GDPR Art. 9 (biometrics)") < patterns.index(
+        "BDSG §26 (Beschäftigtendaten — contested)"
+    )
+
+
 def test_bdsg_bare_digits_are_not_steuer_id(bdsg_scanner):
     result = bdsg_scanner.scan_column("order_id", "12345678901")
     detected = result.get("pattern_detected") or ""

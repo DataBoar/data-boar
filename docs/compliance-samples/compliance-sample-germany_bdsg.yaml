@@ -84,13 +84,8 @@ terms:
   - { text: "debug_output", label: non_sensitive }
 
 recommendation_overrides:
-  - norm_tag_pattern: "BDSG §26 (Beschäftigtendaten — contested)"
-    base_legal: "GDPR Art. 88 + §26 BDSG — CONTESTED. CJEU C-34/21 (30 Mar 2023) and subsequent Bundesarbeitsgericht application: general clauses like §26(1) do not meet Art. 88(2). The Oct 2024 Beschäftigtendatengesetz draft lapsed (coalition collapse 6 Nov 2024). As of 2026-08 there is no replacement statute in force."
-    risk: "Employee-data columns sit on a contested national basis. Treating §26 BDSG as a self-sufficient legal ground is outdated."
-    recommendation: "Map each employee-data purpose to GDPR Art. 6(1) directly. Keep any stricter consent formality as a floor, not a ceiling. Involve the Betriebsrat where works-council co-determination applies. Consult counsel. Not a legal conclusion."
-    priority: "ALTA"
-    relevant_for: "DPO, legal, HR, Betriebsrat"
-
+  # More specific tags first: a compound column (e.g. mitarbeiterdaten_gesichtserkennung)
+  # can fire employee + biometric regexes; _find_override_row is first-match.
   - norm_tag_pattern: "BDSG + GDPR Art. 9 (biometrics)"
     base_legal: "GDPR Art. 9 (special category). German practice treats employee biometrics (fingerprint, facial, iris) as tightly restricted; works-council involvement is commonly required. Not a catch-all ban encoded in this scanner."
     risk: "Biometric employee columns are high-harm special-category data. Inventory only — this does not decide lawfulness."
@@ -118,3 +113,10 @@ recommendation_overrides:
     recommendation: "Minimize stored location precision. Review retention. Consult counsel. Heuristic inventory — not a legal conclusion."
     priority: "MÉDIA"
     relevant_for: "DPO, product, legal"
+
+  - norm_tag_pattern: "BDSG §26 (Beschäftigtendaten — contested)"
+    base_legal: "GDPR Art. 88 + §26 BDSG — CONTESTED. CJEU C-34/21 (30 Mar 2023) and subsequent Bundesarbeitsgericht application: general clauses like §26(1) do not meet Art. 88(2). The Oct 2024 Beschäftigtendatengesetz draft lapsed (coalition collapse 6 Nov 2024). As of 2026-08 there is no replacement statute in force."
+    risk: "Employee-data columns sit on a contested national basis. Treating §26 BDSG as a self-sufficient legal ground is outdated."
+    recommendation: "Map each employee-data purpose to GDPR Art. 6(1) directly. Keep any stricter consent formality as a floor, not a ceiling. Involve the Betriebsrat where works-council co-determination applies. Consult counsel. Not a legal conclusion."
+    priority: "ALTA"
+    relevant_for: "DPO, legal, HR, Betriebsrat"
