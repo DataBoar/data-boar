@@ -107,7 +107,8 @@ Execute: `uv run pytest tests/test_markdown_lint.py -v -W error`.
 O GitHub Actions (`.github/workflows/ci.yml`) executa:
 
 - **Lint (pre-commit)** — em **Python 3.12**: **`uv run pre-commit run --all-files`** (igual ao **`.pre-commit-config.yaml`**: Ruff check + format, **plans-stats** `--check`, markdown, locale pt-BR, guarda commercial). Localmente: **`uv run pre-commit install`** para rodar no **`git commit`**. O **`tests/test_github_workflows.py`** garante que **`ci.yml`** ainda executa **`pre-commit run --all-files`** (anti-regressão).
-- **Testes** — `uv run pytest -v -W error` no Ubuntu para **Python 3.12 e 3.13** (matriz, `fail-fast: false`).
+- **Testes** — `uv run pytest -v -W error` no Ubuntu para **Python 3.12 e 3.13** (matriz, `fail-fast: false`). A instalação padrão é `uv sync --extra shares --group dev`.
+- **Testes com extras opcionais** — job **`test-extras`** (só Python **3.13**) instala extras SQL **exceto** `mariadb`, mais `nosql` + `compressed` + `dataformats` (+ `shares`) para os testes de conectores opcionais rodarem em vez de pular; um teto de skips falha o job se os pulos silenciosos crescerem (issue **#1638**). O extra `mariadb` fica de fora neste job 3.13: PyPI **1.1.14** (estável mais recente) levanta `SyntaxError` no import (`connectionpool.py` sem raw-string); **2.0.0** ainda é só rc. Restaure `sql-all` / `--extra mariadb` quando um conector estável importar no 3.13.
 - **Auditoria de dependências** — `uv run pip-audit` após `uv sync` (Python 3.12).
 - **SonarQube/SonarCloud** — quando `SONAR_TOKEN` está definido; usa Python 3.12 após os testes passarem.
 

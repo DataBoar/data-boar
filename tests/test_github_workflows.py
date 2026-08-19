@@ -61,6 +61,7 @@ def test_upstream_workflows_invoke_slack_ci_failure_notify_on_failure() -> None:
             "CI",
             (
                 "test",
+                "test-extras",
                 "test-windows",
                 "lint",
                 "bandit",
@@ -377,7 +378,9 @@ def test_ci_yml_libmariadb_install_uses_timed_composite_action() -> None:
     """#1627: bare apt-get libmariadb must not hang jobs; use composite with timeouts."""
     text = (WORKFLOWS / "ci.yml").read_text(encoding="utf-8")
     assert "sudo apt-get update && sudo apt-get install -y libmariadb-dev" not in text
-    assert text.count("./.github/actions/install-libmariadb-dev") >= 5
+    # test-extras (Python 3.13) omits libmariadb — upstream mariadb 1.1.14
+    # SyntaxError; remaining jobs still use the timed composite (#1627).
+    assert text.count("./.github/actions/install-libmariadb-dev") >= 4
 
     action = REPO_ROOT / ".github" / "actions" / "install-libmariadb-dev" / "action.yml"
     assert action.is_file(), f"missing composite action: {action}"
@@ -465,6 +468,40 @@ def test_dependabot_sync_workflow_present_and_valid() -> None:
         assert sha_40.search(code), (
             f"expected full commit SHA in uses line: {line.strip()!r}"
         )
+
+
+def test_ci_yml_has_optional_extras_job() -> None:
+    """#1638: dedicated job installs SQL extras (minus mariadb on 3.13) and caps skips."""
+    data = _load_workflow("ci.yml")
+    jobs = data.get("jobs") or {}
+    extras = jobs.get("test-extras")
+    assert isinstance(extras, dict), "ci.yml must define test-extras job"
+    assert extras.get("runs-on") == "ubuntu-latest"
+    assert extras.get("timeout-minutes") == 50
+    assert extras.get("continue-on-error") in (None, False)
+    env = extras.get("env") or {}
+    assert env.get("DATA_BOAR_CI_EXTRAS") == "1"
+    runs = "\n".join(_ci_step_run_texts(extras))
+    for extra in (
+        "postgres",
+        "mysql",
+        "mssql",
+        "mssql-pyodbc",
+        "oracle",
+        "nosql",
+        "compressed",
+        "dataformats",
+    ):
+        assert f"--extra {extra}" in runs, extra
+    assert "--extra shares --group dev" in runs
+    assert "--extra sql-all" not in runs
+    assert "--extra mariadb" not in runs
+    assert "pytest" in runs
+    assert "--junitxml=extras-junit.xml" in runs
+    assert "scripts/ci_pytest_skip_ceiling.py" in runs
+    assert "--max-skipped 90" in runs
+    assert "./.github/actions/install-libmariadb-dev" not in str(extras)
+    assert "unixodbc-dev" in runs
 
 
 def test_ci_yml_has_windows_test_job() -> None:

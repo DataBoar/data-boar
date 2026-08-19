@@ -97,6 +97,50 @@ jobs:
           git fetch origin main --depth=1 2>/dev/null || true
           uv run python scripts/gate_change_tripwire.py --base origin/main
 
+  # Optional extras coverage (#1638): default matrix only installs ``shares``.
+  # One extra Ubuntu job installs SQL extras except ``mariadb``, plus
+  # nosql/compressed/dataformats so importorskip tests actually run.
+  # mariadb 1.1.14 (latest stable on PyPI) has a non-raw docstring with ``\*``
+  # in connectionpool.py; Python 3.13 raises SyntaxError (was SyntaxWarning).
+  # 2.0.0 is still rc-only — do not pin an RC. Restore ``--extra mariadb`` (or
+  # ``sql-all``) when a stable connector imports on 3.13. Also PYSEC-2026-217
+  # on 1.1.14 (#922). Skip ceiling fails if silent skips grow.
+  test-extras:
+    name: Test optional extras (Python 3.13)
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    env:
+      DATA_BOAR_CI_EXTRAS: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install unixodbc-dev (pyodbc / mssql-pyodbc extra)
+        run: timeout 240 sudo apt-get install -y unixodbc-dev
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.11.2"
+
+      - name: Install dependencies (optional extras coverage)
+        # sql-all minus mariadb (3.13 SyntaxError in upstream 1.1.14).
+        # shares: same as default test job so SMB/WebDAV guards stay satisfied.
+        run: uv sync --extra postgres --extra mysql --extra mssql --extra mssql-pyodbc --extra oracle --extra nosql --extra compressed --extra dataformats --extra shares --group dev
+
+      - name: Run tests
+        run: uv run pytest -v -W error -ra --tb=short --junitxml=extras-junit.xml
+
+      - name: Skip-count ceiling (#1638)
+        run: uv run python scripts/ci_pytest_skip_ceiling.py extras-junit.xml --max-skipped 90
+
   lint:
     name: Lint (pre-commit)
     runs-on: ubuntu-latest
@@ -339,7 +383,7 @@ jobs:
   slack-notify-on-failure:
     name: Slack CI failure notify
     if: ${{ always() && contains(needs.*.result, 'failure') }}
-    needs: [test, test-windows, lint, bandit, audit, dependency-review, sonar, ansible-syntax]
+    needs: [test, test-extras, test-windows, lint, bandit, audit, dependency-review, sonar, ansible-syntax]
     uses: ./.github/workflows/slack-ci-failure-notify.yml
     with:
       run_name: CI
