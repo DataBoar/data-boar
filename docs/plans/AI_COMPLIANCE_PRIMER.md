@@ -17,7 +17,7 @@ There is **no** `compliance-sample-*.yaml` for the EU AI Act, ISO/IEC 42001, or 
 | Framework | Obligation (typical ask) | How Data Boar addresses it | Status |
 | --------- | ------------------------ | -------------------------- | ------ |
 | EU AI Act Art. 10 | Quality / relevance of training, validation, and testing data; examine bias in data | Point **Data Sniffing** at the corpus as a filesystem or connector **target**; built-in `DEFAULT_PATTERNS` + optional jurisdiction samples flag PII/sensitive **shapes** | Partial — inventory only; no dataset-quality or bias metrics |
-| EU AI Act Art. 12 | Automatic logging of high-risk system events | Session SQLite + **`--export-audit-trail`** records **who scanned which targets** | Partial — scanner-session log, **not** Art. 12 model-operation logs; **not** WORM |
+| EU AI Act Art. 12 | Automatic logging of high-risk system events | Session SQLite + **`--export-audit-trail`** JSON (`data_wipe_log`, aggregate `scan_sessions_summary`, `trust_state`) | Partial — scanner-session export, **not** Art. 12 model-operation logs; **not** per-session operator/target lists; **not** WORM |
 | EU AI Act Art. 13 | Transparency / instructions for use to deployers | Excel / heatmap / optional **`--governance-report`** (Pro+) summarise **findings in scanned stores** | Partial — not a model card or deployer instructions |
 | EU AI Act Annex III / Art. 6 | Classify high-risk use cases | — | Roadmap / out of scope — counsel + provider classify the **system** |
 | ISO/IEC 42001:2023 cl. 6.1.2 | Repeatable AI risk assessment (incl. data risks) | Same inventory as Art. 10; findings + `norm_tag` feed a **human** AIMS assessment | Partial — does **not** perform or certify the assessment |
@@ -54,7 +54,7 @@ Art. 10 (high-risk) asks providers to ensure training, validation, and testing d
 
 ### Article 12 — record-keeping
 
-Art. 12 requires automatic logging of events over the lifetime of a **high-risk AI system**. **`--export-audit-trail`** exports scanner-session JSON from SQLite (`data_wipe_log`, session summary, `trust_state`, …) — [USAGE.md](../USAGE.md). That is **operator accountability for scans**, not model-inference or training-run logs. Same limit as other primers: **not** a WORM / legally immutable archive.
+Art. 12 requires automatic logging of events over the lifetime of a **high-risk AI system**. **`--export-audit-trail`** exports aggregate scanner JSON from SQLite (`data_wipe_log`, `scan_sessions_summary` count plus first/last timestamps, `trust_state`, …) — [USAGE.md](../USAGE.md). That is **evidence that scans ran**, not per-session `technician_name` / target lists, and **not** model-inference or training-run logs. Same limit as other primers: **not** a WORM / legally immutable archive.
 
 ### Article 13 — transparency
 

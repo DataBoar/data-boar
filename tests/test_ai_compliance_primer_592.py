@@ -43,6 +43,8 @@ def test_ai_compliance_primer_registered_and_disclaims_model_eval() -> None:
     assert "not** a shipped detector field on scan findings" in text
     assert "(roadmap)" in text
     assert "Art. 12 model-operation logs" in text
+    assert "not** per-session operator/target lists" in text
+    assert "scan_sessions_summary" in text
     lines = text.splitlines()
     indexes = [_heading_line_index(lines, heading) for heading in _HEADINGS]
     assert indexes == sorted(indexes)
