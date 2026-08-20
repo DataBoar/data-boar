@@ -4,6 +4,11 @@
 
 ![Data Boar mascot](api/static/mascot/data_boar_mascote_color.svg)
 
+[![CI](https://github.com/DataBoar/data-boar/actions/workflows/ci.yml/badge.svg)](https://github.com/DataBoar/data-boar/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/DataBoar/data-boar/actions/workflows/codeql.yml/badge.svg)](https://github.com/DataBoar/data-boar/security/code-scanning)
+[![Docker Hub](https://img.shields.io/docker/v/fabioleitao/data_boar?label=Docker%20Hub&logo=docker)](https://hub.docker.com/r/fabioleitao/data_boar)
+[![License](https://img.shields.io/github/license/DataBoar/data-boar)](LICENSE)
+
 **Scanner de PII de código aberto com postura forense para LGPD · GDPR · conformidade auditável.**
 
 **LGPD — relato-testemunho (visita de campo, Brasil):** [Português (Brasil)](docs/LGPD_WITNESS_REPORT_NIO_FIELD_VISIT_2026.pt_BR.md) · [English](docs/LGPD_WITNESS_REPORT_NIO_FIELD_VISIT_2026.md)
