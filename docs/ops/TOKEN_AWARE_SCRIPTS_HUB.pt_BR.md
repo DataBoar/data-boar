@@ -17,7 +17,7 @@
 | Script | Função | Ligado a |
 | ------ | ---- | -------- |
 | `check-all.ps1` | Gate completo (Windows) | SKILL **`token-aware-automation`**, **`.cursor/rules/check-all-gate.mdc`**, `CONTRIBUTING.md`, **[`SCRIPTS_CROSS_PLATFORM_PAIRING.pt_BR.md`](SCRIPTS_CROSS_PLATFORM_PAIRING.pt_BR.md)** |
-| `check-all.sh` | Gate completo (Linux / macOS; bash) — mesmos passos de **`check-all.ps1`**; seeds PII via **`uv run python scripts/gatekeeper_audit.py`** (**sem `pwsh` obrigatorio — issue `#560`**) | Igual a **`check-all.ps1`** |
+| `check-all.sh` | Gate completo (Linux / macOS; bash) — mesmos passos de **`check-all.ps1`**; seeds PII via **`uv run python scripts/gatekeeper_audit.py`** (**sem `pwsh` obrigatorio — issue `#560`**); **`gate_change_tripwire.py --base origin/main`** depois das seeds (issue **`#1385`**, igual ao CI) | Igual a **`check-all.ps1`** |
 | `lint-only.ps1` | So lint/format | Igual + doc de pares |
 | `lint-only.sh` | Igual (Linux / macOS) | Igual |
 | `quick-test.ps1` | Pytest focado | Igual + doc de pares |
