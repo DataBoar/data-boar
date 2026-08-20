@@ -52,7 +52,7 @@ class DataBoar < Formula
 
         sleep 2
       end
-      assert File.exist?(demo_db), "demo workspace DB missing; see #{log}"
+      assert_path_exists demo_db, "demo workspace DB missing; see #{log}"
     ensure
       begin
         Process.kill("TERM", pid)

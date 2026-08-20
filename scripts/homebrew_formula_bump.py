@@ -56,8 +56,11 @@ def fetch_pypi_sdist(version: str | None) -> tuple[str, str, str]:
     url = f"https://pypi.org/pypi/{PYPI_PROJECT}/json"
     if version:
         url = f"https://pypi.org/pypi/{PYPI_PROJECT}/{version}/json"
+    if not url.startswith("https://pypi.org/"):
+        raise SystemExit(f"refusing non-PyPI URL: {url}")
     req = urllib.request.Request(url, headers={"Accept": "application/json"})
-    with urllib.request.urlopen(req, timeout=30) as resp:
+    # B310: HTTPS + host allowlist enforced above (PyPI JSON only).
+    with urllib.request.urlopen(req, timeout=30) as resp:  # nosec B310
         payload: dict[str, Any] = json.load(resp)
     ver = str(payload["info"]["version"])
     sdists = [

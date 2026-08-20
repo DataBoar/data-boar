@@ -27,6 +27,8 @@ def test_formula_is_host_python_pip_not_embed() -> None:
     assert "pip" in text
     assert "data-boar --version" in text
     assert "--demo" in text
+    assert "assert_path_exists" in text
+    assert "assert File.exist?" not in text
     assert "/usr/lib/data-boar" not in text
     assert "python3.14t" not in text
 
