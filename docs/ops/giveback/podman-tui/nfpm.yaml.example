@@ -30,5 +30,7 @@ overrides:
     recommends: ["podman"]
   rpm:
     recommends: ["podman"]
+  apk:
+    depends: ["podman"]
   archlinux:
     depends: ["podman"]

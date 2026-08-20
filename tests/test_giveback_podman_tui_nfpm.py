@@ -14,3 +14,5 @@ def test_podman_tui_nfpm_example_has_license_file_and_named_maintainer() -> None
     assert "Full Name <you@example.com>" in text
     assert "usr/share/doc/podman-tui/copyright" in text
     assert "Apache-2.0" in text
+    apk_block = text.split("apk:", 1)[1]
+    assert "podman" in apk_block.split("archlinux:", 1)[0]
