@@ -28,12 +28,14 @@ if ($LASTEXITCODE -ne 0) {
 # Same range as CI (ci.yml PII gate change tripwire). Fetch may fail offline;
 # the Python tool SKIP/fail-opens if origin/main is missing. Do not swallow the
 # tripwire exit code (#1385, ADR-0071 / ADR-0080).
+# Never `git fetch --depth=1` here: that converts a full clone into a shallow
+# repo and breaks merge-base / pii_history_guard / the tripwire itself.
 $prevNativePref = $null
 if (Get-Variable -Name PSNativeCommandUseErrorActionPreference -ErrorAction SilentlyContinue) {
     $prevNativePref = $PSNativeCommandUseErrorActionPreference
     $PSNativeCommandUseErrorActionPreference = $false
 }
-git fetch origin main --depth=1 2>$null | Out-Null
+git fetch origin main 2>$null | Out-Null
 if ($null -ne $prevNativePref) {
     $PSNativeCommandUseErrorActionPreference = $prevNativePref
 }

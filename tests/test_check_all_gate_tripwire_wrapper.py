@@ -31,3 +31,8 @@ def test_check_all_wrappers_invoke_tripwire_and_fail_closed() -> None:
         in sh
     )
     assert 'exit "$rc"' in sh
+    # `--depth=1` shallow-converts a full clone (breaks merge-base).
+    assert "fetch origin main --depth=1" not in sh
+    assert "fetch origin main --depth=1" not in ps1
+    assert "git fetch origin main" in sh
+    assert "git fetch origin main" in ps1

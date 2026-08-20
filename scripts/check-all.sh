@@ -57,7 +57,9 @@ uv run python "$REPO_ROOT/scripts/gatekeeper_audit.py" || {
 # Same range as CI (ci.yml PII gate change tripwire). Fetch may fail offline;
 # the Python tool SKIP/fail-opens if origin/main is missing. Do not swallow the
 # tripwire exit code (#1385, ADR-0071 / ADR-0080).
-git fetch origin main --depth=1 2>/dev/null || true
+# Never `git fetch --depth=1` here: that converts a full clone into a shallow
+# repo and breaks merge-base / pii_history_guard / the tripwire itself.
+git fetch origin main 2>/dev/null || true
 uv run python "$REPO_ROOT/scripts/gate_change_tripwire.py" --base origin/main || {
   rc=$?
   echo "check-all.sh: ABORTED by gate_change_tripwire (ADR-0071)." >&2
