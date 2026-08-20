@@ -96,7 +96,8 @@ DEFAULT_PATTERNS = {
     ),
     "EMAIL": (r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b", "GDPR Art. 4(1)"),
     "CREDIT_CARD": (r"\b\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b", "PCI/GLBA"),
-    "PHONE_BR": (r"\b(?:\+55\s?)?(?:\(?\d{2}\)?\s?)?\d{4,5}-?\d{4}\b", "LGPD Art. 5"),
+    # DDD/area code is required (#393): 8–9 digit IDs like 1234-5678 must not match.
+    "PHONE_BR": (r"\b(?:\+55\s?)?\(?\d{2}\)?\s?\d{4,5}-?\d{4}\b", "LGPD Art. 5"),
     "CCPA_SSN": (r"\b\d{3}-\d{2}-\d{4}\b", "CCPA"),
     "DATE_DMY": (r"\b\d{1,2}/\d{1,2}/\d{2,4}\b", "Personal data context"),
 }

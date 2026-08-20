@@ -499,7 +499,7 @@ The application already includes these patterns; you do not need to redefine the
 | `LGPD_CNPJ`   | Brazilian CNPJ (14 digits, optional formatting) | LGPD Art. 5           |
 | `EMAIL`       | Email address                                   | GDPR Art. 4(1)        |
 | `CREDIT_CARD` | 16-digit card (optional spaces/dashes)          | PCI/GLBA              |
-| `PHONE_BR`    | Brazilian phone (optional +55, area code)       | LGPD Art. 5           |
+| `PHONE_BR`    | Brazilian phone (optional +55, required DDD)    | LGPD Art. 5           |
 | `CCPA_SSN`    | US SSN (XXX-XX-XXXX)                            | CCPA                  |
 | `DATE_DMY`    | Date d/m/y (e.g. 31/12/2024)                    | Personal data context |
 
