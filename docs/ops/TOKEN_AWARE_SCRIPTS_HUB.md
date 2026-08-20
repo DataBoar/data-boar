@@ -17,7 +17,7 @@
 | Script | Role | Wired to |
 | ------ | ---- | -------- |
 | `check-all.ps1` | Full gate (Windows) | **`token-aware-automation`** SKILL, **`.cursor/rules/check-all-gate.mdc`**, `CONTRIBUTING.md`, **[`SCRIPTS_CROSS_PLATFORM_PAIRING.md`](SCRIPTS_CROSS_PLATFORM_PAIRING.md)** |
-| `check-all.sh` | Full gate (Linux / macOS; bash) — same steps as **`check-all.ps1`**; PII seeds via **`uv run python scripts/gatekeeper_audit.py`** (**`pwsh`** not required — issue **`#560`**) | Same as **`check-all.ps1`** |
+| `check-all.sh` | Full gate (Linux / macOS; bash) — same steps as **`check-all.ps1`**; PII seeds via **`uv run python scripts/gatekeeper_audit.py`** (**`pwsh`** not required — issue **`#560`**); **`gate_change_tripwire.py --base origin/main`** after seeds (issue **`#1385`**, same as CI) | Same as **`check-all.ps1`** |
 | `lint-only.ps1` | Docs/style only | Same + pairing doc |
 | `lint-only.sh` | Same (Linux / macOS) | Same |
 | `quick-test.ps1` | Narrow pytest | Same + pairing doc |

@@ -75,7 +75,7 @@ Navigation map for **eleven** reader types. Full doc index: [README.md](README.m
 | | |
 | - | - |
 | **Entry** | [USAGE.md](USAGE.md) |
-| **Trail** | [TECH_GUIDE.md](TECH_GUIDE.md) → [DOCKER_SETUP.md](DOCKER_SETUP.md) → [deploy/DEPLOY.md](deploy/DEPLOY.md) → [SENSITIVITY_DETECTION.md](SENSITIVITY_DETECTION.md) |
+| **Trail** | [TECH_GUIDE.md](TECH_GUIDE.md) → [DOCKER_SETUP.md](DOCKER_SETUP.md) → [deploy/DEPLOY.md](deploy/DEPLOY.md) → [SENSITIVITY_DETECTION.md](SENSITIVITY_DETECTION.md) → [PLUGIN_AUTHOR_GUIDE.md](PLUGIN_AUTHOR_GUIDE.md) |
 | **Skip** | Pitch decks; board brief unless scoping a POC |
 | **Overlap** | Compliance engineer (YAML profiles); operator (homelab smoke) |
 

@@ -91,6 +91,10 @@ from api.locale_i18n import (
     make_t,
     negotiate_locale_tag,
 )
+from api.request_body_limit import (
+    MAX_REQUEST_BODY_BYTES,
+    RequestBodySizeLimitMiddleware,
+)
 from api.webauthn_html_gate import (
     configure_routes_context as configure_webauthn_html_gate_context,
     csrf_context_for_request,
@@ -1062,10 +1066,6 @@ def _audit_log_file_response(path: Path) -> Response:
     )
 
 
-# Max request body size (1 MB) for JSON/config and scan start body to reduce DoS via huge payloads
-MAX_REQUEST_BODY_BYTES = 1_000_000
-
-
 def _is_secure_request(request: Request) -> bool:
     """True if request is HTTPS after trusted-proxy evaluation."""
     posture = forwarded_proto_posture(request, _get_config())
@@ -1186,26 +1186,6 @@ async def optional_api_key_middleware(request: Request, call_next):
     return await call_next(request)
 
 
-@app.middleware("http")
-async def request_body_size_middleware(request: Request, call_next):
-    """
-    Reject requests with Content-Length exceeding MAX_REQUEST_BODY_BYTES (1 MB) to prevent
-    DoS via huge JSON or form bodies (e.g. POST /config, POST /scan, POST /scan_database).
-    Added last so it runs first (outermost) in the middleware stack.
-    """
-    content_length = request.headers.get("content-length")
-    if content_length is not None:
-        try:
-            if int(content_length) > MAX_REQUEST_BODY_BYTES:
-                return JSONResponse(
-                    status_code=413,
-                    content={"detail": "Request body too large. Maximum size is 1 MB."},
-                )
-        except ValueError:
-            pass  # Invalid Content-Length; let the server handle it
-    return await call_next(request)
-
-
 _UNPREFIXED_HTML_PATHS = frozenset({"/", "/config", "/reports", "/help", "/about"})
 
 
@@ -1294,6 +1274,10 @@ async def locale_html_middleware(request: Request, call_next):
         )
     return response
 
+
+# Pure ASGI (not BaseHTTPMiddleware): last add_middleware = outermost, so body bytes
+# are counted before Starlette buffers JSON/form. Closes #1558 (chunked / no Content-Length).
+app.add_middleware(RequestBodySizeLimitMiddleware, max_bytes=MAX_REQUEST_BODY_BYTES)
 
 app.mount("/static", StaticFiles(directory=str(_api_dir / "static")), name="static")
 
@@ -2175,6 +2159,10 @@ async def dashboard(request: Request, locale_slug: LocaleSlug):
 @app.get("/{locale_slug}/config", response_class=HTMLResponse)
 async def config_page(request: Request, locale_slug: LocaleSlug):
     """Configuration editor (YAML). Secret values are redacted so the UI never displays them. Query: saved=1 or error=... for feedback after POST."""
+    # SECURITY (#414 / #86): With api.rbac.enabled (Pro+ dashboard_rbac), middleware
+    # maps GET/HEAD/POST /{locale}/config to CFG (config_admin | admin) in
+    # api.rbac.classify_route_rbac. CSRF still applies to POST. Without RBAC,
+    # single-operator deployments rely on require_api_key / WebAuthn HTML gate.
     tag = _locale_tag_from_slug(locale_slug.value)
     saved = request.query_params.get("saved") == "1"
     error = request.query_params.get("error")
@@ -2195,6 +2183,8 @@ async def config_page(request: Request, locale_slug: LocaleSlug):
 @app.post("/{locale_slug}/config", response_class=HTMLResponse)
 async def config_save(request: Request, locale_slug: LocaleSlug):
     """Save configuration (form body: yaml=...). Redirects back to GET .../config with success or error."""
+    # SECURITY (#414 / #86): Runtime YAML write + engine reload. RBAC CFG gate is in
+    # middleware (see config_page); do not treat dashboard/reports_reader as enough.
     tag = _locale_tag_from_slug(locale_slug.value)
     ls = locale_slug.value
     form = await request.form()

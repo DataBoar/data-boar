@@ -75,7 +75,7 @@ Mapa de navegação para **onze** perfis de leitor. Índice completo: [README.md
 | | |
 | - | - |
 | **Entrada** | [USAGE.pt_BR.md](USAGE.pt_BR.md) |
-| **Trilha** | [TECH_GUIDE.pt_BR.md](TECH_GUIDE.pt_BR.md) → [DOCKER_SETUP.pt_BR.md](DOCKER_SETUP.pt_BR.md) → [deploy/DEPLOY.pt_BR.md](deploy/DEPLOY.pt_BR.md) → [SENSITIVITY_DETECTION.pt_BR.md](SENSITIVITY_DETECTION.pt_BR.md) |
+| **Trilha** | [TECH_GUIDE.pt_BR.md](TECH_GUIDE.pt_BR.md) → [DOCKER_SETUP.pt_BR.md](DOCKER_SETUP.pt_BR.md) → [deploy/DEPLOY.pt_BR.md](deploy/DEPLOY.pt_BR.md) → [SENSITIVITY_DETECTION.pt_BR.md](SENSITIVITY_DETECTION.pt_BR.md) → [PLUGIN_AUTHOR_GUIDE.pt_BR.md](PLUGIN_AUTHOR_GUIDE.pt_BR.md) |
 | **Evitar** | Pasta pitch; brief de conselho salvo escopo de POC |
 | **Sobreposição** | Compliance (perfis YAML); operador (smoke em homelab) |
 

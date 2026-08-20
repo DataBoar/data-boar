@@ -48,4 +48,25 @@ Muitas falhas de login podem bloquear a conta; aguarde o desbloqueio ou peça ao
 
 ---
 
+## 7. `pass_from_env` / `api_key_from_env` não resolve
+
+**Cenário:** O config aponta para uma variável de ambiente (`pass_from_env: "VAR_NAME"`, ou `password_from_env`, `user_from_env`, `api_key_from_env`, `token_from_env`, `client_secret_from_env`, `auth.token_from_env`, `auth.client_secret_from_env`) mas essa variável está **ausente, vazia ou com nome errado** no processo que inicia o Data Boar.
+
+**O que o app realmente faz:** não é só um 401 opaco.
+
+- No carregamento do config, variável ausente ou em branco emite **UserWarning**: `Environment variable 'VAR_NAME' is unset or empty; <chave> falls back to inline or default values when present.` (issue #508).
+- `--validate-config` emite **WARN** para nomes `*_from_env` não definidos — veja [USAGE.pt_BR.md](USAGE.pt_BR.md).
+- Sem fallback inline (`pass` / `api_key` ou equivalente), o conector pode seguir com segredo vazio e falhar depois como **auth_failed** ou connection refused. A coluna **Details** do Scan failures costuma mostrar o erro do **servidor**, não “variável de ambiente ausente”.
+
+**Checklist:**
+
+1. Confirme que a variável está definida **no mesmo ambiente do processo**: `echo "$VAR_NAME"` (bash) ou `$env:VAR_NAME` (PowerShell). No Linux o nome é **sensível a maiúsculas**.
+1. Docker / Podman: passe `--env VAR_NAME=value` ou `--env-file` (Compose `environment:` / `env_file:`). Variável só no shell do laptop **não** entra no container.
+1. systemd: `Environment=VAR_NAME=value` ou `EnvironmentFile=` na unidade do **serviço**.
+1. Rode `--validate-config` e procure WARN com o nome da variável.
+
+**Correção:** Exporte a variável antes de subir, ou injete via Docker/Podman/systemd. Nunca grave segredos reais em YAML rastreado. Contrato do operador: [OPERATOR_CREDENTIALS_FROM_ENV.pt_BR.md](ops/OPERATOR_CREDENTIALS_FROM_ENV.pt_BR.md) ([EN](ops/OPERATOR_CREDENTIALS_FROM_ENV.md)). Hábitos de cofre: [OPERATOR_SECRETS_BITWARDEN.pt_BR.md](ops/OPERATOR_SECRETS_BITWARDEN.pt_BR.md) ([EN](ops/OPERATOR_SECRETS_BITWARDEN.md)).
+
+---
+
 **Índice da documentação:** [README.md](README.md) · [README.pt_BR.md](README.pt_BR.md). **Visão geral:** [TROUBLESHOOTING.pt_BR.md](TROUBLESHOOTING.pt_BR.md).

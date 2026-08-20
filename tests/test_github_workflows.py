@@ -328,13 +328,26 @@ def test_sbom_yml_pins_actions_to_shas() -> None:
         code = line.split("#", 1)[0]
         if "uses:" not in code or "docker://" in code:
             continue
-        if "./.github/workflows/" in code:
+        # Local reusable workflows / composite actions are not third-party pins.
+        if "./.github/workflows/" in code or "./.github/actions/" in code:
             continue
         if not any(p in code for p in ("actions/", "github/", "astral-sh/")):
             continue
         assert sha_40.search(code), (
             f"expected full commit SHA in uses line: {line.strip()!r}"
         )
+
+
+def test_sbom_yml_libmariadb_uses_timed_composite_action() -> None:
+    """SBOM must share the #1646 azure→archive pin; do not inline bare apt-get."""
+    text = (WORKFLOWS / "sbom.yml").read_text(encoding="utf-8")
+    assert "sudo apt-get update && sudo apt-get install -y libmariadb-dev" not in text
+    assert "./.github/actions/install-libmariadb-dev" in text
+    assert "timeout 240 sudo apt-get install -y build-essential" in text
+    # Pin + apt-get update live only in the composite action (#1648).
+    data = _load_workflow("sbom.yml")
+    runs = _ci_step_run_texts(data["jobs"]["generate"])
+    assert not any("apt-get update" in r for r in runs)
 
 
 def test_ci_yml_pins_actions_and_uv_cli() -> None:

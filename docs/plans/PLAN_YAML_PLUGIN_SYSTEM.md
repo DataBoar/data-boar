@@ -61,11 +61,13 @@ If the Plugin SDK later needs **operator-authored gates** without Python plugins
 - [x] `patterns_plugin_file:` config key loads all three sections from one file.
 - [x] All existing example files pass validation.
 - [x] `tests/test_plugin_schema.py` green with at least 8 test cases.
+- [x] Operator author guide: `docs/PLUGIN_AUTHOR_GUIDE.md` (+ pt-BR) and `patterns_plugin_file` in `docs/SENSITIVITY_DETECTION.md` (#836).
 
 ## Related
 
 - ADR-0052 (architectural decision)
-- `docs/SENSITIVITY_DETECTION.md` — add `patterns_plugin_file` to operator reference
+- `docs/PLUGIN_AUTHOR_GUIDE.md` — YAML pattern author front door (#836)
+- `docs/SENSITIVITY_DETECTION.md` — `patterns_plugin_file` in operator reference (#836)
 - `config/regex_overrides.example.yaml` — already valid under new schema
 - [ADR-0090](../adr/ADR-0090-open-core-plugin-boundary-pro-auditability-reference-sample.md) / [PLAN_PRO_PLUGIN_AUDITABILITY.md](PLAN_PRO_PLUGIN_AUDITABILITY.md) — SDK **reference sample** + Pro artifact auditability (#811); distinct from this YAML pattern schema
 - [ADR-0086](../adr/ADR-0086-plugin-sdk-language-neutral-contract.md) — L1/L2/L3 envelope (sample CI target)

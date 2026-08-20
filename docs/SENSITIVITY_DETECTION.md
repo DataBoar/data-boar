@@ -20,7 +20,7 @@ You can **set the training words for both ML and DL** in the main config file (i
 
 The detector applies **entertainment / low-PII document** treatment (confidence penalty; ML-only **HIGH** capped to **MEDIUM** with patterns such as `ML_POTENTIAL_ENTERTAINMENT`) when:
 
-- Content looks like **lyrics** (keywords or many short lines), **tablature**, **chord grids** (including Brazilian **cifras** with multiple chords per line), or **interleaved cifra** (alternating chord rows and lyric rows; chord spellings may mix cases, e.g. `C`, `Am`, `EM7`, `D2sus9`).
+- Content looks like **lyrics** (keywords or many short lines that are **not** mostly CSV/TSV/semicolon rows), **tablature** (digit/pipe lines that are **not** those delimited tables), **chord grids** (including Brazilian **cifras** with multiple chords per line), or **interleaved cifra** (alternating chord rows and lyric rows; chord spellings may mix cases, e.g. `C`, `Am`, `EM7`, `D2sus9`).
 - The path or content looks like **subtitles or a transcript** (e.g. `.srt` / `.vtt` / `.ass` / `.ssa`, or cue/timing patterns after normalization). **Strong regex PII** still yields **HIGH** (FN-first).
 - Optional **image OCR** text (`file_scan.scan_image_ocr`) is often noisy and line-broken; when subtitle-like markup is detected, ML-only highs are capped similarly to entertainment. **False positives** remain possible on scans of forms or signage—review findings in context.
 - The **file name** suggests a standard **open-source Markdown** document (`README`, `CONTRIBUTING`, `CODE_OF_CONDUCT`, `CHANGELOG`, `LICENSE`, `SECURITY`, `HISTORY`, …) **and** the body has typical Markdown headings (`#` / `##`). If the **sample is short**, **one** top-level heading plus at least **~60 characters** of body still counts when the stem matches those OSS names—so the first chunk does not need two headings. For filesystem scans, plain-text budget is **`file_scan.file_sample_max_chars`** (defaults to 12k characters); **`sample_limit`** remains the row/TOPN-style cap for databases and SQLite-as-DB columns. **SQL and Snowflake column sampling** applies `WHERE <column> IS NOT NULL` before that cap so sparse columns still yield values for the detector when non-null data exists (see [USAGE.md](USAGE.md)).
@@ -430,7 +430,16 @@ regex_overrides_file: config/regex_overrides.yaml
 # ... rest of config (targets, file_scan, report, etc.)
 ```
 
-If `regex_overrides_file` is omitted or the file is missing, only the built-in patterns are used.
+Prefer the **unified** key when you also ship ML/DL terms in the same file:
+
+```yaml
+# config.yaml
+patterns_plugin_file: config/my_patterns.yaml
+```
+
+`patterns_plugin_file` takes precedence over a legacy key for the **same section**. Author contract (schema, ReDoS, what YAML cannot do): [PLUGIN_AUTHOR_GUIDE.md](PLUGIN_AUTHOR_GUIDE.md) ([pt-BR](PLUGIN_AUTHOR_GUIDE.pt_BR.md)).
+
+If `regex_overrides_file` (and `patterns_plugin_file`) are omitted or the file is missing, only the built-in patterns are used.
 
 ### File format
 
@@ -490,7 +499,7 @@ The application already includes these patterns; you do not need to redefine the
 | `LGPD_CNPJ`   | Brazilian CNPJ (14 digits, optional formatting) | LGPD Art. 5           |
 | `EMAIL`       | Email address                                   | GDPR Art. 4(1)        |
 | `CREDIT_CARD` | 16-digit card (optional spaces/dashes)          | PCI/GLBA              |
-| `PHONE_BR`    | Brazilian phone (optional +55, area code)       | LGPD Art. 5           |
+| `PHONE_BR`    | Brazilian phone (optional +55, required DDD)    | LGPD Art. 5           |
 | `CCPA_SSN`    | US SSN (XXX-XX-XXXX)                            | CCPA                  |
 | `DATE_DMY`    | Date d/m/y (e.g. 31/12/2024)                    | Personal data context |
 

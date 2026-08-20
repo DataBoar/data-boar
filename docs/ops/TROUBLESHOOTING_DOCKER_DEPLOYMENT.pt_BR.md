@@ -4,7 +4,7 @@
 
 **Ver também:** [TROUBLESHOOTING.pt_BR.md](../TROUBLESHOOTING.pt_BR.md) (visão geral e dicas rápidas).
 
-Este documento ajuda quando o Data Boar roda **dentro de um container Docker** e precisa conectar a **bancos remotos**, **shares NFS/SMB** ou **APIs**. Aborda alcance de rede a partir do container, DNS e como usar shares montadas no host vs alvos NFS/SMB.
+Este documento ajuda quando o Data Boar roda **dentro de um container Docker ou Podman** e precisa conectar a **bancos remotos**, **shares NFS/SMB** ou **APIs**. Aborda alcance de rede a partir do container, DNS e como usar shares montadas no host vs alvos NFS/SMB. Hostnames e rede rootless do Podman estão na **§ 6**.
 
 ---
 
@@ -50,6 +50,26 @@ O config deve estar disponível **dentro** do container. Setup típico: diretór
 | Varrer arquivos em NFS/SMB              | A) Monte o share no host, bind mount no container, alvo filesystem. B) Alvo NFS/SMB no config; imagem com `.[shares]`; rede do container até o servidor. |
 | Container não resolve hostname          | Defina `--dns` ou use IP no config.                                                                                                                      |
 | Config ou relatórios não encontrados    | Monte volume em `/data`; CONFIG_PATH=/data/config.yaml; sqlite_path e report.output_dir em `/data`.                                                      |
+| DB no host a partir do **Podman**       | Use `host.containers.internal` (não `host.docker.internal`); rootless usa slirp4netns/pasta, não a bridge do Docker.                                     |
+
+---
+
+## 6. Diferenças do Podman (rootless e rootful)
+
+Se você roda o Data Boar com **Podman** em vez do Docker Engine, a maior parte da orientação acima ainda vale. Exemplos de pull/run: [DEPLOY.pt_BR.md](../deploy/DEPLOY.pt_BR.md) §10 ([EN](../deploy/DEPLOY.md)).
+
+| Tópico | Docker | Podman |
+| ------ | ------ | ------ |
+| Serviços do host a partir do container | `host.docker.internal` (Docker Desktop; no Linux costuma precisar de host-gateway extra) | `host.containers.internal` (Podman típico — **não** assuma `host.docker.internal`) |
+| Rede | Bridge via `dockerd` | Rootless: **slirp4netns** ou **pasta**; rootful: netavark/CNI |
+| Bind de porta abaixo de 1024 | Em geral precisa de root | Rootless: ajuste `net.ipv4.ip_unprivileged_port_start` ou use porta ≥ 1024 (o padrão do Data Boar **8088** serve) |
+| Volumes | `-v /host/path:/container/path` | Mesma sintaxe; no rootless costuma precisar de `:Z`/`:z` (SELinux) e às vezes `--userns=keep-id` para o UID **65532** da imagem ler o bind mount |
+
+**Correção comum:** um banco no **host** fica inacessível a partir de um container Podman **rootless** se o config ainda usa `host.docker.internal`. Defina o `host` do alvo como **`host.containers.internal`**, ou um IP que o container consiga roteiar (LAN do host / gateway em `podman inspect` — **não** `localhost`).
+
+A imagem publicada do Data Boar é **distroless**: **não** há `/bin/sh` nem `ip`/`nc` dentro do container. Não espere que `podman exec <nome> ip route` ou `sh -c 'nc …'` funcione em `data_boar`. Depure no **host** (`podman port`, `podman inspect`) ou use um container de debug descartável na mesma rede.
+
+Hosts de laboratório **completão** / Maestro que usam Podman seguem os mesmos padrões de hostname no config e de volumes; substitua `docker` / `docker compose` por `podman` / `podman-compose`.
 
 ---
 

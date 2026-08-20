@@ -25,6 +25,27 @@ if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
 
+# Same range as CI (ci.yml PII gate change tripwire). Fetch may fail offline;
+# the Python tool SKIP/fail-opens if origin/main is missing. Do not swallow the
+# tripwire exit code (#1385, ADR-0071 / ADR-0080).
+# Never `git fetch --depth=1` here: that converts a full clone into a shallow
+# repo and breaks merge-base / pii_history_guard / the tripwire itself.
+$prevNativePref = $null
+if (Get-Variable -Name PSNativeCommandUseErrorActionPreference -ErrorAction SilentlyContinue) {
+    $prevNativePref = $PSNativeCommandUseErrorActionPreference
+    $PSNativeCommandUseErrorActionPreference = $false
+}
+git fetch origin main 2>$null | Out-Null
+if ($null -ne $prevNativePref) {
+    $PSNativeCommandUseErrorActionPreference = $prevNativePref
+}
+Write-Host "PII gate change tripwire (ADR-0071)..." -ForegroundColor Yellow
+uv run python "$repoRoot\scripts\gate_change_tripwire.py" --base origin/main
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "check-all: ABORTED by gate_change_tripwire (ADR-0071)." -ForegroundColor Red
+    exit $LASTEXITCODE
+}
+
 # #1003: login-env parity (cargo/uv/maturin off default PATH in non-interactive shells).
 function Ensure-LoginToolPath {
     if (Get-Command cargo -ErrorAction SilentlyContinue) { return $true }

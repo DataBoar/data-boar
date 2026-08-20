@@ -18,7 +18,7 @@ Pipeline:
    borderline low-confidence columns may elevate to MEDIUM (EMBEDDING_PROTOTYPE_HINT); default off (Plan §5).
 
 To reduce false positives on song lyrics and music tablature/chord sheets:
-- Content heuristics detect lyrics (verse/chorus keywords, short lines), tabs (digit/pipe lines),
+- Content heuristics detect lyrics (verse/chorus keywords, short lines that are not delimited tables), tabs (digit/pipe lines that are not CSV/TSV/semicolon rows),
   and **interleaved cifra** rows (chord lines alternating with lyric lines; chords may mix cases,
   e.g. ``C``, ``Am``, ``EM7``, ``D2sus9``).
 - In that context, weak patterns (DATE_DMY, PHONE_BR, CEP_BR when loaded via overrides) are
@@ -96,7 +96,8 @@ DEFAULT_PATTERNS = {
     ),
     "EMAIL": (r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b", "GDPR Art. 4(1)"),
     "CREDIT_CARD": (r"\b\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b", "PCI/GLBA"),
-    "PHONE_BR": (r"\b(?:\+55\s?)?(?:\(?\d{2}\)?\s?)?\d{4,5}-?\d{4}\b", "LGPD Art. 5"),
+    # DDD/area code is required (#393): 8–9 digit IDs like 1234-5678 must not match.
+    "PHONE_BR": (r"\b(?:\+55\s?)?\(?\d{2}\)?\s?\d{4,5}-?\d{4}\b", "LGPD Art. 5"),
     "CCPA_SSN": (r"\b\d{3}-\d{2}-\d{4}\b", "CCPA"),
     "DATE_DMY": (r"\b\d{1,2}/\d{1,2}/\d{2,4}\b", "Personal data context"),
 }
@@ -363,10 +364,25 @@ def _attach_possible_minor_context(
     return names, norms
 
 
+def _looks_like_delimited_tabular(lines: list[str]) -> bool:
+    """Most non-empty lines look like CSV / TSV / semicolon rows, not song stanzas (#395)."""
+    if len(lines) < 5:
+        return False
+    delimited = 0
+    for ln in lines:
+        for sep in (",", ";", "\t"):
+            parts = [p for p in ln.split(sep) if p.strip() != ""]
+            if len(parts) >= 2:
+                delimited += 1
+                break
+    return delimited * 4 >= len(lines) * 3
+
+
 def _looks_like_lyrics(sample: str) -> bool:
     """
     Heuristic: content resembles song lyrics (short lines, verse/chorus keywords).
     Used to downgrade false positives from dates/numbers in lyrics.
+    Short-field CSV/TSV is not lyrics (#395).
     """
     if not sample or len(sample.strip()) < 30:
         return False
@@ -391,6 +407,8 @@ def _looks_like_lyrics(sample: str) -> bool:
         return True
     lines = [ln.strip() for ln in sample.splitlines() if ln.strip()]
     if len(lines) >= 5:
+        if _looks_like_delimited_tabular(lines):
+            return False
         avg_len = sum(len(ln) for ln in lines) / len(lines)
         if avg_len < 55:
             return True
@@ -555,10 +573,13 @@ def _looks_like_music_tab(sample: str) -> bool:
     """
     Heuristic: content resembles guitar/bass tablature or chord sheets.
     Used to downgrade false positives from digit sequences (tabs) or chord names.
+    Short-field CSV/TSV is not tablature (#395).
     """
     if not sample or len(sample.strip()) < 20:
         return False
     lines = [ln.strip() for ln in sample.splitlines() if ln.strip()]
+    if _looks_like_delimited_tabular(lines):
+        return False
     tab_score = 0
     chord_score = 0
     chord_token_lines = 0
@@ -685,6 +706,8 @@ def _looks_like_plain_lyrics_txt_file(file_name: str, sample: str) -> bool:
     med = lengths[len(lengths) // 2]
     longest = lengths[-1]
     if med > 78 or longest > 200:
+        return False
+    if _looks_like_delimited_tabular(lines):
         return False
     return True
 

@@ -30,7 +30,11 @@ from unittest.mock import patch
 import numpy as np
 
 from core import detector as detector_module
-from core.detector import _chord_like_token_count
+from core.detector import (
+    _chord_like_token_count,
+    _looks_like_lyrics,
+    _looks_like_music_tab,
+)
 from core.scanner import DataScanner
 
 # Minimal terms so a real vectorizer + RF exist; ML score comes from the patch below.
@@ -244,6 +248,55 @@ Dm7  G7   C
                 "(entertainment heuristics should cap ML-only path)"
             )
         self.assertIn(result["sensitivity_level"], ("LOW", "MEDIUM"))
+
+
+class TestLooksLikeLyricsShortFieldCsv(unittest.TestCase):
+    """CSV/TSV with short fields must not trip the lyrics short-line heuristic (#395)."""
+
+    _CSV_SAMPLE = (
+        "id,name,amount\n"
+        "1,user_a,100\n"
+        "2,user_b,200\n"
+        "3,user_c,300\n"
+        "4,user_d,150\n"
+        "5,user_e,250"
+    )
+
+    def test_short_field_csv_is_not_lyrics(self) -> None:
+        self.assertFalse(_looks_like_lyrics(self._CSV_SAMPLE))
+        self.assertFalse(_looks_like_music_tab(self._CSV_SAMPLE))
+
+    def test_short_field_semicolon_and_tsv_are_not_lyrics(self) -> None:
+        semi = self._CSV_SAMPLE.replace(",", ";")
+        tsv = self._CSV_SAMPLE.replace(",", "\t")
+        self.assertFalse(_looks_like_lyrics(semi))
+        self.assertFalse(_looks_like_lyrics(tsv))
+
+    def test_short_lyric_lines_without_delimiters_still_match(self) -> None:
+        lyrics = "\n".join(
+            (
+                "walking home at night",
+                "the rain begins again",
+                "wait for me downtown",
+                "lights along the river",
+                "nobody on the platform",
+            )
+        )
+        self.assertTrue(_looks_like_lyrics(lyrics))
+
+    def test_csv_with_weak_date_pattern_stays_high_not_lyrics_context(self) -> None:
+        csv_dates = (
+            "id,event_date,amount\n"
+            "1,31/12/2024,100\n"
+            "2,01/01/2025,200\n"
+            "3,15/06/2024,300\n"
+            "4,20/07/2024,150\n"
+            "5,08/08/2024,250"
+        )
+        result = DataScanner().scan_column("events.csv", csv_dates)
+        self.assertEqual(result["sensitivity_level"], "HIGH")
+        self.assertIn("DATE_DMY", result.get("pattern_detected") or "")
+        self.assertNotIn("lyrics/tabs context", result.get("pattern_detected") or "")
 
 
 if __name__ == "__main__":

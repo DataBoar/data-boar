@@ -20,7 +20,7 @@ Você pode **definir as palavras de treino para ML e DL** no arquivo de config p
 
 O detector aplica tratamento de **entretenimento / documento de baixo risco de PII** (penalidade na confiança; ML só **HIGH** limitado a **MEDIUM** com padrões como `ML_POTENTIAL_ENTERTAINMENT`) quando:
 
-- O conteúdo parece **letra de música** (palavras-chave ou muitas linhas curtas), **tablatura**, **grade de acordes** (incluindo **cifras** com vários acordes por linha) ou **cifra entrelaçada** (linhas de acorde alternando com linhas de letra; grafias podem misturar maiúsculas/minúsculas, ex.: `C`, `Am`, `EM7`, `D2sus9`).
+- O conteúdo parece **letra de música** (palavras-chave ou muitas linhas curtas que **não** são sobretudo linhas CSV/TSV/ponto-e-vírgula), **tablatura** (linhas de dígitos/pipe que **não** são essas tabelas delimitadas), **grade de acordes** (incluindo **cifras** com vários acordes por linha) ou **cifra entrelaçada** (linhas de acorde alternando com linhas de letra; grafias podem misturar maiúsculas/minúsculas, ex.: `C`, `Am`, `EM7`, `D2sus9`).
 - O caminho ou o conteúdo parecem **legenda ou transcrição** (ex.: `.srt` / `.vtt` / `.ass` / `.ssa`, ou padrões de *cue*/tempo após normalização). **Regex forte de PII** ainda gera **HIGH** (prioridade a não perder verdadeiros positivos).
 - Texto vindo de **OCR de imagem** (`file_scan.scan_image_ocr`) costuma ser ruidoso; quando o markup é parecido com legenda, o teto do ML segue a mesma lógica de entretenimento. **Falsos positivos** ainda podem ocorrer em formulários ou placas fotografados — revisar no contexto.
 - O **nome do arquivo** sugere **Markdown** típico de repositório aberto (`README`, `CONTRIBUTING`, `CODE_OF_CONDUCT`, `CHANGELOG`, `LICENSE`, `SECURITY`, `HISTORY`, …) **e** o corpo tem títulos Markdown (`#` / `##`). Se a **amostra for curta**, **um** título de nível superior e pelo menos **~60 caracteres** de corpo já bastam quando o *stem* bate com esses nomes OSS — o primeiro recorte não precisa de dois títulos. No filesystem, o orçamento de texto plano é **`file_scan.file_sample_max_chars`** (padrão 12 mil caracteres); **`sample_limit`** continua sendo o limite no estilo linhas/TOPN para bancos e colunas no modo SQLite como DB. **Na amostragem por coluna em SQL (SQLAlchemy) e Snowflake**, usa-se `WHERE <coluna> IS NOT NULL` antes desse teto, para colunas esparsas ainda alimentarem o detector quando houver valor não nulo (ver [USAGE.md](USAGE.md)).
@@ -428,7 +428,16 @@ regex_overrides_file: config/regex_overrides.yaml
 # ... resto do config (targets, file_scan, report, etc.)
 ```
 
-Se `regex_overrides_file` for omitido ou o arquivo não existir, apenas os padrões embutidos são usados.
+Prefira a chave **unificada** quando também enviar termos ML/DL no mesmo arquivo:
+
+```yaml
+# config.yaml
+patterns_plugin_file: config/my_patterns.yaml
+```
+
+`patterns_plugin_file` prevalece sobre a chave legada na **mesma seção**. Contrato do autor (schema, ReDoS, o que o YAML não pode fazer): [PLUGIN_AUTHOR_GUIDE.pt_BR.md](PLUGIN_AUTHOR_GUIDE.pt_BR.md) ([EN](PLUGIN_AUTHOR_GUIDE.md)).
+
+Se `regex_overrides_file` (e `patterns_plugin_file`) forem omitidos ou o arquivo não existir, apenas os padrões embutidos são usados.
 
 ### Formato do arquivo
 
@@ -488,7 +497,7 @@ A aplicação já inclui estes padrões; não é preciso redefini-los a menos qu
 | `LGPD_CNPJ`   | CNPJ brasileiro (14 dígitos, formatação opcional)  | LGPD Art. 5           |
 | `EMAIL`       | Endereço de e-mail                                 | GDPR Art. 4(1)        |
 | `CREDIT_CARD` | Cartão 16 dígitos (espaços/traços opcionais)       | PCI/GLBA              |
-| `PHONE_BR`    | Telefone BR (+55, DDD opcional)                    | LGPD Art. 5           |
+| `PHONE_BR`    | Telefone BR (+55 opcional, DDD obrigatório)        | LGPD Art. 5           |
 | `CCPA_SSN`    | SSN EUA (XXX-XX-XXXX)                              | CCPA                  |
 | `DATE_DMY`    | Data d/m/a (ex.: 31/12/2024)                       | Personal data context |
 

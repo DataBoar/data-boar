@@ -1,5 +1,5 @@
 # Install MariaDB client headers so the `mariadb` PyPI package can build from
-# source on Ubuntu runners. Used by multiple Linux jobs in ci.yml.
+# source on Ubuntu runners. Used by Linux jobs in ci.yml and sbom.yml.
 #
 # Composite-action steps cannot set `timeout-minutes` (workflow job steps only).
 # Fail-fast for stalled apt mirrors is coreutils `timeout` around apt-get
