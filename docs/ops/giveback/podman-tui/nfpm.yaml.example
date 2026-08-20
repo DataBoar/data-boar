@@ -1,0 +1,34 @@
+# Example nfpm config for an upstream containers/podman-tui PR (#1424).
+# Replace maintainer with the packager identity that will own the Debian/RPM metadata.
+# Copy LICENSE from the podman-tui git tree into payload/usr/share/doc/podman-tui/copyright.
+# Do not ship this file as a Data Boar native package.
+name: podman-tui
+arch: amd64
+platform: linux
+version: 0.0.0
+section: admin
+priority: optional
+maintainer: Full Name <you@example.com>
+description: |
+  Terminal user interface for Podman.
+  Keyboard-driven TUI to manage pods, containers, images, volumes and networks
+  through the Podman API.
+vendor: containers
+homepage: https://github.com/containers/podman-tui
+license: Apache-2.0
+contents:
+  - src: ./payload/usr/bin/podman-tui
+    dst: /usr/bin/podman-tui
+    file_info:
+      mode: 0755
+  - src: ./payload/usr/share/doc/podman-tui/copyright
+    dst: /usr/share/doc/podman-tui/copyright
+    file_info:
+      mode: 0644
+overrides:
+  deb:
+    recommends: ["podman"]
+  rpm:
+    recommends: ["podman"]
+  archlinux:
+    depends: ["podman"]

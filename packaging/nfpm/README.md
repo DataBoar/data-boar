@@ -54,6 +54,10 @@ Embedded CPython is **`cp314t`** under `/usr/lib/data-boar/` (no `Depends: pytho
 
 Presence of freethreaded CPython **does not** unlock Enterprise. Runtime gates remain worker caps (#551) and `pro_prefilter_accel`.
 
+## Give-back (third-party nfpm)
+
+Recipe for proposing **deb/rpm/apk/pacman** on **`containers/podman-tui`** (zip-only releases today): [docs/ops/GIVEBACK_PODMAN_TUI_NFPM.md](../../docs/ops/GIVEBACK_PODMAN_TUI_NFPM.md) ([#1424](https://github.com/DataBoar/data-boar/issues/1424)). Lessons: always include license **file** contents; `maintainer:` must be `Name <email>`; do not publish unofficial packages on Data Boar Releases.
+
 ## Out of scope here
 
 apk/musl + arm64, pacman metal, five-host matrix, signed repo **index** publish (#1405). xbps lives in [`../void/`](../void/README.md). #1408 attaches the same package files to the product Release; #1405 must not rebuild them.
