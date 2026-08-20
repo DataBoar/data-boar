@@ -25,7 +25,10 @@ class DataBoar < Formula
 
   def install
     virtualenv_create(libexec, "python3.13")
-    system libexec/"bin/python", "-m", "pip", "install", *std_pip_args(prefix: false), "."
+    python = libexec/"bin/python"
+    # std_pip_args is --no-deps --no-build-isolation --no-binary=:all: (resource
+    # model). This tap lets pip fetch hatchling for the sdist plus runtime wheels.
+    system "python3.13", "-m", "pip", "--python", python, "install", "--verbose", "."
     bin.install_symlink libexec/"bin/data-boar"
   end
 

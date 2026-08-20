@@ -12,7 +12,7 @@ Operator runbook: [docs/ops/HOMEBREW_TAP.md](../../docs/ops/HOMEBREW_TAP.md) ([p
 | -------- | ---- |
 | [`Formula/data-boar.rb`](Formula/data-boar.rb) | Canonical formula (copied to the tap repo on bump) |
 
-The formula **depends on Homebrew `python@3.13`** and `pip install`s the **PyPI sdist** into a prefix venv. It does **not** embed CPython (that is the Linux nfpm / Void xbps Enterprise channel, ADR-0084).
+The formula **depends on Homebrew `python@3.13`** and `pip install`s the **PyPI sdist** into a prefix venv (build isolation + runtime wheels from PyPI — not Homebrew `std_pip_args` / vendored `resource` blocks). It does **not** embed CPython (that is the Linux nfpm / Void xbps Enterprise channel, ADR-0084).
 
 Connector extras (`sql-community`, `nosql`, …) stay out of the formula; install them into the formula venv after `brew install` (see caveats).
 

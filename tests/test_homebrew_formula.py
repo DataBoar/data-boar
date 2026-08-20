@@ -25,6 +25,7 @@ def test_formula_is_host_python_pip_not_embed() -> None:
     assert 'depends_on "python@3.13"' in text
     assert "virtualenv_create" in text
     assert "pip" in text
+    assert "*std_pip_args" not in text
     assert "data-boar --version" in text
     assert "--demo" in text
     assert "assert_path_exists" in text
