@@ -232,20 +232,31 @@ def _validate_config_and_exit(config: dict[str, Any], config_path: str) -> None:
 
     from core.output_paths import OutputPathError, ensure_config_output_directories
 
+    # #538: connector/key errors abort before mkdir, integrity-anchor sqlite, or trust emit.
+    if errors:
+        for w in warnings:
+            print(f"  WARN  {w}")
+        for e in errors:
+            print(f"  ERROR {e}")
+        print(f"\n[INVALID] {len(errors)} error(s), {len(warnings)} warning(s).")
+        sys.exit(1)
+
     try:
         for msg in ensure_config_output_directories(config):
             print(f"  OK    {msg}")
     except OutputPathError as e:
-        errors.append(str(e))
+        for w in warnings:
+            print(f"  WARN  {w}")
+        print(f"  ERROR {e}")
+        print(f"\n[INVALID] 1 error(s), {len(warnings)} warning(s).")
+        sys.exit(1)
+
+    _run_startup_integrity_check(config)
+    runtime_trust = get_runtime_trust_snapshot(config)
+    _emit_runtime_trust_info(runtime_trust, to_stdout=True, to_stderr=True)
 
     for w in warnings:
         print(f"  WARN  {w}")
-    for e in errors:
-        print(f"  ERROR {e}")
-
-    if errors:
-        print(f"\n[INVALID] {len(errors)} error(s), {len(warnings)} warning(s).")
-        sys.exit(1)
     print(f"\n[OK] {len(targets)} target(s) valid. {len(warnings)} warning(s).")
     sys.exit(0)
 
@@ -655,6 +666,7 @@ def main() -> None:
             "warn on unset *_from_env vars and missing optional SQL driver packages "
             "(offline import probe). Also reports rust-regex-stage / accelerator "
             "readiness (#1411 / #1414; observability only). No connections, scan, or --web. "
+            "On errors, does not create output directories or the sqlite file. "
             "Exit 0 when valid, 1 on errors. Incompatible with --web, --reset-data, "
             "and --export-audit-trail."
         ),
@@ -1094,9 +1106,7 @@ def main() -> None:
         sys.exit(1)
 
     if args.validate_config:
-        _integrity = _run_startup_integrity_check(config)
-        runtime_trust = get_runtime_trust_snapshot(config)
-        _emit_runtime_trust_info(runtime_trust, to_stdout=True, to_stderr=True)
+        # Integrity / runtime-trust (sqlite) run only after a valid pre-flight (#538).
         _validate_config_and_exit(config, args.config)
 
     if args.prefilter_status:

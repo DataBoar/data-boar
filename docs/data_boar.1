@@ -206,6 +206,9 @@ in the configuration instead of this flag. The default Docker image command pass
 Pre\-flight validation: parse the main configuration file (YAML or JSON), check connector type/driver recognition and required keys per target; warn on unset
 .BR *_from_env
 variables and on missing optional SQL driver packages (offline import probe only; no network or DB connect).
+On
+.BR [INVALID]
+(unknown connector, missing required keys), does not create output directories or the SQLite file.
 .
 .TP
 .B \-\-check\-extras
@@ -226,7 +229,11 @@ the parent of
 and (when
 .B learned_patterns.enabled
 is true) the parent of
-.BR learned_patterns.output_file .
+.BR learned_patterns.output_file
+when the configuration is valid.
+On
+.BR [INVALID]
+those directories and the integrity\-anchor SQLite file are not created.
 Exit
 .B 0
 with
