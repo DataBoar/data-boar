@@ -40,6 +40,8 @@ Empty while the working tree carries **`1.8.0-beta`** (see section below).
 
 - **Native packages on the product GitHub Release (#1408):** `native-packages.yml` builds deb/rpm/apk/pacman from the wheelhouse populate and, on a `v*` Release, attaches them beside SBOMs with packager filenames, `SHA256SUMS`, and `release-manifest.json` `native_packages[]`. Air-gap: [NATIVE_PACKAGE_RELEASE.md](docs/ops/NATIVE_PACKAGE_RELEASE.md). The hand-built recipe-proof `.deb` is not published.
 
+- **macOS Homebrew own tap (#1425):** `brew tap DataBoar/databoar && brew install data-boar` — Homebrew `python@3.13` + pip of the PyPI sdist (no embedded CPython). CI `macos-14` runs `brew audit --strict --new` and `brew test`. Formula bump: `scripts/homebrew_formula_bump.py` after PyPI publish. Runbook: [HOMEBREW_TAP.md](docs/ops/HOMEBREW_TAP.md).
+
 ---
 
 ## 1.7.4.post12 (published PyPI **2026-07-30 00:42:09 UTC**)

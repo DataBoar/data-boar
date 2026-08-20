@@ -107,6 +107,18 @@ uv sync
 pip install -e .
 ```
 
+### Homebrew (macOS)
+
+Own tap (not homebrew-core). Host Python from Homebrew; pip installs the PyPI sdist — **no** embedded CPython payload:
+
+```bash
+brew tap DataBoar/databoar
+brew install data-boar
+data-boar --demo
+```
+
+Operator notes (audit, extras, formula bump): [ops/HOMEBREW_TAP.md](ops/HOMEBREW_TAP.md) ([pt-BR](ops/HOMEBREW_TAP.pt_BR.md)).
+
 ### Running the app with uv
 
 `uv` can also run the application directly with all dependencies:

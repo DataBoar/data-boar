@@ -46,6 +46,8 @@ On Windows, the **recommended** flow for non-technical users is **pipx** — see
 
 **Linux via pipx:** on Debian/Ubuntu and Fedora with Python >=3.12 available, `pipx install data-boar` is usually direct. On the RHEL9 family and Alpine/musl there is one onboarding pre-step — see [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) before `pipx install`.
 
+**macOS via Homebrew (own tap):** `brew tap DataBoar/databoar && brew install data-boar`, then `data-boar --demo`. Uses Homebrew’s Python (pip into a venv) — not an embedded interpreter. Details: [docs/ops/HOMEBREW_TAP.md](docs/ops/HOMEBREW_TAP.md).
+
 Open [http://127.0.0.1:8088/en/](http://127.0.0.1:8088/en/) — demo findings already loaded (or `/pt-br/`).
 
 **In the clone (development):** `uv sync` at the repo root, then `uv run python main.py --demo` or `.\scripts\demo.sh`.
