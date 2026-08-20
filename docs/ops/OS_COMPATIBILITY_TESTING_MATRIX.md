@@ -4,6 +4,8 @@
 
 **Windows (CI-tested, not only declared):** GitHub Actions job **`test-windows`** on **`windows-latest`** (Python **3.12**) runs pytest, a native **`pip install .`** smoke (`data-boar --version`), and a headless demo scan via **`scripts/demo_headless.py`** (same outcome as `scripts/demo.sh --headless`). Tracker: [#1427](https://github.com/DataBoar/data-boar/issues/1427) · [PLAN_WINDOWS_CI_ENABLEMENT.md](../plans/PLAN_WINDOWS_CI_ENABLEMENT.md). This does **not** replace MSI/winget packaging ([#1467](https://github.com/DataBoar/data-boar/issues/1467)).
 
+**macOS (Homebrew tap, CI on Apple Silicon):** own tap `DataBoar/databoar` — formula uses Homebrew Python + pip, **not** an embedded interpreter. Workflow **`homebrew-tap.yml`** on **macos-14** runs `brew audit --strict --new`, `brew install`, and `brew test` (`--version` + `--demo`). Tracker: [#1425](https://github.com/DataBoar/data-boar/issues/1425) · [HOMEBREW_TAP.md](HOMEBREW_TAP.md). This does **not** mix with Windows CI (#1427) or xbps (#1404).
+
 **Purpose:** Guide **which Linux distributions** to test Data Boar on in the homelab, prioritized by **production relevance**, **Python 3.12+ availability**, and **package manager** differences. This helps expand **documented Linux homelab coverage** beyond the **most-documented install path** (Debian/Ubuntu examples in [TECH_GUIDE.md](../TECH_GUIDE.md)).
 
 **Related:** [HOMELAB_VALIDATION.md](HOMELAB_VALIDATION.md) · [SECURITY.md](../../SECURITY.md) (Python 3.12+ requirement) · [TECH_GUIDE.md](../TECH_GUIDE.md) (install examples)

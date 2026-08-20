@@ -46,6 +46,8 @@ No Windows, o fluxo **recomendado** para não-técnicos é **pipx** — veja o [
 
 **Linux via pipx:** em Debian/Ubuntu e Fedora com Python >=3.12 disponível, `pipx install data-boar` costuma ser direto. Na família RHEL9 e em Alpine/musl há 1 pré-passo de onboarding — veja [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) antes do `pipx install`.
 
+**macOS via Homebrew (tap próprio):** `brew tap DataBoar/databoar && brew install data-boar`, depois `data-boar --demo`. Usa o Python do Homebrew (pip num venv) — sem interpretador embarcado. Detalhes: [docs/ops/HOMEBREW_TAP.pt_BR.md](docs/ops/HOMEBREW_TAP.pt_BR.md).
+
 Abra [http://127.0.0.1:8088/pt-br/](http://127.0.0.1:8088/pt-br/) — achados de demonstração já carregados.
 
 **No clone (desenvolvimento):** `uv sync` na raiz, depois `uv run python main.py --demo` ou `.\scripts\demo.sh`.

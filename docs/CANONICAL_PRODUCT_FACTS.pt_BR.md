@@ -33,6 +33,8 @@ Fonte da verdade enxuta para humanos e agentes de código. Prefira **links** a r
 5. **Docker é opcional** — caminho avançado / TI. **Não é obrigatório** no caminho nativo Windows. Não apresente Docker como único caminho ou padrão para quem não é de TI.
 6. Aprofunde no repo depois do demo: [QUICKSTART.pt_BR.md](../QUICKSTART.pt_BR.md) → [USAGE.pt_BR.md](USAGE.pt_BR.md). Narrativa de negócio fica no **site**; este repo fica no **como rodar**.
 
+**macOS:** `brew tap DataBoar/databoar && brew install data-boar` (tap próprio, Python do Homebrew + pip; não são os pacotes Linux com CPython embarcado). Detalhes: [ops/HOMEBREW_TAP.pt_BR.md](ops/HOMEBREW_TAP.pt_BR.md).
+
 ---
 
 ## 3. Contrato do produto (doutrina)

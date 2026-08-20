@@ -94,3 +94,17 @@ jobs:
 
       - name: Publish to PyPI (OIDC)
         uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # v1.14.0
+
+  bump-homebrew:
+    name: Bump Homebrew formula after PyPI
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'pypi'
+    needs: publish-pypi
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write
+    secrets:
+      HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+    uses: ./.github/workflows/homebrew-tap.yml
+    with:
+      bump: true

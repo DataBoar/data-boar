@@ -4,6 +4,8 @@
 
 **Windows (testado em CI, não só declarado):** job **`test-windows`** em **`windows-latest`** (Python **3.12**) — pytest, `pip install .`, demo headless (`scripts/demo_headless.py`). Ver [#1427](https://github.com/DataBoar/data-boar/issues/1427) e o plano EN `PLAN_WINDOWS_CI_ENABLEMENT.md`. Não substitui MSI/winget ([#1467](https://github.com/DataBoar/data-boar/issues/1467)).
 
+**macOS (tap Homebrew, CI em Apple Silicon):** tap próprio `DataBoar/databoar` — Python do Homebrew + pip, **sem** interpretador embarcado. Workflow **`homebrew-tap.yml`** em **macos-14**: `brew audit --strict --new`, `brew install`, `brew test`. Ver [#1425](https://github.com/DataBoar/data-boar/issues/1425) · [HOMEBREW_TAP.pt_BR.md](HOMEBREW_TAP.pt_BR.md).
+
 **Objetivo:** Guiar **quais distribuições Linux** testar o Data Boar no homelab, priorizadas por **relevância em produção**, **disponibilidade de Python 3.12+** e diferenças de **gerenciador de pacotes**. Ajuda a expandir a **cobertura documentada do homelab Linux** além do **caminho de instalação mais documentado** (exemplos Debian/Ubuntu no [TECH_GUIDE.md](../TECH_GUIDE.md)).
 
 **Documento completo (EN, tabelas e comandos):** [OS_COMPATIBILITY_TESTING_MATRIX.md](OS_COMPATIBILITY_TESTING_MATRIX.md)

@@ -33,6 +33,8 @@ Terse source of truth for humans and coding agents. Prefer **links** over restat
 5. **Docker is optional** — advanced / TI path. **Not required** for the native Windows path. Do not present Docker as the only or default path for non-technical users.
 6. Deepen in the repo after demo: [QUICKSTART.md](../QUICKSTART.md) → [USAGE.md](USAGE.md). Business narrative stays on the **site**; this repo stays **how to run**.
 
+**macOS:** `brew tap DataBoar/databoar && brew install data-boar` (own tap, Homebrew’s Python + pip; not the Linux embedded-CPython packages). Details: [ops/HOMEBREW_TAP.md](ops/HOMEBREW_TAP.md).
+
 ---
 
 ## 3. Product contract (doctrine)
