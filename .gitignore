@@ -9,6 +9,8 @@ requirements-sbom.txt
 # Project-specific: local DB, generated reports and heatmaps (do not commit scan results or credentials)
 audit_results.db
 audit_results.db-journal
+# Default CLI/dashboard SQLite at repo root (check-all / --validate-config / local runs)
+/audit.db
 *.db-journal
 # Ephemeral scan state at repo root (BoarStateTracker / local runs)
 .data_boar_state.json
