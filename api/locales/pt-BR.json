@@ -75,7 +75,7 @@
     "scan_compressed": "Também varrer dentro de arquivos compactados (zip, tar, 7z, …)",
     "scan_compressed_hint": "Pode aumentar bastante o tempo de execução e E/S. Use só quando precisar inspecionar conteúdo de arquivos.",
     "content_type": "Usar detecção de tipo de conteúdo (magic bytes) para o formato do arquivo",
-    "content_type_hint": "Ajuda a encontrar arquivos renomeados ou disfarçados (ex.: PDF salvo como .txt). Lê o início de cada arquivo — pode aumentar E/S e tempo de execução.",
+    "content_type_hint": "Ajuda a encontrar arquivos renomeados ou disfarçados (ex.: PDF salvo como .txt). Lê o início de cada arquivo — pode aumentar E/S e tempo de execução. Não expande arquivos compactados com extensão mentirosa; esses gravam archive_type_mismatch.",
     "scan_stego": "Dicas de esteganografia em mídia rica (heurística de entropia)",
     "scan_stego_hint": "Dica opcional de entropia de bytes em imagens/áudio/vídeo — não prova dado oculto. Leitura extra por arquivo; use só em investigação de ocultação.",
     "jurisdiction": "Dicas heurísticas de jurisdição (informações do relatório — DPO / jurídico)",
