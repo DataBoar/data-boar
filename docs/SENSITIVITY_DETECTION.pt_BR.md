@@ -428,7 +428,16 @@ regex_overrides_file: config/regex_overrides.yaml
 # ... resto do config (targets, file_scan, report, etc.)
 ```
 
-Se `regex_overrides_file` for omitido ou o arquivo não existir, apenas os padrões embutidos são usados.
+Prefira a chave **unificada** quando também enviar termos ML/DL no mesmo arquivo:
+
+```yaml
+# config.yaml
+patterns_plugin_file: config/my_patterns.yaml
+```
+
+`patterns_plugin_file` prevalece sobre a chave legada na **mesma seção**. Contrato do autor (schema, ReDoS, o que o YAML não pode fazer): [PLUGIN_AUTHOR_GUIDE.pt_BR.md](PLUGIN_AUTHOR_GUIDE.pt_BR.md) ([EN](PLUGIN_AUTHOR_GUIDE.md)).
+
+Se `regex_overrides_file` (e `patterns_plugin_file`) forem omitidos ou o arquivo não existir, apenas os padrões embutidos são usados.
 
 ### Formato do arquivo
 

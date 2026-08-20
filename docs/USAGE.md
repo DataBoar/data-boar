@@ -62,6 +62,10 @@ Some enterprise deployments require explicit **tamper-evidence hooks** beside `l
 
 Opt-in YAML `remediation:` loads a partner `RemediationPlugin` after report generation (**Enterprise** feature `remediation_plugin`, or **OPEN** lab). Fail-graceful: plugin errors never abort the scan. Partner authoring guide: **[PLUGIN_SDK.md](PLUGIN_SDK.md)** ([pt-BR](PLUGIN_SDK.pt_BR.md)). Example block: `deploy/config.example.yaml`.
 
+### YAML pattern plugins (optional)
+
+Operator YAML files inject extra regex / ML / DL **terms** into the detector (`patterns_plugin_file`, or legacy `regex_overrides_file` / `ml_patterns_file` / `dl_patterns_file`). They do **not** run code. Author guide: **[PLUGIN_AUTHOR_GUIDE.md](PLUGIN_AUTHOR_GUIDE.md)** ([pt-BR](PLUGIN_AUTHOR_GUIDE.pt_BR.md)). Schema: `config/plugin_schema.yaml`. Field-level how-to: [SENSITIVITY_DETECTION.md](SENSITIVITY_DETECTION.md#custom-regex-patterns-detecting-new-personalsensitive-values).
+
 ### Outcomes
 
 ## Zero-config demo (`--demo`)

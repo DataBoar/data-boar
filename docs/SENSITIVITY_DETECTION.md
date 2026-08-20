@@ -430,7 +430,16 @@ regex_overrides_file: config/regex_overrides.yaml
 # ... rest of config (targets, file_scan, report, etc.)
 ```
 
-If `regex_overrides_file` is omitted or the file is missing, only the built-in patterns are used.
+Prefer the **unified** key when you also ship ML/DL terms in the same file:
+
+```yaml
+# config.yaml
+patterns_plugin_file: config/my_patterns.yaml
+```
+
+`patterns_plugin_file` takes precedence over a legacy key for the **same section**. Author contract (schema, ReDoS, what YAML cannot do): [PLUGIN_AUTHOR_GUIDE.md](PLUGIN_AUTHOR_GUIDE.md) ([pt-BR](PLUGIN_AUTHOR_GUIDE.pt_BR.md)).
+
+If `regex_overrides_file` (and `patterns_plugin_file`) are omitted or the file is missing, only the built-in patterns are used.
 
 ### File format
 
