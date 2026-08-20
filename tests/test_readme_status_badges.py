@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
@@ -26,6 +27,15 @@ def test_readme_status_badges_after_mascot(readme_name: str) -> None:
     assert "hub.docker.com/r/fabioleitao/data_boar" in intro
     assert "img.shields.io/github/license/DataBoar/data-boar" in intro
     assert "(LICENSE)" in intro
+    # Regex — not hostname ``in`` — CodeQL py/incomplete-url-substring-sanitization.
+    assert re.search(
+        r"img\.shields\.io/github/v/release/DataBoar/data-boar",
+        intro,
+    )
+    assert re.search(
+        r"https://github\.com/DataBoar/data-boar/releases\)",
+        intro,
+    )
     assert "pypi.org" not in intro.lower()
     assert "codecov" not in intro.lower()
     assert "coveralls" not in intro.lower()

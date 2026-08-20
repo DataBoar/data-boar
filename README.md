@@ -10,6 +10,7 @@
 [![CodeQL](https://github.com/DataBoar/data-boar/actions/workflows/codeql.yml/badge.svg)](https://github.com/DataBoar/data-boar/security/code-scanning)
 [![Docker Hub](https://img.shields.io/docker/v/fabioleitao/data_boar?label=Docker%20Hub&logo=docker)](https://hub.docker.com/r/fabioleitao/data_boar)
 [![License](https://img.shields.io/github/license/DataBoar/data-boar)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/DataBoar/data-boar)](https://github.com/DataBoar/data-boar/releases)
 
 **Forensic-grade open-source PII scanner for LGPD · GDPR · evidence-ready compliance.**
 
