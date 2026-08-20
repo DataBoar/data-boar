@@ -70,7 +70,7 @@ Treat these as **defaults** unless the operator explicitly reopens policy:
 | Clear map from intent → token → rule (cold-start ladder) | More **documentation surface** to keep in sync (this runbook, ladder, hubs) |
 | Easier reasoning about “what is binding now” | Wrong narrow **`globs`** can **over**-attach on accidental file opens |
 
-Mitigation: keep **[`session-mode-keywords.mdc`](../../.cursor/rules/session-mode-keywords.mdc)** **`alwaysApply: true`** as the **canonical token table**, and run the [Reproducible ritual](#reproducible-ritual-concrete-steps) so hubs and tests move together.
+Mitigation: keep **[`session-mode-keywords.mdc`](../../.cursor/rules/session-mode-keywords.mdc)** **`alwaysApply: true`** as the **canonical token table**, run the [Reproducible ritual](#reproducible-ritual-concrete-steps) so hubs and tests move together, and keep **[`tests/test_cursor_rules_globs.py`](../../tests/test_cursor_rules_globs.py)** green so stale situational **`globs`** fail CI instead of silently never loading (#409).
 
 ## Why locale rules were not part of phase 2 “flip”
 
@@ -141,6 +141,7 @@ _The table below is **historical** pre-#1154; use the [Tier B situationalized](#
 
 ## Tier C — meta and hygiene
 
+- **Situational globs (#409):** **[`tests/test_cursor_rules_globs.py`](../../tests/test_cursor_rules_globs.py)** fails CI when an **`alwaysApply: false`** glob matches no files (gitignored **`docs/private/`** / **`.cursor/private/`** patterns are skipped when those trees are absent).
 - **Inventory automation (idea):** A test or script that asserts the list of **`alwaysApply: true`** rules matches an allowlist in docs (optional; maintenance cost).
 - **Snapshots:** Private zips under **`docs/private/ops/cursor-config-snapshots/`** (if used) for before/after rule frontmatter.
 - **Hub phase “B”:** **[`CURSOR_AGENT_POLICY_HUB.md`](CURSOR_AGENT_POLICY_HUB.md)** is the **clickable** map—keep it aligned with **`AGENTS.md`** when adding any new latch row.
