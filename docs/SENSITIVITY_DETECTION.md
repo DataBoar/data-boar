@@ -27,6 +27,10 @@ The detector applies **entertainment / low-PII document** treatment (confidence 
 - The file is a **`.txt`** with several **medium-short lines** (typical song stanzas without explicit `Verse` / `Chorus` headers).
 - The **basename** contains a **chord in parentheses** (e.g. `Rosa(D).txt`), hinting at a chord chart.
 
+**Short-field CSV / TSV is not lyrics or tablature (#395):** `_looks_like_delimited_tabular()` in `core/detector.py` returns true when there are **at least five** non-empty lines and **≥ 75%** of them split into **two or more** fields on `,` / `;` / tab. In that case the detector **does not** treat the sample as lyrics via the short-line-average path, and **does not** treat it as guitar/bass tablature. That keeps real PII in short-column exports (order IDs, SKUs) from taking the entertainment downgrade.
+
+**Constraint:** lyric **keywords** (`verse`, `chorus`, `letra`, …) still return “lyrics” **before** the CSV check. A CSV whose cells contain those words can still take the entertainment path. Tablature checks the CSV shape first.
+
 **Strong regex matches** (CPF, email, credit card, …) still produce **HIGH** where applicable. Raising **`medium_confidence_threshold`** mainly affects the MEDIUM band; the default **70** boundary for ML-only **HIGH** is unchanged— these heuristics target false **HIGH** on cloned repos and music libraries scanned as filesystem targets.
 
 ### Generic digit patterns and false-positive scope
@@ -502,6 +506,8 @@ The application already includes these patterns; you do not need to redefine the
 | `PHONE_BR`    | Brazilian phone (optional +55, required DDD)    | LGPD Art. 5           |
 | `CCPA_SSN`    | US SSN (XXX-XX-XXXX)                            | CCPA                  |
 | `DATE_DMY`    | Date d/m/y (e.g. 31/12/2024)                    | Personal data context |
+
+**`PHONE_BR` requires a two-digit DDD (#393):** the built-in regex is `\b(?:\+55\s?)?\(?\d{2}\)?\s?\d{4,5}-?\d{4}\b` in `core/detector.py` (same string in `core/validation.py` and the LGPD compliance sample). **Does not match** bare 8-digit IDs such as `1234-5678` or `98765-4321`. **Does match** `(21) 99999-0000`, `21 99999-0000`, `+55 11 98765-4321`. In entertainment context, `PHONE_BR` is a **weak** pattern (`WEAK_PATTERNS_IN_ENTERTAINMENT`) and can drop to MEDIUM.
 
 **CPF checksum (optional):** Modulo-11 validation for values that already match the ``LGPD_CPF`` *shape* lives in ``core.brazilian_cpf`` (``cpf_checksum_valid``, ``normalize_cpf_digits``, ``PIIValidator``) for lab contracts, custom reports, or future pipeline hooks. Keep ``CPF_SHAPE_PATTERN`` in that module **identical** to the ``LGPD_CPF`` regex string in ``core.detector.DEFAULT_PATTERNS``. A regex hit alone does **not** prove check digits.
 

@@ -36,6 +36,12 @@ def test_guide_distinguishes_yaml_patterns_from_remediation() -> None:
         assert "validate-plugin" in text
         assert "custom_detectors" in text
         assert "remediation_plugin" in text
+        assert "dga_classification" in text
+        assert "iso27001_controls" in text
+        assert "dmbok_area" in text
+        assert "HEALTH_PLAN_ID" in text
+        assert "no_sharing" in text
+        assert "seguranca_dados" in text
 
 
 def test_guide_does_not_claim_enterprise_gate_on_yaml_files() -> None:
@@ -98,3 +104,27 @@ def test_author_guides_have_no_plan_markdown_links() -> None:
             assert "/plans/" not in low
             assert not low.startswith("plans/")
             assert ".cursor/plans" not in low
+
+
+def test_guide_grc_example_validates_as_unified_plugin(tmp_path) -> None:
+    """Copy-paste HEALTH_PLAN_ID example from PLUGIN_AUTHOR_GUIDE must validate."""
+    from config.plugin_validator import validate_plugin_file
+
+    path = tmp_path / "grc_example.yaml"
+    path.write_text(
+        """
+regex_patterns:
+  - name: "HEALTH_PLAN_ID"
+    pattern: "\\\\bHP-\\\\d{8}\\\\b"
+    norm_tag: "LGPD Art. 5 II"
+    dga_classification: no_sharing
+    iso27001_controls:
+      - A.5.33
+      - A.8.11
+    dmbok_area: seguranca_dados
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    result = validate_plugin_file(str(path), plugin_type="unified_plugin_file")
+    assert result.valid is True, result.issues

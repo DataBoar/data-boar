@@ -60,6 +60,15 @@ Sync to the public tap repo needs repository secret **`HOMEBREW_TAP_TOKEN`** (co
 
 Pre-release git-only versions (`1.8.0-beta`) are **not** formula targets — Homebrew users get the latest **PyPI** release.
 
+## Troubleshooting
+
+| Symptom | What the formula actually does | What to do |
+| ------- | ------------------------------ | ---------- |
+| `brew install` cannot fetch hatchling / wheels | `install` runs `python3.13 -m pip --python <venv> install --verbose .` so pip may download **build isolation** (hatchling) and **runtime wheels from PyPI**. It does **not** use Homebrew `std_pip_args` (`--no-deps --no-build-isolation --no-binary=:all:` / vendored `resource` blocks). | Confirm network to `pypi.org` / `files.pythonhosted.org`. Do not rewrite the formula to the homebrew-core resource model — `brew audit --strict --new` on this tap expects the pip path. |
+| Missing `python@3.13` | `depends_on "python@3.13"` | `brew install python@3.13` then retry. |
+| Connectors missing after install | Caveats: base formula only | `"$(brew --prefix data-boar)/libexec/bin/pip" install "data-boar[sql-community]"` (or another extra). |
+| `brew test` times out on `--demo` | Test waits up to ~3 minutes for `$TMPDIR/data_boar_demo/audit_results.db` then SIGTERM | Check the test log path Homebrew prints; `--demo` must be able to write the OS temp dir. |
+
 ## Out of scope
 
 arm64 Linux (#1403), xbps (#1404), MSI/winget (#1467).

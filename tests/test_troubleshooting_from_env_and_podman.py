@@ -37,6 +37,9 @@ def test_docker_troubleshooting_covers_podman_host_alias() -> None:
         assert "host.docker.internal" in text
         assert "distroless" in text
         assert "slirp4netns" in text
+        assert "HEALTHCHECK" in text
+        assert "127.0.0.1:8088/health" in text
+        assert "/usr/local/bin/python3.14" in text
         # Public docs must not paste real lab-op hostnames.
         assert "LAB-NODE-" not in text
 
@@ -48,4 +51,6 @@ def test_troubleshooting_hub_mentions_podman_and_from_env() -> None:
         assert "Podman" in text
         assert "host.containers.internal" in text
         assert "*_from_env" in text
+        assert "unhealthy" in text
+        assert "Audit already in progress" in text
         assert "LAB-NODE-" not in text

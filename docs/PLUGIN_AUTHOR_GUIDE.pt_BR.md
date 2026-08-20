@@ -85,6 +85,34 @@ Arquivos legados só de regex são uma **lista YAML** (sem wrapper `regex_patter
 
 ---
 
+## Metadados GRC opcionais do autor (só itens regex)
+
+Essas chaves ficam em itens **regex** (`config/plugin_schema.yaml`). São **metadados de autor**. O `config/plugin_validator.py` valida tipos e valores permitidos; o detector **não** as copia para as linhas de finding. O relatório segue expondo `pattern_detected` (o `name` da regra) e `norm_tag`. **Não** são parecer jurídico de DGA, certificação ISO 27001 nem avaliação DMBOK.
+
+| Chave | Tipo | Valores / forma permitidos |
+| ----- | ---- | -------------------------- |
+| `dga_classification` | string | `shareable`, `restricted_sharing`, `no_sharing` |
+| `iso27001_controls` | lista de strings | IDs do Anexo A ISO/IEC **27001:2022** (ex.: `A.5.12`, `A.5.33`, `A.8.3`, `A.8.11`). **2013** `A.8.2.1` mapeia para **2022** `A.5.12`, não para 2022 `A.8.2`. |
+| `dmbok_area` | string | `armazenamento_e_operacao`, `integracao_e_interoperabilidade`, `seguranca_dados` |
+
+Itens ML / DL **não** declaram essas chaves no schema. Chaves extras nesses itens são **ignoradas** (validador aditivo). Elas **também não** aparecem nos findings.
+
+```yaml
+regex_patterns:
+  - name: "HEALTH_PLAN_ID"
+    pattern: "\\bHP-\\d{8}\\b"
+    norm_tag: "LGPD Art. 5 II"
+    dga_classification: no_sharing
+    iso27001_controls:
+      - A.5.33
+      - A.8.11
+    dmbok_area: seguranca_dados
+```
+
+Dicas típicas no schema: saúde / categoria especial → `A.5.33` + `A.8.11`; acesso / credencial → `A.8.3`; classificação de PI armazenado → `A.5.12`. Armazenamento / arquivos → `armazenamento_e_operacao`; APIs / fluxos → `integracao_e_interoperabilidade`; PI sem classificação → `seguranca_dados`.
+
+---
+
 ## Contrato de regex seguro (ReDoS)
 
 O validador percorre o padrão e **rejeita repetição ilimitada aninhada** (star-height > 1), a mesma classe dos linters `safe-regex`: `(a+)+`, `([a-z]+)*`, `(x{2,})+`.

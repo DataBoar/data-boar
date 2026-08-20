@@ -117,7 +117,7 @@ brew install data-boar
 data-boar --demo
 ```
 
-Notas do operador (audit, extras, bump da fórmula): [ops/HOMEBREW_TAP.pt_BR.md](ops/HOMEBREW_TAP.pt_BR.md) ([EN](ops/HOMEBREW_TAP.md)).
+Notas do operador (audit, extras, bump da fórmula, armadilhas pip vs `std_pip_args`): [ops/HOMEBREW_TAP.pt_BR.md](ops/HOMEBREW_TAP.pt_BR.md) ([EN](ops/HOMEBREW_TAP.md)).
 
 ### Executando a aplicação com uv
 
