@@ -605,6 +605,9 @@ def test_publish_pypi_workflow_present_and_valid() -> None:
     assert str((bump.get("with") or {}).get("bump")).lower() in {"true", "yes", "1"}
     bump_if = str(bump.get("if") or "")
     assert "pypi" in bump_if
+    bump_secrets = bump.get("secrets") or {}
+    assert bump_secrets != "inherit"
+    assert "HOMEBREW_TAP_TOKEN" in bump_secrets
 
 
 def test_publish_pypi_yml_pins_actions_to_shas() -> None:
@@ -806,6 +809,11 @@ def test_homebrew_tap_workflow_present_and_valid() -> None:
     assert "homebrew_formula_bump.py --write" in bump_runs
     assert "HOMEBREW_TAP_TOKEN" in bump_runs
     text = (WORKFLOWS / "homebrew-tap.yml").read_text(encoding="utf-8")
+    assert "enable-cache: true" not in text
+    assert "enable-cache: false" in text
+    on_call = on.get("workflow_call") or {}
+    call_secrets = on_call.get("secrets") or {}
+    assert "HOMEBREW_TAP_TOKEN" in call_secrets
     sha_40 = re.compile(r"@[0-9a-f]{40}")
     for line in text.splitlines():
         code = line.split("#", 1)[0]

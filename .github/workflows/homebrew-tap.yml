@@ -37,6 +37,9 @@ permissions:
         description: "Rewrite Formula from latest PyPI and sync the tap repo"
         type: boolean
         default: true
+    secrets:
+      HOMEBREW_TAP_TOKEN:
+        required: false
   release:
     types: [published]
 
@@ -60,7 +63,8 @@ jobs:
 
       - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
         with:
-          enable-cache: true
+          # Off: this workflow also has `release: published` (zizmor cache-poisoning).
+          enable-cache: false
 
       - name: pytest + formula --check
         run: |
@@ -118,7 +122,8 @@ jobs:
 
       - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
         with:
-          enable-cache: true
+          # Off: this workflow also has `release: published` (zizmor cache-poisoning).
+          enable-cache: false
 
       - name: Rewrite Formula from PyPI
         run: |

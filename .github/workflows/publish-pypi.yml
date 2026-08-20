@@ -103,7 +103,8 @@ jobs:
       contents: write
       pull-requests: write
       actions: write
-    secrets: inherit
+    secrets:
+      HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
     uses: ./.github/workflows/homebrew-tap.yml
     with:
       bump: true
