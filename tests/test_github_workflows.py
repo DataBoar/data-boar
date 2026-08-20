@@ -814,7 +814,10 @@ def test_native_packages_build_job_pins_ubuntu_apt_mirror() -> None:
 def test_native_packages_smoke_deb_uses_debian_cdn_not_ubuntu_azure_pin() -> None:
     """smoke-deb runs in debian:bookworm-slim — Ubuntu apt-mirrors pin does not apply."""
     text = (WORKFLOWS / "native-packages.yml").read_text(encoding="utf-8")
-    assert "deb.debian.org" in text
+    # Assert the documented Debian-CDN policy comment, not a hostname substring
+    # (CodeQL py/incomplete-url-sanitization flags `in text` on URL-like hosts).
+    assert "Do NOT copy the #1648 ubuntu azure.archive pin" in text
+    assert "debian.sources" in text
     data = _load_workflow("native-packages.yml")
     smoke = data["jobs"]["smoke-deb"]
     assert "debian:bookworm-slim" in str(smoke.get("container") or "")
