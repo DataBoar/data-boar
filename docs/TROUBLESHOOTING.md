@@ -11,7 +11,7 @@ This page gives **short hints** for common problems. For **root-cause analysis a
 - **Excel report — "Scan failures" sheet:** Each failed target has **Target**, **Reason** (e.g. `unreachable`, `auth_failed`, `timeout`), **Details** (exception message), and **Suggested next step** (a short hint from the application). Start here after a run.
 - **Dashboard:** The "Scan failures" count and recent sessions; download the report for the session to open the Scan failures sheet.
 - **Audit log:** `audit_YYYYMMDD.log` (path in config or under report output). Download via **Reports → session → Download log** or API `GET /logs/{session_id}`. Contains connection and failure entries with target name and error text.
-- **API responses:** `POST /scan` returns 409 if a scan is already in progress; 429 if rate limits are exceeded. Session/report endpoints return 404 with a clear message when the session or report is missing.
+- **API responses:** `POST /scan` (also `/start` and `/scan_database`) returns **409** (`Audit already in progress.`) when this process already **claimed** the single `AuditEngine` run slot **at request accept time**, not when the background thread later starts. **429** is a separate `rate_limit` cap. Session/report endpoints return 404 with a clear message when the session or report is missing.
 
 The application maps failure **reasons** to a **Suggested next step** in the report (e.g. "Target did not respond. Check network connectivity…"). If that is not enough, use the deep-dive docs below.
 
@@ -66,6 +66,7 @@ Many deployments use the **Docker image** (or the same image under **Podman**). 
 
 - **Remote databases:** Use the **host IP or FQDN** of the DB server in config (not `localhost` unless the DB runs in the same container). From the host, test with `psql`, `mysql`, or similar; from the container, ensure the container network can reach that host. On Docker Desktop, `host.docker.internal` often works; on **Podman**, prefer **`host.containers.internal`** (see [TROUBLESHOOTING_DOCKER_DEPLOYMENT.md](ops/TROUBLESHOOTING_DOCKER_DEPLOYMENT.md) §6).
 - **NFS / SMB from container:** Two common approaches: (1) **Mount the share on the host** and bind-mount that path into the container (e.g. `-v /mnt/nfs-share:/data/shares`), then point a **filesystem** target at `/data/shares`; (2) **Use NFS/SMB targets** in config and ensure the container network can reach the NFS/SMB server (install `.[shares]` in the image, open firewall for NFS/SMB ports). For step-by-step and pitfalls, see [TROUBLESHOOTING_DOCKER_DEPLOYMENT.md](ops/TROUBLESHOOTING_DOCKER_DEPLOYMENT.md).
+- **Container status `unhealthy`:** The image/`Compose` probe is `GET http://127.0.0.1:8088/health` **inside** the container (Python `urllib`, no `curl`). Keep `--web` on in-container port **8088**. See [TROUBLESHOOTING_DOCKER_DEPLOYMENT.md](ops/TROUBLESHOOTING_DOCKER_DEPLOYMENT.md) §7.
 - **DNS:** If config uses hostnames, the container must resolve them (same DNS as host or `--dns`). See [TROUBLESHOOTING_DOCKER_DEPLOYMENT.md](ops/TROUBLESHOOTING_DOCKER_DEPLOYMENT.md).
 
 ---

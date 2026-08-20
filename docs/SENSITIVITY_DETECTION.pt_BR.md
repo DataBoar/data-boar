@@ -27,6 +27,10 @@ O detector aplica tratamento de **entretenimento / documento de baixo risco de P
 - O arquivo é **`.txt`** com várias linhas de **tamanho médio curto** (estrofes sem cabeçalhos explícitos `Verse` / `Chorus`).
 - O **nome base** traz **acorde entre parênteses** (ex.: `Rosa(D).txt`), indicando cifra.
 
+**CSV / TSV de campos curtos não é letra nem tablatura (#395):** `_looks_like_delimited_tabular()` em `core/detector.py` retorna verdadeiro quando há **pelo menos cinco** linhas não vazias e **≥ 75%** delas separam em **dois ou mais** campos com `,` / `;` / tab. Nesse caso o detector **não** trata a amostra como letra pelo caminho da média de comprimento de linha e **não** trata como tablatura de guitarra/baixo. Isso evita que PII real em exportações de colunas curtas (IDs de pedido, SKUs) caia no rebaixamento de entretenimento.
+
+**Restrição:** palavras-chave de letra (`verse`, `chorus`, `letra`, …) ainda classificam como “letra” **antes** da checagem de CSV. Um CSV cujas células contenham essas palavras ainda pode seguir o caminho de entretenimento. A tablatura checa o formato CSV primeiro.
+
 **Regex forte** (CPF, e-mail, cartão, …) ainda produz **HIGH** quando aplicável. Subir **`medium_confidence_threshold`** afeta sobretudo a faixa MEDIUM; o limite padrão **70** para ML só **HIGH** não muda — essas heurísticas atacam **HIGH** falso em clones de repo e bibliotecas de música no filesystem.
 
 ### Padrões genéricos de dígitos e escopo de falso positivo
@@ -500,6 +504,8 @@ A aplicação já inclui estes padrões; não é preciso redefini-los a menos qu
 | `PHONE_BR`    | Telefone BR (+55 opcional, DDD obrigatório)        | LGPD Art. 5           |
 | `CCPA_SSN`    | SSN EUA (XXX-XX-XXXX)                              | CCPA                  |
 | `DATE_DMY`    | Data d/m/a (ex.: 31/12/2024)                       | Personal data context |
+
+**`PHONE_BR` exige DDD de dois dígitos (#393):** o regex embutido é `\b(?:\+55\s?)?\(?\d{2}\)?\s?\d{4,5}-?\d{4}\b` em `core/detector.py` (a mesma string em `core/validation.py` e na amostra de compliance LGPD). **Não casa** IDs de 8 dígitos como `1234-5678` ou `98765-4321`. **Casa** `(21) 99999-0000`, `21 99999-0000`, `+55 11 98765-4321`. Em contexto de entretenimento, `PHONE_BR` é padrão **fraco** (`WEAK_PATTERNS_IN_ENTERTAINMENT`) e pode cair para MEDIUM.
 
 **Dígitos verificadores do CPF (opcional):** a validação **Módulo 11** para valores que já coincidem com a *forma* ``LGPD_CPF`` está em ``core.brazilian_cpf`` (``cpf_checksum_valid``, ``normalize_cpf_digits``, ``PIIValidator``) para contratos de laboratório, relatórios personalizados ou *hooks* futuros do *pipeline*. Mantenha ``CPF_SHAPE_PATTERN`` nesse módulo **idêntico** ao *regex* ``LGPD_CPF`` em ``core.detector.DEFAULT_PATTERNS``. Só o *match* por regex **não** prova os dígitos verificadores.
 

@@ -117,7 +117,7 @@ brew install data-boar
 data-boar --demo
 ```
 
-Operator notes (audit, extras, formula bump): [ops/HOMEBREW_TAP.md](ops/HOMEBREW_TAP.md) ([pt-BR](ops/HOMEBREW_TAP.pt_BR.md)).
+Operator notes (audit, extras, formula bump, pip-vs-`std_pip_args` pitfalls): [ops/HOMEBREW_TAP.md](ops/HOMEBREW_TAP.md) ([pt-BR](ops/HOMEBREW_TAP.pt_BR.md)).
 
 ### Running the app with uv
 

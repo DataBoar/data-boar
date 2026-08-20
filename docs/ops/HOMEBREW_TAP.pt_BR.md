@@ -60,6 +60,15 @@ Sincronizar o repositório público do tap exige o secret **`HOMEBREW_TAP_TOKEN`
 
 Versões git-only de pré-release (`1.8.0-beta`) **não** são alvo da fórmula — quem usa Homebrew recebe o último release **PyPI**.
 
+## Resolução de problemas
+
+| Sintoma | O que a fórmula faz de fato | O que fazer |
+| ------- | --------------------------- | ----------- |
+| `brew install` não baixa hatchling / wheels | O `install` roda `python3.13 -m pip --python <venv> install --verbose .`; o pip pode baixar **isolamento de build** (hatchling) e **wheels de runtime no PyPI**. **Não** usa `std_pip_args` do Homebrew (`--no-deps --no-build-isolation --no-binary=:all:` / blocos `resource` vendorados). | Confirme rede até `pypi.org` / `files.pythonhosted.org`. Não reescreva a fórmula no modelo de `resource` do homebrew-core — o `brew audit --strict --new` deste tap espera o caminho pip. |
+| Falta `python@3.13` | `depends_on "python@3.13"` | `brew install python@3.13` e tente de novo. |
+| Conectores ausentes depois do install | Caveats: fórmula só da base | `"$(brew --prefix data-boar)/libexec/bin/pip" install "data-boar[sql-community]"` (ou outro extra). |
+| `brew test` estoura tempo no `--demo` | O teste espera até ~3 minutos por `$TMPDIR/data_boar_demo/audit_results.db` e depois envia SIGTERM | Veja o log que o Homebrew imprime; o `--demo` precisa gravar no diretório temp do SO. |
+
 ## Fora de escopo
 
 arm64 Linux (#1403), xbps (#1404), MSI/winget (#1467).

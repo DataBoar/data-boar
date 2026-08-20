@@ -4,7 +4,7 @@
 
 **Ver também:** [TROUBLESHOOTING.pt_BR.md](../TROUBLESHOOTING.pt_BR.md) (visão geral e dicas rápidas).
 
-Este documento ajuda quando o Data Boar roda **dentro de um container Docker ou Podman** e precisa conectar a **bancos remotos**, **shares NFS/SMB** ou **APIs**. Aborda alcance de rede a partir do container, DNS e como usar shares montadas no host vs alvos NFS/SMB. Hostnames e rede rootless do Podman estão na **§ 6**.
+Este documento ajuda quando o Data Boar roda **dentro de um container Docker ou Podman** e precisa conectar a **bancos remotos**, **shares NFS/SMB** ou **APIs**. Aborda alcance de rede a partir do container, DNS e como usar shares montadas no host vs alvos NFS/SMB. Hostnames e rede rootless do Podman estão na **§ 6**. O **`HEALTHCHECK`** da imagem / `healthcheck` do Compose (`GET /health` no loopback **8088**, distroless) está na **§ 7**.
 
 ---
 
@@ -14,7 +14,7 @@ Este documento ajuda quando o Data Boar roda **dentro de um container Docker ou 
 
 Use **hostname ou IP** que o container consiga resolver e alcançar. **Não** use `localhost` no config para um DB que roda no **host** ou em outra máquina (dentro do container, `localhost` é o próprio container). Use o **IP do host** na bridge Docker (ex.: `172.17.0.1`) ou o **hostname** do servidor de DB. No Docker Desktop (Windows/Mac), muitas vezes dá para usar **`host.docker.internal`** como host do DB. Garanta que o servidor de DB escute em um endereço acessível pelo container (ex.: `0.0.0.0`), não só `127.0.0.1`.
 
-**Checklist:** (1) No **host**, teste com psql/mysql. (2) **Dentro do container:** `docker exec <container> nc -zv <db-host> <port>`. Se falhar, o container não alcança o DB (rede/DNS/firewall). (3) **DNS:** Se o config usa hostname, o container precisa resolvê-lo; use `--dns` ou `--network host` (Linux) conforme necessário.
+**Checklist:** (1) No **host**, teste com psql/mysql. (2) A imagem publicada é **distroless** (sem `/bin/sh`, sem `nc`). `docker exec <container> nc -zv …` **falha** em `fabioleitao/data_boar`. Use um container de debug descartável na **mesma rede**, ou teste no host (`docker inspect`, `docker port`). Veja **§ 6** e **§ 7**. (3) **DNS:** Se o config usa hostname, o container precisa resolvê-lo; use `--dns` ou `--network host` (Linux) conforme necessário.
 
 **Passos:** Defina `host` no config como IP ou hostname alcançável pelo container (`host.docker.internal` para serviços no host no Docker Desktop). Garanta que o servidor de DB permita conexões do IP do container. Se a resolução falhar, corrija o DNS do container ou use IP no config.
 
@@ -51,6 +51,7 @@ O config deve estar disponível **dentro** do container. Setup típico: diretór
 | Container não resolve hostname          | Defina `--dns` ou use IP no config.                                                                                                                      |
 | Config ou relatórios não encontrados    | Monte volume em `/data`; CONFIG_PATH=/data/config.yaml; sqlite_path e report.output_dir em `/data`.                                                      |
 | DB no host a partir do **Podman**       | Use `host.containers.internal` (não `host.docker.internal`); rootless usa slirp4netns/pasta, não a bridge do Docker.                                     |
+| Status **unhealthy** do container       | A sonda é `GET http://127.0.0.1:8088/health` **dentro** do container (`urllib` da stdlib, exec JSON). Mantenha o processo escutando na porta **8088** no container. |
 
 ---
 
@@ -70,6 +71,28 @@ Se você roda o Data Boar com **Podman** em vez do Docker Engine, a maior parte 
 A imagem publicada do Data Boar é **distroless**: **não** há `/bin/sh` nem `ip`/`nc` dentro do container. Não espere que `podman exec <nome> ip route` ou `sh -c 'nc …'` funcione em `data_boar`. Depure no **host** (`podman port`, `podman inspect`) ou use um container de debug descartável na mesma rede.
 
 Hosts de laboratório **completão** / Maestro que usam Podman seguem os mesmos padrões de hostname no config e de volumes; substitua `docker` / `docker compose` por `podman` / `podman-compose`.
+
+---
+
+## 7. HEALTHCHECK da imagem vs “unhealthy” (distroless)
+
+A imagem publicada declara um **`HEALTHCHECK`** Docker (`Dockerfile`). O Compose repete a mesma sonda em `deploy/docker-compose.yml` (`healthcheck.test`). Os dois chamam **`urllib` da biblioteca padrão** — **não** `curl`, **não** um shell — porque o distroless não tem `/bin/sh`.
+
+**O que a sonda faz:** `GET http://127.0.0.1:8088/health` **de dentro** do container. `GET /health` permanece **público** mesmo com `api.require_api_key` ligado ([USAGE.pt_BR.md](../USAGE.pt_BR.md)). Mapear uma porta no **host** (`-p 9002:8088`) **não** altera a sonda: ela continua no **8088 do loopback**.
+
+| Origem | Intervalo | Timeout | Período inicial | Tentativas |
+| ------ | --------- | ------- | --------------- | ---------- |
+| `HEALTHCHECK` da imagem | 30s | 10s (timeout HTTP da sonda 8s) | 15s | 3 |
+| `healthcheck` do Compose | 15s | 5s | 20s | 3 |
+
+### Causas comuns de “unhealthy”
+
+1. **O CMD não é o dashboard na 8088.** O `CMD` padrão é `main.py --web --port 8088`. Um override CLI de uma só varredura (`--config …` sem `--web`), `--check-extras`, ou `--port` diferente de **8088** deixa a URL da sonda sem listener. O Docker marca **unhealthy** mesmo que o processo CLI esteja fazendo trabalho útil.
+1. **O processo ainda não escuta.** Respeite `start-period` / `start_period`. Bind mount lento ou criação do SQLite na primeira subida pode perder as primeiras sondas.
+1. **Você esperava `docker exec … curl /health`.** Esse binário **não** está na imagem. No host: `curl http://127.0.0.1:<porta-publicada>/health` (depois do publish da porta). De outro container na mesma rede: use o **nome do serviço** e a porta **8088**.
+1. **HEALTHCHECK em forma de shell num Dockerfile próprio.** `HEALTHCHECK CMD curl …` falha no distroless. Mantenha a forma exec JSON com `/usr/local/bin/python3.14` como no `Dockerfile` do repositório.
+
+**Como confirmar:** `docker inspect --format '{{.State.Health.Status}}' <nome>` (ou `podman inspect`). Em seguida `curl` em `/health` na porta **publicada** no host. O JSON esperado inclui `"status"` (em geral `"ok"`) — veja [DOCKER_SETUP.pt_BR.md](../DOCKER_SETUP.pt_BR.md) e [deploy/DEPLOY.pt_BR.md](../deploy/DEPLOY.pt_BR.md).
 
 ---
 

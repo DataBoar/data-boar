@@ -11,7 +11,7 @@ Esta página traz **dicas curtas** para problemas comuns. Para **análise de cau
 - **Relatório Excel — planilha "Scan failures":** Cada alvo com falha tem **Target**, **Reason** (ex.: `unreachable`, `auth_failed`, `timeout`), **Details** (mensagem da exceção) e **Suggested next step** (dica curta gerada pela aplicação). Comece por aqui após uma execução.
 - **Dashboard:** Contagem de "Scan failures" e sessões recentes; baixe o relatório da sessão para abrir a planilha Scan failures.
 - **Log de auditoria:** `audit_YYYYMMDD.log` (caminho no config ou no diretório de saída dos relatórios). Download em **Reports → sessão → Download log** ou API `GET /logs/{session_id}`. Contém entradas de conexão e falha com nome do alvo e texto do erro.
-- **Respostas da API:** `POST /scan` retorna 409 se já houver varredura em andamento; 429 se os limites de taxa forem excedidos. Endpoints de sessão/relatório retornam 404 com mensagem clara quando a sessão ou o relatório não existir.
+- **Respostas da API:** `POST /scan` (também `/start` e `/scan_database`) retorna **409** (`Audit already in progress.`) quando este processo já **reservou** o único slot de `AuditEngine` **no aceite da requisição**, não quando a thread em background começa depois. **429** é o teto separado de `rate_limit`. Endpoints de sessão/relatório retornam 404 com mensagem clara quando a sessão ou o relatório não existir.
 
 A aplicação mapeia **reasons** de falha para um **Suggested next step** no relatório (ex.: "Target did not respond. Check network connectivity…"). Se isso não bastar, use os documentos de aprofundamento abaixo.
 
@@ -66,6 +66,7 @@ Muitas implantações usam a **imagem Docker** (ou a mesma imagem no **Podman**)
 
 - **Bancos remotos:** Use o **IP ou FQDN do host** do servidor de DB no config (não use `localhost` a menos que o DB rode no mesmo container). No host, teste com `psql`, `mysql` ou similar; no container, garanta que a rede do container alcance esse host. No Docker Desktop, `host.docker.internal` costuma funcionar; no **Podman**, prefira **`host.containers.internal`** (veja [TROUBLESHOOTING_DOCKER_DEPLOYMENT.pt_BR.md](ops/TROUBLESHOOTING_DOCKER_DEPLOYMENT.pt_BR.md) §6).
 - **NFS/SMB a partir do container:** Duas abordagens comuns: (1) **Montar o share no host** e fazer bind mount desse caminho no container (ex.: `-v /mnt/nfs-share:/data/shares`), depois usar um alvo **filesystem** em `/data/shares`; (2) **Usar alvos NFS/SMB** no config e garantir que a rede do container alcance o servidor NFS/SMB (instale `.[shares]` na imagem; abra firewall para portas NFS/SMB). Para passos e armadilhas, veja [TROUBLESHOOTING_DOCKER_DEPLOYMENT.pt_BR.md](ops/TROUBLESHOOTING_DOCKER_DEPLOYMENT.pt_BR.md).
+- **Status `unhealthy` do container:** A sonda da imagem/Compose é `GET http://127.0.0.1:8088/health` **dentro** do container (`urllib` do Python, sem `curl`). Mantenha `--web` na porta **8088** no container. Veja [TROUBLESHOOTING_DOCKER_DEPLOYMENT.pt_BR.md](ops/TROUBLESHOOTING_DOCKER_DEPLOYMENT.pt_BR.md) §7.
 - **DNS:** Se o config usar hostnames, o container precisa resolvê-los (mesmo DNS do host ou `--dns`). Veja [TROUBLESHOOTING_DOCKER_DEPLOYMENT.pt_BR.md](ops/TROUBLESHOOTING_DOCKER_DEPLOYMENT.pt_BR.md).
 
 ---

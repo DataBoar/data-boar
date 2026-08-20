@@ -60,3 +60,16 @@ def test_log_redaction_and_lgpd_sample_keep_phone_br_in_sync() -> None:
     assert pat in validation
     yaml_pat = pat.replace("\\", "\\\\")
     assert yaml_pat in sample
+
+
+def test_sensitivity_docs_cover_phone_br_ddd_and_csv_not_lyrics() -> None:
+    en = (REPO_ROOT / "docs" / "SENSITIVITY_DETECTION.md").read_text(encoding="utf-8")
+    pt = (REPO_ROOT / "docs" / "SENSITIVITY_DETECTION.pt_BR.md").read_text(
+        encoding="utf-8"
+    )
+    for text in (en, pt):
+        assert r"\b(?:\+55\s?)?\(?\d{2}\)?\s?\d{4,5}-?\d{4}\b" in text
+        assert "1234-5678" in text
+        assert "_looks_like_delimited_tabular" in text
+        assert "#395" in text
+        assert "#393" in text
