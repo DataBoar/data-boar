@@ -59,10 +59,14 @@ jobs:
           version: "0.11.2"
           enable-cache: false
 
-      # mariadb / mysqlclient PyPI packages may build from source when no wheel matches;
-      # provide Connector/C and libmysqlclient headers (same class of fix as local Docker/dev docs).
-      - name: Install OS packages for DB connector builds
-        run: sudo apt-get update && sudo apt-get install -y libmariadb-dev pkg-config build-essential
+      # Same apt mirror pin + timed install as ci.yml (#1646 / #1648). Do not
+      # inline a bare apt-get update here — azure.archive.ubuntu.com stalls hang
+      # the 45m SBOM job (PRs #1691 / #1695).
+      - name: Install libmariadb-dev (mariadb PyPI connector builds from source on Linux)
+        uses: ./.github/actions/install-libmariadb-dev
+
+      - name: Install build-essential
+        run: timeout 240 sudo apt-get install -y build-essential
 
       - name: Install dependencies
         run: uv sync --group dev
