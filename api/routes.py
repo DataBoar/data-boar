@@ -15,6 +15,10 @@ GET /findings/{session_id}, GET /findings/{session_id}/csv — async StreamingRe
 with ``source_type`` discriminator and Phase 1 identity fields (``source_mtime_ns``, ``source_size``,
 ``content_fingerprint``). On startup load
 config (config.yaml or CONFIG_PATH) and create a singleton AuditEngine.
+Overlapping POST /scan, /start, and /scan_database share that engine: the handler
+claims the run slot at request time (HTTP 409 if a scan is already in progress).
+Rate limiting (HTTP 429) is a separate DB-backed guard. True parallel scans need
+multiple processes or instances.
 
 Path safety: session_id is validated before use in file paths. Report paths use
 ``_real_file_under_out_dir_str`` / ``_resolved_existing_file_under_out_dir``: CodeQL's
@@ -899,6 +903,27 @@ def _check_rate_limit(source: str) -> None:
     _raise_if_interval_limit_exceeded(dbm, min_interval, grace, source)
 
 
+_AUDIT_IN_PROGRESS_DETAIL = "Audit already in progress."
+
+
+def _claim_singleton_scan_or_409(engine) -> None:
+    """Claim the process-wide AuditEngine run slot at request time (#415).
+
+    CONCURRENCY MODEL: the dashboard API holds one AuditEngine. ``is_running``
+    used to flip only inside the Starlette background task, so two overlapping
+    POST /scan or POST /scan_database calls could both pass the check. This
+    compare-and-set rejects the second caller with HTTP 409 before any session
+    row or config overlay. The slot is held until the background ``finally``,
+    which also serializes run-local overlays on the shared ``engine.config``.
+
+    Remaining follow-up: ``_raise_if_concurrent_limit_exceeded`` is still
+    check-then-act against the SQLite running-session count. True concurrent
+    scans across processes need multiple instances.
+    """
+    if not engine.try_claim_running():
+        raise HTTPException(status_code=409, detail=_AUDIT_IN_PROGRESS_DETAIL)
+
+
 _AUDIT_LOGS_READ_PERMISSION = "audit_logs.read"
 _resolve_effective_roles_for_request_fn = None
 
@@ -1347,6 +1372,12 @@ _RATE_LIMIT_429 = {
         "description": "Rate limit exceeded (too many concurrent scans or scans started too frequently)."
     }
 }
+_SCAN_CONFLICT_409 = {
+    409: {
+        "description": "Audit already in progress (process-wide singleton AuditEngine)."
+    }
+}
+_SCAN_START_RESPONSES = {**_RATE_LIMIT_429, **_SCAN_CONFLICT_409}
 _NOT_FOUND_404 = {404: {"description": "Resource not found."}}
 _SESSION_RESPONSES = {
     400: {"description": "Invalid session_id (empty or invalid format)."},
@@ -1354,99 +1385,114 @@ _SESSION_RESPONSES = {
 }
 
 
-@app.post("/scan", responses=_RATE_LIMIT_429)
-@app.post("/start", responses=_RATE_LIMIT_429)
+@app.post("/scan", responses=_SCAN_START_RESPONSES)
+@app.post("/start", responses=_SCAN_START_RESPONSES)
 async def start_scan(
     background_tasks: BackgroundTasks, body: ScanStartBody | None = None
 ):
-    """Start audit in background. Optional body: tenant, technician, scan_compressed, content_type_check, scan_for_stego, scheduled, jurisdiction_hint, validate_crypto. Returns session_id."""
+    """Start audit in background. Optional body: tenant, technician, scan_compressed, content_type_check, scan_for_stego, scheduled, jurisdiction_hint, validate_crypto. Returns session_id. HTTP 409 if a scan is already running."""
     _raise_if_license_blocks_scan()
     if body and getattr(body, "scheduled", None) is True:
         _raise_if_feature_blocked("scheduled_scans")
     engine = _get_engine()
-    if engine.is_running:
-        raise HTTPException(status_code=409, detail="Audit already in progress.")
-    # Global rate limiting (DB-backed) to avoid accidental DoS from repeated scans
-    _check_rate_limit(source="scan")
-    from core.session import new_session_id
-    from core.validation import sanitize_tenant_technician
+    _claim_singleton_scan_or_409(engine)
+    scan_scheduled = False
+    try:
+        # Global rate limiting (DB-backed) to avoid accidental DoS from repeated scans
+        _check_rate_limit(source="scan")
+        from core.session import new_session_id
+        from core.validation import sanitize_tenant_technician
 
-    session_id = new_session_id()
-    tenant = sanitize_tenant_technician((body.tenant if body else None) or None)
-    technician = sanitize_tenant_technician((body.technician if body else None) or None)
-    jh = bool(body and body.jurisdiction_hint)
-    vc = bool(body and body.validate_crypto)
-    engine.db_manager.set_current_session_id(session_id)
-    engine.db_manager.create_session_record(
-        session_id,
-        tenant_name=tenant,
-        technician_name=technician,
-        jurisdiction_hint=jh,
-    )
+        session_id = new_session_id()
+        tenant = sanitize_tenant_technician((body.tenant if body else None) or None)
+        technician = sanitize_tenant_technician(
+            (body.technician if body else None) or None
+        )
+        jh = bool(body and body.jurisdiction_hint)
+        vc = bool(body and body.validate_crypto)
+        engine.db_manager.set_current_session_id(session_id)
+        engine.db_manager.create_session_record(
+            session_id,
+            tenant_name=tenant,
+            technician_name=technician,
+            jurisdiction_hint=jh,
+        )
 
-    # Run-local overrides: merge into file_scan for this run only; restore after (same pattern as scan_compressed).
-    fs = engine.config.get("file_scan") or {}
-    prev_scan_compressed = fs.get("scan_compressed")
-    prev_use_content_type = fs.get("use_content_type")
-    prev_scan_for_stego = fs.get("scan_for_stego")
-    _scan_prev = engine.config.get("scan") or {}
-    prev_validate_crypto = _scan_prev.get("validate_crypto")
-    _rep_prev = engine.config.get("report") or {}
-    _jh_prev = _rep_prev.get("jurisdiction_hints")
-    prev_jurisdiction_hints_enabled = (
-        bool(_jh_prev.get("enabled")) if isinstance(_jh_prev, dict) else False
-    )
+        # Run-local overrides: merge into file_scan for this run only; restore after (same pattern as scan_compressed).
+        fs = engine.config.get("file_scan") or {}
+        prev_scan_compressed = fs.get("scan_compressed")
+        prev_use_content_type = fs.get("use_content_type")
+        prev_scan_for_stego = fs.get("scan_for_stego")
+        _scan_prev = engine.config.get("scan") or {}
+        prev_validate_crypto = _scan_prev.get("validate_crypto")
+        _rep_prev = engine.config.get("report") or {}
+        _jh_prev = _rep_prev.get("jurisdiction_hints")
+        prev_jurisdiction_hints_enabled = (
+            bool(_jh_prev.get("enabled")) if isinstance(_jh_prev, dict) else False
+        )
 
-    if body and getattr(body, "scan_compressed", None) is True:
-        engine.config.setdefault("file_scan", {})["scan_compressed"] = True
-    if body and getattr(body, "content_type_check", None) is True:
-        engine.config.setdefault("file_scan", {})["use_content_type"] = True
-    if body and getattr(body, "scan_for_stego", None) is True:
-        engine.config.setdefault("file_scan", {})["scan_for_stego"] = True
-    if jh:
-        engine.config.setdefault("report", {}).setdefault("jurisdiction_hints", {})
-        engine.config["report"]["jurisdiction_hints"]["enabled"] = True
-    if vc:
-        # Body overrides scan.validate_crypto for this run only.
-        engine.config.setdefault("scan", {})["validate_crypto"] = True
+        if body and getattr(body, "scan_compressed", None) is True:
+            engine.config.setdefault("file_scan", {})["scan_compressed"] = True
+        if body and getattr(body, "content_type_check", None) is True:
+            engine.config.setdefault("file_scan", {})["use_content_type"] = True
+        if body and getattr(body, "scan_for_stego", None) is True:
+            engine.config.setdefault("file_scan", {})["scan_for_stego"] = True
+        if jh:
+            engine.config.setdefault("report", {}).setdefault("jurisdiction_hints", {})
+            engine.config["report"]["jurisdiction_hints"]["enabled"] = True
+        if vc:
+            # Body overrides scan.validate_crypto for this run only.
+            engine.config.setdefault("scan", {})["validate_crypto"] = True
 
-    def run_targets():
-        try:
-            engine._run_audit_targets()
-        finally:
-            if "file_scan" in engine.config:
-                if prev_scan_compressed is None:
-                    engine.config["file_scan"].pop("scan_compressed", None)
-                else:
-                    engine.config["file_scan"]["scan_compressed"] = prev_scan_compressed
-                if prev_use_content_type is None:
-                    engine.config["file_scan"].pop("use_content_type", None)
-                else:
-                    engine.config["file_scan"]["use_content_type"] = (
-                        prev_use_content_type
-                    )
-                if prev_scan_for_stego is None:
-                    engine.config["file_scan"].pop("scan_for_stego", None)
-                else:
-                    engine.config["file_scan"]["scan_for_stego"] = prev_scan_for_stego
-            if jh:
-                engine.config.setdefault("report", {}).setdefault(
-                    "jurisdiction_hints", {}
-                )["enabled"] = prev_jurisdiction_hints_enabled
-            if vc:
-                if prev_validate_crypto is None:
-                    engine.config.setdefault("scan", {}).pop("validate_crypto", None)
-                else:
-                    engine.config.setdefault("scan", {})["validate_crypto"] = (
-                        prev_validate_crypto
-                    )
-        from utils.notify import notify_scan_complete_background
+        def run_targets():
+            try:
+                engine._run_audit_targets()
+            finally:
+                if "file_scan" in engine.config:
+                    if prev_scan_compressed is None:
+                        engine.config["file_scan"].pop("scan_compressed", None)
+                    else:
+                        engine.config["file_scan"]["scan_compressed"] = (
+                            prev_scan_compressed
+                        )
+                    if prev_use_content_type is None:
+                        engine.config["file_scan"].pop("use_content_type", None)
+                    else:
+                        engine.config["file_scan"]["use_content_type"] = (
+                            prev_use_content_type
+                        )
+                    if prev_scan_for_stego is None:
+                        engine.config["file_scan"].pop("scan_for_stego", None)
+                    else:
+                        engine.config["file_scan"]["scan_for_stego"] = (
+                            prev_scan_for_stego
+                        )
+                if jh:
+                    engine.config.setdefault("report", {}).setdefault(
+                        "jurisdiction_hints", {}
+                    )["enabled"] = prev_jurisdiction_hints_enabled
+                if vc:
+                    if prev_validate_crypto is None:
+                        engine.config.setdefault("scan", {}).pop(
+                            "validate_crypto", None
+                        )
+                    else:
+                        engine.config.setdefault("scan", {})["validate_crypto"] = (
+                            prev_validate_crypto
+                        )
+            from utils.notify import notify_scan_complete_background
 
-        notify_scan_complete_background(engine.config, engine.db_manager, session_id)
+            notify_scan_complete_background(
+                engine.config, engine.db_manager, session_id
+            )
 
-    background_tasks.add_task(run_targets)
-    _invalidate_sessions_cache()
-    return {"status": "started", "session_id": session_id}
+        background_tasks.add_task(run_targets)
+        scan_scheduled = True
+        _invalidate_sessions_cache()
+        return {"status": "started", "session_id": session_id}
+    finally:
+        if not scan_scheduled:
+            engine.clear_running()
 
 
 @app.post("/scan_pdf", responses=_RATE_LIMIT_429)
@@ -1951,113 +1997,123 @@ def _scan_database_matches_configured_target(request_body: DatabaseConfig) -> bo
     return _find_matching_configured_db_target(request_body) is not None
 
 
-@app.post("/scan_database", responses=_RATE_LIMIT_429)
+@app.post("/scan_database", responses=_SCAN_START_RESPONSES)
 async def scan_database(config: DatabaseConfig, background_tasks: BackgroundTasks):
-    """One-off scan of a single database (body: name, host, port, user, password, database, optional driver). Starts in background; returns session_id."""
+    """One-off scan of a single database (body: name, host, port, user, password, database, optional driver). Starts in background; returns session_id. HTTP 409 if a scan is already running."""
     _raise_if_license_blocks_scan()
     driver_key = (config.driver or "").split("+")[0].strip().lower()
     if driver_key == "snowflake":
         _raise_if_feature_blocked("connector_snowflake")
     engine = _get_engine()
-    if engine.is_running:
-        raise HTTPException(status_code=409, detail="Audit already in progress.")
-    # Apply same rate limiting as for full scans
-    _check_rate_limit(source="scan_database")
-    api_cfg = (
-        _get_config().get("api") if isinstance(_get_config().get("api"), dict) else {}
-    )
-    if not bool(api_cfg.get("allow_adhoc_targets", False)):
-        if not _scan_database_matches_configured_target(config):
-            raise HTTPException(
-                status_code=403,
-                detail=(
-                    "Ad-hoc scan_database target is disabled. "
-                    "Set api.allow_adhoc_targets: true or use a pre-configured target."
-                ),
-            )
-    target = {
-        "name": config.name,
-        "type": "database",
-        "driver": config.driver,
-        "host": config.host,
-        "port": config.port,
-        "user": config.user,
-        "pass": config.password,
-        "database": config.database,
-    }
-    if config.allow_private_networks:
-        target["allow_private_networks"] = True
-    else:
-        # Inherit opt-in only from a *fully* matching configured target (#1556).
-        # Name-only match would let an ad-hoc body reuse another target's name and
-        # steal allow_private_networks (Security Agent HIGH on PR #1584).
-        matched = _find_matching_configured_db_target(config)
-        if matched and bool(matched.get("allow_private_networks", False)):
-            target["allow_private_networks"] = True
-    # Defense-in-depth SSRF guard before background work (#1556).
-    from connectors.sql_connector import _build_url, _guard_sql_connection_url
-
+    _claim_singleton_scan_or_409(engine)
+    scan_scheduled = False
     try:
-        _guard_sql_connection_url(_build_url(target), target)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    from core.session import new_session_id
-    from core.validation import sanitize_tenant_technician
+        # Apply same rate limiting as for full scans
+        _check_rate_limit(source="scan_database")
+        api_cfg = (
+            _get_config().get("api")
+            if isinstance(_get_config().get("api"), dict)
+            else {}
+        )
+        if not bool(api_cfg.get("allow_adhoc_targets", False)):
+            if not _scan_database_matches_configured_target(config):
+                raise HTTPException(
+                    status_code=403,
+                    detail=(
+                        "Ad-hoc scan_database target is disabled. "
+                        "Set api.allow_adhoc_targets: true or use a pre-configured target."
+                    ),
+                )
+        target = {
+            "name": config.name,
+            "type": "database",
+            "driver": config.driver,
+            "host": config.host,
+            "port": config.port,
+            "user": config.user,
+            "pass": config.password,
+            "database": config.database,
+        }
+        if config.allow_private_networks:
+            target["allow_private_networks"] = True
+        else:
+            # Inherit opt-in only from a *fully* matching configured target (#1556).
+            # Name-only match would let an ad-hoc body reuse another target's name and
+            # steal allow_private_networks (Security Agent HIGH on PR #1584).
+            matched = _find_matching_configured_db_target(config)
+            if matched and bool(matched.get("allow_private_networks", False)):
+                target["allow_private_networks"] = True
+        # Defense-in-depth SSRF guard before background work (#1556).
+        from connectors.sql_connector import _build_url, _guard_sql_connection_url
 
-    session_id = new_session_id()
-    tenant = sanitize_tenant_technician(config.tenant)
-    technician = sanitize_tenant_technician(config.technician)
-    jh_db = bool(config.jurisdiction_hint)
-    vc_db = bool(config.validate_crypto)
-    _rep_prev = engine.config.get("report") or {}
-    _jh_prev = _rep_prev.get("jurisdiction_hints")
-    prev_jurisdiction_hints_enabled_db = (
-        bool(_jh_prev.get("enabled")) if isinstance(_jh_prev, dict) else False
-    )
-    _scan_prev_db = engine.config.get("scan") or {}
-    prev_validate_crypto_db = _scan_prev_db.get("validate_crypto")
-    if jh_db:
-        engine.config.setdefault("report", {}).setdefault("jurisdiction_hints", {})
-        engine.config["report"]["jurisdiction_hints"]["enabled"] = True
-    if vc_db:
-        engine.config.setdefault("scan", {})["validate_crypto"] = True
-    engine.db_manager.set_current_session_id(session_id)
-    engine.db_manager.create_session_record(
-        session_id,
-        tenant_name=tenant,
-        technician_name=technician,
-        jurisdiction_hint=jh_db,
-    )
-
-    def run_one_target():
-        engine._is_running = True
-        status = "completed"
         try:
-            engine._run_target(target)
-        except KeyboardInterrupt:
-            status = "interrupted"
-            raise
-        finally:
-            engine._is_running = False
-            engine.db_manager.finish_session(session_id, status)
-            if jh_db:
-                engine.config.setdefault("report", {}).setdefault(
-                    "jurisdiction_hints", {}
-                )["enabled"] = prev_jurisdiction_hints_enabled_db
-            if vc_db:
-                if prev_validate_crypto_db is None:
-                    engine.config.setdefault("scan", {}).pop("validate_crypto", None)
-                else:
-                    engine.config.setdefault("scan", {})["validate_crypto"] = (
-                        prev_validate_crypto_db
-                    )
-        from utils.notify import notify_scan_complete_background
+            _guard_sql_connection_url(_build_url(target), target)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        from core.session import new_session_id
+        from core.validation import sanitize_tenant_technician
 
-        notify_scan_complete_background(engine.config, engine.db_manager, session_id)
+        session_id = new_session_id()
+        tenant = sanitize_tenant_technician(config.tenant)
+        technician = sanitize_tenant_technician(config.technician)
+        jh_db = bool(config.jurisdiction_hint)
+        vc_db = bool(config.validate_crypto)
+        _rep_prev = engine.config.get("report") or {}
+        _jh_prev = _rep_prev.get("jurisdiction_hints")
+        prev_jurisdiction_hints_enabled_db = (
+            bool(_jh_prev.get("enabled")) if isinstance(_jh_prev, dict) else False
+        )
+        _scan_prev_db = engine.config.get("scan") or {}
+        prev_validate_crypto_db = _scan_prev_db.get("validate_crypto")
+        if jh_db:
+            engine.config.setdefault("report", {}).setdefault("jurisdiction_hints", {})
+            engine.config["report"]["jurisdiction_hints"]["enabled"] = True
+        if vc_db:
+            engine.config.setdefault("scan", {})["validate_crypto"] = True
+        engine.db_manager.set_current_session_id(session_id)
+        engine.db_manager.create_session_record(
+            session_id,
+            tenant_name=tenant,
+            technician_name=technician,
+            jurisdiction_hint=jh_db,
+        )
 
-    background_tasks.add_task(run_one_target)
-    _invalidate_sessions_cache()
-    return {"status": "started", "session_id": session_id}
+        def run_one_target():
+            status = "completed"
+            try:
+                engine._run_target(target)
+            except KeyboardInterrupt:
+                status = "interrupted"
+                raise
+            finally:
+                engine.clear_running()
+                engine.db_manager.finish_session(session_id, status)
+                if jh_db:
+                    engine.config.setdefault("report", {}).setdefault(
+                        "jurisdiction_hints", {}
+                    )["enabled"] = prev_jurisdiction_hints_enabled_db
+                if vc_db:
+                    if prev_validate_crypto_db is None:
+                        engine.config.setdefault("scan", {}).pop(
+                            "validate_crypto", None
+                        )
+                    else:
+                        engine.config.setdefault("scan", {})["validate_crypto"] = (
+                            prev_validate_crypto_db
+                        )
+            from utils.notify import notify_scan_complete_background
+
+            notify_scan_complete_background(
+                engine.config, engine.db_manager, session_id
+            )
+
+        background_tasks.add_task(run_one_target)
+        scan_scheduled = True
+        _invalidate_sessions_cache()
+        return {"status": "started", "session_id": session_id}
+    finally:
+        if not scan_scheduled:
+            engine.clear_running()
 
 
 # --- Dashboard HTML (locale-prefixed). Registered after API routes so /status, /list, … are not

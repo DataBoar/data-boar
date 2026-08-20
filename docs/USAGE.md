@@ -267,8 +267,8 @@ The **Start scan** button sends `POST /scan` and triggers a **full audit of all 
 
 | Method  | Endpoint                            | Purpose                                                                                                                                                |
 | ---     | ---                                 | ---                                                                                                                                                    |
-| `POST`  | `/scan` or `/start`                 | Start a full audit in the background. Returns `session_id`. Optional JSON body: `tenant`, `technician`, `scan_compressed`, `content_type_check`, `scan_for_stego`, `jurisdiction_hint` (booleans for run-local toggles). |
-| `POST`  | `/scan_database`                    | One-off scan of a single database (body: name, host, port, user, password, database, driver, optional tenant/technician, optional `jurisdiction_hint`). Returns `session_id`.        |
+| `POST`  | `/scan` or `/start`                 | Start a full audit in the background. Returns `session_id`. Optional JSON body: `tenant`, `technician`, `scan_compressed`, `content_type_check`, `scan_for_stego`, `jurisdiction_hint` (booleans for run-local toggles). **HTTP 409** if a scan is already running in this process. |
+| `POST`  | `/scan_database`                    | One-off scan of a single database (body: name, host, port, user, password, database, driver, optional tenant/technician, optional `jurisdiction_hint`). Returns `session_id`. **HTTP 409** if a scan is already running in this process. |
 | `GET`   | `/status`                           | Current run state: `running`, `current_session_id`, `findings_count`, plus canonical **`trust_state`** / **`trust_reasons`** / **`output_confidence`**, `runtime_trust`, **`detection_prefilter`** (#1411), `dashboard_transport`, `enterprise_surface`, and **`maturity_assessment_integrity`** (HMAC summary for POC questionnaire rows when configured). |
 | `GET`   | `/report`                           | Download the **last generated** Excel report (or generate from last session if none).                                                                  |
 | `GET`   | `/heatmap`                          | Download the **last generated** heatmap PNG (sensitivity/risk heatmap for the most recent session).                                                    |
@@ -288,6 +288,8 @@ The **Start scan** button sends `POST /scan` and triggers a **full audit of all 
 | `GET`   | `/about`                            | About page (HTML): application name, version, author, license.                                                                                         |
 | `GET`   | `/about/json`                       | Machine-readable about info (name, version, author, license, copyright).                                                                               |
 | `GET`   | `/health`                           | Liveness/readiness for Docker and Kubernetes.                                                                                                          |
+
+One process holds **one** `AuditEngine`. `POST /scan`, `/start`, and `/scan_database` claim that slot **when the request is accepted**, not when the background task later starts. A second overlapping start returns **HTTP 409** (`Audit already in progress.`). **HTTP 429** from `rate_limit` is a separate DB-backed cap. Parallel scans need multiple processes or instances.
 
 ---
 

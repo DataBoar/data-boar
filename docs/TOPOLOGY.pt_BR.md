@@ -26,7 +26,7 @@ Descrição textual dos módulos, classes e funções principais e como eles se 
 - **core/detector.py** — **SensitivityDetector**: carrega regex (embutido + overrides) e padrões ML; `analyze(column_name, sample_text)` → (sensitivity_level, pattern_detected, norm_tag, confidence). Usa TF-IDF + RandomForest. Helpers: `_load_regex_overrides`, `_load_ml_patterns`.
 - **core/scanner.py** — **DataScanner** encapsula SensitivityDetector; `scan_column`, `scan_file_content`, `analyze_data` (retrocompatível).
 - **core/connector_registry.py** — `register`, `get_connector`, `list_connector_types`, `connector_for_target`.
-- **core/engine.py** — **AuditEngine**: mantém db_manager e scanner; `start_audit()` → session_id; `_run_audit_targets` executa cada target via registry (sequencial ou paralelo); `_run_target` resolve conector e chama `connector.run()`. `generate_final_reports` chama report.generator e opcionalmente write_learned_patterns. Propriedades: `is_running`, `get_current_findings_count`, `get_last_report_path`. Importa conectores para que se registrem.
+- **core/engine.py** — **AuditEngine**: mantém db_manager e scanner; `start_audit()` → session_id; `_run_audit_targets` executa cada target via registry (sequencial ou paralelo); `_run_target` resolve conector e chama `connector.run()`. `generate_final_reports` chama report.generator e opcionalmente write_learned_patterns. Propriedades: `is_running`, `get_current_findings_count`, `get_last_report_path`. Slot de execução por processo: `try_claim_running()` / `clear_running()` (a API reserva no momento da requisição; inícios sobrepostos recebem HTTP 409). Importa conectores para que se registrem.
 - **core/learned_patterns.py** — `collect_learned_entries`, `write_learned_patterns` (grava YAML compatível com ml_patterns_file quando `learned_patterns.enabled`).
 
 ---
@@ -67,7 +67,7 @@ Descrição textual dos módulos, classes e funções principais e como eles se 
 1. **Engine** → cria LocalDBManager, DataScanner; para cada target, connector_for_target → connector.run(). Para filesystem, repassa scan_sqlite_as_db e sample_limit.
 1. **Conectores** → connect, discover (e sample para DB); para filesystem, arquivos .sqlite/.db opcionalmente abertos como SQLite; outros usam _read_text_sample e scanner.
 1. **Report** → report/generator lê SQLite, escreve Excel + heatmap.
-1. **API** → rotas usam o mesmo AuditEngine; /scan inicia _run_audit_targets em background; /report e /reports/{id} chamam generate_final_reports.
+1. **API** → rotas usam o mesmo AuditEngine; /scan reserva o slot singleton e inicia _run_audit_targets em background; /report e /reports/{id} chamam generate_final_reports.
 
 ---
 
