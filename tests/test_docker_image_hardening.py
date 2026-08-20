@@ -19,6 +19,13 @@ GRYPE_GATE_SH = REPO_ROOT / "scripts" / "grype-image-gate.sh"
 GRYPE_GATE_PS1 = REPO_ROOT / "scripts" / "grype-image-gate.ps1"
 
 
+def _dockerfile_instructions(text: str) -> str:
+    """Dockerfile body excluding comments (so we can forbid shell-form HEALTHCHECK)."""
+    return "\n".join(
+        ln for ln in text.splitlines() if ln.strip() and not ln.lstrip().startswith("#")
+    )
+
+
 def _dockerfile_from_lines() -> list[str]:
     text = DOCKERFILE.read_text(encoding="utf-8")
     return [
@@ -44,6 +51,19 @@ def test_dockerfile_distroless_nonroot_and_exec_cmd() -> None:
     assert "distroless/cc-debian13:nonroot@" in text
     assert "USER 65532:65532" in text
     assert 'CMD ["/usr/local/bin/python3.14"' in text
+    assert "HEALTHCHECK" in text
+    assert "CMD-SHELL" not in _dockerfile_instructions(text)
+    assert "http://127.0.0.1:8088/health" in text
+    assert "urllib.request" in text
+    # JSON exec form: first HEALTHCHECK CMD token must be the distroless python path.
+    hc_lines = [
+        ln
+        for ln in text.splitlines()
+        if "HEALTHCHECK" in ln or ln.strip().startswith("CMD [")
+    ]
+    joined_hc = "\n".join(hc_lines)
+    assert '"/usr/local/bin/python3.14"' in joined_hc
+    assert "0.0.0.0" not in joined_hc
 
 
 def test_dockerfile_extras_runtime_extension_point() -> None:
@@ -123,6 +143,10 @@ def test_dockerfile_nogil_pins_and_uv_freethreaded() -> None:
         ln.strip() for ln in text.splitlines() if not ln.lstrip().startswith("#")
     ]
     assert "distroless/cc-debian13:nonroot@" in text
+    assert "HEALTHCHECK" in text
+    assert "CMD-SHELL" not in _dockerfile_instructions(text)
+    assert "http://127.0.0.1:8088/health" in text
+    assert '"/usr/local/bin/python3.14t"' in text
     # No floating/official 3.14t-slim base (404 on Hub) — only comment may mention it.
     from_lines = [
         ln.strip() for ln in text.splitlines() if ln.strip().upper().startswith("FROM ")
@@ -243,3 +267,14 @@ def test_docker_image_smoke_script_passes_on_built_image() -> None:
     if version:
         cmd.append(version)
     subprocess.run(cmd, check=True, cwd=REPO_ROOT)
+
+
+def test_compose_data_boar_healthcheck_is_exec_form() -> None:
+    """#459: Compose must not use CMD-SHELL — distroless has no /bin/sh."""
+    compose_path = REPO_ROOT / "deploy" / "docker-compose.yml"
+    data = yaml.safe_load(compose_path.read_text(encoding="utf-8"))
+    test = data["services"]["data-boar"]["healthcheck"]["test"]
+    assert test[0] == "CMD"
+    assert test[1] == "/usr/local/bin/python3.14"
+    assert any("127.0.0.1:8088/health" in part for part in test)
+    assert "CMD-SHELL" not in compose_path.read_text(encoding="utf-8")

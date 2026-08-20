@@ -12,7 +12,7 @@ Quando você executa a imagem **sem** sobrescrever o comando (ex.: `docker run .
 - **Relatórios:** `http://<host>:8088/reports`
 - **Configuração:** `http://<host>:8088/config`
 - **Documentação da API:** `http://<host>:8088/docs`
-- **Health:** `http://<host>:8088/health`
+- **Health:** `http://<host>:8088/health` (a imagem inclui `HEALTHCHECK` Docker nessa URL no loopback, forma exec JSON — distroless não tem shell)
 
 A porta **8088** é exposta. Config e dados persistentes (SQLite, relatórios) ficam em **`/data`** (monte um volume ou bind mount com `config.yaml`).
 
