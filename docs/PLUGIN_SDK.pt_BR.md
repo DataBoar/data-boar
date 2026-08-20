@@ -6,7 +6,7 @@ Guia para parceiros que implementam plugins de **remediação pós-scan** contra
 
 **Escopo deste documento:** apenas **L1 in-process Python** (`RemediationPlugin`). Isolamento de processo (L2) e contratos de linguagem / sidecar (L3) ficam no épico **#865** — cite como evolução futura, não como API carregável hoje.
 
-**Fora deste guia:** plugins **YAML de padrões** (regex / termos ML / DL) usam `config/plugin_schema.yaml` e a [ADR-0052](adr/ADR-0052-yaml-plugin-system-centralized-schema.md). Eles ensinam novos formatos ao detector; **não** executam código de remediação.
+**Fora deste guia:** plugins **YAML de padrões** (regex / termos ML / DL) usam `config/plugin_schema.yaml` e a [ADR-0052](adr/ADR-0052-yaml-plugin-system-centralized-schema.md). How-to do autor: [PLUGIN_AUTHOR_GUIDE.pt_BR.md](PLUGIN_AUTHOR_GUIDE.pt_BR.md) ([EN](PLUGIN_AUTHOR_GUIDE.md)). Eles ensinam novos formatos ao detector; **não** executam código de remediação.
 
 ---
 

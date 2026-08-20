@@ -45,7 +45,7 @@ CNPJ = r"\b\d{2}\.?\d{3}\.?\d{3}/?\d{4}-?\d{2}\b"
 
 # International / generic
 EMAIL = r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b"
-PHONE_BR = r"\b(?:\+55\s?)?(?:\(?\d{2}\)?\s?)?\d{4,5}-?\d{4}\b"
+PHONE_BR = r"\b(?:\+55\s?)?\(?\d{2}\)?\s?\d{4,5}-?\d{4}\b"
 DATE_DMY = r"\b\d{1,2}/\d{1,2}/\d{2,4}\b"
 ```
 

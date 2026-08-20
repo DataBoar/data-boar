@@ -67,11 +67,17 @@ jobs:
         with:
           persist-credentials: false
 
+      # Same ubuntu-latest azure.archive stall as ci.yml / #1648 / #1702.
+      # Reuse the composite for the pin + timed apt-get update; then install
+      # nfpm toolchain packages (the action also pulls libmariadb-dev — unused
+      # here, accepted so we do not fork the pin script).
+      - name: Pin Ubuntu apt mirrors (#1646)
+        uses: ./.github/actions/install-libmariadb-dev
+
       - name: Install build tools
         run: |
           set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
+          timeout 240 sudo apt-get install -y --no-install-recommends \
             curl ca-certificates binutils file build-essential
 
       - name: Populate staging (cp314t + wheelhouse — fail-closed)
@@ -147,6 +153,13 @@ jobs:
           path: /tmp/pkgs
 
       # bookworm-slim /bin/sh is dash — no `pipefail`. Install bash first (dash-safe).
+      #
+      # Do NOT copy the #1648 ubuntu azure.archive pin into this job.
+      # `container: debian:bookworm-slim` uses the image apt, not the runner's
+      # /etc/apt/apt-mirrors.txt. Official bookworm-slim (docker.io/library,
+      # inspected 2026-08-19) has /etc/apt/sources.list.d/debian.sources with
+      # URIs http://deb.debian.org/debian and debian-security — no
+      # azure.archive.ubuntu.com. The pin would no-op; leave Debian's CDN.
       - name: Install bash and ca-certificates
         run: |
           apt-get update

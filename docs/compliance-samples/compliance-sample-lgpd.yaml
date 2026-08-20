@@ -51,7 +51,7 @@ regex:
     pattern: "\\b[A-Z0-9]{2}\\.?[A-Z0-9]{3}\\.?[A-Z0-9]{3}/?[A-Z0-9]{4}-?\\d{2}\\b"
     norm_tag: "LGPD Art. 5"
   - name: "PHONE_BR"
-    pattern: "\\b(?:\\+55\\s?)?(?:\\(?\\d{2}\\)?\\s?)?\\d{4,5}-?\\d{4}\\b"
+    pattern: "\\b(?:\\+55\\s?)?\\(?\\d{2}\\)?\\s?\\d{4,5}-?\\d{4}\\b"
     norm_tag: "LGPD Art. 5"
   - name: "EMAIL"
     pattern: "\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}\\b"

@@ -1,3 +1,5 @@
+<!-- Language policy: structural headers in EN (GitHub convention);
+     checklist in pt-BR (primary maintainer language). Intentional. -->
 ## Description
 Brief description of the change and why it is needed.
 

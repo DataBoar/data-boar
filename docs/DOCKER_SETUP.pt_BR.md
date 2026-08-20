@@ -178,7 +178,7 @@ docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.override.ym
 
 - **Dashboard:** <http://localhost:8088/>
 - **Documentação da API:** <http://localhost:8088/docs>
-- **Health:** <http://localhost:8088/health>
+- **Health:** <http://localhost:8088/health> (o `HEALTHCHECK` da imagem sonda esta URL no loopback; distroless não tem shell, então a instrução usa forma exec JSON)
 
 ---
 

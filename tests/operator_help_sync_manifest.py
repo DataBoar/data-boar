@@ -156,6 +156,12 @@ OPERATOR_HELP_MARKERS: tuple[OperatorHelpMarker, ...] = (
         _MAN_CONTENT_TYPE,
     ),
     OperatorHelpMarker(
+        "archive_type_mismatch",
+        "archive_type_mismatch",
+        "archive_type_mismatch",
+        "archive_type_mismatch",
+    ),
+    OperatorHelpMarker(
         "scan_stego",
         "--scan-stego",
         "--scan-stego",

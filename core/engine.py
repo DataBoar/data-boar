@@ -3,7 +3,8 @@ Data Boar core engine — risk discovery and governance orchestration.
 
 AuditEngine: orchestrates targets from config via connector registry; uses LocalDBManager and DataScanner.
 Supports sequential or parallel (max_workers) scan; start_audit(), generate_final_reports(session_id).
-Exposes db_manager, is_running, get_current_findings_count() for API.
+Exposes db_manager, is_running, try_claim_running/clear_running, get_current_findings_count() for API.
+One engine instance per process (API singleton): overlapping scans are rejected, not interleaved.
 """
 
 import hashlib
@@ -162,6 +163,7 @@ class AuditEngine:
                 getattr(self.scanner, "prefilter_status", {}) or {}
             )
         self._is_running = False
+        self._run_gate = threading.Lock()
         self._last_report_path: str | None = None
         scan_cfg = config.get("scan") if isinstance(config.get("scan"), dict) else {}
         self._max_workers = int(scan_cfg.get("max_workers", 1))
@@ -215,6 +217,29 @@ class AuditEngine:
     def is_running(self) -> bool:
         return self._is_running
 
+    def try_claim_running(self) -> bool:
+        """Atomically claim the process-wide run slot (#415).
+
+        Returns True if this caller now owns the slot (``is_running`` becomes True).
+        Returns False if a scan is already in progress — callers must not start
+        another run. Pair with ``clear_running`` in ``finally``.
+
+        The API claims at request time (before scheduling a background task) so
+        overlapping ``POST /scan`` / ``POST /scan_database`` cannot both pass a
+        stale ``is_running`` check. Holding the slot until the run finishes also
+        serializes run-local overlays on the shared ``engine.config`` dict.
+        """
+        with self._run_gate:
+            if self._is_running:
+                return False
+            self._is_running = True
+            return True
+
+    def clear_running(self) -> None:
+        """Release the process-wide run slot claimed by ``try_claim_running``."""
+        with self._run_gate:
+            self._is_running = False
+
     def get_current_findings_count(self) -> int:
         return self.db_manager.get_current_findings_count()
 
@@ -253,81 +278,90 @@ class AuditEngine:
         """
         from core.output_paths import OutputPathError, ensure_config_output_directories
 
+        if not self.try_claim_running():
+            raise RuntimeError("Audit already in progress.")
+        # True until _run_audit_targets takes ownership of the slot (its finally).
+        slot_owned_here = True
         try:
-            ensure_config_output_directories(self.config, sqlite_path=self.db_path)
-        except OutputPathError as e:
-            raise OSError(str(e)) from e
+            try:
+                ensure_config_output_directories(self.config, sqlite_path=self.db_path)
+            except OutputPathError as e:
+                raise OSError(str(e)) from e
 
-        from core.licensing import LicenseBlockedError, get_license_guard
+            from core.licensing import LicenseBlockedError, get_license_guard
 
-        guard = get_license_guard(self.config)
-        if not guard.allows_scan():
-            c = guard.context
-            raise LicenseBlockedError(
-                c.state,
-                f"Licensing blocks scan: state={c.state} detail={c.detail}",
-            )
+            guard = get_license_guard(self.config)
+            if not guard.allows_scan():
+                c = guard.context
+                raise LicenseBlockedError(
+                    c.state,
+                    f"Licensing blocks scan: state={c.state} detail={c.detail}",
+                )
 
-        # #551: licensing worker cap — effective = min(scan.max_workers, tier cap).
-        # Enforced mode only (open mode returns None = no cap). Fail-soft: a cap
-        # resolution error must never abort a scan the license gate already
-        # allowed — warn and run uncapped instead.
+            # #551: licensing worker cap — effective = min(scan.max_workers, tier cap).
+            # Enforced mode only (open mode returns None = no cap). Fail-soft: a cap
+            # resolution error must never abort a scan the license gate already
+            # allowed — warn and run uncapped instead.
 
-        try:
-            cap = guard.worker_cap()
-        except Exception as e:  # noqa: BLE001
-            logging.getLogger(__name__).warning(
-                "Licensing worker cap resolution failed (fail-soft, no cap): %s", e
-            )
-            cap = None
-        if cap is not None and self._max_workers > cap:
-            from core.licensing.audit import audit_enforcement_event
+            try:
+                cap = guard.worker_cap()
+            except Exception as e:  # noqa: BLE001
+                logging.getLogger(__name__).warning(
+                    "Licensing worker cap resolution failed (fail-soft, no cap): %s", e
+                )
+                cap = None
+            if cap is not None and self._max_workers > cap:
+                from core.licensing.audit import audit_enforcement_event
 
-            c = guard.context
-            audit_enforcement_event(
-                "workers_clamped",
-                mode=c.mode,
-                state=c.state,
-                allowed=False,
-                detail=f"requested={self._max_workers} cap={cap}",
-                level=logging.WARNING,
-            )
-            self._max_workers = cap
-
-        # #856: open-mode worker clamp (behaviour-critical — part of the
-        # integrity manifest; removing this block tints the build -alpha).
-        # Open mode runs at most OPEN_MODE_WORKER_CAP parallel workers; paid
-        # tiers raise the ceiling via licensing (#551 above).
-        if guard.context.mode != "enforced":
-            from core.integrity_anchor import OPEN_MODE_WORKER_CAP
-            from core.licensing.audit import audit_enforcement_event
-
-            if self._max_workers > OPEN_MODE_WORKER_CAP:
+                c = guard.context
                 audit_enforcement_event(
                     "workers_clamped",
-                    mode=guard.context.mode,
-                    state=guard.context.state,
+                    mode=c.mode,
+                    state=c.state,
                     allowed=False,
-                    detail=(
-                        f"requested={self._max_workers} "
-                        f"cap={OPEN_MODE_WORKER_CAP} (open-mode clamp #856)"
-                    ),
+                    detail=f"requested={self._max_workers} cap={cap}",
                     level=logging.WARNING,
                 )
-                self._max_workers = OPEN_MODE_WORKER_CAP
+                self._max_workers = cap
 
-        session_id = new_session_id()
-        self.db_manager.set_current_session_id(session_id)
-        scope_hash = _compute_config_scope_hash(self.config)
-        self.db_manager.create_session_record(
-            session_id,
-            tenant_name=tenant_name,
-            technician_name=technician_name,
-            config_scope_hash=scope_hash,
-            jurisdiction_hint=jurisdiction_hint,
-        )
-        self._run_audit_targets()
-        return session_id
+            # #856: open-mode worker clamp (behaviour-critical — part of the
+            # integrity manifest; removing this block tints the build -alpha).
+            # Open mode runs at most OPEN_MODE_WORKER_CAP parallel workers; paid
+            # tiers raise the ceiling via licensing (#551 above).
+            if guard.context.mode != "enforced":
+                from core.integrity_anchor import OPEN_MODE_WORKER_CAP
+                from core.licensing.audit import audit_enforcement_event
+
+                if self._max_workers > OPEN_MODE_WORKER_CAP:
+                    audit_enforcement_event(
+                        "workers_clamped",
+                        mode=guard.context.mode,
+                        state=guard.context.state,
+                        allowed=False,
+                        detail=(
+                            f"requested={self._max_workers} "
+                            f"cap={OPEN_MODE_WORKER_CAP} (open-mode clamp #856)"
+                        ),
+                        level=logging.WARNING,
+                    )
+                    self._max_workers = OPEN_MODE_WORKER_CAP
+
+            session_id = new_session_id()
+            self.db_manager.set_current_session_id(session_id)
+            scope_hash = _compute_config_scope_hash(self.config)
+            self.db_manager.create_session_record(
+                session_id,
+                tenant_name=tenant_name,
+                technician_name=technician_name,
+                config_scope_hash=scope_hash,
+                jurisdiction_hint=jurisdiction_hint,
+            )
+            slot_owned_here = False
+            self._run_audit_targets()
+            return session_id
+        finally:
+            if slot_owned_here:
+                self.clear_running()
 
     def _record_parallel_worker_failure(
         self,
@@ -411,7 +445,8 @@ class AuditEngine:
 
     def _run_audit_targets(self) -> None:
         """Run all targets; caller must set session_id and create_session_record before."""
-        self._is_running = True
+        with self._run_gate:
+            self._is_running = True
         session_id = self.db_manager.current_session_id
         targets = self.config.get("targets", [])
         self._target_seq = 0
@@ -444,7 +479,7 @@ class AuditEngine:
             final_status = "interrupted"
             raise
         finally:
-            self._is_running = False
+            self.clear_running()
             from core.scan_audit_log import build_scan_audit_log
 
             self._scan_audit_log = build_scan_audit_log(self.config)

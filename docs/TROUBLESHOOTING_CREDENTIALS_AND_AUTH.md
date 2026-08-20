@@ -98,4 +98,25 @@ When `api.require_api_key: true`, clients must send the key in **one** of:
 
 ---
 
+## 7. `pass_from_env` / `api_key_from_env` not resolving
+
+**Scenario:** Config names an environment variable (`pass_from_env: "VAR_NAME"`, or `password_from_env`, `user_from_env`, `api_key_from_env`, `token_from_env`, `client_secret_from_env`, `auth.token_from_env`, `auth.client_secret_from_env`) but that variable is **unset, empty, or misspelled** in the process that starts Data Boar.
+
+**What the app actually does:** this is **not** only a mysterious 401.
+
+- At config load, an unset or blank env var emits a **UserWarning**: `Environment variable 'VAR_NAME' is unset or empty; <key> falls back to inline or default values when present.` (issue #508).
+- `--validate-config` **WARN**s on unset `*_from_env` names — see [USAGE.md](USAGE.md).
+- If there is **no** inline `pass` / `api_key` (or equivalent) fallback, the connector may still start with an empty secret and fail later as **auth_failed** or connection refused. The Scan failures **Details** column often shows the **server** error, not “env var missing.”
+
+**Checklist:**
+
+1. Confirm the variable is set **in the same environment as the process**: `echo "$VAR_NAME"` (bash) or `$env:VAR_NAME` (PowerShell). Names are **case-sensitive** on Linux.
+1. Docker / Podman: pass `--env VAR_NAME=value` or `--env-file` (Compose `environment:` / `env_file:`). A variable set only in your laptop shell does **not** enter the container.
+1. systemd: set `Environment=VAR_NAME=value` or `EnvironmentFile=` on the **service** unit.
+1. Run `--validate-config` and look for WARN lines that name the unset variable.
+
+**Fix:** Export the variable before start, or inject it via Docker/Podman/systemd. Never commit live secrets in tracked YAML. Operator contract: [OPERATOR_CREDENTIALS_FROM_ENV.md](ops/OPERATOR_CREDENTIALS_FROM_ENV.md) ([pt-BR](ops/OPERATOR_CREDENTIALS_FROM_ENV.pt_BR.md)). Human vault habits: [OPERATOR_SECRETS_BITWARDEN.md](ops/OPERATOR_SECRETS_BITWARDEN.md) ([pt-BR](ops/OPERATOR_SECRETS_BITWARDEN.pt_BR.md)).
+
+---
+
 **Documentation index:** [README.md](README.md) · [README.pt_BR.md](README.pt_BR.md). **Overview:** [TROUBLESHOOTING.md](TROUBLESHOOTING.md).

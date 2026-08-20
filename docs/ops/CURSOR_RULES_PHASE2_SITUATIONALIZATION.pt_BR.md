@@ -70,7 +70,7 @@ Tratar como **padrão** salvo revisão explícita de política:
 | Mapa claro intenção → token → regra (escada de arranque) | Mais **superfície de documentação** para manter alinhada (este runbook, escada, hubs) |
 | Raciocínio mais claro sobre “o que é vinculante agora” | **`globs`** excessivamente estreitos ou largos errados — **sobre**-anexar por arquivo aberto acidental |
 
-Mitigação: manter **[`session-mode-keywords.mdc`](../../.cursor/rules/session-mode-keywords.mdc)** com **`alwaysApply: true`** como **tabela canônica de tokens**, e seguir o [Ritual reproduzível](#ritual-reproduzível-passos-concretos) para hubs e testes mudarem em conjunto.
+Mitigação: manter **[`session-mode-keywords.mdc`](../../.cursor/rules/session-mode-keywords.mdc)** com **`alwaysApply: true`** como **tabela canônica de tokens**, seguir o [Ritual reproduzível](#ritual-reproduzível-passos-concretos) para hubs e testes mudarem em conjunto, e manter **[`tests/test_cursor_rules_globs.py`](../../tests/test_cursor_rules_globs.py)** verde para que **`globs`** situacionais obsoletos falhem no CI em vez de a regra nunca carregar em silêncio (#409).
 
 ## Por que as regras de locale não entraram na “viragem” da fase 2
 
@@ -109,6 +109,7 @@ Inventário completo (EN): [Tier B situationalized](CURSOR_RULES_PHASE2_SITUATIO
 
 ## Tier C — meta e higiene
 
+- **Globs situacionais (#409):** **[`tests/test_cursor_rules_globs.py`](../../tests/test_cursor_rules_globs.py)** falha o CI quando um glob com **`alwaysApply: false`** não encontra arquivo (padrões gitignored em **`docs/private/`** / **`.cursor/private/`** são ignorados quando essas árvores não existem).
 - **Automação de inventário (ideia):** Teste ou script que afirma que a lista de regras **`alwaysApply: true`** coincide com um allowlist em docs (opcional; custo de manutenção).
 - **Snapshots:** Zips privados em **`docs/private/ops/cursor-config-snapshots/`** (se usados) para frontmatter antes/depois.
 - **Fase “B” do hub:** **[`CURSOR_AGENT_POLICY_HUB.pt_BR.md`](CURSOR_AGENT_POLICY_HUB.pt_BR.md)** é o mapa **clicável** — manter alinhado com **`AGENTS.md`** ao acrescentar presilha.

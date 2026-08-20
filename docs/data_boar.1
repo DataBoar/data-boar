@@ -321,7 +321,9 @@ as true for this run: scan inside supported archives (zip, tar, 7z, etc.). May i
 .B \-\-content\-type\-check
 When set, treat
 .B file_scan.use_content_type
-as true for this run: infer file type from magic bytes, not only extension (helps find renamed or cloaked files). Adds extra I/O and CPU per file.
+as true for this run: infer file type from magic bytes, not only extension (helps find renamed or cloaked files). Does not dispatch compressed archives: a lying archive extension still records
+.B archive_type_mismatch
+in scan_failures instead of expanding. Adds extra I/O and CPU per file.
 .
 .TP
 .B \-\-scan\-stego
