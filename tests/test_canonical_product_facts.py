@@ -25,6 +25,7 @@ MUST_CONTAIN = (
     "https://github.com/DataBoar/data-boar",
     "https://databoar.com.br",
     "fabioleitao/data_boar",  # Docker Hub image (explicitly labeled in FACTS)
+    "brew tap DataBoar/databoar",
 )
 
 # Docker-optional: EN and pt-BR phrasing both required across the pair;

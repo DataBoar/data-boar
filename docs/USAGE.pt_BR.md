@@ -189,6 +189,8 @@ Imagens pré-construídas estão no Docker Hub: `fabioleitao/data_boar:latest` (
 
 **Void nativo `xbps` (canal Enterprise, quando construído):** overlay em `packaging/void/` — `xbps-src` em container **Podman Void**, serviço runit em `/etc/sv/data-boar/run`. O produto não chama `systemctl`. Passos: [VOID_XBPS_PACKAGING.pt_BR.md](ops/VOID_XBPS_PACKAGING.pt_BR.md) ([EN](ops/VOID_XBPS_PACKAGING.md)).
 
+**macOS Homebrew (tap próprio):** `brew tap DataBoar/databoar && brew install data-boar`. Python `python@3.13` do host + pip (não é o canal Linux com CPython embarcado). Passos: [HOMEBREW_TAP.pt_BR.md](ops/HOMEBREW_TAP.pt_BR.md) ([EN](ops/HOMEBREW_TAP.md)).
+
 ### URLs principais
 
 As páginas HTML usam **prefixo de idioma** (`/en/…`, `/pt-br/…`). Acessar `/`, `/reports`, `/config`, `/help` ou `/about` **sem** prefixo redireciona conforme cookie `db_locale`, cabeçalho `Accept-Language` e `locale.default_locale` no YAML (veja bloco `locale` em [USAGE.md](USAGE.md)). As rotas JSON da API continuam **sem** prefixo.

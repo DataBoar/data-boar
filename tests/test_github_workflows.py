@@ -586,6 +586,13 @@ def test_publish_pypi_workflow_present_and_valid() -> None:
     prod_perms = prod.get("permissions") or {}
     assert prod_perms.get("id-token") == "write"
 
+    bump = jobs["bump-homebrew"]
+    assert bump.get("needs") == "publish-pypi" or bump.get("needs") == ["publish-pypi"]
+    assert bump.get("uses") == "./.github/workflows/homebrew-tap.yml"
+    assert str((bump.get("with") or {}).get("bump")).lower() in {"true", "yes", "1"}
+    bump_if = str(bump.get("if") or "")
+    assert "pypi" in bump_if
+
 
 def test_publish_pypi_yml_pins_actions_to_shas() -> None:
     """ADR-0074: publish-pypi.yml pins all third-party Actions (incl. pypa/gh-action-pypi-publish)."""
@@ -749,6 +756,43 @@ def test_void_xbps_workflow_present_and_valid() -> None:
     assert "void-glibc" in str(show.get("strategy") or "")
     assert "void-musl" in str(show.get("strategy") or "")
     text = (WORKFLOWS / "void-xbps.yml").read_text(encoding="utf-8")
+    sha_40 = re.compile(r"@[0-9a-f]{40}")
+    for line in text.splitlines():
+        code = line.split("#", 1)[0]
+        if "uses:" not in code or "docker://" in code:
+            continue
+        if "./.github/workflows/" in code:
+            continue
+        if not any(p in code for p in ("actions/", "github/", "astral-sh/")):
+            continue
+        assert sha_40.search(code), (
+            f"expected full commit SHA in uses line: {line.strip()!r}"
+        )
+
+
+def test_homebrew_tap_workflow_present_and_valid() -> None:
+    """#1425: macos-14 brew audit --strict --new plus install/test; PyPI bump job."""
+    data = _load_workflow("homebrew-tap.yml")
+    assert data.get("name") == "Homebrew tap"
+    on = data.get("on") or {}
+    assert "pull_request" in on
+    assert "workflow_dispatch" in on
+    assert "workflow_call" in on
+    jobs = data.get("jobs") or {}
+    assert "formula-check" in jobs
+    assert "brew-macos" in jobs
+    assert "bump-formula" in jobs
+    macos = jobs["brew-macos"]
+    assert macos.get("runs-on") == "macos-14"
+    macos_runs = "\n".join(_ci_step_run_texts(macos))
+    assert "brew audit --strict --new" in macos_runs
+    assert "brew install" in macos_runs
+    assert "brew test" in macos_runs
+    bump = jobs["bump-formula"]
+    bump_runs = "\n".join(_ci_step_run_texts(bump))
+    assert "homebrew_formula_bump.py --write" in bump_runs
+    assert "HOMEBREW_TAP_TOKEN" in bump_runs
+    text = (WORKFLOWS / "homebrew-tap.yml").read_text(encoding="utf-8")
     sha_40 = re.compile(r"@[0-9a-f]{40}")
     for line in text.splitlines():
         code = line.split("#", 1)[0]

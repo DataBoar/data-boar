@@ -1,6 +1,6 @@
 # Plan: Native OS packages — interpreter ownership, nfpm, Void xbps, and Release assets (#1406 / #1403 / #1437 / #1404 / #1408)
 
-<!-- plans-hub-summary: Native/Enterprise embeds CPython (cp314t); ADR-0084 Accepted; Linux nfpm CI (#1437) + Release assets (#1408) + Void xbps overlay (#1404, Podman) + Windows MSI/winget (#1467, blocked by Windows CI #1427 / PLAN_WINDOWS_CI_ENABLEMENT) + macOS Homebrew (#1425); commercial protection = worker caps (#551), not interpreter presence. -->
+<!-- plans-hub-summary: Native/Enterprise embeds CPython (cp314t); ADR-0084 Accepted; Linux nfpm CI (#1437) + Release assets (#1408) + Void xbps overlay (#1404, Podman) + macOS Homebrew own tap host-Python (#1425) + Windows MSI/winget (#1467, blocked by Windows CI #1427 / PLAN_WINDOWS_CI_ENABLEMENT); commercial protection = worker caps (#551), not interpreter presence. -->
 
 **Status:** In progress
 **Date:** 2026-08-12
@@ -23,7 +23,7 @@ Before writing an nfpm (or equivalent) manifest for native packages (#1403), the
 
 | Channel | Interpreter | no-GIL (`cp314t`) | Notes |
 | ------- | ----------- | ----------------- | ----- |
-| **(a) Native / Enterprise / air-gapped** | **Embed CPython** under product prefix | **Reachable** on any distro | Matrix: `(libc × arch)`; correction invariant structural. **Surfaces:** Linux nfpm (**deb/rpm** in CI; apk/pacman/xbps later) · **Windows MSI/winget** ([#1467](https://github.com/DataBoar/data-boar/issues/1467)) · **macOS Homebrew** ([#1425](https://github.com/DataBoar/data-boar/issues/1425)) — see sibling table below |
+| **(a) Native / Enterprise / air-gapped** | **Embed CPython** under product prefix | **Reachable** on any distro | Matrix: `(libc × arch)`; correction invariant structural. **Surfaces:** Linux nfpm (**deb/rpm** in CI; apk/pacman/xbps later) · **Windows MSI/winget** ([#1467](https://github.com/DataBoar/data-boar/issues/1467)) — see sibling table below |
 | **(b) Community / distro upstream** | Distro `python3` | **Not offered** (document per build minor) | **Deferred**; must not be marketed as (a) |
 | **(c) postinst rebuild** | N/A | N/A | **Rejected** (breaks air-gap) |
 
@@ -34,8 +34,8 @@ Before writing an nfpm (or equivalent) manifest for native packages (#1403), the
 | **Linux nfpm** (deb/rpm first; apk/pacman later) | [#1403](https://github.com/DataBoar/data-boar/issues/1403) · [#1437](https://github.com/DataBoar/data-boar/issues/1437) · [#1408](https://github.com/DataBoar/data-boar/issues/1408) | Foundation ✅; CI build 🔄; Release attach 🔄; metal matrix deferred |
 | **Void xbps** (`void-packages` overlay, runit, Podman) | [#1404](https://github.com/DataBoar/data-boar/issues/1404) | Overlay + generator 🔄; validate in Podman Void (not metal) |
 | **Windows MSI + winget** (embed `cp314` / `cp314t`) | [#1467](https://github.com/DataBoar/data-boar/issues/1467) (canonical; #1471 was a dup) | **Planned** — blocked on Windows CI ([#1427](https://github.com/DataBoar/data-boar/issues/1427): no `windows-latest` job yet) |
-| **macOS Homebrew** (own tap; formula/cask) | [#1425](https://github.com/DataBoar/data-boar/issues/1425) | **Planned** — cheapest missing consumer path; **no** published formula/cask yet |
-| **Install ladder honesty** | [ADR-0085](../adr/ADR-0085-install-priority-ladder.md) · [#1478](https://github.com/DataBoar/data-boar/issues/1478) | Recommend only what exists **today** (`pipx`); native / `brew` are **when published** — do not treat `brew install data-boar` as live |
+| **macOS Homebrew** (own tap; host Python + pip) | [#1425](https://github.com/DataBoar/data-boar/issues/1425) | **In progress** — `DataBoar/databoar` tap; formula does **not** embed CPython; CI **macos-14** (Apple Silicon) |
+| **Install ladder honesty** | [ADR-0085](../adr/ADR-0085-install-priority-ladder.md) · [#1478](https://github.com/DataBoar/data-boar/issues/1478) | Recommend only what exists **today** (`pipx`; **macOS tap** `brew tap DataBoar/databoar` when the public tap repo is live). Native Linux / MSI stay **when published** |
 
 ### Commercial protection (normative)
 
@@ -77,7 +77,7 @@ Community at 2 workers does **not** harvest free-threaded scale. See [#551](http
 | **4b** | Void xbps overlay (#1404): generated `void-packages` template + runit + Podman validate | 🔄 |
 | **5** | Windows CI job (`windows-latest`) so MSI/winget work is testable (#1427) | 🔄 [PLAN_WINDOWS_CI_ENABLEMENT.md](PLAN_WINDOWS_CI_ENABLEMENT.md) — PR in flight; **blocks** #1467 until green on `main` |
 | **6** | Windows MSI + winget embed payload (#1467) | ⬜ planned (after #1427) |
-| **7** | macOS Homebrew tap (#1425) | ⬜ planned |
+| **7** | macOS Homebrew tap (#1425): own tap, host Python + pip, macos-14 CI, formula bump | 🔄 |
 
 Cross-link hygiene for this table: [#1541](https://github.com/DataBoar/data-boar/issues/1541).
 
@@ -158,3 +158,15 @@ Traps from the hand-built recipe-proof PoC stay in `scripts/native-nfpm-populate
 - [ ] Finding-count parity vs deb/rpm/apk on the reference corpus after install
 - [ ] musl `--build` when a musl staging tree exists (do not reuse glibc bytes)
 - [x] Target **1.8.x**
+
+## Acceptance (macOS Homebrew tap #1425)
+
+- [x] Own tap layout `Formula/data-boar.rb` (canonical copy under `packaging/homebrew/`; published repo `DataBoar/homebrew-databoar`)
+- [x] Formula `depends_on python@3.13` and pip-installs the PyPI sdist (no embedded CPython / no macOS payload build)
+- [x] Base extra only; connector extras documented as post-install pip into the formula venv
+- [x] CI `macos-14` (Apple Silicon): `brew audit --strict --new`, `brew install`, `brew test` (`--version` + `--demo`)
+- [x] Intel Macs: same bottle-less pip path; no separate GHA Intel runner (documented)
+- [x] QUICKSTART + TECH_GUIDE EN/pt-BR
+- [x] This plan + PLANS_TODO + `plans_hub_sync`
+- [x] Formula bump script + hook after PyPI publish (`HOMEBREW_TAP_TOKEN` to push the tap repo)
+- [x] Out of scope here: arm64 Linux (#1403), xbps (#1404), MSI/winget (#1467)

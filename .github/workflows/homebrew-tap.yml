@@ -1,0 +1,172 @@
+# Homebrew tap — macOS (#1425). Own tap, not homebrew-core.
+# Formula depends on Homebrew python@3.13 and pip-installs the PyPI sdist
+# (no embedded CPython payload).
+#
+# brew-macos: native macos-14 (Apple Silicon). Intel is the same pip path;
+# GitHub does not gate a separate Intel runner here.
+# bump: rewrite Formula url/sha256 from PyPI and optionally push the tap repo.
+name: Homebrew tap
+
+permissions:
+  contents: read
+
+'on':
+  pull_request:
+    branches: [main, master]
+    paths:
+      - "packaging/homebrew/**"
+      - "scripts/homebrew_formula_bump.py"
+      - "tests/test_homebrew_formula.py"
+      - ".github/workflows/homebrew-tap.yml"
+  push:
+    branches: [main, master]
+    paths:
+      - "packaging/homebrew/**"
+      - "scripts/homebrew_formula_bump.py"
+      - "tests/test_homebrew_formula.py"
+      - ".github/workflows/homebrew-tap.yml"
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Rewrite Formula from latest PyPI and sync the tap repo"
+        type: boolean
+        default: false
+  workflow_call:
+    inputs:
+      bump:
+        description: "Rewrite Formula from latest PyPI and sync the tap repo"
+        type: boolean
+        default: true
+  release:
+    types: [published]
+
+concurrency:
+  group: homebrew-tap-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  formula-check:
+    name: Formula url/sha256 vs PyPI
+    if: >-
+      github.event_name == 'pull_request' ||
+      github.event_name == 'push' ||
+      (github.event_name == 'workflow_dispatch' && inputs.bump != true)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          enable-cache: true
+
+      - name: pytest + formula --check
+        run: |
+          set -euo pipefail
+          uv sync --frozen
+          uv run pytest tests/test_homebrew_formula.py tests/test_github_workflows.py -k homebrew -q
+          uv run python scripts/homebrew_formula_bump.py --check
+
+  brew-macos:
+    name: brew audit/install/test (macos-14)
+    if: >-
+      github.event_name == 'pull_request' ||
+      github.event_name == 'push' ||
+      (github.event_name == 'workflow_dispatch' && inputs.bump != true)
+    runs-on: macos-14
+    timeout-minutes: 50
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: "1"
+      HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK: "1"
+      HOMEBREW_NO_ANALYTICS: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Local tap, audit --strict --new, install, test
+        run: |
+          set -euo pipefail
+          TAP="databoar/databoar"
+          brew tap-new --no-git "${TAP}"
+          TAP_DIR="$(brew --repo "${TAP}")"
+          mkdir -p "${TAP_DIR}/Formula"
+          cp packaging/homebrew/Formula/data-boar.rb "${TAP_DIR}/Formula/data-boar.rb"
+          brew audit --strict --new "${TAP}/data-boar"
+          brew install --verbose "${TAP}/data-boar"
+          brew test "${TAP}/data-boar"
+          uname -m
+          echo "homebrew-macos-arch=$(uname -m)"
+
+  bump-formula:
+    name: Bump formula from PyPI
+    if: >-
+      (github.event_name == 'workflow_dispatch' && inputs.bump == true) ||
+      (github.event_name == 'workflow_call' && inputs.bump == true) ||
+      (github.event_name == 'release' && github.event.release.prerelease == false)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: true
+
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          enable-cache: true
+
+      - name: Rewrite Formula from PyPI
+        run: |
+          set -euo pipefail
+          uv sync --frozen
+          uv run python scripts/homebrew_formula_bump.py --write
+          uv run python scripts/homebrew_formula_bump.py --check --latest
+
+      - name: Open PR on this repo when the formula changed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- packaging/homebrew/Formula/data-boar.rb; then
+            echo "formula already matches PyPI"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          BRANCH="chore/homebrew-formula-bump"
+          git checkout -B "${BRANCH}"
+          git add packaging/homebrew/Formula/data-boar.rb
+          git commit -m "chore(homebrew): bump formula to latest PyPI sdist"
+          git push -u origin "${BRANCH}"
+          gh pr list --head "${BRANCH}" --json number --jq '.[0].number' | grep -q '[0-9]' \
+            || gh pr create --title "chore(homebrew): bump formula to latest PyPI sdist" \
+              --body "Automated bump from \`scripts/homebrew_formula_bump.py --write\` (#1425)."
+
+      - name: Sync Formula to DataBoar/homebrew-databoar
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${HOMEBREW_TAP_TOKEN:-}" ]; then
+            echo "HOMEBREW_TAP_TOKEN unset — skip tap-repo push (formula still bumped in this repo)."
+            exit 0
+          fi
+          TAP_URL="https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/DataBoar/homebrew-databoar.git"
+          WORKDIR="$(mktemp -d)"
+          git clone --depth 1 "${TAP_URL}" "${WORKDIR}"
+          mkdir -p "${WORKDIR}/Formula"
+          cp packaging/homebrew/Formula/data-boar.rb "${WORKDIR}/Formula/data-boar.rb"
+          git -C "${WORKDIR}" config user.name "github-actions[bot]"
+          git -C "${WORKDIR}" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git -C "${WORKDIR}" diff --quiet -- Formula/data-boar.rb; then
+            echo "tap already matches"
+            exit 0
+          fi
+          git -C "${WORKDIR}" add Formula/data-boar.rb
+          git -C "${WORKDIR}" commit -m "chore: bump data-boar formula from PyPI"
+          git -C "${WORKDIR}" push origin HEAD
