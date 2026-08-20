@@ -47,19 +47,22 @@ if ! command -v uv >/dev/null 2>&1; then
   echo "check-all.sh: ABORTED: uv not on PATH (required for scripts/gatekeeper_audit.py)." >&2
   exit 2
 fi
-if ! uv run python "$REPO_ROOT/scripts/gatekeeper_audit.py"; then
+# `if ! cmd; then exit "$?"; fi` exits 0: $? is the successful `!` (bash 5).
+uv run python "$REPO_ROOT/scripts/gatekeeper_audit.py" || {
+  rc=$?
   echo "check-all.sh: ABORTED by gatekeeper_audit (PII seed hit or gate failure)." >&2
-  exit "$?"
-fi
+  exit "$rc"
+}
 
 # Same range as CI (ci.yml PII gate change tripwire). Fetch may fail offline;
 # the Python tool SKIP/fail-opens if origin/main is missing. Do not swallow the
 # tripwire exit code (#1385, ADR-0071 / ADR-0080).
 git fetch origin main --depth=1 2>/dev/null || true
-if ! uv run python "$REPO_ROOT/scripts/gate_change_tripwire.py" --base origin/main; then
+uv run python "$REPO_ROOT/scripts/gate_change_tripwire.py" --base origin/main || {
+  rc=$?
   echo "check-all.sh: ABORTED by gate_change_tripwire (ADR-0071)." >&2
-  exit "$?"
-fi
+  exit "$rc"
+}
 
 # #1003: non-interactive SSH/login-env parity — cargo/uv/maturin often live off default PATH.
 _ensure_login_tool_path() {
