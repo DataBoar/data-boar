@@ -87,6 +87,34 @@ def test_validate_config_unknown_type_exits_invalid(tmp_path):
     assert "salesforce-crm" in r.stdout
 
 
+def test_validate_config_invalid_does_not_create_output_dirs(tmp_path: Path) -> None:
+    """#538: [INVALID] pre-flight must not mkdir output_dir or open sqlite."""
+    reports = tmp_path / "reports"
+    db_parent = tmp_path / "state"
+    db = db_parent / "audit.db"
+    cfg = tmp_path / "c.yaml"
+    cfg.write_text(
+        f"""targets:
+  - name: salesforce-crm
+    type: sfdc
+report:
+  output_dir: {reports.as_posix()}
+sqlite_path: {db.as_posix()}
+api:
+  port: 8765
+scan:
+  max_workers: 1
+""",
+        encoding="utf-8",
+    )
+    r = _run_validate(cfg)
+    assert r.returncode == 1, r.stdout + r.stderr
+    assert "[INVALID]" in r.stdout
+    assert not reports.exists()
+    assert not db.exists()
+    assert not db_parent.exists()
+
+
 def test_validate_config_missing_required_key(tmp_path):
     cfg = _base_config(
         tmp_path,

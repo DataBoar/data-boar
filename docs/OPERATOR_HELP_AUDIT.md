@@ -24,6 +24,8 @@ Documented in code: **`main.py --host`** → **`api.host`** → **`API_HOST`** �
 
 ## Done recently (changelog)
 
+- **2026-08-19 (`--validate-config` no side effects on `[INVALID]` #538):** Pre-flight aborts before `report.output_dir` mkdir, sqlite parent, or integrity-anchor `sqlite3.connect`. Surfaces: **`main.py --help`**, **`docs/data_boar.1`**, **`docs/USAGE*.md`**, **`tests/test_main_validate_config.py`**.
+
 - **2026-08-19 (`use_content_type` vs archives #1354):** Option **(b)** — `--content-type-check` / `file_scan.use_content_type` does **not** dispatch compressed archives; lying extension → `archive_type_mismatch` in `scan_failures`. Surfaces: **`main.py --help`**, **`docs/data_boar.1`**, **`docs/data_boar.5`**, **`docs/USAGE*.md`**, **`api/templates/help.html`**, **`api/locales/*.json`**, **`tests/operator_help_sync_manifest.py`**, **`tests/test_archive_type_mismatch.py`**.
 - **2026-07-31 (`/logs` RBAC align #1190):** `_authorize_audit_log_download` requires a principal **only** when `rbac_enforcement_active` (same gate as RBAC middleware). Demo no longer provisions/prints an API key. Surfaces: **`api/routes.py`**, **`core/demo/runtime.py`**, **`main.py --help`**, **`docs/data_boar.1`**, **`docs/USAGE*.md`**, **`api/locales/*.json`**, **`tests/test_demo_logs_1218.py`**, **`tests/test_logs_auth_rbac_align_1190.py`**.
 - **2026-08-02 (`--check-extras` / container `/extras` #1400–#1402):** Optional extras inventory + runtime mount troubleshooting. **`main.py --check-extras`**, **`EXTRAS_MANIFEST.json`**, man §1, **`docs/USAGE*.md`**, **`docs/DOCKER_SETUP*.md`**, **`api/templates/help.html`**, **`tests/operator_help_sync_manifest.py`**, **`tests/test_extras_manifest_and_runtime.py`**.
