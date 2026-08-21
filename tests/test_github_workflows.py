@@ -557,7 +557,20 @@ def test_zizmor_workflow_present_and_valid() -> None:
     on = data.get("on") or {}
     assert "pull_request" in on
     assert "push" in on
+    assert "schedule" in on
     assert "workflow_dispatch" in on
+    pr = on.get("pull_request") or {}
+    push = on.get("push") or {}
+    assert pr.get("branches") == ["main", "master"]
+    assert push.get("branches") == ["main", "master"]
+    assert "paths" not in pr, (
+        "path filter on pull_request omits zizmor SARIF for non-workflow PRs "
+        "(code_scanning ruleset deadlock)"
+    )
+    assert "paths" not in push, (
+        "path filter on push omits zizmor SARIF when main lands without "
+        "workflow changes (code_scanning ruleset deadlock)"
+    )
     jobs = data.get("jobs") or {}
     assert "zizmor" in jobs
     job = jobs["zizmor"]

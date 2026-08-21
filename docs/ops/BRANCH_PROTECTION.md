@@ -64,8 +64,8 @@ From ruleset `main-gate-pii` `pull_request` parameters (2026-08-19):
 | ---                   | ---                                                                                                                                                                                                                  |
 | Repo Actions variable | **`ZIZMOR_ENFORCE=true`**                                                                                                                                                                                            |
 | Workflow              | [`.github/workflows/zizmor.yml`](../../.github/workflows/zizmor.yml)                                                                                                                                                 |
-| When it runs          | `pull_request` / `push` to `main` when **`.github/workflows/**`** changes; weekly schedule; `workflow_dispatch`                                                                                                      |
-| Job behaviour         | With the variable **not** `false`, a zizmor finding **fails the job** (`ENFORCE_ZIZMOR`). That job is **not** in `required_status_checks`, so it is a **workflow-path** fail-closed signal, not a global merge gate. |
+| When it runs          | Every `pull_request` / `push` to `main`/`master` (**no** `paths:` filter — a `code_scanning` ruleset that requires zizmor needs a result for that commit and ref); weekly schedule; `workflow_dispatch` |
+| Job behaviour         | With the variable **not** `false`, a zizmor finding **fails the job** (`ENFORCE_ZIZMOR`). That job is **not** in `required_status_checks`. Unconditional runs make a `code_scanning` tool requirement **eligible** without merge deadlock; adding zizmor back to the ruleset is a separate operator UI step. |
 | Local / `check-all`   | Advisory unless `DATA_BOAR_ENFORCE_ZIZMOR` / `-Enforce` — see [WORKFLOW_DEFERRED_FOLLOWUPS.md](WORKFLOW_DEFERRED_FOLLOWUPS.md) and `scripts/workflow-security-lint.*`.                                               |
 
 **Re-check:** `gh api repos/DataBoar/data-boar/actions/variables/ZIZMOR_ENFORCE`
