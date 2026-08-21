@@ -56,7 +56,7 @@ Parâmetros `pull_request` do ruleset `main-gate-pii` (2026-08-19):
 
 [`.github/CODEOWNERS`](../../.github/CODEOWNERS) ainda cobre os caminhos do gate de PII/segurança ([ADR 0071](../adr/ADR-0071-self-protecting-pii-gate.md)). O ruleset **ainda não** exige essa revisão. Ligar **Require review from Code Owners** é mudança na UI do GitHub, não edição de docs.
 
-**Assinaturas obrigatórias** estão na proteção **clássica** **e** no ruleset `restriction baseline`. Branches só-bot (Dependabot) que não assinam commits precisam de um PR substituto assinado pelo mantenedor — veja a issue **#1419**.
+**Assinaturas obrigatórias** estão na proteção **clássica** **e** no ruleset `restriction baseline`. Branches só-bot (Dependabot) que não assinam commits precisam de PR substituto assinado pelo mantenedor ou do handoff em [DEPENDABOT_REQUIREMENTS_SYNC.pt_BR.md](DEPENDABOT_REQUIREMENTS_SYNC.pt_BR.md) ([#1419](https://github.com/DataBoar/data-boar/issues/1419)).
 
 ## `ZIZMOR_ENFORCE`
 

@@ -56,7 +56,7 @@ From ruleset `main-gate-pii` `pull_request` parameters (2026-08-19):
 
 [`.github/CODEOWNERS`](../../.github/CODEOWNERS) still owns PII/security gate paths ([ADR 0071](../adr/ADR-0071-self-protecting-pii-gate.md)). The ruleset does **not** yet require that review. Enabling **Require review from Code Owners** is an operator GitHub-UI change, not a docs edit.
 
-**Required signatures** are on in **classic** protection **and** ruleset `restriction baseline`. Bot-only branches (Dependabot) that cannot sign commits need a maintainer-signed supersede PR — see issue **#1419**.
+**Required signatures** are on in **classic** protection **and** ruleset `restriction baseline`. Bot-only branches (Dependabot) that cannot sign commits need a maintainer-signed supersede PR or the handoff in [DEPENDABOT_REQUIREMENTS_SYNC.md](DEPENDABOT_REQUIREMENTS_SYNC.md) ([#1419](https://github.com/DataBoar/data-boar/issues/1419)).
 
 ## `ZIZMOR_ENFORCE`
 
