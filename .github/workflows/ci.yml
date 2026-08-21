@@ -111,11 +111,24 @@ jobs:
     timeout-minutes: 50
     env:
       DATA_BOAR_CI_EXTRAS: "1"
+      # Consumer-side Maestro guards (maestro#8 / #1638). Checkout path is under
+      # GITHUB_WORKSPACE (actions/checkout will not place a clone at ../maestro).
+      MAESTRO_ROOT: ${{ github.workspace }}/maestro
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
+
+      - name: Checkout DataBoar/maestro (consumer-side guards)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: DataBoar/maestro
+          path: maestro
+          persist-credentials: false
+          # Fine-grained PAT (contents:read on DataBoar/maestro). Default
+          # GITHUB_TOKEN cannot read another private org repo.
+          token: ${{ secrets.MAESTRO_CHECKOUT_TOKEN }}
 
       - name: Install unixodbc-dev (pyodbc / mssql-pyodbc extra)
         run: timeout 240 sudo apt-get install -y unixodbc-dev
