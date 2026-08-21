@@ -104,31 +104,19 @@ jobs:
   # in connectionpool.py; Python 3.13 raises SyntaxError (was SyntaxWarning).
   # 2.0.0 is still rc-only — do not pin an RC. Restore ``--extra mariadb`` (or
   # ``sql-all``) when a stable connector imports on 3.13. Also PYSEC-2026-217
-  # on 1.1.14 (#922). Skip ceiling fails if silent skips grow.
+  # on 1.1.14 (#922). Skip ceiling measures optional-extra gaps only (Maestro
+  # clone-gated tests are deselected; see the pytest step).
   test-extras:
     name: Test optional extras (Python 3.13)
     runs-on: ubuntu-latest
     timeout-minutes: 50
     env:
       DATA_BOAR_CI_EXTRAS: "1"
-      # Consumer-side Maestro guards (maestro#8 / #1638). Checkout path is under
-      # GITHUB_WORKSPACE (actions/checkout will not place a clone at ../maestro).
-      MAESTRO_ROOT: ${{ github.workspace }}/maestro
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
-
-      - name: Checkout DataBoar/maestro (consumer-side guards)
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          repository: DataBoar/maestro
-          path: maestro
-          persist-credentials: false
-          # Fine-grained PAT (contents:read on DataBoar/maestro). Default
-          # GITHUB_TOKEN cannot read another private org repo.
-          token: ${{ secrets.MAESTRO_CHECKOUT_TOKEN }}
 
       - name: Install unixodbc-dev (pyodbc / mssql-pyodbc extra)
         run: timeout 240 sudo apt-get install -y unixodbc-dev
@@ -149,10 +137,25 @@ jobs:
         run: uv sync --extra postgres --extra mysql --extra mssql --extra mssql-pyodbc --extra oracle --extra nosql --extra compressed --extra dataformats --extra shares --group dev
 
       - name: Run tests
-        run: uv run pytest -v -W error -ra --tb=short --junitxml=extras-junit.xml
+        # Public CI must not clone private DataBoar/maestro: forks have no org
+        # PAT, a long-lived token in public CI is the wrong coupling, and
+        # spinout maestro#8 skips those consumer guards when the clone is
+        # absent ("typical public CI"). Deselect so the skip ceiling measures
+        # optional Python extras only. If Maestro guards should run in CI, add
+        # a separate opt-in job — do not hang it off test-extras.
+        run: |
+          uv run pytest -v -W error -ra --tb=short --junitxml=extras-junit.xml \
+            --ignore=tests/test_maestro_scripts.py \
+            --deselect=tests/test_issue_dev_license_qa.py::test_maestro_handler_issues_60d_machine_bound \
+            --deselect=tests/test_security.py::test_sync_working_tree_excludes_dotenv_from_rsync \
+            --deselect=tests/test_security.py::test_maestro_aggregates_real_failures_in_exit
 
       - name: Skip-count ceiling (#1638)
-        run: uv run python scripts/ci_pytest_skip_ceiling.py extras-junit.xml --max-skipped 90
+        # extras job on 989a4a3f: skipped=106. 56 are MAESTRO_ROOT guards
+        # (test_maestro_scripts.py 53 + test_issue_dev_license_qa.py 1 +
+        # test_security.py 2). Remainder 50 (JUnit counts 1 xfail as skip).
+        # Ceiling 60 = remainder +10 slack for suite growth; not Maestro coverage.
+        run: uv run python scripts/ci_pytest_skip_ceiling.py extras-junit.xml --max-skipped 60
 
   lint:
     name: Lint (pre-commit)

@@ -1,6 +1,6 @@
 # Plan: CI optional extras coverage — #1638
 
-<!-- plans-hub-summary: Dedicated Ubuntu pytest job installs SQL extras except mariadb (3.13 SyntaxError in 1.1.14) plus nosql/compressed/dataformats; checks out DataBoar/maestro for consumer-side guards; skip-count ceiling blocks regression. -->
+<!-- plans-hub-summary: Dedicated Ubuntu pytest job installs SQL extras except mariadb (3.13 SyntaxError in 1.1.14) plus nosql/compressed/dataformats; deselects MAESTRO_ROOT-gated tests; skip-count ceiling 60. -->
 <!-- plans-hub-related: PLAN_PACKAGING_EXTRAS.md, PLAN_WINDOWS_CI_ENABLEMENT.md -->
 
 **Status:** In progress (job + ceiling in this PR; remaining extras are backlog)
@@ -25,9 +25,8 @@ Evidence in #1638: **122 skipped** vs ~2188 passed on a recent default-matrix ru
 1. Job **`test-extras`** on **`ubuntu-latest`**, **Python 3.13** only (not the full 3.12/3.13/3.14 matrix).
 1. Install: `uv sync --extra postgres --extra mysql --extra mssql --extra mssql-pyodbc --extra oracle --extra nosql --extra compressed --extra dataformats --extra shares --group dev` (**`sql-all` minus `mariadb`**).
 1. Apt: **`unixodbc-dev`** for `pyodbc`. No **`install-libmariadb-dev`** while the `mariadb` extra is omitted.
-1. Full pytest + **skip-count ceiling** (`scripts/ci_pytest_skip_ceiling.py`, default **90**; JUnit parse via **`defusedxml`**).
+1. Full pytest + **skip-count ceiling** (`scripts/ci_pytest_skip_ceiling.py`, default **60**; JUnit parse via **`defusedxml`**). Deselect `MAESTRO_ROOT`-gated tests (`--ignore=tests/test_maestro_scripts.py` plus `--deselect` on the two mixed files) so the ceiling measures optional-Python-extra gaps. Public CI / forks must not clone private DataBoar/maestro; spinout maestro#8 skips those guards when the clone is absent. A future **opt-in** job may run Maestro consumer guards — not on **`test-extras`**.
 1. Env **`DATA_BOAR_CI_EXTRAS=1`** so `tests/test_ci_extras_runtime.py` **requires** pymongo/redis/SQL-driver imports except `mariadb` (Mongo/Redis timeout cases must not skip).
-1. Checkout private **DataBoar/maestro** into `$GITHUB_WORKSPACE/maestro` with **`MAESTRO_ROOT`** and secret **`MAESTRO_CHECKOUT_TOKEN`**, so consumer-side Maestro tests run (maestro#8 guards stay in place; they skip only when the clone is absent).
 
 ### Python 3.13 — omit `mariadb` extra (decision)
 
@@ -40,6 +39,7 @@ PyPI **`mariadb` 1.1.14** is the latest **stable** (2026-08-20). Importing it on
 - **`dl`**, **`otel`**, **`richmedia`**, **`bigdata`**, **`grc-dashboard`**, **`legacy-doc`**, **`detection-fuzzy`** (dev group already has rapidfuzz) — heavy C-exts, live services, or already covered elsewhere.
 - Live database engines. Tests that need a running server still skip; the target is **importable packages** with mocks/fixtures.
 - Installing every extra on every matrix job.
+- Checking out private **DataBoar/maestro** from public **`test-extras`** (forks, PAT, spinout skip-when-absent).
 
 ---
 
@@ -47,8 +47,8 @@ PyPI **`mariadb` 1.1.14** is the latest **stable** (2026-08-20). Importing it on
 
 - [x] Dedicated extras job runs the suite with the broad extra set
 - [x] Mongo/Redis cases in `tests/test_connector_timeouts.py` execute when extras are installed (`DATA_BOAR_CI_EXTRAS` import guard)
-- [x] Skip ceiling fails the extras job if skipped tests exceed **90**
-- [x] `test-extras` checks out DataBoar/maestro and sets `MAESTRO_ROOT` (consumer-side guards run)
+- [x] Skip ceiling fails the extras job if skipped tests exceed **60** (calibrated: extras run `989a4a3f` skipped=106 minus 56 Maestro guards = 50 remainder +10 slack)
+- [x] `test-extras` deselects `MAESTRO_ROOT`-gated tests (no private Maestro checkout)
 - [x] This plan + `PLANS_TODO` + hub wired
 
 ---
@@ -60,7 +60,7 @@ PyPI **`mariadb` 1.1.14** is the latest **stable** (2026-08-20). Importing it on
 | **0** | Plan + `PLANS_TODO` + hub                                        | ✅         |
 | **1** | `test-extras` job + unixodbc + skip ceiling                      | ✅         |
 | **1b** | Omit `mariadb` extra on 3.13 (`SyntaxError` in 1.1.14)          | ✅         |
-| **1c** | Checkout DataBoar/maestro + `MAESTRO_ROOT` on `test-extras`     | ✅         |
+| **1c** | Deselect `MAESTRO_ROOT` guards from extras; ceiling **60**      | ✅         |
 | **2** | Workflow shape tests                                             | ✅         |
 | **3** | Merge + close #1638                                              | ⬜         |
 | **4** | Optional later: `otel` / `bigdata` / `grc-dashboard` extras jobs | ⬜ backlog |

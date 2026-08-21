@@ -481,24 +481,12 @@ def test_ci_yml_has_optional_extras_job() -> None:
     assert extras.get("continue-on-error") in (None, False)
     env = extras.get("env") or {}
     assert env.get("DATA_BOAR_CI_EXTRAS") == "1"
-    maestro_root = env.get("MAESTRO_ROOT") or ""
-    assert "github.workspace" in maestro_root
-    assert maestro_root.endswith("/maestro")
-    maestro_checkouts = [
-        s
-        for s in extras.get("steps") or []
-        if isinstance(s, dict)
-        and (s.get("with") or {}).get("repository") == "DataBoar/maestro"
-    ]
-    assert len(maestro_checkouts) == 1, "test-extras must checkout DataBoar/maestro"
-    maestro_with = maestro_checkouts[0].get("with") or {}
-    assert maestro_with.get("path") == "maestro"
-    assert maestro_with.get("persist-credentials") is False
-    token = str(maestro_with.get("token") or "")
-    assert "secrets.MAESTRO_CHECKOUT_TOKEN" in token
-    assert "GITHUB_TOKEN" not in token
-    uses = str(maestro_checkouts[0].get("uses") or "")
-    assert "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1" in uses
+    assert "MAESTRO_ROOT" not in env
+    yaml_text = (WORKFLOWS / "ci.yml").read_text(encoding="utf-8")
+    extras_chunk = yaml_text.split("test-extras:")[1].split("\n  lint:")[0]
+    assert "repository: DataBoar/maestro" not in extras_chunk
+    assert "MAESTRO_CHECKOUT_TOKEN" not in extras_chunk
+    assert "opt-in" in extras_chunk
     runs = "\n".join(_ci_step_run_texts(extras))
     for extra in (
         "postgres",
@@ -517,7 +505,20 @@ def test_ci_yml_has_optional_extras_job() -> None:
     assert "pytest" in runs
     assert "--junitxml=extras-junit.xml" in runs
     assert "scripts/ci_pytest_skip_ceiling.py" in runs
-    assert "--max-skipped 90" in runs
+    assert "--max-skipped 60" in runs
+    assert "--ignore=tests/test_maestro_scripts.py" in runs
+    assert (
+        "--deselect=tests/test_issue_dev_license_qa.py::test_maestro_handler_issues_60d_machine_bound"
+        in runs
+    )
+    assert (
+        "--deselect=tests/test_security.py::test_sync_working_tree_excludes_dotenv_from_rsync"
+        in runs
+    )
+    assert (
+        "--deselect=tests/test_security.py::test_maestro_aggregates_real_failures_in_exit"
+        in runs
+    )
     assert "./.github/actions/install-libmariadb-dev" not in str(extras)
     assert "unixodbc-dev" in runs
 

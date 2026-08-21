@@ -4,7 +4,8 @@
 The default Linux CI matrix installs only ``--extra shares``. Optional connectors
 then ``pytest.skip`` / ``importorskip`` in silence. The dedicated extras job
 installs SQL extras except ``mariadb`` (CPython 3.13 SyntaxError in upstream
-1.1.14), plus ``nosql`` + ``compressed`` + ``dataformats``, and must keep the
+1.1.14), plus ``nosql`` + ``compressed`` + ``dataformats``, deselects
+``MAESTRO_ROOT``-gated tests (public CI / maestro#8), and must keep the
 remaining skip count under a declared ceiling so a new extra cannot hide again
 without a workflow change.
 
@@ -20,7 +21,9 @@ from pathlib import Path
 import defusedxml.ElementTree as ET
 
 # Keep in sync with ``.github/workflows/ci.yml`` extras job ``--max-skipped``.
-DEFAULT_MAX_SKIPPED = 90
+# Calibrated from extras job 989a4a3f (skipped=106 minus 56 MAESTRO_ROOT guards
+# = 50 remainder, JUnit counts 1 xfail as skip) plus +10 slack.
+DEFAULT_MAX_SKIPPED = 60
 
 
 def skipped_count(junit_path: Path) -> int:

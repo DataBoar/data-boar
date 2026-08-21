@@ -104,6 +104,6 @@ def test_main_missing_file(tmp_path: Path) -> None:
 
 def test_default_ceiling_matches_ci_constant() -> None:
     """Keep DEFAULT_MAX_SKIPPED aligned with the extras job flag."""
-    assert DEFAULT_MAX_SKIPPED == 90
+    assert DEFAULT_MAX_SKIPPED == 60
     text = (REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
     assert f"--max-skipped {DEFAULT_MAX_SKIPPED}" in text
