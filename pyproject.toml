@@ -318,6 +318,9 @@ dev = [
     "chardet>=5.1,<6.0",
     # CycloneDX SBOM from uv-exported requirements (ADR 0003); same CLI as CI `sbom.yml`.
     "cyclonedx-bom>=7.0.0",
+    # JUnit skip-ceiling parser (scripts/ci_pytest_skip_ceiling.py). Also a
+    # runtime dep; listed here so Bandit/Semgrep --group-dev jobs stay explicit.
+    "defusedxml>=0.7.1",
     "hypothesis>=6.164.0",
     "httpx2",
     "iniconfig>=2.3.0",

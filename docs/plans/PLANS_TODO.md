@@ -30,12 +30,12 @@ Use these tags in headings to keep priorities explicit and machine-countable:
 
 Do not edit this block manually; refresh with `python scripts/plans-stats.py --write`.
 
-- **Status rows counted:** 231  (Done: 146 | Incomplete: 85)
-- **Incomplete breakdown:** Pending `⬜`=69, Tracked `🔄` / `Tracked (partially done)`=16, Under consideration=0, Backlog-marked rows=0
+- **Status rows counted:** 236  (Done: 149 | Incomplete: 87)
+- **Incomplete breakdown:** Pending `⬜`=70, Tracked `🔄` / `Tracked (partially done)`=17, Under consideration=0, Backlog-marked rows=0
 
 | Horizon | Total rows | Done | Incomplete |
 | ------- | ----------: | ----: | ----------: |
-| `H0` | 53 | 34 | 19 |
+| `H0` | 58 | 37 | 21 |
 | `H1` | 48 | 32 | 16 |
 | `H2` | 0 | 0 | 0 |
 | `H3` | 118 | 68 | 50 |
@@ -55,7 +55,9 @@ When revising **license terms** for IP, commerciality, and profitability, explic
 
 When **partners** or **buyers** anchor on a vertical (MSP, insurance, RPO, real estate, NGO, EdTech, port, law, accounting, pharma), route demand **without scope creep**: (1) use the narrative index **[../use-cases/README.md](../use-cases/README.md)** ([pt-BR](../use-cases/README.pt_BR.md)); (2) map gaps to **shipped** operator surfaces (`USAGE`, connectors, reports) before inventing new flags; (3) promote **one** backlog row here or in the relevant `PLAN_*.md` when **repeatable revenue evidence** exists; keep token batching per **[TOKEN_AWARE_USAGE.md](TOKEN_AWARE_USAGE.md)**.
 
-### Integration / active threads — last refreshed **2026-08-18**
+### Integration / active threads — last refreshed **2026-08-19**
+
+- **CI optional extras coverage ([#1638](https://github.com/DataBoar/data-boar/issues/1638)):** 🔄 **Active** — default matrix still `uv sync --extra shares`; job **`test-extras`** (Python 3.13) installs SQL extras except `mariadb` (1.1.14 `SyntaxError` on 3.13) plus `nosql` + `compressed` + `dataformats`, deselects `MAESTRO_ROOT`-gated tests, and fails if skipped tests exceed **60**. [PLAN_CI_OPTIONAL_EXTRAS_COVERAGE.md](PLAN_CI_OPTIONAL_EXTRAS_COVERAGE.md). Found via [#1636](https://github.com/DataBoar/data-boar/issues/1636). Remaining extras (`otel`, `bigdata`, `dl`, `richmedia`, `grc-dashboard`) stay out of that job.
 
 - **Detection F1 baseline (#835):** 🔄 **In Progress** — `tests/data/f1_validation/` + `scripts/validate_detection_f1.py`; published numbers in [VALIDATION.md](../VALIDATION.md) (measure split only; calibrate split anti-leakage). Plan [PLAN_SYNTHETIC_DATA_AND_CONFIDENCE_VALIDATION.md](PLAN_SYNTHETIC_DATA_AND_CONFIDENCE_VALIDATION.md) **Deferred → In Progress**; Phases 2–4 still open.
 - **TCP peer pin / DNS rebinding class ([#1586](https://github.com/DataBoar/data-boar/issues/1586)):** ✅ **Closed 2026-08-17** (UTC) — same threat class as HTTP pins [#1565](https://github.com/DataBoar/data-boar/issues/1565). Matrix on `main`: Postgres `hostaddr` (**#1589**) · Mongo `HostResolutionPin` (**#1591**) · urlsplit tests (**#1593**) · harden (**#1594**) · Redis (**#1596**) · MySQL (**#1597**) · mssql extra SSOT (**#1598** / [#1588](https://github.com/DataBoar/data-boar/issues/1588)) · MSSQL URL host→IP (**#1600**) · Oracle URL host→IP (**#1603**). Carryover row Done; residual supply-chain work is Dependabot (**#1573** / majors), not more TCP-pin slices.
@@ -225,6 +227,7 @@ Post–PR **#118**: clarified **`private-layout`** vs **`docs/private/homelab`**
 | Object storage (S3 / Azure Blob / GCS)         | Optional: Compressed files, content-type, configurable timeouts, Secrets Phase A (env for keys)                                       | None           | **Additive** connector; list + download/stream objects then same filesystem scan path. See PLAN_OBJECT_STORAGE_CLOUD_CONNECTORS.                                                                                                                                          |
 | Semgrep CI                                     | —                                                                                                                                     | None           | **Workflow only**; complements CodeQL. See PLAN_SEMGREP_CI.md.                                                                                                                                                                                                            |
 | Windows CI enablement (#1427)                  | Optional: [#1112](https://github.com/DataBoar/data-boar/issues/1112) quickstart text aligned with smoke                               | None           | **`windows-latest`** job + native install + `--demo`; **blocks** MSI/winget [#1467](https://github.com/DataBoar/data-boar/issues/1467). See [PLAN_WINDOWS_CI_ENABLEMENT.md](PLAN_WINDOWS_CI_ENABLEMENT.md). Do **not** mix with macOS [#1425](https://github.com/DataBoar/data-boar/issues/1425). |
+| CI optional extras coverage (#1638)            | Optional: [PLAN_PACKAGING_EXTRAS.md](PLAN_PACKAGING_EXTRAS.md); Windows CI stays `shares`-only                                      | None           | Dedicated Ubuntu 3.13 job installs SQL extras except `mariadb` (1.1.14 `SyntaxError`) plus `nosql`/`compressed`/`dataformats`; deselects Maestro clone-gated tests; skip ceiling 60. See [PLAN_CI_OPTIONAL_EXTRAS_COVERAGE.md](PLAN_CI_OPTIONAL_EXTRAS_COVERAGE.md). Do **not** mix into `test-windows`. |
 | Bandit security linter                         | —                                                                                                                                     | None           | **Dev dep + CI job** (strict); config in pyproject. See [completed/PLAN_BANDIT_SECURITY_LINTER.md](completed/PLAN_BANDIT_SECURITY_LINTER.md).                                                                                                                                                                                  |
 | CLI validate, session diff, DSAR export        | Config loader; optional fields from [PLAN_SCAN_RUN_MANIFEST_AND_EXECUTION_SUMMARY.md](PLAN_SCAN_RUN_MANIFEST_AND_EXECUTION_SUMMARY.md) | ✅ Done        | Operator CLI: `--validate-config`, session `--diff`, `--export-dsar` (metadata-first defaults). [PLAN_CLI_VALIDATE_DIFF_AND_DSAR_EXPORT.md](completed/PLAN_CLI_VALIDATE_DIFF_AND_DSAR_EXPORT.md); [#520](https://github.com/DataBoar/data-boar/issues/520)–[#522](https://github.com/DataBoar/data-boar/issues/522) closed. |
 | Maintainer issue batch and PMO sync            | `gh` CLI; CONTRIBUTING / commit ritual                                                                                                | None           | Batch P0/P1; promote issues → `PLAN_*.md` + `plans_hub_sync` / `plans-stats`. [PLAN_MAINTAINER_ISSUE_BATCH_AND_PMO_SYNC.md](PLAN_MAINTAINER_ISSUE_BATCH_AND_PMO_SYNC.md); [#512](https://github.com/DataBoar/data-boar/issues/512). |
@@ -380,6 +383,16 @@ After **A1–A3** (minimum), you can **resume token-aware pace** on Tier 2 featu
 | 7e    | **Plugin SDK language-neutral contract — [#865](https://github.com/DataBoar/data-boar/issues/865)** | [PLAN_PLUGIN_SDK_CONTRACT.md](PLAN_PLUGIN_SDK_CONTRACT.md) · `docs/SDK.md` · `docs/sdk/PLUGIN_CONTRACT.schema.json` · ADR-0086. Fatia B: schema + Safe-Hold conformance + L2 stub. Bidirectional → #1116. 🔄 |
 | 7f    | **Plugin SDK bidirectional zero-trust mesh — [#1116](https://github.com/DataBoar/data-boar/issues/1116)** | [PLAN_SDK_BIDIRECTIONAL.md](PLAN_SDK_BIDIRECTIONAL.md) · ADR-0087 · `core/sdk/mutual_attestation.py` · dogfood `boar_fast_filter`. Host-tinted → guest refuses; guest-violates → contained. 🔄 |
 | 7w    | **Windows CI enablement — [#1427](https://github.com/DataBoar/data-boar/issues/1427)** | [PLAN_WINDOWS_CI_ENABLEMENT.md](PLAN_WINDOWS_CI_ENABLEMENT.md) — `windows-latest` + pip/pipx + headless demo; unblocks [#1467](https://github.com/DataBoar/data-boar/issues/1467). 🔄 In progress |
+| 7x    | **CI optional extras coverage — [#1638](https://github.com/DataBoar/data-boar/issues/1638)** | [PLAN_CI_OPTIONAL_EXTRAS_COVERAGE.md](PLAN_CI_OPTIONAL_EXTRAS_COVERAGE.md) — dedicated `test-extras` job (SQL extras except `mariadb` on 3.13 + `nosql`/`compressed`/`dataformats`; Maestro guards deselected) + skip ceiling 60. 🔄 Active |
+
+**`[H1]` CI optional extras coverage — [#1638](https://github.com/DataBoar/data-boar/issues/1638)** ([PLAN_CI_OPTIONAL_EXTRAS_COVERAGE.md](PLAN_CI_OPTIONAL_EXTRAS_COVERAGE.md)):
+
+| # | To-do | Status |
+| - | ----- | ------ |
+| 1 | Dedicated `test-extras` job (SQL extras except `mariadb` on 3.13) | ✅ Done |
+| 1c | Deselect `MAESTRO_ROOT` guards from extras; ceiling **60** | ✅ Done |
+| 2 | Skip-count ceiling (`scripts/ci_pytest_skip_ceiling.py`) | ✅ Done |
+| 3 | Remaining extras (`otel`, `bigdata`, `dl`, `richmedia`, `grc-dashboard`) | ⬜ Pending |
 
 **Deferred (larger or later):** Secrets Phase B, Version check & self-upgrade (incl. optional Phase 9: .deb/apt repo, signed packages, bytecode-only install, winget-like), Selenium QA, Synthetic data (Phases 2–4 after #835 baseline), SAP connector, **M-LOCALE-PLUS** (extra dashboard locales). **Backlog:** Additional data soup **Tier 3b** embedded-tracker heuristics + **Tier 4** ([PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md](completed/PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md)); **Tier 1** + **stego hints** + **Tier 3 rich media** are on **`main`** (see **Integration / active threads**). **Databricks / Unity Catalog** lakehouse scan + catalog-driven scope — [PLAN_DATABRICKS_UNITY_LAKEHOUSE_SCOPE_AND_SCAN.md](PLAN_DATABRICKS_UNITY_LAKEHOUSE_SCOPE_AND_SCAN.md) (**[H2]**, customer-pull, Pro/Ent-shaped). **Findings export / corporate repository** — [PLAN_FINDINGS_CORPORATE_REPOSITORY_EXPORT.md](PLAN_FINDINGS_CORPORATE_REPOSITORY_EXPORT.md) (**[H2]**, customer-pull; expedite if security review demands).
 

@@ -97,6 +97,66 @@ jobs:
           git fetch origin main --depth=1 2>/dev/null || true
           uv run python scripts/gate_change_tripwire.py --base origin/main
 
+  # Optional extras coverage (#1638): default matrix only installs ``shares``.
+  # One extra Ubuntu job installs SQL extras except ``mariadb``, plus
+  # nosql/compressed/dataformats so importorskip tests actually run.
+  # mariadb 1.1.14 (latest stable on PyPI) has a non-raw docstring with ``\*``
+  # in connectionpool.py; Python 3.13 raises SyntaxError (was SyntaxWarning).
+  # 2.0.0 is still rc-only — do not pin an RC. Restore ``--extra mariadb`` (or
+  # ``sql-all``) when a stable connector imports on 3.13. Also PYSEC-2026-217
+  # on 1.1.14 (#922). Skip ceiling measures optional-extra gaps only (Maestro
+  # clone-gated tests are deselected; see the pytest step).
+  test-extras:
+    name: Test optional extras (Python 3.13)
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    env:
+      DATA_BOAR_CI_EXTRAS: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install unixodbc-dev (pyodbc / mssql-pyodbc extra)
+        run: timeout 240 sudo apt-get install -y unixodbc-dev
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.11.2"
+
+      - name: Install dependencies (optional extras coverage)
+        # sql-all minus mariadb (3.13 SyntaxError in upstream 1.1.14).
+        # shares: same as default test job so SMB/WebDAV guards stay satisfied.
+        run: uv sync --extra postgres --extra mysql --extra mssql --extra mssql-pyodbc --extra oracle --extra nosql --extra compressed --extra dataformats --extra shares --group dev
+
+      - name: Run tests
+        # Public CI must not clone private DataBoar/maestro: forks have no org
+        # PAT, a long-lived token in public CI is the wrong coupling, and
+        # spinout maestro#8 skips those consumer guards when the clone is
+        # absent ("typical public CI"). Deselect so the skip ceiling measures
+        # optional Python extras only. If Maestro guards should run in CI, add
+        # a separate opt-in job — do not hang it off test-extras.
+        run: |
+          uv run pytest -v -W error -ra --tb=short --junitxml=extras-junit.xml \
+            --ignore=tests/test_maestro_scripts.py \
+            --deselect=tests/test_issue_dev_license_qa.py::test_maestro_handler_issues_60d_machine_bound \
+            --deselect=tests/test_security.py::test_sync_working_tree_excludes_dotenv_from_rsync \
+            --deselect=tests/test_security.py::test_maestro_aggregates_real_failures_in_exit
+
+      - name: Skip-count ceiling (#1638)
+        # extras job on 989a4a3f: skipped=106. 56 are MAESTRO_ROOT guards
+        # (test_maestro_scripts.py 53 + test_issue_dev_license_qa.py 1 +
+        # test_security.py 2). Remainder 50 (JUnit counts 1 xfail as skip).
+        # Ceiling 60 = remainder +10 slack for suite growth; not Maestro coverage.
+        run: uv run python scripts/ci_pytest_skip_ceiling.py extras-junit.xml --max-skipped 60
+
   lint:
     name: Lint (pre-commit)
     runs-on: ubuntu-latest
@@ -339,7 +399,7 @@ jobs:
   slack-notify-on-failure:
     name: Slack CI failure notify
     if: ${{ always() && contains(needs.*.result, 'failure') }}
-    needs: [test, test-windows, lint, bandit, audit, dependency-review, sonar, ansible-syntax]
+    needs: [test, test-extras, test-windows, lint, bandit, audit, dependency-review, sonar, ansible-syntax]
     uses: ./.github/workflows/slack-ci-failure-notify.yml
     with:
       run_name: CI
