@@ -438,7 +438,7 @@ def test_dockerfile_pins_python_base_image_by_digest() -> None:
 
 
 def test_dependabot_sync_workflow_present_and_valid() -> None:
-    """Dependabot PRs that touch the lockfile get requirements.txt regenerated on-branch."""
+    """Dependabot PRs that touch the lockfile get requirements.txt closure (#1419)."""
     data = _load_workflow("dependabot-sync.yml")
     assert data.get("name")
     on = data.get("on") or {}
@@ -452,10 +452,25 @@ def test_dependabot_sync_workflow_present_and_valid() -> None:
     jobs = data.get("jobs") or {}
     sync = jobs.get("sync-requirements")
     assert isinstance(sync, dict)
-    assert "dependabot[bot]" in str(sync.get("if") or "")
+    job_if = str(sync.get("if") or "")
+    assert "dependabot[bot]" in job_if
+    assert "dependabot/" in job_if
     perms = sync.get("permissions") or {}
     assert perms.get("contents") == "write"
+    assert perms.get("pull-requests") == "write"
     text = (WORKFLOWS / "dependabot-sync.yml").read_text(encoding="utf-8")
+    assert "path: trusted" in text
+    assert "path: dependabot-input" in text
+    assert "pull_request.base.ref" in text
+    assert "pull_request.head.sha" in text
+    assert "sparse-checkout: scripts/ci_dependabot_requirements_sync.sh" in text
+    assert (
+        'bash "${{ github.workspace }}/trusted/scripts/ci_dependabot_requirements_sync.sh"'
+        in text
+    )
+    assert "ref: ${{ github.event.pull_request.head.ref }}" not in text
+    assert 'git push "https://x-access-token' not in text
+    assert "HEAD:${GITHUB_EVENT_PULL_REQUEST_HEAD_REF}" not in text
     sha_40 = re.compile(r"@[0-9a-f]{40}")
     for line in text.splitlines():
         code = line.split("#", 1)[0]
@@ -468,6 +483,23 @@ def test_dependabot_sync_workflow_present_and_valid() -> None:
         assert sha_40.search(code), (
             f"expected full commit SHA in uses line: {line.strip()!r}"
         )
+
+
+def test_dependabot_sync_script_never_unsigned_push_to_dependabot_head() -> None:
+    """#1419: closure script must not unsigned-push onto the Dependabot PR branch."""
+    script = REPO_ROOT / "scripts" / "ci_dependabot_requirements_sync.sh"
+    assert script.is_file()
+    text = script.read_text(encoding="utf-8")
+    assert not re.search(r"^git push .*HEAD_REF", text, flags=re.MULTILINE)
+    assert re.search(
+        r'^git push "https://x-access-token:\$\{GH_TOKEN\}@github\.com/\$\{GITHUB_REPOSITORY\}" "HEAD:\$\{SYNC_BRANCH\}"$',
+        text,
+        flags=re.MULTILINE,
+    )
+    assert "DEPENDABOT_SYNC_WORKSPACE" in text
+    assert "DEPENDABOT_SYNC_SSH_SIGNING_KEY" in text
+    assert "gh pr comment" in text
+    assert "git commit -S" in text
 
 
 def test_ci_yml_has_optional_extras_job() -> None:
@@ -582,6 +614,11 @@ def test_zizmor_workflow_present_and_valid() -> None:
         if isinstance(step, dict) and step.get("uses")
     ]
     assert any("zizmorcore/zizmor-action@" in line for line in uses_lines)
+    assert not any("github/codeql-action/upload-sarif@" in line for line in uses_lines)
+    text = (WORKFLOWS / "zizmor.yml").read_text(encoding="utf-8")
+    assert "github.event.pull_request.head.sha" in text
+    assert "advanced-security: true" in text
+    assert "upload-sarif@" not in text
     env = job.get("env") or {}
     enforce_expr = str(env.get("ENFORCE_ZIZMOR", ""))
     assert "ZIZMOR_ENFORCE == 'false'" in enforce_expr

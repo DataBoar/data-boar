@@ -56,7 +56,7 @@ From ruleset `main-gate-pii` `pull_request` parameters (2026-08-19):
 
 [`.github/CODEOWNERS`](../../.github/CODEOWNERS) still owns PII/security gate paths ([ADR 0071](../adr/ADR-0071-self-protecting-pii-gate.md)). The ruleset does **not** yet require that review. Enabling **Require review from Code Owners** is an operator GitHub-UI change, not a docs edit.
 
-**Required signatures** are on in **classic** protection **and** ruleset `restriction baseline`. Bot-only branches (Dependabot) that cannot sign commits need a maintainer-signed supersede PR — see issue **#1419**.
+**Required signatures** are on in **classic** protection **and** ruleset `restriction baseline`. Bot-only branches (Dependabot) that cannot sign commits need a maintainer-signed supersede PR or the handoff in [DEPENDABOT_REQUIREMENTS_SYNC.md](DEPENDABOT_REQUIREMENTS_SYNC.md) ([#1419](https://github.com/DataBoar/data-boar/issues/1419)).
 
 ## `ZIZMOR_ENFORCE`
 
@@ -65,7 +65,7 @@ From ruleset `main-gate-pii` `pull_request` parameters (2026-08-19):
 | Repo Actions variable | **`ZIZMOR_ENFORCE=true`**                                                                                                                                                                                            |
 | Workflow              | [`.github/workflows/zizmor.yml`](../../.github/workflows/zizmor.yml)                                                                                                                                                 |
 | When it runs          | Every `pull_request` / `push` to `main`/`master` (**no** `paths:` filter — a `code_scanning` ruleset that requires zizmor needs a result for that commit and ref); weekly schedule; `workflow_dispatch` |
-| Job behaviour         | With the variable **not** `false`, a zizmor finding **fails the job** (`ENFORCE_ZIZMOR`). That job is **not** in `required_status_checks`. Unconditional runs make a `code_scanning` tool requirement **eligible** without merge deadlock; adding zizmor back to the ruleset is a separate operator UI step. |
+| Job behaviour         | With the variable **not** `false`, a zizmor finding **fails the job** (`ENFORCE_ZIZMOR`). That job is **not** in `required_status_checks`. On `pull_request`, checkout **`head.sha`** so `zizmor-action` **`advanced-security`** uploads once to **`refs/pull/<N>/head`** (ruleset **21118976**). Do **not** add a second `upload-sarif` in the same job (duplicate category `zizmor`). |
 | Local / `check-all`   | Advisory unless `DATA_BOAR_ENFORCE_ZIZMOR` / `-Enforce` — see [WORKFLOW_DEFERRED_FOLLOWUPS.md](WORKFLOW_DEFERRED_FOLLOWUPS.md) and `scripts/workflow-security-lint.*`.                                               |
 
 **Re-check:** `gh api repos/DataBoar/data-boar/actions/variables/ZIZMOR_ENFORCE`
