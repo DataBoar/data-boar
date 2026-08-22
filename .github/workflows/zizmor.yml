@@ -1,14 +1,13 @@
 # Zizmor static analysis for GitHub Actions workflows.
 # Complements CodeQL/Semgrep/Bandit by focusing on CI/workflow-specific risks.
-# Third-party Action is pinned to a full commit SHA (v0.5.3).
+# Third-party Actions are pinned to full commit SHAs (tag in comment).
 name: Zizmor
 
 permissions:
   contents: read
-  # zizmor-action's advanced-security upload (github/codeql-action/upload-sarif)
-  # posts a SARIF to the Security tab even with zero findings. On push to a
-  # branch that needs security-events: write (pull_request runs are allowed
-  # without it). Mirrors codeql.yml so the enforced push run is deterministic.
+  # Explicit upload-sarif step posts SARIF to the Security tab (including zero findings).
+  # On pull_request, ref/sha must target refs/pull/<N>/head — default checkout uploads
+  # merge-commit SARIF and ruleset 21118976 blocks merge (head SHA has no zizmor row).
   security-events: write
   actions: read
 
@@ -46,6 +45,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          # PR default is merge commit; code_scanning ruleset matches head SHA only.
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.ref }}
           persist-credentials: false
 
       - name: Run zizmor
@@ -59,6 +60,17 @@ jobs:
           # excessive-permissions, artipacked, unpinned-uses, ...) still run.
           # SHA pins + exact version comments (#878) keep the offline posture.
           online-audits: false
+          # Upload SARIF explicitly below with PR head ref/sha for ruleset 21118976.
+          advanced-security: false
+
+      - name: Upload zizmor SARIF to code scanning
+        if: ${{ steps.zizmor.outputs.output-file != '' }}
+        uses: github/codeql-action/upload-sarif@7188fc363630916deb702c7fdcf4e481b751f97a # v4.37.1
+        with:
+          sarif_file: ${{ steps.zizmor.outputs.output-file }}
+          category: zizmor
+          ref: ${{ github.event_name == 'pull_request' && format('refs/pull/{0}/head', github.event.pull_request.number) || github.ref }}
+          sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
 
       - name: Warn in advisory mode
         if: ${{ steps.zizmor.outcome == 'failure' && env.ENFORCE_ZIZMOR != 'true' }}
