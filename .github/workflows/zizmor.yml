@@ -5,9 +5,9 @@ name: Zizmor
 
 permissions:
   contents: read
-  # Explicit upload-sarif step posts SARIF to the Security tab (including zero findings).
-  # On pull_request, ref/sha must target refs/pull/<N>/head — default checkout uploads
-  # merge-commit SARIF and ruleset 21118976 blocks merge (head SHA has no zizmor row).
+  # zizmor-action advanced-security uploads SARIF (category zizmor). One upload per job only —
+  # do not add a second upload-sarif step (GitHub aborts duplicate category/tool).
+  # On pull_request, checkout head.sha so the internal upload targets refs/pull/<N>/head.
   security-events: write
   actions: read
 
@@ -60,19 +60,9 @@ jobs:
           # excessive-permissions, artipacked, unpinned-uses, ...) still run.
           # SHA pins + exact version comments (#878) keep the offline posture.
           online-audits: false
-          # Default true: zizmor-action only emits sarif-file when advanced-security is
-          # enabled (action.sh). Internal upload may target merge ref; explicit step below
-          # uploads the same SARIF to refs/pull/<N>/head for ruleset 21118976.
+          # advanced-security:true generates SARIF and uploads once (category zizmor).
+          # Requires PR checkout on head.sha above — no second upload-sarif in this job.
           advanced-security: true
-
-      - name: Upload zizmor SARIF to code scanning
-        if: ${{ steps.zizmor.outputs.output-file != '' }}
-        uses: github/codeql-action/upload-sarif@7188fc363630916deb702c7fdcf4e481b751f97a # v4.37.1
-        with:
-          sarif_file: ${{ steps.zizmor.outputs.output-file }}
-          category: zizmor
-          ref: ${{ github.event_name == 'pull_request' && format('refs/pull/{0}/head', github.event.pull_request.number) || github.ref }}
-          sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
 
       - name: Warn in advisory mode
         if: ${{ steps.zizmor.outcome == 'failure' && env.ENFORCE_ZIZMOR != 'true' }}
