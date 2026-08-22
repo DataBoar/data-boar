@@ -4,10 +4,9 @@
 # This project uses pyproject.toml (PEP 621) at repo root with `uv` as the resolver
 # (uv.lock is the canonical pin; requirements.txt is generated via `uv export`).
 # We use package-ecosystem "uv" so Dependabot updates `pyproject.toml` and `uv.lock`
-# together. The `.github/workflows/dependabot-sync.yml` workflow then auto-regenerates
-# `requirements.txt` from the new lock and pushes it back to the PR branch, satisfying
-# the closure rule in docs/adr/0030 and the lock-vs-export guard in
-# tests/test_dependency_artifacts_sync.py without operator intervention.
+# together. The `.github/workflows/dependabot-sync.yml` workflow regenerates
+# `requirements.txt` from the new lock (handoff comment + artifact, or optional
+# signed child PR when DEPENDABOT_SYNC_SSH_SIGNING_KEY is set — see docs/ops/DEPENDABOT_REQUIREMENTS_SYNC.md).
 # Rationale: docs/adr/ADR-0044-dependabot-uv-ecosystem-for-pyproject-lock-closure.md.
 version: 2
 updates:

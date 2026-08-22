@@ -56,7 +56,7 @@ Parâmetros `pull_request` do ruleset `main-gate-pii` (2026-08-19):
 
 [`.github/CODEOWNERS`](../../.github/CODEOWNERS) ainda cobre os caminhos do gate de PII/segurança ([ADR 0071](../adr/ADR-0071-self-protecting-pii-gate.md)). O ruleset **ainda não** exige essa revisão. Ligar **Require review from Code Owners** é mudança na UI do GitHub, não edição de docs.
 
-**Assinaturas obrigatórias** estão na proteção **clássica** **e** no ruleset `restriction baseline`. Branches só-bot (Dependabot) que não assinam commits precisam de um PR substituto assinado pelo mantenedor — veja a issue **#1419**.
+**Assinaturas obrigatórias** estão na proteção **clássica** **e** no ruleset `restriction baseline`. Branches só-bot (Dependabot) que não assinam commits precisam de PR substituto assinado pelo mantenedor ou do handoff em [DEPENDABOT_REQUIREMENTS_SYNC.pt_BR.md](DEPENDABOT_REQUIREMENTS_SYNC.pt_BR.md) ([#1419](https://github.com/DataBoar/data-boar/issues/1419)).
 
 ## `ZIZMOR_ENFORCE`
 
@@ -65,7 +65,7 @@ Parâmetros `pull_request` do ruleset `main-gate-pii` (2026-08-19):
 | Variável Actions do repositório | **`ZIZMOR_ENFORCE=true`**                                                                                                                                                                                                      |
 | Workflow                        | [`.github/workflows/zizmor.yml`](../../.github/workflows/zizmor.yml)                                                                                                                                                           |
 | Quando roda                     | Todo `pull_request` / `push` em `main`/`master` (**sem** filtro `paths:` — um ruleset `code_scanning` que exige zizmor precisa de resultado para aquele commit e ref); agenda semanal; `workflow_dispatch`                                                                                                                  |
-| Comportamento do job            | Com a variável **diferente** de `false`, um achado do zizmor **falha o job** (`ENFORCE_ZIZMOR`). Esse job **não** está em `required_status_checks`. Rodar sempre deixa uma exigência `code_scanning` **elegível** sem deadlock de merge; recolocar o zizmor no ruleset é passo separado na UI do operador. |
+| Comportamento do job            | Com a variável **diferente** de `false`, um achado do zizmor **falha o job** (`ENFORCE_ZIZMOR`). Esse job **não** está em `required_status_checks`. Em `pull_request`, checkout em **`head.sha`** para o upload **`advanced-security`** do `zizmor-action` cair em **`refs/pull/<N>/head`** (ruleset **21118976**). **Não** adicionar segundo `upload-sarif` no mesmo job (categoria `zizmor` duplicada). |
 | Local / `check-all`             | Consultivo salvo `DATA_BOAR_ENFORCE_ZIZMOR` / `-Enforce` — veja [WORKFLOW_DEFERRED_FOLLOWUPS.pt_BR.md](WORKFLOW_DEFERRED_FOLLOWUPS.pt_BR.md) e `scripts/workflow-security-lint.*`.                                             |
 
 **Conferir de novo:** `gh api repos/DataBoar/data-boar/actions/variables/ZIZMOR_ENFORCE`

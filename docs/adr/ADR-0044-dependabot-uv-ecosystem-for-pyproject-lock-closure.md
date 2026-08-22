@@ -39,15 +39,19 @@ Switch `.github/dependabot.yml` to the **`uv`** ecosystem for Python dependencie
 
 The Dependabot `uv` ecosystem natively understands `pyproject.toml` (PEP 621) plus `uv.lock`, so PRs ship those two artifacts together. Commit-message prefix changes from `deps(pip)` to `deps(uv)` to mirror the ecosystem and stay obvious in `git log`.
 
+### Closure after Dependabot PRs (#1419, 2026-08-21)
+
+The auto-sync workflow **no longer unsigned-pushes** to Dependabot branches under `required_signatures`. It posts a handoff comment (+ artifact) or opens a **signed child PR** when `DEPENDABOT_SYNC_SSH_SIGNING_KEY` is configured. See [docs/ops/DEPENDABOT_REQUIREMENTS_SYNC.md](../ops/DEPENDABOT_REQUIREMENTS_SYNC.md). Operator-signed closure (ADR 0030) remains the default path.
+
 ### Closure is automated by an existing workflow
 
 The repository already ships **`.github/workflows/dependabot-sync.yml`**, which:
 
 - Triggers on `pull_request` touching `uv.lock` or `pyproject.toml`.
-- Runs only for `github.actor == 'dependabot[bot]'`.
-- Re-runs `uv export --no-emit-package pyproject.toml -o requirements.txt` and commits the regenerated `requirements.txt` back to the PR branch.
+- Runs only for `github.event.pull_request.user.login == 'dependabot[bot]'`.
+- Re-runs `uv export --no-emit-package pyproject.toml -o requirements.txt` and either hands off to the operator (comment + artifact) or opens a signed child PR when signing secrets exist.
 
-That workflow **never fired** on PR #324 because the `pip` ecosystem only edits `requirements.txt` — neither `uv.lock` nor `pyproject.toml` changed, so the path filter did not match. Switching to the `uv` ecosystem makes Dependabot edit `uv.lock` (and `pyproject.toml` minimums when applicable), which **does** match the path filter and lets `dependabot-sync.yml` complete the closure automatically. Operator action is therefore **not required** for routine bumps; manual closure (per ADR 0030) is reserved for changes the operator pulls locally or for cases where the auto-sync workflow is intentionally skipped.
+That workflow **never fired** on PR #324 because the `pip` ecosystem only edits `requirements.txt` — neither `uv.lock` nor `pyproject.toml` changed, so the path filter did not match. Switching to the `uv` ecosystem makes Dependabot edit `uv.lock` (and `pyproject.toml` minimums when applicable), which **does** match the path filter and lets `dependabot-sync.yml` run the export closure step. **Signed** completion still requires operator action or configured SSH signing secrets ([#1419](https://github.com/DataBoar/data-boar/issues/1419)).
 
 ### Migration of the in-flight pip-ecosystem PR
 
@@ -68,7 +72,7 @@ PR #324 was opened under the old `pip` ecosystem and cannot be auto-converted. R
 ### Negative / trade-offs
 
 - One-time churn: the in-flight `dependabot/pip/*` branch and `deps(pip)` commit prefix retire. Existing PRs under the old prefix must be closed (or rebased) before Dependabot reissues them under `uv`.
-- The auto-sync workflow needs `permissions: contents: write` and runs only for `dependabot[bot]`. Any future audit of the actor guard must check `dependabot-sync.yml` together with this ADR.
+- The auto-sync workflow needs `permissions: contents: write` and `pull-requests: write`, and runs only for Dependabot PRs. Any future audit of the actor guard must check `dependabot-sync.yml` together with this ADR and [DEPENDABOT_REQUIREMENTS_SYNC.md](../ops/DEPENDABOT_REQUIREMENTS_SYNC.md) (#1419).
 
 ### Follow-ups (none required to merge)
 

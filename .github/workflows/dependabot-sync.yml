@@ -1,6 +1,8 @@
 # Keeps requirements.txt in sync when Dependabot updates uv.lock / pyproject.toml.
 # Third-party Actions use full commit SHAs (tag in comment); bump via Dependabot (github-actions).
-# Incident context: CI drift when lock changes without regenerating requirements.txt (e.g. run #25080647534).
+# Under required_signatures (#1419) this workflow never unsigned-pushes: handoff comment + artifact,
+# or optional signed child PR when DEPENDABOT_SYNC_SSH_SIGNING_KEY is configured.
+# Pwn-request hardening: trusted sync script from base ref; only lockfiles from PR head.
 name: Dependabot requirements.txt sync
 
 permissions:
@@ -21,16 +23,33 @@ concurrency:
 jobs:
   sync-requirements:
     name: Regenerate requirements.txt
-    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    if: >-
+      github.event.pull_request.user.login == 'dependabot[bot]' &&
+      startsWith(github.event.pull_request.head.ref, 'dependabot/')
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pull-requests: write
     steps:
-      - name: Checkout PR branch
+      - name: Checkout trusted sync script (base ref)
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.pull_request.head.ref }}
-          fetch-depth: 0
+          ref: ${{ github.event.pull_request.base.ref }}
+          path: trusted
+          sparse-checkout: scripts/ci_dependabot_requirements_sync.sh
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - name: Checkout Dependabot dependency files only (untrusted head)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: dependabot-input
+          sparse-checkout: |
+            uv.lock
+            pyproject.toml
+            requirements.txt
+          sparse-checkout-cone-mode: false
           persist-credentials: false
 
       - name: Install uv
@@ -39,25 +58,28 @@ jobs:
           version: "0.11.2"
           enable-cache: true
 
-      - name: Regenerate requirements.txt
-        run: uv export --frozen --no-emit-project -o requirements.txt
-
-      - name: Commit and push changes
-        run: |
-          set -eux
-          if [ -n "$(git status --porcelain requirements.txt)" ]; then
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git config user.name "github-actions[bot]"
-            git add requirements.txt
-            git commit -m "chore(deps): auto-regenerate requirements.txt after uv.lock update"
-            git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}" \
-              "HEAD:${GITHUB_EVENT_PULL_REQUEST_HEAD_REF}"
-          else
-            echo "No changes to requirements.txt"
-          fi
+      - name: Sync requirements.txt (handoff or signed child PR)
+        id: sync
+        working-directory: dependabot-input
         env:
           GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          DEPENDABOT_SYNC_WORKSPACE: ${{ github.workspace }}/dependabot-input
+          GITHUB_EVENT_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
           GITHUB_EVENT_PULL_REQUEST_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          DEPENDABOT_SYNC_SSH_SIGNING_KEY: ${{ secrets.DEPENDABOT_SYNC_SSH_SIGNING_KEY }}
+          DEPENDABOT_SYNC_SSH_ALLOWED_SIGNERS: ${{ secrets.DEPENDABOT_SYNC_SSH_ALLOWED_SIGNERS }}
+          DEPENDABOT_SYNC_GIT_USER_NAME: ${{ vars.DEPENDABOT_SYNC_GIT_USER_NAME }}
+          DEPENDABOT_SYNC_GIT_USER_EMAIL: ${{ vars.DEPENDABOT_SYNC_GIT_USER_EMAIL }}
+        run: bash "${{ github.workspace }}/trusted/scripts/ci_dependabot_requirements_sync.sh"
+
+      - name: Upload requirements.txt artifact (operator handoff)
+        if: failure() && steps.sync.outcome == 'failure'
+        uses: actions/upload-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: requirements-txt-pr-${{ github.event.pull_request.number }}
+          path: dependabot-input/requirements.txt
+          if-no-files-found: ignore
 
   slack-notify-on-failure:
     name: Slack CI failure notify
