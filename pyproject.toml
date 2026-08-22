@@ -343,7 +343,7 @@ dev = [
 
 # Operator-only maturity octet (ADR-0073). Never copy into [project].version.
 # New public line 1.8.0: maturity_build resets to beta band (1–126); first beta = 1.
-# Reconciled 2026-08-18: 68 fix/feat since cut 604c1b5c → .69 (see docs/releases/1.8.0-beta.md).
+# Reconciled 2026-08-22: 115 fix/feat since cut 604c1b5c → .116 (see docs/releases/1.8.0-beta.md).
 # Map / notes: docs/releases/1.8.0-beta.md (prior 1.7.4.postN maps remain under docs/releases/).
 [tool.databoar]
-maturity_build = 69
+maturity_build = 116
