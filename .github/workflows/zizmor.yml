@@ -60,8 +60,10 @@ jobs:
           # excessive-permissions, artipacked, unpinned-uses, ...) still run.
           # SHA pins + exact version comments (#878) keep the offline posture.
           online-audits: false
-          # Upload SARIF explicitly below with PR head ref/sha for ruleset 21118976.
-          advanced-security: false
+          # Default true: zizmor-action only emits sarif-file when advanced-security is
+          # enabled (action.sh). Internal upload may target merge ref; explicit step below
+          # uploads the same SARIF to refs/pull/<N>/head for ruleset 21118976.
+          advanced-security: true
 
       - name: Upload zizmor SARIF to code scanning
         if: ${{ steps.zizmor.outputs.output-file != '' }}

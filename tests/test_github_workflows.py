@@ -618,7 +618,8 @@ def test_zizmor_workflow_present_and_valid() -> None:
     text = (WORKFLOWS / "zizmor.yml").read_text(encoding="utf-8")
     assert "github.event.pull_request.head.sha" in text
     assert "refs/pull/{0}/head" in text or "refs/pull/${" in text
-    assert "advanced-security: false" in text
+    assert "advanced-security: false" not in text
+    assert "upload-sarif@" in text
     env = job.get("env") or {}
     enforce_expr = str(env.get("ENFORCE_ZIZMOR", ""))
     assert "ZIZMOR_ENFORCE == 'false'" in enforce_expr
