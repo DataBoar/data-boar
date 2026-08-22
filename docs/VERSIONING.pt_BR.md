@@ -68,7 +68,7 @@ Sufixos (`-beta`, `-rc`, `-rc-N`) são obrigatórios em `main` enquanto um issue
 
 | Rótulo | Status |
 | --- | --- |
-| **Working tree `main`** | **`1.8.0-beta`** no `pyproject.toml` (`maturity_build = 69` — faixa beta; reconciliado 2026-08-18). Só git para consumidores. |
+| **Working tree `main`** | **`1.8.0-beta`** no `pyproject.toml` (`maturity_build = 116` — faixa beta; reconciliado 2026-08-18). Só git para consumidores. |
 | **Canais publicados** | **`1.7.4.post12`** / **`v1.7.4.post12`** no PyPI + Hub (+ GA histórico **`1.7.4`**) até ritual futuro de **`1.8.0`** |
 | **#970** | Bump/tag stable prematuro sem release gate — corrigido por **ADR-0072** + gate **#406**; **`1.7.4` não é VOID** |
 | **Numeração pública pós-GA** | **Resolvido** (#977) — fix-line **`1.7.4`** usou **`.postN`** + octeto; **`.postN` não carrega** para **`1.8.0-beta`** |

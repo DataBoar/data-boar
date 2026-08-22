@@ -62,10 +62,10 @@ def test_sql_optional_extras_present() -> None:
 
 
 def test_maturity_build_reconciled_for_180_beta_line() -> None:
-    """ADR-0073: beta band reset at cut; octet advances per fix/feat (reconciled .69)."""
+    """ADR-0073: beta band reset at cut; octet advances per fix/feat (reconciled .116)."""
     data = _load_pyproject()
     maturity = data.get("tool", {}).get("databoar", {}).get("maturity_build")
-    assert maturity == 69
+    assert maturity == 116
 
 
 def test_version_is_180_beta_not_phantom_175() -> None:

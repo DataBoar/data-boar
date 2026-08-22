@@ -13,7 +13,7 @@
 | Field | Value |
 | ----- | ----- |
 | **Verified** | **2026-08-18** |
-| **`pyproject.toml` on `main`** | **`1.8.0-beta`** (`maturity_build=69`) — `1.8.0` beta line; octet reconciled after sprint (ADR-0073). Git-only for consumers; **not** on PyPI/Hub. |
+| **`pyproject.toml` on `main`** | **`1.8.0-beta`** (`maturity_build=116`) — `1.8.0` beta line; octet reconciled after sprint (ADR-0073). Git-only for consumers; **not** on PyPI/Hub. |
 | **PyPI** (published) | [**data-boar `1.7.4.post12`**](https://pypi.org/project/data-boar/1.7.4.post12/) — `pip install data-boar` (published **2026-07-30 00:42:09 UTC**, Trusted Publishing via **`publish-pypi.yml`**) |
 | **GitHub Release Latest** (published) | [**v1.7.4.post12**](https://github.com/DataBoar/data-boar/releases/tag/v1.7.4.post12) (notes: **`docs/releases/1.7.4.post12.md`**, **`CHANGELOG.md`**; annotated tag SSH-signed). Optional pre-release tag **`v1.8.0-beta`** when operator cuts it — see [1.8.0-beta.md](../../releases/1.8.0-beta.md). |
 | **Docker Hub** (published) | **`fabioleitao/data_boar:1.7.4.post12`** + **`latest`** = `sha256:ab8f5dad3e336…` (published **2026-07-30**; base **`python:3.14-slim`**, distroless nonroot, **`popcnt=0`**). Historical June GA tag **`1.7.4`** left untouched. **No** Hub marketing refresh for **`-beta`**. |
