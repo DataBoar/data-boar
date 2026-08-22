@@ -20,6 +20,8 @@ O workflow [`.github/workflows/dependabot-sync.yml`](../../.github/workflows/dep
 
 Script: [`scripts/ci_dependabot_requirements_sync.sh`](../../scripts/ci_dependabot_requirements_sync.sh).
 
+**Anti pwn-request:** o workflow faz checkout do script na **ref base confiável** (`pull_request.base.ref`) e só `uv.lock` / `pyproject.toml` / `requirements.txt` no **head não confiável** da PR. O job exige `head.ref` no padrão `dependabot/*`. Nunca executar scripts do branch do Dependabot com `contents: write`, `pull-requests: write` ou secrets de assinatura.
+
 ## Handoff do operador (padrão — sem secrets)
 
 Quando o job de sync falha num PR do Dependabot:

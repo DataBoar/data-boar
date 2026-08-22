@@ -6,6 +6,9 @@ set -euo pipefail
 
 PR_NUMBER="${GITHUB_EVENT_PULL_REQUEST_NUMBER:?}"
 HEAD_REF="${GITHUB_EVENT_PULL_REQUEST_HEAD_REF:?}"
+WORKSPACE_DIR="${DEPENDABOT_SYNC_WORKSPACE:?}"
+
+cd "${WORKSPACE_DIR}"
 
 uv export --frozen --no-emit-project -o requirements.txt
 
@@ -69,7 +72,7 @@ git checkout -b "${SYNC_BRANCH}"
 git add requirements.txt
 git commit -S -m "chore(deps): regenerate requirements.txt for Dependabot PR #${PR_NUMBER}"
 
-git push origin "HEAD:${SYNC_BRANCH}"
+git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}" "HEAD:${SYNC_BRANCH}"
 
 CHILD_URL="$(gh pr create \
   --base "${HEAD_REF}" \

@@ -20,6 +20,8 @@ The workflow [`.github/workflows/dependabot-sync.yml`](../../.github/workflows/d
 
 Script: [`scripts/ci_dependabot_requirements_sync.sh`](../../scripts/ci_dependabot_requirements_sync.sh).
 
+**Pwn-request hardening:** the workflow checks out the sync script from the **trusted base ref** (`pull_request.base.ref`) and only `uv.lock` / `pyproject.toml` / `requirements.txt` from the **untrusted PR head**. The job also requires `head.ref` to match `dependabot/*`. Never run scripts or workflow YAML from the Dependabot branch when `contents: write`, `pull-requests: write`, or signing secrets are in scope.
+
 ## Operator handoff (default — no secrets)
 
 When the sync job fails on a Dependabot PR:
