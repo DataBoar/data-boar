@@ -18,6 +18,12 @@ Empty while the working tree carries **`1.8.0-beta`** (see section below).
 - **Audit:** `git log 604c1b5c..origin/main --no-merges --format='%s' | rg '^(fix|feat)(\(|:)'` → **68** commits.
 - **Applied:** `1 + 68 = 69` in `[tool.databoar] maturity_build` only — **`[project] version` stays `1.8.0-beta`** (ADR-0073 rule 1).
 
+### Maturity octet reconciliation (2026-08-22)
+
+- **Cut:** `604c1b5c` (unchanged — same 1.8.0-beta line).
+- **Audit:** `git log 604c1b5c..origin/main --no-merges --format='%s' | rg '^(fix|feat)(\(|:)'` → **115** commits (was 68 on 2026-08-18, **+47** since).
+- **Applied:** `1 + 115 = 116` in `[tool.databoar] maturity_build` only — **`[project] version` stays `1.8.0-beta`** (ADR-0073 rule 1).
+
 ### Included since `1.7.4.post12`
 
 - **`--validate-config` invalid path is side-effect free (#538):** unknown connectors / missing required keys abort **before** creating `report.output_dir`, the `sqlite_path` parent, or opening the integrity-anchor SQLite file.
