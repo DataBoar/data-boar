@@ -4,7 +4,7 @@
 
 **Data Boar** — enterprise data discovery and risk governance: compliance-aware mapping of personal and sensitive data across your data soup (intelligence engine, not a single-jurisdiction “audit app”).
 
-![Data Boar mascot](api/static/mascot/data_boar_mascote_color.svg)
+![Data Boar mascot](https://databoar.com.br/images/mascot-pot.png)
 
 [![CI](https://github.com/DataBoar/data-boar/actions/workflows/ci.yml/badge.svg)](https://github.com/DataBoar/data-boar/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/DataBoar/data-boar/actions/workflows/codeql.yml/badge.svg)](https://github.com/DataBoar/data-boar/security/code-scanning)
