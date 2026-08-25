@@ -136,7 +136,22 @@ GitHub Actions (`.github/workflows/ci.yml`) runs:
 1. **Dependency audit** – `uv run pip-audit` after `uv sync` (Python 3.12).
 1. **SonarQube / SonarCloud** – Code quality and security analysis when `SONAR_TOKEN` is set; uses Python 3.12 after tests pass. See [SonarQube / SonarCloud](#sonarqube--sonarcloud) below.
 
-Code scanning (CodeQL) is in `.github/workflows/codeql.yml` and analyzes Python for security and quality findings. See the repository **Security** tab for CodeQL alerts.
+### CodeQL (advanced workflow vs GitHub default setup)
+
+Tracked workflow: [`.github/workflows/codeql.yml`](../.github/workflows/codeql.yml). It analyzes **Python** with `queries: security-and-quality` on **push** / **pull_request** to `main`/`master` and a **weekly** schedule (`0 6 * * 1` UTC). Results land under **Security → Code scanning**. The README **CodeQL** badge points at this workflow file. Keep `github/codeql-action/init` and `.../analyze` on the **same** commit SHA (Dependabot may bump them separately).
+
+**Pitfall — two CodeQL sources:** GitHub **default setup** is a second workflow at path `dynamic/github-code-scanning/codeql` (not in the git tree). GitHub **rejects** SARIF from this advanced workflow while default setup is enabled (`CodeQL analyses from advanced configurations cannot be processed when the default setup is enabled` — that was the 2026-08-12 `main` failure). Check both:
+
+```bash
+gh workflow list --all
+# Two rows named "CodeQL" means default setup is still on alongside codeql.yml.
+```
+
+Do **not** re-enable default setup while `codeql.yml` is the intended source. CodeQL is **not** a required merge check ([BRANCH_PROTECTION.md](ops/BRANCH_PROTECTION.md)). Issue **#1757** tracks the badge vs dual-source migration.
+
+### Zizmor (workflow lint — every PR)
+
+[`.github/workflows/zizmor.yml`](../.github/workflows/zizmor.yml) runs on **every** `pull_request` / `push` to `main`/`master` (**no** `paths:` filter). A `code_scanning` ruleset needs a zizmor SARIF for **this** commit; filtering to `.github/workflows/**` deadlocks merge on docs-only PRs. The job **fails** unless repository variable **`ZIZMOR_ENFORCE=false`**. It is **not** in `required_status_checks`. On PRs, checkout is **`head.sha`** (not the merge commit) so the built-in SARIF upload hits `refs/pull/<N>/head`. Do **not** add a second `upload-sarif` step (duplicate category `zizmor`). Local: `uvx zizmor .github/workflows/` via **`check-all`**. Operator snapshot: [BRANCH_PROTECTION.md](ops/BRANCH_PROTECTION.md).
 
 ### Operator Slack workflows (not live-tested in pytest)
 

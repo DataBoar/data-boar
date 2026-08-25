@@ -60,17 +60,37 @@ From ruleset `main-gate-pii` `pull_request` parameters (2026-08-19):
 
 ## `ZIZMOR_ENFORCE`
 
-| Fact                  | Value (2026-08-19)                                                                                                                                                                                                   |
-| ---                   | ---                                                                                                                                                                                                                  |
-| Repo Actions variable | **`ZIZMOR_ENFORCE=true`**                                                                                                                                                                                            |
-| Workflow              | [`.github/workflows/zizmor.yml`](../../.github/workflows/zizmor.yml)                                                                                                                                                 |
-| When it runs          | Every `pull_request` / `push` to `main`/`master` (**no** `paths:` filter — a `code_scanning` ruleset that requires zizmor needs a result for that commit and ref); weekly schedule; `workflow_dispatch` |
+| Fact                  | Value (2026-08-19)                                                                                                                                                                                                                                                                                                                                                                      |
+| ---                   | ---                                                                                                                                                                                                                                                                                                                                                                                     |
+| Repo Actions variable | **`ZIZMOR_ENFORCE=true`**                                                                                                                                                                                                                                                                                                                                                               |
+| Workflow              | [`.github/workflows/zizmor.yml`](../../.github/workflows/zizmor.yml)                                                                                                                                                                                                                                                                                                                    |
+| When it runs          | Every `pull_request` / `push` to `main`/`master` (**no** `paths:` filter — a `code_scanning` ruleset that requires zizmor needs a result for that commit and ref); weekly schedule; `workflow_dispatch`                                                                                                                                                                                 |
 | Job behaviour         | With the variable **not** `false`, a zizmor finding **fails the job** (`ENFORCE_ZIZMOR`). That job is **not** in `required_status_checks`. On `pull_request`, checkout **`head.sha`** so `zizmor-action` **`advanced-security`** uploads once to **`refs/pull/<N>/head`** (ruleset **21118976**). Do **not** add a second `upload-sarif` in the same job (duplicate category `zizmor`). |
-| Local / `check-all`   | Advisory unless `DATA_BOAR_ENFORCE_ZIZMOR` / `-Enforce` — see [WORKFLOW_DEFERRED_FOLLOWUPS.md](WORKFLOW_DEFERRED_FOLLOWUPS.md) and `scripts/workflow-security-lint.*`.                                               |
+| Local / `check-all`   | **`./scripts/check-all.sh`** default security tier **fails** on zizmor findings (`scripts/check-all-security-scans.sh`). Standalone **`scripts/workflow-security-lint.sh`** stays advisory unless `--enforce` / `DATA_BOAR_ENFORCE_ZIZMOR=true`.                                                                                                                                        |
 
 **Re-check:** `gh api repos/DataBoar/data-boar/actions/variables/ZIZMOR_ENFORCE`
 
 Do not turn the variable **off** to silence a finding. Fix the workflow YAML (or use a documented, operator-approved exception). Same posture as other security gates.
+
+## CodeQL sources (advanced vs default setup)
+
+**Verified:** `gh workflow list --all` on **2026-08-25** against `DataBoar/data-boar`.
+
+| Fact                       | Value (2026-08-25)                                                                                                                                                                                                                                                   |
+| ---                        | ---                                                                                                                                                                                                                                                                  |
+| Advanced (in git)          | [`.github/workflows/codeql.yml`](../../.github/workflows/codeql.yml) — `state: active`. README badge points here.                                                                                                                                                    |
+| Default setup (not in git) | Path `dynamic/github-code-scanning/codeql` — still `state: active` when last checked.                                                                                                                                                                                |
+| Conflict                   | GitHub **does not process** advanced-config SARIF while default setup is enabled. Symptom: job **Analyze (Python)** fails with *CodeQL analyses from advanced configurations cannot be processed when the default setup is enabled* (seen on `main` **2026-08-12**). |
+| Required merge check?      | **No** — CodeQL stays advisory in `required_status_checks` (table above).                                                                                                                                                                                            |
+
+## Re-check CodeQL workflows:
+
+```bash
+gh workflow list --all
+gh run list --workflow=codeql.yml --limit 5
+```
+
+If two workflows named **CodeQL** are `active`, disable **default setup** in the GitHub **Settings → Code security → CodeQL** UI (or re-disable the dynamic workflow) **before** treating `codeql.yml` as the only scanner. Issue **#1757**. Contributor write-up: [TESTING.md](../TESTING.md) *CodeQL*.
 
 ## Heat model (cold → warm → hot)
 
