@@ -1,6 +1,7 @@
 # CodeQL: security and quality analysis for Python (OWASP, injection, etc.).
 # Results appear under Security > Code scanning; configure rulesets for merge protection.
 # https://docs.github.com/en/code-security/code-scanning/creating-an-advanced-setup-for-code-scanning
+# (verify: default-setup disabled 2026-08-25, this custom workflow is the sole CodeQL source of truth now, badge restored -- issue #1757)
 #
 # Actions pinned to full commit SHAs (tag in comment); bump via Dependabot or after upstream review.
 #
@@ -40,7 +41,7 @@ jobs:
           persist-credentials: false
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@5595ccaf912efad79be6eef63a5619ff05969be3 # v4.37.6
+        uses: github/codeql-action/init@ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd # v4.37.7
         with:
           languages: ${{ matrix.language }}
           # Keep broad default coverage for "just in case" findings.
