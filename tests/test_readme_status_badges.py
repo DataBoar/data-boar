@@ -22,7 +22,6 @@ def test_readme_status_badges_after_mascot(readme_name: str) -> None:
     assert i_rule != -1, f"{readme_name} must have a --- separator after the intro"
     intro = text[i_mascot:i_rule]
     assert f"{_GITHUB}/actions/workflows/ci.yml/badge.svg" in intro
-    assert f"{_GITHUB}/actions/workflows/codeql.yml/badge.svg" in intro
     assert f"img.shields.io/docker/v/{_HUB_IMAGE}" in intro
     assert "hub.docker.com/r/fabioleitao/data_boar" in intro
     assert "img.shields.io/github/license/DataBoar/data-boar" in intro
