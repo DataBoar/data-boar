@@ -14,6 +14,7 @@ Data Boar é uma plataforma técnica configurável de descoberta e suporte a evi
   - Um motor de descoberta e mapeamento para inventário de dados e priorização de remediação.
   - Um fluxo de relatório orientado a metadados (achados, norm tags, contexto de tendência) para governança.
   - Uma ponte entre operação de TI e processos de revisão de conformidade/jurídico.
+  - Um insumo à **cocriação de valor ITIL 4** (utilidade + garantia): as varreduras são evidência reproduzível, não o resultado final de conformidade. Veja [ITSM_GOVERNANCE_ALIGNMENT.pt_BR.md](ITSM_GOVERNANCE_ALIGNMENT.pt_BR.md).
 - **Não é**
   - Um mecanismo de decisão jurídica ou aconselhamento legal.
   - Um órgão certificador de ISO, SOC ou conformidade regulatória.
@@ -63,10 +64,10 @@ Exposição ligada a menores é uma **trilha de detecção de primeira classe**,
 Antes de comprar, confirme:
 
 1. Quais domínios e sistemas entram no primeiro escopo de varredura?
-2. Qual audiência consome o primeiro pacote de evidências (TI, DPO, jurídico, diretoria)?
-3. Qual prazo é esperado para os primeiros achados acionáveis?
-4. Quais controles permanecem fora do escopo da ferramenta e exigem dono paralelo?
-5. Qual métrica define valor em 30/60/90 dias?
+1. Qual audiência consome o primeiro pacote de evidências (TI, DPO, jurídico, diretoria)?
+1. Qual prazo é esperado para os primeiros achados acionáveis?
+1. Quais controles permanecem fora do escopo da ferramenta e exigem dono paralelo?
+1. Qual métrica define valor em 30/60/90 dias?
 
 ## Expectativa de pacote de evidências
 

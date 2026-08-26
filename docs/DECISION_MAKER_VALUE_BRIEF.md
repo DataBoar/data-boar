@@ -14,6 +14,7 @@ Data Boar is a configurable technical discovery and evidence-support platform th
   - A discovery and mapping engine for data inventory and remediation prioritization.
   - A metadata-first reporting workflow (findings, norm tags, trend context) for governance.
   - A bridge between IT operations and compliance/legal review processes.
+  - An input to **ITIL 4 value co-creation** (utility + warranty): scans are repeatable evidence, not a finished compliance outcome. See [ITSM_GOVERNANCE_ALIGNMENT.md](ITSM_GOVERNANCE_ALIGNMENT.md).
 - **It is not**
   - A legal decision engine or legal advice.
   - A certification authority for ISO, SOC, or regulatory compliance.
@@ -63,10 +64,10 @@ Minor-related exposure is a **first-class detection lane**, not a marketing afte
 Before purchase, confirm:
 
 1. Which data domains and systems are in the first scan scope?
-2. Which audience consumes the first evidence package (IT, DPO, legal, board)?
-3. What timeline is expected for first actionable findings?
-4. Which controls remain outside tool scope and need parallel ownership?
-5. What success metric defines value in 30/60/90 days?
+1. Which audience consumes the first evidence package (IT, DPO, legal, board)?
+1. What timeline is expected for first actionable findings?
+1. Which controls remain outside tool scope and need parallel ownership?
+1. What success metric defines value in 30/60/90 days?
 
 ## Evidence package expectations
 

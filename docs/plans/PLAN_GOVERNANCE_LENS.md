@@ -10,6 +10,8 @@
 - **Milestone:** [v1.8.0](https://github.com/DataBoar/data-boar/milestone/2)
 - **GitHub:** [#539](https://github.com/DataBoar/data-boar/issues/539) (Phase A) · [#540](https://github.com/DataBoar/data-boar/issues/540)–[#543](https://github.com/DataBoar/data-boar/issues/543) (Phases B–E)
 
+**Conceptual base (external docs):** [ITSM_GOVERNANCE_ALIGNMENT.md](../ITSM_GOVERNANCE_ALIGNMENT.md) — ITIL 4 / COBIT 2019 / ISO 38500 / ISO 27014 / ISO 20000 positioning for interpreting findings as control gaps (not a certified audit).
+
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md) · [ISSUE_QUEUE_SEQUENCING_MAP.md](../ops/ISSUE_QUEUE_SEQUENCING_MAP.md)
 
 **Licensing:** [docs/LICENSING_SPEC.md](../LICENSING_SPEC.md) — Pro+ feature; curated framework maps are **not** Open Core.
@@ -28,13 +30,13 @@ Without a durable plan + schema anchor, Governance Lens becomes vaporware. **Pha
 
 Ship Governance Lens in **five phases** (A→E). Each phase is a thin, reviewable PR with explicit `Closes #N`. **Hard gate:** do **not** start [#540](https://github.com/DataBoar/data-boar/issues/540)–[#543](https://github.com/DataBoar/data-boar/issues/543) until **#539** is closed.
 
-| Phase | Deliverable | Issue | Status |
-| ----- | ----------- | ----- | ------ |
-| **A** | This plan + `config/governance_framework_map.schema.yaml` (structure + illustrative examples only) | [#539](https://github.com/DataBoar/data-boar/issues/539) | ✅ Done |
-| **B** | `report/governance_lens.py` — Pro-tier generator (Governance View sheet / hooks) | [#540](https://github.com/DataBoar/data-boar/issues/540) | ✅ Done |
-| **C** | Pandoc-ready MD template + `pandoc` YAML + CLI `--governance-report` | [#541](https://github.com/DataBoar/data-boar/issues/541) | ✅ Done |
-| **D** | Operator docs: USAGE EN + pt-BR, TECH_GUIDE, pandoc quickstart | [#542](https://github.com/DataBoar/data-boar/issues/542) | ✅ Done |
-| **E** | Enterprise framework modules (BACEN, FEBRABAN, PCI-DSS v4.0) | [#543](https://github.com/DataBoar/data-boar/issues/543) | 🔄 In progress |
+| Phase | Deliverable                                                                                        | Issue                                                    | Status        |
+| ----- | -----------                                                                                        | -----                                                    | ------        |
+| **A** | This plan + `config/governance_framework_map.schema.yaml` (structure + illustrative examples only) | [#539](https://github.com/DataBoar/data-boar/issues/539) | ✅ Done        |
+| **B** | `report/governance_lens.py` — Pro-tier generator (Governance View sheet / hooks)                   | [#540](https://github.com/DataBoar/data-boar/issues/540) | ✅ Done        |
+| **C** | Pandoc-ready MD template + `pandoc` YAML + CLI `--governance-report`                               | [#541](https://github.com/DataBoar/data-boar/issues/541) | ✅ Done        |
+| **D** | Operator docs: USAGE EN + pt-BR, TECH_GUIDE, pandoc quickstart                                     | [#542](https://github.com/DataBoar/data-boar/issues/542) | ✅ Done        |
+| **E** | Enterprise framework modules (BACEN, FEBRABAN, PCI-DSS v4.0)                                       | [#543](https://github.com/DataBoar/data-boar/issues/543) | 🔄 In progress |
 
 **Out of scope for Phase A:** runtime generator code, pandoc templates, USAGE prose, or Enterprise curated maps in public Git.
 
@@ -42,11 +44,11 @@ Ship Governance Lens in **five phases** (A→E). Each phase is a thin, reviewabl
 
 ## Modelo de licenciamento
 
-| Tier | Framework maps | Runtime behaviour |
-| ---- | -------------- | ----------------- |
-| **Community / Open Core** | **No** curated `governance_framework_map` bundles in OSS | Technical findings only (`pattern_detected`, `norm_tag`, recommendations sheet) |
-| **Pro** | Curated **Tier 1** map (`governance_framework_map_pro.yaml` — **not** committed to public Git; distributed under commercial terms). OSS ships **`config/governance_framework_map_pro.example.yaml`** + `governance.map_file` for lab/tests. | Governance View in Excel + exports per Phases B–C |
-| **Enterprise** | Adds **Tier 2** sectoral BR maps (`governance_framework_map_enterprise.yaml` — private) | Phase E modules; same generator pipeline as Pro |
+| Tier                      | Framework maps                                                                                                                                                                                                                              | Runtime behaviour                                                               |
+| ----                      | --------------                                                                                                                                                                                                                              | -----------------                                                               |
+| **Community / Open Core** | **No** curated `governance_framework_map` bundles in OSS                                                                                                                                                                                    | Technical findings only (`pattern_detected`, `norm_tag`, recommendations sheet) |
+| **Pro**                   | Curated **Tier 1** map (`governance_framework_map_pro.yaml` — **not** committed to public Git; distributed under commercial terms). OSS ships **`config/governance_framework_map_pro.example.yaml`** + `governance.map_file` for lab/tests. | Governance View in Excel + exports per Phases B–C                               |
+| **Enterprise**            | Adds **Tier 2** sectoral BR maps (`governance_framework_map_enterprise.yaml` — private)                                                                                                                                                     | Phase E modules; same generator pipeline as Pro                                 |
 
 The **schema** in `config/governance_framework_map.schema.yaml` is public (structure only). **Curated entries** are the commercial asset — never ship production mappings in `origin`.
 
@@ -56,14 +58,14 @@ JWT / `licensing.effective_tier` gating follows [LICENSING_SPEC.md](../LICENSING
 
 ## Frameworks Tier 1 (Pro)
 
-| Framework | Example control IDs (illustrative) | Governance Lens use |
-| --------- | ---------------------------------- | ------------------- |
-| **LGPD** | Art. 6, 7, 46 (security measures) | Map PII patterns to accountability / security baselines for DPO narratives |
-| **ISO/IEC 27001:2022** | A.5.34, A.8.11, A.8.12 | Information protection, data masking, DLP-style discovery evidence |
-| **ISO/IEC 27014:2020** | Governance of information security | Board/CISO-facing control gap titles |
-| **COBIT 2019** | APO13 (managed security), DSS05 (security services), MEA03 (monitoring) | IT governance vocabulary for findings |
-| **ITIL 4** | Security management practice (SecMan) | Service-management phrasing for operational owners |
-| **ISO/IEC 38500** | Evaluate / direct / monitor IT | Executive summary hooks for GRC committees |
+| Framework              | Example control IDs (illustrative)                                      | Governance Lens use                                                        |
+| ---------              | ----------------------------------                                      | -------------------                                                        |
+| **LGPD**               | Art. 6, 7, 46 (security measures)                                       | Map PII patterns to accountability / security baselines for DPO narratives |
+| **ISO/IEC 27001:2022** | A.5.34, A.8.11, A.8.12                                                  | Information protection, data masking, DLP-style discovery evidence         |
+| **ISO/IEC 27014:2020** | Governance of information security                                      | Board/CISO-facing control gap titles                                       |
+| **COBIT 2019**         | APO13 (managed security), DSS05 (security services), MEA03 (monitoring) | IT governance vocabulary for findings                                      |
+| **ITIL 4**             | Security management practice (SecMan)                                   | Service-management phrasing for operational owners                         |
+| **ISO/IEC 38500**      | Evaluate / direct / monitor IT                                          | Executive summary hooks for GRC committees                                 |
 
 Exact control IDs and Portuguese audit phrasing live in the **curated Pro map** (Phase B loader), not in this plan table.
 
@@ -71,19 +73,19 @@ Exact control IDs and Portuguese audit phrasing live in the **curated Pro map** 
 
 ## Frameworks Tier 2 (Enterprise)
 
-| Framework | Scope | Notes |
-| --------- | ----- | ----- |
-| **BACEN Res. 4893/2021** | Financial institutions (BR) | Cybersecurity policy / incident / access themes |
-| **FEBRABAN CPS 004 / Circular 3909** | Open finance / shared data (BR) | Consent and data-sharing control framing |
-| **PCI-DSS v4.0** | Cardholder data environments | Req. 3 (protect stored account data), 4 (transmission), 10 (logging) |
-| **ANS / ANEEL** | Regulated sectors (BR) | **Future** — placeholder in Enterprise roadmap (Phase E) |
+| Framework                            | Scope                           | Notes                                                                |
+| ---------                            | -----                           | -----                                                                |
+| **BACEN Res. 4893/2021**             | Financial institutions (BR)     | Cybersecurity policy / incident / access themes                      |
+| **FEBRABAN CPS 004 / Circular 3909** | Open finance / shared data (BR) | Consent and data-sharing control framing                             |
+| **PCI-DSS v4.0**                     | Cardholder data environments    | Req. 3 (protect stored account data), 4 (transmission), 10 (logging) |
+| **ANS / ANEEL**                      | Regulated sectors (BR)          | **Future** — placeholder in Enterprise roadmap (Phase E)             |
 
 ---
 
 ## Phase A artefacts (this issue)
 
 1. **`docs/plans/PLAN_GOVERNANCE_LENS.md`** (this file) — sequencing, licensing, framework tables.
-2. **`config/governance_framework_map.schema.yaml`** — YAML shape + **three illustrative example entries** (synthetic pattern names only). Curated Pro/Enterprise files reference the same shape but stay off `origin`.
+1. **`config/governance_framework_map.schema.yaml`** — YAML shape + **three illustrative example entries** (synthetic pattern names only). Curated Pro/Enterprise files reference the same shape but stay off `origin`.
 
 ---
 
