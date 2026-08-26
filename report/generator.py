@@ -1497,6 +1497,8 @@ def _build_report_info(
                 "Field": "Integrity state",
                 "Value": about.get("integrity_state", "unknown"),
             },
+            # #1765: pending release severity is loud for auditors, never a gate.
+            {"Field": "Advisory", "Value": about.get("advisory", "unknown")},
             {"Field": "Author", "Value": about["author"]},
             {"Field": "License", "Value": about["license"]},
             {"Field": "Copyright", "Value": about["copyright"]},
