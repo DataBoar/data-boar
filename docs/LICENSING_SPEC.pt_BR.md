@@ -115,9 +115,14 @@ JSON:
 
 ```json
 {
-  "revoked_license_ids": ["license-uuid-1", "license-uuid-2", "jti-token-id", "k1"]
+  "revoked_license_ids": ["license-uuid-1", "license-uuid-2", "jti-token-id", "k1"],
+  "generated_at_unix": 1714000000
 }
 ```
+
+Arquivo companheiro **`revocation.json.sig`**: Base64 padrão (com quebra de linha no fim) da assinatura **Ed25519** bruta de 64 bytes sobre os **bytes exatos em disco** de `revocation.json` (não uma re-serialização). Mesma chave de emissão do JWT da licença. Leitor de referência: `revoke.Verify` do License Studio (`DataBoar/license-studio`).
+
+Quando `DATA_BOAR_LICENSE_REVOCATION_PATH` / `licensing.revocation_list_path` **está definido** no modo **enforced**, lista ausente, `.sig` ausente/malformado ou assinatura que não verifica é **falha fechada** (`TAMPERED`, detalhe `revocation_unverified:…`) — nunca um conjunto vazio em silêncio (#1753). Sem caminho configurado, o kill-switch é ignorado (opt-in).
 
 **Kill-switch matching (#717):** cada entrada pode nomear um **ID de licença** (claim `sub`), um **ID de token** (claim `jti`) ou um **ID de chave de assinatura** (claim `dbkid`). Qualquer match falha **fechado**: estado `REVOKED`, marca-d'água `REVOKED`, tier efetivo limitado a **Community**, mais um evento de auditoria `license_revoked` dedicado (WARNING) com o campo correspondente (`license_revoked:sub|jti|dbkid`). Revogar um `dbkid` desabilita **todos** os tokens assinados com aquela chave — a alavanca de emergência para uma chave de assinatura comprometida.
 

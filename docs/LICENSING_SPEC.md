@@ -111,9 +111,14 @@ JSON:
 
 ```json
 {
-  "revoked_license_ids": ["license-uuid-1", "license-uuid-2", "jti-token-id", "k1"]
+  "revoked_license_ids": ["license-uuid-1", "license-uuid-2", "jti-token-id", "k1"],
+  "generated_at_unix": 1714000000
 }
 ```
+
+Companion file **`revocation.json.sig`**: standard Base64 (plus trailing newline) of the raw 64-byte **Ed25519** signature over the **exact bytes on disk** of `revocation.json` (not a re-serialization). Same issuance key as the license JWT. Reference reader: License Studio `revoke.Verify` (`DataBoar/license-studio`).
+
+When `DATA_BOAR_LICENSE_REVOCATION_PATH` / `licensing.revocation_list_path` **is set** in **enforced** mode, a missing list, missing/malformed `.sig`, or a signature that does not verify is **fail-closed** (`TAMPERED`, detail `revocation_unverified:…`) — never a silent empty set (#1753). When **no** path is configured, the kill-switch is skipped (opt-in).
 
 **Kill-switch matching (#717):** each entry may name a **license id** (`sub` claim), a **token id** (`jti` claim), or a **signing key id** (`dbkid` claim). Any match fails **closed**: state `REVOKED`, watermark `REVOKED`, effective tier capped to **Community**, plus a dedicated `license_revoked` audit event (WARNING) with the matched field (`license_revoked:sub|jti|dbkid`). Revoking a `dbkid` disables **every** token signed with that key — the emergency lever for a compromised signing key.
 
