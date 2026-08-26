@@ -2,7 +2,7 @@
 
 **Português (Brasil):** [AUDIENCE_GUIDE.pt_BR.md](AUDIENCE_GUIDE.pt_BR.md)
 
-Navigation map for **eleven** reader types. Full doc index: [README.md](README.md). Executive decks: [pitch/INDEX.md](pitch/INDEX.md).
+Navigation map for **thirteen** reader types. Full doc index: [README.md](README.md). Executive decks: [pitch/INDEX.md](pitch/INDEX.md).
 
 ---
 
@@ -32,6 +32,24 @@ Navigation map for **eleven** reader types. Full doc index: [README.md](README.m
 | **Trail** | [SECURITY.md](SECURITY.md) → [COMPLIANCE_TECHNICAL_REFERENCE.md](COMPLIANCE_TECHNICAL_REFERENCE.md) → [GRC_EXECUTIVE_REPORT_SCHEMA.md](GRC_EXECUTIVE_REPORT_SCHEMA.md) → [adr/ADR-0039-retention-evidence-posture-bonded-customs-adjacent-contexts.md](adr/ADR-0039-retention-evidence-posture-bonded-customs-adjacent-contexts.md) |
 | **Skip** | Academic primers; stakeholder-only pitch tone |
 | **Overlap** | DPO (legal framing); developer (deploy hardening) |
+
+## CDO / data steward / senior data engineer
+
+| | |
+| - | - |
+| **Entry** | [pitch/PITCH_DATA_OFFICER.md](pitch/PITCH_DATA_OFFICER.md) |
+| **Trail** | [GLOSSARY.md](GLOSSARY.md) (DMBOK §12) → [REPORTS_AND_COMPLIANCE_OUTPUTS.md](REPORTS_AND_COMPLIANCE_OUTPUTS.md) → [USAGE.md](USAGE.md) (targets) |
+| **Skip** | Maintainer ops runbooks; board-only tone unless briefing executives |
+| **Overlap** | CISO (evidence); DPO (sensitive-data classes); developer (connectors) |
+
+## CIO / IT governance lead
+
+| | |
+| - | - |
+| **Entry** | [pitch/PITCH_IT_GOVERNANCE.md](pitch/PITCH_IT_GOVERNANCE.md) |
+| **Trail** | [DECISION_MAKER_VALUE_BRIEF.md](DECISION_MAKER_VALUE_BRIEF.md) → [GRC_EXECUTIVE_REPORT_SCHEMA.md](GRC_EXECUTIVE_REPORT_SCHEMA.md) → [COMPLIANCE_FRAMEWORKS.md](COMPLIANCE_FRAMEWORKS.md) |
+| **Skip** | Detector internals unless the CIO is also the integrator |
+| **Overlap** | CISO (controls); Executive (value brief); CDO (inventory) |
 
 ## PMO / project lead
 
@@ -110,16 +128,17 @@ Navigation map for **eleven** reader types. Full doc index: [README.md](README.m
 
 ## Overlap matrix (shared reads)
 
-| Doc | Executive | DPO | CISO | Compliance | Developer | Academic | Agent | Operator | PMO | CFO | CCO |
-| --- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| [DECISION_MAKER_VALUE_BRIEF.md](DECISION_MAKER_VALUE_BRIEF.md) | ● | ○ | ○ | ○ | | | | | ○ | ● | |
-| [COMPLIANCE_FRAMEWORKS.md](COMPLIANCE_FRAMEWORKS.md) | ○ | ● | ○ | ● | ○ | ○ | | | | | ● |
-| [SECURITY.md](SECURITY.md) | | ○ | ● | ○ | ● | | | ○ | | | |
-| [USAGE.md](USAGE.md) | | ○ | ○ | ○ | ● | | ○ | ● | | | |
-| [pitch/INDEX.md](pitch/INDEX.md) | ● | ● | ● | | | | | | ● | ● | ● |
-| [GRC_EXECUTIVE_REPORT_SCHEMA.md](GRC_EXECUTIVE_REPORT_SCHEMA.md) | | | ○ | | | | | | ● | | |
-| [LICENSING_OPEN_CORE_AND_COMMERCIAL.md](LICENSING_OPEN_CORE_AND_COMMERCIAL.md) | ○ | | | | | | | | | ● | |
-| [COMPLIANCE_AND_LEGAL.md](COMPLIANCE_AND_LEGAL.md) | ○ | ● | | ○ | | | | | | | ● |
+| Doc | Executive | DPO | CISO | CDO | CIO | Compliance | Developer | Academic | Agent | Operator | PMO | CFO | CCO |
+| --- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| [DECISION_MAKER_VALUE_BRIEF.md](DECISION_MAKER_VALUE_BRIEF.md) | ● | ○ | ○ | ○ | ● | ○ | | | | | ○ | ● | |
+| [COMPLIANCE_FRAMEWORKS.md](COMPLIANCE_FRAMEWORKS.md) | ○ | ● | ○ | ○ | ● | ● | ○ | ○ | | | | | ● |
+| [SECURITY.md](SECURITY.md) | | ○ | ● | ○ | ○ | ○ | ● | | | ○ | | | |
+| [USAGE.md](USAGE.md) | | ○ | ○ | ● | ○ | ○ | ● | | ○ | ● | | | |
+| [pitch/INDEX.md](pitch/INDEX.md) | ● | ● | ● | ● | ● | | | | | | ● | ● | ● |
+| [GRC_EXECUTIVE_REPORT_SCHEMA.md](GRC_EXECUTIVE_REPORT_SCHEMA.md) | | | ○ | | ● | | | | | | ● | | |
+| [LICENSING_OPEN_CORE_AND_COMMERCIAL.md](LICENSING_OPEN_CORE_AND_COMMERCIAL.md) | ○ | | | | | | | | | | | ● | |
+| [COMPLIANCE_AND_LEGAL.md](COMPLIANCE_AND_LEGAL.md) | ○ | ● | | | | ○ | | | | | | | ● |
+| [GLOSSARY.md](GLOSSARY.md) | | ○ | | ● | ○ | ○ | | ○ | | | | | |
 
 ● = primary trail · ○ = optional overlap
 

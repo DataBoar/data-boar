@@ -11,6 +11,8 @@ Audience-specific **two-page** narratives for workshops, procurement, and leader
 | Board, GM, COO, procurement sponsor | [PITCH_STAKEHOLDER.md](PITCH_STAKEHOLDER.md) | First conversation: value, shared responsibility, 30/60/90 outcomes |
 | DPO, privacy counsel, compliance lead | [PITCH_DPO.md](PITCH_DPO.md) | Lawful basis, DSAR support, minors, multinational hints |
 | CISO, security architect, GRC lead | [PITCH_CISO.md](PITCH_CISO.md) | Controls, evidence integrity, integration posture |
+| CDO, Data Steward, senior data engineer | [PITCH_DATA_OFFICER.md](PITCH_DATA_OFFICER.md) | Inventory before GGD: DMBOK store/use, maturity of existing PII |
+| CIO, IT manager, IT governance lead | [PITCH_IT_GOVERNANCE.md](PITCH_IT_GOVERNANCE.md) | Evaluate–Direct–Monitor with evidence, not policy-only |
 
 ## Related product docs (deeper than a deck)
 

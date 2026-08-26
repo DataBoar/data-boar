@@ -2,7 +2,7 @@
 
 **English:** [AUDIENCE_GUIDE.md](AUDIENCE_GUIDE.md)
 
-Mapa de navegação para **onze** perfis de leitor. Índice completo: [README.md](README.md). Decks executivos: [pitch/INDEX.pt_BR.md](pitch/INDEX.pt_BR.md).
+Mapa de navegação para **treze** perfis de leitor. Índice completo: [README.md](README.md). Decks executivos: [pitch/INDEX.pt_BR.md](pitch/INDEX.pt_BR.md).
 
 ---
 
@@ -32,6 +32,24 @@ Mapa de navegação para **onze** perfis de leitor. Índice completo: [README.md
 | **Trilha** | [SECURITY.pt_BR.md](SECURITY.pt_BR.md) → [COMPLIANCE_TECHNICAL_REFERENCE.pt_BR.md](COMPLIANCE_TECHNICAL_REFERENCE.pt_BR.md) → [GRC_EXECUTIVE_REPORT_SCHEMA.pt_BR.md](GRC_EXECUTIVE_REPORT_SCHEMA.pt_BR.md) → [adr/ADR-0039-retention-evidence-posture-bonded-customs-adjacent-contexts.md](adr/ADR-0039-retention-evidence-posture-bonded-customs-adjacent-contexts.md) |
 | **Evitar** | Primers acadêmicos; tom de pitch para conselho |
 | **Sobreposição** | DPO (enquadramento legal); desenvolvedor (hardening de deploy) |
+
+## CDO / data steward / engenheiro de dados sênior
+
+| | |
+| - | - |
+| **Entrada** | [pitch/PITCH_DATA_OFFICER.pt_BR.md](pitch/PITCH_DATA_OFFICER.pt_BR.md) |
+| **Trilha** | [GLOSSARY.pt_BR.md](GLOSSARY.pt_BR.md) (DMBOK §12) → [REPORTS_AND_COMPLIANCE_OUTPUTS.pt_BR.md](REPORTS_AND_COMPLIANCE_OUTPUTS.pt_BR.md) → [USAGE.pt_BR.md](USAGE.pt_BR.md) (alvos) |
+| **Evitar** | Runbooks de ops do mantenedor; tom só de conselho salvo briefing a executivos |
+| **Sobreposição** | CISO (evidência); DPO (classes de dado sensível); desenvolvedor (conectores) |
+
+## CIO / governança de TI
+
+| | |
+| - | - |
+| **Entrada** | [pitch/PITCH_IT_GOVERNANCE.pt_BR.md](pitch/PITCH_IT_GOVERNANCE.pt_BR.md) |
+| **Trilha** | [DECISION_MAKER_VALUE_BRIEF.pt_BR.md](DECISION_MAKER_VALUE_BRIEF.pt_BR.md) → [GRC_EXECUTIVE_REPORT_SCHEMA.pt_BR.md](GRC_EXECUTIVE_REPORT_SCHEMA.pt_BR.md) → [COMPLIANCE_FRAMEWORKS.pt_BR.md](COMPLIANCE_FRAMEWORKS.pt_BR.md) |
+| **Evitar** | Internos do detector salvo se o CIO também integra |
+| **Sobreposição** | CISO (controles); Executivo (brief de valor); CDO (inventário) |
 
 ## PMO / líder de projeto
 
@@ -110,16 +128,17 @@ Mapa de navegação para **onze** perfis de leitor. Índice completo: [README.md
 
 ## Matriz de sobreposição
 
-| Doc | Executivo | DPO | CISO | Compliance | Dev | Acadêmico | Agente | Operador | PMO | CFO | CCO |
-| --- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| [DECISION_MAKER_VALUE_BRIEF.pt_BR.md](DECISION_MAKER_VALUE_BRIEF.pt_BR.md) | ● | ○ | ○ | ○ | | | | | ○ | ● | |
-| [COMPLIANCE_FRAMEWORKS.pt_BR.md](COMPLIANCE_FRAMEWORKS.pt_BR.md) | ○ | ● | ○ | ● | ○ | ○ | | | | | ● |
-| [SECURITY.pt_BR.md](SECURITY.pt_BR.md) | | ○ | ● | ○ | ● | | | ○ | | | |
-| [USAGE.pt_BR.md](USAGE.pt_BR.md) | | ○ | ○ | ○ | ● | | ○ | ● | | | |
-| [pitch/INDEX.pt_BR.md](pitch/INDEX.pt_BR.md) | ● | ● | ● | | | | | | ● | ● | ● |
-| [GRC_EXECUTIVE_REPORT_SCHEMA.pt_BR.md](GRC_EXECUTIVE_REPORT_SCHEMA.pt_BR.md) | | | ○ | | | | | | ● | | |
-| [LICENSING_OPEN_CORE_AND_COMMERCIAL.pt_BR.md](LICENSING_OPEN_CORE_AND_COMMERCIAL.pt_BR.md) | ○ | | | | | | | | | ● | |
-| [COMPLIANCE_AND_LEGAL.pt_BR.md](COMPLIANCE_AND_LEGAL.pt_BR.md) | ○ | ● | | ○ | | | | | | | ● |
+| Doc | Executivo | DPO | CISO | CDO | CIO | Compliance | Dev | Acadêmico | Agente | Operador | PMO | CFO | CCO |
+| --- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| [DECISION_MAKER_VALUE_BRIEF.pt_BR.md](DECISION_MAKER_VALUE_BRIEF.pt_BR.md) | ● | ○ | ○ | ○ | ● | ○ | | | | | ○ | ● | |
+| [COMPLIANCE_FRAMEWORKS.pt_BR.md](COMPLIANCE_FRAMEWORKS.pt_BR.md) | ○ | ● | ○ | ○ | ● | ● | ○ | ○ | | | | | ● |
+| [SECURITY.pt_BR.md](SECURITY.pt_BR.md) | | ○ | ● | ○ | ○ | ○ | ● | | | ○ | | | |
+| [USAGE.pt_BR.md](USAGE.pt_BR.md) | | ○ | ○ | ● | ○ | ○ | ● | | ○ | ● | | | |
+| [pitch/INDEX.pt_BR.md](pitch/INDEX.pt_BR.md) | ● | ● | ● | ● | ● | | | | | | ● | ● | ● |
+| [GRC_EXECUTIVE_REPORT_SCHEMA.pt_BR.md](GRC_EXECUTIVE_REPORT_SCHEMA.pt_BR.md) | | | ○ | | ● | | | | | | ● | | |
+| [LICENSING_OPEN_CORE_AND_COMMERCIAL.pt_BR.md](LICENSING_OPEN_CORE_AND_COMMERCIAL.pt_BR.md) | ○ | | | | | | | | | | | ● | |
+| [COMPLIANCE_AND_LEGAL.pt_BR.md](COMPLIANCE_AND_LEGAL.pt_BR.md) | ○ | ● | | | | ○ | | | | | | | ● |
+| [GLOSSARY.pt_BR.md](GLOSSARY.pt_BR.md) | | ○ | | ● | ○ | ○ | | ○ | | | | | |
 
 ● = trilha principal · ○ = sobreposição opcional
 

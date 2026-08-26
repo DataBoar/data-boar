@@ -11,6 +11,8 @@ Narrativas **de duas páginas** por público para workshops, compras e briefings
 | Conselho, diretoria, patrocinador de compra | [PITCH_STAKEHOLDER.pt_BR.md](PITCH_STAKEHOLDER.pt_BR.md) | Primeira conversa: valor, responsabilidade compartilhada, resultados 30/60/90 |
 | DPO, jurídico de privacidade, compliance | [PITCH_DPO.pt_BR.md](PITCH_DPO.pt_BR.md) | Base legal, apoio a DSAR, menores, sinais multinacionais |
 | CISO, arquiteto de segurança, GRC | [PITCH_CISO.pt_BR.md](PITCH_CISO.pt_BR.md) | Controles, integridade de evidência, postura de integração |
+| CDO, Data Steward, engenheiro de dados sênior | [PITCH_DATA_OFFICER.pt_BR.md](PITCH_DATA_OFFICER.pt_BR.md) | Inventário antes do GGD: armazenar/utilizar no DMBOK, maturidade de PII existente |
+| CIO, gerente de TI, governança de TI | [PITCH_IT_GOVERNANCE.pt_BR.md](PITCH_IT_GOVERNANCE.pt_BR.md) | Avaliar–Dirigir–Monitorar com evidência, não só política |
 
 ## Documentação relacionada (mais profunda que um deck)
 
