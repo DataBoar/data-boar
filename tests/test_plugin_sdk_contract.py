@@ -64,6 +64,17 @@ def test_examples_validate_against_contract_schema(example_path: Path) -> None:
     jsonschema.validate(instance=instance, schema=schema)
 
 
+def test_semver_rejects_trailing_newline_on_python_jsonschema() -> None:
+    """Python jsonschema uses re.search; `$` would accept a trailing newline. (#1766)"""
+    semver = _load_schema()["$defs"]["semver"]
+    jsonschema.validate(instance="1.0.0", schema=semver)
+    jsonschema.validate(instance="1.2.3-alpha.1", schema=semver)
+    with pytest.raises(jsonschema.ValidationError):
+        jsonschema.validate(instance="1.0.0\n", schema=semver)
+    with pytest.raises(jsonschema.ValidationError):
+        jsonschema.validate(instance="1.0.0 ", schema=semver)
+
+
 def test_invalid_decision_fails_schema() -> None:
     schema = _load_schema()
     bad = {
