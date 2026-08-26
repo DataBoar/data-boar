@@ -54,6 +54,7 @@
 | Concern map | `docs/MAP.md` | Topic-first navigation |
 | Use cases | `docs/use-cases/USE_CASES_HUB.md` | Storyboards + product scenarios |
 | Pitch decks | `docs/pitch/INDEX.md` | Stakeholder / DPO / CISO |
+| Educational hub | `docs/hubs/EDUCATIONAL_HUB.md` | Onboarding, AI primer anti-hype, framework primers path |
 
 ### Security, governance, and posture
 

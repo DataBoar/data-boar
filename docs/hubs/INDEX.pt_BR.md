@@ -54,6 +54,7 @@
 | MAP | `docs/MAP.md` | Navegação por preocupação |
 | Use cases | `docs/use-cases/USE_CASES_HUB.md` | Cenários de produto |
 | Pitch | `docs/pitch/INDEX.md` | Decks executivos |
+| Hub educacional | `docs/hubs/EDUCATIONAL_HUB.md` | Onboarding, primer de IA anti-hype, caminho dos primers de framework |
 
 ### Segurança, governança e postura
 
