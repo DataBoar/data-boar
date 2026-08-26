@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import json
 import os
 from datetime import datetime, timedelta, timezone
@@ -14,6 +15,7 @@ from fastapi.testclient import TestClient
 from core.licensing import LicenseBlockedError, reset_license_guard_for_tests
 from core.licensing.fingerprint import compute_machine_fingerprint
 from core.licensing.guard import LicenseGuard
+from core.licensing.verify import RevocationListUnverified, load_revocation_ids
 
 
 def _pem_public(priv: Ed25519PrivateKey) -> str:
@@ -210,7 +212,7 @@ def test_enforced_revoked(ed25519_priv, tmp_path):
     lic = tmp_path / "t.lic"
     lic.write_text(_make_token(ed25519_priv, sub="rev-me"), encoding="utf-8")
     rev = tmp_path / "rev.json"
-    rev.write_text(json.dumps({"revoked_license_ids": ["rev-me"]}), encoding="utf-8")
+    _write_signed_revocation(rev, ed25519_priv, ["rev-me"])
     cfg = {
         "licensing": {
             "mode": "enforced",
@@ -225,13 +227,26 @@ def test_enforced_revoked(ed25519_priv, tmp_path):
     assert g.context.detail == "license_revoked:sub"
 
 
+def _write_signed_revocation(
+    path, priv: Ed25519PrivateKey, ids: list[str], *, generated_at_unix: int = 1
+) -> None:
+    """Write revocation.json + revocation.json.sig (license-studio#26 bytes)."""
+    payload = json.dumps(
+        {"revoked_license_ids": ids, "generated_at_unix": generated_at_unix},
+        separators=(",", ":"),
+    ).encode("utf-8")
+    path.write_bytes(payload)
+    sig_b64 = base64.standard_b64encode(priv.sign(payload)).decode("ascii")
+    path.with_name(path.name + ".sig").write_text(sig_b64 + "\n", encoding="utf-8")
+
+
 def _revoked_guard(priv, tmp_path, *, token_extra: dict, revoked_ids: list[str]):
     """#717 helper: enforced guard with a token + revocation list on disk."""
     pem = _pem_public(priv)
     lic = tmp_path / "t.lic"
     lic.write_text(_make_token(priv, extra=token_extra), encoding="utf-8")
     rev = tmp_path / "rev.json"
-    rev.write_text(json.dumps({"revoked_license_ids": revoked_ids}), encoding="utf-8")
+    _write_signed_revocation(rev, priv, revoked_ids)
     cfg = {
         "licensing": {
             "mode": "enforced",
@@ -291,6 +306,65 @@ def test_enforced_not_revoked_when_ids_do_not_match(ed25519_priv, tmp_path):
     )
     assert g.context.state == "VALID"
     assert g.allows_scan() is True
+
+
+def test_enforced_revocation_missing_sig_is_tampered(ed25519_priv, tmp_path):
+    """#1753: configured list without .sig is fail-closed, not an empty set."""
+    pem = _pem_public(ed25519_priv)
+    lic = tmp_path / "t.lic"
+    lic.write_text(_make_token(ed25519_priv, extra={"jti": "tok-ok"}), encoding="utf-8")
+    rev = tmp_path / "rev.json"
+    rev.write_bytes(json.dumps({"revoked_license_ids": ["rev-me"]}).encode("utf-8"))
+    cfg = {
+        "licensing": {
+            "mode": "enforced",
+            "license_path": str(lic),
+            "revocation_list_path": str(rev),
+        }
+    }
+    os.environ["DATA_BOAR_LICENSE_PUBLIC_KEY_PEM"] = pem
+    g = LicenseGuard(cfg)
+    assert g.allows_scan() is False
+    assert g.context.state == "TAMPERED"
+    assert g.context.detail == "revocation_unverified:missing_signature"
+
+
+def test_enforced_revocation_tampered_content_is_rejected(ed25519_priv, tmp_path):
+    """#1753: JSON edited after signing — stale .sig must not be trusted."""
+    pem = _pem_public(ed25519_priv)
+    lic = tmp_path / "t.lic"
+    lic.write_text(_make_token(ed25519_priv, extra={"jti": "tok-ok"}), encoding="utf-8")
+    rev = tmp_path / "rev.json"
+    _write_signed_revocation(rev, ed25519_priv, ["unrelated"])
+    rev.write_bytes(
+        json.dumps({"revoked_license_ids": []}, separators=(",", ":")).encode("utf-8")
+    )
+    cfg = {
+        "licensing": {
+            "mode": "enforced",
+            "license_path": str(lic),
+            "revocation_list_path": str(rev),
+        }
+    }
+    os.environ["DATA_BOAR_LICENSE_PUBLIC_KEY_PEM"] = pem
+    g = LicenseGuard(cfg)
+    assert g.allows_scan() is False
+    assert g.context.state == "TAMPERED"
+    assert g.context.detail == "revocation_unverified:bad_signature"
+
+
+def test_load_revocation_ids_no_path_is_empty():
+    assert load_revocation_ids(None, object()) == set()
+    assert load_revocation_ids("", object()) == set()
+
+
+def test_load_revocation_ids_missing_sig_raises(ed25519_priv, tmp_path):
+    pub = ed25519_priv.public_key()
+    rev = tmp_path / "rev.json"
+    rev.write_bytes(b'{"revoked_license_ids":[]}')
+    with pytest.raises(RevocationListUnverified) as ei:
+        load_revocation_ids(str(rev), pub)
+    assert ei.value.reason == "missing_signature"
 
 
 def test_enforced_machine_mismatch(ed25519_priv, tmp_path):

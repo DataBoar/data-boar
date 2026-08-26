@@ -28,6 +28,7 @@ from core.licensing.verify import (
     load_public_key_from_path,
     load_revocation_ids,
     utc_now_ts,
+    RevocationListUnverified,
 )
 
 
@@ -305,7 +306,20 @@ class LicenseGuard:
         # license id (`sub`), a token id (`jti`), or a signing key id
         # (`dbkid`). Any match fails CLOSED — REVOKED resolves to the
         # Community tier via runtime_trust (_UNEXPECTED_LICENSE_STATES).
-        revoked = load_revocation_ids(rev_path or None)
+        # #717 kill-switch + #1753: the list is opt-in (empty path → skip)
+        # but once configured it must verify like license-studio revoke.Verify
+        # — unsigned/missing .sig is TAMPERED, not an empty set.
+        try:
+            revoked = load_revocation_ids(rev_path or None, pub)
+        except RevocationListUnverified as e:
+            self._context = LicenseContext(
+                state="TAMPERED",
+                mode="enforced",
+                machine_fingerprint=mfp,
+                detail=f"revocation_unverified:{e.reason}",
+                watermark="INVALID_REVOCATION_LIST",
+            )
+            return
         lic_id = str(claims.get("sub", ""))
         token_id = str(claims.get("jti", "") or "")
         key_id = str(claims.get("dbkid", "") or "")
