@@ -109,7 +109,7 @@ Claims só atuam em `licensing.mode: enforced`; um claim assinado vence o padrã
 
 ## Contato
 
-Para avaliar um Trial ou consultar preços Pro/Pro+/Partner/Enterprise, abra uma issue ou entre em contato diretamente com o mantenedor.
+Para avaliar um Trial ou consultar **valores** Pro/Pro+/Partner/Enterprise, abra uma issue ou escreva para **contact@databoar.com.br**. O que entra em cada faixa (sem preços): [PRICING.pt_BR.md](PRICING.pt_BR.md).
 
 ---
 

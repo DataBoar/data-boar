@@ -109,7 +109,7 @@ Claims only bite in `licensing.mode: enforced`; a signed claim wins over the tie
 
 ## Contact
 
-To evaluate a Trial or enquire about Pro/Pro+/Partner/Enterprise pricing, open an issue or contact the maintainer directly.
+To evaluate a Trial or enquire about Pro/Pro+/Partner/Enterprise **amounts**, open an issue or write **contact@databoar.com.br**. Feature inclusion (no prices): [PRICING.md](PRICING.md).
 
 ---
 
