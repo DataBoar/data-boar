@@ -5,8 +5,7 @@
 O Data Boar segue o modelo **open-core**, inspirado em projetos como [Bitwarden](https://bitwarden.com/pricing/) e [NetSpot](https://www.netspotapp.com/pt/netspotpro.html):
 um núcleo totalmente funcional disponível a todos, com camadas comerciais que desbloqueiam capacidades avançadas e direitos de uso comercial.
 
-> **Nota:** Preços exatos, datas de disponibilidade e atribuição de funcionalidades por camada são definidos pela equipe de produto.
-> Esta página é apenas uma visão estrutural. Para preços atuais, entre em contato com o mantenedor ou consulte o site (quando disponível).
+> **Nota:** **Valores** exatos, datas e programas comerciais (**Catalyst**, **Supporter**, franquias de estate) ficam com produto e jurídico. Esta página é estrutural. Chaves e aliases JWT: [PRICING.pt_BR.md](PRICING.pt_BR.md). Para orçamento, fale com o mantenedor.
 >
 > **Nomenclatura:** **Boar Std** (token `std`) é a faixa comercial de entrada do Data Boar — **não** é Oracle Database Standard Edition nem outro SKU "Standard" de terceiros.
 
@@ -18,7 +17,7 @@ um núcleo totalmente funcional disponível a todos, com camadas comerciais que 
 ## Princípio mestre: tier = capacidade, claim = quantidade
 
 - **TIER = CAPACIDADE** — o que o seu deployment pode fazer (conectores, profundidade de RBAC, caminhos de push/export).
-- **CLAIM = QUANTIDADE** — quanto (workers, deployments, linhas); um claim JWT assinado vence o padrão da camada e só atua em `licensing.mode: enforced`.
+- **CLAIM = QUANTIDADE** — quanto (workers, deployments, linhas); um claim JWT assinado vence o padrão da camada e só atua em `licensing.mode: enforced`. **Franquias de tamanho de estate** estão em avaliação e os valores não entram nesta página.
 - Banda nova só existe por **salto de capacidade** — nunca por um número isolado.
 
 ## Escada de camadas (modelo aditivo open-core)

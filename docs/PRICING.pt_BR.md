@@ -1,45 +1,63 @@
-# Mapa de recursos por faixa de assinatura
+# Mapa de recursos e quantidade por faixa comercial
 
 **English:** [PRICING.md](PRICING.md)
 
-Esta página responde **o que está em cada faixa**. **Não** é lista de preços. Valores, descontos e taxas de canal ficam fora da árvore pública.
+Esta página **não** é lista de preços. Valores, descontos, comissões de canal e cotações de franquia ficam fora da árvore pública (`docs/private/`). Contato: **contact@databoar.com.br**.
 
-**Fonte da verdade:** `FEATURE_TIER_MAP` em `core/licensing/tier_features.py` (faixa mínima por chave). As faixas são **aditivas** em modo enforced: Pro inclui as chaves Community; Enterprise inclui as de Pro.
+O issue no GitHub que pedia **só** Community / Pro / Enterprise está **desatualizado**. A escada viva é Community → Std → Pro → Pro+ → Enterprise → Partner / white-label (SKU), mais Open de lab (enforcement desligado). Strings de **Trial** no JWT hoje mapeiam para **Pro** no código.
 
-Faixas de GTM, claims de **quantidade** (workers) e pacotes narrativos: [SUBSCRIPTION_TIERS.pt_BR.md](SUBSCRIPTION_TIERS.pt_BR.md). Rascunho de política: [LICENSING_OPEN_CORE_AND_COMMERCIAL.pt_BR.md](LICENSING_OPEN_CORE_AND_COMMERCIAL.pt_BR.md). Forma do token: [LICENSING_SPEC.pt_BR.md](LICENSING_SPEC.pt_BR.md). Como operar: [USAGE.pt_BR.md](USAGE.pt_BR.md).
+## Dois eixos (não colapsar)
 
-O padrão em desenvolvimento/CI é `licensing.mode: open` (todas as chaves disponíveis). Os gates valem com enforcement ligado.
+| Eixo | Pergunta | Fontes públicas |
+| ---- | -------- | --------------- |
+| **Capacidade (tier)** | O que este deployment pode fazer? | `Tier` + `FEATURE_TIER_MAP` em `core/licensing/tier_features.py`; JWT `dbtier` em `core/licensing/runtime_feature_tier.py` |
+| **Quantidade (franquia)** | Quanta concorrência, quantos sites, quão grande o estate governado? | Implementado: `dbmax_workers`, `dbmax_deployments` ([LICENSING_SPEC.pt_BR.md](LICENSING_SPEC.pt_BR.md), [SUBSCRIPTION_TIERS.pt_BR.md](SUBSCRIPTION_TIERS.pt_BR.md)). **Franquias de tamanho de estate** (escopo lógico ativo, não bytes lidos por scan) estão **em avaliação comercial** e **não** são chaves do `FEATURE_TIER_MAP`. Aumentar volume **não** deve promover sozinho Pro → Pro+ / Enterprise. |
 
-## Community / Pro / Enterprise (colunas do issue #610)
+Narrativa GTM (RBAC, pacotes SIEM/RoPA, tabela de workers): [SUBSCRIPTION_TIERS.pt_BR.md](SUBSCRIPTION_TIERS.pt_BR.md). Rascunho de política: [LICENSING_OPEN_CORE_AND_COMMERCIAL.pt_BR.md](LICENSING_OPEN_CORE_AND_COMMERCIAL.pt_BR.md). Como operar: [USAGE.pt_BR.md](USAGE.pt_BR.md).
 
-Agrupado a partir do registro. A célula é **incluída** quando a faixa da coluna é **pelo menos** o mínimo da chave.
+O padrão em CI/dev é `licensing.mode: open`. Os gates valem em `enforced`. A comparação aditiva usa `_TIER_ORDER` em `tier_features.py`.
 
-| Grupo de capacidade | Community | Pro | Enterprise |
-| ------------------- | :-------: | :-: | :--------: |
-| Scan de filesystem; SQL/NoSQL self-hosted (`sqlite` / Postgres / MySQL / MariaDB / Mongo / Redis); conectores REST/API genéricos | Sim | Sim | Sim |
-| Detectores centrais (CPF, RG, e-mail, telefone, heurística de nome, CNPJ, endereço); arquivos compactados; checagem de content-type; teste com dados sintéticos | Sim | Sim | Sim |
-| Relatórios XLSX e HTML; API REST; dashBOARd; chaves de deploy Docker e Ansible | Sim | Sim | Sim |
-| OCR; relatório PDF; relatório com nota de conformidade; scans agendados; RBAC do dashboard (fixo); UI de API key; POC de autoavaliação de maturidade; notificações e-mail/Slack; export de SBOM; verificação de integridade de build; sink SQL de achados; governance lens (chave Pro) | — | Sim | Sim |
-| Conectores gerenciados / corporativos (Power BI, HubSpot, SharePoint, Dataverse, WebDAV, SMB/CIFS, NFS, MSSQL, Oracle, Snowflake, SAP, S3, Azure Blob, GCS) | — | Sim | Sim |
-| Branding customizado de PDF; UI de scheduler Enterprise; governance lens Enterprise; multi-tenant; **SSO SAML**; assinatura digital de PDF; e-mail de PDF agendado; comparação histórica; export de audit log; detectores customizados; conector VCS; interface de plugin/parceiro; driver de provedor parceiro; plugin e export de manifesto de remediação | — | — | Sim |
+## Aliases JWT / lab (código)
 
-**Ajustes em relação a um sketch de três bullets:** a **assinatura digital** de PDF é chave **Enterprise** (`pdf_digital_signature`), não Pro. **Não** existe chave `report_jsonl` — no mapa, relatório Community é **XLSX/HTML**. **SSO** no mapa é `sso_saml`; OIDC/LDAP aparecem em [SUBSCRIPTION_TIERS.pt_BR.md](SUBSCRIPTION_TIERS.pt_BR.md) como **intenção** de produto, não como chaves do `FEATURE_TIER_MAP`. SLA de suporte dedicado é **termo comercial**, não chave de feature.
+| Faixa | Strings típicas de `dbtier` / `effective_tier` |
+| ----- | ---------------------------------------------- |
+| Community | `community`, `oss`, `open_core` |
+| Std (Boar-Std — não é Standard Edition de banco Oracle) | `std`, `standard`, `boar_std`, `boar-std` |
+| Pro | `pro`, `professional`, `consultant`; **`trial` mapeia aqui** |
+| Pro+ | `pro_plus`, `pro+`, `proplus` |
+| Enterprise | `enterprise`, `ent` |
+| Partner / SKU white-label | `partner`, `partner_custom`, `whitelabel`, `white_label` → enum **`partner`** |
+| Open (lab) | vazio / modo open — não é SKU pago |
 
-## Outras faixas no registro (não omitir)
+Strings desconhecidas fecham em **Community** no mapeamento.
 
-O mesmo arquivo define **Std** (`std`), **Pro+** (`pro_plus`), **Partner** e **Open** (`open` = enforcement desligado). Não são colunas extras de preço aqui.
+## Grupos de capacidade
 
-| Faixa | O que o código diz |
-| ----- | ------------------ |
-| **Std** | Faixa de entrada comercial (Boar-Std). **Sem chaves exclusivas** no `FEATURE_TIER_MAP` — direito de uso/suporte vive em licença/claims, não neste mapa. |
-| **Pro+** | `pro_prefilter_accel` (caminho CLI→ProScanner) e `rust_regex_stage` (estágio regex em Rust). |
-| **Partner** | Enumerado para acordo de canal; capacidade **pelo menos Pro+** no comentário do módulo — sem chaves além da lista Enterprise/Pro+ acima. |
-| **Open** | Bypass: todos os recursos no lab/dev. |
+A célula é **Sim** quando o enum da faixa é **≥** o mínimo da chave em `_TIER_ORDER`. **Std** **não** tem chaves extras (mesmo conjunto Community; direito comercial é licença/claims). **Partner** está **acima de Enterprise** nessa ordem, então um token Partner hoje recebe **todas** as chaves mapeadas (incluindo Enterprise). White-label é **alias de Partner**, não um sétimo enum.
 
-## Contato (sem valores)
+| Grupo de capacidade | Community | Std | Pro | Pro+ | Ent | Partner / WL |
+| ------------------- | :-------: | :-: | :-: | :--: | :-: | :----------: |
+| Filesystem; SQL/NoSQL self-hosted; REST/API genérico; detectores centrais; compactados; content-type; teste sintético; XLSX/HTML; API REST; dashBOARd; Docker/Ansible | Sim | Sim | Sim | Sim | Sim | Sim |
+| OCR; PDF; nota de conformidade; scans agendados; RBAC do dashboard; UI de API key; POC de maturidade; notificações; SBOM; integridade de build; sink SQL; governance lens Pro; conectores gerenciados/corporativos | — | — | Sim | Sim | Sim | Sim |
+| `pro_prefilter_accel`; `rust_regex_stage` | — | — | — | Sim | Sim | Sim |
+| Branding de PDF; UI de scheduler Ent; governance lens Ent; multi-tenant; **SSO SAML**; assinatura digital de PDF; PDF por e-mail agendado; comparação histórica; export de audit log; detectores customizados; VCS; interface plugin/parceiro; driver de provedor; plugin/manifesto de remediação | — | — | — | — | Sim | Sim |
 
-Para avaliação Pro, Pro+, Partner ou Enterprise: **contact@databoar.com.br** ou abra uma issue neste repositório. Esta página não é orçamento.
+**Fora do `FEATURE_TIER_MAP`:** chave de relatório JSONL; SSO OIDC/LDAP (intenção em SUBSCRIPTION_TIERS); SLA de suporte dedicado.
+
+## Franquias de quantidade (avaliação vs o que já embarcou)
+
+Claims de quantidade já embarcados (não são preço): workers Community **2** · Pro **4** · Pro+ **8** (claim) · Enterprise **ilimitado** no entitlement; Pro padrão **2** sites de produção licenciados — ver [SUBSCRIPTION_TIERS.pt_BR.md](SUBSCRIPTION_TIERS.pt_BR.md). `dbmax_targets` continua claim planejado.
+
+**Franquias de volume / data estate** (cota-base + packs, true-up em vez de kill switch) estão sendo **precificadas em privado**. Docs públicos não listam valores nem SKUs de pack até produto+jurídico congelarem. Inventariar o **tamanho** do estate pode ser feature de produto sem ser fatura.
+
+## Catalyst / Supporter (avaliação)
+
+**Catalyst** e **Supporter** são **nomes de programa comercial em avaliação**. **Não** são valores em `map_dbtier_string_to_tier` hoje. Não trate como faixas extras do `FEATURE_TIER_MAP` até emissão e docs mudarem juntos.
+
+## Contato
+
+**contact@databoar.com.br** ou uma issue no GitHub. Esta página não é orçamento.
 
 ## Drift
 
-Quando adicionar uma chave em `FEATURE_TIER_MAP`, atualize esta página no mesmo PR.
+Quando `FEATURE_TIER_MAP`, `_TIER_ORDER` ou `map_dbtier_string_to_tier` mudarem, atualize esta página no mesmo PR.

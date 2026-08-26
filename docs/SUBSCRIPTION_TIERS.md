@@ -5,8 +5,7 @@
 Data Boar follows an **open-core** model inspired by projects like [Bitwarden](https://bitwarden.com/pricing/) and [NetSpot](https://www.netspotapp.com/pt/netspotpro.html):
 a fully functional open core available to all, with commercial tiers that unlock advanced capabilities and commercial-use rights.
 
-> **Note:** Exact pricing, availability dates, and feature assignments per tier are determined by the product team.
-> This page is a structural overview only. For current pricing, contact the maintainer or see the website (when available).
+> **Note:** Exact **amounts**, availability dates, and commercial programs (**Catalyst**, **Supporter**, estate franchises) are decided with product and counsel. This page is structural. Feature keys and JWT aliases: [PRICING.md](PRICING.md). For a quote, contact the maintainer.
 >
 > **Naming:** **Boar Std** (tier token `std`) is the Data Boar commercial entry band — it is **not** Oracle Database Standard Edition or any other vendor "Standard" SKU.
 
@@ -18,7 +17,7 @@ a fully functional open core available to all, with commercial tiers that unlock
 ## Master principle: tier = capability, claim = quantity
 
 - **TIER = CAPABILITY** — what your deployment can do (connectors, RBAC depth, push/export paths).
-- **CLAIM = QUANTITY** — how much (workers, deployments, rows); a signed JWT claim wins over the tier default and only bites in `licensing.mode: enforced`.
+- **CLAIM = QUANTITY** — how much (workers, deployments, rows); a signed JWT claim wins over the tier default and only bites in `licensing.mode: enforced`. **Estate-size franchises** are under evaluation and stay off this page’s amounts.
 - New bands exist only for a **capability jump** — never for a number alone.
 
 ## Tier ladder (additive open-core model)
