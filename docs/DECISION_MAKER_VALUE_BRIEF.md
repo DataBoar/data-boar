@@ -11,25 +11,25 @@ Data Boar is a configurable technical discovery and evidence-support platform th
 ## What it is and what it is not
 
 - **It is**
-- A discovery and mapping engine for data inventory and remediation prioritization.
-- A metadata-first reporting workflow (findings, norm tags, trend context) for governance.
-- A bridge between IT operations and compliance/legal review processes.
-- An input to **ITIL 4 value co-creation** (utility + warranty): scans are repeatable evidence, not a finished compliance outcome. See [ITSM_GOVERNANCE_ALIGNMENT.md](ITSM_GOVERNANCE_ALIGNMENT.md).
+  - A discovery and mapping engine for data inventory and remediation prioritization.
+  - A metadata-first reporting workflow (findings, norm tags, trend context) for governance.
+  - A bridge between IT operations and compliance/legal review processes.
+  - An input to **ITIL 4 value co-creation** (utility + warranty): scans are repeatable evidence, not a finished compliance outcome. See [ITSM_GOVERNANCE_ALIGNMENT.md](ITSM_GOVERNANCE_ALIGNMENT.md).
 - **It is not**
-- A legal decision engine or legal advice.
-- A certification authority for ISO, SOC, or regulatory compliance.
-- A replacement for DPO, counsel, or formal audit firms.
+  - A legal decision engine or legal advice.
+  - A certification authority for ISO, SOC, or regulatory compliance.
+  - A replacement for DPO, counsel, or formal audit firms.
 
 ## Shared responsibility model
 
 - **Data Boar**
-- Runs configured scans against approved targets.
-- Produces technical findings and operational evidence artifacts.
-- Supports norm-aligned language via configuration profiles.
+  - Runs configured scans against approved targets.
+  - Produces technical findings and operational evidence artifacts.
+  - Supports norm-aligned language via configuration profiles.
 - **Customer organization**
-- Defines lawful scope, legal basis, and risk acceptance.
-- Approves credentials, retention, and access governance.
-- Interprets findings for legal/regulatory decisions.
+  - Defines lawful scope, legal basis, and risk acceptance.
+  - Approves credentials, retention, and access governance.
+  - Interprets findings for legal/regulatory decisions.
 
 ## Value by segment
 
