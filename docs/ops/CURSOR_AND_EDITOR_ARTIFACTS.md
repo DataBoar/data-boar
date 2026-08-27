@@ -22,6 +22,7 @@ This repository intentionally versions **some** editor and automation config und
 | -------- | ------ |
 | **`.pytest_cache/`**, **`.ruff_cache/`** | Ephemeral tool caches — **never** version. |
 | **`.cursor/private/`** | Operator-only material (see root `.gitignore`). |
+| **`.mcp.json`** (repo root) | Local MCP server launch (absolute paths, host-specific commands). Distinct from tracked **`.cursor/mcp.json`** placeholders. |
 | **`.cursorignore`**, **`.cursorindexingignore`** | Local/editor-specific ignore for AI context (per Cursor docs). |
 | **`docs/private/`** | Private notes and stacked private git — not `origin`. |
 

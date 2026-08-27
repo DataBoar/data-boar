@@ -22,6 +22,7 @@ Este repositório versiona **parte** da configuração de editor e automação e
 | ----- | ------ |
 | **`.pytest_cache/`**, **`.ruff_cache/`** | Caches efêmeros — **nunca** versionar. |
 | **`.cursor/private/`** | Material só do operador (ver `.gitignore` na raiz). |
+| **`.mcp.json`** (raiz do repo) | Lançamento local de servidores MCP (paths absolutos, comandos da máquina). Distinto do **`.cursor/mcp.json`** rastreado (placeholders). |
 | **`.cursorignore`**, **`.cursorindexingignore`** | Ignore local/editor para contexto de IA (documentação Cursor). |
 | **`docs/private/`** | Notas privadas e git privado empilhado — não vão para `origin`. |
 
