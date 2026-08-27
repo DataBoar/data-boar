@@ -332,6 +332,9 @@ _audit_data-boar/
 .agents/
 .claude/settings.local.json
 .vscode/launch.json
+# Project-root MCP launcher (Claude Code / other hosts). Machine paths and
+# server commands — not the tracked placeholder file `.cursor/mcp.json`.
+.mcp.json
 
 
 # Native nfpm CI payload (#1437) — real cp314t embed must not be committed
