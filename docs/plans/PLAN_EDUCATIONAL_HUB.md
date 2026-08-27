@@ -27,7 +27,7 @@ Canonical files:
 | ---- | ---- | ------ |
 | 1 | Create EN + pt-BR educational hub (onboarding, anti-hype, frameworks path, glossary) | ✅ Done |
 | 2 | Register in `docs/hubs/INDEX.md` (+ pt-BR) and `docs/ops/DOCS_AND_HUBS_INDEX.md` | ✅ Done |
-| 3 | `python scripts/plans_hub_sync.py --write` and PLANS_TODO row | ✅ Done this PR |
+| 3 | `python scripts/plans_hub_sync.py --write` and PLANS_TODO row | ✅ Done |
 | 4 | Optional later: video walkthrough, lab tutorial rows (no content duplication) | ⬜ Pending |
 
 ## Out of scope

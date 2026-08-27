@@ -2,7 +2,7 @@
 
 **Português (Brasil):** [SUBSCRIPTION_TIERS.pt_BR.md](SUBSCRIPTION_TIERS.pt_BR.md)
 
-This is the **canonical public description of product bands** (capability ladder). It is **not** a price list. The live site still says pricing is coming soon; amounts, discounts, volume/franchise quotes, and commercial program names stay in private commercial evaluation (`docs/private/`) until product and counsel freeze them.
+This is the **canonical public description of product bands** (capability ladder). It is **not** a price list and there is **no** public `docs/PRICING.md`. The live site still says pricing is coming soon; amounts, discounts, volume/franchise quotes, and commercial program names stay in private commercial evaluation (`docs/private/`) until product and counsel freeze them. Linking a **third-party** vendor’s own pricing page (for example Bitwarden plans) is unrelated and allowed.
 
 **Code truth:** `Tier` + `FEATURE_TIER_MAP` + `_TIER_ORDER` in `core/licensing/tier_features.py`; JWT / lab string mapping in `core/licensing/runtime_feature_tier.py`. When those change, update **this** file in the same PR — do not add a fourth near-duplicate page.
 
