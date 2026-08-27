@@ -335,8 +335,9 @@ JSON (SDK contract pin; INPUT rows carry raw values). Requires
 .BR \-\-l3\-grant PATH .
 Default is ephemeral stdout/pipe. Disk write only with
 .BR \-\-l3\-persist PATH .
-POSIX persist is owner-only mode 0600. Windows persist uses icacls DACL
-(owner Full Control); SYSTEM and Administrators typically remain — not POSIX 0600.
+POSIX persist is owner-only mode 0600. Windows apply uses icacls; verify
+uses well-known SIDs (locale-independent). SYSTEM and Administrators
+typically remain — not POSIX 0600. OWNER RIGHTS (S-1-3-4) is owner-equivalent.
 Unproven containment exits
 .B 5
 unless

@@ -14,21 +14,24 @@ import pytest
 
 from core.database import LocalDBManager
 from core.l3_transformed_rows import (
-    L3_FEATURE,
     CONTAINMENT_NOT_ENFORCED,
     CONTAINMENT_OWNER_ONLY,
     CONTAINMENT_OWNER_PLUS_PRIVILEGED,
+    L3_FEATURE,
+    SID_BUILTIN_ADMINISTRATORS,
+    SID_CREATOR_OWNER,
+    SID_NT_AUTHORITY_SYSTEM,
+    SID_OWNER_RIGHTS,
     L3ContainmentError,
     L3GrantMissingError,
     L3ScopeError,
     assert_l3_contract,
-    assert_windows_dacl_owner_contained,
     build_l3_transformed_rows,
+    classify_windows_acl_sids,
     dumps_l3_audit,
     dumps_l3_rows,
     load_grant_file,
     parse_grant_document,
-    parse_icacls_aces,
     persist_l3_body,
     resolve_projection_columns,
     verify_owner_containment,
@@ -207,8 +210,11 @@ def test_persist_sets_owner_containment(tmp_path: Path) -> None:
     label = persist_l3_body(dest, "[]\n")
     verified = verify_owner_containment(dest)
     if os.name == "nt":
-        assert label == CONTAINMENT_OWNER_PLUS_PRIVILEGED
-        assert verified == CONTAINMENT_OWNER_PLUS_PRIVILEGED
+        assert label in {
+            CONTAINMENT_OWNER_ONLY,
+            CONTAINMENT_OWNER_PLUS_PRIVILEGED,
+        }
+        assert verified == label
     else:
         assert label == CONTAINMENT_OWNER_ONLY
         mode = dest.stat().st_mode
@@ -216,37 +222,118 @@ def test_persist_sets_owner_containment(tmp_path: Path) -> None:
         assert verified == CONTAINMENT_OWNER_ONLY
 
 
-def test_windows_dacl_parser_rejects_users_ace() -> None:
-    listing = (
-        r"C:\tmp\l3.json BUILTIN\Users:(I)(RX)" + "\n"
-        r"               WIN-CI\runneradmin:(F)" + "\n\n"
-        "Successfully processed 1 files; Failed processing 0 files\n"
+_OWNER_SID = "S-1-5-21-1111111111-2222222222-3333333333-1001"
+_STRANGER_SID = "S-1-5-21-1111111111-2222222222-3333333333-1002"
+
+
+def test_windows_sid_classifier_owner_rights_is_owner_not_privileged() -> None:
+    label = classify_windows_acl_sids(
+        [
+            (SID_OWNER_RIGHTS, False),
+            (_OWNER_SID, False),
+        ],
+        _OWNER_SID,
     )
-    aces = parse_icacls_aces(listing, Path(r"C:\tmp\l3.json"))
+    assert label == CONTAINMENT_OWNER_ONLY
+    owner_rights_only = classify_windows_acl_sids(
+        [(SID_OWNER_RIGHTS, False)],
+        _OWNER_SID,
+    )
+    assert owner_rights_only == CONTAINMENT_OWNER_ONLY
+    label_creator = classify_windows_acl_sids(
+        [
+            (SID_CREATOR_OWNER, False),
+            (_OWNER_SID, False),
+        ],
+        _OWNER_SID,
+    )
+    assert label_creator == CONTAINMENT_OWNER_ONLY
+    with pytest.raises(L3ContainmentError, match="unprivileged SID"):
+        classify_windows_acl_sids(
+            [
+                (SID_OWNER_RIGHTS, False),
+                (_OWNER_SID, False),
+                (_STRANGER_SID, False),
+            ],
+            _OWNER_SID,
+        )
+
+
+def test_windows_sid_classifier_ignores_localized_display_names() -> None:
+    """Allowlist is SID-only. Localized icacls names must not change the verdict."""
+    en_rows = (
+        {
+            "sid": SID_NT_AUTHORITY_SYSTEM,
+            "display": r"NT AUTHORITY\SYSTEM",
+            "inherited": False,
+        },
+        {
+            "sid": SID_BUILTIN_ADMINISTRATORS,
+            "display": r"BUILTIN\Administrators",
+            "inherited": False,
+        },
+        {
+            "sid": SID_OWNER_RIGHTS,
+            "display": "OWNER RIGHTS",
+            "inherited": False,
+        },
+        {"sid": _OWNER_SID, "display": r"WIN-CI\runneradmin", "inherited": False},
+    )
+    pt_rows = (
+        {
+            "sid": SID_NT_AUTHORITY_SYSTEM,
+            "display": r"NT AUTHORITY\SISTEMA",
+            "inherited": False,
+        },
+        {
+            "sid": SID_BUILTIN_ADMINISTRATORS,
+            "display": r"BUILTIN\Administradores",
+            "inherited": False,
+        },
+        {
+            "sid": SID_OWNER_RIGHTS,
+            "display": "DIREITOS DO PROPRIETÁRIO",
+            "inherited": False,
+        },
+        {"sid": _OWNER_SID, "display": r"WIN-CI\usuario", "inherited": False},
+    )
+    assert [r["display"] for r in en_rows] != [r["display"] for r in pt_rows]
+
+    def _aces(rows: tuple[dict[str, object], ...]) -> list[tuple[str, bool]]:
+        return [(str(r["sid"]), bool(r["inherited"])) for r in rows]
+
+    assert classify_windows_acl_sids(_aces(en_rows), _OWNER_SID) == (
+        CONTAINMENT_OWNER_PLUS_PRIVILEGED
+    )
+    assert classify_windows_acl_sids(_aces(pt_rows), _OWNER_SID) == (
+        CONTAINMENT_OWNER_PLUS_PRIVILEGED
+    )
+
+
+def test_windows_sid_classifier_rejects_inherited() -> None:
     with pytest.raises(L3ContainmentError, match="inherited ACE"):
-        assert_windows_dacl_owner_contained(aces, "runneradmin")
+        classify_windows_acl_sids(
+            [
+                ("S-1-5-32-545", True),
+                (_OWNER_SID, False),
+            ],
+            _OWNER_SID,
+        )
 
 
-def test_windows_dacl_parser_allows_system_and_administrators() -> None:
-    listing = (
-        r"C:\tmp\l3.json NT AUTHORITY\SYSTEM:(F)" + "\n"
-        r"               BUILTIN\Administrators:(F)" + "\n"
-        r"               WIN-CI\runneradmin:(F)" + "\n\n"
-        "Successfully processed 1 files; Failed processing 0 files\n"
-    )
-    aces = parse_icacls_aces(listing, Path(r"C:\tmp\l3.json"))
-    assert_windows_dacl_owner_contained(aces, "runneradmin")
+def test_windows_acl_snapshot_fail_closed_when_sid_json_unparseable(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Translate/JSON failure stays exit-5 class. Never fall back to display names."""
 
+    def _fake_ps(_script: str, **_kwargs: object) -> str:
+        return "NT AUTHORITY\\SISTEMA\nOWNER RIGHTS"
 
-def test_windows_dacl_parser_rejects_other_user() -> None:
-    listing = (
-        r"C:\tmp\l3.json NT AUTHORITY\SYSTEM:(F)" + "\n"
-        r"               WIN-CI\other:(F)" + "\n"
-        r"               WIN-CI\runneradmin:(F)" + "\n"
-    )
-    aces = parse_icacls_aces(listing, Path(r"C:\tmp\l3.json"))
-    with pytest.raises(L3ContainmentError, match="unprivileged ACE"):
-        assert_windows_dacl_owner_contained(aces, "runneradmin")
+    monkeypatch.setattr("core.l3_transformed_rows._run_powershell", _fake_ps)
+    from core.l3_transformed_rows import _windows_acl_sid_snapshot
+
+    with pytest.raises(L3ContainmentError, match="not parseable"):
+        _windows_acl_sid_snapshot(tmp_path / "l3.json")
 
 
 def test_persist_fail_closed_unlinks(

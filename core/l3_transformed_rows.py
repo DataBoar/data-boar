@@ -11,7 +11,6 @@ never cell contents.
 
 from __future__ import annotations
 
-import getpass
 import json
 import os
 import re
@@ -70,14 +69,30 @@ CONTAINMENT_OWNER_ONLY = "owner_only"
 CONTAINMENT_OWNER_PLUS_PRIVILEGED = "owner_plus_privileged"
 CONTAINMENT_NOT_ENFORCED = "not_enforced"
 
-# Honest Windows invariant: SYSTEM / Administrators typically remain after
-# icacls /inheritance:r. They are privileged principals, not "other users".
-_WINDOWS_PRIVILEGED_PRINCIPALS = frozenset(
+# Honest Windows invariant — match by SID, never by localized display name.
+# icacls apply still uses the tool; verification reads Get-Acl SIDs. GitHub
+# runners and pt-BR operator boxes emit different names for the same SIDs
+# (SYSTEM vs SISTEMA, OWNER RIGHTS vs DIREITOS DO PROPRIETÁRIO). Name
+# matching would fail-closed on the wrong thing (exit 5) on a safe DACL.
+#
+# S-1-5-18 / S-1-5-32-544 typically remain after icacls /inheritance:r;
+# stripping them is not practical. They are privileged, not "other users".
+# S-1-3-4 (OWNER RIGHTS) and S-1-3-0 (CREATOR OWNER) are *owner-equivalent*,
+# not privileged: owner + OWNER RIGHTS only is still CONTAINMENT_OWNER_ONLY.
+SID_NT_AUTHORITY_SYSTEM = "S-1-5-18"
+SID_BUILTIN_ADMINISTRATORS = "S-1-5-32-544"
+SID_OWNER_RIGHTS = "S-1-3-4"
+SID_CREATOR_OWNER = "S-1-3-0"
+_WINDOWS_PRIVILEGED_SIDS = frozenset(
     {
-        "nt authority\\system",
-        "builtin\\administrators",
-        "system",
-        "administrators",
+        SID_NT_AUTHORITY_SYSTEM,
+        SID_BUILTIN_ADMINISTRATORS,
+    }
+)
+_WINDOWS_OWNER_EQUIVALENT_SIDS = frozenset(
+    {
+        SID_OWNER_RIGHTS,
+        SID_CREATOR_OWNER,
     }
 )
 
@@ -382,13 +397,18 @@ def build_l3_transformed_rows(
     return rows, audit
 
 
-def _windows_current_user() -> str:
-    return (os.environ.get("USERNAME") or getpass.getuser() or "").strip()
+def _normalize_sid(raw: str) -> str:
+    return (raw or "").strip().upper()
 
 
 def _decode_console(blob: bytes) -> str:
     if not blob:
         return ""
+    if blob[:2] in (b"\xff\xfe", b"\xfe\xff") or b"\x00" in blob[:16]:
+        try:
+            return blob.decode("utf-16")
+        except UnicodeDecodeError:
+            pass
     for encoding in ("utf-8", "mbcs", "oem"):
         try:
             return blob.decode(encoding)
@@ -413,99 +433,170 @@ def _run_icacls(args: list[str]) -> subprocess.CompletedProcess[bytes]:
         raise L3ContainmentError("L3 persist: icacls timed out") from exc
 
 
-def parse_icacls_aces(output: str, path: Path) -> list[tuple[str, str]]:
-    """Parse ``icacls`` listing into (principal, paren-flags) pairs.
+_PS_READ_ACL_SIDS = r"""
+$ErrorActionPreference = 'Stop'
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
+$path = $env:DATA_BOAR_L3_ACL_PATH
+if ([string]::IsNullOrWhiteSpace($path)) { throw 'L3 ACL path missing' }
+$acl = Get-Acl -LiteralPath $path
+$current = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+if ([string]::IsNullOrWhiteSpace($current)) { throw 'L3 current user SID missing' }
+$aces = New-Object System.Collections.Generic.List[object]
+foreach ($ace in $acl.Access) {
+  $ref = $ace.IdentityReference
+  $sid = $null
+  try {
+    if ($ref -is [System.Security.Principal.SecurityIdentifier]) {
+      $sid = $ref.Value
+    } else {
+      $sid = $ref.Translate([System.Security.Principal.SecurityIdentifier]).Value
+    }
+  } catch {
+    throw "L3 SID translate failed: $($_.Exception.Message)"
+  }
+  if ([string]::IsNullOrWhiteSpace($sid)) { throw 'L3 SID translate empty' }
+  $aces.Add(@{ Sid = $sid; Inherited = [bool]$ace.IsInherited }) | Out-Null
+}
+@{ CurrentUserSid = $current; Aces = @($aces.ToArray()) } | ConvertTo-Json -Compress -Depth 5
+"""
 
-    Fail closed on unreadable output: callers must not guess principals.
+_PS_CURRENT_USER_SID = (
+    "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; "
+    "[System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value"
+)
+
+
+def _run_powershell(script: str, *, extra_env: dict[str, str] | None = None) -> str:
+    merged = os.environ.copy()
+    if extra_env:
+        merged.update(extra_env)
+    try:
+        proc = subprocess.run(
+            [
+                "powershell.exe",
+                "-NoProfile",
+                "-NonInteractive",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-Command",
+                script,
+            ],
+            capture_output=True,
+            check=False,
+            timeout=30,
+            env=merged,
+        )
+    except FileNotFoundError as exc:
+        raise L3ContainmentError(
+            "L3 persist: powershell.exe is not available (containment cannot be proven)"
+        ) from exc
+    except subprocess.TimeoutExpired as exc:
+        raise L3ContainmentError("L3 persist: powershell timed out") from exc
+    if proc.returncode != 0:
+        err = (
+            _decode_console(proc.stderr).strip() or _decode_console(proc.stdout).strip()
+        )
+        raise L3ContainmentError(
+            f"L3 persist: PowerShell ACL/SID failed (exit {proc.returncode}): {err}"
+        )
+    text = _decode_console(proc.stdout).strip().lstrip("\ufeff")
+    if not text:
+        raise L3ContainmentError("L3 persist: PowerShell returned empty SID output")
+    return text
+
+
+def _windows_current_user_sid() -> str:
+    sid = _normalize_sid(_run_powershell(_PS_CURRENT_USER_SID))
+    if not sid.startswith("S-1-"):
+        raise L3ContainmentError("L3 persist: current user SID is not a SID string")
+    return sid
+
+
+def _windows_acl_sid_snapshot(path: Path) -> tuple[str, list[tuple[str, bool]]]:
+    raw = _run_powershell(
+        _PS_READ_ACL_SIDS,
+        extra_env={"DATA_BOAR_L3_ACL_PATH": str(path)},
+    )
+    try:
+        data = json.loads(raw.lstrip("\ufeff"))
+    except json.JSONDecodeError as exc:
+        raise L3ContainmentError(
+            "L3 persist: PowerShell ACL JSON is not parseable (containment not proven)"
+        ) from exc
+    if not isinstance(data, dict):
+        raise L3ContainmentError("L3 persist: PowerShell ACL JSON must be an object")
+    current = _normalize_sid(str(data.get("CurrentUserSid") or ""))
+    if not current.startswith("S-1-"):
+        raise L3ContainmentError(
+            "L3 persist: current user SID missing from ACL snapshot"
+        )
+    aces_raw = data.get("Aces")
+    if aces_raw is None:
+        raise L3ContainmentError("L3 persist: ACL snapshot has no Aces")
+    if isinstance(aces_raw, dict):
+        aces_raw = [aces_raw]
+    if not isinstance(aces_raw, list):
+        raise L3ContainmentError("L3 persist: Aces is not a list")
+    aces: list[tuple[str, bool]] = []
+    for item in aces_raw:
+        if not isinstance(item, dict):
+            raise L3ContainmentError("L3 persist: ACE entry is not an object")
+        sid = _normalize_sid(str(item.get("Sid") or ""))
+        if not sid.startswith("S-1-"):
+            raise L3ContainmentError(
+                "L3 persist: ACE SID missing or untranslated (containment not proven)"
+            )
+        inherited = bool(item.get("Inherited"))
+        aces.append((sid, inherited))
+    return current, aces
+
+
+def classify_windows_acl_sids(
+    aces: list[tuple[str, bool]], current_user_sid: str
+) -> str:
+    """Prove DACL containment from SIDs only (locale-independent).
+
+    Each ACE is ``(sid, inherited)``. Returns the honest audit label.
     """
-    text = output.replace("\r\n", "\n").replace("\r", "\n")
-    path_s = str(path)
-    aces: list[tuple[str, str]] = []
-    for raw_line in text.split("\n"):
-        line = raw_line.strip()
-        if not line:
-            continue
-        lower = line.casefold()
-        if lower.startswith("successfully processed"):
-            continue
-        if "failed processing" in lower and "successfully processed" in lower:
-            continue
-        if line.startswith(path_s):
-            line = line[len(path_s) :].strip()
-        if not line or ":" not in line:
-            continue
-        principal, _, flags = line.rpartition(":")
-        principal = principal.strip()
-        flags = flags.strip()
-        if not principal or not flags.startswith("("):
-            continue
-        aces.append((principal, flags))
-    return aces
-
-
-def _principal_is_privileged_windows(name: str) -> bool:
-    n = name.strip().casefold()
-    if n in _WINDOWS_PRIVILEGED_PRINCIPALS:
-        return True
-    tail = n.rsplit("\\", 1)[-1]
-    return tail in {"system", "administrators"}
-
-
-def _principal_is_owner_windows(name: str, owner: str) -> bool:
-    n = name.strip().casefold()
-    o = owner.strip().casefold()
-    if not o:
-        return False
-    if n == o:
-        return True
-    return n.rsplit("\\", 1)[-1] == o
-
-
-def assert_windows_dacl_owner_contained(
-    aces: list[tuple[str, str]], owner: str
-) -> None:
-    """Raise if any ACE is inherited or a non-privileged principal other than owner."""
-    if not owner.strip():
-        raise L3ContainmentError("L3 persist: cannot determine Windows owner")
+    owner = _normalize_sid(current_user_sid)
+    if not owner.startswith("S-1-"):
+        raise L3ContainmentError("L3 persist: cannot determine Windows owner SID")
     if not aces:
         raise L3ContainmentError(
-            "L3 persist: icacls listed no ACEs (cannot prove containment)"
+            "L3 persist: ACL listed no ACEs (cannot prove containment)"
         )
     saw_owner = False
-    for principal, flags in aces:
-        flag_u = flags.upper()
-        if "(I)" in flag_u:
+    saw_privileged = False
+    for sid_raw, inherited in aces:
+        sid = _normalize_sid(sid_raw)
+        if inherited:
             raise L3ContainmentError(
-                f"L3 persist: inherited ACE remains for {principal!r} (need /inheritance:r)"
+                f"L3 persist: inherited ACE remains for SID {sid} (need /inheritance:r)"
             )
-        if _principal_is_owner_windows(principal, owner):
+        if sid == owner or sid in _WINDOWS_OWNER_EQUIVALENT_SIDS:
             saw_owner = True
             continue
-        if _principal_is_privileged_windows(principal):
+        if sid in _WINDOWS_PRIVILEGED_SIDS:
+            saw_privileged = True
             continue
         raise L3ContainmentError(
-            f"L3 persist: non-owner unprivileged ACE {principal!r} (containment not proven)"
+            f"L3 persist: non-owner unprivileged SID {sid} (containment not proven)"
         )
     if not saw_owner:
         raise L3ContainmentError(
             "L3 persist: owner ACE missing after restriction (containment not proven)"
         )
+    if saw_privileged:
+        return CONTAINMENT_OWNER_PLUS_PRIVILEGED
+    return CONTAINMENT_OWNER_ONLY
 
 
 def verify_owner_containment(path: Path) -> str:
     """Prove owner containment. Returns the honest audit label."""
     if os.name == "nt":
-        owner = _windows_current_user()
-        proc = _run_icacls([str(path)])
-        listing = _decode_console(proc.stdout)
-        if proc.returncode != 0:
-            err = _decode_console(proc.stderr).strip() or listing.strip()
-            raise L3ContainmentError(
-                f"L3 persist: icacls read failed (exit {proc.returncode}): {err}"
-            )
-        aces = parse_icacls_aces(listing, path)
-        assert_windows_dacl_owner_contained(aces, owner)
-        return CONTAINMENT_OWNER_PLUS_PRIVILEGED
+        current, aces = _windows_acl_sid_snapshot(path)
+        return classify_windows_acl_sids(aces, current)
     st = path.stat()
     if st.st_mode & (stat.S_IRWXG | stat.S_IRWXO):
         raise L3ContainmentError(
@@ -517,12 +608,10 @@ def verify_owner_containment(path: Path) -> str:
 
 
 def _restrict_to_owner(path: Path) -> None:
-    """Apply owner-only policy, then verify. Does not invent POSIX mode on Windows."""
+    """Apply owner-only policy. Does not invent POSIX mode on Windows."""
     if os.name == "nt":
-        user = _windows_current_user()
-        if not user:
-            raise L3ContainmentError("L3 persist: Windows username is empty")
-        grant = f"{user}:(F)"
+        sid = _windows_current_user_sid()
+        grant = f"*{sid}:(F)"
         granted = _run_icacls([str(path), "/grant:r", grant])
         if granted.returncode != 0:
             err = _decode_console(granted.stderr).strip()
@@ -579,17 +668,20 @@ __all__ = [
     "L3Grant",
     "L3GrantMissingError",
     "L3ScopeError",
+    "SID_BUILTIN_ADMINISTRATORS",
+    "SID_CREATOR_OWNER",
+    "SID_NT_AUTHORITY_SYSTEM",
+    "SID_OWNER_RIGHTS",
     "assert_l3_contract",
-    "assert_windows_dacl_owner_contained",
     "build_l3_transformed_rows",
     "clamp_max_rows",
+    "classify_windows_acl_sids",
     "dumps_l3_audit",
     "dumps_l3_rows",
     "load_grant_file",
     "load_l3_schema",
     "load_pin_metadata",
     "parse_grant_document",
-    "parse_icacls_aces",
     "persist_l3_body",
     "resolve_projection_columns",
     "schema_pin_paths",

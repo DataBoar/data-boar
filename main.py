@@ -785,10 +785,11 @@ def main() -> None:
         default=None,
         help=(
             "Explicitly write L3 JSON (raw values) to PATH. POSIX: owner-only "
-            "mode 0600. Windows: DACL via icacls (owner Full; SYSTEM/"
-            "Administrators typically remain — not POSIX 0600). Unproven "
-            "containment → exit 5 unless --l3-allow-unprotected. "
-            "Omitted = stdout only; never a default. Requires --export-l3."
+            "mode 0600. Windows: apply with icacls; verify by well-known SID "
+            "(not localized names). SYSTEM/Administrators may remain; "
+            "OWNER RIGHTS is owner-equivalent. Unproven containment → exit 5 "
+            "unless --l3-allow-unprotected. Omitted = stdout only; never a "
+            "default. Requires --export-l3."
         ),
     )
     parser.add_argument(
