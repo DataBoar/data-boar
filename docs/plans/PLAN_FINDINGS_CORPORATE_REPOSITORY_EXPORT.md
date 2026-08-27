@@ -1,18 +1,21 @@
 # Plan: Corporate findings repository — export / sync beyond local SQLite (medium-term)
 
-**Status:** Pending
-**Date:** 2026-05-02
+<!-- plans-hub-summary: Optional findings export to customer stores and catalog tags; v1.8.0 #1058 OpenMetadata/DataHub/Atlas + opt-in PII-as-quality-check; discovery stays read-only (no source write-back) -->
+<!-- plans-hub-related: PLAN_DATABRICKS_UNITY_LAKEHOUSE_SCOPE_AND_SCAN.md, PLAN_OBJECT_STORAGE_CLOUD_CONNECTORS.md, PLAN_NOTIFICATIONS_OFFBAND_AND_SCAN_COMPLETE.md, PLAN_FIDESLANG_EXPORT_ADAPTER.md, SECURITY.md, REPORTS_AND_COMPLIANCE_OUTPUTS.md -->
+
+**Português (Brasil):** [PLAN_FINDINGS_CORPORATE_REPOSITORY_EXPORT.pt_BR.md](PLAN_FINDINGS_CORPORATE_REPOSITORY_EXPORT.pt_BR.md)
+
+**Status:** Pending (no native sink on `main`; v1.8.0 survey [#1058](https://github.com/DataBoar/data-boar/issues/1058) enriches this plan — do not archive)
+**Date:** 2026-05-02 (v1.8.0 wave: 2026-08-27)
 **Authors:** Fabio Leitao
 **Priority:** H2
 **Depends on:** ADR-0048
-**GitHub:** [#1058](https://github.com/DataBoar/data-boar/issues/1058) (v1.8.x findings-export / catalog format)
+**Milestone:** v1.8.0
+**GitHub:** [#1058](https://github.com/DataBoar/data-boar/issues/1058) (v1.8.x catalog format + PII-as-quality-check)
 
-**Horizon:** **[H2]** medium-term; **expedite** only when a **named prospect or contract** requires a concrete sink (MongoDB, a given SQL engine, object storage + lake ingestion, etc.).
+**Horizon:** **[H2]** medium-term; **expedite** only when a **named prospect or contract** requires a concrete sink (MongoDB, a given SQL engine, object storage + lake ingestion, catalog API, etc.).
 
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md)
-
-<!-- plans-hub-summary: Medium-term Pro/Ent-shaped backlog: optional export or sync of scan findings (metadata model) from local SQLite to customer-chosen corporate stores—SQL, MongoDB, object/lake paths—without changing the core scan contract. -->
-<!-- plans-hub-related: PLAN_DATABRICKS_UNITY_LAKEHOUSE_SCOPE_AND_SCAN.md, PLAN_OBJECT_STORAGE_CLOUD_CONNECTORS.md, PLAN_NOTIFICATIONS_OFFBAND_AND_SCAN_COMPLETE.md, SECURITY.md, REPORTS_AND_COMPLIANCE_OUTPUTS.md -->
 
 ---
 
@@ -56,6 +59,7 @@ Today, the **primary** persistence path is **SQLite** plus **Excel/report** outp
 | [PLAN_DATABRICKS_UNITY_LAKEHOUSE_SCOPE_AND_SCAN.md](PLAN_DATABRICKS_UNITY_LAKEHOUSE_SCOPE_AND_SCAN.md) | A **lakehouse** may be a **sink** (batch files or SQL loads) as well as a **scan source**; keep **source** vs **sink** config separate to avoid confusion. |
 | [PLAN_OBJECT_STORAGE_CLOUD_CONNECTORS.md](PLAN_OBJECT_STORAGE_CLOUD_CONNECTORS.md) | **S3 / Azure Blob / GCS** are natural **staging** targets for JSONL/Parquet export batches before customer ETL. |
 | [PLAN_NOTIFICATIONS_OFFBAND_AND_SCAN_COMPLETE.md](PLAN_NOTIFICATIONS_OFFBAND_AND_SCAN_COMPLETE.md) | **Complementary:** webhooks notify; **this** plan **lands** structured findings where **analytics** teams work. |
+| [PLAN_FIDESLANG_EXPORT_ADAPTER.md](PLAN_FIDESLANG_EXPORT_ADAPTER.md) | Sibling **export-only** taxonomy view (`data_category`); do **not** invent a second mapping dialect — catalog tags reuse the same internal `norm_tag` / pattern leaves. |
 | [OBSERVABILITY_SRE.md](../OBSERVABILITY_SRE.md) | Product **metrics** export is a **different** track; do not conflate **findings** sink with Prometheus/OpenTelemetry. |
 
 ---
@@ -87,4 +91,74 @@ Today, the **primary** persistence path is **SQLite** plus **Excel/report** outp
 
 ## Changelog
 
+- **2026-08-27:** v1.8.0 survey **[#1058](https://github.com/DataBoar/data-boar/issues/1058)** — catalog tag formats (OpenMetadata / DataHub / Apache Atlas) and opt-in **PII-as-quality-check** sidecar; discovery remains read-only (no source write-back).
 - **2026-04-28:** Initial plan — corporate **findings repository / export** beyond SQLite; **Pro/Ent-shaped**; **customer-pull** gating; links to lakehouse plan, object storage, notifications, security.
+
+---
+
+## v1.8.0 wave — catalog format + PII-as-quality-check ([#1058](https://github.com/DataBoar/data-boar/issues/1058))
+
+**Driver:** Landscape survey (private competitive dossier). **Docs-first** in this PR; code stays on the existing **optional export / sink** outline (Phases **A–D**). This wave does **not** add a connector, REST client, or pipeline orchestrator.
+
+**Invariant (doctrine):** Scan **discovery remains read-only**. An OpenMetadata / DataHub / Atlas **exporter is opt-in** and may **push tags or entities into the customer’s catalog**. It must **never** write back to the **scanned source** (no `UPDATE`/`ALTER`/`DELETE` on customer tables, files, or object keys). Catalog write ≠ source write. Lakehouse **scan** ([PLAN_DATABRICKS_UNITY_LAKEHOUSE_SCOPE_AND_SCAN.md](PLAN_DATABRICKS_UNITY_LAKEHOUSE_SCOPE_AND_SCAN.md)) stays a **source** track; this plan is **sink / export**.
+
+**Non-claims (align with [COMPLIANCE_AND_LEGAL.md](../COMPLIANCE_AND_LEGAL.md) and [ADR 0025](../adr/ADR-0025-compliance-positioning-evidence-inventory-not-legal-conclusion-engine.md)):** Exported tags and quality-check **sidecars** are **inventory and technical-mapping aids** — not a legal determination that a column is personal data under LGPD/GDPR, and **not** an ANPD (or other authority) seal. A pipeline that quarantines a run from these hints does so under **customer policy**.
+
+### What already ships or is already specified (do not invent a second contract)
+
+| Surface | Role today | Catalog / DQ relevance |
+| ------- | ---------- | ---------------------- |
+| Local SQLite + Excel/report | Primary evidence store | Source of **metadata-oriented** finding rows (no bulk raw samples by default) |
+| Phase **A** (this plan) | Versioned export JSON/CSV for one `session_id` | **Canonical** payload other tools ingest — including catalog mappers |
+| [PLAN_FIDESLANG_EXPORT_ADAPTER.md](PLAN_FIDESLANG_EXPORT_ADAPTER.md) | Optional lossy `data_category` on **export only** | Same **export-only, default-off** pattern as catalog tags |
+| `--export-remediation-manifest` / JSONL (**#649** / **#1443**) | Location + `pii_type` + `suggested_profile` | Coordinates for tags; **not** a catalog client |
+| Object-storage / SQL / Mongo sinks (Phases **B–C**) | Customer-chosen landing | Staging **before** catalog ETL — still not source mutation |
+
+### Catalog emission (buyer language → existing export)
+
+Competitive “send findings to the catalog” SKUs usually mean **tags on assets the customer already registered**. Map vendor names onto **one** versioned export, then **lossy** tag ids:
+
+| Catalog family | Typical buyer ask | Product hook (no new engine in this docs PR) | Guardrail |
+| -------------- | ----------------- | -------------------------------------------- | --------- |
+| **OpenMetadata** | Classification / glossary tags on tables and columns | Opt-in mapper from export JSON → OM tag/classification payload (customer or later sink module) | Opt-in; **never** PATCH the scanned warehouse |
+| **DataHub** | Dataset / schema field aspects or tags | Same export JSON; DataHub aspect shape is a **view**, not a second finding model | Default off; documented field mapping |
+| **Apache Atlas** | Entity classifications | Atlas type names mapped from `pattern_detected` / `norm_tag` (lossy, like Fideslang) | Customer Atlas admin applies types; Data Boar does not own Atlas |
+
+**Output-as-governance-input:** the customer’s catalog **receives** findings without re-keying Excel. That is **interop**, not a claim that OpenMetadata (or ANPD) validated the scan.
+
+### PII-as-quality-check (opt-in sidecar)
+
+Expose findings as a **pipeline gate artifact** in the **style** of a data-quality rule (quarantine the **run**, or emit a **column flag for the catalog/orchestrator**):
+
+| Idea | What to emit | What not to do |
+| ---- | ------------ | -------------- |
+| **Quarantine** | Sidecar JSON/YAML: `session_id`, asset ids, severity, pass/fail for the **pipeline job** | Do not pause or kill customer jobs from inside the scanner |
+| **Column flag** | Suggested catalog/orchestrator flag (`pii_review`, `quarantine_column`) derived from finding coordinates | Do **not** `ALTER`/`UPDATE` the source column |
+| **DQ-tool shape** | Optional later stub resembling dbt/GE **test results** the customer wires | Data Boar is **not** a DQ engine and does not replace Great Expectations / Soda |
+
+Exact CLI/YAML keys stay **TBD** until Phase **B**. This PR only locks the **opt-in + read-only source** contract.
+
+### Compliance-sample methodology
+
+Same discipline as other v1.8.0 survey slices — **do not** add a catalog-vendor YAML dialect:
+
+1. Keep `norm_tag` in existing `docs/compliance-samples/compliance-sample-*.yaml` files as a **framework label**, not a legal conclusion.
+2. Catalog tag ids, when implemented, are a **lossy export view** (same principle as Fideslang).
+3. Optional later `recommendation_overrides` may mention “review in catalog” — they still **do not** mutate sources.
+4. No performance claims without a pinned file under `tests/benchmarks/`.
+
+### Execution table (doc-first → later slices)
+
+| Step | Deliverable | Status |
+| ---- | ----------- | ------ |
+| P1 | This plan section + hub summary + `PLANS_TODO` survey rows | ✅ Done (docs PR) |
+| P2 | Mapping note: OpenMetadata / DataHub / Atlas tag fields ← Phase **A** export JSON (lossy table; no client code) | ⬜ Pending |
+| P3 | Opt-in quality-check **sidecar** schema (quarantine / column flag for orchestrators; still no source write) | ⬜ Pending |
+| P4 | Phase **B** CLI / post-scan hook (existing outline) can optionally emit catalog JSON + sidecar | ⬜ Pending (existing phase table) |
+| P5 | Native catalog HTTP sink (customer-pull; still no source write-back) | ⬜ Pending (Phase **C**-class) |
+
+### Revisit (sibling plans — survey notes only)
+
+- [PLAN_FIDESLANG_EXPORT_ADAPTER.md](PLAN_FIDESLANG_EXPORT_ADAPTER.md): keep **one** lossy taxonomy adapter family; catalog vendors are additional **views**, not a fork of SQLite.
+- [PLAN_DATABRICKS_UNITY_LAKEHOUSE_SCOPE_AND_SCAN.md](PLAN_DATABRICKS_UNITY_LAKEHOUSE_SCOPE_AND_SCAN.md): Unity Catalog as **scan scope** remains separate from **findings sink**.
+- [PLAN_ACTION_PLAN_GENERATOR_POST_SCAN.md](PLAN_ACTION_PLAN_GENERATOR_POST_SCAN.md): suggested actions ≠ catalog exporter ≠ source write-back.
