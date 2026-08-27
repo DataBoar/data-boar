@@ -13,7 +13,7 @@
 
 ## Purpose
 
-Keep **one** public/internal-facing ladder in `docs/SUBSCRIPTION_TIERS.md` (+ pt-BR) matching `FEATURE_TIER_MAP` / `_TIER_ORDER` (Community → Std → Pro → Pro+ → Enterprise → Partner). This is **not** a public pricing page: no `PRICING.md`, no site promise, no amounts. Quotes and estate-franchise evaluation stay in gitignored `docs/private/`. Issue #610’s Community/Pro/Enterprise-only sketch is **rescoped**, not closed as dead.
+Keep **one** public/internal-facing ladder in `docs/SUBSCRIPTION_TIERS.md` (+ pt-BR) matching `FEATURE_TIER_MAP` / `_TIER_ORDER` (Community → Std → Pro → Pro+ → Enterprise → Partner). This is **not** a public pricing page: no `PRICING.md`, no site promise, no amounts. Quotes and estate-franchise evaluation stay in gitignored `docs/private/`. Issue #610’s Community/Pro/Enterprise-only sketch is **closed as rescoped delivered** (six-band ladder in `docs/SUBSCRIPTION_TIERS.md`; no public pricing page).
 
 `Tier.OPEN` is enforcement-off (dev/CI), never a seventh SKU.
 
@@ -21,9 +21,9 @@ Keep **one** public/internal-facing ladder in `docs/SUBSCRIPTION_TIERS.md` (+ pt
 
 | Step | Task | Status |
 | ---- | ---- | ------ |
-| 1 | Delete public `docs/PRICING.md` (+ pt-BR); no README/AUDIENCE links to a pricing filename | ✅ This PR |
-| 2 | Fold JWT aliases + FEATURE_TIER_MAP groups into `SUBSCRIPTION_TIERS.md`; other licensing docs **point**, do not restate the ladder | ✅ This PR |
-| 3 | Hub sync + PLANS_TODO row (plan renamed away from PRICING) | 🔄 This PR |
+| 1 | Delete public `docs/PRICING.md` (+ pt-BR); no README/AUDIENCE links to a pricing filename | ✅ Done |
+| 2 | Fold JWT aliases + FEATURE_TIER_MAP groups into `SUBSCRIPTION_TIERS.md`; other licensing docs **point**, do not restate the ladder | ✅ Done |
+| 3 | Hub sync + PLANS_TODO row (plan renamed away from PRICING) | ✅ Done |
 | 4 | When `FEATURE_TIER_MAP` / `_TIER_ORDER` / `map_dbtier_string_to_tier` change, update **SUBSCRIPTION_TIERS** in the same PR | 🔄 Ongoing |
 
 ## Out of scope

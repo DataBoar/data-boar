@@ -4,7 +4,7 @@
 
 **Grátis:** em geral **suficiente** para uso solo (senhas ilimitadas, sync, 2FA na **conta** Bitwarden — ative).
 
-**Pago:** faz sentido para **TOTP no cofre**, **anexos** criptografados, **Famílias/Equipes** ou **emergency access** — confira [bitwarden.com](https://bitwarden.com/).
+**Pago:** faz sentido para **TOTP no cofre**, **anexos** criptografados, **Famílias/Equipes** ou **emergency access** — confira [bitwarden.com/pricing](https://bitwarden.com/pricing/) (planos e limites da Bitwarden, não do Data Boar).
 
 **Documento completo (EN):** [OPERATOR_SECRETS_BITWARDEN.md](OPERATOR_SECRETS_BITWARDEN.md)
 
@@ -20,7 +20,7 @@
 
 ## Passos habituais:
 
-1. **Quem paga / admin** — uma conta cria ou faz upgrade da org em [bitwarden.com](https://bitwarden.com/) (confirmar nomes e limites atuais).
+1. **Quem paga / admin** — uma conta cria ou faz upgrade da org em [bitwarden.com/pricing](https://bitwarden.com/pricing/) (confirmar nomes e limites atuais).
 1. **Criar a organização** no cofre web (**console de administração**), ex.: `Homelab` ou `Lab-op`.
 1. **Convidar por e-mail** — o outro **aceita** com conta Bitwarden existente (ou cria conta).
 1. **Criar coleções** por tema: `UniFi`, `SNMP`, `GitHub`, `API solar`, `SSH`, `LAB-OP — notas` — evitar **dados secretos no nome** da coleção.

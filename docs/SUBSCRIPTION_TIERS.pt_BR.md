@@ -2,7 +2,7 @@
 
 **English:** [SUBSCRIPTION_TIERS.md](SUBSCRIPTION_TIERS.md)
 
-Esta é a **descrição pública canônica das faixas de produto** (escada de capacidade). **Não** é lista de preços. O site ao vivo ainda diz que precificação vem em breve; valores, descontos, cotações de volume/franquia e nomes de programas comerciais ficam na avaliação comercial privada (`docs/private/`) até produto e jurídico congelarem.
+Esta é a **descrição pública canônica das faixas de produto** (escada de capacidade). **Não** é lista de preços e **não** existe `docs/PRICING.md` público. O site ao vivo ainda diz que precificação vem em breve; valores, descontos, cotações de volume/franquia e nomes de programas comerciais ficam na avaliação comercial privada (`docs/private/`) até produto e jurídico congelarem. Link para a página de **preços de um terceiro** (ex.: planos da Bitwarden) é outro assunto e é permitido.
 
 **Verdade no código:** `Tier` + `FEATURE_TIER_MAP` + `_TIER_ORDER` em `core/licensing/tier_features.py`; mapeamento JWT / lab em `core/licensing/runtime_feature_tier.py`. Quando isso mudar, atualize **este** arquivo no mesmo PR — não crie uma quarta página quase duplicada.
 

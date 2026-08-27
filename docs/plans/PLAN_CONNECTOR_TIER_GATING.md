@@ -43,7 +43,7 @@ stays free for dev and lab.
 | A | `FEATURE_TIER_MAP` completed: `connector_rest` (Community) + 9 corporate connectors (Pro) + 4 features from #705 | ✅ Done |
 | B | Registry gate: `require_connector_allowed()` in `core/connector_registry.py`; engine `_run_target` uses it (actionable error + `tier_blocked` scan_failure) | ✅ Done |
 | C | Per-connector gating tests (`tests/test_connector_tier_gating.py`): map entries, target resolution, community/pro/OPEN behaviour, enforced JWT end-to-end, engine failure row | ✅ Done |
-| D | Canonical six-band ladder in `docs/SUBSCRIPTION_TIERS.md` (#610 rescoped — not a public pricing page; Open is enforcement-off, not a SKU) | 🔄 #1776 |
+| D | Canonical six-band ladder in `docs/SUBSCRIPTION_TIERS.md` (#610 rescoped — not a public pricing page; Open is enforcement-off, not a SKU) | ✅ Done (#1776) |
 | E | Enterprise connector families (CMDB, findings-sink) gated when implemented | ⬜ Pending |
 | F | **#854 fail-closed:** exhaustive `_CONNECTOR_TIER_FEATURES` (explicit Community entries for api/filesystem/mongodb/redis/postgresql/mysql/mariadb/sqlite); unknown connector type or driver → `FeatureTierBlockedError` + CRITICAL `connector_unknown_blocked` audit (no default-community); free only in `Tier.OPEN` | ✅ Done |
 
