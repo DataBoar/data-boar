@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import secrets
 import stat
 import subprocess
 from dataclasses import dataclass
@@ -592,12 +593,36 @@ def classify_windows_acl_sids(
     return CONTAINMENT_OWNER_ONLY
 
 
+def verify_owner_containment_fd(fd: int) -> str:
+    """Prove owner containment on an open descriptor (no path TOCTOU)."""
+    if os.name == "nt":
+        _windows_reject_reparse_point_fd(fd)
+        current, aces = _windows_acl_sids_from_fd(fd)
+        return classify_windows_acl_sids(aces, current)
+    st = os.fstat(fd)
+    if not stat.S_ISREG(st.st_mode):
+        raise L3ContainmentError("L3 persist: descriptor is not a regular file")
+    if st.st_mode & (stat.S_IRWXG | stat.S_IRWXO):
+        raise L3ContainmentError(
+            f"L3 persist: POSIX mode {stat.filemode(st.st_mode)} is not owner-only"
+        )
+    if hasattr(os, "getuid") and st.st_uid != os.getuid():
+        raise L3ContainmentError("L3 persist: file owner is not the current user")
+    return CONTAINMENT_OWNER_ONLY
+
+
 def verify_owner_containment(path: Path) -> str:
-    """Prove owner containment. Returns the honest audit label."""
+    """Prove owner containment of a finished path (post-replace audit)."""
     if os.name == "nt":
         current, aces = _windows_acl_sid_snapshot(path)
         return classify_windows_acl_sids(aces, current)
-    st = path.stat()
+    st = os.lstat(path)
+    if stat.S_ISLNK(st.st_mode):
+        raise L3ContainmentError(
+            "L3 persist: path is a symlink (containment not proven)"
+        )
+    if not stat.S_ISREG(st.st_mode):
+        raise L3ContainmentError("L3 persist: path is not a regular file")
     if st.st_mode & (stat.S_IRWXG | stat.S_IRWXO):
         raise L3ContainmentError(
             f"L3 persist: POSIX mode {stat.filemode(st.st_mode)} is not owner-only"
@@ -626,34 +651,314 @@ def _restrict_to_owner(path: Path) -> None:
                 f"(exit {stripped.returncode}): {err}"
             )
         return
-    # POSIX: os.open(..., 0o600) already requested owner rw; verify is the proof.
+    # POSIX: exclusive os.open(..., 0o600) + fchmod; verify is the proof.
+
+
+def _exclusive_create_flags() -> int:
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+    nofollow = getattr(os, "O_NOFOLLOW", 0)
+    if nofollow:
+        flags |= nofollow
+    elif os.name != "nt":
+        raise L3ContainmentError(
+            "L3 persist: O_NOFOLLOW is required (containment cannot be proven)"
+        )
+    flags |= getattr(os, "O_CLOEXEC", 0)
+    flags |= getattr(os, "O_BINARY", 0)
+    flags |= getattr(os, "O_NOINHERIT", 0)
+    return flags
+
+
+def _windows_reject_reparse_point_fd(fd: int) -> None:
+    """Refuse symlink/reparse on the open handle (Windows O_NOFOLLOW stand-in)."""
+    import ctypes
+    import msvcrt
+    from ctypes import wintypes
+
+    class _ByHandleFileInformation(ctypes.Structure):
+        _fields_ = [
+            ("dwFileAttributes", wintypes.DWORD),
+            ("ftCreationTime", wintypes.FILETIME),
+            ("ftLastAccessTime", wintypes.FILETIME),
+            ("ftLastWriteTime", wintypes.FILETIME),
+            ("dwVolumeSerialNumber", wintypes.DWORD),
+            ("nFileSizeHigh", wintypes.DWORD),
+            ("nFileSizeLow", wintypes.DWORD),
+            ("nNumberOfLinks", wintypes.DWORD),
+            ("nFileIndexHigh", wintypes.DWORD),
+            ("nFileIndexLow", wintypes.DWORD),
+        ]
+
+    file_attribute_reparse_point = 0x400
+    info = _ByHandleFileInformation()
+    handle = msvcrt.get_osfhandle(fd)
+    ok = ctypes.windll.kernel32.GetFileInformationByHandle(
+        ctypes.c_void_p(handle), ctypes.byref(info)
+    )
+    if not ok:
+        raise L3ContainmentError(
+            "L3 persist: GetFileInformationByHandle failed (containment not proven)"
+        )
+    if info.dwFileAttributes & file_attribute_reparse_point:
+        raise L3ContainmentError(
+            "L3 persist: descriptor is a reparse point/symlink (containment not proven)"
+        )
+
+
+def _windows_sid_to_string(sid_ptr: int) -> str:
+    import ctypes
+    from ctypes import wintypes
+
+    advapi32 = ctypes.WinDLL("advapi32", use_last_error=True)
+    convert = advapi32.ConvertSidToStringSidW
+    convert.argtypes = [ctypes.c_void_p, ctypes.POINTER(wintypes.LPWSTR)]
+    convert.restype = wintypes.BOOL
+    string_sid = wintypes.LPWSTR()
+    if not convert(sid_ptr, ctypes.byref(string_sid)):
+        raise L3ContainmentError(
+            "L3 persist: ConvertSidToStringSid failed (containment not proven)"
+        )
+    try:
+        value = string_sid.value or ""
+    finally:
+        if string_sid:
+            ctypes.windll.kernel32.LocalFree(string_sid)
+    if not value.upper().startswith("S-1-"):
+        raise L3ContainmentError("L3 persist: ACE SID string is invalid")
+    return value
+
+
+def _windows_acl_sids_from_fd(fd: int) -> tuple[str, list[tuple[str, bool]]]:
+    """Read DACL SIDs from the open handle (not the path)."""
+    import ctypes
+    import msvcrt
+    from ctypes import wintypes
+
+    se_file_object = 1
+    owner_security_information = 0x00000001
+    dacl_security_information = 0x00000004
+    access_allowed_ace_type = 0x00
+    inherited_ace = 0x10
+    error_success = 0
+
+    advapi32 = ctypes.WinDLL("advapi32", use_last_error=True)
+    get_security_info = advapi32.GetSecurityInfo
+    get_security_info.argtypes = [
+        wintypes.HANDLE,
+        wintypes.DWORD,
+        wintypes.DWORD,
+        ctypes.POINTER(ctypes.c_void_p),
+        ctypes.POINTER(ctypes.c_void_p),
+        ctypes.POINTER(ctypes.c_void_p),
+        ctypes.POINTER(ctypes.c_void_p),
+        ctypes.POINTER(ctypes.c_void_p),
+    ]
+    get_security_info.restype = wintypes.DWORD
+    get_ace = advapi32.GetAce
+    get_ace.argtypes = [
+        ctypes.c_void_p,
+        wintypes.DWORD,
+        ctypes.POINTER(ctypes.c_void_p),
+    ]
+    get_ace.restype = wintypes.BOOL
+
+    class _Acl(ctypes.Structure):
+        _fields_ = [
+            ("AclRevision", wintypes.BYTE),
+            ("Sbz1", wintypes.BYTE),
+            ("AclSize", wintypes.WORD),
+            ("AceCount", wintypes.WORD),
+            ("Sbz2", wintypes.WORD),
+        ]
+
+    class _AceHeader(ctypes.Structure):
+        _fields_ = [
+            ("AceType", wintypes.BYTE),
+            ("AceFlags", wintypes.BYTE),
+            ("AceSize", wintypes.WORD),
+        ]
+
+    owner_sid = ctypes.c_void_p()
+    group_sid = ctypes.c_void_p()
+    dacl = ctypes.c_void_p()
+    sacl = ctypes.c_void_p()
+    sd = ctypes.c_void_p()
+    handle = wintypes.HANDLE(msvcrt.get_osfhandle(fd))
+    status = get_security_info(
+        handle,
+        se_file_object,
+        owner_security_information | dacl_security_information,
+        ctypes.byref(owner_sid),
+        ctypes.byref(group_sid),
+        ctypes.byref(dacl),
+        ctypes.byref(sacl),
+        ctypes.byref(sd),
+    )
+    if status != error_success or not sd:
+        raise L3ContainmentError(
+            f"L3 persist: GetSecurityInfo failed (status {status}; containment not proven)"
+        )
+    try:
+        current = _windows_current_user_sid()
+        if not dacl:
+            raise L3ContainmentError(
+                "L3 persist: DACL missing on handle (containment not proven)"
+            )
+        acl = ctypes.cast(dacl, ctypes.POINTER(_Acl)).contents
+        aces: list[tuple[str, bool]] = []
+        for index in range(int(acl.AceCount)):
+            ace_ptr = ctypes.c_void_p()
+            if not get_ace(dacl, index, ctypes.byref(ace_ptr)):
+                raise L3ContainmentError(
+                    "L3 persist: GetAce failed (containment not proven)"
+                )
+            header = ctypes.cast(ace_ptr, ctypes.POINTER(_AceHeader)).contents
+            if header.AceType != access_allowed_ace_type:
+                raise L3ContainmentError(
+                    f"L3 persist: unsupported ACE type {header.AceType} "
+                    "(containment not proven)"
+                )
+            if not ace_ptr.value:
+                raise L3ContainmentError("L3 persist: ACE pointer is null")
+            sid = _normalize_sid(_windows_sid_to_string(ace_ptr.value + 8))
+            inherited = bool(header.AceFlags & inherited_ace)
+            aces.append((sid, inherited))
+        return current, aces
+    finally:
+        ctypes.windll.kernel32.LocalFree(sd)
+
+
+def _windows_path_owner_sid(path: Path) -> str:
+    """Owner SID of a path via Get-Acl (destination pre-check only)."""
+    script = r"""
+$ErrorActionPreference = 'Stop'
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
+$path = $env:DATA_BOAR_L3_ACL_PATH
+$acl = Get-Acl -LiteralPath $path
+$acl.GetOwner([System.Security.Principal.SecurityIdentifier]).Value
+"""
+    sid = _normalize_sid(
+        _run_powershell(script, extra_env={"DATA_BOAR_L3_ACL_PATH": str(path)})
+    )
+    if not sid.startswith("S-1-"):
+        raise L3ContainmentError(
+            "L3 persist: destination owner SID is not a SID string"
+        )
+    return sid
+
+
+def _assert_destination_safe_to_replace(path: Path) -> None:
+    try:
+        st = os.lstat(path)
+    except FileNotFoundError:
+        return
+    if stat.S_ISLNK(st.st_mode):
+        raise L3ContainmentError(
+            "L3 persist: destination is a symlink (containment not proven)"
+        )
+    if not stat.S_ISREG(st.st_mode):
+        raise L3ContainmentError(
+            "L3 persist: destination is not a regular file (containment not proven)"
+        )
+    if os.name == "nt":
+        owner = _windows_path_owner_sid(path)
+        current = _windows_current_user_sid()
+        if owner != current:
+            raise L3ContainmentError(
+                "L3 persist: destination is not owned by the current user"
+            )
+        return
+    if hasattr(os, "getuid") and st.st_uid != os.getuid():
+        raise L3ContainmentError(
+            "L3 persist: destination is not owned by the current user"
+        )
+
+
+def _assert_fd_matches_path(fd: int, path: Path) -> None:
+    st_fd = os.fstat(fd)
+    st_path = os.lstat(path)
+    if not os.path.samestat(st_fd, st_path):
+        raise L3ContainmentError(
+            "L3 persist: temp path no longer matches the open descriptor"
+        )
+
+
+def _remove_uncommitted(path: Path) -> None:
+    try:
+        os.unlink(path)
+    except FileNotFoundError:
+        return
+    except OSError as exc:
+        raise L3ContainmentError(
+            f"L3 persist: failed to remove uncommitted file {path}: {exc}"
+        ) from exc
 
 
 def persist_l3_body(path: Path, body: str, *, allow_unprotected: bool = False) -> str:
-    """Write L3 JSON only when the operator passed an explicit persist path.
+    """Persist L3 JSON via create → verify fd → write → replace.
 
-    Returns a containment label for the stderr audit record. On failure the
-    file is unlinked unless ``allow_unprotected`` is set (declared degradation).
+    No L3 byte is written until containment is proven on the descriptor
+    (unless ``allow_unprotected``, which is declared on the audit record).
+    Cleanup failures are exit 5, never swallowed.
     """
-    path.parent.mkdir(parents=True, exist_ok=True)
-    fd = os.open(
-        path,
-        os.O_WRONLY | os.O_CREAT | os.O_TRUNC,
-        0o600,
-    )
-    with os.fdopen(fd, "w", encoding="utf-8") as handle:
-        handle.write(body)
+    dest = Path(path)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    _assert_destination_safe_to_replace(dest)
+    tmp = dest.parent / f".{dest.name}.l3persist.{os.getpid()}.{secrets.token_hex(8)}"
+    fd: int | None = None
+    committed = False
     try:
-        _restrict_to_owner(path)
-        return verify_owner_containment(path)
-    except L3ContainmentError:
-        if allow_unprotected:
-            return CONTAINMENT_NOT_ENFORCED
         try:
-            path.unlink(missing_ok=True)
-        except OSError:
-            pass
-        raise
+            fd = os.open(str(tmp), _exclusive_create_flags(), 0o600)
+        except OSError as exc:
+            raise L3ContainmentError(
+                f"L3 persist: exclusive create failed for {tmp}: {exc}"
+            ) from exc
+        if hasattr(os, "fchmod"):
+            os.fchmod(fd, 0o600)
+        _assert_fd_matches_path(fd, tmp)
+        try:
+            if os.name == "nt":
+                _restrict_to_owner(tmp)
+                _assert_fd_matches_path(fd, tmp)
+            label = verify_owner_containment_fd(fd)
+        except L3ContainmentError:
+            if not allow_unprotected:
+                raise
+            label = CONTAINMENT_NOT_ENFORCED
+        payload = body.encode("utf-8")
+        written = 0
+        while written < len(payload):
+            n = os.write(fd, payload[written:])
+            if n <= 0:
+                raise L3ContainmentError("L3 persist: short write to temp descriptor")
+            written += n
+        os.fsync(fd)
+        _assert_destination_safe_to_replace(dest)
+        _assert_fd_matches_path(fd, tmp)
+        os.close(fd)
+        fd = None
+        os.replace(str(tmp), str(dest))
+        committed = True
+        return label
+    except Exception as err:
+        if fd is not None:
+            try:
+                os.close(fd)
+            except OSError:
+                pass
+            fd = None
+        if not committed:
+            try:
+                _remove_uncommitted(tmp)
+            except L3ContainmentError as clean_err:
+                if isinstance(err, L3ContainmentError):
+                    raise L3ContainmentError(f"{err}; {clean_err}") from err
+                raise L3ContainmentError(f"L3 persist: {err}; {clean_err}") from err
+        if isinstance(err, L3ContainmentError):
+            raise
+        raise L3ContainmentError(f"L3 persist: {err}") from err
 
 
 # Re-export for pin canary tests that share the L1 env gate.
@@ -662,16 +967,16 @@ __all__ = [
     "CONTAINMENT_OWNER_ONLY",
     "CONTAINMENT_OWNER_PLUS_PRIVILEGED",
     "L3_FEATURE",
+    "SID_BUILTIN_ADMINISTRATORS",
+    "SID_CREATOR_OWNER",
+    "SID_NT_AUTHORITY_SYSTEM",
+    "SID_OWNER_RIGHTS",
     "L3ContainmentError",
     "L3ContractError",
     "L3ExportError",
     "L3Grant",
     "L3GrantMissingError",
     "L3ScopeError",
-    "SID_BUILTIN_ADMINISTRATORS",
-    "SID_CREATOR_OWNER",
-    "SID_NT_AUTHORITY_SYSTEM",
-    "SID_OWNER_RIGHTS",
     "assert_l3_contract",
     "build_l3_transformed_rows",
     "clamp_max_rows",
@@ -687,4 +992,5 @@ __all__ = [
     "schema_pin_paths",
     "sdk_schema_check_enabled",
     "verify_owner_containment",
+    "verify_owner_containment_fd",
 ]

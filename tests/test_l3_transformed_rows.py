@@ -35,9 +35,10 @@ from core.l3_transformed_rows import (
     persist_l3_body,
     resolve_projection_columns,
     verify_owner_containment,
+    verify_owner_containment_fd,
 )
-from core.licensing.feature_gate import require_feature
 from core.licensing.errors import FeatureTierBlockedError
+from core.licensing.feature_gate import require_feature
 from core.licensing.guard import reset_license_guard_for_tests
 from core.licensing.tier_features import FEATURE_TIER_MAP, Tier
 
@@ -340,14 +341,18 @@ def test_persist_fail_closed_unlinks(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     dest = tmp_path / "l3.json"
+    payload = "L3-RAW-MUST-NOT-LAND\n"
 
-    def boom(_path: Path) -> None:
+    def boom(_fd: int) -> str:
         raise L3ContainmentError("simulated containment failure")
 
-    monkeypatch.setattr("core.l3_transformed_rows._restrict_to_owner", boom)
+    monkeypatch.setattr("core.l3_transformed_rows.verify_owner_containment_fd", boom)
     with pytest.raises(L3ContainmentError, match="simulated"):
-        persist_l3_body(dest, "[]\n")
+        persist_l3_body(dest, payload)
     assert not dest.exists()
+    leftovers = list(tmp_path.glob("*l3persist*")) + list(tmp_path.glob(".*l3persist*"))
+    for leftover in leftovers:
+        assert payload not in leftover.read_text(encoding="utf-8")
 
 
 def test_persist_allow_unprotected_keeps_file(
@@ -355,14 +360,99 @@ def test_persist_allow_unprotected_keeps_file(
 ) -> None:
     dest = tmp_path / "l3.json"
 
-    def boom(_path: Path) -> None:
+    def boom(_fd: int) -> str:
         raise L3ContainmentError("simulated containment failure")
 
-    monkeypatch.setattr("core.l3_transformed_rows._restrict_to_owner", boom)
+    monkeypatch.setattr("core.l3_transformed_rows.verify_owner_containment_fd", boom)
     label = persist_l3_body(dest, "[]\n", allow_unprotected=True)
     assert dest.is_file()
     assert dest.read_text(encoding="utf-8") == "[]\n"
     assert label == CONTAINMENT_NOT_ENFORCED
+
+
+def test_persist_refuses_foreign_owner_destination(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    dest = tmp_path / "l3.json"
+    dest.write_text("FOREIGN-OWNER-BYTES", encoding="utf-8")
+    payload = "L3-RAW-MUST-NOT-LAND\n"
+    if os.name == "nt":
+        monkeypatch.setattr(
+            "core.l3_transformed_rows._windows_path_owner_sid",
+            lambda _path: _STRANGER_SID,
+        )
+        monkeypatch.setattr(
+            "core.l3_transformed_rows._windows_current_user_sid",
+            lambda: _OWNER_SID,
+        )
+    else:
+        foreign_uid = os.lstat(dest).st_uid + 1
+        monkeypatch.setattr(os, "getuid", lambda: foreign_uid)
+    with pytest.raises(L3ContainmentError, match="not owned"):
+        persist_l3_body(dest, payload)
+    assert dest.read_text(encoding="utf-8") == "FOREIGN-OWNER-BYTES"
+
+
+def test_persist_refuses_symlink_destination(tmp_path: Path) -> None:
+    target = tmp_path / "real.json"
+    target.write_text("SYMLINK-TARGET", encoding="utf-8")
+    dest = tmp_path / "l3.json"
+    dest.symlink_to(target)
+    payload = "L3-RAW-MUST-NOT-LAND\n"
+    with pytest.raises(L3ContainmentError, match="symlink"):
+        persist_l3_body(dest, payload)
+    assert dest.is_symlink()
+    assert target.read_text(encoding="utf-8") == "SYMLINK-TARGET"
+
+
+def test_persist_unlink_failure_after_containment_fail_is_explicit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    dest = tmp_path / "l3.json"
+    payload = "L3-RAW-MUST-NOT-LAND\n"
+
+    def boom(_fd: int) -> str:
+        raise L3ContainmentError("simulated containment failure")
+
+    monkeypatch.setattr("core.l3_transformed_rows.verify_owner_containment_fd", boom)
+
+    def unlink_denied(path: str | os.PathLike[str]) -> None:
+        raise OSError(1, "Operation not permitted")
+
+    monkeypatch.setattr(os, "unlink", unlink_denied)
+    with pytest.raises(L3ContainmentError, match="failed to remove uncommitted"):
+        persist_l3_body(dest, payload)
+    assert (not dest.exists()) or dest.read_text(encoding="utf-8") != payload
+    for leftover in tmp_path.iterdir():
+        if leftover.is_file() and not leftover.is_symlink():
+            assert payload not in leftover.read_text(encoding="utf-8")
+
+
+def test_persist_verify_happens_on_fd_before_write(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    dest = tmp_path / "l3.json"
+    seen: list[int] = []
+
+    real = verify_owner_containment_fd
+
+    def wrapped(fd: int) -> str:
+        seen.append(fd)
+        st = os.fstat(fd)
+        assert st.st_size == 0
+        return real(fd)
+
+    monkeypatch.setattr("core.l3_transformed_rows.verify_owner_containment_fd", wrapped)
+    label = persist_l3_body(dest, "[]\n")
+    assert seen
+    assert dest.read_text(encoding="utf-8") == "[]\n"
+    if os.name == "nt":
+        assert label in {
+            CONTAINMENT_OWNER_ONLY,
+            CONTAINMENT_OWNER_PLUS_PRIVILEGED,
+        }
+    else:
+        assert label == CONTAINMENT_OWNER_ONLY
 
 
 def test_cli_stdout_ephemeral_and_audit_has_no_cells(tmp_path: Path) -> None:
