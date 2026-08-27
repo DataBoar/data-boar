@@ -306,6 +306,28 @@ With
 include raw sample fields from stored finding rows when present (SQLite stores metadata only by default).
 .
 .TP
+.B \-\-export\-l1 SESSION_ID
+Export findings for one scan session as an L1
+.B metadata_manifest
+JSON (SDK contract pin; metadata only — never raw sample fields). Reads existing SQLite rows (no re\-scan). Print to stdout or use
+.BR \-\-l1\-output PATH .
+Unknown or empty session yields empty
+.B findings
+and exit
+.B 0 .
+A projection that would violate the contract aborts with exit
+.B 1
+(fail\-closed; no degraded emit). Cannot be combined with
+.BR \-\-web ", " \-\-reset\-data ", " \-\-export\-audit\-trail ", " \-\-validate\-config ", " \-\-diff ", or " \-\-export\-dsar .
+.
+.TP
+.B \-\-l1\-output PATH
+Write L1 metadata_manifest JSON to
+.B PATH
+instead of stdout. Requires
+.BR \-\-export\-l1 .
+.
+.TP
 .B \-\-regenerate\-report SESSION_ID
 Regenerate the Excel workbook and heatmap PNG for
 .B SESSION_ID

@@ -57,6 +57,8 @@ _MAN_FAIL_ON_NEW_HIGH = r"\-\-fail\-on\-new\-high"
 _MAN_EXPORT_DSAR = r"\-\-export\-dsar"
 _MAN_DSAR_OUTPUT = r"\-\-dsar\-output"
 _MAN_DSAR_INCLUDE_SAMPLES = r"\-\-dsar\-include\-samples"
+_MAN_EXPORT_L1 = r"\-\-export\-l1"
+_MAN_L1_OUTPUT = r"\-\-l1\-output"
 _MAN_DEMO = r"\-\-demo"
 _MAN_REGENERATE_REPORT = r"\-\-regenerate\-report"
 
@@ -135,6 +137,18 @@ OPERATOR_HELP_MARKERS: tuple[OperatorHelpMarker, ...] = (
         "--dsar-include-samples",
         None,
         _MAN_DSAR_INCLUDE_SAMPLES,
+    ),
+    OperatorHelpMarker(
+        "export_l1",
+        "--export-l1",
+        "--export-l1",
+        _MAN_EXPORT_L1,
+    ),
+    OperatorHelpMarker(
+        "l1_output",
+        "--l1-output",
+        "--l1-output",
+        _MAN_L1_OUTPUT,
     ),
     OperatorHelpMarker(
         "regenerate_report",

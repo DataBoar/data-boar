@@ -24,6 +24,8 @@ Documented in code: **`main.py --host`** → **`api.host`** → **`API_HOST`** �
 
 ## Done recently (changelog)
 
+- **2026-08-27 (CLI `--export-l1` #1333):** L1 `metadata_manifest` JSON via **`main.py --export-l1 SESSION_ID`** with **`--l1-output`**; **`core/l1_metadata_manifest.py`**. Pin: **`docs/sdk/metadata_manifest.schema.json`** + **`.pin.json`**. Surfaces: **`docs/data_boar.1`**, **`api/templates/help.html`**, **`docs/USAGE*.md`**, **`tests/operator_help_sync_manifest.py`**, **`tests/test_l1_metadata_manifest.py`**.
+
 - **2026-08-19 (`--validate-config` no side effects on `[INVALID]` #538):** Pre-flight aborts before `report.output_dir` mkdir, sqlite parent, or integrity-anchor `sqlite3.connect`. Surfaces: **`main.py --help`**, **`docs/data_boar.1`**, **`docs/USAGE*.md`**, **`tests/test_main_validate_config.py`**.
 
 - **2026-08-19 (`use_content_type` vs archives #1354):** Option **(b)** — `--content-type-check` / `file_scan.use_content_type` does **not** dispatch compressed archives; lying extension → `archive_type_mismatch` in `scan_failures`. Surfaces: **`main.py --help`**, **`docs/data_boar.1`**, **`docs/data_boar.5`**, **`docs/USAGE*.md`**, **`api/templates/help.html`**, **`api/locales/*.json`**, **`tests/operator_help_sync_manifest.py`**, **`tests/test_archive_type_mismatch.py`**.

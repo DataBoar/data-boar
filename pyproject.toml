@@ -68,6 +68,7 @@ dependencies = [
     "itsdangerous>=2.2.0",
     "jinja2>=3.1.6",
     "joblib>=1.5.3",
+    "jsonschema>=4.23.0",
     "kiwisolver>=1.4.9",
     "markupsafe>=3.0.3",
     "matplotlib>=3.10.8",
@@ -309,6 +310,8 @@ packages = [
 
 [tool.hatch.build.targets.wheel.force-include]
 "main.py" = "main.py"
+"docs/sdk/metadata_manifest.schema.json" = "core/data/metadata_manifest.schema.json"
+"docs/sdk/metadata_manifest.pin.json" = "core/data/metadata_manifest.pin.json"
 
 [dependency-groups]
 dev = [
