@@ -312,6 +312,8 @@ packages = [
 "main.py" = "main.py"
 "docs/sdk/metadata_manifest.schema.json" = "core/data/metadata_manifest.schema.json"
 "docs/sdk/metadata_manifest.pin.json" = "core/data/metadata_manifest.pin.json"
+"docs/sdk/transformed_rows.schema.json" = "core/data/transformed_rows.schema.json"
+"docs/sdk/transformed_rows.pin.json" = "core/data/transformed_rows.pin.json"
 
 [dependency-groups]
 dev = [

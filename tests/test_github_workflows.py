@@ -986,7 +986,7 @@ def test_native_packages_smoke_deb_uses_debian_cdn_not_ubuntu_azure_pin() -> Non
 
 
 def test_sdk_schema_pin_canary_is_scheduled_not_pr_and_offline_by_default() -> None:
-    """#1333: network canary is a separate job; default CI must not fetch the SDK."""
+    """#1333 / #1334: network canary is a separate job; default CI must not fetch the SDK."""
     data = _load_workflow("sdk-schema-pin-canary.yml")
     assert data.get("name")
     on = data.get("on") or {}

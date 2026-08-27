@@ -1,0 +1,10 @@
+{
+  "$comment": "PIN of DataBoar/data-boar-sdk schema/transformed_rows.schema.json. This is not a second contract. Canonical remains https://github.com/DataBoar/data-boar-sdk. The sibling .schema.json file is an unmodified byte pin of that path at sdk_commit. Bump with scripts/sync_sdk_schema_pin.py --schema transformed_rows after reviewing the SDK diff.",
+  "canonical_repo": "DataBoar/data-boar-sdk",
+  "canonical_path": "schema/transformed_rows.schema.json",
+  "id": "https://databoar.dev/sdk/1.0.0/transformed_rows.schema.json",
+  "contract_version": "1.0.0",
+  "sdk_commit": "4eb23ad853a93d54a6699b595286625787f7101d",
+  "sdk_blob_sha": "73dcb37b60b7ca4489c9d1975537abc95f6f9167",
+  "pinned_at": "2026-08-27"
+}
