@@ -1,7 +1,12 @@
 # CodeQL: security and quality analysis for Python (OWASP, injection, etc.).
 # Results appear under Security > Code scanning; configure rulesets for merge protection.
 # https://docs.github.com/en/code-security/code-scanning/creating-an-advanced-setup-for-code-scanning
-# (verify: default-setup disabled 2026-08-25, this custom workflow is the sole CodeQL source of truth now, badge restored -- issue #1757)
+#
+# Conflict: GitHub default setup (path dynamic/github-code-scanning/codeql) and this
+# advanced workflow cannot both upload SARIF. When default setup is enabled, Analyze
+# fails with: "CodeQL analyses from advanced configurations cannot be processed when
+# the default setup is enabled." Check live state with `gh workflow list --all`
+# (two rows named CodeQL). Keep init/analyze action SHAs in lockstep. Issue #1757.
 #
 # Actions pinned to full commit SHAs (tag in comment); bump via Dependabot or after upstream review.
 #

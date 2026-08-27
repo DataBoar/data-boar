@@ -9,7 +9,7 @@ Este documento sugere **camadas adicionais** (ferramentas, hábitos e fluxo de t
 ## O que você já tem (linha de base)
 
 - **Testes:** Suite completa de pytest com `-W error`; testes estilo SonarQube (S3981, S3776, S4423, S5706, S1192, etc.), testes de segurança (SQL injection, path traversal, safe_load), lint de markdown (incluindo `.cursor/`).
-- **CI:** Testes + `pip-audit` a cada push/PR; SonarQube opcional quando `SONAR_TOKEN` está definido; CodeQL em workflow separado.
+- **CI:** Testes + `pip-audit` a cada push/PR; SonarQube opcional quando `SONAR_TOKEN` está definido; CodeQL em workflow separado (`codeql.yml` avançado — **não** rode o default setup do GitHub ao mesmo tempo; [TESTING.pt_BR.md](TESTING.pt_BR.md) *CodeQL*).
 - **Cursor:** Regra e skill para que o agente evite violações SonarQube/CodeQL e execute testes de qualidade após editar Python/markdown.
 - **Docs:** CONTRIBUTING (checklist de release, auditoria, versões mínimas), SECURITY.md, TESTING.md, hardening de deploy.
 
@@ -82,7 +82,7 @@ Este documento sugere **camadas adicionais** (ferramentas, hábitos e fluxo de t
 
 #### O que fazemos (Zizmor):
 
-- **CI:** [`.github/workflows/zizmor.yml`](../.github/workflows/zizmor.yml) roda em push/PR via **`zizmorcore/zizmor-action`** (SHA fixo). **Avisório** por padrão, salvo **`ZIZMOR_ENFORCE`** / **`ENFORCE_ZIZMOR`** no repo — veja [OPERATOR_NOTIFICATION_CHANNELS.md](ops/OPERATOR_NOTIFICATION_CHANNELS.md) e **`scripts/workflow-security-lint.sh`**.
+- **CI:** [`.github/workflows/zizmor.yml`](../.github/workflows/zizmor.yml) roda em **todo** push/PR para `main`/`master` via **`zizmorcore/zizmor-action`** (SHA fixo, **sem** filtro `paths:`). O job **falha por padrão**, salvo a variável do repositório **`ZIZMOR_ENFORCE=false`**. O job **não** é check obrigatório de merge. Em PR o checkout usa **`head.sha`**; **não** adicione um segundo passo `upload-sarif`. Instantâneo: [BRANCH_PROTECTION.pt_BR.md](ops/BRANCH_PROTECTION.pt_BR.md). Wrappers: **`scripts/workflow-security-lint.sh`**.
 - **Local:** `uvx zizmor .github/workflows/` (mesmo caminho que **`workflow-security-lint.sh`**). O **`check-all`** executa Zizmor no tier **padrão** de security scans e **falha** em achados (postura shift-left antes do merge).
 
 **Previne:** Misconfigurações de workflow que Bandit/Semgrep não veem.
@@ -120,7 +120,7 @@ Rodar **`check-all`** localmente (tier padrão) troca **~2–5 minutos** no PC d
 | Classe de achado                 | Sem espelho local                               | Com tier padrão do `check-all`                      |
 | ----------------                 | -----------------                               | ------------------------------                      |
 | Bandit em connectors             | Falha no job **Bandit** depois de lint+test     | Surge num passe local                               |
-| Drift de permissão em workflow   | Falha no workflow **Zizmor** (ou fica avisório) | Surge antes do push                                 |
+| Drift de permissão em workflow   | Falha no job **Zizmor** salvo **`ZIZMOR_ENFORCE=false`** | Surge antes do push                                 |
 | Caminho FP SQLAlchemy no Semgrep | Só com **`--enforced`** ou Semgrep no CI        | Opt-in operador/agente — mesmo comando do container |
 
 **Hábito token-aware:** Use **`./scripts/check-all.sh --skip-pre-commit`** só ao iterar testes; rode **`check-all` completo** antes de abrir o PR. Use **`--enforced`** quando o diff tocar **superfícies de segurança** da Onda 3 — não em todo slice só de docs.

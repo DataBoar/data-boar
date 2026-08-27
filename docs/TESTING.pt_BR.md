@@ -110,9 +110,24 @@ O GitHub Actions (`.github/workflows/ci.yml`) executa:
 - **Testes** — `uv run pytest -v -W error` no Ubuntu para **Python 3.12 e 3.13** (matriz, `fail-fast: false`). A instalação padrão é `uv sync --extra shares --group dev`.
 - **Testes com extras opcionais** — job **`test-extras`** (só Python **3.13**) instala extras SQL **exceto** `mariadb`, mais `nosql` + `compressed` + `dataformats` (+ `shares`) para os testes de conectores opcionais rodarem em vez de pular; um teto de skips (**60**) falha o job se os pulos silenciosos crescerem (issue **#1638**). Os guardrails consumer-side do Maestro (`tests/test_maestro_scripts.py` e os casos gateados por `MAESTRO_ROOT` em `tests/test_issue_dev_license_qa.py` / `tests/test_security.py`) são **deselecionados** neste job: o CI público e os forks não devem clonar o **DataBoar/maestro** privado, e esses testes pulam de propósito quando o clone está ausente (spinout maestro#8, “typical public CI”). Eles ainda rodam na matriz Test padrão (pulam se não houver clone irmão). Um job **opt-in** futuro pode executar os guards do Maestro de verdade; não pendure isso no **`test-extras`**. O extra `mariadb` fica de fora neste job 3.13: PyPI **1.1.14** (estável mais recente) levanta `SyntaxError` no import (`connectionpool.py` sem raw-string); **2.0.0** ainda é só rc. Restaure `sql-all` / `--extra mariadb` quando um conector estável importar no 3.13.
 - **Auditoria de dependências** — `uv run pip-audit` após `uv sync` (Python 3.12).
-- **SonarQube/SonarCloud** — quando `SONAR_TOKEN` está definido; usa Python 3.12 após os testes passarem.
+- **SonarQube/SonarCloud** — quando `SONAR_TOKEN` está definido; usa Python 3.12 após os testes passarem. O mesmo `sonar-project.properties` na raiz do repositório é usado pelo extension no IDE e pelo scanner no CI.
 
-O CodeQL está em `.github/workflows/codeql.yml`. O mesmo `sonar-project.properties` na raiz do repositório é usado pelo extension no IDE e pelo scanner no CI.
+### CodeQL (workflow avançado vs default setup do GitHub)
+
+Workflow versionado: [`.github/workflows/codeql.yml`](../.github/workflows/codeql.yml). Analisa **Python** com `queries: security-and-quality` em **push** / **pull_request** para `main`/`master` e numa agenda **semanal** (`0 6 * * 1` UTC). Os resultados aparecem em **Security → Code scanning**. O badge **CodeQL** do README aponta para este arquivo. Mantenha `github/codeql-action/init` e `.../analyze` no **mesmo** SHA de commit (o Dependabot pode subir os dois pins em PRs separados).
+
+**Armadilha — duas fontes CodeQL:** o **default setup** do GitHub é um segundo workflow no caminho `dynamic/github-code-scanning/codeql` (não está no git). O GitHub **recusa** SARIF deste workflow avançado enquanto o default setup está ligado (`CodeQL analyses from advanced configurations cannot be processed when the default setup is enabled` — essa foi a falha em `main` em 2026-08-12). Confira os dois:
+
+```bash
+gh workflow list --all
+# Duas linhas com o nome "CodeQL" significam que o default setup ainda está ligado junto com o codeql.yml.
+```
+
+**Não** religue o default setup enquanto o `codeql.yml` for a fonte pretendida. O CodeQL **não** é check obrigatório de merge ([BRANCH_PROTECTION.pt_BR.md](ops/BRANCH_PROTECTION.pt_BR.md)). A issue **#1757** acompanha o badge e a migração das duas fontes.
+
+### Zizmor (lint de workflow — todo PR)
+
+[`.github/workflows/zizmor.yml`](../.github/workflows/zizmor.yml) roda em **todo** `pull_request` / `push` para `main`/`master` (**sem** filtro `paths:`). Um ruleset `code_scanning` precisa de SARIF do zizmor para **este** commit; filtrar só `.github/workflows/**` trava o merge em PRs só de docs. O job **falha** salvo a variável do repositório **`ZIZMOR_ENFORCE=false`**. Ele **não** está em `required_status_checks`. Em PRs, o checkout é **`head.sha`** (não o merge commit) para o upload SARIF interno cair em `refs/pull/<N>/head`. **Não** adicione um segundo passo `upload-sarif` (categoria `zizmor` duplicada). Local: `uvx zizmor .github/workflows/` via **`check-all`**. Instantâneo do operador: [BRANCH_PROTECTION.pt_BR.md](ops/BRANCH_PROTECTION.pt_BR.md).
 
 ### Workflows Slack do operador (sem teste “vivo” no pytest)
 
