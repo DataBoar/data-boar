@@ -65,7 +65,7 @@ Mapa de navegação para **treze** perfis de leitor. Índice completo: [README.m
 | | |
 | - | - |
 | **Entrada** | `pitch/PITCH_CFO.md` *(pitch planejado — #683)* |
-| **Trilha** | [DECISION_MAKER_VALUE_BRIEF.pt_BR.md](DECISION_MAKER_VALUE_BRIEF.pt_BR.md) → [PRICING.pt_BR.md](PRICING.pt_BR.md) → [LICENSING_OPEN_CORE_AND_COMMERCIAL.pt_BR.md](LICENSING_OPEN_CORE_AND_COMMERCIAL.pt_BR.md) → [releases/](releases/) |
+| **Trilha** | [DECISION_MAKER_VALUE_BRIEF.pt_BR.md](DECISION_MAKER_VALUE_BRIEF.pt_BR.md) → [SUBSCRIPTION_TIERS.pt_BR.md](SUBSCRIPTION_TIERS.pt_BR.md) → [LICENSING_OPEN_CORE_AND_COMMERCIAL.pt_BR.md](LICENSING_OPEN_CORE_AND_COMMERCIAL.pt_BR.md) → [releases/](releases/) |
 | **Evitar** | [TECH_GUIDE.pt_BR.md](TECH_GUIDE.pt_BR.md), frameworks técnicos de compliance |
 | **Sobreposição** | Executivo (value brief); PMO (entrega vs custo) |
 
