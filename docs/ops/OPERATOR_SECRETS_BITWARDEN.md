@@ -17,14 +17,14 @@
 
 ---
 
-## Free tier vs paid (verify current plans on [bitwarden.com](https://bitwarden.com/pricing/))
+## Free tier vs paid (verify current plans on [bitwarden.com](https://bitwarden.com/))
 
 **Free (personal)** is usually **enough** for a **solo** developer/operator to hold **all** project and homelab secrets: **unlimited passwords**, **sync**, **generator**, and **2FA on your Bitwarden account** (enable it).
 
 **Paid tiers** often add value when:
 
 - You want **TOTP codes inside the vault** next to each login (Premium-style feature — free users often use a **separate** authenticator app).
-- **Bitwarden Authenticator** (e.g. **iPhone**): scans **QR** codes for **OTP/TOTP** and can **sync** with your Bitwarden account alongside passwords—one ecosystem across **browser extension**, **desktop**, and **mobile**. Exact capabilities (sync, item linking) depend on **current** Bitwarden product docs and **your** plan; verify on [bitwarden.com](https://bitwarden.com/pricing/) and the Authenticator help pages.
+- **Bitwarden Authenticator** (e.g. **iPhone**): scans **QR** codes for **OTP/TOTP** and can **sync** with your Bitwarden account alongside passwords—one ecosystem across **browser extension**, **desktop**, and **mobile**. Exact capabilities (sync, item linking) depend on **current** Bitwarden product docs and **your** plan; verify on [bitwarden.com](https://bitwarden.com/) and the Authenticator help pages.
 - You need **encrypted file attachments** (license blobs, small key backups) beyond what notes allow.
 - You want **Families** / **Teams** / **Organizations** for **shared collections** (future collaborators or household).
 - You want **emergency access**, **advanced 2FA**, or **directory integration** at org scale.
@@ -39,7 +39,7 @@
 
 ## Typical setup:
 
-1. **Decide the billing owner** (one account creates or upgrades the org on [bitwarden.com](https://bitwarden.com/pricing/) — verify current plan names and limits).
+1. **Decide the billing owner** (one account creates or upgrades the org on [bitwarden.com](https://bitwarden.com/) — verify current plan names and limits).
 1. **Create the organization** in the web vault (**Admin console**): name it e.g. `Homelab` or `Lab-op`.
 1. **Invite members** by email → they **accept** and join with their existing Bitwarden account (or create one).
 1. **Create collections** (logical folders the org shares), e.g. `UniFi`, `SNMP`, `GitHub`, `Solar API`, `SSH jump`, `LAB-OP — hardware receipts` — **no secrets in the collection name** if it’s sensitive.

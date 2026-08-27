@@ -1,35 +1,41 @@
-# Data Boar Subscription Tiers
+# Data Boar subscription bands (canonical)
 
 **Português (Brasil):** [SUBSCRIPTION_TIERS.pt_BR.md](SUBSCRIPTION_TIERS.pt_BR.md)
 
-Data Boar follows an **open-core** model inspired by projects like [Bitwarden](https://bitwarden.com/pricing/) and [NetSpot](https://www.netspotapp.com/pt/netspotpro.html):
-a fully functional open core available to all, with commercial tiers that unlock advanced capabilities and commercial-use rights.
+This is the **canonical public description of product bands** (capability ladder). It is **not** a price list. The live site still says pricing is coming soon; amounts, discounts, volume/franchise quotes, and commercial program names stay in private commercial evaluation (`docs/private/`) until product and counsel freeze them.
 
-> **Note:** Exact pricing, availability dates, and feature assignments per tier are determined by the product team.
-> This page is a structural overview only. For current pricing, contact the maintainer or see the website (when available).
->
+**Code truth:** `Tier` + `FEATURE_TIER_MAP` + `_TIER_ORDER` in `core/licensing/tier_features.py`; JWT / lab string mapping in `core/licensing/runtime_feature_tier.py`. When those change, update **this** file in the same PR — do not add a fourth near-duplicate page.
+
+JWT claim mechanics: [LICENSING_SPEC.md](LICENSING_SPEC.md). Open-core policy and brand IP (no second ladder): [LICENSING_OPEN_CORE_AND_COMMERCIAL.md](LICENSING_OPEN_CORE_AND_COMMERCIAL.md). How to run: [USAGE.md](USAGE.md).
+
+## Two axes (do not collapse)
+
+| Axis | Question | What is public |
+| ---- | -------- | -------------- |
+| **Capability (band)** | What can this deployment do? | The six bands below. |
+| **Quantity (claims)** | How much concurrency / how many licensed sites? | Shipped JWT claims (`dbmax_workers`, `dbmax_deployments`). **Estate-size franchises** (logical active scope, not bytes-read-per-scan) remain **private evaluation** — inventory of estate **size** can still be a product feature without being a bill. Raising volume **must not** silently promote Pro → Pro+ / Enterprise. |
+
+Data Boar follows an **open-core** model: a fully functional open core, with commercial bands that unlock advanced capabilities and commercial-use rights. Open-core **policy** is in [LICENSING_OPEN_CORE_AND_COMMERCIAL.md](LICENSING_OPEN_CORE_AND_COMMERCIAL.md) — not restated here.
+
 > **Naming:** **Boar Std** (tier token `std`) is the Data Boar commercial entry band — it is **not** Oracle Database Standard Edition or any other vendor "Standard" SKU.
 
-## License split (open core vs commercial modules)
+## Six product bands (not seven)
 
-- **Core = open source (BSD 3-Clause, see `LICENSE`):** scanner engine, detectors, plugin interface, baseline CLI/API/dashboard, research material. **The core never closes — by definition.**
-- **Commercial modules = source-available (model):** corporate features (corporate connectors, custom RBAC, SIEM/RoPA push, deploy packs, partner architecture) stay **visible and auditable** in the public repository; **commercial production use requires a paid subscription**. The physical split and the commercial license text await maintainer ratification — see [LICENSE_FAQ.md](LICENSE_FAQ.md) and [TERMS_OF_USE.md](../TERMS_OF_USE.md).
+The commercial ladder is **six** additive bands. `_TIER_ORDER` ordinals: Community **0** → Std **1** → Pro **2** → Pro+ **3** → Enterprise **4** → Partner **5**.
 
-## Master principle: tier = capability, claim = quantity
+`Tier.OPEN` is **not** a customer-facing band. It is an **enforcement-off sentinel** (ordinal **99**, hardcoded bypass in `is_feature_available`) used for default **dev / CI / unlicensed** `licensing.mode: open`. Empty `dbtier` / lab `effective_tier` maps to that sentinel. Fail-closed enforced mode caps to **Community**, never to Open.
 
-- **TIER = CAPABILITY** — what your deployment can do (connectors, RBAC depth, push/export paths).
-- **CLAIM = QUANTITY** — how much (workers, deployments, rows); a signed JWT claim wins over the tier default and only bites in `licensing.mode: enforced`.
-- New bands exist only for a **capability jump** — never for a number alone.
+**Trial** is a JWT string (`trial`) that **maps to Pro** in `map_dbtier_string_to_tier` — not a seventh band.
 
-## Tier ladder (additive open-core model)
+Partner / white-label SKU strings (`partner`, `whitelabel`, `white_label`, `partner_custom`) map to enum **`partner`**. In `_TIER_ORDER`, Partner sits **above** Enterprise, so a Partner token currently receives **all** mapped feature keys (including Enterprise). White-label is an **alias of Partner**, not a separate enum.
 
 ```mermaid
 flowchart LR
-    C["Community (open · no license)<br/>FS + self-hosted SQL/NoSQL<br/>compressed · generic REST<br/>detectors · XLSX/HTML<br/>no RBAC · internal use"]
+    C["Community (floor)<br/>FS + self-hosted SQL/NoSQL<br/>compressed · generic REST<br/>detectors · XLSX/HTML<br/>no RBAC · internal use"]
     S["Std (+ Community)<br/>commercial delivery right<br/>support · courtesy wait off"]
     P["Pro (+ Std)<br/>corporate connectors<br/>OCR · PDF · scheduled<br/>RBAC: FIXED roles"]
     PP["Pro+ (+ Pro)<br/>RBAC: CUSTOM roles<br/>SARIF/SIEM push · RoPA<br/>deploy pack (1 lic / N fp)"]
-    E["Enterprise (+ Pro+)<br/>plugin/partner · CMDB · sink<br/>white-label · SSO/OIDC/LDAP<br/>RBAC: per-resource<br/>unlimited workers"]
+    E["Enterprise (+ Pro+)<br/>plugin/partner · CMDB · sink<br/>white-label · SSO SAML<br/>RBAC: per-resource<br/>unlimited workers"]
     PT["Partner / White-label<br/>(custom channel)<br/>multi-client delivery"]
     C --> S --> P --> PP --> E
     E -. channel .-> PT
@@ -50,67 +56,86 @@ flowchart TB
     E2 -. OEM/resell .-> PT2
 ```
 
-## Tier overview
+## Band overview
 
-| Tier | Intended audience | License token | Key differentiator |
+| Band | Intended audience | License token | Key differentiator |
 |---|---|---|---|
-| **Community** | Internal DPOs, researchers, students, individual use | Not required (open mode) | Full open-core functionality; no cost |
-| **Std** | Small teams buying commercial rights before full Pro connectors | Annual signed token | Commercial delivery right; support; **no courtesy upgrade wait** (Boar-Std — not Oracle DB Standard Edition) |
-| **Trial / POC** | Pre-sales evaluations, proof-of-concept | Time-limited signed token | Row-capped report; watermarked; converts to Std/Pro/Pro+ |
-| **Pro / Consultant** | Independent consultants, solo MSSPs, single-org buyers | Annual signed token | Corporate connectors; fixed RBAC roles |
+| **Community** | Internal DPOs, researchers, students, individual use | Not required (`licensing.mode: open`) | Full open-core functionality |
+| **Std** | Small teams buying commercial rights before full Pro connectors | Annual signed token | Commercial delivery right; support; **no courtesy upgrade wait** (Boar-Std — not Oracle DB Standard Edition). **No extra `FEATURE_TIER_MAP` keys** vs Community |
+| **Pro / Consultant** | Independent consultants, solo MSSPs, single-org buyers | Annual signed token | Corporate connectors; fixed RBAC roles. JWT `trial` maps here |
 | **Pro+** | Teams needing custom RBAC, SIEM/GRC integration, multi-footprint packs | Annual signed token (claim-driven) | Custom RBAC roles; SARIF/SIEM push; RoPA export; deploy pack |
-| **Enterprise** | Large organisations, regulated industries, OEM | Custom enterprise agreement | Plugin/partner arch + CMDB + sink + white-label + SSO/LDAP + per-resource RBAC |
-| **Partner** (custom) | System integrators, MSPs, multi-client resellers | Custom org agreement | Multi-client delivery; co-brand/white-label channel to many SMBs |
+| **Enterprise** | Large organisations, regulated industries, OEM | Custom enterprise agreement | Plugin/partner arch + CMDB + sink + white-label + `sso_saml` + per-resource RBAC |
+| **Partner** (custom) | System integrators, MSPs, multi-client resellers | Custom org agreement | Multi-client delivery; co-brand/white-label channel. Capability ≥ Enterprise in `_TIER_ORDER` |
 
-## Capability per band (the truth table)
+## JWT / lab aliases (code)
 
-| Capability | Community | Pro | Pro+ | Enterprise |
-|---|:---:|:---:|:---:|:---:|
-| FS + self-hosted SQL/NoSQL + generic REST | ✅ | ✅ | ✅ | ✅ |
-| Corporate connectors (PowerBI/SharePoint/…) | — | ✅ | ✅ | ✅ |
-| RBAC | — (global API key) | **fixed** roles | **custom** roles | **per-resource + SSO/LDAP** |
-| SARIF/SIEM push · RoPA export | — | — | ✅ | ✅ |
-| Plugin/partner arch · CMDB · sink | — | — | — | ✅ |
-| White-label · SSO/OIDC | — | — | — | ✅ |
-| Commercial delivery right | — | ✅ | ✅ | ✅ |
+Unknown strings fail closed to **Community** when mapped.
 
-### Detection depth and formats (licensed tiers)
+| Band | Typical `dbtier` / `effective_tier` strings |
+| ---- | ------------------------------------------- |
+| Community | `community`, `oss`, `open_core` |
+| Std | `std`, `standard`, `boar_std`, `boar-std` |
+| Pro | `pro`, `professional`, `consultant`; **`trial` maps here** |
+| Pro+ | `pro_plus`, `pro+`, `proplus` |
+| Enterprise | `enterprise`, `ent` |
+| Partner / white-label SKU | `partner`, `partner_custom`, `whitelabel`, `white_label` → enum **`partner`** |
+| Enforcement off (not a SKU) | empty string in open mode → `Tier.OPEN` |
+
+## Capability groups (`FEATURE_TIER_MAP`)
+
+A cell is **Yes** when that band’s enum is **≥** the feature’s minimum in `_TIER_ORDER`. **Std** has **no unique feature keys**.
+
+| Capability group | Community | Std | Pro | Pro+ | Ent | Partner / WL |
+| ---------------- | :-------: | :-: | :-: | :--: | :-: | :----------: |
+| Filesystem; self-hosted SQL/NoSQL; generic REST/API; core detectors; compressed files; content-type; synthetic testing; XLSX/HTML; REST API; dashBOARd; Docker/Ansible keys | Yes | Yes | Yes | Yes | Yes | Yes |
+| OCR; PDF report; compliance-grade report; scheduled scans; dashboard RBAC; API-key UI; maturity POC; notifications; SBOM; build-integrity; SQL findings sink; Pro governance lens; managed/corporate connectors | — | — | Yes | Yes | Yes | Yes |
+| `pro_prefilter_accel`; `rust_regex_stage` | — | — | — | Yes | Yes | Yes |
+| Custom PDF branding; Ent scheduler UI; Ent governance lens; multi-tenant; **SSO SAML**; PDF digital signature; scheduled PDF email; historical comparison; audit-log export; custom detectors; VCS connector; plugin/partner interface; partner provider driver; remediation plugin/manifest | — | — | — | — | Yes | Yes |
+
+**Not in `FEATURE_TIER_MAP` (do not invent):** JSONL report key; OIDC/LDAP SSO (named elsewhere as **intent**); dedicated-support SLAs.
+
+### Detection depth and formats (licensed bands)
 
 - **Detection depth:** ML/DL heuristics, confidence calibration, and advanced FN-reduction are **Pro or higher**.
 - **File formats:** legacy office suites (WordPerfect, Access, OneNote), binary string extraction, and **browser artefacts** are **Pro or higher** — surveillance-adjacent paths additionally require runtime operator acknowledgment per [TERMS_OF_USE.md §5](../TERMS_OF_USE.md).
 - **Reports/governance:** audit trail and compliance evidence mapping (GRC-ready) deepen at **Pro+ / Enterprise**.
 
-## Claims (quantity — claim-driven; tier default = fallback)
+## Claims (quantity — claim-driven; band default = fallback)
 
-Workers are, in practice, the number of **targets scanned concurrently**.
+Workers are, in practice, the number of **targets scanned concurrently**. Caps bite only in `licensing.mode: enforced`. These are **entitlement claims**, not prices.
 
-| Claim | Community | Pro | Pro+ | Enterprise |
-|---|:---:|:---:|:---:|:---:|
-| `dbmax_workers` (≈ concurrent targets) | 2 | 4 | **8** | **unlimited** |
-| `dbmax_deployments` | 1 | 2 | 5 (pack) | unlimited |
+| Claim | Community | Std | Pro | Pro+ | Enterprise |
+|---|:---:|:---:|:---:|:---:|:---:|
+| `dbmax_workers` (≈ concurrent targets) | 2 | 2 (same floor as Community unless a signed claim raises it) | 4 | **8** (issued tokens carry the claim) | **unlimited** |
+| `dbmax_deployments` | 1 | (commercial right; site count follows the signed claim / contract) | 2 | 5 (pack) | unlimited |
 
-- Unlimited workers = **Enterprise only** (the ceiling is the Enterprise hook).
-- The Pro+ **deploy pack** (1 license / N fingerprints) is an **admin convenience** — one license and one invoice for N footprints, priced **~linearly**; it is **not** a whale discount.
-- Ratified ladder (2026-06-11) — runtime defaults in `core/licensing/guard.py`; claims in [LICENSING_SPEC.md](LICENSING_SPEC.md).
+- Unlimited workers = **Enterprise** entitlement (Partner follows `_TIER_ORDER` / contract).
+- The Pro+ **deploy pack** (1 license / N fingerprints) is **admin convenience** — one license for N footprints — **not** a volume discount schedule.
+- Runtime defaults: `core/licensing/guard.py`. Claim names: [LICENSING_SPEC.md](LICENSING_SPEC.md). `dbmax_targets` remains a planned claim.
 
-## What a subscription includes
+## License split (open core vs commercial modules)
+
+- **Core = open source (BSD 3-Clause, see `LICENSE`):** scanner engine, detectors, plugin interface, baseline CLI/API/dashboard, research material. **The core never closes — by definition.**
+- **Commercial modules = source-available (model):** corporate features stay **visible and auditable** in the public repository; **commercial production use requires a paid subscription**. Physical split and commercial license text await maintainer ratification — see [LICENSE_FAQ.md](LICENSE_FAQ.md) and [TERMS_OF_USE.md](../TERMS_OF_USE.md).
+
+## What a paid subscription includes
 
 A paid subscription is **not just feature gates**. It includes:
 
-- **Standard support** channel (SLA depth grows with the tier).
+- **Standard support** channel (SLA depth grows with the band).
 - **Configuration assistance** — getting targets, connectors, and scan profiles right for your environment.
 - **Productized customization** — tailoring within the product surface (profiles, report shaping, connector configuration) as packaged services, distinct from bespoke professional services.
 
 ## Enforcement model
 
-Tiers are enforced via **signed Ed25519 JWT licence tokens** (see [`LICENSING_SPEC.md`](LICENSING_SPEC.md)).
-The open-core Community tier runs without a token (`licensing.mode: open`).
-Claims only bite in `licensing.mode: enforced`; a signed claim wins over the tier default.
+Bands are enforced via **signed Ed25519 JWT licence tokens** (see [LICENSING_SPEC.md](LICENSING_SPEC.md)).
+Community open-core runs without a token (`licensing.mode: open` → Open sentinel, not a SKU).
+Claims only bite in `licensing.mode: enforced`; a signed claim wins over the band default.
 
 ## Contact
 
-To evaluate a Trial or enquire about Pro/Pro+/Partner/Enterprise pricing, open an issue or contact the maintainer directly.
+**contact@databoar.com.br** or a GitHub issue. This page is not a quote and does not publish amounts.
 
 ---
 
-*See also: [`LICENSE_FAQ.md`](LICENSE_FAQ.md) for the licensing FAQ, [`LICENSING_OPEN_CORE_AND_COMMERCIAL.md`](LICENSING_OPEN_CORE_AND_COMMERCIAL.md) for the open-core policy and brand IP inventory, and [`TERMS_OF_USE.md`](../TERMS_OF_USE.md) for acceptable use.*
+*See also: [LICENSE_FAQ.md](LICENSE_FAQ.md), [LICENSING_OPEN_CORE_AND_COMMERCIAL.md](LICENSING_OPEN_CORE_AND_COMMERCIAL.md), [TERMS_OF_USE.md](../TERMS_OF_USE.md).*

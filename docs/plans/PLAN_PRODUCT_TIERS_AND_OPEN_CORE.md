@@ -9,6 +9,8 @@
 **Priority:** [H2][U1] — near-term before partner onboarding
 **Related:** `docs/LICENSING_OPEN_CORE_AND_COMMERCIAL.md`, `docs/LICENSING_SPEC.md`, `docs/plans/PLANS_TODO.md`
 
+> **Live ladder (code + canonical doc):** six product bands Community → Std → Pro → Pro+ → Enterprise → Partner in [SUBSCRIPTION_TIERS.md](../SUBSCRIPTION_TIERS.md) and `core/licensing/tier_features.py`. `Tier.OPEN` is enforcement-off, not a SKU. The 4+1 table below is **historical planning** and must not be copied as the public ladder.
+
 > This plan defines **which capabilities belong to each tier** of the Data Boar product.
 > Final pricing, contract terms, and JWT claim enforcement require legal review first.
 > The feature matrix here drives product decisions and must be kept in sync with

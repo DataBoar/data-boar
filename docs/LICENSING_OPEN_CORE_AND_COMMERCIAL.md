@@ -55,32 +55,22 @@ With **no enforcement** (default), the application runs in **open** mode: no lic
 1. Draft a **commercial / source-available** license for paid modules (or adapt a vetted template).
 1. Add **NOTICE** / **THIRD_PARTY** files if you redistribute cryptography or other stacks under varied licenses.
 
-## Commercial subscription tiers: Pro vs Enterprise (working model)
+## Commercial subscription bands (working model)
 
-**Status:** Working model for **product and sales conversations** — **not** final contract language. **Pricing is undecided.** Tier names (`Pro`, `Enterprise`, `Partner`) may shift; **JWT claims and runtime gates** in [LICENSING_SPEC.md](LICENSING_SPEC.md) are not fully implemented yet. The **feature-by-feature matrix** lives in the maintainer plan `docs/plans/PLAN_PRODUCT_TIERS_AND_OPEN_CORE.md` (plain-text path — internal planning, not a buyer-facing link target).
+**Canonical ladder (six product bands; Open is not a SKU):** [SUBSCRIPTION_TIERS.md](SUBSCRIPTION_TIERS.md). Do not restate the worker/capability tables here.
 
-**Why paid tiers at all:** The **open core** is already capable (scan engine, dashboard, baseline connectors, compliance samples, optional jurisdiction hints, and more). **Subscription** is for **corporate-grade packaging**: entitlement clarity, support and liability boundaries, premium connector and detection packs as they ship, and governance features large buyers expect. The split below is **what to reserve for paid SKUs** vs what remains **community trust and adoption** in the public tree.
+**Status:** Working model for **product and sales conversations** — **not** final contract language. **Amounts are not published in this repository.** JWT claims: [LICENSING_SPEC.md](LICENSING_SPEC.md). The maintainer feature-matrix plan remains `docs/plans/PLAN_PRODUCT_TIERS_AND_OPEN_CORE.md` (plain-text path — internal; live runtime map is `FEATURE_TIER_MAP`).
+
+**Why paid bands at all:** The **open core** is already capable. **Subscription** is for **corporate-grade packaging**: entitlement clarity, support and liability boundaries, premium connector and detection packs as they ship, and governance features large buyers expect.
 
 ### Open core (no subscription required)
 
 - **Intent:** Full-featured **self-host** for transparency, research, and adoption; same codebase contributors and CI exercise.
-- **Boundary:** Stays aligned with **public** `LICENSE` (today BSD 3-Clause). Commercial enforcement **off** (`licensing.mode: open`) unless the operator opts in.
+- **Boundary:** Stays aligned with **public** `LICENSE` (today BSD 3-Clause). Commercial enforcement **off** (`licensing.mode: open` → `Tier.OPEN` sentinel) unless the operator opts in.
 
-### Scale and concurrency (working model — workers, targets, premium ingredients)
+### Scale and concurrency
 
-**Status:** Worker caps are **ratified (2026-06-11, #853) and implemented in `enforced` mode** (#551 — `dbmax_workers` claim + tier defaults in `core/licensing/guard.py`). **Workers ≈ concurrent TARGETS** scanned in parallel — that is the buyer-facing framing. Target-count ceilings (`dbmax_targets`) remain a **policy target**; finalize with product + counsel.
-
-| Tier | Workers (≈ concurrent targets scanned) | Targets (configured targets per session or deployment envelope) | Premium “data soup” ingredients |
-| ---- | ----------------------------------------------- | ---------------------------------------------------------------- | -------------------------------- |
-| **Open core / Community** | **2** (ratified) | **Capped but generous** (exact ceiling TBD — e.g. large enough for real pilots, not unlimited fleet-wide inventory) | Full **public** feature set today; when gated features appear, open core stays on the **baseline** pack unless you explicitly widen for community experiments. |
-| **Pro** | **4** (ratified) | **Higher cap** than open | **Curated** premium connectors/heuristics — **not** every high-cost ingredient (see Enterprise). |
-| **Pro+** | **8** (ratified — claim-driven: issued tokens carry `dbmax_workers: 8`) | **Higher cap** than Pro | Pro **plus** custom RBAC roles, push SARIF/SIEM, RoPA export, deployment pack — see [SUBSCRIPTION_TIERS.md](SUBSCRIPTION_TIERS.md). |
-| **Enterprise** | **Unlimited** in entitlement (actual throughput = **host CPU/RAM/IO** and operator tuning) | **Unlimited** in entitlement (same practical limits) | **Widest** entitlement: ingredients that are **expensive, risky, or niche** may be **Enterprise-only** (e.g. certain network-adjacent probes, full enterprise connector tier, white-label report paths) — **exact list TBD**; align with `docs/plans/PLAN_PRODUCT_TIERS_AND_OPEN_CORE.md`. |
-| **Partner** | Typically **Pro- or Enterprise-like** envelope per contract | **Multi-customer** metering may use **separate** caps — not the same SKU problem as single-tenant open core | Co-brand / programme rules in contract, not only worker counts. |
-
-**Why cap open core at all:** Keeps the **free** tier honest (not a stealth unlimited batch product), reduces **abuse** as a costless parallel loader, and preserves a **clear upsell** for organisations that need fleet-scale scans. Forks under the license may still run uncapped until they adopt **your** builds with enforcement — position with counsel if you tighten **AGPL** or **trademark** posture later.
-
-**Implementation pointer:** `dbmax_workers` is **implemented** (#551 — enforced-mode clamp, fail-soft, audited); `dbmax_targets` remains a future signed claim — see [LICENSING_SPEC.md](LICENSING_SPEC.md); `LicenseGuard` + config resolution when `licensing.mode: enforced`.
+Worker and deployment **claim** defaults live in [SUBSCRIPTION_TIERS.md](SUBSCRIPTION_TIERS.md) (`dbmax_workers` implemented in `core/licensing/guard.py`; `dbmax_targets` still planned). **Why cap Community at all:** keeps the free band honest, reduces abuse as a costless parallel loader, and preserves a clear capability upsell. Forks under the license may still run uncapped until they adopt **your** builds with enforcement.
 
 ### Deployments, copies, and sites (Pro vs Enterprise)
 
@@ -88,10 +78,10 @@ With **no enforcement** (default), the application runs in **open** mode: no lic
 
 | Tier | Licensed **copies** / **sites** (production use) | Typical picture |
 | ---- | ----------------------------------------------- | --------------- |
-| **Pro** | **Two** deployments per license (operator-ratified 2026-06-11 — `DEFAULT_PRO_DEPLOYMENTS = 2`): the typical picture is **one on-prem footprint + one cloud/branch** for the **same organisation context**, **or** a **consultant’s laptop + one engagement server**. Not a fleet-wide entitlement. Same SKU story: **one organisation context** or **one consultant**; **Pro+** packs extend to **5** (admin convenience, ~linear pricing). |
-| **Enterprise** | **More than one** authorized deployment per license (and a **higher** price). Packaging examples (mix and match in contracts): **bundles of five** sites (branches, data centres, or **named** cloud tenants), **partial** coverage (some branches or some tenants — not the whole estate), or **unlimited** deployments for global accounts (still subject to **support** and **abuse** guardrails in the contract). Realistic driver: organisations with **many** sites and **multiple** cloud directories/tenants need **flexible** counts without buying a full seat per VM. |
+| **Pro** | **Two** deployments per license (operator-ratified 2026-06-11 — `DEFAULT_PRO_DEPLOYMENTS = 2`): the typical picture is **one on-prem footprint + one cloud/branch** for the **same organisation context**, **or** a **consultant’s laptop + one engagement server**. Not a fleet-wide entitlement. Same SKU story: **one organisation context** or **one consultant**; **Pro+** packs extend to **5** (admin convenience, not a published discount table). |
+| **Enterprise** | **More than one** authorized deployment per license . Packaging examples (mix and match in contracts): **bundles of five** sites (branches, data centres, or **named** cloud tenants), **partial** coverage (some branches or some tenants — not the whole estate), or **unlimited** deployments for global accounts (still subject to **support** and **abuse** guardrails in the contract). Realistic driver: organisations with **many** sites and **multiple** cloud directories/tenants need **flexible** counts without buying a full seat per VM. |
 
-**Federated groups (branch silos, shared CISO, local P&L):** In **distributed** operators (e.g. **ports, terminals, logistics, or multi-country industrials**), each **site** is often its own **knowledge, data, and systems silo**: local compliance and regulation, **local** budget and capex/opex, local management priorities—while **group** leadership sets **common** security tooling, standards, and strategic vendor **volume** deals (EDR, vuln platforms, productivity suites, firewall baselines, hardware norms). That pattern **does not** map to **one** Pro license for the **whole** group: **enterprise-wide** coverage, governance, and deployment counts are **Enterprise** SKUs. It **does** map to **one or more Pro entitlements per site** when a **single location** buys **separate** production footprints—e.g. **one Pro** for a **cloud** tenant and **another Pro** for **on-premises** at **that** site—without requiring HQ mandate or peer branches to mirror the purchase. **Yes, that is coherent** with Pro = **per-deployment** entitlement; **group-wide** roll-out and pricing belong in **Enterprise** contracts.
+**Federated groups (branch silos, shared CISO, local P&L):** In **distributed** operators (e.g. **ports, terminals, logistics, or multi-country industrials**), each **site** is often its own **knowledge, data, and systems silo**: local compliance and regulation, **local** budget and capex/opex, local management priorities—while **group** leadership sets **common** security tooling, standards, and strategic vendor **volume** deals (EDR, vuln platforms, productivity suites, firewall baselines, hardware norms). That pattern **does not** map to **one** Pro license for the **whole** group: **enterprise-wide** coverage, governance, and deployment counts are **Enterprise** SKUs. It **does** map to **one or more Pro entitlements per site** when a **single location** buys **separate** production footprints—e.g. **one Pro** for a **cloud** tenant and **another Pro** for **on-premises** at **that** site—without requiring HQ mandate or peer branches to mirror the purchase. **Yes, that is coherent** with Pro = **per-deployment** entitlement; **group-wide** roll-out belongs in **Enterprise** contracts.
 
 **Control via JWT (and friends):** A single **`dbmfp`** already pins **one** host fingerprint. For **Pro**, that maps naturally to **one** slot. For **Enterprise**, you need a **policy + data structure** that scales:
 
@@ -108,7 +98,7 @@ With **no enforcement** (default), the application runs in **open** mode: no lic
 
 - **Commercial entitlement**, **standard support** channel (SLA lighter than Enterprise), **configuration assistance**, and **productized customization** (profiles, report shaping, connector configuration as packaged services) — a subscription is **not just feature gates**; see [SUBSCRIPTION_TIERS.md](SUBSCRIPTION_TIERS.md) §What a subscription includes.
 - **Two licensed production deployments** per license (operator-ratified 2026-06-11 — e.g. on-prem + 1 cloud/branch; see [Deployments, copies, and sites](#deployments-copies-and-sites-pro-vs-enterprise)) — not multi-site fleet rights. The **same** legal entity may hold **multiple Pro SKUs** for **different** footprints (e.g. **cloud vs on-prem** at **one** site); that is still **not** a substitute for **group-wide** Enterprise where the **whole** organisation needs coverage.
-- **Higher worker and target ceilings** than open core — but **not** necessarily “everything”: some **premium ingredients** may be **Enterprise-only** if cost-to-serve or risk is too high for Pro (see table above).
+- **Higher worker and target ceilings** than open core — but **not** necessarily “everything”: some **premium ingredients** may be **Enterprise-only** if cost-to-serve or risk is too high for Pro (see [SUBSCRIPTION_TIERS.md](SUBSCRIPTION_TIERS.md)).
 - **Premium detection and format coverage** where cost-to-serve is high: e.g. full ML/DL-assisted stacks where gated, stronger content-type / “cloaking” surfaces, legacy or niche formats — aligned with the internal feature matrix.
 - **Machine-bound license** and **named deployment** limits as in [LICENSING_SPEC.md](LICENSING_SPEC.md) (`dbmfp`, trial caps).
 - **Priority** triage of issues — not the same as 24/7 or named CSM (those lean Enterprise).
@@ -121,8 +111,8 @@ With **no enforcement** (default), the application runs in **open** mode: no lic
 
 **Reserve for Enterprise-class SKUs (illustrative):**
 
-- **Unlimited workers and targets** in **entitlement** (subject to hardware — see [Scale and concurrency](#scale-and-concurrency-working-model--workers-targets-premium-ingredients)); optional **Enterprise-only** premium ingredients not offered on Pro.
-- **Multiple authorized deployments per license** (sites / tenants / branches) — **packs**, **partial** estate coverage, or **unlimited** — priced accordingly; see [Deployments, copies, and sites](#deployments-copies-and-sites-pro-vs-enterprise).
+- **Unlimited workers and targets** in **entitlement** (subject to hardware — see [Scale and concurrency](#scale-and-concurrency)); optional **Enterprise-only** premium ingredients not offered on Pro.
+- **Multiple authorized deployments per license** (sites / tenants / branches) — **packs**, **partial** estate coverage, or **unlimited** — contract packaging only; see [Deployments, copies, and sites](#deployments-copies-and-sites-pro-vs-enterprise).
 - **Everything in Pro** that your contract defines, plus **stronger commercial terms**: SLA, **dedicated** or named support where offered, indemnities and liability caps per counsel.
 - **Governance and identity:** e.g. SSO/SAML, report **RBAC**, immutable audit trails, evidence exports aimed at **GRC / audit** workflows — as the product matures.
 - **Broadest connector and format entitlement:** enterprise SaaS (e.g. object storage, M365/Graph at scale, HR/ERP paths), optional **network-oriented** capabilities, **white-label** or strict **co-brand** rules — per [Brand, narrative, and experience IP](#brand-narrative-and-experience-ip-inventory-for-counsel-and-commercial-policy).
@@ -130,30 +120,31 @@ With **no enforcement** (default), the application runs in **open** mode: no lic
 
 ### Partner (often a separate SKU)
 
-**Consulting / MSP / reseller** programmes — **multi-customer** use, co-brand vs white-label, and **different cost-to-serve** — are **not** the same problem as single-tenant Pro or global Enterprise. Treat **Partner** as its own entitlement family in contracts; technically it may map to claims such as `dbtier: partner` (see [LICENSING_SPEC.md](LICENSING_SPEC.md) future extensions). **Do not** collapse Partner into “just Pro with more seats” without pricing and legal review.
+**Consulting / MSP / reseller** programmes — **multi-customer** use, co-brand vs white-label, and **different cost-to-serve** — are **not** the same problem as single-tenant Pro or global Enterprise. Treat **Partner** as its own entitlement family in contracts; technically it may map to claims such as `dbtier: partner` (see [LICENSING_SPEC.md](LICENSING_SPEC.md) future extensions). **Do not** collapse Partner into “just Pro with more seats” without legal review.
 
-### Pricing and enforcement
+### Amounts and enforcement
 
-- **Pricing:** Not fixed in this repository; when you publish SKUs, do it in **commercial** materials after counsel review.
+- **Amounts:** Not published in this repository; commercial materials wait for counsel review. The public site does not list prices.
 - **Enforcement:** When implemented, **signed JWT** claims (e.g. `dbtier`, optional `dbmax_workers`, `dbmax_targets`, `dbmax_deployments`, `dbfeatures`) should match what was sold — see [LICENSING_SPEC.md](LICENSING_SPEC.md) §Future extensions and operational policy sketch.
 
 ## Future product tiers: partners vs end customers (planning reminder)
 
-**Reminder for a later licensing pass** (IP protection, commerciality, profitability): consider **multiple commercial SKUs** with different **objectives, entitlements, and price points**—not unlike how database vendors segment **Express**, **Standard**, **Enterprise**, **Enterprise + options**, **RAC / add-ons**, etc. **Pro vs Enterprise boundaries** for positioning are spelled out in [Commercial subscription tiers: Pro vs Enterprise (working model)](#commercial-subscription-tiers-pro-vs-enterprise-working-model) above.
+**Reminder for a later licensing pass** (IP protection, commerciality, profitability): consider **multiple commercial SKUs** with different **objectives and entitlements**—not unlike how database vendors segment **Express**, **Standard**, **Enterprise**, **Enterprise + options**, **RAC / add-ons**, etc. **Pro vs Enterprise boundaries** for positioning are spelled out in [Commercial subscription bands (working model)](#commercial-subscription-bands-working-model) above. **Amounts stay private until frozen.**
 
 **Use case to preserve explicitly:** **Consulting / integration partners** who hold a **partner-grade** (or **pro** / **enterprise**—names TBD) subscription and use Data Boar to deliver audits or implementations for **their customers** (third-party end clients), under **their** contract and entitlement, as distinct from:
 
 - A **regular commercial** SKU aimed at **organisations that consume the product directly** (internal DPO / IT), and
 - Optional **trial / POC** or **academic** postures you already separate in policy.
 
-**Why it matters:** Partner-led delivery changes **risk, support, liability, metering, and brand** expectations. Pricing should reflect **different cost-to-serve** (e.g. multi-customer use, higher support load, possible white-label or co-brand rules). **Final tier names, contract text, and technical enforcement** require **legal + product** decisions before implementation.
+**Why it matters:** Partner-led delivery changes **risk, support, liability, metering, and brand** expectations. Cost-to-serve differs (multi-customer use, support load, white-label or co-brand rules). **Final band names, contract text, and technical enforcement** require **legal + product** decisions before implementation. Amounts are not listed in this repository.
 
 **Technical direction (later):** encode tier/program in signed tokens (see [LICENSING_SPEC.md](LICENSING_SPEC.md) “Future extensions”) and enforce in `LicenseGuard` / reporting only after claims and contracts are fixed.
 
 ## Related documents
 
+- [SUBSCRIPTION_TIERS.md](SUBSCRIPTION_TIERS.md) — **canonical six-band ladder** (capability + shipped quantity claims; not a price list).
 - [LICENSING_SPEC.md](LICENSING_SPEC.md) — token format, states, machine binding, revocation.
-- docs/plans/PLAN_PRODUCT_TIERS_AND_OPEN_CORE.md — **feature matrix per tier** (Community / Pro / Partner / Enterprise); enforcement roadmap; what to protect as IP. (internal maintainer file — see docs/README.md Internal section)
+- docs/plans/PLAN_PRODUCT_TIERS_AND_OPEN_CORE.md — maintainer feature-matrix **plan** (stale 4+1 sketch vs live six bands — follow SUBSCRIPTION_TIERS + `FEATURE_TIER_MAP`). (internal — see docs/README.md Internal section)
 - [RELEASE_INTEGRITY.md](RELEASE_INTEGRITY.md) — optional signed release manifest.
 - [HOSTING_AND_WEBSITE_OPTIONS.md](HOSTING_AND_WEBSITE_OPTIONS.md) — private repos and public site options.
 - [ACADEMIC_USE_AND_THESIS.md](ACADEMIC_USE_AND_THESIS.md) ([pt-BR](ACADEMIC_USE_AND_THESIS.pt_BR.md)) — thesis / dissertation use of public docs and code (not legal advice).

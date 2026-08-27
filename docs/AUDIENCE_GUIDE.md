@@ -65,7 +65,7 @@ Navigation map for **thirteen** reader types. Full doc index: [README.md](README
 | | |
 | - | - |
 | **Entry** | `pitch/PITCH_CFO.md` *(pitch planned — #683)* |
-| **Trail** | [DECISION_MAKER_VALUE_BRIEF.md](DECISION_MAKER_VALUE_BRIEF.md) → [LICENSING_OPEN_CORE_AND_COMMERCIAL.md](LICENSING_OPEN_CORE_AND_COMMERCIAL.md) → [releases/](releases/) |
+| **Trail** | [DECISION_MAKER_VALUE_BRIEF.md](DECISION_MAKER_VALUE_BRIEF.md) → [SUBSCRIPTION_TIERS.md](SUBSCRIPTION_TIERS.md) → [LICENSING_OPEN_CORE_AND_COMMERCIAL.md](LICENSING_OPEN_CORE_AND_COMMERCIAL.md) → [releases/](releases/) |
 | **Skip** | [TECH_GUIDE.md](TECH_GUIDE.md), technical compliance frameworks |
 | **Overlap** | Executive (value brief); PMO (delivery vs cost) |
 
