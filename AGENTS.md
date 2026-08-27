@@ -7,6 +7,7 @@ Use this table to jump to the **canonical bullet** or **rule** for each theme. D
 | Theme | Where to look first |
 | ----- | ------------------- |
 | **Cold start (fresh agent, token-aware)** — ladder + task router before deep-reading this file | **`docs/ops/OPERATOR_AGENT_COLD_START_LADDER.md`** · hub map: **`docs/hubs/INDEX.md`** |
+| **Ops docs index / guidelines / shorthands** | **`docs/hubs/OPS_HUB.md`** · **`docs/hubs/GUIDELINES_AND_GUARDRAILS_HUB.md`** · **`docs/hubs/SHORTHANDS_HUB.md`** |
 | **Ecosystem map (bestiary, private repos, vault CHIRP)** — off-band onboarding; Cursor = executor on `data-boar` only | **`docs/ops/CURSOR_ECOSYSTEM_ONBOARDING.md`** · vault **`~/Projects/dev/obsidian-vault/databoar-commercial/_NORTE_mapa-do-todo-e-sequencia.md`** (operator-local) |
 | **`.cursor/` / `.vscode/` / `.github/` / caches** — tracked vs gitignored | **`docs/ops/CURSOR_AND_EDITOR_ARTIFACTS.md`** |
 | **Cursor rules — phase 2 situationalization (Tier A/B/C, reproducible ritual)** | **`docs/ops/CURSOR_RULES_PHASE2_SITUATIONALIZATION.md`** ([pt-BR](docs/ops/CURSOR_RULES_PHASE2_SITUATIONALIZATION.pt_BR.md)) |

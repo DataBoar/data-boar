@@ -9,7 +9,7 @@ Oferecer **um caminho ordenado** para um **chat novo** (sem memória do transcri
 ## Ordem de leitura (profundidade conforme a tarefa)
 
 1. **Este arquivo** — router de tarefas + sete regras inegociáveis abaixo.
-2. **[`AGENTS.md`](../../AGENTS.md)** — tabela Quick index (tema → primeiro doc); os bullets longos são o contrato.
+2. **[`docs/hubs/INDEX.pt_BR.md`](../hubs/INDEX.pt_BR.md)** ([EN](../hubs/INDEX.md)) — mapa dos hubs. Catálogo completo de **`docs/ops/`**: **[`OPS_HUB.pt_BR.md`](../hubs/OPS_HUB.pt_BR.md)**. Contratos de comportamento: **[`GUIDELINES_AND_GUARDRAILS_HUB.pt_BR.md`](../hubs/GUIDELINES_AND_GUARDRAILS_HUB.pt_BR.md)**. Depois o [`AGENTS.md`](../../AGENTS.md) (Quick index).
 3. **[`CURSOR_AGENT_POLICY_HUB.pt_BR.md`](CURSOR_AGENT_POLICY_HUB.pt_BR.md)** — os mesmos temas com caminhos **clicáveis** para `.cursor/rules`, `.cursor/skills` e `docs/ops/`.
 4. **[`TOKEN_AWARE_SCRIPTS_HUB.pt_BR.md`](TOKEN_AWARE_SCRIPTS_HUB.pt_BR.md)** — que **`scripts/*.ps1`** ligam a keywords, skills e runbooks.
 5. **Só lab / completão:** **[`LAB_COMPLETAO_FRESH_AGENT_BRIEF.pt_BR.md`](LAB_COMPLETAO_FRESH_AGENT_BRIEF.pt_BR.md)** → **[`LAB_COMPLETAO_RUNBOOK.pt_BR.md`](LAB_COMPLETAO_RUNBOOK.pt_BR.md)** → **[`LAB_OP_HOST_PERSONAS.pt_BR.md`](LAB_OP_HOST_PERSONAS.pt_BR.md)** (ENT / PRO / edge / ponte + knobs Ansible).

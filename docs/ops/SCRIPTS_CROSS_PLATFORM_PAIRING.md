@@ -20,6 +20,7 @@ Some **developer gates** and **thin wrappers** exist in **two forms**: **PowerSh
 | Intent | Windows | Linux / macOS |
 | ------ | ------- | ------------- |
 | Full gate (gatekeeper + plans + pre-commit + pytest + security scans) | `scripts/check-all.ps1` (`-Enforced` = + Semgrep) | `scripts/check-all.sh` (`--enforced` = + Semgrep) |
+| Audit `scripts/*.ps1` vs `.sh` + pairing doc (report only; no empty twins) | `scripts/check-cross-platform-gaps.ps1` | `scripts/check-cross-platform-gaps.sh` |
 | Security scans only (Bandit + Zizmor; fail-collect) | `scripts/check-all-security-scans.ps1` | `scripts/check-all-security-scans.sh` |
 | Lint / hooks only | `scripts/lint-only.ps1` | `scripts/lint-only.sh` |
 | Pytest subset (`-Path` / `-Keyword`) | `scripts/quick-test.ps1` | `scripts/quick-test.sh` |

@@ -9,7 +9,7 @@ Give a **single ordered path** so a **fresh chat** (no transcript memory) can st
 ## Read in this order (pick depth by task)
 
 1. **This file** — task router + seven non-negotiables below.
-2. **[`docs/hubs/INDEX.md`](../hubs/INDEX.md)** ([pt-BR](../hubs/INDEX.pt_BR.md)) — map of all navigation hubs (two hops to any area). For **which Cursor rule or skill applies**, open **[`RULES_AND_SKILLS_HUB.md`](../hubs/RULES_AND_SKILLS_HUB.md)**.
+2. **[`docs/hubs/INDEX.md`](../hubs/INDEX.md)** ([pt-BR](../hubs/INDEX.pt_BR.md)) — map of all navigation hubs (two hops to any area). For **which Cursor rule or skill applies**, open **[`RULES_AND_SKILLS_HUB.md`](../hubs/RULES_AND_SKILLS_HUB.md)**. Full **`docs/ops/`** catalogue: **[`OPS_HUB.md`](../hubs/OPS_HUB.md)**. Behaviour contracts: **[`GUIDELINES_AND_GUARDRAILS_HUB.md`](../hubs/GUIDELINES_AND_GUARDRAILS_HUB.md)**.
 3. **[`AGENTS.md`](../../AGENTS.md)** — Quick index table (theme → first doc); long bullets are the contract.
 4. **[`CURSOR_AGENT_POLICY_HUB.md`](CURSOR_AGENT_POLICY_HUB.md)** — same themes with **clickable** paths into `.cursor/rules`, `.cursor/skills`, and `docs/ops/`.
 5. **[`TOKEN_AWARE_SCRIPTS_HUB.md`](TOKEN_AWARE_SCRIPTS_HUB.md)** — which **`scripts/*.ps1`** map to keywords, skills, and runbooks.
@@ -32,7 +32,7 @@ Give a **single ordered path** so a **fresh chat** (no transcript memory) can st
 | **Study cadence recap / nudges** | **`study-check`** · **`study-cadence-reminders.mdc`** (**situational** — portfolio/sprints/operator-manual globs or **`@study-cadence-reminders.mdc`**) · § *Token → rule latch (`study-check`)* below |
 | **Which script / wrapper for this?** (avoid reinventing long shell) | **`repo-scripts-wrapper-ritual.mdc`** · **`TOKEN_AWARE_SCRIPTS_HUB`** · **`check-all-gate.mdc`** · **`token-aware-automation`** skill |
 | **Vendor web LLM vs validated lab orchestration / *as-is* scripts** | **`LLM_AGENT_EDITING_CAUTION.md`** ([pt-BR](LLM_AGENT_EDITING_CAUTION.pt_BR.md)) — hype vs session limits; full evidence index under **`docs/private/ops/`** (gitignored) |
-| **Docs / hubs / MAP** | **`doc-hubs-plans-sync`** skill · **`docs/README.md`** *Internal and reference* · paired **`*.pt_BR.md`** |
+| **Docs / hubs / MAP** | **`doc-hubs-plans-sync`** skill · **`docs/README.md`** *Internal and reference* · paired **`*.pt_BR.md`** · **[`OPS_HUB.md`](../hubs/OPS_HUB.md)** for the full ops catalogue |
 | **Lab smoke / completão** | **`COMPLETAO_OPERATOR_PROMPT_LIBRARY`** ( **`completao`** + **`tier:…`** ) · **`LAB_COMPLETAO_FRESH_AGENT_BRIEF`** · **`lab-completao-workflow.mdc`** · **`LAB_COMPLETAO_RUNBOOK`** · **`scripts/completao-chat-starter.ps1`** |
 | **Lab lessons archive (public)** | **`lab-lessons`** · **`lab-lessons-learned-archive.mdc`** · **`docs/ops/LAB_LESSONS_LEARNED.md`** · **`docs/ops/lab_lessons_learned/`** · [ADR 0042](../adr/ADR-0042-lab-lessons-learned-archive-contract.md) |
 | **Ansible / Podman / personas** | **`LAB_OP_HOST_PERSONAS`** · **`ops/automation/ansible/README.md`** |

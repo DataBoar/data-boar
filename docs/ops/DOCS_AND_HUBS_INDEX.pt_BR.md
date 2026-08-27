@@ -10,7 +10,7 @@ As tabelas completas (paths e one-liners) estao no arquivo em **ingles** acima �
 
 - **Planejamento e priorizacao** — `PLANS_HUB`, `PLANS_TODO`, hierarquia PMO, eixos, primers.
 - **Decisoes arquiteturais** — `docs/adr/README.md`, `INVENTORY.txt`.
-- **Agentes, politicas e scripts** — `RULES_AND_SKILLS_HUB`, `CURSOR_AGENT_POLICY_HUB`, cold-start ladder, `TOKEN_AWARE_SCRIPTS_HUB`, `AGENTS.md`.
+- **Agentes, politicas e scripts** — `RULES_AND_SKILLS_HUB`, `OPS_HUB`, `GUIDELINES_AND_GUARDRAILS_HUB`, `SHORTHANDS_HUB`, `CURSOR_AGENT_POLICY_HUB`, cold-start ladder, `TOKEN_AWARE_SCRIPTS_HUB`, `AGENTS.md`.
 - **Navegacao transversal** — `docs/hubs/INDEX.md`, hub educacional, `docs/README.md`, `MAP.md`.
 - **Integridade e release** — `INTEGRITY_HUB`, `RELEASE_INTEGRITY`.
 

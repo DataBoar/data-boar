@@ -42,6 +42,9 @@
 | --- | ---------------- | ----- |
 | Cursor policy hub | `docs/ops/CURSOR_AGENT_POLICY_HUB.md` | Regras + skills |
 | Hub de regras e skills | `docs/hubs/RULES_AND_SKILLS_HUB.md` | Todas as rules `.mdc` + skills (gerado) |
+| Hub de ops | `docs/hubs/OPS_HUB.md` | Índice gerado de todo Markdown rastreado em `docs/ops/` |
+| Guidelines e guardrails | `docs/hubs/GUIDELINES_AND_GUARDRAILS_HUB.md` | Regras duras, guidelines, Safe-Hold (só índice) |
+| Shorthands e wrappers | `docs/hubs/SHORTHANDS_HUB.md` | Shorthands de lab/sessão + auditoria de gaps PS1/`.sh` |
 | Cold-start ladder | `docs/ops/OPERATOR_AGENT_COLD_START_LADDER.md` | Roteador de sessão |
 | Contrato do agente | `AGENTS.md` | Não negociáveis + índice |
 

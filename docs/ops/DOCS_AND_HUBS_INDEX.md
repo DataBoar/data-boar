@@ -29,6 +29,9 @@
 | Hub | Purpose | When to consult |
 | --- | ------- | ---------------- |
 | [`docs/hubs/RULES_AND_SKILLS_HUB.md`](../hubs/RULES_AND_SKILLS_HUB.md) | All Cursor `.mdc` rules + skills | Which rule/skill applies |
+| [`docs/hubs/OPS_HUB.md`](../hubs/OPS_HUB.md) | Generated catalogue of `docs/ops/` | Finding an ops runbook by name |
+| [`docs/hubs/GUIDELINES_AND_GUARDRAILS_HUB.md`](../hubs/GUIDELINES_AND_GUARDRAILS_HUB.md) | Hard rules + Safe-Hold index | Behaviour contracts |
+| [`docs/hubs/SHORTHANDS_HUB.md`](../hubs/SHORTHANDS_HUB.md) | Session/lab shorthands + PS1/`.sh` gaps | Before long ad-hoc shell |
 | [`docs/ops/CURSOR_AGENT_POLICY_HUB.md`](CURSOR_AGENT_POLICY_HUB.md) | Theme to policy map (clickable) | Fresh agent policy routing |
 | [`docs/ops/OPERATOR_AGENT_COLD_START_LADDER.md`](OPERATOR_AGENT_COLD_START_LADDER.md) | Ordered cold-start path | Empty-context session |
 | [`docs/ops/TOKEN_AWARE_SCRIPTS_HUB.md`](TOKEN_AWARE_SCRIPTS_HUB.md) | `scripts/*.ps1` / `.sh` | Before ad-hoc shell |
@@ -54,4 +57,5 @@
 
 - New hub: add a row here and in [`docs/hubs/INDEX.md`](../hubs/INDEX.md) in the **same PR**.
 - Rules/skills hub: `uv run python scripts/build_rules_skills_hub.py --write`.
+- Ops hub: `uv run python scripts/build_ops_hub.py --write`.
 - Plans hub: `uv run python scripts/plans_hub_sync.py --write`.

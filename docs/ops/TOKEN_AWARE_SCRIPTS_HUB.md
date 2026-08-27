@@ -2,7 +2,7 @@
 
 **Português (Brasil):** [TOKEN_AWARE_SCRIPTS_HUB.pt_BR.md](TOKEN_AWARE_SCRIPTS_HUB.pt_BR.md)
 
-**Purpose:** One index of **repo automation** under **`scripts/`** (mostly **`.ps1`** on Windows; **paired `.sh`** for Linux/macOS gates — see **[`SCRIPTS_CROSS_PLATFORM_PAIRING.md`](SCRIPTS_CROSS_PLATFORM_PAIRING.md)**) and how each area connects to **skills**, **rules**, **session keywords**, and **ops runbooks** — so we reuse prior work instead of re-discovering scripts each session.
+**Purpose:** One index of **repo automation** under **`scripts/`** (mostly **`.ps1`** on Windows; **paired `.sh`** for Linux/macOS gates — see **[`SCRIPTS_CROSS_PLATFORM_PAIRING.md`](SCRIPTS_CROSS_PLATFORM_PAIRING.md)**) and how each area connects to **skills**, **rules**, **session keywords**, and **ops runbooks** — so we reuse prior work instead of re-discovering scripts each session. Shorthands + PS1/`.sh` gap audit: **[`docs/hubs/SHORTHANDS_HUB.md`](../hubs/SHORTHANDS_HUB.md)** (`scripts/check-cross-platform-gaps.ps1` / `.sh`).
 
 **Not a duplicate of:** **`.cursor/skills/token-aware-automation/SKILL.md`** (daily commands) or **`.cursor/rules/session-mode-keywords.mdc`** (chat tokens). This file answers: *“what else exists, and where is it documented?”*
 

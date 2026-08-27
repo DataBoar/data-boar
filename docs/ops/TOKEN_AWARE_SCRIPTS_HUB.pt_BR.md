@@ -4,7 +4,7 @@
 
 **Objetivo:** Um índice da **automação do repositório** em **`scripts/`** (sobretudo **`.ps1`** no Windows; **`.sh` em par** para *gates* no Linux/macOS — ver **[`SCRIPTS_CROSS_PLATFORM_PAIRING.pt_BR.md`](SCRIPTS_CROSS_PLATFORM_PAIRING.pt_BR.md)**) e como cada área liga a **skills**, **regras**, **palavras-chave de sessão** e **runbooks** — para reutilizar trabalho anterior em vez de redescobrir scripts a cada sessão.
 
-**Não substitui:** **`.cursor/skills/token-aware-automation/SKILL.md`** (comandos do dia a dia) nem **`.cursor/rules/session-mode-keywords.mdc`** (tokens de chat). Este arquivo responde: *“o que mais existe, e onde está documentado?”*
+**Não substitui:** **`.cursor/skills/token-aware-automation/SKILL.md`** (comandos do dia a dia) nem **`.cursor/rules/session-mode-keywords.mdc`** (tokens de chat). Este arquivo responde: *“o que mais existe, e onde está documentado?”* Shorthands + auditoria de gaps PS1/`.sh`: **[`docs/hubs/SHORTHANDS_HUB.pt_BR.md`](../hubs/SHORTHANDS_HUB.pt_BR.md)** (`scripts/check-cross-platform-gaps.sh`).
 
 **Ritual do assistente:** **`.cursor/rules/repo-scripts-wrapper-ritual.mdc`** (`alwaysApply: true`) — folhear este hub antes de reinventar shell longo; usar **`scripts/*.ps1`** acordados; se um wrapper falhar, **avisar o operador** (instalação/montagem/PATH) em vez de “esquecer” a automação em silêncio.
 

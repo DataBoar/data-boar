@@ -20,6 +20,7 @@ Alguns **gates de desenvolvimento** e **wrappers finos** existem em **duas forma
 | Intenção | Windows | Linux / macOS |
 | -------- | ------- | ------------- |
 | Gate completo (*gatekeeper* + planos + *pre-commit* + *pytest* + security scans) | `scripts/check-all.ps1` (`-Enforced` = + Semgrep) | `scripts/check-all.sh` (`--enforced` = + Semgrep) |
+| Auditoria `scripts/*.ps1` vs `.sh` + doc de pares (só relatório; sem gêmeos vazios) | `scripts/check-cross-platform-gaps.ps1` | `scripts/check-cross-platform-gaps.sh` |
 | Security scans só (Bandit + Zizmor; fail-collect) | `scripts/check-all-security-scans.ps1` | `scripts/check-all-security-scans.sh` |
 | Só *lint* / *hooks* | `scripts/lint-only.ps1` | `scripts/lint-only.sh` |
 | Subconjunto *pytest* (`-Path` / `-Keyword`) | `scripts/quick-test.ps1` | `scripts/quick-test.sh` |
