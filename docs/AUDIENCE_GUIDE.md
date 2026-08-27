@@ -93,7 +93,7 @@ Navigation map for **thirteen** reader types. Full doc index: [README.md](README
 | | |
 | - | - |
 | **Entry** | [USAGE.md](USAGE.md) |
-| **Trail** | [TECH_GUIDE.md](TECH_GUIDE.md) → [DOCKER_SETUP.md](DOCKER_SETUP.md) → [deploy/DEPLOY.md](deploy/DEPLOY.md) → [SENSITIVITY_DETECTION.md](SENSITIVITY_DETECTION.md) → [PLUGIN_AUTHOR_GUIDE.md](PLUGIN_AUTHOR_GUIDE.md) |
+| **Trail** | [ENTERPRISE_INTEGRATION_GUIDE.md](ENTERPRISE_INTEGRATION_GUIDE.md) → [TECH_GUIDE.md](TECH_GUIDE.md) → [DOCKER_SETUP.md](DOCKER_SETUP.md) → [deploy/DEPLOY.md](deploy/DEPLOY.md) → [SENSITIVITY_DETECTION.md](SENSITIVITY_DETECTION.md) → [PLUGIN_AUTHOR_GUIDE.md](PLUGIN_AUTHOR_GUIDE.md) |
 | **Skip** | Pitch decks; board brief unless scoping a POC |
 | **Overlap** | Compliance engineer (YAML profiles); operator (homelab smoke) |
 
@@ -134,6 +134,7 @@ Navigation map for **thirteen** reader types. Full doc index: [README.md](README
 | [COMPLIANCE_FRAMEWORKS.md](COMPLIANCE_FRAMEWORKS.md) | ○ | ● | ○ | ○ | ● | ● | ○ | ○ | | | | | ● |
 | [SECURITY.md](SECURITY.md) | | ○ | ● | ○ | ○ | ○ | ● | | | ○ | | | |
 | [USAGE.md](USAGE.md) | | ○ | ○ | ● | ○ | ○ | ● | | ○ | ● | | | |
+| [ENTERPRISE_INTEGRATION_GUIDE.md](ENTERPRISE_INTEGRATION_GUIDE.md) | | | ○ | | ● | | ● | | ○ | ● | | | |
 | [pitch/INDEX.md](pitch/INDEX.md) | ● | ● | ● | ● | ● | | | | | | ● | ● | ● |
 | [GRC_EXECUTIVE_REPORT_SCHEMA.md](GRC_EXECUTIVE_REPORT_SCHEMA.md) | | | ○ | | ● | | | | | | ● | | |
 | [LICENSING_OPEN_CORE_AND_COMMERCIAL.md](LICENSING_OPEN_CORE_AND_COMMERCIAL.md) | ○ | | | | | | | | | | | ● | |
