@@ -62,6 +62,7 @@ _MAN_L1_OUTPUT = r"\-\-l1\-output"
 _MAN_EXPORT_L3 = r"\-\-export\-l3"
 _MAN_L3_GRANT = r"\-\-l3\-grant"
 _MAN_L3_PERSIST = r"\-\-l3\-persist"
+_MAN_L3_ALLOW_UNPROTECTED = r"\-\-l3\-allow\-unprotected"
 _MAN_DEMO = r"\-\-demo"
 _MAN_REGENERATE_REPORT = r"\-\-regenerate\-report"
 
@@ -170,6 +171,12 @@ OPERATOR_HELP_MARKERS: tuple[OperatorHelpMarker, ...] = (
         "--l3-persist",
         "--l3-persist",
         _MAN_L3_PERSIST,
+    ),
+    OperatorHelpMarker(
+        "l3_allow_unprotected",
+        "--l3-allow-unprotected",
+        "--l3-allow-unprotected",
+        _MAN_L3_ALLOW_UNPROTECTED,
     ),
     OperatorHelpMarker(
         "regenerate_report",

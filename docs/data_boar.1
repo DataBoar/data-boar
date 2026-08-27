@@ -334,8 +334,14 @@ Export grant-scoped L3
 JSON (SDK contract pin; INPUT rows carry raw values). Requires
 .BR \-\-l3\-grant PATH .
 Default is ephemeral stdout/pipe. Disk write only with
-.BR \-\-l3\-persist PATH
-(file mode 0600). Paid tier (not Community): missing grant or Community exits
+.BR \-\-l3\-persist PATH .
+POSIX persist is owner-only mode 0600. Windows persist uses icacls DACL
+(owner Full Control); SYSTEM and Administrators typically remain — not POSIX 0600.
+Unproven containment exits
+.B 5
+unless
+.BR \-\-l3\-allow\-unprotected .
+Paid tier (not Community): missing grant or Community exits
 .B 3 .
 A column outside the grant exits
 .B 4 .
@@ -357,6 +363,19 @@ Explicitly write L3 JSON (raw values) to
 .BR PATH .
 Omitted = stdout only. Requires
 .BR \-\-export\-l3 .
+.
+.TP
+.B \-\-l3\-allow\-unprotected
+With
+.BR \-\-l3\-persist :
+if owner containment cannot be proven, keep the file and set audit
+.B containment=not_enforced
+(declared degradation, never silent). Requires
+.BR \-\-export\-l3
+and
+.BR \-\-l3\-persist .
+Default is fail-closed (exit
+.B 5 ).
 .
 .TP
 .B \-\-regenerate\-report SESSION_ID

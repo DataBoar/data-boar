@@ -11,9 +11,12 @@ never cell contents.
 
 from __future__ import annotations
 
+import getpass
 import json
 import os
 import re
+import stat
+import subprocess
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -55,6 +58,28 @@ class L3ContractError(L3ExportError):
     """Pinned schema / producer invariant violated (exit 1, fail-closed)."""
 
     exit_code = 1
+
+
+class L3ContainmentError(L3ExportError):
+    """Persist path is not proven owner-contained (Ferret-aligned exit 5)."""
+
+    exit_code = 5
+
+
+CONTAINMENT_OWNER_ONLY = "owner_only"
+CONTAINMENT_OWNER_PLUS_PRIVILEGED = "owner_plus_privileged"
+CONTAINMENT_NOT_ENFORCED = "not_enforced"
+
+# Honest Windows invariant: SYSTEM / Administrators typically remain after
+# icacls /inheritance:r. They are privileged principals, not "other users".
+_WINDOWS_PRIVILEGED_PRINCIPALS = frozenset(
+    {
+        "nt authority\\system",
+        "builtin\\administrators",
+        "system",
+        "administrators",
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -357,8 +382,170 @@ def build_l3_transformed_rows(
     return rows, audit
 
 
-def persist_l3_body(path: Path, body: str) -> None:
-    """Write L3 JSON only when the operator passed an explicit persist path."""
+def _windows_current_user() -> str:
+    return (os.environ.get("USERNAME") or getpass.getuser() or "").strip()
+
+
+def _decode_console(blob: bytes) -> str:
+    if not blob:
+        return ""
+    for encoding in ("utf-8", "mbcs", "oem"):
+        try:
+            return blob.decode(encoding)
+        except (LookupError, UnicodeDecodeError):
+            continue
+    return blob.decode("utf-8", errors="replace")
+
+
+def _run_icacls(args: list[str]) -> subprocess.CompletedProcess[bytes]:
+    try:
+        return subprocess.run(
+            ["icacls", *args],
+            capture_output=True,
+            check=False,
+            timeout=30,
+        )
+    except FileNotFoundError as exc:
+        raise L3ContainmentError(
+            "L3 persist: icacls is not available (containment cannot be proven)"
+        ) from exc
+    except subprocess.TimeoutExpired as exc:
+        raise L3ContainmentError("L3 persist: icacls timed out") from exc
+
+
+def parse_icacls_aces(output: str, path: Path) -> list[tuple[str, str]]:
+    """Parse ``icacls`` listing into (principal, paren-flags) pairs.
+
+    Fail closed on unreadable output: callers must not guess principals.
+    """
+    text = output.replace("\r\n", "\n").replace("\r", "\n")
+    path_s = str(path)
+    aces: list[tuple[str, str]] = []
+    for raw_line in text.split("\n"):
+        line = raw_line.strip()
+        if not line:
+            continue
+        lower = line.casefold()
+        if lower.startswith("successfully processed"):
+            continue
+        if "failed processing" in lower and "successfully processed" in lower:
+            continue
+        if line.startswith(path_s):
+            line = line[len(path_s) :].strip()
+        if not line or ":" not in line:
+            continue
+        principal, _, flags = line.rpartition(":")
+        principal = principal.strip()
+        flags = flags.strip()
+        if not principal or not flags.startswith("("):
+            continue
+        aces.append((principal, flags))
+    return aces
+
+
+def _principal_is_privileged_windows(name: str) -> bool:
+    n = name.strip().casefold()
+    if n in _WINDOWS_PRIVILEGED_PRINCIPALS:
+        return True
+    tail = n.rsplit("\\", 1)[-1]
+    return tail in {"system", "administrators"}
+
+
+def _principal_is_owner_windows(name: str, owner: str) -> bool:
+    n = name.strip().casefold()
+    o = owner.strip().casefold()
+    if not o:
+        return False
+    if n == o:
+        return True
+    return n.rsplit("\\", 1)[-1] == o
+
+
+def assert_windows_dacl_owner_contained(
+    aces: list[tuple[str, str]], owner: str
+) -> None:
+    """Raise if any ACE is inherited or a non-privileged principal other than owner."""
+    if not owner.strip():
+        raise L3ContainmentError("L3 persist: cannot determine Windows owner")
+    if not aces:
+        raise L3ContainmentError(
+            "L3 persist: icacls listed no ACEs (cannot prove containment)"
+        )
+    saw_owner = False
+    for principal, flags in aces:
+        flag_u = flags.upper()
+        if "(I)" in flag_u:
+            raise L3ContainmentError(
+                f"L3 persist: inherited ACE remains for {principal!r} (need /inheritance:r)"
+            )
+        if _principal_is_owner_windows(principal, owner):
+            saw_owner = True
+            continue
+        if _principal_is_privileged_windows(principal):
+            continue
+        raise L3ContainmentError(
+            f"L3 persist: non-owner unprivileged ACE {principal!r} (containment not proven)"
+        )
+    if not saw_owner:
+        raise L3ContainmentError(
+            "L3 persist: owner ACE missing after restriction (containment not proven)"
+        )
+
+
+def verify_owner_containment(path: Path) -> str:
+    """Prove owner containment. Returns the honest audit label."""
+    if os.name == "nt":
+        owner = _windows_current_user()
+        proc = _run_icacls([str(path)])
+        listing = _decode_console(proc.stdout)
+        if proc.returncode != 0:
+            err = _decode_console(proc.stderr).strip() or listing.strip()
+            raise L3ContainmentError(
+                f"L3 persist: icacls read failed (exit {proc.returncode}): {err}"
+            )
+        aces = parse_icacls_aces(listing, path)
+        assert_windows_dacl_owner_contained(aces, owner)
+        return CONTAINMENT_OWNER_PLUS_PRIVILEGED
+    st = path.stat()
+    if st.st_mode & (stat.S_IRWXG | stat.S_IRWXO):
+        raise L3ContainmentError(
+            f"L3 persist: POSIX mode {stat.filemode(st.st_mode)} is not owner-only"
+        )
+    if hasattr(os, "getuid") and st.st_uid != os.getuid():
+        raise L3ContainmentError("L3 persist: file owner is not the current user")
+    return CONTAINMENT_OWNER_ONLY
+
+
+def _restrict_to_owner(path: Path) -> None:
+    """Apply owner-only policy, then verify. Does not invent POSIX mode on Windows."""
+    if os.name == "nt":
+        user = _windows_current_user()
+        if not user:
+            raise L3ContainmentError("L3 persist: Windows username is empty")
+        grant = f"{user}:(F)"
+        granted = _run_icacls([str(path), "/grant:r", grant])
+        if granted.returncode != 0:
+            err = _decode_console(granted.stderr).strip()
+            raise L3ContainmentError(
+                f"L3 persist: icacls /grant failed (exit {granted.returncode}): {err}"
+            )
+        stripped = _run_icacls([str(path), "/inheritance:r"])
+        if stripped.returncode != 0:
+            err = _decode_console(stripped.stderr).strip()
+            raise L3ContainmentError(
+                f"L3 persist: icacls /inheritance:r failed "
+                f"(exit {stripped.returncode}): {err}"
+            )
+        return
+    # POSIX: os.open(..., 0o600) already requested owner rw; verify is the proof.
+
+
+def persist_l3_body(path: Path, body: str, *, allow_unprotected: bool = False) -> str:
+    """Write L3 JSON only when the operator passed an explicit persist path.
+
+    Returns a containment label for the stderr audit record. On failure the
+    file is unlinked unless ``allow_unprotected`` is set (declared degradation).
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
     fd = os.open(
         path,
@@ -367,17 +554,33 @@ def persist_l3_body(path: Path, body: str) -> None:
     )
     with os.fdopen(fd, "w", encoding="utf-8") as handle:
         handle.write(body)
+    try:
+        _restrict_to_owner(path)
+        return verify_owner_containment(path)
+    except L3ContainmentError:
+        if allow_unprotected:
+            return CONTAINMENT_NOT_ENFORCED
+        try:
+            path.unlink(missing_ok=True)
+        except OSError:
+            pass
+        raise
 
 
 # Re-export for pin canary tests that share the L1 env gate.
 __all__ = [
+    "CONTAINMENT_NOT_ENFORCED",
+    "CONTAINMENT_OWNER_ONLY",
+    "CONTAINMENT_OWNER_PLUS_PRIVILEGED",
     "L3_FEATURE",
+    "L3ContainmentError",
     "L3ContractError",
     "L3ExportError",
     "L3Grant",
     "L3GrantMissingError",
     "L3ScopeError",
     "assert_l3_contract",
+    "assert_windows_dacl_owner_contained",
     "build_l3_transformed_rows",
     "clamp_max_rows",
     "dumps_l3_audit",
@@ -386,8 +589,10 @@ __all__ = [
     "load_l3_schema",
     "load_pin_metadata",
     "parse_grant_document",
+    "parse_icacls_aces",
     "persist_l3_body",
     "resolve_projection_columns",
     "schema_pin_paths",
     "sdk_schema_check_enabled",
+    "verify_owner_containment",
 ]

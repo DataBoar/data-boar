@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 import stat
 import subprocess
@@ -14,16 +15,23 @@ import pytest
 from core.database import LocalDBManager
 from core.l3_transformed_rows import (
     L3_FEATURE,
+    CONTAINMENT_NOT_ENFORCED,
+    CONTAINMENT_OWNER_ONLY,
+    CONTAINMENT_OWNER_PLUS_PRIVILEGED,
+    L3ContainmentError,
     L3GrantMissingError,
     L3ScopeError,
     assert_l3_contract,
+    assert_windows_dacl_owner_contained,
     build_l3_transformed_rows,
     dumps_l3_audit,
     dumps_l3_rows,
     load_grant_file,
     parse_grant_document,
+    parse_icacls_aces,
     persist_l3_body,
     resolve_projection_columns,
+    verify_owner_containment,
 )
 from core.licensing.feature_gate import require_feature
 from core.licensing.errors import FeatureTierBlockedError
@@ -194,12 +202,80 @@ def test_projection_skips_out_of_grant_column(tmp_path: Path) -> None:
     assert_l3_contract(rows)
 
 
-def test_persist_sets_owner_rw_only(tmp_path: Path) -> None:
+def test_persist_sets_owner_containment(tmp_path: Path) -> None:
     dest = tmp_path / "out" / "l3.json"
-    persist_l3_body(dest, "[]\n")
-    mode = dest.stat().st_mode
-    assert mode & stat.S_IRWXO == 0
-    assert mode & stat.S_IRWXG == 0
+    label = persist_l3_body(dest, "[]\n")
+    verified = verify_owner_containment(dest)
+    if os.name == "nt":
+        assert label == CONTAINMENT_OWNER_PLUS_PRIVILEGED
+        assert verified == CONTAINMENT_OWNER_PLUS_PRIVILEGED
+    else:
+        assert label == CONTAINMENT_OWNER_ONLY
+        mode = dest.stat().st_mode
+        assert mode & (stat.S_IRWXG | stat.S_IRWXO) == 0
+        assert verified == CONTAINMENT_OWNER_ONLY
+
+
+def test_windows_dacl_parser_rejects_users_ace() -> None:
+    listing = (
+        r"C:\tmp\l3.json BUILTIN\Users:(I)(RX)" + "\n"
+        r"               WIN-CI\runneradmin:(F)" + "\n\n"
+        "Successfully processed 1 files; Failed processing 0 files\n"
+    )
+    aces = parse_icacls_aces(listing, Path(r"C:\tmp\l3.json"))
+    with pytest.raises(L3ContainmentError, match="inherited ACE"):
+        assert_windows_dacl_owner_contained(aces, "runneradmin")
+
+
+def test_windows_dacl_parser_allows_system_and_administrators() -> None:
+    listing = (
+        r"C:\tmp\l3.json NT AUTHORITY\SYSTEM:(F)" + "\n"
+        r"               BUILTIN\Administrators:(F)" + "\n"
+        r"               WIN-CI\runneradmin:(F)" + "\n\n"
+        "Successfully processed 1 files; Failed processing 0 files\n"
+    )
+    aces = parse_icacls_aces(listing, Path(r"C:\tmp\l3.json"))
+    assert_windows_dacl_owner_contained(aces, "runneradmin")
+
+
+def test_windows_dacl_parser_rejects_other_user() -> None:
+    listing = (
+        r"C:\tmp\l3.json NT AUTHORITY\SYSTEM:(F)" + "\n"
+        r"               WIN-CI\other:(F)" + "\n"
+        r"               WIN-CI\runneradmin:(F)" + "\n"
+    )
+    aces = parse_icacls_aces(listing, Path(r"C:\tmp\l3.json"))
+    with pytest.raises(L3ContainmentError, match="unprivileged ACE"):
+        assert_windows_dacl_owner_contained(aces, "runneradmin")
+
+
+def test_persist_fail_closed_unlinks(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    dest = tmp_path / "l3.json"
+
+    def boom(_path: Path) -> None:
+        raise L3ContainmentError("simulated containment failure")
+
+    monkeypatch.setattr("core.l3_transformed_rows._restrict_to_owner", boom)
+    with pytest.raises(L3ContainmentError, match="simulated"):
+        persist_l3_body(dest, "[]\n")
+    assert not dest.exists()
+
+
+def test_persist_allow_unprotected_keeps_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    dest = tmp_path / "l3.json"
+
+    def boom(_path: Path) -> None:
+        raise L3ContainmentError("simulated containment failure")
+
+    monkeypatch.setattr("core.l3_transformed_rows._restrict_to_owner", boom)
+    label = persist_l3_body(dest, "[]\n", allow_unprotected=True)
+    assert dest.is_file()
+    assert dest.read_text(encoding="utf-8") == "[]\n"
+    assert label == CONTAINMENT_NOT_ENFORCED
 
 
 def test_cli_stdout_ephemeral_and_audit_has_no_cells(tmp_path: Path) -> None:
@@ -274,6 +350,10 @@ def test_cli_persist_requires_flag(tmp_path: Path) -> None:
     assert {row["value"] for row in payload} == {CELL_A, CELL_B}
     audit = json.loads(proc.stderr.strip().splitlines()[-1])
     assert audit["persisted"] is True
+    assert audit["containment"] in {
+        CONTAINMENT_OWNER_ONLY,
+        CONTAINMENT_OWNER_PLUS_PRIVILEGED,
+    }
     assert CELL_A not in proc.stderr
 
 

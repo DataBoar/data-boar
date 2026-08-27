@@ -764,7 +764,8 @@ def main() -> None:
             "(SDK contract pin; INPUT rows carry raw value). Requires --l3-grant. "
             "Default is ephemeral stdout/pipe. Disk write only with --l3-persist PATH. "
             "Paid tier (not Community). Out-of-grant column → exit 4; missing grant "
-            "or Community → exit 3. Incompatible with --web and --reset-data."
+            "or Community → exit 3; persist containment not proven → exit 5. "
+            "Incompatible with --web and --reset-data."
         ),
     )
     parser.add_argument(
@@ -783,7 +784,10 @@ def main() -> None:
         dest="l3_persist",
         default=None,
         help=(
-            "Explicitly write L3 JSON (raw values) to PATH with mode 0600. "
+            "Explicitly write L3 JSON (raw values) to PATH. POSIX: owner-only "
+            "mode 0600. Windows: DACL via icacls (owner Full; SYSTEM/"
+            "Administrators typically remain — not POSIX 0600). Unproven "
+            "containment → exit 5 unless --l3-allow-unprotected. "
             "Omitted = stdout only; never a default. Requires --export-l3."
         ),
     )
@@ -807,6 +811,16 @@ def main() -> None:
         help=(
             "With --export-l3: per-column row cap (default 100, hard max 10000). "
             "Confirmation-window bound — not a full-table dump."
+        ),
+    )
+    parser.add_argument(
+        "--l3-allow-unprotected",
+        dest="l3_allow_unprotected",
+        action="store_true",
+        help=(
+            "With --l3-persist: if owner containment cannot be proven, still "
+            "keep the file and set audit containment=not_enforced. Never silent. "
+            "Requires --export-l3 and --l3-persist. Default is fail-closed (exit 5)."
         ),
     )
     parser.add_argument(
@@ -1223,6 +1237,14 @@ def main() -> None:
         print("--l3-column requires --export-l3.", file=sys.stderr)
         sys.exit(2)
 
+    if args.l3_allow_unprotected and args.export_l3 is None:
+        print("--l3-allow-unprotected requires --export-l3.", file=sys.stderr)
+        sys.exit(2)
+
+    if args.l3_allow_unprotected and not args.l3_persist:
+        print("--l3-allow-unprotected requires --l3-persist PATH.", file=sys.stderr)
+        sys.exit(2)
+
     if args.export_l3 is not None and not args.l3_grant:
         print("--export-l3 requires --l3-grant PATH.", file=sys.stderr)
         sys.exit(3)
@@ -1388,6 +1410,7 @@ def main() -> None:
         from core.licensing.feature_gate import require_feature
         from core.l3_transformed_rows import (
             L3_FEATURE,
+            L3ContainmentError,
             L3ExportError,
             L3GrantMissingError,
             L3ScopeError,
@@ -1438,8 +1461,20 @@ def main() -> None:
                     sys.exit(int(getattr(e, "exit_code", 1) or 1))
                 body = dumps_l3_rows(rows)
                 if persist_path:
-                    persist_l3_body(Path(persist_path), body)
-                    audit = {**audit, "persisted": True}
+                    try:
+                        containment = persist_l3_body(
+                            Path(persist_path),
+                            body,
+                            allow_unprotected=bool(args.l3_allow_unprotected),
+                        )
+                    except L3ContainmentError as e:
+                        print(str(e), file=sys.stderr)
+                        sys.exit(5)
+                    audit = {
+                        **audit,
+                        "persisted": True,
+                        "containment": containment,
+                    }
                     print(
                         f"L3 transformed_rows written to {persist_path} (explicit persist)",
                         file=sys.stderr,
