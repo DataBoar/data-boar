@@ -983,3 +983,29 @@ def test_native_packages_smoke_deb_uses_debian_cdn_not_ubuntu_azure_pin() -> Non
     assert "apt-mirrors.txt" not in dump
     runs = _ci_step_run_texts(smoke)
     assert any("apt-get update" in r for r in runs)
+
+
+def test_sdk_schema_pin_canary_is_scheduled_not_pr_and_offline_by_default() -> None:
+    """#1333: network canary is a separate job; default CI must not fetch the SDK."""
+    data = _load_workflow("sdk-schema-pin-canary.yml")
+    assert data.get("name")
+    on = data.get("on") or {}
+    assert "schedule" in on
+    assert "workflow_dispatch" in on
+    assert "pull_request" not in on
+    assert "push" not in on
+    jobs = data.get("jobs") or {}
+    pin = jobs["pin-check"]
+    env = pin.get("env") or {}
+    assert env.get("DATA_BOAR_SDK_SCHEMA_CHECK") == "1"
+    checkout = [
+        s
+        for s in (pin.get("steps") or [])
+        if isinstance(s, dict) and "actions/checkout@" in str(s.get("uses") or "")
+    ]
+    assert checkout
+    assert checkout[0].get("with", {}).get("persist-credentials") is False
+    runs = "\n".join(_ci_step_run_texts(pin))
+    assert "tests/test_sdk_schema_pin.py" in runs
+    ci_text = (WORKFLOWS / "ci.yml").read_text(encoding="utf-8")
+    assert "DATA_BOAR_SDK_SCHEMA_CHECK" not in ci_text

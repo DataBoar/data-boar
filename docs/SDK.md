@@ -11,7 +11,10 @@
 | **Sidecar** | Runtime that executes (in-process, OS process, or remote API) |
 | **Transport** | Adapter carrying the same envelope (stdio / gRPC / HTTP) — not a parallel protocol |
 
-Machine schema: [`sdk/PLUGIN_CONTRACT.schema.json`](sdk/PLUGIN_CONTRACT.schema.json)
+Machine schema (plugin envelope): [`sdk/PLUGIN_CONTRACT.schema.json`](sdk/PLUGIN_CONTRACT.schema.json)
+
+L1 **metadata_manifest** (sidecar input, `--export-l1`): pin of DataBoar/data-boar-sdk `schema/metadata_manifest.schema.json` at [`sdk/metadata_manifest.schema.json`](sdk/metadata_manifest.schema.json) + [`sdk/metadata_manifest.pin.json`](sdk/metadata_manifest.pin.json) (not a second contract). Network drift canary: `DATA_BOAR_SDK_SCHEMA_CHECK=1` / workflow `sdk-schema-pin-canary.yml`. Refresh pin: `scripts/sync_sdk_metadata_manifest_pin.py`. `co_columns` waits on [data-boar-sdk#41](https://github.com/DataBoar/data-boar-sdk/issues/41).
+
 Examples: [`sdk/example-request.json`](sdk/example-request.json), [`sdk/example-decision.json`](sdk/example-decision.json)
 
 ## Tiers (L1 / L2 / L3)

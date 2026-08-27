@@ -1,0 +1,10 @@
+{
+  "$comment": "PIN of DataBoar/data-boar-sdk schema/metadata_manifest.schema.json. This is not a second contract. Canonical remains https://github.com/DataBoar/data-boar-sdk. The sibling .schema.json file is an unmodified byte pin of that path at sdk_commit. Bump with scripts/sync_sdk_metadata_manifest_pin.py after reviewing the SDK diff. co_columns is tracked as DataBoar/data-boar-sdk#41 (not this pin).",
+  "canonical_repo": "DataBoar/data-boar-sdk",
+  "canonical_path": "schema/metadata_manifest.schema.json",
+  "id": "https://databoar.dev/sdk/1.0.0/metadata_manifest.schema.json",
+  "contract_version": "1.0.0",
+  "sdk_commit": "4eb23ad853a93d54a6699b595286625787f7101d",
+  "sdk_blob_sha": "5d575828e4cff1145ca796ed95e4811bce8c5cda",
+  "pinned_at": "2026-08-27"
+}

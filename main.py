@@ -509,6 +509,9 @@ def main() -> None:
             "  # DSAR-oriented JSON export for one session (stdout or --dsar-output)\n"
             f"  {prog} --config config.yaml --export-dsar <session_id>\n"
             "\n"
+            "  # L1 metadata_manifest for sidecars (stdout or --l1-output; no raw values)\n"
+            f"  {prog} --config config.yaml --export-l1 <session_id>\n"
+            "\n"
             "  # Remediation manifest JSON for a third-party plugin (#649)\n"
             f"  {prog} --config config.yaml --session <session_id> "
             f"--export-remediation-manifest remediation.json\n"
@@ -729,6 +732,26 @@ def main() -> None:
         ),
     )
     parser.add_argument(
+        "--export-l1",
+        metavar="SESSION_ID",
+        dest="export_l1",
+        default=None,
+        help=(
+            "Export findings for SESSION_ID as an L1 metadata_manifest JSON "
+            "(SDK contract pin; metadata only — never raw samples). Print to "
+            "stdout or --l1-output PATH. Unknown or empty session → empty "
+            "findings, exit 0. Fail-closed: contract violation aborts (exit 1). "
+            "Incompatible with --web and --reset-data."
+        ),
+    )
+    parser.add_argument(
+        "--l1-output",
+        metavar="PATH",
+        dest="l1_output",
+        default=None,
+        help="Write L1 metadata_manifest JSON to PATH instead of stdout. Requires --export-l1.",
+    )
+    parser.add_argument(
         "--session",
         metavar="SESSION_ID",
         dest="session_id",
@@ -865,6 +888,7 @@ def main() -> None:
         help="Disable live scan progress lines for this run.",
     )
     args = parser.parse_args()
+    export_l1 = args.export_l1 is not None
 
     if args.version:
         _run_startup_integrity_check({"sqlite_path": "audit_results.db"})
@@ -895,6 +919,7 @@ def main() -> None:
             or args.reset_data
             or args.export_audit_trail is not None
             or args.export_dsar is not None
+            or export_l1
             or args.export_remediation_manifest is not None
             or args.diff_sessions
             or args.regenerate_report is not None
@@ -904,8 +929,8 @@ def main() -> None:
             print(
                 "Cannot combine --demo with --validate-config, --prefilter-status, "
                 "--check-extras, --reset-data, --export-audit-trail, --export-dsar, "
-                "--export-remediation-manifest, --diff, --regenerate-report, or "
-                "--governance-report.",
+                "--export-l1, --export-remediation-manifest, --diff, "
+                "--regenerate-report, or --governance-report.",
                 file=sys.stderr,
             )
             sys.exit(2)
@@ -931,6 +956,7 @@ def main() -> None:
         or args.reset_data
         or args.export_audit_trail is not None
         or args.export_dsar is not None
+        or export_l1
         or args.export_remediation_manifest is not None
         or args.regenerate_report is not None
         or args.governance_report is not None
@@ -938,8 +964,9 @@ def main() -> None:
     ):
         print(
             "Cannot combine --validate-config with --web, --reset-data, "
-            "--export-audit-trail, --export-dsar, --export-remediation-manifest, "
-            "--regenerate-report, --governance-report, or --prefilter-status.",
+            "--export-audit-trail, --export-dsar, --export-l1, "
+            "--export-remediation-manifest, --regenerate-report, "
+            "--governance-report, or --prefilter-status.",
             file=sys.stderr,
         )
         sys.exit(2)
@@ -949,6 +976,7 @@ def main() -> None:
         or args.reset_data
         or args.export_audit_trail is not None
         or args.export_dsar is not None
+        or export_l1
         or args.export_remediation_manifest is not None
         or args.regenerate_report is not None
         or args.governance_report is not None
@@ -956,8 +984,9 @@ def main() -> None:
     ):
         print(
             "Cannot combine --prefilter-status with --web, --reset-data, "
-            "--export-audit-trail, --export-dsar, --export-remediation-manifest, "
-            "--regenerate-report, --governance-report, or --diff.",
+            "--export-audit-trail, --export-dsar, --export-l1, "
+            "--export-remediation-manifest, --regenerate-report, "
+            "--governance-report, or --diff.",
             file=sys.stderr,
         )
         sys.exit(2)
@@ -968,14 +997,15 @@ def main() -> None:
         or args.export_audit_trail is not None
         or args.validate_config
         or args.export_dsar is not None
+        or export_l1
         or args.export_remediation_manifest is not None
         or args.regenerate_report is not None
         or args.governance_report is not None
     ):
         print(
             "Cannot combine --diff with --web, --reset-data, --export-audit-trail, "
-            "--export-dsar, --export-remediation-manifest, --validate-config, "
-            "--regenerate-report, or --governance-report.",
+            "--export-dsar, --export-l1, --export-remediation-manifest, "
+            "--validate-config, --regenerate-report, or --governance-report.",
             file=sys.stderr,
         )
         sys.exit(2)
@@ -986,13 +1016,33 @@ def main() -> None:
         or args.export_audit_trail is not None
         or args.validate_config
         or args.diff_sessions
+        or export_l1
         or args.export_remediation_manifest is not None
         or args.regenerate_report is not None
         or args.governance_report is not None
     ):
         print(
             "Cannot combine --export-dsar with --web, --reset-data, "
-            "--export-audit-trail, --validate-config, --diff, "
+            "--export-audit-trail, --validate-config, --diff, --export-l1, "
+            "--export-remediation-manifest, --regenerate-report, or --governance-report.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+
+    if export_l1 and (
+        args.web
+        or args.reset_data
+        or args.export_audit_trail is not None
+        or args.validate_config
+        or args.diff_sessions
+        or args.export_dsar is not None
+        or args.export_remediation_manifest is not None
+        or args.regenerate_report is not None
+        or args.governance_report is not None
+    ):
+        print(
+            "Cannot combine --export-l1 with --web, --reset-data, "
+            "--export-audit-trail, --validate-config, --diff, --export-dsar, "
             "--export-remediation-manifest, --regenerate-report, or --governance-report.",
             file=sys.stderr,
         )
@@ -1005,6 +1055,7 @@ def main() -> None:
         or args.validate_config
         or args.diff_sessions
         or args.export_dsar is not None
+        or export_l1
         or args.prefilter_status
         or args.regenerate_report is not None
         or args.governance_report is not None
@@ -1012,7 +1063,8 @@ def main() -> None:
         print(
             "Cannot combine --export-remediation-manifest with --web, --reset-data, "
             "--export-audit-trail, --validate-config, --diff, --export-dsar, "
-            "--prefilter-status, --regenerate-report, or --governance-report.",
+            "--export-l1, --prefilter-status, --regenerate-report, or "
+            "--governance-report.",
             file=sys.stderr,
         )
         sys.exit(2)
@@ -1024,13 +1076,14 @@ def main() -> None:
         or args.validate_config
         or args.diff_sessions
         or args.export_dsar is not None
+        or export_l1
         or args.export_remediation_manifest is not None
         or args.governance_report is not None
     ):
         print(
             "Cannot combine --regenerate-report with --web, --reset-data, "
             "--export-audit-trail, --validate-config, --diff, --export-dsar, "
-            "--export-remediation-manifest, or --governance-report.",
+            "--export-l1, --export-remediation-manifest, or --governance-report.",
             file=sys.stderr,
         )
         sys.exit(2)
@@ -1042,6 +1095,7 @@ def main() -> None:
         or args.validate_config
         or args.diff_sessions
         or args.export_dsar is not None
+        or export_l1
         or args.export_remediation_manifest is not None
         or args.regenerate_report is not None
         or args.prefilter_status
@@ -1049,7 +1103,8 @@ def main() -> None:
         print(
             "Cannot combine --governance-report with --web, --reset-data, "
             "--export-audit-trail, --validate-config, --diff, --export-dsar, "
-            "--export-remediation-manifest, --regenerate-report, or --prefilter-status.",
+            "--export-l1, --export-remediation-manifest, --regenerate-report, or "
+            "--prefilter-status.",
             file=sys.stderr,
         )
         sys.exit(2)
@@ -1060,6 +1115,10 @@ def main() -> None:
 
     if args.dsar_include_samples and args.export_dsar is None:
         print("--dsar-include-samples requires --export-dsar.", file=sys.stderr)
+        sys.exit(2)
+
+    if args.l1_output and args.export_l1 is None:
+        print("--l1-output requires --export-l1.", file=sys.stderr)
         sys.exit(2)
 
     if args.export_remediation_manifest is not None and not (
@@ -1174,6 +1233,36 @@ def main() -> None:
                 if dest:
                     Path(dest).write_text(body, encoding="utf-8")
                     print(f"DSAR export written to {dest}", file=sys.stderr)
+                else:
+                    sys.stdout.write(body)
+            finally:
+                engine.db_manager.dispose()
+        return
+
+    if args.export_l1 is not None:
+        _emit_runtime_trust_info(runtime_trust, to_stdout=False, to_stderr=True)
+        from core.l1_metadata_manifest import (
+            L1ContractError,
+            build_l1_metadata_manifest,
+            dumps_l1_manifest,
+        )
+
+        with otel_span("export.l1", session_id=str(args.export_l1)):
+            engine = AuditEngine(config, config_path=args.config)
+            try:
+                try:
+                    payload = build_l1_metadata_manifest(
+                        engine.db_manager,
+                        session_id=args.export_l1,
+                    )
+                except L1ContractError as e:
+                    print(str(e), file=sys.stderr)
+                    sys.exit(1)
+                body = dumps_l1_manifest(payload)
+                dest = args.l1_output
+                if dest:
+                    Path(dest).write_text(body, encoding="utf-8")
+                    print(f"L1 metadata_manifest written to {dest}", file=sys.stderr)
                 else:
                     sys.stdout.write(body)
             finally:
