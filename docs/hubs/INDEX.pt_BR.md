@@ -55,6 +55,7 @@
 | Use cases | `docs/use-cases/USE_CASES_HUB.md` | Cenários de produto |
 | Pitch | `docs/pitch/INDEX.md` | Decks executivos |
 | Hub educacional | `docs/hubs/EDUCATIONAL_HUB.md` | Onboarding, primer de IA anti-hype, caminho dos primers de framework |
+| Integração Enterprise (TI / SRE) | `docs/ENTERPRISE_INTEGRATION_GUIDE.md` | Deploy, gates de CI, conectores, segurança do dashboard — sem preços |
 
 ### Segurança, governança e postura
 

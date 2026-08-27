@@ -93,7 +93,7 @@ Mapa de navegação para **treze** perfis de leitor. Índice completo: [README.m
 | | |
 | - | - |
 | **Entrada** | [USAGE.pt_BR.md](USAGE.pt_BR.md) |
-| **Trilha** | [TECH_GUIDE.pt_BR.md](TECH_GUIDE.pt_BR.md) → [DOCKER_SETUP.pt_BR.md](DOCKER_SETUP.pt_BR.md) → [deploy/DEPLOY.pt_BR.md](deploy/DEPLOY.pt_BR.md) → [SENSITIVITY_DETECTION.pt_BR.md](SENSITIVITY_DETECTION.pt_BR.md) → [PLUGIN_AUTHOR_GUIDE.pt_BR.md](PLUGIN_AUTHOR_GUIDE.pt_BR.md) |
+| **Trilha** | [ENTERPRISE_INTEGRATION_GUIDE.pt_BR.md](ENTERPRISE_INTEGRATION_GUIDE.pt_BR.md) → [TECH_GUIDE.pt_BR.md](TECH_GUIDE.pt_BR.md) → [DOCKER_SETUP.pt_BR.md](DOCKER_SETUP.pt_BR.md) → [deploy/DEPLOY.pt_BR.md](deploy/DEPLOY.pt_BR.md) → [SENSITIVITY_DETECTION.pt_BR.md](SENSITIVITY_DETECTION.pt_BR.md) → [PLUGIN_AUTHOR_GUIDE.pt_BR.md](PLUGIN_AUTHOR_GUIDE.pt_BR.md) |
 | **Evitar** | Pasta pitch; brief de conselho salvo escopo de POC |
 | **Sobreposição** | Compliance (perfis YAML); operador (smoke em homelab) |
 
@@ -134,6 +134,7 @@ Mapa de navegação para **treze** perfis de leitor. Índice completo: [README.m
 | [COMPLIANCE_FRAMEWORKS.pt_BR.md](COMPLIANCE_FRAMEWORKS.pt_BR.md) | ○ | ● | ○ | ○ | ● | ● | ○ | ○ | | | | | ● |
 | [SECURITY.pt_BR.md](SECURITY.pt_BR.md) | | ○ | ● | ○ | ○ | ○ | ● | | | ○ | | | |
 | [USAGE.pt_BR.md](USAGE.pt_BR.md) | | ○ | ○ | ● | ○ | ○ | ● | | ○ | ● | | | |
+| [ENTERPRISE_INTEGRATION_GUIDE.pt_BR.md](ENTERPRISE_INTEGRATION_GUIDE.pt_BR.md) | | | ○ | | ● | | ● | | ○ | ● | | | |
 | [pitch/INDEX.pt_BR.md](pitch/INDEX.pt_BR.md) | ● | ● | ● | ● | ● | | | | | | ● | ● | ● |
 | [GRC_EXECUTIVE_REPORT_SCHEMA.pt_BR.md](GRC_EXECUTIVE_REPORT_SCHEMA.pt_BR.md) | | | ○ | | ● | | | | | | ● | | |
 | [LICENSING_OPEN_CORE_AND_COMMERCIAL.pt_BR.md](LICENSING_OPEN_CORE_AND_COMMERCIAL.pt_BR.md) | ○ | | | | | | | | | | | ● | |
