@@ -39,6 +39,7 @@
 | Hub | Purpose | When to consult |
 | --- | ------- | ---------------- |
 | [`docs/hubs/INDEX.md`](../hubs/INDEX.md) | Hub-of-hubs by work area | Two-hop navigation |
+| [`docs/hubs/EDUCATIONAL_HUB.md`](../hubs/EDUCATIONAL_HUB.md) | Onboarding, anti-hype AI primer, glossary | Evaluator / CISO first reads |
 | [`docs/README.md`](../README.md) | Product doc tables EN/pt-BR | External / integrator docs |
 | [`docs/MAP.md`](../MAP.md) | Topic-first concern map | "Where is X explained?" |
 
