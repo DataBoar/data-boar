@@ -915,6 +915,70 @@ class SQLConnector:
             raise ColumnSampleError from e
         return join_distinct_sample((r[0] for r in rows), distinct_cap=use_limit)
 
+    def fetch_column_values(
+        self,
+        schema: str,
+        table: str,
+        column_name: str,
+        *,
+        limit: int,
+    ) -> list[str]:
+        """Return up to *limit* cell values as strings (L3). Never logs cell contents.
+
+        *limit* is clamped to 1..10000 here. Unlike :meth:`sample`, this path does
+        **not** honour ``DATA_BOAR_SQL_SAMPLE_LIMIT`` (that env is a scan-sample
+        relief valve; L3 blast radius is the operator's ``--l3-max-rows`` only).
+        """
+        if self.engine is None:
+            raise RuntimeError("SQLConnector.fetch_column_values requires connect()")
+        use_limit = max(1, min(int(limit), 10_000))
+        dialect = self.engine.dialect.name if self.engine else ""
+        safe_col = column_name.replace('"', '""')
+        safe_table = table.replace('"', '""')
+        safe_schema = (schema or "").replace('"', '""')
+        to = self._sample_statement_timeout_ms
+        oracle_raw = {"raw_col": column_name, "raw_table": table}
+        if schema:
+            oracle_raw["raw_schema"] = schema
+        table_meta = TableSamplingMetadata(estimated_row_count=None)
+        plan = SamplingManager.build_column_sample(
+            dialect,
+            safe_col=safe_col,
+            safe_table=safe_table,
+            safe_schema=safe_schema,
+            schema=schema,
+            limit=use_limit,
+            table_metadata=table_meta,
+            statement_timeout_ms=to,
+            **(oracle_raw if (dialect or "").lower() == "oracle" else {}),
+        )
+        try:
+            with self.engine.connect() as conn:
+                with conn.begin():
+                    if dialect in ("postgresql", "postgres") and to:
+                        conn.execute(
+                            text("SET LOCAL statement_timeout = :mt").bindparams(
+                                mt=int(to)
+                            )
+                        )
+                    rows = conn.execute(plan.query).fetchall()
+        except Exception as exc:
+            raise RuntimeError("L3 column projection failed") from exc
+        out: list[str] = []
+        for row in rows:
+            if not row:
+                continue
+            cell = row[0]
+            if cell is None:
+                continue
+            text_value = str(cell)
+            if text_value == "":
+                continue
+            out.append(text_value)
+            if len(out) >= use_limit:
+                break
+        return out
+
     def _probe_product_version(self, engine_name: str) -> str | None:
         if not self.engine:
             return None

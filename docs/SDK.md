@@ -13,7 +13,9 @@
 
 Machine schema (plugin envelope): [`sdk/PLUGIN_CONTRACT.schema.json`](sdk/PLUGIN_CONTRACT.schema.json)
 
-L1 **metadata_manifest** (sidecar input, `--export-l1`): pin of DataBoar/data-boar-sdk `schema/metadata_manifest.schema.json` at [`sdk/metadata_manifest.schema.json`](sdk/metadata_manifest.schema.json) + [`sdk/metadata_manifest.pin.json`](sdk/metadata_manifest.pin.json) (not a second contract). Network drift canary: `DATA_BOAR_SDK_SCHEMA_CHECK=1` / workflow `sdk-schema-pin-canary.yml`. Refresh pin: `scripts/sync_sdk_metadata_manifest_pin.py`. `co_columns` waits on [data-boar-sdk#41](https://github.com/DataBoar/data-boar-sdk/issues/41).
+L1 **metadata_manifest** (sidecar input, `--export-l1`): pin of DataBoar/data-boar-sdk `schema/metadata_manifest.schema.json` at [`sdk/metadata_manifest.schema.json`](sdk/metadata_manifest.schema.json) + [`sdk/metadata_manifest.pin.json`](sdk/metadata_manifest.pin.json) (not a second contract).
+
+L3 **transformed_rows** (real-data plane, `--export-l3`): pin of `schema/transformed_rows.schema.json` at [`sdk/transformed_rows.schema.json`](sdk/transformed_rows.schema.json) + [`sdk/transformed_rows.pin.json`](sdk/transformed_rows.pin.json) (not a second contract). Grant-scoped; stdout unless `--l3-persist`. Network drift canary: `DATA_BOAR_SDK_SCHEMA_CHECK=1` / workflow `sdk-schema-pin-canary.yml`. Refresh pins: `scripts/sync_sdk_schema_pin.py`. `co_columns` waits on [data-boar-sdk#41](https://github.com/DataBoar/data-boar-sdk/issues/41).
 
 Examples: [`sdk/example-request.json`](sdk/example-request.json), [`sdk/example-decision.json`](sdk/example-decision.json)
 

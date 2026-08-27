@@ -139,6 +139,9 @@ FEATURE_TIER_MAP: dict[str, Tier] = {
     "remediation_manifest_export": Tier.ENTERPRISE,
     # Post-scan remediation plugin host hook (#606 / ADR-0059).
     "remediation_plugin": Tier.ENTERPRISE,
+    # L3 transformed_rows — raw-value plane, grant-scoped (#1334). Paid floor
+    # (Std); Community is refused (Ferret paid-only / exit 3). OPEN still bypasses.
+    "l3_transformed_rows_export": Tier.STD,
 }
 
 # ---------------------------------------------------------------------------

@@ -84,6 +84,18 @@ def test_governance_lens_enterprise_denied_pro(pro_guard):
     assert not result.allowed
 
 
+def test_l3_transformed_rows_denied_community(community_guard):
+    result = community_guard.check_feature("l3_transformed_rows_export")
+    assert not result.allowed
+
+
+def test_l3_transformed_rows_allowed_std():
+    reset_license_guard_for_tests()
+    g = LicenseGuard({"licensing": {"mode": "open", "effective_tier": "std"}})
+    assert g.is_allowed("l3_transformed_rows_export")
+    reset_license_guard_for_tests()
+
+
 def test_findings_sink_sql_denied_community(community_guard):
     result = community_guard.check_feature("findings_sink_sql")
     assert not result.allowed

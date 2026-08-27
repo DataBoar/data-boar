@@ -512,6 +512,9 @@ def main() -> None:
             "  # L1 metadata_manifest for sidecars (stdout or --l1-output; no raw values)\n"
             f"  {prog} --config config.yaml --export-l1 <session_id>\n"
             "\n"
+            "  # L3 transformed_rows (grant-scoped raw values; stdout unless --l3-persist)\n"
+            f"  {prog} --config config.yaml --export-l3 <session_id> --l3-grant grant.json\n"
+            "\n"
             "  # Remediation manifest JSON for a third-party plugin (#649)\n"
             f"  {prog} --config config.yaml --session <session_id> "
             f"--export-remediation-manifest remediation.json\n"
@@ -752,6 +755,61 @@ def main() -> None:
         help="Write L1 metadata_manifest JSON to PATH instead of stdout. Requires --export-l1.",
     )
     parser.add_argument(
+        "--export-l3",
+        metavar="SESSION_ID",
+        dest="export_l3",
+        default=None,
+        help=(
+            "Export grant-scoped L3 transformed_rows JSON for SESSION_ID "
+            "(SDK contract pin; INPUT rows carry raw value). Requires --l3-grant. "
+            "Default is ephemeral stdout/pipe. Disk write only with --l3-persist PATH. "
+            "Paid tier (not Community). Out-of-grant column → exit 4; missing grant "
+            "or Community → exit 3. Incompatible with --web and --reset-data."
+        ),
+    )
+    parser.add_argument(
+        "--l3-grant",
+        metavar="PATH",
+        dest="l3_grant",
+        default=None,
+        help=(
+            "JSON grant for --export-l3 (grant_id, target, table, columns). "
+            "Never projects the whole table. Required with --export-l3."
+        ),
+    )
+    parser.add_argument(
+        "--l3-persist",
+        metavar="PATH",
+        dest="l3_persist",
+        default=None,
+        help=(
+            "Explicitly write L3 JSON (raw values) to PATH with mode 0600. "
+            "Omitted = stdout only; never a default. Requires --export-l3."
+        ),
+    )
+    parser.add_argument(
+        "--l3-column",
+        metavar="NAME",
+        dest="l3_column",
+        action="append",
+        default=None,
+        help=(
+            "With --export-l3: project only this grant column (repeatable). "
+            "A name outside the grant is refused (exit 4)."
+        ),
+    )
+    parser.add_argument(
+        "--l3-max-rows",
+        metavar="N",
+        dest="l3_max_rows",
+        type=int,
+        default=100,
+        help=(
+            "With --export-l3: per-column row cap (default 100, hard max 10000). "
+            "Confirmation-window bound — not a full-table dump."
+        ),
+    )
+    parser.add_argument(
         "--session",
         metavar="SESSION_ID",
         dest="session_id",
@@ -889,6 +947,7 @@ def main() -> None:
     )
     args = parser.parse_args()
     export_l1 = args.export_l1 is not None
+    export_l3 = args.export_l3 is not None
 
     if args.version:
         _run_startup_integrity_check({"sqlite_path": "audit_results.db"})
@@ -920,6 +979,7 @@ def main() -> None:
             or args.export_audit_trail is not None
             or args.export_dsar is not None
             or export_l1
+            or export_l3
             or args.export_remediation_manifest is not None
             or args.diff_sessions
             or args.regenerate_report is not None
@@ -929,7 +989,7 @@ def main() -> None:
             print(
                 "Cannot combine --demo with --validate-config, --prefilter-status, "
                 "--check-extras, --reset-data, --export-audit-trail, --export-dsar, "
-                "--export-l1, --export-remediation-manifest, --diff, "
+                "--export-l1, --export-l3, --export-remediation-manifest, --diff, "
                 "--regenerate-report, or --governance-report.",
                 file=sys.stderr,
             )
@@ -957,6 +1017,7 @@ def main() -> None:
         or args.export_audit_trail is not None
         or args.export_dsar is not None
         or export_l1
+        or export_l3
         or args.export_remediation_manifest is not None
         or args.regenerate_report is not None
         or args.governance_report is not None
@@ -964,7 +1025,7 @@ def main() -> None:
     ):
         print(
             "Cannot combine --validate-config with --web, --reset-data, "
-            "--export-audit-trail, --export-dsar, --export-l1, "
+            "--export-audit-trail, --export-dsar, --export-l1, --export-l3, "
             "--export-remediation-manifest, --regenerate-report, "
             "--governance-report, or --prefilter-status.",
             file=sys.stderr,
@@ -977,6 +1038,7 @@ def main() -> None:
         or args.export_audit_trail is not None
         or args.export_dsar is not None
         or export_l1
+        or export_l3
         or args.export_remediation_manifest is not None
         or args.regenerate_report is not None
         or args.governance_report is not None
@@ -984,7 +1046,7 @@ def main() -> None:
     ):
         print(
             "Cannot combine --prefilter-status with --web, --reset-data, "
-            "--export-audit-trail, --export-dsar, --export-l1, "
+            "--export-audit-trail, --export-dsar, --export-l1, --export-l3, "
             "--export-remediation-manifest, --regenerate-report, "
             "--governance-report, or --diff.",
             file=sys.stderr,
@@ -998,13 +1060,14 @@ def main() -> None:
         or args.validate_config
         or args.export_dsar is not None
         or export_l1
+        or export_l3
         or args.export_remediation_manifest is not None
         or args.regenerate_report is not None
         or args.governance_report is not None
     ):
         print(
             "Cannot combine --diff with --web, --reset-data, --export-audit-trail, "
-            "--export-dsar, --export-l1, --export-remediation-manifest, "
+            "--export-dsar, --export-l1, --export-l3, --export-remediation-manifest, "
             "--validate-config, --regenerate-report, or --governance-report.",
             file=sys.stderr,
         )
@@ -1017,13 +1080,14 @@ def main() -> None:
         or args.validate_config
         or args.diff_sessions
         or export_l1
+        or export_l3
         or args.export_remediation_manifest is not None
         or args.regenerate_report is not None
         or args.governance_report is not None
     ):
         print(
             "Cannot combine --export-dsar with --web, --reset-data, "
-            "--export-audit-trail, --validate-config, --diff, --export-l1, "
+            "--export-audit-trail, --validate-config, --diff, --export-l1, --export-l3, "
             "--export-remediation-manifest, --regenerate-report, or --governance-report.",
             file=sys.stderr,
         )
@@ -1036,6 +1100,7 @@ def main() -> None:
         or args.validate_config
         or args.diff_sessions
         or args.export_dsar is not None
+        or export_l3
         or args.export_remediation_manifest is not None
         or args.regenerate_report is not None
         or args.governance_report is not None
@@ -1043,7 +1108,29 @@ def main() -> None:
         print(
             "Cannot combine --export-l1 with --web, --reset-data, "
             "--export-audit-trail, --validate-config, --diff, --export-dsar, "
-            "--export-remediation-manifest, --regenerate-report, or --governance-report.",
+            "--export-l3, --export-remediation-manifest, --regenerate-report, "
+            "or --governance-report.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+
+    if export_l3 and (
+        args.web
+        or args.reset_data
+        or args.export_audit_trail is not None
+        or args.validate_config
+        or args.diff_sessions
+        or args.export_dsar is not None
+        or export_l1
+        or args.export_remediation_manifest is not None
+        or args.regenerate_report is not None
+        or args.governance_report is not None
+    ):
+        print(
+            "Cannot combine --export-l3 with --web, --reset-data, "
+            "--export-audit-trail, --validate-config, --diff, --export-dsar, "
+            "--export-l1, --export-remediation-manifest, --regenerate-report, "
+            "or --governance-report.",
             file=sys.stderr,
         )
         sys.exit(2)
@@ -1056,6 +1143,7 @@ def main() -> None:
         or args.diff_sessions
         or args.export_dsar is not None
         or export_l1
+        or export_l3
         or args.prefilter_status
         or args.regenerate_report is not None
         or args.governance_report is not None
@@ -1063,7 +1151,7 @@ def main() -> None:
         print(
             "Cannot combine --export-remediation-manifest with --web, --reset-data, "
             "--export-audit-trail, --validate-config, --diff, --export-dsar, "
-            "--export-l1, --prefilter-status, --regenerate-report, or "
+            "--export-l1, --export-l3, --prefilter-status, --regenerate-report, or "
             "--governance-report.",
             file=sys.stderr,
         )
@@ -1077,13 +1165,14 @@ def main() -> None:
         or args.diff_sessions
         or args.export_dsar is not None
         or export_l1
+        or export_l3
         or args.export_remediation_manifest is not None
         or args.governance_report is not None
     ):
         print(
             "Cannot combine --regenerate-report with --web, --reset-data, "
             "--export-audit-trail, --validate-config, --diff, --export-dsar, "
-            "--export-l1, --export-remediation-manifest, or --governance-report.",
+            "--export-l1, --export-l3, --export-remediation-manifest, or --governance-report.",
             file=sys.stderr,
         )
         sys.exit(2)
@@ -1096,6 +1185,7 @@ def main() -> None:
         or args.diff_sessions
         or args.export_dsar is not None
         or export_l1
+        or export_l3
         or args.export_remediation_manifest is not None
         or args.regenerate_report is not None
         or args.prefilter_status
@@ -1103,7 +1193,7 @@ def main() -> None:
         print(
             "Cannot combine --governance-report with --web, --reset-data, "
             "--export-audit-trail, --validate-config, --diff, --export-dsar, "
-            "--export-l1, --export-remediation-manifest, --regenerate-report, or "
+            "--export-l1, --export-l3, --export-remediation-manifest, --regenerate-report, or "
             "--prefilter-status.",
             file=sys.stderr,
         )
@@ -1119,6 +1209,29 @@ def main() -> None:
 
     if args.l1_output and args.export_l1 is None:
         print("--l1-output requires --export-l1.", file=sys.stderr)
+        sys.exit(2)
+
+    if args.l3_grant and args.export_l3 is None:
+        print("--l3-grant requires --export-l3.", file=sys.stderr)
+        sys.exit(2)
+
+    if args.l3_persist and args.export_l3 is None:
+        print("--l3-persist requires --export-l3.", file=sys.stderr)
+        sys.exit(2)
+
+    if args.l3_column and args.export_l3 is None:
+        print("--l3-column requires --export-l3.", file=sys.stderr)
+        sys.exit(2)
+
+    if args.export_l3 is not None and not args.l3_grant:
+        print("--export-l3 requires --l3-grant PATH.", file=sys.stderr)
+        sys.exit(3)
+
+    if args.l3_persist and str(args.l3_persist).strip() in {"", "-"}:
+        print(
+            "--l3-persist requires a filesystem PATH (not stdout; omit the flag to pipe).",
+            file=sys.stderr,
+        )
         sys.exit(2)
 
     if args.export_remediation_manifest is not None and not (
@@ -1265,6 +1378,75 @@ def main() -> None:
                     print(f"L1 metadata_manifest written to {dest}", file=sys.stderr)
                 else:
                     sys.stdout.write(body)
+            finally:
+                engine.db_manager.dispose()
+        return
+
+    if args.export_l3 is not None:
+        _emit_runtime_trust_info(runtime_trust, to_stdout=False, to_stderr=True)
+        from core.licensing.errors import FeatureTierBlockedError
+        from core.licensing.feature_gate import require_feature
+        from core.l3_transformed_rows import (
+            L3_FEATURE,
+            L3ExportError,
+            L3GrantMissingError,
+            L3ScopeError,
+            build_l3_transformed_rows,
+            dumps_l3_audit,
+            dumps_l3_rows,
+            load_grant_file,
+            persist_l3_body,
+            resolve_projection_columns,
+        )
+
+        try:
+            require_feature(config, L3_FEATURE)
+        except FeatureTierBlockedError as e:
+            print(f"Licensing: {e}", file=sys.stderr)
+            sys.exit(3)
+
+        try:
+            grant = load_grant_file(args.l3_grant)
+            projection = resolve_projection_columns(grant, args.l3_column)
+        except L3GrantMissingError as e:
+            print(str(e), file=sys.stderr)
+            sys.exit(3)
+        except L3ScopeError as e:
+            print(str(e), file=sys.stderr)
+            sys.exit(4)
+
+        persist_path = args.l3_persist
+        with otel_span(
+            "export.l3",
+            session_id=str(args.export_l3),
+            grant_id=grant.grant_id,
+            table=grant.table,
+        ):
+            engine = AuditEngine(config, config_path=args.config)
+            try:
+                try:
+                    rows, audit = build_l3_transformed_rows(
+                        engine.db_manager,
+                        session_id=args.export_l3,
+                        grant=grant,
+                        config=config,
+                        projection_columns=projection,
+                        max_rows=args.l3_max_rows,
+                    )
+                except L3ExportError as e:
+                    print(str(e), file=sys.stderr)
+                    sys.exit(int(getattr(e, "exit_code", 1) or 1))
+                body = dumps_l3_rows(rows)
+                if persist_path:
+                    persist_l3_body(Path(persist_path), body)
+                    audit = {**audit, "persisted": True}
+                    print(
+                        f"L3 transformed_rows written to {persist_path} (explicit persist)",
+                        file=sys.stderr,
+                    )
+                else:
+                    sys.stdout.write(body)
+                sys.stderr.write(dumps_l3_audit(audit))
             finally:
                 engine.db_manager.dispose()
         return

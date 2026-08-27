@@ -59,6 +59,9 @@ _MAN_DSAR_OUTPUT = r"\-\-dsar\-output"
 _MAN_DSAR_INCLUDE_SAMPLES = r"\-\-dsar\-include\-samples"
 _MAN_EXPORT_L1 = r"\-\-export\-l1"
 _MAN_L1_OUTPUT = r"\-\-l1\-output"
+_MAN_EXPORT_L3 = r"\-\-export\-l3"
+_MAN_L3_GRANT = r"\-\-l3\-grant"
+_MAN_L3_PERSIST = r"\-\-l3\-persist"
 _MAN_DEMO = r"\-\-demo"
 _MAN_REGENERATE_REPORT = r"\-\-regenerate\-report"
 
@@ -149,6 +152,24 @@ OPERATOR_HELP_MARKERS: tuple[OperatorHelpMarker, ...] = (
         "--l1-output",
         "--l1-output",
         _MAN_L1_OUTPUT,
+    ),
+    OperatorHelpMarker(
+        "export_l3",
+        "--export-l3",
+        "--export-l3",
+        _MAN_EXPORT_L3,
+    ),
+    OperatorHelpMarker(
+        "l3_grant",
+        "--l3-grant",
+        "--l3-grant",
+        _MAN_L3_GRANT,
+    ),
+    OperatorHelpMarker(
+        "l3_persist",
+        "--l3-persist",
+        "--l3-persist",
+        _MAN_L3_PERSIST,
     ),
     OperatorHelpMarker(
         "regenerate_report",

@@ -1,6 +1,7 @@
-# SDK schema pin canary — compares docs/sdk/metadata_manifest.schema.json to
-# DataBoar/data-boar-sdk main. Default CI (ci.yml) does NOT run this: no network.
-# Fail means bump the pin after review, never emit a degraded L1 document.
+# SDK schema pin canary — compares docs/sdk/*.schema.json pins to
+# DataBoar/data-boar-sdk main (L1 metadata_manifest + L3 transformed_rows).
+# Default CI (ci.yml) does NOT run this: no network.
+# Fail means bump the pin after review, never emit a degraded document.
 name: SDK schema pin canary
 
 permissions:
@@ -13,7 +14,7 @@ permissions:
 
 jobs:
   pin-check:
-    name: metadata_manifest pin vs SDK main
+    name: SDK schema pins vs SDK main
     runs-on: ubuntu-latest
     env:
       DATA_BOAR_SDK_SCHEMA_CHECK: "1"
