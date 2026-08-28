@@ -30,7 +30,13 @@ import yaml
 _SCHEMA_PATH = Path(__file__).parent / "plugin_schema.yaml"
 
 _VALID_PLUGIN_TYPES = frozenset(
-    ("regex_patterns", "ml_patterns", "dl_patterns", "unified_plugin_file")
+    (
+        "regex_patterns",
+        "ml_patterns",
+        "dl_patterns",
+        "unified_plugin_file",
+        "compliance",
+    )
 )
 
 # Field types understood by the lightweight validator.
@@ -185,8 +191,10 @@ def validate_plugin_file(
         Returns a passing result immediately when ``None`` or when the file
         does not exist (the loaders handle missing-file logic separately).
     plugin_type:
-        One of ``regex_patterns``, ``ml_patterns``, ``dl_patterns``, or
-        ``unified_plugin_file``.  Determines which section of the schema is used.
+        One of ``regex_patterns``, ``ml_patterns``, ``dl_patterns``,
+        ``unified_plugin_file``, or ``compliance``.  ``compliance`` validates
+        legacy sample files that mix ``regex`` / ``terms`` with extra keys
+        (e.g. ``recommendation_overrides``).
 
     Returns
     -------
@@ -228,6 +236,9 @@ def validate_plugin_file(
 
     if plugin_type == "unified_plugin_file":
         return _validate_unified(data, schema)
+
+    if plugin_type == "compliance":
+        return _validate_compliance(data, schema)
 
     return _validate_typed_list(data, plugin_type, schema)
 
@@ -272,6 +283,43 @@ def _validate_typed_list(
             continue
         item_issues = _validate_item(item, idx, item_fields)
         issues.extend(item_issues)
+
+    return PluginValidationResult(valid=len(issues) == 0, issues=issues)
+
+
+def _validate_compliance(
+    data: Any,
+    schema: dict[str, Any],
+) -> PluginValidationResult:
+    """Validate a docs/compliance-samples file against regex + ML item schemas.
+
+    Samples are operator-facing packs (not ``patterns_plugin_file``): they use
+    ``regex`` / ``terms`` and extra top-level keys such as
+    ``recommendation_overrides``. Unknown extra keys are ignored.
+    """
+    if isinstance(data, list):
+        return _validate_typed_list(data, "regex_patterns", schema)
+    if not isinstance(data, dict):
+        return PluginValidationResult(
+            valid=False,
+            issues=[
+                "Compliance sample root must be a mapping or list; "
+                f"got {type(data).__name__}."
+            ],
+        )
+
+    issues: list[str] = []
+    regex_result = _validate_typed_list(data, "regex_patterns", schema)
+    issues.extend(regex_result.issues)
+    ml_result = _validate_typed_list(data, "ml_patterns", schema)
+    issues.extend(ml_result.issues)
+    if "dl_patterns" in data:
+        dl_result = _validate_typed_list(
+            {"dl_patterns": data["dl_patterns"]},
+            "dl_patterns",
+            schema,
+        )
+        issues.extend(dl_result.issues)
 
     return PluginValidationResult(valid=len(issues) == 0, issues=issues)
 

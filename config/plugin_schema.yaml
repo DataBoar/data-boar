@@ -11,6 +11,11 @@
 # Three plugin types are defined below.  Each uses a "list" format where every item
 # is a YAML mapping.  The "unified" plugin file wraps all three under top-level keys.
 # See: docs/plans/PLAN_YAML_PLUGIN_SYSTEM.md, ADR-0052.
+#
+# plugin_type "compliance" (config/plugin_validator.py) is for docs/compliance-samples
+# packs: validate ``regex`` / ``regex_patterns`` items and ``terms`` / ``ml_patterns``
+# items against the schemas below; extra keys (e.g. recommendation_overrides) are
+# allowed.  It is not a fourth item_fields block.
 
 # ---------------------------------------------------------------------------
 # regex_patterns
