@@ -30,15 +30,15 @@ Use these tags in headings to keep priorities explicit and machine-countable:
 
 Do not edit this block manually; refresh with `python scripts/plans-stats.py --write`.
 
-- **Status rows counted:** 249  (Done: 156 | Incomplete: 93)
-- **Incomplete breakdown:** Pending `⬜`=76, Tracked `🔄` / `Tracked (partially done)`=17, Under consideration=0, Backlog-marked rows=0
+- **Status rows counted:** 252  (Done: 157 | Incomplete: 95)
+- **Incomplete breakdown:** Pending `⬜`=78, Tracked `🔄` / `Tracked (partially done)`=17, Under consideration=0, Backlog-marked rows=0
 
 | Horizon | Total rows | Done | Incomplete |
 | ------- | ----------: | ----: | ----------: |
 | `H0` | 60 | 39 | 21 |
 | `H1` | 48 | 32 | 16 |
 | `H2` | 0 | 0 | 0 |
-| `H3` | 127 | 71 | 56 |
+| `H3` | 130 | 72 | 58 |
 | `H4` | 0 | 0 | 0 |
 | `H5` | 0 | 0 | 0 |
 | `UNSPECIFIED` | 14 | 14 | 0 |
