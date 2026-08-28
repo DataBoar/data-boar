@@ -472,7 +472,7 @@ CLI uses the path you pass with `--config` (e.g. `config.yaml`). For the **web s
 ### Config file location and shape
 
 - **Location:** Any path; typical names: `config.yaml`, `config/config.json`. Legacy `config/config.json` with `databases` and `file_scan.directories` is normalized automatically.
-- **Root keys:** `targets`, `file_scan`, `report`, `api`, `sqlite_path`, `scan`, **`rate_limit`**, **`timeouts`**, optional **`sql_sampling`** (hierarchical row caps for SQL/Snowflake targets), optional `ml_patterns_file`, `dl_patterns_file`, `regex_overrides_file`, `sensitivity_detection`, `learned_patterns`, **`pattern_files_encoding`**.
+- **Root keys:** `targets`, `file_scan`, `report`, `api`, `sqlite_path`, `scan`, **`rate_limit`**, **`timeouts`**, optional **`sql_sampling`** (hierarchical row caps for SQL/Snowflake targets), optional `ml_patterns_file`, `ml_patterns_files`, `dl_patterns_file`, `regex_overrides_file`, `regex_overrides_files`, `compliance_frameworks`, `sensitivity_detection`, `learned_patterns`, **`pattern_files_encoding`**.
 
 ### Starter config (copy-paste) and where to look first {#starter-config-samples}
 
@@ -513,7 +513,7 @@ Full behaviour is implemented in `config/scope_import_csv.py` (v1 focuses on `fi
 Config and compliance sample files can use different character sets. The application supports this so multilingual terms (e.g. Japanese, Arabic, French) and legacy environments do not break in production.
 
 - **Config file:** Read with **auto-detection**: UTF-8, UTF-8 with BOM, Windows ANSI (cp1252), and Latin-1 are tried in order. No need to set encoding for the main config file.
-- **Pattern files** (`regex_overrides_file`, `ml_patterns_file`, `dl_patterns_file`): Read with the encoding set by **`pattern_files_encoding`** (default **`utf-8`**). Use this when your YAML/JSON is saved in another encoding (e.g. `cp1252`, `latin_1`, `utf-8-sig`). Invalid bytes are replaced so a single bad character does not crash the scan.
+- **Pattern files** (`regex_overrides_file`, `regex_overrides_files`, `ml_patterns_file`, `ml_patterns_files`, `dl_patterns_file`): Read with the encoding set by **`pattern_files_encoding`** (default **`utf-8`**). Use this when your YAML/JSON is saved in another encoding (e.g. `cp1252`, `latin_1`, `utf-8-sig`). Invalid bytes are replaced so a single bad character does not crash the scan. List keys merge in order (later file wins on the same regex `name` or ML `text`), same idea as **`sql_sampling_files`**. Optional **`compliance_frameworks: [lgpd, pci_dss, …]`** resolves to `docs/compliance-samples/compliance-sample-<id>.yaml`. Each referenced sample’s **`recommendation_overrides`** are merged into **`report.recommendation_overrides`** automatically (inline rows still win on the same `norm_tag_pattern`).
 - **Recommendation:** Save all config and sample files in **UTF-8** for best compatibility with multilingual content (compliance samples for APAC, EMEA, etc.). The Excel report and heatmap output support Unicode.
 
 Example in config:
@@ -592,13 +592,13 @@ in your config. To **enable alphanumeric CNPJ via overrides only** (for example,
 
 To detect **new possibly personal or sensitive values** (e.g. RG, vehicle plate, health plan ID), add custom regex patterns. In the main config set **`regex_overrides_file`** to the path of a YAML or JSON file with a list of `{ name, pattern, norm_tag }`. The detector matches each pattern against the column name and sample text; any match is reported with HIGH sensitivity. Your file adds to or overrides built-in patterns (CPF, CNPJ, email, phone, SSN, credit card, dates). **Format and examples:** [SENSITIVITY_DETECTION.md](SENSITIVITY_DETECTION.md#custom-regex-patterns-detecting-new-personalsensitive-values) (EN) · [SENSITIVITY_DETECTION.pt_BR.md](SENSITIVITY_DETECTION.pt_BR.md#padrões-regex-customizados-detectar-novos-dados-pessoaissensíveis) (pt-BR). For **multiple regulations and sample configuration** (built-in: LGPD, GDPR, CCPA, HIPAA, GLBA; extensibility for UK GDPR, PIPEDA, POPIA, APPI, PCI-DSS, or custom), and for assistance with tuning, see [COMPLIANCE_FRAMEWORKS.md](COMPLIANCE_FRAMEWORKS.md) ([pt-BR](COMPLIANCE_FRAMEWORKS.pt_BR.md)).
 
-**Other regulations and compliance samples:** Ready-to-use sample configs for **UK GDPR**, **EU GDPR**, **Benelux**, **PIPEDA**, **POPIA**, **APPI**, **PCI-DSS**, and other regions are in [compliance-samples/](compliance-samples/). Set `regex_overrides_file` and `ml_patterns_file` to the sample file and merge its `recommendation_overrides` into `report.recommendation_overrides`. Full list, what goes where, and how to use: [COMPLIANCE_FRAMEWORKS.md – Compliance samples](COMPLIANCE_FRAMEWORKS.md#compliance-samples) ([pt-BR](COMPLIANCE_FRAMEWORKS.pt_BR.md#amostras-de-conformidade)).
+**Other regulations and compliance samples:** Ready-to-use sample configs for **UK GDPR**, **EU GDPR**, **Benelux**, **PIPEDA**, **POPIA**, **APPI**, **PCI-DSS**, and other regions are in [compliance-samples/](compliance-samples/). Set `regex_overrides_file` / `ml_patterns_file`, the plural list keys, or `compliance_frameworks`. Sample `recommendation_overrides` are injected into `report.recommendation_overrides` automatically. Full list, what goes where, and how to use: [COMPLIANCE_FRAMEWORKS.md – Compliance samples](COMPLIANCE_FRAMEWORKS.md#compliance-samples) ([pt-BR](COMPLIANCE_FRAMEWORKS.pt_BR.md#amostras-de-conformidade)).
 
 **Checklist when using a compliance sample file:**
 
-1. **Merge** the sample’s `recommendation_overrides` into `report.recommendation_overrides` in your main config — otherwise the **Recommendations** sheet falls back to built-in generic text only.
+1. **Confirm** `report.recommendation_overrides` after load includes the sample rows (automatic). Add extra inline rows only if you need different wording — otherwise the **Recommendations** sheet used to fall back to generic text when this copy-paste step was skipped.
 1. **Review** optional `regex` entries; regional digit patterns can be noisy on unconstrained text (see [SENSITIVITY_DETECTION.md](SENSITIVITY_DETECTION.md#generic-digit-patterns-and-false-positive-scope)).
-1. **Order** `recommendation_overrides` so **more specific** `norm_tag_pattern` strings appear **before** broader substrings (e.g. **UK GDPR** before **GDPR**). The matcher uses **first match** (substring semantics).
+1. **Order** extra inline `recommendation_overrides` so **more specific** `norm_tag_pattern` strings appear **before** broader substrings (e.g. **UK GDPR** before **GDPR**). The matcher uses **first match** (substring semantics). For several frameworks, list more specific ids first in `compliance_frameworks` when tags can overlap as substrings.
 
 ### Rate limiting and safe concurrency
 

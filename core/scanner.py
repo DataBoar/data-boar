@@ -27,8 +27,8 @@ class DataScanner:
 
     def __init__(
         self,
-        regex_overrides_path: str | None = None,
-        ml_patterns_path: str | None = None,
+        regex_overrides_path: str | list[str] | tuple[str, ...] | None = None,
+        ml_patterns_path: str | list[str] | tuple[str, ...] | None = None,
         ml_terms_inline: list | None = None,
         dl_patterns_path: str | None = None,
         dl_terms_inline: list | None = None,

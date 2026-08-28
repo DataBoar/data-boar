@@ -123,25 +123,33 @@ Cada amostra pode fornecer até três tipos de conteúdo. Seu **config principal
 
 | Chave de config / arquivo                                     | Finalidade                                                                                                     | O que a amostra fornece                                                                                                                                                  |
 | -------------------------                                     | ----------                                                                                                     | -----------------------                                                                                                                                                  |
-| **`regex_overrides_file`**                                    | Padrões regex customizados; match → achado HIGH com `norm_tag` dado.                                           | Lista de `{ name, pattern, norm_tag }` (ex.: NIN UK, SIN canadense, ID SA). Amostras podem usar chave `regex` ou `patterns`.                                             |
-| **`ml_patterns_file`** / **`sensitivity_detection.ml_terms`** | Termos de treinamento ML (e DL); nomes de coluna e texto amostrado classificados como sensitive/non_sensitive. | Lista de `{ text, label }` com termos por framework (ex.: “data subject”, “personal information”, “responsible party”). Amostras podem usar chave `terms` ou `ml_terms`. |
-| **`report.recommendation_overrides`**                         | Override de “Base legal”, “Risco”, “Recomendação”, “Prioridade”, “Relevante para” por `norm_tag`.              | Lista de `{ norm_tag_pattern, base_legal, risk, recommendation, priority, relevant_for }` para mesclar no config.                                                        |
+| **`regex_overrides_file`** / **`regex_overrides_files`**      | Padrões regex customizados; match → achado HIGH com `norm_tag` dado.                                           | Lista de `{ name, pattern, norm_tag }` (ex.: NIN UK, SIN canadense, ID SA). Amostras podem usar chave `regex` ou `patterns`.                                             |
+| **`ml_patterns_file`** / **`ml_patterns_files`** / **`sensitivity_detection.ml_terms`** | Termos de treinamento ML (e DL); nomes de coluna e texto amostrado classificados como sensitive/non_sensitive. | Lista de `{ text, label }` com termos por framework (ex.: “data subject”, “personal information”, “responsible party”). Amostras podem usar chave `terms` ou `ml_terms`. |
+| **`report.recommendation_overrides`**                         | Override de “Base legal”, “Risco”, “Recomendação”, “Prioridade”, “Relevante para” por `norm_tag`.              | Carregado **automaticamente** de cada amostra referenciada. Linhas extras no config ainda vencem no mesmo `norm_tag_pattern`.                                            |
 
-O mesmo arquivo YAML pode conter **regex**, **terms** e **recommendation_overrides**; defina `regex_overrides_file` e `ml_patterns_file` com o caminho desse arquivo e copie o bloco **recommendation_overrides** para o config principal em `report.recommendation_overrides`.
+O mesmo arquivo YAML pode conter **regex**, **terms** e **recommendation_overrides**. Aponte `regex_overrides_file` / `ml_patterns_file` (ou as chaves no plural / `compliance_frameworks`) para esse arquivo; o loader **injeta** `recommendation_overrides` em `report.recommendation_overrides` (sem cópia manual). Linhas inline em `report.recommendation_overrides` ainda vencem no mesmo `norm_tag_pattern`.
 
 ### Como usar uma amostra
 
 1. **Escolha a amostra** do seu regulamento na tabela acima (ou em [compliance-samples/README.pt_BR.md](compliance-samples/README.pt_BR.md)).
-1. **Defina os caminhos no config principal** (ex.: `config.yaml`):
+1. **Defina os caminhos no config principal** (ex.: `config.yaml`). Um framework:
 
    ```yaml
    regex_overrides_file: docs/compliance-samples/compliance-sample-pipeda.yaml
    ml_patterns_file: docs/compliance-samples/compliance-sample-pipeda.yaml
    ```
 
-   Use o mesmo arquivo para ambos se a amostra tiver `regex` e `terms`.
+   Vários frameworks (mesma ordem de merge que `sql_sampling_files`: arquivo posterior vence no mesmo `name` de regex, `text` de ML ou `norm_tag_pattern`):
 
-1. **Mescle os recommendation overrides:** Copie a lista `recommendation_overrides` do arquivo da amostra para o config em `report.recommendation_overrides` (mescle com overrides que você já tiver). Veja [USAGE.pt_BR.md](USAGE.pt_BR.md) (seção de relatório) para a estrutura.
+   ```yaml
+   compliance_frameworks: [lgpd, pci_dss, brazil_saude]
+   ```
+
+   Ou liste os arquivos: `regex_overrides_files:` / `ml_patterns_files:`.
+
+   Use o mesmo arquivo para regex e ML se a amostra tiver `regex` e `terms`.
+
+1. **O texto de recomendação é injetado automaticamente** de cada amostra em `report.recommendation_overrides`. Acrescente linhas inline só se precisar sobrescrever o texto da amostra. Veja [USAGE.pt_BR.md](USAGE.pt_BR.md) (seção de relatório). Coloque `norm_tag_pattern` **mais específico** **antes** de substrings genéricas nas linhas extras (primeira correspondência).
 1. **Execute a varredura** (CLI ou API). Os achados usarão as norm tags e o texto de recomendação da amostra; o relatório Excel exibirá Base legal, Risco, Recomendação e Prioridade do framework.
 
 ---
@@ -155,7 +163,7 @@ Seja qual for o **idioma**, **encoding** ou **região** da sua sopa de dados, a 
 - **Múltiplos idiomas em termos e relatórios:** As amostras de conformidade podem incluir termos no(s) idioma(s) da região alvo (ex.: EN+FR para PIPEDA/Canadá, PT-BR+EN para LGPD/Brasil, japonês ou árabe para APAC/MENA, **EN+RU para 152-FZ na Rússia**). O relatório Excel e o texto de recomendação suportam **Unicode** (ex.: base_legal e recommendation em japonês, árabe, **cirílico** ou caracteres acentuados).
 - **Scripts e charset nos dados:** O pipeline de varredura e relatório é **Unicode-first**. Conteúdo real costuma misturar **latim**, **cirílico** (ex.: russo), **CJK** (ex.: kanji/kana em japonês) e **árabe** (incluindo apresentação RTL quando o visualizador suporta). **Encodings legados em bytes** para configs e arquivos de padrões são tratados com **auto-detecção** (config principal) e **`pattern_files_encoding`** (arquivos de padrões); **sniffing e heurísticas de encoding** para corpus específicos podem ser **afinados** (config, padrões, conectores) quando a implantação exige comportamento mais rígido — fale conosco para **consultoria** se times de TI, segurança, compliance ou DPO precisarem de um **perfil customizado de idioma/encoding**.
 - **Múltiplos encodings para config e arquivos de padrões:** O **arquivo de config principal** é lido com **auto-detecção** (UTF-8, UTF-8 com BOM, ANSI Windows/cp1252, Latin-1), carregando mesmo quando salvo em encoding legado. Os **arquivos de padrões** (regex overrides, termos ML/DL) usam o encoding definido por **`pattern_files_encoding`** no seu config (padrão **`utf-8`**). Defina como `cp1252` ou `latin_1` apenas quando seus arquivos de padrões ou amostras estiverem salvos nesse encoding.
-- **Múltiplas regiões:** Use a amostra de conformidade que corresponda à sua região ou regulamento (LGPD, UK GDPR, EU GDPR, Benelux, PIPEDA, POPIA, APPI, PCI-DSS, **152-FZ** ou amostras regionais opcionais). Cada amostra é um único arquivo YAML; você aponta o config para ela e mescla os recommendation overrides.
+- **Múltiplas regiões:** Use a amostra de conformidade que corresponda à sua região ou regulamento (LGPD, UK GDPR, EU GDPR, Benelux, PIPEDA, POPIA, APPI, PCI-DSS, **152-FZ** ou amostras regionais opcionais). Cada amostra é um único arquivo YAML. Aponte `regex_overrides_file` para ela, ou defina `compliance_frameworks: [lgpd, pci_dss, …]`. Os recommendation overrides são injetados automaticamente.
 
 ### Interface web, documentação e locales extras (roadmap curto a médio prazo)
 
@@ -183,7 +191,7 @@ Hoje, a documentação de produto **versionada** está em **inglês + pt-BR**; a
    ml_patterns_file: docs/compliance-samples/compliance-sample-pipeda.yaml
    ```
 
-   Depois mescle os **`recommendation_overrides`** da amostra no seu config em `report.recommendation_overrides` (veja [USAGE.pt_BR](USAGE.pt_BR.md) seção de relatório).
+   Os **`recommendation_overrides`** da amostra entram em `report.recommendation_overrides` automaticamente (veja [USAGE.pt_BR](USAGE.pt_BR.md) seção de relatório). Acrescente linhas inline só para sobrescrever a amostra.
 
 1. **Execute a varredura**
 

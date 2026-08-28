@@ -29,6 +29,9 @@ def test_normalize_config_empty():
     }
     assert out.get("sql_sampling_file") == ""
     assert out.get("sql_sampling_files") == []
+    assert out.get("regex_overrides_files") == []
+    assert out.get("ml_patterns_files") == []
+    assert out.get("compliance_frameworks") == []
 
 
 def test_normalize_config_sql_sampling_overrides():

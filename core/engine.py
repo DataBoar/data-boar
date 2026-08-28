@@ -147,8 +147,12 @@ class AuditEngine:
             if _fuzzy_key in sens:
                 detection[_fuzzy_key] = sens[_fuzzy_key]
         self.scanner = DataScanner(
-            regex_overrides_path=config.get("regex_overrides_file") or None,
-            ml_patterns_path=config.get("ml_patterns_file") or None,
+            regex_overrides_path=config.get("regex_overrides_files")
+            or config.get("regex_overrides_file")
+            or None,
+            ml_patterns_path=config.get("ml_patterns_files")
+            or config.get("ml_patterns_file")
+            or None,
             ml_terms_inline=sens.get("ml_terms") or None,
             dl_patterns_path=config.get("dl_patterns_file") or None,
             dl_terms_inline=sens.get("dl_terms") or None,
