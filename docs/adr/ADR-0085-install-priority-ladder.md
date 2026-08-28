@@ -7,12 +7,15 @@
 
 ## Status
 
-Proposed
+Accepted
 
 ### Status history
 
 - 2026-08-06 — Proposed (born Proposed per ADR-0045; records maintainer install-order convention from [#1467](https://github.com/DataBoar/data-boar/issues/1467) / [#1470](https://github.com/DataBoar/data-boar/issues/1470). Accepted only via HITL ratification per ADR-0056; Date (UTC) immutable; Status history append-only).
 - 2026-08-12 — Clarifying amendment (still Proposed): hedge `brew` in Decision §1.2 as **when published**, matching §1.1 macOS wording and [#1478](https://github.com/DataBoar/data-boar/issues/1478); cross-links [#1425](https://github.com/DataBoar/data-boar/issues/1425) / [#1427](https://github.com/DataBoar/data-boar/issues/1427). Plan hub: [PLAN_NATIVE_PACKAGES.md](../plans/PLAN_NATIVE_PACKAGES.md) ([#1541](https://github.com/DataBoar/data-boar/issues/1541)).
+- 2026-08-28 — Accepted (operator ratification against `docs/CANONICAL_PRODUCT_FACTS.md`,
+  README pipx-first ladder, and recent releases with no native packages published yet).
+  Genesis Date (UTC) unchanged.
 
 ## Context
 

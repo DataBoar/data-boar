@@ -6,11 +6,15 @@
 
 ## Status
 
-Proposed
+Accepted
 
 ### Status history
 
 - 2026-08-18 — Proposed (GitHub [#811](https://github.com/DataBoar/data-boar/issues/811)). Number **0090** chosen so it does not collide with [ADR-0089](ADR-0089-native-package-signed-repository-hosting-keys-and-community-boundary.md) ([#1405](https://github.com/DataBoar/data-boar/issues/1405), signed native package repos; now **Accepted** on `main`).
+- 2026-08-28 — Accepted (operator ratification: G1 `PLAN_PRO_PLUGIN_AUDITABILITY.md`;
+  G3 child [#1624](https://github.com/DataBoar/data-boar/issues/1624) OPEN as designed;
+  G2 in declared scope — this ADR remains design, code is follow-up). Genesis Date
+  (UTC) unchanged.
 
 ## Context
 

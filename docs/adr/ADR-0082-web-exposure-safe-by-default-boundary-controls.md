@@ -17,6 +17,13 @@ Accepted
   (issue [#1567](https://github.com/DataBoar/data-boar/issues/1567)). Status remains
   Proposed; genesis Date (UTC) unchanged.
 - 2026-08-14 — Accepted (operator ratification).
+- 2026-08-28 — Amended: Decision #1 bind gate now requires `api.require_api_key: true`
+  **and** a resolved API key. A configured key or WebAuthn token secret alone does
+  not satisfy the gate — WebAuthn's HTML flow does not cover JSON routes. Otherwise
+  startup aborts (exit 2). Origin: GitHub [#1714](https://github.com/DataBoar/data-boar/issues/1714)
+  / [#1800](https://github.com/DataBoar/data-boar/pull/1800) /
+  [#1806](https://github.com/DataBoar/data-boar/issues/1806). Status remains Accepted;
+  genesis Date (UTC) unchanged.
 
 ## Context
 
@@ -36,8 +43,12 @@ opt-in for remote-risk surfaces, and auditable access for sensitive operational 
 
 ## Decision
 
-1. **Startup bind gate:** non-loopback bind now requires a resolved built-in auth boundary
-   (API key or WebAuthn token secret); otherwise startup aborts.
+1. **Startup bind gate:** non-loopback bind requires `api.require_api_key: true` **and** a
+   resolved API key. A configured key or WebAuthn token secret alone does not satisfy this
+   gate — WebAuthn's HTML flow does not cover JSON routes. Otherwise startup aborts
+   (exit 2). ([#1714](https://github.com/DataBoar/data-boar/issues/1714) /
+   [#1800](https://github.com/DataBoar/data-boar/pull/1800) /
+   [#1806](https://github.com/DataBoar/data-boar/issues/1806))
 2. **Ad-hoc target gate:** `api.allow_adhoc_targets` defaults to `false`; when disabled,
    `POST /scan_database` accepts only payloads that match pre-configured targets.
 3. **Audit logs hardening:** `/logs` and `/logs/{session_id}` are disabled by default and
@@ -67,7 +78,8 @@ opt-in for remote-risk surfaces, and auditable access for sensitive operational 
 
 ## Consequences
 
-- **Positive:** remote exposure without auth is blocked at process start.
+- **Positive:** remote exposure without API-key auth (`require_api_key` plus a resolved key)
+  is blocked at process start. WebAuthn is not a bind-gate substitute.
 - **Positive:** ad-hoc DB scan abuse surface is closed by default.
 - **Positive:** audit logs become explicit, opt-in (`audit_logs.enabled`), and role-gated
   when RBAC is active; Community/OPEN are not permanently locked out of their own trail.
@@ -91,3 +103,5 @@ opt-in for remote-risk surfaces, and auditable access for sensitive operational 
 - GitHub issue [#1135](https://github.com/DataBoar/data-boar/issues/1135)
 - GitHub issue/PR [#1553](https://github.com/DataBoar/data-boar/issues/1553) / [#1564](https://github.com/DataBoar/data-boar/pull/1564)
 - GitHub issue/PR [#1552](https://github.com/DataBoar/data-boar/issues/1552) / [#1563](https://github.com/DataBoar/data-boar/pull/1563)
+- GitHub issue/PR [#1714](https://github.com/DataBoar/data-boar/issues/1714) / [#1800](https://github.com/DataBoar/data-boar/pull/1800)
+- GitHub issue [#1806](https://github.com/DataBoar/data-boar/issues/1806)

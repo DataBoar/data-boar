@@ -5,7 +5,7 @@
 
 **Português (Brasil):** [PLAN_FINDINGS_CORPORATE_REPOSITORY_EXPORT.pt_BR.md](PLAN_FINDINGS_CORPORATE_REPOSITORY_EXPORT.pt_BR.md)
 
-**Status:** Pending (no native sink on `main`; v1.8.0 survey [#1058](https://github.com/DataBoar/data-boar/issues/1058) enriches this plan — do not archive)
+**Status:** In progress (Phases A–C native SQL/Mongo echo on `main` via #552; Phase D object storage and catalog clients remain backlog; v1.8.0 survey [#1058](https://github.com/DataBoar/data-boar/issues/1058) still open — do not archive)
 **Date:** 2026-05-02 (v1.8.0 wave: 2026-08-27)
 **Authors:** Fabio Leitao
 **Priority:** H2
@@ -68,9 +68,9 @@ Today, the **primary** persistence path is **SQLite** plus **Excel/report** outp
 
 | Phase | Focus | Outcome |
 | ----- | ----- | -------- |
-| **A — Contract** | Document **canonical export JSON** (or CSV bundles) for one `session_id`: findings + failures + session header; version field; PII policy reminder (no raw samples). | Customers can **ingest today** with external ETL **without** new code (manual or their pipeline). |
-| **B — Operator CLI / post-scan hook** | `scripts/` or engine hook: **after** `generate_final_reports`, push export file(s) to a **path** or **presigned URL**; exit codes and logs. | **Lowest** engineering risk; proves ops story. |
-| **C — Native sinks (pick order by demand)** | **1)** PostgreSQL / SQL Server **DDL + upsert**; **2)** MongoDB **collections** with indexes on `session_id`; **3)** optional **S3 PutObject** using existing object-storage direction. | **Automated** landing in **corp DB** the customer names. |
+| **A — Contract** | Document **canonical export JSON** (or CSV bundles) for one `session_id`: findings + failures + session header; version field; PII policy reminder (no raw samples). | Customers can **ingest today** with external ETL **without** new code (manual or their pipeline). SQL/Mongo **DDL** shipped as `docs/deploy/findings_sink_schema.sql` (+ Mongo JS) — ✅ #552 |
+| **B — Operator CLI / post-scan hook** | `scripts/` or engine hook: **after** `generate_final_reports`, push export file(s) to a **path** or **presigned URL**; exit codes and logs. | **`--export-findings-sink`** + `scripts/export_findings_to_sink.py` — ✅ #552 |
+| **C — Native sinks (pick order by demand)** | **1)** PostgreSQL / SQL Server **DDL + upsert**; **2)** MongoDB **collections** with indexes on `session_id`; **3)** optional **S3 PutObject** using existing object-storage direction. | SQL + Mongo echo ✅ #552; **S3/Blob/GCS deferred** (not this issue) |
 | **D — Governance** | Retention flags, **delete-after-export** (optional, dangerous — doc-heavy), sink-side **RBAC** checklist, audit log line “exported to X”. | Enterprise **review** packet content. |
 
 ---
@@ -91,6 +91,7 @@ Today, the **primary** persistence path is **SQLite** plus **Excel/report** outp
 
 ## Changelog
 
+- **2026-08-28:** Phases **A–C** native SQL/Mongo echo ([#552](https://github.com/DataBoar/data-boar/issues/552)): DDL, `--export-findings-sink`, post-scan hook, sample-export ack (LGPD Art. 46). Phase **D** object storage still deferred.
 - **2026-08-27:** v1.8.0 survey **[#1058](https://github.com/DataBoar/data-boar/issues/1058)** — catalog tag formats (OpenMetadata / DataHub / Apache Atlas) and opt-in **PII-as-quality-check** sidecar; discovery remains read-only (no source write-back).
 - **2026-04-28:** Initial plan — corporate **findings repository / export** beyond SQLite; **Pro/Ent-shaped**; **customer-pull** gating; links to lakehouse plan, object storage, notifications, security.
 
@@ -154,7 +155,7 @@ Same discipline as other v1.8.0 survey slices — **do not** add a catalog-vendo
 | P1 | This plan section + hub summary + `PLANS_TODO` survey rows | ✅ Done (docs PR) |
 | P2 | Mapping note: OpenMetadata / DataHub / Atlas tag fields ← Phase **A** export JSON (lossy table; no client code) | ⬜ Pending |
 | P3 | Opt-in quality-check **sidecar** schema (quarantine / column flag for orchestrators; still no source write) | ⬜ Pending |
-| P4 | Phase **B** CLI / post-scan hook (existing outline) can optionally emit catalog JSON + sidecar | ⬜ Pending (existing phase table) |
+| P4 | Phase **B** CLI / post-scan hook (existing outline) can optionally emit catalog JSON + sidecar | ✅ SQL/Mongo echo (#552); catalog JSON still pending |
 | P5 | Native catalog HTTP sink (customer-pull; still no source write-back) | ⬜ Pending (Phase **C**-class) |
 
 ### Revisit (sibling plans — survey notes only)

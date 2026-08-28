@@ -79,7 +79,7 @@ Os títulos na tabela abaixo ficam em **inglês** (canônicos, iguais ao [README
 | 0056  | [Cryptographic ADR inventory (inv-adr.ps1 + SSH ed25519 attestation)](ADR-0056-cryptographic-adr-inventory-inv-adr-ssh-attestation.md) | Aceito |
 | 0057  | [Lightweight hub index (co-located links, no file moves)](ADR-0057-lightweight-hub-index-co-located-links.md) | Aceito |
 | 0058  | [Primer hub registration ritual](ADR-0058-primer-hub-registration-ritual.md) | Aceito |
-| 0059  | [Arquitetura de plugin de remediação (hook mínimo do host)](ADR-0059-remediation-plugin-architecture.md) | Proposto |
+| 0059  | [Arquitetura de plugin de remediação (hook mínimo do host)](ADR-0059-remediation-plugin-architecture.md) | Aceito |
 | 0060 | [`db/` Ruff and Bandit exclusion — risk accepted](ADR-0060-db-lint-bandit-exclusion-risk-accepted.md) | Aceito |
 | 0061 | [ADR-0061 U-axis issue sub-order and cross-milestone gate](ADR-0061-u-axis-issue-suborder-and-cross-milestone-gate.md) | Aceito |
 | 0062 | [ADR-0062 Agent containment: triple-audit offband pattern](ADR-0062-agent-containment-triple-audit-offband-pingpong.md) | Aceito |
@@ -94,23 +94,23 @@ Os títulos na tabela abaixo ficam em **inglês** (canônicos, iguais ao [README
 | 0071 | [Self-protecting PII gate: word-boundary matcher, CODEOWNERS, tripwire, FP allowlist](ADR-0071-self-protecting-pii-gate.md) | Aceito |
 | 0072 | [Commit Gate vs Release Gate: distinct criteria](ADR-0072-commit-gate-vs-release-gate-distinct-criteria.md) | Aceito |
 | 0073 | [Version scheme: octet-maturity side-channel + release-line roadmap](ADR-0073-version-scheme-octet-maturity-and-roadmap.md) | Aceito |
-| 0074 | [Supply-chain Layer 1: digest pins and Rust SCA](ADR-0074-supply-chain-layer1-digest-pins-and-rust-sca.md) | Proposto |
+| 0074 | [Supply-chain Layer 1: digest pins and Rust SCA](ADR-0074-supply-chain-layer1-digest-pins-and-rust-sca.md) | Aceito |
 | 0075 | [Plugin authentication — file-based license vs Bearer](ADR-0075-plugin-auth-file-based-vs-bearer.md) | Proposto |
-| 0076 | [OPA/Rego as CI tier drift linter (not runtime)](ADR-0076-opa-rego-ci-tier-drift-linter-not-runtime.md) | Proposto |
+| 0076 | [OPA/Rego as CI tier drift linter (not runtime)](ADR-0076-opa-rego-ci-tier-drift-linter-not-runtime.md) | Aceito |
 | 0077 | [Filesystem scan does not honor client `.gitignore`](ADR-0077-filesystem-scan-no-client-gitignore-by-design.md) | Aceito |
-| 0078 | [Multi-pattern regex: RegexSet before Vectorscan (benchmark gate; 2026-07-31 amend — RegexSet spike failed, cached Regex loop next)](ADR-0078-multi-pattern-regex-benchmark-gate-regexset-before-vectorscan.md) | Proposto |
+| 0078 | [Multi-pattern regex: RegexSet before Vectorscan (benchmark gate; 2026-07-31 amend — RegexSet spike failed, cached Regex loop next)](ADR-0078-multi-pattern-regex-benchmark-gate-regexset-before-vectorscan.md) | Aceito |
 | 0079 | [Ecosystem engineering rigor canon (UMADR satellites)](ADR-0079-ecosystem-engineering-rigor-canon.md) | Proposto |
 | 0080 | [Local validation gate is inviolable: full check-all before any push or PR](ADR-0080-local-validation-gate-inviolable.md) | Proposto |
-| 0081 | [No silent ML confidence failures on single-class compliance profiles](ADR-0081-no-silent-ml-confidence-single-class-hardening.md) | Proposto |
+| 0081 | [No silent ML confidence failures on single-class compliance profiles](ADR-0081-no-silent-ml-confidence-single-class-hardening.md) | Aceito |
 | 0082 | [Web exposure safe-by-default boundary controls](ADR-0082-web-exposure-safe-by-default-boundary-controls.md) | Aceito |
 | 0083 | [Rust regex stage: accept form B (findings superset)](ADR-0083-rust-regex-stage-superset-accept-form-b.md) | Aceito |
 | 0084 | [Native package: embed CPython by channel (Enterprise vs community)](ADR-0084-native-package-embedded-cpython-by-channel.md) | Aceito |
-| 0085 | [Install priority ladder (native-first when shipped; pipx today)](ADR-0085-install-priority-ladder.md) | Proposto |
-| 0086 | [Contrato language-neutral do Plugin SDK (L1/L2/L3)](ADR-0086-plugin-sdk-language-neutral-contract.md) | Proposto |
-| 0087 | [Malha bidirecional zero-trust do Plugin SDK](ADR-0087-plugin-sdk-bidirectional-zero-trust-mesh.md) | Proposto |
+| 0085 | [Install priority ladder (native-first when shipped; pipx today)](ADR-0085-install-priority-ladder.md) | Aceito |
+| 0086 | [Contrato language-neutral do Plugin SDK (L1/L2/L3)](ADR-0086-plugin-sdk-language-neutral-contract.md) | Aceito |
+| 0087 | [Malha bidirecional zero-trust do Plugin SDK](ADR-0087-plugin-sdk-bidirectional-zero-trust-mesh.md) | Aceito |
 | 0088 | [Verifique o verificador: checagens de integridade/autorização não podem depender do artefato que verificam](ADR-0088-verify-the-verifier-no-self-referential-trust-chain.md) | Aceito |
 | 0089 | [Repositório assinado de pacote nativo: hospedagem, chaves e fronteira comunidade](ADR-0089-native-package-signed-repository-hosting-keys-and-community-boundary.md) | Aceito |
-| 0090 | [Fronteira open-core/plugin: auditabilidade Pro, sample de referência, guard reverso de vazamento](ADR-0090-open-core-plugin-boundary-pro-auditability-reference-sample.md) | Proposto |
+| 0090 | [Fronteira open-core/plugin: auditabilidade Pro, sample de referência, guard reverso de vazamento](ADR-0090-open-core-plugin-boundary-pro-auditability-reference-sample.md) | Aceito |
 
 ## Docs relacionados
 

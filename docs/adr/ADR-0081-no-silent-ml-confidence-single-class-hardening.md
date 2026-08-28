@@ -6,7 +6,15 @@
 
 ## Status
 
-Proposed
+Accepted
+
+### Status history
+
+- 2026-07-12 — Proposed.
+- 2026-08-28 — Accepted (operator ratification against `core/detector.py`:
+  `classes_` indexing, non-silent warn-once, additive `_merge_ml_terms`,
+  `_declared_sensitive_term_match` fallback, and
+  `tests/test_compliance_samples.py` citing #1195). Genesis Date (UTC) unchanged.
 
 ## Context
 

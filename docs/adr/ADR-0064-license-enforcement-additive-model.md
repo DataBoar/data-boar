@@ -11,6 +11,13 @@ Proposed
 ### Status history
 
 - 2026-06-21 — Proposed (materializes GitHub #709; fulfills ADR-0027 Watch per #993)
+- 2026-08-28 — Amended: Decision *Runtime tier resolution* now documents the two
+  real paths (`enforced` = JWT `dbtier` VALID/GRACE only, fail-closed;
+  `open` = YAML / `Tier.OPEN`). `DATA_BOAR_TIER_OVERRIDE` is not a legitimate
+  resolution step — env vars cannot alter tier or disable enforcement
+  ([#719](https://github.com/DataBoar/data-boar/issues/719) /
+  [#1809](https://github.com/DataBoar/data-boar/issues/1809)). Status remains
+  Proposed; genesis Date (UTC) unchanged.
 
 ## Context
 
@@ -47,12 +54,22 @@ boundaries for L2/L3 are [ADR 0075](ADR-0075-plugin-auth-file-based-vs-bearer.md
 degrades to **Community** with warnings (configurable grace), not hard crash — aligned with
 [ADR 0066](ADR-0066-tampered-state-behavior.md) for tamper paths.
 
-### Runtime tier resolution (`runtime_feature_tier.py` priority)
+### Runtime tier resolution (`runtime_feature_tier.py`)
 
-1. `DATA_BOAR_TIER_OVERRIDE` (only when `DATA_BOAR_ENV=development`)
-2. JWT `dbtier` when `LicenseGuard` state is VALID or GRACE
-3. `licensing.effective_tier` in YAML (lab/manual)
-4. `Tier.OPEN` fallback
+Resolution is **two separate paths**, not a linear waterfall. Environment
+variables (`DATA_BOAR_ENV`, `DEBUG`, `DATA_BOAR_TIER_OVERRIDE`) **never**
+alter the effective tier or disable enforcement. The former dev/CI override
+was removed — a misconfigured production container (`DEBUG=1`) could grant
+Enterprise without a JWT and without audit
+([#719](https://github.com/DataBoar/data-boar/issues/719)).
+
+1. **`mode: enforced`:** the tier comes **only** from a validated JWT `dbtier`
+   claim when `LicenseGuard` state is VALID or GRACE. Any other state (missing
+   or invalid JWT, missing `dbtier`, guard unavailable) **fails closed** to
+   Community with a CRITICAL audit record. YAML `licensing.effective_tier` is
+   **ignored**.
+2. **`mode: open`:** lab simulation via YAML `licensing.effective_tier`; default
+   is `Tier.OPEN`.
 
 ### v1.8.0-beta call-site scope (minimum)
 

@@ -6,12 +6,15 @@
 
 ## Status
 
-Proposed
+Accepted
 
 ### Status history
 
 - 2026-08-03 — Proposed (materializes reserved slot for GitHub #606)
 - 2026-08-05 — Amended: host writes findings JSONL from SQLite before `remediate` (#1443; Phase 2 host-export start)
+- 2026-08-28 — Accepted (operator ratification against code: Protocol, loader,
+  fail-graceful, tier-gate, JSONL host-write; dedicated test
+  `tests/test_remediation_findings_jsonl_1443.py`). Genesis Date (UTC) unchanged.
 
 ## Context
 

@@ -6,11 +6,15 @@
 
 ## Status
 
-Proposed
+Accepted
 
 ### Status history
 
 - 2026-08-09 — Proposed (epic [#865](https://github.com/DataBoar/data-boar/issues/865); Fatia B contract files)
+- 2026-08-28 — Accepted (operator ratification against
+  `docs/sdk/PLUGIN_CONTRACT.schema.json`, `core/sdk/mutual_attestation.py`
+  Safe-Hold, L2 stub, and `tests/test_plugin_sdk_contract.py`). Genesis Date
+  (UTC) unchanged.
 
 ## Context
 
