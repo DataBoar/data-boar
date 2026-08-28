@@ -58,7 +58,7 @@ When adding schema, verify:
 | --- | --- |
 | `scan_sessions` additive columns | `_ensure_tenant_column`, `_ensure_technician_column`, `_ensure_config_scope_hash_column`, `_ensure_jurisdiction_hint_column` |
 | `filesystem_findings` Phase 1 identity | `_ensure_source_mtime_ns_column`, `_ensure_source_size_column`, `_ensure_content_fingerprint_column` (**#736**) |
-| Whole new tables (post–first release) | `_ensure_*_table()` + `create(checkfirst=True)` |
+| `scan_table_checkpoints` (#1330) | `_ensure_scan_table_checkpoints_table` + `create(checkfirst=True)` |
 | `maturity_assessment_answers.row_hmac` | `_ensure_maturity_row_hmac_column` |
 | `webauthn_credentials.roles_json` | `_ensure_webauthn_roles_json_column` |
 

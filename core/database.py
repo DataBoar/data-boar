@@ -4,9 +4,9 @@ LocalDBManager persists findings, failures, and data-source inventory rows by se
 Session id comes from core.session (UUID + timestamp); set via set_current_session_id.
 """
 
-from datetime import datetime, timezone
 import os
 import socket
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import (
@@ -32,7 +32,7 @@ Base = declarative_base()
 
 def _utc_now() -> datetime:
     """Timezone-aware UTC now for SQLAlchemy column defaults."""
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 class ScanSession(Base):
@@ -65,6 +65,33 @@ class ScanSession(Base):
     # Process liveness for orphan reaper (#1251). NULL = legacy / unknown → reapable.
     pid = Column(Integer, nullable=True)
     owner_hostname = Column(String(255), nullable=True)
+
+
+class ScanTableCheckpoint(Base):
+    """Per-table SQL/Snowflake progress for ``--resume`` (#1330).
+
+    This is **not** filesystem incremental identity (ADR-0051). A table is
+    ``completed`` only after every column in that table has been sampled.
+    Crash mid-table leaves ``in_progress`` so resume re-scans that table.
+    """
+
+    __tablename__ = "scan_table_checkpoints"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    session_id = Column(String(64), nullable=False, index=True)
+    target_name = Column(String(100), nullable=False)
+    schema_name = Column(String(100), nullable=False, default="")
+    table_name = Column(String(100), nullable=False)
+    status = Column(String(20), nullable=False, default="in_progress")
+    updated_at = Column(DateTime, default=_utc_now)
+    __table_args__ = (
+        UniqueConstraint(
+            "session_id",
+            "target_name",
+            "schema_name",
+            "table_name",
+            name="uq_scan_table_checkpoints_peer",
+        ),
+    )
 
 
 class DatabaseFinding(Base):
@@ -383,6 +410,7 @@ class LocalDBManager:
         self._ensure_source_mtime_ns_column()
         self._ensure_source_size_column()
         self._ensure_content_fingerprint_column()
+        self._ensure_scan_table_checkpoints_table()
         self._session_factory = sessionmaker(bind=self.engine, expire_on_commit=False)
         self._current_session_id: str | None = None
         # Crash-recovery: mark dead-PID / legacy-NULL orphans as interrupted (#1251).
@@ -470,6 +498,10 @@ class LocalDBManager:
                     )
                 )
             conn.commit()
+
+    def _ensure_scan_table_checkpoints_table(self) -> None:
+        """Create scan_table_checkpoints when missing (#1330)."""
+        ScanTableCheckpoint.__table__.create(self.engine, checkfirst=True)
 
     def _ensure_aggregated_table(self) -> None:
         """Create aggregated_identification_risk table if it does not exist."""
@@ -874,6 +906,146 @@ class LocalDBManager:
     @property
     def current_session_id(self) -> str:
         return self._current_session_id or ""
+
+    def get_session_status(self, session_id: str) -> str | None:
+        """Return scan_sessions.status for *session_id*, or None if missing."""
+        session = self._session_factory()
+        try:
+            rec = (
+                session.query(ScanSession)
+                .filter(ScanSession.session_id == session_id)
+                .first()
+            )
+            return str(rec.status) if rec is not None else None
+        finally:
+            session.close()
+
+    def reopen_session_for_resume(self, session_id: str) -> None:
+        """Mark an interrupted/failed/running session as running again (#1330)."""
+        session = self._session_factory()
+        try:
+            rec = (
+                session.query(ScanSession)
+                .filter(ScanSession.session_id == session_id)
+                .first()
+            )
+            if rec is None:
+                return
+            rec.status = "running"
+            rec.finished_at = None
+            rec.pid = os.getpid()
+            rec.owner_hostname = socket.gethostname() or None
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
+
+    def list_completed_sql_tables(self, target_name: str) -> set[tuple[str, str]]:
+        """Return {(schema, table)} marked completed for the current session."""
+        sid = self._current_session_id
+        if not sid:
+            return set()
+        session = self._session_factory()
+        try:
+            rows = (
+                session.query(ScanTableCheckpoint)
+                .filter(
+                    ScanTableCheckpoint.session_id == sid,
+                    ScanTableCheckpoint.target_name == target_name,
+                    ScanTableCheckpoint.status == "completed",
+                )
+                .all()
+            )
+            return {(r.schema_name or "", r.table_name or "") for r in rows}
+        finally:
+            session.close()
+
+    def mark_sql_table_in_progress(
+        self, target_name: str, schema_name: str | None, table_name: str
+    ) -> None:
+        """Record that sampling of this table has started. Never demotes completed."""
+        sid = self._current_session_id
+        if not sid or not table_name:
+            return
+        schema = (schema_name or "").strip()
+        session = self._session_factory()
+        try:
+            rec = (
+                session.query(ScanTableCheckpoint)
+                .filter_by(
+                    session_id=sid,
+                    target_name=target_name,
+                    schema_name=schema,
+                    table_name=table_name,
+                )
+                .first()
+            )
+            if rec is not None:
+                if rec.status != "completed":
+                    rec.status = "in_progress"
+                    rec.updated_at = _utc_now()
+                    session.commit()
+                return
+            session.add(
+                ScanTableCheckpoint(
+                    session_id=sid,
+                    target_name=target_name,
+                    schema_name=schema,
+                    table_name=table_name,
+                    status="in_progress",
+                    updated_at=_utc_now(),
+                )
+            )
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
+
+    def mark_sql_table_completed(
+        self, target_name: str, schema_name: str | None, table_name: str
+    ) -> None:
+        """Mark the table completed only after all columns were processed (#1330)."""
+        sid = self._current_session_id
+        if not sid or not table_name:
+            return
+        schema = (schema_name or "").strip()
+        session = self._session_factory()
+        try:
+            rec = (
+                session.query(ScanTableCheckpoint)
+                .filter_by(
+                    session_id=sid,
+                    target_name=target_name,
+                    schema_name=schema,
+                    table_name=table_name,
+                )
+                .first()
+            )
+            now = _utc_now()
+            if rec is None:
+                session.add(
+                    ScanTableCheckpoint(
+                        session_id=sid,
+                        target_name=target_name,
+                        schema_name=schema,
+                        table_name=table_name,
+                        status="completed",
+                        updated_at=now,
+                    )
+                )
+            else:
+                rec.status = "completed"
+                rec.updated_at = now
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
 
     # --- Helpers for rate limiting and session state ---
 
@@ -1696,7 +1868,7 @@ class LocalDBManager:
                 .first()
             )
             if rec and rec.status == "running":
-                rec.finished_at = datetime.now(timezone.utc)
+                rec.finished_at = datetime.now(UTC)
                 rec.status = status
                 session.commit()
         except Exception:
@@ -1738,7 +1910,7 @@ class LocalDBManager:
             rows = (
                 session.query(ScanSession).filter(ScanSession.status == "running").all()
             )
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             for rec in rows:
                 host = getattr(rec, "owner_hostname", None)
                 if host and local_host and host != local_host:

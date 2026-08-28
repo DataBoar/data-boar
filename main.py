@@ -14,6 +14,8 @@ from typing import Any
 # Ensure project root on path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+from datetime import UTC
+
 from config.loader import load_config
 from core.database import LocalDBManager
 from core.engine import AuditEngine
@@ -697,6 +699,18 @@ def main() -> None:
         ),
     )
     parser.add_argument(
+        "--resume",
+        metavar="SESSION",
+        dest="resume_session",
+        default=None,
+        help=(
+            "Resume an interrupted SQL/Snowflake scan session (UUID): skip tables "
+            "already completed in that session, continue the rest (#1330). "
+            "A completed session is a no-op (does not re-scan). "
+            "Incompatible with --plan, --web, --reset-data, --diff, and --validate-config."
+        ),
+    )
+    parser.add_argument(
         "--prefilter-status",
         action="store_true",
         help=(
@@ -1008,6 +1022,7 @@ def main() -> None:
         demo_incompatible = (
             args.validate_config
             or args.plan
+            or getattr(args, "resume_session", None)
             or args.prefilter_status
             or args.check_extras
             or args.reset_data
@@ -1022,7 +1037,7 @@ def main() -> None:
         )
         if demo_incompatible:
             print(
-                "Cannot combine --demo with --validate-config, --plan, --prefilter-status, "
+                "Cannot combine --demo with --validate-config, --plan, --resume, --prefilter-status, "
                 "--check-extras, --reset-data, --export-audit-trail, --export-dsar, "
                 "--export-l1, --export-l3, --export-remediation-manifest, --diff, "
                 "--regenerate-report, or --governance-report.",
@@ -1049,6 +1064,7 @@ def main() -> None:
     if args.validate_config and (
         args.web
         or args.plan
+        or getattr(args, "resume_session", None)
         or args.reset_data
         or args.export_audit_trail is not None
         or args.export_dsar is not None
@@ -1060,7 +1076,7 @@ def main() -> None:
         or args.prefilter_status
     ):
         print(
-            "Cannot combine --validate-config with --web, --plan, --reset-data, "
+            "Cannot combine --validate-config with --web, --plan, --resume, --reset-data, "
             "--export-audit-trail, --export-dsar, --export-l1, --export-l3, "
             "--export-remediation-manifest, --regenerate-report, "
             "--governance-report, or --prefilter-status.",
@@ -1070,6 +1086,7 @@ def main() -> None:
 
     if args.plan and (
         args.web
+        or getattr(args, "resume_session", None)
         or args.reset_data
         or args.export_audit_trail is not None
         or args.export_dsar is not None
@@ -1082,10 +1099,32 @@ def main() -> None:
         or args.diff_sessions
     ):
         print(
-            "Cannot combine --plan with --web, --reset-data, "
+            "Cannot combine --plan with --web, --resume, --reset-data, "
             "--export-audit-trail, --export-dsar, --export-l1, --export-l3, "
             "--export-remediation-manifest, --regenerate-report, "
             "--governance-report, --prefilter-status, or --diff.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+
+    if getattr(args, "resume_session", None) and (
+        args.web
+        or args.plan
+        or args.reset_data
+        or args.validate_config
+        or args.diff_sessions
+        or args.prefilter_status
+        or args.export_audit_trail is not None
+        or args.export_dsar is not None
+        or export_l1
+        or export_l3
+        or args.export_remediation_manifest is not None
+        or args.regenerate_report is not None
+        or args.governance_report is not None
+    ):
+        print(
+            "Cannot combine --resume with --web, --plan, --reset-data, "
+            "--validate-config, --diff, --prefilter-status, or exports.",
             file=sys.stderr,
         )
         sys.exit(2)
@@ -1457,8 +1496,6 @@ def main() -> None:
 
     if args.export_l3 is not None:
         _emit_runtime_trust_info(runtime_trust, to_stdout=False, to_stderr=True)
-        from core.licensing.errors import FeatureTierBlockedError
-        from core.licensing.feature_gate import require_feature
         from core.l3_transformed_rows import (
             L3_FEATURE,
             L3ContainmentError,
@@ -1472,6 +1509,8 @@ def main() -> None:
             persist_l3_body,
             resolve_projection_columns,
         )
+        from core.licensing.errors import FeatureTierBlockedError
+        from core.licensing.feature_gate import require_feature
 
         try:
             require_feature(config, L3_FEATURE)
@@ -1678,6 +1717,7 @@ def main() -> None:
 
         _emit_runtime_trust_info(runtime_trust, to_stdout=True, to_stderr=True)
         import uvicorn
+
         from api.routes import app
         from core.dashboard_transport import (
             configure_dashboard_transport,
@@ -1909,15 +1949,15 @@ def main() -> None:
                 f"max_concurrent_scans={max_concurrent}. API calls would be rate-limited in this state."
             )
         if min_interval > 0 and last and last.get("started_at"):
-            from datetime import datetime, timezone
+            from datetime import datetime
 
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             started_at = last["started_at"]
             if isinstance(started_at, datetime):
                 if started_at.tzinfo is None:
-                    started_at = started_at.replace(tzinfo=timezone.utc)
+                    started_at = started_at.replace(tzinfo=UTC)
                 else:
-                    started_at = started_at.astimezone(timezone.utc)
+                    started_at = started_at.astimezone(UTC)
             else:
                 started_at = None
             if started_at is not None and started_at <= now:
@@ -1949,6 +1989,7 @@ def main() -> None:
                 tenant_name=tenant,
                 technician_name=technician,
                 jurisdiction_hint=bool(args.jurisdiction_hint),
+                resume_session_id=getattr(args, "resume_session", None),
             )
             print(f"Scan session: {session_id}")
             report_path = engine.generate_final_reports(session_id)
@@ -1964,6 +2005,11 @@ def main() -> None:
             notify_scan_complete_background(
                 engine.config, engine.db_manager, session_id
             )
+    except ValueError as exc:
+        if "#1330" in str(exc):
+            print(str(exc), file=sys.stderr)
+            sys.exit(2)
+        raise
     except KeyboardInterrupt:
         _finish_session_interrupted_if_running(engine)
         print("Scan interrupted.", file=sys.stderr)

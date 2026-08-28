@@ -3,24 +3,24 @@ SQL connector: connect via SQLAlchemy, discover schemas/tables/columns, sample r
 run detector, save_finding. Supports PostgreSQL, MySQL, MariaDB, SQLite, MSSQL, Oracle via driver.
 """
 
-from collections.abc import Set
 import json
 import os
 import time
+from collections.abc import Set
 from typing import Any
 from urllib.parse import quote
 
 from sqlalchemy import create_engine, inspect, text
 
+from connectors.sample_value_dedup import (
+    join_distinct_sample,
+    resolve_fetch_row_budget,
+)
 from connectors.sql_driver_deps import ensure_sql_driver_available
 from connectors.sql_sampling import (
     SamplingManager,
     TableSamplingMetadata,
     resolve_sql_sample_limit,
-)
-from connectors.sample_value_dedup import (
-    join_distinct_sample,
-    resolve_fetch_row_budget,
 )
 from core.connector_registry import register
 from core.crypto_audit import (
@@ -953,15 +953,12 @@ class SQLConnector:
             **(oracle_raw if (dialect or "").lower() == "oracle" else {}),
         )
         try:
-            with self.engine.connect() as conn:
-                with conn.begin():
-                    if dialect in ("postgresql", "postgres") and to:
-                        conn.execute(
-                            text("SET LOCAL statement_timeout = :mt").bindparams(
-                                mt=int(to)
-                            )
-                        )
-                    rows = conn.execute(plan.query).fetchall()
+            with self.engine.connect() as conn, conn.begin():
+                if dialect in ("postgresql", "postgres") and to:
+                    conn.execute(
+                        text("SET LOCAL statement_timeout = :mt").bindparams(mt=int(to))
+                    )
+                rows = conn.execute(plan.query).fetchall()
         except Exception as exc:
             raise RuntimeError("L3 column projection failed") from exc
         out: list[str] = []
@@ -995,9 +992,8 @@ class SQLConnector:
             return None
         try:
             # Keep probe transaction scope local so sampling starts from a clean connection state.
-            with self.engine.connect() as conn:
-                with conn.begin():
-                    value = conn.execute(stmt).scalar()
+            with self.engine.connect() as conn, conn.begin():
+                value = conn.execute(stmt).scalar()
             return str(value or "")
         except Exception:
             return None
@@ -1108,15 +1104,29 @@ class SQLConnector:
             progress = self._scan_progress
             if progress is not None and getattr(progress, "enabled", False):
                 progress.set_tables_total(len(discovered), target_name=target_name)
+            completed_tables: set[tuple[str, str]] = set()
+            from core.database import LocalDBManager
+
+            if isinstance(self.db_manager, LocalDBManager):
+                completed_tables = self.db_manager.list_completed_sql_tables(
+                    target_name
+                )
             for table_index, item in enumerate(discovered, start=1):
                 schema = item["schema"]
                 table = item["table"]
+                table_key = ((schema or "").strip(), table)
+                if table_key in completed_tables:
+                    continue
                 table_label = f"{schema}.{table}" if schema else table
                 if progress is not None and getattr(progress, "enabled", False):
                     progress.advance_table(
                         table_index,
                         table_label=table_label,
                         target_name=target_name,
+                    )
+                if isinstance(self.db_manager, LocalDBManager):
+                    self.db_manager.mark_sql_table_in_progress(
+                        target_name, schema, table
                     )
                 for col in item["columns"]:
                     cname = col["name"]
@@ -1132,6 +1142,8 @@ class SQLConnector:
                         col["type"],
                         audit_log_name=audit_name,
                     )
+                if isinstance(self.db_manager, LocalDBManager):
+                    self.db_manager.mark_sql_table_completed(target_name, schema, table)
         except Exception as e:
             self.db_manager.save_failure(target_name, "error", str(e))
         finally:
