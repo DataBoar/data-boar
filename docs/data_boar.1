@@ -211,6 +211,16 @@ On
 (unknown connector, missing required keys), does not create output directories or the SQLite file.
 .
 .TP
+.B \-\-plan
+Scan plan (dry\-run): enumerate SQL/Snowflake catalog (tables/columns; no column sampling),
+TCP\-connect RTT to each target peer (one handshake, not a port scan), classify local (loopback or RTT < 5 ms) / lan (5–20 ms) / remote (RTT ≥ 20 ms),
+and print an RTT\-floor estimate.
+Cost model: one sample query per column, plus one row\-estimate query per table on SQLAlchemy engines, plus catalog get_columns per table.
+Warns (does not abort) when the floor is ≥ 10 min, or remote RTT ≥ 50 ms with ≥ 200 columns.
+Cannot be combined with
+.BR \-\-web ", " \-\-validate\-config ", " \-\-reset\-data ", exports, " \-\-diff ", or " \-\-prefilter\-status .
+.
+.TP
 .B \-\-check\-extras
 List optional extras (from
 .BR pyproject.toml )

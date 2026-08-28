@@ -24,6 +24,8 @@ Documented in code: **`main.py --host`** → **`api.host`** → **`API_HOST`** �
 
 ## Done recently (changelog)
 
+- **2026-08-28 (CLI `--plan` scan preview #1329):** Dry-run catalog + TCP RTT floor before a live SQL scan. Surfaces: **`main.py --plan`**, **`core/scan_plan.py`**, **`docs/USAGE*.md`**, **`docs/data_boar.1`**, **`api/templates/help.html`**, **`tests/operator_help_sync_manifest.py`**, **`tests/test_scan_plan.py`**.
+
 - **2026-08-27 (CLI `--export-l3` persist containment #1334):** `--l3-persist` fail-closed: POSIX `0600`; Windows apply `icacls`, verify well-known SIDs (OWNER RIGHTS `S-1-3-4` is owner-equivalent; not localized names). Unproven containment → exit **5**; optional **`--l3-allow-unprotected`**. Surfaces: **`docs/USAGE*.md`**, **`docs/SDK.md`**, **`docs/data_boar.1`**, **`api/templates/help.html`**, **`tests/operator_help_sync_manifest.py`**.
 
 - **2026-08-27 (CLI `--export-l3` #1334):** L3 `transformed_rows` JSON via **`main.py --export-l3 SESSION_ID --l3-grant PATH`**; optional **`--l3-persist`** (never default). **`core/l3_transformed_rows.py`**. Pin: **`docs/sdk/transformed_rows.schema.json`** + **`.pin.json`**. Surfaces: **`docs/data_boar.1`**, **`api/templates/help.html`**, **`docs/USAGE*.md`**, **`tests/operator_help_sync_manifest.py`**, **`tests/test_l3_transformed_rows.py`**.

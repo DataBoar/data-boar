@@ -500,6 +500,9 @@ def main() -> None:
             "  # Validate config only (loader checks; no scan or API startup)\n"
             f"  {prog} --config config.yaml --validate-config\n"
             "\n"
+            "  # Scan plan: catalog scope + TCP RTT floor (no sampling)\n"
+            f"  {prog} --config config.yaml --plan\n"
+            "\n"
             "  # Show rust-regex-stage readiness (paid-tier accelerator; observability)\n"
             f"  {prog} --config config.yaml --prefilter-status\n"
             "\n"
@@ -675,6 +678,19 @@ def main() -> None:
             "On errors, does not create output directories or the sqlite file. "
             "Exit 0 when valid, 1 on errors. Incompatible with --web, --reset-data, "
             "and --export-audit-trail."
+        ),
+    )
+    parser.add_argument(
+        "--plan",
+        action="store_true",
+        help=(
+            "Print a scan plan and exit: enumerate SQL/Snowflake catalog "
+            "(tables/columns, no sampling), TCP-connect RTT to each target peer, "
+            "and an RTT-floor time estimate (1 sample query/column + 1 row-estimate/"
+            "table + catalog get_columns/table). Latency: local = loopback or RTT "
+            "< 5 ms; lan = 5–20 ms; remote = RTT ≥ 20 ms. Warns (does not abort) "
+            "when the floor is ≥ 10 min, or remote RTT ≥ 50 ms with ≥ 200 columns. "
+            "Incompatible with --web, --validate-config, --reset-data, and exports."
         ),
     )
     parser.add_argument(
@@ -988,6 +1004,7 @@ def main() -> None:
     if demo_mode:
         demo_incompatible = (
             args.validate_config
+            or args.plan
             or args.prefilter_status
             or args.check_extras
             or args.reset_data
@@ -1002,7 +1019,7 @@ def main() -> None:
         )
         if demo_incompatible:
             print(
-                "Cannot combine --demo with --validate-config, --prefilter-status, "
+                "Cannot combine --demo with --validate-config, --plan, --prefilter-status, "
                 "--check-extras, --reset-data, --export-audit-trail, --export-dsar, "
                 "--export-l1, --export-l3, --export-remediation-manifest, --diff, "
                 "--regenerate-report, or --governance-report.",
@@ -1028,6 +1045,7 @@ def main() -> None:
 
     if args.validate_config and (
         args.web
+        or args.plan
         or args.reset_data
         or args.export_audit_trail is not None
         or args.export_dsar is not None
@@ -1039,7 +1057,7 @@ def main() -> None:
         or args.prefilter_status
     ):
         print(
-            "Cannot combine --validate-config with --web, --reset-data, "
+            "Cannot combine --validate-config with --web, --plan, --reset-data, "
             "--export-audit-trail, --export-dsar, --export-l1, --export-l3, "
             "--export-remediation-manifest, --regenerate-report, "
             "--governance-report, or --prefilter-status.",
@@ -1047,8 +1065,31 @@ def main() -> None:
         )
         sys.exit(2)
 
+    if args.plan and (
+        args.web
+        or args.reset_data
+        or args.export_audit_trail is not None
+        or args.export_dsar is not None
+        or export_l1
+        or export_l3
+        or args.export_remediation_manifest is not None
+        or args.regenerate_report is not None
+        or args.governance_report is not None
+        or args.prefilter_status
+        or args.diff_sessions
+    ):
+        print(
+            "Cannot combine --plan with --web, --reset-data, "
+            "--export-audit-trail, --export-dsar, --export-l1, --export-l3, "
+            "--export-remediation-manifest, --regenerate-report, "
+            "--governance-report, --prefilter-status, or --diff.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+
     if args.prefilter_status and (
         args.web
+        or args.plan
         or args.reset_data
         or args.export_audit_trail is not None
         or args.export_dsar is not None
@@ -1060,7 +1101,7 @@ def main() -> None:
         or args.diff_sessions
     ):
         print(
-            "Cannot combine --prefilter-status with --web, --reset-data, "
+            "Cannot combine --prefilter-status with --web, --plan, --reset-data, "
             "--export-audit-trail, --export-dsar, --export-l1, --export-l3, "
             "--export-remediation-manifest, --regenerate-report, "
             "--governance-report, or --diff.",
@@ -1303,6 +1344,12 @@ def main() -> None:
     if args.validate_config:
         # Integrity / runtime-trust (sqlite) run only after a valid pre-flight (#538).
         _validate_config_and_exit(config, args.config)
+
+    if args.plan:
+        from core.scan_plan import run_scan_plan
+
+        print(run_scan_plan(config), end="")
+        sys.exit(0)
 
     if args.prefilter_status:
         from core.pro_scan_path import resolve_pro_scan_path, rust_accelerator_installed
