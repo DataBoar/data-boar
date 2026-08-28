@@ -384,6 +384,7 @@ def test_sharepoint_connector_rejects_private_site_url() -> None:
         "connectors/mongodb_connector.py",
         "connectors/redis_connector.py",
         "connectors/sql_connector.py",
+        "connectors/smb_connector.py",
         "core/scan_plan.py",
     ],
 )
@@ -409,6 +410,10 @@ def test_connector_sources_call_url_guard(connector_file: str) -> None:
         assert "primary_pin_str(" in source, (
             "scan_plan must pin TCP RTT to guard IPs (#1586), not re-resolve"
         )
+    if connector_file == "connectors/smb_connector.py":
+        assert "HostResolutionPin(" in source, (
+            "SMB must pin TCP peers to guard IPs (#1715 / #1586), not re-resolve"
+        )
 
 
 def test_powerbi_token_url_guarded() -> None:
@@ -425,3 +430,102 @@ def test_powerbi_token_url_guarded() -> None:
                 "auth": {"token_url": "http://169.254.169.254/token"},
             }
         )
+
+
+def test_smb_connector_rejects_rfc1918_host_without_opt_in() -> None:
+    """#1715: SMB must not register_session (NTLM) to a private host by default."""
+    from connectors.smb_connector import SMBConnector
+
+    db = _FailureRecorder()
+    mock_smb = MagicMock()
+    with (
+        patch("connectors.smb_connector._SMB_AVAILABLE", True),
+        patch("connectors.smb_connector.smbclient", mock_smb),
+    ):
+        conn = SMBConnector(
+            {
+                "name": "smb-ssrf",
+                "host": "192.168.1.50",
+                "share": "data",
+                "user": "svc",
+                "pass": "lab-only-secret",
+            },
+            scanner=None,
+            db_manager=db,
+        )
+        conn.run()
+    mock_smb.register_session.assert_not_called()
+    assert db.failures, "Expected save_failure for guarded SMB host (#1715)"
+    assert "#832" in db.failures[0][2]
+
+
+def test_smb_connector_allows_private_host_with_opt_in() -> None:
+    from connectors.smb_connector import SMBConnector
+
+    db = _FailureRecorder()
+    mock_smb = MagicMock()
+    mock_smb.walk.return_value = []
+    with (
+        patch("connectors.smb_connector._SMB_AVAILABLE", True),
+        patch("connectors.smb_connector.smbclient", mock_smb),
+    ):
+        conn = SMBConnector(
+            {
+                "name": "smb-lab",
+                "host": "192.168.1.50",
+                "share": "data",
+                "user": "svc",
+                "pass": "lab-only-secret",
+                OPT_IN_KEY: True,
+            },
+            scanner=None,
+            db_manager=db,
+        )
+        conn.run()
+    mock_smb.register_session.assert_called_once()
+    assert mock_smb.register_session.call_args.kwargs["server"] == "192.168.1.50"
+
+
+def test_smb_retarget_via_redacted_merge_still_hits_ssrf_guard() -> None:
+    """#1715: merge-on-save restores pass while attacker host stays; guard must block NTLM."""
+    from config.redact_config import REDACTED_PLACEHOLDER, merge_config_on_save
+    from connectors.smb_connector import SMBConnector
+
+    current = {
+        "targets": [
+            {
+                "name": "smb",
+                "type": "smb",
+                "host": "files.example.com",
+                "share": "data",
+                "user": "svc",
+                "pass": "stored-service-password",
+            }
+        ]
+    }
+    submitted = {
+        "targets": [
+            {
+                "name": "smb",
+                "type": "smb",
+                "host": "10.0.0.99",
+                "share": "data",
+                "user": "svc",
+                "pass": REDACTED_PLACEHOLDER,
+            }
+        ]
+    }
+    merged = merge_config_on_save(submitted, current)
+    target = merged["targets"][0]
+    assert target["pass"] == "stored-service-password"
+    assert target["host"] == "10.0.0.99"
+
+    db = _FailureRecorder()
+    mock_smb = MagicMock()
+    with (
+        patch("connectors.smb_connector._SMB_AVAILABLE", True),
+        patch("connectors.smb_connector.smbclient", mock_smb),
+    ):
+        SMBConnector(target, scanner=None, db_manager=db).run()
+    mock_smb.register_session.assert_not_called()
+    assert db.failures and "#832" in db.failures[0][2]
