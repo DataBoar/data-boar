@@ -48,48 +48,48 @@ def _compute_config_scope_hash(config: dict[str, Any]) -> str:
 
 
 # Import connectors so they register themselves
-import connectors.filesystem_connector  # noqa: F401
+import connectors.filesystem_connector
 from connectors.sql_connector import SQLConnector
 
 try:
-    import connectors.mongodb_connector  # noqa: F401
-except ImportError:  # noqa: BLE001
+    import connectors.mongodb_connector
+except ImportError:
     pass  # optional connector not installed
 try:
-    import connectors.redis_connector  # noqa: F401
-except ImportError:  # noqa: BLE001
+    import connectors.redis_connector
+except ImportError:
     pass  # optional connector not installed
 try:
-    import connectors.rest_connector  # noqa: F401
-except ImportError:  # noqa: BLE001
+    import connectors.rest_connector
+except ImportError:
     pass  # optional connector not installed
 try:
-    import connectors.smb_connector  # noqa: F401
-except ImportError:  # noqa: BLE001
+    import connectors.smb_connector
+except ImportError:
     pass  # optional connector not installed
 try:
-    import connectors.webdav_connector  # noqa: F401
-except ImportError:  # noqa: BLE001
+    import connectors.webdav_connector
+except ImportError:
     pass  # optional connector not installed
 try:
-    import connectors.sharepoint_connector  # noqa: F401
-except ImportError:  # noqa: BLE001
+    import connectors.sharepoint_connector
+except ImportError:
     pass  # optional connector not installed
 try:
-    import connectors.nfs_connector  # noqa: F401
-except ImportError:  # noqa: BLE001
+    import connectors.nfs_connector
+except ImportError:
     pass  # optional connector not installed
 try:
-    import connectors.powerbi_connector  # noqa: F401
-except ImportError:  # noqa: BLE001
+    import connectors.powerbi_connector
+except ImportError:
     pass  # optional connector not installed
 try:
-    import connectors.dataverse_connector  # noqa: F401
-except ImportError:  # noqa: BLE001
+    import connectors.dataverse_connector
+except ImportError:
     pass  # optional connector not installed
 try:
     import connectors.hubspot_connector  # noqa: F401
-except ImportError:  # noqa: BLE001
+except ImportError:
     pass  # optional connector not installed
 
 from core.connector_registry import connector_for_target
@@ -99,8 +99,8 @@ from core.crypto_audit import (
     validate_crypto_enabled,
 )
 from core.database import LocalDBManager
-from core.scan_progress import scan_progress_from_config
 from core.sampling import SamplingPolicy
+from core.scan_progress import scan_progress_from_config
 from core.scanner import DataScanner
 from core.session import new_session_id
 from core.throttler import BoarThrottler
@@ -111,7 +111,7 @@ try:
     from connectors.snowflake_connector import SnowflakeConnector
 
     _CONNECTOR_SAMPLING_POLICY_BASES = (SQLConnector, SnowflakeConnector)
-except ImportError:  # noqa: BLE001
+except ImportError:
     pass  # optional Snowflake connector not installed
 
 
@@ -276,9 +276,14 @@ class AuditEngine:
         tenant_name: str | None = None,
         technician_name: str | None = None,
         jurisdiction_hint: bool = False,
+        resume_session_id: str | None = None,
     ) -> str:
         """
         Run audit for all targets (sequential or parallel). Returns session_id (UUID + timestamp).
+
+        ``resume_session_id`` (#1330): reuse an existing session, skip SQL/Snowflake
+        tables already marked completed. A **completed** session is a safe no-op
+        (no target run). Unknown ids raise ``ValueError``.
         """
         from core.output_paths import OutputPathError, ensure_config_output_directories
 
@@ -350,6 +355,20 @@ class AuditEngine:
                     )
                     self._max_workers = OPEN_MODE_WORKER_CAP
 
+            if resume_session_id:
+                status = self.db_manager.get_session_status(resume_session_id)
+                if status is None:
+                    raise ValueError(
+                        f"Unknown scan session for --resume: {resume_session_id!r} "
+                        "(#1330)."
+                    )
+                self.db_manager.set_current_session_id(resume_session_id)
+                if status == "completed":
+                    return resume_session_id
+                self.db_manager.reopen_session_for_resume(resume_session_id)
+                slot_owned_here = False
+                self._run_audit_targets()
+                return resume_session_id
             session_id = new_session_id()
             self.db_manager.set_current_session_id(session_id)
             scope_hash = _compute_config_scope_hash(self.config)

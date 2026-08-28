@@ -20,6 +20,10 @@ Target config (type: database, driver: snowflake):
 import time
 from typing import Any
 
+from connectors.sample_value_dedup import (
+    join_distinct_sample,
+    resolve_fetch_row_budget,
+)
 from connectors.sql_connector import (
     _get_skip_schemas,
     _resolve_sample_statement_timeout_ms,
@@ -28,10 +32,6 @@ from connectors.sql_connector import (
 from connectors.sql_sampling import (
     column_sample_sql_for_cursor,
     resolve_sql_sample_limit,
-)
-from connectors.sample_value_dedup import (
-    join_distinct_sample,
-    resolve_fetch_row_budget,
 )
 from core.connector_registry import register
 from core.sampling import SamplingPolicy
@@ -256,15 +256,29 @@ class SnowflakeConnector:
             progress = self._scan_progress
             if progress is not None and getattr(progress, "enabled", False):
                 progress.set_tables_total(len(tables), target_name=target_name)
+            completed_tables: set[tuple[str, str]] = set()
+            from core.database import LocalDBManager
+
+            if isinstance(self.db_manager, LocalDBManager):
+                completed_tables = self.db_manager.list_completed_sql_tables(
+                    target_name
+                )
             for table_index, t in enumerate(tables, start=1):
                 schema = t["schema"]
                 table = t["table"]
+                table_key = ((schema or "").strip(), table)
+                if table_key in completed_tables:
+                    continue
                 table_label = f"{schema}.{table}" if schema else table
                 if progress is not None and getattr(progress, "enabled", False):
                     progress.advance_table(
                         table_index,
                         table_label=table_label,
                         target_name=target_name,
+                    )
+                if isinstance(self.db_manager, LocalDBManager):
+                    self.db_manager.mark_sql_table_in_progress(
+                        target_name, schema, table
                     )
                 columns = self._get_columns(schema, table)
                 for col in columns:
@@ -315,6 +329,8 @@ class SnowflakeConnector:
                         )
                     except Exception:
                         pass
+                if isinstance(self.db_manager, LocalDBManager):
+                    self.db_manager.mark_sql_table_completed(target_name, schema, table)
         except Exception as e:
             self.db_manager.save_failure(target_name, "error", str(e))
         finally:
