@@ -125,17 +125,17 @@ Each sample can provide up to three kinds of content. Your **main config** refer
 
 | Config key / file                                             | Purpose                                                                                         | What the sample provides                                                                                                                                                 |
 | -----------------                                             | -------                                                                                         | -------------------------                                                                                                                                                |
-| **`regex_overrides_file`**                                    | Custom regex patterns; match → finding with HIGH and given `norm_tag`.                          | A list of `{ name, pattern, norm_tag }` (e.g. UK NIN, Canadian SIN, SA ID). Samples may use key `regex` or `patterns`.                                                   |
-| **`ml_patterns_file`** / **`sensitivity_detection.ml_terms`** | ML (and DL) training terms; column names and sample text classified as sensitive/non_sensitive. | A list of `{ text, label }` with framework-specific terms (e.g. “data subject”, “personal information”, “responsible party”). Samples may use key `terms` or `ml_terms`. |
-| **`report.recommendation_overrides`**                         | Override “Base legal”, “Risco”, “Recomendação”, “Prioridade”, “Relevante para” per `norm_tag`.  | A list of `{ norm_tag_pattern, base_legal, risk, recommendation, priority, relevant_for }` to merge into your config.                                                    |
+| **`regex_overrides_file`** / **`regex_overrides_files`**      | Custom regex patterns; match → finding with HIGH and given `norm_tag`.                          | A list of `{ name, pattern, norm_tag }` (e.g. UK NIN, Canadian SIN, SA ID). Samples may use key `regex` or `patterns`.                                                   |
+| **`ml_patterns_file`** / **`ml_patterns_files`** / **`sensitivity_detection.ml_terms`** | ML (and DL) training terms; column names and sample text classified as sensitive/non_sensitive. | A list of `{ text, label }` with framework-specific terms (e.g. “data subject”, “personal information”, “responsible party”). Samples may use key `terms` or `ml_terms`. |
+| **`report.recommendation_overrides`**                         | Override “Base legal”, “Risco”, “Recomendação”, “Prioridade”, “Relevante para” per `norm_tag`.  | Loaded **automatically** from each sample you reference (see below). Extra inline rows still win on the same `norm_tag_pattern`.                                         |
 
-The same YAML file can contain **regex**, **terms**, and **recommendation_overrides**; you set `regex_overrides_file` and `ml_patterns_file` to that file path, and copy the `recommendation_overrides` block into your main config under `report.recommendation_overrides`.
+The same YAML file can contain **regex**, **terms**, and **recommendation_overrides**. Point `regex_overrides_file` / `ml_patterns_file` (or the plural list keys / `compliance_frameworks`) at that file; the loader **injects** `recommendation_overrides` into `report.recommendation_overrides` (no manual copy). Inline `report.recommendation_overrides` still win on the same `norm_tag_pattern`.
 
 ### Merge behavior: additive by design
 
 Compliance sample patterns and terms are **merged with** (not a replacement for) the built-in detector patterns:
 
-- **`regex_overrides_file`** — the detector runs both the built-in patterns (CPF, CNPJ, email, phone, SSN, credit card, …) **and** the patterns in your sample file. If a built-in pattern has the same `name` as one in the overrides file, the override wins for that specific name. Patterns with unique names in the overrides file are added on top.
+- **`regex_overrides_file`** / **`regex_overrides_files`** — the detector runs both the built-in patterns (CPF, CNPJ, email, phone, SSN, credit card, …) **and** the patterns in your sample file(s). If a built-in pattern has the same `name` as one in an overrides file, the override wins for that specific name. Later files in a list win on the same `name`. Patterns with unique names are added on top.
 - **`ml_patterns_file`** / **`sensitivity_detection.ml_terms`** — your terms are **merged** with the default built-in ML terms. When you load `compliance-sample-eu_gdpr.yaml` alongside your LGPD base config, the detector trains on LGPD built-in terms **plus** the GDPR terms from the sample — it does **not** drop LGPD coverage.
 - **`report.recommendation_overrides`** — the list is evaluated top-to-bottom using **first-match substring semantics** on `norm_tag_pattern`. Order matters: put more specific patterns (e.g. `"UK GDPR"`) before broader ones (e.g. `"GDPR"`) so `"UK GDPR"` findings do not accidentally match the `"GDPR"` rule first.
 
@@ -154,16 +154,24 @@ When a finding matches patterns from **two or more** jurisdictions simultaneousl
 ### How to use a sample
 
 1. **Choose the sample** for your regulation from the table above (or from [compliance-samples/README.md](compliance-samples/README.md)).
-1. **Set paths in your main config** (e.g. `config.yaml`):
+1. **Set paths in your main config** (e.g. `config.yaml`). One framework:
 
    ```yaml
    regex_overrides_file: docs/compliance-samples/compliance-sample-pipeda.yaml
    ml_patterns_file: docs/compliance-samples/compliance-sample-pipeda.yaml
    ```
 
-   Use the same file for both if the sample contains both `regex` and `terms`.
+   Several frameworks (same merge order as `sql_sampling_files`: later file wins on the same regex `name`, ML `text`, or `norm_tag_pattern`):
 
-1. **Merge recommendation overrides:** Copy the `recommendation_overrides` list from the sample file into your config under `report.recommendation_overrides` (merge with any overrides you already have). See [USAGE.md](USAGE.md) (report section) for the structure.
+   ```yaml
+   compliance_frameworks: [lgpd, pci_dss, brazil_saude]
+   ```
+
+   Or list files yourself: `regex_overrides_files:` / `ml_patterns_files:`.
+
+   Use the same file for regex and ML if the sample contains both `regex` and `terms`.
+
+1. **Recommendation text is injected automatically** from each referenced sample into `report.recommendation_overrides`. Add extra inline rows only if you need to override a sample’s wording. See [USAGE.md](USAGE.md) (report section). Put **more specific** `norm_tag_pattern` values **before** broader substrings when you add inline rows (first-match).
 1. **Run the scan** (CLI or API). Findings will use the norm tags and recommendation text from the sample; the Excel report will show the framework-specific Base legal, Risco, Recomendação, and Prioridade.
 
 ---
@@ -177,7 +185,7 @@ Whatever the **language**, **encoding**, or **region** of your data soup, the ap
 - **Multiple languages in terms and reports:** Compliance samples can include terms in the language(s) of the target region (e.g. EN+FR for PIPEDA/Canada, PT-BR+EN for LGPD/Brazil, Japanese or Arabic for APAC/MENA, **EN+RU for Russia 152-FZ**). The Excel report and recommendation text support **Unicode** (e.g. base_legal and recommendation in Japanese, Arabic, Cyrillic, or accented characters).
 - **Scripts and charset behaviour in data:** The scan and report pipeline is **Unicode-first**. Real-world content often mixes **Latin**, **Cyrillic** (e.g. Russian), **CJK** (e.g. Japanese kanji/kana), and **Arabic script** (including RTL presentation where the viewer supports it). Unusual or legacy **byte encodings** for configs and pattern files are handled via **auto-detection** (main config) and **`pattern_files_encoding`** (pattern files); **encoding sniffing and heuristics** for specific corpora can be **tuned further** (config, patterns, connectors) when a deployment needs stricter behaviour—contact us for **consulting** if your IT, security, compliance, or DPO teams require a **custom language/encoding profile**.
 - **Multiple encodings for config and pattern files:** The **main config file** is read with **auto-detection** (UTF-8, UTF-8 with BOM, Windows ANSI/cp1252, Latin-1), so it loads even when saved in a legacy encoding. **Pattern files** (regex overrides, ML/DL terms) use the encoding set by **`pattern_files_encoding`** in your config (default **`utf-8`**). Set it to `cp1252` or `latin_1` only when your pattern or sample files are saved in that encoding.
-- **Multiple regions:** Use the compliance sample that matches your region or regulation (LGPD, UK GDPR, EU GDPR, Benelux, PIPEDA, POPIA, APPI, PCI-DSS, **152-FZ**, or optional regional samples). Each sample is a single YAML file; you point your config at it and merge its recommendation overrides.
+- **Multiple regions:** Use the compliance sample that matches your region or regulation (LGPD, UK GDPR, EU GDPR, Benelux, PIPEDA, POPIA, APPI, PCI-DSS, **152-FZ**, or optional regional samples). Each sample is a single YAML file. Point `regex_overrides_file` at it, or set `compliance_frameworks: [lgpd, pci_dss, …]`. Recommendation overrides are injected automatically.
 
 ### Operator UI, docs, and extra locales (short- to mid-term roadmap)
 
@@ -205,7 +213,7 @@ Today, **tracked** product documentation is **English + pt-BR**; the **dashBOARd
    ml_patterns_file: docs/compliance-samples/compliance-sample-pipeda.yaml
    ```
 
-   Then merge the sample’s **`recommendation_overrides`** into your config under `report.recommendation_overrides` (see [USAGE](USAGE.md) report section).
+   Sample **`recommendation_overrides`** are merged into `report.recommendation_overrides` automatically (see [USAGE](USAGE.md) report section). Add inline rows only to override a sample.
 
 1. **Run the scan**
 

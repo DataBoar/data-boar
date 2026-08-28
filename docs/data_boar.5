@@ -97,11 +97,24 @@ and optional
 .I regex
 patterns; merged with built-in patterns and matched against (column name + sample text).
 .IP \(bu 2
+.B regex_overrides_files
+(optional): list of such paths; merged in order (later file wins on the same pattern name).
+.IP \(bu 2
+.B compliance_frameworks
+(optional): list of sample ids (e.g. lgpd, pci_dss) resolved to
+.I docs/compliance-samples/compliance-sample-<id>.yaml .
+Recommendation overrides from each sample are merged into
+.B report.recommendation_overrides
+automatically.
+.IP \(bu 2
 .B ml_patterns_file
 (optional): path to a YAML/JSON file with
 .I ML
 training terms (text + label: sensitive / non_sensitive).
 Used by the TF-IDF + RandomForest classifier when no inline terms are provided.
+.IP \(bu 2
+.B ml_patterns_files
+(optional): list of ML term files; merged in order (later file wins on the same text).
 .IP \(bu 2
 .B dl_patterns_file
 (optional): path to a YAML/JSON file with

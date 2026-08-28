@@ -11,6 +11,7 @@ pattern_files_encoding key (default utf-8) with errors=replace to avoid crashes.
 
 import logging
 import math
+import re
 import warnings
 from pathlib import Path
 from typing import Any
@@ -165,7 +166,9 @@ if json is not None:
     _YAML_JSON_PARSE_ERRORS = (yaml.YAMLError, json.JSONDecodeError)
 
 
-def _load_yaml_mapping(path: Path) -> dict[str, Any]:
+def _load_yaml_mapping(
+    path: Path, *, kind: str = "sql_sampling fragment"
+) -> dict[str, Any]:
     text = read_text_auto_encoding(path)
     suffix = path.suffix.lower()
     try:
@@ -176,18 +179,16 @@ def _load_yaml_mapping(path: Path) -> dict[str, Any]:
                 raise RuntimeError("JSON fragment requires stdlib json")
             loaded = json.loads(text)
         else:
-            raise ValueError(f"Unsupported sql_sampling fragment format: {path.name}")
+            raise ValueError(f"Unsupported {kind} format: {path.name}")
     except _YAML_JSON_PARSE_ERRORS:
         # ``from None``: PyYAML/json include file snippets in the message; clean_error
         # walks ``__cause__`` into HTTP config-save banners (#1550).
-        kind = "JSON" if suffix == ".json" else "YAML"
-        raise ValueError(
-            f"sql_sampling fragment is not valid {kind}: {path.name}"
-        ) from None
+        fmt = "JSON" if suffix == ".json" else "YAML"
+        raise ValueError(f"{kind} is not valid {fmt}: {path.name}") from None
     if loaded is None:
         return {}
     if not isinstance(loaded, dict):
-        raise ValueError(f"sql_sampling fragment must be a mapping: {path.name}")
+        raise ValueError(f"{kind} must be a mapping: {path.name}")
     return loaded
 
 
@@ -291,6 +292,156 @@ def _merge_sql_sampling_from_files(data: dict[str, Any], config_path: Path) -> N
         data["sql_sampling"] = merged
 
 
+_COMPLIANCE_FRAMEWORK_SLUG_RE = re.compile(r"^[A-Za-z0-9_]+$")
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+_COMPLIANCE_SAMPLES_DIR = _REPO_ROOT / "docs" / "compliance-samples"
+
+
+def _as_nonempty_str_list(value: Any) -> list[str]:
+    if isinstance(value, str) and value.strip():
+        return [value.strip()]
+    if isinstance(value, list):
+        return [str(x).strip() for x in value if isinstance(x, str) and str(x).strip()]
+    return []
+
+
+def _dedupe_paths_preserve_order(paths: list[str]) -> list[str]:
+    seen: set[str] = set()
+    out: list[str] = []
+    for raw in paths:
+        p = Path(raw)
+        try:
+            key = str(p.resolve()) if p.exists() else raw
+        except OSError:
+            key = raw
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(key if p.exists() else raw)
+    return out
+
+
+def _resolve_compliance_framework_file(slug: str) -> Path:
+    raw = str(slug).strip()
+    if not _COMPLIANCE_FRAMEWORK_SLUG_RE.fullmatch(raw):
+        raise ValueError(f"Invalid compliance_frameworks entry: {slug!r}")
+    candidate = _COMPLIANCE_SAMPLES_DIR / f"compliance-sample-{raw}.yaml"
+    if not candidate.is_file():
+        raise ValueError(
+            f"Unknown compliance framework {raw!r}: expected {candidate.name} "
+            "under docs/compliance-samples/"
+        )
+    return candidate
+
+
+def _resolve_existing_pattern_path(rel: str, config_path: Path | None) -> str:
+    raw = rel.strip()
+    if not raw:
+        return raw
+    p = Path(raw)
+    try:
+        if p.is_file():
+            return str(p.resolve())
+    except OSError:
+        pass
+    if config_path is not None:
+        alt = Path(config_path).parent / raw
+        try:
+            if alt.is_file():
+                return str(alt.resolve())
+        except OSError:
+            pass
+    return raw
+
+
+def _merge_recommendation_override_rows(
+    base: list[Any], overlay: list[Any]
+) -> list[dict[str, Any]]:
+    """Additive list merge; later row with the same ``norm_tag_pattern`` wins."""
+    by_key: dict[str, dict[str, Any]] = {}
+    order: list[str] = []
+    for src in (base, overlay):
+        for row in src:
+            if not isinstance(row, dict):
+                continue
+            key = str(row.get("norm_tag_pattern") or "").strip()
+            if not key:
+                continue
+            copied = dict(row)
+            if key not in by_key:
+                order.append(key)
+            by_key[key] = copied
+    return [by_key[k] for k in order]
+
+
+def _recommendation_overrides_from_sample_file(path: Path) -> list[dict[str, Any]]:
+    root = _load_yaml_mapping(path, kind="compliance sample")
+    raw = root.get("recommendation_overrides")
+    if not isinstance(raw, list):
+        return []
+    return [dict(row) for row in raw if isinstance(row, dict)]
+
+
+def _compose_pattern_file_lists(
+    data: dict[str, Any],
+    out: dict[str, Any],
+    *,
+    config_path: Path | None,
+) -> None:
+    """
+    Build ``regex_overrides_files`` / ``ml_patterns_files`` and inject sample
+    ``recommendation_overrides`` (later sources win on the same key).
+
+    Order matches ``sql_sampling_file`` then ``sql_sampling_files``: named
+    frameworks first, then the singular path, then the plural list. Inline
+    ``report.recommendation_overrides`` is applied last.
+    """
+    cfg_path = Path(config_path) if config_path is not None else None
+    frameworks = _as_nonempty_str_list(data.get("compliance_frameworks"))
+    out["compliance_frameworks"] = frameworks
+    fw_paths = [str(_resolve_compliance_framework_file(s)) for s in frameworks]
+
+    regex_paths = list(fw_paths)
+    regex_paths.extend(
+        _resolve_existing_pattern_path(rel, cfg_path)
+        for rel in _as_nonempty_str_list(out.get("regex_overrides_file"))
+    )
+    regex_paths.extend(
+        _resolve_existing_pattern_path(rel, cfg_path)
+        for rel in _as_nonempty_str_list(data.get("regex_overrides_files"))
+    )
+    out["regex_overrides_files"] = _dedupe_paths_preserve_order(regex_paths)
+
+    ml_paths = list(fw_paths)
+    ml_paths.extend(
+        _resolve_existing_pattern_path(rel, cfg_path)
+        for rel in _as_nonempty_str_list(out.get("ml_patterns_file"))
+    )
+    ml_paths.extend(
+        _resolve_existing_pattern_path(rel, cfg_path)
+        for rel in _as_nonempty_str_list(data.get("ml_patterns_files"))
+    )
+    out["ml_patterns_files"] = _dedupe_paths_preserve_order(ml_paths)
+
+    rec_from_files: list[dict[str, Any]] = []
+    for sample in _dedupe_paths_preserve_order(
+        [*out["regex_overrides_files"], *out["ml_patterns_files"]]
+    ):
+        p = Path(sample)
+        if not p.is_file():
+            continue
+        rec_from_files = _merge_recommendation_override_rows(
+            rec_from_files, _recommendation_overrides_from_sample_file(p)
+        )
+    inline = out.get("report", {}).get("recommendation_overrides")
+    inline_list = list(inline) if isinstance(inline, list) else []
+    if "report" not in out or not isinstance(out["report"], dict):
+        out["report"] = {}
+    out["report"]["recommendation_overrides"] = _merge_recommendation_override_rows(
+        rec_from_files, inline_list
+    )
+
+
 def _normalize_operator_channel_block(d: dict[str, Any]) -> dict[str, Any]:
     """One webhook target: Slack, Teams, Telegram pair, or generic URL."""
     return {
@@ -305,7 +456,11 @@ def _normalize_operator_channel_block(d: dict[str, Any]) -> dict[str, Any]:
 def load_config(path: str | Path) -> dict[str, Any]:
     """
     Load configuration from a YAML or JSON file.
-    Supports unified schema: targets[], file_scan, report, api, sqlite_path, scan, ml_patterns_file, dl_patterns_file, regex_overrides_file, sensitivity_detection, learned_patterns, optional sql_sampling_file / sql_sampling_files (YAML fragments merged into sql_sampling before normalize).
+    Supports unified schema: targets[], file_scan, report, api, sqlite_path, scan,
+    ml_patterns_file, dl_patterns_file, regex_overrides_file (and plural list keys),
+    optional compliance_frameworks, sensitivity_detection, learned_patterns,
+    optional sql_sampling_file / sql_sampling_files (YAML fragments merged into
+    sql_sampling before normalize).
     """
     path = Path(path)
     if not path.exists():
@@ -337,6 +492,9 @@ def normalize_config(
 
     When ``config_path`` is set, optional ``sql_sampling_file`` / ``sql_sampling_files`` entries
     are loaded relative to that file's directory and merged into ``sql_sampling`` (inline wins).
+    Optional ``regex_overrides_files`` / ``ml_patterns_files`` / ``compliance_frameworks`` are
+    composed the same way (later sources win on the same pattern name / term / norm_tag_pattern);
+    sample ``recommendation_overrides`` are merged into ``report.recommendation_overrides``.
 
     Emits a logging WARNING (and stderr via default/lastResort handlers) when the obsolete
     ``scan_scope:`` key is detected (produces no targets). The canonical key is ``targets:``
@@ -817,6 +975,12 @@ def normalize_config(
         [str(x).strip() for x in _sfl if isinstance(x, str) and str(x).strip()]
         if isinstance(_sfl, list)
         else []
+    )
+
+    _compose_pattern_file_lists(
+        data,
+        out,
+        config_path=Path(config_path) if config_path is not None else None,
     )
 
     # Encoding for pattern files (regex_overrides_file, ml_patterns_file, dl_patterns_file). Default utf-8.

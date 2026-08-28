@@ -739,8 +739,35 @@ def _looks_like_subtitle_or_transcript(column_name: str, sample: str) -> bool:
     return looks_like_subtitle_markup(sample or "")
 
 
+def _iter_pattern_file_paths(
+    path: str | list[str] | tuple[str, ...] | None,
+) -> list[str]:
+    if path is None:
+        return []
+    if isinstance(path, (list, tuple)):
+        return [str(p).strip() for p in path if str(p).strip()]
+    s = str(path).strip()
+    return [s] if s else []
+
+
 def _load_regex_overrides(
-    path: str | None,
+    path: str | list[str] | tuple[str, ...] | None,
+    encoding: str = "utf-8",
+    errors: str = "replace",
+) -> dict[str, tuple[str, str]]:
+    """Load name -> (pattern, norm_tag) from one or more YAML/JSON files.
+
+    Later files override earlier ones on the same ``name`` (same rule as
+    ``sql_sampling_files``).
+    """
+    merged: dict[str, tuple[str, str]] = {}
+    for one in _iter_pattern_file_paths(path):
+        merged.update(_load_regex_overrides_one(one, encoding=encoding, errors=errors))
+    return merged
+
+
+def _load_regex_overrides_one(
+    path: str,
     encoding: str = "utf-8",
     errors: str = "replace",
 ) -> dict[str, tuple[str, str]]:
@@ -810,7 +837,25 @@ def _load_regex_overrides(
 
 
 def _load_ml_patterns(
-    path: str | None,
+    path: str | list[str] | tuple[str, ...] | None,
+    encoding: str = "utf-8",
+    errors: str = "replace",
+    *,
+    plugin_type: str = "ml_patterns",
+) -> list[tuple[str, int]]:
+    """Load (text, label) from one or more YAML/JSON files; later same text wins."""
+    merged: list[tuple[str, int]] = []
+    for one in _iter_pattern_file_paths(path):
+        merged.extend(
+            _load_ml_patterns_one(
+                one, encoding=encoding, errors=errors, plugin_type=plugin_type
+            )
+        )
+    return merged
+
+
+def _load_ml_patterns_one(
+    path: str,
     encoding: str = "utf-8",
     errors: str = "replace",
     *,
@@ -898,7 +943,7 @@ def _merge_ml_terms(*sources: list[tuple[str, int]]) -> list[tuple[str, int]]:
 
 def _ml_terms_from_inline_or_file(
     inline: list[dict[str, Any]] | list[tuple[str, int]] | None,
-    path: str | None,
+    path: str | list[str] | tuple[str, ...] | None,
     encoding: str = "utf-8",
     errors: str = "replace",
 ) -> list[tuple[str, int]]:
@@ -1182,8 +1227,8 @@ class SensitivityDetector:
 
     def __init__(
         self,
-        regex_overrides_path: str | None = None,
-        ml_patterns_path: str | None = None,
+        regex_overrides_path: str | list[str] | tuple[str, ...] | None = None,
+        ml_patterns_path: str | list[str] | tuple[str, ...] | None = None,
         ml_terms_inline: list[dict[str, Any]] | list[tuple[str, int]] | None = None,
         dl_patterns_path: str | None = None,
         dl_terms_inline: list[dict[str, Any]] | list[tuple[str, int]] | None = None,
