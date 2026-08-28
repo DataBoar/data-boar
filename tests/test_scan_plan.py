@@ -263,7 +263,7 @@ def test_plan_rtt_connects_to_pinned_ip_not_rebinding_hostname(
     captured: list[tuple[object, ...]] = []
 
     def fake_guard(url: str, *, allow_private: bool = False, label: str = "url"):
-        assert "evil.example.com" in url
+        assert url == "evil.example.com:5432"
         return None, [ipaddress.ip_address("203.0.113.10")]
 
     def boom_getaddrinfo(*args: object, **kwargs: object) -> list:
