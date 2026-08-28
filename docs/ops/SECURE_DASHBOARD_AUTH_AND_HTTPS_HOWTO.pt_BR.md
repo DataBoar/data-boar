@@ -16,6 +16,7 @@
 
 1. Com **`api.require_api_key: true`**, o processo precisa de um segredo **resolvido**: ou **`api.api_key`** não vazio no config, ou **`api.api_key_from_env: "VAR"`** com **`VAR` definida no ambiente antes da subida**.
 1. **`main.py --web`** **encerra com código 2** se `require_api_key` estiver true e **nenhuma chave** puder ser resolvida (evita dashboard aberto por engano).
+1. **Bind fora do loopback** (`0.0.0.0`, IP da LAN, `::`): **`main.py --web` encerra com código 2** a menos que **`api.require_api_key: true`** e a chave esteja **resolvida**. Ter **`api.api_key`** / chave no ambiente ou um segredo WebAuthn **sem** `require_api_key` **não** conta — as rotas JSON (`GET /findings`, `POST /scan`, config) continuam sem autenticação (#1714). Use bind **`127.0.0.1`** no lab sem chave, ou ligue **`require_api_key: true`** antes de publicar a porta do container.
 1. **`GET /health`** **nunca** exige autenticação (probes e load balancers continuam simples). Devolve JSON com `status`, resumo público de `license` e `dashboard_transport`.
 1. **Todas as outras rotas** (páginas HTML, `GET /status`, `POST /scan`, `GET /config`, OpenAPI `/docs`, …) exigem chave válida quando a exigência está ativa: envie **`X-API-Key: <segredo>`** ou **`Authorization: Bearer <segredo>`**.
 1. **401** = chave ausente ou incorreta. **503** = `require_api_key` true mas a chave não foi resolvida em runtime (misconfig); corrija YAML/ambiente e reinicie.

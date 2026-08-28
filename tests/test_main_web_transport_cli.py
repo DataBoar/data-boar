@@ -120,3 +120,43 @@ scan:
     )
     assert r.returncode == 2, r.stdout + r.stderr
     assert "Refusing startup with non-loopback API bind" in r.stderr
+    assert "require_api_key" in r.stderr
+
+
+def test_main_web_refuses_non_loopback_when_key_present_but_not_required(tmp_path):
+    """#1714 — configured api_key without require_api_key must not open 0.0.0.0."""
+    cfg = tmp_path / "c.yaml"
+    db = tmp_path / "a.db"
+    cfg.write_text(
+        f"""targets: []
+report:
+  output_dir: {tmp_path}
+sqlite_path: {db}
+api:
+  port: 8768
+  api_key: secret-not-enforced
+scan:
+  max_workers: 1
+""",
+        encoding="utf-8",
+    )
+    repo = Path(__file__).resolve().parents[1]
+    r = subprocess.run(
+        [
+            sys.executable,
+            str(repo / "main.py"),
+            "--config",
+            str(cfg),
+            "--web",
+            "--allow-insecure-http",
+            "--host",
+            "0.0.0.0",
+        ],
+        capture_output=True,
+        text=True,
+        cwd=str(repo),
+        timeout=30,
+        check=False,
+    )
+    assert r.returncode == 2, r.stdout + r.stderr
+    assert "Refusing startup with non-loopback API bind" in r.stderr
