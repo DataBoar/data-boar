@@ -384,6 +384,28 @@ See
 Path to the SQLite database (e.g.
 .IR audit_results.db ).
 .TP
+.B findings_sink
+(optional) Post\-scan echo of findings to a customer SQL or MongoDB store
+(Pro / Enterprise). Sub\-keys:
+.I enabled
+(default false),
+.I type
+(postgresql, mysql, mssql, mongodb, sqlite),
+.I host ,
+.I port ,
+.I database ,
+.I user_from_env ,
+.I pass_from_env ,
+.I on_conflict
+(upsert, skip, fail),
+.I include_sample_content
+(default false — never enable without Legal sign\-off; CLI also needs
+.BR \-\-allow\-sample\-export ).
+See
+.IR docs/USAGE.md
+and
+.IR docs/deploy/findings_sink_schema.sql .
+.TP
 .B scan
 .I max_workers
 (integer, parallelism).

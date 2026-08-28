@@ -101,6 +101,16 @@ def test_findings_sink_sql_denied_community(community_guard):
     assert not result.allowed
 
 
+def test_findings_sink_mongodb_denied_pro(pro_guard):
+    result = pro_guard.check_feature("findings_sink_mongodb")
+    assert not result.allowed
+
+
+def test_findings_sink_mongodb_allowed_enterprise(enterprise_guard):
+    result = enterprise_guard.check_feature("findings_sink_mongodb")
+    assert result.allowed
+
+
 def test_scan_max_workers_enterprise_denied_pro(pro_guard):
     result = pro_guard.check_feature("scan_max_workers_enterprise")
     assert not result.allowed

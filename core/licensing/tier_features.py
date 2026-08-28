@@ -109,6 +109,7 @@ FEATURE_TIER_MAP: dict[str, Tier] = {
     "governance_lens_pro": Tier.PRO,
     "governance_lens_enterprise": Tier.ENTERPRISE,
     "findings_sink_sql": Tier.PRO,
+    "findings_sink_mongodb": Tier.ENTERPRISE,
     "scan_max_workers_pro": Tier.PRO,
     "scan_max_workers_enterprise": Tier.ENTERPRISE,
     "api_key_management_ui": Tier.PRO,

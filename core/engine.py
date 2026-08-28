@@ -669,6 +669,9 @@ class AuditEngine:
                 "Learned patterns written to %s (merge into ml_patterns_file for next run)",
                 learned_path,
             )
+        from core.findings_sink import maybe_push_findings_sink
+
+        maybe_push_findings_sink(self.config, self.db_manager, sid)
         return path
 
     def get_last_report_path(self) -> str | None:

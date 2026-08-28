@@ -37,8 +37,10 @@ The main entry point is `main.py`.
 | `--export-dsar`         | `SESSION_ID`      | Export findings for one scan session as DSAR-oriented JSON (metadata-first; LGPD Art. 18 / GDPR Art. 15 framing). Print to **stdout** or use `--dsar-output PATH`. Unknown or empty session → empty `findings_by_source`, exit **0**. Incompatible with `--web`, `--reset-data`, `--export-audit-trail`, `--validate-config`, `--diff`, `--export-l1`, and `--export-l3`. |
 | `--dsar-output`         | `PATH`            | Write DSAR JSON to `PATH` instead of stdout. Requires `--export-dsar`. |
 | `--dsar-include-samples`| *(flag)*          | With `--export-dsar`: include raw sample fields from stored finding rows when present (SQLite stores metadata only by default). |
-| `--export-l1`           | `SESSION_ID`      | Export findings for one scan session as an L1 **metadata_manifest** JSON (SDK contract pin; metadata only — never raw samples). Reads existing SQLite (no re-scan). Print to **stdout** or `--l1-output PATH`. Unknown or empty session → empty `findings`, exit **0**. Contract violation → abort, exit **1** (fail-closed). Incompatible with `--web`, `--reset-data`, `--export-audit-trail`, `--validate-config`, `--diff`, `--export-dsar`, and `--export-l3`. |
+| `--export-l1`           | `SESSION_ID`      | Export findings for one scan session as an L1 **metadata_manifest** JSON (SDK contract pin; metadata only — never raw samples). Reads existing SQLite (no re-scan). Print to **stdout** or `--l1-output PATH`. Unknown or empty session → empty `findings`, exit **0**. Contract violation → abort, exit **1** (fail-closed). Incompatible with `--web`, `--reset-data`, `--export-audit-trail`, `--validate-config`, `--diff`, `--export-dsar`, `--export-l3`, and `--export-findings-sink`. |
 | `--l1-output`           | `PATH`            | Write L1 metadata_manifest JSON to `PATH` instead of stdout. Requires `--export-l1`. |
+| `--export-findings-sink`| `SESSION_ID`      | Echo findings for one session from local SQLite to the configured **findings_sink** (SQL = Pro, MongoDB = Enterprise). Metadata-only by default. If `findings_sink.include_sample_content: true`, also pass `--allow-sample-export` (LGPD Art. 46) or exit **1**. Sink errors on the CLI exit **1**; missing tier exits **2**. Incompatible with `--web`, `--reset-data`, and other export modes. |
+| `--allow-sample-export` | *(flag)*          | With `--export-findings-sink`: operator acknowledgement to include `sample_content` when YAML opts in. Never implied. |
 | `--export-l3`           | `SESSION_ID`      | Export grant-scoped L3 **transformed_rows** JSON (SDK pin; INPUT rows carry raw `value`). Requires `--l3-grant`. Default is **ephemeral stdout/pipe**; disk write only with **`--l3-persist PATH`**. POSIX persist is owner-only mode `0600`. Windows: apply with `icacls`, verify with well-known SIDs (locale-independent). **SYSTEM** (`S-1-5-18`) and **Administrators** (`S-1-5-32-544`) typically remain — that is **not** POSIX `0600`. **OWNER RIGHTS** (`S-1-3-4`) is owner-equivalent. Unproven containment (including failed SID translation) → exit **5** (file removed) unless **`--l3-allow-unprotected`** (audit `containment`: `not_enforced`). Paid (not Community) — Community or missing grant → exit **3**. Column outside the grant → exit **4**. Per-column cap `--l3-max-rows` (default 100, hard max 10000). Audit JSON on **stderr** (grant id, columns, counts, optional `containment` — never cells). Incompatible with `--web`, `--reset-data`, `--export-audit-trail`, `--validate-config`, `--diff`, `--export-dsar`, and `--export-l1`. |
 | `--l3-grant`            | `PATH`            | JSON grant for `--export-l3`: `grant_id`, `target`, `table`, `columns` (never `*` / whole table). Optional `request_columns` must be a subset. |
 | `--l3-persist`          | `PATH`            | Explicitly persist L3 JSON (raw values) to `PATH`. Omitted = stdout only. Requires `--export-l3`. Not a default. POSIX: `0600`. Windows: apply with `icacls`; verify with well-known SIDs (locale-independent — not display names). Privileged SYSTEM/Administrators (`S-1-5-18` / `S-1-5-32-544`) may remain; OWNER RIGHTS (`S-1-3-4`) counts as the owner. Containment not proven → exit **5**. |
@@ -76,6 +78,39 @@ Opt-in YAML `remediation:` loads a partner `RemediationPlugin` after report gene
 
 Operator YAML files inject extra regex / ML / DL **terms** into the detector (`patterns_plugin_file`, or legacy `regex_overrides_file` / `ml_patterns_file` / `dl_patterns_file`). They do **not** run code. Author guide: **[PLUGIN_AUTHOR_GUIDE.md](PLUGIN_AUTHOR_GUIDE.md)** ([pt-BR](PLUGIN_AUTHOR_GUIDE.pt_BR.md)). Schema: `config/plugin_schema.yaml`. Field-level how-to: [SENSITIVITY_DETECTION.md](SENSITIVITY_DETECTION.md#custom-regex-patterns-detecting-new-personalsensitive-values).
 
+## Findings sink (Pro/Enterprise)
+
+Optional **post-scan echo** of the same metadata-oriented finding rows already stored in local SQLite. It does **not** replace SQLite. Object storage (S3 / Azure Blob / GCS) is out of scope here.
+
+**Tiers:** SQL (`postgresql`, `mysql`, `mssql`, plus lab `sqlite`) → `findings_sink_sql` (**Pro**). MongoDB → `findings_sink_mongodb` (**Enterprise**). Lab `licensing.effective_tier` / OPEN still applies the usual bypass.
+
+**PII:** the default schema has **no** `sample_content`. Setting `include_sample_content: true` without `--allow-sample-export` on the CLI exits **1** (LGPD Art. 46). The automatic post-scan hook never writes sample columns even when the YAML flag is true.
+
+**Failure posture:** a sink error after a scan is a **warning** plus `save_failure(..., reason=sink_error)` — the session still completes.
+
+Customer DDL: [findings_sink_schema.sql](deploy/findings_sink_schema.sql) and [findings_sink_schema_mongodb.js](deploy/findings_sink_schema_mongodb.js).
+
+```yaml
+findings_sink:
+  enabled: true
+  type: postgresql              # postgresql | mysql | mssql | mongodb | sqlite (lab)
+  host: db.example.com
+  port: 5432
+  database: data_governance_db
+  user_from_env: SINK_DB_USER
+  pass_from_env: SINK_DB_PASS
+  schema: data_boar             # documented for PostgreSQL; unused by the echo client today
+  on_conflict: upsert           # upsert | skip | fail
+  include_sample_content: false
+  allow_private_networks: false # same SSRF opt-in as connectors (#832)
+```
+
+Manual echo (same as `uv run python scripts/export_findings_to_sink.py SESSION`):
+
+```bash
+python main.py --config config.yaml --export-findings-sink <session_id>
+```
+
 ### Outcomes
 
 ## Zero-config demo (`--demo`)
@@ -110,7 +145,7 @@ python main.py --config config.yaml --tenant "Acme Corp" --technician "Alice V."
 
 ### Optional OpenTelemetry (opt-in)
 
-When **`DATA_BOAR_OTEL_ENABLED`** is `1` / `true` / `yes` / `on` and the optional **`[otel]`** extra is installed (`uv sync --extra otel`), Data Boar exports traces, metrics, and logs via OTLP (`OTEL_EXPORTER_OTLP_ENDPOINT`, default `http://127.0.0.1:4317`). The same gate covers **`--web`**, **oneshot CLI**, **`--demo`** scan, and export/regenerate flags (`--export-dsar`, `--export-l1`, `--export-l3`, `--export-remediation-manifest`, `--regenerate-report`, `--export-audit-trail`). **`--version`** and **`--check-extras`** stay uninstrumented.
+When **`DATA_BOAR_OTEL_ENABLED`** is `1` / `true` / `yes` / `on` and the optional **`[otel]`** extra is installed (`uv sync --extra otel`), Data Boar exports traces, metrics, and logs via OTLP (`OTEL_EXPORTER_OTLP_ENDPOINT`, default `http://127.0.0.1:4317`). The same gate covers **`--web`**, **oneshot CLI**, **`--demo`** scan, and export/regenerate flags (`--export-dsar`, `--export-l1`, `--export-l3`, `--export-findings-sink`, `--export-remediation-manifest`, `--regenerate-report`, `--export-audit-trail`). **`--version`** and **`--check-extras`** stay uninstrumented.
 
 ## REST API server (`--web`)
 
@@ -474,7 +509,7 @@ CLI uses the path you pass with `--config` (e.g. `config.yaml`). For the **web s
 ### Config file location and shape
 
 - **Location:** Any path; typical names: `config.yaml`, `config/config.json`. Legacy `config/config.json` with `databases` and `file_scan.directories` is normalized automatically.
-- **Root keys:** `targets`, `file_scan`, `report`, `api`, `sqlite_path`, `scan`, **`rate_limit`**, **`timeouts`**, optional **`sql_sampling`** (hierarchical row caps for SQL/Snowflake targets), optional `ml_patterns_file`, `ml_patterns_files`, `dl_patterns_file`, `regex_overrides_file`, `regex_overrides_files`, `compliance_frameworks`, `sensitivity_detection`, `learned_patterns`, **`pattern_files_encoding`**.
+- **Root keys:** `targets`, `file_scan`, `report`, `api`, `sqlite_path`, `scan`, **`rate_limit`**, **`timeouts`**, optional **`sql_sampling`** (hierarchical row caps for SQL/Snowflake targets), optional `ml_patterns_file`, `ml_patterns_files`, `dl_patterns_file`, `regex_overrides_file`, `regex_overrides_files`, `compliance_frameworks`, `sensitivity_detection`, `learned_patterns`, **`pattern_files_encoding`**, optional **`findings_sink`**.
 
 ### Starter config (copy-paste) and where to look first {#starter-config-samples}
 
