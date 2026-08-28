@@ -16,10 +16,11 @@ is annotated inline on those builders (same pattern as ``sql_sampling.py``).
 
 from __future__ import annotations
 
+import ipaddress
 import os
 from datetime import UTC, datetime
 from typing import Any
-from urllib.parse import quote_plus
+from urllib.parse import quote
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
@@ -158,20 +159,94 @@ def _require_sink_tier(config: dict[str, Any], kind: str) -> None:
     require_feature(config, _feature_for_type(kind))
 
 
-def _guard_sql_host(cfg: dict[str, Any]) -> None:
-    kind = _canonical_type(cfg.get("type"))
-    if kind == "sqlite":
-        return
-    host = str(cfg.get("host") or "").strip()
+def _quote_userinfo(value: str) -> str:
+    """Percent-encode userinfo so ``@``, ``:``, ``/`` cannot split the URL (#1816)."""
+    if not value:
+        return ""
+    return quote(str(value), safe="")
+
+
+def _sink_port(cfg: dict[str, Any], *, default: int | None = None) -> int | None:
+    port = cfg.get("port")
+    if port in (None, ""):
+        return default
+    if isinstance(port, bool):
+        raise FindingsSinkError("findings_sink.port must be an integer")
+    try:
+        n = int(port)
+    except (TypeError, ValueError) as exc:
+        raise FindingsSinkError("findings_sink.port must be an integer") from exc
+    if n < 1 or n > 65535:
+        raise FindingsSinkError("findings_sink.port is out of range")
+    return n
+
+
+def _validated_sink_host(raw: Any) -> str:
+    """Hostname or IP for a URL authority — never a URL fragment (#1816).
+
+    The SSRF guard and SQLAlchemy/Mongo parsers must see the same peer. A raw
+    ``host`` containing ``@``, ``/``, ``?``, or ``#`` would be validated as one
+    token by ``urlparse('//' + host)`` and rewritten as userinfo/query/path by
+    the interpolated connection URL.
+    """
+    host = str(raw or "").strip()
     if not host:
         raise FindingsSinkError("findings_sink.host is required for SQL/Mongo sinks")
-    port = cfg.get("port")
-    target = f"{host}:{port}" if port not in (None, "") else host
+    if host.startswith("[") and host.endswith("]") and len(host) > 2:
+        inner = host[1:-1]
+        try:
+            ipaddress.IPv6Address(inner)
+        except ValueError as exc:
+            raise FindingsSinkError(
+                "findings_sink.host IPv6 literal is invalid"
+            ) from exc
+        return f"[{inner}]"
+    if ":" in host:
+        try:
+            ipaddress.IPv6Address(host)
+        except ValueError as exc:
+            raise FindingsSinkError(
+                "findings_sink.host must not contain ':' except as an IPv6 literal"
+            ) from exc
+        return f"[{host}]"
+    for ch in ("@", "/", "?", "#", "\\", " ", "\t", "\n", "%"):
+        if ch in host:
+            raise FindingsSinkError(
+                "findings_sink.host must be a hostname or IP, not a URL fragment "
+                f"(illegal {ch!r} — put credentials in user/pass)."
+            )
+    return host
+
+
+def _encode_sink_host(host: str) -> str:
+    """Percent-encode a validated hostname; keep IPv6 brackets unencoded."""
+    if host.startswith("[") and host.endswith("]"):
+        return host
+    return quote(host, safe=".-")
+
+
+def _sql_userinfo_prefix(cfg: dict[str, Any]) -> str:
+    user = _quote_userinfo(_env_or_inline(cfg, "user_from_env", "user"))
+    password = _quote_userinfo(_env_or_inline(cfg, "pass_from_env", "pass"))
+    if not user:
+        return ""
+    return f"{user}:{password}@" if password else f"{user}@"
+
+
+def _guard_sink_peer(host: str, port: int | None, cfg: dict[str, Any]) -> None:
+    """SSRF-check the *parsed* peer (hostname + port), not the raw YAML string."""
     from connectors.url_guard import (
         resolve_and_validate_outbound_url,
         target_allows_private,
     )
 
+    bare = host[1:-1] if host.startswith("[") and host.endswith("]") else host
+    try:
+        ipaddress.IPv6Address(bare)
+        candidate = f"[{bare}]"
+    except ValueError:
+        candidate = bare
+    target = f"{candidate}:{port}" if port is not None else candidate
     err, _ips = resolve_and_validate_outbound_url(
         target,
         allow_private=target_allows_private(cfg),
@@ -179,6 +254,36 @@ def _guard_sql_host(cfg: dict[str, Any]) -> None:
     )
     if err:
         raise FindingsSinkError(err)
+
+
+def _guard_sql_host(cfg: dict[str, Any]) -> None:
+    """Validate the peer SQLAlchemy/Mongo will actually connect to (#1816)."""
+    kind = _canonical_type(cfg.get("type"))
+    if kind == "sqlite":
+        return
+    if kind in _MONGO_TYPES:
+        from urllib.parse import urlparse
+
+        parsed = urlparse(_mongodb_uri(cfg))
+        host = parsed.hostname
+        if not host:
+            raise FindingsSinkError(
+                "findings_sink.host is required for SQL/Mongo sinks"
+            )
+        _guard_sink_peer(host, parsed.port, cfg)
+        return
+    from sqlalchemy.engine.url import make_url
+
+    parsed = make_url(_sqlalchemy_url(cfg))
+    if parsed.query:
+        raise FindingsSinkError(
+            "findings_sink SQL URL must not contain a query string "
+            "(peer-override keys are refuse-by-default, same as #1556)"
+        )
+    host = parsed.host
+    if not host:
+        raise FindingsSinkError("findings_sink.host is required for SQL/Mongo sinks")
+    _guard_sink_peer(host, parsed.port, cfg)
 
 
 def _sqlalchemy_url(cfg: dict[str, Any]) -> str:
@@ -193,16 +298,20 @@ def _sqlalchemy_url(cfg: dict[str, Any]) -> str:
     prefix = _SQL_URL_PREFIX.get(kind)
     if not prefix:
         raise FindingsSinkError(f"Unsupported findings_sink.type: {kind!r}")
-    user = quote_plus(_env_or_inline(cfg, "user_from_env", "user"))
-    password = quote_plus(_env_or_inline(cfg, "pass_from_env", "pass"))
-    host = str(cfg.get("host") or "").strip()
-    port = cfg.get("port")
+    host = _encode_sink_host(_validated_sink_host(cfg.get("host")))
+    port = _sink_port(cfg)
+    database = quote(str(cfg.get("database") or "").strip(), safe="")
+    port_s = f":{port}" if port is not None else ""
+    return f"{prefix}://{_sql_userinfo_prefix(cfg)}{host}{port_s}/{database}"
+
+
+def _mongodb_uri(cfg: dict[str, Any]) -> str:
     database = str(cfg.get("database") or "").strip()
-    auth = ""
-    if user:
-        auth = f"{user}:{password}@" if password else f"{user}@"
-    port_s = f":{port}" if port not in (None, "") else ""
-    return f"{prefix}://{auth}{host}{port_s}/{database}"
+    if not database:
+        raise FindingsSinkError("findings_sink.database is required for mongodb")
+    host = _encode_sink_host(_validated_sink_host(cfg.get("host")))
+    port = _sink_port(cfg, default=27017)
+    return f"mongodb://{_sql_userinfo_prefix(cfg)}{host}:{port}"
 
 
 def _ensure_sqlite_schema(engine: Engine, *, include_sample: bool) -> None:
@@ -495,21 +604,8 @@ def _push_mongo(
             "MongoDB sink requires pymongo (install data-boar[nosql] or pymongo)."
         ) from exc
 
-    user = _env_or_inline(cfg, "user_from_env", "user")
-    password = _env_or_inline(cfg, "pass_from_env", "pass")
-    host = str(cfg.get("host") or "").strip()
-    port = int(cfg.get("port") or 27017)
     database = str(cfg.get("database") or "").strip()
-    if not database:
-        raise FindingsSinkError("findings_sink.database is required for mongodb")
-    auth = ""
-    if user:
-        auth = (
-            f"{quote_plus(user)}:{quote_plus(password)}@"
-            if password
-            else f"{quote_plus(user)}@"
-        )
-    uri = f"mongodb://{auth}{host}:{port}"
+    uri = _mongodb_uri(cfg)
     client = MongoClient(uri, serverSelectionTimeoutMS=8000)
     try:
         db = client[database]
@@ -630,9 +726,9 @@ def maybe_push_findings_sink(
             require_explicit_sample_ack=False,
         )
         logger.info("findings exported to %s", label)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 — fail-soft post-scan; never abort session
         logger.warning("Findings sink failed (session continues): %s", exc)
         try:
             db_manager.save_failure("findings_sink", "sink_error", str(exc))
-        except Exception:
+        except Exception:  # noqa: BLE001, S110 — recording the failure must not raise
             pass

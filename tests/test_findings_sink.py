@@ -6,6 +6,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
 from sqlalchemy import create_engine, text
 
 from config.loader import normalize_config
@@ -14,6 +15,8 @@ from core.engine import AuditEngine
 from core.findings_sink import (
     FindingsSinkError,
     SampleExportNotAcknowledged,
+    _guard_sql_host,
+    _sqlalchemy_url,
     maybe_push_findings_sink,
     push_session_to_sink,
     sink_enabled,
@@ -206,3 +209,71 @@ def test_maybe_push_noop_when_disabled(tmp_path):
     finally:
         mgr.dispose()
     assert not Path(cfg["findings_sink"]["sqlite_path"]).exists()
+
+
+def _pg_sink(**overrides: object) -> dict:
+    cfg: dict = {
+        "type": "postgresql",
+        "host": "db.example.com",
+        "port": 5432,
+        "database": "audit",
+        "user": "u",
+        "pass": "p",
+    }
+    cfg.update(overrides)
+    return cfg
+
+
+def test_sqlalchemy_url_userinfo_special_chars_do_not_shift_host() -> None:
+    """Password ``@`` / ``/`` must not become a second authority (#1816)."""
+    from sqlalchemy.engine.url import make_url
+
+    url = _sqlalchemy_url(_pg_sink(**{"pass": "p@ss/word#x"}))
+    parsed = make_url(url)
+    assert parsed.host == "db.example.com"
+    assert parsed.port == 5432
+    assert parsed.database == "audit"
+    assert parsed.password == "p@ss/word#x"
+    assert not parsed.query
+
+
+def test_sqlalchemy_url_encodes_database_so_query_cannot_override_peer() -> None:
+    from sqlalchemy.engine.url import make_url
+
+    url = _sqlalchemy_url(_pg_sink(database="audit?hostaddr=10.0.0.9"))
+    parsed = make_url(url)
+    assert parsed.host == "db.example.com"
+    assert not parsed.query
+    assert parsed.database == "audit%3Fhostaddr%3D10.0.0.9"
+
+
+def test_sqlalchemy_url_rejects_host_authority_injection() -> None:
+    with pytest.raises(FindingsSinkError, match="illegal '@'"):
+        _sqlalchemy_url(_pg_sink(host="evil.example.com@169.254.169.254"))
+    with pytest.raises(FindingsSinkError, match=r"illegal '\?'"):
+        _sqlalchemy_url(_pg_sink(host="db.example.com?hostaddr=10.0.0.9"))
+    with pytest.raises(FindingsSinkError, match="illegal '/'"):
+        _sqlalchemy_url(_pg_sink(host="db.example.com/other"))
+
+
+def test_guard_ssrf_uses_make_url_host_not_raw_yaml(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Guard candidate is the SQLAlchemy-parsed peer (#1816 / #1556)."""
+    seen: list[str] = []
+
+    def fake_resolve(
+        url: str,
+        *,
+        allow_private: bool = False,
+        label: str = "url",
+    ) -> tuple[None, list]:
+        seen.append(url)
+        return None, []
+
+    monkeypatch.setattr(
+        "connectors.url_guard.resolve_and_validate_outbound_url",
+        fake_resolve,
+    )
+    _guard_sql_host(_pg_sink())
+    assert seen == ["db.example.com:5432"]

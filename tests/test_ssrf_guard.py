@@ -386,6 +386,7 @@ def test_sharepoint_connector_rejects_private_site_url() -> None:
         "connectors/sql_connector.py",
         "connectors/smb_connector.py",
         "core/scan_plan.py",
+        "core/findings_sink.py",
     ],
 )
 def test_connector_sources_call_url_guard(connector_file: str) -> None:
