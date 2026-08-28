@@ -5,7 +5,7 @@
 
 .DESCRIPTION
     Fail-collect: runs every scan, reports all failures at the end (no fail-fast within tier).
-    Commands mirror CI (.github/workflows/ci.yml bandit paths, semgrep.yml, zizmor on workflows/).
+    Commands mirror CI (.github/workflows/ci.yml bandit paths, semgrep.yml image tag via uvx semgrep@VER, zizmor CLI on workflows/).
 #>
 param(
     [switch]$Enforced = $false
@@ -42,13 +42,28 @@ Invoke-SecurityScan -Name "Bandit" -Block {
     uv run bandit -c pyproject.toml -r api core config connectors database file_scan report main.py -ll -q
 }
 
+# Local uvx zizmor is the PyPI CLI. CI (.github/workflows/zizmor.yml) runs
+# zizmorcore/zizmor-action@<SHA> (SARIF upload, offline-audits). Those are
+# different artifacts - do not invent CLI==action version parity (#1793).
 Invoke-SecurityScan -Name "Zizmor" -Block {
     uvx zizmor .github/workflows/
 }
 
 if ($Enforced) {
+    $wf = Join-Path $repoRoot ".github/workflows/semgrep.yml"
+    $match = Select-String -Path $wf -Pattern "semgrep/semgrep:(\d+\.\d+\.\d+)" | Select-Object -First 1
+    if ($null -eq $match) {
+        Write-Host "check-all-security-scans: ABORTED: could not read Semgrep version from .github/workflows/semgrep.yml" -ForegroundColor Red
+        exit 1
+    }
+    $script:SEMGREP_VER = $match.Matches[0].Groups[1].Value
+    if ([string]::IsNullOrWhiteSpace($script:SEMGREP_VER)) {
+        Write-Host "check-all-security-scans: ABORTED: could not read Semgrep version from .github/workflows/semgrep.yml" -ForegroundColor Red
+        exit 1
+    }
+    Write-Host "Semgrep pin: $script:SEMGREP_VER (from .github/workflows/semgrep.yml image tag)." -ForegroundColor Cyan
     Invoke-SecurityScan -Name "Semgrep" -Block {
-        uvx semgrep scan --config p/python --metrics=off `
+        uvx "semgrep@$script:SEMGREP_VER" scan --config p/python --metrics=off `
             --exclude-rule python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text `
             --error .
     }

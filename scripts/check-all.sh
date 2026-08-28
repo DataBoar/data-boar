@@ -7,7 +7,7 @@
 #   ./scripts/check-all.sh
 #   ./scripts/check-all.sh --skip-pre-commit
 #   ./scripts/check-all.sh --include-version-smoke
-#   ./scripts/check-all.sh --enforced          # + Semgrep (semgrep.yml parity; network)
+#   ./scripts/check-all.sh --enforced          # + Semgrep (version from semgrep.yml image tag; network)
 # On Windows, prefer .\scripts\check-all.ps1 (gatekeeper stays gatekeeper-audit.ps1 per #560).
 # Linux/macOS: gatekeeper_audit.py avoids a silent skip when pwsh is absent (issue #560).
 # Rust requires cargo on PATH.
@@ -30,7 +30,7 @@ while [[ $# -gt 0 ]]; do
       echo "Usage: $0 [options]"
       echo "  --skip-pre-commit          Only run pytest (same as check-all.ps1 -SkipPreCommit)"
       echo "  --include-version-smoke    After success, run version-readiness-smoke.ps1 (requires pwsh)"
-      echo "  --enforced                 Also run Semgrep (mirrors semgrep.yml; needs network)"
+      echo "  --enforced                 Also run Semgrep (engine tag from semgrep.yml; needs network)"
       echo "  -h, --help                 This help"
       exit 0
       ;;
