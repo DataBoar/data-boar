@@ -26,6 +26,8 @@ Documentado no código: **`main.py --host`** → **`api.host`** → **`API_HOST`
 
 ## Concluído recentemente (changelog)
 
+- **2026-08-28 (relatório ODS #553 Parte A):** allowlist `report.formats` `xlsx`/`ods`; `GET /report?format=ods` e `GET /reports/{session_id}?format=ods`. Superfícies: **`docs/USAGE*.md`**, **`docs/data_boar.5`**, **`api/templates/help.html`**, **`tests/operator_help_sync_manifest.py`**.
+
 - **2026-08-27 (CLI `--export-l3` contenção de persistência #1334):** `--l3-persist` fail-closed: POSIX `0600`; Windows aplica `icacls`, verifica SIDs bem-conhecidos (OWNER RIGHTS `S-1-3-4` equivale ao dono; não nomes localizados). Contenção não comprovada → sai **5**; opcional **`--l3-allow-unprotected`**. Superfícies: **`docs/USAGE*.md`**, **`docs/SDK.md`**, **`docs/data_boar.1`**, **`api/templates/help.html`**, **`tests/operator_help_sync_manifest.py`**.
 
 - **2026-08-19 (`--validate-config` sem efeitos colaterais em `[INVALID]` #538):** O pré-voo aborta antes de criar `report.output_dir`, o pai do sqlite ou abrir o SQLite do âncora de integridade. Superfícies: **`main.py --help`**, **`docs/data_boar.1`**, **`docs/USAGE*.md`**, **`tests/test_main_validate_config.py`**.

@@ -24,6 +24,8 @@ Documented in code: **`main.py --host`** → **`api.host`** → **`API_HOST`** �
 
 ## Done recently (changelog)
 
+- **2026-08-28 (report ODS #553 Part A):** `report.formats` allowlist `xlsx`/`ods`; `GET /report?format=ods` and `GET /reports/{session_id}?format=ods`. Surfaces: **`docs/USAGE*.md`**, **`docs/data_boar.5`**, **`api/templates/help.html`**, **`tests/operator_help_sync_manifest.py`**.
+
 - **2026-08-28 (CLI `--resume` SQL table checkpoints #1330):** Resume interrupted DB scans; skip completed tables. Surfaces: **`main.py --resume`**, **`scan_table_checkpoints`**, **`docs/USAGE*.md`**, **`docs/data_boar.1`**, **`api/templates/help.html`**, **`tests/operator_help_sync_manifest.py`**, **`tests/test_sql_scan_resume.py`**.
 
 - **2026-08-28 (CLI `--plan` scan preview #1329):** Dry-run catalog + TCP RTT floor before a live SQL scan. Surfaces: **`main.py --plan`**, **`core/scan_plan.py`**, **`docs/USAGE*.md`**, **`docs/data_boar.1`**, **`api/templates/help.html`**, **`tests/operator_help_sync_manifest.py`**, **`tests/test_scan_plan.py`**.

@@ -57,7 +57,7 @@ class _FakeEngine:
     def get_last_report_path(self):
         return self._report_path
 
-    def generate_final_reports(self, _session_id):
+    def generate_final_reports(self, _session_id, config=None, **_kwargs):
         return self._report_path
 
 
@@ -78,7 +78,7 @@ def test_download_report_rejects_path_outside_configured_output_dir(tmp_path: Pa
 
 
 def test_download_report_rejects_non_report_filename_pattern(tmp_path: Path):
-    """Basename must match Relatorio_Auditoria_*.xlsx even if file sits under output_dir."""
+    """Basename must match Relatorio_Auditoria_*.xlsx|ods even if file sits under output_dir."""
     output_dir = tmp_path / "reports"
     output_dir.mkdir(parents=True, exist_ok=True)
     bad_name = output_dir / "not_a_report.xlsx"
@@ -92,6 +92,43 @@ def test_download_report_rejects_non_report_filename_pattern(tmp_path: Path):
         assert resp.status_code == 404
     finally:
         _restore_routes_context(routes, orig)
+
+
+def test_download_report_accepts_ods_basename_under_output_dir(tmp_path: Path):
+    """#553: allowlist must accept Relatorio_Auditoria_*.ods (Bugbot HIGH)."""
+    output_dir = tmp_path / "reports"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    ods = output_dir / "Relatorio_Auditoria_abcdef123456.ods"
+    ods.write_bytes(b"ods")
+
+    routes, orig = _set_routes_context(tmp_path, output_dir)
+    try:
+        routes._audit_engine = _FakeEngine(output_dir, ods)
+        client = TestClient(routes.app)
+        resp = client.get("/report?format=ods")
+        assert resp.status_code == 200
+        assert (
+            resp.headers["content-type"]
+            == "application/vnd.oasis.opendocument.spreadsheet"
+        )
+    finally:
+        _restore_routes_context(routes, orig)
+
+
+def test_heatmap_session_key_from_ods_report_basename(tmp_path: Path):
+    import api.routes as routes
+
+    out = tmp_path / "reports"
+    out.mkdir(parents=True, exist_ok=True)
+    ods = out / "Relatorio_Auditoria_abcdef123456.ods"
+    ods.write_bytes(b"ods")
+    (out / "heatmap_abcdef123456.png").write_bytes(b"png")
+    engine = _FakeEngine(out, ods)
+    resolved = routes._safe_report_path_for_heatmap(engine)
+    assert resolved is not None
+    path, sid = resolved
+    assert path.suffix == ".ods"
+    assert sid == "abcdef123456"
 
 
 def test_resolved_existing_file_under_out_dir_rejects_traversal(tmp_path: Path):

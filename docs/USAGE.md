@@ -1105,7 +1105,8 @@ sql_sampling:
 
 ```yaml
 report:
-  output_dir: .    # directory for Excel and heatmap PNG
+  output_dir: .    # directory for Excel/ODS and heatmap PNG
+  # formats: [xlsx]          # add ods for LibreOffice Calc / SoftMaker PlanMaker
   # Optional: custom recommendation text per norm/framework (UK GDPR, PIPEDA, or sensitive categories)
   recommendation_overrides:
 
@@ -1262,8 +1263,8 @@ The Excel workbook is saved to your browser downloads folder; the heatmap PNG is
 
 | Goal                                   | How                                                                                                                                                    |
 | ---                                    | ---                                                                                                                                                    |
-| **Last generated report**              | `GET /report` → save response as `.xlsx`.                                                                                                              |
-| **Report for a specific past session** | `GET /list` to get `session_id`s, then `GET /reports/<session_id>` → save as `.xlsx`.                                                                  |
+| **Last generated report**              | `GET /report` → save as `.xlsx`. Optional `?format=ods` for OpenDocument (LibreOffice Calc / SoftMaker PlanMaker). |
+| **Report for a specific past session** | `GET /list` to get `session_id`s, then `GET /reports/<session_id>` → save as `.xlsx` (same `?format=ods`). |
 | **One-shot run (CLI)**                 | After `python main.py --config config.yaml`, the report path is printed; file is under `report.output_dir` as `Relatorio_Auditoria_<session_id>.xlsx`. |
 | **Regenerate Excel + heatmap (CLI)**   | `python main.py --config config.yaml --regenerate-report <session_id>` — SQLite only; no re-scan. Use when findings are already stored but report files are missing or stale. |
 | **Executive Markdown + manifest**      | Written next to the Excel when the workbook is generated: `POC_SUMMARY_<session_prefix>.md` and `scan_manifest_<session_prefix>.yaml` (same directory). If this step fails, the Excel path is still returned — see subsection below. |

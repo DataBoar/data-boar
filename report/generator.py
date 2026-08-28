@@ -14,6 +14,7 @@ Structure: generate_report() delegates all sheet writing to _write_excel_sheets(
 so branches stay in sync with main and merge conflicts are avoided (see CONTRIBUTING.md).
 """
 
+import copy
 import json
 import logging
 from collections import defaultdict
@@ -110,6 +111,36 @@ def _excel_sanitize_cell(value: object) -> object:
 def _excel_safe_dataframe(data: Any) -> pd.DataFrame:
     """Compatibility shim for report writers and tests."""
     return excel_safe_dataframe(data)
+
+
+_SPREADSHEET_FORMATS = frozenset({"xlsx", "ods"})
+_SPREADSHEET_ENGINES = {"xlsx": "openpyxl", "ods": "odf"}
+
+
+def spreadsheet_formats(config: dict | None) -> list[str]:
+    """Return requested spreadsheet formats; default is ``xlsx`` only."""
+    raw = (config or {}).get("report", {}).get("formats")
+    if not isinstance(raw, list) or not raw:
+        return ["xlsx"]
+    out: list[str] = []
+    for item in raw:
+        key = str(item).strip().lower()
+        if key in _SPREADSHEET_FORMATS and key not in out:
+            out.append(key)
+    return out or ["xlsx"]
+
+
+def config_ensuring_spreadsheet_format(config: dict, fmt: str) -> dict:
+    """Shallow-copy config so ``report.formats`` includes ``fmt`` (xlsx|ods)."""
+    key = str(fmt).strip().lower()
+    if key not in _SPREADSHEET_FORMATS:
+        return config
+    current = spreadsheet_formats(config)
+    if key in current:
+        return config
+    report = dict(config.get("report") or {})
+    report["formats"] = [*current, key]
+    return {**config, "report": report}
 
 
 def _format_inventory_details(details: dict[str, Any]) -> str:
@@ -1070,7 +1101,7 @@ def _write_excel_sheets(
     )
     # Small mascot branding in top-right of Report info (D1), minimal; table stays in A:B
     mascot = _mascot_path()
-    if mascot:
+    if mascot and getattr(writer, "engine", None) == "openpyxl":
         try:
             ws = writer.sheets[_SHEET_REPORT_INFO]
             img = OpenpyxlImage(str(mascot))
@@ -1358,7 +1389,7 @@ def _write_excel_sheets(
             if heatmap_path
             else None
         )
-        if safe_heatmap:
+        if safe_heatmap and getattr(writer, "engine", None) == "openpyxl":
             try:
                 ws = writer.sheets[_SHEET_HEATMAP_DATA]
                 n_data_rows = len(summary) + 1  # header + data
@@ -1631,7 +1662,7 @@ def generate_report(
         lic_footer = f"License: {lic_ctx.state}"
         if lic_ctx.watermark:
             lic_footer = f"{lic_footer} ({lic_ctx.watermark})"
-    out_path = Path(output_dir) / f"Relatorio_Auditoria_{session_id[:16]}.xlsx"
+    out_stem = Path(output_dir) / f"Relatorio_Auditoria_{session_id[:16]}"
     # Create heatmap PNG first so we can embed it in the Heatmap data sheet
     # (skip when untrusted stubs — no detail findings exported).
     heatmap_path = None
@@ -1644,28 +1675,34 @@ def generate_report(
             license_footer=lic_footer,
             app_rows=app_rows_for_sheets,
         )
-    with pd.ExcelWriter(out_path, engine="openpyxl") as writer:
-        _write_excel_sheets(
-            writer,
-            session_id,
-            report_cfg,
-            db_rows_for_sheets,
-            fs_rows_for_sheets,
-            config,
-            fail_rows,
-            db_manager,
-            current_db,
-            current_fs,
-            current_fail,
-            current_started_at,
-            report_info,
-            output_dir,
-            heatmap_path=heatmap_path,
-            suggested_review_rows=suggested_review_rows,
-            trust_tint=trust_tint,
-            app_rows_for_sheets=app_rows_for_sheets,
-            current_app=current_app,
-        )
+    primary_path: Path | None = None
+    for fmt in spreadsheet_formats(config):
+        out_path = Path(f"{out_stem}.{fmt}")
+        engine = _SPREADSHEET_ENGINES[fmt]
+        with pd.ExcelWriter(out_path, engine=engine) as writer:
+            _write_excel_sheets(
+                writer,
+                session_id,
+                report_cfg,
+                copy.deepcopy(db_rows_for_sheets),
+                copy.deepcopy(fs_rows_for_sheets),
+                config,
+                fail_rows,
+                db_manager,
+                current_db,
+                current_fs,
+                current_fail,
+                current_started_at,
+                report_info,
+                output_dir,
+                heatmap_path=heatmap_path,
+                suggested_review_rows=copy.deepcopy(suggested_review_rows),
+                trust_tint=trust_tint,
+                app_rows_for_sheets=copy.deepcopy(app_rows_for_sheets),
+                current_app=current_app,
+            )
+        if primary_path is None or fmt == "xlsx":
+            primary_path = out_path
     try:
         write_scan_evidence_artifacts(
             output_dir=output_dir,
@@ -1683,7 +1720,7 @@ def generate_report(
         _logger.exception(
             "Falha ao gravar manifest/POC_SUMMARY (evidência + APG); Excel já foi emitido."
         )
-    return str(out_path)
+    return str(primary_path) if primary_path else None
 
 
 def generate_session_heatmap(
