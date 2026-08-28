@@ -1,13 +1,17 @@
 # Plan: SQL connector extras + lean core install (#1047)
 
-<!-- plans-hub-summary: SQL extras + lean core (#1047); container delivery via runtime /extras+PYTHONPATH mount, EXTRAS_MANIFEST + --check-extras (#1400/#1401/#1399/#1402) — not fat image. -->
+<!-- plans-hub-summary: SQL extras + lean core (#1047); v1.8.0 #1059 [noavx] wheelhouse (#929) + [nlp]/[ocr]/[dl] profiles; CPU detect + loud FN-first degrade -->
+<!-- plans-hub-related: PLAN_WHEELHOUSE_DISTRIBUTION.md, PLAN_CI_OPTIONAL_EXTRAS_COVERAGE.md, PLAN_QUICKSTART.md -->
 
-**Status:** In progress
-**Date:** 2026-06-27
+**Português (Brasil):** [PLAN_PACKAGING_EXTRAS.pt_BR.md](PLAN_PACKAGING_EXTRAS.pt_BR.md)
+
+**Status:** In progress (SQL extras on `main`; v1.8.0 survey [#1059](https://github.com/DataBoar/data-boar/issues/1059) enriches this plan — do not archive)
+**Date:** 2026-06-27 (v1.8.0 wave: 2026-08-27)
 **Authors:** Fabio Leitao (operator); Cursor executor
 **Priority:** H1 (packaging / wide-install ICP)
-**GitHub:** [#1047](https://github.com/DataBoar/data-boar/issues/1047) `[P2][packaging]` · **Related:** [#1059](https://github.com/DataBoar/data-boar/issues/1059) (`[noavx]` / capability profiles; see [#929](https://github.com/DataBoar/data-boar/issues/929)) · **Container slice:** [#1400](https://github.com/DataBoar/data-boar/issues/1400) · [#1401](https://github.com/DataBoar/data-boar/issues/1401) · [#1399](https://github.com/DataBoar/data-boar/issues/1399) · [#1402](https://github.com/DataBoar/data-boar/issues/1402) · **CI extras job (does not change extra names):** [#1638](https://github.com/DataBoar/data-boar/issues/1638) [PLAN_CI_OPTIONAL_EXTRAS_COVERAGE.md](PLAN_CI_OPTIONAL_EXTRAS_COVERAGE.md)
-**Related:** [ADR-0031](../adr/ADR-0031-pypi-packaging-hatchling-flat-layout.md) · [ADR-0073](../adr/ADR-0073-version-scheme-octet-maturity-and-roadmap.md) · [#1042](https://github.com/DataBoar/data-boar/issues/1042) (PyPI publish) · [CONTRIBUTING.md](../../CONTRIBUTING.md)
+**Milestone:** v1.8.0
+**GitHub:** [#1047](https://github.com/DataBoar/data-boar/issues/1047) `[P2][packaging]` · **[#1059](https://github.com/DataBoar/data-boar/issues/1059)** (`[noavx]` / capability profiles; recipe [#929](https://github.com/DataBoar/data-boar/issues/929)) · **Container slice:** [#1400](https://github.com/DataBoar/data-boar/issues/1400) · [#1401](https://github.com/DataBoar/data-boar/issues/1401) · [#1399](https://github.com/DataBoar/data-boar/issues/1399) · [#1402](https://github.com/DataBoar/data-boar/issues/1402) · **CI extras job (does not change extra names):** [#1638](https://github.com/DataBoar/data-boar/issues/1638) [PLAN_CI_OPTIONAL_EXTRAS_COVERAGE.md](PLAN_CI_OPTIONAL_EXTRAS_COVERAGE.md)
+**Related:** [ADR-0031](../adr/ADR-0031-pypi-packaging-hatchling-flat-layout.md) · [ADR-0073](../adr/ADR-0073-version-scheme-octet-maturity-and-roadmap.md) · [#1042](https://github.com/DataBoar/data-boar/issues/1042) (PyPI publish) · [CONTRIBUTING.md](../../CONTRIBUTING.md) · [PLAN_WHEELHOUSE_DISTRIBUTION.md](PLAN_WHEELHOUSE_DISTRIBUTION.md)
 
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md)
 
@@ -115,3 +119,67 @@ PyPI is **immutable per version**; there is **no** `maturity_build` side-channel
 | Post-merge PyPI upload | `1.7.4.post1` via `publish-pypi.yml` (library slice) |
 | Operator smoke | `pipx install data-boar==1.7.4.post1` on constrained py3.14 lab host |
 | Container smoke | `docker-image-smoke.sh` after lab build; mount `/extras` pack without `--user 0` |
+
+---
+
+## Changelog
+
+- **2026-08-27:** v1.8.0 survey **[#1059](https://github.com/DataBoar/data-boar/issues/1059)** — `[noavx]` = proven [#929](https://github.com/DataBoar/data-boar/issues/929) wheelhouse (system OpenBLAS, no bundled AVX); capability profiles `[nlp]` / `[ocr]` / `[dl]`; installer CPU detect; **loud + FN-first** degrade (never silent).
+- **2026-06-27:** Initial plan — SQL extras + lean core (#1047); later container `/extras` mount (#1400–#1402).
+
+---
+
+## v1.8.0 wave — `[noavx]` wheelhouse + capability profiles ([#1059](https://github.com/DataBoar/data-boar/issues/1059))
+
+**Driver:** Landscape survey (private competitive dossier). **Docs-first** in this PR; this wave does **not** add a `pyproject.toml` extra, a new installer binary, or a second wheelhouse recipe.
+
+**Invariant (doctrine):** Capability **degrade is LOUD and FN-first**, never silent. If a reduced profile **detects less**, the risk is **false negative**. In a PII scanner that is the worst outcome — the operator **must see in output** that this run is **reduced** (banner / log / report footer). Same rule as the **min-spec floor**: Alpine no-AVX metal in the gate (**[#821](https://github.com/DataBoar/data-boar/issues/821)** / **[#406](https://github.com/DataBoar/data-boar/issues/406)**) — the artifact **adapts to the floor and declares what it achieved**. SIGILL with **zero** Python traceback ([#929](https://github.com/DataBoar/data-boar/issues/929) title class) is the anti-pattern this wave forbids.
+
+**Non-claims:** No performance numbers (including Rust prefilter) without a pinned file under `tests/benchmarks/`. `[noavx]` is **not** a shipped pip extra on `main` today. Auto CPU-select installer is **specified here**, not implemented in this docs PR.
+
+### What already ships (do not invent a second stack)
+
+| Surface | Role today | #1059 relevance |
+| ------- | ---------- | --------------- |
+| SQL extras (#1047) + `/extras` mount | Lean core; optional drivers | Unchanged; `[noavx]` is **CPU/ISA**, not SQL |
+| Core `numpy` / `scipy` / `scikit-learn` | Default ML (TF-IDF + RandomForest) | PyPI wheels can **SIGILL** on no-AVX; wheelhouse is the measured fix |
+| Extra `[dl]` | Optional sentence-transformers | Heavier ISA; skip or fail **loud** on no-AVX — never omit embeddings in silence |
+| Extra `[richmedia]` | `pytesseract` + system `tesseract-ocr` | Buyer `[ocr]` maps here; missing binary is already a named miss, keep it loud |
+| [PLAN_WHEELHOUSE_DISTRIBUTION.md](PLAN_WHEELHOUSE_DISTRIBUTION.md) | Hosted x86-64-v1 cells + recipe CI | **Canonical** no-AVX distribution; pip/pipx two-step in [TROUBLESHOOTING.md](../TROUBLESHOOTING.md) |
+| pip / pipx onboarding | [PLAN_QUICKSTART.md](PLAN_QUICKSTART.md) + USAGE | Where CPU detect **chooses** stock vs wheelhouse |
+
+### `[noavx]` = wheelhouse recipe **proven** in [#929](https://github.com/DataBoar/data-boar/issues/929)
+
+Lab RCA (metal, min-spec, no AVX): the killer is **`libscipy_openblas` bundled in the PyPI wheel** (unconditional AVX/SSE), not numpy-core once `-Dcpu-baseline=none`. Env vars (`OPENBLAS_CORETYPE`, `NPY_DISABLE_CPU_FEATURES`) **do not** fix a compiled baseline.
+
+**Measured fix (do not re-hypothesize):** build numpy/scipy/sklearn **from source against system OpenBLAS** (`DYNAMIC_ARCH` at runtime = no-AVX-safe); **do not** bundle `scipy-openblas`. Confirm build log: system OpenBLAS **YES**, `scipy-openblas` **NO**. Re-validate **on metal** (build-box AVX can import a poisoned wheel). Full recipe + traps live on **#929** and the wheelhouse plan (no `CFLAGS=-march=…`; audit wheels for embedded OpenBLAS).
+
+**Product extra name:** `data-boar[noavx]` means **install via that wheelhouse path** (plus runtime `openblas` / `libgomp` as the recipe documents) — **not** a new BLAS implementation in-tree. Wire it to the existing **pip / pipx** onboarding (two-step `--find-links` / index), not a greenfield channel.
+
+### Capability profiles (buyer names → extras that exist or stay named)
+
+| Profile | Buyer ask | Map onto (no second engine) | Reduced-run rule |
+| ------- | --------- | --------------------------- | ---------------- |
+| **`[nlp]`** | Regex + classical ML | Core detector path (sklearn already in core) on **stock** or **wheelhouse** wheels | If ML kernels are absent or v1-only, **say so**; regex-only is an FN risk |
+| **`[ocr]`** | Image text | Existing `[richmedia]` + system Tesseract | Missing Tesseract / flag off = **declared** skip, not silent |
+| **`[dl]`** | Embeddings | Existing `[dl]` extra | On no-AVX, **do not** load AVX PyPI DL wheels; degrade **loud** (regex+ML only) |
+
+Exact extra aliases in `pyproject.toml` stay **TBD** until a packaging slice; this PR only locks the **mapping + loud-degrade** contract.
+
+### Installer detects CPU (planned)
+
+| CPU | Choose | Must declare |
+| --- | ------ | ------------ |
+| Capable (AVX / x86-64-v2+ as required by **stock** PyPI wheels) | Default PyPI / stock wheel | Full advertised stack (including `[dl]` if requested) |
+| No AVX (min-spec / x86-64-v1) | Wheelhouse (`[noavx]` path) | **Reduced** profile in stdout + report: which extras loaded, which skipped, FN-first warning |
+
+Do **not** auto-install AVX wheels on a v1 CPU (SIGILL). Do **not** pretend DL ran if it did not. Pre-flight **before** `import numpy` remains the #929 lesson (SIGILL is not `try`/`except`).
+
+### Execution table (doc-first → later slices)
+
+| Step | Deliverable | Status |
+| ---- | ----------- | ------ |
+| P1 | This plan section + hub summary + `PLANS_TODO` survey rows | ✅ Done (docs PR) |
+| P2 | Name `[noavx]` in USAGE/TECH_GUIDE pip/pipx onboarding; pointer to #929 + wheelhouse two-step (no new recipe) | ⬜ Pending |
+| P3 | CPU pre-flight + **loud** capability banner / report footer (FN-first copy) | ⬜ Pending |
+| P4 | Optional `pyproject` extra aliases `[nlp]` / `[ocr]` if they stay distinct from `[dl]` / `[richmedia]` | ⬜ Pending |
