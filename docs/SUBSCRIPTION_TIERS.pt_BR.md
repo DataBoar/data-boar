@@ -61,9 +61,9 @@ flowchart TB
 | Faixa | Público-alvo | Token de licença | Diferencial principal |
 |---|---|---|---|
 | **Community** | DPOs internos, pesquisadores, estudantes, uso individual | Não exigido (`licensing.mode: open`) | Funcionalidade completa do open-core |
-| **Std** | Equipes pequenas que compram direito comercial antes dos conectores Pro | Token anual assinado | Direito de entrega comercial; suporte; **sem wait de cortesia** (Boar Std — não Oracle DB Standard Edition). **Sem chaves extras em `FEATURE_TIER_MAP`** vs Community |
-| **Pro / Consultor** | Consultores independentes, MSSPs individuais, compradores de organização única | Token anual assinado | Conectores corporativos; roles RBAC fixos. JWT `trial` mapeia aqui |
-| **Pro+** | Times que precisam de RBAC custom, integração SIEM/GRC, packs multi-footprint | Token anual assinado (claim-driven) | Roles RBAC custom; push SARIF/SIEM; export RoPA; deploy pack |
+| **Std** | Equipes pequenas que compram direito comercial antes dos conectores Pro | JWT assinado de vida curta (≤ min(90 dias, ciclo de cobrança do contrato); renovável — nunca token anual) | Direito de entrega comercial; suporte; **sem wait de cortesia** (Boar Std — não Oracle DB Standard Edition). **Sem chaves extras em `FEATURE_TIER_MAP`** vs Community |
+| **Pro / Consultor** | Consultores independentes, MSSPs individuais, compradores de organização única | JWT assinado de vida curta (≤ min(90 dias, ciclo de cobrança do contrato); renovável — nunca token anual) | Conectores corporativos; roles RBAC fixos. JWT `trial` mapeia aqui |
+| **Pro+** | Times que precisam de RBAC custom, integração SIEM/GRC, packs multi-footprint | JWT assinado de vida curta (≤ min(90 dias, ciclo de cobrança do contrato); renovável — nunca token anual; claim-driven) | Roles RBAC custom; push SARIF/SIEM; export RoPA; deploy pack |
 | **Enterprise** | Grandes organizações, setores regulados, OEM | Acordo empresarial personalizado | Arquitetura plugin/partner + CMDB + sink + white-label + `sso_saml` + RBAC por recurso |
 | **Partner** (custom) | Integradores, MSPs, revendedores multi-cliente | Acordo organizacional custom | Entrega multi-cliente; canal co-marca/white-label. Capacidade ≥ Enterprise em `_TIER_ORDER` |
 
@@ -131,6 +131,15 @@ A assinatura paga **não é só feature gate**. Ela inclui:
 As faixas são aplicadas via **tokens de licença JWT assinados com Ed25519** (veja [LICENSING_SPEC.pt_BR.md](LICENSING_SPEC.pt_BR.md)).
 O open-core Community roda sem token (`licensing.mode: open` → sentinela Open, não SKU).
 Claims só atuam em `licensing.mode: enforced`; um claim assinado vence o padrão da faixa.
+
+**Ciclo de cobrança do contrato ≠ validade do grant / token de licença.** O **contrato** comercial pode ser cobrado no mês, no ano ou em outro ciclo. O **arquivo JWT / grant** nunca é um token de um ano. Cada grant é de vida curta e renovável (**estilo Let's Encrypt**: reemissão, não um único arquivo para o prazo inteiro), e **nunca excede o menor entre (a) 90 dias e (b) o ciclo de cobrança do contrato**:
+
+- Contrato mensal → token válido no máximo por um mês (ou menos), nunca além desse período contratual.
+- Contrato anual → tokens **ainda assim ≤90 dias**, reemitidos ao longo do ano — **nunca** um único JWT cobrindo o ano inteiro.
+
+O teto de ≤90 dias não é só limite técnico. Ele **força renovação periódica** mesmo quando o cliente está **air-gapped** e não consegue renovar sozinho pela rede. Sem grant curto, um site air-gapped poderia manter faixa paga indefinidamente sem falar com o operador. Com o teto, precisa pedir um `.lic` novo (ao operador, ou no futuro a um parceiro autorizado a emitir). Estados de licença expirados / inesperados **degradam para Community** (open-core) em vez de travar o produto — a operação continua; as faixas pagas esperam um grant fresco.
+
+A expiração em runtime é o claim JWT **`exp`** ([LICENSING_SPEC.pt_BR.md](LICENSING_SPEC.pt_BR.md)). Esta página não nomeia um produto de emissor separado; registra a política de duração do grant.
 
 ## Contato
 

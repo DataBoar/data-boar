@@ -171,21 +171,21 @@ Ideal for enterprise pre-sales and formal POC engagements. JWT required.
 For the independent consultant, solo MSSP operator, or small integrator who delivers to
 **one client engagement at a time**. Full detection capabilities, legacy format ingestion,
 cloud connectors (planned), compliance output.
-**Revenue model:** Annual license per consultant seat. Possible per-engagement add-ons.
+**Revenue model:** Contract **billing cycle** may be annual (or other); each license **JWT grant** is still ≤ min(90 days, that cycle), renewable — never one token covering the whole year. Possible per-engagement add-ons.
 **Key differentiator from Community:** Can deliver the tool output as a professional service.
 
 ### Partner
 For system integrators, MSSPs, and resellers managing **multiple client engagements concurrently**.
 Multi-client use is explicitly licensed. Co-branding in reports is permitted.
 Access to SSO (planned), advanced connectors, and the partner portal (future).
-**Revenue model:** Annual subscription per partner org + per-seat or per-customer usage tier.
+**Revenue model:** Partner-org **billing** (cycle TBD) plus per-seat or per-customer usage; license **JWT grants** remain ≤ min(90 days, contract billing cycle), renewable — never an annual token.
 **Key differentiator from Pro:** Multi-client use rights; partner brand in deliverables.
 
 ### Enterprise
 For large organizations deploying internally at scale, regulated industries (banking, health, port
 terminals), and OEM partners embedding Data Boar in their own product suite.
 All features, SLA, dedicated support, white-label rights as an add-on.
-**Revenue model:** Annual enterprise agreement; custom pricing based on scope, users, connectors.
+**Revenue model:** Custom enterprise **agreement / billing**; license **JWT grants** still ≤ min(90 days, contract billing cycle), renewable — never an annual token. Pricing based on scope, users, connectors.
 **Capability roadmap (subscription packs beyond the matrix above):** [ENT_CAPABILITY_ROADMAP.md](ENT_CAPABILITY_ROADMAP.md).
 
 ---

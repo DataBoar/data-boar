@@ -61,9 +61,9 @@ flowchart TB
 | Band | Intended audience | License token | Key differentiator |
 |---|---|---|---|
 | **Community** | Internal DPOs, researchers, students, individual use | Not required (`licensing.mode: open`) | Full open-core functionality |
-| **Std** | Small teams buying commercial rights before full Pro connectors | Annual signed token | Commercial delivery right; support; **no courtesy upgrade wait** (Boar-Std — not Oracle DB Standard Edition). **No extra `FEATURE_TIER_MAP` keys** vs Community |
-| **Pro / Consultant** | Independent consultants, solo MSSPs, single-org buyers | Annual signed token | Corporate connectors; fixed RBAC roles. JWT `trial` maps here |
-| **Pro+** | Teams needing custom RBAC, SIEM/GRC integration, multi-footprint packs | Annual signed token (claim-driven) | Custom RBAC roles; SARIF/SIEM push; RoPA export; deploy pack |
+| **Std** | Small teams buying commercial rights before full Pro connectors | Short-lived signed JWT (≤ min(90 days, contract billing cycle); renewable — never an annual token) | Commercial delivery right; support; **no courtesy upgrade wait** (Boar-Std — not Oracle DB Standard Edition). **No extra `FEATURE_TIER_MAP` keys** vs Community |
+| **Pro / Consultant** | Independent consultants, solo MSSPs, single-org buyers | Short-lived signed JWT (≤ min(90 days, contract billing cycle); renewable — never an annual token) | Corporate connectors; fixed RBAC roles. JWT `trial` maps here |
+| **Pro+** | Teams needing custom RBAC, SIEM/GRC integration, multi-footprint packs | Short-lived signed JWT (≤ min(90 days, contract billing cycle); renewable — never an annual token; claim-driven) | Custom RBAC roles; SARIF/SIEM push; RoPA export; deploy pack |
 | **Enterprise** | Large organisations, regulated industries, OEM | Custom enterprise agreement | Plugin/partner arch + CMDB + sink + white-label + `sso_saml` + per-resource RBAC |
 | **Partner** (custom) | System integrators, MSPs, multi-client resellers | Custom org agreement | Multi-client delivery; co-brand/white-label channel. Capability ≥ Enterprise in `_TIER_ORDER` |
 
@@ -131,6 +131,15 @@ A paid subscription is **not just feature gates**. It includes:
 Bands are enforced via **signed Ed25519 JWT licence tokens** (see [LICENSING_SPEC.md](LICENSING_SPEC.md)).
 Community open-core runs without a token (`licensing.mode: open` → Open sentinel, not a SKU).
 Claims only bite in `licensing.mode: enforced`; a signed claim wins over the band default.
+
+**Contract billing cycle ≠ license grant / token validity.** A commercial **contract** may bill monthly, annually, or on another cycle. The **JWT file / grant** is never a year-long token. Each grant is short-lived and renewable (**Let's Encrypt-style** re-issue, not a single file for the whole term), and **never exceeds the lesser of (a) 90 days and (b) the contract billing cycle**:
+
+- Monthly contract → token valid for at most one month (or shorter), never longer than that contract period.
+- Annual contract → tokens still **≤90 days**, re-issued through the year — **never** one JWT covering the whole year.
+
+The ≤90-day ceiling is not only a technical cap. It **forces periodic renewal** even when the customer is **air-gapped** and cannot reach an issuer on the network. Without a short grant, an air-gapped site could keep a paid band indefinitely without contacting the operator. With the ceiling, they must request a new `.lic` (from the operator, or later from an authorized issuing partner). Expired / unexpected license states **degrade to Community** (open-core) rather than hard-locking the product — the customer keeps operating; paid features wait for a fresh grant.
+
+Runtime expiry is the JWT **`exp`** claim ([LICENSING_SPEC.md](LICENSING_SPEC.md)). This page does not name a separate issuer product; it states operator policy for grant length.
 
 ## Contact
 
