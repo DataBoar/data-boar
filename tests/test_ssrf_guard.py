@@ -384,6 +384,7 @@ def test_sharepoint_connector_rejects_private_site_url() -> None:
         "connectors/mongodb_connector.py",
         "connectors/redis_connector.py",
         "connectors/sql_connector.py",
+        "core/scan_plan.py",
     ],
 )
 def test_connector_sources_call_url_guard(connector_file: str) -> None:
@@ -404,6 +405,10 @@ def test_connector_sources_call_url_guard(connector_file: str) -> None:
     assert "target_allows_private(" in source, (
         f"{connector_file} lost its allow_private_networks opt-in wiring (#832)"
     )
+    if connector_file == "core/scan_plan.py":
+        assert "primary_pin_str(" in source, (
+            "scan_plan must pin TCP RTT to guard IPs (#1586), not re-resolve"
+        )
 
 
 def test_powerbi_token_url_guarded() -> None:

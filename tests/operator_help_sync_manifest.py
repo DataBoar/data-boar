@@ -50,6 +50,7 @@ _MAN_HTTPS_CERT = r"\-\-https\-cert\-file"
 _MAN_HTTPS_KEY = r"\-\-https\-key\-file"
 _MAN_ALLOW_INSECURE_HTTP = r"\-\-allow\-insecure\-http"
 _MAN_VALIDATE_CONFIG = r"\-\-validate\-config"
+_MAN_PLAN = r"\-\-plan"
 _MAN_CHECK_EXTRAS = r"\-\-check\-extras"
 _MAN_PREFILTER_STATUS = r"\-\-prefilter\-status"
 _MAN_DIFF = r"\-\-diff"
@@ -99,6 +100,12 @@ OPERATOR_HELP_MARKERS: tuple[OperatorHelpMarker, ...] = (
         "--validate-config",
         "--validate-config",
         _MAN_VALIDATE_CONFIG,
+    ),
+    OperatorHelpMarker(
+        "plan",
+        "--plan",
+        "--plan",
+        _MAN_PLAN,
     ),
     OperatorHelpMarker(
         "check_extras",
