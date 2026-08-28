@@ -79,6 +79,26 @@ MeasureRttFn = Callable[[str, int], float | None]
 EnumerateSqlFn = Callable[[dict[str, Any]], tuple[int | None, int | None, str | None]]
 
 
+def rtt_peer_guard_error(target: dict[str, Any], host: str, port: int) -> str | None:
+    """Same SSRF / private-network gate as live SQL/Mongo/Redis connects (#832).
+
+    Live connectors call ``resolve_and_validate_outbound_url`` with
+    ``target_allows_private`` before any TCP peer. ``--plan`` must not probe
+    RTT (or catalog-connect) when that guard would refuse the target.
+    """
+    from connectors.url_guard import (
+        resolve_and_validate_outbound_url,
+        target_allows_private,
+    )
+
+    err, _ips = resolve_and_validate_outbound_url(
+        f"{host}:{int(port)}",
+        allow_private=target_allows_private(target),
+        label="host",
+    )
+    return err
+
+
 def measure_tcp_rtt_ms(
     host: str,
     port: int,
@@ -316,7 +336,13 @@ def format_scan_plan_report(target_rows: list[dict[str, Any]]) -> str:
             lines.append(f"  Peer: {peer}")
         rtt = row.get("rtt_ms")
         klass = row.get("classification") or "unknown"
-        if rtt is None:
+        skip = row.get("rtt_skip_reason")
+        if skip:
+            lines.append(
+                "  RTT: skipped (network policy — same SSRF guard as live scan)"
+            )
+            lines.append(f"  Skip: {skip}")
+        elif rtt is None:
             lines.append(f"  RTT: not measured ({klass})")
         else:
             lines.append(f"  RTT: {rtt:.0f} ms ({klass})")
@@ -383,16 +409,19 @@ def plan_one_target(
     rtt_ms: float | None = None
     peer_s: str | None = None
     host: str | None = None
+    rtt_skip_reason: str | None = None
     if peer_t:
         host, port = peer_t
         peer_s = f"{host}:{port}"
-        rtt_ms = measure_rtt(host, port)
+        rtt_skip_reason = rtt_peer_guard_error(target, host, port)
+        if rtt_skip_reason is None:
+            rtt_ms = measure_rtt(host, port)
     classification = classify_latency(host, rtt_ms)
     engine = sql_engine_key(target)
     n_tables: int | None = None
     n_columns: int | None = None
     enum_error: str | None = None
-    if engine:
+    if engine and rtt_skip_reason is None:
         n_tables, n_columns, enum_error = enumerate_sql(target)
         if engine == "sqlite":
             classification = "local"
@@ -425,6 +454,7 @@ def plan_one_target(
         "n_tables": n_tables,
         "n_columns": n_columns,
         "enum_error": enum_error,
+        "rtt_skip_reason": rtt_skip_reason,
         "estimated_s": estimated_s,
         "inter_query_delay_s": delay_s,
         "include_table_row_estimate": include_row_est,

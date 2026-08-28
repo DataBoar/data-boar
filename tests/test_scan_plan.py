@@ -127,7 +127,7 @@ def test_sql_engine_key() -> None:
 
 def test_plan_one_target_uses_injected_rtt_and_enum() -> None:
     def fake_rtt(host: str, port: int) -> float:
-        assert host == "db.example.com"
+        assert host == "8.8.8.8"
         assert port == 5432
         return 140.0
 
@@ -140,7 +140,7 @@ def test_plan_one_target_uses_injected_rtt_and_enum() -> None:
             "name": "prod-pg",
             "type": "database",
             "driver": "postgresql",
-            "host": "db.example.com",
+            "host": "8.8.8.8",
         },
         measure_rtt=fake_rtt,
         enumerate_sql=fake_enum,
@@ -171,6 +171,83 @@ def test_run_scan_plan_filesystem_no_network() -> None:
     assert "not a SQL/Snowflake catalog target" in text
     assert "  WARN:" not in text
     assert "No slow/remote WARN" in text
+
+
+def test_plan_skips_rfc1918_rtt_without_allow_private_networks() -> None:
+    """Live SQL/Mongo refuse RFC1918 unless allow_private_networks; --plan must too."""
+
+    def boom_rtt(host: str, port: int) -> float:
+        raise AssertionError(f"must not TCP-probe {host}:{port}")
+
+    def boom_enum(target: dict[str, Any]) -> tuple[int, int, None]:
+        raise AssertionError("must not catalog-connect a guard-rejected peer")
+
+    row = plan_one_target(
+        {
+            "name": "lab-pg",
+            "type": "database",
+            "driver": "postgresql",
+            "host": "10.0.0.5",
+            "port": 5432,
+        },
+        measure_rtt=boom_rtt,
+        enumerate_sql=boom_enum,
+    )
+    assert row["rtt_ms"] is None
+    assert row["rtt_skip_reason"]
+    assert "10.0.0.5" in row["rtt_skip_reason"]
+    assert "allow_private_networks" in row["rtt_skip_reason"]
+    assert "#832" in row["rtt_skip_reason"]
+    text = format_scan_plan_report([row])
+    assert "skipped (network policy" in text
+    assert "allow_private_networks" in text
+
+
+def test_plan_skips_link_local_metadata_without_opt_in() -> None:
+    def boom_rtt(host: str, port: int) -> float:
+        raise AssertionError(f"must not TCP-probe {host}:{port}")
+
+    row = plan_one_target(
+        {
+            "name": "meta",
+            "type": "mongodb",
+            "host": "169.254.169.254",
+            "port": 27017,
+        },
+        measure_rtt=boom_rtt,
+        enumerate_sql=lambda t: (_ for _ in ()).throw(
+            AssertionError("must not enumerate")
+        ),
+    )
+    assert row["rtt_ms"] is None
+    assert row["rtt_skip_reason"]
+    assert "169.254.169.254" in row["rtt_skip_reason"]
+    assert "link-local" in row["rtt_skip_reason"]
+
+
+def test_plan_probes_rfc1918_when_allow_private_networks() -> None:
+    seen: list[tuple[str, int]] = []
+
+    def fake_rtt(host: str, port: int) -> float:
+        seen.append((host, port))
+        return 12.0
+
+    row = plan_one_target(
+        {
+            "name": "lab-pg",
+            "type": "database",
+            "driver": "postgresql",
+            "host": "10.0.0.5",
+            "port": 5432,
+            "allow_private_networks": True,
+        },
+        measure_rtt=fake_rtt,
+        enumerate_sql=lambda t: (2, 5, None),
+    )
+    assert seen == [("10.0.0.5", 5432)]
+    assert row["rtt_ms"] == 12.0
+    assert row["rtt_skip_reason"] is None
+    assert row["n_tables"] == 2
 
 
 def test_format_includes_documented_ruler() -> None:
