@@ -686,7 +686,8 @@ def main() -> None:
         help=(
             "Print a scan plan and exit: enumerate SQL/Snowflake catalog "
             "(tables/columns, no sampling), TCP-connect RTT to each target peer "
-            "(same SSRF / allow_private_networks guard as a live scan; private "
+            "(same SSRF / allow_private_networks guard as a live scan; TCP "
+            "connect uses the guard-pinned IP, not a second DNS lookup; private "
             "peers are skipped and reported, not probed), "
             "and an RTT-floor time estimate (1 sample query/column + 1 row-estimate/"
             "table + catalog get_columns/table). Latency: local = loopback or RTT "

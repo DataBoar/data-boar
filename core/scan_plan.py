@@ -79,24 +79,39 @@ MeasureRttFn = Callable[[str, int], float | None]
 EnumerateSqlFn = Callable[[dict[str, Any]], tuple[int | None, int | None, str | None]]
 
 
-def rtt_peer_guard_error(target: dict[str, Any], host: str, port: int) -> str | None:
-    """Same SSRF / private-network gate as live SQL/Mongo/Redis connects (#832).
+def rtt_peer_guard(
+    target: dict[str, Any], host: str, port: int
+) -> tuple[str | None, str | None]:
+    """Same SSRF gate + TCP pin as live SQL/Mongo/Redis (#832 / #1586).
 
-    Live connectors call ``resolve_and_validate_outbound_url`` with
-    ``target_allows_private`` before any TCP peer. ``--plan`` must not probe
-    RTT (or catalog-connect) when that guard would refuse the target.
+    Live connectors call ``resolve_and_validate_outbound_url`` then connect
+    to ``primary_pin_str(ips)`` (or an equivalent driver pin). ``--plan``
+    must not probe RTT (or catalog-connect) when the guard refuses the
+    target, and must not pass the original hostname to
+    ``socket.create_connection`` (DNS rebinding TOCTOU).
     """
+    from connectors.tcp_pin import primary_pin_str
     from connectors.url_guard import (
         resolve_and_validate_outbound_url,
         target_allows_private,
     )
 
-    err, _ips = resolve_and_validate_outbound_url(
+    err, ips = resolve_and_validate_outbound_url(
         f"{host}:{int(port)}",
         allow_private=target_allows_private(target),
         label="host",
     )
-    return err
+    if err:
+        return err, None
+    if not ips:
+        return (
+            (
+                "host rejected: no pin IPs after outbound validation. "
+                "Fail-closed — refusing RTT probe. (#1586)"
+            ),
+            None,
+        )
+    return None, primary_pin_str(ips)
 
 
 def measure_tcp_rtt_ms(
@@ -107,11 +122,17 @@ def measure_tcp_rtt_ms(
 ) -> float | None:
     """One TCP connect RTT in milliseconds, or None on failure.
 
-    Completes the handshake and closes. Not a port scan: one connect to the
-    configured peer. Injectable in tests — do not call this against external
-    hosts from CI.
+    *host* must be a **literal IP** already approved by
+    :func:`rtt_peer_guard` (same pin as live connectors, #1586). Passing a
+    DNS name would re-resolve and reopen DNS rebinding. Completes the
+    handshake and closes. Injectable in tests — do not call this against
+    external hosts from CI.
     """
+    from connectors.tcp_pin import is_ip_literal
+
     if not host or not port:
+        return None
+    if not is_ip_literal(host):
         return None
     try:
         port_i = int(port)
@@ -413,9 +434,9 @@ def plan_one_target(
     if peer_t:
         host, port = peer_t
         peer_s = f"{host}:{port}"
-        rtt_skip_reason = rtt_peer_guard_error(target, host, port)
-        if rtt_skip_reason is None:
-            rtt_ms = measure_rtt(host, port)
+        rtt_skip_reason, pin_host = rtt_peer_guard(target, host, port)
+        if rtt_skip_reason is None and pin_host:
+            rtt_ms = measure_rtt(pin_host, port)
     classification = classify_latency(host, rtt_ms)
     engine = sql_engine_key(target)
     n_tables: int | None = None

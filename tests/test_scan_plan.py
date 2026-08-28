@@ -250,6 +250,75 @@ def test_plan_probes_rfc1918_when_allow_private_networks() -> None:
     assert row["n_tables"] == 2
 
 
+def test_plan_rtt_connects_to_pinned_ip_not_rebinding_hostname(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Validate→connect must use guard pin IPs (#1586), not a second DNS lookup.
+
+    Hostname that is public at validation time must not be re-resolved at
+    ``create_connection`` (rebinding to RFC1918 / link-local / metadata).
+    """
+    import ipaddress
+
+    captured: list[tuple[object, ...]] = []
+
+    def fake_guard(url: str, *, allow_private: bool = False, label: str = "url"):
+        assert "evil.example.com" in url
+        return None, [ipaddress.ip_address("203.0.113.10")]
+
+    def boom_getaddrinfo(*args: object, **kwargs: object) -> list:
+        raise AssertionError(f"must not re-resolve DNS after pin: {args!r}")
+
+    class _DummySock:
+        def close(self) -> None:
+            return None
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc: object) -> None:
+            return None
+
+    def fake_create_connection(address, timeout=None, **kwargs):
+        captured.append(address)
+        return _DummySock()
+
+    monkeypatch.setattr(
+        "connectors.url_guard.resolve_and_validate_outbound_url", fake_guard
+    )
+    monkeypatch.setattr("socket.getaddrinfo", boom_getaddrinfo)
+    monkeypatch.setattr(
+        "core.scan_plan.socket.create_connection", fake_create_connection
+    )
+
+    row = plan_one_target(
+        {
+            "name": "rebinder",
+            "type": "database",
+            "driver": "postgresql",
+            "host": "evil.example.com",
+            "port": 5432,
+        },
+        enumerate_sql=lambda t: (1, 1, None),
+    )
+    assert captured == [("203.0.113.10", 5432)]
+    assert row["rtt_ms"] is not None
+    assert row["rtt_skip_reason"] is None
+    assert row["peer"] == "evil.example.com:5432"
+
+
+def test_measure_tcp_rtt_ms_refuses_hostname_without_pin(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Low-level RTT helper must not DNS-resolve a name (rebinding window)."""
+
+    def boom_create(*args: object, **kwargs: object):
+        raise AssertionError("must not create_connection for a DNS name")
+
+    monkeypatch.setattr("core.scan_plan.socket.create_connection", boom_create)
+    assert measure_tcp_rtt_ms("evil.example.com", 5432) is None
+
+
 def test_format_includes_documented_ruler() -> None:
     body = format_scan_plan_report([])
     assert "local = loopback or RTT < 5 ms" in body

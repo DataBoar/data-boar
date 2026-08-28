@@ -214,7 +214,7 @@ On
 .B \-\-plan
 Scan plan (dry\-run): enumerate SQL/Snowflake catalog (tables/columns; no column sampling),
 TCP\-connect RTT to each target peer (one handshake, not a port scan; same SSRF guard as a live scan —
-loopback / RFC1918 / link\-local require
+connects to the guard\-pinned IP, no second DNS lookup; loopback / RFC1918 / link\-local require
 .B allow_private_networks
 or the probe is skipped and reported), classify local (loopback or RTT < 5 ms) / lan (5–20 ms) / remote (RTT ≥ 20 ms),
 and print an RTT\-floor estimate.
