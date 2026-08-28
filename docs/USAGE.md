@@ -957,6 +957,9 @@ Install optional deps: `uv pip install -e ".[shares]"`.
     domain: "COMPANY"   # optional
     port: 445
     recursive: true
+    # Lab / RFC1918 hosts need this opt-in; without it, SMB refuses the host
+    # before register_session (no NTLM to an unexpected peer — #1715).
+    # allow_private_networks: true
 ```
 
 ## WebDAV

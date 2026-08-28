@@ -974,6 +974,9 @@ Instale os extras opcionais: `uv pip install -e ".[shares]"`.
     domain: "COMPANY"   # opcional
     port: 445
     recursive: true
+    # Hosts RFC1918 / lab precisam deste opt-in; sem ele o SMB recusa o host
+    # antes de register_session (sem NTLM para um peer inesperado — #1715).
+    # allow_private_networks: true
 ```
 
 ## WebDAV
