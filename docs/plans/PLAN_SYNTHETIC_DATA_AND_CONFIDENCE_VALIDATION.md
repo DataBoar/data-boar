@@ -1,11 +1,17 @@
 # Plan: Synthetic and true-like data sources, confidence scoring, and operator guidance
 
-**Status:** In Progress
-**Date:** 2026-03-15
+<!-- plans-hub-summary: Synthetic fixtures + F1 harness (#835); v1.8.0 #1060 composite eval (F1 + latency + throughput + re-id risk as separate axes; no single score) -->
+<!-- plans-hub-related: PLAN_SYNTHETIC_DATA_LAB.pt_BR.md, PLAN_BENCHMARK_SAFE_AXIS.md, PLAN_CLAIMS_CONSISTENCY_AND_ANTI_OVERCLAIM.md, ../VALIDATION.md -->
+
+**Português (Brasil):** [PLAN_SYNTHETIC_DATA_AND_CONFIDENCE_VALIDATION.pt_BR.md](PLAN_SYNTHETIC_DATA_AND_CONFIDENCE_VALIDATION.pt_BR.md)
+
+**Status:** In Progress (Phase 1 + 5.1 on `main`; v1.8.0 survey [#1060](https://github.com/DataBoar/data-boar/issues/1060) enriches this plan — do not archive)
+**Date:** 2026-03-15 (v1.8.0 wave: 2026-08-27)
 **Authors:** Fabio Leitao
 **Priority:** H3
 **Depends on:** ADR-0007
-**Issue:** [#835](https://github.com/DataBoar/data-boar/issues/835) (Phase 1 + 5.1 baseline F1)
+**Milestone:** v1.8.0
+**Issue:** [#835](https://github.com/DataBoar/data-boar/issues/835) (Phase 1 + 5.1 baseline F1) · **[#1060](https://github.com/DataBoar/data-boar/issues/1060)** (composite eval methodology)
 
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md) (central to-do list)
 
@@ -161,6 +167,74 @@ Off-band readonly review of privacy-preserving ML stacks (e.g. OpenMined/PySyft)
 
 - **No conflicts** with other plans. Additive (fixtures, manifest, report columns/section, docs).
 - **Placement:** Independent; can follow or run in parallel with Compliance samples or Selenium QA. See [PLANS_TODO.md](PLANS_TODO.md).
+
+---
+
+## Changelog
+
+- **2026-08-27:** v1.8.0 survey **[#1060](https://github.com/DataBoar/data-boar/issues/1060)** — composite eval axes (F1 + latency + throughput + re-id **privacy** risk); citation contract; no new published numbers in this PR.
+- **2026-03-15:** Initial plan — synthetic/true-like fixtures, confidence bands, operator guidance; later #835 Phase 1 + 5.1 F1 harness.
+
+---
+
+## v1.8.0 wave — composite eval, not F1-only ([#1060](https://github.com/DataBoar/data-boar/issues/1060))
+
+**Driver:** Landscape survey (private competitive dossier). **Docs-first** in this PR. This wave defines **what to measure** and **how to compare**. It does **not** publish a new result table, a new harness, or a fused ranking score.
+
+**Thesis (do not dilute):** **System ranking changes when you measure only F1.** A detector that wins F1 and loses an **order of magnitude** on throughput is not “better” — it is a **different trade-off**. One-dimension eval produces a **false ordering**.
+
+**Non-claims:** Inventory and scores here are **evidence**, not a legal conclusion ([ADR 0025](../adr/ADR-0025-compliance-positioning-evidence-inventory-not-legal-conclusion-engine.md)). Re-id risk is **not** a compliance seal. This PR restates **no** F1, latency, or speedup figures — those live only in their pinned artifacts if cited later.
+
+### What already ships (do not invent a second lab)
+
+| Surface | Role today | #1060 axis |
+| ------- | ---------- | ---------- |
+| [VALIDATION.md](../VALIDATION.md) | **F1 baseline methodology** (issue shorthand `F1_BASELINE_METHODOLOGY` — there is no separate file with that name): splits, anti-leakage, `tests/data/f1_validation/` + `scripts/validate_detection_f1.py` | **F1 / P / R** only; published numbers stay in that doc |
+| This plan Phases 1 + 5.1 | Labeled synthetic text fixtures + on-demand F1 script | Accuracy axis already specified |
+| [PLAN_SYNTHETIC_DATA_LAB.pt_BR.md](PLAN_SYNTHETIC_DATA_LAB.pt_BR.md) + [ADR-0007](../adr/ADR-0007-synthetic-data-corpus-before-real-data.md) | Lab corpus **before** real data; pseudo-anonymisation / residual re-id **exercises** | **Re-id risk** lab track — still not a fused score |
+| Quasi-identifier aggregation (report sheet) | Heuristic **inventory** of combinations | Input to a **privacy** metric later; not F1 |
+| [PLAN_BENCHMARK_SAFE_AXIS.md](PLAN_BENCHMARK_SAFE_AXIS.md) + `tests/benchmarks/README.md` | Wall-clock / recall **gates** with **benchmark id** | **Latency / throughput** only when cited from pinned JSON |
+| [PLAN_CLAIMS_CONSISTENCY_AND_ANTI_OVERCLAIM.md](PLAN_CLAIMS_CONSISTENCY_AND_ANTI_OVERCLAIM.md) | Claims must be `backed_by` | Same rule for any future composite write-up |
+
+### Four axes (report separately — never one scalar)
+
+| Axis | Kind | What it answers | Must not |
+| ---- | ---- | ---------------- | -------- |
+| **F1** (with P/R) | Detection quality vs labeled synthetic truth | Did we flag the right rows/files on **this** split? | Stand in for speed or privacy |
+| **Latency** | Performance | Time to a defined unit (e.g. batch, file, session) | Be compared across unmatched scopes |
+| **Throughput** | Performance | Work per unit time on a defined load | Be inferred from F1 |
+| **Re-id risk** | **Privacy**, not quality | How much the **system’s outputs** help re-identify a data subject | Be added to F1 in a single “overall” score that hides the trade-off |
+
+A future dashboard may show **four columns** (or a Pareto / radar view). It must **not** collapse them into one number that re-ranks systems as if F1 were the whole story.
+
+### Citation contract (every published number)
+
+A number without **scope** is the defect this repo already forbids. Any later write-up **must** carry, together:
+
+1. **Scope** — isolated filter vs connector vs end-to-end scan (these are not interchangeable).
+2. **Pinned artifact** under `tests/benchmarks/` (or the F1 publish path in [VALIDATION.md](../VALIDATION.md) for accuracy-only).
+3. **`benchmark` id** matching `tests/benchmarks/README.md` for that exact scope (do not reuse a hotspot id for an E2E claim).
+4. **`git_sha`** of the tree that produced the artifact.
+5. **Date** of the run (UTC).
+
+This wave **does not** quote ratios from those files. Do **not** paste scar-class marketing speedups (including Rust prefilter headlines) or claims of total FP elimination. If a future PR needs a value, **open the pinned JSON** and copy only with the tuple above.
+
+### Re-id risk (privacy dimension)
+
+**Re-id risk** measures **privacy exposure**: the chance that a **titular** can be re-identified from what the **product exposes** (findings, samples, aggregates, reports) — **not** “how accurate is the detector.”
+
+- Do **not** treat a high F1 as low re-id risk (a thorough detector can **increase** residual identifiability of outputs if samples leak).
+- Do **not** treat quasi-id Excel flags as a scored k-anonymity proof; they are **heuristic inventory** ([GLOSSARY.md](../GLOSSARY.md) quasi-identifier row).
+- Lab work for **controlled** residual re-id stays on [PLAN_SYNTHETIC_DATA_LAB.pt_BR.md](PLAN_SYNTHETIC_DATA_LAB.pt_BR.md) / ADR-0007 — still **synthetic only** in git.
+
+### Execution table (doc-first → later slices)
+
+| Step | Deliverable | Status |
+| ---- | ----------- | ------ |
+| P1 | This plan section + hub summary + `PLANS_TODO` survey rows | ✅ Done (docs PR) |
+| P2 | Operator checklist: four axes + citation tuple (USAGE or VALIDATION addendum — no new numbers) | ⬜ Pending |
+| P3 | Optional harness extension: emit latency/throughput **fields** beside F1 on the same labeled run (still no fused score) | ⬜ Pending |
+| P4 | Re-id risk **protocol** on synthetic lab outputs (privacy metric spec; not a legal conclusion) | ⬜ Pending |
 
 ---
 
