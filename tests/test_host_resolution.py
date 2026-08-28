@@ -76,12 +76,18 @@ def test_should_warn_insecure_api_bind_false_when_key_from_env(
     assert should_warn_insecure_api_bind(cfg, "0.0.0.0") is False
 
 
-def test_auth_boundary_resolved_with_api_key() -> None:
-    cfg = {"api": {"api_key": "secret"}}
-    assert auth_boundary_resolved(cfg) is True
+def test_auth_boundary_resolved_requires_enforced_api_key() -> None:
+    """#1714 — key present is not enough; middleware must be on."""
+    assert auth_boundary_resolved({"api": {"api_key": "secret"}}) is False
+    assert (
+        auth_boundary_resolved({"api": {"require_api_key": True, "api_key": "secret"}})
+        is True
+    )
 
 
-def test_auth_boundary_resolved_with_webauthn_secret(monkeypatch) -> None:
+def test_auth_boundary_resolved_webauthn_secret_alone_is_not_enough(
+    monkeypatch,
+) -> None:
     monkeypatch.setenv("DATA_BOAR_WEBAUTHN_TOKEN_SECRET", "secret-min-16")
     cfg = {
         "api": {
@@ -91,10 +97,20 @@ def test_auth_boundary_resolved_with_webauthn_secret(monkeypatch) -> None:
             }
         }
     }
-    assert auth_boundary_resolved(cfg) is True
+    assert auth_boundary_resolved(cfg) is False
 
 
 def test_should_block_non_loopback_without_auth() -> None:
     cfg = {"api": {"require_api_key": False}}
     assert should_block_non_loopback_without_auth(cfg, "0.0.0.0") is True
     assert should_block_non_loopback_without_auth(cfg, "127.0.0.1") is False
+
+
+def test_should_block_non_loopback_when_key_present_but_not_required() -> None:
+    """#1714 — exact gap: api_key set, require_api_key absent/false, bind 0.0.0.0."""
+    cfg_absent = {"api": {"api_key": "secret"}}
+    assert should_block_non_loopback_without_auth(cfg_absent, "0.0.0.0") is True
+    cfg_false = {"api": {"require_api_key": False, "api_key": "secret"}}
+    assert should_block_non_loopback_without_auth(cfg_false, "0.0.0.0") is True
+    cfg_enforced = {"api": {"require_api_key": True, "api_key": "secret"}}
+    assert should_block_non_loopback_without_auth(cfg_enforced, "0.0.0.0") is False

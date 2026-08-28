@@ -3,8 +3,6 @@ from __future__ import annotations
 import os
 from typing import Any
 
-from core.webauthn_rp.settings import resolve_token_secret, webauthn_block
-
 
 def effective_api_key_configured(api_cfg: dict[str, Any] | None) -> bool:
     """
@@ -90,21 +88,19 @@ def should_warn_insecure_api_bind(config: dict[str, Any], host: str) -> bool:
 
 def auth_boundary_resolved(config: dict[str, Any]) -> bool:
     """
-    True when at least one built-in auth mechanism is configured and usable.
+    True when API-key auth is actually enforced on JSON routes (#1714).
 
-    This covers:
-    - API key available (literal or *_from_env), and/or
-    - WebAuthn enabled with token secret resolved from env.
+    ``optional_api_key_middleware`` is a no-op unless ``api.require_api_key`` is
+    true. A configured key or WebAuthn token secret without that flag does not
+    protect ``GET /findings`` / ``POST /scan``; the HTML WebAuthn gate does not
+    cover JSON. Presence of credentials alone must not satisfy the bind gate.
     """
     api_cfg = config.get("api")
     if not isinstance(api_cfg, dict):
-        api_cfg = {}
-    if effective_api_key_configured(api_cfg):
-        return True
-    wa = webauthn_block(config)
-    if wa and resolve_token_secret(wa):
-        return True
-    return False
+        return False
+    if not bool(api_cfg.get("require_api_key")):
+        return False
+    return effective_api_key_configured(api_cfg)
 
 
 def should_block_non_loopback_without_auth(config: dict[str, Any], host: str) -> bool:

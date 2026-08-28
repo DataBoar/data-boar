@@ -16,6 +16,7 @@
 
 1. When **`api.require_api_key: true`**, the process must have a **resolved** secret: either non-empty **`api.api_key`** in config, or **`api.api_key_from_env: "VAR"`** with **`VAR` set in the environment before startup**.
 1. **`main.py --web`** **exits with code 2** if `require_api_key` is true but **no key** can be resolved (prevents an accidentally open dashboard).
+1. **Non-loopback bind** (`0.0.0.0`, LAN IP, `::`): **`main.py --web` exits 2** unless **`api.require_api_key: true`** and a key is **resolved**. A configured **`api.api_key`** / env key or a WebAuthn token secret **without** `require_api_key` does **not** count — JSON routes (`GET /findings`, `POST /scan`, config) stay unauthenticated (#1714). Bind **`127.0.0.1`** for lab without a key, or set **`require_api_key: true`** before publishing a container port.
 1. **`GET /health`** is **never** authenticated (probes and load balancers stay simple). It returns JSON including `status`, a public `license` summary, and `dashboard_transport`.
 1. **All other routes** (HTML pages, `GET /status`, `POST /scan`, `GET /config`, OpenAPI `/docs`, …) require a valid key when enforcement is active: send **`X-API-Key: <secret>`** or **`Authorization: Bearer <secret>`**.
 1. **401** = missing or wrong key. **503** = `require_api_key` is true but the key could not be resolved at runtime (misconfiguration); fix env/YAML and restart.

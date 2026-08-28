@@ -32,6 +32,8 @@ Documented in code: **`main.py --host`** → **`api.host`** → **`API_HOST`** �
 
 - **2026-08-27 (CLI `--export-l3` #1334):** L3 `transformed_rows` JSON via **`main.py --export-l3 SESSION_ID --l3-grant PATH`**; optional **`--l3-persist`** (never default). **`core/l3_transformed_rows.py`**. Pin: **`docs/sdk/transformed_rows.schema.json`** + **`.pin.json`**. Surfaces: **`docs/data_boar.1`**, **`api/templates/help.html`**, **`docs/USAGE*.md`**, **`tests/operator_help_sync_manifest.py`**, **`tests/test_l3_transformed_rows.py`**.
 
+- **2026-08-28 (bind-gate #1714):** Non-loopback **`--web`** bind **exits 2** unless **`api.require_api_key: true`** and a key is resolved (configured key or WebAuthn secret without the flag is not enough). Docs: **USAGE** (EN + pt-BR), root **SECURITY**, **`docs/ops/SECURE_DASHBOARD_AUTH_AND_HTTPS_HOWTO*`**. Tests: **`tests/test_host_resolution.py`**, **`tests/test_main_web_transport_cli.py`**.
+
 - **2026-08-27 (CLI `--export-l1` #1333):** L1 `metadata_manifest` JSON via **`main.py --export-l1 SESSION_ID`** with **`--l1-output`**; **`core/l1_metadata_manifest.py`**. Pin: **`docs/sdk/metadata_manifest.schema.json`** + **`.pin.json`**. Surfaces: **`docs/data_boar.1`**, **`api/templates/help.html`**, **`docs/USAGE*.md`**, **`tests/operator_help_sync_manifest.py`**, **`tests/test_l1_metadata_manifest.py`**.
 
 - **2026-08-19 (`--validate-config` no side effects on `[INVALID]` #538):** Pre-flight aborts before `report.output_dir` mkdir, sqlite parent, or integrity-anchor `sqlite3.connect`. Surfaces: **`main.py --help`**, **`docs/data_boar.1`**, **`docs/USAGE*.md`**, **`tests/test_main_validate_config.py`**.

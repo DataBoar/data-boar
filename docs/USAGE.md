@@ -127,7 +127,7 @@ python main.py --config config.yaml --web --allow-insecure-http --port 8088
 python main.py --config config.yaml --web --allow-insecure-http --host 0.0.0.0 --port 8088
 ```
 
-- Loads config and starts the FastAPI server on **`<bind>:<port>`**. Default bind is **`127.0.0.1`** unless you set `api.host`, `API_HOST`, or **`--host`** (CLI wins). The official Docker image sets `API_HOST=0.0.0.0` and passes **`--allow-insecure-http`** in `CMD` so the container starts without mounted certificates; mount cert/key and override `CMD` for HTTPS.
+- Loads config and starts the FastAPI server on **`<bind>:<port>`**. Default bind is **`127.0.0.1`** unless you set `api.host`, `API_HOST`, or **`--host`** (CLI wins). The official Docker image sets `API_HOST=0.0.0.0` and passes **`--allow-insecure-http`** in `CMD` so the container starts without mounted certificates; mount cert/key and override `CMD` for HTTPS. **Non-loopback bind refuses to start (exit 2) unless `api.require_api_key: true` and a key is resolved** (#1714) — a key sitting in YAML unused is not enough.
 - **Outcome:** Server runs until interrupted. No scan runs automatically; you trigger scans and download reports via the API (see below).
 - **Note:** The API process loads its own config at startup from the **`CONFIG_PATH`** environment variable, or `config.yaml` in the current working directory. To use a different file when running the server, set `CONFIG_PATH`:
 

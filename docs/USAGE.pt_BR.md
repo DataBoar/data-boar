@@ -135,7 +135,7 @@ python main.py --config config.yaml --web --allow-insecure-http --port 8088
 python main.py --config config.yaml --web --allow-insecure-http --host 0.0.0.0 --port 8088
 ```
 
-- Inicia o FastAPI em **`<bind>:<port>`**. O bind padrão é **`127.0.0.1`**, salvo `api.host`, `API_HOST` ou **`--host`** (a CLI ganha). A imagem Docker oficial define `API_HOST=0.0.0.0` e inclui **`--allow-insecure-http`** no `CMD` para subir sem certificados montados; para HTTPS, monte cert/chave e ajuste o `CMD`.
+- Inicia o FastAPI em **`<bind>:<port>`**. O bind padrão é **`127.0.0.1`**, salvo `api.host`, `API_HOST` ou **`--host`** (a CLI ganha). A imagem Docker oficial define `API_HOST=0.0.0.0` e inclui **`--allow-insecure-http`** no `CMD` para subir sem certificados montados; para HTTPS, monte cert/chave e ajuste o `CMD`. **Bind fora do loopback recusa a subida (código 2) a menos que `api.require_api_key: true` e a chave esteja resolvida** (#1714) — chave no YAML sem essa flag não basta.
 - Nenhuma varredura é executada automaticamente; você controla tudo via HTTP (dashboard ou curl).
 - Configuração para a API:
 - Se `--config` não for usado, a API lê de `CONFIG_PATH` ou `config.yaml` no diretório atual.

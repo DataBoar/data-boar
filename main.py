@@ -1751,8 +1751,10 @@ def main() -> None:
         if should_block_non_loopback_without_auth(config, host):
             print(
                 "ERROR: Refusing startup with non-loopback API bind and unresolved auth boundary. "
-                "Set host to 127.0.0.1 or configure built-in auth (api.api_key/api_key_from_env "
-                "or api.webauthn with token secret).",
+                "Set host to 127.0.0.1, or set api.require_api_key: true with a resolved "
+                "api.api_key / api_key_from_env (a key or WebAuthn secret without "
+                "require_api_key does not protect JSON routes). "
+                "See docs/ops/SECURE_DASHBOARD_AUTH_AND_HTTPS_HOWTO.md.",
                 file=sys.stderr,
                 flush=True,
             )
