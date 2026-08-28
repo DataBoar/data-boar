@@ -16,7 +16,7 @@ while [[ $# -gt 0 ]]; do
     -h | --help)
       echo "Usage: $0 [--enforced]"
       echo "  Default: Bandit + Zizmor (offline-capable after uv sync)."
-      echo "  --enforced: also run Semgrep (network; mirrors semgrep.yml)."
+      echo "  --enforced: also run Semgrep (network; engine version from semgrep.yml image tag)."
       exit 0
       ;;
     *)
@@ -53,12 +53,31 @@ _run_scan() {
 # Mirrors ci.yml job Bandit (strict paths; QUALITY_WORKFLOW_RECOMMENDATIONS.md).
 _run_scan "Bandit" uv run bandit -c pyproject.toml -r api core config connectors database file_scan report main.py -ll -q
 
-# Mirrors zizmor CLI target (workflow-security-lint.sh); enforced in check-all default tier.
+# Local uvx zizmor is the PyPI CLI. CI (.github/workflows/zizmor.yml) runs
+# zizmorcore/zizmor-action@<SHA> (SARIF upload, offline-audits). Those are
+# different artifacts — do not invent CLI==action version parity (#1793).
 _run_scan "Zizmor" uvx zizmor .github/workflows/
 
+_semgrep_ver_from_workflow() {
+  local wf=".github/workflows/semgrep.yml"
+  local ver=""
+  # GNU grep -P matches the issue recipe; POSIX sed covers macOS / no -P.
+  if grep -oP 'semgrep/semgrep:\K[0-9]+\.[0-9]+\.[0-9]+' "$wf" >/dev/null 2>&1; then
+    ver="$(grep -oP 'semgrep/semgrep:\K[0-9]+\.[0-9]+\.[0-9]+' "$wf" | head -n 1)"
+  else
+    ver="$(sed -n 's/.*semgrep\/semgrep:\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\).*/\1/p' "$wf" | head -n 1)"
+  fi
+  printf '%s' "$ver"
+}
+
 if [[ "$ENFORCED" -eq 1 ]]; then
-  # Mirrors .github/workflows/semgrep.yml (container command; uvx for local parity).
-  _run_scan "Semgrep" uvx semgrep scan --config p/python --metrics=off \
+  SEMGREP_VER="$(_semgrep_ver_from_workflow)"
+  if [[ -z "$SEMGREP_VER" ]]; then
+    echo "check-all-security-scans.sh: ABORTED: could not read Semgrep version from .github/workflows/semgrep.yml" >&2
+    exit 1
+  fi
+  echo "Semgrep pin: ${SEMGREP_VER} (from .github/workflows/semgrep.yml image tag)." >&2
+  _run_scan "Semgrep" uvx "semgrep@${SEMGREP_VER}" scan --config p/python --metrics=off \
     --exclude-rule python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text \
     --error .
 fi

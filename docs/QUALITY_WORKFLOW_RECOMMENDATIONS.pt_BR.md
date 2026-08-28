@@ -70,7 +70,7 @@ Este documento sugere **camadas adicionais** (ferramentas, hábitos e fluxo de t
 #### O que fazemos (Semgrep):
 
 - **GitHub Actions:** [`.github/workflows/semgrep.yml`](../.github/workflows/semgrep.yml) roda em push/PR para `main`/`master` usando o container oficial **`semgrep/semgrep`**, ruleset **`p/python`**, **`--metrics=off`** e uma **regra excluída** documentada nos comentários do workflow (falso positivo em caminhos `sqlalchemy.text` verificados).
-- **Local (opcional):** `uvx semgrep scan --config p/python --metrics=off` com o mesmo **`--exclude-rule`** do workflow (veja **§ check-all espelho unificado** abaixo). Regras customizadas podem ficar sob `.semgrep/` no futuro.
+- **Local (opcional):** `uvx semgrep@<tag> scan --config p/python --metrics=off` em que **`<tag>`** é a tag da imagem `semgrep/semgrep:X.Y.Z` em [`.github/workflows/semgrep.yml`](../.github/workflows/semgrep.yml) (lida por `check-all-security-scans.*`; falha fechado se ausente). Mesmo **`--exclude-rule`** do workflow (veja **§ check-all espelho unificado** abaixo). Regras customizadas podem ficar sob `.semgrep/` no futuro.
 
 **Previne:** Padrões extras de vulnerabilidade/bug em Python; complementa o CodeQL.
 
@@ -98,7 +98,7 @@ Este documento sugere **camadas adicionais** (ferramentas, hábitos e fluxo de t
 | Tier                                  | Quando                             | O quê (após gatekeeper, Rust, plans-stats, hubs, Pester, pre-commit, pytest)                                                                                                                                         |
 | ----                                  | ------                             | ----------------------------------------------------------------------------                                                                                                                                         |
 | **Padrão (offline-capable)**          | Todo pré-PR / slice do agente      | **Bandit** — `uv run bandit -c pyproject.toml -r api core config connectors database file_scan report main.py -ll -q`. **Zizmor** — `uvx zizmor .github/workflows/`.                                                 |
-| **Opt-in `--enforced` / `-Enforced`** | Antes de PRs sensíveis à segurança | **+ Semgrep** — `uvx semgrep scan --config p/python --metrics=off` com o mesmo **`--exclude-rule`** de [`.github/workflows/semgrep.yml`](../.github/workflows/semgrep.yml), **`--error .`**. Requer rede para `uvx`. |
+| **Opt-in `--enforced` / `-Enforced`** | Antes de PRs sensíveis à segurança | **+ Semgrep** — `uvx semgrep@X.Y.Z` com **X.Y.Z** lido da tag da imagem em [semgrep.yml](../.github/workflows/semgrep.yml) (sem segundo pin no script; aborta se ilegível), mesmo **`--exclude-rule`**, **`--error .`**. Requer rede para `uvx`. O **Zizmor** local `uvx zizmor` é o CLI PyPI, não o `zizmor-action` de [zizmor.yml](../.github/workflows/zizmor.yml) — não trate os dois como o mesmo pin. |
 
 **Fail-collect:** O tier de security scans roda **todos** os scans do tier e só então reporta **todas** as falhas (sem fail-fast entre Bandit / Zizmor / Semgrep). Gates anteriores (gatekeeper PII, Rust, pre-commit) ainda abortam imediatamente — veja **`scripts/check-all-security-scans.sh`** / **`.ps1`**.
 

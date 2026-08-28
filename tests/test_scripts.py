@@ -824,10 +824,44 @@ def test_check_all_security_scans_mirror_ci_commands():
             in text
         )
         assert "uvx zizmor .github/workflows/" in text
-        assert "semgrep scan --config p/python --metrics=off" in text
+        assert "scan --config p/python --metrics=off" in text
         assert "avoid-sqlalchemy-text.avoid-sqlalchemy-text" in text
+        assert "zizmor-action" in text
+        assert "SEMGREP_VER" in text
     assert "FAILURES" in sh_text
     assert "failures" in ps1_text.lower()
+    assert "semgrep@${SEMGREP_VER}" in sh_text
+    assert "semgrep@$script:SEMGREP_VER" in ps1_text
+    assert (
+        "could not read Semgrep version from .github/workflows/semgrep.yml" in sh_text
+    )
+    assert (
+        "could not read Semgrep version from .github/workflows/semgrep.yml" in ps1_text
+    )
+
+
+def test_check_all_security_scans_semgrep_version_from_workflow_only():
+    """Local Semgrep pin is the semgrep.yml image tag — not a second hardcoded version (#1793)."""
+    root = _project_root()
+    wf = (root / ".github" / "workflows" / "semgrep.yml").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    found = re.findall(r"semgrep/semgrep:(\d+\.\d+\.\d+)", wf)
+    assert found, "semgrep.yml must pin image semgrep/semgrep:X.Y.Z"
+    ver = found[0]
+    sh_text = (root / "scripts" / "check-all-security-scans.sh").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    ps1_text = (root / "scripts" / "check-all-security-scans.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    for text in (sh_text, ps1_text):
+        assert ver not in text
+        assert "uvx semgrep scan" not in text
+    zizmor_yml = (root / ".github" / "workflows" / "zizmor.yml").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "zizmorcore/zizmor-action@" in zizmor_yml
 
 
 def test_pr_hygiene_mentions_gh_preflight():
