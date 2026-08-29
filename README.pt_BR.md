@@ -10,7 +10,7 @@
 [![License](https://img.shields.io/github/license/DataBoar/data-boar)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/DataBoar/data-boar)](https://github.com/DataBoar/data-boar/releases)
 
-**Scanner de PII de código aberto com postura forense para LGPD · GDPR · conformidade auditável.**
+**Scanner de PII de código aberto com postura forense para LGPD · GDPR · conformidade auditável.** Primer: [FORENSICS_AND_EVIDENCE_PRIMER.pt_BR.md](docs/primers/FORENSICS_AND_EVIDENCE_PRIMER.pt_BR.md).
 
 **LGPD — relato-testemunho (visita de campo, Brasil):** [Português (Brasil)](docs/LGPD_WITNESS_REPORT_NIO_FIELD_VISIT_2026.pt_BR.md) · [English](docs/LGPD_WITNESS_REPORT_NIO_FIELD_VISIT_2026.md)
 

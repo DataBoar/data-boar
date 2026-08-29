@@ -20,6 +20,7 @@ configuration guides (those live in the product docs) and **not** compliance/fra
 | ------ | --------------- |
 | [AI_EVOLUTION_PRIMER.md](AI_EVOLUTION_PRIMER.md) ([pt-BR](AI_EVOLUTION_PRIMER.pt_BR.md)) | AI history (winters, expert systems, ML/DL, LLMs) — no hype, integrator context |
 | [DECISION_RECORDS_PRIMER.md](DECISION_RECORDS_PRIMER.md) ([pt-BR](DECISION_RECORDS_PRIMER.pt_BR.md)) | ADR → MADR → UMADR: why decisions are recorded, and this repo's standard |
+| [FORENSICS_AND_EVIDENCE_PRIMER.md](FORENSICS_AND_EVIDENCE_PRIMER.md) ([pt-BR](FORENSICS_AND_EVIDENCE_PRIMER.pt_BR.md)) | Digital forensics and evidence — inventory artefacts vs *laudo*; ISO/NIST pointers |
 
 ## Navigation
 
