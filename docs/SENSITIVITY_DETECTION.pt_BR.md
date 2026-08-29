@@ -331,7 +331,7 @@ uv pip install -e ".[dl]"
 pip install -e ".[dl]"
 ```
 
-Isso instala o `sentence-transformers` (e suas dependências). Se `.[dl]` não estiver instalado, o pipeline continua rodando com **regex + ML**; a etapa DL é ignorada e a confiança vem apenas do ML.
+Isso instala o `sentence-transformers` (e suas dependências). Se `.[dl]` não estiver instalado, o pipeline continua rodando com **regex + ML**; a etapa DL é ignorada e a confiança vem apenas do ML. O job de CI **`test-dl`** instala `--extra dl` e exercita o encode via `core/dl_backend.py`.
 
 ---
 

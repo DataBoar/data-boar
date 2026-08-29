@@ -62,6 +62,7 @@ def test_upstream_workflows_invoke_slack_ci_failure_notify_on_failure() -> None:
             (
                 "test",
                 "test-extras",
+                "test-dl",
                 "test-windows",
                 "lint",
                 "bandit",
@@ -515,7 +516,7 @@ def test_ci_yml_has_optional_extras_job() -> None:
     assert env.get("DATA_BOAR_CI_EXTRAS") == "1"
     assert "MAESTRO_ROOT" not in env
     yaml_text = (WORKFLOWS / "ci.yml").read_text(encoding="utf-8")
-    extras_chunk = yaml_text.split("test-extras:")[1].split("\n  lint:")[0]
+    extras_chunk = yaml_text.split("test-extras:")[1].split("\n  test-dl:")[0]
     assert "repository: DataBoar/maestro" not in extras_chunk
     assert "MAESTRO_CHECKOUT_TOKEN" not in extras_chunk
     assert "opt-in" in extras_chunk
@@ -534,11 +535,13 @@ def test_ci_yml_has_optional_extras_job() -> None:
     assert "--extra shares --group dev" in runs
     assert "--extra sql-all" not in runs
     assert "--extra mariadb" not in runs
+    assert "--extra dl" not in runs
     assert "pytest" in runs
     assert "--junitxml=extras-junit.xml" in runs
     assert "scripts/ci_pytest_skip_ceiling.py" in runs
     assert "--max-skipped 60" in runs
     assert "--ignore=tests/test_maestro_scripts.py" in runs
+    assert "--ignore=tests/test_dl_backend_ci.py" in runs
     assert (
         "--deselect=tests/test_issue_dev_license_qa.py::test_maestro_handler_issues_60d_machine_bound"
         in runs
@@ -553,6 +556,26 @@ def test_ci_yml_has_optional_extras_job() -> None:
     )
     assert "./.github/actions/install-libmariadb-dev" not in str(extras)
     assert "unixodbc-dev" in runs
+
+
+def test_ci_yml_has_dl_extra_job() -> None:
+    """#1822: dedicated job installs extra dl and exercises SentenceTransformer.encode via dl_backend."""
+    data = _load_workflow("ci.yml")
+    jobs = data.get("jobs") or {}
+    dl = jobs.get("test-dl")
+    assert isinstance(dl, dict), "ci.yml must define test-dl job"
+    assert dl.get("runs-on") == "ubuntu-latest"
+    assert dl.get("timeout-minutes") == 45
+    assert dl.get("continue-on-error") in (None, False)
+    env = dl.get("env") or {}
+    assert env.get("DATA_BOAR_CI_DL") == "1"
+    runs = "\n".join(_ci_step_run_texts(dl))
+    assert "--extra dl --group dev" in runs
+    assert "tests/test_dl_backend_ci.py" in runs
+    assert "--extra postgres" not in runs
+    yaml_text = (WORKFLOWS / "ci.yml").read_text(encoding="utf-8")
+    dl_chunk = yaml_text.split("test-dl:")[1].split("\n  lint:")[0]
+    assert "--extra dl" in dl_chunk
 
 
 def test_ci_yml_has_windows_test_job() -> None:
