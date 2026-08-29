@@ -10,9 +10,16 @@ Narrativas **de duas páginas** por público para workshops, compras e briefings
 | ----- | ---- | ----------- |
 | Conselho, diretoria, patrocinador de compra | [PITCH_STAKEHOLDER.pt_BR.md](PITCH_STAKEHOLDER.pt_BR.md) | Primeira conversa: valor, responsabilidade compartilhada, resultados 30/60/90 |
 | DPO, jurídico de privacidade, compliance | [PITCH_DPO.pt_BR.md](PITCH_DPO.pt_BR.md) | Base legal, apoio a DSAR, menores, sinais multinacionais |
-| CISO, arquiteto de segurança, GRC | [PITCH_CISO.pt_BR.md](PITCH_CISO.pt_BR.md) | Controles, integridade de evidência, postura de integração |
+| CISO, arquiteto de segurança, GRC | [PITCH_CISO.pt_BR.md](PITCH_CISO.pt_BR.md) | Controles, **automação de evidência**, postura de integração; faixas para o CFO; KPIs por fonte/sessão |
 | CDO, Data Steward, engenheiro de dados sênior | [PITCH_DATA_OFFICER.pt_BR.md](PITCH_DATA_OFFICER.pt_BR.md) | Inventário antes do GGD: armazenar/utilizar no DMBOK, maturidade de PII existente |
 | CIO, gerente de TI, governança de TI | [PITCH_IT_GOVERNANCE.pt_BR.md](PITCH_IT_GOVERNANCE.pt_BR.md) | Avaliar–Dirigir–Monitorar com evidência, não só política |
+| PMO, líder de programa / projeto | [PITCH_PMO.pt_BR.md](PITCH_PMO.pt_BR.md) | Cadência de entrega; risco por **fonte/sessão configurada**; heatmap de sprint/repositório é o GitHub [#677](https://github.com/DataBoar/data-boar/issues/677) |
+| CFO, financeiro, patrocinador de compra | [PITCH_CFO.pt_BR.md](PITCH_CFO.pt_BR.md) | Exposição financeira; % legal + teto; responsabilidade compartilhada; sem USD de fornecedor |
+| CCO, General Counsel | [PITCH_COMPLIANCE_OFFICER.pt_BR.md](PITCH_COMPLIANCE_OFFICER.pt_BR.md) | Responsabilidade, rastro de auditoria, inventário multi-regime, DD de M&A — distinto do DPO |
+
+## Decks planejados (issues ainda abertas)
+
+Governança de TI ([#631](https://github.com/DataBoar/data-boar/issues/631)) e CDO ([#639](https://github.com/DataBoar/data-boar/issues/639)) já têm decks na tabela acima; feche essas issues quando o AC restante estiver verificado. Não há outros decks de papel enfileirados neste índice além dos arquivos já publicados.
 
 ## Documentação relacionada (mais profunda que um deck)
 

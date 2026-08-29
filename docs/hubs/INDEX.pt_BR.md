@@ -56,7 +56,7 @@
 | Guia de audiências | `docs/AUDIENCE_GUIDE.md` | Quem lê o quê |
 | MAP | `docs/MAP.md` | Navegação por preocupação |
 | Use cases | `docs/use-cases/USE_CASES_HUB.md` | Cenários de produto |
-| Pitch | `docs/pitch/INDEX.md` | Decks executivos |
+| Pitch | `docs/pitch/INDEX.md` | Decks executivos (stakeholder, DPO, CISO, CDO, CIO, PMO, CFO, CCO) |
 | Hub educacional | `docs/hubs/EDUCATIONAL_HUB.md` | Onboarding, primer de IA anti-hype, caminho dos primers de framework |
 | Integração Enterprise (TI / SRE) | `docs/ENTERPRISE_INTEGRATION_GUIDE.md` | Deploy, gates de CI, conectores, segurança do dashboard — sem preços |
 

@@ -55,8 +55,8 @@ Navigation map for **thirteen** reader types. Full doc index: [README.md](README
 
 | | |
 | - | - |
-| **Entry** | `pitch/PITCH_PMO.md` *(pitch planned — #682)* |
-| **Trail** | [GRC_EXECUTIVE_REPORT_SCHEMA.md](GRC_EXECUTIVE_REPORT_SCHEMA.md) → heatmap / sprint tracking → [releases/](releases/) (shipped vs roadmap) |
+| **Entry** | [pitch/PITCH_PMO.md](pitch/PITCH_PMO.md) |
+| **Trail** | [GRC_EXECUTIVE_REPORT_SCHEMA.md](GRC_EXECUTIVE_REPORT_SCHEMA.md) → reports by **configured source/session** → [releases/](releases/) (shipped vs roadmap) |
 | **Skip** | Engineering ADRs, [TECH_GUIDE.md](TECH_GUIDE.md) |
 | **Overlap** | Executive (value brief); CISO (GRC schema) |
 
@@ -64,7 +64,7 @@ Navigation map for **thirteen** reader types. Full doc index: [README.md](README
 
 | | |
 | - | - |
-| **Entry** | `pitch/PITCH_CFO.md` *(pitch planned — #683)* |
+| **Entry** | [pitch/PITCH_CFO.md](pitch/PITCH_CFO.md) |
 | **Trail** | [DECISION_MAKER_VALUE_BRIEF.md](DECISION_MAKER_VALUE_BRIEF.md) → [SUBSCRIPTION_TIERS.md](SUBSCRIPTION_TIERS.md) → [LICENSING_OPEN_CORE_AND_COMMERCIAL.md](LICENSING_OPEN_CORE_AND_COMMERCIAL.md) → [releases/](releases/) |
 | **Skip** | [TECH_GUIDE.md](TECH_GUIDE.md), technical compliance frameworks |
 | **Overlap** | Executive (value brief); PMO (delivery vs cost) |
@@ -73,7 +73,7 @@ Navigation map for **thirteen** reader types. Full doc index: [README.md](README
 
 | | |
 | - | - |
-| **Entry** | `pitch/PITCH_COMPLIANCE_OFFICER.md` *(pitch planned — #684)* |
+| **Entry** | [pitch/PITCH_COMPLIANCE_OFFICER.md](pitch/PITCH_COMPLIANCE_OFFICER.md) |
 | **Trail** | [COMPLIANCE_AND_LEGAL.md](COMPLIANCE_AND_LEGAL.md) → [COMPLIANCE_FRAMEWORKS.md](COMPLIANCE_FRAMEWORKS.md) |
 | **Skip** | [TECH_GUIDE.md](TECH_GUIDE.md); do not confuse with DPO (operational LGPD) |
 | **Overlap** | DPO (legal summary, distinct role); Executive (compliance posture) |

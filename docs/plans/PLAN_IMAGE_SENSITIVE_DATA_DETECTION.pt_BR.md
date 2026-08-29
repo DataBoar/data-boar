@@ -4,6 +4,11 @@
 **Date:** 2026-04-04
 **Authors:** Fabio Leitao
 **Priority:** H3
+**Depends on:** ADR-0012
+
+**English:** [PLAN_IMAGE_SENSITIVE_DATA_DETECTION.md](PLAN_IMAGE_SENSITIVE_DATA_DETECTION.md)
+
+<!-- plans-hub-summary: Varredura OCR/BLOB/embed de imagens com dados pessoais e categorias especiais; extras opcionais; após corpus sintético. ADR-0012. -->
 
 <!-- PLANO: PLAN_IMAGE_SENSITIVE_DATA_DETECTION -->
 <!-- Status: Proposed | Prioridade: H2 (alto valor, depende de Synthetic Data Lab estável) -->
@@ -36,7 +41,7 @@ ADR: `docs/adr/ADR-0012-ocr-image-sensitive-data-detection.md`
 
 ## Sequenciamento recomendado
 
-Deve ser executado APÓS o `PLAN_SYNTHETIC_DATA_LAB.pt_BR.md` ter gerado corpus de imagens sintéticas para testes.
+Deve ser executado APÓS o [PLAN_SYNTHETIC_DATA_LAB.md](PLAN_SYNTHETIC_DATA_LAB.md) ([pt-BR](PLAN_SYNTHETIC_DATA_LAB.pt_BR.md)) ter gerado corpus de imagens sintéticas para testes.
 
 Posição na fila: H2 (high value, not blocking current release).
 
@@ -206,4 +211,4 @@ Posição na fila: H2 (high value, not blocking current release).
 - Decidir se EasyOCR vai no Dockerfile default ou apenas em `data_boar:image` (nova tag).
 - Avaliar se detecção de rosto (biométrico, Fase 5) entra no escopo v2.0 ou fica como plugin.
 - Definir quais extensoes de arquivo disparam a varredura de imagem por default (tudo vs lista curada).
-- Confirmar com colaboradores se clientes alvos (EAD/Sul, escritorio de advocacia) armazenam imagens em banco ou apenas no filesystem.
+- Confirmar com colaboradores se segmentos típicos de cliente (onboarding/KYC, escritórios profissionais) armazenam imagens em banco ou apenas no filesystem — sem nomear contas neste plano.
