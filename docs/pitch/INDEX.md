@@ -10,9 +10,16 @@ Audience-specific **two-page** narratives for workshops, procurement, and leader
 | ---- | ---- | ----------- |
 | Board, GM, COO, procurement sponsor | [PITCH_STAKEHOLDER.md](PITCH_STAKEHOLDER.md) | First conversation: value, shared responsibility, 30/60/90 outcomes |
 | DPO, privacy counsel, compliance lead | [PITCH_DPO.md](PITCH_DPO.md) | Lawful basis, DSAR support, minors, multinational hints |
-| CISO, security architect, GRC lead | [PITCH_CISO.md](PITCH_CISO.md) | Controls, evidence integrity, integration posture |
+| CISO, security architect, GRC lead | [PITCH_CISO.md](PITCH_CISO.md) | Controls, **evidence automation**, integration posture; CFO-safe ranges; KPIs by source/session |
 | CDO, Data Steward, senior data engineer | [PITCH_DATA_OFFICER.md](PITCH_DATA_OFFICER.md) | Inventory before GGD: DMBOK store/use, maturity of existing PII |
 | CIO, IT manager, IT governance lead | [PITCH_IT_GOVERNANCE.md](PITCH_IT_GOVERNANCE.md) | Evaluate–Direct–Monitor with evidence, not policy-only |
+| PMO, programme / project lead | [PITCH_PMO.md](PITCH_PMO.md) | Delivery cadence; risk by **configured source/session**; sprint/repo heatmap is GitHub [#677](https://github.com/DataBoar/data-boar/issues/677) |
+| CFO, finance, procurement sponsor | [PITCH_CFO.md](PITCH_CFO.md) | Financial exposure; statutory % + cap; shared responsibility; no hardcoded vendor USD |
+| CCO, General Counsel | [PITCH_COMPLIANCE_OFFICER.md](PITCH_COMPLIANCE_OFFICER.md) | Liability, audit trail, multi-regime inventory language, M&A DD — distinct from DPO |
+
+## Planned decks (issues still open)
+
+IT Governance ([#631](https://github.com/DataBoar/data-boar/issues/631)) and CDO ([#639](https://github.com/DataBoar/data-boar/issues/639)) already have decks in the table above; close those issues when their remaining AC is verified. No additional role decks are queued in this index beyond the shipped files.
 
 ## Related product docs (deeper than a deck)
 

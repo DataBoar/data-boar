@@ -8,9 +8,25 @@
 
 ## Security value proposition
 
-Data Boar reduces **unknown personal-data sprawl** before it becomes incident material. It produces **repeatable, session-bound** technical evidence—not a replacement for SIEM, DLP, IAM, or vulnerability management.
+Data Boar reduces **unknown personal-data sprawl** before it becomes incident material. The **hero** for security leadership is **evidence automation**: repeatable, **session-bound** technical artefacts (XLSX, optional scan-manifest YAML, audit JSON, GRC executive JSON)—not a replacement for SIEM, DLP, IAM, or vulnerability management, and not a promise to auto-close tickets.
 
 Public security posture: [SECURITY.md](../SECURITY.md).
+
+## Language for the CFO in the same room
+
+Do **not** hardcode vendor **cost-of-breach dollar** figures in a CISO briefing. Use **statutory shape**: administrative fines as a **percentage of revenue** (or turnover) **with a cap** — **LGPD Art. 52**, **GDPR Art. 83**. Public **IBM Cost of a Data Breach** reports are an **external** benchmark: name the source, skip year-locked USD. Shared responsibility: discovery evidence does **not** erase regulatory exposure. Finance-shaped deck: [PITCH_CFO.md](PITCH_CFO.md).
+
+## KPIs the product already delivers
+
+| KPI | What you can show today |
+| --- | ----------------------- |
+| Heatmap / findings | **By configured source and scan session** — not by team, sprint, or git repo until GitHub [#677](https://github.com/DataBoar/data-boar/issues/677) |
+| Trend | Session-over-session on the **same** target set |
+| Coverage | **Configured targets** in scope — not CMDB completeness |
+
+## Emerging vector: repository / supply-chain discovery
+
+Git and similar VCS targets are an **emerging** evidence path (connector dogfood tracked as GitHub [#677](https://github.com/DataBoar/data-boar/issues/677)). Brief it as a **future control conversation**, not a shipped heatmap-by-repo-sprint.
 
 ## Controls you care about
 
@@ -44,4 +60,7 @@ Public security posture: [SECURITY.md](../SECURITY.md).
 
 - **Board narrative:** [PITCH_STAKEHOLDER.md](PITCH_STAKEHOLDER.md)
 - **Privacy narrative:** [PITCH_DPO.md](PITCH_DPO.md)
+- **PMO cadence:** [PITCH_PMO.md](PITCH_PMO.md)
+- **Finance exposure:** [PITCH_CFO.md](PITCH_CFO.md)
+- **Counsel / CCO:** [PITCH_COMPLIANCE_OFFICER.md](PITCH_COMPLIANCE_OFFICER.md)
 - **Technical reference:** [COMPLIANCE_TECHNICAL_REFERENCE.md](../COMPLIANCE_TECHNICAL_REFERENCE.md)

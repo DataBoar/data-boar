@@ -8,9 +8,25 @@
 
 ## Proposta de valor para segurança
 
-O Data Boar reduz **sprawl desconhecido** de dados pessoais antes de virar material de incidente. Produz evidência técnica **repetível e limitada à sessão** — não substitui SIEM, DLP, IAM nem gestão de vulnerabilidades.
+O Data Boar reduz **sprawl desconhecido** de dados pessoais antes de virar material de incidente. O **herói** para liderança de segurança é a **automação de evidência**: artefatos técnicos **repetíveis e limitados à sessão** (XLSX, YAML de manifesto opcional, JSON de auditoria, JSON executivo GRC) — não substitui SIEM, DLP, IAM nem gestão de vulnerabilidades, e não promete fechar tickets sozinho.
 
 Postura pública de segurança: [SECURITY.pt_BR.md](../SECURITY.pt_BR.md).
+
+## Linguagem para o CFO na mesma sala
+
+**Não** fixe no briefing do CISO valores em dólar de **custo de incidente** de fornecedor. Use a **forma legal**: multas administrativas como **percentual do faturamento** **com teto** — **LGPD art. 52**, **GDPR art. 83**. Relatórios públicos **IBM Cost of a Data Breach** são **referência externa**: nomeie a fonte, sem USD amarrado a um ano. Responsabilidade compartilhada: evidência de descoberta **não** apaga exposição regulatória. Deck financeiro: [PITCH_CFO.pt_BR.md](PITCH_CFO.pt_BR.md).
+
+## KPIs que o produto já entrega
+
+| KPI | O que você mostra hoje |
+| --- | ---------------------- |
+| Heatmap / achados | **Por fonte e sessão configuradas** — não por time, sprint ou repositório git até o GitHub [#677](https://github.com/DataBoar/data-boar/issues/677) |
+| Tendência | Sessão a sessão no **mesmo** conjunto de alvos |
+| Cobertura | **Alvos configurados** no escopo — não completude de CMDB |
+
+## Vetor emergente: descoberta em repositório / supply chain
+
+Git e VCS semelhantes são um caminho de evidência **emergente** (dogfood do conector no GitHub [#677](https://github.com/DataBoar/data-boar/issues/677)). Trate como **conversa de controle futuro**, não heatmap por sprint/repositório já entregue.
 
 ## Controles que importam
 
@@ -44,4 +60,7 @@ Postura pública de segurança: [SECURITY.pt_BR.md](../SECURITY.pt_BR.md).
 
 - **Narrativa para conselho:** [PITCH_STAKEHOLDER.pt_BR.md](PITCH_STAKEHOLDER.pt_BR.md)
 - **Narrativa de privacidade:** [PITCH_DPO.pt_BR.md](PITCH_DPO.pt_BR.md)
-- **Referência técnica:** [COMPLIANCE_TECHNICAL_REFERENCE.pt_BR.md](../COMPLIANCE_TECHNICAL_REFERENCE.md)
+- **Cadência de PMO:** [PITCH_PMO.pt_BR.md](PITCH_PMO.pt_BR.md)
+- **Exposição financeira:** [PITCH_CFO.pt_BR.md](PITCH_CFO.pt_BR.md)
+- **Jurídico / CCO:** [PITCH_COMPLIANCE_OFFICER.pt_BR.md](PITCH_COMPLIANCE_OFFICER.pt_BR.md)
+- **Referência técnica:** [COMPLIANCE_TECHNICAL_REFERENCE.pt_BR.md](../COMPLIANCE_TECHNICAL_REFERENCE.pt_BR.md)

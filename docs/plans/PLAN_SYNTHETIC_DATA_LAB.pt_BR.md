@@ -6,6 +6,10 @@
 **Priority:** H3
 **Depends on:** ADR-0007
 
+**English:** [PLAN_SYNTHETIC_DATA_LAB.md](PLAN_SYNTHETIC_DATA_LAB.md)
+
+<!-- plans-hub-summary: Corpus sintético (SQL, arquivos, cloaking, menores, imagens) para FP/FN antes de dados reais. ADR-0007. -->
+
 **Prioridade:** H1 — pré-requisito para testes controlados antes de dados reais
 **Dependências:** Data Boar detector pipeline (`core/detector.py`), matriz de conectores (`docs/TECH_GUIDE.pt_BR.md`)
 **Colaboradores:** operador, colaboradores futuros (fornecedor de dados sintéticos e ambiente de test)
@@ -251,7 +255,7 @@ d4e5f6,30-35,M,24020,engenheiro,diabetes
 | CPF sem formatação | `12345678900` | deve detectar | FN se só testa com pontuação |
 | E-mail Unicode | `usuario@domínio.com.br` | deve detectar | encoding edge case |
 | Telefone internacional | `+55 11 98765-4321` | deve detectar | pattern só doméstico |
-| Nome próprio isolado | `Carlos Eduardo da Silva` | depende de contexto | difícil sem ML |
+| Nome próprio isolado | `Colleague-N Fictício` | depende de contexto | difícil sem ML |
 
 ---
 
@@ -293,7 +297,7 @@ d4e5f6,30-35,M,24020,engenheiro,diabetes
 
 ## 9. Corpus de imagens sinteticas (novo -- para PLAN_IMAGE_SENSITIVE_DATA_DETECTION)
 
-Esta secao e um satelite do `PLAN_IMAGE_SENSITIVE_DATA_DETECTION.pt_BR.md`: gera o corpus de imagens necessario para testar o scanner OCR antes de tocar dados reais.
+Esta secao e um satelite do [PLAN_IMAGE_SENSITIVE_DATA_DETECTION.md](PLAN_IMAGE_SENSITIVE_DATA_DETECTION.md) ([pt-BR](PLAN_IMAGE_SENSITIVE_DATA_DETECTION.pt_BR.md)): gera o corpus de imagens necessario para testar o scanner OCR antes de tocar dados reais.
 
 ### 9.1 Tipos de imagem a gerar
 
@@ -358,4 +362,5 @@ Extender os scripts de seed dos containers MariaDB/PostgreSQL/Oracle para:
 - [PLAN_LAB_OP_OBSERVABILITY_STACK.pt_BR.md](PLAN_LAB_OP_OBSERVABILITY_STACK.pt_BR.md) — stack de observabilidade para o lab.
 - [LAB_OP_MINIMAL_CONTAINER_STACK.pt_BR.md](../ops/LAB_OP_MINIMAL_CONTAINER_STACK.pt_BR.md) — containers base.
 - [PLANS_TODO.md](PLANS_TODO.md) — priorização geral do projeto.
+- [PLAN_IMAGE_SENSITIVE_DATA_DETECTION.md](PLAN_IMAGE_SENSITIVE_DATA_DETECTION.md) — OCR/BLOB após este corpus.
 

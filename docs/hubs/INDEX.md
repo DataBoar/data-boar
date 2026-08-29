@@ -56,7 +56,7 @@
 | Audience guide | `docs/AUDIENCE_GUIDE.md` | Who reads what |
 | Concern map | `docs/MAP.md` | Topic-first navigation |
 | Use cases | `docs/use-cases/USE_CASES_HUB.md` | Storyboards + product scenarios |
-| Pitch decks | `docs/pitch/INDEX.md` | Stakeholder / DPO / CISO |
+| Pitch decks | `docs/pitch/INDEX.md` | Stakeholder / DPO / CISO / CDO / CIO / PMO / CFO / CCO |
 | Educational hub | `docs/hubs/EDUCATIONAL_HUB.md` | Onboarding, AI primer anti-hype, framework primers path |
 | Enterprise integration (IT / SRE) | `docs/ENTERPRISE_INTEGRATION_GUIDE.md` | Deploy, CI gates, connectors, dashboard security — no prices |
 

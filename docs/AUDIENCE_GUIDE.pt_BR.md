@@ -55,8 +55,8 @@ Mapa de navegação para **treze** perfis de leitor. Índice completo: [README.m
 
 | | |
 | - | - |
-| **Entrada** | `pitch/PITCH_PMO.md` *(pitch planejado — #682)* |
-| **Trilha** | [GRC_EXECUTIVE_REPORT_SCHEMA.pt_BR.md](GRC_EXECUTIVE_REPORT_SCHEMA.pt_BR.md) → heatmap / acompanhamento de sprint → [releases/](releases/) (entregue vs roadmap) |
+| **Entrada** | [pitch/PITCH_PMO.pt_BR.md](pitch/PITCH_PMO.pt_BR.md) |
+| **Trilha** | [GRC_EXECUTIVE_REPORT_SCHEMA.pt_BR.md](GRC_EXECUTIVE_REPORT_SCHEMA.pt_BR.md) → relatórios por **fonte/sessão configurada** → [releases/](releases/) (entregue vs roadmap) |
 | **Evitar** | ADRs de engenharia, [TECH_GUIDE.pt_BR.md](TECH_GUIDE.pt_BR.md) |
 | **Sobreposição** | Executivo (value brief); CISO (schema GRC) |
 
@@ -64,7 +64,7 @@ Mapa de navegação para **treze** perfis de leitor. Índice completo: [README.m
 
 | | |
 | - | - |
-| **Entrada** | `pitch/PITCH_CFO.md` *(pitch planejado — #683)* |
+| **Entrada** | [pitch/PITCH_CFO.pt_BR.md](pitch/PITCH_CFO.pt_BR.md) |
 | **Trilha** | [DECISION_MAKER_VALUE_BRIEF.pt_BR.md](DECISION_MAKER_VALUE_BRIEF.pt_BR.md) → [SUBSCRIPTION_TIERS.pt_BR.md](SUBSCRIPTION_TIERS.pt_BR.md) → [LICENSING_OPEN_CORE_AND_COMMERCIAL.pt_BR.md](LICENSING_OPEN_CORE_AND_COMMERCIAL.pt_BR.md) → [releases/](releases/) |
 | **Evitar** | [TECH_GUIDE.pt_BR.md](TECH_GUIDE.pt_BR.md), frameworks técnicos de compliance |
 | **Sobreposição** | Executivo (value brief); PMO (entrega vs custo) |
@@ -73,7 +73,7 @@ Mapa de navegação para **treze** perfis de leitor. Índice completo: [README.m
 
 | | |
 | - | - |
-| **Entrada** | `pitch/PITCH_COMPLIANCE_OFFICER.md` *(pitch planejado — #684)* |
+| **Entrada** | [pitch/PITCH_COMPLIANCE_OFFICER.pt_BR.md](pitch/PITCH_COMPLIANCE_OFFICER.pt_BR.md) |
 | **Trilha** | [COMPLIANCE_AND_LEGAL.pt_BR.md](COMPLIANCE_AND_LEGAL.pt_BR.md) → [COMPLIANCE_FRAMEWORKS.pt_BR.md](COMPLIANCE_FRAMEWORKS.pt_BR.md) |
 | **Evitar** | [TECH_GUIDE.pt_BR.md](TECH_GUIDE.pt_BR.md); não confundir com DPO (LGPD operacional) |
 | **Sobreposição** | DPO (resumo jurídico, papel distinto); Executivo (postura de compliance) |
