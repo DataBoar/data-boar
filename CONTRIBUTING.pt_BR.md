@@ -179,7 +179,7 @@ Se alterar **`.github/workflows/*.yml`** (jobs novos, `uses:` de terceiros ou `s
 
 ## Histórico de releases e changelog
 
-O histórico de releases é o **histórico de commits/PRs no git** mais as **notas de release versionadas em `docs/releases/`** (ex.: um arquivo por versão). Um arquivo CHANGELOG separado no repositório **não é obrigatório**; use `docs/releases/` e as tags para “onde estamos” e o progresso.
+O histórico de releases é o **histórico de commits/PRs no git** mais as **notas de release versionadas em `docs/releases/`** (ex.: um arquivo por versão). O **`CHANGELOG.md`** na raiz do repositório é o resumo legível das mudanças visíveis ao usuário em cada release. Para checklists de release e comandos de publish Docker, veja **`docs/releases/`** (um arquivo por versão).
 
 ## Checklist de release (segurança)
 

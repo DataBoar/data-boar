@@ -181,7 +181,7 @@ If you change **`.github/workflows/*.yml`** (new jobs, new third-party `uses:`, 
 
 ## Release history and changelog
 
-Release history is **git commit/PR history** plus **versioned release notes in `docs/releases/`** (e.g. one file per version). A separate CHANGELOG file in the repo is **not required**; use `docs/releases/` and tags for “where we are” and progress.
+Release history is **git commit/PR history** plus **versioned release notes in `docs/releases/`** (e.g. one file per version). **`CHANGELOG.md`** at the repo root is the human-readable summary of user-facing changes per release. For detailed release checklists and Docker publish commands, see **`docs/releases/`** (one file per version).
 
 ## Release checklist (Security)
 

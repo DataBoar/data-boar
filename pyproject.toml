@@ -219,6 +219,12 @@ norecursedirs = [
 # Markdown: ruff format rewrites fenced Python and breaks MD012; keep lint via pytest markdown guard.
 extend-exclude = ["db", "**/*.md"]
 
+[tool.ruff.lint]
+# Classic Ruff default (pycodestyle selected errors + Pyflakes). Ruff 0.16 enables
+# many more stable rules by default; pin this set so ruff-pre-commit can track
+# the pyproject floor (#491) without a tree-wide SIM/S rewrite in the same slice.
+select = ["E4", "E7", "E9", "F"]
+
 [tool.ruff.lint.per-file-ignores]
 # Connectors must register before we import connector_for_target; optional deps in try/except
 "core/engine.py" = ["E402"]

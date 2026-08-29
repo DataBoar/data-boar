@@ -9,7 +9,8 @@ Textual description of modules, classes, and main functions and how they connect
 ## Entry points
 
 - **main.py** — CLI: `main()` parses `--config`, `--web`, `--port`, optional `--tenant`, `--technician`; loads config via `config.loader.load_config`; if not `--web`, creates `AuditEngine(config)`, runs `start_audit(tenant_name=..., technician_name=...)`, then `generate_final_reports()`; if `--web`, runs uvicorn with `api.routes.app` on given port.
-- **api/routes.py** — FastAPI app: startup loads config and creates `AuditEngine`. API routes: POST `/scan` (optional body `{ "tenant": "...", "technician": "..." }`), `/start`; GET `/status`, `/report`, `/list`; GET `/reports/{session_id}`; PATCH `/sessions/{session_id}` (body `{ "tenant": "..." }` to set/clear tenant), PATCH `/sessions/{session_id}/technician` (body `{ "technician": "..." }` to set/clear technician). POST `/scan_database` accepts optional `tenant` and `technician`. Web dashboard (Jinja2): GET `/` (dashboard with optional tenant/technician inputs and progress chart), GET `/reports` (reports list with tenant/technician columns), GET `/config`, POST `/config` (config editor). Static: `/static` → `api/static`.
+- **api/routes.py** — FastAPI app: startup loads config and creates `AuditEngine`. API routes: POST `/scan` (optional body `{ "tenant": "...", "technician": "..." }`), `/start`; GET `/status`, `/report`, `/list`; GET `/reports/{session_id}`; PATCH `/sessions/{session_id}` (body `{ "tenant": "..." }` to set/clear tenant), PATCH `/sessions/{session_id}/technician` (body `{ "technician": "..." }` to set/clear technician). POST `/scan_database` accepts optional `tenant` and `technician`. Web dashboard (Jinja2): GET `/` (dashboard with optional tenant/technician inputs and progress chart), GET `/reports` (reports list with tenant/technician columns), GET `/config`, POST `/config` (config editor). Static: `/static` → `api/static`. Optional maturity POC: `POST /{locale}/assessment`, `GET /{locale}/assessment/export` when enabled.
+- **app/dashboard.py** — Optional Streamlit GRC executive view (`streamlit run app/dashboard.py` after `uv sync --extra grc-dashboard`). Reads report JSON (`DATA_BOAR_GRC_JSON` or the example under `schemas/`). Distinct from the Jinja dashBOARd in **api/routes.py**.
 
 ---
 
@@ -53,6 +54,10 @@ Textual description of modules, classes, and main functions and how they connect
 - **core/learned_patterns.py**
 - `collect_learned_entries(db_rows, fs_rows, min_sensitivity=HIGH, min_confidence=70, ...)` — From findings build list of { text, label, pattern_detected, norm_tag, count }; filters by sensitivity rank, confidence, term length, require_pattern (skip GENERAL), exclude_generic (id, name, key, …).
 - `write_learned_patterns(db_manager, session_id, config)` — If `config.learned_patterns.enabled`, get findings, collect entries, optionally merge with existing output file, write YAML (format compatible with ml_patterns_file). Returns output path or None.
+
+- **core/licensing/** — Runtime license: **LicenseGuard** (`guard.py`) JWT verify + machine fingerprint (`fingerprint.py`); HMAC/build integrity (`integrity.py`); feature/tier gates. Distroless **GIL** helper (`gil_container_gate.py`) is the image ENTRYPOINT: sets `PYTHON_GIL` by tier, then `os.execve`s CPython.
+
+- **core/maturity_assessment/** — Organizational maturity POC: `scoring.py` (rubric), `pack.py` (locale packs), `export_render.py` (download payload), `integrity.py` (per-row HMAC). Wired from **api/routes.py** when `api.maturity_self_assessment_poc_enabled` and the license feature allow it.
 
 ---
 
@@ -108,6 +113,8 @@ Textual description of modules, classes, and main functions and how they connect
 - FastAPI `app`; startup loads config and creates AuditEngine (singleton). Static files mounted at `/static` (api/static). Jinja2 templates from api/templates. Overlapping `POST /scan` / `/start` / `/scan_database` claim the engine run slot at request time (**HTTP 409** if busy).
 - **API:** `POST /scan`, `POST /start` — Create session_id, run `_run_audit_targets()` in background; return session_id. `POST /scan_database` — One-off scan of a single database (body: name, host, port, user, password, database, optional driver); starts in background, returns session_id. `GET /status` — running, current_session_id, findings_count. `GET /report` — Download last report file (or generate from last session). `GET /list` — List sessions (JSON). `GET /reports/{session_id}` — Regenerate report for session and return file.
 - **Web dashboard (plan: REST + file download only, no WebSocket):** `GET /` — Dashboard page (scan status, quantity/quality stats, recent sessions, start-scan button; status polling when running). `GET /reports` — Reports list page (all sessions with download links). `GET /config` — Config editor (YAML textarea). `POST /config` — Save YAML to config file (validates, then reloads in-memory config/engine). Helpers: `_get_config_path()`, `_get_config_raw()`, `_save_config_yaml()`.
+- **Maturity POC (optional):** `POST /{locale}/assessment`, `GET /{locale}/assessment/export` — gated by config + license; persistence via `LocalDBManager` maturity tables.
+- **app/dashboard.py** is **not** this FastAPI app — Streamlit extra for GRC JSON (see Entry points).
 
 ---
 
@@ -142,8 +149,11 @@ Textual description of modules, classes, and main functions and how they connect
 - core.connector_registry — none.
 - connectors.* — core.connector_registry, core.database (via db_manager), core.scanner (or scanner), utils.logger.
 - core.engine — core.connector_registry, core.database, core.scanner, core.session; imports connectors.
+- core.licensing — JWT / fingerprint / integrity; used by engine, API, and `gil_container_gate`.
+- core.maturity_assessment — scoring / pack / export / HMAC; used by api.routes and LocalDBManager.
 - report.generator — core.database (LocalDBManager usage), pandas, openpyxl, matplotlib/seaborn.
-- api.routes — config.loader, core.engine.
+- api.routes — config.loader, core.engine, optional maturity_assessment.
+- app.dashboard — GRC JSON + Streamlit (not AuditEngine).
 - main — config.loader, core.engine, api.routes (for app), uvicorn.
 
 **Documentation index** (all topics, both languages): [README.md](README.md) · [README.pt_BR.md](README.pt_BR.md).
