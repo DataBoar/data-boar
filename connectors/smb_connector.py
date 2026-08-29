@@ -177,6 +177,49 @@ class SMBConnector:
             (self.config.get("path", "") or "").strip().replace("/", "\\").strip("\\")
         )
         recursive = self.config.get("recursive", True)
+        from connectors.tcp_pin import HostResolutionPin
+        from connectors.url_guard import (
+            resolve_and_validate_outbound_url,
+            target_allows_private,
+        )
+
+        # SSRF / NTLM-relay guard (#1715): reject non-global hosts unless
+        # allow_private_networks. Bare host:port — do not use smb:// (not in
+        # url_guard scheme allowlist). Pin DNS for the session so smbprotocol
+        # cannot re-resolve after the guard (#1552 / #1586).
+        err, pin_ips = resolve_and_validate_outbound_url(
+            f"{host}:{port}",
+            allow_private=target_allows_private(self.config),
+            label="host",
+        )
+        if err:
+            self.db_manager.save_failure(target_name, "error", err)
+            return
+        pin = HostResolutionPin(host, [str(ip) for ip in pin_ips]).install()
+        try:
+            self._run_registered_session(
+                target_name,
+                audit_name,
+                user,
+                password,
+                port,
+                path_in_share,
+                recursive,
+            )
+        finally:
+            pin.release()
+
+    def _run_registered_session(
+        self,
+        target_name: str,
+        audit_name: str,
+        user: str,
+        password: str,
+        port: int,
+        path_in_share: str,
+        recursive: bool,
+    ) -> None:
+        host = self.config.get("host", "").strip()
         try:
             session_kwargs: dict[str, Any] = {
                 "server": host,

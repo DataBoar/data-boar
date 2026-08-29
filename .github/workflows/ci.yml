@@ -65,7 +65,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install uv
-        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
           version: "0.11.2"
 
@@ -106,6 +106,8 @@ jobs:
   # ``sql-all``) when a stable connector imports on 3.13. Also PYSEC-2026-217
   # on 1.1.14 (#922). Skip ceiling measures optional-extra gaps only (Maestro
   # clone-gated tests are deselected; see the pytest step).
+  # Extra ``dl`` (torch + sentence-transformers) is a dedicated ``test-dl``
+  # job (#1822) so this skip ceiling stays about SQL/nosql extras, not model download.
   test-extras:
     name: Test optional extras (Python 3.13)
     runs-on: ubuntu-latest
@@ -127,7 +129,7 @@ jobs:
           python-version: "3.13"
 
       - name: Install uv
-        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
           version: "0.11.2"
 
@@ -146,6 +148,7 @@ jobs:
         run: |
           uv run pytest -v -W error -ra --tb=short --junitxml=extras-junit.xml \
             --ignore=tests/test_maestro_scripts.py \
+            --ignore=tests/test_dl_backend_ci.py \
             --deselect=tests/test_issue_dev_license_qa.py::test_maestro_handler_issues_60d_machine_bound \
             --deselect=tests/test_security.py::test_sync_working_tree_excludes_dotenv_from_rsync \
             --deselect=tests/test_security.py::test_maestro_aggregates_real_failures_in_exit
@@ -156,6 +159,39 @@ jobs:
         # test_security.py 2). Remainder 50 (JUnit counts 1 xfail as skip).
         # Ceiling 60 = remainder +10 slack for suite growth; not Maestro coverage.
         run: uv run python scripts/ci_pytest_skip_ceiling.py extras-junit.xml --max-skipped 60
+
+  # Optional DL extra (#1822): torch is too heavy for test-extras. This job
+  # installs ``--extra dl`` and runs a minimal encode through core/dl_backend.py.
+  test-dl:
+    name: Test DL extra (Python 3.13)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      DATA_BOAR_CI_DL: "1"
+      HF_HUB_DISABLE_TELEMETRY: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          version: "0.11.2"
+
+      - name: Install dependencies (dl extra)
+        run: uv sync --extra dl --group dev
+
+      - name: Run DL encode smoke
+        env:
+          HF_HOME: ${{ runner.temp }}/hf-hub
+        run: uv run pytest -v -W error --tb=short tests/test_dl_backend_ci.py
 
   lint:
     name: Lint (pre-commit)
@@ -175,7 +211,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install uv
-        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
           version: "0.11.2"
 
@@ -201,7 +237,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install uv
-        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
           version: "0.11.2"
 
@@ -229,7 +265,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install uv
-        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
           version: "0.11.2"
 
@@ -296,7 +332,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install uv
-        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
           version: "0.11.2"
 
@@ -360,7 +396,7 @@ jobs:
 
       - name: Install uv
         if: steps.sonar_token.outputs.present == 'true'
-        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
           version: "0.11.2"
 
@@ -399,7 +435,7 @@ jobs:
   slack-notify-on-failure:
     name: Slack CI failure notify
     if: ${{ always() && contains(needs.*.result, 'failure') }}
-    needs: [test, test-extras, test-windows, lint, bandit, audit, dependency-review, sonar, ansible-syntax]
+    needs: [test, test-extras, test-dl, test-windows, lint, bandit, audit, dependency-review, sonar, ansible-syntax]
     uses: ./.github/workflows/slack-ci-failure-notify.yml
     with:
       run_name: CI

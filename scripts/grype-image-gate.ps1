@@ -31,6 +31,9 @@ if (-not (Get-Command grype -ErrorAction SilentlyContinue)) {
 Write-Host "=== grype image gate (#1028) ===" -ForegroundColor Cyan
 Write-Host "Image:  $Image" -ForegroundColor Gray
 Write-Host "Policy: --fail-on high --only-fixed (actionable High/Critical only)" -ForegroundColor Gray
+$grypeVer = (& grype version 2>$null | Select-String -Pattern '^Version:\s*(.+)$').Matches.Groups[1].Value
+if (-not $grypeVer) { $grypeVer = (& grype --version 2>$null | Out-String).Trim() }
+if ($grypeVer) { Write-Host "grype:  $grypeVer" -ForegroundColor Gray }
 
 $grypeArgs = @(
     $Image,

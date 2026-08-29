@@ -48,6 +48,8 @@
 {{ prog }} --config config.yaml --export-dsar &lt;session_id&gt; --dsar-output dsar.json
 {{ prog }} --config config.yaml --export-l1 &lt;session_id&gt;
 {{ prog }} --config config.yaml --export-l1 &lt;session_id&gt; --l1-output l1.json
+{{ prog }} --config config.yaml --export-findings-sink &lt;session_id&gt;
+{{ prog }} --config config.yaml --export-findings-sink &lt;session_id&gt; --allow-sample-export
 {{ prog }} --config config.yaml --export-l3 &lt;session_id&gt; --l3-grant grant.json
 {{ prog }} --config config.yaml --export-l3 &lt;session_id&gt; --l3-grant grant.json --l3-persist l3.json
 {{ prog }} --config config.yaml --export-l3 &lt;session_id&gt; --l3-grant grant.json --l3-persist l3.json --l3-allow-unprotected
@@ -92,11 +94,13 @@
   <p class="muted">{{ t('help.dl_auto_p') }}</p>
   <pre><code># Last report, heatmap and log
 curl -o report.xlsx  http://&lt;host&gt;:&lt;port&gt;/report
+curl -o report.ods   http://&lt;host&gt;:&lt;port&gt;/report?format=ods
 curl -o heatmap.png  http://&lt;host&gt;:&lt;port&gt;/heatmap
 curl -o audit.log    http://&lt;host&gt;:&lt;port&gt;/logs
 
 # Specific session
 curl -o report.xlsx  http://&lt;host&gt;:&lt;port&gt;/reports/&lt;session_id&gt;
+curl -o report.ods   http://&lt;host&gt;:&lt;port&gt;/reports/&lt;session_id&gt;?format=ods
 curl -o heatmap.png  http://&lt;host&gt;:&lt;port&gt;/heatmap/&lt;session_id&gt;
 curl -o audit.log    http://&lt;host&gt;:&lt;port&gt;/logs/&lt;session_id&gt;</code></pre>
   <h4>{{ t('help.findings_h3') }}</h4>

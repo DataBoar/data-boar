@@ -6,11 +6,15 @@
 
 ## Status
 
-Proposed
+Accepted
 
 ### Status history
 
 - 2026-06-23 — Proposed (materialized to close dangling reference: supply-chain posture #987 cited across CI, Dockerfile, dependabot, grype, and deny.toml since PR #998; ADR file missing — PR #997 touched only INVENTORY.txt).
+- 2026-08-28 — Accepted (operator ratification against code: Actions SHA-pinned,
+  Dockerfile digest-pinned, cargo-deny in `rust-ci.yml`, Grype gate in
+  `.cursor/rules/release-publish-sequencing.mdc` step 3b plus
+  `scripts/grype-image-gate.sh` / `.ps1`). Genesis Date (UTC) unchanged.
 
 ## Context
 

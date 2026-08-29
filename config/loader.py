@@ -798,6 +798,17 @@ def normalize_config(
     out["report"] = data.get("report", {})
     if "output_dir" not in out["report"]:
         out["report"]["output_dir"] = "."
+    raw_formats = out["report"].get("formats")
+    if not isinstance(raw_formats, list) or not raw_formats:
+        out["report"]["formats"] = ["xlsx"]
+    else:
+        allowed = {"xlsx", "ods"}
+        seen: list[str] = []
+        for item in raw_formats:
+            key = str(item).strip().lower()
+            if key in allowed and key not in seen:
+                seen.append(key)
+        out["report"]["formats"] = seen or ["xlsx"]
     # Optional: list of { norm_tag_pattern, base_legal, risk, recommendation, priority, relevant_for } for recommendations
     overrides = out["report"].get("recommendation_overrides")
     out["report"]["recommendation_overrides"] = (
@@ -1368,6 +1379,37 @@ def normalize_config(
         "enabled": bool(gov_raw.get("enabled", False)),
         "tier": gov_tier,
         "map_file": map_file or DEFAULT_GOVERNANCE_MAP_FILE,
+    }
+
+    sink_raw = data.get("findings_sink") or {}
+    if not isinstance(sink_raw, dict):
+        sink_raw = {}
+    sink_type = str(sink_raw.get("type") or "").strip().lower()
+    conflict = str(sink_raw.get("on_conflict") or "upsert").strip().lower()
+    if conflict not in ("upsert", "skip", "fail"):
+        conflict = "upsert"
+    try:
+        sink_port = sink_raw.get("port")
+        sink_port_n = int(sink_port) if sink_port not in (None, "") else None
+    except (TypeError, ValueError):
+        sink_port_n = None
+    out["findings_sink"] = {
+        "enabled": bool(sink_raw.get("enabled", False)),
+        "type": sink_type,
+        "host": str(sink_raw.get("host") or "").strip(),
+        "port": sink_port_n,
+        "database": str(sink_raw.get("database") or "").strip(),
+        "schema": str(sink_raw.get("schema") or "").strip(),
+        "user": str(sink_raw.get("user") or "").strip(),
+        "pass": str(sink_raw.get("pass") or "").strip(),
+        "user_from_env": str(sink_raw.get("user_from_env") or "").strip(),
+        "pass_from_env": str(sink_raw.get("pass_from_env") or "").strip(),
+        "sqlite_path": str(
+            sink_raw.get("sqlite_path") or sink_raw.get("path") or ""
+        ).strip(),
+        "on_conflict": conflict,
+        "include_sample_content": bool(sink_raw.get("include_sample_content", False)),
+        "allow_private_networks": bool(sink_raw.get("allow_private_networks", False)),
     }
 
     return out

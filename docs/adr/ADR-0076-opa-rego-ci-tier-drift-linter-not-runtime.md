@@ -6,11 +6,16 @@
 
 ## Status
 
-Proposed
+Accepted
 
 ### Status history
 
 - 2026-06-30 — Proposed (research closure GitHub #1079)
+- 2026-08-28 — Accepted (operator ratification: direction ADR, not a shipped
+  CI hook — no runtime OPA/Rego dependency; prototype isolated under
+  `research/licensing/opa_tier_drift_prototype/`; CI wiring remains target
+  architecture when scheduled; #1079/#887/#845 closed, #854 remains the live
+  motivating case). Genesis Date (UTC) unchanged.
 
 ## Context
 

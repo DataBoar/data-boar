@@ -6,6 +6,6 @@
 > O COLD_START_LADDER é o **roteador de sessão**, não o catálogo.
 > As linhas vêm de `git ls-files` — não invente entradas.
 
-_Gerado por `scripts/build_ops_hub.py` — **386** arquivos Markdown, **213** stems (EN e pt-BR na mesma linha). Tabelas canônicas no arquivo em inglês (nomes de arquivo permanecem em inglês para bater com o disco)._
+_Gerado por `scripts/build_ops_hub.py` — **388** arquivos Markdown, **214** stems (EN e pt-BR na mesma linha). Tabelas canônicas no arquivo em inglês (nomes de arquivo permanecem em inglês para bater com o disco)._
 
 Regenerar: `uv run python scripts/build_ops_hub.py --write`.

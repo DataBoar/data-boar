@@ -1,43 +1,87 @@
-# LGPD/GDPR/CCPA audit app. Default: web API + frontend (dashboard, reports, config UI).
-# Override CMD to run CLI one-shot scan (see docs/deploy/DEPLOY.md).
-# Multi-stage: builder (toolchain) -> runtime-assembler (bundle libs) -> distroless nonroot (#1028).
+# Canonical published image (#1409 / ADR-0091): free-threaded CPython (cp314t).
+# Multi-stage: builder (uv-installed 3.14t) → runtime-assembler → distroless nonroot.
+#
+# There is no `python:3.14t-slim` on Docker Hub (404). Builder is stock
+# `python:3.14-slim` plus `uv python install` (python-build-standalone).
+#
+# CPU contract: x86-64-v2+ (numpy cp314t has popcnt≠0). Does NOT target alpine-emachines.
+# One Hub image: `:latest` is this file. No parallel GIL-on tag.
+# Runtime GIL: ENTRYPOINT sets PYTHON_GIL=1 unless license tier is Enterprise.
+# Do NOT force GIL off with env PYTHON_GIL=0 / -Xgil=0 (undeclared-safe C extensions).
 
 # -----------------------------------------------------------------------------
-# Stage 1: build Python extensions and install dependencies
+# Stage 1: free-threaded interpreter + deps + cp314t wheelhouse
 # -----------------------------------------------------------------------------
-# Rolling 3.14 slim (Debian 13 / trixie): aligns with CI matrix + field-tested
-# wheelhouse cells; licensing enforcement gate green (#551 / cluster closed).
-# Digest pin (ADR-0074 / #988): Dependabot docker ecosystem proposes digest bumps.
 FROM python:3.14-slim@sha256:cea0e6040540fb2b965b6e7fb5ffa00871e632eef63719f0ea54bca189ce14a6 AS builder
+
+# uv 0.11.x cannot fetch cpython-3.14.6+freethreaded; pin 0.12.0 + sha256 of the
+# official linux-gnu tarball (measured 2026-07-30).
+ARG UV_VERSION=0.12.0
+ARG UV_SHA256=eaf842262aa1c418d8ecc5605f02ee1ebfd369124fa48548e85f9481a47831a9
+ARG UV_PYTHON=3.14.6+freethreaded
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential gcc g++ pkg-config curl ca-certificates binutils \
     libpq-dev libffi-dev libssl-dev unixodbc-dev default-libmysqlclient-dev \
-    && rm -rf /var/lib/apt/lists/*
+    freetds-dev libkrb5-dev \
+    && rm -rf /var/lib/apt/lists/* \
+    && curl -fsSL \
+        "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/uv-x86_64-unknown-linux-gnu.tar.gz" \
+        -o /tmp/uv.tgz \
+    && echo "${UV_SHA256}  /tmp/uv.tgz" | sha256sum -c - \
+    && tar -xzf /tmp/uv.tgz -C /tmp \
+    && install -m 0755 /tmp/uv-x86_64-unknown-linux-gnu/uv /usr/local/bin/uv \
+    && rm -rf /tmp/uv.tgz /tmp/uv-x86_64-unknown-linux-gnu
+
+# Install free-threaded CPython into a staging dir, then overlay onto /usr/local
+# so collect-runtime-rootfs + distroless see a normal prefix layout.
+ENV UV_PYTHON_INSTALL_DIR=/opt/uv-pythons
+RUN uv python install "${UV_PYTHON}" \
+    && PYROOT="$(find /opt/uv-pythons -maxdepth 1 -type d -name 'cpython-*freethreaded*' | sort | tail -1)" \
+    && test -n "${PYROOT}" \
+    && test -x "${PYROOT}/bin/python3.14t" \
+    && rm -rf /usr/local/lib/python3.14 /usr/local/lib/python3.14t \
+    && cp -a "${PYROOT}/bin/." /usr/local/bin/ \
+    && cp -a "${PYROOT}/lib/." /usr/local/lib/ \
+    && cp -a "${PYROOT}/include/." /usr/local/include/ \
+    && ln -sf python3.14t /usr/local/bin/python3 \
+    && ln -sf python3.14t /usr/local/bin/python \
+    && python -c 'import sys; assert sys._is_gil_enabled() is False, sys.version' \
+    && rm -f /usr/local/lib/python3.14t/EXTERNALLY-MANAGED \
+    && python -m ensurepip --upgrade
 
 WORKDIR /app
 COPY requirements.txt /app/requirements.txt
 COPY . /app
 
-# Hosted x86-64-v1 wheelhouse (DataBoar/data-boar-site). Override for offline builds.
 ARG WHEELHOUSE_TAG=wheelhouse-x86-64-v1-2026-07-29
+# SQLAlchemy cyextension .so re-enables the GIL on import (undeclared free-threaded
+# safety). Force pure-Python sqlalchemy so the -nogil image keeps GIL=False after
+# app imports (core/database*.py import sqlalchemy at module level). Do NOT use
+# PYTHON_GIL=0 / -Xgil=0 — that would run unsafe C extensions (operator forbid).
+ENV DISABLE_SQLALCHEMY_CEXT=1
 
+# Container owns /usr/local; PEP 668 marker removed above after uv overlay.
 RUN pip uninstall -y wheel || true && \
     pip install --no-cache-dir --upgrade "pip>=25.3" && \
     pip install --no-cache-dir --force-reinstall "wheel>=0.46.2" && \
     python -c "import wheel; import sys; sys.exit(0 if tuple(map(int, wheel.__version__.split('.'))) >= (0,46,2) else 1)" && \
     pip install --no-cache-dir -r /app/requirements.txt && \
+    pip install --no-cache-dir --force-reinstall --no-binary sqlalchemy "sqlalchemy==2.0.50" && \
+    python -c 'import pathlib, site, sqlalchemy, sys; root=pathlib.Path(site.getsitepackages()[0])/"sqlalchemy"; sos=list(root.rglob("*.so")); assert not sos, sos; assert sys._is_gil_enabled() is False, "GIL re-enabled after sqlalchemy"' && \
     pip install --no-cache-dir --no-deps -e /app && \
-    # Lean base only: sql-community + mssql (pymssql) + oracle from pyproject extras.
-    # Remaining extras: mount ABI-compatible wheels at /extras (#1400/#1399) — not fat image.
-    # ODBC MSSQL: mount ``mssql-pyodbc`` wheels at runtime (#1588).
-    pip install --no-cache-dir "/app[sql-community,mssql,oracle]" && \
-    python /app/scripts/generate_extras_manifest.py --probe --write /app/EXTRAS_MANIFEST.json && \
     WHEELHOUSE_TAG="${WHEELHOUSE_TAG}" bash /app/scripts/docker/apply_wheelhouse_v1.sh && \
-    PY_XY="$(python -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')" && \
-    rm -rf "/tmp/wheelhouse-v1-glibc-cp$(python -c 'import sys; print(f"{sys.version_info.major}{sys.version_info.minor}")')" && \
-    (find "/usr/local/lib/python${PY_XY}/site-packages" -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true) && \
-    (find "/usr/local/lib/python${PY_XY}/site-packages" -name "*.pyc" -delete 2>/dev/null || true)
+    # Lean extras after wheelhouse so cp314t SQL wheels (mariadb/oracledb/psycopg2/pymssql)
+    # are already present — avoids source rebuild (#1398). freetds-dev/libkrb5-dev remain
+    # as compile fallback if a wheel is missing.
+    pip install --no-cache-dir "/app[sql-community,mssql,oracle]" && \
+    # Extras can resolve an older cryptography; re-pin GHSA-g6cj-pr64-35w5 (#1409 grype).
+    pip install --no-cache-dir --upgrade "cryptography>=50.0.0,<51" && \
+    python /app/scripts/generate_extras_manifest.py --probe --write /app/EXTRAS_MANIFEST.json && \
+    PY_LIB="$(python -c 'import sysconfig; from pathlib import Path; print(Path(sysconfig.get_path("stdlib")))')" && \
+    rm -rf /tmp/wheelhouse-v1-glibc-cp314t && \
+    (find "${PY_LIB}/site-packages" -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true) && \
+    (find "${PY_LIB}/site-packages" -name "*.pyc" -delete 2>/dev/null || true)
 
 # -----------------------------------------------------------------------------
 # Stage 2: assemble runtime rootfs (shell stage — not shipped)
@@ -50,17 +94,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY --from=builder /usr/local /usr/local
 
-RUN PY_XY="$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')" && \
-    ln -sf "python${PY_XY}" /usr/local/bin/python3 && \
-    ln -sf "python${PY_XY}" /usr/local/bin/python
+RUN ln -sf python3.14t /usr/local/bin/python3 && \
+    ln -sf python3.14t /usr/local/bin/python && \
+    python -c 'import sys; assert sys._is_gil_enabled() is False'
 
-# Runtime extras mount point (#1400): owned by distroless nonroot (65532); no --user 0.
+# Runtime extras mount point (#1400): owned by distroless nonroot (65532).
 RUN mkdir -p /extras && chown 65532:65532 /extras
 
-# No pip/wheel/setuptools in the release image (app does not install packages at runtime, #1028).
-RUN PY_XY="$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')" && \
-    "/usr/local/bin/python${PY_XY}" -m pip uninstall -y pip wheel setuptools 2>/dev/null || true && \
-    rm -f /usr/local/bin/pip /usr/local/bin/pip3 "/usr/local/bin/pip${PY_XY}" /usr/local/bin/wheel 2>/dev/null || true
+# No pip/wheel/setuptools in the release image (#1028).
+RUN /usr/local/bin/python3.14t -m pip uninstall -y pip wheel setuptools 2>/dev/null || true && \
+    rm -f /usr/local/bin/pip /usr/local/bin/pip3 /usr/local/bin/pip3.14 /usr/local/bin/pip3.14t \
+          /usr/local/bin/wheel /usr/local/bin/uv 2>/dev/null || true
 
 COPY scripts/docker/collect-runtime-rootfs.sh /tmp/collect-runtime-rootfs.sh
 RUN chmod +x /tmp/collect-runtime-rootfs.sh && /tmp/collect-runtime-rootfs.sh /rootfs
@@ -68,11 +112,9 @@ RUN chmod +x /tmp/collect-runtime-rootfs.sh && /tmp/collect-runtime-rootfs.sh /r
 # -----------------------------------------------------------------------------
 # Stage 3: minimal distroless runtime (nonroot uid 65532, no shell/apt)
 # -----------------------------------------------------------------------------
-# gcr.io/distroless/cc-debian13:nonroot — Debian 13 matches python:3.14-slim (trixie) glibc.
-# Human tag comment: cc-debian13:nonroot (#1028 / PLAN_IMAGE_HARDENING.md).
-FROM gcr.io/distroless/cc-debian13:nonroot@sha256:a77defd6fedbb3392b175ba8ea3d1c22be963c1597c248c3ba987ddd80bfb512
+FROM gcr.io/distroless/cc-debian13:nonroot@sha256:c31ff9abcb1910f3ab25c7957bdaf0bfe12a01eb546e8df2282f1c8f682b606c
 
-LABEL org.opencontainers.image.description="LGPD/GDPR/CCPA audit. Default: web API and frontend on port 8088. Override command for CLI one-shot."
+LABEL org.opencontainers.image.description="LGPD/GDPR/CCPA audit. Free-threaded CPython; PYTHON_GIL=1 unless Enterprise license. x86-64-v2+."
 
 WORKDIR /app
 
@@ -84,9 +126,9 @@ ENV CONFIG_PATH=/data/config.yaml
 ENV PYTHONUNBUFFERED=1
 ENV API_HOST=0.0.0.0
 ENV PATH=/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-# Runtime extras extension (#1400): mount prebuilt ABI-compatible wheels here.
+# Build-time contract reminder (cext absent in this image); harmless at runtime.
+ENV DISABLE_SQLALCHEMY_CEXT=1
 ENV PYTHONPATH=/extras:/app
-# Stable fingerprint in container pools (Enterprise); empty = hostname-derived (Pro/Pro+).
 ENV DATA_BOAR_MACHINE_SEED=
 VOLUME ["/extras"]
 
@@ -95,8 +137,10 @@ USER 65532:65532
 EXPOSE 8088
 
 # Distroless has no shell: JSON exec form only. A shell-form probe would fail.
-# Probe GET /health on loopback (always public). Matches default CMD port 8088.
+# HEALTHCHECK bypasses ENTRYPOINT (inspects loopback HTTP, not the GIL gate).
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
-    CMD ["/usr/local/bin/python3.14", "-c", "import urllib.request, sys; r = urllib.request.urlopen('http://127.0.0.1:8088/health', timeout=8); sys.exit(0 if r.status == 200 else 1)"]
+    CMD ["/usr/local/bin/python3.14t", "-c", "import urllib.request, sys; r = urllib.request.urlopen('http://127.0.0.1:8088/health', timeout=8); sys.exit(0 if r.status == 200 else 1)"]
 
-CMD ["/usr/local/bin/python3.14", "main.py", "--config", "/data/config.yaml", "--web", "--port", "8088", "--allow-insecure-http"]
+# Probe process then execve with PYTHON_GIL=1 unless Enterprise (#1409).
+ENTRYPOINT ["/usr/local/bin/python3.14t", "-m", "core.licensing.gil_container_gate"]
+CMD ["main.py", "--config", "/data/config.yaml", "--web", "--port", "8088", "--allow-insecure-http"]

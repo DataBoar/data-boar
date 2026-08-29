@@ -46,8 +46,10 @@ O ponto de entrada é `main.py`.
 | `--export-dsar`         | `SESSION_ID`         | Exporta achados de uma sessão em JSON orientado a DSAR (metadados primeiro; enquadramento LGPD Art. 18 / GDPR Art. 15). Imprime em **stdout** ou use `--dsar-output PATH`. Sessão inexistente ou vazia → `findings_by_source` vazio, sai **0**. Incompatível com `--web`, `--reset-data`, `--export-audit-trail`, `--validate-config`, `--diff`, `--export-l1` e `--export-l3`. |
 | `--dsar-output`         | `PATH`               | Grava o JSON DSAR em `PATH` em vez de stdout. Exige `--export-dsar`. |
 | `--dsar-include-samples`| *(flag)*             | Com `--export-dsar`: inclui campos de amostra bruta nas linhas de achado quando existirem (SQLite guarda só metadados por padrão). |
-| `--export-l1`           | `SESSION_ID`         | Exporta achados de uma sessão como JSON L1 **metadata_manifest** (pin do contrato SDK; só metadados — nunca amostras brutas). Lê o SQLite existente (sem re-varredura). Imprime em **stdout** ou `--l1-output PATH`. Sessão inexistente ou vazia → `findings` vazio, sai **0**. Violação de contrato → aborta, sai **1** (fail-closed). Incompatível com `--web`, `--reset-data`, `--export-audit-trail`, `--validate-config`, `--diff`, `--export-dsar` e `--export-l3`. |
+| `--export-l1`           | `SESSION_ID`         | Exporta achados de uma sessão como JSON L1 **metadata_manifest** (pin do contrato SDK; só metadados — nunca amostras brutas). Lê o SQLite existente (sem re-varredura). Imprime em **stdout** ou `--l1-output PATH`. Sessão inexistente ou vazia → `findings` vazio, sai **0**. Violação de contrato → aborta, sai **1** (fail-closed). Incompatível com `--web`, `--reset-data`, `--export-audit-trail`, `--validate-config`, `--diff`, `--export-dsar`, `--export-l3` e `--export-findings-sink`. |
 | `--l1-output`           | `PATH`               | Grava o JSON L1 metadata_manifest em `PATH` em vez de stdout. Exige `--export-l1`. |
+| `--export-findings-sink`| `SESSION_ID`         | Ecoa os achados de uma sessão do SQLite local para o **findings_sink** configurado (SQL = Pro, MongoDB = Enterprise). Só metadados por padrão. Se `findings_sink.include_sample_content: true`, passe também `--allow-sample-export` (LGPD Art. 46) ou a CLI sai **1**. Erro no sink na CLI sai **1**; tier insuficiente sai **2**. Incompatível com `--web`, `--reset-data` e outros modos de export. |
+| `--allow-sample-export` | *(flag)*             | Com `--export-findings-sink`: confirmação do operador para incluir `sample_content` quando o YAML optar. Nunca é implícito. |
 | `--export-l3`           | `SESSION_ID`         | Exporta JSON L3 **transformed_rows** escopado por grant (pin SDK; linhas de INPUT carregam `value` cru). Exige `--l3-grant`. Padrão **efêmero** (stdout/pipe); gravar em disco só com **`--l3-persist PATH`**. No POSIX, persistência é modo `0600` só do dono. No Windows: aplica com `icacls`, verifica SIDs bem-conhecidos (independente de idioma). **SYSTEM** (`S-1-5-18`) e **Administrators** (`S-1-5-32-544`) em geral permanecem — isso **não** é `0600` POSIX. **OWNER RIGHTS** (`S-1-3-4`) é equivalente ao dono. Contenção não comprovada (incluindo falha ao traduzir SID) → sai **5** (arquivo removido), salvo **`--l3-allow-unprotected`** (auditoria `containment`: `not_enforced`). Pago (não Community) — Community ou grant ausente → sai **3**. Coluna fora do grant → sai **4**. Teto por coluna `--l3-max-rows` (padrão 100, máximo 10000). Auditoria JSON no **stderr** (grant id, colunas, contagens, `containment` opcional — jamais células). Incompatível com `--web`, `--reset-data`, `--export-audit-trail`, `--validate-config`, `--diff`, `--export-dsar` e `--export-l1`. |
 | `--l3-grant`            | `PATH`               | Grant JSON para `--export-l3`: `grant_id`, `target`, `table`, `columns` (nunca `*` / tabela inteira). `request_columns` opcional deve ser subconjunto. |
 | `--l3-persist`          | `PATH`               | Persiste explicitamente o JSON L3 (valores crus) em `PATH`. Omitido = só stdout. Exige `--export-l3`. Nunca é o padrão. POSIX: `0600`. Windows: aplica com `icacls`; verifica SIDs bem-conhecidos (independente de idioma — não nomes de exibição). SYSTEM/Administrators privilegiados (`S-1-5-18` / `S-1-5-32-544`) podem permanecer; OWNER RIGHTS (`S-1-3-4`) conta como o dono. Contenção não comprovada → sai **5**. |
@@ -84,6 +86,39 @@ YAML opt-in `remediation:` carrega um `RemediationPlugin` de parceiro após a ge
 ### Plugins YAML de padrões (opcional)
 
 Arquivos YAML do operador injetam termos extras de regex / ML / DL no detector (`patterns_plugin_file`, ou as chaves legadas `regex_overrides_file` / `ml_patterns_file` / `dl_patterns_file`). **Não** executam código. Guia do autor: **[PLUGIN_AUTHOR_GUIDE.pt_BR.md](PLUGIN_AUTHOR_GUIDE.pt_BR.md)** ([EN](PLUGIN_AUTHOR_GUIDE.md)). Schema: `config/plugin_schema.yaml`. How-to campo a campo: [SENSITIVITY_DETECTION.pt_BR.md](SENSITIVITY_DETECTION.pt_BR.md#padrões-regex-customizados-detectar-novos-dados-pessoaissensíveis).
+
+## Findings sink (Pro/Enterprise)
+
+**Eco opcional pós-scan** das mesmas linhas de achado (metadados) já gravadas no SQLite local. **Não** substitui o SQLite. Object storage (S3 / Azure Blob / GCS) fica fora deste recorte.
+
+**Tiers:** SQL (`postgresql`, `mysql`, `mssql`, e `sqlite` de lab) → `findings_sink_sql` (**Pro**). MongoDB → `findings_sink_mongodb` (**Enterprise**). Lab com `licensing.effective_tier` / OPEN segue o bypass usual.
+
+**PII:** o schema padrão **não** tem `sample_content`. Com `include_sample_content: true` sem `--allow-sample-export` na CLI, a saída é **1** (LGPD Art. 46). O hook automático pós-scan **nunca** grava colunas de amostra, mesmo com a flag YAML.
+
+**Falha:** erro no sink após a varredura vira **warning** + `save_failure(..., reason=sink_error)` — a sessão continua.
+
+DDL do cliente: [findings_sink_schema.sql](deploy/findings_sink_schema.sql) e [findings_sink_schema_mongodb.js](deploy/findings_sink_schema_mongodb.js).
+
+```yaml
+findings_sink:
+  enabled: true
+  type: postgresql              # postgresql | mysql | mssql | mongodb | sqlite (lab)
+  host: db.example.com
+  port: 5432
+  database: data_governance_db
+  user_from_env: SINK_DB_USER
+  pass_from_env: SINK_DB_PASS
+  schema: data_boar             # documentado para PostgreSQL; o cliente de eco ainda não usa
+  on_conflict: upsert           # upsert | skip | fail
+  include_sample_content: false
+  allow_private_networks: false # mesmo opt-in SSRF dos conectores (#832)
+```
+
+Eco manual (equivalente a `uv run python scripts/export_findings_to_sink.py SESSION`):
+
+```bash
+python main.py --config config.yaml --export-findings-sink <session_id>
+```
 
 ### Resultados
 
@@ -122,7 +157,7 @@ python main.py --config config.yaml --tenant "Acme Corp" --technician "Alice V."
 
 ##### OpenTelemetry opcional (opt-in)
 
-Quando **`DATA_BOAR_OTEL_ENABLED`** for `1` / `true` / `yes` / `on` e o extra opcional **`[otel]`** estiver instalado (`uv sync --extra otel`), o Data Boar exporta traces, métricas e logs via OTLP (`OTEL_EXPORTER_OTLP_ENDPOINT`, padrão `http://127.0.0.1:4317`). O mesmo gate cobre **`--web`**, varredura única (CLI), scan do **`--demo`** e flags de export/regenerate (`--export-dsar`, `--export-l1`, `--export-l3`, `--export-remediation-manifest`, `--regenerate-report`, `--export-audit-trail`). **`--version`** e **`--check-extras`** permanecem sem instrumentação.
+Quando **`DATA_BOAR_OTEL_ENABLED`** for `1` / `true` / `yes` / `on` e o extra opcional **`[otel]`** estiver instalado (`uv sync --extra otel`), o Data Boar exporta traces, métricas e logs via OTLP (`OTEL_EXPORTER_OTLP_ENDPOINT`, padrão `http://127.0.0.1:4317`). O mesmo gate cobre **`--web`**, varredura única (CLI), scan do **`--demo`** e flags de export/regenerate (`--export-dsar`, `--export-l1`, `--export-l3`, `--export-findings-sink`, `--export-remediation-manifest`, `--regenerate-report`, `--export-audit-trail`). **`--version`** e **`--check-extras`** permanecem sem instrumentação.
 
 #### Servidor API (`--web`)
 
@@ -539,7 +574,7 @@ Defina `licensing.effective_tier: enterprise` em lab. Mesmo CLI do Pro (`--gover
 - **Formatos adicionais (Tier 1 “data soup”):** o scanner pode amostrar texto de **`.epub`** (ZIP/XHTML) e, com dependências opcionais (`uv pip install -e ".[dataformats]"`), de **`.parquet`**, **`.feather`**, **`.orc`** (PyArrow), **`.avro`** (fastavro) e **`.dbf`** (dbfread). Sem esses extras, a extração fica vazia nos binários colunares/legados (análise por caminho/nome continua). Inclua essas extensões em `file_scan.extensions` se usar lista explícita.
 - **Extensão `.doc` (extra opcional `legacy-doc`):** amostra de corpo usa **`mammoth`** quando você instala **`pip install -e ".[legacy-doc]"`** ou `uv sync --extra legacy-doc`. O mammoth mira **OOXML em ZIP** (mesma família que `.docx`); `.doc` **binário Word 97-2003** em geral ainda gera amostra de conteúdo **vazia** — só caminho/nome entram na análise. Veja [TROUBLESHOOTING.pt_BR.md](TROUBLESHOOTING.pt_BR.md) (*Arquivos `.doc` legados*).
 - **Dicas de esteganografia (opt-in):** `file_scan.scan_for_stego: true`, **`--scan-stego`**, caixa no dashboard ou `scan_for_stego: true` em **`POST /scan`** acrescenta uma linha de **entropia de bytes** em imagens/áudio/vídeo (heurística fraca; não é extração de stego). Mesmo padrão de restauração após a execução que `scan_compressed` / `use_content_type`.
-- `report` – `output_dir` para relatórios/heatmaps; opcionalmente `recommendation_overrides` (lista de mapeamentos por `norm_tag` para Base legal, Risco, Recomendação, Prioridade, Relevante para). Exemplo completo em [USAGE.md](USAGE.md) (seção 4, Global options); exemplo para categorias sensíveis (saúde, religião, política, PEP, raça, sindicato, genético, biométrico, vida sexual) em [USAGE.md#recommendation_overrides](USAGE.md) e abaixo em pt-BR (ver também [SENSITIVITY_DETECTION.pt_BR.md](SENSITIVITY_DETECTION.pt_BR.md)).
+- `report` – `output_dir` para relatórios/heatmaps; `formats` (padrão `[xlsx]`; inclua `ods` para planilha OpenDocument, que abre no LibreOffice Calc e no SoftMaker PlanMaker); opcionalmente `recommendation_overrides` (lista de mapeamentos por `norm_tag` para Base legal, Risco, Recomendação, Prioridade, Relevante para). Exemplo completo em [USAGE.md](USAGE.md) (seção 4, Global options); exemplo para categorias sensíveis (saúde, religião, política, PEP, raça, sindicato, genético, biométrico, vida sexual) em [USAGE.md#recommendation_overrides](USAGE.md) e abaixo em pt-BR (ver também [SENSITIVITY_DETECTION.pt_BR.md](SENSITIVITY_DETECTION.pt_BR.md)).
 - **`jurisdiction_hints` (opt-in):** notas heurísticas na planilha **Report info** para DPO/advogado quando **metadados dos achados** (nomes de coluna/arquivo/caminho, tags) sugerem possível relevância a **EUA-CA (CCPA/CPRA)**, **Colorado** ou **Japão (APPI)**. Não é conclusão jurídica; taxa alta de falso positivo/negativo. Ative com `report.jurisdiction_hints.enabled: true`, **`--jurisdiction-hint`** na CLI, caixa no dashboard ou `"jurisdiction_hint": true` em **`POST /scan`**. Sub-chaves: `us_ca`, `us_co`, `jp` e limiares `min_score_*`. Não altera níveis de sensibilidade. Detalhes: [USAGE.md](USAGE.md) (Global options / file_scan — mesmo tema em inglês no parágrafo sobre **jurisdiction hints**).
 - **`scan.validate_crypto` / `--validate-crypto` (opt-in):** validação de criptografia forte / controles. Desligado por padrão; sem mudança de comportamento quando off. Ative com `scan.validate_crypto: true`, CLI **`--validate-crypto`**, caixa no dashboard ou `"validate_crypto": true` em **`POST /scan`** / **`POST /scan_database`**. CLI / API / dashboard sobrescrevem o config nessa execução. **Fase 2 + Fase 3 (SQL + Mongo/Redis + SMB + REST/Power BI/Dataverse):** após conectar, probe best-effort de transporte; na Fase 3 (SQL/Mongo/Redis) inferência heurística por **padrão de nome** (contagem por categoria em **Inferred controls** — sem valores nem lista de nomes reais; não é certificação de compliance; exige revisão humana). Resultados em **`crypto_controls_audit`** e planilha Excel **Crypto & controls**. Ver [USAGE.md](USAGE.md) (*Strong crypto / controls*).
 - `api` – porta da API; opcionalmente `require_api_key`, `api_key` ou `api_key_from_env` para exigir chave de API (cabeçalho X-API-Key ou Authorization: Bearer); GET /health permanece público. **Em produção recomenda-se** `require_api_key: true` e chave forte via variável de ambiente (ex.: `api.api_key_from_env: "AUDIT_API_KEY"`) para não armazenar a chave no config. Ver [SECURITY.md](../SECURITY.md).
@@ -550,7 +585,8 @@ Defina `licensing.effective_tier: enterprise` em lab. Mesmo CLI do Pro (`--gover
 - `scan` – `max_workers` para paralelismo.
 - `timeouts` – timeouts globais para conexões (ex.: `connect_seconds`, `read_seconds`); cada alvo pode sobrescrever com `connect_timeout`, `read_timeout` ou `timeout`. Ver abaixo.
 - `api.workers` – número de workers uvicorn (padrão 1; 2+ para mais requisições concorrentes).
-- Opcionais: **`sql_sampling`** (tetos hierárquicos de amostragem SQL/Snowflake; ver bullet `file_scan` acima e [USAGE.md](USAGE.md)), `ml_patterns_file`, `ml_patterns_files`, `dl_patterns_file`, `regex_overrides_file`, `regex_overrides_files`, `compliance_frameworks`, `sensitivity_detection` (termos ML/DL inline), `learned_patterns` (export de termos classificados), **`pattern_files_encoding`** (encoding dos arquivos de padrões; ver abaixo).
+- Opcionais: **`sql_sampling`** (tetos hierárquicos de amostragem SQL/Snowflake; ver bullet `file_scan` acima e [USAGE.md](USAGE.md)), `ml_patterns_file`, `ml_patterns_files`, `dl_patterns_file`, `regex_overrides_file`, `regex_overrides_files`, `compliance_frameworks`, `sensitivity_detection` (termos ML/DL inline), `learned_patterns` (export de termos classificados), **`pattern_files_encoding`** (encoding dos arquivos de padrões; ver abaixo), **`findings_sink`** (eco pós-scan Pro/Enterprise).
+- **Backend DL (extra opcional):** instale com `uv pip install -e ".[dl]"` (`sentence-transformers`). Com termos DL, a confiança combina com o ML. O job de CI **`test-dl`** instala `--extra dl` e exercita `SentenceTransformer.encode()` via `core/dl_backend.py` (não só import). A matriz pytest padrão e o job **`test-extras`** não instalam esse extra.
 - **Pedindo acesso à TI:** Quando for preciso solicitar permissões à equipe de TI (ex.: pastas compartilhadas, contas de banco, tokens de API), solicite o **mínimo** necessário. Veja [OPERATOR_IT_REQUIREMENTS.pt_BR.md](ops/OPERATOR_IT_REQUIREMENTS.pt_BR.md) para o checklist por fonte (somente leitura, sem admin), o que não precisamos e uma breve justificativa, alinhada a zero-trust ou IAM restrito. ([EN](ops/OPERATOR_IT_REQUIREMENTS.md))
 
 ### Credenciais a partir do ambiente (segredos fora do config)
@@ -974,6 +1010,9 @@ Instale os extras opcionais: `uv pip install -e ".[shares]"`.
     domain: "COMPANY"   # opcional
     port: 445
     recursive: true
+    # Hosts RFC1918 / lab precisam deste opt-in; sem ele o SMB recusa o host
+    # antes de register_session (sem NTLM para um peer inesperado — #1715).
+    # allow_private_networks: true
 ```
 
 ## WebDAV
@@ -1037,8 +1076,8 @@ O Excel é salvo na pasta de downloads do navegador; o mapa de calor PNG é gera
 
 | Objetivo | Como |
 | --- | --- |
-| **Último relatório gerado** | `GET /report` → salve a resposta como `.xlsx`. |
-| **Relatório de uma sessão anterior** | `GET /list` para obter `session_id`s, depois `GET /reports/<session_id>` → salve como `.xlsx`. |
+| **Último relatório gerado** | `GET /report` → salve como `.xlsx`. Opcional `?format=ods` para OpenDocument (LibreOffice Calc / SoftMaker PlanMaker). |
+| **Relatório de uma sessão anterior** | `GET /list` para obter `session_id`s, depois `GET /reports/<session_id>` → salve como `.xlsx` (mesmo `?format=ods`). |
 | **Execução one-shot (CLI)** | Depois de `python main.py --config config.yaml`, o caminho é impresso; o arquivo fica em `report.output_dir` como `Relatorio_Auditoria_<session_id>.xlsx`. |
 | **Regenerar Excel + heatmap (CLI)** | `python main.py --config config.yaml --regenerate-report <session_id>` — só SQLite; sem re-scan. Use quando os achados já estão gravados mas os arquivos do relatório faltam ou estão velhos. |
 | **Markdown executivo + manifesto** | Gravados ao lado do Excel: `POC_SUMMARY_<session_prefix>.md` e `scan_manifest_<session_prefix>.yaml` (mesmo diretório). Se essa etapa falhar, o caminho do Excel ainda é devolvido — veja o subitem abaixo. |

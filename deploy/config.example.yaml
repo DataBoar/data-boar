@@ -86,3 +86,17 @@ remediation:
   plugin: null           # e.g. "myorg.stealthizer:StealthizerPlugin"
   verify_after: true     # re-scan after remediation to confirm PII removed
   config: {}             # passed as-is to plugin.remediate()
+
+# Optional Pro/Enterprise echo of findings to a customer SQL/Mongo store (#552).
+# Local sqlite_path stays the engine primary. See docs/USAGE.md and
+# docs/deploy/findings_sink_schema.sql
+# findings_sink:
+#   enabled: false
+#   type: postgresql
+#   host: db.example.com
+#   port: 5432
+#   database: data_governance_db
+#   user_from_env: SINK_DB_USER
+#   pass_from_env: SINK_DB_PASS
+#   on_conflict: upsert
+#   include_sample_content: false

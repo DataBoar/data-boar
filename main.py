@@ -517,6 +517,9 @@ def main() -> None:
             "  # L1 metadata_manifest for sidecars (stdout or --l1-output; no raw values)\n"
             f"  {prog} --config config.yaml --export-l1 <session_id>\n"
             "\n"
+            "  # Echo findings to a corporate SQL/Mongo sink (Pro/Enterprise; #552)\n"
+            f"  {prog} --config config.yaml --export-findings-sink <session_id>\n"
+            "\n"
             "  # L3 transformed_rows (grant-scoped raw values; stdout unless --l3-persist)\n"
             f"  {prog} --config config.yaml --export-l3 <session_id> --l3-grant grant.json\n"
             "\n"
@@ -788,6 +791,29 @@ def main() -> None:
         help="Write L1 metadata_manifest JSON to PATH instead of stdout. Requires --export-l1.",
     )
     parser.add_argument(
+        "--export-findings-sink",
+        metavar="SESSION_ID",
+        dest="export_findings_sink",
+        default=None,
+        help=(
+            "Echo SESSION_ID findings from local SQLite to the configured "
+            "findings_sink (SQL Pro / MongoDB Enterprise). Metadata-only by "
+            "default. If findings_sink.include_sample_content is true, also pass "
+            "--allow-sample-export (LGPD Art. 46) or the command exits 1. "
+            "Incompatible with --web and --reset-data."
+        ),
+    )
+    parser.add_argument(
+        "--allow-sample-export",
+        action="store_true",
+        dest="allow_sample_export",
+        help=(
+            "With --export-findings-sink: acknowledge sample_content export when "
+            "findings_sink.include_sample_content is true (LGPD Art. 46). "
+            "Required for that YAML flag; never implied."
+        ),
+    )
+    parser.add_argument(
         "--export-l3",
         metavar="SESSION_ID",
         dest="export_l3",
@@ -996,6 +1022,7 @@ def main() -> None:
     args = parser.parse_args()
     export_l1 = args.export_l1 is not None
     export_l3 = args.export_l3 is not None
+    export_sink = args.export_findings_sink is not None
 
     if args.version:
         _run_startup_integrity_check({"sqlite_path": "audit_results.db"})
@@ -1030,6 +1057,7 @@ def main() -> None:
             or args.export_dsar is not None
             or export_l1
             or export_l3
+            or export_sink
             or args.export_remediation_manifest is not None
             or args.diff_sessions
             or args.regenerate_report is not None
@@ -1070,6 +1098,7 @@ def main() -> None:
         or args.export_dsar is not None
         or export_l1
         or export_l3
+        or export_sink
         or args.export_remediation_manifest is not None
         or args.regenerate_report is not None
         or args.governance_report is not None
@@ -1092,6 +1121,7 @@ def main() -> None:
         or args.export_dsar is not None
         or export_l1
         or export_l3
+        or export_sink
         or args.export_remediation_manifest is not None
         or args.regenerate_report is not None
         or args.governance_report is not None
@@ -1118,6 +1148,7 @@ def main() -> None:
         or args.export_dsar is not None
         or export_l1
         or export_l3
+        or export_sink
         or args.export_remediation_manifest is not None
         or args.regenerate_report is not None
         or args.governance_report is not None
@@ -1137,6 +1168,7 @@ def main() -> None:
         or args.export_dsar is not None
         or export_l1
         or export_l3
+        or export_sink
         or args.export_remediation_manifest is not None
         or args.regenerate_report is not None
         or args.governance_report is not None
@@ -1159,6 +1191,7 @@ def main() -> None:
         or args.export_dsar is not None
         or export_l1
         or export_l3
+        or export_sink
         or args.export_remediation_manifest is not None
         or args.regenerate_report is not None
         or args.governance_report is not None
@@ -1179,6 +1212,7 @@ def main() -> None:
         or args.diff_sessions
         or export_l1
         or export_l3
+        or export_sink
         or args.export_remediation_manifest is not None
         or args.regenerate_report is not None
         or args.governance_report is not None
@@ -1199,6 +1233,7 @@ def main() -> None:
         or args.diff_sessions
         or args.export_dsar is not None
         or export_l3
+        or export_sink
         or args.export_remediation_manifest is not None
         or args.regenerate_report is not None
         or args.governance_report is not None
@@ -1206,8 +1241,8 @@ def main() -> None:
         print(
             "Cannot combine --export-l1 with --web, --reset-data, "
             "--export-audit-trail, --validate-config, --diff, --export-dsar, "
-            "--export-l3, --export-remediation-manifest, --regenerate-report, "
-            "or --governance-report.",
+            "--export-l3, --export-findings-sink, --export-remediation-manifest, "
+            "--regenerate-report, or --governance-report.",
             file=sys.stderr,
         )
         sys.exit(2)
@@ -1220,6 +1255,7 @@ def main() -> None:
         or args.diff_sessions
         or args.export_dsar is not None
         or export_l1
+        or export_sink
         or args.export_remediation_manifest is not None
         or args.regenerate_report is not None
         or args.governance_report is not None
@@ -1227,8 +1263,8 @@ def main() -> None:
         print(
             "Cannot combine --export-l3 with --web, --reset-data, "
             "--export-audit-trail, --validate-config, --diff, --export-dsar, "
-            "--export-l1, --export-remediation-manifest, --regenerate-report, "
-            "or --governance-report.",
+            "--export-l1, --export-findings-sink, --export-remediation-manifest, "
+            "--regenerate-report, or --governance-report.",
             file=sys.stderr,
         )
         sys.exit(2)
@@ -1242,6 +1278,7 @@ def main() -> None:
         or args.export_dsar is not None
         or export_l1
         or export_l3
+        or export_sink
         or args.prefilter_status
         or args.regenerate_report is not None
         or args.governance_report is not None
@@ -1264,6 +1301,7 @@ def main() -> None:
         or args.export_dsar is not None
         or export_l1
         or export_l3
+        or export_sink
         or args.export_remediation_manifest is not None
         or args.governance_report is not None
     ):
@@ -1284,6 +1322,7 @@ def main() -> None:
         or args.export_dsar is not None
         or export_l1
         or export_l3
+        or export_sink
         or args.export_remediation_manifest is not None
         or args.regenerate_report is not None
         or args.prefilter_status
@@ -1293,6 +1332,28 @@ def main() -> None:
             "--export-audit-trail, --validate-config, --diff, --export-dsar, "
             "--export-l1, --export-l3, --export-remediation-manifest, --regenerate-report, or "
             "--prefilter-status.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+
+    if export_sink and (
+        args.web
+        or args.reset_data
+        or args.export_audit_trail is not None
+        or args.validate_config
+        or args.diff_sessions
+        or args.export_dsar is not None
+        or export_l1
+        or export_l3
+        or args.export_remediation_manifest is not None
+        or args.regenerate_report is not None
+        or args.governance_report is not None
+    ):
+        print(
+            "Cannot combine --export-findings-sink with --web, --reset-data, "
+            "--export-audit-trail, --validate-config, --diff, --export-dsar, "
+            "--export-l1, --export-l3, --export-remediation-manifest, "
+            "--regenerate-report, or --governance-report.",
             file=sys.stderr,
         )
         sys.exit(2)
@@ -1307,6 +1368,10 @@ def main() -> None:
 
     if args.l1_output and args.export_l1 is None:
         print("--l1-output requires --export-l1.", file=sys.stderr)
+        sys.exit(2)
+
+    if args.allow_sample_export and args.export_findings_sink is None:
+        print("--allow-sample-export requires --export-findings-sink.", file=sys.stderr)
         sys.exit(2)
 
     if args.l3_grant and args.export_l3 is None:
@@ -1490,6 +1555,42 @@ def main() -> None:
                     print(f"L1 metadata_manifest written to {dest}", file=sys.stderr)
                 else:
                     sys.stdout.write(body)
+            finally:
+                engine.db_manager.dispose()
+        return
+
+    if args.export_findings_sink is not None:
+        _emit_runtime_trust_info(runtime_trust, to_stdout=False, to_stderr=True)
+        from core.findings_sink import (
+            FindingsSinkError,
+            SampleExportNotAcknowledged,
+            push_session_to_sink,
+        )
+        from core.licensing.errors import FeatureTierBlockedError
+
+        with otel_span(
+            "export.findings_sink", session_id=str(args.export_findings_sink)
+        ):
+            engine = AuditEngine(config, config_path=args.config)
+            try:
+                try:
+                    label = push_session_to_sink(
+                        config,
+                        engine.db_manager,
+                        args.export_findings_sink,
+                        allow_sample_export=bool(args.allow_sample_export),
+                        require_explicit_sample_ack=True,
+                    )
+                except SampleExportNotAcknowledged as e:
+                    print(str(e), file=sys.stderr)
+                    sys.exit(1)
+                except FeatureTierBlockedError as e:
+                    print(f"Licensing: {e}", file=sys.stderr)
+                    sys.exit(2)
+                except FindingsSinkError as e:
+                    print(f"Findings sink error: {e}", file=sys.stderr)
+                    sys.exit(1)
+                print(f"Findings exported to {label}")
             finally:
                 engine.db_manager.dispose()
         return

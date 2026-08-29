@@ -8,6 +8,11 @@
 ## Status history
 
 - **2026-07-01:** Proposed — hoist operator HITL rigor boilerplate from satellite repos into one canonical, referenceable ADR (#994).
+- **2026-08-28:** Amended — satellite normalization is **additive**, not
+  replace/supersede: new canon stubs are added; existing local ADRs stay
+  Accepted as that repo's history. Canon index gains ADR-0055 and ADR-0061.
+  Origin: GitHub [#1812](https://github.com/DataBoar/data-boar/issues/1812).
+  Status remains Proposed; genesis Date (UTC) unchanged.
 
 ## Context
 
@@ -25,7 +30,7 @@ Before hoisting or retaining an ADR in a satellite repo, apply:
 
 > **Would this decision make sense verbatim in another ecosystem repo?**
 >
-> - **Yes** (rigor, process, HITL, governance, PowerShell invariants, test discipline) → **global** — authoritative text lives in **data-boar**; satellites use a **reference stub**.
+> - **Yes** (rigor, process, HITL, governance, PowerShell invariants, test discipline) → **global** — authoritative text lives in **data-boar**; satellites **add** a **reference stub** pointing here. Existing duplicated local ADRs are **not** deleted or marked superseded.
 > - **No** (names a product script, repo path, consumer-specific contract) → **local** — stays in the satellite only.
 
 Examples: *contextual contract for `inv.ps1`* → **local**; *RCA before fix* → **global**.
@@ -46,8 +51,14 @@ Examples: *contextual contract for `inv.ps1`* → **local**; *RCA before fix* �
 | Audit gate as single source of truth | Global | **This ADR** §3.5 · [ADR 0072](ADR-0072-commit-gate-vs-release-gate-distinct-criteria.md) (commit vs release) |
 | Regression test discipline | Global | **This ADR** §3.6 |
 | Plans segregation (external docs ↔ plans) | Global | [ADR 0004](ADR-0004-external-docs-no-markdown-links-to-plans.md) |
+| Orthogonal priority axes (H/U/A/P/G/S/M) | Global | [ADR 0055](ADR-0055-orthogonal-priority-axes-anti-collision-contract.md) |
+| U-axis issue sub-order and cross-milestone gate | Global | [ADR 0061](ADR-0061-u-axis-issue-suborder-and-cross-milestone-gate.md) |
 
-Satellites **replace** duplicated global stubs with one short **reference-stub ADR** pointing here (and to [ADR 0000](ADR-0000-project-origin-and-adr-baseline.md) for UMADR format).
+Satellites **add** a short **reference-stub ADR** pointing here (and to
+[ADR 0000](ADR-0000-project-origin-and-adr-baseline.md) for UMADR format). They do
+**not** delete or mark superseded existing duplicated local ADRs (`0001`–`0012` and
+similar) — those remain the historical record of that repository. Going forward, a
+**new** global-scope decision references the canon instead of duplicating full text.
 
 ### 3. Hoisted global principles (authoritative text)
 
@@ -104,7 +115,9 @@ Local pre-commit and remote CI must not diverge. One wrapper script is the **def
 
 - **Positive:** One auditable rigor canon; satellites stay thin; operator HITL posture is preserved without per-repo drift.
 - **Positive:** Clear global×local rule for future ADRs and agent sessions.
-- **Negative:** Satellite PRs must replace boilerplate with stubs (one-time normalization per repo).
+- **Negative:** Satellite PRs must **add** a canon stub (one-time additive
+  normalization per repo). Existing local ADRs stay in place as history — they
+  are not deleted or marked superseded.
 - **Ongoing:** Material changes to hoisted principles amend this ADR (Status history) or spawn a numbered sibling ADR when scope splits.
 
 ## References
@@ -113,4 +126,5 @@ Local pre-commit and remote CI must not diverge. One wrapper script is the **def
 - [ADR 0046](ADR-0046-operator-intent-and-blameless-collaboration.md) · [0047](ADR-0047-rca-first-defect-investigation-and-fix-discipline.md) · [0048](ADR-0048-operator-facing-taxonomy-and-naming-contract-preservation.md) · [0049](ADR-0049-no-brittle-mitigations-robust-input-handling.md)
 - [ADR 0004 — External docs must not link into plans](ADR-0004-external-docs-no-markdown-links-to-plans.md)
 - [ADR 0072 — Commit gate vs release gate](ADR-0072-commit-gate-vs-release-gate-distinct-criteria.md)
-- GitHub [#994](https://github.com/FabioLeitao/data-boar/issues/994)
+- GitHub [#994](https://github.com/DataBoar/data-boar/issues/994)
+- GitHub [#1812](https://github.com/DataBoar/data-boar/issues/1812)
