@@ -798,6 +798,17 @@ def normalize_config(
     out["report"] = data.get("report", {})
     if "output_dir" not in out["report"]:
         out["report"]["output_dir"] = "."
+    raw_formats = out["report"].get("formats")
+    if not isinstance(raw_formats, list) or not raw_formats:
+        out["report"]["formats"] = ["xlsx"]
+    else:
+        allowed = {"xlsx", "ods"}
+        seen: list[str] = []
+        for item in raw_formats:
+            key = str(item).strip().lower()
+            if key in allowed and key not in seen:
+                seen.append(key)
+        out["report"]["formats"] = seen or ["xlsx"]
     # Optional: list of { norm_tag_pattern, base_legal, risk, recommendation, priority, relevant_for } for recommendations
     overrides = out["report"].get("recommendation_overrides")
     out["report"]["recommendation_overrides"] = (

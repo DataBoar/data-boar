@@ -116,6 +116,10 @@ def test_heatmap_embed_only_accepts_path_under_output_dir(tmp_path):
     bad = tmp_path / "outside.png"
     bad.write_bytes(b"x")
     assert _heatmap_path_under_output_dir(str(bad), str(out)) is None
+    # Same basename outside must not win: join is output_dir / name only.
+    twin = tmp_path / "heatmap_sess123456.png"
+    twin.write_bytes(b"evil")
+    assert _heatmap_path_under_output_dir(str(twin), str(out)) == good.resolve()
 
 
 def test_report_excel_and_heatmap_data_sheet_no_regression(tmp_path):

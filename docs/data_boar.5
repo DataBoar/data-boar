@@ -261,6 +261,12 @@ to password string for encrypted PDFs and ZIP\-based documents; use env vars or 
 .B report
 .I output_dir
 (path);
+.I formats
+(list; default
+.BR xlsx ;
+add
+.B ods
+for OpenDocument spreadsheet — LibreOffice Calc and SoftMaker PlanMaker);
 optionally
 .I recommendation_overrides
 (list of norm_tag_pattern, base_legal, risk, recommendation, priority, relevant_for) to customise the Recommendations sheet per category;
@@ -652,6 +658,7 @@ Example main config (excerpt):
 
 \fBreport:\fR
   output_dir: .
+  # formats: [xlsx, ods]
   # jurisdiction_hints:
   #   enabled: false
   recommendation_overrides:

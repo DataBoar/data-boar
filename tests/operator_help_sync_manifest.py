@@ -292,6 +292,11 @@ OPERATOR_HELP_MARKERS: tuple[OperatorHelpMarker, ...] = (
         "/findings/csv",
     ),
     OperatorHelpMarker(
+        "report_ods",
+        None,
+        "?format=ods",
+    ),
+    OperatorHelpMarker(
         "sql_sample_limit_env",
         None,
         "DATA_BOAR_SQL_SAMPLE_LIMIT",
