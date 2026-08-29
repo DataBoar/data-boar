@@ -9,16 +9,21 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-# Assembler always symlinks python3 → versioned binary (3.14 / 3.14t…).
-$python = "/usr/local/bin/python3"
+# Skip license ENTRYPOINT so smoke measures the interpreter (cp314t), not PYTHON_GIL=1.
+$python = "/usr/local/bin/python3.14t"
 
 if (-not (Get-Command podman -ErrorAction SilentlyContinue)) {
     Write-Error "podman not in PATH"
 }
 
+function Invoke-ImagePy {
+    param([string]$Code)
+    podman run --rm --entrypoint $python $Image -c $Code
+}
+
 Write-Host "=== docker-image-smoke: $Image ===" -ForegroundColor Cyan
 
-$out = podman run --rm $Image $python -c "from core.about import _package_version; print(_package_version())"
+$out = Invoke-ImagePy "from core.about import _package_version; print(_package_version())"
 Write-Host "public version -> $out"
 
 if ($Version) {
@@ -30,7 +35,7 @@ if ($Version) {
     }
 }
 
-podman run --rm $Image $python -c "import boar_fast_filter; print('boar_fast_filter:', boar_fast_filter.__name__)"
+Invoke-ImagePy "import boar_fast_filter; print('boar_fast_filter:', boar_fast_filter.__name__)"
 
 # #1401: in_artifact extras must import
 $extras = @'
@@ -39,7 +44,7 @@ m = load_manifest()
 assert_in_artifact_imports(m)
 print("extras_manifest: ok in_artifact=", sum(1 for e in m.get("extras", {}).values() if e.get("in_artifact")))
 '@
-podman run --rm $Image $python -c $extras
+Invoke-ImagePy $extras
 
 $tls = @'
 import httpx
@@ -48,6 +53,6 @@ resp.raise_for_status()
 assert resp.status_code == 200, resp.status_code
 print("tls_probe: ok status=", resp.status_code)
 '@
-podman run --rm $Image $python -c $tls
+Invoke-ImagePy $tls
 
 Write-Host "=== docker-image-smoke: PASS ===" -ForegroundColor Green

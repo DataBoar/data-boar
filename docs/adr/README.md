@@ -111,6 +111,7 @@ Canonical completeness of numbered ADR files is enforced for this table **and** 
 | 0088 | [Verify the verifier: integrity/authorization checks must not depend on the artifact they are verifying](ADR-0088-verify-the-verifier-no-self-referential-trust-chain.md) | Accepted |
 | 0089 | [Native package signed repository: hosting, signing keys, and community boundary](ADR-0089-native-package-signed-repository-hosting-keys-and-community-boundary.md) | Accepted |
 | 0090 | [Open-core / plugin boundary: Pro auditability, reference sample, reverse leakage guard](ADR-0090-open-core-plugin-boundary-pro-auditability-reference-sample.md) | Accepted |
+| 0091 | [One published container image (cp314t); GIL restored by license at ENTRYPOINT](ADR-0091-container-cp314t-license-gil-gate.md) | Proposed |
 
 ## Related docs
 

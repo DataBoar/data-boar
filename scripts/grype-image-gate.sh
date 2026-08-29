@@ -50,6 +50,11 @@ fi
 echo "=== grype image gate (#1028) ==="
 echo "Image:  $IMAGE"
 echo "Policy: --fail-on high --only-fixed (actionable High/Critical only)"
+if grype version >/dev/null 2>&1; then
+  echo "grype:  $(grype version 2>/dev/null | awk -F': *' '/^Version:/{print $2; exit}')"
+else
+  echo "grype:  $(grype --version 2>/dev/null || true)"
+fi
 
 ARGS=(grype "$IMAGE" --fail-on high --only-fixed)
 if [[ -f "$CONFIG" ]]; then

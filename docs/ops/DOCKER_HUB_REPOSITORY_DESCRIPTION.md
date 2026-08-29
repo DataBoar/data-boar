@@ -2,7 +2,7 @@
 
 **Purpose:** The [Docker Hub UI](https://hub.docker.com/r/fabioleitao/data_boar) **Short description** and **Full description** are **not** stored in Git. This file is the **canonical text** to paste after each release so Hub stays aligned with **`pyproject.toml`**, [docs/deploy/DEPLOY.md](../deploy/DEPLOY.md), and [docs/releases/](../releases/).
 
-**When to update:** Immediately after you push **`fabioleitao/data_boar:<semver>`** and **`latest`** for a **stable** / **`.postN`** image publish (and after publishing a companion **`-nogil`** tag). Bump the **Current release** lines below to match the published tags. **Docker Hub does not read this file** — you must open **Repository → General → Edit** and paste; otherwise the public page can stay stuck for months.
+**When to update:** Immediately after you push **`fabioleitao/data_boar:<semver>`** and **`latest`** for a **stable** / **`.postN`** image publish. Bump the **Current release** lines below to match the published tags. **Docker Hub does not read this file** — you must open **Repository → General → Edit** and paste; otherwise the public page can stay stuck for months.
 
 **Portuguese twin (choice section):** [DOCKER_HUB_REPOSITORY_DESCRIPTION.pt_BR.md](DOCKER_HUB_REPOSITORY_DESCRIPTION.pt_BR.md)
 
@@ -15,7 +15,7 @@
 Use one line (adjust version when you bump):
 
 ```text
-Data Boar — PII discovery. Default: any x86-64. Optional -nogil: real parallelism (v2+).
+Data Boar — PII discovery. Image: cp314t; no-GIL only with Enterprise license.
 ```
 
 ---
@@ -31,7 +31,7 @@ Copy from the block below into **Repository → Edit** on Docker Hub.
 
 **Compliance-aware discovery** of personal and sensitive data across databases, files, APIs, and more — **data soup** in, structured findings out. Open-source Python stack with optional ML/DL; aligns with **LGPD**, **GDPR**, **CCPA**, and other frameworks via config.
 
-Two published image variants. **Pick by workload and CPU — not by tag name alone.**
+One published image (**cp314t**). **No-GIL at runtime is Enterprise-only** (`PYTHON_GIL=1` for every other license tier). Paste this Full description **when that image is on Hub** — until the next image publish, Hub `:latest` is still the GIL image from **2026-07-30**.
 
 ### Which image should I pull?
 
@@ -77,9 +77,9 @@ So the image pays a measured **~21%** on that SELECT path to keep **~5.3×** on 
 
 **Do not** force `PYTHON_GIL=0` / `-Xgil=0` to keep cext: that runs C extensions that did **not** declare free-threaded safety — silent data races on findings are worse than a slower SELECT.
 
-#### License tier still caps workers
+#### License tier still caps workers — and the GIL
 
-The free-threaded image is public, but **parallelism ceiling is a license concern**, not an image concern. Effective workers are `min(scan.max_workers, tier cap)` in `core/engine.py` (licensing worker cap / `#551`); open mode without a JWT uses `OPEN_MODE_WORKER_CAP`. Full benefit of many workers depends on the tier that allows them.
+The image bits are free-threaded, but **no-GIL at process start is Enterprise-only**. Other tiers get `PYTHON_GIL=1`. Worker ceiling remains `min(scan.max_workers, tier cap)` in `core/engine.py` (`#551`); open mode without a JWT uses `OPEN_MODE_WORKER_CAP`.
 
 ### Copyright and maintainer
 
@@ -91,10 +91,9 @@ The free-threaded image is public, but **parallelism ceiling is a license concer
 
 | Tag | What it is |
 | --- | ---------- |
-| **`fabioleitao/data_boar:latest`** | Same digest as **`1.7.4.post12`** (universal GIL). **Never** `-nogil`. |
-| **`fabioleitao/data_boar:1.7.4.post12`** | Universal GIL image (any x86-64, `popcnt=0`) |
-| **`fabioleitao/data_boar:1.7.4.post12-nogil`** | Free-threaded opt-in (x86-64-v2+ only) |
-| **`fabioleitao/data_boar:1.7.4`** | June 2026 GA (historical; not retagged by post12) |
+| **`fabioleitao/data_boar:latest`** | Next publish: cp314t + license GIL gate. **Until then** same digest as **`1.7.4.post12`** (GIL). |
+| **`fabioleitao/data_boar:1.7.4.post12`** | Last GIL-on `:latest` (any x86-64, `popcnt=0`) |
+| **`fabioleitao/data_boar:1.7.4`** | June 2026 GA (historical) |
 
 ### Quick start (web API + dashboard on port 8088)
 
@@ -107,18 +106,9 @@ docker run -d -p 8088:8088 -v "$(pwd)/data:/data" -e CONFIG_PATH=/data/config.ya
 
 Create `data/config.yaml` from the repo’s `deploy/config.example.yaml` if you do not have one.
 
-Free-threaded (modern CPU only):
-
-```bash
-docker pull fabioleitao/data_boar:1.7.4.post12-nogil
-docker run -d -p 8088:8088 -v "$(pwd)/data:/data" -e CONFIG_PATH=/data/config.yaml \
-  fabioleitao/data_boar:1.7.4.post12-nogil
-```
-
 ### CLI one-shot (override container command)
 
-GIL image entrypoint: **`/usr/local/bin/python3.14`** (symlinks **`python3`** / **`python`**).  
-`-nogil` entrypoint: **`/usr/local/bin/python3.14t`**.
+Default ENTRYPOINT is the license GIL gate (`python3.14t -m core.licensing.gil_container_gate`). Command args are passed through (e.g. `main.py …`). To inspect the interpreter without the gate: `--entrypoint /usr/local/bin/python3.14t`.
 
 ```bash
 docker run --rm -v "$(pwd)/data:/data" fabioleitao/data_boar:latest \

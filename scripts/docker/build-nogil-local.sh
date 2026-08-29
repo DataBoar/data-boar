@@ -25,15 +25,30 @@ SMOKE_VERSION="${APP_VERSION}"
 need_() { command -v "$1" >/dev/null 2>&1 || { echo "FATAL: $1 not in PATH" >&2; exit 127; }; }
 need_ podman
 
-echo "=== podman build -f Dockerfile.nogil -t ${IMAGE} ==="
-podman build -f Dockerfile.nogil -t "${IMAGE}" .
+ENT_CFG=""
+DEMO_WEB_NAME=""
+cleanup_nogil_local_ac() {
+  if [[ -n "${DEMO_WEB_NAME}" ]]; then
+    podman rm -f "${DEMO_WEB_NAME}" >/dev/null 2>&1 || true
+  fi
+  if [[ -n "${ENT_CFG}" ]]; then
+    rm -f "${ENT_CFG}"
+  fi
+}
+trap cleanup_nogil_local_ac EXIT
+
+echo "=== podman build -f Dockerfile -t ${IMAGE} ==="
+podman build -f Dockerfile -t "${IMAGE}" .
 podman tag "${IMAGE}" "${ALIAS}"
 
-echo "=== AC: sys._is_gil_enabled() is False (boot) ==="
-podman run --rm "${ALIAS}" python -c 'import sys; v=sys._is_gil_enabled(); print("gil_enabled", v); raise SystemExit(0 if v is False else 1)'
+# Interpreter contract: skip license ENTRYPOINT (OPEN would set PYTHON_GIL=1).
+EP=(podman run --rm --entrypoint /usr/local/bin/python3.14t "${ALIAS}")
+
+echo "=== AC: sys._is_gil_enabled() is False (boot, --entrypoint) ==="
+"${EP[@]}" -c 'import sys; v=sys._is_gil_enabled(); print("gil_enabled", v); raise SystemExit(0 if v is False else 1)'
 
 echo "=== AC: GIL stays False after sqlalchemy import ==="
-OUT="$(podman run --rm "${ALIAS}" python -W error::RuntimeWarning -c 'import sqlalchemy, sys; print(sqlalchemy.__version__); print("gil_after_sa", sys._is_gil_enabled()); raise SystemExit(0 if sys._is_gil_enabled() is False else 1)' 2>&1)" || {
+OUT="$("${EP[@]}" -W error::RuntimeWarning -c 'import sqlalchemy, sys; print(sqlalchemy.__version__); print("gil_after_sa", sys._is_gil_enabled()); raise SystemExit(0 if sys._is_gil_enabled() is False else 1)' 2>&1)" || {
   echo "$OUT" >&2
   echo "FATAL: sqlalchemy import re-enabled GIL or raised RuntimeWarning" >&2
   exit 1
@@ -41,7 +56,7 @@ OUT="$(podman run --rm "${ALIAS}" python -W error::RuntimeWarning -c 'import sql
 echo "$OUT"
 
 echo "=== AC: zero sqlalchemy *.so under site-packages ==="
-podman run --rm "${ALIAS}" python -c '
+"${EP[@]}" -c '
 import pathlib, site
 root = pathlib.Path(site.getsitepackages()[0]) / "sqlalchemy"
 sos = sorted(root.rglob("*.so")) if root.is_dir() else []
@@ -50,7 +65,7 @@ raise SystemExit(0 if not sos else 1)
 '
 
 echo "=== AC: ML + boar_fast_filter imports (GIL still False) ==="
-podman run --rm "${ALIAS}" python -c '
+"${EP[@]}" -c '
 import numpy, scipy, sklearn, pandas, boar_fast_filter, sqlalchemy, sys
 print("imports_ok", numpy.__version__, boar_fast_filter.__file__)
 print("gil_after_stack", sys._is_gil_enabled())
@@ -58,7 +73,7 @@ raise SystemExit(0 if sys._is_gil_enabled() is False else 1)
 '
 
 echo "=== AC: filter .so is cpython-314t (not abi3) ==="
-podman run --rm "${ALIAS}" python -c '
+"${EP[@]}" -c '
 import boar_fast_filter, pathlib
 pkg = pathlib.Path(boar_fast_filter.__file__).resolve().parent
 sos = sorted(pkg.rglob("*.so"))
@@ -69,14 +84,34 @@ assert any("314t" in p.name for p in sos), sos
 print("filter_ok", sos[0].name)
 '
 
+echo "=== AC: license gate — OPEN/default forces PYTHON_GIL=1 ==="
+GATE_OUT="$(podman run --rm "${ALIAS}" python -c 'import os,sys; g=os.environ.get("PYTHON_GIL"); e=sys._is_gil_enabled(); print("PYTHON_GIL", g, "gil_enabled", e); raise SystemExit(0 if g=="1" and e is True else 1)' 2>&1)" || {
+  echo "$GATE_OUT" >&2
+  echo "FATAL: default entrypoint must set PYTHON_GIL=1 and enable GIL" >&2
+  exit 1
+}
+echo "$GATE_OUT"
+
+echo "=== AC: license gate — open + effective_tier enterprise keeps no-GIL ==="
+ENT_CFG="$(mktemp)"
+printf '%s\n' 'licensing:' '  mode: open' '  effective_tier: enterprise' > "${ENT_CFG}"
+# Distroless nonroot cannot read a 0600 mktemp file bind-mounted at /data.
+chmod a+r "${ENT_CFG}"
+ENT_OUT="$(podman run --rm -v "${ENT_CFG}:/data/config.yaml:ro" -e CONFIG_PATH=/data/config.yaml "${ALIAS}" python -c 'import os,sys; g=os.environ.get("PYTHON_GIL"); e=sys._is_gil_enabled(); print("PYTHON_GIL", g, "gil_enabled", e); raise SystemExit(0 if not g and e is False else 1)' 2>&1)" || {
+  echo "$ENT_OUT" >&2
+  echo "FATAL: Enterprise open-mode YAML must leave PYTHON_GIL unset and GIL off" >&2
+  exit 1
+}
+echo "$ENT_OUT"
+
 echo "=== AC: docker-image-smoke (public version; no GIL RuntimeWarning) ==="
 SMOKE_OUT="$(./scripts/docker/docker-image-smoke.sh "${ALIAS}" "${SMOKE_VERSION}" 2>&1)" || {
   echo "$SMOKE_OUT" >&2
   exit 1
 }
 echo "$SMOKE_OUT"
-if grep -qiE 'RuntimeWarning|GIL has been enabled' <<<"$SMOKE_OUT"; then
-  echo "FATAL: smoke emitted GIL RuntimeWarning" >&2
+if grep -qiE "sqlalchemy\\.cyextension|to load module 'sqlalchemy" <<<"$SMOKE_OUT"; then
+  echo "FATAL: smoke loaded sqlalchemy cext" >&2
   exit 1
 fi
 
@@ -87,8 +122,8 @@ VER_OUT="$(podman run --rm "${ALIAS}" python main.py --version 2>&1)" || {
 }
 echo "$VER_OUT"
 grep -qw "${SMOKE_VERSION}" <<<"$VER_OUT" || { echo "FATAL: version token missing" >&2; exit 1; }
-if grep -qiE 'RuntimeWarning|GIL has been enabled' <<<"$VER_OUT"; then
-  echo "FATAL: --version emitted GIL RuntimeWarning" >&2
+if grep -qiE "sqlalchemy\\.cyextension|to load module 'sqlalchemy" <<<"$VER_OUT"; then
+  echo "FATAL: --version loaded sqlalchemy cext" >&2
   exit 1
 fi
 
@@ -119,6 +154,79 @@ if [[ "${DEMO_RC}" -ne 0 && "${DEMO_RC}" -ne 124 ]]; then
   echo "FATAL: --demo unexpected exit ${DEMO_RC}" >&2
   exit 1
 fi
+
+echo "=== AC: --demo --web /health + PID 1 PYTHON_GIL=1 (OPEN, no published port) ==="
+# Do not podman exec a fresh python -c and trust sys._is_gil_enabled(): that process
+# does not inherit PYTHON_GIL from the gate's os.execve. Read PID 1 environ instead.
+DEMO_WEB_NAME="data-boar-nogil-demo-web-$$"
+podman run -d --name "${DEMO_WEB_NAME}" "${ALIAS}" \
+  python main.py --demo --web --port 8088 --allow-insecure-http >/dev/null
+HEALTH_JSON=""
+deadline=$((SECONDS + 40))
+while (( SECONDS < deadline )); do
+  if HEALTH_JSON="$(
+    podman exec "${DEMO_WEB_NAME}" /usr/local/bin/python3.14t -c '
+import json, sys, urllib.request
+r = urllib.request.urlopen("http://127.0.0.1:8088/health", timeout=2)
+body = json.loads(r.read().decode())
+sys.stdout.write(json.dumps(body, separators=(",", ":")))
+raise SystemExit(0 if r.status == 200 and body.get("status") == "ok" else 1)
+' 2>/dev/null
+  )"; then
+    break
+  fi
+  HEALTH_JSON=""
+  sleep 2
+done
+if [[ -z "${HEALTH_JSON}" ]]; then
+  echo "FATAL: --demo --web /health never became ready (status ok)" >&2
+  podman logs "${DEMO_WEB_NAME}" >&2 || true
+  exit 1
+fi
+echo "${HEALTH_JSON}"
+python3 -c '
+import json, sys
+body = json.load(sys.stdin)
+lic = (body.get("license") or {}).get("license_state")
+if lic != "OPEN":
+    raise SystemExit(f"FATAL: expected license_state OPEN, got {lic!r}")
+' <<<"${HEALTH_JSON}" || {
+  echo "FATAL: /health JSON license_state is not OPEN" >&2
+  podman logs "${DEMO_WEB_NAME}" >&2 || true
+  exit 1
+}
+GIL_PID1="$(
+  podman exec "${DEMO_WEB_NAME}" /usr/local/bin/python3.14t -c '
+import pathlib, sys
+raw = pathlib.Path("/proc/1/environ").read_bytes()
+env = {}
+for part in raw.split(b"\0"):
+    if not part or b"=" not in part:
+        continue
+    key, val = part.split(b"=", 1)
+    env[key.decode("ascii", "replace")] = val.decode("ascii", "replace")
+g = env.get("PYTHON_GIL", "")
+print(g)
+raise SystemExit(0 if g == "1" else 1)
+'
+)" || {
+  echo "${GIL_PID1}" >&2
+  echo "FATAL: PID 1 /proc/1/environ must have PYTHON_GIL=1 on default/OPEN --demo" >&2
+  podman logs "${DEMO_WEB_NAME}" >&2 || true
+  exit 1
+}
+echo "pid1_PYTHON_GIL ${GIL_PID1}"
+podman rm -f "${DEMO_WEB_NAME}" >/dev/null
+DEMO_WEB_NAME=""
+
+echo "=== AC: cryptography >= 50.0.0 (GHSA-g6cj-pr64-35w5) ==="
+podman run --rm --entrypoint /usr/local/bin/python3.14t "${ALIAS}" -c '
+import importlib.metadata as m
+v = m.version("cryptography")
+print("cryptography", v)
+parts = tuple(int(p) for p in v.split(".")[:2])
+raise SystemExit(0 if parts >= (50, 0) else 1)
+'
 
 echo "=== AC: grype gate ==="
 ./scripts/grype-image-gate.sh "${ALIAS}"

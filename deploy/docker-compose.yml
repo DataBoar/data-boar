@@ -24,7 +24,7 @@ services:
       test:
         [
           "CMD",
-          "/usr/local/bin/python3.14",
+          "/usr/local/bin/python3.14t",
           "-c",
           "import urllib.request, sys; r = urllib.request.urlopen('http://127.0.0.1:8088/health', timeout=8); sys.exit(0 if r.status == 200 else 1)",
         ]
