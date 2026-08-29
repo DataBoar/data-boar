@@ -22,9 +22,23 @@ import time
 import urllib.error
 import urllib.request
 
+from connectors.url_guard import validate_outbound_url
+
 DEFAULT_BASE = "http://127.0.0.1:8088"
 DEFAULT_POLL_INTERVAL = 10
 DEFAULT_MAX_POLLS = 120
+
+
+def _assert_dashboard_url(url: str) -> None:
+    """Reject non-http(s) and unparseable URLs before urlopen (#529).
+
+    Loopback / RFC1918 are **allowed**: this helper polls a local dashBOARd
+    (default ``http://127.0.0.1:8088``). ``allow_private=True`` is required
+    so :func:`validate_outbound_url` does not treat localhost as SSRF.
+    """
+    err = validate_outbound_url(url, allow_private=True, label="dashboard URL")
+    if err:
+        raise ValueError(err)
 
 
 def _extra_headers(api_key: str | None) -> dict[str, str]:
@@ -41,10 +55,10 @@ def get_json(
     extra_headers: dict[str, str] | None = None,
 ) -> dict:
     headers = dict(extra_headers or {})
-    req = urllib.request.Request(
-        f"{base.rstrip('/')}{path}", method="GET", headers=headers
-    )
-    with urllib.request.urlopen(req, timeout=60) as r:  # nosec B310
+    url = f"{base.rstrip('/')}{path}"
+    _assert_dashboard_url(url)
+    req = urllib.request.Request(url, method="GET", headers=headers)
+    with urllib.request.urlopen(req, timeout=60) as r:  # nosec B310 — url_guard
         return json.loads(r.read().decode())
 
 
@@ -58,13 +72,15 @@ def post_json(
     headers = {"Content-Type": "application/json"}
     headers.update(extra_headers or {})
     data = json.dumps(body).encode()
+    url = f"{base.rstrip('/')}{path}"
+    _assert_dashboard_url(url)
     req = urllib.request.Request(
-        f"{base.rstrip('/')}{path}",
+        url,
         data=data,
         method="POST",
         headers=headers,
     )
-    with urllib.request.urlopen(req, timeout=60) as r:  # nosec B310
+    with urllib.request.urlopen(req, timeout=60) as r:  # nosec B310 — url_guard
         return json.loads(r.read().decode())
 
 

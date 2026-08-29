@@ -3,11 +3,20 @@
 import logging
 import os
 import time
-import pytest
 from pathlib import Path
 
+import pytest
+
 from config.loader import load_config, normalize_config
-from core.database import DataSourceInventory, DataWipeLog, LocalDBManager, failure_hint
+from core.database import (
+    ApplicationFinding,
+    DatabaseFinding,
+    DataSourceInventory,
+    DataWipeLog,
+    FilesystemFinding,
+    LocalDBManager,
+    failure_hint,
+)
 
 
 def test_scan_scope_key_emits_warning(caplog):
@@ -32,6 +41,13 @@ def test_normalize_config_empty():
     assert out.get("regex_overrides_files") == []
     assert out.get("ml_patterns_files") == []
     assert out.get("compliance_frameworks") == []
+
+
+def test_finding_pattern_and_norm_tag_columns_are_500() -> None:
+    """Joined pattern/norm strings need more than VARCHAR(100) (#516). SQLite ignores width."""
+    for model in (DatabaseFinding, FilesystemFinding, ApplicationFinding):
+        assert model.pattern_detected.type.length == 500
+        assert model.norm_tag.type.length == 500
 
 
 def test_normalize_config_sql_sampling_overrides():

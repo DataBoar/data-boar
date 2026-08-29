@@ -9,7 +9,8 @@ Descrição textual dos módulos, classes e funções principais e como eles se 
 ## Pontos de entrada
 
 - **main.py** — CLI: `main()` analisa `--config`, `--web`, `--port`, opcionalmente `--tenant`, `--technician`; carrega config via `config.loader.load_config`; se não for `--web`, cria `AuditEngine(config)`, executa `start_audit(...)` e `generate_final_reports()`; se `--web`, executa uvicorn com `api.routes.app` na porta informada.
-- **api/routes.py** — App FastAPI: na inicialização carrega config e cria `AuditEngine`. Rotas da API: POST `/scan`, `/start`; GET `/status`, `/report`, `/list`, `/reports/{session_id}`; PATCH `/sessions/{session_id}` e `/sessions/{session_id}/technician`. POST `/scan_database` aceita tenant e technician opcionais. Dashboard web (Jinja2): GET `/` (dashboard com inputs opcionais de tenant/technician e gráfico de progresso), GET `/reports`, GET/POST `/config`. Estáticos: `/static` → `api/static`.
+- **api/routes.py** — App FastAPI: na inicialização carrega config e cria `AuditEngine`. Rotas da API: POST `/scan`, `/start`; GET `/status`, `/report`, `/list`, `/reports/{session_id}`; PATCH `/sessions/{session_id}` e `/sessions/{session_id}/technician`. POST `/scan_database` aceita tenant e technician opcionais. Dashboard web (Jinja2): GET `/` (dashboard com inputs opcionais de tenant/technician e gráfico de progresso), GET `/reports`, GET/POST `/config`. Estáticos: `/static` → `api/static`. POC de maturidade (opcional): `POST /{locale}/assessment`, `GET /{locale}/assessment/export`.
+- **app/dashboard.py** — Visão executiva GRC em Streamlit (`streamlit run app/dashboard.py` após `uv sync --extra grc-dashboard`). Lê JSON do relatório (`DATA_BOAR_GRC_JSON` ou o exemplo em `schemas/`). Distinta do dashBOARd Jinja em **api/routes.py**.
 
 ---
 
@@ -28,6 +29,8 @@ Descrição textual dos módulos, classes e funções principais e como eles se 
 - **core/connector_registry.py** — `register`, `get_connector`, `list_connector_types`, `connector_for_target`.
 - **core/engine.py** — **AuditEngine**: mantém db_manager e scanner; `start_audit()` → session_id; `_run_audit_targets` executa cada target via registry (sequencial ou paralelo); `_run_target` resolve conector e chama `connector.run()`. `generate_final_reports` chama report.generator e opcionalmente write_learned_patterns. Propriedades: `is_running`, `get_current_findings_count`, `get_last_report_path`. Slot de execução por processo: `try_claim_running()` / `clear_running()` (a API reserva no momento da requisição; inícios sobrepostos recebem HTTP 409). Importa conectores para que se registrem.
 - **core/learned_patterns.py** — `collect_learned_entries`, `write_learned_patterns` (grava YAML compatível com ml_patterns_file quando `learned_patterns.enabled`).
+- **core/licensing/** — Licença em runtime: **LicenseGuard** (`guard.py`) JWT + fingerprint de máquina (`fingerprint.py`); HMAC/integridade (`integrity.py`); gates de feature/tier. Helper de **GIL** no container (`gil_container_gate.py`): ENTRYPOINT distroless, define `PYTHON_GIL` por tier e faz `os.execve` do CPython.
+- **core/maturity_assessment/** — POC de maturidade organizacional: `scoring.py` (rúbrica), `pack.py` (packs por locale), `export_render.py` (exportação), `integrity.py` (HMAC por linha). Ligado em **api/routes.py** quando `api.maturity_self_assessment_poc_enabled` e a feature da licença permitem.
 
 ---
 
@@ -51,7 +54,8 @@ Descrição textual dos módulos, classes e funções principais e como eles se 
 
 ## API
 
-- **api/routes.py** — App FastAPI; arquivos estáticos em `/static`; templates Jinja2 em api/templates. Rotas de API e dashboard (GET /, /reports, /config; POST /scan, /config). Helpers: _get_config_path, _get_config_raw, _save_config_yaml.
+- **api/routes.py** — App FastAPI; arquivos estáticos em `/static`; templates Jinja2 em api/templates. Rotas de API e dashboard (GET /, /reports, /config; POST /scan, /config). POC de maturidade: `POST /{locale}/assessment`, `GET /{locale}/assessment/export`. Helpers: _get_config_path, _get_config_raw, _save_config_yaml.
+- **app/dashboard.py** não é este app FastAPI — extra Streamlit para JSON GRC (veja Pontos de entrada).
 
 ---
 
@@ -73,6 +77,6 @@ Descrição textual dos módulos, classes e funções principais e como eles se 
 
 ## Direção de dependências (sem ciclos)
 
-config.loader, core.session, core.database não importam o projeto. core.detector (opcional yaml/sklearn/pandas). core.scanner → core.detector. core.connector_registry — nenhum. connectors.* → core.connector_registry, core.database, core.scanner, utils.logger. core.engine → registry, database, scanner, session; importa conectores. report.generator → core.database, pandas, openpyxl, matplotlib/seaborn. api.routes → config.loader, core.engine. main → config.loader, core.engine, api.routes, uvicorn.
+config.loader, core.session, core.database não importam o restante do produto. core.detector (opcional yaml/sklearn/pandas). core.scanner → core.detector. core.connector_registry — nenhum. connectors.* → core.connector_registry, core.database, core.scanner, utils.logger. core.engine → registry, database, scanner, session; importa conectores. core.licensing → JWT/fingerprint/integridade (engine, API, gate GIL). core.maturity_assessment → scoring/pack/export/HMAC (api.routes e LocalDBManager). report.generator → core.database, pandas, openpyxl, matplotlib/seaborn. api.routes → config.loader, core.engine, maturidade opcional. app.dashboard → JSON GRC + Streamlit (não AuditEngine). main → config.loader, core.engine, api.routes, uvicorn.
 
 **Índice da documentação** (todos os tópicos, ambos os idiomas): [README.md](README.md) · [README.pt_BR.md](README.pt_BR.md).

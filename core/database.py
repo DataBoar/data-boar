@@ -108,8 +108,8 @@ class DatabaseFinding(Base):
     column_name = Column(String(100))
     data_type = Column(String(50))
     sensitivity_level = Column(String(20))
-    pattern_detected = Column(String(100))
-    norm_tag = Column(String(100))  # e.g. LGPD Art. 5, GDPR Art. 4(1)
+    pattern_detected = Column(String(500))
+    norm_tag = Column(String(500))  # e.g. LGPD Art. 5, GDPR Art. 4(1)
     ml_confidence = Column(Integer)
     created_at = Column(DateTime, default=_utc_now)
 
@@ -125,8 +125,8 @@ class FilesystemFinding(Base):
     file_name = Column(String(255))
     data_type = Column(String(50))  # extension / format
     sensitivity_level = Column(String(20))
-    pattern_detected = Column(String(100))
-    norm_tag = Column(String(100))
+    pattern_detected = Column(String(500))
+    norm_tag = Column(String(500))
     ml_confidence = Column(Integer)
     # File-identity fields for incremental scan (Phase 1 — additive, nullable).
     # NULL means the scan predates Phase 1 or stat/fingerprint collection failed.
@@ -156,8 +156,8 @@ class ApplicationFinding(Base):
     file_name = Column(String(255))  # e.g. property / field name
     data_type = Column(String(50))
     sensitivity_level = Column(String(20))
-    pattern_detected = Column(String(100))
-    norm_tag = Column(String(100))
+    pattern_detected = Column(String(500))
+    norm_tag = Column(String(500))
     ml_confidence = Column(Integer)
     created_at = Column(DateTime, default=_utc_now)
 
