@@ -12,7 +12,7 @@
 [![License](https://img.shields.io/github/license/DataBoar/data-boar)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/DataBoar/data-boar)](https://github.com/DataBoar/data-boar/releases)
 
-**Forensic-grade open-source PII scanner for LGPD · GDPR · evidence-ready compliance.**
+**Forensic-grade open-source PII scanner for LGPD · GDPR · evidence-ready compliance.** Primer: [FORENSICS_AND_EVIDENCE_PRIMER.md](docs/primers/FORENSICS_AND_EVIDENCE_PRIMER.md).
 
 **LGPD — real-world witness report (ISP field visit, Brazil):** [English](docs/LGPD_WITNESS_REPORT_NIO_FIELD_VISIT_2026.md) · [Português (Brasil)](docs/LGPD_WITNESS_REPORT_NIO_FIELD_VISIT_2026.pt_BR.md)
 
