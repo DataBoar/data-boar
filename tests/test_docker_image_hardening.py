@@ -46,23 +46,29 @@ def test_dockerfile_pins_all_from_images_by_digest() -> None:
     assert "python:3.14-slim" in joined
 
 
+def _dockerfile_from_first_from(text: str) -> str:
+    lines = text.splitlines()
+    for i, line in enumerate(lines):
+        if line.strip().upper().startswith("FROM "):
+            return "\n".join(lines[i:])
+    raise AssertionError("no FROM in Dockerfile")
+
+
 def test_dockerfile_distroless_nonroot_and_exec_cmd() -> None:
     text = DOCKERFILE.read_text(encoding="utf-8")
     assert "distroless/cc-debian13:nonroot@" in text
     assert "USER 65532:65532" in text
-    assert 'CMD ["/usr/local/bin/python3.14"' in text
+    assert 'ENTRYPOINT ["/usr/local/bin/python3.14t"' in text
+    assert "core.licensing.gil_container_gate" in text
+    assert 'CMD ["main.py"' in text
     assert "HEALTHCHECK" in text
     assert "CMD-SHELL" not in _dockerfile_instructions(text)
     assert "http://127.0.0.1:8088/health" in text
     assert "urllib.request" in text
-    # JSON exec form: first HEALTHCHECK CMD token must be the distroless python path.
-    hc_lines = [
-        ln
-        for ln in text.splitlines()
-        if "HEALTHCHECK" in ln or ln.strip().startswith("CMD [")
-    ]
-    joined_hc = "\n".join(hc_lines)
-    assert '"/usr/local/bin/python3.14"' in joined_hc
+    joined_hc = "\n".join(
+        ln for ln in text.splitlines() if "HEALTHCHECK" in ln or "urllib.request" in ln
+    )
+    assert '"/usr/local/bin/python3.14t"' in joined_hc
     assert "0.0.0.0" not in joined_hc
 
 
@@ -120,10 +126,12 @@ def test_dockerfile_applies_wheelhouse_v1_in_builder() -> None:
 
 
 def test_dockerfile_nogil_pins_and_uv_freethreaded() -> None:
-    """Free-threaded variant: no 3.14t-slim tag; uv-installed 3.14t; does not steal :latest."""
+    """#1409: one image — Dockerfile is cp314t; Dockerfile.nogil is an alias."""
     nogil = REPO_ROOT / "Dockerfile.nogil"
     assert nogil.is_file()
-    text = nogil.read_text(encoding="utf-8")
+    text = DOCKERFILE.read_text(encoding="utf-8")
+    alias = nogil.read_text(encoding="utf-8")
+    assert _dockerfile_from_first_from(text) == _dockerfile_from_first_from(alias)
     assert "python:3.14-slim@" in text
     assert "@sha256:" in text
     assert "uv python install" in text
@@ -131,13 +139,11 @@ def test_dockerfile_nogil_pins_and_uv_freethreaded() -> None:
     assert "python3.14t" in text
     assert "DISABLE_SQLALCHEMY_CEXT=1" in text
     assert "--no-binary sqlalchemy" in text
-    assert "freetds-dev" in text  # pymssql source build on cp314t (#1398 nogil builder)
+    assert "freetds-dev" in text  # pymssql source build on cp314t (#1398)
     assert "libkrb5-dev" in text
-    # GIL image must keep stock SQLAlchemy cext — change is isolated to Dockerfile.nogil (#1398).
-    gil_text = DOCKERFILE.read_text(encoding="utf-8")
-    assert "DISABLE_SQLALCHEMY_CEXT" not in gil_text
-    assert "--no-binary sqlalchemy" not in gil_text
-    # Must not force GIL off over undeclared-safe C exts (comments may mention the forbid).
+    assert "assert not sos" in text
+    assert "GIL re-enabled after sqlalchemy" in text
+    assert "gil_container_gate" in text
     assert "ENV PYTHON_GIL" not in text
     assert "PYTHON_GIL=0" not in [
         ln.strip() for ln in text.splitlines() if not ln.lstrip().startswith("#")
@@ -147,7 +153,6 @@ def test_dockerfile_nogil_pins_and_uv_freethreaded() -> None:
     assert "CMD-SHELL" not in _dockerfile_instructions(text)
     assert "http://127.0.0.1:8088/health" in text
     assert '"/usr/local/bin/python3.14t"' in text
-    # No floating/official 3.14t-slim base (404 on Hub) — only comment may mention it.
     from_lines = [
         ln.strip() for ln in text.splitlines() if ln.strip().upper().startswith("FROM ")
     ]
@@ -246,7 +251,7 @@ def test_docker_image_smoke_script_passes_on_built_image() -> None:
                 "run",
                 "--rm",
                 image,
-                "/usr/local/bin/python3",
+                "/usr/local/bin/python3.14t",
                 "-c",
                 "from core.about import _package_version; print(_package_version())",
             ],
@@ -275,6 +280,6 @@ def test_compose_data_boar_healthcheck_is_exec_form() -> None:
     data = yaml.safe_load(compose_path.read_text(encoding="utf-8"))
     test = data["services"]["data-boar"]["healthcheck"]["test"]
     assert test[0] == "CMD"
-    assert test[1] == "/usr/local/bin/python3.14"
+    assert test[1] == "/usr/local/bin/python3.14t"
     assert any("127.0.0.1:8088/health" in part for part in test)
     assert "CMD-SHELL" not in compose_path.read_text(encoding="utf-8")

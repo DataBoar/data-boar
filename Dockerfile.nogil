@@ -1,12 +1,15 @@
-# Free-threaded (no-GIL) release image variant — tag suffix `-nogil`.
+# Alias of Dockerfile (#1409). Prefer `docker build -f Dockerfile`.
+# Content must stay identical from the first FROM line (tests enforce this).
+# Canonical published image (#1409 / ADR-0091): free-threaded CPython (cp314t).
 # Multi-stage: builder (uv-installed 3.14t) → runtime-assembler → distroless nonroot.
 #
-# Why a separate file: there is no `python:3.14t-slim` on Docker Hub (404). We keep
-# the GIL image on stock `python:3.14-slim` and install CPython free-threaded via
-# `uv python install` (python-build-standalone) for this variant only.
+# There is no `python:3.14t-slim` on Docker Hub (404). Builder is stock
+# `python:3.14-slim` plus `uv python install` (python-build-standalone).
 #
 # CPU contract: x86-64-v2+ (numpy cp314t has popcnt≠0). Does NOT target alpine-emachines.
-# Do NOT retag `:latest` or `:1.7.4` when publishing this image.
+# One Hub image: `:latest` is this file. No parallel GIL-on tag.
+# Runtime GIL: ENTRYPOINT sets PYTHON_GIL=1 unless license tier is Enterprise.
+# Do NOT force GIL off with env PYTHON_GIL=0 / -Xgil=0 (undeclared-safe C extensions).
 
 # -----------------------------------------------------------------------------
 # Stage 1: free-threaded interpreter + deps + cp314t wheelhouse
@@ -111,7 +114,7 @@ RUN chmod +x /tmp/collect-runtime-rootfs.sh && /tmp/collect-runtime-rootfs.sh /r
 # -----------------------------------------------------------------------------
 FROM gcr.io/distroless/cc-debian13:nonroot@sha256:c31ff9abcb1910f3ab25c7957bdaf0bfe12a01eb546e8df2282f1c8f682b606c
 
-LABEL org.opencontainers.image.description="LGPD/GDPR/CCPA audit (free-threaded / no-GIL). Requires x86-64-v2+. Not interchangeable with the GIL image."
+LABEL org.opencontainers.image.description="LGPD/GDPR/CCPA audit. Free-threaded CPython; PYTHON_GIL=1 unless Enterprise license. x86-64-v2+."
 
 WORKDIR /app
 
@@ -134,7 +137,10 @@ USER 65532:65532
 EXPOSE 8088
 
 # Distroless has no shell: JSON exec form only. A shell-form probe would fail.
+# HEALTHCHECK bypasses ENTRYPOINT (inspects loopback HTTP, not the GIL gate).
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
     CMD ["/usr/local/bin/python3.14t", "-c", "import urllib.request, sys; r = urllib.request.urlopen('http://127.0.0.1:8088/health', timeout=8); sys.exit(0 if r.status == 200 else 1)"]
 
-CMD ["/usr/local/bin/python3.14t", "main.py", "--config", "/data/config.yaml", "--web", "--port", "8088", "--allow-insecure-http"]
+# Probe process then execve with PYTHON_GIL=1 unless Enterprise (#1409).
+ENTRYPOINT ["/usr/local/bin/python3.14t", "-m", "core.licensing.gil_container_gate"]
+CMD ["main.py", "--config", "/data/config.yaml", "--web", "--port", "8088", "--allow-insecure-http"]

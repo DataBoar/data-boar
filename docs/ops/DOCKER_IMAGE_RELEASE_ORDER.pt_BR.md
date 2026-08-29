@@ -2,7 +2,7 @@
 
 **English:** [DOCKER_IMAGE_RELEASE_ORDER.md](DOCKER_IMAGE_RELEASE_ORDER.md)
 
-**Contexto:** A imagem **universal (GIL)** usa **`Dockerfile`** → **`python:3.14-slim`** → distroless. A variante **free-threaded (no-GIL)** usa **`Dockerfile.nogil`** (instala `3.14t` via **uv**; não existe `python:3.14t-slim` no Hub). Os operadores ainda precisam de uma **sequência repetível** para manter tags do Hub, versão do app e gate alinhados.
+**Contexto:** A imagem publicada usa **`Dockerfile`** → **CPython 3.14 free-threaded** via uv (`python3.14t`) → distroless. Não existe `python:3.14t-slim` no Hub. **Um artefato no Hub:** `:latest` é essa imagem. No-GIL em **runtime** é **só Enterprise** (`PYTHON_GIL=1` no ENTRYPOINT para qualquer outro tier — [ADR 0091](../adr/ADR-0091-container-cp314t-license-gil-gate.md), [#1409](https://github.com/DataBoar/data-boar/issues/1409)).
 
 **Relacionado:** [scripts/docker/README.md](../../scripts/docker/README.md), [VERSIONING.md](../VERSIONING.md), [PLANS_TODO.md](../plans/PLANS_TODO.md) (ordens **–1**, **–1b**), [HOMELAB_VALIDATION.md](HOMELAB_VALIDATION.md) (ordem **–1L** para segundo ambiente), [DOCKER_HUB_REPOSITORY_DESCRIPTION.md](DOCKER_HUB_REPOSITORY_DESCRIPTION.md) (texto do Hub — colar após publicar).
 
@@ -29,27 +29,28 @@ Use quando quiser **uma imagem publicada** correspondendo a **uma versão do app
 
 ---
 
-## Duas variantes de imagem (escolha + ritual)
+## Uma imagem (cp314t) + gate de GIL por licença
 
-O ritual padrão (**passos 4–6** / `build-push-podman.sh`) publica a imagem **universal GIL** e move **`:latest`** com ela. A companheira **`-nogil`** é build **separado** (`Dockerfile.nogil` / `build-nogil-local.sh`) e tag Hub **separada**. **`:latest` nunca aponta para `-nogil`.**
+O ritual padrão (**passos 4–6** / `build-push-podman.sh` / `docker-lab-build.ps1`) constrói o **`Dockerfile`** e move **`:latest`** com ele. **`Dockerfile.nogil`** é um **alias** dos mesmos estágios (os testes exigem conteúdo idêntico a partir do primeiro `FROM`).
 
-| Variante | Quando escolher | O ritual publica? | Move `:latest`? |
-| -------- | --------------- | ----------------- | --------------- |
-| **Universal GIL** (`1.7.4.post12`, `latest`) | Default: CPU antiga/mista/desconhecida; piso `popcnt=0` (qualquer x86-64, incl. Celeron 900). Filter `abi3`. | **Sim** — ritual principal | **Sim** |
-| **Free-threaded** (`1.7.4.post12-nogil`) | CPU moderna **x86-64-v2+** **e** vários workers **e** detecção regex-bound ([#551](https://github.com/DataBoar/data-boar/issues/551)). Wheels `cp314t`; abi3 **não** carrega; **SQLAlchemy puro-Python** (`DISABLE_SQLALCHEMY_CEXT=1`) para o cext não religar o GIL. | **Só sob pedido** — nunca pelo ritual de `:latest` | **Não** |
+**Gate de release (assert antigo do `Dockerfile.nogil`):** antes do push no Hub, rode `./scripts/docker/build-nogil-local.sh` (ou sondas equivalentes com `--entrypoint /usr/local/bin/python3.14t`) e falhe se o sqlalchemy trouxer `*.so` ou se `sys._is_gil_enabled()` for True **nesse entrypoint** (contrato do interpretador). Em separado, confirme o gate de **licença**: config open/padrão → `PYTHON_GIL=1`; `licensing.effective_tier: enterprise` em modo open → GIL continua desligado.
 
-**Mecanismo:** o GIL serializa workers de regex em Python puro (`core/detector.py`); free-threaded remove isso. O cext do SQLAlchemy de estoque **religa o GIL** — a `-nogil` deve embarcar sqlalchemy puro-Python (medido: ~5,3× regex paralelo vs ~+21% SELECT; microbenchmark ≠ `--demo`). Nunca forçar `PYTHON_GIL=0` para manter o cext. O **teto** de workers continua sendo o **tier de licença** (`core/engine.py` / `#551`).
+| O quê | Runtime |
+| ----- | ------- |
+| **`latest` publicado** | binário cp314t; GIL **ligado** salvo Enterprise |
+| **CPU** | x86-64-v2+ |
+| **SQLAlchemy** | puro-Python (`DISABLE_SQLALCHEMY_CEXT=1`) |
+| **Workers** | ainda limitados pelo tier (`core/engine.py` / `#551`) |
 
-A cópia do Hub deve explicar a **escolha** (não só listar tags): [DOCKER_HUB_REPOSITORY_DESCRIPTION.md](DOCKER_HUB_REPOSITORY_DESCRIPTION.md) · [pt-BR — Qual imagem puxar?](DOCKER_HUB_REPOSITORY_DESCRIPTION.pt_BR.md).
+**Mecanismo:** o GIL serializa workers de regex em Python puro (`core/detector.py`); free-threaded remove isso **no Enterprise**. O cext do SQLAlchemy de estoque **religa o GIL** — a imagem precisa de sqlalchemy puro-Python. Nunca forçar `PYTHON_GIL=0` para manter o cext.
 
-Build/validação local da `-nogil` (sem push):
+Validação local (sem push):
 
 ```bash
-./scripts/docker/build-nogil-local.sh 1.7.4.post12-nogil
-# operador, depois do login: podman push localhost/data_boar:1.7.4.post12-nogil docker.io/fabioleitao/data_boar:1.7.4.post12-nogil
+./scripts/docker/build-nogil-local.sh
 ```
 
-**Não** retague `:latest` nem a tag de junho `:1.7.4` ao publicar `-nogil`.
+**Não** mantenha uma tag Hub paralela com GIL sempre ligado para o mesmo semver.
 
 ---
 

@@ -25,15 +25,18 @@ SMOKE_VERSION="${APP_VERSION}"
 need_() { command -v "$1" >/dev/null 2>&1 || { echo "FATAL: $1 not in PATH" >&2; exit 127; }; }
 need_ podman
 
-echo "=== podman build -f Dockerfile.nogil -t ${IMAGE} ==="
-podman build -f Dockerfile.nogil -t "${IMAGE}" .
+echo "=== podman build -f Dockerfile -t ${IMAGE} ==="
+podman build -f Dockerfile -t "${IMAGE}" .
 podman tag "${IMAGE}" "${ALIAS}"
 
-echo "=== AC: sys._is_gil_enabled() is False (boot) ==="
-podman run --rm "${ALIAS}" python -c 'import sys; v=sys._is_gil_enabled(); print("gil_enabled", v); raise SystemExit(0 if v is False else 1)'
+# Interpreter contract: skip license ENTRYPOINT (OPEN would set PYTHON_GIL=1).
+EP=(podman run --rm --entrypoint /usr/local/bin/python3.14t "${ALIAS}")
+
+echo "=== AC: sys._is_gil_enabled() is False (boot, --entrypoint) ==="
+"${EP[@]}" -c 'import sys; v=sys._is_gil_enabled(); print("gil_enabled", v); raise SystemExit(0 if v is False else 1)'
 
 echo "=== AC: GIL stays False after sqlalchemy import ==="
-OUT="$(podman run --rm "${ALIAS}" python -W error::RuntimeWarning -c 'import sqlalchemy, sys; print(sqlalchemy.__version__); print("gil_after_sa", sys._is_gil_enabled()); raise SystemExit(0 if sys._is_gil_enabled() is False else 1)' 2>&1)" || {
+OUT="$("${EP[@]}" -W error::RuntimeWarning -c 'import sqlalchemy, sys; print(sqlalchemy.__version__); print("gil_after_sa", sys._is_gil_enabled()); raise SystemExit(0 if sys._is_gil_enabled() is False else 1)' 2>&1)" || {
   echo "$OUT" >&2
   echo "FATAL: sqlalchemy import re-enabled GIL or raised RuntimeWarning" >&2
   exit 1
@@ -41,7 +44,7 @@ OUT="$(podman run --rm "${ALIAS}" python -W error::RuntimeWarning -c 'import sql
 echo "$OUT"
 
 echo "=== AC: zero sqlalchemy *.so under site-packages ==="
-podman run --rm "${ALIAS}" python -c '
+"${EP[@]}" -c '
 import pathlib, site
 root = pathlib.Path(site.getsitepackages()[0]) / "sqlalchemy"
 sos = sorted(root.rglob("*.so")) if root.is_dir() else []
@@ -50,7 +53,7 @@ raise SystemExit(0 if not sos else 1)
 '
 
 echo "=== AC: ML + boar_fast_filter imports (GIL still False) ==="
-podman run --rm "${ALIAS}" python -c '
+"${EP[@]}" -c '
 import numpy, scipy, sklearn, pandas, boar_fast_filter, sqlalchemy, sys
 print("imports_ok", numpy.__version__, boar_fast_filter.__file__)
 print("gil_after_stack", sys._is_gil_enabled())
@@ -58,7 +61,7 @@ raise SystemExit(0 if sys._is_gil_enabled() is False else 1)
 '
 
 echo "=== AC: filter .so is cpython-314t (not abi3) ==="
-podman run --rm "${ALIAS}" python -c '
+"${EP[@]}" -c '
 import boar_fast_filter, pathlib
 pkg = pathlib.Path(boar_fast_filter.__file__).resolve().parent
 sos = sorted(pkg.rglob("*.so"))
@@ -69,14 +72,33 @@ assert any("314t" in p.name for p in sos), sos
 print("filter_ok", sos[0].name)
 '
 
+echo "=== AC: license gate — OPEN/default forces PYTHON_GIL=1 ==="
+GATE_OUT="$(podman run --rm "${ALIAS}" python -c 'import os,sys; g=os.environ.get("PYTHON_GIL"); e=sys._is_gil_enabled(); print("PYTHON_GIL", g, "gil_enabled", e); raise SystemExit(0 if g=="1" and e is True else 1)' 2>&1)" || {
+  echo "$GATE_OUT" >&2
+  echo "FATAL: default entrypoint must set PYTHON_GIL=1 and enable GIL" >&2
+  exit 1
+}
+echo "$GATE_OUT"
+
+echo "=== AC: license gate — open + effective_tier enterprise keeps no-GIL ==="
+ENT_CFG="$(mktemp)"
+trap 'rm -f "${ENT_CFG}"' EXIT
+printf '%s\n' 'licensing:' '  mode: open' '  effective_tier: enterprise' > "${ENT_CFG}"
+ENT_OUT="$(podman run --rm -v "${ENT_CFG}:/data/config.yaml:ro" -e CONFIG_PATH=/data/config.yaml "${ALIAS}" python -c 'import os,sys; g=os.environ.get("PYTHON_GIL"); e=sys._is_gil_enabled(); print("PYTHON_GIL", g, "gil_enabled", e); raise SystemExit(0 if not g and e is False else 1)' 2>&1)" || {
+  echo "$ENT_OUT" >&2
+  echo "FATAL: Enterprise open-mode YAML must leave PYTHON_GIL unset and GIL off" >&2
+  exit 1
+}
+echo "$ENT_OUT"
+
 echo "=== AC: docker-image-smoke (public version; no GIL RuntimeWarning) ==="
 SMOKE_OUT="$(./scripts/docker/docker-image-smoke.sh "${ALIAS}" "${SMOKE_VERSION}" 2>&1)" || {
   echo "$SMOKE_OUT" >&2
   exit 1
 }
 echo "$SMOKE_OUT"
-if grep -qiE 'RuntimeWarning|GIL has been enabled' <<<"$SMOKE_OUT"; then
-  echo "FATAL: smoke emitted GIL RuntimeWarning" >&2
+if grep -qiE "sqlalchemy\\.cyextension|to load module 'sqlalchemy" <<<"$SMOKE_OUT"; then
+  echo "FATAL: smoke loaded sqlalchemy cext" >&2
   exit 1
 fi
 
@@ -87,8 +109,8 @@ VER_OUT="$(podman run --rm "${ALIAS}" python main.py --version 2>&1)" || {
 }
 echo "$VER_OUT"
 grep -qw "${SMOKE_VERSION}" <<<"$VER_OUT" || { echo "FATAL: version token missing" >&2; exit 1; }
-if grep -qiE 'RuntimeWarning|GIL has been enabled' <<<"$VER_OUT"; then
-  echo "FATAL: --version emitted GIL RuntimeWarning" >&2
+if grep -qiE "sqlalchemy\\.cyextension|to load module 'sqlalchemy" <<<"$VER_OUT"; then
+  echo "FATAL: --version loaded sqlalchemy cext" >&2
   exit 1
 fi
 
