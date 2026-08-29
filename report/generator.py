@@ -47,13 +47,13 @@ def _heatmap_path_under_output_dir(heatmap_path: str, output_dir: str) -> Path |
         base = Path(output_dir).resolve()
         name = Path(heatmap_path).name
         # codeql[py/path-injection]
-        candidate = (base / name).resolve()
+        candidate = (base / name).resolve()  # lgtm[py/path-injection]
         candidate.relative_to(base)
     except (ValueError, OSError):
         return None
     # candidate already constrained by relative_to(base).
     # codeql[py/path-injection]
-    return candidate if candidate.is_file() else None
+    return candidate if candidate.is_file() else None  # lgtm[py/path-injection]
 
 
 # Cross-ref aggregated sheet: first row explains sampling limits (FN-first; incomplete-data transparency).
@@ -277,7 +277,9 @@ def _create_heatmap(
     # output_dir is the report folder; filename is heatmap_{session_id[:12]}.png,
     # not user/db path segments (ADR-0049 FP).
     # codeql[py/path-injection]
-    out_path = Path(output_dir) / f"heatmap_{session_id[:12]}.png"
+    out_path = (
+        Path(output_dir) / f"heatmap_{session_id[:12]}.png"
+    )  # lgtm[py/path-injection]
     plt.savefig(out_path, bbox_inches="tight")
     plt.close()
     return str(out_path)

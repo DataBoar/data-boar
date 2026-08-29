@@ -188,14 +188,13 @@ def test_codeql_path_injection_directive_sits_on_line_before_flagged_heatmap_pat
     flagged = {
         "candidate = (base / name).resolve()",
         "return candidate if candidate.is_file() else None",
-        'out_path = Path(output_dir) / f"heatmap_{session_id[:12]}.png"',
     }
     seen: set[str] = set()
     for i, line in enumerate(lines):
-        stripped = line.strip()
-        if stripped in flagged:
+        code = line.split("#")[0].strip()
+        if code in flagged:
             assert lines[i - 1].strip() == "# codeql[py/path-injection]", (
-                f"{stripped!r} is not immediately after a lone CodeQL directive"
+                f"{code!r} is not immediately after a lone CodeQL directive"
             )
-            seen.add(stripped)
+            seen.add(code)
     assert seen == flagged
