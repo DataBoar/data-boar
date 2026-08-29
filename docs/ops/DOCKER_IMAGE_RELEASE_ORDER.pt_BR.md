@@ -33,7 +33,7 @@ Use quando quiser **uma imagem publicada** correspondendo a **uma versão do app
 
 O ritual padrão (**passos 4–6** / `build-push-podman.sh` / `docker-lab-build.ps1`) constrói o **`Dockerfile`** e move **`:latest`** com ele. **`Dockerfile.nogil`** é um **alias** dos mesmos estágios (os testes exigem conteúdo idêntico a partir do primeiro `FROM`).
 
-**Gate de release (assert antigo do `Dockerfile.nogil`):** antes do push no Hub, rode `./scripts/docker/build-nogil-local.sh` (ou sondas equivalentes com `--entrypoint /usr/local/bin/python3.14t`) e falhe se o sqlalchemy trouxer `*.so` ou se `sys._is_gil_enabled()` for True **nesse entrypoint** (contrato do interpretador). Em separado, confirme o gate de **licença**: config open/padrão → `PYTHON_GIL=1`; `licensing.effective_tier: enterprise` em modo open → GIL continua desligado.
+**Gate de release (assert antigo do `Dockerfile.nogil`):** antes do push no Hub, rode `./scripts/docker/build-nogil-local.sh` (ou sondas equivalentes com `--entrypoint /usr/local/bin/python3.14t`) e falhe se o sqlalchemy trouxer `*.so` ou se `sys._is_gil_enabled()` for True **nesse entrypoint** (contrato do interpretador). Em separado, confirme o gate de **licença**: config open/padrão → `PYTHON_GIL=1`; `licensing.effective_tier: enterprise` em modo open → GIL continua desligado. O mesmo wrapper também sobe `--demo --web` **sem publicar porta no host**, faz polling de `GET /health` de dentro do contêiner até `status` ser `ok`, e exige `PYTHON_GIL=1` no **PID 1** via `/proc/1/environ` (um interpretador novo via `podman exec` não herda o env do `execve` do gate).
 
 | O quê | Runtime |
 | ----- | ------- |

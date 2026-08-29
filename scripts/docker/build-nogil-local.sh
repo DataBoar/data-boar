@@ -25,6 +25,18 @@ SMOKE_VERSION="${APP_VERSION}"
 need_() { command -v "$1" >/dev/null 2>&1 || { echo "FATAL: $1 not in PATH" >&2; exit 127; }; }
 need_ podman
 
+ENT_CFG=""
+DEMO_WEB_NAME=""
+cleanup_nogil_local_ac() {
+  if [[ -n "${DEMO_WEB_NAME}" ]]; then
+    podman rm -f "${DEMO_WEB_NAME}" >/dev/null 2>&1 || true
+  fi
+  if [[ -n "${ENT_CFG}" ]]; then
+    rm -f "${ENT_CFG}"
+  fi
+}
+trap cleanup_nogil_local_ac EXIT
+
 echo "=== podman build -f Dockerfile -t ${IMAGE} ==="
 podman build -f Dockerfile -t "${IMAGE}" .
 podman tag "${IMAGE}" "${ALIAS}"
@@ -82,7 +94,6 @@ echo "$GATE_OUT"
 
 echo "=== AC: license gate — open + effective_tier enterprise keeps no-GIL ==="
 ENT_CFG="$(mktemp)"
-trap 'rm -f "${ENT_CFG}"' EXIT
 printf '%s\n' 'licensing:' '  mode: open' '  effective_tier: enterprise' > "${ENT_CFG}"
 # Distroless nonroot cannot read a 0600 mktemp file bind-mounted at /data.
 chmod a+r "${ENT_CFG}"
@@ -143,6 +154,70 @@ if [[ "${DEMO_RC}" -ne 0 && "${DEMO_RC}" -ne 124 ]]; then
   echo "FATAL: --demo unexpected exit ${DEMO_RC}" >&2
   exit 1
 fi
+
+echo "=== AC: --demo --web /health + PID 1 PYTHON_GIL=1 (OPEN, no published port) ==="
+# Do not podman exec a fresh python -c and trust sys._is_gil_enabled(): that process
+# does not inherit PYTHON_GIL from the gate's os.execve. Read PID 1 environ instead.
+DEMO_WEB_NAME="data-boar-nogil-demo-web-$$"
+podman run -d --name "${DEMO_WEB_NAME}" "${ALIAS}" \
+  python main.py --demo --web --port 8088 --allow-insecure-http >/dev/null
+HEALTH_JSON=""
+deadline=$((SECONDS + 40))
+while (( SECONDS < deadline )); do
+  if HEALTH_JSON="$(
+    podman exec "${DEMO_WEB_NAME}" /usr/local/bin/python3.14t -c '
+import json, sys, urllib.request
+r = urllib.request.urlopen("http://127.0.0.1:8088/health", timeout=2)
+body = json.loads(r.read().decode())
+sys.stdout.write(json.dumps(body, separators=(",", ":")))
+raise SystemExit(0 if r.status == 200 and body.get("status") == "ok" else 1)
+' 2>/dev/null
+  )"; then
+    break
+  fi
+  HEALTH_JSON=""
+  sleep 2
+done
+if [[ -z "${HEALTH_JSON}" ]]; then
+  echo "FATAL: --demo --web /health never became ready (status ok)" >&2
+  podman logs "${DEMO_WEB_NAME}" >&2 || true
+  exit 1
+fi
+echo "${HEALTH_JSON}"
+python3 -c '
+import json, sys
+body = json.load(sys.stdin)
+lic = (body.get("license") or {}).get("license_state")
+if lic != "OPEN":
+    raise SystemExit(f"FATAL: expected license_state OPEN, got {lic!r}")
+' <<<"${HEALTH_JSON}" || {
+  echo "FATAL: /health JSON license_state is not OPEN" >&2
+  podman logs "${DEMO_WEB_NAME}" >&2 || true
+  exit 1
+}
+GIL_PID1="$(
+  podman exec "${DEMO_WEB_NAME}" /usr/local/bin/python3.14t -c '
+import pathlib, sys
+raw = pathlib.Path("/proc/1/environ").read_bytes()
+env = {}
+for part in raw.split(b"\0"):
+    if not part or b"=" not in part:
+        continue
+    key, val = part.split(b"=", 1)
+    env[key.decode("ascii", "replace")] = val.decode("ascii", "replace")
+g = env.get("PYTHON_GIL", "")
+print(g)
+raise SystemExit(0 if g == "1" else 1)
+'
+)" || {
+  echo "${GIL_PID1}" >&2
+  echo "FATAL: PID 1 /proc/1/environ must have PYTHON_GIL=1 on default/OPEN --demo" >&2
+  podman logs "${DEMO_WEB_NAME}" >&2 || true
+  exit 1
+}
+echo "pid1_PYTHON_GIL ${GIL_PID1}"
+podman rm -f "${DEMO_WEB_NAME}" >/dev/null
+DEMO_WEB_NAME=""
 
 echo "=== AC: cryptography >= 50.0.0 (GHSA-g6cj-pr64-35w5) ==="
 podman run --rm --entrypoint /usr/local/bin/python3.14t "${ALIAS}" -c '

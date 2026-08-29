@@ -174,6 +174,28 @@ def test_boar_fast_filter_releases_gil_on_batch_and_stage() -> None:
     assert "fn match_names(&self, py: Python<'_>" in lib
 
 
+def test_build_nogil_local_demo_web_health_and_pid1_gil() -> None:
+    """Wrapper AC: /health from inside the container + PYTHON_GIL on PID 1 environ."""
+    path = REPO_ROOT / "scripts" / "docker" / "build-nogil-local.sh"
+    body = path.read_text(encoding="utf-8")
+    marker = "=== AC: --demo --web /health + PID 1 PYTHON_GIL=1"
+    assert marker in body
+    ac = body.split(marker, 1)[1].split("=== AC:", 1)[0]
+    assert "python main.py --demo --web --port 8088 --allow-insecure-http" in ac
+    assert "127.0.0.1:8088/health" in ac
+    assert "urllib.request" in ac
+    assert 'body.get("status") == "ok"' in ac
+    assert "/proc/1/environ" in ac
+    assert "pathlib.Path" in ac
+    assert "podman logs" in ac
+    assert "cleanup_nogil_local_ac" in body
+    assert "trap cleanup_nogil_local_ac EXIT" in body
+    assert "--publish" not in ac
+    assert " -p " not in ac
+    assert "-p=" not in ac
+    assert "mkdir" not in ac
+
+
 def test_compare_gil_nogil_demo_timing_script_exists() -> None:
     """#1398 AC: manifest duration_minutes comparison helper for publish gate."""
     path = REPO_ROOT / "scripts" / "docker" / "compare-gil-nogil-demo-timing.sh"

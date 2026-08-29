@@ -32,7 +32,7 @@ Use this when you want **one published image** to match **one released app versi
 
 The default ritual (**steps 4–6** / `build-push-podman.sh` / `docker-lab-build.ps1`) builds **`Dockerfile`** and moves **`:latest`** with it. **`Dockerfile.nogil`** is an **alias** of the same stages (tests require identical content from the first `FROM`).
 
-**Release gate (promote former `Dockerfile.nogil:69` assert):** before Hub push, run `./scripts/docker/build-nogil-local.sh` (or equivalent `--entrypoint /usr/local/bin/python3.14t` probes) and fail if sqlalchemy ships a `*.so` or `sys._is_gil_enabled()` is True **on that entrypoint** (interpreter contract). Separately, confirm the **license** gate: default/open config → `PYTHON_GIL=1`; `licensing.effective_tier: enterprise` in open mode → GIL remains off.
+**Release gate (promote former `Dockerfile.nogil:69` assert):** before Hub push, run `./scripts/docker/build-nogil-local.sh` (or equivalent `--entrypoint /usr/local/bin/python3.14t` probes) and fail if sqlalchemy ships a `*.so` or `sys._is_gil_enabled()` is True **on that entrypoint** (interpreter contract). Separately, confirm the **license** gate: default/open config → `PYTHON_GIL=1`; `licensing.effective_tier: enterprise` in open mode → GIL remains off. The same wrapper also starts `--demo --web` **without publishing a host port**, polls `GET /health` from inside the container until `status` is `ok`, and asserts `PYTHON_GIL=1` on **PID 1** via `/proc/1/environ` (a fresh `podman exec` interpreter does not inherit the gate `execve` env).
 
 | What | Runtime |
 | ---- | ------- |
