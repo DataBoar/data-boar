@@ -46,8 +46,10 @@ O ponto de entrada é `main.py`.
 | `--export-dsar`         | `SESSION_ID`         | Exporta achados de uma sessão em JSON orientado a DSAR (metadados primeiro; enquadramento LGPD Art. 18 / GDPR Art. 15). Imprime em **stdout** ou use `--dsar-output PATH`. Sessão inexistente ou vazia → `findings_by_source` vazio, sai **0**. Incompatível com `--web`, `--reset-data`, `--export-audit-trail`, `--validate-config`, `--diff`, `--export-l1` e `--export-l3`. |
 | `--dsar-output`         | `PATH`               | Grava o JSON DSAR em `PATH` em vez de stdout. Exige `--export-dsar`. |
 | `--dsar-include-samples`| *(flag)*             | Com `--export-dsar`: inclui campos de amostra bruta nas linhas de achado quando existirem (SQLite guarda só metadados por padrão). |
-| `--export-l1`           | `SESSION_ID`         | Exporta achados de uma sessão como JSON L1 **metadata_manifest** (pin do contrato SDK; só metadados — nunca amostras brutas). Lê o SQLite existente (sem re-varredura). Imprime em **stdout** ou `--l1-output PATH`. Sessão inexistente ou vazia → `findings` vazio, sai **0**. Violação de contrato → aborta, sai **1** (fail-closed). Incompatível com `--web`, `--reset-data`, `--export-audit-trail`, `--validate-config`, `--diff`, `--export-dsar` e `--export-l3`. |
+| `--export-l1`           | `SESSION_ID`         | Exporta achados de uma sessão como JSON L1 **metadata_manifest** (pin do contrato SDK; só metadados — nunca amostras brutas). Lê o SQLite existente (sem re-varredura). Imprime em **stdout** ou `--l1-output PATH`. Sessão inexistente ou vazia → `findings` vazio, sai **0**. Violação de contrato → aborta, sai **1** (fail-closed). Incompatível com `--web`, `--reset-data`, `--export-audit-trail`, `--validate-config`, `--diff`, `--export-dsar`, `--export-l3` e `--export-findings-sink`. |
 | `--l1-output`           | `PATH`               | Grava o JSON L1 metadata_manifest em `PATH` em vez de stdout. Exige `--export-l1`. |
+| `--export-findings-sink`| `SESSION_ID`         | Ecoa os achados de uma sessão do SQLite local para o **findings_sink** configurado (SQL = Pro, MongoDB = Enterprise). Só metadados por padrão. Se `findings_sink.include_sample_content: true`, passe também `--allow-sample-export` (LGPD Art. 46) ou a CLI sai **1**. Erro no sink na CLI sai **1**; tier insuficiente sai **2**. Incompatível com `--web`, `--reset-data` e outros modos de export. |
+| `--allow-sample-export` | *(flag)*             | Com `--export-findings-sink`: confirmação do operador para incluir `sample_content` quando o YAML optar. Nunca é implícito. |
 | `--export-l3`           | `SESSION_ID`         | Exporta JSON L3 **transformed_rows** escopado por grant (pin SDK; linhas de INPUT carregam `value` cru). Exige `--l3-grant`. Padrão **efêmero** (stdout/pipe); gravar em disco só com **`--l3-persist PATH`**. No POSIX, persistência é modo `0600` só do dono. No Windows: aplica com `icacls`, verifica SIDs bem-conhecidos (independente de idioma). **SYSTEM** (`S-1-5-18`) e **Administrators** (`S-1-5-32-544`) em geral permanecem — isso **não** é `0600` POSIX. **OWNER RIGHTS** (`S-1-3-4`) é equivalente ao dono. Contenção não comprovada (incluindo falha ao traduzir SID) → sai **5** (arquivo removido), salvo **`--l3-allow-unprotected`** (auditoria `containment`: `not_enforced`). Pago (não Community) — Community ou grant ausente → sai **3**. Coluna fora do grant → sai **4**. Teto por coluna `--l3-max-rows` (padrão 100, máximo 10000). Auditoria JSON no **stderr** (grant id, colunas, contagens, `containment` opcional — jamais células). Incompatível com `--web`, `--reset-data`, `--export-audit-trail`, `--validate-config`, `--diff`, `--export-dsar` e `--export-l1`. |
 | `--l3-grant`            | `PATH`               | Grant JSON para `--export-l3`: `grant_id`, `target`, `table`, `columns` (nunca `*` / tabela inteira). `request_columns` opcional deve ser subconjunto. |
 | `--l3-persist`          | `PATH`               | Persiste explicitamente o JSON L3 (valores crus) em `PATH`. Omitido = só stdout. Exige `--export-l3`. Nunca é o padrão. POSIX: `0600`. Windows: aplica com `icacls`; verifica SIDs bem-conhecidos (independente de idioma — não nomes de exibição). SYSTEM/Administrators privilegiados (`S-1-5-18` / `S-1-5-32-544`) podem permanecer; OWNER RIGHTS (`S-1-3-4`) conta como o dono. Contenção não comprovada → sai **5**. |
@@ -84,6 +86,39 @@ YAML opt-in `remediation:` carrega um `RemediationPlugin` de parceiro após a ge
 ### Plugins YAML de padrões (opcional)
 
 Arquivos YAML do operador injetam termos extras de regex / ML / DL no detector (`patterns_plugin_file`, ou as chaves legadas `regex_overrides_file` / `ml_patterns_file` / `dl_patterns_file`). **Não** executam código. Guia do autor: **[PLUGIN_AUTHOR_GUIDE.pt_BR.md](PLUGIN_AUTHOR_GUIDE.pt_BR.md)** ([EN](PLUGIN_AUTHOR_GUIDE.md)). Schema: `config/plugin_schema.yaml`. How-to campo a campo: [SENSITIVITY_DETECTION.pt_BR.md](SENSITIVITY_DETECTION.pt_BR.md#padrões-regex-customizados-detectar-novos-dados-pessoaissensíveis).
+
+## Findings sink (Pro/Enterprise)
+
+**Eco opcional pós-scan** das mesmas linhas de achado (metadados) já gravadas no SQLite local. **Não** substitui o SQLite. Object storage (S3 / Azure Blob / GCS) fica fora deste recorte.
+
+**Tiers:** SQL (`postgresql`, `mysql`, `mssql`, e `sqlite` de lab) → `findings_sink_sql` (**Pro**). MongoDB → `findings_sink_mongodb` (**Enterprise**). Lab com `licensing.effective_tier` / OPEN segue o bypass usual.
+
+**PII:** o schema padrão **não** tem `sample_content`. Com `include_sample_content: true` sem `--allow-sample-export` na CLI, a saída é **1** (LGPD Art. 46). O hook automático pós-scan **nunca** grava colunas de amostra, mesmo com a flag YAML.
+
+**Falha:** erro no sink após a varredura vira **warning** + `save_failure(..., reason=sink_error)` — a sessão continua.
+
+DDL do cliente: [findings_sink_schema.sql](deploy/findings_sink_schema.sql) e [findings_sink_schema_mongodb.js](deploy/findings_sink_schema_mongodb.js).
+
+```yaml
+findings_sink:
+  enabled: true
+  type: postgresql              # postgresql | mysql | mssql | mongodb | sqlite (lab)
+  host: db.example.com
+  port: 5432
+  database: data_governance_db
+  user_from_env: SINK_DB_USER
+  pass_from_env: SINK_DB_PASS
+  schema: data_boar             # documentado para PostgreSQL; o cliente de eco ainda não usa
+  on_conflict: upsert           # upsert | skip | fail
+  include_sample_content: false
+  allow_private_networks: false # mesmo opt-in SSRF dos conectores (#832)
+```
+
+Eco manual (equivalente a `uv run python scripts/export_findings_to_sink.py SESSION`):
+
+```bash
+python main.py --config config.yaml --export-findings-sink <session_id>
+```
 
 ### Resultados
 
@@ -122,7 +157,7 @@ python main.py --config config.yaml --tenant "Acme Corp" --technician "Alice V."
 
 ##### OpenTelemetry opcional (opt-in)
 
-Quando **`DATA_BOAR_OTEL_ENABLED`** for `1` / `true` / `yes` / `on` e o extra opcional **`[otel]`** estiver instalado (`uv sync --extra otel`), o Data Boar exporta traces, métricas e logs via OTLP (`OTEL_EXPORTER_OTLP_ENDPOINT`, padrão `http://127.0.0.1:4317`). O mesmo gate cobre **`--web`**, varredura única (CLI), scan do **`--demo`** e flags de export/regenerate (`--export-dsar`, `--export-l1`, `--export-l3`, `--export-remediation-manifest`, `--regenerate-report`, `--export-audit-trail`). **`--version`** e **`--check-extras`** permanecem sem instrumentação.
+Quando **`DATA_BOAR_OTEL_ENABLED`** for `1` / `true` / `yes` / `on` e o extra opcional **`[otel]`** estiver instalado (`uv sync --extra otel`), o Data Boar exporta traces, métricas e logs via OTLP (`OTEL_EXPORTER_OTLP_ENDPOINT`, padrão `http://127.0.0.1:4317`). O mesmo gate cobre **`--web`**, varredura única (CLI), scan do **`--demo`** e flags de export/regenerate (`--export-dsar`, `--export-l1`, `--export-l3`, `--export-findings-sink`, `--export-remediation-manifest`, `--regenerate-report`, `--export-audit-trail`). **`--version`** e **`--check-extras`** permanecem sem instrumentação.
 
 #### Servidor API (`--web`)
 
@@ -550,7 +585,7 @@ Defina `licensing.effective_tier: enterprise` em lab. Mesmo CLI do Pro (`--gover
 - `scan` – `max_workers` para paralelismo.
 - `timeouts` – timeouts globais para conexões (ex.: `connect_seconds`, `read_seconds`); cada alvo pode sobrescrever com `connect_timeout`, `read_timeout` ou `timeout`. Ver abaixo.
 - `api.workers` – número de workers uvicorn (padrão 1; 2+ para mais requisições concorrentes).
-- Opcionais: **`sql_sampling`** (tetos hierárquicos de amostragem SQL/Snowflake; ver bullet `file_scan` acima e [USAGE.md](USAGE.md)), `ml_patterns_file`, `ml_patterns_files`, `dl_patterns_file`, `regex_overrides_file`, `regex_overrides_files`, `compliance_frameworks`, `sensitivity_detection` (termos ML/DL inline), `learned_patterns` (export de termos classificados), **`pattern_files_encoding`** (encoding dos arquivos de padrões; ver abaixo).
+- Opcionais: **`sql_sampling`** (tetos hierárquicos de amostragem SQL/Snowflake; ver bullet `file_scan` acima e [USAGE.md](USAGE.md)), `ml_patterns_file`, `ml_patterns_files`, `dl_patterns_file`, `regex_overrides_file`, `regex_overrides_files`, `compliance_frameworks`, `sensitivity_detection` (termos ML/DL inline), `learned_patterns` (export de termos classificados), **`pattern_files_encoding`** (encoding dos arquivos de padrões; ver abaixo), **`findings_sink`** (eco pós-scan Pro/Enterprise).
 - **Pedindo acesso à TI:** Quando for preciso solicitar permissões à equipe de TI (ex.: pastas compartilhadas, contas de banco, tokens de API), solicite o **mínimo** necessário. Veja [OPERATOR_IT_REQUIREMENTS.pt_BR.md](ops/OPERATOR_IT_REQUIREMENTS.pt_BR.md) para o checklist por fonte (somente leitura, sem admin), o que não precisamos e uma breve justificativa, alinhada a zero-trust ou IAM restrito. ([EN](ops/OPERATOR_IT_REQUIREMENTS.md))
 
 ### Credenciais a partir do ambiente (segredos fora do config)
@@ -974,6 +1009,9 @@ Instale os extras opcionais: `uv pip install -e ".[shares]"`.
     domain: "COMPANY"   # opcional
     port: 445
     recursive: true
+    # Hosts RFC1918 / lab precisam deste opt-in; sem ele o SMB recusa o host
+    # antes de register_session (sem NTLM para um peer inesperado — #1715).
+    # allow_private_networks: true
 ```
 
 ## WebDAV

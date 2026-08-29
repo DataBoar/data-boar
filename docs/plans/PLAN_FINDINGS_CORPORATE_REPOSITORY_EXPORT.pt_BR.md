@@ -5,7 +5,7 @@
 
 **English:** [PLAN_FINDINGS_CORPORATE_REPOSITORY_EXPORT.md](PLAN_FINDINGS_CORPORATE_REPOSITORY_EXPORT.md)
 
-**Status:** Pendente (sem sink nativo em `main`; o survey v1.8.0 [#1058](https://github.com/DataBoar/data-boar/issues/1058) enriquece este plano — não arquivar)
+**Status:** Em andamento (Fases A–C eco SQL/Mongo em `main` via #552; Fase D object storage e clientes de catálogo continuam no backlog; o survey v1.8.0 [#1058](https://github.com/DataBoar/data-boar/issues/1058) permanece aberto — não arquivar)
 **Data:** 2026-05-02 (onda v1.8.0: 2026-08-27)
 **Autores:** Fabio Leitao
 **Prioridade:** H2
@@ -68,9 +68,9 @@ Hoje o caminho **primário** de persistência é **SQLite** mais saídas **Excel
 
 | Fase | Foco | Resultado |
 | ---- | ---- | --------- |
-| **A — Contrato** | Documentar **JSON canônico de export** (ou pacotes CSV) para um `session_id`: findings + falhas + cabeçalho de sessão; campo de versão; lembrete de política de PII (sem amostras cruas). | O cliente pode **ingerir hoje** com ETL externo **sem** código novo (manual ou o pipeline deles). |
-| **B — CLI / hook pós-scan** | `scripts/` ou hook do motor: **depois** de `generate_final_reports`, enviar arquivo(s) para um **path** ou **URL pré-assinada**; códigos de saída e logs. | **Menor** risco de engenharia; prova a história operacional. |
-| **C — Sinks nativos (ordem pela demanda)** | **1)** PostgreSQL / SQL Server **DDL + upsert**; **2)** **collections** MongoDB com índices em `session_id`; **3)** **S3 PutObject** opcional na direção já prevista de object storage. | Pouso **automatizado** no **DB corporativo** que o cliente nomear. |
+| **A — Contrato** | Documentar **JSON canônico de export** (ou pacotes CSV) para um `session_id`: findings + falhas + cabeçalho de sessão; campo de versão; lembrete de política de PII (sem amostras cruas). | O cliente pode **ingerir hoje** com ETL externo **sem** código novo (manual ou o pipeline deles). DDL SQL/Mongo em `docs/deploy/findings_sink_schema.sql` (+ JS Mongo) — ✅ #552 |
+| **B — CLI / hook pós-scan** | `scripts/` ou hook do motor: **depois** de `generate_final_reports`, enviar arquivo(s) para um **path** ou **URL pré-assinada**; códigos de saída e logs. | **`--export-findings-sink`** + `scripts/export_findings_to_sink.py` — ✅ #552 |
+| **C — Sinks nativos (ordem pela demanda)** | **1)** PostgreSQL / SQL Server **DDL + upsert**; **2)** **collections** MongoDB com índices em `session_id`; **3)** **S3 PutObject** opcional na direção já prevista de object storage. | Eco SQL + Mongo ✅ #552; **S3/Blob/GCS adiado** |
 | **D — Governança** | Flags de retenção, **delete-after-export** (opcional, perigoso — documentação pesada), checklist de **RBAC** no sink, linha de audit log “exported to X”. | Conteúdo do pacote de **revisão** Enterprise. |
 
 ---

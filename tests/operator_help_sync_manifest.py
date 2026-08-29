@@ -61,6 +61,8 @@ _MAN_DSAR_OUTPUT = r"\-\-dsar\-output"
 _MAN_DSAR_INCLUDE_SAMPLES = r"\-\-dsar\-include\-samples"
 _MAN_EXPORT_L1 = r"\-\-export\-l1"
 _MAN_L1_OUTPUT = r"\-\-l1\-output"
+_MAN_EXPORT_FINDINGS_SINK = r"\-\-export\-findings\-sink"
+_MAN_ALLOW_SAMPLE_EXPORT = r"\-\-allow\-sample\-export"
 _MAN_EXPORT_L3 = r"\-\-export\-l3"
 _MAN_L3_GRANT = r"\-\-l3\-grant"
 _MAN_L3_PERSIST = r"\-\-l3\-persist"
@@ -167,6 +169,18 @@ OPERATOR_HELP_MARKERS: tuple[OperatorHelpMarker, ...] = (
         "--l1-output",
         "--l1-output",
         _MAN_L1_OUTPUT,
+    ),
+    OperatorHelpMarker(
+        "export_findings_sink",
+        "--export-findings-sink",
+        "--export-findings-sink",
+        _MAN_EXPORT_FINDINGS_SINK,
+    ),
+    OperatorHelpMarker(
+        "allow_sample_export",
+        "--allow-sample-export",
+        "--allow-sample-export",
+        _MAN_ALLOW_SAMPLE_EXPORT,
     ),
     OperatorHelpMarker(
         "export_l3",

@@ -347,6 +347,25 @@ instead of stdout. Requires
 .BR \-\-export\-l1 .
 .
 .TP
+.B \-\-export\-findings\-sink SESSION_ID
+Echo findings for one scan session from local SQLite to the configured
+.B findings_sink
+(SQL = Pro, MongoDB = Enterprise). Metadata\-only by default. If
+.B findings_sink.include_sample_content
+is true, also pass
+.BR \-\-allow\-sample\-export
+(LGPD Art. 46) or exit
+.B 1 .
+Cannot be combined with
+.BR \-\-web ", " \-\-reset\-data ", or other export modes.
+.
+.TP
+.B \-\-allow\-sample\-export
+With
+.BR \-\-export\-findings\-sink :
+acknowledge sample_content export when YAML opts in. Never implied.
+.
+.TP
 .B \-\-export\-l3 SESSION_ID
 Export grant-scoped L3
 .B transformed_rows

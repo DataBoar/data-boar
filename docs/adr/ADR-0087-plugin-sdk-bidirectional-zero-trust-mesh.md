@@ -6,11 +6,15 @@
 
 ## Status
 
-Proposed
+Accepted
 
 ### Status history
 
 - 2026-08-09 — Proposed ([#1116](https://github.com/DataBoar/data-boar/issues/1116); Fatia C; vault GAP-010 aggregation)
+- 2026-08-28 — Accepted (operator ratification: `role` host|guest in the schema;
+  `mutual_attestation.py` Ed25519/nonce/freshness/`HOST_TRUST_REJECTED`;
+  cross-language dogfood in `rust/boar_fast_filter/src/lib.rs` and
+  `core/sdk/boar_fast_filter_dogfood.py`). Genesis Date (UTC) unchanged.
 
 ## Context
 

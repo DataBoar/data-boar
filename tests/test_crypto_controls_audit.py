@@ -540,7 +540,7 @@ def test_redis_connector_saves_crypto_audit_when_flag_on() -> None:
 def test_smb_connect_honors_encrypt_and_signing() -> None:
     target = {
         "name": "smb-tls",
-        "host": "files.example.com",
+        "host": "1.1.1.1",
         "share": "data",
         "user": "u",
         "password": "p",
@@ -571,7 +571,7 @@ def test_smb_connector_saves_crypto_audit_when_flag_on() -> None:
     secret = "must-not-appear-in-crypto-details"
     target = {
         "name": "smb-crypto",
-        "host": "files.example.com",
+        "host": "1.1.1.1",
         "share": "data",
         "user": "u",
         "password": secret,
@@ -605,7 +605,7 @@ def test_smb_connector_saves_crypto_audit_when_flag_on() -> None:
 def test_smb_connector_skips_crypto_audit_when_flag_off() -> None:
     target = {
         "name": "smb-off",
-        "host": "files.example.com",
+        "host": "1.1.1.1",
         "share": "data",
         "user": "u",
         "password": "p",
