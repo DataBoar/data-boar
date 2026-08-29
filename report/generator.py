@@ -42,11 +42,15 @@ def _heatmap_path_under_output_dir(heatmap_path: str, output_dir: str) -> Path |
     for embedded images). Caller must pass the same output_dir used to build the heatmap.
     """
     try:
+        # codeql[py/path-injection] — output_dir is the operator report directory, not
+        # finding payload. Heatmap basename is session_id[:12] only (ADR-0049: existing
+        # relative_to guard below is the control; do not weaken it).
         base = Path(output_dir).resolve()
         candidate = Path(heatmap_path).resolve()
         candidate.relative_to(base)
     except (ValueError, OSError):
         return None
+    # codeql[py/path-injection] — candidate already constrained by relative_to(base).
     return candidate if candidate.is_file() else None
 
 
@@ -268,6 +272,8 @@ def _create_heatmap(
             ax_inset.axis("off")
         except Exception:
             pass
+    # codeql[py/path-injection] — output_dir is the report folder; filename is
+    # heatmap_{session_id[:12]}.png, not user/db path segments (ADR-0049 FP).
     out_path = Path(output_dir) / f"heatmap_{session_id[:12]}.png"
     plt.savefig(out_path, bbox_inches="tight")
     plt.close()
