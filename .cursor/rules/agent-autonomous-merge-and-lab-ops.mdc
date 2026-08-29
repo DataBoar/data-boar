@@ -14,15 +14,17 @@ alwaysApply: false
 
 When **all** hold:
 
+- Local **full `check-all`** (Linux `./scripts/check-all.sh`, Windows `.\scripts\check-all.ps1`) exited **0** in-session **before** the `git push` that opened or last-updated this PR ([ADR 0080](../../docs/adr/ADR-0080-local-validation-gate-inviolable.md), pre-push **#1151**). Remote CI green is a **backstop**, never a substitute.
 - `git fetch` + `gh pr view` show **OPEN**, **mergeable** (not CONFLICTING), and `gh pr checks` are **green** (or equivalent).
 - No **suspected regression** from the diff; **docs** relevant to the change are updated.
 - Operator has **not** asked for a **review pause** or **hold** on this PR.
+- The PR is **not** waiting on **`Gate-Change-Approved-By:`** / SSHSIG (agents **never** fill that trailer).
 
 **Do:** run **`.\scripts\pr-merge-when-green.ps1 -PrNumber <N>`** from repo root (after `gh auth` works on the machine). Prefer **merge**; use **squash/rebase** only if repo convention or PR comment says so.
 
-**Do not** merge without checking **mergeable** + **checks**. **Do not** use `--admin` unless branch protection blocks merge and the operator explicitly authorizes.
+**Do not** merge without checking **mergeable** + **checks**. **Do not** use `--admin` unless branch protection blocks merge and the operator explicitly authorizes. **Do not** merge issue **#1153**-class gate PRs without the operator trailer.
 
-**Escalate (stop and ask)** when: checks fail/pending, conflicts, **mergeable UNKNOWN**, `gh` auth errors, or **any doubt** about regression / release impact.
+**Escalate (stop and ask)** when: local check-all was skipped, checks fail/pending, conflicts, **mergeable UNKNOWN**, `gh` auth errors, or **any doubt** about regression / release impact.
 
 ## 2. LAB-OP (SSH from the dev PC terminal — not “remote AI datacenter”)
 
