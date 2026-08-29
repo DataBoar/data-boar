@@ -9,9 +9,11 @@ from unittest.mock import patch
 import pytest
 
 from core.licensing.gil_container_gate import (
+    DEFAULT_CONTAINER_PYTHON,
     config_path_from_argv,
     environ_with_gil_gate,
     load_yaml_config,
+    resolve_python_executable,
     resolve_tier,
     should_force_gil,
     strip_interpreter_prefix,
@@ -64,6 +66,16 @@ def test_environ_non_enterprise_sets_python_gil() -> None:
 def test_environ_enterprise_does_not_set_python_gil() -> None:
     env = environ_with_gil_gate({"PATH": "/usr/bin"}, Tier.ENTERPRISE)
     assert "PYTHON_GIL" not in env
+
+
+def test_resolve_python_ignores_arbitrary_env_executable(tmp_path: Path) -> None:
+    """Env must not pick the execve target (Semgrep tainted-env-args)."""
+    decoy = tmp_path / "not-python"
+    decoy.write_text("#!/bin/sh\n")
+    decoy.chmod(0o755)
+    resolved = resolve_python_executable({"DATA_BOAR_CONTAINER_PYTHON": str(decoy)})
+    assert resolved != str(decoy)
+    assert resolved in {DEFAULT_CONTAINER_PYTHON, sys.executable}
 
 
 def test_strip_interpreter_prefix() -> None:

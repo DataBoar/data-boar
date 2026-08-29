@@ -83,13 +83,40 @@ def strip_interpreter_prefix(argv: list[str]) -> list[str]:
 
 
 def resolve_python_executable(environ: Mapping[str, str]) -> str:
-    configured = (environ.get("DATA_BOAR_CONTAINER_PYTHON") or "").strip()
-    if configured and Path(configured).is_file():
-        return configured
+    """Return the interpreter path to ``execve``.
+
+    ``DATA_BOAR_CONTAINER_PYTHON`` is ignored unless it is exactly the
+    distroless binary (``DEFAULT_CONTAINER_PYTHON``). An env-controlled
+    executable would be the Semgrep ``tainted-env-args`` primitive.
+    """
     default = Path(DEFAULT_CONTAINER_PYTHON)
+    configured = (environ.get("DATA_BOAR_CONTAINER_PYTHON") or "").strip()
+    if configured:
+        cfg = Path(configured)
+        try:
+            same = cfg.is_file() and cfg.resolve() == default.resolve()
+        except OSError:
+            same = False
+        if same:
+            return DEFAULT_CONTAINER_PYTHON
+        logger.warning(
+            "GIL gate: ignoring DATA_BOAR_CONTAINER_PYTHON (must be %s)",
+            DEFAULT_CONTAINER_PYTHON,
+        )
     if default.is_file():
-        return str(default)
+        return DEFAULT_CONTAINER_PYTHON
     return sys.executable
+
+
+def exec_container_python(python: str, argv: list[str], env: dict[str, str]) -> None:
+    """Replace PID 1 (Docker JSON ENTRYPOINT/CMD + process env). Not HTTP.
+
+    Semgrep ``python.lang.security.audit.dangerous-os-exec-tainted-env-args``
+    treats ``sys.argv`` / ``os.environ`` as taint. Here those are Compose/CMD
+    and container startup env (license YAML path), not request handlers.
+    """
+    # nosemgrep: python.lang.security.audit.dangerous-os-exec-tainted-env-args
+    os.execve(python, argv, env)
 
 
 def resolve_tier(cfg: dict[str, Any]) -> Tier:
@@ -123,7 +150,7 @@ def main(argv: list[str] | None = None) -> None:
             "GIL gate: tier=%s — setting PYTHON_GIL=1 (no-GIL is Enterprise only)",
             tier.value,
         )
-    os.execve(python, [python, *rest], child_env)
+    exec_container_python(python, [python, *rest], child_env)
 
 
 if __name__ == "__main__":

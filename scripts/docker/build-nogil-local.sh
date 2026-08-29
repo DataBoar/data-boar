@@ -142,6 +142,15 @@ if [[ "${DEMO_RC}" -ne 0 && "${DEMO_RC}" -ne 124 ]]; then
   exit 1
 fi
 
+echo "=== AC: cryptography >= 50.0.0 (GHSA-g6cj-pr64-35w5) ==="
+podman run --rm --entrypoint /usr/local/bin/python3.14t "${ALIAS}" -c '
+import importlib.metadata as m
+v = m.version("cryptography")
+print("cryptography", v)
+parts = tuple(int(p) for p in v.split(".")[:2])
+raise SystemExit(0 if parts >= (50, 0) else 1)
+'
+
 echo "=== AC: grype gate ==="
 ./scripts/grype-image-gate.sh "${ALIAS}"
 

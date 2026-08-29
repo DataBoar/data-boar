@@ -79,6 +79,8 @@ def test_dockerfile_extras_runtime_extension_point() -> None:
     assert "ENV PYTHONPATH=/extras:/app" in text
     assert "DATA_BOAR_MACHINE_SEED" in text
     assert '"/app[sql-community,mssql,oracle]"' in text
+    # GHSA-g6cj-pr64-35w5: extras pip must not leave cryptography 49.x in the image.
+    assert 'pip install --no-cache-dir --upgrade "cryptography>=50.0.0,<51"' in text
     assert "generate_extras_manifest.py" in text
     # Must not silently expand to all 18 extras in the image.
     assert "sql-all,nosql,shares" not in text

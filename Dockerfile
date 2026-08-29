@@ -75,6 +75,8 @@ RUN pip uninstall -y wheel || true && \
     # are already present — avoids source rebuild (#1398). freetds-dev/libkrb5-dev remain
     # as compile fallback if a wheel is missing.
     pip install --no-cache-dir "/app[sql-community,mssql,oracle]" && \
+    # Extras can resolve an older cryptography; re-pin GHSA-g6cj-pr64-35w5 (#1409 grype).
+    pip install --no-cache-dir --upgrade "cryptography>=50.0.0,<51" && \
     python /app/scripts/generate_extras_manifest.py --probe --write /app/EXTRAS_MANIFEST.json && \
     PY_LIB="$(python -c 'import sysconfig; from pathlib import Path; print(Path(sysconfig.get_path("stdlib")))')" && \
     rm -rf /tmp/wheelhouse-v1-glibc-cp314t && \
