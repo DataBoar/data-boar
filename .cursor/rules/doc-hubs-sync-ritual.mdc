@@ -24,7 +24,7 @@ alwaysApply: false
 ## Manual hubs (agent must verify in the same PR)
 
 - **`docs/MAP.md`** / **`docs/MAP.pt_BR.md`**: rows must point to existing paths; follow **ADR 0004** (no product-tier markdown links into `docs/plans/` from MAP—entry remains **docs/README**).
-- **`docs/adr/README*.md`** + **`AGENTS.md`**: new **ADR NNNN** files require index rows and an updated **“Current last ADR”** line in **AGENTS.md** when that is the repo convention for the latest ADR.
+- **`docs/adr/README*.md`**: new **ADR NNNN** files require index rows. **Do not** add or bump a “Current last ADR” number in **`AGENTS.md`** — discover the next id from **`docs/adr/ADR-*.md`** (or **`.\scripts\new-adr.ps1`**).
 
 ## Skill
 

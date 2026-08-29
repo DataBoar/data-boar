@@ -19,6 +19,17 @@ def test_agents_md_omits_home_root_reproduction() -> None:
     assert "SUDO_USER" in text
 
 
+def test_agents_md_does_not_hardcode_current_last_adr() -> None:
+    """#383: next ADR id comes from disk, not a stale number in AGENTS.md."""
+    text = AGENTS_MD.read_text(encoding="utf-8")
+    assert "Current last:" not in text
+    assert "ls docs/adr/ADR-*.md" in text
+    ritual = (REPO_ROOT / ".cursor" / "rules" / "doc-hubs-sync-ritual.mdc").read_text(
+        encoding="utf-8"
+    )
+    assert "updated **“Current last ADR”** line in **`AGENTS.md`**" not in ritual
+
+
 def test_labop_ensure_scripts_resolve_operator_home_via_getent() -> None:
     nfs = NFS_ENSURE.read_text(encoding="utf-8")
     smb = SMB_ENSURE.read_text(encoding="utf-8")
