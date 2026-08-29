@@ -5,8 +5,10 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
+import pytest
 import yaml
 
+from core.licensing.guard import reset_license_guard_for_tests
 from report.governance_lens import (
     ENTERPRISE_TIER_WARNING,
     GovernanceLensGenerator,
@@ -15,6 +17,13 @@ from report.governance_lens import (
 _PRO_MAP = "tests/fixtures/governance_framework_map_test.yaml"
 _ENT_MAP = "tests/fixtures/governance_framework_map_enterprise_test.yaml"
 _REPO_ROOT = Path(__file__).resolve().parents[1]
+
+
+@pytest.fixture(autouse=True)
+def _reset_license_guard() -> None:
+    reset_license_guard_for_tests()
+    yield
+    reset_license_guard_for_tests()
 
 
 def _gov_config(*, tier: str, enterprise_map: str | None = _ENT_MAP) -> dict:

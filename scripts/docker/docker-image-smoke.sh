@@ -8,9 +8,10 @@ set -euo pipefail
 IMAGE="${1:?image ref required (e.g. data_boar:lab)}"
 VERSION="${2:-}"
 
-# Dockerfile assembler always symlinks python3 → versioned binary (3.14 / 3.13…).
-PYTHON="/usr/local/bin/python3"
-RUN=(podman run --rm "${IMAGE}" "${PYTHON}")
+# Dockerfile assembler always symlinks python3 → versioned binary (3.14t).
+# Skip license ENTRYPOINT so smoke measures the interpreter, not PYTHON_GIL=1.
+PYTHON="/usr/local/bin/python3.14t"
+RUN=(podman run --rm --entrypoint "${PYTHON}" "${IMAGE}")
 
 if ! command -v podman >/dev/null 2>&1; then
     echo "docker-image-smoke: podman not in PATH" >&2

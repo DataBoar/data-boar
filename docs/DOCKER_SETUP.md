@@ -36,7 +36,7 @@ The published image is **lean on purpose**: it installs only the **base SQL grou
 
 **Runtime extension (no shell, no pip in the image):**
 
-1. Build an ABI-compatible wheel pack on a host that matches the image Python (e.g. **cp314** for the GIL image, **cp314t** for `-nogil`) — typically `pip install --target ./extras-pack 'data-boar[nosql,shares,…]'` or equivalent wheels from the project wheelhouse channel.
+1. Build an ABI-compatible wheel pack on a host that matches the image Python (**cp314t** — the published image is free-threaded) — typically `pip install --target ./extras-pack 'data-boar[nosql,shares,…]'` or equivalent wheels from the project wheelhouse channel.
 2. Mount read-only: `-v /path/to/extras-pack:/extras:ro` (nonroot uid **65532**; no `--user 0`).
 3. The image sets **`PYTHONPATH=/extras:/app`** (`/extras` first, then `/app`) and **`VOLUME ["/extras"]`**.
 
@@ -46,7 +46,21 @@ The published image is **lean on purpose**: it installs only the **base SQL grou
 
 **`DATA_BOAR_MACHINE_SEED`:** declared on the image (empty by default). Set a stable secret for **Enterprise** container pools so fingerprint does not change every `docker run`. Leave empty for **Pro / Pro+** machine-count binding (hostname-derived). See [LICENSING_SPEC.md](LICENSING_SPEC.md).
 
-Related GitHub issues: **#1400**, **#1401**, **#1399**, **#1402**.
+Related GitHub issues: **#1400**, **#1401**, **#1399**, **#1402**, **#1409**.
+
+## Free-threaded image and license GIL gate
+
+The **Dockerfile** (Hub `:latest` after the next image publish) installs **CPython 3.14 free-threaded** (`python3.14t`, ABI **cp314t**). There is **no** second GIL-on image.
+
+**What does not change:** detector recall vs the previous GIL image (same findings on the same corpus). Worker **ceiling** is still the license tier (`core/engine.py`).
+
+**What does change:** CPU floor is **x86-64-v2+** (not 2009 `popcnt=0` Celeron). SQLAlchemy ships **pure-Python** (`DISABLE_SQLALCHEMY_CEXT=1`) so a C extension cannot re-enable the GIL. Do **not** set `PYTHON_GIL=0` to keep a C ext.
+
+**License gate (container ENTRYPOINT):** Distroless has no shell. The image runs `python3.14t -m core.licensing.gil_container_gate`, which resolves the same tier as `get_runtime_tier_for_features` and **`execve`s** a new interpreter with **`PYTHON_GIL=1`** unless the tier is **exactly Enterprise**. OPEN, Community, Std, Pro, Pro+, and **Partner** all get the GIL. Lab: `licensing.mode: open` plus `licensing.effective_tier: enterprise` to exercise no-GIL. HEALTHCHECK does **not** go through this gate.
+
+**Image size:** the published layer uses the same `collect-runtime-rootfs.sh` + distroless path as the previous ~309 MB Hub image. A **1.25 GB** local tree was unpruned builder leftover — not the intended Hub blob. Measure compressed size at the next publish; explain any remaining delta there.
+
+**Inspect the interpreter without the gate:** `docker run --rm --entrypoint /usr/local/bin/python3.14t IMAGE -c 'import sys; print(sys._is_gil_enabled())'`.
 
 ---
 

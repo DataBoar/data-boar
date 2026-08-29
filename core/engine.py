@@ -639,9 +639,15 @@ class AuditEngine:
                 target.get("name", "unknown"), "error", clean_error(e)
             )
 
-    def generate_final_reports(self, session_id: str | None = None) -> str | None:
+    def generate_final_reports(
+        self,
+        session_id: str | None = None,
+        *,
+        config: dict[str, Any] | None = None,
+    ) -> str | None:
         """
-        Build Excel + heatmap from SQLite for session_id (or current). Return report file path or None.
+        Build Excel (+ optional ODS) and heatmap from SQLite for session_id (or current).
+        Return primary report file path (xlsx when present) or None.
         If learned_patterns.enabled, also writes learned_patterns.yaml from findings.
         """
         from report.generator import generate_report
@@ -649,12 +655,13 @@ class AuditEngine:
         sid = session_id or self.db_manager.current_session_id
         if not sid:
             return None
-        out_dir = self.config.get("report", {}).get("output_dir", ".")
+        cfg = config if config is not None else self.config
+        out_dir = cfg.get("report", {}).get("output_dir", ".")
         path = generate_report(
             self.db_manager,
             sid,
             output_dir=out_dir,
-            config=self.config,
+            config=cfg,
         )
         if path:
             self._last_report_path = path
