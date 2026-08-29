@@ -333,7 +333,7 @@ uv pip install -e ".[dl]"
 pip install -e ".[dl]"
 ```
 
-This installs `sentence-transformers` (and its dependencies). If `.[dl]` is not installed, the pipeline still runs with **regex + ML**; the DL step is skipped and confidence comes only from ML.
+This installs `sentence-transformers` (and its dependencies). If `.[dl]` is not installed, the pipeline still runs with **regex + ML**; the DL step is skipped and confidence comes only from ML. GitHub Actions job **`test-dl`** installs `--extra dl` and exercises encode through `core/dl_backend.py`.
 
 ---
 

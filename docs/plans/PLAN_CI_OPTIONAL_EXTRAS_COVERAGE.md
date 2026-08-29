@@ -1,6 +1,6 @@
 # Plan: CI optional extras coverage — #1638
 
-<!-- plans-hub-summary: Dedicated Ubuntu pytest job installs SQL extras except mariadb (3.13 SyntaxError in 1.1.14) plus nosql/compressed/dataformats; deselects MAESTRO_ROOT-gated tests; skip-count ceiling 60. -->
+<!-- plans-hub-summary: Dedicated Ubuntu pytest job installs SQL extras except mariadb (3.13 SyntaxError in 1.1.14) plus nosql/compressed/dataformats; deselects MAESTRO_ROOT-gated tests; skip-count ceiling 60. Dedicated test-dl job (#1822) installs extra dl and encodes via dl_backend. -->
 <!-- plans-hub-related: PLAN_PACKAGING_EXTRAS.md, PLAN_WINDOWS_CI_ENABLEMENT.md -->
 
 **Status:** In progress (job + ceiling in this PR; remaining extras are backlog)
@@ -36,7 +36,8 @@ PyPI **`mariadb` 1.1.14** is the latest **stable** (2026-08-20). Importing it on
 
 ### Out of scope (deliberate)
 
-- **`dl`**, **`otel`**, **`richmedia`**, **`bigdata`**, **`grc-dashboard`**, **`legacy-doc`**, **`detection-fuzzy`** (dev group already has rapidfuzz) — heavy C-exts, live services, or already covered elsewhere.
+- **`otel`**, **`richmedia`**, **`bigdata`**, **`grc-dashboard`**, **`legacy-doc`**, **`detection-fuzzy`** (dev group already has rapidfuzz) — heavy C-exts, live services, or already covered elsewhere.
+- **`dl` on `test-extras`:** torch + Hugging Face download would distort the skip ceiling and job time. Covered by dedicated job **`test-dl`** (#1822) instead.
 - Live database engines. Tests that need a running server still skip; the target is **importable packages** with mocks/fixtures.
 - Installing every extra on every matrix job.
 - Checking out private **DataBoar/maestro** from public **`test-extras`** (forks, PAT, spinout skip-when-absent).
@@ -50,6 +51,7 @@ PyPI **`mariadb` 1.1.14** is the latest **stable** (2026-08-20). Importing it on
 - [x] Skip ceiling fails the extras job if skipped tests exceed **60** (calibrated: extras run `989a4a3f` skipped=106 minus 56 Maestro guards = 50 remainder +10 slack)
 - [x] `test-extras` deselects `MAESTRO_ROOT`-gated tests (no private Maestro checkout)
 - [x] This plan + `PLANS_TODO` + hub wired
+- [x] Dedicated **`test-dl`** job installs `--extra dl` and runs encode via `core/dl_backend.py` (#1822) without raising the extras skip ceiling
 
 ---
 
@@ -64,6 +66,7 @@ PyPI **`mariadb` 1.1.14** is the latest **stable** (2026-08-20). Importing it on
 | **2** | Workflow shape tests                                             | ✅         |
 | **3** | Merge + close #1638                                              | ⬜         |
 | **4** | Optional later: `otel` / `bigdata` / `grc-dashboard` extras jobs | ⬜ backlog |
+| **5** | Dedicated `test-dl` job + encode via `dl_backend` (#1822)        | ✅         |
 
 ---
 
