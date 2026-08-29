@@ -13,7 +13,7 @@ Página curta de operador. Não é app novo. A issue continua o barramento AIIDC
 | **Inbox** | Issue aberta **sem milestone e sem label `P*`** | Não é sprint. Processar em ≤7 dias ou é esqueleto. |
 | **Next** | Milestone `v1.8.0` + P0/P1 (P2 só com PLAN/AC) | Se não cabe na cabeça de uma pessoa (~30), o marco mente. |
 | **Waiting** | Texto de blocker com `#N` **ainda open** | Se `#N` já fechou, `NÃO INICIAR` stale é hygiene — não é aresta viva. |
-| **Someday** | Milestone `backlog`, ou labels `proposta-de-plan` / `no-code-yet` | Lab (Growatt, Slack, curso) mora aqui. Nunca conta como v1.8.0. |
+| **Someday** | Milestone `backlog`, **ou qualquer milestone numerado além do release ativo (`v1.8.1`, `v1.8.2`, ...)**, ou labels `proposta-de-plan` / `no-code-yet` | Lab (Growatt, Slack, curso) mora aqui. **Milestones numerados futuros são ondas Someday ordenadas por horizonte — número menor = revisitar antes — não é promessa, não é Next.** Nunca conta como v1.8.0. |
 | **Done** | `closed` + motivo explícito | `completed` = artefato (PR/path). `not_planned` = recusa honesta. `duplicate` usa `duplicate_of`. |
 
 `[P2]` no **título** não substitui label. Filtro e agente leem label.
@@ -37,6 +37,7 @@ Inbox → ?
 4. Agente não fecha porque o body “parece shipped”. HITL ou checklist com path do artefato.
 5. Regenerar `ISSUE_QUEUE_SEQUENCING_MAP.md` no **mesmo PR** que fecha um grupo de hygiene. Mapa velho é esqueleto.
 6. Eixos na prática: **label `Pn` + milestone**. Eixo U (ADR-0061) só no Next, ou para de fingir.
+7. Uma label `Pn` que subestima a gravidade real (ex.: `P3` numa issue com vulnerabilidade confirmada por um scanner ativo) ainda pode entrar no Next — cite a evidência (id da execução do scanner, data confirmed-in-main) no comentário de processamento, em vez de esperar a label acompanhar.
 
 ## Revisão semanal (30–45 min)
 

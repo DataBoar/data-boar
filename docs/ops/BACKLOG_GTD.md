@@ -13,7 +13,7 @@ Short operator page. Not a new app. Issues stay the AIIDCOBPP bus.
 | **Inbox** | Open issue with **no milestone and no `P*` label** | Not sprint work. Process in ≤7 days or it is a skeleton. |
 | **Next** | Milestone `v1.8.0` + P0/P1 (P2 only with PLAN/AC) | If it will not fit in one operator head (~30), the milestone is lying. |
 | **Waiting** | Blocker text with `#N` still **open** | If `#N` is already closed, stale `NÃO INICIAR` is hygiene — not a live edge. |
-| **Someday** | Milestone `backlog`, or labels `proposta-de-plan` / `no-code-yet` | Lab (Growatt, Slack, course lists) lives here. Never count as v1.8.0. |
+| **Someday** | Milestone `backlog`, **or any numbered milestone beyond the active release (`v1.8.1`, `v1.8.2`, ...)**, or labels `proposta-de-plan` / `no-code-yet` | Lab (Growatt, Slack, course lists) lives here. **Numbered future milestones are horizon-ordered Someday waves — lower number = sooner revisit — not a promise, not Next.** Never count as v1.8.0. |
 | **Done** | `closed` + explicit reason | `completed` = artifact (PR/path). `not_planned` = honest refusal. `duplicate` uses `duplicate_of`. |
 
 A `[P2]` **title** is not a label. Filters and agents read labels.
@@ -37,6 +37,7 @@ Inbox → ?
 4. Agents do not close because the body “looks shipped.” HITL or a checklist with an artifact path.
 5. Refresh `ISSUE_QUEUE_SEQUENCING_MAP.md` in the **same PR** that closes a hygiene group. A stale map is itself a skeleton.
 6. Practical axes: **`Pn` label + milestone**. U-axis (ADR-0061) only on Next, or stop pretending it exists.
+7. A `Pn` label that undercounts real severity (e.g. `P3` on an issue with a confirmed vulnerability from an active scanner) may still enter Next — cite the evidence (scanner run id, confirmed-in-main date) in the processing comment instead of waiting for the label to catch up.
 
 ## Weekly review (30–45 min)
 
