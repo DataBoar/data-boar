@@ -84,6 +84,8 @@ echo "=== AC: license gate — open + effective_tier enterprise keeps no-GIL ===
 ENT_CFG="$(mktemp)"
 trap 'rm -f "${ENT_CFG}"' EXIT
 printf '%s\n' 'licensing:' '  mode: open' '  effective_tier: enterprise' > "${ENT_CFG}"
+# Distroless nonroot cannot read a 0600 mktemp file bind-mounted at /data.
+chmod a+r "${ENT_CFG}"
 ENT_OUT="$(podman run --rm -v "${ENT_CFG}:/data/config.yaml:ro" -e CONFIG_PATH=/data/config.yaml "${ALIAS}" python -c 'import os,sys; g=os.environ.get("PYTHON_GIL"); e=sys._is_gil_enabled(); print("PYTHON_GIL", g, "gil_enabled", e); raise SystemExit(0 if not g and e is False else 1)' 2>&1)" || {
   echo "$ENT_OUT" >&2
   echo "FATAL: Enterprise open-mode YAML must leave PYTHON_GIL unset and GIL off" >&2

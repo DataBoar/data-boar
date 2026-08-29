@@ -16,6 +16,7 @@ from core.licensing.gil_container_gate import (
     resolve_python_executable,
     resolve_tier,
     should_force_gil,
+    strip_cpython_gil_x_flags,
     strip_interpreter_prefix,
 )
 from core.licensing.guard import reset_license_guard_for_tests
@@ -83,6 +84,79 @@ def test_strip_interpreter_prefix() -> None:
         "main.py"
     ]
     assert strip_interpreter_prefix(["main.py", "--web"]) == ["main.py", "--web"]
+
+
+def test_strip_cpython_gil_x_flags() -> None:
+    assert strip_cpython_gil_x_flags(["-Xgil=0", "main.py", "--web"]) == [
+        "main.py",
+        "--web",
+    ]
+    assert strip_cpython_gil_x_flags(["-X", "gil=0", "main.py"]) == ["main.py"]
+    assert strip_cpython_gil_x_flags(["-X", "gil=1", "-Xgil=0", "main.py"]) == [
+        "main.py"
+    ]
+    assert strip_cpython_gil_x_flags(["-X", "utf8", "main.py"]) == [
+        "-X",
+        "utf8",
+        "main.py",
+    ]
+
+
+def test_load_yaml_unreadable_fails_closed(tmp_path: Path) -> None:
+    cfg = tmp_path / "config.yaml"
+    cfg.write_text("licensing:\n  mode: open\n  effective_tier: enterprise\n")
+
+    def _denied(*_args: object, **_kwargs: object) -> object:
+        raise PermissionError("denied")
+
+    with patch.object(Path, "open", _denied):
+        assert load_yaml_config(cfg) == {}
+
+
+def test_main_execve_strips_x_gil_when_forcing_gil(tmp_path: Path) -> None:
+    from core.licensing import gil_container_gate as gate
+
+    cfg = tmp_path / "config.yaml"
+    cfg.write_text("licensing:\n  mode: open\n  effective_tier: community\n")
+    captured: dict[str, object] = {}
+
+    def fake_execve(python: str, argv: list[str], env: dict[str, str]) -> None:
+        captured["argv"] = argv
+        captured["env"] = env
+        raise SystemExit(0)
+
+    with (
+        patch.object(gate.os, "execve", fake_execve),
+        pytest.raises(SystemExit),
+    ):
+        gate.main(["-X", "gil=0", "-Xgil=0", "main.py", "--config", str(cfg)])
+    argv = captured["argv"]
+    assert isinstance(argv, list)
+    assert "-Xgil=0" not in argv
+    assert "gil=0" not in argv
+    assert captured["env"]["PYTHON_GIL"] == "1"  # type: ignore[index]
+    assert argv[1:] == ["main.py", "--config", str(cfg)]
+
+
+def test_main_execve_enterprise_keeps_x_gil(tmp_path: Path) -> None:
+    from core.licensing import gil_container_gate as gate
+
+    cfg = tmp_path / "config.yaml"
+    cfg.write_text("licensing:\n  mode: open\n  effective_tier: enterprise\n")
+    captured: dict[str, object] = {}
+
+    def fake_execve(python: str, argv: list[str], env: dict[str, str]) -> None:
+        captured["argv"] = argv
+        raise SystemExit(0)
+
+    with (
+        patch.object(gate.os, "execve", fake_execve),
+        pytest.raises(SystemExit),
+    ):
+        gate.main(["-Xgil=0", "main.py", "--config", str(cfg), "--web"])
+    argv = captured["argv"]
+    assert isinstance(argv, list)
+    assert argv[1:] == ["-Xgil=0", "main.py", "--config", str(cfg), "--web"]
 
 
 def test_config_path_from_argv(tmp_path: Path) -> None:

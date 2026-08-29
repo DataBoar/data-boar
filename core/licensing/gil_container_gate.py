@@ -62,8 +62,12 @@ def load_yaml_config(path: Path | None) -> dict[str, Any]:
         import yaml
     except ImportError:  # pragma: no cover
         return {}
-    with path.open(encoding="utf-8") as handle:
-        data = yaml.safe_load(handle) or {}
+    try:
+        with path.open(encoding="utf-8") as handle:
+            data = yaml.safe_load(handle) or {}
+    except OSError:
+        logger.exception("GIL gate: cannot read config %s — fail closed", path)
+        return {}
     return data if isinstance(data, dict) else {}
 
 
@@ -80,6 +84,28 @@ def strip_interpreter_prefix(argv: list[str]) -> list[str]:
     if argv and Path(argv[0]).name in _INTERPRETER_NAMES:
         return list(argv[1:])
     return list(argv)
+
+
+def strip_cpython_gil_x_flags(argv: list[str]) -> list[str]:
+    """Drop ``-X gil=*`` / ``-Xgil=*`` so they cannot override ``PYTHON_GIL``.
+
+    CPython documents that ``-X gil`` takes precedence over ``PYTHON_GIL``.
+    Kept-ENTRYPOINT Compose/K8s ``args`` would otherwise start free-threaded
+    on a non-Enterprise license. Enterprise callers keep these flags.
+    """
+    out: list[str] = []
+    skip_next = False
+    for i, arg in enumerate(argv):
+        if skip_next:
+            skip_next = False
+            continue
+        if arg.startswith("-Xgil="):
+            continue
+        if arg == "-X" and i + 1 < len(argv) and argv[i + 1].startswith("gil="):
+            skip_next = True
+            continue
+        out.append(arg)
+    return out
 
 
 def resolve_python_executable(environ: Mapping[str, str]) -> str:
@@ -135,6 +161,12 @@ def main(argv: list[str] | None = None) -> None:
     tier = resolve_tier(cfg)
     child_env = environ_with_gil_gate(environ, tier)
     python = resolve_python_executable(environ)
+    if should_force_gil(tier):
+        rest = strip_cpython_gil_x_flags(rest)
+        logger.info(
+            "GIL gate: tier=%s — setting PYTHON_GIL=1 (no-GIL is Enterprise only)",
+            tier.value,
+        )
     if not rest:
         rest = [
             "main.py",
@@ -145,11 +177,6 @@ def main(argv: list[str] | None = None) -> None:
             "8088",
             "--allow-insecure-http",
         ]
-    if should_force_gil(tier):
-        logger.info(
-            "GIL gate: tier=%s — setting PYTHON_GIL=1 (no-GIL is Enterprise only)",
-            tier.value,
-        )
     exec_container_python(python, [python, *rest], child_env)
 
 
