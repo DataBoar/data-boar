@@ -169,7 +169,6 @@ jobs:
     env:
       DATA_BOAR_CI_DL: "1"
       HF_HUB_DISABLE_TELEMETRY: "1"
-      HF_HOME: ${{ runner.temp }}/hf-hub
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -190,6 +189,8 @@ jobs:
         run: uv sync --extra dl --group dev
 
       - name: Run DL encode smoke
+        env:
+          HF_HOME: ${{ runner.temp }}/hf-hub
         run: uv run pytest -v -W error --tb=short tests/test_dl_backend_ci.py
 
   lint:

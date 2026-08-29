@@ -576,6 +576,25 @@ def test_ci_yml_has_dl_extra_job() -> None:
     yaml_text = (WORKFLOWS / "ci.yml").read_text(encoding="utf-8")
     dl_chunk = yaml_text.split("test-dl:")[1].split("\n  lint:")[0]
     assert "--extra dl" in dl_chunk
+    assert "runner.temp" in dl_chunk
+    job_env = "\n".join(f"{k}:{v}" for k, v in env.items())
+    assert "runner." not in job_env
+
+
+def test_ci_job_level_env_avoids_runner_context() -> None:
+    """GitHub rejects the whole workflow if job-level env uses runner.* (#1824)."""
+    data = _load_workflow("ci.yml")
+    for name, job in (data.get("jobs") or {}).items():
+        if not isinstance(job, dict):
+            continue
+        env = job.get("env") or {}
+        if not isinstance(env, dict):
+            continue
+        for key, value in env.items():
+            if isinstance(value, str):
+                assert "runner." not in value, (
+                    f"ci.yml job {name} env {key} uses runner context (invalid at job level)"
+                )
 
 
 def test_ci_yml_has_windows_test_job() -> None:
