@@ -186,7 +186,7 @@ def test_codeql_path_injection_directive_sits_on_line_before_flagged_heatmap_pat
     )
     lines = text.splitlines()
     flagged = {
-        "candidate = Path(heatmap_path).resolve()",
+        "candidate = (base / name).resolve()",
         "return candidate if candidate.is_file() else None",
         'out_path = Path(output_dir) / f"heatmap_{session_id[:12]}.png"',
     }

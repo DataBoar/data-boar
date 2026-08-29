@@ -42,12 +42,12 @@ def _heatmap_path_under_output_dir(heatmap_path: str, output_dir: str) -> Path |
     for embedded images). Caller must pass the same output_dir used to build the heatmap.
     """
     try:
-        # output_dir is the operator report directory, not finding payload.
-        # Heatmap basename is session_id[:12] only (ADR-0049: existing
-        # relative_to guard below is the control; do not weaken it).
+        # Re-join basename onto output_dir so CodeQL does not treat resolve(user path)
+        # as path injection. relative_to remains the containment check (ADR-0049).
         base = Path(output_dir).resolve()
+        name = Path(heatmap_path).name
         # codeql[py/path-injection]
-        candidate = Path(heatmap_path).resolve()
+        candidate = (base / name).resolve()
         candidate.relative_to(base)
     except (ValueError, OSError):
         return None
