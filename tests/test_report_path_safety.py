@@ -175,3 +175,27 @@ def test_download_heatmap_rejects_report_path_outside_configured_output_dir(
         assert resp.status_code == 404
     finally:
         _restore_routes_context(routes, orig)
+
+
+def test_codeql_path_injection_directive_sits_on_line_before_flagged_heatmap_paths() -> (
+    None
+):
+    """#1818: codeql[rule-id] suppresses only the immediately following line."""
+    text = (Path(__file__).resolve().parents[1] / "report" / "generator.py").read_text(
+        encoding="utf-8"
+    )
+    lines = text.splitlines()
+    flagged = {
+        "candidate = Path(heatmap_path).resolve()",
+        "return candidate if candidate.is_file() else None",
+        'out_path = Path(output_dir) / f"heatmap_{session_id[:12]}.png"',
+    }
+    seen: set[str] = set()
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        if stripped in flagged:
+            assert lines[i - 1].strip() == "# codeql[py/path-injection]", (
+                f"{stripped!r} is not immediately after a lone CodeQL directive"
+            )
+            seen.add(stripped)
+    assert seen == flagged
