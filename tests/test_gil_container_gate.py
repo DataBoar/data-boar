@@ -100,6 +100,17 @@ def test_strip_cpython_gil_x_flags() -> None:
         "utf8",
         "main.py",
     ]
+    assert strip_cpython_gil_x_flags(["-E", "main.py"]) == ["main.py"]
+    assert strip_cpython_gil_x_flags(["-I", "main.py"]) == ["main.py"]
+    assert strip_cpython_gil_x_flags(["-EI", "main.py"]) == ["main.py"]
+    assert strip_cpython_gil_x_flags(["-Es", "main.py"]) == ["-s", "main.py"]
+    assert strip_cpython_gil_x_flags(["-i", "main.py"]) == ["-i", "main.py"]
+    assert strip_cpython_gil_x_flags(["-Werror", "main.py"]) == ["-Werror", "main.py"]
+    assert strip_cpython_gil_x_flags(["-E", "--", "-E", "main.py"]) == [
+        "--",
+        "-E",
+        "main.py",
+    ]
 
 
 def test_load_yaml_unreadable_fails_closed(tmp_path: Path) -> None:
@@ -129,11 +140,24 @@ def test_main_execve_strips_x_gil_when_forcing_gil(tmp_path: Path) -> None:
         patch.object(gate.os, "execve", fake_execve),
         pytest.raises(SystemExit),
     ):
-        gate.main(["-X", "gil=0", "-Xgil=0", "main.py", "--config", str(cfg)])
+        gate.main(
+            [
+                "-E",
+                "-I",
+                "-X",
+                "gil=0",
+                "-Xgil=0",
+                "main.py",
+                "--config",
+                str(cfg),
+            ]
+        )
     argv = captured["argv"]
     assert isinstance(argv, list)
     assert "-Xgil=0" not in argv
     assert "gil=0" not in argv
+    assert "-E" not in argv
+    assert "-I" not in argv
     assert captured["env"]["PYTHON_GIL"] == "1"  # type: ignore[index]
     assert argv[1:] == ["main.py", "--config", str(cfg)]
 
@@ -153,10 +177,18 @@ def test_main_execve_enterprise_keeps_x_gil(tmp_path: Path) -> None:
         patch.object(gate.os, "execve", fake_execve),
         pytest.raises(SystemExit),
     ):
-        gate.main(["-Xgil=0", "main.py", "--config", str(cfg), "--web"])
+        gate.main(["-E", "-I", "-Xgil=0", "main.py", "--config", str(cfg), "--web"])
     argv = captured["argv"]
     assert isinstance(argv, list)
-    assert argv[1:] == ["-Xgil=0", "main.py", "--config", str(cfg), "--web"]
+    assert argv[1:] == [
+        "-E",
+        "-I",
+        "-Xgil=0",
+        "main.py",
+        "--config",
+        str(cfg),
+        "--web",
+    ]
 
 
 def test_config_path_from_argv(tmp_path: Path) -> None:

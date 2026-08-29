@@ -86,12 +86,38 @@ def strip_interpreter_prefix(argv: list[str]) -> list[str]:
     return list(argv)
 
 
-def strip_cpython_gil_x_flags(argv: list[str]) -> list[str]:
-    """Drop ``-X gil=*`` / ``-Xgil=*`` so they cannot override ``PYTHON_GIL``.
+# Short options that CPython clusters without a following argument (not -c/-m/-W/-X).
+_NOARG_SHORT_OPTS = frozenset("bBdEhiIOqPsSuvVx")
 
-    CPython documents that ``-X gil`` takes precedence over ``PYTHON_GIL``.
-    Kept-ENTRYPOINT Compose/K8s ``args`` would otherwise start free-threaded
-    on a non-Enterprise license. Enterprise callers keep these flags.
+
+def _strip_env_ignore_short_opt(arg: str) -> str | None:
+    """Drop ``-E`` / ``-I`` (ignore ``PYTHON*`` / isolated). ``None`` means omit the token.
+
+    ``-E`` and ``-I`` make CPython ignore ``PYTHON_GIL``. Clustered forms such as
+    ``-EI`` / ``-Es`` are rewritten (``-s`` kept). Tokens that are not a pure
+    no-arg short cluster (``-Werror``, ``-Xgil=0``) are left unchanged here.
+    """
+    if arg in ("-E", "-I"):
+        return None
+    if len(arg) < 3 or not arg.startswith("-") or arg.startswith("--"):
+        return arg
+    body = arg[1:]
+    if not body.isalpha() or any(ch not in _NOARG_SHORT_OPTS for ch in body):
+        return arg
+    kept = "".join(ch for ch in body if ch not in "EI")
+    if not kept:
+        return None
+    return f"-{kept}"
+
+
+def strip_cpython_gil_x_flags(argv: list[str]) -> list[str]:
+    """Drop flags that would override or ignore ``PYTHON_GIL`` on the child.
+
+    Strips ``-X gil=*`` / ``-Xgil=*`` (``-X gil`` wins over the env var) and
+    ``-E`` / ``-I`` (isolated / ignore environment — CPython then ignores
+    ``PYTHON*``, including ``PYTHON_GIL``). Kept-ENTRYPOINT Compose/K8s
+    ``args`` would otherwise start free-threaded on a non-Enterprise license.
+    Enterprise callers keep these flags. Tokens after ``--`` are not stripped.
     """
     out: list[str] = []
     skip_next = False
@@ -99,12 +125,18 @@ def strip_cpython_gil_x_flags(argv: list[str]) -> list[str]:
         if skip_next:
             skip_next = False
             continue
+        if arg == "--":
+            out.extend(argv[i:])
+            break
         if arg.startswith("-Xgil="):
             continue
         if arg == "-X" and i + 1 < len(argv) and argv[i + 1].startswith("gil="):
             skip_next = True
             continue
-        out.append(arg)
+        rewritten = _strip_env_ignore_short_opt(arg)
+        if rewritten is None:
+            continue
+        out.append(rewritten)
     return out
 
 
