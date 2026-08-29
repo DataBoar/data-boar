@@ -20,7 +20,7 @@
 | Hierarquia PMO | `docs/ops/PLANS_DOCUMENTATION_HIERARCHY.md` | `PLAN_*` vs `PLANS_TODO` vs `PLANS_HUB` |
 | Eixos de taxonomia | `docs/plans/PLAN_TAXONOMY_AXES.md` | Faixas H / U / G / P |
 | Primers hub | `docs/plans/PRIMERS_HUB.md` | Primers de frameworks (camada de compliance) |
-| Primers (técnicos) | `docs/primers/INDEX.md` | Primers de onboarding/KT (evolução da IA, registros de decisão) |
+| Primers (técnicos) | `docs/primers/INDEX.md` | Primers de onboarding/KT (evolução da IA, registros de decisão, forense) |
 | Plans to-do | `docs/plans/PLANS_TODO.md` | Dashboard de execução |
 
 ### Decisões arquiteturais
