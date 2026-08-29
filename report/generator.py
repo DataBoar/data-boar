@@ -38,22 +38,28 @@ _logger = logging.getLogger(__name__)
 
 def _heatmap_path_under_output_dir(heatmap_path: str, output_dir: str) -> Path | None:
     """
-    Return resolved heatmap path only if it lies under output_dir (guards path injection
-    for embedded images). Caller must pass the same output_dir used to build the heatmap.
+    Return a heatmap file that already exists under output_dir, matched by basename.
+
+    Does not resolve the caller-supplied path (CodeQL py/path-injection). Containment
+    is directory listing plus relative_to (ADR-0049).
     """
     try:
-        # Re-join basename onto output_dir so CodeQL does not treat resolve(user path)
-        # as path injection. relative_to remains the containment check (ADR-0049).
         base = Path(output_dir).resolve()
-        name = Path(heatmap_path).name
-        # codeql[py/path-injection]
-        candidate = (base / name).resolve()  # lgtm[py/path-injection]
-        candidate.relative_to(base)
+    except OSError:
+        return None
+    if not base.is_dir():
+        return None
+    wanted = Path(heatmap_path).name
+    try:
+        for entry in base.iterdir():
+            if entry.name != wanted or not entry.is_file():
+                continue
+            resolved = entry.resolve()
+            resolved.relative_to(base)
+            return resolved
     except (ValueError, OSError):
         return None
-    # candidate already constrained by relative_to(base).
-    # codeql[py/path-injection]
-    return candidate if candidate.is_file() else None  # lgtm[py/path-injection]
+    return None
 
 
 # Cross-ref aggregated sheet: first row explains sampling limits (FN-first; incomplete-data transparency).
@@ -276,10 +282,9 @@ def _create_heatmap(
             pass
     # output_dir is the report folder; filename is heatmap_{session_id[:12]}.png,
     # not user/db path segments (ADR-0049 FP).
+    heatmap_name = f"heatmap_{session_id[:12]}.png"
     # codeql[py/path-injection]
-    out_path = (
-        Path(output_dir) / f"heatmap_{session_id[:12]}.png"
-    )  # lgtm[py/path-injection]
+    out_path = Path(output_dir, heatmap_name)  # lgtm[py/path-injection]
     plt.savefig(out_path, bbox_inches="tight")
     plt.close()
     return str(out_path)

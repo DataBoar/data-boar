@@ -177,24 +177,14 @@ def test_download_heatmap_rejects_report_path_outside_configured_output_dir(
         _restore_routes_context(routes, orig)
 
 
-def test_codeql_path_injection_directive_sits_on_line_before_flagged_heatmap_paths() -> (
-    None
-):
-    """#1818: codeql[rule-id] suppresses only the immediately following line."""
+def test_heatmap_helper_does_not_resolve_caller_supplied_path() -> None:
+    """#1818: listing output_dir avoids CodeQL py/path-injection on heatmap_path."""
     text = (Path(__file__).resolve().parents[1] / "report" / "generator.py").read_text(
         encoding="utf-8"
     )
-    lines = text.splitlines()
-    flagged = {
-        "candidate = (base / name).resolve()",
-        "return candidate if candidate.is_file() else None",
-    }
-    seen: set[str] = set()
-    for i, line in enumerate(lines):
-        code = line.split("#")[0].strip()
-        if code in flagged:
-            assert lines[i - 1].strip() == "# codeql[py/path-injection]", (
-                f"{code!r} is not immediately after a lone CodeQL directive"
-            )
-            seen.add(code)
-    assert seen == flagged
+    start = text.index("def _heatmap_path_under_output_dir")
+    end = text.index("def _mascot_path")
+    chunk = text[start:end]
+    assert "iterdir()" in chunk
+    assert "Path(heatmap_path).resolve()" not in chunk
+    assert "Path(heatmap_path).name" in chunk
