@@ -114,7 +114,14 @@ RUN chmod +x /tmp/collect-runtime-rootfs.sh && /tmp/collect-runtime-rootfs.sh /r
 # -----------------------------------------------------------------------------
 FROM gcr.io/distroless/cc-debian13:nonroot@sha256:c31ff9abcb1910f3ab25c7957bdaf0bfe12a01eb546e8df2282f1c8f682b606c
 
-LABEL org.opencontainers.image.description="LGPD/GDPR/CCPA audit. Free-threaded CPython; PYTHON_GIL=1 unless Enterprise license. x86-64-v2+."
+# image.version is ARG (empty unless --build-arg) so a baked semver cannot go stale.
+ARG OCI_IMAGE_VERSION=""
+LABEL org.opencontainers.image.title="Data Boar" \
+      org.opencontainers.image.description="LGPD/GDPR/CCPA audit. Free-threaded CPython; PYTHON_GIL=1 unless Enterprise license. x86-64-v2+." \
+      org.opencontainers.image.vendor="Fabio Tavares Leitão" \
+      org.opencontainers.image.source="https://github.com/DataBoar/data-boar" \
+      org.opencontainers.image.licenses="BSD-3-Clause" \
+      org.opencontainers.image.version="${OCI_IMAGE_VERSION}"
 
 WORKDIR /app
 

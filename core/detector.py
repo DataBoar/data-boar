@@ -439,6 +439,9 @@ _CHORD_SUFFIX_ATOMS: tuple[re.Pattern[str], ...] = tuple(
 _CHORD_TOKEN_END_OK = re.compile(r"(?=\s|\||/|$)")
 _SLASH_BASS = re.compile(r"/[A-Ga-g](?:#|b|♭)?(?:m|min)?", re.I)
 _CHORD_ROOT_START = re.compile(r"(?<![A-Za-z0-9])(?=[A-Ga-g])", re.I)
+# Real suffixes stack at most ~4 atoms (e.g. maj7add9sus2/B). 48 >> any realistic
+# token and bounds the loop on malformed input without truncating valid chords.
+_MAX_CHORD_SUFFIX_STEPS = 48
 
 
 def _consume_chord_token(s: str, start: int) -> int | None:
@@ -457,7 +460,7 @@ def _consume_chord_token(s: str, start: int) -> int | None:
         j += 1
         if j < n and s[j].isdigit():
             j += 1
-    for _ in range(48):
+    for _ in range(_MAX_CHORD_SUFFIX_STEPS):
         if j >= n:
             break
         best = 0

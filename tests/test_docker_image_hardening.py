@@ -72,6 +72,23 @@ def test_dockerfile_distroless_nonroot_and_exec_cmd() -> None:
     assert "0.0.0.0" not in joined_hc
 
 
+def test_dockerfile_oci_image_labels() -> None:
+    """#460: OCI title/source/vendor/licenses; version via ARG (not a stale bake)."""
+    text = DOCKERFILE.read_text(encoding="utf-8")
+    assert 'org.opencontainers.image.title="Data Boar"' in text
+    assert "org.opencontainers.image.description=" in text
+    assert "org.opencontainers.image.vendor=" in text
+    assert (
+        'org.opencontainers.image.source="https://github.com/DataBoar/data-boar"'
+        in text
+    )
+    assert 'org.opencontainers.image.licenses="BSD-3-Clause"' in text
+    assert "org.opencontainers.image.version=" in text
+    assert "ARG OCI_IMAGE_VERSION" in text
+    assert 'org.opencontainers.image.version="1.' not in text
+    assert 'org.opencontainers.image.version="1.8' not in text
+
+
 def test_dockerfile_extras_runtime_extension_point() -> None:
     """#1400: lean base + /extras mount; no fat image of all optional extras."""
     text = DOCKERFILE.read_text(encoding="utf-8")

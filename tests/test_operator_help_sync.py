@@ -130,6 +130,12 @@ def test_web_help_uses_runtime_prog_and_concrete_home_path(tmp_path: Path) -> No
     assert "~/Documents/LGPD" not in html
 
 
+def test_man5_norm_tag_default_is_structured_tp(man5_text: str) -> None:
+    """#432: man 5 puts the Custom default on the norm_tag .TP line, not trailing prose."""
+    assert "(optional, default: Custom)" in man5_text
+    assert 'Default "Custom"' not in man5_text
+
+
 def test_man_pages_use_installed_invocation_contract(
     man1_text: str, man5_text: str
 ) -> None:
