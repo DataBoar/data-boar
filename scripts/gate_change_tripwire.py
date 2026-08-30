@@ -34,6 +34,10 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 # Tracked files whose change must be acknowledged by the gate owner.
 # The live denylist docs/private/security_audit/PII_LOCAL_SEEDS.txt is gitignored,
 # so it never appears in a diff; its tracked template carries the policy instead.
+#
+# Any path under GATE_PATH_PREFIXES is also gated (whole .github/workflows/ tree).
+GATE_PATH_PREFIXES: tuple[str, ...] = (".github/workflows/",)
+
 GATE_FILES: frozenset[str] = frozenset(
     {
         "scripts/gatekeeper_audit.py",
@@ -44,8 +48,6 @@ GATE_FILES: frozenset[str] = frozenset(
         "scripts/operator_gated_pr_guard.py",
         "scripts/__init__.py",
         ".pre-commit-config.yaml",
-        ".github/workflows/ci.yml",
-        ".github/workflows/operator-gated-pr-guard.yml",
         ".github/CODEOWNERS",
         "tests/test_pii_guard.py",
         "tests/test_gatekeeper_audit_word_boundary.py",
@@ -65,9 +67,23 @@ GATE_FILES: frozenset[str] = frozenset(
 MARKER_RE = re.compile(r"(?im)^\s*Gate-Change-Approved-By:\s*@?\S+")
 
 
+def is_gate_path(path: str) -> bool:
+    norm = path.replace("\\", "/").strip()
+    if not norm:
+        return False
+    if norm in GATE_FILES:
+        return True
+    return any(norm.startswith(prefix) for prefix in GATE_PATH_PREFIXES)
+
+
 def gate_files_touched(changed: list[str]) -> list[str]:
-    norm = {c.replace("\\", "/").strip() for c in changed if c.strip()}
-    return sorted(norm & GATE_FILES)
+    return sorted(
+        {
+            p
+            for p in (c.replace("\\", "/").strip() for c in changed)
+            if p and is_gate_path(p)
+        }
+    )
 
 
 def marker_present(commit_messages: str) -> bool:

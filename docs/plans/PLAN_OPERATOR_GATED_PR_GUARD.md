@@ -24,7 +24,7 @@
 - Do **not** swallow `gate_trailer_attest.py` / guard CLI exit codes.
 - Reuse **`GATE_FILES`** from `scripts/gate_change_tripwire.py` (no second list).
 - PR-comment SSHSIG is over **trailer + PR number + head SHA** (not trailer-only replay).
-- CI runs **`pull_request_target`** with checkout of the PR **base SHA only** (never the PR tree). Changed paths and the latest comment come from the GitHub API. `scripts/__init__.py` is in **`GATE_FILES`**.
+- CI runs **`pull_request_target`** with checkout of the PR **base SHA only** (never the PR tree). Changed paths and the latest comment come from the GitHub API. `scripts/__init__.py` is in **`GATE_FILES`**; **any** path under **`.github/workflows/`** is gated via prefix.
 
 ## Phases
 
@@ -37,6 +37,14 @@
 | 5 | Security Reviewer #1832: base-ref verifier + PR-bound payload | ✅ Done (this PR) |
 | 6 | Security Reviewer #1832: pin YAML via `pull_request_target`; never execute PR tree; `scripts/__init__.py` in GATE_FILES | ✅ Done (this PR) |
 | 7 | Security Reviewer #1832: `pulls.listFiles` includes `previous_filename` on rename/copy | ✅ Done (this PR) |
+| 8 | Security Reviewer #1832: `GATE_PATH_PREFIXES` for entire `.github/workflows/` | ✅ Done (this PR) |
+| 9 | Security Reviewer #1832: workflow `concurrency` per PR (race on force-push) | ✅ Done (this PR) |
+
+## Accepted residual risks (#1832)
+
+Documented in `.github/workflows/operator-gated-pr-guard.yml` (not fixed in this slice):
+
+- **`pulls.listFiles` ~3000-entry REST cap** — would require a PR with thousands of file changes to hide a gated path; mitigation deemed disproportionate.
 
 ## Out of scope
 

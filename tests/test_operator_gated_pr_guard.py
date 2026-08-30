@@ -61,8 +61,8 @@ def test_collect_pulls_api_paths_modified_uses_filename_only() -> None:
 
 def test_gate_files_list_is_not_duplicated() -> None:
     assert ogp.GATE_FILES is gct.GATE_FILES
-    assert ".github/workflows/ci.yml" in ogp.GATE_FILES
-    assert ".github/workflows/operator-gated-pr-guard.yml" in ogp.GATE_FILES
+    assert ogp.needs_attestation([".github/workflows/ci.yml"], []) is True
+    assert ogp.needs_attestation([".github/workflows/zizmor.yml"], []) is True
     assert "scripts/operator_gated_pr_guard.py" in ogp.GATE_FILES
     assert "scripts/gate_trailer_attest.py" in ogp.GATE_FILES
     assert "docs/adr/allowed_signers" in ogp.GATE_FILES
