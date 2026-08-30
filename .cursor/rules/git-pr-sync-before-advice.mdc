@@ -34,7 +34,7 @@ Prefer repo automation when it already does fetch/rebase: **`.\scripts\commit-or
 
 - **Commit locally** in small, themed chunks (see `.cursor/rules/execution-priority-and-pr-batching.mdc` — commit cadence) so progress is **recorded** and diffs stay reviewable.
 - **Integrate `main` often** on feature branches (`merge` or `rebase` after `git fetch`) so you do not open a PR or cut a release with a **weeks-old** base and a wall of conflicts.
-- Before **PR / publish / release**: `git status` clean or intentional; run **`check-all`** (or agreed subset); use **Preview** (`commit-or-pr.ps1 -Action Preview`) so scope matches intent.
+- Before **PR / publish / release**: `git status` clean or intentional; run **full `check-all`** (exit 0). **No "agreed subset"** for code publish — `lint-only` is **docs-only** slices only ([ADR 0080](../../docs/adr/ADR-0080-local-validation-gate-inviolable.md), **#1151**, **`check-all-gate.mdc`**). Use **Preview** (`commit-or-pr.ps1 -Action Preview`) so scope matches intent.
 
 ## After creating a PR
 

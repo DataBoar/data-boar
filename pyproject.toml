@@ -213,6 +213,23 @@ norecursedirs = [
     ".hypothesis",
 ]
 
+# Coverage for CI → Sonar (#1719). Omit tests/ and venv; match sonar.sources.
+[tool.coverage.run]
+branch = true
+source = [
+    "api",
+    "config",
+    "connectors",
+    "core",
+    "database",
+    "file_scan",
+    "report",
+    "scanners",
+    "utils",
+    "logging_custom",
+]
+omit = ["tests/*", ".venv/*", "*/.venv/*"]
+
 [tool.ruff]
 # Legacy dirs now linted: utils/, scanners/, logging_custom/ — cleaned 2026-05-14.
 # db/ still excluded (deeper structural issues; see docs/plans/completed/PLAN_BANDIT_SECURITY_LINTER.md).
@@ -347,6 +364,7 @@ dev = [
     "pluggy>=1.6.0",
     "pre-commit>=4.0.0",
     "pytest>=9.0.3",
+    "pytest-cov>=6.0.0",
     "rapidfuzz>=3.9.0",
     "ruff>=0.16.1",
     "types-pyyaml>=6.0.12.20260724",
