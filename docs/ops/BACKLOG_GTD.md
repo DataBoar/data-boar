@@ -35,7 +35,7 @@ Inbox → ?
 2. Do not close P0/P1/bugs in the same sweep as P3 docs.
 3. Stale ≠ done. 90 days + no milestone + P3 → `stale-review` comment, then `not_planned` or `backlog`. No silent stale-bot on this bus.
 4. Agents do not close because the body “looks shipped.” HITL or a checklist with an artifact path.
-5. Refresh `ISSUE_QUEUE_SEQUENCING_MAP.md` in the **same PR** that closes a hygiene group. A stale map is itself a skeleton.
+5. Refresh `ISSUE_QUEUE_SEQUENCING_MAP.md` in the **same PR** that closes a hygiene group (`uv run python scripts/issue_queue_sequencing_map.py --write`). A stale map is itself a skeleton.
 6. Practical axes: **`Pn` label + milestone**. U-axis (ADR-0061) only on Next, or stop pretending it exists.
 7. A `Pn` label that undercounts real severity (e.g. `P3` on an issue with a confirmed vulnerability from an active scanner) may still enter Next — cite the evidence (scanner run id, confirmed-in-main date) in the processing comment instead of waiting for the label to catch up.
 

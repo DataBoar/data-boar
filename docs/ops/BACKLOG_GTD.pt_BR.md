@@ -35,7 +35,7 @@ Inbox → ?
 2. Não fechar P0/P1/bug no mesmo sweep de P3 docs.
 3. Stale ≠ done. 90 dias + sem marco + P3 → comentário `stale-review`, depois `not_planned` ou `backlog`. Sem bot mudo neste barramento.
 4. Agente não fecha porque o body “parece shipped”. HITL ou checklist com path do artefato.
-5. Regenerar `ISSUE_QUEUE_SEQUENCING_MAP.md` no **mesmo PR** que fecha um grupo de hygiene. Mapa velho é esqueleto.
+5. Regenerar `ISSUE_QUEUE_SEQUENCING_MAP.md` no **mesmo PR** que fecha um grupo de hygiene (`uv run python scripts/issue_queue_sequencing_map.py --write`). Mapa velho é esqueleto.
 6. Eixos na prática: **label `Pn` + milestone**. Eixo U (ADR-0061) só no Next, ou para de fingir.
 7. Uma label `Pn` que subestima a gravidade real (ex.: `P3` numa issue com vulnerabilidade confirmada por um scanner ativo) ainda pode entrar no Next — cite a evidência (id da execução do scanner, data confirmed-in-main) no comentário de processamento, em vez de esperar a label acompanhar.
 
