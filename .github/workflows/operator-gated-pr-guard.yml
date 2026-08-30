@@ -1,0 +1,115 @@
+# Operator-gated PR merge guard (GitHub #1709). Brother of operator-gated-reopen.yml (#990).
+#
+# Trusted path: pull_request_target so GitHub runs THIS file from the default
+# branch, not from the PR HEAD. Checkout is the PR **base SHA only** — never
+# the PR tree. Changed paths, labels, and the latest comment come from the
+# GitHub API / event context. Nothing from the PR is executed.
+#
+# Do not add `on: pull_request` with this job name: that YAML is attacker-
+# controlled and can keep the required-check name while no-op'ing the job.
+# This workflow is inert until it exists on the default branch (TOFU for the
+# landing PR).
+#
+# When the PR has label `operator-gated` OR the API file list touches
+# GATE_FILES (imported from scripts/gate_change_tripwire.py), this job FAILS
+# unless the **latest** PR comment is Gate-Change-Approved-By plus a
+# file-namespace SSHSIG over trailer + PR number + head SHA
+# (scripts/gate_trailer_attest.py bound_pr_payload_bytes).
+#
+# Do NOT trust GitHub actor identity (shared operator/agent account).
+# Trailer text without SSHSIG is not approval. Do not swallow the verifier exit code.
+# Do NOT checkout github.event.pull_request.head.sha (untrusted code + token).
+#
+# Accepted residual risk (#1832, Security Reviewer bc-574b1b2c): pulls.listFiles
+# paginates but the REST API caps at ~3000 entries. Hiding a gated path would
+# require a PR with thousands of changed files — disproportionate to mitigate
+# here (no second listFiles strategy in this slice).
+#
+# Operator (human): add this check as required on ruleset `main-gate-pii`.
+name: Operator-gated PR attestation
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: operator-gated-pr-guard-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+on:
+  # zizmor: ignore[dangerous-triggers] intentional pull_request_target: YAML from default branch only; checkout base SHA; pulls API for paths/comments; no PR code executed (#1832).
+  pull_request_target:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+jobs:
+  guard-attestation:
+    name: SSHSIG attestation when gated
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR base only (never PR HEAD)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+
+      - name: Write labels, changed paths, latest PR comment (API)
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const fs = require("fs");
+            const pr = context.payload.pull_request;
+            const labels = (pr.labels || []).map((l) => l.name).join(",");
+            fs.writeFileSync("pr-labels.txt", labels);
+            const { owner, repo } = context.repo;
+            const files = await github.paginate(
+              github.rest.pulls.listFiles,
+              { owner, repo, pull_number: pr.number, per_page: 100 }
+            );
+            const paths = [];
+            for (const f of files) {
+              if (f.filename) paths.push(f.filename);
+              if (
+                f.previous_filename &&
+                (f.status === "renamed" || f.status === "copied")
+              ) {
+                paths.push(f.previous_filename);
+              }
+            }
+            fs.writeFileSync(
+              "pr-changed-paths.txt",
+              paths.length ? paths.join("\n") + "\n" : ""
+            );
+            const comments = await github.paginate(
+              github.rest.issues.listComments,
+              { owner, repo, issue_number: pr.number, per_page: 100 }
+            );
+            let latest = "";
+            if (comments.length > 0) {
+              const sorted = [...comments].sort(
+                (a, b) => new Date(b.created_at) - new Date(a.created_at)
+              );
+              latest = sorted[0].body || "";
+            }
+            fs.writeFileSync("pr-latest-comment.md", latest);
+
+      - name: Enforce SSHSIG attestation
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          uv run python scripts/operator_gated_pr_guard.py \
+            --labels-file pr-labels.txt \
+            --changed-from-file pr-changed-paths.txt \
+            --message-file pr-latest-comment.md \
+            --pr "$PR_NUMBER" \
+            --head "$HEAD_SHA"

@@ -51,8 +51,24 @@ def test_gate_files_set_covers_core_surfaces() -> None:
         ".github/CODEOWNERS",
         ".pre-commit-config.yaml",
         "security/pii_gate_allowlist.txt",
+        "scripts/operator_gated_pr_guard.py",
+        "scripts/gate_trailer_attest.py",
+        "docs/adr/allowed_signers",
+        "scripts/__init__.py",
     ):
-        assert path in t.GATE_FILES
+        assert t.is_gate_path(path)
+
+
+def test_any_github_workflows_yaml_is_gate_path() -> None:
+    assert t.is_gate_path(".github/workflows/ci.yml")
+    assert t.is_gate_path(".github/workflows/operator-gated-pr-guard.yml")
+    assert t.is_gate_path(".github/workflows/evil-noop-guard.yml")
+    code, touched = t.evaluate(
+        [".github/workflows/evil-noop-guard.yml"],
+        "no marker",
+    )
+    assert code == 1
+    assert touched == [".github/workflows/evil-noop-guard.yml"]
 
 
 def test_windows_path_separator_normalized() -> None:

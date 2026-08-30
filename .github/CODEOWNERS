@@ -24,7 +24,14 @@
 /.pre-commit-config.yaml                                       @FabioLeitao
 /.github/workflows/ci.yml                                      @FabioLeitao
 /.github/workflows/gate-change-tripwire.yml                    @FabioLeitao
+/.github/workflows/operator-gated-pr-guard.yml                 @FabioLeitao
 /.github/CODEOWNERS                                            @FabioLeitao
+
+# --- Operator-gated PR merge attestation (#1709) ---
+/scripts/operator_gated_pr_guard.py                            @FabioLeitao
+/scripts/gate_trailer_attest.py                                @FabioLeitao
+/scripts/__init__.py                                           @FabioLeitao
+/docs/adr/allowed_signers                                      @FabioLeitao
 
 # --- Gate tests ---
 /tests/test_pii_guard.py                                       @FabioLeitao

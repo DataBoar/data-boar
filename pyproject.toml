@@ -251,6 +251,7 @@ select = ["E4", "E7", "E9", "F"]
 "scripts/generate_extras_manifest.py" = ["E402"]
 "scripts/generate_nfpm_packages.py" = ["E402"]
 "scripts/generate_void_xbps_packages.py" = ["E402"]
+"scripts/operator_gated_pr_guard.py" = ["E402"]
 # Legacy complexity: these functions are I/O-heavy and have large dispatch tables.
 # Tracked in docs/plans/PLAN_LAB_OP_CAPEX_OPEX_PROCUREMENT.md and SonarQube; refactor when safe.
 # New code in these files must NOT add complexity violations — only existing ones are exempted.

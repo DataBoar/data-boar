@@ -720,6 +720,50 @@ def test_operator_gated_reopen_workflow_present_and_valid() -> None:
             )
 
 
+def test_operator_gated_pr_guard_workflow_present_and_valid() -> None:
+    """#1709: PR brother of ADR-0072 issue reopen — latest comment + SSHSIG only."""
+    data = _load_workflow("operator-gated-pr-guard.yml")
+    assert data.get("name")
+    text = (WORKFLOWS / "operator-gated-pr-guard.yml").read_text(encoding="utf-8")
+    assert "pull_request_target:" in text
+    assert "\n  pull_request:" not in text
+    assert "operator-gated" in text
+    assert "Gate-Change-Approved-By" in text
+    assert "sorted[0]" in text
+    assert "listFiles" in text
+    assert "previous_filename" in text
+    assert "operator_gated_pr_guard.py" in text
+    assert "--changed-from-file" in text
+    assert "--labels-file" in text
+    assert "github.event.pull_request.base.sha" in text
+    assert "ref: ${{ github.event.pull_request.head.sha }}" not in text
+    assert "git checkout" not in text
+    assert "persist-credentials: false" in text
+    assert "concurrency:" in text
+    assert "cancel-in-progress: true" in text
+    assert "operator-gated-pr-guard-${{ github.event.pull_request.number }}" in text
+    assert "3000" in text or "listFiles" in text
+    assert "--pr" in text
+    assert "--head" in text
+    assert "PR_NUMBER" in text
+    assert "HEAD_SHA" in text
+    assert "github.actor" not in text
+    assert "pull_request.body" not in text
+    assert "continue-on-error: true" not in text
+    perms = data.get("permissions") or {}
+    assert perms.get("contents") == "read"
+    assert perms.get("pull-requests") == "read"
+    sha_40 = re.compile(r"@[0-9a-f]{40}")
+    for line in text.splitlines():
+        code = line.split("#", 1)[0]
+        if "uses:" not in code or "docker://" in code:
+            continue
+        if "./.github/" in code:
+            continue
+        if any(p in code for p in ("actions/", "astral-sh/")):
+            assert sha_40.search(code), f"expected full commit SHA: {line.strip()!r}"
+
+
 def test_publish_pypi_workflow_present_and_valid() -> None:
     """#1042 / #74: OIDC PyPI publish — build in CI, prod gated on dispatch target=pypi."""
     data = _load_workflow("publish-pypi.yml")
