@@ -6,7 +6,7 @@
 # Linux/macOS twin: scripts/check-all.sh
 # Usage (from repo root):
 #   .\scripts\check-all.ps1
-#   .\scripts\check-all.ps1 -SkipPreCommit   # only pytest (e.g. when iterating quickly)
+#   .\scripts\check-all.ps1 -SkipPreCommit   # LOCAL ITERATION ONLY - not ADR-0080 push/PR proof (#1153)
 
 param(
     [switch]$SkipPreCommit = $false,
@@ -17,6 +17,11 @@ param(
 $ErrorActionPreference = "Stop"
 $repoRoot = (Get-Item $PSScriptRoot).Parent.FullName
 Set-Location $repoRoot
+
+if ($SkipPreCommit) {
+    Write-Host "check-all: WARNING: -SkipPreCommit is LOCAL ITERATION ONLY." -ForegroundColor Yellow
+    Write-Host "This run is NOT the ADR-0080 / #1151 / #1153 publish gate. Re-run without -SkipPreCommit before git push / gh pr create." -ForegroundColor Yellow
+}
 
 # PII gate: maintainer seeds vs staged paths only (see scripts/gatekeeper-audit.ps1).
 & "$repoRoot\scripts\gatekeeper-audit.ps1"

@@ -10,8 +10,9 @@ alwaysApply: true
 
 When a security gate fires — PII seed gate (`gatekeeper_audit.py` / `gatekeeper-audit.ps1`),
 `pii_history_guard.py`, `tests/test_pii_guard.py`, secret scanners, CODEOWNERS, signed-commit
-or ADR-attestation checks — you **MUST NOT** weaken, disable, loosen, or circumvent it to make
-a commit or CI pass.
+or ADR-attestation checks, **or the local validation / publish gate** (`./scripts/check-all.sh`
+/ `.\scripts\check-all.ps1`, versioned **pre-push** hook **#1151**, [ADR 0080](../../docs/adr/ADR-0080-local-validation-gate-inviolable.md))
+— you **MUST NOT** weaken, disable, loosen, skip, or circumvent it to make a commit, push, PR, or CI pass.
 
 **Gate fired → STOP and escalate to the operator.** Report what fired, where, and why; do not
 "fix" it by mutating the gate.
@@ -22,7 +23,8 @@ a commit or CI pass.
   a seed so a real string stops matching.
 - Editing or rewording the **audited file** purely to dodge the seed (e.g. changing
   `"Chain INPUT"` casing so a substring stops matching) — that is dodging, not fixing.
-- Commenting out, `# noqa`-ing, `--no-verify`, skipping a hook, or relaxing a CI step.
+- Commenting out, `# noqa`-ing, `--no-verify`, skipping a hook (including **pre-push** / **#1151**),
+  treating **`--skip-pre-commit`** or targeted pytest as the publish gate, or relaxing a CI step.
 - Synthesizing or deleting entries from a **real-PII denylist** to silence it.
 
 ## The only sanctioned responses to a false positive
@@ -43,5 +45,6 @@ LOUD if a PR touches a gate file without an operator marker.
 ## Canonical references
 
 - [ADR 0071](../../docs/adr/ADR-0071-self-protecting-pii-gate.md) — self-protecting PII gate.
+- [ADR 0080](../../docs/adr/ADR-0080-local-validation-gate-inviolable.md) — local `check-all` / pre-push inviolable before push/PR (issue **#1151**).
 - [ADR 0018](../../docs/adr/ADR-0018-pii-anti-recurrence-guardrails-for-tracked-files-and-branch-history.md), [ADR 0020](../../docs/adr/ADR-0020-ci-full-git-history-pii-gate.md), [ADR 0049](../../docs/adr/ADR-0049-no-brittle-mitigations-robust-input-handling.md).
 - `docs/plans/PLAN_PII_GATE_INTEGRITY.md`; `.github/CODEOWNERS`; `security/pii_gate_allowlist.txt`.
