@@ -716,6 +716,12 @@ def test_operator_gated_pr_guard_workflow_present_and_valid() -> None:
     assert "sorted[0]" in text
     assert "operator_gated_pr_guard.py" in text
     assert "gate_trailer_attest.py" in text or "operator_gated_pr_guard.py" in text
+    assert "git checkout" in text
+    assert "origin/${BASE_REF}" in text or "origin/${BASE_REF}" in text
+    assert "--pr" in text
+    assert "--head" in text
+    assert "PR_NUMBER" in text
+    assert "HEAD_SHA" in text
     assert "github.actor" not in text
     assert "pull_request.body" not in text
     assert "continue-on-error: true" not in text

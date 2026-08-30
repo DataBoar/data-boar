@@ -4,10 +4,15 @@ from __future__ import annotations
 
 import subprocess
 
+import pytest
+
 import scripts.gate_change_tripwire as gct
+import scripts.gate_trailer_attest as gta
 import scripts.operator_gated_pr_guard as ogp
 
 from tests.test_gate_trailer_attest import GOLDEN_COMMIT, _commit_available
+
+_FAKE_HEAD = "0" * 40
 
 
 def test_needs_attestation_gate_file_not_docs() -> None:
@@ -20,24 +25,47 @@ def test_needs_attestation_gate_file_not_docs() -> None:
 def test_gate_files_list_is_not_duplicated() -> None:
     assert ogp.GATE_FILES is gct.GATE_FILES
     assert ".github/workflows/ci.yml" in ogp.GATE_FILES
+    assert ".github/workflows/operator-gated-pr-guard.yml" in ogp.GATE_FILES
+    assert "scripts/operator_gated_pr_guard.py" in ogp.GATE_FILES
+    assert "scripts/gate_trailer_attest.py" in ogp.GATE_FILES
+    assert "docs/adr/allowed_signers" in ogp.GATE_FILES
+
+
+def test_bound_pr_payload_includes_pr_and_head() -> None:
+    line = "Gate-Change-Approved-By: @FabioLeitao"
+    payload = gta.bound_pr_payload_bytes(line, 1832, "Ab" + "c" * 38)
+    text = payload.decode("utf-8")
+    assert text.startswith(line)
+    assert "PR: 1832" in text
+    assert f"Head: {'ab' + 'c' * 38}" in text
+    assert not payload.endswith(b"\n")
+    assert payload != gta.trailer_payload_bytes(line)
+
+
+def test_bound_pr_payload_rejects_short_sha() -> None:
+    with pytest.raises(ValueError, match="40"):
+        gta.bound_pr_payload_bytes("Gate-Change-Approved-By: @FabioLeitao", 1, "abc")
 
 
 def test_trailer_without_sshsig_is_not_approval() -> None:
     ok, msg = ogp.latest_comment_approves(
-        "Gate-Change-Approved-By: @FabioLeitao\n\nlooks official\n"
+        "Gate-Change-Approved-By: @FabioLeitao\n\nlooks official\n",
+        pr_number=1832,
+        head_sha=_FAKE_HEAD,
     )
     assert ok is False
     assert "SSHSIG" in msg or "trailer" in msg.lower()
 
 
 def test_empty_or_unrelated_latest_comment_fails() -> None:
-    ok, _ = ogp.latest_comment_approves("")
+    ok, _ = ogp.latest_comment_approves("", pr_number=1, head_sha=_FAKE_HEAD)
     assert ok is False
-    ok2, _ = ogp.latest_comment_approves("LGTM")
+    ok2, _ = ogp.latest_comment_approves("LGTM", pr_number=1, head_sha=_FAKE_HEAD)
     assert ok2 is False
 
 
-def test_valid_sshsig_from_golden_commit_body() -> None:
+def test_golden_commit_body_is_not_replayable_as_pr_approval() -> None:
+    """SSHSIG over trailer-only must not attest an unbound PR comment (#1832)."""
     if not _commit_available(GOLDEN_COMMIT):
         return
     proc = subprocess.run(
@@ -46,13 +74,33 @@ def test_valid_sshsig_from_golden_commit_body() -> None:
         text=True,
         check=True,
     )
-    ok, msg = ogp.latest_comment_approves(proc.stdout)
-    assert ok is True, msg
+    ok, _msg = ogp.latest_comment_approves(
+        proc.stdout, pr_number=1832, head_sha=_FAKE_HEAD
+    )
+    assert ok is False
 
 
 def test_cli_out_of_scope_exits_zero() -> None:
     assert ogp.main(["--changed", "docs/USAGE.md", "--labels", ""]) == 0
 
 
+def test_cli_in_scope_without_pr_head_exits_two() -> None:
+    assert ogp.main(["--changed", ".github/workflows/ci.yml", "--labels", ""]) == 2
+
+
 def test_cli_in_scope_without_message_exits_one() -> None:
-    assert ogp.main(["--changed", ".github/workflows/ci.yml", "--labels", ""]) == 1
+    assert (
+        ogp.main(
+            [
+                "--changed",
+                ".github/workflows/ci.yml",
+                "--labels",
+                "",
+                "--pr",
+                "1832",
+                "--head",
+                _FAKE_HEAD,
+            ]
+        )
+        == 1
+    )

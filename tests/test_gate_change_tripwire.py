@@ -51,6 +51,10 @@ def test_gate_files_set_covers_core_surfaces() -> None:
         ".github/CODEOWNERS",
         ".pre-commit-config.yaml",
         "security/pii_gate_allowlist.txt",
+        ".github/workflows/operator-gated-pr-guard.yml",
+        "scripts/operator_gated_pr_guard.py",
+        "scripts/gate_trailer_attest.py",
+        "docs/adr/allowed_signers",
     ):
         assert path in t.GATE_FILES
 

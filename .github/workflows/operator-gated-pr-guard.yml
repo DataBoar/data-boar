@@ -3,7 +3,11 @@
 # When the PR has label `operator-gated` OR the diff vs base touches GATE_FILES
 # (imported from scripts/gate_change_tripwire.py — do not duplicate the list),
 # this job FAILS unless the **latest** PR comment is Gate-Change-Approved-By
-# plus a file-namespace SSHSIG verified by gate_trailer_attest.py.
+# plus a file-namespace SSHSIG over trailer + PR number + head SHA
+# (scripts/gate_trailer_attest.py bound_pr_payload_bytes).
+#
+# Verifier scripts and allowed_signers are restored from the PR **base** so the
+# PR HEAD cannot rewrite the checker. Paths are also in GATE_FILES (#1832).
 #
 # Do NOT trust GitHub actor identity (shared operator/agent account).
 # Trailer text without SSHSIG is not approval. Do not swallow the verifier exit code.
@@ -65,13 +69,34 @@ jobs:
             }
             fs.writeFileSync("pr-latest-comment.md", latest);
 
+      - name: Restore verifier from PR base (not HEAD)
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          # After the guard exists on default: run that tree, not PR HEAD.
+          # First merge of this workflow: files are absent on base — use HEAD.
+          if git cat-file -e \
+            "origin/${BASE_REF}:scripts/operator_gated_pr_guard.py" 2>/dev/null
+          then
+            git checkout "origin/${BASE_REF}" -- \
+              scripts/operator_gated_pr_guard.py \
+              scripts/gate_trailer_attest.py \
+              scripts/gate_change_tripwire.py \
+              docs/adr/allowed_signers
+          fi
+
       - name: Enforce SSHSIG attestation
         env:
           BASE_REF: ${{ github.base_ref }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
           LABELS="$(cat pr-labels.txt)"
           uv run python scripts/operator_gated_pr_guard.py \
             --base "origin/${BASE_REF}" \
             --labels "$LABELS" \
-            --message-file pr-latest-comment.md
+            --message-file pr-latest-comment.md \
+            --pr "$PR_NUMBER" \
+            --head "$HEAD_SHA"

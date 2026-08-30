@@ -74,12 +74,31 @@ def trailer_payload_bytes(trailer_line: str) -> bytes:
     return trailer_line.encode("utf-8")
 
 
+_HEAD_SHA_RE = re.compile(r"^[0-9a-f]{40}$")
+
+
+def bound_pr_payload_bytes(trailer_line: str, pr_number: int, head_sha: str) -> bytes:
+    """PR-comment attestation: trailer + PR number + full head SHA (no trailing newline).
+
+    Binding PR and SHA stops replay of a trailer SSHSIG copied from git history
+    or another pull request (Cursor Security Reviewer on #1832 / #1709).
+    """
+    sha = (head_sha or "").strip().lower()
+    if pr_number < 1:
+        raise ValueError("pr_number must be a positive GitHub issue/PR id")
+    if not _HEAD_SHA_RE.fullmatch(sha):
+        raise ValueError("head_sha must be a 40-character lowercase hex Git SHA")
+    text = f"{trailer_line}\nPR: {pr_number}\nHead: {sha}"
+    return text.encode("utf-8")
+
+
 def verify_trailer_signature(
     trailer_line: str,
     signature_pem: str,
     *,
     allowed_signers: Path,
     principal: str = DEFAULT_PRINCIPAL,
+    payload: bytes | None = None,
 ) -> tuple[bool, str]:
     if not allowed_signers.is_file():
         return False, f"allowed_signers missing: {allowed_signers}"
@@ -100,7 +119,9 @@ def verify_trailer_signature(
                 "-s",
                 str(sig_path),
             ],
-            input=trailer_payload_bytes(trailer_line),
+            input=payload
+            if payload is not None
+            else trailer_payload_bytes(trailer_line),
             capture_output=True,
             text=False,
             check=False,
@@ -117,13 +138,16 @@ def sign_trailer(
     key_path: Path,
     *,
     principal: str = DEFAULT_PRINCIPAL,
+    payload: bytes | None = None,
 ) -> tuple[bool, str]:
     if not key_path.is_file():
         return False, f"signing key not found: {key_path}"
     with tempfile.TemporaryDirectory() as td:
         payload_path = Path(td) / "trailer.txt"
         sig_path = Path(td) / "trailer.sig"
-        payload_path.write_bytes(trailer_payload_bytes(trailer_line))
+        payload_path.write_bytes(
+            payload if payload is not None else trailer_payload_bytes(trailer_line)
+        )
         proc = subprocess.run(
             [
                 "ssh-keygen",
@@ -191,15 +215,37 @@ def cmd_verify(args: argparse.Namespace) -> int:
         sys.stderr.write("gate-trailer-attest: no SSH SIGNATURE block found\n")
         return 1
 
+    pr_n = getattr(args, "pr", None)
+    head = getattr(args, "head", None)
+    if args.commit and (pr_n is not None or head):
+        sys.stderr.write(
+            "gate-trailer-attest: --commit is trailer-only; omit --pr/--head\n"
+        )
+        return 2
+    payload: bytes | None = None
+    if pr_n is not None or head:
+        if pr_n is None or not head:
+            sys.stderr.write(
+                "gate-trailer-attest: --pr and --head must be used together\n"
+            )
+            return 2
+        try:
+            payload = bound_pr_payload_bytes(trailer, int(pr_n), head)
+        except ValueError as exc:
+            sys.stderr.write(f"gate-trailer-attest: {exc}\n")
+            return 2
+
     ok, msg = verify_trailer_signature(
         trailer,
         sig_pem,
         allowed_signers=Path(args.allowed_signers),
         principal=args.principal,
+        payload=payload,
     )
     if ok:
         sys.stdout.write(f"GATE-TRAILER-ATTEST: OK\n{msg}\n")
-        sys.stdout.write(f"trailer_bytes={len(trailer_payload_bytes(trailer))}\n")
+        nbytes = len(payload if payload is not None else trailer_payload_bytes(trailer))
+        sys.stdout.write(f"trailer_bytes={nbytes}\n")
         return 0
     sys.stderr.write(f"GATE-TRAILER-ATTEST: FAIL\n{msg}\n")
     return 1
@@ -217,10 +263,23 @@ def cmd_sign(args: argparse.Namespace) -> int:
             "gate-trailer-attest: line does not match Gate-*-Approved-By\n"
         )
         return 2
+    sign_payload: bytes | None = None
+    if args.pr is not None or args.head:
+        if args.pr is None or not args.head:
+            sys.stderr.write(
+                "gate-trailer-attest: --pr and --head must be used together\n"
+            )
+            return 2
+        try:
+            sign_payload = bound_pr_payload_bytes(trailer, int(args.pr), args.head)
+        except ValueError as exc:
+            sys.stderr.write(f"gate-trailer-attest: {exc}\n")
+            return 2
     ok, out = sign_trailer(
         trailer,
         Path(args.key),
         principal=args.principal,
+        payload=sign_payload,
     )
     if not ok:
         sys.stderr.write(f"GATE-TRAILER-ATTEST: sign failed\n{out}\n")
@@ -277,6 +336,15 @@ def build_parser() -> argparse.ArgumentParser:
     v.add_argument("--trailer", help="Trailer line (overrides extract)")
     v.add_argument("--trailer-file", help="File with trailer line")
     v.add_argument("--signature-file", help="Detached .sig PEM file")
+    v.add_argument(
+        "--pr",
+        type=int,
+        help="GitHub PR number (with --head: verify PR-bound payload, not trailer-only)",
+    )
+    v.add_argument(
+        "--head",
+        help="40-hex PR head SHA (with --pr: verify PR-bound payload)",
+    )
     v.set_defaults(func=cmd_verify)
 
     s = sub.add_parser("sign", help="Sign trailer line (operator key; file namespace)")
@@ -286,6 +354,15 @@ def build_parser() -> argparse.ArgumentParser:
         "--key", required=True, help="Private SSH key for ssh-keygen -Y sign"
     )
     s.add_argument("--output", "-o", help="Write signature PEM to file")
+    s.add_argument(
+        "--pr",
+        type=int,
+        help="GitHub PR number (with --head: sign PR-bound payload)",
+    )
+    s.add_argument(
+        "--head",
+        help="40-hex PR head SHA (with --pr: sign PR-bound payload)",
+    )
     s.set_defaults(func=cmd_sign)
 
     f = sub.add_parser(

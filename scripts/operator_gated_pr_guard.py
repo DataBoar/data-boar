@@ -4,7 +4,8 @@
 Fails when a PR is in scope (label ``operator-gated`` **or** diff touches
 ``GATE_FILES`` from ``gate_change_tripwire.py``) unless the **latest** PR
 comment is a ``Gate-Change-Approved-By:`` trailer **plus** a verified
-file-namespace SSHSIG (``gate_trailer_attest.py``).
+file-namespace SSHSIG (``gate_trailer_attest.py``) over the **PR-bound**
+payload (trailer + PR number + head SHA).
 
 Does **not** scan PR body or comment history. Does **not** trust
 ``github.actor``. Trailer without SSHSIG is not approval. Exit codes are
@@ -28,6 +29,7 @@ if str(_REPO) not in sys.path:
 from scripts.gate_change_tripwire import GATE_FILES, REPO_ROOT, gate_files_touched
 from scripts.gate_trailer_attest import (
     DEFAULT_ALLOWED_SIGNERS,
+    bound_pr_payload_bytes,
     extract_signature_pem,
     extract_trailer_line,
     verify_trailer_signature,
@@ -44,8 +46,18 @@ def needs_attestation(changed: list[str], labels: list[str]) -> bool:
     return bool(gate_files_touched(changed))
 
 
-def latest_comment_approves(body: str) -> tuple[bool, str]:
-    """Evaluate **only** this comment (caller must pass the newest one)."""
+def latest_comment_approves(
+    body: str,
+    *,
+    pr_number: int,
+    head_sha: str,
+) -> tuple[bool, str]:
+    """Evaluate **only** this comment (caller must pass the newest one).
+
+    The SSHSIG must cover ``bound_pr_payload_bytes`` (trailer + PR + head),
+    not the trailer line alone — otherwise a signature from git history
+    can be replayed as the latest comment.
+    """
     text = body or ""
     if not CHANGE_MARKER.search(text):
         return False, "latest comment has no Gate-Change-Approved-By trailer"
@@ -55,10 +67,15 @@ def latest_comment_approves(body: str) -> tuple[bool, str]:
         return False, "could not extract trailer line"
     if sig is None:
         return False, "trailer without verified SSHSIG block"
+    try:
+        payload = bound_pr_payload_bytes(line, pr_number, head_sha)
+    except ValueError as exc:
+        return False, str(exc)
     ok, msg = verify_trailer_signature(
         line,
         sig,
         allowed_signers=DEFAULT_ALLOWED_SIGNERS,
+        payload=payload,
     )
     if not ok:
         return False, msg or "SSHSIG verify failed"
@@ -98,6 +115,15 @@ def main(argv: list[str] | None = None) -> int:
         default=[],
         help="changed path (repeatable; skips git when set)",
     )
+    parser.add_argument(
+        "--pr",
+        type=int,
+        help="GitHub PR number (required when in scope)",
+    )
+    parser.add_argument(
+        "--head",
+        help="40-hex PR head SHA (required when in scope)",
+    )
     args = parser.parse_args(argv)
 
     labels = [p.strip() for p in args.labels.split(",") if p.strip()]
@@ -119,6 +145,14 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 0
 
+    if args.pr is None or not args.head:
+        print(
+            "operator_gated_pr_guard: in scope but missing --pr and --head "
+            "(bind attestation to this PR).",
+            file=sys.stderr,
+        )
+        return 2
+
     if args.message_file is None or not args.message_file.is_file():
         print(
             "operator_gated_pr_guard: in scope but missing --message-file "
@@ -128,7 +162,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     body = args.message_file.read_text(encoding="utf-8")
-    ok, msg = latest_comment_approves(body)
+    ok, msg = latest_comment_approves(body, pr_number=args.pr, head_sha=args.head)
     if ok:
         print(f"operator_gated_pr_guard: attested — {msg}")
         return 0

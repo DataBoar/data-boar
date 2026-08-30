@@ -1,6 +1,6 @@
 # Plan: operator-gated PR merge guard (SSHSIG)
 
-<!-- plans-hub-summary: CI check fails PRs that touch GATE_FILES or carry label operator-gated unless the latest PR comment is Gate-Change-Approved-By plus verified file-namespace SSHSIG. Brother of issue-close guard #990. -->
+<!-- plans-hub-summary: CI check fails PRs that touch GATE_FILES or carry label operator-gated unless the latest PR comment is Gate-Change-Approved-By plus SSHSIG bound to PR number and head SHA. Brother of issue-close guard #990. -->
 <!-- plans-hub-related: PLAN_PII_GATE_INTEGRITY.md -->
 
 **Status:** In progress (workflow + tests in implementing PR; ruleset required-check is operator-only)
@@ -23,6 +23,8 @@
 - Trailer without verified SSHSIG is **not** approval.
 - Do **not** swallow `gate_trailer_attest.py` / guard CLI exit codes.
 - Reuse **`GATE_FILES`** from `scripts/gate_change_tripwire.py` (no second list).
+- PR-comment SSHSIG is over **trailer + PR number + head SHA** (not trailer-only replay).
+- CI restores verifier scripts from the PR **base** once they exist on default.
 
 ## Phases
 
@@ -32,6 +34,7 @@
 | 2 | Workflow `.github/workflows/operator-gated-pr-guard.yml` (`pull_request`) | ✅ Done (this PR) |
 | 3 | `AGENTS.md`: agents never fill `Gate-Change-Approved-By` | ✅ Done (this PR) |
 | 4 | Operator: required check on ruleset `main-gate-pii` | ⬜ Pending (human GitHub settings) |
+| 5 | Security Reviewer #1832: base-ref verifier + PR-bound payload | ✅ Done (this PR) |
 
 ## Out of scope
 
@@ -43,3 +46,9 @@
 ## Operator follow-up
 
 Add job **SSHSIG attestation when gated** as a **required** status check on **`main-gate-pii`**. Agents cannot do that.
+
+PR comment attestation (after this lands): sign with
+
+`uv run python scripts/gate_trailer_attest.py sign --text 'Gate-Change-Approved-By: @FabioLeitao' --pr <N> --head <40-hex> --key <operator-ed25519> -o trailer.sig`
+
+then `format-commit-body` and paste as the **latest** PR comment. A trailer signature copied from git history will not verify.
