@@ -34,6 +34,38 @@ Committing **`uv.lock`** is a **supply-chain control**: it pins the **full resol
 
 The lockfile **does not** prove that those pins are **free of known CVEs** or **non-malicious**. **Vulnerability mitigation** on the Python install path layers **on top of** the lockfile: CI **`pip-audit`**, **GitHub Dependabot** (this repo uses **`package-ecosystem: uv`** so PRs move `pyproject.toml` and **`uv.lock`** together—see [ADR 0044](docs/adr/ADR-0044-dependabot-uv-ecosystem-for-pyproject-lock-closure.md)), maintainer review, and optional **SBOM** artifacts ([below](#software-bill-of-materials-sbom)). When you triage advisories or apply updates, refresh **`uv.lock`** through the single-pass closure (**`pyproject.toml` → `uv lock` → `uv export`**) in [ADR 0030](docs/adr/ADR-0030-python-dependency-update-closure-single-pass.md)—do not hand-edit the lockfile to “fix” audits.
 
+### Rust crate SCA (`rust/boar_fast_filter`)
+
+Layer 1 supply-chain posture for the Rust prefilter is recorded in [ADR 0074](docs/adr/ADR-0074-supply-chain-layer1-digest-pins-and-rust-sca.md) (Accepted): digest-pinned container bases, Actions SHA pins, and Rust SCA before merge. This section is the **external** policy view (CI + lockfile). Lab/runtime tooling lives under **`docs/ops/DATA_BOAR_LAB_SECURITY_TOOLING.md`** ([pt-BR](docs/ops/DATA_BOAR_LAB_SECURITY_TOOLING.pt_BR.md)).
+
+**Known-advisory scanning** runs in [`.github/workflows/rust-ci.yml`](.github/workflows/rust-ci.yml): **`cargo-audit` 0.22.2** and **`cargo-deny` 0.19.9**, both installed with **`--locked`**. Policy for deny: **`rust/boar_fast_filter/deny.toml`**. Treat **RUSTSEC / GHSA** hits like Dependabot security PRs: **P0 / five business days** to accept a fix, defer with written justification, or document an operator exception — same SLA as Python Dependabot in this file.
+
+**Known-advisory tools do not see a crate that never received an identifier.** Three public crates.io incidents illustrate the gap:
+
+| Incident | When | Identifier | Source |
+| -------- | ---- | ---------- | ------ |
+| `rustdecimal` (typosquat of `rust_decimal`; payload if `GITLAB_CI` was set) | 2022-05-10 | **RUSTSEC-2022-0042** · **GHSA-7pwq-f4pq-78gm** | [Rust blog](https://blog.rust-lang.org/2022/05/10/malicious-crate-rustdecimal/) |
+| `finch-rust` / `sha-rust` | 2025-12-05 | none listed | [Rust blog](https://blog.rust-lang.org/2025/12/05/crates.io-malicious-crates-finch-rust-and-sha-rust) |
+| **`arrayref` / `internment` / `append-only-vec`** | 2026-08-20 | **no CVE / RUSTSEC / GHSA assigned** | [Rust blog](https://blog.rust-lang.org/2026/08/20/supply-chain-attack-on-arrayref/) |
+
+On 2026-08-20 a compromised maintainer account published `arrayref@0.3.10`, `internment@0.8.7`, and `append-only-vec@0.1.9` between **07:15 and 07:37 UTC**, each adding a dependency on **`proc-macro1`** (typosquat of **`proc-macro2`**) whose **build script downloaded and ran a remote payload at compile time**. Crates were yanked between 08:41 and 09:25 UTC. **`cargo audit` would not have flagged that window** (86 minutes, no advisory id).
+
+**What actually stops that class here:** committed **`rust/boar_fast_filter/Cargo.lock`** plus **`--locked`** on every CI cargo command. A locked tree does not pick up a freshly published malicious version. In-tree lockfile review: none of those compromised crate versions; **`proc-macro2`** is the legitimate crate (the name `proc-macro1` imitated).
+
+**Uncomfortable corollary:** automatic dependency-update bots are an **amplifier** for this class, not a mitigation. Dependabot would have proposed the poisoned versions as a routine bump. Human review of lockfile diffs stays mandatory.
+
+**Where paranoia pays vs where it does not:**
+
+| Layer | Pin / lock? | Why |
+| ----- | ----------- | --- |
+| **`Cargo.lock`** | Yes — committed + `--locked` | Real control against a compromised crate publisher |
+| **`cargo-audit` / `cargo-deny`** | Yes — versions pinned in `rust-ci.yml` (0.22.2 / 0.19.9) | A self-updating security tool is its own attack surface |
+| **GitHub Actions** | Yes — full commit SHA | Same as ADR 0005 |
+| **Base image** | Yes — digest on `Dockerfile` `FROM` | ADR 0074 Layer 1 |
+| **`rustc` toolchain** | **No** — do **not** pin in-repo | Rust stability guarantees; pinning delays compiler/std *soundness* fixes and adds fork friction. The three incidents above were **crate** attacks, not toolchain attacks. The `cdylib` + `abi3` surface is a C ABI; a different `rustc` does not by itself produce an incompatible artifact. |
+
+PR **dependency-review** (GitHub `dependency-review-action` in **`ci.yml`**) complements Python/Actions graphs on pull requests. It does **not** replace `Cargo.lock` + `--locked`.
+
 ### Runtime prerequisites (Linux example)
 
 On Ubuntu/Debian you should have at least:
@@ -93,7 +125,7 @@ This is **not** permission to churn dependencies blindly; defer or reject change
 - **Code scanning baseline:** CodeQL workflow uses **`security-and-quality`** for Python and should stay enabled on push/PR/schedule. Keep this broad suite plus project-specific hardening tests/rules; if a new query is noisy, triage and document before considering suppression.
 - **Semgrep (OSS):** The **Semgrep** GitHub Actions workflow runs ruleset **`p/python`** on push/PR (complements CodeQL). Exclusions and rationale: **`docs/plans/completed/PLAN_SEMGREP_CI.md`**.
 - **Bandit:** **Bandit (strict)** runs as part of the **CI** workflow on push/PR (`[tool.bandit]` in **`pyproject.toml`**). Details and **low**-severity triage: **`docs/plans/completed/PLAN_BANDIT_SECURITY_LINTER.md`**.
-- **CI workflow supply chain:** Workflows under **`.github/workflows/`** pin third-party GitHub Actions to **full commit SHAs** (version tag in YAML comments for humans). The **`astral-sh/setup-uv`** step pins a **specific uv CLI semver**—not **`latest`**—so installs do not float silently between runs. **Dependabot** may propose SHA bumps; review upstream release notes before merge. This **reduces** tag-moving and unexpected action updates but is **not** a guarantee against zero-day compromise of a pinned commit, supply-chain attacks that pass review, or risks outside CI (for example local developer tooling). See **`docs/adr/ADR-0005-ci-github-actions-supply-chain-pins.md`**.
+- **CI workflow supply chain:** Workflows under **`.github/workflows/`** pin third-party GitHub Actions to **full commit SHAs** (version tag in YAML comments for humans). The **`astral-sh/setup-uv`** step pins a **specific uv CLI semver**—not **`latest`**—so installs do not float silently between runs. **Dependabot** may propose SHA bumps; review upstream release notes before merge. **Dockerfile** `FROM` lines are **digest-pinned**; Dependabot’s docker ecosystem proposes digest bumps. Pull requests also run **`dependency-review`**. This **reduces** tag-moving and unexpected action updates but is **not** a guarantee against zero-day compromise of a pinned commit, supply-chain attacks that pass review, or risks outside CI (for example local developer tooling). See **[ADR 0005](docs/adr/ADR-0005-ci-github-actions-supply-chain-pins.md)** and **[ADR 0074](docs/adr/ADR-0074-supply-chain-layer1-digest-pins-and-rust-sca.md)**.
 
 This approach is part of the project’s security baseline. For the full list of hardening measures and status, see **`docs/plans/completed/PLAN_SECURITY_HARDENING.md`**.
 
