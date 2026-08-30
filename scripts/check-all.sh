@@ -3,6 +3,10 @@
 # Same gates: gatekeeper_audit.py (uv) + gate_change_tripwire.py (ADR-0071, #1385) +
 # Rust (cargo fmt/check/test, PYO3 ABI3 hint) +
 # plans-stats --write + pre-commit-and-tests.sh (venv + pre-commit + pytest).
+# Publish gate (ADR-0080, issues #1151 / #1153): default invocation (and
+# --enforced, which the versioned pre-push hook runs) MUST be ALL-GREEN before
+# git push / gh pr create. --skip-pre-commit is LOCAL ITERATION ONLY — never
+# treat it as pre-push proof.
 # From repo root:
 #   ./scripts/check-all.sh
 #   ./scripts/check-all.sh --skip-pre-commit
@@ -28,7 +32,7 @@ while [[ $# -gt 0 ]]; do
     -Enforced | --enforced) ENFORCED=1 ;;
     -h | --help)
       echo "Usage: $0 [options]"
-      echo "  --skip-pre-commit          Only run pytest (same as check-all.ps1 -SkipPreCommit)"
+      echo "  --skip-pre-commit          Only run pytest (LOCAL ITERATION — not the ADR-0080 push/PR gate)"
       echo "  --include-version-smoke    After success, run version-readiness-smoke.ps1 (requires pwsh)"
       echo "  --enforced                 Also run Semgrep (engine tag from semgrep.yml; needs network)"
       echo "  -h, --help                 This help"
@@ -41,6 +45,11 @@ while [[ $# -gt 0 ]]; do
   esac
   shift
 done
+
+if [[ "$SKIP_PRECOMMIT" -eq 1 ]]; then
+  printf '\033[33m%s\033[0m\n' "check-all.sh: WARNING: --skip-pre-commit is LOCAL ITERATION ONLY." >&2
+  printf '\033[33m%s\033[0m\n' "This run is NOT the ADR-0080 / #1151 / #1153 publish gate. Re-run without skip before git push / gh pr create." >&2
+fi
 
 # PII seed gate — Python port (parity with scripts/gatekeeper-audit.ps1; issue #560).
 if ! command -v uv >/dev/null 2>&1; then
