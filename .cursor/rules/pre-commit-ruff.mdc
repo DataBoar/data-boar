@@ -1,12 +1,12 @@
 ---
-description: Recommend and enforce pre-commit (Ruff + plans-stats + doc guards) before commits and PRs; CI runs the same bundle.
+description: MUST run pre-commit before commits; full check-all is the push/PR gate (ADR-0080). CI Lint runs the same hook bundle.
 globs: ["**/*.py", ".pre-commit-config.yaml"]
 alwaysApply: false
 ---
 
-# Pre-commit and Ruff (recommended before every commit)
+# Pre-commit and Ruff (MUST before every commit; floor, not the publish gate)
 
-Before committing or opening a PR, ensure the **pre-commit** bundle passes. The **CI** **Lint** job runs **`uv run pre-commit run --all-files`** — the same hooks as **`.pre-commit-config.yaml`**.
+**MUST** ensure the **pre-commit** bundle passes before a commit. That bundle is the **floor** (Ruff + dashboard/doc guards). It is **not** the GitHub publish gate: **`check-all`** (and pre-push **`--enforced`**, [ADR 0080](../../docs/adr/ADR-0080-local-validation-gate-inviolable.md), issue **#1151**) is required before **any** push/PR — see **`check-all-gate.mdc`**. The **CI** **Lint** job runs **`uv run pre-commit run --all-files`** — the same hooks as **`.pre-commit-config.yaml`**.
 
 ## Setup (one-time per clone)
 
@@ -30,7 +30,7 @@ uv run pre-commit run --all-files
 
 ## When suggesting or reviewing changes
 
-- **Recommend** **`uv run pre-commit run --all-files`** (or installed hooks) before push so **CI Lint** stays green.
+- **MUST** run **`uv run pre-commit run --all-files`** (or installed hooks) so **CI Lint** stays green; still run **full `check-all`** before push/PR (ADR-0080 / #1153).
 - If **ruff-format** fails: **`uv run ruff format .`** and re-stage.
 - Do not bypass checks with **`--no-verify`** unless intentional; keep **`.pre-commit-config.yaml`** aligned with **`.github/workflows/ci.yml`** **lint** job.
 
