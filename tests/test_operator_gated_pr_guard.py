@@ -23,6 +23,42 @@ def test_needs_attestation_gate_file_not_docs() -> None:
     assert ogp.needs_attestation(["README.md"], ["unrelated"]) is False
 
 
+def test_collect_pulls_api_paths_includes_previous_filename_on_rename() -> None:
+    paths = ogp.collect_pulls_api_paths(
+        [
+            {
+                "filename": "docs/unlisted.md",
+                "previous_filename": "scripts/gatekeeper_audit.py",
+                "status": "renamed",
+            }
+        ]
+    )
+    assert paths == ["docs/unlisted.md", "scripts/gatekeeper_audit.py"]
+    assert ogp.needs_attestation(paths, []) is True
+
+
+def test_collect_pulls_api_paths_includes_previous_filename_on_copy() -> None:
+    paths = ogp.collect_pulls_api_paths(
+        [
+            {
+                "filename": "tmp/copy.yml",
+                "previous_filename": ".github/workflows/ci.yml",
+                "status": "copied",
+            }
+        ]
+    )
+    assert ".github/workflows/ci.yml" in paths
+    assert ogp.needs_attestation(paths, []) is True
+
+
+def test_collect_pulls_api_paths_modified_uses_filename_only() -> None:
+    paths = ogp.collect_pulls_api_paths(
+        [{"filename": "scripts/gatekeeper_audit.py", "status": "modified"}]
+    )
+    assert paths == ["scripts/gatekeeper_audit.py"]
+    assert ogp.needs_attestation(paths, []) is True
+
+
 def test_gate_files_list_is_not_duplicated() -> None:
     assert ogp.GATE_FILES is gct.GATE_FILES
     assert ".github/workflows/ci.yml" in ogp.GATE_FILES

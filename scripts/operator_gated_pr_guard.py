@@ -47,6 +47,24 @@ def needs_attestation(changed: list[str], labels: list[str]) -> bool:
     return bool(gate_files_touched(changed))
 
 
+def collect_pulls_api_paths(files: list[dict[str, str]]) -> list[str]:
+    """Collect paths from GitHub ``pulls.listFiles`` for GATE_FILES scope.
+
+    Includes ``previous_filename`` on renamed/copied entries so relocating a
+    gated path to an unlisted name cannot bypass attestation (#1832).
+    """
+    paths: list[str] = []
+    for entry in files:
+        name = (entry.get("filename") or "").strip()
+        if name:
+            paths.append(name)
+        prev = (entry.get("previous_filename") or "").strip()
+        status = (entry.get("status") or "").strip().lower()
+        if prev and status in ("renamed", "copied"):
+            paths.append(prev)
+    return paths
+
+
 def latest_comment_approves(
     body: str,
     *,

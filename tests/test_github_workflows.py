@@ -731,6 +731,7 @@ def test_operator_gated_pr_guard_workflow_present_and_valid() -> None:
     assert "Gate-Change-Approved-By" in text
     assert "sorted[0]" in text
     assert "listFiles" in text
+    assert "previous_filename" in text
     assert "operator_gated_pr_guard.py" in text
     assert "--changed-from-file" in text
     assert "--labels-file" in text

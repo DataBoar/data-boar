@@ -36,6 +36,7 @@
 | 4 | Operator: required check on ruleset `main-gate-pii` | ⬜ Pending (human GitHub settings) |
 | 5 | Security Reviewer #1832: base-ref verifier + PR-bound payload | ✅ Done (this PR) |
 | 6 | Security Reviewer #1832: pin YAML via `pull_request_target`; never execute PR tree; `scripts/__init__.py` in GATE_FILES | ✅ Done (this PR) |
+| 7 | Security Reviewer #1832: `pulls.listFiles` includes `previous_filename` on rename/copy | ✅ Done (this PR) |
 
 ## Out of scope
 
