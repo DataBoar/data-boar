@@ -28,6 +28,7 @@ permissions:
   pull-requests: read
 
 on:
+  # zizmor: ignore[dangerous-triggers] intentional pull_request_target: YAML from default branch only; checkout base SHA; pulls API for paths/comments; no PR code executed (#1832).
   pull_request_target:
     types: [opened, synchronize, reopened, labeled, unlabeled]
 
