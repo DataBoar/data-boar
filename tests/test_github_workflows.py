@@ -375,6 +375,21 @@ def test_ci_yml_pins_actions_and_uv_cli() -> None:
         )
 
 
+def test_ci_yml_pytest_cov_xml_only_on_python_313_for_sonar() -> None:
+    """#1719: one matrix cell publishes coverage.xml; Sonar downloads it."""
+    text = (WORKFLOWS / "ci.yml").read_text(encoding="utf-8")
+    assert "matrix.python-version == '3.13'" in text
+    assert "matrix.python-version != '3.13'" in text
+    assert "--cov --cov-report=xml" in text
+    assert "name: coverage-xml" in text
+    assert "download-artifact@" in text
+    props = (REPO_ROOT / "sonar-project.properties").read_text(encoding="utf-8")
+    assert "sonar.python.coverage.reportPaths=coverage.xml" in props
+    pyproject = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    assert "pytest-cov" in pyproject
+    assert "[tool.coverage.run]" in pyproject
+
+
 def test_ci_yml_libmariadb_install_uses_timed_composite_action() -> None:
     """#1627: bare apt-get libmariadb must not hang jobs; use composite with timeouts."""
     text = (WORKFLOWS / "ci.yml").read_text(encoding="utf-8")
