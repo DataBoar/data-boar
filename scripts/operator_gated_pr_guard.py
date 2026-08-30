@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """PR attestation guard (GitHub #1709) — brother of issue-close guard #990.
 
-Fails when a PR is in scope (label ``operator-gated`` **or** diff touches
-``GATE_FILES`` from ``gate_change_tripwire.py``) unless the **latest** PR
-comment is a ``Gate-Change-Approved-By:`` trailer **plus** a verified
+Fails when a PR is in scope (label ``operator-gated`` **or** changed paths
+touch ``GATE_FILES`` from ``gate_change_tripwire.py``) unless the **latest**
+PR comment is a ``Gate-Change-Approved-By:`` trailer **plus** a verified
 file-namespace SSHSIG (``gate_trailer_attest.py``) over the **PR-bound**
-payload (trailer + PR number + head SHA).
+payload (trailer + PR number + head SHA). CI supplies paths via the pulls
+API (``--changed-from-file``); local use may still pass ``--base`` / git.
 
 Does **not** scan PR body or comment history. Does **not** trust
 ``github.actor``. Trailer without SSHSIG is not approval. Exit codes are
@@ -105,6 +106,11 @@ def main(argv: list[str] | None = None) -> int:
         help="comma-separated PR labels",
     )
     parser.add_argument(
+        "--labels-file",
+        type=Path,
+        help="PR labels as comma- or newline-separated text (avoids shell expansion)",
+    )
+    parser.add_argument(
         "--message-file",
         type=Path,
         help="body of the newest PR comment only",
@@ -114,6 +120,11 @@ def main(argv: list[str] | None = None) -> int:
         action="append",
         default=[],
         help="changed path (repeatable; skips git when set)",
+    )
+    parser.add_argument(
+        "--changed-from-file",
+        type=Path,
+        help="paths from GitHub pulls API (one per line; skips git)",
     )
     parser.add_argument(
         "--pr",
@@ -126,14 +137,43 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    labels = [p.strip() for p in args.labels.split(",") if p.strip()]
+    if args.labels_file is not None:
+        if not args.labels_file.is_file():
+            print(
+                "operator_gated_pr_guard: --labels-file is not a file",
+                file=sys.stderr,
+            )
+            return 2
+        raw_labels = args.labels_file.read_text(encoding="utf-8")
+        labels = [
+            p.strip() for p in raw_labels.replace("\n", ",").split(",") if p.strip()
+        ]
+    else:
+        labels = [p.strip() for p in args.labels.split(",") if p.strip()]
     try:
-        if args.changed:
+        if args.changed_from_file is not None:
+            if not args.changed_from_file.is_file():
+                print(
+                    "operator_gated_pr_guard: --changed-from-file is not a file",
+                    file=sys.stderr,
+                )
+                return 2
+            changed = [
+                ln.strip()
+                for ln in args.changed_from_file.read_text(
+                    encoding="utf-8"
+                ).splitlines()
+                if ln.strip()
+            ]
+        elif args.changed:
             changed = list(args.changed)
         elif args.base:
             changed = _git_changed_vs_base(args.base)
         else:
-            print("operator_gated_pr_guard: need --base or --changed", file=sys.stderr)
+            print(
+                "operator_gated_pr_guard: need --base, --changed, or --changed-from-file",
+                file=sys.stderr,
+            )
             return 2
     except RuntimeError as exc:
         print(f"operator_gated_pr_guard: {exc}", file=sys.stderr)

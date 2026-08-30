@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import subprocess
+from pathlib import Path
 
 import pytest
 
@@ -29,6 +30,7 @@ def test_gate_files_list_is_not_duplicated() -> None:
     assert "scripts/operator_gated_pr_guard.py" in ogp.GATE_FILES
     assert "scripts/gate_trailer_attest.py" in ogp.GATE_FILES
     assert "docs/adr/allowed_signers" in ogp.GATE_FILES
+    assert "scripts/__init__.py" in ogp.GATE_FILES
 
 
 def test_bound_pr_payload_includes_pr_and_head() -> None:
@@ -78,6 +80,24 @@ def test_golden_commit_body_is_not_replayable_as_pr_approval() -> None:
         proc.stdout, pr_number=1832, head_sha=_FAKE_HEAD
     )
     assert ok is False
+
+
+def test_cli_changed_from_file_and_labels_file(tmp_path: Path) -> None:
+    paths = tmp_path / "changed.txt"
+    labels = tmp_path / "labels.txt"
+    paths.write_text("docs/USAGE.md\n", encoding="utf-8")
+    labels.write_text("unrelated\n", encoding="utf-8")
+    assert (
+        ogp.main(
+            [
+                "--changed-from-file",
+                str(paths),
+                "--labels-file",
+                str(labels),
+            ]
+        )
+        == 0
+    )
 
 
 def test_cli_out_of_scope_exits_zero() -> None:

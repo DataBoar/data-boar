@@ -55,6 +55,7 @@ def test_gate_files_set_covers_core_surfaces() -> None:
         "scripts/operator_gated_pr_guard.py",
         "scripts/gate_trailer_attest.py",
         "docs/adr/allowed_signers",
+        "scripts/__init__.py",
     ):
         assert path in t.GATE_FILES
 

@@ -725,14 +725,19 @@ def test_operator_gated_pr_guard_workflow_present_and_valid() -> None:
     data = _load_workflow("operator-gated-pr-guard.yml")
     assert data.get("name")
     text = (WORKFLOWS / "operator-gated-pr-guard.yml").read_text(encoding="utf-8")
-    assert "pull_request:" in text
+    assert "pull_request_target:" in text
+    assert "\n  pull_request:" not in text
     assert "operator-gated" in text
     assert "Gate-Change-Approved-By" in text
     assert "sorted[0]" in text
+    assert "listFiles" in text
     assert "operator_gated_pr_guard.py" in text
-    assert "gate_trailer_attest.py" in text or "operator_gated_pr_guard.py" in text
-    assert "git checkout" in text
-    assert "origin/${BASE_REF}" in text or "origin/${BASE_REF}" in text
+    assert "--changed-from-file" in text
+    assert "--labels-file" in text
+    assert "github.event.pull_request.base.sha" in text
+    assert "ref: ${{ github.event.pull_request.head.sha }}" not in text
+    assert "git checkout" not in text
+    assert "persist-credentials: false" in text
     assert "--pr" in text
     assert "--head" in text
     assert "PR_NUMBER" in text

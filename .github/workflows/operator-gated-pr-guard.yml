@@ -1,16 +1,24 @@
 # Operator-gated PR merge guard (GitHub #1709). Brother of operator-gated-reopen.yml (#990).
 #
-# When the PR has label `operator-gated` OR the diff vs base touches GATE_FILES
-# (imported from scripts/gate_change_tripwire.py — do not duplicate the list),
-# this job FAILS unless the **latest** PR comment is Gate-Change-Approved-By
-# plus a file-namespace SSHSIG over trailer + PR number + head SHA
-# (scripts/gate_trailer_attest.py bound_pr_payload_bytes).
+# Trusted path: pull_request_target so GitHub runs THIS file from the default
+# branch, not from the PR HEAD. Checkout is the PR **base SHA only** — never
+# the PR tree. Changed paths, labels, and the latest comment come from the
+# GitHub API / event context. Nothing from the PR is executed.
 #
-# Verifier scripts and allowed_signers are restored from the PR **base** so the
-# PR HEAD cannot rewrite the checker. Paths are also in GATE_FILES (#1832).
+# Do not add `on: pull_request` with this job name: that YAML is attacker-
+# controlled and can keep the required-check name while no-op'ing the job.
+# This workflow is inert until it exists on the default branch (TOFU for the
+# landing PR).
+#
+# When the PR has label `operator-gated` OR the API file list touches
+# GATE_FILES (imported from scripts/gate_change_tripwire.py), this job FAILS
+# unless the **latest** PR comment is Gate-Change-Approved-By plus a
+# file-namespace SSHSIG over trailer + PR number + head SHA
+# (scripts/gate_trailer_attest.py bound_pr_payload_bytes).
 #
 # Do NOT trust GitHub actor identity (shared operator/agent account).
 # Trailer text without SSHSIG is not approval. Do not swallow the verifier exit code.
+# Do NOT checkout github.event.pull_request.head.sha (untrusted code + token).
 #
 # Operator (human): add this check as required on ruleset `main-gate-pii`.
 name: Operator-gated PR attestation
@@ -20,7 +28,7 @@ permissions:
   pull-requests: read
 
 on:
-  pull_request:
+  pull_request_target:
     types: [opened, synchronize, reopened, labeled, unlabeled]
 
 jobs:
@@ -28,16 +36,12 @@ jobs:
     name: SSHSIG attestation when gated
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout PR base only (never PR HEAD)
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0
+          ref: ${{ github.event.pull_request.base.sha }}
           persist-credentials: false
-
-      - name: Fetch PR base
-        env:
-          BASE_REF: ${{ github.base_ref }}
-        run: git fetch origin "$BASE_REF" --depth=50
+          fetch-depth: 1
 
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -47,7 +51,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
 
-      - name: Write latest PR comment only
+      - name: Write labels, changed paths, latest PR comment (API)
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
@@ -56,6 +60,15 @@ jobs:
             const labels = (pr.labels || []).map((l) => l.name).join(",");
             fs.writeFileSync("pr-labels.txt", labels);
             const { owner, repo } = context.repo;
+            const files = await github.paginate(
+              github.rest.pulls.listFiles,
+              { owner, repo, pull_number: pr.number, per_page: 100 }
+            );
+            const paths = files.map((f) => f.filename).join("\n");
+            fs.writeFileSync(
+              "pr-changed-paths.txt",
+              paths.length ? paths + "\n" : ""
+            );
             const comments = await github.paginate(
               github.rest.issues.listComments,
               { owner, repo, issue_number: pr.number, per_page: 100 }
@@ -69,34 +82,15 @@ jobs:
             }
             fs.writeFileSync("pr-latest-comment.md", latest);
 
-      - name: Restore verifier from PR base (not HEAD)
-        env:
-          BASE_REF: ${{ github.base_ref }}
-        run: |
-          set -euo pipefail
-          # After the guard exists on default: run that tree, not PR HEAD.
-          # First merge of this workflow: files are absent on base — use HEAD.
-          if git cat-file -e \
-            "origin/${BASE_REF}:scripts/operator_gated_pr_guard.py" 2>/dev/null
-          then
-            git checkout "origin/${BASE_REF}" -- \
-              scripts/operator_gated_pr_guard.py \
-              scripts/gate_trailer_attest.py \
-              scripts/gate_change_tripwire.py \
-              docs/adr/allowed_signers
-          fi
-
       - name: Enforce SSHSIG attestation
         env:
-          BASE_REF: ${{ github.base_ref }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
-          LABELS="$(cat pr-labels.txt)"
           uv run python scripts/operator_gated_pr_guard.py \
-            --base "origin/${BASE_REF}" \
-            --labels "$LABELS" \
+            --labels-file pr-labels.txt \
+            --changed-from-file pr-changed-paths.txt \
             --message-file pr-latest-comment.md \
             --pr "$PR_NUMBER" \
             --head "$HEAD_SHA"

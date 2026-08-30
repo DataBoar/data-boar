@@ -42,6 +42,7 @@ GATE_FILES: frozenset[str] = frozenset(
         "scripts/gate_change_tripwire.py",
         "scripts/gate_trailer_attest.py",
         "scripts/operator_gated_pr_guard.py",
+        "scripts/__init__.py",
         ".pre-commit-config.yaml",
         ".github/workflows/ci.yml",
         ".github/workflows/operator-gated-pr-guard.yml",

@@ -24,24 +24,26 @@
 - Do **not** swallow `gate_trailer_attest.py` / guard CLI exit codes.
 - Reuse **`GATE_FILES`** from `scripts/gate_change_tripwire.py` (no second list).
 - PR-comment SSHSIG is over **trailer + PR number + head SHA** (not trailer-only replay).
-- CI restores verifier scripts from the PR **base** once they exist on default.
+- CI runs **`pull_request_target`** with checkout of the PR **base SHA only** (never the PR tree). Changed paths and the latest comment come from the GitHub API. `scripts/__init__.py` is in **`GATE_FILES`**.
 
 ## Phases
 
 | # | Phase | Status |
 | - | ----- | ------ |
 | 1 | Decision core `scripts/operator_gated_pr_guard.py` + pytest | ✅ Done (this PR) |
-| 2 | Workflow `.github/workflows/operator-gated-pr-guard.yml` (`pull_request`) | ✅ Done (this PR) |
+| 2 | Workflow `.github/workflows/operator-gated-pr-guard.yml` (`pull_request_target`, base checkout) | ✅ Done (this PR) |
 | 3 | `AGENTS.md`: agents never fill `Gate-Change-Approved-By` | ✅ Done (this PR) |
 | 4 | Operator: required check on ruleset `main-gate-pii` | ⬜ Pending (human GitHub settings) |
 | 5 | Security Reviewer #1832: base-ref verifier + PR-bound payload | ✅ Done (this PR) |
+| 6 | Security Reviewer #1832: pin YAML via `pull_request_target`; never execute PR tree; `scripts/__init__.py` in GATE_FILES | ✅ Done (this PR) |
 
 ## Out of scope
 
 - Changing global `required_approving_review_count`.
 - Replacing the issue-close reopen workflow.
-- `pull_request_target` (not required for this fork/comment model).
+- Adding `on: pull_request` with the **same** required job name (untrusted YAML).
 - Treating label `gate-merge-approved` as sufficient (SSHSIG required).
+- Checking out `github.event.pull_request.head.sha` on `pull_request_target`.
 
 ## Operator follow-up
 
