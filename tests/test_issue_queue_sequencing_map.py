@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import importlib.util
-import subprocess
 import sys
 from pathlib import Path
 
@@ -60,16 +59,28 @@ def test_scan_blockers_detects_active_and_stale() -> None:
     assert stale == [(20, 99)]
 
 
-def test_issue_queue_sequencing_map_check_cli() -> None:
-    r = subprocess.run(
-        [
-            sys.executable,
-            str(REPO_ROOT / "scripts" / "issue_queue_sequencing_map.py"),
-            "--check",
-        ],
-        cwd=REPO_ROOT,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    assert r.returncode == 0, r.stderr or r.stdout
+def test_issue_queue_sequencing_map_check_mode_offline(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """--check must not call live gh (CI has no GH_TOKEN on the test job)."""
+    mod = _load_mod()
+    fake_issues = [
+        {
+            "number": 42,
+            "title": "sample",
+            "body": "",
+            "issueType": {"name": "Task"},
+            "milestone": {"title": "v1.8.0"},
+            "labels": {"nodes": [{"name": "[P2]"}]},
+        },
+    ]
+    monkeypatch.setattr(mod, "fetch_open_issues", lambda: fake_issues)
+    map_path = tmp_path / "ISSUE_QUEUE_SEQUENCING_MAP.md"
+    map_path.write_text(mod.build_map(fake_issues).rstrip() + "\n", encoding="utf-8")
+    monkeypatch.setattr(mod, "MAP_PATH", map_path)
+
+    monkeypatch.setattr(sys, "argv", ["issue_queue_sequencing_map.py", "--check"])
+    assert mod.main() == 0
+
+    map_path.write_text("stale\n", encoding="utf-8")
+    assert mod.main() == 1
