@@ -54,6 +54,7 @@ Abra `http://<ip-do-servidor>:9000`, login inicial **admin/admin**, **altere a s
 1. Crie projeto com **Project key** igual a `sonar.projectKey` no repositório (`data-boar`).
 1. **Token de usuário** (não token de projeto): **My Account → Security → Generate Tokens** (ver regra MCP sobre tokens de usuário).
 1. **Secrets no GitHub:** `SONAR_TOKEN`, `SONAR_HOST_URL` (URL base, sem barra final). Em servidor próprio **não** use `sonar.organization` (isso é SonarCloud).
+1. **XML de cobertura:** o job Sonar **baixa** o artefato **`coverage-xml`** da célula Test em Python **3.13** (`pytest --cov --cov-report=xml`). `sonar.python.coverage.reportPaths=coverage.xml`. Se o job Test falhar antes do upload, o Sonar nem começa. Cobertura **0%** com o job Sonar verde costuma ser artefato ausente ou `--cov` pulado. Detalhes: [TESTING.pt_BR.md](../TESTING.pt_BR.md) *CI*.
 
 Scripts locais:
 

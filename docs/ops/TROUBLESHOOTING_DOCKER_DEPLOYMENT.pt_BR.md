@@ -4,7 +4,7 @@
 
 **Ver também:** [TROUBLESHOOTING.pt_BR.md](../TROUBLESHOOTING.pt_BR.md) (visão geral e dicas rápidas).
 
-Este documento ajuda quando o Data Boar roda **dentro de um container Docker ou Podman** e precisa conectar a **bancos remotos**, **shares NFS/SMB** ou **APIs**. Aborda alcance de rede a partir do container, DNS e como usar shares montadas no host vs alvos NFS/SMB. Hostnames e rede rootless do Podman estão na **§ 6**. O **`HEALTHCHECK`** da imagem / `healthcheck` do Compose (`GET /health` no loopback **8088**, distroless) está na **§ 7**.
+Este documento ajuda quando o Data Boar roda **dentro de um container Docker ou Podman** e precisa conectar a **bancos remotos**, **shares NFS/SMB** ou **APIs**. Aborda alcance de rede a partir do container, DNS e como usar shares montadas no host vs alvos NFS/SMB. Hostnames e rede rootless do Podman estão na **§ 6**. O **`HEALTHCHECK`** da imagem / `healthcheck` do Compose (`GET /health` no loopback **8088**, distroless) está na **§ 7**. O **gate de GIL** vs `args` de Compose/K8s está na **§ 8**.
 
 ---
 
@@ -52,6 +52,7 @@ O config deve estar disponível **dentro** do container. Setup típico: diretór
 | Config ou relatórios não encontrados    | Monte volume em `/data`; CONFIG_PATH=/data/config.yaml; sqlite_path e report.output_dir em `/data`.                                                      |
 | DB no host a partir do **Podman**       | Use `host.containers.internal` (não `host.docker.internal`); rootless usa slirp4netns/pasta, não a bridge do Docker.                                     |
 | Status **unhealthy** do container       | A sonda é `GET http://127.0.0.1:8088/health` **dentro** do container (`urllib` da stdlib, exec JSON). Mantenha o processo escutando na porta **8088** no container. |
+| `-X gil=0` / `-E` ignorados fora de Enterprise | O gate remove essas flags antes do `execve`. YAML vazio é OPEN de lab (GIL continua ligado). |
 
 ---
 
@@ -90,9 +91,26 @@ A imagem publicada declara um **`HEALTHCHECK`** Docker (`Dockerfile`). O Compose
 1. **O CMD não é o dashboard na 8088.** O `CMD` padrão é `main.py --web --port 8088`. Um override CLI de uma só varredura (`--config …` sem `--web`), `--check-extras`, ou `--port` diferente de **8088** deixa a URL da sonda sem listener. O Docker marca **unhealthy** mesmo que o processo CLI esteja fazendo trabalho útil.
 1. **O processo ainda não escuta.** Respeite `start-period` / `start_period`. Bind mount lento ou criação do SQLite na primeira subida pode perder as primeiras sondas.
 1. **Você esperava `docker exec … curl /health`.** Esse binário **não** está na imagem. No host: `curl http://127.0.0.1:<porta-publicada>/health` (depois do publish da porta). De outro container na mesma rede: use o **nome do serviço** e a porta **8088**.
-1. **HEALTHCHECK em forma de shell num Dockerfile próprio.** `HEALTHCHECK CMD curl …` falha no distroless. Mantenha a forma exec JSON com `/usr/local/bin/python3.14` como no `Dockerfile` do repositório.
+1. **HEALTHCHECK em forma de shell num Dockerfile próprio.** `HEALTHCHECK CMD curl …` falha no distroless. Mantenha a forma exec JSON com `/usr/local/bin/python3.14t` como no `Dockerfile` do repositório.
 
 **Como confirmar:** `docker inspect --format '{{.State.Health.Status}}' <nome>` (ou `podman inspect`). Em seguida `curl` em `/health` na porta **publicada** no host. O JSON esperado inclui `"status"` (em geral `"ok"`) — veja [DOCKER_SETUP.pt_BR.md](../DOCKER_SETUP.pt_BR.md) e [deploy/DEPLOY.pt_BR.md](../deploy/DEPLOY.pt_BR.md).
+
+---
+
+## 8. Gate de GIL vs args de Compose/K8s (imagem free-threaded)
+
+O ENTRYPOINT da imagem é `python3.14t -m core.licensing.gil_container_gate` ([DOCKER_SETUP.pt_BR.md](../DOCKER_SETUP.pt_BR.md) *Imagem free-threaded*). Em tiers **que não são Enterprise** o filho recebe **`PYTHON_GIL=1`**. No CPython, `-X gil=0` **vence** essa variável; `-E` / `-I` fazem o interpretador **ignorar** `PYTHON*`.
+
+**O que o gate faz:** fora de Enterprise ele **remove** `-X gil=*`, `-Xgil=*`, `-E`, `-I` e clusters como `-EI` do `CMD`/`args` antes do `execve`. **Enterprise** mantém essas flags. Tokens depois de `--` não são removidos.
+
+| Sintoma | O que conferir |
+| ------- | -------------- |
+| Você passou `-X gil=0` no `command:` do Compose e esperava no-GIL em Community/Pro | O gate remove. Use `licensing.effective_tier: enterprise` (lab OPEN) ou grant Enterprise de verdade. |
+| Você definiu `DATA_BOAR_CONTAINER_PYTHON` para outro binário | Ignorado a menos que o caminho seja **exatamente** `/usr/local/bin/python3.14t`. |
+| YAML de config ausente ou ilegível | Config vazia → **OPEN** de lab (GIL continua ligado, não Enterprise). Erros em `resolve_tier` → **Community**. |
+| HEALTHCHECK saudável com GIL ligado | A sonda **não passa** pelo ENTRYPOINT (comentário no `Dockerfile`). Inspecione o env do PID 1, não `/health`. |
+
+**Como confirmar o GIL no processo:** `docker inspect` / `podman inspect` no env do container, ou `--entrypoint /usr/local/bin/python3.14t` só para imprimir `sys._is_gil_enabled()` (isso **pula** o gate — só lab).
 
 ---
 

@@ -124,6 +124,7 @@ Open `http://<server-ip>:9000`. Default login is **admin / admin** — you **mus
    - `SONAR_TOKEN` — the user token.
    - `SONAR_HOST_URL` — base URL of your server, e.g. `<https://sonarqube.home.exampl>e` (no trailing slash).
    - Do **not** set `sonar.organization` in `sonar-project.properties` for SonarQube Server (that is for SonarCloud).
+1. **Coverage XML:** the Sonar job **downloads** artifact **`coverage-xml`** produced by the Python **3.13** Test cell (`pytest --cov --cov-report=xml`). `sonar.python.coverage.reportPaths=coverage.xml`. If the Test job fails before upload, Sonar never starts. Details: [TESTING.md](../TESTING.md) *SonarQube / SonarCloud*.
 
 Local scripts (e.g. `scripts/sonar_issues.py`) use the same variables:
 
@@ -190,6 +191,7 @@ Add the MCP server in **Cursor Settings → MCP** per the MCP provider’s READM
 | CI cannot connect          | Hosted runner vs private IP — use tunnel or self-hosted runner (§6).                          |
 | IDE connects, CI fails     | Different URLs or missing `SONAR_HOST_URL` secret; trailing slash on URL.                     |
 | Quality gate always red    | Narrow rules in SonarQube UI or first analysis baseline; fix or adjust gate for new projects. |
+| Coverage 0% / empty        | Python **3.13** Test cell did not upload `coverage.xml` (job failed, or `--cov` step skipped). Ruleset **code coverage** was empty before #1719. |
 
 ---
 

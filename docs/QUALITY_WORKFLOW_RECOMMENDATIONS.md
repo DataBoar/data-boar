@@ -7,7 +7,7 @@ This document suggests **additional layers** (tools, habits, and workflow) to ke
 ## What you already have (baseline)
 
 - **Tests:** Full pytest suite with `-W error`; SonarQube-style tests (S3981, S3776, S4423, S5706, S1192, etc.), security tests (SQL injection, path traversal, safe_load), markdown lint (including `.cursor/`).
-- **CI:** Tests + `pip-audit` on every push/PR; optional SonarQube when `SONAR_TOKEN` is set; CodeQL in a separate workflow (advanced `codeql.yml` — do not run GitHub default setup at the same time; [TESTING.md](TESTING.md) *CodeQL*).
+- **CI:** Tests + `pip-audit` on every push/PR; optional SonarQube when `SONAR_TOKEN` is set (scanner consumes **`coverage.xml`** from the Python **3.13** Test cell — [TESTING.md](TESTING.md) *SonarQube / SonarCloud*); CodeQL in a separate workflow (advanced `codeql.yml` — do not run GitHub default setup at the same time; [TESTING.md](TESTING.md) *CodeQL*).
 - **Cursor:** Rule and skill so the agent avoids SonarQube/CodeQL violations and runs quality tests after editing Python/markdown.
 - **Docs:** CONTRIBUTING (release checklist, audit, min versions), SECURITY.md, TESTING.md, deploy hardening.
 

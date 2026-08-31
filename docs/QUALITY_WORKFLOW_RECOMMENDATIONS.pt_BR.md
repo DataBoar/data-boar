@@ -9,7 +9,7 @@ Este documento sugere **camadas adicionais** (ferramentas, hábitos e fluxo de t
 ## O que você já tem (linha de base)
 
 - **Testes:** Suite completa de pytest com `-W error`; testes estilo SonarQube (S3981, S3776, S4423, S5706, S1192, etc.), testes de segurança (SQL injection, path traversal, safe_load), lint de markdown (incluindo `.cursor/`).
-- **CI:** Testes + `pip-audit` a cada push/PR; SonarQube opcional quando `SONAR_TOKEN` está definido; CodeQL em workflow separado (`codeql.yml` avançado — **não** rode o default setup do GitHub ao mesmo tempo; [TESTING.pt_BR.md](TESTING.pt_BR.md) *CodeQL*).
+- **CI:** Testes + `pip-audit` a cada push/PR; SonarQube opcional quando `SONAR_TOKEN` está definido (o scanner consome **`coverage.xml`** da célula Test em Python **3.13** — [TESTING.pt_BR.md](TESTING.pt_BR.md) *CI*); CodeQL em workflow separado (`codeql.yml` avançado — **não** rode o default setup do GitHub ao mesmo tempo; [TESTING.pt_BR.md](TESTING.pt_BR.md) *CodeQL*).
 - **Cursor:** Regra e skill para que o agente evite violações SonarQube/CodeQL e execute testes de qualidade após editar Python/markdown.
 - **Docs:** CONTRIBUTING (checklist de release, auditoria, versões mínimas), SECURITY.md, TESTING.md, hardening de deploy.
 
