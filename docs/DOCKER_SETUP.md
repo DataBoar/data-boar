@@ -58,6 +58,8 @@ The **Dockerfile** (Hub `:latest` after the next image publish) installs **CPyth
 
 **License gate (container ENTRYPOINT):** Distroless has no shell. The image runs `python3.14t -m core.licensing.gil_container_gate`, which resolves the same tier as `get_runtime_tier_for_features` and **`execve`s** a new interpreter with **`PYTHON_GIL=1`** unless the tier is **exactly Enterprise**. OPEN, Community, Std, Pro, Pro+, and **Partner** all get the GIL. Lab: `licensing.mode: open` plus `licensing.effective_tier: enterprise` to exercise no-GIL. HEALTHCHECK does **not** go through this gate.
 
+**Non-Enterprise CMD/args (fail-closed):** Compose/K8s `args` that would ignore `PYTHON_GIL` are **stripped** before `execve`: `-X gil=*`, `-Xgil=*`, `-E`, `-I`, and clustered shorts such as `-EI` (`-s` is kept). Tokens after `--` are **not** stripped. **Enterprise** keeps those flags. Unreadable or missing YAML → **GIL on** (empty config is lab **OPEN**, not Enterprise; `resolve_tier` exceptions → **Community**). `DATA_BOAR_CONTAINER_PYTHON` is **ignored** unless it is exactly `/usr/local/bin/python3.14t` (no env-controlled interpreter swap). Code: `core/licensing/gil_container_gate.py`. Pitfalls: [TROUBLESHOOTING_DOCKER_DEPLOYMENT.md](ops/TROUBLESHOOTING_DOCKER_DEPLOYMENT.md) §8.
+
 **Image size:** the published layer uses the same `collect-runtime-rootfs.sh` + distroless path as the previous ~309 MB Hub image. A **1.25 GB** local tree was unpruned builder leftover — not the intended Hub blob. Measure compressed size at the next publish; explain any remaining delta there.
 
 **Inspect the interpreter without the gate:** `docker run --rm --entrypoint /usr/local/bin/python3.14t IMAGE -c 'import sys; print(sys._is_gil_enabled())'`.
