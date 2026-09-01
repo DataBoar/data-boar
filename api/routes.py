@@ -60,6 +60,7 @@ from fastapi.responses import (
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from core.about import get_about_info
 from core.canonical_trust import get_canonical_trust_snapshot
@@ -69,7 +70,7 @@ from core.dashboard_transport import (
 )
 from core.enterprise_surface_posture import get_enterprise_surface_posture
 from core.forwarded_headers import forwarded_proto_posture
-from core.host_resolution import effective_api_key_configured
+from core.host_resolution import effective_api_key_configured, trusted_api_hosts
 from core.licensing.runtime_feature_tier import get_runtime_tier_for_features
 from core.licensing.tier_features import is_feature_available
 from core.rbac_settings import rbac_enforcement_active
@@ -1305,6 +1306,7 @@ async def locale_html_middleware(request: Request, call_next):
 # Pure ASGI (not BaseHTTPMiddleware): last add_middleware = outermost, so body bytes
 # are counted before Starlette buffers JSON/form. Closes #1558 (chunked / no Content-Length).
 app.add_middleware(RequestBodySizeLimitMiddleware, max_bytes=MAX_REQUEST_BODY_BYTES)
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=trusted_api_hosts(_get_config()))
 
 app.mount("/static", StaticFiles(directory=str(_api_dir / "static")), name="static")
 
