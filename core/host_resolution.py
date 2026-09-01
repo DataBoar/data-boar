@@ -57,6 +57,27 @@ def resolve_api_host(config: dict[str, Any], cli_host: str | None = None) -> str
     return "127.0.0.1"
 
 
+def trusted_api_hosts(config: dict[str, Any]) -> list[str]:
+    """Return the exact Host names accepted by the dashboard API."""
+    api_cfg = config.get("api") if isinstance(config, dict) else None
+    api_cfg = api_cfg if isinstance(api_cfg, dict) else {}
+    # ``testserver`` is Starlette's local TestClient host and is equivalent to
+    # localhost for in-process tests; it is not a routable production hostname.
+    hosts = {"127.0.0.1", "localhost", "testserver"}
+    configured_host = str(api_cfg.get("host") or "").strip()
+    if configured_host:
+        hosts.add(configured_host)
+    extras = api_cfg.get("trusted_hosts") or []
+    if isinstance(extras, str):
+        extras = [extras]
+    if isinstance(extras, (list, tuple, set)):
+        for extra in extras:
+            host = str(extra).strip()
+            if host and "*" not in host:
+                hosts.add(host)
+    return sorted(hosts)
+
+
 def api_bind_exposes_non_loopback(host: str) -> bool:
     """
     True when the API listens beyond loopback (e.g. 0.0.0.0, LAN IP, ::), so clients on

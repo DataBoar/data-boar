@@ -6,6 +6,7 @@ from core.host_resolution import (
     resolve_api_host,
     should_block_non_loopback_without_auth,
     should_warn_insecure_api_bind,
+    trusted_api_hosts,
 )
 
 
@@ -27,6 +28,35 @@ def test_resolve_api_host_falls_back_to_loopback_default() -> None:
 def test_resolve_api_host_handles_missing_api_block() -> None:
     config = {}
     assert resolve_api_host(config, cli_host=None) == "127.0.0.1"
+
+
+def test_trusted_api_hosts_include_loopback_configured_and_explicit_names() -> None:
+    config = {
+        "api": {"host": "dashboard.example", "trusted_hosts": ["reports.example"]}
+    }
+    assert trusted_api_hosts(config) == [
+        "127.0.0.1",
+        "dashboard.example",
+        "localhost",
+        "reports.example",
+        "testserver",
+    ]
+
+
+def test_trusted_api_hosts_reject_wildcard_extras() -> None:
+    assert trusted_api_hosts({"api": {"trusted_hosts": ["*"]}}) == [
+        "127.0.0.1",
+        "localhost",
+        "testserver",
+    ]
+
+
+def test_api_rejects_untrusted_host_header() -> None:
+    from fastapi.testclient import TestClient
+    from api.routes import app
+
+    response = TestClient(app).get("/health", headers={"host": "attacker.example"})
+    assert response.status_code == 400
 
 
 def test_resolve_api_host_uses_env_api_host_when_no_config() -> None:
