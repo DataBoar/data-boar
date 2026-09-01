@@ -31,12 +31,24 @@ def test_resolve_api_host_handles_missing_api_block() -> None:
 
 
 def test_trusted_api_hosts_include_loopback_configured_and_explicit_names() -> None:
-    config = {"api": {"host": "dashboard.example", "trusted_hosts": ["reports.example"]}}
-    assert trusted_api_hosts(config) == ["127.0.0.1", "dashboard.example", "localhost", "reports.example", "testserver"]
+    config = {
+        "api": {"host": "dashboard.example", "trusted_hosts": ["reports.example"]}
+    }
+    assert trusted_api_hosts(config) == [
+        "127.0.0.1",
+        "dashboard.example",
+        "localhost",
+        "reports.example",
+        "testserver",
+    ]
 
 
 def test_trusted_api_hosts_reject_wildcard_extras() -> None:
-    assert trusted_api_hosts({"api": {"trusted_hosts": ["*"]}}) == ["127.0.0.1", "localhost", "testserver"]
+    assert trusted_api_hosts({"api": {"trusted_hosts": ["*"]}}) == [
+        "127.0.0.1",
+        "localhost",
+        "testserver",
+    ]
 
 
 def test_api_rejects_untrusted_host_header() -> None:

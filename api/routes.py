@@ -1306,7 +1306,9 @@ async def locale_html_middleware(request: Request, call_next):
 # Pure ASGI (not BaseHTTPMiddleware): last add_middleware = outermost, so body bytes
 # are counted before Starlette buffers JSON/form. Closes #1558 (chunked / no Content-Length).
 app.add_middleware(RequestBodySizeLimitMiddleware, max_bytes=MAX_REQUEST_BODY_BYTES)
-app.add_middleware(TrustedHostMiddleware, allowed_hosts=trusted_api_hosts(_get_config()))
+app.add_middleware(
+    TrustedHostMiddleware, allowed_hosts=trusted_api_hosts(_get_config())
+)
 
 app.mount("/static", StaticFiles(directory=str(_api_dir / "static")), name="static")
 
