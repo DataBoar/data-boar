@@ -434,34 +434,52 @@ _SECTION_ID_FIELDS: dict[str, str] = {
 }
 
 
-def _plugin_paths_from_config(config: dict[str, Any]) -> list[str]:
-    """Return deduplicated plugin file paths referenced by a normalized config."""
-    paths: list[str] = []
+def _plugin_path_entries_from_config(
+    config: dict[str, Any],
+) -> list[tuple[str, str | None]]:
+    """Return deduplicated (path, default_section) pairs from a normalized config.
 
-    def _add(raw: Any) -> None:
+    ``default_section`` is ``None`` for unified ``patterns_plugin_file`` (sections
+    are read from the file body). Legacy list-only ML/DL files use their loader key.
+    """
+    entries: list[tuple[str, str | None]] = []
+
+    def _add(raw: Any, section: str | None) -> None:
         if isinstance(raw, str) and raw.strip():
-            paths.append(raw.strip())
+            entries.append((raw.strip(), section))
 
-    _add(config.get("patterns_plugin_file"))
-    _add(config.get("regex_overrides_file"))
-    _add(config.get("ml_patterns_file"))
-    _add(config.get("dl_patterns_file"))
-    for key in ("regex_overrides_files", "ml_patterns_files"):
-        raw_list = config.get(key)
-        if isinstance(raw_list, list):
-            for entry in raw_list:
-                _add(entry)
+    _add(config.get("patterns_plugin_file"), None)
+    _add(config.get("regex_overrides_file"), "regex_patterns")
+    for path in _as_path_list(config.get("regex_overrides_files")):
+        _add(path, "regex_patterns")
+    _add(config.get("ml_patterns_file"), "ml_patterns")
+    for path in _as_path_list(config.get("ml_patterns_files")):
+        _add(path, "ml_patterns")
+    _add(config.get("dl_patterns_file"), "dl_patterns")
 
     seen: set[str] = set()
-    ordered: list[str] = []
-    for path in paths:
-        if path not in seen:
-            seen.add(path)
-            ordered.append(path)
+    ordered: list[tuple[str, str | None]] = []
+    for path, section in entries:
+        if path in seen:
+            continue
+        seen.add(path)
+        ordered.append((path, section))
     return ordered
 
 
-def _sections_from_plugin_data(data: Any) -> dict[str, list[Any]]:
+def _as_path_list(raw: Any) -> list[str]:
+    if not isinstance(raw, list):
+        return []
+    return [
+        str(entry).strip() for entry in raw if isinstance(entry, str) and entry.strip()
+    ]
+
+
+def _sections_from_plugin_data(
+    data: Any,
+    *,
+    default_section: str | None = None,
+) -> dict[str, list[Any]]:
     """Map plugin YAML root to section lists for volatility extraction."""
     if isinstance(data, dict) and any(k in data for k in _UNIFIED_SECTION_KEYS):
         out: dict[str, list[Any]] = {}
@@ -471,7 +489,8 @@ def _sections_from_plugin_data(data: Any) -> dict[str, list[Any]]:
                 out[key] = section
         return out
     if isinstance(data, list):
-        return {"regex_patterns": data}
+        section = default_section or "regex_patterns"
+        return {section: data}
     if isinstance(data, dict):
         if isinstance(data.get("regex_patterns"), list):
             return {"regex_patterns": data["regex_patterns"]}
@@ -495,18 +514,28 @@ def collect_plugin_volatility_metadata(
     if not isinstance(config, dict):
         return None
 
+    from utils.file_encoding import read_text_with_encoding
+
+    encoding = str(config.get("pattern_files_encoding") or "utf-8")
     entries: list[dict[str, str]] = []
-    for path in _plugin_paths_from_config(config):
+    for path, default_section in _plugin_path_entries_from_config(config):
         plugin_path = Path(path)
         if not plugin_path.is_file():
             continue
         try:
-            raw = plugin_path.read_text(encoding="utf-8")
+            raw = read_text_with_encoding(
+                str(plugin_path),
+                encoding=encoding,
+                errors="replace",
+            )
             data = yaml.safe_load(raw)
         except (OSError, yaml.YAMLError):
             continue
 
-        for section_key, items in _sections_from_plugin_data(data).items():
+        for section_key, items in _sections_from_plugin_data(
+            data,
+            default_section=default_section,
+        ).items():
             id_field = _SECTION_ID_FIELDS[section_key]
             for item in items:
                 if not isinstance(item, dict):

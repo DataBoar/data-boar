@@ -457,6 +457,28 @@ def test_collect_plugin_volatility_metadata_unified_and_legacy(tmp_path):
     assert {row["volatility_class"] for row in rows} == {"HIGH", "MEDIUM"}
 
 
+def test_collect_plugin_volatility_metadata_ml_list_file(tmp_path):
+    from config.plugin_validator import collect_plugin_volatility_metadata
+
+    ml_path = _write_yaml(
+        tmp_path,
+        "terms.yaml",
+        """
+        - text: "rotating log"
+          label: sensitive
+          volatility_class: MEDIUM
+        """,
+    )
+    config = {
+        "ml_patterns_file": ml_path.replace("\\", "/"),
+    }
+    rows = collect_plugin_volatility_metadata(config)
+    assert rows is not None
+    assert rows[0]["section"] == "ml_patterns"
+    assert rows[0]["pattern_id"] == "rotating log"
+    assert rows[0]["volatility_class"] == "MEDIUM"
+
+
 def test_example_regex_overrides_passes_validation():
     """config/regex_overrides.example.yaml must pass regex_patterns validation."""
     from config.plugin_validator import validate_plugin_file
