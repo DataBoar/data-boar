@@ -8,6 +8,7 @@ import base64
 import binascii
 import json
 from datetime import datetime, timezone
+from importlib.resources import files as resource_files
 from pathlib import Path
 from typing import Any
 
@@ -18,6 +19,27 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
 # pyjwt[crypto] uses cryptography for EdDSA
+
+# Official issuer verify key shipped in the wheel (#1331). Public material only.
+EMBEDDED_LICENSE_PUBKEY_RESOURCE = "license-pub-v1.pem"
+
+
+def load_embedded_official_public_key_pem() -> str | None:
+    """Return the packaged official Ed25519 public PEM, or None if missing."""
+    try:
+        traversable = resource_files("core.licensing").joinpath(
+            EMBEDDED_LICENSE_PUBKEY_RESOURCE
+        )
+    except (ModuleNotFoundError, AttributeError):
+        return None
+    try:
+        is_file = getattr(traversable, "is_file", None)
+        if callable(is_file) and not is_file():
+            return None
+        text = traversable.read_text(encoding="utf-8").strip()
+    except (FileNotFoundError, OSError, ValueError):
+        return None
+    return text or None
 
 
 def load_ed25519_public_key_pem(pem_data: str) -> Any:

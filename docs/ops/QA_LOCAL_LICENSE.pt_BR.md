@@ -70,19 +70,24 @@ Envie apenas o arquivo `.lic` — nunca a chave privada.
 
 ## 4. Instalar e rodar enforced
 
+A chave pública oficial de verificação já vai **embarcada** na instalação
+(`license-pub-v1.pem`). Um `.lic` válido e vinculado à máquina basta — sem
+env/config de pubkey numa instalação limpa (#1331). Defina
+`DATA_BOAR_LICENSE_PUBLIC_KEY_PATH` / `DATA_BOAR_LICENSE_PUBLIC_KEY_PEM` /
+`licensing.public_key_path` só para **emissor customizado** ou **rotação de
+chave**.
+
 ```yaml
 # config.yaml
 licensing:
   mode: enforced
   license_path: /caminho/para/qa-enterprise.lic
-  public_key_path: /caminho/para/license-pub-v1.pem
 ```
 
 Ou via ambiente:
 
 ```bash
 export DATA_BOAR_LICENSE_PATH=/caminho/para/qa-enterprise.lic
-export DATA_BOAR_LICENSE_PUBLIC_KEY_PATH=/caminho/para/license-pub-v1.pem
 ```
 
 Confira `GET /health` / `GET /about`: o estado precisa ser **VALID** com

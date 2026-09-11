@@ -68,19 +68,23 @@ Send only the `.lic` file — never the private key.
 
 ## 4. Install and run enforced
 
+The official verify key is **embedded** in the install (`license-pub-v1.pem`).
+A valid machine-bound `.lic` is enough — no pubkey env/config on a clean
+install (#1331). Set `DATA_BOAR_LICENSE_PUBLIC_KEY_PATH` /
+`DATA_BOAR_LICENSE_PUBLIC_KEY_PEM` / `licensing.public_key_path` only for a
+**custom issuer** or **key rotation**.
+
 ```yaml
 # config.yaml
 licensing:
   mode: enforced
   license_path: /path/to/qa-enterprise.lic
-  public_key_path: /path/to/license-pub-v1.pem
 ```
 
 Or via environment:
 
 ```bash
 export DATA_BOAR_LICENSE_PATH=/path/to/qa-enterprise.lic
-export DATA_BOAR_LICENSE_PUBLIC_KEY_PATH=/path/to/license-pub-v1.pem
 ```
 
 Check `GET /health` / `GET /about`: state must be **VALID** with

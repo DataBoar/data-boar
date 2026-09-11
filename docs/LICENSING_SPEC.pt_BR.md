@@ -38,8 +38,24 @@ Variáveis de ambiente sobrescrevem o YAML quando definidas:
 
 - `DATA_BOAR_LICENSE_MODE` — `enforced` (somente escalada; `open` não rebaixa o `enforced` do YAML)
 - `DATA_BOAR_LICENSE_PATH` — caminho do arquivo JWT (`.lic`)
-- `DATA_BOAR_LICENSE_PUBLIC_KEY_PATH` — arquivo PEM com a chave **pública Ed25519** (somente verificação)
-- `DATA_BOAR_LICENSE_PUBLIC_KEY_PEM` — PEM inline (alternativa ao caminho; somente dev/CI)
+- `DATA_BOAR_LICENSE_PUBLIC_KEY_PATH` — arquivo PEM com a chave **pública Ed25519** (somente verificação; **override**)
+- `DATA_BOAR_LICENSE_PUBLIC_KEY_PEM` — PEM inline (alternativa ao caminho; emissor customizado / rotação / CI)
+
+### Resolução da chave pública (#1331)
+
+O modo enforced verifica o `.lic` contra uma chave **pública** Ed25519. A chave oficial do emissor vai **dentro do wheel** em `core/licensing/license-pub-v1.pem` (carregada via `importlib.resources`). Uma instalação limpa com um `.lic` válido e vinculado à máquina **não** precisa de `DATA_BOAR_LICENSE_PUBLIC_KEY_*` nem de `licensing.public_key_path`.
+
+Ordem de resolução (o primeiro valor não vazio vence). Um override explícito que falha ao carregar **falha fechado** (`public_key_load_error`); ele **não** cai na chave embarcada:
+
+1. `DATA_BOAR_LICENSE_PUBLIC_KEY_PEM` (env)
+2. `DATA_BOAR_LICENSE_PUBLIC_KEY_PATH` (env)
+3. `licensing.public_key_path` (YAML)
+4. **chave pública oficial embarcada** (recurso empacotado — padrão)
+
+Use override só para **rotação de chave** ou **emissor customizado**. A chave de verificação é pública; embarcá-la não expõe segredo. A chave privada canônica permanece no emissor ([License Studio](https://github.com/DataBoar/license-studio)). `missing_public_key` só ocorre quando o recurso empacotado está ausente **e** nenhum override está definido.
+
+Outras variáveis de ambiente:
+
 - `DATA_BOAR_LICENSE_REVOCATION_PATH` — arquivo JSON listando IDs de licença revogados
 - `DATA_BOAR_RELEASE_MANIFEST_PATH` — manifesto JSON opcional para integridade (ver [RELEASE_INTEGRITY.md](RELEASE_INTEGRITY.md) ([pt-BR](RELEASE_INTEGRITY.pt_BR.md)))
 - `DATA_BOAR_EXPECTED_BUILD_DIGEST` — SHA-256 hex opcional; se definido, é comparado ao digest de build embutido
@@ -49,7 +65,7 @@ Variáveis de ambiente sobrescrevem o YAML quando definidas:
 ```yaml
 licensing:
   mode: open                    # open | enforced
-  public_key_path: ""           # PEM público Ed25519
+  public_key_path: ""           # override opcional; vazio → pubkey oficial embarcada (#1331)
   license_path: ""              # arquivo JWT assinado
   revocation_list_path: ""      # lista JSON de revogação opcional
   manifest_path: ""             # manifesto de release opcional
