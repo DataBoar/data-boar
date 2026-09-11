@@ -460,6 +460,25 @@ No scan is started; the process exits after the reset.
 See SECURITY.md before use in production.
 .
 .TP
+.B \-\-reconcile\-integrity\-anchor
+Re\-baseline the SQLite integrity anchor after an official package upgrade. Must be paired with
+.BI \-\-confirm\-upgrade\-to " VERSION"
+where
+.I VERSION
+equals the installed package version. Does not auto\-reconcile on a
+.I release_label
+change alone (that would be a bypass). Hash mismatch without this command stays tampered /
+.BR \-alpha .
+Incompatible with
+.BR \-\-web ", " \-\-reset\-data ", scans, and exports."
+.
+.TP
+.BI "\-\-confirm\-upgrade\-to " VERSION
+Required with
+.BR \-\-reconcile\-integrity\-anchor :
+the installed version the operator confirms. Mismatch refuses the re\-baseline (exit 1).
+.
+.TP
 .BI "\-\-export\-audit\-trail " PATH
 Export a JSON audit trail from the SQLite database (wipe log, session summary, maturity assessment HMAC summary when rows exist; future: build integrity anchor). Does not modify the database. If
 .I PATH

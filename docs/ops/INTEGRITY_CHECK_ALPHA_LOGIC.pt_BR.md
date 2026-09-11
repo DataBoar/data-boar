@@ -75,14 +75,17 @@ Anexar registro estruturado a `security_alert.log` (ou destino SIEM):
 2. **Re-verificação no startup (E.3):** todo start (CLI e web, **qualquer**
    modo de licenciamento, incluindo `open`) recomputa os hashes e compara com
    a âncora.
-   - **Mesmo `release_label` + hash divergente** → `integrity_state=tampered` /
-     `trust_level=adulterated` (não afrouxar).
-   - **`release_label` mudou (upgrade legítimo do pacote)** → **re-baseline**
-     da única linha da âncora (novos hashes / label), evento append-only
-     `re-baseline`, e permanece `validated` / `expected`
-     ([#1262](https://github.com/DataBoar/data-boar/issues/1262)). Um upgrade
-     PyPI/wheel que altera `CRITICAL_MODULES` é esperado; tratá-lo como
-     tamper quebra todo `pip install -U` que reusa o SQLite.
+   - **Hash divergente** (qualquer `release_label`, inclusive upgrade pip/pipx
+     que toque `CRITICAL_MODULES`) → `integrity_state=tampered` /
+     `trust_level=adulterated`. **Não** re-baselinar sozinho por semver /
+     mudança de `release_label` (bypass: um atacante poderia só subir o rótulo
+     junto com os hashes).
+   - **Re-baseline do operador (#1262):** `data-boar --reconcile-integrity-anchor
+     --confirm-upgrade-to=<versão-instalada>` grava âncora nova **somente**
+     quando `VERSION` é igual à versão do pacote em execução. O evento
+     append-only `re-baseline` registra a confirmação.
+   - **Hashes iguais + `release_label` mudou** → permanece `validated`; só
+     persiste o rótulo novo (hashes intactos — não é re-baseline).
 3. **TINTED / `-alpha` (E.4):** o estado adulterado força o rótulo
    `-alpha (development / not CI-validated)` na aba Info do report (linhas
    `Build trust` / `Integrity state`), no rodapé do dashboard, em
@@ -104,10 +107,9 @@ Anexar registro estruturado a `security_alert.log` (ou destino SIEM):
 Isto é **evidência de adulteração, não prova de inviolabilidade.** Um atacante
 com acesso de escrita ao código **e** ao arquivo SQLite da âncora pode apagar
 ou re-basear a âncora (o app então re-executa a primeira validação ou mostra
-`unknown`). O caminho de **re-baseline no upgrade de release** só dispara
-quando `release_label` muda; drift de hash na mesma versão ainda tingido.
-Upgrades inesperados ficam no rastro append-only do evento `re-baseline`.
-Mitigações: permissões de arquivo, montagem somente leitura do DB em deploys
+`unknown`). O caminho suportado de **re-baseline** é o confirm do operador
+(`--reconcile-integrity-anchor --confirm-upgrade-to`); drift de hash na mesma
+versão ainda tingido. Mitigações: permissões de arquivo, montagem somente leitura do DB em deploys
 de alta garantia, e o **manifest assinado** (Sigstore / CI OIDC — Fase C.4 do
 `PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY`) como próxima camada. A âncora local
 captura com confiabilidade edições casuais, forks com gates removidos e drift

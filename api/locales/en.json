@@ -183,6 +183,7 @@
     "run_cli_tls": "You must either terminate TLS at the process (--https-cert-file + --https-key-file, or the same under api: in config) or explicitly accept plaintext with --allow-insecure-http (or api.allow_insecure_http: true). The official Docker image passes --allow-insecure-http by default; mount certs and remove it for HTTPS.",
     "run_cli_bind": "Bind order when using --web: --host overrides api.host in config and API_HOST; if none are set, the default is 127.0.0.1 (Docker image often sets API_HOST=0.0.0.0). Port: api.port in config vs --port. Transport: GET /status and GET /health include dashboard_transport — see docs/USAGE.md.",
     "run_cli_danger": "Dangerous maintenance (lab/demo only): --reset-data wipes SQLite sessions/findings and deletes generated reports under report.output_dir. See SECURITY.md before using in production.",
+    "run_cli_integrity": "After an official pip/pipx upgrade, re-baseline integrity hashes with --reconcile-integrity-anchor --confirm-upgrade-to=<installed-version> (must match the running package; does not auto-reconcile on semver).",
     "run_cli_audit": "Audit trail export (CLI only): --export-audit-trail or --export-audit-trail path.json writes a JSON snapshot (wipe log, session summary; future: integrity rows). Does not modify the database. Omit the path or use - for stdout.",
     "dl_h2": "Downloading reports, heatmaps and logs",
     "dl_web_h3": "From the web dashboard",

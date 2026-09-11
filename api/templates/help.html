@@ -68,6 +68,8 @@
 {{ prog }} --config config.yaml --web --allow-insecure-http --host 0.0.0.0 --port 8088</code></pre>
   <p class="muted">{{ t('help.run_cli_bind') }}</p>
   <p><strong>{{ t('help.run_cli_danger') }}</strong></p>
+  <p class="muted">{{ t('help.run_cli_integrity') }}</p>
+  <pre><code>{{ prog }} --config config.yaml --reconcile-integrity-anchor --confirm-upgrade-to=&lt;version&gt;</code></pre>
   <p><strong>{{ t('help.run_cli_audit') }}</strong></p>
 </section>
 

@@ -72,13 +72,17 @@ Append a structured record to `security_alert.log` (or SIEM sink):
    scan tables only.
 2. **Startup re-verify (E.3):** every start (CLI and web, **any** licensing
    mode including `open`) recomputes the hashes and compares to the anchor.
-   - **Same `release_label` + hash mismatch** → `integrity_state=tampered` /
-     `trust_level=adulterated` (unchanged; do not soften).
-   - **`release_label` changed (legitimate package upgrade)** → **re-baseline**
-     the single anchor row to the new hashes / label, append a `re-baseline`
-     event, and stay `validated` / `expected` ([#1262](https://github.com/DataBoar/data-boar/issues/1262)).
-     A PyPI/wheel upgrade that changes `CRITICAL_MODULES` is expected; treating
-     it as tamper breaks every `pip install -U` that reuses the SQLite DB.
+   - **Hash mismatch** (any `release_label`, including a pip/pipx upgrade that
+     touched `CRITICAL_MODULES`) → `integrity_state=tampered` /
+     `trust_level=adulterated`. **Do not** auto-re-baseline on semver /
+     `release_label` change alone (bypass: an attacker could bump the label
+     with the hashes).
+   - **Operator re-baseline (#1262):** `data-boar --reconcile-integrity-anchor
+     --confirm-upgrade-to=<installed-version>` writes a new anchor **only**
+     when `VERSION` equals the running package version. Append-only
+     `re-baseline` event records the confirmation.
+   - **Hash match + `release_label` changed** → keep `validated`; persist the
+     new label only (hashes unchanged — not a re-baseline).
 3. **TINTED / `-alpha` (E.4):** the adulterated state forces the
    `-alpha (development / not CI-validated)` label on the report Info sheet
    (`Build trust` / `Integrity state` rows), dashboard footer, `GET /about`,
@@ -97,9 +101,9 @@ Append a structured record to `security_alert.log` (or SIEM sink):
 This is **tamper-EVIDENT, not tamper-PROOF.** An attacker with write access to
 both the code tree **and** the SQLite anchor file can delete or re-baseline the
 anchor (the app then re-runs first validation or shows `unknown`). The
-**release-upgrade re-baseline** path only runs when `release_label` changes;
-same-version hash drift still tints. Unexpected upgrades remain visible in the
-append-only `re-baseline` event trail. Mitigations: file permissions, read-only
+**operator confirm** path (`--reconcile-integrity-anchor --confirm-upgrade-to`)
+is the only supported re-baseline besides first-run; same-version hash drift
+still tints. Mitigations: file permissions, read-only
 DB mounts in high-assurance deploys, and the **signed manifest** (Sigstore /
 CI OIDC — Phase C.4 of `PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY`) as the next
 hardening layer. The local anchor reliably catches casual edits, forks with

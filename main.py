@@ -536,6 +536,10 @@ def main() -> None:
             "  # Wipe all collected data and generated reports (dangerous, see SECURITY.md)\n"
             f"  {prog} --config config.yaml --reset-data\n"
             "\n"
+            "  # After a pip/pipx upgrade: re-baseline integrity hashes (operator confirm)\n"
+            f"  {prog} --config config.yaml --reconcile-integrity-anchor "
+            "--confirm-upgrade-to=1.8.0-beta\n"
+            "\n"
             "Web/API examples:\n"
             "  # HTTPS: PEM cert + key (TLS >= 1.2)\n"
             f"  {prog} --config config.yaml --web --https-cert-file server.crt --https-key-file server.key\n"
@@ -656,6 +660,25 @@ def main() -> None:
             "delete generated Excel reports and heatmap PNGs under report.output_dir, "
             "and record an immutable data_wipe_log entry with the reason. "
             "Intended for lab/demo environments; review SECURITY.md before using in production."
+        ),
+    )
+    parser.add_argument(
+        "--reconcile-integrity-anchor",
+        action="store_true",
+        help=(
+            "Re-baseline the SQLite integrity anchor after an official package upgrade "
+            "(#1262). Must be paired with --confirm-upgrade-to=<installed-version> "
+            "(must match the running package version). Does not auto-reconcile on "
+            "semver change. Incompatible with --web, --reset-data, scans, and exports."
+        ),
+    )
+    parser.add_argument(
+        "--confirm-upgrade-to",
+        metavar="VERSION",
+        default=None,
+        help=(
+            "With --reconcile-integrity-anchor: installed version string the operator "
+            "confirms (must equal the running package version). Required together."
         ),
     )
     parser.add_argument(
@@ -1023,6 +1046,16 @@ def main() -> None:
     export_l1 = args.export_l1 is not None
     export_l3 = args.export_l3 is not None
     export_sink = args.export_findings_sink is not None
+    reconcile_anchor = bool(getattr(args, "reconcile_integrity_anchor", False))
+    confirm_upgrade = (getattr(args, "confirm_upgrade_to", None) or "").strip()
+
+    if reconcile_anchor != bool(confirm_upgrade):
+        print(
+            "--reconcile-integrity-anchor requires --confirm-upgrade-to=<installed-version> "
+            "(and vice versa).",
+            file=sys.stderr,
+        )
+        sys.exit(2)
 
     if args.version:
         _run_startup_integrity_check({"sqlite_path": "audit_results.db"})
@@ -1062,13 +1095,14 @@ def main() -> None:
             or args.diff_sessions
             or args.regenerate_report is not None
             or args.governance_report is not None
+            or reconcile_anchor
         )
         if demo_incompatible:
             print(
                 "Cannot combine --demo with --validate-config, --plan, --resume, --prefilter-status, "
                 "--check-extras, --reset-data, --export-audit-trail, --export-dsar, "
                 "--export-l1, --export-l3, --export-remediation-manifest, --diff, "
-                "--regenerate-report, or --governance-report.",
+                "--regenerate-report, --governance-report, or --reconcile-integrity-anchor.",
                 file=sys.stderr,
             )
             sys.exit(2)
@@ -1088,6 +1122,32 @@ def main() -> None:
             )
         args.host = "127.0.0.1"
         print_demo_banner(args.port, demo_dir)
+
+    if reconcile_anchor and (
+        args.web
+        or args.validate_config
+        or args.plan
+        or getattr(args, "resume_session", None)
+        or args.prefilter_status
+        or args.check_extras
+        or args.reset_data
+        or args.export_audit_trail is not None
+        or args.export_dsar is not None
+        or export_l1
+        or export_l3
+        or export_sink
+        or args.export_remediation_manifest is not None
+        or args.diff_sessions
+        or args.regenerate_report is not None
+        or args.governance_report is not None
+    ):
+        print(
+            "Cannot combine --reconcile-integrity-anchor with --web, --validate-config, "
+            "--plan, --resume, --prefilter-status, --check-extras, --reset-data, exports, "
+            "--diff, --regenerate-report, or --governance-report.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
 
     if args.validate_config and (
         args.web
@@ -1447,6 +1507,28 @@ def main() -> None:
             "What to do: Validate your config against docs/USAGE.md; check indentation and quoted strings."
         )
         sys.exit(1)
+
+    if reconcile_anchor:
+        import sqlite3
+
+        from core.integrity_anchor import (
+            IntegrityReconcileError,
+            reconcile_integrity_anchor,
+        )
+
+        try:
+            snap = reconcile_integrity_anchor(config, confirm_upgrade)
+        except IntegrityReconcileError as e:
+            print(f"Integrity reconcile refused: {e}", file=sys.stderr)
+            sys.exit(1)
+        except (OSError, sqlite3.Error) as e:
+            print(f"Integrity reconcile failed: {e}", file=sys.stderr)
+            sys.exit(1)
+        print(
+            f"[OK] integrity anchor re-baselined to {snap['release_label']} "
+            f"(state={snap['integrity_state']})"
+        )
+        sys.exit(0)
 
     if args.validate_config:
         # Integrity / runtime-trust (sqlite) run only after a valid pre-flight (#538).

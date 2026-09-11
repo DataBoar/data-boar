@@ -22,8 +22,9 @@ Contract under test:
 8. ``build_digest_matched`` (#1211): True only when expected digest set and
    matches; unset env → False (no signature overclaim).
 9. Legacy DB column ``signature_ok`` migrates to ``build_digest_matched``.
-10. Release upgrade (#1262): ``release_label`` change re-baselines; same-label
-    hash drift still tampers.
+10. Release upgrade (#1262): hash drift after a label change remains
+    ``tampered`` until ``reconcile_integrity_anchor`` with a matching
+    ``confirm_upgrade_to``; auto-rebaseline on semver is not allowed.
 """
 
 from __future__ import annotations
@@ -41,6 +42,7 @@ from core.integrity_anchor import (
     CRITICAL_MODULES,
     OPEN_MODE_WORKER_CAP,
     VALIDATOR_VERSION,
+    IntegrityReconcileError,
     _manifest_content_hash,
     alpha_version_suffix,
     compute_module_hashes,
@@ -48,6 +50,7 @@ from core.integrity_anchor import (
     get_integrity_snapshot,
     is_tampered,
     list_integrity_events,
+    reconcile_integrity_anchor,
     reset_integrity_anchor_for_tests,
 )
 
@@ -164,8 +167,8 @@ def test_tamper_detected_in_open_mode_without_licensing_config(tmp_path, monkeyp
     assert ensure_integrity_anchor(cfg)["integrity_state"] == "tampered"
 
 
-def test_release_upgrade_rebaselines_without_tamper(tmp_path, monkeypatch):
-    """#1262: release_label change + new hashes → re-baseline, not tampered."""
+def test_release_upgrade_without_reconcile_is_tampered(tmp_path, monkeypatch):
+    """#1262: label change + new hashes stay tampered until explicit reconcile."""
     cfg = _cfg(tmp_path)
     monkeypatch.setattr("core.integrity_anchor._release_label", lambda: "1.7.4.post4")
     ensure_integrity_anchor(cfg)
@@ -176,11 +179,32 @@ def test_release_upgrade_rebaselines_without_tamper(tmp_path, monkeypatch):
     monkeypatch.setattr("core.integrity_anchor._release_label", lambda: "1.7.4.post5")
     reset_integrity_anchor_for_tests()
     snap = ensure_integrity_anchor(cfg)
+    assert snap["integrity_state"] == "tampered"
+    assert snap["trust_level"] == "adulterated"
+    assert "core/engine.py" in snap["mismatched_files"]
+    assert is_tampered() is True
+    assert alpha_version_suffix() == "-alpha"
+    assert not any(e["event_type"] == "re-baseline" for e in list_integrity_events(cfg))
+
+
+def test_operator_reconcile_rebaselines_after_confirmed_upgrade(tmp_path, monkeypatch):
+    """#1262: --confirm-upgrade-to matching installed version re-baselines."""
+    cfg = _cfg(tmp_path)
+    monkeypatch.setattr("core.integrity_anchor._release_label", lambda: "1.7.4.post4")
+    ensure_integrity_anchor(cfg)
+
+    drifted = compute_module_hashes()
+    drifted["core/engine.py"] = "a" * 64
+    monkeypatch.setattr("core.integrity_anchor.compute_module_hashes", lambda: drifted)
+    monkeypatch.setattr("core.integrity_anchor._release_label", lambda: "1.7.4.post5")
+    reset_integrity_anchor_for_tests()
+    assert ensure_integrity_anchor(cfg)["integrity_state"] == "tampered"
+
+    snap = reconcile_integrity_anchor(cfg, "1.7.4.post5")
     assert snap["integrity_state"] == "validated"
     assert snap["trust_level"] == "expected"
     assert snap["release_label"] == "1.7.4.post5"
     assert snap["mismatched_files"] == []
-    # User-visible watermark must stay clean after legitimate upgrade.
     assert is_tampered() is False
     assert alpha_version_suffix() == ""
 
@@ -194,10 +218,18 @@ def test_release_upgrade_rebaselines_without_tamper(tmp_path, monkeypatch):
     assert stored["core/engine.py"] == "a" * 64
 
     events = list_integrity_events(cfg)
-    assert any(e["event_type"] == "re-baseline" for e in events)
     re_bl = next(e for e in events if e["event_type"] == "re-baseline")
     assert "1.7.4.post4 -> 1.7.4.post5" in re_bl["detail"]
-    assert not any(e["event_type"] == "tamper" for e in events)
+    assert "operator confirmed" in re_bl["detail"]
+
+
+def test_reconcile_rejects_confirm_mismatch(tmp_path, monkeypatch):
+    cfg = _cfg(tmp_path)
+    monkeypatch.setattr("core.integrity_anchor._release_label", lambda: "1.7.4.post5")
+    ensure_integrity_anchor(cfg)
+    with pytest.raises(IntegrityReconcileError, match="does not match"):
+        reconcile_integrity_anchor(cfg, "9.9.9")
+    assert not any(e["event_type"] == "re-baseline" for e in list_integrity_events(cfg))
 
 
 def test_same_release_label_still_detects_tamper(tmp_path, monkeypatch):
