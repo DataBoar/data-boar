@@ -1092,8 +1092,9 @@ def _audit_log_file_response(path: Path) -> Response:
             status_code=404, detail=f"Audit log file is not readable: {path.name}"
         ) from e
     from core.log_self_scan import scan_text_for_pii
-    from utils.logger import log_audit_trail_finding
+    from utils.logger import configure_audit_log_directory, log_audit_trail_finding
 
+    configure_audit_log_directory(path.parent.resolve())
     text = body.decode("utf-8", errors="replace")
     categories = scan_text_for_pii(text)
     if categories:
