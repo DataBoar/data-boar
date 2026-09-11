@@ -45,7 +45,7 @@ flowchart LR
 
 ---
 
-## Forensic evidence (audit trail)
+## Tamper-evident audit trail
 
 | Stage | What to record |
 | ----- | -------------- |
