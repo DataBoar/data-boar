@@ -1081,6 +1081,9 @@ def _emit_audit_log_download_event(
 def _audit_log_file_response(path: Path) -> Response:
     """
     Return audit log file content as attachment without FileResponse(path) sink.
+
+    Runs PII self-scan (#877) before serving; blocks export when cleartext shapes
+    are detected (Audit Trail finding — category counts only in logs/errors).
     """
     try:
         body = path.read_bytes()
@@ -1088,6 +1091,24 @@ def _audit_log_file_response(path: Path) -> Response:
         raise HTTPException(
             status_code=404, detail=f"Audit log file is not readable: {path.name}"
         ) from e
+    from core.log_self_scan import scan_text_for_pii
+    from utils.logger import log_audit_trail_finding
+
+    text = body.decode("utf-8", errors="replace")
+    categories = scan_text_for_pii(text)
+    if categories:
+        log_audit_trail_finding(categories)
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": "audit_log_pii_self_scan_blocked",
+                "message": (
+                    "Audit log export blocked: cleartext PII shapes detected "
+                    "(Audit Trail finding). Raw log was not served."
+                ),
+                "categories": categories,
+            },
+        )
     return Response(
         content=body,
         media_type="text/plain; charset=utf-8",

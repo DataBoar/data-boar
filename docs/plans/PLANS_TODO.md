@@ -126,6 +126,7 @@ When **partners** or **buyers** anchor on a vertical (MSP, insurance, RPO, real 
 - **DMBOK / ISO/IEC 38505 primer ([#637](https://github.com/DataBoar/data-boar/issues/637)):** [DATA_GOVERNANCE_DMBOK_PRIMER.md](DATA_GOVERNANCE_DMBOK_PRIMER.md) — eleven-area product map, not GDD. **`[H2][U2][P3]`** ✅ shipped.
 - **COMPLIANCE_AND_LEGAL 38505 + DMBOK ([#638](https://github.com/DataBoar/data-boar/issues/638)):** [COMPLIANCE_AND_LEGAL.md](../COMPLIANCE_AND_LEGAL.md) ISO/IEC section. **`[H2][U2][P3]`** ✅ shipped.
 - **Forensics and evidence primer ([#685](https://github.com/DataBoar/data-boar/issues/685)):** [FORENSICS_AND_EVIDENCE_PRIMER.md](../primers/FORENSICS_AND_EVIDENCE_PRIMER.md) — inventory artefacts vs *laudo*; `volatility_class` called out as gap. Parent of **#747**. **`[H2][U1][P1]`** ✅ shipped.
+- **Audit log PII self-scan ([#877](https://github.com/DataBoar/data-boar/issues/877)):** [PLAN_LOG_SELF_SCAN_PII_GATE.md](PLAN_LOG_SELF_SCAN_PII_GATE.md) — second-layer `DEFAULT_PATTERNS` gate on **`GET /logs`** export; Audit Trail finding (counts only). **`[H2][U2]`** v1.8.0 typed feature 🔄 **In Progress** (after **#687**, **#692**).
 
 **Gemini Cold — promoted sequence (safest first, `[H3][U3]` doc/hygiene unless noted):** Use a **`docs`** or **`houseclean`** session; run **`check-all`** before merge. Source IDs: §6 of [PLAN_GEMINI_FEEDBACK_TRIAGE.md](PLAN_GEMINI_FEEDBACK_TRIAGE.md).
 
