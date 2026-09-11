@@ -87,6 +87,7 @@ from core.maturity_assessment.export_render import (
 from core.maturity_assessment.pack import load_maturity_pack
 from core.maturity_assessment.scoring import rubric_result_to_summary_dict
 from core.webauthn_rp.settings import webauthn_block
+from report.excel_sanitizer import excel_sanitize_cell
 
 from api.locale_i18n import (
     LOCALE_SLUG_BY_TAG,
@@ -1720,7 +1721,9 @@ def _build_findings_csv(rows: list[dict]) -> str:
     )
     writer.writeheader()
     if rows:
-        writer.writerows(rows)
+        writer.writerows(
+            {k: excel_sanitize_cell(v) for k, v in row.items()} for row in rows
+        )
     return buf.getvalue()
 
 
