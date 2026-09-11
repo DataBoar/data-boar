@@ -45,7 +45,7 @@ flowchart LR
 
 ---
 
-## Evidência forense (audit trail)
+## Trilha de auditoria com evidência de integridade
 
 | Etapa | O que registrar |
 | ----- | ----------------- |
