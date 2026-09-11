@@ -8,7 +8,8 @@ name: Install libmariadb-dev
 description: >-
   Install libmariadb-dev and pkg-config via apt with a bounded timeout so stalled
   mirrors fail the step instead of hanging the runner for hours (#1627). Restricts
-  apt indexes to Ubuntu main+updates (#1862).
+  apt indexes to Ubuntu main+updates (#1862) and retries transient
+  archive.ubuntu.com stalls via apt Acquire::Retries (#1865).
 
 runs:
   using: composite
@@ -74,6 +75,12 @@ runs:
               ;;
           esac
         done
+        # #1865: apt-level retries for transient archive.ubuntu.com stalls that
+        # survive the #1862 index shrink.
+        apt_retry_opts=(
+          -o Acquire::Retries=3
+          -o Acquire::http::Timeout=30
+        )
         # 420s wall clock per apt-get invocation (composite steps have no timeout-minutes).
-        timeout 420 sudo apt-get update
-        timeout 420 sudo apt-get install -y libmariadb-dev pkg-config
+        timeout 420 sudo apt-get "${apt_retry_opts[@]}" update
+        timeout 420 sudo apt-get "${apt_retry_opts[@]}" install -y libmariadb-dev pkg-config

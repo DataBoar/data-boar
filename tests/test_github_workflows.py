@@ -415,10 +415,15 @@ def test_ci_yml_libmariadb_install_uses_timed_composite_action() -> None:
         r"s\|azure\\\.archive\\\.ubuntu\\\.com\|archive\.ubuntu\.com\|g",
         action_text,
     ), "missing azure→archive sed repoint (#1646)"
-    assert "timeout 420 sudo apt-get update" in action_text
+    assert re.search(
+        r"timeout 420 sudo apt-get \"\$\{apt_retry_opts\[@\]\}\" update",
+        action_text,
+    ), "missing timed apt-get update with retry opts (#1627, #1862, #1865)"
     assert (
-        "timeout 420 sudo apt-get install -y libmariadb-dev pkg-config" in action_text
+        'timeout 420 sudo apt-get "${apt_retry_opts[@]}" install -y libmariadb-dev pkg-config'
+        in action_text
     )
+    assert "Acquire::Retries=3" in action_text
     # #1862: do not refresh backports/security/third-party indexes.
     assert "data-boar-mariadb.list" in action_text
     assert "disabled-1862" in action_text
