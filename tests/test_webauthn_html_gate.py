@@ -329,7 +329,7 @@ def test_require_api_key_accepts_session_over_wrong_api_key(webauthn_gate_client
     ],
 )
 def test_safe_next_path_rejects_protocol_relative_and_backslash(malicious: str) -> None:
-    """#1630: protocol-relative and /\\ variants must not become post-login redirects."""
+    """#1557 / #1630: protocol-relative and /\\ variants must not become post-login redirects."""
     from api.webauthn_html_gate import safe_next_path
 
     fallback = "/en/"
@@ -362,3 +362,16 @@ def test_safe_next_path_still_rejects_scheme_and_control_chars() -> None:
     # Nested percent-encoding survives Starlette's single query decode (Bugbot on #1632).
     assert safe_next_path("/%09/evil.com", fb) == fb
     assert safe_next_path("/%2509/evil.com", fb) == fb
+
+
+def test_safe_next_path_rejects_issue_1557_protocol_relative_login_next() -> None:
+    """PoC from #1557: /en/login?next=//evil.com must not survive to window.location."""
+    from urllib.parse import urlsplit
+
+    from api.webauthn_html_gate import safe_next_path
+
+    fb = "/en/"
+    poc = "//evil.com"
+    assert urlsplit(poc).netloc == "evil.com"
+    assert safe_next_path(poc, fb) == fb
+    assert safe_next_path("//evil.com/phish", fb) == fb

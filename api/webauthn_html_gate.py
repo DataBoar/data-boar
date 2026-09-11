@@ -9,7 +9,7 @@ mutative locale form POSTs — independent of whether the WebAuthn gate is enfor
 from __future__ import annotations
 
 from typing import Any
-from urllib.parse import quote, unquote
+from urllib.parse import quote, unquote, urlsplit
 
 from fastapi import HTTPException
 from starlette.requests import Request
@@ -139,6 +139,7 @@ def safe_next_path(next_q: str | None, fallback: str) -> str:
     finding on PR #1632: TAB between slashes still redirected).
     Percent-decode nested encodings before those checks so ``/%09/…`` and
     ``/%2509/…`` cannot survive a second decode in the browser.
+    Also fail closed when ``urlsplit`` reports a scheme or netloc (#1557).
     """
     if not next_q:
         return fallback
@@ -154,6 +155,9 @@ def safe_next_path(next_q: str | None, fallback: str) -> str:
     if _looks_like_protocol_relative_path(n) or _looks_like_protocol_relative_path(
         decoded
     ):
+        return fallback
+    split = urlsplit(decoded)
+    if split.scheme or split.netloc:
         return fallback
     if len(n) > 2048:
         return fallback
