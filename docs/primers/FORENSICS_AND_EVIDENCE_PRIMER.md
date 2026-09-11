@@ -106,7 +106,7 @@ raw PII. That supports **repeatable inventory**. It is **not** a signed exhibit 
 | ISO/IEC 27041 | — | Whether methods are adequate and sufficient | [ISO 44405](https://www.iso.org/standard/44405.html) |
 | ISO/IEC 27042 | — | Analysis and technical interpretation | [ISO 44406](https://www.iso.org/standard/44406.html) |
 | ISO/IEC 27043 | 2015 | Investigation principles and processes | [ISO 60943](https://www.iso.org/standard/60943.html) |
-| ISO/IEC 27050-1 | — | e-discovery / ESI concepts | [ISO 78525](https://www.iso.org/standard/78525.html) |
+| ISO/IEC 27050-1 | — | e-discovery / ESI concepts | [ISO 78647](https://www.iso.org/standard/78647.html) |
 | NIST SP 800-86 | 2006 | Integrating forensic techniques into incident response | [NIST SP 800-86](https://csrc.nist.gov/publications/detail/sp/800-86/final) |
 | ENISA first-responder guide | — | Field guidance for first responders | [ENISA](https://www.enisa.europa.eu/publications/electronic-evidence-a-basic-guide-for-first-responders) |
 | CPP (Brazil) Arts. 158-A–158-F | Lei 13.964/2019 | Chain of custody in Brazilian criminal procedure | [Planalto CPP](https://www.planalto.gov.br/ccivil_03/decreto-lei/del3689compilado.htm) |
