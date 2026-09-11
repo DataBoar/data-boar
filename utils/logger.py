@@ -98,6 +98,21 @@ def log_finding(
     notify_violation(f"{sensitivity} | {pattern} @ {safe_name} / {safe_loc}")
 
 
+def log_audit_trail_finding(categories: dict[str, int]) -> None:
+    """
+    Record an Audit Trail taxonomy finding from audit-log PII self-scan (#877).
+
+    Logs category names and counts only — never matched cleartext or log excerpts.
+    """
+    if not categories:
+        return
+    parts = ",".join(f"{name}:{count}" for name, count in sorted(categories.items()))
+    get_logger().warning(
+        "AuditTrailFinding: taxonomy=Audit Trail | log_self_scan_pii | categories=%s",
+        parts,
+    )
+
+
 def notify_violation(message: str | dict[str, Any]) -> None:
     """
     Notify operator immediately on console (and log). Use when personal/sensitive data is detected.

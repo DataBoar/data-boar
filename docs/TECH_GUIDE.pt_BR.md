@@ -705,6 +705,8 @@ A aplicação referencia explicitamente **LGPD**, **GDPR**, **CCPA**, **HIPAA** 
 
 **Triagem de volatilidade forense (#687):** o campo opcional `volatility_class` em itens de plugin de padrão (`HIGH` / `MEDIUM` / `LOW` / `STATIC`, ISO/IEC 27037:2012 §7) é metadado de autor em `config/plugin_schema.yaml` — não é copiado para as linhas de achado. Quando setado, `scan_manifest_*.yaml` lista entradas sob `plugin_metadata.volatility_triage` (arquivo de origem, seção, id do padrão, classe). Semântica completa e contexto de resposta a incidentes: [FORENSICS_AND_EVIDENCE_PRIMER.pt_BR.md](primers/FORENSICS_AND_EVIDENCE_PRIMER.pt_BR.md) ([EN](primers/FORENSICS_AND_EVIDENCE_PRIMER.md)).
 
+**Auto-varredura de PII em log de auditoria (#877):** antes de `GET /logs` servir um anexo `audit_*.log`, a API aplica os `DEFAULT_PATTERNS` embutidos sobre o arquivo (`core/log_self_scan.py`). Achados de formas sensíveis em claro bloqueiam a exportação (HTTP **422**, só contagem por categoria — sem texto casado) e registram finding de **Audit Trail** via `log_audit_trail_finding`. Complementa `sanitize_log_text` na escrita ([ADR-0036](adr/ADR-0036-exception-and-log-pii-redaction-pipeline.md)).
+
 ## Segurança e conformidade
 
 - Nenhum conteúdo amostrado bruto é persistido; apenas metadados (localização, padrão, sensibilidade, norm tag).

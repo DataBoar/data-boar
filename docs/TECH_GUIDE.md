@@ -725,6 +725,8 @@ The application explicitly references **LGPD**, **GDPR**, **CCPA**, **HIPAA**, a
 
 **Forensic volatility triage (#687):** optional `volatility_class` on pattern plugin items (`HIGH` / `MEDIUM` / `LOW` / `STATIC`, ISO/IEC 27037:2012 §7) is author metadata in `config/plugin_schema.yaml` — not copied onto finding rows. When set, `scan_manifest_*.yaml` lists entries under `plugin_metadata.volatility_triage` (source file, section, pattern id, class). Full semantics and incident-response context: [FORENSICS_AND_EVIDENCE_PRIMER.md](primers/FORENSICS_AND_EVIDENCE_PRIMER.md) ([pt-BR](primers/FORENSICS_AND_EVIDENCE_PRIMER.pt_BR.md)).
 
+**Audit log PII self-scan (#877):** before `GET /logs` serves an `audit_*.log` attachment, the API runs built-in `DEFAULT_PATTERNS` over the file (`core/log_self_scan.py`). Cleartext shape hits block export (HTTP **422**, category counts only — no matched text) and record an **Audit Trail** finding via `log_audit_trail_finding`. Complements write-time `sanitize_log_text` ([ADR-0036](adr/ADR-0036-exception-and-log-pii-redaction-pipeline.md)).
+
 ## Security and compliance
 
 - No raw sampled content is persisted; only metadata (location, pattern, sensitivity, norm tag).
