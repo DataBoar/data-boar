@@ -378,6 +378,85 @@ def test_plugin_schema_documents_644_optional_fields():
     assert fields["dmbok_area"]["required"] is False
 
 
+def test_plugin_schema_documents_687_volatility_class():
+    """Schema file documents optional volatility_class for forensic triage (#687)."""
+    import yaml
+
+    schema_path = Path(__file__).parent.parent / "config" / "plugin_schema.yaml"
+    schema = yaml.safe_load(schema_path.read_text(encoding="utf-8"))
+    regex_fields = schema["regex_patterns"]["item_fields"]
+    assert regex_fields["volatility_class"]["required"] is False
+    assert regex_fields["volatility_class"]["allowed_values"] == [
+        "HIGH",
+        "MEDIUM",
+        "LOW",
+        "STATIC",
+    ]
+    schema_text = schema_path.read_text(encoding="utf-8")
+    assert "ISO/IEC 27037:2012" in schema_text
+    assert schema["ml_patterns"]["item_fields"]["volatility_class"][
+        "allowed_values"
+    ] == [
+        "HIGH",
+        "MEDIUM",
+        "LOW",
+        "STATIC",
+    ]
+
+
+def test_volatility_class_validation_accepts_and_rejects(tmp_path):
+    from config.plugin_validator import validate_plugin_file
+
+    good = _write_yaml(
+        tmp_path,
+        "good_vol.yaml",
+        """
+        - name: "LIVE_SESSION"
+          pattern: "\\\\bsession\\\\b"
+          norm_tag: "Custom"
+          volatility_class: HIGH
+        """,
+    )
+    result = validate_plugin_file(good, plugin_type="regex_patterns")
+    assert result.valid is True, result.issues
+
+    bad = _write_yaml(
+        tmp_path,
+        "bad_vol.yaml",
+        """
+        - name: "LIVE_SESSION"
+          pattern: "\\\\bsession\\\\b"
+          volatility_class: EPHEMERAL
+        """,
+    )
+    bad_result = validate_plugin_file(bad, plugin_type="regex_patterns")
+    assert bad_result.valid is False
+    assert any("volatility_class" in issue for issue in bad_result.issues)
+
+
+def test_collect_plugin_volatility_metadata_unified_and_legacy(tmp_path):
+    from config.plugin_validator import collect_plugin_volatility_metadata
+
+    unified = _write_yaml(
+        tmp_path,
+        "unified.yaml",
+        """
+        regex_patterns:
+          - name: "LIVE_DB"
+            pattern: "\\\\blive\\\\b"
+            volatility_class: HIGH
+        ml_patterns:
+          - text: "rotating log"
+            volatility_class: MEDIUM
+        """,
+    )
+    config = {"patterns_plugin_file": unified.replace("\\", "/")}
+    rows = collect_plugin_volatility_metadata(config)
+    assert rows is not None
+    assert len(rows) == 2
+    assert {row["volatility_class"] for row in rows} == {"HIGH", "MEDIUM"}
+
+
 def test_example_regex_overrides_passes_validation():
     """config/regex_overrides.example.yaml must pass regex_patterns validation."""
     from config.plugin_validator import validate_plugin_file

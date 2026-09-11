@@ -21,6 +21,7 @@ from connectors.sql_sampling import (
     resolve_sql_sample_limit,
     resolve_statement_timeout_ms_for_sampling,
 )
+from config.plugin_validator import collect_plugin_volatility_metadata
 from core.sampling import SamplingProvider
 from report.evidence_collector import EvidenceCollector
 from report.executive_report import generate_executive_report
@@ -283,7 +284,7 @@ def _build_manifest(
         "rust_only_patterns": pf_raw.get("rust_only_patterns"),
     }
 
-    return {
+    manifest: dict[str, Any] = {
         "evidence_schema_version": EVIDENCE_SCHEMA_VERSION,
         "kind": "data_boar_scan_manifest",
         "engine_signature": {
@@ -350,6 +351,10 @@ def _build_manifest(
             "certificate or a guarantee of zero production impact. Confirm with your DBA/SRE."
         ),
     }
+    volatility_triage = collect_plugin_volatility_metadata(config)
+    if volatility_triage:
+        manifest["plugin_metadata"] = {"volatility_triage": volatility_triage}
+    return manifest
 
 
 def write_scan_evidence_artifacts(

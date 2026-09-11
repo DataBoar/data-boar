@@ -424,3 +424,108 @@ def _validate_item(
             )
 
     return issues
+
+
+_VOLATILITY_CLASSES = frozenset(("HIGH", "MEDIUM", "LOW", "STATIC"))
+_SECTION_ID_FIELDS: dict[str, str] = {
+    "regex_patterns": "name",
+    "ml_patterns": "text",
+    "dl_patterns": "text",
+}
+
+
+def _plugin_paths_from_config(config: dict[str, Any]) -> list[str]:
+    """Return deduplicated plugin file paths referenced by a normalized config."""
+    paths: list[str] = []
+
+    def _add(raw: Any) -> None:
+        if isinstance(raw, str) and raw.strip():
+            paths.append(raw.strip())
+
+    _add(config.get("patterns_plugin_file"))
+    _add(config.get("regex_overrides_file"))
+    _add(config.get("ml_patterns_file"))
+    _add(config.get("dl_patterns_file"))
+    for key in ("regex_overrides_files", "ml_patterns_files"):
+        raw_list = config.get(key)
+        if isinstance(raw_list, list):
+            for entry in raw_list:
+                _add(entry)
+
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for path in paths:
+        if path not in seen:
+            seen.add(path)
+            ordered.append(path)
+    return ordered
+
+
+def _sections_from_plugin_data(data: Any) -> dict[str, list[Any]]:
+    """Map plugin YAML root to section lists for volatility extraction."""
+    if isinstance(data, dict) and any(k in data for k in _UNIFIED_SECTION_KEYS):
+        out: dict[str, list[Any]] = {}
+        for key in _UNIFIED_SECTION_KEYS:
+            section = data.get(key)
+            if isinstance(section, list):
+                out[key] = section
+        return out
+    if isinstance(data, list):
+        return {"regex_patterns": data}
+    if isinstance(data, dict):
+        if isinstance(data.get("regex_patterns"), list):
+            return {"regex_patterns": data["regex_patterns"]}
+        regex_items = data.get("patterns", data.get("regex", []))
+        if isinstance(regex_items, list):
+            return {"regex_patterns": regex_items}
+        terms = data.get("terms", [])
+        if isinstance(terms, list):
+            return {"ml_patterns": terms}
+    return {}
+
+
+def collect_plugin_volatility_metadata(
+    config: dict[str, Any] | None,
+) -> list[dict[str, str]] | None:
+    """Collect volatility_class annotations from configured plugin files.
+
+    Returns a list suitable for ``scan_manifest`` → ``plugin_metadata`` when at
+    least one pattern item declares ``volatility_class``; otherwise ``None``.
+    """
+    if not isinstance(config, dict):
+        return None
+
+    entries: list[dict[str, str]] = []
+    for path in _plugin_paths_from_config(config):
+        plugin_path = Path(path)
+        if not plugin_path.is_file():
+            continue
+        try:
+            raw = plugin_path.read_text(encoding="utf-8")
+            data = yaml.safe_load(raw)
+        except (OSError, yaml.YAMLError):
+            continue
+
+        for section_key, items in _sections_from_plugin_data(data).items():
+            id_field = _SECTION_ID_FIELDS[section_key]
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                volatility = item.get("volatility_class")
+                if volatility is None:
+                    continue
+                if volatility not in _VOLATILITY_CLASSES:
+                    continue
+                pattern_id = str(item.get(id_field) or "").strip()
+                if not pattern_id:
+                    continue
+                entries.append(
+                    {
+                        "source_file": str(plugin_path),
+                        "section": section_key,
+                        "pattern_id": pattern_id,
+                        "volatility_class": str(volatility),
+                    }
+                )
+
+    return entries or None

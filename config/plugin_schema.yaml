@@ -11,6 +11,8 @@
 # Three plugin types are defined below.  Each uses a "list" format where every item
 # is a YAML mapping.  The "unified" plugin file wraps all three under top-level keys.
 # See: docs/plans/PLAN_YAML_PLUGIN_SYSTEM.md, ADR-0052.
+# Optional author metadata includes volatility_class (ISO/IEC 27037:2012 §7) for
+# forensic triage — see docs/primers/FORENSICS_AND_EVIDENCE_PRIMER.md.
 #
 # plugin_type "compliance" (config/plugin_validator.py) is for docs/compliance-samples
 # packs: validate ``regex`` / ``regex_patterns`` items and ``terms`` / ``ml_patterns``
@@ -87,6 +89,25 @@ regex_patterns:
         live connector).  Tokens are stable keys: storage / files →
         armazenamento_e_operacao; APIs / streams → integracao_e_interoperabilidade;
         unclassified PI → seguranca_dados.  Advisory only — not a DMBOK assessment.
+    volatility_class:
+      type: string
+      required: false
+      allowed_values:
+        - HIGH
+        - MEDIUM
+        - LOW
+        - STATIC
+      description: >
+        Optional forensic triage classification for the source type associated with
+        this pattern (author metadata only — not copied onto finding rows).
+        HIGH = ephemeral/live data (RAM, running processes, network connections,
+        live DB sessions); MEDIUM = rotated/overwritten (rotating logs, temp files,
+        session tokens); LOW = persistent but mutable (DB tables, filesystem,
+        email stores); STATIC = immutable or archived (backups, WORM storage,
+        append-only audit logs). When set, scan_manifest includes this value under
+        plugin_metadata.volatility_triage. Normative reference: ISO/IEC 27037:2012
+        §7 (identification, collection and acquisition). Operators should prioritize
+        HIGH sources in forensic collection sequences.
 
 # ---------------------------------------------------------------------------
 # ml_patterns
@@ -121,6 +142,18 @@ ml_patterns:
         "sensitive" / 1 → increases sensitivity score.
         "non_sensitive" / 0 → can be used to suppress false positives.
         Defaults to "sensitive" when omitted.
+    volatility_class:
+      type: string
+      required: false
+      allowed_values:
+        - HIGH
+        - MEDIUM
+        - LOW
+        - STATIC
+      description: >
+        Optional forensic triage classification for the source type associated with
+        this term (author metadata only). See regex_patterns.volatility_class for
+        enum semantics (ISO/IEC 27037:2012 §7). Included in scan_manifest when set.
 
 # ---------------------------------------------------------------------------
 # dl_patterns
@@ -150,6 +183,18 @@ dl_patterns:
         - 1
         - 0
       description: "Sensitivity label (same semantics as ml_patterns.label)."
+    volatility_class:
+      type: string
+      required: false
+      allowed_values:
+        - HIGH
+        - MEDIUM
+        - LOW
+        - STATIC
+      description: >
+        Optional forensic triage classification for the source type associated with
+        this term (author metadata only). See regex_patterns.volatility_class for
+        enum semantics (ISO/IEC 27037:2012 §7). Included in scan_manifest when set.
 
 # ---------------------------------------------------------------------------
 # unified_plugin_file
