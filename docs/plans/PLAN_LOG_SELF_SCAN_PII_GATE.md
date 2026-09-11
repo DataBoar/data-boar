@@ -37,7 +37,7 @@ This complements (does not replace) write-time redaction in **`utils/logger.py`*
 
 ## Code map
 
-- **`core/log_self_scan.py`** — `scan_text_for_pii`, compiled `DEFAULT_PATTERNS`.
+- **`core/log_self_scan.py`** — `scan_text_for_pii`, compiled `DEFAULT_PATTERNS` (excludes `DATE_DMY`, aligned with ADR-0036 log redaction).
 - **`utils/logger.py`** — first-layer `sanitize_log_text`; **`log_audit_trail_finding`** for blocked exports.
 - **`api/routes.py`** — `_audit_log_file_response`, `GET /logs`, `GET /logs/{session_id}`.
 - **`core/detector.py`** — `DEFAULT_PATTERNS` source of truth.

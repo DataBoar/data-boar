@@ -83,6 +83,11 @@ def _teardown(routes, previous) -> None:
     configure_audit_log_directory(None)
 
 
+def test_scan_text_for_pii_ignores_date_dmy_like_log_redaction() -> None:
+    text = "2026-09-11 12:00:00 - INFO - scan finished on 11/09/2026\n"
+    assert scan_text_for_pii(text) == {}
+
+
 def test_logs_export_serves_clean_audit_log(tmp_path: Path) -> None:
     routes, client, previous = _setup_logs_client(
         tmp_path, "session=deadbeefcafe\nFinding: demo\n"
@@ -91,6 +96,18 @@ def test_logs_export_serves_clean_audit_log(tmp_path: Path) -> None:
         resp = client.get("/logs")
         assert resp.status_code == 200
         assert b"deadbeefcafe" in resp.content
+    finally:
+        _teardown(routes, previous)
+
+
+def test_logs_export_allows_innocuous_dates_in_audit_log(tmp_path: Path) -> None:
+    routes, client, previous = _setup_logs_client(
+        tmp_path, "2026-09-11 - INFO - completed scan window 11/09/2026\n"
+    )
+    try:
+        resp = client.get("/logs")
+        assert resp.status_code == 200
+        assert b"11/09/2026" in resp.content
     finally:
         _teardown(routes, previous)
 

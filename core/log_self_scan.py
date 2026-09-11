@@ -1,7 +1,8 @@
 """
 Second-layer PII self-scan for audit log export (#877).
 
-Reuses ``core.detector.DEFAULT_PATTERNS`` (same regex families as the scanner).
+Reuses ``core.detector.DEFAULT_PATTERNS`` (same regex families as the scanner),
+except ``DATE_DMY`` (omitted per ADR-0036 log-redaction policy — too noisy).
 Returns category counts only — never matched cleartext (issue #877 AC).
 """
 
@@ -15,9 +16,11 @@ from core.detector import DEFAULT_PATTERNS
 
 @lru_cache(maxsize=1)
 def _compiled_default_patterns() -> tuple[tuple[str, re.Pattern[str]], ...]:
+    # Align with ADR-0036 / core.validation redact_pii_for_log: omit DATE_DMY (too noisy).
     return tuple(
         (name, re.compile(pattern, re.IGNORECASE))
         for name, (pattern, _norm) in DEFAULT_PATTERNS.items()
+        if name != "DATE_DMY"
     )
 
 
