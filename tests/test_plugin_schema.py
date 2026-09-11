@@ -479,6 +479,25 @@ def test_collect_plugin_volatility_metadata_ml_list_file(tmp_path):
     assert rows[0]["volatility_class"] == "MEDIUM"
 
 
+def test_collect_plugin_volatility_metadata_dl_terms_dict(tmp_path):
+    from config.plugin_validator import collect_plugin_volatility_metadata
+
+    dl_path = _write_yaml(
+        tmp_path,
+        "dl_terms.yaml",
+        """
+        terms:
+          - text: "archived backup token"
+            volatility_class: STATIC
+        """,
+    )
+    config = {"dl_patterns_file": dl_path.replace("\\", "/")}
+    rows = collect_plugin_volatility_metadata(config)
+    assert rows is not None
+    assert rows[0]["section"] == "dl_patterns"
+    assert rows[0]["volatility_class"] == "STATIC"
+
+
 def test_example_regex_overrides_passes_validation():
     """config/regex_overrides.example.yaml must pass regex_patterns validation."""
     from config.plugin_validator import validate_plugin_file

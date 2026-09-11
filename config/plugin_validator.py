@@ -492,14 +492,20 @@ def _sections_from_plugin_data(
         section = default_section or "regex_patterns"
         return {section: data}
     if isinstance(data, dict):
-        if isinstance(data.get("regex_patterns"), list):
-            return {"regex_patterns": data["regex_patterns"]}
-        regex_items = data.get("patterns", data.get("regex", []))
+        for key in _UNIFIED_SECTION_KEYS:
+            section_items = data.get(key)
+            if isinstance(section_items, list):
+                return {key: section_items}
+        section = default_section or "regex_patterns"
+        if section not in _SECTION_ID_FIELDS:
+            section = "ml_patterns"
+        for alias in ("terms", "patterns"):
+            items = data.get(alias)
+            if isinstance(items, list):
+                return {section: items}
+        regex_items = data.get("regex", [])
         if isinstance(regex_items, list):
             return {"regex_patterns": regex_items}
-        terms = data.get("terms", [])
-        if isinstance(terms, list):
-            return {"ml_patterns": terms}
     return {}
 
 
