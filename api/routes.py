@@ -1944,13 +1944,14 @@ async def download_latest_log(request: Request):
     if not candidates:
         raise HTTPException(status_code=404, detail="No log files found.")
     latest = candidates[0]
+    response = _audit_log_file_response(latest)
     _emit_audit_log_download_event(
         request,
         filename=latest.name,
         session_id=None,
         roles=roles,
     )
-    return _audit_log_file_response(latest)
+    return response
 
 
 @app.get("/logs/{session_id}", responses=_SESSION_RESPONSES)
@@ -1977,22 +1978,24 @@ async def download_log_for_session(session_id: str, request: Request):
         except OSError:
             continue
         if session_id in text:
+            response = _audit_log_file_response(p)
             _emit_audit_log_download_event(
                 request,
                 filename=p.name,
                 session_id=session_id,
                 roles=roles,
             )
-            return _audit_log_file_response(p)
+            return response
     by_day = _date_fallback_log_for_session(log_dir, session_id)
     if by_day is not None:
+        response = _audit_log_file_response(by_day)
         _emit_audit_log_download_event(
             request,
             filename=by_day.name,
             session_id=session_id,
             roles=roles,
         )
-        return _audit_log_file_response(by_day)
+        return response
     raise HTTPException(
         status_code=404, detail=f"No log file contains session_id {session_id}."
     )

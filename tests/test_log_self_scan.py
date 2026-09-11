@@ -113,8 +113,9 @@ def test_logs_export_allows_innocuous_dates_in_audit_log(tmp_path: Path) -> None
 
 
 def test_logs_export_blocks_contaminated_audit_log_without_cleartext_body(
-    tmp_path: Path,
+    tmp_path: Path, caplog
 ) -> None:
+    caplog.set_level("INFO")
     secret_cpf = "529.982.247-25"
     secret_email = "leak-test@example.com"
     contaminated = f"session=abc\nDEBUG leak {secret_cpf} {secret_email}\n"
@@ -130,5 +131,7 @@ def test_logs_export_blocks_contaminated_audit_log_without_cleartext_body(
         raw = resp.text
         assert secret_cpf not in raw
         assert secret_email not in raw
+        joined = " ".join(r.message for r in caplog.records)
+        assert "AuditLogDownload" not in joined
     finally:
         _teardown(routes, previous)
