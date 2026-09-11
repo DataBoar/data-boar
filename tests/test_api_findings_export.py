@@ -196,3 +196,22 @@ def test_get_findings_invalid_session_returns_validation_error(tmp_path):
         routes._config_path = ocp
         routes._config = oc
         routes._audit_engine = oe
+
+
+def test_build_findings_csv_sanitizes_formula_prefixes() -> None:
+    """CSV export must neutralize formula-leading cells (parity with XLSX #547 / #1723)."""
+    from api.routes import _FINDINGS_UNIFIED_FIELDS, _build_findings_csv
+
+    payload = 'HYPERLINK("http://evil.example","x")'
+    row = dict.fromkeys(_FINDINGS_UNIFIED_FIELDS)
+    row["file_name"] = f"={payload}"
+    row["table_name"] = "+cmd"
+    row["column_name"] = "@SUM(A1)"
+    row["path"] = "-1+1"
+    csv_text = _build_findings_csv([row])
+    reader = csv.DictReader(io.StringIO(csv_text))
+    out = next(reader)
+    assert out["file_name"] == f"'={payload}"
+    assert out["table_name"] == "'+cmd"
+    assert out["column_name"] == "'@SUM(A1)"
+    assert out["path"] == "'-1+1"
