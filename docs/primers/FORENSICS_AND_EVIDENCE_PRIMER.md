@@ -67,15 +67,18 @@ SVG: [data_boar_operational_vs_forensic.svg](../assets/diagrams/data_boar_operat
 
 ---
 
-## 4. Volatility triage (gap)
+## 4. Volatility triage
 
 When data can disappear (RAM, logs that rotate, ephemeral containers), responders **document a
 priority order**. [ISO/IEC 27037](https://www.iso.org/standard/44381.html) discusses volatility as a
 collection concern.
 
-**Product gap:** there is **no** `volatility_class` field in `plugin_schema.yaml` (or equivalent) in
-this tree today. Do **not** invent plugin metadata. Until a dedicated issue lands, treat volatility
-as an **operator/IR runbook** concern, not a shipped schema.
+**Shipped (#687):** `plugin_schema.yaml` has an optional `volatility_class` field (`HIGH` /
+`MEDIUM` / `LOW` / `STATIC`) on regex/ML/DL pattern items — author metadata, not copied onto
+finding rows. When set, `scan_manifest_*.yaml` lists it under `plugin_metadata.volatility_triage`
+(source file, section, pattern id, class). See [ADR-0052](../adr/ADR-0052-yaml-plugin-system-centralized-schema.md),
+`config/plugin_schema.yaml`. Collection order itself remains an **operator/IR runbook** concern —
+the field records triage classification, it does not sequence or automate collection.
 
 ---
 

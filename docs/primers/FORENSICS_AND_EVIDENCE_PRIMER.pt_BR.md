@@ -66,15 +66,18 @@ SVG: [data_boar_operational_vs_forensic.svg](../assets/diagrams/data_boar_operat
 
 ---
 
-## 4. Triagem de volatilidade (lacuna)
+## 4. Triagem de volatilidade
 
 Quando o dado some (RAM, logs que rotacionam, contêineres efêmeros), o respondente **documenta uma
 ordem de prioridade**. A [ISO/IEC 27037](https://www.iso.org/standard/44381.html) trata volatilidade
 como preocupação de coleta.
 
-**Lacuna de produto:** **não** existe campo `volatility_class` em `plugin_schema.yaml` (nem
-equivalente) nesta árvore hoje. **Não** invente metadado de plugin. Até haver issue dedicada, trate
-volatilidade como **runbook de IR/operador**, não schema entregue.
+**Entregue (#687):** `plugin_schema.yaml` tem campo opcional `volatility_class` (`HIGH` /
+`MEDIUM` / `LOW` / `STATIC`) em itens de plugin regex/ML/DL — metadado de autor, não copiado para
+as linhas de achado. Quando setado, `scan_manifest_*.yaml` lista sob `plugin_metadata.volatility_triage`
+(arquivo de origem, seção, id do padrão, classe). Ver [ADR-0052](../adr/ADR-0052-yaml-plugin-system-centralized-schema.md),
+`config/plugin_schema.yaml`. A ordem de coleta em si segue sendo preocupação de **runbook de
+IR/operador** — o campo registra a classificação de triagem, não sequencia nem automatiza a coleta.
 
 ---
 
