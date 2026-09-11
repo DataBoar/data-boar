@@ -703,6 +703,8 @@ A aplicação referencia explicitamente **LGPD**, **GDPR**, **CCPA**, **HIPAA** 
 
 **Plugins de remediação Enterprise (L1):** parceiros implementam `RemediationPlugin` (`core/plugins/`) e registram sob YAML `remediation:` — veja **[PLUGIN_SDK.pt_BR.md](PLUGIN_SDK.pt_BR.md)** ([EN](PLUGIN_SDK.md)). Distinto dos **plugins YAML de padrões** (regex/ML/DL via [PLUGIN_AUTHOR_GUIDE.pt_BR.md](PLUGIN_AUTHOR_GUIDE.pt_BR.md) e [ADR-0052](adr/ADR-0052-yaml-plugin-system-centralized-schema.md)).
 
+**Triagem de volatilidade forense (#687):** o campo opcional `volatility_class` em itens de plugin de padrão (`HIGH` / `MEDIUM` / `LOW` / `STATIC`, ISO/IEC 27037:2012 §7) é metadado de autor em `config/plugin_schema.yaml` — não é copiado para as linhas de achado. Quando setado, `scan_manifest_*.yaml` lista entradas sob `plugin_metadata.volatility_triage` (arquivo de origem, seção, id do padrão, classe). Semântica completa e contexto de resposta a incidentes: [FORENSICS_AND_EVIDENCE_PRIMER.pt_BR.md](primers/FORENSICS_AND_EVIDENCE_PRIMER.pt_BR.md) ([EN](primers/FORENSICS_AND_EVIDENCE_PRIMER.md)).
+
 ## Segurança e conformidade
 
 - Nenhum conteúdo amostrado bruto é persistido; apenas metadados (localização, padrão, sensibilidade, norm tag).
