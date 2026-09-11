@@ -25,6 +25,7 @@ from core.licensing.integrity import (
 from core.licensing.verify import (
     decode_license_jwt,
     load_ed25519_public_key_pem,
+    load_embedded_official_public_key_pem,
     load_public_key_from_path,
     load_revocation_ids,
     utc_now_ts,
@@ -189,6 +190,31 @@ class LicenseGuard:
             detail=c.detail,
         )
 
+    def _resolve_verify_key_sources(self) -> tuple[str, str]:
+        """PEM text and/or filesystem path for verify-key material (#1331).
+
+        Precedence (first non-empty wins; explicit overrides do not fall
+        through to the embedded default on load failure):
+
+        1. ``DATA_BOAR_LICENSE_PUBLIC_KEY_PEM``
+        2. ``DATA_BOAR_LICENSE_PUBLIC_KEY_PATH``
+        3. ``licensing.public_key_path``
+        4. packaged ``core/licensing/license-pub-v1.pem`` via importlib.resources
+        """
+        pem_env = (os.environ.get("DATA_BOAR_LICENSE_PUBLIC_KEY_PEM") or "").strip()
+        if pem_env:
+            return pem_env, ""
+        path_env = (os.environ.get("DATA_BOAR_LICENSE_PUBLIC_KEY_PATH") or "").strip()
+        if path_env:
+            return "", path_env
+        cfg_path = str(self._lc.get("public_key_path") or "").strip()
+        if cfg_path:
+            return "", cfg_path
+        embedded = load_embedded_official_public_key_pem()
+        if embedded:
+            return embedded, ""
+        return "", ""
+
     def _evaluate(self) -> None:
         mfp = compute_machine_fingerprint()
         if self.mode == "open":
@@ -228,12 +254,7 @@ class LicenseGuard:
             )
             return
 
-        pem_env = (os.environ.get("DATA_BOAR_LICENSE_PUBLIC_KEY_PEM") or "").strip()
-        key_path = (
-            os.environ.get("DATA_BOAR_LICENSE_PUBLIC_KEY_PATH")
-            or self._lc.get("public_key_path")
-            or ""
-        ).strip()
+        pem_env, key_path = self._resolve_verify_key_sources()
         lic_path = (
             os.environ.get("DATA_BOAR_LICENSE_PATH")
             or self._lc.get("license_path")

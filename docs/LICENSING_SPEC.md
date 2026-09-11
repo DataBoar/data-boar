@@ -34,8 +34,24 @@ Environment variables override YAML when set:
 
 - `DATA_BOAR_LICENSE_MODE` — `enforced` (escalation only; `open` cannot downgrade YAML `enforced`)
 - `DATA_BOAR_LICENSE_PATH` — path to JWT file (`.lic`)
-- `DATA_BOAR_LICENSE_PUBLIC_KEY_PATH` — PEM file with **Ed25519 public** key (verify only)
-- `DATA_BOAR_LICENSE_PUBLIC_KEY_PEM` — inline PEM (alternative to path; dev/CI only)
+- `DATA_BOAR_LICENSE_PUBLIC_KEY_PATH` — PEM file with **Ed25519 public** key (verify only; **override**)
+- `DATA_BOAR_LICENSE_PUBLIC_KEY_PEM` — inline PEM (alternative to path; custom issuer / rotation / CI)
+
+### Public-key resolution (#1331)
+
+Enforced mode verifies the `.lic` against an Ed25519 **public** key. The official issuer key ships **inside the wheel** as `core/licensing/license-pub-v1.pem` (loaded via `importlib.resources`). A clean install with a valid machine-bound `.lic` does **not** need `DATA_BOAR_LICENSE_PUBLIC_KEY_*` or `licensing.public_key_path`.
+
+Resolution order (first non-empty wins). An explicit override that fails to load is **fail-closed** (`public_key_load_error`); it does **not** fall through to the embedded key:
+
+1. `DATA_BOAR_LICENSE_PUBLIC_KEY_PEM` (env)
+2. `DATA_BOAR_LICENSE_PUBLIC_KEY_PATH` (env)
+3. `licensing.public_key_path` (YAML)
+4. **embedded official pubkey** (packaged resource — default)
+
+Use an override only for **key rotation** or a **custom issuer**. The verify key is public; shipping it is not a secret. The golden private key stays with the issuer ([License Studio](https://github.com/DataBoar/license-studio)). `missing_public_key` remains only when the packaged resource is absent **and** no override is set.
+
+Other environment variables:
+
 - `DATA_BOAR_LICENSE_REVOCATION_PATH` — JSON file listing revoked license IDs
 - `DATA_BOAR_RELEASE_MANIFEST_PATH` — optional JSON manifest for integrity (see [RELEASE_INTEGRITY.md](RELEASE_INTEGRITY.md))
 - `DATA_BOAR_EXPECTED_BUILD_DIGEST` — optional hex SHA-256; if set, compared to embedded build digest
@@ -45,7 +61,7 @@ Environment variables override YAML when set:
 ```yaml
 licensing:
   mode: open                    # open | enforced
-  public_key_path: ""           # Ed25519 public PEM
+  public_key_path: ""           # optional override; empty → embedded official pubkey (#1331)
   license_path: ""              # signed JWT file
   revocation_list_path: ""      # optional JSON revoke list
   manifest_path: ""             # optional release manifest

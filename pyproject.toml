@@ -334,6 +334,7 @@ packages = [
 
 [tool.hatch.build.targets.wheel.force-include]
 "main.py" = "main.py"
+"core/licensing/license-pub-v1.pem" = "core/licensing/license-pub-v1.pem"
 "docs/sdk/metadata_manifest.schema.json" = "core/data/metadata_manifest.schema.json"
 "docs/sdk/metadata_manifest.pin.json" = "core/data/metadata_manifest.pin.json"
 "docs/sdk/transformed_rows.schema.json" = "core/data/transformed_rows.schema.json"
