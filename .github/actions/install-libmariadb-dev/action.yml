@@ -6,8 +6,9 @@
 # (GitHub's default job timeout is 6h — see #1627).
 name: Install libmariadb-dev
 description: >-
-  Install libmariadb-dev and pkg-config via apt with a short timeout so stalled
-  mirrors fail the step instead of hanging the runner for hours (#1627).
+  Install libmariadb-dev and pkg-config via apt with a bounded timeout so stalled
+  mirrors fail the step instead of hanging the runner for hours (#1627). Restricts
+  apt indexes to Ubuntu main+updates (#1862).
 
 runs:
   using: composite
@@ -47,6 +48,32 @@ runs:
         if [ "$repointed" -eq 0 ]; then
           echo "  note: no azure.archive.ubuntu.com entries found"
         fi
-        # 240s wall clock per apt-get invocation (composite steps have no timeout-minutes).
-        timeout 240 sudo apt-get update
-        timeout 240 sudo apt-get install -y libmariadb-dev pkg-config
+        # #1862: apt-get update fetching noble+updates+backports+security plus
+        # Microsoft/Google lists can exceed 240s on a slow canonical mirror even
+        # after the #1646 azure→archive repoint. Keep only Ubuntu main+updates
+        # (enough for libmariadb-dev / pkg-config); disable the rest.
+        . /etc/os-release
+        printf 'deb http://archive.ubuntu.com/ubuntu/ %s main universe\n' \
+          "${VERSION_CODENAME}" \
+          | sudo tee /etc/apt/sources.list.d/data-boar-mariadb.list >/dev/null
+        printf 'deb http://archive.ubuntu.com/ubuntu/ %s-updates main universe\n' \
+          "${VERSION_CODENAME}" \
+          | sudo tee -a /etc/apt/sources.list.d/data-boar-mariadb.list >/dev/null
+        if [ -f /etc/apt/sources.list ]; then
+          sudo mv /etc/apt/sources.list /etc/apt/sources.list.disabled-1862
+          echo "  disabled sources.list (#1862)"
+        fi
+        for f in /etc/apt/sources.list.d/*; do
+          [ -e "$f" ] || continue
+          base="$(basename "$f")"
+          case "$base" in
+            data-boar-mariadb.list|*.disabled-1862) ;;
+            *)
+              sudo mv "$f" "${f}.disabled-1862"
+              echo "  disabled ${base} (#1862)"
+              ;;
+          esac
+        done
+        # 420s wall clock per apt-get invocation (composite steps have no timeout-minutes).
+        timeout 420 sudo apt-get update
+        timeout 420 sudo apt-get install -y libmariadb-dev pkg-config
