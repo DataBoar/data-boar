@@ -183,6 +183,7 @@
     "run_cli_tls": "É preciso terminar TLS no processo (--https-cert-file + --https-key-file, ou o mesmo em api: na config) ou aceitar explicitamente texto claro com --allow-insecure-http (ou api.allow_insecure_http: true). A imagem Docker oficial passa --allow-insecure-http por padrão; monte certificados e remova para HTTPS.",
     "run_cli_bind": "Ordem de bind com --web: --host sobrescreve api.host na config e API_HOST; se nada estiver definido, o padrão é 127.0.0.1 (a imagem Docker costuma definir API_HOST=0.0.0.0). Porta: api.port na config vs --port. Transporte: GET /status e GET /health incluem dashboard_transport — veja docs/USAGE.md.",
     "run_cli_danger": "Manutenção perigosa (só lab/demo): --reset-data apaga sessões/achados no SQLite e remove relatórios gerados em report.output_dir. Veja SECURITY.md antes de usar em produção.",
+    "run_cli_integrity": "Depois de um upgrade oficial pip/pipx, re-baseline os hashes de integridade com --reconcile-integrity-anchor --confirm-upgrade-to=<versão-instalada> (tem que casar com o pacote em execução; não reconcilia sozinho por semver).",
     "run_cli_audit": "Exportação de trilha de auditoria (só CLI): --export-audit-trail ou --export-audit-trail caminho.json grava um snapshot JSON (log de wipe, resumo de sessão; futuro: linhas de integridade). Não modifica o banco. Omita o caminho ou use - para stdout.",
     "dl_h2": "Baixar relatórios, mapas de calor e logs",
     "dl_web_h3": "Pelo painel web",

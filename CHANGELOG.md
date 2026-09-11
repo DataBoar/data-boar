@@ -28,6 +28,8 @@ Empty while the working tree carries **`1.8.0-beta`** (see section below).
 
 - **`--validate-config` invalid path is side-effect free (#538):** unknown connectors / missing required keys abort **before** creating `report.output_dir`, the `sqlite_path` parent, or opening the integrity-anchor SQLite file.
 
+- **Integrity anchor upgrade (#1262):** a legitimate `pip`/`pipx` upgrade that changes hashed modules stays `tampered`/`-alpha` until the operator runs `--reconcile-integrity-anchor --confirm-upgrade-to=<installed-version>` (must match the running package). Auto-rebaseline on `release_label` change was a bypass surface and is removed.
+
 - **Archive mismatch docs (#1354):** `--content-type-check` / `file_scan.use_content_type` does **not** dispatch compressed archives. On **filesystem** targets a lying archive extension records `archive_type_mismatch` in `scan_failures` instead of expanding. SMB/WebDAV/SharePoint skip expansion without that failure today. Magic-wins dispatch remains an optional later enhancement.
 
 - **Void xbps overlay (#1404):** `void-packages` template generated from `EXTRAS_MANIFEST` (same connector map as nfpm), runit service, Podman/Docker Void `--show` / fail-closed `--build`. Upstream `void-packages` merge remains out of scope.

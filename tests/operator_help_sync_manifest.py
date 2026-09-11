@@ -40,6 +40,8 @@ _MAN_SCAN_COMPRESSED = r"\-\-scan\-compressed"
 _MAN_CONTENT_TYPE = r"\-\-content\-type\-check"
 _MAN_SCAN_STEGO = r"\-\-scan\-stego"
 _MAN_RESET = r"\-\-reset\-data"
+_MAN_RECONCILE_ANCHOR = r"\-\-reconcile\-integrity\-anchor"
+_MAN_CONFIRM_UPGRADE = r"\-\-confirm\-upgrade\-to"
 _MAN_EXPORT_AUDIT = r"\-\-export\-audit\-trail"
 _MAN_TENANT = r"\-\-tenant"
 _MAN_TECH = r"\-\-technician"
@@ -238,6 +240,18 @@ OPERATOR_HELP_MARKERS: tuple[OperatorHelpMarker, ...] = (
         _MAN_SCAN_STEGO,
     ),
     OperatorHelpMarker("reset_data", "--reset-data", "--reset-data", _MAN_RESET),
+    OperatorHelpMarker(
+        "reconcile_integrity_anchor",
+        "--reconcile-integrity-anchor",
+        "--reconcile-integrity-anchor",
+        _MAN_RECONCILE_ANCHOR,
+    ),
+    OperatorHelpMarker(
+        "confirm_upgrade_to",
+        "--confirm-upgrade-to",
+        "--confirm-upgrade-to",
+        _MAN_CONFIRM_UPGRADE,
+    ),
     OperatorHelpMarker(
         "export_audit_trail",
         "--export-audit-trail",
