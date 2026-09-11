@@ -69,6 +69,40 @@ def test_write_scan_evidence_artifacts_standalone(tmp_path) -> None:
     assert "scan_manifest" in md_text
 
 
+def test_scan_manifest_includes_plugin_volatility_when_set(tmp_path) -> None:
+    plugin_path = tmp_path / "patterns.yaml"
+    plugin_path.write_text(
+        """
+regex_patterns:
+  - name: LIVE_SESSION_TOKEN
+    pattern: "\\\\btoken\\\\b"
+    norm_tag: "Custom"
+    volatility_class: HIGH
+""",
+        encoding="utf-8",
+    )
+    man, _md = write_scan_evidence_artifacts(
+        output_dir=str(tmp_path / "out"),
+        session_id="vol-session-01",
+        meta={
+            "started_at": "2026-01-01T10:00:00+00:00",
+            "finished_at": "2026-01-01T10:05:00+00:00",
+        },
+        about={"name": "Data Boar", "version": "9.9.9-test"},
+        config={
+            "patterns_plugin_file": str(plugin_path),
+            "targets": [{"name": "db1", "type": "database"}],
+        },
+        db_rows=[],
+        fs_rows=[],
+        fail_rows=[],
+    )
+    loaded = yaml.safe_load(Path(man).read_text(encoding="utf-8"))
+    triage = loaded["plugin_metadata"]["volatility_triage"]
+    assert triage[0]["pattern_id"] == "LIVE_SESSION_TOKEN"
+    assert triage[0]["volatility_class"] == "HIGH"
+
+
 def test_generate_report_writes_evidence_files(tmp_path) -> None:
     db_path = str(tmp_path / "audit.db")
     out_dir = str(tmp_path / "out")
