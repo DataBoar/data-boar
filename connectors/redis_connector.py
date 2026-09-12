@@ -184,9 +184,9 @@ class RedisConnector:
                 ):
                     # Bounded value sampling (audit v2): inspect key payloads when names are clean.
                     if values_sampled < self.value_sample_limit:
-                        key_type = str(self._client.type(key) or "unknown")
                         raw_val = None
                         try:
+                            key_type = str(self._client.type(key) or "unknown")
                             if key_type == "string":
                                 raw_val = self._client.get(key)
                             elif key_type == "hash":
