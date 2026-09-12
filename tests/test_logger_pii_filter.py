@@ -89,10 +89,7 @@ def test_get_logger_warning_redacts_dsn_password(audit_log_dir: Path, caplog) ->
     )
     with caplog.at_level(logging.WARNING, logger="LGPDAudit"):
         # Intentional DSN-shaped arg: Filter must redact before emit (AC #1722).
-        # codeql[py/clear-text-logging-sensitive-data]
-        logger.warning(
-            "%s", DSN_WITH_PASSWORD
-        )  # lgtm[py/clear-text-logging-sensitive-data]
+        logger.warning("%s", DSN_WITH_PASSWORD)  # lgtm[py/clear-text-logging-sensitive-data]  # fmt: skip
     assert "hunter2secret" not in caplog.text
     assert "***REDACTED***" in caplog.text
     log_files = list(audit_log_dir.glob("audit_*.log"))
@@ -106,10 +103,7 @@ def test_get_logger_warning_redacts_exception_arg(audit_log_dir: Path, caplog) -
     """Exception objects in args must not bypass the Filter (#1722 HIGH)."""
     logger = get_logger()
     with caplog.at_level(logging.WARNING, logger="LGPDAudit"):
-        # codeql[py/clear-text-logging-sensitive-data]
-        logger.warning(
-            "%s", RuntimeError(DSN_WITH_PASSWORD)
-        )  # lgtm[py/clear-text-logging-sensitive-data]
+        logger.warning("%s", RuntimeError(DSN_WITH_PASSWORD))  # lgtm[py/clear-text-logging-sensitive-data]  # fmt: skip
     assert "hunter2secret" not in caplog.text
     assert "***REDACTED***" in caplog.text
     body = next(audit_log_dir.glob("audit_*.log")).read_text(encoding="utf-8")
@@ -123,10 +117,7 @@ def test_get_logger_exception_redacts_exc_info(audit_log_dir: Path, caplog) -> N
         try:
             raise ConnectionError(DSN_WITH_PASSWORD)
         except ConnectionError:
-            # codeql[py/clear-text-logging-sensitive-data]
-            logger.exception(
-                "Parallel target worker failed"
-            )  # lgtm[py/clear-text-logging-sensitive-data]
+            logger.exception("Parallel target worker failed")  # lgtm[py/clear-text-logging-sensitive-data]  # fmt: skip
     assert "hunter2secret" not in caplog.text
     assert "***REDACTED***" in caplog.text
     body = next(audit_log_dir.glob("audit_*.log")).read_text(encoding="utf-8")
@@ -137,10 +128,7 @@ def test_get_logger_exception_redacts_exc_info(audit_log_dir: Path, caplog) -> N
 def test_get_logger_warning_redacts_bytes_arg(audit_log_dir: Path, caplog) -> None:
     logger = get_logger()
     with caplog.at_level(logging.WARNING, logger="LGPDAudit"):
-        # codeql[py/clear-text-logging-sensitive-data]
-        logger.warning(
-            "%s", DSN_WITH_PASSWORD.encode("utf-8")
-        )  # lgtm[py/clear-text-logging-sensitive-data]
+        logger.warning("%s", DSN_WITH_PASSWORD.encode("utf-8"))  # lgtm[py/clear-text-logging-sensitive-data]  # fmt: skip
     assert "hunter2secret" not in caplog.text
     assert "***REDACTED***" in caplog.text
 
@@ -152,8 +140,7 @@ def test_get_logger_warning_redacts_object_str(audit_log_dir: Path, caplog) -> N
 
     logger = get_logger()
     with caplog.at_level(logging.WARNING, logger="LGPDAudit"):
-        # codeql[py/clear-text-logging-sensitive-data]
-        logger.warning("%s", _Carrier())  # lgtm[py/clear-text-logging-sensitive-data]
+        logger.warning("%s", _Carrier())  # lgtm[py/clear-text-logging-sensitive-data]  # fmt: skip
     assert "hunter2secret" not in caplog.text
     assert "***REDACTED***" in caplog.text
 
@@ -164,10 +151,7 @@ def test_sanitize_filter_overhead_measured(audit_log_dir: Path) -> None:
     n = 400
     t0 = time.perf_counter()
     for _ in range(n):
-        # codeql[py/clear-text-logging-sensitive-data]
-        logger.warning(
-            "dsn=%s", DSN_WITH_PASSWORD
-        )  # lgtm[py/clear-text-logging-sensitive-data]
+        logger.warning("dsn=%s", DSN_WITH_PASSWORD)  # lgtm[py/clear-text-logging-sensitive-data]  # fmt: skip
     elapsed_s = time.perf_counter() - t0
     per_call_us = (elapsed_s / n) * 1_000_000
     # Lab (Linux primary, 2026-09-12): ~80–200 µs/call including FileHandler I/O.
