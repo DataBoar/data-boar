@@ -101,6 +101,15 @@ Design history for minor detection lives in a **completed** plan file under `doc
 
 ---
 
+## Engineering doctrine (repository discipline)
+
+| Question | Read first | Notes |
+| -------- | ---------- | ----- |
+| What are the four default engineering principles (fail-closed, pin+cooldown, verified integrity, metadata-first) and where are they implemented? | **[ENGINEERING_PRACTICES.md](ENGINEERING_PRACTICES.md)** ([pt-BR](ENGINEERING_PRACTICES.pt_BR.md)) | Canonical in-repo doctrine; cites [SECURITY.md](SECURITY.md), [`.github/dependabot.yml`](../.github/dependabot.yml), [RELEASE_INTEGRITY.md](RELEASE_INTEGRITY.md), [GLOSSARY.md](GLOSSARY.md) — no private tooling. |
+| Security posture map (PII gates, supply chain, local gate ritual) | **[SECURITY_GOVERNANCE_POSTURE_HUB.md](SECURITY_GOVERNANCE_POSTURE_HUB.md)** ([pt-BR](SECURITY_GOVERNANCE_POSTURE_HUB.pt_BR.md)) | Complements the principles page with themed entry points. |
+
+---
+
 ## Where this fits
 
 - **Technical install and run:** [TECH_GUIDE.md](TECH_GUIDE.md) ([pt-BR](TECH_GUIDE.pt_BR.md)) ends with a short **Topic map** pointer back here.
