@@ -181,5 +181,5 @@ Aliases exatos de extra no `pyproject.toml` ficam **TBD** até uma fatia de pack
 | ----- | ---------- | ------ |
 | P1 | Esta seção do plano + resumo no hub + linhas do survey em `PLANS_TODO` | ✅ Feito (PR de docs) |
 | P2 | Nomear `[noavx]` no onboarding pip/pipx de USAGE/TECH_GUIDE; ponteiro para #929 + dois passos do wheelhouse (sem receita nova) | ⬜ Pendente |
-| P3 | Pre-flight de CPU + banner / rodapé de capacidade **LOUD** (texto FN-first) | ⬜ Pendente |
+| P3 | Pre-flight de CPU + banner / rodapé de capacidade **LOUD** (texto FN-first) | 🔄 Pre-flight em runtime + aviso no log (#929); banner / rodapé do relatório ainda aberto |
 | P4 | Aliases opcionais de extra `[nlp]` / `[ocr]` no `pyproject` se permanecerem distintos de `[dl]` / `[richmedia]` | ⬜ Pendente |

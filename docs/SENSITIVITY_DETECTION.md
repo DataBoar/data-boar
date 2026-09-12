@@ -333,7 +333,7 @@ uv pip install -e ".[dl]"
 pip install -e ".[dl]"
 ```
 
-This installs `sentence-transformers` (and its dependencies). If `.[dl]` is not installed, the pipeline still runs with **regex + ML**; the DL step is skipped and confidence comes only from ML. GitHub Actions job **`test-dl`** installs `--extra dl` and exercises encode through `core/dl_backend.py`.
+This installs `sentence-transformers` (and its dependencies). If `.[dl]` is not installed, the pipeline still runs with **regex + ML**; the DL step is skipped and confidence comes only from ML. GitHub Actions job **`test-dl`** installs `--extra dl` and exercises encode through `core/dl_backend.py`. On x86 CPUs missing SSE4.2, POPCNT, or AVX, numpy/ML/DL are not imported at all (PyPI wheels would **SIGILL**); regex CPF/CNPJ still runs. See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) (x86-64-v1 / wheelhouse).
 
 ---
 

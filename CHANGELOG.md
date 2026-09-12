@@ -36,6 +36,8 @@ Empty while the working tree carries **`1.8.0-beta`** (see section below).
 
 - **Augmented scan extras are Pro (#1876 / remaining #854):** `ocr_images` stays Pro; `rich_media_metadata` and `data_soup_formats` are explicit `Tier.PRO` keys with gates on the filesystem/share extract path (existing `is_feature_available`). EPUB stays Community. No computer-vision keys (not in tree).
 
+- **CPU pre-flight before numpy/ML (#929):** x86 hosts missing SSE4.2, POPCNT, or AVX skip the PyPI numpy/sklearn/DL imports (SIGILL is not catchable). Regex CPF/CNPJ still runs; `core.dl_backend` is lazy from `detector.py`. Use distro numpy or `-Dcpu-baseline=min` / the wheelhouse for ML on min-spec CPUs.
+
 - **Archive mismatch docs (#1354):** `--content-type-check` / `file_scan.use_content_type` does **not** dispatch compressed archives. On **filesystem** targets a lying archive extension records `archive_type_mismatch` in `scan_failures` instead of expanding. SMB/WebDAV/SharePoint skip expansion without that failure today. Magic-wins dispatch remains an optional later enhancement.
 
 - **Void xbps overlay (#1404):** `void-packages` template generated from `EXTRAS_MANIFEST` (same connector map as nfpm), runit service, Podman/Docker Void `--show` / fail-closed `--build`. Upstream `void-packages` merge remains out of scope.

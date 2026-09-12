@@ -181,5 +181,5 @@ Do **not** auto-install AVX wheels on a v1 CPU (SIGILL). Do **not** pretend DL r
 | ---- | ----------- | ------ |
 | P1 | This plan section + hub summary + `PLANS_TODO` survey rows | ✅ Done (docs PR) |
 | P2 | Name `[noavx]` in USAGE/TECH_GUIDE pip/pipx onboarding; pointer to #929 + wheelhouse two-step (no new recipe) | ⬜ Pending |
-| P3 | CPU pre-flight + **loud** capability banner / report footer (FN-first copy) | ⬜ Pending |
+| P3 | CPU pre-flight + **loud** capability banner / report footer (FN-first copy) | 🔄 Runtime pre-flight + warning log shipped (#929); banner / report footer still open |
 | P4 | Optional `pyproject` extra aliases `[nlp]` / `[ocr]` if they stay distinct from `[dl]` / `[richmedia]` | ⬜ Pending |
