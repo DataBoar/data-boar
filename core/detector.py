@@ -36,19 +36,24 @@ To reduce false positives on song lyrics and music tablature/chord sheets:
   cue-shaped text triggers the same entertainment-style ML cap as lyrics (strong PII regex unchanged).
 """
 
+from __future__ import annotations
+
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import copy
 import re
 
 from core.column_name_normalize import normalize_column_name_for_ml
 from core.brazilian_cpf import text_contains_valid_cpf, text_contains_valid_cnpj
-from core.dl_backend import DLClassifier, is_available as dl_available
+from core.cpu_preflight import warn_if_numpy_unsafe
 from core.embedding_prototype_hint import try_embedding_prototype_elevation
 from core.fuzzy_column_match import try_fuzzy_elevation
 from core.suggested_review import column_name_suggests_identifier_review
 from utils.file_encoding import read_text_with_encoding
+
+if TYPE_CHECKING:
+    from core.dl_backend import DLClassifier
 
 # Pattern names that require at least one checksum-valid token in the scanned
 # text before being included in found_patterns (false-positive gate).
@@ -58,18 +63,34 @@ _CHECKSUM_GATED_PATTERNS: dict[str, object] = {
     "LGPD_CNPJ": text_contains_valid_cnpj,
 }
 
-# Optional ML deps (numpy/pandas/sklearn) - fail gracefully if not installed
-try:
-    import pandas as pd
-    from sklearn.feature_extraction.text import TfidfVectorizer
-    from sklearn.ensemble import RandomForestClassifier
+# Optional ML deps (numpy/pandas/sklearn). SIGILL from a PyPI numpy wheel is
+# not catchable — CPU pre-flight must run before the import (#929).
+pd = None
+TfidfVectorizer = None
+RandomForestClassifier = None
+_ML_AVAILABLE = False
+if warn_if_numpy_unsafe():
+    try:
+        import pandas as pd
+        from sklearn.ensemble import RandomForestClassifier
+        from sklearn.feature_extraction.text import TfidfVectorizer
 
-    _ML_AVAILABLE = True
-except ImportError:
-    _ML_AVAILABLE = False
-    pd = None
-    TfidfVectorizer = None
-    RandomForestClassifier = None
+        _ML_AVAILABLE = True
+    except ImportError:
+        _ML_AVAILABLE = False
+        pd = None
+        TfidfVectorizer = None
+        RandomForestClassifier = None
+
+
+def _dl_available() -> bool:
+    """Lazy DL probe: never import numpy/sentence-transformers until CPU is safe."""
+    if not warn_if_numpy_unsafe():
+        return False
+    from core.dl_backend import is_available as dl_available
+
+    return dl_available()
+
 
 # Built-in regex patterns (LGPD/GDPR/CCPA/HIPAA/GLBA relevant)
 # Notes on Brazilian identifiers:
@@ -1296,7 +1317,9 @@ class SensitivityDetector:
             dl_patterns_path, dl_terms_inline, encoding=enc, errors=err
         )
         self._dl_classifier: DLClassifier | None = None
-        if dl_terms and dl_available():
+        if dl_terms and _dl_available():
+            from core.dl_backend import DLClassifier
+
             self._dl_classifier = DLClassifier(dl_terms)
             if not self._dl_classifier.is_ready:
                 self._dl_classifier = None

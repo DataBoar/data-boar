@@ -13,26 +13,30 @@ from __future__ import annotations
 import math
 from typing import Any
 
-# Optional: sentence-transformers (pulls torch + transformers). Fail gracefully if not installed.
+from core.cpu_preflight import warn_if_numpy_unsafe
+
+# Optional: sentence-transformers (pulls torch + numpy). Fail gracefully if not
+# installed. CPU pre-flight must run first — SIGILL is not ImportError (#929).
 _DL_AVAILABLE = False
 _SentenceTransformer = None
+_LogisticRegression = None
 
-try:
-    from sentence_transformers import SentenceTransformer
+if warn_if_numpy_unsafe():
+    try:
+        from sentence_transformers import SentenceTransformer
 
-    _SentenceTransformer = SentenceTransformer
-    _DL_AVAILABLE = True
-except ImportError:
-    _SentenceTransformer = None
-    _DL_AVAILABLE = False
+        _SentenceTransformer = SentenceTransformer
+        _DL_AVAILABLE = True
+    except ImportError:
+        _SentenceTransformer = None
+        _DL_AVAILABLE = False
 
-# sklearn used for training a small head on top of embeddings (already a project dep)
-try:
-    from sklearn.linear_model import LogisticRegression
+    try:
+        from sklearn.linear_model import LogisticRegression
 
-    _LogisticRegression = LogisticRegression
-except ImportError:
-    _LogisticRegression = None
+        _LogisticRegression = LogisticRegression
+    except ImportError:
+        _LogisticRegression = None
 
 
 # Default small model: 384-dim, ~80MB; good balance of speed and semantic quality

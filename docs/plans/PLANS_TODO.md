@@ -30,15 +30,15 @@ Use these tags in headings to keep priorities explicit and machine-countable:
 
 Do not edit this block manually; refresh with `python scripts/plans-stats.py --write`.
 
-- **Status rows counted:** 259  (Done: 158 | Incomplete: 101)
-- **Incomplete breakdown:** Pending `⬜`=84, Tracked `🔄` / `Tracked (partially done)`=17, Under consideration=0, Backlog-marked rows=0
+- **Status rows counted:** 259  (Done: 159 | Incomplete: 100)
+- **Incomplete breakdown:** Pending `⬜`=83, Tracked `🔄` / `Tracked (partially done)`=17, Under consideration=0, Backlog-marked rows=0
 
 | Horizon | Total rows | Done | Incomplete |
 | ------- | ----------: | ----: | ----------: |
 | `H0` | 62 | 40 | 22 |
 | `H1` | 48 | 32 | 16 |
 | `H2` | 0 | 0 | 0 |
-| `H3` | 134 | 72 | 62 |
+| `H3` | 134 | 73 | 61 |
 | `H4` | 0 | 0 | 0 |
 | `H5` | 0 | 0 | 0 |
 | `UNSPECIFIED` | 15 | 14 | 1 |
@@ -829,7 +829,7 @@ Docs-first `[noavx]` = proven [#929](https://github.com/DataBoar/data-boar/issue
 | Step | To-do | Status |
 | ---- | ----- | ------ |
 | P1 | **v1.8.0 #1059 — doc-first:** PLAN_PACKAGING EN + pt-BR wave; `plans_hub_sync` + this file ([#1059](https://github.com/DataBoar/data-boar/issues/1059)) | ✅ Done |
-| P2 | **#1059 —** name `[noavx]` in pip/pipx onboarding; pointer to #929 + wheelhouse two-step | ⬜ Pending |
+| P2 | **#1059 —** name `[noavx]` in pip/pipx onboarding; pointer to #929 + wheelhouse two-step | ✅ Done (#929 / PR #1874) |
 | P3 | **#1059 —** CPU pre-flight + loud capability banner / report footer (FN-first) | ⬜ Pending |
 
 ---
