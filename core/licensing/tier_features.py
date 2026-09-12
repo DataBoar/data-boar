@@ -81,8 +81,12 @@ FEATURE_TIER_MAP: dict[str, Tier] = {
     "connector_mysql": Tier.COMMUNITY,
     "connector_mariadb": Tier.COMMUNITY,
     "connector_sqlite": Tier.COMMUNITY,
-    # Pro features (PDF report, advanced connectors, scheduling)
+    # Pro extras (#854 remaining / #1876): OCR + richmedia/dataformats extras.
+    # Canon: SUBSCRIPTION_TIERS.md “Pro or higher”. CV beyond OCR is not in tree.
     "ocr_images": Tier.PRO,
+    "rich_media_metadata": Tier.PRO,  # mutagen / pillow-heif / EXIF / ffprobe
+    "data_soup_formats": Tier.PRO,  # pyarrow / fastavro / dbfread extras
+    # Pro features (PDF report, advanced connectors, scheduling)
     "report_pdf": Tier.PRO,  # see PLAN_PDF_GRC_REPORT.md
     "report_pdf_custom_branding": Tier.ENTERPRISE,
     "compliance_grade_report": Tier.PRO,  # DPO A+→F score — see #697

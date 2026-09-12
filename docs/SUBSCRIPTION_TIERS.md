@@ -88,7 +88,7 @@ A cell is **Yes** when that band’s enum is **≥** the feature’s minimum in 
 | Capability group | Community | Std | Pro | Pro+ | Ent | Partner / WL |
 | ---------------- | :-------: | :-: | :-: | :--: | :-: | :----------: |
 | Filesystem; self-hosted SQL/NoSQL; generic REST/API; core detectors; compressed files; content-type; synthetic testing; XLSX/HTML; REST API; dashBOARd; Docker/Ansible keys | Yes | Yes | Yes | Yes | Yes | Yes |
-| OCR; PDF report; compliance-grade report; scheduled scans; dashboard RBAC; API-key UI; maturity POC; notifications; SBOM; build-integrity; SQL findings sink; Pro governance lens; managed/corporate connectors | — | — | Yes | Yes | Yes | Yes |
+| OCR (`ocr_images`); rich-media extras (`rich_media_metadata`); data-soup extras (`data_soup_formats`); PDF report; compliance-grade report; scheduled scans; dashboard RBAC; API-key UI; maturity POC; notifications; SBOM; build-integrity; SQL findings sink; Pro governance lens; managed/corporate connectors | — | — | Yes | Yes | Yes | Yes |
 | `pro_prefilter_accel`; `rust_regex_stage` | — | — | — | Yes | Yes | Yes |
 | Custom PDF branding; Ent scheduler UI; Ent governance lens; multi-tenant; **SSO SAML**; PDF digital signature; scheduled PDF email; historical comparison; audit-log export; custom detectors; VCS connector; plugin/partner interface; partner provider driver; remediation plugin/manifest | — | — | — | — | Yes | Yes |
 
