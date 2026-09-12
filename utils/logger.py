@@ -8,12 +8,73 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from core.validation import sanitize_log_text
+from core.validation import clean_error, sanitize_log_text
 from utils.audit_log_display import sanitize_target_name_for_audit_log
 
 _LOGGER: logging.Logger | None = None
 _VIOLATION_HANDLER: logging.Handler | None = None
 _AUDIT_LOG_DIR: Path | None = None
+
+# Choke-point filter name (#1722 / ADR-0036). Must stay on the logger, not only
+# on individual handlers, so every sink (file, console, pytest caplog) is covered.
+SANITIZE_LOG_FILTER_NAME = "data_boar_sanitize_log_text"
+
+
+class SanitizeLogFilter(logging.Filter):
+    """Redact secrets/PII in log records before any handler emits them (#1722)."""
+
+    def __init__(self) -> None:
+        super().__init__(name=SANITIZE_LOG_FILTER_NAME)
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        record.msg = _sanitize_log_arg(record.msg)
+        if record.args:
+            if isinstance(record.args, dict):
+                record.args = {k: _sanitize_log_arg(v) for k, v in record.args.items()}
+            else:
+                record.args = tuple(_sanitize_log_arg(a) for a in record.args)
+        _sanitize_record_traceback(record)
+        return True
+
+
+_PASSTHROUGH_LOG_ARGS = (int, float, bool, type(None))
+
+
+def _sanitize_log_arg(value: Any) -> Any:
+    """Redact secrets in any log operand, not only ``str`` (#1722 HIGH)."""
+    if isinstance(value, BaseException):
+        return clean_error(value)
+    if isinstance(value, memoryview):
+        value = value.tobytes()
+    if isinstance(value, (bytes, bytearray)):
+        return sanitize_log_text(bytes(value).decode("utf-8", errors="replace"))
+    if isinstance(value, str):
+        return sanitize_log_text(value)
+    if isinstance(value, _PASSTHROUGH_LOG_ARGS):
+        return value
+    return sanitize_log_text(str(value))
+
+
+def _sanitize_record_traceback(record: logging.LogRecord) -> None:
+    """Sanitize ``exc_info`` / ``exc_text`` / ``stack_info`` before formatters run."""
+    if record.exc_info:
+        if not record.exc_text:
+            record.exc_text = logging.Formatter().formatException(record.exc_info)
+        # Drop unsanitized tuple so a later formatException cannot replay secrets.
+        record.exc_info = None
+    if record.exc_text:
+        record.exc_text = sanitize_log_text(record.exc_text)
+    stack_info = getattr(record, "stack_info", None)
+    if isinstance(stack_info, str) and stack_info:
+        record.stack_info = sanitize_log_text(stack_info)
+
+
+def _ensure_sanitize_filter(logger: logging.Logger) -> None:
+    if any(
+        getattr(f, "name", None) == SANITIZE_LOG_FILTER_NAME for f in logger.filters
+    ):
+        return
+    logger.addFilter(SanitizeLogFilter())
 
 
 def configure_audit_log_directory(log_dir: str | Path | None) -> None:
@@ -42,7 +103,7 @@ def configure_audit_log_directory(log_dir: str | Path | None) -> None:
 
 
 def get_logger(session_id: str | None = None) -> logging.Logger:
-    """Return the unified audit logger. Optionally include session_id in extra for formatter."""
+    """Return the unified audit logger. ``SanitizeLogFilter`` is always attached (#1722)."""
     global _LOGGER
     if _LOGGER is None:
         _LOGGER = logging.getLogger("LGPDAudit")
@@ -61,6 +122,9 @@ def get_logger(session_id: str | None = None) -> logging.Logger:
         ch.setFormatter(formatter)
         _LOGGER.addHandler(fh)
         _LOGGER.addHandler(ch)
+        _ensure_sanitize_filter(_LOGGER)
+    else:
+        _ensure_sanitize_filter(_LOGGER)
     return _LOGGER
 
 
