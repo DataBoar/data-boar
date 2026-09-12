@@ -107,6 +107,10 @@ uv sync
 pip install -e .
 ```
 
+### `[noavx]` / x86-64-v1 (pip / pipx)
+
+**`[noavx]` não é extra do PyPI.** Em hosts sem SSE4.2, POPCNT ou AVX, o numpy do PyPI dá **SIGILL**. Restaure **ML de verdade** com o wheelhouse verificado ([#929](https://github.com/DataBoar/data-boar/issues/929)): tag `wheelhouse-x86-64-v1-2026-07-29`, dois passos `gh release download` e `pip install --no-index --find-links` (ou `pipx runpip`). Receita: [TROUBLESHOOTING.pt_BR.md](TROUBLESHOOTING.pt_BR.md) *x86-64-v1 / wheelhouse*. O pre-flight evita o crash; **não** substitui essa instalação.
+
 ### Homebrew (macOS)
 
 Tap próprio (não é homebrew-core). Python do host via Homebrew; o pip instala o sdist do PyPI — **sem** payload de CPython embarcado:

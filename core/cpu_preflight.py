@@ -16,6 +16,11 @@ from pathlib import Path
 # plus AVX in bundled OpenBLAS. Missing any one is enough to skip the ML stack.
 PYPI_NUMPY_X86_REQUIRED: tuple[str, ...] = ("sse4_2", "popcnt", "avx")
 
+# Hosted, SHA256SUMS-verified ML stack for x86-64-v1 (product path [noavx] — not a
+# PyPI extra). Canonical recipe: docs/TROUBLESHOOTING.md § x86-64-v1 / wheelhouse.
+WHEELHOUSE_TAG = "wheelhouse-x86-64-v1-2026-07-29"
+WHEELHOUSE_REPO = "DataBoar/data-boar-site"
+
 _X86_MACHINES = frozenset({"x86_64", "amd64", "x64", "i386", "i686", "i586", "i486"})
 
 _logged_skip = False
@@ -88,10 +93,21 @@ def missing_pypi_numpy_features(
 def numpy_cpu_incompatible_message(missing: tuple[str, ...]) -> str:
     feat = ", ".join(missing) if missing else "required SIMD"
     return (
-        f"this CPU does not have {feat} required by the PyPI numpy wheel; "
-        "use distro numpy (`apk add py3-numpy` / `apt install python3-numpy`) "
-        "or a source build with `-Dcpu-baseline=min`. Regex CPF/CNPJ detection "
-        "continues without ML/DL."
+        f"this CPU does not have {feat} required by the PyPI numpy wheel. "
+        "ML/DL is skipped so the process does not SIGILL; regex CPF/CNPJ still runs. "
+        "Primary (restore working ML on this CPU — product path [noavx], not a "
+        f"PyPI extra): hosted wheelhouse {WHEELHOUSE_TAG} on {WHEELHOUSE_REPO} "
+        "(SHA256SUMS). docs/TROUBLESHOOTING.md section "
+        "'x86-64-v1 / wheelhouse install'. "
+        f"gh release download {WHEELHOUSE_TAG} --repo {WHEELHOUSE_REPO} "
+        "--pattern '*musllinux*' --pattern '*-none-any.whl' --dir ~/wheelhouse-v1 "
+        "(glibc: swap *musllinux* for *manylinux*); then "
+        "pip install --no-index --find-links $HOME/wheelhouse-v1 "
+        "--force-reinstall numpy scipy scikit-learn pandas "
+        "(pipx: pipx runpip data-boar install --no-index --find-links "
+        "$HOME/wheelhouse-v1 --force-reinstall numpy scipy scikit-learn pandas). "
+        "Fallback only: distro numpy (`apk add py3-numpy` / "
+        "`apt install python3-numpy`) or a source build with `-Dcpu-baseline=min`."
     )
 
 

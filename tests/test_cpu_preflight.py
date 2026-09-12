@@ -7,6 +7,8 @@ from pathlib import Path
 
 from core.cpu_preflight import (
     PYPI_NUMPY_X86_REQUIRED,
+    WHEELHOUSE_REPO,
+    WHEELHOUSE_TAG,
     missing_pypi_numpy_features,
     numpy_cpu_incompatible_message,
     parse_cpuinfo_flags,
@@ -55,12 +57,21 @@ def test_non_x86_is_import_safe() -> None:
     assert missing_pypi_numpy_features(flags, machine="aarch64") == ()
 
 
-def test_incompatible_message_names_feat_and_remediation() -> None:
+def test_incompatible_message_leads_with_wheelhouse() -> None:
     msg = numpy_cpu_incompatible_message(("avx",))
     assert "avx" in msg
+    assert WHEELHOUSE_TAG in msg
+    assert WHEELHOUSE_REPO in msg
+    assert "[noavx]" in msg
+    primary = msg[: msg.find("Fallback only")]
+    assert "gh release download" in primary
+    assert f"--repo {WHEELHOUSE_REPO}" in primary
+    assert "pip install --no-index --find-links" in primary
+    assert "Primary" in primary
+    assert primary.find("Primary") < primary.find("pip install --no-index")
     assert "apk add py3-numpy" in msg
-    assert "apt install python3-numpy" in msg
-    assert "-Dcpu-baseline=min" in msg
+    assert msg.find("Primary") < msg.find("Fallback only")
+    assert "-Dcpu-baseline=min" in msg[msg.find("Fallback only") :]
 
 
 def test_detector_has_no_eager_dl_backend_import() -> None:
