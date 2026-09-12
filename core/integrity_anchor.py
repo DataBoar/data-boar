@@ -336,7 +336,10 @@ def ensure_integrity_anchor(config: dict[str, Any] | None = None) -> dict[str, A
             "validated_at": "",
             "build_digest_matched": False,
             "mismatched_files": [],
-            "error": str(e),
+            # Public JSON (/health, /status) — class name only. str(e) can
+            # embed sqlite/OS paths or JSON parse context (CodeQL
+            # py/stack-trace-exposure; #1721 / alerts #300, #287).
+            "error": type(e).__name__,
         }
     if snapshot["integrity_state"] == "tampered":
         logger.critical(
