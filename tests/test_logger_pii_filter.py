@@ -88,7 +88,11 @@ def test_get_logger_warning_redacts_dsn_password(audit_log_dir: Path, caplog) ->
         getattr(f, "name", None) == SANITIZE_LOG_FILTER_NAME for f in logger.filters
     )
     with caplog.at_level(logging.WARNING, logger="LGPDAudit"):
-        logger.warning("%s", DSN_WITH_PASSWORD)
+        # Intentional DSN-shaped arg: Filter must redact before emit (AC #1722).
+        # codeql[py/clear-text-logging-sensitive-data]
+        logger.warning(
+            "%s", DSN_WITH_PASSWORD
+        )  # lgtm[py/clear-text-logging-sensitive-data]
     assert "hunter2secret" not in caplog.text
     assert "***REDACTED***" in caplog.text
     log_files = list(audit_log_dir.glob("audit_*.log"))
@@ -104,7 +108,10 @@ def test_sanitize_filter_overhead_measured(audit_log_dir: Path) -> None:
     n = 400
     t0 = time.perf_counter()
     for _ in range(n):
-        logger.warning("dsn=%s", DSN_WITH_PASSWORD)
+        # codeql[py/clear-text-logging-sensitive-data]
+        logger.warning(
+            "dsn=%s", DSN_WITH_PASSWORD
+        )  # lgtm[py/clear-text-logging-sensitive-data]
     elapsed_s = time.perf_counter() - t0
     per_call_us = (elapsed_s / n) * 1_000_000
     # Lab (Linux primary, 2026-09-12): ~80–200 µs/call including FileHandler I/O.
