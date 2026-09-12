@@ -10,13 +10,15 @@ Obrigado por considerar contribuir. Este documento cobre a configuração local,
 
 - **Produto e marca:** **Data Boar** — use esse nome em texto, issues e títulos de PR.
 - **Repositório upstream:** **[github.com/DataBoar/data-boar](https://github.com/DataBoar/data-boar)** — faça fork ou clone a partir daí (troque pelo seu fork se aplicável).
-- **Nome da distribuição PyPI:** o `pyproject.toml` declara **`name = "data-boar"`**. Quando houver publicação no índice de pacotes Python, a instalação será:
+- **Nome da distribuição PyPI:** o `pyproject.toml` declara **`name = "data-boar"`**. O projeto **já está publicado** no índice de pacotes Python ([pypi.org/project/data-boar](https://pypi.org/project/data-boar/)):
 
   ```bash
   pip install data-boar
+  pipx install data-boar
+  uvx data-boar --demo
   ```
 
-  Até lá, use **clone git** + **`uv sync`** ou **`pip install -e .`**. O repositório ainda contém o pacote Python histórico **`lgpd_crawler`** (imports) — é detalhe de implementação, não o nome do produto. Contexto da renomeação: **[ADR 0014](docs/adr/ADR-0014-rename-repo-and-package-python3-lgpd-crawler-to-data-boar.md)**.
+  Linhas pré-release no **`main`** (por exemplo **`1.8.0-beta`**) continuam **só git** — não são a wheel do PyPI. Para colaboradores, ou para rodar essa árvore de trabalho, use **clone git** + **`uv sync`** ou **`pip install -e .`**. O repositório ainda contém o pacote Python histórico **`lgpd_crawler`** (imports) — é detalhe de implementação, não o nome do produto. Contexto da renomeação: **[ADR 0014](docs/adr/ADR-0014-rename-repo-and-package-python3-lgpd-crawler-to-data-boar.md)**.
 
 **Conectores SQL (extras opcionais):** o **`pip install data-boar`** *core* cobre **arquivos + SQLite** — sem wheels C-extension de PostgreSQL/MySQL/MariaDB/MSSQL/Oracle. Instale por motor:
 
