@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from core.validation import sanitize_log_text
+from core.validation import clean_error, sanitize_log_text
 from utils.audit_log_display import sanitize_target_name_for_audit_log
 
 _LOGGER: logging.Logger | None = None
@@ -27,20 +27,46 @@ class SanitizeLogFilter(logging.Filter):
         super().__init__(name=SANITIZE_LOG_FILTER_NAME)
 
     def filter(self, record: logging.LogRecord) -> bool:
-        if isinstance(record.msg, str):
-            record.msg = sanitize_log_text(record.msg)
+        record.msg = _sanitize_log_arg(record.msg)
         if record.args:
             if isinstance(record.args, dict):
                 record.args = {k: _sanitize_log_arg(v) for k, v in record.args.items()}
             else:
                 record.args = tuple(_sanitize_log_arg(a) for a in record.args)
+        _sanitize_record_traceback(record)
         return True
 
 
+_PASSTHROUGH_LOG_ARGS = (int, float, bool, type(None))
+
+
 def _sanitize_log_arg(value: Any) -> Any:
+    """Redact secrets in any log operand, not only ``str`` (#1722 HIGH)."""
+    if isinstance(value, BaseException):
+        return clean_error(value)
+    if isinstance(value, memoryview):
+        value = value.tobytes()
+    if isinstance(value, (bytes, bytearray)):
+        return sanitize_log_text(bytes(value).decode("utf-8", errors="replace"))
     if isinstance(value, str):
         return sanitize_log_text(value)
-    return value
+    if isinstance(value, _PASSTHROUGH_LOG_ARGS):
+        return value
+    return sanitize_log_text(str(value))
+
+
+def _sanitize_record_traceback(record: logging.LogRecord) -> None:
+    """Sanitize ``exc_info`` / ``exc_text`` / ``stack_info`` before formatters run."""
+    if record.exc_info:
+        if not record.exc_text:
+            record.exc_text = logging.Formatter().formatException(record.exc_info)
+        # Drop unsanitized tuple so a later formatException cannot replay secrets.
+        record.exc_info = None
+    if record.exc_text:
+        record.exc_text = sanitize_log_text(record.exc_text)
+    stack_info = getattr(record, "stack_info", None)
+    if isinstance(stack_info, str) and stack_info:
+        record.stack_info = sanitize_log_text(stack_info)
 
 
 def _ensure_sanitize_filter(logger: logging.Logger) -> None:

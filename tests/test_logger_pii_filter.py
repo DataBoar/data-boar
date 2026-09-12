@@ -102,6 +102,62 @@ def test_get_logger_warning_redacts_dsn_password(audit_log_dir: Path, caplog) ->
     assert "***REDACTED***" in body
 
 
+def test_get_logger_warning_redacts_exception_arg(audit_log_dir: Path, caplog) -> None:
+    """Exception objects in args must not bypass the Filter (#1722 HIGH)."""
+    logger = get_logger()
+    with caplog.at_level(logging.WARNING, logger="LGPDAudit"):
+        # codeql[py/clear-text-logging-sensitive-data]
+        logger.warning(
+            "%s", RuntimeError(DSN_WITH_PASSWORD)
+        )  # lgtm[py/clear-text-logging-sensitive-data]
+    assert "hunter2secret" not in caplog.text
+    assert "***REDACTED***" in caplog.text
+    body = next(audit_log_dir.glob("audit_*.log")).read_text(encoding="utf-8")
+    assert "hunter2secret" not in body
+
+
+def test_get_logger_exception_redacts_exc_info(audit_log_dir: Path, caplog) -> None:
+    """logger.exception traceback (engine worker path) must be redacted."""
+    logger = get_logger()
+    with caplog.at_level(logging.ERROR, logger="LGPDAudit"):
+        try:
+            raise ConnectionError(DSN_WITH_PASSWORD)
+        except ConnectionError:
+            # codeql[py/clear-text-logging-sensitive-data]
+            logger.exception(
+                "Parallel target worker failed"
+            )  # lgtm[py/clear-text-logging-sensitive-data]
+    assert "hunter2secret" not in caplog.text
+    assert "***REDACTED***" in caplog.text
+    body = next(audit_log_dir.glob("audit_*.log")).read_text(encoding="utf-8")
+    assert "hunter2secret" not in body
+    assert "***REDACTED***" in body
+
+
+def test_get_logger_warning_redacts_bytes_arg(audit_log_dir: Path, caplog) -> None:
+    logger = get_logger()
+    with caplog.at_level(logging.WARNING, logger="LGPDAudit"):
+        # codeql[py/clear-text-logging-sensitive-data]
+        logger.warning(
+            "%s", DSN_WITH_PASSWORD.encode("utf-8")
+        )  # lgtm[py/clear-text-logging-sensitive-data]
+    assert "hunter2secret" not in caplog.text
+    assert "***REDACTED***" in caplog.text
+
+
+def test_get_logger_warning_redacts_object_str(audit_log_dir: Path, caplog) -> None:
+    class _Carrier:
+        def __str__(self) -> str:
+            return DSN_WITH_PASSWORD
+
+    logger = get_logger()
+    with caplog.at_level(logging.WARNING, logger="LGPDAudit"):
+        # codeql[py/clear-text-logging-sensitive-data]
+        logger.warning("%s", _Carrier())  # lgtm[py/clear-text-logging-sensitive-data]
+    assert "hunter2secret" not in caplog.text
+    assert "***REDACTED***" in caplog.text
+
+
 def test_sanitize_filter_overhead_measured(audit_log_dir: Path) -> None:
     """Measured cost (not a guess). Generous CI bound; ADR records the lab number."""
     logger = get_logger()

@@ -36,11 +36,9 @@ Empty while the working tree carries **`1.8.0-beta`** (see section below).
 
 - **Augmented scan extras are Pro (#1876 / remaining #854):** `ocr_images` stays Pro; `rich_media_metadata` and `data_soup_formats` are explicit `Tier.PRO` keys with gates on the filesystem/share extract path (existing `is_feature_available`). EPUB stays Community. No computer-vision keys (not in tree).
 
-<<<<<<< HEAD
 - **CPU pre-flight before numpy/ML (#929):** x86 hosts missing SSE4.2, POPCNT, or AVX skip the PyPI numpy/sklearn/DL imports (SIGILL is not catchable). Regex CPF/CNPJ still runs; `core.dl_backend` is lazy from `detector.py`. **Primary** path to restore working ML is the hosted wheelhouse `wheelhouse-x86-64-v1-2026-07-29` (`[noavx]`: `gh release download` + `pip install --no-index --find-links`). Distro numpy / `-Dcpu-baseline=min` are fallbacks only.
-=======
+
 - **Logger redaction choke point (#1722):** `get_logger()` always attaches `SanitizeLogFilter` (`sanitize_log_text` on msg+args) so `logger.warning("%s", dsn)` cannot emit a password. `save_failure` remains the persistence sink. AST gate + allowlist in `tests/test_logger_pii_filter.py`.
->>>>>>> c8899b54 (fix(security): redact log records in get_logger Filter (#1722))
 
 - **Archive mismatch docs (#1354):** `--content-type-check` / `file_scan.use_content_type` does **not** dispatch compressed archives. On **filesystem** targets a lying archive extension records `archive_type_mismatch` in `scan_failures` instead of expanding. SMB/WebDAV/SharePoint skip expansion without that failure today. Magic-wins dispatch remains an optional later enhancement.
 
