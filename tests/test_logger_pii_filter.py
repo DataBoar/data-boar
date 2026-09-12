@@ -63,7 +63,6 @@ EXPECTED_STR_E_COUNTS: Counter[tuple[str, str, str]] = Counter(
         ("core/engine.py", "start_audit", "inert"): 1,
         ("core/findings_sink.py", "push_session_to_sink", "inert"): 1,
         ("core/findings_sink.py", "maybe_push_findings_sink", "persist"): 1,
-        ("core/integrity_anchor.py", "ensure_integrity_anchor", "inert"): 1,
         (
             "core/sdk/boar_fast_filter_dogfood.py",
             "filter_batch_with_mutual_attestation",
@@ -173,7 +172,7 @@ def test_str_e_survey_matches_snapshot() -> None:
     kind_totals = Counter(s.kind for s in sites)
     assert kind_totals["logger"] == 2
     assert kind_totals["persist"] == 20
-    assert kind_totals["inert"] == 14
+    assert kind_totals["inert"] == 13
 
 
 def test_logger_str_e_sites_are_allowlisted() -> None:

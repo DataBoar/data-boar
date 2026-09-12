@@ -38,6 +38,8 @@ Empty while the working tree carries **`1.8.0-beta`** (see section below).
 
 - **PyPI install docs (#1752):** README / CONTRIBUTING no longer say `pip install data-boar` is “when published”. The package is live; document `uvx data-boar` and `uvx data-boar --demo`. Last stable wheel can lag `main` (pre-release remains git-only).
 
+- **Integrity snapshot public `error` (#1721):** `ensure_integrity_anchor` fail-soft JSON used by unauthenticated `/health` and `/status` stores `type(e).__name__` only. `str(e)` (paths, JSON parse context) stays in the operator log via `SanitizeLogFilter`.
+
 - **CPU pre-flight before numpy/ML (#929):** x86 hosts missing SSE4.2, POPCNT, or AVX skip the PyPI numpy/sklearn/DL imports (SIGILL is not catchable). Regex CPF/CNPJ still runs; `core.dl_backend` is lazy from `detector.py`. **Primary** path to restore working ML is the hosted wheelhouse `wheelhouse-x86-64-v1-2026-07-29` (`[noavx]`: `gh release download` + `pip install --no-index --find-links`). Distro numpy / `-Dcpu-baseline=min` are fallbacks only.
 
 - **OpenSSF Scorecard CI (#886):** `.github/workflows/scorecard.yml` runs Scorecard on `main` (push + weekly + `branch_protection_rule`), uploads SARIF, and publishes results for the public badge on README / README.pt_BR. Workflow-level token is `contents: read`; the analysis job keeps the narrower Scorecard grants.

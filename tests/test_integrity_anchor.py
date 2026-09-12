@@ -410,6 +410,45 @@ def test_sqlite_error_on_ensure_never_looks_trusted(tmp_path, monkeypatch):
     assert "error" in snap
 
 
+@pytest.mark.parametrize(
+    ("exc", "secret"),
+    [
+        (
+            sqlite3.OperationalError(
+                "unable to open database file: /secret/lab/audit.db"
+            ),
+            "/secret/lab/audit.db",
+        ),
+        (
+            OSError(2, "No such file or directory", "/secret/lab/audit.db"),
+            "/secret/lab/audit.db",
+        ),
+        (
+            json.JSONDecodeError(
+                "Expecting value", '{"path":"/secret/lab/audit.db"}', 0
+            ),
+            "/secret/lab/audit.db",
+        ),
+    ],
+)
+def test_ensure_exception_public_error_is_type_name_only(
+    tmp_path, monkeypatch, exc, secret
+):
+    """#1721: snapshot['error'] on /health and /status must not echo str(e)."""
+
+    def _boom(*_a, **_k):
+        raise exc
+
+    monkeypatch.setattr("core.integrity_anchor.sqlite3.connect", _boom)
+    snap = ensure_integrity_anchor(_cfg(tmp_path))
+    assert snap["integrity_state"] == "unknown"
+    assert snap["error"] == type(exc).__name__
+    blob = json.dumps(snap)
+    assert secret not in blob
+    assert str(exc) not in blob
+    assert snap["error"] != str(exc)
+
+
 def test_list_integrity_events_fail_closed_on_error(tmp_path, monkeypatch):
     def _boom(*_a, **_k):
         raise OSError("simulated open failure")
