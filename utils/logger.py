@@ -15,6 +15,41 @@ _LOGGER: logging.Logger | None = None
 _VIOLATION_HANDLER: logging.Handler | None = None
 _AUDIT_LOG_DIR: Path | None = None
 
+# Choke-point filter name (#1722 / ADR-0036). Must stay on the logger, not only
+# on individual handlers, so every sink (file, console, pytest caplog) is covered.
+SANITIZE_LOG_FILTER_NAME = "data_boar_sanitize_log_text"
+
+
+class SanitizeLogFilter(logging.Filter):
+    """Redact secrets/PII in log records before any handler emits them (#1722)."""
+
+    def __init__(self) -> None:
+        super().__init__(name=SANITIZE_LOG_FILTER_NAME)
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if isinstance(record.msg, str):
+            record.msg = sanitize_log_text(record.msg)
+        if record.args:
+            if isinstance(record.args, dict):
+                record.args = {k: _sanitize_log_arg(v) for k, v in record.args.items()}
+            else:
+                record.args = tuple(_sanitize_log_arg(a) for a in record.args)
+        return True
+
+
+def _sanitize_log_arg(value: Any) -> Any:
+    if isinstance(value, str):
+        return sanitize_log_text(value)
+    return value
+
+
+def _ensure_sanitize_filter(logger: logging.Logger) -> None:
+    if any(
+        getattr(f, "name", None) == SANITIZE_LOG_FILTER_NAME for f in logger.filters
+    ):
+        return
+    logger.addFilter(SanitizeLogFilter())
+
 
 def configure_audit_log_directory(log_dir: str | Path | None) -> None:
     """
@@ -42,7 +77,7 @@ def configure_audit_log_directory(log_dir: str | Path | None) -> None:
 
 
 def get_logger(session_id: str | None = None) -> logging.Logger:
-    """Return the unified audit logger. Optionally include session_id in extra for formatter."""
+    """Return the unified audit logger. ``SanitizeLogFilter`` is always attached (#1722)."""
     global _LOGGER
     if _LOGGER is None:
         _LOGGER = logging.getLogger("LGPDAudit")
@@ -61,6 +96,9 @@ def get_logger(session_id: str | None = None) -> logging.Logger:
         ch.setFormatter(formatter)
         _LOGGER.addHandler(fh)
         _LOGGER.addHandler(ch)
+        _ensure_sanitize_filter(_LOGGER)
+    else:
+        _ensure_sanitize_filter(_LOGGER)
     return _LOGGER
 
 
