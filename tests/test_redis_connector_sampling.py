@@ -87,6 +87,29 @@ def test_redis_unsupported_type_recorded_not_as_connection_failure():
     client.get.assert_not_called()
 
 
+def test_redis_type_failure_records_unreachable_and_continues_loop():
+    if not _has_module("redis"):
+        pytest.skip("redis not installed")
+    from redis.exceptions import TimeoutError as RedisTimeoutError
+
+    dbm = MagicMock()
+    client = MagicMock()
+    client.scan_iter.return_value = iter(["u:fail", "u:1001"])
+    client.type.side_effect = [RedisTimeoutError("timed out"), "string"]
+    client.get.return_value = "529.982.247-25"
+
+    _run_with_client(client, _mk_scanner(value_hits=True), dbm, value_sample_limit=5)
+
+    unreachable = [
+        c for c in dbm.save_failure.call_args_list if c.args[1] == "unreachable"
+    ]
+    assert len(unreachable) == 1
+    assert "u:fail" in unreachable[0].args[2]
+    error_level = [c for c in dbm.save_failure.call_args_list if c.args[1] == "error"]
+    assert not error_level
+    client.get.assert_called_once()
+
+
 @pytest.mark.parametrize(
     ("redis_type", "setup_client"),
     [
