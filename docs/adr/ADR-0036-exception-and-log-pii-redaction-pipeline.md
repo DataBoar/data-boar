@@ -20,7 +20,7 @@ Database drivers, HTTP clients (for example **httpx**), and ORMs often embed **S
 
 CodeQL #301 on `wrong_password` was a false positive; the investigation showed ADR-0036 decision 4 had an **unwritten premise**: it only covered the persistence sink. Direct `get_logger().warning(..., str(e))` bypassed `sanitize_log_text`.
 
-### Decision
+### Decision (amendment #1722)
 
 5. **Mandatory `logging.Filter` on `get_logger()`.** `utils.logger.SanitizeLogFilter` runs `sanitize_log_text` on `record.msg` and string `record.args` **before** any handler emits. Filter the **Logger** (not only FileHandler/StreamHandler) so file, console, and test `caplog` share one choke point. Lazy `%s` formatting is covered by sanitizing args before `getMessage()`.
 6. **Anti-regression gate** in `tests/test_logger_pii_filter.py` (+ AST helper `tests/str_e_callsite_gate.py`): scan `connectors/`, `core/`, `app/`, `api/` for `str(e)`/`str(exc)` inside log method calls. New log sites fail unless added to **`LOG_STR_E_ALLOWLIST`** with a written justification. The survey snapshot (`EXPECTED_STR_E_COUNTS`) classifies persist vs logger vs inert. The gate **self-tests** (synthetic logger vs `save_failure` snippets).
