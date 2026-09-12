@@ -88,7 +88,7 @@ Uma célula é **Sim** quando o enum da faixa é **≥** o mínimo da feature em
 | Grupo de capacidade | Community | Std | Pro | Pro+ | Ent | Partner / WL |
 | ---------------- | :-------: | :-: | :-: | :--: | :-: | :----------: |
 | Filesystem; SQL/NoSQL self-hosted; REST/API genérico; detectores core; compactados; content-type; teste sintético; XLSX/HTML; REST API; dashBOARd; chaves Docker/Ansible | Sim | Sim | Sim | Sim | Sim | Sim |
-| OCR; relatório PDF; relatório compliance-grade; scans agendados; RBAC do dashboard; UI de API-key; POC de maturidade; notificações; SBOM; integridade de build; sink SQL de findings; governance lens Pro; conectores gerenciados/corporativos | — | — | Sim | Sim | Sim | Sim |
+| Relatório PDF; OCR (`ocr_images`); extras rich-media (`rich_media_metadata`); extras data-soup (`data_soup_formats`); relatório compliance-grade; scans agendados; RBAC do dashboard; UI de API-key; POC de maturidade; notificações; SBOM; integridade de build; sink SQL de findings; governance lens Pro; conectores gerenciados/corporativos | — | — | Sim | Sim | Sim | Sim |
 | `pro_prefilter_accel`; `rust_regex_stage` | — | — | — | Sim | Sim | Sim |
 | Branding PDF custom; UI de scheduler Ent; governance lens Ent; multi-tenant; **SSO SAML**; assinatura digital de PDF; e-mail PDF agendado; comparação histórica; export de audit-log; detectores custom; conector VCS; interface plugin/partner; driver de provider parceiro; plugin/manifest de remediação | — | — | — | — | Sim | Sim |
 

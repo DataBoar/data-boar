@@ -34,6 +34,8 @@ Empty while the working tree carries **`1.8.0-beta`** (see section below).
 
 - **WebAuthn login `next=` (#1557):** `safe_next_path` also fail-closes when `urlsplit` reports a scheme or netloc (protocol-relative `//host` after auth).
 
+- **Augmented scan extras are Pro (#1876 / remaining #854):** `ocr_images` stays Pro; `rich_media_metadata` and `data_soup_formats` are explicit `Tier.PRO` keys with gates on the filesystem/share extract path (existing `is_feature_available`). EPUB stays Community. No computer-vision keys (not in tree).
+
 - **Archive mismatch docs (#1354):** `--content-type-check` / `file_scan.use_content_type` does **not** dispatch compressed archives. On **filesystem** targets a lying archive extension records `archive_type_mismatch` in `scan_failures` instead of expanding. SMB/WebDAV/SharePoint skip expansion without that failure today. Magic-wins dispatch remains an optional later enhancement.
 
 - **Void xbps overlay (#1404):** `void-packages` template generated from `EXTRAS_MANIFEST` (same connector map as nfpm), runit service, Podman/Docker Void `--show` / fail-closed `--build`. Upstream `void-packages` merge remains out of scope.

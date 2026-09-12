@@ -88,10 +88,12 @@ class SharePointConnector:
         # Planned: optional content-based type detection (magic bytes) for renamed/cloaked files.
         # Wiring only; actual use in extraction will be controlled by a future opt-in toggle.
         self.use_content_type = bool(fs_opts.get("use_content_type", False))
-        self.scan_rich_media_metadata = bool(
-            fs_opts.get("scan_rich_media_metadata", False)
+        from core.licensing.augmented_scan import effective_rich_media_flags
+
+        self.scan_rich_media_metadata, self.scan_image_ocr = effective_rich_media_flags(
+            bool(fs_opts.get("scan_rich_media_metadata", False)),
+            bool(fs_opts.get("scan_image_ocr", False)),
         )
-        self.scan_image_ocr = bool(fs_opts.get("scan_image_ocr", False))
         try:
             self.ocr_max_dimension = int(fs_opts.get("ocr_max_dimension", 2000))
         except (TypeError, ValueError):

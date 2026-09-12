@@ -58,6 +58,9 @@ def _clean_guard():
         ("vcs_connector", Tier.ENTERPRISE),
         ("plugin_partner_interface", Tier.ENTERPRISE),
         ("partner_provider_driver", Tier.ENTERPRISE),
+        ("ocr_images", Tier.PRO),
+        ("rich_media_metadata", Tier.PRO),
+        ("data_soup_formats", Tier.PRO),
     ],
 )
 def test_feature_tier_map_entries(feature, tier):

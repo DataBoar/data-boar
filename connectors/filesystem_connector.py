@@ -394,13 +394,20 @@ def _read_text_sample(
         if ext.lower() in RICH_MEDIA_SCAN_EXTENSIONS and (
             rich_media_metadata or scan_image_ocr
         ):
+            from core.licensing.augmented_scan import effective_rich_media_flags
+
+            metadata_ok, ocr_ok = effective_rich_media_flags(
+                rich_media_metadata, scan_image_ocr
+            )
+            if not metadata_ok and not ocr_ok:
+                return finalize("")
             return finalize(
                 build_rich_media_text_sample(
                     path,
                     ext,
                     max_chars,
-                    metadata=rich_media_metadata,
-                    image_ocr=bool(scan_image_ocr and ext.lower() in IMAGE_EXTENSIONS),
+                    metadata=metadata_ok,
+                    image_ocr=bool(ocr_ok and ext.lower() in IMAGE_EXTENSIONS),
                     ocr_max_dimension=ocr_max_dimension,
                     ocr_lang=ocr_lang,
                 )
@@ -546,6 +553,13 @@ def _read_text_sample(
             from connectors.data_soup_formats import sample_epub_text
 
             return finalize(sample_epub_text(path, max_chars))
+        from core.licensing.augmented_scan import (
+            DATA_SOUP_EXTRA_EXTENSIONS,
+            data_soup_formats_allowed,
+        )
+
+        if ext in DATA_SOUP_EXTRA_EXTENSIONS and not data_soup_formats_allowed():
+            return finalize("")
         if ext == ".parquet":
             from connectors.data_soup_formats import sample_parquet_text
 
@@ -705,10 +719,12 @@ class FilesystemConnector:
         # with renamed/cloaked files. Currently an inert toggle; future phases will
         # consult this flag before choosing how to extract/scan content.
         self.use_content_type = bool(fs_opts.get("use_content_type", False))
-        self.scan_rich_media_metadata = bool(
-            fs_opts.get("scan_rich_media_metadata", False)
+        from core.licensing.augmented_scan import effective_rich_media_flags
+
+        self.scan_rich_media_metadata, self.scan_image_ocr = effective_rich_media_flags(
+            bool(fs_opts.get("scan_rich_media_metadata", False)),
+            bool(fs_opts.get("scan_image_ocr", False)),
         )
-        self.scan_image_ocr = bool(fs_opts.get("scan_image_ocr", False))
         try:
             self.ocr_max_dimension = int(fs_opts.get("ocr_max_dimension", 2000))
         except (TypeError, ValueError):
