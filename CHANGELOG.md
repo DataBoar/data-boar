@@ -38,7 +38,11 @@ Empty while the working tree carries **`1.8.0-beta`** (see section below).
 
 - **CPU pre-flight before numpy/ML (#929):** x86 hosts missing SSE4.2, POPCNT, or AVX skip the PyPI numpy/sklearn/DL imports (SIGILL is not catchable). Regex CPF/CNPJ still runs; `core.dl_backend` is lazy from `detector.py`. **Primary** path to restore working ML is the hosted wheelhouse `wheelhouse-x86-64-v1-2026-07-29` (`[noavx]`: `gh release download` + `pip install --no-index --find-links`). Distro numpy / `-Dcpu-baseline=min` are fallbacks only.
 
+<<<<<<< HEAD
 - **Logger redaction choke point (#1722):** `get_logger()` always attaches `SanitizeLogFilter`. Args and `msg` are sanitized whether they are `str`, `bytes`, `BaseException` (`clean_error`), or other objects (`str` then `sanitize_log_text`). Formatted `exc_info` / `stack_info` are redacted so `logger.exception` and `logger.warning("%s", exc)` cannot emit a password. `save_failure` remains the persistence sink. AST gate + allowlist in `tests/test_logger_pii_filter.py`.
+=======
+- **Rust bridge edge cases (#390):** `tests/test_rust_bridge.py` covers empty batch, Unicode/emoji, ~100KB strings, and Pro pre-filter fallback when `boar_fast_filter` is missing.
+>>>>>>> 0f4d8c09 (test: rust bridge empty/unicode/long-string and fallback (#390))
 
 - **Archive mismatch docs (#1354):** `--content-type-check` / `file_scan.use_content_type` does **not** dispatch compressed archives. On **filesystem** targets a lying archive extension records `archive_type_mismatch` in `scan_failures` instead of expanding. SMB/WebDAV/SharePoint skip expansion without that failure today. Magic-wins dispatch remains an optional later enhancement.
 
