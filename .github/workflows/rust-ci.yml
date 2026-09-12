@@ -62,10 +62,16 @@ jobs:
           cargo clippy --version
           cargo fmt --version
 
-      # Caching cargo registry/target would speed up subsequent runs but
-      # requires pinning actions/cache to a verified commit SHA per the repo
-      # convention. The crate is small and a clean build is ~10s, so we skip
-      # the cache step here and can add it in a follow-up that pins the SHA.
+      - name: Cache cargo registry and crate target
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            rust/boar_fast_filter/target
+          key: cargo-${{ runner.os }}-${{ hashFiles('rust/boar_fast_filter/Cargo.lock') }}
+          restore-keys: |
+            cargo-${{ runner.os }}-
 
       - name: cargo fmt --check
         run: cargo fmt --all -- --check

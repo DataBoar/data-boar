@@ -40,6 +40,8 @@ Empty while the working tree carries **`1.8.0-beta`** (see section below).
 
 - **Logger redaction choke point (#1722):** `get_logger()` always attaches `SanitizeLogFilter`. Args and `msg` are sanitized whether they are `str`, `bytes`, `BaseException` (`clean_error`), or other objects (`str` then `sanitize_log_text`). Formatted `exc_info` / `stack_info` are redacted so `logger.exception` and `logger.warning("%s", exc)` cannot emit a password. `save_failure` remains the persistence sink. AST gate + allowlist in `tests/test_logger_pii_filter.py`.
 
+- **Rust CI cargo cache (#386):** `rust-ci.yml` caches cargo registry/git and `boar_fast_filter/target` via SHA-pinned `actions/cache` (v6.1.0).
+
 - **Rust bridge edge cases (#390):** `tests/test_rust_bridge.py` covers empty batch, Unicode/emoji, ~100KB strings, and Pro pre-filter fallback when `boar_fast_filter` is missing.
 
 - **Archive mismatch docs (#1354):** `--content-type-check` / `file_scan.use_content_type` does **not** dispatch compressed archives. On **filesystem** targets a lying archive extension records `archive_type_mismatch` in `scan_failures` instead of expanding. SMB/WebDAV/SharePoint skip expansion without that failure today. Magic-wins dispatch remains an optional later enhancement.

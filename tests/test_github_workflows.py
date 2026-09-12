@@ -449,6 +449,9 @@ def test_rust_ci_runs_cargo_audit_and_deny() -> None:
     text = (WORKFLOWS / "rust-ci.yml").read_text(encoding="utf-8")
     assert "cargo audit" in text
     assert "cargo deny check" in text
+    assert "actions/cache@" in text
+    sha_40 = re.compile(r"actions/cache@[0-9a-f]{40}")
+    assert sha_40.search(text), "actions/cache must be pinned to a full commit SHA"
 
 
 def test_dockerfile_pins_python_base_image_by_digest() -> None:
