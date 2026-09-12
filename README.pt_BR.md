@@ -7,6 +7,7 @@
 [![CI](https://github.com/DataBoar/data-boar/actions/workflows/ci.yml/badge.svg)](https://github.com/DataBoar/data-boar/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/DataBoar/data-boar/actions/workflows/codeql.yml/badge.svg)](https://github.com/DataBoar/data-boar/security/code-scanning)
 [![SBOM](https://github.com/DataBoar/data-boar/actions/workflows/sbom.yml/badge.svg)](https://github.com/DataBoar/data-boar/actions/workflows/sbom.yml)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/DataBoar/data-boar/badge)](https://scorecard.dev/viewer/?uri=github.com/DataBoar/data-boar)
 [![Docker Hub](https://img.shields.io/docker/v/fabioleitao/data_boar?label=Docker%20Hub&logo=docker)](https://hub.docker.com/r/fabioleitao/data_boar)
 [![License](https://img.shields.io/github/license/DataBoar/data-boar)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/DataBoar/data-boar)](https://github.com/DataBoar/data-boar/releases)
