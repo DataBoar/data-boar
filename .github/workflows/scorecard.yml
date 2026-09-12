@@ -11,7 +11,8 @@ name: Scorecard supply-chain security
   push:
     branches: [main]
 
-permissions: read-all
+permissions:
+  contents: read
 
 jobs:
   analysis:

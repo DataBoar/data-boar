@@ -663,7 +663,8 @@ def test_scorecard_workflow_present_and_valid() -> None:
     assert "push" in on
     push = on.get("push") or {}
     assert push.get("branches") == ["main"]
-    assert data.get("permissions") == "read-all"
+    assert (data.get("permissions") or {}).get("contents") == "read"
+    assert data.get("permissions") != "read-all"
     jobs = data.get("jobs") or {}
     assert "analysis" in jobs
     job = jobs["analysis"]
