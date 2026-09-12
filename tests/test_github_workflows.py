@@ -74,6 +74,7 @@ def test_upstream_workflows_invoke_slack_ci_failure_notify_on_failure() -> None:
         ),
         ("semgrep.yml", "Semgrep", ("semgrep",)),
         ("gitleaks.yml", "Gitleaks", ("scan",)),
+        ("scorecard.yml", "Scorecard", ("analysis",)),
         ("sbom.yml", "SBOM", ("generate",)),
         (
             "dependabot-sync.yml",
@@ -653,6 +654,60 @@ def test_ci_yml_has_windows_test_job() -> None:
     ]
     assert pytest_steps, "Windows job must have a pytest step"
     assert pytest_steps[0].get("shell") == "bash"
+
+
+def test_scorecard_workflow_present_and_valid() -> None:
+    """#886: OpenSSF Scorecard — SARIF + publish_results, SHA pins (ADR 0005)."""
+    data = _load_workflow("scorecard.yml")
+    assert data.get("name") == "Scorecard supply-chain security"
+    on = data.get("on") or {}
+    assert "branch_protection_rule" in on
+    assert "schedule" in on
+    assert "push" in on
+    push = on.get("push") or {}
+    assert push.get("branches") == ["main"]
+    assert (data.get("permissions") or {}).get("contents") == "read"
+    assert data.get("permissions") != "read-all"
+    jobs = data.get("jobs") or {}
+    assert "analysis" in jobs
+    job = jobs["analysis"]
+    perms = job.get("permissions") or {}
+    assert perms.get("security-events") == "write"
+    assert perms.get("id-token") == "write"
+    steps = job.get("steps") or []
+    uses_lines = [
+        str(step.get("uses"))
+        for step in steps
+        if isinstance(step, dict) and step.get("uses")
+    ]
+    assert any("ossf/scorecard-action@" in line for line in uses_lines)
+    assert any("github/codeql-action/upload-sarif@" in line for line in uses_lines)
+    publish = False
+    persist = False
+    for step in steps:
+        if not isinstance(step, dict):
+            continue
+        with_block = step.get("with") or {}
+        if with_block.get("publish_results") is True:
+            publish = True
+        if with_block.get("persist-credentials") is False:
+            persist = True
+        if with_block.get("results_file") == "results.sarif":
+            assert with_block.get("results_format") == "sarif"
+    assert publish, "publish_results must be true for the public Scorecard badge"
+    assert persist, "checkout must set persist-credentials: false"
+    text = (WORKFLOWS / "scorecard.yml").read_text(encoding="utf-8")
+    sha_40 = re.compile(r"@[0-9a-f]{40}")
+    for line in text.splitlines():
+        code = line.split("#", 1)[0]
+        if "uses:" not in code or "docker://" in code:
+            continue
+        if "./.github/workflows/" in code:
+            continue
+        if any(p in code for p in ("actions/", "github/", "ossf/")):
+            assert sha_40.search(code), (
+                f"expected full commit SHA in uses line: {line.strip()!r}"
+            )
 
 
 def test_zizmor_workflow_present_and_valid() -> None:
