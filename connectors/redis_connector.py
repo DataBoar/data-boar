@@ -167,7 +167,10 @@ class RedisConnector:
                 if len(keys) >= self.sample_limit:
                     break
             # Pass the sampled keyspace as shared context for name-based detection on
-            # each key (cross-key co-occurrence in this SCAN window).
+            # each key. Intentional: every key's name scan sees the same `combined`
+            # string (all keys in this SCAN window), not an isolated key name — that
+            # gives cross-key co-occurrence context for pattern hits on opaque names
+            # (e.g. u:1001 next to customer:email:*) without changing per-key value sampling.
             combined = " ".join(keys)
             per_key_limit = min(self.sample_limit, len(keys))
             values_sampled = 0
@@ -181,20 +184,25 @@ class RedisConnector:
                 ):
                     # Bounded value sampling (audit v2): inspect key payloads when names are clean.
                     if values_sampled < self.value_sample_limit:
+                        key_type = str(self._client.type(key) or "unknown")
+                        raw_val = None
                         try:
-                            raw_val = self._client.get(key)
-                        except RedisResponseError as exc:
-                            if "WRONGTYPE" in str(exc).upper():
-                                key_type = str(self._client.type(key) or "unknown")
+                            if key_type == "string":
+                                raw_val = self._client.get(key)
+                            elif key_type == "hash":
+                                raw_val = self._sample_hash_value(key)
+                            elif key_type == "list":
+                                raw_val = self._sample_list_value(key)
+                            elif key_type == "set":
+                                raw_val = self._sample_set_value(key)
+                            elif key_type == "zset":
+                                raw_val = self._sample_zset_value(key)
+                            elif key_type == "stream":
+                                raw_val = self._sample_stream_value(key)
+                            else:
                                 value_not_sampled_by_type[key_type] = (
                                     value_not_sampled_by_type.get(key_type, 0) + 1
                                 )
-                                raw_val = None
-                            else:
-                                self.db_manager.save_failure(
-                                    target_name, "redis_error", f"{key}: {exc}"
-                                )
-                                raw_val = None
                         except (
                             RedisConnectionError,
                             RedisTimeoutError,
@@ -202,6 +210,11 @@ class RedisConnector:
                         ) as exc:
                             self.db_manager.save_failure(
                                 target_name, "unreachable", f"{key}: {exc}"
+                            )
+                            raw_val = None
+                        except RedisResponseError as exc:
+                            self.db_manager.save_failure(
+                                target_name, "redis_error", f"{key}: {exc}"
                             )
                             raw_val = None
                         if raw_val:
@@ -269,6 +282,63 @@ class RedisConnector:
             # Best-effort even when mid-loop sampling/detection raises.
             self._save_inferred_controls_summary(target_name, keys)
             self.close()
+
+    def _sample_hash_value(self, key: str) -> str | None:
+        cursor = 0
+        pairs: list[str] = []
+        while True:
+            cursor, batch = self._client.hscan(
+                key, cursor=cursor, count=self.value_sample_limit
+            )
+            for field, value in batch.items():
+                pairs.append(f"{field}={value}")
+                if len(pairs) >= self.value_sample_limit:
+                    return " ".join(pairs[: self.value_sample_limit])
+            if cursor == 0:
+                break
+        return " ".join(pairs) if pairs else None
+
+    def _sample_list_value(self, key: str) -> str | None:
+        end = max(0, self.value_sample_limit - 1)
+        items = self._client.lrange(key, 0, end)
+        if not items:
+            return None
+        return " ".join(str(item) for item in items[: self.value_sample_limit])
+
+    def _sample_set_value(self, key: str) -> str | None:
+        cursor = 0
+        members: list[str] = []
+        while True:
+            cursor, batch = self._client.sscan(
+                key, cursor=cursor, count=self.value_sample_limit
+            )
+            members.extend(str(item) for item in batch)
+            if len(members) >= self.value_sample_limit:
+                return " ".join(members[: self.value_sample_limit])
+            if cursor == 0:
+                break
+        return " ".join(members) if members else None
+
+    def _sample_zset_value(self, key: str) -> str | None:
+        end = max(0, self.value_sample_limit - 1)
+        items = self._client.zrange(key, 0, end)
+        if not items:
+            return None
+        return " ".join(str(item) for item in items[: self.value_sample_limit])
+
+    def _sample_stream_value(self, key: str) -> str | None:
+        entries = self._client.xrange(key, count=self.value_sample_limit)
+        if not entries:
+            return None
+        parts: list[str] = []
+        for _entry_id, fields in entries:
+            if not isinstance(fields, dict):
+                continue
+            for field, value in fields.items():
+                parts.append(f"{field}={value}")
+                if len(parts) >= self.value_sample_limit:
+                    return " ".join(parts[: self.value_sample_limit])
+        return " ".join(parts) if parts else None
 
     def _save_inferred_controls_summary(
         self, target_name: str, identifier_names: list[Any]
