@@ -42,6 +42,8 @@ pip install data-boar
 data-boar --demo
 ```
 
+A mesma demo sem passo de venv se você já tem [uv](https://docs.astral.sh/uv/): **`uvx data-boar --demo`**.
+
 No Windows, o fluxo **recomendado** para não-técnicos é **pipx** — veja o [guia Windows](docs/QUICKSTART_WINDOWS.md).
 
 **Linux via pipx:** em Debian/Ubuntu e Fedora com Python >=3.12 disponível, `pipx install data-boar` costuma ser direto. Na família RHEL9 e em Alpine/musl há 1 pré-passo de onboarding — veja [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) antes do `pipx install`.

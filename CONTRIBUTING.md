@@ -10,13 +10,15 @@ Thank you for considering contributing. This document covers local setup, workfl
 
 - **Product and brand:** **Data Boar** — use this name in prose, issues, and PR titles.
 - **Upstream repository:** **[github.com/DataBoar/data-boar](https://github.com/DataBoar/data-boar)** — fork or clone from there (replace `YOUR_FORK` if you use a fork).
-- **PyPI distribution name:** `pyproject.toml` declares **`name = "data-boar"`**. When published to the Python Package Index, installs will use:
+- **PyPI distribution name:** `pyproject.toml` declares **`name = "data-boar"`**. The project **is published** on the Python Package Index ([pypi.org/project/data-boar](https://pypi.org/project/data-boar/)):
 
   ```bash
   pip install data-boar
+  pipx install data-boar
+  uvx data-boar --demo
   ```
 
-  Until a release is published under that name, use a **git clone** with **`uv sync`** or **`pip install -e .`**. The tree still contains the historical **`lgpd_crawler`** Python package for imports and continuity — that is implementation layout, not the product name. Rename context: **[ADR 0014](docs/adr/ADR-0014-rename-repo-and-package-python3-lgpd-crawler-to-data-boar.md)**.
+  Pre-release lines on **`main`** (for example **`1.8.0-beta`**) stay **git-only** — they are not the PyPI wheel. For contributors, or to run that working tree, use a **git clone** with **`uv sync`** or **`pip install -e .`**. The tree still contains the historical **`lgpd_crawler`** Python package for imports and continuity — that is implementation layout, not the product name. Rename context: **[ADR 0014](docs/adr/ADR-0014-rename-repo-and-package-python3-lgpd-crawler-to-data-boar.md)**.
 
 **SQL connectors (optional extras):** Core **`pip install data-boar`** includes **filesystem + SQLite** scanning only — no PostgreSQL/MySQL/MariaDB/MSSQL/Oracle C-extension wheels. Install per engine:
 

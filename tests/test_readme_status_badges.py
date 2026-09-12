@@ -44,3 +44,14 @@ def test_readme_status_badges_after_mascot(readme_name: str) -> None:
     assert "coveralls" not in intro.lower()
     # Issue example used a personal GitHub path; upstream is the org.
     assert "github.com/FabioLeitao/data-boar" not in intro
+
+
+@pytest.mark.parametrize("readme_name", ["README.md", "README.pt_BR.md"])
+def test_readme_pypi_install_is_live_not_future(readme_name: str) -> None:
+    """#1752: PyPI is published; do not hedge pip install as 'when published'."""
+    text = (_REPO_ROOT / readme_name).read_text(encoding="utf-8")
+    assert "uvx data-boar --demo" in text
+    lower = text.lower()
+    assert "when published" not in lower
+    assert "quando publicado" not in lower
+    assert "pypi.org/project/data-boar" in text
