@@ -1,4 +1,4 @@
-"""Redis connector: WRONGTYPE visibility and sample_limit-derived key classification cap."""
+"""Redis connector: TYPE dispatch value sampling (#1348 Part B)."""
 
 from __future__ import annotations
 
@@ -19,44 +19,56 @@ def _has_module(name: str) -> bool:
     return importlib.util.find_spec(name) is not None
 
 
-def _mk_scanner():
+def _mk_scanner(*, value_hits: bool = False):
     scanner = MagicMock()
-    scanner.scan_column.return_value = {
-        "sensitivity_level": "LOW",
-        "pattern_detected": "",
-        "norm_tag": "",
-        "ml_confidence": 0,
-    }
+
+    def _scan_column(column: str, content: str) -> dict:
+        if value_hits and ":value" in column:
+            return {
+                "sensitivity_level": "HIGH",
+                "pattern_detected": "EMAIL",
+                "norm_tag": "LGPD Art. 5",
+                "ml_confidence": 0,
+            }
+        return {
+            "sensitivity_level": "LOW",
+            "pattern_detected": "",
+            "norm_tag": "",
+            "ml_confidence": 0,
+        }
+
+    scanner.scan_column.side_effect = _scan_column
     return scanner
 
 
-def test_redis_wrongtype_recorded_per_type_not_as_connection_failure():
+def _run_with_client(client: MagicMock, scanner: MagicMock, dbm: MagicMock, **kwargs):
+    conn = RedisConnector(
+        {"name": "redis-lab", "host": "127.0.0.1", OPT_IN_KEY: True},
+        scanner,
+        dbm,
+        sample_limit=kwargs.get("sample_limit", 100),
+        value_sample_limit=kwargs.get("value_sample_limit", 10),
+    )
+    conn._client = client
+    with patch.object(conn, "connect"):
+        conn.run()
+    return conn
+
+
+def test_redis_unsupported_type_recorded_not_as_connection_failure():
     if not _has_module("redis"):
         pytest.skip("redis not installed")
-    from redis.exceptions import ResponseError
 
     dbm = MagicMock()
     client = MagicMock()
-    client.scan_iter.return_value = iter(["user:1", "session:2"])
-    client.get.side_effect = [
-        ResponseError(
-            "WRONGTYPE Operation against a key holding the wrong kind of value"
-        ),
-        "plain-string-value",
-    ]
-    client.type.side_effect = ["hash", "string"]
-
-    conn = RedisConnector(
-        {"name": "redis-lab", "host": "127.0.0.1", OPT_IN_KEY: True},
-        _mk_scanner(),
-        dbm,
-        sample_limit=100,
-        value_sample_limit=10,
+    client.scan_iter.return_value = iter(["u:1002", "u:ghost"])
+    client.type.side_effect = ["hash", "none"]
+    client.hscan.return_value = (
+        0,
+        {"email": "hash.pii@example.invalid", "cpf": "529.982.247-25"},
     )
-    conn._client = client
-    # Bypass connect() — exercise sampling path with the mock client.
-    with patch.object(conn, "connect"):
-        conn.run()
+
+    _run_with_client(client, _mk_scanner(value_hits=True), dbm, value_sample_limit=5)
 
     unreachable = [
         c for c in dbm.save_failure.call_args_list if c.args[1] == "unreachable"
@@ -70,10 +82,178 @@ def test_redis_wrongtype_recorded_per_type_not_as_connection_failure():
     ]
     assert len(sampled_calls) == 1
     payload = json.loads(sampled_calls[0].args[2])
-    assert payload["keys_discovered"] == 2
-    assert payload["keys_name_classified"] == 2
-    assert payload["value_not_sampled_by_type"] == {"hash": 1}
-    assert client.get.call_count == 2
+    assert payload["value_not_sampled_by_type"] == {"none": 1}
+    assert payload["values_sampled"] >= 1
+    client.get.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("redis_type", "setup_client"),
+    [
+        (
+            "string",
+            lambda client: (
+                setattr(client, "type", MagicMock(return_value="string")),
+                setattr(
+                    client,
+                    "get",
+                    MagicMock(return_value="529.982.247-25 plain@example.invalid"),
+                ),
+            ),
+        ),
+        (
+            "hash",
+            lambda client: (
+                setattr(client, "type", MagicMock(return_value="hash")),
+                setattr(
+                    client,
+                    "hscan",
+                    MagicMock(
+                        return_value=(
+                            0,
+                            {
+                                "email": "hash.pii@example.invalid",
+                                "cpf": "529.982.247-25",
+                            },
+                        )
+                    ),
+                ),
+            ),
+        ),
+        (
+            "list",
+            lambda client: (
+                setattr(client, "type", MagicMock(return_value="list")),
+                setattr(
+                    client,
+                    "lrange",
+                    MagicMock(return_value=["529.982.247-25", "list@example.invalid"]),
+                ),
+            ),
+        ),
+        (
+            "set",
+            lambda client: (
+                setattr(client, "type", MagicMock(return_value="set")),
+                setattr(
+                    client,
+                    "sscan",
+                    MagicMock(return_value=(0, ["set.member@example.invalid"])),
+                ),
+            ),
+        ),
+        (
+            "zset",
+            lambda client: (
+                setattr(client, "type", MagicMock(return_value="zset")),
+                setattr(
+                    client,
+                    "zrange",
+                    MagicMock(
+                        return_value=["529.982.247-25 zset.member@example.invalid"]
+                    ),
+                ),
+            ),
+        ),
+        (
+            "stream",
+            lambda client: (
+                setattr(client, "type", MagicMock(return_value="stream")),
+                setattr(
+                    client,
+                    "xrange",
+                    MagicMock(
+                        return_value=[
+                            (
+                                "1700000000000-0",
+                                {
+                                    "email": "stream.pii@example.invalid",
+                                    "cpf": "123.456.789-09",
+                                },
+                            )
+                        ]
+                    ),
+                ),
+            ),
+        ),
+    ],
+)
+def test_redis_type_dispatch_samples_value_and_finds_pii(redis_type, setup_client):
+    if not _has_module("redis"):
+        pytest.skip("redis not installed")
+
+    dbm = MagicMock()
+    client = MagicMock()
+    client.scan_iter.return_value = iter(["u:1001"])
+    setup_client(client)
+
+    scanner = _mk_scanner(value_hits=True)
+    _run_with_client(client, scanner, dbm, value_sample_limit=5)
+
+    value_scans = [
+        c for c in scanner.scan_column.call_args_list if ":value" in c.args[0]
+    ]
+    assert value_scans
+    assert dbm.save_finding.call_count >= 1
+    sampled_calls = [
+        c
+        for c in dbm.save_failure.call_args_list
+        if c.args[1] == REDIS_SCAN_FAILURE_VALUE_NOT_SAMPLED
+    ]
+    assert not sampled_calls, f"{redis_type} should not be counted as unsampled"
+
+
+def test_redis_all_dispatched_types_leave_value_not_sampled_empty():
+    if not _has_module("redis"):
+        pytest.skip("redis not installed")
+
+    dbm = MagicMock()
+    client = MagicMock()
+    keys = ["k:string", "k:hash", "k:list", "k:set", "k:zset", "k:stream"]
+    client.scan_iter.return_value = iter(keys)
+
+    def _type_side_effect(key: str) -> str:
+        return str(key).split(":", 1)[1]
+
+    client.type.side_effect = _type_side_effect
+    client.get.return_value = "529.982.247-25"
+    client.hscan.return_value = (0, {"cpf": "529.982.247-25"})
+    client.lrange.return_value = ["529.982.247-25"]
+    client.sscan.return_value = (0, ["529.982.247-25"])
+    client.zrange.return_value = ["529.982.247-25"]
+    client.xrange.return_value = [("1-0", {"cpf": "529.982.247-25"})]
+
+    scanner = _mk_scanner(value_hits=True)
+    _run_with_client(client, scanner, dbm, sample_limit=6, value_sample_limit=6)
+
+    sampled_calls = [
+        c
+        for c in dbm.save_failure.call_args_list
+        if c.args[1] == REDIS_SCAN_FAILURE_VALUE_NOT_SAMPLED
+    ]
+    assert not sampled_calls
+    assert dbm.save_finding.call_count == len(keys)
+
+
+def test_redis_unknown_future_type_still_counted():
+    if not _has_module("redis"):
+        pytest.skip("redis not installed")
+
+    dbm = MagicMock()
+    client = MagicMock()
+    client.scan_iter.return_value = iter(["module:key"])
+    client.type.return_value = "ReJSON-RL"
+
+    _run_with_client(client, _mk_scanner(), dbm, value_sample_limit=3)
+
+    sampled_calls = [
+        c
+        for c in dbm.save_failure.call_args_list
+        if c.args[1] == REDIS_SCAN_FAILURE_VALUE_NOT_SAMPLED
+    ]
+    assert len(sampled_calls) == 1
+    payload = json.loads(sampled_calls[0].args[2])
+    assert payload["value_not_sampled_by_type"] == {"ReJSON-RL": 1}
 
 
 def test_redis_per_key_limit_follows_sample_limit():
@@ -94,6 +274,7 @@ def test_redis_per_key_limit_follows_sample_limit():
         value_sample_limit=5,
     )
     conn._client = client
+    client.type.return_value = "string"
     client.get.return_value = None
     with patch.object(conn, "connect"):
         conn.run()
