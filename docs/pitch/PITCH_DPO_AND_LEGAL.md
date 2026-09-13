@@ -43,6 +43,20 @@ Shared responsibility: [DECISION_MAKER_VALUE_BRIEF.md](../DECISION_MAKER_VALUE_B
 
 ---
 
+## Evidence bundle = trust triangle
+
+[ENTERPRISE_DB_OPS_AND_GRC_EVIDENCE.md](../ops/inspirations/ENTERPRISE_DB_OPS_AND_GRC_EVIDENCE.md) asked for a **minimal “evidence bundle”** story: which artefacts a DPO or audit consumer should keep with a scan. That item is **answered here**, not left pending: the bundle **is** the **trust triangle** in [ACTIONABLE_GOVERNANCE_AND_TRUST.md](../ops/inspirations/ACTIONABLE_GOVERNANCE_AND_TRUST.md) §1.
+
+| Leg | Artefact | Role for counsel / DPO |
+| --- | -------- | ------------------------ |
+| Narrative | Executive Markdown (`data-boar-report`) | Stakeholder-grade **path to action** (counts and recommendations — no bulk PII) |
+| Machine record | `scan_manifest_*.yaml` | Version, session id, UTC window, sampling/timeouts, **scope hash** — backs claims in the Markdown |
+| Replay | CLI invocation + SQLite session | The **same** command against the **same** session file regenerates the report |
+
+Drop any one leg and you have a slide deck, not a pack you can attach. This is still **inventory evidence**, not a sealed exhibit, WORM store, or CPP-complete custody ([ADR 0025](../adr/ADR-0025-compliance-positioning-evidence-inventory-not-legal-conclusion-engine.md)). How the three map to forensic *themes* (ISO/NIST/CPP **pointers only**) is in primer [§8](../primers/FORENSICS_AND_EVIDENCE_PRIMER.md#8-data-boar-positioning).
+
+---
+
 ## Differentiator (generic scanner vs this product)
 
 | Aspect                | Typical generic scanner            | Data Boar                                                                                             |

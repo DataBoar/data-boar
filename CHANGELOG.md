@@ -26,6 +26,8 @@ Empty while the working tree carries **`1.8.0-beta`** (see section below).
 
 ### Included since `1.7.4.post12`
 
+- **Primer + DPO/legal pitch manifesto bridge (#700):** primer §8 mapping table (defensive scanning + actionable-governance doctrine vs ISO/NIST/CPP **themes**, not legal equivalence); pitch states the trust triangle **is** the GRC “evidence bundle”. ADR-0025 ceiling unchanged.
+
 - **`--validate-config` invalid path is side-effect free (#538):** unknown connectors / missing required keys abort **before** creating `report.output_dir`, the `sqlite_path` parent, or opening the integrity-anchor SQLite file.
 
 - **Integrity anchor upgrade (#1262):** a legitimate `pip`/`pipx` upgrade that changes hashed modules stays `tampered`/`-alpha` until the operator runs `--reconcile-integrity-anchor --confirm-upgrade-to=<installed-version>` (must match the running package). Auto-rebaseline on `release_label` change was a bypass surface and is removed.
