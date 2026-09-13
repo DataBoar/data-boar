@@ -74,8 +74,8 @@ jobs:
       - name: Fallback install uv via pip if action failed
         if: steps.setup_uv.outcome != 'success'
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install "uv==0.11.2"
+          python -m pip install --disable-pip-version-check --require-hashes \
+            -r .github/pip-constraints/ci-uv-fallback.txt
           uv --version
 
       - name: Install dependencies
@@ -467,7 +467,9 @@ jobs:
           python-version: "3.12"
 
       - name: Install ansible-core
-        run: pip install --disable-pip-version-check "ansible-core>=2.16,<2.19"
+        run: |
+          pip install --disable-pip-version-check --require-hashes \
+            -r .github/pip-constraints/ci-ansible-syntax.txt
 
       - name: Syntax-check LAB-NODE-01 playbooks
         run: bash scripts/ansible-syntax-check.sh
