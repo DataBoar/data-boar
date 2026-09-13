@@ -6,7 +6,22 @@ Este documento descreve quais versões da aplicação são suportadas, qual linh
 
 **Índice de postura de governança (gates de PII, contenção de agentes, supply chain, proveniência):** [`docs/SECURITY_GOVERNANCE_POSTURE_HUB.pt_BR.md`](docs/SECURITY_GOVERNANCE_POSTURE_HUB.pt_BR.md) ([EN](docs/SECURITY_GOVERNANCE_POSTURE_HUB.md)) — links co-localizados; não substitui esta política de vulnerabilidades.
 
+**Reportar uma vulnerabilidade (privado):** [Abrir um security advisory no GitHub](https://github.com/DataBoar/data-boar/security/advisories/new). Envie o mesmo disclosure para [contact@databoar.com.br](mailto:contact@databoar.com.br). **Não** abra uma issue pública com prova de conceito. Detalhes: [Reportar uma vulnerabilidade](#reportar-uma-vulnerabilidade) e [Prazo de divulgação](#prazo-de-divulgação).
+
+OpenSSF Scorecard deste repositório (badge depois do publish; API JSON): [visualizador Scorecard](https://scorecard.dev/viewer/?uri=github.com/DataBoar/data-boar) · [api.securityscorecards.dev](https://api.securityscorecards.dev/projects/github.com/DataBoar/data-boar) · badge do README via [api.scorecard.dev](https://api.scorecard.dev/projects/github.com/DataBoar/data-boar/badge).
+
 ## Versões suportadas
+
+**Produto (o que recebemos patches para reportes de segurança):**
+
+| Linha | Estado |
+| ----- | ------ |
+| **1.7.4.x** (estável **1.7.4**, incluindo PyPI **1.7.4.postN**; Docker Hub `fabioleitao/data_boar` **1.7.4** / `latest` quando essas tags estão publicadas) | **Suportada** — correções de segurança nesta linha estável |
+| **`main`** (árvore de trabalho; atualmente **1.8.0-beta**, só git) | **Suportada** — correções entram aqui primeiro, depois no estável quando couber |
+
+**Não suportado:** tags e imagens **anteriores a 1.7.4**; forks ou imagens reconstruídas não oficiais; espelhos não oficiais; qualquer versão pública com quarto segmento “1.7.4.N” (este projeto não publica esse esquema — veja [docs/VERSIONING.pt_BR.md](docs/VERSIONING.pt_BR.md)).
+
+**Runtime (Python):**
 
 - **Aplicação (marca):** **Data Boar**. Id da distribuição PyPI: **`data-boar`** (veja [CONTRIBUTING.pt_BR.md](CONTRIBUTING.pt_BR.md#repositório-e-identidade-de-instalação-data-boar)). O desenvolvimento atual tem como alvo **Python 3.12+**.
 - Objetivamos suportar as últimas versões estáveis minor do Python 3.12 e 3.13 em Linux, macOS e Windows.
@@ -181,19 +196,29 @@ Quando a API ou o dashboard for **exposto à internet ou a redes não confiávei
 
 Se você acredita ter encontrado uma vulnerabilidade de segurança neste projeto:
 
-1. **Não abra uma issue pública com detalhes de exploração.**
-1. Em vez disso:
-   - Abra uma nova issue na aba **Issues** com uma descrição curta e em alto nível (sem dados sensíveis de PoC), **ou**
-   - Se os security advisories do GitHub ou o reporte privado estiver disponível para este repositório, prefira esse canal.
+1. **Não abra uma issue pública com detalhes de exploração ou prova de conceito.**
+1. **Prefira divulgação privada:**
+   - [Abrir um security advisory no GitHub](https://github.com/DataBoar/data-boar/security/advisories/new), **ou**
+   - Enviar e-mail para [contact@databoar.com.br](mailto:contact@databoar.com.br) (alias público já usado pelo Data Boar).
 1. Inclua pelo menos:
    - Versão/commit do projeto que você está usando.
    - Versão do Python e detalhes do SO.
    - Uma descrição mínima do impacto (ex.: divulgação de informação, escalação de privilégio, DoS).
-1. Os mantenedores irão:
-   - Confirmar o recebimento o mais rápido possível.
-   - Investigar e, se confirmado, trabalhar em uma correção e coordenar a divulgação.
+1. Os mantenedores seguirão o [Prazo de divulgação](#prazo-de-divulgação).
 
-Se não tiver certeza se algo é sensível do ponto de vista de segurança, prefira o canal privado (ou uma issue pública mínima) para que possamos triar com segurança.
+Se não tiver certeza se algo é sensível do ponto de vista de segurança, use o **formulário de advisory ou o e-mail**, não uma issue pública.
+
+## Prazo de divulgação
+
+Estas são **metas**, não SLAs contratuais.
+
+| Passo | Meta |
+| ---- | ------ |
+| **Confirmar recebimento** de um reporte de vulnerabilidade | Em até **72 horas** após um advisory privado ou e-mail que de fato chegue |
+| **Corrigir ou documentar** (patch, advisory, mitigação ou “não corrigir” com justificativa) | Conforme a **severidade**: **alto/crítico** — objetivar **30 dias**; menor severidade — próximo trem de release suportado quando for prático |
+| **Divulgação pública** | Coordenada depois que a correção estiver disponível em uma [versão suportada](#versões-suportadas), ou antes se o reporte já for público |
+
+**Não** abra uma issue **pública** no GitHub com PoC, passos de exploração ou segredos reais. Se a UI do GitHub só oferecer issue pública, mantenha o corpo **em alto nível** (sem reprodução) e aponte para o advisory privado.
 
 ## Resposta de segurança (SLAs opcionais)
 
@@ -201,7 +226,7 @@ Estes são **metas** para mantenedores e reportadores, não obrigações contrat
 
 | Área                               | Meta opcional                                                                                                                                                                                                                                                                |
 | ------                             | ----------------                                                                                                                                                                                                                                                             |
-| **Reportes de vulnerabilidade**    | Objetivamos **confirmar recebimento** em até **5 dias úteis** e, para achados **altos/críticos**, **corrigir ou documentar** (ex.: advisory, mitigação ou “não corrigir” com justificativa) em até **30 dias**.                                                              |
+| **Reportes de vulnerabilidade**    | Objetivamos **confirmar recebimento** em até **72 horas** (veja [Prazo de divulgação](#prazo-de-divulgação)) e, para achados **altos/críticos**, **corrigir ou documentar** (ex.: advisory, mitigação ou “não corrigir” com justificativa) em até **30 dias**. |
 | **PRs de segurança do Dependabot** | Tratamos os PRs **de segurança** do Dependabot como **P0**: objetivamos **fazer merge ou responder** (ex.: merge, fechar com comentário ou adiar com justificativa) em até **5 dias úteis**. PRs de dependência que não sejam de segurança seguem o ciclo normal de revisão. |
 
 Veja **CONTRIBUTING** para como aplicar atualizações de dependências e executar `pip-audit`; veja **`.github/dependabot.yml`** para a configuração do Dependabot.
