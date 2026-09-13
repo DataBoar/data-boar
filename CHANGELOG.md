@@ -26,6 +26,8 @@ Empty while the working tree carries **`1.8.0-beta`** (see section below).
 
 ### Included since `1.7.4.post12`
 
+- **Scorecard Dangerous-Workflow (#1888):** `operator-gated-pr-guard.yml` omits checkout `ref:` (default-branch `github.sha`) so Scorecard does not treat trusted `base.sha` like untrusted `head.sha`. `persist-credentials: false` unchanged; SSHSIG gate unchanged.
+
 - **Inspirations NIST PF + OWASP AI Exchange (#698):** `OWASP.md` plus full `OWASP.pt_BR.md`; NIST Privacy Framework Identify-P and AI RMF Privacy-Enhanced sections on the Wazuh/NIST lab-op note (EN + pt-BR); hub row. Alignment/inspiration only — not PF, RMF, or OWASP certification.
 
 - **`--validate-config` invalid path is side-effect free (#538):** unknown connectors / missing required keys abort **before** creating `report.output_dir`, the `sqlite_path` parent, or opening the integrity-anchor SQLite file.

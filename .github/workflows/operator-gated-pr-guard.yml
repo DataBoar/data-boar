@@ -1,9 +1,12 @@
 # Operator-gated PR merge guard (GitHub #1709). Brother of operator-gated-reopen.yml (#990).
 #
 # Trusted path: pull_request_target so GitHub runs THIS file from the default
-# branch, not from the PR HEAD. Checkout is the PR **base SHA only** — never
-# the PR tree. Changed paths, labels, and the latest comment come from the
-# GitHub API / event context. Nothing from the PR is executed.
+# branch, not from the PR HEAD. Checkout omits `ref:` so the action uses
+# github.sha (default-branch tip) — never the PR tree. Scorecard Dangerous-
+# Workflow (#1888) flags interpolating *any* PR-event SHA into checkout
+# `ref:`, including trusted `base.sha`. Do not set `ref:` to base.sha or
+# head.sha. Changed paths, labels, and the latest comment come from the GitHub
+# API / event context. Nothing from the PR is executed.
 #
 # Do not add `on: pull_request` with this job name: that YAML is attacker-
 # controlled and can keep the required-check name while no-op'ing the job.
@@ -25,6 +28,12 @@
 # require a PR with thousands of changed files — disproportionate to mitigate
 # here (no second listFiles strategy in this slice).
 #
+# #1888: Scorecard cannot tell base.sha from head.sha in checkout `ref:`.
+# Residual if we had kept base.sha: false-positive Dangerous-Workflow warn.
+# Mitigation: omit checkout `ref:` (default-branch github.sha). Attestation
+# still binds HEAD_SHA from the event; scripts still come from this YAML's
+# tree, not the PR.
+#
 # Operator (human): add this check as required on ruleset `main-gate-pii`.
 name: Operator-gated PR attestation
 
@@ -37,7 +46,7 @@ concurrency:
   cancel-in-progress: true
 
 on:
-  # zizmor: ignore[dangerous-triggers] intentional pull_request_target: YAML from default branch only; checkout base SHA; pulls API for paths/comments; no PR code executed (#1832).
+  # zizmor: ignore[dangerous-triggers] intentional pull_request_target: YAML from default branch only; checkout omits ref (github.sha); pulls API for paths/comments; no PR code executed (#1832 / #1888).
   pull_request_target:
     types: [opened, synchronize, reopened, labeled, unlabeled]
 
@@ -46,10 +55,10 @@ jobs:
     name: SSHSIG attestation when gated
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout PR base only (never PR HEAD)
+      - name: Checkout default branch only (never PR HEAD)
+        # #1888: do not pass github.event.pull_request.*.sha as checkout `ref:`.
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.pull_request.base.sha }}
           persist-credentials: false
           fetch-depth: 1
 
