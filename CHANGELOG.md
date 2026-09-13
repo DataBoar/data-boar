@@ -38,6 +38,8 @@ Empty while the working tree carries **`1.8.0-beta`** (see section below).
 
 - **PyPI install docs (#1752):** README / CONTRIBUTING no longer say `pip install data-boar` is “when published”. The package is live; document `uvx data-boar` and `uvx data-boar --demo`. Last stable wheel can lag `main` (pre-release remains git-only).
 
+- **TECH_GUIDE forensic scan posture (#691):** live vs offline collection, operator checklist, and CISO tool-validation note (ISO/IEC 27041 pointer, ADR-0007 corpus, ADR-0047 RCA, NIST CFTT as complementary — not FTK/AXIOM equivalence). `volatility_class` remains author metadata (#687), not an auto live/offline flag.
+
 - **Integrity snapshot public `error` (#1721):** `ensure_integrity_anchor` fail-soft JSON used by unauthenticated `/health` and `/status` stores `type(e).__name__` only. `str(e)` (paths, JSON parse context) stays in the operator log via `SanitizeLogFilter`.
 
 - **CPU pre-flight before numpy/ML (#929):** x86 hosts missing SSE4.2, POPCNT, or AVX skip the PyPI numpy/sklearn/DL imports (SIGILL is not catchable). Regex CPF/CNPJ still runs; `core.dl_backend` is lazy from `detector.py`. **Primary** path to restore working ML is the hosted wheelhouse `wheelhouse-x86-64-v1-2026-07-29` (`[noavx]`: `gh release download` + `pip install --no-index --find-links`). Distro numpy / `-Dcpu-baseline=min` are fallbacks only.
