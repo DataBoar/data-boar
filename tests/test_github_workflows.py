@@ -341,6 +341,30 @@ def test_sbom_yml_pins_actions_to_shas() -> None:
         )
 
 
+def test_sbom_workflow_attests_oidc_provenance_on_release() -> None:
+    """#1891: Scorecard Signed-Releases needs a ``*.intoto.jsonl`` Release asset; OIDC only."""
+    text = (WORKFLOWS / "sbom.yml").read_text(encoding="utf-8")
+    assert (
+        "actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8"
+        in text
+    )
+    assert "data-boar.intoto.jsonl" in text
+    assert "PROVENANCE_BUNDLE" in text
+    data = _load_workflow("sbom.yml")
+    gen = data["jobs"]["generate"]
+    perms = gen.get("permissions") or {}
+    assert perms.get("id-token") == "write"
+    assert perms.get("attestations") == "write"
+    assert perms.get("contents") == "write"
+    assert "COSIGN_PRIVATE" not in text
+    assert "COSIGN_PASSWORD" not in text
+    assert "NATIVE_PACKAGE_GPG_PRIVATE_KEY" not in text
+    names = [s.get("name") for s in gen.get("steps") or [] if isinstance(s, dict)]
+    attest_idx = names.index("Attest release artifacts (Sigstore OIDC, issue 1891)")
+    attach_idx = names.index("Attach SBOMs to GitHub Release (when applicable)")
+    assert attest_idx < attach_idx
+
+
 def test_sbom_yml_libmariadb_uses_timed_composite_action() -> None:
     """SBOM must share the #1646 azure→archive pin; do not inline bare apt-get."""
     text = (WORKFLOWS / "sbom.yml").read_text(encoding="utf-8")

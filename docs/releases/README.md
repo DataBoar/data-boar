@@ -33,3 +33,5 @@ To publish **v1.3.1** (or the version you just bumped) as a GitHub release with 
    Or in the GitHub web UI: **Releases** → **Draft a new release** → choose tag `v1.3.1`, set title to `1.3.1`, and paste the contents of `docs/releases/1.3.1.md` into the description. For RCs, tick **Set as a pre-release** and leave **Set as the latest release** **off** unless you truly want the RC to become the repo’s **Latest** pointer.
 
 The release will then be visible on the repository’s Releases page and the Docker image with the same version tag is already on Docker Hub.
+
+**Provenance (next tag, #1891):** after this workflow lands, the **SBOM** job attests those Release assets with GitHub OIDC / Sigstore and uploads **`data-boar.intoto.jsonl`**. Create the GitHub Release (or let `release: created` run after the tag) so the attach step can upload. Historical tags are **not** retro-signed. PyPI Trusted Publishing is a separate workflow.

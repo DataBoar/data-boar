@@ -26,6 +26,8 @@ Empty while the working tree carries **`1.8.0-beta`** (see section below).
 
 ### Included since `1.7.4.post12`
 
+- **Scorecard Signed-Releases (#1891):** the next GitHub tag (`1.7.4.postN` or `1.8.0`, whichever ships first) attaches Sigstore SLSA provenance (`data-boar.intoto.jsonl`) via OIDC `actions/attest-build-provenance` on the SBOM job. Historical tags stay unsigned. PyPI Trusted Publishing is unchanged.
+
 - **Primer + DPO/legal pitch manifesto bridge (#700):** primer §8 mapping table (defensive scanning + actionable-governance doctrine vs ISO/NIST/CPP **themes**, not legal equivalence); pitch states the trust triangle **is** the GRC “evidence bundle”. ADR-0025 ceiling unchanged.
 
 - **Inspirations NIST PF + OWASP AI Exchange (#698):** `OWASP.md` plus full `OWASP.pt_BR.md`; NIST Privacy Framework Identify-P and AI RMF Privacy-Enhanced sections on the Wazuh/NIST lab-op note (EN + pt-BR); hub row. Alignment/inspiration only — not PF, RMF, or OWASP certification.

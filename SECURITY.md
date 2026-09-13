@@ -87,8 +87,9 @@ Formal **CycloneDX JSON** SBOMs support **supply-chain** visibility and **incide
 | -------- | -------- | ------------------ |
 | **`sbom-python.cdx.json`** | Python dependencies aligned with **`uv.lock`** (via `uv export` + **`cyclonedx-py`**) | Workflow **`SBOM`**, local **`scripts/generate-sbom.ps1`** |
 | **`sbom-docker-image.cdx.json`** | Packages in the **built** OCI image (OS + Python layers) | **`syft`** in **`anchore/syft:v1.28.0`** against image `data_boar:sbom` built from the **`Dockerfile`** at the same commit |
+| **`data-boar.intoto.jsonl`** | Sigstore SLSA provenance for the SBOM/digest/manifest files (OIDC; no Cosign private key) | Workflow **`SBOM`** on **`v*`** tags / GitHub Release (`actions/attest-build-provenance`). **Next** tag only — older Releases stay unsigned |
 
-**Where to download:** GitHub Actions workflow [**SBOM**](.github/workflows/sbom.yml) uploads both files as **workflow artifacts** (runs on version tags `v*`, on **`release: published`**, on **`workflow_dispatch`**, and on path-filtered PRs to `main`). When a **GitHub Release** already exists for the tag, the same files are **attached to that release**.
+**Where to download:** GitHub Actions workflow [**SBOM**](.github/workflows/sbom.yml) uploads the CycloneDX files as **workflow artifacts** (runs on version tags `v*`, on **`release: published`**, on **`workflow_dispatch`**, and on path-filtered PRs to `main`). When a **GitHub Release** already exists for the tag, those files are **attached to that release**. From the **next** `v*` tag, the same job also attaches **`data-boar.intoto.jsonl`** (OpenSSF Scorecard **Signed-Releases** looks at Release assets, not the PyPI wheel). PyPI Trusted Publishing (`publish-pypi.yml`) is unchanged.
 
 **Docker Hub:** When you follow [docs/ops/DOCKER_IMAGE_RELEASE_ORDER.md](docs/ops/DOCKER_IMAGE_RELEASE_ORDER.md), the published image **`fabioleitao/data_boar:<semver>`** should match the same source tree as the tag used for the SBOM workflow; the **image** SBOM is from a **local build** in CI (equivalent layers to a clean `docker build` at that commit), not from a separate registry pull.
 
