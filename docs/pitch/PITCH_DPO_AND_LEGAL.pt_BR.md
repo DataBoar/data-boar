@@ -43,6 +43,20 @@ Responsabilidade compartilhada: [DECISION_MAKER_VALUE_BRIEF.pt_BR.md](../DECISIO
 
 ---
 
+## Pacote de evidência = triângulo de confiança
+
+[ENTERPRISE_DB_OPS_AND_GRC_EVIDENCE.pt_BR.md](../ops/inspirations/ENTERPRISE_DB_OPS_AND_GRC_EVIDENCE.pt_BR.md) pedia uma narrativa de **pacote mínimo de evidência**: quais artefatos o DPO ou o consumidor de auditoria deve guardar com a varredura. Esse item fica **respondido aqui**, não pendente: o pacote **é** o **triângulo de confiança** de [ACTIONABLE_GOVERNANCE_AND_TRUST.md](../ops/inspirations/ACTIONABLE_GOVERNANCE_AND_TRUST.md) §1 (doutrina em inglês).
+
+| Perna | Artefato | Papel para assessoria / DPO |
+| ----- | -------- | ---------------------------- |
+| Narrativa | Markdown executivo (`data-boar-report`) | **Caminho de ação** em linguagem de stakeholder (contagens e recomendações — sem PII em massa) |
+| Registro máquina | `scan_manifest_*.yaml` | Versão, id de sessão, janela UTC, amostragem/timeouts, **hash de escopo** — sustenta as alegações do Markdown |
+| Reprodução | Invocação CLI + sessão SQLite | O **mesmo** comando contra o **mesmo** arquivo de sessão regenera o relatório |
+
+Faltar uma perna vira deck de slides, não pacote anexável. Continua sendo **evidência de inventário**, não peça lacrada, WORM nem custódia completa do CPP ([ADR 0025](../adr/ADR-0025-compliance-positioning-evidence-inventory-not-legal-conclusion-engine.md)). O mapeamento dos três para *temas* forenses (ponteiros ISO/NIST/CPP **somente**) está no primer [§8](../primers/FORENSICS_AND_EVIDENCE_PRIMER.pt_BR.md#8-posicionamento-do-data-boar).
+
+---
+
 ## Diferenciais (scanner genérico vs este produto)
 
 | Aspecto                    | Scanner genérico típico                  | Data Boar                                                                                                         |
