@@ -72,6 +72,18 @@ def test_workflow_does_not_hardcode_connector_sha256() -> None:
     assert "ci-pyyaml.txt" in text
     assert "--require-hashes" in text
     assert "pyyaml>=6.0.3" not in text
+    for job_id in ("connector-c-checksum", "canary-musl-cp312", "matrix-cell"):
+        steps = jobs[job_id].get("steps") or []
+        install = next(
+            s
+            for s in steps
+            if isinstance(s, dict)
+            and s.get("name") == "Install PyYAML (manifest loader)"
+        )
+        run = str(install.get("run") or "")
+        # Folded YAML scalar turns `\` + newline into ` \ -r`, which pip treats as a requirement.
+        assert "\n" in run, f"{job_id} pip install must be a block scalar"
+        assert "\\ -r" not in run
 
 
 def test_export_build_env_composes_package_name_with_spec() -> None:
