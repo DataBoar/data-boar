@@ -1,5 +1,8 @@
 # SBOM: CycloneDX JSON from lockfile-aligned export (Phase A), then Syft on built image (Phase B).
 # ADR 0003 — workflow artifacts; attach to GitHub Release when a release exists for the tag.
+# #1891: on tag/release, Sigstore OIDC provenance (`actions/attest-build-provenance`) and
+# upload `data-boar.intoto.jsonl` as a GitHub Release asset (Scorecard Signed-Releases).
+# No Cosign private key. Does not change publish-pypi.yml (PyPI Trusted Publishing).
 #
 # Syft runs in the official `anchore/syft` image (version tag pinned below; bump with care).
 # Third-party Actions use full commit SHAs (see ADR 0005).
@@ -41,6 +44,8 @@ jobs:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     permissions:
       contents: write
+      id-token: write
+      attestations: write
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -125,6 +130,21 @@ jobs:
             release-manifest.json
           if-no-files-found: error
 
+      - name: Attest release artifacts (Sigstore OIDC, issue 1891)
+        id: provenance
+        if: >-
+          ${{
+            (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) ||
+            github.event_name == 'release'
+          }}
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: |
+            sbom-python.cdx.json
+            sbom-docker-image.cdx.json
+            build-digest.txt
+            release-manifest.json
+
       - name: Attach SBOMs to GitHub Release (when applicable)
         if: >-
           ${{
@@ -134,6 +154,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GITHUB_EVENT_RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
+          PROVENANCE_BUNDLE: ${{ steps.provenance.outputs.bundle-path }}
         run: |
           set -euo pipefail
           if [ "${{ github.event_name }}" = "release" ]; then
@@ -167,7 +188,12 @@ jobs:
               --preserve-native-from /tmp/relman/release-manifest.json \
               --quiet
           fi
-          gh release upload "$TAG" sbom-python.cdx.json sbom-docker-image.cdx.json build-digest.txt release-manifest.json \
+          if [ -z "${PROVENANCE_BUNDLE:-}" ] || [ ! -f "$PROVENANCE_BUNDLE" ]; then
+            echo "::error title=missing provenance::attest-build-provenance produced no bundle-path (#1891)"
+            exit 1
+          fi
+          cp "$PROVENANCE_BUNDLE" data-boar.intoto.jsonl
+          gh release upload "$TAG" sbom-python.cdx.json sbom-docker-image.cdx.json build-digest.txt release-manifest.json data-boar.intoto.jsonl \
             --clobber --repo "${{ github.repository }}"
 
   slack-notify-on-failure:

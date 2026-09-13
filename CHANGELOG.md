@@ -26,6 +26,8 @@ Empty while the working tree carries **`1.8.0-beta`** (see section below).
 
 ### Included since `1.7.4.post12`
 
+- **Scorecard Signed-Releases (#1891):** the next GitHub tag (`1.7.4.postN` or `1.8.0`, whichever ships first) attaches Sigstore SLSA provenance (`data-boar.intoto.jsonl`) via OIDC `actions/attest-build-provenance` on the SBOM job. Historical tags stay unsigned. PyPI Trusted Publishing is unchanged.
+
 - **Scorecard Dangerous-Workflow (#1888):** `operator-gated-pr-guard.yml` omits checkout `ref:` (default-branch `github.sha`) so Scorecard does not treat trusted `base.sha` like untrusted `head.sha`. `persist-credentials: false` unchanged; SSHSIG gate unchanged.
 
 - **Global privacy regulations primer (#600):** [GLOBAL_PRIVACY_REGULATIONS_PRIMER.md](docs/plans/GLOBAL_PRIVACY_REGULATIONS_PRIMER.md) — PIPEDA / POPIA / APPI / Vietnam PDPD / FELCA alignment narrative; #477 samples as baseline; honest coverage (PIPEDA/POPIA/APPI YAML already on disk; FELCA is Brazil).
