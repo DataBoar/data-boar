@@ -38,6 +38,8 @@ Empty while the working tree carries **`1.8.0-beta`** (see section below).
 
 - **PyPI install docs (#1752):** README / CONTRIBUTING no longer say `pip install data-boar` is “when published”. The package is live; document `uvx data-boar` and `uvx data-boar --demo`. Last stable wheel can lag `main` (pre-release remains git-only).
 
+- **DPO + legal pitch (#688):** [PITCH_DPO_AND_LEGAL.md](docs/pitch/PITCH_DPO_AND_LEGAL.md) ([pt-BR](docs/pitch/PITCH_DPO_AND_LEGAL.pt_BR.md)) — litigation/custody companion to [PITCH_DPO.md](docs/pitch/PITCH_DPO.md); CPP Arts. 158-A–F pointers; ADR-0025 ceiling (*laudo* / not a legal-conclusion engine). Honest on hashes vs SSH-signed manifests.
+
 - **Integrity snapshot public `error` (#1721):** `ensure_integrity_anchor` fail-soft JSON used by unauthenticated `/health` and `/status` stores `type(e).__name__` only. `str(e)` (paths, JSON parse context) stays in the operator log via `SanitizeLogFilter`.
 
 - **CPU pre-flight before numpy/ML (#929):** x86 hosts missing SSE4.2, POPCNT, or AVX skip the PyPI numpy/sklearn/DL imports (SIGILL is not catchable). Regex CPF/CNPJ still runs; `core.dl_backend` is lazy from `detector.py`. **Primary** path to restore working ML is the hosted wheelhouse `wheelhouse-x86-64-v1-2026-07-29` (`[noavx]`: `gh release download` + `pip install --no-index --find-links`). Distro numpy / `-Dcpu-baseline=min` are fallbacks only.

@@ -51,6 +51,6 @@ Posicionamento completo: [DECISION_MAKER_VALUE_BRIEF.pt_BR.md](../DECISION_MAKER
 
 ## Próximo passo
 
-- **Profundidade DPO / jurídico:** [PITCH_DPO.pt_BR.md](PITCH_DPO.pt_BR.md)
+- **Profundidade DPO / jurídico:** [PITCH_DPO.pt_BR.md](PITCH_DPO.pt_BR.md) · incidente e custódia: [PITCH_DPO_AND_LEGAL.pt_BR.md](PITCH_DPO_AND_LEGAL.pt_BR.md)
 - **Profundidade segurança:** [PITCH_CISO.pt_BR.md](PITCH_CISO.pt_BR.md)
 - **Storyboards por setor:** [use-cases/USE_CASES_HUB.pt_BR.md](../use-cases/USE_CASES_HUB.pt_BR.md)

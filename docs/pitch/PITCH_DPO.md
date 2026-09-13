@@ -54,5 +54,6 @@ Operator guide: [MINOR_DETECTION.md](../MINOR_DETECTION.md).
 ## Next step
 
 - **Executive summary:** [PITCH_STAKEHOLDER.md](PITCH_STAKEHOLDER.md)
+- **Incident / litigation / CPP (companion):** [PITCH_DPO_AND_LEGAL.md](PITCH_DPO_AND_LEGAL.md)
 - **Security controls:** [PITCH_CISO.md](PITCH_CISO.md)
 - **Tokenized findings narrative:** [use-cases/USE_CASE_TOKENIZED_FINDINGS.md](../use-cases/USE_CASE_TOKENIZED_FINDINGS.md)

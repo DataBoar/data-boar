@@ -40,5 +40,6 @@ Bounded discovery on **agreed** systems can feed a diligence workstream (what cl
 ## Next step
 
 - **Privacy operations:** [PITCH_DPO.md](PITCH_DPO.md)
+- **Incident / custody / CPP:** [PITCH_DPO_AND_LEGAL.md](PITCH_DPO_AND_LEGAL.md)
 - **Security evidence:** [PITCH_CISO.md](PITCH_CISO.md)
 - **Finance:** [PITCH_CFO.md](PITCH_CFO.md)

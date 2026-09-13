@@ -143,7 +143,8 @@ conclusões jurídicas. Ver [ADR-0025](../adr/ADR-0025-compliance-positioning-ev
 
 **Relacionados (ecos — leia lá, não copie aqui):**
 
-- Pitch (DPO/jurídico): [PITCH_DPO.pt_BR.md](../pitch/PITCH_DPO.pt_BR.md)
+- Pitch (DPO operacional): [PITCH_DPO.pt_BR.md](../pitch/PITCH_DPO.pt_BR.md)
+- Pitch (DPO incidente / jurídico / CPP): [PITCH_DPO_AND_LEGAL.pt_BR.md](../pitch/PITCH_DPO_AND_LEGAL.pt_BR.md)
 - Cliente técnico / CISO: [TECH_GUIDE.pt_BR.md](../TECH_GUIDE.pt_BR.md)
 - Página de compliance: [COMPLIANCE_AND_LEGAL.pt_BR.md](../COMPLIANCE_AND_LEGAL.pt_BR.md)
 - Uma linha de produto: [README.pt_BR.md](../../README.pt_BR.md)

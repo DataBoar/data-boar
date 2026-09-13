@@ -20,7 +20,7 @@ Navigation map for **thirteen** reader types. Full doc index: [README.md](README
 | | |
 | - | - |
 | **Entry** | [pitch/PITCH_DPO.md](pitch/PITCH_DPO.md) |
-| **Trail** | [COMPLIANCE_AND_LEGAL.md](COMPLIANCE_AND_LEGAL.md) → [COMPLIANCE_FRAMEWORKS.md](COMPLIANCE_FRAMEWORKS.md) → [MINOR_DETECTION.md](MINOR_DETECTION.md) → [JURISDICTION_COLLISION_HANDLING.md](JURISDICTION_COLLISION_HANDLING.md) |
+| **Trail** | [COMPLIANCE_AND_LEGAL.md](COMPLIANCE_AND_LEGAL.md) → [pitch/PITCH_DPO_AND_LEGAL.md](pitch/PITCH_DPO_AND_LEGAL.md) → [COMPLIANCE_FRAMEWORKS.md](COMPLIANCE_FRAMEWORKS.md) → [MINOR_DETECTION.md](MINOR_DETECTION.md) → [JURISDICTION_COLLISION_HANDLING.md](JURISDICTION_COLLISION_HANDLING.md) |
 | **Skip** | [TECH_GUIDE.md](TECH_GUIDE.md) unless integrating; engineering ADRs |
 | **Overlap** | CISO ([SECURITY.md](SECURITY.md)); compliance engineer (framework samples) |
 
@@ -74,7 +74,7 @@ Navigation map for **thirteen** reader types. Full doc index: [README.md](README
 | | |
 | - | - |
 | **Entry** | [pitch/PITCH_COMPLIANCE_OFFICER.md](pitch/PITCH_COMPLIANCE_OFFICER.md) |
-| **Trail** | [COMPLIANCE_AND_LEGAL.md](COMPLIANCE_AND_LEGAL.md) → [COMPLIANCE_FRAMEWORKS.md](COMPLIANCE_FRAMEWORKS.md) |
+| **Trail** | [COMPLIANCE_AND_LEGAL.md](COMPLIANCE_AND_LEGAL.md) → [pitch/PITCH_DPO_AND_LEGAL.md](pitch/PITCH_DPO_AND_LEGAL.md) → [COMPLIANCE_FRAMEWORKS.md](COMPLIANCE_FRAMEWORKS.md) |
 | **Skip** | [TECH_GUIDE.md](TECH_GUIDE.md); do not confuse with DPO (operational LGPD) |
 | **Overlap** | DPO (legal summary, distinct role); Executive (compliance posture) |
 
