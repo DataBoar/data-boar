@@ -15,7 +15,7 @@ mkdir -p "$TMPDIR" /out
 
 apk add --no-cache build-base openblas openblas-dev gfortran patchelf binutils >/dev/null
 python3 -m venv /v && . /v/bin/activate
-pip install --no-cache-dir -q Cython meson-python ninja pythran pybind11 setuptools auditwheel
+pip install --no-cache-dir --require-hashes -r /build-tools-hashes.txt
 # CRITICAL: block PyPI scipy-openblas so the build links SYSTEM OpenBLAS (DYNAMIC_ARCH).
 pip uninstall -y scipy-openblas64 scipy-openblas32 >/dev/null 2>&1 || true
 

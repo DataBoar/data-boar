@@ -135,6 +135,9 @@ def test_dockerfile_applies_wheelhouse_v1_in_builder() -> None:
     body = script.read_text(encoding="utf-8")
     assert "--force-reinstall" in body
     assert "--no-index" in body
+    assert "numpy==2.5.1" in body
+    assert "scipy==1.18.0" in body
+    assert "boar_fast_filter==0.1.0" in body
     assert "popcnt" in body
     assert "boar_fast_filter" in body
     assert "wheelhouse-x86-64-v1-2026-07-29" in body

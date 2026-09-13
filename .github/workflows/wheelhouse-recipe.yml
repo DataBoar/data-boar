@@ -53,7 +53,8 @@ jobs:
           python-version: "3.12"
 
       - name: Install PyYAML (manifest loader)
-        run: pip install --no-cache-dir "pyyaml>=6.0.3"
+        run: pip install --disable-pip-version-check --no-cache-dir --require-hashes \
+          -r .github/pip-constraints/ci-pyyaml.txt
 
       - name: Verify Connector/C checksum from recipe-manifest.yaml
         run: bash scripts/wheelhouse/verify_connector_c_checksum.sh
@@ -98,7 +99,8 @@ jobs:
           python-version: "3.12"
 
       - name: Install PyYAML (manifest loader)
-        run: pip install --no-cache-dir "pyyaml>=6.0.3"
+        run: pip install --disable-pip-version-check --no-cache-dir --require-hashes \
+          -r .github/pip-constraints/ci-pyyaml.txt
 
       - name: Load canary cell from manifest
         id: canary
@@ -139,7 +141,8 @@ jobs:
           python-version: "3.12"
 
       - name: Install PyYAML (manifest loader)
-        run: pip install --no-cache-dir "pyyaml>=6.0.3"
+        run: pip install --disable-pip-version-check --no-cache-dir --require-hashes \
+          -r .github/pip-constraints/ci-pyyaml.txt
 
       - name: Build matrix cell (explicit --platform from manifest)
         env:
