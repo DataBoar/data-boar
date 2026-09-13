@@ -26,6 +26,8 @@ Empty while the working tree carries **`1.8.0-beta`** (see section below).
 
 ### Included since `1.7.4.post12`
 
+- **Scorecard Pinned-Dependencies (#1904):** `ci.yml` uv fallback and ansible-syntax install `pip` with `--require-hashes` files under `.github/pip-constraints/` (compiled from the same version pins the jobs already used). `uv.lock` stays the product lock.
+
 - **Scorecard Token-Permissions (#1903):** publish workflows (`publish-pypi.yml`, `sbom.yml`, `homebrew-tap.yml`, `native-packages.yml`, `dependabot-sync.yml`) keep top-level `contents: read`; `contents: write` only on jobs that attach/push. PyPI OIDC `id-token` unchanged; unused `actions: write` dropped from the Homebrew bump caller.
 
 - **Pytest / Dependabot uv group (#1871):** ignore only the starlette `anyio.abc.BlockingPortal` alias `DeprecationWarning` (exact message regex in `filterwarnings`). `addopts = -v -W error` unchanged. `tests/conftest.py` warms `starlette.testclient` in `pytest_configure` and re-applies the ignore during collection (not only per-item marks) so CI collection does not error. Remove via #1915 when starlette ships Kludex/starlette#3498.
