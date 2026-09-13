@@ -656,6 +656,21 @@ def test_ci_yml_has_windows_test_job() -> None:
     assert pytest_steps[0].get("shell") == "bash"
 
 
+def test_claude_workflow_token_permissions() -> None:
+    """#1889: Scorecard Token-Permissions — top-level contents:read; job does not write git."""
+    data = _load_workflow("claude.yml")
+    assert (data.get("permissions") or {}).get("contents") == "read"
+    assert data.get("permissions") != "read-all"
+    jobs = data.get("jobs") or {}
+    assert "claude" in jobs
+    perms = jobs["claude"].get("permissions") or {}
+    assert perms.get("contents") == "read"
+    assert perms.get("pull-requests") == "write"
+    assert perms.get("issues") == "write"
+    text = (WORKFLOWS / "claude.yml").read_text(encoding="utf-8")
+    assert "persist-credentials: false" in text
+
+
 def test_scorecard_workflow_present_and_valid() -> None:
     """#886: OpenSSF Scorecard — SARIF + publish_results, SHA pins (ADR 0005)."""
     data = _load_workflow("scorecard.yml")
