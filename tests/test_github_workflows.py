@@ -400,6 +400,35 @@ def test_ci_yml_pins_actions_and_uv_cli() -> None:
         )
 
 
+def test_ci_yml_pins_pip_commands_with_hashes() -> None:
+    """#1904: Scorecard Pinned-Dependencies — listed pip lines use --require-hashes files."""
+    data = _load_workflow("ci.yml")
+    test_job = data["jobs"]["test"]
+    fallback = [
+        s
+        for s in test_job.get("steps") or []
+        if isinstance(s, dict)
+        and s.get("name") == "Fallback install uv via pip if action failed"
+    ]
+    assert len(fallback) == 1
+    fb_run = str(fallback[0].get("run") or "")
+    assert "--require-hashes" in fb_run
+    assert "ci-uv-fallback.txt" in fb_run
+    assert "--upgrade pip" not in fb_run
+    ansible = data["jobs"]["ansible-syntax"]
+    ansible_runs = "\n".join(_ci_step_run_texts(ansible))
+    assert "--require-hashes" in ansible_runs
+    assert "ci-ansible-syntax.txt" in ansible_runs
+    assert "ansible-core>=2.16,<2.19" not in ansible_runs
+    uv_req = REPO_ROOT / ".github" / "pip-constraints" / "ci-uv-fallback.txt"
+    ansible_req = REPO_ROOT / ".github" / "pip-constraints" / "ci-ansible-syntax.txt"
+    assert "uv==0.11.2" in uv_req.read_text(encoding="utf-8")
+    assert "--hash=sha256:" in uv_req.read_text(encoding="utf-8")
+    ansible_body = ansible_req.read_text(encoding="utf-8")
+    assert "ansible-core==2.18.19" in ansible_body
+    assert "--hash=sha256:" in ansible_body
+
+
 def test_ci_yml_pytest_cov_xml_only_on_python_313_for_sonar() -> None:
     """#1719: one matrix cell publishes coverage.xml; Sonar downloads it."""
     text = (WORKFLOWS / "ci.yml").read_text(encoding="utf-8")
