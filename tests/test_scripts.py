@@ -53,6 +53,19 @@ def test_prep_audit_sh_has_shebang_and_exit_code():
     )
 
 
+def test_prep_audit_sh_pins_uv_download_then_run():
+    """#1905: no curl|sh; download uv tarball, sha256, then exec (fail-closed)."""
+    script = _project_root() / "prep_audit.sh"
+    text = script.read_text(encoding="utf-8")
+    assert "install.sh | sh" not in text
+    assert "astral.sh/uv/install.sh" not in text
+    assert "sha256sum -c" in text
+    assert "UV_SHA256=" in text
+    assert "github.com/astral-sh/uv/releases/download/" in text
+    assert "--retry-connrefused" in text
+    assert "Failed to download" in text
+
+
 # --- PowerShell: commit-or-pr.ps1 syntax (Parser::ParseFile) ---
 
 
