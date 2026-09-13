@@ -16,7 +16,7 @@ export TMPDIR="${TMPDIR:-/var/tmp/data-boar-build}"
 mkdir -p "$TMPDIR" /out
 
 "$PYBIN" -m venv /v && . /v/bin/activate
-pip install --no-cache-dir -q Cython meson-python ninja pythran pybind11 setuptools auditwheel
+pip install --no-cache-dir --require-hashes -r /build-tools-hashes.txt
 pip uninstall -y scipy-openblas64 scipy-openblas32 >/dev/null 2>&1 || true
 dnf -q -y install epel-release >/dev/null 2>&1 || true
 dnf -q -y --enablerepo=crb install openblas-devel binutils >/dev/null 2>&1 \

@@ -141,16 +141,16 @@ for whl in "${WHEELS[@]}"; do
 done
 
 echo "=== force-reinstall ML stack + boar_fast_filter from wheelhouse (--no-index) ==="
-# --no-deps: do not resolve from PyPI; pure deps already present from requirements.txt.
+# Versions match wheel filenames in WHEELS above (hosted tag, not uv.lock).
 python -m pip install --no-cache-dir --no-index --find-links "$WORKDIR" \
   --force-reinstall --no-deps \
-  numpy scipy scikit-learn pandas boar_fast_filter
+  numpy==2.5.1 scipy==1.18.0 scikit-learn==1.9.0 pandas==3.0.5 boar_fast_filter==0.1.0
 
 if [[ "${FREETHREADED}" == "1" ]]; then
   echo "=== force-reinstall SQL extras from wheelhouse (--no-index, cp314t) ==="
   python -m pip install --no-cache-dir --no-index --find-links "$WORKDIR" \
     --force-reinstall --no-deps \
-    mariadb oracledb psycopg2-binary pymssql
+    mariadb==1.1.14 oracledb==4.0.2 psycopg2-binary==2.9.12 pymssql==2.3.13
 fi
 
 python - <<'PY'

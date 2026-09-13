@@ -13,6 +13,7 @@ PLAN = REPO / "docs" / "plans" / "PLAN_WHEELHOUSE_DISTRIBUTION.md"
 WORKFLOW = REPO / ".github" / "workflows" / "wheelhouse-recipe.yml"
 RUN_CELL = REPO / "scripts" / "wheelhouse" / "run_cell.sh"
 BUILD_MUSL = REPO / "scripts" / "wheelhouse" / "build_musl_incontainer.sh"
+BUILD_GLIBC = REPO / "scripts" / "wheelhouse" / "build_glibc_incontainer.sh"
 
 
 def _manifest() -> dict:
@@ -68,6 +69,21 @@ def test_workflow_does_not_hardcode_connector_sha256() -> None:
     assert "matrix-cell" in jobs
     assert "verify_release_sha256sums.sh" in text
     assert "wheelhouse-x86-64-v1-2026-07-29" in text
+    assert "ci-pyyaml.txt" in text
+    assert "--require-hashes" in text
+    assert "pyyaml>=6.0.3" not in text
+    for job_id in ("connector-c-checksum", "canary-musl-cp312", "matrix-cell"):
+        steps = jobs[job_id].get("steps") or []
+        install = next(
+            s
+            for s in steps
+            if isinstance(s, dict)
+            and s.get("name") == "Install PyYAML (manifest loader)"
+        )
+        run = str(install.get("run") or "")
+        # Folded YAML scalar turns `\` + newline into ` \ -r`, which pip treats as a requirement.
+        assert "\n" in run, f"{job_id} pip install must be a block scalar"
+        assert "\\ -r" not in run
 
 
 def test_export_build_env_composes_package_name_with_spec() -> None:
@@ -92,10 +108,18 @@ def test_export_build_env_composes_package_name_with_spec() -> None:
 
 def test_build_scripts_preserve_grep_c_and_platform_lessons() -> None:
     musl = BUILD_MUSL.read_text(encoding="utf-8")
+    glibc = BUILD_GLIBC.read_text(encoding="utf-8")
     assert "grep -c popcnt || true" in musl
     assert "--no-build-isolation" in musl
     assert "libscipy_openblas" in musl
     assert "GATE_UMATH_MAX_BYTES" in musl
+    assert "--require-hashes" in musl
+    assert "--require-hashes" in glibc
     run = RUN_CELL.read_text(encoding="utf-8")
     assert "--platform" in run
     assert "docker_platform" in run
+    assert "build-tools-hashes.txt" in run
+    assert "--require-hashes" in musl
+    hashes = REPO / "scripts" / "wheelhouse" / "build-tools-hashes.txt"
+    assert hashes.is_file()
+    assert "--hash=sha256:" in hashes.read_text(encoding="utf-8")

@@ -26,6 +26,8 @@ Empty while the working tree carries **`1.8.0-beta`** (see section below).
 
 ### Included since `1.7.4.post12`
 
+- **Scorecard Pinned-Dependencies (#1906):** wheelhouse recipe installs PyYAML with `--require-hashes`; in-container builders install the toolchain from `scripts/wheelhouse/build-tools-hashes.txt`; `apply_wheelhouse_v1.sh` pins `--no-index` packages to the hosted wheel versions. Remaining `pip install numpy` after local `pip wheel` is `--no-index` only (hashes are the built wheels).
+
 - **Scorecard Pinned-Dependencies (#1904):** `ci.yml` uv fallback and ansible-syntax install `pip` with `--require-hashes` files under `.github/pip-constraints/` (compiled from the same version pins the jobs already used). `uv.lock` stays the product lock.
 
 - **Scorecard Token-Permissions (#1903):** publish workflows (`publish-pypi.yml`, `sbom.yml`, `homebrew-tap.yml`, `native-packages.yml`, `dependabot-sync.yml`) keep top-level `contents: read`; `contents: write` only on jobs that attach/push. PyPI OIDC `id-token` unchanged; unused `actions: write` dropped from the Homebrew bump caller.

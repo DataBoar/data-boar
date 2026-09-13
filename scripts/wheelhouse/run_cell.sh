@@ -45,7 +45,9 @@ if [ "$LIBC" = musl ]; then
   BUILD="$HERE/build_musl_incontainer.sh"
   "$DOCKER" run --rm --platform "$PLATFORM" \
     "${ENV_ARGS[@]}" -e "AUDITWHEEL_PLAT=$AUDIT" \
-    -v "$BUILD:/build.sh:ro" -v "$OUT/$LIBC:/out/repaired" \
+    -v "$BUILD:/build.sh:ro" \
+    -v "$HERE/build-tools-hashes.txt:/build-tools-hashes.txt:ro" \
+    -v "$OUT/$LIBC:/out/repaired" \
     "$IMG" sh /build.sh 2>&1 | tee -a "$LOG"
 elif [ "$LIBC" = glibc ]; then
   IMG="$("${LOAD[@]}" --get containers.glibc.image)"
@@ -53,7 +55,9 @@ elif [ "$LIBC" = glibc ]; then
   BUILD="$HERE/build_glibc_incontainer.sh"
   "$DOCKER" run --rm --platform "$PLATFORM" \
     "${ENV_ARGS[@]}" -e "AUDITWHEEL_PLAT=$AUDIT" \
-    -v "$BUILD:/build.sh:ro" -v "$OUT/$LIBC:/out/repaired" \
+    -v "$BUILD:/build.sh:ro" \
+    -v "$HERE/build-tools-hashes.txt:/build-tools-hashes.txt:ro" \
+    -v "$OUT/$LIBC:/out/repaired" \
     "$IMG" bash /build.sh "$CP" 2>&1 | tee -a "$LOG"
 else
   echo "FATAL: libc must be musl|glibc"; exit 2
