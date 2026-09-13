@@ -26,6 +26,8 @@ Empty while the working tree carries **`1.8.0-beta`** (see section below).
 
 ### Included since `1.7.4.post12`
 
+- **Scorecard Dangerous-Workflow (#1888):** `operator-gated-pr-guard.yml` omits checkout `ref:` (default-branch `github.sha`) so Scorecard does not treat trusted `base.sha` like untrusted `head.sha`. `persist-credentials: false` unchanged; SSHSIG gate unchanged.
+
 - **Global privacy regulations primer (#600):** [GLOBAL_PRIVACY_REGULATIONS_PRIMER.md](docs/plans/GLOBAL_PRIVACY_REGULATIONS_PRIMER.md) — PIPEDA / POPIA / APPI / Vietnam PDPD / FELCA alignment narrative; #477 samples as baseline; honest coverage (PIPEDA/POPIA/APPI YAML already on disk; FELCA is Brazil).
 
 - **Primer + DPO/legal pitch manifesto bridge (#700):** primer §8 mapping table (defensive scanning + actionable-governance doctrine vs ISO/NIST/CPP **themes**, not legal equivalence); pitch states the trust triangle **is** the GRC “evidence bundle”. ADR-0025 ceiling unchanged.
