@@ -422,6 +422,15 @@ def test_ci_yml_pins_pip_commands_with_hashes() -> None:
     assert "--require-hashes" in ansible_runs
     assert "ci-ansible-syntax.txt" in ansible_runs
     assert "ansible-core>=2.16,<2.19" not in ansible_runs
+    install_ansible = next(
+        s
+        for s in (ansible.get("steps") or [])
+        if isinstance(s, dict) and s.get("name") == "Install ansible-core"
+    )
+    install_run = str(install_ansible.get("run") or "")
+    # Folded YAML scalar turns `\` + newline into ` \ -r`, which pip treats as a requirement.
+    assert "\n" in install_run
+    assert "\\ -r" not in install_run
     uv_req = REPO_ROOT / ".github" / "pip-constraints" / "ci-uv-fallback.txt"
     ansible_req = REPO_ROOT / ".github" / "pip-constraints" / "ci-ansible-syntax.txt"
     assert "uv==0.11.2" in uv_req.read_text(encoding="utf-8")
