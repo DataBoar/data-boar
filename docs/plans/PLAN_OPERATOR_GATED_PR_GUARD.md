@@ -24,7 +24,7 @@
 - Do **not** swallow `gate_trailer_attest.py` / guard CLI exit codes.
 - Reuse **`GATE_FILES`** from `scripts/gate_change_tripwire.py` (no second list).
 - PR-comment SSHSIG is over **trailer + PR number + head SHA** (not trailer-only replay).
-- CI runs **`pull_request_target`** with checkout of the PR **base SHA only** (never the PR tree). Changed paths and the latest comment come from the GitHub API. `scripts/__init__.py` is in **`GATE_FILES`**; **any** path under **`.github/workflows/`** is gated via prefix.
+- CI runs **`pull_request_target`** with checkout of the **default branch** (`github.sha`; never the PR tree; do **not** pass `base.sha` / `head.sha` as checkout `ref:` — Scorecard #1888). Changed paths and the latest comment come from the GitHub API. `scripts/__init__.py` is in **`GATE_FILES`**; **any** path under **`.github/workflows/`** is gated via prefix.
 
 ## Phases
 

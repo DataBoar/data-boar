@@ -820,10 +820,10 @@ def test_operator_gated_pr_guard_workflow_present_and_valid() -> None:
     assert "operator_gated_pr_guard.py" in text
     assert "--changed-from-file" in text
     assert "--labels-file" in text
-    assert "github.event.pull_request.base.sha" in text
+    assert "ref: ${{ github.event.pull_request.base.sha }}" not in text
     assert "ref: ${{ github.event.pull_request.head.sha }}" not in text
-    assert "git checkout" not in text
     assert "persist-credentials: false" in text
+    assert "git checkout" not in text
     assert "concurrency:" in text
     assert "cancel-in-progress: true" in text
     assert "operator-gated-pr-guard-${{ github.event.pull_request.number }}" in text

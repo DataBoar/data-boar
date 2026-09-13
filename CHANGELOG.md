@@ -26,6 +26,8 @@ Empty while the working tree carries **`1.8.0-beta`** (see section below).
 
 ### Included since `1.7.4.post12`
 
+- **Scorecard Dangerous-Workflow (#1888):** `operator-gated-pr-guard.yml` omits checkout `ref:` (default-branch `github.sha`) so Scorecard does not treat trusted `base.sha` like untrusted `head.sha`. `persist-credentials: false` unchanged; SSHSIG gate unchanged.
+
 - **Global privacy regulations primer (#600):** [GLOBAL_PRIVACY_REGULATIONS_PRIMER.md](docs/plans/GLOBAL_PRIVACY_REGULATIONS_PRIMER.md) — PIPEDA / POPIA / APPI / Vietnam PDPD / FELCA alignment narrative; #477 samples as baseline; honest coverage (PIPEDA/POPIA/APPI YAML already on disk; FELCA is Brazil).
 
 - **Primer + DPO/legal pitch manifesto bridge (#700):** primer §8 mapping table (defensive scanning + actionable-governance doctrine vs ISO/NIST/CPP **themes**, not legal equivalence); pitch states the trust triangle **is** the GRC “evidence bundle”. ADR-0025 ceiling unchanged.
@@ -45,6 +47,8 @@ Empty while the working tree carries **`1.8.0-beta`** (see section below).
 - **PyPI install docs (#1752):** README / CONTRIBUTING no longer say `pip install data-boar` is “when published”. The package is live; document `uvx data-boar` and `uvx data-boar --demo`. Last stable wheel can lag `main` (pre-release remains git-only).
 
 - **Scorecard Token-Permissions (#1889):** `.github/workflows/claude.yml` declares top-level `permissions: contents: read` and drops job-level `contents: write` to `read` (checkout does not persist credentials; the job does not push). Other publish workflows unchanged.
+
+- **Dockerfile pip pins (#1890):** `Dockerfile` / `Dockerfile.nogil` pin `pip==25.3`, `wheel==0.46.2`, `cryptography==50.0.0` (lock), and install `requirements.txt` with `--require-hashes`. Does not change lab-op scripts, `ci.yml`, or `wheelhouse-recipe.yml`.
 
 - **OpenSSF Security-Policy (#1886):** root `SECURITY.md` / `SECURITY.pt_BR.md` now include a clickable GitHub advisory URL, `mailto:contact@databoar.com.br`, product **Supported versions** (1.7.4.x + `main`), a **Disclosure timeline** (ack **72 hours**; no public PoC issue), and Scorecard badge/API links. Does not change Scorecard YAML workflows.
 

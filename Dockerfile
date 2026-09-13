@@ -62,11 +62,15 @@ ARG WHEELHOUSE_TAG=wheelhouse-x86-64-v1-2026-07-29
 ENV DISABLE_SQLALCHEMY_CEXT=1
 
 # Container owns /usr/local; PEP 668 marker removed above after uv overlay.
+# #1890: pin pip/wheel/cryptography to exact versions (Scorecard Pinned-Dependencies).
+# pip/wheel are not in uv.lock; floors match the previous >= pins. cryptography==50.0.0
+# matches uv.lock / requirements.txt. sqlalchemy==2.0.50 stays the GIL-safe
+# --no-binary reinstall (pyproject allows >=2.0.50; lock currently 2.0.52).
 RUN pip uninstall -y wheel || true && \
-    pip install --no-cache-dir --upgrade "pip>=25.3" && \
-    pip install --no-cache-dir --force-reinstall "wheel>=0.46.2" && \
+    pip install --no-cache-dir --upgrade "pip==25.3" && \
+    pip install --no-cache-dir --force-reinstall "wheel==0.46.2" && \
     python -c "import wheel; import sys; sys.exit(0 if tuple(map(int, wheel.__version__.split('.'))) >= (0,46,2) else 1)" && \
-    pip install --no-cache-dir -r /app/requirements.txt && \
+    pip install --no-cache-dir --require-hashes -r /app/requirements.txt && \
     pip install --no-cache-dir --force-reinstall --no-binary sqlalchemy "sqlalchemy==2.0.50" && \
     python -c 'import pathlib, site, sqlalchemy, sys; root=pathlib.Path(site.getsitepackages()[0])/"sqlalchemy"; sos=list(root.rglob("*.so")); assert not sos, sos; assert sys._is_gil_enabled() is False, "GIL re-enabled after sqlalchemy"' && \
     pip install --no-cache-dir --no-deps -e /app && \
@@ -76,7 +80,7 @@ RUN pip uninstall -y wheel || true && \
     # as compile fallback if a wheel is missing.
     pip install --no-cache-dir "/app[sql-community,mssql,oracle]" && \
     # Extras can resolve an older cryptography; re-pin GHSA-g6cj-pr64-35w5 (#1409 grype).
-    pip install --no-cache-dir --upgrade "cryptography>=50.0.0,<51" && \
+    pip install --no-cache-dir --upgrade "cryptography==50.0.0" && \
     python /app/scripts/generate_extras_manifest.py --probe --write /app/EXTRAS_MANIFEST.json && \
     PY_LIB="$(python -c 'import sysconfig; from pathlib import Path; print(Path(sysconfig.get_path("stdlib")))')" && \
     rm -rf /tmp/wheelhouse-v1-glibc-cp314t && \
