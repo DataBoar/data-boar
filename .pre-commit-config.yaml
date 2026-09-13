@@ -96,6 +96,11 @@ repos:
         entry: uv run pytest tests/test_gitleaks_config.py -q -W error
         language: system
         pass_filenames: false
+      - id: workflow-run-scalar-guard
+        name: GitHub Actions folded-scalar run plus backslash (#1918)
+        entry: uv run python scripts/workflow_run_scalar_guard.py
+        language: system
+        pass_filenames: false
       - id: workflow-security-lint
         name: zizmor workflow security lint (optional manual stage)
         entry: pwsh -NoProfile -File scripts/workflow-security-lint.ps1 -SkipIfMissing

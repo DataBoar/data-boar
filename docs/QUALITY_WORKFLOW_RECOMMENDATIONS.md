@@ -82,6 +82,7 @@ This document suggests **additional layers** (tools, habits, and workflow) to ke
 
 - **CI:** [`.github/workflows/zizmor.yml`](../.github/workflows/zizmor.yml) runs on **every** push/PR to `main`/`master` via **`zizmorcore/zizmor-action`** (SHA-pinned, **no** `paths:` filter). Enforcement is **on** unless repository variable **`ZIZMOR_ENFORCE=false`**. The job is **not** a required merge check. PR checkout uses **`head.sha`**; do **not** add a second `upload-sarif` step. Snapshot: [BRANCH_PROTECTION.md](ops/BRANCH_PROTECTION.md). Wrappers: **`scripts/workflow-security-lint.sh`**.
 - **Local:** `uvx zizmor .github/workflows/` (same path as **`workflow-security-lint.sh`**). **`check-all`** runs Zizmor in the **default** security tier and **fails** on findings (shift-left mirror of a strict posture before merge).
+- **Folded `run:` + `\` (#1918):** `uv run python scripts/workflow_run_scalar_guard.py` (pre-commit + **`check-all`**). Optional **`act`** + Podman: [ACT_PODMAN_WORKFLOW_SMOKE.md](ops/ACT_PODMAN_WORKFLOW_SMOKE.md) — **not** in **`check-all`**.
 
 **Prevents:** Workflow misconfigurations that Bandit/Semgrep do not see.
 

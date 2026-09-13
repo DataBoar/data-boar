@@ -38,6 +38,7 @@ PREFIX_GROUPS: list[tuple[str, str]] = [
     ("SECURE_", "Integrity and PII"),
     ("TOKEN_AWARE", "Scripts and automation"),
     ("SCRIPTS_", "Scripts and automation"),
+    ("ACT_PODMAN", "Scripts and automation"),
     ("WINDOWS_FAST", "Scripts and automation"),
     ("REPO_", "Scripts and automation"),
     ("LAB_", "Lab-op and homelab"),

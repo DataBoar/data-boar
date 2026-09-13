@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # check-all.sh — Linux/macOS (bash) mirror of scripts/check-all.ps1.
 # Same gates: gatekeeper_audit.py (uv) + gate_change_tripwire.py (ADR-0071, #1385) +
+# workflow_run_scalar_guard.py (#1918) +
 # Rust (cargo fmt/check/test, PYO3 ABI3 hint) +
 # plans-stats --write + pre-commit-and-tests.sh (venv + pre-commit + pytest).
 # Publish gate (ADR-0080, issues #1151 / #1153): default invocation (and
@@ -72,6 +73,12 @@ git fetch origin main 2>/dev/null || true
 uv run python "$REPO_ROOT/scripts/gate_change_tripwire.py" --base origin/main || {
   rc=$?
   echo "check-all.sh: ABORTED by gate_change_tripwire (ADR-0071)." >&2
+  exit "$rc"
+}
+
+uv run python "$REPO_ROOT/scripts/workflow_run_scalar_guard.py" || {
+  rc=$?
+  echo "check-all.sh: ABORTED by workflow_run_scalar_guard (#1918)." >&2
   exit "$rc"
 }
 

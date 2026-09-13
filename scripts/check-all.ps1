@@ -51,6 +51,13 @@ if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
 
+Write-Host "GitHub Actions run: folded-scalar guard (#1918)..." -ForegroundColor Yellow
+uv run python "$repoRoot\scripts\workflow_run_scalar_guard.py"
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "check-all: ABORTED by workflow_run_scalar_guard (#1918)." -ForegroundColor Red
+    exit $LASTEXITCODE
+}
+
 # #1003: login-env parity (cargo/uv/maturin off default PATH in non-interactive shells).
 function Ensure-LoginToolPath {
     if (Get-Command cargo -ErrorAction SilentlyContinue) { return $true }
