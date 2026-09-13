@@ -101,6 +101,15 @@ O histórico de desenho da detecção de menores está num plano **concluído** 
 
 ---
 
+## Doutrina de engenharia (disciplina do repositório)
+
+| Pergunta | Leia primeiro | Notas |
+| -------- | ------------- | ----- |
+| Quais são os quatro princípios padrão (fail-closed, pin+cooldown, integridade verificada, metadado primeiro) e onde estão implementados? | **[ENGINEERING_PRACTICES.pt_BR.md](ENGINEERING_PRACTICES.pt_BR.md)** ([EN](ENGINEERING_PRACTICES.md)) | Doutrina canônica no repositório; cita [SECURITY.pt_BR.md](SECURITY.pt_BR.md), [`.github/dependabot.yml`](../.github/dependabot.yml), [RELEASE_INTEGRITY.pt_BR.md](RELEASE_INTEGRITY.pt_BR.md), [GLOSSARY.pt_BR.md](GLOSSARY.pt_BR.md) — sem ferramentas privadas. |
+| Mapa de postura de segurança (gates de PII, supply chain, ritual de gate local) | **[SECURITY_GOVERNANCE_POSTURE_HUB.pt_BR.md](SECURITY_GOVERNANCE_POSTURE_HUB.pt_BR.md)** ([EN](SECURITY_GOVERNANCE_POSTURE_HUB.md)) | Complementa a página de princípios com entradas por tema. |
+
+---
+
 ## Onde isso se encaixa
 
 - **Instalação e execução técnicas:** [TECH_GUIDE.pt_BR.md](TECH_GUIDE.pt_BR.md) ([EN](TECH_GUIDE.md)) termina com um ponteiro **Topic map** de volta a esta página.
