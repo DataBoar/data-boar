@@ -707,7 +707,7 @@ A aplicação referencia explicitamente **LGPD**, **GDPR**, **CCPA**, **HIPAA** 
 
 **Plugins de remediação Enterprise (L1):** parceiros implementam `RemediationPlugin` (`core/plugins/`) e registram sob YAML `remediation:` — veja **[PLUGIN_SDK.pt_BR.md](PLUGIN_SDK.pt_BR.md)** ([EN](PLUGIN_SDK.md)). Distinto dos **plugins YAML de padrões** (regex/ML/DL via [PLUGIN_AUTHOR_GUIDE.pt_BR.md](PLUGIN_AUTHOR_GUIDE.pt_BR.md) e [ADR-0052](adr/ADR-0052-yaml-plugin-system-centralized-schema.md)).
 
-**Triagem de volatilidade forense (#687):** o campo opcional `volatility_class` em itens de plugin de padrão (`HIGH` / `MEDIUM` / `LOW` / `STATIC`, ISO/IEC 27037:2012 §7) é metadado de autor em `config/plugin_schema.yaml` — não é copiado para as linhas de achado. Quando setado, `scan_manifest_*.yaml` lista entradas sob `plugin_metadata.volatility_triage` (arquivo de origem, seção, id do padrão, classe). Semântica completa e contexto de resposta a incidentes: [FORENSICS_AND_EVIDENCE_PRIMER.pt_BR.md](primers/FORENSICS_AND_EVIDENCE_PRIMER.pt_BR.md) ([EN](primers/FORENSICS_AND_EVIDENCE_PRIMER.md)).
+**Triagem de volatilidade forense (#687):** o campo opcional `volatility_class` em itens de plugin de padrão (`HIGH` / `MEDIUM` / `LOW` / `STATIC`, ISO/IEC 27037:2012 §7) é metadado de autor em `config/plugin_schema.yaml` — não é copiado para as linhas de achado. Quando setado, `scan_manifest_*.yaml` lista entradas sob `plugin_metadata.volatility_triage` (arquivo de origem, seção, id do padrão, classe). Checklist live vs offline e postura de validação para CISO: [Postura de varredura forense](#postura-de-varredura-forense) e [Postura de validação da ferramenta (CISO)](#postura-de-validação-da-ferramenta-ciso) abaixo. Primer: [FORENSICS_AND_EVIDENCE_PRIMER.pt_BR.md](primers/FORENSICS_AND_EVIDENCE_PRIMER.pt_BR.md) ([EN](primers/FORENSICS_AND_EVIDENCE_PRIMER.md)).
 
 **Auto-varredura de PII em log de auditoria (#877):** antes de `GET /logs` servir um anexo `audit_*.log`, a API aplica os `DEFAULT_PATTERNS` embutidos sobre o arquivo (`core/log_self_scan.py`). Achados de formas sensíveis em claro bloqueiam a exportação (HTTP **422**, só contagem por categoria — sem texto casado) e registram finding de **Audit Trail** via `log_audit_trail_finding`. Complementa `sanitize_log_text` na escrita ([ADR-0036](adr/ADR-0036-exception-and-log-pii-redaction-pipeline.md)).
 
@@ -728,6 +728,49 @@ A aplicação referencia explicitamente **LGPD**, **GDPR**, **CCPA**, **HIPAA** 
 ## Mapa de tópicos (guias periféricos)
 
 Para trilhas de **CISO / DPO / arquiteto** que ligam postura a config concreta (menores, *jurisdiction hints*, amostras EUA sobre menores, posicionamento FELCA), use **[MAP.pt_BR.md](MAP.pt_BR.md)** ([EN](MAP.md)) em vez de vasculhar pasta a pasta. Ali estão **[MINOR_DETECTION.pt_BR.md](MINOR_DETECTION.pt_BR.md)** ([EN](MINOR_DETECTION.md)), a parte de **jurisdiction hints** em **[USAGE.pt_BR.md](USAGE.pt_BR.md)** ([EN](USAGE.md)), o **[ADR 0026](adr/ADR-0026-optional-jurisdiction-hints-dpo-facing-heuristic-metadata-only.md)**, **[JURISDICTION_COLLISION_HANDLING.pt_BR.md](JURISDICTION_COLLISION_HANDLING.pt_BR.md)** ([EN](JURISDICTION_COLLISION_HANDLING.md)), o **[ADR 0038](adr/ADR-0038-jurisdictional-ambiguity-alert-dont-decide.md)** e as linhas relevantes de **COMPLIANCE_FRAMEWORKS** / **compliance-samples** num só lugar.
+
+## Postura de varredura forense
+
+Enquadramento canônico (inventário vs *laudo*, hash vs custódia): [FORENSICS_AND_EVIDENCE_PRIMER.pt_BR.md](primers/FORENSICS_AND_EVIDENCE_PRIMER.pt_BR.md). Pitch operacional DPO: [pitch/PITCH_DPO.pt_BR.md](pitch/PITCH_DPO.pt_BR.md). Esta seção é a árvore de decisão **operador / DevSecOps**: coleta **live** vs **offline** tem **peso probatório**, não só conveniência operacional. Inspiração (compre os textos oficiais; **não** use esta página como substituto): [ISO/IEC 27037:2012](https://www.iso.org/standard/44381.html); [NIST SP 800-86](https://csrc.nist.gov/publications/detail/sp/800-86/final).
+
+**`volatility_class` não é preenchido automaticamente pelo modo de scan.** Campo já publicado ([#687](https://github.com/DataBoar/data-boar/issues/687), schema [ADR-0052](adr/ADR-0052-yaml-plugin-system-centralized-schema.md)): autores marcam **fontes de padrão** `HIGH` / `MEDIUM` / `LOW` / `STATIC`. O motor **não** altera a classe só porque o banco está online. Use o mapeamento abaixo no **runbook**.
+
+### Varredura live (fonte ainda muda)
+
+O alvo está **ativo** enquanto o Data Boar lê (SQL ao vivo, compartilhamento NFS/SMB, API em execução). Linhas, arquivos e logs podem **mudar entre a amostra e o relatório**. Isso aumenta risco de contaminação e de “o que você realmente viu?”.
+
+- Documente **por que** não usou uma cópia quiescida (disponibilidade, hold ainda não instaurado, só existe réplica de produção).
+- Trate o trabalho como volatilidade **HIGH** na ordem de coleta do IR. Alinhe `volatility_class: HIGH` nos plugins com fontes que somem rápido (logs quase RAM, contêineres efêmeros) — continua sendo **metadado de padrão**, não coletor de memória. O Data Boar **não** imageia RAM nem faz disco com write-blocker.
+- Exija **carimbos UTC**, id de sessão, versão do produto, amostragem/timeouts e `config_scope_hash` no `scan_manifest_*.yaml` (veja [REPORTS_AND_COMPLIANCE_OUTPUTS.pt_BR.md](REPORTS_AND_COMPLIANCE_OUTPUTS.pt_BR.md)). Inclua **nota do operador** (chamado, `technician_name`, runbook) sobre o estado da fonte. Coleta live precisa estar **justificada nessa nota**.
+
+### Varredura offline (quiescida, export ou arquivo)
+
+A fonte está **exportada, em snapshot ou estável** antes da sessão (dump, arquivo em object storage, réplica desconectada). Risco de contaminação é **menor**; é a postura **preferida** quando a saída entra em pacote jurídico ou ANPD.
+
+- Mapeie o runbook para `volatility_class` **LOW** ou **STATIC** nessas fontes de padrão. **MEDIUM** cabe a logs que rotacionam devagar, sem estar congelados nem na classe RAM.
+- Offline ainda exige conector **somente leitura** e manifesto honesto. Cópia no disco **não** é imagem forense a menos que o processo DFIR a tenha feito.
+
+### Checklist do operador (sessão de inventário de grau forense)
+
+1. Registre o **estado da fonte** (live vs offline) nas notas / chamado — o YAML **não** infere isso sozinho.
+2. Se for live: documente **por que offline não foi viável**.
+3. Confira o manifesto que você guarda: horário de geração (**UTC**), produto/versão, id de sessão, limites de amostragem, **`config_scope_hash`**. Campos opcionais de tenant/técnico existem na sessão; preencha. O algoritmo de hash do escopo é o que `report/scan_evidence.py` grava hoje — **não** é lacre de peça ([primer §5](primers/FORENSICS_AND_EVIDENCE_PRIMER.pt_BR.md#5-integridade-e-hash)).
+4. **Não altere** a fonte como parte da varredura. Conectores são **somente leitura** por desenho; não “corrija” arquivos no alvo enquanto a sessão roda.
+5. **Guarde** uma cópia do `scan_manifest_*.yaml` (e do Excel) no **seu** depósito append-only ou assinado (WORM, cofre de evidência). O produto grava os arquivos ao lado do diretório de relatório; **não** implementa WORM.
+
+PMO: este checklist é o **protocolo de varredura** que você anexa ao dossiê de auditoria. CISO: integração com resposta a incidente é “inventário primeiro, imageamento DFIR se a assessoria exigir” — primer §3 live vs offline.
+
+## Postura de validação da ferramenta (CISO)
+
+A [ISO/IEC 27041](https://www.iso.org/standard/44405.html) trata se os **métodos** investigativos são adequados e suficientes (entrada de catálogo; **não** trate este parágrafo como a norma). O Data Boar é motor de **descoberta de PII / inventário de compliance**, não suíte de imageamento forense. Adequação **para este trabalho** aparece por:
+
+- **[ADR-0007](adr/ADR-0007-synthetic-data-corpus-before-real-data.md):** corpus **sintético** como **gate obrigatório** antes de dado real de produção (FP/FN conhecidos, cloaking, flags de menores). Artefatos de lab ficam gitignorados; o CI não leva o corpus.
+- **Comportamento de código aberto:** detectores, conectores e relatório são **auditáveis**. Isso é **auditoria pela comunidade**, não certificado pago do [NIST CFTT](https://www.nist.gov/itl/ssd/software-quality-group/computer-forensics-tool-testing-program-cftt) ([PDF de visão geral](https://www.nist.gov/system/files/documents/2017/05/09/cftt_overview.pdf)).
+- **Defeitos:** quando varredura ou relatório falha, o [ADR-0047](adr/ADR-0047-rca-first-defect-investigation-and-fix-discipline.md) exige **causa raiz** antes do conserto — relevante se um defeito da ferramenta puder contaminar evidência usada por DPO ou assessoria.
+
+### Nota para o público CISO
+
+Validação independente e certificação explicam boa parte do custo de bancadas forenses comerciais (exemplos: **FTK**, **Magnet AXIOM**). O modelo **open-core** do Data Boar **não** afirma equivalência com esses produtos nem com imageadores listados no CFTT. É um caminho **complementar**: **código transparente** mais validação sintética **ADR-0007**, adequado a **inventário de PII e apoio a compliance**. *Laudo* oficial e aquisição de disco/RAM continuam com ferramentas e peritos DFIR ([ADR-0025](adr/ADR-0025-compliance-positioning-evidence-inventory-not-legal-conclusion-engine.md)).
 
 ## Licença e direitos autorais
 

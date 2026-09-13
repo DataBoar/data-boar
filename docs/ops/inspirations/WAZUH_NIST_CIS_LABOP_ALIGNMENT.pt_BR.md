@@ -81,6 +81,19 @@ O SP 800-228A se tornará a referência NIST para hardening de APIs REST que tra
 
 **Ação:** Revisar o texto final do SP 800-228A em relação às rotas em `api/` quando publicado; considerar um novo ADR para alinhamento de hardening de API nesse momento.
 
+## NIST Privacy Framework (PF 1.0)
+
+- Primário: [NIST Privacy Framework](https://www.nist.gov/privacy-framework)
+- A função **Identify-P** (inventário de dados pessoais e fluxos / processamento relacionados) é o **vocabulário mais próximo** do que o Data Boar **varre**: localizar registros com forma de dados pessoais em bancos, arquivos e APIs. Isso é **alinhamento**, não a alegação de que o produto **implementa** toda a função Identify-P nem o restante do Core do PF (Govern-P, Control-P, Communicate-P, Protect-P).
+- O PF é um overlay **voluntário**, complementar a LGPD / GDPR / CCPA. **Não** substitui essas normas. Usar a linguagem do PF em conversas comerciais pode apoiar **discussões de diligência**; **não** é evidência perante a ANPD (nem outro regulador) por si só e **não** é certificação.
+- Texto seguro no pitch: “O Data Boar **alinha-se** à Identify-P (inventário de dados pessoais).” **Não** diga “implementa o NIST PF”, “certificado NIST” ou “conforme o Privacy Framework”.
+
+## NIST AI RMF — característica Privacy-Enhanced
+
+- Primário: [NIST AI Risk Management Framework](https://www.nist.gov/itl/ai-risk-management-framework)
+- **Privacy-Enhanced** é uma das características de IA confiável no RMF. Varrer repositórios **antes** (ou em paralelo) do treinamento de modelos pode apoiar a função **Measure** como **medição de risco de privacidade nos dados de origem** — a mesma ideia da subseção de overlay acima. O Data Boar continua sendo ferramenta de **inventário de PII**, não avaliador de sistemas de IA.
+- O **Art. 10** do EU AI Act (qualidade de dados de treinamento em sistemas de alto risco) é uma **conversa regulatória relacionada na UE**, não a alegação de que o Data Boar atende o Artigo 10.
+
 ---
 
 ## CIS Controls — lente de priorização

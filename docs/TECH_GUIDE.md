@@ -727,7 +727,7 @@ The application explicitly references **LGPD**, **GDPR**, **CCPA**, **HIPAA**, a
 
 **Enterprise remediation plugins (L1):** partners implement `RemediationPlugin` (`core/plugins/`) and register it under YAML `remediation:` — see **[PLUGIN_SDK.md](PLUGIN_SDK.md)** ([pt-BR](PLUGIN_SDK.pt_BR.md)). Distinct from **YAML pattern plugins** (custom regex/ML/DL terms via [PLUGIN_AUTHOR_GUIDE.md](PLUGIN_AUTHOR_GUIDE.md) and [ADR-0052](adr/ADR-0052-yaml-plugin-system-centralized-schema.md)).
 
-**Forensic volatility triage (#687):** optional `volatility_class` on pattern plugin items (`HIGH` / `MEDIUM` / `LOW` / `STATIC`, ISO/IEC 27037:2012 §7) is author metadata in `config/plugin_schema.yaml` — not copied onto finding rows. When set, `scan_manifest_*.yaml` lists entries under `plugin_metadata.volatility_triage` (source file, section, pattern id, class). Full semantics and incident-response context: [FORENSICS_AND_EVIDENCE_PRIMER.md](primers/FORENSICS_AND_EVIDENCE_PRIMER.md) ([pt-BR](primers/FORENSICS_AND_EVIDENCE_PRIMER.pt_BR.md)).
+**Forensic volatility triage (#687):** optional `volatility_class` on pattern plugin items (`HIGH` / `MEDIUM` / `LOW` / `STATIC`, ISO/IEC 27037:2012 §7) is author metadata in `config/plugin_schema.yaml` — not copied onto finding rows. When set, `scan_manifest_*.yaml` lists entries under `plugin_metadata.volatility_triage` (source file, section, pattern id, class). Operator live vs offline checklist and CISO validation posture: [Forensic scan posture](#forensic-scan-posture) and [Tool validation posture (CISO)](#tool-validation-posture-ciso) below. Full primer: [FORENSICS_AND_EVIDENCE_PRIMER.md](primers/FORENSICS_AND_EVIDENCE_PRIMER.md) ([pt-BR](primers/FORENSICS_AND_EVIDENCE_PRIMER.pt_BR.md)).
 
 **Audit log PII self-scan (#877):** before `GET /logs` serves an `audit_*.log` attachment, the API runs built-in `DEFAULT_PATTERNS` over the file (`core/log_self_scan.py`). Cleartext shape hits block export (HTTP **422**, category counts only — no matched text) and record an **Audit Trail** finding via `log_audit_trail_finding`. Complements write-time `sanitize_log_text` ([ADR-0036](adr/ADR-0036-exception-and-log-pii-redaction-pipeline.md)).
 
@@ -748,6 +748,49 @@ The application explicitly references **LGPD**, **GDPR**, **CCPA**, **HIPAA**, a
 ## Topic map (peripheral guides)
 
 For **CISO / DPO / architect** paths that tie posture to concrete config (minors, jurisdiction hints, U.S. child-privacy samples, FELCA positioning), use **[MAP.md](MAP.md)** ([pt-BR](MAP.pt_BR.md)) instead of searching folder-by-folder. It links **[MINOR_DETECTION.md](MINOR_DETECTION.md)** ([pt-BR](MINOR_DETECTION.pt_BR.md)), the **jurisdiction hints** section of **[USAGE.md](USAGE.md)** ([pt-BR](USAGE.pt_BR.md)), **[ADR 0026](adr/ADR-0026-optional-jurisdiction-hints-dpo-facing-heuristic-metadata-only.md)**, **[JURISDICTION_COLLISION_HANDLING.md](JURISDICTION_COLLISION_HANDLING.md)** ([pt-BR](JURISDICTION_COLLISION_HANDLING.pt_BR.md)), **[ADR 0038](adr/ADR-0038-jurisdictional-ambiguity-alert-dont-decide.md)**, and the relevant **COMPLIANCE_FRAMEWORKS** / **compliance-samples** rows in one place.
+
+## Forensic scan posture
+
+Canonical framing (inventory vs *laudo*, hashes vs custody): [FORENSICS_AND_EVIDENCE_PRIMER.md](primers/FORENSICS_AND_EVIDENCE_PRIMER.md). DPO operations pitch: [pitch/PITCH_DPO.md](pitch/PITCH_DPO.md). This section is the **operator / DevSecOps** decision tree: **live** vs **offline** collection has **evidentiary weight**, not only operational convenience. Inspiration (buy official texts; **do not** treat this page as a substitute): [ISO/IEC 27037:2012](https://www.iso.org/standard/44381.html); [NIST SP 800-86](https://csrc.nist.gov/publications/detail/sp/800-86/final).
+
+**`volatility_class` is not auto-set from scan mode.** Shipped field ([#687](https://github.com/DataBoar/data-boar/issues/687), schema [ADR-0052](adr/ADR-0052-yaml-plugin-system-centralized-schema.md)): authors tag **pattern sources** `HIGH` / `MEDIUM` / `LOW` / `STATIC`. The engine does **not** flip the class because a database is online. Use the mapping below in **runbooks**.
+
+### Live scan (source still changing)
+
+The target is **active** while Data Boar reads it (live SQL, NFS/SMB share, running API). Rows, files, and logs can **move between sample and report**. That raises contamination and “what did you actually see?” risk.
+
+- Document **why** a quiesced copy was not used (availability, legal hold not yet in place, production-only replica).
+- Treat the work as **HIGH** volatility in the IR order-of-collection story. Align plugin `volatility_class: HIGH` with sources that disappear fast (RAM-adjacent logs, ephemeral containers) — still **metadata on patterns**, not a live-memory collector. Data Boar does **not** image RAM or take a write-blocked disk.
+- Require **UTC timestamps**, session id, product version, sampling/timeouts, and `config_scope_hash` on `scan_manifest_*.yaml` (see [REPORTS_AND_COMPLIANCE_OUTPUTS.md](REPORTS_AND_COMPLIANCE_OUTPUTS.md)). Add an **operator note** (ticket, `technician_name`, runbook) for source state. Collection that is live should be **justified in that note**.
+
+### Offline scan (quiesced, export, or archive)
+
+The source is **exported, snapshotted, or otherwise stable** before the session (dump, object-store archive, detached replica). Contamination risk is **lower**; this is the **preferred** posture when the output will enter a legal or ANPD pack.
+
+- Map the runbook to `volatility_class` **LOW** or **STATIC** for those pattern sources. **MEDIUM** fits slower-rotating logs that are not frozen but are not RAM-class either.
+- Offline still needs a **read-only** connector and an honest manifest. A copy sitting on disk is **not** a forensic image unless your DFIR process made it one.
+
+### Operator checklist (forensic-grade inventory session)
+
+1. Record **source state** (live vs offline) in scan notes / ticket — the YAML will not infer it for you.
+2. If live: document **why offline was not feasible**.
+3. Confirm the manifest you keep: generation time (**UTC**), product/version, session id, sampling bounds, **`config_scope_hash`**. Optional tenant/technician fields exist on the session; fill them. Hash algorithm for scope is whatever `report/scan_evidence.py` records today — **not** an exhibit seal ([primer §5](primers/FORENSICS_AND_EVIDENCE_PRIMER.md#5-integrity-and-hash)).
+4. **Do not modify** the source as part of the scan. Connectors are **read-only** by design; do not “fix” files on the target while the session runs.
+5. **Retain** a copy of `scan_manifest_*.yaml` (and the Excel) in **your** append-only or signed store (WORM, evidence locker). The product writes the files next to the report directory; it does **not** implement WORM itself.
+
+PMO: this checklist is the **scan protocol** you attach to the audit file. CISO: incident-response integration is “inventory first, then DFIR imaging if counsel requires it” — see primer §3 live vs offline.
+
+## Tool validation posture (CISO)
+
+[ISO/IEC 27041](https://www.iso.org/standard/44405.html) is the family document on whether investigative **methods** are adequate and sufficient (catalogue entry; **do not** treat this paragraph as the standard). Data Boar is a **PII discovery / compliance-inventory** engine, not a courtroom imaging suite. Adequacy for **this** job is shown by:
+
+- **[ADR-0007](adr/ADR-0007-synthetic-data-corpus-before-real-data.md):** a **synthetic corpus** is a **mandatory gate** before real production data (known FP/FN, cloaking, minors flags). Lab artefacts stay gitignored; CI never ships the corpus.
+- **Open-source behaviour:** detectors, connectors, and report code are **reviewable**. That is **community auditability**, not a paid [NIST CFTT](https://www.nist.gov/itl/ssd/software-quality-group/computer-forensics-tool-testing-program-cftt) certificate ([overview PDF](https://www.nist.gov/system/files/documents/2017/05/09/cftt_overview.pdf)).
+- **Defects:** when a scan or report misbehaves, [ADR-0047](adr/ADR-0047-rca-first-defect-investigation-and-fix-discipline.md) requires **root-cause** before the fix — relevant when a tool defect could taint evidence used by DPO or counsel.
+
+### Note for CISO audience
+
+Independent validation and certification are a large part of why commercial forensic workbenches (examples: **FTK**, **Magnet AXIOM**) are expensive. Data Boar’s **open-core** model does **not** claim equivalence with those products or with CFTT-listed imagers. It is a **complementary** path: **transparent code** plus **ADR-0007** synthetic validation, appropriate for **PII inventory and compliance support**. Official *laudo* and disk/RAM acquisition stay with accredited DFIR tools and experts ([ADR-0025](adr/ADR-0025-compliance-positioning-evidence-inventory-not-legal-conclusion-engine.md)).
 
 ## License and copyright
 
