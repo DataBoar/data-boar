@@ -75,7 +75,7 @@ def test_upstream_workflows_invoke_slack_ci_failure_notify_on_failure() -> None:
         ("semgrep.yml", "Semgrep", ("semgrep",)),
         ("gitleaks.yml", "Gitleaks", ("scan",)),
         ("scorecard.yml", "Scorecard", ("analysis",)),
-        ("sbom.yml", "SBOM", ("generate",)),
+        ("sbom.yml", "SBOM", ("generate", "attest-and-attach")),
         (
             "dependabot-sync.yml",
             "Dependabot requirements.txt sync",
@@ -352,14 +352,16 @@ def test_sbom_workflow_attests_oidc_provenance_on_release() -> None:
     assert "PROVENANCE_BUNDLE" in text
     data = _load_workflow("sbom.yml")
     gen = data["jobs"]["generate"]
-    perms = gen.get("permissions") or {}
+    assert (gen.get("permissions") or {}).get("contents") == "read"
+    attach = data["jobs"]["attest-and-attach"]
+    perms = attach.get("permissions") or {}
     assert perms.get("id-token") == "write"
     assert perms.get("attestations") == "write"
     assert perms.get("contents") == "write"
     assert "COSIGN_PRIVATE" not in text
     assert "COSIGN_PASSWORD" not in text
     assert "NATIVE_PACKAGE_GPG_PRIVATE_KEY" not in text
-    names = [s.get("name") for s in gen.get("steps") or [] if isinstance(s, dict)]
+    names = [s.get("name") for s in attach.get("steps") or [] if isinstance(s, dict)]
     attest_idx = names.index("Attest release artifacts (Sigstore OIDC, issue 1891)")
     attach_idx = names.index("Attach SBOMs to GitHub Release (when applicable)")
     assert attest_idx < attach_idx
@@ -693,6 +695,41 @@ def test_claude_workflow_token_permissions() -> None:
     assert perms.get("issues") == "write"
     text = (WORKFLOWS / "claude.yml").read_text(encoding="utf-8")
     assert "persist-credentials: false" in text
+
+
+def test_publish_workflows_token_permissions_least_privilege() -> None:
+    """#1903: Scorecard Token-Permissions — top-level contents:read; write only on publish jobs."""
+    write_jobs = {
+        "publish-pypi.yml": {"bump-homebrew"},
+        "sbom.yml": {"attest-and-attach"},
+        "homebrew-tap.yml": {"bump-formula"},
+        "native-packages.yml": {"attach-release", "sign-release-sums"},
+        "dependabot-sync.yml": {"sync-requirements"},
+    }
+    for name, expected_write in write_jobs.items():
+        data = _load_workflow(name)
+        top = data.get("permissions") or {}
+        assert top.get("contents") == "read", name
+        assert data.get("permissions") != "read-all"
+        jobs = data.get("jobs") or {}
+        for job_id, job in jobs.items():
+            if not isinstance(job, dict):
+                continue
+            perms = job.get("permissions") or {}
+            if job_id in expected_write:
+                assert perms.get("contents") == "write", f"{name}:{job_id}"
+                continue
+            if "contents" in perms:
+                assert perms["contents"] == "read", f"{name}:{job_id}"
+        text = (WORKFLOWS / name).read_text(encoding="utf-8")
+        if name == "publish-pypi.yml":
+            assert "actions: write" not in text
+            bump = jobs["bump-homebrew"].get("permissions") or {}
+            assert "actions" not in bump
+            prod = jobs["publish-pypi"].get("permissions") or {}
+            assert prod.get("id-token") == "write"
+            testpypi = jobs["publish-testpypi"].get("permissions") or {}
+            assert testpypi.get("id-token") == "write"
 
 
 def test_scorecard_workflow_present_and_valid() -> None:
