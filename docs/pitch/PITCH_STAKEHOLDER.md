@@ -51,6 +51,6 @@ Full positioning: [DECISION_MAKER_VALUE_BRIEF.md](../DECISION_MAKER_VALUE_BRIEF.
 
 ## Next step
 
-- **DPO / legal depth:** [PITCH_DPO.md](PITCH_DPO.md)
+- **DPO / legal depth:** [PITCH_DPO.md](PITCH_DPO.md) · incident and custody: [PITCH_DPO_AND_LEGAL.md](PITCH_DPO_AND_LEGAL.md)
 - **Security depth:** [PITCH_CISO.md](PITCH_CISO.md)
 - **Sector storyboards:** [use-cases/USE_CASES_HUB.md](../use-cases/USE_CASES_HUB.md)

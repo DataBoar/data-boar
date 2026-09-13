@@ -40,5 +40,6 @@ Descoberta limitada em sistemas **acordados** pode alimentar um workstream de di
 ## Próximo passo
 
 - **Privacidade operacional:** [PITCH_DPO.pt_BR.md](PITCH_DPO.pt_BR.md)
+- **Incidente / custódia / CPP:** [PITCH_DPO_AND_LEGAL.pt_BR.md](PITCH_DPO_AND_LEGAL.pt_BR.md)
 - **Evidência de segurança:** [PITCH_CISO.pt_BR.md](PITCH_CISO.pt_BR.md)
 - **Finanças:** [PITCH_CFO.pt_BR.md](PITCH_CFO.pt_BR.md)

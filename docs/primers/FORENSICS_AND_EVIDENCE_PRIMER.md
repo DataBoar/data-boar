@@ -142,7 +142,8 @@ own legal conclusions. See [ADR-0025](../adr/ADR-0025-compliance-positioning-evi
 
 **Related (echoes — read there, do not copy here):**
 
-- Pitch (DPO/legal): [PITCH_DPO.md](../pitch/PITCH_DPO.md)
+- Pitch (DPO operations): [PITCH_DPO.md](../pitch/PITCH_DPO.md)
+- Pitch (DPO incident / legal / CPP): [PITCH_DPO_AND_LEGAL.md](../pitch/PITCH_DPO_AND_LEGAL.md)
 - Technical client / CISO: [TECH_GUIDE.md](../TECH_GUIDE.md)
 - Compliance page: [COMPLIANCE_AND_LEGAL.md](../COMPLIANCE_AND_LEGAL.md)
 - Product one-liner: [README.md](../../README.md)
