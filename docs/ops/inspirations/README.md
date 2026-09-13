@@ -11,7 +11,7 @@ This folder holds **two** tracks. Both use the same idea: external material is *
 Purpose: a small, high-signal list of sources that inform **hardening and compliance-oriented** roadmap choices.
 
 - [Security Now / GRC](SECURITY_NOW.md)
-- [OWASP projects and guidance](OWASP.md)
+- [OWASP projects and guidance](OWASP.md) ([pt-BR](OWASP.pt_BR.md)) — includes **OWASP AI Exchange**
 - [CISA KEV + advisories](CISA_KEV_AND_ADVISORIES.md)
 - [Supply chain and trust signals](SUPPLY_CHAIN_AND_TRUST_SIGNALS.md) ([pt-BR — follow-ups adiados](SUPPLY_CHAIN_AND_TRUST_SIGNALS.pt_BR.md))
 - [Wazuh docs + NIST CSF / CIS — lab-op alignment](WAZUH_NIST_CIS_LABOP_ALIGNMENT.md) ([pt-BR](WAZUH_NIST_CIS_LABOP_ALIGNMENT.pt_BR.md))

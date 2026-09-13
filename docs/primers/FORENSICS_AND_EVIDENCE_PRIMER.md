@@ -140,6 +140,32 @@ plugin/schema **collection records**, and `norm_tag` as an **analysis label** �
 It is **not** a substitute for an official forensic report. Counsel and accredited experts still
 own legal conclusions. See [ADR-0025](../adr/ADR-0025-compliance-positioning-evidence-inventory-not-legal-conclusion-engine.md).
 
+That posture is **not** a certification. It is a set of **engineering decisions** already written into
+the scanning and report doctrine and **clamped in code** (especially
+[`connectors/sql_sampling.py`](../../connectors/sql_sampling.py)). Bounded reads, a greppable SQL
+footprint, and a replayable report package overlap **themes** taught in digital-forensics standards
+because SRE/guest-in-the-database discipline arrived at the same constraints — they are **technical
+analogues**, not legal equivalence with ISO, NIST, or CPP.
+
+### Manifesto-to-forensic-principle mapping (technical comparison only)
+
+Rows below **inspire** how we talk about inventory artefacts. They do **not** mean Data Boar implements
+the cited instrument, replaces a write-blocker or *laudo*, or satisfies chain-of-custody statute.
+
+| Forensic theme | Pointer (catalogue / statute — buy/read official text) | What the product actually does | Doctrine § |
+| -------------- | ------------------------------------------------------- | ------------------------------ | ---------- |
+| Minimisation / necessity | [ISO/IEC 27037:2012](https://www.iso.org/standard/44381.html) | SQL sample size is **clamped** in `connectors/sql_sampling.py` (`_HARD_MAX_SAMPLE`); config/env cannot make it unbounded | [DEFENSIVE_SCANNING_MANIFESTO.md](../ops/inspirations/DEFENSIVE_SCANNING_MANIFESTO.md) §2 |
+| Non-contamination analogue | [ISO/IEC 27037:2012](https://www.iso.org/standard/44381.html) | Guest contract: no exclusive locks where the dialect allows a compliance-style read; no DDL / surprise side effects. **Not** a hardware write-blocker | [DEFENSIVE_SCANNING_MANIFESTO.md](../ops/inspirations/DEFENSIVE_SCANNING_MANIFESTO.md) §1 |
+| Traceable footprint (custody *input*) | CPP Arts. 158-A–F ([Planalto](https://www.planalto.gov.br/ccivil_03/decreto-lei/del3689compilado.htm)) | Sampling SQL is prefixed so a DBA can grep activity views. The comment can **enter** a custody pack; the product **does not** implement those articles | [DEFENSIVE_SCANNING_MANIFESTO.md](../ops/inspirations/DEFENSIVE_SCANNING_MANIFESTO.md) §4 |
+| Observed vs interpretation (*visum et repetum*) | [ISO/IEC 27042](https://www.iso.org/standard/44406.html) | Deliverables are expected to answer what ran, on what scope, and what to do next **from the artefacts** — still counts/patterns, not a legal finding | [ACTIONABLE_GOVERNANCE_AND_TRUST.md](../ops/inspirations/ACTIONABLE_GOVERNANCE_AND_TRUST.md) §4 |
+| Replayable package | [NIST SP 800-86](https://csrc.nist.gov/publications/detail/sp/800-86/final) | Trust triangle: executive Markdown + `scan_manifest_*.yaml` + the CLI/SQLite pair that regenerated them | [ACTIONABLE_GOVERNANCE_AND_TRUST.md](../ops/inspirations/ACTIONABLE_GOVERNANCE_AND_TRUST.md) §1 |
+| Method limits on the record | [ISO/IEC 27041](https://www.iso.org/standard/44405.html) | Executive Markdown methodology (section 3) records caps, timeouts, dialect posture, and last fallback when one occurred — always present, not an opt-in debug dump | [ACTIONABLE_GOVERNANCE_AND_TRUST.md](../ops/inspirations/ACTIONABLE_GOVERNANCE_AND_TRUST.md) §3 |
+
+The same trust triangle is the **minimal evidence bundle** for DPO/audit consumers. The DPO/legal pitch
+states that explicitly (it answers the deferred narrative in
+[ENTERPRISE_DB_OPS_AND_GRC_EVIDENCE.md](../ops/inspirations/ENTERPRISE_DB_OPS_AND_GRC_EVIDENCE.md)):
+[PITCH_DPO_AND_LEGAL.md](../pitch/PITCH_DPO_AND_LEGAL.md).
+
 **Related (echoes — read there, do not copy here):**
 
 - Pitch (DPO operations): [PITCH_DPO.md](../pitch/PITCH_DPO.md)
