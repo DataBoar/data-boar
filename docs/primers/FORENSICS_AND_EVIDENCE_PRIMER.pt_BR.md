@@ -141,6 +141,32 @@ como **rótulo de análise** — não achado de juízo.
 **Não** substitui laudo pericial oficial. Assessoria e peritos acreditados continuam donos das
 conclusões jurídicas. Ver [ADR-0025](../adr/ADR-0025-compliance-positioning-evidence-inventory-not-legal-conclusion-engine.md).
 
+Essa postura **não** é certificação. É um conjunto de **decisões de engenharia** já escritas na doutrina
+de varredura e de relatório e **limitadas em código** (em especial
+[`connectors/sql_sampling.py`](../../connectors/sql_sampling.py)). Leituras delimitadas, pegada SQL
+rastreável e pacote de relatório reproduzível cruzam **temas** das normas de forense digital porque a
+disciplina de SRE / “hóspede no banco do cliente” chegou às mesmas restrições — são **análogos técnicos**,
+não equivalência jurídica com ISO, NIST ou CPP.
+
+### Mapeamento manifesto → princípio forense (só comparação técnica)
+
+As linhas abaixo **inspiram** como falamos dos artefatos de inventário. **Não** significam que o Data Boar
+implementa o instrumento citado, substitui write-blocker ou *laudo*, nem atende cadeia de custódia legal.
+
+| Tema forense | Ponteiro (catálogo / estatuto — compre/leia o texto oficial) | O que o produto de fato faz | Doutrina § |
+| ------------ | ------------------------------------------------------------- | --------------------------- | ---------- |
+| Minimização e necessidade | [ISO/IEC 27037:2012](https://www.iso.org/standard/44381.html) | O tamanho da amostra SQL é **clampado** em `connectors/sql_sampling.py` (`_HARD_MAX_SAMPLE`); YAML/env não deixam a leitura ilimitada | [DEFENSIVE_SCANNING_MANIFESTO.md](../ops/inspirations/DEFENSIVE_SCANNING_MANIFESTO.md) §2 |
+| Análogo de não contaminação | [ISO/IEC 27037:2012](https://www.iso.org/standard/44381.html) | Contrato de hóspede: sem lock exclusivo onde o dialeto permite leitura de compliance; sem DDL / efeito colateral surpresa. **Não** é write-blocker de hardware | [DEFENSIVE_SCANNING_MANIFESTO.md](../ops/inspirations/DEFENSIVE_SCANNING_MANIFESTO.md) §1 |
+| Pegada rastreável (insumo de custódia) | CPP arts. 158-A–F ([Planalto](https://www.planalto.gov.br/ccivil_03/decreto-lei/del3689compilado.htm)) | O SQL de amostragem leva prefixo para o DBA grepar views de atividade. O comentário pode **entrar** no pacote de custódia; o produto **não** implementa esses artigos | [DEFENSIVE_SCANNING_MANIFESTO.md](../ops/inspirations/DEFENSIVE_SCANNING_MANIFESTO.md) §4 |
+| Observado vs interpretação (*visum et repetum*) | [ISO/IEC 27042](https://www.iso.org/standard/44406.html) | Os entregáveis devem responder o que rodou, em que escopo e o que fazer em seguida **a partir dos artefatos** — ainda contagens/padrões, não achado jurídico | [ACTIONABLE_GOVERNANCE_AND_TRUST.md](../ops/inspirations/ACTIONABLE_GOVERNANCE_AND_TRUST.md) §4 |
+| Pacote reproduzível | [NIST SP 800-86](https://csrc.nist.gov/publications/detail/sp/800-86/final) | Triângulo de confiança: Markdown executivo + `scan_manifest_*.yaml` + o par CLI/SQLite que os regenerou | [ACTIONABLE_GOVERNANCE_AND_TRUST.md](../ops/inspirations/ACTIONABLE_GOVERNANCE_AND_TRUST.md) §1 |
+| Limites de método no registro | [ISO/IEC 27041](https://www.iso.org/standard/44405.html) | A metodologia do Markdown executivo (seção 3) registra tetos, timeouts, postura de dialeto e o último fallback quando houve — sempre presente, não dump de debug opcional | [ACTIONABLE_GOVERNANCE_AND_TRUST.md](../ops/inspirations/ACTIONABLE_GOVERNANCE_AND_TRUST.md) §3 |
+
+O mesmo triângulo de confiança é o **pacote mínimo de evidência** para consumidores DPO/auditoria. O pitch
+DPO/jurídico deixa isso explícito (responde a narrativa adiada em
+[ENTERPRISE_DB_OPS_AND_GRC_EVIDENCE.pt_BR.md](../ops/inspirations/ENTERPRISE_DB_OPS_AND_GRC_EVIDENCE.pt_BR.md)):
+[PITCH_DPO_AND_LEGAL.pt_BR.md](../pitch/PITCH_DPO_AND_LEGAL.pt_BR.md).
+
 **Relacionados (ecos — leia lá, não copie aqui):**
 
 - Pitch (DPO operacional): [PITCH_DPO.pt_BR.md](../pitch/PITCH_DPO.pt_BR.md)
