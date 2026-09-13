@@ -26,6 +26,8 @@ Empty while the working tree carries **`1.8.0-beta`** (see section below).
 
 ### Included since `1.7.4.post12`
 
+- **Inspirations NIST PF + OWASP AI Exchange (#698):** `OWASP.md` plus full `OWASP.pt_BR.md`; NIST Privacy Framework Identify-P and AI RMF Privacy-Enhanced sections on the Wazuh/NIST lab-op note (EN + pt-BR); hub row. Alignment/inspiration only — not PF, RMF, or OWASP certification.
+
 - **`--validate-config` invalid path is side-effect free (#538):** unknown connectors / missing required keys abort **before** creating `report.output_dir`, the `sqlite_path` parent, or opening the integrity-anchor SQLite file.
 
 - **Integrity anchor upgrade (#1262):** a legitimate `pip`/`pipx` upgrade that changes hashed modules stays `tampered`/`-alpha` until the operator runs `--reconcile-integrity-anchor --confirm-upgrade-to=<installed-version>` (must match the running package). Auto-rebaseline on `release_label` change was a bypass surface and is removed.
@@ -40,8 +42,9 @@ Empty while the working tree carries **`1.8.0-beta`** (see section below).
 
 - **OpenSSF Security-Policy (#1886):** root `SECURITY.md` / `SECURITY.pt_BR.md` now include a clickable GitHub advisory URL, `mailto:contact@databoar.com.br`, product **Supported versions** (1.7.4.x + `main`), a **Disclosure timeline** (ack **72 hours**; no public PoC issue), and Scorecard badge/API links. Does not change Scorecard YAML workflows.
 
-- **DPO + legal pitch (#688):** [PITCH_DPO_AND_LEGAL.md](docs/pitch/PITCH_DPO_AND_LEGAL.md) ([pt-BR](docs/pitch/PITCH_DPO_AND_LEGAL.pt_BR.md)) — litigation/custody companion to [PITCH_DPO.md](docs/pitch/PITCH_DPO.md); CPP Arts. 158-A–F pointers; ADR-0025 ceiling (*laudo* / not a legal-conclusion engine). Honest on hashes vs SSH-signed manifests.
+- **TECH_GUIDE forensic scan posture (#691):** live vs offline collection, operator checklist, and CISO tool-validation note (ISO/IEC 27041 pointer, ADR-0007 corpus, ADR-0047 RCA, NIST CFTT as complementary — not FTK/AXIOM equivalence). `volatility_class` remains author metadata (#687), not an auto live/offline flag.
 
+- **DPO + legal pitch (#688):** [PITCH_DPO_AND_LEGAL.md](docs/pitch/PITCH_DPO_AND_LEGAL.md) ([pt-BR](docs/pitch/PITCH_DPO_AND_LEGAL.pt_BR.md)) — litigation/custody companion to [PITCH_DPO.md](docs/pitch/PITCH_DPO.md); CPP Arts. 158-A–F pointers; ADR-0025 ceiling (*laudo* / not a legal-conclusion engine). Honest on hashes vs SSH-signed manifests.
 - **Integrity snapshot public `error` (#1721):** `ensure_integrity_anchor` fail-soft JSON used by unauthenticated `/health` and `/status` stores `type(e).__name__` only. `str(e)` (paths, JSON parse context) stays in the operator log via `SanitizeLogFilter`.
 
 - **CPU pre-flight before numpy/ML (#929):** x86 hosts missing SSE4.2, POPCNT, or AVX skip the PyPI numpy/sklearn/DL imports (SIGILL is not catchable). Regex CPF/CNPJ still runs; `core.dl_backend` is lazy from `detector.py`. **Primary** path to restore working ML is the hosted wheelhouse `wheelhouse-x86-64-v1-2026-07-29` (`[noavx]`: `gh release download` + `pip install --no-index --find-links`). Distro numpy / `-Dcpu-baseline=min` are fallbacks only.
