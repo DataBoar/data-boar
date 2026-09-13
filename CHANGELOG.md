@@ -46,6 +46,8 @@ Empty while the working tree carries **`1.8.0-beta`** (see section below).
 
 - **PyPI install docs (#1752):** README / CONTRIBUTING no longer say `pip install data-boar` is “when published”. The package is live; document `uvx data-boar` and `uvx data-boar --demo`. Last stable wheel can lag `main` (pre-release remains git-only).
 
+- **Scorecard Token-Permissions (#1889):** `.github/workflows/claude.yml` declares top-level `permissions: contents: read` and drops job-level `contents: write` to `read` (checkout does not persist credentials; the job does not push). Other publish workflows unchanged.
+
 - **Dockerfile pip pins (#1890):** `Dockerfile` / `Dockerfile.nogil` pin `pip==25.3`, `wheel==0.46.2`, `cryptography==50.0.0` (lock), and install `requirements.txt` with `--require-hashes`. Does not change lab-op scripts, `ci.yml`, or `wheelhouse-recipe.yml`.
 
 - **OpenSSF Security-Policy (#1886):** root `SECURITY.md` / `SECURITY.pt_BR.md` now include a clickable GitHub advisory URL, `mailto:contact@databoar.com.br`, product **Supported versions** (1.7.4.x + `main`), a **Disclosure timeline** (ack **72 hours**; no public PoC issue), and Scorecard badge/API links. Does not change Scorecard YAML workflows.
