@@ -42,6 +42,8 @@ Empty while the working tree carries **`1.8.0-beta`** (see section below).
 
 - **PyPI install docs (#1752):** README / CONTRIBUTING no longer say `pip install data-boar` is “when published”. The package is live; document `uvx data-boar` and `uvx data-boar --demo`. Last stable wheel can lag `main` (pre-release remains git-only).
 
+- **OpenSSF Security-Policy (#1886):** root `SECURITY.md` / `SECURITY.pt_BR.md` now include a clickable GitHub advisory URL, `mailto:contact@databoar.com.br`, product **Supported versions** (1.7.4.x + `main`), a **Disclosure timeline** (ack **72 hours**; no public PoC issue), and Scorecard badge/API links. Does not change Scorecard YAML workflows.
+
 - **TECH_GUIDE forensic scan posture (#691):** live vs offline collection, operator checklist, and CISO tool-validation note (ISO/IEC 27041 pointer, ADR-0007 corpus, ADR-0047 RCA, NIST CFTT as complementary — not FTK/AXIOM equivalence). `volatility_class` remains author metadata (#687), not an auto live/offline flag.
 
 - **DPO + legal pitch (#688):** [PITCH_DPO_AND_LEGAL.md](docs/pitch/PITCH_DPO_AND_LEGAL.md) ([pt-BR](docs/pitch/PITCH_DPO_AND_LEGAL.pt_BR.md)) — litigation/custody companion to [PITCH_DPO.md](docs/pitch/PITCH_DPO.md); CPP Arts. 158-A–F pointers; ADR-0025 ceiling (*laudo* / not a legal-conclusion engine). Honest on hashes vs SSH-signed manifests.
