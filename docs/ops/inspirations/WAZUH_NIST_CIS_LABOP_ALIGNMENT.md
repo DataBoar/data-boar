@@ -81,6 +81,19 @@ SP 800-228A will become the NIST reference for hardening REST APIs handling sens
 
 **Action:** Review SP 800-228A final text against `api/` routes when published; consider a new ADR for API hardening alignment at that point.
 
+## NIST Privacy Framework (PF 1.0)
+
+- Primary: [NIST Privacy Framework](https://www.nist.gov/privacy-framework)
+- Function **Identify-P** (inventory of personal data and related processing / flows) is the **closest vocabulary match** to what Data Boar **scans for**: locating personal-data-shaped records in databases, files, and APIs. That is **alignment**, not a claim that the product **implements** the full Identify-P function or the rest of the PF Core (Govern-P, Control-P, Communicate-P, Protect-P).
+- The PF is a **voluntary** overlay complementary to LGPD / GDPR / CCPA. It does **not** replace those laws. Using PF language in buyer conversations can support **diligence discussions**; it is **not** ANPD (or other regulator) evidence by itself and is **not** a certification.
+- Pitch-safe wording: “Data Boar **aligns with** Identify-P (personal-data inventory).” Do **not** say “implements NIST PF,” “NIST-certified,” or “compliant with the Privacy Framework.”
+
+## NIST AI RMF — Privacy-Enhanced characteristic
+
+- Primary: [NIST AI Risk Management Framework](https://www.nist.gov/itl/ai-risk-management-framework)
+- **Privacy-Enhanced** is one of the trustworthy-AI characteristics in the RMF. Scanning stores **before** (or alongside) model training can support the **Measure** function as **privacy-risk measurement of source data** — same idea as the overlay subsection above. Data Boar remains a **PII inventory** tool, not an AI-system evaluator.
+- EU AI Act **Art. 10** (training-data quality for high-risk systems) is a **related EU regulatory conversation**, not a claim that Data Boar satisfies Article 10.
+
 ---
 
 ## CIS Controls — prioritization lens

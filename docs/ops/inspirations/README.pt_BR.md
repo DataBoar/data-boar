@@ -11,7 +11,7 @@ Esta pasta tem **dois** eixos. Em ambos: material externo é **insumo**, não po
 Objetivo: fontes que informam **hardening** e escolhas de roadmap com viés compliance/GRC.
 
 - [Security Now / GRC](SECURITY_NOW.md)
-- [Projetos e guias OWASP](OWASP.md)
+- [Projetos e guias OWASP](OWASP.pt_BR.md) ([EN](OWASP.md)) — inclui **OWASP AI Exchange**
 - [CISA KEV + advisories](CISA_KEV_AND_ADVISORIES.md)
 - [Cadeia de suprimentos e sinais de confiança — pt-BR (follow-ups)](SUPPLY_CHAIN_AND_TRUST_SIGNALS.pt_BR.md) ([nota completa em EN](SUPPLY_CHAIN_AND_TRUST_SIGNALS.md))
 - [Wazuh + NIST CSF / CIS — alinhamento lab-op](WAZUH_NIST_CIS_LABOP_ALIGNMENT.pt_BR.md) ([EN](WAZUH_NIST_CIS_LABOP_ALIGNMENT.md))

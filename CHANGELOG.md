@@ -26,6 +26,8 @@ Empty while the working tree carries **`1.8.0-beta`** (see section below).
 
 ### Included since `1.7.4.post12`
 
+- **Inspirations NIST PF + OWASP AI Exchange (#698):** `OWASP.md` plus full `OWASP.pt_BR.md`; NIST Privacy Framework Identify-P and AI RMF Privacy-Enhanced sections on the Wazuh/NIST lab-op note (EN + pt-BR); hub row. Alignment/inspiration only — not PF, RMF, or OWASP certification.
+
 - **`--validate-config` invalid path is side-effect free (#538):** unknown connectors / missing required keys abort **before** creating `report.output_dir`, the `sqlite_path` parent, or opening the integrity-anchor SQLite file.
 
 - **Integrity anchor upgrade (#1262):** a legitimate `pip`/`pipx` upgrade that changes hashed modules stays `tampered`/`-alpha` until the operator runs `--reconcile-integrity-anchor --confirm-upgrade-to=<installed-version>` (must match the running package). Auto-rebaseline on `release_label` change was a bypass surface and is removed.
