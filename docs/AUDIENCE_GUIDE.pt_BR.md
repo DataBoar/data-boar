@@ -20,7 +20,7 @@ Mapa de navegação para **treze** perfis de leitor. Índice completo: [README.m
 | | |
 | - | - |
 | **Entrada** | [pitch/PITCH_DPO.pt_BR.md](pitch/PITCH_DPO.pt_BR.md) |
-| **Trilha** | [COMPLIANCE_AND_LEGAL.pt_BR.md](COMPLIANCE_AND_LEGAL.pt_BR.md) → [COMPLIANCE_FRAMEWORKS.pt_BR.md](COMPLIANCE_FRAMEWORKS.pt_BR.md) → [MINOR_DETECTION.pt_BR.md](MINOR_DETECTION.pt_BR.md) → [JURISDICTION_COLLISION_HANDLING.pt_BR.md](JURISDICTION_COLLISION_HANDLING.pt_BR.md) |
+| **Trilha** | [COMPLIANCE_AND_LEGAL.pt_BR.md](COMPLIANCE_AND_LEGAL.pt_BR.md) → [pitch/PITCH_DPO_AND_LEGAL.pt_BR.md](pitch/PITCH_DPO_AND_LEGAL.pt_BR.md) → [COMPLIANCE_FRAMEWORKS.pt_BR.md](COMPLIANCE_FRAMEWORKS.pt_BR.md) → [MINOR_DETECTION.pt_BR.md](MINOR_DETECTION.pt_BR.md) → [JURISDICTION_COLLISION_HANDLING.pt_BR.md](JURISDICTION_COLLISION_HANDLING.pt_BR.md) |
 | **Evitar** | [TECH_GUIDE.pt_BR.md](TECH_GUIDE.pt_BR.md) salvo integração; ADRs de engenharia |
 | **Sobreposição** | CISO ([SECURITY.pt_BR.md](SECURITY.pt_BR.md)); engenheiro de compliance (amostras) |
 
@@ -74,7 +74,7 @@ Mapa de navegação para **treze** perfis de leitor. Índice completo: [README.m
 | | |
 | - | - |
 | **Entrada** | [pitch/PITCH_COMPLIANCE_OFFICER.pt_BR.md](pitch/PITCH_COMPLIANCE_OFFICER.pt_BR.md) |
-| **Trilha** | [COMPLIANCE_AND_LEGAL.pt_BR.md](COMPLIANCE_AND_LEGAL.pt_BR.md) → [COMPLIANCE_FRAMEWORKS.pt_BR.md](COMPLIANCE_FRAMEWORKS.pt_BR.md) |
+| **Trilha** | [COMPLIANCE_AND_LEGAL.pt_BR.md](COMPLIANCE_AND_LEGAL.pt_BR.md) → [pitch/PITCH_DPO_AND_LEGAL.pt_BR.md](pitch/PITCH_DPO_AND_LEGAL.pt_BR.md) → [COMPLIANCE_FRAMEWORKS.pt_BR.md](COMPLIANCE_FRAMEWORKS.pt_BR.md) |
 | **Evitar** | [TECH_GUIDE.pt_BR.md](TECH_GUIDE.pt_BR.md); não confundir com DPO (LGPD operacional) |
 | **Sobreposição** | DPO (resumo jurídico, papel distinto); Executivo (postura de compliance) |
 

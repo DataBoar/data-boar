@@ -54,5 +54,6 @@ Guia do operador: [MINOR_DETECTION.pt_BR.md](../MINOR_DETECTION.pt_BR.md).
 ## Próximo passo
 
 - **Resumo executivo:** [PITCH_STAKEHOLDER.pt_BR.md](PITCH_STAKEHOLDER.pt_BR.md)
+- **Incidente / litígio / CPP (companheiro):** [PITCH_DPO_AND_LEGAL.pt_BR.md](PITCH_DPO_AND_LEGAL.pt_BR.md)
 - **Controles de segurança:** [PITCH_CISO.pt_BR.md](PITCH_CISO.pt_BR.md)
 - **Achados tokenizados:** [use-cases/USE_CASE_TOKENIZED_FINDINGS.pt_BR.md](../use-cases/USE_CASE_TOKENIZED_FINDINGS.pt_BR.md)

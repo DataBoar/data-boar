@@ -10,6 +10,7 @@ Narrativas **de duas páginas** por público para workshops, compras e briefings
 | ----- | ---- | ----------- |
 | Conselho, diretoria, patrocinador de compra | [PITCH_STAKEHOLDER.pt_BR.md](PITCH_STAKEHOLDER.pt_BR.md) | Primeira conversa: valor, responsabilidade compartilhada, resultados 30/60/90 |
 | DPO, jurídico de privacidade, compliance | [PITCH_DPO.pt_BR.md](PITCH_DPO.pt_BR.md) | Base legal, apoio a DSAR, menores, sinais multinacionais |
+| DPO (incidente), litigante, sócio de escritório | [PITCH_DPO_AND_LEGAL.pt_BR.md](PITCH_DPO_AND_LEGAL.pt_BR.md) | Cadeia de custódia, ponteiros CPP arts. 158-A–F, teto do *laudo* — **não** duplica o deck operacional do DPO |
 | CISO, arquiteto de segurança, GRC | [PITCH_CISO.pt_BR.md](PITCH_CISO.pt_BR.md) | Controles, **automação de evidência**, postura de integração; faixas para o CFO; KPIs por fonte/sessão |
 | CDO, Data Steward, engenheiro de dados sênior | [PITCH_DATA_OFFICER.pt_BR.md](PITCH_DATA_OFFICER.pt_BR.md) | Inventário antes do GGD: armazenar/utilizar no DMBOK, maturidade de PII existente |
 | CIO, gerente de TI, governança de TI | [PITCH_IT_GOVERNANCE.pt_BR.md](PITCH_IT_GOVERNANCE.pt_BR.md) | Avaliar–Dirigir–Monitorar com evidência, não só política |
@@ -19,7 +20,7 @@ Narrativas **de duas páginas** por público para workshops, compras e briefings
 
 ## Decks planejados (issues ainda abertas)
 
-Governança de TI ([#631](https://github.com/DataBoar/data-boar/issues/631)) e CDO ([#639](https://github.com/DataBoar/data-boar/issues/639)) já têm decks na tabela acima; feche essas issues quando o AC restante estiver verificado. Não há outros decks de papel enfileirados neste índice além dos arquivos já publicados.
+Governança de TI ([#631](https://github.com/DataBoar/data-boar/issues/631)) e CDO ([#639](https://github.com/DataBoar/data-boar/issues/639)) já têm decks na tabela acima; feche essas issues quando o AC restante estiver verificado. **DPO + jurídico / CPP** ([#688](https://github.com/DataBoar/data-boar/issues/688)) está publicado em [PITCH_DPO_AND_LEGAL.pt_BR.md](PITCH_DPO_AND_LEGAL.pt_BR.md).
 
 ## Documentação relacionada (mais profunda que um deck)
 
@@ -27,6 +28,7 @@ Governança de TI ([#631](https://github.com/DataBoar/data-boar/issues/631)) e C
 | ---- | ---- |
 | Brief de valor (uma página) | [DECISION_MAKER_VALUE_BRIEF.pt_BR.md](../DECISION_MAKER_VALUE_BRIEF.pt_BR.md) |
 | Resumo jurídico / DPO | [COMPLIANCE_AND_LEGAL.pt_BR.md](../COMPLIANCE_AND_LEGAL.pt_BR.md) |
+| Forense digital vs inventário (primer) | [FORENSICS_AND_EVIDENCE_PRIMER.pt_BR.md](../primers/FORENSICS_AND_EVIDENCE_PRIMER.pt_BR.md) |
 | Perfis e amostras de conformidade | [COMPLIANCE_FRAMEWORKS.pt_BR.md](../COMPLIANCE_FRAMEWORKS.pt_BR.md) |
 | Postura de segurança (público) | [SECURITY.pt_BR.md](../SECURITY.pt_BR.md) |
 | Storyboards de casos de uso | [use-cases/USE_CASES_HUB.pt_BR.md](../use-cases/USE_CASES_HUB.pt_BR.md) |

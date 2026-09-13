@@ -123,6 +123,7 @@ O produto é **feito para se adaptar**: **perfis de configuração**, **override
 | Necessidade                                               | Documento                                                                                                                    |
 | -----------                                               | ---------                                                                                                                    |
 | **Resumo jurídico / compliance (esta página)**            | Você está aqui                                                                                                               |
+| **Pitch DPO incidente / litígio (ponteiros CPP)**        | [pitch/PITCH_DPO_AND_LEGAL.pt_BR.md](pitch/PITCH_DPO_AND_LEGAL.pt_BR.md) ([EN](pitch/PITCH_DPO_AND_LEGAL.md))                 |
 | **TI: codificações, limites de API, timeouts, automação** | [COMPLIANCE_TECHNICAL_REFERENCE.pt_BR.md](COMPLIANCE_TECHNICAL_REFERENCE.pt_BR.md) ([EN](COMPLIANCE_TECHNICAL_REFERENCE.md)) |
 | **Lista de frameworks e perfis de exemplo**               | [COMPLIANCE_FRAMEWORKS.pt_BR.md](COMPLIANCE_FRAMEWORKS.pt_BR.md) · [COMPLIANCE_FRAMEWORKS.md](COMPLIANCE_FRAMEWORKS.md)      |
 | **Esquema de config, credenciais, CLI/API**               | [USAGE.pt_BR.md](USAGE.pt_BR.md) · [USAGE.md](USAGE.md)                                                                      |

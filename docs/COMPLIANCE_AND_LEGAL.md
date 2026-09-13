@@ -119,6 +119,7 @@ The product is **designed to adapt**: **configuration profiles**, **regex and re
 | Need                                                | Document                                                                                                                  |
 | ----                                                | --------                                                                                                                  |
 | **Legal / compliance summary (this page)**          | You are here                                                                                                              |
+| **DPO incident / litigation pitch (CPP pointers)** | [pitch/PITCH_DPO_AND_LEGAL.md](pitch/PITCH_DPO_AND_LEGAL.md) ([pt-BR](pitch/PITCH_DPO_AND_LEGAL.pt_BR.md))                 |
 | **IT: encodings, API limits, timeouts, automation** | [COMPLIANCE_TECHNICAL_REFERENCE.md](COMPLIANCE_TECHNICAL_REFERENCE.md) ([pt-BR](COMPLIANCE_TECHNICAL_REFERENCE.pt_BR.md)) |
 | **Framework list and sample profiles**              | [COMPLIANCE_FRAMEWORKS.md](COMPLIANCE_FRAMEWORKS.md) · [COMPLIANCE_FRAMEWORKS.pt_BR.md](COMPLIANCE_FRAMEWORKS.pt_BR.md)   |
 | **Config schema, credentials, CLI/API**             | [USAGE.md](USAGE.md) · [USAGE.pt_BR.md](USAGE.pt_BR.md)                                                                   |
