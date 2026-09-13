@@ -6,7 +6,22 @@ This document describes which versions of the application are supported, which d
 
 **Governance posture index (PII gates, agent containment, supply chain, provenance):** [`docs/SECURITY_GOVERNANCE_POSTURE_HUB.md`](docs/SECURITY_GOVERNANCE_POSTURE_HUB.md) ([pt-BR](docs/SECURITY_GOVERNANCE_POSTURE_HUB.pt_BR.md)) — co-located links only; does not replace this vulnerability policy.
 
+**Report a vulnerability (private):** [Open a GitHub security advisory](https://github.com/DataBoar/data-boar/security/advisories/new). Email the same disclosure to [contact@databoar.com.br](mailto:contact@databoar.com.br). Do **not** open a public issue with a proof-of-concept. Details: [Reporting a vulnerability](#reporting-a-vulnerability) and [Disclosure timeline](#disclosure-timeline).
+
+OpenSSF Scorecard for this repository (badge after publish; JSON API): [Scorecard viewer](https://scorecard.dev/viewer/?uri=github.com/DataBoar/data-boar) · [api.securityscorecards.dev](https://api.securityscorecards.dev/projects/github.com/DataBoar/data-boar) · README badge via [api.scorecard.dev](https://api.scorecard.dev/projects/github.com/DataBoar/data-boar/badge).
+
 ## Supported versions
+
+**Product (what we patch for security reports):**
+
+| Line | Status |
+| ----- | ------ |
+| **1.7.4.x** (stable **1.7.4**, including PyPI **1.7.4.postN**; Docker Hub `fabioleitao/data_boar` **1.7.4** / `latest` when those tags are published) | **Supported** — security fixes for this stable line |
+| **`main`** (working tree; currently **1.8.0-beta**, git-only) | **Supported** — fixes land here first, then stable as appropriate |
+
+**Not supported:** tags and images **older than 1.7.4**; unofficial forks or rebuilt images; unofficial mirrors; any fourth-segment “1.7.4.N” public version (this project does not publish that scheme — see [docs/VERSIONING.md](docs/VERSIONING.md)).
+
+**Runtime (Python):**
 
 - **Application (brand):** **Data Boar**. PyPI distribution id: **`data-boar`** (see [CONTRIBUTING.md](CONTRIBUTING.md#repository-and-install-identity-data-boar)). Current development targets **Python 3.12+**.
 - We aim to support the latest stable minor versions of Python 3.12 and 3.13 on Linux, macOS and Windows.
@@ -183,19 +198,29 @@ When the API or dashboard is **exposed to the internet or untrusted networks**, 
 
 If you believe you have found a security vulnerability in this project:
 
-1. **Do not open a public issue with exploit details.**
-1. Instead, please:
-   - Open a new issue in the **Issues** tab with a short, high-level description (no sensitive PoC data), **or**
-   - If GitHub security advisories or private reporting is available for this repo, prefer that channel.
+1. **Do not open a public issue with exploit details or a proof-of-concept.**
+1. **Prefer private disclosure:**
+   - [Open a GitHub security advisory](https://github.com/DataBoar/data-boar/security/advisories/new), **or**
+   - Email [contact@databoar.com.br](mailto:contact@databoar.com.br) (existing public Data Boar contact alias).
 1. Include at least:
    - Version/commit of the project you are using.
    - Python version and OS details.
    - A minimal description of the impact (e.g. information disclosure, privilege escalation, DoS).
-1. The maintainers will:
-   - Acknowledge receipt as soon as reasonably possible.
-   - Investigate and, if confirmed, work on a fix and coordinate disclosure.
+1. The maintainers will follow the [Disclosure timeline](#disclosure-timeline).
 
-If you are unsure whether something is security-sensitive, err on the side of caution and use the private channel (or a minimal public issue) so we can triage it safely.
+If you are unsure whether something is security-sensitive, err on the side of caution and use the **advisory form or email**, not a public issue.
+
+## Disclosure timeline
+
+These are **targets**, not contractual SLAs.
+
+| Step | Target |
+| ---- | ------ |
+| **Acknowledge** a vulnerability report | Within **72 hours** of a private advisory or email we can actually receive |
+| **Fix or document** (patch, advisory, mitigation, or “won’t fix” with rationale) | According to **severity**: **high/critical** — aim within **30 days**; lower severity — next supported release train when practical |
+| **Public disclosure** | Coordinated after a fix is available on a [supported version](#supported-versions), or sooner if the report is already public |
+
+Do **not** file a **public** GitHub issue that includes a PoC, exploit steps, or live secrets. If GitHub’s UI only offers a public issue, keep the body **high-level** (no reproduction) and point to the private advisory.
 
 ## Security response (optional SLAs)
 
@@ -203,7 +228,7 @@ These are **targets** for maintainers and reporters, not contractual obligations
 
 | Area                        | Optional target                                                                                                                                                                                                             |
 | ------                      | -----------------                                                                                                                                                                                                           |
-| **Vulnerability reports**   | We aim to **acknowledge** within **5 working days** and, for **high/critical** findings, to **fix or document** (e.g. advisory, mitigation, or “won’t fix” with rationale) within **30 days**.                              |
+| **Vulnerability reports**   | We aim to **acknowledge** within **72 hours** (see [Disclosure timeline](#disclosure-timeline)) and, for **high/critical** findings, to **fix or document** (e.g. advisory, mitigation, or “won’t fix” with rationale) within **30 days**. |
 | **Dependabot security PRs** | We treat Dependabot **security** PRs as **P0**: aim to **merge or respond** (e.g. merge, close with comment, or defer with rationale) within **5 working days**. Non-security dependency PRs follow the usual review cycle. |
 
 See **CONTRIBUTING** for how to apply dependency updates and run `pip-audit`; see **`.github/dependabot.yml`** for Dependabot configuration.

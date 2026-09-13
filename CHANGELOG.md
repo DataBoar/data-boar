@@ -28,6 +28,8 @@ Empty while the working tree carries **`1.8.0-beta`** (see section below).
 
 - **Scorecard Signed-Releases (#1891):** the next GitHub tag (`1.7.4.postN` or `1.8.0`, whichever ships first) attaches Sigstore SLSA provenance (`data-boar.intoto.jsonl`) via OIDC `actions/attest-build-provenance` on the SBOM job. Historical tags stay unsigned. PyPI Trusted Publishing is unchanged.
 
+- **Global privacy regulations primer (#600):** [GLOBAL_PRIVACY_REGULATIONS_PRIMER.md](docs/plans/GLOBAL_PRIVACY_REGULATIONS_PRIMER.md) — PIPEDA / POPIA / APPI / Vietnam PDPD / FELCA alignment narrative; #477 samples as baseline; honest coverage (PIPEDA/POPIA/APPI YAML already on disk; FELCA is Brazil).
+
 - **Primer + DPO/legal pitch manifesto bridge (#700):** primer §8 mapping table (defensive scanning + actionable-governance doctrine vs ISO/NIST/CPP **themes**, not legal equivalence); pitch states the trust triangle **is** the GRC “evidence bundle”. ADR-0025 ceiling unchanged.
 
 - **Inspirations NIST PF + OWASP AI Exchange (#698):** `OWASP.md` plus full `OWASP.pt_BR.md`; NIST Privacy Framework Identify-P and AI RMF Privacy-Enhanced sections on the Wazuh/NIST lab-op note (EN + pt-BR); hub row. Alignment/inspiration only — not PF, RMF, or OWASP certification.
@@ -43,6 +45,8 @@ Empty while the working tree carries **`1.8.0-beta`** (see section below).
 - **Augmented scan extras are Pro (#1876 / remaining #854):** `ocr_images` stays Pro; `rich_media_metadata` and `data_soup_formats` are explicit `Tier.PRO` keys with gates on the filesystem/share extract path (existing `is_feature_available`). EPUB stays Community. No computer-vision keys (not in tree).
 
 - **PyPI install docs (#1752):** README / CONTRIBUTING no longer say `pip install data-boar` is “when published”. The package is live; document `uvx data-boar` and `uvx data-boar --demo`. Last stable wheel can lag `main` (pre-release remains git-only).
+
+- **OpenSSF Security-Policy (#1886):** root `SECURITY.md` / `SECURITY.pt_BR.md` now include a clickable GitHub advisory URL, `mailto:contact@databoar.com.br`, product **Supported versions** (1.7.4.x + `main`), a **Disclosure timeline** (ack **72 hours**; no public PoC issue), and Scorecard badge/API links. Does not change Scorecard YAML workflows.
 
 - **TECH_GUIDE forensic scan posture (#691):** live vs offline collection, operator checklist, and CISO tool-validation note (ISO/IEC 27041 pointer, ADR-0007 corpus, ADR-0047 RCA, NIST CFTT as complementary — not FTK/AXIOM equivalence). `volatility_class` remains author metadata (#687), not an auto live/offline flag.
 
