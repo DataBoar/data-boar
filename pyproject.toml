@@ -202,6 +202,14 @@ constraint-dependencies = ["rpds-py<2026"]
 [tool.pytest.ini_options]
 # Fail on any warning (DeprecationWarning, ResourceWarning, etc.) so the suite stays clean
 addopts = "-v -W error"
+# #1871 Option A: starlette still re-exports anyio.abc.BlockingPortal (Kludex/starlette#3498).
+# Message regex only — not ignore::DeprecationWarning, not :anyio.abc module-scope.
+# Pytest applies ini filters before cmdline ``-W error`` (CI/quick-test pass -W again);
+# tests/conftest.py re-applies this same filter after cmdline so it still wins.
+# Drop when starlette ships Kludex/starlette#3498 (follow-up #1915).
+filterwarnings = [
+    "ignore:The anyio.abc.BlockingPortal alias is deprecated:DeprecationWarning",
+]
 # Only the repo-root tests/ tree (see .gitignore /data-boar/): a nested duplicate worktree must not be collected.
 testpaths = ["tests"]
 norecursedirs = [

@@ -15,6 +15,19 @@ import subprocess
 
 import pytest
 
+# Keep in lockstep with [tool.pytest.ini_options].filterwarnings (#1871 / #1915).
+# Pytest applies ini filters, then cmdline ``-W error`` (CI/quick-test), so the
+# ini ignore loses unless a per-item filterwarnings mark is applied after that.
+_BLOCKINGPORTAL_DEPRECATION_FILTER = (
+    "ignore:The anyio.abc.BlockingPortal alias is deprecated:DeprecationWarning"
+)
+
+
+def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
+    mark = pytest.mark.filterwarnings(_BLOCKINGPORTAL_DEPRECATION_FILTER)
+    for item in items:
+        item.add_marker(mark)
+
 
 def pytest_addoption(parser: pytest.Parser) -> None:
     parser.addoption(
