@@ -35,3 +35,10 @@ def test_blockingportal_alias_deprecation_is_filtered() -> None:
         DeprecationWarning,
         stacklevel=1,
     )
+
+
+def test_starlette_testclient_import_does_not_error_under_werror() -> None:
+    """Collection of API tests imports this module; must not raise under ``-W error``."""
+    import starlette.testclient as starlette_testclient
+
+    assert starlette_testclient.TestClient is not None

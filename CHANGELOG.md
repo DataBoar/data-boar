@@ -26,7 +26,7 @@ Empty while the working tree carries **`1.8.0-beta`** (see section below).
 
 ### Included since `1.7.4.post12`
 
-- **Pytest / Dependabot uv group (#1871):** ignore only the starlette `anyio.abc.BlockingPortal` alias `DeprecationWarning` (exact message regex in `filterwarnings`). `addopts = -v -W error` unchanged. Per-test mark in `tests/conftest.py` so the ignore still wins when CI/quick-test pass an extra `-W error`. Remove via #1915 when starlette ships Kludex/starlette#3498.
+- **Pytest / Dependabot uv group (#1871):** ignore only the starlette `anyio.abc.BlockingPortal` alias `DeprecationWarning` (exact message regex in `filterwarnings`). `addopts = -v -W error` unchanged. `tests/conftest.py` warms `starlette.testclient` in `pytest_configure` and re-applies the ignore during collection (not only per-item marks) so CI collection does not error. Remove via #1915 when starlette ships Kludex/starlette#3498.
 
 - **Scorecard Pinned-Dependencies (#1905):** `prep_audit.sh` installs `uv` from the GitHub release tarball (`0.11.2`) after sha256 verification — no `curl | sh`. Fail-closed on checksum or download failure; curl retries match #1842.
 
