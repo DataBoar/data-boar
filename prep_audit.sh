@@ -54,10 +54,35 @@ apt-get install -y libxml2-dev libxslt1-dev zlib1g-dev
 
 echo -e "${GREEN}7. Verificando instalação do gerenciador 'uv'...${NC}"
 if ! command -v uv &>/dev/null; then
-  echo "Instalando o gerenciador uv..."
-  curl -LsSf https://astral.sh/uv/install.sh | sh
-  # shellcheck source=/dev/null
-  . "${HOME}/.cargo/env"
+  echo "Instalando o gerenciador uv (pinned tarball + sha256, #1905)..."
+  UV_VERSION="0.11.2"
+  UV_SHA256="7ac2ca0449c8d68dae9b99e635cd3bc9b22a4cb1de64b7c43716398447d42981"
+  UV_TARBALL="uv-x86_64-unknown-linux-gnu.tar.gz"
+  UV_URL="https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/${UV_TARBALL}"
+  tmpdir="$(mktemp -d)"
+  trap 'rm -rf "${tmpdir}"' EXIT
+  MAX_RETRIES=5
+  for i in $(seq 1 "${MAX_RETRIES}"); do
+    if curl --fail --show-error --location --retry 3 --retry-delay 5 --retry-connrefused \
+      "${UV_URL}" -o "${tmpdir}/${UV_TARBALL}"; then
+      break
+    fi
+    echo "Download attempt ${i} failed; sleeping $((i * 5))s before retry..."
+    sleep $((i * 5))
+    if [ "${i}" -eq "${MAX_RETRIES}" ]; then
+      echo -e "${RED}Failed to download ${UV_TARBALL} after ${MAX_RETRIES} attempts${NC}" >&2
+      exit 1
+    fi
+  done
+  echo "${UV_SHA256}  ${tmpdir}/${UV_TARBALL}" | sha256sum -c -
+  tar -xzf "${tmpdir}/${UV_TARBALL}" -C "${tmpdir}"
+  UV_BIN="$(find "${tmpdir}" -type f -name uv -perm -u+x | head -1)"
+  if [ -z "${UV_BIN}" ] || [ ! -x "${UV_BIN}" ]; then
+    echo -e "${RED}uv binary missing from tarball after checksum${NC}" >&2
+    exit 1
+  fi
+  install -m 0755 "${UV_BIN}" /usr/local/bin/uv
+  uv --version
 else
   echo "Gerenciador uv já está instalado."
 fi

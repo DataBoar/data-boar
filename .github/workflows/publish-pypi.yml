@@ -28,6 +28,8 @@ jobs:
     name: Build dist
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -102,7 +104,6 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-      actions: write
     secrets:
       HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
     uses: ./.github/workflows/homebrew-tap.yml

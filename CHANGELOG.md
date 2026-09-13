@@ -28,6 +28,14 @@ Empty while the working tree carries **`1.8.0-beta`** (see section below).
 
 - **Scorecard Pinned-Dependencies (#1906):** wheelhouse recipe installs PyYAML with `--require-hashes`; in-container builders install the toolchain from `scripts/wheelhouse/build-tools-hashes.txt`; `apply_wheelhouse_v1.sh` pins `--no-index` packages to the hosted wheel versions. Remaining `pip install numpy` after local `pip wheel` is `--no-index` only (hashes are the built wheels).
 
+- **Scorecard Pinned-Dependencies (#1904):** `ci.yml` uv fallback and ansible-syntax install `pip` with `--require-hashes` files under `.github/pip-constraints/` (compiled from the same version pins the jobs already used). `uv.lock` stays the product lock.
+
+- **Scorecard Token-Permissions (#1903):** publish workflows (`publish-pypi.yml`, `sbom.yml`, `homebrew-tap.yml`, `native-packages.yml`, `dependabot-sync.yml`) keep top-level `contents: read`; `contents: write` only on jobs that attach/push. PyPI OIDC `id-token` unchanged; unused `actions: write` dropped from the Homebrew bump caller.
+
+- **Pytest / Dependabot uv group (#1871):** ignore only the starlette `anyio.abc.BlockingPortal` alias `DeprecationWarning` (exact message regex in `filterwarnings`). `addopts = -v -W error` unchanged. `tests/conftest.py` warms `starlette.testclient` in `pytest_configure` and re-applies the ignore during collection (not only per-item marks) so CI collection does not error. Remove via #1915 when starlette ships Kludex/starlette#3498.
+
+- **Scorecard Pinned-Dependencies (#1905):** `prep_audit.sh` installs `uv` from the GitHub release tarball (`0.11.2`) after sha256 verification — no `curl | sh`. Fail-closed on checksum or download failure; curl retries match #1842.
+
 - **Scorecard Signed-Releases (#1891):** the next GitHub tag (`1.7.4.postN` or `1.8.0`, whichever ships first) attaches Sigstore SLSA provenance (`data-boar.intoto.jsonl`) via OIDC `actions/attest-build-provenance` on the SBOM job. Historical tags stay unsigned. PyPI Trusted Publishing is unchanged.
 
 - **Scorecard Dangerous-Workflow (#1888):** `operator-gated-pr-guard.yml` omits checkout `ref:` (default-branch `github.sha`) so Scorecard does not treat trusted `base.sha` like untrusted `head.sha`. `persist-credentials: false` unchanged; SSHSIG gate unchanged.
