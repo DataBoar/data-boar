@@ -4,7 +4,7 @@
 
 This document summarizes **critical and high-severity security measures** implemented in the application, the **regression tests** that guard them, and **recommendations for technicians** so you know what to keep an eye out for when configuring and operating the audit tool.
 
-For full policy, supported versions, dependency audit, and how to report vulnerabilities, see **[SECURITY.md](../SECURITY.md)** ([pt-BR](../SECURITY.pt_BR.md)).
+For full policy, supported versions, dependency audit, and how to report vulnerabilities, see **[SECURITY.md](../SECURITY.md)** ([pt-BR](../SECURITY.pt_BR.md)). That root file also has the **document hierarchy** (policy → this guide → lab ops → hub → ADR 0074) and a **pointer** to executor-host / detection work ([#989](https://github.com/DataBoar/data-boar/issues/989)); this page stays the technician surface.
 
 ---
 

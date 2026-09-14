@@ -6,6 +6,26 @@ Este documento descreve quais versões da aplicação são suportadas, qual linh
 
 **Índice de postura de governança (gates de PII, contenção de agentes, supply chain, proveniência):** [`docs/SECURITY_GOVERNANCE_POSTURE_HUB.pt_BR.md`](docs/SECURITY_GOVERNANCE_POSTURE_HUB.pt_BR.md) ([EN](docs/SECURITY_GOVERNANCE_POSTURE_HUB.md)) — links co-localizados; não substitui esta política de vulnerabilidades.
 
+## Onde esta política se encaixa
+
+Este arquivo é a **política externa de vulnerabilidades**. As outras camadas não são cópia dele:
+
+| Camada | Onde |
+| ----- | ----- |
+| **Política (este documento)** | [`SECURITY.md`](SECURITY.md) (este arquivo) |
+| **Guia técnico** | [`docs/SECURITY.md`](docs/SECURITY.md) ([pt-BR](docs/SECURITY.pt_BR.md)) — testes do produto e orientação ao operador; aponta **para cá** para reporte e versões suportadas |
+| **Lab / runtime** | [`docs/ops/DATA_BOAR_LAB_SECURITY_TOOLING.pt_BR.md`](docs/ops/DATA_BOAR_LAB_SECURITY_TOOLING.pt_BR.md) ([EN](docs/ops/DATA_BOAR_LAB_SECURITY_TOOLING.md)) · [`docs/ops/DOCKER_AIDE_AUDITD_BASELINE.pt_BR.md`](docs/ops/DOCKER_AIDE_AUDITD_BASELINE.pt_BR.md) ([EN](docs/ops/DOCKER_AIDE_AUDITD_BASELINE.md)) |
+| **Enforcement do agente** | [`.cursor/rules/`](.cursor/rules/) (não enfraquecer gates, PII, contenção) |
+| **Constituição** | ADRs — cadeia de suprimentos **Camada 1** é o [ADR 0074](docs/adr/ADR-0074-supply-chain-layer1-digest-pins-and-rust-sca.md) |
+| **Índice** | [`docs/SECURITY_GOVERNANCE_POSTURE_HUB.pt_BR.md`](docs/SECURITY_GOVERNANCE_POSTURE_HUB.pt_BR.md) ([EN](docs/SECURITY_GOVERNANCE_POSTURE_HUB.md)) |
+
+### Host do executor e detecção (L3/L4) — só ponte
+
+**Não está entregue neste repositório.** O trabalho está na issue **[#989](https://github.com/DataBoar/data-boar/issues/989)** (OPEN, milestone **v1.8.4**). O [ADR 0074](docs/adr/ADR-0074-supply-chain-layer1-digest-pins-and-rust-sca.md) permanece **Camada 1** até essa issue emendar o ADR.
+
+- **L3 (host do executor):** Cursor/Electron (e similares) é superfície privilegiada de escrita — poucas extensões, preferir OpenVSX / publishers confiáveis, menor privilégio nas chaves de assinatura. Requisitos e auditoria de lab ficam na **#989**, não como política extra aqui.
+- **L4 (detecção):** tripwires no host (arquivos canário, AIDE + auditd), não funcionalidade do produto. Baseline de lab: [`docs/ops/DOCKER_AIDE_AUDITD_BASELINE.pt_BR.md`](docs/ops/DOCKER_AIDE_AUDITD_BASELINE.pt_BR.md); plantar canários nos hosts é trabalho de operador/vault na **#989**.
+
 **Reportar uma vulnerabilidade (privado):** [Abrir um security advisory no GitHub](https://github.com/DataBoar/data-boar/security/advisories/new). Envie o mesmo disclosure para [contact@databoar.com.br](mailto:contact@databoar.com.br). **Não** abra uma issue pública com prova de conceito. Detalhes: [Reportar uma vulnerabilidade](#reportar-uma-vulnerabilidade) e [Prazo de divulgação](#prazo-de-divulgação).
 
 OpenSSF Scorecard deste repositório (badge depois do publish; API JSON): [visualizador Scorecard](https://scorecard.dev/viewer/?uri=github.com/DataBoar/data-boar) · [api.securityscorecards.dev](https://api.securityscorecards.dev/projects/github.com/DataBoar/data-boar) · badge do README via [api.scorecard.dev](https://api.scorecard.dev/projects/github.com/DataBoar/data-boar/badge).
