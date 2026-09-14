@@ -4,7 +4,7 @@
 
 Este documento resume as **medidas de segurança de severidade crítica e alta** implementadas na aplicação, os **testes de regressão** que as protegem e **recomendações para técnicos**, para que você saiba o que observar ao configurar e operar a ferramenta de auditoria.
 
-Para política completa, versões suportadas, auditoria de dependências e como reportar vulnerabilidades, consulte **[SECURITY.md](../SECURITY.md)** ([pt-BR](../SECURITY.pt_BR.md)).
+Para política completa, versões suportadas, auditoria de dependências e como reportar vulnerabilidades, consulte **[SECURITY.md](../SECURITY.md)** ([pt-BR](../SECURITY.pt_BR.md)). O arquivo na raiz também tem o **mapa de hierarquia** (política → este guia → ops de lab → hub → ADR 0074) e uma **ponte** para trabalho de host do executor / detecção ([#989](https://github.com/DataBoar/data-boar/issues/989)); esta página continua sendo a superfície do técnico.
 
 ---
 
