@@ -165,6 +165,7 @@ python main.py --config config.yaml --web --allow-insecure-http --host 0.0.0.0 -
 ```
 
 - Loads config and starts the FastAPI server on **`<bind>:<port>`**. Default bind is **`127.0.0.1`** unless you set `api.host`, `API_HOST`, or **`--host`** (CLI wins). The official Docker image sets `API_HOST=0.0.0.0` and passes **`--allow-insecure-http`** in `CMD` so the container starts without mounted certificates; mount cert/key and override `CMD` for HTTPS. **Non-loopback bind refuses to start (exit 2) unless `api.require_api_key: true` and a key is resolved** (#1714) — a key sitting in YAML unused is not enough.
+- **Host header allow-list:** Starlette **`TrustedHostMiddleware`** is applied at **process import** from `trusted_api_hosts()` (`core/host_resolution.py`). The set always includes **`127.0.0.1`**, **`localhost`**, and **`testserver`** (Starlette TestClient). It also includes **`api.host`** when that string is set, plus extras in **`api.trusted_hosts`** (string or list). Entries that contain **`*`** are **ignored** (no wildcard Host matching). Binding **`0.0.0.0`** does **not** add a public DNS name. An untrusted `Host` header returns **HTTP 400**. Saving YAML in the dashboard **does not** rebuild this list — **restart** the `--web` process. See **[SECURE_DASHBOARD_AUTH_AND_HTTPS_HOWTO.md](ops/SECURE_DASHBOARD_AUTH_AND_HTTPS_HOWTO.md)** ([pt-BR](ops/SECURE_DASHBOARD_AUTH_AND_HTTPS_HOWTO.pt_BR.md)).
 - **Outcome:** Server runs until interrupted. No scan runs automatically; you trigger scans and download reports via the API (see below).
 - **Note:** The API process loads its own config at startup from the **`CONFIG_PATH`** environment variable, or `config.yaml` in the current working directory. To use a different file when running the server, set `CONFIG_PATH`:
 
@@ -271,7 +272,7 @@ Pre-built images are on Docker Hub: `fabioleitao/data_boar:latest` ([hub.docker.
 - **Authentication:** By default the API does not require authentication; secure it at the reverse proxy or network level if exposed. You can optionally enable a shared API key: set `api.require_api_key: true` and either `api.api_key` (avoid committing secrets) or `api.api_key_from_env: "VAR"` with the variable set **before** process start — see **[API_KEY_FROM_ENV_OPERATOR_STEPS.md](ops/API_KEY_FROM_ENV_OPERATOR_STEPS.md)**. **Step-by-step (key + HTTPS, Let’s Encrypt, lab certs):** **[SECURE_DASHBOARD_AUTH_AND_HTTPS_HOWTO.md](ops/SECURE_DASHBOARD_AUTH_AND_HTTPS_HOWTO.md)** ([pt-BR](ops/SECURE_DASHBOARD_AUTH_AND_HTTPS_HOWTO.pt_BR.md)). **For production we recommend `require_api_key: true` plus `api_key_from_env`** so the secret never lives in tracked YAML.
 - **WebAuthn (optional — Phase 1 JSON API + Phase 1b HTML session):** When **`api.webauthn.enabled: true`**, set the environment variable named by **`api.webauthn.token_secret_from_env`** (default **`DATA_BOAR_WEBAUTHN_TOKEN_SECRET`**) **before** starting the process; startup fails if the secret is missing. This enables **vendor-neutral** passkey registration/authentication JSON endpoints under **`/auth/webauthn/`** (open-source **`webauthn`** library on PyPI — not Bitwarden- or Microsoft-specific). **`api.require_api_key` does not apply** to these paths or to **`GET /{locale}/login`** (so you can open the sign-in page when a global API key is on). **First passkey bootstrap (#1553):** registering the **first** credential **always** requires a valid **`X-API-Key`** / Bearer (configure **`api.api_key`** or **`api.api_key_from_env`**). There is no loopback key-free exemption — same-host reverse proxies commonly present every client as **`127.0.0.1`**. Authentication ceremonies (sign-in after a passkey exists) stay key-free on these paths. Align **`api.webauthn.origin`** and **`api.webauthn.rp_id`** with the browser URL (HTTPS recommended). Credentials persist in SQLite (`webauthn_credentials`); **`--reset-data` / wipe** clears them. **After at least one passkey is registered**, locale-prefixed dashboard pages (**`/`, `/config`, `/reports`, `/assessment`, …**) require a valid WebAuthn session cookie unless you only visit **`help`**, **`about`**, or **`login`** (GET). Use **`/{locale}/login`** in the browser ( **`/static/webauthn-login.js`** ) to register or sign in; mutating HTML forms (**`POST …/config`**, **`POST …/assessment`**) **always** require a signed **CSRF** synchronizer token (**#1231** — independent of whether the WebAuthn gate is active; optional stable key via **`DATA_BOAR_HTML_CSRF_SECRET`**, else the WebAuthn token secret when set, else a process-ephemeral secret). Optional **per-route RBAC** (next bullet; **#86** Phase **2**) layers on top when enabled. See **[ADR 0033](adr/ADR-0033-webauthn-open-relying-party-json-endpoints.md)**.
 - **RBAC (optional — Phase 2, Pro+ `dashboard_rbac`):** When **`api.rbac.enabled: true`** and the effective tier allows **`dashboard_rbac`** (`licensing.effective_tier` in YAML, or JWT **`dbtier`** when enforcement is on — same as other tier-gated features), protected routes require **named roles**: `admin` (all), `dashboard`, `scanner`, `reports_reader`, `config_admin`, and **`audit_logs.read`** for **`GET /logs`** / **`GET /logs/{session_id}`**. **`GET`/`POST /{locale}/config`** requires **`config_admin`** or **`admin`** (#414). The **global API key** (when present and matching) receives **`api.rbac.api_key_roles`**; WebAuthn sessions use the **`roles_json`** column on the matching `webauthn_credentials` row (JSON array of role names), or **`api.rbac.default_roles`** when **`roles_json`** is unset. **401** if no principal; **403** if roles are insufficient. When RBAC is **not** active, `/logs` follows the same posture as `/findings` / `/report` (still gated by `api.audit_logs.enabled` / directory, and by **`api.require_api_key`** when that flag is on). **`GET /status`** and **`GET /health`** include **`enterprise_surface.access_surface.rbac`** (`enabled` vs `not_implemented`). **Community** tier cannot enable in-product RBAC; use **`require_api_key`**, reverse-proxy, or network controls. See the internal plan file **`PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md`** (listed under **Internal and reference** in `docs/README.md`; GitHub **#86**); enterprise **SSO/OIDC** remains Phase **3**.
-- **`GET /health` (always public):** Intended for load balancers and orchestrators. Returns JSON with at least `status`, a **public** `license` summary, `dashboard_transport`, `enterprise_surface`, and canonical **`trust_state`** / **`trust_reasons`** / **`output_confidence`**. **No** `X-API-Key` / Bearer header is required or checked.
+- **`GET /health` (always public):** Intended for load balancers and orchestrators. Returns JSON with at least `status`, a **public** `license` summary, `dashboard_transport`, `enterprise_surface`, canonical **`trust_state`** / **`trust_reasons`** / **`output_confidence`**, and an **`integrity`** snapshot from `ensure_integrity_anchor`. When the anchor cannot be read, **`integrity.error`** is the **exception class name only** (`type(e).__name__` — #1721); `str(e)` (paths, parse context) stays in the operator log via **`SanitizeLogFilter`**. **No** `X-API-Key` / Bearer header is required or checked. **`GET /status`** includes the same **`integrity`** object.
 - **All other HTTP routes** (HTML pages, `GET /status`, `POST /scan`, locale-prefixed dashboard paths such as `GET /en/config`, OpenAPI `/docs`, etc.): when `require_api_key` is true and a key is configured, send **X-API-Key** or **Authorization: Bearer &lt;key&gt;**. **401** = missing or invalid key. **503** = `require_api_key` is true but no key could be resolved (fix config/env). **`main.py --web` refuses to start (exit code 2)** in that misconfiguration so you do not accidentally expose an open dashboard.
 - **Rollout:** Inventory API clients (scripts, cron, CI, probes), enable **staging** first with TLS + API key where applicable, then production with a short compatibility window if needed — **[SECURE_BY_DEFAULT_BLOCKERS_AND_MIGRATION.md](ops/SECURE_BY_DEFAULT_BLOCKERS_AND_MIGRATION.md)**. After enabling HTTPS or plaintext HTTP explicitly, use **`GET /status` / `GET /health`** and **`--export-audit-trail`** (`dashboard_transport` in the JSON) to verify posture.
 - See also [SECURITY.md](../SECURITY.md#optional-api-key-enterprise) and the Configuration section below.
@@ -335,7 +336,11 @@ The **Start scan** button sends `POST /scan` and triggers a **full audit of all 
 | `PATCH` | `/sessions/{session_id}/technician` | Set or clear technician/operator name for an existing session. Body: `{ "technician": "..." }`.                                                        |
 | `GET`   | `/about`                            | About page (HTML): application name, version, author, license.                                                                                         |
 | `GET`   | `/about/json`                       | Machine-readable about info (name, version, author, license, copyright).                                                                               |
-| `GET`   | `/health`                           | Liveness/readiness for Docker and Kubernetes.                                                                                                          |
+| `GET`   | `/findings`                         | Latest session: unified JSON array of database + filesystem findings.                                                                                |
+| `GET`   | `/findings/csv`                     | Same session as UTF-8 CSV. String cells that start with `=`, `+`, `-`, `@`, TAB, or CR get a leading `'` (`excel_sanitize_cell`, CWE-1236 / #1723). |
+| `GET`   | `/findings/{session_id}`          | Same JSON schema for a specific session.                                                                                                           |
+| `GET`   | `/findings/{session_id}/csv`      | CSV attachment for that session (same sanitization as `/findings/csv`).                                                                              |
+| `GET`   | `/health`                           | Liveness/readiness for Docker and Kubernetes. Public JSON includes **`integrity`** (class-name-only `error` on fail-soft).                          |
 
 One process holds **one** `AuditEngine`. `POST /scan`, `/start`, and `/scan_database` claim that slot **when the request is accepted**, not when the background task later starts. A second overlapping start returns **HTTP 409** (`Audit already in progress.`). **HTTP 429** from `rate_limit` is a separate DB-backed cap. Parallel scans need multiple processes or instances.
 
@@ -531,7 +536,7 @@ For **Docker**, start from **[deploy/config.example.yaml](../deploy/config.examp
 
 By default the web API binds to **`127.0.0.1` (loopback)** when started via the CLI (`python main.py --web ...`). When you run the official Docker image, the container sets `API_HOST=0.0.0.0` so the published port works from outside Docker Desktop/WSL.
 
-If you run behind a reverse proxy or have special network constraints, you can still override with `api.host` in the config (e.g. `0.0.0.0` / `127.0.0.1`)—but keep the safe loopback default unless the runtime is explicitly fenced.
+If you run behind a reverse proxy or have special network constraints, you can still override with `api.host` in the config (e.g. `0.0.0.0` / `127.0.0.1`)—but keep the safe loopback default unless the runtime is explicitly fenced. **`api.host` is also a Host-header name**, not only a bind address: clients that call the dashboard as `https://dashboard.example.com` need that name (or an **`api.trusted_hosts`** extra) even when the process binds `127.0.0.1` behind a proxy. Wildcards in `trusted_hosts` are ignored. Restart `--web` after changing the list.
 
 ### Scope import from CSV (config fragment) {#scope-import-from-csv-config-fragment}
 
@@ -840,6 +845,27 @@ uv pip install -e ".[bigdata]"
 ```
 
 The Snowflake connector uses the same pattern as other SQL engines: discover tables/columns, sample rows (no raw storage), run sensitivity detection, and save findings as database metadata (schema, table, column, data type, sensitivity, pattern, norm tag, confidence).
+
+## Redis (optional, .[nosql])
+
+```yaml
+targets:
+
+- name: "Cache_LGPD"
+
+    type: database
+    driver: redis
+    host: "127.0.0.1"
+    port: 6379
+    # pass: "secret"                 # optional AUTH
+    allow_private_networks: true     # required for loopback / RFC1918 (same SSRF guard as other TCP targets)
+```
+
+Install the optional extra: `uv pip install -e ".[nosql]"`.
+
+**What is scanned:** `SCAN` collects up to **`file_scan.sample_limit`** keys (engine default **5** when the YAML key is omitted). Key **names** in that window are joined as **shared** context for name-based detection (cross-key co-occurrence). If a key name stays **LOW** (and is not `SUGGESTED_REVIEW`), the connector samples the **payload** by Redis **`TYPE`**: **string** `GET`, **hash** `HSCAN`, **list** `LRANGE`, **set** `SSCAN`, **zset** `ZRANGE`, **stream** `XRANGE`. Other types are **not** treated as `unreachable`; they increment **`scan_failures`** with reason **`redis_value_not_sampled`** and a JSON detail (`keys_discovered`, `keys_name_classified`, `values_sampled`, `value_not_sampled_by_type`). Value preview is `str(raw)[:500]`. Findings use `table_name="keys"` and `column_name=<key>`.
+
+**Constraint:** there is **no YAML key** for `value_sample_limit`. The engine passes `sample_limit` from `file_scan` and leaves payload sampling at the connector constructor default (**100**). TCP/SSRF pinning is the same as other outbound connectors.
 
 ### Targets: filesystem
 
@@ -1214,6 +1240,10 @@ api:
   # require_api_key: true
   # api_key: "your-secret-key"              # or use api_key_from_env to read from environment
   # api_key_from_env: "AUDIT_API_KEY"
+  # Optional Host names accepted by TrustedHostMiddleware (no wildcards). Always plus
+  # 127.0.0.1, localhost, testserver, and api.host when set. Restart --web after edits.
+  # trusted_hosts:
+  #   - "dashboard.example.com"
   # Optional POC: dashboard GET /{locale}/assessment (see Web dashboard table). Default off.
   # maturity_self_assessment_poc_enabled: true
   # maturity_assessment_pack_path: /path/to/maturity_pack.yaml
@@ -1266,6 +1296,7 @@ The Excel workbook is saved to your browser downloads folder; the heatmap PNG is
 | Goal                                   | How                                                                                                                                                    |
 | ---                                    | ---                                                                                                                                                    |
 | **Last generated report**              | `GET /report` → save as `.xlsx`. Optional `?format=ods` for OpenDocument (LibreOffice Calc / SoftMaker PlanMaker). |
+| **Findings as CSV**                   | `GET /findings/csv` (latest session) or `GET /findings/{session_id}/csv`. Formula-like cells are prefixed with `'` (same sanitizer as Excel / #1723). |
 | **Report for a specific past session** | `GET /list` to get `session_id`s, then `GET /reports/<session_id>` → save as `.xlsx` (same `?format=ods`). |
 | **One-shot run (CLI)**                 | After `python main.py --config config.yaml`, the report path is printed; file is under `report.output_dir` as `Relatorio_Auditoria_<session_id>.xlsx`. |
 | **Regenerate Excel + heatmap (CLI)**   | `python main.py --config config.yaml --regenerate-report <session_id>` — SQLite only; no re-scan. Use when findings are already stored but report files are missing or stale. |

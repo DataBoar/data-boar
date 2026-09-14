@@ -341,9 +341,9 @@ Ao usar a API (`--web`), o servidor carrega a config de **`CONFIG_PATH`** (vari�
 | `POST`   | `/scan_database`                    | Varredura pontual de um banco (corpo JSON); retorna `session_id`                                                                                                |
 | `GET`    | `/status`                           | `running`, `current_session_id`, `findings_count`                                                                                                               |
 | `GET`    | `/findings`                         | Sessão mais recente: lista JSON unificada de achados BD + filesystem (`source_type`, `norm_tag`, caminhos/colunas, etc.).                                         |
-| `GET`    | `/findings/csv`                     | Mesma sessão mais recente: CSV UTF-8 em anexo.                                                                                                                  |
+| `GET`    | `/findings/csv`                     | Sessão mais recente: CSV UTF-8. Células string que começam com `= + - @` ou TAB/CR recebem `'` (`excel_sanitize_cell`, CWE-1236 / #1723). O JSON `/findings` não recebe prefixo de fórmula. |
 | `GET`    | `/findings/{session_id}`            | Mesmo esquema JSON para uma sessão específica.                                                                                                                  |
-| `GET`    | `/findings/{session_id}/csv`        | CSV em anexo para essa sessão.                                                                                                                                  |
+| `GET`    | `/findings/{session_id}/csv`        | CSV em anexo para essa sessão (mesma sanitização de células que `/findings/csv`).                                                                                                                                  |
 | `GET`    | `/report`                           | Download do relatório Excel **último gerado**                                                                                                                   |
 | `GET`    | `/heatmap`                          | Download do heatmap PNG **último gerado** (heatmap de sensibilidade/risco da sessão mais recente)                                                               |
 | `GET`    | `/list`                             | Lista JSON de sessões anteriores (`tenant_name`, `technician_name`, contagens, status). Query: `sort=date_desc` (padrão) ou `sort=date_asc`. O `/reports` sem prefixo de idioma **redireciona** para a lista HTML do dashboard (`/{locale}/reports`), não para esta API JSON. |
@@ -372,6 +372,8 @@ Para **implantação**, **uso da API web** (com exemplos de requisição/respost
 | Redis            | `redis`                     | `nosql`                                       | redis                                                                                                                                 |
 
 Para MongoDB/Redis, adicione um alvo com `type: database` e `driver: mongodb` ou `redis` (host, port, database/password conforme necessário). Instale dependências opcionais: `uv pip install -e ".[nosql]"`. Para Snowflake, adicione um alvo com `type: database` e `driver: snowflake` e instale o extra `.[bigdata]`. Para **todos os motores SQL** em lab/Docker: `uv pip install -e ".[sql-all]"` ou `pip install 'data-boar[sql-all]'`.
+
+**Amostragem Redis (#1348 Part B):** `SCAN` até `file_scan.sample_limit` chaves (padrão do engine **5**). Os nomes nessa janela são varridos juntos como contexto compartilhado. Nomes LOW amostram pelo `TYPE` (`GET` / `HSCAN` / `LRANGE` / `SSCAN` / `ZRANGE` / `XRANGE`). Tipos não suportados gravam **`redis_value_not_sampled`** (contagens JSON), não `unreachable`. O teto de payload `value_sample_limit` é o padrão do construtor (**100**); **não há chave YAML**. Preview: 500 caracteres. Achados: `table_name="keys"`, `column_name=<chave>`. Loopback/RFC1918 ainda precisam de `allow_private_networks: true`. Ver [USAGE.pt_BR.md](USAGE.pt_BR.md) (*Redis*).
 
 ## Alvos REST/API e autenticação
 
