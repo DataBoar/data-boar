@@ -36,8 +36,9 @@
 | Artefato | Como rodar | Ligado a |
 | -------- | ---------- | -------- |
 | **[`tests/test_github_workflows.py`](../../tests/test_github_workflows.py)** | **`.\scripts\quick-test.ps1 -Path tests/test_github_workflows.py`** (ou **`check-all`**) · **`./scripts/quick-test.sh --path tests/test_github_workflows.py`** | **[`.github/workflows/ci.yml`](../../.github/workflows/ci.yml)** roda **`uv run pytest`** na **suíte completa** (este módulo entra sempre); **[ADR 0005](../adr/ADR-0005-ci-github-actions-supply-chain-pins.md)**; **[`OPERATOR_NOTIFICATION_CHANNELS.pt_BR.md`](OPERATOR_NOTIFICATION_CHANNELS.pt_BR.md)** §4.1 / §4.1.1; **[`TESTING.pt_BR.md`](../TESTING.pt_BR.md)** |
+| **`scripts/workflow_run_scalar_guard.py`** | **`uv run python scripts/workflow_run_scalar_guard.py`** (também **pre-commit** + **`check-all`**) · **`./scripts/quick-test.sh --path tests/test_workflow_run_scalar_guard.py`** | `run:` folded do YAML + `\` (#1918); **`act`** opcional: [ACT_PODMAN_WORKFLOW_SMOKE.pt_BR.md](ACT_PODMAN_WORKFLOW_SMOKE.pt_BR.md) |
 
-**Use depois de:** mudanças em **`.github/workflows/*.yml`** (Slack, pins / job de lint do `ci.yml`, Semgrep, Gitleaks, SBOM, Dependabot sync, zizmor) — feedback rápido sem rodar toda a matriz de testes do produto.
+**Use depois de:** mudanças em **`.github/workflows/*.yml`** (Slack, pins / job de lint do `ci.yml`, Semgrep, Gitleaks, SBOM, Dependabot sync, zizmor, pip `--require-hashes`) — feedback rápido sem rodar toda a matriz de testes do produto.
 
 ### 1a. CLI rápida no Windows (conteúdo / tail / preview)
 

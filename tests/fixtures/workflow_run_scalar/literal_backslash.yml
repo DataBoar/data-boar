@@ -1,0 +1,10 @@
+name: literal-backslash-ok
+on: push
+jobs:
+  t:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install
+        run: |
+          pip install --disable-pip-version-check --require-hashes \
+            -r .github/pip-constraints/ci-pyyaml.txt

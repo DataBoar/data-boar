@@ -36,8 +36,9 @@
 | Artifact | How to run | Wired to |
 | -------- | ---------- | -------- |
 | **[`tests/test_github_workflows.py`](../../tests/test_github_workflows.py)** | **`.\scripts\quick-test.ps1 -Path tests/test_github_workflows.py`** (or full **`check-all`**) · **`./scripts/quick-test.sh --path tests/test_github_workflows.py`** | **[`.github/workflows/ci.yml`](../../.github/workflows/ci.yml)** runs **`uv run pytest`** on the **full** suite (this module always included); **[ADR 0005](../adr/ADR-0005-ci-github-actions-supply-chain-pins.md)**; **[`OPERATOR_NOTIFICATION_CHANNELS.md`](OPERATOR_NOTIFICATION_CHANNELS.md)** §4.1 / §4.1.1; **[`TESTING.md`](../TESTING.md)** |
+| **`scripts/workflow_run_scalar_guard.py`** | **`uv run python scripts/workflow_run_scalar_guard.py`** (also **pre-commit** + **`check-all`**) · **`.\scripts\quick-test.ps1 -Path tests/test_workflow_run_scalar_guard.py`** | Folded YAML `run:` + `\` (#1918); optional **`act`**: [ACT_PODMAN_WORKFLOW_SMOKE.md](ACT_PODMAN_WORKFLOW_SMOKE.md) |
 
-**Use after:** edits to **`.github/workflows/*.yml`** (Slack, `ci.yml` pins / lint job, Semgrep, Gitleaks, SBOM, Dependabot sync, zizmor) — fast feedback without running the entire product test matrix.
+**Use after:** edits to **`.github/workflows/*.yml`** (Slack, `ci.yml` pins / lint job, Semgrep, Gitleaks, SBOM, Dependabot sync, zizmor, pip `--require-hashes`) — fast feedback without running the entire product test matrix.
 
 ### 1a. Windows fast CLI (content / tail / preview)
 

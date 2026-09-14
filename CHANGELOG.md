@@ -26,6 +26,8 @@ Empty while the working tree carries **`1.8.0-beta`** (see section below).
 
 ### Included since `1.7.4.post12`
 
+- **CI workflow YAML (#1918):** local guard rejects GitHub Actions `run:` steps that mix folded scalars (`>` / `>-`) with shell `\` (the `#1904` / `#1906` pip `--require-hashes` collapse). Wired in pre-commit and `check-all`. Optional `act` + Podman smoke stays documented only — not in `check-all`.
+
 - **Scorecard Pinned-Dependencies (#1906):** wheelhouse recipe installs PyYAML with `--require-hashes`; in-container builders install the toolchain from `scripts/wheelhouse/build-tools-hashes.txt`; `apply_wheelhouse_v1.sh` pins `--no-index` packages to the hosted wheel versions. Remaining `pip install numpy` after local `pip wheel` is `--no-index` only (hashes are the built wheels).
 
 - **Scorecard Pinned-Dependencies (#1904):** `ci.yml` uv fallback and ansible-syntax install `pip` with `--require-hashes` files under `.github/pip-constraints/` (compiled from the same version pins the jobs already used). `uv.lock` stays the product lock.
