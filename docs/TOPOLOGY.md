@@ -76,7 +76,7 @@ Textual description of modules, classes, and main functions and how they connect
 - **MongoDBConnector** — connect, list collections, sample documents, run scanner on field names + combined sample text, save_finding. Registered for mongodb when pymongo is installed.
 
 - **connectors/redis_connector.py** (optional)
-- **RedisConnector** — connect, SCAN keys, run scanner on key names, save_finding. Registered for redis when redis package is installed.
+- **RedisConnector** — connect (SSRF/TCP pin), `SCAN` up to `sample_limit` keys, scanner on **joined key names**, then TYPE-first payload sampling when the name is LOW (`GET` / `HSCAN` / `LRANGE` / `SSCAN` / `ZRANGE` / `XRANGE`). Unsupported types → `save_failure(..., redis_value_not_sampled, json)`. Findings: `table_name="keys"`. Registered for redis when redis package is installed.
 
 - **connectors/rest_connector.py**
 - **RESTConnector** — `__init__(target_config, scanner, db_manager, sample_limit=5)`; `connect()` builds httpx client and applies auth from `target["auth"]` (basic, bearer, oauth2_client, custom headers); `run()` GETs each path in `paths` or from `discover_url`, parses JSON, flattens keys/sample values, runs scanner, save_finding as filesystem (file_name e.g. `GET /path | field`). Registered for `api` and `rest` when httpx is available.

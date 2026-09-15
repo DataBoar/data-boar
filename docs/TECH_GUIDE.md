@@ -341,9 +341,9 @@ When using the API (`--web`), the server loads config from **`CONFIG_PATH`** (en
 | `POST`   | `/scan_database`                    | One-off scan of one database (JSON body); returns `session_id`                                                                                   |
 | `GET`    | `/status`                           | `running`, `current_session_id`, `findings_count`                                                                                                |
 | `GET`    | `/findings`                         | Latest session: unified JSON array of DB + filesystem findings (`source_type`, `norm_tag`, paths/columns, etc.).                                 |
-| `GET`    | `/findings/csv`                     | Latest session: findings as UTF-8 CSV attachment.                                                                                               |
+| `GET`    | `/findings/csv`                     | Latest session: UTF-8 CSV. String cells starting with `= + - @` or TAB/CR are prefixed with `'` (`excel_sanitize_cell`, CWE-1236 / #1723). JSON `/findings` is not formula-prefixed. |
 | `GET`    | `/findings/{session_id}`            | Same unified JSON schema for a specific session.                                                                                                 |
-| `GET`    | `/findings/{session_id}/csv`        | CSV attachment for that session.                                                                                                                 |
+| `GET`    | `/findings/{session_id}/csv`        | CSV attachment for that session (same cell sanitization as `/findings/csv`).                                                                                                                 |
 | `GET`    | `/report`                           | Download **last generated** Excel report                                                                                                         |
 | `GET`    | `/heatmap`                          | Download **last generated** heatmap PNG (sensitivity/risk heatmap for most recent session)                                                       |
 | `GET`    | `/list`                             | JSON list of past sessions (`tenant_name`, `technician_name`, counts, status). Query: `sort=date_desc` (default) or `sort=date_asc`. Unprefixed `/reports` redirects to the localized dashboard HTML list (`/{locale}/reports`), not this JSON API. |
@@ -372,6 +372,8 @@ For **deployment**, **using the web API** (with request/response examples), **co
 | Redis            | `redis`                     | `nosql`                                        | redis                                                                                                                                  |
 
 For MongoDB/Redis, add a target with `type: database` and `driver: mongodb` or `redis` (host, port, database/password as needed). Install optional deps: `uv pip install -e ".[nosql]"`. For Snowflake, add a target with `type: database` and `driver: snowflake` and install the `.[bigdata]` extra. For **all SQL engines** in lab/Docker: `uv pip install -e ".[sql-all]"` or `pip install 'data-boar[sql-all]'`.
+
+**Redis sampling (#1348 Part B):** `SCAN` up to `file_scan.sample_limit` keys (engine default **5**). Names in that window are scanned together as shared context. LOW names then sample by Redis `TYPE` (`GET` / `HSCAN` / `LRANGE` / `SSCAN` / `ZRANGE` / `XRANGE`). Unsupported types record **`redis_value_not_sampled`** (JSON counts), not `unreachable`. Payload cap `value_sample_limit` is the connector constructor default (**100**); there is **no YAML key**. Preview is 500 characters. Findings: `table_name="keys"`, `column_name=<key>`. Loopback/RFC1918 still need `allow_private_networks: true`. See [USAGE.md](USAGE.md) (*Redis*).
 
 ## REST/API targets and authentication
 

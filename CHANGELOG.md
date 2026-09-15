@@ -26,6 +26,10 @@ Empty while the working tree carries **`1.8.0-beta`** (see section below).
 
 ### Included since `1.7.4.post12`
 
+- **Redis TYPE-first value sampling (#1348 Part B):** `connectors/redis_connector.py` samples payloads by Redis `TYPE` when key names stay LOW (`GET` / `HSCAN` / `LRANGE` / `SSCAN` / `ZRANGE` / `XRANGE`). Unsupported types record `redis_value_not_sampled` (JSON counts), not `unreachable`. Engine still passes `file_scan.sample_limit` for the SCAN window; `value_sample_limit` has **no YAML key** (constructor default 100).
+
+- **Host header allow-list (`api.trusted_hosts`):** `TrustedHostMiddleware` uses `trusted_api_hosts()` at import (`127.0.0.1`, `localhost`, `testserver`, plus `api.host` and extras). Wildcards ignored. Bind `0.0.0.0` does not add a public DNS name. Untrusted Host → HTTP 400. Restart `--web` after YAML changes.
+
 - **SECURITY.md hierarchy (#1892):** root policy map (policy → technician `docs/SECURITY.md` → lab ops → posture hub at `docs/SECURITY_GOVERNANCE_POSTURE_HUB.md` → ADR 0074) plus a short L3/L4 pointer to [#989](https://github.com/DataBoar/data-boar/issues/989) and the AIDE/auditd baseline. Does not implement canaries or amend ADR 0074.
 
 - **CI workflow YAML (#1918):** local guard rejects GitHub Actions `run:` steps that mix folded scalars (`>` / `>-`) with shell `\` (the `#1904` / `#1906` pip `--require-hashes` collapse). Wired in pre-commit and `check-all`. Optional `act` + Podman smoke stays documented only — not in `check-all`.

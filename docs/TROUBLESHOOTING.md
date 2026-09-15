@@ -11,7 +11,7 @@ This page gives **short hints** for common problems. For **root-cause analysis a
 - **Excel report — "Scan failures" sheet:** Each failed target has **Target**, **Reason** (e.g. `unreachable`, `auth_failed`, `timeout`), **Details** (exception message), and **Suggested next step** (a short hint from the application). Start here after a run.
 - **Dashboard:** The "Scan failures" count and recent sessions; download the report for the session to open the Scan failures sheet.
 - **Audit log:** `audit_YYYYMMDD.log` (path in config or under report output). Download via **Reports → session → Download log** or API `GET /logs/{session_id}`. Contains connection and failure entries with target name and error text.
-- **API responses:** `POST /scan` (also `/start` and `/scan_database`) returns **409** (`Audit already in progress.`) when this process already **claimed** the single `AuditEngine` run slot **at request accept time**, not when the background thread later starts. **429** is a separate `rate_limit` cap. Session/report endpoints return 404 with a clear message when the session or report is missing.
+- **API responses:** `POST /scan` (also `/start` and `/scan_database`) returns **409** (`Audit already in progress.`) when this process already **claimed** the single `AuditEngine` run slot **at request accept time**, not when the background thread later starts. **429** is a separate `rate_limit` cap. Session/report endpoints return 404 with a clear message when the session or report is missing. **HTTP 400** with an invalid/untrusted **`Host`** header is **`TrustedHostMiddleware`** (`api.trusted_hosts` / `api.host`) — not a missing API key; add the name clients actually send and **restart** `--web`.
 
 The application maps failure **reasons** to a **Suggested next step** in the report (e.g. "Target did not respond. Check network connectivity…"). If that is not enough, use the deep-dive docs below.
 
@@ -26,6 +26,7 @@ The application maps failure **reasons** to a **Suggested next step** in the rep
 | **permission_denied**                       | Scanner needs read access to the resource (share path, DB, API). Run as a user/service account that has access, or adjust permissions.                                      | [Connectivity](TROUBLESHOOTING_CONNECTIVITY.md)                                                          |
 | **timeout**                                 | Target slow or unreachable; timeout value too low. Increase timeout in config (per target or global); retry during off-peak.                                                | [Connectivity](TROUBLESHOOTING_CONNECTIVITY.md)                                                          |
 | **error** (generic)                         | See **Details** in the report. Often config (missing host, port, URL) or missing optional dependency (e.g. `.[shares]` for SMB).                                            | [Connectivity](TROUBLESHOOTING_CONNECTIVITY.md) · [Credentials](TROUBLESHOOTING_CREDENTIALS_AND_AUTH.md) |
+| **redis_value_not_sampled**                | Redis `TYPE` was not string/hash/list/set/zset/stream (counts in JSON **Details**). Not a TCP failure. Name scan still ran. Increase coverage by converting those types or accepting the gap. | [USAGE.md](USAGE.md) (*Redis*) · [TECH_GUIDE.md](TECH_GUIDE.md) |
 
 ---
 
