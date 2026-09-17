@@ -24,6 +24,11 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 WORKFLOWS = REPO_ROOT / ".github" / "workflows"
 
 
+def _is_local_github_uses(code: str) -> bool:
+    """In-repo composite actions / reusable workflows (``./`` or GitHub ``$/`` syntax)."""
+    return "./.github/" in code or "$/.github/" in code
+
+
 def _load_workflow(name: str) -> dict:
     path = WORKFLOWS / name
     assert path.is_file(), f"missing workflow file: {path}"
@@ -270,7 +275,7 @@ def test_gitleaks_yml_pins_actions_to_shas() -> None:
         code = line.split("#", 1)[0]
         if "uses:" not in code or "docker://" in code:
             continue
-        if "./.github/workflows/" in code:
+        if _is_local_github_uses(code):
             continue
         if not any(p in code for p in ("actions/", "github/")):
             continue
@@ -332,7 +337,7 @@ def test_sbom_yml_pins_actions_to_shas() -> None:
         if "uses:" not in code or "docker://" in code:
             continue
         # Local reusable workflows / composite actions are not third-party pins.
-        if "./.github/workflows/" in code or "./.github/actions/" in code:
+        if _is_local_github_uses(code):
             continue
         if not any(p in code for p in ("actions/", "github/", "astral-sh/")):
             continue
@@ -371,7 +376,7 @@ def test_sbom_yml_libmariadb_uses_timed_composite_action() -> None:
     """SBOM must share the #1646 azure→archive pin; do not inline bare apt-get."""
     text = (WORKFLOWS / "sbom.yml").read_text(encoding="utf-8")
     assert "sudo apt-get update && sudo apt-get install -y libmariadb-dev" not in text
-    assert "./.github/actions/install-libmariadb-dev" in text
+    assert "$/.github/actions/install-libmariadb-dev" in text
     assert "timeout 240 sudo apt-get install -y build-essential" in text
     # Pin + apt-get update live only in the composite action (#1648).
     data = _load_workflow("sbom.yml")
@@ -391,7 +396,7 @@ def test_ci_yml_pins_actions_and_uv_cli() -> None:
         if "uses:" not in code or "docker://" in code:
             continue
         # Local reusable workflows / composite actions are not third-party pins.
-        if "./.github/workflows/" in code or "./.github/actions/" in code:
+        if _is_local_github_uses(code):
             continue
         if not any(
             p in code for p in ("actions/", "github/", "astral-sh/", "SonarSource/")
@@ -461,7 +466,7 @@ def test_ci_yml_libmariadb_install_uses_timed_composite_action() -> None:
     assert "sudo apt-get update && sudo apt-get install -y libmariadb-dev" not in text
     # test-extras (Python 3.13) omits libmariadb — upstream mariadb 1.1.14
     # SyntaxError; remaining jobs still use the timed composite (#1627).
-    assert text.count("./.github/actions/install-libmariadb-dev") >= 4
+    assert text.count("$/.github/actions/install-libmariadb-dev") >= 4
 
     action = REPO_ROOT / ".github" / "actions" / "install-libmariadb-dev" / "action.yml"
     assert action.is_file(), f"missing composite action: {action}"
@@ -572,7 +577,7 @@ def test_dependabot_sync_workflow_present_and_valid() -> None:
         code = line.split("#", 1)[0]
         if "uses:" not in code or "docker://" in code:
             continue
-        if "./.github/workflows/" in code:
+        if _is_local_github_uses(code):
             continue
         if not any(p in code for p in ("actions/", "github/", "astral-sh/")):
             continue
@@ -649,7 +654,7 @@ def test_ci_yml_has_optional_extras_job() -> None:
         "--deselect=tests/test_security.py::test_maestro_aggregates_real_failures_in_exit"
         in runs
     )
-    assert "./.github/actions/install-libmariadb-dev" not in str(extras)
+    assert "$/.github/actions/install-libmariadb-dev" not in str(extras)
     assert "unixodbc-dev" in runs
 
 
@@ -816,7 +821,7 @@ def test_scorecard_workflow_present_and_valid() -> None:
         code = line.split("#", 1)[0]
         if "uses:" not in code or "docker://" in code:
             continue
-        if "./.github/workflows/" in code:
+        if _is_local_github_uses(code):
             continue
         if any(p in code for p in ("actions/", "github/", "ossf/")):
             assert sha_40.search(code), (
@@ -942,7 +947,7 @@ def test_operator_gated_pr_guard_workflow_present_and_valid() -> None:
         code = line.split("#", 1)[0]
         if "uses:" not in code or "docker://" in code:
             continue
-        if "./.github/" in code:
+        if _is_local_github_uses(code):
             continue
         if any(p in code for p in ("actions/", "astral-sh/")):
             assert sha_40.search(code), f"expected full commit SHA: {line.strip()!r}"
@@ -992,7 +997,7 @@ def test_publish_pypi_workflow_present_and_valid() -> None:
 
     bump = jobs["bump-homebrew"]
     assert bump.get("needs") == "publish-pypi" or bump.get("needs") == ["publish-pypi"]
-    assert bump.get("uses") == "./.github/workflows/homebrew-tap.yml"
+    assert bump.get("uses") == "$/.github/workflows/homebrew-tap.yml"
     assert str((bump.get("with") or {}).get("bump")).lower() in {"true", "yes", "1"}
     bump_if = str(bump.get("if") or "")
     assert "pypi" in bump_if
@@ -1009,7 +1014,7 @@ def test_publish_pypi_yml_pins_actions_to_shas() -> None:
         code = line.split("#", 1)[0]
         if "uses:" not in code or "docker://" in code:
             continue
-        if "./.github/workflows/" in code:
+        if _is_local_github_uses(code):
             continue
         if not any(
             p in code
@@ -1168,7 +1173,7 @@ def test_void_xbps_workflow_present_and_valid() -> None:
         code = line.split("#", 1)[0]
         if "uses:" not in code or "docker://" in code:
             continue
-        if "./.github/workflows/" in code:
+        if _is_local_github_uses(code):
             continue
         if not any(p in code for p in ("actions/", "github/", "astral-sh/")):
             continue
@@ -1210,7 +1215,7 @@ def test_homebrew_tap_workflow_present_and_valid() -> None:
         code = line.split("#", 1)[0]
         if "uses:" not in code or "docker://" in code:
             continue
-        if "./.github/workflows/" in code:
+        if _is_local_github_uses(code):
             continue
         if not any(p in code for p in ("actions/", "github/", "astral-sh/")):
             continue
@@ -1228,7 +1233,7 @@ def test_native_packages_yml_pins_actions_to_shas() -> None:
         if "uses:" not in code or "docker://" in code:
             continue
         # Local reusable workflows / composite actions are not third-party pins.
-        if "./.github/workflows/" in code or "./.github/actions/" in code:
+        if _is_local_github_uses(code):
             continue
         if not any(p in code for p in ("actions/", "github/", "astral-sh/")):
             continue
@@ -1246,7 +1251,7 @@ def test_native_packages_build_job_pins_ubuntu_apt_mirror() -> None:
         for s in (build.get("steps") or [])
         if isinstance(s, dict)
     ]
-    assert any("./.github/actions/install-libmariadb-dev" in u for u in uses)
+    assert any("$/.github/actions/install-libmariadb-dev" in u for u in uses)
     runs = _ci_step_run_texts(build)
     assert not any("apt-get update" in r for r in runs)
     assert any(
@@ -1294,3 +1299,16 @@ def test_sdk_schema_pin_canary_is_scheduled_not_pr_and_offline_by_default() -> N
     assert "tests/test_sdk_schema_pin.py" in runs
     ci_text = (WORKFLOWS / "ci.yml").read_text(encoding="utf-8")
     assert "DATA_BOAR_SDK_SCHEMA_CHECK" not in ci_text
+
+
+def test_workflows_in_repo_uses_self_repository_syntax() -> None:
+    """#1934: zizmor self-repository — forbid workspace-relative ``uses: ./.github/``."""
+    offenders: list[str] = []
+    for path in sorted(WORKFLOWS.glob("*.yml")):
+        for i, line in enumerate(
+            path.read_text(encoding="utf-8").splitlines(), start=1
+        ):
+            code = line.split("#", 1)[0]
+            if "uses:" in code and "uses: ./.github/" in code:
+                offenders.append(f"{path.name}:{i}")
+    assert not offenders, offenders

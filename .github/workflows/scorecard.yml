@@ -45,7 +45,7 @@ jobs:
     name: Slack CI failure notify
     if: ${{ always() && contains(needs.*.result, 'failure') }}
     needs: [analysis]
-    uses: ./.github/workflows/slack-ci-failure-notify.yml
+    uses: $/.github/workflows/slack-ci-failure-notify.yml
     with:
       run_name: Scorecard
       head_branch: ${{ github.head_ref || github.ref_name }}

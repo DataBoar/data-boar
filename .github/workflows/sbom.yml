@@ -66,7 +66,7 @@ jobs:
       # inline a bare apt-get update here — azure.archive.ubuntu.com stalls hang
       # the 45m SBOM job (PRs #1691 / #1695).
       - name: Install libmariadb-dev (mariadb PyPI connector builds from source on Linux)
-        uses: ./.github/actions/install-libmariadb-dev
+        uses: $/.github/actions/install-libmariadb-dev
 
       - name: Install build-essential
         run: timeout 240 sudo apt-get install -y build-essential
@@ -214,7 +214,7 @@ jobs:
     name: Slack CI failure notify
     if: ${{ always() && contains(needs.*.result, 'failure') }}
     needs: [generate, attest-and-attach]
-    uses: ./.github/workflows/slack-ci-failure-notify.yml
+    uses: $/.github/workflows/slack-ci-failure-notify.yml
     with:
       run_name: SBOM
       head_branch: ${{ github.head_ref || github.ref_name }}

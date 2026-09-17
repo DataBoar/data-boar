@@ -85,7 +85,7 @@ jobs:
     name: Slack CI failure notify
     if: ${{ always() && contains(needs.*.result, 'failure') }}
     needs: [sync-requirements]
-    uses: ./.github/workflows/slack-ci-failure-notify.yml
+    uses: $/.github/workflows/slack-ci-failure-notify.yml
     with:
       run_name: Dependabot requirements.txt sync
       head_branch: ${{ github.head_ref || github.ref_name }}

@@ -20,7 +20,8 @@ paths = [
   '''docs/ops/API_KEY_FROM_ENV_OPERATOR_STEPS\.pt_BR\.md''',
   '''docs/ops/SECURE_DASHBOARD_AUTH_AND_HTTPS_HOWTO\.md''',
   '''docs/ops/SECURE_DASHBOARD_AUTH_AND_HTTPS_HOWTO\.pt_BR\.md''',
-  '''docs/OPERATOR_NOTIFICATION_CHANNELS\.md'''
+  '''docs/OPERATOR_NOTIFICATION_CHANNELS\.md''',
+  '''tests/data/licensing_hybrid/.*\.jwt''',
 ]
 
 # ── Governança: NÃO EXISTE CO-AUTORIA (fail-closed, defense-in-depth) ──
