@@ -57,7 +57,7 @@ jobs:
           persist-credentials: false
 
       - name: Install libmariadb-dev (mariadb PyPI connector builds from source on Linux)
-        uses: ./.github/actions/install-libmariadb-dev
+        uses: $/.github/actions/install-libmariadb-dev
 
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -237,7 +237,7 @@ jobs:
           persist-credentials: false
 
       - name: Install libmariadb-dev (mariadb PyPI connector builds from source on Linux)
-        uses: ./.github/actions/install-libmariadb-dev
+        uses: $/.github/actions/install-libmariadb-dev
 
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -263,7 +263,7 @@ jobs:
           persist-credentials: false
 
       - name: Install libmariadb-dev (mariadb PyPI connector builds from source on Linux)
-        uses: ./.github/actions/install-libmariadb-dev
+        uses: $/.github/actions/install-libmariadb-dev
 
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -291,7 +291,7 @@ jobs:
           persist-credentials: false
 
       - name: Install libmariadb-dev (mariadb PyPI connector builds from source on Linux)
-        uses: ./.github/actions/install-libmariadb-dev
+        uses: $/.github/actions/install-libmariadb-dev
 
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -409,7 +409,7 @@ jobs:
           persist-credentials: false
 
       - name: Install libmariadb-dev (mariadb PyPI connector builds from source on Linux)
-        uses: ./.github/actions/install-libmariadb-dev
+        uses: $/.github/actions/install-libmariadb-dev
 
       - name: Detect Sonar token
         id: sonar_token
@@ -478,7 +478,7 @@ jobs:
     name: Slack CI failure notify
     if: ${{ always() && contains(needs.*.result, 'failure') }}
     needs: [test, test-extras, test-dl, test-windows, lint, bandit, audit, dependency-review, sonar, ansible-syntax]
-    uses: ./.github/workflows/slack-ci-failure-notify.yml
+    uses: $/.github/workflows/slack-ci-failure-notify.yml
     with:
       run_name: CI
       head_branch: ${{ github.head_ref || github.ref_name }}

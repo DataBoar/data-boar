@@ -74,7 +74,7 @@ jobs:
       # nfpm toolchain packages (the action also pulls libmariadb-dev — unused
       # here, accepted so we do not fork the pin script).
       - name: Pin Ubuntu apt mirrors (#1646)
-        uses: ./.github/actions/install-libmariadb-dev
+        uses: $/.github/actions/install-libmariadb-dev
 
       - name: Install build tools
         run: |
