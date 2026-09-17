@@ -50,6 +50,7 @@ tmp_completao_*.yaml
 *.key
 *.pem
 !core/licensing/license-pub-v1.pem
+!tests/data/licensing_hybrid/*.pem
 core/licensing/_build_digest.txt
 *.p12
 *.pfx
