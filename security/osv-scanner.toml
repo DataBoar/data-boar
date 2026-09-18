@@ -1,0 +1,4 @@
+# OSV-Scanner policy (issue #1933). Mirrors pip-audit ignores documented in ci.yml (#922, #926).
+[[IgnoredVulns]]
+id = "PYSEC-2026-217"
+reason = "mariadb 1.1.14 — no PyPI fix yet; optional extra excluded from test-extras on 3.13; pip-audit ignore in ci.yml"

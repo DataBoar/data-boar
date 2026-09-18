@@ -1,4 +1,4 @@
-title = "data-boar gitleaks config"
+title = "data-boar gitleaks policy (maintainer-owned; security/gitleaks.toml)"
 
 # extend + useDefault: mantém TODAS as regras default de segredo (não regride a detecção)
 # e ADICIONA a regra de governança abaixo. Sem isso, [[rules]] custom SUBSTITUIria as defaults.

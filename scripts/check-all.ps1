@@ -136,7 +136,7 @@ if ($SkipPreCommit) {
 $exitCode = $LASTEXITCODE
 
 if ($exitCode -eq 0) {
-    Write-Host "=== check-all: security scans (Bandit + Zizmor; fail-collect) ===" -ForegroundColor Cyan
+    Write-Host "=== check-all: security scans (Bandit + Zizmor + Gitleaks; -Enforced + OSV + Semgrep) ===" -ForegroundColor Cyan
     $secArgs = @()
     if ($Enforced) { $secArgs += "-Enforced" }
     & "$repoRoot\scripts\check-all-security-scans.ps1" @secArgs

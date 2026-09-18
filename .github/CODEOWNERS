@@ -40,6 +40,8 @@
 
 # --- Sanctioned FP exception allowlist (operator-approved, per-location) ---
 /security/pii_gate_allowlist.txt                               @FabioLeitao
+/security/gitleaks.toml                                        @FabioLeitao
+/security/osv-scanner.toml                                     @FabioLeitao
 /docs/private.example/security_audit/PII_LOCAL_SEEDS.example.txt   @FabioLeitao
 
 # --- Gate governance: ADRs, plan, hard rule ---

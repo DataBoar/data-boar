@@ -1,18 +1,9 @@
-# Gitleaks — secret scanning on push/PR and weekly schedule.
-# OSS mode; third-party Actions use full commit SHAs (ADR 0005); bump via Dependabot.
+# Gitleaks + OSV dependency scan (issue #1933 — keen-platypus parity, strict gitleaks).
+# OSS mode; third-party Actions use full commit SHAs (ADR 0005).
 #
-# Complements other repo gates (same idea as perf-ai-challenge-2 baseline, adapted here):
-# - pre-commit + pytest (PII / talent / commercial guards on the tree CI exercises)
-# - Gitleaks scans credential-shaped leaks with full Git history (fetch-depth: 0),
-#   catching cases hooks miss (different laptop, hook not installed, history paths).
-#
-# Optional: add a repo-root `.gitleaks.toml` when you need allowlists (e.g. long-lived
-# doc examples that still trip heuristics). Neither this repo nor the perf-ai / challenge-2
-# clones shipped one; tune here instead of mutating CI to "report only" without maintainer intent.
-#
-# Local parity (operator machine, not CI): use the upstream gitleaks CLI or container
-# from https://github.com/gitleaks/gitleaks — pin a version or digest in your own notes;
-# do not rely on undocumented random Dockerfiles for policy truth.
+# Strict gitleaks: pinned binary SHA256 (not checksums.txt self-verify), remove root
+# .gitleaks.toml / .gitleaksignore before scan (PR allowlist bypass), --ignore-gitleaks-allow.
+# Maintainer allowlist: security/gitleaks.toml (kombi + confirmed FPs).
 name: Gitleaks
 
 permissions:
@@ -38,23 +29,54 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      # gitleaks BINARIO (open-source, gratis) — evita a licenca que a Action exige em ORG.
-      # Ver DataBoar/maestro#10. Confirmar VER com a release atual antes do merge.
-      - name: gitleaks (binary, no org-license)
+      - name: Install pinned gitleaks (binary SHA256)
         run: |
-          VER="8.30.1"
-          BASE="https://github.com/gitleaks/gitleaks/releases/download/v${VER}"
-          TARBALL="gitleaks_${VER}_linux_x64.tar.gz"
+          set -euo pipefail
+          source scripts/tool-pins.sh
+          BASE="https://github.com/gitleaks/gitleaks/releases/download/v${DB_GITLEAKS_VERSION}"
+          TARBALL="gitleaks_${DB_GITLEAKS_VERSION}_linux_x64.tar.gz"
           curl -sSfL "${BASE}/${TARBALL}" -o "${TARBALL}"
-          curl -sSfL "${BASE}/gitleaks_${VER}_checksums.txt" -o gl.sums
-          grep " ${TARBALL}$" gl.sums | sha256sum -c -
           tar -xzf "${TARBALL}" gitleaks
-          ./gitleaks git . --config .gitleaks.toml --no-banner --redact --exit-code 1
+          echo "${DB_GITLEAKS_LINUX_X64_BINARY_SHA256}  gitleaks" | sha256sum -c -
+          chmod +x ./gitleaks
+
+      - name: Gitleaks strict scan
+        run: |
+          set -euo pipefail
+          source scripts/tool-pins.sh
+          rm -f .gitleaks.toml .gitleaksignore
+          ./gitleaks git . \
+            --config "${DB_GITLEAKS_POLICY_CONFIG}" \
+            --no-banner \
+            --redact \
+            --exit-code 1 \
+            --ignore-gitleaks-allow
+
+  osv-scanner:
+    name: OSV dependency scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Download and verify osv-scanner
+        run: |
+          set -euo pipefail
+          source scripts/tool-pins.sh
+          BASE="https://github.com/google/osv-scanner/releases/download/v${DB_OSV_SCANNER_VERSION}"
+          curl -sSfL "${BASE}/osv-scanner_linux_amd64" -o osv-scanner
+          echo "${DB_OSV_SCANNER_LINUX_AMD64_SHA256}  osv-scanner" | sha256sum -c -
+          chmod +x ./osv-scanner
+
+      - name: Scan dependency manifests
+        run: ./osv-scanner scan source -r . --config=security/osv-scanner.toml
 
   slack-notify-on-failure:
     name: Slack CI failure notify
     if: ${{ always() && contains(needs.*.result, 'failure') }}
-    needs: [scan]
+    needs: [scan, osv-scanner]
     uses: $/.github/workflows/slack-ci-failure-notify.yml
     with:
       run_name: Gitleaks

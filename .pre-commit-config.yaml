@@ -92,7 +92,7 @@ repos:
         language: system
         pass_filenames: false
       - id: gitleaks-detect-config
-        name: gitleaks detect with repo .gitleaks.toml (kombi)
+        name: gitleaks detect with security/gitleaks.toml (kombi)
         entry: uv run pytest tests/test_gitleaks_config.py -q -W error
         language: system
         pass_filenames: false
