@@ -1588,9 +1588,9 @@ pycparser==3.0 ; implementation_name != 'PyPy' and platform_python_implementatio
     # via
     #   cffi
     #   data-boar
-pydantic==2.14.0b1 \
-    --hash=sha256:c7803eac0d891142724e06f9a53264feb1b4e3dfdf89890cbe7eb819795f6b07 \
-    --hash=sha256:d974b3fe7e6ad2a3a5718842d4fc3f5f78142d431a8f73d2d08bc498acf39c8a
+pydantic==2.14.0b2 \
+    --hash=sha256:4556c932fb3dbb7e9ac773bee241b2eb7058a2f9ff1d850d45d7d11cb6e54b68 \
+    --hash=sha256:bb3b4bdb0c69e0eb349e43f07eddfd755547cae3aab3df34cc4c95caa44a5077
     # via
     #   data-boar
     #   fastapi
