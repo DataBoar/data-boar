@@ -42,6 +42,8 @@
 /security/pii_gate_allowlist.txt                               @FabioLeitao
 /security/gitleaks.toml                                        @FabioLeitao
 /security/osv-scanner.toml                                     @FabioLeitao
+/scripts/tool-pins.sh                                          @FabioLeitao
+/scripts/db-tool-bootstrap.sh                                  @FabioLeitao
 /docs/private.example/security_audit/PII_LOCAL_SEEDS.example.txt   @FabioLeitao
 
 # --- Gate governance: ADRs, plan, hard rule ---
