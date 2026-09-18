@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Security scan tier for check-all (issue #1044) — commands mirror CI workflows.
+# Security scan tier for check-all (issue #1044, #1933) — commands mirror CI workflows.
 # Invoked from check-all.sh / check-all.ps1; fail-collect (run all, report at end).
 # Usage (from repo root):
 #   ./scripts/check-all-security-scans.sh
-#   ./scripts/check-all-security-scans.sh --enforced   # + Semgrep (semgrep.yml parity)
+#   ./scripts/check-all-security-scans.sh --enforced   # + OSV + Semgrep (ADR-0080 publish tier)
 set -uo pipefail
 
 REPO_ROOT=$(cd "$(dirname "$0")/.." && pwd)
@@ -15,8 +15,8 @@ while [[ $# -gt 0 ]]; do
     --enforced | -Enforced) ENFORCED=1 ;;
     -h | --help)
       echo "Usage: $0 [--enforced]"
-      echo "  Default: Bandit + Zizmor (offline-capable after uv sync)."
-      echo "  --enforced: also run Semgrep (network; engine version from semgrep.yml image tag)."
+      echo "  Default: Bandit + Zizmor + Gitleaks strict (pinned bootstrap)."
+      echo "  --enforced: also OSV dependency scan + Semgrep (network)."
       exit 0
       ;;
     *)
@@ -57,6 +57,12 @@ _run_scan "Bandit" uv run bandit -c pyproject.toml -r api core config connectors
 # zizmorcore/zizmor-action@<SHA> (SARIF upload, offline-audits). Those are
 # different artifacts — do not invent CLI==action version parity (#1793).
 _run_scan "Zizmor" uvx zizmor .github/workflows/
+
+_run_scan "Gitleaks (strict)" bash "$REPO_ROOT/scripts/run-gitleaks-strict.sh"
+
+if [[ "$ENFORCED" -eq 1 ]]; then
+  _run_scan "OSV dependency scan" bash "$REPO_ROOT/scripts/run-osv-scanner.sh"
+fi
 
 _semgrep_ver_from_workflow() {
   local wf=".github/workflows/semgrep.yml"

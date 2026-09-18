@@ -78,7 +78,7 @@ def test_upstream_workflows_invoke_slack_ci_failure_notify_on_failure() -> None:
             ),
         ),
         ("semgrep.yml", "Semgrep", ("semgrep",)),
-        ("gitleaks.yml", "Gitleaks", ("scan",)),
+        ("gitleaks.yml", "Gitleaks", ("scan", "osv-scanner")),
         ("scorecard.yml", "Scorecard", ("analysis",)),
         ("sbom.yml", "SBOM", ("generate", "attest-and-attach")),
         (
@@ -247,6 +247,7 @@ def test_gitleaks_workflow_present_and_valid() -> None:
     assert "workflow_dispatch" in on
     jobs = data.get("jobs") or {}
     assert "scan" in jobs
+    assert "osv-scanner" in jobs
     job = jobs["scan"]
     assert job.get("runs-on") == "ubuntu-latest"
     steps = job.get("steps") or []
@@ -261,10 +262,13 @@ def test_gitleaks_workflow_present_and_valid() -> None:
         for step in steps
         if isinstance(step, dict) and step.get("run")
     )
-    assert "gitleaks_${VER}_linux_x64.tar.gz" in run_blob
+    assert "gitleaks_${DB_GITLEAKS_VERSION}_linux_x64.tar.gz" in run_blob
     assert "sha256sum -c" in run_blob
+    assert "DB_GITLEAKS_LINUX_X64_BINARY_SHA256" in run_blob
     assert "./gitleaks git ." in run_blob
-    assert "--config .gitleaks.toml" in run_blob
+    assert "--ignore-gitleaks-allow" in run_blob
+    assert "DB_GITLEAKS_POLICY_CONFIG" in run_blob
+    assert "rm -f .gitleaks.toml" in run_blob
 
 
 def test_gitleaks_yml_pins_actions_to_shas() -> None:

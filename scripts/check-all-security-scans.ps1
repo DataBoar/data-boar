@@ -1,7 +1,7 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Security scan tier for check-all (#1044) - Bandit + Zizmor; optional Semgrep with -Enforced.
+    Security scan tier for check-all (#1044, #1933) - Bandit + Zizmor + Gitleaks strict; -Enforced adds OSV + Semgrep.
 
 .DESCRIPTION
     Fail-collect: runs every scan, reports all failures at the end (no fail-fast within tier).
@@ -49,7 +49,15 @@ Invoke-SecurityScan -Name "Zizmor" -Block {
     uvx zizmor .github/workflows/
 }
 
+Invoke-SecurityScan -Name "Gitleaks (strict)" -Block {
+    bash "$repoRoot/scripts/run-gitleaks-strict.sh"
+}
+
 if ($Enforced) {
+    Invoke-SecurityScan -Name "OSV dependency scan" -Block {
+        bash "$repoRoot/scripts/run-osv-scanner.sh"
+    }
+
     $wf = Join-Path $repoRoot ".github/workflows/semgrep.yml"
     $match = Select-String -Path $wf -Pattern "semgrep/semgrep:(\d+\.\d+\.\d+)" | Select-Object -First 1
     if ($null -eq $match) {

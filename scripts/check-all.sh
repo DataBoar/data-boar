@@ -155,7 +155,7 @@ sec_args=()
 if [[ "$ENFORCED" -eq 1 ]]; then
   sec_args+=(--enforced)
 fi
-echo "=== check-all.sh: security scans (Bandit + Zizmor; fail-collect) ===" >&2
+echo "=== check-all.sh: security scans (Bandit + Zizmor + Gitleaks; --enforced + OSV + Semgrep) ===" >&2
 if ! bash "$REPO_ROOT/scripts/check-all-security-scans.sh" "${sec_args[@]}"; then
   echo "check-all.sh: FAILED security scan tier." >&2
   exit 1

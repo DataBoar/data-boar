@@ -83,11 +83,12 @@ jobs:
         # dev group: pytest, hypothesis, pre-commit stack — not shipped to end-user `uv sync` default in CI test matrix
         run: uv sync --extra shares --group dev
 
-      - name: Install gitleaks (binary; kombi PLAN_NO_COAUTHORSHIP_GATE)
+      - name: Install gitleaks (pinned binary SHA256; kombi PLAN_NO_COAUTHORSHIP_GATE)
         run: |
-          VER="8.30.1"
-          BASE="https://github.com/gitleaks/gitleaks/releases/download/v${VER}"
-          TARBALL="gitleaks_${VER}_linux_x64.tar.gz"
+          set -euo pipefail
+          source scripts/tool-pins.sh
+          BASE="https://github.com/gitleaks/gitleaks/releases/download/v${DB_GITLEAKS_VERSION}"
+          TARBALL="gitleaks_${DB_GITLEAKS_VERSION}_linux_x64.tar.gz"
           MAX_RETRIES=5
           for i in $(seq 1 $MAX_RETRIES); do
             if curl --fail --show-error --location --retry 3 --retry-delay 5 --retry-connrefused \
@@ -101,9 +102,8 @@ jobs:
               exit 1
             fi
           done
-          curl --fail --show-error --location "${BASE}/gitleaks_${VER}_checksums.txt" -o gl.sums
-          grep " ${TARBALL}$" gl.sums | sha256sum -c -
           tar -xzf "${TARBALL}" gitleaks
+          echo "${DB_GITLEAKS_LINUX_X64_BINARY_SHA256}  gitleaks" | sha256sum -c -
           sudo install -m 0755 gitleaks /usr/local/bin/gitleaks
 
       - name: Run tests
