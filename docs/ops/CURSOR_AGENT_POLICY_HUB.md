@@ -12,6 +12,7 @@ This page is **consolidation phase B**: the same **theme → first place to look
 
 | Theme | Where to look first |
 | ----- | ------------------- |
+| **Complete issue and PR threads** — full body, all comments, PR reviews + inline findings | [`AGENTS.md`](../../AGENTS.md) § *Complete issue and PR threads* (GitHub **#1953**; runtime rule lives in root `AGENTS.md`, not only a skill) |
 | **Cold start (fresh agent, token-aware)** — ladder + task router | [OPERATOR_AGENT_COLD_START_LADDER.md](OPERATOR_AGENT_COLD_START_LADDER.md) ([pt-BR](OPERATOR_AGENT_COLD_START_LADDER.pt_BR.md)) |
 | **Ops docs catalogue** | [`docs/hubs/OPS_HUB.md`](../hubs/OPS_HUB.md) ([pt-BR](../hubs/OPS_HUB.pt_BR.md)) — generated from `git ls-files` |
 | **Guidelines and guardrails** | [`docs/hubs/GUIDELINES_AND_GUARDRAILS_HUB.md`](../hubs/GUIDELINES_AND_GUARDRAILS_HUB.md) ([pt-BR](../hubs/GUIDELINES_AND_GUARDRAILS_HUB.pt_BR.md)) |
