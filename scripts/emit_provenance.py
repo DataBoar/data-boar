@@ -63,7 +63,7 @@ def _run_text(cmd: list[str], *, cwd: Path) -> str | None:
             text=True,
             timeout=15,
         )
-    except OSError:
+    except (OSError, subprocess.TimeoutExpired):
         return None
     if proc.returncode != 0:
         return None
