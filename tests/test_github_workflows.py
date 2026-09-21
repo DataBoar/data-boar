@@ -381,6 +381,8 @@ def test_sbom_workflow_merges_cargo_lock_into_application_cdx() -> None:
     text = (WORKFLOWS / "sbom.yml").read_text(encoding="utf-8")
     assert "scripts/application_sbom.py merge" in text
     assert "scripts/application_sbom.py check" in text
+    assert "scripts/emit_provenance.py" in text
+    assert "--require-signed-attestation" in text
     assert "rust/boar_fast_filter/Cargo.lock" in text
     assert "sbom/sbom-application.cdx.json" in text
     assert "sbom/sbom-runtime.cdx.json" in text

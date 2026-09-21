@@ -28,6 +28,9 @@ permissions:
       - "scripts/generate-sbom.sh"
       - "scripts/check-sbom.sh"
       - "scripts/check-sbom.ps1"
+      - "scripts/emit-provenance.sh"
+      - "scripts/emit-provenance.ps1"
+      - "scripts/emit_provenance.py"
       - "scripts/application_sbom.py"
       - "rust/boar_fast_filter/Cargo.lock"
       - "rust/boar_fast_filter/Cargo.toml"
@@ -140,6 +143,11 @@ jobs:
             --application sbom-python.cdx.json \
             --runtime sbom-docker-image.cdx.json
 
+      - name: Emit local unsigned provenance record (issue 1950)
+        run: |
+          uv run python scripts/emit_provenance.py emit --require-sboms
+          uv run python scripts/emit_provenance.py verify --require-sboms
+
       - name: Upload workflow artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -149,6 +157,7 @@ jobs:
             sbom-docker-image.cdx.json
             sbom/sbom-application.cdx.json
             sbom/sbom-runtime.cdx.json
+            sbom/provenance-local.json
             build-digest.txt
             release-manifest.json
           if-no-files-found: error
@@ -232,6 +241,9 @@ jobs:
             exit 1
           fi
           cp "$PROVENANCE_BUNDLE" data-boar.intoto.jsonl
+          python3 scripts/emit_provenance.py emit --require-sboms --require-signed-attestation \
+            --attestation data-boar.intoto.jsonl
+          python3 scripts/emit_provenance.py verify --require-sboms --require-signed-attestation
           gh release upload "$TAG" sbom-python.cdx.json sbom-docker-image.cdx.json build-digest.txt release-manifest.json data-boar.intoto.jsonl \
             --clobber --repo "${{ github.repository }}"
 

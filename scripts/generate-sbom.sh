@@ -42,4 +42,8 @@ uv run python scripts/application_sbom.py check \
   --application sbom-python.cdx.json \
   --runtime sbom-docker-image.cdx.json
 
-echo "Done: sbom-python.cdx.json, sbom-docker-image.cdx.json, sbom/sbom-application.cdx.json, sbom/sbom-runtime.cdx.json"
+echo "==> emit-provenance (unsigned local record; not SLSA)"
+uv run python scripts/emit_provenance.py emit --require-sboms
+uv run python scripts/emit_provenance.py verify --require-sboms
+
+echo "Done: sbom-python.cdx.json, sbom-docker-image.cdx.json, sbom/sbom-application.cdx.json, sbom/sbom-runtime.cdx.json, sbom/provenance-local.json"

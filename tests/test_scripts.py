@@ -1007,12 +1007,24 @@ def test_application_sbom_py_compiles():
     py_compile.compile(str(script), doraise=True)
 
 
+def test_emit_provenance_py_compiles():
+    """scripts/emit_provenance.py compiles (issue 1950 wrapper)."""
+    root = _project_root()
+    script = root / "scripts" / "emit_provenance.py"
+    assert script.is_file()
+    py_compile.compile(str(script), doraise=True)
+
+
 def test_generate_and_check_sbom_shell_syntax():
     """Linux SBOM wrappers parse with bash -n."""
     if sys.platform == "win32":
         return
     root = _project_root()
-    for rel in ("scripts/generate-sbom.sh", "scripts/check-sbom.sh"):
+    for rel in (
+        "scripts/generate-sbom.sh",
+        "scripts/check-sbom.sh",
+        "scripts/emit-provenance.sh",
+    ):
         script = root / rel
         assert script.is_file(), rel
         proc = subprocess.run(
