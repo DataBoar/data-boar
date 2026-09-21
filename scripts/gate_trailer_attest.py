@@ -143,8 +143,10 @@ def sign_trailer(
     if not key_path.is_file():
         return False, f"signing key not found: {key_path}"
     with tempfile.TemporaryDirectory() as td:
-        payload_path = Path(td) / "trailer.txt"
-        sig_path = Path(td) / "trailer.sig"
+        # OpenSSH 10's `ssh-keygen -Y sign` writes `<payload>.sig`; it does
+        # not accept the older `-s` output-file option.
+        payload_path = Path(td) / "trailer"
+        sig_path = Path(f"{payload_path}.sig")
         payload_path.write_bytes(
             payload if payload is not None else trailer_payload_bytes(trailer_line)
         )
@@ -157,10 +159,6 @@ def sign_trailer(
                 str(key_path),
                 "-n",
                 NAMESPACE,
-                "-I",
-                principal,
-                "-s",
-                str(sig_path),
                 str(payload_path),
             ],
             capture_output=True,

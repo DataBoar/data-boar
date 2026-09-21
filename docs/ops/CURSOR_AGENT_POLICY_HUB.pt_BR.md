@@ -12,6 +12,7 @@ Esta página é a **fase B de consolidação**: o mesmo mapa **tema → primeiro
 
 | Tema | Onde olhar primeiro |
 | ---- | ------------------- |
+| **Issue e PR completos** — corpo inteiro, todos os comentários, reviews e achados inline | [`AGENTS.md`](../../AGENTS.md) § *Complete issue and PR threads* (GitHub **#1953**; regra de execução no `AGENTS.md` da raiz, não só em skill) |
 | **Arranque a frio (agente novo, token-aware)** — escada + router de tarefas | [OPERATOR_AGENT_COLD_START_LADDER.pt_BR.md](OPERATOR_AGENT_COLD_START_LADDER.pt_BR.md) ([EN](OPERATOR_AGENT_COLD_START_LADDER.md)) |
 | **Catálogo de docs de ops** | [`docs/hubs/OPS_HUB.pt_BR.md`](../hubs/OPS_HUB.pt_BR.md) ([EN](../hubs/OPS_HUB.md)) — gerado de `git ls-files` |
 | **Guidelines e guardrails** | [`docs/hubs/GUIDELINES_AND_GUARDRAILS_HUB.pt_BR.md`](../hubs/GUIDELINES_AND_GUARDRAILS_HUB.pt_BR.md) ([EN](../hubs/GUIDELINES_AND_GUARDRAILS_HUB.md)) |

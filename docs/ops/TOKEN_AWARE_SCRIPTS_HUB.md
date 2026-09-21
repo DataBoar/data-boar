@@ -156,6 +156,7 @@
 | `private-git-sync.ps1` / `private-git-sync.sh` | Nested private repo (`-Push` / `--push`: manifest-driven **lab bare mirrors** on primary x86 lab nodes; **low-power ARM-class lab node** excluded from bare push — validation target, not mirror sink; canonical host list in script + private manifest; VC bare on `Z:`/`Y:` when mounted; pCloud tree mirror) | **`docs/ops/PRIVATE_LOCAL_VERSIONING.md`**, **`PRIVATE_STACK_SYNC_RITUAL.md`**, session **`private-stack-sync`**, **`PRIVATE_OPERATOR_NOTES.md`**, **ADR 0040**, **`operator-evidence-backup-no-rhetorical-asks.mdc`** |
 | `license-smoke.ps1`, `version-readiness-smoke.ps1`, `release-integrity-check.ps1` | Release checks | **`docs/releases/`**, **`VERSIONING.md`** |
 | `generate-sbom.ps1` | SBOM | **`WORKFLOW_DEFERRED_FOLLOWUPS.md`**, security docs |
+| `emit-provenance.ps1` | Local unsigned provenance record (not SLSA) | **`SECURITY.md`**, **`#1950`**, workflow **`SBOM`** |
 | `gitlab-mirror-health-check.ps1` | Mirror health | **`GITLAB_GITHUB_MIRROR.md`** |
 | `docker-lab-build.ps1`, `docker-hub-pull.ps1`, `docker-prune-local.ps1`, `docker-scout-critical-gate.ps1` | Docker lab / Hub / Scout | **`docker-smoke-container-hygiene`** SKILL, **`token-aware-automation`** SKILL |
 

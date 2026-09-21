@@ -10,6 +10,17 @@ NFS_ENSURE = REPO_ROOT / "scripts" / "labop-nfs-server-ensure.sh"
 SMB_ENSURE = REPO_ROOT / "scripts" / "labop-smb-server-ensure.sh"
 
 
+def test_agents_md_requires_complete_issue_thread_reading() -> None:
+    """#1953: runtime rule in root AGENTS.md, not only a skill or ops doc."""
+    text = AGENTS_MD.read_text(encoding="utf-8")
+    assert "## Complete issue and PR threads" in text
+    assert "every paginated comment" in text
+    assert "inline" in text
+    assert "Do **not** close an issue or PR solely from a title" in text
+    claude = (REPO_ROOT / "CLAUDE.md").read_text(encoding="utf-8")
+    assert "paginated comments" in claude
+
+
 def test_agents_md_omits_home_root_reproduction() -> None:
     text = AGENTS_MD.read_text(encoding="utf-8")
     assert "Open: `$HOME=root` bug" not in text
