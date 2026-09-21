@@ -25,6 +25,12 @@ permissions:
       - "Dockerfile"
       - ".github/workflows/sbom.yml"
       - "scripts/generate-sbom.ps1"
+      - "scripts/generate-sbom.sh"
+      - "scripts/check-sbom.sh"
+      - "scripts/check-sbom.ps1"
+      - "scripts/application_sbom.py"
+      - "rust/boar_fast_filter/Cargo.lock"
+      - "rust/boar_fast_filter/Cargo.toml"
       - "scripts/generate_build_digest.py"
       - "scripts/generate_release_manifest.py"
       - "core/**/*.py"
@@ -86,6 +92,15 @@ jobs:
           --output-reproducible
           -o sbom-python.cdx.json
 
+      - name: Merge Cargo.lock into application CycloneDX (issue 1950)
+        run: |
+          uv run python scripts/application_sbom.py merge \
+            --python-bom sbom-python.cdx.json \
+            --out sbom-python.cdx.json \
+            --canonical
+          uv run python scripts/application_sbom.py check \
+            --application sbom-python.cdx.json
+
       - name: Generate build digest (licensing tamper check)
         run: uv run python scripts/generate_build_digest.py --quiet
 
@@ -117,6 +132,14 @@ jobs:
             scan docker:data_boar:sbom \
             -o cyclonedx-json=/out/sbom-docker-image.cdx.json
 
+      - name: Canonical runtime copy and SBOM check (issue 1950)
+        run: |
+          mkdir -p sbom
+          cp -f sbom-docker-image.cdx.json sbom/sbom-runtime.cdx.json
+          uv run python scripts/application_sbom.py check \
+            --application sbom-python.cdx.json \
+            --runtime sbom-docker-image.cdx.json
+
       - name: Upload workflow artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -124,6 +147,8 @@ jobs:
           path: |
             sbom-python.cdx.json
             sbom-docker-image.cdx.json
+            sbom/sbom-application.cdx.json
+            sbom/sbom-runtime.cdx.json
             build-digest.txt
             release-manifest.json
           if-no-files-found: error

@@ -120,8 +120,8 @@ SBOMs formais em **CycloneDX JSON** apoiam **visibilidade da cadeia de supriment
 
 | Artefato | Conteúdo | Como é gerado |
 | -------- | -------- | ------------- |
-| **`sbom-python.cdx.json`** | Dependências Python alinhadas ao **`uv.lock`** (via `uv export` + **`cyclonedx-py`**) | Workflow **`SBOM`**, local **`scripts/generate-sbom.ps1`** |
-| **`sbom-docker-image.cdx.json`** | Pacotes na imagem OCI **construída** (camadas OS + Python) | **`syft`** em **`anchore/syft:v1.28.0`** sobre a imagem `data_boar:sbom` gerada pelo **`Dockerfile`** no mesmo commit |
+| **`sbom-python.cdx.json`** (cópia canônica **`sbom/sbom-application.cdx.json`**) | Dependências Python do **`uv.lock`** **mais** o grafo resolvido de crates em **`rust/boar_fast_filter/Cargo.lock`** (`scripts/application_sbom.py`) | Workflow **`SBOM`**, local **`scripts/generate-sbom.ps1`** / **`scripts/generate-sbom.sh`**. **`scripts/check-sbom.*`** falha se o lockfile divergir |
+| **`sbom-docker-image.cdx.json`** (cópia canônica **`sbom/sbom-runtime.cdx.json`**) | Pacotes na imagem OCI **construída** (camadas OS + Python) | **`syft`** em **`anchore/syft:v1.28.0`** sobre a imagem `data_boar:sbom` gerada pelo **`Dockerfile`** no mesmo commit |
 | **`data-boar.intoto.jsonl`** | Provenance SLSA Sigstore dos arquivos SBOM/digest/manifest (OIDC; sem chave privada Cosign) | Workflow **`SBOM`** em tags **`v*`** / GitHub Release (`actions/attest-build-provenance`). Só a **próxima** tag — Releases antigas permanecem sem assinatura |
 
 **Onde baixar:** o workflow do GitHub Actions [**SBOM**](.github/workflows/sbom.yml) faz upload dos arquivos CycloneDX como **artefatos da execução** (em tags de versão `v*`, em **`release: published`**, em **`workflow_dispatch`** e em PRs filtrados por caminho para `main`). Quando já existe um **GitHub Release** para a tag, esses arquivos são **anexados a essa release**. A partir da **próxima** tag `v*`, o mesmo job também anexa **`data-boar.intoto.jsonl`** (o OpenSSF Scorecard **Signed-Releases** lê assets do GitHub Release, não o wheel do PyPI isolado). O Trusted Publishing do PyPI (`publish-pypi.yml`) não muda.

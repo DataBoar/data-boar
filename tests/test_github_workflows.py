@@ -376,6 +376,17 @@ def test_sbom_workflow_attests_oidc_provenance_on_release() -> None:
     assert attest_idx < attach_idx
 
 
+def test_sbom_workflow_merges_cargo_lock_into_application_cdx() -> None:
+    """#1950: application CycloneDX must include Cargo.lock; no third SBOM file."""
+    text = (WORKFLOWS / "sbom.yml").read_text(encoding="utf-8")
+    assert "scripts/application_sbom.py merge" in text
+    assert "scripts/application_sbom.py check" in text
+    assert "rust/boar_fast_filter/Cargo.lock" in text
+    assert "sbom/sbom-application.cdx.json" in text
+    assert "sbom/sbom-runtime.cdx.json" in text
+    assert "sbom-rust" not in text
+
+
 def test_sbom_yml_libmariadb_uses_timed_composite_action() -> None:
     """SBOM must share the #1646 azure→archive pin; do not inline bare apt-get."""
     text = (WORKFLOWS / "sbom.yml").read_text(encoding="utf-8")
