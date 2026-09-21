@@ -601,6 +601,30 @@ def test_dependabot_sync_workflow_present_and_valid() -> None:
         )
 
 
+def test_dependabot_yml_labels_match_existing_github_labels() -> None:
+    """Dependabot must not request labels GitHub does not have.
+
+    Live ``gh label list`` on DataBoar/data-boar (2026-09-21) includes
+    ``dependencies`` and ``github_actions``. It does not include hyphenated
+    ``github-actions`` or ``docker``. Bot comments on PRs #1941–#1944 documented
+    the missing-label skips.
+    """
+    path = REPO_ROOT / ".github" / "dependabot.yml"
+    data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    assert isinstance(data, dict)
+    allowed = {"dependencies", "github_actions"}
+    updates = data.get("updates") or []
+    assert updates, "dependabot.yml must list ecosystems"
+    for update in updates:
+        eco = update.get("package-ecosystem")
+        for lab in update.get("labels") or []:
+            assert lab in allowed, (
+                f"package-ecosystem {eco!r} requests GitHub label {lab!r}, "
+                f"which is not in the known DataBoar/data-boar set {sorted(allowed)}. "
+                "Create the label on GitHub first, then add it here."
+            )
+
+
 def test_dependabot_sync_script_never_unsigned_push_to_dependabot_head() -> None:
     """#1419: closure script must not unsigned-push onto the Dependabot PR branch."""
     script = REPO_ROOT / "scripts" / "ci_dependabot_requirements_sync.sh"
