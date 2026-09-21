@@ -40,6 +40,16 @@
 
 **Use depois de:** mudanças em **`.github/workflows/*.yml`** (Slack, pins / job de lint do `ci.yml`, Semgrep, Gitleaks, SBOM, Dependabot sync, zizmor, pip `--require-hashes`) — feedback rápido sem rodar toda a matriz de testes do produto.
 
+### 1d. Bootstrap Gitleaks / OSV (tier de segurança do check-all, #1933)
+
+| Script | Função | Ligado a |
+| ------ | ------ | -------- |
+| `tool-pins.sh` | Versão + SHA256 do **binário** para gitleaks **8.30.1** e osv-scanner **2.6.0**; `DB_GITLEAKS_POLICY_CONFIG=security/gitleaks.toml` | Sourced pelos blocos `run:` do CI e pelo bootstrap |
+| `db-tool-bootstrap.sh` | Baixa CLIs pinadas em **`scripts/.cache/`** (gitignored) | `run-gitleaks-strict.sh`, `run-osv-scanner.sh` |
+| `run-gitleaks-strict.sh` | `rm -f .gitleaks.toml .gitleaksignore` e depois `gitleaks git . --ignore-gitleaks-allow` | Tier de segurança **padrão** do **`check-all`** |
+| `run-osv-scanner.sh` | `osv-scanner scan source -r . --config=security/osv-scanner.toml` | Só **`check-all --enforced`** |
+| `check-all-security-scans.sh` / `.ps1` | Bandit + Zizmor + Gitleaks; **`--enforced`** soma OSV + Semgrep | **`check-all.sh`** / **`check-all.ps1`**; [TESTING.pt_BR.md](../TESTING.pt_BR.md) *Gitleaks + OSV* |
+
 ### 1a. CLI rápida no Windows (conteúdo / tail / preview)
 
 | Script | Função | Ligado a |

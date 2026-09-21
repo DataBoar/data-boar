@@ -134,7 +134,7 @@ GitHub Actions (`.github/workflows/ci.yml`) runs:
 - **Lint (pre-commit)** – On **Python 3.12**: **`uv run pre-commit run --all-files`** (same as **`.pre-commit-config.yaml`**: Ruff check + format, **plans-stats** `--check`, markdown lint, pt-BR locale, confidential-commercial guard). Locally: **`uv run pre-commit install`** so **`git commit`** runs the bundle. **`tests/test_github_workflows.py`** asserts **`ci.yml`** still runs **`pre-commit run --all-files`** (regression guard).
 
 1. **Test** – `uv run pytest -v -W error` on Ubuntu for **Python 3.12 and 3.13** (matrix, `fail-fast: false`). Default install is `uv sync --extra shares --group dev`. **Python 3.13 only** adds `--cov --cov-report=xml` and uploads artifact **`coverage-xml`** for the Sonar job (#1719). Other matrix cells do **not** emit coverage (one report, no duplicate XML). Guard: `tests/test_github_workflows.py::test_ci_yml_pytest_cov_xml_only_on_python_313_for_sonar`.
-1. **Transient installs (#1842)** – the Test job’s `astral-sh/setup-uv` step is **`continue-on-error`**. If that Action fails, a follow-up step runs `python -m pip install uv==0.11.2` (same semver as `version:`). The same job downloads the **gitleaks** release tarball with up to **5** attempts (`sleep i*5` seconds) **then** `sha256sum -c` against the official `checksums.txt`. Do **not** skip the checksum to “make CI green.” The standalone workflow [`.github/workflows/gitleaks.yml`](../.github/workflows/gitleaks.yml) still uses a **single** `curl -sSfL` (without that retry loop).
+1. **Transient installs (#1842 / #1933)** – the Test job’s `astral-sh/setup-uv` step is **`continue-on-error`**. If that Action fails, a follow-up step runs `python -m pip install uv==0.11.2` (same semver as `version:`). The same job downloads the **gitleaks** tarball with up to **5** attempts (`sleep i*5` seconds) **then** `sha256sum -c` against the **linux_x64 binary** pin in `scripts/tool-pins.sh` (`DB_GITLEAKS_LINUX_X64_BINARY_SHA256`) — **not** the release `checksums.txt` (that file is self-referential). Do **not** skip the checksum to “make CI green.” Standalone [`.github/workflows/gitleaks.yml`](../.github/workflows/gitleaks.yml) also pins that binary SHA256; its install is a **single** `curl -sSfL` (no retry loop).
 1. **Test optional extras** – job **`test-extras`** (Python **3.13** only) installs SQL extras **except** `mariadb`, plus `nosql` + `compressed` + `dataformats` (+ `shares`) so optional-connector tests run instead of skip; a skip-count ceiling (**60**) fails the job if silent skips grow (issue **#1638**). Consumer-side Maestro guards (`tests/test_maestro_scripts.py` and the `MAESTRO_ROOT`-gated cases in `tests/test_issue_dev_license_qa.py` / `tests/test_security.py`) are **deselected** here: public CI and forks must not clone private **DataBoar/maestro**, and those tests skip by design when the clone is absent (spinout maestro#8, “typical public CI”). They still run in the default Test matrix (skip if no sibling clone). A future **opt-in** job may run Maestro guards for real; do not hang that off **`test-extras`**. The `mariadb` extra stays out of this 3.13 job: PyPI **1.1.14** (latest stable) raises `SyntaxError` on import (`connectionpool.py` non-raw docstring); **2.0.0** is still rc-only. Restore `sql-all` / `--extra mariadb` when a stable connector imports on 3.13. **`tests/test_dl_backend_ci.py` is `--ignore`d here** so a skip does not eat ceiling budget; encode coverage is **`test-dl`**.
 1. **Test DL extra** – job **`test-dl`** (Python **3.13**) installs `--extra dl` (`sentence-transformers` / torch) and runs `tests/test_dl_backend_ci.py`, which trains `DLClassifier` so `SentenceTransformer.encode()` runs (issue **#1822**). Dedicated so **`test-extras`** skip ceiling **60** is unchanged. Default matrix jobs skip that test when the extra is absent.
 1. **Dependency audit** – `uv run pip-audit` after `uv sync` (Python 3.12).
@@ -153,9 +153,26 @@ gh workflow list --all
 
 Do **not** re-enable default setup while `codeql.yml` is the intended source. CodeQL is **not** a required merge check ([BRANCH_PROTECTION.md](ops/BRANCH_PROTECTION.md)). Issue **#1757** tracks the badge vs dual-source migration.
 
+### Gitleaks + OSV (#1933)
+
+[`.github/workflows/gitleaks.yml`](../.github/workflows/gitleaks.yml) runs **two** jobs (plus Slack on failure):
+
+| Job | Binary pin (`scripts/tool-pins.sh`) | Scan |
+| --- | ----------------------------------- | ---- |
+| **Secret scan (Gitleaks)** | gitleaks **8.30.1**, `DB_GITLEAKS_LINUX_X64_BINARY_SHA256` | `gitleaks git . --config security/gitleaks.toml --ignore-gitleaks-allow` after `rm -f .gitleaks.toml .gitleaksignore` |
+| **OSV dependency scan** | osv-scanner **2.6.0**, `DB_OSV_SCANNER_LINUX_AMD64_SHA256` | `osv-scanner scan source -r . --config=security/osv-scanner.toml` |
+
+**Local `check-all`:** default security tier runs Bandit + Zizmor + `scripts/run-gitleaks-strict.sh` (bootstrap into `scripts/.cache/`). **OSV** and Semgrep run only with **`--enforced`** / **`-Enforced`** (`scripts/check-all-security-scans.sh`). Policy file is **`security/gitleaks.toml`** (kombi `no-coauthorship-at-all`); a root `.gitleaks.toml` is a **bypass** and the strict scripts delete it before scanning.
+
+**Pitfall:** do not restore “verify `checksums.txt` then trust the tarball.” CI hashes the extracted **binary**. Do not add a PR-local `.gitleaksignore` expecting it to survive the strict job.
+
+Guards: `tests/test_gitleaks_config.py`, `tests/test_tool_pins_gitleaks_osv.py`, `tests/test_github_workflows.py`. Operator plan (internal): ``docs/plans/PLAN_CHECKALL_GITLEAKS_OSV_PARITY.md``.
+
 ### Zizmor (workflow lint — every PR)
 
 [`.github/workflows/zizmor.yml`](../.github/workflows/zizmor.yml) runs on **every** `pull_request` / `push` to `main`/`master` (**no** `paths:` filter). A `code_scanning` ruleset needs a zizmor SARIF for **this** commit; filtering to `.github/workflows/**` deadlocks merge on docs-only PRs. The job **fails** unless repository variable **`ZIZMOR_ENFORCE=false`**. It is **not** in `required_status_checks`. On PRs, checkout is **`head.sha`** (not the merge commit) so the built-in SARIF upload hits `refs/pull/<N>/head`. Do **not** add a second `upload-sarif` step (duplicate category `zizmor`). Local: `uvx zizmor .github/workflows/` via **`check-all`**. Operator snapshot: [BRANCH_PROTECTION.md](ops/BRANCH_PROTECTION.md).
+
+**Pitfall — `uses: ./` vs `$/` (#1934):** reusable workflows and composite actions in this repo use GitHub **self-repository** syntax `uses: $/.github/workflows/<file>` (or `$/.github/actions/...`). Workspace-relative `uses: ./.github/` is forbidden (`tests/test_github_workflows.py::test_workflows_in_repo_uses_self_repository_syntax`) — zizmor flags it as `self-repository`.
 
 ### Operator Slack workflows (not live-tested in pytest)
 

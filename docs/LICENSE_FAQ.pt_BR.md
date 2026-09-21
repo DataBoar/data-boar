@@ -46,7 +46,7 @@ Sim. O core BSD 3-Clause é forkável nos termos da licença. Duas fronteiras:
 
 **Defesa em camadas, não segredo de código:**
 
-1. **Licenças JWT assinadas com Ed25519** — enforcement fail-closed (`licensing.mode: enforced`).
+1. **Licenças JWT assinadas com Ed25519** — enforcement fail-closed (`licensing.mode: enforced`). Overlay opcional na biblioteca (#48): `decode_license_jwt_hybrid` também pode checar `dbmldsa_sig` (ML-DSA-65). **O `LicenseGuard` ainda verifica só EdDSA** — veja [LICENSING_SPEC.pt_BR.md](LICENSING_SPEC.pt_BR.md) *Overlay híbrido Ed25519 + ML-DSA-65*.
 2. **Binding por fingerprint de máquina** (`dbmfp`, deployment packs) — contagem de deploys aplicada na emissão.
 3. **Integridade de release** — verificação de digest de build e âncora de integridade com evidência de adulteração (marcação TINTED/`-alpha`).
 4. **Marca e contrato** — camada jurídica para uso comercial indevido.
