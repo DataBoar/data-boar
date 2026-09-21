@@ -46,7 +46,7 @@ Yes. The BSD 3-Clause core is forkable under its terms. Two boundaries:
 
 **Layered defense, not code secrecy:**
 
-1. **Signed Ed25519 JWT licenses** — fail-closed enforcement (`licensing.mode: enforced`).
+1. **Signed Ed25519 JWT licenses** — fail-closed enforcement (`licensing.mode: enforced`). Optional library overlay (#48): `decode_license_jwt_hybrid` can also check `dbmldsa_sig` (ML-DSA-65). **`LicenseGuard` still verifies EdDSA only** — see [LICENSING_SPEC.md](LICENSING_SPEC.md) *Hybrid Ed25519 + ML-DSA-65 overlay*.
 2. **Machine fingerprint binding** (`dbmfp`, deployment packs) — issuance-enforced deploy counts.
 3. **Release integrity** — build digest verification and tamper-evident integrity anchor (TINTED/`-alpha` marking).
 4. **Trademark and contract** — legal layer for commercial misuse.

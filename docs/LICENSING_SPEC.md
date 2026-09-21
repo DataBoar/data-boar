@@ -94,6 +94,26 @@ Custom claims (namespaced to avoid collisions):
 | `dbmax_workers` | int | Max parallel scan workers (#551) — in practice the number of **targets scanned concurrently**. **Enforced mode only:** the engine clamps `scan.max_workers` to `min(scan.max_workers, dbmax_workers)`. Absent/zero on a usable license → tier defaults apply (Community **2** / Pro **4** / Enterprise **unlimited**; ratified 2026-06-11, #853). **Pro+** is claim-driven: issued tokens carry `dbmax_workers: 8` (claim wins over tier default). Open mode never caps. Clamp is fail-soft and audited (`workers_clamped`, WARNING). |
 | `dbmax_deployments` | int | Max distinct **licensed production sites** (fingerprints) for this token (#846). **Issuance-enforced:** the issuer emits the `dbmfp` pack with at most this many entries; runtime reads the claim into `LicenseContext.max_deployments` (audit/report surface) and validates only its **own** fingerprint ∈ pack. **0** may mean **unlimited** when contract allows (Enterprise). Pro default = **2** (operator-ratified 2026-06-11: on-prem + 1 cloud/branch) — see `DEFAULT_PRO_DEPLOYMENTS` in `core/licensing/guard.py`. |
 | `dbdeployment_pack_id` | string | Id of a **commercial add-on** (e.g. “+5 sites”) for audit/refill trail (#846); surfaced in `LicenseContext.deployment_pack_id`. Issuer: `scripts/issue_dev_license_jwt.py --dbmfp-pack <hex,hex,...> [--pack-id ...]`. |
+| `dbmldsa_sig` | string | Optional ML-DSA-65 overlay (#48). **Not** a JOSE algorithm. See [Hybrid Ed25519 + ML-DSA-65](#hybrid-ed25519--ml-dsa-65-overlay-48). |
+
+### Hybrid Ed25519 + ML-DSA-65 overlay (#48)
+
+JOSE `alg` stays **EdDSA** (Ed25519). License Studio can attach claim `dbmldsa_sig` (`CLAIM_MLDSA_SIG` in `core/licensing/verify.py`): base64url of an **ML-DSA-65** signature over `header_b64` + `.` + base64url of the JWT payload JSON **without** that claim.
+
+| Surface | What it does |
+| ------- | ------------ |
+| `decode_license_jwt` | Verifies EdDSA only. Extra `dbmldsa_sig` is ignored (retrocompat). |
+| `decode_license_jwt_hybrid` | EdDSA first, then ML-DSA when the claim is present. |
+| `LicenseGuard` | Still calls **`decode_license_jwt` only**. Enforced scans do **not** require ML-DSA today. |
+
+**Constraints (verify against source, do not invent a runtime gate):**
+
+- Claim present + `mldsa_pub is None` → `ValueError` (`hybrid claim present: ML-DSA public key required`).
+- Bad ML-DSA signature → `cryptography.exceptions.InvalidSignature`.
+- Payload JSON must match license-studio `pkg/verify/hybrid.go`: `json.dumps(..., sort_keys=True, separators=(",", ":"), ensure_ascii=False)` plus Go HTML-safe escapes (`<` `>` `&` U+2028 U+2029).
+- Public key PEM is `-----BEGIN ML-DSA-65 PUBLIC KEY-----` with **raw** public bytes (`MLDSA65PublicKey.from_public_bytes`), **not** PKIX/`SubjectPublicKeyInfo`.
+- Tests: `tests/test_licensing_hybrid_mldsa_verify.py` (skipped when OpenSSL has no ML-DSA: `backend.mldsa_supported()`).
+- **Forgery bar:** an attacker who forges Ed25519 can **omit** `dbmldsa_sig` and the Ed25519-only path still accepts the token. Hybrid verify does not raise production enforcement until a future policy requires ML-DSA (ADR-0063 post-quantum watch).
 
 **Multi-site verification (honest boundary, #718 + #846):** Implemented via option (1) — **array** of allowed fingerprints in the `dbmfp` claim (deployment pack). Runtime validates only that **its own** `compute_machine_fingerprint()` (hostname + optional `DATA_BOAR_MACHINE_SEED`) is in the pack — the **global** deploy count is enforced at **issuance** (the issuer signs a pack of at most `dbmax_deployments` fingerprints). Alternatives kept for reference: (2) **online** registration (privacy + ops cost); (3) **multiple JWTs** same `dbcid`, one fingerprint each. See [LICENSING_OPEN_CORE_AND_COMMERCIAL.md](LICENSING_OPEN_CORE_AND_COMMERCIAL.md) §Deployments, copies, and sites.
 

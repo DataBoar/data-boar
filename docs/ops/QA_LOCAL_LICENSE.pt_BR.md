@@ -18,6 +18,8 @@ deliberadamente:
 Mantenha a chave **privada** Ed25519 fora do Git (ex.: `~/.keys/data-boar/`).
 Veja `docs/private.example/licensing/README.md` para gerar as chaves.
 
+O `LicenseGuard` em runtime verifica o JWT emitido **somente com EdDSA** (`decode_license_jwt`). O overlay opcional ML-DSA-65 (`dbmldsa_sig` / `decode_license_jwt_hybrid`, #48) **não** entra neste caminho de QA — veja [LICENSING_SPEC.pt_BR.md](../LICENSING_SPEC.pt_BR.md).
+
 ### Opcional: chave de assinatura cifrada (passphrase)
 
 A chave de assinatura pode ficar como um PEM PKCS#8 cifrado com AES. O emissor

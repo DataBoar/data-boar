@@ -1,6 +1,6 @@
 # Plan: No-coauthorship gate (kombi — gitleaks + pytest)
 
-<!-- plans-hub-summary: Fail-closed kombi blocking any Co-authored-by trailer in commit messages (pytest) plus governance rule in .gitleaks.toml; A.I.I.D.C.O.B.P.P. v1.4 / ADR-0049 / ADR-0079. -->
+<!-- plans-hub-summary: Fail-closed kombi blocking any Co-authored-by trailer in commit messages (pytest) plus governance rule in security/gitleaks.toml; A.I.I.D.C.O.B.P.P. v1.4 / ADR-0049 / ADR-0079. -->
 
 **Status:** Active
 **Date:** 2026-07-04
@@ -21,10 +21,12 @@ Cursor (and other agent UIs) may **inject** `Co-authored-by: Cursor <cursoragent
 
 | Layer | Mechanism | What it scans |
 | ----- | --------- | ------------- |
-| **A** | `.gitleaks.toml` rule `no-coauthorship-at-all` (`extend.useDefault = true`) | Tracked **content** / git-visible text matching `^Co-authored-by:` |
+| **A** | `security/gitleaks.toml` rule `no-coauthorship-at-all` (`extend.useDefault = true`) | Tracked **content** / git-visible text matching `^Co-authored-by:` |
 | **B** | `tests/test_commit_no_tool_coauthorship.py` | **Commit messages** on `origin/main..HEAD` (layer gitleaks cannot reach) |
-| **C** | `tests/test_gitleaks_config.py` | Config presence + `gitleaks detect --config .gitleaks.toml` from repo root |
-| **D** | `.github/workflows/gitleaks.yml` | Scheduled/push scan with `--config .gitleaks.toml` |
+| **C** | `tests/test_gitleaks_config.py` | Config presence + `gitleaks detect --config security/gitleaks.toml` from repo root |
+| **D** | `.github/workflows/gitleaks.yml` + `scripts/run-gitleaks-strict.sh` | Full-history `gitleaks git .` with `--config security/gitleaks.toml --ignore-gitleaks-allow`; **deletes** root `.gitleaks.toml` / `.gitleaksignore` first (#1933) |
+
+**Canonical config path (#1933):** maintainer policy lives at **`security/gitleaks.toml`**. A root `.gitleaks.toml` is a **PR bypass**; strict CI and `check-all` remove it before scanning. Do not document `gitleaks detect --config .gitleaks.toml` as the live contract.
 
 **Cursor injection:** If layer **B** fails because HEAD already carries `Co-authored-by: Cursor`, the **agent stops** — cure is the operator **disabling co-author injection in Cursor IDE**, then a normal `git commit --amend` that **runs hooks** (no `--no-verify`, no `commit-tree`).
 
@@ -34,7 +36,7 @@ Cursor (and other agent UIs) may **inject** `Co-authored-by: Cursor <cursoragent
 | ----- | ---- | ------ |
 | 1 | Copy tested `.gitleaks.toml` + `test_commit_no_tool_coauthorship.py` from scratchpad | ✅ |
 | 2 | `tests/test_gitleaks_config.py` + pre-commit hooks + CI pytest | ✅ |
-| 3 | `gitleaks.yml` uses `--config .gitleaks.toml` | ✅ |
+| 3 | `gitleaks.yml` uses `--config security/gitleaks.toml` (strict; no root bypass) | ✅ |
 | 4 | `./scripts/check-all.sh` green before merge | ⬜ |
 | 5 | Operator: Cursor co-author toggle + amend polluted commits on branch | ⬜ |
 
@@ -47,5 +49,5 @@ Cursor (and other agent UIs) may **inject** `Co-authored-by: Cursor <cursoragent
 ## References
 
 - `tests/test_commit_no_tool_coauthorship.py` — deterministic esporro + ADR list on failure
-- `.gitleaks.toml` — governance rule + existing secret allowlist paths
+- `security/gitleaks.toml` — governance rule + existing secret allowlist paths (moved from repo-root `.gitleaks.toml` in #1933)
 - [PLAN_ADR_GOVERNANCE_ENFORCEMENT.md](PLAN_ADR_GOVERNANCE_ENFORCEMENT.md) — adjacent ADR Phase 1 gates
