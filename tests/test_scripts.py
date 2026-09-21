@@ -999,6 +999,44 @@ def test_generate_release_manifest_py_compiles():
     py_compile.compile(str(script), doraise=True)
 
 
+def test_application_sbom_py_compiles():
+    """scripts/application_sbom.py compiles (Cargo.lock merge, issue 1950)."""
+    root = _project_root()
+    script = root / "scripts" / "application_sbom.py"
+    assert script.is_file()
+    py_compile.compile(str(script), doraise=True)
+
+
+def test_emit_provenance_py_compiles():
+    """scripts/emit_provenance.py compiles (issue 1950 wrapper)."""
+    root = _project_root()
+    script = root / "scripts" / "emit_provenance.py"
+    assert script.is_file()
+    py_compile.compile(str(script), doraise=True)
+
+
+def test_generate_and_check_sbom_shell_syntax():
+    """Linux SBOM wrappers parse with bash -n."""
+    if sys.platform == "win32":
+        return
+    root = _project_root()
+    for rel in (
+        "scripts/generate-sbom.sh",
+        "scripts/check-sbom.sh",
+        "scripts/emit-provenance.sh",
+    ):
+        script = root / rel
+        assert script.is_file(), rel
+        proc = subprocess.run(
+            ["bash", "-n", str(script)],
+            cwd=str(root),
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        assert proc.returncode == 0, f"{rel}: {proc.stderr or proc.stdout}"
+
+
 def test_recovery_doc_bundle_sanity_ps1_syntax():
     """scripts/recovery-doc-bundle-sanity.ps1 has valid PowerShell syntax (parse-only)."""
     root = _project_root()

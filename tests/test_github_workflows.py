@@ -376,6 +376,19 @@ def test_sbom_workflow_attests_oidc_provenance_on_release() -> None:
     assert attest_idx < attach_idx
 
 
+def test_sbom_workflow_merges_cargo_lock_into_application_cdx() -> None:
+    """#1950: application CycloneDX must include Cargo.lock; no third SBOM file."""
+    text = (WORKFLOWS / "sbom.yml").read_text(encoding="utf-8")
+    assert "scripts/application_sbom.py merge" in text
+    assert "scripts/application_sbom.py check" in text
+    assert "scripts/emit_provenance.py" in text
+    assert "--require-signed-attestation" in text
+    assert "rust/boar_fast_filter/Cargo.lock" in text
+    assert "sbom/sbom-application.cdx.json" in text
+    assert "sbom/sbom-runtime.cdx.json" in text
+    assert "sbom-rust" not in text
+
+
 def test_sbom_yml_libmariadb_uses_timed_composite_action() -> None:
     """SBOM must share the #1646 azure→archive pin; do not inline bare apt-get."""
     text = (WORKFLOWS / "sbom.yml").read_text(encoding="utf-8")
@@ -588,6 +601,30 @@ def test_dependabot_sync_workflow_present_and_valid() -> None:
         assert sha_40.search(code), (
             f"expected full commit SHA in uses line: {line.strip()!r}"
         )
+
+
+def test_dependabot_yml_labels_match_existing_github_labels() -> None:
+    """Dependabot must not request labels GitHub does not have.
+
+    Live ``gh label list`` on DataBoar/data-boar (2026-09-21) includes
+    ``dependencies`` and ``github_actions``. It does not include hyphenated
+    ``github-actions`` or ``docker``. Bot comments on PRs #1941–#1944 documented
+    the missing-label skips.
+    """
+    path = REPO_ROOT / ".github" / "dependabot.yml"
+    data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    assert isinstance(data, dict)
+    allowed = {"dependencies", "github_actions"}
+    updates = data.get("updates") or []
+    assert updates, "dependabot.yml must list ecosystems"
+    for update in updates:
+        eco = update.get("package-ecosystem")
+        for lab in update.get("labels") or []:
+            assert lab in allowed, (
+                f"package-ecosystem {eco!r} requests GitHub label {lab!r}, "
+                f"which is not in the known DataBoar/data-boar set {sorted(allowed)}. "
+                "Create the label on GitHub first, then add it here."
+            )
 
 
 def test_dependabot_sync_script_never_unsigned_push_to_dependabot_head() -> None:

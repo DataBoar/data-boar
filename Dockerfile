@@ -116,7 +116,7 @@ RUN chmod +x /tmp/collect-runtime-rootfs.sh && /tmp/collect-runtime-rootfs.sh /r
 # -----------------------------------------------------------------------------
 # Stage 3: minimal distroless runtime (nonroot uid 65532, no shell/apt)
 # -----------------------------------------------------------------------------
-FROM gcr.io/distroless/cc-debian13:nonroot@sha256:c31ff9abcb1910f3ab25c7957bdaf0bfe12a01eb546e8df2282f1c8f682b606c
+FROM gcr.io/distroless/cc-debian13:nonroot@sha256:54df941ed0d06a1bd95ef5e0ce391fd8d9f94b64782dc9a60062727849ee3f97
 
 # image.version is ARG (empty unless --build-arg) so a baked semver cannot go stale.
 ARG OCI_IMAGE_VERSION=""

@@ -46,7 +46,9 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 3
-    labels: ["dependencies", "github-actions"]
+    # GitHub repo label is github_actions (underscore). Hyphenated github-actions
+    # is not a label and Dependabot comments on every Actions PR (#1941–#1944).
+    labels: ["dependencies", "github_actions"]
     commit-message:
       prefix: "ci(actions)"
     cooldown:
@@ -58,7 +60,9 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 3
-    labels: ["dependencies", "docker"]
+    # No GitHub label named docker exists on DataBoar/data-boar (gh label list
+    # 2026-09-21). Keep dependencies only until an operator creates docker.
+    labels: ["dependencies"]
     commit-message:
       prefix: "deps(docker)"
     cooldown:

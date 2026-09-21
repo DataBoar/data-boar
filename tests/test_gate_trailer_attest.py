@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import subprocess
+from pathlib import Path
 
 import scripts.gate_trailer_attest as gta
 
@@ -48,3 +49,33 @@ def test_trailer_payload_has_no_trailing_newline():
     payload = gta.trailer_payload_bytes(line)
     assert not payload.endswith(b"\n")
     assert payload == line.encode("utf-8")
+
+
+def test_sign_uses_openssh_y_sign_syntax_without_verify_identity(monkeypatch, tmp_path):
+    key = tmp_path / "attest-key"
+    key.write_text("placeholder", encoding="utf-8")
+    captured: list[list[str]] = []
+
+    class Completed:
+        returncode = 0
+        stdout = ""
+        stderr = ""
+
+    def fake_run(command, **kwargs):
+        captured.append(command)
+        signature_path = Path(f"{command[-1]}.sig")
+        signature_path.write_text("-----BEGIN SSH SIGNATURE-----\n", encoding="utf-8")
+        return Completed()
+
+    monkeypatch.setattr(gta.subprocess, "run", fake_run)
+    ok, _ = gta.sign_trailer(
+        "Gate-Change-Approved-By: @FabioLeitao",
+        key,
+    )
+
+    assert ok
+    assert captured
+    assert "-Y" in captured[0]
+    assert "sign" in captured[0]
+    assert "-I" not in captured[0]
+    assert "-s" not in captured[0]

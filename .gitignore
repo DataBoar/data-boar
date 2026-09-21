@@ -4,6 +4,7 @@ check-all.log
 # SBOM local outputs (ADR 0003; CI generates inside the workflow)
 sbom-python.cdx.json
 sbom-docker-image.cdx.json
+sbom/
 requirements-sbom.txt
 
 # Project-specific: local DB, generated reports and heatmaps (do not commit scan results or credentials)

@@ -176,7 +176,7 @@ Running **`check-all`** locally (default tier) trades **~2–5 minutes** on the 
 
 ## What to do (SBOM):
 
-- **Implemented:** GitHub Actions workflow [**SBOM**](../.github/workflows/sbom.yml) — **CycloneDX JSON** from `uv export` + `cyclonedx-py` (`sbom-python.cdx.json`), **Syft** on the built image (`sbom-docker-image.cdx.json`). See [SECURITY.md](../SECURITY.md), [RELEASE_INTEGRITY.md](RELEASE_INTEGRITY.md), [ADR 0003](adr/ADR-0003-sbom-roadmap-cyclonedx-then-syft.md). Local: [`scripts/generate-sbom.ps1`](../scripts/generate-sbom.ps1).
+- **Implemented:** GitHub Actions workflow [**SBOM**](../.github/workflows/sbom.yml) — **CycloneDX JSON** from `uv export` + `cyclonedx-py`, then **`scripts/application_sbom.py`** merges **`Cargo.lock`** into the **same** application file (`sbom-python.cdx.json` / `sbom/sbom-application.cdx.json`); **Syft** on the built image (`sbom-docker-image.cdx.json` / `sbom/sbom-runtime.cdx.json`). Local unsigned provenance record: [`scripts/emit-provenance.sh`](../scripts/emit-provenance.sh) (not SLSA; tag path still uses OIDC `data-boar.intoto.jsonl`). See [SECURITY.md](../SECURITY.md), [RELEASE_INTEGRITY.md](RELEASE_INTEGRITY.md), [ADR 0003](adr/ADR-0003-sbom-roadmap-cyclonedx-then-syft.md). Local: [`scripts/generate-sbom.ps1`](../scripts/generate-sbom.ps1) / [`scripts/generate-sbom.sh`](../scripts/generate-sbom.sh). Check: [`scripts/check-sbom.sh`](../scripts/check-sbom.sh).
 
 **Prevents:** Blind spots in dependency and image inventory and slower response to supply-chain or IR questions.
 
