@@ -64,11 +64,11 @@ When the project opens a **new semver line** (e.g. **`1.8.0`** after **`1.7.4`**
 
 Suffixes (`-beta`, `-rc`, `-rc-N`) are required on `main` while a **release gate** issue (e.g. GitHub #406) is **open**. A green **commit gate** (`check-all`) never authorizes removing them — see ADR-0072. Gate **#406** closed with **1.7.4** stable (PR **#1024**).
 
-### Current lines (`1.7.4` published · `1.8.0-beta` working)
+### Current lines (`1.7.4` published · `1.8.0-rc` working)
 
 | Label | Status |
 | --- | --- |
-| **`main` working tree** | **`1.8.0-beta`** in `pyproject.toml` (`maturity_build = 116` — beta band; reconciled 2026-08-22). Git-only for consumers. |
+| **`main` working tree** | **`1.8.0-rc`** in `pyproject.toml` (`maturity_build = 127` — rc band entry; promoted 2026-09-22). Git-only for consumers. |
 | **Published customer channels** | **`1.7.4.post12`** / **`v1.7.4.post12`** on PyPI + Hub (+ historical GA **`1.7.4`**) until a later **`1.8.0`** release-ritual |
 | **#970** | Premature stable bump/tag without release gate — corrected by **ADR-0072** + gate **#406**; **`1.7.4` is not VOID** |
 | **Post-GA public fix numbering** | **Resolved** (#977) — **`1.7.4`** fix-line used **`.postN`** + octet; **`.postN` does not carry** onto **`1.8.0-beta`** |

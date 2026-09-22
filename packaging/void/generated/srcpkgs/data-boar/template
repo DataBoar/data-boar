@@ -6,7 +6,7 @@
 # void-packages submission is out of scope for #1404.
 # Validation: Podman Void — not lab metal. glibc staging is x86_64 only.
 pkgname=data-boar
-version=1.8.0beta1
+version=1.8.0rc1
 revision=1
 archs="x86_64"
 create_wrksrc=yes

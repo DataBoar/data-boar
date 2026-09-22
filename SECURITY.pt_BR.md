@@ -39,7 +39,7 @@ OpenSSF Scorecard deste repositório (badge depois do publish; API JSON): [visua
 | Linha | Estado |
 | ----- | ------ |
 | **1.7.4.x** (estável **1.7.4**, incluindo PyPI **1.7.4.postN**; Docker Hub `fabioleitao/data_boar` **1.7.4** / `latest` quando essas tags estão publicadas) | **Suportada** — correções de segurança nesta linha estável |
-| **`main`** (árvore de trabalho; atualmente **1.8.0-beta**, só git) | **Suportada** — correções entram aqui primeiro, depois no estável quando couber |
+| **`main`** (árvore de trabalho; atualmente **1.8.0-rc**, só git) | **Suportada** — correções entram aqui primeiro, depois no estável quando couber |
 
 **Não suportado:** tags e imagens **anteriores a 1.7.4**; forks ou imagens reconstruídas não oficiais; espelhos não oficiais; qualquer versão pública com quarto segmento “1.7.4.N” (este projeto não publica esse esquema — veja [docs/VERSIONING.pt_BR.md](docs/VERSIONING.pt_BR.md)).
 

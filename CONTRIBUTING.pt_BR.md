@@ -18,7 +18,7 @@ Obrigado por considerar contribuir. Este documento cobre a configuração local,
   uvx data-boar --demo
   ```
 
-  Linhas pré-release no **`main`** (por exemplo **`1.8.0-beta`**) continuam **só git** — não são a wheel do PyPI. Para colaboradores, ou para rodar essa árvore de trabalho, use **clone git** + **`uv sync`** ou **`pip install -e .`**. O repositório ainda contém o pacote Python histórico **`lgpd_crawler`** (imports) — é detalhe de implementação, não o nome do produto. Contexto da renomeação: **[ADR 0014](docs/adr/ADR-0014-rename-repo-and-package-python3-lgpd-crawler-to-data-boar.md)**.
+  Linhas pré-release no **`main`** (por exemplo **`1.8.0-rc`**) continuam **só git** — não são a wheel do PyPI. Para colaboradores, ou para rodar essa árvore de trabalho, use **clone git** + **`uv sync`** ou **`pip install -e .`**. O repositório ainda contém o pacote Python histórico **`lgpd_crawler`** (imports) — é detalhe de implementação, não o nome do produto. Contexto da renomeação: **[ADR 0014](docs/adr/ADR-0014-rename-repo-and-package-python3-lgpd-crawler-to-data-boar.md)**.
 
 **Conectores SQL (extras opcionais):** o **`pip install data-boar`** *core* cobre **arquivos + SQLite** — sem wheels C-extension de PostgreSQL/MySQL/MariaDB/MSSQL/Oracle. Instale por motor:
 

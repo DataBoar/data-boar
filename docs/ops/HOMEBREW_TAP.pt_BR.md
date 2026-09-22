@@ -58,7 +58,7 @@ Automação:
 
 Sincronizar o repositório público do tap exige o secret **`HOMEBREW_TAP_TOKEN`** (contents:write em `DataBoar/homebrew-databoar`). Sem o secret, a fórmula ainda sobe PR neste repo; o clone do tap é ignorado.
 
-Versões git-only de pré-release (`1.8.0-beta`) **não** são alvo da fórmula — quem usa Homebrew recebe o último release **PyPI**.
+Versões git-only de pré-release (`1.8.0-rc`) **não** são alvo da fórmula — quem usa Homebrew recebe o último release **PyPI**.
 
 ## Resolução de problemas
 
