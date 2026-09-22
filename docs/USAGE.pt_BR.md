@@ -941,7 +941,10 @@ Use `type: api` ou `type: rest`. Obrigatório: `name`, `base_url` (ou `url`). Op
     auth:
       type: bearer
       token: "eyJhbGc..."   # ou token_from_env: "API_TOKEN" para ler do ambiente
+      allowed_hosts: ["api.example.com"]  # obrigatório com token_from_env (#1977)
 ```
+
+Com **`token_from_env`**, defina **`auth.allowed_hosts`** com os hostnames exatos da API (e do token OAuth) que podem receber credenciais. Nomes de variável de ambiente devem usar o prefixo **`API_`**, **`REST_API_`** ou **`DATA_BOAR_`**. Tokens inline usam por padrão os hosts de **`base_url`** / **`auth.token_url`** no mesmo target.
 
 ## OAuth2 client credentials (machine-to-machine)
 

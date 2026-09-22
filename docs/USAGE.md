@@ -923,7 +923,10 @@ Use `type: api` or `type: rest`. Required: `name`, `base_url` (or `url`). Option
     auth:
       type: bearer
       token: "eyJhbGc..."   # or use token_from_env: "API_TOKEN" to read from env
+      allowed_hosts: ["api.example.com"]  # required for token_from_env (#1977)
 ```
+
+With **`token_from_env`**, set **`auth.allowed_hosts`** to the exact API (and OAuth token) hostnames that may receive credentials. Environment variable names must use the prefix **`API_`**, **`REST_API_`**, or **`DATA_BOAR_`**. Inline tokens default to the hosts in **`base_url`** / **`auth.token_url`** on the same target.
 
 ## OAuth2 client credentials (machine-to-machine)
 

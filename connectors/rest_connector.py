@@ -8,6 +8,7 @@ Optional: register only when httpx is available. Used for type "api" or "rest" t
 import os
 from typing import Any
 import json
+from urllib.parse import urlparse
 
 from core.about import get_http_user_agent
 from core.connector_registry import register
@@ -37,6 +38,151 @@ except ImportError:
     _HTTPX_AVAILABLE = False
     httpx = None
 
+# Credential-bearing REST calls must not target arbitrary public hosts (#1977).
+# url_guard blocks private/metadata IPs only; compare HubSpot host allowlist (#1607).
+_REST_AUTH_HOST_TAG = "#1977"
+_REST_ENV_VAR_PREFIXES = ("DATA_BOAR_", "REST_API_", "API_")
+
+
+def _host_from_url(url: str) -> str:
+    parsed = urlparse(url.strip())
+    host = (parsed.hostname or "").lower()
+    if not host:
+        raise ValueError(
+            f"Invalid URL for credential host allowlist ({_REST_AUTH_HOST_TAG})."
+        )
+    return host
+
+
+def _collect_explicit_allowed_hosts(target: dict[str, Any]) -> set[str]:
+    auth = target.get("auth") or {}
+    raw = auth.get("allowed_hosts") or target.get("allowed_hosts") or []
+    if isinstance(raw, str):
+        raw = [raw]
+    return {str(h).lower().strip() for h in raw if str(h).strip()}
+
+
+def _implicit_allowed_hosts(target: dict[str, Any]) -> set[str]:
+    """Hosts derived from the same target config (inline secrets only)."""
+    out: set[str] = set()
+    base = (target.get("base_url") or target.get("url") or "").strip()
+    if base:
+        out.add(_host_from_url(base))
+    auth = target.get("auth") or {}
+    token_url = (auth.get("token_url") or "").strip()
+    if token_url:
+        out.add(_host_from_url(token_url))
+    return out
+
+
+def _auth_loads_secrets_from_env(auth: dict[str, Any]) -> bool:
+    if (auth.get("token_from_env") or "").strip():
+        return True
+    if (auth.get("client_secret_from_env") or "").strip():
+        return True
+    client_secret = auth.get("client_secret", "")
+    if (
+        isinstance(client_secret, str)
+        and client_secret.startswith("${")
+        and client_secret.endswith("}")
+    ):
+        return True
+    return False
+
+
+def _validate_rest_env_var_names(auth: dict[str, Any]) -> None:
+    for key, label in (
+        ("token_from_env", "auth.token_from_env"),
+        ("client_secret_from_env", "auth.client_secret_from_env"),
+    ):
+        env_name = (auth.get(key) or "").strip()
+        if not env_name:
+            continue
+        if not any(env_name.startswith(prefix) for prefix in _REST_ENV_VAR_PREFIXES):
+            raise ValueError(
+                f"{label} must use one of the prefixes "
+                f"{', '.join(_REST_ENV_VAR_PREFIXES)} ({_REST_AUTH_HOST_TAG})."
+            )
+
+
+def _credential_endpoint_urls(target: dict[str, Any]) -> list[tuple[str, str]]:
+    urls: list[tuple[str, str]] = []
+    base = (target.get("base_url") or target.get("url") or "").strip()
+    if base:
+        urls.append(("base_url", base))
+    auth = target.get("auth") or {}
+    token_url = (auth.get("token_url") or "").strip()
+    if token_url:
+        urls.append(("auth.token_url", token_url))
+    return urls
+
+
+def _rest_auth_will_attach_credentials(target: dict[str, Any]) -> bool:
+    auth = target.get("auth") or {}
+    auth_type = (auth.get("type") or "none").lower()
+
+    if auth_type == "basic":
+        return bool(
+            auth.get("username")
+            or auth.get("user")
+            or auth.get("password")
+            or auth.get("pass")
+        )
+    if auth_type == "bearer":
+        if auth.get("token"):
+            return True
+        env_key = (auth.get("token_from_env") or "").strip()
+        return bool(env_key and os.environ.get(env_key, "").strip())
+    if auth_type == "oauth2_client":
+        client_secret = auth.get("client_secret", "")
+        if (
+            isinstance(client_secret, str)
+            and client_secret.startswith("${")
+            and client_secret.endswith("}")
+        ):
+            client_secret = os.environ.get(client_secret[2:-1], "")
+        return bool(auth.get("token_url") and auth.get("client_id") and client_secret)
+    if auth_type == "custom":
+        for key, value in (auth.get("headers") or {}).items():
+            if value is not None and str(key).lower() in (
+                "authorization",
+                "x-api-key",
+                "api-key",
+            ):
+                return True
+        return False
+
+    user = target.get("user", target.get("username", ""))
+    password = target.get("pass", target.get("password", ""))
+    return bool(user or password)
+
+
+def _assert_rest_credential_hosts_allowlisted(target: dict[str, Any]) -> None:
+    """Refuse Bearer/client_secret unless each endpoint host is allowlisted (#1977)."""
+    auth = target.get("auth") or {}
+    uses_env = _auth_loads_secrets_from_env(auth)
+    if uses_env:
+        _validate_rest_env_var_names(auth)
+    explicit = _collect_explicit_allowed_hosts(target)
+    if uses_env and not explicit:
+        raise ValueError(
+            "auth.allowed_hosts is required when credentials are loaded from "
+            f"environment variables ({_REST_AUTH_HOST_TAG})."
+        )
+    allowed = explicit if explicit else _implicit_allowed_hosts(target)
+    if not allowed:
+        raise ValueError(
+            "auth.allowed_hosts is required before attaching API credentials "
+            f"({_REST_AUTH_HOST_TAG})."
+        )
+    for label, url in _credential_endpoint_urls(target):
+        host = _host_from_url(url)
+        if host not in allowed:
+            raise ValueError(
+                f"{label} host {host!r} is not in auth.allowed_hosts "
+                f"({_REST_AUTH_HOST_TAG})."
+            )
+
 
 def _build_auth(client: "httpx.Client", target: dict[str, Any]) -> None:
     """
@@ -51,6 +197,7 @@ def _build_auth(client: "httpx.Client", target: dict[str, Any]) -> None:
         username = auth.get("username", auth.get("user", ""))
         password = auth.get("password", auth.get("pass", ""))
         if username or password:
+            _assert_rest_credential_hosts_allowlisted(target)
             client.auth = httpx.BasicAuth(username, password)
         return
 
@@ -61,6 +208,7 @@ def _build_auth(client: "httpx.Client", target: dict[str, Any]) -> None:
             else None
         )
         if token:
+            _assert_rest_credential_hosts_allowlisted(target)
             client.headers["Authorization"] = f"Bearer {token}"
         return
 
@@ -76,6 +224,7 @@ def _build_auth(client: "httpx.Client", target: dict[str, Any]) -> None:
             client_secret = os.environ.get(client_secret[2:-1], "")
         scope = auth.get("scope", "")
         if token_url and client_id and client_secret:
+            _assert_rest_credential_hosts_allowlisted(target)
             # One-off request to token endpoint (no client auth).
             # Pin peer IPs at request time (#1552) — never honor verify=False
             # on token exchange (httpx default verify=True).
@@ -107,7 +256,15 @@ def _build_auth(client: "httpx.Client", target: dict[str, Any]) -> None:
         return
 
     if auth_type == "custom":
-        for key, value in (auth.get("headers") or {}).items():
+        headers = auth.get("headers") or {}
+        sends_credential = any(
+            value is not None
+            and str(key).lower() in ("authorization", "x-api-key", "api-key")
+            for key, value in headers.items()
+        )
+        if sends_credential:
+            _assert_rest_credential_hosts_allowlisted(target)
+        for key, value in headers.items():
             if value is not None:
                 client.headers[key] = str(value)
         return
@@ -116,6 +273,7 @@ def _build_auth(client: "httpx.Client", target: dict[str, Any]) -> None:
     user = target.get("user", target.get("username", ""))
     password = target.get("pass", target.get("password", ""))
     if user or password:
+        _assert_rest_credential_hosts_allowlisted(target)
         client.auth = httpx.BasicAuth(user, password)
 
 
@@ -219,6 +377,8 @@ class RESTConnector:
         base_url = (self.config.get("base_url") or self.config.get("url", "")).rstrip(
             "/"
         )
+        if _rest_auth_will_attach_credentials(self.config):
+            _assert_rest_credential_hosts_allowlisted(self.config)
         # SSRF guard (#832 / #1552 / #1554): reject link-local/private/loopback hosts
         # unless allow_private_networks; fail-closed on DNS failure; pin peer IPs via
         # PinnedIPTransport (HTTP sibling of HostResolutionPin used by Mongo/SQL —
