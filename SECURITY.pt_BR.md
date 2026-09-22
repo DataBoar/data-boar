@@ -91,6 +91,8 @@ Em 2026-08-20, uma conta de mantenedor comprometida publicou `arrayref@0.3.10`, 
 
 **Corolário desconfortável:** bots de atualização automática de dependência **amplificam** essa classe, não a mitigam. O Dependabot teria proposto as versões envenenadas como bump de rotina. Revisão humana do diff do lockfile continua obrigatória.
 
+**Remediação Rust via Dependabot (com travas):** [`.github/dependabot.yml`](.github/dependabot.yml) inclui **`package-ecosystem: cargo`** para **`rust/boar_fast_filter`** ([#1763](https://github.com/DataBoar/data-boar/issues/1763)) para que o `Cargo.lock` possa receber PRs de atualização — **somente** com **`cooldown: default-days: 7`**, **`open-pull-requests-limit`** baixo e política explícita de **sem auto-merge** (incluindo patch). O **`--locked`** do CI em todo comando cargo permanece. Detecção (`cargo-audit` / `cargo-deny`) e este caminho de remediação são complementares; nenhum substitui revisão do lockfile.
+
 **Onde a paranoia vale e onde não:**
 
 | Camada | Pinar / travar? | Por quê |

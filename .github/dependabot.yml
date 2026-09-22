@@ -67,3 +67,22 @@ updates:
       prefix: "deps(docker)"
     cooldown:
       default-days: 7
+
+  # Rust crates (`rust/boar_fast_filter/Cargo.lock`) — remediation was detection-only
+  # (`cargo-audit` / `cargo-deny`, #988) until this block (#1763). Mandatory cooldown:
+  # on 2026-08-20 compromised maintainer crates (`arrayref`, `internment`,
+  # `append-only-vec`) were live ~86–107 minutes with no CVE/RUSTSEC/GHSA; Dependabot
+  # without cooldown would have proposed the poisoned versions as routine bumps.
+  # https://blog.rust-lang.org/2026/08/20/supply-chain-attack-on-arrayref/
+  # AUTO-MERGE: prohibited for this ecosystem (including patch) — every `Cargo.lock`
+  # diff requires human review; do not enable GitHub auto-merge on Dependabot cargo PRs.
+  - package-ecosystem: "cargo"
+    directory: "/rust/boar_fast_filter"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 2
+    labels: ["dependencies"]
+    commit-message:
+      prefix: "deps(cargo)"
+    cooldown:
+      default-days: 7

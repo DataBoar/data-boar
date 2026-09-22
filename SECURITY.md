@@ -91,6 +91,8 @@ On 2026-08-20 a compromised maintainer account published `arrayref@0.3.10`, `int
 
 **Uncomfortable corollary:** automatic dependency-update bots are an **amplifier** for this class, not a mitigation. Dependabot would have proposed the poisoned versions as a routine bump. Human review of lockfile diffs stays mandatory.
 
+**Rust remediation via Dependabot (with guardrails):** [`.github/dependabot.yml`](.github/dependabot.yml) includes **`package-ecosystem: cargo`** for **`rust/boar_fast_filter`** ([#1763](https://github.com/DataBoar/data-boar/issues/1763)) so `Cargo.lock` can receive update PRs — **only** with **`cooldown: default-days: 7`**, a low **`open-pull-requests-limit`**, and an explicit **no auto-merge** policy (including patch). CI **`--locked`** on every cargo command is unchanged. Detection (`cargo-audit` / `cargo-deny`) and this remediation path are complementary; neither replaces lockfile review.
+
 **Where paranoia pays vs where it does not:**
 
 | Layer | Pin / lock? | Why |
