@@ -22,7 +22,6 @@ Doctrine references (Slice 3 latency refactor):
 
 from __future__ import annotations
 
-import re
 from collections.abc import Sequence
 from typing import Any
 
@@ -44,12 +43,7 @@ except Exception:
     FastFilter = None  # type: ignore[assignment]
     HAS_RUST = False
 
-# Card-shape candidate (Luhn check is applied after this regex matches).
-# Pattern is intentionally loose: it must match any 13-19 digit run with
-# optional space or hyphen separators, so the Luhn validator decides
-# acceptance. Tightening this regex risks dropping valid PANs and would
-# violate the precision contract documented in the doctrine manifestos.
-_CARD_PATTERN = re.compile(r"\b(?:\d[ -]?){13,19}\b")
+from utils.luhn_card import text_contains_luhn_valid_card as _contains_luhn_valid_card
 
 _filter_instance: Any = None
 
@@ -141,21 +135,3 @@ def basic_python_scan(payloads: list[str]) -> list[str]:
         for value in payloads
         if value and (cpf_search(value) or email_search(value) or has_card(value))
     ]
-
-
-def _contains_luhn_valid_card(value: str) -> bool:
-    return any(_check_luhn(m.group(0)) for m in _CARD_PATTERN.finditer(value))
-
-
-def _check_luhn(card_number: str) -> bool:
-    digits = [int(ch) for ch in card_number if ch.isdigit()]
-    if len(digits) < 13 or len(digits) > 19:
-        return False
-    total = 0
-    for idx, digit in enumerate(reversed(digits)):
-        if idx % 2 == 1:
-            doubled = digit * 2
-            total += doubled - 9 if doubled > 9 else doubled
-        else:
-            total += digit
-    return total % 10 == 0

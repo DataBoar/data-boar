@@ -7,6 +7,7 @@ import time
 from unittest.mock import MagicMock, patch
 
 from connectors.sample_value_dedup import (
+    SAMPLE_VALUE_JOIN_SEPARATOR,
     distinct_values_capped,
     join_distinct_sample,
     resolve_fetch_row_budget,
@@ -49,7 +50,10 @@ def test_distinct_values_capped_preserves_order():
 
 
 def test_join_distinct_sample_skips_nulls():
-    assert join_distinct_sample([None, "a", None, "a", "b"], distinct_cap=5) == "a b"
+    sep = SAMPLE_VALUE_JOIN_SEPARATOR
+    assert (
+        join_distinct_sample([None, "a", None, "a", "b"], distinct_cap=5) == f"a{sep}b"
+    )
 
 
 def test_sql_connector_finds_rare_cpf_after_dedup(tmp_path):
