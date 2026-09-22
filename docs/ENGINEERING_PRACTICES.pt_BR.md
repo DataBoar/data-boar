@@ -31,7 +31,8 @@ Quando uma condição de **segurança ou higiene não pode ser verificada**, a o
 - **Python:** `uv.lock` é o pin canônico (resolvido a partir de `pyproject.toml`); Dependabot `package-ecosystem: uv` mantém lock e manifesto alinhados — veja comentários no topo de [`.github/dependabot.yml`](../.github/dependabot.yml) e [ADR-0044](adr/ADR-0044-dependabot-uv-ecosystem-for-pyproject-lock-closure.md).
 - **GitHub Actions:** passos de workflow referenciam **SHAs de commit**; ecossistema Dependabot `github-actions` atualiza esses pins em agenda.
 - **Base de container:** digests de imagem no Dockerfile são mantidos via ecossistema Dependabot `docker` ([ADR-0074](adr/ADR-0074-supply-chain-layer1-digest-pins-and-rust-sca.md)).
-- **Cooldown:** os três ecossistemas acima definem **`cooldown: default-days: 7`** em [`.github/dependabot.yml`](../.github/dependabot.yml) — janela de quarentena de sete dias antes de propor uma versão recém-publicada.
+- **Rust (`boar_fast_filter`):** Dependabot `cargo` em `rust/boar_fast_filter` com o mesmo cooldown e **merge manual apenas** ([#1763](https://github.com/DataBoar/data-boar/issues/1763); incidente arrayref documentado em `dependabot.yml`).
+- **Cooldown:** os quatro ecossistemas acima definem **`cooldown: default-days: 7`** em [`.github/dependabot.yml`](../.github/dependabot.yml) — janela de quarentena de sete dias antes de propor uma versão recém-publicada.
 
 **Evidência mais ampla de supply chain:** geração de SBOM e pilha de gates do CI — [ADR-0005](adr/ADR-0005-ci-quality-gates-and-supply-chain-scanning.md), [RELEASE_INTEGRITY.pt_BR.md](RELEASE_INTEGRITY.pt_BR.md) (seção SBOM).
 

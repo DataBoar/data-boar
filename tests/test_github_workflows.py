@@ -627,6 +627,24 @@ def test_dependabot_yml_labels_match_existing_github_labels() -> None:
             )
 
 
+def test_dependabot_cargo_ecosystem_guardrails() -> None:
+    """#1763: cargo updates for boar_fast_filter require cooldown and low PR cap."""
+    path = REPO_ROOT / ".github" / "dependabot.yml"
+    data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    cargo_blocks = [
+        u for u in (data.get("updates") or []) if u.get("package-ecosystem") == "cargo"
+    ]
+    assert len(cargo_blocks) == 1
+    block = cargo_blocks[0]
+    assert block.get("directory") == "/rust/boar_fast_filter"
+    assert block.get("open-pull-requests-limit", 99) <= 3
+    cooldown = block.get("cooldown") or {}
+    assert int(cooldown.get("default-days", 0)) >= 7
+    raw = path.read_text(encoding="utf-8")
+    assert "AUTO-MERGE" in raw and "arrayref" in raw
+    assert "#1763" in raw
+
+
 def test_dependabot_sync_script_never_unsigned_push_to_dependabot_head() -> None:
     """#1419: closure script must not unsigned-push onto the Dependabot PR branch."""
     script = REPO_ROOT / "scripts" / "ci_dependabot_requirements_sync.sh"
