@@ -67,3 +67,19 @@ def test_builtin_credit_card_detects_luhn_valid_single_value() -> None:
     scanner = DataScanner()
     result = scanner.scan_column("pan", _LUHN_VALID_TEST_PAN)
     assert "CREDIT_CARD" in (result.get("pattern_detected") or "")
+
+
+def test_builtin_credit_card_detects_luhn_valid_pan_with_tab_separators() -> None:
+    """#1978 — Luhn gate must use detector match span, not a narrower rescan regex."""
+    pan = "4111\t1111\t1111\t1111"
+    scanner = DataScanner()
+    result = scanner.scan_column("card_number", pan)
+    assert "CREDIT_CARD" in (result.get("pattern_detected") or "")
+
+
+def test_builtin_credit_card_detects_luhn_valid_pan_with_nbsp_separators() -> None:
+    """#1978 — NBSP (\\xa0) is \\s for detection but was dropped by [ -] in the gate."""
+    pan = "4111\xa01111\xa01111\xa01111"
+    scanner = DataScanner()
+    result = scanner.scan_column("card_number", pan)
+    assert "CREDIT_CARD" in (result.get("pattern_detected") or "")

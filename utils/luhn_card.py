@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import re
 
-# Loose card-shape candidate: 13–19 digits with optional space or hyphen separators.
-_CARD_CANDIDATE_RX = re.compile(r"\b(?:\d[ -]?){13,19}\b")
+# Fallback scan when no detector match span is available (e.g. Pro prefilter).
+# Align separator class with CREDIT_CARD detection: optional whitespace or hyphen.
+_CARD_CANDIDATE_RX = re.compile(r"\b(?:\d[-\s]?){13,19}\b")
 
 
 def check_luhn(card_number: str) -> bool:
@@ -22,5 +23,13 @@ def check_luhn(card_number: str) -> bool:
     return total % 10 == 0
 
 
+def luhn_check_matched_card_span(matched_span: str) -> bool:
+    """Run Luhn on digits extracted from a regex match span (no re-scan with a narrower pattern)."""
+    return check_luhn(matched_span)
+
+
 def text_contains_luhn_valid_card(value: str) -> bool:
-    return any(check_luhn(m.group(0)) for m in _CARD_CANDIDATE_RX.finditer(value))
+    return any(
+        luhn_check_matched_card_span(m.group(0))
+        for m in _CARD_CANDIDATE_RX.finditer(value)
+    )

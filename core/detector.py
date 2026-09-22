@@ -51,7 +51,7 @@ from core.embedding_prototype_hint import try_embedding_prototype_elevation
 from core.fuzzy_column_match import try_fuzzy_elevation
 from core.suggested_review import column_name_suggests_identifier_review
 from utils.file_encoding import read_text_with_encoding
-from utils.luhn_card import text_contains_luhn_valid_card
+from utils.luhn_card import luhn_check_matched_card_span, text_contains_luhn_valid_card
 
 if TYPE_CHECKING:
     from core.dl_backend import DLClassifier
@@ -62,7 +62,6 @@ if TYPE_CHECKING:
 _CHECKSUM_GATED_PATTERNS: dict[str, object] = {
     "LGPD_CPF": text_contains_valid_cpf,
     "LGPD_CNPJ": text_contains_valid_cnpj,
-    "CREDIT_CARD": text_contains_luhn_valid_card,
 }
 
 # Optional ML deps (numpy/pandas/sklearn). SIGILL from a PyPI numpy wheel is
@@ -1453,12 +1452,28 @@ class SensitivityDetector:
             licensing_config=licensing_config,
         )
 
-    def _pattern_passes_post_match_gates(self, name: str, combined: str) -> bool:
+    def _pattern_passes_post_match_gates(
+        self,
+        name: str,
+        combined: str,
+        match: re.Match[str] | None = None,
+    ) -> bool:
+        if match is None:
+            rex = self._compiled.get(name)
+            if rex is not None:
+                match = rex.search(combined)
+
         validator = self._pattern_validators.get(name)
         if validator == "luhn":
-            from utils.luhn_card import text_contains_luhn_valid_card
+            if match is None:
+                return False
+            return luhn_check_matched_card_span(match.group(0))
 
+        if name == "CREDIT_CARD":
+            if match is not None:
+                return luhn_check_matched_card_span(match.group(0))
             return text_contains_luhn_valid_card(combined)
+
         gate_fn = _CHECKSUM_GATED_PATTERNS.get(name)
         if gate_fn is not None and not gate_fn(combined):  # type: ignore[operator]
             return False
@@ -1469,8 +1484,9 @@ class SensitivityDetector:
         found_patterns: list[tuple[str, str]],
         name: str,
         combined: str,
+        match: re.Match[str] | None = None,
     ) -> None:
-        if not self._pattern_passes_post_match_gates(name, combined):
+        if not self._pattern_passes_post_match_gates(name, combined, match):
             return
         found_patterns.append((name, self.patterns[name][1]))
 
@@ -1495,11 +1511,12 @@ class SensitivityDetector:
             return found_patterns
         for name, (_, norm_tag) in self.patterns.items():
             rex = self._compiled.get(name)
-            if not (rex and rex.search(combined)):
+            if not rex:
                 continue
-            if not self._pattern_passes_post_match_gates(name, combined):
+            m = rex.search(combined)
+            if not m:
                 continue
-            found_patterns.append((name, norm_tag))
+            self._append_pattern_hit(found_patterns, name, combined, m)
         return found_patterns
 
     def _predict_ml_confidence(self, ml_dl_text: str) -> int:
