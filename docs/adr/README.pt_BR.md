@@ -112,6 +112,7 @@ Os títulos na tabela abaixo ficam em **inglês** (canônicos, iguais ao [README
 | 0089 | [Repositório assinado de pacote nativo: hospedagem, chaves e fronteira comunidade](ADR-0089-native-package-signed-repository-hosting-keys-and-community-boundary.md) | Aceito |
 | 0090 | [Fronteira open-core/plugin: auditabilidade Pro, sample de referência, guard reverso de vazamento](ADR-0090-open-core-plugin-boundary-pro-auditability-reference-sample.md) | Aceito |
 | 0091 | [Uma imagem publicada (cp314t); GIL religado por licença no ENTRYPOINT](ADR-0091-container-cp314t-license-gil-gate.md) | Proposto |
+| 0092 | [Proveniência de build: Scorecard + atestações em GitHub Release (sem badges no PyPI)](ADR-0092-build-provenance-scorecard-and-github-release-attestations.md) | Proposto |
 
 ## Docs relacionados
 

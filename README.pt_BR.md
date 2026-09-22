@@ -12,6 +12,8 @@
 [![License](https://img.shields.io/github/license/DataBoar/data-boar)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/DataBoar/data-boar)](https://github.com/DataBoar/data-boar/releases)
 
+**Proveniência de build:** atestações assinadas e assets de SBOM entram nas [GitHub Releases](https://github.com/DataBoar/data-boar/releases) em tags de versão (workflow SBOM)—não como badge no PyPI. Mapa: [BUILD_PROVENANCE_POSTURE.pt_BR.md](docs/ops/BUILD_PROVENANCE_POSTURE.pt_BR.md) ([ADR 0092](docs/adr/ADR-0092-build-provenance-scorecard-and-github-release-attestations.md), encerra [#1844](https://github.com/DataBoar/data-boar/issues/1844)).
+
 **Scanner de PII de código aberto com postura forense para LGPD · GDPR · conformidade auditável.** Primer: [FORENSICS_AND_EVIDENCE_PRIMER.pt_BR.md](docs/primers/FORENSICS_AND_EVIDENCE_PRIMER.pt_BR.md).
 
 **LGPD — relato-testemunho (visita de campo, Brasil):** [Português (Brasil)](docs/LGPD_WITNESS_REPORT_NIO_FIELD_VISIT_2026.pt_BR.md) · [English](docs/LGPD_WITNESS_REPORT_NIO_FIELD_VISIT_2026.md)
