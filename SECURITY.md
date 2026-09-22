@@ -30,6 +30,8 @@ This file is the **external vulnerability policy**. Other layers are not copies 
 
 OpenSSF Scorecard for this repository (badge after publish; JSON API): [Scorecard viewer](https://scorecard.dev/viewer/?uri=github.com/DataBoar/data-boar) · [api.securityscorecards.dev](https://api.securityscorecards.dev/projects/github.com/DataBoar/data-boar) · README badge via [api.scorecard.dev](https://api.scorecard.dev/projects/github.com/DataBoar/data-boar/badge).
 
+**Build provenance (honest scope):** GitHub Release attestations and SBOM assets from the SBOM workflow on version tags—not a PyPI “verified provenance” badge while Warehouse JSON keeps `urls[].provenance` null. See [ADR 0092](docs/adr/ADR-0092-build-provenance-scorecard-and-github-release-attestations.md) and [BUILD_PROVENANCE_POSTURE.md](docs/ops/BUILD_PROVENANCE_POSTURE.md).
+
 ## Supported versions
 
 **Product (what we patch for security reports):**

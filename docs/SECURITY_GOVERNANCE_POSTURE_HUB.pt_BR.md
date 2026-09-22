@@ -61,6 +61,8 @@
 | Inventário cripto de ADRs | [ADR-0056](adr/ADR-0056-adr-inventory-ed25519-attestation-workflow.md) · `scripts/inv-adr.ps1` · [`docs/adr/INVENTORY.txt`](adr/INVENTORY.txt) |
 | Roadmap Sigstore / cosign | [`docs/ops/RELEASE_INTEGRITY.md`](ops/RELEASE_INTEGRITY.md) · `docs/plans/PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md` (interno) |
 | SBOM | [ADR-0003](adr/ADR-0003-sbom-roadmap-cyclonedx-then-syft.md) · [`SECURITY.md`](../SECURITY.md) § SBOM |
+| Proveniência de build (Scorecard + attest GitHub Release; sem badge PyPI) | [ADR-0092](adr/ADR-0092-build-provenance-scorecard-and-github-release-attestations.md) · [`BUILD_PROVENANCE_POSTURE.pt_BR.md`](ops/BUILD_PROVENANCE_POSTURE.pt_BR.md) · [#1844](https://github.com/DataBoar/data-boar/issues/1844) |
+| Evidência de regressão PEP 740 no PyPI | [`PYPI_PEP740_ATTESTATION_EVIDENCE.pt_BR.md`](ops/PYPI_PEP740_ATTESTATION_EVIDENCE.pt_BR.md) |
 | Closure de dependências | [ADR-0030](adr/ADR-0030-python-dependency-update-closure-single-pass.md) · [ADR-0044](adr/ADR-0044-dependabot-uv-ecosystem-for-pyproject-lock-closure.md) |
 
 ## Vault ↔ repo

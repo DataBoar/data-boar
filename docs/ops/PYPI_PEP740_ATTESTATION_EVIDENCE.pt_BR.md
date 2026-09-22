@@ -2,7 +2,7 @@
 
 **English:** [PYPI_PEP740_ATTESTATION_EVIDENCE.md](PYPI_PEP740_ATTESTATION_EVIDENCE.md)
 
-Capturado em **2026-09-21** (relógio da estação Linux primária) para a issue **#1844**. Este arquivo registra resultados **HTTP ao vivo**. **Não** adiciona badge no README, **não** fecha a issue e **não** altera `publish-pypi.yml`.
+Capturado em **2026-09-21** (relógio da estação Linux primária) para a issue **#1844**. Este arquivo registra resultados **HTTP ao vivo**. **Não** adiciona badge de proveniência no PyPI no README e **não** altera `publish-pypi.yml`. Narrativa de fechamento: [BUILD_PROVENANCE_POSTURE.pt_BR.md](BUILD_PROVENANCE_POSTURE.pt_BR.md) / [ADR 0092](../adr/ADR-0092-build-provenance-scorecard-and-github-release-attestations.md).
 
 ## O que foi medido
 
@@ -21,6 +21,9 @@ JSON do projeto no PyPI de produção: último **`1.7.4.post12`**. Os caminhos `
 
 ## O que isto não autoriza
 
-- Badges de atestação no README / SECURITY
-- `actions/attest-build-provenance` no job de publish PyPI (SLSA de Release continua no workflow **SBOM**; ADR 0003)
-- `Closes #1844`
+- Badges de **atestação no PyPI** no README / SECURITY enquanto `urls[].provenance` for null (postura pública: [BUILD_PROVENANCE_POSTURE.pt_BR.md](BUILD_PROVENANCE_POSTURE.pt_BR.md), [ADR 0092](../adr/ADR-0092-build-provenance-scorecard-and-github-release-attestations.md))
+- Tratar só os logs do publish PyPI como prova de que o usuário final vê proveniência no Warehouse
+
+## Relação com a #1844
+
+A [#1844](https://github.com/DataBoar/data-boar/issues/1844) encerra via **ADR 0092** e o doc de postura: Scorecard + atestações em GitHub Release (`sbom.yml`), sem badges no PyPI. Este arquivo continua como registro de regressão HTTP no JSON/HTML do PyPI.

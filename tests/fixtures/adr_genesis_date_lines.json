@@ -89,5 +89,6 @@
   "ADR-0088-verify-the-verifier-no-self-referential-trust-chain.md": "- **Date (UTC):** 2026-08-13",
   "ADR-0089-native-package-signed-repository-hosting-keys-and-community-boundary.md": "- **Date (UTC):** 2026-08-18",
   "ADR-0090-open-core-plugin-boundary-pro-auditability-reference-sample.md": "- **Date (UTC):** 2026-08-18",
-  "ADR-0091-container-cp314t-license-gil-gate.md": "- **Date (UTC):** 2026-08-29"
+  "ADR-0091-container-cp314t-license-gil-gate.md": "- **Date (UTC):** 2026-08-29",
+  "ADR-0092-build-provenance-scorecard-and-github-release-attestations.md": "- **Date (UTC):** 2026-09-22"
 }

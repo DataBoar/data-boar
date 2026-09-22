@@ -30,6 +30,8 @@ Este arquivo é a **política externa de vulnerabilidades**. As outras camadas n
 
 OpenSSF Scorecard deste repositório (badge depois do publish; API JSON): [visualizador Scorecard](https://scorecard.dev/viewer/?uri=github.com/DataBoar/data-boar) · [api.securityscorecards.dev](https://api.securityscorecards.dev/projects/github.com/DataBoar/data-boar) · badge do README via [api.scorecard.dev](https://api.scorecard.dev/projects/github.com/DataBoar/data-boar/badge).
 
+**Proveniência de build (escopo honesto):** atestações em GitHub Release e assets de SBOM no workflow SBOM em tags de versão—não badge de “proveniência verificada” no PyPI enquanto o JSON do Warehouse mantém `urls[].provenance` null. Ver [ADR 0092](docs/adr/ADR-0092-build-provenance-scorecard-and-github-release-attestations.md) e [BUILD_PROVENANCE_POSTURE.pt_BR.md](docs/ops/BUILD_PROVENANCE_POSTURE.pt_BR.md).
+
 ## Versões suportadas
 
 **Produto (o que recebemos patches para reportes de segurança):**

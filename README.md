@@ -14,6 +14,8 @@
 [![License](https://img.shields.io/github/license/DataBoar/data-boar)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/DataBoar/data-boar)](https://github.com/DataBoar/data-boar/releases)
 
+**Build provenance:** signed attestations and SBOM assets attach to [GitHub Releases](https://github.com/DataBoar/data-boar/releases) on version tags (SBOM workflow)—not as a PyPI project badge. Map: [BUILD_PROVENANCE_POSTURE.md](docs/ops/BUILD_PROVENANCE_POSTURE.md) ([ADR 0092](docs/adr/ADR-0092-build-provenance-scorecard-and-github-release-attestations.md), closes [#1844](https://github.com/DataBoar/data-boar/issues/1844)).
+
 **Forensic-grade open-source PII scanner for LGPD · GDPR · evidence-ready compliance.** Primer: [FORENSICS_AND_EVIDENCE_PRIMER.md](docs/primers/FORENSICS_AND_EVIDENCE_PRIMER.md).
 
 **LGPD — real-world witness report (ISP field visit, Brazil):** [English](docs/LGPD_WITNESS_REPORT_NIO_FIELD_VISIT_2026.md) · [Português (Brasil)](docs/LGPD_WITNESS_REPORT_NIO_FIELD_VISIT_2026.pt_BR.md)

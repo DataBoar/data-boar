@@ -4,6 +4,11 @@
 
 **Related:** [scripts/docker/README.md](../../scripts/docker/README.md), [VERSIONING.md](../VERSIONING.md), [PLANS_TODO.md](../plans/PLANS_TODO.md) (orders **–1**, **–1b**), [HOMELAB_VALIDATION.md](HOMELAB_VALIDATION.md) (order **–1L** when the second environment is ready), [DOCKER_HUB_REPOSITORY_DESCRIPTION.md](DOCKER_HUB_REPOSITORY_DESCRIPTION.md) (Hub UI text — copy/paste after publish).
 
+### Build provenance vs Docker Hub (GitHub #1844)
+
+- **GitHub Releases (version tags):** SBOM + `actions/attest-build-provenance` run in [`.github/workflows/sbom.yml`](../../.github/workflows/sbom.yml) — see [BUILD_PROVENANCE_POSTURE.md](BUILD_PROVENANCE_POSTURE.md) and [ADR 0092](../adr/ADR-0092-build-provenance-scorecard-and-github-release-attestations.md).
+- **Docker Hub (`fabioleitao/data_boar`):** images are built and pushed with **operator scripts** on the primary dev workstation (steps 4–6 below). There is **no** dedicated in-repo workflow that publishes Hub tags or attaches digest-level SLSA attestations for those pushes today.
+
 ---
 
 ## Recommended default (PR-friendly, least confusion)
