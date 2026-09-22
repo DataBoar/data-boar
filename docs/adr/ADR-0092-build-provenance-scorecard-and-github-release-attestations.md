@@ -6,11 +6,12 @@
 
 ## Status
 
-Proposed
+Accepted
 
 ### Status history
 
-- 2026-09-22 — Proposed — records the operator decision for [#1844](https://github.com/DataBoar/data-boar/issues/1844) (Scorecard + native GitHub attestation on the SBOM/release path; no PyPI provenance badge). Move to **Accepted** when this PR merges and CI is green.
+- 2026-09-22 — Proposed — records the operator decision for [#1844](https://github.com/DataBoar/data-boar/issues/1844) (Scorecard + native GitHub attestation on the SBOM/release path; no PyPI provenance badge).
+- 2026-09-22 — Accepted — after merge of PR [#1963](https://github.com/DataBoar/data-boar/pull/1963) (operator audit; issue #1844 remains open until explicit close).
 
 ## Context
 

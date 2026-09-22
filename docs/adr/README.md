@@ -112,7 +112,7 @@ Canonical completeness of numbered ADR files is enforced for this table **and** 
 | 0089 | [Native package signed repository: hosting, signing keys, and community boundary](ADR-0089-native-package-signed-repository-hosting-keys-and-community-boundary.md) | Accepted |
 | 0090 | [Open-core / plugin boundary: Pro auditability, reference sample, reverse leakage guard](ADR-0090-open-core-plugin-boundary-pro-auditability-reference-sample.md) | Accepted |
 | 0091 | [One published container image (cp314t); GIL restored by license at ENTRYPOINT](ADR-0091-container-cp314t-license-gil-gate.md) | Proposed |
-| 0092 | [Build provenance: Scorecard + GitHub Release attestations (not PyPI badges)](ADR-0092-build-provenance-scorecard-and-github-release-attestations.md) | Proposed |
+| 0092 | [Build provenance: Scorecard + GitHub Release attestations (not PyPI badges)](ADR-0092-build-provenance-scorecard-and-github-release-attestations.md) | Accepted |
 
 ## Related docs
 
