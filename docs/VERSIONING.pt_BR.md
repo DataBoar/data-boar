@@ -64,11 +64,11 @@ Ao abrir uma **nova linha semver** (ex.: **`1.8.0`** após **`1.7.4`**), **`matu
 
 Sufixos (`-beta`, `-rc`, `-rc-N`) são obrigatórios em `main` enquanto um issue de **release gate** (ex.: GitHub #406) estiver **aberto**. **Commit gate** verde (`check-all`) **não** autoriza removê-los — ver ADR-0072. Gate **#406** fechado com **1.7.4** stable (PR **#1024**).
 
-### Linhas atuais (`1.7.4` publicado · `1.8.0-beta` working)
+### Linhas atuais (`1.7.4` publicado · `1.8.0-rc` working)
 
 | Rótulo | Status |
 | --- | --- |
-| **Working tree `main`** | **`1.8.0-beta`** no `pyproject.toml` (`maturity_build = 116` — faixa beta; reconciliado 2026-08-18). Só git para consumidores. |
+| **Working tree `main`** | **`1.8.0-rc`** no `pyproject.toml` (`maturity_build = 127` — entrada na faixa rc; promovido 2026-09-22). Só git para consumidores. |
 | **Canais publicados** | **`1.7.4.post12`** / **`v1.7.4.post12`** no PyPI + Hub (+ GA histórico **`1.7.4`**) até ritual futuro de **`1.8.0`** |
 | **#970** | Bump/tag stable prematuro sem release gate — corrigido por **ADR-0072** + gate **#406**; **`1.7.4` não é VOID** |
 | **Numeração pública pós-GA** | **Resolvido** (#977) — fix-line **`1.7.4`** usou **`.postN`** + octeto; **`.postN` não carrega** para **`1.8.0-beta`** |

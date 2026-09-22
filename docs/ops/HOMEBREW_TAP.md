@@ -58,7 +58,7 @@ Automation:
 
 Sync to the public tap repo needs repository secret **`HOMEBREW_TAP_TOKEN`** (contents:write on `DataBoar/homebrew-databoar`). Without it, the formula still bumps in this product repo via PR; the tap clone is skipped.
 
-Pre-release git-only versions (`1.8.0-beta`) are **not** formula targets — Homebrew users get the latest **PyPI** release.
+Pre-release git-only versions (`1.8.0-rc`) are **not** formula targets — Homebrew users get the latest **PyPI** release.
 
 ## Troubleshooting
 

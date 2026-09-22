@@ -24,10 +24,11 @@ POST11_FIX_COUNT = 1
 POST11_MATURITY_BUILD = 262
 POST12_FIX_COUNT = 1
 POST12_MATURITY_BUILD = 263
-# New public line 1.8.0-beta (ADR-0073): octet resets into beta band; first beta = 1.
-# Reconciled 2026-08-22: 115 fix/feat commits since cut 604c1b5c (exclusive) → 1 + 115 = 116.
+# 1.8.0 beta line (ADR-0073): octet resets into beta band at cut; reconciled 2026-08-22.
 LINE_180_BETA_FIX_COUNT_SINCE_CUT = 115
 LINE_180_BETA_MATURITY_BUILD = 1 + LINE_180_BETA_FIX_COUNT_SINCE_CUT
+# 1.8.0-rc promotion (2026-09-22): rc band floor per docs/releases/1.8.0-rc.md.
+LINE_180_RC_MATURITY_BUILD = 127
 
 
 def _load_pyproject() -> dict:
@@ -52,11 +53,14 @@ def test_post12_canonical_map_arithmetic_is_internally_consistent() -> None:
     assert POST7_MATURITY_BUILD + POST8_FIX_COUNT == POST8_MATURITY_BUILD
 
 
-def test_pyproject_maturity_build_matches_180_beta_reconciled_octet() -> None:
+def test_pyproject_maturity_build_matches_180_rc_cut() -> None:
     data = _load_pyproject()
     version = data.get("project", {}).get("version")
     maturity = data.get("tool", {}).get("databoar", {}).get("maturity_build")
-    assert version == "1.8.0-beta"
-    assert maturity == LINE_180_BETA_MATURITY_BUILD
-    assert maturity == 116
+    assert version == "1.8.0-rc"
+    assert maturity == LINE_180_RC_MATURITY_BUILD
+    assert maturity == 127
     assert maturity != POST12_MATURITY_BUILD  # must not carry .263 across lines
+    assert (
+        maturity > LINE_180_BETA_MATURITY_BUILD
+    )  # rc band entry above last beta octet

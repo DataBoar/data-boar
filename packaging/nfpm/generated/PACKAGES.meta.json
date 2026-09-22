@@ -2,7 +2,7 @@
   "schema_version": 1,
   "issue": 1403,
   "adr": "0084",
-  "version": "1.8.0-beta",
+  "version": "1.8.0-rc",
   "packagers": [
     "deb",
     "rpm",

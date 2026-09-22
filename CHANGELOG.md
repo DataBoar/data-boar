@@ -4,13 +4,24 @@ Human-readable summary of user-facing changes. **Detailed release notes:** [docs
 
 ## Unreleased (`main`)
 
-Empty while the working tree carries **`1.8.0-beta`** (see section below).
+Empty while the working tree carries **`1.8.0-rc`** (see section below).
 
 ---
 
-## 1.8.0-beta (working line on `main` — git-only)
+## 1.8.0-rc (working line on `main` — git-only)
 
-> Opens the **`1.8.0`** public line. **`[project] version = 1.8.0-beta`** (ADR-0073 PEP 440 hyphen form). **`[tool.databoar] maturity_build = 69`** — octet **resets** into beta band **1–126** at cut (`604c1b5c`, 2026-08-02); **reconciled 2026-08-18** after **68** `fix`/`feat` commits on `main` were not reflected in `pyproject.toml` during a heavy sprint (**process lapse, not a policy regression**). Does **not** continue from **`1.7.4.post12` / `.263`**. **Not** on PyPI or Docker Hub **`latest`** (distribution policy: pre-release = git-only). Notes: [docs/releases/1.8.0-beta.md](docs/releases/1.8.0-beta.md).
+> Release candidate for **`1.8.0`**. **`[project] version = 1.8.0-rc`** (ADR-0073 PEP 440 hyphen form). **`[tool.databoar] maturity_build = 127`** — **rc band entry** on promotion from **`1.8.0-beta`** (last beta reconciliation **`.116`**, 2026-08-22). **Not** on PyPI or Docker Hub **`latest`**. Notes: [docs/releases/1.8.0-rc.md](docs/releases/1.8.0-rc.md).
+
+### Promotion from `1.8.0-beta` (2026-09-22)
+
+- **Cut:** `chore(release): cut 1.8.0-rc` — suffix **`1.8.0-beta` → `1.8.0-rc`**; `maturity_build` **116 → 127** (rc band floor; ADR-0073 same-line beta→rc decision).
+- **Highlights:** feature and fix bullets accumulated during the beta line remain under **§ 1.8.0-beta** below (not duplicated here).
+
+---
+
+## 1.8.0-beta (frozen at RC promotion — git-only history)
+
+> Opened the **`1.8.0`** public line (superseded on `main` by **`1.8.0-rc`** — see § above). **`[project] version` was `1.8.0-beta`**; **`maturity_build`** reached **`.116`** at last beta reconciliation (**2026-08-22**). Notes: [docs/releases/1.8.0-beta.md](docs/releases/1.8.0-beta.md).
 
 ### Maturity octet reconciliation (2026-08-18)
 

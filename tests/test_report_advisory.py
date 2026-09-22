@@ -17,7 +17,7 @@ _PENDING = "sev=critical · 1.7.4 → 1.7.6 · fix disponível · visto em 2026-
 def _about(**overrides: object) -> dict:
     about = {
         "name": "Data Boar",
-        "version": "1.8.0-beta",
+        "version": "1.8.0-rc",
         "author": "Fabio Leitao",
         "license": "BSD 3-Clause License",
         "copyright": "Copyright (c) 2025-2026, Fabio Leitao",

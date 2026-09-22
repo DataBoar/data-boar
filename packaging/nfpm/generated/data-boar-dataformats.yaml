@@ -1,7 +1,7 @@
 name: data-boar-dataformats
 arch: ${NFPM_ARCH}
 platform: linux
-version: 1.8.0-beta
+version: 1.8.0-rc
 version_schema: none
 release: '1'
 section: utils
@@ -14,7 +14,7 @@ vendor: Data Boar
 homepage: https://github.com/DataBoar/data-boar
 license: AGPL-3.0-or-later
 depends:
-- data-boar (= 1.8.0-beta-1)
+- data-boar (= 1.8.0-rc-1)
 contents:
 - src: staging/usr/lib/data-boar/extras/dataformats/
   dst: /usr/lib/data-boar/extras/dataformats/
@@ -22,13 +22,13 @@ contents:
 overrides:
   deb:
     depends:
-    - data-boar (= 1.8.0-beta-1)
+    - data-boar (= 1.8.0-rc-1)
   rpm:
     depends:
-    - data-boar = 1.8.0-beta-1
+    - data-boar = 1.8.0-rc-1
   apk:
     depends:
-    - data-boar=1.8.0-beta-r1
+    - data-boar=1.8.0-rc-r1
   archlinux:
     depends:
-    - data-boar=1.8.0-beta-1
+    - data-boar=1.8.0-rc-1

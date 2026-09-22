@@ -27,7 +27,7 @@ def test_emit_and_verify_with_sboms(tmp_path: Path) -> None:
     _sha_file(app, b'{"bomFormat":"CycloneDX"}')
     _sha_file(runtime, b'{"bomFormat":"CycloneDX","specVersion":"1.6"}')
     (tmp_path / "pyproject.toml").write_text(
-        '[project]\nname = "data-boar"\nversion = "1.8.0-beta"\n',
+        '[project]\nname = "data-boar"\nversion = "1.8.0-rc"\n',
         encoding="utf-8",
     )
     commit = "a" * 40
@@ -53,7 +53,7 @@ def test_emit_and_verify_with_sboms(tmp_path: Path) -> None:
     assert record["kind"] == KIND
     assert record["signed_slsa"] is False
     assert record["source_commit"] == commit
-    assert record["version"] == "1.8.0-beta"
+    assert record["version"] == "1.8.0-rc"
     assert "application" in record["sbom_digests"]
     assert "runtime" in record["sbom_digests"]
     assert record["signed_attestation"] is None

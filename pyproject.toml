@@ -1,6 +1,6 @@
 [project]
 name = "data-boar"
-version = "1.8.0-beta"
+version = "1.8.0-rc"
 description = "Data Boar — compliance-aware discovery and mapping of personal and sensitive data across databases, files, and APIs (LGPD, GDPR, CCPA, and configurable frameworks)."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -381,8 +381,8 @@ dev = [
 ]
 
 # Operator-only maturity octet (ADR-0073). Never copy into [project].version.
-# New public line 1.8.0: maturity_build resets to beta band (1–126); first beta = 1.
-# Reconciled 2026-08-22: 115 fix/feat since cut 604c1b5c → .116 (see docs/releases/1.8.0-beta.md).
-# Map / notes: docs/releases/1.8.0-beta.md (prior 1.7.4.postN maps remain under docs/releases/).
+# 1.8.0 line: beta band 1–126 (cut 604c1b5c); rc band 127–199 (promotion 2026-09-22).
+# Last beta reconciliation: maturity_build = 116 (2026-08-22). RC cut enters rc band at 127 (ADR-0073).
+# Map / notes: docs/releases/1.8.0-rc.md (beta map: docs/releases/1.8.0-beta.md).
 [tool.databoar]
-maturity_build = 116
+maturity_build = 127
