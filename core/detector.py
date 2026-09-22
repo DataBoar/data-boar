@@ -51,6 +51,7 @@ from core.embedding_prototype_hint import try_embedding_prototype_elevation
 from core.fuzzy_column_match import try_fuzzy_elevation
 from core.suggested_review import column_name_suggests_identifier_review
 from utils.file_encoding import read_text_with_encoding
+from utils.luhn_card import text_contains_luhn_valid_card
 
 if TYPE_CHECKING:
     from core.dl_backend import DLClassifier
@@ -61,6 +62,7 @@ if TYPE_CHECKING:
 _CHECKSUM_GATED_PATTERNS: dict[str, object] = {
     "LGPD_CPF": text_contains_valid_cpf,
     "LGPD_CNPJ": text_contains_valid_cnpj,
+    "CREDIT_CARD": text_contains_luhn_valid_card,
 }
 
 # Optional ML deps (numpy/pandas/sklearn). SIGILL from a PyPI numpy wheel is
@@ -778,26 +780,31 @@ def _load_regex_overrides(
     path: str | list[str] | tuple[str, ...] | None,
     encoding: str = "utf-8",
     errors: str = "replace",
-) -> dict[str, tuple[str, str]]:
-    """Load name -> (pattern, norm_tag) from one or more YAML/JSON files.
+) -> tuple[dict[str, tuple[str, str]], dict[str, str]]:
+    """Load regex overrides and optional per-pattern validators from YAML/JSON.
 
-    Later files override earlier ones on the same ``name`` (same rule as
-    ``sql_sampling_files``).
+    Returns ``(name -> (pattern, norm_tag), name -> validator)``. Later files
+    override earlier ones on the same ``name`` (same rule as ``sql_sampling_files``).
     """
     merged: dict[str, tuple[str, str]] = {}
+    merged_validators: dict[str, str] = {}
     for one in _iter_pattern_file_paths(path):
-        merged.update(_load_regex_overrides_one(one, encoding=encoding, errors=errors))
-    return merged
+        chunk, validators = _load_regex_overrides_one(
+            one, encoding=encoding, errors=errors
+        )
+        merged.update(chunk)
+        merged_validators.update(validators)
+    return merged, merged_validators
 
 
 def _load_regex_overrides_one(
     path: str,
     encoding: str = "utf-8",
     errors: str = "replace",
-) -> dict[str, tuple[str, str]]:
+) -> tuple[dict[str, tuple[str, str]], dict[str, str]]:
     """Load name -> (pattern, norm_tag) from YAML/JSON file. Uses given encoding (default utf-8)."""
     if not path or not Path(path).exists():
-        return {}
+        return {}, {}
     # Validate against canonical plugin schema (ADR-0052); emit warnings for bad items.
     import warnings
 
@@ -820,8 +827,9 @@ def _load_regex_overrides_one(
 
         data = json.loads(raw)
     if not isinstance(data, (list, dict)):
-        return {}
-    out = {}
+        return {}, {}
+    out: dict[str, tuple[str, str]] = {}
+    validators: dict[str, str] = {}
     items = (
         data if isinstance(data, list) else data.get("patterns", data.get("regex", []))
     )
@@ -856,8 +864,19 @@ def _load_regex_overrides_one(
                     stacklevel=2,
                 )
                 continue
+            validator = item.get("validator")
+            if validator:
+                if validator == "luhn":
+                    validators[name] = "luhn"
+                else:
+                    warnings.warn(
+                        f"Plugin file '{path}': pattern '{name}' skipped validator "
+                        f"'{validator}' — only 'luhn' is supported today (#1332).",
+                        PluginValidationWarning,
+                        stacklevel=2,
+                    )
             out[name] = (pattern, norm)
-    return out
+    return out, validators
 
 
 def _load_ml_patterns(
@@ -1267,7 +1286,10 @@ class SensitivityDetector:
         patterns = copy.deepcopy(DEFAULT_PATTERNS)
         if not bool(det.get("cnpj_alphanumeric", False)):
             patterns.pop("LGPD_CNPJ_ALNUM", None)
-        over = _load_regex_overrides(regex_overrides_path, encoding=enc, errors=err)
+        over, pattern_validators = _load_regex_overrides(
+            regex_overrides_path, encoding=enc, errors=err
+        )
+        self._pattern_validators: dict[str, str] = pattern_validators
         for k, v in over.items():
             patterns[k] = v
         self.patterns = patterns
@@ -1431,14 +1453,24 @@ class SensitivityDetector:
             licensing_config=licensing_config,
         )
 
+    def _pattern_passes_post_match_gates(self, name: str, combined: str) -> bool:
+        validator = self._pattern_validators.get(name)
+        if validator == "luhn":
+            from utils.luhn_card import text_contains_luhn_valid_card
+
+            return text_contains_luhn_valid_card(combined)
+        gate_fn = _CHECKSUM_GATED_PATTERNS.get(name)
+        if gate_fn is not None and not gate_fn(combined):  # type: ignore[operator]
+            return False
+        return True
+
     def _append_pattern_hit(
         self,
         found_patterns: list[tuple[str, str]],
         name: str,
         combined: str,
     ) -> None:
-        gate_fn = _CHECKSUM_GATED_PATTERNS.get(name)
-        if gate_fn is not None and not gate_fn(combined):  # type: ignore[operator]
+        if not self._pattern_passes_post_match_gates(name, combined):
             return
         found_patterns.append((name, self.patterns[name][1]))
 
@@ -1465,8 +1497,7 @@ class SensitivityDetector:
             rex = self._compiled.get(name)
             if not (rex and rex.search(combined)):
                 continue
-            gate_fn = _CHECKSUM_GATED_PATTERNS.get(name)
-            if gate_fn is not None and not gate_fn(combined):  # type: ignore[operator]
+            if not self._pattern_passes_post_match_gates(name, combined):
                 continue
             found_patterns.append((name, norm_tag))
         return found_patterns

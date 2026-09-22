@@ -26,6 +26,7 @@ regex:
   - name: "PAN"
     pattern: "\\b\\d{4}[-\\s]?\\d{4}[-\\s]?\\d{4}[-\\s]?\\d{4}\\b"
     norm_tag: "PCI-DSS"
+    validator: luhn
   - name: "CARD_TRACK_ALT"
     pattern: "\\b%?[B]?\\d{13,19}\\^[^\\^]+\\^\\d{4}"
     norm_tag: "PCI-DSS"

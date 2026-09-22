@@ -134,8 +134,8 @@ def test_two_frameworks_match_manual_yaml_merge() -> None:
     expected_rec = _manual_recommendation_merge(_LGPD, _PCI)
     assert cfg["report"]["recommendation_overrides"] == expected_rec
     manual_regex = {}
-    manual_regex.update(_load_regex_overrides(str(_LGPD)))
-    manual_regex.update(_load_regex_overrides(str(_PCI)))
+    manual_regex.update(_load_regex_overrides(str(_LGPD))[0])
+    manual_regex.update(_load_regex_overrides(str(_PCI))[0])
     det = SensitivityDetector(regex_overrides_path=cfg["regex_overrides_files"])
     for name, pair in manual_regex.items():
         assert det.patterns[name] == pair

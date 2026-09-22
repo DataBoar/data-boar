@@ -51,6 +51,16 @@ regex_patterns:
       description: >
         Compliance norm tag displayed in findings (e.g. "LGPD Art. 5", "GDPR Art. 4",
         "CCPA / Personal data context").  Defaults to "Custom" when omitted.
+    validator:
+      type: string
+      required: false
+      allowed_values:
+        - luhn
+      description: >
+        Optional post-match semantic check applied to the combined column name + sample
+        text after the regex matches. ``luhn`` requires a Luhn-valid payment card
+        candidate (13–19 digits) — use on PAN-style overrides to align with built-in
+        rigor (#1332). Omitted = form-only match (legacy behaviour).
     dga_classification:
       type: string
       required: false

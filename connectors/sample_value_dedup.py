@@ -20,6 +20,12 @@ from connectors.sql_sampling import _HARD_MAX_SAMPLE, resolve_sql_sample_limit
 _ENV_FETCH_MULTIPLIER = "DATA_BOAR_SAMPLE_FETCH_MULTIPLIER"
 _DEFAULT_FETCH_MULTIPLIER = 10
 
+# Non-numeric separator between distinct sample values for detector input (#1332).
+# Space joins let PCI-style regexes match across value boundaries (years, INTEGER ids).
+# ASCII U+001F is matched by Python ``\s`` (so it does not block ``[-\s]?`` in PAN regexes);
+# U+241F SYMBOL FOR UNIT SEPARATOR (␟) is not whitespace and is safe in sample blobs.
+SAMPLE_VALUE_JOIN_SEPARATOR = "\u241f"
+
 
 def resolve_fetch_multiplier() -> int:
     """Multiplier for row fetch budget before client-side distinct cap."""
@@ -89,8 +95,12 @@ def join_distinct_sample(
     distinct_cap: int,
     max_value_len: int = 200,
 ) -> str:
-    """Space-joined distinct sample string for detector input (not persisted)."""
-    return " ".join(
+    """Distinct sample string for detector input (not persisted).
+
+    Values are joined with :data:`SAMPLE_VALUE_JOIN_SEPARATOR` (unit separator), not
+    spaces, so form-only regexes cannot match across column value boundaries.
+    """
+    return SAMPLE_VALUE_JOIN_SEPARATOR.join(
         distinct_values_capped(
             raw_values, distinct_cap=distinct_cap, max_value_len=max_value_len
         )

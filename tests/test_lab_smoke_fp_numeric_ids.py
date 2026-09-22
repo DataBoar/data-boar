@@ -58,13 +58,8 @@ def test_lab_fp_numeric_ids_sql_parity_across_engines() -> None:
         assert path.is_file(), f"missing {path}"
 
 
-# strict=True (unlike ad-hoc xfail elsewhere): XPASS must fail CI so the marker is removed with #1332.
-@pytest.mark.xfail(
-    strict=True,
-    reason="falso-positivo por concatenacao de amostra — #1332",
-)
 def test_lab_fp_numeric_ids_credit_card_must_be_zero_after_1332_fix() -> None:
-    """Target state for #1332 — xfail until join/sampling no longer crosses value boundaries."""
+    """#1332 — join separator must not let CREDIT_CARD regex span INTEGER samples."""
     scanner = DataScanner()
     hits = _scan_credit_card_hits(scanner, _FP_TRIGGER_COLUMNS)
     assert hits == 0, (
