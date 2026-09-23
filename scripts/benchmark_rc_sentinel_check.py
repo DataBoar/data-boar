@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Post-scan sentinel for Maestro RC profiles (benchmark-rc-v2).
+"""Post-scan sentinel for Maestro RC profiles (benchmark-rc-v3).
 
-Validates SQLite findings for required patterns and runs static negative SSRF/auth
-guard cases. Exit 0 = pass, 1 = sentinel fail, 2 = usage/config error.
+Validates SQLite findings for required patterns (min_count / max_count), optional
+connector probes, forbidden pattern substrings, and static negative SSRF/auth cases.
+Exit 0 = pass, 1 = sentinel fail, 2 = usage/config error.
 
-Refs: maestro#82, data-boar#1980 (gap report §E).
+Refs: maestro#82, maestro#86, data-boar#1980 (gap report §E), data-boar#1985.
 """
 
 from __future__ import annotations
@@ -26,6 +27,22 @@ _REPO_ROOT = Path(__file__).resolve().parents[1]
 _SENTINEL_TABLES = frozenset(
     {"filesystem_findings", "database_findings", "application_findings"}
 )
+
+_LIKE_ESCAPE_CHAR = "\\"
+
+
+def _like_prefix_param(prefix: str) -> str:
+    """Literal prefix for SQL LIKE … ESCAPE '\\' (SQLite _/% are not wildcards)."""
+    escaped = (
+        prefix.replace(_LIKE_ESCAPE_CHAR, _LIKE_ESCAPE_CHAR * 2)
+        .replace("%", _LIKE_ESCAPE_CHAR + "%")
+        .replace("_", _LIKE_ESCAPE_CHAR + "_")
+    )
+    return f"{escaped}%"
+
+
+def _target_name_prefix_clause() -> str:
+    return f" AND target_name LIKE ? ESCAPE '{_LIKE_ESCAPE_CHAR}'"
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -103,10 +120,102 @@ def _count_pattern(
     params: list[Any] = [session_id, f"%{pattern}%"]
     q = base
     if target_prefix:
-        q += " AND target_name LIKE ?"
-        params.append(f"{target_prefix}%")
+        q += _target_name_prefix_clause()
+        params.append(_like_prefix_param(target_prefix))
     row = conn.execute(q, params).fetchone()
     return int(row[0]) if row else 0
+
+
+def _count_rows_in_target_scope(
+    conn: sqlite3.Connection,
+    table: str,
+    session_id: str,
+    target_prefix: str,
+) -> int:
+    table_id = _safe_table(table)
+    if table_id not in _SENTINEL_TABLES:
+        raise ValueError(f"unsupported table: {table}")
+    row = conn.execute(
+        f"SELECT COUNT(*) FROM {table_id} WHERE session_id = ?"
+        + _target_name_prefix_clause(),
+        (session_id, _like_prefix_param(target_prefix)),
+    ).fetchone()
+    return int(row[0]) if row else 0
+
+
+def _scope_rows_for_tables(
+    conn: sqlite3.Connection,
+    session_id: str,
+    tables: list[Any],
+    target_prefix: str,
+) -> int:
+    return sum(
+        _count_rows_in_target_scope(conn, str(table), session_id, target_prefix)
+        for table in tables
+    )
+
+
+def _append_scope_empty_error(
+    errors: list[str],
+    rule_id: str,
+    target_prefix: str,
+    *,
+    xfail: bool,
+) -> None:
+    msg = (
+        f"{rule_id}: scope_empty (no findings rows for "
+        f"target_name_prefix={target_prefix!r})"
+    )
+    if xfail:
+        print(f"XFAIL_OK {msg}", file=sys.stderr)
+    else:
+        errors.append(msg)
+
+
+def _count_forbidden_substrings(
+    conn: sqlite3.Connection,
+    table: str,
+    session_id: str,
+    substrings: list[str],
+    target_prefix: str | None = None,
+) -> int:
+    if not substrings:
+        return 0
+    table_id = _safe_table(table)
+    if table_id not in _SENTINEL_TABLES:
+        raise ValueError(f"unsupported table: {table}")
+    hits = 0
+    q = f"SELECT pattern_detected FROM {table_id} WHERE session_id = ?"
+    params: list[Any] = [session_id]
+    if target_prefix:
+        q += _target_name_prefix_clause()
+        params.append(_like_prefix_param(target_prefix))
+    for (pattern_detected,) in conn.execute(q, params):
+        text = str(pattern_detected or "")
+        if any(sub in text for sub in substrings):
+            hits += 1
+    return hits
+
+
+def _append_pattern_bound_errors(
+    errors: list[str],
+    rule_id: str,
+    got: int,
+    *,
+    min_count: int | None,
+    max_count: int | None,
+    xfail: bool,
+) -> None:
+    if min_count is not None and got < min_count:
+        msg = f"{rule_id}: count={got} < min_count={min_count}"
+    elif max_count is not None and got > max_count:
+        msg = f"{rule_id}: count={got} > max_count={max_count}"
+    else:
+        return
+    if xfail:
+        print(f"XFAIL_OK {msg}", file=sys.stderr)
+        return
+    errors.append(msg)
 
 
 def _count_rows(conn: sqlite3.Connection, table: str, session_id: str) -> int:
@@ -134,10 +243,13 @@ def _count_scan_failures(
     target_prefix: str | None = None,
 ) -> int:
     if target_prefix:
+        # B608 FP: table name is the literal scan_failures. The only append is
+        # _target_name_prefix_clause() (no parameters, constant SQL). The prefix
+        # value is bound via ? in _like_prefix_param(), never concatenated.
         row = conn.execute(
-            "SELECT COUNT(*) FROM scan_failures "
-            "WHERE session_id = ? AND target_name LIKE ?",
-            (session_id, f"{target_prefix}%"),
+            "SELECT COUNT(*) FROM scan_failures "  # nosec B608
+            "WHERE session_id = ?" + _target_name_prefix_clause(),
+            (session_id, _like_prefix_param(target_prefix)),
         ).fetchone()
     else:
         row = conn.execute(
@@ -199,15 +311,35 @@ def _check_findings_sentinel(
             if not isinstance(req, dict):
                 continue
             pattern = str(req.get("pattern") or "")
-            min_count = int(req.get("min_count") or 1)
+            if not pattern:
+                continue
+            min_count = req.get("min_count")
+            max_count = req.get("max_count")
+            min_n = int(min_count) if min_count is not None else None
+            max_n = int(max_count) if max_count is not None else None
+            if min_n is None and max_n is None:
+                min_n = 1
             tables = req.get("tables") or ["filesystem_findings"]
+            prefix = str(req.get("target_name_prefix") or "") or None
+            rule_label = str(req.get("id", pattern))
+            xfail_req = bool(req.get("xfail"))
+            if prefix:
+                if _scope_rows_for_tables(conn, session_id, tables, prefix) == 0:
+                    _append_scope_empty_error(
+                        errors, rule_label, prefix, xfail=xfail_req
+                    )
+                    continue
             got = 0
             for table in tables:
-                got += _count_pattern(conn, str(table), session_id, pattern)
-            if got < min_count:
-                errors.append(
-                    f"{req.get('id', pattern)}: count={got} < min_count={min_count}"
-                )
+                got += _count_pattern(conn, str(table), session_id, pattern, prefix)
+            _append_pattern_bound_errors(
+                errors,
+                rule_label,
+                got,
+                min_count=min_n,
+                max_count=max_n,
+                xfail=xfail_req,
+            )
 
         for opt in sentinel.get("optional_connectors") or []:
             if not isinstance(opt, dict):
@@ -221,18 +353,68 @@ def _check_findings_sentinel(
                 continue
             prefix = str(opt.get("target_name_prefix") or "")
             pattern = opt.get("pattern")
-            if pattern:
-                min_count = int(opt.get("min_count") or 1)
-                tables = opt.get("tables") or ["database_findings"]
+            rule_id = f"optional {opt.get('id')}"
+            xfail = bool(opt.get("xfail"))
+            tables_for_scope = list(opt.get("tables") or ["database_findings"])
+            forbidden = [
+                str(s) for s in (opt.get("forbidden_pattern_substrings") or [])
+            ]
+            require_clean_scan = bool(opt.get("require_no_scan_failure"))
+            scope_has_rows = True
+            # scope_empty only when bounds need evidence rows; require_no_scan_failure
+            # already proves reachability + clean scan (#1983 / Bugbot #1981).
+            if prefix and (pattern or forbidden) and not require_clean_scan:
+                scope_has_rows = (
+                    _scope_rows_for_tables(conn, session_id, tables_for_scope, prefix)
+                    > 0
+                )
+                if not scope_has_rows:
+                    _append_scope_empty_error(errors, rule_id, prefix, xfail=xfail)
+            if pattern and scope_has_rows:
+                min_count = opt.get("min_count")
+                max_count = opt.get("max_count")
+                min_n = int(min_count) if min_count is not None else None
+                max_n = int(max_count) if max_count is not None else None
+                if min_n is None and max_n is None:
+                    min_n = 1
                 got = 0
-                for table in tables:
+                for table in tables_for_scope:
                     got += _count_pattern(
-                        conn, str(table), session_id, str(pattern), prefix or None
+                        conn,
+                        str(table),
+                        session_id,
+                        str(pattern),
+                        prefix or None,
                     )
-                if got < min_count:
-                    errors.append(
-                        f"optional {opt.get('id')}: pattern count={got} < {min_count}"
+                _append_pattern_bound_errors(
+                    errors,
+                    rule_id,
+                    got,
+                    min_count=min_n,
+                    max_count=max_n,
+                    xfail=xfail,
+                )
+            if forbidden and (scope_has_rows or require_clean_scan):
+                max_forbidden = opt.get("max_forbidden_matches")
+                cap = int(max_forbidden) if max_forbidden is not None else 0
+                got_forbidden = 0
+                for table in tables_for_scope:
+                    got_forbidden += _count_forbidden_substrings(
+                        conn,
+                        str(table),
+                        session_id,
+                        forbidden,
+                        prefix or None,
                     )
+                if got_forbidden > cap:
+                    msg = (
+                        f"{rule_id}: forbidden_pattern_substrings matches="
+                        f"{got_forbidden} > max_forbidden_matches={cap}"
+                    )
+                    if xfail:
+                        print(f"XFAIL_OK {msg}", file=sys.stderr)
+                    else:
+                        errors.append(msg)
             if opt.get("require_no_scan_failure"):
                 fail_n = _count_scan_failures(conn, session_id, prefix or None)
                 if fail_n > 0:
@@ -243,10 +425,12 @@ def _check_findings_sentinel(
             min_app = opt.get("min_application_findings")
             if min_app is not None:
                 if prefix:
+                    # B608 FP: table name is the literal application_findings.
+                    # Same constant clause and bound LIKE prefix as scan_failures.
                     row = conn.execute(
-                        "SELECT COUNT(*) FROM application_findings "
-                        "WHERE session_id = ? AND target_name LIKE ?",
-                        (session_id, f"{prefix}%"),
+                        "SELECT COUNT(*) FROM application_findings "  # nosec B608
+                        "WHERE session_id = ?" + _target_name_prefix_clause(),
+                        (session_id, _like_prefix_param(prefix)),
                     ).fetchone()
                     got = int(row[0]) if row else 0
                 else:
@@ -312,8 +496,8 @@ def main() -> int:
     parser.add_argument(
         "--config",
         type=Path,
-        default=_REPO_ROOT / "tests/config/benchmark-rc-v2.yaml",
-        help="RC YAML used for the scan (default: benchmark-rc-v2.yaml)",
+        default=_REPO_ROOT / "tests/config/benchmark-rc-v3.yaml",
+        help="RC YAML used for the scan (default: benchmark-rc-v3.yaml)",
     )
     parser.add_argument(
         "--sentinel",

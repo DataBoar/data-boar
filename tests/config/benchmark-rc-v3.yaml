@@ -1,0 +1,90 @@
+# RC profile v3 — Maestro Deep / lab-completao (maestro#86, data-boar#1980 §E).
+# Superset of benchmark-rc-v2: v2 targets + lab SQL (Postgres/MariaDB) + NFS/SMB scan entries.
+tenant: "Lab-Op"
+technician: "Maestro"
+
+targets:
+  - name: "Data_Soup_Synthetic"
+    type: filesystem
+    path: "tests/data/"
+
+  - name: "Lab_Mongo_Synthetic_RC"
+    type: database
+    driver: mongodb
+    host: "127.0.0.1"
+    port: 27018
+    database: lab_smoke_mongo
+    allow_private_networks: true
+
+  # lab-smoke-stack defaults (deploy/lab-smoke-stack/docker-compose.yml).
+  - name: "Lab_Postgres_Synthetic_RC"
+    type: database
+    driver: postgresql+psycopg2
+    host: "127.0.0.1"
+    port: 55432
+    user: lab_smoke
+    pass: lab_smoke_change_me
+    database: lab_smoke_pg
+    allow_private_networks: true
+
+  - name: "Lab_MariaDB_Synthetic_RC"
+    type: database
+    driver: mysql+pymysql
+    host: "127.0.0.1"
+    port: 33306
+    user: lab_smoke
+    pass: lab_smoke_change_me
+    database: lab_smoke_my
+    allow_private_networks: true
+
+  # NFS persona: local path must exist (export mounted by labop-nfs-server-ensure or use corpus path).
+  - name: "Lab_RC_NFS_DataSoup"
+    type: nfs
+    host: "127.0.0.1"
+    export_path: "/export/lab"
+    path: "tests/data/"
+
+  # SMB persona: native smbprotocol scan; optional when lab SMB listener is up (sentinel probes 445).
+  - name: "Lab_RC_SMB_Synthetic"
+    type: smb
+    host: "127.0.0.1"
+    share: "lab_smoke"
+    path: ""
+    user: lab_smoke
+    pass: lab_smoke_change_me
+    port: 445
+    allow_private_networks: true
+    recursive: true
+
+  - name: "Lab_REST_Httpbin_Sample"
+    type: api
+    base_url: "https://httpbin.org"
+    paths: ["/json"]
+    timeout: 30
+
+file_scan:
+  sample_limit: 50
+  scan_compressed: true
+  use_content_type: true
+  scan_for_stego: true
+  extensions:
+    - .txt
+    - .csv
+    - .xlsx
+    - .docx
+    - .pdf
+    - .log
+    - .json
+    - .zip
+    - .tar.gz
+    - .7z
+
+engine_tuning:
+  rust_fast_filter: true
+  auto_throttling: true
+  max_cpu_target: 75
+
+reporting:
+  export_audit_trail: "log/audit_trail_rc_v3.log"
+
+sqlite_path: audit_results_rc_v3.db
