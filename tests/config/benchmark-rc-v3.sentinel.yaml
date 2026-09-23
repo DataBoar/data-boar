@@ -1,0 +1,75 @@
+# Sentinel thresholds for benchmark-rc-v3.yaml (scripts/benchmark_rc_sentinel_check.py).
+version: 2
+min_total_findings: 1
+required_patterns:
+  - id: filesystem_lgpd_cpf
+    pattern: LGPD_CPF
+    min_count: 1
+    tables:
+      - filesystem_findings
+optional_connectors:
+  - id: lab_mongo_lgpd
+    target_name_prefix: Lab_Mongo
+    pattern: LGPD_CPF
+    min_count: 1
+    tables:
+      - database_findings
+    probe: "tcp:127.0.0.1:27018"
+  - id: lab_postgres_lgpd
+    target_name_prefix: Lab_Postgres
+    pattern: LGPD_CPF
+    min_count: 1
+    tables:
+      - database_findings
+    probe: "tcp:127.0.0.1:55432"
+  - id: lab_postgres_no_credit_card_fp
+    target_name_prefix: Lab_Postgres
+    pattern: CREDIT_CARD
+    max_count: 0
+    tables:
+      - database_findings
+    probe: "tcp:127.0.0.1:55432"
+  - id: lab_mariadb_lgpd
+    target_name_prefix: Lab_MariaDB
+    pattern: LGPD_CPF
+    min_count: 1
+    tables:
+      - database_findings
+    probe: "tcp:127.0.0.1:33306"
+  - id: lab_mariadb_no_credit_card_fp
+    target_name_prefix: Lab_MariaDB
+    pattern: CREDIT_CARD
+    max_count: 0
+    tables:
+      - database_findings
+    probe: "tcp:127.0.0.1:33306"
+  - id: lab_nfs_lgpd
+    target_name_prefix: Lab_RC_NFS
+    pattern: LGPD_CPF
+    min_count: 1
+    tables:
+      - filesystem_findings
+  - id: lab_smb_optional
+    target_name_prefix: Lab_RC_SMB
+    probe: "tcp:127.0.0.1:445"
+    require_no_scan_failure: true
+    forbidden_pattern_substrings:
+      - LGPD_CPF
+      - CREDIT_CARD
+      - LGPD_CNPJ
+    max_forbidden_matches: 0
+    tables:
+      - filesystem_findings
+  - id: lab_rest_application
+    target_name_prefix: Lab_REST
+    probe: "tcp:httpbin.org:443"
+    require_no_scan_failure: true
+    forbidden_pattern_substrings:
+      - LGPD_CPF
+      - CREDIT_CARD
+      - LGPD_CNPJ
+    max_forbidden_matches: 0
+    tables:
+      - application_findings
+      - filesystem_findings
+      - database_findings

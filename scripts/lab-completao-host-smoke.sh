@@ -99,7 +99,7 @@ Usage: bash scripts/lab-completao-host-smoke.sh [--privileged] [--skip-engine-im
   --skip-engine-import  Skip uv / import core.engine (hosts that run Data Boar only via Docker/Swarm/Podman).
   --lab-stack-up        Try to bring up deploy/lab-smoke-stack (and optional Mongo compose overlay) before checks.
   --emit-jsonl-host-env-and-exit  Print one DATA_BOAR_COMPLETAO_JSONL_MIN_EVENT line (uv/python versions) and exit 0.
-  --bench-config        Relative path under repo root for data-boar scan --config (Deep/benchmark RC; default: tests/config/benchmark-rc-v2.yaml).
+  --bench-config        Relative path under repo root for data-boar scan --config (Deep/benchmark RC; default: tests/config/benchmark-rc-v3.yaml).
   --bench-track         Ephemeral A/B workdir under /tmp/databoar_bench/<stable|beta> (checkpoint isolation).
   --bench-run-id        Optional run marker for metric files (default: UTC timestamp).
   --health-url          Override LAB_COMPLETAO_HEALTH_URL (e.g. http://127.0.0.1:8088/health).
@@ -373,7 +373,7 @@ fi
 
 _lc_section "Data Boar Engine (Baremetal RC)"
 # Maestro passes --bench-config PATH (flags parsed above); default matches Deep RC benchmark.
-CONFIG_RC="${LC_BENCH_CONFIG:-tests/config/benchmark-rc-v2.yaml}"
+CONFIG_RC="${LC_BENCH_CONFIG:-tests/config/benchmark-rc-v3.yaml}"
 _lc_capture_metrics_snapshot "pre_scan"
 _scan_start_epoch="$(date +%s 2>/dev/null || echo 0)"
 LC_BAREMETAL_SCAN_OK=0
