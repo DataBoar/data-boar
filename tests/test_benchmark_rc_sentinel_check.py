@@ -216,6 +216,143 @@ def test_rc_sentinel_golden_int_year_join_must_not_credit_card() -> None:
         )
 
 
+def _write_rest_optional_db(
+    path: Path,
+    *,
+    session_id: str,
+    filesystem_pattern: str,
+    scan_failure_target: str | None = None,
+) -> None:
+    conn = sqlite3.connect(str(path))
+    try:
+        conn.executescript(
+            """
+            CREATE TABLE scan_sessions (
+                session_id TEXT PRIMARY KEY,
+                started_at TEXT,
+                status TEXT
+            );
+            CREATE TABLE filesystem_findings (
+                session_id TEXT,
+                target_name TEXT,
+                pattern_detected TEXT
+            );
+            CREATE TABLE database_findings (
+                session_id TEXT,
+                target_name TEXT,
+                pattern_detected TEXT
+            );
+            CREATE TABLE application_findings (
+                session_id TEXT,
+                target_name TEXT,
+                pattern_detected TEXT
+            );
+            CREATE TABLE scan_failures (
+                session_id TEXT,
+                target_name TEXT,
+                reason TEXT
+            );
+            """
+        )
+        ts = datetime.now(timezone.utc).isoformat()
+        conn.execute(
+            "INSERT INTO scan_sessions VALUES (?, ?, ?)",
+            (session_id, ts, "completed"),
+        )
+        conn.execute(
+            "INSERT INTO filesystem_findings VALUES (?, ?, ?)",
+            (session_id, "Data_Soup_Synthetic", filesystem_pattern),
+        )
+        if scan_failure_target:
+            conn.execute(
+                "INSERT INTO scan_failures VALUES (?, ?, ?)",
+                (session_id, scan_failure_target, "error"),
+            )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def test_optional_rest_reachable_zero_application_findings_passes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Bugbot #1983 — httpbin reachability must not require sensitive app findings."""
+    monkeypatch.setattr(sentinel_mod, "_probe_reachable", lambda _spec: True)
+    cfg = tmp_path / "bench.yaml"
+    cfg.write_text("sqlite_path: sentinel.db\n", encoding="utf-8")
+    spec = tmp_path / "bench.sentinel.yaml"
+    spec.write_text(
+        yaml.safe_dump(
+            {
+                "min_total_findings": 1,
+                "required_patterns": [
+                    {
+                        "pattern": "LGPD_CPF",
+                        "min_count": 1,
+                        "tables": ["filesystem_findings"],
+                    }
+                ],
+                "optional_connectors": [
+                    {
+                        "id": "lab_rest_application",
+                        "target_name_prefix": "Lab_REST",
+                        "probe": "tcp:httpbin.org:443",
+                        "require_no_scan_failure": True,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    db = tmp_path / "sentinel.db"
+    _write_rest_optional_db(
+        db, session_id="sess-rest-clean", filesystem_pattern="LGPD_CPF"
+    )
+    errs = sentinel_mod._check_findings_sentinel(cfg, spec, db)
+    assert errs == []
+
+
+def test_optional_rest_reachable_scan_failure_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(sentinel_mod, "_probe_reachable", lambda _spec: True)
+    cfg = tmp_path / "bench.yaml"
+    cfg.write_text("sqlite_path: sentinel.db\n", encoding="utf-8")
+    spec = tmp_path / "bench.sentinel.yaml"
+    spec.write_text(
+        yaml.safe_dump(
+            {
+                "min_total_findings": 1,
+                "required_patterns": [
+                    {
+                        "pattern": "LGPD_CPF",
+                        "min_count": 1,
+                        "tables": ["filesystem_findings"],
+                    }
+                ],
+                "optional_connectors": [
+                    {
+                        "id": "lab_rest_application",
+                        "target_name_prefix": "Lab_REST",
+                        "probe": "tcp:httpbin.org:443",
+                        "require_no_scan_failure": True,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    db = tmp_path / "sentinel.db"
+    _write_rest_optional_db(
+        db,
+        session_id="sess-rest-fail",
+        filesystem_pattern="LGPD_CPF",
+        scan_failure_target="Lab_REST_Httpbin_Sample",
+    )
+    errs = sentinel_mod._check_findings_sentinel(cfg, spec, db)
+    assert any("scan_failures=" in e and "lab_rest_application" in e for e in errs)
+
+
 def test_rc_sentinel_golden_luhn_pan_tab_and_nbsp_still_credit_card() -> None:
     """Grok fixture — tab/NBSP PAN must remain CREDIT_CARD after #1978 Luhn span gate."""
     from core.scanner import DataScanner

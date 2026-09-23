@@ -15,7 +15,8 @@ optional_connectors:
     tables:
       - database_findings
     probe: "tcp:127.0.0.1:27018"
+  # Reachable probe only: REST target must not land in scan_failures (clean scan OK).
   - id: lab_rest_application
     target_name_prefix: Lab_REST
-    min_application_findings: 1
     probe: "tcp:httpbin.org:443"
+    require_no_scan_failure: true

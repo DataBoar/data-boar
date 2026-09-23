@@ -128,6 +128,25 @@ def _count_rows(conn: sqlite3.Connection, table: str, session_id: str) -> int:
     return int(row[0]) if row else 0
 
 
+def _count_scan_failures(
+    conn: sqlite3.Connection,
+    session_id: str,
+    target_prefix: str | None = None,
+) -> int:
+    if target_prefix:
+        row = conn.execute(
+            "SELECT COUNT(*) FROM scan_failures "
+            "WHERE session_id = ? AND target_name LIKE ?",
+            (session_id, f"{target_prefix}%"),
+        ).fetchone()
+    else:
+        row = conn.execute(
+            "SELECT COUNT(*) FROM scan_failures WHERE session_id = ?",
+            (session_id,),
+        ).fetchone()
+    return int(row[0]) if row else 0
+
+
 def _latest_session_id(conn: sqlite3.Connection) -> tuple[str | None, str | None]:
     """Latest scan by started_at; only status=completed is acceptable evidence."""
     row = conn.execute(
@@ -213,6 +232,13 @@ def _check_findings_sentinel(
                 if got < min_count:
                     errors.append(
                         f"optional {opt.get('id')}: pattern count={got} < {min_count}"
+                    )
+            if opt.get("require_no_scan_failure"):
+                fail_n = _count_scan_failures(conn, session_id, prefix or None)
+                if fail_n > 0:
+                    errors.append(
+                        f"optional {opt.get('id')}: scan_failures={fail_n} "
+                        f"for target prefix {prefix!r}"
                     )
             min_app = opt.get("min_application_findings")
             if min_app is not None:
