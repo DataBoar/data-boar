@@ -40,6 +40,7 @@ Variáveis de ambiente sobrescrevem o YAML quando definidas:
 - `DATA_BOAR_LICENSE_PATH` — caminho do arquivo JWT (`.lic`)
 - `DATA_BOAR_LICENSE_PUBLIC_KEY_PATH` — arquivo PEM com a chave **pública Ed25519** (somente verificação; **override**)
 - `DATA_BOAR_LICENSE_PUBLIC_KEY_PEM` — PEM inline (alternativa ao caminho; emissor customizado / rotação / CI)
+- `DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_PATH` / `DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_PEM` — chave pública ML-DSA-65 (`-----BEGIN ML-DSA-65 PUBLIC KEY-----`, bytes crus). Obrigatória quando o token traz `dbmldsa_sig`; chave ausente falha fechada.
 
 ### Resolução da chave pública (#1331)
 
@@ -108,7 +109,7 @@ O `alg` JOSE permanece **EdDSA** (Ed25519). O License Studio pode anexar o claim
 | ---------- | ------------- |
 | `decode_license_jwt` | Verifica só EdDSA. `dbmldsa_sig` extra é ignorado (retrocompat). |
 | `decode_license_jwt_hybrid` | EdDSA primeiro; ML-DSA quando o claim está presente. |
-| `LicenseGuard` | Continua chamando **somente** `decode_license_jwt`. O scan enforced **não** exige ML-DSA hoje. |
+| `LicenseGuard` | Chama **`decode_license_jwt_hybrid`** quando `dbmldsa_sig` está presente (falha fechada sem a chave pública ML-DSA). Token sem o claim continua só Ed25519. Token híbrido verificado define `license_detail=hybrid_mldsa65_verified`. |
 
 **Restrições (confira no código; não invente um gate de runtime):**
 

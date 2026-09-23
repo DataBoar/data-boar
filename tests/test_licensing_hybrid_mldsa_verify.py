@@ -2,12 +2,20 @@
 
 from __future__ import annotations
 
+import base64
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+import jwt
 import pytest
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.backends.openssl.backend import backend
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from cryptography.hazmat.primitives.asymmetric.mldsa import MLDSA65PrivateKey
 
+from core.licensing.fingerprint import compute_machine_fingerprint
+from core.licensing.guard import LicenseGuard
 from core.licensing.verify import (
     CLAIM_MLDSA_SIG,
     decode_license_jwt,
@@ -78,3 +86,89 @@ def test_decode_license_jwt_hybrid_rejects_corrupted_mldsa_sig(
     )
     with pytest.raises(InvalidSignature):
         decode_license_jwt_hybrid(bad_token, ed25519_pub, mldsa_pub)
+
+
+def _pem_mldsa_public(private_key: MLDSA65PrivateKey) -> str:
+    raw = private_key.public_key().public_bytes_raw()
+    body = base64.b64encode(raw).decode("ascii")
+    lines = [body[i : i + 64] for i in range(0, len(body), 64)]
+    return (
+        "-----BEGIN ML-DSA-65 PUBLIC KEY-----\n"
+        + "\n".join(lines)
+        + "\n-----END ML-DSA-65 PUBLIC KEY-----\n"
+    )
+
+
+def _issue_hybrid_token(
+    ed_private: Ed25519PrivateKey,
+    ml_private: MLDSA65PrivateKey,
+    *,
+    corrupt_mldsa: bool = False,
+) -> str:
+    """Machine-bound hybrid JWT using the same ML-DSA message as verify.py."""
+    from core.licensing.verify import _mldsa_payload_json_without_sig
+
+    now = datetime.now(timezone.utc)
+    claims = {
+        "sub": "hybrid-guard-1",
+        "iat": int(now.timestamp()),
+        "exp": int((now + timedelta(days=1)).timestamp()),
+        "dbcid": "lab-dev",
+        "dbcname": "Lab",
+        "dbenv": "qa",
+        "dbissuer": "test",
+        "dbkid": "dev",
+        "dbtier": "enterprise",
+        "dbmfp": compute_machine_fingerprint(),
+    }
+    unsigned = jwt.encode(claims, ed_private, algorithm="EdDSA")
+    header_b64 = unsigned.split(".", 1)[0]
+    payload_json = _mldsa_payload_json_without_sig(claims)
+    payload_b64 = (
+        base64.urlsafe_b64encode(payload_json.encode("utf-8"))
+        .decode("ascii")
+        .rstrip("=")
+    )
+    sig = ml_private.sign(f"{header_b64}.{payload_b64}".encode("utf-8"))
+    sig_b64 = base64.urlsafe_b64encode(sig).decode("ascii").rstrip("=")
+    if corrupt_mldsa:
+        sig_b64 = "A" * len(sig_b64)
+    claims[CLAIM_MLDSA_SIG] = sig_b64
+    token = jwt.encode(claims, ed_private, algorithm="EdDSA")
+    if token.split(".", 1)[0] != header_b64:
+        raise AssertionError("JWT header changed after attaching dbmldsa_sig")
+    return token
+
+
+def test_license_guard_verifies_dbmldsa_sig_when_present(tmp_path, monkeypatch) -> None:
+    ed_private = Ed25519PrivateKey.generate()
+    ml_private = MLDSA65PrivateKey.generate()
+    token = _issue_hybrid_token(ed_private, ml_private)
+    lic = tmp_path / "hybrid.lic"
+    lic.write_text(token, encoding="utf-8")
+    ed_pem = (
+        ed_private.public_key()
+        .public_bytes(
+            serialization.Encoding.PEM,
+            serialization.PublicFormat.SubjectPublicKeyInfo,
+        )
+        .decode("ascii")
+    )
+    ml_pem = _pem_mldsa_public(ml_private)
+    monkeypatch.setenv("DATA_BOAR_LICENSE_PUBLIC_KEY_PEM", ed_pem)
+    monkeypatch.setenv("DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_PEM", ml_pem)
+    monkeypatch.delenv("DATA_BOAR_LICENSE_PATH", raising=False)
+    monkeypatch.delenv("DATA_BOAR_EXPECTED_BUILD_DIGEST", raising=False)
+
+    guard = LicenseGuard({"licensing": {"mode": "enforced", "license_path": str(lic)}})
+    assert guard.context.state == "VALID"
+    assert guard.context.detail == "hybrid_mldsa65_verified"
+
+    bad = _issue_hybrid_token(ed_private, ml_private, corrupt_mldsa=True)
+    bad_path = tmp_path / "hybrid-bad.lic"
+    bad_path.write_text(bad, encoding="utf-8")
+    denied = LicenseGuard(
+        {"licensing": {"mode": "enforced", "license_path": str(bad_path)}}
+    )
+    assert denied.context.state == "INVALID"
+    assert denied.context.detail == "mldsa_signature_invalid"

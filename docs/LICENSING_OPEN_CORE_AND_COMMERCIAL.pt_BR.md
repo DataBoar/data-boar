@@ -16,7 +16,7 @@ Espelha o padrão de mercado de projetos como **Bitwarden**: núcleo sob termos 
 ## O que permanece no repositório público
 
 - Motor de varredura, conectores (linha de base), geração de relatórios, API/dashboard (dashBOARd), testes, documentação para **operadores** (USAGE, SECURITY, guias de deploy).
-- **Somente verificação em tempo de execução**: **chave pública Ed25519** de verificação (não a chave de assinatura), formato de lista de revogação e o comportamento de `core/licensing/` quando o enforcement de licenciamento estiver ativo. O claim opcional **ML-DSA-65** `dbmldsa_sig` é caminho de biblioteca (`decode_license_jwt_hybrid`); o **`LicenseGuard` ainda não chama isso** ([LICENSING_SPEC.pt_BR.md](LICENSING_SPEC.pt_BR.md) #48).
+- **Somente verificação em tempo de execução**: **chave pública Ed25519** de verificação (não a chave de assinatura), formato de lista de revogação e o comportamento de `core/licensing/` quando o enforcement de licenciamento estiver ativo. O claim opcional **ML-DSA-65** `dbmldsa_sig` é verificado pelo **`LicenseGuard`** via `decode_license_jwt_hybrid` quando presente ([LICENSING_SPEC.pt_BR.md](LICENSING_SPEC.pt_BR.md) #48).
 
 **Nota:** Licenciamento **open source** do **código** sob BSD (ou AGPL futuro) **não** renuncia a **marca**, **trade dress** ou **boa vontade comercial** no **nome, mascote, narrativa e experiência do produto** abaixo. Forks podem redistribuir código conforme os termos da licença, mas não devem implicar endosso ou confundir origem, salvo permissão. A assessoria deve alinhar `LICENSE`, `NOTICE`, política de marca e SKUs de **parceiro / white-label** (veja [Produtos futuros: parceiros vs clientes finais](#produtos-futuros-parceiros-vs-clientes-finais-lembrete-de-planejamento)) a este inventário.
 

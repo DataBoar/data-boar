@@ -4,6 +4,9 @@ Runtime license guard: open mode (default) vs enforced commercial token verifica
 
 from __future__ import annotations
 
+import base64
+import binascii
+import json
 import logging
 import os
 from dataclasses import dataclass
@@ -12,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 import jwt
+from cryptography.exceptions import InvalidSignature
 
 from core.licensing.audit import audit_enforcement_event
 from core.licensing.feature_gate import FeatureCheckResult, check_feature
@@ -23,14 +27,38 @@ from core.licensing.integrity import (
     verify_manifest_optional,
 )
 from core.licensing.verify import (
+    CLAIM_MLDSA_SIG,
     decode_license_jwt,
+    decode_license_jwt_hybrid,
     load_ed25519_public_key_pem,
     load_embedded_official_public_key_pem,
+    load_mldsa65_public_key_pem,
     load_public_key_from_path,
     load_revocation_ids,
     utc_now_ts,
     RevocationListUnverified,
 )
+
+
+def _token_has_mldsa_claim(token: str) -> bool:
+    """True when the unverified JWT payload carries a non-empty ``dbmldsa_sig``.
+
+    This only chooses the verify function. Signature checks stay inside
+    ``decode_license_jwt_hybrid``.
+    """
+    parts = token.split(".")
+    if len(parts) != 3 or not parts[1]:
+        return False
+    try:
+        payload = json.loads(
+            base64.urlsafe_b64decode(parts[1] + "=" * (-len(parts[1]) % 4))
+        )
+    except (ValueError, binascii.Error, json.JSONDecodeError):
+        return False
+    if not isinstance(payload, dict):
+        return False
+    raw = payload.get(CLAIM_MLDSA_SIG)
+    return isinstance(raw, str) and bool(raw)
 
 
 @dataclass
@@ -215,6 +243,26 @@ class LicenseGuard:
             return embedded, ""
         return "", ""
 
+    def _load_mldsa_public_key(self) -> Any | None:
+        """ML-DSA-65 verify key when a hybrid token carries ``dbmldsa_sig``.
+
+        Precedence: ``DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_PEM``, then
+        ``DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_PATH``, then
+        ``licensing.mldsa_public_key_path``. Absent material returns ``None``
+        so ``decode_license_jwt_hybrid`` fails closed instead of ignoring the claim.
+        """
+        pem_env = (
+            os.environ.get("DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_PEM") or ""
+        ).strip()
+        if pem_env:
+            return load_mldsa65_public_key_pem(pem_env)
+        path = (os.environ.get("DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_PATH") or "").strip()
+        if not path:
+            path = str(self._lc.get("mldsa_public_key_path") or "").strip()
+        if not path:
+            return None
+        return load_mldsa65_public_key_pem(Path(path).read_text(encoding="utf-8"))
+
     def _evaluate(self) -> None:
         mfp = compute_machine_fingerprint()
         if self.mode == "open":
@@ -303,7 +351,22 @@ class LicenseGuard:
 
         try:
             raw = Path(lic_path).read_text(encoding="utf-8").strip()
-            claims = decode_license_jwt(raw, pub)
+            hybrid = _token_has_mldsa_claim(raw)
+            if hybrid:
+                claims = decode_license_jwt_hybrid(
+                    raw, pub, self._load_mldsa_public_key()
+                )
+            else:
+                claims = decode_license_jwt(raw, pub)
+        except InvalidSignature:
+            self._context = LicenseContext(
+                state="INVALID",
+                mode="enforced",
+                machine_fingerprint=mfp,
+                detail="mldsa_signature_invalid",
+                watermark="INVALID_TOKEN",
+            )
+            return
         except jwt.PyJWTError as e:
             self._context = LicenseContext(
                 state="INVALID",
@@ -493,7 +556,11 @@ class LicenseGuard:
             trial=trial,
             max_report_rows=max_rows,
             machine_fingerprint=mfp,
-            detail="ok" if state in ("VALID", "GRACE") else state.lower(),
+            detail=(
+                "hybrid_mldsa65_verified"
+                if hybrid and state in ("VALID", "GRACE")
+                else ("ok" if state in ("VALID", "GRACE") else state.lower())
+            ),
             watermark=wm,
             dbtier=str(claims.get("dbtier") or "").strip(),
             max_workers=claim_workers,

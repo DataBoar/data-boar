@@ -37,7 +37,7 @@ Empty while the working tree carries **`1.8.0-rc`** (see section below).
 
 ### Included since `1.7.4.post12`
 
-- **License JWT hybrid verify (#48):** `decode_license_jwt_hybrid` checks optional claim `dbmldsa_sig` (ML-DSA-65). JOSE `alg` stays EdDSA. **`LicenseGuard` still calls `decode_license_jwt` only.** Spec: [LICENSING_SPEC.md](docs/LICENSING_SPEC.md).
+- **License JWT hybrid verify (#48):** `decode_license_jwt_hybrid` checks optional claim `dbmldsa_sig` (ML-DSA-65). JOSE `alg` stays EdDSA. **`LicenseGuard` calls that hybrid verifier when the claim is present** (Refs #1462). Spec: [LICENSING_SPEC.md](docs/LICENSING_SPEC.md).
 
 - **Gitleaks + OSV check-all parity (#1933):** CI and local `check-all` pin gitleaks **8.30.1** by **binary** SHA256 (`scripts/tool-pins.sh`), scan with `security/gitleaks.toml` after deleting root `.gitleaks.toml` / `.gitleaksignore`, `--ignore-gitleaks-allow`. OSV-Scanner **2.6.0** in `gitleaks.yml` and on `check-all --enforced`. Notes: [TESTING.md](docs/TESTING.md).
 
