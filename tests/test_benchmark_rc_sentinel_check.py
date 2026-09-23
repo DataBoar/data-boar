@@ -80,6 +80,71 @@ def test_findings_sentinel_passes_with_required_pattern(tmp_path: Path) -> None:
     assert errs == []
 
 
+def test_findings_sentinel_rejects_latest_session_when_not_completed(
+    tmp_path: Path,
+) -> None:
+    cfg = tmp_path / "bench.yaml"
+    cfg.write_text("sqlite_path: sentinel.db\n", encoding="utf-8")
+    spec = tmp_path / "bench.sentinel.yaml"
+    spec.write_text(
+        yaml.safe_dump(
+            {
+                "min_total_findings": 1,
+                "required_patterns": [
+                    {
+                        "pattern": "LGPD_CPF",
+                        "min_count": 1,
+                        "tables": ["filesystem_findings"],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    db = tmp_path / "sentinel.db"
+    conn = sqlite3.connect(str(db))
+    try:
+        conn.executescript(
+            """
+            CREATE TABLE scan_sessions (
+                session_id TEXT PRIMARY KEY,
+                started_at TEXT,
+                status TEXT
+            );
+            CREATE TABLE filesystem_findings (
+                session_id TEXT,
+                target_name TEXT,
+                pattern_detected TEXT
+            );
+            CREATE TABLE database_findings (
+                session_id TEXT,
+                target_name TEXT,
+                pattern_detected TEXT
+            );
+            CREATE TABLE application_findings (
+                session_id TEXT,
+                target_name TEXT,
+                pattern_detected TEXT
+            );
+            """
+        )
+        ts = datetime.now(timezone.utc).isoformat()
+        conn.execute(
+            "INSERT INTO scan_sessions VALUES (?, ?, ?)",
+            ("sess-partial", ts, "running"),
+        )
+        conn.execute(
+            "INSERT INTO filesystem_findings VALUES (?, ?, ?)",
+            ("sess-partial", "Data_Soup_Synthetic", "LGPD_CPF"),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+    errs = sentinel_mod._check_findings_sentinel(cfg, spec, db)
+    assert errs
+    assert any("completed" in e and "running" in e for e in errs)
+
+
 def test_findings_sentinel_fails_when_pattern_missing(tmp_path: Path) -> None:
     cfg = tmp_path / "bench.yaml"
     cfg.write_text("sqlite_path: sentinel.db\n", encoding="utf-8")

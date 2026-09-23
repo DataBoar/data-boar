@@ -128,11 +128,21 @@ def _count_rows(conn: sqlite3.Connection, table: str, session_id: str) -> int:
     return int(row[0]) if row else 0
 
 
-def _latest_session_id(conn: sqlite3.Connection) -> str | None:
+def _latest_session_id(conn: sqlite3.Connection) -> tuple[str | None, str | None]:
+    """Latest scan by started_at; only status=completed is acceptable evidence."""
     row = conn.execute(
-        "SELECT session_id FROM scan_sessions ORDER BY started_at DESC LIMIT 1"
+        "SELECT session_id, status FROM scan_sessions ORDER BY started_at DESC LIMIT 1"
     ).fetchone()
-    return str(row[0]) if row else None
+    if not row:
+        return None, "no scan_sessions row in sqlite"
+    session_id = str(row[0])
+    status = str(row[1] if row[1] is not None else "")
+    if status != "completed":
+        return None, (
+            f"latest scan_sessions row has status={status!r}, expected 'completed' "
+            f"(session_id={session_id})"
+        )
+    return session_id, None
 
 
 def _check_findings_sentinel(
@@ -147,9 +157,9 @@ def _check_findings_sentinel(
 
     conn = sqlite3.connect(str(sqlite_path))
     try:
-        session_id = _latest_session_id(conn)
-        if not session_id:
-            return ["no scan_sessions row in sqlite"]
+        session_id, session_err = _latest_session_id(conn)
+        if session_err:
+            return [session_err]
 
         total = sum(
             _count_rows(conn, t, session_id)
