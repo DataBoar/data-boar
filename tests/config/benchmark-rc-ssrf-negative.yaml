@@ -1,0 +1,27 @@
+# Static negative cases for benchmark_rc_sentinel_check.py (no live exfil).
+# Each case must fail in RESTConnector.connect() before credentials are sent.
+version: 1
+cases:
+  - id: metadata_base_url_blocked
+    match_substrings: ["#832", "private", "blocked", "link-local"]
+    target:
+      name: ssrf_metadata
+      type: api
+      base_url: "http://169.254.169.254"
+      paths: ["/latest/meta-data/"]
+      auth:
+        type: bearer
+        token: "sentinel-negative-token"
+        allowed_hosts: ["169.254.169.254"]
+
+  - id: rest_auth_host_not_allowlisted
+    match_substrings: ["#1977", "allowed_hosts"]
+    target:
+      name: ssrf_exfil_host
+      type: api
+      base_url: "https://attacker.example"
+      paths: ["/exfil"]
+      auth:
+        type: bearer
+        token: "sentinel-negative-token"
+        allowed_hosts: ["api.trusted.example"]

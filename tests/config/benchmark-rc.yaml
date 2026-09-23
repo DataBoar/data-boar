@@ -1,4 +1,5 @@
-# Data Boar 1.7.4-rc - Perfil de Benchmark de Stress
+# Data Boar 1.7.4-rc - Perfil de Benchmark de Stress (v1 — filesystem only).
+# Maestro Deep / lab smoke default: tests/config/benchmark-rc-v2.yaml (maestro#82).
 tenant: "Lab-Op"
 technician: "Maestro"
 

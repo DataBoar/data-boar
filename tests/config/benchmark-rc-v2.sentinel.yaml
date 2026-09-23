@@ -1,0 +1,22 @@
+# Sentinel thresholds for benchmark-rc-v2.yaml (scripts/benchmark_rc_sentinel_check.py).
+version: 1
+min_total_findings: 1
+required_patterns:
+  - id: filesystem_lgpd_cpf
+    pattern: LGPD_CPF
+    min_count: 1
+    tables:
+      - filesystem_findings
+optional_connectors:
+  - id: lab_mongo_lgpd
+    target_name_prefix: Lab_Mongo
+    pattern: LGPD_CPF
+    min_count: 1
+    tables:
+      - database_findings
+    probe: "tcp:127.0.0.1:27018"
+  # Reachable probe only: REST target must not land in scan_failures (clean scan OK).
+  - id: lab_rest_application
+    target_name_prefix: Lab_REST
+    probe: "tcp:httpbin.org:443"
+    require_no_scan_failure: true

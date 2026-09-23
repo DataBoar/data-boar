@@ -1,0 +1,53 @@
+# RC profile v2 — Maestro Deep / lab-completao baremetal (maestro#82, data-boar#1980 §E).
+# Superset of benchmark-rc.yaml: filesystem corpus + optional lab connectors when reachable.
+tenant: "Lab-Op"
+technician: "Maestro"
+
+targets:
+  - name: "Data_Soup_Synthetic"
+    type: filesystem
+    path: "tests/data/"
+
+  # lab-smoke-stack: deploy/lab-smoke-stack/docker-compose.mongo.yml (default host port 27018).
+  - name: "Lab_Mongo_Synthetic_RC"
+    type: database
+    driver: mongodb
+    host: "127.0.0.1"
+    port: 27018
+    database: lab_smoke_mongo
+    allow_private_networks: true
+
+  # Public read-only JSON (url_guard + pinned httpx); no auth — connector path only.
+  - name: "Lab_REST_Httpbin_Sample"
+    type: api
+    base_url: "https://httpbin.org"
+    paths: ["/json"]
+    timeout: 30
+
+file_scan:
+  sample_limit: 50
+  scan_compressed: true
+  use_content_type: true
+  scan_for_stego: true
+  extensions:
+    - .txt
+    - .csv
+    - .xlsx
+    - .docx
+    - .pdf
+    - .log
+    - .json
+    - .zip
+    - .tar.gz
+    - .7z
+
+engine_tuning:
+  rust_fast_filter: true
+  auto_throttling: true
+  max_cpu_target: 75
+
+reporting:
+  export_audit_trail: "log/audit_trail_rc_v2.log"
+
+# Isolate RC v2 sessions from ad-hoc local scans (sentinel reads this file).
+sqlite_path: audit_results_rc_v2.db
