@@ -13,6 +13,7 @@ def _credit_card_in_pattern(pattern_detected: str | None) -> bool:
 
 @pytest.mark.xfail(
     strict=True,
+    raises=AssertionError,
     reason="1984 — Amex 15-digit PAN not matched by CREDIT_CARD regex yet",
 )
 def test_amex_pan_free_text_should_detect_credit_card() -> None:
@@ -23,6 +24,7 @@ def test_amex_pan_free_text_should_detect_credit_card() -> None:
 
 @pytest.mark.xfail(
     strict=True,
+    raises=AssertionError,
     reason="1984 — Diners 14-digit PAN not matched by CREDIT_CARD regex yet",
 )
 def test_diners_pan_free_text_should_detect_credit_card() -> None:
