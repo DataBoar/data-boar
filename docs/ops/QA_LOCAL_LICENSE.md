@@ -16,7 +16,7 @@ enforced mode is a real signed license. QA licenses are deliberately:
 Keep the Ed25519 **private** key outside Git (e.g. `~/.keys/data-boar/`).
 See `docs/private.example/licensing/README.md` for key generation.
 
-Runtime `LicenseGuard` verifies the issued JWT with **EdDSA only** (`decode_license_jwt`). The optional ML-DSA-65 overlay (`dbmldsa_sig` / `decode_license_jwt_hybrid`, #48) is **not** on this QA path — see [LICENSING_SPEC.md](../LICENSING_SPEC.md).
+Runtime `LicenseGuard` verifies EdDSA, and also ML-DSA-65 when the token carries `dbmldsa_sig` (`decode_license_jwt_hybrid`). That path needs `DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_PATH` or `DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_PEM`. Tokens without the claim stay Ed25519-only — see [LICENSING_SPEC.md](../LICENSING_SPEC.md).
 
 ### Optional: encrypted signing key (passphrase)
 
