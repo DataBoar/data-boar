@@ -8,11 +8,14 @@ targets:
     type: filesystem
     path: "tests/data/"
 
+  # Root auth: LAB_MONGO_ROOT_USERNAME / LAB_MONGO_ROOT_PASSWORD (target_mongodb has no in-script default).
   - name: "Lab_Mongo_Synthetic_RC"
     type: database
     driver: mongodb
     host: "127.0.0.1"
     port: 27018
+    user: lab_smoke_root
+    pass: lab_smoke_mongo_change_me
     database: lab_smoke_mongo
     allow_private_networks: true
 
