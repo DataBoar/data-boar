@@ -22,6 +22,11 @@ import yaml
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 
+# Sentinel YAML only references these SQLite tables (validated before query build).
+_SENTINEL_TABLES = frozenset(
+    {"filesystem_findings", "database_findings", "application_findings"}
+)
+
 
 def _load_yaml(path: Path) -> dict[str, Any]:
     if not path.is_file():
@@ -79,36 +84,47 @@ def _count_pattern(
     target_prefix: str | None = None,
 ) -> int:
     table_id = _safe_table(table)
-    if table_id == "filesystem_findings":
-        q = (
-            f"SELECT COUNT(*) FROM {table_id} "
-            "WHERE session_id = ? AND pattern_detected LIKE ?"
-        )
-        params: list[Any] = [session_id, f"%{pattern}%"]
-        if target_prefix:
-            q += " AND target_name LIKE ?"
-            params.append(f"{target_prefix}%")
-    elif table_id in ("database_findings", "application_findings"):
-        q = (
-            f"SELECT COUNT(*) FROM {table_id} "
-            "WHERE session_id = ? AND pattern_detected LIKE ?"
-        )
-        params = [session_id, f"%{pattern}%"]
-        if target_prefix:
-            q += " AND target_name LIKE ?"
-            params.append(f"{target_prefix}%")
-    else:
+    if table_id not in _SENTINEL_TABLES:
         raise ValueError(f"unsupported table: {table}")
+    base = {
+        "filesystem_findings": (
+            "SELECT COUNT(*) FROM filesystem_findings "
+            "WHERE session_id = ? AND pattern_detected LIKE ?"
+        ),
+        "database_findings": (
+            "SELECT COUNT(*) FROM database_findings "
+            "WHERE session_id = ? AND pattern_detected LIKE ?"
+        ),
+        "application_findings": (
+            "SELECT COUNT(*) FROM application_findings "
+            "WHERE session_id = ? AND pattern_detected LIKE ?"
+        ),
+    }[table_id]
+    params: list[Any] = [session_id, f"%{pattern}%"]
+    q = base
+    if target_prefix:
+        q += " AND target_name LIKE ?"
+        params.append(f"{target_prefix}%")
     row = conn.execute(q, params).fetchone()
     return int(row[0]) if row else 0
 
 
 def _count_rows(conn: sqlite3.Connection, table: str, session_id: str) -> int:
     table_id = _safe_table(table)
-    row = conn.execute(
-        f"SELECT COUNT(*) FROM {table_id} WHERE session_id = ?",
-        (session_id,),
-    ).fetchone()
+    if table_id not in _SENTINEL_TABLES:
+        raise ValueError(f"unsupported table: {table}")
+    queries = {
+        "filesystem_findings": (
+            "SELECT COUNT(*) FROM filesystem_findings WHERE session_id = ?"
+        ),
+        "database_findings": (
+            "SELECT COUNT(*) FROM database_findings WHERE session_id = ?"
+        ),
+        "application_findings": (
+            "SELECT COUNT(*) FROM application_findings WHERE session_id = ?"
+        ),
+    }
+    row = conn.execute(queries[table_id], (session_id,)).fetchone()
     return int(row[0]) if row else 0
 
 
