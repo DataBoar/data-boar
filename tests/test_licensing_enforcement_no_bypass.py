@@ -23,7 +23,9 @@ import pytest
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from core.licensing.guard import LicenseGuard, reset_license_guard_for_tests
+from core.licensing.guard import LicenseGuard
+from core.licensing import reset_license_guard_for_tests
+from tests.license_verify_pin import pin_embedded_ed25519_pem
 from core.licensing.runtime_feature_tier import get_runtime_tier_for_features
 from core.licensing.tier_features import Tier
 
@@ -159,7 +161,7 @@ def test_yaml_effective_tier_ignored_in_enforced(monkeypatch):
 def test_enforced_valid_license_dbtier_governs(ed25519_priv, tmp_path):
     lic = tmp_path / "t.lic"
     lic.write_text(_make_token(ed25519_priv, extra={"dbtier": "pro"}), encoding="utf-8")
-    os.environ["DATA_BOAR_LICENSE_PUBLIC_KEY_PEM"] = _pem_public(ed25519_priv)
+    pin_embedded_ed25519_pem(_pem_public(ed25519_priv))
     cfg = {
         "licensing": {
             "mode": "enforced",
@@ -179,7 +181,7 @@ def test_enforced_valid_license_without_dbtier_falls_to_community(
 ):
     lic = tmp_path / "t.lic"
     lic.write_text(_make_token(ed25519_priv), encoding="utf-8")
-    os.environ["DATA_BOAR_LICENSE_PUBLIC_KEY_PEM"] = _pem_public(ed25519_priv)
+    pin_embedded_ed25519_pem(_pem_public(ed25519_priv))
     cfg = {"licensing": {"mode": "enforced", "license_path": str(lic)}}
     assert get_runtime_tier_for_features(cfg) == Tier.COMMUNITY
 
@@ -190,7 +192,7 @@ def test_enforced_expired_license_fails_closed(ed25519_priv, tmp_path, caplog):
         _make_token(ed25519_priv, exp_delta_days=-2, extra={"dbtier": "enterprise"}),
         encoding="utf-8",
     )
-    os.environ["DATA_BOAR_LICENSE_PUBLIC_KEY_PEM"] = _pem_public(ed25519_priv)
+    pin_embedded_ed25519_pem(_pem_public(ed25519_priv))
     cfg = {"licensing": {"mode": "enforced", "license_path": str(lic)}}
     with caplog.at_level(logging.DEBUG, logger=AUDIT_LOGGER):
         g = LicenseGuard(cfg)
@@ -213,7 +215,7 @@ def test_audit_allow_decisions_recorded(ed25519_priv, tmp_path, caplog):
     lic.write_text(
         _make_token(ed25519_priv, extra={"dbtier": "enterprise"}), encoding="utf-8"
     )
-    os.environ["DATA_BOAR_LICENSE_PUBLIC_KEY_PEM"] = _pem_public(ed25519_priv)
+    pin_embedded_ed25519_pem(_pem_public(ed25519_priv))
     cfg = {"licensing": {"mode": "enforced", "license_path": str(lic)}}
     with caplog.at_level(logging.DEBUG, logger=AUDIT_LOGGER):
         g = LicenseGuard(cfg)
@@ -243,7 +245,7 @@ def test_audit_trial_clamp_recorded(ed25519_priv, tmp_path, caplog):
         _make_token(ed25519_priv, extra={"dbtrial": True, "dbmaxrows": 100}),
         encoding="utf-8",
     )
-    os.environ["DATA_BOAR_LICENSE_PUBLIC_KEY_PEM"] = _pem_public(ed25519_priv)
+    pin_embedded_ed25519_pem(_pem_public(ed25519_priv))
     cfg = {"licensing": {"mode": "enforced", "license_path": str(lic)}}
     with caplog.at_level(logging.DEBUG, logger=AUDIT_LOGGER):
         g = LicenseGuard(cfg)

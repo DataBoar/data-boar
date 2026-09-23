@@ -34,22 +34,14 @@ Environment variables override YAML when set:
 
 - `DATA_BOAR_LICENSE_MODE` — `enforced` (escalation only; `open` cannot downgrade YAML `enforced`)
 - `DATA_BOAR_LICENSE_PATH` — path to JWT file (`.lic`)
-- `DATA_BOAR_LICENSE_PUBLIC_KEY_PATH` — PEM file with **Ed25519 public** key (verify only; **override**)
-- `DATA_BOAR_LICENSE_PUBLIC_KEY_PEM` — inline PEM (alternative to path; custom issuer / rotation / CI)
-- `DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_PATH` / `DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_PEM` — ML-DSA-65 public key (`-----BEGIN ML-DSA-65 PUBLIC KEY-----`, raw bytes). Required when the token carries `dbmldsa_sig`; missing key fails closed.
 
-### Public-key resolution (#1331)
+`DATA_BOAR_LICENSE_PUBLIC_KEY_PEM`, `DATA_BOAR_LICENSE_PUBLIC_KEY_PATH`, `DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_PEM`, `DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_PATH`, `licensing.public_key_path`, and `licensing.mldsa_public_key_path` are **not** verify keys. If any of them is set, enforced mode fails closed with `untrusted_key_override` (#1992). There is no test-only environment flag that turns that into an override. The ML-DSA key for `dbmldsa_sig` is the packaged anchor or the ML-DSA half of an accepted rotation.
 
-Enforced mode verifies the `.lic` against an Ed25519 **public** key. The official issuer key ships **inside the wheel** as `core/licensing/license-pub-v1.pem` (loaded via `importlib.resources`). A clean install with a valid machine-bound `.lic` does **not** need `DATA_BOAR_LICENSE_PUBLIC_KEY_*` or `licensing.public_key_path`.
+### Public-key resolution (#1331, #1992)
 
-Resolution order (first non-empty wins). An explicit override that fails to load is **fail-closed** (`public_key_load_error`); it does **not** fall through to the embedded key:
+Enforced mode verifies the `.lic` against the Ed25519 **public** key shipped **inside the wheel** as `core/licensing/license-pub-v1.pem` (loaded via `importlib.resources`). A clean install with a valid machine-bound `.lic` does **not** need a pubkey path.
 
-1. `DATA_BOAR_LICENSE_PUBLIC_KEY_PEM` (env)
-2. `DATA_BOAR_LICENSE_PUBLIC_KEY_PATH` (env)
-3. `licensing.public_key_path` (YAML)
-4. **embedded official pubkey** (packaged resource — default)
-
-Use an override only for **key rotation** or a **custom issuer**. The verify key is public; shipping it is not a secret. The golden private key stays with the issuer ([License Studio](https://github.com/DataBoar/license-studio)). `missing_public_key` remains only when the packaged resource is absent **and** no override is set.
+Key rotation is a JSON attestation at `licensing.rotation_attestation_path`. It is accepted only when **both** embedded anchors (Ed25519 and ML-DSA-65) sign the same message and `epoch` is `>= MIN_ACCEPTED_KEY_EPOCH` in `core/licensing/trust_anchor.py`. The signed bytes are `data-boar/license-key-rotation/v1\\0` plus the epoch as an 8-byte big-endian integer plus the canonical JSON of the new public keys. The epoch is inside that message; changing it after signing fails the signature. One anchor, a raw PEM, or an older epoch fails closed (`rotation_rejected:…`). `missing_public_key` remains only when the packaged Ed25519 resource is absent and no accepted rotation is configured.
 
 Other environment variables:
 
@@ -62,7 +54,9 @@ Other environment variables:
 ```yaml
 licensing:
   mode: open                    # open | enforced
-  public_key_path: ""           # optional override; empty → embedded official pubkey (#1331)
+  public_key_path: ""           # rejected if set (#1992); not a verify key
+  mldsa_public_key_path: ""     # rejected if set (#1992); not a verify key
+  rotation_attestation_path: "" # cross-signed Ed25519+ML-DSA rotation, or empty
   license_path: ""              # signed JWT file
   revocation_list_path: ""      # optional JSON revoke list
   manifest_path: ""             # optional release manifest
@@ -105,7 +99,7 @@ JOSE `alg` stays **EdDSA** (Ed25519). License Studio can attach claim `dbmldsa_s
 | ------- | ------------ |
 | `decode_license_jwt` | Verifies EdDSA only. Extra `dbmldsa_sig` is ignored (retrocompat). |
 | `decode_license_jwt_hybrid` | EdDSA first, then ML-DSA when the claim is present. |
-| `LicenseGuard` | Calls **`decode_license_jwt_hybrid`** when `dbmldsa_sig` is present (fail-closed without the ML-DSA public key). Tokens without the claim stay Ed25519-only. A verified hybrid token sets `license_detail=hybrid_mldsa65_verified`. |
+| `LicenseGuard` | Calls **`decode_license_jwt_hybrid`** when `dbmldsa_sig` is present. The ML-DSA key is the packaged anchor or an accepted rotation, never an env/YAML override (`untrusted_key_override`). Tokens without the claim stay Ed25519-only. A verified hybrid token sets `license_detail=hybrid_mldsa65_verified`. |
 
 **Constraints (verify against source, do not invent a runtime gate):**
 

@@ -123,56 +123,38 @@ def test_enforced_embedded_default_not_missing_public_key(
     assert "jwt_error" in g.context.detail
 
 
-def test_pem_env_overrides_path_and_embedded(
+def test_pem_env_is_untrusted_key_override(
     tmp_path: Path,
-    ed25519_priv: Ed25519PrivateKey,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     winner = Ed25519PrivateKey.generate()
-    loser_pem = tmp_path / "loser.pem"
-    loser_pem.write_text(_pem_public(ed25519_priv), encoding="utf-8")
-    monkeypatch.setenv("DATA_BOAR_LICENSE_PUBLIC_KEY_PATH", str(loser_pem))
     monkeypatch.setenv("DATA_BOAR_LICENSE_PUBLIC_KEY_PEM", _pem_public(winner))
     lic = tmp_path / "t.lic"
     lic.write_text(_make_token(winner), encoding="utf-8")
     g = LicenseGuard({"licensing": {"mode": "enforced", "license_path": str(lic)}})
-    assert g.context.state == "VALID"
+    assert g.context.state == "INVALID"
+    assert g.context.detail == "untrusted_key_override"
 
 
-def test_path_env_overrides_config(
+def test_path_env_is_untrusted_key_override(
     tmp_path: Path,
     ed25519_priv: Ed25519PrivateKey,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    env_key = Ed25519PrivateKey.generate()
     env_pem = tmp_path / "env.pem"
-    cfg_pem = tmp_path / "cfg.pem"
-    env_pem.write_text(_pem_public(env_key), encoding="utf-8")
-    cfg_pem.write_text(_pem_public(ed25519_priv), encoding="utf-8")
+    env_pem.write_text(_pem_public(ed25519_priv), encoding="utf-8")
     monkeypatch.setenv("DATA_BOAR_LICENSE_PUBLIC_KEY_PATH", str(env_pem))
     lic = tmp_path / "t.lic"
-    lic.write_text(_make_token(env_key), encoding="utf-8")
-    g = LicenseGuard(
-        {
-            "licensing": {
-                "mode": "enforced",
-                "license_path": str(lic),
-                "public_key_path": str(cfg_pem),
-            }
-        }
-    )
-    assert g.context.state == "VALID"
+    lic.write_text(_make_token(ed25519_priv), encoding="utf-8")
+    g = LicenseGuard({"licensing": {"mode": "enforced", "license_path": str(lic)}})
+    assert g.context.state == "INVALID"
+    assert g.context.detail == "untrusted_key_override"
 
 
-def test_config_path_overrides_embedded(
+def test_config_public_key_path_is_untrusted_key_override(
     tmp_path: Path,
     ed25519_priv: Ed25519PrivateKey,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(
-        "core.licensing.guard.load_embedded_official_public_key_pem",
-        lambda: "-----BEGIN PUBLIC KEY-----\nNOT-A-KEY\n-----END PUBLIC KEY-----",
-    )
     pem_path = tmp_path / "k.pem"
     pem_path.write_text(_pem_public(ed25519_priv), encoding="utf-8")
     lic = tmp_path / "t.lic"
@@ -186,26 +168,8 @@ def test_config_path_overrides_embedded(
             }
         }
     )
-    assert g.context.state == "VALID"
-
-
-def test_bad_path_env_does_not_fall_through_to_embedded(
-    tmp_path: Path,
-    ed25519_priv: Ed25519PrivateKey,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(
-        "core.licensing.guard.load_embedded_official_public_key_pem",
-        lambda: _pem_public(ed25519_priv),
-    )
-    monkeypatch.setenv(
-        "DATA_BOAR_LICENSE_PUBLIC_KEY_PATH", str(tmp_path / "missing.pem")
-    )
-    lic = tmp_path / "t.lic"
-    lic.write_text(_make_token(ed25519_priv), encoding="utf-8")
-    g = LicenseGuard({"licensing": {"mode": "enforced", "license_path": str(lic)}})
     assert g.context.state == "INVALID"
-    assert "public_key_load_error" in g.context.detail
+    assert g.context.detail == "untrusted_key_override"
 
 
 def _venv_python(venv: Path) -> Path:
@@ -285,7 +249,14 @@ pub = (
 )
 os.environ["DATA_BOAR_LICENSE_PUBLIC_KEY_PEM"] = pub
 from core.licensing import reset_license_guard_for_tests
+import core.licensing.guard as guard_mod
 
+reset_license_guard_for_tests()
+g_env = LicenseGuard({"licensing": {"mode": "enforced", "license_path": lic_path}})
+assert g_env.context.state == "INVALID", (g_env.context.state, g_env.context.detail)
+assert g_env.context.detail == "untrusted_key_override"
+os.environ.pop("DATA_BOAR_LICENSE_PUBLIC_KEY_PEM", None)
+guard_mod.load_embedded_official_public_key_pem = lambda: pub
 reset_license_guard_for_tests()
 g2 = LicenseGuard({"licensing": {"mode": "enforced", "license_path": lic_path}})
 assert g2.context.state == "VALID", (g2.context.state, g2.context.detail)
@@ -307,8 +278,9 @@ def test_wheel_install_embedded_pubkey_default(tmp_path: Path) -> None:
 
     A VALID token against the *official* pubkey needs the issuer private key,
     which is not in this repo. The probe asserts: official PEM is in the wheel,
-    importlib.resources loads it, missing_public_key is gone, and an explicit
-    PEM override still yields VALID + dbtier from a bound .lic.
+    importlib.resources loads it, missing_public_key is gone, a raw PEM env
+    override is rejected, and pinning the embedded loader (test stand-in for
+    the issuer key) still yields VALID + dbtier from a bound .lic.
     """
     if shutil.which("uv") is None:
         pytest.skip("uv is required to build and install the wheel")

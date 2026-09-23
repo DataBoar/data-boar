@@ -26,6 +26,7 @@ from core.licensing.integrity import (
     check_build_digest_expected,
     verify_manifest_optional,
 )
+from core.licensing import trust_anchor
 from core.licensing.verify import (
     CLAIM_MLDSA_SIG,
     decode_license_jwt,
@@ -33,7 +34,6 @@ from core.licensing.verify import (
     load_ed25519_public_key_pem,
     load_embedded_official_public_key_pem,
     load_mldsa65_public_key_pem,
-    load_public_key_from_path,
     load_revocation_ids,
     utc_now_ts,
     RevocationListUnverified,
@@ -59,6 +59,18 @@ def _token_has_mldsa_claim(token: str) -> bool:
         return False
     raw = payload.get(CLAIM_MLDSA_SIG)
     return isinstance(raw, str) and bool(raw)
+
+
+def _license_detail(state: str, *, hybrid: bool, rotation_epoch: int | None) -> str:
+    """Usable states name every layer that actually verified."""
+    if state not in ("VALID", "GRACE"):
+        return state.lower()
+    parts: list[str] = []
+    if hybrid:
+        parts.append("hybrid_mldsa65_verified")
+    if rotation_epoch is not None:
+        parts.append(f"rotation_epoch_{rotation_epoch}")
+    return ";".join(parts) if parts else "ok"
 
 
 @dataclass
@@ -219,49 +231,55 @@ class LicenseGuard:
         )
 
     def _resolve_verify_key_sources(self) -> tuple[str, str]:
-        """PEM text and/or filesystem path for verify-key material (#1331).
+        """PEM of the Ed25519 verify key, and an unused path slot.
 
-        Precedence (first non-empty wins; explicit overrides do not fall
-        through to the embedded default on load failure):
-
-        1. ``DATA_BOAR_LICENSE_PUBLIC_KEY_PEM``
-        2. ``DATA_BOAR_LICENSE_PUBLIC_KEY_PATH``
-        3. ``licensing.public_key_path``
-        4. packaged ``core/licensing/license-pub-v1.pem`` via importlib.resources
+        The verify key is the packaged Ed25519 anchor, or the Ed25519 half of
+        a rotation attestation signed by both embedded anchors (#1992).
+        Tests monkeypatch this method. Environment variables and
+        ``licensing.public_key_path`` are not accepted as keys.
         """
-        pem_env = (os.environ.get("DATA_BOAR_LICENSE_PUBLIC_KEY_PEM") or "").strip()
-        if pem_env:
-            return pem_env, ""
-        path_env = (os.environ.get("DATA_BOAR_LICENSE_PUBLIC_KEY_PATH") or "").strip()
-        if path_env:
-            return "", path_env
-        cfg_path = str(self._lc.get("public_key_path") or "").strip()
-        if cfg_path:
-            return "", cfg_path
+        self._rotation_epoch = None
+        self._rotation_mldsa_pem = None
+        if trust_anchor.raw_key_override_configured(
+            str(self._lc.get("public_key_path") or ""),
+            str(self._lc.get("mldsa_public_key_path") or ""),
+        ):
+            raise trust_anchor.UntrustedKeyOverride()
+        rotation_path = str(self._lc.get("rotation_attestation_path") or "").strip()
+        if rotation_path:
+            ed_anchor = load_embedded_official_public_key_pem() or ""
+            ml_anchor = trust_anchor.load_embedded_mldsa_anchor_pem()
+            try:
+                raw = Path(rotation_path).read_text(encoding="utf-8")
+            except OSError as exc:
+                raise trust_anchor.RotationRejected("attestation_unreadable") from exc
+            ed_pem, ml_pem, epoch = trust_anchor.verify_rotation_attestation(
+                raw,
+                ed25519_anchor_pem=ed_anchor,
+                mldsa_anchor_pem=ml_anchor,
+            )
+            self._rotation_epoch = epoch
+            self._rotation_mldsa_pem = ml_pem
+            return ed_pem, ""
         embedded = load_embedded_official_public_key_pem()
         if embedded:
             return embedded, ""
         return "", ""
 
     def _load_mldsa_public_key(self) -> Any | None:
-        """ML-DSA-65 verify key when a hybrid token carries ``dbmldsa_sig``.
+        """ML-DSA-65 verify key for a hybrid token.
 
-        Precedence: ``DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_PEM``, then
-        ``DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_PATH``, then
-        ``licensing.mldsa_public_key_path``. Absent material returns ``None``
-        so ``decode_license_jwt_hybrid`` fails closed instead of ignoring the claim.
+        The key is the ML-DSA half of an accepted rotation, or the packaged
+        ML-DSA anchor. Raw env and YAML paths are rejected earlier as
+        ``untrusted_key_override``. Absent material returns ``None`` so
+        ``decode_license_jwt_hybrid`` fails closed instead of ignoring the claim.
         """
-        pem_env = (
-            os.environ.get("DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_PEM") or ""
-        ).strip()
-        if pem_env:
-            return load_mldsa65_public_key_pem(pem_env)
-        path = (os.environ.get("DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_PATH") or "").strip()
-        if not path:
-            path = str(self._lc.get("mldsa_public_key_path") or "").strip()
-        if not path:
+        pem = getattr(self, "_rotation_mldsa_pem", None)
+        if not pem:
+            pem = trust_anchor.load_embedded_mldsa_anchor_pem()
+        if not pem:
             return None
-        return load_mldsa65_public_key_pem(Path(path).read_text(encoding="utf-8"))
+        return load_mldsa65_public_key_pem(pem)
 
     def _evaluate(self) -> None:
         mfp = compute_machine_fingerprint()
@@ -302,7 +320,26 @@ class LicenseGuard:
             )
             return
 
-        pem_env, key_path = self._resolve_verify_key_sources()
+        try:
+            pem_env, key_path = self._resolve_verify_key_sources()
+        except trust_anchor.UntrustedKeyOverride:
+            self._context = LicenseContext(
+                state="INVALID",
+                mode="enforced",
+                machine_fingerprint=mfp,
+                detail="untrusted_key_override",
+                watermark="UNTRUSTED_KEY",
+            )
+            return
+        except trust_anchor.RotationRejected as exc:
+            self._context = LicenseContext(
+                state="INVALID",
+                mode="enforced",
+                machine_fingerprint=mfp,
+                detail=f"rotation_rejected:{exc.detail}",
+                watermark="UNTRUSTED_KEY",
+            )
+            return
         lic_path = (
             os.environ.get("DATA_BOAR_LICENSE_PATH")
             or self._lc.get("license_path")
@@ -325,10 +362,7 @@ class LicenseGuard:
             return
 
         try:
-            if pem_env:
-                pub = load_ed25519_public_key_pem(pem_env)
-            else:
-                pub = load_public_key_from_path(key_path)
+            pub = load_ed25519_public_key_pem(pem_env)
         except Exception as e:
             self._context = LicenseContext(
                 state="INVALID",
@@ -556,10 +590,10 @@ class LicenseGuard:
             trial=trial,
             max_report_rows=max_rows,
             machine_fingerprint=mfp,
-            detail=(
-                "hybrid_mldsa65_verified"
-                if hybrid and state in ("VALID", "GRACE")
-                else ("ok" if state in ("VALID", "GRACE") else state.lower())
+            detail=_license_detail(
+                state,
+                hybrid=hybrid,
+                rotation_epoch=getattr(self, "_rotation_epoch", None),
             ),
             watermark=wm,
             dbtier=str(claims.get("dbtier") or "").strip(),

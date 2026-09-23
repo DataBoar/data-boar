@@ -18,7 +18,7 @@ deliberadamente:
 Mantenha a chave **privada** Ed25519 fora do Git (ex.: `~/.keys/data-boar/`).
 Veja `docs/private.example/licensing/README.md` para gerar as chaves.
 
-O `LicenseGuard` em runtime verifica EdDSA e também ML-DSA-65 quando o token traz `dbmldsa_sig` (`decode_license_jwt_hybrid`). Esse caminho precisa de `DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_PATH` ou `DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_PEM`. Token sem o claim continua só Ed25519 — veja [LICENSING_SPEC.pt_BR.md](../LICENSING_SPEC.pt_BR.md).
+O `LicenseGuard` em runtime verifica EdDSA e também ML-DSA-65 quando o token traz `dbmldsa_sig` (`decode_license_jwt_hybrid`). Essa chave ML-DSA é a âncora empacotada ou uma rotação aceita. `DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_*` falha fechado (`untrusted_key_override`). Token sem o claim continua só Ed25519 — veja [LICENSING_SPEC.pt_BR.md](../LICENSING_SPEC.pt_BR.md).
 
 ### Opcional: chave de assinatura cifrada (passphrase)
 
@@ -74,10 +74,12 @@ Envie apenas o arquivo `.lic` — nunca a chave privada.
 
 A chave pública oficial de verificação já vai **embarcada** na instalação
 (`license-pub-v1.pem`). Um `.lic` válido e vinculado à máquina basta — sem
-env/config de pubkey numa instalação limpa (#1331). Defina
-`DATA_BOAR_LICENSE_PUBLIC_KEY_PATH` / `DATA_BOAR_LICENSE_PUBLIC_KEY_PEM` /
-`licensing.public_key_path` só para **emissor customizado** ou **rotação de
-chave**.
+env/config de pubkey numa instalação limpa (#1331). Um
+`DATA_BOAR_LICENSE_PUBLIC_KEY_*`, `DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_*`,
+`licensing.public_key_path` ou `licensing.mldsa_public_key_path` falha
+fechado (`untrusted_key_override`, #1992). Rotação de chave é
+`licensing.rotation_attestation_path`: as duas âncoras embarcadas precisam
+assinar `data-boar/license-key-rotation/v1` mais a época.
 
 ```yaml
 # config.yaml

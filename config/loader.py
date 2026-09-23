@@ -1248,6 +1248,10 @@ def normalize_config(
     out["licensing"] = {
         "mode": mode,
         "public_key_path": str(lic.get("public_key_path") or "").strip(),
+        "mldsa_public_key_path": str(lic.get("mldsa_public_key_path") or "").strip(),
+        "rotation_attestation_path": str(
+            lic.get("rotation_attestation_path") or ""
+        ).strip(),
         "license_path": str(lic.get("license_path") or "").strip(),
         "revocation_list_path": str(lic.get("revocation_list_path") or "").strip(),
         "manifest_path": str(lic.get("manifest_path") or "").strip(),

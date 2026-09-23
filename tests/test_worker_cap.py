@@ -31,6 +31,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from core.licensing.guard import LicenseGuard, reset_license_guard_for_tests
+from tests.license_verify_pin import pin_embedded_ed25519_pem
 
 AUDIT_LOGGER = "data_boar.licensing.audit"
 
@@ -99,7 +100,7 @@ def _enforced_guard(
 ) -> LicenseGuard:
     lic = tmp_path / "t.lic"
     lic.write_text(_make_token(priv, extra=extra), encoding="utf-8")
-    os.environ["DATA_BOAR_LICENSE_PUBLIC_KEY_PEM"] = _pem_public(priv)
+    pin_embedded_ed25519_pem(_pem_public(priv))
     return LicenseGuard({"licensing": {"mode": "enforced", "license_path": str(lic)}})
 
 
@@ -213,7 +214,7 @@ def test_engine_clamps_workers_in_enforced(ed25519_priv, tmp_path, caplog):
         _make_token(ed25519_priv, extra={"dbtier": "enterprise", "dbmax_workers": 2}),
         encoding="utf-8",
     )
-    os.environ["DATA_BOAR_LICENSE_PUBLIC_KEY_PEM"] = _pem_public(ed25519_priv)
+    pin_embedded_ed25519_pem(_pem_public(ed25519_priv))
     licensing = {"mode": "enforced", "license_path": str(lic)}
     engine = _engine(tmp_path, max_workers=8, licensing=licensing)
     # Prime the singleton with the same config the engine will use.
@@ -257,7 +258,7 @@ def test_engine_cap_failure_is_fail_soft(ed25519_priv, tmp_path, monkeypatch, ca
     lic.write_text(
         _make_token(ed25519_priv, extra={"dbtier": "enterprise"}), encoding="utf-8"
     )
-    os.environ["DATA_BOAR_LICENSE_PUBLIC_KEY_PEM"] = _pem_public(ed25519_priv)
+    pin_embedded_ed25519_pem(_pem_public(ed25519_priv))
     licensing = {"mode": "enforced", "license_path": str(lic)}
     engine = _engine(tmp_path, max_workers=4, licensing=licensing)
     get_license_guard(engine.config)

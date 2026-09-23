@@ -15,6 +15,7 @@ from fastapi.testclient import TestClient
 from core.licensing import LicenseBlockedError, reset_license_guard_for_tests
 from core.licensing.fingerprint import compute_machine_fingerprint
 from core.licensing.guard import LicenseGuard
+from tests.license_verify_pin import pin_embedded_ed25519_pem as _pin_verify_pem
 from core.licensing.verify import RevocationListUnverified, load_revocation_ids
 
 
@@ -90,7 +91,7 @@ def test_enforced_missing_license_unlicensed(tmp_path, ed25519_priv):
             "license_path": str(tmp_path / "missing.lic"),
         }
     }
-    os.environ["DATA_BOAR_LICENSE_PUBLIC_KEY_PEM"] = pem
+    _pin_verify_pem(pem)
     g = LicenseGuard(cfg)
     assert g.allows_scan() is False
     assert g.context.state == "UNLICENSED"
@@ -101,7 +102,7 @@ def test_enforced_valid_token(ed25519_priv, tmp_path):
     lic = tmp_path / "t.lic"
     lic.write_text(_make_token(ed25519_priv), encoding="utf-8")
     cfg = {"licensing": {"mode": "enforced", "license_path": str(lic)}}
-    os.environ["DATA_BOAR_LICENSE_PUBLIC_KEY_PEM"] = pem
+    _pin_verify_pem(pem)
     g = LicenseGuard(cfg)
     assert g.allows_scan() is True
     assert g.context.state == "VALID"
@@ -123,7 +124,7 @@ def test_enforced_grace_when_past_exp_before_dbgrace(ed25519_priv, tmp_path):
         encoding="utf-8",
     )
     cfg = {"licensing": {"mode": "enforced", "license_path": str(lic)}}
-    os.environ["DATA_BOAR_LICENSE_PUBLIC_KEY_PEM"] = pem
+    _pin_verify_pem(pem)
     g = LicenseGuard(cfg)
     assert g.context.state == "GRACE"
     assert g.allows_scan() is True
@@ -145,7 +146,7 @@ def test_enforced_expired_when_past_dbgrace(ed25519_priv, tmp_path):
         encoding="utf-8",
     )
     cfg = {"licensing": {"mode": "enforced", "license_path": str(lic)}}
-    os.environ["DATA_BOAR_LICENSE_PUBLIC_KEY_PEM"] = pem
+    _pin_verify_pem(pem)
     g = LicenseGuard(cfg)
     assert g.context.state == "EXPIRED"
     assert g.allows_scan() is False
@@ -160,7 +161,7 @@ def test_enforced_expired_when_past_exp_without_dbgrace(ed25519_priv, tmp_path):
         encoding="utf-8",
     )
     cfg = {"licensing": {"mode": "enforced", "license_path": str(lic)}}
-    os.environ["DATA_BOAR_LICENSE_PUBLIC_KEY_PEM"] = pem
+    _pin_verify_pem(pem)
     g = LicenseGuard(cfg)
     assert g.context.state == "EXPIRED"
     assert g.allows_scan() is False
@@ -184,7 +185,7 @@ def test_enforced_malformed_exp_claim_fail_closed(ed25519_priv, tmp_path):
     lic = tmp_path / "bad-exp.lic"
     lic.write_text(tok, encoding="utf-8")
     cfg = {"licensing": {"mode": "enforced", "license_path": str(lic)}}
-    os.environ["DATA_BOAR_LICENSE_PUBLIC_KEY_PEM"] = pem
+    _pin_verify_pem(pem)
     g = LicenseGuard(cfg)
     assert g.context.state == "INVALID"
     assert g.context.detail == "malformed_exp_claim"
@@ -200,7 +201,7 @@ def test_enforced_token_dbtier_claim_exposed(ed25519_priv, tmp_path):
         encoding="utf-8",
     )
     cfg = {"licensing": {"mode": "enforced", "license_path": str(lic)}}
-    os.environ["DATA_BOAR_LICENSE_PUBLIC_KEY_PEM"] = pem
+    _pin_verify_pem(pem)
     g = LicenseGuard(cfg)
     assert g.context.state == "VALID"
     assert g.context.dbtier == "pro"
@@ -220,7 +221,7 @@ def test_enforced_revoked(ed25519_priv, tmp_path):
             "revocation_list_path": str(rev),
         }
     }
-    os.environ["DATA_BOAR_LICENSE_PUBLIC_KEY_PEM"] = pem
+    _pin_verify_pem(pem)
     g = LicenseGuard(cfg)
     assert g.allows_scan() is False
     assert g.context.state == "REVOKED"
@@ -254,7 +255,7 @@ def _revoked_guard(priv, tmp_path, *, token_extra: dict, revoked_ids: list[str])
             "revocation_list_path": str(rev),
         }
     }
-    os.environ["DATA_BOAR_LICENSE_PUBLIC_KEY_PEM"] = pem
+    _pin_verify_pem(pem)
     return LicenseGuard(cfg)
 
 
@@ -322,7 +323,7 @@ def test_enforced_revocation_missing_sig_is_tampered(ed25519_priv, tmp_path):
             "revocation_list_path": str(rev),
         }
     }
-    os.environ["DATA_BOAR_LICENSE_PUBLIC_KEY_PEM"] = pem
+    _pin_verify_pem(pem)
     g = LicenseGuard(cfg)
     assert g.allows_scan() is False
     assert g.context.state == "TAMPERED"
@@ -346,7 +347,7 @@ def test_enforced_revocation_tampered_content_is_rejected(ed25519_priv, tmp_path
             "revocation_list_path": str(rev),
         }
     }
-    os.environ["DATA_BOAR_LICENSE_PUBLIC_KEY_PEM"] = pem
+    _pin_verify_pem(pem)
     g = LicenseGuard(cfg)
     assert g.allows_scan() is False
     assert g.context.state == "TAMPERED"
@@ -375,7 +376,7 @@ def test_enforced_machine_mismatch(ed25519_priv, tmp_path):
         encoding="utf-8",
     )
     cfg = {"licensing": {"mode": "enforced", "license_path": str(lic)}}
-    os.environ["DATA_BOAR_LICENSE_PUBLIC_KEY_PEM"] = pem
+    _pin_verify_pem(pem)
     g = LicenseGuard(cfg)
     assert g.context.state == "MACHINE_MISMATCH"
     assert g.allows_scan() is False
@@ -387,7 +388,7 @@ def test_enforced_machine_match(ed25519_priv, tmp_path):
     lic = tmp_path / "t.lic"
     lic.write_text(_make_token(ed25519_priv, extra={"dbmfp": mfp}), encoding="utf-8")
     cfg = {"licensing": {"mode": "enforced", "license_path": str(lic)}}
-    os.environ["DATA_BOAR_LICENSE_PUBLIC_KEY_PEM"] = pem
+    _pin_verify_pem(pem)
     g = LicenseGuard(cfg)
     assert g.context.state == "VALID"
 
@@ -408,7 +409,7 @@ def test_engine_start_audit_raises_when_blocked(tmp_path, ed25519_priv, monkeypa
             },
         }
     )
-    os.environ["DATA_BOAR_LICENSE_PUBLIC_KEY_PEM"] = pem
+    _pin_verify_pem(pem)
     reset_license_guard_for_tests()
     eng = AuditEngine(cfg, db_path=str(tmp_path / "db.sqlite"))
     with pytest.raises(LicenseBlockedError):
@@ -435,7 +436,7 @@ def test_api_scan_forbidden_when_blocked(tmp_path, ed25519_priv, monkeypatch):
 
     p.write_text(yaml.dump(cfg), encoding="utf-8")
 
-    os.environ["DATA_BOAR_LICENSE_PUBLIC_KEY_PEM"] = pem
+    _pin_verify_pem(pem)
     reset_license_guard_for_tests()
     monkeypatch.setattr(routes, "_config_path", str(p))
     routes._config = None

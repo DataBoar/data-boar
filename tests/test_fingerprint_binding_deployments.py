@@ -39,6 +39,7 @@ from core.licensing.guard import (
     _parse_dbmfp_claim,
     reset_license_guard_for_tests,
 )
+from tests.license_verify_pin import pin_embedded_ed25519_pem
 from core.licensing.runtime_feature_tier import get_runtime_tier_for_features
 from core.licensing.tier_features import Tier
 
@@ -123,7 +124,7 @@ def _enforced_guard(
 ) -> LicenseGuard:
     lic = tmp_path / "t.lic"
     lic.write_text(_make_token(priv, extra=extra), encoding="utf-8")
-    os.environ["DATA_BOAR_LICENSE_PUBLIC_KEY_PEM"] = _pem_public(priv)
+    pin_embedded_ed25519_pem(_pem_public(priv))
     return LicenseGuard({"licensing": {"mode": "enforced", "license_path": str(lic)}})
 
 
@@ -301,7 +302,7 @@ def test_issuer_dbmfp_pack_binds_n_machines(ed25519_priv, tmp_path):
     # End-to-end: the pack license is VALID on this (pack member) machine.
     lic = tmp_path / "pack.lic"
     lic.write_text(token, encoding="utf-8")
-    os.environ["DATA_BOAR_LICENSE_PUBLIC_KEY_PEM"] = _pem_public(ed25519_priv)
+    pin_embedded_ed25519_pem(_pem_public(ed25519_priv))
     g = LicenseGuard({"licensing": {"mode": "enforced", "license_path": str(lic)}})
     assert g.context.state == "VALID"
     assert g.context.max_deployments == 2

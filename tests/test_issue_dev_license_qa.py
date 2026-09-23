@@ -23,7 +23,9 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from core.licensing.fingerprint import compute_machine_fingerprint
-from core.licensing.guard import LicenseGuard, reset_license_guard_for_tests
+from core.licensing.guard import LicenseGuard
+from core.licensing import reset_license_guard_for_tests
+from tests.license_verify_pin import pin_embedded_ed25519_pem
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 ISSUER = REPO_ROOT / "scripts" / "issue_dev_license_jwt.py"
@@ -121,7 +123,7 @@ def test_bound_license_valid_on_this_machine(keypair, tmp_path):
     priv_path, pub_pem, _pub_key = keypair
     lic = tmp_path / "qa.lic"
     _run_issuer("--private-key-pem-file", str(priv_path), "--out", str(lic))
-    os.environ["DATA_BOAR_LICENSE_PUBLIC_KEY_PEM"] = pub_pem
+    pin_embedded_ed25519_pem(pub_pem)
     g = LicenseGuard({"licensing": {"mode": "enforced", "license_path": str(lic)}})
     assert g.context.state == "VALID"
     assert g.context.dbtier == "enterprise"
@@ -139,7 +141,7 @@ def test_bound_license_rejected_on_other_machine(keypair, tmp_path):
         "--out",
         str(lic),
     )
-    os.environ["DATA_BOAR_LICENSE_PUBLIC_KEY_PEM"] = pub_pem
+    pin_embedded_ed25519_pem(pub_pem)
     g = LicenseGuard({"licensing": {"mode": "enforced", "license_path": str(lic)}})
     assert g.context.state == "MACHINE_MISMATCH"
     assert g.allows_scan() is False
