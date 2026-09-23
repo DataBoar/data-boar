@@ -243,8 +243,11 @@ def _count_scan_failures(
     target_prefix: str | None = None,
 ) -> int:
     if target_prefix:
+        # B608 FP: table name is the literal scan_failures. The only append is
+        # _target_name_prefix_clause() (no parameters, constant SQL). The prefix
+        # value is bound via ? in _like_prefix_param(), never concatenated.
         row = conn.execute(
-            "SELECT COUNT(*) FROM scan_failures "
+            "SELECT COUNT(*) FROM scan_failures "  # nosec B608
             "WHERE session_id = ?" + _target_name_prefix_clause(),
             (session_id, _like_prefix_param(target_prefix)),
         ).fetchone()
@@ -422,8 +425,10 @@ def _check_findings_sentinel(
             min_app = opt.get("min_application_findings")
             if min_app is not None:
                 if prefix:
+                    # B608 FP: table name is the literal application_findings.
+                    # Same constant clause and bound LIKE prefix as scan_failures.
                     row = conn.execute(
-                        "SELECT COUNT(*) FROM application_findings "
+                        "SELECT COUNT(*) FROM application_findings "  # nosec B608
                         "WHERE session_id = ?" + _target_name_prefix_clause(),
                         (session_id, _like_prefix_param(prefix)),
                     ).fetchone()
