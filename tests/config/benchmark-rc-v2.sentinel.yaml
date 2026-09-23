@@ -1,0 +1,21 @@
+# Sentinel thresholds for benchmark-rc-v2.yaml (scripts/benchmark_rc_sentinel_check.py).
+version: 1
+min_total_findings: 1
+required_patterns:
+  - id: filesystem_lgpd_cpf
+    pattern: LGPD_CPF
+    min_count: 1
+    tables:
+      - filesystem_findings
+optional_connectors:
+  - id: lab_mongo_lgpd
+    target_name_prefix: Lab_Mongo
+    pattern: LGPD_CPF
+    min_count: 1
+    tables:
+      - database_findings
+    probe: "tcp:127.0.0.1:27018"
+  - id: lab_rest_application
+    target_name_prefix: Lab_REST
+    min_application_findings: 1
+    probe: "tcp:httpbin.org:443"

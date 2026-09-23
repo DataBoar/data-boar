@@ -134,6 +134,14 @@ def test_benchmark_rc_config_exists_for_deep_mode() -> None:
     root = _project_root()
     cfg = root / "tests" / "config" / "benchmark-rc.yaml"
     assert cfg.is_file(), "tests/config/benchmark-rc.yaml required for Maestro -Deep"
+    cfg_v2 = root / "tests" / "config" / "benchmark-rc-v2.yaml"
+    assert cfg_v2.is_file(), (
+        "tests/config/benchmark-rc-v2.yaml required for Maestro -Deep (RC v2)"
+    )
+    sentinel = root / "scripts" / "benchmark_rc_sentinel_check.py"
+    assert sentinel.is_file(), (
+        "scripts/benchmark_rc_sentinel_check.py required for RC sentinel"
+    )
 
 
 def test_target_cifs_handler_exists() -> None:
@@ -541,7 +549,8 @@ def test_lab_completao_host_smoke_parses_bench_config_flag() -> None:
         encoding="utf-8", errors="replace"
     )
     assert "    --bench-config)" in text
-    assert 'CONFIG_RC="${LC_BENCH_CONFIG:-tests/config/benchmark-rc.yaml}"' in text
+    assert 'CONFIG_RC="${LC_BENCH_CONFIG:-tests/config/benchmark-rc-v2.yaml}"' in text
+    assert "benchmark_rc_sentinel_check.py" in text
 
 
 def test_labop_maestro_target_sudoers_example_lists_check_and_apply() -> None:

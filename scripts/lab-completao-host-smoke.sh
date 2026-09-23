@@ -99,7 +99,7 @@ Usage: bash scripts/lab-completao-host-smoke.sh [--privileged] [--skip-engine-im
   --skip-engine-import  Skip uv / import core.engine (hosts that run Data Boar only via Docker/Swarm/Podman).
   --lab-stack-up        Try to bring up deploy/lab-smoke-stack (and optional Mongo compose overlay) before checks.
   --emit-jsonl-host-env-and-exit  Print one DATA_BOAR_COMPLETAO_JSONL_MIN_EVENT line (uv/python versions) and exit 0.
-  --bench-config        Relative path under repo root for data-boar scan --config (Deep/benchmark RC; default: tests/config/benchmark-rc.yaml).
+  --bench-config        Relative path under repo root for data-boar scan --config (Deep/benchmark RC; default: tests/config/benchmark-rc-v2.yaml).
   --bench-track         Ephemeral A/B workdir under /tmp/databoar_bench/<stable|beta> (checkpoint isolation).
   --bench-run-id        Optional run marker for metric files (default: UTC timestamp).
   --health-url          Override LAB_COMPLETAO_HEALTH_URL (e.g. http://127.0.0.1:8088/health).
@@ -114,6 +114,7 @@ Environment:
   LAB_COMPLETAO_SKIP_UNDERVOLTAGE_CHECK If 1, skip vcgencmd/journal undervoltage section (LAB-NODE-04 passive / operator override).
   LAB_COMPLETAO_BENCH_TRACK             stable|beta when --bench-track not passed.
   LAB_COMPLETAO_BENCH_RUN_ID            run marker for benchmark metric files.
+  LAB_COMPLETAO_SKIP_RC_SENTINEL        If 1, skip scripts/benchmark_rc_sentinel_check.py after scan.
   LAB_COMPLETAO_BENCH_COMPARE           If 1, emit coarse wall-clock import probe (stable: core.engine; beta: boar_fast_filter).
   LAB_COMPLETAO_PREBUILT_WHEEL          Optional path to a prebuilt boar_fast_filter wheel (#782 Build-Once); installed after uv sync instead of a per-host maturin build.
 EOF
@@ -372,7 +373,7 @@ fi
 
 _lc_section "Data Boar Engine (Baremetal RC)"
 # Maestro passes --bench-config PATH (flags parsed above); default matches Deep RC benchmark.
-CONFIG_RC="${LC_BENCH_CONFIG:-tests/config/benchmark-rc.yaml}"
+CONFIG_RC="${LC_BENCH_CONFIG:-tests/config/benchmark-rc-v2.yaml}"
 _lc_capture_metrics_snapshot "pre_scan"
 _scan_start_epoch="$(date +%s 2>/dev/null || echo 0)"
 LC_BAREMETAL_SCAN_OK=0
@@ -386,6 +387,15 @@ elif [[ -f "$LC_REPO_ROOT/$CONFIG_RC" ]] && _lc_cmd uv; then
   if _lc_prepare_baremetal_runtime && (cd "$LC_REPO_ROOT" && uv run --no-sync python main.py --config "$CONFIG_RC"); then
     LC_BAREMETAL_SCAN_OK=1
     echo "BAREMETAL_SCAN: OK"
+    if [[ "${LAB_COMPLETAO_SKIP_RC_SENTINEL:-}" != "1" ]] && [[ -f "$LC_REPO_ROOT/scripts/benchmark_rc_sentinel_check.py" ]]; then
+      echo "Running RC sentinel (findings + negative SSRF guards)..."
+      if (cd "$LC_REPO_ROOT" && uv run --no-sync python scripts/benchmark_rc_sentinel_check.py --config "$CONFIG_RC"); then
+        echo "BAREMETAL_SENTINEL: OK"
+      else
+        LC_BAREMETAL_SCAN_OK=0
+        echo "BAREMETAL_SENTINEL: FAILED"
+      fi
+    fi
   else
     echo "BAREMETAL_SCAN: FAILED"
   fi
