@@ -776,6 +776,28 @@ def test_target_prefix_like_does_not_match_underscore_wildcard(
     assert any("scope_empty" in e and "Lab_REST" in e for e in errs)
 
 
+def test_shipped_rc_sentinels_require_filesystem_credit_card() -> None:
+    """maestro#92 — v2 and v3 fail closed when CREDIT_CARD is missing post-smoke."""
+    root = Path(__file__).resolve().parents[1]
+    for name in (
+        "benchmark-rc-v2.sentinel.yaml",
+        "benchmark-rc-v3.sentinel.yaml",
+    ):
+        spec = yaml.safe_load(
+            (root / "tests" / "config" / name).read_text(encoding="utf-8")
+        )
+        rules = [
+            r
+            for r in spec.get("required_patterns") or []
+            if isinstance(r, dict) and r.get("id") == "filesystem_credit_card"
+        ]
+        assert len(rules) == 1, name
+        rule = rules[0]
+        assert rule["pattern"] == "CREDIT_CARD"
+        assert int(rule["min_count"]) >= 1
+        assert rule["tables"] == ["filesystem_findings"]
+
+
 def test_rc_sentinel_golden_luhn_pan_tab_and_nbsp_still_credit_card() -> None:
     """Grok fixture — tab/NBSP PAN must remain CREDIT_CARD after #1978 Luhn span gate."""
     from core.scanner import DataScanner

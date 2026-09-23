@@ -1,0 +1,3 @@
+Synthetic PCI fixture for the RC sentinel rule filesystem_credit_card.
+Visa test PAN, Luhn-valid. Not a live card.
+4111111111111111
