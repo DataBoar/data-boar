@@ -13,4 +13,4 @@ This folder documents **where real issuer material lives** without committing it
 - `DATA_BOAR_LICENSE_ISSUER_PRIVATE_KEY_PEM_FILE` — path to private PEM
 - `DATA_BOAR_LICENSE_ISSUER_PRIVATE_KEY_PEM` — inline PEM (CI or one-off only; prefer file)
 
-Verification and runtime consumption of `.lic` files follow `docs/LICENSING_SPEC.md` (`DATA_BOAR_LICENSE_PUBLIC_KEY_PEM`, `licensing.mode: enforced`, etc.).
+Verification and runtime consumption of `.lic` files follow `docs/LICENSING_SPEC.md` (`licensing.mode: enforced`, embedded verify key; raw pubkey env overrides are rejected).

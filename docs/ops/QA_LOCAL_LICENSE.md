@@ -16,7 +16,7 @@ enforced mode is a real signed license. QA licenses are deliberately:
 Keep the Ed25519 **private** key outside Git (e.g. `~/.keys/data-boar/`).
 See `docs/private.example/licensing/README.md` for key generation.
 
-Runtime `LicenseGuard` verifies EdDSA, and also ML-DSA-65 when the token carries `dbmldsa_sig` (`decode_license_jwt_hybrid`). That path needs `DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_PATH` or `DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_PEM`. Tokens without the claim stay Ed25519-only — see [LICENSING_SPEC.md](../LICENSING_SPEC.md).
+Runtime `LicenseGuard` verifies EdDSA, and also ML-DSA-65 when the token carries `dbmldsa_sig` (`decode_license_jwt_hybrid`). That ML-DSA key is the packaged anchor or an accepted rotation. `DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_*` fails closed (`untrusted_key_override`). Tokens without the claim stay Ed25519-only — see [LICENSING_SPEC.md](../LICENSING_SPEC.md).
 
 ### Optional: encrypted signing key (passphrase)
 
@@ -72,9 +72,11 @@ Send only the `.lic` file — never the private key.
 
 The official verify key is **embedded** in the install (`license-pub-v1.pem`).
 A valid machine-bound `.lic` is enough — no pubkey env/config on a clean
-install (#1331). Set `DATA_BOAR_LICENSE_PUBLIC_KEY_PATH` /
-`DATA_BOAR_LICENSE_PUBLIC_KEY_PEM` / `licensing.public_key_path` only for a
-**custom issuer** or **key rotation**.
+install (#1331). A raw `DATA_BOAR_LICENSE_PUBLIC_KEY_*`, `DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_*`,
+`licensing.public_key_path`, or `licensing.mldsa_public_key_path` fails closed
+(`untrusted_key_override`, #1992).
+Key rotation is `licensing.rotation_attestation_path`: both embedded anchors
+must sign `data-boar/license-key-rotation/v1` plus the epoch.
 
 ```yaml
 # config.yaml

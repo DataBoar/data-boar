@@ -155,10 +155,23 @@ def test_license_guard_verifies_dbmldsa_sig_when_present(tmp_path, monkeypatch) 
         .decode("ascii")
     )
     ml_pem = _pem_mldsa_public(ml_private)
-    monkeypatch.setenv("DATA_BOAR_LICENSE_PUBLIC_KEY_PEM", ed_pem)
-    monkeypatch.setenv("DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_PEM", ml_pem)
-    monkeypatch.delenv("DATA_BOAR_LICENSE_PATH", raising=False)
-    monkeypatch.delenv("DATA_BOAR_EXPECTED_BUILD_DIGEST", raising=False)
+    for name in (
+        "DATA_BOAR_LICENSE_PUBLIC_KEY_PEM",
+        "DATA_BOAR_LICENSE_PUBLIC_KEY_PATH",
+        "DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_PEM",
+        "DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_PATH",
+        "DATA_BOAR_LICENSE_PATH",
+        "DATA_BOAR_EXPECTED_BUILD_DIGEST",
+    ):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setattr(
+        "core.licensing.guard.load_embedded_official_public_key_pem",
+        lambda: ed_pem,
+    )
+    monkeypatch.setattr(
+        "core.licensing.trust_anchor.load_embedded_mldsa_anchor_pem",
+        lambda: ml_pem,
+    )
 
     guard = LicenseGuard({"licensing": {"mode": "enforced", "license_path": str(lic)}})
     assert guard.context.state == "VALID"
@@ -172,3 +185,36 @@ def test_license_guard_verifies_dbmldsa_sig_when_present(tmp_path, monkeypatch) 
     )
     assert denied.context.state == "INVALID"
     assert denied.context.detail == "mldsa_signature_invalid"
+
+
+def test_mldsa_env_and_yaml_key_fail_closed(tmp_path, monkeypatch) -> None:
+    """The #1993 ML-DSA env/YAML key is the #1992 untrusted override."""
+    monkeypatch.delenv("DATA_BOAR_LICENSE_PUBLIC_KEY_PEM", raising=False)
+    monkeypatch.delenv("DATA_BOAR_EXPECTED_BUILD_DIGEST", raising=False)
+    monkeypatch.setenv("DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_PEM", "not-a-trust-anchor")
+    by_pem = LicenseGuard(
+        {"licensing": {"mode": "enforced", "license_path": str(tmp_path / "x.lic")}}
+    )
+    assert by_pem.context.state == "INVALID"
+    assert by_pem.context.detail == "untrusted_key_override"
+
+    monkeypatch.delenv("DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_PEM")
+    monkeypatch.setenv(
+        "DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_PATH", str(tmp_path / "ml.pem")
+    )
+    by_path = LicenseGuard(
+        {"licensing": {"mode": "enforced", "license_path": str(tmp_path / "x.lic")}}
+    )
+    assert by_path.context.detail == "untrusted_key_override"
+
+    monkeypatch.delenv("DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_PATH")
+    by_yaml = LicenseGuard(
+        {
+            "licensing": {
+                "mode": "enforced",
+                "license_path": str(tmp_path / "x.lic"),
+                "mldsa_public_key_path": str(tmp_path / "ml.pem"),
+            }
+        }
+    )
+    assert by_yaml.context.detail == "untrusted_key_override"

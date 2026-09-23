@@ -108,7 +108,10 @@ def _setup_enforced_assessment_routes(
     When ``yaml_effective_tier_line`` is empty, YAML omits ``effective_tier`` (tier from JWT only).
     """
     pem = _pem_public(ed25519_priv)
-    monkeypatch.setenv("DATA_BOAR_LICENSE_PUBLIC_KEY_PEM", pem)
+    monkeypatch.setattr(
+        "core.licensing.guard.load_embedded_official_public_key_pem",
+        lambda: pem,
+    )
     lic = tmp_path / "license.lic"
     lic.write_text(
         _make_license_token(ed25519_priv, extra={"dbtier": jwt_dbtier}),

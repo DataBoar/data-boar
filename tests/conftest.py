@@ -75,6 +75,15 @@ def include_private_lint(request: pytest.FixtureRequest) -> bool:
     return bool(request.config.getoption("--include-private"))
 
 
+@pytest.fixture(autouse=True)
+def _restore_license_verify_key_loader():
+    """Drop any test pin of the embedded verify key after the test."""
+    yield
+    from tests.license_verify_pin import restore_embedded_ed25519_loader
+
+    restore_embedded_ed25519_loader()
+
+
 @pytest.fixture(scope="session")
 def warm_pwsh() -> None:
     """#860: absorb the pwsh cold-start cost ONCE before ParseFile loops.

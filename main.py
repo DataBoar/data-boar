@@ -79,7 +79,13 @@ def _emit_runtime_trust_info(
         f"mode={snapshot['license_mode']})"
     )
     license_detail = str(snapshot.get("license_detail") or "")
-    if license_detail in {"hybrid_mldsa65_verified", "mldsa_signature_invalid"}:
+    if license_detail in {
+        "hybrid_mldsa65_verified",
+        "mldsa_signature_invalid",
+        "untrusted_key_override",
+    } or license_detail.startswith(
+        ("rotation_epoch_", "rotation_rejected:", "hybrid_mldsa65_verified")
+    ):
         info_line += f" license_detail={license_detail}"
     if to_stdout:
         print(info_line)

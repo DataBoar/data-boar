@@ -38,22 +38,14 @@ Variáveis de ambiente sobrescrevem o YAML quando definidas:
 
 - `DATA_BOAR_LICENSE_MODE` — `enforced` (somente escalada; `open` não rebaixa o `enforced` do YAML)
 - `DATA_BOAR_LICENSE_PATH` — caminho do arquivo JWT (`.lic`)
-- `DATA_BOAR_LICENSE_PUBLIC_KEY_PATH` — arquivo PEM com a chave **pública Ed25519** (somente verificação; **override**)
-- `DATA_BOAR_LICENSE_PUBLIC_KEY_PEM` — PEM inline (alternativa ao caminho; emissor customizado / rotação / CI)
-- `DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_PATH` / `DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_PEM` — chave pública ML-DSA-65 (`-----BEGIN ML-DSA-65 PUBLIC KEY-----`, bytes crus). Obrigatória quando o token traz `dbmldsa_sig`; chave ausente falha fechada.
 
-### Resolução da chave pública (#1331)
+`DATA_BOAR_LICENSE_PUBLIC_KEY_PEM`, `DATA_BOAR_LICENSE_PUBLIC_KEY_PATH`, `DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_PEM`, `DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_PATH`, `licensing.public_key_path` e `licensing.mldsa_public_key_path` **não** são chaves de verificação. Se qualquer uma estiver definida, o modo enforced falha fechado com `untrusted_key_override` (#1992). Não existe flag de ambiente só de teste que transforme isso em override. A chave ML-DSA de `dbmldsa_sig` é a âncora empacotada ou a metade ML-DSA de uma rotação aceita.
 
-O modo enforced verifica o `.lic` contra uma chave **pública** Ed25519. A chave oficial do emissor vai **dentro do wheel** em `core/licensing/license-pub-v1.pem` (carregada via `importlib.resources`). Uma instalação limpa com um `.lic` válido e vinculado à máquina **não** precisa de `DATA_BOAR_LICENSE_PUBLIC_KEY_*` nem de `licensing.public_key_path`.
+### Resolução da chave pública (#1331, #1992)
 
-Ordem de resolução (o primeiro valor não vazio vence). Um override explícito que falha ao carregar **falha fechado** (`public_key_load_error`); ele **não** cai na chave embarcada:
+O modo enforced verifica o `.lic` contra a chave **pública** Ed25519 que vai **dentro do wheel** em `core/licensing/license-pub-v1.pem` (carregada via `importlib.resources`). Uma instalação limpa com um `.lic` válido e vinculado à máquina **não** precisa de caminho de pubkey.
 
-1. `DATA_BOAR_LICENSE_PUBLIC_KEY_PEM` (env)
-2. `DATA_BOAR_LICENSE_PUBLIC_KEY_PATH` (env)
-3. `licensing.public_key_path` (YAML)
-4. **chave pública oficial embarcada** (recurso empacotado — padrão)
-
-Use override só para **rotação de chave** ou **emissor customizado**. A chave de verificação é pública; embarcá-la não expõe segredo. A chave privada canônica permanece no emissor ([License Studio](https://github.com/DataBoar/license-studio)). `missing_public_key` só ocorre quando o recurso empacotado está ausente **e** nenhum override está definido.
+A rotação de chave é uma atestação JSON em `licensing.rotation_attestation_path`. Ela só é aceita quando **as duas** âncoras embarcadas (Ed25519 e ML-DSA-65) assinam a mesma mensagem e `epoch` é `>= MIN_ACCEPTED_KEY_EPOCH` em `core/licensing/trust_anchor.py`. Os bytes assinados são `data-boar/license-key-rotation/v1\\0` mais a época como inteiro de 8 bytes big-endian mais o JSON canônico das chaves públicas novas. A época fica dentro dessa mensagem; mudá-la depois de assinar invalida a assinatura. Uma âncora só, um PEM cru ou uma época antiga falham fechado (`rotation_rejected:…`). `missing_public_key` só ocorre quando o recurso Ed25519 empacotado está ausente e não há rotação aceita.
 
 Outras variáveis de ambiente:
 
@@ -66,7 +58,9 @@ Outras variáveis de ambiente:
 ```yaml
 licensing:
   mode: open                    # open | enforced
-  public_key_path: ""           # override opcional; vazio → pubkey oficial embarcada (#1331)
+  public_key_path: ""           # rejeitado se definido (#1992); não é chave de verificação
+  mldsa_public_key_path: ""     # rejeitado se definido (#1992); não é chave de verificação
+  rotation_attestation_path: "" # rotação cross-signed Ed25519+ML-DSA, ou vazio
   license_path: ""              # arquivo JWT assinado
   revocation_list_path: ""      # lista JSON de revogação opcional
   manifest_path: ""             # manifesto de release opcional
@@ -109,7 +103,7 @@ O `alg` JOSE permanece **EdDSA** (Ed25519). O License Studio pode anexar o claim
 | ---------- | ------------- |
 | `decode_license_jwt` | Verifica só EdDSA. `dbmldsa_sig` extra é ignorado (retrocompat). |
 | `decode_license_jwt_hybrid` | EdDSA primeiro; ML-DSA quando o claim está presente. |
-| `LicenseGuard` | Chama **`decode_license_jwt_hybrid`** quando `dbmldsa_sig` está presente (falha fechada sem a chave pública ML-DSA). Token sem o claim continua só Ed25519. Token híbrido verificado define `license_detail=hybrid_mldsa65_verified`. |
+| `LicenseGuard` | Chama **`decode_license_jwt_hybrid`** quando `dbmldsa_sig` está presente. A chave ML-DSA é a âncora empacotada ou uma rotação aceita, nunca um override por ambiente/YAML (`untrusted_key_override`). Token sem o claim continua só Ed25519. Token híbrido verificado define `license_detail=hybrid_mldsa65_verified`. |
 
 **Restrições (confira no código; não invente um gate de runtime):**
 

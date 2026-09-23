@@ -15,6 +15,7 @@ from fastapi.testclient import TestClient
 from app.grc_dashboard_model import load_grc_json
 from core.licensing.errors import FeatureTierBlockedError
 from core.licensing.guard import reset_license_guard_for_tests
+from tests.license_verify_pin import pin_embedded_ed25519_pem
 from report.grc_export_multiformat import export_grc_executive_pdf
 
 _REPO = Path(__file__).resolve().parents[1]
@@ -105,7 +106,7 @@ def _setup_routes(tmp_path: Path, cfg: dict, monkeypatch: pytest.MonkeyPatch):
 def test_report_pdf_blocked_for_community_tier(
     tmp_path: Path, ed25519_priv: Ed25519PrivateKey, monkeypatch: pytest.MonkeyPatch
 ):
-    os.environ["DATA_BOAR_LICENSE_PUBLIC_KEY_PEM"] = _pem_public(ed25519_priv)
+    pin_embedded_ed25519_pem(_pem_public(ed25519_priv))
     cfg = _enforced_community_cfg(tmp_path, ed25519_priv)
     data = load_grc_json(_GRC_EXAMPLE)
     pdf = tmp_path / "out.pdf"
@@ -118,7 +119,7 @@ def test_report_pdf_blocked_for_community_tier(
 def test_scheduled_scans_blocked_for_community_tier_api(
     tmp_path: Path, ed25519_priv: Ed25519PrivateKey, monkeypatch: pytest.MonkeyPatch
 ):
-    os.environ["DATA_BOAR_LICENSE_PUBLIC_KEY_PEM"] = _pem_public(ed25519_priv)
+    pin_embedded_ed25519_pem(_pem_public(ed25519_priv))
     cfg = _enforced_community_cfg(tmp_path, ed25519_priv)
     routes, client = _setup_routes(tmp_path, cfg, monkeypatch)
     try:
@@ -135,7 +136,7 @@ def test_scheduled_scans_blocked_for_community_tier_api(
 def test_snowflake_scan_database_blocked_for_community_tier_api(
     tmp_path: Path, ed25519_priv: Ed25519PrivateKey, monkeypatch: pytest.MonkeyPatch
 ):
-    os.environ["DATA_BOAR_LICENSE_PUBLIC_KEY_PEM"] = _pem_public(ed25519_priv)
+    pin_embedded_ed25519_pem(_pem_public(ed25519_priv))
     cfg = _enforced_community_cfg(tmp_path, ed25519_priv)
     routes, client = _setup_routes(tmp_path, cfg, monkeypatch)
     try:
@@ -164,7 +165,7 @@ def test_community_tier_manual_scan_still_allowed(
     tmp_path: Path, ed25519_priv: Ed25519PrivateKey, monkeypatch: pytest.MonkeyPatch
 ):
     """Regression: community JWT must not block a normal (non-scheduled) scan start."""
-    os.environ["DATA_BOAR_LICENSE_PUBLIC_KEY_PEM"] = _pem_public(ed25519_priv)
+    pin_embedded_ed25519_pem(_pem_public(ed25519_priv))
     cfg = _enforced_community_cfg(tmp_path, ed25519_priv)
     routes, client = _setup_routes(tmp_path, cfg, monkeypatch)
     try:

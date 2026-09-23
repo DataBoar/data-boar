@@ -24,6 +24,7 @@ from core.connector_registry import (
 )
 from core.licensing.errors import FeatureTierBlockedError
 from core.licensing.guard import reset_license_guard_for_tests
+from tests.license_verify_pin import pin_embedded_ed25519_pem
 from core.licensing.tier_features import FEATURE_TIER_MAP, Tier
 
 
@@ -213,7 +214,7 @@ def _signed_license(tmp_path, dbtier: str) -> dict:
     )
     lic = tmp_path / "t.lic"
     lic.write_text(token, encoding="utf-8")
-    os.environ["DATA_BOAR_LICENSE_PUBLIC_KEY_PEM"] = pub_pem
+    pin_embedded_ed25519_pem(pub_pem)
     return {"licensing": {"mode": "enforced", "license_path": str(lic)}}
 
 
