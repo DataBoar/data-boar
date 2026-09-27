@@ -1,16 +1,30 @@
-"""Ensure pyproject.toml, uv.lock, and requirements.txt stay a single source of truth.
+"""Ensure pyproject.toml, uv.lock, requirements.txt and pylock.toml stay a single source of truth.
 
 Manual edits to ``requirements.txt`` or drift from the lockfile break reproducible installs.
-This module runs ``uv lock --check`` and compares ``requirements.txt`` to ``uv export``.
+This module runs ``uv lock --check`` and compares ``requirements.txt`` and ``pylock.toml``
+to ``uv export``. ``pylock.toml`` is read by the CI OSV scanner, so a stale or invalid
+export silently scans the wrong versions (#1937).
 """
 
 from __future__ import annotations
 
 import subprocess
 import tempfile
+import tomllib
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+
+PYLOCK_EXPORT_ARGS = [
+    "uv",
+    "export",
+    "--format",
+    "pylock.toml",
+    "--frozen",
+    "--all-extras",
+    "--all-groups",
+]
+PYLOCK_EXPORT_CMD = " ".join([*PYLOCK_EXPORT_ARGS, "--output-file", "pylock.toml"])
 
 
 def _normalize_uv_export_text(text: str) -> str:
@@ -66,6 +80,39 @@ def test_requirements_txt_matches_uv_export() -> None:
         "requirements.txt does not match `uv export` from the lockfile. "
         "Regenerate: uv export --frozen --no-emit-project -o requirements.txt "
         "(after uv lock if you changed pyproject.toml)."
+    )
+
+
+def test_pylock_toml_is_strict_toml() -> None:
+    """#1937: a corrupted export (e.g. ``2025-12-04LAB-NODE-01:49:44Z``) broke OSV."""
+    data = tomllib.loads((REPO_ROOT / "pylock.toml").read_text(encoding="utf-8"))
+    assert data.get("lock-version"), "pylock.toml has no lock-version"
+    assert data.get("packages"), "pylock.toml lists no packages"
+
+
+def test_pylock_toml_matches_uv_export() -> None:
+    committed = (REPO_ROOT / "pylock.toml").read_text(encoding="utf-8")
+    with tempfile.TemporaryDirectory() as tmp:
+        out = Path(tmp) / "pylock.toml"
+        subprocess.run(
+            [*PYLOCK_EXPORT_ARGS, "--output-file", str(out)],
+            cwd=REPO_ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        fresh = out.read_text(encoding="utf-8")
+
+    def _body(text: str) -> list[str]:
+        lines = text.replace("\r\n", "\n").splitlines()
+        # Line 2 records the export command, including the output path.
+        return lines[2:] if lines[:1] and lines[0].startswith("# This file") else lines
+
+    assert committed.splitlines()[1:2] == [f"#    {PYLOCK_EXPORT_CMD}"], (
+        f"pylock.toml header must record: {PYLOCK_EXPORT_CMD}"
+    )
+    assert _body(committed) == _body(fresh), (
+        f"pylock.toml does not match `uv export` from the lockfile. Regenerate: {PYLOCK_EXPORT_CMD}"
     )
 
 

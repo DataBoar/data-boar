@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Regenerate requirements.txt on Dependabot PRs under required_signatures (#1419).
+# Regenerate requirements.txt and pylock.toml on Dependabot PRs under required_signatures (#1419, #1937).
 # Default (no signing secret): PR comment + exit 1 — never unsigned git push.
 # Optional: DEPENDABOT_SYNC_SSH_SIGNING_KEY opens a signed child PR into the Dependabot branch.
 set -euo pipefail
@@ -8,20 +8,26 @@ PR_NUMBER="${GITHUB_EVENT_PULL_REQUEST_NUMBER:?}"
 HEAD_REF="${GITHUB_EVENT_PULL_REQUEST_HEAD_REF:?}"
 WORKSPACE_DIR="${DEPENDABOT_SYNC_WORKSPACE:?}"
 
+# Must match tests/test_dependency_artifacts_sync.py (PYLOCK_EXPORT_CMD).
+EXPORT_REQUIREMENTS=(uv export --frozen --no-emit-project -o requirements.txt)
+EXPORT_PYLOCK=(uv export --format pylock.toml --frozen --all-extras --all-groups --output-file pylock.toml)
+ARTIFACTS=(requirements.txt pylock.toml)
+
 cd "${WORKSPACE_DIR}"
 
-uv export --frozen --no-emit-project -o requirements.txt
+"${EXPORT_REQUIREMENTS[@]}"
+"${EXPORT_PYLOCK[@]}"
 
-if ! git status --porcelain requirements.txt | grep -q .; then
-  echo "No changes to requirements.txt"
+if ! git status --porcelain -- "${ARTIFACTS[@]}" | grep -q .; then
+  echo "No changes to ${ARTIFACTS[*]}"
   exit 0
 fi
 
-echo "requirements.txt drift detected for PR #${PR_NUMBER}"
+echo "Lockfile export drift detected for PR #${PR_NUMBER}: $(git status --porcelain -- "${ARTIFACTS[@]}" | awk '{print $2}' | xargs)"
 
 post_handoff_comment() {
   gh pr comment "${PR_NUMBER}" --body "$(cat <<EOF
-## requirements.txt drift (unsigned push blocked)
+## requirements.txt / pylock.toml drift (unsigned push blocked)
 
 \`uv.lock\` / \`pyproject.toml\` changed but GitHub Actions **cannot** push an unsigned commit under the \`required_signatures\` ruleset ([#1419](https://github.com/DataBoar/data-boar/issues/1419)).
 
@@ -29,22 +35,23 @@ post_handoff_comment() {
 \`\`\`bash
 git fetch origin pull/${PR_NUMBER}/head:dependabot-review
 git checkout dependabot-review
-uv export --frozen --no-emit-project -o requirements.txt
-git add requirements.txt
-git commit -S -m "chore(deps): regenerate requirements.txt after uv.lock update"
+${EXPORT_REQUIREMENTS[*]}
+${EXPORT_PYLOCK[*]}
+git add requirements.txt pylock.toml
+git commit -S -m "chore(deps): regenerate requirements.txt and pylock.toml after uv.lock update"
 git push origin "HEAD:<dependabot-branch-name>"
 \`\`\`
 
 **Option B — supersede PR:** apply the bump + export locally with signed commits (see [CONTRIBUTING.md](https://github.com/DataBoar/data-boar/blob/main/CONTRIBUTING.md)).
 
-Download the CI-generated \`requirements.txt\` from the **workflow artifact** on this run when present.
+Download the CI-generated \`requirements.txt\` and \`pylock.toml\` from the **workflow artifact** on this run when present.
 EOF
 )"
 }
 
 if [[ -z "${DEPENDABOT_SYNC_SSH_SIGNING_KEY:-}" ]]; then
   post_handoff_comment
-  echo "::error::requirements.txt drift; configure DEPENDABOT_SYNC_SSH_SIGNING_KEY for signed child PRs, or apply manually (#1419)."
+  echo "::error::lockfile export drift; configure DEPENDABOT_SYNC_SSH_SIGNING_KEY for signed child PRs, or apply manually (#1419)."
   exit 1
 fi
 
@@ -69,21 +76,21 @@ git config --local user.email "${DEPENDABOT_SYNC_GIT_USER_EMAIL:-41898282+github
 
 SYNC_BRANCH="ci/requirements-sync-pr-${PR_NUMBER}"
 git checkout -b "${SYNC_BRANCH}"
-git add requirements.txt
-git commit -S -m "chore(deps): regenerate requirements.txt for Dependabot PR #${PR_NUMBER}"
+git add -- "${ARTIFACTS[@]}"
+git commit -S -m "chore(deps): regenerate requirements.txt and pylock.toml for Dependabot PR #${PR_NUMBER}"
 
 git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}" "HEAD:${SYNC_BRANCH}"
 
 CHILD_URL="$(gh pr create \
   --base "${HEAD_REF}" \
   --head "${SYNC_BRANCH}" \
-  --title "chore(deps): requirements.txt sync for Dependabot PR #${PR_NUMBER}" \
+  --title "chore(deps): lockfile export sync for Dependabot PR #${PR_NUMBER}" \
   --body "$(cat <<EOF
-Automated \`requirements.txt\` export for Dependabot PR #${PR_NUMBER}.
+Automated \`requirements.txt\` + \`pylock.toml\` export for Dependabot PR #${PR_NUMBER}.
 
 **Merge this PR into the Dependabot branch** (\`${HEAD_REF}\`) before landing the dependency bump. Signed commits only — no unsigned push to protected refs ([#1419](https://github.com/DataBoar/data-boar/issues/1419)).
 EOF
 )")"
 
-gh pr comment "${PR_NUMBER}" --body "Opened signed requirements.txt sync PR: ${CHILD_URL}"
+gh pr comment "${PR_NUMBER}" --body "Opened signed lockfile export sync PR: ${CHILD_URL}"
 echo "Created child PR: ${CHILD_URL}"

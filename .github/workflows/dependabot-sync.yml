@@ -1,4 +1,4 @@
-# Keeps requirements.txt in sync when Dependabot updates uv.lock / pyproject.toml.
+# Keeps requirements.txt and pylock.toml in sync when Dependabot updates uv.lock / pyproject.toml (#1937).
 # Third-party Actions use full commit SHAs (tag in comment); bump via Dependabot (github-actions).
 # Under required_signatures (#1419) this workflow never unsigned-pushes: handoff comment + artifact,
 # or optional signed child PR when DEPENDABOT_SYNC_SSH_SIGNING_KEY is configured.
@@ -49,6 +49,7 @@ jobs:
             uv.lock
             pyproject.toml
             requirements.txt
+            pylock.toml
           sparse-checkout-cone-mode: false
           persist-credentials: false
 
@@ -58,7 +59,7 @@ jobs:
           version: "0.11.2"
           enable-cache: true
 
-      - name: Sync requirements.txt (handoff or signed child PR)
+      - name: Sync requirements.txt + pylock.toml (handoff or signed child PR)
         id: sync
         working-directory: dependabot-input
         env:
@@ -73,12 +74,14 @@ jobs:
           DEPENDABOT_SYNC_GIT_USER_EMAIL: ${{ vars.DEPENDABOT_SYNC_GIT_USER_EMAIL }}
         run: bash "${{ github.workspace }}/trusted/scripts/ci_dependabot_requirements_sync.sh"
 
-      - name: Upload requirements.txt artifact (operator handoff)
+      - name: Upload lockfile exports artifact (operator handoff)
         if: failure() && steps.sync.outcome == 'failure'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: requirements-txt-pr-${{ github.event.pull_request.number }}
-          path: dependabot-input/requirements.txt
+          path: |
+            dependabot-input/requirements.txt
+            dependabot-input/pylock.toml
           if-no-files-found: ignore
 
   slack-notify-on-failure:
