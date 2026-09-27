@@ -41,10 +41,11 @@ from core.licensing.verify import (
 
 
 def _token_has_mldsa_claim(token: str) -> bool:
-    """True when the unverified JWT payload carries a non-empty ``dbmldsa_sig``.
+    """True when the unverified JWT payload carries a ``dbmldsa_sig`` key at all.
 
-    This only chooses the verify function. Signature checks stay inside
-    ``decode_license_jwt_hybrid``.
+    Any present value (including ``null``, empty, or non-string) must take the
+    hybrid path so ``decode_license_jwt_hybrid`` fails closed; only an absent
+    key selects Ed25519-only verification.
     """
     parts = token.split(".")
     if len(parts) != 3 or not parts[1]:
@@ -57,8 +58,7 @@ def _token_has_mldsa_claim(token: str) -> bool:
         return False
     if not isinstance(payload, dict):
         return False
-    raw = payload.get(CLAIM_MLDSA_SIG)
-    return isinstance(raw, str) and bool(raw)
+    return CLAIM_MLDSA_SIG in payload
 
 
 def _license_detail(state: str, *, hybrid: bool, rotation_epoch: int | None) -> str:

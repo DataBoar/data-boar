@@ -108,6 +108,7 @@ O `alg` JOSE permanece **EdDSA** (Ed25519). O License Studio pode anexar o claim
 **Restrições (confira no código; não invente um gate de runtime):**
 
 - Claim presente + `mldsa_pub is None` → `ValueError` (`hybrid claim present: ML-DSA public key required`).
+- "Presente" significa que a **chave** `dbmldsa_sig` existe no payload. Um claim presente com valor `null`, string vazia ou não-string falha fechado (`ValueError`; o `LicenseGuard` retorna `INVALID`). Só a chave ausente seleciona o caminho só-Ed25519 (#1996).
 - Assinatura ML-DSA inválida → `cryptography.exceptions.InvalidSignature`.
 - O JSON do payload precisa bater com `pkg/verify/hybrid.go` do license-studio: `json.dumps(..., sort_keys=True, separators=(",", ":"), ensure_ascii=False)` mais os escapes HTML-safe do Go (`<` `>` `&` U+2028 U+2029).
 - O PEM público é `-----BEGIN ML-DSA-65 PUBLIC KEY-----` com bytes **brutos** (`MLDSA65PublicKey.from_public_bytes`), **não** PKIX/`SubjectPublicKeyInfo`.
