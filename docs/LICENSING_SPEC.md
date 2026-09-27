@@ -80,7 +80,7 @@ Custom claims (namespaced to avoid collisions):
 | `dbcid`     | string | Customer ID                                                                     |
 | `dbcname`   | string | Customer display name                                                           |
 | `dbenv`     | string | Target environment: `production`, `qa`, `uat`, `homologation`, `debug`, `trial` |
-| `dbmfp`     | string \| array | Expected machine fingerprint(s). Single hex string = one host; **array of hex strings = deployment pack** (#718 + #846): runtime accepts when its own fingerprint ∈ pack. Empty/absent = any host. **Malformed claim (wrong type) fails closed** (`INVALID`) — never degrades to "unbound". |
+| `dbmfp`     | string \| array | Expected machine fingerprint(s). Single hex string = one host; **array of hex strings = deployment pack** (#718 + #846): runtime accepts when its own fingerprint ∈ pack. Each entry must be exactly 64 hex chars (case-insensitive; only ASCII whitespace is trimmed). **Absent = any host.** A **present** claim that is `null`, empty, whitespace/control-char only, non-hex, wrong length, an empty pack, or the wrong type **fails closed** (`INVALID`, `malformed_dbmfp_claim`) — never degrades to "unbound" (#1939). |
 | `dbtrial`   | bool   | Trial / POC: cap report rows and watermark                                      |
 | `dbmaxrows` | int    | Max data rows in report when trial (e.g. 15)                                    |
 | `dbissuer`  | string | Issuer operator id (e.g. SSH key fingerprint or email)                          |

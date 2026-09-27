@@ -9,6 +9,7 @@ import binascii
 import json
 import logging
 import os
+import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -128,28 +129,43 @@ DEFAULT_PRO_DEPLOYMENTS = 2
 DEFAULT_ENTERPRISE_DEPLOYMENTS = 0  # 0 = unlimited (contract-driven)
 
 
+_DBMFP_HEX_RE = re.compile(r"[0-9a-f]{64}")
+# ASCII whitespace only: str.strip() without args also drops C0 separators
+# (0x1C-0x1F), which Go strings.TrimSpace on the issuer side keeps (#1939).
+_DBMFP_TRIM = " \t\r\n"
+
+
+def _normalize_dbmfp_entry(item: Any) -> str | None:
+    if not isinstance(item, str):
+        return None
+    v = item.strip(_DBMFP_TRIM).lower()
+    return v if _DBMFP_HEX_RE.fullmatch(v) else None
+
+
 def _parse_dbmfp_claim(raw: Any) -> list[str] | None:
     """
-    Parse the ``dbmfp`` claim (#718 + #846).
+    Parse a **present** ``dbmfp`` claim (#718 + #846 + #1939).
 
-    Accepted shapes: absent/empty → ``[]`` (no binding); a single hex string →
-    one-entry list; a list/tuple of hex strings (deployment pack) → normalized
-    list. Any other type is a malformed claim → ``None`` (caller fails closed,
-    #719 posture — a bad binding claim must never mean "unbound").
+    The caller maps an absent claim to ``[]`` (no binding) and only calls this
+    when the key exists. Accepted shapes: one 64-hex fingerprint string →
+    one-entry list; a non-empty list/tuple of 64-hex strings (deployment pack)
+    → normalized list. Anything else — ``null``, empty/whitespace-only strings,
+    non-hex or wrong-length values, empty packs, non-string entries — is a
+    malformed claim → ``None`` (caller fails closed, #719 posture — a present
+    binding claim must never mean "unbound").
     """
-    if raw is None:
-        return []
     if isinstance(raw, str):
-        v = raw.strip().lower()
-        return [v] if v else []
+        v = _normalize_dbmfp_entry(raw)
+        return [v] if v else None
     if isinstance(raw, (list, tuple)):
+        if not raw:
+            return None
         out: list[str] = []
         for item in raw:
-            if not isinstance(item, str):
+            v = _normalize_dbmfp_entry(item)
+            if v is None:
                 return None
-            v = item.strip().lower()
-            if v:
-                out.append(v)
+            out.append(v)
         return out
     return None
 
@@ -499,7 +515,7 @@ class LicenseGuard:
         # string) or to a deployment pack (list of hex strings). Runtime
         # validates only its OWN fingerprint ∈ pack; the GLOBAL deploy count
         # (dbmax_deployments) is issuance-enforced by the issuer.
-        allowed_fps = _parse_dbmfp_claim(claims.get("dbmfp"))
+        allowed_fps = _parse_dbmfp_claim(claims["dbmfp"]) if "dbmfp" in claims else []
         pack_id = str(claims.get("dbdeployment_pack_id", "") or "").strip()
         try:
             max_deployments = int(claims.get("dbmax_deployments", 0) or 0)
