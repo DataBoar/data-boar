@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import sys
 from datetime import datetime, timedelta, timezone
 from getpass import getpass
@@ -27,6 +28,7 @@ from cryptography.hazmat.primitives.serialization import load_pem_private_key
 
 # Default QA validity: short enough that a leaked license dies on its own.
 DEFAULT_QA_DAYS = 60
+_DBMFP_HEX_RE = re.compile(r"[0-9a-f]{64}")
 
 # Running by path puts scripts/ first on sys.path; core/ lives at repo root.
 _REPO_ROOT = str(Path(__file__).resolve().parent.parent)
@@ -102,6 +104,13 @@ def _resolve_key_password(pem: str) -> bytes | None:
     return None
 
 
+def _require_fingerprint_hex(value: str) -> str:
+    """Reject at issuance what the runtime guard would reject (#1939)."""
+    if not _DBMFP_HEX_RE.fullmatch(value):
+        sys.exit(f"invalid fingerprint {value!r}: expected 64 lowercase hex chars")
+    return value
+
+
 def _resolve_dbmfp(raw: str) -> str:
     """Resolve --dbmfp: 'auto' = bind to this machine, 'none' = unbound."""
     value = raw.strip().lower()
@@ -109,7 +118,7 @@ def _resolve_dbmfp(raw: str) -> str:
         return ""
     if value == "auto":
         return _machine_fingerprint()
-    return value
+    return _require_fingerprint_hex(value) if value else ""
 
 
 def _resolve_dbmfp_pack(raw: str) -> list[str]:
@@ -126,6 +135,7 @@ def _resolve_dbmfp_pack(raw: str) -> list[str]:
             continue
         if value == "auto":
             value = _machine_fingerprint()
+        _require_fingerprint_hex(value)
         if value not in pack:
             pack.append(value)
     return pack

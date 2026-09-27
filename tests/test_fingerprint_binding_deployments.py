@@ -10,8 +10,9 @@ Contract under test:
    Community) + audit CRITICAL — same posture as #719/#847.
 3. Enforced + no ``dbmfp`` claim → no binding (current behavior preserved).
 4. Open mode → binding never checked.
-5. Malformed ``dbmfp`` claim (wrong type) → INVALID, fail-closed — never
-   degrades to "unbound".
+5. Malformed ``dbmfp`` claim (wrong type, null, empty/C0-only, non-64-hex,
+   empty pack) → INVALID, fail-closed — only an ABSENT claim means "unbound"
+   (#1939).
 6. ``dbmax_deployments`` + ``dbdeployment_pack_id`` claims are plumbed into
    ``LicenseContext`` (issuance-enforced count; runtime validates own fp only).
 7. Issuer ``--dbmfp-pack`` emits a pack license usable on a pack member.
@@ -135,25 +136,57 @@ def _audit_records(caplog):
 # --- claim parsing -----------------------------------------------------------
 
 
+FP_A = "ab" * 32
+FP_B = "cd" * 32
+
+# #1939: a PRESENT claim that is empty, whitespace/C0-only, non-hex, wrong
+# length, null, or an empty pack is malformed — never "unbound".
+MALFORMED_PRESENT_DBMFP = [
+    None,
+    "",
+    "  ",
+    "\x1c",
+    "\x1c\x1d\x1e\x1f",
+    f"\x1f{FP_A}",
+    "abcd12",
+    "g" * 64,
+    FP_A + "0",
+    [],
+    ["", FP_A],
+    [FP_A, "\x1e"],
+    [FP_A, "abcd12"],
+    {"a": 1},
+    42,
+    [1, 2],
+    [FP_A, 3],
+]
+
+
 @pytest.mark.parametrize(
     ("raw", "expected"),
     [
-        (None, []),
-        ("", []),
-        ("  ", []),
-        ("ABCD12", ["abcd12"]),
-        (["ABCD12", "ef34"], ["abcd12", "ef34"]),
-        ([], []),
-        (["", "ab"], ["ab"]),
+        (FP_A.upper(), [FP_A]),
+        (f" {FP_A}\n", [FP_A]),
+        ([FP_A.upper(), FP_B], [FP_A, FP_B]),
+        ((FP_A,), [FP_A]),
     ],
 )
 def test_parse_dbmfp_claim_valid_shapes(raw, expected):
     assert _parse_dbmfp_claim(raw) == expected
 
 
-@pytest.mark.parametrize("raw", [{"a": 1}, 42, [1, 2], ["ok", 3]])
+@pytest.mark.parametrize("raw", MALFORMED_PRESENT_DBMFP)
 def test_parse_dbmfp_claim_malformed_returns_none(raw):
     assert _parse_dbmfp_claim(raw) is None
+
+
+@pytest.mark.parametrize("raw", MALFORMED_PRESENT_DBMFP)
+def test_guard_present_malformed_dbmfp_fails_closed(ed25519_priv, tmp_path, raw):
+    """#1939: end-to-end through LicenseGuard, not only the parser."""
+    g = _enforced_guard(ed25519_priv, tmp_path, extra={"dbmfp": raw})
+    assert g.context.state == "INVALID"
+    assert g.context.detail == "malformed_dbmfp_claim"
+    assert g.allows_scan() is False
 
 
 # --- 1. bound to local fingerprint → accepted --------------------------------
@@ -306,6 +339,30 @@ def test_issuer_dbmfp_pack_binds_n_machines(ed25519_priv, tmp_path):
     g = LicenseGuard({"licensing": {"mode": "enforced", "license_path": str(lic)}})
     assert g.context.state == "VALID"
     assert g.context.max_deployments == 2
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["--dbmfp", "abcd12"],
+        ["--dbmfp-pack", f"auto,{'g' * 64}"],
+    ],
+)
+def test_issuer_rejects_non_hex_fingerprint(ed25519_priv, args):
+    """#1939: the issuer refuses what the runtime guard would reject."""
+    env = dict(os.environ)
+    env["DATA_BOAR_LICENSE_ISSUER_PRIVATE_KEY_PEM"] = _pem_private(ed25519_priv)
+    proc = subprocess.run(
+        [sys.executable, str(ISSUER), *args],
+        capture_output=True,
+        text=True,
+        env=env,
+        check=False,
+        cwd=str(REPO_ROOT),
+    )
+    assert proc.returncode != 0
+    assert "invalid fingerprint" in proc.stderr
+    assert proc.stdout.strip() == ""
 
 
 def test_issuer_explicit_dbmax_deployments_and_pack_id(ed25519_priv):
