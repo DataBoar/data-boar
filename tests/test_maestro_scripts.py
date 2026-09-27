@@ -195,7 +195,12 @@ def test_db_target_handlers_use_compose_contract() -> None:
     assert "pick_port()" in mariadb
     assert "LAB_MY_PORT_CANDIDATES" in mariadb
     assert "TARGET_MARIADB_READY port=" in mariadb
-    assert "LAB_TARGET_DB_AUTOCLEAN" in mariadb
+    # maestro#81: loopback publish by default + unconditional post-verify teardown.
+    assert "LAB_TARGET_DB_BIND:-127.0.0.1" in mariadb
+    assert (
+        "Invoke-LabTargetDbContainerTeardown -Node $Node -ContainerName 'lab-mariadb'"
+        in mariadb
+    )
     assert "podman info" in postgres
     assert "docker info" in postgres
     assert "podman run -d --name lab-postgres" in postgres
@@ -203,7 +208,11 @@ def test_db_target_handlers_use_compose_contract() -> None:
     assert "pick_port()" in postgres
     assert "LAB_PG_PORT_CANDIDATES" in postgres
     assert "TARGET_POSTGRES_READY port=" in postgres
-    assert "LAB_TARGET_DB_AUTOCLEAN" in postgres
+    assert "LAB_TARGET_DB_BIND:-127.0.0.1" in postgres
+    assert (
+        "Invoke-LabTargetDbContainerTeardown -Node $Node -ContainerName 'lab-postgres'"
+        in postgres
+    )
     assert "podman info" in mongo
     assert "docker info" in mongo
     assert "podman run -d --name lab-mongodb" in mongo
@@ -211,7 +220,11 @@ def test_db_target_handlers_use_compose_contract() -> None:
     assert "pick_port()" in mongo
     assert "LAB_MONGO_PORT_CANDIDATES" in mongo
     assert "TARGET_MONGODB_READY port=" in mongo
-    assert "LAB_TARGET_DB_AUTOCLEAN" in mongo
+    assert "LAB_TARGET_DB_BIND:-127.0.0.1" in mongo
+    assert (
+        "Invoke-LabTargetDbContainerTeardown -Node $Node -ContainerName 'lab-mongodb'"
+        in mongo
+    )
     for text, persona in (
         (mariadb, "target_mariadb"),
         (postgres, "target_postgres"),
