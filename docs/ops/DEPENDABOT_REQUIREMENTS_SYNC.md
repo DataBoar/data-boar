@@ -6,7 +6,7 @@ GitHub issue [#1419](https://github.com/DataBoar/data-boar/issues/1419). Related
 
 ## Problem
 
-Dependabot PRs update `uv.lock` (and sometimes `pyproject.toml`). [ADR 0030](../adr/ADR-0030-python-dependency-update-closure-single-pass.md) requires `requirements.txt` to stay in sync (`uv export --frozen --no-emit-project`).
+Dependabot PRs update `uv.lock` (and sometimes `pyproject.toml`). [ADR 0030](../adr/ADR-0030-python-dependency-update-closure-single-pass.md) requires `requirements.txt` to stay in sync (`uv export --frozen --no-emit-project`). `pylock.toml` must stay in sync too (`uv export --format pylock.toml --frozen --all-extras --all-groups --output-file pylock.toml`): the CI OSV scanner reads it, so a stale export scans versions the project no longer installs ([#1937](https://github.com/DataBoar/data-boar/issues/1937)). `tests/test_dependency_artifacts_sync.py` fails on drift in either file.
 
 The workflow [`.github/workflows/dependabot-sync.yml`](../../.github/workflows/dependabot-sync.yml) regenerates the export on those PRs. The repository ruleset **`restriction baseline`** enforces **`required_signatures`** with **no bypass** for the GitHub Actions bot. Unsigned `git push` from Actions is **rejected** — this is expected, not a misconfiguration.
 
@@ -14,21 +14,21 @@ The workflow [`.github/workflows/dependabot-sync.yml`](../../.github/workflows/d
 
 | Condition | Behaviour |
 | --- | --- |
-| No `requirements.txt` drift | Job succeeds (no-op). |
-| Drift, **no** signing secrets | Posts a **PR comment** with signed-commit instructions, uploads a **workflow artifact** (`requirements-txt-pr-<N>`), job **fails** (Slack notify when configured). **No unsigned push.** |
+| No `requirements.txt` / `pylock.toml` drift | Job succeeds (no-op). |
+| Drift, **no** signing secrets | Posts a **PR comment** with signed-commit instructions, uploads a **workflow artifact** (`requirements-txt-pr-<N>`, both exports), job **fails** (Slack notify when configured). **No unsigned push.** |
 | Drift, signing secrets configured | Opens a **signed child PR** into the Dependabot branch (`ci/requirements-sync-pr-<N>`). Maintainer merges that child PR into the Dependabot branch, then lands the bump. |
 
 Script: [`scripts/ci_dependabot_requirements_sync.sh`](../../scripts/ci_dependabot_requirements_sync.sh).
 
-**Pwn-request hardening:** the workflow checks out the sync script from the **trusted base ref** (`pull_request.base.ref`) and only `uv.lock` / `pyproject.toml` / `requirements.txt` from the **untrusted PR head**. The job also requires `head.ref` to match `dependabot/*`. Never run scripts or workflow YAML from the Dependabot branch when `contents: write`, `pull-requests: write`, or signing secrets are in scope.
+**Pwn-request hardening:** the workflow checks out the sync script from the **trusted base ref** (`pull_request.base.ref`) and only `uv.lock` / `pyproject.toml` / `requirements.txt` / `pylock.toml` from the **untrusted PR head**. The job also requires `head.ref` to match `dependabot/*`. Never run scripts or workflow YAML from the Dependabot branch when `contents: write`, `pull-requests: write`, or signing secrets are in scope.
 
 ## Operator handoff (default — no secrets)
 
 When the sync job fails on a Dependabot PR:
 
 1. Read the bot comment on the PR (exact `git` commands).
-2. Optionally download `requirements.txt` from the failed workflow run artifact.
-3. On your workstation: fetch the Dependabot branch, run `uv export --frozen --no-emit-project -o requirements.txt`, **`git commit -S`**, push.
+2. Optionally download `requirements.txt` and `pylock.toml` from the failed workflow run artifact.
+3. On your workstation: fetch the Dependabot branch, run `uv export --frozen --no-emit-project -o requirements.txt` and `uv export --format pylock.toml --frozen --all-extras --all-groups --output-file pylock.toml`, **`git commit -S`**, push.
 4. Or supersede the Dependabot PR with a fully signed maintainer branch ([CONTRIBUTING.md](../../CONTRIBUTING.md)).
 
 ## Optional automation — SSH commit signing (high bar)

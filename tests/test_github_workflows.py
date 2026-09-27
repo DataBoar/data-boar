@@ -662,6 +662,26 @@ def test_dependabot_sync_script_never_unsigned_push_to_dependabot_head() -> None
     assert "git commit -S" in text
 
 
+def test_dependabot_sync_regenerates_pylock_toml() -> None:
+    """#1937: Dependabot closure must also regenerate pylock.toml (OSV scanner input).
+
+    The export command must match the drift guard in
+    tests/test_dependency_artifacts_sync.py, or every Dependabot PR goes red.
+    """
+    from tests.test_dependency_artifacts_sync import PYLOCK_EXPORT_CMD
+
+    script = (REPO_ROOT / "scripts" / "ci_dependabot_requirements_sync.sh").read_text(
+        encoding="utf-8"
+    )
+    assert f"EXPORT_PYLOCK=({PYLOCK_EXPORT_CMD})" in script
+    assert "ARTIFACTS=(requirements.txt pylock.toml)" in script
+    workflow = (WORKFLOWS / "dependabot-sync.yml").read_text(encoding="utf-8")
+    assert re.search(r"^\s+pylock\.toml$", workflow, flags=re.MULTILINE), (
+        "dependabot-sync.yml must sparse-checkout pylock.toml from the PR head"
+    )
+    assert "dependabot-input/pylock.toml" in workflow
+
+
 def test_ci_yml_has_optional_extras_job() -> None:
     """#1638: dedicated job installs SQL extras (minus mariadb on 3.13) and caps skips."""
     data = _load_workflow("ci.yml")
