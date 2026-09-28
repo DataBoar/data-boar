@@ -422,7 +422,7 @@ def test_powerbi_token_url_guarded() -> None:
 
     if not _HTTPX_AVAILABLE:
         pytest.skip("httpx not installed")
-    with pytest.raises(ValueError, match="#832"):
+    with pytest.raises(ValueError, match="#2007|#832"):
         _get_access_token(
             {
                 "tenant_id": "t",
