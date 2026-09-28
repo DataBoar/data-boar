@@ -5,8 +5,12 @@ from unittest.mock import MagicMock, patch
 import httpx
 import pytest
 
-from connectors.dataverse_connector import DataverseConnector
-from connectors.powerbi_connector import PowerBIConnector
+from connectors.dataverse_connector import DataverseConnector, _dataverse_token
+from connectors.powerbi_connector import (
+    PowerBIConnector,
+    _AZURE_TOKEN_URL_TMPL,
+    _get_access_token,
+)
 
 
 def _mk_scanner():
@@ -25,6 +29,79 @@ def _oauth_token_response_ok() -> MagicMock:
     m.raise_for_status.return_value = None
     m.json.return_value = {"access_token": "tok"}
     return m
+
+
+@patch("connectors.powerbi_connector.pinned_httpx_request")
+def test_powerbi_default_template_token_url_posts_to_microsoft_login(
+    mock_pinned_req,
+) -> None:
+    """#2007: default Azure AD URL from template must pass vendor host allowlist."""
+    mock_pinned_req.return_value = _oauth_token_response_ok()
+    tenant_id = "11111111-2222-3333-4444-555555555555"
+    _get_access_token(
+        {
+            "tenant_id": tenant_id,
+            "client_id": "cid",
+            "client_secret": "sec",
+        }
+    )
+    mock_pinned_req.assert_called_once()
+    assert mock_pinned_req.call_args[0][1] == _AZURE_TOKEN_URL_TMPL.format(
+        tenant_id=tenant_id
+    )
+
+
+@patch("connectors.powerbi_connector.pinned_httpx_request")
+def test_powerbi_rejects_attacker_token_url_before_client_secret_post(
+    mock_pinned_req,
+) -> None:
+    with pytest.raises(ValueError, match="#2007"):
+        _get_access_token(
+            {
+                "tenant_id": "t",
+                "client_id": "cid",
+                "client_secret": "sec",
+                "auth": {"token_url": "https://attacker.example/oauth/token"},
+            }
+        )
+    mock_pinned_req.assert_not_called()
+
+
+@patch("connectors.dataverse_connector.pinned_httpx_request")
+def test_dataverse_default_template_token_url_posts_to_microsoft_login(
+    mock_pinned_req,
+) -> None:
+    mock_pinned_req.return_value = _oauth_token_response_ok()
+    tenant_id = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
+    _dataverse_token(
+        {
+            "org_url": "https://org.crm.dynamics.com",
+            "tenant_id": tenant_id,
+            "client_id": "cid",
+            "client_secret": "sec",
+        }
+    )
+    mock_pinned_req.assert_called_once()
+    assert mock_pinned_req.call_args[0][1] == (
+        f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
+    )
+
+
+@patch("connectors.dataverse_connector.pinned_httpx_request")
+def test_dataverse_rejects_attacker_token_url_before_client_secret_post(
+    mock_pinned_req,
+) -> None:
+    with pytest.raises(ValueError, match="#2007"):
+        _dataverse_token(
+            {
+                "org_url": "https://org.crm.dynamics.com",
+                "tenant_id": "t",
+                "client_id": "cid",
+                "client_secret": "sec",
+                "auth": {"token_url": "https://attacker.example/oauth/token"},
+            }
+        )
+    mock_pinned_req.assert_not_called()
 
 
 @patch("connectors.dataverse_connector.build_pinned_httpx_client")

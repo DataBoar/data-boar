@@ -21,6 +21,7 @@ from core.suggested_review import (
     augment_low_id_like_for_persist,
 )
 
+from .microsoft_identity import assert_allowlisted_microsoft_token_url
 from .url_guard import (
     build_pinned_httpx_client,
     merge_host_pins,
@@ -61,6 +62,7 @@ def _get_access_token(target: dict[str, Any]) -> str | None:
     token_url = auth.get("token_url") or _AZURE_TOKEN_URL_TMPL.format(
         tenant_id=tenant_id
     )
+    assert_allowlisted_microsoft_token_url(token_url)
     # SSRF guard (#832 / #1552): custom token_url receives client_secret via POST —
     # validate + pin peer IPs (no DNS rebinding on the secret-bearing request).
     token_kwargs: dict[str, Any] = {

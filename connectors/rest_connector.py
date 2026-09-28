@@ -90,12 +90,37 @@ def _auth_loads_secrets_from_env(auth: dict[str, Any]) -> bool:
     return False
 
 
+def _target_loads_secrets_from_env(target: dict[str, Any]) -> bool:
+    """True when loader resolved target credentials from env (#2006)."""
+    if (target.get("pass_from_env") or target.get("password_from_env") or "").strip():
+        return True
+    if (target.get("user_from_env") or "").strip():
+        return True
+    return False
+
+
 def _validate_rest_env_var_names(auth: dict[str, Any]) -> None:
     for key, label in (
         ("token_from_env", "auth.token_from_env"),
         ("client_secret_from_env", "auth.client_secret_from_env"),
     ):
         env_name = (auth.get(key) or "").strip()
+        if not env_name:
+            continue
+        if not any(env_name.startswith(prefix) for prefix in _REST_ENV_VAR_PREFIXES):
+            raise ValueError(
+                f"{label} must use one of the prefixes "
+                f"{', '.join(_REST_ENV_VAR_PREFIXES)} ({_REST_AUTH_HOST_TAG})."
+            )
+
+
+def _validate_target_env_var_names(target: dict[str, Any]) -> None:
+    for key, label in (
+        ("pass_from_env", "pass_from_env"),
+        ("password_from_env", "password_from_env"),
+        ("user_from_env", "user_from_env"),
+    ):
+        env_name = (target.get(key) or "").strip()
         if not env_name:
             continue
         if not any(env_name.startswith(prefix) for prefix in _REST_ENV_VAR_PREFIXES):
@@ -160,9 +185,12 @@ def _rest_auth_will_attach_credentials(target: dict[str, Any]) -> bool:
 def _assert_rest_credential_hosts_allowlisted(target: dict[str, Any]) -> None:
     """Refuse Bearer/client_secret unless each endpoint host is allowlisted (#1977)."""
     auth = target.get("auth") or {}
-    uses_env = _auth_loads_secrets_from_env(auth)
+    uses_env = _auth_loads_secrets_from_env(auth) or _target_loads_secrets_from_env(
+        target
+    )
     if uses_env:
         _validate_rest_env_var_names(auth)
+        _validate_target_env_var_names(target)
     explicit = _collect_explicit_allowed_hosts(target)
     if uses_env and not explicit:
         raise ValueError(
