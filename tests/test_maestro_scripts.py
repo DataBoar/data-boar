@@ -256,9 +256,9 @@ def test_confirm_target_db_synthetic_data_contract() -> None:
     assert "lab_customers" in common
     assert "lab_people" in common
     assert "lab_smoke_mongo" in common
-    assert "docker compose exec -T lab-postgres" in common
-    assert "docker compose exec -T lab-mariadb" in common
-    assert "docker-compose.mongo.yml exec -T lab-mongodb" in common
+    assert "docker exec lab-postgres psql" in common
+    assert "docker exec lab-mariadb mariadb" in common
+    assert "docker exec lab-mongodb mongosh" in common
     assert '-replace "`r", ""' in common
 
 
