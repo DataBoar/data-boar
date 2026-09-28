@@ -26,15 +26,17 @@
 
 Update this section with concise bullets only. Keep details in canonical docs above.
 
-- **Now (top 1):** `S2a` transport + trust (Phase 7 + trust-state slice aligned with `#86`) is selected in `PLANS_TODO`.
+**Last refresh:** **2026-09-28** · Today file: [OPERATOR_TODAY_MODE_2026-09-28.md](OPERATOR_TODAY_MODE_2026-09-28.md)
+
+- **Now (top 1):** **BFF / GA validation** — **[#1980](https://github.com/DataBoar/data-boar/issues/1980)** with Maestro **#82/#91** closure and **carrion-crow #99** on the operator queue.
 - **Next (top 3):**
-  - Close the `1.7.0` carryover lane (`gh run list` on `main` + optional `lab-op` smoke follow-up in `CARRYOVER.md`).
-  - Run `-1L` homelab proof / `benchmark-ab` when the lab window is available.
-  - Send WRB follow-up and triage external review deltas into `PLANS_TODO`.
+  - Close **maestro#91** (fix merged as **data-boar#2011**); optional lab-host RC smoke after podman images ([#756](https://github.com/DataBoar/data-boar/issues/756)).
+  - Merge **carrion-crow #99**, then security issues **#94–#101**.
+  - One **Dependabot** PR (**#1999** / **#1998** first) — not blind majors.
 - **Blockers:**
-  - Lab calendar/hardware window for `-1L` and `benchmark-ab` execution (`PLANS_TODO` + `CARRYOVER.md`).
-  - External review cadence for WRB follow-up (GitHub issue cycle + response wait).
-- **Deferred with date:** keep date + owner in `CARRYOVER.md`.
+  - Lab **podman** smoke images removed **2026-09-27** — restore before claiming lab RC proof ([#756](https://github.com/DataBoar/data-boar/issues/756)).
+  - **maestro#82** still open while product RC/security landed on `main`.
+- **Deferred with date:** Maestro `engine/` RC `uv sync` mirror — post-#2011, no date (operator **2026-09-28**).
 
 ---
 
