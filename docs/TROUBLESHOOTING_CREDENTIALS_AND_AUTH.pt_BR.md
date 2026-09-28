@@ -34,6 +34,8 @@ Verifique usuário/senha no config (`user`, `pass` ou `password`); conta bloquea
 
 **Basic/Bearer/API key:** Use apenas um (Basic com user/pass, ou Bearer, ou header de API key). Evite enviar a mesma chave no header e no body. **OAuth2 (ex. Power BI, Dataverse):** Verifique tenant_id, client_id, client_secret e permissões do app no IdP; não envie o mesmo token no fluxo OAuth e em um header customizado.
 
+**Allow-list de host (`#1977`):** se **Details** contém `#1977`, o conector recusou anexar credencial **antes** do HTTP. Segredo de ambiente (`token_from_env`, `client_secret_from_env` ou `client_secret: "${VAR}"`) exige `auth.allowed_hosts`. Nomes `*_from_env` precisam do prefixo **`API_`**, **`REST_API_`** ou **`DATA_BOAR_`**. O hostname de `base_url` / `auth.token_url` precisa estar na lista (exato, minúsculas, sem wildcard). Contrato: [USAGE.pt_BR.md](USAGE.pt_BR.md) (*Alvos: APIs*). Testes: `tests/test_rest_connector_auth_allowlist.py`.
+
 ---
 
 ## 5. API key do Data Boar (quando habilitada)
