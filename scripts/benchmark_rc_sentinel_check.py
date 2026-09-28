@@ -3,9 +3,11 @@
 
 Validates SQLite findings for required patterns (min_count / max_count), optional
 connector probes, forbidden pattern substrings, and static negative SSRF/auth cases.
+Any ``scan_failures.reason=missing_optional_dependency`` in the session fails before
+optional probes run, so a closed lab port cannot mask a missing extra (maestro#91).
 Exit 0 = pass, 1 = sentinel fail, 2 = usage/config error.
 
-Refs: maestro#82, maestro#86, data-boar#1980 (gap report §E), data-boar#1985.
+Refs: maestro#82, maestro#86, maestro#91, data-boar#1980 (gap report §E), data-boar#1985.
 """
 
 from __future__ import annotations
@@ -259,6 +261,33 @@ def _count_scan_failures(
     return int(row[0]) if row else 0
 
 
+# A connector whose optional extra is absent is a tool/prepare defect, never a lab
+# outage: it fails the sentinel even when the optional probe port is closed.
+_MISSING_EXTRA_REASON = "missing_optional_dependency"
+
+
+def _missing_extra_failures(
+    conn: sqlite3.Connection, session_id: str
+) -> list[tuple[str, str]]:
+    # Minimal fixture sqlite files may lack scan_failures or its details column;
+    # the app schema (core.database.ScanFailure) always has both.
+    cols = {str(r[1]) for r in conn.execute("PRAGMA table_info(scan_failures)")}
+    if "reason" not in cols:
+        return []
+    if "details" in cols:
+        query = (
+            "SELECT target_name, details FROM scan_failures "
+            "WHERE session_id = ? AND reason = ? ORDER BY target_name"
+        )
+    else:
+        query = (
+            "SELECT target_name, '' FROM scan_failures "
+            "WHERE session_id = ? AND reason = ? ORDER BY target_name"
+        )
+    rows = conn.execute(query, (session_id, _MISSING_EXTRA_REASON)).fetchall()
+    return [(str(r[0] or ""), str(r[1] or "")) for r in rows]
+
+
 def _latest_session_id(conn: sqlite3.Connection) -> tuple[str | None, str | None]:
     """Latest scan by started_at; only status=completed is acceptable evidence."""
     row = conn.execute(
@@ -291,6 +320,12 @@ def _check_findings_sentinel(
         session_id, session_err = _latest_session_id(conn)
         if session_err:
             return [session_err]
+
+        for target_name, details in _missing_extra_failures(conn, session_id):
+            errors.append(
+                f"scan_failures reason={_MISSING_EXTRA_REASON} target={target_name!r}: "
+                f"optional extra absent in the scan venv, not a lab outage ({details[:200]})"
+            )
 
         total = sum(
             _count_rows(conn, t, session_id)
