@@ -148,9 +148,10 @@ def test_mongodb_dedup_fetches_more_docs_for_distinct_values():
         connector._db = mock_db
 
     connector.connect = _noop_connect
-    with patch("utils.logger.log_connection"):
-        with patch.object(connector, "_save_inventory_snapshot"):
-            connector.run()
+    with patch("connectors.mongodb_connector._MONGO_AVAILABLE", True):
+        with patch("utils.logger.log_connection"):
+            with patch.object(connector, "_save_inventory_snapshot"):
+                connector.run()
 
     mock_coll.find.return_value.limit.assert_called_once_with(50)
     save_calls = db_manager.save_finding.call_args_list
