@@ -886,6 +886,13 @@ Use `type: api` or `type: rest`. Required: `name`, `base_url` (or `url`). Option
 
 **SSRF guard:** `base_url`, `discover_url`, and `auth.token_url` pointing at link-local (cloud metadata `169.254.0.0/16`), loopback, or private (RFC1918/ULA) hosts are rejected by default. To scan internal infrastructure, add `allow_private_networks: true` to the target. The same guard applies to SharePoint (`site_url`), WebDAV (`base_url`), and Power BI (`auth.token_url`) targets.
 
+**Credential host allowlist (#1977):** Before the connector attaches Basic, Bearer, OAuth client secrets, or custom `Authorization` / `X-API-Key` / `api-key` headers, it checks every credential endpoint host (`base_url` / `url` and `auth.token_url`). Matching is the **exact hostname** (lowercased). No wildcards, no ports, no path.
+
+- **Secrets from the environment** (`auth.token_from_env`, `auth.client_secret_from_env`, or `client_secret: "${VAR}"`) **require** an explicit list: `auth.allowed_hosts` (or top-level `allowed_hosts`). Include **both** the API host and the OAuth token host when they differ.
+- Names in `token_from_env` / `client_secret_from_env` must start with **`API_`**, **`REST_API_`**, or **`DATA_BOAR_`**. Other names fail closed (`ValueError` containing `#1977`) before any `Authorization` header is set.
+- **Inline** tokens/passwords (no env) default to the hosts already in `base_url` / `auth.token_url` on the **same** target. An explicit list still wins and can reject a mismatched `base_url`.
+- Failure is connect-time **`ValueError`**. Scan failures usually show reason **`error`** with `#1977` in **Details** — not a remote 401. See [TROUBLESHOOTING_CREDENTIALS_AND_AUTH.md](TROUBLESHOOTING_CREDENTIALS_AND_AUTH.md).
+
 ```yaml
 
 - name: "Internal API"
@@ -926,8 +933,6 @@ Use `type: api` or `type: rest`. Required: `name`, `base_url` (or `url`). Option
       allowed_hosts: ["api.example.com"]  # required for token_from_env (#1977)
 ```
 
-With **`token_from_env`**, set **`auth.allowed_hosts`** to the exact API (and OAuth token) hostnames that may receive credentials. Environment variable names must use the prefix **`API_`**, **`REST_API_`**, or **`DATA_BOAR_`**. Inline tokens default to the hosts in **`base_url`** / **`auth.token_url`** on the same target.
-
 ## OAuth2 client credentials (machine-to-machine)
 
 ```yaml
@@ -943,9 +948,10 @@ With **`token_from_env`**, set **`auth.allowed_hosts`** to the exact API (and OA
       client_id: "audit-client"
       client_secret: "${API_OAUTH_SECRET}"   # or literal secret
       scope: "read:users"
+      allowed_hosts: ["api.example.com", "auth.example.com"]  # required for ${…} / *_from_env
 ```
 
-Set the env var (e.g. `API_OAUTH_SECRET`) in the environment where the app runs.
+Set the env var (e.g. `API_OAUTH_SECRET`) in the environment where the app runs. `${VAR}` and `*_from_env` both count as environment secrets: list **every** host that receives the secret (API + token endpoint).
 
 ## Custom headers (e.g. API key or Negotiate)
 
@@ -1106,7 +1112,7 @@ file_scan:
 
 ```
 
-**Relational database sampling (SQLAlchemy SQL targets + Snowflake connector):** Per-column reads apply `WHERE <column> IS NOT NULL` before the row cap so sparse columns still yield non-empty samples for the detector when non-null values exist. Optional process environment variable **`DATA_BOAR_SQL_SAMPLE_LIMIT`** (integer, clamped to **1** through **10000**) **replaces** `file_scan.sample_limit` for those connectors when set—useful for production break-glass without editing YAML. Optional YAML **`sql_sampling.overrides`** tightens or loosens the default **per target name** (must match `targets[].name`), **per table** under that target (`schema.table` or bare `table`), then **per table name pattern** (`fnmatch`, e.g. `*_audit`) before falling back to `file_scan.sample_limit`. You may split overrides into a separate file (same schema as the `sql_sampling` block or bare `overrides:`) and reference it with root keys **`sql_sampling_file`** (single path) and/or **`sql_sampling_files`** (list, merged in order; later files override earlier ones). Inline `sql_sampling` in the main config **wins** over fragments when the same key is set. Paths (relative or absolute) must resolve **inside** the main config file’s directory; `..` and absolute paths outside that directory are rejected. **`load_config`** and **`normalize_config(..., config_path=...)`** expand fragments; calling **`normalize_config(dict)`** without `config_path` does **not** read external files. Implementation: `core/sampling.py` / `core/sampling_policy.py` + `connectors/sql_sampling.py` — `SamplingManager` picks a **strategy label** per dialect (and optional table metadata); `SQLConnector` / Snowflake / embedded SQLite-as-DB log that label **once per table** at INFO for a short audit trail. Legacy entry point: `SqlColumnSampleQueryBuilder.build` → same SQL.
+**Relational database sampling (SQLAlchemy SQL targets + Snowflake connector):** Per-column reads apply `WHERE <column> IS NOT NULL` before the row cap so sparse columns still yield non-empty samples for the detector when non-null values exist. Distinct values are joined with **U+241F** (unit-separator symbol), not spaces, so form-only PAN regexes cannot match across INTEGER years or sequential ids (#1332 — `connectors/sample_value_dedup.py`). Optional process environment variable **`DATA_BOAR_SQL_SAMPLE_LIMIT`** (integer, clamped to **1** through **10000**) **replaces** `file_scan.sample_limit` for those connectors when set—useful for production break-glass without editing YAML. Optional YAML **`sql_sampling.overrides`** tightens or loosens the default **per target name** (must match `targets[].name`), **per table** under that target (`schema.table` or bare `table`), then **per table name pattern** (`fnmatch`, e.g. `*_audit`) before falling back to `file_scan.sample_limit`. You may split overrides into a separate file (same schema as the `sql_sampling` block or bare `overrides:`) and reference it with root keys **`sql_sampling_file`** (single path) and/or **`sql_sampling_files`** (list, merged in order; later files override earlier ones). Inline `sql_sampling` in the main config **wins** over fragments when the same key is set. Paths (relative or absolute) must resolve **inside** the main config file’s directory; `..` and absolute paths outside that directory are rejected. **`load_config`** and **`normalize_config(..., config_path=...)`** expand fragments; calling **`normalize_config(dict)`** without `config_path` does **not** read external files. Implementation: `core/sampling.py` / `core/sampling_policy.py` + `connectors/sql_sampling.py` — `SamplingManager` picks a **strategy label** per dialect (and optional table metadata); `SQLConnector` / Snowflake / embedded SQLite-as-DB log that label **once per table** at INFO for a short audit trail. Legacy entry point: `SqlColumnSampleQueryBuilder.build` → same SQL.
 
 **SRE sampling knobs (database targets):** Generated sampling statements start with the line comment **`-- Data Boar Compliance Scan`** so operators can attribute activity in engine views. On each **database** target you may set **`sample_statement_timeout_ms`** or **`sample_statement_timeout_seconds`** (use **`0`** to disable); when unset the connector defaults to **5000 ms** for short reads. That budget drives a MySQL **`/*+ MAX_EXECUTION_TIME(N) */`** optimizer hint and a per-sample PostgreSQL **`SET LOCAL statement_timeout`** (wrapped in a short transaction). **SQL Server has no equivalent query-level time hint** (T-SQL does *not* accept `OPTION (MAX_EXECUTION_TIME = …)`), so the budget is recorded in the audit log only; tighten MSSQL reads via the connection-level **`connect_timeout`** and DBA-side resource governor. **`DATA_BOAR_SAMPLE_STATEMENT_TIMEOUT_MS`** overrides the budget from the process environment. Optional **`inter_query_delay_ms`** adds a sleep between column samples to reduce burst load. Approximate table sizes for “large table” sampling strategies come from **catalog statistics** (`connectors/sql_table_row_estimate.py`), never **`COUNT(*)`** on the heap.
 
