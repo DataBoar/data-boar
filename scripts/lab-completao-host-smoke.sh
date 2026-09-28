@@ -189,16 +189,54 @@ _lc_install_prebuilt_rust_wheel() {
   return 1
 }
 
+# Print the optional extras the bench config's targets need (one per line; empty when
+# there is no bench config or helper). Needs an existing venv (PyYAML); non-zero exit
+# means the caller must bootstrap first.
+_lc_rc_bench_extras() {
+  local cfg="${LC_BENCH_CONFIG:-tests/config/benchmark-rc-v3.yaml}"
+  if [[ ! -f "$LC_REPO_ROOT/$cfg" || ! -f "$LC_REPO_ROOT/scripts/rc_bench_extras.py" ]]; then
+    return 0
+  fi
+  (cd "$LC_REPO_ROOT" && uv run --no-sync python scripts/rc_bench_extras.py list --config "$cfg")
+}
+
 _lc_prepare_baremetal_runtime() {
   if [[ ! -f "$LC_REPO_ROOT/pyproject.toml" ]] || ! _lc_cmd uv; then
     return 1
   fi
+  # `uv sync` is exact: every extra not named here is pruned from the venv.
   # --extra compressed pulls py7zr so .7z archives are scannable in the completao
-  # flow; without it `uv sync` prunes py7zr and .7z stays archive_unsupported (#931).
-  echo "Preparing baremetal venv (uv sync --extra compressed)..."
-  if ! (cd "$LC_REPO_ROOT" && uv sync --extra compressed); then
+  # flow (#931). The bench config's targets add theirs (mongodb -> nosql, smb -> shares,
+  # ...) so a connector extra is never pruned before the scan (maestro#91). This runs
+  # for both the engine import probe and the RC scan with the same config default as
+  # CONFIG_RC, so the second sync does not prune what the first installed.
+  local cfg="${LC_BENCH_CONFIG:-tests/config/benchmark-rc-v3.yaml}"
+  local extras="" extra=""
+  local -a extra_args=(--extra compressed)
+  if ! extras="$(_lc_rc_bench_extras 2>/dev/null)"; then
+    echo "Bootstrapping baremetal venv (uv sync --extra compressed)..."
+    if ! (cd "$LC_REPO_ROOT" && uv sync --extra compressed); then
+      echo "uv sync: FAILED"
+      return 1
+    fi
+    if ! extras="$(_lc_rc_bench_extras)"; then
+      echo "rc_bench_extras list: FAILED ($cfg)"
+      return 1
+    fi
+  fi
+  while IFS= read -r extra; do
+    [[ -n "$extra" ]] && extra_args+=(--extra "$extra")
+  done <<<"$extras"
+  echo "Preparing baremetal venv (uv sync ${extra_args[*]})..."
+  if ! (cd "$LC_REPO_ROOT" && uv sync "${extra_args[@]}"); then
     echo "uv sync: FAILED"
     return 1
+  fi
+  if [[ -f "$LC_REPO_ROOT/$cfg" && -f "$LC_REPO_ROOT/scripts/rc_bench_extras.py" ]]; then
+    if ! (cd "$LC_REPO_ROOT" && uv run --no-sync python scripts/rc_bench_extras.py verify --config "$cfg" --extra compressed); then
+      echo "rc_bench_extras verify: FAILED (connector extras missing after uv sync; $cfg)"
+      return 1
+    fi
   fi
   # Prefer the prebuilt Build-Once wheel (no Rust toolchain per host, #937); only
   # build from source via maturin when no usable wheel is available on this host.

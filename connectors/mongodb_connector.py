@@ -135,6 +135,17 @@ class MongoDBConnector:
 
         target_name = self.config.get("name", "mongodb")
         audit_name = audit_log_target_label(self.config, default="mongodb")
+        if not _MONGO_AVAILABLE:
+            from core.extras_runtime import missing_optional_message
+
+            # Not "unreachable": the RC sentinel must not read a missing extra as
+            # a lab target that is down (maestro#91).
+            self.db_manager.save_failure(
+                target_name,
+                "missing_optional_dependency",
+                missing_optional_message(subject="MongoDB connector", extra="nosql"),
+            )
+            return
         try:
             self.connect()
         except Exception as e:

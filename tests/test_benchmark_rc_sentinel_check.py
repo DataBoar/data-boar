@@ -811,3 +811,124 @@ def test_rc_sentinel_golden_luhn_pan_tab_and_nbsp_still_credit_card() -> None:
         assert _credit_card_in_pattern(result.get("pattern_detected")), (
             f"RC profile must detect Luhn-valid PAN with {label} separator (#1978)"
         )
+
+
+def _write_mongo_failure_db(path: Path, *, session_id: str, reason: str) -> None:
+    """RC v2 session with filesystem evidence and one Lab_Mongo scan_failures row."""
+    conn = sqlite3.connect(str(path))
+    try:
+        conn.executescript(
+            """
+            CREATE TABLE scan_sessions (
+                session_id TEXT PRIMARY KEY,
+                started_at TEXT,
+                status TEXT
+            );
+            CREATE TABLE filesystem_findings (
+                session_id TEXT,
+                target_name TEXT,
+                pattern_detected TEXT
+            );
+            CREATE TABLE database_findings (
+                session_id TEXT,
+                target_name TEXT,
+                pattern_detected TEXT
+            );
+            CREATE TABLE application_findings (
+                session_id TEXT,
+                target_name TEXT,
+                pattern_detected TEXT
+            );
+            CREATE TABLE scan_failures (
+                session_id TEXT,
+                target_name TEXT,
+                reason TEXT,
+                details TEXT
+            );
+            """
+        )
+        ts = datetime.now(timezone.utc).isoformat()
+        conn.execute(
+            "INSERT INTO scan_sessions VALUES (?, ?, ?)",
+            (session_id, ts, "completed"),
+        )
+        for pattern in ("LGPD_CPF", "CREDIT_CARD"):
+            conn.execute(
+                "INSERT INTO filesystem_findings VALUES (?, ?, ?)",
+                (session_id, "Data_Soup_Synthetic", pattern),
+            )
+        conn.execute(
+            "INSERT INTO scan_failures VALUES (?, ?, ?, ?)",
+            (
+                session_id,
+                "Lab_Mongo_Synthetic_RC",
+                reason,
+                "MongoDB connector requires optional dependencies. "
+                "Install with: pip install 'data-boar[nosql]'",
+            ),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def _shipped_v2_paths(tmp_path: Path) -> tuple[Path, Path]:
+    cfg = tmp_path / "bench.yaml"
+    cfg.write_text("sqlite_path: sentinel.db\n", encoding="utf-8")
+    spec = Path(__file__).resolve().parent / "config" / "benchmark-rc-v2.sentinel.yaml"
+    return cfg, spec
+
+
+def _mongo_port_closed(spec: str) -> bool:
+    return "27018" not in spec
+
+
+def test_missing_extra_fails_even_when_mongo_probe_is_closed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """maestro#91: a missing ``nosql`` extra must not pass as SKIP (lab down)."""
+    monkeypatch.setattr(sentinel_mod, "_probe_reachable", _mongo_port_closed)
+    cfg, spec = _shipped_v2_paths(tmp_path)
+    db = tmp_path / "sentinel.db"
+    _write_mongo_failure_db(
+        db, session_id="sess-91-extra", reason="missing_optional_dependency"
+    )
+    errs = sentinel_mod._check_findings_sentinel(cfg, spec, db)
+    assert len(errs) == 1
+    assert "reason=missing_optional_dependency" in errs[0]
+    assert "Lab_Mongo_Synthetic_RC" in errs[0]
+    assert "data-boar[nosql]" in errs[0]
+
+
+def test_unreachable_mongo_with_closed_probe_still_skips(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A real lab outage (port closed, reason=unreachable) stays a legitimate SKIP."""
+    monkeypatch.setattr(sentinel_mod, "_probe_reachable", _mongo_port_closed)
+    cfg, spec = _shipped_v2_paths(tmp_path)
+    db = tmp_path / "sentinel.db"
+    _write_mongo_failure_db(db, session_id="sess-91-down", reason="unreachable")
+    assert sentinel_mod._check_findings_sentinel(cfg, spec, db) == []
+
+
+def test_missing_extra_in_older_session_does_not_fail_latest(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(sentinel_mod, "_probe_reachable", _mongo_port_closed)
+    cfg, spec = _shipped_v2_paths(tmp_path)
+    db = tmp_path / "sentinel.db"
+    _write_mongo_failure_db(db, session_id="sess-new", reason="unreachable")
+    conn = sqlite3.connect(str(db))
+    try:
+        conn.execute(
+            "INSERT INTO scan_sessions VALUES (?, ?, ?)",
+            ("sess-old", "2000-01-01T00:00:00+00:00", "completed"),
+        )
+        conn.execute(
+            "INSERT INTO scan_failures VALUES (?, ?, ?, ?)",
+            ("sess-old", "Lab_Mongo_Synthetic_RC", "missing_optional_dependency", ""),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+    assert sentinel_mod._check_findings_sentinel(cfg, spec, db) == []
