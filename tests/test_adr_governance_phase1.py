@@ -1,6 +1,7 @@
 """ADR governance Phase 1 anti-regression tests (issue #1162, ADR-0045).
 
-T1 lifecycle · T2 locale/structure · T5 anti-deletion (rename-aware) · T6 date immutability.
+T1 lifecycle · T2 locale/structure · T5 anti-deletion (rename-aware) · T6 date immutability ·
+T7 no embedded experimental data (#1925).
 
 Does not duplicate test_adr_inventory_sync or test_adr_readme_index_sync.
 """
@@ -14,6 +15,7 @@ import pytest
 from tests.adr_governance_support import (
     ADR_DIR,
     GENESIS_FIXTURE,
+    GRANDFATHER_FIXTURE,
     H1_RE,
     ISO_DATE_IN_DATE_LINE_RE,
     META_AUTHORS_RE,
@@ -22,13 +24,18 @@ from tests.adr_governance_support import (
     NEW_ADR_ALLOWED_STATUSES,
     PT_BR_HEADING_DENYLIST,
     REPO_ROOT,
+    T7_BAD_FIXTURE,
+    T7_GOOD_FIXTURE,
+    embedded_experimental_data_violations,
     extract_date_line,
     git_is_repo,
     governance_override_present,
     iter_adr_files,
     load_genesis_fixture,
+    load_grandfather_allowlist,
     parse_status,
     read_adr_text,
+    staged_adr_added_chunks,
     staged_adr_paths,
     staged_name_status_with_renames,
 )
@@ -186,4 +193,66 @@ def test_phase1_corpus_file_count_matches_fixture() -> None:
     assert len(baseline) == len(adrs), (
         f"fixture rows={len(baseline)} adr files={len(adrs)}; "
         "regenerate tests/fixtures/adr_genesis_date_lines.json"
+    )
+
+
+def test_t7_synthetic_bad_fixture_is_flagged() -> None:
+    """T7: incident-shaped synthetic excerpt must trip the detector."""
+    text = T7_BAD_FIXTURE.read_text(encoding="utf-8")
+    hits = embedded_experimental_data_violations(text)
+    assert "operator_decision_line" in hits
+    assert "benchmark_dataset_table_3plus_rows" in hits
+
+
+def test_t7_synthetic_good_fixture_is_clean() -> None:
+    """T7: prose + pinned artifact path (ADR-0078 style) must not trip the detector."""
+    text = T7_GOOD_FIXTURE.read_text(encoding="utf-8")
+    assert embedded_experimental_data_violations(text) == []
+
+
+def test_t7_real_adr_corpus_has_no_incident_signatures() -> None:
+    """T7: full corpus scan — list must stay empty (PR body cites this test)."""
+    violations: list[str] = []
+    for path in iter_adr_files():
+        hits = embedded_experimental_data_violations(read_adr_text(path))
+        if hits:
+            violations.append(f"{path.name}: {', '.join(hits)}")
+    assert not violations, (
+        "ADR corpus T7 hits (add dated grandfather only if truly needed):\n"
+        + "\n".join(violations)
+    )
+
+
+def test_t7_grandfather_allowlist_still_justified() -> None:
+    """T7: allowlisted ADRs must still violate; drop entries when the ADR is cleaned."""
+    if not GRANDFATHER_FIXTURE.is_file():
+        return
+    allowlist = load_grandfather_allowlist()
+    assert allowlist, "grandfather file exists but is empty — remove the file"
+    stale: list[str] = []
+    for name, meta in allowlist.items():
+        path = ADR_DIR / name
+        if not path.is_file():
+            stale.append(f"{name}: missing file")
+            continue
+        hits = embedded_experimental_data_violations(read_adr_text(path))
+        if not hits:
+            stale.append(
+                f"{name}: no longer violates ({meta.get('reason', 'no reason')})"
+            )
+    assert not stale, "stale grandfather entries:\n" + "\n".join(stale)
+
+
+@pytest.mark.skipif(not git_is_repo(), reason="git required for incremental ADR gates")
+def test_t7_staged_adr_added_lines_no_embedded_data() -> None:
+    """T7: scan only + lines from staged A/M ADR diffs (not the full legacy file)."""
+    if governance_override_present():
+        pytest.skip("operator override marker present")
+    violations: list[str] = []
+    for rel, added in staged_adr_added_chunks():
+        hits = embedded_experimental_data_violations(added)
+        if hits:
+            violations.append(f"{rel}: {', '.join(hits)} in staged additions")
+    assert not violations, "T7 staged ADR addition violations:\n" + "\n".join(
+        violations
     )
