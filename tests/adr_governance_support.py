@@ -199,12 +199,18 @@ def _markdown_table_blocks(text: str) -> list[list[str]]:
     return blocks
 
 
+def _is_table_separator_row(line: str) -> bool:
+    return bool(re.match(r"^\|\s*[-: ]+\|", line.replace(" ", "")))
+
+
 def _table_data_rows(block: list[str]) -> list[str]:
-    if len(block) < 3:
+    if not block:
         return []
+    # Full table: header + separator + data. Staged + chunks may be data rows only.
+    start = 2 if len(block) >= 2 and _is_table_separator_row(block[1]) else 0
     rows: list[str] = []
-    for line in block[2:]:
-        if re.match(r"^\|\s*[-: ]+\|", line.replace(" ", "")):
+    for line in block[start:]:
+        if _is_table_separator_row(line):
             continue
         rows.append(line)
     return rows
