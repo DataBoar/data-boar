@@ -51,16 +51,18 @@ OVERRIDE_MARKER_RE = re.compile(r"(?im)^\s*ADR-Governance-Override-Approved-By:\
 
 # T7 (#1925): incident-shaped embedded experimental data (keen-platypus class), not loose numbers.
 OPERATOR_DECISION_LINE_RE = re.compile(
-    r"^Operator decision\s*\(\d{4}-\d{2}-\d{2}\)",
+    r"^[\s]*(?:>[\s]*)?(?:[-*+][\s]+)?(?:\*\*)?"
+    r"Operator decision\s*\(\d{4}-\d{2}-\d{2}\)",
     re.MULTILINE | re.IGNORECASE,
 )
 BENCHMARK_TABLE_CELL_RE = re.compile(
-    r"\d[\d.,]*\s*(?:ms|sec|s\b|×|x\s*slower|%)|(?:\d+\.\d+|\d+)\s*×",
+    r"\d[\d.,]*\s*(?:ms|µs|us|sec|×|x\s*slower|req/s|MB/s)"
+    r"|(?:\d+\.\d+|\d+)\s*×",
     re.IGNORECASE,
 )
+# Case-sensitive PASSED/FAILED (pytest); avoid matching `status: failed` in YAML samples.
 TEST_RUNNER_IN_FENCE_RE = re.compile(
-    r"\bPASSED\b|\bFAILED\b|passed in \d",
-    re.IGNORECASE,
+    r"\bPASSED\b|\bFAILED\b|\d+\s+passed\b|passed in \d+(?:\.\d+)?s",
 )
 FENCE_RE = re.compile(r"```[^\n]*\n(.*?)```", re.DOTALL)
 
@@ -226,16 +228,24 @@ def _test_runner_codeblock_violation(text: str) -> bool:
     return False
 
 
-def embedded_experimental_data_violations(text: str) -> list[str]:
-    """Return stable violation codes for incident-shaped embedded benchmark/spike data."""
+def embedded_experimental_data_violations(
+    text: str, *, check_tables: bool = True
+) -> list[str]:
+    """Return stable violation codes for incident-shaped embedded benchmark/spike data.
+
+    ``check_tables=False`` skips the 3+ row measurement-table heuristic (legacy Accepted
+    ADRs may cite µs/call tables; non-retroactive posture — table rule targets staged
+    additions and fixtures).
+    """
     normalized = normalize_eol(text)
     hits: list[str] = []
     if OPERATOR_DECISION_LINE_RE.search(normalized):
         hits.append("operator_decision_line")
-    for block in _markdown_table_blocks(normalized):
-        if _benchmark_dataset_table_violation(block):
-            hits.append("benchmark_dataset_table_3plus_rows")
-            break
+    if check_tables:
+        for block in _markdown_table_blocks(normalized):
+            if _benchmark_dataset_table_violation(block):
+                hits.append("benchmark_dataset_table_3plus_rows")
+                break
     if _test_runner_codeblock_violation(normalized):
         hits.append("test_runner_codeblock")
     return hits

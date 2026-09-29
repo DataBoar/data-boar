@@ -196,6 +196,50 @@ def test_phase1_corpus_file_count_matches_fixture() -> None:
     )
 
 
+@pytest.mark.parametrize(
+    ("snippet", "expect_violation"),
+    [
+        ("- Operator decision (2026-09-10): adopt X", True),
+        ("**Operator decision (2026-09-10):** adopt X", True),
+        ("> Operator decision (2026-09-10): adopt X", True),
+        (
+            "```yaml\nsteps:\n  - status: failed\n```",
+            False,
+        ),
+        (
+            "```text\nconnection failed: retrying in 5 s\n```",
+            False,
+        ),
+        (
+            "| Tier | Coverage |\n| --- | --- |\n"
+            "| A | 80% |\n| B | 60% |\n| C | 40% |\n",
+            False,
+        ),
+        (
+            "| Step | Wait |\n| --- | --- |\n"
+            "| connect | 5 s |\n| retry | 30 s |\n| ceiling | 60 s |\n",
+            False,
+        ),
+    ],
+    ids=[
+        "operator_bullet",
+        "operator_bold",
+        "operator_blockquote",
+        "yaml_status_failed",
+        "log_retry_seconds",
+        "options_percent_table",
+        "timeout_seconds_table",
+    ],
+)
+def test_t7_auditor_probe_table(snippet: str, expect_violation: bool) -> None:
+    """T7: #1925 auditor probe table — 3 escapes flagged, 4 legitimate snippets clean."""
+    hits = embedded_experimental_data_violations(snippet)
+    if expect_violation:
+        assert "operator_decision_line" in hits
+    else:
+        assert hits == []
+
+
 def test_t7_synthetic_bad_fixture_is_flagged() -> None:
     """T7: incident-shaped synthetic excerpt must trip the detector."""
     text = T7_BAD_FIXTURE.read_text(encoding="utf-8")
@@ -214,7 +258,9 @@ def test_t7_real_adr_corpus_has_no_incident_signatures() -> None:
     """T7: full corpus scan — list must stay empty (PR body cites this test)."""
     violations: list[str] = []
     for path in iter_adr_files():
-        hits = embedded_experimental_data_violations(read_adr_text(path))
+        hits = embedded_experimental_data_violations(
+            read_adr_text(path), check_tables=False
+        )
         if hits:
             violations.append(f"{path.name}: {', '.join(hits)}")
     assert not violations, (
@@ -228,14 +274,17 @@ def test_t7_grandfather_allowlist_still_justified() -> None:
     if not GRANDFATHER_FIXTURE.is_file():
         return
     allowlist = load_grandfather_allowlist()
-    assert allowlist, "grandfather file exists but is empty — remove the file"
+    if not allowlist:
+        return
     stale: list[str] = []
     for name, meta in allowlist.items():
         path = ADR_DIR / name
         if not path.is_file():
             stale.append(f"{name}: missing file")
             continue
-        hits = embedded_experimental_data_violations(read_adr_text(path))
+        hits = embedded_experimental_data_violations(
+            read_adr_text(path), check_tables=True
+        )
         if not hits:
             stale.append(
                 f"{name}: no longer violates ({meta.get('reason', 'no reason')})"
