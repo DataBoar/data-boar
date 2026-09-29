@@ -776,6 +776,28 @@ def test_target_prefix_like_does_not_match_underscore_wildcard(
     assert any("scope_empty" in e and "Lab_REST" in e for e in errs)
 
 
+def test_shipped_rc_sentinels_require_filesystem_credit_card() -> None:
+    """maestro#92 — v2 and v3 fail closed when CREDIT_CARD is missing post-smoke."""
+    root = Path(__file__).resolve().parents[1]
+    for name in (
+        "benchmark-rc-v2.sentinel.yaml",
+        "benchmark-rc-v3.sentinel.yaml",
+    ):
+        spec = yaml.safe_load(
+            (root / "tests" / "config" / name).read_text(encoding="utf-8")
+        )
+        rules = [
+            r
+            for r in spec.get("required_patterns") or []
+            if isinstance(r, dict) and r.get("id") == "filesystem_credit_card"
+        ]
+        assert len(rules) == 1, name
+        rule = rules[0]
+        assert rule["pattern"] == "CREDIT_CARD"
+        assert int(rule["min_count"]) >= 1
+        assert rule["tables"] == ["filesystem_findings"]
+
+
 def test_rc_sentinel_golden_luhn_pan_tab_and_nbsp_still_credit_card() -> None:
     """Grok fixture — tab/NBSP PAN must remain CREDIT_CARD after #1978 Luhn span gate."""
     from core.scanner import DataScanner
@@ -789,3 +811,124 @@ def test_rc_sentinel_golden_luhn_pan_tab_and_nbsp_still_credit_card() -> None:
         assert _credit_card_in_pattern(result.get("pattern_detected")), (
             f"RC profile must detect Luhn-valid PAN with {label} separator (#1978)"
         )
+
+
+def _write_mongo_failure_db(path: Path, *, session_id: str, reason: str) -> None:
+    """RC v2 session with filesystem evidence and one Lab_Mongo scan_failures row."""
+    conn = sqlite3.connect(str(path))
+    try:
+        conn.executescript(
+            """
+            CREATE TABLE scan_sessions (
+                session_id TEXT PRIMARY KEY,
+                started_at TEXT,
+                status TEXT
+            );
+            CREATE TABLE filesystem_findings (
+                session_id TEXT,
+                target_name TEXT,
+                pattern_detected TEXT
+            );
+            CREATE TABLE database_findings (
+                session_id TEXT,
+                target_name TEXT,
+                pattern_detected TEXT
+            );
+            CREATE TABLE application_findings (
+                session_id TEXT,
+                target_name TEXT,
+                pattern_detected TEXT
+            );
+            CREATE TABLE scan_failures (
+                session_id TEXT,
+                target_name TEXT,
+                reason TEXT,
+                details TEXT
+            );
+            """
+        )
+        ts = datetime.now(timezone.utc).isoformat()
+        conn.execute(
+            "INSERT INTO scan_sessions VALUES (?, ?, ?)",
+            (session_id, ts, "completed"),
+        )
+        for pattern in ("LGPD_CPF", "CREDIT_CARD"):
+            conn.execute(
+                "INSERT INTO filesystem_findings VALUES (?, ?, ?)",
+                (session_id, "Data_Soup_Synthetic", pattern),
+            )
+        conn.execute(
+            "INSERT INTO scan_failures VALUES (?, ?, ?, ?)",
+            (
+                session_id,
+                "Lab_Mongo_Synthetic_RC",
+                reason,
+                "MongoDB connector requires optional dependencies. "
+                "Install with: pip install 'data-boar[nosql]'",
+            ),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def _shipped_v2_paths(tmp_path: Path) -> tuple[Path, Path]:
+    cfg = tmp_path / "bench.yaml"
+    cfg.write_text("sqlite_path: sentinel.db\n", encoding="utf-8")
+    spec = Path(__file__).resolve().parent / "config" / "benchmark-rc-v2.sentinel.yaml"
+    return cfg, spec
+
+
+def _mongo_port_closed(spec: str) -> bool:
+    return "27018" not in spec
+
+
+def test_missing_extra_fails_even_when_mongo_probe_is_closed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """maestro#91: a missing ``nosql`` extra must not pass as SKIP (lab down)."""
+    monkeypatch.setattr(sentinel_mod, "_probe_reachable", _mongo_port_closed)
+    cfg, spec = _shipped_v2_paths(tmp_path)
+    db = tmp_path / "sentinel.db"
+    _write_mongo_failure_db(
+        db, session_id="sess-91-extra", reason="missing_optional_dependency"
+    )
+    errs = sentinel_mod._check_findings_sentinel(cfg, spec, db)
+    assert len(errs) == 1
+    assert "reason=missing_optional_dependency" in errs[0]
+    assert "Lab_Mongo_Synthetic_RC" in errs[0]
+    assert "data-boar[nosql]" in errs[0]
+
+
+def test_unreachable_mongo_with_closed_probe_still_skips(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A real lab outage (port closed, reason=unreachable) stays a legitimate SKIP."""
+    monkeypatch.setattr(sentinel_mod, "_probe_reachable", _mongo_port_closed)
+    cfg, spec = _shipped_v2_paths(tmp_path)
+    db = tmp_path / "sentinel.db"
+    _write_mongo_failure_db(db, session_id="sess-91-down", reason="unreachable")
+    assert sentinel_mod._check_findings_sentinel(cfg, spec, db) == []
+
+
+def test_missing_extra_in_older_session_does_not_fail_latest(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(sentinel_mod, "_probe_reachable", _mongo_port_closed)
+    cfg, spec = _shipped_v2_paths(tmp_path)
+    db = tmp_path / "sentinel.db"
+    _write_mongo_failure_db(db, session_id="sess-new", reason="unreachable")
+    conn = sqlite3.connect(str(db))
+    try:
+        conn.execute(
+            "INSERT INTO scan_sessions VALUES (?, ?, ?)",
+            ("sess-old", "2000-01-01T00:00:00+00:00", "completed"),
+        )
+        conn.execute(
+            "INSERT INTO scan_failures VALUES (?, ?, ?, ?)",
+            ("sess-old", "Lab_Mongo_Synthetic_RC", "missing_optional_dependency", ""),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+    assert sentinel_mod._check_findings_sentinel(cfg, spec, db) == []

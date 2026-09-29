@@ -80,7 +80,7 @@ Custom claims (namespaced to avoid collisions):
 | `dbcid`     | string | Customer ID                                                                     |
 | `dbcname`   | string | Customer display name                                                           |
 | `dbenv`     | string | Target environment: `production`, `qa`, `uat`, `homologation`, `debug`, `trial` |
-| `dbmfp`     | string \| array | Expected machine fingerprint(s). Single hex string = one host; **array of hex strings = deployment pack** (#718 + #846): runtime accepts when its own fingerprint ∈ pack. Empty/absent = any host. **Malformed claim (wrong type) fails closed** (`INVALID`) — never degrades to "unbound". |
+| `dbmfp`     | string \| array | Expected machine fingerprint(s). Single hex string = one host; **array of hex strings = deployment pack** (#718 + #846): runtime accepts when its own fingerprint ∈ pack. Each entry must be exactly 64 hex chars (case-insensitive; only ASCII whitespace is trimmed). **Absent = any host.** A **present** claim that is `null`, empty, whitespace/control-char only, non-hex, wrong length, an empty pack, or the wrong type **fails closed** (`INVALID`, `malformed_dbmfp_claim`) — never degrades to "unbound" (#1939). |
 | `dbtrial`   | bool   | Trial / POC: cap report rows and watermark                                      |
 | `dbmaxrows` | int    | Max data rows in report when trial (e.g. 15)                                    |
 | `dbissuer`  | string | Issuer operator id (e.g. SSH key fingerprint or email)                          |
@@ -104,6 +104,7 @@ JOSE `alg` stays **EdDSA** (Ed25519). License Studio can attach claim `dbmldsa_s
 **Constraints (verify against source, do not invent a runtime gate):**
 
 - Claim present + `mldsa_pub is None` → `ValueError` (`hybrid claim present: ML-DSA public key required`).
+- "Present" means the `dbmldsa_sig` **key** exists in the payload. A present claim whose value is `null`, an empty string, or a non-string fails closed (`ValueError`; `LicenseGuard` → `INVALID`). Only an absent key selects the Ed25519-only path (#1996).
 - Bad ML-DSA signature → `cryptography.exceptions.InvalidSignature`.
 - Payload JSON must match license-studio `pkg/verify/hybrid.go`: `json.dumps(..., sort_keys=True, separators=(",", ":"), ensure_ascii=False)` plus Go HTML-safe escapes (`<` `>` `&` U+2028 U+2029).
 - Public key PEM is `-----BEGIN ML-DSA-65 PUBLIC KEY-----` with **raw** public bytes (`MLDSA65PublicKey.from_public_bytes`), **not** PKIX/`SubjectPublicKeyInfo`.

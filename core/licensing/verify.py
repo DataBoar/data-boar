@@ -110,6 +110,8 @@ def _verify_mldsa_claim(
 ) -> None:
     if not isinstance(raw_sig, str):
         raise ValueError(f"{CLAIM_MLDSA_SIG} must be a string")
+    if not raw_sig:
+        raise ValueError(f"{CLAIM_MLDSA_SIG} must be a non-empty string")
     try:
         mldsa_sig = base64.urlsafe_b64decode(raw_sig + "=" * (-len(raw_sig) % 4))
     except (ValueError, binascii.Error) as e:
@@ -137,7 +139,9 @@ def decode_license_jwt_hybrid(
     """
     Verify EdDSA (``decode_license_jwt``) and optional ``dbmldsa_sig`` (ML-DSA-65).
 
-    When ``dbmldsa_sig`` is present, ``mldsa_pub`` is required (fail-closed). The ML-DSA
+    When the ``dbmldsa_sig`` claim is **absent**, only Ed25519 is verified. When the claim is
+    **present** (including JSON ``null`` or other invalid values), verification is fail-closed.
+    ``mldsa_pub`` is required for a present claim. The ML-DSA
     message is ``header_b64`` + ``.`` + base64url(JSON payload without that claim), with
     JSON matching license-studio ``pkg/verify/hybrid.go`` (sorted keys, Go HTML escapes).
 
@@ -146,9 +150,9 @@ def decode_license_jwt_hybrid(
     bar until a future enforcement policy requires ML-DSA.
     """
     claims = decode_license_jwt(token, ed25519_pub)
-    raw = claims.get(CLAIM_MLDSA_SIG)
-    if raw is None:
+    if CLAIM_MLDSA_SIG not in claims:
         return claims
+    raw = claims[CLAIM_MLDSA_SIG]
     if mldsa_pub is None:
         raise ValueError(
             "hybrid claim present: ML-DSA public key required (decode_license_jwt_hybrid)"

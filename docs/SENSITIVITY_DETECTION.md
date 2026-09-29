@@ -502,10 +502,12 @@ The application already includes these patterns; you do not need to redefine the
 | `LGPD_CPF`    | Brazilian CPF (11 digits, optional dots/dash)   | LGPD Art. 5           |
 | `LGPD_CNPJ`   | Brazilian CNPJ (14 digits, optional formatting) | LGPD Art. 5           |
 | `EMAIL`       | Email address                                   | GDPR Art. 4(1)        |
-| `CREDIT_CARD` | 16-digit card (optional spaces/dashes)          | PCI/GLBA              |
+| `CREDIT_CARD` | 16-digit PAN 4-4-4-4 (optional hyphen/space/TAB/NBSP) + Luhn on the match span | PCI/GLBA              |
 | `PHONE_BR`    | Brazilian phone (optional +55, required DDD)    | LGPD Art. 5           |
 | `CCPA_SSN`    | US SSN (XXX-XX-XXXX)                            | CCPA                  |
 | `DATE_DMY`    | Date d/m/y (e.g. 31/12/2024)                    | Personal data context |
+
+**`CREDIT_CARD` is 16-digit + Luhn (#1978, #1332, #1984):** the built-in regex is `\b\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b` in `core/detector.py`. After a shape match the detector runs **Luhn (Mod 10)** on the **matched span** (`utils.luhn_card.luhn_check_matched_card_span`) — not a second narrower rescan. **Does not match** Luhn-valid **Amex (15-digit)** or **Diners (14-digit)** in free text; a named PCI column override may still flag those (honest RC note in [releases/1.8.0-rc.md](releases/1.8.0-rc.md)). SQL, Snowflake, and filesystem distinct samples join values with **U+241F** (`SAMPLE_VALUE_JOIN_SEPARATOR` in `connectors/sample_value_dedup.py`), not spaces, so INTEGER years/ids cannot form a 16-digit PAN across value boundaries. YAML regex overrides may set `validator: luhn` (13–19 digits) — see [compliance-samples/README.md](compliance-samples/README.md).
 
 **`PHONE_BR` requires a two-digit DDD (#393):** the built-in regex is `\b(?:\+55\s?)?\(?\d{2}\)?\s?\d{4,5}-?\d{4}\b` in `core/detector.py` (same string in `core/validation.py` and the LGPD compliance sample). **Does not match** bare 8-digit IDs such as `1234-5678` or `98765-4321`. **Does match** `(21) 99999-0000`, `21 99999-0000`, `+55 11 98765-4321`. In entertainment context, `PHONE_BR` is a **weak** pattern (`WEAK_PATTERNS_IN_ENTERTAINMENT`) and can drop to MEDIUM.
 

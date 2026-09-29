@@ -21,6 +21,7 @@ from core.suggested_review import (
     augment_low_id_like_for_persist,
 )
 
+from .microsoft_identity import assert_allowlisted_microsoft_token_url
 from .url_guard import (
     build_pinned_httpx_client,
     merge_host_pins,
@@ -75,6 +76,7 @@ def _dataverse_token(target: dict[str, Any]) -> str | None:
         auth.get("token_url")
         or f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
     )
+    assert_allowlisted_microsoft_token_url(token_url)
     # SSRF guard (#1232 / #832 / #1552): custom token_url receives client_secret —
     # validate + pin peer IPs (no DNS rebinding on the secret-bearing request).
     token_kwargs: dict[str, Any] = {

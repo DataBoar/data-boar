@@ -7,6 +7,11 @@ required_patterns:
     min_count: 1
     tables:
       - filesystem_findings
+  - id: filesystem_credit_card
+    pattern: CREDIT_CARD
+    min_count: 1
+    tables:
+      - filesystem_findings
 optional_connectors:
   - id: lab_mongo_lgpd
     target_name_prefix: Lab_Mongo

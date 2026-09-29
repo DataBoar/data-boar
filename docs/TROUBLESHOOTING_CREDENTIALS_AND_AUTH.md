@@ -78,6 +78,18 @@ If that is not enough, use the sections below.
 - **What to check:** Tenant ID (GUID), client ID (GUID), secret value and expiry; app registration has the right permissions (e.g. read for Power BI/Dataverse). No conflicting extra headers with another token.
 - **Steps to fix:** Verify in Azure (or your IdP) that the app registration is correct and the secret has not expired; fix config and re-run. Do not send the same token in both the OAuth flow and a custom header.
 
+### 4.3 Credential host allowlist (`#1977`)
+
+**Scenario:** Scan failures **Details** contain `#1977`, or `connect()` raises `ValueError` before any HTTP call.
+
+This is **not** `auth_failed` from the remote API. `connectors/rest_connector.py` refuses to attach credentials when:
+
+1. Secrets come from the environment (`token_from_env`, `client_secret_from_env`, or `client_secret: "${VAR}"`) and **`auth.allowed_hosts`** is missing.
+2. `token_from_env` / `client_secret_from_env` does not start with **`API_`**, **`REST_API_`**, or **`DATA_BOAR_`**.
+3. `base_url` or `auth.token_url` hostname is **not** in the allowlist (exact lowercase hostname; no wildcards).
+
+**Fix:** List every host that receives the secret (API + token endpoint). For inline tokens, the implicit list is `base_url` / `token_url` on the same target. Full contract: [USAGE.md](USAGE.md) (*Targets: APIs*). Tests: `tests/test_rest_connector_auth_allowlist.py`.
+
 ---
 
 ## 5. Data Boar API key (when enabled)

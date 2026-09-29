@@ -500,10 +500,12 @@ A aplicação já inclui estes padrões; não é preciso redefini-los a menos qu
 | `LGPD_CPF`    | CPF brasileiro (11 dígitos, opcional pontos/traço) | LGPD Art. 5           |
 | `LGPD_CNPJ`   | CNPJ brasileiro (14 dígitos, formatação opcional)  | LGPD Art. 5           |
 | `EMAIL`       | Endereço de e-mail                                 | GDPR Art. 4(1)        |
-| `CREDIT_CARD` | Cartão 16 dígitos (espaços/traços opcionais)       | PCI/GLBA              |
+| `CREDIT_CARD` | PAN 16 dígitos 4-4-4-4 (hífen/espaço/TAB/NBSP opcional) + Luhn no trecho casado | PCI/GLBA              |
 | `PHONE_BR`    | Telefone BR (+55 opcional, DDD obrigatório)        | LGPD Art. 5           |
 | `CCPA_SSN`    | SSN EUA (XXX-XX-XXXX)                              | CCPA                  |
 | `DATE_DMY`    | Data d/m/a (ex.: 31/12/2024)                       | Personal data context |
+
+**`CREDIT_CARD` é 16 dígitos + Luhn (#1978, #1332, #1984):** o regex embutido é `\b\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b` em `core/detector.py`. Depois do match de forma o detector aplica **Luhn (Módulo 10)** no **trecho casado** (`utils.luhn_card.luhn_check_matched_card_span`) — não há um segundo regex mais estreito. **Não casa** Amex (15 dígitos) nem Diners (14 dígitos) válidos em Luhn em texto livre; um override de coluna PCI nomeada ainda pode marcar esses casos (nota honesta em [releases/1.8.0-rc.md](releases/1.8.0-rc.md)). Amostras distintas SQL, Snowflake e filesystem unem valores com **U+241F** (`SAMPLE_VALUE_JOIN_SEPARATOR` em `connectors/sample_value_dedup.py`), não espaços, para anos/IDs INTEGER não formarem PAN de 16 dígitos entre valores. Overrides YAML podem definir `validator: luhn` (13–19 dígitos) — veja [compliance-samples/README.pt_BR.md](compliance-samples/README.pt_BR.md).
 
 **`PHONE_BR` exige DDD de dois dígitos (#393):** o regex embutido é `\b(?:\+55\s?)?\(?\d{2}\)?\s?\d{4,5}-?\d{4}\b` em `core/detector.py` (a mesma string em `core/validation.py` e na amostra de compliance LGPD). **Não casa** IDs de 8 dígitos como `1234-5678` ou `98765-4321`. **Casa** `(21) 99999-0000`, `21 99999-0000`, `+55 11 98765-4321`. Em contexto de entretenimento, `PHONE_BR` é padrão **fraco** (`WEAK_PATTERNS_IN_ENTERTAINMENT`) e pode cair para MEDIUM.
 

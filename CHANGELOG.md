@@ -12,6 +12,16 @@ Empty while the working tree carries **`1.8.0-rc`** (see section below).
 
 > Release candidate for **`1.8.0`**. **`[project] version = 1.8.0-rc`** (ADR-0073 PEP 440 hyphen form). **`[tool.databoar] maturity_build = 127`** — **rc band entry** on promotion from **`1.8.0-beta`** (last beta reconciliation **`.116`**, 2026-08-22). **Not** on PyPI or Docker Hub **`latest`**. Notes: [docs/releases/1.8.0-rc.md](docs/releases/1.8.0-rc.md).
 
+### RC sentinel CREDIT_CARD (maestro#92)
+
+- **`filesystem_credit_card`** in `benchmark-rc-v2.sentinel.yaml` and `benchmark-rc-v3.sentinel.yaml` fails the post-smoke checker when `CREDIT_CARD` is absent from `filesystem_findings`. Corpus file: `tests/data/homelab_synthetic/synthetic_pan_luhn.txt` (Visa test PAN).
+
+### RC smoke extras and missing-extra failures (maestro#91)
+
+- **Host smoke prepare** syncs `--extra compressed` plus the extras the `--bench-config` targets need (`scripts/rc_bench_extras.py list`, from `optional_extra_for_target`; RC v2 → `nosql`, v3 → `mysql nosql postgres shares`). `uv sync` no longer prunes `pymongo` before the scan. `rc_bench_extras.py verify` fails the prepare when a distribution of those extras is missing.
+- **MongoDB / Redis connectors** record `scan_failures.reason=missing_optional_dependency` (not `unreachable`) when the `nosql` extra is absent.
+- **RC sentinel** fails on any `missing_optional_dependency` in the latest session before optional probes run, so a closed lab port cannot turn a missing extra into `SKIP` + `SENTINEL_OK`.
+
 ### Trust anchor (#1992)
 
 - **Key rotation** is accepted only when both embedded anchors (Ed25519 and ML-DSA-65) sign `data-boar/license-key-rotation/v1` plus the epoch. A raw `DATA_BOAR_LICENSE_PUBLIC_KEY_*`, `DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_*`, or YAML public-key path fails closed (`untrusted_key_override`). Hybrid `dbmldsa_sig` still verifies, against the packaged or rotated ML-DSA key.
