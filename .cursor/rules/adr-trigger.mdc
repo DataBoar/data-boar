@@ -108,5 +108,6 @@ A decision was **explicitly deferred** and should be documented so future sessio
 At the end of any session where a trigger fires:
 1. List candidate decisions in chat (one line each)
 2. For each: `new-adr.ps1 -Title ... -Summary ...` → fill Context/Decision/Consequences
+   - **Never** paste raw spike/benchmark tables, test-runner logs, or `Operator decision (YYYY-MM-DD)` lines into the ADR — link to `tests/benchmarks/`, issue comments, or spike docs ([ADR 0045](docs/adr/ADR-0045-adr-metadata-and-format-standardization.md) item 9, **#1925** / T7).
 3. Update `docs/adr/README.md` index
 4. Commit as `docs(adr): add ADR NNNN — short title`
