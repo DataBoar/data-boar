@@ -240,6 +240,54 @@ def test_t7_auditor_probe_table(snippet: str, expect_violation: bool) -> None:
         assert hits == []
 
 
+@pytest.mark.parametrize(
+    ("snippet", "expect_table_violation"),
+    [
+        (
+            "| a | 412 ms |\n| b | 388 ms |\n| c | 401 ms |\n",
+            True,
+        ),
+        (
+            "| one | 5 seconds |\n| two | 6 seconds |\n| three | 7 seconds |\n",
+            False,
+        ),
+        (
+            "| a | 8 users |\n| b | 12 users |\n| c | 3 users |\n",
+            False,
+        ),
+        (
+            "| Throughput (MB/s) |\n| a | 1 |\n| b | 2 |\n| c | 3 |\n",
+            False,
+        ),
+        (
+            "| Matriz A × B |\n| a | 1 |\n| b | 2 |\n| c | 3 |\n",
+            False,
+        ),
+        (
+            "| not x slower |\n| a | 1 |\n| b | 2 |\n| c | 3 |\n",
+            False,
+        ),
+    ],
+    ids=[
+        "staged_data_rows_only",
+        "seconds_word",
+        "users_word",
+        "throughput_mbs_label",
+        "matrix_times_label",
+        "not_x_slower_label",
+    ],
+)
+def test_t7_table_measurement_probes(
+    snippet: str, expect_table_violation: bool
+) -> None:
+    """T7: partial staged tables and unit word boundaries (bugbot #2020)."""
+    hits = embedded_experimental_data_violations(snippet, check_tables=True)
+    if expect_table_violation:
+        assert "benchmark_dataset_table_3plus_rows" in hits
+    else:
+        assert "benchmark_dataset_table_3plus_rows" not in hits
+
+
 def test_t7_synthetic_bad_fixture_is_flagged() -> None:
     """T7: incident-shaped synthetic excerpt must trip the detector."""
     text = T7_BAD_FIXTURE.read_text(encoding="utf-8")

@@ -56,7 +56,7 @@ OPERATOR_DECISION_LINE_RE = re.compile(
     re.MULTILINE | re.IGNORECASE,
 )
 BENCHMARK_TABLE_CELL_RE = re.compile(
-    r"\d[\d.,]*\s*(?:ms|µs|us|sec|×|x\s*slower|req/s|MB/s)"
+    r"\d[\d.,]*\s*(?:(?:ms|µs|us|sec)(?![A-Za-z])|×|x\s*slower|req/s|MB/s)"
     r"|(?:\d+\.\d+|\d+)\s*×",
     re.IGNORECASE,
 )
