@@ -5,18 +5,18 @@
 **Authors:** Fabio Leitao
 **Priority:** H0
 
-**Synced with:** [PLANS_TODO.md](PLANS_TODO.md) · carryover [CARRYOVER.md](../ops/today-mode/CARRYOVER.md) · day anchor [OPERATOR_TODAY_MODE_2026-08-17.md](../ops/today-mode/OPERATOR_TODAY_MODE_2026-08-17.md) (cycle opened [2026-08-16](../ops/today-mode/OPERATOR_TODAY_MODE_2026-08-16.md))
+**Synced with:** [PLANS_TODO.md](PLANS_TODO.md) · carryover [CARRYOVER.md](../ops/today-mode/CARRYOVER.md) · day anchor [OPERATOR_TODAY_MODE_2026-09-28.md](../ops/today-mode/OPERATOR_TODAY_MODE_2026-09-28.md)
 
-**Previous template cycles:** Earlier windows in this file (including **2026-07-11 → 2026-07-24**) are **superseded** by the current sequencing in [PLANS_TODO.md](PLANS_TODO.md) (*Integration / active threads* + *What to start next*). Close each cycle with: green `main`, explicit carryover rows, and one short outcome note.
+**Previous template cycles:** **2026-08-16 → 2026-08-29** and earlier windows are **superseded** by this cycle and [PLANS_TODO.md](PLANS_TODO.md) (*Integration / active threads*). Close each cycle with: green `main`, explicit carryover rows, and one short outcome note.
 
-### This cycle — focus (2026-08-16 → 2026-08-29)
+### This cycle — focus (2026-09-28 → 2026-10-11)
 
 | Week | Theme | Outcomes |
 | ---- | ----- | -------- |
-| **1** | **Land open tracks + supply-chain hygiene** | ✅ Docs **[#1602](https://github.com/DataBoar/data-boar/pull/1602)** + cycle refresh **[#1604](https://github.com/DataBoar/data-boar/pull/1604)** on `main`. ✅ TCP peer-pin mother **[#1586](https://github.com/DataBoar/data-boar/issues/1586)** **closed** (**#1589–#1603** matrix). **Still open:** Dependabot triage (**Actions** **#1573** first, then majors **#1487 / #1485 / #1484** one-at-a-time with skill + `check-all`). Keep docs-only vs behavior PRs separated. |
-| **2** | **One selected delivery slice, no regression** | Ship **one** primary from [PLANS_TODO.md](PLANS_TODO.md): privacy-first dashBOARd RUM pilot (**[#1601](https://github.com/DataBoar/data-boar/issues/1601)** — gates already on `main` via **#1602**) **or** CMMC/CUI sample (**[#1453](https://github.com/DataBoar/data-boar/issues/1453)**) **or** one **M-PILOT-READY** blocker (e.g. licensing **#719** / lab **#756**) if operator names it — tests + docs in the same slice; no scope sprawl. |
+| **1** | **Close BFF validation loops (Maestro + Crow + lab)** | ✅ **Day-0 wins on `main`:** **[#2011](https://github.com/DataBoar/data-boar/pull/2011)** RC smoke/sentinel, **[#2012](https://github.com/DataBoar/data-boar/pull/2012)** env-secret egress, **#1992** closed. **Target:** close **maestro#91** + advance **maestro#82**; merge **[carrion-crow#99](https://github.com/DataBoar/carrion-crow/pull/99)**; one **Dependabot** hygiene PR; optional **lab host** RC smoke after podman restore ([#756](https://github.com/DataBoar/data-boar/issues/756)). |
+| **2** | **1.8.0 GA decision slice (no scope sprawl)** | One primary from **[#1980](https://github.com/DataBoar/data-boar/issues/1980)** / [PLANS_TODO.md](PLANS_TODO.md): either **GA cut checklist** (release notes, published sync, lab sign-off) **or** explicit defer with dated carryover. Secondary: **#1984** Amex/Diners honest RC note if not already shipped. **Not default:** CRM connectors **#2014–#2018**. |
 
-**Definition of done (this cycle):** At least one merged PR for the selected Week-2 slice (or ≥1 Dependabot merge if Week-2 slips); **`check-all --enforced`** green before publish/merge; docs/plan/carryover rows updated when scope moves; no silent carryover.
+**Definition of done (this cycle):** **maestro#91** closed with evidence; **carrion-crow #99** merged; **maestro#82** materially advanced or scoped defer; **`check-all`** green on every merge; [CARRYOVER.md](../ops/today-mode/CARRYOVER.md) + today-mode updated at least weekly; no silent backlog.
 
 ---
 

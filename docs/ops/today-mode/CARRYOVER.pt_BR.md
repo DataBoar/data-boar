@@ -12,9 +12,18 @@
 
 | Item | Origem | Estado | Próximo passo / defer |
 | ---- | ------ | ------ | ----- |
-| **Desacelerar — refil de token ~2026-09-09** | Operador **2026-08-30** EOD | 🔄 Ativo | Manhãs só Tier A; sem maratona de agente; **`feature`/`deps`** adiados salvo **U0** em `main`. Hoje: [OPERATOR_TODAY_MODE_2026-08-31.pt_BR.md](OPERATOR_TODAY_MODE_2026-08-31.pt_BR.md). |
-| **#1840 mapa da fila — PR #1841** | [#1840](https://github.com/DataBoar/data-boar/issues/1840) · [PR #1841](https://github.com/DataBoar/data-boar/pull/1841) | 🔄 PR aberto | Mergear com CI verde (`Closes #1840`); regen: `scripts/issue_queue_sequencing_map.py`. |
-| **#1709 guard PR operator-gated — PR #1832** | [#1709](https://github.com/DataBoar/data-boar/issues/1709) · [PR #1832](https://github.com/DataBoar/data-boar/pull/1832) | ✅ Mergeado **2026-08-30** | Operador: **SSHSIG attestation when gated** no ruleset **`main-gate-pii`**. |
+| **Âncora today (re-ancoragem)** | [OPERATOR_TODAY_MODE_2026-09-28.pt_BR.md](OPERATOR_TODAY_MODE_2026-09-28.pt_BR.md) | 🔄 Ativo | Ciclo duas semanas **2026-09-28 → 2026-10-11**; PMO no fim do arquivo EN. |
+| **Smoke RC Maestro + sentinel (#91)** | [data-boar#2011](https://github.com/DataBoar/data-boar/pull/2011) · [maestro#91](https://github.com/DataBoar/maestro/issues/91) | ✅ Merge data-boar | Fechar **maestro#91** citando **#2011**; smoke no **host de lab** opcional após imagens podman ([#756](https://github.com/DataBoar/data-boar/issues/756)). **Adiar** espelho `engine/` no maestro. |
+| **Egress env-secret REST / Microsoft (#2006/#2007)** | [data-boar#2012](https://github.com/DataBoar/data-boar/pull/2012) | ✅ Merge **28/set** | Issues fechadas via PR. |
+| **Trust anchor licença (#1992)** | [#1994](https://github.com/DataBoar/data-boar/pull/1994) | ✅ Fechada **completed** | Revogação offline = limitação conhecida. |
+| **Auditoria e2e Maestro (#82)** | [maestro#82](https://github.com/DataBoar/maestro/issues/82) | 🔄 Parcial | **CREDIT_CARD** Covered; restante §B + **#87**. |
+| **GA neighbor + lote segurança crow** | [crow#99](https://github.com/DataBoar/carrion-crow/pull/99) | 🔄 Na fila | **#99** antes de **#94–#101**. |
+| **GA 1.8.0 / BFF** | [data-boar#1980](https://github.com/DataBoar/data-boar/issues/1980) | 🔄 Ativo | Validar Maestro/KP/Crow em **`1.8.0-rc`**. |
+| **Commits do agente Cursor + `required_signatures` (#2009)** | [data-boar#2009](https://github.com/DataBoar/data-boar/issues/2009) · evidência **#2008** | ⏸️ **Decisão pendente do operador** | Escolher opções do corpo da issue (ex.: runbook de re-assinatura manual) — **não** é decisão do agente. |
+| **Fila Dependabot** | **#1997–#2001** | 🔄 Aberta | Um PR por vez (`deps`). |
+| **Desacelerar ~2026-09-09** | Operador **2026-08-30** | ✅ Encerrado | Cadência normal desde **28/set**. |
+| **#1840 mapa — PR #1841** | [#1840](https://github.com/DataBoar/data-boar/issues/1840) | ✅ Feito | Regen: `scripts/issue_queue_sequencing_map.py --write`. |
+| **#1709 guard PR operator-gated — PR #1832** | [#1709](https://github.com/DataBoar/data-boar/issues/1709) | ✅ Mergeado **2026-08-30** | Operador: **SSHSIG attestation when gated** no ruleset **`main-gate-pii`**. |
 | **Give-back Heptapod / Codeberg (AIIDCOBPP #63)** | [data-boar-shared#63](https://github.com/DataBoar/data-boar-shared/issues/63) | ⬜ Decantar | **Sem contato upstream** até após **09/09**. Heptapod `projects_limit: 0`. |
 | **Hygiene milestone — 3 abertas sem milestone** | [ISSUE_QUEUE_SEQUENCING_MAP.md](../ISSUE_QUEUE_SEQUENCING_MAP.md) **2026-08-30** | ⬜ Opcional | `#696`, `#697`, `#1538` — [#1522](https://github.com/DataBoar/data-boar/issues/1522). |
 | **#552 sink de achados — PR #1816** | [#552](https://github.com/DataBoar/data-boar/issues/552) · [PR #1816](https://github.com/DataBoar/data-boar/pull/1816) | ✅ Mergeado | **#552** **CLOSED** — não fechar manualmente. |

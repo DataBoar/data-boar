@@ -12,9 +12,19 @@
 
 | Item | Source | Status | Next step / defer |
 | ---- | ------ | ------ | ----- |
-| **Operator slowdown — token refill ~2026-09-09** | Operator **2026-08-30** EOD | 🔄 Active | Tier A mornings only; no agent marathon; **`feature`/`deps`** defer unless **U0** on `main`. Today: [OPERATOR_TODAY_MODE_2026-08-31.md](OPERATOR_TODAY_MODE_2026-08-31.md). |
-| **#1840 issue queue map — PR #1841** | [#1840](https://github.com/DataBoar/data-boar/issues/1840) · [PR #1841](https://github.com/DataBoar/data-boar/pull/1841) | 🔄 Open PR | Merge when CI green (`Closes #1840`); regen via `scripts/issue_queue_sequencing_map.py`. |
-| **#1709 operator-gated PR guard — PR #1832** | [#1709](https://github.com/DataBoar/data-boar/issues/1709) · [PR #1832](https://github.com/DataBoar/data-boar/pull/1832) | ✅ Merged **2026-08-30** | Operator-only: add **SSHSIG attestation when gated** to ruleset **`main-gate-pii`**. |
+| **Today anchor (re-anchor after gap)** | [OPERATOR_TODAY_MODE_2026-09-28.md](OPERATOR_TODAY_MODE_2026-09-28.md) | 🔄 Active | Two-week cycle **2026-09-28 → 2026-10-11**; PMO table at bottom of today file. |
+| **Maestro RC smoke + sentinel (#91)** | [data-boar#2011](https://github.com/DataBoar/data-boar/pull/2011) · [maestro#91](https://github.com/DataBoar/maestro/issues/91) | ✅ Merged data-boar | Close **maestro#91** with pointer to **#2011**; optional **lab host** RC smoke after podman image restore ([#756](https://github.com/DataBoar/data-boar/issues/756)) (`postgres`, `mariadb`, `oracle-xe`, `mssql`). **Defer** `engine/` uv-sync mirror (maestro private). |
+| **REST / Microsoft env-secret egress (#2006/#2007)** | [data-boar#2012](https://github.com/DataBoar/data-boar/pull/2012) | ✅ Merged **2026-09-28** | Issues **#2006** / **#2007** close via PR. |
+| **License trust anchor (#1992)** | [#1994](https://github.com/DataBoar/data-boar/pull/1994) · comment **5878436617** | ✅ Closed **completed** | Offline revocation = known limitation; short TTL is the control. |
+| **Maestro e2e audit (#82)** | [maestro#82](https://github.com/DataBoar/maestro/issues/82) | 🔄 Partial | **CREDIT_CARD** → Covered (**#1995** / maestro#92 closed). Remaining §B rows + lab evidence **#87**. |
+| **carrion-crow GA neighbor + security lot** | [crow#99](https://github.com/DataBoar/carrion-crow/pull/99) · **#94–#101** | 🔄 Queued | Operator order: **#99** merge first, then security batch. |
+| **1.8.0 GA / BFF hardening** | [data-boar#1980](https://github.com/DataBoar/data-boar/issues/1980) | 🔄 Active | Validate Maestro/KP/Crow path on **`1.8.0-rc`** before stable tag. |
+| **Cursor cloud agent commits + `required_signatures` (#2009)** | [data-boar#2009](https://github.com/DataBoar/data-boar/issues/2009) · PR **#2008** evidence | ⏸️ **Operator decision pending** | Choose: document manual re-sign runbook vs other options in issue body — **not** agent-owned. |
+| **Dependabot queue** | **#1997–#2001** open **2026-09-28** | 🔄 Reopened | Triage **one** PR (`deps` skill); prefer Actions pins before **#2000** / **#2001** majors. |
+| **CRM connector backlog (filing only)** | **#2014–#2018** | ⬜ Backlog | P2 features — not this two-week primary unless operator re-points. |
+| **Operator slowdown — token refill ~2026-09-09** | Operator **2026-08-30** | ✅ Ended | Normal **`feature`** cadence resumed **2026-09-28**. |
+| **#1840 issue queue map — PR #1841** | [#1840](https://github.com/DataBoar/data-boar/issues/1840) | ✅ Done | Map regen: `uv run python scripts/issue_queue_sequencing_map.py --write`. |
+| **#1709 operator-gated PR guard — PR #1832** | [#1709](https://github.com/DataBoar/data-boar/issues/1709) | ✅ Merged **2026-08-30** | Operator-only: add **SSHSIG attestation when gated** to ruleset **`main-gate-pii`**. |
 | **Heptapod / Codeberg give-back (AIIDCOBPP #63)** | [data-boar-shared#63](https://github.com/DataBoar/data-boar-shared/issues/63) | ⬜ Decantar | **No upstream contact** until post **09/09**. Heptapod `projects_limit: 0` — give-back via upstream issues first. |
 | **Milestone hygiene — 3 open without milestone** | [ISSUE_QUEUE_SEQUENCING_MAP.md](../ISSUE_QUEUE_SEQUENCING_MAP.md) **2026-08-30** | ⬜ Optional | `#696`, `#697`, `#1538` — assign via [#1522](https://github.com/DataBoar/data-boar/issues/1522) when energy allows. |
 | **#552 findings sink — PR #1816** | [#552](https://github.com/DataBoar/data-boar/issues/552) · [PR #1816](https://github.com/DataBoar/data-boar/pull/1816) | ✅ Merged | **#552** **CLOSED** — do not manual-close. |

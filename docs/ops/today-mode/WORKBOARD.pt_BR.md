@@ -26,15 +26,17 @@
 
 Atualize esta seção com bullets curtos. Detalhes ficam nas fontes canônicas acima.
 
-- **Agora (top 1):** `S2a` transporte + confiança (Fase 7 + fatia de trust-state alinhada com `#86`) está selecionado no `PLANS_TODO`.
+**Última atualização:** **2026-09-28** · Today: [OPERATOR_TODAY_MODE_2026-09-28.pt_BR.md](OPERATOR_TODAY_MODE_2026-09-28.pt_BR.md)
+
+- **Agora (top 1):** **Validação BFF / GA** — **[#1980](https://github.com/DataBoar/data-boar/issues/1980)** com fechamento **maestro#82/#91** e **carrion-crow #99** na fila do operador.
 - **Próximos (top 3):**
-  - Fechar a trilha de carryover do `1.7.0` (`gh run list` no `main` + follow-up opcional de smoke `lab-op` no `CARRYOVER.md`).
-  - Rodar a prova `-1L` de homelab / `benchmark-ab` quando houver janela de laboratório.
-  - Enviar o follow-up WRB e triar os deltas da revisão externa para o `PLANS_TODO`.
+  - Fechar **maestro#91** (**data-boar#2011** mergeado); smoke no host de lab opcional ([#756](https://github.com/DataBoar/data-boar/issues/756)).
+  - Merge **carrion-crow #99**, depois lote segurança **#94–#101**.
+  - Um PR **Dependabot** (**#1999** / **#1998** primeiro).
 - **Bloqueios:**
-  - Janela de calendário/hardware do lab para executar `-1L` e `benchmark-ab` (`PLANS_TODO` + `CARRYOVER.md`).
-  - Cadência externa de revisão para o follow-up WRB (ciclo no GitHub + espera de resposta).
-- **Adiado com data:** manter data + dono em `CARRYOVER.pt_BR.md`.
+  - Imagens podman do smoke no lab (limpeza **27/set**; [#756](https://github.com/DataBoar/data-boar/issues/756)).
+  - **maestro#82** ainda aberto com RC/segurança já no `main`.
+- **Adiado:** espelho `engine/` RC no maestro — sem data (operador **28/set**).
 
 ---
 
