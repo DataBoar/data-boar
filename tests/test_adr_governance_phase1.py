@@ -1,6 +1,7 @@
 """ADR governance Phase 1 anti-regression tests (issue #1162, ADR-0045).
 
-T1 lifecycle · T2 locale/structure · T5 anti-deletion (rename-aware) · T6 date immutability.
+T1 lifecycle · T2 locale/structure · T5 anti-deletion (rename-aware) · T6 date immutability ·
+T7 no embedded experimental data (#1925).
 
 Does not duplicate test_adr_inventory_sync or test_adr_readme_index_sync.
 """
@@ -14,6 +15,7 @@ import pytest
 from tests.adr_governance_support import (
     ADR_DIR,
     GENESIS_FIXTURE,
+    GRANDFATHER_FIXTURE,
     H1_RE,
     ISO_DATE_IN_DATE_LINE_RE,
     META_AUTHORS_RE,
@@ -22,13 +24,18 @@ from tests.adr_governance_support import (
     NEW_ADR_ALLOWED_STATUSES,
     PT_BR_HEADING_DENYLIST,
     REPO_ROOT,
+    T7_BAD_FIXTURE,
+    T7_GOOD_FIXTURE,
+    embedded_experimental_data_violations,
     extract_date_line,
     git_is_repo,
     governance_override_present,
     iter_adr_files,
     load_genesis_fixture,
+    load_grandfather_allowlist,
     parse_status,
     read_adr_text,
+    staged_adr_added_chunks,
     staged_adr_paths,
     staged_name_status_with_renames,
 )
@@ -186,4 +193,163 @@ def test_phase1_corpus_file_count_matches_fixture() -> None:
     assert len(baseline) == len(adrs), (
         f"fixture rows={len(baseline)} adr files={len(adrs)}; "
         "regenerate tests/fixtures/adr_genesis_date_lines.json"
+    )
+
+
+@pytest.mark.parametrize(
+    ("snippet", "expect_violation"),
+    [
+        ("- Operator decision (2026-09-10): adopt X", True),
+        ("**Operator decision (2026-09-10):** adopt X", True),
+        ("> Operator decision (2026-09-10): adopt X", True),
+        (
+            "```yaml\nsteps:\n  - status: failed\n```",
+            False,
+        ),
+        (
+            "```text\nconnection failed: retrying in 5 s\n```",
+            False,
+        ),
+        (
+            "| Tier | Coverage |\n| --- | --- |\n"
+            "| A | 80% |\n| B | 60% |\n| C | 40% |\n",
+            False,
+        ),
+        (
+            "| Step | Wait |\n| --- | --- |\n"
+            "| connect | 5 s |\n| retry | 30 s |\n| ceiling | 60 s |\n",
+            False,
+        ),
+    ],
+    ids=[
+        "operator_bullet",
+        "operator_bold",
+        "operator_blockquote",
+        "yaml_status_failed",
+        "log_retry_seconds",
+        "options_percent_table",
+        "timeout_seconds_table",
+    ],
+)
+def test_t7_auditor_probe_table(snippet: str, expect_violation: bool) -> None:
+    """T7: #1925 auditor probe table — 3 escapes flagged, 4 legitimate snippets clean."""
+    hits = embedded_experimental_data_violations(snippet)
+    if expect_violation:
+        assert "operator_decision_line" in hits
+    else:
+        assert hits == []
+
+
+@pytest.mark.parametrize(
+    ("snippet", "expect_table_violation"),
+    [
+        (
+            "| a | 412 ms |\n| b | 388 ms |\n| c | 401 ms |\n",
+            True,
+        ),
+        (
+            "| one | 5 seconds |\n| two | 6 seconds |\n| three | 7 seconds |\n",
+            False,
+        ),
+        (
+            "| a | 8 users |\n| b | 12 users |\n| c | 3 users |\n",
+            False,
+        ),
+        (
+            "| Throughput (MB/s) |\n| a | 1 |\n| b | 2 |\n| c | 3 |\n",
+            False,
+        ),
+        (
+            "| Matriz A × B |\n| a | 1 |\n| b | 2 |\n| c | 3 |\n",
+            False,
+        ),
+        (
+            "| not x slower |\n| a | 1 |\n| b | 2 |\n| c | 3 |\n",
+            False,
+        ),
+    ],
+    ids=[
+        "staged_data_rows_only",
+        "seconds_word",
+        "users_word",
+        "throughput_mbs_label",
+        "matrix_times_label",
+        "not_x_slower_label",
+    ],
+)
+def test_t7_table_measurement_probes(
+    snippet: str, expect_table_violation: bool
+) -> None:
+    """T7: partial staged tables and unit word boundaries (bugbot #2020)."""
+    hits = embedded_experimental_data_violations(snippet, check_tables=True)
+    if expect_table_violation:
+        assert "benchmark_dataset_table_3plus_rows" in hits
+    else:
+        assert "benchmark_dataset_table_3plus_rows" not in hits
+
+
+def test_t7_synthetic_bad_fixture_is_flagged() -> None:
+    """T7: incident-shaped synthetic excerpt must trip the detector."""
+    text = T7_BAD_FIXTURE.read_text(encoding="utf-8")
+    hits = embedded_experimental_data_violations(text)
+    assert "operator_decision_line" in hits
+    assert "benchmark_dataset_table_3plus_rows" in hits
+
+
+def test_t7_synthetic_good_fixture_is_clean() -> None:
+    """T7: prose + pinned artifact path (ADR-0078 style) must not trip the detector."""
+    text = T7_GOOD_FIXTURE.read_text(encoding="utf-8")
+    assert embedded_experimental_data_violations(text) == []
+
+
+def test_t7_real_adr_corpus_has_no_incident_signatures() -> None:
+    """T7: full corpus scan — list must stay empty (PR body cites this test)."""
+    violations: list[str] = []
+    for path in iter_adr_files():
+        hits = embedded_experimental_data_violations(
+            read_adr_text(path), check_tables=False
+        )
+        if hits:
+            violations.append(f"{path.name}: {', '.join(hits)}")
+    assert not violations, (
+        "ADR corpus T7 hits (add dated grandfather only if truly needed):\n"
+        + "\n".join(violations)
+    )
+
+
+def test_t7_grandfather_allowlist_still_justified() -> None:
+    """T7: allowlisted ADRs must still violate; drop entries when the ADR is cleaned."""
+    if not GRANDFATHER_FIXTURE.is_file():
+        return
+    allowlist = load_grandfather_allowlist()
+    if not allowlist:
+        return
+    stale: list[str] = []
+    for name, meta in allowlist.items():
+        path = ADR_DIR / name
+        if not path.is_file():
+            stale.append(f"{name}: missing file")
+            continue
+        hits = embedded_experimental_data_violations(
+            read_adr_text(path), check_tables=True
+        )
+        if not hits:
+            stale.append(
+                f"{name}: no longer violates ({meta.get('reason', 'no reason')})"
+            )
+    assert not stale, "stale grandfather entries:\n" + "\n".join(stale)
+
+
+@pytest.mark.skipif(not git_is_repo(), reason="git required for incremental ADR gates")
+def test_t7_staged_adr_added_lines_no_embedded_data() -> None:
+    """T7: scan only + lines from staged A/M ADR diffs (not the full legacy file)."""
+    if governance_override_present():
+        pytest.skip("operator override marker present")
+    violations: list[str] = []
+    for rel, added in staged_adr_added_chunks():
+        hits = embedded_experimental_data_violations(added)
+        if hits:
+            violations.append(f"{rel}: {', '.join(hits)} in staged additions")
+    assert not violations, "T7 staged ADR addition violations:\n" + "\n".join(
+        violations
     )

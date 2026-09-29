@@ -49,6 +49,39 @@ NEW_ADR_ALLOWED_STATUSES = frozenset({"Proposed", "Reserved"})
 
 OVERRIDE_MARKER_RE = re.compile(r"(?im)^\s*ADR-Governance-Override-Approved-By:\s*\S+")
 
+# T7 (#1925): incident-shaped embedded experimental data (keen-platypus class), not loose numbers.
+OPERATOR_DECISION_LINE_RE = re.compile(
+    r"^[\s]*(?:>[\s]*)?(?:[-*+][\s]+)?(?:\*\*)?"
+    r"Operator decision\s*\(\d{4}-\d{2}-\d{2}\)",
+    re.MULTILINE | re.IGNORECASE,
+)
+BENCHMARK_TABLE_CELL_RE = re.compile(
+    r"\d[\d.,]*\s*(?:(?:ms|µs|us|sec)(?![A-Za-z])|×|x\s*slower|req/s|MB/s)"
+    r"|(?:\d+\.\d+|\d+)\s*×",
+    re.IGNORECASE,
+)
+# Case-sensitive PASSED/FAILED (pytest); avoid matching `status: failed` in YAML samples.
+TEST_RUNNER_IN_FENCE_RE = re.compile(
+    r"\bPASSED\b|\bFAILED\b|\d+\s+passed\b|passed in \d+(?:\.\d+)?s",
+)
+FENCE_RE = re.compile(r"```[^\n]*\n(.*?)```", re.DOTALL)
+
+T7_BAD_FIXTURE = (
+    Path(__file__).resolve().parent
+    / "fixtures"
+    / "adr_t7_synthetic_bad_embedded_spike.md"
+)
+T7_GOOD_FIXTURE = (
+    Path(__file__).resolve().parent
+    / "fixtures"
+    / "adr_t7_synthetic_good_benchmark_reference.md"
+)
+GRANDFATHER_FIXTURE = (
+    Path(__file__).resolve().parent
+    / "fixtures"
+    / "adr_embedded_benchmark_grandfather.json"
+)
+
 
 def normalize_eol(text: str) -> str:
     return text.replace("\r\n", "\n").replace("\r", "\n")
@@ -147,3 +180,108 @@ def pending_commit_message() -> str:
 
 def governance_override_present() -> bool:
     return bool(OVERRIDE_MARKER_RE.search(pending_commit_message()))
+
+
+def _markdown_table_blocks(text: str) -> list[list[str]]:
+    blocks: list[list[str]] = []
+    lines = normalize_eol(text).split("\n")
+    index = 0
+    while index < len(lines):
+        if not lines[index].strip().startswith("|"):
+            index += 1
+            continue
+        block: list[str] = []
+        while index < len(lines) and lines[index].strip().startswith("|"):
+            block.append(lines[index])
+            index += 1
+        if len(block) >= 3:
+            blocks.append(block)
+    return blocks
+
+
+def _is_table_separator_row(line: str) -> bool:
+    return bool(re.match(r"^\|\s*[-: ]+\|", line.replace(" ", "")))
+
+
+def _table_data_rows(block: list[str]) -> list[str]:
+    if not block:
+        return []
+    # Full table: header + separator + data. Staged + chunks may be data rows only.
+    start = 2 if len(block) >= 2 and _is_table_separator_row(block[1]) else 0
+    rows: list[str] = []
+    for line in block[start:]:
+        if _is_table_separator_row(line):
+            continue
+        rows.append(line)
+    return rows
+
+
+def _benchmark_dataset_table_violation(block: list[str]) -> bool:
+    data_rows = _table_data_rows(block)
+    if len(data_rows) < 3:
+        return False
+    measurement_rows = sum(
+        1 for row in data_rows if BENCHMARK_TABLE_CELL_RE.search(row)
+    )
+    return measurement_rows >= 3
+
+
+def _test_runner_codeblock_violation(text: str) -> bool:
+    for match in FENCE_RE.finditer(normalize_eol(text)):
+        body = match.group(1)
+        if TEST_RUNNER_IN_FENCE_RE.search(body):
+            return True
+    return False
+
+
+def embedded_experimental_data_violations(
+    text: str, *, check_tables: bool = True
+) -> list[str]:
+    """Return stable violation codes for incident-shaped embedded benchmark/spike data.
+
+    ``check_tables=False`` skips the 3+ row measurement-table heuristic (legacy Accepted
+    ADRs may cite µs/call tables; non-retroactive posture — table rule targets staged
+    additions and fixtures).
+    """
+    normalized = normalize_eol(text)
+    hits: list[str] = []
+    if OPERATOR_DECISION_LINE_RE.search(normalized):
+        hits.append("operator_decision_line")
+    if check_tables:
+        for block in _markdown_table_blocks(normalized):
+            if _benchmark_dataset_table_violation(block):
+                hits.append("benchmark_dataset_table_3plus_rows")
+                break
+    if _test_runner_codeblock_violation(normalized):
+        hits.append("test_runner_codeblock")
+    return hits
+
+
+def staged_adr_added_chunks() -> list[tuple[str, str]]:
+    """Per staged ADR path, text formed only from added lines in the cached diff (A or M)."""
+    proc = _git(["diff", "--cached", "-U0", "--", ADR_GLOB])
+    if proc.returncode != 0 or not proc.stdout.strip():
+        return []
+    chunks: dict[str, list[str]] = {}
+    current: str | None = None
+    for line in proc.stdout.splitlines():
+        if line.startswith("+++ b/"):
+            current = line.removeprefix("+++ b/").strip()
+            if current.startswith("docs/adr/"):
+                chunks.setdefault(current, [])
+            else:
+                current = None
+            continue
+        if current is None or not line.startswith("+") or line.startswith("+++"):
+            continue
+        if line == r"\ No newline at end of file":
+            continue
+        chunks[current].append(line[1:])
+    return [(path, "\n".join(lines)) for path, lines in chunks.items() if lines]
+
+
+def load_grandfather_allowlist() -> dict[str, dict[str, str]]:
+    if not GRANDFATHER_FIXTURE.is_file():
+        return {}
+    data = json.loads(GRANDFATHER_FIXTURE.read_text(encoding="utf-8"))
+    return {str(k): dict(v) for k, v in data.items()}

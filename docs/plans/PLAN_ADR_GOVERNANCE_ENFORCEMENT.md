@@ -27,12 +27,12 @@ Golden rules (from #1162 — non-negotiable):
 
 | Track | Deliverable |
 | ----- | ----------- |
-| Phase 1 | `tests/test_adr_governance_phase1.py` + `tests/adr_governance_support.py` — T1, T2, T5, T6 |
+| Phase 1 | `tests/test_adr_governance_phase1.py` + `tests/adr_governance_support.py` — T1, T2, T5, T6, **T7** |
 | Fixture | `tests/fixtures/adr_genesis_date_lines.json` — frozen genesis `Date (UTC)` lines (T6 corpus) |
 | Hooks | `.pre-commit-config.yaml` — `adr-governance-phase1` pytest hook |
 | Phase 2 | T3 prose locale density · T4 anti-dangling `ADR-NNNN` refs (CI) — **deferred** |
 | ADR-0074 smoke | Materialize phantom ADR + planted violations — **deferred** (separate slice) |
-| ADR-0045 amend | Codify “every mechanizable rule has a test” — **deferred** (in-place §8) |
+| ADR-0045 amend | Item 9 — no embedded raw benchmark/test data (**#1925**) — **in PR with T7** |
 
 **Out of scope (existing coverage):** `test_adr_inventory_sync`, `test_adr_readme_index_sync`, cryptographic `inv-adr.ps1` inventory.
 
@@ -44,6 +44,7 @@ Golden rules (from #1162 — non-negotiable):
 | **T2** | H1 `^# ADR \d{4} — `; exact metadata labels; no pt-BR `##`/`###` headings | Full corpus scan |
 | **T5** | ADRs never deleted | Staged diff; `R*` rename allowed; bare `D` blocked |
 | **T6** | `Date (UTC)` immutable | Frozen fixture vs working tree; staged diff must not mutate line |
+| **T7** | No embedded raw test/benchmark/spike data in ADR body | Incident-shaped detector on **staged `+` lines** (A/M); full-corpus scan must stay empty; synthetic good/bad fixtures in `tests/fixtures/adr_t7_*` (**#1925**) |
 
 ## Implementation checklist
 
@@ -55,7 +56,8 @@ Golden rules (from #1162 — non-negotiable):
 | 1d | ADR-0080 brought to ADR-0045 shape on branch (corpus GREEN for T2) | ✅ |
 | 1e | `./scripts/check-all.sh --enforced` green | ✅ |
 | 1f | PR `Closes #1162` — **operator merge only** | ⬜ |
-| 2 | T3 + T4 + ADR-0074 smoke + ADR-0045 governance amend | ⬜ |
+| 2 | T3 + T4 + ADR-0074 smoke | ⬜ |
+| 2b | T7 + ADR-0045 item 9 + ADR-0000 pointer (**#1925**) | ⬜ |
 
 ## Operator override
 

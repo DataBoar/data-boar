@@ -14,6 +14,7 @@ Accepted
 - 2026-06-09 — Amended: append-only Status history, immutable Date (UTC), extended status enum (Duplicate of ADR-NNNN), locale en_US, immutability clause — [GitHub #803](https://github.com/FabioLeitao/data-boar/issues/803)
 - 2026-06-09 — Amended: UMADR declaration + Obsolete/Quarantined statuses — [GitHub #803](https://github.com/FabioLeitao/data-boar/issues/803)
 - 2026-06-21 — Amended: `Reserved` status + new ADR materialization defaults to **Proposed** — [GitHub #993](https://github.com/FabioLeitao/data-boar/issues/993)
+- 2026-09-28 — Amended: no embedded raw test/benchmark/spike data in ADR body — [GitHub #1925](https://github.com/DataBoar/data-boar/issues/1925)
 
 ## Context
 
@@ -150,6 +151,20 @@ locale rule in the ADR constitution itself.
    decided require a **new ADR** or an explicit **Amended:** line in Status history plus
    proportionate edits; solo + human-in-the-loop governance may amend in-place when the
    amendment is recorded in Status history (dogfood on this ADR).
+
+9. **No embedded experimental raw data:** An ADR records the **decision and rationale** —
+   never raw test/benchmark/spike evidence pasted into the body. **Forbidden shapes**
+   (mechanically enforced — `tests/test_adr_governance_phase1.py` **T7**, issue **#1925**):
+   - A line `Operator decision (YYYY-MM-DD)` in the body (fabricated ratification pattern).
+   - A Markdown table with **three or more** data rows whose cells look like **measurement
+     datasets** (timings, `×` slowdown factors, `%` wall-time splits) — not governance
+     matrices (rules, statuses, taxonomies).
+   - A fenced code block containing test-runner output (`PASSED` / `FAILED` / `passed in N`).
+   **Allowed:** prose summary with a **link or pinned path** to versioned evidence (for example
+   `tests/benchmarks/*.json`, issue comment, spike doc) without reproducing the raw table or
+   log. The **measurement-table** heuristic runs on **staged `+` lines** (create or amend);
+   full-corpus CI scan uses the operator-decision and test-runner shapes only (non-retroactive
+   posture for legacy Accepted ADRs — same as item 5).
 
 ## Rationale
 
