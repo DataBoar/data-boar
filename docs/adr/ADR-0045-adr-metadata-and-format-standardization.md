@@ -162,8 +162,9 @@ locale rule in the ADR constitution itself.
    - A fenced code block containing test-runner output (`PASSED` / `FAILED` / `passed in N`).
    **Allowed:** prose summary with a **link or pinned path** to versioned evidence (for example
    `tests/benchmarks/*.json`, issue comment, spike doc) without reproducing the raw table or
-   log. Applies to **new staged lines** on create or amend; does not force mass rewrite of
-   already-**Accepted** ADRs (same non-retroactive posture as item 5).
+   log. The **measurement-table** heuristic runs on **staged `+` lines** (create or amend);
+   full-corpus CI scan uses the operator-decision and test-runner shapes only (non-retroactive
+   posture for legacy Accepted ADRs — same as item 5).
 
 ## Rationale
 
