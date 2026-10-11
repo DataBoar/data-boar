@@ -1122,6 +1122,16 @@ def test_lab_allow_data_boar_inbound_sh_syntax():
     assert proc.returncode == 0, f"bash -n failed: {proc.stderr or proc.stdout}"
 
 
+def test_check_all_twins_run_shellcheck_severity_error():
+    """#1926: both check-all twins invoke shellcheck at error severity."""
+    root = _project_root()
+    sh = (root / "scripts" / "check-all.sh").read_text(encoding="utf-8")
+    ps1 = (root / "scripts" / "check-all.ps1").read_text(encoding="utf-8")
+    for text in (sh, ps1):
+        assert "shellcheck --severity=error" in text
+        assert "ABORTED by shellcheck" in text
+
+
 def test_paired_dev_gate_shell_scripts_bash_syntax():
     """Paired Linux/macOS gate scripts (check-all, lint-only, quick-test, pre-commit-and-tests)."""
     if sys.platform == "win32":

@@ -251,6 +251,19 @@ jobs:
 
       - name: Install dependencies
         run: uv sync --extra shares --group dev
+
+      # #1926: error-level only. Same file set as scripts/check-all.sh.
+      - name: Shellcheck (severity=error)
+        run: |
+          if ! command -v shellcheck >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y shellcheck
+          fi
+          mapfile -d '' sh_files < <(git ls-files -z '*.sh')
+          if ((${#sh_files[@]})); then
+            shellcheck --severity=error -- "${sh_files[@]}"
+          fi
+
       - name: Pre-commit (all files)
         run: uv run pre-commit run --all-files
 

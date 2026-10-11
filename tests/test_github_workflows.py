@@ -223,6 +223,15 @@ def test_slack_post_workflows_guard_webhook_secret() -> None:
             )
 
 
+def test_ci_lint_job_runs_shellcheck_severity_error() -> None:
+    """#1926: shellcheck stays inside the existing lint job, error severity."""
+    data = _load_workflow("ci.yml")
+    lint = (data.get("jobs") or {}).get("lint") or {}
+    blob = "\n".join(_ci_step_run_texts(lint))
+    assert "shellcheck --severity=error" in blob
+    assert "git ls-files -z '*.sh'" in blob
+
+
 def test_semgrep_workflow_present_and_valid() -> None:
     data = _load_workflow("semgrep.yml")
     assert data.get("name") == "Semgrep"
