@@ -10,8 +10,8 @@ Contract under test:
 2. Enforced mode with a usable (VALID/GRACE) license: a positive
    ``dbmax_workers`` claim wins.
 3. Enforced mode without the claim: tier fallback defaults apply —
-   Community 2 / Pro 4 / Enterprise unlimited (``None``); Pro+ is
-   claim-driven (``dbmax_workers: 8`` at issuance, #853).
+   Community 2 / Std 2 / Pro 4 / Pro+ 8 / Enterprise unlimited (``None``) /
+   Partner unlimited unless a claim sets the cap (#2047).
 4. Enforced fail-closed states (no license, invalid) resolve the tier to
    Community → inherit the Community cap. Dev env vars do not lift it (#719).
 5. Engine integration: ``start_audit`` clamps ``_max_workers`` to the cap
@@ -30,7 +30,12 @@ import pytest
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from core.licensing.guard import LicenseGuard, reset_license_guard_for_tests
+from core.licensing.guard import (
+    LicenseGuard,
+    _TIER_DEFAULT_WORKER_CAP,
+    reset_license_guard_for_tests,
+)
+from core.licensing.tier_features import Tier
 from tests.license_verify_pin import pin_embedded_ed25519_pem
 
 AUDIT_LOGGER = "data_boar.licensing.audit"
@@ -159,12 +164,45 @@ def test_enforced_pro_default_cap(ed25519_priv, tmp_path):
     assert g.worker_cap() == 4
 
 
-def test_enforced_pro_plus_is_claim_driven(ed25519_priv, tmp_path):
-    """#853: Pro+ has no Tier enum — it ships as dbmax_workers=8 at issuance."""
+@pytest.mark.parametrize(
+    ("tier", "cap"),
+    [
+        (Tier.OPEN, None),
+        (Tier.COMMUNITY, 2),
+        (Tier.STD, 2),
+        (Tier.PRO, 4),
+        (Tier.PRO_PLUS, 8),
+        (Tier.ENTERPRISE, None),
+        (Tier.PARTNER, None),
+    ],
+)
+def test_tier_default_worker_cap_table(tier: Tier, cap: int | None):
+    """#2047: Std matches Community (2) unless a signed claim raises it."""
+    assert set(_TIER_DEFAULT_WORKER_CAP) == set(Tier)
+    assert _TIER_DEFAULT_WORKER_CAP[tier] == cap
+
+
+@pytest.mark.parametrize(
+    ("dbtier", "cap"),
+    [
+        ("community", 2),
+        ("std", 2),
+        ("pro", 4),
+        ("pro_plus", 8),
+        ("enterprise", None),
+        ("partner", None),
+    ],
+)
+def test_enforced_tier_default_worker_cap(ed25519_priv, tmp_path, dbtier, cap):
+    g = _enforced_guard(ed25519_priv, tmp_path, extra={"dbtier": dbtier})
+    assert g.worker_cap() == cap
+
+
+def test_enforced_partner_claim_caps_otherwise_unlimited(ed25519_priv, tmp_path):
     g = _enforced_guard(
-        ed25519_priv, tmp_path, extra={"dbtier": "pro", "dbmax_workers": 8}
+        ed25519_priv, tmp_path, extra={"dbtier": "partner", "dbmax_workers": 5}
     )
-    assert g.worker_cap() == 8
+    assert g.worker_cap() == 5
 
 
 def test_enforced_enterprise_unlimited(ed25519_priv, tmp_path):
