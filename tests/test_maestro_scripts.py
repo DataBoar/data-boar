@@ -55,6 +55,15 @@ def _require_maestro() -> Path:
     return root
 
 
+def _ps1_function(text: str, name: str) -> str:
+    """Return one PowerShell function body, from its declaration to the next."""
+    marker = f"function {name}"
+    start = text.find(marker)
+    assert start != -1, f"{name} missing"
+    nxt = text.find("\nfunction ", start + len(marker))
+    return text[start:] if nxt == -1 else text[start:nxt]
+
+
 def _maestro_ps1_paths(maestro: Path) -> list[Path]:
     maestro = _require_maestro()
     paths: list[Path] = []
@@ -304,10 +313,19 @@ def test_maestro_deep_gate_detach_tmux() -> None:
 
 
 def test_handle_web_health_contract() -> None:
-    """Anti-regression: web persona targets API port 8088 and GET /health (not legacy 8080 /api/status)."""
+    """Web health stays on 8088 /health, and recovery bind follows maestro#93.
+
+    Default recovery (absent web_recovery_bind) binds 127.0.0.1 and does not pass
+    --allow-insecure-http. Opt-in web_recovery_bind=lab binds the inventory IP only
+    when that IP is RFC1918, and only then passes --allow-insecure-http. Teardown
+    runs in finally and the remote script verifies the PID before signalling.
+    """
     _project_root()
     maestro = _require_maestro()
     text = (maestro / "handlers" / "Handle-web.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    common = (maestro / "core" / "Lab-MaestroCommon.ps1").read_text(
         encoding="utf-8", errors="replace"
     )
     assert '-Name "web_port" -DefaultValue 8088' in text
@@ -317,14 +335,54 @@ def test_handle_web_health_contract() -> None:
     assert "web_check_retries" in text
     assert "Get-NodePropOrDefault" in text
     assert "PSObject.Properties" in text
-    assert "--allow-insecure-http" in text
-    assert "--host 0.0.0.0" in text
     assert "CFG_ARG" in text
     assert "--config deploy/config.example.yaml" in text
     assert "~/.labop-web-port" in text
     assert "curl -fsS --max-time 5" in text
     assert "__NODE_PATH__" in text
     assert '.Replace("__NODE_PATH__"' in text
+    # Bind and the insecure flag come from the spec. A hardcoded LAN bind, or a
+    # START_CMD that always passes the flag, fails these checks.
+    assert "Get-MaestroWebRecoveryStartSpec -Node $Node" in text
+    assert "if ($recoverySpec.AllowInsecureHttp)" in text
+    assert text.count("' --allow-insecure-http'") == 1
+    assert "--host 0.0.0.0" not in text
+    assert "--host __WEB_BIND_HOST____WEB_INSECURE_SUFFIX__" in text
+    assert '.Replace("__WEB_BIND_HOST__", $bindHost)' in text
+    assert '.Replace("__WEB_INSECURE_SUFFIX__", $insecureSuffix)' in text
+    for line in text.splitlines():
+        if "START_CMD=" in line:
+            assert "--allow-insecure-http" not in line
+    assert re.search(
+        r"\} finally \{\s*"
+        r"Invoke-LabWebRecoveryProcessTeardown -Node \$Node -ProcessId \$recoveryPid\s*"
+        r"\}",
+        text,
+    ), "recovery teardown must run in finally with the captured PID"
+    assert "WEB_RECOVERY_PID=" in text
+    assert "WEB_RECOVERY_PID_MISSING" in text
+
+    spec = _ps1_function(common, "Get-MaestroWebRecoveryStartSpec")
+    lab_at = spec.find("if ($mode -eq 'lab')")
+    assert lab_at != -1
+    returns = spec[lab_at:].split("return [pscustomobject]@")
+    assert len(returns) == 3, "lab return and default return must both exist"
+    lab_guard, lab_ret, default_ret = returns
+    assert "Test-MaestroIPv4InsideRfc1918" in lab_guard
+    assert "not RFC1918" in lab_guard
+    assert "BindHost           = $ip" in lab_ret
+    assert "AllowInsecureHttp  = $true" in lab_ret
+    assert "127.0.0.1" not in lab_ret
+    assert "BindHost           = '127.0.0.1'" in default_ret
+    assert "AllowInsecureHttp  = $false" in default_ret
+    assert "AllowInsecureHttp  = $true" not in default_ret
+    assert "Test-MaestroSafeWebRecoveryBind" in spec
+
+    teardown = _ps1_function(common, "Get-LabWebRecoveryTeardownScript")
+    assert "/proc/$pid" in teardown
+    assert "cmdline missing main.py" in teardown
+    assert "cmdline missing --web" in teardown
+    assert 'kill -- "-$pid"' in teardown
 
 
 def test_maestro_dispatch_orders_container_before_web() -> None:
@@ -900,37 +958,43 @@ def test_sync_container_artefact_scp_fallback_is_actionable() -> None:
 def test_handle_web_reconciles_exit_code_after_recovery() -> None:
     """#889: Handle-web must reconcile the exit code with the real process health.
 
-    Scenario "HTTP 200 but realFail": after recovery, an external 200 must NOT be
-    reported as success when the recovered process never answered on the host's own
-    loopback. The handler must exit non-zero (exit 7) so Maestro counts a realFail,
-    and the final post-fallback failure path must also exit non-zero (no silent
-    fall-through to exit 0).
+    In-node curl failure sets $webExit = 7. Lab mode is an elseif of that check, so
+    an external HTTP 200 cannot override a failed in-node curl. In lab mode, an
+    external probe that is not 200 also sets $webExit = 7. The handler exits with
+    that code after finally, so Maestro counts a realFail.
     """
     _project_root()
     maestro = _require_maestro()
     text = (maestro / "handlers" / "Handle-web.ps1").read_text(
         encoding="utf-8", errors="replace"
     )
-    # Ground-truth signal is captured (remote loopback curl result).
     assert "$remoteCurlOk" in text, (
-        "Handle-web must capture the remote loopback curl result to reconcile against "
-        "the external HTTP probe (#889)."
+        "Handle-web must capture the in-node curl result (#889)."
     )
-    # 200-but-realFail reconciliation: inside the success branch, a failed remote curl
-    # forces exit 7 instead of returning success.
-    assert re.search(r"if \(-not \$remoteCurlOk\)\s*\{[^}]*exit 7", text, re.DOTALL), (
-        "Handle-web must exit 7 when HTTP 200 contradicts the remote loopback check (#889)."
+    assert re.search(
+        r"if \(-not \$remoteCurlOk\)\s*\{[\s\S]*?\$webExit = 7[\s\S]*?\} "
+        r"elseif \(\$recoverySpec\.Mode -eq 'lab'\)",
+        text,
+    ), (
+        "In-node curl failure must set exit 7 before lab mode can treat an "
+        "external HTTP 200 as success (#889)."
     )
-    # Real failures (fallback start failed; final health check failed) must exit 7,
-    # not fall through to exit 0.
-    assert text.count("exit 7") >= 3, (
-        "Handle-web must propagate realFail via exit 7 on start failure, the 200-but-"
-        "realFail reconciliation, and the final post-fallback failure (#889)."
+    assert re.search(
+        r"if \(-not \$externalOk\)\s*\{[\s\S]*?\$webExit = 7",
+        text,
+    ), "Lab mode must set exit 7 when the external probe is not HTTP 200 (#889)."
+    assert text.count("$webExit = 7") >= 3, (
+        "Handle-web must set exit 7 on start failure, in-node curl failure, "
+        "and the lab external failure (#889)."
     )
-    # The final failure line must be an error + exit, not a swallowed warning.
-    assert re.search(r"Health Check Web falhou[\s\S]{0,200}exit 7", text), (
-        "Handle-web final failure after fallback must surface a non-zero exit (#889)."
-    )
+    assert re.search(
+        r"Health Check Web falhou[\s\S]{0,240}\$webExit = 7",
+        text,
+    ), "Lab post-fallback failure must set a non-zero exit (#889)."
+    assert re.search(
+        r"if \(\$webExit -ne 0\) \{\s*exit \$webExit\s*\}",
+        text,
+    ), "A non-zero $webExit must leave the process (#889)."
 
 
 def _run_maestro_build_decision(pwsh: str, personas: list[str], tmp: Path) -> bool:
