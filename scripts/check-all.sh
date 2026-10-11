@@ -99,6 +99,13 @@ if ((${#sh_files[@]})); then
 fi
 printf '\033[32m%s\033[0m\n' "Shellcheck... Passed" >&2
 
+# #2044: tracked paths that differ only by case break Windows/macOS checkout.
+uv run python "$REPO_ROOT/scripts/check_case_collisions.py" || {
+  rc=$?
+  echo "check-all.sh: ABORTED by check_case_collisions (#2044)." >&2
+  exit "$rc"
+}
+
 # #1003: non-interactive SSH/login-env parity — cargo/uv/maturin often live off default PATH.
 _ensure_login_tool_path() {
   command -v cargo >/dev/null 2>&1 && return 0

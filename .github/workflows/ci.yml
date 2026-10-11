@@ -264,6 +264,9 @@ jobs:
             shellcheck --severity=error -- "${sh_files[@]}"
           fi
 
+      - name: Case-collision guard
+        run: uv run python scripts/check_case_collisions.py
+
       - name: Pre-commit (all files)
         run: uv run pre-commit run --all-files
 

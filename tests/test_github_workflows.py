@@ -230,6 +230,7 @@ def test_ci_lint_job_runs_shellcheck_severity_error() -> None:
     blob = "\n".join(_ci_step_run_texts(lint))
     assert "shellcheck --severity=error" in blob
     assert "git ls-files -z '*.sh'" in blob
+    assert "scripts/check_case_collisions.py" in blob
 
 
 def test_semgrep_workflow_present_and_valid() -> None:

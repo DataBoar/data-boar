@@ -30,12 +30,12 @@ Use these tags in headings to keep priorities explicit and machine-countable:
 
 Do not edit this block manually; refresh with `python scripts/plans-stats.py --write`.
 
-- **Status rows counted:** 268  (Done: 160 | Incomplete: 108)
+- **Status rows counted:** 269  (Done: 161 | Incomplete: 108)
 - **Incomplete breakdown:** Pending `⬜`=90, Tracked `🔄` / `Tracked (partially done)`=18, Under consideration=0, Backlog-marked rows=0
 
 | Horizon | Total rows | Done | Incomplete |
 | ------- | ----------: | ----: | ----------: |
-| `H0` | 64 | 40 | 24 |
+| `H0` | 65 | 41 | 24 |
 | `H1` | 54 | 33 | 21 |
 | `H2` | 0 | 0 | 0 |
 | `H3` | 134 | 73 | 61 |
@@ -485,6 +485,14 @@ Doc-first wave 1 shipped; **v1.8.0 wave 2 ([#1056](https://github.com/DataBoar/d
 | 1.1–1.4 | Refresh open-issue snapshot; batch thin PRs; close with evidence | 🔄 Tracked |
 | 2.1–2.2 | Promote multi-step threads into `PLAN_*.md` + dependency rows | 🔄 Tracked |
 | 3.1 | `plans_hub_sync.py --write` and `plans-stats.py --write` after hub/dashboard inputs change | ⬜ Pending |
+
+### Case-collision guard – [PLAN_CASE_COLLISION_GUARD.md](PLAN_CASE_COLLISION_GUARD.md) ([pt-BR](PLAN_CASE_COLLISION_GUARD.pt_BR.md))
+
+**`[H0][U2]`** · GitHub [#2044](https://github.com/DataBoar/data-boar/issues/2044).
+
+| Step | To-do | Status |
+| ---- | ----- | ------ |
+| 1 | Lowercased `git ls-files` guard in check-all (sh/ps1) and the CI lint job | ✅ Done |
 
 ## [H1] Commercial / Enterprise subscription docs
 
