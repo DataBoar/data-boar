@@ -92,8 +92,13 @@ def test_pylock_toml_is_strict_toml() -> None:
 
 def test_pylock_toml_matches_uv_export() -> None:
     committed = (REPO_ROOT / "pylock.toml").read_text(encoding="utf-8")
-    with tempfile.TemporaryDirectory() as tmp:
-        out = Path(tmp) / "pylock.toml"
+    # uv>=0.12 records the project directory relative to the output file.
+    # A temp dir outside the repo makes that path machine-specific
+    # (`../…/data-boar`) and diverges from the committed `path = "."`.
+    # Export beside pylock.toml (allowed name `pylock.<name>.toml`) so the
+    # comparison is the lock body on both uv 0.11 (CI) and uv 0.12+.
+    out = REPO_ROOT / "pylock.synccheck.toml"
+    try:
         subprocess.run(
             [*PYLOCK_EXPORT_ARGS, "--output-file", str(out)],
             cwd=REPO_ROOT,
@@ -102,6 +107,8 @@ def test_pylock_toml_matches_uv_export() -> None:
             text=True,
         )
         fresh = out.read_text(encoding="utf-8")
+    finally:
+        out.unlink(missing_ok=True)
 
     def _body(text: str) -> list[str]:
         lines = text.replace("\r\n", "\n").splitlines()
