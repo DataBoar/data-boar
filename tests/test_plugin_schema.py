@@ -434,6 +434,93 @@ def test_volatility_class_validation_accepts_and_rejects(tmp_path):
     assert any("volatility_class" in issue for issue in bad_result.issues)
 
 
+def test_plugin_path_entries_collapse_relative_and_absolute(tmp_path, monkeypatch):
+    """#1868: same file, same default section, two spellings → one entry."""
+    from config.plugin_validator import _plugin_path_entries_from_config
+
+    monkeypatch.chdir(tmp_path)
+    written = _write_yaml(
+        tmp_path,
+        "patterns.yaml",
+        """
+        - name: "LIVE_DB"
+          pattern: "\\\\blive\\\\b"
+          volatility_class: HIGH
+        """,
+    )
+    absolute = str(Path(written).resolve())
+    entries = _plugin_path_entries_from_config(
+        {
+            "regex_overrides_file": "patterns.yaml",
+            "regex_overrides_files": [absolute],
+        }
+    )
+    assert entries == [("patterns.yaml", "regex_patterns")]
+
+
+def test_plugin_path_entries_keep_distinct_default_sections(tmp_path, monkeypatch):
+    """The same file under two default sections is two loads, not a duplicate."""
+    from config.plugin_validator import _plugin_path_entries_from_config
+
+    monkeypatch.chdir(tmp_path)
+    written = _write_yaml(tmp_path, "patterns.yaml", "- name: X\n  pattern: a\n")
+    absolute = str(Path(written).resolve())
+    entries = _plugin_path_entries_from_config(
+        {
+            "patterns_plugin_file": "patterns.yaml",
+            "regex_overrides_files": [absolute],
+        }
+    )
+    assert entries == [
+        ("patterns.yaml", None),
+        (absolute, "regex_patterns"),
+    ]
+
+
+def test_plugin_path_entries_nonexistent_path_does_not_raise(tmp_path, monkeypatch):
+    from config.plugin_validator import _plugin_path_entries_from_config
+
+    monkeypatch.chdir(tmp_path)
+    missing = str((tmp_path / "missing-plugin.yaml").resolve())
+    entries = _plugin_path_entries_from_config(
+        {
+            "regex_overrides_file": "missing-plugin.yaml",
+            "regex_overrides_files": [missing],
+        }
+    )
+    assert entries == [("missing-plugin.yaml", "regex_patterns")]
+
+
+def test_collect_plugin_volatility_metadata_dedups_relative_and_absolute(
+    tmp_path, monkeypatch
+):
+    """#1868: one volatility_triage row when the same file is spelled twice."""
+    from config.plugin_validator import collect_plugin_volatility_metadata
+
+    monkeypatch.chdir(tmp_path)
+    written = _write_yaml(
+        tmp_path,
+        "patterns.yaml",
+        """
+        - name: "LIVE_DB"
+          pattern: "\\\\blive\\\\b"
+          volatility_class: HIGH
+        """,
+    )
+    absolute = str(Path(written).resolve())
+    rows = collect_plugin_volatility_metadata(
+        {
+            "regex_overrides_file": "patterns.yaml",
+            "regex_overrides_files": [absolute],
+        }
+    )
+    assert rows is not None
+    assert len(rows) == 1
+    assert rows[0]["pattern_id"] == "LIVE_DB"
+    assert rows[0]["volatility_class"] == "HIGH"
+    assert rows[0]["section"] == "regex_patterns"
+
+
 def test_collect_plugin_volatility_metadata_unified_and_legacy(tmp_path):
     from config.plugin_validator import collect_plugin_volatility_metadata
 

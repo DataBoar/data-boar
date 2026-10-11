@@ -457,14 +457,27 @@ def _plugin_path_entries_from_config(
         _add(path, "ml_patterns")
     _add(config.get("dl_patterns_file"), "dl_patterns")
 
-    seen: set[str] = set()
+    # Same file under two spellings (relative vs absolute) is one entry, but the
+    # same file under two default sections stays: a list-only legacy load and a
+    # unified file read different shapes. First occurrence wins; the returned
+    # path is the original string, not the resolved key (#1868).
+    seen: set[tuple[str, str | None]] = set()
     ordered: list[tuple[str, str | None]] = []
     for path, section in entries:
-        if path in seen:
+        key = (_plugin_path_dedup_key(path), section)
+        if key in seen:
             continue
-        seen.add(path)
+        seen.add(key)
         ordered.append((path, section))
     return ordered
+
+
+def _plugin_path_dedup_key(path: str) -> str:
+    """Resolved path for dedup. A missing path still yields a stable string."""
+    try:
+        return str(Path(path).resolve(strict=False))
+    except (OSError, ValueError):
+        return path
 
 
 def _as_path_list(raw: Any) -> list[str]:
