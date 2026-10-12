@@ -82,6 +82,30 @@ uv run python "$REPO_ROOT/scripts/workflow_run_scalar_guard.py" || {
   exit "$rc"
 }
 
+# #1926: error-level shellcheck on tracked scripts. Warning/info and the
+# selective bats slice stay out of this gate.
+echo "Running shellcheck (severity=error) on tracked shell scripts..." >&2
+if ! command -v shellcheck >/dev/null 2>&1; then
+  echo "check-all.sh: ABORTED: shellcheck not on PATH (#1926)." >&2
+  exit 1
+fi
+mapfile -d '' sh_files < <(git ls-files -z '*.sh')
+if ((${#sh_files[@]})); then
+  shellcheck --severity=error -- "${sh_files[@]}" || {
+    rc=$?
+    echo "check-all.sh: ABORTED by shellcheck (#1926)." >&2
+    exit "$rc"
+  }
+fi
+printf '\033[32m%s\033[0m\n' "Shellcheck... Passed" >&2
+
+# #2044: tracked paths that differ only by case break Windows/macOS checkout.
+uv run python "$REPO_ROOT/scripts/check_case_collisions.py" || {
+  rc=$?
+  echo "check-all.sh: ABORTED by check_case_collisions (#2044)." >&2
+  exit "$rc"
+}
+
 # #1003: non-interactive SSH/login-env parity — cargo/uv/maturin often live off default PATH.
 _ensure_login_tool_path() {
   command -v cargo >/dev/null 2>&1 && return 0

@@ -170,16 +170,16 @@ def _parse_dbmfp_claim(raw: Any) -> list[str] | None:
     return None
 
 
-# #551 + #853: fallback worker caps when a usable license carries no
-# dbmax_workers claim. Ratified ladder (2026-06-11): Community 2 · Pro 4 ·
-# Pro+ 8 · Enterprise unlimited. Pro+ is not a Tier enum value — it ships as
-# a dbmax_workers=8 claim at issuance (claim wins over tier default). Tier
-# resolution in enforced mode already fails closed to COMMUNITY, so an
-# unlicensed/invalid state inherits the Community cap.
+# #551 + #853 + #2047: fallback worker caps when a usable license carries no
+# dbmax_workers claim. A positive dbmax_workers claim still wins over the
+# tier default at issuance (Pro+ tokens may still carry dbmax_workers=8).
+# Pro+ is Tier.PRO_PLUS. Std uses the same floor as Community unless that
+# claim raises it. Tier resolution in enforced mode already fails closed to
+# COMMUNITY, so an unlicensed or invalid state inherits the Community cap.
 _TIER_DEFAULT_WORKER_CAP: dict[Tier, int | None] = {
     Tier.OPEN: None,
     Tier.COMMUNITY: 2,
-    Tier.STD: 3,
+    Tier.STD: 2,
     Tier.PRO: 4,
     Tier.PRO_PLUS: 8,
     Tier.ENTERPRISE: None,  # unlimited — Enterprise perk
@@ -668,9 +668,10 @@ class LicenseGuard:
 
         Only ``enforced`` mode caps — open mode never restricts ``scan.max_workers``.
         A positive ``dbmax_workers`` claim on a usable (VALID/GRACE) license wins;
-        otherwise the resolved tier default applies (Community 2 / Pro 4 /
-        Enterprise unlimited; Pro+ = claim-driven 8). Enforced fail-closed
-        states resolve to the Community tier, so they inherit the Community cap.
+        otherwise the resolved tier default applies (Community 2 / Std 2 /
+        Pro 4 / Pro+ 8 / Enterprise unlimited / Partner unlimited). Enforced
+        fail-closed states resolve to the Community tier, so they inherit
+        the Community cap.
         """
         c = self.context
         if c.mode != "enforced":

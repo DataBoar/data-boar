@@ -13,6 +13,10 @@ set -eu
 VC_PATH="${VC_PATH:-${HOME}/.kb-cache/private_repo.vc}"
 KEYFILE="${KEYFILE:-${HOME}/.kb-private/keyfile.bin}"
 MNT="${MNT:-/mnt/private}"
+# Colleague-K is a redacted placeholder token (hyphen). It is not a valid bash
+# identifier; the operator override string stays as documented. Excluded from
+# the error-level shellcheck gate instead of rewriting the mount helper (#1926).
+# shellcheck disable=SC2276
 Colleague-K="${Colleague-K:-485}"
 
 if ! command -v veracrypt >/dev/null 2>&1; then

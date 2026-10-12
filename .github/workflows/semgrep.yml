@@ -17,7 +17,7 @@ jobs:
     name: Semgrep (OSS, Python)
     runs-on: ubuntu-latest
     container:
-      image: semgrep/semgrep:1.117.0@sha256:a256468ff217498bfde2f44bd74dd2ffd0460bd08fabbbec009dbdeb4870f4dc
+      image: semgrep/semgrep:1.178.0@sha256:32e459968daabe7ab86968184a29109b9564aa00392401156f9788452b42786b
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

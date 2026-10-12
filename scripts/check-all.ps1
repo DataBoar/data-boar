@@ -58,6 +58,33 @@ if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
 
+# #1926: error-level shellcheck on tracked scripts (parity with check-all.sh).
+Write-Host "Running shellcheck (severity=error) on tracked shell scripts..." -ForegroundColor Yellow
+if (-not (Get-Command shellcheck -ErrorAction SilentlyContinue)) {
+    Write-Host "check-all: ABORTED: shellcheck not on PATH (#1926)." -ForegroundColor Red
+    exit 1
+}
+$shRaw = git -c core.quotepath=false ls-files -z "*.sh"
+$shFiles = @()
+if ($shRaw) {
+    $shFiles = @($shRaw -split "`0" | Where-Object { $_ })
+}
+if ($shFiles.Count -gt 0) {
+    & shellcheck --severity=error -- @shFiles
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "check-all: ABORTED by shellcheck (#1926)." -ForegroundColor Red
+        exit $LASTEXITCODE
+    }
+}
+Write-Host "Shellcheck... Passed" -ForegroundColor Green
+
+Write-Host "Checking tracked path case collisions (#2044)..." -ForegroundColor Yellow
+uv run python "$repoRoot\scripts\check_case_collisions.py"
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "check-all: ABORTED by check_case_collisions (#2044)." -ForegroundColor Red
+    exit $LASTEXITCODE
+}
+
 # #1003: login-env parity (cargo/uv/maturin off default PATH in non-interactive shells).
 function Ensure-LoginToolPath {
     if (Get-Command cargo -ErrorAction SilentlyContinue) { return $true }
