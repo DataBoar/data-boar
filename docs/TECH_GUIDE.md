@@ -107,6 +107,16 @@ uv sync
 pip install -e .
 ```
 
+### Bash tab completion (optional)
+
+After `uv sync`, you can enable tab completion for the eight published console scripts (`data-boar`, `data-boar-report`, and the format shortcuts). Source the tracked script from your clone (adjust the path):
+
+```bash
+source /path/to/data-boar/scripts/bash-completion/data-boar.bash
+```
+
+Inventory and drift checks live in `cli/bash_completion_inventory.py` and `tests/test_bash_completion_inventory.py` (#1952; complements CLI↔docs anti-drift in #1448). This does not replace `docs/data_boar.1` / `docs/data_boar.5` or the `uv sync` install path above.
+
 ### `[noavx]` / x86-64-v1 (pip / pipx)
 
 **`[noavx]` is not a PyPI extra.** On hosts without SSE4.2, POPCNT, or AVX, PyPI numpy **SIGILL**s. Restore **working ML** with the verified wheelhouse ([#929](https://github.com/DataBoar/data-boar/issues/929)): tag `wheelhouse-x86-64-v1-2026-07-29`, two-step `gh release download` then `pip install --no-index --find-links` (or `pipx runpip`). Full recipe: [TROUBLESHOOTING.md](TROUBLESHOOTING.md) *x86-64-v1 / wheelhouse install*. Pre-flight skips the crash; it does **not** replace that install.
