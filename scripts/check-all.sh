@@ -99,6 +99,19 @@ if ((${#sh_files[@]})); then
 fi
 printf '\033[32m%s\033[0m\n' "Shellcheck... Passed" >&2
 
+# #1926: optional bats slice (hermetic tests under tests/bats). Not in CI.
+echo "Running optional bats slice (#1926)..." >&2
+if ! command -v bats >/dev/null 2>&1; then
+  echo "check-all.sh: WARNING: bats not on PATH; skipping tests/bats (#1926)." >&2
+else
+  if ! bats "$REPO_ROOT/tests/bats"; then
+    rc=$?
+    echo "check-all.sh: ABORTED by bats (#1926)." >&2
+    exit "$rc"
+  fi
+  printf '\033[32m%s\033[0m\n' "Bats... Passed" >&2
+fi
+
 # #2044: tracked paths that differ only by case break Windows/macOS checkout.
 uv run python "$REPO_ROOT/scripts/check_case_collisions.py" || {
   rc=$?

@@ -78,6 +78,20 @@ if ($shFiles.Count -gt 0) {
 }
 Write-Host "Shellcheck... Passed" -ForegroundColor Green
 
+# #1926: optional bats slice (hermetic tests under tests/bats). Not in CI.
+Write-Host "Running optional bats slice (#1926)..." -ForegroundColor Yellow
+if (-not (Get-Command bats -ErrorAction SilentlyContinue)) {
+    Write-Warning "check-all: bats not on PATH; skipping tests/bats (#1926)."
+} else {
+    $batsDir = Join-Path $repoRoot "tests" "bats"
+    & bats $batsDir
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "check-all: ABORTED by bats (#1926)." -ForegroundColor Red
+        exit $LASTEXITCODE
+    }
+    Write-Host "Bats... Passed" -ForegroundColor Green
+}
+
 Write-Host "Checking tracked path case collisions (#2044)..." -ForegroundColor Yellow
 uv run python "$repoRoot\scripts\check_case_collisions.py"
 if ($LASTEXITCODE -ne 0) {
