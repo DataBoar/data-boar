@@ -28,6 +28,7 @@ from core.licensing.integrity import (
     verify_manifest_optional,
 )
 from core.licensing import trust_anchor
+from core.licensing.paths import resolve_license_path
 from core.licensing.verify import (
     CLAIM_MLDSA_SIG,
     decode_license_jwt,
@@ -356,11 +357,7 @@ class LicenseGuard:
                 watermark="UNTRUSTED_KEY",
             )
             return
-        lic_path = (
-            os.environ.get("DATA_BOAR_LICENSE_PATH")
-            or self._lc.get("license_path")
-            or ""
-        ).strip()
+        lic_path = resolve_license_path(self._lc.get("license_path"))
         rev_path = (
             os.environ.get("DATA_BOAR_LICENSE_REVOCATION_PATH")
             or self._lc.get("revocation_list_path")
