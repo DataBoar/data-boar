@@ -8,7 +8,11 @@ import yaml
 from fastapi.testclient import TestClient
 
 from core.log_self_scan import scan_text_for_pii
-from utils.logger import configure_audit_log_directory, log_audit_trail_finding
+from utils.logger import (
+    configure_audit_log_directory,
+    get_logger,
+    log_audit_trail_finding,
+)
 
 
 def test_scan_text_for_pii_empty_returns_empty_dict() -> None:
@@ -133,5 +137,44 @@ def test_logs_export_blocks_contaminated_audit_log_without_cleartext_body(
         assert secret_email not in raw
         joined = " ".join(r.message for r in caplog.records)
         assert "AuditLogDownload" not in joined
+    finally:
+        _teardown(routes, previous)
+
+
+def test_blocked_export_writes_audit_trail_beside_the_exported_file(
+    tmp_path: Path,
+) -> None:
+    """#877: a block retargets the audit logger to the exported file's parent.
+
+    A logger already pointed at another directory must not keep the
+    AuditTrailFinding there. The finding is counts only.
+    """
+    stale = tmp_path / "stale-audit"
+    stale.mkdir()
+    configure_audit_log_directory(stale)
+    get_logger().info("primed elsewhere")
+    assert any(stale.glob("audit_*.log"))
+
+    secret_cpf = "529.982.247-25"
+    contaminated = f"session=abc\nDEBUG leak {secret_cpf}\n"
+    routes, client, previous = _setup_logs_client(tmp_path, contaminated)
+    logs_dir = tmp_path / "logs"
+    try:
+        resp = client.get("/logs")
+        assert resp.status_code == 422
+        trails = [
+            path
+            for path in logs_dir.glob("audit_*.log")
+            if path.name != "audit_20260911.log"
+        ]
+        assert len(trails) == 1
+        written = trails[0].read_text(encoding="utf-8")
+        assert "AuditTrailFinding" in written
+        assert "LGPD_CPF:" in written
+        assert secret_cpf not in written
+        stale_text = "\n".join(
+            path.read_text(encoding="utf-8") for path in stale.glob("audit_*.log")
+        )
+        assert "AuditTrailFinding" not in stale_text
     finally:
         _teardown(routes, previous)
