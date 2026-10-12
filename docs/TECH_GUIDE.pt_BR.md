@@ -107,6 +107,16 @@ uv sync
 pip install -e .
 ```
 
+### Tab completion no Bash (opcional)
+
+Depois do `uv sync`, você pode ativar o completion dos oito scripts publicados (`data-boar`, `data-boar-report` e os atalhos de formato). Carregue o script versionado do clone (ajuste o caminho):
+
+```bash
+source /caminho/para/data-boar/scripts/bash-completion/data-boar.bash
+```
+
+O inventário e os testes anti-drift estão em `cli/bash_completion_inventory.py` e `tests/test_bash_completion_inventory.py` (#1952; complementa o anti-drift CLI↔docs do #1448). Isso não substitui `docs/data_boar.1` / `docs/data_boar.5` nem o fluxo de instalação com `uv sync` acima.
+
 ### `[noavx]` / x86-64-v1 (pip / pipx)
 
 **`[noavx]` não é extra do PyPI.** Em hosts sem SSE4.2, POPCNT ou AVX, o numpy do PyPI dá **SIGILL**. Restaure **ML de verdade** com o wheelhouse verificado ([#929](https://github.com/DataBoar/data-boar/issues/929)): tag `wheelhouse-x86-64-v1-2026-07-29`, dois passos `gh release download` e `pip install --no-index --find-links` (ou `pipx runpip`). Receita: [TROUBLESHOOTING.pt_BR.md](TROUBLESHOOTING.pt_BR.md) *x86-64-v1 / wheelhouse*. O pre-flight evita o crash; **não** substitui essa instalação.
