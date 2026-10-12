@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import types
 from datetime import datetime, timedelta, timezone
 
 import jwt
@@ -65,15 +66,18 @@ def _reset_guard_and_env():
         os.environ.pop(k, None)
 
 
-def _linux_style_config_home(tmp_path, monkeypatch):
-    home = isolate_user_config_home(monkeypatch, tmp_path)
-    lic = home / ".config" / "databoar" / "license.jwt"
-    lic.parent.mkdir(parents=True)
+def _isolated_canonical_license_path(
+    tmp_path, monkeypatch, *, ensure_parent: bool = True
+):
+    isolate_user_config_home(monkeypatch, tmp_path)
+    lic = canonical_org_license_jwt_path()
+    if ensure_parent:
+        lic.parent.mkdir(parents=True, exist_ok=True)
     return lic
 
 
 def test_resolve_license_path_unit_precedence(tmp_path, monkeypatch):
-    _linux_style_config_home(tmp_path, monkeypatch)
+    _isolated_canonical_license_path(tmp_path, monkeypatch, ensure_parent=False)
     assert resolve_license_path(None) == ""
     assert resolve_license_path("") == ""
     assert resolve_license_path("   ") == ""
@@ -82,7 +86,7 @@ def test_resolve_license_path_unit_precedence(tmp_path, monkeypatch):
 def test_canonical_fallback_valid_license(
     ed25519_priv: Ed25519PrivateKey, tmp_path, monkeypatch
 ):
-    lic = _linux_style_config_home(tmp_path, monkeypatch)
+    lic = _isolated_canonical_license_path(tmp_path, monkeypatch)
     lic.write_text(_make_token(ed25519_priv), encoding="utf-8")
     _pin_verify_pem(_pem_public(ed25519_priv))
     g = LicenseGuard({"licensing": {"mode": "enforced"}})
@@ -94,7 +98,7 @@ def test_canonical_fallback_valid_license(
 def test_env_explicit_wins_over_canonical_even_when_missing(
     ed25519_priv: Ed25519PrivateKey, tmp_path, monkeypatch
 ):
-    lic = _linux_style_config_home(tmp_path, monkeypatch)
+    lic = _isolated_canonical_license_path(tmp_path, monkeypatch)
     lic.write_text(_make_token(ed25519_priv), encoding="utf-8")
     missing = tmp_path / "nope.lic"
     monkeypatch.setenv("DATA_BOAR_LICENSE_PATH", str(missing))
@@ -108,7 +112,7 @@ def test_env_explicit_wins_over_canonical_even_when_missing(
 def test_config_explicit_wins_over_canonical_even_when_missing(
     ed25519_priv: Ed25519PrivateKey, tmp_path, monkeypatch
 ):
-    lic = _linux_style_config_home(tmp_path, monkeypatch)
+    lic = _isolated_canonical_license_path(tmp_path, monkeypatch)
     lic.write_text(_make_token(ed25519_priv), encoding="utf-8")
     missing = tmp_path / "cfg-missing.lic"
     _pin_verify_pem(_pem_public(ed25519_priv))
@@ -127,7 +131,7 @@ def test_config_explicit_wins_over_canonical_even_when_missing(
 def test_whitespace_env_and_config_treated_as_unset(
     ed25519_priv: Ed25519PrivateKey, tmp_path, monkeypatch
 ):
-    lic = _linux_style_config_home(tmp_path, monkeypatch)
+    lic = _isolated_canonical_license_path(tmp_path, monkeypatch)
     lic.write_text(_make_token(ed25519_priv), encoding="utf-8")
     monkeypatch.setenv("DATA_BOAR_LICENSE_PATH", "  \t  ")
     _pin_verify_pem(_pem_public(ed25519_priv))
@@ -137,7 +141,7 @@ def test_whitespace_env_and_config_treated_as_unset(
 
 
 def test_no_canonical_file_unchanged_unlicensed(tmp_path, monkeypatch, ed25519_priv):
-    _linux_style_config_home(tmp_path, monkeypatch)
+    isolate_user_config_home(monkeypatch, tmp_path)
     _pin_verify_pem(_pem_public(ed25519_priv))
     g = LicenseGuard({"licensing": {"mode": "enforced"}})
     assert g.context.state == "UNLICENSED"
@@ -145,10 +149,42 @@ def test_no_canonical_file_unchanged_unlicensed(tmp_path, monkeypatch, ed25519_p
     assert not canonical_org_license_jwt_path().is_file()
 
 
-def test_user_config_dir_honors_xdg_config_home(tmp_path, monkeypatch):
+def test_user_config_dir_platform_branches(tmp_path, monkeypatch):
+    home = tmp_path / "platform-home"
+    home.mkdir()
+    roaming = home / "AppData" / "Roaming"
+    roaming.mkdir(parents=True)
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
+
     xdg = tmp_path / "xdg"
     xdg.mkdir()
-    monkeypatch.setenv("HOME", str(tmp_path / "home"))
     monkeypatch.setenv("XDG_CONFIG_HOME", str(xdg))
+    monkeypatch.setattr(
+        "core.licensing.paths.sys", types.SimpleNamespace(platform="linux")
+    )
     assert user_config_dir() == xdg
-    assert canonical_org_license_jwt_path() == xdg / "databoar" / "license.jwt"
+
+    monkeypatch.delenv("XDG_CONFIG_HOME", raising=False)
+    monkeypatch.setattr(
+        "core.licensing.paths.sys", types.SimpleNamespace(platform="linux")
+    )
+    assert user_config_dir() == home / ".config"
+
+    monkeypatch.setattr(
+        "core.licensing.paths.sys", types.SimpleNamespace(platform="darwin")
+    )
+    assert user_config_dir() == home / "Library" / "Application Support"
+
+    monkeypatch.setenv("APPDATA", str(roaming))
+    monkeypatch.setattr(
+        "core.licensing.paths.sys", types.SimpleNamespace(platform="win32")
+    )
+    assert user_config_dir() == roaming
+
+    monkeypatch.delenv("APPDATA", raising=False)
+    monkeypatch.setenv("USERPROFILE", str(home))
+    monkeypatch.setattr(
+        "core.licensing.paths.sys", types.SimpleNamespace(platform="win32")
+    )
+    assert user_config_dir() == home / "AppData" / "Roaming"
