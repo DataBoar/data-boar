@@ -41,6 +41,8 @@ configuration guides (those live in the product docs) and **not** compliance/fra
 
 | [SOC2_COMPLIANCE_PRIMER.md](SOC2_COMPLIANCE_PRIMER.md) | SOC 2 Privacy Trust Services Criteria — evidence for assurance (not an audit report) |
 
+| [CLOUD_DEPLOYMENT_MODELS_PRIMER.md](CLOUD_DEPLOYMENT_MODELS_PRIMER.md) ([pt-BR](CLOUD_DEPLOYMENT_MODELS_PRIMER.pt_BR.md)) | Container, VM, and IaC deploy paths versioned under deploy/ |
+
 ## Navigation
 
 - **Map of maps:** [docs/hubs/INDEX.md](../hubs/INDEX.md)

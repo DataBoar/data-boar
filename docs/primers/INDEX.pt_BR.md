@@ -41,6 +41,8 @@ são primers de compliance/frameworks (esses ficam no hub central — veja abaix
 
 | [SOC2_COMPLIANCE_PRIMER.md](SOC2_COMPLIANCE_PRIMER.md) | Critérios SOC 2 Privacy TSC — evidência para assurance (não é laudo de auditoria) |
 
+| [CLOUD_DEPLOYMENT_MODELS_PRIMER.pt_BR.md](CLOUD_DEPLOYMENT_MODELS_PRIMER.pt_BR.md) ([EN](CLOUD_DEPLOYMENT_MODELS_PRIMER.md)) | Container, VM e caminhos IaC versionados em deploy/ |
+
 ## Navegação
 
 - **Mapa de mapas:** [docs/hubs/INDEX.md](../hubs/INDEX.md)
