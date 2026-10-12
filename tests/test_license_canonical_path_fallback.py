@@ -16,6 +16,7 @@ from core.licensing.paths import (
     resolve_license_path,
     user_config_dir,
 )
+from tests.license_config_home import isolate_user_config_home
 from tests.license_verify_pin import pin_embedded_ed25519_pem as _pin_verify_pem
 
 
@@ -65,11 +66,7 @@ def _reset_guard_and_env():
 
 
 def _linux_style_config_home(tmp_path, monkeypatch):
-    home = tmp_path / "home"
-    home.mkdir()
-    monkeypatch.setenv("HOME", str(home))
-    monkeypatch.delenv("XDG_CONFIG_HOME", raising=False)
-    monkeypatch.delenv("APPDATA", raising=False)
+    home = isolate_user_config_home(monkeypatch, tmp_path)
     lic = home / ".config" / "databoar" / "license.jwt"
     lic.parent.mkdir(parents=True)
     return lic

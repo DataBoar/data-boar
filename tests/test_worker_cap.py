@@ -213,14 +213,20 @@ def test_enforced_enterprise_unlimited(ed25519_priv, tmp_path):
 # --- 4. enforced fail-closed inherits Community cap; no env lift ------------
 
 
-def test_enforced_unlicensed_inherits_community_cap():
+def test_enforced_unlicensed_inherits_community_cap(tmp_path, monkeypatch):
+    from tests.license_config_home import isolate_user_config_home
+
+    isolate_user_config_home(monkeypatch, tmp_path)
     g = LicenseGuard({"licensing": {"mode": "enforced"}})
     assert g.context.state == "UNLICENSED"
     assert g.worker_cap() == 2
 
 
-def test_dev_env_does_not_lift_cap(monkeypatch):
+def test_dev_env_does_not_lift_cap(monkeypatch, tmp_path):
     """#719 regression applied to #551: dev env vars never lift the worker cap."""
+    from tests.license_config_home import isolate_user_config_home
+
+    isolate_user_config_home(monkeypatch, tmp_path)
     monkeypatch.setenv("DATA_BOAR_ENV", "development")
     monkeypatch.setenv("DEBUG", "1")
     monkeypatch.setenv("DATA_BOAR_TIER_OVERRIDE", "enterprise")
