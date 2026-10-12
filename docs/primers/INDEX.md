@@ -47,6 +47,8 @@ configuration guides (those live in the product docs) and **not** compliance/fra
 
 | [RAG_PRIMER.md](RAG_PRIMER.md) ([pt-BR](RAG_PRIMER.pt_BR.md)) | RAG concepts; Boar scans corpora, does not ship vector RAG stack |
 
+| [OBSERVABILITY_PRIMER.md](OBSERVABILITY_PRIMER.md) ([pt-BR](OBSERVABILITY_PRIMER.pt_BR.md)) | Opt-in OpenTelemetry (metrics/logs/traces) in core/otel_setup |
+
 ## Navigation
 
 - **Map of maps:** [docs/hubs/INDEX.md](../hubs/INDEX.md)

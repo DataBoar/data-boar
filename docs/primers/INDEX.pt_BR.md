@@ -47,6 +47,8 @@ são primers de compliance/frameworks (esses ficam no hub central — veja abaix
 
 | [RAG_PRIMER.pt_BR.md](RAG_PRIMER.pt_BR.md) ([EN](RAG_PRIMER.md)) | Conceitos RAG; Boar varre corpora, não entrega stack vetorial RAG |
 
+| [OBSERVABILITY_PRIMER.pt_BR.md](OBSERVABILITY_PRIMER.pt_BR.md) ([EN](OBSERVABILITY_PRIMER.md)) | OpenTelemetry opt-in (métricas/logs/traces) em core/otel_setup |
+
 ## Navegação
 
 - **Mapa de mapas:** [docs/hubs/INDEX.md](../hubs/INDEX.md)
