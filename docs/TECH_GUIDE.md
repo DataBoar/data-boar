@@ -371,7 +371,7 @@ For **deployment**, **using the web API** (with request/response examples), **co
 | MongoDB          | `mongodb`                   | `nosql`                                        | pymongo                                                                                                                                |
 | Redis            | `redis`                     | `nosql`                                        | redis                                                                                                                                  |
 
-For MongoDB/Redis, add a target with `type: database` and `driver: mongodb` or `redis` (host, port, database/password as needed). Install optional deps: `uv pip install -e ".[nosql]"`. For Snowflake, add a target with `type: database` and `driver: snowflake` and install the `.[bigdata]` extra. For **all SQL engines** in lab/Docker: `uv pip install -e ".[sql-all]"` or `pip install 'data-boar[sql-all]'`.
+For MongoDB/Redis, add a target with `type: database` and `driver: mongodb` or `redis` (host, port, database/password as needed). Install optional deps: `uv pip install -e ".[nosql]"`. When the extra is missing, those connectors record **`scan_failures.reason=missing_optional_dependency`** (not **`unreachable`**). For Snowflake, add a target with `type: database` and `driver: snowflake` and install the `.[bigdata]` extra. For **all SQL engines** in lab/Docker: `uv pip install -e ".[sql-all]"` or `pip install 'data-boar[sql-all]'`.
 
 **Redis sampling (#1348 Part B):** `SCAN` up to `file_scan.sample_limit` keys (engine default **5**). Names in that window are scanned together as shared context. LOW names then sample by Redis `TYPE` (`GET` / `HSCAN` / `LRANGE` / `SSCAN` / `ZRANGE` / `XRANGE`). Unsupported types record **`redis_value_not_sampled`** (JSON counts), not `unreachable`. Payload cap `value_sample_limit` is the connector constructor default (**100**); there is **no YAML key**. Preview is 500 characters. Findings: `table_name="keys"`, `column_name=<key>`. Loopback/RFC1918 still need `allow_private_networks: true`. See [USAGE.md](USAGE.md) (*Redis*).
 
@@ -383,7 +383,7 @@ You can scan remote HTTP(S) APIs for personal or sensitive data by adding target
 
 **SSRF guard (#832):** `base_url`, `discover_url`, and `auth.token_url` resolving to link-local (cloud metadata `169.254.0.0/16`), loopback, or private (RFC1918/ULA) hosts are **rejected by default** — the target records a failure and no request is sent. Scanning internal infrastructure is a normal Data Boar use case, so opt in per target with `allow_private_networks: true`. Non-`http(s)` schemes are always rejected. The same guard applies to SharePoint (`site_url`), WebDAV (`base_url`), and Power BI (custom `auth.token_url`).
 
-**Credential host allowlist (#1977):** Env-loaded secrets (`token_from_env`, `client_secret_from_env`, or `client_secret: "${VAR}"`) require explicit **`auth.allowed_hosts`** listing every hostname that receives the secret (`base_url` and `auth.token_url`). `*_from_env` names must start with **`API_`**, **`REST_API_`**, or **`DATA_BOAR_`**. Inline secrets default to hosts already on that target. Match is exact hostname (lowercase); no wildcards. Failure is connect-time `ValueError` (`#1977` in the message) before `Authorization` is set. Operator copy: [USAGE.md](USAGE.md) (*Targets: APIs*).
+**Credential host allowlist (#1977 / #2006):** Env-loaded secrets (`token_from_env`, `client_secret_from_env`, `client_secret: "${VAR}"`, or REST target `pass_from_env` / `password_from_env` / `user_from_env`) require explicit **`auth.allowed_hosts`** listing every hostname that receives the secret (`base_url` and `auth.token_url`). The loader may copy the env value into `pass`; the connector still requires the explicit list while `*_from_env` remains. REST `*_from_env` names must start with **`API_`**, **`REST_API_`**, or **`DATA_BOAR_`**. SQL/NoSQL/share `pass_from_env` names are **not** on that prefix list. Inline secrets default to hosts already on that target. Match is exact hostname (lowercase); no wildcards. Failure is connect-time `ValueError` (`#1977` in the message) before `Authorization` is set. Operator copy: [USAGE.md](USAGE.md) (*Targets: APIs*). Tests: `tests/test_rest_connector_pass_from_env_loader.py`.
 
 **Default outbound User-Agent:** discovery HTTP(S) clients send **`DataBoar-Prospector/<version>`** (same resolved version as the installed `data-boar` package — `core.about.get_http_user_agent()`). Use this string in remote WAF or API-gateway logs to identify this product. If a vendor requires a different token, set **`User-Agent`** (case-insensitive key) under `headers` on the target; that value **overrides** the default for REST/API. SharePoint, Power BI, and Dataverse connectors apply the same default. See [ADR 0034](adr/ADR-0034-outbound-http-user-agent-data-boar-prospector.md).
 
@@ -396,7 +396,7 @@ You can scan remote HTTP(S) APIs for personal or sensitive data by adding target
 | **oauth2_client** | OAuth2 client credentials (machine-to-machine)                       | `auth: { type: oauth2_client, token_url: "<https://...",> client_id: "...", client_secret: "..." }` (or `client_secret: "${API_OAUTH_SECRET}"` plus `allowed_hosts` for both API and token hosts) |
 | **custom**        | Custom headers (e.g. `Authorization: Negotiate ...`, API key header) | `auth: { type: custom, headers: { "Authorization": "Bearer ...", "X-API-Key": "..." } }`                                                                        |
 
-If you omit `auth` but set `user`/`username` and `pass`/`password` on the target, **basic** auth is used.
+If you omit `auth` but set `user`/`username` and `pass`/`password` on the target, **basic** auth is used. `pass_from_env` on that path still needs `allowed_hosts` and a REST env prefix (#2006).
 
 ## Example config (YAML) — API/REST
 
@@ -453,6 +453,8 @@ Findings from API targets appear in the **Application findings** sheet with `fil
 ## Power BI and Power Apps (Dataverse)
 
 You can scan **Power BI** (datasets and tables) and **Power Apps / Dataverse** (entities and columns) as data sources. Both use **Azure AD OAuth2 client credentials** (app registration with a client secret). No extra install is required (httpx is already a dependency).
+
+**Microsoft login host (#2007):** The connectors POST the client secret only to **`https://login.microsoftonline.com`**. The default token URL template already uses that host. A custom `auth.token_url` must use **https**, that **exact** hostname, and **no userinfo**. Other hosts — including Azure sovereign-cloud logins such as `login.microsoftonline.us` — fail closed (`ValueError` with `#2007` in the message) **before** the POST. This is separate from the REST `#1977` allowlist. Tests: `tests/test_powerbi_dataverse_http_surfaces.py`.
 
 ### Power BI
 

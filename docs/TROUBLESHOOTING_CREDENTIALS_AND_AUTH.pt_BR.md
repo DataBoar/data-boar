@@ -34,7 +34,9 @@ Verifique usuário/senha no config (`user`, `pass` ou `password`); conta bloquea
 
 **Basic/Bearer/API key:** Use apenas um (Basic com user/pass, ou Bearer, ou header de API key). Evite enviar a mesma chave no header e no body. **OAuth2 (ex. Power BI, Dataverse):** Verifique tenant_id, client_id, client_secret e permissões do app no IdP; não envie o mesmo token no fluxo OAuth e em um header customizado.
 
-**Allow-list de host (`#1977`):** se **Details** contém `#1977`, o conector recusou anexar credencial **antes** do HTTP. Segredo de ambiente (`token_from_env`, `client_secret_from_env` ou `client_secret: "${VAR}"`) exige `auth.allowed_hosts`. Nomes `*_from_env` precisam do prefixo **`API_`**, **`REST_API_`** ou **`DATA_BOAR_`**. O hostname de `base_url` / `auth.token_url` precisa estar na lista (exato, minúsculas, sem wildcard). Contrato: [USAGE.pt_BR.md](USAGE.pt_BR.md) (*Alvos: APIs*). Testes: `tests/test_rest_connector_auth_allowlist.py`.
+**Allow-list de host (`#1977` / `#2006`):** se **Details** contém `#1977`, o conector recusou anexar credencial **antes** do HTTP. Segredo de ambiente (`token_from_env`, `client_secret_from_env`, `client_secret: "${VAR}"` **ou** `pass_from_env` / `password_from_env` / `user_from_env` em REST) exige `auth.allowed_hosts`. O loader pode já ter copiado o valor para `pass`; o gate ainda dispara enquanto `*_from_env` existir (#2006). Nomes `*_from_env` **REST** precisam do prefixo **`API_`**, **`REST_API_`** ou **`DATA_BOAR_`** — `pass_from_env` de banco/share **não**. O hostname de `base_url` / `auth.token_url` precisa estar na lista (exato, minúsculas, sem wildcard). Contrato: [USAGE.pt_BR.md](USAGE.pt_BR.md) (*Alvos: APIs*). Testes: `tests/test_rest_connector_auth_allowlist.py`, `tests/test_rest_connector_pass_from_env_loader.py`.
+
+**Host de login Microsoft (`#2007`):** Power BI e Dataverse só fazem POST do client secret para **`https://login.microsoftonline.com`**. `auth.token_url` customizado para outro host (inclusive nuvem soberana Azure) falha fechado **antes** do POST (`#2007` em **Details**). Testes: `tests/test_powerbi_dataverse_http_surfaces.py`.
 
 ---
 
