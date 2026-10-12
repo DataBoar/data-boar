@@ -371,7 +371,7 @@ Para **implantação**, **uso da API web** (com exemplos de requisição/respost
 | MongoDB          | `mongodb`                   | `nosql`                                       | pymongo                                                                                                                               |
 | Redis            | `redis`                     | `nosql`                                       | redis                                                                                                                                 |
 
-Para MongoDB/Redis, adicione um alvo com `type: database` e `driver: mongodb` ou `redis` (host, port, database/password conforme necessário). Instale dependências opcionais: `uv pip install -e ".[nosql]"`. Para Snowflake, adicione um alvo com `type: database` e `driver: snowflake` e instale o extra `.[bigdata]`. Para **todos os motores SQL** em lab/Docker: `uv pip install -e ".[sql-all]"` ou `pip install 'data-boar[sql-all]'`.
+Para MongoDB/Redis, adicione um alvo com `type: database` e `driver: mongodb` ou `redis` (host, port, database/password conforme necessário). Instale dependências opcionais: `uv pip install -e ".[nosql]"`. Sem o extra, esses conectores gravam **`scan_failures.reason=missing_optional_dependency`** (não **`unreachable`**). Para Snowflake, adicione um alvo com `type: database` e `driver: snowflake` e instale o extra `.[bigdata]`. Para **todos os motores SQL** em lab/Docker: `uv pip install -e ".[sql-all]"` ou `pip install 'data-boar[sql-all]'`.
 
 **Amostragem Redis (#1348 Part B):** `SCAN` até `file_scan.sample_limit` chaves (padrão do engine **5**). Os nomes nessa janela são varridos juntos como contexto compartilhado. Nomes LOW amostram pelo `TYPE` (`GET` / `HSCAN` / `LRANGE` / `SSCAN` / `ZRANGE` / `XRANGE`). Tipos não suportados gravam **`redis_value_not_sampled`** (contagens JSON), não `unreachable`. O teto de payload `value_sample_limit` é o padrão do construtor (**100**); **não há chave YAML**. Preview: 500 caracteres. Achados: `table_name="keys"`, `column_name=<chave>`. Loopback/RFC1918 ainda precisam de `allow_private_networks: true`. Ver [USAGE.pt_BR.md](USAGE.pt_BR.md) (*Redis*).
 
@@ -383,7 +383,7 @@ Você pode varrer APIs HTTP(S) remotas em busca de dados pessoais ou sensíveis 
 
 **Guarda SSRF (#832):** `base_url`, `discover_url` e `auth.token_url` que resolvem para hosts link-local (metadados de nuvem `169.254.0.0/16`), loopback ou privados (RFC1918/ULA) são **rejeitados por padrão** — o alvo registra a falha e nenhuma requisição é enviada. Varrer infraestrutura interna é um caso de uso normal do Data Boar, então faça o opt-in por alvo com `allow_private_networks: true`. Esquemas que não sejam `http(s)` são sempre rejeitados. A mesma guarda vale para SharePoint (`site_url`), WebDAV (`base_url`) e Power BI (`auth.token_url` customizado).
 
-**Allow-list de host de credencial (#1977):** Segredos do ambiente (`token_from_env`, `client_secret_from_env` ou `client_secret: "${VAR}"`) exigem **`auth.allowed_hosts`** com todo hostname que recebe o segredo (`base_url` e `auth.token_url`). Nomes `*_from_env` precisam começar com **`API_`**, **`REST_API_`** ou **`DATA_BOAR_`**. Segredos inline usam os hosts já no mesmo alvo. Comparação é hostname exato (minúsculas); sem wildcard. A falha é `ValueError` no `connect` (`#1977` na mensagem) antes de definir `Authorization`. Texto do operador: [USAGE.pt_BR.md](USAGE.pt_BR.md) (*Alvos: APIs*).
+**Allow-list de host de credencial (#1977 / #2006):** Segredos do ambiente (`token_from_env`, `client_secret_from_env`, `client_secret: "${VAR}"` ou, em REST, `pass_from_env` / `password_from_env` / `user_from_env`) exigem **`auth.allowed_hosts`** com todo hostname que recebe o segredo (`base_url` e `auth.token_url`). O loader pode copiar o valor da env para `pass`; o conector ainda exige a lista explícita enquanto `*_from_env` existir. Nomes `*_from_env` em REST precisam começar com **`API_`**, **`REST_API_`** ou **`DATA_BOAR_`**. `pass_from_env` de SQL/NoSQL/share **não** entra nessa lista de prefixo. Segredos inline usam os hosts já no mesmo alvo. Comparação é hostname exato (minúsculas); sem wildcard. A falha é `ValueError` no `connect` (`#1977` na mensagem) antes de definir `Authorization`. Texto do operador: [USAGE.pt_BR.md](USAGE.pt_BR.md) (*Alvos: APIs*). Testes: `tests/test_rest_connector_pass_from_env_loader.py`.
 
 **User-Agent HTTP(S) padrão de saída:** clientes de descoberta enviam **`DataBoar-Prospector/<versão>`** (mesma versão resolvida do pacote `data-boar` instalado — `core.about.get_http_user_agent()`). Use essa string em logs de WAF ou API gateway no destino para identificar o produto. Se o fornecedor exigir outro valor, defina **`User-Agent`** (chave case-insensitive) em `headers` no alvo; isso **substitui** o padrão em REST/API. Conectores SharePoint, Power BI e Dataverse aplicam o mesmo padrão. Veja [ADR 0034](adr/ADR-0034-outbound-http-user-agent-data-boar-prospector.md) (texto canônico em inglês).
 
@@ -396,7 +396,7 @@ Você pode varrer APIs HTTP(S) remotas em busca de dados pessoais ou sensíveis 
 | **oauth2_client** | OAuth2 client credentials (máquina a máquina)                          | `auth: { type: oauth2_client, token_url: "<https://...",> client_id: "...", client_secret: "..." }` (ou `client_secret: "${API_OAUTH_SECRET}"` mais `allowed_hosts` para API e host do token) |
 | **custom**        | Cabeçalhos customizados (ex.: `Authorization: Negotiate ...`, API key) | `auth: { type: custom, headers: { "Authorization": "Bearer ...", "X-API-Key": "..." } }`                                                                    |
 
-Se você omitir `auth` mas definir `user`/`username` e `pass`/`password` no alvo, a auth **basic** é usada.
+Se você omitir `auth` mas definir `user`/`username` e `pass`/`password` no alvo, a auth **basic** é usada. `pass_from_env` nesse caminho ainda precisa de `allowed_hosts` e do prefixo de env REST (#2006).
 
 ## Exemplo de config (YAML) — API/REST
 
@@ -453,6 +453,8 @@ Achados de alvos de API aparecem na planilha **Application findings** com `file_
 ## Power BI e Power Apps (Dataverse)
 
 Você pode varrer **Power BI** (datasets e tabelas) e **Power Apps / Dataverse** (entidades e colunas) como fontes de dados. Ambos usam **OAuth2 client credentials do Azure AD** (registro de app com client secret). Não é necessária instalação extra (httpx já é dependência).
+
+**Host de login Microsoft (#2007):** Os conectores fazem POST do client secret só para **`https://login.microsoftonline.com`**. O template padrão de token já usa esse host. Um `auth.token_url` customizado precisa de **https**, desse hostname **exato** e **sem userinfo**. Outros hosts — inclusive logins de nuvem soberana Azure como `login.microsoftonline.us` — falham fechado (`ValueError` com `#2007` na mensagem) **antes** do POST. Isso é separado da allow-list REST `#1977`. Testes: `tests/test_powerbi_dataverse_http_surfaces.py`.
 
 ### Power BI
 

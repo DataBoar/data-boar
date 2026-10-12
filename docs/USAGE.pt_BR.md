@@ -904,11 +904,11 @@ Use `type: api` ou `type: rest`. Obrigatório: `name`, `base_url` (ou `url`). Op
 
 **Guarda SSRF:** `base_url`, `discover_url` e `auth.token_url` apontando para link-local (metadados de nuvem `169.254.0.0/16`), loopback ou hosts privados (RFC1918/ULA) são **rejeitados por padrão**. Para varrer infraestrutura interna, acrescente `allow_private_networks: true` no alvo. A mesma guarda vale para SharePoint (`site_url`), WebDAV (`base_url`) e Power BI (`auth.token_url`).
 
-**Allow-list de host de credencial (#1977):** Antes de anexar Basic, Bearer, segredo OAuth ou cabeçalhos customizados `Authorization` / `X-API-Key` / `api-key`, o conector confere cada host de endpoint de credencial (`base_url` / `url` e `auth.token_url`). A comparação é o **hostname exato** (minúsculas). Sem wildcard, sem porta, sem path.
+**Allow-list de host de credencial (#1977 / #2006):** Antes de anexar Basic, Bearer, segredo OAuth ou cabeçalhos customizados `Authorization` / `X-API-Key` / `api-key`, o conector confere cada host de endpoint de credencial (`base_url` / `url` e `auth.token_url`). A comparação é o **hostname exato** (minúsculas). Sem wildcard, sem porta, sem path.
 
-- **Segredos do ambiente** (`auth.token_from_env`, `auth.client_secret_from_env` ou `client_secret: "${VAR}"`) **exigem** lista explícita: `auth.allowed_hosts` (ou `allowed_hosts` no alvo). Inclua **os dois** hosts quando a API e o token OAuth diferem.
-- Nomes em `token_from_env` / `client_secret_from_env` precisam começar com **`API_`**, **`REST_API_`** ou **`DATA_BOAR_`**. Outros nomes falham fechado (`ValueError` com `#1977`) antes de qualquer cabeçalho `Authorization`.
-- Tokens/senhas **inline** (sem env) usam por padrão os hosts de `base_url` / `auth.token_url` no **mesmo** alvo. Lista explícita vence e pode rejeitar um `base_url` fora da lista.
+- **Segredos do ambiente** (`auth.token_from_env`, `auth.client_secret_from_env`, `client_secret: "${VAR}"` **ou** `pass_from_env` / `password_from_env` / `user_from_env` no alvo) **exigem** lista explícita: `auth.allowed_hosts` (ou `allowed_hosts` no alvo). Inclua **os dois** hosts quando a API e o token OAuth diferem. O loader pode copiar o valor da env para `pass` / `user`; o conector ainda trata o alvo como carregado do ambiente enquanto essas chaves `*_from_env` existem (#2006).
+- Nomes em `token_from_env`, `client_secret_from_env`, `pass_from_env`, `password_from_env` e `user_from_env` em alvos **REST/API** precisam começar com **`API_`**, **`REST_API_`** ou **`DATA_BOAR_`**. Outros nomes falham fechado (`ValueError` com `#1977`) antes de qualquer cabeçalho `Authorization`. Alvos **SQL / NoSQL / share** **não** usam essa lista de prefixo (um banco com `pass_from_env: DEMO_DB_PASSWORD` continua válido).
+- Tokens/senhas **inline** (sem chaves env) usam por padrão os hosts de `base_url` / `auth.token_url` no **mesmo** alvo. Lista explícita vence e pode rejeitar um `base_url` fora da lista.
 - A falha é **`ValueError`** no `connect`. Em Scan failures o motivo costuma ser **`error`** com `#1977` em **Details** — não é 401 remoto. Veja [TROUBLESHOOTING_CREDENTIALS_AND_AUTH.pt_BR.md](TROUBLESHOOTING_CREDENTIALS_AND_AUTH.pt_BR.md).
 
 ```yaml
@@ -934,6 +934,20 @@ Use `type: api` ou `type: rest`. Obrigatório: `name`, `base_url` (ou `url`). Op
       type: basic
       username: "audit_user"
       password: "your_password"
+```
+
+`user` + `pass_from_env` no alvo (sem bloco `auth`) também envia Basic. Senha vinda do ambiente **exige** `allowed_hosts` e prefixo `API_` / `REST_API_` / `DATA_BOAR_`:
+
+```yaml
+
+- name: "API with env password"
+
+    type: api
+    base_url: "https://api.example.com"
+    paths: ["/users"]
+    user: "audit_user"
+    pass_from_env: "API_REST_PASS"
+    allowed_hosts: ["api.example.com"]
 ```
 
 ## Bearer token (static or from environment)
