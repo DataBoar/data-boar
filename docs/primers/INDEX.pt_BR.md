@@ -21,6 +21,7 @@ são primers de compliance/frameworks (esses ficam no hub central — veja abaix
 | [AI_EVOLUTION_PRIMER.pt_BR.md](AI_EVOLUTION_PRIMER.pt_BR.md) ([EN](AI_EVOLUTION_PRIMER.md)) | História da IA (invernos, sistemas especialistas, ML/DL, LLMs) — sem hype, contexto de integrador |
 | [DECISION_RECORDS_PRIMER.pt_BR.md](DECISION_RECORDS_PRIMER.pt_BR.md) ([EN](DECISION_RECORDS_PRIMER.md)) | ADR → MADR → UMADR: por que decisões são registradas e o padrão deste repositório |
 | [FORENSICS_AND_EVIDENCE_PRIMER.pt_BR.md](FORENSICS_AND_EVIDENCE_PRIMER.pt_BR.md) ([EN](FORENSICS_AND_EVIDENCE_PRIMER.md)) | Forense digital e evidência — artefatos de inventário vs laudo; ponteiros ISO/NIST |
+| [IAC_AND_DEVSECOPS_PRIMER.pt_BR.md](IAC_AND_DEVSECOPS_PRIMER.pt_BR.md) ([EN](IAC_AND_DEVSECOPS_PRIMER.md)) | Conceitos de IaC; `deploy/ansible` + `deploy/opentofu`; checagens DevSecOps que existem no repositório |
 
 ## Navegação
 
