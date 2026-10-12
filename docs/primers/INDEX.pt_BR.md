@@ -43,6 +43,8 @@ são primers de compliance/frameworks (esses ficam no hub central — veja abaix
 
 | [CLOUD_DEPLOYMENT_MODELS_PRIMER.pt_BR.md](CLOUD_DEPLOYMENT_MODELS_PRIMER.pt_BR.md) ([EN](CLOUD_DEPLOYMENT_MODELS_PRIMER.md)) | Container, VM e caminhos IaC versionados em deploy/ |
 
+| [AAS_MODELS_PRIMER.pt_BR.md](AAS_MODELS_PRIMER.pt_BR.md) ([EN](AAS_MODELS_PRIMER.md)) | Rótulos SaaS/AIaaS vs entrega on-prem-first do produto |
+
 ## Navegação
 
 - **Mapa de mapas:** [docs/hubs/INDEX.md](../hubs/INDEX.md)

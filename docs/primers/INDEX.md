@@ -43,6 +43,8 @@ configuration guides (those live in the product docs) and **not** compliance/fra
 
 | [CLOUD_DEPLOYMENT_MODELS_PRIMER.md](CLOUD_DEPLOYMENT_MODELS_PRIMER.md) ([pt-BR](CLOUD_DEPLOYMENT_MODELS_PRIMER.pt_BR.md)) | Container, VM, and IaC deploy paths versioned under deploy/ |
 
+| [AAS_MODELS_PRIMER.md](AAS_MODELS_PRIMER.md) ([pt-BR](AAS_MODELS_PRIMER.pt_BR.md)) | SaaS vs AIaaS labels vs on-prem-first product delivery |
+
 ## Navigation
 
 - **Map of maps:** [docs/hubs/INDEX.md](../hubs/INDEX.md)
