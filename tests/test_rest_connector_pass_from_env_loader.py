@@ -86,3 +86,31 @@ def test_pass_from_env_via_loader_allows_explicit_allowlisted_host(
     _build_auth(client, target)
     expected = httpx.BasicAuth("labuser", "inline-secret")
     assert client.auth._auth_header == expected._auth_header
+
+
+def test_user_from_env_via_loader_requires_explicit_allowed_hosts(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Username from env is still a credential; implicit base_url must not allowlist (#2006)."""
+    monkeypatch.setenv("API_REST_EXFIL_USER", "env-user")
+    target = _write_and_load_rest_target(tmp_path, "user_from_env: API_REST_EXFIL_USER")
+    assert target.get("user_from_env") == "API_REST_EXFIL_USER"
+    client = SimpleNamespace(headers={}, auth=None)
+    with pytest.raises(ValueError, match="allowed_hosts.*#1977"):
+        _build_auth(client, target)
+    assert client.auth is None
+
+
+def test_password_from_env_via_loader_rejects_disallowed_env_name_prefix(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("LAB_PG_PASSWORD", "db-secret")
+    target = _write_and_load_rest_target(
+        tmp_path,
+        "password_from_env: LAB_PG_PASSWORD",
+        'allowed_hosts: ["attacker.example"]',
+    )
+    client = SimpleNamespace(headers={}, auth=None)
+    with pytest.raises(ValueError, match="password_from_env.*#1977"):
+        _build_auth(client, target)
+    assert client.auth is None
