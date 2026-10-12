@@ -28,6 +28,8 @@ uv run pytest -v -W error --include-private
 
 **Opcional — `docs/private/`:** Por padrão, os testes de **lint de Markdown** e **sintaxe de scripts** **ignoram** a árvore **`docs/private/`** (gitignored). Para incluí-la localmente (ex.: após editar notas privadas), use **`pytest --include-private`** ou defina **`INCLUDE_PRIVATE_LINT=1`**. Para corrigir Markdown lá: **`uv run python scripts/fix_markdown_sonar.py --include-private`** (ou a mesma variável de ambiente). O **CI não** define essa flag.
 
+**Avisos do pytest (`-W error`, #1915):** O `pyproject.toml` mantém **`addopts = -v -W error`** **sem** lista `filterwarnings` de ignore. O **Starlette 1.7.0** (Kludex/starlette#3498) eliminou a necessidade de silenciar o `DeprecationWarning` de `anyio.abc.BlockingPortal` na coleta; o filtro antigo e o gancho correspondente em `tests/conftest.py` foram removidos. Guarda de regressão: `tests/test_pytest_blockingportal_filterwarnings.py`. Nota de release: [CHANGELOG.md](../CHANGELOG.md) § *Pytest warnings (#1915)*.
+
 **Requisitos:** Python **3.12 ou 3.13** (veja `CONTRIBUTING.md` / `SECURITY.md`), dependências instaladas (`uv sync --group dev` ou `pip install -e .`). Nenhum serviço externo é necessário; os testes usam configs temporários e SQLite em memória ou temporário quando preciso.
 
 ## Visão geral dos módulos de teste
