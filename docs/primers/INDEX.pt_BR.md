@@ -29,6 +29,8 @@ são primers de compliance/frameworks (esses ficam no hub central — veja abaix
 
 | [FINANCIAL_SECTOR_COMPLIANCE_PRIMER.md](FINANCIAL_SECTOR_COMPLIANCE_PRIMER.md) | PCI DSS v4.0, SOX, BACEN CMN 4.893 — conformidade setor financeiro (limites de evidência) |
 
+| [GLOBAL_PRIVACY_REGULATIONS_PRIMER.md](GLOBAL_PRIVACY_REGULATIONS_PRIMER.md) | PIPEDA, POPIA, APPI, Vietnam PDPD, FELCA — regulações globais de privacidade (status honesto de samples) |
+
 ## Navegação
 
 - **Mapa de mapas:** [docs/hubs/INDEX.md](../hubs/INDEX.md)

@@ -8,7 +8,7 @@
 
 **Product stance:** Data Boar is a **technical evidence and inventory** layer ([ADR-0025](../adr/ADR-0025-compliance-positioning-evidence-inventory-not-legal-conclusion-engine.md)). This primer does **not** certify PIPEDA, POPIA, APPI, PDPD, or FELCA. It does **not** decide notification, retention calendars, or whether a cross-border transfer is lawful.
 
-**Related:** [COMPLIANCE_FRAMEWORKS.md](../COMPLIANCE_FRAMEWORKS.md) (how to attach samples) · [compliance-samples/README.md](../compliance-samples/README.md) · [PRIVACY_MANAGEMENT_STANDARDS_PRIMER.md](PRIVACY_MANAGEMENT_STANDARDS_PRIMER.md) (ISO 27701 / NIST PF) · [PITCH_DPO.md](../pitch/PITCH_DPO.md)
+**Related:** [COMPLIANCE_FRAMEWORKS.md](../COMPLIANCE_FRAMEWORKS.md) (how to attach samples) · [compliance-samples/README.md](../compliance-samples/README.md) · [PRIVACY_MANAGEMENT_STANDARDS_PRIMER.md](../primers/PRIVACY_MANAGEMENT_STANDARDS_PRIMER.md) (ISO 27701 / NIST PF) · [PITCH_DPO.md](../pitch/PITCH_DPO.md)
 
 **Issue context:** GitHub **[#600](https://github.com/DataBoar/data-boar/issues/600)** asked for this narrative because Tier-2 jurisdictions had **samples without a primer**. The issue table that said PIPEDA / POPIA / APPI had “no sample yet” is **stale relative to `main`**. Coverage below is **what is on disk now**, not that 2026-05 issue snapshot.
 
@@ -124,4 +124,4 @@ Issue #600 listed FELCA under Vietnam. On disk, FELCA is the **Brazilian** digit
 
 ## Maintainer
 
-When a new jurisdiction YAML ships, add a **status-table row** here and a line in [COMPLIANCE_FRAMEWORKS.md](../COMPLIANCE_FRAMEWORKS.md) (product index — **do not** link that page back into `docs/plans/`). After editing the hub summary, run `python scripts/plans_hub_sync.py --write` (indexes `PLAN_*.md` only; this primer is listed in [PRIMERS_HUB.md](PRIMERS_HUB.md)).
+When a new jurisdiction YAML ships, add a **status-table row** here and a line in [COMPLIANCE_FRAMEWORKS.md](../COMPLIANCE_FRAMEWORKS.md) (product index — **do not** link that page back into `docs/plans/`). After editing the hub summary, run `python scripts/plans_hub_sync.py --write` (indexes `PLAN_*.md` only; this primer is listed in `docs/plans/PRIMERS_HUB.md`).

@@ -29,6 +29,8 @@ configuration guides (those live in the product docs) and **not** compliance/fra
 
 | [FINANCIAL_SECTOR_COMPLIANCE_PRIMER.md](FINANCIAL_SECTOR_COMPLIANCE_PRIMER.md) | PCI DSS v4.0, SOX, BACEN CMN 4.893 — financial-sector compliance (evidence limits) |
 
+| [GLOBAL_PRIVACY_REGULATIONS_PRIMER.md](GLOBAL_PRIVACY_REGULATIONS_PRIMER.md) | PIPEDA, POPIA, APPI, Vietnam PDPD, FELCA — global privacy regulations (honest sample status) |
+
 ## Navigation
 
 - **Map of maps:** [docs/hubs/INDEX.md](../hubs/INDEX.md)
