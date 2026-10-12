@@ -12,7 +12,9 @@ Empty while the working tree carries **`1.8.0-rc`** (see section below).
 
 > Release candidate for **`1.8.0`**. **`[project] version = 1.8.0-rc`** (ADR-0073 PEP 440 hyphen form). **`[tool.databoar] maturity_build = 127`** — **rc band entry** on promotion from **`1.8.0-beta`** (last beta reconciliation **`.116`**, 2026-08-22). **Not** on PyPI or Docker Hub **`latest`**. Notes: [docs/releases/1.8.0-rc.md](docs/releases/1.8.0-rc.md).
 
-### RC sentinel CREDIT_CARD (maestro#92)
+### Pytest warnings (#1915)
+
+- **Starlette 1.7.0** includes the Kludex/starlette#3498 fix. The `anyio.abc.BlockingPortal` `filterwarnings` entry and the matching mark in `tests/conftest.py` are gone. `addopts` stays `-v -W error`.
 
 - **`filesystem_credit_card`** in `benchmark-rc-v2.sentinel.yaml` and `benchmark-rc-v3.sentinel.yaml` fails the post-smoke checker when `CREDIT_CARD` is absent from `filesystem_findings`. Corpus file: `tests/data/homelab_synthetic/synthetic_pan_luhn.txt` (Visa test PAN).
 
