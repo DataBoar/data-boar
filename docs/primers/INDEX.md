@@ -23,6 +23,8 @@ configuration guides (those live in the product docs) and **not** compliance/fra
 | [FORENSICS_AND_EVIDENCE_PRIMER.md](FORENSICS_AND_EVIDENCE_PRIMER.md) ([pt-BR](FORENSICS_AND_EVIDENCE_PRIMER.pt_BR.md)) | Digital forensics and evidence — inventory artefacts vs *laudo*; ISO/NIST pointers |
 | [IAC_AND_DEVSECOPS_PRIMER.md](IAC_AND_DEVSECOPS_PRIMER.md) ([pt-BR](IAC_AND_DEVSECOPS_PRIMER.pt_BR.md)) | IaC concepts; `deploy/ansible` + `deploy/opentofu`; DevSecOps checks that exist in-repo |
 
+| [AI_COMPLIANCE_PRIMER.md](AI_COMPLIANCE_PRIMER.md) | EU AI Act, ISO/IEC 42001, NIST AI RMF — data-layer compliance (inventory only; no model evaluation) |
+
 ## Navigation
 
 - **Map of maps:** [docs/hubs/INDEX.md](../hubs/INDEX.md)

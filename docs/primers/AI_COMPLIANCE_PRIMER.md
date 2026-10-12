@@ -6,7 +6,7 @@
 
 **Product stance:** Data Boar covers the **data layer** — it does **not** evaluate the model itself. Discovery can inventory personal and sensitive fields in **configured targets** that happen to feed training, fine-tuning, or RAG corpora. The engine does **not** classify an AI system as high-risk, run conformity assessment, certify an AI Management System, score model quality or bias, or produce a NIST AI RMF attestation.
 
-**Related:** [COMPLIANCE_FRAMEWORKS.md](../COMPLIANCE_FRAMEWORKS.md#cyber-ai-governance-evidence-not-samples) · [COMPLIANCE_AND_LEGAL.md](../COMPLIANCE_AND_LEGAL.md) · [PLAN_COMPLIANCE_EVIDENCE_MAPPING.md](PLAN_COMPLIANCE_EVIDENCE_MAPPING.md) (NIST AI RMF = adjacent inventory) · [docs/primers/AI_EVOLUTION_PRIMER.md](../primers/AI_EVOLUTION_PRIMER.md) (vocabulary; not this compliance primer) · [GLOSSARY.md](../GLOSSARY.md) (**Data Sniffing**, **LLM**)
+**Related:** [COMPLIANCE_FRAMEWORKS.md](../COMPLIANCE_FRAMEWORKS.md#cyber-ai-governance-evidence-not-samples) · [COMPLIANCE_AND_LEGAL.md](../COMPLIANCE_AND_LEGAL.md) · `docs/plans/PLAN_COMPLIANCE_EVIDENCE_MAPPING.md` (NIST AI RMF = adjacent inventory) · [AI_EVOLUTION_PRIMER.md](AI_EVOLUTION_PRIMER.md) (vocabulary; not this compliance primer) · [GLOSSARY.md](../GLOSSARY.md) (**Data Sniffing**, **LLM**)
 
 There is **no** `compliance-sample-*.yaml` for the EU AI Act, ISO/IEC 42001, or NIST AI RMF. [COMPLIANCE_FRAMEWORKS.md](../COMPLIANCE_FRAMEWORKS.md#cyber-ai-governance-evidence-not-samples) treats those instruments as **evidence and inventory**, not PII vocabulary packs. Shipping an “AI Act sample” would be a **category mismatch** and an overclaim risk.
 
@@ -84,16 +84,16 @@ Optional Enterprise Governance Lens adds GRC **storytelling** in Markdown ([USAG
 
 ## NIST AI RMF 1.0 — GOVERN, MAP, MEASURE, MANAGE
 
-The [NIST AI Risk Management Framework](https://airc.nist.gov) is **voluntary** US vocabulary. Per [PLAN_COMPLIANCE_EVIDENCE_MAPPING.md](PLAN_COMPLIANCE_EVIDENCE_MAPPING.md), AI RMF is **adjacent** when a client needs to **map or inventory data that feeds AI systems**. The product does **not** walk AI RMF functions as a certification tool and does **not** produce NIST attestations.
+The [NIST AI Risk Management Framework](https://airc.nist.gov) is **voluntary** US vocabulary. Per `docs/plans/PLAN_COMPLIANCE_EVIDENCE_MAPPING.md`, AI RMF is **adjacent** when a client needs to **map or inventory data that feeds AI systems**. The product does **not** walk AI RMF functions as a certification tool and does **not** produce NIST attestations.
 
 | Function | Typical ask | Data Boar capability (shipped) | Notes |
 | -------- | ----------- | ------------------------------ | ----- |
 | **MAP** | Know what data and context the AI system uses | **Data Sniffing** (bounded discovery + sensitivity detection) on configured targets | Same motor as other primers — [GLOSSARY.md](../GLOSSARY.md) |
 | **MEASURE** | Evaluate AI risks with metrics | Finding **severity** and Excel/heatmap on **PII matches** | **Not** model eval (accuracy, fairness, robustness, drift) |
-| **GOVERN** | Policies, roles, accountability | Config, tiers, optional dashboard RBAC | SSO/OIDC remains a plan — [PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md](PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md) |
+| **GOVERN** | Policies, roles, accountability | Config, tiers, optional dashboard RBAC | SSO/OIDC remains a plan — `docs/plans/PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md` |
 | **MANAGE** | Prioritise and treat risks | Triage findings; **`--diff`** after remediation | Treatment (delete, minimise, retrain) is organisational |
 
-Do **not** treat [PLAN_G_TIER.md](PLAN_G_TIER.md) (**G0–G3**) as a NIST **MEASURE** score on AI datasets. That plan is **repo gravity** for operator issues (orthogonal to H/U/P). It is **not** a shipped detector field on scan findings.
+Do **not** treat `docs/plans/PLAN_G_TIER.md` (**G0–G3**) as a NIST **MEASURE** score on AI datasets. That plan is **repo gravity** for operator issues (orthogonal to H/U/P). It is **not** a shipped detector field on scan findings.
 
 ---
 
@@ -113,4 +113,4 @@ Before citing this primer in RFPs or AIMS packs:
 
 ## Maintainer
 
-When capabilities ship, update the status table and [PRIMERS_HUB.md](PRIMERS_HUB.md). Run `python scripts/plans_hub_sync.py --write` after hub-summary edits (hub table lists `PLAN_*.md` only; this primer is indexed in **PRIMERS_HUB**).
+When capabilities ship, update the status table and `docs/plans/PRIMERS_HUB.md`. Run `python scripts/plans_hub_sync.py --write` after hub-summary edits (hub table lists `PLAN_*.md` only; this primer is indexed in **PRIMERS_HUB**).

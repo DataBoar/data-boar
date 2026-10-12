@@ -35,7 +35,7 @@ Criteria names follow AICPA **Trust Services Criteria** (Privacy category). Cove
 | -------- | -------------------------- | ------------------ |
 | Excel + heatmap + `scan_manifest_*.yaml` | Scope / inventory of **where PI-like fields sat** in **configured** targets | A Privacy notice (P1) or completeness of the estate |
 | **`--export-dsar`** | Metadata inventory for one session (subject-rights **prep**) | Fulfilment of P5 access or P6 disclosure |
-| **`--export-audit-trail`** | Aggregate JSON: `data_wipe_log`, `scan_sessions_summary`, `trust_state`, `dashboard_transport` | Immutable / WORM log; per-session operator or target lists ([AI primer](AI_COMPLIANCE_PRIMER.md) Art. 12 note) |
+| **`--export-audit-trail`** | Aggregate JSON: `data_wipe_log`, `scan_sessions_summary`, `trust_state`, `dashboard_transport` | Immutable / WORM log; per-session operator or target lists ([AI primer](../primers/AI_COMPLIANCE_PRIMER.md) Art. 12 note) |
 | Optional maturity HMAC + `maturity_assessment_integrity` | Tamper-evident **questionnaire POC** rows | Hash chain of all SOC 2 evidence |
 | **`--diff`** in the **customer’s** cron / CI | Change detection between two sessions (P8 **support**) | Built-in continuous monitoring |
 

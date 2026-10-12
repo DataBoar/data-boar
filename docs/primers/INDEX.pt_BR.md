@@ -23,6 +23,8 @@ são primers de compliance/frameworks (esses ficam no hub central — veja abaix
 | [FORENSICS_AND_EVIDENCE_PRIMER.pt_BR.md](FORENSICS_AND_EVIDENCE_PRIMER.pt_BR.md) ([EN](FORENSICS_AND_EVIDENCE_PRIMER.md)) | Forense digital e evidência — artefatos de inventário vs laudo; ponteiros ISO/NIST |
 | [IAC_AND_DEVSECOPS_PRIMER.pt_BR.md](IAC_AND_DEVSECOPS_PRIMER.pt_BR.md) ([EN](IAC_AND_DEVSECOPS_PRIMER.md)) | Conceitos de IaC; `deploy/ansible` + `deploy/opentofu`; checagens DevSecOps que existem no repositório |
 
+| [AI_COMPLIANCE_PRIMER.md](AI_COMPLIANCE_PRIMER.md) | EU AI Act, ISO/IEC 42001, NIST AI RMF — camada de dados (inventário; sem avaliação de modelo) |
+
 ## Navegação
 
 - **Mapa de mapas:** [docs/hubs/INDEX.md](../hubs/INDEX.md)

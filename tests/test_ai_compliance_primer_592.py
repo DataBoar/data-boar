@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parents[1]
-_PRIMER = _ROOT / "docs" / "plans" / "AI_COMPLIANCE_PRIMER.md"
+_PRIMER = _ROOT / "docs" / "primers" / "AI_COMPLIANCE_PRIMER.md"
 _HUB = _ROOT / "docs" / "plans" / "PRIMERS_HUB.md"
 
 _HEADINGS = (
@@ -52,5 +52,5 @@ def test_ai_compliance_primer_registered_and_disclaims_model_eval() -> None:
 
 def test_primers_hub_links_ai_compliance_primer() -> None:
     hub = _HUB.read_text(encoding="utf-8")
-    assert "[AI_COMPLIANCE_PRIMER.md](AI_COMPLIANCE_PRIMER.md)" in hub
+    assert "[AI_COMPLIANCE_PRIMER.md](../primers/AI_COMPLIANCE_PRIMER.md)" in hub
     assert "planned — #592" not in hub
