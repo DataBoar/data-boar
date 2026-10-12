@@ -35,6 +35,8 @@ são primers de compliance/frameworks (esses ficam no hub central — veja abaix
 
 | [ITSM_FRAMEWORKS_PRIMER.pt_BR.md](ITSM_FRAMEWORKS_PRIMER.pt_BR.md) ([EN](ITSM_FRAMEWORKS_PRIMER.md)) | ITIL 4 SVS e ISO/IEC 20000 — práticas selecionadas vs evidência de scan (não é service desk) |
 
+| [IT_GOVERNANCE_FRAMEWORKS_PRIMER.pt_BR.md](IT_GOVERNANCE_FRAMEWORKS_PRIMER.pt_BR.md) ([EN](IT_GOVERNANCE_FRAMEWORKS_PRIMER.md)) | ISO/IEC 38500 e COBIT 2019 — ciclo EDM; evidência de descoberta, não suite GRC |
+
 ## Navegação
 
 - **Mapa de mapas:** [docs/hubs/INDEX.md](../hubs/INDEX.md)

@@ -35,6 +35,8 @@ configuration guides (those live in the product docs) and **not** compliance/fra
 
 | [ITSM_FRAMEWORKS_PRIMER.md](ITSM_FRAMEWORKS_PRIMER.md) ([pt-BR](ITSM_FRAMEWORKS_PRIMER.pt_BR.md)) | ITIL 4 SVS and ISO/IEC 20000 — selected practices vs scan evidence (not a service desk) |
 
+| [IT_GOVERNANCE_FRAMEWORKS_PRIMER.md](IT_GOVERNANCE_FRAMEWORKS_PRIMER.md) ([pt-BR](IT_GOVERNANCE_FRAMEWORKS_PRIMER.pt_BR.md)) | ISO/IEC 38500 and COBIT 2019 — EDM cycle; discovery evidence, not a GRC suite |
+
 ## Navigation
 
 - **Map of maps:** [docs/hubs/INDEX.md](../hubs/INDEX.md)
