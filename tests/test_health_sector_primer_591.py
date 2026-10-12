@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parents[1]
-_PRIMER = _ROOT / "docs" / "plans" / "HEALTH_SECTOR_COMPLIANCE_PRIMER.md"
+_PRIMER = _ROOT / "docs" / "primers" / "HEALTH_SECTOR_COMPLIANCE_PRIMER.md"
 _HUB = _ROOT / "docs" / "plans" / "PRIMERS_HUB.md"
 
 _HEADINGS = (
@@ -48,7 +48,7 @@ def test_health_sector_primer_registered_and_disclaims_baa() -> None:
 def test_primers_hub_links_health_sector_primer() -> None:
     hub = _HUB.read_text(encoding="utf-8")
     assert (
-        "[HEALTH_SECTOR_COMPLIANCE_PRIMER.md](HEALTH_SECTOR_COMPLIANCE_PRIMER.md)"
+        "[HEALTH_SECTOR_COMPLIANCE_PRIMER.md](../primers/HEALTH_SECTOR_COMPLIANCE_PRIMER.md)"
         in hub
     )
     assert "planned — #591" not in hub

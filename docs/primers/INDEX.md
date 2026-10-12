@@ -31,6 +31,8 @@ configuration guides (those live in the product docs) and **not** compliance/fra
 
 | [GLOBAL_PRIVACY_REGULATIONS_PRIMER.md](GLOBAL_PRIVACY_REGULATIONS_PRIMER.md) | PIPEDA, POPIA, APPI, Vietnam PDPD, FELCA — global privacy regulations (honest sample status) |
 
+| [HEALTH_SECTOR_COMPLIANCE_PRIMER.md](HEALTH_SECTOR_COMPLIANCE_PRIMER.md) | HIPAA/PHI, ANS, ANVISA, CFM — health-sector compliance alignment |
+
 ## Navigation
 
 - **Map of maps:** [docs/hubs/INDEX.md](../hubs/INDEX.md)

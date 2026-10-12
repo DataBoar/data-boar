@@ -31,6 +31,8 @@ são primers de compliance/frameworks (esses ficam no hub central — veja abaix
 
 | [GLOBAL_PRIVACY_REGULATIONS_PRIMER.md](GLOBAL_PRIVACY_REGULATIONS_PRIMER.md) | PIPEDA, POPIA, APPI, Vietnam PDPD, FELCA — regulações globais de privacidade (status honesto de samples) |
 
+| [HEALTH_SECTOR_COMPLIANCE_PRIMER.md](HEALTH_SECTOR_COMPLIANCE_PRIMER.md) | HIPAA/PHI, ANS, ANVISA, CFM — alinhamento de conformidade no setor de saúde |
+
 ## Navegação
 
 - **Mapa de mapas:** [docs/hubs/INDEX.md](../hubs/INDEX.md)
