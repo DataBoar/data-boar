@@ -91,6 +91,28 @@ Or via environment:
 export DATA_BOAR_LICENSE_PATH=/path/to/qa-enterprise.lic
 ```
 
+### License file path precedence (#1940)
+
+`LicenseGuard` resolves the JWT file in this order:
+
+1. **`DATA_BOAR_LICENSE_PATH`** — always wins when set to a non-empty path
+   (after trim). Whitespace-only env values are treated as unset.
+2. **`licensing.license_path`** in `config.yaml` — same trim rule; used when
+   (1) is unset or blank.
+3. **Canonical org path** — only when (1) and (2) are both unset/blank **and**
+   the file exists:
+   - Linux: `$XDG_CONFIG_HOME/databoar/license.jwt` or
+     `~/.config/databoar/license.jwt`
+   - macOS: `~/Library/Application Support/databoar/license.jwt`
+   - Windows: `%AppData%\databoar\license.jwt`
+
+The directory name is **`databoar`** (org), not the repo slug `data-boar`.
+`license-studio sign -deploy auto` writes here; one JWT can cover multiple
+bestials. An explicit env or config path is **never** replaced silently — if
+that path is missing, enforcement stays **fail-closed** (`missing_license_file`,
+#719). The canonical fallback only chooses **where to read**; signature and
+claims validation are unchanged.
+
 Check `GET /health` / `GET /about`: state must be **VALID** with
 `dbtier: enterprise`. Without a valid license, enforced mode **fails closed**
 (scans denied with 403/Safe-Hold) — see `docs/LICENSING_SPEC.md`.
