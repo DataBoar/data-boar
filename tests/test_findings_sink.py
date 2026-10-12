@@ -238,13 +238,49 @@ def test_sqlalchemy_url_userinfo_special_chars_do_not_shift_host() -> None:
 
 
 def test_sqlalchemy_url_encodes_database_so_query_cannot_override_peer() -> None:
+    """URL path still encodes ``?``/``=`` so they are not a URL query; SQLAlchemy 2.1+
+    percent-decodes the database segment when parsing (#2069). psycopg2 receives the
+    literal dbname (see make_dsn/parse_dsn) without rewriting host/hostaddr."""
     from sqlalchemy.engine.url import make_url
 
     url = _sqlalchemy_url(_pg_sink(database="audit?hostaddr=10.0.0.9"))
     parsed = make_url(url)
     assert parsed.host == "db.example.com"
     assert not parsed.query
-    assert parsed.database == "audit%3Fhostaddr%3D10.0.0.9"
+    assert parsed.database == "audit?hostaddr=10.0.0.9"
+
+
+def test_sqlalchemy_connect_args_dbname_cannot_override_peer_psycopg2() -> None:
+    """Driver-level invariant (#2069): verified with psycopg2 (postgres extra, lock)
+    and SQLAlchemy 2.1.x — dbname stays literal; host is not replaced by libpq."""
+    pytest.importorskip("psycopg2")
+    import psycopg2.extensions as pg_ext
+    from sqlalchemy import create_engine
+    from sqlalchemy.engine.url import make_url
+
+    cases = [
+        "audit?hostaddr=10.0.0.9",
+        "audit hostaddr=10.0.0.9",
+        "audit host=10.0.0.9",
+        "audit=foo",
+    ]
+    for db in cases:
+        url = _sqlalchemy_url(_pg_sink(database=db))
+        parsed = make_url(url)
+        _, kwargs = create_engine(url).dialect.create_connect_args(parsed)
+        assert kwargs["host"] == "db.example.com"
+        assert "hostaddr" not in kwargs
+        dsn = pg_ext.make_dsn(**kwargs)
+        raw = pg_ext.parse_dsn(dsn)
+        p = {
+            (k.decode() if isinstance(k, bytes) else k): (
+                v.decode() if isinstance(v, bytes) else v
+            )
+            for k, v in raw.items()
+        }
+        assert p["host"] == "db.example.com"
+        assert "hostaddr" not in p
+        assert p["dbname"] == db
 
 
 def test_sqlalchemy_url_rejects_host_authority_injection() -> None:
