@@ -55,11 +55,11 @@ Section 404 is about **internal control over financial reporting** (ICFR) and th
 | Sensitive-field inventory | Know which systems hold data that could affect reporting integrity | Configured **targets** + findings (including financial identifiers when you enable samples) | You still own the **in-scope application list** |
 | Repeatable evidence | Show the same check ran again | Scheduled / API scans, Excel + heatmap, **`--diff`** | Not a GRC platform of record |
 | Accountability trail | Who ran which scan | Session metadata, **`--export-audit-trail`**, optional notification send log | SQLite can be copied or wiped — **not** an immutable SOX archive |
-| Access / SoD | Who can see findings | Optional dashboard **API key**, **WebAuthn**, **RBAC** (Pro+) | **(roadmap)** SSO/OIDC — [PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md](PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md) |
+| Access / SoD | Who can see findings | Optional dashboard **API key**, **WebAuthn**, **RBAC** (Pro+) | **(roadmap)** SSO/OIDC — `docs/plans/PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md` |
 
 **Relevance:** US **issuers** and many **subsidiaries** reuse the same evidence pack. Pair this primer with counsel: SOX language in reports is **governance evidence**, not an audit opinion — [GLOSSARY.md](../GLOSSARY.md) **SOX**.
 
-**(roadmap)** Access/metadata findings for ITGC narratives — [PLAN_ENTERPRISE_HR_SST_ERP_CONNECTORS.md](PLAN_ENTERPRISE_HR_SST_ERP_CONNECTORS.md) (SOC software ≠ SOX).
+**(roadmap)** Access/metadata findings for ITGC narratives — `docs/plans/PLAN_ENTERPRISE_HR_SST_ERP_CONNECTORS.md` (SOC software ≠ SOX).
 
 ---
 
@@ -109,4 +109,4 @@ Before citing this primer in RFPs or audit packs:
 
 ## Maintainer
 
-When features ship, update the tables above and [PRIMERS_HUB.md](PRIMERS_HUB.md). Run `python scripts/plans_hub_sync.py --write` after hub-summary edits (hub table lists `PLAN_*.md` only; this primer is indexed in **PRIMERS_HUB**).
+When features ship, update the tables above and `docs/plans/PRIMERS_HUB.md`. Run `python scripts/plans_hub_sync.py --write` after hub-summary edits (hub table lists `PLAN_*.md` only; this primer is indexed in **PRIMERS_HUB**).

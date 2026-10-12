@@ -27,6 +27,8 @@ configuration guides (those live in the product docs) and **not** compliance/fra
 
 | [DATA_GOVERNANCE_DMBOK_PRIMER.md](DATA_GOVERNANCE_DMBOK_PRIMER.md) ([pt-BR](DATA_GOVERNANCE_DMBOK_PRIMER.pt_BR.md)) | DAMA-DMBOK knowledge areas and ISO/IEC 38505 — discovery evidence, not a GDD platform |
 
+| [FINANCIAL_SECTOR_COMPLIANCE_PRIMER.md](FINANCIAL_SECTOR_COMPLIANCE_PRIMER.md) | PCI DSS v4.0, SOX, BACEN CMN 4.893 — financial-sector compliance (evidence limits) |
+
 ## Navigation
 
 - **Map of maps:** [docs/hubs/INDEX.md](../hubs/INDEX.md)
