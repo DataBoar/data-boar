@@ -49,6 +49,8 @@ são primers de compliance/frameworks (esses ficam no hub central — veja abaix
 
 | [OBSERVABILITY_PRIMER.pt_BR.md](OBSERVABILITY_PRIMER.pt_BR.md) ([EN](OBSERVABILITY_PRIMER.md)) | OpenTelemetry opt-in (métricas/logs/traces) em core/otel_setup |
 
+| [SUPPLY_CHAIN_SECURITY_PRIMER.pt_BR.md](SUPPLY_CHAIN_SECURITY_PRIMER.pt_BR.md) ([EN](SUPPLY_CHAIN_SECURITY_PRIMER.md)) | SBOM, Actions pinadas, commits assinados, Dependabot, scanners |
+
 ## Navegação
 
 - **Mapa de mapas:** [docs/hubs/INDEX.md](../hubs/INDEX.md)

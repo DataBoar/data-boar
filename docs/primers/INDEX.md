@@ -49,6 +49,8 @@ configuration guides (those live in the product docs) and **not** compliance/fra
 
 | [OBSERVABILITY_PRIMER.md](OBSERVABILITY_PRIMER.md) ([pt-BR](OBSERVABILITY_PRIMER.pt_BR.md)) | Opt-in OpenTelemetry (metrics/logs/traces) in core/otel_setup |
 
+| [SUPPLY_CHAIN_SECURITY_PRIMER.md](SUPPLY_CHAIN_SECURITY_PRIMER.md) ([pt-BR](SUPPLY_CHAIN_SECURITY_PRIMER.pt_BR.md)) | SBOM, pinned Actions, signed commits, Dependabot, scanners |
+
 ## Navigation
 
 - **Map of maps:** [docs/hubs/INDEX.md](../hubs/INDEX.md)
