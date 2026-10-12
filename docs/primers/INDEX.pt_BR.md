@@ -25,6 +25,8 @@ são primers de compliance/frameworks (esses ficam no hub central — veja abaix
 
 | [AI_COMPLIANCE_PRIMER.md](AI_COMPLIANCE_PRIMER.md) | EU AI Act, ISO/IEC 42001, NIST AI RMF — camada de dados (inventário; sem avaliação de modelo) |
 
+| [DATA_GOVERNANCE_DMBOK_PRIMER.pt_BR.md](DATA_GOVERNANCE_DMBOK_PRIMER.pt_BR.md) ([EN](DATA_GOVERNANCE_DMBOK_PRIMER.md)) | Áreas DAMA-DMBOK e ISO/IEC 38505 — onde o Data Boar atua; não é plataforma GDD |
+
 ## Navegação
 
 - **Mapa de mapas:** [docs/hubs/INDEX.md](../hubs/INDEX.md)

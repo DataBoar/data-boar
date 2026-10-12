@@ -25,6 +25,8 @@ configuration guides (those live in the product docs) and **not** compliance/fra
 
 | [AI_COMPLIANCE_PRIMER.md](AI_COMPLIANCE_PRIMER.md) | EU AI Act, ISO/IEC 42001, NIST AI RMF — data-layer compliance (inventory only; no model evaluation) |
 
+| [DATA_GOVERNANCE_DMBOK_PRIMER.md](DATA_GOVERNANCE_DMBOK_PRIMER.md) ([pt-BR](DATA_GOVERNANCE_DMBOK_PRIMER.pt_BR.md)) | DAMA-DMBOK knowledge areas and ISO/IEC 38505 — discovery evidence, not a GDD platform |
+
 ## Navigation
 
 - **Map of maps:** [docs/hubs/INDEX.md](../hubs/INDEX.md)
