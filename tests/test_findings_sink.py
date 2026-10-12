@@ -238,13 +238,16 @@ def test_sqlalchemy_url_userinfo_special_chars_do_not_shift_host() -> None:
 
 
 def test_sqlalchemy_url_encodes_database_so_query_cannot_override_peer() -> None:
+    """URL path still encodes ``?``/``=`` so they are not a URL query; SQLAlchemy 2.1+
+    percent-decodes the database segment when parsing (#2069). psycopg2 receives the
+    literal dbname (see make_dsn/parse_dsn) without rewriting host/hostaddr."""
     from sqlalchemy.engine.url import make_url
 
     url = _sqlalchemy_url(_pg_sink(database="audit?hostaddr=10.0.0.9"))
     parsed = make_url(url)
     assert parsed.host == "db.example.com"
     assert not parsed.query
-    assert parsed.database == "audit%3Fhostaddr%3D10.0.0.9"
+    assert parsed.database == "audit?hostaddr=10.0.0.9"
 
 
 def test_sqlalchemy_url_rejects_host_authority_injection() -> None:
