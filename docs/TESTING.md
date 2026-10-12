@@ -170,6 +170,19 @@ Do **not** re-enable default setup while `codeql.yml` is the intended source. Co
 
 Guards: `tests/test_gitleaks_config.py`, `tests/test_tool_pins_gitleaks_osv.py`, `tests/test_github_workflows.py`. Operator plan (internal): ``docs/plans/PLAN_CHECKALL_GITLEAKS_OSV_PARITY.md``.
 
+### Shellcheck and case collisions (#1926, #2044)
+
+`./scripts/check-all.sh` and `.\scripts\check-all.ps1` abort **before** pytest when either check fails. The **Lint (pre-commit)** job in [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) runs the same two checks. On that runner, the shellcheck step installs the Debian package when the binary is absent. A local `check-all` does not: the binary must already be on `PATH`.
+
+| Check | Command | Failure |
+| --- | --- | --- |
+| **shellcheck** | `shellcheck --severity=error` on every tracked `*.sh` (`git ls-files -z '*.sh'`) | Missing binary: `shellcheck not on PATH (#1926)`. Findings at **warning** or **info** do not fail the gate. |
+| **Case collisions** | `uv run python scripts/check_case_collisions.py` | Two distinct tracked paths share a lowercased key. Stderr prints `path <=> path` (`#2044`). |
+
+Linux stores `README.md` and `readme.md` as two files. Windows and default macOS keep one, so checkout drops or overwrites the other. The guard reads `git ls-files -z`, groups by the lowercased path, and exits **1** when a group has more than one distinct path. A missing path string is still a key; the script does not open the files.
+
+Install shellcheck from the distro package before the first local `check-all` (Debian/Ubuntu: `sudo apt install shellcheck`).
+
 ### Zizmor (workflow lint — every PR)
 
 [`.github/workflows/zizmor.yml`](../.github/workflows/zizmor.yml) runs on **every** `pull_request` / `push` to `main`/`master` (**no** `paths:` filter). A `code_scanning` ruleset needs a zizmor SARIF for **this** commit; filtering to `.github/workflows/**` deadlocks merge on docs-only PRs. The job **fails** unless repository variable **`ZIZMOR_ENFORCE=false`**. It is **not** in `required_status_checks`. On PRs, checkout is **`head.sha`** (not the merge commit) so the built-in SARIF upload hits `refs/pull/<N>/head`. Do **not** add a second `upload-sarif` step (duplicate category `zizmor`). Local: `uvx zizmor .github/workflows/` via **`check-all`**. Operator snapshot: [BRANCH_PROTECTION.md](ops/BRANCH_PROTECTION.md).

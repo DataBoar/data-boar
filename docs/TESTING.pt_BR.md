@@ -148,6 +148,19 @@ gh workflow list --all
 
 Guards: `tests/test_gitleaks_config.py`, `tests/test_tool_pins_gitleaks_osv.py`, `tests/test_github_workflows.py`. Plano do operador (interno): ``docs/plans/PLAN_CHECKALL_GITLEAKS_OSV_PARITY.md``.
 
+### Shellcheck e colisão de caixa (#1926, #2044)
+
+`./scripts/check-all.sh` e `.\scripts\check-all.ps1` abortam **antes** do pytest quando qualquer um dos dois checks falha. O job **Lint (pre-commit)** em [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) executa os mesmos dois checks. Nesse runner, o passo de shellcheck instala o pacote Debian quando o binário está ausente. O `check-all` local não instala: o binário já precisa estar no `PATH`.
+
+| Check | Comando | Falha |
+| --- | --- | --- |
+| **shellcheck** | `shellcheck --severity=error` em todo `*.sh` rastreado (`git ls-files -z '*.sh'`) | Binário ausente: `shellcheck not on PATH (#1926)`. Achados em **warning** ou **info** não derrubam o gate. |
+| **Colisão de caixa** | `uv run python scripts/check_case_collisions.py` | Dois caminhos rastreados distintos compartilham a mesma chave em minúsculas. O stderr imprime `path <=> path` (`#2044`). |
+
+O Linux guarda `README.md` e `readme.md` como dois arquivos. Windows e macOS (padrão) guardam um só, então o checkout descarta ou sobrescreve o outro. O guarda lê `git ls-files -z`, agrupa pela forma em minúsculas e sai com código **1** quando um grupo tem mais de um caminho distinto. Uma string de caminho ausente ainda entra na chave; o script não abre os arquivos.
+
+Instale o shellcheck pelo pacote da distribuição antes do primeiro `check-all` local (Debian/Ubuntu: `sudo apt install shellcheck`).
+
 ### Zizmor (lint de workflow — todo PR)
 
 [`.github/workflows/zizmor.yml`](../.github/workflows/zizmor.yml) roda em **todo** `pull_request` / `push` para `main`/`master` (**sem** filtro `paths:`). Um ruleset `code_scanning` precisa de SARIF do zizmor para **este** commit; filtrar só `.github/workflows/**` trava o merge em PRs só de docs. O job **falha** salvo a variável do repositório **`ZIZMOR_ENFORCE=false`**. Ele **não** está em `required_status_checks`. Em PRs, o checkout é **`head.sha`** (não o merge commit) para o upload SARIF interno cair em `refs/pull/<N>/head`. **Não** adicione um segundo passo `upload-sarif` (categoria `zizmor` duplicada). Local: `uvx zizmor .github/workflows/` via **`check-all`**. Instantâneo do operador: [BRANCH_PROTECTION.pt_BR.md](ops/BRANCH_PROTECTION.pt_BR.md).
