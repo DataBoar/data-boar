@@ -45,6 +45,8 @@ configuration guides (those live in the product docs) and **not** compliance/fra
 
 | [AAS_MODELS_PRIMER.md](AAS_MODELS_PRIMER.md) ([pt-BR](AAS_MODELS_PRIMER.pt_BR.md)) | SaaS vs AIaaS labels vs on-prem-first product delivery |
 
+| [RAG_PRIMER.md](RAG_PRIMER.md) ([pt-BR](RAG_PRIMER.pt_BR.md)) | RAG concepts; Boar scans corpora, does not ship vector RAG stack |
+
 ## Navigation
 
 - **Map of maps:** [docs/hubs/INDEX.md](../hubs/INDEX.md)

@@ -45,6 +45,8 @@ são primers de compliance/frameworks (esses ficam no hub central — veja abaix
 
 | [AAS_MODELS_PRIMER.pt_BR.md](AAS_MODELS_PRIMER.pt_BR.md) ([EN](AAS_MODELS_PRIMER.md)) | Rótulos SaaS/AIaaS vs entrega on-prem-first do produto |
 
+| [RAG_PRIMER.pt_BR.md](RAG_PRIMER.pt_BR.md) ([EN](RAG_PRIMER.md)) | Conceitos RAG; Boar varre corpora, não entrega stack vetorial RAG |
+
 ## Navegação
 
 - **Mapa de mapas:** [docs/hubs/INDEX.md](../hubs/INDEX.md)
