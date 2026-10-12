@@ -39,6 +39,8 @@ configuration guides (those live in the product docs) and **not** compliance/fra
 
 | [PRIVACY_MANAGEMENT_STANDARDS_PRIMER.md](PRIVACY_MANAGEMENT_STANDARDS_PRIMER.md) | ISO/IEC 27701, ISO/IEC 27018, NIST Privacy Framework — privacy management alignment |
 
+| [SOC2_COMPLIANCE_PRIMER.md](SOC2_COMPLIANCE_PRIMER.md) | SOC 2 Privacy Trust Services Criteria — evidence for assurance (not an audit report) |
+
 ## Navigation
 
 - **Map of maps:** [docs/hubs/INDEX.md](../hubs/INDEX.md)

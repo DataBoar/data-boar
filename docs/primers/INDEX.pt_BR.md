@@ -39,6 +39,8 @@ são primers de compliance/frameworks (esses ficam no hub central — veja abaix
 
 | [PRIVACY_MANAGEMENT_STANDARDS_PRIMER.md](PRIVACY_MANAGEMENT_STANDARDS_PRIMER.md) | ISO/IEC 27701, ISO/IEC 27018, NIST Privacy Framework — alinhamento de gestão de privacidade |
 
+| [SOC2_COMPLIANCE_PRIMER.md](SOC2_COMPLIANCE_PRIMER.md) | Critérios SOC 2 Privacy TSC — evidência para assurance (não é laudo de auditoria) |
+
 ## Navegação
 
 - **Mapa de mapas:** [docs/hubs/INDEX.md](../hubs/INDEX.md)
