@@ -76,8 +76,12 @@ como preocupação de coleta.
 `MEDIUM` / `LOW` / `STATIC`) em itens de plugin regex/ML/DL — metadado de autor, não copiado para
 as linhas de achado. Quando setado, `scan_manifest_*.yaml` lista sob `plugin_metadata.volatility_triage`
 (arquivo de origem, seção, id do padrão, classe). Ver [ADR-0052](../adr/ADR-0052-yaml-plugin-system-centralized-schema.md),
-`config/plugin_schema.yaml`. A ordem de coleta em si segue sendo preocupação de **runbook de
-IR/operador** — o campo registra a classificação de triagem, não sequencia nem automatiza a coleta.
+`config/plugin_schema.yaml`. **#1868:** duas grafias do mesmo arquivo viram uma linha só quando
+as chaves de config compartilham a mesma seção padrão (`regex_overrides_file` e
+`regex_overrides_files`). `patterns_plugin_file` mais uma chave legada nesse caminho continuam
+duas leituras. Contrato: [TECH_GUIDE.pt_BR.md](../TECH_GUIDE.pt_BR.md) ([EN](../TECH_GUIDE.md)).
+A ordem de coleta em si segue sendo preocupação de **runbook de IR/operador** — o campo registra
+a classificação de triagem e não sequencia nem automatiza a coleta.
 
 ---
 

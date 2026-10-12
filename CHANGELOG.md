@@ -12,6 +12,10 @@ Empty while the working tree carries **`1.8.0-rc`** (see section below).
 
 > Release candidate for **`1.8.0`**. **`[project] version = 1.8.0-rc`** (ADR-0073 PEP 440 hyphen form). **`[tool.databoar] maturity_build = 127`** — **rc band entry** on promotion from **`1.8.0-beta`** (last beta reconciliation **`.116`**, 2026-08-22). **Not** on PyPI or Docker Hub **`latest`**. Notes: [docs/releases/1.8.0-rc.md](docs/releases/1.8.0-rc.md).
 
+### Volatility triage path spellings (#1868)
+
+- `plugin_metadata.volatility_triage` collapses a relative path and the absolute path of the same plugin file when both config keys share one default section (for example `regex_overrides_file` and `regex_overrides_files`). The first spelling stays in `source_file`. `patterns_plugin_file` plus a legacy key on that path remains two reads. Detector merge is unchanged. See [TECH_GUIDE.md](docs/TECH_GUIDE.md).
+
 ### Pytest warnings (#1915)
 
 - **Starlette 1.7.0** includes the Kludex/starlette#3498 fix. The `anyio.abc.BlockingPortal` `filterwarnings` entry and the matching mark in `tests/conftest.py` are gone. `addopts` stays `-v -W error`.
