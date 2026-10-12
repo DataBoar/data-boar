@@ -105,6 +105,12 @@ Os mesmos tokens de [WORKFLOW_DEFERRED_FOLLOWUPS.pt_BR.md](WORKFLOW_DEFERRED_FOL
 
 **Neste repositório (2026-08-19):** a linha **Branch protection** dos follow-ups permanece **warm**. A matriz pytest Linux já é **hot**. Suba a linha dos follow-ups para **hot** só quando o conjunto recomendado no QUALITY §9 (Lint, audit, Bandit, Semgrep e qualquer CodeQL/Sonar que você queira bloquear) estiver **obrigatório** em `main`.
 
+## OpenSSF Scorecard — teto em Branch-Protection (operador solo)
+
+O check **Branch-Protection** do OpenSSF Scorecard costuma marcar **3/10 (High)** neste repositório enquanto `required_approving_review_count` permanece **0** e revisão de CODEOWNERS **não** é exigida no ruleset. Esse é um **teto consciente** para operação com **um único mantenedor** ([#1910](https://github.com/DataBoar/data-boar/issues/1910)): exigir aprovadores (ou políticas mais rígidas de revisão obsoleta / branch atualizado) não cria um segundo revisor humano e pode **piorar** a fricção de merge (por exemplo drift longo do Dependabot) sem ganho real de segurança.
+
+**Não** altere rulesets no GitHub **só** para subir a nota do Scorecard. Reavalie aprovadores + CODEOWNERS quando existir um **segundo mantenedor**, ou quando um experimento documentado de Code-Review (wave 3 sob [#1902](https://github.com/DataBoar/data-boar/issues/1902)) mostrar benefício líquido **sem** bloquear merge solo. Este parágrafo **não** afirma o resultado de experimento ainda em andamento.
+
 ## Relacionado
 
 - [COMMIT_AND_PR.pt_BR.md](COMMIT_AND_PR.pt_BR.md) ([EN](COMMIT_AND_PR.md)) — scripts locais de commit/PR
