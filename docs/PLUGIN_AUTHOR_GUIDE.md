@@ -58,6 +58,8 @@ patterns_plugin_file: /data/my_patterns.yaml
 
 Legacy keys still work (same schemas, three files): `regex_overrides_file`, `ml_patterns_file`, `dl_patterns_file`. When both the unified file and a legacy key supply the **same section**, **`patterns_plugin_file` wins** for that section ([ADR-0052](adr/ADR-0052-yaml-plugin-system-centralized-schema.md)).
 
+**Scan-manifest paths (#1868):** `plugin_metadata.volatility_triage` collapses two spellings of one file only when both keys share the **same default section** (for example `regex_overrides_file` and `regex_overrides_files`). `patterns_plugin_file` plus a legacy key on that same path stays two reads, because the default sections differ. A bare list under `patterns_plugin_file` is read as `regex_patterns`, so the same bytes on `regex_overrides_*` repeat those triage rows. Detector merge is unchanged. Full contract: [TECH_GUIDE.md](TECH_GUIDE.md) ([pt-BR](TECH_GUIDE.pt_BR.md)) (forensic volatility triage).
+
 Field-by-field detection behaviour: [SENSITIVITY_DETECTION.md](SENSITIVITY_DETECTION.md) ([pt-BR](SENSITIVITY_DETECTION.pt_BR.md)). CLI/config overview: [USAGE.md](USAGE.md) ([pt-BR](USAGE.pt_BR.md)).
 
 ---
