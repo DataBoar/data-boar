@@ -1,6 +1,6 @@
 # Plan: Clojure/Lisp augmentation feasibility for Data Boar
 
-**Status:** Deferred
+**Status:** Amended (2026-10-12 — runtime in sibling bestials, not in-tree host sidecar; see §0)
 **Date:** 2026-05-09
 **Authors:** Fabio Leitao
 **Priority:** H3
@@ -12,6 +12,18 @@
 
 **Horizon suggestion:** `[H4][U3]` far-horizon exploration after current commercialization slices
 **Primary scope:** Architecture feasibility and evidence, not immediate product migration
+
+---
+
+## 0. Amendment (2026-10-12 — issue #1839)
+
+**Conclusion:** a Clojure/Lisp **sidecar plugin** remains valid, but **not** inside the `data-boar` tree (`experimental/clojure_sidecar/`, JVM on the Community path, Python adapter in core).
+
+- Runtime lives in **separate DataBoar org repositories** (sage-remora, faithful-ferret) orchestrated via the plugin/SDK slot — not as a sub-product of this monorepo.
+- The **host** keeps only the L2 spawn/timeout/Safe-Hold contract (`PLAN_PLUGIN_PARTNER_INTERFACE` / epic #865); it does not own the Clojure engine.
+- **Phases 0–2 below (host in-tree PoC):** **cancelled / do not apply** — preserved as historical hypothesis only.
+
+This plan is **not** moved to `completed/` solely to hide hub rows; status is **Amended**, not “done on core.”
 
 ---
 
@@ -61,10 +73,10 @@ Proceed beyond PoC only if all are true:
 
 | # | To-do | Status |
 | - | ----- | ------ |
-| 0.1 | Define 2-3 realistic rule cases where current Python logic is verbose or hard to audit. | ⬜ Pending |
-| 0.2 | Compare candidate stacks (`datascript`, `malli`, lightweight EDN rule model) and list trade-offs. | ⬜ Pending |
-| 0.3 | Write integration options (gRPC sidecar, local process, or offline rule compiler) with blast-radius notes. | ⬜ Pending |
-| 0.4 | Produce a go/no-go memo (one page) and classify this track as product backlog or academic-only backlog. | ⬜ Pending |
+| 0.1 | Define 2-3 realistic rule cases where current Python logic is verbose or hard to audit. | ❌ Cancelled (§0 — host track) |
+| 0.2 | Compare candidate stacks (`datascript`, `malli`, lightweight EDN rule model) and list trade-offs. | ❌ Cancelled (§0) |
+| 0.3 | Write integration options (gRPC sidecar, local process, or offline rule compiler) with blast-radius notes. | ❌ Cancelled (§0) |
+| 0.4 | Produce a go/no-go memo (one page) and classify this track as product backlog or academic-only backlog. | ❌ Cancelled (§0) |
 
 ---
 
@@ -74,11 +86,11 @@ Proceed beyond PoC only if all are true:
 
 | # | To-do | Status |
 | - | ----- | ------ |
-| 1.1 | Create `experimental/clojure_sidecar/` with minimal project bootstrap and README constraints. | ⬜ Pending |
-| 1.2 | Implement one rule-evaluation endpoint with deterministic input/output contract. | ⬜ Pending |
-| 1.3 | Add a Python adapter behind an opt-in feature flag (`off` by default). | ⬜ Pending |
-| 1.4 | Add benchmark script and capture latency/memory overhead versus baseline. | ⬜ Pending |
-| 1.5 | Record findings and recommendation (`continue`, `park`, or `discard`). | ⬜ Pending |
+| 1.1 | Create `experimental/clojure_sidecar/` with minimal project bootstrap and README constraints. | ❌ Cancelled (§0) |
+| 1.2 | Implement one rule-evaluation endpoint with deterministic input/output contract. | ❌ Cancelled (§0) |
+| 1.3 | Add a Python adapter behind an opt-in feature flag (`off` by default). | ❌ Cancelled (§0) |
+| 1.4 | Add benchmark script and capture latency/memory overhead versus baseline. | ❌ Cancelled (§0) |
+| 1.5 | Record findings and recommendation (`continue`, `park`, or `discard`). | ❌ Cancelled (§0) |
 
 ---
 
@@ -88,10 +100,10 @@ Proceed beyond PoC only if all are true:
 
 | # | To-do | Status |
 | - | ----- | ------ |
-| 2.1 | Define operator lifecycle workflow (install, health checks, fallback when sidecar is unavailable). | ⬜ Pending |
-| 2.2 | Define security model for sidecar communication and input validation. | ⬜ Pending |
-| 2.3 | Define report/audit surface fields showing when sidecar logic was active. | ⬜ Pending |
-| 2.4 | Estimate maintenance cost and confirm fit with roadmap priorities. | ⬜ Pending |
+| 2.1 | Define operator lifecycle workflow (install, health checks, fallback when sidecar is unavailable). | ❌ Cancelled (§0 — host track) |
+| 2.2 | Define security model for sidecar communication and input validation. | ❌ Cancelled (§0) |
+| 2.3 | Define report/audit surface fields showing when sidecar logic was active. | ❌ Cancelled (§0) |
+| 2.4 | Estimate maintenance cost and confirm fit with roadmap priorities. | ❌ Cancelled (§0) |
 
 ---
 
@@ -112,8 +124,10 @@ Related references:
 
 ## 7. Recommendation (current)
 
-Current recommendation: keep this track in **far-horizon backlog** until active trust/commercial slices stabilize. Re-evaluate when one of these triggers occurs:
+**After §0 (2026-10-12):** do **not** resume host in-tree phases 0–2. Any Clojure/Lisp sidecar work belongs in **sibling bestial repositories** (plugin/SDK slot) with the host keeping spawn/timeout/Safe-Hold only.
+
+For product planning, treat this file as **amended reference** — not a near-term `main` milestone. Revisit twins + host contract when:
 
 - A customer/partner request requires richer policy reasoning.
 - A thesis/research cycle needs an experimental formal-rules branch.
-- Existing Python policy logic becomes too costly to maintain.
+- Plugin partner interface (#865) defines a concrete L2 integration test.
