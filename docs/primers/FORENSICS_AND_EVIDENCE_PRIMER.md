@@ -77,8 +77,12 @@ collection concern.
 `MEDIUM` / `LOW` / `STATIC`) on regex/ML/DL pattern items — author metadata, not copied onto
 finding rows. When set, `scan_manifest_*.yaml` lists it under `plugin_metadata.volatility_triage`
 (source file, section, pattern id, class). See [ADR-0052](../adr/ADR-0052-yaml-plugin-system-centralized-schema.md),
-`config/plugin_schema.yaml`. Collection order itself remains an **operator/IR runbook** concern —
-the field records triage classification, it does not sequence or automate collection.
+`config/plugin_schema.yaml`. **#1868:** two spellings of one file collapse to one row only when
+the config keys share the same default section (`regex_overrides_file` and
+`regex_overrides_files`). `patterns_plugin_file` plus a legacy key on that path stays two reads.
+Contract: [TECH_GUIDE.md](../TECH_GUIDE.md) ([pt-BR](../TECH_GUIDE.pt_BR.md)). Collection order
+itself remains an **operator/IR runbook** concern — the field records triage classification, it
+does not sequence or automate collection.
 
 ---
 

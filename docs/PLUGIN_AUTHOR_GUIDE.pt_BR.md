@@ -58,6 +58,8 @@ patterns_plugin_file: /data/my_patterns.yaml
 
 As chaves legadas ainda funcionam (mesmos schemas, três arquivos): `regex_overrides_file`, `ml_patterns_file`, `dl_patterns_file`. Quando o arquivo unificado e uma chave legada cobrem a **mesma seção**, **`patterns_plugin_file` prevalece** nessa seção ([ADR-0052](adr/ADR-0052-yaml-plugin-system-centralized-schema.md)).
 
+**Caminhos no manifesto de scan (#1868):** `plugin_metadata.volatility_triage` colapsa duas grafias do mesmo arquivo só quando as duas chaves compartilham a **mesma seção padrão** (por exemplo `regex_overrides_file` e `regex_overrides_files`). `patterns_plugin_file` mais uma chave legada nesse mesmo caminho continuam duas leituras, porque as seções padrão diferem. Uma lista nua em `patterns_plugin_file` é lida como `regex_patterns`, então os mesmos bytes em `regex_overrides_*` repetem essas linhas de triagem. O merge do detector permanece o mesmo. Contrato completo: [TECH_GUIDE.pt_BR.md](TECH_GUIDE.pt_BR.md) ([EN](TECH_GUIDE.md)) (triagem de volatilidade forense).
+
 Comportamento campo a campo: [SENSITIVITY_DETECTION.pt_BR.md](SENSITIVITY_DETECTION.pt_BR.md) ([EN](SENSITIVITY_DETECTION.md)). Visão CLI/config: [USAGE.pt_BR.md](USAGE.pt_BR.md) ([EN](USAGE.md)).
 
 ---
