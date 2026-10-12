@@ -45,6 +45,8 @@ Variáveis de ambiente sobrescrevem o YAML quando definidas:
 
 O modo enforced verifica o `.lic` contra a chave **pública** Ed25519 que vai **dentro do wheel** em `core/licensing/license-pub-v1.pem` (carregada via `importlib.resources`). Uma instalação limpa com um `.lic` válido e vinculado à máquina **não** precisa de caminho de pubkey.
 
+A âncora ML-DSA-65 de **rotação / híbrido** vai em `core/licensing/license-mldsa-pub-v1.pem` (mesmo empacotamento que a Ed25519). SHA-256 canônico do arquivo em disco (bytes LF): `37faef8ff167cf01a0fc6a2bc8b7cfcac6bfe5651360051b1eb00a0a60fa85b8`. A verificação híbrida `dbmldsa_sig` segue **opcional** até o operador adotar política obrigatória; tokens sem esse claim continuam só Ed25519.
+
 A rotação de chave é uma atestação JSON em `licensing.rotation_attestation_path`. Ela só é aceita quando **as duas** âncoras embarcadas (Ed25519 e ML-DSA-65) assinam a mesma mensagem e `epoch` é `>= MIN_ACCEPTED_KEY_EPOCH` em `core/licensing/trust_anchor.py`. Os bytes assinados são `data-boar/license-key-rotation/v1\\0` mais a época como inteiro de 8 bytes big-endian mais o JSON canônico das chaves públicas novas. A época fica dentro dessa mensagem; mudá-la depois de assinar invalida a assinatura. Uma âncora só, um PEM cru ou uma época antiga falham fechado (`rotation_rejected:…`). `missing_public_key` só ocorre quando o recurso Ed25519 empacotado está ausente e não há rotação aceita.
 
 Outras variáveis de ambiente:

@@ -73,7 +73,10 @@ Envie apenas o arquivo `.lic` — nunca a chave privada.
 ## 4. Instalar e rodar enforced
 
 A chave pública oficial de verificação já vai **embarcada** na instalação
-(`license-pub-v1.pem`). Um `.lic` válido e vinculado à máquina basta — sem
+(`license-pub-v1.pem`). A âncora ML-DSA-65 (`license-mldsa-pub-v1.pem`, SHA-256
+`37faef8ff167cf01a0fc6a2bc8b7cfcac6bfe5651360051b1eb00a0a60fa85b8`) vem no
+mesmo wheel para rotação e verificação híbrida opcional; `dbmldsa_sig` ainda
+não é obrigatório. Um `.lic` válido e vinculado à máquina basta — sem
 env/config de pubkey numa instalação limpa (#1331). Um
 `DATA_BOAR_LICENSE_PUBLIC_KEY_*`, `DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_*`,
 `licensing.public_key_path` ou `licensing.mldsa_public_key_path` falha

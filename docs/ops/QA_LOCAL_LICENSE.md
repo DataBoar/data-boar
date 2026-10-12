@@ -71,6 +71,10 @@ Send only the `.lic` file — never the private key.
 ## 4. Install and run enforced
 
 The official verify key is **embedded** in the install (`license-pub-v1.pem`).
+The ML-DSA-65 anchor (`license-mldsa-pub-v1.pem`, SHA-256
+`37faef8ff167cf01a0fc6a2bc8b7cfcac6bfe5651360051b1eb00a0a60fa85b8`) ships in
+the same wheel for rotation and optional hybrid verify; `dbmldsa_sig` is not
+required yet.
 A valid machine-bound `.lic` is enough — no pubkey env/config on a clean
 install (#1331). A raw `DATA_BOAR_LICENSE_PUBLIC_KEY_*`, `DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_*`,
 `licensing.public_key_path`, or `licensing.mldsa_public_key_path` fails closed

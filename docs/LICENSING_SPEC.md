@@ -41,6 +41,8 @@ Environment variables override YAML when set:
 
 Enforced mode verifies the `.lic` against the Ed25519 **public** key shipped **inside the wheel** as `core/licensing/license-pub-v1.pem` (loaded via `importlib.resources`). A clean install with a valid machine-bound `.lic` does **not** need a pubkey path.
 
+The ML-DSA-65 **rotation / hybrid** anchor ships as `core/licensing/license-mldsa-pub-v1.pem` (same packaging path as Ed25519). Canonical on-disk SHA-256 (LF bytes): `37faef8ff167cf01a0fc6a2bc8b7cfcac6bfe5651360051b1eb00a0a60fa85b8`. Hybrid `dbmldsa_sig` verify remains **optional** until the operator adopts a mandatory policy; tokens without that claim stay Ed25519-only.
+
 Key rotation is a JSON attestation at `licensing.rotation_attestation_path`. It is accepted only when **both** embedded anchors (Ed25519 and ML-DSA-65) sign the same message and `epoch` is `>= MIN_ACCEPTED_KEY_EPOCH` in `core/licensing/trust_anchor.py`. The signed bytes are `data-boar/license-key-rotation/v1\\0` plus the epoch as an 8-byte big-endian integer plus the canonical JSON of the new public keys. The epoch is inside that message; changing it after signing fails the signature. One anchor, a raw PEM, or an older epoch fails closed (`rotation_rejected:…`). `missing_public_key` remains only when the packaged Ed25519 resource is absent and no accepted rotation is configured.
 
 Other environment variables:
