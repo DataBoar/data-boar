@@ -21,7 +21,7 @@ Educational **plan-tier** documents that explain how Data Boar aligns with exter
 | Primer | Summary |
 | ------ | ------- |
 | [IT_GOVERNANCE_FRAMEWORKS_PRIMER.md](IT_GOVERNANCE_FRAMEWORKS_PRIMER.md) | ISO/IEC 38500, COBIT 2019 — EDM cycle; diagram companion [GOVERNANCE_ITSM_DIAGRAMS_SOURCE.md](GOVERNANCE_ITSM_DIAGRAMS_SOURCE.md) |
-| [ITSM_FRAMEWORKS_PRIMER.md](ITSM_FRAMEWORKS_PRIMER.md) | ITIL 4, ISO/IEC 20000 — service practices mapping; same diagram companion |
+| [ITSM_FRAMEWORKS_PRIMER.md](../primers/ITSM_FRAMEWORKS_PRIMER.md) | ITIL 4, ISO/IEC 20000 — service practices mapping; same diagram companion |
 | [DATA_GOVERNANCE_DMBOK_PRIMER.md](../primers/DATA_GOVERNANCE_DMBOK_PRIMER.md) | DAMA-DMBOK knowledge areas + ISO/IEC 38505 — discovery vs GDD platform |
 | [ITSM_GOVERNANCE_ALIGNMENT.md](../ITSM_GOVERNANCE_ALIGNMENT.md) *(shipped — #554)* | ITIL 4, ISO 38500, COBIT 2019, ISO 27014, ISO 20000 — alignment tables (product docs) |
 

@@ -33,6 +33,8 @@ são primers de compliance/frameworks (esses ficam no hub central — veja abaix
 
 | [HEALTH_SECTOR_COMPLIANCE_PRIMER.md](HEALTH_SECTOR_COMPLIANCE_PRIMER.md) | HIPAA/PHI, ANS, ANVISA, CFM — alinhamento de conformidade no setor de saúde |
 
+| [ITSM_FRAMEWORKS_PRIMER.pt_BR.md](ITSM_FRAMEWORKS_PRIMER.pt_BR.md) ([EN](ITSM_FRAMEWORKS_PRIMER.md)) | ITIL 4 SVS e ISO/IEC 20000 — práticas selecionadas vs evidência de scan (não é service desk) |
+
 ## Navegação
 
 - **Mapa de mapas:** [docs/hubs/INDEX.md](../hubs/INDEX.md)

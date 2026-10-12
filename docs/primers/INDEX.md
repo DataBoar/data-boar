@@ -33,6 +33,8 @@ configuration guides (those live in the product docs) and **not** compliance/fra
 
 | [HEALTH_SECTOR_COMPLIANCE_PRIMER.md](HEALTH_SECTOR_COMPLIANCE_PRIMER.md) | HIPAA/PHI, ANS, ANVISA, CFM — health-sector compliance alignment |
 
+| [ITSM_FRAMEWORKS_PRIMER.md](ITSM_FRAMEWORKS_PRIMER.md) ([pt-BR](ITSM_FRAMEWORKS_PRIMER.pt_BR.md)) | ITIL 4 SVS and ISO/IEC 20000 — selected practices vs scan evidence (not a service desk) |
+
 ## Navigation
 
 - **Map of maps:** [docs/hubs/INDEX.md](../hubs/INDEX.md)
