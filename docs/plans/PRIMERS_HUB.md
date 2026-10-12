@@ -12,7 +12,7 @@ Educational **plan-tier** documents that explain how Data Boar aligns with exter
 
 | Primer | Summary |
 | ------ | ------- |
-| [PRIVACY_MANAGEMENT_STANDARDS_PRIMER.md](PRIVACY_MANAGEMENT_STANDARDS_PRIMER.md) | ISO/IEC 27701, ISO/IEC 27018, NIST Privacy Framework |
+| [PRIVACY_MANAGEMENT_STANDARDS_PRIMER.md](../primers/PRIVACY_MANAGEMENT_STANDARDS_PRIMER.md) | ISO/IEC 27701, ISO/IEC 27018, NIST Privacy Framework |
 | [HEALTH_SECTOR_COMPLIANCE_PRIMER.md](../primers/HEALTH_SECTOR_COMPLIANCE_PRIMER.md) | HIPAA/PHI, ANS, ANVISA, CFM |
 | [GLOBAL_PRIVACY_REGULATIONS_PRIMER.md](../primers/GLOBAL_PRIVACY_REGULATIONS_PRIMER.md) | PIPEDA, POPIA, APPI, Vietnam PDPD, FELCA — honest sample status (#600) |
 

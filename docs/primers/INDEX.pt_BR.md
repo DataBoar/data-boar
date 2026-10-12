@@ -37,6 +37,8 @@ são primers de compliance/frameworks (esses ficam no hub central — veja abaix
 
 | [IT_GOVERNANCE_FRAMEWORKS_PRIMER.pt_BR.md](IT_GOVERNANCE_FRAMEWORKS_PRIMER.pt_BR.md) ([EN](IT_GOVERNANCE_FRAMEWORKS_PRIMER.md)) | ISO/IEC 38500 e COBIT 2019 — ciclo EDM; evidência de descoberta, não suite GRC |
 
+| [PRIVACY_MANAGEMENT_STANDARDS_PRIMER.md](PRIVACY_MANAGEMENT_STANDARDS_PRIMER.md) | ISO/IEC 27701, ISO/IEC 27018, NIST Privacy Framework — alinhamento de gestão de privacidade |
+
 ## Navegação
 
 - **Mapa de mapas:** [docs/hubs/INDEX.md](../hubs/INDEX.md)

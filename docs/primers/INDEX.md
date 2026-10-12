@@ -37,6 +37,8 @@ configuration guides (those live in the product docs) and **not** compliance/fra
 
 | [IT_GOVERNANCE_FRAMEWORKS_PRIMER.md](IT_GOVERNANCE_FRAMEWORKS_PRIMER.md) ([pt-BR](IT_GOVERNANCE_FRAMEWORKS_PRIMER.pt_BR.md)) | ISO/IEC 38500 and COBIT 2019 — EDM cycle; discovery evidence, not a GRC suite |
 
+| [PRIVACY_MANAGEMENT_STANDARDS_PRIMER.md](PRIVACY_MANAGEMENT_STANDARDS_PRIMER.md) | ISO/IEC 27701, ISO/IEC 27018, NIST Privacy Framework — privacy management alignment |
+
 ## Navigation
 
 - **Map of maps:** [docs/hubs/INDEX.md](../hubs/INDEX.md)
