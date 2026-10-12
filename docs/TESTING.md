@@ -28,6 +28,8 @@ uv run pytest -v -W error --include-private
 
 **Optional — `docs/private/`:** By default **markdown lint** and **script syntax** tests **skip** the gitignored **`docs/private/`** tree. To include it locally (e.g. after editing private notes), pass **`pytest --include-private`** or set **`INCLUDE_PRIVATE_LINT=1`**. To fix Markdown there: **`uv run python scripts/fix_markdown_sonar.py --include-private`** (or the same env var). CI does **not** set this flag.
 
+**Pytest warnings (`-W error`, #1915):** `pyproject.toml` keeps **`addopts = -v -W error`** with **no** `filterwarnings` ignore list. **Starlette 1.7.0** (Kludex/starlette#3498) removed the need to silence `anyio.abc.BlockingPortal` `DeprecationWarning` during collection; the retired filter and the matching `tests/conftest.py` hook are gone. Regression guard: `tests/test_pytest_blockingportal_filterwarnings.py`. Release note: [CHANGELOG.md](../CHANGELOG.md) § *Pytest warnings (#1915)*.
+
 **Requirements:** Python **3.12 or 3.13** (see `CONTRIBUTING.md` / `SECURITY.md`), dependencies installed (`uv sync --group dev` or `pip install -e .` plus dev tools). The **dev** group includes **`rapidfuzz`** so fuzzy-column tests run; core runtime does not require it unless you enable `sensitivity_detection.fuzzy_column_match` (optional extra **`detection-fuzzy`**). No external services are required; tests use temporary configs and in-memory or temporary SQLite where needed.
 
 ## Test modules overview
