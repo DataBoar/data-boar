@@ -25,7 +25,7 @@ RAG reduz “alucinação” versus modelo nu **somente quando** a recuperação
 | Embeddings, chunking, vector DB, orquestração de prompt | **Não** em `data-boar` | — |
 | API RAG hospedada (AIaaS) | **Não** | [AAS_MODELS_PRIMER.pt_BR.md](AAS_MODELS_PRIMER.pt_BR.md) |
 
-**latent-lynx** (repositório **privado** separado no roster do ecossistema do operador) é o nome usado para experimentação orientada a RAG — **não** documentado nesta árvore pública. Não infira implementação interna a partir do `data-boar`. O alinhamento **latent-lynx#28** segue **aberto** na redação deste primer; trate integração como **pendente**, não entregue.
+**latent-lynx** (repositório **privado** separado no roster do ecossistema do operador) é o nome usado para experimentação orientada a RAG — **não** documentado nesta árvore pública. Não infira implementação interna a partir do `data-boar`. O alinhamento **latent-lynx#28** segue **aberto** na redação deste primer; trate integração como **pendente**, não entregue. O material de onboarding e de treino do Lynx (incluindo o pipeline de recuperação como exemplo) é rastreado em `latent-lynx#28`, no repositório privado.
 
 ---
 

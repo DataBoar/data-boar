@@ -25,7 +25,7 @@ RAG reduces “hallucination” versus a bare model **only when** retrieval qual
 | Embeddings, chunking, vector DB, prompt orchestration | **No** in `data-boar` | — |
 | Hosted RAG API (AIaaS) | **No** | [AAS_MODELS_PRIMER.md](AAS_MODELS_PRIMER.md) |
 
-**latent-lynx** (separate **private** repository in the operator ecosystem roster) is the named home for RAG-oriented experimentation — **not** documented in this public tree. Do not infer its internals from `data-boar`. Cross-repo alignment work **latent-lynx#28** remains **open** at the time of this primer; treat integration as **pending**, not shipped.
+**latent-lynx** (separate **private** repository in the operator ecosystem roster) is the named home for RAG-oriented experimentation — **not** documented in this public tree. Do not infer its internals from `data-boar`. Cross-repo alignment work **latent-lynx#28** remains **open** at the time of this primer; treat integration as **pending**, not shipped. Lynx onboarding and training material (including a retrieval pipeline as an example) is tracked in `latent-lynx#28` in that private repository.
 
 ---
 
