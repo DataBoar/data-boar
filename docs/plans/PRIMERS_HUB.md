@@ -12,36 +12,36 @@ Educational **plan-tier** documents that explain how Data Boar aligns with exter
 
 | Primer | Summary |
 | ------ | ------- |
-| [PRIVACY_MANAGEMENT_STANDARDS_PRIMER.md](PRIVACY_MANAGEMENT_STANDARDS_PRIMER.md) | ISO/IEC 27701, ISO/IEC 27018, NIST Privacy Framework |
-| [HEALTH_SECTOR_COMPLIANCE_PRIMER.md](HEALTH_SECTOR_COMPLIANCE_PRIMER.md) | HIPAA/PHI, ANS, ANVISA, CFM |
-| [GLOBAL_PRIVACY_REGULATIONS_PRIMER.md](GLOBAL_PRIVACY_REGULATIONS_PRIMER.md) | PIPEDA, POPIA, APPI, Vietnam PDPD, FELCA — honest sample status (#600) |
+| [PRIVACY_MANAGEMENT_STANDARDS_PRIMER.md](../primers/PRIVACY_MANAGEMENT_STANDARDS_PRIMER.md) | ISO/IEC 27701, ISO/IEC 27018, NIST Privacy Framework |
+| [HEALTH_SECTOR_COMPLIANCE_PRIMER.md](../primers/HEALTH_SECTOR_COMPLIANCE_PRIMER.md) | HIPAA/PHI, ANS, ANVISA, CFM |
+| [GLOBAL_PRIVACY_REGULATIONS_PRIMER.md](../primers/GLOBAL_PRIVACY_REGULATIONS_PRIMER.md) | PIPEDA, POPIA, APPI, Vietnam PDPD, FELCA — honest sample status (#600) |
 
 ## Governance and risk
 
 | Primer | Summary |
 | ------ | ------- |
-| [IT_GOVERNANCE_FRAMEWORKS_PRIMER.md](IT_GOVERNANCE_FRAMEWORKS_PRIMER.md) | ISO/IEC 38500, COBIT 2019 — EDM cycle; diagram companion [GOVERNANCE_ITSM_DIAGRAMS_SOURCE.md](GOVERNANCE_ITSM_DIAGRAMS_SOURCE.md) |
-| [ITSM_FRAMEWORKS_PRIMER.md](ITSM_FRAMEWORKS_PRIMER.md) | ITIL 4, ISO/IEC 20000 — service practices mapping; same diagram companion |
-| [DATA_GOVERNANCE_DMBOK_PRIMER.md](DATA_GOVERNANCE_DMBOK_PRIMER.md) | DAMA-DMBOK knowledge areas + ISO/IEC 38505 — discovery vs GDD platform |
+| [IT_GOVERNANCE_FRAMEWORKS_PRIMER.md](../primers/IT_GOVERNANCE_FRAMEWORKS_PRIMER.md) | ISO/IEC 38500, COBIT 2019 — EDM cycle; diagram companion [GOVERNANCE_ITSM_DIAGRAMS_SOURCE.md](GOVERNANCE_ITSM_DIAGRAMS_SOURCE.md) |
+| [ITSM_FRAMEWORKS_PRIMER.md](../primers/ITSM_FRAMEWORKS_PRIMER.md) | ITIL 4, ISO/IEC 20000 — service practices mapping; same diagram companion |
+| [DATA_GOVERNANCE_DMBOK_PRIMER.md](../primers/DATA_GOVERNANCE_DMBOK_PRIMER.md) | DAMA-DMBOK knowledge areas + ISO/IEC 38505 — discovery vs GDD platform |
 | [ITSM_GOVERNANCE_ALIGNMENT.md](../ITSM_GOVERNANCE_ALIGNMENT.md) *(shipped — #554)* | ITIL 4, ISO 38500, COBIT 2019, ISO 27014, ISO 20000 — alignment tables (product docs) |
 
 ## Audit and assurance
 
 | Primer | Summary |
 | ------ | ------- |
-| [SOC2_COMPLIANCE_PRIMER.md](SOC2_COMPLIANCE_PRIMER.md) | SOC 2 Privacy Trust Services Criteria |
+| [SOC2_COMPLIANCE_PRIMER.md](../primers/SOC2_COMPLIANCE_PRIMER.md) | SOC 2 Privacy Trust Services Criteria |
 
 ## Financial sector
 
 | Primer | Summary |
 | ------ | ------- |
-| [FINANCIAL_SECTOR_COMPLIANCE_PRIMER.md](FINANCIAL_SECTOR_COMPLIANCE_PRIMER.md) | PCI DSS v4.0, SOX, BACEN CMN 4.893/2021 |
+| [FINANCIAL_SECTOR_COMPLIANCE_PRIMER.md](../primers/FINANCIAL_SECTOR_COMPLIANCE_PRIMER.md) | PCI DSS v4.0, SOX, BACEN CMN 4.893/2021 |
 
 ## AI and emerging tech
 
 | Primer | Summary |
 | ------ | ------- |
-| [AI_COMPLIANCE_PRIMER.md](AI_COMPLIANCE_PRIMER.md) | EU AI Act, ISO/IEC 42001, NIST AI RMF |
+| [AI_COMPLIANCE_PRIMER.md](../primers/AI_COMPLIANCE_PRIMER.md) | EU AI Act, ISO/IEC 42001, NIST AI RMF |
 
 ## Technical / onboarding primers (`docs/primers/`)
 

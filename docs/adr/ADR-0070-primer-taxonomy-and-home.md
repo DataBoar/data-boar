@@ -13,6 +13,7 @@ Accepted
 
 - 2026-06-17 — Proposed
 - 2026-06-17 — Accepted: ratified to proceed with the #744 migration now (Maestro gate decoupled)
+- 2026-10-12 — Amended: operator rule — all primers (technical and compliance/framework) live under `docs/primers/`; deliverable-tier primers migrated from `docs/plans/` (epic #2038)
 
 ## Context
 
@@ -42,12 +43,11 @@ primers therefore must not link down into the plan-tier hub; the central hub (in
 
 ## Decision
 
-1. **Two primer tiers, explicit:**
-   - **Technical / onboarding / KT** primers (conceptual; audience = integrators, new
-     maintainers, technical clients) live under **`docs/primers/`**.
-   - **Deliverable / framework / compliance / governance** primers (external-standard
-     explainers, issue-tracked) **stay under `docs/plans/`** for now; a future
-     `docs/plans/primers/` subfolder is allowed in a later revision.
+1. **Single primer home (amended 2026-10-12):** all primers — **technical / onboarding / KT**
+   and **framework / compliance / governance** explainers — live under **`docs/primers/`**.
+   Registration for new primers uses the local **`docs/primers/INDEX.md`** (+ pt-BR mirror).
+   **`docs/plans/PRIMERS_HUB.md`** remains the central navigation hub and links to
+   `../primers/<NAME>_PRIMER.md` files; it does **not** host primer bodies.
 2. **Create `docs/primers/`** with a local mini-hub (`INDEX.md` + `INDEX.pt_BR.md`), migrate
    `docs/AI_EVOLUTION_PRIMER.md` (+ pt-BR) there, and host new technical primers (e.g. a
    `DECISION_RECORDS_PRIMER` for ADR/MADR/UMADR). This executes **#744**.

@@ -124,4 +124,4 @@ Issue #600 listed FELCA under Vietnam. On disk, FELCA is the **Brazilian** digit
 
 ## Maintainer
 
-When a new jurisdiction YAML ships, add a **status-table row** here and a line in [COMPLIANCE_FRAMEWORKS.md](../COMPLIANCE_FRAMEWORKS.md) (product index — **do not** link that page back into `docs/plans/`). After editing the hub summary, run `python scripts/plans_hub_sync.py --write` (indexes `PLAN_*.md` only; this primer is listed in [PRIMERS_HUB.md](PRIMERS_HUB.md)).
+When a new jurisdiction YAML ships, add a **status-table row** here and a line in [COMPLIANCE_FRAMEWORKS.md](../COMPLIANCE_FRAMEWORKS.md) (product index — **do not** link that page back into `docs/plans/`). After editing the hub summary, run `python scripts/plans_hub_sync.py --write` (indexes `PLAN_*.md` only; this primer is listed in `docs/plans/PRIMERS_HUB.md`).

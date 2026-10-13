@@ -1,6 +1,6 @@
 # Plano: viabilidade de augmentação Clojure/Lisp no Data Boar
 
-**Status:** Pending
+**Status:** Emendado (2026-10-12 — runtime em bestiais irmãos, não sidecar no host; ver §0)
 **Date:** 2026-05-09
 **Authors:** Fabio Leitao
 **Priority:** H3
@@ -12,6 +12,18 @@
 
 **Horizonte sugerido:** `[H4][U3]` exploração de longo prazo após as fatias atuais de comercialização
 **Escopo principal:** Viabilidade arquitetural e evidências, não migração imediata do produto
+
+---
+
+## 0. Emenda (2026-10-12 — issue #1839)
+
+**Conclusão:** um **plugin sidecar** Clojure/Lisp continua válido, mas **não** dentro da árvore `data-boar` (`experimental/clojure_sidecar/`, JVM no caminho Community, adapter Python no core).
+
+- O runtime fica em **repositórios separados** da org DataBoar (sage-remora, faithful-ferret), orquestrados pelo slot plugin/SDK — não como subproduto deste monorepo.
+- O **host** mantém só o contrato L2 spawn/timeout/Safe-Hold (`PLAN_PLUGIN_PARTNER_INTERFACE` / epic #865); não é dono do motor Clojure.
+- **Fases 0–2 abaixo (PoC no host):** **canceladas / não aplicam** — preservadas só como hipótese histórica.
+
+Este plano **não** vai para `completed/` só para sumir do hub; status **Emendado**, não “concluído no core.”
 
 ---
 
@@ -61,10 +73,10 @@ Só avançar além de PoC se tudo for verdadeiro:
 
 | # | To-do | Status |
 | - | ----- | ------ |
-| 0.1 | Definir 2-3 casos de regra realistas onde a lógica Python atual está verbosa ou difícil de auditar. | ⬜ Pending |
-| 0.2 | Comparar stacks candidatas (`datascript`, `malli`, modelo de regra EDN leve) e listar trade-offs. | ⬜ Pending |
-| 0.3 | Escrever opções de integração (sidecar gRPC, processo local ou compilador de regras offline) com notas de blast radius. | ⬜ Pending |
-| 0.4 | Produzir memo de go/no-go (uma página) e classificar esta trilha como backlog de produto ou backlog acadêmico. | ⬜ Pending |
+| 0.1 | Definir 2-3 casos de regra realistas onde a lógica Python atual está verbosa ou difícil de auditar. | ❌ Cancelada (§0 — trilha host) |
+| 0.2 | Comparar stacks candidatas (`datascript`, `malli`, modelo de regra EDN leve) e listar trade-offs. | ❌ Cancelada (§0) |
+| 0.3 | Escrever opções de integração (sidecar gRPC, processo local ou compilador de regras offline) com notas de blast radius. | ❌ Cancelada (§0) |
+| 0.4 | Produzir memo de go/no-go (uma página) e classificar esta trilha como backlog de produto ou backlog acadêmico. | ❌ Cancelada (§0) |
 
 ---
 
@@ -74,11 +86,11 @@ Só avançar além de PoC se tudo for verdadeiro:
 
 | # | To-do | Status |
 | - | ----- | ------ |
-| 1.1 | Criar `experimental/clojure_sidecar/` com bootstrap mínimo e README de restrições. | ⬜ Pending |
-| 1.2 | Implementar um endpoint de avaliação de regra com contrato de entrada/saída determinístico. | ⬜ Pending |
-| 1.3 | Adicionar adapter Python atrás de feature flag opt-in (`off` por padrão). | ⬜ Pending |
-| 1.4 | Adicionar script de benchmark e capturar overhead de latência/memória versus baseline. | ⬜ Pending |
-| 1.5 | Registrar achados e recomendação (`continue`, `park` ou `discard`). | ⬜ Pending |
+| 1.1 | Criar `experimental/clojure_sidecar/` com bootstrap mínimo e README de restrições. | ❌ Cancelada (§0) |
+| 1.2 | Implementar um endpoint de avaliação de regra com contrato de entrada/saída determinístico. | ❌ Cancelada (§0) |
+| 1.3 | Adicionar adapter Python atrás de feature flag opt-in (`off` por padrão). | ❌ Cancelada (§0) |
+| 1.4 | Adicionar script de benchmark e capturar overhead de latência/memória versus baseline. | ❌ Cancelada (§0) |
+| 1.5 | Registrar achados e recomendação (`continue`, `park` ou `discard`). | ❌ Cancelada (§0) |
 
 ---
 
@@ -88,10 +100,10 @@ Só avançar além de PoC se tudo for verdadeiro:
 
 | # | To-do | Status |
 | - | ----- | ------ |
-| 2.1 | Definir workflow operacional (instalação, health checks, fallback quando sidecar indisponível). | ⬜ Pending |
-| 2.2 | Definir modelo de segurança para comunicação do sidecar e validação de entrada. | ⬜ Pending |
-| 2.3 | Definir campos em relatório/Audit Trail mostrando quando lógica de sidecar esteve ativa. | ⬜ Pending |
-| 2.4 | Estimar custo de manutenção e confirmar aderência à prioridade do roadmap. | ⬜ Pending |
+| 2.1 | Definir workflow operacional (instalação, health checks, fallback quando sidecar indisponível). | ❌ Cancelada (§0 — trilha host) |
+| 2.2 | Definir modelo de segurança para comunicação do sidecar e validação de entrada. | ❌ Cancelada (§0) |
+| 2.3 | Definir campos em relatório/Audit Trail mostrando quando lógica de sidecar esteve ativa. | ❌ Cancelada (§0) |
+| 2.4 | Estimar custo de manutenção e confirmar aderência à prioridade do roadmap. | ❌ Cancelada (§0) |
 
 ---
 
@@ -112,8 +124,10 @@ Referências relacionadas:
 
 ## 7. Recomendação atual
 
-Recomendação atual: manter esta trilha em **backlog de horizonte distante** até estabilizar fatias ativas de confiança/comercialização. Reavaliar quando um destes gatilhos ocorrer:
+**Após §0 (2026-10-12):** **não** retomar as fases 0–2 no host. Trabalho Clojure/Lisp sidecar fica em **repositórios bestiais irmãos** (slot plugin/SDK); o host mantém só spawn/timeout/Safe-Hold.
 
-- Solicitação de cliente/parceiro exigindo raciocínio de política mais rico.
-- Ciclo de tese/pesquisa pedindo uma ramificação experimental de regras formais.
-- Lógica de política em Python ficar cara demais para manter.
+Para planejamento de produto, trate este arquivo como **referência emendada** — não como marco imediato em `main`. Reavaliar twins + contrato do host quando:
+
+- Solicitação de cliente/parceiro exigir raciocínio de política mais rico.
+- Ciclo de tese/pesquisa pedir ramificação experimental de regras formais.
+- A interface de plugin parceiro (#865) definir um teste L2 concreto.

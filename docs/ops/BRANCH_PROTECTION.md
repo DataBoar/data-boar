@@ -105,6 +105,12 @@ Same tokens as [WORKFLOW_DEFERRED_FOLLOWUPS.md](WORKFLOW_DEFERRED_FOLLOWUPS.md):
 
 **This repo (2026-08-19):** the **Branch protection** follow-up row stays **warm**. The Linux pytest matrix is already **hot**. Bump the follow-up row to **hot** only when the recommended set in QUALITY §9 (Lint, audit, Bandit, Semgrep, and any CodeQL/Sonar you intend to block on) is **required** on `main`.
 
+## OpenSSF Scorecard — Branch-Protection ceiling (solo maintainer)
+
+OpenSSF Scorecard’s **Branch-Protection** check often scores **3/10 (High)** on this repository while `required_approving_review_count` stays **0** and CODEOWNERS review is **not** ruleset-required. That is a **conscious ceiling** for **one-maintainer** operation ([#1910](https://github.com/DataBoar/data-boar/issues/1910)): turning on mandatory approvers (or stricter stale-review / up-to-date-branch policies) would not add a second human reviewer and can **worsen** merge friction (for example long-lived Dependabot drift) without improving real safety.
+
+**Do not** change GitHub rulesets **only** to chase a higher Scorecard number. Revisit approvers + CODEOWNERS when a **second maintainer** exists, or when a documented Code-Review experiment (wave 3 under [#1902](https://github.com/DataBoar/data-boar/issues/1902)) shows a net benefit **without** blocking solo merge. This paragraph does **not** assert the outcome of any experiment still in flight.
+
 ## Related
 
 - [COMMIT_AND_PR.md](COMMIT_AND_PR.md) ([pt-BR](COMMIT_AND_PR.pt_BR.md)) — local commit/PR scripts

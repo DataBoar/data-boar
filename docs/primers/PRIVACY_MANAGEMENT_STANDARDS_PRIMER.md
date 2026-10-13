@@ -6,7 +6,7 @@
 
 **Product stance:** Data Boar **supports evidence** for privacy programmes; it does **not** certify ISO 27701, ISO 27018, or NIST PF implementation. Map controls to **your** ISMS/PIMS with counsel.
 
-**Related:** [COMPLIANCE_FRAMEWORKS.md](../COMPLIANCE_FRAMEWORKS.md) · [pitch/PITCH_DPO.md](../pitch/PITCH_DPO.md) · [completed/PLAN_COMPLIANCE_STANDARDS_ALIGNMENT.md](completed/PLAN_COMPLIANCE_STANDARDS_ALIGNMENT.md)
+**Related:** [COMPLIANCE_FRAMEWORKS.md](../COMPLIANCE_FRAMEWORKS.md) · [pitch/PITCH_DPO.md](../pitch/PITCH_DPO.md) · `docs/plans/completed/PLAN_COMPLIANCE_STANDARDS_ALIGNMENT.md`
 
 ---
 
@@ -33,7 +33,7 @@ Extension of **ISO/IEC 27001** for privacy information management. Annex **B** m
 | 8.2.x (operational controls) | Run technical measures | CLI, API, dashBOARd, rate limits |
 | Annex B (GDPR mapping) | Align to GDPR articles | Built-in **GDPR** norm tags + EU samples in `compliance-samples/` |
 
-**(roadmap)** Deeper PIMS **control checklist packs** in the maturity questionnaire content packs — see [PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md](completed/PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md).
+**(roadmap)** Deeper PIMS **control checklist packs** in the maturity questionnaire content packs — see `docs/plans/completed/PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md`.
 
 ---
 
@@ -45,7 +45,7 @@ Code of practice for **PII processors** in **public cloud** environments. Extend
 
 | 27018 theme | Data Boar capability (shipped) | Gap / roadmap |
 | ----------- | ------------------------------ | ------------- |
-| Know customer PII in cloud workloads | Scan **cloud-adjacent** targets when you configure them (APIs, exports, mounted shares) | **(roadmap)** First-class **S3 / Azure Blob / GCS** connectors — [PLAN_OBJECT_STORAGE_CLOUD_CONNECTORS.md](PLAN_OBJECT_STORAGE_CLOUD_CONNECTORS.md) |
+| Know customer PII in cloud workloads | Scan **cloud-adjacent** targets when you configure them (APIs, exports, mounted shares) | **(roadmap)** First-class **S3 / Azure Blob / GCS** connectors — `docs/plans/PLAN_OBJECT_STORAGE_CLOUD_CONNECTORS.md` |
 | Evidence for customer audits | Excel + manifest + audit trail export | Customer still owns cloud IAM and DPA |
 | Segregation / access | **API key**, optional **WebAuthn**, optional **RBAC** (Pro+ tier) | Network and cloud IAM remain customer scope |
 
@@ -60,10 +60,10 @@ Five functions: **Identify-P**, **Govern-P**, **Control-P**, **Communicate-P**, 
 | Function | Outcome | Data Boar capability (shipped) | Roadmap |
 | -------- | ------- | ------------------------------ | ------- |
 | **Identify-P** | Inventory and understand data processing | **Data Sniffing** pass: connectors, bounded reads, sensitivity detection | Richer cloud object inventory when object-storage plan ships |
-| **Govern-P** | Policies and roles | Config profiles, licensing tiers, optional **dashboard RBAC** | SSO/OIDC Phase 3 — [PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md](PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md) |
+| **Govern-P** | Policies and roles | Config profiles, licensing tiers, optional **dashboard RBAC** | SSO/OIDC Phase 3 — `docs/plans/PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md` |
 | **Control-P** | Manage privacy risk | Findings triage, rate limits, **Safe-Hold** posture (stop on critical engine risk — operator runbooks) | Enterprise remediation plugins — **#606** |
 | **Communicate-P** | Transparency to stakeholders | Reports, **GRC executive JSON** schema, **`--export-dsar`** (metadata-first) | DSAR export helpers expanding — USAGE roadmap bullets |
-| **Protect-P** | Data security safeguards | TLS / explicit HTTP modes, audit exports, optional **maturity row HMAC** (POC) | Build identity / release integrity — [PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md](PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md) |
+| **Protect-P** | Data security safeguards | TLS / explicit HTTP modes, audit exports, optional **maturity row HMAC** (POC) | Build identity / release integrity — `docs/plans/PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md` |
 
 Deck vocabulary **Data Sniffing** / **Deep Boring** maps to discovery vs structured compliance report depth — [COMPLIANCE_FRAMEWORKS.md](../COMPLIANCE_FRAMEWORKS.md#deterministic-detection-vs-generative-llm-hype).
 
@@ -82,4 +82,4 @@ Before citing this primer in RFPs or audit packs:
 
 ## Maintainer
 
-When features ship, update the tables above and [PRIMERS_HUB.md](PRIMERS_HUB.md). Run `python scripts/plans_hub_sync.py --write` after hub-summary edits.
+When features ship, update the tables above and `docs/plans/PRIMERS_HUB.md`. Run `python scripts/plans_hub_sync.py --write` after hub-summary edits.

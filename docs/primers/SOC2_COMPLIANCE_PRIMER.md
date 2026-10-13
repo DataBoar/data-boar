@@ -8,7 +8,7 @@
 
 **Related:** [ADR 0037](../adr/ADR-0037-data-boar-self-audit-log-governance.md) (honest self-audit baseline) · [USAGE.md](../USAGE.md) (`--export-audit-trail`, `--export-dsar`, `--diff`, HTTPS / API key) · [SECURITY.md](../SECURITY.md)
 
-There is **no** `compliance-sample-*.yaml` for SOC 2. Control-framework mapping stays **norm tags / recommendation overrides / this primer** — not a PII vocabulary pack ([PLAN_ADDITIONAL_COMPLIANCE_SAMPLES.md](completed/PLAN_ADDITIONAL_COMPLIANCE_SAMPLES.md)).
+There is **no** `compliance-sample-*.yaml` for SOC 2. Control-framework mapping stays **norm tags / recommendation overrides / this primer** — not a PII vocabulary pack (`docs/plans/completed/PLAN_ADDITIONAL_COMPLIANCE_SAMPLES.md`).
 
 ---
 
@@ -48,7 +48,7 @@ Criteria names follow AICPA **Trust Services Criteria** (Privacy category). Cove
 | Criterion | Typical ask | Data Boar capability (shipped) | Notes |
 | --------- | ----------- | ------------------------------ | ----- |
 | **CC6.1** | Logical access to the system and data | Opt-in **`api.require_api_key`** (`X-API-Key` / Bearer); **`GET /health`** stays public; fail-closed start if the flag is true but no key resolves ([SECURITY.md](../SECURITY.md), [USAGE.md](../USAGE.md)) | **Default is off** (demo / loopback). **[#549](https://github.com/DataBoar/data-boar/issues/549) is closed** (documented risk + fail-closed when misconfigured). Remaining gap: operators must **turn the key on** for exposed dashboards |
-| **CC6.1** (finer roles) | Least privilege on operator UI | Optional **WebAuthn** + Pro+ **`dashboard_rbac`** (`audit_logs.read`, …) | Phase 3 SSO/OIDC remains [PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md](PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md) / **#86** |
+| **CC6.1** (finer roles) | Least privilege on operator UI | Optional **WebAuthn** + Pro+ **`dashboard_rbac`** (`audit_logs.read`, …) | Phase 3 SSO/OIDC remains `docs/plans/PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md` / **#86** |
 | **CC6.7** | Restrict transmission; protect data in transit | **HTTPS-by-default** for `--web`; plaintext only with **`--allow-insecure-http`**; `dashboard_transport` on `/status` and audit export | Does **not** encrypt findings **at rest** in SQLite or Excel |
 
 Governance Lens **Enterprise** adds BACEN / PCI / FEBRABAN **storytelling** only — **no** SOC 2 TSC map in `--governance-report` ([USAGE.md](../USAGE.md#governance-lens-enterprise)).
@@ -72,4 +72,4 @@ Before citing this primer in an SOC 2 PBC list or RFP:
 
 ## Maintainer
 
-When access-log or scheduler work ships, update the P5/P8 rows and [PRIMERS_HUB.md](PRIMERS_HUB.md). Run `python scripts/plans_hub_sync.py --write` after hub-summary edits (hub table lists `PLAN_*.md` only; this primer is indexed in **PRIMERS_HUB**).
+When access-log or scheduler work ships, update the P5/P8 rows and `docs/plans/PRIMERS_HUB.md`. Run `python scripts/plans_hub_sync.py --write` after hub-summary edits (hub table lists `PLAN_*.md` only; this primer is indexed in **PRIMERS_HUB**).

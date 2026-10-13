@@ -21,6 +21,35 @@ são primers de compliance/frameworks (esses ficam no hub central — veja abaix
 | [AI_EVOLUTION_PRIMER.pt_BR.md](AI_EVOLUTION_PRIMER.pt_BR.md) ([EN](AI_EVOLUTION_PRIMER.md)) | História da IA (invernos, sistemas especialistas, ML/DL, LLMs) — sem hype, contexto de integrador |
 | [DECISION_RECORDS_PRIMER.pt_BR.md](DECISION_RECORDS_PRIMER.pt_BR.md) ([EN](DECISION_RECORDS_PRIMER.md)) | ADR → MADR → UMADR: por que decisões são registradas e o padrão deste repositório |
 | [FORENSICS_AND_EVIDENCE_PRIMER.pt_BR.md](FORENSICS_AND_EVIDENCE_PRIMER.pt_BR.md) ([EN](FORENSICS_AND_EVIDENCE_PRIMER.md)) | Forense digital e evidência — artefatos de inventário vs laudo; ponteiros ISO/NIST |
+| [IAC_AND_DEVSECOPS_PRIMER.pt_BR.md](IAC_AND_DEVSECOPS_PRIMER.pt_BR.md) ([EN](IAC_AND_DEVSECOPS_PRIMER.md)) | Conceitos de IaC; `deploy/ansible` + `deploy/opentofu`; checagens DevSecOps que existem no repositório |
+
+| [AI_COMPLIANCE_PRIMER.md](AI_COMPLIANCE_PRIMER.md) | EU AI Act, ISO/IEC 42001, NIST AI RMF — camada de dados (inventário; sem avaliação de modelo) |
+
+| [DATA_GOVERNANCE_DMBOK_PRIMER.pt_BR.md](DATA_GOVERNANCE_DMBOK_PRIMER.pt_BR.md) ([EN](DATA_GOVERNANCE_DMBOK_PRIMER.md)) | Áreas DAMA-DMBOK e ISO/IEC 38505 — onde o Data Boar atua; não é plataforma GDD |
+
+| [FINANCIAL_SECTOR_COMPLIANCE_PRIMER.md](FINANCIAL_SECTOR_COMPLIANCE_PRIMER.md) | PCI DSS v4.0, SOX, BACEN CMN 4.893 — conformidade setor financeiro (limites de evidência) |
+
+| [GLOBAL_PRIVACY_REGULATIONS_PRIMER.md](GLOBAL_PRIVACY_REGULATIONS_PRIMER.md) | PIPEDA, POPIA, APPI, Vietnam PDPD, FELCA — regulações globais de privacidade (status honesto de samples) |
+
+| [HEALTH_SECTOR_COMPLIANCE_PRIMER.md](HEALTH_SECTOR_COMPLIANCE_PRIMER.md) | HIPAA/PHI, ANS, ANVISA, CFM — alinhamento de conformidade no setor de saúde |
+
+| [ITSM_FRAMEWORKS_PRIMER.pt_BR.md](ITSM_FRAMEWORKS_PRIMER.pt_BR.md) ([EN](ITSM_FRAMEWORKS_PRIMER.md)) | ITIL 4 SVS e ISO/IEC 20000 — práticas selecionadas vs evidência de scan (não é service desk) |
+
+| [IT_GOVERNANCE_FRAMEWORKS_PRIMER.pt_BR.md](IT_GOVERNANCE_FRAMEWORKS_PRIMER.pt_BR.md) ([EN](IT_GOVERNANCE_FRAMEWORKS_PRIMER.md)) | ISO/IEC 38500 e COBIT 2019 — ciclo EDM; evidência de descoberta, não suite GRC |
+
+| [PRIVACY_MANAGEMENT_STANDARDS_PRIMER.md](PRIVACY_MANAGEMENT_STANDARDS_PRIMER.md) | ISO/IEC 27701, ISO/IEC 27018, NIST Privacy Framework — alinhamento de gestão de privacidade |
+
+| [SOC2_COMPLIANCE_PRIMER.md](SOC2_COMPLIANCE_PRIMER.md) | Critérios SOC 2 Privacy TSC — evidência para assurance (não é laudo de auditoria) |
+
+| [CLOUD_DEPLOYMENT_MODELS_PRIMER.pt_BR.md](CLOUD_DEPLOYMENT_MODELS_PRIMER.pt_BR.md) ([EN](CLOUD_DEPLOYMENT_MODELS_PRIMER.md)) | Container, VM e caminhos IaC versionados em deploy/ |
+
+| [AAS_MODELS_PRIMER.pt_BR.md](AAS_MODELS_PRIMER.pt_BR.md) ([EN](AAS_MODELS_PRIMER.md)) | Rótulos SaaS/AIaaS vs entrega on-prem-first do produto |
+
+| [RAG_PRIMER.pt_BR.md](RAG_PRIMER.pt_BR.md) ([EN](RAG_PRIMER.md)) | Conceitos RAG; Boar varre corpora, não entrega stack vetorial RAG |
+
+| [OBSERVABILITY_PRIMER.pt_BR.md](OBSERVABILITY_PRIMER.pt_BR.md) ([EN](OBSERVABILITY_PRIMER.md)) | OpenTelemetry opt-in (métricas/logs/traces) em core/otel_setup |
+
+| [SUPPLY_CHAIN_SECURITY_PRIMER.pt_BR.md](SUPPLY_CHAIN_SECURITY_PRIMER.pt_BR.md) ([EN](SUPPLY_CHAIN_SECURITY_PRIMER.md)) | SBOM, Actions pinadas, commits assinados, Dependabot, scanners |
 
 ## Navegação
 

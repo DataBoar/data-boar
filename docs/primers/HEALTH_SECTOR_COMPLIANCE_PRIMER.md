@@ -8,7 +8,7 @@
 
 **Related:** [COMPLIANCE_FRAMEWORKS.md](../COMPLIANCE_FRAMEWORKS.md) · [COMPLIANCE_AND_LEGAL.md](../COMPLIANCE_AND_LEGAL.md) (HIPAA / HITECH inventory limits) · [compliance-sample-us_hipaa_phi.yaml](../compliance-samples/compliance-sample-us_hipaa_phi.yaml) · [compliance-sample-brazil_saude.yaml](../compliance-samples/compliance-sample-brazil_saude.yaml) (**#511**) · [GLOSSARY.md](../GLOSSARY.md) (PHI, ePHI, HIPAA)
 
-There is **no** Brazilian statute that copies HIPAA/HITECH as one package. In Brazil, **LGPD Art. 11** (sensitive health data) plus sector layers (**ANS**, **CFM**, **ANVISA**) apply — [PLAN_COMPLIANCE_EVIDENCE_MAPPING.md](PLAN_COMPLIANCE_EVIDENCE_MAPPING.md).
+There is **no** Brazilian statute that copies HIPAA/HITECH as one package. In Brazil, **LGPD Art. 11** (sensitive health data) plus sector layers (**ANS**, **CFM**, **ANVISA**) apply — `docs/plans/PLAN_COMPLIANCE_EVIDENCE_MAPPING.md`.
 
 ---
 
@@ -97,4 +97,4 @@ Before citing this primer in RFPs or BAAs:
 
 ## Maintainer
 
-When patterns ship, update the 18-row table and [PRIMERS_HUB.md](PRIMERS_HUB.md). Run `python scripts/plans_hub_sync.py --write` after hub-summary edits (hub table lists `PLAN_*.md` only; this primer is indexed in **PRIMERS_HUB**).
+When patterns ship, update the 18-row table and `docs/plans/PRIMERS_HUB.md`. Run `python scripts/plans_hub_sync.py --write` after hub-summary edits (hub table lists `PLAN_*.md` only; this primer is indexed in **PRIMERS_HUB**).
