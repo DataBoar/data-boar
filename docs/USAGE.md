@@ -1276,7 +1276,8 @@ api:
 
 # Optional: simulate commercial tier in lab (community | pro | enterprise). Omits OPEN dev behaviour for feature gates.
 # licensing:
-#   effective_tier: pro
+#   mode: enforced                 # see LICENSING_SPEC.md — env / license_path / canonical databoar/license.jwt
+#   effective_tier: pro            # lab simulation only; JWT dbtier wins when enforced
 
 # Optional Enterprise: post-scan remediation plugin (L1 in-process). See PLUGIN_SDK.md.
 # Requires effective_tier: enterprise (or OPEN lab). Fail-graceful — never aborts the scan.

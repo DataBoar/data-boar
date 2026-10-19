@@ -37,7 +37,20 @@ logger `data_boar.licensing.audit` com o prefixo `LICENSE_AUDIT`.
 Variáveis de ambiente sobrescrevem o YAML quando definidas:
 
 - `DATA_BOAR_LICENSE_MODE` — `enforced` (somente escalada; `open` não rebaixa o `enforced` do YAML)
-- `DATA_BOAR_LICENSE_PATH` — caminho do arquivo JWT (`.lic`)
+- `DATA_BOAR_LICENSE_PATH` — caminho do arquivo JWT assinado (`.lic` ou `license.jwt`)
+
+### Precedência do caminho do arquivo de licença (#1940)
+
+O `LicenseGuard` chama `core.licensing.paths.resolve_license_path`. Ordem:
+
+1. **`DATA_BOAR_LICENSE_PATH`** — vence quando definida para um caminho não vazio após strip. Env só com espaços conta como ausente.
+2. **`licensing.license_path`** no YAML — mesma regra de strip; usada quando (1) está ausente ou em branco.
+3. **Caminho canônico da org** — só quando (1) e (2) estão ambos ausentes/em branco **e** o arquivo existe:
+   - Linux: `$XDG_CONFIG_HOME/databoar/license.jwt` ou `~/.config/databoar/license.jwt`
+   - macOS: `~/Library/Application Support/databoar/license.jwt`
+   - Windows: `%AppData%\databoar\license.jwt`
+
+O nome do diretório é **`databoar`** (org), não o slug do repositório `data-boar`. O `license-studio sign -deploy auto` grava aqui. Um caminho explícito de env ou config nunca é substituído em silêncio: arquivo explícito ausente permanece fail-closed (`missing_license_file`, #719). O fallback canônico só escolhe **de onde ler**; a validação de assinatura e claims não muda. QA do operador: [QA_LOCAL_LICENSE.pt_BR.md](ops/QA_LOCAL_LICENSE.pt_BR.md) ([EN](ops/QA_LOCAL_LICENSE.md)).
 
 `DATA_BOAR_LICENSE_PUBLIC_KEY_PEM`, `DATA_BOAR_LICENSE_PUBLIC_KEY_PATH`, `DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_PEM`, `DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_PATH`, `licensing.public_key_path` e `licensing.mldsa_public_key_path` **não** são chaves de verificação. Se qualquer uma estiver definida, o modo enforced falha fechado com `untrusted_key_override` (#1992). Não existe flag de ambiente só de teste que transforme isso em override. A chave ML-DSA de `dbmldsa_sig` é a âncora empacotada ou a metade ML-DSA de uma rotação aceita.
 
@@ -63,7 +76,7 @@ licensing:
   public_key_path: ""           # rejeitado se definido (#1992); não é chave de verificação
   mldsa_public_key_path: ""     # rejeitado se definido (#1992); não é chave de verificação
   rotation_attestation_path: "" # rotação cross-signed Ed25519+ML-DSA, ou vazio
-  license_path: ""              # arquivo JWT assinado
+  license_path: ""              # JWT assinado; vazio + env ausente → databoar/license.jwt canônico se o arquivo existir (#1940)
   revocation_list_path: ""      # lista JSON de revogação opcional
   manifest_path: ""             # manifesto de release opcional
   machine_bind_strict: false    # se true, o mfp do token precisa bater com o fingerprint do host

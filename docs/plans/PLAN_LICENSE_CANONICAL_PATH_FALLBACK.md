@@ -24,6 +24,7 @@ org canonical JWT path if present — without overriding explicit configuration
 | `core/licensing/paths.py` + `LicenseGuard._evaluate` precedence | ✅ Done |
 | Hermetic tests (`tests/test_license_canonical_path_fallback.py`) | ✅ Done |
 | `docs/ops/QA_LOCAL_LICENSE.md` (+ pt-BR) | ✅ Done |
+| `docs/LICENSING_SPEC.md` (+ pt-BR) + CHANGELOG path precedence | ✅ Done (#2073) |
 | Fail-then-pass evidence in PR (revert fallback, confirm UNLICENSED, restore) | ✅ Done (local epic) |
 
 ## Out of scope
