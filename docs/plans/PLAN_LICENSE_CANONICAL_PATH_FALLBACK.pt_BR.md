@@ -24,6 +24,7 @@ sobrescrever configuração explícita (#719).
 | `core/licensing/paths.py` + precedência em `LicenseGuard._evaluate` | ✅ Feito |
 | Testes herméticos (`tests/test_license_canonical_path_fallback.py`) | ✅ Feito |
 | `docs/ops/QA_LOCAL_LICENSE.md` (+ pt-BR) | ✅ Feito |
+| `docs/LICENSING_SPEC.md` (+ pt-BR) + CHANGELOG da precedência do caminho | ✅ Feito (#2073) |
 | Evidência falha-então-passa na PR (reverter fallback, UNLICENSED, restaurar) | ✅ Feito (epic local) |
 
 ## Fora de escopo

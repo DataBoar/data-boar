@@ -32,6 +32,10 @@ Empty while the working tree carries **`1.8.0-rc`** (see section below).
 
 - **Key rotation** is accepted only when both embedded anchors (Ed25519 and ML-DSA-65) sign `data-boar/license-key-rotation/v1` plus the epoch. A raw `DATA_BOAR_LICENSE_PUBLIC_KEY_*`, `DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_*`, or YAML public-key path fails closed (`untrusted_key_override`). Hybrid `dbmldsa_sig` still verifies, against the packaged or rotated ML-DSA key.
 
+### License file path (#1940)
+
+- When `DATA_BOAR_LICENSE_PATH` and `licensing.license_path` are both unset or blank, `LicenseGuard` reads the org canonical JWT if it exists (`<user-config>/databoar/license.jwt`). Explicit env/config still fail closed if that path is missing. Spec: [LICENSING_SPEC.md](docs/LICENSING_SPEC.md).
+
 ### Promotion from `1.8.0-beta` (2026-09-22)
 
 - **Cut:** `chore(release): cut 1.8.0-rc` — suffix **`1.8.0-beta` → `1.8.0-rc`**; `maturity_build` **116 → 127** (rc band floor; ADR-0073 same-line beta→rc decision).

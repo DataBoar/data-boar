@@ -33,7 +33,20 @@ Every enforcement decision (allow / deny / clamp / expire) is recorded on the
 Environment variables override YAML when set:
 
 - `DATA_BOAR_LICENSE_MODE` — `enforced` (escalation only; `open` cannot downgrade YAML `enforced`)
-- `DATA_BOAR_LICENSE_PATH` — path to JWT file (`.lic`)
+- `DATA_BOAR_LICENSE_PATH` — path to the signed JWT file (`.lic` or `license.jwt`)
+
+### License file path precedence (#1940)
+
+`LicenseGuard` calls `core.licensing.paths.resolve_license_path`. Order:
+
+1. **`DATA_BOAR_LICENSE_PATH`** — wins when set to a non-empty path after strip. Whitespace-only env is treated as unset.
+2. **`licensing.license_path`** in YAML — same strip rule; used when (1) is unset or blank.
+3. **Canonical org path** — only when (1) and (2) are both unset/blank **and** the file exists:
+   - Linux: `$XDG_CONFIG_HOME/databoar/license.jwt` or `~/.config/databoar/license.jwt`
+   - macOS: `~/Library/Application Support/databoar/license.jwt`
+   - Windows: `%AppData%\databoar\license.jwt`
+
+The directory name is **`databoar`** (org), not the repo slug `data-boar`. `license-studio sign -deploy auto` writes here. An explicit env or config path is never replaced silently: a missing explicit file stays fail-closed (`missing_license_file`, #719). Canonical fallback only chooses **where to read**; signature and claims validation are unchanged. Operator QA: [QA_LOCAL_LICENSE.md](ops/QA_LOCAL_LICENSE.md) ([pt-BR](ops/QA_LOCAL_LICENSE.pt_BR.md)).
 
 `DATA_BOAR_LICENSE_PUBLIC_KEY_PEM`, `DATA_BOAR_LICENSE_PUBLIC_KEY_PATH`, `DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_PEM`, `DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_PATH`, `licensing.public_key_path`, and `licensing.mldsa_public_key_path` are **not** verify keys. If any of them is set, enforced mode fails closed with `untrusted_key_override` (#1992). There is no test-only environment flag that turns that into an override. The ML-DSA key for `dbmldsa_sig` is the packaged anchor or the ML-DSA half of an accepted rotation.
 
@@ -59,7 +72,7 @@ licensing:
   public_key_path: ""           # rejected if set (#1992); not a verify key
   mldsa_public_key_path: ""     # rejected if set (#1992); not a verify key
   rotation_attestation_path: "" # cross-signed Ed25519+ML-DSA rotation, or empty
-  license_path: ""              # signed JWT file
+  license_path: ""              # signed JWT; blank + unset env → canonical databoar/license.jwt if that file exists (#1940)
   revocation_list_path: ""      # optional JSON revoke list
   manifest_path: ""             # optional release manifest
   machine_bind_strict: false    # if true, token mfp must match host fingerprint
