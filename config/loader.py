@@ -125,9 +125,14 @@ def _gate_non_rest_env_credential(
     assert_non_rest_env_credential(target, env_name, label)
 
 
-def _notification_env_value(val: Any) -> str | None:
+def _notification_env_value(
+    val: Any, *, interpolate: bool = True, label: str = "notification"
+) -> str | None:
     """
     Resolve optional notification secrets: inline string or ${ENV_VAR} from the environment.
+
+    ``${VAR}`` names must use the #1977 credential prefixes. ``public_base_url``
+    is display text and never expands an environment variable (#2087).
     """
     if val is None:
         return None
@@ -137,7 +142,12 @@ def _notification_env_value(val: Any) -> str | None:
     if not t:
         return None
     if t.startswith("${") and t.endswith("}"):
+        if not interpolate:
+            raise ValueError(
+                f"{label} must not interpolate environment variables (#2087)."
+            )
         var = t[2:-1].strip()
+        assert_credential_env_name(var, label)
         return (os.environ.get(var) or "").strip() or None
     return t
 
@@ -1384,7 +1394,11 @@ def normalize_config(
             n_raw.get("notify_only_if_high_or_critical", False)
         ),
         "notify_on_failure": bool(n_raw.get("notify_on_failure", True)),
-        "public_base_url": _notification_env_value(n_raw.get("public_base_url")),
+        "public_base_url": _notification_env_value(
+            n_raw.get("public_base_url"),
+            interpolate=False,
+            label="public_base_url",
+        ),
         "dedupe_scan_complete_per_session": bool(
             n_raw.get("dedupe_scan_complete_per_session", True)
         ),
