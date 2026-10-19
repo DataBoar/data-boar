@@ -64,7 +64,7 @@ So: a **local vault with import/re-import is feasible**; an **external vault wit
 These can be implemented **instead of** or **in addition to** a vault.
 
 1. **Expand env-only for all credentials**
-   - For every secret field (pass, api_key, client_secret, token, etc.), support a `*_from_env` (or existing `*_from_env` / `${VAR}`) so the config file holds **no** secrets, only references like `pass_from_env: "DB_PASS"`. Document as the recommended pattern; keep inline secrets working for backward compatibility.
+   - For every secret field (pass, api_key, client_secret, token, etc.), support a `*_from_env` (or existing `*_from_env` / `${VAR}`) so the config file holds **no** secrets, only references like `pass_from_env: "DATA_BOAR_DB_PASS"`. Document as the recommended pattern; keep inline secrets working for backward compatibility.
    - **Pro:** No new storage; fits 12-factor and containers. **Con:** Many env vars for many targets; no “import from file” story.
 
 1. **Redact secrets in the web UI**
