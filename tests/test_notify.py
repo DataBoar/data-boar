@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import json
+import threading
 import urllib.error
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import pytest
 
@@ -113,7 +115,7 @@ def test_send_slack_uses_json_post(monkeypatch):
 
         return R()
 
-    monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
+    monkeypatch.setattr("utils.notify._open_webhook", fake_urlopen)
     n = {
         "operator": {
             "slack_webhook_url": "https://hooks.slack.example/services/XXX",
@@ -154,7 +156,7 @@ def test_send_slack_retries_once_on_502(monkeypatch):
 
         return R()
 
-    monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
+    monkeypatch.setattr("utils.notify._open_webhook", fake_urlopen)
     monkeypatch.setattr("utils.notify.time.sleep", lambda *_a, **_k: None)
     send_slack_webhook("https://hooks.example/hook", "hi")
     assert calls["n"] == 2
@@ -178,7 +180,7 @@ def test_send_all_operator_channels_two_slacks(monkeypatch):
 
         return R()
 
-    monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
+    monkeypatch.setattr("utils.notify._open_webhook", fake_urlopen)
     n = {
         "operator": {
             "channels": [
@@ -212,7 +214,7 @@ def test_notify_scan_complete_dedupe_skips_second_post(monkeypatch):
 
         return R()
 
-    monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
+    monkeypatch.setattr("utils.notify._open_webhook", fake_urlopen)
 
     class FakeDB:
         def get_session_scan_summary_for_notification(self, sid):
@@ -262,7 +264,7 @@ def test_send_manual_operator_message_records_audit(monkeypatch):
 
         return R()
 
-    monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
+    monkeypatch.setattr("utils.notify._open_webhook", fake_urlopen)
     cfg = {
         "notifications": {
             "enabled": True,
@@ -301,7 +303,7 @@ def test_notify_scan_complete_tenant_channel(monkeypatch):
 
         return R()
 
-    monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
+    monkeypatch.setattr("utils.notify._open_webhook", fake_urlopen)
 
     class FakeDB:
         def get_session_scan_summary_for_notification(self, sid):
@@ -334,3 +336,45 @@ def test_notify_scan_complete_tenant_channel(monkeypatch):
     }
     notify_scan_complete_sync(cfg, FakeDB(), "sess_tenant_1")
     assert calls["n"] == 2
+
+
+def test_post_json_does_not_follow_http_redirect(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """#2088: a 302 from an HTTPS webhook must not be fetched."""
+    from utils.notify import _post_json
+
+    hits: list[str] = []
+
+    class Handler(BaseHTTPRequestHandler):
+        def log_message(self, fmt: str, *args: object) -> None:
+            return
+
+        def do_POST(self) -> None:
+            hits.append(self.path)
+            self.send_response(302)
+            location = f"http://127.0.0.1:{self.server.server_address[1]}/landed"
+            self.send_header("Location", location)
+            self.end_headers()
+
+        def do_GET(self) -> None:
+            hits.append(self.path)
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"ok")
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    monkeypatch.setattr("utils.notify._require_https_webhook_url", lambda _url: None)
+    try:
+        with pytest.raises(urllib.error.HTTPError):
+            _post_json(
+                f"http://127.0.0.1:{server.server_address[1]}/hook",
+                {"text": "x"},
+                timeout_s=2,
+            )
+    finally:
+        server.shutdown()
+        server.server_close()
+    assert hits == ["/hook"]
