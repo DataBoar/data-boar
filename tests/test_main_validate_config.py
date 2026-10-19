@@ -137,12 +137,14 @@ def test_mask_env_name_sensitive_vs_non_sensitive() -> None:
 
 
 def test_validate_config_unset_env_var_warns_but_ok(tmp_path):
-    env_name = "DB_USER_TEST_VALIDATE_CONFIG_UNUSED"
+    env_name = "API_DB_USER_TEST_VALIDATE_CONFIG_UNUSED"
     cfg = _base_config(
         tmp_path,
         f"""  - name: prod-postgres
     type: database
     driver: postgresql+psycopg2
+    host: db.example
+    allowed_hosts: ["db.example"]
     user_from_env: {env_name}""",
     )
     child_env = os.environ.copy()
@@ -170,12 +172,14 @@ def test_validate_config_unset_env_var_warns_but_ok(tmp_path):
 
 
 def test_validate_config_masks_sensitive_env_name_in_warning(tmp_path):
-    env_name = "PG_PASS_TEST_VALIDATE_CONFIG_MASK"
+    env_name = "API_PG_PASS_TEST_VALIDATE_CONFIG_MASK"
     cfg = _base_config(
         tmp_path,
         f"""  - name: prod-postgres
     type: database
     driver: postgresql+psycopg2
+    host: db.example
+    allowed_hosts: ["db.example"]
     pass_from_env: {env_name}""",
     )
     child_env = os.environ.copy()

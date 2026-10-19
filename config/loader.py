@@ -15,6 +15,7 @@ import re
 import warnings
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 import yaml
 
@@ -51,6 +52,77 @@ def _warn_if_env_from_key_unset_or_empty(
         UserWarning,
         stacklevel=3,
     )
+
+
+# Same env-name prefixes as the REST credential gate (#1977 / #2086).
+CREDENTIAL_ENV_PREFIXES = ("DATA_BOAR_", "REST_API_", "API_")
+_CREDENTIAL_ENV_TAG = "#1977"
+_REST_TARGET_TYPES = frozenset({"api", "rest", "rest_api", "http", "https"})
+
+
+def assert_credential_env_name(env_name: str, label: str) -> None:
+    """Fail closed unless the env var name uses a #1977 credential prefix."""
+    name = env_name.strip()
+    if any(name.startswith(prefix) for prefix in CREDENTIAL_ENV_PREFIXES):
+        return
+    raise ValueError(
+        f"{label} must use one of the prefixes "
+        f"{', '.join(CREDENTIAL_ENV_PREFIXES)} ({_CREDENTIAL_ENV_TAG})."
+    )
+
+
+def _explicit_allowed_hosts(cfg: dict[str, Any]) -> set[str]:
+    raw = cfg.get("allowed_hosts")
+    if not raw and isinstance(cfg.get("auth"), dict):
+        raw = cfg["auth"].get("allowed_hosts") or []
+    if isinstance(raw, str):
+        raw = [raw]
+    if not isinstance(raw, list):
+        return set()
+    return {str(host).lower().strip() for host in raw if str(host).strip()}
+
+
+def _destination_host(cfg: dict[str, Any]) -> str:
+    host = str(cfg.get("host") or "").strip().lower()
+    if host:
+        return host
+    for key in ("base_url", "url"):
+        raw = str(cfg.get(key) or "").strip()
+        if not raw:
+            continue
+        parsed = (urlparse(raw).hostname or "").lower()
+        if parsed:
+            return parsed
+    return ""
+
+
+def assert_explicit_destination_allowlisted(cfg: dict[str, Any], label: str) -> None:
+    """Fail closed unless the credential destination is explicitly allowlisted."""
+    host = _destination_host(cfg)
+    allowed = _explicit_allowed_hosts(cfg)
+    if host and host in allowed:
+        return
+    raise ValueError(
+        f"{label} requires an explicit allowed_hosts entry "
+        f"for the destination ({_CREDENTIAL_ENV_TAG})."
+    )
+
+
+def assert_non_rest_env_credential(
+    cfg: dict[str, Any], env_name: str, label: str
+) -> None:
+    """Prefix plus destination allowlist for non-REST env credentials (#2086)."""
+    assert_credential_env_name(env_name, label)
+    assert_explicit_destination_allowlisted(cfg, label)
+
+
+def _gate_non_rest_env_credential(
+    target: dict[str, Any], env_name: str, label: str
+) -> None:
+    kind = str(target.get("type") or "").strip().lower()
+    if kind in _REST_TARGET_TYPES:
+        return
+    assert_non_rest_env_credential(target, env_name, label)
 
 
 def _notification_env_value(val: Any) -> str | None:
@@ -737,10 +809,11 @@ def normalize_config(
             t.get("pass_from_env") or t.get("password_from_env") or ""
         ).strip()
         if env_pass_key:
-            _warn_if_env_from_key_unset_or_empty(
-                env_pass_key,
-                ("pass_from_env" if t.get("pass_from_env") else "password_from_env"),
+            pass_label = (
+                "pass_from_env" if t.get("pass_from_env") else "password_from_env"
             )
+            _gate_non_rest_env_credential(t, env_pass_key, pass_label)
+            _warn_if_env_from_key_unset_or_empty(env_pass_key, pass_label)
             t["pass"] = (
                 (os.environ.get(env_pass_key) or "").strip()
                 or t.get("pass")
@@ -749,6 +822,7 @@ def normalize_config(
             )
         env_user_key = (t.get("user_from_env") or "").strip()
         if env_user_key:
+            _gate_non_rest_env_credential(t, env_user_key, "user_from_env")
             _warn_if_env_from_key_unset_or_empty(env_user_key, "user_from_env")
             t["user"] = (
                 (os.environ.get(env_user_key) or "").strip()
@@ -760,12 +834,14 @@ def normalize_config(
         if isinstance(auth, dict):
             token_env = (auth.get("token_from_env") or "").strip()
             if token_env:
+                _gate_non_rest_env_credential(t, token_env, "auth.token_from_env")
                 _warn_if_env_from_key_unset_or_empty(token_env, "auth.token_from_env")
                 auth["token"] = (
                     (os.environ.get(token_env) or "").strip() or auth.get("token") or ""
                 )
             cs_env = (auth.get("client_secret_from_env") or "").strip()
             if cs_env:
+                _gate_non_rest_env_credential(t, cs_env, "auth.client_secret_from_env")
                 _warn_if_env_from_key_unset_or_empty(
                     cs_env, "auth.client_secret_from_env"
                 )
@@ -776,6 +852,7 @@ def normalize_config(
                 )
         env_cs_key = (t.get("client_secret_from_env") or "").strip()
         if env_cs_key:
+            _gate_non_rest_env_credential(t, env_cs_key, "client_secret_from_env")
             _warn_if_env_from_key_unset_or_empty(env_cs_key, "client_secret_from_env")
             t["client_secret"] = (
                 (os.environ.get(env_cs_key) or "").strip()

@@ -702,16 +702,24 @@ def test_normalize_config_resolves_pass_from_env_and_user_from_env(monkeypatch):
     """Loader resolves pass_from_env, password_from_env, user_from_env for targets."""
     from config.loader import normalize_config
 
-    monkeypatch.setenv("DB_PASS", "env-pass")
-    monkeypatch.setenv("DB_USER", "env-user")
+    monkeypatch.setenv("API_DB_PASS", "env-pass")
+    monkeypatch.setenv("API_DB_USER", "env-user")
     data = {
         "targets": [
-            {"name": "db1", "type": "database", "pass_from_env": "DB_PASS"},
+            {
+                "name": "db1",
+                "type": "database",
+                "host": "db.example",
+                "allowed_hosts": ["db.example"],
+                "pass_from_env": "API_DB_PASS",
+            },
             {
                 "name": "db2",
                 "type": "database",
-                "password_from_env": "DB_PASS",
-                "user_from_env": "DB_USER",
+                "host": "db.example",
+                "allowed_hosts": ["db.example"],
+                "password_from_env": "API_DB_PASS",
+                "user_from_env": "API_DB_USER",
             },
         ],
         "api": {},
@@ -788,14 +796,16 @@ def test_normalize_config_warns_when_pass_from_env_unset_then_falls_back(monkeyp
 
     from config.loader import normalize_config
 
-    monkeypatch.delenv("MISSING_DB_PASS", raising=False)
+    monkeypatch.delenv("API_MISSING_DB_PASS", raising=False)
     data = {
         "targets": [
             {
                 "name": "db1",
                 "type": "database",
+                "host": "db.example",
+                "allowed_hosts": ["db.example"],
                 "pass": "inline-secret",
-                "pass_from_env": "MISSING_DB_PASS",
+                "pass_from_env": "API_MISSING_DB_PASS",
             }
         ],
         "api": {},
@@ -806,7 +816,7 @@ def test_normalize_config_warns_when_pass_from_env_unset_then_falls_back(monkeyp
         out = normalize_config(data)
     assert out["targets"][0]["pass"] == "inline-secret"
     assert any("pass_from_env" in str(w.message) for w in recorded)
-    assert any("MISSING_DB_PASS" in str(w.message) for w in recorded)
+    assert any("API_MISSING_DB_PASS" in str(w.message) for w in recorded)
 
 
 # ---------------------------------------------------------------------------

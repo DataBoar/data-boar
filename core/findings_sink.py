@@ -145,6 +145,9 @@ def redacted_sink_label(cfg: dict[str, Any]) -> str:
 def _env_or_inline(cfg: dict[str, Any], env_key: str, inline_key: str) -> str:
     env_name = str(cfg.get(env_key) or "").strip()
     if env_name:
+        from config.loader import assert_non_rest_env_credential
+
+        assert_non_rest_env_credential(cfg, env_name, env_key)
         return (os.environ.get(env_name) or "").strip()
     return str(cfg.get(inline_key) or "").strip()
 
