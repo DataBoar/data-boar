@@ -35,7 +35,7 @@ This path is for **counsel, DPOs, or programme leads** who have a **list of syst
 1. Add **one row per data source** (folder, database, or share). One row = one place the organisation stores files or tables that might contain personal data.
 1. In **`type`**, use only values the product supports in the importer today (examples: `filesystem` for a folder path, `postgresql` or `mysql` for SQL, `smb` / `nfs` for shares). If unsure, put `filesystem` for “a folder we need to scan” and fill **`path`** with the path IT will confirm.
 1. **`name`** is a free label (e.g. “HR shared drive”) so people can recognise the row in reviews — it is not a technical hostname.
-1. **Never** type real passwords in the sheet. Put the **name of an environment variable** in **`pass_from_env`** (e.g. `HR_DB_PASSWORD`) and ask IT to set that variable on the server before running scans.
+1. **Never** type real passwords in the sheet. Put the **name of an environment variable** in **`pass_from_env`** (e.g. `DATA_BOAR_HR_DB_PASSWORD`) and ask IT to set that variable on the server before running scans. The name must start with `DATA_BOAR_`, `REST_API_`, or `API_`, and the finished YAML needs `allowed_hosts` listing that row’s host.
 1. **Save As** → **CSV UTF-8** (comma-separated). If the tool offers only “CSV (comma delimited)”, use **Excel UTF-8** or **LibreOffice** with UTF-8 so Portuguese accents do not break.
 1. Give the CSV file to the person who runs Data Boar (or run yourself if you have the repo):
    `uv run python scripts/scope_import_csv.py path/to/your.csv -o targets.fragment.yaml`

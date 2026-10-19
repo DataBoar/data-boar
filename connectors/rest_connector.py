@@ -41,7 +41,6 @@ except ImportError:
 # Credential-bearing REST calls must not target arbitrary public hosts (#1977).
 # url_guard blocks private/metadata IPs only; compare HubSpot host allowlist (#1607).
 _REST_AUTH_HOST_TAG = "#1977"
-_REST_ENV_VAR_PREFIXES = ("DATA_BOAR_", "REST_API_", "API_")
 
 
 def _host_from_url(url: str) -> str:
@@ -107,11 +106,9 @@ def _validate_rest_env_var_names(auth: dict[str, Any]) -> None:
         env_name = (auth.get(key) or "").strip()
         if not env_name:
             continue
-        if not any(env_name.startswith(prefix) for prefix in _REST_ENV_VAR_PREFIXES):
-            raise ValueError(
-                f"{label} must use one of the prefixes "
-                f"{', '.join(_REST_ENV_VAR_PREFIXES)} ({_REST_AUTH_HOST_TAG})."
-            )
+        from config.loader import assert_credential_env_name
+
+        assert_credential_env_name(env_name, label)
 
 
 def _validate_target_env_var_names(target: dict[str, Any]) -> None:
@@ -123,11 +120,9 @@ def _validate_target_env_var_names(target: dict[str, Any]) -> None:
         env_name = (target.get(key) or "").strip()
         if not env_name:
             continue
-        if not any(env_name.startswith(prefix) for prefix in _REST_ENV_VAR_PREFIXES):
-            raise ValueError(
-                f"{label} must use one of the prefixes "
-                f"{', '.join(_REST_ENV_VAR_PREFIXES)} ({_REST_AUTH_HOST_TAG})."
-            )
+        from config.loader import assert_credential_env_name
+
+        assert_credential_env_name(env_name, label)
 
 
 def _credential_endpoint_urls(target: dict[str, Any]) -> list[tuple[str, str]]:

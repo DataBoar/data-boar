@@ -15,6 +15,7 @@ import re
 import warnings
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 import yaml
 
@@ -53,9 +54,179 @@ def _warn_if_env_from_key_unset_or_empty(
     )
 
 
-def _notification_env_value(val: Any) -> str | None:
+# Same env-name prefixes as the REST credential gate (#1977 / #2086).
+CREDENTIAL_ENV_PREFIXES = ("DATA_BOAR_", "REST_API_", "API_")
+_CREDENTIAL_ENV_TAG = "#1977"
+_REST_TARGET_TYPES = frozenset({"api", "rest", "rest_api", "http", "https"})
+
+
+def assert_credential_env_name(env_name: str, label: str) -> None:
+    """Fail closed unless the env var name uses a #1977 credential prefix."""
+    name = env_name.strip()
+    if any(name.startswith(prefix) for prefix in CREDENTIAL_ENV_PREFIXES):
+        return
+    raise ValueError(
+        f"{label} must use one of the prefixes "
+        f"{', '.join(CREDENTIAL_ENV_PREFIXES)} ({_CREDENTIAL_ENV_TAG})."
+    )
+
+
+def _explicit_allowed_hosts(cfg: dict[str, Any]) -> set[str]:
+    raw = cfg.get("allowed_hosts")
+    if not raw and isinstance(cfg.get("auth"), dict):
+        raw = cfg["auth"].get("allowed_hosts") or []
+    if isinstance(raw, str):
+        raw = [raw]
+    if not isinstance(raw, list):
+        return set()
+    return {str(host).lower().strip() for host in raw if str(host).strip()}
+
+
+def _hostname_of(value: str) -> str:
+    raw = value.strip()
+    if not raw:
+        return ""
+    if "://" in raw:
+        return (urlparse(raw).hostname or "").lower()
+    return raw.split("/")[0].split(":")[0].lower()
+
+
+def _credential_target_kind(cfg: dict[str, Any]) -> str:
+    kind = str(cfg.get("type") or "").strip().lower()
+    if kind != "database":
+        return kind
+    return str(cfg.get("driver") or "").split("+")[0].strip().lower() or "database"
+
+
+# Explicit destination key per non-REST type (#2086). Not a fallback chain.
+# Kinds absent here fail closed when an env credential is set.
+_HOST_DESTINATION_KINDS = frozenset(
+    {
+        "database",
+        "postgresql",
+        "postgres",
+        "mysql",
+        "mariadb",
+        "mssql",
+        "sqlserver",
+        "oracle",
+        "mongodb",
+        "mongo",
+        "redis",
+        "smb",
+        "cifs",
+    }
+)
+
+
+def _credential_destination_groups(cfg: dict[str, Any]) -> list[set[str]] | None:
+    """Places the secret is sent, each as a set of aliases.
+
+    ``None`` means a vendor allowlist already binds the destination
+    (#1607 HubSpot, #2007 Power BI default token host).
+
+    Two semantics (#2086):
+
+    * Aliases of the **same** destination (Snowflake account or
+      ``<account>.snowflakecomputing.com``) share one set. One match is enough.
+    * **Distinct** destinations (Dataverse/Power Apps ``org_url`` and
+      ``token_url``; a custom Power BI ``token_url``) are separate sets.
+      Every set must intersect ``allowed_hosts``.
+
+    An empty set fails closed.
+    """
+    kind = _credential_target_kind(cfg)
+    auth = cfg.get("auth") if isinstance(cfg.get("auth"), dict) else {}
+    token_url = str(auth.get("token_url") or "").strip()
+
+    def _one(host: str) -> list[set[str]]:
+        return [{host}] if host else [set()]
+
+    if kind == "hubspot":
+        return None
+    if kind == "powerbi":
+        if not token_url:
+            return None
+        return _one(_hostname_of(token_url))
+    if kind in {"dataverse", "powerapps"}:
+        org = str(cfg.get("org_url") or cfg.get("environment_url") or "")
+        groups = _one(_hostname_of(org))
+        if token_url:
+            groups.extend(_one(_hostname_of(token_url)))
+        return groups
+    if kind == "snowflake":
+        account = str(cfg.get("account") or "").strip().lower()
+        if not account:
+            return [set()]
+        derived = (
+            account
+            if account.endswith(".snowflakecomputing.com")
+            else f"{account}.snowflakecomputing.com"
+        )
+        return [{account, derived}]
+    if kind == "sharepoint":
+        host = _hostname_of(str(cfg.get("site_url") or cfg.get("base_url") or ""))
+        return _one(host)
+    if kind == "webdav":
+        host = _hostname_of(
+            str(cfg.get("base_url") or cfg.get("url") or cfg.get("host") or "")
+        )
+        return _one(host)
+    if kind == "nfs":
+        host = str(cfg.get("host") or cfg.get("server") or "").strip().lower()
+        return _one(host)
+    if kind in _HOST_DESTINATION_KINDS:
+        host = str(cfg.get("host") or "").strip().lower()
+        if not host:
+            host = _hostname_of(str(cfg.get("url") or cfg.get("base_url") or ""))
+        return _one(host)
+    return [set()]
+
+
+def assert_explicit_destination_allowlisted(cfg: dict[str, Any], label: str) -> None:
+    """Fail closed unless every credential destination is explicitly allowlisted.
+
+    ``allowed_hosts`` comes from the same YAML the config author writes (same
+    limit as #1977). Against that author only the env-name prefix is an
+    independent control; the host list is a brake, not a second authority.
+    """
+    groups = _credential_destination_groups(cfg)
+    if groups is None:
+        return
+    allowed = _explicit_allowed_hosts(cfg)
+    if groups and all(group & allowed for group in groups):
+        return
+    raise ValueError(
+        f"{label} requires an explicit allowed_hosts entry "
+        f"for every destination ({_CREDENTIAL_ENV_TAG})."
+    )
+
+
+def assert_non_rest_env_credential(
+    cfg: dict[str, Any], env_name: str, label: str
+) -> None:
+    """Prefix plus destination allowlist for non-REST env credentials (#2086)."""
+    assert_credential_env_name(env_name, label)
+    assert_explicit_destination_allowlisted(cfg, label)
+
+
+def _gate_non_rest_env_credential(
+    target: dict[str, Any], env_name: str, label: str
+) -> None:
+    kind = str(target.get("type") or "").strip().lower()
+    if kind in _REST_TARGET_TYPES:
+        return
+    assert_non_rest_env_credential(target, env_name, label)
+
+
+def _notification_env_value(
+    val: Any, *, interpolate: bool = True, label: str = "notification"
+) -> str | None:
     """
     Resolve optional notification secrets: inline string or ${ENV_VAR} from the environment.
+
+    ``${VAR}`` names must use the #1977 credential prefixes. ``public_base_url``
+    is display text and never expands an environment variable (#2087).
     """
     if val is None:
         return None
@@ -65,7 +236,12 @@ def _notification_env_value(val: Any) -> str | None:
     if not t:
         return None
     if t.startswith("${") and t.endswith("}"):
+        if not interpolate:
+            raise ValueError(
+                f"{label} must not interpolate environment variables (#2087)."
+            )
         var = t[2:-1].strip()
+        assert_credential_env_name(var, label)
         return (os.environ.get(var) or "").strip() or None
     return t
 
@@ -737,10 +913,11 @@ def normalize_config(
             t.get("pass_from_env") or t.get("password_from_env") or ""
         ).strip()
         if env_pass_key:
-            _warn_if_env_from_key_unset_or_empty(
-                env_pass_key,
-                ("pass_from_env" if t.get("pass_from_env") else "password_from_env"),
+            pass_label = (
+                "pass_from_env" if t.get("pass_from_env") else "password_from_env"
             )
+            _gate_non_rest_env_credential(t, env_pass_key, pass_label)
+            _warn_if_env_from_key_unset_or_empty(env_pass_key, pass_label)
             t["pass"] = (
                 (os.environ.get(env_pass_key) or "").strip()
                 or t.get("pass")
@@ -749,6 +926,7 @@ def normalize_config(
             )
         env_user_key = (t.get("user_from_env") or "").strip()
         if env_user_key:
+            _gate_non_rest_env_credential(t, env_user_key, "user_from_env")
             _warn_if_env_from_key_unset_or_empty(env_user_key, "user_from_env")
             t["user"] = (
                 (os.environ.get(env_user_key) or "").strip()
@@ -760,12 +938,14 @@ def normalize_config(
         if isinstance(auth, dict):
             token_env = (auth.get("token_from_env") or "").strip()
             if token_env:
+                _gate_non_rest_env_credential(t, token_env, "auth.token_from_env")
                 _warn_if_env_from_key_unset_or_empty(token_env, "auth.token_from_env")
                 auth["token"] = (
                     (os.environ.get(token_env) or "").strip() or auth.get("token") or ""
                 )
             cs_env = (auth.get("client_secret_from_env") or "").strip()
             if cs_env:
+                _gate_non_rest_env_credential(t, cs_env, "auth.client_secret_from_env")
                 _warn_if_env_from_key_unset_or_empty(
                     cs_env, "auth.client_secret_from_env"
                 )
@@ -776,6 +956,7 @@ def normalize_config(
                 )
         env_cs_key = (t.get("client_secret_from_env") or "").strip()
         if env_cs_key:
+            _gate_non_rest_env_credential(t, env_cs_key, "client_secret_from_env")
             _warn_if_env_from_key_unset_or_empty(env_cs_key, "client_secret_from_env")
             t["client_secret"] = (
                 (os.environ.get(env_cs_key) or "").strip()
@@ -1307,7 +1488,11 @@ def normalize_config(
             n_raw.get("notify_only_if_high_or_critical", False)
         ),
         "notify_on_failure": bool(n_raw.get("notify_on_failure", True)),
-        "public_base_url": _notification_env_value(n_raw.get("public_base_url")),
+        "public_base_url": _notification_env_value(
+            n_raw.get("public_base_url"),
+            interpolate=False,
+            label="public_base_url",
+        ),
         "dedupe_scan_complete_per_session": bool(
             n_raw.get("dedupe_scan_complete_per_session", True)
         ),

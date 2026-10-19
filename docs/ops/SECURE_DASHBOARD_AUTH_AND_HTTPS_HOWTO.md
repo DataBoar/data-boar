@@ -17,7 +17,7 @@
 1. When **`api.require_api_key: true`**, the process must have a **resolved** secret: either non-empty **`api.api_key`** in config, or **`api.api_key_from_env: "VAR"`** with **`VAR` set in the environment before startup**.
 1. **`main.py --web`** **exits with code 2** if `require_api_key` is true but **no key** can be resolved (prevents an accidentally open dashboard).
 1. **Non-loopback bind** (`0.0.0.0`, LAN IP, `::`): **`main.py --web` exits 2** unless **`api.require_api_key: true`** and a key is **resolved**. A configured **`api.api_key`** / env key or a WebAuthn token secret **without** `require_api_key` does **not** count — JSON routes (`GET /findings`, `POST /scan`, config) stay unauthenticated (#1714). Bind **`127.0.0.1`** for lab without a key, or set **`require_api_key: true`** before publishing a container port.
-1. **`GET /health`** is **never** authenticated (probes and load balancers stay simple). It returns JSON including `status`, a public `license` summary, and `dashboard_transport`.
+1. **`GET /health`** is **never** authenticated (probes and load balancers stay simple). The body is exactly `{"status":"ok"}`. License, trust, and `dashboard_transport` are on authenticated **`GET /status`** (#2077).
 1. **All other routes** (HTML pages, `GET /status`, `POST /scan`, `GET /config`, OpenAPI `/docs`, …) require a valid key when enforcement is active: send **`X-API-Key: <secret>`** or **`Authorization: Bearer <secret>`**.
 1. **401** = missing or wrong key. **503** = `require_api_key` is true but the key could not be resolved at runtime (misconfiguration); fix env/YAML and restart.
 
@@ -120,7 +120,7 @@ api:
     - "dashboard.example.com"
 ```
 
-With a matching peer **and** trusted `X-Forwarded-Proto: https`, the dashboard suppresses the red plaintext-risk banner and reports request-scoped **`effective_external_transport`** (`tls_termination: trusted_proxy`) on **`GET /status`** / **`GET /health`**. Process-level **`dashboard_transport`** stays `mode: http` / `tls_active: false` — that is intentional honesty about the Uvicorn listener, not a claim of native app TLS. See [#1515](https://github.com/DataBoar/data-boar/issues/1515) / [PLAN_DASHBOARD_TRUSTED_PROXY_TLS.md](../plans/PLAN_DASHBOARD_TRUSTED_PROXY_TLS.md).
+With a matching peer **and** trusted `X-Forwarded-Proto: https`, the dashboard suppresses the red plaintext-risk banner and reports request-scoped **`effective_external_transport`** (`tls_termination: trusted_proxy`) on **`GET /status`**. Process-level **`dashboard_transport`** stays `mode: http` / `tls_active: false` — that is intentional honesty about the Uvicorn listener, not a claim of native app TLS. See [#1515](https://github.com/DataBoar/data-boar/issues/1515) / [PLAN_DASHBOARD_TRUSTED_PROXY_TLS.md](../plans/PLAN_DASHBOARD_TRUSTED_PROXY_TLS.md).
 
 See [deploy/DEPLOY.md](../deploy/DEPLOY.md) ([pt-BR](../deploy/DEPLOY.pt_BR.md)) and root **SECURITY.md** for hardening context.
 
@@ -151,7 +151,7 @@ api:
   #   - "old-cert-still-valid-during-rotation…"
 ```
 
-**3.** Open **`https://<host>:<port>/`**. Use **`GET /status`** or **`GET /health`** and check **`dashboard_transport`** in JSON (`mode`, `tls_active`, `summary`, optional nested **`tls_posture`**) **and** canonical **`trust_state`** / **`trust_reasons`** / **`output_confidence`**.
+**3.** Open **`https://<host>:<port>/`**. Use **`GET /status`** and check **`dashboard_transport`** in JSON (`mode`, `tls_active`, `summary`, optional nested **`tls_posture`**) **and** canonical **`trust_state`** / **`trust_reasons`** / **`output_confidence`**.
 
 **4.** Optional evidence: **`python main.py --export-audit-trail -`** (without `--web`) includes **`dashboard_transport`**, **`trust_state`**, and **`enterprise_surface`** in the exported JSON for governance snapshots.
 
@@ -197,7 +197,7 @@ Exact Compose/Kubernetes patterns live next to your orchestration files; see [de
 
 | Check            | What to look for                                                                                                                                                                                               |
 | -----            | ----------------                                                                                                                                                                                               |
-| **Runtime**      | `GET /status` and `GET /health` → **`dashboard_transport`** reflects **`https`** vs explicit **http** opt-in; **`trust_state`** is the canonical combined signal. On native HTTPS, **`dashboard_transport.tls_posture`** reports cipher/protocol + leaf cert SHA-256 (S2a wave-2a/2b; published via env so uvicorn **workers** see it). Weak ciphers/protocol add **`tls_cipher_baseline_weak`** / **`tls_protocol_below_baseline`**; configured fingerprint allow-list mismatch adds **`tls_cert_fingerprint_mismatch`**. Without **`api.https_cert_fingerprint_sha256`**, fingerprint is observe-only (no trust downgrade). |
+| **Runtime**      | `GET /status` → **`dashboard_transport`** reflects **`https`** vs explicit **http** opt-in; **`GET /health`** is liveness only (`{"status":"ok"}`). **`trust_state`** is the canonical combined signal. On native HTTPS, **`dashboard_transport.tls_posture`** reports cipher/protocol + leaf cert SHA-256 (S2a wave-2a/2b; published via env so uvicorn **workers** see it). Weak ciphers/protocol add **`tls_cipher_baseline_weak`** / **`tls_protocol_below_baseline`**; configured fingerprint allow-list mismatch adds **`tls_cert_fingerprint_mismatch`**. Without **`api.https_cert_fingerprint_sha256`**, fingerprint is observe-only (no trust downgrade). |
 | **Audit export** | `python main.py --export-audit-trail -` → JSON fields **`dashboard_transport`**, **`trust_state`**, **`enterprise_surface`** (export runs without `--web`; transport may be `not_configured` unless env is set). |
 | **Auth**         | With **`require_api_key`**, **`/health`** = no key; **`/status`** = key required.                                                                                                                              |
 

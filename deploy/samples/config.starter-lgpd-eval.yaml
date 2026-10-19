@@ -27,10 +27,11 @@ targets:
     type: database
     driver: postgresql+psycopg2
     host: 192.0.2.10
+    allowed_hosts: ["192.0.2.10"]
     port: 5432
     database: demo_app
     user: demo_reader
-    pass_from_env: DEMO_DB_PASSWORD
+    pass_from_env: DATA_BOAR_DEMO_DB_PASSWORD
 
 # --- file_scan.extensions (filesystem / SMB / WebDAV / SharePoint) ---
 # This sample keeps a short LGPD-style pilot list below. For the full built-in suffix

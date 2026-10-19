@@ -487,13 +487,13 @@ def test_normalize_config_notifications_defaults():
 
 
 def test_normalize_config_notifications_env(monkeypatch):
-    monkeypatch.setenv("TEST_NOTIFY_SLACK", "https://hooks.example/test")
+    monkeypatch.setenv("API_TEST_NOTIFY_SLACK", "https://hooks.example/test")
     out = normalize_config(
         {
             "targets": [],
             "notifications": {
                 "enabled": True,
-                "operator": {"slack_webhook_url": "${TEST_NOTIFY_SLACK}"},
+                "operator": {"slack_webhook_url": "${API_TEST_NOTIFY_SLACK}"},
             },
         }
     )

@@ -4,7 +4,7 @@ Off-band and scan-completion notifications (webhooks, Slack, Teams, Telegram).
 Default: disabled in config. Secrets come from env or config; never log full URLs.
 See docs/USAGE.md and PLAN_NOTIFICATIONS_OFFBAND_AND_SCAN_COMPLETE.md.
 
-``_post_json`` / ``_post_form`` require an ``https`` URL before ``urlopen`` (Bandit B310).
+``_post_json`` / ``_post_form`` require an ``https`` URL and do not follow redirects (Bandit B310, #2088).
 Operator webhooks and the Telegram API URL are HTTPS-only paths.
 """
 
@@ -30,6 +30,20 @@ _SCAN_COMPLETE_OK_SESSIONS: set[str] = set()
 _MAX_DEDUPE_SESSIONS = 10_000
 
 
+class _RefuseRedirects(urllib.request.HTTPRedirectHandler):
+    """Do not follow webhook redirects (#2088). A 302 stays an HTTP error."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):  # noqa: ANN001
+        return None
+
+
+_WEBHOOK_OPENER = urllib.request.build_opener(_RefuseRedirects)
+
+
+def _open_webhook(req: urllib.request.Request, timeout: float):
+    return _WEBHOOK_OPENER.open(req, timeout=timeout)
+
+
 def _require_https_webhook_url(url: str) -> None:
     """Reject non-HTTPS URLs before urllib opens the request (Bandit B310 contract)."""
     parsed = urllib.parse.urlparse(url)
@@ -53,7 +67,7 @@ def _post_json(url: str, payload: dict[str, Any], timeout_s: float = 15.0) -> No
         )
         try:
             # B310: HTTPS-only URL enforced above via _require_https_webhook_url.
-            with urllib.request.urlopen(req, timeout=timeout_s) as resp:  # nosec B310
+            with _open_webhook(req, timeout_s) as resp:  # nosec B310
                 resp.read()
             return
         except urllib.error.HTTPError as e:
@@ -80,7 +94,7 @@ def _post_form(url: str, body: dict[str, str], timeout_s: float = 15.0) -> None:
         )
         try:
             # B310: HTTPS-only URL enforced above via _require_https_webhook_url.
-            with urllib.request.urlopen(req, timeout=timeout_s) as resp:  # nosec B310
+            with _open_webhook(req, timeout_s) as resp:  # nosec B310
                 resp.read()
             return
         except urllib.error.HTTPError as e:

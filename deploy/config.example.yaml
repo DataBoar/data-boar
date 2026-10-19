@@ -31,7 +31,7 @@ api:
   # maturity_assessment_pack_path: /data/maturity_pack.yaml
   # Optional: HMAC-SHA256 per answer row (tamper-evident; not encryption). Set env before start:
   #   DATA_BOAR_MATURITY_INTEGRITY_SECRET=<long random string>
-  # Or: maturity_integrity_secret_from_env: "VAR_NAME" to read the secret from that env var.
+  # Or: maturity_integrity_secret_from_env: "DATA_BOAR_MATURITY_INTEGRITY_SECRET" to read the secret from that env var.
 
 # Optional: dashboard HTML locale (path prefix /en/, /pt-br/; cookie + Accept-Language; see docs/USAGE.md).
 # locale:
@@ -94,9 +94,10 @@ remediation:
 #   enabled: false
 #   type: postgresql
 #   host: db.example.com
+#   allowed_hosts: ["db.example.com"]
 #   port: 5432
 #   database: data_governance_db
-#   user_from_env: SINK_DB_USER
-#   pass_from_env: SINK_DB_PASS
+#   user_from_env: DATA_BOAR_SINK_DB_USER
+#   pass_from_env: DATA_BOAR_SINK_DB_PASS
 #   on_conflict: upsert
 #   include_sample_content: false
