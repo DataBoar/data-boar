@@ -85,7 +85,7 @@ If that is not enough, use the sections below.
 This is **not** `auth_failed` from the remote API. `connectors/rest_connector.py` refuses to attach credentials when:
 
 1. Secrets come from the environment (`token_from_env`, `client_secret_from_env`, `client_secret: "${VAR}"`, **or** REST `pass_from_env` / `password_from_env` / `user_from_env`) and **`auth.allowed_hosts`** is missing. The loader may already have copied the env value into `pass`; the gate still fires while `*_from_env` remains (#2006).
-2. Those REST `*_from_env` names do not start with **`API_`**, **`REST_API_`**, or **`DATA_BOAR_`**. Database/share `pass_from_env` names are **not** on this prefix list.
+2. A `*_from_env` name (REST or SQL / NoSQL / share) does not start with **`API_`**, **`REST_API_`**, or **`DATA_BOAR_`**, or the non-REST destination is missing from `allowed_hosts`. Both checks fail closed at load (#2086).
 3. `base_url` or `auth.token_url` hostname is **not** in the allowlist (exact lowercase hostname; no wildcards).
 
 **Fix:** List every host that receives the secret (API + token endpoint). For inline tokens, the implicit list is `base_url` / `token_url` on the same target. Full contract: [USAGE.md](USAGE.md) (*Targets: APIs*). Tests: `tests/test_rest_connector_auth_allowlist.py`, `tests/test_rest_connector_pass_from_env_loader.py`.

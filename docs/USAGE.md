@@ -97,10 +97,11 @@ findings_sink:
   enabled: true
   type: postgresql              # postgresql | mysql | mssql | mongodb | sqlite (lab)
   host: db.example.com
+  allowed_hosts: ["db.example.com"]
   port: 5432
   database: data_governance_db
-  user_from_env: SINK_DB_USER
-  pass_from_env: SINK_DB_PASS
+  user_from_env: DATA_BOAR_SINK_DB_USER
+  pass_from_env: DATA_BOAR_SINK_DB_PASS
   schema: data_boar             # documented for PostgreSQL; unused by the echo client today
   on_conflict: upsert           # upsert | skip | fail
   include_sample_content: false
@@ -525,7 +526,7 @@ If you are **new to the product** (counsel, DPO, audit lead, or anyone validatin
 1. Open the **hub** **[docs/samples/README.md](samples/README.md)** ([pt-BR](samples/README.pt_BR.md)) — it links the starter YAML, the minimal Docker template, the scope CSV, and explains **`config/config.json`** (legacy JSON only).
 1. Copy **[deploy/samples/config.starter-lgpd-eval.yaml](../deploy/samples/config.starter-lgpd-eval.yaml)** to your machine as **`config.yaml`** (any writable folder). The file is **Runnable defaults** (two folders + one database + rate limit + ML/DL terms) plus **commented optional** sections (e.g. `scan_compressed`, `file_passwords`, `learned_patterns`, external pattern files) so you can enable features gradually.
 1. Replace the **fictitious** paths (`/opt/lgpd-demo/...`) and the database host **`192.0.2.10`** (documentation-only TEST-NET) with your lab paths and hostname.
-1. Set the environment variable referenced by **`pass_from_env`** (example: `DEMO_DB_PASSWORD`) **before** starting the process — do not paste real passwords into YAML for production.
+1. Set the environment variable referenced by **`pass_from_env`** (example: `DATA_BOAR_DEMO_DB_PASSWORD`) **before** starting the process — do not paste real passwords into YAML for production. The name must use a `DATA_BOAR_` / `REST_API_` / `API_` prefix, and `allowed_hosts` must list `192.0.2.10` (already in the starter).
 1. Run a one-shot scan: `uv run python main.py --config config.yaml` or start the dashboard with the same `--config` path.
 
 The starter is **not** as exhaustive as **`docs/compliance-samples/`** (those are for **framework-specific** tuning).
@@ -593,11 +594,24 @@ To keep secrets **out of the config file**, use **`*_from_env`** keys so the app
 **Requesting access from IT:** When you need to ask the IT team for permissions (e.g. shared folders, database accounts, API tokens), use the **minimal** access required. See [OPERATOR_IT_REQUIREMENTS.md](ops/OPERATOR_IT_REQUIREMENTS.md) for a per-source checklist of what to ask for (read-only, no admin), what we do *not* need, and a short justification so the request aligns with zero-trust or strict IAM. ([pt-BR](ops/OPERATOR_IT_REQUIREMENTS.pt_BR.md))
 
 - **API key:** `api.api_key_from_env: "AUDIT_API_KEY"` (see Authentication above).
-- **Targets (databases, REST, Power BI, etc.):**
-- **Password:** `pass_from_env: "DB_PASS"` or `password_from_env: "DB_PASS"` — the app reads the password from the named env var.
-- **User:** `user_from_env: "DB_USER"` — username from env.
-- **REST / OAuth:** In the target’s `auth` block: `token_from_env: "REST_TOKEN"`, `client_secret_from_env: "CLIENT_SECRET"`.
-- **Power BI / Dataverse:** At target level: `client_secret_from_env: "PBI_SECRET"`, or in `auth`: `client_secret_from_env: "PBI_SECRET"`.
+- **Targets (databases, REST, Power BI, etc.):** two checks run at load (#2086). The env **name** must start with **`DATA_BOAR_`**, **`REST_API_`**, or **`API_`**. The destination must appear in that target’s **`allowed_hosts`** (or `auth.allowed_hosts`). A name outside the prefix, or a destination that is not on the list, raises `ValueError` and the secret is not copied.
+- **Password:** `pass_from_env: "DATA_BOAR_DB_PASS"` or `password_from_env: "DATA_BOAR_DB_PASS"`.
+- **User:** `user_from_env: "DATA_BOAR_DB_USER"`.
+- **REST / OAuth:** In the target’s `auth` block: `token_from_env: "API_REST_TOKEN"`, `client_secret_from_env: "API_CLIENT_SECRET"`, plus `allowed_hosts` for the API host and the token host.
+- **Power BI / Dataverse:** `client_secret_from_env: "API_PBI_SECRET"`. Power BI’s default token host is already vendor-allowlisted; Dataverse still needs `allowed_hosts` for `org_url` / `environment_url`.
+- **Example (database):**
+
+```yaml
+- name: payroll
+  type: database
+  driver: postgresql+psycopg2
+  host: db.example.com
+  allowed_hosts: ["db.example.com"]
+  user: reader
+  pass_from_env: DATA_BOAR_DB_PASS
+```
+
+`allowed_hosts` is written in the same YAML as the rest of the target. Against a config author, only the prefix is an independent control; the host list is a brake. See [SECURITY.md](SECURITY.md).
 
 When a `*_from_env` key is set, the resolved value is used for the connection; the config file can omit the literal secret. Restrict config file permissions and **do not commit** config files that contain credentials; see [SECURITY.md](../SECURITY.md) (Config file and secrets). Bitwarden as human source of truth: [OPERATOR_SECRETS_BITWARDEN.md](ops/OPERATOR_SECRETS_BITWARDEN.md).
 
@@ -889,7 +903,7 @@ Use `type: api` or `type: rest`. Required: `name`, `base_url` (or `url`). Option
 **Credential host allowlist (#1977 / #2006):** Before the connector attaches Basic, Bearer, OAuth client secrets, or custom `Authorization` / `X-API-Key` / `api-key` headers, it checks every credential endpoint host (`base_url` / `url` and `auth.token_url`). Matching is the **exact hostname** (lowercased). No wildcards, no ports, no path.
 
 - **Secrets from the environment** (`auth.token_from_env`, `auth.client_secret_from_env`, `client_secret: "${VAR}"`, **or** target-level `pass_from_env` / `password_from_env` / `user_from_env`) **require** an explicit list: `auth.allowed_hosts` (or top-level `allowed_hosts`). Include **both** the API host and the OAuth token host when they differ. The config loader may copy the env value into `pass` / `user`; the connector still treats the target as env-loaded while those `*_from_env` keys remain (#2006).
-- Names in `token_from_env`, `client_secret_from_env`, `pass_from_env`, `password_from_env`, and `user_from_env` on **REST/API** targets must start with **`API_`**, **`REST_API_`**, or **`DATA_BOAR_`**. Other names fail closed (`ValueError` containing `#1977`) before any `Authorization` header is set. **SQL / NoSQL / share** targets do **not** use this prefix list (a database `pass_from_env: DEMO_DB_PASSWORD` stays valid).
+- Names in `token_from_env`, `client_secret_from_env`, `pass_from_env`, `password_from_env`, and `user_from_env` must start with **`API_`**, **`REST_API_`**, or **`DATA_BOAR_`** on REST **and** on SQL, NoSQL, and share targets. Other names fail closed (`ValueError` containing `#1977`) and the secret is not copied. Non-REST targets also need the destination in `allowed_hosts` (see *Credentials from environment* above). Example: `pass_from_env: DATA_BOAR_DB_PASS` with `allowed_hosts: ["db.example.com"]`.
 - **Inline** tokens/passwords (no env keys) default to the hosts already in `base_url` / `auth.token_url` on the **same** target. An explicit list still wins and can reject a mismatched `base_url`.
 - Failure is connect-time **`ValueError`**. Scan failures usually show reason **`error`** with `#1977` in **Details** — not a remote 401. See [TROUBLESHOOTING_CREDENTIALS_AND_AUTH.md](TROUBLESHOOTING_CREDENTIALS_AND_AUTH.md).
 

@@ -35,7 +35,7 @@ Para **jurídico, DPO ou gestão de programa** que tem uma **lista de sistemas**
 1. Inclua **uma linha por fonte de dados** (pasta, base ou compartilhamento). Uma linha = um local onde a organização guarda arquivos ou tabelas que possam conter dados pessoais.
 1. Em **`type`**, use só valores que o importador suporta hoje (ex.: `filesystem` para pasta, `postgresql` ou `mysql` para SQL, `smb` / `nfs` para compartilhamentos). Em dúvida, use `filesystem` para “uma pasta a analisar” e preencha **`path`** com o caminho que a TI confirmar.
 1. **`name`** é um rótulo livre (ex.: “compartilhamento RH”) para reconhecer a linha na revisão — não é hostname técnico.
-1. **Nunca** coloque senhas reais na planilha. Coloque o **nome de uma variável de ambiente** em **`pass_from_env`** (ex.: `HR_DB_PASSWORD`) e peça à TI para definir essa variável no servidor antes das varreduras.
+1. **Nunca** coloque senhas reais na planilha. Coloque o **nome de uma variável de ambiente** em **`pass_from_env`** (ex.: `DATA_BOAR_HR_DB_PASSWORD`) e peça à TI para definir essa variável no servidor antes das varreduras. O nome começa com `DATA_BOAR_`, `REST_API_` ou `API_`, e o YAML final precisa de `allowed_hosts` com o host daquela linha.
 1. **Salvar como** → **CSV UTF-8** (vírgulas). Se só existir “CSV (delimitado por vírgulas)”, use **Excel UTF-8** ou **LibreOffice** em UTF-8 para não corromper acentos.
 1. Entregue o CSV a quem executa o Data Boar (ou execute você, se tiver o repositório):
    `uv run python scripts/scope_import_csv.py caminho/para/sua.csv -o targets.fragment.yaml`

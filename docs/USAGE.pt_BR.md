@@ -106,10 +106,11 @@ findings_sink:
   enabled: true
   type: postgresql              # postgresql | mysql | mssql | mongodb | sqlite (lab)
   host: db.example.com
+  allowed_hosts: ["db.example.com"]
   port: 5432
   database: data_governance_db
-  user_from_env: SINK_DB_USER
-  pass_from_env: SINK_DB_PASS
+  user_from_env: DATA_BOAR_SINK_DB_USER
+  pass_from_env: DATA_BOAR_SINK_DB_PASS
   schema: data_boar             # documentado para PostgreSQL; o cliente de eco ainda não usa
   on_conflict: upsert           # upsert | skip | fail
   include_sample_content: false
@@ -600,6 +601,13 @@ Defina `licensing.effective_tier: enterprise` em lab. Mesmo CLI do Pro (`--gover
 
 Para manter segredos **fora do arquivo de config**, use chaves **`*_from_env`**: o YAML guarda só o **nome** da variável; o valor entra no **ambiente do processo** na subida. Esse é o contrato estável — vaults (Bitwarden hoje; Fase B `@vault:` / vaults corporativos depois) devem **injetar na mesma camada de env**. Ponte opcional: `~/.config/databoar/*.env` + `scripts/databoar-env-load.sh` / `.ps1`. Detalhe: [OPERATOR_CREDENTIALS_FROM_ENV.pt_BR.md](ops/OPERATOR_CREDENTIALS_FROM_ENV.pt_BR.md) ([EN](ops/OPERATOR_CREDENTIALS_FROM_ENV.md)). Bitwarden como fonte humana: [OPERATOR_SECRETS_BITWARDEN.pt_BR.md](ops/OPERATOR_SECRETS_BITWARDEN.pt_BR.md).
 
+Dois requisitos no load (#2086), para `pass_from_env`, `password_from_env`, `user_from_env` e `token_from_env`:
+
+- O **nome** começa com **`DATA_BOAR_`**, **`REST_API_`** ou **`API_`**.
+- O destino do alvo está em **`allowed_hosts`** (ou `auth.allowed_hosts`).
+
+Nome fora do prefixo, ou destino fora da lista, levanta `ValueError` e o segredo não é copiado. Exemplo: `pass_from_env: DATA_BOAR_DB_PASS` com `host: db.example.com` e `allowed_hosts: ["db.example.com"]`. `allowed_hosts` vem do mesmo YAML que o autor do config escreve: contra esse autor, só o prefixo é controle independente; a lista de host é um freio. Veja [SECURITY.pt_BR.md](SECURITY.pt_BR.md).
+
 ### Config inicial (copiar e colar) e onde começar {#config-inicial-exemplos}
 
 Se você está **começando agora** (jurídico, DPO, liderança de auditoria ou **validação de capacidades**) e precisa de **um único arquivo** para alinhar com a TI **sem** ler todos os guias primeiro:
@@ -607,7 +615,7 @@ Se você está **começando agora** (jurídico, DPO, liderança de auditoria ou 
 1. Abra o **hub** **[docs/samples/README.pt_BR.md](samples/README.pt_BR.md)** ([EN](samples/README.md)) — ele aponta para o YAML *starter*, o modelo mínimo Docker, o CSV de escopo e explica **`config/config.json`** (JSON legado só para referência).
 1. Copie **[deploy/samples/config.starter-lgpd-eval.yaml](../deploy/samples/config.starter-lgpd-eval.yaml)** para a sua máquina como **`config.yaml`**. O arquivo traz **valores padrão utilizáveis** (duas pastas + um banco + timeouts + limite de taxa + termos ML/DL) e **blocos opcionais comentados** (ex.: arquivos compactados, `file_passwords`, `learned_patterns`) para ir habilitando aos poucos.
 1. Substitua os caminhos **fictícios** (`/opt/lgpd-demo/...`) e o host **`192.0.2.10`** (rede só de documentação) pelos valores de laboratório reais.
-1. Defina a variável de ambiente de **`pass_from_env`** (exemplo: `DEMO_DB_PASSWORD`) **antes** de subir o processo — não coloque senhas reais no YAML em produção.
+1. Defina a variável de ambiente de **`pass_from_env`** (exemplo: `DATA_BOAR_DEMO_DB_PASSWORD`) **antes** de subir o processo — não coloque senhas reais no YAML em produção. O nome precisa do prefixo `DATA_BOAR_` / `REST_API_` / `API_`, e `allowed_hosts` precisa listar `192.0.2.10` (já está no starter).
 1. Execute uma varredura one-shot: `uv run python main.py --config config.yaml` ou suba o painel com o mesmo `--config`.
 
 O *starter* **não** substitui os grandes YAML de **`docs/compliance-samples/`** (ajuste fino por norma).
@@ -907,7 +915,7 @@ Use `type: api` ou `type: rest`. Obrigatório: `name`, `base_url` (ou `url`). Op
 **Allow-list de host de credencial (#1977 / #2006):** Antes de anexar Basic, Bearer, segredo OAuth ou cabeçalhos customizados `Authorization` / `X-API-Key` / `api-key`, o conector confere cada host de endpoint de credencial (`base_url` / `url` e `auth.token_url`). A comparação é o **hostname exato** (minúsculas). Sem wildcard, sem porta, sem path.
 
 - **Segredos do ambiente** (`auth.token_from_env`, `auth.client_secret_from_env`, `client_secret: "${VAR}"` **ou** `pass_from_env` / `password_from_env` / `user_from_env` no alvo) **exigem** lista explícita: `auth.allowed_hosts` (ou `allowed_hosts` no alvo). Inclua **os dois** hosts quando a API e o token OAuth diferem. O loader pode copiar o valor da env para `pass` / `user`; o conector ainda trata o alvo como carregado do ambiente enquanto essas chaves `*_from_env` existem (#2006).
-- Nomes em `token_from_env`, `client_secret_from_env`, `pass_from_env`, `password_from_env` e `user_from_env` em alvos **REST/API** precisam começar com **`API_`**, **`REST_API_`** ou **`DATA_BOAR_`**. Outros nomes falham fechado (`ValueError` com `#1977`) antes de qualquer cabeçalho `Authorization`. Alvos **SQL / NoSQL / share** **não** usam essa lista de prefixo (um banco com `pass_from_env: DEMO_DB_PASSWORD` continua válido).
+- Nomes em `token_from_env`, `client_secret_from_env`, `pass_from_env`, `password_from_env` e `user_from_env` precisam começar com **`API_`**, **`REST_API_`** ou **`DATA_BOAR_`** em REST **e** em alvos SQL, NoSQL e share. Outros nomes falham fechado (`ValueError` com `#1977`) e o segredo não é copiado. Alvos não-REST também precisam do destino em `allowed_hosts` (veja *Credenciais a partir do ambiente* acima). Exemplo: `pass_from_env: DATA_BOAR_DB_PASS` com `allowed_hosts: ["db.example.com"]`.
 - Tokens/senhas **inline** (sem chaves env) usam por padrão os hosts de `base_url` / `auth.token_url` no **mesmo** alvo. Lista explícita vence e pode rejeitar um `base_url` fora da lista.
 - A falha é **`ValueError`** no `connect`. Em Scan failures o motivo costuma ser **`error`** com `#1977` em **Details** — não é 401 remoto. Veja [TROUBLESHOOTING_CREDENTIALS_AND_AUTH.pt_BR.md](TROUBLESHOOTING_CREDENTIALS_AND_AUTH.pt_BR.md).
 

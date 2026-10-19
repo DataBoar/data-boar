@@ -20,6 +20,8 @@
 
 **Rule:** Do not invent a second secret channel in YAML that bypasses **A→B**. New vault products should **populate environment variables** (or future `@vault:` resolution that the loader already planned) with the **same names** your `*_from_env` keys point to.
 
+**Load gate (#2086):** `pass_from_env`, `password_from_env`, `user_from_env`, `token_from_env`, and `client_secret_from_env` names must start with `DATA_BOAR_`, `REST_API_`, or `API_`, and the target’s `allowed_hosts` must include the destination. Example: `pass_from_env: DATA_BOAR_DEMO_DB_PASSWORD` with `allowed_hosts: ["192.0.2.10"]`. `allowed_hosts` lives in the same YAML the config author writes; only the prefix is an independent control against that author.
+
 ```text
   Bitwarden / HCP Vault / K8s Secret / systemd EnvironmentFile
                          │
@@ -99,7 +101,7 @@ Tracked pattern for the dashboard API key: [API_KEY_FROM_ENV_OPERATOR_STEPS.md](
 ```text
 ~/.config/databoar/          # mkdir; chmod 700
   hubspot.env                # chmod 0600 — HUBSPOT_PRIVATE_APP_TOKEN=…
-  postgres-lab.env           # DEMO_DB_PASSWORD=…
+  postgres-lab.env           # DATA_BOAR_DEMO_DB_PASSWORD=…
   agent-sessions.env         # optional; used by primary-linux-agent-sessions.sh
 ```
 

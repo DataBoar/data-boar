@@ -27,9 +27,10 @@ targets:
     type: database
     driver: postgresql+psycopg2
     host: REPLACE_WITH_LAB_HOST_IP
+    allowed_hosts: ["REPLACE_WITH_LAB_HOST_IP"]
     port: 55432
     user: lab_smoke
-    pass_from_env: LAB_PG_PASSWORD
+    pass_from_env: DATA_BOAR_LAB_PG_PASSWORD
     database: lab_smoke_pg
     connect_timeout_seconds: 25
     read_timeout_seconds: 90
@@ -38,9 +39,10 @@ targets:
     type: database
     driver: mysql+pymysql
     host: REPLACE_WITH_LAB_HOST_IP
+    allowed_hosts: ["REPLACE_WITH_LAB_HOST_IP"]
     port: 33306
     user: lab_smoke
-    pass_from_env: LAB_MY_PASSWORD
+    pass_from_env: DATA_BOAR_LAB_MY_PASSWORD
     database: lab_smoke_my
     connect_timeout_seconds: 25
     read_timeout_seconds: 90
@@ -49,9 +51,10 @@ targets:
     type: database
     driver: mssql+pymssql
     host: REPLACE_WITH_LAB_HOST_IP
+    allowed_hosts: ["REPLACE_WITH_LAB_HOST_IP"]
     port: 14333
     user: sa
-    pass_from_env: LAB_MSSQL_SA_PASSWORD
+    pass_from_env: DATA_BOAR_LAB_MSSQL_SA_PASSWORD
     database: lab_smoke_mssql
     connect_timeout_seconds: 25
     read_timeout_seconds: 90
@@ -60,9 +63,10 @@ targets:
     type: database
     driver: oracle+oracledb
     host: REPLACE_WITH_LAB_HOST_IP
+    allowed_hosts: ["REPLACE_WITH_LAB_HOST_IP"]
     port: 15211
     user: lab_smoke
-    pass_from_env: LAB_ORACLE_PASSWORD
+    pass_from_env: DATA_BOAR_LAB_ORACLE_PASSWORD
     database: XEPDB1
     connect_timeout_seconds: 25
     read_timeout_seconds: 90
@@ -73,16 +77,18 @@ targets:
     host: REPLACE_WITH_LAB_HOST_IP
     port: 56379
     # Redis lab image has no auth by default; leave pass_from_env unset unless
-    # you enable requirepass. When set, export LAB_REDIS_PASSWORD.
+    # you enable requirepass. When set, export DATA_BOAR_LAB_REDIS_PASSWORD
+    # and add allowed_hosts for this host.
 
   # Optional remote latency lane (#1237 / #1337) — fill from operator vault, not git:
   # - name: Cloud_Postgres_Remote
   #   type: database
   #   driver: postgresql+psycopg2
   #   host: REPLACE_WITH_REMOTE_PG_HOST
+  #   allowed_hosts: ["REPLACE_WITH_REMOTE_PG_HOST"]
   #   port: 6543
   #   user: REPLACE_WITH_REMOTE_PG_USER
-  #   pass_from_env: DATABOAR_REMOTE_PG_PASS
+  #   pass_from_env: DATA_BOAR_REMOTE_PG_PASS
   #   database: postgres
   #   connect_timeout_seconds: 25
   #   read_timeout_seconds: 90
