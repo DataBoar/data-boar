@@ -41,6 +41,16 @@ def test_otel_disabled_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
     assert maybe_setup_otel(app=None) is False
 
 
+def test_fastapi_app_does_not_auto_configure_otel(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Native FastAPI export stays off unless DATA_BOAR_OTEL_ENABLED (#2089)."""
+    monkeypatch.delenv("DATA_BOAR_OTEL_ENABLED", raising=False)
+    import api.routes as routes
+
+    assert routes.app._telemetry["auto_configure"] is False
+
+
 @pytest.mark.parametrize("truthy", ["1", "true", "YES", "on"])
 def test_otel_enabled_truthy(monkeypatch: pytest.MonkeyPatch, truthy: str) -> None:
     monkeypatch.setenv("DATA_BOAR_OTEL_ENABLED", truthy)

@@ -801,6 +801,9 @@ app = FastAPI(
     title="LGPD/GDPR/CCPA Audit API",
     version=get_about_info()["version"],
     lifespan=_lifespan,
+    # FastAPI 0.142.x auto-exports OTLP when the env is set. Product export
+    # stays behind DATA_BOAR_OTEL_ENABLED (core.otel_setup, #1500 / #2089).
+    telemetry={"auto_configure": False},
 )
 
 # OpenTelemetry: opt-in via DATA_BOAR_OTEL_ENABLED (see core/otel_setup.py / #1500).
