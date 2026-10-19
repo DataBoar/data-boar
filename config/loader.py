@@ -82,25 +82,112 @@ def _explicit_allowed_hosts(cfg: dict[str, Any]) -> set[str]:
     return {str(host).lower().strip() for host in raw if str(host).strip()}
 
 
-def _destination_host(cfg: dict[str, Any]) -> str:
-    host = str(cfg.get("host") or "").strip().lower()
-    if host:
-        return host
-    for key in ("base_url", "url"):
-        raw = str(cfg.get(key) or "").strip()
-        if not raw:
-            continue
-        parsed = (urlparse(raw).hostname or "").lower()
-        if parsed:
-            return parsed
-    return ""
+def _hostname_of(value: str) -> str:
+    raw = value.strip()
+    if not raw:
+        return ""
+    if "://" in raw:
+        return (urlparse(raw).hostname or "").lower()
+    return raw.split("/")[0].split(":")[0].lower()
+
+
+def _credential_target_kind(cfg: dict[str, Any]) -> str:
+    kind = str(cfg.get("type") or "").strip().lower()
+    if kind != "database":
+        return kind
+    return str(cfg.get("driver") or "").split("+")[0].strip().lower() or "database"
+
+
+# Explicit destination key per non-REST type (#2086). Not a fallback chain.
+# Kinds absent here fail closed when an env credential is set.
+_HOST_DESTINATION_KINDS = frozenset(
+    {
+        "database",
+        "postgresql",
+        "postgres",
+        "mysql",
+        "mariadb",
+        "mssql",
+        "sqlserver",
+        "oracle",
+        "mongodb",
+        "mongo",
+        "redis",
+        "smb",
+        "cifs",
+    }
+)
+# Secret is posted only to a host the connector already allowlists.
+_VENDOR_FIXED_SECRET_KINDS = frozenset({"hubspot", "powerbi"})
+
+
+def _credential_destination_identities(cfg: dict[str, Any]) -> set[str] | None:
+    """Identities that must intersect ``allowed_hosts``.
+
+    ``None`` means a vendor allowlist already binds where the secret is sent
+    (#1607 HubSpot, #2007 Power BI default token host). An empty set fails closed.
+    """
+    kind = _credential_target_kind(cfg)
+    auth = cfg.get("auth") if isinstance(cfg.get("auth"), dict) else {}
+    token_url = str(auth.get("token_url") or "").strip()
+
+    if kind == "hubspot":
+        return None
+    if kind == "powerbi":
+        if not token_url:
+            return None
+        host = _hostname_of(token_url)
+        return {host} if host else set()
+    if kind in {"dataverse", "powerapps"}:
+        org = str(cfg.get("org_url") or cfg.get("environment_url") or "")
+        idents = {host} if (host := _hostname_of(org)) else set()
+        if token_url:
+            token_host = _hostname_of(token_url)
+            if not token_host:
+                return set()
+            idents.add(token_host)
+        return idents
+    if kind == "snowflake":
+        account = str(cfg.get("account") or "").strip().lower()
+        if not account:
+            return set()
+        derived = (
+            account
+            if account.endswith(".snowflakecomputing.com")
+            else f"{account}.snowflakecomputing.com"
+        )
+        return {account, derived}
+    if kind == "sharepoint":
+        host = _hostname_of(str(cfg.get("site_url") or cfg.get("base_url") or ""))
+        return {host} if host else set()
+    if kind == "webdav":
+        host = _hostname_of(
+            str(cfg.get("base_url") or cfg.get("url") or cfg.get("host") or "")
+        )
+        return {host} if host else set()
+    if kind == "nfs":
+        host = str(cfg.get("host") or cfg.get("server") or "").strip().lower()
+        return {host} if host else set()
+    if kind in _HOST_DESTINATION_KINDS:
+        host = str(cfg.get("host") or "").strip().lower()
+        if not host:
+            host = _hostname_of(str(cfg.get("url") or cfg.get("base_url") or ""))
+        return {host} if host else set()
+    return set()
 
 
 def assert_explicit_destination_allowlisted(cfg: dict[str, Any], label: str) -> None:
-    """Fail closed unless the credential destination is explicitly allowlisted."""
-    host = _destination_host(cfg)
+    """Fail closed unless the credential destination is explicitly allowlisted.
+
+    ``allowed_hosts`` comes from the same YAML the config author writes (same
+    limit as #1977). Against that author only the env-name prefix is an
+    independent control; the host list is a brake, not a second authority.
+    """
+    identities = _credential_destination_identities(cfg)
+    if identities is None:
+        return
     allowed = _explicit_allowed_hosts(cfg)
-    if host and host in allowed:
+    if identities and identities & allowed:
         return
     raise ValueError(
         f"{label} requires an explicit allowed_hosts entry "
