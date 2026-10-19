@@ -275,3 +275,43 @@ def test_powerbi_client_secret_from_env_uses_vendor_token_host(
     }
     out = normalize_config(data)
     assert out["targets"][0]["client_secret"] == "pbi-secret"
+
+
+@pytest.mark.parametrize("kind", ["dataverse", "powerapps"])
+def test_org_and_token_url_must_both_be_allowlisted(
+    kind: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("API_DV_SECRET", "dv-secret")
+    target = {
+        "name": kind,
+        "type": kind,
+        "org_url": "https://org.crm.dynamics.com",
+        "client_secret_from_env": "API_DV_SECRET",
+        "auth": {"token_url": "https://evil.example/oauth/token"},
+        "allowed_hosts": ["org.crm.dynamics.com"],
+    }
+    with pytest.raises(ValueError, match="allowed_hosts.*#1977"):
+        normalize_config(
+            {"targets": [target], "api": {}, "report": {"output_dir": "."}}
+        )
+
+
+@pytest.mark.parametrize("kind", ["dataverse", "powerapps"])
+def test_org_and_token_url_copy_when_both_allowlisted(
+    kind: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("API_DV_SECRET", "dv-secret")
+    target = {
+        "name": kind,
+        "type": kind,
+        "org_url": "https://org.crm.dynamics.com",
+        "client_secret_from_env": "API_DV_SECRET",
+        "auth": {
+            "token_url": "https://login.microsoftonline.com/tenant/oauth2/v2.0/token"
+        },
+        "allowed_hosts": ["org.crm.dynamics.com", "login.microsoftonline.com"],
+    }
+    out = normalize_config(
+        {"targets": [target], "api": {}, "report": {"output_dir": "."}}
+    )
+    assert out["targets"][0]["client_secret"] == "dv-secret"

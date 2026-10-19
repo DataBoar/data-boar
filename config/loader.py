@@ -117,81 +117,88 @@ _HOST_DESTINATION_KINDS = frozenset(
         "cifs",
     }
 )
-# Secret is posted only to a host the connector already allowlists.
-_VENDOR_FIXED_SECRET_KINDS = frozenset({"hubspot", "powerbi"})
 
 
-def _credential_destination_identities(cfg: dict[str, Any]) -> set[str] | None:
-    """Identities that must intersect ``allowed_hosts``.
+def _credential_destination_groups(cfg: dict[str, Any]) -> list[set[str]] | None:
+    """Places the secret is sent, each as a set of aliases.
 
-    ``None`` means a vendor allowlist already binds where the secret is sent
-    (#1607 HubSpot, #2007 Power BI default token host). An empty set fails closed.
+    ``None`` means a vendor allowlist already binds the destination
+    (#1607 HubSpot, #2007 Power BI default token host).
+
+    Two semantics (#2086):
+
+    * Aliases of the **same** destination (Snowflake account or
+      ``<account>.snowflakecomputing.com``) share one set. One match is enough.
+    * **Distinct** destinations (Dataverse/Power Apps ``org_url`` and
+      ``token_url``; a custom Power BI ``token_url``) are separate sets.
+      Every set must intersect ``allowed_hosts``.
+
+    An empty set fails closed.
     """
     kind = _credential_target_kind(cfg)
     auth = cfg.get("auth") if isinstance(cfg.get("auth"), dict) else {}
     token_url = str(auth.get("token_url") or "").strip()
+
+    def _one(host: str) -> list[set[str]]:
+        return [{host}] if host else [set()]
 
     if kind == "hubspot":
         return None
     if kind == "powerbi":
         if not token_url:
             return None
-        host = _hostname_of(token_url)
-        return {host} if host else set()
+        return _one(_hostname_of(token_url))
     if kind in {"dataverse", "powerapps"}:
         org = str(cfg.get("org_url") or cfg.get("environment_url") or "")
-        idents = {host} if (host := _hostname_of(org)) else set()
+        groups = _one(_hostname_of(org))
         if token_url:
-            token_host = _hostname_of(token_url)
-            if not token_host:
-                return set()
-            idents.add(token_host)
-        return idents
+            groups.extend(_one(_hostname_of(token_url)))
+        return groups
     if kind == "snowflake":
         account = str(cfg.get("account") or "").strip().lower()
         if not account:
-            return set()
+            return [set()]
         derived = (
             account
             if account.endswith(".snowflakecomputing.com")
             else f"{account}.snowflakecomputing.com"
         )
-        return {account, derived}
+        return [{account, derived}]
     if kind == "sharepoint":
         host = _hostname_of(str(cfg.get("site_url") or cfg.get("base_url") or ""))
-        return {host} if host else set()
+        return _one(host)
     if kind == "webdav":
         host = _hostname_of(
             str(cfg.get("base_url") or cfg.get("url") or cfg.get("host") or "")
         )
-        return {host} if host else set()
+        return _one(host)
     if kind == "nfs":
         host = str(cfg.get("host") or cfg.get("server") or "").strip().lower()
-        return {host} if host else set()
+        return _one(host)
     if kind in _HOST_DESTINATION_KINDS:
         host = str(cfg.get("host") or "").strip().lower()
         if not host:
             host = _hostname_of(str(cfg.get("url") or cfg.get("base_url") or ""))
-        return {host} if host else set()
-    return set()
+        return _one(host)
+    return [set()]
 
 
 def assert_explicit_destination_allowlisted(cfg: dict[str, Any], label: str) -> None:
-    """Fail closed unless the credential destination is explicitly allowlisted.
+    """Fail closed unless every credential destination is explicitly allowlisted.
 
     ``allowed_hosts`` comes from the same YAML the config author writes (same
     limit as #1977). Against that author only the env-name prefix is an
     independent control; the host list is a brake, not a second authority.
     """
-    identities = _credential_destination_identities(cfg)
-    if identities is None:
+    groups = _credential_destination_groups(cfg)
+    if groups is None:
         return
     allowed = _explicit_allowed_hosts(cfg)
-    if identities and identities & allowed:
+    if groups and all(group & allowed for group in groups):
         return
     raise ValueError(
         f"{label} requires an explicit allowed_hosts entry "
-        f"for the destination ({_CREDENTIAL_ENV_TAG})."
+        f"for every destination ({_CREDENTIAL_ENV_TAG})."
     )
 
 
