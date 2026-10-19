@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 
 import pytest
 
@@ -41,14 +42,38 @@ def test_otel_disabled_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
     assert maybe_setup_otel(app=None) is False
 
 
+def test_fastapi_floor_requires_otel_opt_in_release() -> None:
+    """0.142 auto-exports; 0.143+ is opt-in. The floor must exclude 0.142 (#2089)."""
+    text = (Path(__file__).resolve().parents[1] / "pyproject.toml").read_text(
+        encoding="utf-8"
+    )
+    assert "fastapi>=0.143.0" in text
+
+
 def test_fastapi_app_does_not_auto_configure_otel(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Native FastAPI export stays off unless DATA_BOAR_OTEL_ENABLED (#2089)."""
+    """No OTLP exporter when DATA_BOAR_OTEL_ENABLED is unset (#2089).
+
+    Observable check: the process-global tracer provider is unchanged after the
+    ASGI lifespan runs with OTEL_EXPORTER_OTLP_ENDPOINT set. FastAPI only
+    installs a SDK TracerProvider when native auto-config is on.
+    """
+    from opentelemetry import trace
+    from starlette.testclient import TestClient
+
     monkeypatch.delenv("DATA_BOAR_OTEL_ENABLED", raising=False)
+    monkeypatch.delenv("OTEL_SDK_DISABLED", raising=False)
+    monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://127.0.0.1:9")
+    before = trace.get_tracer_provider()
     import api.routes as routes
 
-    assert routes.app._telemetry["auto_configure"] is False
+    with TestClient(routes.app) as client:
+        response = client.get("/health")
+    assert response.status_code == 200
+    after = trace.get_tracer_provider()
+    assert after is before
+    assert type(after).__name__ != "TracerProvider"
 
 
 @pytest.mark.parametrize("truthy", ["1", "true", "YES", "on"])
