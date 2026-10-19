@@ -467,7 +467,9 @@ def test_health_includes_license(tmp_path, monkeypatch):
     client = TestClient(routes.app)
     r = client.get("/health")
     assert r.status_code == 200
-    body = r.json()
-    assert body.get("status") == "ok"
+    assert set(r.json()) == {"status"}
+    detailed = client.get("/status")
+    assert detailed.status_code == 200
+    body = detailed.json()
     assert "license" in body
     assert body["license"].get("license_state") == "OPEN"

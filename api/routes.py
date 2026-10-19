@@ -128,7 +128,7 @@ class LocaleSlug(str, Enum):
 
 
 def _integrity_snapshot() -> dict:
-    """#856: integrity anchor snapshot for /health and /status (ensure once, lazily)."""
+    """#856: integrity anchor snapshot for /status (ensure once, lazily)."""
     from core.integrity_anchor import ensure_integrity_anchor, get_integrity_snapshot
 
     snap = get_integrity_snapshot()
@@ -1340,27 +1340,15 @@ app.mount("/static", StaticFiles(directory=str(_api_dir / "static")), name="stat
 
 
 @app.get("/health")
-async def health(request: Request):
+async def health():
     """
     Liveness/readiness probe for Docker, Swarm and Kubernetes.
 
-    Semantics: **always unauthenticated** (no API key). Returns minimal JSON for
-    orchestrators; see SECURITY.md / USAGE.md for difference vs protected routes.
+    Semantics: **always unauthenticated** (no API key). Body is only
+    ``{"status": "ok"}`` (#2077). License, trust, and transport live on
+    authenticated ``GET /status``.
     """
-    cfg = _get_config()
-    canonical = get_canonical_trust_snapshot(cfg)
-    eff = effective_dashboard_transport(request, cfg)
-    body: dict = {"status": "ok"}
-    body["license"] = _license_public_dict()
-    body["trust_state"] = canonical["trust_state"]
-    body["trust_reasons"] = canonical["trust_reasons"]
-    body["output_confidence"] = canonical["output_confidence"]
-    body["dashboard_transport"] = get_dashboard_transport_snapshot()
-    body["forwarded_headers"] = eff["forwarded"]
-    body["effective_external_transport"] = eff["effective_external_transport"]
-    body["enterprise_surface"] = get_enterprise_surface_posture(cfg)
-    body["integrity"] = _integrity_snapshot()
-    return body
+    return {"status": "ok"}
 
 
 @app.get("/about/json")
@@ -1578,6 +1566,7 @@ async def get_status(request: Request):
         "enterprise_surface": get_enterprise_surface_posture(cfg),
         "maturity_assessment_integrity": maturity_integrity,
         "integrity": _integrity_snapshot(),
+        "license": _license_public_dict(),
     }
 
 

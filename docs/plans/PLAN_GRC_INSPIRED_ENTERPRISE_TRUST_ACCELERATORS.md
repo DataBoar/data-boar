@@ -40,7 +40,7 @@ We still need a stronger "trust evidence loop" in runtime behavior:
 
 **Why now:** creates single-source-of-truth semantics for all later security work.
 
-**Status (S2a wave-1):** ✅ Contract landed in `core/canonical_trust.py` — `trust_state` + `trust_reasons` on `GET /status`, `GET /health`, `--export-audit-trail`, plus stderr line on `--web`. Folds license trust, integrity tamper, and plaintext HTTP opt-in. Report-body metadata / DB audit rows for every scan remain follow-up.
+**Status (S2a wave-1):** ✅ Contract landed in `core/canonical_trust.py` — `trust_state` + `trust_reasons` on `GET /status` and `--export-audit-trail` (`GET /health` is liveness only, #2077), plus stderr line on `--web`. Folds license trust, integrity tamper, and plaintext HTTP opt-in. Report-body metadata / DB audit rows for every scan remain follow-up.
 
 ### A2 — Output confidence policy
 

@@ -200,9 +200,7 @@ sqlite_path: {tmp_path}/audit.db
         assert body["output_confidence"] in ("full", "reduced", "minimal")
         health = client.get("/health")
         assert health.status_code == 200
-        hbody = health.json()
-        assert hbody["trust_state"] == body["trust_state"]
-        assert "dashboard_transport" in hbody
+        assert set(health.json()) == {"status"}
     finally:
         routes._config_path = orig_path
         routes._config = orig_cfg

@@ -7,6 +7,7 @@ Human-readable summary of user-facing changes. **Detailed release notes:** [docs
 Migration notes on the **`1.8.0-rc`** working line (no new semver cut):
 
 - **Credential env names (#2086):** `pass_from_env`, `password_from_env`, `user_from_env`, `token_from_env`, and `client_secret_from_env` fail at load when the name is outside the `DATA_BOAR_` / `REST_API_` / `API_` prefixes, or when the destination is missing from that target’s `allowed_hosts`. Shipped examples now use prefixed names (`DATA_BOAR_DEMO_DB_PASSWORD`, `DATA_BOAR_LAB_*`).
+- **`GET /health` (#2077):** the unauthenticated body is only `{"status":"ok"}`. License, trust, transport, and integrity moved to authenticated `GET /status`.
 - **Notification `public_base_url` (#2087):** `public_base_url: ${VAR}` raises `ValueError` and is not expanded. Other notification `${VAR}` values still expand only for the same prefixes.
 
 ---
