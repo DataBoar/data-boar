@@ -819,8 +819,10 @@ class SQLConnector:
                 )
             use_limit = resolve_sql_sample_limit(base)
         dialect = self.engine.dialect.name if self.engine else ""
-        # Escape identifier per dialect to prevent SQL injection (identifiers come from discover(), not user input).
-        # Double-quote for SQLite/Postgres/Oracle; backtick for MySQL.
+        # Escape identifiers per dialect. Names come from the scanned catalog
+        # (discover()), which is not a trusted input. Oracle quoting is
+        # oracle_sql_identifier; other dialects double the quote character.
+        # Double-quote for SQLite/Postgres; backtick for MySQL.
         safe_col = column_name.replace('"', '""')
         safe_table = table.replace('"', '""')
         safe_schema = (schema or "").replace('"', '""')

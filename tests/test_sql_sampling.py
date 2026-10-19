@@ -97,6 +97,14 @@ def test_oracle_sql_identifier_mixed_case_quoted():
     assert oracle_sql_identifier("Lab_Customers") == '"Lab_Customers"'
 
 
+def test_oracle_sql_identifier_quotes_uppercase_names_with_sql_syntax():
+    """#2094: quote catalog names that are not a simple unquoted Oracle identifier."""
+    assert oracle_sql_identifier("ATTACKER.EVIL()") == '"ATTACKER.EVIL()"'
+    assert oracle_sql_identifier('SAY "HI"') == '"SAY ""HI"""'
+    assert oracle_sql_identifier("COL$ID") == "COL$ID"
+    assert oracle_sql_identifier("A#1") == "A#1"
+
+
 def test_build_oracle_reflected_lowercase_emits_unquoted_upper():
     """Regression #1370: quoted lowercase breaks ORA-00942 on default Oracle objects."""
     q = SqlColumnSampleQueryBuilder.build(

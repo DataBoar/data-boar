@@ -22,7 +22,8 @@ Identifiers passed into `SamplingManager.build_column_sample` (and the legacy
 `sql_connector.sample`); this module only composes SQL shape. **Oracle** is the
 exception: pass optional ``raw_col`` / ``raw_table`` / ``raw_schema`` from
 discovery (may be ``quoted_name``) so case-sensitive quoted objects are preserved;
-unquoted dictionary names are emitted without double quotes (uppercase).
+simple unquoted dictionary names are emitted without double quotes
+(uppercase); any other catalog name is quoted.
 
 Architecture (orchestrator vs fixed strings):
 - `SamplingManager` picks a **strategy label** and builds a `TextClause` from
@@ -53,6 +54,7 @@ Doctrinal references (behaviour-preserving comments — do not remove in refacto
 from __future__ import annotations
 
 import os
+import re
 from dataclasses import dataclass
 from typing import Any
 
@@ -220,6 +222,10 @@ def _ansi_quoted_table(safe_schema: str, safe_table: str, schema: str | None) ->
     return f'"{safe_schema}"."{safe_table}"' if schema else f'"{safe_table}"'
 
 
+# Unquoted Oracle identifiers are uppercase and start with a letter (#2094).
+_ORACLE_SIMPLE_IDENTIFIER = re.compile(r"^[A-Z][A-Z0-9_$#]*$")
+
+
 def oracle_sql_identifier(name: Any) -> str:
     """
     Render an Oracle SQL identifier from a discovery/reflection name.
@@ -228,6 +234,9 @@ def oracle_sql_identifier(name: Any) -> str:
     those in double quotes forces case-sensitive resolution and yields ORA-00942.
     Objects created with quoted lowercase identifiers are reflected as
     ``quoted_name(..., quote=True)`` and must keep exact case inside quotes.
+    Any other name that is not a simple unquoted identifier (``[A-Z][A-Z0-9_$#]*``)
+    is emitted quoted, with embedded ``"`` doubled, so catalog syntax cannot
+    splice into the sampling statement.
     """
     raw = str(name)
     safe = raw.replace('"', '""')
@@ -235,7 +244,10 @@ def oracle_sql_identifier(name: Any) -> str:
         return f'"{safe}"'
     if raw != raw.lower() and raw != raw.upper():
         return f'"{safe}"'
-    return safe.upper()
+    upper = safe.upper()
+    if _ORACLE_SIMPLE_IDENTIFIER.fullmatch(upper):
+        return upper
+    return f'"{safe}"'
 
 
 def _oracle_table_ref(schema_name: Any, table_name: Any, schema: str | None) -> str:
