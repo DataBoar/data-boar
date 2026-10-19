@@ -222,8 +222,8 @@ def _en() -> dict:
             "run_cli_bind": (
                 "Bind order when using --web: --host overrides api.host in config and API_HOST; "
                 "if none are set, the default is 127.0.0.1 (Docker image often sets API_HOST=0.0.0.0). "
-                "Port: api.port in config vs --port. Transport: GET /status and GET /health include "
-                "dashboard_transport — see docs/USAGE.md."
+                "Port: api.port in config vs --port. Transport: GET /status includes "
+                "dashboard_transport; GET /health is liveness only — see docs/USAGE.md."
             ),
             "run_cli_danger": (
                 "Dangerous maintenance (lab/demo only): --reset-data wipes SQLite sessions/findings "
@@ -607,8 +607,8 @@ def _pt_br(en: dict) -> dict:
     base["help"]["run_cli_bind"] = (
         "Ordem de bind com --web: --host sobrescreve api.host na config e API_HOST; se nada estiver "
         "definido, o padrão é 127.0.0.1 (a imagem Docker costuma definir API_HOST=0.0.0.0). "
-        "Porta: api.port na config vs --port. Transporte: GET /status e GET /health incluem "
-        "dashboard_transport — veja docs/USAGE.md."
+        "Porta: api.port na config vs --port. Transporte: GET /status inclui "
+        "dashboard_transport; GET /health é só liveness — veja docs/USAGE.md."
     )
     base["help"]["run_cli_danger"] = (
         "Manutenção perigosa (só lab/demo): --reset-data apaga sessões/achados no SQLite e remove "

@@ -51,7 +51,7 @@ We still need a stronger "trust evidence loop" in runtime behavior:
 
 **Why now:** aligns with enterprise expectation that risky states do not emit normal-looking evidence.
 
-**Status (S2a wave-2c / M-TRUST-02 thin):** 🔄 Partial — JSON marker `output_confidence` on status/health/audit; Excel Report info **TRUST WATERMARK** when `degraded`/`untrusted`; `untrusted` detail sheets present as stubs (0 finding rows + retention notice) via `report/trust_tint.py`. PDF/DOCX/dashboard download gating deferred.
+**Status (S2a wave-2c / M-TRUST-02 thin):** 🔄 Partial — JSON marker `output_confidence` on status/audit (`GET /health` is liveness only, #2077); Excel Report info **TRUST WATERMARK** when `degraded`/`untrusted`; `untrusted` detail sheets present as stubs (0 finding rows + retention notice) via `report/trust_tint.py`. PDF/DOCX/dashboard download gating deferred.
 
 ### A3 — Crypto/runtime baseline self-check
 

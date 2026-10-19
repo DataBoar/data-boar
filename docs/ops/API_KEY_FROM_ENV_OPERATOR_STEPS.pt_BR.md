@@ -112,7 +112,7 @@ Esperado: **200** (ou outro sucesso), não 401.
 1. **Inventariar** os consumidores da API (scripts, cron, CI, probes, dashboards internos). Se a lista estiver vazia, execute os checks assim mesmo para que o primeiro usuário em produção não encontre surpresas de 401/503.
 2. **Homologação:** defina `api.require_api_key: true`, `api.api_key_from_env: "AUDIT_API_KEY"` (ou seu nome), exporte a variável e use **HTTPS** (`--https-cert-file` / `--https-key-file` ou TLS no proxy reverso) onde aplicável. Confirme **`GET /health`** sem chave (200) vs **`GET /status`** sem chave (**401**).
 3. **Clientes:** adicione **`X-API-Key`** ou **`Authorization: Bearer`** a todas as requisições que não sejam de health; fixe a **confiança TLS** (CA empresarial, `mkcert` somente em lab, etc.).
-4. **Produção:** lance com uma **curta** janela de compatibilidade apenas se necessário (ex.: `--allow-insecure-http` em texto claro ou HTTP atrás de proxy TLS-terminador). **Encerre-a** usando **`GET /status` / `GET /health`** (`dashboard_transport`) e **`python main.py --export-audit-trail`** para que a postura insegura fique rastreável.
+4. **Produção:** lance com uma **curta** janela de compatibilidade apenas se necessário (ex.: `--allow-insecure-http` em texto claro ou HTTP atrás de proxy TLS-terminador). **Encerre-a** usando **`GET /status`** (`dashboard_transport`; **`GET /health`** é só liveness) e **`python main.py --export-audit-trail`** para que a postura insegura fique rastreável.
 5. Narrativa completa: **[SECURE_BY_DEFAULT_BLOCKERS_AND_MIGRATION.md](SECURE_BY_DEFAULT_BLOCKERS_AND_MIGRATION.md)**.
 
 ---

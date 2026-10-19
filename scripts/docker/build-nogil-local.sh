@@ -184,14 +184,24 @@ if [[ -z "${HEALTH_JSON}" ]]; then
   exit 1
 fi
 echo "${HEALTH_JSON}"
+# License left /health (#2077). Read it from /status (demo does not require an API key).
+STATUS_JSON="$(
+  podman exec "${DEMO_WEB_NAME}" /usr/local/bin/python3.14t -c '
+import json, sys, urllib.request
+r = urllib.request.urlopen("http://127.0.0.1:8088/status", timeout=2)
+body = json.loads(r.read().decode())
+sys.stdout.write(json.dumps(body, separators=(",", ":")))
+raise SystemExit(0 if r.status == 200 else 1)
+' 2>/dev/null
+)" || STATUS_JSON=""
 python3 -c '
 import json, sys
-body = json.load(sys.stdin)
+body = json.loads(sys.argv[1])
 lic = (body.get("license") or {}).get("license_state")
 if lic != "OPEN":
     raise SystemExit(f"FATAL: expected license_state OPEN, got {lic!r}")
-' <<<"${HEALTH_JSON}" || {
-  echo "FATAL: /health JSON license_state is not OPEN" >&2
+' "${STATUS_JSON}" || {
+  echo "FATAL: /status JSON license_state is not OPEN" >&2
   podman logs "${DEMO_WEB_NAME}" >&2 || true
   exit 1
 }

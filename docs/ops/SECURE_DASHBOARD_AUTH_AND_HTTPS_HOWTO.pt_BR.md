@@ -17,7 +17,7 @@
 1. Com **`api.require_api_key: true`**, o processo precisa de um segredo **resolvido**: ou **`api.api_key`** não vazio no config, ou **`api.api_key_from_env: "VAR"`** com **`VAR` definida no ambiente antes da subida**.
 1. **`main.py --web`** **encerra com código 2** se `require_api_key` estiver true e **nenhuma chave** puder ser resolvida (evita dashboard aberto por engano).
 1. **Bind fora do loopback** (`0.0.0.0`, IP da LAN, `::`): **`main.py --web` encerra com código 2** a menos que **`api.require_api_key: true`** e a chave esteja **resolvida**. Ter **`api.api_key`** / chave no ambiente ou um segredo WebAuthn **sem** `require_api_key` **não** conta — as rotas JSON (`GET /findings`, `POST /scan`, config) continuam sem autenticação (#1714). Use bind **`127.0.0.1`** no lab sem chave, ou ligue **`require_api_key: true`** antes de publicar a porta do container.
-1. **`GET /health`** **nunca** exige autenticação (probes e load balancers continuam simples). Devolve JSON com `status`, resumo público de `license` e `dashboard_transport`.
+1. **`GET /health`** **nunca** exige autenticação (probes e load balancers continuam simples). O corpo é exatamente `{"status":"ok"}`. Licença, confiança e `dashboard_transport` ficam no **`GET /status`** autenticado (#2077).
 1. **Todas as outras rotas** (páginas HTML, `GET /status`, `POST /scan`, `GET /config`, OpenAPI `/docs`, …) exigem chave válida quando a exigência está ativa: envie **`X-API-Key: <segredo>`** ou **`Authorization: Bearer <segredo>`**.
 1. **401** = chave ausente ou incorreta. **503** = `require_api_key` true mas a chave não foi resolvida em runtime (misconfig); corrija YAML/ambiente e reinicie.
 
@@ -120,7 +120,7 @@ api:
     - "dashboard.example.com"
 ```
 
-Com peer correspondente **e** `X-Forwarded-Proto: https` confiável, o painel suprime o banner vermelho de risco de texto claro e expõe **`effective_external_transport`** por requisição (`tls_termination: trusted_proxy`) em **`GET /status`** / **`GET /health`**. O **`dashboard_transport`** a nível de processo permanece `mode: http` / `tls_active: false` — honestidade sobre o listener Uvicorn, não alegação de TLS nativo no app. Veja [#1515](https://github.com/DataBoar/data-boar/issues/1515) / [PLAN_DASHBOARD_TRUSTED_PROXY_TLS.md](../plans/PLAN_DASHBOARD_TRUSTED_PROXY_TLS.md).
+Com peer correspondente **e** `X-Forwarded-Proto: https` confiável, o painel suprime o banner vermelho de risco de texto claro e expõe **`effective_external_transport`** por requisição (`tls_termination: trusted_proxy`) em **`GET /status`**. O **`dashboard_transport`** a nível de processo permanece `mode: http` / `tls_active: false` — honestidade sobre o listener Uvicorn, não alegação de TLS nativo no app. Veja [#1515](https://github.com/DataBoar/data-boar/issues/1515) / [PLAN_DASHBOARD_TRUSTED_PROXY_TLS.md](../plans/PLAN_DASHBOARD_TRUSTED_PROXY_TLS.md).
 
 Veja [deploy/DEPLOY.md](../deploy/DEPLOY.pt_BR.md) e **SECURITY.md** na raiz.
 
@@ -151,7 +151,7 @@ api:
   #   - "cert-antigo-ainda-valido-na-transicao…"
 ```
 
-**3.** Abra **`https://<host>:<port>/`**. Use **`GET /status`** ou **`GET /health`** e confira **`dashboard_transport`** no JSON (`mode`, `tls_active`, `summary`, **`tls_posture`** opcional aninhado) **e** os campos canônicos **`trust_state`** / **`trust_reasons`** / **`output_confidence`**.
+**3.** Abra **`https://<host>:<port>/`**. Use **`GET /status`** e confira **`dashboard_transport`** no JSON (`mode`, `tls_active`, `summary`, **`tls_posture`** opcional aninhado) **e** os campos canônicos **`trust_state`** / **`trust_reasons`** / **`output_confidence`**.
 
 **4.** Evidência opcional: **`python main.py --export-audit-trail -`** (sem `--web`) inclui **`dashboard_transport`**, **`trust_state`** e **`enterprise_surface`** no JSON exportado.
 
@@ -194,7 +194,7 @@ Padrões em [deploy/DEPLOY.md](../deploy/DEPLOY.pt_BR.md) e [deploy/kubernetes/R
 
 | Verificação             | O que observar                                                                                                                                                         |
 | -----------             | --------------                                                                                                                                                         |
-| **Runtime**             | `GET /status` e `GET /health` → **`dashboard_transport`** com **`https`** vs **http** com opt-in; **`trust_state`** é o sinal canônico combinado. Em HTTPS nativo, **`dashboard_transport.tls_posture`** traz cipher/protocolo + SHA-256 do cert leaf (S2a wave-2a/2b; publicado via env para os **workers** do uvicorn). Cipher/protocolo fracos adicionam **`tls_cipher_baseline_weak`** / **`tls_protocol_below_baseline`**; mismatch da allow-list de fingerprint adiciona **`tls_cert_fingerprint_mismatch`**. Sem **`api.https_cert_fingerprint_sha256`**, o fingerprint é só observação (sem downgrade de trust). |
+| **Runtime**             | `GET /status` → **`dashboard_transport`** com **`https`** vs **http** com opt-in; **`GET /health`** é só liveness (`{"status":"ok"}`). **`trust_state`** é o sinal canônico combinado. Em HTTPS nativo, **`dashboard_transport.tls_posture`** traz cipher/protocolo + SHA-256 do cert leaf (S2a wave-2a/2b; publicado via env para os **workers** do uvicorn). Cipher/protocolo fracos adicionam **`tls_cipher_baseline_weak`** / **`tls_protocol_below_baseline`**; mismatch da allow-list de fingerprint adiciona **`tls_cert_fingerprint_mismatch`**. Sem **`api.https_cert_fingerprint_sha256`**, o fingerprint é só observação (sem downgrade de trust). |
 | **Export de auditoria** | `python main.py --export-audit-trail -` → JSON com **`dashboard_transport`**, **`trust_state`** e **`enterprise_surface`** (export sem `--web`; transporte pode ficar `not_configured` sem env). |
 | **Auth**                | Com **`require_api_key`**, **`/health`** sem chave; **`/status`** com chave.                                                                                           |
 
