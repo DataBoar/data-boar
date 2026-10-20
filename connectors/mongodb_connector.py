@@ -99,6 +99,9 @@ class MongoDBConnector:
             "serverSelectionTimeoutMS": connect_s * 1000,
             "connectTimeoutMS": connect_s * 1000,
             "socketTimeoutMS": read_s * 1000,
+            # Stay on the guarded seed. Replica-set discovery would dial peers
+            # the SSRF check never saw.
+            "directConnection": True,
         }
         if tls_enabled:
             client_kwargs["tls"] = True
