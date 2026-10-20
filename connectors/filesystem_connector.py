@@ -597,6 +597,7 @@ def _scan_sqlite_file_as_db(
     No raw content stored.
     """
     from sqlalchemy import create_engine, inspect
+    from sqlalchemy.engine import URL
 
     from connectors.sql_sampling import SamplingManager, resolve_sql_sample_limit
     from connectors.sample_value_dedup import (
@@ -606,7 +607,10 @@ def _scan_sqlite_file_as_db(
 
     findings = []
     try:
-        engine = create_engine(f"sqlite:///{file_path.resolve()}", pool_pre_ping=True)
+        engine = create_engine(
+            URL.create("sqlite", database=str(file_path.resolve())),
+            pool_pre_ping=True,
+        )
     except Exception:
         return []
     try:
