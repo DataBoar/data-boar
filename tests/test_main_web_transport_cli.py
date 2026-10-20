@@ -7,6 +7,18 @@ import sys
 import time
 from pathlib import Path
 
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def _drop_operator_config_path(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Child ``main.py --web`` inherits this process env (#2091).
+
+    A shell ``CONFIG_PATH`` that is not the test ``--config`` exits on a
+    non-loopback bind before the auth refusal these tests assert.
+    """
+    monkeypatch.delenv("CONFIG_PATH", raising=False)
+
 
 def test_main_web_exits_without_transport_choice(tmp_path):
     cfg = tmp_path / "c.yaml"
