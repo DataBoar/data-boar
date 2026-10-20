@@ -49,7 +49,11 @@ uv run python scripts/issue_dev_license_jwt.py \
 ```
 
 Padrões: `--dbtier enterprise --days 60 --dbmfp auto` (vinculada à máquina
-que executa o comando).
+que executa o comando). O emissor também anexa `dbmldsa_sig` (#2043) com
+`DATA_BOAR_LICENSE_ISSUER_MLDSA_PRIVATE_KEY_PEM_FILE` (ou o PEM inline).
+Essa chave precisa ser uma privada ML-DSA-65 de DEV. O script recusa a
+privada da âncora empacotada. Sem a variável, a assinatura é efêmera e não
+verifica contra a âncora empacotada.
 
 ## 3. Emitir para a máquina de um testador (remoto)
 

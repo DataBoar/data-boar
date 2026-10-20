@@ -25,6 +25,11 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from core.licensing.fingerprint import compute_machine_fingerprint
 from core.licensing.guard import LicenseGuard
 from core.licensing import reset_license_guard_for_tests
+from core.licensing.verify import CLAIM_MLDSA_SIG
+from tests.hybrid_license_fixture import (
+    pin_test_mldsa_anchor,
+    test_mldsa_public_pem as dev_mldsa_public_pem,
+)
 from tests.license_verify_pin import pin_embedded_ed25519_pem
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -73,6 +78,29 @@ def _clean_guard():
     os.environ.pop("DATA_BOAR_LICENSE_PUBLIC_KEY_PEM", None)
 
 
+def _dev_mldsa_file(tmp_path: Path) -> Path:
+    from cryptography.hazmat.primitives import serialization
+    from tests.hybrid_license_fixture import test_mldsa_private
+
+    pem = test_mldsa_private().private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption(),
+    )
+    path = tmp_path / "dev-mldsa.pem"
+    path.write_bytes(pem)
+    return path
+
+
+def _issuer_env(tmp_path: Path, **extra: str) -> dict[str, str]:
+    env = dict(os.environ)
+    env["DATA_BOAR_LICENSE_ISSUER_MLDSA_PRIVATE_KEY_PEM_FILE"] = str(
+        _dev_mldsa_file(tmp_path)
+    )
+    env.update(extra)
+    return env
+
+
 def _run_issuer(*argv: str, env: dict | None = None) -> str:
     proc = _run_issuer_proc(*argv, env=env)
     assert proc.returncode == 0, proc.stderr
@@ -105,6 +133,7 @@ def test_issuer_defaults_60d_enterprise_machine_bound(keypair):
     assert 59.9 <= lifetime_days <= 60.1
     # Machine-bound by default to the issuing machine.
     assert claims["dbmfp"] == compute_machine_fingerprint()
+    assert isinstance(claims[CLAIM_MLDSA_SIG], str) and claims[CLAIM_MLDSA_SIG]
 
 
 def test_issuer_show_machine_fingerprint(keypair):
@@ -122,12 +151,44 @@ def test_issuer_dbmfp_none_unbound(keypair):
 def test_bound_license_valid_on_this_machine(keypair, tmp_path):
     priv_path, pub_pem, _pub_key = keypair
     lic = tmp_path / "qa.lic"
-    _run_issuer("--private-key-pem-file", str(priv_path), "--out", str(lic))
+    _run_issuer(
+        "--private-key-pem-file",
+        str(priv_path),
+        "--out",
+        str(lic),
+        env=_issuer_env(tmp_path),
+    )
     pin_embedded_ed25519_pem(pub_pem)
+    pin_test_mldsa_anchor(dev_mldsa_public_pem())
     g = LicenseGuard({"licensing": {"mode": "enforced", "license_path": str(lic)}})
-    assert g.context.state == "VALID"
+    assert g.context.state == "VALID", g.context.detail
+    assert "hybrid_mldsa65_verified" in g.context.detail
     assert g.context.dbtier == "enterprise"
     assert g.allows_scan() is True
+
+
+def test_dev_token_without_claim_is_rejected(keypair, tmp_path):
+    from cryptography.hazmat.primitives.serialization import load_pem_private_key
+
+    priv_path, pub_pem, pub_key = keypair
+    token = _run_issuer(
+        "--private-key-pem-file",
+        str(priv_path),
+        env=_issuer_env(tmp_path),
+    )
+    claims = jwt.decode(
+        token, pub_key, algorithms=["EdDSA"], options={"verify_exp": False}
+    )
+    claims.pop(CLAIM_MLDSA_SIG)
+    ed_private = load_pem_private_key(priv_path.read_bytes(), password=None)
+    bare = jwt.encode(claims, ed_private, algorithm="EdDSA")
+    lic = tmp_path / "bare.lic"
+    lic.write_text(bare, encoding="utf-8")
+    pin_embedded_ed25519_pem(pub_pem)
+    pin_test_mldsa_anchor(dev_mldsa_public_pem())
+    g = LicenseGuard({"licensing": {"mode": "enforced", "license_path": str(lic)}})
+    assert g.context.state == "INVALID"
+    assert g.context.detail == "hybrid_claim_required"
 
 
 def test_bound_license_rejected_on_other_machine(keypair, tmp_path):
@@ -140,8 +201,10 @@ def test_bound_license_rejected_on_other_machine(keypair, tmp_path):
         "f" * 64,  # some other machine's fingerprint
         "--out",
         str(lic),
+        env=_issuer_env(tmp_path),
     )
     pin_embedded_ed25519_pem(pub_pem)
+    pin_test_mldsa_anchor(dev_mldsa_public_pem())
     g = LicenseGuard({"licensing": {"mode": "enforced", "license_path": str(lic)}})
     assert g.context.state == "MACHINE_MISMATCH"
     assert g.allows_scan() is False

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Issue a signed QA/lab license JWT (Ed25519) — the ONLY test path in enforced mode.
+Issue a signed QA/lab license JWT (Ed25519 + ML-DSA-65) — the ONLY test path in enforced mode.
 
 The env-based tier bypass was removed (#719): QA against ``licensing.mode:
 enforced`` requires a real signed license. This issuer emits short-lived
@@ -16,6 +16,8 @@ docs/ops/QA_LOCAL_LICENSE.md.
 from __future__ import annotations
 
 import argparse
+import base64
+import json
 import os
 import re
 import sys
@@ -24,6 +26,7 @@ from getpass import getpass
 from pathlib import Path
 
 import jwt
+from cryptography.hazmat.primitives.asymmetric.mldsa import MLDSA65PrivateKey
 from cryptography.hazmat.primitives.serialization import load_pem_private_key
 
 # Default QA validity: short enough that a leaked license dies on its own.
@@ -34,6 +37,82 @@ _DBMFP_HEX_RE = re.compile(r"[0-9a-f]{64}")
 _REPO_ROOT = str(Path(__file__).resolve().parent.parent)
 if _REPO_ROOT not in sys.path:
     sys.path.insert(0, _REPO_ROOT)
+
+
+def _load_dev_mldsa_private() -> MLDSA65PrivateKey:
+    """DEV/QA ML-DSA signer. Never the packaged anchor private key.
+
+    ``DATA_BOAR_LICENSE_ISSUER_MLDSA_PRIVATE_KEY_PEM_FILE`` or
+    ``DATA_BOAR_LICENSE_ISSUER_MLDSA_PRIVATE_KEY_PEM`` supplies the key.
+    When both are unset, an ephemeral key is generated for this process.
+    That token will not verify against the packaged anchor; tests pin the
+    matching public key in-process. This is not a production verify override.
+    """
+    path = os.environ.get(
+        "DATA_BOAR_LICENSE_ISSUER_MLDSA_PRIVATE_KEY_PEM_FILE", ""
+    ).strip()
+    inline = os.environ.get(
+        "DATA_BOAR_LICENSE_ISSUER_MLDSA_PRIVATE_KEY_PEM", ""
+    ).strip()
+    if path:
+        blob = Path(path).expanduser().read_text(encoding="utf-8")
+    elif inline:
+        blob = inline
+    else:
+        return MLDSA65PrivateKey.generate()
+    key = load_pem_private_key(blob.encode("utf-8"), password=None)
+    if not isinstance(key, MLDSA65PrivateKey):
+        print(
+            "DATA_BOAR_LICENSE_ISSUER_MLDSA_PRIVATE_KEY_* must be an ML-DSA-65 private key",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    _reject_packaged_mldsa_anchor(key)
+    return key
+
+
+def _reject_packaged_mldsa_anchor(key: MLDSA65PrivateKey) -> None:
+    from core.licensing.trust_anchor import load_embedded_mldsa_anchor_pem
+    from core.licensing.verify import load_mldsa65_public_key_pem
+
+    embedded = load_embedded_mldsa_anchor_pem()
+    if not embedded:
+        return
+    packaged = load_mldsa65_public_key_pem(embedded)
+    if key.public_key().public_bytes_raw() == packaged.public_bytes_raw():
+        print(
+            "refusing to sign with the packaged ML-DSA anchor private key",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+
+def _attach_dev_mldsa_sig(
+    token: str, ed_private: object, mldsa_private: MLDSA65PrivateKey
+) -> str:
+    from core.licensing.verify import CLAIM_MLDSA_SIG, _mldsa_payload_json_without_sig
+
+    payload_b64 = token.split(".")[1]
+    claims = json.loads(
+        base64.urlsafe_b64decode(payload_b64 + "=" * (-len(payload_b64) % 4))
+    )
+    if not isinstance(claims, dict):
+        print("issuer payload is not an object", file=sys.stderr)
+        sys.exit(1)
+    header_b64 = token.split(".", 1)[0]
+    payload_json = _mldsa_payload_json_without_sig(claims)
+    signed_payload_b64 = (
+        base64.urlsafe_b64encode(payload_json.encode("utf-8"))
+        .decode("ascii")
+        .rstrip("=")
+    )
+    sig = mldsa_private.sign(f"{header_b64}.{signed_payload_b64}".encode("utf-8"))
+    claims[CLAIM_MLDSA_SIG] = base64.urlsafe_b64encode(sig).decode("ascii").rstrip("=")
+    sealed = jwt.encode(claims, ed_private, algorithm="EdDSA")
+    if sealed.split(".", 1)[0] != header_b64:
+        print("JWT header changed after attaching dbmldsa_sig", file=sys.stderr)
+        sys.exit(1)
+    return sealed
 
 
 def _machine_fingerprint() -> str:
@@ -244,7 +323,11 @@ def main() -> None:
             payload["dbmax_deployments"] = args.dbmax_deployments
         if args.pack_id:
             payload["dbdeployment_pack_id"] = args.pack_id
-    token = jwt.encode(payload, key, algorithm="EdDSA")
+    token = _attach_dev_mldsa_sig(
+        jwt.encode(payload, key, algorithm="EdDSA"),
+        key,
+        _load_dev_mldsa_private(),
+    )
     if args.out:
         Path(args.out).write_text(token + "\n", encoding="utf-8")
     else:

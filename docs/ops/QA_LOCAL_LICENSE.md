@@ -47,7 +47,11 @@ uv run python scripts/issue_dev_license_jwt.py \
 ```
 
 Defaults: `--dbtier enterprise --days 60 --dbmfp auto` (bound to the machine
-that runs the command).
+that runs the command). The issuer also attaches `dbmldsa_sig` (#2043) using
+`DATA_BOAR_LICENSE_ISSUER_MLDSA_PRIVATE_KEY_PEM_FILE` (or the inline PEM env).
+That key must be a DEV ML-DSA-65 private key. The script refuses the packaged
+anchor private key. When the env is unset, the signature is ephemeral and will
+not verify against the packaged anchor.
 
 ## 3. Issue for a tester's machine (remote)
 
