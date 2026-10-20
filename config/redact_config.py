@@ -28,6 +28,7 @@ _SECRET_SUBSTRINGS = frozenset(
         "private_key",
         "credential",
         "bearer",
+        "webhook",
     }
 )
 
@@ -57,16 +58,20 @@ def _is_sensitive_query_key(key: str) -> bool:
 def _redact_url_like_string(value: str) -> str:
     if "://" not in value:
         return value
-    split = urlsplit(value)
-    if not split.scheme:
-        return value
+    try:
+        split = urlsplit(value)
+        if not split.scheme:
+            return value
+        port = split.port
+    except ValueError:
+        return REDACTED_PLACEHOLDER
     out_netloc = split.netloc
     if split.username is not None and split.password is not None:
         username = quote(split.username, safe="")
         host = split.hostname or ""
         if ":" in host and not host.startswith("["):
             host = f"[{host}]"
-        port_part = f":{split.port}" if split.port is not None else ""
+        port_part = f":{port}" if port is not None else ""
         out_netloc = f"{username}:{_INLINE_SECRET_PLACEHOLDER}@{host}{port_part}"
     pairs = parse_qsl(split.query, keep_blank_values=True)
     if pairs:
@@ -166,7 +171,9 @@ def _walk_merge(
             return current
 
     if isinstance(submitted, dict) and isinstance(current, dict):
-        out = dict(current)
+        # Omitted keys are deletions. A secret key stays only when the
+        # submitted value is the placeholder or empty.
+        out: dict[Any, Any] = {}
         for k, v in submitted.items():
             sub_path = f"{path}.{k}" if path else k
             if isinstance(k, str) and _is_secret_key(k):
@@ -182,18 +189,18 @@ def _walk_merge(
             else:
                 out[k] = _walk_merge(
                     v,
-                    current.get(k) if isinstance(current, dict) else None,
+                    current.get(k) if k in current else None,
                     sub_path,
                 )
         return out
     if isinstance(submitted, list) and isinstance(current, list):
         return [
             _walk_merge(
-                submitted[i] if i < len(submitted) else None,
+                submitted[i],
                 current[i] if i < len(current) else None,
                 f"{path}[{i}]",
             )
-            for i in range(max(len(submitted), len(current)))
+            for i in range(len(submitted))
         ]
     return submitted if submitted is not None else current
 
