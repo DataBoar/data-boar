@@ -119,6 +119,21 @@ def test_sqlite_filesystem_scan_finds_rare_cpf(tmp_path):
     ) or any(f.get("sensitivity_level") != "LOW" for f in findings)
 
 
+def test_sqlite_scan_opens_filename_with_percent_encoding(tmp_path):
+    """SQLAlchemy 2.1 must not percent-decode the scanned filename (#2095)."""
+    from connectors.filesystem_connector import _scan_sqlite_file_as_db
+
+    db_path = tmp_path / "report%2Fcopy.db"
+    conn = sqlite3.connect(str(db_path))
+    conn.execute("CREATE TABLE t (payload TEXT)")
+    conn.execute("INSERT INTO t (payload) VALUES (?)", (f"ERR {_RARE_CPF}",))
+    conn.commit()
+    conn.close()
+
+    findings = _scan_sqlite_file_as_db(db_path, DataScanner(), sample_limit=5)
+    assert findings, db_path.name
+
+
 def test_mongodb_dedup_fetches_more_docs_for_distinct_values():
     from connectors.mongodb_connector import MongoDBConnector
 

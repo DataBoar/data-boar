@@ -53,7 +53,9 @@ def _make_token(
     }
     if extra:
         payload.update(extra)
-    return jwt.encode(payload, priv, algorithm="EdDSA")
+    from tests.hybrid_license_fixture import seal_enforced_test_token
+
+    return seal_enforced_test_token(priv, jwt.encode(payload, priv, algorithm="EdDSA"))
 
 
 @pytest.fixture
@@ -186,13 +188,20 @@ from datetime import datetime, timedelta, timezone
 from importlib.resources import files
 from pathlib import Path
 
+import base64
+
 import jwt
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from cryptography.hazmat.primitives.asymmetric.mldsa import MLDSA65PrivateKey
 
 from core.licensing.fingerprint import compute_machine_fingerprint
 from core.licensing.guard import LicenseGuard
-from core.licensing.verify import load_embedded_official_public_key_pem
+from core.licensing.verify import (
+    CLAIM_MLDSA_SIG,
+    _mldsa_payload_json_without_sig,
+    load_embedded_official_public_key_pem,
+)
 
 venv_root = Path(sys.argv[1]).resolve()
 lic_path = sys.argv[2]
@@ -223,6 +232,28 @@ payload = {
     "dbmfp": compute_machine_fingerprint(),
 }
 token = jwt.encode(payload, priv, algorithm="EdDSA")
+header_b64 = token.split(".", 1)[0]
+payload_json = _mldsa_payload_json_without_sig(payload)
+signed_payload_b64 = (
+    base64.urlsafe_b64encode(payload_json.encode("utf-8")).decode("ascii").rstrip("=")
+)
+ml_priv = MLDSA65PrivateKey.generate()
+sig = ml_priv.sign(f"{header_b64}.{signed_payload_b64}".encode("utf-8"))
+payload[CLAIM_MLDSA_SIG] = base64.urlsafe_b64encode(sig).decode("ascii").rstrip("=")
+token = jwt.encode(payload, priv, algorithm="EdDSA")
+if token.split(".", 1)[0] != header_b64:
+    raise SystemExit("JWT header changed after attaching dbmldsa_sig")
+raw_ml = ml_priv.public_key().public_bytes_raw()
+body = base64.b64encode(raw_ml).decode("ascii")
+lines = [body[i : i + 64] for i in range(0, len(body), 64)]
+ml_pem = (
+    "-----BEGIN ML-DSA-65 PUBLIC KEY-----\n"
+    + "\n".join(lines)
+    + "\n-----END ML-DSA-65 PUBLIC KEY-----\n"
+)
+import core.licensing.trust_anchor as trust_anchor
+
+trust_anchor.load_embedded_mldsa_anchor_pem = lambda: ml_pem
 Path(lic_path).write_text(token, encoding="utf-8")
 
 for k in (

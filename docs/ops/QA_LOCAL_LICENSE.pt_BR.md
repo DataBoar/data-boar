@@ -18,7 +18,7 @@ deliberadamente:
 Mantenha a chave **privada** Ed25519 fora do Git (ex.: `~/.keys/data-boar/`).
 Veja `docs/private.example/licensing/README.md` para gerar as chaves.
 
-O `LicenseGuard` em runtime verifica EdDSA e também ML-DSA-65 quando o token traz `dbmldsa_sig` (`decode_license_jwt_hybrid`). Essa chave ML-DSA é a âncora empacotada ou uma rotação aceita. `DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_*` falha fechado (`untrusted_key_override`). Token sem o claim continua só Ed25519 — veja [LICENSING_SPEC.pt_BR.md](../LICENSING_SPEC.pt_BR.md).
+O `LicenseGuard` em runtime verifica EdDSA e ML-DSA-65 juntos (`decode_license_jwt_hybrid`). Essa chave ML-DSA é a âncora empacotada ou uma rotação aceita. `DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_*` falha fechado (`untrusted_key_override`). Token sem `dbmldsa_sig` é inválido (`hybrid_claim_required`, #2042) — veja [LICENSING_SPEC.pt_BR.md](../LICENSING_SPEC.pt_BR.md).
 
 ### Opcional: chave de assinatura cifrada (passphrase)
 
@@ -49,7 +49,11 @@ uv run python scripts/issue_dev_license_jwt.py \
 ```
 
 Padrões: `--dbtier enterprise --days 60 --dbmfp auto` (vinculada à máquina
-que executa o comando).
+que executa o comando). O emissor também anexa `dbmldsa_sig` (#2043) com
+`DATA_BOAR_LICENSE_ISSUER_MLDSA_PRIVATE_KEY_PEM_FILE` (ou o PEM inline).
+Essa chave precisa ser uma privada ML-DSA-65 de DEV. O script recusa a
+privada da âncora empacotada. Sem a variável, a assinatura é efêmera e não
+verifica contra a âncora empacotada.
 
 ## 3. Emitir para a máquina de um testador (remoto)
 
@@ -75,8 +79,8 @@ Envie apenas o arquivo `.lic` — nunca a chave privada.
 A chave pública oficial de verificação já vai **embarcada** na instalação
 (`license-pub-v1.pem`). A âncora ML-DSA-65 (`license-mldsa-pub-v1.pem`, SHA-256
 `37faef8ff167cf01a0fc6a2bc8b7cfcac6bfe5651360051b1eb00a0a60fa85b8`) vem no
-mesmo wheel para rotação e verificação híbrida opcional; `dbmldsa_sig` ainda
-não é obrigatório. Um `.lic` válido e vinculado à máquina basta — sem
+mesmo wheel para rotação e verificação híbrida obrigatória; `dbmldsa_sig` é
+obrigatório em todo token enforced (#2042). Um `.lic` válido e vinculado à máquina basta — sem
 env/config de pubkey numa instalação limpa (#1331). Um
 `DATA_BOAR_LICENSE_PUBLIC_KEY_*`, `DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_*`,
 `licensing.public_key_path` ou `licensing.mldsa_public_key_path` falha

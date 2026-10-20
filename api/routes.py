@@ -587,6 +587,14 @@ _config = None
 _audit_engine = None
 
 
+def use_validated_config_path(path: str) -> None:
+    """Point the API at the config file ``main.py`` already validated (#2091)."""
+    global _config_path, _config, _audit_engine
+    _config_path = path
+    _config = None
+    _audit_engine = None
+
+
 def _get_config_path() -> str:
     """Return path to config file (for dashboard display and save)."""
     return _config_path
@@ -1406,12 +1414,24 @@ _SESSION_RESPONSES = {
 }
 
 
+def _reject_non_json_or_cross_site_scan(request: Request) -> None:
+    """POST /scan and /start are not CORS-simple requests (#2096)."""
+    media = request.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+    if media != "application/json":
+        raise HTTPException(status_code=415, detail="application/json required")
+    if request.headers.get("sec-fetch-site", "").strip().lower() == "cross-site":
+        raise HTTPException(status_code=403, detail="cross-site scan rejected")
+
+
 @app.post("/scan", responses=_SCAN_START_RESPONSES)
 @app.post("/start", responses=_SCAN_START_RESPONSES)
 async def start_scan(
-    background_tasks: BackgroundTasks, body: ScanStartBody | None = None
+    request: Request,
+    background_tasks: BackgroundTasks,
+    body: ScanStartBody | None = None,
 ):
     """Start audit in background. Optional body: tenant, technician, scan_compressed, content_type_check, scan_for_stego, scheduled, jurisdiction_hint, validate_crypto. Returns session_id. HTTP 409 if a scan is already running."""
+    _reject_non_json_or_cross_site_scan(request)
     _raise_if_license_blocks_scan()
     if body and getattr(body, "scheduled", None) is True:
         _raise_if_feature_blocked("scheduled_scans")

@@ -21,7 +21,7 @@ from cryptography.hazmat.primitives.asymmetric.mldsa import MLDSA65PublicKey
 
 # pyjwt[crypto] uses cryptography for EdDSA
 
-# Optional hybrid PQC claim (license-studio #48); JOSE alg remains EdDSA.
+# Required hybrid PQC claim (license-studio #48); JOSE alg remains EdDSA.
 CLAIM_MLDSA_SIG = "dbmldsa_sig"
 
 # Official issuer verify key shipped in the wheel (#1331). Public material only.
@@ -137,21 +137,20 @@ def decode_license_jwt_hybrid(
     mldsa_pub: MLDSA65PublicKey | None = None,
 ) -> dict[str, Any]:
     """
-    Verify EdDSA (``decode_license_jwt``) and optional ``dbmldsa_sig`` (ML-DSA-65).
+    Verify EdDSA and a required ``dbmldsa_sig`` (ML-DSA-65).
 
-    When the ``dbmldsa_sig`` claim is **absent**, only Ed25519 is verified. When the claim is
-    **present** (including JSON ``null`` or other invalid values), verification is fail-closed.
-    ``mldsa_pub`` is required for a present claim. The ML-DSA
-    message is ``header_b64`` + ``.`` + base64url(JSON payload without that claim), with
-    JSON matching license-studio ``pkg/verify/hybrid.go`` (sorted keys, Go HTML escapes).
+    A token without ``dbmldsa_sig`` is invalid. A present claim (including JSON
+    ``null`` or other invalid values) is fail-closed. ``mldsa_pub`` is required.
+    The ML-DSA message is ``header_b64`` + ``.`` + base64url(JSON payload without
+    that claim), with JSON matching license-studio ``pkg/verify/hybrid.go``
+    (sorted keys, Go HTML escapes).
 
-    The claim is optional: an attacker who forges Ed25519 can omit ``dbmldsa_sig`` and
-    ``decode_license_jwt`` still accepts the token — hybrid verify does not raise the forgery
-    bar until a future enforcement policy requires ML-DSA.
+    ``decode_license_jwt`` still checks only Ed25519 so callers can inspect a
+    token. Production ``LicenseGuard`` always uses this function.
     """
     claims = decode_license_jwt(token, ed25519_pub)
     if CLAIM_MLDSA_SIG not in claims:
-        return claims
+        raise ValueError("dbmldsa_sig is required")
     raw = claims[CLAIM_MLDSA_SIG]
     if mldsa_pub is None:
         raise ValueError(

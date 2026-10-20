@@ -202,15 +202,20 @@ def _signed_license(tmp_path, dbtier: str) -> dict:
         .decode("ascii")
     )
     now = datetime.now(timezone.utc)
-    token = jwt.encode(
-        {
-            "sub": "lic-gating",
-            "iat": int(now.timestamp()),
-            "exp": int((now + timedelta(days=1)).timestamp()),
-            "dbtier": dbtier,
-        },
+    from tests.hybrid_license_fixture import seal_enforced_test_token
+
+    token = seal_enforced_test_token(
         priv,
-        algorithm="EdDSA",
+        jwt.encode(
+            {
+                "sub": "lic-gating",
+                "iat": int(now.timestamp()),
+                "exp": int((now + timedelta(days=1)).timestamp()),
+                "dbtier": dbtier,
+            },
+            priv,
+            algorithm="EdDSA",
+        ),
     )
     lic = tmp_path / "t.lic"
     lic.write_text(token, encoding="utf-8")

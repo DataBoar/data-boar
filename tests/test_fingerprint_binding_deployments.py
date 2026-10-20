@@ -86,7 +86,9 @@ def _make_token(priv: Ed25519PrivateKey, *, extra: dict | None = None) -> str:
     }
     if extra:
         payload.update(extra)
-    return jwt.encode(payload, priv, algorithm="EdDSA")
+    from tests.hybrid_license_fixture import seal_enforced_test_token
+
+    return seal_enforced_test_token(priv, jwt.encode(payload, priv, algorithm="EdDSA"))
 
 
 @pytest.fixture
@@ -317,9 +319,28 @@ def _run_issuer(args: list[str], env_extra: dict[str, str]) -> str:
 
 
 def test_issuer_dbmfp_pack_binds_n_machines(ed25519_priv, tmp_path):
+    from cryptography.hazmat.primitives import serialization
+
+    from tests.hybrid_license_fixture import (
+        pin_test_mldsa_anchor,
+        test_mldsa_private,
+        test_mldsa_public_pem,
+    )
+
+    ml_path = tmp_path / "dev-mldsa.pem"
+    ml_path.write_bytes(
+        test_mldsa_private().private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.PKCS8,
+            encryption_algorithm=serialization.NoEncryption(),
+        )
+    )
     token = _run_issuer(
         ["--dbmfp-pack", f"auto,{OTHER_FP}", "--sub", "qa-pack-lic"],
-        {"DATA_BOAR_LICENSE_ISSUER_PRIVATE_KEY_PEM": _pem_private(ed25519_priv)},
+        {
+            "DATA_BOAR_LICENSE_ISSUER_PRIVATE_KEY_PEM": _pem_private(ed25519_priv),
+            "DATA_BOAR_LICENSE_ISSUER_MLDSA_PRIVATE_KEY_PEM_FILE": str(ml_path),
+        },
     )
     claims = jwt.decode(
         token,
@@ -336,6 +357,7 @@ def test_issuer_dbmfp_pack_binds_n_machines(ed25519_priv, tmp_path):
     lic = tmp_path / "pack.lic"
     lic.write_text(token, encoding="utf-8")
     pin_embedded_ed25519_pem(_pem_public(ed25519_priv))
+    pin_test_mldsa_anchor(test_mldsa_public_pem())
     g = LicenseGuard({"licensing": {"mode": "enforced", "license_path": str(lic)}})
     assert g.context.state == "VALID"
     assert g.context.max_deployments == 2

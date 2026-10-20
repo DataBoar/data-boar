@@ -72,23 +72,33 @@ def _attest(
     return json.dumps(doc)
 
 
-def _license(priv: Ed25519PrivateKey) -> str:
+def _license(
+    priv: Ed25519PrivateKey,
+    mldsa: MLDSA65PrivateKey | None = None,
+) -> str:
     now = datetime.now(timezone.utc)
-    return jwt.encode(
-        {
-            "sub": "lic-rotation-1",
-            "iat": int(now.timestamp()),
-            "exp": int((now + timedelta(days=2)).timestamp()),
-            "dbcid": "lab-dev",
-            "dbcname": "Lab",
-            "dbenv": "qa",
-            "dbissuer": "test",
-            "dbkid": "rot",
-            "dbtier": "enterprise",
-            "dbmfp": compute_machine_fingerprint(),
-        },
+    from tests.hybrid_license_fixture import seal_enforced_test_token
+
+    return seal_enforced_test_token(
         priv,
-        algorithm="EdDSA",
+        jwt.encode(
+            {
+                "sub": "lic-rotation-1",
+                "iat": int(now.timestamp()),
+                "exp": int((now + timedelta(days=2)).timestamp()),
+                "dbcid": "lab-dev",
+                "dbcname": "Lab",
+                "dbenv": "qa",
+                "dbissuer": "test",
+                "dbkid": "rot",
+                "dbtier": "enterprise",
+                "dbmfp": compute_machine_fingerprint(),
+            },
+            priv,
+            algorithm="EdDSA",
+        ),
+        mldsa_private=mldsa,
+        pin=mldsa is None,
     )
 
 
@@ -170,7 +180,7 @@ def test_unsigned_rotation_fails_and_cross_signed_rotation_passes(
         encoding="utf-8",
     )
     lic = tmp_path / "rot.lic"
-    lic.write_text(_license(new_ed), encoding="utf-8")
+    lic.write_text(_license(new_ed, new_ml), encoding="utf-8")
     denied = LicenseGuard(
         {
             "licensing": {
@@ -226,7 +236,7 @@ def test_unsigned_rotation_fails_and_cross_signed_rotation_passes(
         }
     )
     assert accepted.context.state == "VALID"
-    assert accepted.context.detail == "rotation_epoch_1"
+    assert accepted.context.detail == "hybrid_mldsa65_verified;rotation_epoch_1"
 
     bare = canonical_rotation_message(1, new_ed_pem, new_ml_pem)[len(ROTATION_DOMAIN) :]
     no_domain = _attest(

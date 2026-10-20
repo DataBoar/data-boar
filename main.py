@@ -1910,7 +1910,7 @@ def main() -> None:
         _emit_runtime_trust_info(runtime_trust, to_stdout=True, to_stderr=True)
         import uvicorn
 
-        from api.routes import app
+        from api.routes import app, use_validated_config_path
         from core.dashboard_transport import (
             configure_dashboard_transport,
             resolve_web_listen_options,
@@ -1918,6 +1918,7 @@ def main() -> None:
         from core.host_resolution import (
             effective_api_key_configured,
             resolve_api_host,
+            resolve_served_config_path,
             should_block_non_loopback_without_auth,
             should_warn_insecure_api_bind,
         )
@@ -1940,6 +1941,24 @@ def main() -> None:
         port = api_cfg.get("port", args.port)
         workers = int(api_cfg.get("workers", 1))
         host = resolve_api_host(config, cli_host=args.host)
+        try:
+            served_config = resolve_served_config_path(
+                cli_config=args.config,
+                env_config=os.environ.get("CONFIG_PATH"),
+                host=host,
+            )
+        except ValueError as exc:
+            if str(exc) != "config_path_mismatch":
+                raise
+            print(
+                "ERROR: --config and CONFIG_PATH point at different files. "
+                "The API would not serve the config this bind gate validated. "
+                "Pass the same path to --config or unset CONFIG_PATH.",
+                file=sys.stderr,
+                flush=True,
+            )
+            sys.exit(2)
+        use_validated_config_path(served_config)
         if should_block_non_loopback_without_auth(config, host):
             print(
                 "ERROR: Refusing startup with non-loopback API bind and unresolved auth boundary. "

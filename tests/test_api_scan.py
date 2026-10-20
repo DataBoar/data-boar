@@ -6,6 +6,46 @@ Ensures the dashboard Start scan button flow runs the audit engine with the curr
 from fastapi.testclient import TestClient
 
 
+def test_scan_and_start_reject_missing_json_content_type(tmp_path):
+    """POST /scan and /start require application/json (#2096)."""
+    out_dir = str(tmp_path).replace("\\", "/")
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        f"""targets: []
+report:
+  output_dir: {out_dir}
+sqlite_path: {out_dir}/audit_results.db
+""",
+        encoding="utf-8",
+    )
+    import api.routes as routes
+
+    original_config_path = routes._config_path
+    original_config = routes._config
+    original_engine = routes._audit_engine
+    try:
+        routes._config_path = str(config_path)
+        routes._config = None
+        routes._audit_engine = None
+        client = TestClient(routes.app)
+        for path in ("/scan", "/start"):
+            resp = client.post(path)
+            assert resp.status_code == 415, (path, resp.status_code, resp.text)
+            cross = client.post(
+                path,
+                headers={
+                    "Content-Type": "application/json",
+                    "Sec-Fetch-Site": "cross-site",
+                },
+                content=b"{}",
+            )
+            assert cross.status_code == 403, (path, cross.status_code, cross.text)
+    finally:
+        routes._config_path = original_config_path
+        routes._config = original_config
+        routes._audit_engine = original_engine
+
+
 def test_post_scan_triggers_audit_using_config(tmp_path):
     """
     POST /scan must start a background audit that uses targets from the config file.

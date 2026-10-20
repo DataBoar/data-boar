@@ -47,7 +47,9 @@ def _make_token(priv: Ed25519PrivateKey, *, dbtier: str) -> str:
         "dbkid": "k1",
         "dbtier": dbtier,
     }
-    return jwt.encode(payload, priv, algorithm="EdDSA")
+    from tests.hybrid_license_fixture import seal_enforced_test_token
+
+    return seal_enforced_test_token(priv, jwt.encode(payload, priv, algorithm="EdDSA"))
 
 
 @pytest.fixture

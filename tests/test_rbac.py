@@ -75,8 +75,9 @@ scan:
     monkeypatch.delenv("DATA_BOAR_WEBAUTHN_TOKEN_SECRET", raising=False)
 
 
-def test_rbac_enforcement_active_requires_tier_and_flag():
-    assert not rbac_enforcement_active(
+def test_rbac_enforcement_stays_closed_when_tier_drops():
+    """Configured RBAC does not turn off when the tier falls below Pro (#2092)."""
+    assert rbac_enforcement_active(
         {
             "api": {"rbac": {"enabled": True}},
             "licensing": {"effective_tier": "community"},
@@ -84,6 +85,9 @@ def test_rbac_enforcement_active_requires_tier_and_flag():
     )
     assert rbac_enforcement_active(
         {"api": {"rbac": {"enabled": True}}, "licensing": {"effective_tier": "pro"}}
+    )
+    assert not rbac_enforcement_active(
+        {"api": {"rbac": {"enabled": False}}, "licensing": {"effective_tier": "pro"}}
     )
 
 
@@ -100,8 +104,8 @@ def test_rbac_api_key_dashboard_allows_status_forbids_report(rbac_pro_client):
     assert client.get("/report", headers=h).status_code == 403
 
 
-def test_rbac_community_yaml_enabled_does_not_enforce(tmp_path: Path, monkeypatch):
-    """Tier blocks dashboard_rbac: middleware is a no-op (OPEN behaviour without RBAC)."""
+def test_rbac_community_yaml_enabled_stays_fail_closed(tmp_path: Path, monkeypatch):
+    """A configured RBAC gate stays closed when the tier is Community (#2092)."""
     monkeypatch.setenv(
         "DATA_BOAR_WEBAUTHN_TOKEN_SECRET", "unit-test-webauthn-secret-min-16"
     )
@@ -133,7 +137,7 @@ scan:
     routes._audit_engine = None
     client = TestClient(routes.app)
     try:
-        assert client.get("/status").status_code == 200
+        assert client.get("/status").status_code == 401
     finally:
         routes._config_path = prev_path
         routes._config = prev_cfg

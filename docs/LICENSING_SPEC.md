@@ -54,7 +54,7 @@ The directory name is **`databoar`** (org), not the repo slug `data-boar`. `lice
 
 Enforced mode verifies the `.lic` against the Ed25519 **public** key shipped **inside the wheel** as `core/licensing/license-pub-v1.pem` (loaded via `importlib.resources`). A clean install with a valid machine-bound `.lic` does **not** need a pubkey path.
 
-The ML-DSA-65 **rotation / hybrid** anchor ships as `core/licensing/license-mldsa-pub-v1.pem` (same packaging path as Ed25519). Canonical on-disk SHA-256 (LF bytes): `37faef8ff167cf01a0fc6a2bc8b7cfcac6bfe5651360051b1eb00a0a60fa85b8`. Hybrid `dbmldsa_sig` verify remains **optional** until the operator adopts a mandatory policy; tokens without that claim stay Ed25519-only.
+The ML-DSA-65 **rotation / hybrid** anchor ships as `core/licensing/license-mldsa-pub-v1.pem` (same packaging path as Ed25519). Canonical on-disk SHA-256 (LF bytes): `37faef8ff167cf01a0fc6a2bc8b7cfcac6bfe5651360051b1eb00a0a60fa85b8`. Hybrid `dbmldsa_sig` is **required** on every enforced token (#2042). A token without that claim is invalid. Reissue Ed25519-only licenses from 1.7.4 before upgrading a deployment that runs `licensing.mode: enforced`.
 
 Key rotation is a JSON attestation at `licensing.rotation_attestation_path`. It is accepted only when **both** embedded anchors (Ed25519 and ML-DSA-65) sign the same message and `epoch` is `>= MIN_ACCEPTED_KEY_EPOCH` in `core/licensing/trust_anchor.py`. The signed bytes are `data-boar/license-key-rotation/v1\\0` plus the epoch as an 8-byte big-endian integer plus the canonical JSON of the new public keys. The epoch is inside that message; changing it after signing fails the signature. One anchor, a raw PEM, or an older epoch fails closed (`rotation_rejected:…`). `missing_public_key` remains only when the packaged Ed25519 resource is absent and no accepted rotation is configured.
 
@@ -114,17 +114,17 @@ JOSE `alg` stays **EdDSA** (Ed25519). License Studio can attach claim `dbmldsa_s
 | ------- | ------------ |
 | `decode_license_jwt` | Verifies EdDSA only. Extra `dbmldsa_sig` is ignored (retrocompat). |
 | `decode_license_jwt_hybrid` | EdDSA first, then ML-DSA when the claim is present. |
-| `LicenseGuard` | Calls **`decode_license_jwt_hybrid`** when `dbmldsa_sig` is present. The ML-DSA key is the packaged anchor or an accepted rotation, never an env/YAML override (`untrusted_key_override`). Tokens without the claim stay Ed25519-only. A verified hybrid token sets `license_detail=hybrid_mldsa65_verified`. |
+| `LicenseGuard` | Always calls **`decode_license_jwt_hybrid`**. The ML-DSA key is the packaged anchor or an accepted rotation, never an env/YAML override (`untrusted_key_override`). A missing claim is `hybrid_claim_required`. A missing anchor is `missing_mldsa_anchor`. A verified token sets `license_detail=hybrid_mldsa65_verified`. |
 
 **Constraints (verify against source, do not invent a runtime gate):**
 
 - Claim present + `mldsa_pub is None` → `ValueError` (`hybrid claim present: ML-DSA public key required`).
-- "Present" means the `dbmldsa_sig` **key** exists in the payload. A present claim whose value is `null`, an empty string, or a non-string fails closed (`ValueError`; `LicenseGuard` → `INVALID`). Only an absent key selects the Ed25519-only path (#1996).
+- "Present" means the `dbmldsa_sig` **key** exists in the payload. A present claim whose value is `null`, an empty string, or a non-string fails closed (`ValueError`; `LicenseGuard` → `INVALID`). An absent key is also invalid (`hybrid_claim_required`, #2042). #1996 still covers the present-but-invalid values.
 - Bad ML-DSA signature → `cryptography.exceptions.InvalidSignature`.
 - Payload JSON must match license-studio `pkg/verify/hybrid.go`: `json.dumps(..., sort_keys=True, separators=(",", ":"), ensure_ascii=False)` plus Go HTML-safe escapes (`<` `>` `&` U+2028 U+2029).
 - Public key PEM is `-----BEGIN ML-DSA-65 PUBLIC KEY-----` with **raw** public bytes (`MLDSA65PublicKey.from_public_bytes`), **not** PKIX/`SubjectPublicKeyInfo`.
 - Tests: `tests/test_licensing_hybrid_mldsa_verify.py` (skipped when OpenSSL has no ML-DSA: `backend.mldsa_supported()`).
-- **Forgery bar:** an attacker who forges Ed25519 can **omit** `dbmldsa_sig` and the Ed25519-only path still accepts the token. Hybrid verify does not raise production enforcement until a future policy requires ML-DSA (ADR-0063 post-quantum watch).
+- **Forgery bar:** omitting `dbmldsa_sig` does not fall back to Ed25519-only. Both signatures are required (#2042).
 
 **Multi-site verification (honest boundary, #718 + #846):** Implemented via option (1) — **array** of allowed fingerprints in the `dbmfp` claim (deployment pack). Runtime validates only that **its own** `compute_machine_fingerprint()` (hostname + optional `DATA_BOAR_MACHINE_SEED`) is in the pack — the **global** deploy count is enforced at **issuance** (the issuer signs a pack of at most `dbmax_deployments` fingerprints). Alternatives kept for reference: (2) **online** registration (privacy + ops cost); (3) **multiple JWTs** same `dbcid`, one fingerprint each. See [LICENSING_OPEN_CORE_AND_COMMERCIAL.md](LICENSING_OPEN_CORE_AND_COMMERCIAL.md) §Deployments, copies, and sites.
 
