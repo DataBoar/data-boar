@@ -587,6 +587,14 @@ _config = None
 _audit_engine = None
 
 
+def use_validated_config_path(path: str) -> None:
+    """Point the API at the config file ``main.py`` already validated (#2091)."""
+    global _config_path, _config, _audit_engine
+    _config_path = path
+    _config = None
+    _audit_engine = None
+
+
 def _get_config_path() -> str:
     """Return path to config file (for dashboard display and save)."""
     return _config_path

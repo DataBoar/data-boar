@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 from typing import Any
 
 
@@ -76,6 +77,23 @@ def trusted_api_hosts(config: dict[str, Any]) -> list[str]:
             if host and "*" not in host:
                 hosts.add(host)
     return sorted(hosts)
+
+
+def resolve_served_config_path(
+    *, cli_config: str, env_config: str | None, host: str
+) -> str:
+    """Return the config file the bind gate already loaded.
+
+    A different ``CONFIG_PATH`` on a non-loopback bind is refused. The served
+    file is always ``cli_config`` so the API cannot load a second YAML.
+    """
+    cli = str(Path(cli_config).resolve())
+    env = (env_config or "").strip()
+    if env:
+        env_resolved = str(Path(env).resolve())
+        if env_resolved != cli and api_bind_exposes_non_loopback(host):
+            raise ValueError("config_path_mismatch")
+    return cli
 
 
 def api_bind_exposes_non_loopback(host: str) -> bool:
