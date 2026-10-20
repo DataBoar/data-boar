@@ -37,6 +37,11 @@ updates:
       # capped <2026 via [tool.uv] constraint-dependencies. See docs/adr/ADR-0069-*.md.
       - dependency-name: "rpds-py"
         update-types: ["version-update:semver-major"]
+      # filelock 4.x is rejected by snowflake-connector-python stable (filelock>=3.5,<4).
+      # Forcing 4.x pulls a release candidate of that connector. Remove this ignore
+      # when a stable connector accepts filelock>=4. See #2021.
+      - dependency-name: "filelock"
+        update-types: ["version-update:semver-major"]
     cooldown:
       default-days: 7
 
