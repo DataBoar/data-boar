@@ -31,7 +31,6 @@ from core.licensing import trust_anchor
 from core.licensing.paths import resolve_license_path
 from core.licensing.verify import (
     CLAIM_MLDSA_SIG,
-    decode_license_jwt,
     decode_license_jwt_hybrid,
     load_ed25519_public_key_pem,
     load_embedded_official_public_key_pem,
@@ -45,9 +44,8 @@ from core.licensing.verify import (
 def _token_has_mldsa_claim(token: str) -> bool:
     """True when the unverified JWT payload carries a ``dbmldsa_sig`` key at all.
 
-    Any present value (including ``null``, empty, or non-string) must take the
-    hybrid path so ``decode_license_jwt_hybrid`` fails closed; only an absent
-    key selects Ed25519-only verification.
+    Any present value (including ``null``, empty, or non-string) is a claim.
+    An absent key is not Ed25519-only: ``LicenseGuard`` rejects it.
     """
     parts = token.split(".")
     if len(parts) != 3 or not parts[1]:
@@ -398,13 +396,26 @@ class LicenseGuard:
 
         try:
             raw = Path(lic_path).read_text(encoding="utf-8").strip()
-            hybrid = _token_has_mldsa_claim(raw)
-            if hybrid:
-                claims = decode_license_jwt_hybrid(
-                    raw, pub, self._load_mldsa_public_key()
+            if not _token_has_mldsa_claim(raw):
+                self._context = LicenseContext(
+                    state="INVALID",
+                    mode="enforced",
+                    machine_fingerprint=mfp,
+                    detail="hybrid_claim_required",
+                    watermark="INVALID_TOKEN",
                 )
-            else:
-                claims = decode_license_jwt(raw, pub)
+                return
+            mldsa_pub = self._load_mldsa_public_key()
+            if mldsa_pub is None:
+                self._context = LicenseContext(
+                    state="INVALID",
+                    mode="enforced",
+                    machine_fingerprint=mfp,
+                    detail="missing_mldsa_anchor",
+                    watermark="INVALID_KEY_MATERIAL",
+                )
+                return
+            claims = decode_license_jwt_hybrid(raw, pub, mldsa_pub)
         except InvalidSignature:
             self._context = LicenseContext(
                 state="INVALID",
@@ -605,7 +616,7 @@ class LicenseGuard:
             machine_fingerprint=mfp,
             detail=_license_detail(
                 state,
-                hybrid=hybrid,
+                hybrid=True,
                 rotation_epoch=getattr(self, "_rotation_epoch", None),
             ),
             watermark=wm,

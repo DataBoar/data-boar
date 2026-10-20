@@ -7,6 +7,10 @@ runs after every test via ``tests/conftest.py``.
 
 from __future__ import annotations
 
+import core.licensing.trust_anchor as _trust_anchor
+
+_ORIG_LOAD_EMBEDDED_MLDSA = _trust_anchor.load_embedded_mldsa_anchor_pem
+
 
 def pin_embedded_ed25519_pem(pem: str) -> None:
     import core.licensing.guard as guard_mod
@@ -16,8 +20,10 @@ def pin_embedded_ed25519_pem(pem: str) -> None:
 
 def restore_embedded_ed25519_loader() -> None:
     import core.licensing.guard as guard_mod
+    import core.licensing.trust_anchor as trust_anchor
     from core.licensing.verify import load_embedded_official_public_key_pem
 
     guard_mod.load_embedded_official_public_key_pem = (
         load_embedded_official_public_key_pem
     )
+    trust_anchor.load_embedded_mldsa_anchor_pem = _ORIG_LOAD_EMBEDDED_MLDSA

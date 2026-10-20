@@ -16,7 +16,7 @@ enforced mode is a real signed license. QA licenses are deliberately:
 Keep the Ed25519 **private** key outside Git (e.g. `~/.keys/data-boar/`).
 See `docs/private.example/licensing/README.md` for key generation.
 
-Runtime `LicenseGuard` verifies EdDSA, and also ML-DSA-65 when the token carries `dbmldsa_sig` (`decode_license_jwt_hybrid`). That ML-DSA key is the packaged anchor or an accepted rotation. `DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_*` fails closed (`untrusted_key_override`). Tokens without the claim stay Ed25519-only — see [LICENSING_SPEC.md](../LICENSING_SPEC.md).
+Runtime `LicenseGuard` verifies EdDSA and ML-DSA-65 together (`decode_license_jwt_hybrid`). That ML-DSA key is the packaged anchor or an accepted rotation. `DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_*` fails closed (`untrusted_key_override`). A token without `dbmldsa_sig` is invalid (`hybrid_claim_required`, #2042) — see [LICENSING_SPEC.md](../LICENSING_SPEC.md).
 
 ### Optional: encrypted signing key (passphrase)
 
@@ -73,8 +73,8 @@ Send only the `.lic` file — never the private key.
 The official verify key is **embedded** in the install (`license-pub-v1.pem`).
 The ML-DSA-65 anchor (`license-mldsa-pub-v1.pem`, SHA-256
 `37faef8ff167cf01a0fc6a2bc8b7cfcac6bfe5651360051b1eb00a0a60fa85b8`) ships in
-the same wheel for rotation and optional hybrid verify; `dbmldsa_sig` is not
-required yet.
+the same wheel for rotation and required hybrid verify; `dbmldsa_sig` is
+required on every enforced token (#2042).
 A valid machine-bound `.lic` is enough — no pubkey env/config on a clean
 install (#1331). A raw `DATA_BOAR_LICENSE_PUBLIC_KEY_*`, `DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_*`,
 `licensing.public_key_path`, or `licensing.mldsa_public_key_path` fails closed

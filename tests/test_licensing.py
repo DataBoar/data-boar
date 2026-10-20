@@ -51,7 +51,9 @@ def _make_token(
     }
     if extra:
         payload.update(extra)
-    return jwt.encode(payload, priv, algorithm="EdDSA")
+    from tests.hybrid_license_fixture import seal_enforced_test_token
+
+    return seal_enforced_test_token(priv, jwt.encode(payload, priv, algorithm="EdDSA"))
 
 
 @pytest.fixture
@@ -181,7 +183,12 @@ def test_enforced_malformed_exp_claim_fail_closed(ed25519_priv, tmp_path):
         "dbissuer": "test-issuer",
         "dbkid": "k1",
     }
-    tok = jwt.encode(payload, ed25519_priv, algorithm="EdDSA")
+    from tests.hybrid_license_fixture import seal_enforced_test_token
+
+    tok = seal_enforced_test_token(
+        ed25519_priv,
+        jwt.encode(payload, ed25519_priv, algorithm="EdDSA"),
+    )
     lic = tmp_path / "bad-exp.lic"
     lic.write_text(tok, encoding="utf-8")
     cfg = {"licensing": {"mode": "enforced", "license_path": str(lic)}}

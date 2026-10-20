@@ -63,7 +63,9 @@ def _make_token(
     }
     if extra:
         payload.update(extra)
-    return jwt.encode(payload, priv, algorithm="EdDSA")
+    from tests.hybrid_license_fixture import seal_enforced_test_token
+
+    return seal_enforced_test_token(priv, jwt.encode(payload, priv, algorithm="EdDSA"))
 
 
 @pytest.fixture

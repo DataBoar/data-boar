@@ -107,12 +107,11 @@ def _guard_for(tmp_path, monkeypatch, token: str, ed_pem: str, mldsa_pem: str):
 # --- library: decode_license_jwt_hybrid -------------------------------------
 
 
-def test_decode_license_jwt_hybrid_absent_mldsa_claim_ok(ed25519_pub) -> None:
+def test_decode_license_jwt_hybrid_absent_mldsa_claim_rejected(ed25519_pub) -> None:
     ed_private, ed_pub = ed25519_pub
     token = _token_with_mldsa_claim(ed_private, _ABSENT)
-    claims = decode_license_jwt_hybrid(token, ed_pub, mldsa_pub=None)
-    assert CLAIM_MLDSA_SIG not in claims
-    assert claims["sub"] == "hybrid-claim-presence"
+    with pytest.raises(ValueError, match="dbmldsa_sig is required"):
+        decode_license_jwt_hybrid(token, ed_pub, mldsa_pub=None)
 
 
 def test_decode_license_jwt_hybrid_null_claim_requires_mldsa_key(ed25519_pub) -> None:
@@ -148,13 +147,30 @@ def test_token_has_mldsa_claim_false_when_absent(ed25519_pub) -> None:
     assert not _token_has_mldsa_claim(_token_with_mldsa_claim(ed_private, _ABSENT))
 
 
-def test_license_guard_absent_mldsa_claim_is_valid(
+def test_license_guard_absent_mldsa_claim_is_invalid(
     tmp_path, monkeypatch, ed25519_pub
 ) -> None:
     ed_private, _ = ed25519_pub
     token = _token_with_mldsa_claim(ed_private, _ABSENT)
     guard = _guard_for(tmp_path, monkeypatch, token, _ed_public_pem(ed_private), "")
-    assert guard.context.state == "VALID"
+    assert guard.context.state == "INVALID"
+    assert guard.context.detail == "hybrid_claim_required"
+
+
+def test_license_guard_missing_mldsa_anchor_is_invalid(
+    tmp_path, monkeypatch, ed25519_pub
+) -> None:
+    from tests.hybrid_license_fixture import seal_enforced_test_token
+
+    ed_private, _ = ed25519_pub
+    token = seal_enforced_test_token(
+        ed_private,
+        _token_with_mldsa_claim(ed_private, _ABSENT),
+        pin=False,
+    )
+    guard = _guard_for(tmp_path, monkeypatch, token, _ed_public_pem(ed_private), "")
+    assert guard.context.state == "INVALID"
+    assert guard.context.detail == "missing_mldsa_anchor"
 
 
 @pytest.mark.parametrize("bad_value", _INVALID_CLAIM_VALUES)
