@@ -30,15 +30,15 @@ Use these tags in headings to keep priorities explicit and machine-countable:
 
 Do not edit this block manually; refresh with `python scripts/plans-stats.py --write`.
 
-- **Status rows counted:** 269  (Done: 161 | Incomplete: 108)
-- **Incomplete breakdown:** Pending `⬜`=90, Tracked `🔄` / `Tracked (partially done)`=18, Under consideration=0, Backlog-marked rows=0
+- **Status rows counted:** 272  (Done: 161 | Incomplete: 111)
+- **Incomplete breakdown:** Pending `⬜`=93, Tracked `🔄` / `Tracked (partially done)`=18, Under consideration=0, Backlog-marked rows=0
 
 | Horizon | Total rows | Done | Incomplete |
 | ------- | ----------: | ----: | ----------: |
 | `H0` | 65 | 41 | 24 |
 | `H1` | 54 | 33 | 21 |
 | `H2` | 0 | 0 | 0 |
-| `H3` | 134 | 73 | 61 |
+| `H3` | 137 | 73 | 64 |
 | `H4` | 0 | 0 | 0 |
 | `H5` | 0 | 0 | 0 |
 | `UNSPECIFIED` | 16 | 14 | 2 |
@@ -1098,6 +1098,18 @@ Core flow first (sections 1–7); then optional Phase 9 (complexity/gain: high c
 **Optional follow-ups (non-blocking):** first **PyPI publish** under `data-boar`; collaborator `origin` URL check; optional removal of legacy second remote after [BRANCH_AND_DOCKER_CLEANUP.md](../ops/BRANCH_AND_DOCKER_CLEANUP.md) §7.
 
 Historical mentions (ADRs, some completed plans) may still cite the **original** bootstrap name where they record history.
+
+---
+
+## [H3][U3] Live demo sandbox — [PLAN_LIVE_DEMO_SANDBOX.md](PLAN_LIVE_DEMO_SANDBOX.md)
+
+**Status:** Not started. Rescued from an unmerged local branch on 2026-10-21. No deployment is recorded.
+
+| Phase | To-do | Status |
+| ----- | ----- | ------ |
+| 1 | Review the network and edge manifest; keep application and data services off the public Internet | ⬜ Pending |
+| 2 | Provision the smallest suitable compute shape and a resettable synthetic stack | ⬜ Pending |
+| 3 | Attach the public name only after the private smoke tests pass | ⬜ Pending |
 
 ---
 
