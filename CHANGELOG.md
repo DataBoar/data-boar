@@ -6,6 +6,7 @@ Human-readable summary of user-facing changes. **Detailed release notes:** [docs
 
 Migration notes on the **`1.8.0-rc`** working line (no new semver cut):
 
+- **Installed help (#1130):** the dashBOARd help intro names the installed `data-boar` command. Command samples still follow the process that is running.
 - **Credential env names:** a name this process reserves for itself is refused as a target credential. The public prefix list is unchanged.
 - **Config save:** while RBAC enforcement is active, a non-admin principal can change only api keys classified as editable. Unclassified api keys stay as stored. The freeze does not run when RBAC enforcement is inactive.
 
