@@ -42,7 +42,7 @@ dependencies = [
     # See: https://pypi.org/project/extract-msg/0.55.0/ (requires_dist).
     "beautifulsoup4>=4.13.5,<4.16",
     "blinker>=1.9.0",
-    "certifi>=2026.5.20",
+    "certifi>=2026.10.19",
     "cffi>=2.0.0 ; platform_python_implementation != 'PyPy'",
     "charset-normalizer>=3.4.4",
     "click>=8.4.1",
@@ -86,7 +86,7 @@ dependencies = [
     "pydantic-core>=2.46.2",
     "pygments>=2.20.0",
     "pyparsing>=3.3.2",
-    "pypdf>=6.15.0",
+    "pypdf>=6.20.1",
     "pyjwt>=2.12.0",
     "python-dateutil>=2.9.0.post0",
     "python-docx>=1.2.0",
@@ -100,7 +100,7 @@ dependencies = [
     "scipy>=1.17.0",
     "seaborn>=0.13.2",
     "sqlalchemy>=2.0.50",
-    "starlette==1.7.0",
+    "starlette==1.8.0",
     "threadpoolctl>=3.6.0",
     "typing-extensions>=4.15.0",
     "typing-inspection>=0.4.2",
@@ -198,6 +198,12 @@ otel = [
 # #871 turned CI red on 3.12/3.13/3.14). Cap below 2026 to keep the working 0.x
 # line until we explicitly validate the CalVer series. Remove when ready to adopt.
 constraint-dependencies = ["rpds-py<2026"]
+# streamlit<=1.66.0 declares pillow<13. Raising the public floor to
+# pillow>=13 makes `pip install data-boar[grc-dashboard]` unsatisfiable
+# (#2116). This override applies only to the uv lock, so the audited tree
+# installs Pillow 13 while the published extra floor stays pillow>=12.3.0.
+# Remove it when a streamlit release widens that cap to include Pillow 13.
+override-dependencies = ["pillow>=13.0.0"]
 
 [tool.pytest.ini_options]
 # Fail on any warning (DeprecationWarning, ResourceWarning, etc.) so the suite stays clean
@@ -365,7 +371,7 @@ dev = [
     "maturin>=1.14.0",
     "mypy>=2.1.0",
     "pluggy>=1.6.0",
-    "pre-commit>=4.0.0",
+    "pre-commit>=4.7.0",
     "pytest>=9.0.3",
     "pytest-cov>=6.0.0",
     "rapidfuzz>=3.9.0",

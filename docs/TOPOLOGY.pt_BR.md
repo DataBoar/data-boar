@@ -10,7 +10,7 @@ Descrição textual dos módulos, classes e funções principais e como eles se 
 
 - **main.py** — CLI: `main()` analisa `--config`, `--web`, `--port`, opcionalmente `--tenant`, `--technician`; carrega config via `config.loader.load_config`; se não for `--web`, cria `AuditEngine(config)`, executa `start_audit(...)` e `generate_final_reports()`; se `--web`, executa uvicorn com `api.routes.app` na porta informada.
 - **api/routes.py** — App FastAPI: na inicialização carrega config e cria `AuditEngine`. Rotas da API: POST `/scan`, `/start`; GET `/status`, `/report`, `/list`, `/reports/{session_id}`; PATCH `/sessions/{session_id}` e `/sessions/{session_id}/technician`. POST `/scan_database` aceita tenant e technician opcionais. Dashboard web (Jinja2): GET `/` (dashboard com inputs opcionais de tenant/technician e gráfico de progresso), GET `/reports`, GET/POST `/config`. Estáticos: `/static` → `api/static`. POC de maturidade (opcional): `POST /{locale}/assessment`, `GET /{locale}/assessment/export`.
-- **app/dashboard.py** — Visão executiva GRC em Streamlit (`streamlit run app/dashboard.py` após `uv sync --extra grc-dashboard`). Lê JSON do relatório (`DATA_BOAR_GRC_JSON` ou o exemplo em `schemas/`). Distinta do dashBOARd Jinja em **api/routes.py**.
+- **app/dashboard.py** — Visão executiva GRC em Streamlit (`streamlit run app/dashboard.py` após `uv sync --extra grc-dashboard`). Lê JSON do relatório (`DATA_BOAR_GRC_JSON` ou o exemplo em `schemas/`). Distinta do dashBOARd Jinja em **api/routes.py**. Quem instala o extra `[grc-dashboard]` via pip fica no Pillow 12.x até o Streamlit ampliar o limite `pillow<13`; o `uv.lock` instala o Pillow 13 (#2116).
 
 ---
 
