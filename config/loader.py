@@ -94,7 +94,7 @@ BOAR_INTERNAL_ENV_NAMES = frozenset(
 )
 # DATA_BOAR_* reads that are operational knobs, not process secrets.
 # The source scan requires every read to sit in exactly one of these sets.
-OPERATOR_CREDENTIAL_ENV_NAMES = frozenset(
+OPERATIONAL_ENV_NAMES = frozenset(
     {
         "DATA_BOAR_BASE",
         "DATA_BOAR_EXTRAS_DIR",

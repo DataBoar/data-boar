@@ -129,6 +129,45 @@ def _record_api_names(tree: ast.AST) -> set[str]:
     return api_names
 
 
+def _string_const(node: ast.AST) -> str | None:
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return node.value
+    return None
+
+
+def _api_key_literals(node: ast.AST, api_names: set[str]) -> set[str]:
+    """Keys read by .get, api_cfg["k"], or ``"k" in api_cfg``."""
+    found: set[str] = set()
+    if (
+        isinstance(node, ast.Call)
+        and node.args
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr == "get"
+    ):
+        key = _string_const(node.args[0])
+        receiver = node.func.value
+        if key and (
+            (isinstance(receiver, ast.Name) and receiver.id in api_names)
+            or _expr_is_api_mapping(receiver, api_names)
+        ):
+            found.add(key)
+    if isinstance(node, ast.Subscript):
+        key = _string_const(node.slice)
+        if key and isinstance(node.value, ast.Name) and node.value.id in api_names:
+            found.add(key)
+    if (
+        isinstance(node, ast.Compare)
+        and len(node.ops) == 1
+        and isinstance(node.ops[0], ast.In)
+        and node.comparators
+    ):
+        key = _string_const(node.left)
+        right = node.comparators[0]
+        if key and isinstance(right, ast.Name) and right.id in api_names:
+            found.add(key)
+    return found
+
+
 def _api_keys_read_by_source(root: Path) -> set[str]:
     keys: set[str] = set()
     for folder in ("api", "config", "core"):
@@ -136,23 +175,12 @@ def _api_keys_read_by_source(root: Path) -> set[str]:
             tree = ast.parse(path.read_text(encoding="utf-8"))
             api_names = _record_api_names(tree)
             for node in ast.walk(tree):
-                if not isinstance(node, ast.Call) or not node.args:
-                    continue
-                if not isinstance(node.func, ast.Attribute) or node.func.attr != "get":
-                    continue
-                arg = node.args[0]
-                if not isinstance(arg, ast.Constant) or not isinstance(arg.value, str):
-                    continue
-                receiver = node.func.value
-                if isinstance(receiver, ast.Name) and receiver.id in api_names:
-                    keys.add(arg.value)
-                elif _expr_is_api_mapping(receiver, api_names):
-                    keys.add(arg.value)
+                keys.update(_api_key_literals(node, api_names))
     return keys
 
 
 def test_every_api_key_the_code_reads_is_classified() -> None:
-    """Default config keys and api.get reads must be editable or admin-only."""
+    """Default config keys and api reads must be editable or admin-only."""
     from config.loader import normalize_config
     import api.routes as routes
 
@@ -164,6 +192,7 @@ def test_every_api_key_the_code_reads_is_classified() -> None:
     api = normalized.get("api") if isinstance(normalized.get("api"), dict) else {}
     keys = set(api) | _api_keys_read_by_source(root)
     classified = routes.API_EDITABLE_KEYS | routes.API_ADMIN_ONLY_KEYS
+    assert keys
     assert not (routes.API_EDITABLE_KEYS & routes.API_ADMIN_ONLY_KEYS)
     assert not (keys - classified), sorted(keys - classified)
 
@@ -299,6 +328,16 @@ def test_config_admin_cannot_add_unclassified_api_key(
     edited["unclassified_policy"] = "changed"
     saved = _save_edited_api(tmp_path, monkeypatch, api, edited)
     assert "unclassified_policy" not in saved
+
+
+def test_config_admin_cannot_persist_non_string_api_key(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    api = _base_api(rbac_enabled=True)
+    edited = copy.deepcopy(api)
+    edited[True] = "changed"
+    saved = _save_edited_api(tmp_path, monkeypatch, api, edited)
+    assert True not in saved
 
 
 def test_config_admin_can_change_listen_port(

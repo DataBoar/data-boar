@@ -467,11 +467,11 @@ def data_boar_env_names_read_by_source(root: Path) -> set[str]:
 
 def test_source_scan_classifies_every_data_boar_env_read() -> None:
     """Every DATA_BOAR_* environment read is internal-refused or operator-allowed."""
-    from config.loader import BOAR_INTERNAL_ENV_NAMES, OPERATOR_CREDENTIAL_ENV_NAMES
+    from config.loader import BOAR_INTERNAL_ENV_NAMES, OPERATIONAL_ENV_NAMES
 
     root = Path(__file__).resolve().parents[1]
     read = data_boar_env_names_read_by_source(root)
-    classified = BOAR_INTERNAL_ENV_NAMES | OPERATOR_CREDENTIAL_ENV_NAMES
-    assert not (BOAR_INTERNAL_ENV_NAMES & OPERATOR_CREDENTIAL_ENV_NAMES)
+    classified = BOAR_INTERNAL_ENV_NAMES | OPERATIONAL_ENV_NAMES
+    assert not (BOAR_INTERNAL_ENV_NAMES & OPERATIONAL_ENV_NAMES)
     assert not (read - classified), sorted(read - classified)
     assert read

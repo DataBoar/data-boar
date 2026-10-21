@@ -704,7 +704,8 @@ def _restore_policy_subtrees(merged: dict, current: dict) -> dict:
     """Keep non-editable api keys and licensing when the principal is not admin.
 
     Only ``API_EDITABLE_KEYS`` may come from the submitted YAML. A key that is
-    not classified is admin-only. Licensing is not an api key and stays frozen.
+    not classified, including a non-string key, is admin-only. Licensing is
+    not an api key and stays frozen.
     """
     import copy
 
@@ -714,7 +715,7 @@ def _restore_policy_subtrees(merged: dict, current: dict) -> dict:
         merged_api = {}
         merged["api"] = merged_api
     for key in set(current_api) | set(merged_api):
-        if not isinstance(key, str) or _api_key_is_editable(key):
+        if isinstance(key, str) and _api_key_is_editable(key):
             continue
         if key in current_api:
             merged_api[key] = copy.deepcopy(current_api[key])
