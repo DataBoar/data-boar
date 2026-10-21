@@ -144,13 +144,34 @@ def internal_secret_env_names(config: dict[str, Any] | None) -> frozenset[str]:
 
 
 def _reject_reserved_credential_env_name(env_name: str, label: str) -> None:
-    """Fail closed when a credential name is reserved for this process."""
-    if env_name.strip() not in internal_secret_env_names(None):
+    """Fail closed when a credential name is reserved for this process.
+
+    Comparison is case-insensitive so a platform that folds environment
+    names cannot skip the reserved set.
+    """
+    folded = env_name.strip().casefold()
+    if not folded:
+        return
+    reserved = {name.casefold() for name in internal_secret_env_names(None)}
+    if folded not in reserved:
         return
     raise ValueError(
         f"{label} must not name an environment variable reserved for this "
         f"process ({_CREDENTIAL_ENV_TAG})."
     )
+
+
+def _reject_reserved_interpolation(value: Any, label: str) -> None:
+    """Refuse a reserved name inside a ``${...}`` credential value.
+
+    Does not apply the prefix rule. Unprefixed vendor names stay valid.
+    """
+    if not isinstance(value, str):
+        return
+    text = value.strip()
+    if not (text.startswith("${") and text.endswith("}") and len(text) > 3):
+        return
+    _reject_reserved_credential_env_name(text[2:-1].strip(), label)
 
 
 def assert_credential_env_name(env_name: str, label: str) -> None:
@@ -1068,6 +1089,9 @@ def _normalize_config_body(
                     or auth.get("client_secret")
                     or ""
                 )
+            _reject_reserved_interpolation(
+                auth.get("client_secret"), "auth.client_secret"
+            )
         env_cs_key = (t.get("client_secret_from_env") or "").strip()
         if env_cs_key:
             _gate_non_rest_env_credential(t, env_cs_key, "client_secret_from_env")
@@ -1077,6 +1101,7 @@ def _normalize_config_body(
                 or t.get("client_secret")
                 or ""
             )
+        _reject_reserved_interpolation(t.get("client_secret"), "client_secret")
 
     # Detection: configuration toggles for detector behaviour (regex/ML/DL options)
     det_cfg = data.get("detection", {}) or {}

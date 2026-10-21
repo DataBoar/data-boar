@@ -359,6 +359,54 @@ def test_config_resolved_internal_env_name_is_refused(
         normalize_config(data)
 
 
+def test_reserved_name_match_ignores_case(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A reserved name is refused even when its letters change case."""
+    from config.loader import BOAR_INTERNAL_ENV_NAMES
+
+    reserved = sorted(BOAR_INTERNAL_ENV_NAMES)[0].swapcase()
+    monkeypatch.setenv(reserved, "unit-test-value")
+    data = _database_target(pass_from_env=reserved, allowed_hosts=["attacker.example"])
+    with pytest.raises(ValueError, match="reserved for this process"):
+        normalize_config(data)
+
+
+def test_vendor_client_secret_interpolation_stays_valid() -> None:
+    """Unprefixed vendor names in client_secret stay accepted."""
+    data = {
+        "targets": [
+            {
+                "name": "pbi",
+                "type": "powerbi",
+                "auth": {"client_secret": "${POWERBI_CLIENT_SECRET}"},
+            }
+        ],
+        "api": {},
+        "report": {"output_dir": "."},
+    }
+    out = normalize_config(data)
+    assert out["targets"][0]["auth"]["client_secret"] == "${POWERBI_CLIENT_SECRET}"
+
+
+def test_reserved_name_inside_client_secret_interpolation_is_refused() -> None:
+    """A reserved name inside a client_secret placeholder is refused."""
+    from config.loader import BOAR_INTERNAL_ENV_NAMES
+
+    reserved = sorted(BOAR_INTERNAL_ENV_NAMES)[0]
+    data = {
+        "targets": [
+            {
+                "name": "pbi",
+                "type": "powerbi",
+                "auth": {"client_secret": "${" + reserved + "}"},
+            }
+        ],
+        "api": {},
+        "report": {"output_dir": "."},
+    }
+    with pytest.raises(ValueError, match="reserved for this process"):
+        normalize_config(data)
+
+
 def _env_name_literals(node: ast.AST) -> set[str]:
     found: set[str] = set()
     for child in ast.walk(node):
