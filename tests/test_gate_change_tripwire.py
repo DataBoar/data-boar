@@ -55,8 +55,12 @@ def test_gate_files_set_covers_core_surfaces() -> None:
         "scripts/gate_trailer_attest.py",
         "docs/adr/allowed_signers",
         "scripts/__init__.py",
+        "scripts/native_package_release.py",
+        "scripts/ci_dependabot_requirements_sync.sh",
+        "scripts/homebrew_formula_bump.py",
     ):
         assert t.is_gate_path(path)
+    assert t.is_gate_path(".github/actions/install-libmariadb-dev/action.yml")
 
 
 def test_any_github_workflows_yaml_is_gate_path() -> None:
