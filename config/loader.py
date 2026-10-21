@@ -419,6 +419,10 @@ def _rest_env_destinations(target: dict[str, Any]) -> list[set[str]]:
         key = _operator_host_key(str(raw or ""))
         if key:
             groups.append({key})
+    discover = str(target.get("discover_url") or "").strip()
+    if discover:
+        key = _operator_host_key(discover) if "://" in discover else ""
+        groups.append({key} if key else set())
     return groups
 
 

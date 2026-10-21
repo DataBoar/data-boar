@@ -242,3 +242,73 @@ def test_rest_without_destination_fails_closed(
     }
     with pytest.raises(ValueError, match="outside"):
         normalize_config(data)
+
+
+def _rest_with_discover(discover_url: str, hosts: list[str]) -> dict:
+    return {
+        "targets": [
+            {
+                "name": "api",
+                "type": "api",
+                "base_url": "https://api.trusted.example",
+                "discover_url": discover_url,
+                "auth": {
+                    "type": "bearer",
+                    "token_from_env": "API_REST_TOKEN",
+                    "allowed_hosts": hosts,
+                },
+            }
+        ],
+        "api": {},
+        "report": {"output_dir": "."},
+    }
+
+
+def test_discover_url_outside_operator_list_rejected_at_load_and_connect(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from connectors.rest_connector import _assert_rest_credential_hosts_allowlisted
+
+    _clear(monkeypatch)
+    monkeypatch.setenv(_HOSTS, "api.trusted.example")
+    monkeypatch.setenv("API_REST_TOKEN", "rest-secret")
+    data = _rest_with_discover(
+        "https://other.example/openapi.json",
+        ["api.trusted.example", "other.example"],
+    )
+    with pytest.raises(ValueError, match="outside"):
+        normalize_config(data)
+    with pytest.raises(ValueError, match="outside"):
+        _assert_rest_credential_hosts_allowlisted(data["targets"][0])
+
+
+def test_discover_url_on_operator_list_is_accepted(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from connectors.rest_connector import _assert_rest_credential_hosts_allowlisted
+
+    _clear(monkeypatch)
+    monkeypatch.setenv(_HOSTS, "api.trusted.example,other.example")
+    monkeypatch.setenv("API_REST_TOKEN", "rest-secret")
+    data = _rest_with_discover(
+        "https://other.example/openapi.json",
+        ["api.trusted.example", "other.example"],
+    )
+    out = normalize_config(data)
+    assert out["targets"][0]["auth"]["token"] == "rest-secret"
+    _assert_rest_credential_hosts_allowlisted(data["targets"][0])
+
+
+def test_discover_url_without_host_fails_closed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from connectors.rest_connector import _assert_rest_credential_hosts_allowlisted
+
+    _clear(monkeypatch)
+    monkeypatch.setenv(_HOSTS, "api.trusted.example")
+    monkeypatch.setenv("API_REST_TOKEN", "rest-secret")
+    data = _rest_with_discover("/openapi.json", ["api.trusted.example"])
+    with pytest.raises(ValueError, match="outside"):
+        normalize_config(data)
+    with pytest.raises(ValueError, match="outside"):
+        _assert_rest_credential_hosts_allowlisted(data["targets"][0])

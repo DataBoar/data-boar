@@ -138,6 +138,9 @@ def _credential_endpoint_urls(target: dict[str, Any]) -> list[tuple[str, str]]:
     token_url = (auth.get("token_url") or "").strip()
     if token_url:
         urls.append(("auth.token_url", token_url))
+    discover = (target.get("discover_url") or "").strip()
+    if discover:
+        urls.append(("discover_url", discover))
     return urls
 
 
@@ -190,10 +193,10 @@ def _assert_rest_credential_hosts_allowlisted(target: dict[str, Any]) -> None:
     if uses_env:
         _validate_rest_env_var_names(auth)
         _validate_target_env_var_names(target)
-        dests = [
-            {_host_from_url(url)} if _host_from_url(url) else set()
-            for _label, url in _credential_endpoint_urls(target)
-        ]
+        dests = []
+        for _label, url in _credential_endpoint_urls(target):
+            host = (urlparse(url).hostname or "").lower() if "://" in url else ""
+            dests.append({host} if host else set())
         enforce_operator_credential_host_gate(dests, "auth.allowed_hosts")
         _assert_yaml_hosts_within_operator(target, "auth.allowed_hosts")
     explicit = _collect_explicit_allowed_hosts(target)
@@ -209,6 +212,8 @@ def _assert_rest_credential_hosts_allowlisted(target: dict[str, Any]) -> None:
             f"({_REST_AUTH_HOST_TAG})."
         )
     for label, url in _credential_endpoint_urls(target):
+        if "://" not in url:
+            continue
         host = _host_from_url(url)
         if host not in allowed:
             raise ValueError(
