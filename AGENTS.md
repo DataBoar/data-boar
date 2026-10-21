@@ -6,6 +6,10 @@ Before **implementing**, **committing**, **closing**, or **declaring work comple
 
 This is a **runtime** rule in this file (GitHub **#1953**). It does **not** by itself complete the org-wide epic; other maintained DataBoar repositories keep their own root `AGENTS.md`.
 
+## Responsible disclosure in public repos
+
+Security findings in this public repository are stated as the class of the problem plus acceptance criteria. Do not include a proof of concept, an exploit chain, concrete secret or variable names, or a description of what is still editable. Repair detail belongs in the fix pull request or in a private tracker. The rule applies to humans and to LLM agents.
+
 ## Quick index (find the policy first)
 
 Use this table to jump to the **canonical bullet** or **rule** for each theme. Details stay in the bullets below and in linked files — this section is a **map only** (consolidation phase A). The same map with **clickable paths** is in **[`docs/ops/CURSOR_AGENT_POLICY_HUB.md`](docs/ops/CURSOR_AGENT_POLICY_HUB.md)** ([pt-BR](docs/ops/CURSOR_AGENT_POLICY_HUB.pt_BR.md)) (consolidation phase B). **Fresh chat / low context / token-aware:** read **[`docs/ops/OPERATOR_AGENT_COLD_START_LADDER.md`](docs/ops/OPERATOR_AGENT_COLD_START_LADDER.md)** ([pt-BR](docs/ops/OPERATOR_AGENT_COLD_START_LADDER.pt_BR.md)) first — ordered ladder + task router + **seven** non-negotiables (homelab **`ssh`** reachability = §7), then this table.
@@ -13,6 +17,7 @@ Use this table to jump to the **canonical bullet** or **rule** for each theme. D
 | Theme | Where to look first |
 | ----- | ------------------- |
 | **Complete issue and PR threads** — full body, all comments, PR reviews + inline findings before implement/commit/close | This file, section **Complete issue and PR threads** (GitHub **#1953**) |
+| **Public security findings** — class of problem plus acceptance criteria; repair detail stays in the fix PR or a private tracker | This file, section **Responsible disclosure in public repos** |
 | **Cold start (fresh agent, token-aware)** — ladder + task router before deep-reading this file | **`docs/ops/OPERATOR_AGENT_COLD_START_LADDER.md`** · hub map: **`docs/hubs/INDEX.md`** |
 | **Ops docs index / guidelines / shorthands** | **`docs/hubs/OPS_HUB.md`** · **`docs/hubs/GUIDELINES_AND_GUARDRAILS_HUB.md`** · **`docs/hubs/SHORTHANDS_HUB.md`** |
 | **Ecosystem map (bestiary, private repos, vault CHIRP)** — off-band onboarding; Cursor = executor on `data-boar` only | **`docs/ops/CURSOR_ECOSYSTEM_ONBOARDING.md`** · vault **`~/Projects/dev/obsidian-vault/databoar-commercial/_NORTE_mapa-do-todo-e-sequencia.md`** (operator-local) |
