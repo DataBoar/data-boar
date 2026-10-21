@@ -615,14 +615,14 @@ def _get_config_yaml_for_display() -> str:
     raw = _get_config_raw()
     try:
         data = yaml.safe_load(raw)
-        if isinstance(data, dict):
-            redacted = redact_config_for_display(data)
-            return yaml.dump(
-                redacted, default_flow_style=False, allow_unicode=True, sort_keys=False
-            )
+        if not isinstance(data, dict):
+            return "# config display unavailable\n"
+        redacted = redact_config_for_display(data)
+        return yaml.dump(
+            redacted, default_flow_style=False, allow_unicode=True, sort_keys=False
+        )
     except Exception:
-        pass
-    return raw
+        return "# config display unavailable\n"
 
 
 def _default_config_yaml() -> str:
@@ -669,7 +669,59 @@ def _save_config_yaml(yaml_content: str) -> None:
     reset_license_guard_for_tests()
 
 
-def _merge_and_save_config_yaml(submitted_yaml: str) -> None:
+_POLICY_API_KEYS = (
+    "rbac",
+    "api_key",
+    "require_api_key",
+    "audit_logs",
+    "webauthn",
+)
+
+
+def _restore_policy_subtrees(merged: dict, current: dict) -> dict:
+    """Keep security-policy subtrees from the file when the principal is not admin."""
+    import copy
+
+    current_api = current.get("api") if isinstance(current.get("api"), dict) else {}
+    merged_api = merged.get("api")
+    if not isinstance(merged_api, dict):
+        merged_api = {}
+        merged["api"] = merged_api
+    for key in _POLICY_API_KEYS:
+        if key in current_api:
+            merged_api[key] = copy.deepcopy(current_api[key])
+        else:
+            merged_api.pop(key, None)
+    for key in [
+        k for k in merged_api if isinstance(k, str) and k.startswith("trusted_")
+    ]:
+        if key not in current_api:
+            merged_api.pop(key, None)
+    for key, value in current_api.items():
+        if isinstance(key, str) and key.startswith("trusted_"):
+            merged_api[key] = copy.deepcopy(value)
+    if "licensing" in current:
+        merged["licensing"] = copy.deepcopy(current["licensing"])
+    else:
+        merged.pop("licensing", None)
+    return merged
+
+
+def _principal_lacks_admin(current_data: dict, request: Request) -> bool:
+    from api.rbac import resolve_effective_roles_for_request
+    from core.rbac_settings import rbac_enforcement_active
+
+    if not rbac_enforcement_active(current_data):
+        return False
+    roles = resolve_effective_roles_for_request(
+        request, current_data, _get_engine().db_manager
+    )
+    return "admin" not in (roles or [])
+
+
+def _merge_and_save_config_yaml(
+    submitted_yaml: str, request: Request | None = None
+) -> None:
     """Merge submitted YAML with current config so redacted/placeholder secret values do not overwrite real secrets, then save."""
     from config.redact_config import merge_config_on_save
 
@@ -687,6 +739,8 @@ def _merge_and_save_config_yaml(submitted_yaml: str) -> None:
     if not isinstance(submitted_data, dict):
         raise ValueError("Config must be a YAML object")
     merged = merge_config_on_save(submitted_data, current_data)
+    if request is not None and _principal_lacks_admin(current_data, request):
+        merged = _restore_policy_subtrees(merged, current_data)
     merged_yaml = yaml.dump(
         merged, default_flow_style=False, allow_unicode=True, sort_keys=False
     )
@@ -2339,7 +2393,7 @@ async def config_save(request: Request, locale_slug: LocaleSlug):
             context=_i18n_template_context(request, ls, tag, err_ctx),
         )
     try:
-        _merge_and_save_config_yaml(yaml_content)
+        _merge_and_save_config_yaml(yaml_content, request)
         return RedirectResponse(url=f"/{ls}/config?saved=1", status_code=303)
     except ValueError as e:
         from core.validation import clean_error

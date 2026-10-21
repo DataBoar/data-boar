@@ -236,7 +236,7 @@ def _sql_userinfo_prefix(cfg: dict[str, Any]) -> str:
     return f"{user}:{password}@" if password else f"{user}@"
 
 
-def _guard_sink_peer(host: str, port: int | None, cfg: dict[str, Any]) -> None:
+def _guard_sink_peer(host: str, port: int | None, cfg: dict[str, Any]) -> list[str]:
     """SSRF-check the *parsed* peer (hostname + port), not the raw YAML string."""
     from connectors.url_guard import (
         resolve_and_validate_outbound_url,
@@ -250,20 +250,24 @@ def _guard_sink_peer(host: str, port: int | None, cfg: dict[str, Any]) -> None:
     except ValueError:
         candidate = bare
     target = f"{candidate}:{port}" if port is not None else candidate
-    err, _ips = resolve_and_validate_outbound_url(
+    err, ips = resolve_and_validate_outbound_url(
         target,
         allow_private=target_allows_private(cfg),
         label="findings_sink.host",
     )
     if err:
         raise FindingsSinkError(err)
+    return [str(ip) for ip in ips]
 
 
-def _guard_sql_host(cfg: dict[str, Any]) -> None:
-    """Validate the peer SQLAlchemy/Mongo will actually connect to (#1816)."""
+def _guard_sql_host(cfg: dict[str, Any]) -> list[str]:
+    """Validate the peer SQLAlchemy/Mongo will actually connect to (#1816).
+
+    Returns the guard-accepted addresses so the dial uses those peers.
+    """
     kind = _canonical_type(cfg.get("type"))
     if kind == "sqlite":
-        return
+        return []
     if kind in _MONGO_TYPES:
         from urllib.parse import urlparse
 
@@ -273,8 +277,7 @@ def _guard_sql_host(cfg: dict[str, Any]) -> None:
             raise FindingsSinkError(
                 "findings_sink.host is required for SQL/Mongo sinks"
             )
-        _guard_sink_peer(host, parsed.port, cfg)
-        return
+        return _guard_sink_peer(host, parsed.port, cfg)
     from sqlalchemy.engine.url import make_url
 
     parsed = make_url(_sqlalchemy_url(cfg))
@@ -286,7 +289,30 @@ def _guard_sql_host(cfg: dict[str, Any]) -> None:
     host = parsed.host
     if not host:
         raise FindingsSinkError("findings_sink.host is required for SQL/Mongo sinks")
-    _guard_sink_peer(host, parsed.port, cfg)
+    return _guard_sink_peer(host, parsed.port, cfg)
+
+
+def _open_sql_sink_engine(cfg: dict[str, Any], pin_ips: list[str]):
+    """Open the SQL sink engine with the same peer pin the SQL connector uses."""
+    kind = _canonical_type(cfg.get("type"))
+    url = _sqlalchemy_url(cfg)
+    connect_args: dict[str, Any] = {}
+    dns_pin = None
+    if kind == "postgresql" and pin_ips:
+        from connectors.sql_connector import _apply_postgres_hostaddr_pin
+
+        connect_args = _apply_postgres_hostaddr_pin({}, pin_ips)
+    elif kind in ("mysql", "mariadb") and pin_ips:
+        from connectors.sql_connector import _install_mysql_host_resolution_pin
+
+        prefix = _SQL_URL_PREFIX.get("mysql" if kind == "mariadb" else kind, "")
+        dns_pin = _install_mysql_host_resolution_pin(url, pin_ips, drivername=prefix)
+    elif kind == "mssql" and pin_ips:
+        from connectors.sql_connector import _apply_mssql_tcp_peer_pin
+
+        url = _apply_mssql_tcp_peer_pin(url, pin_ips)
+    engine = create_engine(url, pool_pre_ping=True, connect_args=connect_args)
+    return engine, dns_pin
 
 
 def _sqlalchemy_url(cfg: dict[str, Any]) -> str:
@@ -675,14 +701,14 @@ def push_session_to_sink(
     if require_explicit_sample_ack and samples_yaml and not allow_sample_export:
         raise SampleExportNotAcknowledged(SAMPLE_EXPORT_REFUSED)
     include_sample = bool(samples_yaml and allow_sample_export)
-    _guard_sql_host(cfg)
+    pin_ips = _guard_sql_host(cfg)
     meta = _session_meta(db_manager, sid)
     rows = _finding_rows(db_manager, sid, include_sample=include_sample)
     label = redacted_sink_label(cfg)
     if kind in _MONGO_TYPES:
         _push_mongo(cfg, meta, rows, on_conflict=_on_conflict(cfg))
         return label
-    engine = create_engine(_sqlalchemy_url(cfg), pool_pre_ping=True)
+    engine, dns_pin = _open_sql_sink_engine(cfg, pin_ips)
     try:
         if kind == "sqlite":
             _ensure_sqlite_schema(engine, include_sample=include_sample)
@@ -697,6 +723,8 @@ def push_session_to_sink(
         raise FindingsSinkError(str(exc)) from exc
     finally:
         engine.dispose()
+        if dns_pin is not None:
+            dns_pin.release()
     return label
 
 

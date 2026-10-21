@@ -53,6 +53,15 @@ PyPI installs expose two **first-class** console entry points (same package, sam
 - **`data-boar`** → **`main:main`** (CLI, one-shot scan, `--web` API server).
 - **`data-boar-report`** → **`cli.reporter:main`** (executive Markdown from the local SQLite session — no live SQL connector; see [docs/USAGE.md](docs/USAGE.md) section 5, [pt-BR](docs/USAGE.pt_BR.md)).
 
+## Claude Code workflow
+
+`.github/workflows/claude.yml` is the source of the actor gate. A short constraint list:
+
+- Events: issue comment, pull request review comment, pull request review, or an issue `opened` / `assigned`.
+- The comment, review, or issue text contains `@claude`.
+- `author_association` is `OWNER`, `MEMBER`, or `COLLABORATOR`.
+- The GitHub user type is not `Bot`.
+
 ## Quick start (development)
 
 1. **Clone and enter the repo**

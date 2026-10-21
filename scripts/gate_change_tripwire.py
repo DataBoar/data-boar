@@ -36,7 +36,10 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 # so it never appears in a diff; its tracked template carries the policy instead.
 #
 # Any path under GATE_PATH_PREFIXES is also gated (whole .github/workflows/ tree).
-GATE_PATH_PREFIXES: tuple[str, ...] = (".github/workflows/",)
+GATE_PATH_PREFIXES: tuple[str, ...] = (
+    ".github/workflows/",
+    ".github/actions/",
+)
 
 GATE_FILES: frozenset[str] = frozenset(
     {
@@ -46,6 +49,9 @@ GATE_FILES: frozenset[str] = frozenset(
         "scripts/gate_change_tripwire.py",
         "scripts/gate_trailer_attest.py",
         "scripts/operator_gated_pr_guard.py",
+        "scripts/native_package_release.py",
+        "scripts/ci_dependabot_requirements_sync.sh",
+        "scripts/homebrew_formula_bump.py",
         "scripts/__init__.py",
         ".pre-commit-config.yaml",
         ".github/CODEOWNERS",

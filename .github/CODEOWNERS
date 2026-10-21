@@ -29,6 +29,10 @@
 
 # --- Operator-gated PR merge attestation (#1709) ---
 /scripts/operator_gated_pr_guard.py                            @FabioLeitao
+/scripts/native_package_release.py                             @FabioLeitao
+/scripts/ci_dependabot_requirements_sync.sh                    @FabioLeitao
+/scripts/homebrew_formula_bump.py                              @FabioLeitao
+/.github/actions/                                              @FabioLeitao
 /scripts/gate_trailer_attest.py                                @FabioLeitao
 /scripts/__init__.py                                           @FabioLeitao
 /docs/adr/allowed_signers                                      @FabioLeitao

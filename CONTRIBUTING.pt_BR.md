@@ -53,6 +53,15 @@ Instalações via PyPI expõem **dois** entry points de console de **mesmo níve
 - **`data-boar`** → **`main:main`** (CLI, varredura *one-shot*, servidor API com `--web`).
 - **`data-boar-report`** → **`cli.reporter:main`** (Markdown executivo a partir da sessão no SQLite local — sem conector SQL ao vivo; ver [docs/USAGE.pt_BR.md](docs/USAGE.pt_BR.md) *Resumo executivo*, [EN](docs/USAGE.md) seção 5).
 
+## Workflow do Claude Code
+
+`.github/workflows/claude.yml` é a fonte do gate de ator. Lista curta:
+
+- Eventos: comentário em issue, comentário de review em pull request, review de pull request, ou issue `opened` / `assigned`.
+- O texto do comentário, do review ou da issue contém `@claude`.
+- `author_association` é `OWNER`, `MEMBER` ou `COLLABORATOR`.
+- O tipo do usuário no GitHub não é `Bot`.
+
 ## Início rápido (desenvolvimento)
 
 1. **Clone e entre no repositório**
