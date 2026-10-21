@@ -37,6 +37,48 @@ def include_private_lint(request: pytest.FixtureRequest) -> bool:
     return bool(request.config.getoption("--include-private"))
 
 
+# Stand-in operator list so existing *_from_env fixtures keep their YAML asserts.
+_FIXTURE_OPERATOR_HOSTS = ",".join(
+    (
+        "127.0.0.1",
+        "api.example.com",
+        "api.good.example",
+        "api.hubapi.com",
+        "api.trusted.example",
+        "attacker.example",
+        "auth.example.com",
+        "db.example",
+        "db.example.com",
+        "dav.example",
+        "db.trusted.example",
+        "evil.example.com",
+        "example.com",
+        "files.example",
+        "files.example.com",
+        "localhost",
+        "login.microsoftonline.com",
+        "mongo.example",
+        "nas.example",
+        "nfs.example.com",
+        "org.crm.dynamics.com",
+        "other.example",
+        "192.0.2.10",
+        "REPLACE_WITH_LAB_HOST_IP",
+        "redis.example",
+        "sharepoint.example",
+        "sql.example.com",
+        "xy12345.us-east-1",
+        "xy12345.us-east-1.snowflakecomputing.com",
+    )
+)
+
+
+@pytest.fixture(autouse=True)
+def _operator_credential_host_allowlist(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Give existing env-credential fixtures an operator host list (#2103)."""
+    monkeypatch.setenv("DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS", _FIXTURE_OPERATOR_HOSTS)
+
+
 @pytest.fixture(autouse=True)
 def _restore_license_verify_key_loader():
     """Drop any test pin of the embedded verify key after the test."""

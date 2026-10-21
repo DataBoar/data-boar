@@ -4,6 +4,7 @@
 # Targets: deploy/lab-smoke-stack synthetic engines (LAN hub).
 # Replace REPLACE_WITH_LAB_HOST_IP in every host: field.
 # Credentials: ONLY pass_from_env — never commit passwords.
+# DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS must list each host (no port).
 #   Export names match deploy/lab-smoke-stack/env.example (or inject from Bitwarden).
 #
 # Fix each target exercises:

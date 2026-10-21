@@ -751,12 +751,14 @@ def test_normalize_config_secret_binding_is_by_identity_not_position(monkeypatch
             {
                 "name": "alpha",
                 "type": "rest_api",
+                "base_url": "https://api.trusted.example",
                 "client_secret_from_env": "SECRET_ALPHA",
                 "pass_from_env": "PASS_ALPHA",
             },
             {
                 "name": "beta",
                 "type": "rest_api",
+                "base_url": "https://api.trusted.example",
                 "client_secret_from_env": "SECRET_BETA",
                 "pass_from_env": "PASS_BETA",
             },

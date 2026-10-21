@@ -64,6 +64,8 @@ _REST_TARGET_TYPES = frozenset({"api", "rest", "rest_api", "http", "https"})
 # A target credential must not copy them. The prefix list is unchanged.
 BOAR_INTERNAL_ENV_NAMES = frozenset(
     {
+        "DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS",
+        "DATA_BOAR_CREDENTIAL_HOSTS_UNRESTRICTED",
         "DATA_BOAR_API_KEY",
         "DATA_BOAR_CONTAINER_PYTHON",
         "DATA_BOAR_DASHBOARD_INSECURE_OPT_IN",
@@ -107,6 +109,9 @@ OPERATIONAL_ENV_NAMES = frozenset(
     }
 )
 _WEBAUTHN_TOKEN_ENV_DEFAULT = "DATA_BOAR_WEBAUTHN_TOKEN_SECRET"
+_OPERATOR_HOSTS_ENV = "DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS"
+_OPERATOR_HOSTS_UNRESTRICTED_ENV = "DATA_BOAR_CREDENTIAL_HOSTS_UNRESTRICTED"
+_OPERATOR_HOSTS_TRUTHY = frozenset({"1", "true", "yes", "on"})
 _credential_env_root: contextvars.ContextVar[dict[str, Any] | None] = (
     contextvars.ContextVar("credential_env_root", default=None)
 )
@@ -302,16 +307,142 @@ def _credential_destination_groups(cfg: dict[str, Any]) -> list[set[str]] | None
     return [set()]
 
 
+_operator_hosts_unrestricted_logged = False
+
+
+def _operator_host_key(value: str) -> str:
+    """Host key: no scheme, no port, case-insensitive.
+
+    Bracketed IPv6 keeps the address inside the brackets. An unbracketed value
+    with more than one colon is an IPv6 literal and has no port.
+    """
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    if "://" in text:
+        return (urlparse(text).hostname or "").casefold()
+    if text.startswith("["):
+        end = text.find("]")
+        inner = text[1:end] if end != -1 else text[1:]
+        return inner.casefold()
+    if text.count(":") == 1:
+        host, _, port = text.partition(":")
+        if port.isdigit():
+            return host.casefold()
+    return text.casefold()
+
+
+def _operator_credential_hosts() -> set[str] | None:
+    """Operator host keys, or None when the lab opt-out is set."""
+    global _operator_hosts_unrestricted_logged
+    flag = os.environ.get(_OPERATOR_HOSTS_UNRESTRICTED_ENV, "")
+    if flag.strip().casefold() in _OPERATOR_HOSTS_TRUTHY:
+        if not _operator_hosts_unrestricted_logged:
+            _operator_hosts_unrestricted_logged = True
+            _logger.warning(
+                "%s is set; env-credential hosts are unrestricted (lab only).",
+                _OPERATOR_HOSTS_UNRESTRICTED_ENV,
+            )
+        return None
+    listed = os.environ.get(_OPERATOR_HOSTS_ENV, "")
+    return {key for item in listed.split(",") if (key := _operator_host_key(item))}
+
+
+def enforce_operator_credential_host_gate(
+    destinations: list[set[str]], label: str
+) -> None:
+    """Accept env-credential destinations only when the operator listed them."""
+    allowed = _operator_credential_hosts()
+    if allowed is None:
+        return
+    if not allowed:
+        raise ValueError(
+            f"{label} uses an environment credential but "
+            f"{_OPERATOR_HOSTS_ENV} is unset. Set a comma-separated host list "
+            f"(host without port; bracket an IPv6 address) or set "
+            f"{_OPERATOR_HOSTS_UNRESTRICTED_ENV}=1 for a lab process "
+            f"({_CREDENTIAL_ENV_TAG})."
+        )
+    if not destinations:
+        raise ValueError(
+            f"{label} destination is outside {_OPERATOR_HOSTS_ENV} "
+            f"({_CREDENTIAL_ENV_TAG})."
+        )
+    for group in destinations:
+        if not group:
+            raise ValueError(
+                f"{label} destination is outside {_OPERATOR_HOSTS_ENV} "
+                f"({_CREDENTIAL_ENV_TAG})."
+            )
+        for host in group:
+            key = _operator_host_key(str(host or ""))
+            if not key or key not in allowed:
+                raise ValueError(
+                    f"{label} destination is outside {_OPERATOR_HOSTS_ENV}. "
+                    f"allowed_hosts can only narrow that list "
+                    f"({_CREDENTIAL_ENV_TAG})."
+                )
+
+
+def _assert_yaml_hosts_within_operator(cfg: dict[str, Any], label: str) -> None:
+    """YAML allowed_hosts may only narrow the operator list."""
+    allowed = _operator_credential_hosts()
+    if not allowed:
+        return
+    for host in _explicit_allowed_hosts(cfg):
+        if _operator_host_key(host) in allowed:
+            continue
+        raise ValueError(
+            f"{label} lists a host outside {_OPERATOR_HOSTS_ENV}. "
+            f"allowed_hosts can only narrow that list ({_CREDENTIAL_ENV_TAG})."
+        )
+
+
+def _vendor_fixed_destination_groups(cfg: dict[str, Any]) -> list[set[str]]:
+    """Hosts a vendor allowlist binds when YAML allowed_hosts is optional."""
+    kind = _credential_target_kind(cfg)
+    auth = cfg.get("auth") if isinstance(cfg.get("auth"), dict) else {}
+    if kind == "hubspot":
+        raw = str(cfg.get("base_url") or "https://api.hubapi.com")
+        return [{_operator_host_key(raw)}]
+    if kind == "powerbi" and not str(auth.get("token_url") or "").strip():
+        return [{"login.microsoftonline.com"}]
+    return [set()]
+
+
+def _rest_env_destinations(target: dict[str, Any]) -> list[set[str]]:
+    raws: list[Any] = [target.get("base_url"), target.get("url")]
+    auth = target.get("auth") if isinstance(target.get("auth"), dict) else {}
+    raws.append(auth.get("token_url"))
+    groups: list[set[str]] = []
+    for raw in raws:
+        key = _operator_host_key(str(raw or ""))
+        if key:
+            groups.append({key})
+    return groups
+
+
 def assert_explicit_destination_allowlisted(cfg: dict[str, Any], label: str) -> None:
     """Fail closed unless every credential destination is explicitly allowlisted.
 
-    ``allowed_hosts`` comes from the same YAML the config author writes (same
-    limit as #1977). Against that author only the env-name prefix is an
-    independent control; the host list is a brake, not a second authority.
+    The process env DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS is the operator
+    authority. YAML allowed_hosts can only narrow that set. Unset or empty
+    fails closed unless DATA_BOAR_CREDENTIAL_HOSTS_UNRESTRICTED=1 (lab only).
     """
     groups = _credential_destination_groups(cfg)
     if groups is None:
+        vendor = _vendor_fixed_destination_groups(cfg)
+        enforce_operator_credential_host_gate(vendor, label)
+        _assert_yaml_hosts_within_operator(cfg, label)
+        yaml_keys = {_operator_host_key(h) for h in _explicit_allowed_hosts(cfg)}
+        if yaml_keys and not all(group <= yaml_keys for group in vendor):
+            raise ValueError(
+                f"{label} requires an explicit allowed_hosts entry "
+                f"for every destination ({_CREDENTIAL_ENV_TAG})."
+            )
         return
+    enforce_operator_credential_host_gate(groups, label)
+    _assert_yaml_hosts_within_operator(cfg, label)
     allowed = _explicit_allowed_hosts(cfg)
     if groups and all(group & allowed for group in groups):
         return
@@ -337,6 +468,8 @@ def _gate_non_rest_env_credential(
     _reject_reserved_credential_env_name(env_name, label)
     kind = str(target.get("type") or "").strip().lower()
     if kind in _REST_TARGET_TYPES:
+        enforce_operator_credential_host_gate(_rest_env_destinations(target), label)
+        _assert_yaml_hosts_within_operator(target, label)
         return
     assert_non_rest_env_credential(target, env_name, label)
 

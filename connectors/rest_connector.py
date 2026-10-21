@@ -10,6 +10,10 @@ from typing import Any
 import json
 from urllib.parse import urlparse
 
+from config.loader import (
+    _assert_yaml_hosts_within_operator,
+    enforce_operator_credential_host_gate,
+)
 from core.about import get_http_user_agent
 from core.connector_registry import register
 from core.crypto_audit import (
@@ -186,6 +190,12 @@ def _assert_rest_credential_hosts_allowlisted(target: dict[str, Any]) -> None:
     if uses_env:
         _validate_rest_env_var_names(auth)
         _validate_target_env_var_names(target)
+        dests = [
+            {_host_from_url(url)} if _host_from_url(url) else set()
+            for _label, url in _credential_endpoint_urls(target)
+        ]
+        enforce_operator_credential_host_gate(dests, "auth.allowed_hosts")
+        _assert_yaml_hosts_within_operator(target, "auth.allowed_hosts")
     explicit = _collect_explicit_allowed_hosts(target)
     if uses_env and not explicit:
         raise ValueError(
