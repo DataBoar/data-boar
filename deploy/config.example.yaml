@@ -99,5 +99,6 @@ remediation:
 #   database: data_governance_db
 #   user_from_env: DATA_BOAR_SINK_DB_USER
 #   pass_from_env: DATA_BOAR_SINK_DB_PASS
+#   # DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS must list this host (no port).
 #   on_conflict: upsert
 #   include_sample_content: false

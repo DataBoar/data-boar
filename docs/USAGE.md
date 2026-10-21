@@ -611,7 +611,7 @@ To keep secrets **out of the config file**, use **`*_from_env`** keys so the app
   pass_from_env: DATA_BOAR_DB_PASS
 ```
 
-`allowed_hosts` is written in the same YAML as the rest of the target. Against a config author, only the prefix is an independent control; the host list is a brake. See [SECURITY.md](SECURITY.md).
+`allowed_hosts` is written in the same YAML as the rest of the target and only narrows the process env `DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS` (host without port). Unset or empty fails closed. Lab opt-out: `DATA_BOAR_CREDENTIAL_HOSTS_UNRESTRICTED=1`. See [SECURITY.md](SECURITY.md).
 
 When a `*_from_env` key is set, the resolved value is used for the connection; the config file can omit the literal secret. Restrict config file permissions and **do not commit** config files that contain credentials; see [SECURITY.md](../SECURITY.md) (Config file and secrets). Bitwarden as human source of truth: [OPERATOR_SECRETS_BITWARDEN.md](ops/OPERATOR_SECRETS_BITWARDEN.md).
 
@@ -903,7 +903,7 @@ Use `type: api` or `type: rest`. Required: `name`, `base_url` (or `url`). Option
 **Credential host allowlist (#1977 / #2006):** Before the connector attaches Basic, Bearer, OAuth client secrets, or custom `Authorization` / `X-API-Key` / `api-key` headers, it checks every credential endpoint host (`base_url` / `url` and `auth.token_url`). Matching is the **exact hostname** (lowercased). No wildcards, no ports, no path.
 
 - **Secrets from the environment** (`auth.token_from_env`, `auth.client_secret_from_env`, `client_secret: "${VAR}"`, **or** target-level `pass_from_env` / `password_from_env` / `user_from_env`) **require** an explicit list: `auth.allowed_hosts` (or top-level `allowed_hosts`). Include **both** the API host and the OAuth token host when they differ. The config loader may copy the env value into `pass` / `user`; the connector still treats the target as env-loaded while those `*_from_env` keys remain (#2006).
-- Names in `token_from_env`, `client_secret_from_env`, `pass_from_env`, `password_from_env`, and `user_from_env` must start with **`API_`**, **`REST_API_`**, or **`DATA_BOAR_`** on REST **and** on SQL, NoSQL, and share targets. Other names fail closed (`ValueError` containing `#1977`) and the secret is not copied. Non-REST targets also need the destination in `allowed_hosts` (see *Credentials from environment* above). Example: `pass_from_env: DATA_BOAR_DB_PASS` with `allowed_hosts: ["db.example.com"]`.
+- Names in `token_from_env`, `client_secret_from_env`, `pass_from_env`, `password_from_env`, and `user_from_env` must start with **`API_`**, **`REST_API_`**, or **`DATA_BOAR_`** on REST **and** on SQL, NoSQL, and share targets. Other names fail closed (`ValueError` containing `#1977`) and the secret is not copied. The process env `DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS` must list every destination host (no port). YAML `allowed_hosts` only narrows that list. Example: `pass_from_env: DATA_BOAR_DB_PASS` with `allowed_hosts: ["db.example.com"]`.
 - **Inline** tokens/passwords (no env keys) default to the hosts already in `base_url` / `auth.token_url` on the **same** target. An explicit list still wins and can reject a mismatched `base_url`.
 - Failure is connect-time **`ValueError`**. Scan failures usually show reason **`error`** with `#1977` in **Details** — not a remote 401. See [TROUBLESHOOTING_CREDENTIALS_AND_AUTH.md](TROUBLESHOOTING_CREDENTIALS_AND_AUTH.md).
 

@@ -9,6 +9,7 @@ Migration notes on the **`1.8.0-rc`** working line (no new semver cut):
 - **Installed help (#1130):** the dashBOARd help intro names the installed `data-boar` command. Command samples still follow the process that is running.
 - **markdown 3.11.1:** routine lock bump. No advisory. `uv.lock`, `requirements.txt`, and `pylock.toml` move together.
 - **Credential env names:** a name this process reserves for itself is refused as a target credential. The public prefix list is unchanged.
+- **Credential hosts (#2103), default change:** an env credential fails closed unless the process sets `DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS` (comma-separated hosts, no port). YAML `allowed_hosts` only narrows that list. Lab opt-out: `DATA_BOAR_CREDENTIAL_HOSTS_UNRESTRICTED=1` logs a warning and restores the previous YAML host gate.
 - **Config save:** while RBAC enforcement is active, a non-admin principal can change only api keys classified as editable. Unclassified api keys stay as stored. The freeze does not run when RBAC enforcement is inactive.
 
 - **Pillow 13 in the uv lock (#2116):** `uv.lock` installs Pillow 13. `pip install data-boar[grc-dashboard]` stays on Pillow 12.x until Streamlit widens its `pillow<13` cap (Streamlit <=1.66.0). The public floor remains `pillow>=12.3.0`.

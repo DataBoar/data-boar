@@ -31,6 +31,7 @@ targets:
     port: 5432
     database: demo_app
     user: demo_reader
+    # DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS must list this host (no port).
     pass_from_env: DATA_BOAR_DEMO_DB_PASSWORD
 
 # --- file_scan.extensions (filesystem / SMB / WebDAV / SharePoint) ---
