@@ -6,6 +6,9 @@ Human-readable summary of user-facing changes. **Detailed release notes:** [docs
 
 Migration notes on the **`1.8.0-rc`** working line (no new semver cut):
 
+- **Credential env names:** a name this process reserves for itself is refused as a target credential. The public prefix list is unchanged.
+- **Config save:** while RBAC enforcement is active, a non-admin principal can change only api keys classified as editable. Unclassified api keys stay as stored. The freeze does not run when RBAC enforcement is inactive.
+
 - **Pillow 13 in the uv lock (#2116):** `uv.lock` installs Pillow 13. `pip install data-boar[grc-dashboard]` stays on Pillow 12.x until Streamlit widens its `pillow<13` cap (Streamlit <=1.66.0). The public floor remains `pillow>=12.3.0`.
 
 - **Hybrid license required (#2042):** enforced mode rejects a token that has no `dbmldsa_sig` (`hybrid_claim_required`) and rejects verification when the packaged ML-DSA anchor is missing (`missing_mldsa_anchor`). Ed25519-only licenses from 1.7.4 must be reissued before an enforced 1.8 deployment. `licensing.mode: open` is unchanged.

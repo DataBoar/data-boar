@@ -669,17 +669,43 @@ def _save_config_yaml(yaml_content: str) -> None:
     reset_license_guard_for_tests()
 
 
-_POLICY_API_KEYS = (
-    "rbac",
-    "api_key",
-    "require_api_key",
-    "audit_logs",
-    "webauthn",
+# A non-admin save may change only these api keys. Every other api key,
+# including one that is not listed, stays as it is on disk.
+API_EDITABLE_KEYS = frozenset({"port", "workers"})
+API_ADMIN_ONLY_KEYS = frozenset(
+    {
+        "allow_adhoc_targets",
+        "allow_insecure_http",
+        "api_key",
+        "api_key_from_env",
+        "audit_logs",
+        "host",
+        "https_cert_file",
+        "https_cert_fingerprint_sha256",
+        "https_key_file",
+        "maturity_assessment_pack_path",
+        "maturity_integrity_secret_from_env",
+        "maturity_self_assessment_poc_enabled",
+        "rbac",
+        "require_api_key",
+        "trusted_hosts",
+        "trusted_proxy_cidrs",
+        "webauthn",
+    }
 )
 
 
+def _api_key_is_editable(key: str) -> bool:
+    """True only for an explicitly editable api key. Unknown keys are not."""
+    return key in API_EDITABLE_KEYS
+
+
 def _restore_policy_subtrees(merged: dict, current: dict) -> dict:
-    """Keep security-policy subtrees from the file when the principal is not admin."""
+    """Keep non-editable api keys and licensing when the principal is not admin.
+
+    Only ``API_EDITABLE_KEYS`` may come from the submitted YAML. A key that is
+    not classified is admin-only. Licensing is not an api key and stays frozen.
+    """
     import copy
 
     current_api = current.get("api") if isinstance(current.get("api"), dict) else {}
@@ -687,19 +713,13 @@ def _restore_policy_subtrees(merged: dict, current: dict) -> dict:
     if not isinstance(merged_api, dict):
         merged_api = {}
         merged["api"] = merged_api
-    for key in _POLICY_API_KEYS:
+    for key in set(current_api) | set(merged_api):
+        if not isinstance(key, str) or _api_key_is_editable(key):
+            continue
         if key in current_api:
             merged_api[key] = copy.deepcopy(current_api[key])
         else:
             merged_api.pop(key, None)
-    for key in [
-        k for k in merged_api if isinstance(k, str) and k.startswith("trusted_")
-    ]:
-        if key not in current_api:
-            merged_api.pop(key, None)
-    for key, value in current_api.items():
-        if isinstance(key, str) and key.startswith("trusted_"):
-            merged_api[key] = copy.deepcopy(value)
     if "licensing" in current:
         merged["licensing"] = copy.deepcopy(current["licensing"])
     else:
@@ -719,9 +739,7 @@ def _principal_lacks_admin(current_data: dict, request: Request) -> bool:
     return "admin" not in (roles or [])
 
 
-def _merge_and_save_config_yaml(
-    submitted_yaml: str, request: Request | None = None
-) -> None:
+def _merge_and_save_config_yaml(submitted_yaml: str, request: Request) -> None:
     """Merge submitted YAML with current config so redacted/placeholder secret values do not overwrite real secrets, then save."""
     from config.redact_config import merge_config_on_save
 
@@ -739,7 +757,9 @@ def _merge_and_save_config_yaml(
     if not isinstance(submitted_data, dict):
         raise ValueError("Config must be a YAML object")
     merged = merge_config_on_save(submitted_data, current_data)
-    if request is not None and _principal_lacks_admin(current_data, request):
+    # Freeze only while RBAC enforcement is active. An inactive gate returns
+    # False from _principal_lacks_admin and leaves the submitted api keys.
+    if _principal_lacks_admin(current_data, request):
         merged = _restore_policy_subtrees(merged, current_data)
     merged_yaml = yaml.dump(
         merged, default_flow_style=False, allow_unicode=True, sort_keys=False
