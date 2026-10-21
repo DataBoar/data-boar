@@ -1,0 +1,4 @@
+interface:
+  display_name: "CHIRP Context Recovery"
+  short_description: "Recover canonical context across agents"
+  default_prompt: "Use $chirp-context-recovery to recover canonical context, reconcile agent state, and produce a verified handoff."

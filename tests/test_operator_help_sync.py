@@ -121,6 +121,25 @@ def test_cli_help_uses_dev_canonical_invocation(cli_help_text: str) -> None:
     assert "--validate-config" in cli_help_text
 
 
+def test_installed_argv0_uses_data_boar_prog_and_concrete_home(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Installed entry points render data-boar and a concrete home path (#1130)."""
+    import main
+    import api.routes as routes
+
+    for argv0 in ("data-boar", "data-boar.exe", "/usr/local/bin/data-boar"):
+        assert main._display_prog(argv0) == "data-boar"
+        assert routes._display_prog(argv0) == "data-boar"
+    monkeypatch.setattr(sys, "argv", ["data-boar"])
+    html = _web_help_html(tmp_path)
+    home_docs = str(Path.home() / "Documents" / "LGPD")
+    assert "data-boar --config config.yaml" in html
+    assert "python main.py" not in html
+    assert home_docs in html
+    assert "~/" not in html
+
+
 def test_web_help_uses_runtime_prog_and_concrete_home_path(tmp_path: Path) -> None:
     html = _web_help_html(tmp_path)
     expected_docs_path = str(Path.home() / "Documents" / "LGPD")
