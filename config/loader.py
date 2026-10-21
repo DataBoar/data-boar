@@ -9,6 +9,7 @@ so it works in multilingual and legacy Windows environments. Pattern files
 pattern_files_encoding key (default utf-8) with errors=replace to avoid crashes.
 """
 
+import contextvars
 import logging
 import math
 import re
@@ -59,9 +60,127 @@ CREDENTIAL_ENV_PREFIXES = ("DATA_BOAR_", "REST_API_", "API_")
 _CREDENTIAL_ENV_TAG = "#1977"
 _REST_TARGET_TYPES = frozenset({"api", "rest", "rest_api", "http", "https"})
 
+# Names this process reads for its own secrets or security controls.
+# A target credential must not copy them. The prefix list is unchanged.
+BOAR_INTERNAL_ENV_NAMES = frozenset(
+    {
+        "DATA_BOAR_API_KEY",
+        "DATA_BOAR_CONTAINER_PYTHON",
+        "DATA_BOAR_DASHBOARD_INSECURE_OPT_IN",
+        "DATA_BOAR_DASHBOARD_TRANSPORT",
+        "DATA_BOAR_EXPECTED_BUILD_DIGEST",
+        "DATA_BOAR_HTML_CSRF_SECRET",
+        "DATA_BOAR_HTTPS_CERT_FILE",
+        "DATA_BOAR_HTTPS_KEY_FILE",
+        "DATA_BOAR_LICENSE_ISSUER_MLDSA_PRIVATE_KEY_PEM",
+        "DATA_BOAR_LICENSE_ISSUER_MLDSA_PRIVATE_KEY_PEM_FILE",
+        "DATA_BOAR_LICENSE_ISSUER_PRIVATE_KEY_PASSWORD",
+        "DATA_BOAR_LICENSE_ISSUER_PRIVATE_KEY_PEM",
+        "DATA_BOAR_LICENSE_ISSUER_PRIVATE_KEY_PEM_FILE",
+        "DATA_BOAR_LICENSE_MACHINE_STRICT",
+        "DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_PATH",
+        "DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_PEM",
+        "DATA_BOAR_LICENSE_MODE",
+        "DATA_BOAR_LICENSE_PATH",
+        "DATA_BOAR_LICENSE_PUBLIC_KEY_PATH",
+        "DATA_BOAR_LICENSE_PUBLIC_KEY_PEM",
+        "DATA_BOAR_LICENSE_REVOCATION_PATH",
+        "DATA_BOAR_MACHINE_SEED",
+        "DATA_BOAR_MATURITY_INTEGRITY_SECRET",
+        "DATA_BOAR_RELEASE_MANIFEST_PATH",
+        "DATA_BOAR_TLS_POSTURE",
+        "DATA_BOAR_WEBAUTHN_TOKEN_SECRET",
+    }
+)
+# DATA_BOAR_* reads that are operational knobs, not process secrets.
+# The source scan requires every read to sit in exactly one of these sets.
+OPERATIONAL_ENV_NAMES = frozenset(
+    {
+        "DATA_BOAR_BASE",
+        "DATA_BOAR_EXTRAS_DIR",
+        "DATA_BOAR_IMAGE_VARIANT",
+        "DATA_BOAR_OTEL_ENABLED",
+        "DATA_BOAR_PREFILTER",
+        "DATA_BOAR_SAMPLE_STATEMENT_TIMEOUT_MS",
+        "DATA_BOAR_SDK_SCHEMA_CHECK",
+        "DATA_BOAR_SQL_SAMPLE_LIMIT",
+    }
+)
+_WEBAUTHN_TOKEN_ENV_DEFAULT = "DATA_BOAR_WEBAUTHN_TOKEN_SECRET"
+_credential_env_root: contextvars.ContextVar[dict[str, Any] | None] = (
+    contextvars.ContextVar("credential_env_root", default=None)
+)
+
+
+def _nonempty_env_name(value: Any) -> str:
+    return str(value or "").strip()
+
+
+def internal_secret_env_names(config: dict[str, Any] | None) -> frozenset[str]:
+    """Static reserved names plus names this config points at internal secrets.
+
+    Defaults count when the config omits the key. A name resolved from an
+    internal ``*_from_env`` key is reserved for this process too.
+    """
+    names = set(BOAR_INTERNAL_ENV_NAMES)
+    names.add(_WEBAUTHN_TOKEN_ENV_DEFAULT)
+    root = config if isinstance(config, dict) else _credential_env_root.get()
+    api = root.get("api") if isinstance(root, dict) else None
+    if not isinstance(api, dict):
+        return frozenset(names)
+    for key in ("api_key_from_env", "maturity_integrity_secret_from_env"):
+        resolved = _nonempty_env_name(api.get(key))
+        if resolved:
+            names.add(resolved)
+    webauthn = api.get("webauthn")
+    token_name = _WEBAUTHN_TOKEN_ENV_DEFAULT
+    if isinstance(webauthn, dict):
+        token_name = _nonempty_env_name(
+            webauthn.get("token_secret_from_env") or _WEBAUTHN_TOKEN_ENV_DEFAULT
+        )
+    if token_name:
+        names.add(token_name)
+    return frozenset(names)
+
+
+def _reject_reserved_credential_env_name(env_name: str, label: str) -> None:
+    """Fail closed when a credential name is reserved for this process.
+
+    Comparison is case-insensitive so a platform that folds environment
+    names cannot skip the reserved set.
+    """
+    folded = env_name.strip().casefold()
+    if not folded:
+        return
+    reserved = {name.casefold() for name in internal_secret_env_names(None)}
+    if folded not in reserved:
+        return
+    raise ValueError(
+        f"{label} must not name an environment variable reserved for this "
+        f"process ({_CREDENTIAL_ENV_TAG})."
+    )
+
+
+def _reject_reserved_interpolation(value: Any, label: str) -> None:
+    """Refuse a reserved name inside a ``${...}`` credential value.
+
+    Does not apply the prefix rule. Unprefixed vendor names stay valid.
+    """
+    if not isinstance(value, str):
+        return
+    text = value.strip()
+    if not (text.startswith("${") and text.endswith("}") and len(text) > 3):
+        return
+    _reject_reserved_credential_env_name(text[2:-1].strip(), label)
+
 
 def assert_credential_env_name(env_name: str, label: str) -> None:
-    """Fail closed unless the env var name uses a #1977 credential prefix."""
+    """Fail closed unless the name uses a #1977 prefix and is not reserved.
+
+    A reserved process name is refused even when it has an allowed prefix.
+    The prefix tuple itself does not change.
+    """
+    _reject_reserved_credential_env_name(env_name, label)
     name = env_name.strip()
     if any(name.startswith(prefix) for prefix in CREDENTIAL_ENV_PREFIXES):
         return
@@ -213,6 +332,9 @@ def assert_non_rest_env_credential(
 def _gate_non_rest_env_credential(
     target: dict[str, Any], env_name: str, label: str
 ) -> None:
+    # Reserved names apply to REST and non-REST. The prefix rule for REST
+    # stays at the connector; non-REST still checks prefix and destination here.
+    _reject_reserved_credential_env_name(env_name, label)
     kind = str(target.get("type") or "").strip().lower()
     if kind in _REST_TARGET_TYPES:
         return
@@ -663,6 +785,19 @@ def load_config(path: str | Path) -> dict[str, Any]:
 def normalize_config(
     data: dict[str, Any], *, config_path: str | Path | None = None
 ) -> dict[str, Any]:
+    """Normalize config. See ``_normalize_config_body`` for the schema contract."""
+    if not isinstance(data, dict):
+        raise ValueError("Config root must be a dict")
+    token = _credential_env_root.set(data)
+    try:
+        return _normalize_config_body(data, config_path=config_path)
+    finally:
+        _credential_env_root.reset(token)
+
+
+def _normalize_config_body(
+    data: dict[str, Any], *, config_path: str | Path | None = None
+) -> dict[str, Any]:
     """
     Normalize config to unified schema. Accepts legacy shapes (e.g. databases[] from config.json).
 
@@ -954,6 +1089,9 @@ def normalize_config(
                     or auth.get("client_secret")
                     or ""
                 )
+            _reject_reserved_interpolation(
+                auth.get("client_secret"), "auth.client_secret"
+            )
         env_cs_key = (t.get("client_secret_from_env") or "").strip()
         if env_cs_key:
             _gate_non_rest_env_credential(t, env_cs_key, "client_secret_from_env")
@@ -963,6 +1101,7 @@ def normalize_config(
                 or t.get("client_secret")
                 or ""
             )
+        _reject_reserved_interpolation(t.get("client_secret"), "client_secret")
 
     # Detection: configuration toggles for detector behaviour (regex/ML/DL options)
     det_cfg = data.get("detection", {}) or {}
@@ -1600,5 +1739,9 @@ def normalize_config(
         "include_sample_content": bool(sink_raw.get("include_sample_content", False)),
         "allow_private_networks": bool(sink_raw.get("allow_private_networks", False)),
     }
+    for env_key in ("user_from_env", "pass_from_env"):
+        sink_env_name = _nonempty_env_name(out["findings_sink"].get(env_key))
+        if sink_env_name:
+            _reject_reserved_credential_env_name(sink_env_name, env_key)
 
     return out

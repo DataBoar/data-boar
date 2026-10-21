@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import ast
+from pathlib import Path
+
 import pytest
 
 from config.loader import normalize_config
@@ -315,3 +318,160 @@ def test_org_and_token_url_copy_when_both_allowlisted(
         {"targets": [target], "api": {}, "report": {"output_dir": "."}}
     )
     assert out["targets"][0]["client_secret"] == "dv-secret"
+
+
+def test_reserved_process_env_name_is_refused(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A name this process reserves is not a target credential."""
+    from config.loader import BOAR_INTERNAL_ENV_NAMES
+
+    reserved = sorted(BOAR_INTERNAL_ENV_NAMES)[0]
+    monkeypatch.setenv(reserved, "unit-test-value")
+    data = _database_target(
+        pass_from_env=reserved,
+        allowed_hosts=["attacker.example"],
+    )
+    with pytest.raises(ValueError, match="reserved for this process"):
+        normalize_config(data)
+
+
+def test_operator_prefixed_name_still_copies(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The public prefix list still accepts an operator credential name."""
+    monkeypatch.setenv("DATA_BOAR_DEMO_DB_PASSWORD", "db-secret")
+    data = _database_target(
+        pass_from_env="DATA_BOAR_DEMO_DB_PASSWORD",
+        allowed_hosts=["attacker.example"],
+    )
+    out = normalize_config(data)
+    assert out["targets"][0]["pass"] == "db-secret"
+
+
+def test_config_resolved_internal_env_name_is_refused(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A name the config uses for an internal secret cannot also be a target credential."""
+    monkeypatch.setenv("DATA_BOAR_LAB_DB_PASSWORD", "db-secret")
+    data = _database_target(
+        pass_from_env="DATA_BOAR_LAB_DB_PASSWORD",
+        allowed_hosts=["attacker.example"],
+    )
+    data["api"] = {"api_key_from_env": "DATA_BOAR_LAB_DB_PASSWORD"}
+    with pytest.raises(ValueError, match="reserved for this process"):
+        normalize_config(data)
+
+
+def test_reserved_name_match_ignores_case(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A reserved name is refused even when its letters change case."""
+    from config.loader import BOAR_INTERNAL_ENV_NAMES
+
+    reserved = sorted(BOAR_INTERNAL_ENV_NAMES)[0].swapcase()
+    monkeypatch.setenv(reserved, "unit-test-value")
+    data = _database_target(pass_from_env=reserved, allowed_hosts=["attacker.example"])
+    with pytest.raises(ValueError, match="reserved for this process"):
+        normalize_config(data)
+
+
+def test_vendor_client_secret_interpolation_stays_valid() -> None:
+    """Unprefixed vendor names in client_secret stay accepted."""
+    data = {
+        "targets": [
+            {
+                "name": "pbi",
+                "type": "powerbi",
+                "auth": {"client_secret": "${POWERBI_CLIENT_SECRET}"},
+            }
+        ],
+        "api": {},
+        "report": {"output_dir": "."},
+    }
+    out = normalize_config(data)
+    assert out["targets"][0]["auth"]["client_secret"] == "${POWERBI_CLIENT_SECRET}"
+
+
+def test_reserved_name_inside_client_secret_interpolation_is_refused() -> None:
+    """A reserved name inside a client_secret placeholder is refused."""
+    from config.loader import BOAR_INTERNAL_ENV_NAMES
+
+    reserved = sorted(BOAR_INTERNAL_ENV_NAMES)[0]
+    data = {
+        "targets": [
+            {
+                "name": "pbi",
+                "type": "powerbi",
+                "auth": {"client_secret": "${" + reserved + "}"},
+            }
+        ],
+        "api": {},
+        "report": {"output_dir": "."},
+    }
+    with pytest.raises(ValueError, match="reserved for this process"):
+        normalize_config(data)
+
+
+def _env_name_literals(node: ast.AST) -> set[str]:
+    found: set[str] = set()
+    for child in ast.walk(node):
+        if not isinstance(child, ast.Constant) or not isinstance(child.value, str):
+            continue
+        if child.value.startswith("DATA_BOAR_") and child.value.isupper():
+            found.add(child.value)
+    return found
+
+
+def _assigned_env_names(tree: ast.AST) -> dict[str, set[str]]:
+    assigned: dict[str, set[str]] = {}
+    for node in ast.walk(tree):
+        target = None
+        value = None
+        if isinstance(node, ast.Assign) and len(node.targets) == 1:
+            target, value = node.targets[0], node.value
+        elif isinstance(node, ast.AnnAssign):
+            target, value = node.target, node.value
+        if isinstance(target, ast.Name) and value is not None:
+            names = _env_name_literals(value)
+            if names:
+                assigned.setdefault(target.id, set()).update(names)
+    return assigned
+
+
+def _is_env_read(node: ast.AST) -> bool:
+    if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
+        return node.func.attr in {"get", "getenv", "pop"}
+    if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+        return node.func.id == "getenv"
+    return isinstance(node, ast.Subscript)
+
+
+def data_boar_env_names_read_by_source(root: Path) -> set[str]:
+    """DATA_BOAR_* names passed to an environment read in product code."""
+    found: set[str] = set()
+    for folder in ("core", "api", "config", "scripts"):
+        for path in (root / folder).rglob("*.py"):
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+            assigned = _assigned_env_names(tree)
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
+                    if node.func.attr in {"get", "getenv", "pop"} and node.args:
+                        found.update(_env_name_literals(node.args[0]))
+                        if isinstance(node.args[0], ast.Name):
+                            found.update(assigned.get(node.args[0].id, set()))
+                if isinstance(node, ast.Subscript):
+                    found.update(_env_name_literals(node.slice))
+                    slice_name = node.slice
+                    if isinstance(slice_name, ast.Name):
+                        found.update(assigned.get(slice_name.id, set()))
+                if isinstance(node, ast.For) and isinstance(node.target, ast.Name):
+                    if any(_is_env_read(child) for child in ast.walk(node)):
+                        found.update(_env_name_literals(node.iter))
+    return found
+
+
+def test_source_scan_classifies_every_data_boar_env_read() -> None:
+    """Every DATA_BOAR_* environment read is internal-refused or operator-allowed."""
+    from config.loader import BOAR_INTERNAL_ENV_NAMES, OPERATIONAL_ENV_NAMES
+
+    root = Path(__file__).resolve().parents[1]
+    read = data_boar_env_names_read_by_source(root)
+    classified = BOAR_INTERNAL_ENV_NAMES | OPERATIONAL_ENV_NAMES
+    assert not (BOAR_INTERNAL_ENV_NAMES & OPERATIONAL_ENV_NAMES)
+    assert not (read - classified), sorted(read - classified)
+    assert read
