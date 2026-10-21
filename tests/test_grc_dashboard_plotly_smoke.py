@@ -80,6 +80,32 @@ def test_dashboard_chart_builds_and_serializes() -> None:
     assert isinstance(payload, str) and len(payload) > 0
 
 
+def test_dashboard_apptest_renders_example_report(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Run app/dashboard.py through Streamlit AppTest on the example report.
+
+    Skips only when the grc-dashboard extra is absent. When Streamlit is
+    installed, a missing file, a script exception, or an empty render fails.
+    """
+    pytest.importorskip("streamlit")
+    pytest.importorskip("plotly")
+
+    from streamlit.testing.v1 import AppTest
+
+    monkeypatch.setenv("DATA_BOAR_GRC_JSON", str(_EXAMPLE))
+    app = AppTest.from_file(
+        str(_REPO / "app" / "dashboard.py"),
+        default_timeout=60,
+    )
+    app.run()
+    assert not app.exception, app.exception
+    titles = [el.value for el in app.title]
+    assert any("GRC DashBOARd" in value for value in titles), titles
+    assert app.metric, "dashboard must render the executive metrics"
+    assert app.dataframe, "example report must render the findings table"
+
+
 def test_dashboard_module_imports_under_plotly_6() -> None:
     """Importing app.dashboard exercises the plotly + streamlit import chain.
 
