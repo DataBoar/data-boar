@@ -212,7 +212,7 @@ async def registration_verify(request: Request) -> JSONResponse:
         value=cookie,
         max_age=session_cookie.MAX_AGE_SECONDS,
         httponly=True,
-        samesite="lax",
+        samesite=session_cookie.SAMESITE,
         secure=_cookie_secure(request),
         path="/",
     )
@@ -300,7 +300,7 @@ async def authentication_verify(request: Request) -> JSONResponse:
         value=cookie,
         max_age=session_cookie.MAX_AGE_SECONDS,
         httponly=True,
-        samesite="lax",
+        samesite=session_cookie.SAMESITE,
         secure=_cookie_secure(request),
         path="/",
     )

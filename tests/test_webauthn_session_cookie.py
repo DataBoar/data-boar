@@ -14,6 +14,10 @@ def test_sign_verify_roundtrip():
     assert verify_session_cookie(secret, tok, max_age=MAX_AGE_SECONDS) == uid
 
 
+def test_session_max_age_is_twelve_hours():
+    assert MAX_AGE_SECONDS == 12 * 3600
+
+
 def test_verify_rejects_wrong_secret():
     tok = sign_session("secret-a_________________", b"y" * 32)
     assert verify_session_cookie("secret-b_________________", tok) is None

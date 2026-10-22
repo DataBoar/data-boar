@@ -1916,6 +1916,7 @@ def main() -> None:
             resolve_web_listen_options,
         )
         from core.host_resolution import (
+            assert_api_key_strength,
             effective_api_key_configured,
             resolve_api_host,
             resolve_served_config_path,
@@ -1937,6 +1938,11 @@ def main() -> None:
                 "See docs/ops/API_KEY_FROM_ENV_OPERATOR_STEPS.md.",
                 file=sys.stderr,
             )
+            sys.exit(2)
+        try:
+            assert_api_key_strength(api_cfg)
+        except ValueError as exc:
+            print(f"ERROR: {exc}", file=sys.stderr)
             sys.exit(2)
         port = api_cfg.get("port", args.port)
         workers = int(api_cfg.get("workers", 1))

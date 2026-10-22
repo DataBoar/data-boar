@@ -6,6 +6,8 @@ Human-readable summary of user-facing changes. **Detailed release notes:** [docs
 
 Migration notes on the **`1.8.0-rc`** working line (no new semver cut):
 
+- **API key failures (#2078), default change:** with `require_api_key` on, five failures from one client address in 60 seconds return **429**. Each **401** and **429** is an Audit Trail record and does not contain the key. A configured key shorter than 32 characters is refused at `main.py --web` (`openssl rand -hex 32`).
+- **WebAuthn session cookie (#2079), default change:** lifetime is 12 hours and `SameSite=Strict`. Cookie-authenticated mutations require the dashboard origin. Logout clears the browser cookie. This change does not revoke a cookie still held by another client.
 - **Installed help (#1130):** the dashBOARd help intro names the installed `data-boar` command. Command samples still follow the process that is running.
 - **markdown 3.11.1:** routine lock bump. No advisory. `uv.lock`, `requirements.txt`, and `pylock.toml` move together.
 - **Credential env names:** a name this process reserves for itself is refused as a target credential. The public prefix list is unchanged.

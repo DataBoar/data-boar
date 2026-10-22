@@ -80,6 +80,16 @@ def _operator_credential_host_allowlist(monkeypatch: pytest.MonkeyPatch) -> None
 
 
 @pytest.fixture(autouse=True)
+def _reset_api_key_auth_failures():
+    """Keep the in-memory auth-failure window from leaking between tests."""
+    from api.auth_failure_throttle import reset_auth_failure_throttle
+
+    reset_auth_failure_throttle()
+    yield
+    reset_auth_failure_throttle()
+
+
+@pytest.fixture(autouse=True)
 def _restore_license_verify_key_loader():
     """Drop any test pin of the embedded verify key after the test."""
     yield

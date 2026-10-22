@@ -296,6 +296,7 @@ def _base_api(*, rbac_enabled: bool) -> dict:
         "allow_insecure_http": False,
         "allow_adhoc_targets": False,
         "api_key_from_env": "DATA_BOAR_DEMO_API_KEY",
+        "auth_failure_throttle": {"max_failures": 5, "window_seconds": 60},
         "maturity_assessment_pack_path": "pack",
         "maturity_integrity_secret_from_env": "DATA_BOAR_DEMO_INTEGRITY",
         "maturity_self_assessment_poc_enabled": False,

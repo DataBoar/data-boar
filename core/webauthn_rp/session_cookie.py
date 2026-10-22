@@ -5,7 +5,8 @@ from __future__ import annotations
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 
 COOKIE_NAME = "db_webauthn"
-MAX_AGE_SECONDS = 7 * 24 * 3600
+MAX_AGE_SECONDS = 12 * 3600
+SAMESITE = "strict"
 
 
 def sign_session(secret: str, user_id: bytes) -> str:
