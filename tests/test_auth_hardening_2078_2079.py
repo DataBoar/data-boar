@@ -72,6 +72,42 @@ def test_concurrent_wrong_keys_stop_at_the_limit() -> None:
     assert later == "limited"
 
 
+def test_cookie_only_is_not_limited_and_a_key_still_is() -> None:
+    source = "198.51.100.30"
+    expected = "correct-key-value-32-characters!!"
+    for _i in range(5):
+        outcome, _retry = decide_auth_attempt(
+            source, 5, 60, provided="wrong", expected=expected, cookie_ok=False
+        )
+        assert outcome == "invalid"
+    cookie_only, _retry = decide_auth_attempt(
+        source, 5, 60, provided="", expected=expected, cookie_ok=True
+    )
+    assert cookie_only == "cookie"
+    still_limited, _retry = decide_auth_attempt(
+        source, 5, 60, provided=expected, expected=expected, cookie_ok=False
+    )
+    assert still_limited == "limited"
+
+
+def test_audit_path_cannot_forge_a_field(caplog) -> None:
+    from core.auth_audit import record_auth_failure
+
+    with caplog.at_level(logging.WARNING, logger=audit_logger.name):
+        record_auth_failure(
+            method="GET",
+            path="/scan\n source=1.2.3.4 ",
+            source="127.0.0.1",
+            reason="invalid_key",
+        )
+    message = caplog.records[-1].getMessage()
+    assert "\n" not in message
+    sources = [item for item in message.split() if item.startswith("source=")]
+    assert sources == ["source=127.0.0.1"]
+    assert "/scan" in message
+    assert "invalid_key" in message
+
+
 def test_concurrent_correct_keys_are_not_limited() -> None:
     expected = "correct-key-value-32-characters!!"
 

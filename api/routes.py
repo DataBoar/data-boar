@@ -1331,9 +1331,12 @@ async def optional_api_key_middleware(request: Request, call_next):
     source = client_host_for_auth(request, cfg)
     cookie_ok = webauthn_session_satisfies_require_api_key(cfg, request)
     if limits is None:
-        matched = bool(provided) and hmac.compare_digest(
-            str(provided).encode(), str(expected).encode()
-        )
+        try:
+            matched = bool(provided) and hmac.compare_digest(
+                provided.encode(), str(expected).encode()
+            )
+        except (TypeError, UnicodeError):
+            matched = False
         outcome = "ok" if matched else ("cookie" if cookie_ok else "invalid")
         retry_after = 0
     else:

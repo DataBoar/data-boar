@@ -149,7 +149,7 @@ def test_webauthn_registration_verify_rejects_bad_state(webauthn_client):
 
 def test_webauthn_logout_returns_ok(webauthn_client):
     client, _routes = webauthn_client
-    r = client.post("/auth/webauthn/logout")
+    r = client.post("/auth/webauthn/logout", headers={"Origin": "http://testserver"})
     assert r.status_code == 200
     assert r.json().get("ok") is True
 

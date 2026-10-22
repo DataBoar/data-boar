@@ -76,6 +76,8 @@ def decide_auth_attempt(
     now = time.monotonic()
     with _lock:
         bucket = _prune_bucket(source, now, window_seconds)
+        if cookie_ok and not provided:
+            return "cookie", 0
         if len(bucket) >= limit:
             retry = max(1, int(window_seconds - (now - bucket[0])))
             return "limited", retry

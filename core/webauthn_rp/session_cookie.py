@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
@@ -59,7 +60,10 @@ def accepted_session_user_id(secret: str, token: str, db_manager: Any) -> bytes 
     uid, _token_epoch = parsed
     try:
         current = db_manager.webauthn_session_epoch_for_user_id(uid)
-    except Exception:
+    except Exception as exc:
+        logging.getLogger(__name__).debug(
+            "WebAuthn session epoch read failed (%s)", type(exc).__name__
+        )
         return None
     if current is None:
         return None

@@ -85,7 +85,7 @@ def test_logout_rejects_old_cookie_and_accepts_a_new_one(tmp_path, monkeypatch):
     try:
         old = sign_session(_SECRET, uid, 0)
         assert _scan(client, old).status_code != 401
-        assert client.post("/auth/webauthn/logout").status_code == 200
+        assert client.post("/auth/webauthn/logout", headers=_ORIGIN).status_code == 200
         assert dbm.webauthn_session_epoch_for_user_id(uid) == 1
         assert _scan(client, old).status_code == 401
         fresh = sign_session(_SECRET, uid, 1)
@@ -107,7 +107,7 @@ def test_logout_of_one_user_leaves_the_other_cookie(tmp_path, monkeypatch):
         other_cookie = sign_session(_SECRET, other, 0)
         mine = sign_session(_SECRET, uid, 0)
         client.cookies.set(COOKIE_NAME, mine)
-        assert client.post("/auth/webauthn/logout").status_code == 200
+        assert client.post("/auth/webauthn/logout", headers=_ORIGIN).status_code == 200
         assert _scan(client, other_cookie).status_code != 401
         assert dbm.webauthn_session_epoch_for_user_id(other) == 0
     finally:
@@ -119,7 +119,7 @@ def test_second_credential_after_logout_still_signs_in(tmp_path, monkeypatch):
     try:
         old = sign_session(_SECRET, uid, 0)
         client.cookies.set(COOKIE_NAME, old)
-        assert client.post("/auth/webauthn/logout").status_code == 200
+        assert client.post("/auth/webauthn/logout", headers=_ORIGIN).status_code == 200
         dbm.webauthn_save_credential(
             user_id=uid,
             credential_id=b"second-credential-id-32bytes!!!!",
@@ -140,14 +140,14 @@ def test_revoked_cookie_logout_does_not_bump_again(tmp_path, monkeypatch):
     try:
         old = sign_session(_SECRET, uid, 0)
         client.cookies.set(COOKIE_NAME, old)
-        assert client.post("/auth/webauthn/logout").status_code == 200
+        assert client.post("/auth/webauthn/logout", headers=_ORIGIN).status_code == 200
         assert dbm.webauthn_session_epoch_for_user_id(uid) == 1
         client.cookies.set(COOKIE_NAME, old)
-        assert client.post("/auth/webauthn/logout").status_code == 200
+        assert client.post("/auth/webauthn/logout", headers=_ORIGIN).status_code == 200
         assert dbm.webauthn_session_epoch_for_user_id(uid) == 1
         fresh = sign_session(_SECRET, uid, 1)
         client.cookies.set(COOKIE_NAME, fresh)
-        assert client.post("/auth/webauthn/logout").status_code == 200
+        assert client.post("/auth/webauthn/logout", headers=_ORIGIN).status_code == 200
         assert dbm.webauthn_session_epoch_for_user_id(uid) == 2
         assert _scan(client, fresh).status_code == 401
     finally:
@@ -161,7 +161,7 @@ def test_legacy_cookie_without_epoch_dies_after_logout(tmp_path, monkeypatch):
         assert session_payload(_SECRET, legacy) == (uid, 0)
         assert _scan(client, legacy).status_code != 401
         client.cookies.set(COOKIE_NAME, legacy)
-        assert client.post("/auth/webauthn/logout").status_code == 200
+        assert client.post("/auth/webauthn/logout", headers=_ORIGIN).status_code == 200
         assert _scan(client, legacy).status_code == 401
         assert dbm.webauthn_session_epoch_for_user_id(uid) == 1
     finally:
@@ -231,3 +231,83 @@ def test_session_epoch_column_migration_is_idempotent(tmp_path: Path):
         session.close()
         first.engine.dispose()
         second.engine.dispose()
+
+
+def test_logout_wrong_origin_does_not_revoke(tmp_path, monkeypatch):
+    client, routes, dbm, uid, saved = _client(tmp_path, monkeypatch)
+    try:
+        old = sign_session(_SECRET, uid, 0)
+        client.cookies.set(COOKIE_NAME, old)
+        missing = client.post("/auth/webauthn/logout")
+        assert missing.status_code == 403
+        wrong = client.post(
+            "/auth/webauthn/logout",
+            headers={"Origin": "http://sibling.testserver"},
+        )
+        assert wrong.status_code == 403
+        assert dbm.webauthn_session_epoch_for_user_id(uid) == 0
+        assert _scan(client, old).status_code != 401
+        accepted = client.post("/auth/webauthn/logout", headers=_ORIGIN)
+        assert accepted.status_code == 200
+        assert dbm.webauthn_session_epoch_for_user_id(uid) == 1
+        assert _scan(client, old).status_code == 401
+    finally:
+        _restore(routes, saved)
+
+
+def test_sibling_origin_on_scan_is_forbidden(tmp_path, monkeypatch):
+    client, routes, _dbm, uid, saved = _client(tmp_path, monkeypatch)
+    try:
+        client.cookies.set(COOKIE_NAME, sign_session(_SECRET, uid, 0))
+        response = client.post(
+            "/scan",
+            json={},
+            headers={"Origin": "http://sibling.testserver"},
+        )
+        assert response.status_code == 403
+        assert (
+            response.json()["detail"] == "Cookie session requires the dashboard origin"
+        )
+    finally:
+        _restore(routes, saved)
+
+
+def test_user_with_no_credential_rows_is_refused(tmp_path, monkeypatch):
+    client, routes, dbm, uid, saved = _client(tmp_path, monkeypatch)
+    try:
+        session = dbm._session_factory()
+        try:
+            session.query(WebAuthnCredential).delete()
+            session.commit()
+        finally:
+            session.close()
+        assert dbm.webauthn_session_epoch_for_user_id(uid) is None
+        assert _scan(client, sign_session(_SECRET, uid, 0)).status_code == 401
+    finally:
+        _restore(routes, saved)
+
+
+def test_cookie_only_request_is_not_limited(tmp_path, monkeypatch):
+    client, routes, _dbm, uid, saved = _client(tmp_path, monkeypatch)
+    try:
+        for _i in range(5):
+            denied = client.get("/status", headers={"X-API-Key": "wrong-secret"})
+            assert denied.status_code == 401
+        blocked = client.get("/status", headers={"X-API-Key": "k" * 32})
+        assert blocked.status_code == 429
+        client.cookies.set(COOKIE_NAME, sign_session(_SECRET, uid, 0))
+        allowed = client.get("/status")
+        assert allowed.status_code != 429
+        assert allowed.status_code != 401
+    finally:
+        _restore(routes, saved)
+
+
+def test_cookie_and_correct_key_without_origin_is_not_forbidden(tmp_path, monkeypatch):
+    client, routes, _dbm, uid, saved = _client(tmp_path, monkeypatch)
+    try:
+        client.cookies.set(COOKIE_NAME, sign_session(_SECRET, uid, 0))
+        response = client.post("/scan", json={}, headers={"X-API-Key": "k" * 32})
+        assert response.status_code != 403
+    finally:
+        _restore(routes, saved)

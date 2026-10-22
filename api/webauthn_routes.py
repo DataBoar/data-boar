@@ -331,6 +331,13 @@ async def webauthn_status(request: Request) -> JSONResponse:
 @router.post("/logout")
 async def webauthn_logout(request: Request) -> JSONResponse:
     _wa, secret = _wa_secret_or_raise()
+    from api.webauthn_html_gate import cookie_mutation_origin_allowed
+
+    if not cookie_mutation_origin_allowed(_get_config(), request):
+        return JSONResponse(
+            status_code=403,
+            content={"detail": "Cookie session requires the dashboard origin"},
+        )
     r = JSONResponse(content={"ok": True})
     try:
         raw = request.cookies.get(session_cookie.COOKIE_NAME)
