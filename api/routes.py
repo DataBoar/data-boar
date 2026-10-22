@@ -70,6 +70,8 @@ from core.dashboard_transport import (
 )
 from core.enterprise_surface_posture import get_enterprise_surface_posture
 from core.forwarded_headers import forwarded_proto_posture
+from core.auth_audit import record_auth_failure
+from core.forwarded_headers import client_host_for_auth
 from core.host_resolution import effective_api_key_configured, trusted_api_hosts
 from core.licensing.runtime_feature_tier import get_runtime_tier_for_features
 from core.licensing.tier_features import is_feature_available
@@ -97,6 +99,7 @@ from api.locale_i18n import (
     make_t,
     negotiate_locale_tag,
 )
+from api.auth_failure_throttle import auth_failure_limits, decide_auth_attempt
 from api.request_body_limit import (
     MAX_REQUEST_BODY_BYTES,
     RequestBodySizeLimitMiddleware,
@@ -107,6 +110,7 @@ from api.webauthn_html_gate import (
     is_locale_login_get,
     safe_next_path,
     verify_html_form_csrf_or_raise,
+    cookie_mutation_origin_allowed,
     webauthn_html_session_middleware as webauthn_html_session_gate,
     webauthn_session_satisfies_require_api_key,
 )
@@ -679,6 +683,7 @@ API_ADMIN_ONLY_KEYS = frozenset(
         "api_key",
         "api_key_from_env",
         "audit_logs",
+        "auth_failure_throttle",
         "host",
         "https_cert_file",
         "https_cert_fingerprint_sha256",
@@ -1277,6 +1282,17 @@ async def cache_control_middleware(request: Request, call_next):
     return response
 
 
+def _provided_api_credential(request: Request) -> str:
+    """API key from X-API-Key, or from Authorization Bearer. Empty when absent."""
+    provided = (request.headers.get("x-api-key") or "").strip()
+    if provided:
+        return provided
+    auth = (request.headers.get("authorization") or "").strip()
+    if auth.lower().startswith("bearer "):
+        return auth[7:].strip()
+    return ""
+
+
 @app.middleware("http")
 async def optional_api_key_middleware(request: Request, call_next):
     """
@@ -1310,16 +1326,55 @@ async def optional_api_key_middleware(request: Request, call_next):
             },
         )
     expected = api_cfg.get("api_key") or ""
-    provided = (request.headers.get("x-api-key") or "").strip()
-    if not provided and request.headers.get("authorization"):
-        auth = request.headers.get("authorization", "").strip()
-        if auth.lower().startswith("bearer "):
-            provided = auth[7:].strip()
-    if not provided or not hmac.compare_digest(provided, expected):
-        if webauthn_session_satisfies_require_api_key(cfg, request):
-            return await call_next(request)
+    provided = _provided_api_credential(request)
+    limits = auth_failure_limits(api_cfg)
+    source = client_host_for_auth(request, cfg)
+    cookie_ok = webauthn_session_satisfies_require_api_key(cfg, request)
+    if limits is None:
+        try:
+            matched = bool(provided) and hmac.compare_digest(
+                provided.encode(), str(expected).encode()
+            )
+        except (TypeError, UnicodeError):
+            matched = False
+        outcome = "ok" if matched else ("cookie" if cookie_ok else "invalid")
+        retry_after = 0
+    else:
+        limit, window = limits
+        outcome, retry_after = decide_auth_attempt(
+            source,
+            limit,
+            window,
+            provided=provided,
+            expected=str(expected),
+            cookie_ok=cookie_ok,
+        )
+    if outcome == "limited":
+        record_auth_failure(
+            method=request.method,
+            path=request.url.path,
+            source=source,
+            reason="auth_failure_limit",
+        )
+        return JSONResponse(
+            status_code=429,
+            content={"detail": "Too many authentication failures"},
+            headers={"Retry-After": str(retry_after)},
+        )
+    if outcome == "invalid":
+        record_auth_failure(
+            method=request.method,
+            path=request.url.path,
+            source=source,
+            reason="invalid_key",
+        )
         return JSONResponse(
             status_code=401, content={"detail": "Missing or invalid API key"}
+        )
+    if outcome == "cookie" and not cookie_mutation_origin_allowed(cfg, request):
+        return JSONResponse(
+            status_code=403,
+            content={"detail": "Cookie session requires the dashboard origin"},
         )
     return await call_next(request)
 

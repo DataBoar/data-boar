@@ -26,6 +26,35 @@ def effective_api_key_configured(api_cfg: dict[str, Any] | None) -> bool:
     return bool((os.environ.get(env_name) or "").strip())
 
 
+MIN_API_KEY_LENGTH = 32
+
+
+def resolved_api_key(api_cfg: dict[str, Any] | None) -> str:
+    """Key from ``api_key``, or from the env var named by ``api_key_from_env``."""
+    if not isinstance(api_cfg, dict):
+        return ""
+    key = (api_cfg.get("api_key") or "").strip()
+    if key:
+        return key
+    env_name = (api_cfg.get("api_key_from_env") or "").strip()
+    if not env_name:
+        return ""
+    return (os.environ.get(env_name) or "").strip()
+
+
+def assert_api_key_strength(api_cfg: dict[str, Any] | None) -> None:
+    """Refuse a short key when ``require_api_key`` is on. The key is not logged."""
+    if not isinstance(api_cfg, dict) or not api_cfg.get("require_api_key"):
+        return
+    key = resolved_api_key(api_cfg)
+    if not key or len(key) >= MIN_API_KEY_LENGTH:
+        return
+    raise ValueError(
+        "api.require_api_key is true but the API key is shorter than "
+        f"{MIN_API_KEY_LENGTH} characters. Generate one with: openssl rand -hex 32"
+    )
+
+
 def resolve_api_host(config: dict[str, Any], cli_host: str | None = None) -> str:
     """
     Resolve the host/interface for the API server.

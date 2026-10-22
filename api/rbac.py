@@ -234,7 +234,7 @@ def resolve_effective_roles_for_request(
     raw_c = request.cookies.get(session_cookie.COOKIE_NAME)
     if not raw_c:
         return None
-    uid = session_cookie.verify_session_cookie(secret, raw_c)
+    uid = session_cookie.accepted_session_user_id(secret, raw_c, db_manager)
     if uid is None:
         return None
     rj = db_manager.webauthn_roles_json_for_user_id(uid)

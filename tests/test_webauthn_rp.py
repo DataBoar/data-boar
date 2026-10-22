@@ -149,9 +149,52 @@ def test_webauthn_registration_verify_rejects_bad_state(webauthn_client):
 
 def test_webauthn_logout_returns_ok(webauthn_client):
     client, _routes = webauthn_client
-    r = client.post("/auth/webauthn/logout")
+    r = client.post("/auth/webauthn/logout", headers={"Origin": "http://testserver"})
     assert r.status_code == 200
     assert r.json().get("ok") is True
+
+
+def test_authentication_verify_sets_strict_twelve_hour_cookie(
+    webauthn_client, monkeypatch
+):
+    from types import SimpleNamespace
+
+    from webauthn.helpers import bytes_to_base64url
+
+    import api.webauthn_routes as webauthn_routes
+    from core.webauthn_rp import challenges
+
+    client, routes_mod = webauthn_client
+    client.get("/health")
+    cfg = yaml.safe_load(Path(routes_mod._config_path).read_text(encoding="utf-8"))
+    wa = webauthn_block(cfg)
+    uid = user_id_bytes(wa)
+    credential_id = b"unit-test-credential-id-32bytes!!"
+    dbm = routes_mod._get_engine().db_manager
+    dbm.webauthn_save_credential(
+        user_id=uid,
+        credential_id=credential_id,
+        public_key=b"k" * 64,
+        sign_count=0,
+    )
+    token = challenges.new_state_token()
+    challenges.put_pending(token=token, kind="auth", challenge=b"x" * 32)
+    monkeypatch.setattr(
+        webauthn_routes,
+        "verify_authentication_response",
+        lambda **_kwargs: SimpleNamespace(new_sign_count=1),
+    )
+    response = client.post(
+        "/auth/webauthn/authentication/verify",
+        json={
+            "state": token,
+            "credential": {"rawId": bytes_to_base64url(credential_id)},
+        },
+    )
+    assert response.status_code == 200
+    cookie = response.headers["set-cookie"].lower()
+    assert "samesite=strict" in cookie
+    assert "max-age=43200" in cookie
 
 
 def test_startup_fails_when_enabled_without_secret(

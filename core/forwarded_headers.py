@@ -72,3 +72,31 @@ def forwarded_proto_posture(request: Any, config: dict[str, Any]) -> dict[str, A
         "forwarded_proto_trusted": use_forwarded_proto,
         "effective_scheme": effective_scheme,
     }
+
+
+def client_host_for_auth(request: Any, config: dict[str, Any]) -> str:
+    """Peer address. X-Forwarded-For counts only from a trusted proxy.
+
+    Walk the header from the right and take the first address that is not in
+    the trusted networks. A forged left-hand entry does not change the result.
+    An invalid entry, or no trusted network, falls back to the direct peer.
+    """
+    direct = _client_ip_from_request(request)
+    direct_s = str(direct) if direct is not None else "unknown"
+    networks = _trusted_proxy_networks(config)
+    trusted = bool(
+        networks and direct is not None and any(direct in net for net in networks)
+    )
+    if not trusted:
+        return direct_s
+    raw = (request.headers.get("x-forwarded-for") or "").strip()
+    parts = [part.strip() for part in raw.split(",") if part.strip()]
+    for item in reversed(parts):
+        try:
+            addr = ip_address(item)
+        except ValueError:
+            return direct_s
+        if any(addr in net for net in networks):
+            continue
+        return str(addr)
+    return direct_s

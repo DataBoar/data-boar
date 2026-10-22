@@ -22,7 +22,11 @@ from core.webauthn_rp.html_csrf import (
     resolve_html_csrf_signing_secret,
     verify_html_csrf_token,
 )
-from core.webauthn_rp.settings import resolve_token_secret, webauthn_block
+from core.webauthn_rp.settings import (
+    expected_origins,
+    resolve_token_secret,
+    webauthn_block,
+)
 
 _routes_get_config: Any | None = None
 _routes_get_engine: Any | None = None
@@ -66,7 +70,12 @@ def request_has_webauthn_session(request: Request, token_secret: str) -> bool:
     raw = request.cookies.get(session_cookie.COOKIE_NAME)
     if not raw:
         return False
-    return session_cookie.verify_session_cookie(token_secret, raw) is not None
+    try:
+        _cfg, engine = _routes_config_engine()
+        dbm = engine.db_manager
+    except Exception:
+        return False
+    return session_cookie.accepted_session_user_id(token_secret, raw, dbm) is not None
 
 
 def webauthn_session_satisfies_require_api_key(cfg: dict, request: Request) -> bool:
@@ -83,6 +92,24 @@ def webauthn_session_satisfies_require_api_key(cfg: dict, request: Request) -> b
     if not secret:
         return False
     return request_has_webauthn_session(request, secret)
+
+
+_MUTATING_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
+
+
+def cookie_mutation_origin_allowed(cfg: dict, request: Request) -> bool:
+    """Cookie-authenticated mutations must match the dashboard origin (#2079)."""
+    if request.method not in _MUTATING_METHODS:
+        return True
+    sec_fetch = (request.headers.get("sec-fetch-site") or "").strip().lower()
+    if sec_fetch == "same-origin":
+        return True
+    origin = (request.headers.get("origin") or "").strip().rstrip("/")
+    if not origin:
+        return False
+    wa = webauthn_block(cfg) or {}
+    allowed = {item.rstrip("/") for item in expected_origins(wa)}
+    return origin in allowed
 
 
 def is_locale_html_public_unauthenticated(method: str, rest: list[str]) -> bool:
