@@ -237,9 +237,14 @@ scan:
     routes._audit_engine = None
     client = TestClient(routes.app)
     loaded = yaml.safe_load(cfg.read_text(encoding="utf-8"))
-    cookie = sign_session(
-        "unit-test-webauthn-secret-min-16", user_id_bytes(webauthn_block(loaded))
+    uid = user_id_bytes(webauthn_block(loaded))
+    routes._get_engine().db_manager.webauthn_save_credential(
+        user_id=uid,
+        credential_id=b"unit-test-credential-id-32bytes!!",
+        public_key=b"k" * 64,
+        sign_count=0,
     )
+    cookie = sign_session("unit-test-webauthn-secret-min-16", uid)
     client.cookies.set(COOKIE_NAME, cookie)
     try:
         missing = client.post("/scan", json={})

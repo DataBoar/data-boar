@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import hmac
 import json
+import logging
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
@@ -205,7 +206,8 @@ async def registration_verify(request: Request) -> JSONResponse:
         public_key=verified.credential_public_key,
         sign_count=verified.sign_count,
     )
-    cookie = session_cookie.sign_session(secret, uid)
+    epoch = dbm.webauthn_session_epoch_for_user_id(uid)
+    cookie = session_cookie.sign_session(secret, uid, 0 if epoch is None else epoch)
     r = JSONResponse(content={"ok": True, "registered": True})
     r.set_cookie(
         key=session_cookie.COOKIE_NAME,
@@ -293,7 +295,8 @@ async def authentication_verify(request: Request) -> JSONResponse:
         ) from e
     dbm.webauthn_update_sign_count(cid, verified.new_sign_count)
     uid = bytes(match["user_id"])
-    cookie = session_cookie.sign_session(secret, uid)
+    epoch = dbm.webauthn_session_epoch_for_user_id(uid)
+    cookie = session_cookie.sign_session(secret, uid, 0 if epoch is None else epoch)
     r = JSONResponse(content={"ok": True, "authenticated": True})
     r.set_cookie(
         key=session_cookie.COOKIE_NAME,
@@ -315,8 +318,7 @@ async def webauthn_status(request: Request) -> JSONResponse:
     raw = request.cookies.get(session_cookie.COOKIE_NAME)
     authed = False
     if raw:
-        uid = session_cookie.verify_session_cookie(secret, raw)
-        authed = uid is not None
+        authed = session_cookie.accepted_session_user_id(secret, raw, dbm) is not None
     return JSONResponse(
         {
             "enabled": True,
@@ -327,10 +329,23 @@ async def webauthn_status(request: Request) -> JSONResponse:
 
 
 @router.post("/logout")
-async def webauthn_logout() -> JSONResponse:
-    _wa_or_404()
+async def webauthn_logout(request: Request) -> JSONResponse:
+    _wa, secret = _wa_secret_or_raise()
     r = JSONResponse(content={"ok": True})
-    r.delete_cookie(session_cookie.COOKIE_NAME, path="/")
+    try:
+        raw = request.cookies.get(session_cookie.COOKIE_NAME)
+        if raw:
+            dbm = _get_engine().db_manager
+            uid = session_cookie.accepted_session_user_id(secret, raw, dbm)
+            if uid is not None:
+                dbm.webauthn_bump_session_epoch(uid)
+    except Exception as exc:
+        logging.getLogger(__name__).warning(
+            "WebAuthn logout could not revoke the session (%s)",
+            type(exc).__name__,
+        )
+    finally:
+        r.delete_cookie(session_cookie.COOKIE_NAME, path="/")
     return r
 
 

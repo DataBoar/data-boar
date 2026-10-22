@@ -365,6 +365,7 @@ class WebAuthnCredential(Base):
     created_at = Column(DateTime, default=_utc_now)
     # JSON array of role names, e.g. ["reports_reader","dashboard"]. NULL = use config api.rbac.default_roles.
     roles_json = Column(String(512), nullable=True)
+    session_epoch = Column(Integer, nullable=False, default=0)
 
 
 class MaturityAssessmentAnswer(Base):
@@ -407,6 +408,7 @@ class LocalDBManager:
         self._ensure_application_findings_table()
         self._ensure_webauthn_credentials_table()
         self._ensure_webauthn_roles_json_column()
+        self._ensure_webauthn_session_epoch_column()
         self._ensure_source_mtime_ns_column()
         self._ensure_source_size_column()
         self._ensure_content_fingerprint_column()
@@ -566,6 +568,24 @@ class LocalDBManager:
                 )
                 conn.commit()
 
+    def _ensure_webauthn_session_epoch_column(self) -> None:
+        """Add session_epoch when missing (logout revocation, #2079)."""
+        with self.engine.connect() as conn:
+            r = conn.execute(
+                text(
+                    "SELECT 1 FROM pragma_table_info('webauthn_credentials') "
+                    "WHERE name='session_epoch'"
+                )
+            )
+            if r.fetchone() is None:
+                conn.execute(
+                    text(
+                        "ALTER TABLE webauthn_credentials ADD COLUMN "
+                        "session_epoch INTEGER NOT NULL DEFAULT 0"
+                    )
+                )
+                conn.commit()
+
     def _ensure_source_mtime_ns_column(self) -> None:
         """Add source_mtime_ns to filesystem_findings if missing (Phase 1 migration)."""
         with self.engine.connect() as conn:
@@ -712,6 +732,52 @@ class LocalDBManager:
                 return None
             s = str(rj).strip()
             return s if s else None
+        finally:
+            session.close()
+
+    def webauthn_session_epoch_for_user_id(self, user_id: bytes) -> int | None:
+        """Indexed read of this user's session epoch.
+
+        No cache: a cached epoch would keep a logged-out cookie valid until
+        the cache entry expired.
+        """
+        uid = user_id[:64]
+        session = self._session_factory()
+        try:
+            value = (
+                session.query(func.max(WebAuthnCredential.session_epoch))
+                .filter(WebAuthnCredential.user_id == uid)
+                .scalar()
+            )
+            if value is None:
+                return None
+            return int(value)
+        finally:
+            session.close()
+
+    def webauthn_bump_session_epoch(self, user_id: bytes) -> None:
+        """Move every credential row for this user to max+1 in one transaction."""
+        uid = user_id[:64]
+        session = self._session_factory()
+        try:
+            current = (
+                session.query(func.max(WebAuthnCredential.session_epoch))
+                .filter(WebAuthnCredential.user_id == uid)
+                .scalar()
+            )
+            if current is None:
+                return
+            nxt = int(current) + 1
+            session.query(WebAuthnCredential).filter(
+                WebAuthnCredential.user_id == uid
+            ).update(
+                {WebAuthnCredential.session_epoch: nxt},
+                synchronize_session=False,
+            )
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
         finally:
             session.close()
 

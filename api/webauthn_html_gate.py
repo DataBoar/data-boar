@@ -70,7 +70,12 @@ def request_has_webauthn_session(request: Request, token_secret: str) -> bool:
     raw = request.cookies.get(session_cookie.COOKIE_NAME)
     if not raw:
         return False
-    return session_cookie.verify_session_cookie(token_secret, raw) is not None
+    try:
+        _cfg, engine = _routes_config_engine()
+        dbm = engine.db_manager
+    except Exception:
+        return False
+    return session_cookie.accepted_session_user_id(token_secret, raw, dbm) is not None
 
 
 def webauthn_session_satisfies_require_api_key(cfg: dict, request: Request) -> bool:
