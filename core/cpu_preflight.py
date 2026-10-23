@@ -4,21 +4,23 @@ PyPI numpy/scipy wheels compile a baseline that SIGILLs on x86 CPUs without
 SSE4.2, POPCNT, and (for bundled OpenBLAS) AVX. That crash is native — it cannot
 be caught with try/except. Call this module *before* those imports (#929).
 
-On CPUs missing the required flags, the module now probes the *installed* stack
-by running a tiny BLAS/NumPy/SciPy/scikit-learn workload in a child process. If
-the installed stack (e.g. a wheelhouse x86-64-v1 build) executes without SIGILL,
-ML is enabled regardless of the CPU's reported flags.
+The CPU flags alone do not decide (#2125): a wheelhouse x86-64-v1 build of
+numpy/scipy/scikit-learn runs on those CPUs. When a required flag is missing the
+module probes the *installed* stack in a child process (a native crash only kills
+the child) and fails closed when safety cannot be proven.
 """
 
 from __future__ import annotations
 
+import enum
 import logging
 import platform
 import re
+import signal
 import subprocess
 import sys
 from pathlib import Path
-from typing import Final
+from typing import Final, NamedTuple
 
 # Typical PyPI numpy/scipy wheel floor on x86_64: x86-64-v2 (sse4_2 + popcnt)
 # plus AVX in bundled OpenBLAS. Missing any one is enough to skip the ML stack.
@@ -39,13 +41,31 @@ _CPUINFO_FLAGS_RE = re.compile(
     re.IGNORECASE | re.MULTILINE,
 )
 
-# Child process exit codes
-_CHILD_EXIT_SAFE: Final = 0  # installed stack ran without SIGILL
-_CHILD_EXIT_MODULE_MISSING: Final = 3  # numpy/scipy/sklearn not installed (ImportError)
-_CHILD_EXIT_UNSAFE: Final = 1  # SIGILL, timeout, or other failure
+# Probe child contract (#2125). The child exits 0 when the installed stack ran,
+# _CHILD_EXIT_MODULE_MISSING when numpy itself is not installed, and anything else
+# (a traceback, or a death by signal such as SIGILL) means the stack is unsafe.
+_CHILD_EXIT_MODULE_MISSING: Final = 3
+_PROBE_TIMEOUT_SECONDS: Final = 20
+_STDERR_DETAIL_MAX: Final = 200
 
-# Module-level cache for the probe result
-_probe_result_cache: dict[str, bool | None] = {}
+
+class ProbeStatus(enum.Enum):
+    """Outcome class of the installed-stack probe."""
+
+    SAFE = "safe"
+    MODULE_MISSING = "module_missing"
+    UNSAFE = "unsafe"
+
+
+class ProbeResult(NamedTuple):
+    """Probe outcome plus a human-readable, precise detail for the warning."""
+
+    status: ProbeStatus
+    detail: str
+
+
+# One probe per process: detector and dl_backend both ask.
+_probe_cache: ProbeResult | None = None
 
 
 def _normalize_flag(flag: str) -> str:
@@ -106,89 +126,109 @@ def missing_pypi_numpy_features(
     return tuple(missing)
 
 
-def _probe_code() -> str:
-    """Python code run in a child process to test the installed stack.
-
-    The probe imports numpy and executes a tiny BLAS-using operation (dot + linalg).
-    If importable, it also exercises scipy.linalg and sklearn.ensemble with a tiny fit.
-    No imports from core.* are allowed.
-    """
-    return r"""
+# Child program. Only a *missing* module is benign: a numpy/scipy/sklearn that
+# imports but refuses to run on this CPU raises a plain ImportError/RuntimeError
+# (newer wheels) or dies by SIGILL (older ones); both must stay a failure.
+# The child imports nothing from core.*.
+_PROBE_TEMPLATE: Final = r"""
 import sys
-import numpy as np
 
-# Tiny BLAS operation (dot + linalg)
+
+def _top(exc):
+    return (exc.name or "").split(".")[0]
+
+
+try:
+    import numpy as np
+except ModuleNotFoundError as exc:
+    if _top(exc) == "numpy":
+        sys.exit(__MODULE_MISSING_EXIT__)
+    raise
+
 a = np.array([[1.0, 2.0], [3.0, 4.0]])
 b = np.array([[5.0, 6.0], [7.0, 8.0]])
 np.dot(a, b)
 np.linalg.solve(a, b)
 
-# Optional scipy
 try:
     import scipy.linalg
+except ModuleNotFoundError as exc:
+    if _top(exc) != "scipy":
+        raise
+else:
     scipy.linalg.det(a)
-except ImportError:
-    pass
 
-# Optional sklearn
 try:
     from sklearn.ensemble import RandomForestClassifier
-    import numpy as np
-    X = np.array([[0, 0], [1, 1]])
+except ModuleNotFoundError as exc:
+    if _top(exc) not in ("sklearn", "scipy"):
+        raise
+else:
+    x = np.array([[0.0, 0.0], [1.0, 1.0]])
     y = np.array([0, 1])
-    RandomForestClassifier(n_estimators=1, max_depth=1, random_state=0).fit(X, y)
-except ImportError:
-    pass
-
-sys.exit(0)
+    RandomForestClassifier(n_estimators=1, max_depth=1, random_state=0).fit(x, y)
 """
 
 
-def _run_probe() -> bool | None:
-    """Run the installed-stack probe in a child process.
+def _probe_code() -> str:
+    """Child program text, with the missing-module exit code from the constant."""
+    return _PROBE_TEMPLATE.replace(
+        "__MODULE_MISSING_EXIT__", str(_CHILD_EXIT_MODULE_MISSING)
+    )
 
-    Returns:
-        True  - probe succeeded (stack is safe)
-        False - probe failed (SIGILL, timeout, OSError, etc.)
-        None  - numpy/scipy/sklearn not installed (callers' ImportError guards apply)
-    """
-    probe_code = _probe_code()
+
+def _signal_name(signum: int) -> str:
+    try:
+        return signal.Signals(signum).name
+    except ValueError:
+        return f"signal {signum}"
+
+
+def _classify_probe(returncode: int, stderr: str) -> ProbeResult:
+    """Map a finished child to a ProbeResult with a precise detail."""
+    if returncode == 0:
+        return ProbeResult(ProbeStatus.SAFE, "installed stack ran")
+    if returncode == _CHILD_EXIT_MODULE_MISSING:
+        return ProbeResult(ProbeStatus.MODULE_MISSING, "numpy is not installed")
+    if returncode < 0:
+        return ProbeResult(ProbeStatus.UNSAFE, f"killed by {_signal_name(-returncode)}")
+    lines = [line.strip() for line in stderr.splitlines() if line.strip()]
+    tail = f": {lines[-1][:_STDERR_DETAIL_MAX]}" if lines else ""
+    return ProbeResult(ProbeStatus.UNSAFE, f"exited with code {returncode}{tail}")
+
+
+def _run_probe() -> ProbeResult:
+    """Run the installed-stack probe once in a child process (fail closed)."""
     try:
         proc = subprocess.run(
-            [sys.executable, "-I", "-c", probe_code],
+            [sys.executable, "-I", "-c", _probe_code()],
             stdin=subprocess.DEVNULL,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            timeout=20,
+            capture_output=True,
+            text=True,
+            errors="replace",
+            timeout=_PROBE_TIMEOUT_SECONDS,
+            check=False,
         )
-        if proc.returncode == 0:
-            return True
-        if proc.returncode == _CHILD_EXIT_MODULE_MISSING:
-            return None
-        if proc.returncode < 0:
-            # Killed by signal (SIGILL = -4 on Linux)
-            return False
-        # Any other non-zero
-        return False
     except subprocess.TimeoutExpired:
-        return False
-    except OSError:
-        return False
+        return ProbeResult(
+            ProbeStatus.UNSAFE, f"timed out after {_PROBE_TIMEOUT_SECONDS} s"
+        )
+    except OSError as exc:
+        return ProbeResult(ProbeStatus.UNSAFE, f"could not start: {exc}")
+    return _classify_probe(proc.returncode, proc.stderr or "")
 
 
-def _cached_probe_result() -> bool | None:
-    """Return cached probe result, running the probe if not cached."""
-    cache_key = "probe_result"
-    if cache_key in _probe_result_cache:
-        return _probe_result_cache[cache_key]
-    result = _run_probe()
-    _probe_result_cache[cache_key] = result
-    return result
+def _cached_probe() -> ProbeResult:
+    global _probe_cache
+    if _probe_cache is None:
+        _probe_cache = _run_probe()
+    return _probe_cache
 
 
 def _reset_probe_cache() -> None:
-    """Reset the probe cache (for testing)."""
-    _probe_result_cache.clear()
+    """Forget the probe outcome (tests)."""
+    global _probe_cache
+    _probe_cache = None
 
 
 def numpy_import_safe(
@@ -198,27 +238,19 @@ def numpy_import_safe(
 ) -> bool:
     """True when it is safe to import numpy/sklearn without a likely SIGILL.
 
-    On x86 CPUs missing required flags, this probes the *installed* stack.
-    A working wheelhouse build on a no-AVX CPU returns True.
+    Capable CPUs (no required flag missing) return True without any probe. On a
+    CPU missing flags the installed stack is probed: a working wheelhouse
+    x86-64-v1 build is safe, a stack that is simply not installed is left to the
+    callers' ImportError guards, anything else is unsafe.
     """
-    missing = missing_pypi_numpy_features(flags, machine=machine)
-    if not missing:
+    if not missing_pypi_numpy_features(flags, machine=machine):
         return True
-    # Flags missing — probe the installed stack
-    result = _cached_probe_result()
-    if result is True:
-        return True
-    if result is None:
-        # Module not installed: safe to proceed; callers' ImportError guards handle it
-        return True
-    return False
+    return _cached_probe().status is not ProbeStatus.UNSAFE
 
 
-def numpy_cpu_incompatible_message(missing: tuple[str, ...]) -> str:
-    feat = ", ".join(missing) if missing else "required SIMD"
+def _remedy_text() -> str:
+    """Wheelhouse remediation shared by every skip message."""
     return (
-        f"this CPU does not have {feat} required by the PyPI numpy wheel. "
-        "ML/DL is skipped so the process does not SIGILL; regex CPF/CNPJ still runs. "
         "Primary (restore working ML on this CPU — product path [noavx], not a "
         f"PyPI extra): hosted wheelhouse {WHEELHOUSE_TAG} on {WHEELHOUSE_REPO} "
         "(SHA256SUMS). docs/TROUBLESHOOTING.md section "
@@ -235,25 +267,20 @@ def numpy_cpu_incompatible_message(missing: tuple[str, ...]) -> str:
     )
 
 
-def _probe_failure_message(missing: tuple[str, ...], detail: str) -> str:
+def numpy_cpu_incompatible_message(
+    missing: tuple[str, ...],
+    probe_detail: str | None = None,
+) -> str:
     feat = ", ".join(missing) if missing else "required SIMD"
+    head = f"this CPU does not have {feat} required by the PyPI numpy wheel. "
+    if probe_detail:
+        head += (
+            f"The installed numpy stack also failed a safety probe ({probe_detail}). "
+        )
     return (
-        f"this CPU does not have {feat} required by the PyPI numpy wheel. "
-        f"Installed stack probe {detail}. ML/DL is skipped so the process does not SIGILL; "
-        "regex CPF/CNPJ still runs. "
-        "Primary (restore working ML on this CPU — product path [noavx], not a "
-        f"PyPI extra): hosted wheelhouse {WHEELHOUSE_TAG} on {WHEELHOUSE_REPO} "
-        "(SHA256SUMS). docs/TROUBLESHOOTING.md section "
-        "'x86-64-v1 / wheelhouse install'. "
-        f"gh release download {WHEELHOUSE_TAG} --repo {WHEELHOUSE_REPO} "
-        "--pattern '*musllinux*' --pattern '*-none-any.whl' --dir ~/wheelhouse-v1 "
-        "(glibc: swap *musllinux* for *manylinux*); then "
-        "pip install --no-index --find-links $HOME/wheelhouse-v1 "
-        "--force-reinstall numpy scipy scikit-learn pandas "
-        "(pipx: pipx runpip data-boar install --no-index --find-links "
-        "$HOME/wheelhouse-v1 --force-reinstall numpy scipy scikit-learn pandas). "
-        "Fallback only: distro numpy (`apk add py3-numpy` / "
-        "`apt install python3-numpy`) or a source build with `-Dcpu-baseline=min`."
+        head
+        + "ML/DL is skipped so the process does not SIGILL; regex CPF/CNPJ still runs. "
+        + _remedy_text()
     )
 
 
@@ -262,26 +289,20 @@ def warn_if_numpy_unsafe(
     *,
     machine: str | None = None,
 ) -> bool:
-    """Log once and return False when the CPU cannot run the PyPI numpy wheel.
+    """Log once and return False when the installed stack cannot run on this CPU.
 
-    On x86 CPUs missing required flags, this probes the installed stack.
-    A working wheelhouse build returns True. A failed probe (SIGILL/timeout)
-    returns False and logs the specific failure reason.
+    Capable CPUs return True without a probe. On a CPU missing required flags the
+    installed stack is probed once per process; only an UNSAFE probe skips ML, and
+    the warning states the real reason (signal, timeout, exit code, start error).
     """
     global _logged_skip
     missing = missing_pypi_numpy_features(flags, machine=machine)
     if not missing:
         return True
-
-    result = _cached_probe_result()
-    if result is True:
+    result = _cached_probe()
+    if result.status is not ProbeStatus.UNSAFE:
         return True
-    if result is None:
-        # Module not installed: callers' ImportError guards handle it
-        return True
-
     if not _logged_skip:
-        if result is False:
-            _log.warning(_probe_failure_message(missing, "failed (SIGILL or timeout)"))
+        _log.warning(numpy_cpu_incompatible_message(missing, result.detail))
         _logged_skip = True
     return False
