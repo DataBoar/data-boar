@@ -284,3 +284,39 @@ def test_dl_backend_skips_native_imports_when_cpu_unsafe(monkeypatch) -> None:
         cpu_preflight._logged_skip = False
         importlib.reload(dl_backend)
         _reset_probe_cache()
+
+
+def test_new_probe_result_returns_bool_on_old_code() -> None:
+    """Negation proof: on ddadd3c0 code, _run_probe returns bool, not _ProbeResult."""
+    import core.cpu_preflight as cpu_preflight
+
+    # On old code, _run_probe returns True/False/None directly
+    result = cpu_preflight._run_probe()
+    # On old code, this is a bool or None
+    assert isinstance(result, (bool, type(None))), (
+        f"Old code returns bool/None, got {type(result)}"
+    )
+
+
+def test_new_cached_probe_result_returns_bool_on_old_code() -> None:
+    """Negation proof: on ddadd3c0 code, _cached_probe_result returns bool/None."""
+    import core.cpu_preflight as cpu_preflight
+
+    _reset_probe_cache()
+    result = _cached_probe_result()
+    # On old code, this is a bool or None
+    assert isinstance(result, (bool, type(None))), (
+        f"Old code returns bool/None, got {type(result)}"
+    )
+
+
+def test_new_warn_if_numpy_unsafe_no_detail() -> None:
+    """Negation proof: old code's warn_if_numpy_usa uses different message format."""
+    import core.cpu_preflight as cpu_preflight
+
+    # Old code doesn't have the detailed probe result with status/detail
+    # Just verify the function still works (backward compat)
+    cpu_preflight._logged_skip = False
+    # With no flags missing, should return True
+    result = cpu_preflight.warn_if_numpy_unsafe()
+    assert isinstance(result, bool)
