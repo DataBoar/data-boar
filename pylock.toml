@@ -2059,7 +2059,7 @@ wheels = [{ url = "https://files.pythonhosted.org/packages/43/e3/7d92a15f894aa0c
 [[packages]]
 name = "msoffcrypto-tool"
 version = "6.0.0"
-marker = "(platform_python_implementation != 'PyPy' and sys_platform == 'darwin') or (platform_python_implementation != 'PyPy' and sys_platform == 'win32') or (sys_platform != 'darwin' and sys_platform != 'win32')"
+marker = "platform_python_implementation != 'PyPy' or (sys_platform != 'darwin' and sys_platform != 'win32')"
 index = "https://pypi.org/simple"
 sdist = { url = "https://files.pythonhosted.org/packages/a6/34/6250bdddaeaae24098e45449ea362fb3555a65fba30cad0ad5630ea48d1a/msoffcrypto_tool-6.0.0.tar.gz", upload-time = 2026-01-12T08:59:56Z, size = 40593, hashes = { sha256 = "9a5ebc4c0096b42e5d7ebc2350afdc92dc511061e935ca188468094fdd032bbe" } }
 wheels = [{ url = "https://files.pythonhosted.org/packages/3c/85/9e359fa9279e1d6861faaf9b6f037a3226374deb20a054c3937be6992013/msoffcrypto_tool-6.0.0-py3-none-any.whl", upload-time = 2026-01-12T08:59:55Z, size = 48791, hashes = { sha256 = "46c394ed5d9641e802fc79bf3fb0666a53748b23fa8c4aa634ae9d30d46fe397" } }]
