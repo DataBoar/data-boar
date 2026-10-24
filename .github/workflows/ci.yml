@@ -328,8 +328,9 @@ jobs:
       # CVE-2026-3219 cleared: pip>=26.1 fixes (PyPI 26.1.1 as of 2026-05); no longer suppressed.
       # PYSEC-2024-277 / PYSEC-2026-89 / PYSEC-2025-183: OSV entries without PyPI fix versions (2026-05-20); triage via deps issue.
       # PYSEC-2026-217: mariadb 1.1.14 connector — OSV entry without a PyPI fix version (2026-06-17); remove when a fixed release ships. Tracked in #922.
+      # filelock 3.32.7 (CVE-2026-112907 / CVE-2026-112913 / CVE-2026-112940 = GHSA-567q-5qvw-pf92 / GHSA-9vhv-jxww-xfm5 / GHSA-v4x8-3wr5-3wq8): fix 4.2.1 is blocked by snowflake-connector-python 4.8.0 (filelock<4); Boar does not import filelock. pip-audit has no expiry: the OSV ignores in security/osv-scanner.toml expire 2026-11-22; remove all of them with #2136.
       - name: Run pip audit
-        run: uv run pip-audit --ignore-vuln PYSEC-2024-277 --ignore-vuln PYSEC-2026-89 --ignore-vuln PYSEC-2025-183 --ignore-vuln PYSEC-2026-217
+        run: uv run pip-audit --ignore-vuln PYSEC-2024-277 --ignore-vuln PYSEC-2026-89 --ignore-vuln PYSEC-2025-183 --ignore-vuln PYSEC-2026-217 --ignore-vuln CVE-2026-112907 --ignore-vuln CVE-2026-112913 --ignore-vuln CVE-2026-112940
 
   dependency-review:
     name: Dependency review (PR)
