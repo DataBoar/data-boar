@@ -1,0 +1,74 @@
+# PLAN — YAML-Based Plugin System (Extensibility)
+
+**Status:** Active
+**Date:** 2026-05-14
+**Authors:** Fabio Leitao
+**Priority:** H1
+**Tags:** extensibility, plugin, yaml, schema, patterns, ADR-0052
+**Depends on:** ADR-0052
+**GitHub:** [#865](https://github.com/DataBoar/data-boar/issues/865) (Boar Plugin SDK — formal contract; complements YAML schema phases here)
+
+<!-- plans-hub-summary: Centralized YAML schema + validator for operator pattern plugins; unified patterns_plugin_file; Phase 1b (context gates, PCI) queued as S4b. -->
+<!-- plans-hub-related: PLAN_ADDITIONAL_DETECTION_TECHNIQUES_AND_FN_REDUCTION.md -->
+
+## Goal
+
+Allow operators to add custom discovery patterns without modifying the Data Boar core engine (Python or Rust). All custom pattern definitions are validated against a single, centralized YAML schema file before the scan engine loads them.
+
+## Problem Statement
+
+- Three separate pattern file keys (`regex_overrides_file`, `ml_patterns_file`, `dl_patterns_file`) each have their own ad-hoc YAML parser with no formal schema.
+- Malformed plugin files fail **silently**: the engine skips bad items without reporting why.
+- Operators have no machine-readable contract to validate their custom files before a scan run.
+- There is no support for a **unified plugin file** (one file with all pattern types), requiring operators to manage 3+ separate configs.
+
+## Approach (Three Phases)
+
+### Phase 1 — Canonical Schema + Validator (this plan) — shipped
+
+1. `config/plugin_schema.yaml` — centralized definition for all plugin types (regex, ml, dl).
+2. `config/plugin_validator.py` — lightweight validator (no third-party deps) that reads the schema and checks a plugin file before loading, emitting `PluginValidationWarning` with actionable messages.
+3. `config/loader.py` — integrate validator call into existing `_load_regex_overrides`, `_load_ml_patterns`, `_load_dl_patterns`. **No behaviour change** for valid files; warnings surfaced for invalid ones.
+4. New unified key: `patterns_plugin_file:` — a single YAML file that may contain `regex_patterns:`, `ml_patterns:`, and/or `dl_patterns:` sections. Backward-compatible with the three legacy keys.
+5. Tests: `tests/test_plugin_schema.py` — unit-test validator edge cases (missing required field, wrong type, unknown key, unified file).
+
+### Phase 1b — Context gates + PCI sample calibration (queued; `PLANS_TODO` **S4b**)
+
+- **Driver:** PCI-DSS v4 readiness — noisy logs where digit runs collide with PAN-shaped regexes; validate ADR-0052 YAML expressiveness under stress.
+- **Engine work:** optional schema fields (e.g. proximity keywords, metadata) must wire into `SensitivityDetector` (regex light to Luhn or keyword window before heavy work), not validator-only.
+- **Sample file:** `docs/compliance-samples/compliance-sample-pci_dss.yaml` — align PAN patterns with built-in `CREDIT_CARD` to avoid duplicate findings; document framing already warns on bare routing-style regexes.
+- **Exit:** same discipline as other sprint rows — tests + `check-all`; then remove or date the matching row in `docs/ops/today-mode/CARRYOVER.md` (EN + pt-BR).
+- **Follow-up — ML/DL backfill (defaults + samples):** align built-in `DEFAULT_ML_TERMS` / DL prototype paths with **compliance-sample-*.yaml** vocabulary (geo and sector terms); add optional `dl_patterns:` blocks in samples when operators need embedding parity — thin slices, no big-bang.
+- **Follow-up — U.S. retail + health samples:** optional new files mirroring the **LGPD** export model (core `DEFAULT_*` stays canonical): e.g. `compliance-sample-us_ca_cpra.yaml` (CCPA as amended / CPRA inventory framing) and `compliance-sample-us_hipaa_phi.yaml` (PHI-oriented patterns and terms) for counsel-tuned overrides.
+
+### Future research — declarative policy format ([#865](https://github.com/DataBoar/data-boar/issues/865) / [#1066](https://github.com/DataBoar/data-boar/issues/1066))
+
+If the Plugin SDK later needs **operator-authored gates** without Python plugins (e.g. “severity G3 in a column named `log` blocks merge”), [json-logic](https://github.com/jwadhams/json-logic-py) is a **reference format** for lightweight, auditable rules — more approachable than regex-only expressions, safer than `eval()`. **No dependency or implementation** until a concrete requirement appears in a future phase.
+
+### Phase 2 — Rust Passthrough (future)
+
+- Export compiled regex patterns from the plugin file to the Rust `boar_fast_filter` layer so custom regexes benefit from Rust-speed matching.
+
+### Phase 3 — CLI Linter (future)
+
+- `uv run python -m data_boar validate-plugin <file>` — operator can validate a plugin file standalone, outside a scan run.
+
+## Acceptance Criteria (Phase 1)
+
+- [x] `config/plugin_schema.yaml` documents all three pattern types with required/optional fields, types, and constraints.
+- [x] `validate_plugin_file(path, plugin_type)` returns a `PluginValidationResult` (valid bool + list of issue strings).
+- [x] Invalid items in `regex_overrides_file` emit `PluginValidationWarning` (not silent skip).
+- [x] `patterns_plugin_file:` config key loads all three sections from one file.
+- [x] All existing example files pass validation.
+- [x] `tests/test_plugin_schema.py` green with at least 8 test cases.
+- [x] Operator author guide: `docs/PLUGIN_AUTHOR_GUIDE.md` (+ pt-BR) and `patterns_plugin_file` in `docs/SENSITIVITY_DETECTION.md` (#836).
+
+## Related
+
+- ADR-0052 (architectural decision)
+- `docs/PLUGIN_AUTHOR_GUIDE.md` — YAML pattern author front door (#836)
+- `docs/SENSITIVITY_DETECTION.md` — `patterns_plugin_file` in operator reference (#836)
+- `config/regex_overrides.example.yaml` — already valid under new schema
+- [ADR-0090](../adr/ADR-0090-open-core-plugin-boundary-pro-auditability-reference-sample.md) / [PLAN_PRO_PLUGIN_AUDITABILITY.md](PLAN_PRO_PLUGIN_AUDITABILITY.md) — SDK **reference sample** + Pro artifact auditability (#811); distinct from this YAML pattern schema
+- [ADR-0086](../adr/ADR-0086-plugin-sdk-language-neutral-contract.md) — L1/L2/L3 envelope (sample CI target)
+- Related issues: [#769](https://github.com/DataBoar/data-boar/issues/769), [#784](https://github.com/DataBoar/data-boar/issues/784), [#785](https://github.com/DataBoar/data-boar/issues/785)

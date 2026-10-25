@@ -1,0 +1,90 @@
+---
+description: When editing Python or markdown, avoid SonarQube and CodeQL violations; run the project quality tests after changes so CI stays green.
+globs: ["**/*.py", "**/*.md", ".cursor/**/*.mdc"]
+alwaysApply: false
+---
+
+# Quality: SonarQube and CodeQL
+
+This project enforces quality and security via **tests** (CI) and **CodeQL** (GitHub code scanning). When you create or edit **Python** or **markdown** files, follow the rules below and run the relevant tests so we do not introduce regressions.
+
+## CI enforcement (GitHub Actions)
+
+The **`CI`** workflow (`.github/workflows/ci.yml`) includes a dedicated **`lint`** job on **Python 3.12** that runs **`uv run pre-commit run --all-files`** — the same hook bundle as **`.pre-commit-config.yaml`** (Ruff check + format, **plans-stats** `--check`, markdown lint, pt-BR locale, confidential-commercial guard).
+
+Other **`CI`** jobs: **test** (pytest matrix 3.12/3.13), **bandit**, **dependency audit** (pip-audit), optional **Sonar**. **Semgrep** is a separate workflow. Match local runs to **pre-commit** + **test** before PR.
+
+**Windows (operator):** Prefer **`.\scripts\check-all.ps1`** or **`.\scripts\lint-only.ps1`** over ad-hoc one-liners when iterating — same gates, consistent with **check-all-gate**. Install hooks once: **`uv run pre-commit install`** so **`git commit`** runs the same checks without waiting for CI.
+
+**Security scan tier (#1044):** Default **`check-all`** runs **Bandit** + **Zizmor** after pre-commit/pytest (`scripts/check-all-security-scans.*`, fail-collect). Use **`--enforced`** / **`-Enforced`** to add **Semgrep** (same command as **`semgrep.yml`**). Full mirror table: **`docs/QUALITY_WORKFLOW_RECOMMENDATIONS.md`** §4c.
+
+## After editing Python
+
+1. **Lint bundle (Ruff + docs guards + plans-stats):** Run **`uv run pre-commit run --all-files`** (or rely on **`git commit`** after **`uv run pre-commit install`**). Fix format with **`uv run ruff format .`** when **ruff-format** fails. Same checks run in **`ci.yml`** **`lint`**; see **pre-commit-ruff** and **`.pre-commit-config.yaml`**.
+
+1. **Run SonarQube-style and security tests:**
+
+   ```bash
+   uv run pytest tests/test_sonarqube_python.py tests/test_security.py -v -W error
+   ```
+
+   Fix any failure before committing.
+
+1. **Optional — Bandit (matches CI):** After **security-sensitive** Python changes (SQL connectors, subprocess, auth), run **`uv run bandit -c pyproject.toml -r api core config connectors database file_scan report main.py -ll -q`**. Config: **`[tool.bandit]`** in **`pyproject.toml`**. Full triage: **`docs/plans/completed/PLAN_BANDIT_SECURITY_LINTER.md`**.
+
+1. **Avoid these SonarQube patterns** (guarded by tests or CI):
+   - **S3981:** Do not use `len(...) >= 0` (length is never negative). Use `== 0` or `> 0` instead, or drop the assertion if both are acceptable.
+   - **S3776:** Keep cognitive complexity ≤ 15 per function in **all** Python files (including tests, e.g. `tests/test_sonarqube_python.py`, `tests/test_compliance_samples.py`). Extract helper functions to reduce branches/loops; parametrized tests and small validators keep complexity low.
+   - **S4423:** Any `ssl.create_default_context()` must set `minimum_version = ssl.TLSVersion.TLSv1_2` (or stronger).
+   - **S5706:** Do not use bare `except:` in api/routes, core/engine, or config/loader.
+   - **S1192:** Use constants for repeated string literals (session_id pattern, template names, response codes); see test_sonarqube_python and api/routes.
+
+1. **Avoid CodeQL-relevant patterns** (CI runs CodeQL on push/PR):
+   - Do not log secrets (API keys, passwords, connection strings). See SECURITY.md and docs/SECURITY.md.
+   - Do not build SQL or shell commands by concatenating user input; use parameterized queries and safe APIs.
+   - Prefer strong crypto (e.g. TLS 1.2+); avoid weak or deprecated algorithms for sensitive data.
+   - **py/path-injection:** For serving files under `report.output_dir`, use **`_real_file_under_out_dir_str`** / **`_resolved_existing_file_under_out_dir`** in `api/routes.py`: canonical `base_path` (`realpath(abspath(out_dir))`), then CodeQL’s documented `normpath(join(base_path, filename))` + `fullpath.startswith(base_path)` + `os.path.isfile(fullpath)`. Use **`_report_output_dir_resolved(engine)`** for the base (not `report_path.parent`). Heatmaps use **`_heatmap_png_response`** (bytes body) to avoid `FileResponse(path=...)` as a sink. After editing `api/routes.py` path logic, run **`uv run pytest tests/test_report_path_safety.py -v -W error`**.
+
+## After editing markdown
+
+1. Run the **markdown lint** flow (see rule **markdown-lint**): `uv run python scripts/fix_markdown_sonar.py` then `uv run pytest tests/test_markdown_lint.py -v -W error`.
+
+## Full regression (recommended before PR)
+
+```bash
+./scripts/check-all.sh
+# Security-sensitive slice (connectors, workflows, auth):
+./scripts/check-all.sh --enforced
+```
+
+Default **`check-all`** mirrors CI lint/test plus **Bandit** + **Zizmor** (fail-collect). **`--enforced`** adds **Semgrep** — see **`docs/QUALITY_WORKFLOW_RECOMMENDATIONS.md`** §4c.
+
+```bash
+uv run pytest -v -W error
+```
+
+This runs all tests including SonarQube, security, and markdown lint. Resolve any failure; CodeQL results appear under the repository’s Security > Code scanning after push.
+
+## Extending the list
+
+When you add a **new** SonarQube or CodeQL rule that the project should follow:
+
+1. **Add a test** that enforces it (e.g. in `tests/test_sonarqube_python.py` or `tests/test_security.py`), so CI and local runs catch regressions.
+1. **Update this rule** (and `.cursor/skills/quality-sonarqube-codeql/SKILL.md`) with the rule id and what to avoid / use instead.
+1. **Update docs/TESTING.md** so the new rule is documented in the quality section.
+
+If you **change** `.github/workflows/ci.yml` **lint** job or **`.pre-commit-config.yaml`**, update **`tests/test_github_workflows.py`** (`test_ci_lint_job_runs_pre_commit_all_files` or a sibling) so CI expectations do not drift silently.
+
+The full suite (`uv run pytest -v -W error`) is the regression gate: keep all tests green and free of warnings during development so the app keeps doing what it is supposed to do.
+
+## References
+
+- **tests/test_sonarqube_python.py** – S3981, S3776, S4423, S5706, S1192, S5856, S8415. S3776 (cognitive complexity ≤ 15) applies to **all** `.py` files; when adding or editing tests, extract helpers so each function stays under the limit.
+- **tests/test_security.py** – SQL injection, path traversal, safe_load, config endpoint.
+- **tests/test_report_path_safety.py** – Report/heatmap paths under `report.output_dir` (CodeQL py/path-injection; containment + allowlist basenames).
+- **tests/test_markdown_lint.py** – MD009, MD012, MD060, etc.
+- **docs/TESTING.md** – Full test module list and quality section.
+- **.github/workflows/codeql.yml** – CodeQL runs on push/PR; fix findings in Security tab.
+- **docs/QUALITY_WORKFLOW_RECOMMENDATIONS.md** – Extra layers (pre-commit, Bandit, Semgrep, mypy, MD029, ADRs, etc.).
+- **`.github/workflows/ci.yml`** – **`lint`** job runs **`pre-commit run --all-files`**; **`test`** runs full pytest.
+- **`docs/plans/completed/PLAN_BANDIT_SECURITY_LINTER.md`** – Bandit dev/CI config and low-severity triage log (Phase 3 closed).

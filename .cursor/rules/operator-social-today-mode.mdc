@@ -1,0 +1,24 @@
+---
+description: Align private SOCIAL_HUB / editorial calendar with today-mode, carryover, and ad-hoc post evidence
+globs: docs/ops/today-mode/**/*.md,docs/private/social_drafts/**
+alwaysApply: false
+---
+
+# Social hub + today-mode (operator)
+
+## When this applies
+
+Sessions that touch **`docs/ops/today-mode/`**, **`carryover-sweep`**, **`eod-sync`**, **`today-mode YYYY-MM-DD`**, or **`social-today-check`**, and **operator-authorized** social editorial work under **`docs/private/social_drafts/`**.
+
+## Do
+
+1. **Pointer:** remind that the workflow lives in **`docs/ops/today-mode/SOCIAL_PUBLISH_AND_TODAY_MODE.md`** (+ **`.pt_BR.md`**).
+1. **`today-mode` / morning:** if **`docs/private/social_drafts/editorial/SOCIAL_HUB.md`** exists, **read** it and list **draft/scheduled/deferred** rows whose **Alvo editorial** is **today or tomorrow** (or the date in **`today-mode`**) — **one short block**, not a wall of text.
+1. **Defer:** **SOCIAL_HUB** + **rename** draft **`YYYY-MM-DD_*`** + calendar row; optional **`CARRYOVER.md`** only when the deferral is a **real** cross-day commitment.
+1. **Ad-hoc manual post:** update **inventory**; optional **`drafts/evidence/YYYY-MM-DD_evidence_<network>_<slug>.md`** under **`docs/private/`** (operator workspace; not on public `origin`).
+1. **Skills:** **`.cursor/skills/operator-social-today-alignment/SKILL.md`**.
+
+## Do not
+
+- **Guarantee** unattended posting or calendar sync — this is **discipline + docs**, not a daemon.
+- Put **PII**, **LAN**, or **commercial** detail into **tracked** `docs/ops/` beyond what **`SOCIAL_PUBLISH_AND_TODAY_MODE*.md`** already describes generically.

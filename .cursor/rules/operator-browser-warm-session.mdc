@@ -1,0 +1,16 @@
+---
+description: Warm browser + Google SSO. Situational — browser/social tasks or @operator-browser-warm-session.mdc.
+globs:
+  - .cursor/skills/cursor-browser-social-session/**
+alwaysApply: false
+---
+
+# Operator social / browser (Cursor IDE)
+
+When the operator asks to **fix, post, or edit** content on **LinkedIn**, **FacColleague-Sok**, **X**, **Threads**, **Instagram**, **YouTube** (when in scope), **Patreon**, **Gmail** / **Google Mail** (inbox, threads, attachments), **Docker Hub** (repository **General** / **Edit**, **Tags**, overview Markdown), **GitHub.com** (web UI when needed beyond `gh`), or similar **third-party dashboards** that support **Google / SSO** — **same workstation contract as SSH** (no separate AI datacenter):
+
+1. **Assume** the **Cursor IDE browser** MCP (`cursor-ide-browser`) can reach the operator’s **logged-in** session when **warm** — **do not** ask whether the assistant “has access” before **`browser_tabs` → `browser_navigate` / `browser_snapshot` / `browser_click` / `browser_fill`**. **Cold session:** you **must** attempt **Continue with Google** / **Sign in with Google** (or equivalent SSO) **when the UI offers it** — **before** asking the operator to log in. **Only after** that attempt fails (captcha, MFA wall, broken automation tree, timeout), **one** concise escalation so the operator can interact once and restore access.
+2. Prefer **`read_file`** on **`docs/private/social_drafts/`** for copy-paste-ready text; align **pt-BR** per `.cursor/rules/operator-chat-language-pt-br.mdc`.
+3. **SOCIAL_HUB / post already live:** To check whether a published post (e.g. **Instagram** IG1, **Threads** T1) matches the draft, **use the browser MCP first** (profile or permalink with warm session) — **do not** claim the assistant cannot see the feed without attempting navigation + snapshot. See **`.cursor/rules/cursor-browser-social-sso-hygiene.mdc`** § SOCIAL_HUB.
+4. If automation **fails** (login wall, no “Editar” in a11y tree, modal not exposed, timeout), state that briefly and give the **corrected text** or path to the file — **one** escalation, not repeated permission pings.
+5. **After** this task’s **`cursor-ide-browser`** work: **`browser_lock`** `unlock` if locked; then **`browser_tabs`** `close` on tabs no longer needed — **saves RAM**. Do **not** log out of social sites or clear cookies (“warm sessions” stay intact). See **`.cursor/rules/cursor-browser-social-sso-hygiene.mdc`** (*Depois da tarefa — RAM e sessões warm*).

@@ -1,0 +1,27 @@
+---
+# Example: additional regex patterns (overrides and new identifiers)
+# Copy this file and point config.yaml `regex_overrides_file` to it.
+
+- name: "RG_BR"
+
+  pattern: "\\b\\d{1,2}\\.?\\d{3}\\.?\\d{3}-?[0-9Xx]\\b"
+  norm_tag: "LGPD Art. 5"
+
+- name: "PLATE_BR"
+
+  pattern: "\\b[A-Z]{3}-?\\d{4}\\b"
+  norm_tag: "Personal data context"
+
+- name: "HEALTH_PLAN_ID"
+
+  pattern: "\\b\\d{6,14}\\b"
+  norm_tag: "Health/insurance context"
+
+# Example: alphanumeric CNPJ pattern (same structure as built-in LGPD_CNPJ_ALNUM).
+# Useful when you want to enable/experiment via regex_overrides_file only.
+
+- name: "LGPD_CNPJ_ALNUM"
+
+  pattern: "\\b[A-Z0-9]{2}\\.?[A-Z0-9]{3}\\.?[A-Z0-9]{3}/?[A-Z0-9]{4}-?\\d{2}\\b"
+  norm_tag: "LGPD Art. 5"
+

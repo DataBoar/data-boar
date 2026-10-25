@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "comment": "Example only: replace paths and sha256 with values from your release tree; use scripts/release-integrity-check.ps1 to validate.",
+  "files": [
+    {
+      "path": "core/licensing/guard.py",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  ]
+}

@@ -1,0 +1,1242 @@
+# Data Boar: motor de descoberta de dados e governança de risco corporativa — pt-BR
+
+Esta página é o **guia de uso do operador**: **CLI**, **API web e dashboard**, **configuração** (alvos, amostragem, detecção, credenciais) e **entregáveis** (Excel, heatmap, Markdown executivo, manifesto de evidência — sessões atuais e anteriores). Complementa o [guia técnico](TECH_GUIDE.pt_BR.md) e o [README raiz](../README.pt_BR.md). Identidade de instalação e PyPI **`data-boar`**: [CONTRIBUTING.pt_BR.md](../CONTRIBUTING.pt_BR.md#repositório-e-identidade-de-instalação-data-boar).
+
+**Data Boar** faz **descoberta e mapeamento com consciência de conformidade** de dados pessoais e sensíveis em bases, arquivos, APIs e compartilhamentos (**LGPD**, **GDPR**, **CCPA**, **GLBA** e *frameworks* configuráveis — não é só LGPD). Os entregáveis são **adjacentes a GRC** (narrativa executiva, prioridades estilo APG, manifestos de evidência): apoiam **avaliação de risco** e **descoberta para conformidade**; **não** substituem assessoria jurídica nem uma plataforma GRC corporativa completa. O repositório ainda contém o pacote Python histórico **`lgpd_crawler`** (imports) — detalhe de implementação, não o nome do produto.
+
+**Data warehouse e SQL corporativo:** o mesmo motor cobre alvos **SQLAlchemy** (**Microsoft SQL Server**, **PostgreSQL**, **MySQL/MariaDB**, **Oracle**, …) e **Snowflake** opcional (instale com ``uv sync --extra bigdata`` — ver [Snowflake (optional, .[bigdata])](#snowflake-optional-bigdata) abaixo). A amostragem usa **timeouts por motor** e *hints* documentados (por exemplo **`/*+ MAX_EXECUTION_TIME(N) */`** no MySQL e **`SET LOCAL statement_timeout`** no PostgreSQL — ver **amostragem SRE** nas opções globais e bullets em [USAGE.md](USAGE.md)). Se a política do **DBA** usar leituras **read-uncommitted** (por exemplo *hints* **`NOLOCK`** no SQL do conector), registre isso em **runbooks** e no **`scan_manifest_*.yaml`** / texto de evidência para que *stakeholders* vejam a **postura atribuída**, não semântica de isolamento omitida.
+
+O documento descreve, em português, como:
+
+- Executar a aplicação via **CLI** e **API web**;
+- Entender os parâmetros (`--demo`, `--config`, `--web`, `--port`, `--host`, `--https-cert-file`, `--https-key-file`, `--allow-insecure-http`, `--validate-config`, `--plan`, `--prefilter-status`, `--tenant`, `--technician`, `--scan-compressed`, `--content-type-check`, `--scan-stego`, `--jurisdiction-hint`, `--validate-crypto`);
+- Navegar pelo **dashboard web**;
+- Iniciar varreduras e baixar relatórios/heatmaps usando **curl**.
+
+**English:** [USAGE.md](USAGE.md)
+
+> **Importante:** sempre que `docs/USAGE.md` for atualizado, mantenha este arquivo sincronizado (mesmas rotas, parâmetros e exemplos, traduzidos).
+
+---
+
+## 1. Interface de linha de comando (CLI)
+
+O ponto de entrada é `main.py`.
+
+### Argumentos
+
+<!-- markdownlint-disable MD060 -->
+| Argumento               | Padrão               | Descrição                                                                                                                                                                                                                                                                                |
+| ---                     | ---                  | ---                                                                                                                                                                                                                                                                                      |
+| `--demo`                | *(flag)*             | **Demonstração zero-config:** cria workspace temporário em `/tmp/data_boar_demo/` (ou diretório temp do SO) com `demo.config.yaml`, corpus sintético de filesystem, relatórios, SQLite e `api.audit_logs` nessa árvore; executa varredura inicial e sobe o dashboard em loopback. **Ignora o `config.yaml` do diretório atual.** Implica `--web` e `--allow-insecure-http`. Arquivos temporários são removidos ao sair. Incompatível com `--validate-config`, `--reset-data`, `--export-audit-trail`, `--export-dsar` e `--diff`. |
+| `--config`              | `config.yaml`        | Caminho do arquivo de configuração (YAML ou JSON). Usado em varredura única e para resolver `api.port` / `api.host` ao subir a API.                                                                                                                                                      |
+| `--web`                 | *(flag)*             | Inicia o servidor FastAPI em vez de executar uma varredura única.                                                                                                                                                                                                                        |
+| `--port`                | `8088`               | Porta da API quando `--web` é usado. Pode ser sobrescrita por `api.port` no config, salvo se você passar `--port` explicitamente. Ignorado em modo varredura única.                                                                                                                      |
+| `--host`                | *(resolvido)*        | Endereço de bind quando `--web` (ex.: `127.0.0.1`, `0.0.0.0`). **Prevalece** sobre `api.host` e `API_HOST`. Se omitido: `api.host` → `API_HOST` → padrão seguro **`127.0.0.1`**. Ver §2.                                                                                                 |
+| `--https-cert-file`     | *(vazio)*            | Caminho PEM do certificado para TLS com `--web`; exige `--https-key-file` (ou `api.https_cert_file` / `api.https_key_file`). TLS **≥ 1.2**. Sem os dois arquivos, a inicialização **falha** salvo `--allow-insecure-http`. Opcional: `api.https_cert_fingerprint_sha256` (hex, escalar ou lista) — allow-list do SHA-256 do cert leaf; omitir = só observação; qualquer item da lista basta (rotação). |
+| `--https-key-file`      | *(vazio)*            | Caminho PEM da chave privada para TLS com `--web`; pareado com `--https-cert-file` ou as chaves `api.*` correspondentes.                                                                                                                                                                 |
+| `--allow-insecure-http` | *(flag)*             | **Aceite explícito de risco:** servir o dashboard em **HTTP em texto plano** (risco de interceptação/alteração). Em produção, prefira TLS ou proxy reverso. Equivale a `api.allow_insecure_http: true`. A imagem **Docker** padrão passa essa flag para rodar sem certificados montados. |
+| `--validate-config`     | *(flag)*             | Pré-voo: analisa o config, reconhece conectores e chaves obrigatórias por target; **WARN** em `*_from_env` ausentes e em pacotes opcionais de driver SQL ausentes (probe de import offline; ex.: `psycopg2` / `data-boar[postgres]`). Também **WARN**/OK de prontidão do estágio de regex / acelerador Rust (#1411 / #1414); em tiers pagos, **WARN** se `boar_fast_filter` estiver ausente (mesma classe dos drivers SQL opcionais; PyPI usa fallback Python puro). **Cria** diretórios ausentes de `report.output_dir`, do pai de `sqlite_path` e (com `learned_patterns.enabled`) do pai de `learned_patterns.output_file` **somente quando o config é válido**. Em **`[INVALID]`** (conector desconhecido, chave obrigatória ausente, …) esses diretórios, o arquivo SQLite e as tabelas do âncora de integridade **não** são criados. Sem rede nem DB de varredura no caminho inválido. Sai **0** com `[OK]` ou **1** com `[INVALID]`. Incompatível com `--web`, `--reset-data`, `--export-audit-trail`, `--export-dsar`, `--regenerate-report` e `--prefilter-status`. |
+| `--plan`                | *(flag)*             | **Plano de varredura (dry-run):** enumera o **catálogo** SQL/Snowflake (tabelas/colunas — `discover()` / no Snowflake `_list_tables`+`_get_columns`; **sem** `sample()` e sem achados), mede **RTT** TCP até o `host`:`port` de cada alvo (um handshake; não é scan de porta) **somente depois** do mesmo guard SSRF de saída do scan ao vivo (`resolve_and_validate_outbound_url` / `allow_private_networks` — loopback, RFC1918 e link-local são **pulados e reportados**, não sondados, salvo opt-in no target; o TCP usa o **IP pinado pelo guard**, sem segunda resolução DNS), classifica **local** (loopback ou RTT **< 5 ms**) / **lan** (5–20 ms) / **remoto** (RTT **≥ 20 ms**) e imprime um **piso de RTT**. O modelo de custo segue o motor: **1 query de amostra por coluna** + **1 `estimate_table_rows` por tabela** (SQLAlchemy) + catálogo `get_columns` por tabela; Snowflake não tem query de estimativa de linhas. Piso = `round-trips × RTT` + `inter_query_delay_ms` por coluna. **Avisa** (não aborta) quando o piso é **≥ 10 min**, ou o alvo é **remoto** com RTT **≥ 50 ms** e **≥ 200** colunas. O tempo de parede costuma ser maior (execução das queries). Incompatível com `--web`, `--validate-config`, `--reset-data`, exports, `--diff`, `--prefilter-status` e `--resume`. Sai **0**. |
+| `--resume`              | `SESSION`            | Retoma uma sessão SQL/Snowflake **interrompida** (UUID em `scan_sessions`): pula tabelas já **concluídas** nessa sessão e continua o resto (#1330). **Não** usa fingerprint de arquivo (ADR-0051). Sessão **concluída** é **no-op** (não reescaneia). UUID desconhecido → sai **2**. Incompatível com `--plan`, `--web`, `--reset-data`, `--validate-config`, `--diff` e `--prefilter-status`. |
+| `--check-extras`        | *(flag)*             | Lista extras opcionais × estado × origem (site-packages da imagem vs montagem `/extras`) e sai. **Primeiro passo de troubleshooting** quando um conector falha por dependência ausente. Veja [DOCKER_SETUP.pt_BR.md](DOCKER_SETUP.pt_BR.md) (*Extras e licenciamento em pool*). |
+| `--prefilter-status`    | *(flag)*             | Imprime JSON de prontidão do acelerador Rust / estágio de regex (`active`, `name`, `backend` rust\|python, `tier`, `reason`, `engine`, `rust_accelerator_installed`) e sai. Só observabilidade — **não** muda achados (#1411 / #1414). Incompatível com `--web`, `--reset-data`, `--export-audit-trail`, `--export-dsar`, `--regenerate-report`, `--diff` e `--validate-config`. |
+| `--diff`                | `SESSION_A SESSION_B` | Compara achados entre dois UUIDs de sessão no SQLite; imprime novos, resolvidos e mudanças de severidade. Sai **0**, salvo `--fail-on-new-high` com novo **HIGH** (sai **1**). Sessão inexistente → sai **2**. Incompatível com `--web`, `--reset-data`, `--export-audit-trail` e `--validate-config`. |
+| `--fail-on-new-high`    | *(flag)*             | Com `--diff`: sai **1** se `SESSION_B` tiver achado **HIGH** novo em relação a `SESSION_A` (gate de regressão em CI). |
+| `--export-dsar`         | `SESSION_ID`         | Exporta achados de uma sessão em JSON orientado a DSAR (metadados primeiro; enquadramento LGPD Art. 18 / GDPR Art. 15). Imprime em **stdout** ou use `--dsar-output PATH`. Sessão inexistente ou vazia → `findings_by_source` vazio, sai **0**. Incompatível com `--web`, `--reset-data`, `--export-audit-trail`, `--validate-config`, `--diff`, `--export-l1` e `--export-l3`. |
+| `--dsar-output`         | `PATH`               | Grava o JSON DSAR em `PATH` em vez de stdout. Exige `--export-dsar`. |
+| `--dsar-include-samples`| *(flag)*             | Com `--export-dsar`: inclui campos de amostra bruta nas linhas de achado quando existirem (SQLite guarda só metadados por padrão). |
+| `--export-l1`           | `SESSION_ID`         | Exporta achados de uma sessão como JSON L1 **metadata_manifest** (pin do contrato SDK; só metadados — nunca amostras brutas). Lê o SQLite existente (sem re-varredura). Imprime em **stdout** ou `--l1-output PATH`. Sessão inexistente ou vazia → `findings` vazio, sai **0**. Violação de contrato → aborta, sai **1** (fail-closed). Incompatível com `--web`, `--reset-data`, `--export-audit-trail`, `--validate-config`, `--diff`, `--export-dsar`, `--export-l3` e `--export-findings-sink`. |
+| `--l1-output`           | `PATH`               | Grava o JSON L1 metadata_manifest em `PATH` em vez de stdout. Exige `--export-l1`. |
+| `--export-findings-sink`| `SESSION_ID`         | Ecoa os achados de uma sessão do SQLite local para o **findings_sink** configurado (SQL = Pro, MongoDB = Enterprise). Só metadados por padrão. Se `findings_sink.include_sample_content: true`, passe também `--allow-sample-export` (LGPD Art. 46) ou a CLI sai **1**. Erro no sink na CLI sai **1**; tier insuficiente sai **2**. Incompatível com `--web`, `--reset-data` e outros modos de export. |
+| `--allow-sample-export` | *(flag)*             | Com `--export-findings-sink`: confirmação do operador para incluir `sample_content` quando o YAML optar. Nunca é implícito. |
+| `--export-l3`           | `SESSION_ID`         | Exporta JSON L3 **transformed_rows** escopado por grant (pin SDK; linhas de INPUT carregam `value` cru). Exige `--l3-grant`. Padrão **efêmero** (stdout/pipe); gravar em disco só com **`--l3-persist PATH`**. No POSIX, persistência é modo `0600` só do dono. No Windows: aplica com `icacls`, verifica SIDs bem-conhecidos (independente de idioma). **SYSTEM** (`S-1-5-18`) e **Administrators** (`S-1-5-32-544`) em geral permanecem — isso **não** é `0600` POSIX. **OWNER RIGHTS** (`S-1-3-4`) é equivalente ao dono. Contenção não comprovada (incluindo falha ao traduzir SID) → sai **5** (arquivo removido), salvo **`--l3-allow-unprotected`** (auditoria `containment`: `not_enforced`). Pago (não Community) — Community ou grant ausente → sai **3**. Coluna fora do grant → sai **4**. Teto por coluna `--l3-max-rows` (padrão 100, máximo 10000). Auditoria JSON no **stderr** (grant id, colunas, contagens, `containment` opcional — jamais células). Incompatível com `--web`, `--reset-data`, `--export-audit-trail`, `--validate-config`, `--diff`, `--export-dsar` e `--export-l1`. |
+| `--l3-grant`            | `PATH`               | Grant JSON para `--export-l3`: `grant_id`, `target`, `table`, `columns` (nunca `*` / tabela inteira). `request_columns` opcional deve ser subconjunto. |
+| `--l3-persist`          | `PATH`               | Persiste explicitamente o JSON L3 (valores crus) em `PATH`. Omitido = só stdout. Exige `--export-l3`. Nunca é o padrão. POSIX: `0600`. Windows: aplica com `icacls`; verifica SIDs bem-conhecidos (independente de idioma — não nomes de exibição). SYSTEM/Administrators privilegiados (`S-1-5-18` / `S-1-5-32-544`) podem permanecer; OWNER RIGHTS (`S-1-3-4`) conta como o dono. Contenção não comprovada → sai **5**. |
+| `--l3-allow-unprotected`| (flag)               | Com `--l3-persist`: se a contenção não puder ser comprovada, mantém o arquivo e grava `containment`: `not_enforced` na auditoria. Degradação declarada — nunca silenciosa. Exige `--export-l3` e `--l3-persist`. |
+| `--l3-column`           | `NAME`               | Repetível. Projeta só esta coluna do grant. Nome fora do grant é recusado (sai **4**). |
+| `--l3-max-rows`         | `N`                  | Teto de linhas por coluna para `--export-l3` (padrão **100**, máximo **10000**). |
+| `--regenerate-report`   | `SESSION_ID`         | Regenera planilha Excel + heatmap PNG de uma sessão existente a partir do SQLite (também grava `learned_patterns` quando habilitado). Sem re-varredura, sem `--web`. Sessão inexistente → sai **2**. Incompatível com `--web`, `--reset-data`, `--export-audit-trail`, `--validate-config`, `--diff`, `--export-dsar` e `--governance-report`. |
+| `--governance-report`   | `[PATH]`             | Grava relatório GRC em Markdown do Governance Lens a partir do SQLite (pronto para pandoc). `PATH` opcional; padrão em `report.output_dir`. Use `--session` para escolher a sessão; caso contrário usa a mais recente. Exige `governance.enabled: true` e tier Pro+. Imprime o caminho no stdout. Sem re-varredura. Incompatível com `--web` e outros modos de export (sai **2**). |
+| `--session`             | `SESSION_ID`         | UUID da sessão para exports por sessão. Obrigatório com `--export-remediation-manifest`; opcional com `--governance-report`. |
+| `--reset-data`          | *(flag)*             | Operação de manutenção perigosa: apaga todas as sessões/achados/falhas do SQLite, remove relatórios/heatmaps em `report.output_dir` e registra o wipe na tabela `data_wipe_log`. Não inicia varredura.                                                                                   |
+| `--reconcile-integrity-anchor` | *(flag)* | Depois de um upgrade oficial `pip`/`pipx`, re-baselina os hashes de integridade no SQLite. **Exige** `--confirm-upgrade-to=<versão-instalada>` igual à versão do pacote em execução. **Não** reconcilia sozinho quando `release_label` muda (superfície de bypass). Hash divergente sem este comando permanece `tampered`/`-alpha`. Incompatível com `--web`, `--reset-data`, varreduras e exports. |
+| `--confirm-upgrade-to`  | `VERSION`            | String de versão que o operador confirma com `--reconcile-integrity-anchor` (tem que ser igual a `_package_version()`). Os dois flags juntos, ou nenhum. |
+| `--export-audit-trail`  | *(caminho opcional)* | Exporta Rastro de Auditoria (Audit Trail) em JSON a partir do SQLite (`data_wipe_log`, resumo de sessões, `dashboard_transport`, **`trust_state`** / **`trust_reasons`** / **`output_confidence`** canônicos, **`enterprise_surface`**, **`maturity_assessment_integrity`** quando houver linhas do POC de maturity — mesmos totais que **`GET /status`**). Sem caminho ou com `-` → **stdout**; caso contrário grava no arquivo. **Não** altera o banco. Incompatível com `--web` e `--reset-data`.                             |
+| `--tenant`              | *(vazio)*            | Nome do cliente/tenant na execução CLI; gravado na sessão e exibido em dashboard/relatórios.                                                                                                                                                                                             |
+| `--technician`          | *(vazio)*            | Nome do técnico/operador na execução CLI; também gravado na sessão e relatórios.                                                                                                                                                                                                         |
+| `--scan-compressed`     | *(flag)*             | Sobrescrita pontual: ativa varredura dentro de arquivos compactados como se `file_scan.scan_compressed` estivesse true.                                                                                                                                                                  |
+| `--content-type-check`  | *(flag)*             | Sobrescrita pontual: inferência por magic bytes como se `file_scan.use_content_type` estivesse true (extensão vs formato real — disfarce simples). **Não** despacha arquivos compactados: extensão mentirosa ainda grava `archive_type_mismatch` em vez de expandir. |
+| `--scan-stego`          | *(flag)*             | Sobrescrita pontual: dicas de esteganografia (heurística de entropia de bytes) como se `file_scan.scan_for_stego` estivesse true — não prova dado oculto; pode aumentar leitura em imagens/áudio/vídeo.                                                                                                    |
+| `--jurisdiction-hint`   | *(flag)*             | Opt-in nesta execução: notas heurísticas de jurisdição na planilha **Report info** (ex.: EUA-CA CCPA/CPRA, Colorado, Japão APPI) quando metadados sugerem relevância. Não é conclusão jurídica. Equivale a `report.jurisdiction_hints.enabled: true` neste processo e grava o opt-in na sessão. |
+| `--validate-crypto`     | *(flag)*             | Opt-in nesta execução: ativa o wiring de validação de criptografia forte / controles (`scan.validate_crypto`). Desligado por padrão. A Fase 1 liga a flag e controla a coleta grosseira de sinais crypto; checagens TLS por conector e heurísticas de anonimização vêm depois. A CLI sobrescreve o config quando a flag está presente. Mesmo opt-in via caixa no dashboard ou `"validate_crypto": true` em **`POST /scan`** / **`POST /scan_database`**. |
+<!-- markdownlint-enable MD060 -->
+
+### Evidência opcional de adulteração na camada de licenciamento (`licensing.mode: enforced`)
+
+Implantações corporativas podem exigir *hooks* de **tamper-evidence** paralelos ao enforcement:
+
+- **`DATA_BOAR_EXPECTED_BUILD_DIGEST`** — compara com a linha embutida em **`core/licensing/_build_digest.txt`** (gerada no build via **`scripts/generate_build_digest.py`** — ver **`docs/RELEASE_INTEGRITY.pt_BR.md`**). Divergência ⇒ **TAMPERED** e bloqueio de varreduras com enforcement ligado.
+- **`DATA_BOAR_RELEASE_MANIFEST_PATH`** ou **`licensing.manifest_path`** — JSON opcional de SHA-256 de arquivos críticos verificado na subida (**mesmo documento**).
+
+**Roadmap:** *anchor* SQLite, re-hash na inicialização e degradação de confiança além da camada de licenciamento continuam **planejadas** (**`docs/plans/PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md`** — export **E.11** via **`--export-audit-trail`** ✅; *anchors* ⬜).
+
+### Plugin de remediação Enterprise (opcional)
+
+YAML opt-in `remediation:` carrega um `RemediationPlugin` de parceiro após a geração de relatório (feature **Enterprise** `remediation_plugin`, ou lab **OPEN**). Fail-graceful: erros do plugin nunca abortam o scan. Guia do autor: **[PLUGIN_SDK.pt_BR.md](PLUGIN_SDK.pt_BR.md)** ([EN](PLUGIN_SDK.md)). Bloco de exemplo: `deploy/config.example.yaml`.
+
+### Plugins YAML de padrões (opcional)
+
+Arquivos YAML do operador injetam termos extras de regex / ML / DL no detector (`patterns_plugin_file`, ou as chaves legadas `regex_overrides_file` / `ml_patterns_file` / `dl_patterns_file`). **Não** executam código. Guia do autor: **[PLUGIN_AUTHOR_GUIDE.pt_BR.md](PLUGIN_AUTHOR_GUIDE.pt_BR.md)** ([EN](PLUGIN_AUTHOR_GUIDE.md)). Schema: `config/plugin_schema.yaml`. How-to campo a campo: [SENSITIVITY_DETECTION.pt_BR.md](SENSITIVITY_DETECTION.pt_BR.md#padrões-regex-customizados-detectar-novos-dados-pessoaissensíveis).
+
+## Findings sink (Pro/Enterprise)
+
+**Eco opcional pós-scan** das mesmas linhas de achado (metadados) já gravadas no SQLite local. **Não** substitui o SQLite. Object storage (S3 / Azure Blob / GCS) fica fora deste recorte.
+
+**Tiers:** SQL (`postgresql`, `mysql`, `mssql`, e `sqlite` de lab) → `findings_sink_sql` (**Pro**). MongoDB → `findings_sink_mongodb` (**Enterprise**). Lab com `licensing.effective_tier` / OPEN segue o bypass usual.
+
+**PII:** o schema padrão **não** tem `sample_content`. Com `include_sample_content: true` sem `--allow-sample-export` na CLI, a saída é **1** (LGPD Art. 46). O hook automático pós-scan **nunca** grava colunas de amostra, mesmo com a flag YAML.
+
+**Falha:** erro no sink após a varredura vira **warning** + `save_failure(..., reason=sink_error)` — a sessão continua.
+
+DDL do cliente: [findings_sink_schema.sql](deploy/findings_sink_schema.sql) e [findings_sink_schema_mongodb.js](deploy/findings_sink_schema_mongodb.js).
+
+```yaml
+findings_sink:
+  enabled: true
+  type: postgresql              # postgresql | mysql | mssql | mongodb | sqlite (lab)
+  host: db.example.com
+  allowed_hosts: ["db.example.com"]
+  port: 5432
+  database: data_governance_db
+  user_from_env: DATA_BOAR_SINK_DB_USER
+  pass_from_env: DATA_BOAR_SINK_DB_PASS
+  schema: data_boar             # documentado para PostgreSQL; o cliente de eco ainda não usa
+  on_conflict: upsert           # upsert | skip | fail
+  include_sample_content: false
+  allow_private_networks: false # mesmo opt-in SSRF dos conectores (#832)
+```
+
+Eco manual (equivalente a `uv run python scripts/export_findings_to_sink.py SESSION`):
+
+```bash
+python main.py --config config.yaml --export-findings-sink <session_id>
+```
+
+### Resultados
+
+#### Demonstração zero-config (`--demo`)
+
+```bash
+data-boar --demo
+# ou a partir do clone:
+uv run python main.py --demo
+```
+
+- **Não** é varredura pontual orientada ao seu config: `--demo` **não** lê o `config.yaml` do diretório atual.
+- Prepara `/tmp/data_boar_demo/` (temp do SO + `data_boar_demo/`) com `demo.config.yaml`, corpus sintético, `reports/`, `audit_logs/` e `audit_results.db`, executa varredura inicial e mantém o dashboard em **`127.0.0.1`** com HTTP em texto plano.
+- **Audit trail (#1190):** com RBAC inativo (padrão do demo), `GET /logs/{session_id}` fica acessível como `/findings` — sem chave por execução. Para trancar downloads, use `api.require_api_key: true` (qualquer tier) ou ligue RBAC Pro+ com `audit_logs.read`.
+- **Saída:** banner no console com caminho do workspace e URL do dashboard (porta padrão **8088**). A árvore temporária é removida ao encerrar o processo.
+- Veja também [QUICKSTART.pt_BR.md](../QUICKSTART.pt_BR.md) (*Caminho 0*) e `man 1 data-boar` (`--demo`).
+
+#### Varredura única (sem `--web`)
+
+```bash
+# Execução mínima
+python main.py --config config.yaml
+
+# Execução com tags de tenant e técnico
+python main.py --config config.yaml --tenant "Acme Corp" --technician "Alice V."
+```
+
+- Carrega a configuração, varre todos os alvos (`targets`) e grava achados em `audit_results.db`.
+- Cria uma nova sessão (UUID + timestamp) com metadados (`tenant_name`, `technician_name` opcionais).
+- Gera um relatório Excel e um heatmap PNG para essa sessão.
+- O relatório também inclui a aba **Data source inventory** com metadados best-effort das fontes (alvo, tipo, produto/versão, dica de versão de API/protocolo, dica de transporte e detalhes brutos).
+- Imprime linhas `INFO` de confiança do runtime (stdout + stderr); em estado inesperado, alerta explícito: **THERE IS SOMETHING DIFFERENT AND UNEXPECTED IN THIS RUNTIME**.
+- No console, você verá algo como:
+- `Scan session: <session_id>`
+- `Report written: <caminho_do_relatorio>`
+
+##### OpenTelemetry opcional (opt-in)
+
+Quando **`DATA_BOAR_OTEL_ENABLED`** for `1` / `true` / `yes` / `on` e o extra opcional **`[otel]`** estiver instalado (`uv sync --extra otel`), o Data Boar exporta traces, métricas e logs via OTLP (`OTEL_EXPORTER_OTLP_ENDPOINT`, padrão `http://127.0.0.1:4317`). O mesmo gate cobre **`--web`**, varredura única (CLI), scan do **`--demo`** e flags de export/regenerate (`--export-dsar`, `--export-l1`, `--export-l3`, `--export-findings-sink`, `--export-remediation-manifest`, `--regenerate-report`, `--export-audit-trail`). **`--version`** e **`--check-extras`** permanecem sem instrumentação.
+
+#### Servidor API (`--web`)
+
+**Transporte:** é preciso usar **HTTPS** (certificado + chave PEM na CLI ou em `api` no config) ou **aceitar explicitamente** texto plano com **`--allow-insecure-http`** (ou `api.allow_insecure_http: true`). Caso contrário, `main.py --web` termina com código **2**. **`GET /status`** inclui `dashboard_transport`, **`enterprise_surface`** (transporte + confiança da licença + postura global da chave de API; **RBAC** opcional por rota aparece em **`enterprise_surface.access_surface.rbac`** — **`enabled`** quando `api.rbac` está ligado e o tier permite **`dashboard_rbac`**, senão **`not_implemented`**) e os campos canônicos **`trust_state`** / **`trust_reasons`** / **`output_confidence`** (licença + integridade + transporte — opt-in HTTP nunca fica `trusted` limpo); em HTTP texto plano há **faixa de aviso** nas páginas do dashboard. **`GET /status`** também inclui **`detection_prefilter`** (prontidão do estágio de regex / acelerador: `active`, `name`, `backend`, `tier`, `reason`, `engine`) ao lado de **`runtime_trust`** — só observabilidade; não muda achados (#1411 / #1412).
+
+```bash
+python main.py --config config.yaml --web --https-cert-file server.crt --https-key-file server.key --port 8088
+python main.py --config config.yaml --web --allow-insecure-http --port 8088
+# Escutar em todas as interfaces (sobrescreve config / API_HOST; use só com controles de rede):
+python main.py --config config.yaml --web --allow-insecure-http --host 0.0.0.0 --port 8088
+```
+
+- Inicia o FastAPI em **`<bind>:<port>`**. O bind padrão é **`127.0.0.1`**, salvo `api.host`, `API_HOST` ou **`--host`** (a CLI ganha). A imagem Docker oficial define `API_HOST=0.0.0.0` e inclui **`--allow-insecure-http`** no `CMD` para subir sem certificados montados; para HTTPS, monte cert/chave e ajuste o `CMD`. **Bind fora do loopback recusa a subida (código 2) a menos que `api.require_api_key: true` e a chave esteja resolvida** (#1714) — chave no YAML sem essa flag não basta.
+- **Allow-list do cabeçalho Host:** o **`TrustedHostMiddleware`** do Starlette é aplicado na **importação** do processo via `trusted_api_hosts()` (`core/host_resolution.py`). O conjunto sempre inclui **`127.0.0.1`**, **`localhost`** e **`testserver`** (TestClient). Também inclui **`api.host`** quando essa string está definida, mais extras em **`api.trusted_hosts`** (string ou lista). Entradas com **`*`** são **ignoradas** (sem wildcard). Bind em **`0.0.0.0`** **não** acrescenta um DNS público. `Host` não confiável responde **HTTP 400**. Salvar YAML no dashboard **não** reconstrói essa lista — **reinicie** o processo `--web`. Ver **[SECURE_DASHBOARD_AUTH_AND_HTTPS_HOWTO.pt_BR.md](ops/SECURE_DASHBOARD_AUTH_AND_HTTPS_HOWTO.pt_BR.md)** ([EN](ops/SECURE_DASHBOARD_AUTH_AND_HTTPS_HOWTO.md)).
+- Nenhuma varredura é executada automaticamente; você controla tudo via HTTP (dashboard ou curl).
+- Configuração para a API:
+- Se `--config` não for usado, a API lê de `CONFIG_PATH` ou `config.yaml` no diretório atual.
+
+### Arquivo de configuração (primeira execução)
+
+**Prefira YAML** (`.yaml` / `.yml`) em projetos novos: dá para comentar, revisar diff e mesclar com segurança. **`--config`** usa por padrão **`config.yaml`** no diretório de trabalho atual; esse nome está no **`.gitignore`** na raiz do repositório para não versionar caminhos de LAN ou segredos — use uma **cópia** de uma amostra versionada num caminho privado ou defina **`CONFIG_PATH`**.
+
+| O que copiar | Quando usar |
+| ------------ | ----------- |
+| **[`deploy/samples/config.starter-lgpd-eval.yaml`](../deploy/samples/config.starter-lgpd-eval.yaml)** | **Recomendado** para primeiro laboratório ou avaliação: duas pastas fictícias de sistema de arquivos, um alvo estilo PostgreSQL com `pass_from_env`, `scan.max_workers`, timeouts, **`rate_limit`**, termos ML/DL mínimos e blocos opcionais **comentados** (arquivos compactados, `file_passwords`, `learned_patterns`, arquivos de padrões, `detection.cnpj_alphanumeric`, `connector_format_id_hint`, chave de API, dicas de jurisdição). Substitua caminhos e defina variáveis de ambiente — os valores usam **IPs de documentação RFC 5737** e caminhos placeholder apenas. |
+| **[`deploy/config.example.yaml`](../deploy/config.example.yaml)** | Arquivo **mínimo** válido para Docker (`targets: []`, caminhos `/data`). |
+| **JSON legado** em [`config/config.json`](../config/README.md) | O carregador ainda aceita o formato antigo **`databases`** + **`file_scan.directories`**; **trabalhos novos devem usar YAML** — veja [`config/README.md`](../config/README.md). |
+
+**Índice (mesmos links a partir de `docs/`):** [samples/README.pt_BR.md](samples/README.pt_BR.md) ([EN](samples/README.md)). **Montar alvos a partir de planilha:** [deploy/scope_import.example.csv](../deploy/scope_import.example.csv) e [ops/SCOPE_IMPORT_QUICKSTART.pt_BR.md](ops/SCOPE_IMPORT_QUICKSTART.pt_BR.md) ([EN](ops/SCOPE_IMPORT_QUICKSTART.md)) — texto para jurídico, DPO e gestores que **não** são equipe de infra em tempo integral.
+
+---
+
+## 2. API web e dashboard
+
+### Implantar o servidor
+
+### Implantação automatizada com Ansible (dois caminhos)
+
+Para implantações reproduzíveis com um único comando em servidores Debian/Ubuntu, o Data Boar inclui playbooks Ansible em `deploy/ansible/`. Há dois caminhos:
+
+**Caminho A — Simples (Docker Compose, Docker já instalado):**
+
+```bash
+# 1. Instale o Ansible na máquina de controle
+sudo apt install ansible
+ansible-galaxy collection install community.docker
+
+# 2. Clone o repositório
+git clone https://github.com/DataBoar/data-boar.git
+cd data-boar/deploy/ansible
+
+# 3. Configure o inventário
+cp inventory/hosts.ini.example inventory/hosts.ini
+# Edite hosts.ini: IP do servidor e usuário SSH
+
+# 4. Simulação (--check) e depois aplicação
+ansible-playbook site.yml --check
+ansible-playbook site.yml
+```
+
+**Caminho B — Pilha completa (Docker CE + Swarm + ctop + serviço Data Boar, servidor novo):**
+
+```bash
+# Passos 1–3 iguais ao Caminho A, depois:
+ansible-playbook site-full.yml --check
+ansible-playbook site-full.yml
+```
+
+Isso instala o Docker CE a partir do repositório oficial, inicializa um Swarm de nó único, instala `ctop` para monitoramento de containers e implanta o Data Boar como serviço Swarm.
+
+Após qualquer caminho, o Data Boar fica acessível em `http://<servidor>:8088`.
+Veja `deploy/ansible/README.md` para variáveis, Swarm multi-nó e solução de problemas.
+
+## Opção: executar via Docker (sem clonar o Git)
+
+Imagens pré-construídas estão no Docker Hub: `fabioleitao/data_boar:latest` ([hub.docker.com/r/fabioleitao/data_boar](https://hub.docker.com/r/fabioleitao/data_boar)). Faça pull e execute com um config montado em `/data/config.yaml` (veja o README “Deploy com Docker” e [docs/deploy/DEPLOY.pt_BR.md](deploy/DEPLOY.pt_BR.md) ([EN](deploy/DEPLOY.md))). Você pode usar esse container em vez de instalar a partir do código.
+
+**Instalação `pipx` / `[noavx]` (Linux):** `[noavx]` **não** é extra do PyPI — é o caminho do wheelhouse hospedado ([#929](https://github.com/DataBoar/data-boar/issues/929): tag `wheelhouse-x86-64-v1-2026-07-29`, dois passos `gh release download` e `pip install --no-index --find-links` / `pipx runpip`). Receita (sem receita nova): [TROUBLESHOOTING.pt_BR.md](TROUBLESHOOTING.pt_BR.md) *x86-64-v1 / wheelhouse*. Antes de rollout em frotas RHEL/Void/musl/no-AVX, confira também a matriz [ops/OS_COMPATIBILITY_TESTING_MATRIX.pt_BR.md](ops/OS_COMPATIBILITY_TESTING_MATRIX.pt_BR.md) (RHEL 8/9 com passo explícito de Python 3.12; RHEL/CentOS 7 somente Docker).
+
+**Void nativo `xbps` (canal Enterprise, quando construído):** overlay em `packaging/void/` — `xbps-src` em container **Podman Void**, serviço runit em `/etc/sv/data-boar/run`. O produto não chama `systemctl`. Passos: [VOID_XBPS_PACKAGING.pt_BR.md](ops/VOID_XBPS_PACKAGING.pt_BR.md) ([EN](ops/VOID_XBPS_PACKAGING.md)).
+
+**macOS Homebrew (tap próprio):** `brew tap DataBoar/databoar && brew install data-boar`. Python `python@3.13` do host + pip (não é o canal Linux com CPython embarcado). Passos: [HOMEBREW_TAP.pt_BR.md](ops/HOMEBREW_TAP.pt_BR.md) ([EN](ops/HOMEBREW_TAP.md)).
+
+### URLs principais
+
+As páginas HTML usam **prefixo de idioma** (`/en/…`, `/pt-br/…`). Acessar `/`, `/reports`, `/config`, `/help` ou `/about` **sem** prefixo redireciona conforme cookie `db_locale`, cabeçalho `Accept-Language` e `locale.default_locale` no YAML (veja bloco `locale` em [USAGE.md](USAGE.md)). As rotas JSON da API continuam **sem** prefixo.
+
+**Passo a passo (não técnico, primeira execução):**
+
+1. **Abra** o painel no navegador: `http://127.0.0.1:8088/pt-br/` (ou `/en/`). O servidor precisa estar no ar antes — veja [Servidor API (`--web`)](#servidor-api---web) (texto plano exige `--allow-insecure-http`; fora do loopback use TLS).
+
+   ![Painel — formulário de varredura](img/dashboard/pt-br/scan-start.png)
+
+2. **(Opcional) Identifique a execução:** preencha **Cliente / tenant** e **Técnico / operador** nos campos do formulário — aparecem na planilha **Report info** do relatório.
+3. **Confira os alvos (opcional):** abra **Configuração** e verifique bancos, sistemas de arquivos ou outros alvos listados — a próxima varredura usa exatamente esse arquivo.
+
+   ![Configuração — alvos em YAML](img/dashboard/pt-br/config.png)
+
+4. **Inicie a varredura:** clique em **Iniciar varredura**. A página acompanha o status enquanto a auditoria roda (`POST /scan` por baixo).
+5. **Abra Relatórios:** ao terminar, vá para a página **Relatórios** (`/pt-br/reports` ou `/en/reports`).
+6. **Baixe:** clique em **Baixar** na linha da sessão para obter o relatório Excel (e o mapa de calor). Sem shell nem chamada de API.
+
+   ![Relatórios — botão Baixar por sessão](img/dashboard/pt-br/reports-download.png)
+
+### Baixar relatórios pelo painel web
+
+Para **DPO, jurídico e outros perfis não técnicos** (veja [AUDIENCE_GUIDE.pt_BR.md](AUDIENCE_GUIDE.pt_BR.md)), use o navegador — a captura abaixo mostra o caminho **antes** de qualquer `curl`.
+
+1. Abra **Relatórios** no menu superior.
+2. Clique em **Baixar** na linha da sessão desejada.
+
+![Página Relatórios — clique em Baixar](img/dashboard/pt-br/reports-download.png)
+
+O Excel é salvo na pasta de downloads do navegador; o mapa de calor PNG é gerado junto com a planilha quando o relatório é montado.
+
+- **Dashboard:** `http://<host>:<port>/en/` (ou `/pt-br/`)
+- **Reports:** `http://<host>:<port>/en/reports`
+- **Configuration:** `http://<host>:<port>/en/config`
+- **Help:** `http://<host>:<port>/en/help` — início rápido, exemplos de config, detecção de sensibilidade e `recommendation_overrides`, links para README e USAGE (EN/pt-BR)
+- **Entrar (WebAuthn):** `http://<host>:<port>/en/login` — registro e login por passkey no navegador quando **`api.webauthn.enabled`**; script **`webauthn-login.js`**. Com WebAuthn desligado, a página explica isso. Enquanto **não** houver passkey registrada, o dashboard HTML continua acessível sem esta página (bootstrap). Depois de **uma ou mais** passkeys, visitantes sem sessão são redirecionados para cá a partir das outras URLs do painel.
+- **About:** `http://<host>:<port>/en/about` — aplicação, versão, autor e licença (conforme LICENSE)
+- **Autoavaliação (POC):** `http://<host>:<port>/en/assessment` — placeholder quando **`api.maturity_self_assessment_poc_enabled`** está ligado; **404** se desligado. **Tier:** `licensing.effective_tier` no YAML para lab, ou claim **`dbtier`** no JWT com `licensing.mode: enforced` (**Pro+** para esta funcionalidade). Com enforcement ligado e JWT de licença válido, **`dbtier` prevalece sobre `effective_tier` no YAML** neste gate (mesma regra das outras funcionalidades do painel com tier). Opcional **`api.maturity_assessment_pack_path`** para YAML do questionário (`core/maturity_assessment/pack.py`); **`scores`** opcionais por resposta no YAML alimentam o **total da rubrica** no resumo pós-envio. Opcional **`DATA_BOAR_MATURITY_INTEGRITY_SECRET`** (ou **`api.maturity_integrity_secret_from_env`**) para **HMAC-SHA256 por linha** (integridade / anti-adulteração casual; **não** é criptografia). **`GET /status`** expõe **`maturity_assessment_integrity`** para demonstrar o resumo. Após **POST**, o redirect traz **`saved=1`** e **`batch=`**; o HTML mostra **resumo do envio** (linhas gravadas, pontuação da rubrica quando configurada, totais HMAC daquele batch) e, com respostas no SQLite, uma tabela de **envios recentes** por **batch** (mais recente primeiro). **Exportação:** `GET /{locale}/assessment/export?batch=<id>&format=csv` ou `format=md` devolve **anexo** (download); não há exportação automática em disco no produto — salve pelo navegador ou redirecione `curl` para arquivo. Com **`api.require_api_key`** ativo, envie **`X-API-Key`** ou **`Authorization: Bearer`** como nas outras rotas do painel. Sem texto proprietário do questionário no repositório público.
+- **Swagger UI:** `http://<host>:<port>/docs` — documentação interativa da API (OpenAPI)
+- **Health:** `http://<host>:<port>/health` — sonda de liveness para Docker/Kubernetes (sempre público mesmo com API key exigida). O corpo é só `{"status":"ok"}` (#2077).
+- **Autenticação (API key opcional):** Por padrão a API não exige autenticação. Para exigir chave, use `api.require_api_key: true` e `api.api_key` **ou** `api.api_key_from_env: "VAR"` com a variável definida **antes** de subir o processo — passos em **[API_KEY_FROM_ENV_OPERATOR_STEPS.md](ops/API_KEY_FROM_ENV_OPERATOR_STEPS.md)** (EN, operador). **Passo a passo (chave + HTTPS, Let’s Encrypt, cert de lab):** **[SECURE_DASHBOARD_AUTH_AND_HTTPS_HOWTO.pt_BR.md](ops/SECURE_DASHBOARD_AUTH_AND_HTTPS_HOWTO.pt_BR.md)** ([EN](ops/SECURE_DASHBOARD_AUTH_AND_HTTPS_HOWTO.md)). Em produção, prefira **`api_key_from_env`** para não versionar segredo em YAML rastreado.
+- **Limite de falha de autenticação (#2078):** com `require_api_key` ligado, falhas vindas de um endereço de cliente são limitadas. O padrão é 5 falhas em 60 segundos (`api.auth_failure_throttle.max_failures` e `window_seconds`). `enabled: false` desliga o limite. Acima do limite a resposta é **429** com `Retry-After`. Cada **401** e cada **429** vira registro no Audit Trail: hora, método, caminho, origem e motivo. O registro não inclui a chave. `main.py --web` recusa uma chave configurada com menos de 32 caracteres (`openssl rand -hex 32`). O endereço de origem é o par direto, salvo quando esse par está em `api.trusted_proxy_cidrs`.
+- **Cookie de sessão WebAuthn (#2079), mudança de padrão:** o cookie dura **12 horas** e usa `SameSite=Strict`. Um `POST`, `PUT`, `PATCH` ou `DELETE` autenticado por cookie precisa enviar `Origin` igual a `api.webauthn.origin` (mais `api.webauthn.additional_origins`, se houver) ou `Sec-Fetch-Site: same-origin`. `X-API-Key` e Bearer não passam por essa checagem. O logout invalida todas as sessões daquele usuário.
+- **WebAuthn (opcional — fase 1 API JSON + fase 1b sessão HTML):** Com **`api.webauthn.enabled: true`**, defina a variável de ambiente indicada por **`api.webauthn.token_secret_from_env`** (padrão **`DATA_BOAR_WEBAUTHN_TOKEN_SECRET`**) **antes** de subir o processo; a falta do segredo faz o processo **encerrar na inicialização**. Habilita endpoints JSON **sem lock-in de vendor** (biblioteca open-source **`webauthn`** no PyPI) em **`/auth/webauthn/`** para registro e autenticação por passkey. **`api.require_api_key` não se aplica** a esses caminhos nem a **`GET /{locale}/login`** (para abrir a página de entrada com chave global ligada). **Bootstrap da primeira passkey (#1553):** registrar a **primeira** credencial **sempre** exige **`X-API-Key`** / Bearer válida (configure **`api.api_key`** ou **`api.api_key_from_env`**). Não há isenção key-free em loopback — reverse proxies no mesmo host costumam apresentar todo cliente como **`127.0.0.1`**. Cerimônias de autenticação (entrar depois que já existe passkey) continuam sem chave nesses caminhos. Alinhe **`api.webauthn.origin`** e **`api.webauthn.rp_id`** com a URL do navegador (HTTPS recomendado). Credenciais ficam no SQLite (`webauthn_credentials`); **`--reset-data` / wipe** apaga essas linhas. **Depois que existir pelo menos uma passkey registrada**, as páginas do painel com prefixo de idioma (**`/`, `/config`, `/reports`, `/assessment`, …**) exigem cookie de sessão WebAuthn válido, exceto **`help`**, **`about`** e **`login`** (GET). Use **`/{locale}/login`** no navegador ( **`/static/webauthn-login.js`** ) para registrar ou entrar; formulários HTML mutáveis (**`POST …/config`**, **`POST …/assessment`**) **sempre** exigem token **CSRF** assinado (**#1231** — independente do gate WebAuthn; chave estável opcional via **`DATA_BOAR_HTML_CSRF_SECRET`**, senão o segredo WebAuthn quando configurado, senão segredo efêmero do processo). RBAC por rota (opcional; item seguinte) pode complementar quando habilitado. Ver **[ADR 0033](adr/ADR-0033-webauthn-open-relying-party-json-endpoints.md)** (EN).
+- **RBAC (opcional — fase 2, Pro+ `dashboard_rbac`):** Com **`api.rbac.enabled: true`** e tier efetivo que permita **`dashboard_rbac`** (`licensing.effective_tier` no YAML ou claim **`dbtier`** no JWT com enforcement — mesma regra das outras funções com tier), rotas protegidas exigem **papéis**: `admin` (tudo), `dashboard`, `scanner`, `reports_reader`, `config_admin`, e **`audit_logs.read`** para **`GET /logs`** / **`GET /logs/{session_id}`**. **`GET`/`POST /{locale}/config`** exige **`config_admin`** ou **`admin`** (#414). A **chave global de API** (quando presente e correta) recebe **`api.rbac.api_key_roles`**; sessões WebAuthn usam a coluna **`roles_json`** na linha correspondente de `webauthn_credentials` (array JSON de nomes de papel), ou **`api.rbac.default_roles`** quando **`roles_json`** estiver vazio. **401** sem principal; **403** com papéis insuficientes. Quando o RBAC **não** estiver ativo, `/logs` segue a mesma postura de `/findings` / `/report` (ainda sujeito a `api.audit_logs.enabled` / directory e a **`api.require_api_key`** quando essa flag estiver ligada). **`GET /status`** e **`GET /health`** incluem **`enterprise_surface.access_surface.rbac`** (`enabled` vs `not_implemented`). Tier **Community** não habilita RBAC no produto; use **`require_api_key`**, proxy reverso ou rede. Veja o plano interno **`PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md`** (na lista *Internal and reference* em `docs/README.md`; GitHub **#86**); **SSO/OIDC** empresarial permanece na fase **3**.
+- **`GET /health` (sempre público):** Sonda de liveness para balanceadores e orquestradores. O corpo é exatamente `{"status":"ok"}` (#2077). **Não** é necessário (nem checado) `X-API-Key` / Bearer. Licença, `dashboard_transport`, `enterprise_surface`, **`trust_state`** / **`trust_reasons`** / **`output_confidence`** e **`integrity`** ficam no **`GET /status`** autenticado. Quando o âncora não puder ser lido, **`integrity.error`** é **só o nome da classe** da exceção (`type(e).__name__` — #1721); `str(e)` fica no log do operador via **`SanitizeLogFilter`**.
+- **Demais rotas** (HTML com prefixo de idioma, `GET /status`, `POST /scan`, `GET /en/config`, OpenAPI `/docs`, etc.): com `require_api_key` e chave resolvida, envie **X-API-Key** ou **Authorization: Bearer**. **401** = chave ausente ou inválida. **503** = `require_api_key` true porém nenhuma chave resolvida (corrija config/ambiente). O **`main.py --web` encerra com código 2** nesse caso para não subir dashboard aberto por engano.
+- **Rollout:** Inventário de consumidores da API (scripts, cron, CI, probes), **staging** primeiro com TLS + chave quando couber, depois produção com janela curta de compatibilidade se necessário — **[SECURE_BY_DEFAULT_BLOCKERS_AND_MIGRATION.pt_BR.md](ops/SECURE_BY_DEFAULT_BLOCKERS_AND_MIGRATION.pt_BR.md)**. Com HTTPS ou HTTP explícito, use **`GET /status`** e **`--export-audit-trail`** (campos `dashboard_transport`, e **`maturity_assessment_integrity`** quando aplicável) para auditar postura.
+- Veja [SECURITY.pt_BR.md](../SECURITY.pt_BR.md) (chave opcional).
+
+### O que o dashboard mostra
+
+- Estado da varredura (`Running`/`Idle`), ID da sessão atual, contagem de achados.
+- Estatísticas da última execução (achados em bancos, filesystem, falhas, total).
+- Gráfico **“Progress over time”** com total de achados e score de risco (0–100) por sessão.
+- Campos de entrada para **cliente/tenant** e **técnico/operador**, usados ao clicar em “Start scan”.
+- Tabela de sessões recentes com:
+- ID, data de início, tenant, técnico, achados DB/FS, falhas e link “Download” (gera o Excel dessa sessão).
+
+### Rotas de API (resumo)
+
+| Método  | Endpoint                            | Finalidade                                                                                              |
+| ---     | ---                                 | ---                                                                                                     |
+| `POST`  | `/scan` ou `/start`                 | Inicia uma varredura completa em background; retorna `session_id`. Corpo JSON opcional: `tenant`, `technician`, `scan_compressed`, `content_type_check`, `scan_for_stego`, `jurisdiction_hint` (booleanos pontuais por execução). **HTTP 409** se já houver varredura em execução neste processo. |
+| `POST`  | `/scan_database`                    | Inicia varredura pontual de um único banco (body JSON). Pode incluir `tenant` e `technician`. **HTTP 409** se já houver varredura em execução neste processo. |
+| `GET`   | `/status`                           | Retorna `running`, `current_session_id`, `findings_count`, além de **`trust_state`** / **`trust_reasons`** / **`output_confidence`** canônicos, `runtime_trust`, **`detection_prefilter`** (#1411), `dashboard_transport`, `enterprise_surface` e **`maturity_assessment_integrity`** (resumo HMAC das respostas do POC quando configurado). |
+| `GET`   | `/report`                           | Baixa o último relatório Excel gerado (ou gera a partir da sessão mais recente).                        |
+| `GET`   | `/heatmap`                          | Baixa o último heatmap PNG gerado (sessão mais recente).                                                |
+| `GET`   | `/logs`                             | Baixa o arquivo de log mais recente (`audit_YYYYMMDD.log`) com registros de conexões e achados.         |
+| `GET`   | `/list`                             | Lista sessões anteriores (JSON). A lista HTML fica em `/en/reports` ou `/pt-br/reports`.                |
+| `GET`   | `/reports/{session_id}`             | Gera (se necessário) e baixa o relatório Excel para a sessão indicada.                                  |
+| `GET`   | `/heatmap/{session_id}`             | Gera (se necessário) e baixa o heatmap PNG para a sessão indicada.                                      |
+| `GET`   | `/logs/{session_id}`                | Baixa o log da sessão (`match` por conteúdo primeiro; fallback por dia UTC para `audit_YYYYMMDD.log` quando necessário), para análise detalhada da sessão. |
+| `POST`  | `/auth/webauthn/registration/options` | **Opcional.** Com **`api.webauthn.enabled`**, devolve JSON de criação WebAuthn + `state` opaco (ADR 0033, EN). |
+| `POST`  | `/auth/webauthn/registration/verify` | **Opcional.** Verifica registro; grava passkey no SQLite; define cookie de sessão. |
+| `POST`  | `/auth/webauthn/authentication/options` | **Opcional.** Opções de autenticação + `state`. |
+| `POST`  | `/auth/webauthn/authentication/verify` | **Opcional.** Verifica autenticação; atualiza cookie. |
+| `GET`   | `/auth/webauthn/status`             | **Opcional.** `{ enabled, registered_credentials, session_authenticated }` quando WebAuthn está ligado. |
+| `POST`  | `/auth/webauthn/logout`             | **Opcional.** Remove cookie de sessão WebAuthn. |
+| `PATCH` | `/sessions/{session_id}`            | Atualiza/limpa o tenant de uma sessão existente (`{ "tenant": "..." }`).                                |
+| `PATCH` | `/sessions/{session_id}/technician` | Atualiza/limpa o técnico de uma sessão existente (`{ "technician": "..." }`).                           |
+| `GET`   | `/en/about` (ou outro prefixo de locale) | Página About (HTML): aplicação, versão, autor, licença.                                            |
+| `GET`   | `/about/json`                       | Informações de about em JSON (nome, versão, autor, licença, copyright).                                 |
+| `GET`   | `/findings`                         | Sessão mais recente: lista JSON unificada de achados BD + filesystem.                                                                 |
+| `GET`   | `/findings/csv`                     | Mesma sessão em CSV UTF-8. Células string que começam com `=`, `+`, `-`, `@`, TAB ou CR recebem `'` à frente (`excel_sanitize_cell`, CWE-1236 / #1723). |
+| `GET`   | `/findings/{session_id}`          | Mesmo esquema JSON para uma sessão específica.                                                                                          |
+| `GET`   | `/findings/{session_id}/csv`      | CSV da sessão (mesma sanitização que `/findings/csv`).                                                                                |
+| `GET`   | `/health`                           | Liveness para Docker e Kubernetes. Corpo público é exatamente `{"status":"ok"}` (#2077). A postura fica em `GET /status`. |
+
+Um processo mantém **um** `AuditEngine`. `POST /scan`, `/start` e `/scan_database` reservam esse slot **quando a requisição é aceita**, não quando a tarefa em background começa. Um segundo início sobreposto responde **HTTP 409** (`Audit already in progress.`). O **HTTP 429** de `rate_limit` é um teto separado (SQLite). Varreduras em paralelo exigem vários processos ou instâncias.
+
+---
+
+## 3. Exemplos de uso da API com curl
+
+**Para automação / scripting** — use os exemplos `curl` abaixo em CI, cron ou integrações. Para DPO, jurídico e outros perfis não técnicos, prefira o [passo a passo do painel web](#passo-a-passo-não-técnico-primeira-execução) e [Baixar relatórios pelo painel web](#baixar-relatórios-pelo-painel-web) primeiro.
+
+### Iniciar varredura completa
+
+```bash
+# Sem metadados extras
+curl -X POST http://localhost:8088/scan
+
+# Com tenant e technician
+curl -X POST http://localhost:8088/scan \
+  -H "Content-Type: application/json" \
+  -d '{ "tenant": "Acme Corp", "technician": "Alice V." }'
+```
+
+Resposta típica:
+
+```json
+{
+  "status": "started",
+  "session_id": "a1b2c3d4-20250301_143022"
+}
+```
+
+### Verificar status
+
+```bash
+curl http://localhost:8088/status
+```
+
+```json
+{
+  "running": true,
+  "current_session_id": "a1b2c3d4-20250301_143022",
+  "findings_count": 42
+}
+```
+
+### Varredura pontual de banco de dados
+
+```bash
+curl -X POST http://localhost:8088/scan_database \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Ad-hoc Postgres",
+    "host": "db.example.com",
+    "port": 5432,
+    "user": "audit",
+    "password": "secret",
+    "database": "mydb",
+    "driver": "postgresql+psycopg2",
+    "tenant": "Acme Corp",
+    "technician": "Alice V."
+  }'
+```
+
+### Listar sessões anteriores
+
+```bash
+curl http://localhost:8088/list
+```
+
+Resposta (exemplo):
+
+```json
+{
+  "sessions": [
+    {
+      "session_id": "a1b2c3d4-20250301_143022",
+      "started_at": "2025-03-01LAB-NODE-01:30:22",
+      "finished_at": "2025-03-01LAB-NODE-01:35:10",
+      "status": "completed",
+      "tenant_name": "Acme Corp",
+      "technician_name": "Alice V.",
+      "database_findings": 12,
+      "filesystem_findings": 30,
+      "scan_failures": 0
+    }
+  ]
+}
+```
+
+### Baixar o último relatório Excel
+
+```bash
+curl -o report.xlsx http://localhost:8088/report
+```
+
+### Baixar o último arquivo de log
+
+```bash
+curl -o audit.log http://localhost:8088/logs
+```
+
+**Formato das linhas do audit log (leia antes de interpretar caminhos):** As linhas seguem o padrão `Finding: origem | rótulo_do_target | localização | sensibilidade | padrão` e `Connected: rótulo_do_target (tipo) em localização`. O **`rótulo_do_target`** é um nome **único e higienizado** por alvo (`audit_log_name`), derivado do config — pode não ser idêntico ao `name` bruto. Em alvos **filesystem**, a **`localização`** costuma ser um **caminho POSIX relativo à raiz de varredura resolvida** (sem letra de drive nem home). A própria raiz aparece como `nome_da_pasta?8_hex` (não é caminho absoluto completo). Se um arquivo **resolve fora** da raiz (ex.: symlink), a **localização** vira `rótulo_do_target?12_hex` em vez de vazar caminho absoluto — use a linha no SQLite/Excel como evidência canônica. Conectores de compartilhamento remoto que abrem arquivos compactados via temporário mantêm no log estilo `arquivo.zip|caminho/interno.txt`.
+
+### Baixar o último heatmap PNG
+
+```bash
+curl -o heatmap.png http://localhost:8088/heatmap
+```
+
+### Baixar relatório e heatmap de uma sessão específica
+
+```bash
+curl -o report_20250301.xlsx \
+  "http://localhost:8088/reports/a1b2c3d4-20250301_143022"
+
+curl -o heatmap_20250301.png \
+  "http://localhost:8088/heatmap/a1b2c3d4-20250301_143022"
+```
+
+### Baixar o arquivo de log associado a uma sessão específica
+
+```bash
+curl -o audit_20250301.log \
+  "http://localhost:8088/logs/a1b2c3d4-20250301_143022"
+```
+
+Esse endpoint procura, entre os arquivos `audit_YYYYMMDD.log` disponíveis (do mais recente para o mais antigo), o primeiro cujo conteúdo contenha o `session_id` informado e devolve esse arquivo.
+
+### Evidência executiva, prioridades APG e o comando `data-boar-report`
+
+Quando o **`generate_report`** roda (CLI one-shot, **`GET /reports/{session_id}`**, **`GET /report`** ou **Download** no dashboard), o produto pode gravar, **no mesmo diretório do Excel** (`report.output_dir`):
+
+- **`POC_SUMMARY_<primeiros_16_chars_do_session_id>.md`** — Markdown com tom executivo: status, achados **agregados por sensibilidade** (só nomes de **padrão** e contagens), as **três** prioridades de mitigação da **APG Fase A** e um resumo curto de postura DBA/SRE. **Não** lista nomes de colunas, tabelas, caminhos de arquivo nem conteúdo amostrado — adequado para quem não deve ver detalhe operacional.
+- **`scan_manifest_<prefixo>.yaml`** — manifesto de evidência (tetos de amostragem, timeouts, bullets de auditoria, recorte de escopo, bloco opcional `apg_phase_a`).
+
+Se a gravação desses artefatos falhar, o fluxo **não** invalida o Excel nem o heatmap; veja os logs se o `.md` ou o `.yaml` não aparecerem.
+
+**Ponto de entrada no console** (instalado com o pacote PyPI **`data-boar`**, ver `[project.scripts]` no repositório):
+
+```bash
+uv run data-boar-report --config config.yaml --session-id <session_id>
+```
+
+Sem **`-o` / `--output`**, o CLI grava **`executive_report_<prefixo_seguro>.md`** ao lado do YAML de configuração (evita despejar o relatório completo no stdout em logs de CI). Com **`-o`**, define o caminho explicitamente:
+
+```bash
+uv run data-boar-report --config config.yaml --session-id <session_id> -o Resumo_executivo.md
+```
+
+**Flags úteis:**
+
+| Flag | Significado |
+| --- | --- |
+| `--sqlite <caminho>` | Sobrescreve `sqlite_path` do config (ex.: cópia do banco de auditoria em outro host). |
+| `--trial-rows-capped` | Inclui a mesma nota sobre possível limite de linhas no Excel sob licença de avaliação, alinhada ao `POC_SUMMARY` gerado junto ao relatório. |
+
+**Requisitos:** o mesmo **`config.yaml`** usado nas varreduras (para o manifesto refletir política de amostragem/timeouts) e um **`session_id`** que exista nas tabelas de sessão/achados.
+
+#### Processamento local e privacidade (`data-boar-report`)
+
+O `data-boar-report` lê **apenas** o artefato **SQLite local** da varredura (`sqlite_path`, sobrescrevível com **`--sqlite`**). Ele **reagrega** metadados da sessão em Markdown/YAML **sem abrir conectores ao vivo**. Por desenho, o Markdown executivo padrão (**`POC_SUMMARY_*.md`**) traz **nomes de padrão, contagens, prioridades APG Fase A** e narrativa de postura — **não** valores amostrados brutos nem trechos livres de PII. Literais sensíveis ficam no nível de banco protegido (ou em exportações **redigidas** que **você** controla).
+
+**Estrutura (contrato “mesa” do PoC):** o Markdown segue hierarquia clara (**H1–H4**): status, achados por sensibilidade, **`## 3. Metodologia e segurança`** (amostragem, timeouts, comentário de rastreio, **`WITH (NOLOCK)`** no SQL Server quando esse motor aparece na sessão, mais bullets SRE/DBA do manifesto), depois **`## 4. Plano de ação (APG)`** com **Top 3** e **inventário completo por padrão** (achado → risco → recomendação técnica).
+
+**Ver também:** [REPORTS_AND_COMPLIANCE_OUTPUTS.pt_BR.md](REPORTS_AND_COMPLIANCE_OUTPUTS.pt_BR.md) (mapa de saídas).
+
+## Governance Lens (Pro) {#governance-lens-pro}
+
+Feature **Pro / Enterprise**: mapeia achados técnicos para narrativas de **gap de controle GRC** (COBIT 2019, ISO/IEC 27001, ISO/IEC 27014, ISO/IEC 38500, ITIL 4) e gera a aba **Governance View** no Excel mais um relatório **Markdown pronto para pandoc**.
+
+**Licenciamento:** exige licença **Pro** (`governance_lens_pro`). O mapa curado de produção **`governance_framework_map_pro.yaml` não é distribuído no pacote Open Core** — licenciados recebem em termos comerciais. O OSS inclui **`config/governance_framework_map_pro.example.yaml`** para lab e testes (`governance.map_file`).
+
+**Aviso:** a saída apoia inventário técnico e narrativa GRC; **não** constitui auditoria certificada nem parecer jurídico.
+
+### Config mínima
+
+```yaml
+governance:
+  enabled: true
+  tier: pro
+  map_file: config/governance_framework_map_pro.example.yaml   # lab; use mapa licenciado em produção
+```
+
+Defina `licensing.effective_tier: pro` em lab ou sua licença em produção. Ver [LICENSING_SPEC.md](LICENSING_SPEC.md).
+
+### Gerar Markdown (CLI)
+
+```bash
+python main.py --config config.yaml --governance-report ./relatorio_grc.md
+```
+
+Sessão opcional:
+
+```bash
+python main.py --config config.yaml --session <session_id> --governance-report ./relatorio_grc.md
+```
+
+Imprime o caminho gravado no **stdout**. Usa dados existentes no SQLite — **sem nova varredura**. Incompatível com `--web` (sai **2**).
+
+### Exportar DOCX (pandoc, instalado pelo operador)
+
+```bash
+pandoc relatorio_grc.md --defaults config/pandoc_governance.yaml -o relatorio_grc.docx
+```
+
+PDF (opcional): `pandoc relatorio_grc.md --defaults config/pandoc_governance.yaml -o relatorio_grc.pdf --to=pdf -V pdf-engine=lualatex`
+
+**Passo a passo:** [ops/GOVERNANCE_LENS_QUICKSTART.pt_BR.md](ops/GOVERNANCE_LENS_QUICKSTART.pt_BR.md) ([EN](ops/GOVERNANCE_LENS_QUICKSTART.md)). **Arquitetura:** [TECH_GUIDE.pt_BR.md](TECH_GUIDE.pt_BR.md#governance-lens-architecture).
+
+## Governance Lens (Enterprise) {#governance-lens-enterprise}
+
+O tier **Enterprise** acrescenta módulos setoriais sobre o lens Pro: **BACEN Res. 4893/2021**, **FEBRABAN CPS 004** / Circular 3909 e **PCI-DSS v4.0** (Req. 3.4, 4.2, 10.2). Esses mapeamentos **não** entram no Open Core nem no Pro.
+
+**Licenciamento:** exige `governance.tier: enterprise` e `governance_lens_enterprise`. O arquivo curado de produção **`governance_framework_map_enterprise.yaml` não é versionado** no Git público (gitignore). O OSS inclui **`config/governance_framework_map_enterprise.example.yaml`** para lab/testes (`governance.enterprise_map_file`).
+
+Se o `tier` for **pro** e um mapa Enterprise for referenciado, o gerador registra **`Enterprise framework requires enterprise license tier`**, omite esses controles e segue (não falha).
+
+### Config mínima Enterprise
+
+```yaml
+governance:
+  enabled: true
+  tier: enterprise
+  map_file: config/governance_framework_map_pro.example.yaml
+  enterprise_map_file: config/governance_framework_map_enterprise.example.yaml   # lab; arquivo licenciado em produção
+```
+
+Defina `licensing.effective_tier: enterprise` em lab. Mesmo CLI do Pro (`--governance-report`). O template Markdown inclui seções BACEN / PCI-DSS / FEBRABAN só quando o Enterprise está habilitado.
+
+**Exemplos (heurístico — não é avaliação certificada):**
+
+- `LGPD_CPF` em alvo de banco não produtivo → BACEN 4893 Art. 4º (política de segurança cibernética).
+- PII em alvo de API → BACEN 4893 Art. 6º (plano de ação e resposta a incidentes).
+- `CREDIT_CARD` / `PCI_CARD` em qualquer alvo → BACEN 4893 Art. 4º + PCI-DSS Req. 3.4 (tornar o PAN ilegível).
+
+**Aviso:** igual ao Pro — não substitui fiscalização BACEN, auditoria FEBRABAN nem relatório de QSA PCI.
+
+---
+
+## 4. Notas sobre configuração
+
+- A aplicação utiliza um único arquivo de configuração (YAML/JSON) com as chaves principais:
+- `targets` – alvos a escanear (bancos, diretórios, APIs, compartilhamentos). Não há limite rígido de alvos por varredura; listas muito grandes (ex.: centenas de bancos ou APIs) podem aumentar tempo e uso de memória—considere um escopo razoável por varredura.
+- `file_scan` – extensões, recursividade, `scan_sqlite_as_db`, `sample_limit` (estilo linhas/TOPN), `file_sample_max_chars` (orçamento de caracteres para `.txt`/`.md` em FS/shares), opcionalmente `scan_compressed` (varrer dentro de arquivos compactados, ex.: zip, tar, 7z — desligado por padrão), limites de tamanho (`max_inner_size`, faixa válida 1 MB–500 MB; padrão 10 MB), orçamentos agregados anti zip-bomb (`max_members` padrão 1000, `max_total_uncompressed` padrão 1 GiB, `max_expansion_ratio` padrão 200; excedente → `scan_failures` com razão `archive_budget_exceeded`) e `compressed_extensions`, e `file_passwords` (senhas para PDFs e documentos ZIP protegidos por senha; ver [USAGE.md](USAGE.md), seção Global options, para exemplo YAML e limitações). Para suporte a .7z instale o extra opcional: `pip install -e ".[compressed]"`. **Amostragem em banco (SQL via SQLAlchemy + conector Snowflake):** a leitura por coluna usa `WHERE <coluna> IS NOT NULL` antes do teto de linhas, para colunas esparsas ainda gerarem amostra útil quando existir valor não nulo. Valores distintos são unidos com **U+241F** (símbolo de separador de unidade), não espaços, para regex de PAN só-de-forma não casar anos INTEGER ou IDs sequenciais (#1332 — `connectors/sample_value_dedup.py`). A variável de ambiente opcional **`DATA_BOAR_SQL_SAMPLE_LIMIT`** (inteiro entre **1** e **10000**) **substitui** `file_scan.sample_limit` nesses conectores quando definida — útil em produção sem editar o YAML. Opcional: bloco raiz **`sql_sampling.overrides`** com tetos por **`targets[].name`**, por tabela (`schema.tabela` ou só o nome da tabela) e padrões globais com **`fnmatch`** no nome da tabela (ex.: `*_audit`), nessa ordem, antes de cair no `file_scan.sample_limit`. É possível fatiar overrides em **arquivos** YAML à parte e referenciá-los com **`sql_sampling_file`** (um caminho) e/ou **`sql_sampling_files`** (lista; mesclagem em ordem; o YAML principal por cima ganha em chaves iguais; caminhos relativos ou absolutos têm de resolver **dentro** da pasta do config principal — `..` e absoluto fora dessa pasta são rejeitados). Só **`load_config`** / **`normalize_config(..., config_path=...)`** expandem esses arquivos. Ver exemplo em [USAGE.md](USAGE.md) (Global options). Código: `core/sampling.py` / `core/sampling_policy.py` e `connectors/sql_sampling.py` — `SamplingManager` escolhe um **rótulo de estratégia** por dialeto (e metadados opcionais de tabela); `SQLConnector` / Snowflake / SQLite embutido no filesystem registra esse rótulo **uma vez por tabela** em INFO. Ponto legado: `SqlColumnSampleQueryBuilder.build` gera o mesmo SQL.
+- **Resiliência na amostragem SQL (alvos `type: database`):** o SQL gerado começa com o comentário de linha **`-- Data Boar Compliance Scan`** para rastreio em visões do motor. No alvo você pode definir **`sample_statement_timeout_ms`** ou **`sample_statement_timeout_seconds`** (**`0`** desliga); se omitido, o conector usa **5000 ms** por padrão. Esse orçamento aciona o hint **`/*+ MAX_EXECUTION_TIME(N) */`** no MySQL e **`SET LOCAL statement_timeout`** no PostgreSQL (transação curta por amostra). **No SQL Server não existe hint equivalente** (T-SQL não aceita `OPTION (MAX_EXECUTION_TIME = …)`); o orçamento fica registrado apenas no log de auditoria — para limitar leituras MSSQL use o **`connect_timeout`** do driver e o resource governor lado DBA. A variável de ambiente **`DATA_BOAR_SAMPLE_STATEMENT_TIMEOUT_MS`** sobrescreve o valor. Opcional: **`inter_query_delay_ms`** (pausa entre colunas). Estimativa de tamanho de tabela para modo “tabela grande” vem só de **estatísticas de dicionário** (`connectors/sql_table_row_estimate.py`), sem **`COUNT(*)`** na tabela de negócio.
+- **Aviso (scan_compressed):** Habilitar `scan_compressed: true` pode **aumentar bastante** o tempo de execução, I/O em disco e uso de espaço temporário. Use só quando precisar inspecionar o interior de arquivos compactados; na primeira vez, prefira um escopo menor (ex.: um diretório ou poucos caminhos). Orçamentos agregados (`max_members`, `max_total_uncompressed`, `max_expansion_ratio`) aplicam-se sempre ao varrer arquivos; ver [USAGE.md](USAGE.md). Se a **extensão** sugere um arquivo suportado mas os **magic bytes** discordam, o arquivo **não** é expandido. Em alvos **filesystem** a execução grava `archive_type_mismatch` em `scan_failures`; SMB/WebDAV/SharePoint não expandem e hoje não emitem essa falha. `--content-type-check` **não** altera isso.
+- **`use_content_type` (opt-in):** Quando `true`, o scanner usa um helper de **magic bytes** para que **disfarce simples** (extensão no nome diferente do formato real) não vença só pela extensão: o **nome** pode sugerir um tipo (ex.: `.txt` ou extensão que não é de texto, como `.mp3`) e os **primeiros bytes** revelam outro (ex.: `%PDF-...`). Quem só segue a extensão se engana; com o flag, filesystem e compartilhamentos aplicam o **recorte PDF** (tratar como PDF quando o cabeçalho é PDF) e o **remapeamento de mídia rica** onde existir — ver [TECH_GUIDE.pt_BR.md](TECH_GUIDE.pt_BR.md). Aumenta I/O e CPU por **arquivo**; o padrão é só por extensão. **CLI:** `--content-type-check` força isso numa execução one-shot. **API/dashboard:** `content_type_check: true` no corpo de **`POST /scan`** ou a caixa no dashboard aplica só àquela varredura; o `config.yaml` gravado não é alterado. **Arquivos compactados:** esta flag **não** escolhe o formato do arquivo pelo magic. Com `scan_compressed` ligado, um arquivo cuja **extensão** parece arquivo suportado mas o **magic** discorda (ex.: bytes gzip com nome `.tar.bz2`) **não** é expandido. Alvos **filesystem** gravam `scan_failures` com razão `archive_type_mismatch`; SMB/WebDAV/SharePoint não expandem e hoje não emitem essa falha. Detalhes e exemplos YAML: [USAGE.md](USAGE.md) (seção Global options / file_scan).
+- **Rich media (opt-in, Pro com licensing enforced):** `file_scan.scan_rich_media_metadata: true` lê amostras limitadas de metadados: EXIF de imagens (Pillow), tags de áudio (**mutagen** — `uv pip install -e ".[richmedia]"`) e tags de vídeo com **ffprobe** (binário no `PATH`). `file_scan.scan_image_ocr: true` aciona **Tesseract** numa miniatura limitada (`pytesseract` + pacote do sistema `tesseract-ocr`). Ambas as flags exigem **`rich_media_metadata`** / **`ocr_images`** no `FEATURE_TIER_MAP` (**Pro ou superior**). Lab `licensing.mode: open` continua liberando. **Privacidade:** OCR lê **pixels visíveis**; habilite só onde houver base legal e política clara. Padrão **false** para ambos. `ocr_lang` (padrão `eng`) e `ocr_max_dimension` (padrão 2000, entre 256 e 8000) ajustam o OCR.
+- **Legendas (padrão):** `.srt`, `.vtt`, `.ass`, `.ssa` entram na lista padrão de extensões e são lidas como texto UTF-8 (normalização de tempos), sem flag extra.
+- **Formatos adicionais (Tier 1 “data soup”):** **`.epub`** (ZIP/XHTML, stdlib) permanece Community. **`.parquet`**, **`.feather`**, **`.orc`**, **`.avro`**, **`.dbf`** (`uv pip install -e ".[dataformats]"`) exigem a feature **`data_soup_formats`** (**Pro ou superior** com licensing enforced; OPEN no lab libera). Sem extras ou sem esse degrau, a extração fica vazia nesses binários (análise por caminho/nome continua). Inclua essas extensões em `file_scan.extensions` se usar lista explícita.
+- **Extensão `.doc` (extra opcional `legacy-doc`):** amostra de corpo usa **`mammoth`** quando você instala **`pip install -e ".[legacy-doc]"`** ou `uv sync --extra legacy-doc`. O mammoth mira **OOXML em ZIP** (mesma família que `.docx`); `.doc` **binário Word 97-2003** em geral ainda gera amostra de conteúdo **vazia** — só caminho/nome entram na análise. Veja [TROUBLESHOOTING.pt_BR.md](TROUBLESHOOTING.pt_BR.md) (*Arquivos `.doc` legados*).
+- **Dicas de esteganografia (opt-in):** `file_scan.scan_for_stego: true`, **`--scan-stego`**, caixa no dashboard ou `scan_for_stego: true` em **`POST /scan`** acrescenta uma linha de **entropia de bytes** em imagens/áudio/vídeo (heurística fraca; não é extração de stego). Mesmo padrão de restauração após a execução que `scan_compressed` / `use_content_type`.
+- `report` – `output_dir` para relatórios/heatmaps; `formats` (padrão `[xlsx]`; inclua `ods` para planilha OpenDocument, que abre no LibreOffice Calc e no SoftMaker PlanMaker); opcionalmente `recommendation_overrides` (lista de mapeamentos por `norm_tag` para Base legal, Risco, Recomendação, Prioridade, Relevante para). Exemplo completo em [USAGE.md](USAGE.md) (seção 4, Global options); exemplo para categorias sensíveis (saúde, religião, política, PEP, raça, sindicato, genético, biométrico, vida sexual) em [USAGE.md#recommendation_overrides](USAGE.md) e abaixo em pt-BR (ver também [SENSITIVITY_DETECTION.pt_BR.md](SENSITIVITY_DETECTION.pt_BR.md)).
+- **`jurisdiction_hints` (opt-in):** notas heurísticas na planilha **Report info** para DPO/advogado quando **metadados dos achados** (nomes de coluna/arquivo/caminho, tags) sugerem possível relevância a **EUA-CA (CCPA/CPRA)**, **Colorado** ou **Japão (APPI)**. Não é conclusão jurídica; taxa alta de falso positivo/negativo. Ative com `report.jurisdiction_hints.enabled: true`, **`--jurisdiction-hint`** na CLI, caixa no dashboard ou `"jurisdiction_hint": true` em **`POST /scan`**. Sub-chaves: `us_ca`, `us_co`, `jp` e limiares `min_score_*`. Não altera níveis de sensibilidade. Detalhes: [USAGE.md](USAGE.md) (Global options / file_scan — mesmo tema em inglês no parágrafo sobre **jurisdiction hints**).
+- **`scan.validate_crypto` / `--validate-crypto` (opt-in):** validação de criptografia forte / controles. Desligado por padrão; sem mudança de comportamento quando off. Ative com `scan.validate_crypto: true`, CLI **`--validate-crypto`**, caixa no dashboard ou `"validate_crypto": true` em **`POST /scan`** / **`POST /scan_database`**. CLI / API / dashboard sobrescrevem o config nessa execução. **Fase 2 + Fase 3 (SQL + Mongo/Redis + SMB + REST/Power BI/Dataverse):** após conectar, probe best-effort de transporte; na Fase 3 (SQL/Mongo/Redis) inferência heurística por **padrão de nome** (contagem por categoria em **Inferred controls** — sem valores nem lista de nomes reais; não é certificação de compliance; exige revisão humana). Resultados em **`crypto_controls_audit`** e planilha Excel **Crypto & controls**. Ver [USAGE.md](USAGE.md) (*Strong crypto / controls*).
+- `api` – porta da API; opcionalmente `require_api_key`, `api_key` ou `api_key_from_env` para exigir chave de API (cabeçalho X-API-Key ou Authorization: Bearer); GET /health permanece público. Opcional **`api.trusted_hosts`** (string ou lista): nomes extras aceitos no cabeçalho Host (sem wildcards). Sempre entram `127.0.0.1`, `localhost`, `testserver` e `api.host` quando definido. Bind `0.0.0.0` **não** acrescenta DNS público. Reinicie `--web` após editar. **Em produção recomenda-se** `require_api_key: true` e chave forte via variável de ambiente (ex.: `api.api_key_from_env: "AUDIT_API_KEY"`) para não armazenar a chave no config. Ver [SECURITY.md](../SECURITY.md).
+- Por padrão, quando você inicia a API via CLI (`python main.py --web ...`), o servidor web faz bind em **`127.0.0.1` (loopback)**. No container oficial (Docker image), ele define `API_HOST=0.0.0.0` para que a porta publicada funcione a partir de fora do Docker Desktop/WSL.
+
+- Se você estiver atrás de proxy reverso ou com restrições de rede específicas, ainda pode sobrescrever com `api.host` no config (por exemplo, `0.0.0.0` / `127.0.0.1`) — mas mantenha o padrão seguro em `127.0.0.1` a menos que o runtime esteja explicitamente cercado por regras de rede/Ingress. **`api.host` também é um nome de Host**, não só endereço de bind: clientes que chamam `https://dashboard.example.com` precisam desse nome (ou de um extra em **`api.trusted_hosts`**) mesmo com bind em `127.0.0.1` atrás do proxy. Wildcards em `trusted_hosts` são ignorados. Reinicie `--web` depois de mudar a lista.
+- `sqlite_path` – caminho do banco SQLite com resultados.
+- `scan` – `max_workers` para paralelismo.
+- `timeouts` – timeouts globais para conexões (ex.: `connect_seconds`, `read_seconds`); cada alvo pode sobrescrever com `connect_timeout`, `read_timeout` ou `timeout`. Ver abaixo.
+- `api.workers` – número de workers uvicorn (padrão 1; 2+ para mais requisições concorrentes).
+- Opcionais: **`sql_sampling`** (tetos hierárquicos de amostragem SQL/Snowflake; ver bullet `file_scan` acima e [USAGE.md](USAGE.md)), `ml_patterns_file`, `ml_patterns_files`, `dl_patterns_file`, `regex_overrides_file`, `regex_overrides_files`, `compliance_frameworks`, `sensitivity_detection` (termos ML/DL inline), `learned_patterns` (export de termos classificados), **`pattern_files_encoding`** (encoding dos arquivos de padrões; ver abaixo), **`findings_sink`** (eco pós-scan Pro/Enterprise).
+- **Backend DL (extra opcional):** instale com `uv pip install -e ".[dl]"` (`sentence-transformers`). Com termos DL, a confiança combina com o ML. O job de CI **`test-dl`** instala `--extra dl` e exercita `SentenceTransformer.encode()` via `core/dl_backend.py` (não só import). A matriz pytest padrão e o job **`test-extras`** não instalam esse extra.
+- **Pedindo acesso à TI:** Quando for preciso solicitar permissões à equipe de TI (ex.: pastas compartilhadas, contas de banco, tokens de API), solicite o **mínimo** necessário. Veja [OPERATOR_IT_REQUIREMENTS.pt_BR.md](ops/OPERATOR_IT_REQUIREMENTS.pt_BR.md) para o checklist por fonte (somente leitura, sem admin), o que não precisamos e uma breve justificativa, alinhada a zero-trust ou IAM restrito. ([EN](ops/OPERATOR_IT_REQUIREMENTS.md))
+
+### Credenciais a partir do ambiente (segredos fora do config)
+
+Para manter segredos **fora do arquivo de config**, use chaves **`*_from_env`**: o YAML guarda só o **nome** da variável; o valor entra no **ambiente do processo** na subida. Esse é o contrato estável — vaults (Bitwarden hoje; Fase B `@vault:` / vaults corporativos depois) devem **injetar na mesma camada de env**. Ponte opcional: `~/.config/databoar/*.env` + `scripts/databoar-env-load.sh` / `.ps1`. Detalhe: [OPERATOR_CREDENTIALS_FROM_ENV.pt_BR.md](ops/OPERATOR_CREDENTIALS_FROM_ENV.pt_BR.md) ([EN](ops/OPERATOR_CREDENTIALS_FROM_ENV.md)). Bitwarden como fonte humana: [OPERATOR_SECRETS_BITWARDEN.pt_BR.md](ops/OPERATOR_SECRETS_BITWARDEN.pt_BR.md).
+
+Dois requisitos no load (#2086), para `pass_from_env`, `password_from_env`, `user_from_env` e `token_from_env`:
+
+- O **nome** começa com **`DATA_BOAR_`**, **`REST_API_`** ou **`API_`**.
+- O destino do alvo está em **`allowed_hosts`** (ou `auth.allowed_hosts`).
+
+Nome fora do prefixo, ou destino fora da lista, levanta `ValueError` e o segredo não é copiado. Exemplo: `pass_from_env: DATA_BOAR_DB_PASS` com `host: db.example.com` e `allowed_hosts: ["db.example.com"]`. `allowed_hosts` vem do mesmo YAML que o autor do config escreve e só estreita a env de processo `DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS` (host sem porta). Lista ausente ou vazia falha fechada. Opt-out de laboratório: `DATA_BOAR_CREDENTIAL_HOSTS_UNRESTRICTED=1`. Veja [SECURITY.pt_BR.md](SECURITY.pt_BR.md).
+
+### Config inicial (copiar e colar) e onde começar {#config-inicial-exemplos}
+
+Se você está **começando agora** (jurídico, DPO, liderança de auditoria ou **validação de capacidades**) e precisa de **um único arquivo** para alinhar com a TI **sem** ler todos os guias primeiro:
+
+1. Abra o **hub** **[docs/samples/README.pt_BR.md](samples/README.pt_BR.md)** ([EN](samples/README.md)) — ele aponta para o YAML *starter*, o modelo mínimo Docker, o CSV de escopo e explica **`config/config.json`** (JSON legado só para referência).
+1. Copie **[deploy/samples/config.starter-lgpd-eval.yaml](../deploy/samples/config.starter-lgpd-eval.yaml)** para a sua máquina como **`config.yaml`**. O arquivo traz **valores padrão utilizáveis** (duas pastas + um banco + timeouts + limite de taxa + termos ML/DL) e **blocos opcionais comentados** (ex.: arquivos compactados, `file_passwords`, `learned_patterns`) para ir habilitando aos poucos.
+1. Substitua os caminhos **fictícios** (`/opt/lgpd-demo/...`) e o host **`192.0.2.10`** (rede só de documentação) pelos valores de laboratório reais.
+1. Defina a variável de ambiente de **`pass_from_env`** (exemplo: `DATA_BOAR_DEMO_DB_PASSWORD`) **antes** de subir o processo — não coloque senhas reais no YAML em produção. O nome precisa do prefixo `DATA_BOAR_` / `REST_API_` / `API_`, e `allowed_hosts` precisa listar `192.0.2.10` (já está no starter).
+1. Execute uma varredura one-shot: `uv run python main.py --config config.yaml` ou suba o painel com o mesmo `--config`.
+
+O *starter* **não** substitui os grandes YAML de **`docs/compliance-samples/`** (ajuste fino por norma).
+
+Em **Docker**, comece por **[deploy/config.example.yaml](../deploy/config.example.yaml)** e una trechos do *starter* se precisar de um perfil de laboratório mais completo.
+
+**JSON legado:** O arquivo **`config/config.json`** no repositório só ilustra o formato antigo `databases` + `file_scan.directories` — veja **[config/README.pt_BR.md](../config/README.pt_BR.md)**. **Prefira YAML** em projetos novos.
+
+### Importação de escopo a partir de CSV (fragmento de config) {#scope-import-csv-fragment}
+
+Dá para **montar a lista de `targets`** a partir de um **CSV canônico** (por exemplo exportado de uma planilha) e gerar um **fragmento YAML** para colar em `targets:` ou salvar em arquivo para revisão. O produto **não** mescla automaticamente com um `config.yaml` existente; o operador revisa e integra manualmente ou com ferramentas próprias.
+
+- **Script:** `uv run python scripts/scope_import_csv.py <arquivo.csv>` imprime YAML no stdout; `-o saida.yaml` grava arquivo. `--no-merge-hint` omite o bloco inicial de comentários.
+- **Coluna obrigatória:** `type` (ex.: `filesystem`, `postgresql`, `mysql`, `database`, `smb`, `nfs`). Cabeçalhos são reconhecidos sem distinção de maiúsculas/minúsculas; espaços viram `_`.
+- **Colunas usuais:** `name`, `path`, `host`, `port`, `database`, `driver`, `user`, `pass_from_env`, `user_from_env`, `share`, `domain`, `export_path`, `recursive`, além de breadcrumbs opcionais: `asset_id`, `hostname`, `ip`, `tags` (vários valores com `|` ou `;`), `path_hints`, `port_hints`, `source_system`, `source_export_type`, `confidence`. Metadados opcionais ficam em `scope_import` em cada alvo.
+- **Segredos:** Prefira `pass_from_env` / `user_from_env` no CSV; **não** coloque senhas reais no arquivo.
+- **Privacidade:** Exportações podem listar infraestrutura sensível — trate como config (permissões, evite commit acidental). Ver [SECURITY.md](../SECURITY.md).
+- **Exemplo:** [`deploy/scope_import.example.csv`](../deploy/scope_import.example.csv).
+- **Quem não é de TI:** [docs/ops/SCOPE_IMPORT_QUICKSTART.pt_BR.md](ops/SCOPE_IMPORT_QUICKSTART.pt_BR.md) ([EN](ops/SCOPE_IMPORT_QUICKSTART.md)) — montar o CSV a partir de planilha ou memória quando ainda não houver export do CMDB.
+
+O comportamento está em `config/scope_import_csv.py` (v1: `filesystem`, `database` / aliases SQL, `smb`, `nfs`). Detalhes em inglês: [USAGE.md](USAGE.md) (mesma seção).
+
+### Encoding de arquivos (config e arquivos de padrões) {#file-encoding-config-and-pattern-files}
+
+Config e amostras de conformidade podem usar diferentes conjuntos de caracteres. A aplicação suporta isso para que termos multilíngues (ex.: japonês, árabe, francês) e ambientes legados não quebrem em produção.
+
+- **Arquivo de config:** Lido com **auto-detecção**: UTF-8, UTF-8 com BOM, ANSI Windows (cp1252) e Latin-1 são tentados em ordem. Não é necessário definir encoding para o config principal.
+- **Arquivos de padrões** (`regex_overrides_file`, `regex_overrides_files`, `ml_patterns_file`, `ml_patterns_files`, `dl_patterns_file`): Lidos com o encoding definido por **`pattern_files_encoding`** (padrão **`utf-8`**). Use quando seus YAML/JSON estiverem em outro encoding (ex.: `cp1252`, `latin_1`, `utf-8-sig`). Bytes inválidos são substituídos para que um caractere problemático não derrube a varredura. Chaves em lista mesclam na ordem (arquivo posterior vence no mesmo `name` de regex ou `text` de ML), mesma ideia de **`sql_sampling_files`**. Opcional **`compliance_frameworks: [lgpd, pci_dss, …]`** resolve para `docs/compliance-samples/compliance-sample-<id>.yaml`. O **`recommendation_overrides`** de cada amostra referenciada entra em **`report.recommendation_overrides`** automaticamente (linhas inline ainda vencem no mesmo `norm_tag_pattern`).
+- **Recomendação:** Salve todos os configs e amostras em **UTF-8** para melhor compatibilidade com conteúdo multilíngue (amostras para APAC, EMEA etc.). O relatório Excel e o heatmap suportam Unicode.
+
+Exemplo no config:
+
+```yaml
+pattern_files_encoding: utf-8   # padrão; ou cp1252, latin_1, utf-8-sig para legado
+regex_overrides_file: docs/compliance-samples/compliance-sample-uk_gdpr.yaml
+ml_patterns_file: docs/compliance-samples/compliance-sample-pipeda.yaml
+```
+
+**Padrões regex customizados:** Para a aplicação se atentar a **novos valores possivelmente pessoais ou sensíveis** (ex.: RG, placa, número de plano de saúde), defina **`regex_overrides_file`** no config com o caminho de um arquivo YAML/JSON contendo uma lista de `{ name, pattern, norm_tag }`. O detector aplica cada padrão ao nome da coluna e ao texto amostrado; qualquer match é reportado com sensibilidade HIGH (ou MEDIUM em contexto de letras/cifras). Formato e exemplos (RG, placa, CEP, telefone EUA, etc.): [SENSITIVITY_DETECTION.pt_BR.md#padrões-regex-customizados-detectar-novos-dados-pessoaissensíveis](SENSITIVITY_DETECTION.pt_BR.md#padrões-regex-customizados-detectar-novos-dados-pessoaissensíveis) (pt-BR) · [SENSITIVITY_DETECTION.md#custom-regex-patterns-detecting-new-personalsensitive-values](SENSITIVITY_DETECTION.md#custom-regex-patterns-detecting-new-personalsensitive-values) (EN). Para **múltiplas regulamentações e exemplos de configuração** (embutidas: LGPD, GDPR, CCPA, HIPAA, GLBA; extensibilidade para UK GDPR, PIPEDA, POPIA, APPI, PCI-DSS ou custom) e ajuda com ajuste fino, veja [COMPLIANCE_FRAMEWORKS.pt_BR.md](COMPLIANCE_FRAMEWORKS.pt_BR.md) ([EN](COMPLIANCE_FRAMEWORKS.md)).
+
+**Outras regulamentações e amostras de conformidade:** Amostras de config prontas para **UK GDPR**, **EU GDPR**, **Benelux**, **PIPEDA**, **POPIA**, **APPI**, **PCI-DSS** e outras regiões estão em [compliance-samples/](compliance-samples/). Defina `regex_overrides_file` / `ml_patterns_file`, as chaves no plural, ou `compliance_frameworks`. O `recommendation_overrides` da amostra é injetado em `report.recommendation_overrides` automaticamente. Lista completa, o que vai onde e como usar: [COMPLIANCE_FRAMEWORKS.pt_BR.md – Amostras de conformidade](COMPLIANCE_FRAMEWORKS.pt_BR.md#amostras-de-conformidade) ([EN](COMPLIANCE_FRAMEWORKS.md#compliance-samples)).
+
+**Aceleração do estágio de regex em Rust (#1414 / observabilidade #1411–#1412):** a direção de produto é que `boar_fast_filter` **executa o mesmo estágio de casamento de regex** do `SensitivityDetector` (built-ins + YAML / plugins), com veredito equivalente onde os motores batem — **não** um prefiltro que pula lotes não suspeitos antes do ML/DL, e **não** um latch de zero-regressão (sem skip → latch não se aplica). Forma de aceite **B** ([ADR 0083](adr/ADR-0083-rust-regex-stage-superset-accept-form-b.md)): ``findings(Rust) ⊇ findings(Python)`` com extras atribuíveis. Em tiers pagos, sem o wheel o caminho cai no OpenCore em Python puro (PyPI não traz a extensão Rust; ver [TROUBLESHOOTING.md](TROUBLESHOOTING.md)). O **regex determinístico** (built-in + `regex_overrides_file` / amostras) continua o catálogo de domínio aberto em [compliance-samples/](compliance-samples/). Status do motor: ``--prefilter-status``, linhas WARN/OK de ``--validate-config``, ``GET /status`` → ``detection_prefilter``, ou ``detection_prefilter`` em ``scan_manifest_*.yaml`` (#1412). Superfícies **só de observabilidade** — não mudam achados por si. Detalhe EN: [USAGE.md](USAGE.md) (*Sensitivity detection*).
+
+**Checklist ao usar arquivo de amostra de compliance:**
+
+1. **Confirmar** que `report.recommendation_overrides` após o load inclui as linhas da amostra (automático). Acrescente linhas inline só se o texto da amostra não servir — antes, pular a cópia manual fazia a aba **Recomendações** cair só no texto genérico.
+1. **Revisar** entradas `regex` opcionais; padrões regionais com dígitos podem gerar ruído em texto amplo (veja [SENSITIVITY_DETECTION.pt_BR.md](SENSITIVITY_DETECTION.pt_BR.md#padrões-genéricos-de-dígitos-e-escopo-de-falso-positivo)).
+1. **Ordenar** linhas extras de `recommendation_overrides` com `norm_tag_pattern` **mais específico** **antes** de substrings genéricas (ex.: **UK GDPR** antes de **GDPR**). O casamento usa **primeira entrada** (semântica de substring). Com vários frameworks, coloque ids mais específicos primeiro em `compliance_frameworks` quando as tags puderem se sobrepor como substring.
+
+**Exemplo `recommendation_overrides` para categorias sensíveis (LGPD Art. 5 II, 11; GDPR Art. 9):** Você pode adicionar entradas para que achados de saúde, religião, política, PEP, raça, sindicato, genético, biométrico e vida sexual tenham Base legal, Risco e Prioridade corretos na aba Recomendações. Exemplo (inglês): [USAGE.md](USAGE.md). Em pt-BR, use os mesmos `norm_tag_pattern` (ex.: `health`, `religious`, `political`, `PEP`, `race`, `union`, `genetic`, `biometric`, `sex life`) e preencha `base_legal`, `risk`, `recommendation`, `priority`, `relevant_for` conforme sua política. Ver [SENSITIVITY_DETECTION.pt_BR.md](SENSITIVITY_DETECTION.pt_BR.md).
+
+### Rate limiting e segurança contra abuso
+
+Para evitar DoS acidental ou abuso (muitas varreduras em sequência ou sessões demais em paralelo), use o bloco `rate_limit` no config:
+
+```yaml
+rate_limit:
+  enabled: true               # quando presente, o padrão é true
+  max_concurrent_scans: 1     # máximo de varreduras em execução ao mesmo tempo (API)
+  min_interval_seconds: 0     # intervalo mínimo em segundos entre inícios de varredura
+  grace_for_running_status: 0 # opcional; tolerância extra quando o status ainda mostra running
+```
+
+- Quando `rate_limit.enabled` for true, os endpoints de início de varredura (`POST /scan`, `POST /start`, `POST /scan_database`) podem responder **HTTP 429** com JSON:
+
+  ```json
+  {
+    "detail": {
+      "error": "rate_limited",
+      "reason": "too_many_running_scans",
+      "running_scans": 2,
+      "max_concurrent_scans": 1,
+      "source": "scan"
+    }
+  }
+  ```
+
+- A CLI usa a mesma lógica apenas para imprimir **avisos** (não muda o código de saída), de forma a manter scripts existentes funcionando enquanto você enxerga quando sua política bloquearia chamadas via API/dashboard.
+- É possível sobrescrever os valores via variáveis de ambiente: `RATE_LIMIT_ENABLED`, `RATE_LIMIT_MAX_CONCURRENT_SCANS`, `RATE_LIMIT_MIN_INTERVAL_SECONDS`, `RATE_LIMIT_GRACE_FOR_RUNNING_STATUS`.
+- **Produção:** O rate limiting é a primeira linha de defesa contra abuso e sobrecarga de varreduras. Desabilitar ou relaxar os limites (ex.: `max_concurrent_scans` alto ou `min_interval_seconds` zero) aumenta o risco de abuso e esgotamento de recursos; mantenha os limites ativos com valores conservadores em produção.
+
+### Timeouts para conexões com fontes de dados
+
+É possível configurar timeouts de conexão e de leitura (em segundos) usados ao abrir e ler bancos, APIs ou outros alvos. Os padrões globais valem para todos os alvos; cada alvo pode sobrescrevê-los.
+
+```yaml
+timeouts:
+  connect_seconds: 25   # padrão 25 — tempo máximo para estabelecer conexão
+  read_seconds: 90      # padrão 90 — tempo máximo de espera para leitura/resposta
+```
+
+- **Sobrescrita por alvo:** Em qualquer alvo você pode definir `connect_timeout`, `read_timeout` ou um único `timeout` (usado para connect e read quando o outro não for definido). Os valores do alvo sobrescrevem os timeouts globais quando presentes. Valores em segundos; mínimo 1.
+
+Exemplo (padrões globais e um alvo mais lento):
+
+```yaml
+timeouts:
+  connect_seconds: 25
+  read_seconds: 90
+
+targets:
+
+- name: fast-db
+
+    type: database
+    # usa 25 / 90
+- name: slow-api
+
+    type: api
+    connect_timeout: 60
+    read_timeout: 120
+
+- name: legacy
+
+    type: database
+    timeout: 45   # 45 para connect e read
+```
+
+Os conectores usam os valores mesclados (global ou por alvo) ao abrir conexões e fazer I/O; veja o esquema do config e a documentação dos conectores.
+
+### Timeouts e carga
+
+Recomendações para que as varreduras permaneçam estáveis sem sobrecarregar os alvos nem esperar indefinidamente:
+
+1. **Não espere para sempre:** Defina timeouts de conexão e de leitura para que um alvo travado não bloqueie toda a varredura. Use as dicas de falha no relatório para identificar falhas por timeout e qual alvo falhou.
+1. **Não seja agressivo demais:** Timeouts muito baixos geram falsos timeouts em redes ocupadas ou lentas (ex.: durante backup). Se aparecerem muitos timeouts, **aumente** `connect_seconds` e `read_seconds` (ou por alvo `connect_timeout` / `read_timeout`) e considere reexecutar em horário de menor uso.
+1. **Evite DoS e “muito rápido demais”:** Use **rate_limit** (ex.: `max_concurrent_scans: 1`, `min_interval_seconds: 5`) e **scan.max_workers: 1** (ou 2) para que o scanner não abra muitas conexões ao mesmo tempo. Isso reduz carga nos alvos e evita amplificar lentidão ou causar DoS. Em bancos de produção frágeis, prefira **limitação de taxa adaptativa (ARL)** — veja [Limitação de taxa adaptativa (ARL)](#limitação-de-taxa-adaptativa-arl) abaixo em vez de chutar um `max_workers` fixo.
+1. **Janelas de backup ou manutenção:** Se as varreduras rodarem durante backup ou manutenção, aumente os timeouts e mantenha o paralelismo baixo; ou agende varreduras fora dessas janelas.
+1. **Sobrescrita por alvo:** Para um banco ou API lento, defina `connect_timeout` / `read_timeout` (ou `timeout`) nesse alvo em vez de aumentar os padrões globais para todos.
+
+### Limitação de taxa adaptativa (ARL)
+
+**Padrão:** `scan.adaptive_rate_limit: false` — o engine usa pool fixo de `scan.max_workers` (comportamento atual).
+
+Com **ARL ligado**, o caminho de produção `--config` (`core/engine.py`) usa `BoarThrottler` para ajustar workers **efetivos** por alvo a partir da latência observada:
+
+| Sinal | Ação |
+| ----- | ---- |
+| Média móvel **&lt; 80%** de `target_latency_ms` | Aumenta workers em 1 (até `scan.max_workers`) |
+| Média **&gt;** `target_latency_ms` | Reduz workers em 1 (mínimo 1) |
+| Média **&gt; 2×** `target_latency_ms` | Divide workers pela metade (mín. 1) + cool-off opcional |
+
+**Config (em `scan:`):**
+
+```yaml
+scan:
+  max_workers: 4
+  adaptive_rate_limit: true   # padrão false — opt-in
+  # validate_crypto: false    # opcional: wiring de criptografia forte / controles (off por padrão)
+  target_latency_ms: 200
+```
+
+**Interações:**
+
+- **Teto de licença (#551):** `guard.worker_cap()` ainda limita `scan.max_workers` antes do scan; ARL não ultrapassa esse teto.
+- **`rate_limit`:** limita **sessões** de scan na API; ARL limita **alvos** em paralelo dentro de uma sessão.
+- **Freio manual:** `max_workers: 1` (ou 2) fixo continua válido; ARL é para quando o feedback de latência deve ajustar a concorrência.
+
+**Quando usar:** SQL Server / RDS em produção frágil, sem swap — `max_workers: 8` arrisca sobrecarga; `max_workers: 1` desperdiça tempo quando a latência está boa.
+
+Veja também [TECH_GUIDE.pt_BR.md](TECH_GUIDE.pt_BR.md) e [TROUBLESHOOTING_CONNECTIVITY.pt_BR.md](TROUBLESHOOTING_CONNECTIVITY.pt_BR.md).
+
+### Progresso ao vivo do scan (stderr, #1328)
+
+Varreduras longas em banco podem levar dezenas de minutos. O Data Boar emite **linhas periódicas de progresso** em **stderr** (e no audit log quando configurado) para o operador não precisar estimar ETA cruzando ordem alfabética de tabelas com o SQLite.
+
+**Formato (exemplo):** `target 2/5 (prod-rds) · table 120/450 (public.users) · ~27% · ETA ~12 min`
+
+- **Target X/Y** — posição entre os `targets` desta sessão.
+- **Table N/M** — após a descoberta SQL listar as tabelas do alvo atual (`SQLConnector.discover()` / Snowflake `_list_tables()`). **M só é conhecido depois da discovery** — não confundir com `tables_override_count` nos logs de auditoria.
+- **~Z%** e **ETA** — estimativa linear após **pelo menos duas tabelas** no mesmo alvo. Sem total conhecido (alvos não-SQL), mostra `table N` sem percentual/ETA.
+
+**Ativar / ajustar:** `scan.progress` (padrão `true`), `scan.progress_interval_seconds` (30), `scan.progress_interval_tables` (5), ou `--progress` / `--no-progress` na CLI.
+
+Somente **observabilidade** — não altera achados, amostragem nem relatório.
+
+### Latência de banco remoto (cross-region)
+
+Com scanner e banco em **regiões diferentes** (ex.: estação no Brasil → RDS `us-east-1`), o tempo costuma ser dominado pelo **RTT de rede**, não pela CPU do servidor.
+
+- **Modelo de custo:** cada amostragem de coluna paga pelo menos **1 RTT**; tempo ≈ **(consultas × RTT)**, não throughput do link.
+- **Sintomas:** **CPUUtilization** baixa no CloudWatch, **ReadLatency** ~ociosa no servidor, scan ainda lento — o cliente fica em **espera de rede**.
+- **Não é GIL / servidor sobrecarregado:** com CPU ociosa no RDS, investigue RTT e filas no cliente primeiro.
+- **Recomendação #1:** **Co-localizar** scanner e banco — mesma **VPC/região** (jump host, runner de CI ou VM de lab na região).
+- **Caveat `scan.max_workers` (comportamento atual):** paralelismo de DB é **por target**, não por tabela/coluna. `max_workers` alto só ajuda com **vários targets**; não acelera um único RDS grande. Paralelismo fino dentro do DB está em [#1322](https://github.com/DataBoar/data-boar/issues/1322) (milestone 1.8.x — trabalho futuro, sem promessa de data).
+- **Como medir:** `ss -tn dst :<porta>` no cliente; **DatabaseConnections**, **ReadLatency**, **CPUUtilization** no servidor; RTT TCP de referência.
+
+Veja [TROUBLESHOOTING_CONNECTIVITY.pt_BR.md](TROUBLESHOOTING_CONNECTIVITY.pt_BR.md) § *Latência de banco remoto* e [TECH_GUIDE.pt_BR.md](TECH_GUIDE.pt_BR.md).
+
+### API e segurança (CSP, cabeçalhos)
+
+A API web e o dashboard enviam **cabeçalhos de segurança** em toda resposta (veja [SECURITY.md](../SECURITY.md)): X-Content-Type-Options, X-Frame-Options, **Content-Security-Policy (CSP)**, Referrer-Policy, Permissions-Policy e HSTS quando a requisição é considerada HTTPS.
+
+- **CSP padrão:** Scripts e estilos são permitidos da origem da aplicação (`'self'`). O dashboard carrega o Chart.js do **CDN jsDelivr** (`<https://cdn.jsdelivr.ne>t`), permitido por padrão para o gráfico “Progress over time”. Uma quantidade mínima de script inline é usada para os dados do gráfico; o restante da lógica do dashboard fica em `/static/dashboard.js`.
+- **CSP mais restrito:** Para remover `'unsafe-inline'` (ex.: perfil de alta segurança), você pode definir um CSP mais restrito no **proxy reverso** (sobrescrevendo o cabeçalho da aplicação) ou usar um toggle de env/config se a aplicação passar a oferecer um no futuro. Com CSP mais restrito, todo script e estilo deve vir de origens permitidas (`'self'` e o CDN); qualquer script inline restante nos templates precisaria ser refatorado para arquivos externos. Veja [SECURITY.md](../SECURITY.md) e [docs/deploy/DEPLOY.pt_BR.md](deploy/DEPLOY.pt_BR.md) ([EN](deploy/DEPLOY.md)) (Security and hardening) para endurecimento de implantação (Docker, Kubernetes, proxy reverso).
+
+Para detalhes de todos os campos e exemplos completos, consulte `README.md` e `docs/USAGE.md` (inglês), que são as referências canônicas.
+
+**Produção atrás de proxy reverso (nginx, Traefik, Caddy):** A aplicação se comporta corretamente atrás de NAT, load balancer ou proxy reverso. Quando o TLS for terminado no proxy, defina **X-Forwarded-Proto: https** para que os cabeçalhos de segurança (ex.: HSTS) funcionem. Veja [SECURITY.md](../SECURITY.md) para os cabeçalhos HTTP de segurança.
+
+#### Formatos de CNPJ (legado numérico e alfanumérico)
+
+Para o **CNPJ** brasileiro, o detector inclui dois padrões regex embutidos:
+
+- `LGPD_CNPJ` – formato **legado, apenas numérico** (14 dígitos, pontuação opcional `./-/`: `XX.XXX.XXX/XXXX-XX`).
+- `LGPD_CNPJ_ALNUM` – formato **alfanumérico** em que as 12 primeiras posições podem conter `A–Z` ou `0–9`, e as duas últimas posições permanecem dígitos (check digits); a pontuação é opcional nos mesmos lugares.
+
+Ambos usam o mesmo `norm_tag` (`LGPD Art. 5`). Nesta etapa a detecção é apenas por **compatibilidade de formato** (sem validação de dígito verificador); veja [SENSITIVITY_DETECTION.pt_BR.md](SENSITIVITY_DETECTION.pt_BR.md#formatos-de-cnpj-brasil-numérico-legado-e-alfanumérico) para detalhes e para saber como estender/substituir padrões via `regex_overrides_file`.
+
+### Alvos: bancos de dados
+
+Cada alvo é um objeto em `targets` com pelo menos `name` e `type`. Para SQL use `type: database` e o `driver` adequado. O driver precisa bater com o extra opcional: MSSQL padrão é `mssql` ou `mssql+pymssql` com `data-boar[mssql]` (alias `data-boar[mssql-pymssql]`); use `mssql+pyodbc` com `data-boar[mssql-pyodbc]` quando ODBC for necessário. **Carga da varredura:** não há limite rígido de alvos por sessão; listas muito grandes (centenas de bancos ou APIs) aumentam tempo e memória. Prefira um escopo razoável por varredura.
+
+```yaml
+targets:
+
+- name: "Produção_Postgres"
+
+    type: database
+    driver: postgresql+psycopg2
+    host: 10.0.0.50
+    port: 5432
+    user: audit_user
+    pass: secure_password
+    database: customers_db
+```
+
+Credenciais: `user`, `pass` (ou `password`). Opcional: `url` com URL SQLAlchemy completa no lugar de host/porta/usuário/banco.
+
+## Snowflake (optional, .[bigdata]) {#snowflake-optional-bigdata}
+
+```yaml
+targets:
+
+- name: "Warehouse_LGPD"
+
+    type: database
+    driver: snowflake
+    account: "xy12345.us-east-1"
+    user: "AUDIT_USER"
+    pass: "secret"
+    database: "COMPLIANCE_DB"
+    schema: "PUBLIC"
+    warehouse: "AUDIT_WH"
+    role: "ANALYST"   # opcional
+```
+
+Instale o extra opcional:
+
+```bash
+uv pip install -e ".[bigdata]"
+```
+
+O conector Snowflake segue o mesmo padrão dos outros motores SQL: descobre tabelas/colunas, amostra linhas (sem persistir valor cru), roda a detecção de sensibilidade e grava achados como metadados de banco (schema, tabela, coluna, tipo, sensibilidade, padrão, norm tag, confiança).
+
+## Redis (opcional, .[nosql])
+
+```yaml
+targets:
+
+- name: "Cache_LGPD"
+
+    type: database
+    driver: redis
+    host: "127.0.0.1"
+    port: 6379
+    # pass: "secret"                 # AUTH opcional
+    allow_private_networks: true     # obrigatório em loopback / RFC1918 (mesma guarda SSRF dos outros alvos TCP)
+```
+
+Instale o extra opcional: `uv pip install -e ".[nosql]"`.
+
+**O que é varrido:** `SCAN` coleta até **`file_scan.sample_limit`** chaves (padrão do engine **5** se a chave YAML for omitida). Os **nomes** nessa janela entram juntos como contexto **compartilhado** para detecção por nome. Se o nome da chave permanecer **LOW** (e não for o padrão de revisão sugerida), o conector amostra o **payload** pelo **`TYPE`** do Redis: **string** `GET`, **hash** `HSCAN`, **list** `LRANGE`, **set** `SSCAN`, **zset** `ZRANGE`, **stream** `XRANGE`. Outros tipos **não** viram `unreachable`; entram em **`scan_failures`** com razão **`redis_value_not_sampled`** e detalhe JSON (`keys_discovered`, `keys_name_classified`, `values_sampled`, `value_not_sampled_by_type`). Preview do valor: `str(raw)[:500]`. Achados usam `table_name="keys"` e `column_name=<chave>`.
+
+**Restrição:** **não há chave YAML** para `value_sample_limit`. O engine passa `sample_limit` de `file_scan` e deixa a amostragem de payload no padrão do construtor (**100**). Pin TCP/SSRF é o mesmo dos outros conectores de saída.
+
+### Alvos: filesystem
+
+```yaml
+
+- name: "Documentos_LGPD"
+
+    type: filesystem
+    path: /home/user/Documents/LGPD
+    recursive: true
+```
+
+Sem credenciais. Usa as chaves de `file_scan` (extensões, recursividade, `scan_sqlite_as_db`, `sample_limit`, `file_sample_max_chars`) do config.
+
+### Alvos: APIs (REST) — Basic, Bearer, OAuth2, custom
+
+Use `type: api` ou `type: rest`. Obrigatório: `name`, `base_url` (ou `url`). Opcional: `paths` ou `endpoints`, `discover_url`, `timeout`, `headers` e um bloco `auth`.
+
+**Guarda SSRF:** `base_url`, `discover_url` e `auth.token_url` apontando para link-local (metadados de nuvem `169.254.0.0/16`), loopback ou hosts privados (RFC1918/ULA) são **rejeitados por padrão**. Para varrer infraestrutura interna, acrescente `allow_private_networks: true` no alvo. A mesma guarda vale para SharePoint (`site_url`), WebDAV (`base_url`) e Power BI (`auth.token_url`).
+
+**Allow-list de host de credencial (#1977 / #2006):** Antes de anexar Basic, Bearer, segredo OAuth ou cabeçalhos customizados `Authorization` / `X-API-Key` / `api-key`, o conector confere cada host de endpoint de credencial (`base_url` / `url` e `auth.token_url`). A comparação é o **hostname exato** (minúsculas). Sem wildcard, sem porta, sem path.
+
+- **Segredos do ambiente** (`auth.token_from_env`, `auth.client_secret_from_env`, `client_secret: "${VAR}"` **ou** `pass_from_env` / `password_from_env` / `user_from_env` no alvo) **exigem** lista explícita: `auth.allowed_hosts` (ou `allowed_hosts` no alvo). Inclua **os dois** hosts quando a API e o token OAuth diferem. O loader pode copiar o valor da env para `pass` / `user`; o conector ainda trata o alvo como carregado do ambiente enquanto essas chaves `*_from_env` existem (#2006).
+- Nomes em `token_from_env`, `client_secret_from_env`, `pass_from_env`, `password_from_env` e `user_from_env` precisam começar com **`API_`**, **`REST_API_`** ou **`DATA_BOAR_`** em REST **e** em alvos SQL, NoSQL e share. Outros nomes falham fechado (`ValueError` com `#1977`) e o segredo não é copiado. A env de processo `DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS` precisa listar cada host de destino (sem porta). O `allowed_hosts` do YAML só estreita essa lista. Exemplo: `pass_from_env: DATA_BOAR_DB_PASS` com `allowed_hosts: ["db.example.com"]`.
+- Tokens/senhas **inline** (sem chaves env) usam por padrão os hosts de `base_url` / `auth.token_url` no **mesmo** alvo. Lista explícita vence e pode rejeitar um `base_url` fora da lista.
+- A falha é **`ValueError`** no `connect`. Em Scan failures o motivo costuma ser **`error`** com `#1977` em **Details** — não é 401 remoto. Veja [TROUBLESHOOTING_CREDENTIALS_AND_AUTH.pt_BR.md](TROUBLESHOOTING_CREDENTIALS_AND_AUTH.pt_BR.md).
+
+```yaml
+
+- name: "Internal API"
+
+    type: api
+    base_url: "http://10.0.0.5:8080"
+    paths: ["/users"]
+    allow_private_networks: true  # opt-in explícito para hosts privados/loopback
+```
+
+## Basic auth
+
+```yaml
+
+- name: "Legacy API"
+
+    type: api
+    base_url: "https://api.example.com"
+    paths: ["/users", "/contacts"]
+    auth:
+      type: basic
+      username: "audit_user"
+      password: "your_password"
+```
+
+`user` + `pass_from_env` no alvo (sem bloco `auth`) também envia Basic. Senha vinda do ambiente **exige** `allowed_hosts` e prefixo `API_` / `REST_API_` / `DATA_BOAR_`:
+
+```yaml
+
+- name: "API with env password"
+
+    type: api
+    base_url: "https://api.example.com"
+    paths: ["/users"]
+    user: "audit_user"
+    pass_from_env: "API_REST_PASS"
+    allowed_hosts: ["api.example.com"]
+```
+
+## Bearer token (static or from environment)
+
+```yaml
+
+- name: "API with bearer"
+
+    type: api
+    base_url: "https://api.example.com"
+    paths: ["/data"]
+    auth:
+      type: bearer
+      token: "eyJhbGc..."   # ou token_from_env: "API_TOKEN" para ler do ambiente
+      allowed_hosts: ["api.example.com"]  # obrigatório com token_from_env (#1977)
+```
+
+## OAuth2 client credentials (machine-to-machine)
+
+```yaml
+
+- name: "Internal Users API"
+
+    type: api
+    base_url: "https://api.example.com"
+    paths: ["/users", "/profiles"]
+    auth:
+      type: oauth2_client
+      token_url: "https://auth.example.com/oauth/token"
+      client_id: "audit-client"
+      client_secret: "${API_OAUTH_SECRET}"   # ou segredo literal
+      scope: "read:users"
+      allowed_hosts: ["api.example.com", "auth.example.com"]  # obrigatório com ${…} / *_from_env
+```
+
+Defina a variável (ex.: `API_OAUTH_SECRET`) no ambiente em que o processo sobe. `${VAR}` e `*_from_env` contam como segredo de ambiente: liste **todo** host que recebe o segredo (API + endpoint de token).
+
+## Custom headers (e.g. API key or Negotiate)
+
+```yaml
+
+- name: "API with custom header"
+
+    type: api
+    base_url: "https://api.example.com"
+    paths: ["/export"]
+    auth:
+      type: custom
+      headers:
+        Authorization: "Bearer ..."
+        X-API-Key: "your-api-key"
+```
+
+Se você omitir `auth` mas definir `user`/`username` e `pass`/`password` no alvo, aplica-se **basic** auth.
+
+### Alvos: Power BI e Power Apps (Dataverse)
+
+**Power BI** e **Dataverse (Power Apps)** usam OAuth2 client credentials do Azure AD. Não precisa de pacote extra (`httpx` já é dependência).
+
+## Power BI (`type: powerbi`)
+
+- Obrigatório: `name`, `tenant_id`, `client_id`, `client_secret` (ou sob `auth:`).
+- Opcional: `workspace_ids` ou `group_ids` (lista de GUIDs de workspace) para limitar a varredura; omita para usar “My workspace” e todos os workspaces.
+- O app Azure AD precisa da permissão Power BI `Dataset.Read.All` ou `Dataset.ReadWrite.All`. Com service principal, habilite “Allow service principals to use Power BI APIs” no portal de admin do Power BI.
+
+```yaml
+
+- name: "Power BI Compliance"
+
+    type: powerbi
+    tenant_id: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    client_id: "yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy"
+    client_secret: "${POWERBI_CLIENT_SECRET}"
+    # workspace_ids: ["group-guid-1"]
+```
+
+## Dataverse / Power Apps (`type: dataverse` or `type: powerapps`)
+
+- Obrigatório: `name`, `org_url` (ou `environment_url`, ex.: `https://myorg.crm.dynamics.com`), `tenant_id`, `client_id`, `client_secret` (ou sob `auth:`).
+- O app Azure AD precisa de permissão de aplicativo no Dataverse (consentimento de admin). O *scope* deriva de `org_url`.
+
+```yaml
+
+- name: "Dataverse HR"
+
+    type: dataverse
+    org_url: "https://myorg.crm.dynamics.com"
+    tenant_id: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    client_id: "yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy"
+    client_secret: "${DATAVERSE_CLIENT_SECRET}"
+```
+
+Achados de Power BI e Dataverse entram na planilha **Database findings**. A amostragem usa `file_scan.sample_limit` (padrão 5). Metadados de inventário desses conectores (versão de API e transporte) entram na planilha **Data source inventory**.
+
+### Alvos: conteúdo compartilhado (SMB, WebDAV, SharePoint, NFS)
+
+Instale os extras opcionais: `uv pip install -e ".[shares]"`.
+
+## SMB/CIFS
+
+```yaml
+
+- name: "FileServer HR"
+
+    type: smb
+    host: "fileserver.company.local"
+    share: "HR"
+    path: "Documents"
+    user: "audit_user"
+    pass: "***"
+    domain: "COMPANY"   # opcional
+    port: 445
+    recursive: true
+    # Hosts RFC1918 / lab precisam deste opt-in; sem ele o SMB recusa o host
+    # antes de register_session (sem NTLM para um peer inesperado — #1715).
+    # allow_private_networks: true
+```
+
+## WebDAV
+
+```yaml
+
+- name: "WebDAV Storage"
+
+    type: webdav
+    base_url: "https://webdav.company.com/dav"
+    user: "audit"
+    pass: "***"
+    path: "archive"
+    recursive: true
+    verify_ssl: true
+```
+
+## SharePoint
+
+```yaml
+
+- name: "SharePoint HR"
+
+    type: sharepoint
+    site_url: "https://sharepoint.company.com/sites/hr"
+    path: "Shared Documents"
+    user: "audit@company.com"
+    pass: "***"
+```
+
+## NFS (path = local mount point; mount NFS before scanning)
+
+```yaml
+
+- name: "NFS Export"
+
+    type: nfs
+    host: "nfs.company.local"
+    export_path: "/export/data"
+    path: "/mnt/nfs_data"   # ponto de montagem local
+```
+
+Todos os tipos de *share* usam as mesmas chaves de `file_scan` (extensões, recursividade, `scan_sqlite_as_db`, `sample_limit`, `file_sample_max_chars`, `file_passwords`). Os achados entram na planilha **Filesystem findings**.
+
+---
+
+## 5. Baixando relatórios (resumo)
+
+### Baixando relatórios (web) {#baixando-relatorios-web}
+
+Para **DPO, jurídico e outros leitores não técnicos** (veja [AUDIENCE_GUIDE.pt_BR.md](AUDIENCE_GUIDE.pt_BR.md)), use o navegador — o passo a passo com captura está também na [seção 2](#baixar-relatórios-pelo-painel-web).
+
+1. Abra **Relatórios** no menu superior (`/pt-br/reports` ou `/en/reports`).
+2. Clique em **Baixar** na linha da sessão desejada.
+
+![Página Relatórios — clique em Baixar](img/dashboard/pt-br/reports-download.png)
+
+O Excel é salvo na pasta de downloads do navegador; o mapa de calor PNG é gerado junto com a planilha quando o relatório é montado.
+
+### Para automação / scripts
+
+| Objetivo | Como |
+| --- | --- |
+| **Último relatório gerado** | `GET /report` → salve como `.xlsx`. Opcional `?format=ods` para OpenDocument (LibreOffice Calc / SoftMaker PlanMaker). |
+| **Achados em CSV** | `GET /findings/csv` (sessão mais recente) ou `GET /findings/{session_id}/csv`. Células estilo fórmula recebem `'` à frente (mesmo sanitizador do Excel / #1723). |
+| **Relatório de uma sessão anterior** | `GET /list` para obter `session_id`s, depois `GET /reports/<session_id>` → salve como `.xlsx` (mesmo `?format=ods`). |
+| **Execução one-shot (CLI)** | Depois de `python main.py --config config.yaml`, o caminho é impresso; o arquivo fica em `report.output_dir` como `Relatorio_Auditoria_<session_id>.xlsx`. |
+| **Regenerar Excel + heatmap (CLI)** | `python main.py --config config.yaml --regenerate-report <session_id>` — só SQLite; sem re-scan. Use quando os achados já estão gravados mas os arquivos do relatório faltam ou estão velhos. |
+| **Markdown executivo + manifesto** | Gravados ao lado do Excel: `POC_SUMMARY_<session_prefix>.md` e `scan_manifest_<session_prefix>.yaml` (mesmo diretório). Se essa etapa falhar, o caminho do Excel ainda é devolvido — veja o subitem abaixo. |
+| **Só Markdown executivo (CLI)** | `data-boar-report` — lê o **SQLite local** de `sqlite_path` no config; não precisa de conector de banco ao vivo. Veja o subitem abaixo. |
+
+- Os relatórios são gerados sob demanda para uma sessão (a partir dos achados no SQLite). O PNG do mapa de calor é escrito ao lado do Excel quando o relatório é gerado.
+- Não há política de retenção embutida; os relatórios são arquivos em disco. Limpe ou arquive conforme a política local.
+
+### Evidência executiva, prioridades APG e `data-boar-report`
+
+Quando **`generate_report`** roda (CLI one-shot, **`GET /reports/{session_id}`**, **`GET /report`** ou **Baixar** no dashboard), o produto pode emitir:
+
+- **`POC_SUMMARY_<primeiros_16_chars_do_session_id>.md`** — Markdown para *stakeholder*: status, achados **agregados por sensibilidade** (só nomes de padrão e contagens), **três** prioridades de mitigação APG Fase A e um resumo curto de postura DBA/SRE. **Não** lista nomes de coluna, tabela, caminhos de arquivo nem conteúdo amostrado — dá para compartilhar com audiências que não devem ver detalhe operacional.
+- **`scan_manifest_<prefix>.yaml`** — manifesto de evidência (tetos de amostragem, timeouts, bullets de trilha de auditoria, *snapshot* de escopo, bloco opcional `apg_phase_a`).
+
+Falhar ao gravar esses arquivos é **não fatal**: Excel e heatmap ainda são gerados; veja os logs se o Markdown ou o YAML faltar.
+
+**Ponto de entrada no console** (instalado com o pacote `data-boar` em `[project.scripts]`):
+
+```bash
+uv run data-boar-report --config config.yaml --session-id <session_id>
+```
+
+Quando **`-o` / `--output` é omitido**, a CLI grava **`executive_report_<safe_prefix>.md`** ao lado do arquivo de config (evita despejar o relatório inteiro no stdout de CI). Use **`-o`** para um caminho explícito:
+
+```bash
+uv run data-boar-report --config config.yaml --session-id <session_id> -o Executive_summary.md
+```
+
+**Flags úteis:**
+
+| Flag | Significado |
+| --- | --- |
+| `--sqlite <path>` | Substitui `sqlite_path` do config (ex.: cópia do banco de auditoria no homelab). |
+| `--trial-rows-capped` | Acrescenta a mesma nota de “licença trial pode limitar linhas do Excel” do `POC_SUMMARY` empacotado quando você regenera a partir do SQLite. |
+
+**Requisitos:** o mesmo **`config.yaml`** das varreduras (para amostragem/timeouts do manifesto baterem com a política). O **`session_id`** precisa existir em `scan_sessions` / tabelas de achados.
+
+Privacidade e estrutura do Markdown: veja [Processamento local e privacidade (`data-boar-report`)](#processamento-local-e-privacidade-data-boar-report) na seção 3 e [REPORTS_AND_COMPLIANCE_OUTPUTS.pt_BR.md](REPORTS_AND_COMPLIANCE_OUTPUTS.pt_BR.md) ([EN](REPORTS_AND_COMPLIANCE_OUTPUTS.md)).
+
+### 5.1 Notificações ao operador (opcional) {#notificações-ao-operador-opcional}
+
+Após o fim da varredura (CLI ou `POST /scan` / `POST /start` em segundo plano), a aplicação pode enviar um **resumo curto em pt-BR** para **Slack**, **Microsoft Teams**, um **webhook JSON genérico** (ex.: ferramentas de automação ou ponte **Signal**) ou **Telegram** (campos opcionais para instalações legadas/de terceiros). O padrão é **desligado** (`notifications.enabled: false`).
+
+- **Política do mantenedor (repositório canônico):** O mantenedor **não** usa **Telegram** para notificações ao operador do Data Boar; prefira **Slack**, **Teams** ou **webhook genérico** para **Signal**. Ver [OPERATOR_NOTIFICATION_CHANNELS.pt_BR.md](ops/OPERATOR_NOTIFICATION_CHANNELS.pt_BR.md).
+- **Config (caminho único legado):** `notifications.operator` com `slack_webhook_url`, `teams_webhook_url`, `telegram_bot_token` + `telegram_chat_id` ou `generic_webhook_url` — vale o primeiro tipo configurado (Slack → Teams → Telegram → genérico).
+- **Config (vários canais ao operador):** `notifications.operator.channels` como **lista** de objetos; cada item é **um** canal (ex.: um webhook Slack e um webhook genérico). Todos recebem a mesma mensagem (varredura concluída ou script manual).
+- **Cópia ao tenant (opcional):** `notifications.tenant.by_tenant` mapeia o nome do tenant em **minúsculas** para um bloco de webhook (ou string URL para POST genérico). `default_slack_webhook_url` / `default_generic_webhook_url` aplicam quando há `tenant_name` na sessão mas não há entrada específica. Exige `tenant_name` não vazio na sessão.
+- **Deduplicação:** `notifications.dedupe_scan_complete_per_session` (padrão `true`) evita um segundo POST para o mesmo `session_id` depois de **pelo menos um** envio bem-sucedido (por processo; use `false` só se precisar repetir em todo hook de conclusão).
+- **Registro de auditoria (opcional):** `notifications.notify_audit_log` (padrão `true`) grava uma linha por tentativa/canal na tabela SQLite **`notification_send_log`** (sessão, *trigger*, destino `operator`/`tenant`, canal, sucesso, texto de erro redigido, carimbo de tempo). **Não** armazena o corpo da mensagem. Use `false` para desligar escritas.
+- **Segredos:** URLs podem usar `${VAR_DE_AMBIENTE}`. Os POSTs repetem algumas vezes em HTTP 5xx ou erro de rede transitório.
+- **Manual / CI:** `python scripts/notify_webhook.py "mensagem"` (mesmo `config.yaml`; exige `notifications.enabled: true` e um canal configurado). Por padrão o script abre o SQLite em ``sqlite_path`` e grava auditoria por canal (como no fim de varredura); use ``--no-audit`` quando não houver banco local (ex.: alguns jobs de CI).
+- **Detalhes:** [TECH_GUIDE.pt_BR.md](TECH_GUIDE.pt_BR.md) (notificações e webhooks) e [ops/OPERATOR_NOTIFICATION_CHANNELS.pt_BR.md](ops/OPERATOR_NOTIFICATION_CHANNELS.pt_BR.md).
+
+## 6. Infraestrutura como Código — OpenTofu / Terraform
+
+Para ambientes corporativos que gerenciam infraestrutura com OpenTofu ou Terraform, o Data Boar traz um módulo HCL mínimo em `deploy/opentofu/`.
+
+**Fluxo recomendado para times IaC-first:**
+
+```bash
+# Passo 1 — Provisionar infraestrutura (container Docker, portas, volumes)
+cd deploy/opentofu
+tofu init
+tofu apply                       # ou: terraform apply
+
+# Passo 2 — Configurar e implantar a aplicação
+cd ../..
+ansible-playbook -i deploy/opentofu/generated_inventory.ini deploy/ansible/site.yml
+```
+
+**Com banco POC (PostgreSQL) para teste:**
+
+```bash
+tofu apply -var="db_enabled=true" -var="db_password=poc-test-123"
+uv run python scripts/populate_poc_database.py --db-type postgres --host localhost --write-config
+```
+
+Variáveis-chave: `data_boar_image`, `data_boar_port` (padrão `8088`), `data_boar_config_path`,
+`data_boar_output_dir`, `db_enabled`, `db_password`.
+
+Documentação do módulo: `deploy/opentofu/README.md` — decisão de desenho: `docs/adr/ADR-0016-opentofu-corporate-iac-path-alongside-ansible.md`.
+
+> OpenTofu >= 1.6 e Terraform >= 1.5 são compatíveis com este módulo (HCL idêntico).
+> Em hosts Docker remotos, defina `DOCKER_HOST` ou um túnel SSH antes de `tofu apply`.
+
+## 7. Referência rápida
+
+- **CLI one-shot:** `python main.py --config config.yaml`
+- **CLI sobe a API:** `python main.py --config config.yaml --web --port 8088`
+- **Config da API:** defina `CONFIG_PATH` ou coloque `config.yaml` no diretório de trabalho.
+- **Iniciar varredura:** `POST /scan` ou `POST /start`
+- **Status:** `GET /status`
+- **Listar sessões:** `GET /list` (JSON). Para a lista HTML, abra `/{locale}/reports` (ex.: `/pt-br/reports`); `/reports` sem prefixo redireciona para lá (não há lista JSON em `GET /reports`).
+- **Baixar último relatório:** `GET /report`
+- **Baixar relatório por sessão:** `GET /reports/{session_id}`
+- **Markdown executivo (SQLite local):** `uv run data-boar-report --config config.yaml --session-id <session_id>` (veja a seção 5)
+- **Docs interativos da API:** `http://<host>:<port>/docs`
+
+**Documentação relacionada:** Índice completo (todos os tópicos, ambos os idiomas): [README.md](README.md) · [README.pt_BR.md](README.pt_BR.md). Guia técnico: [TECH_GUIDE.md](TECH_GUIDE.md) · [TECH_GUIDE.pt_BR.md](TECH_GUIDE.pt_BR.md). [SENSITIVITY_DETECTION.pt_BR.md](SENSITIVITY_DETECTION.pt_BR.md) (termos de treino ML/DL; [inglês](SENSITIVITY_DETECTION.md)). Para `recommendation_overrides` cobrindo categorias sensíveis (saúde, religião, política, PEP, raça, sindicato, genético, biométrico, vida sexual), veja o exemplo acima (Notas sobre configuração) e [SENSITIVITY_DETECTION.pt_BR.md](SENSITIVITY_DETECTION.pt_BR.md). Para adicionar um novo conector (banco, API, *share*), veja [ADDING_CONNECTORS.pt_BR.md](ADDING_CONNECTORS.pt_BR.md) ou [ADDING_CONNECTORS.md](ADDING_CONNECTORS.md) (inglês). Deploy: [deploy/DEPLOY.pt_BR.md](deploy/DEPLOY.pt_BR.md) · [deploy/DEPLOY.md](deploy/DEPLOY.md). Mais: [TESTING.pt_BR.md](TESTING.pt_BR.md) ([EN](TESTING.md)), [TOPOLOGY.pt_BR.md](TOPOLOGY.pt_BR.md) ([EN](TOPOLOGY.md)), [COMMIT_AND_PR.pt_BR.md](ops/COMMIT_AND_PR.pt_BR.md) ([EN](ops/COMMIT_AND_PR.md)), [COMPLIANCE_FRAMEWORKS.pt_BR.md](COMPLIANCE_FRAMEWORKS.pt_BR.md) ([EN](COMPLIANCE_FRAMEWORKS.md)). Em sistemas com `man`: `man data_boar` ou `man lgpd_crawler` (comando e API), e `man 5 data_boar` ou `man 5 lgpd_crawler` (config e formatos).

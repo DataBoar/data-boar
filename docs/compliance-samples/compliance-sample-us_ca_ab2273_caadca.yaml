@@ -1,0 +1,73 @@
+# California AB 2273 (Age-Appropriate Design Code) — sample profile (technical mapping)
+#
+# NOT LEGAL ADVICE. AB 2273 has faced legal challenge and applicability may depend on
+# venue and facts. This sample provides norm tags and terms for teams voluntarily
+# mapping "age-appropriate design" and child-safety contexts in data stores.
+# Does not implement platform design requirements or age assurance.
+#
+# How to use:
+#   regex_overrides_file: path/to/compliance-sample-us_ca_ab2273_caadca.yaml
+#   ml_patterns_file: path/to/compliance-sample-us_ca_ab2273_caadca.yaml
+# Merge recommendation_overrides into report.recommendation_overrides.
+#
+# Precise geolocation (logs / APIs): same regex geometry as compliance-sample-us_va_vcdpa.yaml
+# (JSON lat/lng, location: pair, latitude=&longitude=). norm_tag matches this sample's framework label
+# for report overrides. Heuristic only — especially sensitive when combined with minor-facing context;
+# not an age-assurance or parental-consent determination.
+
+regex:
+  - name: "CA_AB2273_REF"
+    pattern: "(?i)\\bAB[\\s-]*2273\\b"
+    norm_tag: "CA AB 2273 (CAADCA)"
+  - name: "CA_AB2273_JSON_LAT_PRECISION"
+    pattern: "(?i)[\"']lat[\"']\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\b"
+    norm_tag: "CA AB 2273 (CAADCA)"
+  - name: "CA_AB2273_JSON_LNG_PRECISION"
+    pattern: "(?i)[\"'](?:lng|lon)[\"']\\s*:\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}\\b"
+    norm_tag: "CA AB 2273 (CAADCA)"
+  - name: "CA_AB2273_LOCATION_CSV_PAIR"
+    pattern: "(?i)\\blocation\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*,\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "CA AB 2273 (CAADCA)"
+  - name: "CA_AB2273_QUERYSTRING_LAT_LONG"
+    pattern: "(?i)latitude=[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*&\\s*longitude=[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "CA AB 2273 (CAADCA)"
+
+terms:
+  - text: "Age-Appropriate Design Code"
+    label: sensitive
+  - text: "California Age-Appropriate Design Act"
+    label: sensitive
+  - text: "CAADCA"
+    label: sensitive
+  - text: "likely to be accessed by children"
+    label: sensitive
+  - text: "best interests of the child"
+    label: sensitive
+  - text: "default privacy settings"
+    label: sensitive
+  - text: "high privacy default"
+    label: sensitive
+  - text: "data protection impact assessment"
+    label: sensitive
+  - text: "DPIA minors"
+    label: sensitive
+  - text: "dark pattern"
+    label: sensitive
+  - text: "dark patterns"
+    label: sensitive
+  - text: "geolocation minor"
+    label: sensitive
+  - text: "precise geolocation"
+    label: sensitive
+  - text: "geolocation data"
+    label: sensitive
+  - text: "profiling children"
+    label: sensitive
+
+recommendation_overrides:
+  - norm_tag_pattern: "CA AB 2273 (CAADCA)"
+    base_legal: "California AB 2273 (Age-Appropriate Design Code) — informational labelling; legal status and scope require counsel"
+    risk: "Stored or processed data may be relevant to age-appropriate design reviews; precise coordinate-shaped values in logs/APIs are heuristic inventory signals only (not minor identification or parental consent). Automated detection does not establish regulatory coverage."
+    recommendation: "Engage DPO/counsel on AB 2273 scope, DPIA obligations, and minor-facing processing. Use output as technical discovery input only."
+    priority: "ALTA"
+    relevant_for: "DPO, California privacy counsel, product compliance"

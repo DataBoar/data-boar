@@ -1,0 +1,49 @@
+---
+description: Session ritual — synced main, private stack, today-mode. Situational — `carryover-sweep` / `eod-sync` / `private-stack-sync` or globs below; @agent-session-ritual-sync-main-and-private-stack.mdc.
+globs:
+  - docs/ops/today-mode/**
+  - docs/ops/PRIVATE_STACK_SYNC*
+  - AGENTS.md
+alwaysApply: false
+---
+
+# Agent session ritual — synced `main`, private stack, next steps
+
+## Calendar / “today” (operator workstation — not the model’s clock)
+
+When you need **which calendar day** matters (today-mode checklist path, dated drafts, “this morning”, release timing):
+
+1. **Do not** rely only on IDE **User** / chat **“Today’s date”** fields — they can be **wrong or stale** for the real session.
+2. On **Windows** (typical for this repo’s dev PC), run in the **integrated terminal**: **`Get-Date -Format "yyyy-MM-dd"`** (PowerShell) or **`date /t`** (cmd). Use that string to pick **`docs/ops/today-mode/OPERATOR_TODAY_MODE_YYYY-MM-DD.md`** unless the operator fixes the date in chat.
+3. On **Linux/macOS** shells, use **`date -I`** or **`date "+%Y-%m-%d"`** the same way.
+
+Canonical prose: **`AGENTS.md`** (*Workstation calendar clock*), **`docs/ops/today-mode/README.md`** (*For assistants*). **Condensed cold-start ladder (token-aware / fresh chat):** **[`docs/ops/OPERATOR_AGENT_COLD_START_LADDER.md`](../../docs/ops/OPERATOR_AGENT_COLD_START_LADDER.md)** ([pt-BR](../../docs/ops/OPERATOR_AGENT_COLD_START_LADDER.pt_BR.md)) — read before re-loading the entire **`AGENTS.md`** table when context is empty.
+
+## Public repo (`origin`)
+
+1. Before **substantive** edits: run **`git fetch origin`** and **`git status -sb`** in the integrated terminal (or rely on fresh output from the same session).
+2. On **`main`**: if behind **`origin/main`**, **`git pull origin main`** before building on a stale base.
+3. On a **feature branch**: **`git fetch`**; integrate **`origin/main`** when the branch is stale or before opening/updating a PR (**merge** or **rebase** per repo habit).
+4. Do **not** give merge advice, PR numbers, or “what’s next” without this refresh—see **`git-pr-sync-before-advice.mdc`**.
+
+## Canonical workstation (primary dev PC — not a cloud hop)
+
+- Do **not** run destructive repo history ops on the canonical clone from routine sessions (**`primary-windows-workstation-protected-no-destructive-repo-ops.mdc`**, **`docs/ops/PRIMARY_WINDOWS_WORKSTATION_PROTECTION.md`**).
+
+## Sidequests
+
+- Exploratory **`sidequest`** branches may be abandoned if impractical; document **stop condition** and **resume pointer** (session keywords).
+
+## Stacked private Git (`docs/private/`)
+
+- After meaningful changes under **`docs/private/`**, run **`scripts/private-git-sync.ps1`** from repo root; use **`-Push`** when the operator’s policy or request includes **non-GitHub mirrors** (configured **`lab-*`** remotes **and**, on Windows, a **bare `notes-sync.git` on the VeraCrypt-mounted drive** when that path exists — the script probes **`Z:`** first (operator default), then **`Y:`** fallback). **Do not** stop after lab pushes if another mirror is mounted and still behind. See **`docs/ops/PRIVATE_STACK_SYNC_RITUAL.md`**, **`operator-evidence-backup-no-rhetorical-asks.mdc`**, **[ADR 0040](../../docs/adr/ADR-0040-assistant-private-stack-evidence-mirrors-default.md)**, keyword **`private-stack-sync`**.
+
+## PR / merge (when it makes sense — not every commit)
+
+- **Sync + local commits** preserve history on the canonical clone; **PR + merge** are for slices **worth** review/CI on GitHub.
+- **Do not** spiral: open PR → CI nit → merge → pull → another PR for the next typo in the same breath. **Batch** fixes; **one** PR per coherent slice when possible (**`execution-priority-and-pr-batching.mdc`**).
+- Merge when green per **`agent-autonomous-merge-and-lab-ops.mdc`** only when the PR is the right integration step—not a reflex.
+
+## Canonical prose
+
+- Root **`AGENTS.md`** — bullets *Assistant session ritual* and *Assistant session closure*.

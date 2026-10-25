@@ -1,0 +1,93 @@
+# Dependabot: automated dependency and workflow updates for security and maintenance.
+# https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+#
+# This project uses pyproject.toml (PEP 621) at repo root with `uv` as the resolver
+# (uv.lock is the canonical pin; requirements.txt is generated via `uv export`).
+# We use package-ecosystem "uv" so Dependabot updates `pyproject.toml` and `uv.lock`
+# together. The `.github/workflows/dependabot-sync.yml` workflow regenerates
+# `requirements.txt` from the new lock (handoff comment + artifact, or optional
+# signed child PR when DEPENDABOT_SYNC_SSH_SIGNING_KEY is set — see docs/ops/DEPENDABOT_REQUIREMENTS_SYNC.md).
+# Rationale: docs/adr/ADR-0044-dependabot-uv-ecosystem-for-pyproject-lock-closure.md.
+version: 2
+updates:
+  # Python dependencies (pyproject.toml + uv.lock)
+  - package-ecosystem: "uv"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels: ["dependencies"]
+    commit-message:
+      prefix: "deps(uv)"
+    groups:
+      # Batch minor/patch updates into one PR to reduce noise; security updates still created separately
+      uv-minor-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    # Upstream-capped transitives: `ignore` blocks Dependabot version-update PRs only;
+    # security advisories still surface. See docs/adr/ADR-0053-*.md, ADR-0054-*.md, ADR-0069-*.md.
+    ignore:
+      # ebcdic 2.x is incompatible with extract-msg 0.55.x (requires_dist ebcdic<2,>=1.1.1).
+      - dependency-name: "ebcdic"
+        update-types: ["version-update:semver-major"]
+      # chardet 6+ is incompatible with cyclonedx-bom until upstream relaxes chardet<6.0.
+      - dependency-name: "chardet"
+        update-types: ["version-update:semver-major"]
+      # rpds-py 2026.x is a breaking CalVer pivot (legitimate but red on 3.12/3.13/3.14);
+      # capped <2026 via [tool.uv] constraint-dependencies. See docs/adr/ADR-0069-*.md.
+      - dependency-name: "rpds-py"
+        update-types: ["version-update:semver-major"]
+      # filelock 4.x is rejected by snowflake-connector-python stable (filelock>=3.5,<4).
+      # Forcing 4.x pulls a release candidate of that connector. Remove this ignore
+      # when a stable connector accepts filelock>=4. See #2021.
+      - dependency-name: "filelock"
+        update-types: ["version-update:semver-major"]
+    cooldown:
+      default-days: 7
+
+  # GitHub Actions (workflows and action versions)
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 3
+    # GitHub repo label is github_actions (underscore). Hyphenated github-actions
+    # is not a label and Dependabot comments on every Actions PR (#1941–#1944).
+    labels: ["dependencies", "github_actions"]
+    commit-message:
+      prefix: "ci(actions)"
+    cooldown:
+      default-days: 7
+
+  # Base image digest pins in Dockerfile (ADR-0074 / #988).
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 3
+    # No GitHub label named docker exists on DataBoar/data-boar (gh label list
+    # 2026-09-21). Keep dependencies only until an operator creates docker.
+    labels: ["dependencies"]
+    commit-message:
+      prefix: "deps(docker)"
+    cooldown:
+      default-days: 7
+
+  # Rust crates (`rust/boar_fast_filter/Cargo.lock`) — remediation was detection-only
+  # (`cargo-audit` / `cargo-deny`, #988) until this block (#1763). Mandatory cooldown:
+  # on 2026-08-20 compromised maintainer crates (`arrayref`, `internment`,
+  # `append-only-vec`) were live ~86–107 minutes with no CVE/RUSTSEC/GHSA; Dependabot
+  # without cooldown would have proposed the poisoned versions as routine bumps.
+  # https://blog.rust-lang.org/2026/08/20/supply-chain-attack-on-arrayref/
+  # AUTO-MERGE: prohibited for this ecosystem (including patch) — every `Cargo.lock`
+  # diff requires human review; do not enable GitHub auto-merge on Dependabot cargo PRs.
+  - package-ecosystem: "cargo"
+    directory: "/rust/boar_fast_filter"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 2
+    labels: ["dependencies"]
+    commit-message:
+      prefix: "deps(cargo)"
+    cooldown:
+      default-days: 7

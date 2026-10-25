@@ -1,0 +1,39 @@
+---
+description: Keep PLAN_*.md header Status, body to-dos, and PLANS_TODO.md in sync—reduces silent drift. Situational — plan globs or session docs/feature/houseclean/backlog or @.
+globs:
+  - docs/plans/**/*.md
+  - docs/plans/PLANS_TODO.md
+alwaysApply: false
+---
+
+# Plan status vs PLANS_TODO (anti-drift)
+
+## When this rule attaches (Cursor)
+
+**Context:** **`alwaysApply: false`** — loads when a path matches the **`globs`** above **or** the operator scopes **`docs`**, **`feature`**, **`houseclean`**, or **`backlog`** to **plan / PLANS_TODO drift** in the same thread **or** attaches **`@plans-status-pl-sync.mdc`**. **`docs-plans.mdc`** remains the place for **archive moves**, hub sync, and external-tier link policy when those files are in focus.
+
+**Companion:** **`docs/ops/OPERATOR_AGENT_COLD_START_LADDER.md`** § *Token → rule latch (plans — status sync)*.
+
+**Rollback:** `git revert` the commit or `git show <parent>:.cursor/rules/plans-status-pl-sync.mdc`.
+
+## Problem
+
+Work can ship on `main` while a **`PLAN_*.md`** file still shows **`Status: Not started`** on line 1, or while **`PLANS_TODO.md`** *Integration / active threads* bullets lag (e.g. HTTPS phase table vs narrative). Humans and agents then **mis-prioritize** or **re-plan completed work**.
+
+## When to reconcile (do)
+
+1. **After** merging a feature slice that maps to a named **`PLAN_*.md`**: update that plan’s **`**Status:**`** line, any **phase table**, and the **sequential to-do table** inside the same file.
+1. **Same pass:** update **`docs/plans/PLANS_TODO.md`** — at minimum the long **Plan status** paragraph and/or **Integration / active threads** if the theme moved; bump **last refreshed** date on **Integration / active threads** when you touch it.
+1. **Automation:** run **`python scripts/plans-stats.py --write`** when dashboard table rows in `PLANS_TODO.md` change; **`python scripts/plans_hub_sync.py --write`** when adding/renaming/archiving a `PLAN_*.md`.
+1. **Fully done:** move the **`PLAN_*.md`** to **`docs/plans/completed/`** (`git mv`, fix links) so **`docs/plans/`** lists **active** plans only — **`.cursor/rules/plans-archive-on-completion.mdc`**.
+1. **Shipped feature + version bump (`-beta` / `-rc` / final):** update the **relevant `PLAN_*.md`** (and **`PLANS_TODO.md`** if the theme moved) in the **same merge window** so testers and collaborators do not have to infer availability from `git pull` alone. Cross-link **`CHANGELOG.md`**, **`docs/releases/`** when applicable, and keep **README** “stable vs `main` pre-release” honest per **`docs/VERSIONING.md`**.
+1. **Spot-check:** the first-line **`Status:`** must not contradict the **body** (e.g. “Not started” vs “steps 1–12 ✅” in tables).
+
+## When editing plans only (read)
+
+- Prefer **`docs-plans.mdc`** for archive moves, hub sync, and external-tier link policy.
+- **`houseclean`** or **`docs`** sessions are good for **drift sweeps** across headers.
+
+## Not required every session
+
+- Full audit of all 60+ plans—only when the operator asks for a **drift check** or when you already touched that plan file.

@@ -1,0 +1,37 @@
+---
+description: clean-slate + PII self-audit memory hook. Situational — `pii-fresh-audit` token or globs below; @clean-slate-pii-self-audit.mdc.
+globs:
+  - docs/ops/PII_FRESH_CLONE*
+  - docs/ops/PII_PUBLIC_TREE*
+  - scripts/pii-fresh-clone*
+alwaysApply: false
+---
+
+# `clean-slate` + PII — memory hook (no simulation)
+
+## primary Windows dev PC (primary dev workstation)
+
+- **Never** run **`clean-slate.sh`**-class destructive reset or **`run-pii-history-rewrite.ps1`** on **L-series** — **`primary-windows-workstation-protected-no-destructive-repo-ops.mdc`**, **`docs/ops/PRIMARY_WINDOWS_WORKSTATION_PROTECTION.md`**.
+- Temp-only Windows audits (**`pii-fresh-clone-audit.ps1`**, **`new-b2-verify.ps1`**) are **not** clean-slate; they only use **`%TEMP%`**.
+
+## What exists (tracked vs private)
+
+- **Template (tracked):** `docs/private.example/scripts/clean-slate.sh.example` — copy to **`docs/private/scripts/clean-slate.sh`** (private git only). See **`docs/private.example/scripts/README.md`**.
+- **Canonical runbook:** **`docs/ops/PII_PUBLIC_TREE_OPERATOR_GUIDE.md`** — **H.9** (how to run on Linux lab), **H.10** (what assistants/operators should remember).
+
+## Purpose
+
+- **Self-audit / validation:** After a **destructive** re-clone, run **`uv run python scripts/pii_history_guard.py --full-history`** and **`uv run pytest tests/test_pii_guard.py`** (plus private seed greps per the guide) to see if policy matches a **fresh** tree.
+- **Windows:** **`scripts/pii-fresh-clone-audit.ps1`** automates **new empty folder** + full `git clone` + `uv sync` + same guards — see **`docs/ops/PII_FRESH_CLONE_AUDIT.md`**. Manual equivalent: empty folder + `git clone` + commands from the PII guide Section D.
+
+## What it is *not*
+
+- **Not** `git filter-repo` / history rewrite — see **`scripts/run-pii-history-rewrite.ps1`** and Part II of the same guide.
+- **Not** something to “simulate” in chat. Do **not** claim clean-slate ran without a real terminal clone/reset.
+
+## When the operator asks “did the improvements suffice?”
+
+1. Run **`pii_history_guard.py --full-history`** and **`pytest tests/test_pii_guard.py`** on the **real** workspace when possible.
+2. Remind that periodic **fresh clone** (or `~/clean-slate.sh` on Linux lab) is the stronger check for **long-lived** working trees — **H.10**.
+
+Repeat real guard runs / fresh clones as often as needed after changing guards, seeds, or replacement rules — that loop is valid; fake repetition in chat is not.

@@ -1,0 +1,22 @@
+---
+description: When changing api/routes.py HTTP routes, update PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL Phase 0 table and tests/test_api_route_matrix_plan_sync.py in the same PR.
+globs: ["api/routes.py", "docs/plans/PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md", "tests/test_api_route_matrix_plan_sync.py"]
+alwaysApply: false
+---
+
+# API routes ↔ D-WEB plan matrix
+
+## Rule
+
+Any PR that **adds, removes, or renames** a FastAPI route in **`api/routes.py`** must **in the same PR**:
+
+1. Update the **§ Phase 0 deliverable — HTTP routes** table in **`docs/plans/PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md`** (and middleware subsection if order changes).
+1. Update **`EXPECTED_HTTP_ROUTES`** in **`tests/test_api_route_matrix_plan_sync.py`** so CI stays green.
+
+## Optional micro-PR
+
+If a route change is already merged, a **follow-up PR** may only refresh the plan table + test tuple — no product code — to restore sync.
+
+## See also
+
+**`.cursor/rules/plans-status-pl-sync.mdc`** (plan header vs `PLANS_TODO.md`).

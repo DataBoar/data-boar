@@ -1,0 +1,226 @@
+# Peru — Ley 29733 (Protección de Datos Personales)
+# Published 2011; reglamento DS 003-2013-JUS (2013). Revalidate the current
+# reglamento consolidation before relying on secondary-rule citations.
+#
+# NOT LEGAL ADVICE. Technical starting point for inventory of personal-data
+# fields. Does NOT certify compliance, ANPDP registration, or OECD alignment.
+#
+# Authority: Autoridad Nacional de Protección de Datos Personales (ANPDP) —
+# Ley 29733 Art. 32 (Ministerio de Justicia). Registro Nacional / inscripción
+# of bancos de datos: Art. 29 and Art. 34.
+#
+# OECD: Peru is an OECD accession candidate (roadmap adopted June 2022).
+# It is NOT an OECD member as of 2026-08. Do not treat tags as "OECD 2024".
+#
+# Official Art. 2.5 sensitive list (not GDPR mirroring): biometric data that
+# identifies the holder; racial and ethnic origin; ingresos económicos;
+# political, religious, philosophical or moral opinions/convictions; union
+# affiliation; health and sexual life.
+#
+# Art. 12 = interpretive value of the guiding principles — NOT consent.
+# Consent: Art. 13.5 (prior, informed, express, unequivocal). Sensitive data:
+# Art. 13.6 additionally requires written consent (or a statutory public-
+# interest exception). Children/adolescents: Art. 13.3 (special measures via
+# reglamento; rights via legal representatives).
+#
+# Art. 17 = confidentiality DUTY on controllers/processors — not a separate
+# Art. 2.5 category named "comunicación confidencial". Ley 27806 Art. 17(5)
+# confidential public-information types are treated as sensitive by a
+# complementary provision — inventory only.
+#
+# Identifiers use contextual column labels. No bare 8-digit DNI, no nude
+# 10/20 + 9-digit RUC, no letter+8 passport, no 9xxxxxxxx phone matcher
+# (high FP; same class as nude CPF / ISPB). No querystring geo-coordinate
+# key used in older samples (PII seed gate).
+#
+# Pair with: compliance-sample-ecuador_lopdp.yaml,
+# compliance-sample-colombia_1581.yaml.
+#
+# NOTE — recommendation_overrides use distinctive Art. N.n (role) patterns.
+# Do not add a bare "Ley 29733" catch-all: _find_override_row is bidirectional.
+#
+# How to use:
+#   regex_overrides_file: path/to/compliance-sample-peru_ley29733.yaml
+#   ml_patterns_file:     path/to/compliance-sample-peru_ley29733.yaml
+#   Merge recommendation_overrides into report.recommendation_overrides.
+
+regex:
+  - name: "PE_FIELD_DNI_LABEL"
+    pattern: "(?i)(?:^|_|\b)(numero[_\\s]?(?:de[_\\s]?)?dni|dni[_\\s]?peru|documento[_\\s]?nacional[_\\s]?(?:de[_\\s]?)?identidad)\\w*"
+    norm_tag: "Ley 29733 Art. 2.4 (dato personal — DNI)"
+
+  - name: "PE_FIELD_RUC_LABEL"
+    pattern: "(?i)(?:^|_|\b)(numero[_\\s]?(?:de[_\\s]?)?ruc|ruc[_\\s]?peru|registro[_\\s]?unico[_\\s]?(?:de[_\\s]?)?contribuyentes)\\w*"
+    norm_tag: "Ley 29733 Art. 2.4 (dato personal — RUC)"
+
+  - name: "PE_FIELD_PASSPORT_LABEL"
+    pattern: "(?i)(?:^|_|\b)(pasaporte[_\\s]?peru|numero[_\\s]?pasaporte[_\\s]?pe|passport[_\\s]?pe|pe[_\\s]?passport)\\w*"
+    norm_tag: "Ley 29733 Art. 2.4 (dato personal — pasaporte)"
+
+  - name: "PE_FIELD_CE_LABEL"
+    pattern: "(?i)(?:^|_|\b)(carnet[_\\s]?(?:de[_\\s]?)?extranjer\\w*|ce[_\\s]?peru|carne[_\\s]?extranjer\\w*)"
+    norm_tag: "Ley 29733 Art. 2.4 (dato personal — carnet de extranjería)"
+
+  - name: "PE_FIELD_HEALTH_LABEL"
+    pattern: "(?i)(?:^|_|\b)(historia[_\\s]?clinica|expediente[_\\s]?medico|datos[_\\s]?salud|eps[_\\s]?afiliacion|afiliado[_\\s]?essalud|sis[_\\s]?beneficiario)\\w*"
+    norm_tag: "Ley 29733 Art. 2.5 (dato sensible — salud)"
+
+  - name: "PE_FIELD_INCOME_LABEL"
+    pattern: "(?i)(?:^|_|\b)(ingresos[_\\s]?economicos|situacion[_\\s]?economica|renta[_\\s]?anual)\\w*"
+    norm_tag: "Ley 29733 Art. 2.5 (dato sensible — ingresos económicos)"
+
+  - name: "PE_FIELD_CONVICTION_LABEL"
+    pattern: "(?i)(?:^|_|\b)(ideologia|opinion[_\\s]?politica|conviccion[_\\s]?(?:religiosa|filosofica|moral)|afiliacion[_\\s]?sindical)\\w*"
+    norm_tag: "Ley 29733 Art. 2.5 (dato sensible — convicciones)"
+
+  - name: "PE_FIELD_MINOR_LABEL"
+    pattern: "(?i)(?:^|_|\b)(datos[_\\s]?menores|datos[_\\s]?ninos|consentimiento[_\\s]?parental|menor[_\\s]?(?:de[_\\s]?)?edad)\\w*"
+    norm_tag: "Ley 29733 Art. 13.3 (datos de NNA)"
+
+  - name: "PE_FIELD_CONFIDENTIALITY_LABEL"
+    pattern: "(?i)(?:^|_|\b)(comunicacion[_\\s]?confidencial|datos[_\\s]?confidenciales|secreto[_\\s]?profesional)\\w*"
+    norm_tag: "Ley 29733 Art. 17 (deber de confidencialidad)"
+
+  - name: "PE_LEY29733_JSON_LAT_PRECISION"
+    pattern: "(?i)[\"']lat[\"']\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\b"
+    norm_tag: "Ley 29733 Art. 2.4 (dato personal — geolocalización)"
+
+  - name: "PE_LEY29733_JSON_LNG_PRECISION"
+    pattern: "(?i)[\"'](?:lng|lon)[\"']\\s*:\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}\\b"
+    norm_tag: "Ley 29733 Art. 2.4 (dato personal — geolocalización)"
+
+  - name: "PE_LEY29733_LOCATION_CSV_PAIR"
+    pattern: "(?i)\\blocation\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*,\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "Ley 29733 Art. 2.4 (dato personal — geolocalización)"
+
+terms:
+  - { text: "datos personales", label: sensitive }
+  - { text: "dato personal", label: sensitive }
+  - { text: "personal data", label: sensitive }
+  - { text: "titular de datos", label: sensitive }
+  - { text: "data subject", label: sensitive }
+  - { text: "anpdp", label: sensitive }
+  - { text: "autoridad nacional de protección de datos personales", label: sensitive }
+  - { text: "banco de datos personales", label: sensitive }
+
+  - { text: "documento nacional de identidad", label: sensitive }
+  - { text: "registro único de contribuyentes", label: sensitive }
+  - { text: "registro unico de contribuyentes", label: sensitive }
+  - { text: "carnet de extranjería", label: sensitive }
+  - { text: "carnet de extranjeria", label: sensitive }
+
+  - { text: "datos de salud", label: sensitive }
+  - { text: "historia clínica", label: sensitive }
+  - { text: "historia clinica", label: sensitive }
+  - { text: "health data", label: sensitive }
+  - { text: "medical record", label: sensitive }
+  - { text: "afiliado essalud", label: sensitive }
+  - { text: "sis beneficiario", label: sensitive }
+  - { text: "datos biométricos", label: sensitive }
+  - { text: "datos biometricos", label: sensitive }
+  - { text: "datos genéticos", label: sensitive }
+  - { text: "datos geneticos", label: sensitive }
+
+  - { text: "ingresos económicos", label: sensitive }
+  - { text: "ingresos economicos", label: sensitive }
+  - { text: "situación económica", label: sensitive }
+  - { text: "situacion economica", label: sensitive }
+
+  - { text: "opinión política", label: sensitive }
+  - { text: "opinion politica", label: sensitive }
+  - { text: "creencia religiosa", label: sensitive }
+  - { text: "afiliación sindical", label: sensitive }
+  - { text: "afiliacion sindical", label: sensitive }
+  - { text: "origen racial", label: sensitive }
+  - { text: "orientación sexual", label: sensitive }
+  - { text: "orientacion sexual", label: sensitive }
+  - { text: "antecedentes judiciales", label: sensitive }
+
+  - { text: "comunicación confidencial", label: sensitive }
+  - { text: "comunicacion confidencial", label: sensitive }
+
+  - { text: "cuenta bancaria", label: sensitive }
+  - { text: "tarjeta de crédito", label: sensitive }
+  - { text: "tarjeta de credito", label: sensitive }
+  - { text: "fecha de nacimiento", label: sensitive }
+  - { text: "nombre completo", label: sensitive }
+
+  - { text: "geolocalización", label: sensitive }
+  - { text: "geolocalizacion", label: sensitive }
+  - { text: "precise geolocation", label: sensitive }
+
+  - { text: "product_id", label: non_sensitive }
+  - { text: "item_code", label: non_sensitive }
+  - { text: "session_log", label: non_sensitive }
+  - { text: "debug_output", label: non_sensitive }
+
+recommendation_overrides:
+  - norm_tag_pattern: "Ley 29733 Art. 2.4 (dato personal — DNI)"
+    base_legal: "Ley 29733 Art. 2.4 — a DNI identifies a natural person. Art. 13.5 governs consent when required. Art. 29/34 — inscripción of the banco de datos ante ANPDP when applicable. In force since 2011; reglamento DS 003-2013-JUS. Authority: ANPDP (Art. 32)."
+    risk: "Peruvian DNI fields identify the data subject directly. Unauthorized exposure enables identity fraud."
+    recommendation: "Minimize DNI storage. Verify a lawful basis. Encrypt and restrict access. Confirm whether the banco de datos must be inscribed before ANPDP. Consult counsel. Not a legal conclusion."
+    priority: "ALTA"
+    relevant_for: "DPO, legal, CISO, operations"
+
+  - norm_tag_pattern: "Ley 29733 Art. 2.4 (dato personal — RUC)"
+    base_legal: "Ley 29733 Art. 2.4 — an RUC can identify a natural person (type 10) or a legal entity (type 20). Treat as personal data when it relates to an identifiable individual. Art. 29/34 inscripción when applicable."
+    risk: "RUC fields may identify a taxpayer who is a natural person."
+    recommendation: "Confirm whether the RUC identifies a natural person. Minimize full RUC storage when a token suffices. Consult counsel. Not a legal conclusion."
+    priority: "ALTA"
+    relevant_for: "DPO, legal, finance, operations"
+
+  - norm_tag_pattern: "Ley 29733 Art. 2.4 (dato personal — pasaporte)"
+    base_legal: "Ley 29733 Art. 2.4 — a passport number identifies the data subject. Art. 13.5 governs consent when required."
+    risk: "Passport numbers enable direct identification and raise identity-fraud risk when combined with other fields."
+    recommendation: "Prefer a verification flag over retaining the full passport number. Encrypt and apply least privilege. Consult counsel. Not a legal conclusion."
+    priority: "ALTA"
+    relevant_for: "DPO, legal, HR operations"
+
+  - norm_tag_pattern: "Ley 29733 Art. 2.4 (dato personal — carnet de extranjería)"
+    base_legal: "Ley 29733 Art. 2.4 — a carnet de extranjería identifies a natural person. Art. 13.5 governs consent when required."
+    risk: "Foreign-resident ID fields identify the data subject and can reveal migratory status in practice."
+    recommendation: "Minimize storage. Apply least privilege. Consult counsel. Not a legal conclusion."
+    priority: "ALTA"
+    relevant_for: "DPO, legal, HR operations"
+
+  - norm_tag_pattern: "Ley 29733 Art. 2.5 (dato sensible — salud)"
+    base_legal: "Ley 29733 Art. 2.5 — health data is sensitive. Art. 13.6 requires written consent for sensitive-data processing (or a statutory public-interest exception). Art. 12 is the interpretive value of principles, not the consent rule."
+    risk: "Health records are a statutory sensitive category. Unauthorized exposure can harm the data subject and trigger ANPDP scrutiny."
+    recommendation: "Verify written consent or another Art. 13.6 ground. Encrypt at rest and in transit. Limit access. Consult counsel. Not a legal conclusion."
+    priority: "ALTA"
+    relevant_for: "DPO, legal, CISO"
+
+  - norm_tag_pattern: "Ley 29733 Art. 2.5 (dato sensible — ingresos económicos)"
+    base_legal: "Ley 29733 Art. 2.5 lists ingresos económicos as sensitive personal data. Art. 13.6 requires written consent unless a statutory exception applies."
+    risk: "Income and economic-situation fields are sensitive under Peruvian law — uncommon wording versus several other LatAm samples."
+    recommendation: "Verify Art. 13.6 basis. Minimize retention. Restrict access. Consult counsel. Not a legal conclusion."
+    priority: "ALTA"
+    relevant_for: "DPO, legal, HR, finance"
+
+  - norm_tag_pattern: "Ley 29733 Art. 2.5 (dato sensible — convicciones)"
+    base_legal: "Ley 29733 Art. 2.5 — political, religious, philosophical or moral opinions/convictions and union affiliation are sensitive. Art. 13.6 written consent (or statutory exception)."
+    risk: "Ideology / conviction / union columns are sensitive categories. Exposure can harm the data subject."
+    recommendation: "Verify Art. 13.6 basis. Apply least privilege. Consult counsel. Not a legal conclusion."
+    priority: "ALTA"
+    relevant_for: "DPO, legal, HR"
+
+  - norm_tag_pattern: "Ley 29733 Art. 13.3 (datos de NNA)"
+    base_legal: "Ley 29733 Art. 13.3 — special measures for children's and adolescents' personal data are set by reglamento; rights are exercised via legal representatives."
+    risk: "Column names indicate minors' data. This scanner does not perform age verification."
+    recommendation: "Confirm representative-consent workflow and purpose limitation. Consult counsel. Not a legal conclusion."
+    priority: "ALTA"
+    relevant_for: "DPO, legal, product"
+
+  - norm_tag_pattern: "Ley 29733 Art. 17 (deber de confidencialidad)"
+    base_legal: "Ley 29733 Art. 17 — controllers, processors, and anyone involved in processing must keep personal data and their antecedents confidential (duty survives the relationship). This is not an Art. 2.5 category labelled comunicación confidencial. A complementary provision treats certain Ley 27806 Art. 17(5) confidential information as sensitive."
+    risk: "Columns labelled confidential communications or professional secrecy may hold personal data subject to the Art. 17 duty."
+    recommendation: "Apply need-to-know access and retention limits. Confirm whether Ley 27806 confidential-information rules also apply. Consult counsel. Not a legal conclusion."
+    priority: "ALTA"
+    relevant_for: "DPO, legal, CISO"
+
+  - norm_tag_pattern: "Ley 29733 Art. 2.4 (dato personal — geolocalización)"
+    base_legal: "Ley 29733 Art. 2.4 — precise geolocation can identify or make identifiable a natural person. Art. 13.5 governs consent when required."
+    risk: "Precise coordinates can track the data subject."
+    recommendation: "Minimize stored location precision. Review retention. Consult counsel. Heuristic inventory — not a legal conclusion."
+    priority: "MÉDIA"
+    relevant_for: "DPO, product, legal"

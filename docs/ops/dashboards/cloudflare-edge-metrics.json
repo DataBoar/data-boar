@@ -1,0 +1,92 @@
+{
+  "dashboard": {
+    "uid": "databoar-cloudflare-edge",
+    "title": "DataBoar — Cloudflare Edge (GraphQL aggregates)",
+    "description": "Aggregate Cloudflare edge metrics from the #1599 exporter (service.name=cloudflare-edge). NOT Faro/browser RUM and NOT distributed traces. Adjust Prom metric names after first OTLP export (dots may become underscores + _total).",
+    "tags": ["databoar", "cloudflare", "edge", "otel", "not-faro"],
+    "timezone": "browser",
+    "schemaVersion": 39,
+    "version": 1,
+    "refresh": "5m",
+    "time": {"from": "now-24h", "to": "now"},
+    "templating": {"list": []},
+    "panels": [
+      {
+        "id": 1,
+        "type": "text",
+        "title": "Scope",
+        "gridPos": {"h": 4, "w": 24, "x": 0, "y": 0},
+        "options": {
+          "mode": "markdown",
+          "content": "**cloudflare-edge** only (GraphQL `httpRequestsAdaptiveGroups` → OTLP).\n\n- Separate from **DataBoar Site / Faro** RUM dashboards.\n- Visits ≠ unique visitors (Cloudflare definition).\n- Expected series: `cloudflare.edge.http.requests|visits|response_bytes` (or Prom-style `cloudflare_edge_http_*_total`)."
+        }
+      },
+      {
+        "id": 2,
+        "type": "timeseries",
+        "title": "Edge requests (by status class)",
+        "gridPos": {"h": 9, "w": 12, "x": 0, "y": 4},
+        "datasource": {"type": "prometheus", "uid": "grafanacloud-prom"},
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "sum by (http_status_class) (rate(cloudflare_edge_http_requests_total[5m]))",
+            "legendFormat": "{{http_status_class}}"
+          }
+        ],
+        "fieldConfig": {"defaults": {"unit": "reqps"}, "overrides": []},
+        "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}}
+      },
+      {
+        "id": 3,
+        "type": "timeseries",
+        "title": "Edge response bytes",
+        "gridPos": {"h": 9, "w": 12, "x": 12, "y": 4},
+        "datasource": {"type": "prometheus", "uid": "grafanacloud-prom"},
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "sum(rate(cloudflare_edge_http_response_bytes_total[5m]))",
+            "legendFormat": "bytes/s"
+          }
+        ],
+        "fieldConfig": {"defaults": {"unit": "binBps"}, "overrides": []},
+        "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "single"}}
+      },
+      {
+        "id": 4,
+        "type": "timeseries",
+        "title": "Visits (Cloudflare definition — caveat)",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 13},
+        "datasource": {"type": "prometheus", "uid": "grafanacloud-prom"},
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "sum by (http_host) (rate(cloudflare_edge_http_visits_total[5m]))",
+            "legendFormat": "{{http_host}}"
+          }
+        ],
+        "fieldConfig": {"defaults": {"unit": "ops"}, "overrides": []},
+        "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}}
+      },
+      {
+        "id": 5,
+        "type": "timeseries",
+        "title": "Cache status (allowlisted labels)",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 13},
+        "datasource": {"type": "prometheus", "uid": "grafanacloud-prom"},
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "sum by (cloudflare_cache_status) (rate(cloudflare_edge_http_requests_total[5m]))",
+            "legendFormat": "{{cloudflare_cache_status}}"
+          }
+        ],
+        "fieldConfig": {"defaults": {"unit": "reqps"}, "overrides": []},
+        "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}}
+      }
+    ]
+  },
+  "overwrite": true,
+  "message": "Create Cloudflare edge aggregate dashboard (orthogonal to Faro RUM)"
+}

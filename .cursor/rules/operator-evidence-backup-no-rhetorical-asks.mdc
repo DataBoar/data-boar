@@ -1,0 +1,18 @@
+---
+description: Private evidence mirrors — full mirror set on sync. Situational — `private-stack-sync` token or globs below; @operator-evidence-backup-no-rhetorical-asks.mdc.
+globs:
+  - docs/ops/PRIVATE_STACK_SYNC*
+  - scripts/private-git-sync*
+alwaysApply: false
+---
+
+# Evidence, private Git history, and redundant mirrors
+
+1. **Contract with the operator:** Protecting **progress history** (stacked private repo under **`docs/private/`**, lab bare mirrors, and **encrypted-volume bare** when used) is **not optional** and **not** a “nice-to-have” follow-up. **One backup destination updated while another drifts is a failed close.**
+
+2. **No rhetorical confirmation:** When the operator asks to **verify alignment**, **close hygiene**, **sync**, **push private**, **`private-stack-sync`**, or any task that clearly implies **keeping private history consistent across mirrors**, **execute** the full mirror set **without** asking questions whose answer is implied (e.g. “should I also push to the VeraCrypt bare?”). **Treat “conferir” / “align” / “drift” on the private stack as including every reachable mirror** (configured **`lab-*`** remotes **and** a **bare repo on the VeraCrypt-mounted volume** when that path exists on the workstation — probe with **`Test-Path`**; mount letter may vary).
+
+3. **If a mirror is unreachable:** Report **facts** (which push succeeded, which path was missing, SSH error, **`safe.directory`** / dubious ownership on a local bare). **Do not** substitute permission theatre for a technical blocker. **Do not** paste passphrases, keyfiles, or volume secrets.
+
+4. **Canonical prose:** **`docs/ops/PRIVATE_STACK_SYNC_RITUAL.md`** (and **`.pt_BR.md`**), **`scripts/private-git-sync.ps1`** (**`-Push`**), **`.cursor/skills/stacked-private-sync/SKILL.md`** (public template) + **`.cursor/private/skills/stacked-private-sync/SKILL.md`** (operator runbook, #1191), **`operator-direct-execution.mdc`**, **`agent-session-ritual-sync-main-and-private-stack.mdc`**, root **`AGENTS.md`**, **[ADR 0040](../../docs/adr/ADR-0040-assistant-private-stack-evidence-mirrors-default.md)**.
+

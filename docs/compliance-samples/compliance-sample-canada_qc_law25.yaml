@@ -1,0 +1,122 @@
+# Quebec Law 25 — sample compliance profile (Act to modernize legislative provisions respecting
+# the protection of personal information / Loi modernisant des dispositions legislatives en matiere
+# de protection des renseignements personnels)
+#
+# Target audience: Organizations operating in Quebec or processing Quebec residents' personal
+# information in the private-sector context where provincial Law 25 (as amended) applies alongside
+# or instead of PIPEDA for intraprovincial and other scoped activities. Authority: Commission
+# d'acces a l'information du Quebec (CAI). Scope with Quebec/Federal counsel.
+#
+# How to use:
+#   1. Set in your main config:
+#        regex_overrides_file: path/to/compliance-sample-canada_qc_law25.yaml
+#        ml_patterns_file: path/to/compliance-sample-canada_qc_law25.yaml
+#   2. Merge the recommendation_overrides list below into report.recommendation_overrides.
+#
+# Legal scope (summary — not legal advice):
+#   - Law 25 substantially raises Quebec private-sector privacy obligations (consent,
+#     transparency, governance, cross-border disclosures, AI and biometric systems in several
+#     contexts, breach notification to CAI, DPIA-style assessments). Not every obligation is
+#     expressible as a regex or ML term.
+#   - Canadian SIN-shaped identifiers often appear in HR and benefits data in Quebec; patterns
+#     mirror PIPEDA sample geometry with Law 25 norm_tag for inventory alignment in Quebec runs.
+#   - Precise geolocation: same four-pattern regex geometry as compliance-sample-us_va_vcdpa.yaml
+#     and compliance-sample-eu_gdpr.yaml. Heuristic only — not a CAI classification of sensitivity.
+#
+# Use double-quoted YAML with escaped backslashes.
+
+regex:
+  - name: "QC_SIN_CTX"
+    pattern: "\\b\\d{3}[-\\s]?\\d{3}[-\\s]?\\d{3}\\b"
+    norm_tag: "Quebec Law 25"
+  - name: "QC_SIN_BARE_CTX"
+    pattern: "(?i)(?:SIN|NAS|numero\\s+d'assurance\\s+sociale|social\\s+insurance)\\s*[:#]?\\s*\\b\\d{9}\\b"
+    norm_tag: "Quebec Law 25"
+  - name: "QC_LAW25_JSON_LAT_PRECISION"
+    pattern: "(?i)[\"']lat[\"']\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\b"
+    norm_tag: "Quebec Law 25"
+  - name: "QC_LAW25_JSON_LNG_PRECISION"
+    pattern: "(?i)[\"'](?:lng|lon)[\"']\\s*:\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}\\b"
+    norm_tag: "Quebec Law 25"
+  - name: "QC_LAW25_LOCATION_CSV_PAIR"
+    pattern: "(?i)\\blocation\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*,\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "Quebec Law 25"
+  - name: "QC_LAW25_QUERYSTRING_LAT_LONG"
+    pattern: "(?i)latitude=[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*&\\s*longitude=[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "Quebec Law 25"
+
+terms:
+  - text: "Law 25"
+    label: sensitive
+  - text: "Loi 25"
+    label: sensitive
+  - text: "Quebec Law 25"
+    label: sensitive
+  - text: "CAI"
+    label: sensitive
+  - text: "Commission d'acces a l'information"
+    label: sensitive
+  - text: "personal information"
+    label: sensitive
+  - text: "renseignements personnels"
+    label: sensitive
+  - text: "sensitive information"
+    label: sensitive
+  - text: "renseignements sensibles"
+    label: sensitive
+  - text: "consent"
+    label: sensitive
+  - text: "consentement"
+    label: sensitive
+  - text: "privacy officer"
+    label: sensitive
+  - text: "personne responsable de la protection des renseignements personnels"
+    label: sensitive
+  - text: "confidentiality incident"
+    label: sensitive
+  - text: "incident de confidentialite"
+    label: sensitive
+  - text: "cross-border disclosure"
+    label: sensitive
+  - text: "communication hors Quebec"
+    label: sensitive
+  - text: "PIA"
+    label: sensitive
+  - text: "privacy impact assessment"
+    label: sensitive
+  - text: "evaluation des facteurs relatifs a la vie privee"
+    label: sensitive
+  - text: "biometric"
+    label: sensitive
+  - text: "biometrie"
+    label: sensitive
+  - text: "geolocation"
+    label: sensitive
+  - text: "geolocalisation"
+    label: sensitive
+  - text: "precise geolocation"
+    label: sensitive
+  - text: "geolocalisation precise"
+    label: sensitive
+  - text: "automated decision"
+    label: sensitive
+  - text: "decision automatisée"
+    label: sensitive
+  - text: "social insurance number"
+    label: sensitive
+  - text: "numero d'assurance sociale"
+    label: sensitive
+  - text: "Quebec private sector"
+    label: sensitive
+  - text: "enterprise"
+    label: sensitive
+  - text: "enterprise quebecoise"
+    label: sensitive
+
+recommendation_overrides:
+  - norm_tag_pattern: "Quebec Law 25"
+    base_legal: "Quebec Act to modernize legislative provisions respecting the protection of personal information (Law 25); Commission d'acces a l'information du Quebec (CAI)."
+    risk: "Elevated governance, transparency, consent, and breach-notification expectations vs legacy private-sector practice; biometric, geolocation, and automated processing inventory signals require counsel-aligned controls — PIPEDA vs Law 25 scope splits are not evaluated by the scanner."
+    recommendation: "Confirm Act applicability (Quebec establishment vs extraterritorial triggers); align policies, PIAs, CAI notification practice, and cross-border mechanisms; pair technical inventory with Quebec/Federal privacy counsel."
+    priority: "ALTA"
+    relevant_for: "DPO, Privacy Counsel, CAI liaison, Person responsible for the protection of personal information"

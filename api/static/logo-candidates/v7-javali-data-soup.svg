@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">Compliance Crawler - Javali (wild boar) and data soup</title>
+  <desc id="desc">Cute cartoon javali facing right, looking at a pot of data soup almost out of frame. Friendly mascot, identity and data theme.</desc>
+  <defs>
+    <!-- Javali head: brown-grey -->
+    <radialGradient id="javaliHead" cx="35%" cy="35%" r="75%" fx="30%" fy="30%">
+      <stop offset="0%" stop-color="#b89870"/>
+      <stop offset="50%" stop-color="#8b7355"/>
+      <stop offset="100%" stop-color="#6b5344"/>
+    </radialGradient>
+    <!-- Snout -->
+    <radialGradient id="javaliSnout" cx="30%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#a08060"/>
+      <stop offset="100%" stop-color="#7a5c42"/>
+    </radialGradient>
+    <!-- Ear -->
+    <radialGradient id="javaliEar" cx="30%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#9a7a52"/>
+      <stop offset="100%" stop-color="#6b5344"/>
+    </radialGradient>
+    <!-- Pot body -->
+    <linearGradient id="potGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#d4c4a8"/>
+      <stop offset="50%" stop-color="#b8a078"/>
+      <stop offset="100%" stop-color="#8b7355"/>
+    </linearGradient>
+    <!-- Soft shadow -->
+    <filter id="shadowJavali" x="-20%" y="-15%" width="140%" height="130%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+      <feOffset dx="2" dy="3" result="offsetblur"/>
+      <feFlood flood-color="#3a3028" flood-opacity="0.25"/>
+      <feComposite in2="offsetblur" operator="in"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Pot of data soup: right side, mostly out of frame (only left part visible) -->
+  <g>
+    <!-- Pot body (center off to the right so left half visible) -->
+    <ellipse cx="118" cy="68" rx="22" ry="20" fill="url(#potGrad)" stroke="#7a6348" stroke-width="1.2"/>
+    <!-- Pot rim -->
+    <path d="M 96 56 L 96 50 Q 112 46 128 50 L 128 56 Q 112 60 96 56" fill="#e8dcc8" stroke="#7a6348" stroke-width="1"/>
+    <!-- Steam / data soup: wavy lines -->
+    <path d="M 102 48 Q 106 42 110 46 Q 114 50 116 44" fill="none" stroke="#21A179" stroke-width="0.9" opacity="0.75"/>
+    <path d="M 106 44 Q 110 38 114 42" fill="none" stroke="#145DA0" stroke-width="0.7" opacity="0.65"/>
+    <!-- Tiny data glyphs (soup = data) -->
+    <text x="106" y="42" font-size="5" fill="#21A179" opacity="0.85">{} </text>
+    <text x="110" y="38" font-size="4" fill="#145DA0" opacity="0.75">@</text>
+  </g>
+
+  <!-- Javali: main character, facing right toward the pot -->
+  <g filter="url(#shadowJavali)">
+    <!-- Head -->
+    <ellipse cx="58" cy="64" rx="32" ry="30" fill="url(#javaliHead)" stroke="#6b5344" stroke-width="1.5"/>
+    <!-- Bristly mane (curved stripe on top-back of head) -->
+    <path d="M 28 48 Q 32 42 38 46 Q 44 50 50 46 Q 56 42 62 48 Q 68 44 74 48 Q 80 52 82 50"
+          fill="none" stroke="#4a3c30" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M 30 52 Q 38 46 48 50 Q 58 54 68 50 Q 76 46 84 52"
+          fill="none" stroke="#5a4a38" stroke-width="2.5" stroke-linecap="round"/>
+    <!-- Ear (one visible, left side) -->
+    <ellipse cx="32" cy="44" rx="10" ry="14" fill="url(#javaliEar)" stroke="#6b5344" stroke-width="1" transform="rotate(-20 32 44)"/>
+    <!-- Snout (elongated, pointing right) -->
+    <ellipse cx="88" cy="66" rx="20" ry="14" fill="url(#javaliSnout)" stroke="#6b5344" stroke-width="1.2"/>
+    <!-- Nostrils -->
+    <ellipse cx="98" cy="64" rx="5" ry="6" fill="#5a4030" stroke="#4a3020" stroke-width="0.5"/>
+    <ellipse cx="98" cy="70" rx="4" ry="5" fill="#5a4030" stroke="#4a3020" stroke-width="0.5"/>
+    <!-- Tusks (small, cute, curved - lower jaw) -->
+    <path d="M 82 76 Q 90 74 94 78" fill="none" stroke="#e8e4d8" stroke-width="2" stroke-linecap="round"/>
+    <path d="M 84 80 Q 92 78 96 82" fill="none" stroke="#e8e4d8" stroke-width="1.8" stroke-linecap="round"/>
+    <!-- Eye (big, friendly, looking right toward pot) -->
+    <ellipse cx="72" cy="58" rx="8" ry="9" fill="#2a2a2a" stroke="#1a1a1a" stroke-width="0.6"/>
+    <circle cx="74" cy="55" r="2.2" fill="#fff" opacity="0.95"/>
+  </g>
+</svg>

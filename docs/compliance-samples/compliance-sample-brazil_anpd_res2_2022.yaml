@@ -1,0 +1,124 @@
+# Brazil — ANPD Resolução CD/ANPD 2/2022 (LGPD Art. 14)
+# In force: 2023
+#
+# NOT LEGAL ADVICE. Technical inventory / triage only — not age verification,
+# not a legal conclusion, and not ANPD certification.
+#
+# Complements (do not replace):
+#   - compliance-sample-lgpd.yaml          — general Brazilian PII
+#   - compliance-sample-brazil_felca.yaml  — FELCA (Lei 15.211/2025) digital-platform design
+# Built-in minor heuristics: docs/MINOR_DETECTION.md (DOB_POSSIBLE_MINOR).
+#
+# ANPD Res. 2/2022 applies to ANY entity that processes personal data of
+# children (under 12) or adolescents (12–17) — not only digital platforms.
+# Unique signal in this pack: behavioural profiling of minors for marketing
+# is a LEGAL PROHIBITION (norm_tag "perfilamento proibido — menores"),
+# not merely an elevated risk.
+#
+# Authority: ANPD (Autoridade Nacional de Proteção de Dados)
+# Reference: Resolução CD/ANPD 2/2022 — gov.br/anpd
+#
+# How to use:
+#   regex_overrides_file: path/to/compliance-sample-brazil_anpd_res2_2022.yaml
+#   ml_patterns_file:     path/to/compliance-sample-brazil_anpd_res2_2022.yaml
+#   Merge recommendation_overrides into report.recommendation_overrides.
+
+regex:
+  - name: "ANPD_RES2_DOB_AGE_FIELD"
+    pattern: "(?i)\\b(data[_\\s-]?nasc(?:imento)?|nascimento|birth[_\\s-]?date|dob|idade|age|anos[_\\s]?completados)\\b"
+    norm_tag: "ANPD Res. 2/2022 (dado de menor — DOB/idade)"
+
+  - name: "ANPD_RES2_PARENTAL_CONSENT"
+    pattern: "(?i)\\b(consentimento[_\\s]?parental|consentimento[_\\s]?responsavel|parental[_\\s]?consent|autoriza[cç][aã]o[_\\s]?responsavel|consentimento[_\\s]?verificavel)\\b"
+    norm_tag: "ANPD Res. 2/2022 (consentimento responsável)"
+
+  - name: "ANPD_RES2_MINOR_FLAG"
+    pattern: "(?i)\\b(is[_\\s]?minor|eh[_\\s]?menor|menor[_\\s]?de[_\\s]?idade|underage[_\\s]?flag|crianca[_\\s]?flag|menor[_\\s]?flag)\\b"
+    norm_tag: "ANPD Res. 2/2022 (dado de menor)"
+
+  - name: "ANPD_RES2_PROFILING_FIELD"
+    pattern: "(?i)\\b(perfil[_\\s]?comportamental|perfilamento[_\\s]?crianca|behavioural[_\\s]?profil|personalizacao[_\\s]?perfil[_\\s]?menor|targeted[_\\s]?profil[_\\s]?child)\\b"
+    norm_tag: "ANPD Res. 2/2022 (perfilamento proibido — menores)"
+
+  - name: "ANPD_RES2_EDUCATIONAL_DATA"
+    pattern: "(?i)\\b(matricula[_\\s]?escolar|student[_\\s]?id|turma|serie[_\\s]?escolar|grade[_\\s]?level|ano[_\\s]?escolar|dado[_\\s]?educacional[_\\s]?menor)\\b"
+    norm_tag: "ANPD Res. 2/2022 (dado educacional de menor)"
+
+terms:
+  # Age bands (ANPD Res. 2/2022: children <12, adolescents 12–17)
+  - { text: "criança", label: sensitive }
+  - { text: "adolescente", label: sensitive }
+  - { text: "menor de idade", label: sensitive }
+  - { text: "child", label: sensitive }
+  - { text: "children", label: sensitive }
+  - { text: "adolescent", label: sensitive }
+  - { text: "underage", label: sensitive }
+  - { text: "under 12", label: sensitive }
+  - { text: "entre 12 e 17", label: sensitive }
+
+  # Verifiable parental consent (ANPD-specific mechanics)
+  - { text: "consentimento parental", label: sensitive }
+  - { text: "consentimento do responsável", label: sensitive }
+  - { text: "autorização dos pais", label: sensitive }
+  - { text: "responsável legal", label: sensitive }
+  - { text: "parental consent", label: sensitive }
+  - { text: "legal guardian", label: sensitive }
+  - { text: "verifiable parental consent", label: sensitive }
+  - { text: "consentimento verificável", label: sensitive }
+
+  # Child / adolescent personal data
+  - { text: "dado pessoal de criança", label: sensitive }
+  - { text: "dado pessoal de adolescente", label: sensitive }
+  - { text: "dados de menores", label: sensitive }
+  - { text: "child personal data", label: sensitive }
+
+  # Prohibition: behavioural profiling for marketing
+  - { text: "perfilamento comportamental de menores", label: sensitive }
+  - { text: "behavioural profiling of minors", label: sensitive }
+  - { text: "targeted advertising children", label: sensitive }
+  - { text: "publicidade comportamental de crianças", label: sensitive }
+
+  # Best-interest / ECA framing
+  - { text: "melhor interesse da criança", label: sensitive }
+  - { text: "best interest of the child", label: sensitive }
+  - { text: "proteção integral da criança", label: sensitive }
+
+  # Educational purpose restriction
+  - { text: "dado educacional de menor", label: sensitive }
+  - { text: "educational data minor", label: sensitive }
+  - { text: "finalidade educacional", label: sensitive }
+
+  - { text: "product_id", label: non_sensitive }
+  - { text: "session_token", label: non_sensitive }
+  - { text: "log_entry", label: non_sensitive }
+  - { text: "internal_code", label: non_sensitive }
+  - { text: "test_account", label: non_sensitive }
+
+recommendation_overrides:
+  - norm_tag_pattern: "ANPD Res. 2/2022 (dado de menor"
+    base_legal: "ANPD Resolução CD/ANPD 2/2022 + LGPD Art. 14 — dado pessoal de criança/adolescente. Em vigor 2023. Autoridade: ANPD (Autoridade Nacional de Proteção de Dados)."
+    risk: "Dado de menor identificado. Resolução CD/ANPD 2/2022 impõe: (1) consentimento específico do responsável legal; (2) maximização da minimização; (3) vedação de perfilamento comportamental para marketing; (4) transparência reforçada em linguagem acessível."
+    recommendation: "Verificar consentimento do responsável legal (específico, claro, verificável). Aplicar minimização máxima. Confirmar ausência de perfilamento comportamental para fins de marketing. Auditar finalidades. Consultar DPO e jurídico. Inventário heurístico — não é conclusão legal."
+    priority: "CRÍTICA"
+    relevant_for: "DPO, encarregado LGPD, jurídico, produto, ANPD"
+
+  - norm_tag_pattern: "ANPD Res. 2/2022 (consentimento responsável)"
+    base_legal: "ANPD Res. 2/2022 Art. 5–9 + LGPD Art. 14 — consentimento parental verificável, específico e em linguagem acessível."
+    risk: "Campo de consentimento parental identificado. A resolução exige: consentimento verificável, específico por finalidade, linguagem acessível ao responsável legal, e registro auditável. Consentimento genérico ou inválido torna o tratamento ilegal."
+    recommendation: "Verificar workflow de coleta: (1) linguagem clara e acessível, (2) específico por finalidade, (3) verificável, (4) revogável facilmente. Manter registros auditáveis. Consultar DPO."
+    priority: "CRÍTICA"
+    relevant_for: "DPO, jurídico, produto, ANPD"
+
+  - norm_tag_pattern: "ANPD Res. 2/2022 (perfilamento proibido — menores)"
+    base_legal: "ANPD Res. 2/2022 + LGPD Art. 14 — perfilamento comportamental de crianças e adolescentes para fins de marketing é **vedado** (proibição explícita, não apenas risco)."
+    risk: "Campo de perfilamento comportamental identificado em contexto de dados de menores. Perfilamento para marketing de menores é explicitamente proibido pela ANPD Res. 2/2022. Esta é uma proibição legal, não apenas um risco elevado."
+    recommendation: "**Interromper imediatamente** qualquer perfilamento comportamental de menores para fins de marketing. Verificar se outras finalidades de perfilamento têm base legal qualificada. Notificar ANPD se pertinente. Consultar DPO e jurídico urgentemente."
+    priority: "CRÍTICA"
+    relevant_for: "DPO, encarregado LGPD, jurídico, produto, marketing, ANPD"
+
+  - norm_tag_pattern: "ANPD Res. 2/2022 (dado educacional de menor)"
+    base_legal: "ANPD Res. 2/2022 + LGPD Art. 14 — dados educacionais de crianças e adolescentes têm finalidade restrita; uso para fins não educacionais requer nova base legal qualificada."
+    risk: "Dado educacional de menor identificado. A resolução proíbe o uso secundário de dados educacionais de menores (ex.: para marketing, segmentação) sem base legal qualificada e consentimento específico."
+    recommendation: "Verificar que dados educacionais são usados exclusivamente para a finalidade educacional declarada. Vedar compartilhamento para marketing sem novo consentimento específico. Consultar DPO e EdTech compliance."
+    priority: "ALTA"
+    relevant_for: "DPO, jurídico, EdTech, produto"

@@ -1,0 +1,8 @@
+#!/bin/sh
+# runit service for data-boar — Void systemd-coupling canary (#1404).
+# Init-neutral: no systemd manager CLI. Product code does not assume one init.
+# Drop root: system_accounts=databoar in the xbps template + chpst (runit).
+exec 2>&1
+export DISABLE_SQLALCHEMY_CEXT="${DISABLE_SQLALCHEMY_CEXT:-1}"
+export CONFIG_PATH="${CONFIG_PATH:-/etc/data-boar/config.yaml}"
+exec chpst -u databoar:databoar /usr/lib/data-boar/python3.14t/bin/python3.14t -m data_boar --web

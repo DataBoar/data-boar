@@ -1,0 +1,27 @@
+---
+- name: Ensure snmpd is installed (opt-in)
+  when: lab_node_01_snmpd_install | bool
+  ansible.builtin.apt:
+    name: snmpd
+    state: present
+    update_cache: false
+  failed_when: false
+
+- name: Write snmpd.conf (v3-only baseline)
+  when: lab_node_01_snmpd_install | bool
+  ansible.builtin.template:
+    src: snmpd.conf.j2
+    dest: /etc/snmp/snmpd.conf
+    owner: root
+    group: root
+    mode: "0600"
+  failed_when: false
+
+- name: Configure snmpd service state (best-effort)
+  when: lab_node_01_snmpd_install | bool
+  ansible.builtin.service:
+    name: snmpd
+    state: "{{ 'started' if (lab_node_01_snmpd_enable | bool) else 'stopped' }}"
+    enabled: "{{ true if (lab_node_01_snmpd_enable | bool) else false }}"
+  failed_when: false
+

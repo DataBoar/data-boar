@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}{{ t('config.page_title') }}{% endblock %}
+{% block content %}
+<h1><img src="/static/mascot/data_boar_mascote_color.svg" alt="" width="40" height="40" style="vertical-align: middle; margin-right: 0.35em;">{{ t('config.h1') }}</h1>
+<p>{{ t('config.intro') }} <code>{{ config_path }}</code>. {{ t('config.intro_tail') }}</p>
+{% if config_save_error %}<p class="error">{{ t('config.error_prefix') }} {{ config_save_error }}</p>{% endif %}
+{% if config_saved %}<p class="success">{{ t('config.saved_ok') }}</p>{% endif %}
+<form method="post" action="{{ base_path }}/config" class="config-form">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+  <div class="form-group">
+    <label for="yaml">{{ t('config.yaml_label') }}</label>
+    <textarea id="yaml" name="yaml" rows="24" class="mono">{{ config_yaml }}</textarea>
+  </div>
+  <button type="submit" class="btn btn-primary">{{ t('config.save') }}</button>
+</form>
+<p class="muted">{{ t('config.readme_blurb') }}</p>
+{% endblock %}

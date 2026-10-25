@@ -1,0 +1,33 @@
+---
+description: Operator career / LinkedIn / ATS private layout. Situational — career globs or @operator-career-private-layout.mdc.
+globs:
+  - docs/private.example/author_info/**
+  - docs/ops/LINKEDIN_ATS*
+alwaysApply: false
+---
+
+# Operator career / LinkedIn / ATS / SLI — private layout
+
+## Canonical private folder
+
+- **Operator** ATS/SLI reports, Calendly notes, and pandoc exports belong under **`docs/private/author_info/career/`** (see **`README.pt_BR.md`** there for the full decision map).
+- **Do not** store the operator's ATS deliverables next to **talent-pool candidates** in **`docs/private/commercial/candidates/`** — that tree is for **other people** the project helps.
+
+## Related private locations
+
+- **Social post drafts** (LinkedIn/X/WordPress queues, SOCIAL_HUB): **`docs/private/social_drafts/`** — content for feeds; keep coherent with keywords in **`author_info/career/`** when both exist. **Subscription / OPEX log** (e.g. X Premium): **`docs/private/operator_economics/SUBSCRIPTIONS_LOG.pt_BR.md`** (gitignored tree).
+- **Tracked policy** (no PII): **`docs/PRIVATE_OPERATOR_NOTES.md`** §2 (`author_info/` row) · **`docs/private.example/author_info/README.md`**.
+
+## Stubs / redirects
+
+- Legacy paths under **`docs/private/commercial/ats_sli_hub/`** or **`ats_sli_delivery/`** that point at **Fabio** may be **redirect stubs only**; read **`author_info/career/README.pt_BR.md`** for the canonical file names.
+
+## LinkedIn capture (token-aware)
+
+- LinkedIn has **no** general public JSON API for full personal profiles to **unauthenticated automation**. The repo uses **PDF export +** **`scripts/operator-linkedin-profile-extract.ps1`** (calls **`extract_cv_pdf.py`**) — same pattern as talent CVs — for **structured offline diff** and token savings.
+- The operator **authorizes** the assistant to use the **Cursor embedded browser** (warm session or **Google / SSO** on the LinkedIn login page) for **live** profile review—**do not** treat “no public API” as “no access.” If the session is cold, ask the operator to re-warm; do not refuse ATS/SLI updates on API grounds alone.
+- When refreshing **operator** ATS/SLI, **prefer** `read_file` on the latest JSON under **`docs/private/author_info/career/exports_linkedin_snapshot/`** after a fresh profile PDF under **`docs/private/author_info/`**, **and** use the browser for gaps (e.g. live “Open to Work”, metrics, **“Ver mais”** on long About).
+
+## Structured extract (PDF → JSON)
+
+- After the operator saves a **LinkedIn profile PDF** under **`docs/private/author_info/`**, run **`scripts/operator-linkedin-profile-extract.ps1`** (repo root). Outputs: **`docs/private/author_info/career/exports_linkedin_snapshot/`**. Agents should **`read_file`** the latest JSON when updating ATS/SLI — **not** rely only on browser accessibility snapshots for full profile text. See **`docs/plans/TOKEN_AWARE_USAGE.md`** §2 (operator LinkedIn bullet).

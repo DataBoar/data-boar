@@ -1,0 +1,53 @@
+---
+description: Study cadence reminders — calendar vs deep code; nudge at natural stopping points. Situational — portfolio/sprints/operator manual docs or study-check / @.
+globs:
+  - docs/plans/PORTFOLIO_AND_EVIDENCE_SOURCES.md
+  - docs/plans/SPRINTS_AND_MILESTONES.md
+  - docs/plans/SPRINTS_AND_MILESTONES.pt_BR.md
+  - docs/ops/OPERATOR_MANUAL_ACTIONS.md
+  - docs/ops/OPERATOR_MANUAL_ACTIONS.pt_BR.md
+alwaysApply: false
+---
+
+# Study cadence reminders (operator calendar vs deep code focus)
+
+## When this rule attaches (Cursor)
+
+**Context:** **`alwaysApply: false`** — loads when a path matches the **`globs`** above **or** the operator types **`study-check`** **or** attaches **`@study-cadence-reminders.mdc`**. Proactive nudges (without **`study-check`**) apply only when this rule is **already** in context from globs or **`@`** — do **not** spam study text in unrelated threads.
+
+**Companion:** **`.cursor/rules/session-mode-keywords.mdc`** · **`docs/ops/OPERATOR_AGENT_COLD_START_LADDER.md`** § *Token → rule latch (`study-check`)*.
+
+**Rollback:** `git revert` the commit or `git show <parent>:.cursor/rules/study-cadence-reminders.mdc`.
+
+The operator wants to **complete the study path** (paid **CWL** cyber lane + **alternating** AI + **other** subjects) but tends to **hyperfocus on repo work** and forget calendar study. The assistant should **gently surface** the agreed rhythm **only when appropriate**—supporting balance, not spam.
+
+## Agreed rhythm (source of truth in docs)
+
+- **Week A pattern:** **2** blocks **CWL (cyber)** + **1** block **AI** (e.g. Anthropic Academy).
+- **Week B pattern:** **2** CWL + **1** **other** (thesis, LGPD, homelab note, plan reading).
+- **Loop** until CWL milestones are done; **ease off** when **Priority band A** (–1/–1b) or **release pressure** spikes—see [PORTFOLIO_AND_EVIDENCE_SOURCES.md](../../docs/plans/PORTFOLIO_AND_EVIDENCE_SOURCES.md) §3.0, [OPERATOR_MANUAL_ACTIONS.md](../../docs/ops/OPERATOR_MANUAL_ACTIONS.md) §1, [SPRINTS_AND_MILESTONES.md](../../docs/plans/SPRINTS_AND_MILESTONES.md) §3.1.
+- **Course sequence (CWL):** [PORTFOLIO_AND_EVIDENCE_SOURCES.md](../../docs/plans/PORTFOLIO_AND_EVIDENCE_SOURCES.md) §3.2 (**BTF → C3SA**, then onward).
+
+## When to remind (do)
+
+Offer a **short** (2–5 lines) **optional pause / study nudge** in **pt-BR** if the operator’s chat is pt-BR, else concise English:
+
+1. **Natural completion:** Right after a **coherent slice is done**—tests/docs committed or task explicitly wrapped (“pronto”, “merged”, “ship it”, “done for today”).
+1. **Explicit stop:** Operator says they are **pausing**, **logging off**, **good night**, or **closing the session**.
+1. **“What next?” with no fire:** They ask what to do next and there is **no** critical blocker—include **one line** that study blocks are part of the same 2026 plan, plus pointer to §3.0/§3.2 (no lecture).
+1. **`study-check`:** When the operator uses the English token **`study-check`** (see **`.cursor/rules/session-mode-keywords.mdc`**), **always** give a compact recap: cadence + CWL sequence + links above.
+
+## Format example (pt-BR):
+
+*“Se for encerrar o bloco de código: lembrete do combinado — 2× CWL + 1× IA numa semana, na outra 2× CWL + 1× outro assunto; trilho CWL em PORTFOLIO §3.2 (BTF→C3SA). Próximo passo no repo quando voltar: …”*
+
+## When not to remind (don’t)
+
+- **Mid-debug**, **incident**, **failing CI**, **security triage**, or **operator is clearly stuck and asking for technical help**—stay on the problem.
+- **Every message** or **repeating the same paragraph** in one session—**at most one** study nudge per **completed** slice unless they ask or use **`study-check`**.
+- **Do not** guilt or moralize; frame as **optional calendar alignment** they asked for.
+
+## Coordination with execution priority
+
+Study reminders **do not** override **`.cursor/rules/execution-priority-and-pr-batching.mdc`**. They are a **human calendar** cue after **safe stopping points**, not a reason to abandon critical fixes.
+

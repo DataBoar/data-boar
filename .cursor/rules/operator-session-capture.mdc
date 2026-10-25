@@ -1,0 +1,22 @@
+---
+description: Capture high-value operator chat into docs/private or tracked ops/plans without leaking secrets
+globs: docs/ops/*.md,docs/plans/*.md,AGENTS.md
+alwaysApply: false
+---
+
+# Operator session capture (chat → durable notes)
+
+When the operator asks to **save**, **document**, or **capture** what was discussed in session:
+
+1. **Triage by sensitivity**
+   - **Tracked:** policy, process, cross-team guidance (EN + pt-BR for operator docs when adding new pages)—see **`docs/ops/OPERATOR_SESSION_CAPTURE_GUIDE.md`**.
+   - **`docs/private/`:** personal strategy, family/academic ethics details, OPEX numbers, client-specific drafts, LAN/session CLI dumps.
+   - **`docs/plans/` + `PLANS_TODO.md`:** when the outcome is a **scoped product or workflow deliverable**, not a personal note.
+
+1. **Prefer small artifacts:** one private index row or one new section in an existing private file; avoid duplicate of **`AGENTS.md`** or full transcripts.
+
+1. **Never** put in tracked files: passwords, webhooks, RFC1918 IPs, raw **`last`/`w`/`lastlog`**, commercial rate tables, or identifiable family + institution pairings used strategically.
+
+1. **Optional index:** suggest updating **`docs/private/author_info/RECENT_OPERATOR_SYNC_INDEX.pt_BR.md`** (or operator’s chosen path) with a **dated** bullet list pointing to other private files.
+
+Skill: **`.cursor/skills/operator-session-capture/SKILL.md`**.

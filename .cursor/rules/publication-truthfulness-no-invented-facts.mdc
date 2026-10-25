@@ -1,0 +1,50 @@
+---
+description: "Never invent dates, metrics, URLs, or publication claims; always capture real permalinks when reachable. alwaysApply."
+alwaysApply: true
+---
+
+# Publication truthfulness — no invented dates or facts (GitHub, sites, social)
+
+## Hard rule (every session, every surface)
+
+The assistant **must not** invent or assume:
+
+- **Dates** (“today”, “published on”, backdates, filenames prefixed with `YYYY-MM-DD`, changelog entries, release notes).
+- **Status** (e.g. “published”, “green CI”, “merged”) without verification.
+- **URLs / permalinks / evidence** (social posts, issue numbers, PR numbers, Sonar status) without a **verified** source.
+- **Metrics, quotes, or attributions** presented as factual in **public** or **operator-facing** published material.
+
+Applies to: **GitHub** (`origin`), **WordPress** / any **public site**, **social networks**, **issues/PR descriptions**, and **tracked** docs that describe live state. **Private** `docs/private/` drafts must still avoid **lying to the operator**: if a date is placeholder, label it explicitly as **placeholder** until verified.
+
+## Source of truth (pick one before asserting)
+
+1. **Platform response** — e.g. WordPress REST/API return (`date`, `link`, `id`), `gh pr view`, CI JSON, `git log`.
+2. **Operator-stated fact** in this chat (explicit).
+3. **Read** of a file or **HTTP GET** you just ran — not memory from a prior session.
+
+If none of the above exists: **say you do not know**, **verify**, or **ask** — **do not** fill gaps with plausible dates.
+
+## Permalinks — capture and record (whenever technically possible)
+
+- After **any** publish or reshare (WordPress REST, Jetpack, `gh`, vendor APIs, or a fresh **HTTP GET** / page parse), **record** the **canonical URL** (`link` from the API response, redirect `Location`, or stable public `https://...`) in the operator inventory (**`docs/private/social_drafts/editorial/SOCIAL_HUB.md`**) and in chat when the operator needs a paper trail.
+- For **each network** that received the content (Tumblr, LinkedIn, X, Threads, FacColleague-Sok, etc.), **paste the real permalink** when it is reachable in-session with the same tools used for verification (`curl`, `rg`/parse of embedded JSON, browser MCP, `gh`, etc.). **Match** the URL style already used in the hub (e.g. Tumblr ecos as `https://presuntorj.tumblr.com/post/<id>` like **W2**/**W3**).
+- Use **`_(pendente — short reason)_`** only when capture is **blocked** after a documented attempt (login wall, UI intercept, no public URL yet). **Do not** invent cross-network URLs to “complete” a row.
+
+## “Today” and timezones
+
+- **“Today”** for filenames and publication alignment: use the **operator workstation** clock and timezone (e.g. PowerShell `Get-Date` in **E. South America Standard Time** when that is the operator’s context), **not** a stale date from a system message.
+- After **any** WordPress (or other) **API publish/update**, **re-read** the API response (`link`, `date`, `status`) and align **local** draft filename prefix (`YYYY-MM-DD`) and any **“published on”** line in the body to that **truth** — **never** a guessed date.
+
+## WordPress.com API vs. browser UI (Jetpack, taxonomies)
+
+- **Categories and tags** set via API with **correct term IDs** should match what the UI would save; wrong IDs = wrong or missing terms — **always** resolve IDs (`categories.list` / `tags.list`) before `posts.create`.
+- **Permalinks** follow the same site rules (slug + date); API-published posts are still **real** posts.
+- **Jetpack Social (Publicize)** typically runs when a post becomes **published**, but **edge cases** exist: scheduled/future posts delay sharing; some meta (custom share text) must be set on the post; rare failures or OAuth issues are **not** identical to “I clicked Publish in Calypso” — **verify** on the site or Jetpack activity if the operator needs certainty.
+
+## On violation
+
+1. **Stop** before commit/push/publish.
+2. **Replace** invented facts with verified values or **TBD** + verification step.
+3. **Align** filenames and hub tables to the **platform** after publish.
+
+See also: **`docs/private/social_drafts/editorial/SOCIAL_HUB.md`** (**Política de data**), **`.cursor/rules/private-pii-never-public.mdc`** (what must not leak publicly).

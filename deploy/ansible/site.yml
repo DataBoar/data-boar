@@ -1,0 +1,14 @@
+---
+# Path A — Data Boar standalone (Docker Compose, without Swarm).
+# Usage:
+#   ansible-playbook site.yml --check   # dry-run
+#   ansible-playbook site.yml           # apply
+
+- name: Deploy Data Boar (standalone)
+  hosts: data_boar
+  become: true
+  environment: "{{ labop_debian_unattended_apt_environment }}"
+  vars:
+    swarm_enabled: false
+  roles:
+    - data_boar

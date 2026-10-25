@@ -1,0 +1,55 @@
+# Chile – sample compliance profile (Law 19.628 on personal data protection)
+#
+# Target audience: Chile and South America deployments. Modernising legislation; datos personales.
+# Terms in Spanish and English (datos personales / personal data).
+#
+# How to use:
+#   1. Set in your main config:
+#        regex_overrides_file: path/to/compliance-sample-chile_privacy.yaml
+#        ml_patterns_file: path/to/compliance-sample-chile_privacy.yaml
+#   2. Merge the recommendation_overrides list below into your config under report.recommendation_overrides.
+#
+# Chile: Law 19.628 (protección de datos personales); evolving framework.
+
+regex:
+  - name: "RUT_CL"
+    pattern: "\\b\\d{1,2}\\.?\\d{3}\\.?\\d{3}-?[\\\\dkK]\\b"
+    norm_tag: "Chile Privacy"
+  - name: "RUT_CL_ALT"
+    pattern: "\\b\\d{7,8}-?[\\\\dkK]\\b"
+    norm_tag: "Chile Privacy"
+
+# ML terms: Spanish and English (datos personales, personal data).
+terms:
+  - text: "datos personales"
+    label: sensitive
+  - text: "personal data"
+    label: sensitive
+  - text: "titular de datos"
+    label: sensitive
+  - text: "data subject"
+    label: sensitive
+  - text: "responsable de datos"
+    label: sensitive
+  - text: "data controller"
+    label: sensitive
+  - text: "ley 19.628"
+    label: sensitive
+  - text: "law 19.628"
+    label: sensitive
+  - text: "consentimiento"
+    label: sensitive
+  - text: "consent"
+    label: sensitive
+  - text: "rut"
+    label: sensitive
+  - text: "rol único tributario"
+    label: sensitive
+
+recommendation_overrides:
+  - norm_tag_pattern: "Chile Privacy"
+    base_legal: "Ley 19.628 (protección de datos personales); Chile"
+    risk: "Datos personales; obligaciones de tratamiento y consentimiento."
+    recommendation: "Cumplir Ley 19.628; obtener consentimiento; respetar derechos del titular; considerar normativa en evolución."
+    priority: "ALTA"
+    relevant_for: "DPO, Responsable de datos"

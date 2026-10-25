@@ -1,0 +1,90 @@
+# Manual test of Slack incoming webhook (repository secret SLACK_WEBHOOK_URL).
+# Skips cleanly if the secret is unset — no failed runs on forks without the secret.
+name: Slack operator ping (manual)
+
+permissions:
+  contents: read
+
+'on':
+  workflow_dispatch:
+    inputs:
+      message:
+        description: Plain-text message to post to Slack
+        required: false
+        default: "Data Boar — manual Slack ping from GitHub Actions (workflow_dispatch)."
+      mention_user_id:
+        description: Optional Slack member ID (U…) to @mention for mobile/desktop alert; empty uses repo variable SLACK_MENTION_USER_ID if set
+        required: false
+        default: ""
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    # Do not use `secrets.*` in job-level `if:` — it can cause GitHub Actions to
+    # record a phantom failed run with 0 jobs ("workflow file issue"). The
+    # webhook presence is detected at step level instead. See ADR/runbook in
+    # docs/ops/OPERATOR_NOTIFICATION_CHANNELS.md and the same posture used by
+    # the `sonar` job in ci.yml (commit 881bdec).
+    steps:
+      - name: Detect Slack webhook
+        id: webhook
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          if [ -n "$SLACK_WEBHOOK_URL" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "SLACK_WEBHOOK_URL is unset; downstream steps will skip cleanly."
+          fi
+
+      - name: Post to Slack incoming webhook
+        if: steps.webhook.outputs.present == 'true'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          NOTIFY_TEXT: ${{ inputs.message }}
+          SLACK_MENTION_USER_ID: ${{ inputs.mention_user_id || vars.SLACK_MENTION_USER_ID }}
+        run: |
+          python3 <<'PY'
+          import json
+          import os
+          import urllib.error
+          import urllib.request
+
+          def _normalize_slack_member_id(raw_id: str) -> str:
+              mid = (raw_id or "").strip()
+              if not mid:
+                  return ""
+              if mid.startswith("<@") and mid.endswith(">"):
+                  mid = mid[2:-1]
+              return mid.strip()
+
+          def with_optional_mention(text: str, raw_id: str) -> str:
+              mid = _normalize_slack_member_id(raw_id)
+              if not mid:
+                  return text
+              return f"<@{mid}> {text}"
+
+          url = os.environ.get("SLACK_WEBHOOK_URL", "").strip()
+          if not url:
+              print("SLACK_WEBHOOK_URL is unset; skipping manual ping.")
+              raise SystemExit(0)
+          text = with_optional_mention(
+              os.environ.get("NOTIFY_TEXT", "ping"),
+              os.environ.get("SLACK_MENTION_USER_ID", ""),
+          )
+          data = json.dumps({"text": text}).encode("utf-8")
+          req = urllib.request.Request(
+              url,
+              data=data,
+              headers={"Content-Type": "application/json"},
+              method="POST",
+          )
+          try:
+              with urllib.request.urlopen(req, timeout=30) as resp:
+                  if resp.status >= 400:
+                      body = resp.read()
+                      raise SystemExit(f"HTTP {resp.status}: {body!r}")
+          except urllib.error.HTTPError as e:
+              raise SystemExit(f"HTTPError {e.code}: {e.read()!r}") from e
+          PY

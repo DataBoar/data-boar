@@ -1,0 +1,140 @@
+---
+description: Lab completão — wrappers + -Privileged + narrow sudoers; L-series protection; token-aware automation reuse; document timeouts, latency, FP/FN vs synthetic, real-path confidence; doc+code capability matrix; SSH from dev PC.
+globs:
+  - scripts/lab-completao*
+  - docs/ops/LAB_COMPLETAO*
+  - core/brazilian_cpf.py
+alwaysApply: false
+---
+
+# Lab completão — assistant / operator workflow (SSH from dev PC)
+
+## Access model (canonical for this repo)
+
+1. The assistant runs commands in the **Cursor integrated terminal** on the **operator’s Windows dev PC**. That session uses the **same SSH client, keys, and LAN reachability** as the operator’s shell when invoking **`ssh`**, **`scp`**, or **`curl`** to lab hosts. **Do not** tell the operator the assistant “cannot reach the lab” or “has no SSH” from this workspace when the usual **`ssh Host`** aliases work from that terminal.
+
+1. **Non-interactive SSH is not the same TTY as tmux:** `sudo -v` in a **tmux** pane warms sudo for **that terminal**. A separate **`ssh user@host 'sudo …'`** from Cursor uses a **non-interactive** session; **`sudo -n`** for privileged probes succeeds when **sudoers** allows those commands **without a password** (see gitignored **`docs/private/homelab/LABOP_COMPLETÃO_SUDOERS*.md`** template referenced from **`docs/ops/LAB_COMPLETAO_RUNBOOK.md`**). If **`sudo -n`** fails in logs, treat it as an **operator configuration** issue for that host, not an assistant limitation.
+
+## When the operator asks for completão / session token **`completao`**
+
+1. **Tier shorthand (line 2):** If the message includes **`tier:…`** immediately after the token (see **`docs/ops/COMPLETAO_OPERATOR_PROMPT_LIBRARY.md`**), map that tier to the **documented** script / flags there — **`completao-chat-starter.ps1`** prints the same pairing for operators. For **`tier:release-master-v1-7-3`** or **`tier:release-master`** (with **`semver:`** / **`tag:`** on the following lines), open the resolved **`docs/ops/COMPLETAO_MESTRE_RELEASE_CHECKLIST_PROMPT*.md`** first (**versioned** basename **`…_<semver>.md`** when present, else the canonical **`COMPLETAO_MESTRE_RELEASE_CHECKLIST_PROMPT.md`**) **before** running lab-wide Git or image steps.
+
+1. **Default command** from repo root (unless the operator explicitly opts out, e.g. “without privileged”):
+
+   ```text
+   .\scripts\lab-completao-orchestrate.ps1 -Privileged
+   ```
+
+1. **Inventory map first (private):** **`read_file`** **`docs/private/homelab/OPERATOR_SYSTEM_MAP.md`** and **`LAB_SOFTWARE_INVENTORY.md`** when they exist — host roles and software versions **must** inform interpretation of host-smoke (see **`docs-private-workspace-context.mdc`** — **`@docs-private-workspace-context.mdc`** if that rule is not already in context). The orchestrator runs **`lab-completao-inventory-preflight.ps1`** before SSH smoke by default (**15-day** staleness → **`lab-op-sync-and-collect.ps1`**); **`LAB_COMPLETAO_RUNBOOK.md`** *Inventory freshness*.
+
+1. **Manifest:** **`docs/private/homelab/lab-op-hosts.manifest.json`** (same as **`lab-op-sync-and-collect.ps1`**). Optional per-host **`completaoHealthUrl`** for HTTP checks from the dev PC. Optional **`completaoEngineMode`:** **`container`** or **`completaoSkipEngineImport`:** **`true`** when that host runs Data Boar **only** via **Docker / Swarm / Podman** (no bare-metal **`uv`** expected) — see **`docs/ops/LAB_COMPLETAO_RUNBOOK.md`** (*Container-only lab hosts*) and **`docs/ops/LAB_OP_HOST_PERSONAS.md`** (ENT / PRO / edge / bridge intent vs Ansible knobs).
+
+1. **Read logs** under **`docs/private/homelab/reports/`** (`completao_*_allhosts.log`, per-host `*_completao_host_smoke.log`) and summarize pass/fail **without** pasting secrets, passwords, or unnecessary LAN identifiers into **public** issues/PRs.
+
+1. **Public lessons + plan bridge (when the slice ends):** If repeatable lab findings need a **tracked** narrative, close with **`lab-lessons`**: follow **`lab-lessons-learned-archive.mdc`**, **ADR 0042**, and **`docs/ops/lab_lessons_learned/README.md`** — snapshot the hub to a dated file **before** rewriting **`LAB_LESSONS_LEARNED.md`**; promote actionable gaps to **`docs/plans/PLANS_TODO.md`**. Keep long narrative + LAN context in **`docs/private/homelab/COMPLETAO_SESSION_*.md`** (private git only).
+
+## Automation stack (wrappers, remote lab-op, **`sudo -n`**)
+
+1. **Prefer existing scripts** end-to-end instead of one-off ad-hoc SSH: **`lab-completao-orchestrate.ps1`**, **`lab-completao-host-smoke.sh`**, **`lab-op-repo-status.ps1`**, **`lab-op-git-align-main.ps1`**, **`lab-op-sync-and-collect.ps1`**, **`homelab-host-report.sh`** — see **`docs/ops/LAB_COMPLETAO_RUNBOOK.md`**, **`docs/ops/LAB_OP_PRIVILEGED_COLLECTION.md`**, **`docs/ops/TOKEN_AWARE_SCRIPTS_HUB.md`**.
+
+1. **Completão default:** **`.\scripts\lab-completao-orchestrate.ps1 -Privileged`** from the repo root on the **Windows dev PC**. Remote hosts run the bash smoke **over SSH** as today; extend with **Ansible** under **`ops/automation/ansible/`** when a change should be **reproducible**.
+
+1. **Passwordless sudo for probes:** Align each Linux host with the **narrow** sudoers pattern — gitignored template **`docs/private/homelab/LABOP_COMPLETÃO_SUDOERS*.md`** and tracked guide **`docs/ops/LAB_OP_PRIVILEGED_COLLECTION.md`** (same spirit as **`homelab-host-report.sh`**). **Apply** / **extend** sudoers includes as needed for **`iptables-save`**, **`nft`**, **`ufw`**, and smoke-adjacent read-only commands — **never** commit real **`/etc/sudoers`** drops to **public** Git.
+
+1. **Narrow sudoers baseline (LAB-OP + WSL — assume deployed unless logs prove otherwise):** The operator may keep **`/etc/sudoers.d/labop-host-report`** (name may vary) with **`Cmnd_Alias`** entries whose **NOPASSWD** lines match **exactly** (path + user + flags): **`homelab-host-report.sh`** (`--privileged` / `--privileged --deep`), **`lab-node-01-ansible-labop-podman-apply.sh`** (`--apply` / `--check`), **`labop-share-client-install.sh`** (`--apply` only), **`lab-completao-host-smoke.sh`** (`--privileged`). Non-interactive checks use **`sudo -n <bash-path> <absolute-repo>/scripts/<script>.sh …`** where **`<bash-path>`** must match sudoers literally — list **both** **`/bin/bash`** and **`/usr/bin/bash`** in the alias (Void / path drift). **`lab-node-01-ansible-labop-podman-apply.sh`** extends **PATH** for **`ansible-playbook`** under **`sudo`** (operator **`~/.local/bin`**); if still missing, install system **`ansible`** on that host. **`sudo visudo -cf …`** is **administration**, **not** in those aliases: it **normally asks for a password** — **do not** treat that prompt as “NOPASSWD broken” or suggest **`visudo -cf`** as the first passwordless validation step. **`labop-share-client-install.sh --apply`** runs **`apt-get` / `xbps-install`** (mutates packages); **do not** lump it with read-only smoke checks unless the operator wants installs. When **`completao`** / **`-Privileged`** is in scope and the manifest exists, **execute** the orchestration path and **do not** burn tokens on rhetorical “may I SSH / use privileged mode?” asks — **`operator-direct-execution.mdc`**; **stop** only on real blockers (SSH/auth, missing manifest, ambiguous action on the **primary** dev PC tree).
+
+1. **Token-aware operations:** Prefer **one scripted pass** + **logs under `docs/private/homelab/reports/`** over repeated manual micro-steps — this is the agreed way to **save cognition and tokens** on reruns.
+
+## Blast radius — primary dev workstation vs LAB-OP hosts (contract — do not “forget”)
+
+1. **Primary Windows dev PC** (ThinkPad **L-series** **role**, Cursor workspace): **never** run **`git reset --hard`**, **`git clean -fdx`**, **`clean-slate`**, or history rewrite on the **canonical** `data-boar` clone — **`docs/ops/PRIMARY_WINDOWS_WORKSTATION_PROTECTION.md`**. Normal workflow: **`git pull`**, merge, branch, stash.
+
+1. **LAB-OP manifest hosts** (**`lab-op-hosts.manifest.json`** — **`sshHost`** + **`repoPaths`**): **always safe** to align from GitHub — **`git fetch`**, **`git pull --ff-only`**, **`lab-op-repo-status.ps1 -PullFfOnly`**, **`lab-op-git-align-main.ps1`**, **`lab-op-git-ensure-ref -Mode Reset`**, **`lab-completao-orchestrate.ps1 -AlignLabClonesToLabGitRef`** target **only** those **remote** paths over SSH. This is **not** “destructive to the product” in the primary dev PC sense — it is **expected** lab hygiene. **Do not** ask pointless “should I align?” questions when the operator already contracted completão; **do not** tell them to “SSH to each box by hand” if the script can do it.
+
+1. **Container images** (Docker / **Swarm** / **Podman** / **Kubernetes**): images from **Docker Hub** (or the configured registry) are **re-pullable** — **`docker pull`**, service update, prune old tags on lab nodes is **normal** and **not** equivalent to destroying the canonical Git tree on the primary dev PC.
+
+1. **No redundant permission prompts** for the **already-agreed** completão contract (SSH from dev PC, **`-Privileged`**, LAB clone alignment): **execute** and **report** — see **`operator-direct-execution.mdc`**. **Stop** only for real blockers (SSH/auth failure, missing manifest, ambiguous action that would hit the **primary Windows dev PC** canonical tree).
+
+## Failure handling (no “excuses” loop — operator + assistant loop)
+
+1. If **SSH** fails: report the **error**; suggest **`ssh -v`**, manifest **`sshHost`**, agent, key — **execute** retries when the operator confirms keys or config.
+
+1. If **`sudo -n`** fails for privileged probes: **remind** the operator to (a) align **sudoers** with the narrow template for completão / host-report, and/or (b) refresh an interactive session on the host if they rely on password sudo for **manual** steps — then **re-run** **`lab-completao-orchestrate.ps1 -Privileged`**. **Do not** blame “the AI” for lack of network access when the failure is **permission denied** for **`sudo -n`**.
+
+1. If **`MISSING_SCRIPT`** or stale clone: run **`lab-op-repo-status.ps1`** / **`-PullFfOnly`** or align scripts against **manifest hosts only** — never against the primary dev PC canonical tree — see **`LAB_COMPLETAO_RUNBOOK.md`** (*Blast radius*).
+
+1. If logs show **`uv` not in PATH** / skipped **`import core.engine`**: **read the manifest** (and **`LAB_COMPLETAO_RUNBOOK.md`**) — when **`completaoEngineMode`:** **`container`** (or **`completaoSkipEngineImport`:** **`true`**), that is **expected** for Swarm/Podman-only hosts; **do not** insist on installing **`uv`** on bare metal unless the operator wants native runtime there.
+
+## Lab scope — dependencies, network, and security (assistant **may** remediate when asked)
+
+When the operator asks for **completão** and expects the lab to behave like a **test datacenter**, the assistant **may and should** unblock failures **in the lab-op footprint** using **least privilege**, **narrow** rules, and **reversible** changes where practical. **Do not** use this as a reason to weaken **non-lab** or **production** systems. **Never** put secrets, tokens, full firewall dumps, or LAN identifiers into **public** GitHub — record operator-only details under **`docs/private/homelab/`**.
+
+1. **Packages and build deps (native-runtime hosts):** When the host is meant to run **`uv run`** on the clone, install missing **OS packages** (headers, `-dev` libs, **`zlib`**, MariaDB/MySQL client dev files, etc.), run **`uv sync`** / **`uv sync --extra …`**, fix **`PATH`** for non-interactive SSH when safe — prefer **Ansible playbooks** or **`ops/automation/ansible/`** when the repo already models the change. **Container-only** hosts (manifest **`completaoEngineMode`:** **`container`**) are out of scope for “install **`uv`** on the OS” unless the operator asks to add a native env.
+
+1. **Application config:** Fix **wrong ports**, **`main.py` / env**, compose files, or **`deploy/lab-smoke-stack`** wiring when they block tests — commit **tracked** fixes when they are **product-correct**; keep **operator-specific** YAML only in **`docs/private/`**.
+
+1. **Host firewalls (`ufw`, `nftables`, `iptables`):** Add **allow** rules **only** for **lab-op source/destination pairs** and **ports the test needs** (e.g. Data Boar **8088**, DB lab ports). Prefer **temporary** or **documented** rules; avoid **wide open** LAN or `0.0.0.0/0` **except** when the operator explicitly accepts it for a **short** test window.
+
+1. **UniFi / LAB-ROUTER-01 (VLANs, firewall between VLANs):** Use existing operator scripts and credentials (e.g. **`scripts/LAB-ROUTER-01.ps1`**, private notes) when available. If API keys or the controller are **not** reachable from the terminal session, **report** that and ask the operator to apply the **same rule intent** in the UI — do **not** invent topology.
+
+1. **MAC / LSM / hardening (SELinux, AppArmor):** Prefer **narrow** booleans, **per-path** profiles, or **short** permissive modes **for test paths/containers only** — **escalate** (ask the operator) before **global** enforcing→permissive flips or **disabling** layers site-wide.
+
+1. **Bruteforce / abuse tools (fail2ban, sshguard):** Prefer **whitelist/jail tweaks** for **lab-op** sources, **time-boxed**, or **operator-approved** test IPs — not “turn off security” by default.
+
+1. **Integrity / USB / audit (AIDE, Tripwire, Samhain, USBGuard, auditd):** Expect **false positives** or **blocks** during scans; adjust **only** with **operator agreement** and **minimal** scope (paths, windows). **Do not** silently disable **audit** on systems that must stay compliant for **non-lab** reasons — **ask** if unsure.
+
+1. **Containers and orchestration:** Aim for **at least one** runnable Data Boar path per **major** lab **OS/runtime** the manifest covers — **Docker** / **Compose**, **Podman**, **Swarm** where used, **Kubernetes** (e.g. **Docker Desktop** on the primary dev laptop) **if** the operator has a cluster/context. Use **`deploy/`** and **`scripts/docker/`** patterns; do **not** commit operator kubeconfig.
+
+1. **Remote storage protocols:** Exercise **NFS**, **SSHFS**, **SMB/CIFS** (and similar) **when** the product supports them and mounts exist — follow **[TECH_GUIDE.md](../../docs/TECH_GUIDE.md)** extras; keep **credentials** in **`docs/private/`** only. If mounts are **missing**, **configure** OS-level exports/mounts or **connector** targets in **private** YAML so lab hosts can reach paths **between** themselves — **least privilege** only.
+
+## Documentation + code as source of truth (capability matrix)
+
+When the operator asks for **completão** to **learn what the product actually does** vs what docs promise, treat **English docs** + **`pyproject.toml` / `main.py` / connectors / tests** as the **authority**. **Ingest** a **mixed lab corpus** (synthetic + intentional edge cases + non-secret samples) through **CLI**, **API**, and **web** — goal: **document** **pass/fail/gap** in **`docs/private/homelab/`** (session notes), not marketing claims.
+
+1. **Orientation (read first):** **[docs/README.md](../../docs/README.md)** index — then **[USAGE.md](../../docs/USAGE.md)**, **[TECH_GUIDE.md](../../docs/TECH_GUIDE.md)**, **[TESTING.md](../../docs/TESTING.md)**, **[SENSITIVITY_DETECTION.md](../../docs/SENSITIVITY_DETECTION.md)**, **[MINOR_DETECTION.md](../../docs/MINOR_DETECTION.md)**, **[COMPLIANCE_AND_LEGAL.md](../../docs/COMPLIANCE_AND_LEGAL.md)** (detection language **≠** legal conclusion), **[COMPLIANCE_TECHNICAL_REFERENCE.md](../../docs/COMPLIANCE_TECHNICAL_REFERENCE.md)**, **[SECURITY.md](../../docs/SECURITY.md)**, **[LICENSING_SPEC.md](../../docs/LICENSING_SPEC.md)** (trial/POC behaviour).
+
+1. **Databases and connectors:** Exercise **`deploy/lab-smoke-stack`** (Postgres/MariaDB/Mongo as needed), **`uv sync --extra nosql`**, SQL connectors, **[ADDING_CONNECTORS.md](../../docs/ADDING_CONNECTORS.md)** — align with **[TECH_GUIDE.md](../../docs/TECH_GUIDE.md)** database sections.
+
+1. **Filesystems:** Cover **local** and **remote** targets, **file extensions** and **filters** in YAML, **hidden** / **dotfile** paths where policy allows, **archives** and **compressed** trees per **[TECH_GUIDE.md](../../docs/TECH_GUIDE.md)** — use **private** scope CSV / YAML; **no** real PII in **public** commits.
+
+1. **Brazilian CPF beyond regex:** When adding new high-confidence PII logic, column validators, or lab data-contract checks for Brazilian identifiers, prefer **Modulo-11 checksum** confirmation after a shape match — use **`core.brazilian_cpf.cpf_checksum_valid`**, **`normalize_cpf_digits`**, or **`PIIValidator.validate_cpf`** (same regex shape as ``LGPD_CPF`` in **`core.detector`** — keep strings in sync). Eleven digits alone may be an opaque ID. **Do not** log full raw numbers in public artifacts; align with **`core.validation.sanitize_log_text`** / redaction patterns and **[SENSITIVITY_DETECTION.md](../../docs/SENSITIVITY_DETECTION.md)** for pipeline boundaries.
+
+1. **POC / demo surfaces (verify vs shipped):** Maturity self-assessment **[SMOKE_MATURITY_ASSESSMENT_POC.md](../../docs/ops/SMOKE_MATURITY_ASSESSMENT_POC.md)** + **`scripts/smoke-maturity-assessment-poc.ps1`**; WebAuthn JSON RP **[SMOKE_WEBAUTHN_JSON.md](../../docs/ops/SMOKE_WEBAUTHN_JSON.md)**, **[SECURE_DASHBOARD_AUTH_AND_HTTPS_HOWTO.md](../../docs/ops/SECURE_DASHBOARD_AUTH_AND_HTTPS_HOWTO.md)**, **[0033-webauthn-open-relying-party-json-endpoints.md](../../docs/adr/ADR-0033-webauthn-open-relying-party-json-endpoints.md)**. **Secure-by-design** claims must match **[SECURITY.md](../../docs/SECURITY.md)** and runnable checks — **do not** assert FIDO2/dashboard **UX** beyond what **tests + smoke** prove.
+
+1. **ML / DL sensitivity:** Follow **[SENSITIVITY_DETECTION.md](../../docs/SENSITIVITY_DETECTION.md)** and **`tests/`** subsets noted in **[TESTING.md](../../docs/TESTING.md)** — lab completão **may** run targeted **pytest** slices on hosts when useful, but **does not** replace **`check-all`** for merge gates.
+
+1. **Outcome:** For each major theme, record **observed behaviour**, **doc drift**, and **gaps** in **`COMPLETAO_SESSION_*.md`** (private) and, when product bugs are confirmed, **issues** / **`PLANS_TODO.md`** with **redacted** repro steps.
+
+## Automation reuse + documented learnings (every signal counts)
+
+1. **Automate new toil:** Whenever completão surfaces a **repeatable** step (wrapper, one-liner, firewall tweak sequence, mount order, env export), **prefer** adding or extending **`scripts/`**, **`ops/automation/ansible/`**, or **manifest** fields so the **next** run costs **fewer tokens** and less cognition — see **`docs/ops/TOKEN_AWARE_SCRIPTS_HUB.md`**.
+
+1. **Document everything material** in **`docs/private/homelab/`** session files (template **`COMPLETAO_SESSION_TEMPLATE.pt_BR.md`** when present), not only pass/fail:
+   - **Timeouts** and **wall-clock** duration (CLI, API, web, DB connectors).
+   - **Unexpected slowness** vs **expected** on the same host class.
+   - **False positives / false negatives** when **ground truth** is known from **synthetic** fixtures — compare **report output** to **expected** labels/paths; note **confidence** / **score** behaviour.
+   - **Real-path** scans (e.g. system log trees, user home samples): **time to complete**, **operator confidence** in findings, and **permission** noise — **no** raw PII in **public** Git.
+   - **Latency** for **remote** work: **public HTTP APIs**, **SSH**-bound steps, **resource-constrained** lab hosts (e.g. small **ARM** boards vs **x86** laptops).
+   - Any **deviation** between **docs/config defaults** and **observed** runtime (ports, extras, **`uv`** features).
+
+1. **Feed improvements:** Turn recurring signals into **`PLANS_TODO.md`** rows or **GitHub issues** (product), or **script**/**runbook** edits (workflow) — **link** the private session date when triaging.
+
+## Heterogeneous lab runtime (Docker, Podman, Swarm) + strict agent rules (v1.7.3)
+
+1. **Config isolation (Rule 1):** Never commit a tracked **`config.yaml`** (or equivalent) that embeds **real operator paths** or other environment-specific secrets. Use **`.example`** suffixes, **private** gitignored copies, or **ephemeral** files generated under **`/tmp/`** on lab hosts (see **`scripts/lab-completao-orchestrate-hybrid-v173.ps1`** deploying **`/tmp/config_databoar.yaml`** via **`scp`**).
+
+1. **Heuristic validation (Rule 2):** When interpreting scan output rooted at **`/home/leitao/documents`** (LAB-NODE-02 lyrics / sheet-music corpus), the assistant must **explicitly** state whether a **Heuristic Miss** occurred: chord charts or lyrics lines mistaken for **PII** by high heuristics, and how that affects confidence in the run.
+
+1. **LAB-NODE-01 context (Rule 3):** When the active context is host **LAB-NODE-01** (Podman-first lab laptop), **do not** propose or run bare-metal **`python`**, **`pip`**, or **`uv`** for Data Boar work; use **Podman** (container image / `podman run`) per operator policy for that host class.
+
+1. **Swarm synthetic DB stack:** **`scripts/stack-db.yml`** defines **`postgres:15-alpine`** and **`mariadb:10.11`** on an **`overlay`** network (**`databoar-net`**) for **Docker Swarm** on LAB-NODE-02-style managers — deploy with **`docker stack deploy`** (not a substitute for manifest-driven **`lab-completao-orchestrate.ps1`** defaults).
+
+## Related rules
+
+- **`homelab-ssh-via-terminal.mdc`** — TTY vs SSH, `P:`, private **`AGENT_LAB_ACCESS.md`**.
+- **`operator-direct-execution.mdc`** — execute agreed completão without **idle** confirmation loops.
+- **`agent-autonomous-merge-and-lab-ops.mdc`** — when to run **`lab-op-sync-and-collect.ps1`** vs completão.
+- **`docs/ops/PRIMARY_WINDOWS_WORKSTATION_PROTECTION.md`** — non-destructive posture for the **primary** dev PC.
+- **`docs/ops/LAB_COMPLETAO_RUNBOOK.md`** — scripts, slice order, capability coverage.
+- **`docs/ops/LAB_EXTERNAL_CONNECTIVITY_EVAL.md`** — external eval smoke (complements lab LAN).
+- **`docs/ops/TOKEN_AWARE_SCRIPTS_HUB.md`** — map scripts to session keywords / reuse.

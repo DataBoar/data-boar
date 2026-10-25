@@ -1,0 +1,113 @@
+# ADR trigger — when to create an Architecture Decision Record
+
+## Rule (always-on)
+
+After **any** session where one or more of the triggers below occurs, **create or propose an ADR before closing the session**.
+Do not wait for the operator to ask. If unsure whether a decision qualifies, err on the side of creating a short ADR — a brief record is better than silence.
+
+Use `.\scripts\new-adr.ps1 -Title "short-kebab-title" -Summary "one-liner"` to scaffold.
+
+---
+
+## Trigger categories
+
+### 1. Tooling / runtime choice
+A specific tool, library, runtime, or vendor was chosen **over alternatives**:
+- Container runtime: Docker CE, Podman, k3s, docker.io, Colima...
+- Package manager: uv over pip/poetry/conda
+- Export format: pandoc over LibreOffice/Word
+- CI provider, branch strategy, release tool
+- Database engine for dev/lab (MariaDB vs PostgreSQL vs SQLite)
+- Monitoring agent (Wazuh vs Falco vs auditd)
+
+### 2. Architecture / structure
+A **structural pattern** was established or changed:
+- Where configuration lives (Ansible roles vs shell scripts vs manual)
+- How docs are segmented by audience (external vs internal vs secrets-only)
+- How private vs public information is separated (gitignored `docs/private/`)
+- Module boundaries, plugin interfaces, or connector patterns in Data Boar
+- Directory/repo layout decisions (ops/ vs scripts/ vs docs/)
+
+### 3. Security / compliance posture
+A security-relevant decision that must not be silently undone:
+- IP assignment protection (prior-art declarations before employment)
+- Key management patterns (Bitwarden, session env vars, never in commits)
+- Data sovereignty choices (no cloud APM to avoid LGPD surface)
+- Secure Boot + TPM stance, LUKS choices, Clevis TPM binding
+- Supply chain pins (GitHub Actions SHA pinning — already ADR 0005)
+
+### 4. Process / workflow lock-in
+A process was formalised in a way that future contributors must not circumvent:
+- "synthetic data corpus before real client data" (ADR 0007)
+- "external-tier docs must not link into plans/" (ADR 0004)
+- "Ansible roles win over manual steps" (ADR 0009)
+- Testing gates, pre-commit hooks added for a specific reason
+- PR merge policy or branch strategy
+
+### 5. Deferral with explicit reason
+A decision was **explicitly deferred** and should be documented so future sessions know:
+- "We chose X now; Y is deferred because of cost/complexity/dependency"
+- "Legal counsel on IP was deferred to post-revenue stage" (part of ADR 0010)
+- Plan sequencing choices (why one feature precedes another)
+
+---
+
+## What does NOT need an ADR
+
+- Routine bug fixes with no architectural implication
+- Adding a new file to an established pattern (e.g., new Ansible role for a tool already in the stack)
+- Docs-only updates that do not change structure or policy
+- Config value tweaks (e.g., changing a timeout from 30s to 60s)
+- Private/gitignored operational notes (go into `docs/private/`, not ADR)
+
+---
+
+## Format (MADR-style, English, one or two screens)
+
+```markdown
+# ADR NNNN: Short descriptive title
+
+**Status:** Accepted | Proposed | Deprecated | Superseded by ADRNNN
+**Date:** YYYY-MM-DD
+
+## Context
+[What situation forced this decision? What alternatives existed?]
+
+## Decision
+[What was chosen and why? Numbered list of specific choices made.]
+
+## Consequences
+[Positive, negative, and watch items.]
+
+## References
+[Docs, plans, rules, scripts that implement or document the decision.]
+```
+
+---
+
+## Numbering
+
+- Next ADR number: check `docs/adr/` — `ls docs/adr/*.md | sort` → take max + 1
+- Filename: `NNNN-short-kebab-title.md` (stable after merge — do not rename)
+- Language: **English only** (canonical); no pt-BR twin for numbered ADR files
+- After creating: update `docs/adr/README.md` index table
+
+---
+
+## Automation
+
+`.\scripts\new-adr.ps1 -Title "my-decision-title" -Summary "One-line summary"`:
+- Detects next number automatically
+- Creates the file from template with correct header
+- Prints the path for the operator to open and fill in
+
+---
+
+## Session habit (agent checklist)
+
+At the end of any session where a trigger fires:
+1. List candidate decisions in chat (one line each)
+2. For each: `new-adr.ps1 -Title ... -Summary ...` → fill Context/Decision/Consequences
+   - **Never** paste raw spike/benchmark tables, test-runner logs, or `Operator decision (YYYY-MM-DD)` lines into the ADR — link to `tests/benchmarks/`, issue comments, or spike docs ([ADR 0045](docs/adr/ADR-0045-adr-metadata-and-format-standardization.md) item 9, **#1925** / T7).
+3. Update `docs/adr/README.md` index
+4. Commit as `docs(adr): add ADR NNNN — short title`

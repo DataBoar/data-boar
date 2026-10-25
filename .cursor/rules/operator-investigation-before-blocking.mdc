@@ -1,0 +1,44 @@
+---
+description: SRE-style recovery — investigate on disk, private git, and tools before refusing or panicking
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# Operator recovery — investigation before blocking
+
+**Problem:** The assistant defaults to **“I cannot”**, **chat memory limits**, or **tool anxiety** before **exhausting recovery paths** on the operator’s machine. That wastes time and contradicts an **SRE-style** habit: **hypothesize → gather evidence → try local options → then** narrow conclusions (blameless RCA; facts over guilt).
+
+## When this applies
+
+- Operator says **figure it out**, **te vira**, **recover**, **where did it go**, **restore**, **lost file**, **before the mistake**, **RCA**.
+- Any **“blocked”** claim about **LinkedIn**, **private docs**, or **git history** without a **short attempt log**.
+
+## Minimum investigation (do this before refusing)
+
+| Layer | Action |
+| ----- | ------ |
+| **Agreed wrappers (do not skip)** | **`docs/ops/TOKEN_AWARE_SCRIPTS_HUB.md`** + **`.cursor/rules/repo-scripts-wrapper-ritual.mdc`** — before a long ad-hoc shell sequence, check whether **`scripts/*.ps1`** (or a linked skill) already encodes the flow; if a **documented** wrapper fails, **tell the operator** (often misconfiguration) then use that script’s **documented** fallback. |
+| **Workspace tree** | `read_file` / terminal `dir` / `Get-ChildItem` under plausible paths (`docs/private/**`, `author_info`, `team_info`, `legal_dossier`, `career`, `exports_*`). |
+| **Everything / fast filename search (Windows)** | When the filename or pattern is unknown, use **`scripts/es-find.ps1`** (or operator’s **`es.exe`**) — session keyword **`es-find`** in **`session-mode-keywords.mdc`**. |
+| **Stacked private Git** | `git -C docs/private log`, `git -C docs/private log --all --name-only -- "*.pdf"`, `git log -S"fragment" -- docs/private` — **`origin` does not index `docs/private`**; **nested repo does**. |
+| **Public repo history** | `git log -p`, `git log --diff-filter=D`, `git show rev:path` for **tracked** moves/deletes. |
+| **LinkedIn profile text** | Prefer **PDF export** on disk + **`scripts/operator-linkedin-profile-extract.ps1`** → JSON/text under **`author_info/career/`**; **then** `read_file`. |
+| **Browser MCP** | If the task needs the **live site** (**Gmail**, **operator social**, **Docker Hub**, etc.) and MCP is available, **`browser_tabs` → `browser_navigate`** (and **Google SSO** click when the UI is cold but offers it) **before** claiming no access — **no public API required**; escalate to the operator **only after** a real failed attempt (see **`.cursor/rules/cursor-browser-social-sso-hygiene.mdc`**, *Contrato único* + § *Gmail e webmail*). |
+
+## What not to do
+
+- **Do not** refuse **private** paths because of **`.gitignore`** on GitHub — see **`agent-docs-private-read-access.mdc`**.
+- **Do not** stop after **one failed grep** — broaden paths, dates, and extensions (`.md`, `.pdf`, `.txt`).
+- **Do not** present **panic** or **defensive meta** as a substitute for a **short list of attempts**.
+
+## Escalation format
+
+If still blocked after the above, output:
+
+1. **What we need** (artifact type).
+2. **What was tried** (bullets).
+3. **Next concrete step** (operator action or one more path).
+
+---
+
+**Skill (expanded checklist):** `.cursor/private/skills/operator-recovery-investigation/SKILL.md`.

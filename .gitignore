@@ -1,0 +1,348 @@
+# Check-all output
+check-all.log
+
+# SBOM local outputs (ADR 0003; CI generates inside the workflow)
+sbom-python.cdx.json
+sbom-docker-image.cdx.json
+sbom/
+requirements-sbom.txt
+
+# Project-specific: local DB, generated reports and heatmaps (do not commit scan results or credentials)
+audit_results.db
+audit_results_rc_*.db
+audit_results.db-journal
+# Default CLI/dashboard SQLite at repo root (check-all / --validate-config / local runs)
+/audit.db
+*.db-journal
+# Ephemeral scan state at repo root (BoarStateTracker / local runs)
+.data_boar_state.json
+# Gitleaks CLI JSON report at repo root (local audit artifact; do not track — see docs/ops if CI runs gitleaks)
+gitleaks-report.json
+# Local completão QA SQLite + checkpoints (generate via scripts/setup_lab_db.py / lab runs)
+data/qa_completao_*.db
+data/qa_completao_*.json
+data/lab_completao_benchmark.db
+# Local A/B completão benchmark harness (scripts/run-benchmark.ps1)
+bench/
+# Git checkout A/B harness (scripts/benchmark-ab.ps1)
+benchmark_runs/
+# Local default output from tests/benchmarks/run_official_bench.py (--output); machine-specific timing.
+# Pinned CI/operator evidence: tests/benchmarks/official_benchmark_200k.json (+ manifest).
+tests/benchmarks/official_benchmark.json
+# Maestro / completão container bundles at repo root (ephemeral; rsync also excludes data-boar-*.tar)
+/data-boar-*-beta.tar
+/data-boar-*-rc.tar
+Relatorio_Auditoria_*.xlsx
+heatmap*.png
+# Executive desk outputs under report.output_dir (any depth; regenerate via data-boar-report — USAGE.md section 5)
+POC_SUMMARY_*.md
+scan_manifest_*.yaml
+config.yaml
+config.local.yaml
+# Licensed Governance Lens maps (commercial; OSS ships *.example.yaml only)
+config/governance_framework_map_pro.yaml
+config/governance_framework_map_enterprise.yaml
+# Ephemeral LAB completão filesystem scan configs (soup paths); keep local only
+tmp_completao_*.yaml
+*.vault
+.env.local
+.env.*.local
+
+# Cryptographic material (never track)
+*.key
+*.pem
+!core/licensing/license-pub-v1.pem
+!core/licensing/license-mldsa-pub-v1.pem
+!tests/data/licensing_hybrid/*.pem
+core/licensing/_build_digest.txt
+*.p12
+*.pfx
+*.jks
+
+# Local-only security reviews / feedback (confidential; keep out of git)
+docs/feedbacks, reviews, comments and criticism/
+
+# Local-only private artifacts (CV, TCC, LinkedIn exports, personal notes, real homelab inventory)
+# Layout policy: docs/PRIVATE_OPERATOR_NOTES.md — use docs/private/homelab/ for hostnames, IPs, measured power, etc.
+# Operator-only social posting schedule / home-office window policy: keep under docs/private/ (e.g. social_drafts/OPERATOR_SOCIAL_POSTING_WINDOWS.pt_BR.md) — never copy full tables to public tracked docs.
+docs/private/
+.cursor/private/
+# Cursor hooks: ephemeral local state (e.g. continual-learning index) — keep hooks.json / scripts tracked if added later
+.cursor/hooks/state/
+
+# LAB-OP: skip lab-node-01-podman.yml package install on constrained hosts (see inventory.example.ini + lab-node-01-ansible-labop-podman-apply.sh)
+.labop-skip-lab-node-01-podman
+.labop-gate/
+
+# Ansible local inventory (hostnames / SSH targets — copy from inventory.example.ini)
+ops/automation/ansible/inventory.local.ini
+
+# Shallow clones of external GitHub repos (local README edits only; not part of Data Boar)
+_upstream_rust_sgad/
+_upstream_python_sgad/
+_upstream_go_sgat/
+_upstream_wf_t1r/
+_upstream_batch_reload_ap/
+_upstream_bash_localiza_danfe_por_id_de_upload/
+_upstream_tmux_configs/
+
+# git filter-repo mirror + work clones (local only; scripts/run-upstream-tools-history-rewrite.ps1)
+*-history-rewrite-*/
+*-mirror-backup-*.git/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[codz]
+*$py.class
+
+# C extensions
+*.so
+*.xlsx
+*.png
+# Mascot branding PNGs are versioned
+!api/static/mascot/*.png
+# dashBOARd operator walkthrough screenshots (docs #1005, #945)
+!docs/img/dashboard/**/*.png
+!api/static/dashboard/**/*.png
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+#  Usually these files are written by a python script from a template
+#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+scripts/.cache/
+nosetests.xml
+coverage.xml
+*.cover
+*.py.cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Scrapy stuff:
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+.pybuilder/
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+#   For a library or package, you might want to ignore these files since the code is
+#   intended to run in multiple environments; otherwise, check them in:
+# .python-version
+
+# pipenv
+#   According to pypa/pipenv#598, it is recommended to include Pipfile.lock in version control.
+#   However, in case of collaboration, if having platform-specific dependencies or dependencies
+#   having no cross-platform support, pipenv may install dependencies that don't work, or not
+#   install all needed dependencies.
+#Pipfile.lock
+
+# UV
+#   Similar to Pipfile.lock, it is generally recommended to include uv.lock in version control.
+#   This is especially recommended for binary packages to ensure reproducibility, and is more
+#   commonly ignored for libraries.
+#uv.lock
+
+# poetry
+#   Similar to Pipfile.lock, it is generally recommended to include poetry.lock in version control.
+#   This is especially recommended for binary packages to ensure reproducibility, and is more
+#   commonly ignored for libraries.
+#   https://python-poetry.org/docs/basic-usage/#commit-your-poetrylock-file-to-version-control
+#poetry.lock
+#poetry.toml
+
+# pdm
+#   Similar to Pipfile.lock, it is generally recommended to include pdm.lock in version control.
+#   pdm recommends including project-wide configuration in pdm.toml, but excluding .pdm-python.
+#   https://pdm-project.org/en/latest/usage/project/#working-with-version-control
+#pdm.lock
+#pdm.toml
+.pdm-python
+.pdm-build/
+
+# pixi
+#   Similar to Pipfile.lock, it is generally recommended to include pixi.lock in version control.
+#pixi.lock
+#   Pixi creates a virtual environment in the .pixi directory, just like venv module creates one
+#   in the .venv directory. It is recommended not to include this directory in version control.
+.pixi
+
+# PEP 582; used by e.g. github.com/David-OConnor/pyflow and github.com/pdm-project/pdm
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.env
+.envrc
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# pytype static type analyzer
+.pytype/
+
+# Cython debug symbols
+cython_debug/
+
+# PyCharm
+#  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
+#  be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
+#  and can be added to the global gitignore or merged into this file.  For a more nuclear
+#  option (not recommended) you can uncomment the following to ignore the entire idea folder.
+#.idea/
+
+# Abstra
+# Abstra is an AI-powered process automation framework.
+# Ignore directories containing user credentials, local state, and settings.
+# Learn more at https://abstra.io/docs
+.abstra/
+
+# Visual Studio Code
+#  Visual Studio Code specific template is maintained in a separate VisualStudioCode.gitignore
+#  that can be found at https://github.com/github/gitignore/blob/main/Global/VisualStudioCode.gitignore
+#  and can be added to the global gitignore or merged into this file.
+#  This repo tracks a minimal .vscode/ for shared editor defaults (non-secret only).
+#  Do not add launch.json/tasks with LAN hosts, tokens, or absolute paths; keep those local or under docs/private/.
+#  To ignore the entire folder locally, uncomment:
+# .vscode/
+
+# Ruff stuff:
+.ruff_cache/
+
+# PyPI configuration file
+.pypirc
+
+# Cursor
+#  Cursor is an AI-powered code editor. `.cursorignore` specifies files/directories to
+#  exclude from AI features like autocomplete and code analysis. Recommended for sensitive data
+#  refer to https://docs.cursor.com/context/ignore-files
+.cursorignore
+.cursorindexingignore
+
+# Marimo
+marimo/_static/
+marimo/_lsp/
+__marimo__/
+# Session-capture / personal notes saved as .txt at repo root (not project files)
+# These are operator notes/chat-dumps accidentally placed at root; keep gitignored.
+# Use wildcard prefix matches to avoid encoding issues with accented filenames.
+/Persona*.txt
+/e agora*.txt
+/*.txt
+
+# OPSEC: operator-local paths — never `git add -A` (explicit `git add <path>` only).
+# docs/ops/today-mode/ stays PUBLIC (#1147) — methodology/lore on origin; explicit git add only.
+scripts/beastie-ecosystem-sync.ps1
+scripts/beastie-ecosystem-sync.sh
+api/static/mascot/bata_boar_mascot_pot.png
+
+# Generated POC test corpus (on-demand, not tracked)
+tests/synthetic_corpus/
+.cursor/rules/dossier-update-on-evidence.mdc
+
+# acrescenta ao .gitignore se ainda não estiver:
+_audit_data-boar/
+/data-boar/
+/uv.lock.gpg
+
+# Per-dev agent/tool installs + venvs — not versioned (#1240)
+.locust_env/
+.jolli/
+.gemini/
+.tours/
+.agents/
+.claude/settings.local.json
+.vscode/launch.json
+# Project-root MCP launcher (Claude Code / other hosts). Machine paths and
+# server commands — not the tracked placeholder file `.cursor/mcp.json`.
+.mcp.json
+
+
+# Native nfpm CI payload (#1437) — real cp314t embed must not be committed
+packaging/nfpm/staging/usr/lib/data-boar/python3.14t/
+packaging/void/generated/srcpkgs/data-boar/files/staging/
+dist/native-packages/

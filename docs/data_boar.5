@@ -1,0 +1,999 @@
+.\" data_boar.5 - file formats and configuration for Data Boar (PyPI distribution: data-boar)
+.\" View as: man 5 data-boar (primary), man 5 data_boar or man 5 lgpd_crawler (symlink aliases)
+.TH DATA-BOAR 5 "September 2026" "Data Boar 1.8.0-rc" "File Formats"
+.SH NAME
+data-boar config, data_boar config, lgpd_crawler config \- configuration and pattern file formats for Data Boar (compliance-aware discovery and mapping)
+.
+.SH WHY TWO MAN PAGES (SECTION 1 AND 5)
+On Linux, BSD and most Unix-like systems, the
+.B man
+command uses numbered
+.I sections
+to group manual pages by topic.
+Section
+.B 1
+describes
+.I executable programs and shell commands
+(e.g. how to run the program and its options).
+Section
+.B 5
+describes
+.I file formats and conventions
+(e.g. configuration files and their syntax).
+.
+.P
+This project provides two man pages in different sections; the primary installed names are
+.BR data-boar
+and
+.BR data-boar (5);
+symlinks also expose
+.BR data_boar
+and
+.BR lgpd_crawler
+:
+.TP
+.B "man data-boar"
+or
+.B "man data_boar"
+or
+.B "man lgpd_crawler"
+(or
+.BR "man 1 data-boar" ,
+.BR "man 1 data_boar" ,
+.BR "man 1 lgpd_crawler" )
+Shows the
+.I command
+and its options (config path, \-\-web, \-\-host, \-\-port, \-\-tenant, \-\-technician, \-\-scan\-compressed, \-\-content\-type\-check, \-\-reset\-data, API usage, curl examples).
+Use this when you want to know how to run the application.
+.TP
+.B "man 5 data-boar"
+or
+.B "man 5 data_boar"
+or
+.B "man 5 lgpd_crawler"
+Shows the
+.I configuration and optional file formats
+(main config topology, regex/ML/DL pattern files, examples).
+Use this when you want to understand or edit config files and pattern definitions.
+.
+.P
+If you type only
+.B "man data-boar"
+,
+.B "man data_boar"
+or
+.B "man lgpd_crawler"
+the system usually shows section 1 first (the command).
+To open the config/file-format page explicitly, use
+.BR "man 5 data-boar"
+,
+.BR "man 5 data_boar"
+or
+.BR "man 5 lgpd_crawler" .
+.
+.SH OVERVIEW
+The application uses one main configuration file (YAML or JSON) and can optionally reference external files to
+.I override
+or
+.I expand
+regex patterns and to
+.I train
+the ML and DL classifiers.
+This page describes the topology of those files and their formats, with examples compatible with the current application capabilities.
+.
+.SH TOPOLOGY
+.IP \(bu 2
+.B Main config file
+(default
+.IR config.yaml ):
+defines targets (databases, filesystems, APIs, shares), file_scan, report, api, sqlite_path, scan,
+.B rate_limit
+and optional
+.B timeouts
+(connector defaults), plus optional paths to the files below.
+.IP \(bu 2
+.B regex_overrides_file
+(optional): path to a YAML/JSON file listing custom
+.I regex
+patterns; merged with built-in patterns and matched against (column name + sample text).
+.IP \(bu 2
+.B regex_overrides_files
+(optional): list of such paths; merged in order (later file wins on the same pattern name).
+.IP \(bu 2
+.B compliance_frameworks
+(optional): list of sample ids (e.g. lgpd, pci_dss) resolved to
+.I docs/compliance-samples/compliance-sample-<id>.yaml .
+Recommendation overrides from each sample are merged into
+.B report.recommendation_overrides
+automatically.
+.IP \(bu 2
+.B ml_patterns_file
+(optional): path to a YAML/JSON file with
+.I ML
+training terms (text + label: sensitive / non_sensitive).
+Used by the TF-IDF + RandomForest classifier when no inline terms are provided.
+.IP \(bu 2
+.B ml_patterns_files
+(optional): list of ML term files; merged in order (later file wins on the same text).
+.IP \(bu 2
+.B dl_patterns_file
+(optional): path to a YAML/JSON file with
+.I DL
+training terms (same format as ML).
+Used by the optional sentence-embedding classifier when the DL extra is installed.
+.IP \(bu 2
+.B sensitivity_detection
+(optional): inline section in the main config with
+.I ml_terms
+and/or
+.I dl_terms
+lists; when non-empty they override loading from
+.B ml_patterns_file
+/
+.BR dl_patterns_file .
+.IP \(bu 2
+.B learned_patterns
+(optional): section in the main config that enables writing
+.I learned
+terms (classified as sensitive during a run) to an output file, which you can later merge into
+.B ml_patterns_file
+to improve future scans.
+.
+.P
+All paths in the main config can be absolute or relative to the process working directory.
+.
+.SH SECURITY AND CREDENTIALS
+Database and MongoDB connection strings are built with URL-encoded user and password, so credentials containing @, :, / or # are handled correctly; no extra escaping is required in the config file.
+When
+.I api.require_api_key
+is true, the Configuration page (GET /config) is protected and returns 401 without a valid X-API-Key or Bearer token.
+Technicians: restrict config file permissions and enable
+.I api.require_api_key
+when the API is exposed to untrusted networks; see
+.I SECURITY.md
+and
+.I docs/security.md
+for fixes, regression tests, and full recommendations.
+.
+.P
+Prefer credentials in the process environment instead of plaintext in the config on disk.
+Each
+.B targets
+entry may set
+.I pass_from_env
+(or the alias
+.IR password_from_env )
+to the name of an environment variable holding the password, and
+.I user_from_env
+for the username.
+At load time the loader copies those values into the in-memory
+.I pass
+and
+.I user
+fields (falling back to inline
+.IR pass ,
+.IR password ,
+or
+.I user
+when the variable is unset or empty).
+For API-type targets with an
+.I auth
+mapping, optional
+.I token_from_env
+and
+.I client_secret_from_env
+resolve the same way (plus top-level
+.IR client_secret_from_env
+for OAuth-style flows).
+Never commit live secrets; keep env var names in config only.
+.
+.SH MAIN CONFIGURATION FILE
+The main file (e.g.
+.IR config.yaml )
+is YAML or JSON.
+Top-level keys:
+.
+.TP
+.B targets
+List of scan targets.
+Each item has at least
+.I name
+and
+.I type
+(database, filesystem, api, sharepoint, webdav, smb, nfs, powerbi, dataverse, etc.), plus type-specific keys (driver, host, port, user, pass, database for DB; path, recursive for filesystem; etc.).
+Optional credential indirection:
+.IR pass_from_env " / " password_from_env ,
+.IR user_from_env ,
+and (inside
+.IR auth ,
+when applicable)
+.IR token_from_env " / " client_secret_from_env
+(see
+.B SECURITY AND CREDENTIALS
+above).
+.TP
+.B file_scan
+.I extensions
+(list, e.g. [.txt, .csv, .pdf]), 
+.I recursive
+(bool),
+.I scan_sqlite_as_db
+(bool),
+.I sample_limit
+(integer);
+optionally
+.I scan_compressed
+(bool, scan inside zip/tar/7z when supported),
+.I max_inner_size
+(bytes per member; clamped 1 MB–500 MB),
+.I max_members
+.IR /
+.I max_total_uncompressed
+.IR /
+.I max_expansion_ratio
+(aggregate archive budgets; defaults 1000 / 1 GiB / 200; exceed records
+.B archive_budget_exceeded
+in scan_failures),
+.I use_content_type
+(bool, magic\-byte / content\-type detection for renamed or cloaked files; extra I/O;
+does not dispatch compressed archives — mismatch records
+.B archive_type_mismatch ),
+.I scan_for_stego
+(bool, append lightweight byte\-entropy hints for image/audio/video containers; heuristic only — not proof of hidden payload; may increase read size per rich\-media file; CLI:
+.BR \-\-scan\-stego ),
+.I compressed_extensions
+(optional list, e.g.\&
+.BR [".zip", ".tar", ".gz", ".tgz", ".bz2", ".xz", ".7z"] ;
+archive extensions scanned when
+.B scan_compressed
+is true),
+.I file_sample_max_chars
+(optional integer) Character budget for plain\-text reads per file sample on filesystem and share targets; limits how much of each file is read before sensitivity scoring (see
+.IR docs/USAGE.md ),
+.I file_passwords
+(optional mapping) Dict from extension key (e.g.\&
+.BR ".pdf" ", "
+.BR ".pptx" )
+or
+.B default
+to password string for encrypted PDFs and ZIP\-based documents; use env vars or a secrets manager in production.
+.TP
+.B report
+.I output_dir
+(path);
+.I formats
+(list; default
+.BR xlsx ;
+add
+.B ods
+for OpenDocument spreadsheet — LibreOffice Calc and SoftMaker PlanMaker);
+optionally
+.I recommendation_overrides
+(list of norm_tag_pattern, base_legal, risk, recommendation, priority, relevant_for) to customise the Recommendations sheet per category;
+.I jurisdiction_hints
+(optional) Heuristic jurisdiction notes on the Excel Report info sheet when metadata signals suggest possible relevance (e.g.\& US\-CA CCPA/CPRA, Colorado, Japan APPI).
+Sub\-block
+.B jurisdiction_hints.enabled
+(bool; CLI
+.BR \-\-jurisdiction\-hint
+and
+.B POST /scan
+body
+.B jurisdiction_hint
+opt in for a single run).
+Not a legal conclusion; see
+.IR docs/USAGE.md .
+.TP
+.B api
+.I port
+(integer);
+optionally
+.I host
+(bind address for the HTTP server, e.g.\&
+.BR 127.0.0.1 " or " 0.0.0.0 ;
+default resolution when unset is
+.B 127.0.0.1
+unless
+.B API_HOST
+is set or
+.B "main.py \-\-web \-\-host"
+overrides);
+optionally
+.I require_api_key
+(bool),
+.I api_key
+(string) or
+.I api_key_from_env
+(env var name).
+The web API also sends security headers (CSP, HSTS, Referrer-Policy, Permissions-Policy); see
+.I SECURITY.md
+and
+.I docs/deploy/DEPLOY.md
+for hardening and stricter CSP.
+Optional
+.B api.webauthn
+(Phase 1 JSON API + Phase 1b HTML session): set
+.B api.webauthn.enabled
+to true and provide the env var named by
+.B api.webauthn.token_secret_from_env
+(default
+.BR DATA_BOAR_WEBAUTHN_TOKEN_SECRET )
+before startup; enables passkey endpoints under
+.BR /auth/webauthn/ .
+Optional
+.B api.rbac
+(Phase 2, Pro+
+.B dashboard_rbac
+): when
+.B api.rbac.enabled
+is true and the effective tier allows RBAC, protected routes require named roles (e.g.\&
+.BR admin ", "
+.BR dashboard ", "
+.BR scanner ", "
+.BR reports_reader ", "
+.BR config_admin ", "
+.B audit_logs.read
+for log downloads).
+See
+.IR docs/USAGE.md .
+.TP
+.B api.workers
+(optional, integer) Number of HTTP server workers (uvicorn).
+Default 1 (minimal footprint); increase to 2-4 for higher concurrent API traffic
+(scans are I/O-bound so extra workers mainly help dashboard responsiveness
+during an active scan). Distinct from
+.BR scan.max_workers
+(parallel scan targets).
+.TP
+.B licensing
+(optional) Tier simulation block for lab and development environments.
+Sub-key
+.I licensing.effective_tier
+accepts
+.BR community ,
+.BR pro ,
+or
+.BR enterprise .
+When set, tier-gated features behave as if the named tier is active
+without requiring a signed JWT token. Omit this block entirely in production;
+a JWT
+.I dbtier
+claim overrides
+.I effective_tier
+when both are present. See
+.IR docs/LICENSING_SPEC.md .
+.TP
+.B locale
+(optional) Dashboard HTML locale configuration.
+Controls the path-prefixed UI language (e.g.
+.BR /en/ ,
+.BR /pt-br/ ).
+Sub-keys:
+.I default_locale
+(e.g.
+.BR en ),
+.I supported_locales
+(list, e.g.
+.BR "[en, pt-BR]" ),
+.I cookie_name
+(default:
+.BR db_locale ),
+.I cookie_max_age_seconds
+(integer; default 31536000, one year).
+Visiting
+.B /
+redirects to the negotiated locale prefix.
+See
+.IR docs/USAGE.md .
+.TP
+.B sqlite_path
+Path to the SQLite database (e.g.
+.IR audit_results.db ).
+.TP
+.B findings_sink
+(optional) Post\-scan echo of findings to a customer SQL or MongoDB store
+(Pro / Enterprise). Sub\-keys:
+.I enabled
+(default false),
+.I type
+(postgresql, mysql, mssql, mongodb, sqlite),
+.I host ,
+.I port ,
+.I database ,
+.I user_from_env ,
+.I pass_from_env ,
+.I on_conflict
+(upsert, skip, fail),
+.I include_sample_content
+(default false — never enable without Legal sign\-off; CLI also needs
+.BR \-\-allow\-sample\-export ).
+See
+.IR docs/USAGE.md
+and
+.IR docs/deploy/findings_sink_schema.sql .
+.TP
+.B scan
+.I max_workers
+(integer, parallelism).
+.TP
+.B sql_sampling
+(optional) Hierarchical row\-cap overrides for SQLAlchemy and Snowflake column sampling.
+Sub\-key
+.B overrides
+may set per\-target
+.I sample_limit
+, per\-table caps under
+.B targets.<name>.tables
+, and
+.B patterns
+.RB ( fnmatch ", e.g.\& "
+.B *_audit
+).
+Merged with
+.B file_scan.sample_limit
+unless
+.B DATA_BOAR_SQL_SAMPLE_LIMIT
+is set (SQL/Snowflake only).
+See ADR\-0043 and
+.IR docs/USAGE.md .
+.TP
+.B sql_sampling_file
+(optional) Path to an external YAML fragment (same schema as the
+.B sql_sampling
+block or bare
+.B overrides:
+root) merged before the inline
+.B sql_sampling
+block in the main config.
+.TP
+.B sql_sampling_files
+(optional) List of such fragment paths; merged in order before inline
+.B sql_sampling .
+.TP
+.B inter_query_delay_ms
+(optional, on each
+.B type: database
+target) Milliseconds to sleep between column samples on that target (DB load relief); default
+.BR 0 .
+Per\-target
+.B sample_statement_timeout_ms
+or
+.B sample_statement_timeout_seconds
+also tune short read budgets; env
+.B DATA_BOAR_SAMPLE_STATEMENT_TIMEOUT_MS
+overrides the timeout budget process\-wide.
+.TP
+.B rate_limit
+(optional) Global safeguards against accidental DoS or abuse:
+.I enabled
+(bool),
+.I max_concurrent_scans
+(integer, max running scans at the same time),
+.I min_interval_seconds
+(integer, minimum seconds between scan starts),
+.I grace_for_running_status
+(integer, optional extra tolerance when status still reports running).
+When enabled, API endpoints that start scans may return HTTP 429 with a structured JSON body containing
+.I error
+and
+.I reason
+fields (the CLI only prints warnings).
+.TP
+.B timeouts
+(optional) Global connection and read timeout defaults (seconds).
+Sub-keys:
+.I connect_seconds
+(integer, default 25) and
+.I read_seconds
+(integer, default 90).
+Per-target overrides on any target entry: set
+.IR connect_timeout ,
+.IR read_timeout ,
+or
+.I timeout
+directly to override the global default for that source only.
+See
+.I docs/USAGE.md
+(section: Timeouts for data source connections).
+.TP
+.B detection
+(optional) Minor data and aggregated identification:
+.I minor_age_threshold
+(default 18),
+.I minor_cross_reference
+(bool),
+.I minor_full_scan
+(bool),
+.I aggregated_identification_enabled
+(bool),
+.I aggregated_min_categories
+(integer),
+.I quasi_identifier_mapping
+(list).
+.TP
+.B licensing
+(optional) License mode and effective tier.
+Optional Rust acceleration of the detector regex stage (#1414) is gated to paid
+tiers
+.BR pro_plus / enterprise / partner
+(see
+.B FEATURE_TIER_MAP
+/
+.BR pro_prefilter_accel
+legacy key name). The product path runs the same YAML/built\-in patterns with
+equivalent verdicts — it does
+.B not
+skip non\-suspect rows before ML/DL, so there is no zero\-regression latch.
+Status appears in
+.B detection_prefilter
+on
+.B GET /status
+and in
+.B scan_manifest_*.yaml
+(#1411 / #1412 — observability only).
+See
+.I docs/USAGE.md
+and
+.IR docs/TECH_GUIDE.md .
+.TP
+.B sensitivity_detection.connector_format_id_hint
+(optional, bool, default false) When true, connectors pass declared SQL type
+and length metadata (for example VARCHAR(N) on ID-like column names), which
+may elevate a borderline LOW score to MEDIUM (tag:
+.BR FORMAT_LENGTH_HINT_ID ).
+Reduces false negatives on structured ID columns.
+See
+.IR docs/SENSITIVITY_DETECTION.md .
+.TP
+.B sensitivity_detection.fuzzy_column_match
+(optional, bool, default false) When true, applies fuzzy string matching to
+column names to catch variations of known sensitive field names (for example
+cpf_num, email_address). Requires the optional
+.I rapidfuzz
+dependency (extra
+.IR detection-fuzzy );
+ignored when it is not installed.
+.TP
+.B sensitivity_detection.fuzzy_column_match_min_confidence
+(optional, integer 0-100, default 25) Lower bound of the combined-confidence
+band in which a fuzzy column-name match may elevate a finding to MEDIUM.
+.TP
+.B sensitivity_detection.fuzzy_column_match_max_confidence
+(optional, integer 0-100, default 45) Upper bound of that band; it is capped
+at
+.I medium_confidence_threshold
+minus one so normal MEDIUM and ML paths stay unchanged.
+.TP
+.B sensitivity_detection.fuzzy_column_match_min_ratio
+(optional, integer 50-100, default 85) Minimum fuzzy match ratio (string
+similarity) required for a column name to count as a match. Higher values
+reduce false positives.
+See
+.IR docs/SENSITIVITY_DETECTION.md .
+.TP
+.B ml_patterns_file
+Path to ML terms file (used if
+.B sensitivity_detection.ml_terms
+is not set).
+.TP
+.B dl_patterns_file
+Path to DL terms file (used if
+.B sensitivity_detection.dl_terms
+is not set).
+.TP
+.B regex_overrides_file
+Path to custom regex patterns file.
+.TP
+.B patterns_plugin_file
+(optional) Path to a unified plugin YAML file validated at load time (ADR-0052).
+May contain any combination of
+.I regex_patterns ,
+.I ml_patterns ,
+and
+.I dl_patterns
+sections.
+When non-empty, takes precedence over the separate legacy pattern file keys above.
+See
+.SH UNIFIED PLUGIN FILE
+below and
+.IR config/plugin_schema.yaml .
+.TP
+.B sensitivity_detection
+(optional) Inline
+.I ml_terms
+and/or
+.I dl_terms
+(list of { text, label }).
+.TP
+.B learned_patterns
+(optional)
+.I enabled
+(bool),
+.I output_file
+(path),
+.I min_sensitivity
+(HIGH/MEDIUM),
+.I min_confidence
+(integer),
+.I require_pattern
+(bool),
+.I append
+(bool),
+.I exclude_if_in_ml_patterns
+(bool).
+.
+.P
+Example main config (excerpt):
+.RS
+.nf
+\fBtargets:\fR
+  \- name: "Produção_Postgres"
+    type: database
+    driver: postgresql+psycopg2
+    host: 10.0.0.50
+    port: 5432
+    user: audit_user
+    pass: secure_password
+    # pass_from_env: MY_DB_PASSWORD   # optional: take password from env (recommended vs plaintext)
+    # user_from_env: MY_DB_USER      # optional: take username from env
+    database: customers_db
+  \- name: "Documentos_LGPD"
+    type: filesystem
+    path: /home/user/Documents/LGPD
+    recursive: true
+
+\fBfile_scan:\fR
+  extensions: [.txt, .csv, .pdf, .docx, .xlsx]
+  recursive: true
+  scan_sqlite_as_db: true
+  sample_limit: 5
+  # scan_compressed: false   # optional: scan inside archives
+  # compressed_extensions: [".zip", ".tar", ".gz", ".tgz", ".bz2", ".xz", ".7z"]
+  # scan_for_stego: false    # optional: rich-media entropy hints
+  # file_sample_max_chars: 12000
+  # max_members: 1000         # aggregate budgets (anti zip-bomb)
+  # max_total_uncompressed: 1000000000
+  # max_expansion_ratio: 200
+  # use_content_type: false   # optional: magic-byte detection (renamed files)
+
+\fBreport:\fR
+  output_dir: .
+  # formats: [xlsx, ods]
+  # jurisdiction_hints:
+  #   enabled: false
+  recommendation_overrides:
+    \- norm_tag_pattern: "health"
+      base_legal: "LGPD Art. 5 II, 11; GDPR Art. 9"
+      risk: "Health or medical condition data."
+      recommendation: "Ensure legal basis and consent."
+      priority: "CRÍTICA"
+      relevant_for: "DPO, Compliance"
+
+\fBapi:\fR
+  port: 8088
+  # host: 127.0.0.1   # optional bind address; see man 1 data-boar for CLI and API_HOST
+  # https_cert_file: /path/server.crt   # optional: TLS for data-boar --web
+  # https_key_file: /path/server.key    # optional: must pair with https_cert_file
+  # allow_insecure_http: false           # explicit plaintext only when true (Docker image CMD often sets CLI flag instead)
+
+\fBsqlite_path:\fR audit_results.db
+\fBtimeouts:\fR
+  connect_seconds: 25
+  read_seconds: 90
+\fBscan:\fR
+  max_workers: 1
+
+\fBml_patterns_file:\fR config/ml_patterns.yaml
+\fBregex_overrides_file:\fR config/regex_overrides.yaml
+.fi
+.RE
+.
+.SH REGEX OVERRIDES FILE
+Used to add or override regex patterns for value-based detection.
+Set
+.B regex_overrides_file
+in the main config to the path of a YAML or JSON file.
+.
+.P
+Format: a list of objects, each with:
+.TP
+.B name
+(required) Short identifier (e.g. RG_BR, PLATE_BR). Shown in reports as
+.IR pattern_detected .
+.TP
+.B pattern
+(required) Regular expression (Python
+.B re
+syntax). Matched against (column name + sample text). Use word boundaries (e.g. \e\eb) to reduce false positives.
+.TP
+.B norm_tag
+(optional, default: Custom) Compliance norm tag shown in findings (e.g. "LGPD Art. 5", "Custom").
+.
+.P
+You can use a root-level list or a key
+.B patterns
+or
+.B regex
+containing the list.
+.
+.P
+Example (YAML):
+.RS
+.nf
+\- name: "RG_BR"
+  pattern: "\e\eb\e\ed{1,2}\e\.?\e\ed{3}\e\.?\e\ed{3}-?[0-9Xx]\e\eb"
+  norm_tag: "LGPD Art. 5"
+
+\- name: "PLATE_BR_OLD"
+  pattern: "\e\eb[A-Z]{3}-?\e\ed{4}\e\eb"
+  norm_tag: "Personal data context"
+
+\- name: "CEP_BR"
+  pattern: "\e\eb\e\ed{5}-?\e\ed{3}\e\eb"
+  norm_tag: "LGPD Art. 5"
+.fi
+.RE
+.
+.P
+Built-in patterns (no need to redefine unless overriding): LGPD_CPF, LGPD_CNPJ, EMAIL, CREDIT_CARD, PHONE_BR, CCPA_SSN, DATE_DMY.
+.
+.SH ML AND DL PATTERNS FILES
+Both
+.B ml_patterns_file
+and
+.B dl_patterns_file
+use the same format.
+They list training terms for the ML classifier (TF-IDF + RandomForest) and, when installed, the DL classifier (sentence embeddings).
+.
+.P
+Format: a list of objects, each with:
+.TP
+.B text
+(required) A phrase or token (e.g. "cpf", "religious affiliation", "health condition").
+.TP
+.B label
+(optional, default:
+.B sensitive )
+Allowed values (string or integer alias):
+.RS
+.IP \(bu 2
+.B sensitive
+or
+.BR 1 " — increases sensitivity score."
+.IP \(bu 2
+.B non_sensitive
+or
+.BR 0 " — may suppress false positives."
+.RE
+When omitted, the loader defaults to
+.BR sensitive .
+.
+.P
+The file can be a root-level list or an object with key
+.B patterns
+or
+.B terms
+containing the list.
+When
+.B sensitivity_detection.ml_terms
+or
+.B sensitivity_detection.dl_terms
+is set in the main config (non-empty), that list is used instead of loading from the corresponding file.
+.
+.P
+Example (YAML) for ML/DL terms:
+.RS
+.nf
+\- text: "cpf"
+  label: sensitive
+\- text: "email"
+  label: sensitive
+\- text: "data de nascimento"
+  label: sensitive
+\- text: "religious affiliation"
+  label: sensitive
+\- text: "political affiliation"
+  label: sensitive
+\- text: "item_count"
+  label: non_sensitive
+\- text: "config_file"
+  label: non_sensitive
+.fi
+.RE
+.
+.P
+Inline example in main config:
+.RS
+.nf
+\fBsensitivity_detection:\fR
+  ml_terms:
+    \- { text: "cid", label: sensitive }
+    \- { text: "religion", label: sensitive }
+    \- { text: "gender", label: sensitive }
+    \- { text: "system_log", label: non_sensitive }
+  dl_terms:
+    \- { text: "religious affiliation", label: sensitive }
+    \- { text: "genetic data", label: sensitive }
+.fi
+.RE
+.
+.P
+See
+.I docs/sensitivity_terms_sensitive_categories.example.yaml
+and
+.I docs/PLAN_SENSITIVE_CATEGORIES_ML_DL.md
+for a full set of sensitive-category terms (health, religion, political, PEP, race, union, genetic, biometric, sex life).
+.
+.SH UNIFIED PLUGIN FILE
+Set
+.B patterns_plugin_file
+in the main config to a single YAML file that may define any combination of:
+.TP
+.B regex_patterns
+List of { name, pattern, norm_tag } (same shape as
+.B regex_overrides_file ).
+.TP
+.B ml_patterns
+List of { text, label } training terms (same shape as
+.B ml_patterns_file ).
+.TP
+.B dl_patterns
+List of { text, label } training terms (same shape as
+.B dl_patterns_file ).
+.
+.P
+The loader validates the file against
+.IR config/plugin_schema.yaml
+before use.
+When
+.B patterns_plugin_file
+is set and non-empty, it takes precedence over the legacy per-type file keys.
+.
+.P
+Example skeleton (YAML):
+.RS
+.nf
+regex_patterns:
+  \- name: "RG_BR"
+    pattern: "\e\eb\e\ed{1,2}\e\eb\.?\e\ed{3}\e\eb\.?\e\ed{3}-?[0-9Xx]\e\eb"
+    norm_tag: "LGPD Art. 5"
+ml_patterns:
+  \- text: "cpf"
+    label: sensitive
+dl_patterns:
+  \- text: "religious affiliation"
+    label: sensitive
+.fi
+.RE
+.
+.SH LEARNED PATTERNS (OUTPUT)
+When
+.B learned_patterns.enabled
+is true, the application writes terms that were classified as sensitive during the scan to
+.BR learned_patterns.output_file .
+You can merge these into your
+.B ml_patterns_file
+for the next run to improve detection.
+.
+.P
+Config example:
+.RS
+.nf
+learned_patterns:
+  enabled: true
+  output_file: learned_patterns.yaml
+  min_sensitivity: HIGH
+  min_confidence: 70
+  min_term_length: 3
+  require_pattern: true
+  append: true
+  exclude_if_in_ml_patterns: true
+.fi
+.RE
+.
+.P
+The output file has the same list format as ML/DL terms (text + label: sensitive).
+Merge entries into
+.B ml_patterns_file
+manually or with a script; then the next run will use the expanded set.
+.
+.SH FILES (SUMMARY)
+.TP
+.I config.yaml
+Main configuration (targets, file_scan, report, api, sqlite_path, scan, optional detection and file paths).
+.TP
+.I config/regex_overrides.yaml
+Example path for custom regex patterns (name, pattern, norm_tag).
+.TP
+.I config/ml_patterns.yaml
+Example path for ML training terms (text, label).
+.TP
+.I config/dl_patterns.yaml
+Example path for DL training terms (same format; can point to the same file as ML).
+.TP
+.I patterns_plugin.yaml
+Example path for a unified plugin file (regex_patterns + ml_patterns + dl_patterns sections).
+.TP
+.I learned_patterns.yaml
+Example output path when learned_patterns.enabled is true.
+.
+.SH INSTALLATION OF THIS MAN PAGE
+Section 5 pages are installed in
+.IR man5 .
+Install both section 1 and 5 from the source tree as
+.BR data-boar.1
+and
+.BR data-boar.5
+(primary hyphenated names), then create symlinks for
+.BR data_boar
+and
+.BR lgpd_crawler
+aliases.
+See the
+.B "INSTALLATION OF THIS MAN PAGE"
+section in
+.BR data-boar (1)
+(or
+.BR data_boar (1)
+or
+.BR lgpd_crawler (1))
+for the full sequence (system\-wide under
+.IR /usr/local/share/man
+or user\-local under
+.IR ~/.local/share/man ,
+copy
+.I docs/data_boar.1
+and
+.I docs/data_boar.5
+to
+.IR data-boar.1
+and
+.IR data-boar.5
+in
+.I man1
+and
+.IR man5 ,
+then
+.B "ln -sf data-boar.1 data_boar.1"
+,
+.B "ln -sf data-boar.1 lgpd_crawler.1"
+,
+.B "ln -sf data-boar.5 data_boar.5"
+and
+.B "ln -sf data-boar.5 lgpd_crawler.5"
+in the respective directories,
+.BR mandb ).
+.PP
+After installation, view this page with:
+.RS
+.B "man 5 data-boar"
+or
+.B "man 5 data_boar"
+or
+.B "man 5 lgpd_crawler"
+.RE
+.PP
+To view the command and options (section 1) use
+.B "man data-boar"
+,
+.B "man data_boar"
+or
+.B "man lgpd_crawler"
+(or
+.BR "man 1 data-boar" ,
+.BR "man 1 data_boar" ,
+.BR "man 1 lgpd_crawler" ).
+.
+.SH SEE ALSO
+.BR data-boar (1),
+.BR data_boar (1),
+.BR lgpd_crawler (1)
+(command, options, API, curl examples),
+.IR README.md ,
+.IR docs/USAGE.md ,
+.IR docs/TROUBLESHOOTING.md
+(failures, connectivity, credentials, Docker; see Scan failures sheet and suggested next steps),
+.IR docs/SENSITIVITY_DETECTION.md ,
+.IR docs/sensitivity_terms_sensitive_categories.example.yaml ,
+.IR docs/regex_overrides.example.yaml ,
+.IR docs/deploy/DEPLOY.md .

@@ -1,0 +1,45 @@
+# Semgrep OSS scan — complements CodeQL (different rules/heuristics).
+# See docs/plans/completed/PLAN_SEMGREP_CI.md for rationale and excluded rules.
+# actions/checkout pinned to full SHA (tag in comment); bump via Dependabot.
+name: Semgrep
+
+permissions:
+  contents: read
+
+'on':
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  semgrep:
+    name: Semgrep (OSS, Python)
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep:1.178.0@sha256:32e459968daabe7ab86968184a29109b9564aa00392401156f9788452b42786b
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # p/python: community Python rules. One rule is excluded — see docs/plans/completed/PLAN_SEMGREP_CI.md
+      # (sqlalchemy.text FP where identifiers are validated; CodeQL + tests cover injection).
+      - name: Run Semgrep
+        run: >-
+          semgrep scan --config p/python --metrics=off
+          --exclude-rule python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+          --error .
+
+  slack-notify-on-failure:
+    name: Slack CI failure notify
+    if: ${{ always() && contains(needs.*.result, 'failure') }}
+    needs: [semgrep]
+    uses: $/.github/workflows/slack-ci-failure-notify.yml
+    with:
+      run_name: Semgrep
+      head_branch: ${{ github.head_ref || github.ref_name }}
+      event: ${{ github.event_name }}
+      html_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    secrets:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

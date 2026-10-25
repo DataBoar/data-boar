@@ -1,0 +1,7 @@
+---
+lab_node_01_aide_enable: true
+lab_node_01_aide_conf_path: /etc/aide/aide.conf
+
+# Comment-only suggestions catalog; adopt by overriding with a real snippet list.
+lab_node_01_aide_extra_lines: []
+

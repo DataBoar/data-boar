@@ -1,0 +1,32 @@
+---
+description: Non-negotiable — all assistant-authored Portuguese in this workspace defaults to Brazilian Portuguese (pt-BR), never European Portuguese (pt-PT), unless an explicit exception applies.
+globs:
+alwaysApply: true
+---
+
+# Locale contract — pt-BR default (always on)
+
+This rule applies to **every** turn: **chat**, **tracked docs** (`*.pt_BR.md` and any Portuguese paragraphs in `docs/`), **gitignored operator Markdown** under `docs/private/` (drafts, runbooks, notes), **`.cursor/`** prose that operators read, and **suggested commit/PR text** when it is in Portuguese.
+
+## Hard default
+
+- Write **Brazilian Portuguese (pt-BR)** — same lexical bar as **`.cursor/rules/docs-pt-br-locale.mdc`** (quick cues: **arquivo**, **compartilhar**, **seção**, **usuário**, **precisa/tem que**, **padrão** for IT “default”, **por padrão** for “by default”).
+- **Do not** slip into **European Portuguese (pt-PT)** by habit (*ficheiro*, *partilhar*, *secção*, *utilizador*, *tem de*, *equipa*, *ecrã*, *sítio* in “website” sense, etc.). In IT Portuguese, **por defeito** / mixing **default** with **defeito** (“bug”) reads **European** or confusing — keep **por padrão** unless you are **quoting** someone else’s wording.
+- **Operator irony / wordplay:** If the operator **juxtaposes** “default” and “defeito” or “por defeito” **without** a clear product spec, treat it as a **locale probe** (stay **pt-BR**; do not “fix” English technical **default** in code/config) — not necessarily a request to rename behaviour unless they state that separately.
+
+## Exceptions (only these)
+
+1. **English (or other)** jargon, CLI, API names, product names, and stable technical terms left in EN on purpose.
+2. **Quoted** third-party text, citations, or **deliberate** humor where the voice requires another register — still avoid pt-PT in **normative** instructions unless quoting.
+3. **Operator explicitly** asks for **pt-PT** or a **regional variant** (e.g. copy for Angola, Mozambique, Macau, Portugal) — then follow that instruction **only** for the scoped file or paragraph; default **remains pt-BR** everywhere else.
+
+## Verification (tracked mirrors)
+
+- After substantive edits to **`*.pt_BR.md`** (or when adding Portuguese-heavy tracked ops copy), run **`uv run pytest tests/test_docs_pt_br_locale.py -v`** before merge. Extend **`tests/test_docs_pt_br_locale.py`** (`_extra_locale_scan_paths`) if a mixed-language tracked file must get the same guard.
+- **There is no separate “locale sub-agent” in Cursor** — this rule + **`.cursor/skills/documentation-en-pt-br/SKILL.md`** + CI are the enforcement stack. For a manual second pass, use a **Task** with a prompt limited to “pt-BR locale scan vs EN source”.
+
+## Pointers
+
+- Full prefer/avoid table: **`.cursor/rules/docs-pt-br-locale.mdc`**
+- EN canonical + pt-BR sync workflow: **`.cursor/rules/docs-policy.mdc`** · **`.cursor/skills/documentation-en-pt-br/SKILL.md`**
+- Conversational chat: **`.cursor/rules/operator-chat-language-pt-br.mdc`**

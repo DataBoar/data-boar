@@ -1,0 +1,124 @@
+---
+description: LAB-OP systems context — read before ANY homelab, energy, solar, Enel, HVAC, LAB-ROUTER-01, or hardware task. Token-aware index mapping topics to private files and scripts so the agent never re-discovers on every turn.
+globs: ["**/*"]
+alwaysApply: false
+---
+
+# LAB-OP systems context (token-aware index)
+
+## When to apply this rule
+
+Any prompt that mentions: solar / growatt / inversor / painel solar / energia gerada /
+enel / fatura / consumo / conta de luz / LAB-ROUTER-01 / UniFi / VLAN / rede / WiFi /
+HVAC / ar condicionado / LG / Springer / BTU / R-22 / R-410A /
+lab-op / <lab-host-2> / SBC / dev laptop class / Attiv / UPS / homelab /
+(legacy chat nicknames may still appear — facts live in `docs/private/homelab/` only) /
+hardware inventory / coleta de dados / relatorio de energia.
+
+## 1. Required private-file read order
+
+Read in this order -- stop when you have enough context for the task:
+
+1. `docs/private/homelab/OPERATOR_RETEACH.md` (B1-B6) -- hardware facts, HVAC plates, VLANs, solar IDs, burst host
+2. `docs/private/homelab/OPERATOR_SYSTEM_MAP.md` -- topology, accessibility matrix, software versions
+3. System-specific file per section 2 below
+
+## 2. System registry (private-file map)
+
+| System | Topic keywords | Private file | Existing script |
+|---|---|---|---|
+| **Solar / Growatt** | solar, growatt, inversor, kWh gerado, painel | `docs/private/homelab/SOLAR_SYSTEM_NOTES.md` | `.\scripts\growatt.ps1` |
+| **Enel / Grid** | enel, fatura, consumo, kWh consumido, concessionaria, light | `docs/private/homelab/ENEL_ACCOUNT_NOTES.md` | `.\scripts\enel.ps1` |
+| **Solar x Grid** | gerado vs consumido, saldo solar, balanco energetico | Both above | `.\scripts\energy-report.ps1` |
+| **LAB-ROUTER-01 / Rede** | LAB-ROUTER-01, unifi, VLAN, wifi, switch, clientes, alertas, rede | `OPERATOR_RETEACH.md` B3 + `LAB_SECURITY_POSTURE.md` | `.\scripts\LAB-ROUTER-01.ps1` |
+| **HVAC** | hvac, ar condicionado, LG, Springer, BTU, R-22, R-410A | `OPERATOR_RETEACH.md` B2 | -- |
+| **Hardware / hosts** | lab-op, <lab-host-2>, SBC, workstation-class laptop, hardware, specs | `OPERATOR_SYSTEM_MAP.md` sections 2-4 + `LAB_SOFTWARE_INVENTORY.md` | `.\scripts\lab-op.ps1` |
+| **UPS** | attiv, ups, bateria, autonomia, nobreak | `OPERATOR_RETEACH.md` B2 | -- |
+| **Lab host reports** | homelab-report, collect, inventory, matrix | `docs/private/homelab/lab-op-hosts.manifest.json` | `.\scripts\lab-op.ps1 -Action report-all` |
+| **Gravatar / perfil** | gravatar, social links, handles | `docs/private/homelab/OPERATOR_GRAVATAR_PROFILE.md` | -- |
+| **Candidatos / ATS** | candidato, talent, linkedin, CV, pool | `docs/private/commercial/candidates/` | `.\scripts\talent.ps1` |
+
+## 3. Scripts de automacao (preferir sobre ad-hoc)
+
+| Script | Proposito | Exemplo |
+|---|---|---|
+| `.\scripts\LAB-ROUTER-01.ps1 -Command scan` | LAB-ROUTER-01 full API scan (Bitwarden ou API key direta) | `.\scripts\LAB-ROUTER-01.ps1 -Command clients` |
+| `.\scripts\LAB-ROUTER-01.ps1 -Command status` | LAB-ROUTER-01 quick status | -- |
+| `.\scripts\growatt.ps1` | Growatt solar data (ShinePhone API ou browser) | `.\scripts\growatt.ps1 -Mode api` |
+| `.\scripts\enel.ps1` | Enel status -- READ-ONLY (sem browser) | `.\scripts\enel.ps1 -Show invoices` |
+| `.\scripts\energy-report.ps1` | Solar vs grid: correlacao gerado vs consumido | `.\scripts\energy-report.ps1` |
+| `.\scripts\lab-op.ps1 -Action report-all` | Todos os hosts via SSH + manifest | -- |
+| `.\scripts\lab-op.ps1 -Action sync-collect` | git pull + collect all hosts | -- |
+| `.\scripts\es-find.ps1` | **So Windows (primary Windows dev PC):** busca por nome via Voidtools Everything — **nao** usar em Linux SSH | `.\scripts\es-find.ps1 -Help`; **`docs/ops/EVERYTHING_ES_PRIMARY_WINDOWS_DEV_LAB.md`** |
+| `.\scripts\talent.ps1 scan` | Varredura de CVs no pool ATS | -- |
+| `. .\scripts\lab-env-load.ps1` | Carrega vars LAB-OP na sessao (LAB-ROUTER-01, Growatt, Enel, SSH) -- dot-source! | `. .\scripts\lab-env-load.ps1 -Systems LAB-ROUTER-01` |
+
+## 4. CRITICAL -- Guardrails de interacao por sistema
+
+### Enel portal -- ALTO RISCO de ordens de servico acidentais
+
+- O portal Enel tem um **overlay html full-page** que **intercepta TODOS os cliques**
+  e os direciona para o formulario de "Falta de Luz" (solicitacao de servico)
+- **NUNCA clique no portal Enel** sem snapshot fresco e refs de elemento confirmados
+- Protocolos de servico ja foram gerados acidentalmente (numeros reais em docs/private/)
+- "Grafico de Consumo" exige CPF/CNPJ -- **NUNCA preencher** dados sensiveis no browser
+- **Dados de faturas ja estao** em `ENEL_ACCOUNT_NOTES.md` (10 faturas, pag 1/6, ~60 meses)
+- Para novos dados: **pedir ao operador para baixar manualmente**
+- Contato Enel: ver docs/private/ para telefone e protocolos
+
+### Growatt portal -- SPA, nao navegavel por URL direta
+
+- E uma Single-Page App: **URL direta nao funciona** para Energy > Month/Year
+- Autenticacao: **somente por cookie de sessao** -- programatico requer token ShinePhone API
+- **Dados dashboard ja capturados** em `SOLAR_SYSTEM_NOTES.md` (snapshot 2026-04-02)
+- Para novos dados: `.\scripts\growatt.ps1 -Mode api` (apos setup token) ou browser autenticado
+- Registro ShinePhone API: <https://openapi.growatt.com> (gratuito, unico)
+
+### LAB-ROUTER-01 / UniFi -- API key em arquivo privado
+
+- API base: `https://unifi.local` (resolve na LAN local do operador)
+- Chave: `docs/private/homelab/.env.api.LAB-ROUTER-01-se.local` ou Bitwarden "LAB-ROUTER-01 cursor.auto.ai"
+- SSH na console LAB-ROUTER-01 esta OFF -- usar `.\scripts\LAB-ROUTER-01.ps1` (API HTTP)
+- Usuario `auto.cursor` tem permissoes limitadas; erros 403 em alguns endpoints sao esperados
+- Scan completo: salvar em `docs/private/homelab/reports/LAB-ROUTER-01_api_<data>.json`
+
+## 5. Session shorthands (chat keywords)
+
+| O operador diz... | Shorthand | Acao |
+|---|---|---|
+| "mostra a rede / LAB-ROUTER-01 / clientes" | `LAB-ROUTER-01-scan` | `.\scripts\LAB-ROUTER-01.ps1 -Command scan` |
+| "dados do solar / growatt / hoje" | `solar-snap` | `.\scripts\growatt.ps1` + ler `SOLAR_SYSTEM_NOTES.md` |
+| "conta de luz / Enel / fatura" | `enel-check` | `.\scripts\enel.ps1` (read-only) |
+| "quanto geramos vs consumimos" | `energy-report` | `.\scripts\energy-report.ps1` |
+| "inventario de hosts / maquinas" | `lab-op report-all` | `.\scripts\lab-op.ps1 -Action report-all` |
+| "atualiza tudo do lab" | `lab-op sync-collect` | `.\scripts\lab-op.ps1 -Action sync-collect` |
+
+## 6. Token-aware defaults
+
+- **Nao reler TODOS** os arquivos privados em cada mensagem -- use secao 2 para ler so o relevante
+- **Nao re-probar LAB-ROUTER-01** se existir scan recente em `docs/private/homelab/reports/` (verificar data)
+- **Nao navegar no Enel** -- dados de faturas ja capturados; usar script
+- **Nao re-navegar Growatt** se dados de total/hoje ja estiverem em `SOLAR_SYSTEM_NOTES.md`
+- **Preferir `.\scripts\*.ps1`** sobre comandos ad-hoc de PowerShell/curl
+- **Antes de qualquer acao no browser**: verificar se dado ja existe em `docs/private/homelab/`
+
+## 7. Mapa de arquivos privados (gitignored)
+
+```
+docs/private/homelab/
+  OPERATOR_RETEACH.md          <- hardware, HVAC, VLANs, solar IDs (B1-B6)
+  OPERATOR_RETEACH.pt_BR.md    <- mesmos fatos em pt-BR
+  OPERATOR_SYSTEM_MAP.md       <- topologia, matriz de acesso, software
+  SOLAR_SYSTEM_NOTES.md        <- Growatt MIC 3000TL-X, dados ao vivo
+  ENEL_ACCOUNT_NOTES.md        <- UC local, faturas, alertas Enel
+  OPERATOR_GRAVATAR_PROFILE.md <- perfil publico + 23 redes sociais
+  LAB_SECURITY_POSTURE.md      <- UFW, nftables, SSH, firewall por host
+  LAB_SOFTWARE_INVENTORY.md    <- matrix Python/Docker/Go/Rust por host
+  AGENT_LAB_ACCESS.md          <- SSH aliases, P:, ports, Data Boar
+  HARDWARE_CATALOG.md          <- hardware only (sem credenciais)
+  .env.api.LAB-ROUTER-01-se.local        <- LAB-ROUTER-01 API key (nao commitar, nao mostrar)
+  .env.*.local                 <- fallback offline para lab-env-load.ps1
+  reports/                     <- snapshots JSON LAB-ROUTER-01 + host reports
+```
+
+See also: `.cursor/private/skills/homelab-lab-op-data/SKILL.md` (workflow detalhado por sistema).

@@ -1,0 +1,26 @@
+---
+description: New HUB or INDEX docs must register in docs/hubs/INDEX.md; never move files only to feed a hub.
+globs:
+  - docs/**/*HUB*.md
+  - docs/**/INDEX.md
+  - docs/hubs/**
+alwaysApply: false
+---
+
+# Hub pattern (lightweight index)
+
+## Rules
+
+1. Hubs **link** to canonical paths; they **do not** relocate existing tracked files.
+2. New **`*HUB*.md`** or category **`INDEX.md`** under **`docs/`** needs a row in **`docs/hubs/INDEX.md`** in the **same PR**.
+3. **`scripts/check_hubs.py`** runs in **`check-all`** — broken backtick paths in **`docs/hubs/INDEX.md`** or primer links fail CI.
+4. **ADR index exception:** use **`docs/adr/README.md`**, not a duplicate under **`docs/hubs/`**.
+
+## Agent guardrail
+
+- If a PR **moves** a file listed in a hub, update **every** hub backtick path that referenced the old location.
+- If a PR **creates** a hub without updating **`docs/hubs/INDEX.md`**, add the row before merge.
+
+## Canonical decision
+
+**[ADR-0057](../../docs/adr/ADR-0057-lightweight-hub-index-co-located-links.md)**

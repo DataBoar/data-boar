@@ -1,0 +1,69 @@
+---
+# Installs Docker CE and (optionally) initialises a single-node Swarm.
+# Supports Debian/Ubuntu. For RHEL/Rocky add a separate task file.
+
+- name: Install prerequisite packages
+  ansible.builtin.apt:
+    name:
+      - ca-certificates
+      - curl
+      - gnupg
+      - lsb-release
+    state: present
+    update_cache: true
+
+- name: Add Docker GPG key
+  ansible.builtin.shell: |
+    install -m 0755 -d /etc/apt/keyrings
+    curl -fsSL https://download.docker.com/linux/{{ ansible_distribution | lower }}/gpg \
+      -o /etc/apt/keyrings/docker.asc
+    chmod a+r /etc/apt/keyrings/docker.asc
+  args:
+    creates: /etc/apt/keyrings/docker.asc
+
+- name: Add Docker apt repository
+  ansible.builtin.shell: |
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] \
+      https://download.docker.com/linux/{{ ansible_distribution | lower }} \
+      $(. /etc/os-release && echo \"$VERSION_CODENAME\") stable" \
+      | tee /etc/apt/sources.list.d/docker.list > /dev/null
+  args:
+    creates: /etc/apt/sources.list.d/docker.list
+
+- name: Install Docker CE
+  ansible.builtin.apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+    state: present
+    update_cache: true
+
+- name: Enable and start Docker service
+  ansible.builtin.systemd:
+    name: docker
+    enabled: true
+    state: started
+
+- name: Add current user to docker group
+  ansible.builtin.user:
+    name: "{{ ansible_user }}"
+    groups: docker
+    append: true
+
+- name: Initialise Docker Swarm (single-node)
+  ansible.builtin.shell: docker swarm init --advertise-addr {{ ansible_default_ipv4.address }}
+  when: swarm_enabled | bool
+  register: swarm_init
+  failed_when: swarm_init.rc != 0 and "already part of a swarm" not in swarm_init.stderr
+  changed_when: swarm_init.rc == 0
+
+- name: Install ctop (container monitoring)
+  ansible.builtin.shell: |
+    curl -sSL https://github.com/bcicen/ctop/releases/download/v0.7.7/ctop-0.7.7-linux-amd64 \
+      -o /usr/local/bin/ctop && chmod +x /usr/local/bin/ctop
+  args:
+    creates: /usr/local/bin/ctop
+  when: swarm_enabled | bool

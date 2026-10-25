@@ -1,0 +1,87 @@
+# NIST CSF 2.0 function hint mapping (heuristic, non-authoritative)
+#
+# Maps Data Boar finding ``norm_tag`` strings to short NIST CSF 2.0 codes
+# (Function or Function.Category), e.g. "GV", "ID.AM", "PR.DS".
+#
+# IMPORTANT (ADR-0025): these are *hints for CISO/DPO workshop use*, derived from
+# finding metadata only. They are NOT a compliance determination, control
+# attestation, or legal conclusion. The CISO/DPO validates applicability.
+#
+# Why this table is versioned and shipped (not hard-coded): same model as the
+# ``docs/compliance-samples/*.yaml`` profiles and the article-hint tables referenced
+# in ``docs/GRC_EXECUTIVE_REPORT_SCHEMA.md`` (section 4). Counsel-facing "truth" must
+# never live in code comments; mapping decisions live here so they can be reviewed,
+# diffed, and re-versioned without touching the consolidator.
+#
+# Alignment with #749 (tri-level NIST CSF / SANS / ISO 27035 positioning):
+#   - Discovering where personal data lives is primarily an **Identify** activity
+#     (ID.AM — Asset Management: build the data inventory before an incident).
+#   - Protecting that data maps to **Protect** (PR.DS — Data Security).
+#   - Special-category / minor data raises **Govern** attention (GV — policy,
+#     oversight, risk acceptance) on top of inventory and data security.
+#
+# Matching contract (see report/nist_csf_hints.py):
+#   - ``match`` is a case-insensitive substring tested against each norm_tag.
+#   - All rules whose ``match`` is contained in a norm_tag contribute their codes.
+#   - Codes are de-duplicated and sorted in canonical CSF order (GV, ID, PR, DE, RS, RC).
+#   - A norm_tag that matches no rule contributes nothing; a finding with no matched
+#     code omits ``nist_csf_function_hint`` entirely (never emit an empty array).
+
+mapping_version: "nist_csf_2_0_hint_v1"
+
+# Short, human-readable disclaimer surfaced once in compliance_mapping by the reporter.
+disclaimer: >-
+  NIST CSF 2.0 function codes here are heuristic hints derived from finding norm tags,
+  not a compliance determination or control attestation (ADR-0025). CISO/DPO validates
+  applicability and maturity.
+
+rules:
+  # --- Ordinary personal data (inventory + data security) ---
+  - match: "lgpd art"
+    csf: ["ID.AM", "PR.DS"]
+  - match: "gdpr art"
+    csf: ["ID.AM", "PR.DS"]
+  - match: "personal data"
+    csf: ["ID.AM", "PR.DS"]
+  - match: "dados pessoais"
+    csf: ["ID.AM", "PR.DS"]
+
+  # --- Special-category / sensitive data (add Govern attention) ---
+  - match: "art. 11"
+    csf: ["GV", "ID.AM", "PR.DS"]
+  - match: "sensitive"
+    csf: ["GV", "ID.AM", "PR.DS"]
+  - match: "health"
+    csf: ["GV", "ID.AM", "PR.DS"]
+  - match: "saude"
+    csf: ["GV", "ID.AM", "PR.DS"]
+  - match: "biometric"
+    csf: ["GV", "ID.AM", "PR.DS"]
+  - match: "genetic"
+    csf: ["GV", "ID.AM", "PR.DS"]
+  - match: "religio"
+    csf: ["GV", "ID.AM", "PR.DS"]
+  - match: "politic"
+    csf: ["GV", "ID.AM", "PR.DS"]
+  - match: "racial"
+    csf: ["GV", "ID.AM", "PR.DS"]
+  - match: "sexual"
+    csf: ["GV", "ID.AM", "PR.DS"]
+
+  # --- Minor / child data (heightened governance) ---
+  - match: "minor"
+    csf: ["GV", "ID.AM", "PR.DS"]
+  - match: "child"
+    csf: ["GV", "ID.AM", "PR.DS"]
+  - match: "infantil"
+    csf: ["GV", "ID.AM", "PR.DS"]
+  - match: "coppa"
+    csf: ["GV", "ID.AM", "PR.DS"]
+
+  # --- Ambiguous / needs manual confirmation (inventory hint only) ---
+  - match: "ambiguous"
+    csf: ["ID.AM"]
+  - match: "suggested review"
+    csf: ["ID.AM"]
+  - match: "confirm manually"
+    csf: ["ID.AM"]

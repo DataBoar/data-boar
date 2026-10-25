@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}{{ t('login.page_title') }}{% endblock %}
+{% block content %}
+<h1>{{ t('login.h1') }}</h1>
+{% if not webauthn_enabled %}
+<p class="muted">{{ t('login.disabled') }}</p>
+<p><a href="{{ base_path }}/help">{{ t('login.help_link') }}</a></p>
+{% else %}
+<p class="muted">{{ t('login.intro') }}</p>
+<p id="login-status" class="muted" role="status"></p>
+<p>
+  <button type="button" class="btn btn-primary" id="btn-webauthn" hidden>{{ t('login.button_placeholder') }}</button>
+</p>
+<p class="muted small">{{ t('login.hint_https') }}</p>
+<script src="/static/webauthn-login.js" defer data-next="{{ login_next | e }}"></script>
+{% endif %}
+{% endblock %}

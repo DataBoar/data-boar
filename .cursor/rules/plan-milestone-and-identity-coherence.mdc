@@ -1,0 +1,34 @@
+---
+description: Single-source pointers for milestone bundles (M-*) and dashboard identity sequencing—do not paste duplicate tables; use when editing sprint/milestone docs, #86, PLANS_TODO, or today-mode production blocks.
+globs:
+  - docs/plans/SPRINTS_AND_MILESTONES*.md
+  - docs/plans/PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md
+  - docs/plans/completed/PLAN_DASHBOARD_I18N.md
+  - docs/plans/PLANS_TODO.md
+  - docs/plans/TOKEN_AWARE_USAGE.md
+  - docs/plans/PLANS_HUB*.md
+  - docs/ops/today-mode/OPERATOR_TODAY_MODE_*.md
+alwaysApply: false
+---
+
+# Plan milestones and identity — coherence (pointers only)
+
+## Canonical text (do not duplicate)
+
+- **Milestone definitions and “done when”:** `docs/plans/SPRINTS_AND_MILESTONES.md` section **5** (milestone table) and **5.0** (M-TRUST sub-milestones).
+- **How to combine milestones for narrative / commercial / automation posture:** same file, subsection **Composing milestones (release lifecycle map)** immediately after the milestone **Cadence suggestion** in section **5**.
+- **Edge OIDC vs in-app passwordless vs M-ACCESS:** same file, **§4.1** subsection **Identity: edge OIDC vs in-app passwordless**.
+- **Dashboard access, RBAC, passwordless phases, demo vs production table:** `docs/plans/PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md` (GitHub **#86**).
+- **Execution order and dashboard cluster (D-WEB, i18n, #86):** `docs/plans/SPRINTS_AND_MILESTONES.md` **§4.2** and `docs/plans/completed/PLAN_DASHBOARD_I18N.md` (meshing with **#86**).
+- **Single to-do queue:** `docs/plans/PLANS_TODO.md`.
+
+## When editing one of the globs above
+
+1. **Prefer links** to the subsection titles above instead of copying full tables into another doc.
+2. If **identity** or **M-ACCESS** story changes, update **both** `SPRINTS_AND_MILESTONES.md` **§4.1** and `PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md` **or** add an explicit cross-link—avoid silent divergence.
+3. **Version strings** stay under `docs/releases/` and **VERSIONING** policy—do not use this rule to invent alternate product-stage names; pre-release suffixes on tags are separate.
+
+## Related
+
+- **`docs-plans.mdc`** — hub sync, archiving, external-tier link policy.
+- **`execution-priority-and-pr-batching.mdc`** — commit grouping.

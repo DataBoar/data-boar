@@ -1,0 +1,34 @@
+# Copy to docs/private/ (gitignored) and adjust. Do not commit real secrets.
+#
+# See: docs/ops/LAB_EXTERNAL_CONNECTIVITY_EVAL.md
+#
+# --- Example A: public REST (read-only GET) ---
+# targets:
+#   - name: "Public_REST_demo"
+#     type: api
+#     base_url: "https://api.restful-api.dev"
+#     paths: ["/objects"]
+#     connect_timeout_seconds: 15
+#     read_timeout_seconds: 60
+#
+# --- Example B: intentional failure (wrong port on localhost) ---
+# targets:
+#   - name: "Expected_fail_TCP"
+#     type: database
+#     driver: postgresql+psycopg2
+#     host: "127.0.0.1"
+#     port: 1
+#     user: "nouser"
+#     pass: "nopass"
+#     database: "nodb"
+#
+# --- Example C: local MongoDB from docker-compose.mongo.yml ---
+# targets:
+#   - name: "Lab_Mongo_Synthetic"
+#     type: database
+#     driver: mongodb
+#     host: "127.0.0.1"
+#     port: 27018
+#     database: "lab_smoke_mongo"
+
+targets: []

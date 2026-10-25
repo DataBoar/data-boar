@@ -1,0 +1,120 @@
+# Thailand PDPA — sample compliance profile (Personal Data Protection Act B.E. 2562 (2019))
+#
+# Target audience: Thailand and ASEAN deployments; controllers/processors under the Thai PDPA.
+# Authority: Personal Data Protection Committee (PDPC Thailand) and Ministry of Digital Economy
+# and Society (MDES) implementing context — scope final interpretation with Thai counsel.
+#
+# How to use:
+#   1. Set in your main config:
+#        regex_overrides_file: path/to/compliance-sample-thailand_pdpa.yaml
+#        ml_patterns_file: path/to/compliance-sample-thailand_pdpa.yaml
+#   2. Merge the recommendation_overrides list below into report.recommendation_overrides.
+#
+# Legal scope (summary — not legal advice):
+#   - PDPA governs collection, use, and disclosure of personal data in Thailand; key constructs
+#     include personal data, sensitive personal data, data subject, data controller, data processor,
+#     consent, legal bases, cross-border transfers, and data subject rights.
+#   - Thai national ID (Citizen ID): 13-digit national identifier; pattern below is contextual
+#     to reduce false positives from bare digit runs.
+#   - Precise geolocation: same four-pattern regex geometry as compliance-sample-us_va_vcdpa.yaml
+#     and compliance-sample-eu_gdpr.yaml (JSON lat/lng, location: pair, latitude=&longitude=).
+#     Heuristic coordinate-shape signals only — not an automatic PDPC sensitive-data determination.
+#
+# Use double-quoted YAML with escaped backslashes.
+
+regex:
+  - name: "TH_CID_CTX"
+    pattern: "(?i)(?:เลขประจำตัวประชาชน|Thai\\s+citizen\\s+id|national\\s+id\\s*\\(TH\\)|CID\\s*TH)\\s*[:#]?\\s*\\b\\d{13}\\b"
+    norm_tag: "Thailand PDPA"
+  - name: "TH_PDPA_JSON_LAT_PRECISION"
+    pattern: "(?i)[\"']lat[\"']\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\b"
+    norm_tag: "Thailand PDPA"
+  - name: "TH_PDPA_JSON_LNG_PRECISION"
+    pattern: "(?i)[\"'](?:lng|lon)[\"']\\s*:\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}\\b"
+    norm_tag: "Thailand PDPA"
+  - name: "TH_PDPA_LOCATION_CSV_PAIR"
+    pattern: "(?i)\\blocation\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*,\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "Thailand PDPA"
+  - name: "TH_PDPA_QUERYSTRING_LAT_LONG"
+    pattern: "(?i)latitude=[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*&\\s*longitude=[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "Thailand PDPA"
+
+terms:
+  - text: "PDPA"
+    label: sensitive
+  - text: "Thailand PDPA"
+    label: sensitive
+  - text: "Personal Data Protection Act"
+    label: sensitive
+  - text: "พระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล"
+    label: sensitive
+  - text: "personal data"
+    label: sensitive
+  - text: "ข้อมูลส่วนบุคคล"
+    label: sensitive
+  - text: "sensitive personal data"
+    label: sensitive
+  - text: "ข้อมูลส่วนบุคคลที่ละเอียดอ่อน"
+    label: sensitive
+  - text: "data subject"
+    label: sensitive
+  - text: "เจ้าของข้อมูลส่วนบุคคล"
+    label: sensitive
+  - text: "data controller"
+    label: sensitive
+  - text: "ผู้ควบคุมข้อมูลส่วนบุคคล"
+    label: sensitive
+  - text: "data processor"
+    label: sensitive
+  - text: "ผู้ประมวลผลข้อมูลส่วนบุคคล"
+    label: sensitive
+  - text: "consent"
+    label: sensitive
+  - text: "ความยินยอม"
+    label: sensitive
+  - text: "PDPC"
+    label: sensitive
+  - text: "คณะกรรมการคุ้มครองข้อมูลส่วนบุคคล"
+    label: sensitive
+  - text: "cross-border transfer"
+    label: sensitive
+  - text: "การโอนข้อมูลส่วนบุคคลไปต่างประเทศ"
+    label: sensitive
+  - text: "privacy notice"
+    label: sensitive
+  - text: "แจ้งการประมวลผล"
+    label: sensitive
+  - text: "biometric data"
+    label: sensitive
+  - text: "ข้อมูลไบโอเมตริก"
+    label: sensitive
+  - text: "health data"
+    label: sensitive
+  - text: "ข้อมูลสุขภาพ"
+    label: sensitive
+  - text: "geolocation"
+    label: sensitive
+  - text: "precise geolocation"
+    label: sensitive
+  - text: "ตำแหน่งทางภูมิศาสตร์"
+    label: sensitive
+  - text: "children personal data"
+    label: sensitive
+  - text: "ข้อมูลเด็ก"
+    label: sensitive
+  - text: "data breach"
+    label: sensitive
+  - text: "การละเมิดข้อมูลส่วนบุคคล"
+    label: sensitive
+  - text: "DPIA"
+    label: sensitive
+  - text: "MDES"
+    label: sensitive
+
+recommendation_overrides:
+  - norm_tag_pattern: "Thailand PDPA"
+    base_legal: "Thailand Personal Data Protection Act B.E. 2562 (2019); Personal Data Protection Committee (PDPC) and implementing regulations."
+    risk: "Personal and sensitive personal data; consent and legal bases; cross-border transfers; biometric, health, and precise geolocation inventory signals require governance alignment — exemptions and sector rules are not evaluated by the scanner."
+    recommendation: "Map inventory to controller/processor roles under PDPA; maintain lawful bases and documentation for transfers; pair technical findings with Thai counsel on PDPC-facing posture."
+    priority: "ALTA"
+    relevant_for: "DPO, Privacy Counsel, PDPC liaison, Data Controller, Data Processor"

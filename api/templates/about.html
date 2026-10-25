@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}{{ t('about.page_title') }}{% endblock %}
+{% block content %}
+<h1>{{ t('about.h1') }} <span class="muted">{{ t('about.dashmuted') }}</span></h1>
+
+<section class="card">
+  <h2>{{ t('about.app_h2') }}</h2>
+  <p><img src="/static/mascot/data_boar_mascote_color.svg" alt="Data Boar" width="72" height="72" style="vertical-align: middle; margin-right: 0.5em;"><strong>{{ about.name }}</strong> — {{ about.description }}</p>
+  <p><span class="muted">Version:</span> {{ about.version }}</p>
+  <p class="muted">{{ t('about.web_dash') }} <strong>dashBOARd</strong> (part of Data Boar).</p>
+</section>
+
+<section class="card">
+  <h2>{{ t('about.author_h2') }}</h2>
+  <p><strong>{{ about.author }}</strong></p>
+  <p class="muted">{{ about.copyright }}</p>
+</section>
+
+<section class="card">
+  <h2>{{ t('about.license_h2') }}</h2>
+  <p class="muted">{{ t('about.license_intro') }}</p>
+  <p><strong>{{ t('about.state') }}</strong> {{ license.get('license_state', '—') }}</p>
+  <p><strong>{{ t('about.mode') }}</strong> {{ license.get('license_mode', '—') }}</p>
+  {% if license.get('customer_name') %}
+  <p><strong>{{ t('about.licensed_customer') }}</strong> {{ license.get('customer_name') }}</p>
+  {% endif %}
+  {% if license.get('expires_at') %}
+  <p><strong>{{ t('about.expires') }}</strong> {{ license.get('expires_at') }}</p>
+  {% endif %}
+  {% if license.get('issuer_id') %}
+  <p><strong>{{ t('about.issuer') }}</strong> {{ license.get('issuer_id') }}</p>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2>Links</h2>
+  <p class="muted"><a href="https://github.com/DataBoar/data-boar/blob/main/LICENSE" target="_blank" rel="noopener">LICENSE</a> · <a href="https://github.com/DataBoar/data-boar/blob/main/NOTICE" target="_blank" rel="noopener">NOTICE</a></p>
+</section>
+{% endblock %}

@@ -1,0 +1,29 @@
+# git filter-repo --replace-text / --replace-message
+# Shared rules for polished upstream tool repos: sgad siblings (Rust/Python/Go), wf_t1r, batch_reload_ap.
+# Lines starting with # are comments. Format: literal==>replacement or regex:PATTERN==>replacement
+
+# Commit-message no-op (keeps filter-repo happy if referenced)
+REPLACEMENT==>REPLACEMENT
+
+# batch_reload_ap: internal DNS suffix and password placeholder
+glibra.corp==>example.invalid
+telecom000==>REDACTED_PASSWORD
+
+# wf_t1r Dockerfiles: corporate author email; example password in comments
+fabio.leitao.ext@corporate-entity-ario.com==>maintainer@example.invalid
+Infra@T1R_2023==>REDACTED_PASSWORD
+
+# wf_t1r: RFC1918 addresses used in sshguard whitelist (historical blobs)
+regex:10\.21\.[0-9]{1,3}\.[0-9]{1,3}==>192.0.2.1
+regex:10\.98\.180\.0/24==>192.0.2.0/24
+regex:10\.31\.1\.0/24==>198.51.100.0/24
+
+# Python/Go SGAD clones (legacy Easy Connect / host fragments)
+10.129.48.68==>203.0.113.10
+tosprd==>ORCL
+
+# wf_t1r: commented WildFly add-user example
+Admin#70365==>REDACTED_PASSWORD
+
+# go-ora style DSN host leakage (if present in history)
+regex:oracle://[^:]+:[^@]+@==>oracle://USER_REDACTED:PASS_REDACTED@

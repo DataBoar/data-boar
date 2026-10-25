@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: data-boar-config
+  labels:
+    app: data-boar
+data:
+  config.yaml: |
+    targets: []
+    file_scan:
+      extensions: [.txt, .csv, .pdf, .docx, .xlsx]
+      recursive: true
+      scan_sqlite_as_db: true
+      sample_limit: 5
+      file_sample_max_chars: 12000
+    report:
+      output_dir: /data
+    api:
+      port: 8088
+      # Corporate-Entity-C / production: when the Service exposes 8088 beyond a trusted network, set:
+      # require_api_key: true
+      # and supply the key via Secret + env (e.g. api_key_from_env) — see README.md § Security.
+    sqlite_path: /data/audit_results.db
+    scan:
+      max_workers: 1

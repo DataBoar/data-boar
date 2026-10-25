@@ -1,0 +1,20 @@
+# Generic placeholder pack for tests and local POC — not proprietary questionnaire text.
+version: 1
+sections:
+  - id: governance
+    title: "Governance (sample)"
+    questions:
+      - id: sample_dpo
+        prompt: "Does the organization designate a person or team accountable for privacy governance?"
+        scores:
+          yes: 2
+          no: 0
+          na: 1
+          unset: 0
+      - id: sample_policy
+        prompt: "Are personal data processing activities documented at a high level?"
+        scores:
+          yes: 2
+          no: 1
+          na: 1
+          unset: 0

@@ -1,0 +1,101 @@
+# Reusable workflow: posts a short message to Slack when a caller workflow fails.
+# Invoked via workflow_call from CI, Semgrep, Gitleaks, SBOM, and Dependabot sync.
+# Requires repository secret SLACK_WEBHOOK_URL (same as Slack operator ping).
+# Skips if secret unset. No checkout needed.
+name: Slack CI failure notify
+
+'on':
+  workflow_call:
+    inputs:
+      run_name:
+        required: true
+        type: string
+      head_branch:
+        required: true
+        type: string
+      event:
+        required: true
+        type: string
+      html_url:
+        required: true
+        type: string
+    secrets:
+      SLACK_WEBHOOK_URL:
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Detect Slack webhook
+        id: webhook
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          if [ -n "$SLACK_WEBHOOK_URL" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "SLACK_WEBHOOK_URL is unset; downstream steps will skip cleanly."
+          fi
+
+      - name: Post CI failure summary to Slack
+        if: steps.webhook.outputs.present == 'true'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_MENTION_USER_ID: ${{ vars.SLACK_MENTION_USER_ID }}
+          RUN_HTML_URL: ${{ inputs.html_url }}
+          RUN_NAME: ${{ inputs.run_name }}
+          HEAD_BRANCH: ${{ inputs.head_branch }}
+          REPO: ${{ github.repository }}
+          EVENT: ${{ inputs.event }}
+        run: |
+          python3 <<'PY'
+          import json
+          import os
+          import urllib.error
+          import urllib.request
+
+          def _normalize_slack_member_id(raw_id: str) -> str:
+              mid = (raw_id or "").strip()
+              if not mid:
+                  return ""
+              if mid.startswith("<@") and mid.endswith(">"):
+                  mid = mid[2:-1]
+              return mid.strip()
+
+          def with_optional_mention(text: str, raw_id: str) -> str:
+              mid = _normalize_slack_member_id(raw_id)
+              if not mid:
+                  return text
+              return f"<@{mid}>\n{text}"
+
+          url = os.environ["SLACK_WEBHOOK_URL"]
+          lines = [
+              f"Data Boar — {os.environ['RUN_NAME']} falhou",
+              f"Repositório: {os.environ['REPO']}",
+              f"Evento: {os.environ['EVENT']}",
+              f"Branch (head): {os.environ['HEAD_BRANCH']}",
+              f"Workflow: {os.environ['RUN_NAME']}",
+              f"Abrir run: {os.environ['RUN_HTML_URL']}",
+          ]
+          body = "\n".join(lines)
+          text = with_optional_mention(body, os.environ.get("SLACK_MENTION_USER_ID", ""))
+          data = json.dumps({"text": text}).encode("utf-8")
+          req = urllib.request.Request(
+              url,
+              data=data,
+              headers={"Content-Type": "application/json"},
+              method="POST",
+          )
+          try:
+              with urllib.request.urlopen(req, timeout=30) as resp:
+                  if resp.status >= 400:
+                      body = resp.read()
+                      raise SystemExit(f"HTTP {resp.status}: {body!r}")
+          except urllib.error.HTTPError as e:
+              raise SystemExit(f"HTTPError {e.code}: {e.read()!r}") from e
+          PY

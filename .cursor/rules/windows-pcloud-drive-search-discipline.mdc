@@ -1,0 +1,32 @@
+---
+description: "Windows dev PC — pCloud on P: (often); default filename/path search on large trees = scripts/es-find.ps1 (es.exe); if es fails notify operator then native fallback (e.g. capped Get-ChildItem). Avoid opening with unbounded -Recurse on huge sync roots."
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# pCloud `P:` and filename search discipline (Windows, token-aware)
+
+## Defaults
+
+- On the **same Windows PC** as Cursor, **pCloud** is **normally** mounted as **`P:`** (encrypted mirror via VeraCrypt is **`Z:\`** by operator default — **`Y:\`** only if remapped; see **`AGENTS.md`**). If a path fails, **`Test-Path`** once and report **sync client likely offline**; do not silently assume another drive letter.
+
+## Default: `es-find.ps1` / `es.exe` — `Get-ChildItem` is recovery, not the default
+
+- **Default** for **filename/path** discovery on **`P:\`** (and similar huge sync trees): **`.\scripts\es-find.ps1`** ( **`es.exe`** ) or **another repo wrapper that already calls `es.exe`**. That contract is **unchanged** — we are **not** “moving default” to **`Get-ChildItem`**.
+- **`Get-ChildItem`** (including **`-Recurse`** under a **narrow** root) is **recovery only** — **after** **`es-find` / `es.exe`** fails (missing CLI, **IPC**, PATH, script error) or when **`es`** does not apply. **Tell the operator** what broke so they can fix **Everything**/PATH; then **`-FallbackPowerShell`**, **`Glob`** (in-repo), or scoped **`Get-ChildItem`**. The waste to avoid is **opening** with **unbounded** **`-Recurse`** from **`P:\`**, **`P:\Automatic Upload`**, or other **multi‑10k‑object** roots **instead of** **`es-find.ps1`**. Session keyword **`es-find`**; cold-start ladder § *Token → rule latch (`es-find`)*; full **`es.exe`** / fallback / **lab-op** nuance in **situational** **`.cursor/rules/everything-es-cli.mdc`** ( **`read_file`** / **`@everything-es-cli.mdc`** when globs miss) and **`docs/ops/EVERYTHING_ES_PRIMARY_WINDOWS_DEV_LAB.md`**.
+
+## Repo-first (unchanged)
+
+- Inside **`data-boar/`** workspace: prefer **`Glob`** / **`Grep`** when fast — **unless** the tree is huge or paths are **outside** the workspace; then **`es-find.ps1`** wins.
+
+## Remember wrappers (do not “forget” automation)
+
+- Before reaching for ad-hoc shell walks, follow **`.cursor/rules/repo-scripts-wrapper-ritual.mdc`** — **`docs/ops/TOKEN_AWARE_SCRIPTS_HUB.md`**, **`.cursor/rules/check-all-gate.mdc`**, and **`scripts/`** for an existing wrapper (token and cognition budget).
+
+## Where the operator records real `P:\...` bases
+
+- **`docs/private/WHAT_TO_SHARE_WITH_AGENT.md`** — iPhone → pCloud table (private only; never tracked GitHub paths).
+
+## Config / rule edits — rollback
+
+- Prefer **small slices** and **one coherent commit** per experiment; **revert** or **`git checkout -- <file>`** from **`main`** if a rule change hurts clarity — same habit as **`docs/ops/COMMIT_AND_PR.md`** and **`.cursor/rules/execution-priority-and-pr-batching.mdc`**.

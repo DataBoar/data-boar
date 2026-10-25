@@ -1,0 +1,40 @@
+#
+# Lynis profile — LAB-OP baseline (safe, reviewable)
+#
+# Goal: reduce end-of-scan noise while keeping "skips" opt-in.
+# Policy:
+# - Keep values generic and non-sensitive in tracked automation.
+# - Put any host-specific exceptions under gitignored docs/private/homelab/ and override locally.
+#
+
+# --- Operator intent / knobs (baseline) ---
+# (Most Lynis settings are "skip-test" and "skip-plugin". Keep them commented unless confirmed.)
+
+# Example: reduce known false positives only after you validate applicability:
+#
+# skip-test=FILE-6310    # Example only: comment stays until you confirm.
+# skip-test=SSH-7408     # Example only.
+#
+# Notes:
+# - Prefer fixing the root cause (package/service/config) instead of skipping.
+# - When skipping, document why + scope (LAB-OP fixed workstation vs roaming host).
+
+# --- Suggestions catalog (comment-only; "uncomment to activate") ---
+#
+# 1) If the host is NOT intended to run any mail service:
+# skip-test=MAIL-8818    # mail services not applicable on this host
+#
+# 2) If the host is a workstation with no database server:
+# skip-test=DBS-8000     # database server checks not applicable
+#
+# 3) If Docker/Swarm is in use, some kernel forwarding/NAT posture is intentional:
+# skip-test=KRNL-6000    # kernel networking posture differs due to containers/bridges
+#
+# 4) If the host is a desk-bound LAB-OP node (no WAN exposure by design):
+# skip-test=NETW-3200    # external exposure checks may not apply (validate first)
+#
+# 5) If you are using TPM auto-unlock / disk crypto already verified:
+# skip-test=KRNL-5820    # disk encryption check (only if you have evidence elsewhere)
+#
+# Keep this file short; long exception lists belong in a private overlay.
+

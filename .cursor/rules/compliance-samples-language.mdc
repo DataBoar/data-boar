@@ -1,0 +1,29 @@
+---
+description: When adding or editing compliance samples, consider the target audience language(s) (e.g. LGPD → PT-BR + EN; PIPEDA → EN + FR) and document in the sample or COMPLIANCE_FRAMEWORKS.
+globs: ["docs/compliance-samples/**/*.yaml", "docs/compliance-samples/**/README*.md", "docs/COMPLIANCE_FRAMEWORKS*.md"]
+alwaysApply: false
+---
+
+# Compliance samples: language and target audience
+
+When creating or updating **compliance sample** YAML files (regex, ML/DL terms, recommendation overrides), choose terms and labels that match the **language(s)** of the target region so that column names and document labels in scanned data are detected.
+
+## By regulation / region
+
+| Regulation / region      | Language(s) to include in terms (and in sample docs)                                                                                                                                             |
+| -------------------      | ----------------------------------------------------                                                                                                                                             |
+| **LGPD (Brazil)**        | Portuguese (BR) and English. E.g. "documento oficial" and "official document", "RG", "ID", "CPF", "CNH", "carteira de motorista" and "Driver License", "data de nascimento" and "date of birth". |
+| **PIPEDA (Canada)**      | English and French. E.g. "personal information" and "renseignements personnels", "consent" and "consentement", where scanning Canadian data.                                                     |
+| **UK GDPR**              | English.                                                                                                                                                                                         |
+| **POPIA (South Africa)** | English; add local languages in terms if the data uses them.                                                                                                                                     |
+| **APPI (Japan)**         | Japanese and/or English as needed for column names.                                                                                                                                              |
+| **PCI-DSS**              | English.                                                                                                                                                                                         |
+
+## What to do
+
+1. **When adding a new sample:** Include ML/DL terms (and regex names if relevant) in the language(s) of the target audience. For LGPD, always include both PT-BR and EN where it makes sense (e.g. document and identifier vocabulary).
+1. **Document in the sample:** In the YAML header comment, state when the sample is bilingual or multi-language (e.g. "bilingual PT-BR + EN terms for Brazilian deployments").
+1. **Document in README / COMPLIANCE_FRAMEWORKS:** The compliance-samples README has a "Language and target audience" table; keep it in sync when adding regions or language guidance.
+1. **When it doesn’t make sense to scan both languages:** For region-specific regulations (e.g. UK-only), a single language is fine. For Canada (PIPEDA), recommend EN + FR in docs or in the sample so users can add French terms if needed.
+
+This avoids missing columns or labels that appear only in one language (e.g. "documento oficial" in a Brazilian database) and keeps samples aligned with the probable target audience.

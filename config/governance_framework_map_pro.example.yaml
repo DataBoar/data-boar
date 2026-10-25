@@ -1,0 +1,155 @@
+---
+# governance_framework_map_pro.example.yaml — OSS starter map (lab / tests)
+#
+# Production licensees may ship a fuller curated map outside public Git.
+# Point governance.map_file at this file (default) or a licensed replacement.
+#
+# Shape: config/governance_framework_map.schema.yaml
+
+version: "1.0"
+
+entries:
+  - pattern_name: LGPD_CPF
+    target_context: database_nonprod
+    frameworks:
+      - id: COBIT-DSS05.04
+        name: "DSS05.04 — Gerenciar identidade e acesso"
+        tier: pro
+        control_gap_title: "CPF em base não produtiva"
+        control_gap_body: >
+          CPF identificado em ambiente que pode não replicar controles de produção.
+          Evidência técnica — não conclusão legal.
+        recommendation: "Restringir cópias, mascarar CPF ou eliminar dados desnecessários."
+        deadline_days: 30
+
+  - pattern_name: EMAIL
+    target_context: database_nonprod
+    frameworks:
+      - id: COBIT-DSS05.04
+        name: "DSS05.04 — Gerenciar identidade e acesso"
+        tier: pro
+        control_gap_title: "E-mail em base não produtiva"
+        control_gap_body: >
+          Contato pessoal em ambiente de homologação/lab pode vazar em testes ou exports.
+        recommendation: "Usar dados sintéticos ou mascarar e-mails em não produção."
+        deadline_days: 30
+
+  - pattern_name: PHONE_BR
+    target_context: database_nonprod
+    frameworks:
+      - id: ITIL4-SECMAN-ACCESS
+        name: "ITIL 4 — Security management (controle de acesso)"
+        tier: pro
+        control_gap_title: "Telefone em base não produtiva"
+        control_gap_body: >
+          Número de telefone em dataset de teste aumenta superfície de vazamento acidental.
+        recommendation: "Substituir por dados fictícios em ambientes não produtivos."
+        deadline_days: 45
+
+  - pattern_name: LGPD_CPF
+    target_context: filesystem
+    frameworks:
+      - id: ISO27001-A.8.10
+        name: "A.8.10 — Exclusão de informações"
+        tier: pro
+        control_gap_title: "CPF em repositório de arquivos"
+        control_gap_body: >
+          Identificador pessoal em filesystem compartilhado ou backup sem classificação clara.
+        recommendation: "Classificar o repositório, revisar retenção e aplicar exclusão segura."
+        deadline_days: 45
+
+  - pattern_name: EMAIL
+    target_context: filesystem
+    frameworks:
+      - id: ISO27001-A.8.10
+        name: "A.8.10 — Exclusão de informações"
+        tier: pro
+        control_gap_title: "E-mail em repositório de arquivos"
+        control_gap_body: >
+          Dado de contato em arquivos pode indicar cópia informal fora de bases governadas.
+        recommendation: "Mover para repositório controlado ou remover cópias redundantes."
+        deadline_days: 45
+
+  - pattern_name: "LGPD_*"
+    target_context: null
+    frameworks:
+      - id: ISO27014-6.2
+        name: "ISO/IEC 27014 — Monitorar o desempenho de segurança"
+        tier: pro
+        control_gap_title: "Padrão LGPD detectado — monitoramento de controles"
+        control_gap_body: >
+          Achados com padrões LGPD sugerem revisar se monitoramento e métricas cobrem esses ativos.
+        recommendation: "Incluir o ativo no ciclo de monitoramento e revisão de controles."
+        deadline_days: 60
+
+  - pattern_name: CREDIT_CARD
+    target_context: null
+    frameworks:
+      - id: ISO27001-A.5.33
+        name: "A.5.33 — Proteção de registros"
+        tier: pro
+        control_gap_title: "Possível dado de cartão"
+        control_gap_body: >
+          Padrão compatível com PAN exige controles reforçados de proteção e escopo PCI quando aplicável.
+        recommendation: "Confirmar escopo PCI, tokenizar ou remover PAN onde não for necessário."
+        deadline_days: 21
+
+  - pattern_name: "*"
+    target_context: null
+    frameworks:
+      - id: ISO38500-CONFORMITY
+        name: "ISO/IEC 38500 — Princípio de conformidade"
+        tier: pro
+        control_gap_title: "Achado sensível — alinhamento de governança"
+        control_gap_body: >
+          Qualquer achado sensível deve ser rastreado pela governança de TI e privacidade.
+        recommendation: "Registrar no backlog de riscos e atribuir dono para tratamento."
+        deadline_days: 90
+
+  - pattern_name: LGPD_CNPJ
+    target_context: api
+    frameworks:
+      - id: ITIL4-SECMAN-DATA
+        name: "ITIL 4 — Security management (proteção de dados)"
+        tier: pro
+        control_gap_title: "CNPJ exposto em integração/API"
+        control_gap_body: >
+          Identificador empresarial em payload de API pode ampliar superfície de exposição.
+        recommendation: "Revisar contratos de API, minimização de campos e logs."
+        deadline_days: 30
+
+  - pattern_name: EMAIL
+    target_context: database
+    frameworks:
+      - id: ISO27001-A.8.11
+        name: "A.8.11 — Mascaramento de dados"
+        tier: pro
+        control_gap_title: "E-mail em base relacional"
+        control_gap_body: >
+          Dado de contato em coluna relacional — avaliar mascaramento ou pseudonimização.
+        recommendation: "Aplicar mascaramento em não produção e revisar necessidade em produção."
+        deadline_days: 45
+
+  - pattern_name: LGPD_CPF
+    target_context: database
+    frameworks:
+      - id: COBIT-MEA03.02
+        name: "MEA03.02 — Analisar conformidade interna"
+        tier: pro
+        control_gap_title: "CPF em base relacional"
+        control_gap_body: >
+          CPF em produção ou ambiente governado exige base legal e controles de acesso documentados.
+        recommendation: "Validar base legal, ACL e trilhas de auditoria para a tabela/coluna."
+        deadline_days: 30
+
+  - pattern_name: DATE_DMY
+    target_context: database_nonprod
+    frameworks:
+      - id: COBIT-APO13.02
+        name: "APO13.02 — Gerenciar serviços de segurança da informação"
+        tier: pro
+        control_gap_title: "Data de nascimento em não produção"
+        control_gap_body: >
+          Data pessoal em ambiente de teste pode compor identificação indireta em conjunto com outros campos.
+        recommendation: "Generalizar ou sintetizar datas em datasets de teste."
+        deadline_days: 45

@@ -1,0 +1,50 @@
+# Gordon (Docker AI) — token-aware workflow and guardrails
+
+Gordon (Docker AI) can accelerate Docker/Compose/Dockerfile work, but it must be used in a way that preserves this repo’s safety rules (no secrets, no LAN details, no regressions) and saves tokens.
+
+## When to use Gordon (high ROI)
+
+- Docker Desktop / engine / BuildKit troubleshooting (build failures, cache misses, mount issues).
+- Dockerfile hardening and optimization (multi-stage, caching, non-root).
+- Compose authoring (profiles, overrides, volumes, healthchecks).
+- Docker Hub / tags / publish flow checks (pre-push / post-push validation).
+
+## When *not* to use Gordon
+
+- Anything that requires private homelab details to be correct (real hostnames, RFC1918 IPs, inventories).
+- Anything that would cause the operator to paste PATs/tokens/secrets to a third party.
+
+## Absolute red lines (never paste)
+
+- Docker Hub PATs, GitHub tokens, private keys, passwords.
+- Real homelab hostnames, RFC1918 subnets, or inventory that belongs under `docs/private/`.
+- Any sensitive operational dumps you wouldn’t commit (e.g. `last`, `w`, login patterns).
+
+## Token-aware prompt pattern
+
+Ask Gordon for **one** narrow thing at a time, and ask for outputs that are easy to turn into repo artifacts:
+
+- “Give a minimal reproduction checklist.”
+- “Give an exact `Dockerfile` diff suggestion and explain why each layer changes caching.”
+- “Give a Compose override for local dev with `/data` volume and a healthcheck.”
+- “Give post-push validation commands that do not require UI.”
+
+Avoid: multi-topic “everything about Docker” prompts.
+
+## Converting Gordon output into repo work (the only accepted shape)
+
+1. Extract the **concrete artifact** we can own:
+   - a repo script under `scripts/`,
+   - a doc change under `docs/`,
+   - or a regression test under `tests/`.
+1. Prefer existing wrappers (token-aware):
+   - `.\scripts\check-all.ps1`, `.\scripts\lint-only.ps1`, `.\scripts\quick-test.ps1`
+   - `.\scripts\docker-lab-build.ps1`, `.\scripts\docker-hub-pull.ps1`, `.\scripts\docker-prune-local.ps1`
+1. Validate “no regression”:
+   - For docs-only changes: `.\scripts\lint-only.ps1`
+   - For anything else: `.\scripts\check-all.ps1`
+
+## Documentation placement
+
+- Operator-facing Docker workflow stays in `docs/DOCKER_SETUP.md` (+ `.pt_BR.md`).
+- Cross-cutting “how we consume external inputs” belongs in `docs/ops/` or `.cursor/rules/` (this file).

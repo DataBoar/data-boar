@@ -1,0 +1,12 @@
+---
+- name: Reload systemd
+  ansible.builtin.command: systemctl daemon-reload
+  changed_when: false
+  failed_when: false
+
+- name: Restart systemd-zram-setup@zram0
+  ansible.builtin.service:
+    name: systemd-zram-setup@zram0
+    state: restarted
+  failed_when: false
+

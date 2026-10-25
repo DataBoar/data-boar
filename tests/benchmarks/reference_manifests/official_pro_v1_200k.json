@@ -1,0 +1,12 @@
+{
+  "benchmark": "official_pro_v1",
+  "corpus_id": "synthetic_seed_200k",
+  "description": "Deterministic synthetic seed from tests/benchmarks/run_official_bench.py generate_test_data() — public fixture only (#1288).",
+  "rows": 200000,
+  "workers": 8,
+  "tolerance": "exact",
+  "expected_opencore_hits": 100000,
+  "expected_pro_hits": 100000,
+  "safe_hold_min_speedup": 0.574,
+  "pinned_artifact": "tests/benchmarks/official_benchmark_200k.json"
+}

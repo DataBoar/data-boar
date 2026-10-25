@@ -1,0 +1,3 @@
+Internal ops log — should stay boring for PII detectors.
+SKU-LAB-778899, ticket INC-00042, host lab-pb-01, metric 99.9% uptime.
+No national_id, no email, no phone on this line by design.

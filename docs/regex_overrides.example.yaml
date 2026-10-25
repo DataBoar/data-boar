@@ -1,0 +1,27 @@
+# Example custom regex patterns for sensitivity detection.
+# Copy to e.g. config/regex_overrides.yaml and set in config:
+#   regex_overrides_file: config/regex_overrides.yaml
+# See SENSITIVITY_DETECTION.md (EN) / SENSITIVITY_DETECTION.pt_BR.md (pt-BR) for format and more examples.
+# Each pattern is matched against (column name + sample text). Match → finding reported with HIGH sensitivity.
+# Use double-quoted YAML with escaped backslashes (\\b, \\d, \\s, \\.) so linters and loaders accept; see .cursor/rules/yaml-regex-patterns.mdc.
+
+- name: "RG_BR"
+  pattern: "\\b\\d{1,2}\\.?\\d{3}\\.?\\d{3}-?[0-9Xx]\\b"
+  norm_tag: "LGPD Art. 5"
+
+- name: "PLATE_BR_OLD"
+  pattern: "\\b[A-Z]{3}-?\\d{4}\\b"
+  norm_tag: "Personal data context"
+
+- name: "PLATE_MERCOSUL"
+  pattern: "\\b[A-Z]{3}\\d[A-Z]\\d{2}\\b"
+  norm_tag: "Personal data context"
+
+# CEP (BR): format-only; also matches many 8-digit product/internal codes — validate findings.
+- name: "CEP_BR"
+  pattern: "\\b\\d{5}-?\\d{3}\\b"
+  norm_tag: "LGPD Art. 5"
+
+- name: "US_PHONE"
+  pattern: "\\b\\(?\\d{3}\\)?[-.\\s]?\\d{3}[-.\\s]?\\d{4}\\b"
+  norm_tag: "CCPA / Personal data context"

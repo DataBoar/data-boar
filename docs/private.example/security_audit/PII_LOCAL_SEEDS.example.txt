@@ -1,0 +1,44 @@
+# Copy to docs/private/security_audit/PII_LOCAL_SEEDS.txt and replace PLACEHOLDER_* lines
+# with maintainer-approved literals (one pickaxe string per line).
+#
+# Lines starting with # and blank lines are ignored by scripts/run-pii-local-seeds-pickaxe.ps1
+#
+# --- What belongs here (local literals CI cannot infer) ---
+# - git pickaxe (-S) and git grep -F search for EXACT substrings in history / tree.
+# - Use CI / pii_history_guard / test_pii_guard for PATTERN CLASSES (paths, LinkedIn shape, CPF format).
+# - Use this file for irreducible NAMES, EMAILS, HANDLES, PATH SNIPPETS, ORG/PROJECT tokens you must not leak.
+#
+# --- What does NOT belong here (use other tools) ---
+# - RFC1918 IPs, CPF/CNPJ masks: use the regex greps in docs/ops/PII_PUBLIC_TREE_OPERATOR_GUIDE.md Part I.
+# - Ultra-common surnames alone (one-word searches) unless you accept huge noise in git log output.
+#
+# --- Token / cost discipline ---
+# - Each line is one full pickaxe pass over history: keep the list LEAN; prefer phrases over single tokens.
+# - Order by risk (highest first) so you can stop early if you only need a spot check.
+#
+# --- Replace below with your real literals (delete unused PLACEHOLDER lines) ---
+
+# --- GitHub / git remote snippets ---
+# PLACEHOLDER_GITHUB_ORG_REPO e.g. owner/repo slug fragment
+# PLACEHOLDER_GITHUB_HTTPS
+# PLACEHOLDER_GITHUB_SSH git@github.com:OWNER
+
+# --- Email (full address; one per line) ---
+# PLACEHOLDER_EMAIL_WORK_OR_PERSONAL_1
+# PLACEHOLDER_EMAIL_WORK_OR_PERSONAL_2
+
+# --- Path fragments (machine-specific; use your real segments) ---
+# PLACEHOLDER_WINDOWS_USERS_FABIO_STYLE C:\Users\<segment>\
+# PLACEHOLDER_WINDOWS_LOWER c:\users\<segment>
+# PLACEHOLDER_LINUX_HOME /home/<segment>/
+
+# --- LinkedIn (full URL or path suffix if you must match a specific profile) ---
+# PLACEHOLDER_LINKEDIN_URL_OR_SUFFIX
+
+# --- Names: prefer full name or rare bigrams over isolated given names ---
+# PLACEHOLDER_FULL_NAME_BIGRAM
+# PLACEHOLDER_FAMILY_OR_COLLABORATOR_HANDLE
+
+# --- Employer / case / product tokens (only if they must never appear in public tree) ---
+# PLACEHOLDER_ORG_ACRONYM
+# PLACEHOLDER_CASE_KEYWORD

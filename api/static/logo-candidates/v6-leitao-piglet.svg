@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">Compliance Crawler - Leitao (piglet) identity and data</title>
+  <desc id="desc">Cartoon piglet head facing left, following scent from the left. Cute, shaded for volume. Original design.</desc>
+  <defs>
+    <!-- Head: rounded 3D -->
+    <radialGradient id="headGrad" cx="40%" cy="35%" r="75%" fx="35%" fy="30%">
+      <stop offset="0%" stop-color="#fce4e0"/>
+      <stop offset="55%" stop-color="#f0b8b8"/>
+      <stop offset="100%" stop-color="#e09090"/>
+    </radialGradient>
+    <!-- Ear -->
+    <radialGradient id="earGrad" cx="30%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#f5c4c0"/>
+      <stop offset="100%" stop-color="#e0a0a0"/>
+    </radialGradient>
+    <!-- Snout (smaller, 3/4 view) -->
+    <radialGradient id="snoutGrad" cx="25%" cy="40%" r="80%" fx="20%" fy="35%">
+      <stop offset="0%" stop-color="#fce0dc"/>
+      <stop offset="50%" stop-color="#f0b8b8"/>
+      <stop offset="100%" stop-color="#e09090"/>
+    </radialGradient>
+    <radialGradient id="nostrilGrad" cx="45%" cy="45%" r="60%">
+      <stop offset="0%" stop-color="#604040"/>
+      <stop offset="70%" stop-color="#905050"/>
+      <stop offset="100%" stop-color="#a05858"/>
+    </radialGradient>
+    <!-- Soft shadow -->
+    <filter id="softShadow" x="-25%" y="-15%" width="150%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="4"/>
+      <feOffset dx="3" dy="4" result="offsetblur"/>
+      <feFlood flood-color="#503838" flood-opacity="0.3"/>
+      <feComposite in2="offsetblur" operator="in"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <!-- Snout highlight -->
+    <radialGradient id="snoutHighlight" cx="20%" cy="25%" r="45%">
+      <stop offset="0%" stop-color="#fff8f6" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#fff8f6" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <!-- Scent trail: from far left, wavy, drifting toward the nose (left to right) -->
+  <path d="M 6 58 Q 14 62 22 60 Q 30 58 36 62 Q 40 64 38 66" fill="none" stroke="#d49898" stroke-width="1.8" stroke-linecap="round" opacity="0.45"/>
+  <path d="M 8 64 Q 16 68 24 66 Q 32 64 38 68 Q 42 70 40 72" fill="none" stroke="#d49898" stroke-width="1.6" stroke-linecap="round" opacity="0.4"/>
+  <path d="M 10 70 Q 18 74 26 72 Q 34 70 40 74" fill="none" stroke="#e0a8a8" stroke-width="1.4" stroke-linecap="round" opacity="0.35"/>
+  <!-- Pig head group: angled left (slight rotation), with shadow -->
+  <g filter="url(#softShadow)">
+    <!-- Head (main circle) -->
+    <circle cx="80" cy="62" r="34" fill="url(#headGrad)" stroke="#e0a8a8" stroke-width="1.5"/>
+    <!-- Ear (one visible, right side) -->
+    <ellipse cx="98" cy="38" rx="12" ry="16" fill="url(#earGrad)" stroke="#e0a0a0" stroke-width="1.2" transform="rotate(25 98 38)"/>
+    <!-- Snout: smaller, extending left from head (3/4 view) -->
+    <ellipse cx="42" cy="62" rx="18" ry="14" fill="url(#snoutGrad)" stroke="#e0a8a8" stroke-width="1.2"/>
+    <ellipse cx="34" cy="58" rx="8" ry="6" fill="url(#snoutHighlight)"/>
+    <!-- Nostril (one clearly visible in 3/4 view; second smaller) -->
+    <ellipse cx="36" cy="62" rx="5" ry="6" fill="url(#nostrilGrad)" stroke="#5a3838" stroke-width="0.6"/>
+    <ellipse cx="44" cy="64" rx="3" ry="4" fill="url(#nostrilGrad)" stroke="#5a3838" stroke-width="0.5"/>
+    <!-- Eye (one visible, cute) -->
+    <circle cx="88" cy="54" r="6" fill="#2a2a2a" stroke="#1a1a1a" stroke-width="0.6"/>
+    <circle cx="89" cy="52.5" r="1.8" fill="#fff" opacity="0.9"/>
+  </g>
+</svg>

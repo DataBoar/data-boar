@@ -1,0 +1,36 @@
+---
+description: When editing MAP, docs README hub tables, adr README index, AGENTS ADR pointer, or plans sequencing—run plans_hub_sync/plans-stats and paired EN/pt-BR updates. Prevents silent drift vs PLANS_HUB and ADR truth.
+globs:
+  - "docs/MAP.md"
+  - "docs/MAP.pt_BR.md"
+  - "docs/README.md"
+  - "docs/README.pt_BR.md"
+  - "docs/adr/README.md"
+  - "docs/adr/README.pt_BR.md"
+  - "AGENTS.md"
+  - "docs/plans/PLANS_TODO.md"
+  - "docs/plans/PLANS_HUB.md"
+  - "docs/plans/**/*.md"
+alwaysApply: false
+---
+
+# Doc hubs and plans — sync ritual (assistant)
+
+## Non-negotiable automation (already in pre-commit)
+
+- After any **`PLAN_*.md`** add/rename/move or **`PLANS_TODO.md`** table row change: **`python scripts/plans_hub_sync.py --write`** and **`python scripts/plans-stats.py --write`** as required by **`.cursor/rules/docs-plans.mdc`** and **CONTRIBUTING.md**. CI blocks drift via `--check`.
+- Do not tell the operator the hub is “fresh” if those commands were not run when plans files changed.
+
+## Manual hubs (agent must verify in the same PR)
+
+- **`docs/MAP.md`** / **`docs/MAP.pt_BR.md`**: rows must point to existing paths; follow **ADR 0004** (no product-tier markdown links into `docs/plans/` from MAP—entry remains **docs/README**).
+- **`docs/adr/README*.md`**: new **ADR NNNN** files require index rows. **Do not** add or bump a “Current last ADR” number in **`AGENTS.md`** — discover the next id from **`docs/adr/ADR-*.md`** (or **`.\scripts\new-adr.ps1`**).
+
+## Skill
+
+Full checklist: **`.cursor/skills/doc-hubs-plans-sync/SKILL.md`**.
+
+## What this rule does **not** replace
+
+- **Operator judgement** on what is “notable” sequencing (still update `PLANS_TODO` when reality shifts).
+- **`private-git-sync`** / stacked private git (separate ritual).

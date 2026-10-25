@@ -1,0 +1,16 @@
+---
+- name: Write restricted sudoers include for LAB-OP host report (opt-in)
+  when: lab_node_01_labop_sudoers_enable | bool
+  ansible.builtin.template:
+    src: labop-host-report.sudoers.j2
+    dest: "{{ lab_node_01_labop_sudoers_include_path }}"
+    owner: root
+    group: root
+    mode: "0440"
+  failed_when: false
+
+- name: Validate sudoers include syntax (visudo -c)
+  when: lab_node_01_labop_sudoers_enable | bool
+  ansible.builtin.command: "visudo -cf {{ lab_node_01_labop_sudoers_include_path }}"
+  changed_when: false
+  failed_when: false

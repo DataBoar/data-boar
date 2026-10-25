@@ -1,0 +1,4 @@
+data_boar_image: "fabioleitao/data_boar:latest"
+data_boar_port:  8088
+data_boar_dir:   "/opt/data_boar"
+swarm_enabled:   false

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">Compliance Crawler logo - cream paper, crawler rays</title>
+  <desc id="desc">C-shaped mark on cream notepad; teal table/database; dotted/crawler-style scan rays.</desc>
+  <rect x="0" y="0" width="128" height="128" fill="#faf6ef"/>
+  <line x1="16" y1="42" x2="112" y2="42" stroke="#e8e2d8" stroke-width="0.8"/>
+  <line x1="16" y1="64" x2="112" y2="64" stroke="#e8e2d8" stroke-width="0.8"/>
+  <line x1="16" y1="86" x2="112" y2="86" stroke="#e8e2d8" stroke-width="0.8"/>
+  <path d="M 102 42 A 44 44 0 1 0 102 86 L 88 78 A 28 28 0 1 0 88 50 Z" fill="#145DA0"/>
+  <rect x="69" y="51" width="24" height="26" rx="3" ry="3" fill="none" stroke="#21A179" stroke-width="2"/>
+  <rect x="71" y="53" width="20" height="6" fill="#21A179" opacity="0.9"/>
+  <line x1="71" y1="62" x2="91" y2="62" stroke="#21A179" stroke-width="1.2"/>
+  <line x1="71" y1="70" x2="91" y2="70" stroke="#21A179" stroke-width="1.2"/>
+  <line x1="71" y1="74" x2="91" y2="74" stroke="#21A179" stroke-width="1.2"/>
+  <line x1="24" y1="46" x2="40" y2="46" stroke="#145DA0" stroke-width="2" stroke-dasharray="3 2" stroke-linecap="round"/>
+  <line x1="22" y1="64" x2="42" y2="64" stroke="#145DA0" stroke-width="2.5" stroke-dasharray="4 2" stroke-linecap="round"/>
+  <line x1="24" y1="82" x2="40" y2="82" stroke="#145DA0" stroke-width="2" stroke-dasharray="3 2" stroke-linecap="round"/>
+  <circle cx="26" cy="46" r="2" fill="#145DA0"/>
+  <circle cx="26" cy="64" r="2.5" fill="#145DA0"/>
+  <circle cx="26" cy="82" r="2" fill="#145DA0"/>
+</svg>

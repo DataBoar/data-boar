@@ -1,0 +1,36 @@
+---
+description: Documentation .md files use UPPERCASE subject names; code, config, rules, and skills use lowercase. Use when creating or renaming files under docs/, .cursor/, or repo root.
+globs: ["docs/**/*.md", "**/*.md", "**/*.yaml", "**/*.yml", ".cursor/**/*.mdc", ".cursor/**/SKILL.md"]
+alwaysApply: false
+---
+
+# Documentation vs code/config naming
+
+Keep **consistency and readability** by following these conventions.
+
+## Documentation files (.md in docs/ or root)
+
+- **Subject part of the filename:** Use **UPPERCASE with underscores** when the name refers to the content subject (e.g. `SENSITIVITY_DETECTION.md`, `MINOR_DETECTION.pt_BR.md`, `OBSERVABILITY_SRE.md`, `COMPLIANCE_FRAMEWORKS.md`, `LOGO_CANDIDATES.md`).
+- **Extension and language hint:** Do **not** capitalize the `.md` extension or the language suffix. Keep the language hint as given (e.g. `.pt_BR.md`), so translated docs look like `SENSITIVITY_DETECTION.pt_BR.md` or `OBSERVABILITY_SRE.pt_BR.md`.
+- **Root docs:** Same rule: `README.md`, `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md` (already conventional). New substantive docs in `docs/` should use `UPPERCASE_SUBJECT.md` (and `UPPERCASE_SUBJECT.pt_BR.md` when translated).
+- **Plan files:** Already under `docs/plans/` with names like `PLANS_TODO.md`, `PLAN_*.md`; keep that style.
+- **Release notes:** Versioned names like `1.4.0.md` under `docs/releases/` are fine as-is.
+
+## Code, config, rules, and skills (lowercase)
+
+- **Source code:** `app.py`, `detector.py`, `loader.py`, etc. — lowercase with underscores where appropriate.
+- **Config and example files:** `config.yaml`, `config.example.yaml`, `regex_overrides.example.yaml`, `sensitivity_terms.example.yaml`, `sensitivity_terms_sensitive_categories.example.yaml` — lowercase; no need to capitalize.
+- **Cursor rules:** `.cursor/rules/*.mdc` — use lowercase with hyphens (e.g. `markdown-lint.mdc`, `docs-policy.mdc`, `docs-plans.mdc`, `quality-sonarqube-codeql.mdc`).
+- **Cursor skills:** Folder names and `SKILL.md` / `reference.md` under `.cursor/skills/` — keep as-is (e.g. `documentation-en-pt-br/SKILL.md`, `sensitive-data-detection/reference.md`).
+- **Templates and static assets:** Follow existing project style (e.g. `help.html`, `config.yaml`).
+
+## When adding new documentation
+
+1. Create the doc with an **UPPERCASE subject** name (e.g. `docs/NEW_TOPIC.md` and, if translated, `docs/NEW_TOPIC.pt_BR.md`).
+1. Link to it using the same casing so links resolve and the index stays consistent.
+1. Do **not** create new docs in `docs/` with lowercase subject names (e.g. avoid `docs/new-topic.md`).
+
+## Reference
+
+- **Doc index:** `docs/README.md` — all doc links use the UPPERCASE naming.
+- **Plans:** `.cursor/rules/docs-plans.mdc` — plan files live under `docs/plans/` and `docs/plans/completed/`.

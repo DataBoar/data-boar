@@ -1,0 +1,68 @@
+# Argentina PDPA – sample compliance profile (Ley 25.326, DNPDP)
+#
+# Target audience: Argentina and Mercosur deployments. Dirección Nacional de Protección
+# de Datos Personales (DNPDP). Terms in Spanish and English (datos personales / personal data).
+#
+# How to use:
+#   1. Set in your main config:
+#        regex_overrides_file: path/to/compliance-sample-argentina_pdpa.yaml
+#        ml_patterns_file: path/to/compliance-sample-argentina_pdpa.yaml
+#   2. Merge the recommendation_overrides list below into your config under report.recommendation_overrides.
+#
+# Argentina: Ley 25.326; DNPDP; Registro Nacional de Datos Personales.
+
+regex:
+  - name: "CUIT_AR"
+    pattern: "\\b\\d{2}-?\\d{8}-?\\d\\b"
+    norm_tag: "Argentina PDPA"
+  - name: "CUIL_AR"
+    pattern: "\\b20-?\\d{8}-?\\d\\b"
+    norm_tag: "Argentina PDPA"
+  # DNI: 7–8 digits. Same shape as many internal numeric IDs and counters — expect false
+  # positives outside true ID columns; tighten with a stricter regex in a private override if needed.
+  - name: "DNI_AR"
+    pattern: "\\b\\d{7,8}\\b"
+    norm_tag: "Argentina PDPA"
+
+# ML terms: Spanish and English (datos personales, personal data, DNPDP).
+terms:
+  - text: "datos personales"
+    label: sensitive
+  - text: "personal data"
+    label: sensitive
+  - text: "titular de datos"
+    label: sensitive
+  - text: "data subject"
+    label: sensitive
+  - text: "responsable del archivo"
+    label: sensitive
+  - text: "data controller"
+    label: sensitive
+  - text: "dnpdp"
+    label: sensitive
+  - text: "dirección nacional de protección de datos personales"
+    label: sensitive
+  - text: "registro nacional de datos personales"
+    label: sensitive
+  - text: "consentimiento"
+    label: sensitive
+  - text: "consent"
+    label: sensitive
+  - text: "ley 25.326"
+    label: sensitive
+  - text: "habeas data"
+    label: sensitive
+  - text: "cuit"
+    label: sensitive
+  - text: "cuil"
+    label: sensitive
+  - text: "dni"
+    label: sensitive
+
+recommendation_overrides:
+  - norm_tag_pattern: "Argentina PDPA"
+    base_legal: "Ley 25.326 (Protección de Datos Personales); DNPDP"
+    risk: "Datos personales; obligaciones del responsable del archivo; registro y consentimiento."
+    recommendation: "Cumplir Ley 25.326; inscribir en el Registro Nacional si corresponde; obtener consentimiento y garantizar derechos del titular."
+    priority: "ALTA"
+    relevant_for: "DPO, DNPDP, Responsable del archivo"

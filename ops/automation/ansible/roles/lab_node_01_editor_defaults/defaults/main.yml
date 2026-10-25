@@ -1,0 +1,15 @@
+---
+# Editor defaults are opt-in because editors are personal preference.
+lab_node_01_editor_enable: false
+
+# Install editor packages (best-effort).
+lab_node_01_editor_install: true
+lab_node_01_editor_packages:
+  - neovim
+  - vim-tiny
+  - nano
+
+# Set Debian alternatives for /usr/bin/editor.
+# Valid values depend on what's installed; common: /usr/bin/nvim, /bin/nano, /usr/bin/vim.tiny, /bin/ed
+lab_node_01_editor_alternative_path: /usr/bin/nvim
+

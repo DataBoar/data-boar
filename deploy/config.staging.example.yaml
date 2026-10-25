@@ -1,0 +1,23 @@
+# ---------------------------------------------------------------------------
+# Staging / lab example — merge these keys into your real config (or start
+# from deploy/config.example.yaml and paste sections below).
+# ---------------------------------------------------------------------------
+# Fuzzy column matching requires rapidfuzz:
+#   uv sync --group dev
+#   OR:  pip install ".[detection-fuzzy]"
+# If reports are too noisy, raise fuzzy_column_match_min_ratio (e.g. 88–95).
+#
+# See: docs/SENSITIVITY_DETECTION.md · docs/plans/Corporate-Entity-C_ANALISE_2026-03-18.md
+# ---------------------------------------------------------------------------
+
+sensitivity_detection:
+  fuzzy_column_match: true
+  fuzzy_column_match_min_confidence: 25
+  fuzzy_column_match_max_confidence: 45
+  fuzzy_column_match_min_ratio: 85
+  # Lab: SQL type length + ID-like names → MEDIUM (see SENSITIVITY_DETECTION.md)
+  connector_format_id_hint: true
+
+# Optional: surface ID-like LOW columns on "Suggested review (LOW)" (multi-connector).
+detection:
+  persist_low_id_like_for_review: true

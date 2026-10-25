@@ -1,0 +1,80 @@
+# Operator help sync — backlog checklist
+
+**Purpose:** Keep every **surface** where operators learn about flags and options aligned with the real implementation. This doc is a **reminder / audit list**, not the canonical reference (see `docs/USAGE.md`, `docs/data_boar.1`, web `/help`, OpenAPI).
+
+**When to use:** Say **`docs`** + “operator help audit” in a session, or run through this after adding CLI flags, API bodies, or dashboard controls.
+
+**Automation:** Extend **`tests/operator_help_sync_manifest.py`** when adding operator-visible behaviour; run **`uv run pytest tests/test_operator_help_sync.py`**. Cursor rule **`.cursor/rules/operator-help-sync.mdc`** applies when editing listed paths; skill **`.cursor/skills/operator-help-sync/SKILL.md`** summarises the workflow for agents.
+
+## Surfaces to keep in sync
+
+| Surface                | Location / how                            | Notes                                                                                                                              |
+| -------                | --------------                            | -----                                                                                                                              |
+| **CLI `--help`**       | `main.py` (`argparse`)                    | Source of truth for flags; contract tests in `tests/test_operator_help_sync.py` + manifest `tests/operator_help_sync_manifest.py`. |
+| **Man page**           | `docs/data_boar.1`                        | Synopsis + `.SH OPTIONS`; install path varies by distro/package.                                                                   |
+| **USAGE (EN + pt-BR)** | `docs/USAGE.md`, `docs/USAGE.pt_BR.md`    | Tables and “REST API server” sections must match bind/port resolution (`core/host_resolution.py`).                                 |
+| **README quick start** | `README.md`, `README.pt_BR.md`            | At least link to USAGE for full flags; mention `--host` when discussing exposure.                                                  |
+| **Web in-app help**    | Dashboard `/help` templates / static copy | Should not contradict USAGE for scan options and API entrypoints.                                                                  |
+| **OpenAPI / Swagger**  | `api/routes` and related                  | Request bodies (e.g. `/scan` JSON) and documented query params.                                                                    |
+| **Deploy / security**  | `docs/deploy/DEPLOY*.md`, `SECURITY.md`   | Binding, `API_HOST`, reverse proxy — consistent with loopback-by-default story.                                                    |
+
+## Resolution order (API bind)
+
+Documented in code: **`main.py --host`** → **`api.host`** → **`API_HOST`** → default **`127.0.0.1`**. Any new override (e.g. another env var) must update `core/host_resolution.py`, USAGE, man, and this table if we publish it.
+
+## Done recently (changelog)
+
+- **2026-09-11 (CLI `--reconcile-integrity-anchor` #1262):** Operator-confirmed integrity re-baseline after official upgrades; `--confirm-upgrade-to` must match the running package. Surfaces: **`main.py`**, **`docs/USAGE*.md`**, **`docs/data_boar.1`**, **`api/templates/help.html`**, **`api/locales/*.json`**, **`tests/operator_help_sync_manifest.py`**.
+- **2026-08-28 (report ODS #553 Part A):** `report.formats` allowlist `xlsx`/`ods`; `GET /report?format=ods` and `GET /reports/{session_id}?format=ods`. Surfaces: **`docs/USAGE*.md`**, **`docs/data_boar.5`**, **`api/templates/help.html`**, **`tests/operator_help_sync_manifest.py`**.
+
+- **2026-08-28 (CLI `--resume` SQL table checkpoints #1330):** Resume interrupted DB scans; skip completed tables. Surfaces: **`main.py --resume`**, **`scan_table_checkpoints`**, **`docs/USAGE*.md`**, **`docs/data_boar.1`**, **`api/templates/help.html`**, **`tests/operator_help_sync_manifest.py`**, **`tests/test_sql_scan_resume.py`**.
+
+- **2026-08-28 (CLI `--plan` scan preview #1329):** Dry-run catalog + TCP RTT floor before a live SQL scan. Surfaces: **`main.py --plan`**, **`core/scan_plan.py`**, **`docs/USAGE*.md`**, **`docs/data_boar.1`**, **`api/templates/help.html`**, **`tests/operator_help_sync_manifest.py`**, **`tests/test_scan_plan.py`**.
+
+- **2026-08-27 (CLI `--export-l3` persist containment #1334):** `--l3-persist` fail-closed: POSIX `0600`; Windows apply `icacls`, verify well-known SIDs (OWNER RIGHTS `S-1-3-4` is owner-equivalent; not localized names). Unproven containment → exit **5**; optional **`--l3-allow-unprotected`**. Surfaces: **`docs/USAGE*.md`**, **`docs/SDK.md`**, **`docs/data_boar.1`**, **`api/templates/help.html`**, **`tests/operator_help_sync_manifest.py`**.
+
+- **2026-08-27 (CLI `--export-l3` #1334):** L3 `transformed_rows` JSON via **`main.py --export-l3 SESSION_ID --l3-grant PATH`**; optional **`--l3-persist`** (never default). **`core/l3_transformed_rows.py`**. Pin: **`docs/sdk/transformed_rows.schema.json`** + **`.pin.json`**. Surfaces: **`docs/data_boar.1`**, **`api/templates/help.html`**, **`docs/USAGE*.md`**, **`tests/operator_help_sync_manifest.py`**, **`tests/test_l3_transformed_rows.py`**.
+
+- **2026-08-28 (bind-gate #1714):** Non-loopback **`--web`** bind **exits 2** unless **`api.require_api_key: true`** and a key is resolved (configured key or WebAuthn secret without the flag is not enough). Docs: **USAGE** (EN + pt-BR), root **SECURITY**, **`docs/ops/SECURE_DASHBOARD_AUTH_AND_HTTPS_HOWTO*`**. Tests: **`tests/test_host_resolution.py`**, **`tests/test_main_web_transport_cli.py`**.
+
+- **2026-08-27 (CLI `--export-l1` #1333):** L1 `metadata_manifest` JSON via **`main.py --export-l1 SESSION_ID`** with **`--l1-output`**; **`core/l1_metadata_manifest.py`**. Pin: **`docs/sdk/metadata_manifest.schema.json`** + **`.pin.json`**. Surfaces: **`docs/data_boar.1`**, **`api/templates/help.html`**, **`docs/USAGE*.md`**, **`tests/operator_help_sync_manifest.py`**, **`tests/test_l1_metadata_manifest.py`**.
+
+- **2026-08-19 (`--validate-config` no side effects on `[INVALID]` #538):** Pre-flight aborts before `report.output_dir` mkdir, sqlite parent, or integrity-anchor `sqlite3.connect`. Surfaces: **`main.py --help`**, **`docs/data_boar.1`**, **`docs/USAGE*.md`**, **`tests/test_main_validate_config.py`**.
+
+- **2026-08-19 (`use_content_type` vs archives #1354):** Option **(b)** — `--content-type-check` / `file_scan.use_content_type` does **not** dispatch compressed archives; lying extension → `archive_type_mismatch` in `scan_failures`. Surfaces: **`main.py --help`**, **`docs/data_boar.1`**, **`docs/data_boar.5`**, **`docs/USAGE*.md`**, **`api/templates/help.html`**, **`api/locales/*.json`**, **`tests/operator_help_sync_manifest.py`**, **`tests/test_archive_type_mismatch.py`**.
+- **2026-07-31 (`/logs` RBAC align #1190):** `_authorize_audit_log_download` requires a principal **only** when `rbac_enforcement_active` (same gate as RBAC middleware). Demo no longer provisions/prints an API key. Surfaces: **`api/routes.py`**, **`core/demo/runtime.py`**, **`main.py --help`**, **`docs/data_boar.1`**, **`docs/USAGE*.md`**, **`api/locales/*.json`**, **`tests/test_demo_logs_1218.py`**, **`tests/test_logs_auth_rbac_align_1190.py`**.
+- **2026-08-02 (`--check-extras` / container `/extras` #1400–#1402):** Optional extras inventory + runtime mount troubleshooting. **`main.py --check-extras`**, **`EXTRAS_MANIFEST.json`**, man §1, **`docs/USAGE*.md`**, **`docs/DOCKER_SETUP*.md`**, **`api/templates/help.html`**, **`tests/operator_help_sync_manifest.py`**, **`tests/test_extras_manifest_and_runtime.py`**.
+- **2026-07-31 (`--prefilter-status` / regex-stage observability #1411–#1412):** Surfaces for Rust accelerator readiness (not skip/latch framing — product path is same-regex-stage / form B per **#1414** / ADR-0083). **`main.py --prefilter-status`**, **`--validate-config`** WARN/OK, **`GET /status` → `detection_prefilter`**, man §1/§5, **`docs/USAGE*.md`**, **`docs/TECH_GUIDE*.md`**, **`api/templates/help.html`**, **`tests/operator_help_sync_manifest.py`**, **`tests/test_prefilter_cli_scan_path_1411.py`**.
+- **2026-07-27 (`--regenerate-report` + output pre-flight):** **`main.py --regenerate-report SESSION_ID`** regenerates Excel + heatmap from SQLite (#1325); **`--validate-config`** and **`start_audit`** create missing **`report.output_dir`**, **`sqlite_path`** parent, and **`learned_patterns.output_file`** parent (#1324). Updated **`docs/data_boar.1`**, **`api/templates/help.html`**, **`docs/USAGE*.md`**, **`tests/operator_help_sync_manifest.py`**, **`tests/test_output_paths_and_regenerate_report.py`**.
+- **2026-05-18 (CLI `--export-dsar`):** DSAR-oriented JSON via **`main.py --export-dsar SESSION_ID`** with **`--dsar-output`** and **`--dsar-include-samples`**; **`core/dsar_export.py`**. Updated **`docs/data_boar.1`**, **`api/templates/help.html`**, **`docs/USAGE*.md`**, **`docs/TECH_GUIDE*.md`**, **`tests/operator_help_sync_manifest.py`**, **`tests/test_dsar_export.py`**.
+- **2026-05-18 (CLI `--validate-config`):** Pre-flight config load via **`main.py --validate-config`** (incompatible with **`--web`**, **`--reset-data`**, **`--export-audit-trail`**). Updated **`docs/data_boar.1`**, **`api/templates/help.html`**, **`docs/USAGE*.md`**, **`docs/TECH_GUIDE*.md`**, **`tests/operator_help_sync_manifest.py`**, **`tests/test_main_validate_config.py`**. Re-run **`uv run pytest tests/test_operator_help_sync.py tests/test_main_validate_config.py`** after edits.
+- **2026-05-18 (CLI `--diff`):** Session delta via **`main.py --diff SESSION_A SESSION_B`** and optional **`--fail-on-new-high`**; **`LocalDBManager.diff_sessions`**. Docs/manifest/tests: **`tests/test_cli_diff.py`**, **`tests/operator_help_sync_manifest.py`**, USAGE, TECH_GUIDE, help.html.
+- **2026-05-14 (findings API + SQL env — help sync):** Documented **`GET /findings`**, **`/findings/csv`**, session-scoped JSON/CSV, and env vars **`DATA_BOAR_SQL_SAMPLE_LIMIT`** / **`DATA_BOAR_SAMPLE_STATEMENT_TIMEOUT_MS`** on **`docs/data_boar.1`** (WEB + ENVIRONMENT), **`api/templates/help.html`** + **`api/locales/*.json`**, and **`tests/operator_help_sync_manifest.py`**. Re-run **`uv run pytest tests/test_operator_help_sync.py`** after changing these surfaces.
+- **2026-04-08 (data soup / stego / help sync):** CLI **`--scan-stego`**, web **`/help`** and **`tests/operator_help_sync_manifest.py`** marker, **`docs/data_boar.1`**, **`USAGE*.md`** (Tier 1 formats + `scan_for_stego`). Run **`uv run pytest tests/test_operator_help_sync.py`** after changing operator surfaces.
+- **2026-04 (maturity POC — web export):** **`GET /{locale}/assessment/export`** (`format=csv|md`, **attachment**) documents the same POC as **`GET /{locale}/assessment`** — **USAGE** (EN + pt-BR) is canonical for URL, **`api.require_api_key`**, and “download vs on-disk” (no server path under **`report.output_dir`**). CLI **`--export-audit-trail`** remains the JSON governance snapshot (**`maturity_assessment_integrity`**); **man** (`docs/data_boar.1`) stays CLI-focused. Tests: **`tests/test_api_assessment_poc.py`**, **`tests/test_api_route_matrix_plan_sync.py`**.
+- **2026-04 (maturity POC / audit export):** **`--export-audit-trail`** JSON includes **`maturity_assessment_integrity`** (same object as **`GET /status`**). Updated **`main.py --help`**, **`docs/USAGE*.md`**, **`docs/data_boar.1`**. Tests: **`tests/test_audit_export.py`**, **`tests/test_maturity_assessment_integrity.py`** (golden HMAC vector).
+- **2026-03:** Wired **`--host`** into CLI (`main.py`) and extended man + USAGE; added regression test for `--help` listing core flags; corrected USAGE binding text (was incorrectly implying default `0.0.0.0` for `main.py --web`).
+- **2026-03 (sync pass):** **`docs/data_boar.5`** — `file_scan.scan_compressed` / `use_content_type`, **`api.host`** / `API_HOST` / CLI precedence; man §1 cross-ref line updated. **`api/templates/help.html`** — `uv run`, one-shot vs `--web`, bind order, `--reset-data` warning, config YAML comments; **dashboard** link to Help for CLI parity on scan options.
+- **2026-03-25:** Dashboard transport — **`--https-cert-file`**, **`--https-key-file`**, **`--allow-insecure-http`**; `GET /status` + `/health` **`dashboard_transport`**; **`tests/operator_help_sync_manifest.py`** markers; Docker **`CMD`** explicit plaintext for default image.
+- **2026-03-25 (API key hardening):** When **`api.require_api_key`** is true but no key is resolved, **`main.py --web`** exits **2**; API returns **503** on protected routes; **`GET /health`** stays public. Docs: **USAGE** (EN/pt-BR), root **SECURITY**, **`docs/SECURITY*`**, **`docs/ops/API_KEY_FROM_ENV_OPERATOR_STEPS.md`**, **`SECURE_BY_DEFAULT_BLOCKERS_AND_MIGRATION*`**. Tests: **`tests/test_api_key.py`**, **`tests/test_host_resolution.py`**.
+- **2026-03-25 (technician how-to):** **`docs/ops/SECURE_DASHBOARD_AUTH_AND_HTTPS_HOWTO.md`** + **`.pt_BR.md`** — end-to-end API key + HTTPS (Let’s Encrypt, lab self-signed, Docker); indexed in **`docs/README.md`**, **`docs/ops/README.md`**, linked from root **SECURITY**, **USAGE**, **API_KEY_FROM_ENV**, **SECURE_BY_DEFAULT**.
+- **2026-03-30 (carryover / houseclean):** Web **`/help`** vs **`main.py`** — no new CLI flags since the 2026-03-25 dashboard transport pass; **`uv run pytest tests/test_operator_help_sync.py`** green; **`api/templates/help.html`** still documents bind order, TLS/plaintext, and one-shot toggles consistent with **`tests/operator_help_sync_manifest.py`**.
+- **2026-03-30 (session):** Help-sync gate re-run — **`uv run pytest tests/test_operator_help_sync.py -v`** green (CLI, `/help`, man §1); no manifest changes required.
+- **2026-03-27 (today-mode):** **`uv run pytest tests/test_operator_help_sync.py -v`** green; OpenAPI follow-up closed in **Follow-ups** (code-anchored `ScanStartBody` + `/docs` check); **`.\scripts\recovery-doc-bundle-sanity.ps1`** OK with **`pwsh`** (use **`pwsh`**, not legacy **`powershell`**, if the script errors — em-dash removed from Tip line for PS 5.1).
+- **2026-04-08 (M-LOCALE-V1):** Dashboard HTML uses **`/{locale_slug}/…`** (e.g. **`/en/help`**, **`/pt-br/help`**). Unprefixed **`/help`** (and **`/`**, **`/config`**, **`/reports`**, **`/about`**) **302** to the negotiated slug; **`GET /help`** in **`tests/test_operator_help_sync.py`** still passes because **Starlette `TestClient` follows redirects** to the locale template (markers unchanged; **`tests/operator_help_sync_manifest.py`** not edited this pass). USAGE / TECH_GUIDE describe prefix vs JSON API; optional **`locale`** block in **`deploy/config.example.yaml`**.
+
+## Next verification pass (objective code ↔ docs)
+
+After realignment work on CLI/API/help surfaces, from the repo root:
+
+```bash
+uv run pytest tests/test_operator_help_sync.py -v
+```
+
+Then re-walk **Follow-ups** below (OpenAPI vs `POST /scan` bodies, README **`--host`** when discussing exposure, web **`/help`** after new flags). This is the **objective** sync gate agreed post-realignment—run before treating the slice as complete.
+
+## Follow-ups (optional)
+
+- [x] **OpenAPI** vs `POST /scan` / `POST /start` — request body model is **`ScanStartBody`** in **`api/routes.py`**: optional `tenant`, `technician`, `scan_compressed`, `content_type_check`, `scan_for_stego`, `jurisdiction_hint` (nullable booleans/strings as per model). FastAPI serves the generated schema at **`/openapi.json`** / **`/docs`** when `--web` is running — spot-check there after schema changes; USAGE documents scan behaviour.
+- [x] **README** one-liner: mention **`--host`** when describing LAN/Docker-less runs — **done** in EN + pt-BR quick start (bind `127.0.0.1`, `--host 0.0.0.0` only with network controls); re-open if quick start text moves.
+- [ ] Re-diff **Web `/help`** after each new CLI flag or dashboard control.

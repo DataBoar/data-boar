@@ -1,0 +1,27 @@
+# Example: scan a generic Linux user home on the same host (synthetic / operational text only).
+# Copy beside config.lab-fs-varlog.example.yaml; replace `user` with your lab username if needed.
+
+targets:
+  - name: FS_home_user_local
+    type: filesystem
+    path: /home/user/databoar-lab-scan
+    recursive: true
+
+file_scan:
+  extensions: [.txt, .csv, .md, .yaml, .yml, .log, .json]
+  recursive: true
+  scan_compressed: false
+  sample_limit: 5
+  file_sample_max_chars: 8000
+
+report:
+  output_dir: ./reports/lab_fs_home
+
+sqlite_path: ./reports/lab_fs_home/audit_fs_home.db
+
+scan:
+  max_workers: 1
+
+rate_limit:
+  max_concurrent_scans: 1
+  min_interval_seconds: 2

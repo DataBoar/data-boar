@@ -1,0 +1,13 @@
+---
+# Avoid systemctl here: same D-Bus issue as the main task when the bus is down.
+- name: Restart fail2ban
+  ansible.builtin.shell: |
+    set -euo pipefail
+    if [ -x /etc/init.d/fail2ban ]; then
+      /etc/init.d/fail2ban restart
+    else
+      fail2ban-client reload 2>/dev/null || fail2ban-client restart || true
+    fi
+  args:
+    executable: /bin/bash
+  failed_when: false

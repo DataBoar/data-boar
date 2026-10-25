@@ -1,0 +1,10 @@
+{
+  "benchmark": "lab_ab_lgpd_filesystem",
+  "corpus_id": "synthetic_lgpd_10file",
+  "description": "Operator A/B precedent (v1.7.3 vs v1.7.4-rc): synthetic LGPD filesystem corpus under tests/data/ via tests/config/benchmark-rc.yaml — not customer data (#1288).",
+  "config": "tests/config/benchmark-rc.yaml",
+  "tolerance": "exact",
+  "expected_findings_legacy": 26,
+  "expected_findings_candidate": 26,
+  "lab_evidence": "10816ms vs 10330ms wall-clock with 26 findings on both sides (manual check before #1338 gate)."
+}

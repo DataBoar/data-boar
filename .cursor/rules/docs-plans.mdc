@@ -1,0 +1,73 @@
+---
+description: Where plan files live and how to complete a plan without breaking links. Use when creating, moving, or completing plan docs under docs/plans/.
+globs: ["docs/plans/**/*.md", "**/PLAN_*.md", "**/PLANS_TODO.md"]
+alwaysApply: false
+---
+
+# Plan files location and completion workflow
+
+Plan documents are kept in a **dedicated subfolder** so they do not mix with operator-facing documentation and how-tos.
+
+## Location
+
+- **Open plans:** `docs/plans/` — `PLANS_TODO.md` and all active `PLAN_*.md` files.
+- **Completed plans:** `docs/plans/completed/` — Archived plan documents and the implementation checklist (`NEXT_STEPS.md`).
+
+Do **not** put plan files in `docs/` root or in `docs/completed/` (that folder was retired in favour of `docs/plans/completed/`).
+
+## Plans hub (collaborator navigation)
+
+- **`docs/plans/PLANS_HUB.md`** (EN table) + **`docs/plans/PLANS_HUB.pt_BR.md`** (pt-BR intro) — map of **every** `PLAN_*.md` (open + `completed/`) with auto **summary** and optional **`plans-hub-related`** cross-links. Linked from **`PLANS_TODO.md`**, **`SPRINTS_AND_MILESTONES*.md`**, and **`docs/README.md`** *Internal and reference*.
+- **Refresh** after adding, renaming, or moving a plan: `python scripts/plans_hub_sync.py --write` (then commit). **Check** (CI / pre-commit): `python scripts/plans_hub_sync.py --check`. Tests: **`tests/test_plans_hub_sync.py`**.
+- **Optional hints** inside any `PLAN_*.md` body:
+- `<!-- plans-hub-summary: One line for humans. -->`
+- `<!-- plans-hub-related: PLAN_OTHER.md, completed/PLAN_OLD.md -->`
+
+## When completing a plan
+
+1. Mark all to-dos **Done** in the plan file and in **`docs/plans/PLANS_TODO.md`**.
+1. **Move** the plan file from `docs/plans/PLAN_*.md` to `docs/plans/completed/PLAN_*.md` (e.g. `git mv docs/plans/PLAN_XYZ.md docs/plans/completed/`).
+1. **Update** `docs/plans/PLANS_TODO.md`: remove the plan from the open list and ensure the "Completed plans" section links to `completed/PLAN_XYZ.md`.
+1. Run **`python scripts/plans_hub_sync.py --write`** so **[PLANS_HUB.md](../../docs/plans/PLANS_HUB.md)** lists the plan under **Completed** with the correct path.
+1. **Update** any references elsewhere (**prefer product docs:** USAGE, SENSITIVITY_DETECTION, MINOR_DETECTION, releases, TECH_GUIDE) so operators are not left with broken paths. **Do not** add new markdown links from **external-tier** docs into `docs/plans/`; use **[docs/README.md](../../docs/README.md)** *Internal and reference* or plain-text plan names. See **`.cursor/rules/audience-segmentation-docs.mdc`** and **`tests/test_docs_external_no_plan_links.py`**.
+1. In the **moved** file, set **Status** to "Complete" and note that it is archived in `docs/plans/completed/`. Keep the "Synced with" link to `../PLANS_TODO.md` so readers can jump back to the central to-do list.
+1. **Update the pitch** in **README.md** and **README.pt_BR.md**: remove the completed item from the **Roadmap** sentence and, if useful, reflect the new capability in "What we surface" or "Why it holds up" so the pitch describes what the application now does and why to consider the product. See `.cursor/rules/pitch-roadmap-sync.mdc`.
+
+## Cross-references
+
+- From **external-tier docs** (USAGE, COMPLIANCE_*, GLOSSARY, SENSITIVITY_*, deploy guides, releases, root README pitch, etc.): **do not** use markdown links into `docs/plans/` or `.cursor/plans/`. Point readers to **product behaviour** docs or to **[docs/README.md](../../docs/README.md)** *Internal and reference* / plain-text `` `docs/plans/` `` paths. **Exception:** **`docs/README.md`** and **`docs/README.pt_BR.md`** intentionally list plan files in that section.
+- From **docs/ops/** runbooks: linking to `../plans/...` remains appropriate for operator/maintainer workflow.
+- From **docs/plans/** (open plans): use relative links `[PLANS_TODO.md](PLANS_TODO.md)` and `[PLAN_*.md](PLAN_*.md)`.
+- From **docs/plans/completed/**: use `[../PLANS_TODO.md](../PLANS_TODO.md)` to point back to the central list.
+
+## When creating a new plan (overlap + taxonomy)
+
+**Default:** Treat new plans as **potentially overlapping** other fronts unless the operator **explicitly** says the plan is **completely independent** of other ideas (then skip broad overlap hunting—still follow taxonomy, pitch policy, secrets, and doc/test norms below).
+
+1. **Scan before you write:** Search `docs/plans/*.md` and `PLANS_TODO.md` for the same **surface area** (routes, middleware, config keys, connectors, report sheets, dashboard templates, licensing/JWT, ops runbooks). Issues from GitHub or ad-hoc requests are **not** exempt—link them in a triage row or footnote when tracked.
+1. After adding a new **`PLAN_*.md`**, run **`python scripts/plans_hub_sync.py --write`** and commit the updated **`PLANS_HUB.md`** so collaborators see the new row.
+1. **Same files ≠ same plan:** If the concern is different (e.g. **i18n** vs **RBAC**), keep **separate** `PLAN_*.md` files but add a **§ Relationship to other plans** (or equivalent) and **cross-links**. Coordinate **sprint sequencing** when route/middleware/layout would otherwise be refactored twice.
+1. **Taxonomy and matrix:** Tag horizons/urgency per `PLANS_TODO.md` (**`[H0]`–`[H5]`, `[U0]`–`[U3]`**). Respect **token-aware** sequencing ([TOKEN_AWARE_USAGE.md](../../docs/plans/TOKEN_AWARE_USAGE.md)), **Priority band A** when safety/IP trumps feature work, and add/update the **dependency analysis** table in `PLANS_TODO.md` when the plan is non-trivial.
+1. **Do not drop standing rules:** Pitch/roadmap sync when the goal is decision-maker visible ([pitch-roadmap-sync.mdc](pitch-roadmap-sync.mdc)); **SECURITY/USAGE/TECH_GUIDE** updates when behaviour changes; tests as for other plans; **no secrets** in tracked files ([AGENTS.md](../../AGENTS.md)); English-only plan body history unless the repo already uses paired EN/pt-BR for that doc type.
+
+**Escape hatch:** If the operator states **this plan is intentionally isolated** from other product threads, document that once in the plan **Status** or **Scope** line and minimise cross-links to unrelated plans—still keep `PLANS_TODO` and pitch policy where they apply.
+
+## Pitch and roadmap
+
+When you **create** a new plan, add the new roadmap goal to the pitch (README "For decision-makers" / "Why it holds up"). When you **complete** a plan, update the pitch so the new capability is reflected and that item is removed from the Roadmap sentence. When you **remove, cancel, or substitute** a plan, update the pitch so the Roadmap no longer mentions the dropped goal. Keep README and README.pt_BR in sync. **Rule:** `.cursor/rules/pitch-roadmap-sync.mdc`.
+
+## Header Status vs body vs PLANS_TODO (anti-drift)
+
+- After shipping work tied to a plan, update the plan **`**Status:**`** line **and** `PLANS_TODO.md` in the **same** themed pass when possible.
+- **Always-on reminder:** **`.cursor/rules/plans-status-pl-sync.mdc`**.
+- **`api/routes.py` ↔ D-WEB route table:** **`.cursor/rules/api-routes-plan-matrix-sync.mdc`** + **`tests/test_api_route_matrix_plan_sync.py`**.
+
+## Reference
+
+- **Three-layer PMO model (`PLAN_*` vs hub vs `PLANS_TODO`):** **[PLANS_DOCUMENTATION_HIERARCHY.md](../ops/PLANS_DOCUMENTATION_HIERARCHY.md)** ([pt-BR](../ops/PLANS_DOCUMENTATION_HIERARCHY.pt_BR.md)).
+- **Central to-do list:** `docs/plans/PLANS_TODO.md`.
+- **Plans hub (collaborator map):** `docs/plans/PLANS_HUB.md` — sync with `scripts/plans_hub_sync.py`.
+- **Token-aware usage:** `docs/plans/TOKEN_AWARE_USAGE.md`.
+- **Pitch–roadmap sync:** `.cursor/rules/pitch-roadmap-sync.mdc`.
+- **Execution / PR batching:** `.cursor/rules/execution-priority-and-pr-batching.mdc`.
+- **Doc index and policy:** `docs/README.md` (section "Documentation policy"); plan links are under "Internal and reference".

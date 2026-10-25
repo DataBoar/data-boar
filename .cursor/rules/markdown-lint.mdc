@@ -1,0 +1,49 @@
+---
+description: When creating or editing any .md file, run the markdown lint test and apply the SonarQube fix script so MD060 (table style), MD009, MD012, and other rules pass. Use for changes to README, docs, or any markdown.
+globs: ["**/*.md", ".cursor/**/*.mdc"]
+alwaysApply: false
+---
+
+# Markdown lint (SonarQube / markdownlint)
+
+After **creating or editing** any `.md` or `.cursor` rule/skill file (`.md`, `.mdc`) in this project:
+
+1. **Fix style automatically** (tables, trailing spaces, blanks, list style, trailing newline):
+
+   ```bash
+   uv run python scripts/fix_markdown_sonar.py
+   ```
+
+   This applies MD007, MD009, MD012, MD029, **MD031** (blanks around fenced code blocks), MD032, **MD034** (wrap bare URLs), MD036, MD047, and **MD060** (aligned table column style) across all project `.md` and `.mdc` files (including `.cursor/` rules and skills).
+
+1. **Run the markdown lint test** to ensure no violations:
+
+   ```bash
+   uv run pytest tests/test_markdown_lint.py -v -W error
+   ```
+
+If the test fails, fix the reported violations (or run the fix script again if it didn’t cover the file). Do not commit markdown changes without the lint test passing.
+
+**After the fix script:** It applies **MD029** (ordered list style 1/1/1), so step lists (1. 2. 3.) can become (1. 1. 1.). Restore **semantic numbering** by hand where the list is a real sequence of steps so the doc still reads correctly.
+
+**Avoid reintroducing:** **MD028** (no blank line inside blockquotes – keep all `>` lines consecutive).
+
+## Points of attention (manual or fix script)
+
+When creating or editing markdown, pay attention to these so the lint test and SonarQube stay clean:
+
+| Rule      | Meaning                                                                 | Action                                                                |
+| -------   | ----------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| **MD022** | Headings should be surrounded by blank lines                            | Add a blank line before and after each `#` heading                    |
+| **MD026** | No trailing punctuation in headings                                     | Remove trailing `.` `:` `;` `!` `?` from `#` headings                 |
+| **MD032** | Lists should be surrounded by blank lines                               | Fix script applies this; or add blank line before/after list blocks   |
+| **MD041** | First line in file must be a top-level heading                          | Start each `.md` with `# Title` (no blank line or front matter only)  |
+| **MD024** | No duplicate heading text in the same file                              | Use unique heading text per section (e.g. "What to do (Ruff):")       |
+| **MD060** | Table column style aligned; consistent fenced code markers              | Run fix script for tables; use only ``` or only ~~~ in a file         |
+
+Plan files (e.g. `docs/plans/PLAN_*.md`) often need table alignment (MD060); run the fix script and then restore semantic list numbering (1. 2. 3.) by hand where needed.
+
+## Reference
+
+- **TESTING.md** – section “Markdown lint” (MD009, MD012, MD024, MD036, MD051, MD060, MD031, MD034, table style).
+- **scripts/fix_markdown_sonar.py** – normalizes tables to aligned style and other Sonar rules.

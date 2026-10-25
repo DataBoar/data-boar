@@ -1,0 +1,30 @@
+---
+# Install OS packages for *kernel* mounts used with Data Boar lab workflows:
+#   CIFS/SMB (mount.cifs), NFS client, sshfs, FUSE.
+#
+# Does **not** replace `uv sync --extra shares` for native `type: smb` / `type: webdav`
+# (Python connectors). See docs/ops/LAB_SMOKE_MULTI_HOST.md and TECH_GUIDE.md.
+#
+# Inventory: add [lab_share_clients] in inventory.local.ini (see inventory.example.ini).
+#
+#   cd ops/automation/ansible
+#   ansible-playbook -i inventory.local.ini playbooks/lab-data-boar-share-clients.yml
+#
+# Void/Alpine: use distro packages manually (xbps/apk names differ); this play is Debian/Ubuntu-oriented.
+
+- name: Lab Data Boar — OS clients for CIFS/NFS/sshfs mounts
+  hosts: lab_share_clients
+  become: true
+  gather_facts: true
+  environment: "{{ labop_debian_unattended_apt_environment }}"
+
+  tasks:
+    - name: Install CIFS, NFS client, sshfs, FUSE (apt)
+      ansible.builtin.apt:
+        name:
+          - cifs-utils
+          - nfs-common
+          - sshfs
+          - fuse3
+        state: present
+        update_cache: false

@@ -1,0 +1,635 @@
+"""Tests for the YAML-based plugin system (ADR-0052).
+
+Covers:
+- validate_plugin_file() with all three plugin types.
+- Valid files pass without issues.
+- Missing required fields are reported.
+- Wrong types are reported.
+- Unknown/extra fields are tolerated (additive schema: no strict rejection of unknown keys).
+- Unified plugin file validation.
+- patterns_plugin_file config key correctly overrides legacy keys in normalize_config.
+- Existing example files (config/regex_overrides.example.yaml) pass validation.
+"""
+
+from __future__ import annotations
+
+import textwrap
+from pathlib import Path
+
+import pytest
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _write_yaml(tmp_path: Path, name: str, content: str) -> str:
+    p = tmp_path / name
+    p.write_text(textwrap.dedent(content), encoding="utf-8")
+    return str(p)
+
+
+# ---------------------------------------------------------------------------
+# validate_plugin_file — regex_patterns
+# ---------------------------------------------------------------------------
+
+
+def test_valid_regex_plugin_passes(tmp_path):
+    """A well-formed regex plugin file produces no validation issues."""
+    from config.plugin_validator import validate_plugin_file
+
+    path = _write_yaml(
+        tmp_path,
+        "good_regex.yaml",
+        """
+        - name: "RG_BR"
+          pattern: "\\\\b\\\\d{1,2}\\\\.?\\\\d{3}-?[0-9Xx]\\\\b"
+          norm_tag: "LGPD Art. 5"
+        - name: "PLATE_BR"
+          pattern: "\\\\b[A-Z]{3}-?\\\\d{4}\\\\b"
+        """,
+    )
+    result = validate_plugin_file(path, plugin_type="regex_patterns")
+    assert result.valid is True
+    assert result.issues == []
+
+
+def test_regex_plugin_missing_required_name(tmp_path):
+    """Missing 'name' field is reported as an issue."""
+    from config.plugin_validator import validate_plugin_file
+
+    path = _write_yaml(
+        tmp_path,
+        "bad_regex.yaml",
+        """
+        - pattern: "\\\\b\\\\d+\\\\b"
+          norm_tag: "Custom"
+        """,
+    )
+    result = validate_plugin_file(path, plugin_type="regex_patterns")
+    assert result.valid is False
+    assert any("name" in issue for issue in result.issues)
+
+
+def test_regex_plugin_missing_required_pattern(tmp_path):
+    """Missing 'pattern' field is reported as an issue."""
+    from config.plugin_validator import validate_plugin_file
+
+    path = _write_yaml(
+        tmp_path,
+        "bad_pattern.yaml",
+        """
+        - name: "MISSING_PATTERN"
+        """,
+    )
+    result = validate_plugin_file(path, plugin_type="regex_patterns")
+    assert result.valid is False
+    assert any("pattern" in issue for issue in result.issues)
+
+
+def test_regex_plugin_wrong_type_for_name(tmp_path):
+    """'name' with non-string value is reported."""
+    from config.plugin_validator import validate_plugin_file
+
+    path = _write_yaml(
+        tmp_path,
+        "bad_name_type.yaml",
+        """
+        - name: 42
+          pattern: "\\\\b\\\\d+\\\\b"
+        """,
+    )
+    result = validate_plugin_file(path, plugin_type="regex_patterns")
+    assert result.valid is False
+    assert any("name" in issue for issue in result.issues)
+
+
+def test_regex_plugin_compliance_dict_prefers_regex_over_terms(tmp_path):
+    """Legacy compliance files list ``regex`` and ``terms`` in one mapping; regex
+    validation must not treat ML ``terms`` as regex items (regression guard).
+    """
+    from config.plugin_validator import validate_plugin_file
+
+    path = _write_yaml(
+        tmp_path,
+        "combo.yaml",
+        """
+        regex:
+          - name: "GEO_TEST"
+            pattern: "\\\\blocation\\\\b"
+            norm_tag: "VCDPA"
+        terms:
+          - text: "personal data"
+            label: sensitive
+        """,
+    )
+    result = validate_plugin_file(path, plugin_type="regex_patterns")
+    assert result.valid is True
+    assert result.issues == []
+
+
+# ---------------------------------------------------------------------------
+# validate_plugin_file — ml_patterns
+# ---------------------------------------------------------------------------
+
+
+def test_valid_ml_plugin_passes(tmp_path):
+    """A well-formed ml_patterns file produces no issues."""
+    from config.plugin_validator import validate_plugin_file
+
+    path = _write_yaml(
+        tmp_path,
+        "good_ml.yaml",
+        """
+        - text: "cpf"
+          label: "sensitive"
+        - text: "cartão de crédito"
+          label: 1
+        - text: "código de produto"
+          label: "non_sensitive"
+        """,
+    )
+    result = validate_plugin_file(path, plugin_type="ml_patterns")
+    assert result.valid is True
+
+
+def test_ml_plugin_missing_required_text(tmp_path):
+    """Missing 'text' field is reported."""
+    from config.plugin_validator import validate_plugin_file
+
+    path = _write_yaml(
+        tmp_path,
+        "bad_ml.yaml",
+        """
+        - label: "sensitive"
+        """,
+    )
+    result = validate_plugin_file(path, plugin_type="ml_patterns")
+    assert result.valid is False
+    assert any("text" in issue for issue in result.issues)
+
+
+def test_ml_plugin_invalid_label_value(tmp_path):
+    """An unexpected label value is reported."""
+    from config.plugin_validator import validate_plugin_file
+
+    path = _write_yaml(
+        tmp_path,
+        "bad_label.yaml",
+        """
+        - text: "salary"
+          label: "maybe"
+        """,
+    )
+    result = validate_plugin_file(path, plugin_type="ml_patterns")
+    assert result.valid is False
+    assert any("label" in issue for issue in result.issues)
+
+
+def test_ml_patterns_invalid_file_emits_warning(tmp_path):
+    """Loading invalid ml_patterns via detector emits PluginValidationWarning."""
+    from config.plugin_validator import PluginValidationWarning
+    from core.detector import _load_ml_patterns
+
+    path = _write_yaml(
+        tmp_path,
+        "bad_ml_load.yaml",
+        """
+        - label: "sensitive"
+        """,
+    )
+    with pytest.warns(PluginValidationWarning, match="text"):
+        _load_ml_patterns(path)
+
+
+def test_dl_patterns_invalid_file_emits_warning(tmp_path):
+    """Loading invalid dl_patterns via detector emits PluginValidationWarning."""
+    from config.plugin_validator import PluginValidationWarning
+    from core.detector import _load_dl_terms
+
+    path = _write_yaml(
+        tmp_path,
+        "bad_dl_load.yaml",
+        """
+        - label: "sensitive"
+        """,
+    )
+    with pytest.warns(PluginValidationWarning, match="text"):
+        _load_dl_terms(path, inline=None)
+
+
+# ---------------------------------------------------------------------------
+# validate_plugin_file — unified_plugin_file
+# ---------------------------------------------------------------------------
+
+
+def test_valid_unified_plugin_passes(tmp_path):
+    """A unified plugin file with all three sections validates cleanly."""
+    from config.plugin_validator import validate_plugin_file
+
+    path = _write_yaml(
+        tmp_path,
+        "unified.yaml",
+        """
+        regex_patterns:
+          - name: "RG_BR"
+            pattern: "\\\\b\\\\d{1,2}\\\\.?\\\\d{3}-?[0-9Xx]\\\\b"
+            norm_tag: "LGPD Art. 5"
+        ml_patterns:
+          - text: "cpf"
+            label: "sensitive"
+        dl_patterns:
+          - text: "dado pessoal"
+            label: 1
+        """,
+    )
+    result = validate_plugin_file(path, plugin_type="unified_plugin_file")
+    assert result.valid is True
+
+
+def test_unified_plugin_unknown_top_level_key(tmp_path):
+    """An unknown top-level key in a unified file is reported."""
+    from config.plugin_validator import validate_plugin_file
+
+    path = _write_yaml(
+        tmp_path,
+        "unified_bad.yaml",
+        """
+        regex_patterns:
+          - name: "PLATE"
+            pattern: "\\\\b[A-Z]+\\\\b"
+        unknown_section:
+          - text: "foo"
+        """,
+    )
+    result = validate_plugin_file(path, plugin_type="unified_plugin_file")
+    assert result.valid is False
+    assert any("unknown_section" in issue for issue in result.issues)
+
+
+# ---------------------------------------------------------------------------
+# Edge cases
+# ---------------------------------------------------------------------------
+
+
+def test_none_path_returns_valid():
+    """None path returns valid=True (no-op)."""
+    from config.plugin_validator import validate_plugin_file
+
+    result = validate_plugin_file(None, plugin_type="regex_patterns")
+    assert result.valid is True
+
+
+def test_nonexistent_path_returns_valid(tmp_path):
+    """Non-existent path returns valid=True (the loader handles missing files)."""
+    from config.plugin_validator import validate_plugin_file
+
+    result = validate_plugin_file(
+        str(tmp_path / "not_here.yaml"), plugin_type="regex_patterns"
+    )
+    assert result.valid is True
+
+
+def test_unknown_plugin_type_returns_invalid(tmp_path):
+    """Unknown plugin_type returns valid=False with a clear message."""
+    from config.plugin_validator import validate_plugin_file
+
+    path = _write_yaml(tmp_path, "dummy.yaml", "- name: foo\n  pattern: bar\n")
+    result = validate_plugin_file(path, plugin_type="nonexistent_type")
+    assert result.valid is False
+    assert any("Unknown plugin_type" in issue for issue in result.issues)
+
+
+# ---------------------------------------------------------------------------
+# Existing example files must pass validation
+# ---------------------------------------------------------------------------
+
+
+def test_regex_optional_dga_iso_dmbok_fields_pass(tmp_path):
+    """#644 — optional DGA / ISO 27001:2022 / DMBOK keys are valid on regex items."""
+    from config.plugin_validator import validate_plugin_file
+
+    path = _write_yaml(
+        tmp_path,
+        "regex_meta.yaml",
+        """
+        - name: "HEALTH_HINT"
+          pattern: "\\\\bhealth\\\\b"
+          norm_tag: "LGPD Art. 11"
+          dga_classification: "no_sharing"
+          iso27001_controls:
+            - "A.5.33"
+            - "A.8.11"
+          dmbok_area: "seguranca_dados"
+        """,
+    )
+    result = validate_plugin_file(path, plugin_type="regex_patterns")
+    assert result.valid is True
+    assert result.issues == []
+
+
+def test_regex_invalid_dga_classification_rejected(tmp_path):
+    from config.plugin_validator import validate_plugin_file
+
+    path = _write_yaml(
+        tmp_path,
+        "bad_dga.yaml",
+        """
+        - name: "X"
+          pattern: "\\\\bx\\\\b"
+          dga_classification: "public_domain"
+        """,
+    )
+    result = validate_plugin_file(path, plugin_type="regex_patterns")
+    assert result.valid is False
+    assert any("dga_classification" in issue for issue in result.issues)
+
+
+def test_regex_iso27001_controls_must_be_string_list(tmp_path):
+    from config.plugin_validator import validate_plugin_file
+
+    path = _write_yaml(
+        tmp_path,
+        "bad_iso.yaml",
+        """
+        - name: "X"
+          pattern: "\\\\bx\\\\b"
+          iso27001_controls: "A.5.12"
+        """,
+    )
+    result = validate_plugin_file(path, plugin_type="regex_patterns")
+    assert result.valid is False
+    assert any("iso27001_controls" in issue for issue in result.issues)
+
+
+def test_plugin_schema_documents_644_optional_fields():
+    """Schema file (not detector findings) is the contract for #644 metadata."""
+    import yaml
+
+    schema_path = Path(__file__).parent.parent / "config" / "plugin_schema.yaml"
+    schema = yaml.safe_load(schema_path.read_text(encoding="utf-8"))
+    fields = schema["regex_patterns"]["item_fields"]
+    assert fields["dga_classification"]["required"] is False
+    assert fields["iso27001_controls"]["type"] == "list"
+    schema_text = schema_path.read_text(encoding="utf-8")
+    assert "A.5.12" in schema_text
+    assert "maps to 2022 A.5.12" in schema_text
+    assert fields["dmbok_area"]["required"] is False
+
+
+def test_plugin_schema_documents_687_volatility_class():
+    """Schema file documents optional volatility_class for forensic triage (#687)."""
+    import yaml
+
+    schema_path = Path(__file__).parent.parent / "config" / "plugin_schema.yaml"
+    schema = yaml.safe_load(schema_path.read_text(encoding="utf-8"))
+    regex_fields = schema["regex_patterns"]["item_fields"]
+    assert regex_fields["volatility_class"]["required"] is False
+    assert regex_fields["volatility_class"]["allowed_values"] == [
+        "HIGH",
+        "MEDIUM",
+        "LOW",
+        "STATIC",
+    ]
+    schema_text = schema_path.read_text(encoding="utf-8")
+    assert "ISO/IEC 27037:2012" in schema_text
+    assert schema["ml_patterns"]["item_fields"]["volatility_class"][
+        "allowed_values"
+    ] == [
+        "HIGH",
+        "MEDIUM",
+        "LOW",
+        "STATIC",
+    ]
+
+
+def test_volatility_class_validation_accepts_and_rejects(tmp_path):
+    from config.plugin_validator import validate_plugin_file
+
+    good = _write_yaml(
+        tmp_path,
+        "good_vol.yaml",
+        """
+        - name: "LIVE_SESSION"
+          pattern: "\\\\bsession\\\\b"
+          norm_tag: "Custom"
+          volatility_class: HIGH
+        """,
+    )
+    result = validate_plugin_file(good, plugin_type="regex_patterns")
+    assert result.valid is True, result.issues
+
+    bad = _write_yaml(
+        tmp_path,
+        "bad_vol.yaml",
+        """
+        - name: "LIVE_SESSION"
+          pattern: "\\\\bsession\\\\b"
+          volatility_class: EPHEMERAL
+        """,
+    )
+    bad_result = validate_plugin_file(bad, plugin_type="regex_patterns")
+    assert bad_result.valid is False
+    assert any("volatility_class" in issue for issue in bad_result.issues)
+
+
+def test_plugin_path_entries_collapse_relative_and_absolute(tmp_path, monkeypatch):
+    """#1868: same file, same default section, two spellings → one entry."""
+    from config.plugin_validator import _plugin_path_entries_from_config
+
+    monkeypatch.chdir(tmp_path)
+    written = _write_yaml(
+        tmp_path,
+        "patterns.yaml",
+        """
+        - name: "LIVE_DB"
+          pattern: "\\\\blive\\\\b"
+          volatility_class: HIGH
+        """,
+    )
+    absolute = str(Path(written).resolve())
+    entries = _plugin_path_entries_from_config(
+        {
+            "regex_overrides_file": "patterns.yaml",
+            "regex_overrides_files": [absolute],
+        }
+    )
+    assert entries == [("patterns.yaml", "regex_patterns")]
+
+
+def test_plugin_path_entries_keep_distinct_default_sections(tmp_path, monkeypatch):
+    """The same file under two default sections is two loads, not a duplicate."""
+    from config.plugin_validator import _plugin_path_entries_from_config
+
+    monkeypatch.chdir(tmp_path)
+    written = _write_yaml(tmp_path, "patterns.yaml", "- name: X\n  pattern: a\n")
+    absolute = str(Path(written).resolve())
+    entries = _plugin_path_entries_from_config(
+        {
+            "patterns_plugin_file": "patterns.yaml",
+            "regex_overrides_files": [absolute],
+        }
+    )
+    assert entries == [
+        ("patterns.yaml", None),
+        (absolute, "regex_patterns"),
+    ]
+
+
+def test_plugin_path_entries_nonexistent_path_does_not_raise(tmp_path, monkeypatch):
+    from config.plugin_validator import _plugin_path_entries_from_config
+
+    monkeypatch.chdir(tmp_path)
+    missing = str((tmp_path / "missing-plugin.yaml").resolve())
+    entries = _plugin_path_entries_from_config(
+        {
+            "regex_overrides_file": "missing-plugin.yaml",
+            "regex_overrides_files": [missing],
+        }
+    )
+    assert entries == [("missing-plugin.yaml", "regex_patterns")]
+
+
+def test_collect_plugin_volatility_metadata_dedups_relative_and_absolute(
+    tmp_path, monkeypatch
+):
+    """#1868: one volatility_triage row when the same file is spelled twice."""
+    from config.plugin_validator import collect_plugin_volatility_metadata
+
+    monkeypatch.chdir(tmp_path)
+    written = _write_yaml(
+        tmp_path,
+        "patterns.yaml",
+        """
+        - name: "LIVE_DB"
+          pattern: "\\\\blive\\\\b"
+          volatility_class: HIGH
+        """,
+    )
+    absolute = str(Path(written).resolve())
+    rows = collect_plugin_volatility_metadata(
+        {
+            "regex_overrides_file": "patterns.yaml",
+            "regex_overrides_files": [absolute],
+        }
+    )
+    assert rows is not None
+    assert len(rows) == 1
+    assert rows[0]["pattern_id"] == "LIVE_DB"
+    assert rows[0]["volatility_class"] == "HIGH"
+    assert rows[0]["section"] == "regex_patterns"
+
+
+def test_collect_plugin_volatility_metadata_unified_and_legacy(tmp_path):
+    from config.plugin_validator import collect_plugin_volatility_metadata
+
+    unified = _write_yaml(
+        tmp_path,
+        "unified.yaml",
+        """
+        regex_patterns:
+          - name: "LIVE_DB"
+            pattern: "\\\\blive\\\\b"
+            volatility_class: HIGH
+        ml_patterns:
+          - text: "rotating log"
+            volatility_class: MEDIUM
+        """,
+    )
+    config = {"patterns_plugin_file": unified.replace("\\", "/")}
+    rows = collect_plugin_volatility_metadata(config)
+    assert rows is not None
+    assert len(rows) == 2
+    assert {row["volatility_class"] for row in rows} == {"HIGH", "MEDIUM"}
+
+
+def test_collect_plugin_volatility_metadata_ml_list_file(tmp_path):
+    from config.plugin_validator import collect_plugin_volatility_metadata
+
+    ml_path = _write_yaml(
+        tmp_path,
+        "terms.yaml",
+        """
+        - text: "rotating log"
+          label: sensitive
+          volatility_class: MEDIUM
+        """,
+    )
+    config = {
+        "ml_patterns_file": ml_path.replace("\\", "/"),
+    }
+    rows = collect_plugin_volatility_metadata(config)
+    assert rows is not None
+    assert rows[0]["section"] == "ml_patterns"
+    assert rows[0]["pattern_id"] == "rotating log"
+    assert rows[0]["volatility_class"] == "MEDIUM"
+
+
+def test_collect_plugin_volatility_metadata_dl_terms_dict(tmp_path):
+    from config.plugin_validator import collect_plugin_volatility_metadata
+
+    dl_path = _write_yaml(
+        tmp_path,
+        "dl_terms.yaml",
+        """
+        terms:
+          - text: "archived backup token"
+            volatility_class: STATIC
+        """,
+    )
+    config = {"dl_patterns_file": dl_path.replace("\\", "/")}
+    rows = collect_plugin_volatility_metadata(config)
+    assert rows is not None
+    assert rows[0]["section"] == "dl_patterns"
+    assert rows[0]["volatility_class"] == "STATIC"
+
+
+def test_example_regex_overrides_passes_validation():
+    """config/regex_overrides.example.yaml must pass regex_patterns validation."""
+    from config.plugin_validator import validate_plugin_file
+
+    example_path = (
+        Path(__file__).parent.parent / "config" / "regex_overrides.example.yaml"
+    )
+    if not example_path.exists():
+        pytest.skip("Example file not found")
+    result = validate_plugin_file(str(example_path), plugin_type="regex_patterns")
+    assert result.valid is True, f"Validation issues: {result.issues}"
+
+
+# ---------------------------------------------------------------------------
+# patterns_plugin_file config key integration
+# ---------------------------------------------------------------------------
+
+
+def test_patterns_plugin_file_overrides_regex_legacy_key(tmp_path):
+    """When patterns_plugin_file has regex_patterns and regex_overrides_file is empty,
+    normalize_config sets regex_overrides_file to the unified path."""
+    import yaml
+
+    from config.loader import normalize_config
+
+    unified_path = _write_yaml(
+        tmp_path,
+        "my_plugin.yaml",
+        """
+        regex_patterns:
+          - name: "CUSTOM"
+            pattern: "\\\\bcustom\\\\b"
+            norm_tag: "Custom"
+        """,
+    )
+    raw_config = yaml.safe_load(
+        f"""
+        targets:
+          - name: test
+            type: filesystem
+            path: /tmp
+        patterns_plugin_file: "{unified_path.replace(chr(92), "/")}"
+        """
+    )
+    config = normalize_config(raw_config)
+    assert config["patterns_plugin_file"] == unified_path.replace("\\", "/")
+    # regex_overrides_file should point to the unified file
+    assert config["regex_overrides_file"] == unified_path.replace("\\", "/")

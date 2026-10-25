@@ -1,0 +1,119 @@
+# Indonesia PDP — sample compliance profile (Law No. 27 of 2022 on Personal Data Protection / UU PDP)
+#
+# Target audience: Indonesia and ASEAN deployments; personal-data controllers and processors under
+# Indonesian PDP. Authority: Supervisory Authority for Personal Data Protection — scope titles
+# and secondary rules with Indonesian counsel (implementing regulations evolve).
+#
+# How to use:
+#   1. Set in your main config:
+#        regex_overrides_file: path/to/compliance-sample-indonesia_pdp.yaml
+#        ml_patterns_file: path/to/compliance-sample-indonesia_pdp.yaml
+#   2. Merge the recommendation_overrides list below into report.recommendation_overrides.
+#
+# Legal scope (summary — not legal advice):
+#   - PDP regulates processing of personal data within Indonesia and offshore handling with
+#     Indonesian links; key constructs include personal data, sensitive personal data, consent,
+#     legal bases, data subjects' rights, domestic and cross-border transfers, and accountability.
+#   - NIK (Nomor Induk Kependudukan): 16-digit population identification number; pattern is
+#     contextual to reduce false positives from bare digit runs.
+#   - Precise geolocation: same four-pattern regex geometry as compliance-sample-us_va_vcdpa.yaml
+#     and compliance-sample-eu_gdpr.yaml. Heuristic only — not an automatic authority determination.
+#
+# Use double-quoted YAML with escaped backslashes.
+
+regex:
+  - name: "ID_NIK_CTX"
+    pattern: "(?i)(?:NIK|Nomor\\s+Induk\\s+Kependudukan|no\\.?\\s*induk\\s*kependudukan)\\s*[:#]?\\s*\\b\\d{16}\\b"
+    norm_tag: "Indonesia PDP"
+  - name: "ID_PDP_JSON_LAT_PRECISION"
+    pattern: "(?i)[\"']lat[\"']\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\b"
+    norm_tag: "Indonesia PDP"
+  - name: "ID_PDP_JSON_LNG_PRECISION"
+    pattern: "(?i)[\"'](?:lng|lon)[\"']\\s*:\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}\\b"
+    norm_tag: "Indonesia PDP"
+  - name: "ID_PDP_LOCATION_CSV_PAIR"
+    pattern: "(?i)\\blocation\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*,\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "Indonesia PDP"
+  - name: "ID_PDP_QUERYSTRING_LAT_LONG"
+    pattern: "(?i)latitude=[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*&\\s*longitude=[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "Indonesia PDP"
+
+terms:
+  - text: "Indonesia PDP"
+    label: sensitive
+  - text: "UU PDP"
+    label: sensitive
+  - text: "Undang-Undang Perlindungan Data Pribadi"
+    label: sensitive
+  - text: "personal data"
+    label: sensitive
+  - text: "data pribadi"
+    label: sensitive
+  - text: "sensitive personal data"
+    label: sensitive
+  - text: "data pribadi bersifat spesifik"
+    label: sensitive
+  - text: "data subject"
+    label: sensitive
+  - text: "subjek data"
+    label: sensitive
+  - text: "data controller"
+    label: sensitive
+  - text: "pengendali data"
+    label: sensitive
+  - text: "data processor"
+    label: sensitive
+  - text: "pemroses data"
+    label: sensitive
+  - text: "consent"
+    label: sensitive
+  - text: "persetujuan"
+    label: sensitive
+  - text: "cross-border transfer"
+    label: sensitive
+  - text: "transfer lintas negara"
+    label: sensitive
+  - text: "privacy policy"
+    label: sensitive
+  - text: "kebijakan privasi"
+    label: sensitive
+  - text: "NIK"
+    label: sensitive
+  - text: "Nomor Induk Kependudukan"
+    label: sensitive
+  - text: "biometric data"
+    label: sensitive
+  - text: "data biometrik"
+    label: sensitive
+  - text: "health data"
+    label: sensitive
+  - text: "data kesehatan"
+    label: sensitive
+  - text: "geolocation"
+    label: sensitive
+  - text: "lokasi presisi"
+    label: sensitive
+  - text: "children data"
+    label: sensitive
+  - text: "data anak"
+    label: sensitive
+  - text: "data breach"
+    label: sensitive
+  - text: "kebocoran data"
+    label: sensitive
+  - text: "legitimate interest"
+    label: sensitive
+  - text: "kepentingan sah"
+    label: sensitive
+  - text: "accountability"
+    label: sensitive
+  - text: "akuntabilitas"
+    label: sensitive
+
+recommendation_overrides:
+  - norm_tag_pattern: "Indonesia PDP"
+    base_legal: "Indonesia Law No. 27 of 2022 on Personal Data Protection (UU PDP); supervisory and implementing instruments — verify current titles with counsel."
+    risk: "Personal and specific personal data; consent and legal bases; domestic and cross-border flows; biometric, health, and geolocation inventory signals — sector and localization rules are not evaluated by the scanner."
+    recommendation: "Map PDP roles (pengendali/pemroses); document lawful bases and transfer mechanisms; align retention and DPIA practice with Indonesian guidance; pair findings with local counsel."
+    priority: "ALTA"
+    relevant_for: "DPO, Privacy Counsel, Data Controller, Data Processor"

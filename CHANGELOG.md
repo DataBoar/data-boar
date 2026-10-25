@@ -1,0 +1,472 @@
+# Changelog
+
+Human-readable summary of user-facing changes. **Detailed release notes:** [docs/releases/](docs/releases/) (full checklists, Docker publish commands, GitHub Release text).
+
+## Unreleased (`main`)
+
+Migration notes on the **`1.8.0-rc`** working line (no new semver cut):
+
+- **CPU preflight probes installed stack (#2125):** `core.cpu_preflight` no longer decides ML import safety from CPU flags alone. When required flags (SSE4.2/POPCNT/AVX) are missing, it runs a one-time probe of the **installed** numpy/scipy/scikit-learn stack in a child process. A working wheelhouse x86-64-v1 build passes the probe and enables ML/DL on CPUs without those flags. A failed probe (killed by a signal such as SIGILL, a timeout, a non-zero exit such as an import that refuses to run on this CPU, or a start error) skips ML/DL. Regex CPF/CNPJ continues unaffected. The skip warning states the real cause (signal name, timeout, exit code with the last stderr line, or start error) and still carries the wheelhouse remedy.
+
+- **API key failures (#2078), default change:** with `require_api_key` on, five failures from one client address in 60 seconds return **429**. Each **401** and **429** is an Audit Trail record and does not contain the key. A configured key shorter than 32 characters is refused at `main.py --web` (`openssl rand -hex 32`).
+- **WebAuthn session cookie (#2079), default change:** lifetime is 12 hours and `SameSite=Strict`. Cookie-authenticated mutations require the dashboard origin. Logout invalidates every session for that user.
+- **Installed help (#1130):** the dashBOARd help intro names the installed `data-boar` command. Command samples still follow the process that is running.
+- **markdown 3.11.1:** routine lock bump. No advisory. `uv.lock`, `requirements.txt`, and `pylock.toml` move together.
+- **Credential env names:** a name this process reserves for itself is refused as a target credential. The public prefix list is unchanged.
+- **Credential hosts (#2103), default change:** an env credential fails closed unless the process sets `DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS` (comma-separated hosts, no port). YAML `allowed_hosts` only narrows that list. Lab opt-out: `DATA_BOAR_CREDENTIAL_HOSTS_UNRESTRICTED=1` logs a warning and restores the previous YAML host gate.
+- **Config save:** while RBAC enforcement is active, a non-admin principal can change only api keys classified as editable. Unclassified api keys stay as stored. The freeze does not run when RBAC enforcement is inactive.
+
+- **Pillow 13 in the uv lock (#2116):** `uv.lock` installs Pillow 13. `pip install data-boar[grc-dashboard]` stays on Pillow 12.x until Streamlit widens its `pillow<13` cap (Streamlit <=1.66.0). The public floor remains `pillow>=12.3.0`.
+
+- **Hybrid license required (#2042):** enforced mode rejects a token that has no `dbmldsa_sig` (`hybrid_claim_required`) and rejects verification when the packaged ML-DSA anchor is missing (`missing_mldsa_anchor`). Ed25519-only licenses from 1.7.4 must be reissued before an enforced 1.8 deployment. `licensing.mode: open` is unchanged.
+- **Dev issuer hybrid (#2043):** `scripts/issue_dev_license_jwt.py` attaches `dbmldsa_sig` with a DEV ML-DSA-65 key (`DATA_BOAR_LICENSE_ISSUER_MLDSA_PRIVATE_KEY_PEM_FILE`). It refuses the packaged anchor private key. An unset key is ephemeral and does not match the packaged anchor.
+
+- **FastAPI floor (#2089):** `fastapi>=0.143.0`. Native OpenTelemetry auto-config is opt-in (`FASTAPI_OTEL_AUTO_CONFIGURE=true` or `telemetry={"auto_configure": True}`). The app passes `telemetry={"auto_configure": False}` and still exports only when `DATA_BOAR_OTEL_ENABLED` is set.
+- **Credential env names (#2086):** `pass_from_env`, `password_from_env`, `user_from_env`, `token_from_env`, and `client_secret_from_env` fail at load when the name is outside the `DATA_BOAR_` / `REST_API_` / `API_` prefixes, or when the destination is missing from that target’s `allowed_hosts`. Shipped examples now use prefixed names (`DATA_BOAR_DEMO_DB_PASSWORD`, `DATA_BOAR_LAB_*`).
+- **`GET /health` (#2077):** the unauthenticated body is only `{"status":"ok"}`. License, trust, transport, and integrity moved to authenticated `GET /status`.
+- **Notification `public_base_url` (#2087):** `public_base_url: ${VAR}` raises `ValueError` and is not expanded. Other notification `${VAR}` values still expand only for the same prefixes.
+
+---
+
+## 1.8.0-rc (working line on `main` — git-only)
+
+> Release candidate for **`1.8.0`**. **`[project] version = 1.8.0-rc`** (ADR-0073 PEP 440 hyphen form). **`[tool.databoar] maturity_build = 127`** — **rc band entry** on promotion from **`1.8.0-beta`** (last beta reconciliation **`.116`**, 2026-08-22). **Not** on PyPI or Docker Hub **`latest`**. Notes: [docs/releases/1.8.0-rc.md](docs/releases/1.8.0-rc.md).
+
+### Volatility triage path spellings (#1868)
+
+- `plugin_metadata.volatility_triage` collapses a relative path and the absolute path of the same plugin file when both config keys share one default section (for example `regex_overrides_file` and `regex_overrides_files`). The first spelling stays in `source_file`. `patterns_plugin_file` plus a legacy key on that path remains two reads. Detector merge is unchanged. See [TECH_GUIDE.md](docs/TECH_GUIDE.md).
+
+### Pytest warnings (#1915)
+
+- **Starlette 1.7.0** includes the Kludex/starlette#3498 fix. The `anyio.abc.BlockingPortal` `filterwarnings` entry and the matching mark in `tests/conftest.py` are gone. `addopts` stays `-v -W error`.
+
+- **`filesystem_credit_card`** in `benchmark-rc-v2.sentinel.yaml` and `benchmark-rc-v3.sentinel.yaml` fails the post-smoke checker when `CREDIT_CARD` is absent from `filesystem_findings`. Corpus file: `tests/data/homelab_synthetic/synthetic_pan_luhn.txt` (Visa test PAN).
+
+### RC smoke extras and missing-extra failures (maestro#91)
+
+- **Host smoke prepare** syncs `--extra compressed` plus the extras the `--bench-config` targets need (`scripts/rc_bench_extras.py list`, from `optional_extra_for_target`; RC v2 → `nosql`, v3 → `mysql nosql postgres shares`). `uv sync` no longer prunes `pymongo` before the scan. `rc_bench_extras.py verify` fails the prepare when a distribution of those extras is missing.
+- **MongoDB / Redis connectors** record `scan_failures.reason=missing_optional_dependency` (not `unreachable`) when the `nosql` extra is absent.
+- **RC sentinel** fails on any `missing_optional_dependency` in the latest session before optional probes run, so a closed lab port cannot turn a missing extra into `SKIP` + `SENTINEL_OK`.
+
+### Trust anchor (#1992)
+
+- **Key rotation** is accepted only when both embedded anchors (Ed25519 and ML-DSA-65) sign `data-boar/license-key-rotation/v1` plus the epoch. A raw `DATA_BOAR_LICENSE_PUBLIC_KEY_*`, `DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_*`, or YAML public-key path fails closed (`untrusted_key_override`). Hybrid `dbmldsa_sig` still verifies, against the packaged or rotated ML-DSA key.
+
+### License file path (#1940)
+
+- When `DATA_BOAR_LICENSE_PATH` and `licensing.license_path` are both unset or blank, `LicenseGuard` reads the org canonical JWT if it exists (`<user-config>/databoar/license.jwt`). Explicit env/config still fail closed if that path is missing. Spec: [LICENSING_SPEC.md](docs/LICENSING_SPEC.md).
+
+### Promotion from `1.8.0-beta` (2026-09-22)
+
+- **Cut:** `chore(release): cut 1.8.0-rc` — suffix **`1.8.0-beta` → `1.8.0-rc`**; `maturity_build` **116 → 127** (rc band floor; ADR-0073 same-line beta→rc decision).
+- **Highlights:** feature and fix bullets accumulated during the beta line remain under **§ 1.8.0-beta** below (not duplicated here).
+
+---
+
+## 1.8.0-beta (frozen at RC promotion — git-only history)
+
+> Opened the **`1.8.0`** public line (superseded on `main` by **`1.8.0-rc`** — see § above). **`[project] version` was `1.8.0-beta`**; **`maturity_build`** reached **`.116`** at last beta reconciliation (**2026-08-22**). Notes: [docs/releases/1.8.0-beta.md](docs/releases/1.8.0-beta.md).
+
+### Maturity octet reconciliation (2026-08-18)
+
+- **Cut:** `604c1b5c` (`chore(release): cut 1.8.0-beta`) set `maturity_build = 1`.
+- **Audit:** `git log 604c1b5c..origin/main --no-merges --format='%s' | rg '^(fix|feat)(\(|:)'` → **68** commits.
+- **Applied:** `1 + 68 = 69` in `[tool.databoar] maturity_build` only — **`[project] version` stays `1.8.0-beta`** (ADR-0073 rule 1).
+
+### Maturity octet reconciliation (2026-08-22)
+
+- **Cut:** `604c1b5c` (unchanged — same 1.8.0-beta line).
+- **Audit:** `git log 604c1b5c..origin/main --no-merges --format='%s' | rg '^(fix|feat)(\(|:)'` → **115** commits (was 68 on 2026-08-18, **+47** since).
+- **Applied:** `1 + 115 = 116` in `[tool.databoar] maturity_build` only — **`[project] version` stays `1.8.0-beta`** (ADR-0073 rule 1).
+
+### Included since `1.7.4.post12`
+
+- **License JWT hybrid verify (#48):** `decode_license_jwt_hybrid` checks optional claim `dbmldsa_sig` (ML-DSA-65). JOSE `alg` stays EdDSA. **`LicenseGuard` calls that hybrid verifier when the claim is present** (Refs #1462). Spec: [LICENSING_SPEC.md](docs/LICENSING_SPEC.md).
+
+- **Gitleaks + OSV check-all parity (#1933):** CI and local `check-all` pin gitleaks **8.30.1** by **binary** SHA256 (`scripts/tool-pins.sh`), scan with `security/gitleaks.toml` after deleting root `.gitleaks.toml` / `.gitleaksignore`, `--ignore-gitleaks-allow`. OSV-Scanner **2.6.0** in `gitleaks.yml` and on `check-all --enforced`. Notes: [TESTING.md](docs/TESTING.md).
+
+- **Redis TYPE-first value sampling (#1348 Part B):** `connectors/redis_connector.py` samples payloads by Redis `TYPE` when key names stay LOW (`GET` / `HSCAN` / `LRANGE` / `SSCAN` / `ZRANGE` / `XRANGE`). Unsupported types record `redis_value_not_sampled` (JSON counts), not `unreachable`. Engine still passes `file_scan.sample_limit` for the SCAN window; `value_sample_limit` has **no YAML key** (constructor default 100).
+
+- **Host header allow-list (`api.trusted_hosts`):** `TrustedHostMiddleware` uses `trusted_api_hosts()` at import (`127.0.0.1`, `localhost`, `testserver`, plus `api.host` and extras). Wildcards ignored. Bind `0.0.0.0` does not add a public DNS name. Untrusted Host → HTTP 400. Restart `--web` after YAML changes.
+
+- **SECURITY.md hierarchy (#1892):** root policy map (policy → technician `docs/SECURITY.md` → lab ops → posture hub at `docs/SECURITY_GOVERNANCE_POSTURE_HUB.md` → ADR 0074) plus a short L3/L4 pointer to [#989](https://github.com/DataBoar/data-boar/issues/989) and the AIDE/auditd baseline. Does not implement canaries or amend ADR 0074.
+
+- **CI workflow YAML (#1918):** local guard rejects GitHub Actions `run:` steps that mix folded scalars (`>` / `>-`) with shell `\` (the `#1904` / `#1906` pip `--require-hashes` collapse). Wired in pre-commit and `check-all`. Optional `act` + Podman smoke stays documented only — not in `check-all`.
+
+- **Scorecard Pinned-Dependencies (#1906):** wheelhouse recipe installs PyYAML with `--require-hashes`; in-container builders install the toolchain from `scripts/wheelhouse/build-tools-hashes.txt`; `apply_wheelhouse_v1.sh` pins `--no-index` packages to the hosted wheel versions. Remaining `pip install numpy` after local `pip wheel` is `--no-index` only (hashes are the built wheels).
+
+- **Scorecard Pinned-Dependencies (#1904):** `ci.yml` uv fallback and ansible-syntax install `pip` with `--require-hashes` files under `.github/pip-constraints/` (compiled from the same version pins the jobs already used). `uv.lock` stays the product lock.
+
+- **Scorecard Token-Permissions (#1903):** publish workflows (`publish-pypi.yml`, `sbom.yml`, `homebrew-tap.yml`, `native-packages.yml`, `dependabot-sync.yml`) keep top-level `contents: read`; `contents: write` only on jobs that attach/push. PyPI OIDC `id-token` unchanged; unused `actions: write` dropped from the Homebrew bump caller.
+
+- **Pytest / Dependabot uv group (#1871):** ignore only the starlette `anyio.abc.BlockingPortal` alias `DeprecationWarning` (exact message regex in `filterwarnings`). `addopts = -v -W error` unchanged. `tests/conftest.py` warms `starlette.testclient` in `pytest_configure` and re-applies the ignore during collection (not only per-item marks) so CI collection does not error. Remove via #1915 when starlette ships Kludex/starlette#3498.
+
+- **Scorecard Pinned-Dependencies (#1905):** `prep_audit.sh` installs `uv` from the GitHub release tarball (`0.11.2`) after sha256 verification — no `curl | sh`. Fail-closed on checksum or download failure; curl retries match #1842.
+
+- **Scorecard Signed-Releases (#1891):** the next GitHub tag (`1.7.4.postN` or `1.8.0`, whichever ships first) attaches Sigstore SLSA provenance (`data-boar.intoto.jsonl`) via OIDC `actions/attest-build-provenance` on the SBOM job. Historical tags stay unsigned. PyPI Trusted Publishing is unchanged.
+
+- **Scorecard Dangerous-Workflow (#1888):** `operator-gated-pr-guard.yml` omits checkout `ref:` (default-branch `github.sha`) so Scorecard does not treat trusted `base.sha` like untrusted `head.sha`. `persist-credentials: false` unchanged; SSHSIG gate unchanged.
+
+- **Global privacy regulations primer (#600):** [GLOBAL_PRIVACY_REGULATIONS_PRIMER.md](docs/primers/GLOBAL_PRIVACY_REGULATIONS_PRIMER.md) — PIPEDA / POPIA / APPI / Vietnam PDPD / FELCA alignment narrative; #477 samples as baseline; honest coverage (PIPEDA/POPIA/APPI YAML already on disk; FELCA is Brazil).
+
+- **Primer + DPO/legal pitch manifesto bridge (#700):** primer §8 mapping table (defensive scanning + actionable-governance doctrine vs ISO/NIST/CPP **themes**, not legal equivalence); pitch states the trust triangle **is** the GRC “evidence bundle”. ADR-0025 ceiling unchanged.
+
+- **Inspirations NIST PF + OWASP AI Exchange (#698):** `OWASP.md` plus full `OWASP.pt_BR.md`; NIST Privacy Framework Identify-P and AI RMF Privacy-Enhanced sections on the Wazuh/NIST lab-op note (EN + pt-BR); hub row. Alignment/inspiration only — not PF, RMF, or OWASP certification.
+
+- **`--validate-config` invalid path is side-effect free (#538):** unknown connectors / missing required keys abort **before** creating `report.output_dir`, the `sqlite_path` parent, or opening the integrity-anchor SQLite file.
+
+- **Integrity anchor upgrade (#1262):** a legitimate `pip`/`pipx` upgrade that changes hashed modules stays `tampered`/`-alpha` until the operator runs `--reconcile-integrity-anchor --confirm-upgrade-to=<installed-version>` (must match the running package). Auto-rebaseline on `release_label` change was a bypass surface and is removed.
+
+- **Findings CSV formula injection (#1723):** `GET /findings/csv` and `GET /findings/{session_id}/csv` sanitize string cells with `excel_sanitize_cell` (same CWE-1236 prefixes as XLSX / #547).
+
+- **WebAuthn login `next=` (#1557):** `safe_next_path` also fail-closes when `urlsplit` reports a scheme or netloc (protocol-relative `//host` after auth).
+
+- **Augmented scan extras are Pro (#1876 / remaining #854):** `ocr_images` stays Pro; `rich_media_metadata` and `data_soup_formats` are explicit `Tier.PRO` keys with gates on the filesystem/share extract path (existing `is_feature_available`). EPUB stays Community. No computer-vision keys (not in tree).
+
+- **PyPI install docs (#1752):** README / CONTRIBUTING no longer say `pip install data-boar` is “when published”. The package is live; document `uvx data-boar` and `uvx data-boar --demo`. Last stable wheel can lag `main` (pre-release remains git-only).
+
+- **Scorecard Token-Permissions (#1889):** `.github/workflows/claude.yml` declares top-level `permissions: contents: read` and drops job-level `contents: write` to `read` (checkout does not persist credentials; the job does not push). Other publish workflows unchanged.
+
+- **Dockerfile pip pins (#1890):** `Dockerfile` / `Dockerfile.nogil` pin `pip==25.3`, `wheel==0.46.2`, `cryptography==50.0.0` (lock), and install `requirements.txt` with `--require-hashes`. Does not change lab-op scripts, `ci.yml`, or `wheelhouse-recipe.yml`.
+
+- **OpenSSF Security-Policy (#1886):** root `SECURITY.md` / `SECURITY.pt_BR.md` now include a clickable GitHub advisory URL, `mailto:contact@databoar.com.br`, product **Supported versions** (1.7.4.x + `main`), a **Disclosure timeline** (ack **72 hours**; no public PoC issue), and Scorecard badge/API links. Does not change Scorecard YAML workflows.
+
+- **TECH_GUIDE forensic scan posture (#691):** live vs offline collection, operator checklist, and CISO tool-validation note (ISO/IEC 27041 pointer, ADR-0007 corpus, ADR-0047 RCA, NIST CFTT as complementary — not FTK/AXIOM equivalence). `volatility_class` remains author metadata (#687), not an auto live/offline flag.
+
+- **DPO + legal pitch (#688):** [PITCH_DPO_AND_LEGAL.md](docs/pitch/PITCH_DPO_AND_LEGAL.md) ([pt-BR](docs/pitch/PITCH_DPO_AND_LEGAL.pt_BR.md)) — litigation/custody companion to [PITCH_DPO.md](docs/pitch/PITCH_DPO.md); CPP Arts. 158-A–F pointers; ADR-0025 ceiling (*laudo* / not a legal-conclusion engine). Honest on hashes vs SSH-signed manifests.
+- **Integrity snapshot public `error` (#1721):** `ensure_integrity_anchor` fail-soft JSON used by unauthenticated `/health` and `/status` stores `type(e).__name__` only. `str(e)` (paths, JSON parse context) stays in the operator log via `SanitizeLogFilter`.
+
+- **CPU pre-flight before numpy/ML (#929):** x86 hosts missing SSE4.2, POPCNT, or AVX skip the PyPI numpy/sklearn/DL imports (SIGILL is not catchable). Regex CPF/CNPJ still runs; `core.dl_backend` is lazy from `detector.py`. **Primary** path to restore working ML is the hosted wheelhouse `wheelhouse-x86-64-v1-2026-07-29` (`[noavx]`: `gh release download` + `pip install --no-index --find-links`). Distro numpy / `-Dcpu-baseline=min` are fallbacks only.
+
+- **OpenSSF Scorecard CI (#886):** `.github/workflows/scorecard.yml` runs Scorecard on `main` (push + weekly + `branch_protection_rule`), uploads SARIF, and publishes results for the public badge on README / README.pt_BR. Workflow-level token is `contents: read`; the analysis job keeps the narrower Scorecard grants.
+
+- **Logger redaction choke point (#1722):** `get_logger()` always attaches `SanitizeLogFilter`. Args and `msg` are sanitized whether they are `str`, `bytes`, `BaseException` (`clean_error`), or other objects (`str` then `sanitize_log_text`). Formatted `exc_info` / `stack_info` are redacted so `logger.exception` and `logger.warning("%s", exc)` cannot emit a password. `save_failure` remains the persistence sink. AST gate + allowlist in `tests/test_logger_pii_filter.py`.
+
+- **Rust CI cargo cache (#386):** `rust-ci.yml` caches cargo registry/git and `boar_fast_filter/target` via SHA-pinned `actions/cache` (v6.1.0).
+
+- **Rust bridge edge cases (#390):** `tests/test_rust_bridge.py` covers empty batch, Unicode/emoji, ~100KB strings, and Pro pre-filter fallback when `boar_fast_filter` is missing.
+
+- **Archive mismatch docs (#1354):** `--content-type-check` / `file_scan.use_content_type` does **not** dispatch compressed archives. On **filesystem** targets a lying archive extension records `archive_type_mismatch` in `scan_failures` instead of expanding. SMB/WebDAV/SharePoint skip expansion without that failure today. Magic-wins dispatch remains an optional later enhancement.
+
+- **Void xbps overlay (#1404):** `void-packages` template generated from `EXTRAS_MANIFEST` (same connector map as nfpm), runit service, Podman/Docker Void `--show` / fail-closed `--build`. Upstream `void-packages` merge remains out of scope.
+
+- **`/logs` auth aligns with RBAC middleware (#1190):** role check in `_authorize_audit_log_download` runs only when `rbac_enforcement_active` (`api.rbac.enabled` and tier allows `dashboard_rbac`). Community/OPEN and Pro+ without RBAC reach `/logs` like `/findings`; lock with `api.require_api_key`. `--demo` no longer provisions or prints a per-run API key (removes clear-text credential in YAML/banner). ADR-0082 Decision 3 amended.
+
+- **Route matrix collector walks nested `include_router` (#1426):** FastAPI **0.139+** stores `include_router` as `_IncludedRouter`; snapshot collector recurses so endpoint-loss detection still works. **`EXPECTED_HTTP_ROUTES` unchanged.**
+
+- **uv minor/patch bump + requirements sync (#1428):** maintainer branch replaces Dependabot tip (#1423); avoids close/recreate loop under `required_signatures` (#1419).
+
+- **Remediation manifest export (#649 / #1394):** `--session` + `--export-remediation-manifest` (Enterprise feature).
+
+- **Cursor rules — Tier B situationalization (#1154):** 14 workflow rules → `alwaysApply: false` + globs/tokens; merged `operator-chat-language` + `persona-rigor` duplicates; workstation rules reframed (main dev box / secondary, same rigor). Rollback: `git revert` the Tier B commit. Inventory: `docs/ops/CURSOR_RULES_PHASE2_SITUATIONALIZATION.md`.
+
+- **ADR governance (Phase 1, #1162):** deterministic tests T1/T2/T5/T6 for ADR-0045 (`tests/test_adr_governance_phase1.py`); pre-commit hook `adr-governance-phase1`; plan [PLAN_ADR_GOVERNANCE_ENFORCEMENT.md](docs/plans/PLAN_ADR_GOVERNANCE_ENFORCEMENT.md).
+
+- **Native packages on the product GitHub Release (#1408):** `native-packages.yml` builds deb/rpm/apk/pacman from the wheelhouse populate and, on a `v*` Release, attaches them beside SBOMs with packager filenames, `SHA256SUMS`, and `release-manifest.json` `native_packages[]`. Air-gap: [NATIVE_PACKAGE_RELEASE.md](docs/ops/NATIVE_PACKAGE_RELEASE.md). The hand-built recipe-proof `.deb` is not published.
+
+- **macOS Homebrew own tap (#1425):** `brew tap DataBoar/databoar && brew install data-boar` — Homebrew `python@3.13` + pip of the PyPI sdist (no embedded CPython). CI `macos-14` runs `brew audit --strict --new` and `brew test`. Formula bump: `scripts/homebrew_formula_bump.py` after PyPI publish. Runbook: [HOMEBREW_TAP.md](docs/ops/HOMEBREW_TAP.md).
+
+---
+
+## 1.7.4.post12 (published PyPI **2026-07-30 00:42:09 UTC**)
+
+> Post-release on the **`1.7.4`** public line. **`[project] version = 1.7.4.post12`** and **`[tool.databoar] maturity_build = 263`** (`N=1` discrete fix since post11 baseline `.262`, ADR-0073). **PyPI-only** — no Git tag, no GitHub Release, no container. Operator runs **`publish-pypi`** after merge.
+
+### Fixed / hardened (post12, N=1)
+
+- **`gitpython` floor on `[grc-dashboard]` (#1383):** add `gitpython>=3.1.55` next to streamlit/plotly so the nine Dependabot HIGH advisories (runtime via streamlit) cannot resolve below the last patched version — one advisory is only fixed in **3.1.55** (not 3.1.54). Streamlit’s declared range `gitpython!=3.1.19,<4,>=3.0.7` accepts 3.1.55+ (measured). Lock resolves to **3.1.57**. Base install without the extra is unchanged.
+
+### Notes (post12 — not in N)
+
+- **CI Action pins (SHA-exact):** `github/codeql-action` init/analyze → `99df26d4f13ea111d4ec1a7dddef6063f76b97e9` (v4.37.0) — [#1269](https://github.com/DataBoar/data-boar/pull/1269) / [#1268](https://github.com/DataBoar/data-boar/pull/1268); `actions/setup-python` → `ece7cb06caefa5fff74198d8649806c4678c61a1` (v6.3.0) — [#1107](https://github.com/DataBoar/data-boar/pull/1107). Dependabot could not rebase those PRs under the `non_fast_forward` ruleset (#1376).
+- **Not absorbed:** [#1378](https://github.com/DataBoar/data-boar/pull/1378) uv-minor-patch group (47 updates) — keep bulk lockfile churn out of this security floor post.
+- Full `N=1` fix set and `postN` ↔ `maturity_build` map: [docs/releases/1.7.4.post12.md](docs/releases/1.7.4.post12.md).
+
+---
+
+## 1.7.4.post11 (published PyPI **2026-07-29 21:32:58 UTC**)
+
+> Post-release on the **`1.7.4`** public line. **`[project] version = 1.7.4.post11`** and **`[tool.databoar] maturity_build = 262`** (`N=1` discrete fix since post10 baseline `.261`, ADR-0073). **PyPI-only** — no Git tag, no GitHub Release, no container. Operator runs **`publish-pypi`** after merge.
+
+### Fixed / hardened (post11, N=1)
+
+- **Oracle sampling identifiers (#1370):** stop emitting lowercase quoted schema/table/column names on the Oracle dialect path — Oracle folds unquoted identifiers to UPPERCASE, so `"lab_smoke"."lab_customers"` raised `ORA-00942` on **every** column sample while discovery still worked (zero findings vs 20 on peer engines). Validated on lab-smoke: Postgres/MariaDB/MSSQL/Oracle **20** · Redis **5** · `scan_failures` none ([#1372](https://github.com/DataBoar/data-boar/pull/1372)).
+
+### Notes (post11 — not in N)
+
+- **[#1369](https://github.com/DataBoar/data-boar/issues/1369)** — lab-smoke MSSQL/Oracle one-shot init sidecars (test infra).
+- **[#1371](https://github.com/DataBoar/data-boar/issues/1371)** — `#1332` CREDIT_CARD FP fixture with `xfail(strict=True)`.
+- **[#1368](https://github.com/DataBoar/data-boar/issues/1368)** — comparable config-ref harness under `deploy/compat-matrix-config-ref/`.
+- **[#1365](https://github.com/DataBoar/data-boar/issues/1365)** — wheelhouse `x86-64-v1` troubleshooting docs (TROUBLESHOOTING + matrix + PLAN).
+- **Refs [#1367](https://github.com/DataBoar/data-boar/issues/1367)** — reproducible `mariadb` glibc recipe in PLAN ([#1377](https://github.com/DataBoar/data-boar/pull/1377)).
+- **[#1379](https://github.com/DataBoar/data-boar/issues/1379)** — wheelhouse recipe CI ([#1380](https://github.com/DataBoar/data-boar/pull/1380)); wheelhouse remains a **`data-boar-site`** release, not part of this PyPI wheel.
+- Full `N=1` fix set and `postN` ↔ `maturity_build` map: [docs/releases/1.7.4.post11.md](docs/releases/1.7.4.post11.md).
+
+---
+
+## 1.7.4.post10 (published PyPI **2026-07-28 16:37:23 UTC**)
+
+> Post-release on the **`1.7.4`** public line. **`[project] version = 1.7.4.post10`** and **`[tool.databoar] maturity_build = 261`** (`N=4` discrete fixes since post9 baseline `9fa991c2`, ADR-0073). **PyPI-only** — no Git tag, no GitHub Release, no container. Operator runs **`publish-pypi`** after merge.
+
+### Fixed / hardened (post10)
+
+- **Executive export:** PDF/DOCX session reports render Markdown inline (headings, bold, monospace) via shared `report/executive_markdown_render.py` — fixes raw `**` / `` ` `` / `####` in board/DPO deliverables ([#1353](https://github.com/DataBoar/data-boar/issues/1353), [#1357](https://github.com/DataBoar/data-boar/pull/1357)).
+- **Redis visibility (Part A):** `WRONGTYPE` on `GET` is distinguished from connection failures; `scan_failures` records per-type value-not-sampled counts; key classification cap follows `sample_limit` ([#1348](https://github.com/DataBoar/data-boar/issues/1348) Part A — Part B → 1.8.x).
+- **Archives visibility (Part A):** `archive_type_mismatch` when compressed extension and magic bytes disagree — file is not expanded but failure is visible ([#1354](https://github.com/DataBoar/data-boar/issues/1354) Part A — Part B → 1.8.x).
+- **Dependencies:** `pypdf` floor raised to `>=6.14.2` so future resolves cannot slip below the post9 CVE pin ([#1340](https://github.com/DataBoar/data-boar/issues/1340)).
+
+### Notes (post10)
+
+- **Visibility theme:** post10 fixes change **reporting**, not scan read semantics (except the `pypdf` floor, which affects what a fresh install can resolve).
+- **Not in `N`:** [#1349](https://github.com/DataBoar/data-boar/issues/1349) OS compatibility matrix docs ([#1357](https://github.com/DataBoar/data-boar/pull/1357)); lab-smoke seeds / `.gitignore` ([#1355](https://github.com/DataBoar/data-boar/pull/1355)); release-status doc commits only.
+- **Issues left open:** [#1348](https://github.com/DataBoar/data-boar/issues/1348) and [#1354](https://github.com/DataBoar/data-boar/issues/1354) remain open until Part B ships on **1.8.x**.
+- Full `N=4` fix set and `postN` ↔ `maturity_build` map: [docs/releases/1.7.4.post10.md](docs/releases/1.7.4.post10.md).
+
+---
+
+## 1.7.4.post9 (published PyPI **2026-07-28 10:34:16 UTC**)
+
+> Post-release on the **`1.7.4`** public line. **`[project] version = 1.7.4.post9`** and **`[tool.databoar] maturity_build = 257`** (`N=7` discrete fixes since post8 baseline `8527b0a4`, ADR-0073). **PyPI-only** — no Git tag, no GitHub Release, no container.
+>
+> **Milestone:** closes **11 issues** across **7 PRs** ([#1339](https://github.com/DataBoar/data-boar/pull/1339), [#1341](https://github.com/DataBoar/data-boar/pull/1341), [#1343](https://github.com/DataBoar/data-boar/pull/1343), [#1344](https://github.com/DataBoar/data-boar/pull/1344), [#1345](https://github.com/DataBoar/data-boar/pull/1345), [#1346](https://github.com/DataBoar/data-boar/pull/1346), [#1347](https://github.com/DataBoar/data-boar/pull/1347)) — post9 field-train bundle after post8.
+
+### Fixed / hardened (post9)
+
+- **CLI output paths:** pre-flight writable checks for report/output dirs; `--regenerate-report` rebuilds from SQLite without a full rescan ([#1324](https://github.com/DataBoar/data-boar/issues/1324), [#1325](https://github.com/DataBoar/data-boar/issues/1325), [#1339](https://github.com/DataBoar/data-boar/pull/1339)).
+- **SQL sampling:** deduplicate column values before applying `sample_limit` cap — fewer redundant round-trips ([#1337](https://github.com/DataBoar/data-boar/issues/1337), [#1343](https://github.com/DataBoar/data-boar/pull/1343)).
+- **Scan engine:** optional adaptive rate limiting (`BoarThrottler`) wired into the production `ThreadPoolExecutor` target loop ([#1320](https://github.com/DataBoar/data-boar/issues/1320), [#1344](https://github.com/DataBoar/data-boar/pull/1344)).
+- **Learned patterns:** audit/migration anti-generic blocklist so field column patterns are not over-broad ([#1327](https://github.com/DataBoar/data-boar/issues/1327), [#1345](https://github.com/DataBoar/data-boar/pull/1345)).
+- **Report export:** unified session export CLI with per-format wrappers (JSON/CSV/XLSX/HTML/PDF/DOCX) ([#1326](https://github.com/DataBoar/data-boar/issues/1326), [#1346](https://github.com/DataBoar/data-boar/pull/1346)).
+- **Live progress:** periodic stderr progress lines (target/table/percent/ETA when discovery yields totals) ([#1328](https://github.com/DataBoar/data-boar/issues/1328), [#1347](https://github.com/DataBoar/data-boar/pull/1347)); remote DB latency operator docs ([#1323](https://github.com/DataBoar/data-boar/issues/1323), same PR).
+- **Dependencies:** `pypdf` `6.13.3` → `6.14.2` — four DoS CVEs reachable via filesystem PDF scan path (`connectors/filesystem_connector.py` `PdfReader` on target files): CVE-2026-59935, CVE-2026-59936, CVE-2026-59937, CVE-2026-59938 ([#1336](https://github.com/DataBoar/data-boar/pull/1336)).
+
+### Notes (post9)
+
+- **Not in `N` (wheel unchanged):** benchmark safe-axis docs/tests ([#1338](https://github.com/DataBoar/data-boar/pull/1341) / `19e268c7`); PCI/saúde/LGPD compliance **samples** under `docs/compliance-samples/` + `security/` (`a9678874` — operator: samples count as docs); report `resolve_output_dir` regression test only (`1baa76b5`); `.gitignore` for local benchmark artefact (`2979c99b`); distroless base image bump (`55c6b75d` — Dockerfile; postN is PyPI-only).
+- Full `N=7` fix set and `postN` ↔ `maturity_build` map: [docs/releases/1.7.4.post9.md](docs/releases/1.7.4.post9.md).
+
+---
+
+## 1.7.4.post8 (published PyPI **2026-07-23 13:52:06 UTC**)
+
+> Post-release on the **`1.7.4`** public line. **`[project] version = 1.7.4.post8`** and **`[tool.databoar] maturity_build = 250`** (`N=5` `fix(` commits since post7 baseline `b5054d55`, ADR-0073). **PyPI-only** — no Git tag, no GitHub Release, no container.
+>
+> **Honesty:** early post8 prep documented only `N=2` / `247` (#1297–#1298); three more `fix(` commits landed on `main` before upload — this entry reflects the full set at publish time.
+
+### Fixed / hardened (post8)
+
+- **SQL / MSSQL (native pymssql):** map `connect_timeout_seconds` / `read_timeout_seconds` to pymssql `login_timeout` / `timeout` instead of unsupported `connect_timeout` — first field run ingested zero rows before this fix ([#1297](https://github.com/DataBoar/data-boar/pull/1297)).
+- **Integrity anchor:** expand behaviour-critical allowlist via `connectors/*.py` + `core/licensing/*.py` globs (42 modules, was 6); `--version` and `--validate-config` surface `-alpha` / `runtime-trust` before scan ([#1298](https://github.com/DataBoar/data-boar/pull/1298)).
+- **Dependencies:** `pyasn1` → `0.6.4` (PYSEC-2026-3455/3456/3457) ([#1304](https://github.com/DataBoar/data-boar/pull/1304)).
+- **SQL connect_args (per driver):** `oracle+oracledb` uses `tcp_connect_timeout`; `mssql+pyodbc` passes `timeout` only (pyodbc rejects `login_timeout`); pymssql path unchanged ([#1310](https://github.com/DataBoar/data-boar/pull/1310) / [#1302](https://github.com/DataBoar/data-boar/issues/1302)).
+- **Oracle discovery:** skip `AUDSYS` and other 12c+ system schemas that raise permission errors during enumeration ([#1316](https://github.com/DataBoar/data-boar/pull/1316) / [#1315](https://github.com/DataBoar/data-boar/issues/1315)).
+
+### Notes (post8)
+
+- **Not in `N`:** LGPD compliance sample enrichment ([#1288](https://github.com/DataBoar/data-boar/pull/1288), docs); MSSQL no-ODBC default was **post7** ([#1290](https://github.com/DataBoar/data-boar/pull/1290)).
+- Full `N=5` fix set and `postN` ↔ `maturity_build` map: [docs/releases/1.7.4.post8.md](docs/releases/1.7.4.post8.md).
+
+---
+
+## 1.7.4.post7 (published PyPI **2026-07-21 12:03:52 UTC**)
+
+> Post-release on the **`1.7.4`** public line. **`[project] version = 1.7.4.post7`** and **`[tool.databoar] maturity_build = 245`** (`N=4` discrete fixes since post6 baseline `6dc54642`, ADR-0073). **PyPI-only** — no Git tag, no GitHub Release, no container.
+
+### Fixed / hardened (post7)
+
+- **Archives (.7z):** batch-extract and post-extract read failures route through `clean_error()` instead of raw `str(e)` (#1257).
+- **API / WebAuthn:** valid WebAuthn session cookie satisfies `require_api_key` on JSON routes (#1258).
+- **learned_patterns:** skip bare filesystem filenames; anchor relative `output_file` under `report.output_dir` (#1259, #1260).
+- **SQL / MSSQL:** honor explicit `dialect+driver`; default `mssql` to `mssql+pymssql` (hardcoded ODBC was the defect) + `sql-community` extra for free-tier drivers (#1289, #1290 — operator reclassified from `feat(` as defect-fix).
+
+### Notes (post7)
+
+- **Accounting (#1261):** post5 `maturity_build` baseline documentation only — does **not** advance `maturity_build`.
+- Full `N=4` fix set and `postN` ↔ `maturity_build` map: [docs/releases/1.7.4.post7.md](docs/releases/1.7.4.post7.md).
+
+---
+
+## 1.7.4.post6 (published PyPI **2026-07-15 22:48:46 UTC**)
+
+> Post-release on the **`1.7.4`** public line. **`[project] version = 1.7.4.post6`** and **`[tool.databoar] maturity_build = 241`** (`N=1` `fix(` commit since post5 `b7de32ba`, ADR-0073). **PyPI-only** — no Git tag, no GitHub Release, no container.
+
+### Fixed / hardened (post6)
+
+- **Integrity:** re-baseline the SQLite integrity anchor on a **legitimate** release upgrade — `pip install -U` / `pipx upgrade` reusing the same SQLite DB no longer false-tints as tampered/`-alpha`; same `release_label` + hash drift still = `tampered` (real detection preserved) (#1262, #1263).
+
+### Notes (post6)
+
+- Full `N=1` fix set and `postN` ↔ `maturity_build` map: [docs/releases/1.7.4.post6.md](docs/releases/1.7.4.post6.md).
+
+---
+
+## 1.7.4.post5 (published PyPI **2026-07-15 21:44:36 UTC**)
+
+> Post-release on the **`1.7.4`** public line. **`[project] version = 1.7.4.post5`** and **`[tool.databoar] maturity_build = 240`** (`N=14` `fix(` commits since post4 merge `656fdc3d`, ADR-0073). **PyPI-only** — no Git tag, no GitHub Release, no container.
+
+### Fixed / hardened (post5)
+
+- **Archives (.7z):** content scan via py7zr `BytesIOFactory` + pre-budget member extract (#1250, #1248).
+- **Sessions:** orphan `running` reaper (PID liveness, TOCTOU-safe conditional UPDATE) + interrupt → `interrupted` (#1251).
+- **CLI:** `--validate-config` **WARN** when optional SQL driver deps are missing (offline probe) (#1246).
+- **Security:** standalone HTML form CSRF (#1231); Dataverse `org_url` / `token_url` SSRF guards (#1232); aggregate archive decompression budgets (#1233); secret-by-identity lock + reachable JWT GRACE (#1210, #1212); non-numeric / non-finite license/budget hardening; drop `Invoke-Expression` from `external-review-pack.ps1` (#1192).
+- **Integrity:** honest `build_digest_matched` (no `signature_ok` overclaim) + legacy migrate zeroing (#1211).
+- **OPSEC / lint:** LICENSING_SPEC evasion-vector redaction (#1234, #1235); markdown-lint git-tracked only (#1240); skills OPSEC / ATS footer path (#1191).
+
+### Notes (post5)
+
+- Full `N=14` fix set and `postN` ↔ `maturity_build` map: [docs/releases/1.7.4.post5.md](docs/releases/1.7.4.post5.md).
+- **Accounting (ADR-0073):** `N` for post5 uses the **published** post4 row **`maturity_build = 226`** (`656fdc3d`), not the preceding unpublished fix row **`.225`** — hence `226 + 14 = 240` (not `225 + 15`).
+
+---
+
+## 1.7.4.post4 (published PyPI **2026-07-13 16:29:05 UTC**)
+
+> Post-release on the **`1.7.4`** public line. **`[project] version = 1.7.4.post4`** and **`[tool.databoar] maturity_build = 226`** (`N=15` fixes since post3 baseline, ADR-0073 dual counter policy).
+
+### Fixed (post4)
+
+- **API logs hardening / demo retrieval:** fixed `/logs` fallback path-injection sink and resolved demo session audit-log retrieval on `/logs/{session_id}`.
+- **Help invocation contract:** aligned help text for dev (`python main.py`) vs installed (`data-boar`) usage surfaces.
+- **Prefilter recall parity:** prefilter now preserves findings parity when profile signals are active.
+- **Config redaction:** DSN/URL embedded credentials are now redacted in `/config`.
+- **Web exposure hardening:** safe-by-default API exposure updates and follow-up import-cycle/logging remediations.
+- **Report safety:** all XLSX exports route through formula-injection sanitization.
+- **Detector hardening:** one-class compliance-term detection is stabilized.
+- **SQL connector robustness:** sampling transaction isolation per connection.
+- **CI governance:** operator-gated reopen action pins restored.
+- **RBAC hardening:** default-deny route map and `compare_digest` byte-safe checks.
+
+### Notes
+
+- Full fix set used for `N=14` is listed in [docs/releases/1.7.4.post4.md](docs/releases/1.7.4.post4.md).
+
+---
+
+## 1.7.4.post3 (published PyPI **2026-07-10 21:58:29 UTC**)
+
+> Post-release on the **`1.7.4`** public line. **`[project] version = 1.7.4.post3`** and **`[tool.databoar] maturity_build = 211`** (ADR-0073 dual counter policy).
+
+### Fixed (post3)
+
+- **Dependency security:** `soupsieve` **2.8.3 → 2.8.4** to remove findings for **CVE-2026-49476** and **CVE-2026-49477** ([#1177](https://github.com/DataBoar/data-boar/pull/1177)).
+- **SQL connector observability:** SQL sampling failures now surface in `scan_failures` (bundle includes [#1144](https://github.com/DataBoar/data-boar/pull/1144), issue [#1140](https://github.com/DataBoar/data-boar/issues/1140)).
+- **Archive observability:** encrypted/corrupt archive members now surface in `scan_failures` (bundle includes [#1146](https://github.com/DataBoar/data-boar/pull/1146), issue [#828](https://github.com/DataBoar/data-boar/issues/828)).
+
+### Changed (post3)
+
+- **Onboarding docs (`pipx`):** RHEL9-family (`python3.12`) and Alpine/musl (toolchain prerequisites) edge cases documented ([#1175](https://github.com/DataBoar/data-boar/pull/1175)).
+- **Contributor command docs:** canonical `uv export --frozen --no-emit-project -o requirements.txt` guidance applied in EN/pt-BR ([#1179](https://github.com/DataBoar/data-boar/pull/1179), issue [#1176](https://github.com/DataBoar/data-boar/issues/1176)).
+
+---
+
+## 1.7.4 (2026-06-26)
+
+> **Stable GA** on the **`1.7.4` line** — release gate **#406** closed with Maestro Deep 5-host completão evidence ([#1021](https://github.com/DataBoar/data-boar/issues/1021)). **#970** was a **premature** stable bump/tag **without** the gate — corrected by **ADR-0072**; **`1.7.4` is not VOID**. Public version **`1.7.4`**; **`[tool.databoar] maturity_build = 201`** (side-channel per **ADR-0073** — #976, #977).
+
+### Added
+
+- **SQL sampling (SRE + audit):** connectors + timeouts + **`core/sampling_policy`** — [ADR 0043](docs/adr/ADR-0043-sql-column-sampling-non-null-and-strategy-hook.md).
+- **Lab lessons archive:** **`docs/ops/lab_lessons_learned/`** + **`LAB_LESSONS_LEARNED.md`** — [ADR 0042](docs/adr/ADR-0042-lab-lessons-learned-archive-contract.md); **`lab-lessons`** session token.
+- **Cross-platform + POSIX gate helpers:** **`scripts/quick-test.sh`**, **`lint-only.sh`**, **`pre-commit-and-tests.sh`**, **`check-all.sh`** — [SCRIPTS_CROSS_PLATFORM_PAIRING.md](docs/ops/SCRIPTS_CROSS_PLATFORM_PAIRING.md).
+- **Completão operator prompts:** **`completao-chat-starter.ps1`** + **[COMPLETAO_OPERATOR_PROMPT_LIBRARY.md](docs/ops/COMPLETAO_OPERATOR_PROMPT_LIBRARY.md)** (tiers incl. **`release-master`** parametric semver).
+- **Lab-OP personas hub:** **[LAB_OP_HOST_PERSONAS.md](docs/ops/LAB_OP_HOST_PERSONAS.md)** (+ pt-BR).
+- **Five-minute onboarding:** **`QUICKSTART.md`** — **#609**.
+- **Audience routing:** **`docs/AUDIENCE_GUIDE.md`** — **#595**.
+- **Stakeholder pitch stubs + index:** **`docs/pitch/PITCH_STAKEHOLDER.md`**, **`docs/pitch/PITCH_DPO.md`**, **`docs/pitch/PITCH_CISO.md`**, **`docs/pitch/INDEX.md`** — **#586**, **#587**, **#588**, **#594**.
+- **Use-case library:** **`docs/use-cases/USE_CASES_HUB.md`**, **`docs/use-cases/USE_CASE_SCAN_AND_REMEDIATE.md`**, **`docs/use-cases/USE_CASE_TOKENIZED_FINDINGS.md`**, **`docs/use-cases/USE_CASE_BIOMETRIC_DATA_PROTECTION.md`** — **#605**, **#603**, **#602**, **#604**.
+- **Plan bridge:** **`docs/plans/PLAN_REMEDIATION_INTERFACE.md`** — **#601**.
+- **Privacy management primers:** **`docs/plans/PRIVACY_MANAGEMENT_STANDARDS_PRIMER.md`**, **`docs/plans/PRIMERS_HUB.md`** — **#589**, **#593**.
+- **Rules/skills navigator:** **`docs/RULES_AND_SKILLS_HUB.md`** — **#578**.
+- **Governance ITSM diagrams (source companion):** **`docs/plans/GOVERNANCE_ITSM_DIAGRAMS_SOURCE.md`** — **#629**, **#630**.
+
+### Changed
+
+- **Governance surfaced copy:** **`CODE_OF_CONDUCT`** (**2.1**), **`TERMS_OF_USE`**, **`PRIVACY_POLICY`** (+ pt-BR; tier matrix, dashboard cues, maturity assessment storage) — **#419**, **#423**, **#424**.
+- **Man pages:** **`docs/data_boar.5`** — **`locale`** + unified **`patterns_plugin_file`** — **#444**, **#431**.
+- **PMO head-of-queue snapshot:** **`PLANS_TODO.md`** triage (**#483** contextual refresh).
+- **Ops / Cursor policy ergonomics:** phase-2 situational **`*.mdc`** (`plans-archive`, **`release-ritual`**, **`es-find`**, **`private-stack-sync`**, homelab **`ssh`**, legal dossier, **`lab-completao`**); **[CURSOR_RULES_PHASE2_SITUATIONALIZATION.md](docs/ops/CURSOR_RULES_PHASE2_SITUATIONALIZATION.md)** Tier ritual (**EN**/pt-BR).
+- **`AGENTS.md` / hubs / ladders:** VeraCrypt **`Z:`** default (**`notes-sync.git`**), **`completao`** latch, **`legal-dossier-update`**, homelab **`ssh`** §7.
+- **Lab hybrid orchestration:** **`lab-completao-orchestrate-hybrid-v173.ps1`** manifest dispatch + **`1.7.3`** image baseline notes.
+- **Lab-OP / Ansible ergonomics:** sudoers **`bash`** paths; **Void** **`xbps-install`** / **`fuse-sshfs`**; skip marker **`.labop-skip-lab-node-01-podman`**.
+- **`private-git-sync.ps1`:** bare mirror probe **`Z:`** → **`Y:`** guard + **`git push`** exit semantics (stderr MOTD).
+- **Completão archived master tiers:** **`COMPLETAO_MESTRE`** + parametric **`release-master`** semver in **`completao-chat-starter`**.
+- **ADR governance hubs:** **[ADR 0056](docs/adr/ADR-0056-cryptographic-adr-inventory-inv-adr-ssh-attestation.md)**, **[ADR 0057](docs/adr/ADR-0057-lightweight-hub-index-co-located-links.md)**, **[ADR 0058](docs/adr/ADR-0058-primer-hub-registration-ritual.md)** — **#582**, **#583**, **#626**.
+- **Contributing ergonomics:** venv **`Activate.ps1`** guidance (**EN**/pt-BR); **`tests/test_pwsh_venv_activate_docs.py`**.
+
+### Fixed
+
+- **Maestro / completão Deep smoke:** **`--bench-config`** before **`--lab-stack-up`** — **#404**, **#408**.
+- **Docs headings (MD024):** **`TESTING_POC_GUIDE`**, **`TROUBLESHOOTING_MATRIX`** pseudo-heading uniqueness.
+
+### Removed
+
+- **Legacy typo filename:** **`db/databasse.py`** → **`db/database.py`** — **#488**.
+
+### Security
+
+- **Config redaction API:** substring key matching (**`telegram_bot_token`**, **`file_passwords`**, …) on **`GET /config`** — **#622**.
+- **Excel export:** formula / **DDE** injection sanitisation — **#547**.
+- **`public-tracked-pii-zero-tolerance.mdc`:** placeholder slug hygiene for **`test_pii_guard`**.
+- **Timing-safe API key + MAC comparison:** `hmac.compare_digest` in `api/routes.py` and `core/maturity_assessment/integrity.py` — **#825**.
+- **Chart.js vendored** (`api/static/chart.umd.min.js`); CSP `script-src 'self'` — no CDN dependency — **#825**.
+- **rsync excludes `.env` / `.env.*`** in `Sync-WorkingTree.ps1` — **#825**.
+- **Maestro exits non-zero on real handler failures** (`$realFailCount`); offline-skips excluded — **#825**.
+- **Maestro Linux-compat:** `-WindowStyle Hidden` guarded by `$IsWindows`; `Start-Process` wrapped in `try/catch` to propagate spawn failures — **#827**.
+- **Smoke handlers: base64-encoded `tmux` payloads** eliminate shell-quoting injection; `-Ref` allowlist in all 10 handlers — **#830**.
+- **Sentinel result propagation:** all 10 handlers write `/tmp/databoar_handler/<persona>_sentinel.txt`; `Wait-HandlerSentinel.ps1` generalises polling + exit aggregation — **#831**.
+
+---
+
+Full release notes and Docker publish commands: **[docs/releases/1.7.4.md](docs/releases/1.7.4.md)**.
+
+---
+
+## 1.7.3 (2026-04-22)
+
+- Maintenance release to establish stable versioning baseline post-sanitization.
+- **Stable semver baseline** after **`1.7.2+safe` / `v1.7.2-safe`**: normalised **PEP 440** **`1.7.3`** for PyPI, docs, and Docker **`1.7.3`** + **`latest`**. Checklist: [docs/releases/1.7.3.md](docs/releases/1.7.3.md).
+
+## 1.7.2+safe (2026-04-22) — Security & Sanitization (Golden / Clean Slate)
+
+**Distribution milestone.** Package version **`1.7.2+safe`** is **PEP 440** (local segment `safe`); **Git** and **Docker Hub** use tag **`v1.7.2-safe`** for parity with the validated slim image.
+
+- **Sanitized publish surface:** **Docker Hub** now standardises on **`fabioleitao/data_boar:v1.7.2-safe`** and **`latest`** (single digest); **all prior Hub tags for this repository were removed** — do not pin deprecated tags in runbooks.
+- **Git / history narrative:** Positions the repo after **PII-sensitive history remediation**; external consumers should clone from **`v1.7.2-safe`** onward for the clean baseline story.
+- **Feature baseline:** Same application line as **1.7.1** plus subsequent `main` development (WebAuthn phases, RBAC **#86** Phase 2, data-soup Tier 1 + stego hints, etc.); see **1.7.1** below for feature notes. Full operator checklist: [docs/releases/1.7.2-safe.md](docs/releases/1.7.2-safe.md).
+
+### Carryover (was `1.7.2-beta` on `main` before this tag)
+
+- **Dashboard auth (Phase 1a — WebAuthn JSON core):** Optional **`api.webauthn`** + **`DATA_BOAR_WEBAUTHN_TOKEN_SECRET`** — [ADR 0033](docs/adr/ADR-0033-webauthn-open-relying-party-json-endpoints.md), `tests/test_webauthn_rp.py`, **`scripts/smoke-webauthn-json.ps1`** + [SMOKE_WEBAUTHN_JSON.md](docs/ops/SMOKE_WEBAUTHN_JSON.md). Default **disabled**.
+- **Dashboard auth (Phase 1b — HTML session + CSRF minimal):** WebAuthn session + CSRF on gated routes — `tests/test_webauthn_html_gate.py`, `tests/test_html_csrf.py`.
+- **Dashboard RBAC (Phase 2 — GitHub [#86](https://github.com/DataBoar/data-boar/issues/86)):** Optional **`api.rbac.enabled`** — `tests/test_rbac.py`. **Phase 3** (enterprise SSO/OIDC) remains future work.
+- **Filesystem “data soup” Tier 1 + stego hints:** **`SUPPORTED_EXTENSIONS`** + **`file_scan.scan_for_stego`** / CLI **`--scan-stego`**; import fix in **`connectors/filesystem_connector._read_text_sample`** for **`RICH_MEDIA_SCAN_EXTENSIONS`**.
+
+## 1.7.1 (2026-04-21)
+
+- **Scope import (CSV):** `scripts/scope_import_csv.py` + `config/scope_import_csv.py` emit a YAML **`targets`** fragment from a canonical CSV for operator review and merge; see [USAGE.md](docs/USAGE.md#scope-import-from-csv-config-fragment), `deploy/scope_import.example.csv`, [docs/ops/SCOPE_IMPORT_QUICKSTART.md](docs/ops/SCOPE_IMPORT_QUICKSTART.md), [PLAN_SCOPE_IMPORT_FROM_EXPORTS.md](docs/plans/completed/PLAN_SCOPE_IMPORT_FROM_EXPORTS.md).
+- **Ops (maturity POC):** [docs/ops/SMOKE_MATURITY_ASSESSMENT_POC.md](docs/ops/SMOKE_MATURITY_ASSESSMENT_POC.md) (+ pt-BR) documents **autonomous** pytest smoke (`scripts/smoke-maturity-assessment-poc.ps1`) and **manual** browser/integrity steps for the **POC ready** checklist; indexed from [docs/ops/README.md](docs/ops/README.md).
+- **Dashboard (maturity POC):** `GET /{locale}/assessment` shows a **recent submissions** table (per **batch**, newest first) when the SQLite DB has stored answers; links reuse the post-submit summary URL and CSV export. Documented in [ADR 0032](docs/adr/ADR-0032-maturity-assessment-batch-history-sqlite.md). Per-tenant RBAC for this list remains **[#86](https://github.com/DataBoar/data-boar/issues/86)** follow-up.
+- **Licensing / maturity POC:** API tests assert **`licensing.mode: enforced`** + JWT **`dbtier`** (community vs pro) gates `/{locale}/assessment` (and export) consistent with YAML `effective_tier` override — see `tests/test_api_assessment_poc.py` (`test_assessment_enforced_jwt_dbtier_*`).
+
+## 1.7.0 (2026-04-17)
+
+- **Minor release:** detector **format hints** (REST JSON scalars, **email**/**UUID** `VARCHAR` hints), **HEIC** / Apple images when optional deps are present; reporting/security fixes (heatmap path guard, report import hygiene).
+- **Compliance & docs:** **GLOSSARY** and **COMPLIANCE_AND_LEGAL** expanded (US healthcare adjacency, **Corporate-Entity-C/WRB**, **VBA** disambiguation, minors/criminal-record **context** — not legal conclusions); alignment with **ADR 0025** evidence positioning.
+- **Repository:** PII guards, CI/deps, Semgrep/Bandit posture; operator **Ansible**/homelab scripts and runbooks (see [docs/releases/1.7.0.md](docs/releases/1.7.0.md) for full checklist).
+
+## 1.6.8 (2026-04-02)
+
+- **Ops automation:** added reusable token-aware wrappers for session bootstrap, progress snapshots, and external review package generation (`scripts/auto-mode-session-pack.ps1`, `scripts/progress-snapshot.ps1`, `scripts/external-review-pack.ps1`).
+- **Review reliability:** hardened Gemini bundle verification logic to avoid false mismatches when marker-like text appears inside documentation examples (`scripts/export_public_gemini_bundle.py`).
+- **Runbooks and governance:** expanded today/next-day/carryover discipline, reinforced Corporate-Entity-C/Gemini source-of-truth framing, and added Time Machine USB recovery and repurpose playbook for urgent storage/backup recovery.
+- **Hardening and lab-op docs:** integrated LMDE/LAB-NODE-01 and Ansible hardening baselines, validation checklists, and CAPEX/OPEX planning outputs aligned to current roadmap.
+
+## 1.6.7 (2026-03-25)
+
+- **Removed** legacy **`run.py`**. Use **`python main.py`** only, with the correct **bind** flags (`--host`, `api.host`, `API_HOST`) and **dashboard transport** (`--https-cert-file` / `--https-key-file`, or `--allow-insecure-http` / `api.allow_insecure_http`). See [docs/releases/1.6.7.md](docs/releases/1.6.7.md) and [docs/USAGE.md](docs/USAGE.md).
+- **Docs / tooling:** `docs/USAGE.md` (+ pt-BR), `sonar-project.properties`, `docs/plans/completed/NEXT_STEPS.md` updated accordingly.
+
+## Earlier versions
+
+See [docs/releases/](docs/releases/) (e.g. `1.6.6.md`, `1.6.5.md`, …).

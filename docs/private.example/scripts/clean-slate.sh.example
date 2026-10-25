@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# Example template for docs/private/scripts/clean-slate.sh (copy to private tree; adjust paths).
+# Tracked in public repo WITHOUT operator-specific hostnames or paths.
+# See docs/private.example/scripts/README.md
+
+set -euo pipefail
+
+ORIGIN_URL="${ORIGIN_URL:-https://github.com/DataBoar/data-boar.git}"
+BRANCH="${BRANCH:-main}"
+DATA_BOAR_ROOT="${DATA_BOAR_ROOT:-${HOME}/Projects/dev/data-boar}"
+SEEDS_HOME="${SEEDS_HOME:-${HOME}/.config/PII/PII_LOCAL_SEEDS.txt}"
+NONINTERACTIVE="${NONINTERACTIVE:-0}"
+
+die() { echo "clean-slate: $*" >&2; exit 1; }
+
+command -v git >/dev/null 2>&1 || die "git not found in PATH"
+command -v python3 >/dev/null 2>&1 || die "python3 not found in PATH"
+
+CLONE_PARENT="$(dirname "${DATA_BOAR_ROOT}")"
+
+echo "clean-slate: DESTRUCTIVE — will remove: ${DATA_BOAR_ROOT}"
+echo "clean-slate: will clone: ${ORIGIN_URL} branch ${BRANCH}"
+
+if [[ "${NONINTERACTIVE}" != "1" ]]; then
+  read -r -p "Type YES to continue: " confirm
+  [[ "${confirm}" == "YES" ]] || die "aborted"
+fi
+
+rm -rf "${DATA_BOAR_ROOT}"
+mkdir -p "${CLONE_PARENT}"
+git clone --branch "${BRANCH}" "${ORIGIN_URL}" "${DATA_BOAR_ROOT}"
+cd "${DATA_BOAR_ROOT}"
+
+PRIVATE_SEEDS="${DATA_BOAR_ROOT}/docs/private/security_audit/PII_LOCAL_SEEDS.txt"
+# Optional: after a public-only clone, docs/private/ may be empty. Pull canonical seeds
+# from another lab host where ~/.config/PII is already aligned (set in env or shell profile;
+# never commit real hosts). Example:
+#   export PII_SEEDS_FROM_SCP='you@<canonical-lab-host>:~/.config/PII/PII_LOCAL_SEEDS.txt'
+if [[ -n "${PII_SEEDS_FROM_SCP:-}" ]]; then
+  mkdir -p "$(dirname "${PRIVATE_SEEDS}")"
+  scp -q "${PII_SEEDS_FROM_SCP}" "${PRIVATE_SEEDS}" || die "scp PII_SEEDS_FROM_SCP failed"
+  echo "clean-slate: installed ${PRIVATE_SEEDS} from PII_SEEDS_FROM_SCP"
+fi
+if [[ -f "${PRIVATE_SEEDS}" ]]; then
+  mkdir -p "$(dirname "${SEEDS_HOME}")"
+  cp -f "${PRIVATE_SEEDS}" "${SEEDS_HOME}"
+  echo "clean-slate: refreshed ${SEEDS_HOME}"
+fi
+
+if command -v uv >/dev/null 2>&1; then
+  uv sync || die "uv sync failed"
+fi
+
+python3 scripts/pii_history_guard.py --full-history
+echo "clean-slate: done"

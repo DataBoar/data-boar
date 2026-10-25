@@ -1,0 +1,12 @@
+{
+  "benchmark": "official_pro_v1",
+  "rows": 200000,
+  "workers": 8,
+  "opencore_seconds": 0.252242,
+  "pro_seconds": 0.439419,
+  "speedup_vs_opencore": 0.574,
+  "opencore_hits": 100000,
+  "pro_hits": 100000,
+  "rust_worker_path": true,
+  "generated_at_epoch": 1777172459.5106227
+}

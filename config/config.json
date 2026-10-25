@@ -1,0 +1,28 @@
+{
+    "databases": [
+        {
+            "name": "postgres",
+            "host": "192.0.2.10",
+            "port": 5432,
+            "user": "admin",
+            "password": "senha123",
+            "database": "banco_dados"
+        },
+        {
+            "name": "mysql",
+            "host": "192.0.2.11",
+            "port": 3306,
+            "user": "root",
+            "password": "senha456",
+            "database": "banco_dados"
+        }
+    ],
+    "file_scan": {
+        "directories": [
+            "/home/user/Documents/LGPD/",
+            "/home/user/Documents/sample_data/"
+        ],
+        "extensions": ["*.pdf", "*.csv", "*.xls", "*.xlsx", "*.doc", "*.txt", "*.docx"]
+    }
+}
+

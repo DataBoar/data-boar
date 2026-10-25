@@ -1,0 +1,31 @@
+---
+# Sync LAB-OP Data Boar clones to origin/main (destructive: reset --hard).
+# Inventory: group [lab_op_data_boar] with ansible_user=leitao (or your SSH user).
+# Optional per-host: data_boar_repo_root: "{{ ansible_env.HOME }}/Projects/dev/data-boar"
+#
+# Example:
+#   ansible-playbook -i inventory.local.ini playbooks/lab-op-data-boar-git-sync.yml
+#
+# See docs/ops/LAB_COMPLETAO_RUNBOOK.md
+
+- name: LAB-OP Data Boar git align to origin/main
+  hosts: lab_op_data_boar
+  gather_facts: true
+  environment: "{{ labop_debian_unattended_apt_environment }}"
+
+  tasks:
+    - name: Fetch and hard-reset main to match origin
+      ansible.builtin.shell: |
+        set -e
+        cd "{{ data_boar_repo_root | default(ansible_env.HOME ~ '/Projects/dev/data-boar') }}"
+        git fetch origin
+        git reset --hard origin/main
+        git rev-parse --short HEAD
+      args:
+        executable: /bin/bash
+      register: lab_op_git_head
+      changed_when: true
+
+    - name: Show HEAD
+      ansible.builtin.debug:
+        msg: "{{ lab_op_git_head.stdout_lines | default([]) }}"

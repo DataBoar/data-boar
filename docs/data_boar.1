@@ -1,0 +1,1210 @@
+.\" data_boar.1 - man page for Data Boar (application; PyPI distribution: data-boar)
+.\" View as: man data-boar (primary), man data_boar or man lgpd_crawler (symlink aliases)
+.TH DATA-BOAR 1 "September 2026" "Data Boar 1.8.0-rc" "User Commands"
+.SH NAME
+data-boar, data_boar, lgpd_crawler \- enterprise data discovery and risk governance (Data Boar)
+.
+.SH SYNOPSIS
+.B data-boar
+[
+.B \-\-demo
+]
+[
+.B \-\-config
+.I FILE
+]
+[
+.B \-\-web
+]
+[
+.B \-\-port
+.I PORT
+]
+[
+.B \-\-host
+.I ADDR
+]
+[
+.B \-\-reset\-data
+]
+[
+.B \-\-export\-audit\-trail
+[
+.I PATH
+]
+]
+[
+.B \-\-tenant
+.I NAME
+]
+[
+.B \-\-technician
+.I NAME
+]
+.
+.P
+.B lgpd_crawler
+is accepted as an alias; both names refer to the same application.
+.P
+The actual entry point is:
+.br
+.RS 4
+.B data-boar
+[
+.I OPTIONS
+]
+.RE
+.
+.SH DESCRIPTION
+.B Data Boar
+is an enterprise data discovery and risk governance engine. It helps organizations map personal and sensitive data across configured sources for LGPD, GDPR, CCPA, HIPAA, and related programmes (inventory and triage — not legal advice).
+.
+.P
+It discovers and maps potential PII and sensitive data using configurable
+.I regex
+patterns and an
+.I ML
+classifier (TF-IDF + RandomForest), with optional
+.I DL
+(sentence embeddings) for improved detection.
+Out-of-the-box it recognises common PII (CPF, email, phone, SSN, etc.) and sensitive categories (health, religion, political affiliation, gender, biometric, genetic, race, union, PEP, sex life).
+No raw sample content is stored; only metadata is written to a local SQLite database.
+The application produces Excel reports with multiple sheets (findings, recommendations, trends, report info) and a sensitivity/risk heatmap PNG.
+.
+.P
+Supported targets include: SQL databases (PostgreSQL, MySQL, MariaDB, SQLite, SQL Server, Oracle), local or mounted filesystems, optional Power BI workspaces, Power Apps (Dataverse), remote shares (SharePoint, WebDAV, SMB, NFS), and REST APIs.
+Optional features include: possible minor data detection (LGPD Art. 14, GDPR Art. 8), aggregated/cross-referenced identification risk (quasi-identifiers per table/file), and optional API key protection for the web API.
+.
+.P
+The application can be run as a one-shot CLI tool or as a long-running web API with a dashboard.
+Each scan is stored as a session with optional
+.I tenant/customer
+and
+.I technician/operator
+tags for attribution.
+.
+.SH SECURITY
+The web API sends security headers on all responses: X-Content-Type-Options, X-Frame-Options,
+Content-Security-Policy (CSP), Referrer-Policy, Permissions-Policy, and HSTS when the request is HTTPS.
+CSP can be tightened via environment/config or at the reverse proxy.
+.P
+Database and MongoDB connection URLs encode user and password (e.g. special characters like @, :, /, # are percent-encoded) so credentials do not break URL parsing; no extra configuration is required.
+When
+.I api.require_api_key
+is true, GET /config returns 401 without a valid API key, protecting the config file (which may contain credentials) from unauthenticated access.
+.P
+Technicians: protect the Configuration page when the API is exposed to untrusted networks by enabling
+.I api.require_api_key
+and using a strong key; run behind a reverse proxy with TLS for production.
+See
+.I SECURITY.md
+and
+.I docs/security.md
+(EN), and
+.I docs/deploy/DEPLOY.md
+(Security and hardening) for details.
+.
+.SH OPTIONS
+.TP
+.B \-\-demo
+Zero\-config demonstration mode: create a temp workspace under
+.IR /tmp/data_boar_demo/
+(or the OS temp directory) with
+.IR demo.config.yaml ,
+a synthetic filesystem corpus,
+.IR reports/ ,
+.IR audit_logs/ ,
+and SQLite DB; run an initial scan and start the dashboard on loopback (\fB127.0.0.1\fR) with plaintext HTTP.
+Does not provision an API key; with RBAC inactive,
+.B GET /logs/{session_id}
+is reachable like other dashboard download routes.
+Does not read
+.B config.yaml
+from the current working directory.
+Does not require
+.BR \-\-config .
+Implies
+.BR \-\-web
+and
+.BR \-\-allow\-insecure\-http .
+Temporary files are removed when the process exits.
+.
+.TP
+.BI "\-\-config " FILE
+Path to the configuration file (YAML or JSON).
+Defaults to
+.IR config.yaml .
+Used both for one\-shot audits and to resolve API options when starting the web server.
+.
+.TP
+.B \-\-web
+Start the REST API server instead of running a one\-shot audit.
+When this flag is set the process does not run a scan automatically; scans are triggered via the dashboard or HTTP (e.g.\&
+.BR curl (1)).
+.
+.TP
+.BI "\-\-port " PORT
+Port for the API when
+.B \-\-web
+is set.
+Defaults to
+.IR 8088 .
+Ignored in one\-shot mode.
+Can be overridden by
+.B api.port
+in the configuration file.
+.
+.TP
+.BI "\-\-host " ADDR
+Bind address for the API when
+.B \-\-web
+is set (e.g.\&
+.BR 127.0.0.1 ", " 0.0.0.0 ).
+Overrides
+.B api.host
+in the configuration file and the
+.B API_HOST
+environment variable.
+If omitted, the bind address is resolved in this order:
+.BR api.host ", " API_HOST ", "
+then a safe default of
+.B 127.0.0.1
+(loopback) for desktop/CLI use.
+Ignored in one\-shot audit mode.
+.
+.TP
+.BI "\-\-https\-cert\-file " PATH
+PEM certificate file for HTTPS when
+.B \-\-web
+is set. Must be used together with
+.BR \-\-https\-key\-file
+(or
+.B api.https_cert_file
+and
+.B api.https_key_file
+in the configuration). TLS baseline is 1.2 or newer. Without both certificate and key, startup fails unless
+.B \-\-allow\-insecure\-http
+(or
+.B api.allow_insecure_http
+in config) is set.
+.
+.TP
+.BI "\-\-https\-key\-file " PATH
+PEM private key file for HTTPS when
+.B \-\-web
+is set. Paired with
+.BR \-\-https\-cert\-file .
+.
+.TP
+.B \-\-allow\-insecure\-http
+Explicit risk acceptance: serve the dashboard over plaintext HTTP (no TLS between clients and this process). Use only on trusted loopback or lab networks. For production, prefer TLS via cert/key flags or terminate TLS at a reverse proxy. Can be set via
+.B api.allow_insecure_http
+in the configuration instead of this flag. The default Docker image command passes this flag so the container runs without mounted certificates.
+.
+.TP
+.B \-\-validate\-config
+Pre\-flight validation: parse the main configuration file (YAML or JSON), check connector type/driver recognition and required keys per target; warn on unset
+.BR *_from_env
+variables and on missing optional SQL driver packages (offline import probe only; no network or DB connect).
+On
+.BR [INVALID]
+(unknown connector, missing required keys), does not create output directories or the SQLite file.
+.
+.TP
+.B \-\-plan
+Scan plan (dry\-run): enumerate SQL/Snowflake catalog (tables/columns; no column sampling),
+TCP\-connect RTT to each target peer (one handshake, not a port scan; same SSRF guard as a live scan —
+connects to the guard\-pinned IP, no second DNS lookup; loopback / RFC1918 / link\-local require
+.B allow_private_networks
+or the probe is skipped and reported), classify local (loopback or RTT < 5 ms) / lan (5–20 ms) / remote (RTT ≥ 20 ms),
+and print an RTT\-floor estimate.
+Cost model: one sample query per column, plus one row\-estimate query per table on SQLAlchemy engines, plus catalog get_columns per table.
+Warns (does not abort) when the floor is ≥ 10 min, or remote RTT ≥ 50 ms with ≥ 200 columns.
+Cannot be combined with
+.BR \-\-web ", " \-\-validate\-config ", " \-\-reset\-data ", exports, " \-\-diff ", " \-\-prefilter\-status ", or " \-\-resume .
+.
+.TP
+.B \-\-resume
+.I SESSION
+Resume an interrupted SQL/Snowflake scan: skip tables already completed in that session UUID, continue the rest (#1330). A completed session is a no\-op (does not re\-scan). Cannot be combined with
+.BR \-\-plan ", " \-\-web ", " \-\-reset\-data ", " \-\-validate\-config ", " \-\-diff ", or " \-\-prefilter\-status .
+.
+.TP
+.B \-\-check\-extras
+List optional extras (from
+.BR pyproject.toml )
+with status and origin (image site\-packages vs
+.B /extras
+mount). Use as the first troubleshooting step when a connector fails for missing dependencies. See
+.BR DOCKER_SETUP.md .
+.
+Also reports rust\-regex\-stage / accelerator readiness (#1411 / #1414) and warns when the optional Rust accelerator
+.B boar_fast_filter
+is not installed (PyPI installs use the pure\-Python fallback; wheelhouse is the distribution channel).
+Also creates missing output directories for
+.BR report.output_dir ,
+the parent of
+.BR sqlite_path ,
+and (when
+.B learned_patterns.enabled
+is true) the parent of
+.BR learned_patterns.output_file
+when the configuration is valid.
+On
+.BR [INVALID]
+those directories and the integrity\-anchor SQLite file are not created.
+Exit
+.B 0
+with
+.BR [OK]
+or
+.B 1
+with
+.BR [INVALID] .
+Cannot be combined with
+.BR \-\-web ", " \-\-reset\-data ", " \-\-export\-audit\-trail ", " \-\-export\-dsar ", " \-\-regenerate\-report ", or " \-\-prefilter\-status .
+.
+.TP
+.B \-\-prefilter\-status
+Print rust\-regex\-stage / accelerator readiness for this configuration as JSON
+.RB ( active ", " name ", " backend ", " tier ", " reason ", " engine ,
+and
+.BR rust_accelerator_installed )
+and exit.
+Reports readiness of the optional Rust accelerator for the regex matching stage
+(#1411 / #1414). Product path executes the same patterns as the detector
+(no skip\-before\-ML; latch does not apply). Observability only — does not change findings.
+Cannot be combined with
+.BR \-\-web ", " \-\-reset\-data ", " \-\-export\-audit\-trail ", " \-\-export\-dsar ", " \-\-regenerate\-report ", " \-\-diff ", or " \-\-validate\-config .
+.
+.TP
+.B \-\-diff SESSION_A SESSION_B
+Compare findings between two scan sessions (UUIDs) in the configured SQLite database. Prints new, resolved, and severity\-changed rows to stdout. Use
+.BR \-\-fail\-on\-new\-high
+with
+.BR \-\-diff
+to exit
+.B 1
+when new HIGH findings appear in SESSION_B (CI gate). Unknown session UUID exits
+.B 2 .
+Cannot be combined with
+.BR \-\-web ", " \-\-reset\-data ", " \-\-export\-audit\-trail ", or " \-\-validate\-config .
+.
+.TP
+.B \-\-fail\-on\-new\-high
+When used with
+.BR \-\-diff :
+exit
+.B 1
+if SESSION_B has any new HIGH\-sensitivity finding vs SESSION_A; otherwise exit
+.B 0
+(unless a session UUID is invalid).
+.
+.TP
+.B \-\-export\-dsar SESSION_ID
+Export findings for one scan session as DSAR\-oriented JSON (metadata\-first; LGPD Art. 18 / GDPR Art. 15 framing). Print to stdout or use
+.BR \-\-dsar\-output PATH .
+Unknown or empty session yields empty
+.B findings_by_source
+and exit
+.B 0 .
+Cannot be combined with
+.BR \-\-web ", " \-\-reset\-data ", " \-\-export\-audit\-trail ", " \-\-validate\-config ", or " \-\-diff .
+.
+.TP
+.B \-\-dsar\-output PATH
+Write DSAR JSON to
+.B PATH
+instead of stdout. Requires
+.BR \-\-export\-dsar .
+.
+.TP
+.B \-\-dsar\-include\-samples
+With
+.BR \-\-export\-dsar :
+include raw sample fields from stored finding rows when present (SQLite stores metadata only by default).
+.
+.TP
+.B \-\-export\-l1 SESSION_ID
+Export findings for one scan session as an L1
+.B metadata_manifest
+JSON (SDK contract pin; metadata only — never raw sample fields). Reads existing SQLite rows (no re\-scan). Print to stdout or use
+.BR \-\-l1\-output PATH .
+Unknown or empty session yields empty
+.B findings
+and exit
+.B 0 .
+A projection that would violate the contract aborts with exit
+.B 1
+(fail\-closed; no degraded emit). Cannot be combined with
+.BR \-\-web ", " \-\-reset\-data ", " \-\-export\-audit\-trail ", " \-\-validate\-config ", " \-\-diff ", or " \-\-export\-dsar .
+.
+.TP
+.B \-\-l1\-output PATH
+Write L1 metadata_manifest JSON to
+.B PATH
+instead of stdout. Requires
+.BR \-\-export\-l1 .
+.
+.TP
+.B \-\-export\-findings\-sink SESSION_ID
+Echo findings for one scan session from local SQLite to the configured
+.B findings_sink
+(SQL = Pro, MongoDB = Enterprise). Metadata\-only by default. If
+.B findings_sink.include_sample_content
+is true, also pass
+.BR \-\-allow\-sample\-export
+(LGPD Art. 46) or exit
+.B 1 .
+Cannot be combined with
+.BR \-\-web ", " \-\-reset\-data ", or other export modes.
+.
+.TP
+.B \-\-allow\-sample\-export
+With
+.BR \-\-export\-findings\-sink :
+acknowledge sample_content export when YAML opts in. Never implied.
+.
+.TP
+.B \-\-export\-l3 SESSION_ID
+Export grant-scoped L3
+.B transformed_rows
+JSON (SDK contract pin; INPUT rows carry raw values). Requires
+.BR \-\-l3\-grant PATH .
+Default is ephemeral stdout/pipe. Disk write only with
+.BR \-\-l3\-persist PATH .
+POSIX persist is owner-only mode 0600. Windows apply uses icacls; verify
+uses well-known SIDs (locale-independent). SYSTEM and Administrators
+typically remain — not POSIX 0600. OWNER RIGHTS (S-1-3-4) is owner-equivalent.
+Unproven containment exits
+.B 5
+unless
+.BR \-\-l3\-allow\-unprotected .
+Paid tier (not Community): missing grant or Community exits
+.B 3 .
+A column outside the grant exits
+.B 4 .
+Per-column cap
+.B \-\-l3\-max\-rows
+(default 100, hard max 10000). Audit JSON on stderr (grant id, columns, counts — never cell values). Cannot be combined with
+.BR \-\-web ", " \-\-reset\-data ", " \-\-export\-audit\-trail ", " \-\-validate\-config ", " \-\-diff ", " \-\-export\-dsar ", or " \-\-export\-l1 .
+.
+.TP
+.B \-\-l3\-grant PATH
+JSON grant for
+.BR \-\-export\-l3
+(grant_id, target, table, columns). Never the whole table. Required with
+.BR \-\-export\-l3 .
+.
+.TP
+.B \-\-l3\-persist PATH
+Explicitly write L3 JSON (raw values) to
+.BR PATH .
+Omitted = stdout only. Requires
+.BR \-\-export\-l3 .
+.
+.TP
+.B \-\-l3\-allow\-unprotected
+With
+.BR \-\-l3\-persist :
+if owner containment cannot be proven, keep the file and set audit
+.B containment=not_enforced
+(declared degradation, never silent). Requires
+.BR \-\-export\-l3
+and
+.BR \-\-l3\-persist .
+Default is fail-closed (exit
+.B 5 ).
+.
+.TP
+.B \-\-regenerate\-report SESSION_ID
+Regenerate the Excel workbook and heatmap PNG for
+.B SESSION_ID
+from the configured SQLite database (also writes
+.B learned_patterns
+when enabled in config). No live target scan and no
+.BR \-\-web .
+Unknown session UUID exits
+.B 2 .
+Cannot be combined with
+.BR \-\-web ", " \-\-reset\-data ", " \-\-export\-audit\-trail ", " \-\-validate\-config ", " \-\-diff ", or " \-\-export\-dsar .
+.
+.TP
+.B \-\-scan\-compressed
+When set, treat
+.B file_scan.scan_compressed
+as true for this run: scan inside supported archives (zip, tar, 7z, etc.). May increase run time and I/O.
+.
+.TP
+.B \-\-content\-type\-check
+When set, treat
+.B file_scan.use_content_type
+as true for this run: infer file type from magic bytes, not only extension (helps find renamed or cloaked files). Does not dispatch compressed archives: a lying archive extension still records
+.B archive_type_mismatch
+in scan_failures instead of expanding. Adds extra I/O and CPU per file.
+.
+.TP
+.B \-\-scan\-stego
+When set, treat
+.B file_scan.scan_for_stego
+as true for this run: append lightweight byte-entropy hints for image/audio/video containers (heuristic only; not proof of hidden payload). May increase read size per rich-media file.
+.
+.TP
+.B \-\-reset\-data
+Dangerous maintenance operation: wipes all scan sessions, findings and failures from the SQLite database, deletes generated Excel reports and heatmap PNGs under
+.I report.output_dir
+and records a row in the
+.I data_wipe_log
+table.
+No scan is started; the process exits after the reset.
+See SECURITY.md before use in production.
+.
+.TP
+.B \-\-reconcile\-integrity\-anchor
+Re\-baseline the SQLite integrity anchor after an official package upgrade. Must be paired with
+.BI \-\-confirm\-upgrade\-to " VERSION"
+where
+.I VERSION
+equals the installed package version. Does not auto\-reconcile on a
+.I release_label
+change alone (that would be a bypass). Hash mismatch without this command stays tampered /
+.BR \-alpha .
+Incompatible with
+.BR \-\-web ", " \-\-reset\-data ", scans, and exports."
+.
+.TP
+.BI "\-\-confirm\-upgrade\-to " VERSION
+Required with
+.BR \-\-reconcile\-integrity\-anchor :
+the installed version the operator confirms. Mismatch refuses the re\-baseline (exit 1).
+.
+.TP
+.BI "\-\-export\-audit\-trail " PATH
+Export a JSON audit trail from the SQLite database (wipe log, session summary, maturity assessment HMAC summary when rows exist; future: build integrity anchor). Does not modify the database. If
+.I PATH
+is omitted or is
+.BR \- ,
+write to standard output; otherwise write to the given file. Cannot be combined with
+.B \-\-web
+or
+.BR \-\-reset\-data .
+See
+.I docs/USAGE.md
+and
+.I PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md
+in the repository.
+.
+.TP
+.BI "\-\-tenant " NAME
+Optional tenant or customer name for the scan in CLI (one\-shot) mode.
+Stored as
+.I tenant_name
+on the session and written to the "Report info" sheet and dashboard.
+.
+.TP
+.BI "\-\-technician " NAME
+Optional technician or operator name for the scan in CLI (one\-shot) mode.
+Stored as
+.I technician_name
+on the session and written to the "Report info" sheet and dashboard.
+.
+.TP
+.B \-\-jurisdiction\-hint
+Opt\-in for this run: add heuristic jurisdiction notes (e.g.\& US\-CA CCPA/CPRA, Colorado, Japan APPI) to the Excel Report info sheet when metadata signals suggest possible relevance.
+Not a legal conclusion; also configurable under
+.BR report.jurisdiction_hints .
+Stored on the session when set via CLI or API.
+.
+.TP
+.B \-\-validate\-crypto
+Opt\-in for this run: enable strong\-crypto / controls validation wiring
+.RB ( scan.validate_crypto ).
+Off by default.
+Phase 1 wires the flag only; full per\-connector TLS checks and anonymisation heuristics land in later phases.
+CLI and API/dashboard body override config when set for that run.
+.
+.TP
+.B \-\-progress
+Emit periodic scan progress to stderr (target X/Y, table N/M, percent, ETA when known).
+Default follows
+.B scan.progress
+in config (on unless disabled).
+.
+.TP
+.B \-\-no\-progress
+Disable live scan progress lines for this run.
+.
+.SH CONFIGURATION
+The main config file (YAML or JSON) defines:
+.IP \(bu 2
+.B targets
+\- list of databases, filesystems, APIs, shares (name, type, connection or path).
+.IP \(bu 2
+.B file_scan
+\- extensions, recursive, scan_sqlite_as_db, sample_limit.
+.IP \(bu 2
+.B report
+\- output_dir; optionally
+.B recommendation_overrides
+(list of norm_tag_pattern with base_legal, risk, recommendation, priority, relevant_for) for custom recommendation text per category (e.g.\& health, religion, political).
+.IP \(bu 2
+.B api
+\- port;
+.B host
+(bind address; optional; CLI
+.B \-\-host
+and
+.B API_HOST
+can override);
+optionally require_api_key, api_key or api_key_from_env for API key protection (GET /health remains public).
+.IP \(bu 2
+.B sqlite_path
+\- path to the SQLite database (default:
+.IR audit_results.db ).
+.IP \(bu 2
+.B scan
+\- max_workers for parallelism;
+.B adaptive_rate_limit
+(opt\-in; default false) tunes effective workers from per\-target latency;
+.B target_latency_ms
+(default 200) is the ARL feedback target in milliseconds when ARL is enabled;
+.B progress
+(default true) enables periodic stderr progress lines (override with
+.BR \-\-progress / \-\-no\-progress ).
+.IP \(bu 2
+Optional:
+.B rate_limit
+\- global safety limits to avoid accidental overload: enabled, max_concurrent_scans, min_interval_seconds, grace_for_running_status. When enabled, API/dashboard scan-start endpoints may return HTTP 429 with a JSON body containing
+.I error
+and
+.I reason
+fields (the CLI only logs warnings and exit codes remain unchanged). See
+.I docs/USAGE.md
+and
+.I data-boar (5)
+(or
+.I data_boar (5)
+or
+.I lgpd_crawler (5))
+for full configuration examples.
+.IP \(bu 2
+Optional:
+.B detection
+(minor_age_threshold, minor_cross_reference, aggregated_identification_enabled, quasi_identifier_mapping),
+.B ml_patterns_file
+,
+.B dl_patterns_file
+,
+.B regex_overrides_file
+,
+.B sensitivity_detection.ml_terms
+/
+.B .dl_terms
+,
+.B learned_patterns
+.
+.P
+See
+.I docs/USAGE.md
+and
+.I docs/SENSITIVITY_DETECTION.md
+for the full schema and examples.
+.
+.SH ENVIRONMENT
+.TP
+.B CONFIG_PATH
+Path to the configuration file used by the web API.
+When the server is started with
+.B \-\-web
+and no
+.B \-\-config
+path is given, the application loads configuration from
+.B CONFIG_PATH
+if set, or from
+.IR config.yaml
+in the current working directory.
+.
+.TP
+.B AUDIT_API_KEY
+When
+.B api.api_key_from_env
+is set in config and
+.B api.require_api_key
+is true, the API key is read from this variable (alternative to
+.B api.api_key
+in the config file).
+.
+.TP
+.B DATA_BOAR_WEBAUTHN_TOKEN_SECRET
+When
+.B api.webauthn.enabled
+is true, the WebAuthn session signing secret is read from the variable named by
+.B api.webauthn.token_secret_from_env
+(default:
+.B DATA_BOAR_WEBAUTHN_TOKEN_SECRET ).
+Startup fails if WebAuthn is enabled and the secret is unset.
+See
+.IR docs/USAGE.md
+(WebAuthn).
+.
+.TP
+.B DATA_BOAR_MATURITY_INTEGRITY_SECRET
+Optional HMAC\-SHA256 key for tamper\-evident maturity self\-assessment answer rows when the maturity POC API is enabled.
+May also be referenced via
+.B api.maturity_integrity_secret_from_env
+in config instead of this default name.
+See
+.IR docs/USAGE.md
+and
+.IR deploy/config.example.yaml .
+.
+.TP
+.B API_HOST
+When
+.B \-\-web
+is set and
+.B \-\-host
+is not passed, the bind address falls back to
+.B api.host
+in config, then this variable, then
+.BR 127.0.0.1 .
+See
+.I docs/USAGE.md
+and
+.BR core/host_resolution.py .
+.
+.TP
+.B DATA_BOAR_SQL_SAMPLE_LIMIT
+Optional integer (clamped between 1 and 10000): when set in the process environment it
+.B replaces
+.B file_scan.sample_limit
+for SQLAlchemy and Snowflake column sampling only, without editing YAML.
+See
+.I docs/USAGE.md
+(\(lqRelational database sampling\(rq).
+.
+.TP
+.B DATA_BOAR_SAMPLE_STATEMENT_TIMEOUT_MS
+Optional integer: overrides the short read timeout budget (milliseconds) for generated sampling statements on database targets when set in the process environment.
+See
+.I docs/USAGE.md
+(\(lqSRE sampling knobs\(rq).
+.
+.SH FILES
+.TP
+.I config.yaml
+Default configuration file (targets, file_scan, report, api, sqlite_path, scan, optional detection and pattern files).
+.
+.TP
+.I audit_results.db
+SQLite database for sessions, findings and failures (path set by
+.BR sqlite_path ).
+.
+.TP
+.I Relatorio_Auditoria_*.xlsx
+Excel reports per session, under
+.B report.output_dir
+(with sheets: Report info, Database findings, Filesystem findings, Scan failures, Recommendations, Trends, etc.).
+.
+.TP
+.I heatmap_*.png
+Sensitivity/risk heatmap images per session, in the same directory as the Excel reports.
+.
+.SH WEB INTERFACE
+When the API is running (\fB\-\-web\fR), open in a browser:
+.
+.TP
+.B /
+Dashboard: scan status, "Start scan" button, tenant/technician inputs, recent sessions and download links, progress chart.
+.TP
+.B /reports
+List of all sessions with Download link per session (regenerates Excel report).
+.TP
+.B /config
+Edit configuration (YAML) in the browser; "Save configuration" writes to the config file used for the next scan.
+.TP
+.B /help
+Quickstart, config examples, sensitivity detection and recommendation_overrides, links to README and USAGE (EN/pt\-BR).
+.TP
+.B /about
+Application name, version, author, license.
+.TP
+.B /docs
+Interactive API documentation (OpenAPI/Swagger).
+.TP
+.B /health
+Liveness/readiness JSON; stays public even when
+.B api.require_api_key
+protects other routes.
+.TP
+.B /status
+Scan/engine status JSON (includes transport metadata useful for dashboards).
+.TP
+.B /list
+List scan sessions (metadata) as JSON.
+.TP
+.B POST /scan
+Start a full audit of all targets in the current configuration. Optional JSON body may include
+.BR tenant ", " technician ", " scan_compressed ", " content_type_check ", " scan_for_stego ", " jurisdiction_hint ", " validate_crypto
+(see OpenAPI at
+.B /docs
+and
+.IR docs/USAGE.md ).
+.TP
+.B /report
+Download the Excel report for the latest session.
+.TP
+.B /heatmap
+Download the heatmap PNG for the latest session.
+.TP
+.B /logs
+Download the audit log for the latest session (requires
+.B api.audit_logs.enabled
+and directory; when RBAC is active, role
+.B audit_logs.read
+or
+.BR admin ).
+.TP
+.BI /reports/ session_id
+Excel report for
+.IR session_id
+(regenerated on demand).
+.TP
+.BI /heatmap/ session_id
+Heatmap PNG for
+.IR session_id .
+.TP
+.BI /logs/ session_id
+Audit log for
+.IR session_id
+(same
+.B audit_logs
+gates and
+.B audit_logs.read
+role when RBAC is active).
+.TP
+.BI "PATCH /sessions/" session_id
+Update tenant/customer; JSON body uses a
+.B tenant
+key (see EXAMPLES).
+.TP
+.BI "PATCH /sessions/" session_id /technician
+Update technician/operator; JSON body uses a
+.B technician
+key (see EXAMPLES).
+.TP
+.B /findings
+JSON export of all findings for the latest completed session (unified schema with
+.I source_type
+per row; filesystem rows may include
+.I content_fingerprint
+and source metadata).
+.TP
+.B /findings/csv
+Same findings as
+.B /findings
+for the latest session, as a UTF\-8 CSV download.
+.TP
+.BI "/findings/" session_id
+Findings for
+.I session_id
+as JSON (unified schema).
+.TP
+.BI "/findings/" session_id /csv
+Findings for
+.I session_id
+as UTF\-8 CSV.
+.P
+The "Start scan" button triggers
+.B POST /scan
+(a full audit of all targets in the current config).
+.
+.SH EXAMPLES
+.SS Zero\-config demo
+.TP
+Synthetic corpus and dashboard (ignores
+.B config.yaml
+in the CWD):
+.RS
+.B data-boar \-\-demo
+.RE
+.
+.SS One\-shot CLI (config\-driven)
+.TP
+Minimal scan with default config:
+.RS
+.B data-boar \-\-config config.yaml
+.RE
+.
+.TP
+Scan with tenant and technician metadata:
+.RS
+.B data-boar \-\-config config.yaml \-\-tenant "Acme Corp" \-\-technician "Alice Colleague-V"
+.RE
+.
+.TP
+Wipe all sessions, findings and generated reports (dangerous):
+.RS
+.B data-boar \-\-config config.yaml \-\-reset\-data
+.RE
+.
+.SS Web API
+Without TLS certificate and key paths, you must pass
+.B \-\-allow\-insecure\-http
+(or set
+.B api.allow_insecure_http
+in the configuration) for plaintext HTTP.
+.
+.TP
+Start the API on port 8088 (plaintext, explicit opt\-in):
+.RS
+.B data-boar \-\-config config.yaml \-\-web \-\-allow\-insecure\-http \-\-port 8088
+.RE
+.
+.TP
+HTTPS (PEM cert + key; TLS >= 1.2):
+.RS
+.B data-boar \-\-config config.yaml \-\-web \-\-https\-cert\-file server.crt \-\-https\-key\-file server.key
+.RE
+.
+.TP
+Use CONFIG_PATH and start the server:
+.RS
+.nf
+export CONFIG_PATH=/etc/lgpd\-audit/config.yaml
+data-boar \-\-web \-\-allow\-insecure\-http \-\-port 8088
+.fi
+.RE
+.
+.TP
+Listen on all interfaces (e.g.\& LAN or container without Docker env); use only with network controls:
+.RS
+.B data-boar \-\-config config.yaml \-\-web \-\-allow\-insecure\-http \-\-host 0.0.0.0 \-\-port 8088
+.RE
+.
+.SS curl \- API examples
+.TP
+Start a full audit:
+.RS
+.nf
+curl \-X POST http://localhost:8088/scan
+.fi
+.RE
+.
+.TP
+Start a scan with tenant and technician:
+.RS
+.nf
+curl \-X POST http://localhost:8088/scan \\
+  \-H "Content\-Type: application/json" \\
+  \-d '{"tenant": "Acme Corp", "technician": "Alice Colleague-V"}'
+.fi
+.RE
+.
+.TP
+Check scan status:
+.RS
+.nf
+curl http://localhost:8088/status
+.fi
+.RE
+.
+.TP
+Health check (liveness/readiness; always public even when API key is required):
+.RS
+.nf
+curl http://localhost:8088/health
+.fi
+.RE
+.
+.TP
+List sessions:
+.RS
+.nf
+curl http://localhost:8088/list
+.fi
+.RE
+.
+.TP
+Download latest Excel report:
+.RS
+.nf
+curl \-o report.xlsx http://localhost:8088/report
+.fi
+.RE
+.
+.TP
+Download latest heatmap PNG:
+.RS
+.nf
+curl \-o heatmap.png http://localhost:8088/heatmap
+.fi
+.RE
+.
+.TP
+Download latest audit log:
+.RS
+.nf
+curl \-o audit.log http://localhost:8088/logs
+.fi
+.RE
+.
+.TP
+Download report and heatmap for a specific session:
+.RS
+.nf
+curl \-o report.xlsx "http://localhost:8088/reports/SESSION_ID"
+curl \-o heatmap.png "http://localhost:8088/heatmap/SESSION_ID"
+.fi
+.RE
+.
+.TP
+Download audit log for a session:
+.RS
+.nf
+curl \-o audit.log "http://localhost:8088/logs/SESSION_ID"
+.fi
+.RE
+.
+.TP
+Download latest findings as JSON:
+.RS
+.nf
+curl \-o findings.json http://localhost:8088/findings
+.fi
+.RE
+.
+.TP
+Download latest findings as CSV:
+.RS
+.nf
+curl \-o findings.csv http://localhost:8088/findings/csv
+.fi
+.RE
+.
+.TP
+Download findings for a session (JSON):
+.RS
+.nf
+curl \-o findings.json "http://localhost:8088/findings/SESSION_ID"
+.fi
+.RE
+.
+.TP
+Download findings for a session (CSV):
+.RS
+.nf
+curl \-o findings.csv "http://localhost:8088/findings/SESSION_ID/csv"
+.fi
+.RE
+.
+.TP
+Update tenant/customer for a session (PATCH):
+.RS
+.nf
+curl \-X PATCH "http://localhost:8088/sessions/SESSION_ID" \\
+  \-H "Content\-Type: application/json" \\
+  \-d '{"tenant": "New Tenant Name"}'
+.fi
+.RE
+.
+.TP
+When API key is required (X-API-Key or Bearer):
+.RS
+.nf
+curl \-X POST http://localhost:8088/scan \\
+  \-H "X-API-Key: your-secret-key"
+# or
+curl \-X POST http://localhost:8088/scan \\
+  \-H "Authorization: Bearer your-secret-key"
+.fi
+.RE
+.
+.SH INSTALLATION OF THIS MAN PAGE
+Install the troff sources from this repository as
+.BR data-boar (1)
+and
+.BR data-boar (5)
+(the installed filenames use a hyphen, matching the packaged CLI
+.BR data-boar ).
+Create optional symlinks so
+.BR data_boar
+and
+.BR lgpd_crawler
+also resolve (legacy aliases).
+.PP
+Two common routes:
+.TP
+.B System\-wide
+(with
+.BR sudo ;
+typical Linux or BSD)
+.RS
+.nf
+sudo mkdir \-p /usr/local/share/man/man1/ /usr/local/share/man/man5/
+sudo chmod 755 /usr/local/share/man/man1/ /usr/local/share/man/man5/
+sudo cp docs/data_boar.1 /usr/local/share/man/man1/data-boar.1
+sudo cp docs/data_boar.5 /usr/local/share/man/man5/data-boar.5
+sudo chmod 644 /usr/local/share/man/man1/data-boar.1 \\
+    /usr/local/share/man/man5/data-boar.5
+sudo ln \-sf data-boar.1 /usr/local/share/man/man1/data_boar.1
+sudo ln \-sf data-boar.1 /usr/local/share/man/man1/lgpd_crawler.1
+sudo ln \-sf data-boar.5 /usr/local/share/man/man5/data_boar.5
+sudo ln \-sf data-boar.5 /usr/local/share/man/man5/lgpd_crawler.5
+sudo mandb
+.fi
+.RE
+.TP
+.B User\-local
+(no
+.BR sudo ;
+writes under your home directory; default
+.BR manpath
+on many distributions already includes
+.IR ~/.local/share/man )
+.RS
+.nf
+mkdir \-p ~/.local/share/man/man1 ~/.local/share/man/man5
+cp docs/data_boar.1 ~/.local/share/man/man1/data-boar.1
+cp docs/data_boar.5 ~/.local/share/man/man5/data-boar.5
+chmod 644 ~/.local/share/man/man1/data-boar.1 \\
+    ~/.local/share/man/man5/data-boar.5
+ln \-sf data-boar.1 ~/.local/share/man/man1/data_boar.1
+ln \-sf data-boar.1 ~/.local/share/man/man1/lgpd_crawler.1
+ln \-sf data-boar.5 ~/.local/share/man/man5/data_boar.5
+ln \-sf data-boar.5 ~/.local/share/man/man5/lgpd_crawler.5
+mandb \-u
+.fi
+.RE
+.PP
+Source paths remain
+.I docs/data_boar.1
+and
+.I docs/data_boar.5
+in the repository; only the installed primary names use the hyphen.
+.PP
+The
+.B chmod 755
+on system directories ensures all users can traverse them (new directories may be 750 with a restrictive umask). The
+.B chmod 644
+on the installed pages ensures all users can read them.
+.PP
+On some BSD systems use
+.B "sudo makewhatis"
+instead of
+.BR mandb .
+If a directory does not exist,
+.B "sudo mkdir -p"
+creates it so that
+.B "sudo cp"
+does not fail with "No such file or directory".
+.PP
+After installation, view the pages with:
+.RS
+.B "man data-boar"
+or the alias
+.B "man data_boar"
+or
+.B "man lgpd_crawler"
+(section 1), and
+.B "man 5 data-boar"
+or
+.B "man 5 data_boar"
+or
+.B "man 5 lgpd_crawler"
+(section 5).
+.RE
+.
+.SH TWO MAN PAGES (SECTION 1 AND 5)
+This manual is in section
+.B 1
+(commands).
+A second manual in section
+.B 5
+describes
+.I configuration and file formats
+(config file topology, regex/ML/DL pattern files, examples).
+View it with
+.BR "man 5 data-boar"
+or
+.BR "man 5 data_boar"
+or
+.BR "man 5 lgpd_crawler" .
+On Unix/Linux/BSD, section 1 is for programs and commands; section 5 is for file formats and conventions.
+.
+.SH REPORT EXPORT CLI (data-boar-report)
+.PP
+In addition to
+.BR main.py ,
+the package installs
+.B data-boar-report
+and thin per-format wrappers that read a completed scan session from the configured SQLite database
+(no live target scan, no
+.BR \-\-web ).
+.PP
+.RS
+.B data-boar-report \-\-config CONFIG \-\-session-id SESSION_ID [\-\-format FORMAT]
+.RE
+.PP
+.B FORMAT
+may be
+.BR md " (default), "
+.BR docx ", "
+.BR pdf ", "
+.BR xlsx ", "
+.BR heatmap ", "
+.BR dsar ", "
+.BR json ", "
+.BR audit\-trail ", or "
+.B all
+(full bundle).
+Output files are written under
+.B report.output_dir
+unless
+.B \-\-output\-dir
+is set.
+For a single text/JSON format you may pass
+.BR \-o " / "
+.B \-\-output PATH
+instead of the default filename.
+.PP
+Wrapper entry points (each equivalent to
+.B data-boar-report \-\-format
+with the same name):
+.BR data\-boar\-xlsx ", "
+.BR data\-boar\-pdf ", "
+.BR data\-boar\-docx ", "
+.BR data\-boar\-heatmap ", "
+.BR data\-boar\-dsar ", and "
+.BR data\-boar\-audit
+(audit-trail JSON).
+.PP
+The legacy shortcut
+.BR main.py " "
+.BR \-\-regenerate\-report SESSION_ID
+still regenerates Excel + heatmap (+
+.B learned_patterns
+when enabled) and remains supported for backward compatibility.
+See
+.IR docs/USAGE.md
+section 5.
+.
+.SH SEE ALSO
+.BR data-boar (5),
+.BR data_boar (5),
+.BR lgpd_crawler (5)
+(configuration and pattern file formats),
+.BR python (1),
+.BR curl (1).
+.P
+Project documentation in the source tree:
+.IR README.md ,
+.IR docs/USAGE.md ,
+.IR docs/USAGE.pt_BR.md ,
+.IR docs/TROUBLESHOOTING.md
+(connectivity, credentials, Docker; failures and suggested next steps),
+.IR docs/SENSITIVITY_DETECTION.md ,
+.IR docs/PLAN_SENSITIVE_CATEGORIES_ML_DL.md ,
+.IR docs/deploy/DEPLOY.md
+(Docker and image on Docker Hub:
+.IR fabioleitao/data_boar ).

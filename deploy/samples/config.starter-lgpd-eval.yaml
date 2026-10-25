@@ -1,0 +1,145 @@
+# ---------------------------------------------------------------------------
+# Data Boar — starter config for LGPD-style evaluation (documentation sample)
+# ---------------------------------------------------------------------------
+# Copy to your working directory as config.yaml (or pass --config / CONFIG_PATH).
+# Replace paths, hosts, and env var names to match your environment. Values are
+# fictitious (RFC 5737 TEST-NET, placeholder folders) — not real infrastructure.
+#
+# Navigation:
+#   deploy/config.example.yaml — minimal Docker-oriented file (empty targets).
+#   deploy/samples/README.md — index of samples + scope CSV.
+#   docs/samples/README.md — short hub from docs/ into this folder.
+#   config/README.md — legacy JSON shape only (prefer YAML for new projects).
+# ---------------------------------------------------------------------------
+
+targets:
+  - name: demo-documents
+    type: filesystem
+    path: /opt/lgpd-demo/documents
+    recursive: true
+
+  - name: demo-exports
+    type: filesystem
+    path: /opt/lgpd-demo/exports
+    recursive: true
+
+  - name: demo-postgres
+    type: database
+    driver: postgresql+psycopg2
+    host: 192.0.2.10
+    allowed_hosts: ["192.0.2.10"]
+    port: 5432
+    database: demo_app
+    user: demo_reader
+    # DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS must list this host (no port).
+    pass_from_env: DATA_BOAR_DEMO_DB_PASSWORD
+
+# --- file_scan.extensions (filesystem / SMB / WebDAV / SharePoint) ---
+# This sample keeps a short LGPD-style pilot list below. For the full built-in suffix
+# union, see `connectors/filesystem_connector.py` (`SUPPORTED_EXTENSIONS` = text +
+# documents + structured data). If you omit `extensions` entirely, `config/loader.py`
+# applies its own default list (broad, but not identical to `SUPPORTED_EXTENSIONS`;
+# it still omits many code/markup suffixes). To widen this sample, copy dots from the
+# catalogue into the YAML list, or merge with your own allowlist.
+#
+# Optional pip extras (see `pyproject.toml`): `[richmedia]` for image/audio/video
+# metadata + OCR flags; `[dataformats]` for some columnar/binary helpers (e.g. heavy
+# parquet/avro paths). Enable rich-media scanning via `file_scan.scan_rich_media_metadata`
+# / `scan_image_ocr` in USAGE.md — those flags add the media suffixes below to the scan.
+#
+# Text / markup / config / code / subtitles (plain-text read path):
+#   .ass .bat .bib .c .cjs .cfg .conf .config .cpp .cs .csv .diff .env .go .graphql .gql
+#   .h .hpp .htm .html .ini .java .js .json .jsonl .kt .kts .log .mjs .md .markdown .n3
+#   .ndjson .owl .patch .php .pl .pm .properties .ps1 .py .r .R .rb .rdf .rst .rs .rtf .rtfd
+#   .scala .sh .sql .srt .ssa .svg .svgz .tab .tex .toml .ts .tsv .ttl .txt .vb .vue .vtt .xhtml .xml .yaml .yml
+#
+# Office and binary documents (dedicated extractors):
+#   .doc .docx .eml .epub .mht .mhtml .msg .odf .odg .odm .odb .odp .ods .odt .pdf .pps
+#   .ppsx .ppt .pptx .xls .xlsb .xlsm .xlsx
+#
+# Databases and structured/tabular (sample, path-only, or column samples):
+#   .accdb .avro .db .dbf .feather .mdb .orc .parquet .sqlite .sqlite3
+#
+# Image / audio / video (not in `SUPPORTED_EXTENSIONS` by default; add by setting
+# `file_scan.scan_rich_media_metadata` and/or `file_scan.scan_image_ocr`, optional `[richmedia]`):
+#   .aac .avi .bmp .flac .gif .heic .heif .jpeg .jpg .m4a .m4v .mkv .mov .mp3 .mp4 .mpeg
+#   .mpg .ogg .oga .opus .png .tif .tiff .wav .webm .webp .wmv .wma
+#
+# Archives (not file types for `extensions`; when `file_scan.scan_compressed: true`,
+# members inside these containers are scanned — see `core/archives.py`):
+#   .7z .bz2 .gz .tar .tar.bz2 .tar.gz .tar.xz .tbz2 .tgz .txz .xz .zip
+
+file_scan:
+  extensions: [.txt, .csv, .pdf, .docx, .xlsx]
+  recursive: true
+  scan_sqlite_as_db: true
+  # Rows / TOPN caps for DB-like sampling; see USAGE.md (database connectors).
+  sample_limit: 10
+  # UTF-8 characters read per plain-text file on filesystem/shares (not the same as sample_limit).
+  file_sample_max_chars: 12000
+  # --- Optional (commented defaults = product defaults; uncomment to opt in) ---
+  # scan_compressed: false
+  # # When true: opens zip/tar/gz/7z/etc. inside scanned paths. Increases I/O and CPU.
+  # max_inner_size: 52428800
+  # # Optional cap (bytes) on extracted inner size per archive (connector default if omitted).
+  # file_passwords:
+  #   default: "literal-password-for-lab-only"
+  # # Per-extension passwords for protected PDF/ZIP/PPTX; literals only (see USAGE).
+  # use_content_type: false
+  # # Magic-byte detection for renamed files (extra I/O); see SENSITIVITY_DETECTION.md.
+  # connector_format_id_hint: false
+  # # When true: declared VARCHAR length + ID-like column name may raise MEDIUM FORMAT_LENGTH_HINT_ID (see USAGE).
+
+report:
+  output_dir: ./reports
+  # --- Optional: heuristic jurisdiction notes on Report info (not a legal conclusion) ---
+  # jurisdiction_hints:
+  #   enabled: true
+
+sqlite_path: ./data/audit_results.db
+
+api:
+  port: 8088
+  host: "127.0.0.1"
+  # --- Optional: require X-API-Key / Bearer on API and HTML (except /health) ---
+  # require_api_key: true
+  # api_key_from_env: "DATA_BOAR_API_KEY"
+
+# Parallelism across *targets* (separate connectors), not CPU threads per file.
+# 1 = sequential (safest default). Raise to 2–4 when you have many independent targets
+# and disk/network can keep up (I/O bound). Hard cap 32 in loader.
+scan:
+  max_workers: 2
+
+timeouts:
+  connect_seconds: 20
+  read_seconds: 60
+
+# Anti-abuse for the scan API / concurrent runs (see USAGE rate_limit).
+rate_limit:
+  enabled: true
+  max_concurrent_scans: 2
+  min_interval_seconds: 5
+
+sensitivity_detection:
+  ml_terms:
+    - { text: "cpf", label: sensitive }
+    - { text: "email", label: sensitive }
+    - { text: "rg", label: sensitive }
+  dl_terms:
+    - { text: "prontuário", label: sensitive }
+    - { text: "diagnóstico", label: sensitive }
+  # --- Optional: load larger term lists from files (see COMPLIANCE_FRAMEWORKS.md) ---
+  # ml_patterns_file: ./my_ml_terms.yaml
+  # dl_patterns_file: ./my_dl_terms.yaml
+
+# --- Optional: persist high-confidence learned terms for later merge into ml_patterns_file ---
+# learned_patterns:
+#   enabled: false
+#   output_file: ./learned_patterns.yaml
+#   min_sensitivity: HIGH
+#   min_confidence: 70
+
+# --- Optional: CNPJ alfanumerico (plan-specific); default remains numeric CNPJ only ---
+# detection:
+#   cnpj_alphanumeric: false

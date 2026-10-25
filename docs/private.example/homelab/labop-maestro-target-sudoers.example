@@ -1,0 +1,42 @@
+# Example: narrow sudoers for Maestro Handle-target_nfs / Handle-target_cifs
+# Copy fragments into /etc/sudoers.d/z-labop-maestro (or merge with existing LAB-OP drop-in).
+# Replace REPO_PATH and USER with operator values. Validate: sudo visudo -cf /etc/sudoers.d/z-labop-maestro
+#
+# Load order (#1021): files in /etc/sudoers.d/ are read lexically; the LAST matching rule wins.
+# If another drop-in (e.g. wheel) defines %wheel ALL=(ALL:ALL) ALL with password, LAB-OP files
+# MUST load AFTER it (prefix z- or zz-) or NOPASSWD narrow grants are silently overridden.
+# Verify with the real run (not only sudo -l):
+#   sudo -n /usr/bin/bash REPO_PATH/scripts/labop-fw-guard-ensure.sh --check
+#
+# Handlers invoke exactly (#1021 R8 — grant-match argv, env via .labop-gate/):
+#   Maestro writes REPO_PATH/.labop-gate/LAB_OP_SUBNET (and optional LAB_NFS_SVC) as the operator user.
+#   sudo -n /usr/bin/bash REPO_PATH/scripts/labop-nfs-server-ensure.sh --check|--apply
+#   sudo -n /usr/bin/bash REPO_PATH/scripts/labop-smb-server-ensure.sh --check|--apply
+#   (never: env LAB_OP_SUBNET=... bash — breaks narrow sudoers/doas literal match)
+
+Cmnd_Alias LABOP_NFS_SERVER = /bin/bash REPO_PATH/scripts/labop-nfs-server-ensure.sh --check, \
+                              /usr/bin/bash REPO_PATH/scripts/labop-nfs-server-ensure.sh --check, \
+                              /bin/bash REPO_PATH/scripts/labop-nfs-server-ensure.sh --apply, \
+                              /usr/bin/bash REPO_PATH/scripts/labop-nfs-server-ensure.sh --apply
+
+Cmnd_Alias LABOP_SMB_SERVER = /bin/bash REPO_PATH/scripts/labop-smb-server-ensure.sh --check, \
+                              /usr/bin/bash REPO_PATH/scripts/labop-smb-server-ensure.sh --check, \
+                              /bin/bash REPO_PATH/scripts/labop-smb-server-ensure.sh --apply, \
+                              /usr/bin/bash REPO_PATH/scripts/labop-smb-server-ensure.sh --apply
+
+# FASE 2 gate readiness (#957/#958)
+# exactly (no env prefix, no variable persona args):
+#   sudo -n bash REPO_PATH/scripts/labop-fw-guard-ensure.sh --check|--apply
+#   sudo -n bash REPO_PATH/scripts/labop-dep-doctor.sh --check|--privileged
+
+Cmnd_Alias LABOP_FW_GUARD = /bin/bash REPO_PATH/scripts/labop-fw-guard-ensure.sh --check, \
+                            /usr/bin/bash REPO_PATH/scripts/labop-fw-guard-ensure.sh --check, \
+                            /bin/bash REPO_PATH/scripts/labop-fw-guard-ensure.sh --apply, \
+                            /usr/bin/bash REPO_PATH/scripts/labop-fw-guard-ensure.sh --apply
+
+Cmnd_Alias LABOP_DEP_DOCTOR = /bin/bash REPO_PATH/scripts/labop-dep-doctor.sh --check, \
+                              /usr/bin/bash REPO_PATH/scripts/labop-dep-doctor.sh --check, \
+                              /bin/bash REPO_PATH/scripts/labop-dep-doctor.sh --privileged, \
+                              /usr/bin/bash REPO_PATH/scripts/labop-dep-doctor.sh --privileged
+
+USER ALL=(root) NOPASSWD: LABOP_NFS_SERVER, LABOP_SMB_SERVER, LABOP_FW_GUARD, LABOP_DEP_DOCTOR

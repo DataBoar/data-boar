@@ -1,0 +1,25 @@
+---
+# sshd hardening via /etc/ssh/sshd_config.d/ (Include is default on modern OpenSSH packages).
+lab_node_01_sshd_labop_enable: true
+lab_node_01_sshd_labop_dropin_path: /etc/ssh/sshd_config.d/90-labop-hardening.conf
+
+# dev: AllowTcpForwarding + AllowAgentForwarding on (daily Git/SSH dev).
+# strict: match locked-down workstation (no forwarding); closer to minimal exposure.
+lab_node_01_sshd_profile: dev
+
+# prohibit-password: root only with pubkey; "no" disables root SSH entirely.
+lab_node_01_sshd_permit_root_login: "prohibit-password"
+
+# Empty = do not emit PasswordAuthentication (leave distro/admin effective setting).
+# Set to "no" only after confirming pubkey access.
+lab_node_01_sshd_password_authentication: ""
+
+# Log extra auth lines (audit-friendly).
+lab_node_01_sshd_log_level: VERBOSE
+
+# Reduce slow/fingerprinting DNS lookups on server.
+lab_node_01_sshd_usedns: "no"
+
+# Point Banner at file created by role lab_node_01_banners (runs earlier in playbook).
+lab_node_01_sshd_use_banner: true
+lab_node_01_sshd_banner_path: /etc/banner.net

@@ -1,0 +1,224 @@
+# Extended ML/DL terms for sensitive categories (LGPD Art. 5 II, 11; GDPR Art. 9).
+# Use as ml_patterns_file and/or dl_patterns_file, or copy into sensitivity_detection.ml_terms / dl_terms.
+# See PLAN_SENSITIVE_CATEGORIES_ML_DL.md and SENSITIVITY_DETECTION.md.
+# Label: sensitive (or 1) = sensitive personal data; non_sensitive (or 0) = not.
+
+# CID/ICD (medical diagnosis codes)
+- text: "cid"
+  label: sensitive
+- text: "icd"
+  label: sensitive
+- text: "diagnosis code"
+  label: sensitive
+- text: "medical code"
+  label: sensitive
+- text: "disease classification"
+  label: sensitive
+- text: "codigo de doenca"
+  label: sensitive
+- text: "CID-10"
+  label: sensitive
+- text: "ICD-10"
+  label: sensitive
+- text: "diagnostico medico"
+  label: sensitive
+
+# Gender
+- text: "gender"
+  label: sensitive
+- text: "sex"
+  label: sensitive
+- text: "sexo"
+  label: sensitive
+- text: "genero"
+  label: sensitive
+- text: "identidade de genero"
+  label: sensitive
+- text: "gender identity"
+  label: sensitive
+
+# Religion
+- text: "religion"
+  label: sensitive
+- text: "religious affiliation"
+  label: sensitive
+- text: "religiao"
+  label: sensitive
+- text: "filiacao religiosa"
+  label: sensitive
+- text: "creed"
+  label: sensitive
+- text: "crenca"
+  label: sensitive
+- text: "religious belief"
+  label: sensitive
+
+# Political
+- text: "political affiliation"
+  label: sensitive
+- text: "political opinion"
+  label: sensitive
+- text: "filiacao politica"
+  label: sensitive
+- text: "opiniao politica"
+  label: sensitive
+- text: "partido"
+  label: sensitive
+- text: "party affiliation"
+  label: sensitive
+- text: "political party"
+  label: sensitive
+
+# PEP
+- text: "politically exposed person"
+  label: sensitive
+- text: "PEP"
+  label: sensitive
+- text: "pessoa politicamente exposta"
+  label: sensitive
+- text: "PEP list"
+  label: sensitive
+- text: "cargo politico"
+  label: sensitive
+- text: "public office"
+  label: sensitive
+
+# Race / skin color / ethnic origin
+- text: "race"
+  label: sensitive
+- text: "ethnic origin"
+  label: sensitive
+- text: "skin color"
+  label: sensitive
+- text: "cor da pele"
+  label: sensitive
+- text: "raca"
+  label: sensitive
+- text: "origem etnica"
+  label: sensitive
+- text: "ethnicity"
+  label: sensitive
+- text: "etnia"
+  label: sensitive
+
+# Union
+- text: "union affiliation"
+  label: sensitive
+- text: "workers union"
+  label: sensitive
+- text: "sindicato"
+  label: sensitive
+- text: "filiacao sindical"
+  label: sensitive
+- text: "trade union"
+  label: sensitive
+- text: "labor union"
+  label: sensitive
+- text: "union membership"
+  label: sensitive
+
+# Genetic
+- text: "genetic data"
+  label: sensitive
+- text: "genetic information"
+  label: sensitive
+- text: "dados geneticos"
+  label: sensitive
+- text: "DNA"
+  label: sensitive
+- text: "genetic test"
+  label: sensitive
+- text: "teste genetico"
+  label: sensitive
+
+# Biometric
+- text: "biometric data"
+  label: sensitive
+- text: "fingerprint"
+  label: sensitive
+- text: "facial recognition"
+  label: sensitive
+- text: "biometria"
+  label: sensitive
+- text: "impressao digital"
+  label: sensitive
+- text: "reconhecimento facial"
+  label: sensitive
+- text: "iris"
+  label: sensitive
+- text: "voice print"
+  label: sensitive
+- text: "biometric identifier"
+  label: sensitive
+
+# Sex life / sexual orientation
+- text: "sex life"
+  label: sensitive
+- text: "sexual orientation"
+  label: sensitive
+- text: "orientacao sexual"
+  label: sensitive
+- text: "vida sexual"
+  label: sensitive
+- text: "intimate data"
+  label: sensitive
+- text: "dados intimos"
+  label: sensitive
+
+# Health / disability
+- text: "health condition"
+  label: sensitive
+- text: "disability"
+  label: sensitive
+- text: "deficiencia"
+  label: sensitive
+- text: "condicao de saude"
+  label: sensitive
+- text: "medical condition"
+  label: sensitive
+- text: "chronic disease"
+  label: sensitive
+- text: "doenca cronica"
+  label: sensitive
+- text: "health record"
+  label: sensitive
+- text: "saude"
+  label: sensitive
+- text: "prontuario"
+  label: sensitive
+
+# Criminal record / background check: engine label "sensitive" = high-priority column-name discovery.
+# Identifiable criminal-record data are personal data; GDPR Art. 10 and LGPD contextual rules — not always LGPD Art. 5 II.
+# See COMPLIANCE_AND_LEGAL.md; map norm_tag with counsel.
+- text: "criminal record"
+  label: sensitive
+- text: "criminal history"
+  label: sensitive
+- text: "background check"
+  label: sensitive
+- text: "antecedentes criminais"
+  label: sensitive
+- text: "certidao de antecedentes"
+  label: sensitive
+- text: "certidão de antecedentes"
+  label: sensitive
+- text: "historico criminal"
+  label: sensitive
+- text: "histórico criminal"
+  label: sensitive
+
+# Non-sensitive counter-examples
+- text: "item_count"
+  label: non_sensitive
+- text: "config_file"
+  label: non_sensitive
+- text: "temp_data"
+  label: non_sensitive
+- text: "system_log"
+  label: non_sensitive
+- text: "department_id"
+  label: non_sensitive
+- text: "employee_id"
+  label: non_sensitive
+- text: "cache_key"
+  label: non_sensitive

@@ -1,0 +1,273 @@
+# Política de segurança
+
+**English:** [SECURITY.md](SECURITY.md)
+
+Este documento descreve quais versões da aplicação são suportadas, qual linha de base de dependências é esperada e como reportar vulnerabilidades de segurança aos mantenedores. Sobre direitos autorais e licença: [NOTICE](NOTICE); para tornar direitos autorais e marca oficial: [docs/COPYRIGHT_AND_TRADEMARK.pt_BR.md](docs/COPYRIGHT_AND_TRADEMARK.pt_BR.md) (português) · [docs/COPYRIGHT_AND_TRADEMARK.md](docs/COPYRIGHT_AND_TRADEMARK.md) (inglês).
+
+**Índice de postura de governança (gates de PII, contenção de agentes, supply chain, proveniência):** [`docs/SECURITY_GOVERNANCE_POSTURE_HUB.pt_BR.md`](docs/SECURITY_GOVERNANCE_POSTURE_HUB.pt_BR.md) ([EN](docs/SECURITY_GOVERNANCE_POSTURE_HUB.md)) — links co-localizados; não substitui esta política de vulnerabilidades.
+
+## Onde esta política se encaixa
+
+Este arquivo é a **política externa de vulnerabilidades**. As outras camadas não são cópia dele:
+
+| Camada | Onde |
+| ----- | ----- |
+| **Política (este documento)** | [`SECURITY.md`](SECURITY.md) (este arquivo) |
+| **Guia técnico** | [`docs/SECURITY.md`](docs/SECURITY.md) ([pt-BR](docs/SECURITY.pt_BR.md)) — testes do produto e orientação ao operador; aponta **para cá** para reporte e versões suportadas |
+| **Lab / runtime** | [`docs/ops/DATA_BOAR_LAB_SECURITY_TOOLING.pt_BR.md`](docs/ops/DATA_BOAR_LAB_SECURITY_TOOLING.pt_BR.md) ([EN](docs/ops/DATA_BOAR_LAB_SECURITY_TOOLING.md)) · [`docs/ops/DOCKER_AIDE_AUDITD_BASELINE.pt_BR.md`](docs/ops/DOCKER_AIDE_AUDITD_BASELINE.pt_BR.md) ([EN](docs/ops/DOCKER_AIDE_AUDITD_BASELINE.md)) |
+| **Enforcement do agente** | [`.cursor/rules/`](.cursor/rules/) (não enfraquecer gates, PII, contenção) |
+| **Constituição** | ADRs — cadeia de suprimentos **Camada 1** é o [ADR 0074](docs/adr/ADR-0074-supply-chain-layer1-digest-pins-and-rust-sca.md) |
+| **Índice** | [`docs/SECURITY_GOVERNANCE_POSTURE_HUB.pt_BR.md`](docs/SECURITY_GOVERNANCE_POSTURE_HUB.pt_BR.md) ([EN](docs/SECURITY_GOVERNANCE_POSTURE_HUB.md)) |
+
+### Host do executor e detecção (L3/L4) — só ponte
+
+**Não está entregue neste repositório.** O trabalho está na issue **[#989](https://github.com/DataBoar/data-boar/issues/989)** (OPEN, milestone **v1.8.4**). O [ADR 0074](docs/adr/ADR-0074-supply-chain-layer1-digest-pins-and-rust-sca.md) permanece **Camada 1** até essa issue emendar o ADR.
+
+- **L3 (host do executor):** Cursor/Electron (e similares) é superfície privilegiada de escrita — poucas extensões, preferir OpenVSX / publishers confiáveis, menor privilégio nas chaves de assinatura. Requisitos e auditoria de lab ficam na **#989**, não como política extra aqui.
+- **L4 (detecção):** tripwires no host (arquivos canário, AIDE + auditd), não funcionalidade do produto. Baseline de lab: [`docs/ops/DOCKER_AIDE_AUDITD_BASELINE.pt_BR.md`](docs/ops/DOCKER_AIDE_AUDITD_BASELINE.pt_BR.md); plantar canários nos hosts é trabalho de operador/vault na **#989**.
+
+**Reportar uma vulnerabilidade (privado):** [Abrir um security advisory no GitHub](https://github.com/DataBoar/data-boar/security/advisories/new). Envie o mesmo disclosure para [contact@databoar.com.br](mailto:contact@databoar.com.br). **Não** abra uma issue pública com prova de conceito. Detalhes: [Reportar uma vulnerabilidade](#reportar-uma-vulnerabilidade) e [Prazo de divulgação](#prazo-de-divulgação).
+
+OpenSSF Scorecard deste repositório (badge depois do publish; API JSON): [visualizador Scorecard](https://scorecard.dev/viewer/?uri=github.com/DataBoar/data-boar) · [api.securityscorecards.dev](https://api.securityscorecards.dev/projects/github.com/DataBoar/data-boar) · badge do README via [api.scorecard.dev](https://api.scorecard.dev/projects/github.com/DataBoar/data-boar/badge).
+
+**Proveniência de build (escopo honesto):** atestações em GitHub Release e assets de SBOM no workflow SBOM em tags de versão—não badge de “proveniência verificada” no PyPI enquanto o JSON do Warehouse mantém `urls[].provenance` null. Ver [ADR 0092](docs/adr/ADR-0092-build-provenance-scorecard-and-github-release-attestations.md) e [BUILD_PROVENANCE_POSTURE.pt_BR.md](docs/ops/BUILD_PROVENANCE_POSTURE.pt_BR.md).
+
+## Versões suportadas
+
+**Produto (o que recebemos patches para reportes de segurança):**
+
+| Linha | Estado |
+| ----- | ------ |
+| **1.7.4.x** (estável **1.7.4**, incluindo PyPI **1.7.4.postN**; Docker Hub `fabioleitao/data_boar` **1.7.4** / `latest` quando essas tags estão publicadas) | **Suportada** — correções de segurança nesta linha estável |
+| **`main`** (árvore de trabalho; atualmente **1.8.0-rc**, só git) | **Suportada** — correções entram aqui primeiro, depois no estável quando couber |
+
+**Não suportado:** tags e imagens **anteriores a 1.7.4**; forks ou imagens reconstruídas não oficiais; espelhos não oficiais; qualquer versão pública com quarto segmento “1.7.4.N” (este projeto não publica esse esquema — veja [docs/VERSIONING.pt_BR.md](docs/VERSIONING.pt_BR.md)).
+
+**Runtime (Python):**
+
+- **Aplicação (marca):** **Data Boar**. Id da distribuição PyPI: **`data-boar`** (veja [CONTRIBUTING.pt_BR.md](CONTRIBUTING.pt_BR.md#repositório-e-identidade-de-instalação-data-boar)). O desenvolvimento atual tem como alvo **Python 3.12+**.
+- Objetivamos suportar as últimas versões estáveis minor do Python 3.12 e 3.13 em Linux, macOS e Windows.
+- Versões antigas do Python (< 3.12) não são testadas e devem ser consideradas não suportadas.
+
+## Dependências e ambiente
+
+O **`pyproject.toml`** é a fonte de verdade para a toolchain **uv**. O arquivo **`uv.lock`** fixa a árvore exata de dependências resolvidas para que as instalações sejam reproduzíveis e os usuários fiquem protegidos de quebras acidentais quando uma dependência atualiza (“funcionou ontem”). **pip** e **`requirements.txt`** são derivados (o requirements.txt é exportado do lockfile para ambientes pip ou legados). As dependências são declaradas em **`pyproject.toml`** e gerenciadas via **uv**:
+
+- Para instalar em um ambiente limpo (usa o **uv.lock** para versões reproduzíveis):
+
+  ```bash
+  uv sync
+  ```
+
+- Para exportar um **requirements.txt** bloqueado para ambientes que usam **pip** puro (mesmas versões do **uv.lock**):
+
+  ```bash
+  uv export --no-emit-package pyproject.toml -o requirements.txt
+  ```
+
+### Lockfile e mitigação da cadeia de suprimentos (`uv.lock`)
+
+Fazer commit do **`uv.lock`** é um **controle de cadeia de suprimentos**: ele fixa a **árvore completa resolvida** (dependências diretas e transitivas) para que `uv sync` e o CI instalem **as mesmas versões de pacotes** com base nos hashes registados no lockfile. Isso **reduz** deriva não revisada por resolução flutuante de `>=` no PyPI, quebras do tipo “funcionou na minha máquina” e divergência entre **`uv.lock`** e o export **`requirements.txt`** para pip.
+
+O lockfile **não prova**, por si só, que esses pins estão **livres de CVEs conhecidos** ou que são **benignos**. A **mitigação de vulnerabilidade** no caminho de instalação Python se **empilha** sobre o lockfile: **`pip-audit`** no CI, **GitHub Dependabot** (este repositório usa **`package-ecosystem: uv`** para PRs alinharem `pyproject.toml` e **`uv.lock`** — veja [ADR 0044](docs/adr/ADR-0044-dependabot-uv-ecosystem-for-pyproject-lock-closure.md)), revisão humana e artefatos **SBOM** ([abaixo](#lista-de-materiais-de-software-sbom)). Ao triar advisories ou aplicar atualizações, regenere **`uv.lock`** pelo fechamento de um único passo (**`pyproject.toml` → `uv lock` → `uv export`**) em [ADR 0030](docs/adr/ADR-0030-python-dependency-update-closure-single-pass.md) — **não** edite o lockfile à mão para “consertar” auditorias.
+
+### SCA de crates Rust (`rust/boar_fast_filter`)
+
+A postura de cadeia de suprimentos **Camada 1** do prefiltro Rust está em [ADR 0074](docs/adr/ADR-0074-supply-chain-layer1-digest-pins-and-rust-sca.md) (Accepted): bases de container por digest, pins de SHA nas Actions e SCA Rust antes do merge. Esta seção é a visão de **política externa** (CI + lockfile). Ferramentas de bancada/lab ficam em **`docs/ops/DATA_BOAR_LAB_SECURITY_TOOLING.pt_BR.md`** ([EN](docs/ops/DATA_BOAR_LAB_SECURITY_TOOLING.md)).
+
+A **varredura por advisory conhecido** corre em [`.github/workflows/rust-ci.yml`](.github/workflows/rust-ci.yml): **`cargo-audit` 0.22.2** e **`cargo-deny` 0.19.9**, ambos instalados com **`--locked`**. Política do deny: **`rust/boar_fast_filter/deny.toml`**. Trate achados **RUSTSEC / GHSA** como PRs de segurança do Dependabot: **P0 / cinco dias úteis** para aceitar o conserto, adiar com justificativa escrita ou registrar exceção do operador — o mesmo SLA do Dependabot Python neste arquivo.
+
+**Ferramentas de advisory conhecido não veem crate sem identificador.** Três incidentes públicos no crates.io mostram o buraco:
+
+| Incidente | Quando | Identificador | Fonte |
+| --------- | ------ | ------------- | ----- |
+| `rustdecimal` (typosquat de `rust_decimal`; payload se `GITLAB_CI` estava definido) | 2022-05-10 | **RUSTSEC-2022-0042** · **GHSA-7pwq-f4pq-78gm** | [blog Rust](https://blog.rust-lang.org/2022/05/10/malicious-crate-rustdecimal/) |
+| `finch-rust` / `sha-rust` | 2025-12-05 | nenhum listado | [blog Rust](https://blog.rust-lang.org/2025/12/05/crates.io-malicious-crates-finch-rust-and-sha-rust) |
+| **`arrayref` / `internment` / `append-only-vec`** | 2026-08-20 | **sem CVE / RUSTSEC / GHSA** | [blog Rust](https://blog.rust-lang.org/2026/08/20/supply-chain-attack-on-arrayref/) |
+
+Em 2026-08-20, uma conta de mantenedor comprometida publicou `arrayref@0.3.10`, `internment@0.8.7` e `append-only-vec@0.1.9` entre **07:15 e 07:37 UTC**, cada uma adicionando dependência em **`proc-macro1`** (typosquat de **`proc-macro2`**) cujo **script de build baixava e executava payload remoto em tempo de compilação**. As crates foram removidas entre 08:41 e 09:25 UTC. **`cargo audit` não teria marcado essa janela** (86 minutos, sem id de advisory).
+
+**O que de fato para essa classe aqui:** **`rust/boar_fast_filter/Cargo.lock`** commitado mais **`--locked`** em todo comando cargo do CI. Uma árvore travada não puxa versão recém-publicada, maliciosa ou não. Revisão do lockfile no repositório: nenhuma das versões comprometidas; **`proc-macro2`** é a crate legítima (o nome `proc-macro1` imitava).
+
+**Corolário desconfortável:** bots de atualização automática de dependência **amplificam** essa classe, não a mitigam. O Dependabot teria proposto as versões envenenadas como bump de rotina. Revisão humana do diff do lockfile continua obrigatória.
+
+**Remediação Rust via Dependabot (com travas):** [`.github/dependabot.yml`](.github/dependabot.yml) inclui **`package-ecosystem: cargo`** para **`rust/boar_fast_filter`** ([#1763](https://github.com/DataBoar/data-boar/issues/1763)) para que o `Cargo.lock` possa receber PRs de atualização — **somente** com **`cooldown: default-days: 7`**, **`open-pull-requests-limit`** baixo e política explícita de **sem auto-merge** (incluindo patch). O **`--locked`** do CI em todo comando cargo permanece. Detecção (`cargo-audit` / `cargo-deny`) e este caminho de remediação são complementares; nenhum substitui revisão do lockfile.
+
+**Onde a paranoia vale e onde não:**
+
+| Camada | Pinar / travar? | Por quê |
+| ------ | --------------- | ------- |
+| **`Cargo.lock`** | Sim — commitado + `--locked` | Controle real contra editor de crate comprometido |
+| **`cargo-audit` / `cargo-deny`** | Sim — versões pinadas em `rust-ci.yml` (0.22.2 / 0.19.9) | Ferramenta de segurança que se autoatualiza é superfície de ataque |
+| **GitHub Actions** | Sim — SHA de commit completo | Igual ao ADR 0005 |
+| **Imagem base** | Sim — digest no `FROM` do `Dockerfile` | ADR 0074 Camada 1 |
+| **Toolchain `rustc`** | **Não** — **não** pinar no repositório | Garantias de estabilidade do Rust; pinar atrasa correções de *soundness* do compilador/std e gera atrito em forks. Os três incidentes acima foram ataques de **crate**, não de toolchain. A superfície `cdylib` + `abi3` é ABI C; outro `rustc` não gera, por si só, artefato incompatível. |
+
+O job **dependency-review** (`dependency-review-action` no **`ci.yml`**) complementa os grafos Python/Actions em pull requests. **Não** substitui `Cargo.lock` + `--locked`.
+
+### Pré-requisitos de runtime (exemplo Linux)
+
+No Ubuntu/Debian você deve ter pelo menos:
+
+```bash
+sudo apt update
+sudo apt install -y \
+  python3.12 python3.12-venv python3.12-dev build-essential \
+  libpq-dev libssl-dev libffi-dev unixodbc-dev
+```
+
+Bibliotecas cliente adicionais podem ser necessárias dependendo de quais conectores você usa (ex.: Oracle, SQL Server, Snowflake); veja o `README.md` principal para notas específicas por conector.
+
+## Lista de materiais de software (SBOM)
+
+SBOMs formais em **CycloneDX JSON** apoiam **visibilidade da cadeia de suprimentos** e **resposta a incidentes** (veja [docs/adr/0003](docs/adr/ADR-0003-sbom-roadmap-cyclonedx-then-syft.md)). Complementam o **`pip-audit`**; **não** são gestão de risco organizacional ISO 31000 (veja [COMPLIANCE_FRAMEWORKS.pt_BR.md](docs/COMPLIANCE_FRAMEWORKS.pt_BR.md)).
+
+| Artefato | Conteúdo | Como é gerado |
+| -------- | -------- | ------------- |
+| **`sbom-python.cdx.json`** (cópia canônica **`sbom/sbom-application.cdx.json`**) | Dependências Python do **`uv.lock`** **mais** o grafo resolvido de crates em **`rust/boar_fast_filter/Cargo.lock`** (`scripts/application_sbom.py`) | Workflow **`SBOM`**, local **`scripts/generate-sbom.ps1`** / **`scripts/generate-sbom.sh`**. **`scripts/check-sbom.*`** falha se o lockfile divergir |
+| **`sbom-docker-image.cdx.json`** (cópia canônica **`sbom/sbom-runtime.cdx.json`**) | Pacotes na imagem OCI **construída** (camadas OS + Python) | **`syft`** em **`anchore/syft:v1.28.0`** sobre a imagem `data_boar:sbom` gerada pelo **`Dockerfile`** no mesmo commit |
+| **`data-boar.intoto.jsonl`** | Provenance SLSA Sigstore dos arquivos SBOM/digest/manifest (OIDC; sem chave privada Cosign) | Workflow **`SBOM`** em tags **`v*`** / GitHub Release (`actions/attest-build-provenance`). Só a **próxima** tag — Releases antigas permanecem sem assinatura |
+| **`sbom/provenance-local.json`** | Registro local **não assinado**: commit, versão, toolchain, inputs do workflow, digests de SBOM/artefato | **`scripts/emit-provenance.sh`** / **`.ps1`** (`scripts/emit_provenance.py`). **Não** é SLSA. No trilho de tag, verifica contra **`data-boar.intoto.jsonl`** |
+
+**Onde baixar:** o workflow do GitHub Actions [**SBOM**](.github/workflows/sbom.yml) faz upload dos arquivos CycloneDX como **artefatos da execução** (em tags de versão `v*`, em **`release: published`**, em **`workflow_dispatch`** e em PRs filtrados por caminho para `main`). Quando já existe um **GitHub Release** para a tag, esses arquivos são **anexados a essa release**. A partir da **próxima** tag `v*`, o mesmo job também anexa **`data-boar.intoto.jsonl`** (o OpenSSF Scorecard **Signed-Releases** lê assets do GitHub Release, não o wheel do PyPI isolado). O Trusted Publishing do PyPI (`publish-pypi.yml`) não muda.
+
+**Docker Hub:** seguindo [docs/ops/DOCKER_IMAGE_RELEASE_ORDER.md](docs/ops/DOCKER_IMAGE_RELEASE_ORDER.md), a imagem publicada **`fabioleitao/data_boar:<semver>`** deve corresponder à mesma árvore de código da tag usada no workflow de SBOM; o SBOM da **imagem** vem de um **build local** na CI (camadas equivalentes a um `docker build` limpo nesse commit), não de um pull separado no registry.
+
+## Manter as dependências atualizadas
+
+- As dependências em **`pyproject.toml`** usam versões mínimas (`>=`) para permitir correções de segurança. O **lockfile (`uv.lock`)** é commitado para que todos (e o CI) instalem a mesma árvore; ele é atualizado quando as dependências mudam ou antes de uma release estável, mantendo o app atualizado, compatível e seguro. O **Dependabot** (veja `.github/dependabot.yml`) abre PRs semanais para pip e GitHub Actions e ajuda a sinalizar quando agir: ao aplicar uma atualização (ou antes de uma release), atualize primeiro o **`pyproject.toml`**, execute `uv lock` e `uv export --no-emit-package pyproject.toml -o requirements.txt`, e faça commit de **pyproject.toml**, **uv.lock** e **requirements.txt**. Não faça merge de alteração que edite só `requirements.txt` ou `uv.lock` sem atualizar o outro. Faça merge dos PRs de dependência somente após o CI (testes e auditoria) passar.
+
+### Fechamento de atualização de dependências (um passe, qualquer origem)
+
+O **gatilho** da mudança (CI, Dependabot, Docker Scout, revisão externa, decisão do mantenedor ou outro sinal) **não muda** o **fluxo**. Quando você concluir que uma atualização é **justificada e segura** após testes e auditoria:
+
+1. Declare a intenção no **`pyproject.toml`**, depois **`uv lock`** e **`uv export --no-emit-package pyproject.toml -o requirements.txt`** — faça commit dos três juntos.
+2. Rode **`uv sync`** localmente para o **`.venv`** bater com o lockfile.
+3. Rode **`.\scripts\check-all.ps1`** (gate completo) antes do merge — sem PR de dependência “meio verde”.
+4. Atualize artefatos de **SBOM** quando o release ou o trilho de compliance exigir lista de materiais no **mesmo commit** — veja [ADR 0003](docs/adr/ADR-0003-sbom-roadmap-cyclonedx-then-syft.md) e **`scripts/generate-sbom.ps1`** / workflow **`SBOM`**.
+5. Acrescente ou atualize um **ADR** quando o bump refletir **política ou arquitetura** (limites de extras opcionais, toolchains, restrição upstream documentada), não para cada patch de rotina.
+
+Isto **não** é licença para churn cego de dependências; adie ou rejeite mudanças sem fundamento ou que falhem nos gates. Decisão registrada: [ADR 0030](docs/adr/ADR-0030-python-dependency-update-closure-single-pass.md).
+
+- Localmente, instale e execute uma auditoria de dependências (o CI faz o mesmo em todo push/PR):
+
+  ```bash
+  uv sync
+  uv pip install pip-audit
+  uv run pip-audit
+  ```
+
+- Sempre que alterar dependências (incluindo ao aplicar Dependabot ou automação), edite primeiro o **`pyproject.toml`**, depois execute `uv lock` e `uv export --no-emit-package pyproject.toml -o requirements.txt` para que **uv.lock** e **requirements.txt** permaneçam em sincronia com o lockfile.
+
+- **Triagem local (Dependabot + CVEs de imagem):** No Windows, na raiz do repositório, execute **`.\scripts\maintenance-check.ps1`** após `gh auth login` (lista PRs abertos do Dependabot) e com Docker Desktop se quiser **`docker scout quickview`** na imagem publicada. O script não altera o repositório. Depois de corrigir deps ou o **Dockerfile**, reconstrua e publique a imagem e rode o Scout de novo no novo digest. O **Dockerfile** atualiza **pip** e **wheel** no builder e no runtime para evitar ferramentas antigas em camadas copiadas; o **`requirements.txt`** é exportado pelo uv e em geral não lista `wheel` como dependência da aplicação.
+- **Alertas Dependabot pyOpenSSL (#9 / #10) e Snowflake:** Não é possível subir para **pyOpenSSL ≥ 26** enquanto o **`snowflake-connector-python`** declarar limite **`<26`** (extra opcional **`bigdata`**). Veja **[docs/ops/DEPENDABOT_PYOPENSSL_SNOWFLAKE.md](docs/ops/DEPENDABOT_PYOPENSSL_SNOWFLAKE.md)** para triagem, link upstream e orientação de dispensa opcional.
+- **Pygments Dependabot / pip-audit (CVE-2026-4539):** Ainda **não há release corrigido no PyPI** além do **2.19.2**. Veja **[docs/ops/DEPENDABOT_PYGMENTS_CVE.md](docs/ops/DEPENDABOT_PYGMENTS_CVE.md)** para triagem e dispensa opcional; suba o piso de **`pygments`** quando o upstream publicar o patch.
+- **Linha de base de code scanning:** O workflow de CodeQL usa **`security-and-quality`** para Python e deve permanecer ativo em push/PR/agendado. Mantenha essa cobertura ampla junto com regras/testes de hardening do projeto; se uma query nova gerar ruído, triar e documentar antes de considerar supressão.
+- **Semgrep (OSS):** O workflow **Semgrep** no GitHub Actions roda o conjunto **`p/python`** em push/PR (complementa o CodeQL). Exclusões e justificativa: **`docs/plans/completed/PLAN_SEMGREP_CI.md`**.
+- **Bandit:** O job **Bandit (strict)** corre dentro do workflow **CI** em push/PR (`[tool.bandit]` no **`pyproject.toml`**). Detalhes e triagem de achados **low**: **`docs/plans/completed/PLAN_BANDIT_SECURITY_LINTER.md`**.
+- **Cadeia de suprimentos da CI:** Os workflows em **`.github/workflows/`** fixam Actions de terceiros em **SHA de commit completo** (tag de versão em comentários YAML para humanos). O passo **`astral-sh/setup-uv`** fixa um **semver específico** do CLI **uv** — não **`latest`** — para as instalações não variarem silenciosamente entre execuções. O **Dependabot** pode propor bumps de SHA; revisar notas de release antes do merge. As linhas **`FROM`** do **Dockerfile** são **pinadas por digest**; o ecossistema docker do Dependabot propõe bumps de digest. Pull requests também rodam **`dependency-review`**. Isso **reduz** risco de tag móvel e de atualizações inesperadas da action, mas **não garante** proteção contra zero-day no commit fixo, ataques à cadeia que passem na revisão ou riscos fora da CI (por exemplo ferramentas no ambiente local do desenvolvedor). Veja **[ADR 0005](docs/adr/ADR-0005-ci-github-actions-supply-chain-pins.md)** e **[ADR 0074](docs/adr/ADR-0074-supply-chain-layer1-digest-pins-and-rust-sca.md)**.
+
+Essa abordagem faz parte da linha de base de segurança do projeto. Para a lista completa de medidas de endurecimento e status, veja **`docs/plans/completed/PLAN_SECURITY_HARDENING.md`**.
+
+## Resistência a vulnerabilidades comuns
+
+- **Injeção SQL:** Nomes de tabelas e colunas usados em SQL dinâmico (conectores) vêm do inspetor do banco (discover), não de entrada do usuário. Identificadores são escapados por dialeto: aspas duplas para SQLite/Postgres/Oracle (`"` → `""`), backtick para MySQL (`` ` `` → ` `` `). O banco de auditoria local (SQLite) usa apenas ORM do SQLAlchemy e consultas parametrizadas; `session_id` e outros valores fornecidos pelo usuário nunca são concatenados em SQL bruto. Veja **`tests/test_security.py`** para testes de regressão.
+- **Path traversal:** O `session_id` nos caminhos da API é validado com um padrão estrito (alfanumérico e sublinhado, 12–64 caracteres) antes do uso em caminhos de arquivo ou buscas; valores inválidos retornam HTTP 400. Veja **`api/routes.py`** `_validate_session_id` e **`tests/test_security.py`**. Fragmentos **`sql_sampling_file`** / **`sql_sampling_files`** precisam resolver **dentro** do diretório do config principal (caminho absoluto fora dessa pasta é rejeitado); erros de parse YAML/JSON não ecoam trechos do arquivo na exceção (o banner HTTP de salvar config não vaza conteúdo de arquivo alheio). Veja **`config/loader.py`** e **`tests/test_config_sql_sampling_files.py`**.
+- **Validação de entrada (tenant/técnico):** Os valores de tenant e técnico (corpo de início de varredura, PATCH de sessão, varredura via config) são validados quanto ao tamanho e caracteres permitidos (imprimíveis, sem caracteres de controle), depois sanitizados antes do armazenamento, para que relatórios e o dashboard nunca exibam entrada não sanitizada. Veja **`core/validation.py`** `sanitize_tenant_technician` e **`tests/test_security.py`**.
+- **Injeção de credenciais em URLs de conexão:** Usuário e senha são codificados para URL ao montar as URLs de conexão com bancos (conector SQL, conector MongoDB), de modo que caracteres especiais (`@`, `:`, `/`, `#`) em credenciais não quebrem o parsing da URL nem sejam interpretados como host/caminho. Veja **`connectors/sql_connector.py`** `_quote_userinfo` / `_build_url`, **`connectors/mongodb_connector.py`** `connect()`, e **`tests/test_security.py`** (ex.: `test_sql_connector_build_url_encodes_password_special_chars`, `test_mongodb_connector_uri_encodes_password_special_chars`).
+- **Config e serialização:** O config YAML é carregado com `yaml.safe_load` (sem deserialização de objetos Python arbitrários). Veja **`tests/test_security.py`** para um teste que rejeita tags YAML inseguras.
+- **Exposição do endpoint de config:** Quando `api.require_api_key` é true, GET `/config` retorna 401 sem uma chave de API válida, de modo que o config bruto (que pode conter segredos) não fique exposto. **GET `/config` sempre redige valores secretos** (senhas, API key, tokens, client_secret, etc.) antes de enviar o YAML ao navegador, de modo que a UI nunca exiba nem transmita segredos em claro; ao salvar, placeholders são mesclados ao arquivo atual para que segredos reais não sejam sobrescritos. Veja **`config/redact_config.py`** e **`tests/test_security.py`**.
+- **Arquivo de config e segredos:** Restrinja as permissões do arquivo (ex.: `chmod 600` em `config.yaml`) para que só usuários confiáveis leiam. **Não commite** `config.yaml` nem arquivos com credenciais; use **`config.example.yaml`** ou **`deploy/config.example.yaml`** como modelo e mantenha o config local no **`.gitignore`** (o projeto ignora `config.yaml`, `config.local.yaml` e `*.vault`). Se o `config.yaml` da raiz já foi commitado, use **`git rm --cached config.yaml`** para o Git parar de rastreá-lo (o arquivo permanece no disco); commits antigos podem ainda conter o blob—reescreva o histórico ou **rotacione** segredos expostos se o repositório foi público. Prefira variáveis de ambiente (`pass_from_env`, `api_key_from_env`). Um **gerenciador de senhas** (ex. **Bitwarden**) é um bom **lugar** para o **operador** guardar cópias das credenciais; veja **`docs/ops/OPERATOR_SECRETS_BITWARDEN.pt_BR.md`**. **Homelab** (hostnames, IPs RFC1918, inventário): **`docs/private/homelab/`** (gitignored) — **`docs/PRIVATE_OPERATOR_NOTES.pt_BR.md`**. Veja também **`docs/USAGE.pt_BR.md`** (Configuração), **`CONTRIBUTING.pt_BR.md`** (higiene do repositório) e **`docs/plans/PLAN_SECRETS_VAULT.md`** (fase A).
+- **Notificações ao operador (webhooks):** O bloco opcional `notifications` pode enviar resumos para Slack, Teams, URL genérico (ex.: ponte Signal) ou campos Telegram em configurações legadas/de terceiros. A política do mantenedor no repositório canónico é **não** usar Telegram para o Data Boar — veja **`docs/ops/OPERATOR_NOTIFICATION_CHANNELS.pt_BR.md`**. Trate URLs de webhook e tokens de bot como segredos; use `${VAR_DE_AMBIENTE}` no YAML ou só variáveis de ambiente. Veja **`docs/USAGE.pt_BR.md`** (Notificações ao operador). O envio repete em falhas transitórias (HTTP 5xx / rede); isso **não** substitui TLS nem política de rede.
+- **Bind da API vs chave de API:** Ao subir com **`--web`** em bind **fora do loopback** (ex.: `0.0.0.0`), o processo **encerra com código 2** a menos que **`api.require_api_key: true`** e a chave esteja resolvida (`core/host_resolution.py` / `#1714`). Ter `api.api_key` ou um segredo WebAuthn **sem** `require_api_key` **não** libera esse bind — as rotas JSON ficariam sem autenticação. Um **aviso em stderr** ainda vale quando o bind não é loopback e a chave não está de fato exigida. Em produção, prefira loopback + proxy reverso ou `require_api_key` com chave forte.
+- **Limite de tamanho do corpo da requisição:** A API rejeita requisições cujo corpo exceda **1 MB** (ex.: POST `/config`, POST `/scan`, POST `/scan_database`) com **HTTP 413 Payload Too Large**, contando **bytes realmente recebidos** (não só o cabeçalho `Content-Length`) para que transferência chunked não pule o limite. Veja **`api/request_body_limit.py`** e **`tests/test_security.py`**.
+- **Política de logging:** Chave de API, senhas e strings de conexão não devem aparecer em logs. **`get_logger()`** aplica **`SanitizeLogFilter`** (#1722 / ADR-0036) em todo registro. Persistência continua em **`save_failure`**. Veja **`utils/logger.py`** e **`tests/test_logger_pii_filter.py`**.
+- **Acesso a relatório e heatmap:** Os endpoints de relatório e heatmap validam o formato do `session_id` antes do uso; IDs inválidos retornam 400, sessões desconhecidas ou inexistentes retornam 404 (sem enumeração de sessões nem distinção 403/404 para IDs desconhecidos). Veja **`api/routes.py`** e **`docs/SECURITY.md`**.
+
+Para um **resumo orientado ao técnico** (o que observar, testes de regressão, recomendações), veja **`docs/SECURITY.md`** (EN) e **`docs/SECURITY.pt_BR.md`** (pt-BR). Para etapas de endurecimento concluídas e planejadas, veja **`docs/plans/completed/PLAN_SECURITY_HARDENING.md`**.
+
+## Cabeçalhos HTTP de segurança (web e API)
+
+A aplicação adiciona os seguintes cabeçalhos a todas as respostas web e da API por padrão:
+
+- **X-Content-Type-Options: nosniff** — evita detecção de tipo MIME.
+- **X-Frame-Options: DENY** — evita que o app seja incorporado em frames (mitigação de clickjacking).
+- **Content-Security-Policy** — restringe origens de script, estilo e recursos ao app e ao CDN do Chart.js; permite scripts/estilos inline exigidos pelo dashboard atual.
+- **Referrer-Policy: strict-origin-when-cross-origin** — limita informações de referrer enviadas em requisições cross-origin.
+- **Permissions-Policy** — desabilita recursos do navegador não usados pelo app (câmera, microfone, geolocalização, etc.).
+- **Strict-Transport-Security (HSTS)** — definido apenas quando a requisição é considerada HTTPS (direta ou via `X-Forwarded-Proto: https` de um proxy confiável), para que implantações somente HTTP não fiquem bloqueadas. Quando presente, usa `max-age=31536000; includeSubDomains; preload`.
+
+Quando o app estiver atrás de um proxy reverso (ex.: nginx, Caddy, load balancer), garanta que o proxy defina **X-Forwarded-Proto: https** para requisições com TLS terminado para que o HSTS seja aplicado corretamente. Configure **`api.trusted_proxy_cidrs`** com o(s) CIDR(s) do peer **direto** do proxy; sem correspondência, cabeçalhos `X-Forwarded-*` são ignorados (fail-safe). Quando o peer corresponde e o proto forwarded confiável é `https`, o painel suprime o banner de risco de texto claro nessa requisição e **`GET /status`** expõe **`effective_external_transport`** com `tls_termination: trusted_proxy` — o **`dashboard_transport`** a nível de processo continua reportando HTTP upstream com honestidade. Não habilite HSTS na camada do app para HTTP puro; o proxy pode adicionar HSTS ao servir via HTTPS.
+
+## Chave de API opcional (empresarial)
+
+A API não implementa autenticação por padrão; proteja o app no proxy reverso ou no nível de rede quando exposto. Para empresas que desejam um gate de segredo compartilhado simples sem alterar o modelo “proteger no proxy”, a aplicação suporta uma **chave de API opcional**:
+
+- No config, defina `api.require_api_key: true` e `api.api_key` (literal — evite commit de segredo) ou `api.api_key_from_env: "VAR"` (lê a chave do ambiente na subida do processo). Quando habilitado, **GET /health** permanece **sem autenticação** de propósito: devolve JSON de liveness `{"status":"ok"}` para probes (#2077). Licença, confiança e `dashboard_transport` ficam em **GET /status**. **Todas as outras rotas** precisam de **X-API-Key** ou **Authorization: Bearer** quando a chave foi resolvida a partir do config/ambiente. **401** = chave ausente ou inválida. **503** = `require_api_key` true porém nenhuma chave resolvida (misconfig). O **`main.py --web` encerra com código 2** antes de escutar se a chave é obrigatória e está ausente, evitando API aberta por engano.
+- **Boa prática:** Use uma chave forte e aleatória e armazene-a em uma variável de ambiente (ex.: `api_key_from_env: "AUDIT_API_KEY"`). Não registre em log nem faça commit da chave no controle de versão. Isso é apenas um gate simples; para autenticação e autorização completas, use o proxy reverso ou um provedor de identidade.
+- **Passos concretos (EN, para evitar ambiguidade):** nome da variável no YAML vs segredo no SO, precedência, exemplos `curl` — [API_KEY_FROM_ENV_OPERATOR_STEPS.md](docs/ops/API_KEY_FROM_ENV_OPERATOR_STEPS.md). Ordem sugerida (inventário, staging, monitorar `dashboard_transport` / audit export): [SECURE_BY_DEFAULT_BLOCKERS_AND_MIGRATION.pt_BR.md](docs/ops/SECURE_BY_DEFAULT_BLOCKERS_AND_MIGRATION.pt_BR.md).
+- **Guia ponta a ponta para técnico (chave de API + caminhos TLS, Let’s Encrypt, autoassinado em lab, Docker):** [SECURE_DASHBOARD_AUTH_AND_HTTPS_HOWTO.pt_BR.md](docs/ops/SECURE_DASHBOARD_AUTH_AND_HTTPS_HOWTO.pt_BR.md) ([EN](docs/ops/SECURE_DASHBOARD_AUTH_AND_HTTPS_HOWTO.md)).
+
+## Endurecimento de implantação e proxy reverso
+
+Os cabeçalhos de segurança (incluindo CSP) são implementados em **`api/routes.py`** (middleware aplicado às respostas web e da API). Para endurecer implantações em container e cluster:
+
+- **Docker e Kubernetes:** Veja **`docs/deploy/DEPLOY.md`** ([pt-BR](docs/deploy/DEPLOY.pt_BR.md)), seção **“Security and hardening (optional)”**, para:
+- Executar como não-root, limites de recursos e healthchecks.
+- Exemplos opcionais Kubernetes: **securityContext** (runAsNonRoot, readOnlyRootFilesystem, drop capabilities), **NetworkPolicy** (`deploy/kubernetes/network-policy.example.yaml`) e **PodDisruptionBudget** (`deploy/kubernetes/pdb.example.yaml`).
+
+Quando a API ou o dashboard for **exposto à internet ou a redes não confiáveis**, execute-o atrás de um **proxy reverso** com **TLS**, **autenticação/autorização** adequadas e considere um **WAF** (web application firewall). A chave de API e o rate limiting do app (veja [docs/USAGE.md](docs/USAGE.md) ([pt-BR](docs/USAGE.pt_BR.md))) complementam, mas não substituem, a segurança no nível do proxy.
+
+## Reportar uma vulnerabilidade
+
+Se você acredita ter encontrado uma vulnerabilidade de segurança neste projeto:
+
+1. **Não abra uma issue pública com detalhes de exploração ou prova de conceito.**
+1. **Prefira divulgação privada:**
+   - [Abrir um security advisory no GitHub](https://github.com/DataBoar/data-boar/security/advisories/new), **ou**
+   - Enviar e-mail para [contact@databoar.com.br](mailto:contact@databoar.com.br) (alias público já usado pelo Data Boar).
+1. Inclua pelo menos:
+   - Versão/commit do projeto que você está usando.
+   - Versão do Python e detalhes do SO.
+   - Uma descrição mínima do impacto (ex.: divulgação de informação, escalação de privilégio, DoS).
+1. Os mantenedores seguirão o [Prazo de divulgação](#prazo-de-divulgação).
+
+Se não tiver certeza se algo é sensível do ponto de vista de segurança, use o **formulário de advisory ou o e-mail**, não uma issue pública.
+
+## Prazo de divulgação
+
+Estas são **metas**, não SLAs contratuais.
+
+| Passo | Meta |
+| ---- | ------ |
+| **Confirmar recebimento** de um reporte de vulnerabilidade | Em até **72 horas** após um advisory privado ou e-mail que de fato chegue |
+| **Corrigir ou documentar** (patch, advisory, mitigação ou “não corrigir” com justificativa) | Conforme a **severidade**: **alto/crítico** — objetivar **30 dias**; menor severidade — próximo trem de release suportado quando for prático |
+| **Divulgação pública** | Coordenada depois que a correção estiver disponível em uma [versão suportada](#versões-suportadas), ou antes se o reporte já for público |
+
+**Não** abra uma issue **pública** no GitHub com PoC, passos de exploração ou segredos reais. Se a UI do GitHub só oferecer issue pública, mantenha o corpo **em alto nível** (sem reprodução) e aponte para o advisory privado.
+
+## Resposta de segurança (SLAs opcionais)
+
+Estes são **metas** para mantenedores e reportadores, não obrigações contratuais. Ajuste conforme a capacidade da equipe.
+
+| Área                               | Meta opcional                                                                                                                                                                                                                                                                |
+| ------                             | ----------------                                                                                                                                                                                                                                                             |
+| **Reportes de vulnerabilidade**    | Objetivamos **confirmar recebimento** em até **72 horas** (veja [Prazo de divulgação](#prazo-de-divulgação)) e, para achados **altos/críticos**, **corrigir ou documentar** (ex.: advisory, mitigação ou “não corrigir” com justificativa) em até **30 dias**. |
+| **PRs de segurança do Dependabot** | Tratamos os PRs **de segurança** do Dependabot como **P0**: objetivamos **fazer merge ou responder** (ex.: merge, fechar com comentário ou adiar com justificativa) em até **5 dias úteis**. PRs de dependência que não sejam de segurança seguem o ciclo normal de revisão. |
+
+Veja **CONTRIBUTING** para como aplicar atualizações de dependências e executar `pip-audit`; veja **`.github/dependabot.yml`** para a configuração do Dependabot.
+
+## Matriz rápida de triagem CodeQL (P0/P1/P2)
+
+Use esta matriz para priorizar alertas do CodeQL por impacto e risco de release. Mapeie cada alerta para a família de regra e superfície de código mais próxima, então decida correção imediata vs agendamento.
+
+| Prioridade                              | Rule IDs (exemplos)                                                                                                                                                                                                              | Superfície típica neste repositório                                                                                                                                   | Ação                                                                                            |
+| ---                                     | ---                                                                                                                                                                                                                              | ---                                                                                                                                                                   | ---                                                                                             |
+| **P0** (corrigir antes da release)      | `py/path-injection`, `py/sql-injection`, `py/nosql-injection`, `py/code-injection`, `py/command-line-injection`, `py/template-injection`, `py/full-ssrf`, `py/unsafe-deserialization`, `py/xxe`                                  | Servir arquivos e caminhos de relatório na API (`api/routes.py`), conectores/construção de query (`connectors/*`, `database/*`), caminhos de config/load (`config/*`) | Corrigir imediatamente, adicionar teste de regressão e validar com nova execução do CodeQL.     |
+| **P1** (corrigir no ciclo atual)        | `py/weak-sensitive-data-hashing`, `py/clear-text-logging-sensitive-data`, `py/clear-text-storage-sensitive-data`, `py/insecure-protocol`, `py/insecure-default-protocol`, `py/url-redirection`, `py/regex-injection`, `py/redos` | Helpers de licensing/integridade (`core/licensing/*`), logging/persistência de falhas (`core/database.py`, `core/validation.py`), conectores de rede (`connectors/*`) | Corrigir ou documentar mitigação neste ciclo de release; adicionar testes quando viável.        |
+| **P2** (hardening agendado / monitorar) | `py/bind-socket-all-network-interfaces`, `py/flask-debug`, `py/client-exposed-cookie`, `py/insecure-cookie`, `py/samesite-none-cookie`, `py/stack-trace-exposure`, `py/use-of-input`                                             | Configuração de host/runtime (`core/host_resolution.py`, defaults de Docker), middleware/templates web (`api/routes.py`, `api/templates/*`)                           | Manter habilitado, monitorar tendência e agrupar correções de baixo risco em PRs de manutenção. |
+
+Notas:
+
+- **Não desabilitar suites amplas por padrão.** Mantenha `security-and-quality` e priorize correções pontuais + testes.
+- Se um alerta precisar ser adiado, registrar justificativa + controle compensatório no PR/issue e revisitar no próximo loop `-1/-1b`.

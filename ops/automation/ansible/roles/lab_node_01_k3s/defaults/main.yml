@@ -1,0 +1,11 @@
+---
+lab_node_01_install_k3s: false
+
+# Disable Traefik ingress controller by default (cleaner for lab experiments).
+lab_node_01_k3s_disable_traefik: true
+
+# Write kubeconfig to operator home directory.
+lab_node_01_k3s_write_kubeconfig: true
+
+# Additional k3s install flags (e.g. "--cluster-cidr=10.244.0.0/16").
+lab_node_01_k3s_extra_flags: ""

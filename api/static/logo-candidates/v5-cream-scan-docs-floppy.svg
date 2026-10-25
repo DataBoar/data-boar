@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">Compliance Crawler logo - scan left, documents right</title>
+  <desc id="desc">Left: radar dish and sweep (scan/crawler). Right: cream notepad, ID card with paper clip (documents). Blue C in background.</desc>
+  <!-- 1) Blue C in BACKGROUND -->
+  <path d="M 96 34 A 36 36 0 1 0 96 94 L 84 90 A 26 26 0 1 0 84 38 Z" fill="#145DA0" opacity="0.2"/>
+  <!-- LEFT SIDE: scan / crawler -->
+  <!-- 2) Sweep cone BEHIND the dish (drawn first so dish is never hidden) -->
+  <path d="M 44 62 L 66 38 L 66 86 Z" fill="#2563eb" opacity="0.28"/>
+  <path d="M 44 62 L 66 38" fill="none" stroke="#1d4ed8" stroke-width="2" stroke-linecap="round" opacity="0.45"/>
+  <path d="M 44 62 L 66 86" fill="none" stroke="#1d4ed8" stroke-width="2" stroke-linecap="round" opacity="0.45"/>
+  <g id="radar-dish">
+    <circle cx="44" cy="62" r="22" fill="#145DA0" stroke="#0d3d75" stroke-width="2"/>
+    <circle cx="44" cy="62" r="5" fill="#1d4ed8" stroke="#0d3d75" stroke-width="1"/>
+    <path d="M 32 82 L 44 84 L 56 82 L 53 98 L 35 98 Z" fill="#145DA0" stroke="#0d3d75" stroke-width="1.2"/>
+  </g>
+  <!-- RIGHT SIDE: documents (inclined, natural perspective) -->
+  <!-- 3) Notepad sheet: slight tilt around center -->
+  <g transform="rotate(-6 97 62)">
+    <rect x="76" y="34" width="42" height="56" rx="3" ry="3" fill="#f2ebe0" stroke="#b8ab9a" stroke-width="1.2"/>
+    <line x1="82" y1="40" x2="114" y2="40" stroke="#c9bfb0" stroke-width="0.8"/>
+    <line x1="82" y1="47" x2="114" y2="47" stroke="#c9bfb0" stroke-width="0.8"/>
+    <line x1="82" y1="54" x2="114" y2="54" stroke="#c9bfb0" stroke-width="0.8"/>
+    <line x1="82" y1="61" x2="114" y2="61" stroke="#c9bfb0" stroke-width="0.8"/>
+    <line x1="82" y1="68" x2="114" y2="68" stroke="#c9bfb0" stroke-width="0.8"/>
+    <line x1="82" y1="75" x2="114" y2="75" stroke="#c9bfb0" stroke-width="0.8"/>
+    <line x1="82" y1="82" x2="114" y2="82" stroke="#c9bfb0" stroke-width="0.8"/>
+    <line x1="84" y1="40" x2="84" y2="86" stroke="#b8a098" stroke-width="0.6"/>
+  </g>
+  <!-- 4) ID + paper clip: more inclined, not aligned with paper -->
+  <g transform="rotate(-14 89 44)">
+    <rect x="78" y="37" width="22" height="14" rx="1.5" ry="1.5" fill="#e8e4dc" stroke="#9a8f7e" stroke-width="0.7"/>
+    <rect x="80" y="39.5" width="6" height="8" rx="0.6" fill="#c4b8a8" stroke="#9a8f7e" stroke-width="0.4"/>
+    <line x1="88" y1="41" x2="97" y2="41" stroke="#8a8070" stroke-width="0.5"/>
+    <line x1="88" y1="44" x2="97" y2="44" stroke="#8a8070" stroke-width="0.5"/>
+    <line x1="88" y1="47" x2="94" y2="47" stroke="#8a8070" stroke-width="0.5"/>
+    <path d="M 77.5 36.2 C 79.2 36.2 80.6 37.2 80.6 38.8 C 80.6 40.4 79.2 41.4 77.5 41.4 L 77.5 42.8 C 77.5 44.4 79.2 45.8 80.6 45.8 C 82.2 45.8 83.6 44.4 83.6 42.8 C 83.6 41.2 82.2 39.8 80.6 39.8 L 80.6 38.8 C 80.6 37.2 79.2 36.2 77.5 36.2" fill="none" stroke="#4a4540" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

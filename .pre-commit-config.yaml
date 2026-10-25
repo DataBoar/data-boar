@@ -1,0 +1,109 @@
+# Pre-commit hooks: run before each commit to catch issues early.
+# Install (once per clone): uv sync && uv run pre-commit install
+# Run manually / CI parity: uv run pre-commit run --all-files
+# Hooks mirror .github/workflows/ci.yml lint job (Ruff, markdown, pt-BR, commercial guard, public skills OPSEC guard #1191, external-docs plan links, plans-stats, dependency artifacts vs uv).
+# Local commits also run gatekeeper_audit.py (PII seeds vs staged paths; issue #560) -- skip when seeds file absent, same semantics as scripts/gatekeeper-audit.ps1.
+# The CI test job also runs scripts/pii_history_guard.py --full-history (ADR 0020); pre-commit runs the incremental guard only.
+# See https://pre-commit.com and docs/QUALITY_WORKFLOW_RECOMMENDATIONS.md
+
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.4
+    hooks:
+      - id: ruff
+        args: [--fix]
+        # Ruff config (extend-exclude, etc.) is in pyproject.toml; same as CI.
+      - id: ruff-format
+        args: [--check]
+        # Enforce format on commit; fix with: uv run ruff format .
+  - repo: local
+    hooks:
+      - id: plans-stats-check
+        name: plans status dashboard is fresh
+        entry: uv run python scripts/plans-stats.py --check
+        language: system
+        pass_filenames: false
+      - id: markdown-lint-guard
+        name: markdown lint guard (pytest)
+        entry: uv run pytest tests/test_markdown_lint.py::test_markdown_lint_no_violations -q -W error
+        language: system
+        pass_filenames: false
+      - id: pt-br-locale-guard
+        name: pt-BR locale guard (pytest)
+        entry: uv run pytest tests/test_docs_pt_br_locale.py -q -W error
+        language: system
+        pass_filenames: false
+      - id: confidential-commercial-guard
+        name: confidential commercial guard (git index)
+        entry: uv run pytest tests/test_confidential_commercial_guard.py -q -W error
+        language: system
+        pass_filenames: false
+      - id: public-operational-intel-guard
+        name: public Cursor skills operational-intel guard (#1191)
+        entry: uv run pytest tests/test_public_operational_intel_guard.py -q -W error
+        language: system
+        pass_filenames: false
+
+      - id: gatekeeper-audit
+        name: PII seed gate (staged files vs private seeds)
+        entry: uv run python scripts/gatekeeper_audit.py
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+      - id: docs-external-no-plan-links
+        name: external-tier docs must not link into docs/plans
+        entry: uv run pytest tests/test_docs_external_no_plan_links.py -q -W error
+        language: system
+        pass_filenames: false
+      - id: dependency-artifacts-sync
+        name: uv.lock and requirements.txt match pyproject (uv)
+        entry: uv run pytest tests/test_dependency_artifacts_sync.py -q -W error
+        language: system
+        pass_filenames: false
+      - id: pii-guard
+        name: PII guard (tracked files must not contain sensitive patterns)
+        entry: uv run pytest tests/test_pii_guard.py -q -W error
+        language: system
+        pass_filenames: false
+      - id: pii-history-guard
+        name: PII history guard (forbidden literals must stay purged)
+        entry: uv run python scripts/pii_history_guard.py
+        language: system
+        pass_filenames: false
+      - id: no-legacy-cursorrules
+        name: no legacy .cursorrules file
+        entry: uv run pytest tests/test_no_legacy_cursorrules.py -q -W error
+        language: system
+        pass_filenames: false
+      - id: adr-governance-phase1
+        name: ADR governance Phase 1 (ADR-0045 anti-regression)
+        entry: uv run pytest tests/test_adr_governance_phase1.py -q -W error
+        language: system
+        pass_filenames: false
+      - id: commit-msg-strip-coauthor
+        name: strip injected Co-authored-by from commit message (forward-only)
+        entry: .githooks/commit-msg
+        language: script
+        stages: [commit-msg]
+        pass_filenames: true
+      - id: no-coauthorship-commit-messages
+        name: no co-authorship in commit messages (kombi)
+        entry: uv run pytest tests/test_commit_no_tool_coauthorship.py -q -W error
+        language: system
+        pass_filenames: false
+      - id: gitleaks-detect-config
+        name: gitleaks detect with security/gitleaks.toml (kombi)
+        entry: uv run pytest tests/test_gitleaks_config.py -q -W error
+        language: system
+        pass_filenames: false
+      - id: workflow-run-scalar-guard
+        name: GitHub Actions folded-scalar run plus backslash (#1918)
+        entry: uv run python scripts/workflow_run_scalar_guard.py
+        language: system
+        pass_filenames: false
+      - id: workflow-security-lint
+        name: zizmor workflow security lint (optional manual stage)
+        entry: pwsh -NoProfile -File scripts/workflow-security-lint.ps1 -SkipIfMissing
+        language: system
+        pass_filenames: false
+        stages: [manual]

@@ -1,0 +1,21 @@
+---
+description: Zero tolerance for third-party identifiers and sensitive breadcrumbs in public tracked files, commits, and PR text (LGPD/GDPR alignment).
+alwaysApply: true
+---
+
+# Public tree — PII / third-party data (zero tolerance)
+
+## Scope
+
+Applies to **every** edit that could land on **GitHub `origin`** (tracked files, Conventional Commit messages, PR titles/bodies, examples in scripts/skills).
+
+## Hard rules
+
+1. **No** real talent-pool aliases, candidate PDF names, LinkedIn slugs/URLs, client identifiers, legal-case narratives, or family/whistleblowing breadcrumbs in **public** scripts, docs, skills, rules, tests (except dynamic construction used only to assert negatives), commit messages, or PR descriptions.
+2. **Placeholders only** in tracked examples: `candidate_a`, `Sample_Candidate.pdf`, `https://www.example.com/profile/<placeholder-slug>`, `ssh://<ssh-user>@myserver.example.com`, etc. Real mappings stay in **gitignored** `docs/private/commercial/` (e.g. `talent_pool.json`).
+3. **CI and pre-commit** enforce `tests/test_pii_guard.py`, `tests/test_talent_public_script_placeholders.py`, and `scripts/pii_history_guard.py` (incremental locally; **full history** in CI — see ADR 0020). Do not weaken or bypass without maintainer decision and ADR update.
+4. If the operator asks for automation that would embed real names or URLs in tracked output, **refuse** and redirect to private files or local-only JSON.
+
+## When unsure
+
+Prefer **fewer** words in commits/PRs; put context in `docs/private/` or redacted maintainer notes. See **CONTRIBUTING.md** (*Public repo: third-party identifiers and Git history*) and **docs/ops/COMMIT_AND_PR.md**.

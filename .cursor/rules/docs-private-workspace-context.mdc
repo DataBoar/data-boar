@@ -1,0 +1,30 @@
+---
+description: docs/private read cadence + .cursorignore opt-out; gitignore is not GitHub-only — pairs with always-on agent-docs-private-read-access. Situational (globs + private-stack-sync latch).
+globs:
+  - docs/PRIVATE_OPERATOR_NOTES.md
+  - AGENTS.md
+  - docs/private.example/**
+  - docs/ops/PRIVATE_STACK_SYNC_RITUAL.md
+  - docs/ops/PRIVATE_STACK_SYNC_RITUAL.pt_BR.md
+  - docs/ops/PRIVATE_LOCAL_VERSIONING.md
+  - docs/ops/PRIVATE_LOCAL_VERSIONING.pt_BR.md
+  - scripts/private-git-sync.ps1
+alwaysApply: false
+---
+
+# `docs/private/` — workspace context, not a GitHub secret only
+
+## When this rule attaches (Cursor)
+
+**Context:** **`alwaysApply: false`** — loads when a path matches the **`globs`** above **or** the operator is closing the **stacked private** workflow (session token **`private-stack-sync`** in the same thread — see **`session-mode-keywords.mdc`** and **`docs/ops/OPERATOR_AGENT_COLD_START_LADDER.md`** § *Token → rule latch (`private-stack-sync`)*) **or** attaches **`@docs-private-workspace-context.mdc`**.
+
+**Non-negotiable elsewhere:** **`.cursor/rules/agent-docs-private-read-access.mdc`** stays **`alwaysApply: true`** — assistants **must not** self-block on gitignored **`docs/private/`** even when this situational rule is **not** loaded.
+
+1. **`docs/private/`** is **excluded from Git / GitHub** (`.gitignore`). It is **not** “blocked from the assistant until `@`.”
+1. **Default:** When the task involves **homelab, operator inventory, LAN Data Boar, `P:`**, or other notes under **`docs/private/`**, **`read_file`**: **`docs/private/homelab/AGENT_LAB_ACCESS.md`**, **`docs/private/homelab/OPERATOR_SYSTEM_MAP.md`** (master chart: hardware + access + software), **`docs/private/homelab/OPERATOR_RETEACH.md`**, then others as needed. **`@`-mention and open tabs are optional** once this rule (or **`agent-docs-private-read-access.mdc`**) is in context.
+1. **Opt-out:** If the operator adds **`docs/private/`** to **`.cursorignore`**, then explicit **`@`** or paste is required—**not** this repo’s default.
+1. **Still:** never put **real hostnames, IPs, keys** from private notes into **committed** tracked files.
+1. **CLI habit dumps:** **`uptime`**, **`w`**, **`last`**, **`lastlog`** (and similar) belong in **`docs/private/homelab/`** if kept—not in **issues/PRs/tracked** Markdown (they leak LAN IPs and login patterns).
+1. **Secrets:** never paste **passwords / tokens / SNMP communities** into chat; never store them in **`.mdc` rules** or **tracked** skills. Prefer **session env vars**, **Bitwarden CLI**, or **gitignored** `docs/private/` files per **`docs/private.example/homelab/CREDENTIALS_AND_LAB_SECRETS.md`**.
+
+See **`docs/PRIVATE_OPERATOR_NOTES.md`** §1, §2, §5.

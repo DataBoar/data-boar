@@ -1,0 +1,11 @@
+---
+lab_node_01_fail2ban_enable: true
+lab_node_01_fail2ban_sshd_enabled: true
+lab_node_01_fail2ban_maxretry: 5
+lab_node_01_fail2ban_findtime: "10m"
+lab_node_01_fail2ban_bantime: "1h"
+lab_node_01_fail2ban_banaction: ufw
+
+# Comment-only suggestions catalog (operator can adopt by overriding via inventory).
+lab_node_01_fail2ban_ignoreip: []
+

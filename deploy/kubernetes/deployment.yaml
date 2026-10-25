@@ -1,0 +1,57 @@
+# Runs image default: web API + frontend (no command/args override).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: data-boar
+  labels:
+    app: data-boar
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: data-boar
+  template:
+    metadata:
+      labels:
+        app: data-boar
+    spec:
+      containers:
+        - name: data-boar
+          image: fabioleitao/data_boar:latest
+          ports:
+            - containerPort: 8088
+          env:
+            - name: CONFIG_PATH
+              value: /data/config.yaml
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: config
+              mountPath: /data/config.yaml
+              subPath: config.yaml
+              readOnly: true
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8088
+            initialDelaySeconds: 25
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8088
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          # I/O-bound: network and filesystem are the bottleneck. CPU request helps placement; limit left high for report-generation bursts.
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "1Gi"
+      volumes:
+        - name: data
+          emptyDir: {}
+        - name: config
+          configMap:
+            name: data-boar-config

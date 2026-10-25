@@ -1,0 +1,159 @@
+# PIPEDA – sample compliance profile (Canada; federal private sector)
+#
+# Target audience: Canadian deployments and PIPEDA compliance. Bilingual (English + French)
+# ML terms per compliance-samples language rule: "personal information" / "renseignements personnels",
+# "consent" / "consentement", etc.
+#
+# How to use:
+#   1. Set in your main config:
+#        regex_overrides_file: path/to/compliance-sample-pipeda.yaml
+#        ml_patterns_file: path/to/compliance-sample-pipeda.yaml
+#   2. Merge the recommendation_overrides list below into your config under report.recommendation_overrides.
+#
+# PIPEDA: Personal Information Protection and Electronic Documents Act; Office of the Privacy Commissioner.
+#
+# Precise geolocation (logs / APIs): same regex geometry as compliance-sample-us_va_vcdpa.yaml and
+# compliance-sample-eu_gdpr.yaml (JSON lat/lng, location: pair, latitude=&longitude=). norm_tag stays
+# "PIPEDA" for Canadian inventory. Heuristic only — not an OPC determination of sensitivity or consent.
+
+regex:
+  - name: "SIN_CA"
+    pattern: "\\b\\d{3}[-\\s]?\\d{3}[-\\s]?\\d{3}\\b"
+    norm_tag: "PIPEDA"
+  - name: "SIN_CA_ALT"
+    pattern: "\\b\\d{9}\\b"
+    norm_tag: "PIPEDA"
+  - name: "PIPEDA_JSON_LAT_PRECISION"
+    pattern: "(?i)[\"']lat[\"']\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\b"
+    norm_tag: "PIPEDA"
+  - name: "PIPEDA_JSON_LNG_PRECISION"
+    pattern: "(?i)[\"'](?:lng|lon)[\"']\\s*:\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}\\b"
+    norm_tag: "PIPEDA"
+  - name: "PIPEDA_LOCATION_CSV_PAIR"
+    pattern: "(?i)\\blocation\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*,\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "PIPEDA"
+  - name: "PIPEDA_QUERYSTRING_LAT_LONG"
+    pattern: "(?i)latitude=[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*&\\s*longitude=[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "PIPEDA"
+
+# ML terms: English and French (PIPEDA s. 2 "personal information"; consent, limitation).
+terms:
+  - text: "personal information"
+    label: sensitive
+  - text: "renseignements personnels"
+    label: sensitive
+  - text: "consent"
+    label: sensitive
+  - text: "consentement"
+    label: sensitive
+  - text: "data subject"
+    label: sensitive
+  - text: "sujet des données"
+    label: sensitive
+  - text: "privacy commissioner"
+    label: sensitive
+  - text: "commissaire à la vie privée"
+    label: sensitive
+  - text: "pipeda"
+    label: sensitive
+  - text: "geolocation"
+    label: sensitive
+  - text: "geolocation data"
+    label: sensitive
+  - text: "precise geolocation"
+    label: sensitive
+  - text: "géolocalisation"
+    label: sensitive
+  - text: "données de géolocalisation"
+    label: sensitive
+  - text: "géolocalisation précise"
+    label: sensitive
+  - text: "limitation of purposes"
+    label: sensitive
+  - text: "limitation des finalités"
+    label: sensitive
+  - text: "social insurance number"
+    label: sensitive
+  - text: "numéro d'assurance sociale"
+    label: sensitive
+  - text: "nas"
+    label: sensitive
+  # Phone / contact (EN + FR for Canadian data)
+  - text: "phone"
+    label: sensitive
+  - text: "telephone"
+    label: sensitive
+  - text: "téléphone"
+    label: sensitive
+  - text: "mobile"
+    label: sensitive
+  - text: "home phone"
+    label: sensitive
+  - text: "work phone"
+    label: sensitive
+  - text: "cell phone"
+    label: sensitive
+  - text: "numéro de téléphone"
+    label: sensitive
+  - text: "contact number"
+    label: sensitive
+  # Name / identifier (EN + FR for Canadian data)
+  - text: "first name"
+    label: sensitive
+  - text: "last name"
+    label: sensitive
+  - text: "surname"
+    label: sensitive
+  - text: "full name"
+    label: sensitive
+  - text: "birth name"
+    label: sensitive
+  - text: "nickname"
+    label: sensitive
+  - text: "given name"
+    label: sensitive
+  - text: "family name"
+    label: sensitive
+  - text: "prénom"
+    label: sensitive
+  - text: "nom de famille"
+    label: sensitive
+  - text: "nom complet"
+    label: sensitive
+  # ID / document (EN + FR for Canadian data)
+  - text: "passport"
+    label: sensitive
+  - text: "passeport"
+    label: sensitive
+  - text: "id card"
+    label: sensitive
+  - text: "identity document"
+    label: sensitive
+  - text: "document d'identité"
+    label: sensitive
+  - text: "carte d'identité"
+    label: sensitive
+  - text: "national id"
+    label: sensitive
+  - text: "document number"
+    label: sensitive
+  - text: "social insurance number"
+    label: sensitive
+  - text: "numéro d'assurance sociale"
+    label: sensitive
+  - text: "driver license"
+    label: sensitive
+  - text: "permis de conduire"
+    label: sensitive
+  - text: "green card"
+    label: sensitive
+  - text: "professional registration"
+    label: sensitive
+
+recommendation_overrides:
+  - norm_tag_pattern: "PIPEDA"
+    base_legal: "PIPEDA s. 2 (personal information); Privacy Commissioner"
+    risk: "Personal information as defined under Canadian federal law; possible precise geolocation in logs/APIs (heuristic regex only — not an OPC classification of sensitivity or consent)."
+    recommendation: "Review PIPEDA consent and limitation of purposes; document legitimate need for location data; comply with Office of the Privacy Commissioner guidance."
+    priority: "ALTA"
+    relevant_for: "DPO, Privacy Officer, Privacy Commissioner"

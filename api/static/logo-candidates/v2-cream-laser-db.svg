@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">Compliance Crawler logo - cream paper, laser beams</title>
+  <desc id="desc">C-shaped mark on cream background; teal database cylinder; sharp laser-like scan lines.</desc>
+  <rect x="0" y="0" width="128" height="128" fill="#faf6ef"/>
+  <line x1="16" y1="48" x2="112" y2="48" stroke="#e8e2d8" stroke-width="0.8"/>
+  <line x1="16" y1="64" x2="112" y2="64" stroke="#e8e2d8" stroke-width="0.8"/>
+  <line x1="16" y1="80" x2="112" y2="80" stroke="#e8e2d8" stroke-width="0.8"/>
+  <path d="M 102 42 A 44 44 0 1 0 102 86 L 88 78 A 28 28 0 1 0 88 50 Z" fill="#145DA0"/>
+  <ellipse cx="81" cy="56" rx="10" ry="4" fill="#21A179"/>
+  <path d="M 71 56 L 71 76 Q 71 80 81 80 Q 91 80 91 76 L 91 56" fill="#21A179"/>
+  <line x1="71" y1="64" x2="91" y2="64" stroke="#1a8a66" stroke-width="1" opacity="0.8"/>
+  <line x1="20" y1="44" x2="42" y2="44" stroke="#145DA0" stroke-width="2" stroke-linecap="round"/>
+  <line x1="18" y1="64" x2="44" y2="64" stroke="#145DA0" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="20" y1="84" x2="42" y2="84" stroke="#145DA0" stroke-width="2" stroke-linecap="round"/>
+  <line x1="22" y1="54" x2="38" y2="54" stroke="#145DA0" stroke-width="1" stroke-linecap="round" opacity="0.7"/>
+  <line x1="22" y1="74" x2="38" y2="74" stroke="#145DA0" stroke-width="1" stroke-linecap="round" opacity="0.7"/>
+</svg>

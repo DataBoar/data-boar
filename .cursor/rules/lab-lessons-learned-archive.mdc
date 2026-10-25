@@ -1,0 +1,45 @@
+---
+description: Dated public LAB_LESSONS snapshots under docs/ops/lab_lessons_learned/; hub LAB_LESSONS_LEARNED.md; pair with private COMPLETAO_SESSION; promote follow-ups to PLANS_TODO; session token lab-lessons.
+globs:
+  - docs/ops/LAB_LESSONS_LEARNED.md
+  - docs/ops/lab_lessons_learned/**
+  - docs/ops/SPRINT_GREAT_LEAP_POSTMORTEM.md
+  - docs/ops/SPRINT_GREAT_LEAP_POSTMORTEM.pt_BR.md
+  - docs/private/homelab/COMPLETAO_SESSION*.md
+  - scripts/lab-completao-orchestrate.ps1
+alwaysApply: false
+---
+
+# LAB lessons learned — archive contract (situational)
+
+## When this binds
+
+- Operator types English token **`lab-lessons`**, **or**
+- Editor context already includes **`docs/ops/LAB_LESSONS_LEARNED.md`**, **`docs/ops/lab_lessons_learned/**`**, **`SPRINT_GREAT_LEAP_POSTMORTEM*`**, private **`docs/private/homelab/COMPLETAO_SESSION*.md`**, or **`scripts/lab-completao-orchestrate.ps1`**.
+
+Do **not** mark this rule **`alwaysApply`**: lab evidence hygiene is **high-signal but rare** compared to everyday edits.
+
+## Contract (must)
+
+1. **Immutable dated snapshots** live in **`docs/ops/lab_lessons_learned/`** as **`LAB_LESSONS_LEARNED_YYYY_MM_DD.md`**. Never rewrite an older dated file to “fix” history — add a new date or an erratum note in the hub.
+2. **`docs/ops/LAB_LESSONS_LEARNED.md`** stays the **hub**: short latest summary, table of archives, links to sprint post-mortem / integrity docs, and **explicit bridges** into **`docs/plans/PLANS_TODO.md`** when work is promoted.
+3. **Private completão** narratives stay under **`docs/private/homelab/COMPLETAO_SESSION_*.md`** (and reports under **`docs/private/homelab/reports/`**). Only **public-safe** metrics and conclusions belong in the dated archive — no LAN hostnames, no secrets, no RFC1918 breadcrumbs in **tracked** snapshots.
+4. When a lesson becomes a tracked deliverable, **edit `PLANS_TODO.md`** (or the relevant **`PLAN_*.md`**) and run **`python scripts/plans-stats.py --write`** when dashboard rows change.
+
+## Canonical prose
+
+- **ADR 0042:** `docs/adr/ADR-0042-lab-lessons-learned-archive-contract.md`
+- **Folder README:** `docs/ops/lab_lessons_learned/README.md` (+ **`.pt_BR.md`**)
+- **Completão runbook:** `docs/ops/LAB_COMPLETAO_RUNBOOK.md` § *Public vs private evidence*
+
+## Ritual (assistant-friendly)
+
+When the operator closes a lab QA / completão block and wants history preserved:
+
+1. **`read_file`** the current hub and any private session file they reference.
+2. **Copy** the hub body (or agreed final text) to **`docs/ops/lab_lessons_learned/LAB_LESSONS_LEARNED_YYYY_MM_DD.md`** using the **session-end** calendar date.
+3. **Trim** the hub to summary + links; extend the archive table row.
+4. **Patch `PLANS_TODO.md`** if new ⬜ / 🔄 rows are agreed; run **`plans-stats --write`**.
+5. **Never** paste private completão blobs into **tracked** Markdown — summarize.
+
+Session keyword table: **`.cursor/rules/session-mode-keywords.mdc`** row **`lab-lessons`**.

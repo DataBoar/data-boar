@@ -1,0 +1,2 @@
+# Galaxy installs for local/CI syntax-check (see scripts/ansible-syntax-check.sh).
+ansible_collections/

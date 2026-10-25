@@ -1,0 +1,79 @@
+---
+description: Critical-first execution, token-aware sequencing, and PR batching (avoid micro-PR chaos)
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# Execution order and PR batching
+
+Use this decision order every session:
+
+1. **Critical-first safety gate**
+   - If there is a critical blocker/risk (broken automation, merge/sync confusion, failing safety checks, security gate), work on that first.
+   - Prefer finishing the critical slice to a stable commit state before starting new feature work.
+   - If needed, make multiple **local commits** in the same branch while stabilizing.
+
+1. **Then product work by matrix**
+   - When no critical blocker exists, prioritize feature/bugfix work according to `docs/plans/PLANS_TODO.md` taxonomy and sequencing (H0/H1/H2..., U0/U1/U2...).
+   - Stay token-aware: bias to low-cost, low-complexity, high-gain increments **within** that taxonomy and the **active sprint theme** (§3)—not unrelated “cheap” tasks by default.
+
+1. **Sub-ordering within the same P label and milestone (U axis)**
+   - Within issues sharing the same P label and GH milestone, execute in this fixed order:
+     - **U0 first** — security/safety now; block all other work in that session until resolved
+     - **U1 next** — high-value, chain blockers, or external deadline pressure
+     - **U2 next** — valuable but no hard external deadline
+     - **U3 next** — explicitly deferred within the milestone
+     - **No U marker = U3** — absence of a U tag in the issue body means lowest sub-priority within the milestone; never treat unlabeled issues as equal to U0–U2
+   - This ordering is **mandatory**, not a suggestion. Do not reorder based on perceived complexity, token cost, or familiarity.
+
+1. **Cross-milestone hard gate**
+   - **Never start v1.8.0-beta issues before all v1.7.4 issues are closed.**
+   - Issues marked `**NÃO INICIAR ANTES DE #N FECHADA**` in their body are **hard blockers** — not advisory notes. Starting such an issue before #N is closed is a deterministic violation.
+   - If operator explicitly reprioritizes cross-milestone work, they must say so explicitly in the session message; silence = respect the gate.
+
+1. **Sprint theme vs token-cherry-picking (coherence)**
+   - After **Priority band A** (when invoked) and critical gates, anchor sessions on the **active milestone or sprint theme** from [PLANS_TODO.md](../../docs/plans/PLANS_TODO.md) and [SPRINTS_AND_MILESTONES.md](../../docs/plans/SPRINTS_AND_MILESTONES.md) (e.g. Kanban **Selected** / **In progress**).
+   - **Token-aware** means splitting **that theme** into small, reviewable chunks—not jumping to a different product thread every session **only** because it would use fewer tokens. If the **operator** reprioritises, switch theme explicitly.
+   - Detail: [TOKEN_AWARE_USAGE.md](../../docs/plans/TOKEN_AWARE_USAGE.md) §2.
+
+1. **Commit cadence (document progress locally — avoid pre-PR / pre-release chaos)**
+   - **Commit locally** at sensible checkpoints: (a) a **single important** change, or (b) a **batch of related edits** that share one “train of thought” / theme—use **one commit** for that batch *or* split into a few commits by sub-theme (`docs` vs `test` vs core), each with a clear Conventional Commit message.
+   - **Avoid** letting **large uncommitted** diffs accumulate over many days: scope becomes unclear, rollback is harder, and **merge/rebase conflicts** explode when you finally prepare a PR or release.
+   - Work on a **feature branch**; **refresh from `main`** regularly (`git fetch`, merge or rebase `origin/main`) so drift stays small—see `.cursor/rules/git-pr-sync-before-advice.mdc`.
+   - **End of a long session:** if the tree is in a good state, commit coherent work. **`lint-only` is docs-only** (Markdown/rules with no product/CI/code publish). **Any** `git push` / PR of **code, tests, workflows, or scripts** MUST have **full `check-all`** green first ([ADR 0080](../../docs/adr/ADR-0080-local-validation-gate-inviolable.md), **#1151**, **`check-all-gate.mdc`**). If you must pause mid-theme, a **single** clearly labeled commit on the branch (e.g. message states *WIP* / next step) is better than a mystery working tree—only with operator agreement; do not push sloppy state to `main`.
+   - Local commits are encouraged for **safety and `git log` narrative**; **do not** open a PR for every tiny commit unless the change is truly standalone.
+   - **Batch** coherent local commits into **one PR** when the slice is reviewable. Human workflow + scripts: [docs/ops/COMMIT_AND_PR.md](../../docs/ops/COMMIT_AND_PR.md) ([pt-BR](../../docs/ops/COMMIT_AND_PR.pt_BR.md)).
+
+1. **PR timing**
+   - Open PR when a coherent slice is complete/stable, tests/docs for that slice are updated, and sharing feedback value is clear.
+   - Micro-PRs are fine only when the change is truly tiny, safe, and complete.
+
+1. **Chaos prevention guardrails**
+   - Before Commit/PR: run `git status -sb` and script Preview (`.\scripts\commit-or-pr.ps1 -Action Preview`).
+   - Prefer script workflow (`check-all`, `preview-commit`, `commit-or-pr`) over ad-hoc git commands when possible.
+   - Avoid mixing unrelated subjects in the same branch/PR.
+
+1. **Commit grouping taxonomy (feature/workflow/documentation)**
+   - Classify each planned phase as one of:
+     - `feature`: product behavior (detector logic, report output, config semantics, runtime behavior)
+     - `workflow`: delivery/process/tooling (scripts, CI flow, branch/PR guardrails, contributor process)
+     - `documentation`: explanatory/operator text with no behavior change
+   - Preferred grouping:
+     - Keep `feature`, `workflow`, and pure `documentation` in separate commits.
+     - Allow combined commits only when docs are required to make the paired change usable/reviewable:
+       - `feature + documentation` for behavior/config changes that need docs at the same checkpoint.
+       - `workflow + documentation` for process/tooling changes that need operator/contributor guidance.
+   - Disallow mixed `feature + workflow` in one commit/PR unless explicitly requested for an emergency fix.
+
+1. **Phase-to-commit-to-PR policy (non-micro slices)**
+   - For a multi-phase next step, first map each phase to the taxonomy above.
+   - Create one or more coherent local commits per track (not per tiny edit), preserving review intent.
+   - Open PR when a track reaches a stable checkpoint (tests/docs for that track pass and diff is reviewable).
+   - If a branch carries multiple tracks, ensure commits are clearly separated by intent and keep PR title/body explicit about included tracks.
+
+1. **Conventional Commit types (subject line) vs grouping (feature/workflow/docs)**
+   - **Types:** `feat`, `fix`, `security` (optional top-level for primary hardening), `refactor`, `docs`, `chore`, `ci`, `test`, `perf`, `style`.
+   - **Bugfix:** use **`fix:`** (not a separate invented prefix). **`fix(security):`** when the fix is security-critical.
+   - **Refactor vs feat+fix:** Prefer **`refactor:`** for behavior-preserving moves. **Do not** combine unrelated **`feat` + `fix`** in one commit; split into two commits (or two PRs) unless the work is truly atomic. If it is both a feature and a fix, separate commits almost always read clearer in history.
+   - **Scopes:** Optional — `feat(detector):`, `docs(ops):`, `fix(api):`, **`chore(deps):`** for dependency-only bumps. **Homelab / operator fronts:** `docs(homelab):`, `docs(workflow):`, `chore(cursor):`, `docs(private-layout):`, `docs(plans):` — full scope table in root **`AGENTS.md`** (including **`private-layout`** vs real inventory).
+   - Grouping rules (`feature + documentation`, etc.) still apply; the type line tells *what* changed, grouping tells *which narrative bucket*.

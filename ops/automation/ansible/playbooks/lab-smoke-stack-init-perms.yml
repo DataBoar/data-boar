@@ -1,0 +1,27 @@
+---
+# Fix permissions on deploy/lab-smoke-stack SQL init trees after SCP or partial checkout
+# so Docker Postgres/Maria can read bind-mounted /docker-entrypoint-initdb.d (non-destructive).
+#
+# Inventory: add [lab_smoke] in inventory.local.ini (see inventory.example.ini).
+#
+#   cd ops/automation/ansible
+#   ansible-playbook -i inventory.local.ini playbooks/lab-smoke-stack-init-perms.yml \
+#     -e lab_smoke_stack_path='{{ ansible_env.HOME }}/Projects/dev/data-boar/deploy/lab-smoke-stack'
+#
+# become: false — adjusts files as the SSH user; use the account that owns the repo clone.
+
+- name: Lab smoke stack — init SQL readable for Docker bind mounts
+  hosts: lab_smoke
+  gather_facts: true
+  environment: "{{ labop_debian_unattended_apt_environment }}"
+  vars:
+    # Remote path: operator home + standard clone layout (override with -e if needed).
+    lab_smoke_stack_path: "{{ ansible_env.HOME }}/Projects/dev/data-boar/deploy/lab-smoke-stack"
+
+  tasks:
+    - name: chmod a+rX on postgres and mariadb init directories
+      ansible.builtin.shell: |
+        chmod -R a+rX "{{ lab_smoke_stack_path }}/init/postgres" "{{ lab_smoke_stack_path }}/init/mariadb"
+      args:
+        executable: /bin/bash
+      changed_when: true

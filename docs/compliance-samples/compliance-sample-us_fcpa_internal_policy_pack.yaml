@@ -1,0 +1,114 @@
+# U.S. FCPA + internal anti-corruption policy pack — sample compliance profile (lexicon / inventory)
+#
+# NOT LEGAL ADVICE. This file supplies technical lexicon (regex + ML terms) and report
+# recommendation_overrides for teams scoping U.S. Foreign Corrupt Practices Act (FCPA)
+# programmes and employer-specific internal policies (sometimes abbreviated FPCA or similar).
+#
+# Data Boar does NOT detect bribes, conclude FCPA violations, or replace anti-corruption
+# monitoring systems. Replace or extend employer-specific acronyms and wording with counsel
+# after review of your corporate policy and facts.
+#
+# References (public law text — not endorsement): 15 U.S.C. §§ 78dd-1 et seq. (anti-bribery);
+# books-and-records and internal accounting controls provisions — verify current statute with counsel.
+#
+# How to use:
+#   regex_overrides_file: path/to/compliance-sample-us_fcpa_internal_policy_pack.yaml
+#   ml_patterns_file: path/to/compliance-sample-us_fcpa_internal_policy_pack.yaml
+# Merge recommendation_overrides into report.recommendation_overrides.
+
+regex:
+  - name: "FCPA_ACRONYM"
+    pattern: "(?i)\\bFCPA\\b"
+    norm_tag: "US FCPA-adjacent (policy lexicon)"
+  - name: "FOREIGN_CORRUPT_PRACTICES_ACT"
+    pattern: "(?i)Foreign\\s+Corrupt\\s+Practices\\s+Act"
+    norm_tag: "US FCPA-adjacent (policy lexicon)"
+  - name: "FACILITATION_PAYMENT"
+    pattern: "(?i)\\bfacilitation\\s+payment(s)?\\b"
+    norm_tag: "US FCPA-adjacent (policy lexicon)"
+  - name: "THIRD_PARTY_DUE_DILIGENCE"
+    pattern: "(?i)third[-\\s]party\\s+due\\s+diligence"
+    norm_tag: "US FCPA-adjacent (policy lexicon)"
+  - name: "GIFT_AND_ENTERTAINMENT"
+    pattern: "(?i)gift(s)?\\s+and\\s+entertainment"
+    norm_tag: "US FCPA-adjacent (policy lexicon)"
+  - name: "ANTI_BRIBERY_POLICY"
+    pattern: "(?i)anti[-\\s]?bribery\\s+polic(y|ies)"
+    norm_tag: "US FCPA-adjacent (policy lexicon)"
+  - name: "BOOKS_AND_RECORDS_IC"
+    pattern: "(?i)books\\s+and\\s+records.*internal\\s+accounting\\s+controls"
+    norm_tag: "US FCPA-adjacent (policy lexicon)"
+  - name: "POLITICA_ANTICORRUPCAO_PT"
+    pattern: "(?i)pol[ií]tica\\s+anticorrup[cç][aã]o"
+    norm_tag: "US FCPA-adjacent (policy lexicon)"
+  - name: "INTERMEDIARIO_SUBORNO_PT"
+    pattern: "(?i)intermedi[aá]rio.*(suborno|corrup[cç][aã]o)"
+    norm_tag: "US FCPA-adjacent (policy lexicon)"
+
+terms:
+  - text: "Foreign Corrupt Practices Act"
+    label: sensitive
+  - text: "anti-corruption"
+    label: sensitive
+  - text: "anticorrupcao"
+    label: sensitive
+  - text: "anticorrupção"
+    label: sensitive
+  - text: "bribery"
+    label: sensitive
+  - text: "suborno"
+    label: sensitive
+  - text: "corrupção"
+    label: sensitive
+  - text: "corruption risk"
+    label: sensitive
+  - text: "facilitation payment"
+    label: sensitive
+  - text: "pagamento de facilitação"
+    label: sensitive
+  - text: "third party due diligence"
+    label: sensitive
+  - text: "due diligence terceiros"
+    label: sensitive
+  - text: "intermediary"
+    label: sensitive
+  - text: "intermediário"
+    label: sensitive
+  - text: "agente intermediário"
+    label: sensitive
+  - text: "gift and entertainment"
+    label: sensitive
+  - text: "presentes e hospitalidade"
+    label: sensitive
+  - text: "hospitalidade"
+    label: sensitive
+  - text: "books and records"
+    label: sensitive
+  - text: "internal accounting controls"
+    label: sensitive
+  - text: "controles contábeis internos"
+    label: sensitive
+  - text: "compliance training completion"
+    label: sensitive
+  - text: "treinamento compliance"
+    label: sensitive
+  - text: "certification of compliance"
+    label: sensitive
+  - text: "whistleblower"
+    label: sensitive
+  - text: "canal de denúncias"
+    label: sensitive
+  - text: "DOJ"
+    label: sensitive
+  - text: "SEC enforcement"
+    label: sensitive
+  - text: "system_log"
+    label: non_sensitive
+
+recommendation_overrides:
+  - norm_tag_pattern: "US FCPA-adjacent (policy lexicon)"
+    base_legal: "U.S. FCPA / employer anti-corruption policy — technical inventory only; not a violation determination (verify wording with counsel)."
+    risk: "Match may indicate policy, training, due-diligence, or control artefacts in the data soup; requires compliance/legal review. Tool does not assess FCPA liability."
+    recommendation: "Prioritise human review with compliance and counsel: map retention and access for anti-corruption records; align internal policy labels (e.g. FPCA) and statutory references with approved corporate wording; use findings as evidence inputs only."
+    priority: "ALTA"
+    relevant_for: "Compliance, legal, DPO (governance evidence), internal audit"

@@ -1,0 +1,72 @@
+# Posts a short message to Slack when a GitHub Release is published.
+# Requires repository secret SLACK_WEBHOOK_URL.
+# Opt-in toggle: repository variable SLACK_NOTIFY_RELEASE_PUBLISHED=true
+name: Slack release published notify
+
+permissions:
+  contents: read
+
+'on':
+  release:
+    types: [published]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    # Opt-in toggle stays at job level (vars context is safe). Webhook presence
+    # is detected at step level — `secrets.*` in a job-level `if:` can cause a
+    # phantom failed run with 0 jobs.
+    if: ${{ vars.SLACK_NOTIFY_RELEASE_PUBLISHED == 'true' }}
+    steps:
+      - name: Detect Slack webhook
+        id: webhook
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          if [ -n "$SLACK_WEBHOOK_URL" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "SLACK_WEBHOOK_URL is unset; downstream steps will skip cleanly."
+          fi
+
+      - name: Post release published summary to Slack
+        if: steps.webhook.outputs.present == 'true'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          REPO: ${{ github.repository }}
+          RELEASE_NAME: ${{ github.event.release.name }}
+          TAG_NAME: ${{ github.event.release.tag_name }}
+          RELEASE_URL: ${{ github.event.release.html_url }}
+          AUTHOR: ${{ github.event.release.author.login }}
+        run: |
+          python3 <<'PY'
+          import json
+          import os
+          import urllib.error
+          import urllib.request
+
+          url = os.environ["SLACK_WEBHOOK_URL"]
+          lines = [
+              "Data Boar — release published",
+              f"Repository: {os.environ['REPO']}",
+              f"Release: {os.environ['RELEASE_NAME'] or '(no title)'}",
+              f"Tag: {os.environ['TAG_NAME']}",
+              f"Published by: {os.environ['AUTHOR']}",
+              f"Open release: {os.environ['RELEASE_URL']}",
+          ]
+          data = json.dumps({"text": "\n".join(lines)}).encode("utf-8")
+          req = urllib.request.Request(
+              url,
+              data=data,
+              headers={"Content-Type": "application/json"},
+              method="POST",
+          )
+          try:
+              with urllib.request.urlopen(req, timeout=30) as resp:
+                  if resp.status >= 400:
+                      body = resp.read()
+                      raise SystemExit(f"HTTP {resp.status}: {body!r}")
+          except urllib.error.HTTPError as e:
+              raise SystemExit(f"HTTPError {e.code}: {e.read()!r}") from e
+          PY

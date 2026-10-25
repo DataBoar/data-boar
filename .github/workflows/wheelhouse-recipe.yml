@@ -1,0 +1,156 @@
+# Rebuild x86-64-v1 wheelhouse cells from the PLAN recipe and FAIL on gate divergence (#1379).
+#
+# Cadence (cost ~1 h for full matrix; scipy ≈ 70%):
+#   - pull_request / push (paths): canary musl×cp312 + Connector/C checksum (~10–25 min)
+#   - schedule (weekly) + workflow_dispatch scope=full: full libc×cp matrix + checksum
+# Pins live ONLY in scripts/wheelhouse/recipe-manifest.yaml (referenced by the PLAN).
+# Do not copy sha256 / package specs into this YAML.
+name: Wheelhouse recipe
+
+permissions:
+  contents: read
+
+'on':
+  pull_request:
+    branches: [main, master]
+    paths:
+      - "scripts/wheelhouse/**"
+      - "docs/plans/PLAN_WHEELHOUSE_DISTRIBUTION.md"
+      - ".github/workflows/wheelhouse-recipe.yml"
+  push:
+    branches: [main, master]
+    paths:
+      - "scripts/wheelhouse/**"
+      - "docs/plans/PLAN_WHEELHOUSE_DISTRIBUTION.md"
+      - ".github/workflows/wheelhouse-recipe.yml"
+  schedule:
+    # Weekly Sunday 06:00 UTC — full matrix (~1 h wall if sequential; cells parallel).
+    - cron: "0 6 * * 0"
+  workflow_dispatch:
+    inputs:
+      scope:
+        description: "canary = musl cp312 only; full = all scientific cells"
+        required: true
+        default: canary
+        type: choice
+        options:
+          - canary
+          - full
+
+jobs:
+  connector-c-checksum:
+    name: Connector/C tarball sha256 == manifest
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Install PyYAML (manifest loader)
+        run: |
+          pip install --disable-pip-version-check --no-cache-dir --require-hashes \
+            -r .github/pip-constraints/ci-pyyaml.txt
+
+      - name: Verify Connector/C checksum from recipe-manifest.yaml
+        run: bash scripts/wheelhouse/verify_connector_c_checksum.sh
+
+  hosted-sha256sums-parity:
+    name: Hosted release SHA256SUMS covers every .whl (#1410)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Fail if SHA256SUMS line count != .whl count on hosted tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          # Keep in sync with scripts/docker/apply_wheelhouse_v1.sh DEFAULT / PLAN tag.
+          WHEELHOUSE_TAG: wheelhouse-x86-64-v1-2026-07-29
+          WHEELHOUSE_REPO: DataBoar/data-boar-site
+        run: |
+          bash scripts/wheelhouse/verify_release_sha256sums.sh \
+            --repo "$WHEELHOUSE_REPO" --tag "$WHEELHOUSE_TAG"
+
+  canary-musl-cp312:
+    name: Canary musl × CPython 3.12 (gates hard-fail)
+    # PR/push path hits + manual canary. Schedule uses matrix-cell (includes this cell).
+    if: >-
+      github.event_name == 'pull_request' ||
+      github.event_name == 'push' ||
+      (github.event_name == 'workflow_dispatch' && inputs.scope == 'canary')
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    needs: [connector-c-checksum]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Install PyYAML (manifest loader)
+        run: |
+          pip install --disable-pip-version-check --no-cache-dir --require-hashes \
+            -r .github/pip-constraints/ci-pyyaml.txt
+
+      - name: Load canary cell from manifest
+        id: canary
+        run: |
+          echo "libc=$(python3 scripts/wheelhouse/load_manifest.py --get canary.libc)" >> "$GITHUB_OUTPUT"
+          echo "py=$(python3 scripts/wheelhouse/load_manifest.py --get canary.python)" >> "$GITHUB_OUTPUT"
+
+      - name: Build canary cell (explicit --platform from manifest)
+        env:
+          WHEELHOUSE_OUT: ${{ runner.temp }}/wheelhouse
+          DOCKER: docker
+          # Env (not run-script interpolation) — avoids zizmor template-injection on outputs.
+          CELL_LIBC: ${{ steps.canary.outputs.libc }}
+          CELL_PY: ${{ steps.canary.outputs.py }}
+        run: bash scripts/wheelhouse/run_cell.sh "$CELL_LIBC" "$CELL_PY"
+
+  matrix-cell:
+    name: Full cell ${{ matrix.libc }} × ${{ matrix.py }}
+    if: >-
+      github.event_name == 'schedule' ||
+      (github.event_name == 'workflow_dispatch' && inputs.scope == 'full')
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    needs: [connector-c-checksum]
+    strategy:
+      fail-fast: false
+      matrix:
+        libc: [musl, glibc]
+        py: ["3.12", "3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Install PyYAML (manifest loader)
+        run: |
+          pip install --disable-pip-version-check --no-cache-dir --require-hashes \
+            -r .github/pip-constraints/ci-pyyaml.txt
+
+      - name: Build matrix cell (explicit --platform from manifest)
+        env:
+          WHEELHOUSE_OUT: ${{ runner.temp }}/wheelhouse
+          DOCKER: docker
+          CELL_LIBC: ${{ matrix.libc }}
+          CELL_PY: ${{ matrix.py }}
+        run: bash scripts/wheelhouse/run_cell.sh "$CELL_LIBC" "$CELL_PY"

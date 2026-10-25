@@ -1,0 +1,80 @@
+# Posts a short message to Slack when a PR is merged into main/master.
+# Requires repository secret SLACK_WEBHOOK_URL.
+# Opt-in toggle: repository variable SLACK_NOTIFY_PR_MERGED=true
+name: Slack PR merged notify
+
+permissions:
+  contents: read
+  pull-requests: read
+
+'on':
+  pull_request:
+    types: [closed]
+    branches: [main, master]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    # PR-merged check + opt-in toggle stay at job level (no secrets context).
+    # Webhook presence is detected at step level — `secrets.*` in a job-level
+    # `if:` can produce a phantom failed run with 0 jobs.
+    if: >-
+      ${{
+        github.event.pull_request.merged == true &&
+        vars.SLACK_NOTIFY_PR_MERGED == 'true'
+      }}
+    steps:
+      - name: Detect Slack webhook
+        id: webhook
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          if [ -n "$SLACK_WEBHOOK_URL" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "SLACK_WEBHOOK_URL is unset; downstream steps will skip cleanly."
+          fi
+
+      - name: Post PR merged summary to Slack
+        if: steps.webhook.outputs.present == 'true'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_MERGED_BY: ${{ github.event.pull_request.merged_by.login }}
+          BASE_BRANCH: ${{ github.event.pull_request.base.ref }}
+          HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          python3 <<'PY'
+          import json
+          import os
+          import urllib.error
+          import urllib.request
+
+          url = os.environ["SLACK_WEBHOOK_URL"]
+          lines = [
+              "Data Boar — PR merged",
+              f"Repository: {os.environ['REPO']}",
+              f"PR #{os.environ['PR_NUMBER']}: {os.environ['PR_TITLE']}",
+              f"Base <- Head: {os.environ['BASE_BRANCH']} <- {os.environ['HEAD_BRANCH']}",
+              f"Merged by: {os.environ['PR_MERGED_BY']}",
+              f"Open PR: {os.environ['PR_URL']}",
+          ]
+          data = json.dumps({"text": "\n".join(lines)}).encode("utf-8")
+          req = urllib.request.Request(
+              url,
+              data=data,
+              headers={"Content-Type": "application/json"},
+              method="POST",
+          )
+          try:
+              with urllib.request.urlopen(req, timeout=30) as resp:
+                  if resp.status >= 400:
+                      body = resp.read()
+                      raise SystemExit(f"HTTP {resp.status}: {body!r}")
+          except urllib.error.HTTPError as e:
+              raise SystemExit(f"HTTPError {e.code}: {e.read()!r}") from e
+          PY

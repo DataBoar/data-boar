@@ -1,0 +1,109 @@
+# Posts an operator digest to Slack (manual or scheduled).
+# Requires repository secret SLACK_WEBHOOK_URL.
+# Schedule is opt-in via repository variable SLACK_NOTIFY_DAILY_DIGEST=true.
+# actions/checkout pinned to full SHA (tag in comment); bump via Dependabot.
+name: Slack ops digest
+
+permissions:
+  contents: read
+  pull-requests: read
+
+'on':
+  workflow_dispatch:
+    inputs:
+      message:
+        description: Optional custom prefix line
+        required: false
+        type: string
+  schedule:
+    - cron: "0 21 * * 1-5"
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    # Event/opt-in checks stay at job level (no secrets context). Webhook
+    # presence is detected at step level — `secrets.*` in a job-level `if:`
+    # can produce a phantom failed run with 0 jobs.
+    if: >-
+      ${{
+        github.event_name == 'workflow_dispatch' ||
+        vars.SLACK_NOTIFY_DAILY_DIGEST == 'true'
+      }}
+    steps:
+      - name: Detect Slack webhook
+        id: webhook
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          if [ -n "$SLACK_WEBHOOK_URL" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "SLACK_WEBHOOK_URL is unset; downstream steps will skip cleanly."
+          fi
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: steps.webhook.outputs.present == 'true'
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Build digest payload
+        if: steps.webhook.outputs.present == 'true'
+        id: digest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          OPEN_PRS=$(gh pr list --state open --json number --jq 'length' 2>/dev/null || echo "n/a")
+          LATEST_TAG=$(gh release view --json tagName -q '.tagName' 2>/dev/null || echo "n/a")
+          MAIN_SHA=$(git rev-parse --short HEAD)
+          {
+            echo "open_prs=$OPEN_PRS"
+            echo "latest_tag=$LATEST_TAG"
+            echo "main_sha=$MAIN_SHA"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Post digest to Slack
+        if: steps.webhook.outputs.present == 'true'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          EVENT_NAME: ${{ github.event_name }}
+          CUSTOM_MESSAGE: ${{ github.event.inputs.message }}
+          OPEN_PRS: ${{ steps.digest.outputs.open_prs }}
+          LATEST_TAG: ${{ steps.digest.outputs.latest_tag }}
+          MAIN_SHA: ${{ steps.digest.outputs.main_sha }}
+        run: |
+          python3 <<'PY'
+          import json
+          import os
+          import urllib.error
+          import urllib.request
+
+          url = os.environ["SLACK_WEBHOOK_URL"]
+          header = os.environ.get("CUSTOM_MESSAGE") or "Data Boar — operator digest"
+          lines = [
+              header,
+              f"Repository: {os.environ['REPO']}",
+              f"Trigger: {os.environ['EVENT_NAME']}",
+              f"Latest release tag: {os.environ['LATEST_TAG']}",
+              f"Open PRs: {os.environ['OPEN_PRS']}",
+              f"Current main SHA: {os.environ['MAIN_SHA']}",
+              f"Workflow run: {os.environ['RUN_URL']}",
+          ]
+          data = json.dumps({"text": "\n".join(lines)}).encode("utf-8")
+          req = urllib.request.Request(
+              url,
+              data=data,
+              headers={"Content-Type": "application/json"},
+              method="POST",
+          )
+          try:
+              with urllib.request.urlopen(req, timeout=30) as resp:
+                  if resp.status >= 400:
+                      body = resp.read()
+                      raise SystemExit(f"HTTP {resp.status}: {body!r}")
+          except urllib.error.HTTPError as e:
+              raise SystemExit(f"HTTPError {e.code}: {e.read()!r}") from e
+          PY

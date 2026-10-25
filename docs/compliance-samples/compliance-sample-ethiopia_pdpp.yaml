@@ -1,0 +1,106 @@
+# Ethiopia — Personal Data Protection Proclamation No. 1321/2024
+# House of Peoples' Representatives: 4 Apr 2024.
+# Federal Negarit Gazette / in force: 24 Jul 2024.
+#
+# NOT LEGAL ADVICE. Technical starting point for inventory. Does NOT certify
+# ECA registration or Fayda enrollment.
+#
+# Authority: Ethiopian Communications Authority (ECA).
+# GDPR-like data-subject rights; DPO for some entities; breach notice
+# commonly cited as 72 hours; cross-border transfer needs an adequate
+# level of protection. Biometric data is defined (fingerprint, face,
+# iris). Ties to the national digital ID programme Fayda (Proc. 1284/2023).
+#
+# Fayda FIN is a 12-digit number (id.et). Labels only — no bare 12-digit
+# matcher (high FP). No querystring geo-coordinate key (PII seed gate).
+#
+# Amharic terms below are a small draft (የግል መረጃ, ግላዊነት, ስምምነት).
+# Native review is recommended before production use. No Ge'ez / Aramaic.
+#
+# NOTE — recommendation_overrides use distinctive 1321/2024 (role) patterns.
+# Do not add a bare "Ethiopia PDPP" catch-all: _find_override_row is bidirectional.
+#
+# How to use:
+#   regex_overrides_file: path/to/compliance-sample-ethiopia_pdpp.yaml
+#   ml_patterns_file:     path/to/compliance-sample-ethiopia_pdpp.yaml
+#   Merge recommendation_overrides into report.recommendation_overrides.
+
+regex:
+  - name: "ET_FIELD_FAYDA_LABEL"
+    pattern: "(?i)(?:^|_|\b)(fayda[_\\s]?(?:id|number|fin)|fin[_\\s]?ethiopia|ethiopian[_\\s]?national[_\\s]?id)\\w*"
+    norm_tag: "Ethiopia PDPP 1321/2024 (personal data — Fayda FIN)"
+
+  - name: "ET_FIELD_BIOMETRIC_LABEL"
+    pattern: "(?i)(?:^|_|\b)(biometric[_\\s]?(?:data|template)|fingerprint[_\\s]?et|iris[_\\s]?scan[_\\s]?et|face[_\\s]?photo[_\\s]?et)\\w*"
+    norm_tag: "Ethiopia PDPP 1321/2024 (personal data — biometric)"
+
+  - name: "ET_FIELD_HEALTH_LABEL"
+    pattern: "(?i)(?:^|_|\b)(health[_\\s]?data[_\\s]?et|medical[_\\s]?(?:record|information)[_\\s]?et|patient[_\\s]?record[_\\s]?et)\\w*"
+    norm_tag: "Ethiopia PDPP 1321/2024 (personal data — health)"
+
+  - name: "ET_FIELD_HEALTH_GENERIC_LABEL"
+    pattern: "(?i)(?:^|_|\b)(medical[_\\s]?record|patient[_\\s]?record|health[_\\s]?data)\\w*"
+    norm_tag: "Ethiopia PDPP 1321/2024 (personal data — health)"
+
+  - name: "ET_PDPP_JSON_LAT_PRECISION"
+    pattern: "(?i)[\"']lat[\"']\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\b"
+    norm_tag: "Ethiopia PDPP 1321/2024 (personal data — geolocation)"
+
+  - name: "ET_PDPP_JSON_LNG_PRECISION"
+    pattern: "(?i)[\"'](?:lng|lon)[\"']\\s*:\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}\\b"
+    norm_tag: "Ethiopia PDPP 1321/2024 (personal data — geolocation)"
+
+  - name: "ET_PDPP_LOCATION_CSV_PAIR"
+    pattern: "(?i)\\blocation\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*,\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "Ethiopia PDPP 1321/2024 (personal data — geolocation)"
+
+terms:
+  - { text: "personal data", label: sensitive }
+  - { text: "data subject", label: sensitive }
+  - { text: "data controller", label: sensitive }
+  - { text: "data processor", label: sensitive }
+  - { text: "ethiopian communications authority", label: sensitive }
+  - { text: "fayda", label: sensitive }
+  - { text: "fayda number", label: sensitive }
+  - { text: "biometric data", label: sensitive }
+  - { text: "iris scan", label: sensitive }
+  - { text: "health data", label: sensitive }
+  - { text: "medical record", label: sensitive }
+
+  - { text: "የግል መረጃ", label: sensitive }
+  - { text: "ግላዊነት", label: sensitive }
+  - { text: "ስምምነት", label: sensitive }
+
+  - { text: "product_id", label: non_sensitive }
+  - { text: "item_code", label: non_sensitive }
+  - { text: "session_log", label: non_sensitive }
+  - { text: "debug_output", label: non_sensitive }
+
+recommendation_overrides:
+  - norm_tag_pattern: "Ethiopia PDPP 1321/2024 (personal data — biometric)"
+    base_legal: "Ethiopia PDPP Proclamation 1321/2024 (in force 24 Jul 2024) — biometric data is defined (fingerprint, face, iris). Fayda enrollment also collects biometrics. Regulator: Ethiopian Communications Authority (ECA)."
+    risk: "Biometric templates are hard to rotate if leaked."
+    recommendation: "Minimize biometric storage. Confirm purpose limitation and ECA duties. Consult counsel. Not a legal conclusion."
+    priority: "ALTA"
+    relevant_for: "DPO, legal, CISO"
+
+  - norm_tag_pattern: "Ethiopia PDPP 1321/2024 (personal data — health)"
+    base_legal: "Ethiopia PDPP 1321/2024 — health data can identify a natural person and is a high-risk inventory slice. Breach notice is commonly cited as 72 hours — revalidate the Proclamation article."
+    risk: "Health records can harm the data subject if exposed."
+    recommendation: "Verify a lawful basis and security controls. Consult counsel. Not a legal conclusion."
+    priority: "ALTA"
+    relevant_for: "DPO, legal, CISO"
+
+  - norm_tag_pattern: "Ethiopia PDPP 1321/2024 (personal data — Fayda FIN)"
+    base_legal: "Ethiopia PDPP 1321/2024 + Fayda (Proc. 1284/2023) — a Fayda FIN identifies a resident. Official sources describe a 12-digit number. A bare 12-digit matcher is intentionally omitted (high false-positive rate)."
+    risk: "National digital-ID fields identify the data subject."
+    recommendation: "Minimize FIN storage. Confirm controller/processor registration with the ECA where required. Consult counsel. Not a legal conclusion."
+    priority: "ALTA"
+    relevant_for: "DPO, legal, CISO, operations"
+
+  - norm_tag_pattern: "Ethiopia PDPP 1321/2024 (personal data — geolocation)"
+    base_legal: "Ethiopia PDPP 1321/2024 — precise geolocation can identify or make identifiable a natural person."
+    risk: "Precise coordinates can track the data subject."
+    recommendation: "Minimize stored location precision. Consult counsel. Heuristic inventory — not a legal conclusion."
+    priority: "MÉDIA"
+    relevant_for: "DPO, product, legal"

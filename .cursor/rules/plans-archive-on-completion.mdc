@@ -1,0 +1,33 @@
+---
+description: When a PLAN_*.md is truly done, archive under docs/plans/completed/. Situational — plan paths, plans_hub_sync / plans-stats scripts, or @.
+globs:
+  - docs/plans/**/*.md
+  - docs/plans/completed/**
+  - scripts/plans_hub_sync.py
+  - scripts/plans-stats.py
+  - .cursor/rules/docs-plans.mdc
+alwaysApply: false
+---
+
+# Plans: archive completed work (operator expectation)
+
+## When this rule attaches (Cursor)
+
+**Context:** **`alwaysApply: false`** — loads when a path matches the **`globs`** above **or** the operator is **`git mv`**-ing a **`PLAN_*.md`** to **`docs/plans/completed/`** (say so in chat) **or** attaches **`@plans-archive-on-completion.mdc`**. Pair with **`plans-status-pl-sync.mdc`** when **`PLANS_TODO.md`** / dashboard rows change in the same pass.
+
+**Companion:** **`docs/ops/OPERATOR_AGENT_COLD_START_LADDER.md`** § *Token → rule latch (plans — archive)*.
+
+**Rollback:** `git revert` the commit or `git show <parent>:.cursor/rules/plans-archive-on-completion.mdc`.
+
+1. **Goal:** **`docs/plans/`** holds **in-progress and upcoming** `PLAN_*.md` files only. **Delivered** plans belong in **`docs/plans/completed/`** so the folder is quick to scan.
+
+1. **When to move:** The plan’s **Status** and **PLANS_TODO.md** narrative agree the work is **done** (or the doc-only / CI slice is **complete**), with no misleading **⬜** rows left for that theme. Use a **qualified** Status (*Core complete*, *catalogue*, *phase N*, *doc-only*) when backlog rows remain — label them **Deferred (post-archive)**. CI: `tests/test_plan_archive_integrity.py`.
+
+1. **How (same merge / follow-up commit):**
+   - `git mv docs/plans/PLAN_FOO.md docs/plans/completed/`
+   - Fix **relative links** inside the moved file (`../PLANS_TODO.md`, `../PLAN_STILL_OPEN.md`).
+   - Update **references** in **`PLANS_TODO.md`**, sprint docs, and code comments that pointed at the old path (`completed/PLAN_FOO.md` or `docs/plans/completed/PLAN_FOO.md`).
+   - Run **`python scripts/plans_hub_sync.py --write`** and commit **`docs/plans/PLANS_HUB.md`**.
+   - If **`PLANS_TODO.md`** dashboard rows changed: **`python scripts/plans-stats.py --write`**.
+
+1. **Full checklist:** **`.cursor/rules/docs-plans.mdc`** § *When completing a plan* · **`.cursor/rules/plans-status-pl-sync.mdc`**.

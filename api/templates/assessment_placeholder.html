@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}{{ t('assessment.page_title') }}{% endblock %}
+{% block content %}
+<h1>{{ t('assessment.h1') }}</h1>
+{% if assessment_batch_history %}
+<section class="card assessment-history" aria-labelledby="assessment-history-h">
+  <h2 id="assessment-history-h">{{ t('assessment.history_title') }}</h2>
+  <p class="muted">{{ t('assessment.history_intro') }}</p>
+  <table class="assessment-history-table">
+    <thead>
+      <tr>
+        <th scope="col">{{ t('assessment.history_th_submitted') }}</th>
+        <th scope="col">{{ t('assessment.history_th_batch') }}</th>
+        <th scope="col">{{ t('assessment.history_th_locale') }}</th>
+        <th scope="col">{{ t('assessment.history_th_pack') }}</th>
+        <th scope="col">{{ t('assessment.history_th_rows') }}</th>
+        <th scope="col">{{ t('assessment.history_th_actions') }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in assessment_batch_history %}
+      <tr{% if assessment_summary and assessment_summary.batch_id == row.batch_id %} class="assessment-history-current"{% endif %}>
+        <td>{{ row.submitted_at_display }}</td>
+        <td><code title="{{ row.batch_id }}">{{ row.batch_id_short }}</code></td>
+        <td>{{ row.locale_slug }}</td>
+        <td>{{ row.pack_version }}</td>
+        <td>{{ row.answer_count }}</td>
+        <td>
+          <a href="{{ base_path }}assessment?saved=1&amp;batch={{ row.batch_id }}">{{ t('assessment.history_view') }}</a>
+          <span aria-hidden="true"> · </span>
+          <a href="{{ base_path }}assessment/export?batch={{ row.batch_id }}&amp;format=csv">{{ t('assessment.export_csv') }}</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endif %}
+{% if assessment_summary %}
+<section class="card assessment-summary" aria-labelledby="assessment-summary-h">
+  <h2 id="assessment-summary-h">{{ t('assessment.summary_title') }}</h2>
+  <p role="status">{{ t('assessment.summary_rows_stored').format(count=assessment_summary.answer_count) }}</p>
+  {% if assessment_summary.score and assessment_summary.score.has_rubric %}
+  <p><strong>{{ t('assessment.summary_score').format(total=assessment_summary.score.total_display, maximum=assessment_summary.score.maximum_display, pct=assessment_summary.score.percentage_display) }}</strong></p>
+  {% elif assessment_summary.score and not assessment_summary.score.has_rubric %}
+  <p class="muted">{{ t('assessment.summary_score_none') }}</p>
+  {% endif %}
+  {% if assessment_summary.answer_count > 0 and assessment_summary.batch_id and maturity_pack_sections %}
+  <p class="assessment-export-links">
+    <a href="{{ base_path }}assessment/export?batch={{ assessment_summary.batch_id }}&amp;format=csv">{{ t('assessment.export_csv') }}</a>
+    <span aria-hidden="true"> · </span>
+    <a href="{{ base_path }}assessment/export?batch={{ assessment_summary.batch_id }}&amp;format=md">{{ t('assessment.export_md') }}</a>
+  </p>
+  <p class="muted">{{ t('assessment.export_contract') }}</p>
+  {% endif %}
+  <p class="muted">{{ t('assessment.summary_disclaimer') }}</p>
+  {% if assessment_summary.answer_count > 0 %}
+  <h3 class="assessment-subh">{{ t('assessment.summary_integrity_heading') }}</h3>
+  {% if assessment_summary.integrity.secret_configured %}
+  <p class="{% if assessment_summary.integrity.rows_mismatch > 0 %}warn{% else %}success{% endif %}">
+    {{ t('assessment.summary_integrity_detail').format(
+      ok=assessment_summary.integrity.rows_ok,
+      mismatch=assessment_summary.integrity.rows_mismatch,
+      unsealed=assessment_summary.integrity.rows_unsealed,
+      unknown=assessment_summary.integrity.rows_unknown_sealed
+    ) }}
+  </p>
+  {% else %}
+  <p class="muted">{{ t('assessment.summary_integrity_none') }}</p>
+  {% endif %}
+  {% endif %}
+</section>
+{% elif assessment_saved %}
+<p class="success" role="status">{{ t('assessment.saved_ok') }}</p>
+{% endif %}
+{% if maturity_pack_sections %}
+<section class="card">
+  <p>{{ t('assessment.pack_intro') }}</p>
+  <form method="post" action="{{ base_path }}assessment" class="assessment-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+    <input type="hidden" name="assessment_batch_id" value="{{ assessment_batch_id }}" />
+    <input type="hidden" name="pack_version" value="{{ maturity_pack_version }}" />
+  {% for sec in maturity_pack_sections %}
+  <h2>{{ sec.title }}</h2>
+  <ul class="assessment-questions">
+    {% for q in sec.questions %}
+    <li id="q-{{ q.id }}">
+      <label for="ans-{{ q.id }}">{{ q.prompt }}</label>
+      <select name="answer__{{ q.id }}" id="ans-{{ q.id }}">
+        <option value="">{{ t('assessment.answer_unset') }}</option>
+        <option value="yes">{{ t('assessment.answer_yes') }}</option>
+        <option value="no">{{ t('assessment.answer_no') }}</option>
+        <option value="na">{{ t('assessment.answer_na') }}</option>
+      </select>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endfor %}
+    <p><button type="submit">{{ t('assessment.form_submit') }}</button></p>
+  </form>
+  <p class="muted">{{ t('assessment.pack_note') }}</p>
+</section>
+{% endif %}
+<section class="card">
+  <p>{{ t('assessment.lead') }}</p>
+  <p class="muted">{{ t('assessment.body_p1') }}</p>
+  <p class="muted">{{ t('assessment.body_p2') }}</p>
+</section>
+{% endblock %}

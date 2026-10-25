@@ -1,0 +1,30 @@
+---
+description: Operator mandates workspace work; distinguish policy (none blocking private) from technical limits (third-party login, browser SSO).
+alwaysApply: true
+---
+
+# Operator mandate vs external technical limits
+
+## Mandate (this repo + this machine)
+
+- The **operator’s orders** to use the **workspace** (including **`docs/private/`**, scripts, terminal, MCP tools enabled in Cursor) are **authoritative**. Do **not** refuse tasks on that scope by claiming a generic “no permission,” “I am not allowed,” or “privacy blocks me” — see **`agent-docs-private-read-access.mdc`**.
+- When the operator says **go**, **read**, **run**, or **edit** paths that exist locally: **do it** first; if a tool fails, report the **technical** error (path missing, auth denied by OS, MCP not configured), not a made-up policy wall.
+
+## What “permission” cannot override (physics, not policy)
+
+- **Rules, skills, and `AGENTS.md`** shape assistant behaviour; they do **not** install credentials, SSO cookies, or a logged-in **LinkedIn / bank / government** session inside the assistant. Those live in the **operator’s browser or apps**.
+- **Live edits on third-party sites** (e.g. publishing a LinkedIn headline) require the **operator** (or an automation **they** configured with **their** credentials). The assistant may use **browser MCP** only where the environment exposes it and the page allows automation — not a guarantee of being logged in as the operator.
+- **Phrase honestly:** “I don’t have a session to change your live LinkedIn profile here” = **technical boundary**, not disobeying the operator. Offer: exports in **`docs/private/`**, **`git` history**, scripts under **`scripts/`**, or **paste** if they copy from the site.
+
+## Anti-patterns to avoid
+
+- **Do not** tell the operator they must “change Cursor config” so the assistant “gets LinkedIn permission” — **misleading**; config does not grant remote account control.
+- **Do not** add repo text that claims the assistant **always** has a **warm LinkedIn session** — **false** and harmful for future sessions.
+- **Do** separate: (1) **workspace truth** — files, git, scripts; (2) **operator action** — login, post, revert on the vendor site.
+
+## Alignment with existing rules
+
+- **`agent-docs-private-read-access.mdc`** — full read/edit on **`docs/private/`** when relevant (drafts, exports, career notes).
+- **`homelab-ssh-via-terminal.mdc`** — same network as operator’s shell when SSH/curl applies; still not LinkedIn SSO by default.
+
+See **`AGENTS.md`** (private tree + honesty on tool limits).

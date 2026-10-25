@@ -1,0 +1,65 @@
+# Morocco Law 09-08 – sample compliance profile (Loi 09-08, CNDP)
+#
+# Target audience: Morocco and North Africa deployments. CNDP (Commission nationale de contrôle
+# de la protection des données à caractère personnel). Terms in French and optional Arabic.
+#
+# How to use:
+#   1. Set in your main config:
+#        regex_overrides_file: path/to/compliance-sample-morocco_09_08.yaml
+#        ml_patterns_file: path/to/compliance-sample-morocco_09_08.yaml
+#   2. Merge the recommendation_overrides list below into your config under report.recommendation_overrides.
+#
+# Morocco: Loi 09-08 (données à caractère personnel); CNDP.
+
+regex:
+  - name: "CIN_MA"
+    pattern: "\\b[A-Z]{1,2}\\d{5,6}\\b"
+    norm_tag: "Morocco 09-08"
+  - name: "CIN_MA_ALT"
+    pattern: "\\b\\d{7,8}\\b"
+    norm_tag: "Morocco 09-08"
+
+# ML terms: French and English (données à caractère personnel, personal data, CNDP).
+terms:
+  - text: "données à caractère personnel"
+    label: sensitive
+  - text: "personal data"
+    label: sensitive
+  - text: "données personnelles"
+    label: sensitive
+  - text: "responsable du traitement"
+    label: sensitive
+  - text: "data controller"
+    label: sensitive
+  - text: "sous-traitant"
+    label: sensitive
+  - text: "data processor"
+    label: sensitive
+  - text: "personne concernée"
+    label: sensitive
+  - text: "data subject"
+    label: sensitive
+  - text: "cndp"
+    label: sensitive
+  - text: "commission nationale de contrôle"
+    label: sensitive
+  - text: "loi 09-08"
+    label: sensitive
+  - text: "law 09-08"
+    label: sensitive
+  - text: "consentement"
+    label: sensitive
+  - text: "consent"
+    label: sensitive
+  - text: "carte nationale d'identité"
+    label: sensitive
+  - text: "cin"
+    label: sensitive
+
+recommendation_overrides:
+  - norm_tag_pattern: "Morocco 09-08"
+    base_legal: "Loi 09-08 (protection des données à caractère personnel); CNDP"
+    risk: "Données à caractère personnel; responsable du traitement; déclaration et consentement."
+    recommendation: "Conformer à la Loi 09-08; déclarer auprès de la CNDP si requis; obtenir le consentement; respecter les droits des personnes."
+    priority: "ALTA"
+    relevant_for: "DPO, CNDP, Responsable du traitement"

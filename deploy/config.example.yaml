@@ -1,0 +1,104 @@
+# Example config for container. Copy to /data/config.yaml or mount your own.
+# In container: sqlite_path and report.output_dir should be under /data so they persist.
+# Add database/filesystem/API targets (see docs/USAGE.md).
+targets: []
+
+file_scan:
+  extensions: [.txt, .csv, .pdf, .docx, .xlsx]
+  recursive: true
+  scan_sqlite_as_db: true
+  sample_limit: 5
+  file_sample_max_chars: 12000
+
+report:
+  output_dir: /data
+
+api:
+  port: 8088
+  # workers: 1   # 1 = minimal footprint; 2+ if you need more concurrent API traffic (I/O-bound)
+  # Optional Phase 1a: WebAuthn JSON under /auth/webauthn/ (FIDO2/passkeys). Default off.
+  # Set DATA_BOAR_WEBAUTHN_TOKEN_SECRET (or token_secret_from_env) before start; align origin/rp_id with HTTPS URL.
+  # webauthn:
+  #   enabled: true
+  #   rp_id: localhost
+  #   rp_name: Data Boar
+  #   origin: https://localhost:8088
+  #   # token_secret_from_env: "DATA_BOAR_WEBAUTHN_TOKEN_SECRET"
+  # Optional POC: dashboard HTML GET /{locale}/assessment (organizational self-assessment placeholder).
+  # Requires Pro+ when licensing.effective_tier is set; omit effective_tier for OPEN (dev) tier checks off.
+  # JWT: dbtier claim overrides effective_tier for gates (see LICENSING_SPEC.md).
+  # maturity_self_assessment_poc_enabled: false
+  # maturity_assessment_pack_path: /data/maturity_pack.yaml
+  # Optional: HMAC-SHA256 per answer row (tamper-evident; not encryption). Set env before start:
+  #   DATA_BOAR_MATURITY_INTEGRITY_SECRET=<long random string>
+  # Or: maturity_integrity_secret_from_env: "DATA_BOAR_MATURITY_INTEGRITY_SECRET" to read the secret from that env var.
+
+# Optional: dashboard HTML locale (path prefix /en/, /pt-br/; cookie + Accept-Language; see docs/USAGE.md).
+# locale:
+#   default_locale: en
+#   supported_locales: [en, pt-BR]
+#   cookie_name: db_locale
+#   cookie_max_age_seconds: 31536000
+
+# Optional: simulate commercial tier in lab (community | pro | enterprise). Omit for OPEN (all tier gates off).
+# licensing:
+#   effective_tier: pro
+
+# Optional: Governance Lens — GRC control-gap sheet in Excel (Pro+; heuristic only, not legal advice).
+# OSS ships *.example.yaml maps; licensees may point map_file / enterprise_map_file at private curated maps.
+# Enterprise modules (BACEN / FEBRABAN / PCI-DSS) load only when tier: enterprise.
+# governance:
+#   enabled: false
+#   tier: pro
+#   map_file: config/governance_framework_map_pro.example.yaml
+#   enterprise_map_file: config/governance_framework_map_enterprise.example.yaml
+
+sqlite_path: /data/audit_results.db
+scan:
+  # Parallel targets: 1 = sequential (minimal), 2–4 for many DB/FS targets (I/O-bound; network/disk are the bottleneck)
+  max_workers: 1
+
+# Optional: connection/read timeouts (seconds). Per-target overrides: connect_timeout, read_timeout, or timeout on each target (see docs/USAGE.md).
+# timeouts:
+#   connect_seconds: 25
+#   read_seconds: 90
+
+# Optional: ML/DL training terms for sensitivity detection (see docs/SENSITIVITY_DETECTION.md).
+# Uncomment and set paths, or use inline sensitivity_detection.ml_terms / dl_terms.
+# ml_patterns_file: /data/config/ml_terms.yaml
+# dl_patterns_file: /data/config/dl_terms.yaml
+# sensitivity_detection:
+#   # Optional Plan §4: declared VARCHAR/CHAR length + ID-like column name → MEDIUM FORMAT_LENGTH_HINT_ID (default off).
+#   # connector_format_id_hint: true
+#   ml_terms:
+#     - { text: "cpf", label: sensitive }
+#     - { text: "email", label: sensitive }
+#     - { text: "item_count", label: non_sensitive }
+#   dl_terms:
+#     - { text: "customer name", label: sensitive }
+#     - { text: "internal id", label: non_sensitive }
+
+# Enterprise tier — post-scan remediation plugin (optional)
+# Requires licensing.effective_tier: enterprise (or OPEN for dev/lab).
+# plugin format: "module.path:ClassName"
+remediation:
+  enabled: false
+  plugin: null           # e.g. "myorg.stealthizer:StealthizerPlugin"
+  verify_after: true     # re-scan after remediation to confirm PII removed
+  config: {}             # passed as-is to plugin.remediate()
+
+# Optional Pro/Enterprise echo of findings to a customer SQL/Mongo store (#552).
+# Local sqlite_path stays the engine primary. See docs/USAGE.md and
+# docs/deploy/findings_sink_schema.sql
+# findings_sink:
+#   enabled: false
+#   type: postgresql
+#   host: db.example.com
+#   allowed_hosts: ["db.example.com"]
+#   port: 5432
+#   database: data_governance_db
+#   user_from_env: DATA_BOAR_SINK_DB_USER
+#   pass_from_env: DATA_BOAR_SINK_DB_PASS
+#   # DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS must list this host (no port).
+#   on_conflict: upsert
+#   include_sample_content: false

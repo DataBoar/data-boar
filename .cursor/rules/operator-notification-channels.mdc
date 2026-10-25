@@ -1,0 +1,18 @@
+---
+description: Prefer at least two operator paths (GitHub + Slack and/or Signal). Telegram is not used for Data Boar ops in this repo; never commit webhooks or Signal bridge secrets.
+globs: .github/workflows/**,scripts/kpi-export.py,scripts/*notify*,docs/ops/OPERATOR_NOTIFICATION_CHANNELS.md
+alwaysApply: false
+---
+
+# Operator notifications (multi-channel)
+
+When adding CI alerts, KPI jobs, or “ping the human” automation:
+
+1. **Read** [docs/ops/OPERATOR_NOTIFICATION_CHANNELS.md](../../docs/ops/OPERATOR_NOTIFICATION_CHANNELS.md) for **A** (GitHub), **B** (Slack webhooks), **C** (Signal Docker REST bridge)—**Telegram is maintainer policy off** for Data Boar.
+1. **Redundancy:** design for **at least two** independent channels so one failure mode does not block awareness.
+1. **Secrets:** store `SLACK_WEBHOOK_URL` and/or Signal bridge URL/token only in **GitHub Actions secrets** or local `.env` (gitignored)—never in committed YAML beyond `${{ secrets.* }}` references.
+1. **Signal:** document-only until the operator finishes `signal-cli` / **signald** Docker pairing; do not assume the agent holds a Signal session.
+1. **KPI:** optional `kpi-export.py` in scheduled/workflow_dispatch workflows; artifacts with short retention or chat summary only.
+1. **EOD / sprint digest:** The agent **cannot** send SMS or email; see **OPERATOR_NOTIFICATION_CHANNELS.md §7**—workflows may assemble `git log`, `plans-stats.py`, release-notes links, Kanban/gantt text, then deliver via Twilio/SMTP/**Slack/Signal** using secrets (not Telegram for this maintainer policy).
+1. **Local Docker + volume:** Operator may bind-mount **gitignored** `docs/private/notify/` (blueprint: **docs/private.example/notify/README.md**) for Signal/SMS tools; triggers are **local scripts** the operator runs—never commit `.env` or session data.
+1. **Slack message format (channel `#data-boar-ops`):** Prefer the structured template `[TASK_ID] | [PERSONA: NASA/Gibson] | [STATUS: RUNNING/FAIL/SUCCESS]` with three body fields — `Summary:` (1 sentence, active voice), `Drift Check:` (linguistic/functional status), `Performance:` (current vs target 0.574×). **Heartbeat required** for long-running tasks; **operational silence is forbidden** — mandatory events: `RCA`, `PR_OPEN`, `TEST_FAILURE`, `STATE_CHANGE`.

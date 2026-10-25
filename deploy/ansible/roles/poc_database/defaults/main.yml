@@ -1,0 +1,11 @@
+---
+# POC database role defaults
+poc_db_type: postgres        # postgres | mariadb
+poc_db_host: localhost
+poc_db_port: 5432            # auto-set based on db_type in tasks
+poc_db_name: poc_databoar
+poc_db_user: poc_user
+poc_db_password: poc_pass    # override via --extra-vars or vault
+poc_db_large_rows: 10000
+poc_db_docker_enabled: true  # spin up via Docker
+poc_db_write_config: true    # write config-poc-db.yaml
