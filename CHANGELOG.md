@@ -6,6 +6,8 @@ Human-readable summary of user-facing changes. **Detailed release notes:** [docs
 
 Migration notes on the **`1.8.0-rc`** working line (no new semver cut):
 
+- **CPU preflight probes installed stack (#2125):** `core.cpu_preflight` no longer decides ML import safety from CPU flags alone. When required flags (SSE4.2/POPCNT/AVX) are missing, it runs a one-time probe of the **installed** numpy/scipy/scikit-learn stack in a child process. A working wheelhouse x86-64-v1 build passes the probe and enables ML/DL on CPUs without those flags. A failed probe (killed by a signal such as SIGILL, a timeout, a non-zero exit such as an import that refuses to run on this CPU, or a start error) skips ML/DL. Regex CPF/CNPJ continues unaffected. The skip warning states the real cause (signal name, timeout, exit code with the last stderr line, or start error) and still carries the wheelhouse remedy.
+
 - **API key failures (#2078), default change:** with `require_api_key` on, five failures from one client address in 60 seconds return **429**. Each **401** and **429** is an Audit Trail record and does not contain the key. A configured key shorter than 32 characters is refused at `main.py --web` (`openssl rand -hex 32`).
 - **WebAuthn session cookie (#2079), default change:** lifetime is 12 hours and `SameSite=Strict`. Cookie-authenticated mutations require the dashboard origin. Logout invalidates every session for that user.
 - **Installed help (#1130):** the dashBOARd help intro names the installed `data-boar` command. Command samples still follow the process that is running.
