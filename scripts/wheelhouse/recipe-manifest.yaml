@@ -33,6 +33,7 @@ packages:
     - pytz
     - tzdata
     - joblib
+    - cloudpickle
     - threadpoolctl
     - narwhals
 
