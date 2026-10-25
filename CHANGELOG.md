@@ -2,7 +2,9 @@
 
 Human-readable summary of user-facing changes. **Detailed release notes:** [docs/releases/](docs/releases/) (full checklists, Docker publish commands, GitHub Release text).
 
-## Unreleased (`main`)
+## 1.8.0
+
+See [docs/releases/1.8.0.md](docs/releases/1.8.0.md) for the full release notes.
 
 Migration notes on the **`1.8.0-rc`** working line (no new semver cut):
 
