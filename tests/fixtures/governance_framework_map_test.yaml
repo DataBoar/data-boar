@@ -1,0 +1,71 @@
+---
+# Minimal map for tests/test_governance_lens.py (deterministic; not production curated data)
+
+version: "1.0"
+
+entries:
+  - pattern_name: LGPD_CPF
+    target_context: database_nonprod
+    frameworks:
+      - id: COBIT-DSS05.04
+        name: "DSS05.04 — Gerenciar identidade e acesso"
+        tier: pro
+        control_gap_title: "CPF em base não produtiva"
+        control_gap_body: "Test body for nonprod CPF."
+        recommendation: "Mascarar ou remover CPF de homologação."
+        deadline_days: 30
+
+  - pattern_name: EMAIL
+    target_context: database_nonprod
+    frameworks:
+      - id: COBIT-DSS05.04
+        name: "DSS05.04 — Gerenciar identidade e acesso"
+        tier: pro
+        control_gap_title: "E-mail em base não produtiva"
+        control_gap_body: "Test body for nonprod email."
+        recommendation: "Usar dados sintéticos."
+        deadline_days: 30
+
+  - pattern_name: LGPD_CPF
+    target_context: filesystem
+    frameworks:
+      - id: ISO27001-A.8.10
+        name: "A.8.10 — Exclusão de informações"
+        tier: pro
+        control_gap_title: "CPF em repositório de arquivos"
+        control_gap_body: "Test body for filesystem CPF."
+        recommendation: "Revisar retenção."
+        deadline_days: 45
+
+  - pattern_name: "LGPD_*"
+    target_context: null
+    frameworks:
+      - id: ISO27014-6.2
+        name: "ISO/IEC 27014 — Monitorar"
+        tier: pro
+        control_gap_title: "Padrão LGPD — monitoramento"
+        control_gap_body: "Wildcard LGPD test entry."
+        recommendation: "Monitorar controles."
+        deadline_days: 60
+
+  - pattern_name: CREDIT_CARD
+    target_context: null
+    frameworks:
+      - id: ISO27001-A.5.33
+        name: "A.5.33 — Proteção de registros"
+        tier: pro
+        control_gap_title: "Possível dado de cartão"
+        control_gap_body: "PCI-style test entry."
+        recommendation: "Tokenizar PAN."
+        deadline_days: 21
+
+  - pattern_name: "*"
+    target_context: null
+    frameworks:
+      - id: ISO38500-CONFORMITY
+        name: "ISO/IEC 38500 — Conformidade"
+        tier: pro
+        control_gap_title: "Achado sensível — governança"
+        control_gap_body: "Catch-all test entry."
+        recommendation: "Registrar no backlog de riscos."
+        deadline_days: 90

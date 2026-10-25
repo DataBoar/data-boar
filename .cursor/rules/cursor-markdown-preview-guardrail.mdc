@@ -1,0 +1,28 @@
+---
+description: Markdown preview — avoid forced split. Situational — CURSOR_MARKDOWN_PREVIEW docs or @cursor-markdown-preview-guardrail.mdc.
+globs:
+  - docs/ops/CURSOR_MARKDOWN_PREVIEW*
+  - scripts/check-cursor-markdown*
+alwaysApply: false
+---
+
+# Markdown preview: avoid forced GUI split (operator workstation)
+
+## Canonical settings (User `settings.json`)
+
+- **`markdown.preview.openPreviewToTheSide`:** `false`
+- **`workbench.editor.autoLockGroups`:** do **not** set **`mainThreadWebview-markdown.preview`** or **`workbench.editor.markdown`** to `true` (locks preview/source into separate groups and feels like a mandatory vertical split).
+
+## Optional keybinding (`keybindings.json`)
+
+- **`Ctrl+Shift+V`** -> **`markdown.showPreview`** with `when`: `editorLangId == markdown` (so it does not steal paste in other contexts).
+
+## Verification
+
+- Run **`.\scripts\check-cursor-markdown-preview-settings.ps1`** on the operator PC after Cursor updates or profile sync.
+- Doc: **`docs/ops/CURSOR_MARKDOWN_PREVIEW_SETTINGS.md`**.
+
+## Assistant behaviour
+
+- Do **not** revert these values when editing `%APPDATA%\Cursor\User\settings.json` unless the operator asks.
+- If the operator reports split-preview regression, re-check the three items above before suggesting unrelated workbench settings.

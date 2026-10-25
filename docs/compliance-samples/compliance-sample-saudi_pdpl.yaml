@@ -1,0 +1,55 @@
+# Saudi PDPL – sample compliance profile (Personal Data Protection Law, Royal Decree M/19, SDAIA)
+#
+# Target audience: Saudi Arabia and GCC deployments. SDAIA; personal data, sensitive personal data.
+# Terms: EN (optional Arabic can be added in terms if scanning Arabic column names).
+#
+# How to use:
+#   1. Set in your main config:
+#        regex_overrides_file: path/to/compliance-sample-saudi_pdpl.yaml
+#        ml_patterns_file: path/to/compliance-sample-saudi_pdpl.yaml
+#   2. Merge the recommendation_overrides list below into your config under report.recommendation_overrides.
+#
+# Saudi Arabia: Royal Decree M/19; SDAIA (Saudi Data and AI Authority); PDPL.
+
+regex:
+  - name: "SAUDI_ID"
+    pattern: "\\b1\\d{9}\\b"
+    norm_tag: "Saudi PDPL"
+  - name: "IQAMA_SA"
+    pattern: "\\b2\\d{9}\\b"
+    norm_tag: "Saudi PDPL"
+
+# ML terms: personal data, sensitive personal data, SDAIA, data controller.
+terms:
+  - text: "personal data"
+    label: sensitive
+  - text: "sensitive personal data"
+    label: sensitive
+  - text: "data controller"
+    label: sensitive
+  - text: "data processor"
+    label: sensitive
+  - text: "data subject"
+    label: sensitive
+  - text: "sdaia"
+    label: sensitive
+  - text: "saudi data and ai authority"
+    label: sensitive
+  - text: "pdpl"
+    label: sensitive
+  - text: "royal decree m/19"
+    label: sensitive
+  - text: "consent"
+    label: sensitive
+  - text: "lawful basis"
+    label: sensitive
+  - text: "data transfer"
+    label: sensitive
+
+recommendation_overrides:
+  - norm_tag_pattern: "Saudi PDPL"
+    base_legal: "Personal Data Protection Law (Royal Decree M/19); SDAIA"
+    risk: "Personal data and sensitive personal data; controller/processor obligations; cross-border transfer."
+    recommendation: "Comply with Saudi PDPL; register with SDAIA if required; implement consent and lawful basis; follow transfer rules."
+    priority: "ALTA"
+    relevant_for: "DPO, SDAIA, Data Controller"

@@ -1,0 +1,34 @@
+# Example (copy to gitignored docs/private/homelab/ or ~/.config/data-boar/ on the Linux host).
+# Run ON the same machine whose paths you scan (not from Windows pointing at UNC unless mounted).
+#
+#   export PATH=$HOME/.local/bin:$PATH
+#   cd ~/Projects/dev/data-boar
+#   uv sync
+#   uv run python main.py --config /path/to/this/file.yaml
+#
+# Expect some permission_denied under /var/log for non-root users.
+
+targets:
+  - name: FS_var_log_local
+    type: filesystem
+    path: /var/log
+    recursive: true
+
+file_scan:
+  extensions: [.log, .txt]
+  recursive: true
+  scan_compressed: false
+  sample_limit: 3
+  file_sample_max_chars: 4000
+
+report:
+  output_dir: ./reports/lab_fs_varlog
+
+sqlite_path: ./reports/lab_fs_varlog/audit_fs_varlog.db
+
+scan:
+  max_workers: 1
+
+rate_limit:
+  max_concurrent_scans: 1
+  min_interval_seconds: 2

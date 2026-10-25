@@ -1,0 +1,130 @@
+# PCI-DSS – sample compliance profile (Payment Card Industry Data Security Standard)
+#
+# Target audience: Merchants and assessors; payment card data scanning. Bundles patterns
+# and recommendations so reports speak PCI-DSS language (scope, tokenization, cardholder data).
+#
+# How to use:
+#   1. Set in your main config:
+#        regex_overrides_file: path/to/compliance-sample-pci_dss.yaml
+#        ml_patterns_file: path/to/compliance-sample-pci_dss.yaml
+#   2. Merge the recommendation_overrides list below into your config under report.recommendation_overrides.
+#
+# Built-in detector already includes CREDIT_CARD; this sample adds norm_tag PCI-DSS and
+# recommendation text for assessors. Optional: add PAN, CVV, track data patterns if needed.
+#
+# NOTE — financial routing / ABA routing number regex (NOT included here by default):
+#   If you add a custom routing-number pattern (e.g. ABA 9-digit: \b\d{9}\b or
+#   \b[0-9]{4}[0-9]{4}[0-9]\b with routing-transit framing), be aware that bare 9-digit
+#   sequences produce very high FALSE POSITIVE rates against sequential IDs, ZIP+4 codes,
+#   UUIDs, and other counters. To reduce FP risk:
+#     a) Require structural context in the regex (e.g. near "routing", "ABA", "RTN", slash notation).
+#     b) Pair the pattern with a keyword trigger (column name matches "routing" or "aba").
+#     c) Test against a column with known non-PAN sequential data before enabling in production.
+#   See SENSITIVITY_DETECTION.md §Custom regex patterns for guidance on scoping patterns.
+
+regex:
+  - name: "PAN"
+    pattern: "\\b\\d{4}[-\\s]?\\d{4}[-\\s]?\\d{4}[-\\s]?\\d{4}\\b"
+    norm_tag: "PCI-DSS"
+    validator: luhn
+  - name: "CARD_TRACK_ALT"
+    pattern: "\\b%?[B]?\\d{13,19}\\^[^\\^]+\\^\\d{4}"
+    norm_tag: "PCI-DSS"
+  # Field-validated column headers (#1318): tokenized metadata, PAN columns, CVV, expiry, track.
+  # Use (?:^|_) so prefixed columns match (e.g. billing_card_number) without mid-word hits.
+  - name: "PCI_CARD_COLUMN"
+    pattern: "(?i)(?:^|_)(?:pan\\w*|card_?number\\w*|numero_?(?:do_?)?cart[aã]o\\w*|credit_?card\\w*|payment_?card\\w*|cardholder\\w*|titular_?(?:cart[aã]o|card)?\\w*|nome_?titular\\w*|bandeira\\w*)"
+    norm_tag: "PCI-DSS Req. 3 (PAN / cardholder data column)"
+  - name: "PCI_CVV"
+    pattern: "(?i)(?:^|_)(?:cvv\\w*|cvc\\w*|card_?security_?code\\w*|codigo_?seguranca\\w*)"
+    norm_tag: "PCI-DSS Req. 3.2 (CVV/CVC — never store)"
+  - name: "PCI_CARD_EXPIRY"
+    pattern: "(?i)(?:^|_)(?:card_?expir(?:y|ation)?\\w*|expir(?:y|ation)_?date\\w*|validade_?(?:cart[aã]o|card)?\\w*|data_?validade\\w*)"
+    norm_tag: "PCI-DSS Req. 3 (card expiry — SAD if full track)"
+  - name: "PCI_TRACK2"
+    pattern: "(?i)(?:^|_)(?:track_?2\\w*|track_?ii\\w*|magnetic_?stripe\\w*|faixa_?magnetica\\w*)"
+    norm_tag: "PCI-DSS Req. 3 (track data — prohibited storage)"
+  - name: "PCI_TOKENIZED_METADATA"
+    pattern: "(?i)(?:^|_)(?:last_?(?:four|4)(?:_digits)?\\w*|gateway_?token\\w*|payment_?token\\w*|card_?token\\w*|tokenized_?(?:pan|card)\\w*)"
+    norm_tag: "PCI-DSS (scope reduction — tokenized metadata only)"
+
+# ML terms: cardholder data, CHD, PCI scope.
+terms:
+  - text: "cardholder data"
+    label: sensitive
+  - text: "chd"
+    label: sensitive
+  - text: "pan"
+    label: sensitive
+  - text: "primary account number"
+    label: sensitive
+  - text: "cvv"
+    label: sensitive
+  - text: "cvc"
+    label: sensitive
+  - text: "card number"
+    label: sensitive
+  - text: "pci"
+    label: sensitive
+  - text: "pci-dss"
+    label: sensitive
+  - text: "tokenization"
+    label: sensitive
+  - text: "card expiry"
+    label: sensitive
+  - text: "expiration date"
+    label: sensitive
+  - text: "cartao de credito"
+    label: sensitive
+  - text: "cartão de crédito"
+    label: sensitive
+  - text: "credit card"
+    label: sensitive
+  - text: "numero do cartao"
+    label: sensitive
+  - text: "número do cartão"
+    label: sensitive
+  - text: "validade do cartao"
+    label: sensitive
+  - text: "validade do cartão"
+    label: sensitive
+  - text: "titular"
+    label: sensitive
+  - text: "cardholder"
+    label: sensitive
+  - text: "bandeira"
+    label: sensitive
+  - text: "card brand"
+    label: sensitive
+
+recommendation_overrides:
+  - norm_tag_pattern: "PCI-DSS Req. 3 (PAN / cardholder data column)"
+    base_legal: "PCI-DSS Requirement 3 — protect stored cardholder data (PAN, cardholder name)."
+    risk: "Column name indicates primary account number or cardholder data. Raw PAN storage expands PCI scope and breach impact."
+    recommendation: "Confirm whether full PAN is stored. If yes: encrypt, restrict access, document retention, and scope for QSA/ISA. Prefer tokenization or point-to-point encryption to reduce scope."
+    priority: "ALTA"
+    relevant_for: "QSA, ISA, Security, Compliance, DBA"
+  - norm_tag_pattern: "PCI-DSS Req. 3.2 (CVV/CVC"
+    base_legal: "PCI-DSS Requirement 3.2 — sensitive authentication data must not be stored after authorization."
+    risk: "CVV/CVC must never be stored post-authorization. Storage is a critical PCI violation."
+    recommendation: "Remove CVV/CVC from storage immediately. Verify no historical backups retain SAD. Document compensating controls only with QSA approval — do not store CVV."
+    priority: "CRÍTICA"
+    relevant_for: "QSA, ISA, Security, Compliance, DBA"
+  - norm_tag_pattern: "PCI-DSS Req. 3 (track data"
+    base_legal: "PCI-DSS Requirement 3 — track data (magnetic stripe equivalent) is prohibited storage."
+    risk: "Track data storage is a critical finding; full card data exposure risk."
+    recommendation: "Eliminate track data from databases and logs. Validate tokenization scope with assessors."
+    priority: "CRÍTICA"
+    relevant_for: "QSA, ISA, Security, Compliance"
+  - norm_tag_pattern: "scope reduction — tokenized"
+    base_legal: "PCI-DSS — tokenization / scope reduction (metadata only: last four, payment token)."
+    risk: "Column suggests tokenized card metadata rather than full PAN — positive control signal when no SAD is present."
+    recommendation: "Praise / existing controls: tokenization reduces PCI scope. Confirm with gateway documentation that no full PAN, CVV, or track data is stored alongside these fields."
+    priority: "INFORMATIVO"
+    relevant_for: "QSA, ISA, Security, Compliance, DBA"
+  - norm_tag_pattern: "PCI-DSS"
+    base_legal: "PCI-DSS; cardholder data (CHD) scope"
+    risk: "Storage or processing of cardholder data; scope for PCI-DSS assessment."
+    recommendation: "Restrict storage of PAN/CVV; use tokenization or approved methods; ensure scope is documented for assessors."
+    priority: "CRÍTICA"
+    relevant_for: "QSA, ISA, Security, Compliance"

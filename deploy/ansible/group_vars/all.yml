@@ -1,0 +1,18 @@
+# Global defaults — override in host_vars/ or via -e on the command line.
+
+# Debian/Ubuntu: set on every play as `environment: "{{ labop_debian_unattended_apt_environment }}"`
+# so apt-listbugs does not abort unattended installs (see repo ansible README / tests).
+labop_debian_unattended_apt_environment:
+  APT_LISTBUGS_FRONTEND: "none"
+
+# Docker Hub image (or private registry path)
+data_boar_image: "fabioleitao/data_boar:latest"
+
+# Host port published by the API container
+data_boar_port: 8088
+
+# Working directory on the target host
+data_boar_dir: "/opt/data_boar"
+
+# Docker Swarm: set to true on the Swarm path (site-swarm.yml)
+swarm_enabled: false

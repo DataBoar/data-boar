@@ -1,0 +1,140 @@
+# Lab-only: PostgreSQL + MariaDB with synthetic rows for multi-host Data Boar smoke tests.
+# Deploy on a LAN host (e.g. burst laptop). Do not expose WAN. Change passwords via env file.
+#
+# Usage (Compose v2):
+#   cd deploy/lab-smoke-stack
+#   copy env.example .env   # Windows — or: cp env.example .env
+#   docker compose up -d
+#
+# Published ports (avoid clashing with local DBs):
+#   PostgreSQL: 55432 -> 5432
+#   MariaDB:    33306 -> 3306
+#   MSSQL:      14333 -> 1433
+#   Oracle XE:  15211 -> 1521
+#   Redis:      56379 -> 6379
+#
+# See: docs/ops/LAB_SMOKE_MULTI_HOST.md
+#
+services:
+  lab-postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${LAB_PG_USER:-lab_smoke}
+      POSTGRES_PASSWORD: ${DATA_BOAR_LAB_PG_PASSWORD:-lab_smoke_change_me}
+      POSTGRES_DB: ${LAB_PG_DATABASE:-lab_smoke_pg}
+    ports:
+      - "${LAB_PG_PORT:-55432}:5432"
+    volumes:
+      - ./init/postgres:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lab_smoke -d lab_smoke_pg"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  lab-mariadb:
+    image: mariadb:11
+    environment:
+      MARIADB_ROOT_PASSWORD: ${LAB_MY_ROOT_PASSWORD:-lab_smoke_root_change_me}
+      MARIADB_DATABASE: ${LAB_MY_DATABASE:-lab_smoke_my}
+      MARIADB_USER: ${LAB_MY_USER:-lab_smoke}
+      MARIADB_PASSWORD: ${DATA_BOAR_LAB_MY_PASSWORD:-lab_smoke_change_me}
+    ports:
+      - "${LAB_MY_PORT:-33306}:3306"
+    volumes:
+      - ./init/mariadb:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  lab-mssql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${DATA_BOAR_LAB_MSSQL_SA_PASSWORD:-Lab_Smoke_Change_Me1!}
+      MSSQL_PID: Developer
+    ports:
+      - "${LAB_MSSQL_PORT:-14333}:1433"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          '/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$$MSSQL_SA_PASSWORD" -C -Q "SELECT 1" -b -o /dev/null || exit 1',
+        ]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  lab-mssql-init:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    depends_on:
+      lab-mssql:
+        condition: service_healthy
+    environment:
+      MSSQL_HOST: lab-mssql
+      MSSQL_PORT: "1433"
+      MSSQL_SA_PASSWORD: ${DATA_BOAR_LAB_MSSQL_SA_PASSWORD:-Lab_Smoke_Change_Me1!}
+    volumes:
+      - ./init/mssql:/seed:ro
+    entrypoint: ["/bin/bash", "/seed/apply_lab_smoke.sh"]
+    restart: "no"
+
+  lab-oracle:
+    image: gvenzl/oracle-xe:21-slim
+    environment:
+      ORACLE_PASSWORD: ${DATA_BOAR_LAB_ORACLE_PASSWORD:-lab_smoke_oracle_change_me}
+      APP_USER: ${LAB_ORACLE_USER:-lab_smoke}
+      APP_USER_PASSWORD: ${DATA_BOAR_LAB_ORACLE_PASSWORD:-lab_smoke_change_me}
+    ports:
+      - "${LAB_ORACLE_PORT:-15211}:1521"
+    healthcheck:
+      test: ["CMD", "healthcheck.sh"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
+
+  lab-oracle-init:
+    image: gvenzl/oracle-xe:21-slim
+    depends_on:
+      lab-oracle:
+        condition: service_healthy
+    environment:
+      ORACLE_HOST: lab-oracle
+      ORACLE_PORT: "1521"
+      ORACLE_SERVICE: XEPDB1
+      APP_USER: ${LAB_ORACLE_USER:-lab_smoke}
+      APP_USER_PASSWORD: ${DATA_BOAR_LAB_ORACLE_PASSWORD:-lab_smoke_change_me}
+    volumes:
+      - ./init/oracle:/seed:ro
+    entrypoint: ["/bin/bash", "/seed/apply_lab_smoke_pdb.sh"]
+    restart: "no"
+
+  lab-redis:
+    image: redis:7-alpine
+    ports:
+      - "${LAB_REDIS_PORT:-56379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+  lab-redis-init:
+    image: redis:7-alpine
+    depends_on:
+      lab-redis:
+        condition: service_healthy
+    environment:
+      REDIS_HOST: lab-redis
+      REDIS_PORT: "6379"
+    volumes:
+      - ./init/redis:/seed:ro
+    entrypoint: ["/bin/sh", "/seed/01_lab_smoke_seed.sh"]
+    restart: "no"

@@ -1,0 +1,51 @@
+---
+description: Keep the README pitch (decision-makers section and roadmap) in sync with plan creation, completion, and removal. Use when adding, completing, or cancelling plans.
+globs: ["README.md", "README.pt_BR.md", "docs/plans/**/*.md"]
+alwaysApply: false
+---
+
+# Pitch and roadmap sync with plans
+
+The **pitch** is the "For decision-makers and compliance leads" section in **README.md** (and **README.pt_BR.md**). It includes **current capabilities** ("What we surface", "Why it holds up") and a **Roadmap** block (usually one short paragraph plus links to **releases** and **COMPLIANCE_AND_LEGAL** for depth). These must stay in sync with what we have **accomplished** and what we are **actually working on**, so the pitch accurately reflects the product and future development. Prefer **outcome language** for executives; keep API names, ADRs, and long regional lists out of the pitch unless a buyer-facing milestone requires a single named anchor.
+
+## When you create a new plan
+
+- **Add the new goal to the pitch** if it is a visible roadmap item you want decision-makers to see.
+- In **README.md** and **README.pt_BR.md**, update the **Roadmap** sentence (e.g. in "Why it holds up") to include the new priority (e.g. "optional scanning inside compressed archives", "Dashboard i18n") so the pitch reflects what we are working toward.
+- Keep the list concise; one short phrase per plan is enough. The full detail stays in `docs/plans/PLANS_TODO.md` and the plan file.
+
+## When you complete a plan
+
+1. **Move** the plan to `docs/plans/completed/` and update references (see `.cursor/rules/docs-plans.mdc`).
+1. **Update the pitch** so it reflects the new **capability** instead of a future goal:
+   - **Remove** that item from the **Roadmap** sentence (it is no longer "future").
+   - **Optionally strengthen** "What we surface" or "Why it holds up" (or the following paragraphs) to mention the new capability and **why prospects should consider the product** (e.g. "Security hardening and configurable timeouts are in place so deployments can meet auditor expectations").
+1. Apply the same changes to **README.pt_BR.md** so both languages stay aligned.
+1. Run the markdown fix script and lint test after editing.
+
+Result: the pitch describes **what the application does today** and **what is next on the roadmap**, not completed work as if it were still planned.
+
+## When you remove, cancel, or substitute a plan
+
+- **Update the pitch** so the **Roadmap** sentence no longer mentions the removed or cancelled goal.
+- If a plan is **substituted** by another (e.g. different approach), replace the old goal with the new one in the Roadmap text.
+- **Reduce** "future development" wording so the pitch does not promise or imply work that is no longer planned.
+- Sync **README.pt_BR.md** with the same changes.
+
+Result: the pitch stays honest about what we are accomplishing and what we are working on, without outdated or dropped goals.
+
+## Where the pitch lives
+
+- **README.md** — section "For decision-makers and compliance leads", including "What we surface", "Why it holds up" (with the **Roadmap** sentence), and "Typical scenarios".
+- **README.pt_BR.md** — same structure; "Para gestores e líderes de conformidade", "O que trazemos à tona", "Por que sustenta" (with roadmap), "Cenários típicos".
+- **docs/plans/PORTFOLIO_AND_EVIDENCE_SOURCES.md** — §0 *Stakeholder pitch* holds **short bullet reminders** for thesis/CV/decks; keep aligned when you change hireability or roadmap wording in the READMEs.
+- **docs/COMPLIANCE_AND_LEGAL.md** (and **.pt_BR**) — *What we surface* may echo filesystem triage and media roadmap for **legal/compliance** readers; sync when the README pitch changes materially.
+
+## Future public website (not the same as pitch or stakeholder deck)
+
+When a **marketing site** ships (see **[PLAN_WEBSITE_AND_DOCS_I18N_FUTURE.md](../../docs/plans/PLAN_WEBSITE_AND_DOCS_I18N_FUTURE.md)** §2.1–2.3, milestone **M-SITE-READY** in **[SPRINTS_AND_MILESTONES.md](../../docs/plans/SPRINTS_AND_MILESTONES.md)**), it will host **deeper technical** material (USAGE, TECH_GUIDE, releases, roadmap **fronts**, Docker Hub / GitHub links) than the **README pitch**, **private `.pptx` / deck**, or **compliance-legal** summary tone. **Do not** collapse that depth into the README roadmap sentence — keep README concise; expand on the **site** when built. **i18n** on the site should follow the same model as **dashBOARd** ([PLAN_DASHBOARD_I18N.md](../../docs/plans/completed/PLAN_DASHBOARD_I18N.md)). **Cadence:** new **EN+pt-BR deck generation** → reminder to schedule a **website** content pass.
+
+## Reference
+
+- **Plans location and completion:** `.cursor/rules/docs-plans.mdc`.
+- **Documentation (EN + pt-BR):** `.cursor/rules/docs-policy.mdc` and `.cursor/skills/documentation-en-pt-br/SKILL.md`.

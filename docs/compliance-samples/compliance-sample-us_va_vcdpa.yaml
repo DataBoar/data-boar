@@ -1,0 +1,80 @@
+# Virginia Consumer Data Protection Act (VCDPA) — sample compliance profile
+#
+# Target audience: U.S. Virginia deployments; DPOs aligning inventory language with Va. Code
+# § 59.1-575 et seq. (sensitive data includes precise geolocation and biometric data under the Act).
+#
+# How to use:
+#   1. Set in your main config:
+#        regex_overrides_file: path/to/compliance-sample-us_va_vcdpa.yaml
+#        ml_patterns_file: path/to/compliance-sample-us_va_vcdpa.yaml
+#   2. Merge the recommendation_overrides list below into your config under report.recommendation_overrides.
+#
+# Legal scope (read before relying on tags):
+#   - The VCDPA applies to "consumers" in a personal, family, or household context. Statutory text
+#     and guidance exclude certain B2B and employment contexts from the consumer definition.
+#   - Data Boar performs **technical pattern and term matching** only. It does **not** classify
+#     whether a row is B2B, employment, or consumer data, and it does **not** apply legal exemptions.
+#     High-sensitivity findings in HR or B2B datasets may still appear — treat as **inventory signals**
+#     and scope with counsel, not as automatic VCDPA "violations".
+#
+# Geolocation regex design (high ROI, engine-supported fields only):
+#   - Patterns require **four or more decimal places** on each coordinate (common proxy for
+#     "precise" geolocation in logs) **and** a **keyword or JSON key** in the same match context
+#     (column name + sample are concatenated by the detector — see SENSITIVITY_DETECTION.md).
+#   - This reduces noise from bare version strings (e.g. 1.7.4.0) and coarse coordinates (e.g. -22.9).
+#   - For other shapes (WKT, GeoJSON blobs, proprietary encodings), extend this file or add
+#     consulting-scoped patterns — do not assume one regex covers all GIS exports.
+#
+# Future architecture (not in this file — see PLAN_YAML_PLUGIN_SYSTEM.md / PLANS_TODO S4b):
+#   - Optional YAML fields such as proximity_keywords, exclusion_scope, performance_tier, and
+#     included_detectors require schema + detector support (ADR-0052 Phase 1b+). Until then, use
+#     comments and separate norm_tags for operator interpretation.
+
+regex:
+  - name: "VCDPA_JSON_LAT_PRECISION"
+    pattern: "(?i)[\"']lat[\"']\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\b"
+    norm_tag: "VCDPA"
+  - name: "VCDPA_JSON_LNG_PRECISION"
+    pattern: "(?i)[\"'](?:lng|lon)[\"']\\s*:\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}\\b"
+    norm_tag: "VCDPA"
+  - name: "VCDPA_LOCATION_CSV_PAIR"
+    pattern: "(?i)\\blocation\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*,\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "VCDPA"
+  - name: "VCDPA_QUERYSTRING_LAT_LONG"
+    pattern: "(?i)latitude=[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*&\\s*longitude=[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "VCDPA"
+
+# ML terms: sensitive categories (geolocation, biometric) + consumer-privacy vocabulary (EN).
+terms:
+  - text: "vcdpa"
+    label: sensitive
+  - text: "virginia consumer data protection"
+    label: sensitive
+  - text: "consumer privacy"
+    label: sensitive
+  - text: "sensitive data"
+    label: sensitive
+  - text: "sensitive personal information"
+    label: sensitive
+  - text: "precise geolocation"
+    label: sensitive
+  - text: "geolocation data"
+    label: sensitive
+  - text: "biometric data"
+    label: sensitive
+  - text: "biometric identifier"
+    label: sensitive
+  - text: "facial recognition"
+    label: sensitive
+  - text: "fingerprint"
+    label: sensitive
+  - text: "genetic data"
+    label: sensitive
+
+recommendation_overrides:
+  - norm_tag_pattern: "VCDPA"
+    base_legal: "Virginia Consumer Data Protection Act (VCDPA); Va. Code § 59.1-575 et seq. (personal data, sensitive data, consumer rights)"
+    risk: "Possible sensitive data (e.g. precise geolocation, biometric-related fields) or consumer personal data in scope of VCDPA; statutory exemptions (e.g. certain B2B/employment contexts) are not evaluated by the scanner."
+    recommendation: "Confirm legal scope with counsel (consumer vs B2B/employment contexts); document purpose limitation and consent where sensitive data applies; pair technical findings with governance records."
+    priority: "ALTA"
+    relevant_for: "DPO, Privacy Counsel, Information Security, Virginia counsel"

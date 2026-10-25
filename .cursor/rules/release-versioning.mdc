@@ -1,0 +1,124 @@
+---
+description: Release/version guardrails — commit gate vs release gate, ADR-0073 side-channel, no 1.7.5, semver TBD. Situational — semver bumps, VERSIONING, pyproject version.
+globs:
+  - pyproject.toml
+  - docs/VERSIONING.md
+  - docs/VERSIONING.pt_BR.md
+  - CHANGELOG.md
+  - security/version_policy.yaml
+  - tests/test_release_version_policy.py
+  - docs/releases/**
+  - docs/adr/ADR-0072*.md
+  - docs/adr/ADR-0073*.md
+alwaysApply: false
+---
+
+# Release & versioning guardrails (post-#970)
+
+## When this rule attaches
+
+**Situational** — globs above, semver bump / release doc work, or **`@release-versioning.mdc`**. **`release-publish-sequencing.mdc`** covers **tag → GitHub → Docker → Hub** choreography; **this rule** covers **authorization to bump** and **phantom-version prevention**.
+
+## Two gates (ADR-0072 — Accepted)
+
+| | **Commit gate** | **Release gate** |
+|---|---|---|
+| Question | May this code enter `main`? | May this version become stable? |
+| Criterion | `check-all` / CI / pre-commit GREEN | Lab completão (#406) + operator FASE 3 |
+| Vocabulary | **Never** call this "gate" alone — **local checks** / **CI** | **Gate** without qualifier = **this** |
+
+**Green commit gate never authorizes removing `-beta`/`-rc` from `pyproject.toml`.**
+
+## Version facts (ADR-0073 — Accepted)
+
+> **Esta regra DERIVA de ADR-0073 (+ `docs/VERSIONING.md`). Em conflito, a ADR vence → corrigir o `.mdc`, não a ADR. Se o certo não estiver claro, PARAR e perguntar ao operador.**
+
+- **`main` today:** **`1.7.4` STABLE** (release PR **#1024**); ADR-0073 **Accepted**; release gate **#406 CLOSED**.
+- **#970:** premature stable bump/tag without release gate — corrected by **ADR-0072** + **#406**; **`1.7.4` is not VOID**.
+- **Published stable:** tag **`v1.7.4`**, GitHub Release, Docker Hub **`1.7.4`** / **`latest`** — operator **release-ritual** post-merge (not agent-autonomous).
+- **`1.7.5` does not exist.** Next dev line: **`1.8.0-beta`** (#772) **after** publish ritual completes.
+- **Maturity octet** (1–126 beta · 127–199 rc · 200–254 GA+fix; counter starts at **`1`**): **`[tool.databoar] maturity_build = 208`** side-channel — **never** in `[project] version` or About. See **`docs/VERSIONING.md`**.
+
+## Distribution policy (pre-release vs stable)
+
+| Channel | `-beta` / `-rc` | Stable (no suffix) |
+| --- | --- | --- |
+| **Git** (`main` / tags) | Yes — UAT/QA consume from git | Tag **`vX.Y.Z`** + GitHub Release |
+| **Docker Hub** | **Never** push pre-release tags | **`X.Y.Z`** + **`latest`** after local smoke + scout |
+| **PyPI** | **Never** | Stable only (#74 — post-1.7.4) |
+| **Local image build** (smoke / scout) | OK — **do not push** | Required before Hub push |
+
+Beta/rc builds stay **git-only** for external users; operators may build images locally without publishing.
+
+## Agent must not
+
+1. Bump to **stable** while a **`release-gate`** issue (e.g. **#406** successor) is **OPEN** without operator FASE 3.
+2. Invent **`1.7.5`** / **`1.7.5-beta`** targeting.
+3. Treat **verifiable** smoke hardening (#831) as **release gate passed**.
+4. Tag, GitHub Release, or Docker Hub publish without operator **release-ritual** — pair with **`release-publish-sequencing.mdc`**.
+
+## Machine guard
+
+**`security/version_policy.yaml`** + **`tests/test_release_version_policy.py`** — run via **`check-all`**.
+
+## Post-release bump: `postN` + maturity (ADR-0073 § PyPI dual counters)
+
+**When:** Runnable fixes on the **same public line** (e.g. **`1.7.4`**) must reach **PyPI** without a new marketing semver or reopening the release gate (**#406 CLOSED** — fix-line only).
+
+**No empty PyPI publish:** A **`postN` bump on PyPI never stands alone** — there must be **substance**:
+
+| Motivation | What moves | Example |
+| --- | --- | --- |
+| **Fix-line republication** | `[project] version` → next **`.postN`** **because** at least one **fix** already advanced **`maturity_build`** since the last PyPI upload | `post1` → `post2` after `.203`–`.208` fixes on `main` |
+| **Next public line** | New semver train (**`1.8.0-beta`** → GA per gate + ritual), **not** another `.postN` on the old line | ADR-0073 next line **`1.8.0`** |
+
+If **`maturity_build` did not advance** since the last PyPI upload (docs/ADR/chore/rito only), **do not** publish a new **`postN`** — there is nothing new for the user to install.
+
+**Two independent counters** (never conflate):
+
+| Counter | Field | Advances when | Example |
+| --- | --- | --- | --- |
+| **Publication** | `[project] version` → PEP 440 **`.postN`** | Each **PyPI upload** (not each fix on `main`) | `1.7.4.post1`, `1.7.4.post2` |
+| **Maturity / fix** | `[tool.databoar] maturity_build` (octet side-channel) | Each **discrete fix** (correction/maturity of what users install/run) | `.202`, `.208` |
+
+**`maturity_build` diverges from `postN` and runs ahead** — many fixes may land before the next PyPI upload.
+
+**Bundling vs coincidence:** One **`postN` upload** may **bundle several fixes** already counted in the octet (e.g. `.203`–`.208` on `main`, then a single **`post2`** publish). Conversely, **one fix and one upload** can leave the counters **looking synced** — that alignment is **coincidence**, not a rule. **`postN` never tracks fixes; `maturity_build` never tracks PyPI uploads.**
+
+**Counts as a fix (octet +1):** discrete correction or maturation of **what the user installs and runs** — e.g. bugfix, CVE/security patch, connector/scan/report/runtime behavior change, or completing a **dangling** feature slice that already shipped incomplete on `main` (behavior the wheel should have had).
+
+**Does not increment `maturity_build`:** docs-only, ADR, plans, `chore`, `ci`, workflow, test-only, release ritual, or any change that does **not** alter installed/executed product behavior. **Rule:** if it does not change what the user runs, do not bump the octet.
+
+**Guardrails (intact):**
+
+- **`.postN` is never the octet** — no fourth semver segment (`1.7.4.202` is invalid).
+- **Public line** (README, man `.TH`, stakeholder copy) stays **`X.Y.Z`** — no `.postN` in marketing surfaces.
+- **`.postN` is stable** (no `-beta`/`-rc`) → **PyPI-eligible**; Docker/tag choreography per **`release-publish-sequencing.mdc`** when operator runs **release-ritual**.
+- **Release gate** does **not** reopen for post-line bumps.
+
+### Procedure (agent / operator)
+
+1. **Fixes land on `main`** → increment **`maturity_build`** per discrete fix (octet +1); record in the release-note map even if PyPI is not ready yet.
+2. **When publishing to PyPI** on the fix-line → bump **`[project] version`** to the next **`.postN`** only if step 1 produced new runnable substance since the last upload; set **`maturity_build`** in `pyproject.toml` to the **latest fix octet** bundled in that wheel.
+3. **Release note:** create or extend **`docs/releases/X.Y.Z.postN.md`** from the molde [`docs/releases/1.7.4.post1.md`](../../docs/releases/1.7.4.post1.md) — full **`postN ↔ maturity_build`** table (unpublished fix octets included).
+4. **Sync:** `core/about.py` dev fallback, `tests/test_pyproject_sql_extras.py` (or successor), **`uv lock`** after `pyproject.toml` version change.
+5. **Do not** bump public marketing line, invent **`1.7.5`**, or remove `-beta` on a pre-release train without release gate + operator FASE 3.
+6. **Publish:** operator runs **`publish-pypi.yml`** (`workflow_dispatch`) after merge — agent does **not** autonomous PyPI push.
+
+**Canonical molde + map:** [`docs/releases/1.7.4.post1.md`](../../docs/releases/1.7.4.post1.md) · **ADR-0073** § *PyPI dual counters* · **#1047**.
+
+## New public line — maturity band reset (ADR-0073)
+
+When opening **`1.8.0-beta`** (next dev line after **`1.7.4`** completes), **`maturity_build` resets** — it does **not** continue from `.208`.
+
+| `[project] version` | `maturity_build` band | Typical start |
+| --- | --- | --- |
+| **`1.8.0-beta`** | **1–126** (counter starts at **`1`**; forgiving ceiling) | e.g. **`1`** — first beta = `.1`; document in release notes |
+| **`1.8.0-rc`** | **127–199** | e.g. **`127`** or **`128`** — forgiving ceiling |
+| **`1.8.0`** GA | **200–254** | **`.200`** GA; **`.201`** first fix on that line |
+
+**`.postN`** applies only on the **release band** of a line (fix-line republication). **Beta/rc bands** use the octet only — no PyPI pre-release uploads per distribution policy.
+
+## Canonical refs
+
+- **`docs/VERSIONING.md`** · **ADR-0072** · **ADR-0073** · **#970** · **#772** · **#978** · **#1047**

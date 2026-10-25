@@ -1,0 +1,30 @@
+---
+description: CHIRP cross-tool context recovery and evidence-backed handoffs. Use when the operator says `chirp`/`CHIRP`, resumes after context loss, asks for cross-agent status, or agents disagree about completion.
+globs:
+  - .cursor/skills/chirp-context-recovery/**
+  - docs/hubs/**
+  - docs/ops/**
+alwaysApply: false
+---
+
+# CHIRP — Cross-tool Hub-Indexed Recall Pattern
+
+CHIRP is the protocol for recovering canonical context across Codex, Claude Code,
+Cursor, GitHub, tmux/SSH, local repositories, and the Obsidian vault. It is a
+verification ritual, not a claim that an agent remembers every prior session.
+
+When triggered by `chirp` or an equivalent cross-tool handoff request:
+
+1. Resolve the repository, host, session, branch, issue/PR, and owner in scope.
+2. Read the relevant canonical hub and private source when the task requires it.
+3. Inspect the narrowest direct evidence (`git`, GitHub, vault, or read-only
+   `tmux capture-pane`); do not send tmux input merely to inspect state.
+4. Classify each fact as observed, reported, planned, stale, or blocked.
+5. Reconcile conflicts explicitly and preserve commit/PR/issue/session anchors.
+6. Return: **CHIRP status**, **Observed**, **Discrepancies**, **Ownership**, and
+   **Next safe action**.
+
+Never infer that a spinner, prompt, command issuance, local commit, or agent
+summary means that remote execution, CI, push, merge, or publication completed.
+Do not duplicate canonical issues/plans or leak secrets, raw PII, credentials,
+private host details, or full session logs into tracked/public output.

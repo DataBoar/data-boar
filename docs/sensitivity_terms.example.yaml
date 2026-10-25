@@ -1,0 +1,224 @@
+# Example ML/DL training terms for sensitivity detection.
+# Use as ml_patterns_file and/or dl_patterns_file in your config, or copy entries
+# into sensitivity_detection.ml_terms / sensitivity_detection.dl_terms (inline).
+# Label: sensitive (or 1) = PII/personal; non_sensitive (or 0) = not sensitive.
+# See SENSITIVITY_DETECTION.md for full documentation.
+
+- text: "cpf"
+  label: sensitive
+- text: "cnpj"
+  label: sensitive
+- text: "email"
+  label: sensitive
+# Phone / contact – multiple naming schemes and languages (column names and labels)
+- text: "telefone"
+  label: sensitive
+- text: "phone"
+  label: sensitive
+- text: "celular"
+  label: sensitive
+- text: "mobile"
+  label: sensitive
+- text: "fone"
+  label: sensitive
+- text: "home phone"
+  label: sensitive
+- text: "work phone"
+  label: sensitive
+- text: "cell phone"
+  label: sensitive
+- text: "contact number"
+  label: sensitive
+- text: "téléphone"
+  label: sensitive
+- text: "teléfono"
+  label: sensitive
+- text: "telefono"
+  label: sensitive
+- text: "móvil"
+  label: sensitive
+- text: "handy"
+  label: sensitive
+- text: "handynummer"
+  label: sensitive
+- text: "mobilnummer"
+  label: sensitive
+# Name / identifier – multiple naming schemes and languages (column names and labels)
+- text: "first name"
+  label: sensitive
+- text: "last name"
+  label: sensitive
+- text: "surname"
+  label: sensitive
+- text: "full name"
+  label: sensitive
+- text: "birth name"
+  label: sensitive
+- text: "christian name"
+  label: sensitive
+- text: "nickname"
+  label: sensitive
+- text: "given name"
+  label: sensitive
+- text: "family name"
+  label: sensitive
+- text: "middle name"
+  label: sensitive
+- text: "nome"
+  label: sensitive
+- text: "sobrenome"
+  label: sensitive
+- text: "nome completo"
+  label: sensitive
+- text: "nombre"
+  label: sensitive
+- text: "apellido"
+  label: sensitive
+- text: "nombre completo"
+  label: sensitive
+- text: "prénom"
+  label: sensitive
+- text: "nom de famille"
+  label: sensitive
+- text: "nom complet"
+  label: sensitive
+- text: "vorname"
+  label: sensitive
+- text: "nachname"
+  label: sensitive
+- text: "geburtsname"
+  label: sensitive
+- text: "familienname"
+  label: sensitive
+# ID / document – multiple naming schemes and languages (column names and labels)
+- text: "rg"
+  label: sensitive
+- text: "passaporte"
+  label: sensitive
+- text: "passport"
+  label: sensitive
+- text: "ctps"
+  label: sensitive
+- text: "carteira de trabalho"
+  label: sensitive
+- text: "documento oficial"
+  label: sensitive
+- text: "official document"
+  label: sensitive
+- text: "distintivo"
+  label: sensitive
+- text: "carteira sindical"
+  label: sensitive
+- text: "certificado de reservista"
+  label: sensitive
+- text: "título eleitoral"
+  label: sensitive
+- text: "titulo eleitoral"
+  label: sensitive
+- text: "pis"
+  label: sensitive
+- text: "cartão cidadão"
+  label: sensitive
+- text: "cartao cidadao"
+  label: sensitive
+- text: "identidade de estrangeiro"
+  label: sensitive
+- text: "certidão"
+  label: sensitive
+- text: "certidao"
+  label: sensitive
+- text: "green card"
+  label: sensitive
+- text: "registro no conselho de classe"
+  label: sensitive
+- text: "cnh"
+  label: sensitive
+- text: "driver license"
+  label: sensitive
+- text: "driving licence"
+  label: sensitive
+- text: "documento de identidade"
+  label: sensitive
+- text: "identity document"
+  label: sensitive
+- text: "id card"
+  label: sensitive
+- text: "national id"
+  label: sensitive
+- text: "document number"
+  label: sensitive
+- text: "carte d'identité"
+  label: sensitive
+- text: "pasaporte"
+  label: sensitive
+- text: "passeport"
+  label: sensitive
+# French document nicknames and regional (carte bleue, carte rose, carte vitale, etc.)
+- text: "carte bleue"
+  label: sensitive
+- text: "carte rose"
+  label: sensitive
+- text: "carte vitale"
+  label: sensitive
+- text: "titre de séjour"
+  label: sensitive
+- text: "carte de séjour"
+  label: sensitive
+- text: "numéro de sécurité sociale"
+  label: sensitive
+# Further regional ID (PT-BR, EN, ES, DE)
+- text: "rne"
+  label: sensitive
+- text: "ric"
+  label: sensitive
+- text: "certidão de nascimento"
+  label: sensitive
+- text: "oab"
+  label: sensitive
+- text: "crm"
+  label: sensitive
+- text: "employee badge number"
+  label: sensitive
+- text: "license number"
+  label: sensitive
+- text: "nie"
+  label: sensitive
+- text: "libro de familia"
+  label: sensitive
+- text: "Aufenthaltserlaubnis"
+  label: sensitive
+- text: "Sozialversicherungsnummer"
+  label: sensitive
+# Generic/ambiguous (doc_id, document_id) → detector returns MEDIUM + PII_AMBIGUOUS; operator should confirm manually
+- text: "doc_id"
+  label: sensitive
+- text: "document_id"
+  label: sensitive
+- text: "id_number"
+  label: sensitive
+- text: "data de nascimento"
+  label: sensitive
+- text: "senha"
+  label: sensitive
+- text: "password"
+  label: sensitive
+- text: "salário"
+  label: sensitive
+- text: "salary"
+  label: sensitive
+- text: "health record"
+  label: sensitive
+- text: "saude"
+  label: sensitive
+- text: "item_count"
+  label: non_sensitive
+- text: "config_file"
+  label: non_sensitive
+- text: "temp_data"
+  label: non_sensitive
+- text: "system_log"
+  label: non_sensitive
+- text: "lyrics"
+  label: non_sensitive
+- text: "tablature"
+  label: non_sensitive

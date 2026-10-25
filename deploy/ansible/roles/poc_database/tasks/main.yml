@@ -1,0 +1,77 @@
+---
+# Role: poc_database
+# Spins up a test database via Docker and populates it with synthetic PII data.
+
+- name: Set port based on db_type
+  ansible.builtin.set_fact:
+    _poc_port: "{{ 5432 if poc_db_type == 'postgres' else 3306 }}"
+
+- name: Pull database Docker image
+  community.docker.docker_image:
+    name: "{{ 'postgres:16-alpine' if poc_db_type == 'postgres' else 'mariadb:11' }}"
+    source: pull
+  when: poc_db_docker_enabled | bool
+
+- name: Run PostgreSQL container
+  community.docker.docker_container:
+    name: poc_postgres
+    image: postgres:16-alpine
+    state: started
+    restart_policy: unless-stopped
+    ports:
+      - "15432:5432"
+    env:
+      POSTGRES_DB: "{{ poc_db_name }}"
+      POSTGRES_USER: "{{ poc_db_user }}"
+      POSTGRES_PASSWORD: "{{ poc_db_password }}"
+  when:
+    - poc_db_docker_enabled | bool
+    - poc_db_type == "postgres"
+
+- name: Run MariaDB container
+  community.docker.docker_container:
+    name: poc_mariadb
+    image: mariadb:11
+    state: started
+    restart_policy: unless-stopped
+    ports:
+      - "13306:3306"
+    env:
+      MARIADB_DATABASE: "{{ poc_db_name }}"
+      MARIADB_USER: "{{ poc_db_user }}"
+      MARIADB_PASSWORD: "{{ poc_db_password }}"
+      MARIADB_ROOT_PASSWORD: root_poc_pass
+  when:
+    - poc_db_docker_enabled | bool
+    - poc_db_type == "mariadb"
+
+- name: Wait for database to be ready
+  ansible.builtin.wait_for:
+    host: "{{ poc_db_host }}"
+    port: "{{ _poc_port }}"
+    timeout: 60
+  when: poc_db_docker_enabled | bool
+
+- name: Install Python database drivers
+  ansible.builtin.shell: uv pip install psycopg2-binary pymysql pyyaml
+  args:
+    chdir: "{{ playbook_dir }}/../.."
+
+- name: Populate POC database with synthetic data
+  ansible.builtin.command: >
+    uv run python scripts/populate_poc_database.py
+    --db-type {{ poc_db_type }}
+    --host {{ poc_db_host }}
+    --port {{ _poc_port }}
+    --database {{ poc_db_name }}
+    --user {{ poc_db_user }}
+    --password {{ poc_db_password }}
+    --large-rows {{ poc_db_large_rows }}
+    {{ "--write-config" if poc_db_write_config | bool else "" }}
+  args:
+    chdir: "{{ playbook_dir }}/../.."
+  register: populate_result
+
+- name: Show population output
+  ansible.builtin.debug:
+    msg: "{{ populate_result.stdout_lines }}"

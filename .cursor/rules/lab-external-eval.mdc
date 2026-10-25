@@ -1,0 +1,16 @@
+---
+description: Lab external connectivity eval — public APIs and read-only DBs; no secrets in tracked files; pointer to LAB_EXTERNAL_CONNECTIVITY_EVAL.md and external-eval keyword.
+globs: ["docs/ops/LAB_EXTERNAL_CONNECTIVITY_EVAL*.md", "scripts/lab-external-smoke.ps1", "deploy/lab-smoke-stack/docker-compose.mongo.yml"]
+alwaysApply: false
+---
+
+# Lab external connectivity evaluation
+
+When the operator runs **external-eval** or edits **`LAB_EXTERNAL_CONNECTIVITY_EVAL*.md`**:
+
+1. **Never** commit passwords for RNAcentral, Azure SQL samples, or any third-party DB — reference the **provider help page** instead.
+2. Prefer **local Docker** (`deploy/lab-smoke-stack`, `docker-compose.mongo.yml`) for repeatable scans; public internet targets are **optional** and **bandwidth-light**.
+3. Encourage **two** test types per session: one **success path** + one **intentional failure** (wrong port/credentials) to validate **`scan_failures`** messaging.
+4. **PRD-readiness:** external eval is **supplementary** — not a substitute for **HOMELAB_VALIDATION**, **SECURITY**, or release checklist.
+
+Skill: **`.cursor/skills/lab-external-connectivity-eval/SKILL.md`**.

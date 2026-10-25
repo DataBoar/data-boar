@@ -1,0 +1,87 @@
+# Gitleaks + OSV dependency scan (issue #1933 — keen-platypus parity, strict gitleaks).
+# OSS mode; third-party Actions use full commit SHAs (ADR 0005).
+#
+# Strict gitleaks: pinned binary SHA256 (not checksums.txt self-verify), remove root
+# .gitleaks.toml / .gitleaksignore before scan (PR allowlist bypass), --ignore-gitleaks-allow.
+# Maintainer allowlist: security/gitleaks.toml (kombi + confirmed FPs).
+name: Gitleaks
+
+permissions:
+  contents: read
+
+'on':
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  schedule:
+    - cron: "0 8 * * 1"
+  workflow_dispatch:
+
+jobs:
+  scan:
+    name: Secret scan (Gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install pinned gitleaks (binary SHA256)
+        run: |
+          set -euo pipefail
+          source scripts/tool-pins.sh
+          BASE="https://github.com/gitleaks/gitleaks/releases/download/v${DB_GITLEAKS_VERSION}"
+          TARBALL="gitleaks_${DB_GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -sSfL "${BASE}/${TARBALL}" -o "${TARBALL}"
+          tar -xzf "${TARBALL}" gitleaks
+          echo "${DB_GITLEAKS_LINUX_X64_BINARY_SHA256}  gitleaks" | sha256sum -c -
+          chmod +x ./gitleaks
+
+      - name: Gitleaks strict scan
+        run: |
+          set -euo pipefail
+          source scripts/tool-pins.sh
+          rm -f .gitleaks.toml .gitleaksignore
+          ./gitleaks git . \
+            --config "${DB_GITLEAKS_POLICY_CONFIG}" \
+            --no-banner \
+            --redact \
+            --exit-code 1 \
+            --ignore-gitleaks-allow
+
+  osv-scanner:
+    name: OSV dependency scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Download and verify osv-scanner
+        run: |
+          set -euo pipefail
+          source scripts/tool-pins.sh
+          BASE="https://github.com/google/osv-scanner/releases/download/v${DB_OSV_SCANNER_VERSION}"
+          curl -sSfL "${BASE}/osv-scanner_linux_amd64" -o osv-scanner
+          echo "${DB_OSV_SCANNER_LINUX_AMD64_SHA256}  osv-scanner" | sha256sum -c -
+          chmod +x ./osv-scanner
+
+      - name: Scan dependency manifests
+        run: ./osv-scanner scan source -r . --config=security/osv-scanner.toml
+
+  slack-notify-on-failure:
+    name: Slack CI failure notify
+    if: ${{ always() && contains(needs.*.result, 'failure') }}
+    needs: [scan, osv-scanner]
+    uses: $/.github/workflows/slack-ci-failure-notify.yml
+    with:
+      run_name: Gitleaks
+      head_branch: ${{ github.head_ref || github.ref_name }}
+      event: ${{ github.event_name }}
+      html_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    secrets:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

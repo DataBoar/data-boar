@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">Compliance Crawler logo (original)</title>
+  <desc id="desc">
+    Abstract C-shaped mark encircling a data node, representing compliant data discovery.
+  </desc>
+
+  <!-- Background -->
+  <rect x="0" y="0" width="128" height="128" fill="none"/>
+
+  <!-- Outer C shape: thick stroked circle with right side "cut out" -->
+  <circle cx="64" cy="64" r="44" fill="none" stroke="#145DA0" stroke-width="12"/>
+
+  <!-- Mask rectangle to open the right side of the circle, forming a C -->
+  <rect x="64" y="16" width="48" height="96" fill="#ffffff"/>
+
+  <!-- Inner data node: rounded square inside the C -->
+  <rect x="70" y="52" width="20" height="24" rx="4" ry="4" fill="#21A179"/>
+
+  <!-- Small scan "beam" lines on the left, suggesting crawling/scanning -->
+  <line x1="26" y1="48" x2="40" y2="48" stroke="#145DA0" stroke-width="4" stroke-linecap="round"/>
+  <line x1="24" y1="64" x2="40" y2="64" stroke="#145DA0" stroke-width="4" stroke-linecap="round"/>
+  <line x1="26" y1="80" x2="40" y2="80" stroke="#145DA0" stroke-width="4" stroke-linecap="round"/>
+</svg>

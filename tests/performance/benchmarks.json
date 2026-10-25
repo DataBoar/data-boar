@@ -1,0 +1,14 @@
+{
+  "benchmark": "discovery_v1",
+  "db_path": "data\\lab_completao_benchmark.db",
+  "sample_limit": 5000,
+  "extra_rows": 2000,
+  "sequential_seconds": 0.042568,
+  "parallel_seconds": 1.378047,
+  "parallel_workers": 4,
+  "speedup_vs_sequential": 0.0309,
+  "sequential_assets": 1,
+  "parallel_assets": 1,
+  "results_match": true,
+  "generated_at_epoch": 1777169841.2750165
+}

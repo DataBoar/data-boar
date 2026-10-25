@@ -1,0 +1,1487 @@
+"""
+Tests for shell and PowerShell scripts: syntax validity and safe dry-run behaviour.
+
+SonarQube-style checks: scripts use quoted variables, explicit exit codes, and no
+obvious injection; these tests ensure they parse and (where possible) run a no-op path.
+"""
+
+import py_compile
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+
+def _project_root() -> Path:
+    return Path(__file__).resolve().parent.parent
+
+
+# --- Bash: prep_audit.sh syntax (bash -n) ---
+
+
+def test_prep_audit_sh_syntax():
+    """prep_audit.sh has valid bash syntax (bash -n). Skipped on Windows (path handling)."""
+    if sys.platform == "win32":
+        return  # bash -n with Windows path is unreliable (e.g. Git Bash path quirks)
+    root = _project_root()
+    script = root / "prep_audit.sh"
+    if not script.exists():
+        return  # skip if removed
+    try:
+        proc = subprocess.run(
+            ["bash", "-n", str(script)],
+            cwd=str(root),
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+    except FileNotFoundError:
+        return
+    assert proc.returncode == 0, f"bash -n failed: {proc.stderr or proc.stdout}"
+
+
+def test_prep_audit_sh_has_shebang_and_exit_code():
+    """prep_audit.sh has shebang and uses explicit exit 1 when not root (Sonar best practice)."""
+    root = _project_root()
+    script = root / "prep_audit.sh"
+    if not script.exists():
+        return
+    text = script.read_text(encoding="utf-8", errors="replace")
+    assert text.startswith("#!/bin/bash"), "Script should have bash shebang"
+    assert "exit 1" in text, (
+        "Script should use explicit exit code (e.g. exit 1 when not root)"
+    )
+
+
+def test_prep_audit_sh_pins_uv_download_then_run():
+    """#1905: no curl|sh; download uv tarball, sha256, then exec (fail-closed)."""
+    script = _project_root() / "prep_audit.sh"
+    text = script.read_text(encoding="utf-8")
+    assert "install.sh | sh" not in text
+    assert "astral.sh/uv/install.sh" not in text
+    assert "sha256sum -c" in text
+    assert "UV_SHA256=" in text
+    assert "github.com/astral-sh/uv/releases/download/" in text
+    assert "--retry-connrefused" in text
+    assert "Failed to download" in text
+
+
+# --- PowerShell: commit-or-pr.ps1 syntax (Parser::ParseFile) ---
+
+
+def test_commit_or_pr_ps1_syntax(warm_pwsh):
+    """scripts/commit-or-pr.ps1 has valid PowerShell syntax (parse-only, no execution)."""
+    root = _project_root()
+    script = root / "scripts" / "commit-or-pr.ps1"
+    if not script.exists():
+        return
+    # Parse-only: avoids running git or any side effects; works on all platforms
+    parse_script = (
+        "$path = [System.IO.Path]::GetFullPath((Join-Path (Get-Location) 'scripts/commit-or-pr.ps1')); "
+        "$errors = $null; "
+        "$null = [System.Management.Automation.Language.Parser]::ParseFile($path, [ref]$null, [ref]$errors); "
+        "exit ([int]($errors -and $errors.Count -gt 0))"
+    )
+    # #860: the FIRST pwsh start after boot can exceed 30s under load (JIT /
+    # assembly cache cold on Linux). The session-scoped ``warm_pwsh`` fixture
+    # absorbs that once; 60s here is belt-and-suspenders for slow CI runners.
+    timeout_s = 60
+    errors: list[str] = []
+    for pw in ("pwsh", "powershell"):
+        try:
+            proc = subprocess.run(
+                [pw, "-NoProfile", "-NonInteractive", "-Command", parse_script],
+                cwd=str(root),
+                capture_output=True,
+                text=True,
+                timeout=timeout_s,
+            )
+        except FileNotFoundError:
+            continue
+        except subprocess.TimeoutExpired:
+            errors.append(f"{pw}: timed out after {timeout_s}s")
+            continue
+        assert proc.returncode == 0, (
+            f"commit-or-pr.ps1 parse failed with {pw}: {proc.stderr or proc.stdout}"
+        )
+        return
+    if errors:
+        raise AssertionError(
+            "commit-or-pr.ps1 parse check: " + "; ".join(errors),
+        )
+
+
+def test_commit_or_pr_ps1_has_param_block():
+    """scripts/commit-or-pr.ps1 has param block and ValidateSet for Action (structured)."""
+    root = _project_root()
+    script = root / "scripts" / "commit-or-pr.ps1"
+    if not script.exists():
+        return
+    text = script.read_text(encoding="utf-8", errors="replace")
+    assert "param(" in text
+    assert "ValidateSet" in text
+    assert "Preview" in text and "Commit" in text and "PR" in text
+
+
+def _parse_powershell_script(script_path: Path, root: Path) -> bool:
+    """Return True if script has valid PowerShell syntax (Parser::ParseFile)."""
+    # Scripts may live outside the consumer repo (DataBoar/maestro after spinout #8).
+    try:
+        rel = script_path.resolve().relative_to(root.resolve())
+        path_expr = (
+            "[System.IO.Path]::GetFullPath((Join-Path (Get-Location) '"
+            + str(rel.as_posix())
+            + "'))"
+        )
+    except ValueError:
+        abs_posix = script_path.resolve().as_posix().replace("'", "''")
+        path_expr = f"'{abs_posix}'"
+    parse_script = (
+        f"$path = {path_expr}; "
+        "$errors = $null; "
+        "$null = [System.Management.Automation.Language.Parser]::ParseFile($path, [ref]$null, [ref]$errors); "
+        "exit ([int]($errors -and $errors.Count -gt 0))"
+    )
+    for pw in ("pwsh", "powershell"):
+        try:
+            proc = subprocess.run(
+                [pw, "-NoProfile", "-NonInteractive", "-Command", parse_script],
+                cwd=str(root),
+                capture_output=True,
+                text=True,
+                # #860: 60s absorbs pwsh cold-start on slow runners; callers in
+                # parse loops should also request the ``warm_pwsh`` fixture.
+                timeout=60,
+                check=False,
+            )
+        except FileNotFoundError:
+            continue
+        return proc.returncode == 0
+    return False
+
+
+def test_preview_commit_ps1_syntax():
+    """scripts/preview-commit.ps1 has valid PowerShell syntax (parse-only)."""
+    root = _project_root()
+    script = root / "scripts" / "preview-commit.ps1"
+    if not script.exists():
+        return
+    assert _parse_powershell_script(script, root), "preview-commit.ps1 parse failed"
+
+
+def test_evidence_hash_manifest_ps1_syntax():
+    """scripts/evidence-hash-manifest.ps1 has valid PowerShell syntax (parse-only)."""
+    root = _project_root()
+    script = root / "scripts" / "evidence-hash-manifest.ps1"
+    if not script.exists():
+        return
+    assert _parse_powershell_script(script, root), (
+        "evidence-hash-manifest.ps1 parse failed"
+    )
+
+
+def test_mount_secure_vault_ps1_syntax():
+    """scripts/mount-secure-vault.ps1 has valid PowerShell syntax (parse-only)."""
+    root = _project_root()
+    script = root / "scripts" / "mount-secure-vault.ps1"
+    if not script.exists():
+        return
+    assert _parse_powershell_script(script, root), "mount-secure-vault.ps1 parse failed"
+
+
+def test_pr_hygiene_remind_ps1_syntax():
+    """scripts/pr-hygiene-remind.ps1 has valid PowerShell syntax (parse-only)."""
+    root = _project_root()
+    script = root / "scripts" / "pr-hygiene-remind.ps1"
+    if not script.exists():
+        return
+    assert _parse_powershell_script(script, root), "pr-hygiene-remind.ps1 parse failed"
+
+
+def test_maintenance_check_ps1_syntax():
+    """scripts/maintenance-check.ps1 has valid PowerShell syntax (parse-only)."""
+    root = _project_root()
+    script = root / "scripts" / "maintenance-check.ps1"
+    if not script.exists():
+        return
+    assert _parse_powershell_script(script, root), "maintenance-check.ps1 parse failed"
+
+
+def test_docker_hub_pull_ps1_syntax():
+    """scripts/docker-hub-pull.ps1 has valid PowerShell syntax (parse-only)."""
+    root = _project_root()
+    script = root / "scripts" / "docker-hub-pull.ps1"
+    if not script.exists():
+        return
+    assert _parse_powershell_script(script, root), "docker-hub-pull.ps1 parse failed"
+
+
+def test_docker_lab_build_ps1_syntax():
+    """scripts/docker-lab-build.ps1 has valid PowerShell syntax (parse-only)."""
+    root = _project_root()
+    script = root / "scripts" / "docker-lab-build.ps1"
+    if not script.exists():
+        return
+    assert _parse_powershell_script(script, root), "docker-lab-build.ps1 parse failed"
+
+
+def test_docker_prune_local_ps1_syntax():
+    """scripts/docker-prune-local.ps1 has valid PowerShell syntax (parse-only)."""
+    root = _project_root()
+    script = root / "scripts" / "docker-prune-local.ps1"
+    if not script.exists():
+        return
+    assert _parse_powershell_script(script, root), "docker-prune-local.ps1 parse failed"
+
+
+def test_pr_merge_when_green_ps1_syntax():
+    """scripts/pr-merge-when-green.ps1 has valid PowerShell syntax (parse-only)."""
+    root = _project_root()
+    script = root / "scripts" / "pr-merge-when-green.ps1"
+    if not script.exists():
+        return
+    assert _parse_powershell_script(script, root), (
+        "pr-merge-when-green.ps1 parse failed"
+    )
+
+
+def test_inv_adr_ps1_syntax():
+    """scripts/inv-adr.ps1 has valid PowerShell syntax (parse-only)."""
+    root = _project_root()
+    script = root / "scripts" / "inv-adr.ps1"
+    if not script.exists():
+        return
+    assert _parse_powershell_script(script, root), "inv-adr.ps1 parse failed"
+
+
+def test_inv_adr_inventory_hash_matches_data_lines():
+    """INVENTORY.txt InventoryHash covers data rows only (regression guard)."""
+    root = _project_root()
+    inv = root / "docs" / "adr" / "INVENTORY.txt"
+    if not inv.exists():
+        return
+    text = inv.read_text(encoding="utf-8")
+    lines = text.splitlines()
+    data_lines = []
+    for line in lines:
+        if line.startswith("#"):
+            continue
+        if not line.strip():
+            continue
+        if line.startswith("# InventoryHash:"):
+            continue
+        data_lines.append(line)
+    assert data_lines, "expected ADR data rows in INVENTORY.txt"
+    import hashlib
+
+    expected = hashlib.sha256("\n".join(data_lines).encode("utf-8")).hexdigest().upper()
+    hash_line = next((ln for ln in lines if ln.startswith("# InventoryHash:")), "")
+    assert hash_line, "missing InventoryHash line"
+    got = hash_line.split(":", 1)[1].strip().upper()
+    assert got == expected, "InventoryHash does not match data rows"
+
+
+def test_private_git_sync_ps1_syntax():
+    """scripts/private-git-sync.ps1 has valid PowerShell syntax (parse-only)."""
+    root = _project_root()
+    script = root / "scripts" / "private-git-sync.ps1"
+    if not script.exists():
+        return
+    assert _parse_powershell_script(script, root), "private-git-sync.ps1 parse failed"
+
+
+def test_private_git_sync_ps1_excludes_homelab_secrets_from_pcloud():
+    """private-git-sync mirrors homelab secret leaf names to VC and /XF on pCloud."""
+    root = _project_root()
+    script = root / "scripts" / "private-git-sync.ps1"
+    if not script.exists():
+        return
+    text = script.read_text(encoding="utf-8")
+    assert "HomelabSecretLeafNames" in text
+    assert ".env.bitwarden.local" in text
+    assert "Sync-VeraCryptHomelabSecrets" in text
+    assert "/XF" in text
+    assert "/R:2" in text and "/W:5" in text
+
+
+def test_private_git_sync_lab_hosts_exclude_fragile_sd():
+    """Bare mirror host list excludes fragile SD lab host and includes alpine-emachines."""
+    fragile_sd = "pi" + "3b"
+    mini_host = "mini" + "-bt"
+    lat_host = "lat" + "itude"
+    root = _project_root()
+    for name in ("private-git-sync.ps1", "private-git-sync.sh"):
+        script = root / "scripts" / name
+        if not script.exists():
+            continue
+        text = script.read_text(encoding="utf-8")
+        assert "LabBareMirrorHosts" in text or "LAB_BARE_MIRROR_HOSTS" in text
+        assert "alpine-emachines" in text
+        assert fragile_sd in text.lower()  # documented exclusion
+        host_block = text
+        if "LabBareMirrorHosts" in text:
+            import re
+
+            m = re.search(r"LabBareMirrorHosts\s*=\s*@\([^)]+\)", text, re.DOTALL)
+            assert m, "LabBareMirrorHosts array missing in ps1"
+            host_block = m.group(0)
+        else:
+            m = re.search(r"LAB_BARE_MIRROR_HOSTS=\([^)]+\)", text, re.DOTALL)
+            assert m, "LAB_BARE_MIRROR_HOSTS array missing in sh"
+            host_block = m.group(0)
+        assert fragile_sd not in host_block
+        assert mini_host in host_block
+        assert lat_host in host_block
+
+
+def test_private_git_sync_sh_syntax():
+    """scripts/private-git-sync.sh passes bash -n."""
+    if sys.platform == "win32":
+        return  # bare `bash` on GHA Windows is the WSL stub (#1427)
+    root = _project_root()
+    script = root / "scripts" / "private-git-sync.sh"
+    if not script.exists():
+        return
+    import subprocess
+
+    proc = subprocess.run(
+        ["bash", "-n", str(script)],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stderr or proc.stdout
+
+
+def test_snmp_LAB_ROUTER_01_lab_probe_ps1_syntax():
+    """scripts/snmp-LAB-ROUTER-01-lab-probe.ps1 has valid PowerShell syntax (parse-only)."""
+    root = _project_root()
+    script = root / "scripts" / "snmp-LAB-ROUTER-01-lab-probe.ps1"
+    if not script.exists():
+        return
+    assert _parse_powershell_script(script, root), (
+        "snmp-LAB-ROUTER-01-lab-probe.ps1 parse failed"
+    )
+
+
+def test_lab_op_sync_and_collect_ps1_syntax():
+    """scripts/lab-op-sync-and-collect.ps1 has valid PowerShell syntax (parse-only)."""
+    root = _project_root()
+    script = root / "scripts" / "lab-op-sync-and-collect.ps1"
+    if not script.exists():
+        return
+    assert _parse_powershell_script(script, root), (
+        "lab-op-sync-and-collect.ps1 parse failed"
+    )
+
+
+def test_lab_completao_orchestrate_ps1_syntax():
+    """scripts/lab-completao-orchestrate.ps1 has valid PowerShell syntax (parse-only)."""
+    root = _project_root()
+    script = root / "scripts" / "lab-completao-orchestrate.ps1"
+    if not script.exists():
+        return
+    assert _parse_powershell_script(script, root), (
+        "lab-completao-orchestrate.ps1 parse failed"
+    )
+
+
+def test_lab_completao_orchestrate_hybrid_v173_ps1_syntax():
+    """scripts/lab-completao-orchestrate-hybrid-v173.ps1 has valid PowerShell syntax (parse-only)."""
+    root = _project_root()
+    script = root / "scripts" / "lab-completao-orchestrate-hybrid-v173.ps1"
+    if not script.exists():
+        return
+    assert _parse_powershell_script(script, root), (
+        "lab-completao-orchestrate-hybrid-v173.ps1 parse failed"
+    )
+
+
+def test_maestro_benchmark_ab_ps1_syntax():
+    root = _project_root()
+    script = root / "scripts" / "maestro-benchmark-ab.ps1"
+    if not script.exists():
+        return
+    assert _parse_powershell_script(script, root), (
+        "maestro-benchmark-ab.ps1 parse failed"
+    )
+
+
+def test_lab_op_repo_status_ps1_syntax():
+    """scripts/lab-op-repo-status.ps1 has valid PowerShell syntax (parse-only)."""
+    root = _project_root()
+    script = root / "scripts" / "lab-op-repo-status.ps1"
+    if not script.exists():
+        return
+    assert _parse_powershell_script(script, root), "lab-op-repo-status.ps1 parse failed"
+
+
+def test_lab_op_git_ensure_ref_ps1_syntax():
+    """scripts/lab-op-git-ensure-ref.ps1 has valid PowerShell syntax (parse-only)."""
+    root = _project_root()
+    script = root / "scripts" / "lab-op-git-ensure-ref.ps1"
+    if not script.exists():
+        return
+    assert _parse_powershell_script(script, root), (
+        "lab-op-git-ensure-ref.ps1 parse failed"
+    )
+
+
+def test_collect_homelab_report_remote_ps1_syntax():
+    """scripts/collect-homelab-report-remote.ps1 has valid PowerShell syntax (parse-only)."""
+    root = _project_root()
+    script = root / "scripts" / "collect-homelab-report-remote.ps1"
+    if not script.exists():
+        return
+    assert _parse_powershell_script(script, root), (
+        "collect-homelab-report-remote.ps1 parse failed"
+    )
+
+
+def test_homelab_host_report_sh_syntax():
+    """scripts/homelab-host-report.sh has valid bash syntax (bash -n). Skipped on Windows."""
+    if sys.platform == "win32":
+        return
+    root = _project_root()
+    script = root / "scripts" / "homelab-host-report.sh"
+    if not script.exists():
+        return
+    try:
+        proc = subprocess.run(
+            ["bash", "-n", str(script)],
+            cwd=str(root),
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except FileNotFoundError:
+        return
+    assert proc.returncode == 0, f"bash -n failed: {proc.stderr or proc.stdout}"
+
+
+def test_labop_share_client_install_sh_syntax():
+    """scripts/labop-share-client-install.sh has valid bash syntax (bash -n). Skipped on Windows."""
+    if sys.platform == "win32":
+        return
+    root = _project_root()
+    script = root / "scripts" / "labop-share-client-install.sh"
+    if not script.exists():
+        return
+    try:
+        proc = subprocess.run(
+            ["bash", "-n", str(script)],
+            cwd=str(root),
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except FileNotFoundError:
+        return
+    assert proc.returncode == 0, f"bash -n failed: {proc.stderr or proc.stdout}"
+
+
+def test_lab_completao_host_smoke_sh_syntax():
+    """scripts/lab-completao-host-smoke.sh has valid bash syntax (bash -n). Skipped on Windows."""
+    if sys.platform == "win32":
+        return
+    root = _project_root()
+    script = root / "scripts" / "lab-completao-host-smoke.sh"
+    if not script.exists():
+        return
+    try:
+        proc = subprocess.run(
+            ["bash", "-n", str(script)],
+            cwd=str(root),
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except FileNotFoundError:
+        return
+    assert proc.returncode == 0, f"bash -n failed: {proc.stderr or proc.stdout}"
+
+
+def test_lab_node_01_ansible_preflight_sh_syntax():
+    """scripts/lab-node-01-ansible-preflight.sh has valid bash syntax (bash -n). Skipped on Windows."""
+    if sys.platform == "win32":
+        return
+    root = _project_root()
+    script = root / "scripts" / "lab-node-01-ansible-preflight.sh"
+    if not script.exists():
+        return
+    try:
+        proc = subprocess.run(
+            ["bash", "-n", str(script)],
+            cwd=str(root),
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except FileNotFoundError:
+        return
+    assert proc.returncode == 0, f"bash -n failed: {proc.stderr or proc.stdout}"
+
+
+def test_lab_node_01_ansible_labop_podman_apply_sh_syntax():
+    """scripts/lab-node-01-ansible-labop-podman-apply.sh has valid bash syntax (bash -n). Skipped on Windows."""
+    if sys.platform == "win32":
+        return
+    root = _project_root()
+    script = root / "scripts" / "lab-node-01-ansible-labop-podman-apply.sh"
+    if not script.exists():
+        return
+    try:
+        proc = subprocess.run(
+            ["bash", "-n", str(script)],
+            cwd=str(root),
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except FileNotFoundError:
+        return
+    assert proc.returncode == 0, f"bash -n failed: {proc.stderr or proc.stdout}"
+
+
+def test_lab_node_01_session_warm_sh_syntax():
+    """scripts/lab-node-01-session-warm.sh has valid bash syntax (bash -n). Skipped on Windows."""
+    if sys.platform == "win32":
+        return
+    root = _project_root()
+    script = root / "scripts" / "lab-node-01-session-warm.sh"
+    if not script.exists():
+        return
+    try:
+        proc = subprocess.run(
+            ["bash", "-n", str(script)],
+            cwd=str(root),
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except FileNotFoundError:
+        return
+    assert proc.returncode == 0, f"bash -n failed: {proc.stderr or proc.stdout}"
+
+
+def test_lab_node_01_fix_docker_list_sh_syntax():
+    """scripts/lab-node-01-fix-docker-list.sh has valid bash syntax (bash -n). Skipped on Windows."""
+    if sys.platform == "win32":
+        return
+    root = _project_root()
+    script = root / "scripts" / "lab-node-01-fix-docker-list.sh"
+    if not script.exists():
+        return
+    try:
+        proc = subprocess.run(
+            ["bash", "-n", str(script)],
+            cwd=str(root),
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except FileNotFoundError:
+        return
+    assert proc.returncode == 0, f"bash -n failed: {proc.stderr or proc.stdout}"
+
+
+def test_lab_node_01_docker_remove_live_restore_and_restart_sh_syntax():
+    """scripts/lab-node-01-docker-remove-live-restore-and-restart.sh has valid bash syntax. Skipped on Windows."""
+    if sys.platform == "win32":
+        return
+    root = _project_root()
+    script = root / "scripts" / "lab-node-01-docker-remove-live-restore-and-restart.sh"
+    if not script.exists():
+        return
+    try:
+        proc = subprocess.run(
+            ["bash", "-n", str(script)],
+            cwd=str(root),
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except FileNotFoundError:
+        return
+    assert proc.returncode == 0, f"bash -n failed: {proc.stderr or proc.stdout}"
+
+
+def test_lab_node_01_bitwarden_cli_bootstrap_sh_syntax():
+    """scripts/lab-node-01-bitwarden-cli-bootstrap.sh has valid bash syntax (bash -n). Skipped on Windows."""
+    if sys.platform == "win32":
+        return
+    root = _project_root()
+    script = root / "scripts" / "lab-node-01-bitwarden-cli-bootstrap.sh"
+    if not script.exists():
+        return
+    try:
+        proc = subprocess.run(
+            ["bash", "-n", str(script)],
+            cwd=str(root),
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except FileNotFoundError:
+        return
+    assert proc.returncode == 0, f"bash -n failed: {proc.stderr or proc.stdout}"
+
+
+def test_lab_node_01_install_veracrypt_console_debian13_sh_syntax():
+    """scripts/lab-node-01-install-veracrypt-console-debian13.sh has valid bash syntax. Skipped on Windows."""
+    if sys.platform == "win32":
+        return
+    root = _project_root()
+    script = root / "scripts" / "lab-node-01-install-veracrypt-console-debian13.sh"
+    if not script.exists():
+        return
+    try:
+        proc = subprocess.run(
+            ["bash", "-n", str(script)],
+            cwd=str(root),
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except FileNotFoundError:
+        return
+    assert proc.returncode == 0, f"bash -n failed: {proc.stderr or proc.stdout}"
+
+
+def test_primary_linux_agent_sessions_sh_syntax():
+    """scripts/primary-linux-agent-sessions.sh has valid bash syntax. Skipped on Windows."""
+    if sys.platform == "win32":
+        return
+    root = _project_root()
+    script = root / "scripts" / "primary-linux-agent-sessions.sh"
+    if not script.exists():
+        return
+    try:
+        proc = subprocess.run(
+            ["bash", "-n", str(script)],
+            cwd=str(root),
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except FileNotFoundError:
+        return
+    assert proc.returncode == 0, f"bash -n failed: {proc.stderr or proc.stdout}"
+
+
+def test_lab_node_01_veracrypt_mount_private_repo_sh_syntax():
+    """scripts/lab-node-01-veracrypt-mount-private-repo.sh has valid bash syntax. Skipped on Windows."""
+    if sys.platform == "win32":
+        return
+    root = _project_root()
+    script = root / "scripts" / "lab-node-01-veracrypt-mount-private-repo.sh"
+    if not script.exists():
+        return
+    try:
+        proc = subprocess.run(
+            ["bash", "-n", str(script)],
+            cwd=str(root),
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except FileNotFoundError:
+        return
+    assert proc.returncode == 0, f"bash -n failed: {proc.stderr or proc.stdout}"
+
+
+def test_docker_common_ps1_syntax():
+    """scripts/docker/DataBoarDockerCommon.ps1 has valid PowerShell syntax (parse-only)."""
+    root = _project_root()
+    script = root / "scripts" / "docker" / "DataBoarDockerCommon.ps1"
+    if not script.exists():
+        return
+    assert _parse_powershell_script(script, root), (
+        "DataBoarDockerCommon.ps1 parse failed"
+    )
+
+
+def test_create_pr_ps1_syntax():
+    """scripts/create-pr.ps1 has valid PowerShell syntax (parse-only)."""
+    root = _project_root()
+    script = root / "scripts" / "create-pr.ps1"
+    if not script.exists():
+        return
+    assert _parse_powershell_script(script, root), "create-pr.ps1 parse failed"
+
+
+def test_create_pr_ps1_has_param_block():
+    """scripts/create-pr.ps1 has param block with Title and BodyFilePath (structured)."""
+    root = _project_root()
+    script = root / "scripts" / "create-pr.ps1"
+    if not script.exists():
+        return
+    text = script.read_text(encoding="utf-8", errors="replace")
+    assert "param(" in text
+    assert "Title" in text and "BodyFilePath" in text
+
+
+def test_gh_ensure_default_ps1_syntax():
+    """scripts/gh-ensure-default.ps1 has valid PowerShell syntax (parse-only)."""
+    root = _project_root()
+    script = root / "scripts" / "gh-ensure-default.ps1"
+    if not script.exists():
+        return
+    assert _parse_powershell_script(script, root), "gh-ensure-default.ps1 parse failed"
+
+
+def test_version_readiness_smoke_ps1_syntax():
+    """scripts/version-readiness-smoke.ps1 has valid PowerShell syntax (parse-only)."""
+    root = _project_root()
+    script = root / "scripts" / "version-readiness-smoke.ps1"
+    if not script.exists():
+        return
+    assert _parse_powershell_script(script, root), (
+        "version-readiness-smoke.ps1 parse failed"
+    )
+
+
+def test_candidate_dossier_scaffold_ps1_syntax():
+    """scripts/candidate-dossier-scaffold.ps1 has valid PowerShell syntax (parse-only)."""
+    root = _project_root()
+    script = root / "scripts" / "candidate-dossier-scaffold.ps1"
+    if not script.exists():
+        return
+    assert _parse_powershell_script(script, root), (
+        "candidate-dossier-scaffold.ps1 parse failed"
+    )
+
+
+def test_candidate_dossier_scaffold_ps1_has_core_params():
+    """candidate dossier scaffold exposes key parameters for private workflow."""
+    root = _project_root()
+    script = root / "scripts" / "candidate-dossier-scaffold.ps1"
+    if not script.exists():
+        return
+    text = script.read_text(encoding="utf-8", errors="replace")
+    assert "CandidatePdfPath" in text
+    assert "OutputDir" in text
+    assert "LowPriorityCaution" in text
+    assert "AdvisorRemote" in text
+    assert "OperatorRelationship" in text
+    assert "Overwrite" in text
+
+
+def test_talent_dossier_ps1_syntax():
+    """scripts/talent-dossier.ps1 has valid PowerShell syntax (parse-only)."""
+    root = _project_root()
+    script = root / "scripts" / "talent-dossier.ps1"
+    if not script.exists():
+        return
+    assert _parse_powershell_script(script, root), "talent-dossier.ps1 parse failed"
+
+
+def test_talent_dossier_ps1_resolves_repo_root():
+    """talent-dossier supports portable repo root (env, --repo-root, PSScriptRoot)."""
+    root = _project_root()
+    script = root / "scripts" / "talent-dossier.ps1"
+    if not script.exists():
+        return
+    text = script.read_text(encoding="utf-8", errors="replace")
+    assert "DATA_BOAR_REPO_ROOT" in text
+    assert "--repo-root" in text
+    assert "Get-TalentDossierRepoRoot" in text
+
+
+def test_commit_or_pr_mentions_gh_default_repo_guard():
+    """commit-or-pr includes gh default repository guard for PR flow."""
+    root = _project_root()
+    script = root / "scripts" / "commit-or-pr.ps1"
+    if not script.exists():
+        return
+    text = script.read_text(encoding="utf-8", errors="replace")
+    assert "Set-GhDefaultRepo" in text
+    assert "RunVersionSmoke" in text
+
+
+def test_check_all_supports_optional_version_smoke():
+    """check-all script exposes optional version readiness smoke switch."""
+    root = _project_root()
+    script = root / "scripts" / "check-all.ps1"
+    if not script.exists():
+        return
+    text = script.read_text(encoding="utf-8", errors="replace")
+    assert "IncludeVersionSmoke" in text
+    assert "version-readiness-smoke.ps1" in text
+
+
+def test_check_all_supports_enforced_security_tier():
+    """check-all exposes --enforced / -Enforced for Semgrep parity (#1044)."""
+    root = _project_root()
+    for rel in ("scripts/check-all.ps1", "scripts/check-all.sh"):
+        script = root / rel
+        if not script.exists():
+            continue
+        text = script.read_text(encoding="utf-8", errors="replace")
+        assert "Enforced" in text or "enforced" in text
+        assert "check-all-security-scans" in text
+
+
+def test_check_all_security_scans_mirror_ci_commands():
+    """Security scan tier uses CI-parity Bandit, Zizmor, and Semgrep commands."""
+    root = _project_root()
+    sh = root / "scripts" / "check-all-security-scans.sh"
+    ps1 = root / "scripts" / "check-all-security-scans.ps1"
+    assert sh.is_file() and ps1.is_file()
+    sh_text = sh.read_text(encoding="utf-8", errors="replace")
+    ps1_text = ps1.read_text(encoding="utf-8", errors="replace")
+    for text in (sh_text, ps1_text):
+        assert (
+            "bandit -c pyproject.toml -r api core config connectors database file_scan report main.py -ll -q"
+            in text
+        )
+        assert "uvx zizmor .github/workflows/" in text
+        assert "scan --config p/python --metrics=off" in text
+        assert "avoid-sqlalchemy-text.avoid-sqlalchemy-text" in text
+        assert "zizmor-action" in text
+        assert "SEMGREP_VER" in text
+    assert "FAILURES" in sh_text
+    assert "failures" in ps1_text.lower()
+    assert "semgrep@${SEMGREP_VER}" in sh_text
+    assert "semgrep@$script:SEMGREP_VER" in ps1_text
+    assert (
+        "could not read Semgrep version from .github/workflows/semgrep.yml" in sh_text
+    )
+    assert (
+        "could not read Semgrep version from .github/workflows/semgrep.yml" in ps1_text
+    )
+
+
+def test_check_all_security_scans_semgrep_version_from_workflow_only():
+    """Local Semgrep pin is the semgrep.yml image tag — not a second hardcoded version (#1793)."""
+    root = _project_root()
+    wf = (root / ".github" / "workflows" / "semgrep.yml").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    found = re.findall(r"semgrep/semgrep:(\d+\.\d+\.\d+)", wf)
+    assert found, "semgrep.yml must pin image semgrep/semgrep:X.Y.Z"
+    ver = found[0]
+    sh_text = (root / "scripts" / "check-all-security-scans.sh").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    ps1_text = (root / "scripts" / "check-all-security-scans.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    for text in (sh_text, ps1_text):
+        assert ver not in text
+        assert "uvx semgrep scan" not in text
+    zizmor_yml = (root / ".github" / "workflows" / "zizmor.yml").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "zizmorcore/zizmor-action@" in zizmor_yml
+
+
+def test_pr_hygiene_mentions_gh_preflight():
+    """pr-hygiene-remind includes gh preflight reminder and quick checks switch."""
+    root = _project_root()
+    script = root / "scripts" / "pr-hygiene-remind.ps1"
+    if not script.exists():
+        return
+    text = script.read_text(encoding="utf-8", errors="replace")
+    assert "gh-ensure-default.ps1" in text
+    assert "RunQuickChecks" in text
+    assert "SLACK_WEBHOOK_URL" in text
+    assert "OPERATOR_NOTIFICATION_CHANNELS" in text
+
+
+def test_docs_private_scripts_syntax_optional(include_private_lint: bool):
+    """
+    When opted in (``pytest --include-private`` or ``INCLUDE_PRIVATE_LINT=1``),
+    parse any ``*.ps1`` under ``docs/private/`` and run ``bash -n`` on ``*.sh`` there (non-Windows only).
+    Skips if ``docs/private/`` is missing or contains no matching scripts.
+    """
+    if not include_private_lint:
+        return
+    root = _project_root()
+    private_dir = root / "docs" / "private"
+    if not private_dir.is_dir():
+        return
+    ps1_files = sorted(private_dir.rglob("*.ps1"))
+    for script in ps1_files:
+        assert _parse_powershell_script(script, root), (
+            f"{script.relative_to(root)}: PowerShell parse failed"
+        )
+    if sys.platform == "win32":
+        return
+    sh_files = sorted(private_dir.rglob("*.sh"))
+    for script in sh_files:
+        try:
+            proc = subprocess.run(
+                ["bash", "-n", str(script)],
+                cwd=str(root),
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+        except FileNotFoundError:
+            return
+        assert proc.returncode == 0, (
+            f"bash -n failed for {script.relative_to(root)}: "
+            f"{proc.stderr or proc.stdout}"
+        )
+
+
+def test_audit_concatenated_markdown_py_compiles():
+    """scripts/audit_concatenated_markdown.py compiles (optional Gemini bundle sanity helper)."""
+    root = _project_root()
+    script = root / "scripts" / "audit_concatenated_markdown.py"
+    if not script.exists():
+        return
+    py_compile.compile(str(script), doraise=True)
+
+
+def test_export_public_gemini_bundle_py_compiles():
+    """scripts/export_public_gemini_bundle.py compiles (safe tracked-files bundle for external LLM)."""
+    root = _project_root()
+    script = root / "scripts" / "export_public_gemini_bundle.py"
+    if not script.exists():
+        return
+    py_compile.compile(str(script), doraise=True)
+
+
+def test_audit_concat_sliding_window_py_compiles():
+    """scripts/audit_concat_sliding_window.py compiles (sliding-window bundle vs corpus heuristic)."""
+    root = _project_root()
+    script = root / "scripts" / "audit_concat_sliding_window.py"
+    if not script.exists():
+        return
+    py_compile.compile(str(script), doraise=True)
+
+
+def test_build_final_round_bucket_concat_py_compiles():
+    """scripts/build_final_round_bucket_concat.py compiles (final-round bucket concat + map-names)."""
+    root = _project_root()
+    script = root / "scripts" / "build_final_round_bucket_concat.py"
+    if not script.exists():
+        return
+    py_compile.compile(str(script), doraise=True)
+
+
+def test_pii_history_guard_py_compiles():
+    """scripts/pii_history_guard.py compiles (history anti-regression guard)."""
+    root = _project_root()
+    script = root / "scripts" / "pii_history_guard.py"
+    if not script.exists():
+        return
+    py_compile.compile(str(script), doraise=True)
+
+
+def test_issue_dev_license_jwt_py_compiles():
+    """scripts/issue_dev_license_jwt.py compiles (lab JWT issuer; keys stay private)."""
+    root = _project_root()
+    script = root / "scripts" / "issue_dev_license_jwt.py"
+    if not script.exists():
+        return
+    py_compile.compile(str(script), doraise=True)
+
+
+def test_generate_build_digest_py_compiles():
+    """scripts/generate_build_digest.py compiles (licensing build digest)."""
+    root = _project_root()
+    script = root / "scripts" / "generate_build_digest.py"
+    if not script.exists():
+        return
+    py_compile.compile(str(script), doraise=True)
+
+
+def test_generate_release_manifest_py_compiles():
+    """scripts/generate_release_manifest.py compiles (licensing release manifest)."""
+    root = _project_root()
+    script = root / "scripts" / "generate_release_manifest.py"
+    if not script.exists():
+        return
+    py_compile.compile(str(script), doraise=True)
+
+
+def test_application_sbom_py_compiles():
+    """scripts/application_sbom.py compiles (Cargo.lock merge, issue 1950)."""
+    root = _project_root()
+    script = root / "scripts" / "application_sbom.py"
+    assert script.is_file()
+    py_compile.compile(str(script), doraise=True)
+
+
+def test_emit_provenance_py_compiles():
+    """scripts/emit_provenance.py compiles (issue 1950 wrapper)."""
+    root = _project_root()
+    script = root / "scripts" / "emit_provenance.py"
+    assert script.is_file()
+    py_compile.compile(str(script), doraise=True)
+
+
+def test_generate_and_check_sbom_shell_syntax():
+    """Linux SBOM wrappers parse with bash -n."""
+    if sys.platform == "win32":
+        return
+    root = _project_root()
+    for rel in (
+        "scripts/generate-sbom.sh",
+        "scripts/check-sbom.sh",
+        "scripts/emit-provenance.sh",
+    ):
+        script = root / rel
+        assert script.is_file(), rel
+        proc = subprocess.run(
+            ["bash", "-n", str(script)],
+            cwd=str(root),
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        assert proc.returncode == 0, f"{rel}: {proc.stderr or proc.stdout}"
+
+
+def test_recovery_doc_bundle_sanity_ps1_syntax():
+    """scripts/recovery-doc-bundle-sanity.ps1 has valid PowerShell syntax (parse-only)."""
+    root = _project_root()
+    script = root / "scripts" / "recovery-doc-bundle-sanity.ps1"
+    if not script.exists():
+        return
+    assert _parse_powershell_script(script, root), (
+        "recovery-doc-bundle-sanity.ps1 parse failed"
+    )
+
+
+def test_operator_day_ritual_ps1_syntax():
+    """scripts/operator-day-ritual.ps1 has valid PowerShell syntax (parse-only)."""
+    root = _project_root()
+    script = root / "scripts" / "operator-day-ritual.ps1"
+    if not script.exists():
+        return
+    assert _parse_powershell_script(script, root), (
+        "operator-day-ritual.ps1 parse failed"
+    )
+
+
+def test_lab_node_01_ansible_baseline_ps1_syntax():
+    """scripts/lab-node-01-ansible-baseline.ps1 has valid PowerShell syntax (parse-only)."""
+    root = _project_root()
+    script = root / "scripts" / "lab-node-01-ansible-baseline.ps1"
+    if not script.exists():
+        return
+    assert _parse_powershell_script(script, root), (
+        "lab-node-01-ansible-baseline.ps1 parse failed"
+    )
+
+
+def test_run_homelab_host_report_all_ps1_syntax():
+    """scripts/run-homelab-host-report-all.ps1 has valid PowerShell syntax (parse-only)."""
+    root = _project_root()
+    script = root / "scripts" / "run-homelab-host-report-all.ps1"
+    if not script.exists():
+        return
+    assert _parse_powershell_script(script, root), (
+        "run-homelab-host-report-all.ps1 parse failed"
+    )
+
+
+def test_lab_op_ps1_syntax():
+    """scripts/lab-op.ps1 has valid PowerShell syntax (parse-only)."""
+    root = _project_root()
+    script = root / "scripts" / "lab-op.ps1"
+    if not script.exists():
+        return
+    assert _parse_powershell_script(script, root), "lab-op.ps1 parse failed"
+
+
+def test_lab_allow_data_boar_inbound_ps1_syntax():
+    """scripts/lab-allow-data-boar-inbound.ps1 has valid PowerShell syntax (parse-only)."""
+    root = _project_root()
+    script = root / "scripts" / "lab-allow-data-boar-inbound.ps1"
+    if not script.exists():
+        return
+    assert _parse_powershell_script(script, root), (
+        "lab-allow-data-boar-inbound.ps1 parse failed"
+    )
+
+
+def test_lab_allow_data_boar_inbound_sh_syntax():
+    """scripts/lab-allow-data-boar-inbound.sh has valid bash syntax (bash -n)."""
+    if sys.platform == "win32":
+        return
+    root = _project_root()
+    script = root / "scripts" / "lab-allow-data-boar-inbound.sh"
+    if not script.exists():
+        return
+    try:
+        proc = subprocess.run(
+            ["bash", "-n", str(script)],
+            cwd=str(root),
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+    except FileNotFoundError:
+        return
+    assert proc.returncode == 0, f"bash -n failed: {proc.stderr or proc.stdout}"
+
+
+def test_check_all_twins_run_shellcheck_severity_error():
+    """#1926: both check-all twins invoke shellcheck at error severity."""
+    root = _project_root()
+    sh = (root / "scripts" / "check-all.sh").read_text(encoding="utf-8")
+    ps1 = (root / "scripts" / "check-all.ps1").read_text(encoding="utf-8")
+    for text in (sh, ps1):
+        assert "shellcheck --severity=error" in text
+        assert "ABORTED by shellcheck" in text
+
+
+def test_paired_dev_gate_shell_scripts_bash_syntax():
+    """Paired Linux/macOS gate scripts (check-all, lint-only, quick-test, pre-commit-and-tests)."""
+    if sys.platform == "win32":
+        return
+    root = _project_root()
+    rels = (
+        "scripts/check-all.sh",
+        "scripts/check-all-security-scans.sh",
+        "scripts/lint-only.sh",
+        "scripts/quick-test.sh",
+        "scripts/pre-commit-and-tests.sh",
+    )
+    for rel in rels:
+        script = root / rel
+        assert script.is_file(), f"expected tracked script: {rel}"
+        try:
+            proc = subprocess.run(
+                ["bash", "-n", str(script)],
+                cwd=str(root),
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+        except FileNotFoundError:
+            return
+        assert proc.returncode == 0, (
+            f"bash -n failed for {rel}: {proc.stderr or proc.stdout}"
+        )
+
+
+def test_es_find_ps1_syntax():
+    """scripts/es-find.ps1 has valid PowerShell syntax (parse-only)."""
+    root = _project_root()
+    script = root / "scripts" / "es-find.ps1"
+    if not script.exists():
+        return
+    assert _parse_powershell_script(script, root), "es-find.ps1 parse failed"
+
+
+def test_social_x_pace_remind_ps1_syntax():
+    """scripts/social-x-pace-remind.ps1 has valid PowerShell syntax (parse-only)."""
+    root = _project_root()
+    script = root / "scripts" / "social-x-pace-remind.ps1"
+    if not script.exists():
+        return
+    assert _parse_powershell_script(script, root), (
+        "social-x-pace-remind.ps1 parse failed"
+    )
+
+
+def test_video_frame_samples_ps1_syntax():
+    """scripts/video-frame-samples.ps1 has valid PowerShell syntax (parse-only)."""
+    root = _project_root()
+    script = root / "scripts" / "video-frame-samples.ps1"
+    if not script.exists():
+        return
+    assert _parse_powershell_script(script, root), (
+        "video-frame-samples.ps1 parse failed"
+    )
+
+
+def test_image_inspect_ps1_syntax():
+    """scripts/image-inspect.ps1 has valid PowerShell syntax (parse-only)."""
+    root = _project_root()
+    script = root / "scripts" / "image-inspect.ps1"
+    if not script.exists():
+        return
+    assert _parse_powershell_script(script, root), "image-inspect.ps1 parse failed"
+
+
+def test_run_pii_local_seeds_pickaxe_ps1_syntax():
+    """scripts/run-pii-local-seeds-pickaxe.ps1 has valid PowerShell syntax (parse-only)."""
+    root = _project_root()
+    script = root / "scripts" / "run-pii-local-seeds-pickaxe.ps1"
+    if not script.exists():
+        return
+    assert _parse_powershell_script(script, root), (
+        "run-pii-local-seeds-pickaxe.ps1 parse failed"
+    )
+
+
+def test_pii_fresh_clone_audit_ps1_syntax():
+    """scripts/pii-fresh-clone-audit.ps1 has valid PowerShell syntax (parse-only)."""
+    root = _project_root()
+    script = root / "scripts" / "pii-fresh-clone-audit.ps1"
+    if not script.exists():
+        return
+    assert _parse_powershell_script(script, root), (
+        "pii-fresh-clone-audit.ps1 parse failed"
+    )
+
+
+def test_check_cursor_markdown_preview_settings_ps1_syntax():
+    """scripts/check-cursor-markdown-preview-settings.ps1 parses on Windows (parse-only)."""
+    root = _project_root()
+    script = root / "scripts" / "check-cursor-markdown-preview-settings.ps1"
+    if not script.exists():
+        return
+    assert _parse_powershell_script(script, root), (
+        "check-cursor-markdown-preview-settings.ps1 parse failed"
+    )
+
+
+def test_smoke_maturity_assessment_poc_ps1_parses():
+    """scripts/smoke-maturity-assessment-poc.ps1 has valid PowerShell syntax (parse-only)."""
+    root = _project_root()
+    script = root / "scripts" / "smoke-maturity-assessment-poc.ps1"
+    if not script.exists():
+        return
+    assert _parse_powershell_script(script, root), (
+        "smoke-maturity-assessment-poc.ps1 parse failed"
+    )
+
+
+def test_smoke_webauthn_json_ps1_parses():
+    """scripts/smoke-webauthn-json.ps1 has valid PowerShell syntax (parse-only)."""
+    root = _project_root()
+    script = root / "scripts" / "smoke-webauthn-json.ps1"
+    if not script.exists():
+        return
+    assert _parse_powershell_script(script, root), (
+        "smoke-webauthn-json.ps1 parse failed"
+    )
+
+
+# ---------------------------------------------------------------------------
+# PowerShell ASCII-safety guard
+# Non-ASCII characters (em-dash U+2014, curly quotes, etc.) cause
+# Windows PowerShell 5.1 to emit ParserError even when the file is otherwise
+# syntactically correct.  This test catches those regressions early.
+# ---------------------------------------------------------------------------
+
+_PS1_ASCII_UNSAFE_RE: re.Pattern[str] = re.compile(r"[^\x00-\x7F]")
+
+_PS1_ASCII_EXEMPT: frozenset[str] = frozenset(
+    {
+        # candidate-dossier-scaffold.ps1: intentionally contains Portuguese text in
+        # output strings for candidate dossier generation; targets pwsh 7+ only.
+        "candidate-dossier-scaffold.ps1",
+    }
+)
+
+
+def test_powershell_scripts_ascii_safe():
+    """All .ps1 scripts under scripts/ are ASCII-only (no em-dash, curly quotes, etc.).
+
+    Windows PowerShell 5.1 emits ParserError on non-ASCII characters in string literals
+    or comments even when the file is otherwise valid.  We enforce ASCII-only to prevent
+    silent breakage on the operator's Windows dev machine.
+
+    Exemptions: add a script name (not path) to _PS1_ASCII_EXEMPT only if it explicitly
+    targets pwsh 7+ and the non-ASCII is intentional.
+    """
+    root = _project_root()
+    violations: list[str] = []
+    for script in sorted((root / "scripts").glob("*.ps1")):
+        if script.name in _PS1_ASCII_EXEMPT:
+            continue
+        text = script.read_text(encoding="utf-8", errors="replace")
+        for lineno, line in enumerate(text.splitlines(), start=1):
+            m = _PS1_ASCII_UNSAFE_RE.search(line)
+            if m:
+                char = m.group(0)
+                violations.append(
+                    f"  scripts/{script.name}:{lineno} non-ASCII char {char!r}"
+                    f" (U+{ord(char):04X}) - use ASCII equivalent"
+                )
+    assert not violations, (
+        "PowerShell scripts contain non-ASCII characters that break PS 5.1:\n"
+        + "\n".join(violations)
+    )
+
+
+def test_pypi_publish_oidc_dispatch_wrapper() -> None:
+    """#1046: pypi-publish twins dispatch publish-pypi.yml; no UV_PUBLISH_TOKEN / uv publish."""
+    root = _project_root()
+    ps1 = (root / "scripts" / "pypi-publish.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    sh = (root / "scripts" / "pypi-publish.sh").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    for text in (ps1, sh):
+        assert "publish-pypi.yml" in text
+        assert "gh workflow run" in text
+        assert "UV_PUBLISH_TOKEN =" not in text
+        assert "uv publish dist" not in text
+        assert "& uv publish" not in text
+    assert "ValidateSet" in ps1 or "testpypi" in ps1
+    assert "testpypi" in sh and "pypi" in sh
+
+
+def _maestro_get_lab_status_script():
+    """Resolve DataBoar/maestro core/Get-LabStatus.ps1 when the clone is present."""
+    import os
+
+    env = (os.environ.get("MAESTRO_ROOT") or "").strip()
+    candidates: list[Path] = []
+    if env:
+        candidates.append(Path(env))
+    parent = _project_root().parent
+    candidates.extend([parent / "maestro", parent / "Maestro"])
+    for root in candidates:
+        script = root / "core" / "Get-LabStatus.ps1"
+        if script.is_file():
+            return script
+    return None
+
+
+def test_get_lab_status_ps1_syntax():
+    """DataBoar/maestro core/Get-LabStatus.ps1 has valid PowerShell syntax (parse-only, #952)."""
+    root = _project_root()
+    script = _maestro_get_lab_status_script()
+    if script is None:
+        return
+    assert _parse_powershell_script(script, root), "Get-LabStatus.ps1 parse failed"
+
+
+def test_get_lab_status_probes_ssh_independent_of_icmp():
+    """#952 guard: the SSH probe must not be nested inside the ICMP (Test-Connection) block.
+
+    A node with ICMP blocked but SSH up (common hardening), or a pwsh-on-Linux raw-ICMP
+    privilege failure, must NOT cause Get-LabStatus to report SSH DOWN and have Maestro
+    skip the node. We assert the ssh probe line is at top-level indentation (column 0),
+    i.e. not gated behind the Test-Connection ``if`` block.
+    """
+    script = _maestro_get_lab_status_script()
+    if script is None:
+        return
+    lines = script.read_text(encoding="utf-8").splitlines()
+    ssh_probe = [ln for ln in lines if "$rawOutput = ssh " in ln]
+    assert ssh_probe, "expected an ssh probe assigning $rawOutput"
+    # Top-level (not indented under the ICMP if-block) => SSH runs regardless of ICMP.
+    assert all(not ln.startswith((" ", "\t")) for ln in ssh_probe), (
+        "SSH probe must run independent of ICMP (not indented under Test-Connection) (#952)"
+    )
+
+
+def test_host_smoke_uv_run_uses_no_sync_after_wheel():
+    """#951 guard: lab-completao-host-smoke.sh runs the scan/import via ``uv run --no-sync``.
+
+    boar_fast_filter is not a locked dependency, so a plain ``uv run`` re-syncs the venv
+    and prunes the pre-installed Build-Once wheel -> main.py silently scans in pure-Python
+    and the "Rust prefilter compiled on every node" gate criterion (#406) is never met.
+    This guard asserts the wheel-dependent invocations keep ``--no-sync`` and that no bare
+    ``uv run python main.py`` reintroduces the prune.
+    """
+    root = _project_root()
+    script = root / "scripts" / "lab-completao-host-smoke.sh"
+    if not script.exists():
+        return
+    text = script.read_text(encoding="utf-8")
+    # The scan must not re-sync (would prune the prefilter wheel).
+    assert "uv run --no-sync python main.py" in text, (
+        "the baremetal scan must use `uv run --no-sync python main.py` (#951)"
+    )
+    assert "uv run python main.py" not in text, (
+        "bare `uv run python main.py` re-syncs and prunes boar_fast_filter (#951)"
+    )
+    # The boar_fast_filter import check must reflect the installed wheel, not a re-synced env.
+    assert 'uv run --no-sync python -c "import boar_fast_filter"' in text, (
+        "the boar_fast_filter import probe must use --no-sync (#951)"
+    )
+
+
+def test_labop_shell_scripts_ascii_safe():
+    """#794 guard: scripts/labop-*.sh are ASCII-only (no em-dash, arrow, curly quotes).
+
+    These ensure/firewall scripts run on lab hosts whose ``LANG`` is not guaranteed to
+    be a UTF-8 locale (e.g. Void Linux). A multi-byte char (em-dash U+2014, arrow U+2192)
+    inside a quoted string is misread under ``LANG=C`` and can break ``if``/``else``
+    parsing -> "unexpected end of file" (the #794 failure on an old lab host). Enforce
+    ASCII so the same class of bug cannot regress.
+    """
+    root = _project_root()
+    violations: list[str] = []
+    for script in sorted((root / "scripts").glob("labop-*.sh")):
+        text = script.read_text(encoding="utf-8", errors="replace")
+        for lineno, line in enumerate(text.splitlines(), start=1):
+            m = _PS1_ASCII_UNSAFE_RE.search(line)
+            if m:
+                char = m.group(0)
+                violations.append(
+                    f"  scripts/{script.name}:{lineno} non-ASCII char {char!r}"
+                    f" (U+{ord(char):04X}) - use ASCII equivalent"
+                )
+    assert not violations, (
+        "labop-*.sh contain non-ASCII chars that break bash parsing in non-UTF-8 "
+        "locales (#794):\n" + "\n".join(violations)
+    )
+
+
+def test_labop_ensure_scripts_parse_under_c_locale():
+    """#794 guard: labop ensure scripts pass ``LANG=C bash -n`` (non-UTF-8 locale).
+
+    Reproduces the exact Void Linux failure mode (an old lab host) where a multi-byte
+    char under a C locale breaks ``if`` parsing. Skipped on Windows / when bash is absent.
+    """
+    if sys.platform == "win32":
+        return
+    root = _project_root()
+    import os
+
+    env = dict(os.environ)
+    env["LANG"] = "C"
+    env["LC_ALL"] = "C"
+    for name in ("labop-nfs-server-ensure.sh", "labop-smb-server-ensure.sh"):
+        script = root / "scripts" / name
+        if not script.exists():
+            continue
+        try:
+            proc = subprocess.run(
+                ["bash", "-n", str(script)],
+                cwd=str(root),
+                capture_output=True,
+                text=True,
+                timeout=10,
+                env=env,
+            )
+        except FileNotFoundError:
+            return
+        assert proc.returncode == 0, (
+            f"LANG=C bash -n failed for {name}: {proc.stderr or proc.stdout}"
+        )
+
+
+def test_build_rust_prefilter_is_uv_first_and_cross_platform():
+    """#890 guard: build-rust-prefilter.ps1 must be uv-first and path-portable.
+
+    Regressions this catches:
+    - `pip install maturin` (not uv-first; maturin is a dev-dep since #892).
+    - bare `maturin` invocation instead of `uv run maturin`.
+    - a hardcoded backslash separator in the manifest path (breaks PowerShell Core
+      on Linux/musl, where the build must also run).
+    """
+    root = _project_root()
+    script = root / "scripts" / "build-rust-prefilter.ps1"
+    if not script.exists():
+        return
+    text = script.read_text(encoding="utf-8")
+
+    assert "pip install maturin" not in text, (
+        "build-rust-prefilter.ps1 must not pip-install maturin; use `uv run maturin` "
+        "(maturin is a dev dependency)."
+    )
+    assert "uv run maturin" in text, (
+        "build-rust-prefilter.ps1 must invoke maturin via `uv run maturin` (uv-first)."
+    )
+    # No backslash path literal for the Rust manifest (cross-platform Join-Path only).
+    assert "rust\\boar_fast_filter" not in text, (
+        "build-rust-prefilter.ps1 must not hardcode a backslash manifest path; "
+        "use nested Join-Path so PowerShell Core on Linux/musl resolves it too."
+    )

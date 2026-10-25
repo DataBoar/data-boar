@@ -1,0 +1,34 @@
+---
+description: When editing YAML files that contain regex patterns (compliance samples, regex_overrides), use double-quoted strings with escaped backslashes to avoid linter errors and invalid escapes.
+globs: ["**/compliance-sample-*.yaml", "**/regex_overrides*.yaml", "**/*.example.yaml"]
+alwaysApply: false
+---
+
+# YAML regex patterns (no invalid escape sequences)
+
+YAML files that contain **regex patterns** (e.g. `pattern:` in compliance samples or `regex_overrides.example.yaml`) must be written so that:
+
+1. **Linters and IDEs** do not report "Invalid escape sequence" (e.g. `\d`, `\s`, `\b`).
+1. **yaml.safe_load** and the application receive the correct string value (backslash + character for regex).
+
+## Rule: double-quoted with escaped backslashes
+
+Use **double-quoted** YAML strings and **escape every backslash** so the stored value is a literal backslash followed by the character.
+
+- **Correct:** `pattern: "\\b[A-Z]{2}\\s?\\d{6}\\s?[A-D]\\b"` → value is `\b[A-Z]{2}\s?\d{6}\s?[A-D]\b` (valid for regex).
+- **Wrong:** `pattern: "\b[A-Z]{2}\s?\d{6}\s?[A-D]\b"` → YAML/linters treat `\d` and `\s` as invalid escapes; errors in IDE.
+- **Wrong:** `pattern: '\b[A-Z]{2}\s?\d{6}\s?[A-D]\b'` → some linters still flag `\d`/`\s`; prefer double-quote + escape for consistency.
+
+## Where this applies
+
+- **docs/compliance-samples/compliance-sample-*.yaml** – every `pattern:` under `regex:`.
+- **docs/regex_overrides.example.yaml** (or any `*regex*.yaml`) – every `pattern:` entry.
+- Any **\*.example.yaml** or config YAML that includes regex patterns for the detector.
+
+## When adding or editing regex in YAML
+
+1. Use double quotes for the `pattern` value.
+1. Replace each single `\` in the regex with `\\` in the YAML (e.g. `\d` → `\\d`, `\s` → `\\s`, `\b` → `\\b`).
+1. Run `uv run pytest tests/test_compliance_samples.py -v` if you changed compliance samples; fix any load errors.
+
+This keeps the file valid for both the Python YAML loader and YAML linters/IDE extensions.

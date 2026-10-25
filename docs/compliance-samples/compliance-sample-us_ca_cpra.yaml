@@ -1,0 +1,199 @@
+# California Privacy Rights Act (CPRA) / CCPA – sample compliance profile
+#
+# Target audience: U.S. California deployments; DPOs and privacy engineers aligning inventory
+# language with the California Consumer Privacy Act (Cal. Civ. Code § 1798.100 et seq.) as
+# amended and expanded by the California Privacy Rights Act (Proposition 24, 2020). Enforced
+# by the California Privacy Protection Agency (CPPA) from 2023.
+#
+# Relationship with built-in defaults:
+#   This sample includes the same CCPA_SSN regex as the app's core DEFAULT_PATTERNS (so using
+#   this file as regex_overrides_file does not reduce coverage), plus additional California-
+#   specific sensitive personal information (SPI) patterns and terms from CPRA (§ 1798.140(ae)).
+#   ML terms are tuned for California consumer-context vocabulary.
+#
+# How to use:
+#   1. Set in your main config:
+#        regex_overrides_file: path/to/compliance-sample-us_ca_cpra.yaml
+#        ml_patterns_file: path/to/compliance-sample-us_ca_cpra.yaml
+#   2. Merge the recommendation_overrides list below into your config under report.recommendation_overrides.
+#
+# Detection thresholds (not configurable in this file; set in main config.yaml):
+#   - sensitivity_detection.fuzzy_column_match_min_confidence (int, default 25)
+#   - sensitivity_detection.embedding_prototype_hint_min_confidence (int, default 20)
+#
+# Legal scope (read before relying on tags):
+#   - CCPA/CPRA applies to certain businesses collecting personal information of California
+#     consumers. Statutory text, CPPA rulemaking, and case law continuously evolve.
+#   - Data Boar performs technical pattern and term matching only. It does NOT classify B2B
+#     vs consumer data, apply exemptions, or evaluate opt-out validity. Use output as
+#     inventory signal; scope with counsel.
+#
+# Regex design:
+#   - CCPA_SSN: built-in pattern (SSN ddd-dd-dddd) carried here for explicit documentation
+#     and so operators can tune norm_tag or disable without touching detector.py.
+#   - DL_CA: California driver license format (1 letter + 7 digits) per CPRA SPI definition.
+#   - ITIN: individual taxpayer ID — commonly used by non-SSN holders in California.
+#   - Precise geolocation: same four-decimal-place geometry as compliance-sample-us_va_vcdpa.yaml
+#     and compliance-sample-eu_gdpr.yaml; CPRA § 1798.140(ae)(1)(H) lists precise geolocation
+#     (< 1852 m) as sensitive personal information. Heuristic only — not an automatic SPI
+#     legal determination; confirm with counsel.
+#
+# Use double-quoted YAML with escaped backslashes (see .cursor/rules/yaml-regex-patterns.mdc).
+
+regex:
+  # Built-in equivalent — explicit here so operators can tune or document
+  - name: "CCPA_SSN"
+    pattern: "\\b\\d{3}-\\d{2}-\\d{4}\\b"
+    norm_tag: "CCPA"
+  # California SPI identifiers (CPRA § 1798.140(ae))
+  - name: "CPRA_CA_DL"
+    # California driver license: letter + 7 digits (e.g. A1234567)
+    pattern: "\\b[A-Z]\\d{7}\\b"
+    norm_tag: "CPRA"
+  - name: "CPRA_ITIN"
+    # U.S. Individual Taxpayer Identification Number: 9XX-7X-XXXX format
+    pattern: "\\b9\\d{2}-[7-9]\\d-\\d{4}\\b"
+    norm_tag: "CPRA"
+  # Precise geolocation (CPRA § 1798.140(ae)(1)(H); < 1852 m radius threshold)
+  - name: "CPRA_JSON_LAT_PRECISION"
+    pattern: "(?i)[\"']lat[\"']\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\b"
+    norm_tag: "CPRA"
+  - name: "CPRA_JSON_LNG_PRECISION"
+    pattern: "(?i)[\"'](?:lng|lon)[\"']\\s*:\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}\\b"
+    norm_tag: "CPRA"
+  - name: "CPRA_LOCATION_CSV_PAIR"
+    pattern: "(?i)\\blocation\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*,\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "CPRA"
+  - name: "CPRA_QUERYSTRING_LAT_LONG"
+    pattern: "(?i)latitude=[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*&\\s*longitude=[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "CPRA"
+
+# ML terms: California consumer-privacy vocabulary (EN). Covers personal information (PI)
+# and sensitive personal information (SPI) categories under CCPA/CPRA.
+terms:
+  - text: "ccpa"
+    label: sensitive
+  - text: "cpra"
+    label: sensitive
+  - text: "california consumer privacy"
+    label: sensitive
+  - text: "california privacy rights"
+    label: sensitive
+  - text: "consumer privacy"
+    label: sensitive
+  - text: "personal information"
+    label: sensitive
+  - text: "sensitive personal information"
+    label: sensitive
+  - text: "spi"
+    label: sensitive
+  - text: "opt-out"
+    label: sensitive
+  - text: "right to opt out"
+    label: sensitive
+  - text: "right to delete"
+    label: sensitive
+  - text: "right to correct"
+    label: sensitive
+  - text: "do not sell"
+    label: sensitive
+  - text: "do not share"
+    label: sensitive
+  - text: "cppa"
+    label: sensitive
+  - text: "california privacy protection agency"
+    label: sensitive
+  - text: "precise geolocation"
+    label: sensitive
+  - text: "geolocation data"
+    label: sensitive
+  - text: "geolocation"
+    label: sensitive
+  - text: "biometric information"
+    label: sensitive
+  - text: "biometric data"
+    label: sensitive
+  - text: "genetic data"
+    label: sensitive
+  - text: "racial origin"
+    label: sensitive
+  - text: "ethnic origin"
+    label: sensitive
+  - text: "religious belief"
+    label: sensitive
+  - text: "union membership"
+    label: sensitive
+  - text: "sexual orientation"
+    label: sensitive
+  - text: "health condition"
+    label: sensitive
+  - text: "mental health"
+    label: sensitive
+  - text: "mail contents"
+    label: sensitive
+  - text: "account log-in"
+    label: sensitive
+  - text: "financial account"
+    label: sensitive
+  - text: "debit card number"
+    label: sensitive
+  - text: "credit card number"
+    label: sensitive
+  - text: "account number"
+    label: sensitive
+  - text: "social security number"
+    label: sensitive
+  - text: "ssn"
+    label: sensitive
+  - text: "driver license"
+    label: sensitive
+  - text: "passport number"
+    label: sensitive
+  - text: "first name"
+    label: sensitive
+  - text: "last name"
+    label: sensitive
+  - text: "full name"
+    label: sensitive
+  - text: "email"
+    label: sensitive
+  - text: "phone"
+    label: sensitive
+  - text: "address"
+    label: sensitive
+  - text: "ip address"
+    label: sensitive
+  - text: "device id"
+    label: sensitive
+  - text: "consumer id"
+    label: sensitive
+  - text: "unique identifier"
+    label: sensitive
+  - text: "browsing history"
+    label: sensitive
+  - text: "search history"
+    label: sensitive
+  - text: "purchase history"
+    label: sensitive
+  - text: "inferred data"
+    label: sensitive
+  - text: "profiling"
+    label: sensitive
+  - text: "automated decision"
+    label: sensitive
+  - text: "data broker"
+    label: sensitive
+
+recommendation_overrides:
+  - norm_tag_pattern: "CPRA"
+    base_legal: "California Privacy Rights Act (CPRA) / CCPA; Cal. Civ. Code § 1798.100 et seq.; CPPA rulemaking"
+    risk: "Possible sensitive personal information (SPI) under CPRA § 1798.140(ae) — including precise geolocation, biometric, health, racial/ethnic origin, financial credentials, or communications content. Precise geolocation regex signals are heuristic only; not an automatic SPI legal determination."
+    recommendation: "Confirm SPI category, purpose, and opt-out or consent requirements with California privacy counsel; document data mapping and CPPA filing obligations; verify precise-geolocation threshold (< 1852 m) with your data architecture team."
+    priority: "ALTA"
+    relevant_for: "DPO, California privacy counsel, CPPA, Information Security, Product"
+  - norm_tag_pattern: "CCPA"
+    base_legal: "California Consumer Privacy Act (CCPA) / CPRA; Cal. Civ. Code § 1798.100 et seq."
+    risk: "Personal information of California consumers in scope of CCPA (as amended by CPRA); B2B and employment exemptions are not evaluated by the scanner."
+    recommendation: "Verify consumer context and applicable exemptions with counsel; maintain records of processing and consumer rights requests (access, delete, correct, opt-out)."
+    priority: "ALTA"
+    relevant_for: "DPO, California privacy counsel, CPPA, Information Security"

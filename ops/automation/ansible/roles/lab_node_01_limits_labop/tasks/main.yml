@@ -1,0 +1,14 @@
+---
+- name: Skip PAM limits LAB-OP file
+  when: not (lab_node_01_limits_labop_enable | bool)
+  ansible.builtin.debug:
+    msg: "limits.d LAB-OP disabled (lab_node_01_limits_labop_enable=false)."
+
+- name: Install LAB-OP limits.d snippet
+  when: lab_node_01_limits_labop_enable | bool
+  ansible.builtin.template:
+    src: limits_labop.conf.j2
+    dest: "{{ lab_node_01_limits_labop_path }}"
+    owner: root
+    group: root
+    mode: "0644"

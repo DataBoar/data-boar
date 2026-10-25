@@ -1,0 +1,47 @@
+# Docker Compose v3. Compatible with Docker Swarm: deploy with
+#   docker stack deploy -c deploy/docker-compose.yml data-boar-audit
+# Default: runs the image CMD = web API + frontend (dashboard, reports, config UI) on port 8088.
+# No "command:" override = container starts the API. For CLI one-shot use a separate run with entrypoint override.
+# Requires: config at /data/config.yaml (mount volume or bind).
+# Image: pre-built on Docker Hub (hub.docker.com/r/fabioleitao/data_boar) or override with build: for local build.
+# Resources: tuned for I/O-bound workload (network/FS are the bottleneck). CPU left unconstrained for report-generation bursts.
+version: "3.8"
+
+services:
+  data-boar:
+    image: fabioleitao/data_boar:latest
+    # command not set: use image default = web API + frontend
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    ports:
+      - "8088:8088"
+    environment:
+      CONFIG_PATH: /data/config.yaml
+    volumes:
+      - data-boar-data:/data
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "/usr/local/bin/python3.14t",
+          "-c",
+          "import urllib.request, sys; r = urllib.request.urlopen('http://127.0.0.1:8088/health', timeout=8); sys.exit(0 if r.status == 200 else 1)",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+    deploy:
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 256M
+          cpus: "0.25"
+
+volumes:
+  data-boar-data:

@@ -1,0 +1,74 @@
+# Example Data Boar config for lab smoke: DBs on LAB-NODE-01 (or any host) + optional filesystem.
+# Copy to a private path; set CONFIG_PATH when running the app/container.
+#
+# Replace REPLACE_WITH_LAB_HOST_IP in each host: field (quoted string).
+# Examples:
+# - LAN IP of the machine running deploy/lab-smoke-stack (e.g. LAB-NODE-01)
+# - host.docker.internal (Data Boar in Docker Desktop / same host as DB containers)
+# - Docker DNS name if Data Boar joins the same Compose network as lab-postgres / lab-mariadb
+#
+# Ports must match env (default 55432 PostgreSQL, 33306 MariaDB, 14333 MSSQL, 15211 Oracle, 56379 Redis).
+
+targets:
+
+  - name: "Lab_Postgres_Synthetic"
+    type: database
+    driver: postgresql+psycopg2
+    host: "REPLACE_WITH_LAB_HOST_IP"
+    port: 55432
+    user: lab_smoke
+    pass: lab_smoke_change_me
+    database: lab_smoke_pg
+
+  - name: "Lab_MariaDB_Synthetic"
+    type: database
+    driver: mysql+pymysql
+    host: "REPLACE_WITH_LAB_HOST_IP"
+    port: 33306
+    user: lab_smoke
+    pass: lab_smoke_change_me
+    database: lab_smoke_my
+
+  - name: "Lab_MSSQL_Synthetic"
+    type: database
+    driver: mssql+pymssql
+    host: "REPLACE_WITH_LAB_HOST_IP"
+    port: 14333
+    user: sa
+    pass: Lab_Smoke_Change_Me1!
+    database: lab_smoke_mssql
+
+  - name: "Lab_OracleXE_Synthetic"
+    type: database
+    driver: oracle+oracledb
+    host: "REPLACE_WITH_LAB_HOST_IP"
+    port: 15211
+    user: lab_smoke
+    pass: lab_smoke_oracle_change_me
+    database: XEPDB1
+
+  - name: "Lab_Redis_Synthetic"
+    type: database
+    driver: redis
+    host: "REPLACE_WITH_LAB_HOST_IP"
+    port: 56379
+
+  # Optional: mount repo tests/data read-only into the container (two paths = two targets).
+  - name: "Lab_FS_Compressed_Samples"
+    type: filesystem
+    path: /data/lab-fixtures/tests-data-compressed
+    recursive: true
+
+  - name: "Lab_FS_Homelab_Synthetic_Text"
+    type: filesystem
+    path: /data/lab-fixtures/tests-data-homelab-synthetic
+    recursive: true
+
+file_scan:
+  extensions: [.txt, .csv, .pdf, .zip, .7z, .gz, .bz2]
+  recursive: true
+  scan_compressed: true
+  compressed_extensions: [.zip, .7z, .tar.gz, .tgz, .tar.bz2]
+
+scan:
+  max_workers: 2

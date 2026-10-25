@@ -1,0 +1,10 @@
+{
+  "generated_by": "illustrative — future exporter from core/licensing/tier_features.py",
+  "features": {
+    "connector_filesystem": "community",
+    "connector_postgresql": "community",
+    "connector_smb": "pro",
+    "connector_powerbi": "pro",
+    "report_pdf": "pro"
+  }
+}

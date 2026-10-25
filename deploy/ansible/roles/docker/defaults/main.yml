@@ -1,0 +1,2 @@
+# Minimum Docker CE version to install/verify.
+docker_min_version: "24.0"

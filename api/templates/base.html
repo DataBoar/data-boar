@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="{{ html_lang }}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}{{ t('meta.title_suffix') }}{% endblock %}</title>
+  <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+  <link rel="icon" type="image/png" href="/static/mascot/data_boar_mascote_color_translucent_not_zombie.png">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  {% if show_insecure_banner %}
+  <div class="insecure-transport-banner" role="status">
+    <strong>{{ t('banner.insecure_title') }}</strong> — {{ t('banner.insecure_body') }}
+  </div>
+  {% elif show_trusted_proxy_tls_info %}
+  <div class="trusted-proxy-tls-banner" role="status">
+    <strong>{{ t('banner.trusted_proxy_tls_title') }}</strong> — {{ t('banner.trusted_proxy_tls_body') }}
+  </div>
+  {% endif %}
+  {% if show_trust_governance_banner %}
+  <div class="governance-trust-banner" role="status">
+    <strong>{{ t('banner.gov_title') }}</strong> — {{ t('banner.gov_body').format(severity=enterprise_surface.severity, license_state=enterprise_surface.runtime_trust.license_state, mode=enterprise_surface.access_surface.mode) }}
+  </div>
+  {% endif %}
+  <nav class="nav">
+    <a href="{{ base_path }}/">{{ t('nav.dashboard') }}</a>
+    <a href="{{ base_path }}/reports">{{ t('nav.reports') }}</a>
+    <a href="{{ base_path }}/config">{{ t('nav.config') }}</a>
+    <a href="{{ base_path }}/help">{{ t('nav.help') }}</a>
+    {% if show_maturity_assessment_nav %}
+    <a href="{{ base_path }}/assessment">{{ t('nav.assessment') }}</a>
+    {% endif %}
+    <a href="{{ base_path }}/about">{{ t('nav.about') }}</a>
+    <span class="nav-locale" aria-label="Language">
+      {% for item in locale_switcher %}
+      {% if item.current %}
+      <strong>{{ item.label }}</strong>
+      {% else %}
+      <a href="{{ item.url }}">{{ item.label }}</a>
+      {% endif %}
+      {% if not loop.last %} · {% endif %}
+      {% endfor %}
+    </span>
+  </nav>
+  <main class="main">
+    {% block content %}{% endblock %}
+  </main>
+  <script src="/static/app.js"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

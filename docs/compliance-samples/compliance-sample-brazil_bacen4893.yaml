@@ -1,0 +1,253 @@
+# Brazil — BACEN Resolução 4893/2021
+# Política de Segurança Cibernética para Bancos, Fintechs e Instituições de Pagamento
+# In force: 1 February 2022 (full compliance deadline; Res. 4658/2018 consolidated and updated)
+#
+# NOT LEGAL ADVICE. Technical starting point for inventory of data fields relevant
+# to cybersecurity and data governance obligations for Brazilian financial institutions.
+# BACEN 4893 complements LGPD: financial institutions must comply with BOTH.
+# Does NOT certify compliance with BACEN, LGPD, or Febraban norms.
+#
+# Authority: Banco Central do Brasil (BACEN)
+# Reference: Resolução BCB 4.893/2021 — bcb.gov.br
+# Scope: Banks (commercial, multiple, investment), payment institutions, fintechs,
+#        direct credit companies (SCD/SEP), credit fintechs, and electronic money issuers.
+#
+# Key obligations: designated CISO, incident response plan, 3-tier cloud outsourcing rules,
+# mandatory incident notification to BACEN within 4 business days, annual security policy review.
+#
+# Pair with: compliance-sample-lgpd.yaml for full Brazilian data governance coverage.
+# Also relevant: compliance-sample-pci_dss.yaml for card data.
+# NIS2 / DORA are evidence/inventory frameworks, not PII sample packs
+# (see COMPLIANCE_FRAMEWORKS.md — cyber/AI governance as evidence, not samples).
+#
+# How to use:
+#   regex_overrides_file: path/to/compliance-sample-brazil_bacen4893.yaml
+#   ml_patterns_file:     path/to/compliance-sample-brazil_bacen4893.yaml
+#   Merge recommendation_overrides into report.recommendation_overrides.
+#
+# NOTE — ISPB (8 digits): a bare \b\d{8}\b matches sequential IDs and zip-like
+# counters (same FP class as ABA routing). This sample requires an ISPB / SPI
+# keyword near the digits. Do not loosen to bare 8-digit matching.
+
+regex:
+  # --- Brazilian financial identifiers ---
+  - name: "BACEN_CONTA_CORRENTE"
+    # Bank account number pattern (agência + conta) — heuristic
+    pattern: "(?i)\\b(?:conta[_\\s]?(?:corrente|poupanca|pagamento)|account[_\\s]?number)[_\\s]?[:\\-]?\\s*\\d{4,12}\\b"
+    norm_tag: "BACEN 4893 (dado financeiro — conta)"
+
+  - name: "BACEN_AGENCIA"
+    pattern: "(?i)\\b(agencia|agência|ag[\\.]?)[_\\s]?[:\\-]?\\s*\\d{4}\\b"
+    norm_tag: "BACEN 4893 (dado financeiro — agência)"
+
+  - name: "BACEN_CHAVE_PIX"
+    # Pix key types: CPF, CNPJ, phone, email, random key (EVP)
+    # Random key: 32-char UUID-like string
+    pattern: "(?i)\\b(chave[_\\s]?pix|pix[_\\s]?key|chave[_\\s]?aleatoria|evp[_\\s]?pix)\\b"
+    norm_tag: "BACEN 4893 (dado financeiro — chave Pix)"
+
+  - name: "BACEN_CARTAO_FIELD"
+    pattern: "(?i)\\b(numero[_\\s]?cartao|card[_\\s]?number|pan[_\\s]?masked|bin[_\\s]?number|cvv|cvc|expiry[_\\s]?date|validade[_\\s]?cartao)\\b"
+    norm_tag: "BACEN 4893 (dado financeiro — cartão)"
+
+  - name: "BACEN_TOKEN_PAGAMENTO"
+    pattern: "(?i)\\b(token[_\\s]?pagamento|payment[_\\s]?token|network[_\\s]?token|wallet[_\\s]?token|tokenized[_\\s]?pan)\\b"
+    norm_tag: "BACEN 4893 (dado financeiro — token)"
+
+  - name: "BACEN_INCIDENT_FIELD"
+    pattern: "(?i)\\b(incidente[_\\s]?cibernetico|cyber[_\\s]?incident[_\\s]?id|notificacao[_\\s]?bacen|relatorio[_\\s]?incidente|security[_\\s]?event[_\\s]?id)\\b"
+    norm_tag: "BACEN 4893 Art. 11 (notificação incidente)"
+
+  - name: "BACEN_OUTSOURCING_FIELD"
+    pattern: "(?i)\\b(prestador[_\\s]?servico[_\\s]?ti|outsourcing[_\\s]?assessment|contrato[_\\s]?nuvem|cloud[_\\s]?provider[_\\s]?tier|terceirizacao[_\\s]?critica)\\b"
+    norm_tag: "BACEN 4893 Art. 16 (terceirização)"
+
+  - name: "BACEN_CRYPT_KEY_FIELD"
+    pattern: "(?i)\\b(chave[_\\s]?criptografica|encryption[_\\s]?key[_\\s]?id|kms[_\\s]?key|hsm[_\\s]?key|master[_\\s]?key[_\\s]?ref)\\b"
+    norm_tag: "BACEN 4893 (controle criptográfico)"
+
+  # Brazilian financial identifiers (precise — keyword + digits; not bare 8-digit)
+  - name: "BACEN_ISPB"
+    # ISPB — Identificador de Sistema de Pagamentos Brasileiro (8 digits)
+    pattern: "(?i)\\b(?:ispb|identificador[_\\s]?sistema[_\\s]?pagamentos)[_\\s]?[:\\-]?\\s*\\d{8}\\b"
+    norm_tag: "BACEN 4893 (identificador financeiro — ISPB)"
+
+  - name: "BACEN_NSU"
+    # NSU — Número Sequencial Único de transação (up to 12 digits)
+    pattern: "(?i)\\b(nsu|numero[_\\s]?sequencial[_\\s]?unico)[_\\s]?[:\\-]?\\s*\\d{6,12}\\b"
+    norm_tag: "BACEN 4893 (dado de transação — NSU)"
+
+terms:
+  # --- Financial institution data (PT-BR primary) ---
+
+  # Account and payment data
+  - { text: "conta corrente", label: sensitive }
+  - { text: "conta poupança", label: sensitive }
+  - { text: "conta poupanca", label: sensitive }
+  - { text: "conta de pagamento", label: sensitive }
+  - { text: "número da conta", label: sensitive }
+  - { text: "numero da conta", label: sensitive }
+  - { text: "agência bancária", label: sensitive }
+  - { text: "agencia bancaria", label: sensitive }
+  - { text: "dados bancários", label: sensitive }
+  - { text: "dados bancarios", label: sensitive }
+  - { text: "bank account", label: sensitive }
+  - { text: "account number", label: sensitive }
+  - { text: "routing number", label: sensitive }
+
+  # Pix
+  - { text: "chave pix", label: sensitive }
+  - { text: "chave aleatória", label: sensitive }
+  - { text: "chave aleatoria", label: sensitive }
+  - { text: "pix key", label: sensitive }
+  - { text: "transferência pix", label: sensitive }
+  - { text: "transferencia pix", label: sensitive }
+  - { text: "recebimento pix", label: sensitive }
+
+  # Card data (complementary to PCI-DSS sample)
+  - { text: "número do cartão", label: sensitive }
+  - { text: "numero do cartao", label: sensitive }
+  - { text: "dados do cartão", label: sensitive }
+  - { text: "dados do cartao", label: sensitive }
+  - { text: "cvv", label: sensitive }
+  - { text: "cvc", label: sensitive }
+  - { text: "validade do cartão", label: sensitive }
+  - { text: "pan", label: sensitive }
+  - { text: "tokenized pan", label: sensitive }
+  - { text: "network token", label: sensitive }
+  - { text: "payment token", label: sensitive }
+
+  # Transaction data
+  - { text: "nsu", label: sensitive }
+  - { text: "número de transação", label: sensitive }
+  - { text: "numero de transacao", label: sensitive }
+  - { text: "comprovante", label: sensitive }
+  - { text: "extrato bancário", label: sensitive }
+  - { text: "extrato bancario", label: sensitive }
+  - { text: "saldo", label: sensitive }
+  - { text: "limite de crédito", label: sensitive }
+  - { text: "limite de credito", label: sensitive }
+  - { text: "histórico financeiro", label: sensitive }
+  - { text: "historico financeiro", label: sensitive }
+  - { text: "financial history", label: sensitive }
+  - { text: "transaction history", label: sensitive }
+
+  # Cybersecurity / BACEN-specific
+  - { text: "incidente cibernético", label: sensitive }
+  - { text: "incidente cibernetico", label: sensitive }
+  - { text: "ataque cibernético", label: sensitive }
+  - { text: "ataque cibernetico", label: sensitive }
+  - { text: "fraude bancária", label: sensitive }
+  - { text: "fraude bancaria", label: sensitive }
+  - { text: "tentativa de fraude", label: sensitive }
+  - { text: "notificação bacen", label: sensitive }
+  - { text: "notificacao bacen", label: sensitive }
+  - { text: "relato de incidente", label: sensitive }
+  - { text: "segurança cibernética", label: sensitive }
+  - { text: "seguranca cibernetica", label: sensitive }
+  - { text: "política de segurança", label: sensitive }
+  - { text: "politica de seguranca", label: sensitive }
+  - { text: "cyber incident", label: sensitive }
+  - { text: "security incident", label: sensitive }
+  - { text: "fraud attempt", label: sensitive }
+
+  # Privileged access / credentials
+  - { text: "senha bancária", label: sensitive }
+  - { text: "senha bancaria", label: sensitive }
+  - { text: "token de autenticação", label: sensitive }
+  - { text: "token de autenticacao", label: sensitive }
+  - { text: "senha do internet banking", label: sensitive }
+  - { text: "pin do cartão", label: sensitive }
+  - { text: "pin do cartao", label: sensitive }
+  - { text: "chave criptográfica", label: sensitive }
+  - { text: "chave criptografica", label: sensitive }
+  - { text: "banking password", label: sensitive }
+  - { text: "internet banking credential", label: sensitive }
+
+  # Outsourcing / third party (Art. 16 obligations)
+  - { text: "prestador de serviços críticos", label: sensitive }
+  - { text: "prestador de servicos criticos", label: sensitive }
+  - { text: "terceirização de TI", label: sensitive }
+  - { text: "terceirizacao de ti", label: sensitive }
+  - { text: "contrato de nuvem", label: sensitive }
+  - { text: "cloud provider", label: sensitive }
+  - { text: "outsourcing agreement", label: sensitive }
+  - { text: "vendor assessment financeiro", label: sensitive }
+
+  # Client / customer data in financial context
+  - { text: "dados cadastrais do cliente", label: sensitive }
+  - { text: "ficha cadastral", label: sensitive }
+  - { text: "cliente pf", label: sensitive }
+  - { text: "cliente pj", label: sensitive }
+  - { text: "tomador de crédito", label: sensitive }
+  - { text: "tomador de credito", label: sensitive }
+  - { text: "mutuário", label: sensitive }
+  - { text: "mutuario", label: sensitive }
+  - { text: "devedor", label: sensitive }
+  - { text: "credor", label: sensitive }
+  - { text: "beneficiário do pagamento", label: sensitive }
+  - { text: "beneficiario do pagamento", label: sensitive }
+
+  # Non-sensitive anchors
+  - { text: "product_code", label: non_sensitive }
+  - { text: "item_id", label: non_sensitive }
+  - { text: "session_log", label: non_sensitive }
+  - { text: "debug_output", label: non_sensitive }
+  - { text: "test_account", label: non_sensitive }
+
+recommendation_overrides:
+  - norm_tag_pattern: "BACEN 4893 (dado financeiro — chave Pix)"
+    base_legal: "Resolução BCB 4.893/2021 + LGPD Art. 5 — chave Pix é dado pessoal associado a CPF, CNPJ, telefone ou e-mail. Tratamento exige base legal LGPD e conformidade com regulamentação BACEN/PIX. Autoridade: Banco Central do Brasil."
+    risk: "Chave Pix vincula dados pessoais do titular a conta de pagamento. Exposição não autorizada pode facilitar fraudes, social engineering, ou violação de privacidade financeira. LGPD + BACEN 4893 aplicáveis."
+    recommendation: "Verificar base legal LGPD para armazenamento de chaves Pix. Aplicar criptografia em repouso. Limitar acesso a sistemas de pagamento. Reportar incidentes ao BACEN (Art. 11, prazo 4 dias úteis). Consultar DPO e equipe jurídica."
+    priority: "ALTA"
+    relevant_for: "DPO, CISO, equipe de pagamentos, jurídico, BACEN compliance"
+
+  - norm_tag_pattern: "BACEN 4893 (dado financeiro — cartão)"
+    base_legal: "Resolução BCB 4.893/2021 + PCI-DSS + LGPD Art. 5 — dados de cartão são dados pessoais financeiros sujeitos a múltiplos frameworks. BACEN exige políticas de segurança cibernética para proteção desses dados."
+    risk: "Dados de cartão (PAN, CVV, data de validade) são alvo primário de fraude financeira. Armazenamento inadequado viola PCI-DSS e exige notificação obrigatória ao BACEN em caso de incidente. CVV nunca deve ser armazenado."
+    recommendation: "CVV/CVC NÃO deve ser armazenado após autorização (PCI-DSS req. 3.2). Tokenizar PAN. Verificar conformidade PCI-DSS. Usar compliance-sample-pci_dss.yaml em conjunto. Reportar incidente ao BACEN (prazo 4 dias úteis) e bandeiras (Visa/Mastercard). Consultar CISO e jurídico."
+    priority: "CRÍTICA"
+    relevant_for: "CISO, DPO, equipe de pagamentos, PCI-DSS QSA, jurídico"
+
+  - norm_tag_pattern: "BACEN 4893 (dado financeiro — conta)"
+    base_legal: "Resolução BCB 4.893/2021 + LGPD Art. 5 — dados de conta corrente/poupança/pagamento são dados pessoais financeiros. Sigilo bancário (LC 105/2001) aplicável."
+    risk: "Dados de conta bancária sujeitos ao sigilo bancário (Lei Complementar 105/2001) além da LGPD. Vazamento pode gerar responsabilidade civil e criminal. BACEN exige controles de acesso e políticas de segurança cibernética."
+    recommendation: "Aplicar criptografia em trânsito e repouso. Restringir acesso por necessidade de negócio. Manter logs de acesso auditáveis. Verificar sigilo bancário e LGPD. Consultar DPO, CISO e jurídico."
+    priority: "ALTA"
+    relevant_for: "DPO, CISO, jurídico, operações bancárias, BACEN compliance"
+
+  - norm_tag_pattern: "BACEN 4893 Art. 11 (notificação incidente)"
+    base_legal: "Resolução BCB 4.893/2021 Art. 11 — incidentes relevantes de segurança cibernética devem ser notificados ao BACEN em até 4 dias úteis. Autoridade: Banco Central do Brasil."
+    risk: "Campo de tracking de incidente cibernético identificado. BACEN 4893 Art. 11 exige notificação em 4 dias úteis para incidentes relevantes. Atraso na notificação pode resultar em sanções do BACEN."
+    recommendation: "Verificar se o incidente está sendo adequadamente tratado e notificado ao BACEN (quando aplicável). Confirmar se o plano de resposta a incidentes (Art. 6-8) está ativado. Consultar CISO e compliance BACEN. Não é conclusão legal."
+    priority: "CRÍTICA"
+    relevant_for: "CISO, DPO, jurídico, BACEN compliance, alta administração"
+
+  - norm_tag_pattern: "BACEN 4893 Art. 16 (terceirização)"
+    base_legal: "Resolução BCB 4.893/2021 Art. 16 — prestação de serviços relevantes de tecnologia da informação por terceiros exige contrato com cláusulas de segurança cibernética e avaliação de risco. Autoridade: BACEN."
+    risk: "Dado de avaliação de terceirização ou contrato de nuvem identificado. BACEN 4893 exige que contratos com prestadores críticos incluam requisitos de segurança cibernética, direitos de auditoria e planos de contingência."
+    recommendation: "Verificar se os contratos com prestadores de TI críticos incluem: (1) requisitos de segurança cibernética; (2) direitos de auditoria; (3) plano de contingência. Classificar prestadores por criticidade (Art. 16). Consultar jurídico e CISO."
+    priority: "ALTA"
+    relevant_for: "CISO, jurídico, procurement, BACEN compliance, gestão de fornecedores"
+
+  - norm_tag_pattern: "BACEN 4893 (dado financeiro — token)"
+    base_legal: "Resolução BCB 4.893/2021 + PCI-DSS — tokens de pagamento são dados financeiros sensíveis. Tokenização é uma medida de segurança exigida; o token não reduz obrigações de segurança para os sistemas que os gerenciam."
+    risk: "Token de pagamento identificado. Embora tokens substituam dados de cartão bruto, os sistemas que gerenciam tokens são alvos de alto valor e exigem controles equivalentes aos dos dados originais sob PCI-DSS e BACEN 4893."
+    recommendation: "Verificar isolamento do ambiente de tokenização. Aplicar controles PCI-DSS ao vault de tokens. Usar compliance-sample-pci_dss.yaml em conjunto. Consultar CISO e equipe de pagamentos."
+    priority: "ALTA"
+    relevant_for: "CISO, equipe de pagamentos, PCI-DSS QSA, DPO"
+
+  - norm_tag_pattern: "BACEN 4893 (controle criptográfico)"
+    base_legal: "Resolução BCB 4.893/2021 Art. 6 — política de segurança cibernética deve incluir controles criptográficos para proteção de dados em trânsito e em repouso. Autoridade: BACEN."
+    risk: "Referência a chave criptográfica identificada. Gestão inadequada de chaves é um risco crítico sob BACEN 4893. Chaves expostas em databases ou filesystems representam falha de controle de segurança."
+    recommendation: "Chaves criptográficas NÃO devem ser armazenadas em databases de aplicação ou filesystems sem proteção de HSM/KMS. Verificar política de gestão de chaves (ciclo de vida, rotação, custódia). Consultar CISO. Rotacionar qualquer chave exposta imediatamente."
+    priority: "CRÍTICA"
+    relevant_for: "CISO, equipe de segurança, DevSecOps, BACEN compliance"
+
+  - norm_tag_pattern: "BACEN 4893 (dado de transação — NSU)"
+    base_legal: "Resolução BCB 4.893/2021 + LGPD Art. 5 — NSU e dados de transação são dados pessoais financeiros sujeitos a sigilo bancário (LC 105/2001) e LGPD."
+    risk: "NSU (Número Sequencial Único) de transação identifica operações financeiras específicas. Em conjunto com outros dados, permite reidentificação do titular e reconstrução de histórico financeiro."
+    recommendation: "Limitar acesso a dados de NSU/transação. Verificar retenção mínima necessária. Aplicar pseudonimização quando histórico completo não for necessário. Consultar DPO e jurídico (sigilo bancário LC 105/2001 + LGPD)."
+    priority: "ALTA"
+    relevant_for: "DPO, CISO, jurídico, operações de pagamento"

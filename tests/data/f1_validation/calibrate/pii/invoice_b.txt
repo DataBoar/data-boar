@@ -1,0 +1,5 @@
+NOTA FISCAL SINTETICA — CALIBRACAO (NAO REUSAR EM MEASURE)
+Cliente: Carlos Eduardo Lima
+Documento fiscal CPF: 390.533.447-05
+Emitente CNPJ: 12.345.678/0001-95
+Contato: carlos.lima@demo.invalid

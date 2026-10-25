@@ -1,0 +1,252 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://databoar.dev/sdk/1.0.0/metadata_manifest.schema.json",
+  "title": "Boar SDK L1 metadata manifest",
+  "description": "METADATA-ONLY input to a MetadataSidecar (Sage). Raw value fields are FORBIDDEN by name (not/required). PII-shaped CONTENT in allowed strings is also refused (sdk#25).",
+  "type": "object",
+  "required": [
+    "contract_version",
+    "kind",
+    "plane",
+    "findings"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "semver": {
+      "$comment": "Forma reaproveitada VERBATIM de data-boar/docs/sdk/PLUGIN_CONTRACT.schema.json ($defs/semver, ADR-0086). Nao reinventar: se aquela mudar, esta acompanha.",
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+([.-][A-Za-z0-9.-]+)?$"
+    },
+    "forbiddenRawValueNames": {
+      "anyOf": [
+        {
+          "required": [
+            "sample_value"
+          ]
+        },
+        {
+          "required": [
+            "sample_content"
+          ]
+        },
+        {
+          "required": [
+            "raw_sample"
+          ]
+        },
+        {
+          "required": [
+            "value"
+          ]
+        }
+      ]
+    },
+    "piiShapedString": {
+      "anyOf": [
+        {
+          "pattern": "\\d{3}\\.?\\d{3}\\.?\\d{3}-\\d{2}"
+        },
+        {
+          "pattern": "[^\\s@]+@[^\\s@]+\\.[^\\s@]+"
+        },
+        {
+          "pattern": "(?:\\d[ -]?){13,19}"
+        },
+        {
+          "pattern": "\\d{3}-\\d{2}-\\d{4}"
+        }
+      ]
+    },
+    "metadataString": {
+      "type": "string",
+      "maxLength": 256,
+      "not": {
+        "$ref": "#/$defs/piiShapedString"
+      }
+    },
+    "locationString": {
+      "type": "string",
+      "maxLength": 512,
+      "not": {
+        "$ref": "#/$defs/piiShapedString"
+      }
+    },
+    "classifierString": {
+      "type": "string",
+      "maxLength": 64,
+      "pattern": "^[A-Za-z][A-Za-z0-9_-]*$",
+      "not": {
+        "$ref": "#/$defs/piiShapedString"
+      }
+    },
+    "normTag": {
+      "type": "string",
+      "maxLength": 32,
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "not": {
+        "$ref": "#/$defs/piiShapedString"
+      }
+    },
+    "columnIdentifier": {
+      "type": "string",
+      "maxLength": 128,
+      "pattern": "^[A-Za-z_][A-Za-z0-9_.]*$",
+      "not": {
+        "$ref": "#/$defs/piiShapedString"
+      }
+    },
+    "findingId": {
+      "type": "string",
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9_.:#-]+$",
+      "not": {
+        "$ref": "#/$defs/piiShapedString"
+      }
+    },
+    "piiShapedNumber": {
+      "comment": "Vulnerability Scanner (2026-08-24): scalarOrMetadataString's number arm had NO piiShapedString check at all -- pattern only applies to type:string, so a PAN/CPF encoded as a bare JSON number (application.credit_card: 4111111111111111) or a whole-number float (4111111111111111.0) sailed through the open application/summary bags with zero PII-shape validation, fully bypassing sdk#25. Reject integers whose digit count matches an unformatted CPF (11) or PAN (13-19), mirroring the digit-length remediation the finding itself specifies.",
+      "type": "integer",
+      "anyOf": [
+        {
+          "minimum": 10000000000,
+          "maximum": 99999999999
+        },
+        {
+          "minimum": 1000000000000,
+          "maximum": 9999999999999999999
+        }
+      ]
+    },
+    "safeScalar": {
+      "type": [
+        "number",
+        "boolean",
+        "null"
+      ],
+      "not": {
+        "$ref": "#/$defs/piiShapedNumber"
+      }
+    },
+    "scalarOrMetadataString": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/safeScalar"
+        },
+        {
+          "$ref": "#/$defs/metadataString"
+        }
+      ]
+    }
+  },
+  "properties": {
+    "contract_version": {
+      "$ref": "#/$defs/semver",
+      "maxLength": 32,
+      "$comment": "Versao do SCHEMA DESTE PAYLOAD. Nao e a versao do produtor nem a do envelope/SDK negociada no handshake (I5) — ver #9."
+    },
+    "kind": {
+      "const": "metadata_manifest"
+    },
+    "plane": {
+      "const": "L1"
+    },
+    "application": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/scalarOrMetadataString"
+      },
+      "not": {
+        "$ref": "#/$defs/forbiddenRawValueNames"
+      }
+    },
+    "summary": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/scalarOrMetadataString"
+      },
+      "not": {
+        "$ref": "#/$defs/forbiddenRawValueNames"
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "finding_id",
+          "source_type",
+          "pattern"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "finding_id": {
+            "$ref": "#/$defs/findingId"
+          },
+          "source_type": {
+            "$ref": "#/$defs/classifierString"
+          },
+          "sensitivity": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "high",
+              "medium",
+              "low",
+              null
+            ]
+          },
+          "pattern": {
+            "$ref": "#/$defs/classifierString"
+          },
+          "norm_tag": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/$defs/normTag"
+              }
+            ]
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/$defs/locationString"
+              }
+            ]
+          },
+          "raw_field": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/$defs/columnIdentifier"
+              }
+            ]
+          },
+          "value_length": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        },
+        "not": {
+          "$ref": "#/$defs/forbiddenRawValueNames"
+        }
+      }
+    }
+  }
+}

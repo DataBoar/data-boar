@@ -1,0 +1,13 @@
+# Optional local MongoDB for lab external-eval (driver: mongodb).
+# Usage: docker compose -f docker-compose.mongo.yml up -d
+# Default published port: 27018 -> 27017 (avoid clashing with host MongoDB).
+#
+# See: docs/ops/LAB_EXTERNAL_CONNECTIVITY_EVAL.md
+#
+services:
+  lab-mongodb:
+    image: mongo:7
+    ports:
+      - "${LAB_MONGO_PORT:-27018}:27017"
+    volumes:
+      - ./init/mongodb:/docker-entrypoint-initdb.d:ro

@@ -1,0 +1,377 @@
+"""WebAuthn HTML session gate and CSRF (Phase 1b, GitHub #86)."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import pytest
+import yaml
+from fastapi.testclient import TestClient
+
+from core.webauthn_rp.session_cookie import COOKIE_NAME, sign_session
+from core.webauthn_rp.settings import user_id_bytes, webauthn_block
+
+
+@pytest.fixture
+def webauthn_gate_client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv(
+        "DATA_BOAR_WEBAUTHN_TOKEN_SECRET", "unit-test-webauthn-secret-min-16"
+    )
+    cfg = tmp_path / "config.yaml"
+    db = tmp_path / "audit.db"
+    cfg.write_text(
+        f"""targets: []
+report:
+  output_dir: {tmp_path}
+sqlite_path: {db}
+api:
+  port: 8088
+  webauthn:
+    enabled: true
+    rp_id: localhost
+    rp_name: Data Boar Test
+    origin: http://testserver
+    user_display_name: tester
+scan:
+  max_workers: 1
+""",
+        encoding="utf-8",
+    )
+    import api.routes as routes
+
+    prev_path = routes._config_path
+    prev_cfg = routes._config
+    prev_eng = routes._audit_engine
+    routes._config_path = str(cfg)
+    routes._config = None
+    routes._audit_engine = None
+    client = TestClient(routes.app)
+    yield client, routes
+    routes._config_path = prev_path
+    routes._config = prev_cfg
+    routes._audit_engine = prev_eng
+    monkeypatch.delenv("DATA_BOAR_WEBAUTHN_TOKEN_SECRET", raising=False)
+
+
+def test_gate_off_when_no_credentials_allows_dashboard(webauthn_gate_client):
+    client, _routes = webauthn_gate_client
+    r = client.get("/en/", follow_redirects=False)
+    assert r.status_code == 200
+
+
+def test_gate_on_redirects_dashboard_to_login(webauthn_gate_client):
+    client, routes_mod = webauthn_gate_client
+    cfg = yaml.safe_load(Path(routes_mod._config_path).read_text(encoding="utf-8"))
+    wa = webauthn_block(cfg)
+    assert wa is not None
+    uid = user_id_bytes(wa)
+    dbm = routes_mod._get_engine().db_manager
+    dbm.webauthn_save_credential(
+        user_id=uid,
+        credential_id=b"unit-test-credential-id-32bytes!!",
+        public_key=b"k" * 64,
+        sign_count=0,
+    )
+    r = client.get("/en/", follow_redirects=False)
+    assert r.status_code == 302
+    assert r.headers["location"].startswith("/en/login?next=")
+
+
+def test_gate_on_allows_help(webauthn_gate_client):
+    client, routes_mod = webauthn_gate_client
+    cfg = yaml.safe_load(Path(routes_mod._config_path).read_text(encoding="utf-8"))
+    wa = webauthn_block(cfg)
+    uid = user_id_bytes(wa)
+    dbm = routes_mod._get_engine().db_manager
+    dbm.webauthn_save_credential(
+        user_id=uid,
+        credential_id=b"unit-test-credential-id-32bytes!!",
+        public_key=b"k" * 64,
+        sign_count=0,
+    )
+    r = client.get("/en/help")
+    assert r.status_code == 200
+
+
+def test_gate_on_allows_login_page(webauthn_gate_client):
+    client, routes_mod = webauthn_gate_client
+    cfg = yaml.safe_load(Path(routes_mod._config_path).read_text(encoding="utf-8"))
+    wa = webauthn_block(cfg)
+    uid = user_id_bytes(wa)
+    dbm = routes_mod._get_engine().db_manager
+    dbm.webauthn_save_credential(
+        user_id=uid,
+        credential_id=b"unit-test-credential-id-32bytes!!",
+        public_key=b"k" * 64,
+        sign_count=0,
+    )
+    r = client.get("/en/login")
+    assert r.status_code == 200
+
+
+def test_gate_on_session_cookie_allows_dashboard(webauthn_gate_client):
+    client, routes_mod = webauthn_gate_client
+    cfg = yaml.safe_load(Path(routes_mod._config_path).read_text(encoding="utf-8"))
+    wa = webauthn_block(cfg)
+    uid = user_id_bytes(wa)
+    secret = "unit-test-webauthn-secret-min-16"
+    dbm = routes_mod._get_engine().db_manager
+    dbm.webauthn_save_credential(
+        user_id=uid,
+        credential_id=b"unit-test-credential-id-32bytes!!",
+        public_key=b"k" * 64,
+        sign_count=0,
+    )
+    cookie_val = sign_session(secret, uid)
+    client.cookies.set(COOKIE_NAME, cookie_val)
+    r = client.get("/en/")
+    assert r.status_code == 200
+
+
+def test_csrf_required_on_config_post_when_gate_on(webauthn_gate_client):
+    client, routes_mod = webauthn_gate_client
+    cfg = yaml.safe_load(Path(routes_mod._config_path).read_text(encoding="utf-8"))
+    wa = webauthn_block(cfg)
+    uid = user_id_bytes(wa)
+    secret = "unit-test-webauthn-secret-min-16"
+    dbm = routes_mod._get_engine().db_manager
+    dbm.webauthn_save_credential(
+        user_id=uid,
+        credential_id=b"unit-test-credential-id-32bytes!!",
+        public_key=b"k" * 64,
+        sign_count=0,
+    )
+    cookie_val = sign_session(secret, uid)
+    client.cookies.set(COOKIE_NAME, cookie_val)
+    r = client.post(
+        "/en/config",
+        data={"yaml": "targets: []\n"},
+    )
+    assert r.status_code == 403
+
+
+@pytest.fixture
+def html_csrf_gate_off_client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    """Default out-of-box: no WebAuthn gate — CSRF must still fail closed (#1231)."""
+    monkeypatch.setenv("DATA_BOAR_HTML_CSRF_SECRET", "unit-test-html-csrf-secret")
+    cfg = tmp_path / "config.yaml"
+    db = tmp_path / "audit.db"
+    cfg.write_text(
+        f"""targets: []
+report:
+  output_dir: {tmp_path}
+sqlite_path: {db}
+api:
+  port: 8088
+scan:
+  max_workers: 1
+""",
+        encoding="utf-8",
+    )
+    import api.routes as routes
+
+    prev_path = routes._config_path
+    prev_cfg = routes._config
+    prev_eng = routes._audit_engine
+    routes._config_path = str(cfg)
+    routes._config = None
+    routes._audit_engine = None
+    client = TestClient(routes.app)
+    yield client, routes
+    routes._config_path = prev_path
+    routes._config = prev_cfg
+    routes._audit_engine = prev_eng
+    monkeypatch.delenv("DATA_BOAR_HTML_CSRF_SECRET", raising=False)
+
+
+def test_csrf_required_on_config_post_when_gate_off(html_csrf_gate_off_client):
+    client, _routes = html_csrf_gate_off_client
+    r = client.post("/en/config", data={"yaml": "targets: []\n"})
+    assert r.status_code == 403
+
+
+def test_config_get_emits_csrf_when_gate_off(html_csrf_gate_off_client):
+    client, _routes = html_csrf_gate_off_client
+    r = client.get("/en/config")
+    assert r.status_code == 200
+    assert 'name="csrf_token"' in r.text
+    assert 'value="' in r.text
+
+
+def test_config_post_accepts_valid_csrf_when_gate_off(html_csrf_gate_off_client):
+    import re
+
+    client, _routes = html_csrf_gate_off_client
+    page = client.get("/en/config")
+    assert page.status_code == 200
+    m = re.search(r'name="csrf_token"\s+value="([^"]+)"', page.text)
+    assert m, "expected csrf_token hidden field on config GET"
+    token = m.group(1)
+    r = client.post(
+        "/en/config",
+        data={"yaml": "targets: []\n", "csrf_token": token},
+        follow_redirects=False,
+    )
+    assert r.status_code == 303
+    assert "/en/config?saved=1" in r.headers.get("location", "")
+
+
+def test_config_post_rejects_forged_csrf_when_gate_off(html_csrf_gate_off_client):
+    client, _routes = html_csrf_gate_off_client
+    r = client.post(
+        "/en/config",
+        data={"yaml": "targets: []\n", "csrf_token": "forged.not.valid"},
+        follow_redirects=False,
+    )
+    assert r.status_code == 403
+
+
+def test_require_api_key_satisfied_by_webauthn_session_on_json_route(
+    webauthn_gate_client,
+):
+    """#1258: valid WebAuthn session cookie must satisfy api.require_api_key on /status."""
+    client, routes_mod = webauthn_gate_client
+    cfg_path = Path(routes_mod._config_path)
+    cfg = yaml.safe_load(cfg_path.read_text(encoding="utf-8"))
+    cfg.setdefault("api", {})["require_api_key"] = True
+    cfg["api"]["api_key"] = "automation-secret"
+    cfg_path.write_text(yaml.dump(cfg, sort_keys=False), encoding="utf-8")
+    routes_mod._config = None
+
+    wa = webauthn_block(cfg)
+    assert wa is not None
+    uid = user_id_bytes(wa)
+    secret = "unit-test-webauthn-secret-min-16"
+    dbm = routes_mod._get_engine().db_manager
+    dbm.webauthn_save_credential(
+        user_id=uid,
+        credential_id=b"unit-test-credential-id-32bytes!!",
+        public_key=b"k" * 64,
+        sign_count=0,
+    )
+    client.cookies.set(COOKIE_NAME, sign_session(secret, uid))
+
+    resp = client.get("/status")
+    assert resp.status_code == 200
+
+
+def test_require_api_key_still_rejects_without_session_when_webauthn_on(
+    webauthn_gate_client,
+):
+    """#1258: api-key gate stays enforced for JSON when no session and no key."""
+    client, routes_mod = webauthn_gate_client
+    cfg_path = Path(routes_mod._config_path)
+    cfg = yaml.safe_load(cfg_path.read_text(encoding="utf-8"))
+    cfg.setdefault("api", {})["require_api_key"] = True
+    cfg["api"]["api_key"] = "automation-secret"
+    cfg_path.write_text(yaml.dump(cfg, sort_keys=False), encoding="utf-8")
+    routes_mod._config = None
+
+    wa = webauthn_block(cfg)
+    uid = user_id_bytes(wa)
+    dbm = routes_mod._get_engine().db_manager
+    dbm.webauthn_save_credential(
+        user_id=uid,
+        credential_id=b"unit-test-credential-id-32bytes!!",
+        public_key=b"k" * 64,
+        sign_count=0,
+    )
+
+    resp = client.get("/status")
+    assert resp.status_code == 401
+
+
+def test_require_api_key_accepts_session_over_wrong_api_key(webauthn_gate_client):
+    """#1258: wrong X-API-Key must not block a valid WebAuthn browser session."""
+    client, routes_mod = webauthn_gate_client
+    cfg_path = Path(routes_mod._config_path)
+    cfg = yaml.safe_load(cfg_path.read_text(encoding="utf-8"))
+    cfg.setdefault("api", {})["require_api_key"] = True
+    cfg["api"]["api_key"] = "automation-secret"
+    cfg_path.write_text(yaml.dump(cfg, sort_keys=False), encoding="utf-8")
+    routes_mod._config = None
+
+    wa = webauthn_block(cfg)
+    uid = user_id_bytes(wa)
+    secret = "unit-test-webauthn-secret-min-16"
+    dbm = routes_mod._get_engine().db_manager
+    dbm.webauthn_save_credential(
+        user_id=uid,
+        credential_id=b"unit-test-credential-id-32bytes!!",
+        public_key=b"k" * 64,
+        sign_count=0,
+    )
+    client.cookies.set(COOKIE_NAME, sign_session(secret, uid))
+
+    resp = client.get("/status", headers={"X-API-Key": "wrong-key"})
+    assert resp.status_code == 200
+
+
+@pytest.mark.parametrize(
+    "malicious",
+    [
+        "//evil.com",
+        "//evil.com/path",
+        "/\\evil.com",
+        "///evil.com",
+        "/%5Cevil.com",
+        "/%5cevil.com",
+        "/\t/evil.com",
+        "/\t\\evil.com",
+        "/ /evil.com",
+        "/\v/evil.com",
+        "/\f/evil.com",
+        "/%09/evil.com",
+        "/%2509/evil.com",
+        "/%2Fevil.com",
+        "/%2fevil.com",
+        "/%2F%09/evil.com",
+    ],
+)
+def test_safe_next_path_rejects_protocol_relative_and_backslash(malicious: str) -> None:
+    """#1557 / #1630: protocol-relative and /\\ variants must not become post-login redirects."""
+    from api.webauthn_html_gate import safe_next_path
+
+    fallback = "/en/"
+    assert safe_next_path(malicious, fallback) == fallback
+
+
+@pytest.mark.parametrize(
+    "ok",
+    [
+        "/en/",
+        "/en/dashboard",
+        "/pt_BR/help",
+    ],
+)
+def test_safe_next_path_allows_same_origin_paths(ok: str) -> None:
+    from api.webauthn_html_gate import safe_next_path
+
+    assert safe_next_path(ok, "/en/") == ok
+
+
+def test_safe_next_path_still_rejects_scheme_and_control_chars() -> None:
+    from api.webauthn_html_gate import safe_next_path
+
+    fb = "/en/"
+    assert safe_next_path("https://evil.com", fb) == fb
+    assert safe_next_path("javascript:alert(1)", fb) == fb
+    assert safe_next_path("/en/\n/", fb) == fb
+    # Starlette-decoded TAB between slashes (Cursor Security on #1632).
+    assert safe_next_path("/\t/evil.com", fb) == fb
+    # Nested percent-encoding survives Starlette's single query decode (Bugbot on #1632).
+    assert safe_next_path("/%09/evil.com", fb) == fb
+    assert safe_next_path("/%2509/evil.com", fb) == fb
+
+
+def test_safe_next_path_rejects_issue_1557_protocol_relative_login_next() -> None:
+    """PoC from #1557: /en/login?next=//evil.com must not survive to window.location."""
+    from urllib.parse import urlsplit
+
+    from api.webauthn_html_gate import safe_next_path
+
+    fb = "/en/"
+    poc = "//evil.com"
+    assert urlsplit(poc).netloc == "evil.com"
+    assert safe_next_path(poc, fb) == fb
+    assert safe_next_path("//evil.com/phish", fb) == fb

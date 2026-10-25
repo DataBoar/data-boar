@@ -1,0 +1,29 @@
+---
+description: Maintainer vs contributor collaboration. Situational — CONTRIBUTING / COLLABORATION_TEAM globs or @collaboration-maintainer-contributor.mdc.
+globs:
+  - docs/COLLABORATION_TEAM*
+  - CONTRIBUTING.md
+alwaysApply: false
+---
+
+# Maintainer / contributor collaboration (Cursor)
+
+## Roles
+
+- **Maintainer**: owns release discipline, sensitive operator context under **gitignored** `docs/private/`, and merge/release policy per `AGENTS.md` / `CONTRIBUTING.md`.
+- **Contributor**: follows the same `AGENTS.md` and tracked docs; uses **feature branches** and **PRs** to the canonical repo (or PR from fork → upstream).
+
+## Identity
+
+- **Git** `user.name` / `user.email` on each machine identify **commit authors**. The assistant does **not** reliably know the human at the keyboard unless the operator states it in chat.
+- Do **not** assume maintainer-only tasks (homelab secrets, study cadence, private notes) apply to a contributor session unless the operator says so.
+
+## Where to look
+
+- Human-readable workflow + copy-paste Git commands + suggested Cursor prompts: **`docs/COLLABORATION_TEAM.pt_BR.md`** (full) and **`docs/COLLABORATION_TEAM.md`** (link stub).
+- Global agent contract: **`AGENTS.md`**. Contribution flow: **`CONTRIBUTING.md`**.
+
+## Tracked vs private
+
+- **Never** put real secrets, LAN IPs, or personal maintainer-only chores into **tracked** files to “help” a contributor; use issues/PRs and public docs instead.
+- **`docs/private/`** is workspace-only / gitignored from GitHub per `AGENTS.md` — contributors may not have the same tree; do not require it for routine product work.

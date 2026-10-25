@@ -1,0 +1,29 @@
+# {{ ansible_managed }} — LAB-OP sshd drop-in (role lab_node_01_sshd_labop)
+#
+LogLevel {{ lab_node_01_sshd_log_level }}
+MaxAuthTries 3
+MaxSessions 2
+KbdInteractiveAuthentication no
+ClientAliveCountMax 2
+Compression no
+PrintMotd no
+UseDNS {{ lab_node_01_sshd_usedns }}
+PermitRootLogin {{ lab_node_01_sshd_permit_root_login }}
+{% if lab_node_01_sshd_password_authentication | length > 0 %}
+PasswordAuthentication {{ lab_node_01_sshd_password_authentication }}
+{% endif %}
+{% if lab_node_01_sshd_profile == 'strict' %}
+AllowTcpForwarding no
+AllowAgentForwarding no
+X11Forwarding no
+TCPKeepAlive no
+{% else %}
+# Profile "dev": SSH tunnels and agent forwarding allowed.
+AllowTcpForwarding yes
+AllowAgentForwarding yes
+X11Forwarding no
+TCPKeepAlive yes
+{% endif %}
+{% if lab_node_01_sshd_use_banner | bool and lab_node_01_sshd_banner_exists | bool %}
+Banner {{ lab_node_01_sshd_banner_path }}
+{% endif %}

@@ -1,0 +1,63 @@
+# Switzerland FADP – sample compliance profile (Revised FADP, FDPIC)
+#
+# Target audience: Switzerland deployments. Federal Data Protection and Information Commissioner (FDPIC).
+# Terms: personal data (EN); optional DE/FR/IT for multilingual Swiss data.
+#
+# How to use:
+#   1. Set in your main config:
+#        regex_overrides_file: path/to/compliance-sample-switzerland_fadp.yaml
+#        ml_patterns_file: path/to/compliance-sample-switzerland_fadp.yaml
+#   2. Merge the recommendation_overrides list below into your config under report.recommendation_overrides.
+#
+# Switzerland: Revised Federal Act on Data Protection (FADP); FDPIC (EDÖB/PPDT/IFPDT).
+
+regex:
+  - name: "AHV_CH"
+    pattern: "\\b756\\.?\\d{4}\\.?\\d{4}\\.?\\d{2}\\b"
+    norm_tag: "Switzerland FADP"
+  - name: "UID_CH"
+    pattern: "\\bCHE-?\\d{3}\\.?\\d{3}\\.?\\d{3}\\b"
+    norm_tag: "Switzerland FADP"
+
+# ML terms: English and optional DE/FR (personal data, Persönlichkeitsrecht, données personnelles).
+terms:
+  - text: "personal data"
+    label: sensitive
+  - text: "personenbezogene daten"
+    label: sensitive
+  - text: "données personnelles"
+    label: sensitive
+  - text: "dati personali"
+    label: sensitive
+  - text: "fdpic"
+    label: sensitive
+  - text: "federal data protection and information commissioner"
+    label: sensitive
+  - text: "fadp"
+    label: sensitive
+  - text: "data subject"
+    label: sensitive
+  - text: "betroffene person"
+    label: sensitive
+  - text: "data controller"
+    label: sensitive
+  - text: "verantwortliche"
+    label: sensitive
+  - text: "consent"
+    label: sensitive
+  - text: "einwilligung"
+    label: sensitive
+  - text: "consentement"
+    label: sensitive
+  - text: "datenschutz"
+    label: sensitive
+  - text: "protection des données"
+    label: sensitive
+
+recommendation_overrides:
+  - norm_tag_pattern: "Switzerland FADP"
+    base_legal: "Revised FADP (Federal Act on Data Protection); FDPIC (EDÖB/PPDT/IFPDT)"
+    risk: "Personal data; transparency and lawful processing; cross-border disclosure."
+    recommendation: "Comply with revised FADP; ensure transparency and lawful basis; consider FDPIC guidance for cross-border transfers."
+    priority: "ALTA"
+    relevant_for: "DPO, FDPIC, Data Controller"

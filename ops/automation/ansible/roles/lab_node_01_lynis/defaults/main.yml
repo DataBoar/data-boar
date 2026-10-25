@@ -1,0 +1,21 @@
+---
+# Install Lynis via distro packages.
+lab_node_01_lynis_install: true
+
+# Optionally clone the upstream repo to a fixed path for diffing / bleeding edge.
+lab_node_01_lynis_clone_upstream: true
+lab_node_01_lynis_upstream_repo: "https://github.com/CISOfy/lynis.git"
+lab_node_01_lynis_upstream_dir: "/opt/lynis"
+lab_node_01_lynis_upstream_ref: "master"
+
+# Create stable wrappers under /usr/local/bin to run upstream/system Lynis.
+# This avoids relying on per-shell aliases and keeps operator workflow consistent.
+lab_node_01_lynis_install_wrappers: true
+lab_node_01_lynis_wrapper_dir: /usr/local/bin
+
+# Where Lynis reads its default profile on Debian-family.
+lab_node_01_lynis_default_prf_path: "/etc/lynis/default.prf"
+
+# Keep suggestions as comments; operator can "uncomment to activate".
+lab_node_01_lynis_profile_write: true
+

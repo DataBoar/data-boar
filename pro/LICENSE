@@ -1,0 +1,21 @@
+Data Boar — pro/ (Pro-tier modules)
+Proprietary License Notice
+
+Copyright (c) 2025-2026, FabioLeitao. All rights reserved.
+
+The source code in this directory ("pro/") is NOT covered by the
+BSD 3-Clause License granted for the rest of this repository (see the
+repository-root LICENSE file). It is proprietary and made available
+solely to enable runtime license-key verification for licensed users
+of the Pro tier.
+
+No rights are granted to copy, modify, distribute, sublicense, or
+create derivative works from any file in this directory, except as
+may be separately agreed in writing.
+
+The final commercial license model for pro/ is under active definition
+(tracked in issue #1576 and related planning docs). Until ratified,
+this default — proprietary / all rights reserved — governs.
+
+Questions about licensing pro/ content: see the repository's contact
+information (README / SECURITY.md).

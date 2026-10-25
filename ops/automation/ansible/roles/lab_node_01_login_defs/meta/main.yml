@@ -1,0 +1,8 @@
+---
+galaxy_info:
+  role_name: lab_node_01_login_defs
+  description: Harden /etc/login.defs (umask, password aging, SHA512 rounds).
+  license: BSD-3-Clause
+  platforms:
+    - name: Debian
+dependencies: []

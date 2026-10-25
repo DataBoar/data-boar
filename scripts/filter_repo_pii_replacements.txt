@@ -1,0 +1,20 @@
+# git filter-repo --replace-text / --replace-message (see docs/ops/PII_PUBLIC_TREE_OPERATOR_GUIDE.md Part II)
+# Blob replacements. Patterns apply to file contents; overlapping rules: order matters.
+
+# Commit-message no-op literal (some workflows reference this token pair)
+REPLACEMENT==>REPLACEMENT
+
+# LinkedIn: any profile slug except the documented placeholder "example"
+regex:(?i)https?://(?:www\.)?linkedin\.com/in/(?!example\b)[^\s"'`)]+==>https://www.example.com/profile/redacted
+
+# ssh:// with embedded username (lab or personal); replace with neutral token
+regex:(?i)\bssh://[a-z0-9._-]+@==>ssh://USER_REDACTED@
+
+# Portuguese high-signal family phrase (tracked template leakage)
+regex:(?i)\btrabalho\s+da\s+esposa\b==>trabalho [redacted]
+
+# Windows user profile segment (non-system account names; fabio = public maintainer identity — do not redact)
+regex:(?i)C:[/\\]+Users[/\\]+(?!(?:Public|Default|All Users|desktop\.ini|fabio)\b)([a-z0-9._-]+)[/\\]==>C:/Users/<redacted>/
+
+# Linux /home/ username segment (leitao = public maintainer home — do not redact)
+regex:(?i)(?<![\w/])/home/(?!user/|you/|<user>/|replace_user/|\{\{|leitao/)([a-z0-9._-]+)/==>/home/<redacted>/

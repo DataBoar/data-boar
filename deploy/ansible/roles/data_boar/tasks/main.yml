@@ -1,0 +1,39 @@
+---
+# Deploys Data Boar via Docker (standalone or Swarm service).
+
+- name: Create working directory
+  ansible.builtin.file:
+    path: "{{ data_boar_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Copy docker-compose file
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../../docker-compose.yml"
+    dest: "{{ data_boar_dir }}/docker-compose.yml"
+    mode: "0644"
+
+- name: Pull Data Boar image
+  community.docker.docker_image:
+    name: "{{ data_boar_image }}"
+    source: pull
+    force_source: true
+
+# --- Standalone path (swarm_enabled: false) ---
+- name: Deploy with Docker Compose (standalone)
+  community.docker.docker_compose_v2:
+    project_src: "{{ data_boar_dir }}"
+    state: present
+  when: not swarm_enabled | bool
+
+# --- Swarm path (swarm_enabled: true) ---
+- name: Deploy Data Boar as Swarm service
+  community.docker.docker_swarm_service:
+    name: data_boar
+    image: "{{ data_boar_image }}"
+    publish:
+      - published_port: "{{ data_boar_port }}"
+        target_port: 8088
+    replicas: 1
+    state: present
+  when: swarm_enabled | bool

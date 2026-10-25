@@ -1,0 +1,14 @@
+{
+  "sdk_contract_version": "1.0.0",
+  "schema": "databoar.attestation.response",
+  "role": "guest",
+  "party": "boar_fast_filter",
+  "nonce_echo": "0123456789abcdef0123456789abcdef",
+  "trust_level": "trusted",
+  "integrity_state": "ok",
+  "integrity_anchor": "sha256:dogfood-guest-anchor-example",
+  "release_label": "boar_fast_filter-0.1.0",
+  "issued_at": "2026-08-09T20:00:01Z",
+  "signature_b64": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+  "counter_nonce": "fedcba9876543210fedcba9876543210"
+}

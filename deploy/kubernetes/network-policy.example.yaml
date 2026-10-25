@@ -1,0 +1,29 @@
+# Optional: restrict ingress to data-boar pods.
+# Apply only if your cluster supports NetworkPolicy (e.g. Calico, Cilium).
+# Adjust namespaceSelector / podSelector to match your ingress controller or allowed clients.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: data-boar-ingress
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      app: data-boar
+  policyTypes:
+    - Ingress
+  ingress:
+    # Allow from ingress-nginx (example); change namespace/labels to match your ingress.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8088
+    # Allow from same namespace (e.g. probes, same-ns clients).
+    - from:
+        - podSelector: {}
+      ports:
+        - protocol: TCP
+          port: 8088

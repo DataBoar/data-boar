@@ -1,0 +1,51 @@
+---
+description: Audience segmentation for docs. Situational — `docs` / `feature` tokens or docs/** globs; @audience-segmentation-docs.mdc when globs miss.
+globs:
+  - docs/**
+  - README.md
+  - CONTRIBUTING.md
+alwaysApply: false
+---
+
+# Audience segmentation guardrail (docs and training materials)
+
+Use these audience buckets when editing docs, README sections, and training/disclosure material:
+
+1. **External audience**
+
+   Stakeholders, decision-makers, and enterprise teams (IT, cybersecurity, compliance, DPO, legal) evaluating or operating Data Boar.
+
+1. **Technical integrators**
+
+   Engineers deploying, configuring, and extending the product (USAGE, TECH_GUIDE, connectors, API) without maintainer PMO context.
+
+1. **Internal project audience**
+
+   Operator, assistant, maintainers, collaborators, and reviewers working on project internals.
+
+1. **Secrets-access audience**
+
+   Strictly operator + assistant; includes private operational notes and secret-bearing workflows.
+
+## Planning vs product documentation (segregation)
+
+- **Plans stay public in-tree** (`docs/plans/`, `docs/plans/completed/`, optional `.cursor/plans/`) for transparency and contributor access, but **must not be one-click navigation targets** from **external** or **integrator** documentation.
+- **Deliberate entry point:** The **Internal and reference** section of **[docs/README.md](../../docs/README.md)** (and **README.pt_BR.md**) lists plan files for maintainers and collaborators. **`docs/plans/PLANS_HUB.md`** is the in-tree **table of all plans** (summaries + related-plan hints); keep it in sync via **`scripts/plans_hub_sync.py`**. Prefer pointing there (or plain-text paths like `` `docs/plans/` ``) instead of deep-linking `PLAN_*.md` from compliance, legal, pitch, or primary product guides.
+- **Where plan links are OK:** **`docs/ops/`** runbooks, **`docs/plans/`** itself, **`docs/README.md`** / **README.pt_BR.md** internal tables, **CONTRIBUTING**, **AGENTS** when describing workflow, and **gitignored** `docs/private/` (never in tracked pages).
+- **Prefer instead of plan URLs:** **USAGE**, **TECH_GUIDE**, **COMPLIANCE_***, **SECURITY**, **releases/**, **SENSITIVITY_DETECTION**, **MINOR_DETECTION**, and **[README.md](../../docs/README.md)** index rows.
+- **Automation:** **`tests/test_docs_external_no_plan_links.py`** fails CI/pre-commit if a tracked **external-tier** Markdown file contains markdown links whose targets include `plans/` or `.cursor/plans`. Excluded from that scan: **`docs/ops/`**, **`docs/plans/`**, **`docs/adr/`**, **`docs/private/`**, **`docs/README*.md`** (hub), **`docs/COLLABORATION_TEAM*.md`**, **root `CONTRIBUTING*.md`**, **`AGENTS.md`**, and other **root policy** files listed in the test module.
+- **Architecture record:** **[ADR 0004](../../docs/adr/ADR-0004-external-docs-no-markdown-links-to-plans.md)** — information architecture decision (why external-tier surfaces stay separate from plan hyperlinks).
+
+## Link and visibility rules (summary)
+
+- Keep current protections for `docs/private/` and existing restricted paths unchanged.
+- External-facing sections (e.g. README pitch, compliance/legal overview) should prefer links to public product docs (USAGE, TECH_GUIDE, COMPLIANCE_*, TESTING, SECURITY, GLOSSARY).
+- Avoid adding links from external-facing sections to internal-operational planning/control material (for example: `docs/plans/` deep links, CI/pipeline control docs, internal review-tracking files) except via the **docs/README** hub or **ops** runbooks as above.
+- Internal docs may link to `docs/ops/`, `docs/plans/`, `docs/releases/`, `docs/private.example/`, and review-feedback folders when useful.
+- Secrets-only details remain in gitignored private docs and must never be exposed in tracked public pages.
+
+## Language and source-of-truth constraints
+
+- Product/user docs are authored from code truth in English first, then synced to pt-BR.
+- Respect lint/locale rules; avoid pt-PT forms in pt-BR docs.
+- Keep edits minimal and natural when removing boundary-crossing links.

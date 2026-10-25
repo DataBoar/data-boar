@@ -1,0 +1,174 @@
+"""CLI: main.py --web requires TLS paths or explicit --allow-insecure-http."""
+
+from __future__ import annotations
+
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def _drop_operator_config_path(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Child ``main.py --web`` inherits this process env (#2091).
+
+    A shell ``CONFIG_PATH`` that is not the test ``--config`` exits on a
+    non-loopback bind before the auth refusal these tests assert.
+    """
+    monkeypatch.delenv("CONFIG_PATH", raising=False)
+
+
+def test_main_web_exits_without_transport_choice(tmp_path):
+    cfg = tmp_path / "c.yaml"
+    db = tmp_path / "a.db"
+    cfg.write_text(
+        f"""targets: []
+report:
+  output_dir: {tmp_path}
+sqlite_path: {db}
+api:
+  port: 8765
+scan:
+  max_workers: 1
+""",
+        encoding="utf-8",
+    )
+    repo = Path(__file__).resolve().parents[1]
+    r = subprocess.run(
+        [
+            sys.executable,
+            str(repo / "main.py"),
+            "--config",
+            str(cfg),
+            "--web",
+        ],
+        capture_output=True,
+        text=True,
+        cwd=str(repo),
+        timeout=30,
+        check=False,
+    )
+    assert r.returncode == 2, r.stdout + r.stderr
+    assert "Dashboard transport error" in r.stderr
+
+
+def test_main_web_accepts_allow_insecure_http(tmp_path):
+    """With explicit opt-in, web mode stays up (uvicorn) instead of exiting at transport gate."""
+    cfg = tmp_path / "c.yaml"
+    db = tmp_path / "a.db"
+    cfg.write_text(
+        f"""targets: []
+report:
+  output_dir: {tmp_path}
+sqlite_path: {db}
+api:
+  port: 8766
+scan:
+  max_workers: 1
+""",
+        encoding="utf-8",
+    )
+    repo = Path(__file__).resolve().parents[1]
+    proc = subprocess.Popen(
+        [
+            sys.executable,
+            "-u",
+            str(repo / "main.py"),
+            "--config",
+            str(cfg),
+            "--web",
+            "--allow-insecure-http",
+            "--host",
+            "127.0.0.1",
+        ],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        cwd=str(repo),
+    )
+    try:
+        time.sleep(2.0)
+        assert proc.poll() is None, (
+            "Server should still be running (transport gate passed)."
+        )
+    finally:
+        proc.kill()
+        proc.wait(timeout=15)
+
+
+def test_main_web_refuses_non_loopback_without_resolved_auth(tmp_path):
+    cfg = tmp_path / "c.yaml"
+    db = tmp_path / "a.db"
+    cfg.write_text(
+        f"""targets: []
+report:
+  output_dir: {tmp_path}
+sqlite_path: {db}
+api:
+  port: 8767
+scan:
+  max_workers: 1
+""",
+        encoding="utf-8",
+    )
+    repo = Path(__file__).resolve().parents[1]
+    r = subprocess.run(
+        [
+            sys.executable,
+            str(repo / "main.py"),
+            "--config",
+            str(cfg),
+            "--web",
+            "--allow-insecure-http",
+            "--host",
+            "0.0.0.0",
+        ],
+        capture_output=True,
+        text=True,
+        cwd=str(repo),
+        timeout=30,
+        check=False,
+    )
+    assert r.returncode == 2, r.stdout + r.stderr
+    assert "Refusing startup with non-loopback API bind" in r.stderr
+    assert "require_api_key" in r.stderr
+
+
+def test_main_web_refuses_non_loopback_when_key_present_but_not_required(tmp_path):
+    """#1714 — configured api_key without require_api_key must not open 0.0.0.0."""
+    cfg = tmp_path / "c.yaml"
+    db = tmp_path / "a.db"
+    cfg.write_text(
+        f"""targets: []
+report:
+  output_dir: {tmp_path}
+sqlite_path: {db}
+api:
+  port: 8768
+  api_key: secret-not-enforced
+scan:
+  max_workers: 1
+""",
+        encoding="utf-8",
+    )
+    repo = Path(__file__).resolve().parents[1]
+    r = subprocess.run(
+        [
+            sys.executable,
+            str(repo / "main.py"),
+            "--config",
+            str(cfg),
+            "--web",
+            "--allow-insecure-http",
+            "--host",
+            "0.0.0.0",
+        ],
+        capture_output=True,
+        text=True,
+        cwd=str(repo),
+        timeout=30,
+        check=False,
+    )
+    assert r.returncode == 2, r.stdout + r.stderr
+    assert "Refusing startup with non-loopback API bind" in r.stderr

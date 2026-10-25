@@ -1,0 +1,9 @@
+# Example scope-import CSV (UTF-8). Required column: type.
+# Emit YAML: uv run python scripts/scope_import_csv.py deploy/scope_import.example.csv
+# Do not put live secrets in this file — use pass_from_env and set env vars at runtime.
+
+type,name,path,host,port,database,user,pass_from_env,share,recursive,tags,source_system,asset_id
+filesystem,example-fs,/data/share,,,,,,,true,manual,example-sheet,ASSET-001
+postgresql,,,db.example.com,5432,mydb,auditor,DB_SECRET,,,,,ASSET-002
+smb,smb-target,,fileserver,,,,SMB_PASS,c$/data,true,manual,sheet,ASSET-003
+nfs,nfs1,/mnt/imports,fs.internal,,,,,,true,,,ASSET-004

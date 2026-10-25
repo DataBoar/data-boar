@@ -1,0 +1,32 @@
+---
+description: Talent ATS / LinkedIn recommendations — locale-aware. Situational — `talent-ats` token or globs below; @ats-locale-aware-recommendations.mdc.
+globs:
+  - docs/ops/LINKEDIN_ATS_PLAYBOOK*
+  - docs/private.example/commercial/**
+  - .cursor/private/skills/candidate-ats-evaluation/**
+
+alwaysApply: false
+---
+
+# ATS / talent recommendations — locale and jurisdiction
+
+## When this applies
+
+Any **talent-ats** output, **LinkedIn/ATS recommendation** for pool candidates, or **ATS_SLI_RECOMMENDATIONS_*.md** draft for a **named geography**.
+
+## Rules
+
+1. **Anchor language** to the candidate’s **target job market** (e.g. **en_CA** for Canada — not generic `en`, **en_UK**, or **en_US** unless that is the stated target).
+2. **Privacy / data protection framing:**
+   - **Canada:** lead with **PIPEDA** and relevant **provincial** laws; note **Bill C-27** / CPPA trajectory where useful; treat **GDPR** as supplementary when the role involves **EU data** or explicit employer ask — **not** as the default Canadian market vocabulary.
+   - **EU/UK:** **GDPR** / **UK GDPR** as appropriate.
+   - **Brazil:** **LGPD** (pt-BR narrative).
+   - **US:** sectoral + **state** privacy laws when relevant.
+3. **Certifications:** If the issuer is **US-based** (e.g. **SCCE** for **CCEP**), **do not** assume one global price — direct the candidate to **official** pricing for **Canada** (**CAD**), **test centres**, **taxes**, and **chapter** discounts; mention **USD** only as a **separate** scenario (e.g. exam in the United States).
+4. **Uncertainty:** Say **verify on the issuer’s site** instead of inventing fees or eligibility.
+
+## Canonical references
+
+- **`docs/ops/LINKEDIN_ATS_PLAYBOOK.md`** section **8** (EN) / **`.pt_BR.md`** (pt-BR).
+- **`.cursor/private/skills/candidate-ats-evaluation/SKILL.md`** — Locale subsection.
+- Session keyword **`talent-ats`** in **`.cursor/rules/session-mode-keywords.mdc`**.

@@ -1,0 +1,335 @@
+"""
+Lightweight operator-help contract (drift alarm, not full documentation).
+
+When you add a user-visible CLI flag, dashboard toggle, or in-app help callout that
+operators should discover from `--help` or `/help`, add or adjust a row below and
+update the surfaces listed in `docs/OPERATOR_HELP_AUDIT.md`.
+
+Use ``None`` for a surface that intentionally does not carry that cue (e.g. `uv run`
+is documented on `/help` and README, not in argparse text).
+
+Canonical detail stays in docs/USAGE*.md, man pages, and the repo README — this
+file only pins a minimal substring set so tests fail if copy disappears.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class OperatorHelpMarker:
+    """One feature cue checked on operator-facing surfaces (None = skip that surface)."""
+
+    id: str
+    cli_help_substring: str | None
+    web_help_substring: str | None
+    man1_troff_substring: str | None = None
+    """
+    If set, must appear in `docs/data_boar.1` (troff source).
+    Use escapes as stored on disk (e.g. raw ``\\-\\-web`` in the file).
+    """
+
+
+# Troff hyphenated options in data_boar.1 use \- for a literal hyphen in output.
+_MAN_WEB = r"\-\-web"
+_MAN_HOST = r"\-\-host"
+_MAN_PORT = r"\-\-port"
+_MAN_CONFIG = r"\-\-config"
+_MAN_SCAN_COMPRESSED = r"\-\-scan\-compressed"
+_MAN_CONTENT_TYPE = r"\-\-content\-type\-check"
+_MAN_SCAN_STEGO = r"\-\-scan\-stego"
+_MAN_RESET = r"\-\-reset\-data"
+_MAN_RECONCILE_ANCHOR = r"\-\-reconcile\-integrity\-anchor"
+_MAN_CONFIRM_UPGRADE = r"\-\-confirm\-upgrade\-to"
+_MAN_EXPORT_AUDIT = r"\-\-export\-audit\-trail"
+_MAN_TENANT = r"\-\-tenant"
+_MAN_TECH = r"\-\-technician"
+_MAN_JURISDICTION_HINT = r"\-\-jurisdiction\-hint"
+_MAN_VALIDATE_CRYPTO = r"\-\-validate\-crypto"
+_MAN_SCAN_PROGRESS = r"\-\-progress"
+_MAN_HTTPS_CERT = r"\-\-https\-cert\-file"
+_MAN_HTTPS_KEY = r"\-\-https\-key\-file"
+_MAN_ALLOW_INSECURE_HTTP = r"\-\-allow\-insecure\-http"
+_MAN_VALIDATE_CONFIG = r"\-\-validate\-config"
+_MAN_PLAN = r"\-\-plan"
+_MAN_RESUME = r"\-\-resume"
+_MAN_CHECK_EXTRAS = r"\-\-check\-extras"
+_MAN_PREFILTER_STATUS = r"\-\-prefilter\-status"
+_MAN_DIFF = r"\-\-diff"
+_MAN_FAIL_ON_NEW_HIGH = r"\-\-fail\-on\-new\-high"
+_MAN_EXPORT_DSAR = r"\-\-export\-dsar"
+_MAN_DSAR_OUTPUT = r"\-\-dsar\-output"
+_MAN_DSAR_INCLUDE_SAMPLES = r"\-\-dsar\-include\-samples"
+_MAN_EXPORT_L1 = r"\-\-export\-l1"
+_MAN_L1_OUTPUT = r"\-\-l1\-output"
+_MAN_EXPORT_FINDINGS_SINK = r"\-\-export\-findings\-sink"
+_MAN_ALLOW_SAMPLE_EXPORT = r"\-\-allow\-sample\-export"
+_MAN_EXPORT_L3 = r"\-\-export\-l3"
+_MAN_L3_GRANT = r"\-\-l3\-grant"
+_MAN_L3_PERSIST = r"\-\-l3\-persist"
+_MAN_L3_ALLOW_UNPROTECTED = r"\-\-l3\-allow\-unprotected"
+_MAN_DEMO = r"\-\-demo"
+_MAN_REGENERATE_REPORT = r"\-\-regenerate\-report"
+
+OPERATOR_HELP_MARKERS: tuple[OperatorHelpMarker, ...] = (
+    OperatorHelpMarker("config", "--config", "config.yaml", _MAN_CONFIG),
+    OperatorHelpMarker(
+        "demo",
+        "--demo",
+        "--demo",
+        _MAN_DEMO,
+    ),
+    OperatorHelpMarker("web", "--web", "--web", _MAN_WEB),
+    OperatorHelpMarker("host", "--host", "--host", _MAN_HOST),
+    OperatorHelpMarker(
+        "https_cert_file",
+        "--https-cert-file",
+        "--https-cert-file",
+        _MAN_HTTPS_CERT,
+    ),
+    OperatorHelpMarker(
+        "https_key_file",
+        "--https-key-file",
+        "--https-key-file",
+        _MAN_HTTPS_KEY,
+    ),
+    OperatorHelpMarker(
+        "allow_insecure_http",
+        "--allow-insecure-http",
+        "--allow-insecure-http",
+        _MAN_ALLOW_INSECURE_HTTP,
+    ),
+    OperatorHelpMarker(
+        "validate_config",
+        "--validate-config",
+        "--validate-config",
+        _MAN_VALIDATE_CONFIG,
+    ),
+    OperatorHelpMarker(
+        "plan",
+        "--plan",
+        "--plan",
+        _MAN_PLAN,
+    ),
+    OperatorHelpMarker(
+        "resume_session",
+        "--resume",
+        "--resume",
+        _MAN_RESUME,
+    ),
+    OperatorHelpMarker(
+        "check_extras",
+        "--check-extras",
+        "--check-extras",
+        _MAN_CHECK_EXTRAS,
+    ),
+    OperatorHelpMarker(
+        "prefilter_status",
+        "--prefilter-status",
+        "--prefilter-status",
+        _MAN_PREFILTER_STATUS,
+    ),
+    OperatorHelpMarker(
+        "diff_sessions",
+        "--diff",
+        "--diff",
+        _MAN_DIFF,
+    ),
+    OperatorHelpMarker(
+        "fail_on_new_high",
+        "--fail-on-new-high",
+        "--fail-on-new-high",
+        _MAN_FAIL_ON_NEW_HIGH,
+    ),
+    OperatorHelpMarker(
+        "export_dsar",
+        "--export-dsar",
+        "--export-dsar",
+        _MAN_EXPORT_DSAR,
+    ),
+    OperatorHelpMarker(
+        "dsar_output",
+        "--dsar-output",
+        "--dsar-output",
+        _MAN_DSAR_OUTPUT,
+    ),
+    OperatorHelpMarker(
+        "dsar_include_samples",
+        "--dsar-include-samples",
+        None,
+        _MAN_DSAR_INCLUDE_SAMPLES,
+    ),
+    OperatorHelpMarker(
+        "export_l1",
+        "--export-l1",
+        "--export-l1",
+        _MAN_EXPORT_L1,
+    ),
+    OperatorHelpMarker(
+        "l1_output",
+        "--l1-output",
+        "--l1-output",
+        _MAN_L1_OUTPUT,
+    ),
+    OperatorHelpMarker(
+        "export_findings_sink",
+        "--export-findings-sink",
+        "--export-findings-sink",
+        _MAN_EXPORT_FINDINGS_SINK,
+    ),
+    OperatorHelpMarker(
+        "allow_sample_export",
+        "--allow-sample-export",
+        "--allow-sample-export",
+        _MAN_ALLOW_SAMPLE_EXPORT,
+    ),
+    OperatorHelpMarker(
+        "export_l3",
+        "--export-l3",
+        "--export-l3",
+        _MAN_EXPORT_L3,
+    ),
+    OperatorHelpMarker(
+        "l3_grant",
+        "--l3-grant",
+        "--l3-grant",
+        _MAN_L3_GRANT,
+    ),
+    OperatorHelpMarker(
+        "l3_persist",
+        "--l3-persist",
+        "--l3-persist",
+        _MAN_L3_PERSIST,
+    ),
+    OperatorHelpMarker(
+        "l3_allow_unprotected",
+        "--l3-allow-unprotected",
+        "--l3-allow-unprotected",
+        _MAN_L3_ALLOW_UNPROTECTED,
+    ),
+    OperatorHelpMarker(
+        "regenerate_report",
+        "--regenerate-report",
+        "--regenerate-report",
+        _MAN_REGENERATE_REPORT,
+    ),
+    OperatorHelpMarker("port", "--port", "--port", _MAN_PORT),
+    OperatorHelpMarker(
+        "scan_compressed",
+        "--scan-compressed",
+        "--scan-compressed",
+        _MAN_SCAN_COMPRESSED,
+    ),
+    OperatorHelpMarker(
+        "content_type_check",
+        "--content-type-check",
+        "--content-type-check",
+        _MAN_CONTENT_TYPE,
+    ),
+    OperatorHelpMarker(
+        "archive_type_mismatch",
+        "archive_type_mismatch",
+        "archive_type_mismatch",
+        "archive_type_mismatch",
+    ),
+    OperatorHelpMarker(
+        "scan_stego",
+        "--scan-stego",
+        "--scan-stego",
+        _MAN_SCAN_STEGO,
+    ),
+    OperatorHelpMarker("reset_data", "--reset-data", "--reset-data", _MAN_RESET),
+    OperatorHelpMarker(
+        "reconcile_integrity_anchor",
+        "--reconcile-integrity-anchor",
+        "--reconcile-integrity-anchor",
+        _MAN_RECONCILE_ANCHOR,
+    ),
+    OperatorHelpMarker(
+        "confirm_upgrade_to",
+        "--confirm-upgrade-to",
+        "--confirm-upgrade-to",
+        _MAN_CONFIRM_UPGRADE,
+    ),
+    OperatorHelpMarker(
+        "export_audit_trail",
+        "--export-audit-trail",
+        "--export-audit-trail",
+        _MAN_EXPORT_AUDIT,
+    ),
+    OperatorHelpMarker("tenant", "--tenant", '--tenant "Acme Corp"', _MAN_TENANT),
+    OperatorHelpMarker(
+        "technician",
+        "--technician",
+        '--technician "Alice Colleague-V"',
+        _MAN_TECH,
+    ),
+    OperatorHelpMarker(
+        "jurisdiction_hint",
+        "--jurisdiction-hint",
+        "--jurisdiction-hint",
+        _MAN_JURISDICTION_HINT,
+    ),
+    OperatorHelpMarker(
+        "validate_crypto",
+        "--validate-crypto",
+        "--validate-crypto",
+        _MAN_VALIDATE_CRYPTO,
+    ),
+    OperatorHelpMarker(
+        "scan_progress",
+        "--progress",
+        "--progress",
+        _MAN_SCAN_PROGRESS,
+    ),
+    OperatorHelpMarker(
+        "scan_no_progress",
+        "--no-progress",
+        "--no-progress",
+        None,
+    ),
+    # Dev canonical invocation is python main.py; installed entry point is data-boar.
+    # Man pages document installed usage, so man1 is intentionally skipped here.
+    OperatorHelpMarker(
+        "python_main_invocation",
+        "python main.py --config config.yaml",
+        "python main.py --config config.yaml",
+        None,
+    ),
+    OperatorHelpMarker("api_host_env", "API_HOST", "API_HOST", "API_HOST"),
+    OperatorHelpMarker("bind_loopback", "127.0.0.1", "127.0.0.1", "127.0.0.1"),
+    OperatorHelpMarker(
+        "findings_export",
+        None,
+        "/findings/csv",
+        "/findings/csv",
+    ),
+    OperatorHelpMarker(
+        "report_ods",
+        None,
+        "?format=ods",
+    ),
+    OperatorHelpMarker(
+        "sql_sample_limit_env",
+        None,
+        "DATA_BOAR_SQL_SAMPLE_LIMIT",
+        "DATA_BOAR_SQL_SAMPLE_LIMIT",
+    ),
+    OperatorHelpMarker(
+        "sample_statement_timeout_env",
+        None,
+        "DATA_BOAR_SAMPLE_STATEMENT_TIMEOUT_MS",
+        "DATA_BOAR_SAMPLE_STATEMENT_TIMEOUT_MS",
+    ),
+)
+
+
+def _validate_markers() -> None:
+    for m in OPERATOR_HELP_MARKERS:
+        assert m.cli_help_substring or m.web_help_substring, (
+            f"marker {m.id!r} must set at least one of cli_help_substring, web_help_substring"
+        )
+
+
+_validate_markers()

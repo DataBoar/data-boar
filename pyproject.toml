@@ -1,0 +1,387 @@
+[project]
+name = "data-boar"
+version = "1.8.0-rc"
+description = "Data Boar — compliance-aware discovery and mapping of personal and sensitive data across databases, files, and APIs (LGPD, GDPR, CCPA, and configurable frameworks)."
+readme = "README.md"
+requires-python = ">=3.12"
+license = "BSD-3-Clause"
+license-files = ["LICENSE"]
+authors = [{ name = "Fabio Tavares Leitão", email = "author@databoar.com.br" }]
+keywords = [
+    "lgpd",
+    "gdpr",
+    "ccpa",
+    "pii",
+    "data-discovery",
+    "compliance",
+    "privacy",
+    "ropa",
+    "data-mapping",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "Intended Audience :: Legal Industry",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Security",
+    "Topic :: Database",
+]
+# Dependabot-friendly: minimum versions (>=) allow security patches; pin (==) only where needed for reproducibility.
+dependencies = [
+    "annotated-doc>=0.0.5",
+    "annotated-types>=0.7.0",
+    "anyio>=4.12.1",
+    # beautifulsoup4 is a transitive dep of extract-msg, but pinned here as a
+    # direct constraint so Dependabot/uv stop trying to bump past 4.14 until
+    # upstream extract-msg relaxes its `beautifulsoup4<4.14` requirement.
+    # See: https://pypi.org/project/extract-msg/0.55.0/ (requires_dist).
+    "beautifulsoup4>=4.13.5,<4.16",
+    "blinker>=1.9.0",
+    "certifi>=2026.10.19",
+    "cffi>=2.0.0 ; platform_python_implementation != 'PyPy'",
+    "charset-normalizer>=3.4.4",
+    "click>=8.4.1",
+    "colorama>=0.4.6 ; sys_platform == 'win32'",
+    "contourpy>=1.3.3",
+    "cryptography>=50.0.0,<51",
+    "cycler>=0.12.1",
+    "defusedxml>=0.7.1",
+    # ebcdic is a transitive dep of extract-msg; pinned here so Dependabot sees
+    # extract-msg 0.55.x requires_dist: ebcdic<2,>=1.1.1 (ADR 0053).
+    "ebcdic>=1.1.1,<2",
+    "et-xmlfile>=2.0.0",
+    "extract-msg>=0.55.0",
+    "fastapi>=0.143.0",
+    "flask>=3.1.3",
+    "flask-sqlalchemy>=3.1.1",
+    "fonttools>=4.63.0",
+    "greenlet>=3.5.1 ; platform_machine == 'AMD64' or platform_machine == 'WIN32' or platform_machine == 'aarch64' or platform_machine == 'amd64' or platform_machine == 'ppc64le' or platform_machine == 'win32' or platform_machine == 'x86_64'",
+    "h11>=0.16.0",
+    "httpcore>=1.0.9",
+    "httpx>=0.28.1",
+    "idna>=3.18",
+    "itsdangerous>=2.2.0",
+    "jinja2>=3.1.6",
+    "joblib>=1.5.3",
+    "jsonschema>=4.23.0",
+    "kiwisolver>=1.4.9",
+    "markupsafe>=3.0.3",
+    "matplotlib>=3.10.8",
+    "numpy>=2.4.6",
+    "odfpy>=1.4.1",
+    "openpyxl>=3.1.5",
+    "packaging>=26.1",
+    "pandas>=3.0.3",
+    "pillow>=12.3.0",
+    # pyasn1 is transitive (pyopenssl/crypto); direct floor so uv resolves the
+    # security fix for PYSEC-2026-3455, PYSEC-2026-3456, PYSEC-2026-3457.
+    "pyasn1>=0.6.4",
+    "pycparser>=3.0 ; implementation_name != 'PyPy' and platform_python_implementation != 'PyPy'",
+    "pydantic>=2.13.2",
+    "pydantic-core>=2.46.2",
+    "pygments>=2.20.0",
+    "pyparsing>=3.3.2",
+    "pypdf>=6.20.1",
+    "pyjwt>=2.12.0",
+    "python-dateutil>=2.9.0.post0",
+    "python-docx>=1.2.0",
+    "python-dotenv>=1.2.1",
+    "python-multipart>=0.0.32",
+    "pyyaml>=6.0.3",
+    "regex>=2026.5.9",
+    "reportlab>=5.0.0",
+    "requests>=2.34.2",
+    "scikit-learn>=1.9.0",
+    "scipy>=1.17.0",
+    "seaborn>=0.13.2",
+    "sqlalchemy>=2.0.50",
+    "starlette==1.8.0",
+    "threadpoolctl>=3.6.0",
+    "typing-extensions>=4.15.0",
+    "typing-inspection>=0.4.2",
+    "urllib3>=2.6.3",
+    "uvicorn>=0.52.0",
+    "werkzeug>=3.1.6",
+    "webauthn>=3.0.0",
+]
+
+[build-system]
+requires = ["hatchling>=1.30.1"]
+build-backend = "hatchling.build"
+
+# PyPI / `pip install`: flat layout — explicit packages (avoid setuptools auto-discover noise).
+# See scripts/pypi-publish.ps1 (OIDC dispatch) and CONTRIBUTING.md (install identity).
+[project.scripts]
+data-boar = "main:main"
+data-boar-report = "cli.reporter:main"
+data-boar-xlsx = "cli.format_entrypoints:main_xlsx"
+data-boar-pdf = "cli.format_entrypoints:main_pdf"
+data-boar-docx = "cli.format_entrypoints:main_docx"
+data-boar-heatmap = "cli.format_entrypoints:main_heatmap"
+data-boar-dsar = "cli.format_entrypoints:main_dsar"
+data-boar-audit = "cli.format_entrypoints:main_audit"
+
+[project.urls]
+Homepage = "https://github.com/DataBoar/data-boar"
+Repository = "https://github.com/DataBoar/data-boar"
+Issues = "https://github.com/DataBoar/data-boar/issues"
+Changelog = "https://github.com/DataBoar/data-boar/blob/main/CHANGELOG.md"
+"Docker Hub" = "https://hub.docker.com/r/fabioleitao/data_boar"
+
+[project.optional-dependencies]
+# SQL engines (#1047): core install = files + sqlite only; no DB C-extensions in core.
+postgres = ["psycopg2-binary>=2.9.11"]
+mysql = ["pymysql>=1.2.0"]
+mariadb = ["mariadb>=1.1.14"]
+# Bare config ``driver: mssql`` → DRIVER_MAP ``mssql+pymssql`` (#1588).
+# Extra name ``mssql`` must match that default (not pyodbc).
+mssql = ["pymssql>=2.3.0"]
+mssql-pymssql = ["pymssql>=2.3.0"]  # alias of ``mssql`` (explicit name)
+mssql-pyodbc = ["pyodbc>=5.3.0"]  # ``driver: mssql+pyodbc`` only
+oracle = ["oracledb>=4.0.1"]
+sql-community = [
+    "psycopg2-binary>=2.9.11",
+    "pymysql>=1.2.0",
+    "mariadb>=1.1.14",
+]
+sql-all = [
+    "psycopg2-binary>=2.9.11",
+    "pymysql>=1.2.0",
+    "mariadb>=1.1.14",
+    "pymssql>=2.3.0",
+    "pyodbc>=5.3.0",
+    "oracledb>=4.0.1",
+]
+nosql = ["pymongo>=4.0", "redis>=8.1.0"]
+bigdata = ["snowflake-connector-python>=4.6.0"]
+shares = ["smbprotocol>=1.2.0", "webdavclient3>=0.14.0", "requests_ntlm>=1.2.0"]
+# Scan inside .7z archives (ZIP/tar/tar.gz etc. use stdlib). See docs/plans/PLAN_COMPRESSED_FILES.md.
+compressed = ["py7zr>=1.1.3"]
+# Deep-learning sensitivity: sentence embeddings + classifier on your training terms (see docs/SENSITIVITY_DETECTION.md)
+dl = ["sentence-transformers>=5.5.1"]
+# Optional typo-tolerant column name vs sensitive terms (see sensitivity_detection.fuzzy_column_match)
+detection-fuzzy = ["rapidfuzz>=3.9.0"]
+# Rich media: ID3/Vorbis/FLAC tags (mutagen), OCR wrapper (pytesseract; install system tesseract-ocr),
+# HEIC/HEIF decoding for iPhone photos (pillow-heif; bridges PIL to libheif).
+richmedia = [
+    "mutagen>=1.47.0",
+    "pillow-heif>=0.16.0",
+    "pytesseract>=0.3.13",
+]
+# Parquet/ORC/Feather (pyarrow), Avro (fastavro), dBase (dbfread) — Tier-1 data soup formats.
+dataformats = ["pyarrow>=14.0.0", "fastavro>=1.9.0", "dbfread>=2.0.7"]
+# Legacy ".doc" samples: mammoth reads ZIP-based OOXML; binary Word 97-2003 often yields empty content (see docs/TROUBLESHOOTING.md).
+legacy-doc = ["mammoth>=1.6.0"]
+# GRC executive JSON dashboard (Streamlit + Plotly). Run: ``streamlit run app/dashboard.py``.
+# gitpython floor: streamlit pulls GitPython; pin so resolves cannot slip below
+# 3.1.55 (nine Dependabot HIGH advisories; one only fixed in 3.1.55 — not 3.1.54).
+grc-dashboard = ["streamlit>=1.58.0", "plotly>=6.8.0", "gitpython>=3.1.55"]
+# OpenTelemetry RED metrics + traces (#1500). Opt-in: DATA_BOAR_OTEL_ENABLED=1.
+# Never required for ``python main.py``. See docs/plans/PLAN_DATABOAR_OTEL_INSTRUMENTATION.md.
+otel = [
+    "opentelemetry-api>=1.27.0",
+    "opentelemetry-sdk>=1.27.0",
+    "opentelemetry-exporter-otlp>=1.27.0",
+    "opentelemetry-instrumentation-fastapi>=0.48b0",
+    "opentelemetry-instrumentation-sqlalchemy>=0.48b0",
+    "opentelemetry-instrumentation-logging>=0.48b0",
+]
+
+[tool.uv]
+# rpds-py is transitive (referencing -> jsonschema). Upstream pivoted to CalVer at
+# 2026.5.1, which is a legitimate release but BREAKING for our suite (Dependabot
+# #871 turned CI red on 3.12/3.13/3.14). Cap below 2026 to keep the working 0.x
+# line until we explicitly validate the CalVer series. Remove when ready to adopt.
+constraint-dependencies = ["rpds-py<2026"]
+# streamlit<=1.66.0 declares pillow<13. Raising the public floor to
+# pillow>=13 makes `pip install data-boar[grc-dashboard]` unsatisfiable
+# (#2116). This override applies only to the uv lock, so the audited tree
+# installs Pillow 13 while the published extra floor stays pillow>=12.3.0.
+# Remove it when a streamlit release widens that cap to include Pillow 13.
+override-dependencies = ["pillow>=13.0.0"]
+
+[tool.pytest.ini_options]
+# Fail on any warning (DeprecationWarning, ResourceWarning, etc.) so the suite stays clean
+addopts = "-v -W error"
+# Only the repo-root tests/ tree (see .gitignore /data-boar/): a nested duplicate worktree must not be collected.
+testpaths = ["tests"]
+norecursedirs = [
+    ".git",
+    ".venv",
+    "node_modules",
+    "data-boar",
+    "_audit_data-boar",
+    ".hypothesis",
+]
+
+# Coverage for CI → Sonar (#1719). Omit tests/ and venv; match sonar.sources.
+[tool.coverage.run]
+branch = true
+source = [
+    "api",
+    "config",
+    "connectors",
+    "core",
+    "database",
+    "file_scan",
+    "report",
+    "scanners",
+    "utils",
+    "logging_custom",
+]
+omit = ["tests/*", ".venv/*", "*/.venv/*"]
+
+[tool.ruff]
+# Legacy dirs now linted: utils/, scanners/, logging_custom/ — cleaned 2026-05-14.
+# db/ still excluded (deeper structural issues; see docs/plans/completed/PLAN_BANDIT_SECURITY_LINTER.md).
+# Markdown: ruff format rewrites fenced Python and breaks MD012; keep lint via pytest markdown guard.
+extend-exclude = ["db", "**/*.md"]
+
+[tool.ruff.lint]
+# Classic Ruff default (pycodestyle selected errors + Pyflakes). Ruff 0.16 enables
+# many more stable rules by default; pin this set so ruff-pre-commit can track
+# the pyproject floor (#491) without a tree-wide SIM/S rewrite in the same slice.
+select = ["E4", "E7", "E9", "F"]
+
+[tool.ruff.lint.per-file-ignores]
+# Connectors must register before we import connector_for_target; optional deps in try/except
+"core/engine.py" = ["E402"]
+# Streamlit entry: repo root must be on ``sys.path`` before ``app.*`` imports.
+"app/dashboard.py" = ["E402"]
+# Thin CLIs: insert repo root on sys.path before importing ``core.*``.
+"scripts/generate_extras_manifest.py" = ["E402"]
+"scripts/generate_nfpm_packages.py" = ["E402"]
+"scripts/generate_void_xbps_packages.py" = ["E402"]
+"scripts/operator_gated_pr_guard.py" = ["E402"]
+# Legacy complexity: these functions are I/O-heavy and have large dispatch tables.
+# Tracked in docs/plans/PLAN_LAB_OP_CAPEX_OPEX_PROCUREMENT.md and SonarQube; refactor when safe.
+# New code in these files must NOT add complexity violations — only existing ones are exempted.
+"config/loader.py" = ["C901", "PLR0912", "PLR0915"]
+"connectors/dataverse_connector.py" = ["C901", "PLR0912", "PLR0915"]
+"connectors/filesystem_connector.py" = ["C901", "PLR0911", "PLR0912", "PLR0915"]
+"connectors/mongodb_connector.py" = ["C901"]
+"connectors/powerbi_connector.py" = ["C901", "PLR0912", "PLR0915"]
+"connectors/rest_connector.py" = ["C901", "PLR0911", "PLR0912", "PLR0915"]
+"connectors/sharepoint_connector.py" = ["C901", "PLR0912", "PLR0915"]
+"connectors/smb_connector.py" = ["C901", "PLR0912", "PLR0915"]
+"connectors/sql_connector.py" = ["C901"]
+"connectors/webdav_connector.py" = ["C901", "PLR0912", "PLR0915"]
+"core/aggregated_identification.py" = ["C901", "PLR0912", "PLR0915"]
+"core/archives.py" = ["C901", "PLR0911", "PLR0912", "PLR0915"]
+"core/detector.py" = ["C901", "PLR0911", "PLR0912", "PLR0915"]
+"core/fuzzy_column_match.py" = ["C901", "PLR0911"]
+"core/learned_patterns.py" = ["C901"]
+"core/licensing/guard.py" = ["C901", "PLR0911", "PLR0912", "PLR0915"]
+"core/licensing/integrity.py" = ["C901", "PLR0911"]
+"core/rich_media_magic.py" = ["C901", "PLR0911"]
+"main.py" = ["C901", "PLR0912", "PLR0915"]
+"report/generator.py" = ["C901", "PLR0911", "PLR0912", "PLR0915"]
+"scripts/audit_concat_sliding_window.py" = ["C901", "PLR0911", "PLR0912", "PLR0915"]
+"scripts/audit_concatenated_markdown.py" = ["C901", "PLR0912"]
+"scripts/export_public_gemini_bundle.py" = ["C901"]
+"scripts/generate_pool_sync_snapshot.py" = ["PLR0915"]
+"scripts/plans-stats.py" = ["C901"]
+"scripts/plans_hub_sync.py" = ["C901"]
+
+# Bandit (security linter): pyproject baseline + strict CI gate (``bandit`` job).
+# See docs/plans/completed/PLAN_BANDIT_SECURITY_LINTER.md.
+[tool.bandit]
+exclude_dirs = ["tests", "db", ".venv"]
+# B608: identifier-built SQL from discovery (validated/quoted), not end-user SQL.
+# B310: urlopen in utils/notify.py is HTTPS webhook — annotated with # nosec B310.
+# Legacy dirs utils/, scanners/, logging_custom/ now included — cleaned 2026-05-14.
+# db/ still excluded (deeper structural issues; see docs/plans/completed/PLAN_BANDIT_SECURITY_LINTER.md).
+skips = []
+# B608 was previously skipped globally; now annotated inline with # nosec B608 in
+# connectors/sql_sampling.py (all 10 occurrences) — identifiers are ANSI-quoted
+# with '""'-escaping from DB schema introspection, not end-user input.
+level = "MEDIUM"
+confidence = "MEDIUM"
+# Força auditoria em chamadas de sistema e FFI (importante para o core em Rust)
+recursive = true
+aggregate = "file"
+
+# Gradual typing: dev-only until clean enough for CI. See docs/QUALITY_WORKFLOW_RECOMMENDATIONS.md §5.
+[tool.mypy]
+python_version = "3.12"
+explicit_package_bases = true
+# Start soft; tighten later (disallow_untyped_defs, warn_return_any, smaller ignore_missing_imports).
+disallow_untyped_defs = false
+check_untyped_defs = false
+warn_return_any = false
+ignore_missing_imports = true
+warn_unused_ignores = false
+show_error_codes = true
+
+[tool.hatch.build.targets.wheel]
+packages = [
+    "app",
+    "cli",
+    "analysis",
+    "api",
+    "config",
+    "connectors",
+    "core",
+    "data_boar",
+    "database",
+    "db",
+    "file_scan",
+    "logging_custom",
+    "pro",
+    "report",
+    "scanners",
+    "utils",
+]
+
+[tool.hatch.build.targets.wheel.force-include]
+"main.py" = "main.py"
+"core/licensing/license-pub-v1.pem" = "core/licensing/license-pub-v1.pem"
+"core/licensing/license-mldsa-pub-v1.pem" = "core/licensing/license-mldsa-pub-v1.pem"
+"docs/sdk/metadata_manifest.schema.json" = "core/data/metadata_manifest.schema.json"
+"docs/sdk/metadata_manifest.pin.json" = "core/data/metadata_manifest.pin.json"
+"docs/sdk/transformed_rows.schema.json" = "core/data/transformed_rows.schema.json"
+"docs/sdk/transformed_rows.pin.json" = "core/data/transformed_rows.pin.json"
+
+[dependency-groups]
+dev = [
+    "bandit>=1.9.4",
+    # chardet is transitive via cyclonedx-bom; dev-only pin matches cyclonedx-bom's
+    # chardet>=5.1,<6.0 until upstream allows 6+ (ADR 0054).
+    "chardet>=5.1,<6.0",
+    # CycloneDX SBOM from uv-exported requirements (ADR 0003); same CLI as CI `sbom.yml`.
+    "cyclonedx-bom>=7.0.0",
+    # JUnit skip-ceiling parser (scripts/ci_pytest_skip_ceiling.py). Also a
+    # runtime dep; listed here so Bandit/Semgrep --group-dev jobs stay explicit.
+    "defusedxml>=0.7.1",
+    "hypothesis>=6.164.0",
+    "httpx2",
+    "iniconfig>=2.3.0",
+    "markdown>=3.10.3",
+    # maturin builds the Rust `boar_fast_filter` extension on CAPABLE hosts
+    # (`maturin develop --release`). RAM-constrained hosts (<4GB, e.g. a
+    # Raspberry Pi 3-class board) do
+    # NOT build locally — they consume a prebuilt abi3 wheel (#782 wheel-matrix).
+    # Dev-dep only: the runtime falls back to pure Python when the extension is
+    # absent. See docs/TECH_GUIDE.md (Rust prefilter build). (#892, xref #782)
+    "maturin>=1.14.0",
+    "mypy>=2.1.0",
+    "pluggy>=1.6.0",
+    "pre-commit>=4.7.0",
+    "pytest>=9.0.3",
+    "pytest-cov>=6.0.0",
+    "rapidfuzz>=3.9.0",
+    "ruff>=0.16.1",
+    "types-pyyaml>=6.0.12.20260724",
+]
+
+# Operator-only maturity octet (ADR-0073). Never copy into [project].version.
+# 1.8.0 line: beta band 1–126 (cut 604c1b5c); rc band 127–199 (promotion 2026-09-22).
+# Last beta reconciliation: maturity_build = 116 (2026-08-22). RC cut enters rc band at 127 (ADR-0073).
+# Map / notes: docs/releases/1.8.0-rc.md (beta map: docs/releases/1.8.0-beta.md).
+[tool.databoar]
+maturity_build = 127

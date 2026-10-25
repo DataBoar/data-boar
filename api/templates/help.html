@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+{% block title %}{{ t('help.page_title') }}{% endblock %}
+{% block content %}
+<h1><img src="/static/mascot/data_boar_mascote_color.svg" alt="" width="40" height="40" style="vertical-align: middle; margin-right: 0.35em;">{{ t('help.h1') }}</h1>
+
+<section class="card">
+  <h2>{{ t('help.what_h2') }}</h2>
+  <p>{{ t('help.what_p1') }}</p>
+  <p class="muted">{{ t('help.what_p2') }}</p>
+</section>
+
+<section class="card">
+  <h2>{{ t('help.run_h2') }}</h2>
+  <h3>{{ t('help.run_web_h3') }}</h3>
+  <ol>
+    <li>{{ t('help.run_web_li1') }}</li>
+    <li>{{ t('help.run_web_li2') }}</li>
+    <li>{{ t('help.run_web_li3') }}</li>
+    <li>{{ t('help.run_web_li4') }}</li>
+  </ol>
+  <figure>
+    <img
+      class="help-shot"
+      src="/static/dashboard/{{ locale_slug }}/scan-start.png"
+      alt="{{ t('help.run_web_shot_alt') }}"
+      width="1200"
+      height="675"
+      loading="lazy"
+    >
+    <figcaption class="muted help-shot-caption">{{ t('help.run_web_shot_caption') }}</figcaption>
+  </figure>
+  <p class="muted">{{ t('help.run_web_tail') }}</p>
+
+  <h3>{{ t('help.run_auto_h3') }}</h3>
+  <p class="muted">{{ t('help.run_cli_p1') }}</p>
+  <p><strong>{{ t('help.run_cli_demo') }}</strong></p>
+  <pre><code>{{ prog }} --demo</code></pre>
+  <p><strong>{{ t('help.run_cli_oneshot') }}</strong></p>
+  <pre><code>{{ prog }} --config config.yaml
+{{ prog }} --config config.yaml --validate-config
+{{ prog }} --config config.yaml --plan
+{{ prog }} --config config.yaml --resume &lt;session_id&gt;
+{{ prog }} --check-extras
+{{ prog }} --config config.yaml --prefilter-status
+{{ prog }} --config config.yaml --diff &lt;session_a&gt; &lt;session_b&gt;
+{{ prog }} --config config.yaml --diff &lt;session_a&gt; &lt;session_b&gt; --fail-on-new-high
+{{ prog }} --config config.yaml --export-dsar &lt;session_id&gt;
+{{ prog }} --config config.yaml --export-dsar &lt;session_id&gt; --dsar-output dsar.json
+{{ prog }} --config config.yaml --export-l1 &lt;session_id&gt;
+{{ prog }} --config config.yaml --export-l1 &lt;session_id&gt; --l1-output l1.json
+{{ prog }} --config config.yaml --export-findings-sink &lt;session_id&gt;
+{{ prog }} --config config.yaml --export-findings-sink &lt;session_id&gt; --allow-sample-export
+{{ prog }} --config config.yaml --export-l3 &lt;session_id&gt; --l3-grant grant.json
+{{ prog }} --config config.yaml --export-l3 &lt;session_id&gt; --l3-grant grant.json --l3-persist l3.json
+{{ prog }} --config config.yaml --export-l3 &lt;session_id&gt; --l3-grant grant.json --l3-persist l3.json --l3-allow-unprotected
+{{ prog }} --config config.yaml --regenerate-report &lt;session_id&gt;
+{{ prog }} --config config.yaml --tenant "Acme Corp" --technician "Alice Colleague-V"
+# Same optional toggles as the dashboard checkboxes (this run only):
+{{ prog }} --config config.yaml --scan-compressed --content-type-check --scan-stego --jurisdiction-hint --validate-crypto --progress
+# Disable live progress lines for this run:
+{{ prog }} --config config.yaml --no-progress</code></pre>
+  <p><strong>{{ t('help.run_cli_api') }}</strong></p>
+  <p class="muted">{{ t('help.run_cli_tls') }}</p>
+  <pre><code>{{ prog }} --config config.yaml --web --https-cert-file server.crt --https-key-file server.key
+# Lab / loopback only — explicit plaintext:
+{{ prog }} --config config.yaml --web --allow-insecure-http
+# Default bind is loopback (127.0.0.1). Listen on all interfaces only with network controls:
+{{ prog }} --config config.yaml --web --allow-insecure-http --host 0.0.0.0 --port 8088</code></pre>
+  <p class="muted">{{ t('help.run_cli_bind') }}</p>
+  <p><strong>{{ t('help.run_cli_danger') }}</strong></p>
+  <p class="muted">{{ t('help.run_cli_integrity') }}</p>
+  <pre><code>{{ prog }} --config config.yaml --reconcile-integrity-anchor --confirm-upgrade-to=&lt;version&gt;</code></pre>
+  <p><strong>{{ t('help.run_cli_audit') }}</strong></p>
+</section>
+
+<section class="card">
+  <h2>{{ t('help.dl_h2') }}</h2>
+  <h3>{{ t('help.dl_web_h3') }}</h3>
+  <ol>
+    <li>{{ t('help.dl_web_li1') }}</li>
+    <li>{{ t('help.dl_web_li2') }}</li>
+  </ol>
+  <figure>
+    <img
+      class="help-shot"
+      src="/static/dashboard/{{ locale_slug }}/reports-download.png"
+      alt="{{ t('help.dl_web_shot_alt') }}"
+      width="1200"
+      height="675"
+      loading="lazy"
+    >
+    <figcaption class="muted help-shot-caption">{{ t('help.dl_web_shot_caption') }}</figcaption>
+  </figure>
+
+  <h3>{{ t('help.dl_auto_h3') }}</h3>
+  <p class="muted">{{ t('help.dl_auto_p') }}</p>
+  <pre><code># Last report, heatmap and log
+curl -o report.xlsx  http://&lt;host&gt;:&lt;port&gt;/report
+curl -o report.ods   http://&lt;host&gt;:&lt;port&gt;/report?format=ods
+curl -o heatmap.png  http://&lt;host&gt;:&lt;port&gt;/heatmap
+curl -o audit.log    http://&lt;host&gt;:&lt;port&gt;/logs
+
+# Specific session
+curl -o report.xlsx  http://&lt;host&gt;:&lt;port&gt;/reports/&lt;session_id&gt;
+curl -o report.ods   http://&lt;host&gt;:&lt;port&gt;/reports/&lt;session_id&gt;?format=ods
+curl -o heatmap.png  http://&lt;host&gt;:&lt;port&gt;/heatmap/&lt;session_id&gt;
+curl -o audit.log    http://&lt;host&gt;:&lt;port&gt;/logs/&lt;session_id&gt;</code></pre>
+  <h4>{{ t('help.findings_h3') }}</h4>
+  <p class="muted">{{ t('help.findings_p') }}</p>
+  <pre><code># Latest session (unified DB + filesystem metadata)
+curl -o findings.json  http://&lt;host&gt;:&lt;port&gt;/findings
+curl -o findings.csv   http://&lt;host&gt;:&lt;port&gt;/findings/csv
+
+# Specific session
+curl -o findings.json  http://&lt;host&gt;:&lt;port&gt;/findings/&lt;session_id&gt;
+curl -o findings.csv   http://&lt;host&gt;:&lt;port&gt;/findings/&lt;session_id&gt;/csv</code></pre>
+</section>
+
+<section class="card">
+  <h2>{{ t('help.sql_env_h2') }}</h2>
+  <p class="muted">{{ t('help.sql_env_p') }}</p>
+</section>
+
+<section class="card">
+  <h2>{{ t('help.cfg_h2') }}</h2>
+  <p>{{ t('help.cfg_p1') }}</p>
+  <pre><code>targets:
+  - name: "Produção_Postgres"
+    type: database
+    driver: postgresql+psycopg2
+    host: 10.0.0.50
+    port: 5432
+    user: audit_user
+    pass: secure_password
+    database: customers_db
+
+  - name: "Documentos_LGPD"
+    type: filesystem
+    path: {{ home_docs_example }}
+    recursive: true
+
+file_scan:
+  extensions: [.txt, .csv, .pdf, .docx, .xlsx]
+  recursive: true
+  scan_sqlite_as_db: true
+  sample_limit: 5
+  # scan_compressed: true   # optional: scan inside archives (matches dashboard checkbox)
+  # use_content_type: true   # optional: magic-byte detection (not archive dispatch; mismatch → archive_type_mismatch)
+
+report:
+  output_dir: .
+
+api:
+  port: 8088
+  # host: 127.0.0.1  # optional; omit for defaults (see USAGE.md)
+
+sqlite_path: audit_results.db
+scan:
+  max_workers: 1
+  # validate_crypto: true   # optional: strong-crypto / controls wiring (matches dashboard checkbox)</code></pre>
+  <p class="muted">{{ t('help.cfg_tail') }}</p>
+</section>
+
+<section class="card">
+  <h2>{{ t('help.rate_h2') }}</h2>
+  <p>{{ t('help.rate_p1') }}</p>
+  <pre><code>rate_limit:
+  enabled: true
+  max_concurrent_scans: 1
+  min_interval_seconds: 0
+  grace_for_running_status: 0</code></pre>
+  <p class="muted">{{ t('help.rate_tail') }}</p>
+</section>
+
+<section class="card">
+  <h2>{{ t('help.sense_h2') }}</h2>
+  <p>{{ t('help.sense_p1') }}</p>
+  <ul>
+    <li>{{ t('help.sense_li1') }}</li>
+    <li>{{ t('help.sense_li2') }}</li>
+    <li>{{ t('help.sense_li3') }}</li>
+  </ul>
+  <p class="muted">{{ t('help.sense_tail') }}</p>
+</section>
+
+<section class="card">
+  <h2>{{ t('help.sec_h2') }}</h2>
+  <p>{{ t('help.sec_p1') }}</p>
+  <ul>
+    <li>{{ t('help.sec_li1') }}</li>
+    <li>{{ t('help.sec_li2') }}</li>
+  </ul>
+  <h3>{{ t('help.sec_h3') }}</h3>
+  <ul>
+    <li>{{ t('help.sec_t1') }}</li>
+    <li>{{ t('help.sec_t2') }}</li>
+    <li>{{ t('help.sec_t3') }}</li>
+  </ul>
+  <p class="muted">{{ t('help.sec_tail') }}</p>
+</section>
+
+<section class="card">
+  <h2>{{ t('help.more_h2') }}</h2>
+  <p>{{ t('help.more_p1') }}</p>
+  <ul>
+    <li>{{ t('help.more_li1') }}</li>
+    <li>{{ t('help.more_li2') }}</li>
+    <li>{{ t('help.more_li3') }}</li>
+  </ul>
+  <p class="muted">{{ t('help.more_tail') }}</p>
+</section>
+{% endblock %}

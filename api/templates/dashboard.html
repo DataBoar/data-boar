@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% block title %}{{ t('dashboard.page_title') }}{% endblock %}
+{% block content %}
+<h1><img src="/static/mascot/data_boar_mascote_color.svg" alt="" width="40" height="40" style="vertical-align: middle; margin-right: 0.35em;">{{ t('dashboard.h1') }}</h1>
+
+{% if license %}
+<section class="card" style="margin-bottom: 1rem;">
+  <h2>{{ t('dashboard.license_h2') }}</h2>
+  <p class="muted" style="margin: 0;"><strong>{{ license.get('license_state', '—') }}</strong> · mode {{ license.get('license_mode', '—') }}{% if license.get('customer_name') %} · {{ license.get('customer_name') }}{% endif %}{% if license.get('expires_at') %} · expires {{ license.get('expires_at') }}{% endif %}</p>
+</section>
+{% endif %}
+
+<section class="card status-card" id="status-card">
+  <h2>{{ t('dashboard.scan_h2') }}</h2>
+  <div id="status-content">
+    <p><strong>{{ t('dashboard.state') }}</strong> <span id="status-running" data-running="{{ '1' if status.running else '0' }}">{% if status.running %}{{ t('dashboard.running') }}{% else %}{{ t('dashboard.idle') }}{% endif %}</span></p>
+    <p><strong>{{ t('dashboard.current_session') }}</strong> <span id="status-session">{{ status.current_session_id or "—" }}</span></p>
+    <p><strong>{{ t('dashboard.findings_run') }}</strong> <span id="status-findings">{{ status.findings_count }}</span></p>
+  </div>
+  <div class="form-group" style="margin-bottom: 0.75rem;">
+    <label for="scan-tenant" class="muted" style="display: block; margin-bottom: 0.25rem;">{{ t('dashboard.tenant_label') }}</label>
+    <input type="text" id="scan-tenant" placeholder="{{ t('dashboard.tenant_ph') }}" maxlength="255" style="width: 100%; max-width: 280px; padding: 0.4rem 0.5rem; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font-size: 0.9rem;">
+  </div>
+  <div class="form-group" style="margin-bottom: 0.75rem;">
+    <label for="scan-technician" class="muted" style="display: block; margin-bottom: 0.25rem;">{{ t('dashboard.tech_label') }}</label>
+    <input type="text" id="scan-technician" placeholder="{{ t('dashboard.tech_ph') }}" maxlength="255" style="width: 100%; max-width: 280px; padding: 0.4rem 0.5rem; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font-size: 0.9rem;">
+  </div>
+  <p class="muted" style="margin: 0 0 0.5rem 0; font-size: 0.85rem;">{{ t('dashboard.cli_parity') }} <a href="{{ base_path }}/help">{{ t('dashboard.cli_parity_link') }}</a> → <em>{{ t('dashboard.cli_parity_tail') }}</em></p>
+  <div class="form-group" style="margin-bottom: 0.75rem;">
+    <label class="checkbox-label" style="display: flex; align-items: flex-start; gap: 0.5rem; cursor: pointer;">
+      <input type="checkbox" id="scan-compressed" name="scan_compressed" value="1" style="margin-top: 0.25rem;">
+      <span>{{ t('dashboard.scan_compressed') }}</span>
+    </label>
+    <p class="muted" style="margin: 0.25rem 0 0 0; font-size: 0.85rem;">{{ t('dashboard.scan_compressed_hint') }}</p>
+  </div>
+  <div class="form-group" style="margin-bottom: 0.75rem;">
+    <label class="checkbox-label" style="display: flex; align-items: flex-start; gap: 0.5rem; cursor: pointer;">
+      <input type="checkbox" id="scan-content-type" name="content_type_check" value="1" style="margin-top: 0.25rem;">
+      <span>{{ t('dashboard.content_type') }}</span>
+    </label>
+    <p class="muted" style="margin: 0.25rem 0 0 0; font-size: 0.85rem;">{{ t('dashboard.content_type_hint') }}</p>
+  </div>
+  <div class="form-group" style="margin-bottom: 0.75rem;">
+    <label class="checkbox-label" style="display: flex; align-items: flex-start; gap: 0.5rem; cursor: pointer;">
+      <input type="checkbox" id="scan-stego" name="scan_for_stego" value="1" style="margin-top: 0.25rem;">
+      <span>{{ t('dashboard.scan_stego') }}</span>
+    </label>
+    <p class="muted" style="margin: 0.25rem 0 0 0; font-size: 0.85rem;">{{ t('dashboard.scan_stego_hint') }}</p>
+  </div>
+  <div class="form-group" style="margin-bottom: 0.75rem;">
+    <label class="checkbox-label" style="display: flex; align-items: flex-start; gap: 0.5rem; cursor: pointer;">
+      <input type="checkbox" id="scan-jurisdiction-hint" name="jurisdiction_hint" value="1" style="margin-top: 0.25rem;">
+      <span>{{ t('dashboard.jurisdiction') }}</span>
+    </label>
+    <p class="muted" style="margin: 0.25rem 0 0 0; font-size: 0.85rem;">{{ t('dashboard.jurisdiction_hint') }}</p>
+  </div>
+  <div class="form-group" style="margin-bottom: 0.75rem;">
+    <label class="checkbox-label" style="display: flex; align-items: flex-start; gap: 0.5rem; cursor: pointer;">
+      <input type="checkbox" id="scan-validate-crypto" name="validate_crypto" value="1" style="margin-top: 0.25rem;">
+      <span>{{ t('dashboard.validate_crypto') }}</span>
+    </label>
+    <p class="muted" style="margin: 0.25rem 0 0 0; font-size: 0.85rem;">{{ t('dashboard.validate_crypto_hint') }}</p>
+  </div>
+  <div class="actions">
+    <button type="button" class="btn btn-primary" id="btn-start-scan" {% if status.running %}disabled{% endif %}>{{ t('dashboard.start_scan') }}</button>
+    <span id="scan-feedback" class="feedback"></span>
+    <span id="scan-feedback-guide" class="feedback muted" style="display: block; margin-top: 0.25rem; font-size: 0.9rem;"></span>
+  </div>
+</section>
+
+<section class="card stats-card">
+  <h2>{{ t('dashboard.discovery_h2') }}</h2>
+  <div class="stats-grid">
+    <div class="stat">
+      <span class="stat-value" id="stat-db">{{ last_session.database_findings if last_session else 0 }}</span>
+      <span class="stat-label">{{ t('dashboard.stat_db') }}</span>
+    </div>
+    <div class="stat">
+      <span class="stat-value" id="stat-fs">{{ last_session.filesystem_findings if last_session else 0 }}</span>
+      <span class="stat-label">{{ t('dashboard.stat_fs') }}</span>
+    </div>
+    <div class="stat">
+      <span class="stat-value" id="stat-failures">{{ last_session.scan_failures if last_session else 0 }}</span>
+      <span class="stat-label">{{ t('dashboard.stat_fail') }}</span>
+    </div>
+    <div class="stat">
+      <span class="stat-value" id="stat-total">{{ (last_session.database_findings + last_session.filesystem_findings) if last_session else 0 }}</span>
+      <span class="stat-label">{{ t('dashboard.stat_total') }}</span>
+    </div>
+  </div>
+  <p class="muted">
+    {{ t('dashboard.session_line') }} {{ last_session.session_id[:20] + "…" if last_session and last_session.session_id else "—" }} · {{ last_session.started_at if last_session else "—" }}
+    {% if last_session and last_session.get('tenant_name') %} · <strong>{{ t('dashboard.tenant_kv') }}</strong> {{ last_session.tenant_name }}{% endif %}
+    {% if last_session and last_session.get('technician_name') %} · <strong>{{ t('dashboard.tech_kv') }}</strong> {{ last_session.technician_name }}{% endif %}
+  </p>
+</section>
+
+<section class="card chart-card">
+  <h2>{{ t('dashboard.chart_h2') }}</h2>
+  <p class="muted">{{ t('dashboard.chart_intro') }}</p>
+  <div class="chart-container">
+    <canvas id="progress-chart"
+            aria-label="{{ t('dashboard.chart_aria') }}"
+            data-chart='{{ chart_data | tojson | e }}'></canvas>
+  </div>
+  <p class="muted" id="chart-empty" style="display: none;">{{ t('dashboard.chart_empty') }}</p>
+</section>
+
+<section class="card reports-preview">
+  <h2>{{ t('dashboard.sessions_h2') }}</h2>
+  <p><a href="{{ base_path }}/reports">{{ t('dashboard.view_reports') }}</a></p>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>{{ t('dashboard.th_session') }}</th>
+        <th>{{ t('dashboard.th_started') }}</th>
+        <th>{{ t('dashboard.th_tenant') }}</th>
+        <th>{{ t('dashboard.th_technician') }}</th>
+        <th>{{ t('dashboard.th_db') }}</th>
+        <th>{{ t('dashboard.th_fs') }}</th>
+        <th>{{ t('dashboard.th_failures') }}</th>
+        <th>{{ t('dashboard.th_report') }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in sessions[:10] %}
+      <tr>
+        <td><code>{{ s.session_id[:16] }}…</code></td>
+        <td>{{ s.started_at or "—" }}</td>
+        <td>{{ s.tenant_name or "—" }}</td>
+        <td>{{ s.technician_name or "—" }}</td>
+        <td>{{ s.database_findings }}</td>
+        <td>{{ s.filesystem_findings }}</td>
+        <td>{{ s.scan_failures }}</td>
+        <td><a href="/reports/{{ s.session_id }}" download>{{ t('dashboard.download') }}</a></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="8">{{ t('dashboard.no_sessions_row') }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section class="card about-report" aria-label="Application and report attribution">
+  <h2>{{ t('dashboard.about_app_h2') }}</h2>
+  <p class="muted"><img src="/static/mascot/data_boar_mascote_color.svg" alt="" width="32" height="32" style="vertical-align: middle; margin-right: 0.25em;"><strong>{{ about.name }}</strong> v{{ about.version }} · Author: {{ about.author }} · {{ about.license }} · {{ about.copyright }}. {{ t('dashboard.about_app_p') }} <a href="{{ base_path }}/about">{{ t('dashboard.about_link') }}</a></p>
+</section>
+<script type="application/json" id="db-dashboard-i18n-data">{{ dashboard_js_i18n | tojson }}</script>
+{% endblock %}
+{% block scripts %}
+<script src="/static/chart.umd.min.js" defer></script>
+<script src="/static/dashboard.js" defer></script>
+{% endblock %}

@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://databoar.dev/sdk/1.0.0/transformed_rows.schema.json",
+  "title": "Boar SDK L3 rows / transformed rows",
+  "description": "Real-data plane. INPUT rows carry raw `value`; OUTPUT rows carry the token in `value` plus tokenization metadata. Only the RealDataSidecar (Stoat) touches this plane; it is OPT-IN.",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["finding_id", "pattern", "raw_field", "value"],
+    "properties": {
+      "finding_id": {"type": "string"},
+      "source_type": {"type": "string"},
+      "pattern": {"type": "string"},
+      "raw_field": {"type": "string", "enum": ["sample_value", "sample_content", "raw_sample"]},
+      "value": {"type": "string", "description": "raw PII on input; token (or redaction) on output"},
+      "tokenized": {"type": "boolean"},
+      "backend": {"type": ["string", "null"]},
+      "tier": {"type": "string", "enum": ["software", "tpm12", "tpm20", "hsm"]}
+    }
+  }
+}

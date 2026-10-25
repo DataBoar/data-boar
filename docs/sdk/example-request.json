@@ -1,0 +1,32 @@
+{
+  "sdk_contract_version": "1.0.0",
+  "schema": "databoar.remediation.l3.request",
+  "session_id": "sess_example",
+  "issued_at": "2026-08-09T17:59:00Z",
+  "trust_level": "trusted",
+  "integrity_state": "ok",
+  "source": {
+    "product": "data-boar",
+    "version": "1.7.4"
+  },
+  "filter": {
+    "min_severity": "high",
+    "pii_types": ["cpf", "pan"]
+  },
+  "targets": [
+    {
+      "finding_id": "f-001",
+      "source_type": "sql",
+      "schema": "hr",
+      "table": "employees",
+      "column": "tax_id",
+      "pii_type": "cpf",
+      "suggested_profile": "tokenize"
+    }
+  ],
+  "capabilities": ["remediate.v1", "health.v1"],
+  "callback": {
+    "mode": "none",
+    "correlation_id": "corr_001"
+  }
+}

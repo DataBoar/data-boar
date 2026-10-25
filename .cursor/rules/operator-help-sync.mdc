@@ -1,0 +1,30 @@
+---
+description: After changing CLI flags, dashboard scan options, or in-app help, sync operator surfaces and the help manifest (not full doc duplication).
+globs:
+
+- main.py
+- api/templates/help.html
+- api/templates/dashboard.html
+- docs/data_boar.1
+- docs/data_boar.5
+- docs/USAGE.md
+- docs/USAGE.pt_BR.md
+
+alwaysApply: false
+---
+
+# Operator help sync (lightweight)
+
+When you change **user-visible** runtime options here:
+
+1. **Update the drift contract** — add or edit a row in **`tests/operator_help_sync_manifest.py`** (`OPERATOR_HELP_MARKERS`). Use `cli_help_substring=None` or `web_help_substring=None` only when that surface intentionally omits the cue (e.g. `uv run` on `/help` but not in argparse).
+1. **Touch the operator surfaces** that apply (short copy only; full detail stays in USAGE/man/README):
+   - **`main.py`** — `argparse` + epilog examples
+   - **`api/templates/help.html`** — dashBOARd quick reference
+   - **`docs/data_boar.1`** / **`docs/data_boar.5`** — if the option is man-worthy
+   - **`docs/USAGE.md`** and **`docs/USAGE.pt_BR.md`** — tables and binding/security notes
+1. **Run** `uv run pytest tests/test_operator_help_sync.py -v`
+1. **Optional:** OpenAPI (`api/routes`) if the JSON body or behaviour changed for API clients.
+1. After a **realignment slice**, use **“Next verification pass”** in **`docs/OPERATOR_HELP_AUDIT.md`** (then the **Follow-ups** checkboxes).
+
+Reference: **`docs/OPERATOR_HELP_AUDIT.md`**, skill **`.cursor/skills/operator-help-sync/SKILL.md`**.

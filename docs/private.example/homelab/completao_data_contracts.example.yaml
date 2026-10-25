@@ -1,0 +1,35 @@
+# Data contract preflight for lab completão (schema version 1).
+#
+# Copy to docs/private/homelab/completao_data_contracts.yaml (gitignored) and add
+# to lab-op-hosts.manifest.json root:
+#   "completaoDataContractsPath": "docs/private/homelab/completao_data_contracts.yaml"
+#
+# lab-completao-orchestrate.ps1 runs scripts/lab_completao_data_contract_check.py
+# after lab-op-git-ensure-ref when that manifest key is set and the file exists.
+#
+# Rules:
+# - Do NOT put passwords or DSN secrets in this file. Use connection.url_from_env
+#   and export a SQLAlchemy URL in the operator session before completão.
+# - Column names are matched case-insensitively against SQLAlchemy inspector output.
+# - MSSQL: use schema dbo (or your schema) + table name.
+#
+# Implementation: scripts/lab_completao_data_contract_check.py
+
+version: 1
+checks: []
+
+# Example (Postgres lab smoke table) — uncomment only in private copy:
+#  - name: lab_smoke_employees_shape
+#    connection:
+#      url_from_env: LAB_COMPLETAO_CONTRACT_LAB_PG_URL
+#    schema: public
+#    table: lab_employees
+#    require_columns: [id, email, hire_date]
+
+# Example (SQL Server) — uncomment only in private copy:
+#  - name: lab_mssql_contacts_shape
+#    connection:
+#      url_from_env: LAB_COMPLETAO_CONTRACT_LAB_MSSQL_URL
+#    schema: dbo
+#    table: contacts
+#    require_columns: [contact_id, display_name]

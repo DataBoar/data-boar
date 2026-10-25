@@ -1,0 +1,33 @@
+---
+description: Apply CodeQL P0/P1/P2 triage matrix on security/workflow/docs edits
+globs: [".github/workflows/codeql.yml", "SECURITY.md", "SECURITY.pt_BR.md", "api/routes.py", "connectors/**/*.py", "core/licensing/**/*.py", "config/**/*.py", "database/**/*.py"]
+alwaysApply: false
+---
+
+# CodeQL priority triage matrix (P0/P1/P2)
+
+Use this matrix when touching security-sensitive code, workflow, or security docs.
+
+## P0 (fix before release)
+
+- Rule IDs: `py/path-injection`, `py/sql-injection`, `py/nosql-injection`, `py/code-injection`, `py/command-line-injection`, `py/template-injection`, `py/full-ssrf`, `py/unsafe-deserialization`, `py/xxe`.
+- Surfaces: file serving/path handling (`api/routes.py`), query building (`connectors/*`, `database/*`), config/load paths (`config/*`).
+- Required action: fix now, add regression test, and rerun focused tests.
+
+## P1 (fix in current cycle)
+
+- Rule IDs: `py/weak-sensitive-data-hashing`, `py/clear-text-logging-sensitive-data`, `py/clear-text-storage-sensitive-data`, `py/insecure-protocol`, `py/insecure-default-protocol`, `py/url-redirection`, `py/regex-injection`, `py/redos`.
+- Surfaces: licensing/integrity (`core/licensing/*`), logging/failure persistence (`core/database.py`, `core/validation.py`), network connectors.
+- Required action: fix or document mitigation in this cycle; add tests where practical.
+
+## P2 (scheduled hardening / monitor)
+
+- Rule IDs: `py/bind-socket-all-network-interfaces`, `py/flask-debug`, `py/client-exposed-cookie`, `py/insecure-cookie`, `py/samesite-none-cookie`, `py/stack-trace-exposure`, `py/use-of-input`.
+- Surfaces: host/runtime defaults (`core/host_resolution.py`, Docker defaults), web middleware/templates.
+- Required action: keep enabled, batch low-risk fixes in maintenance PRs.
+
+## Guardrails
+
+- Keep CodeQL broad coverage enabled (`security-and-quality`) unless user explicitly asks otherwise.
+- Prefer targeted code fixes over suppressions; if deferring, record rationale + compensating control.
+- After P0/P1 edits, run relevant tests and keep CI green.

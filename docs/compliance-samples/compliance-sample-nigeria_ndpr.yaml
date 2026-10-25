@@ -1,0 +1,59 @@
+# Nigeria NDPR – sample compliance profile (Nigeria Data Protection Regulation 2019, NITDA)
+#
+# Target audience: Nigeria and West Africa deployments. NITDA; personal data, data controller.
+# Terms: EN.
+#
+# How to use:
+#   1. Set in your main config:
+#        regex_overrides_file: path/to/compliance-sample-nigeria_ndpr.yaml
+#        ml_patterns_file: path/to/compliance-sample-nigeria_ndpr.yaml
+#   2. Merge the recommendation_overrides list below into your config under report.recommendation_overrides.
+#
+# Nigeria: Nigeria Data Protection Regulation 2019; National Information Technology Development Agency (NITDA).
+
+regex:
+  - name: "BVN_NG"
+    pattern: "\\b\\d{11}\\b"
+    norm_tag: "Nigeria NDPR"
+  - name: "NIN_NG"
+    pattern: "\\b\\d{11}\\b"
+    norm_tag: "Nigeria NDPR"
+
+# ML terms: personal data, data controller, NITDA, NDPR.
+terms:
+  - text: "personal data"
+    label: sensitive
+  - text: "data controller"
+    label: sensitive
+  - text: "data processor"
+    label: sensitive
+  - text: "data subject"
+    label: sensitive
+  - text: "nitda"
+    label: sensitive
+  - text: "national information technology development agency"
+    label: sensitive
+  - text: "ndpr"
+    label: sensitive
+  - text: "nigeria data protection regulation"
+    label: sensitive
+  - text: "consent"
+    label: sensitive
+  - text: "lawful basis"
+    label: sensitive
+  - text: "data protection compliance organization"
+    label: sensitive
+  - text: "dpco"
+    label: sensitive
+  - text: "bvn"
+    label: sensitive
+  - text: "nin"
+    label: sensitive
+
+recommendation_overrides:
+  - norm_tag_pattern: "Nigeria NDPR"
+    base_legal: "Nigeria Data Protection Regulation 2019; NITDA"
+    risk: "Personal data; data controller/processor obligations; registration with NITDA."
+    recommendation: "Comply with NDPR; engage DPCO if required; register with NITDA; implement consent and lawful processing."
+    priority: "ALTA"
+    relevant_for: "DPO, NITDA, Data Controller"

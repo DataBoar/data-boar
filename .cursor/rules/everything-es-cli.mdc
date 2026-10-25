@@ -1,0 +1,79 @@
+---
+description: Windows primary dev PC — voidtools Everything (es.exe) via scripts/es-find.ps1 for token-aware filename/path search; not on Linux lab-op (use find/fd over SSH). Situational — session es-find or @everything-es-cli.mdc when globs miss.
+globs:
+  - scripts/es-find.ps1
+  - docs/ops/EVERYTHING_ES_PRIMARY_WINDOWS_DEV_LAB.md
+  - docs/ops/EVERYTHING_ES_PRIMARY_WINDOWS_DEV_LAB.pt_BR.md
+  - docs/ops/WINDOWS_FAST_CLI_WRAPPERS.md
+  - docs/ops/WINDOWS_FAST_CLI_WRAPPERS.pt_BR.md
+  - .cursor/skills/everything-es-search/SKILL.md
+alwaysApply: false
+---
+
+# Everything CLI (`es.exe`) — token-aware filename search (primary Windows dev PC)
+
+## When this rule attaches (Cursor)
+
+**Context:** **`alwaysApply: false`** — loads when a path matches the **`globs`** above **or** the operator types the English session token **`es-find`** **or** attaches **`@everything-es-cli.mdc`**. **`windows-pcloud-drive-search-discipline.mdc`** stays **always-on** for **`P:`** / huge-tree **discipline**; this rule carries the **full** **`es.exe`** / fallback / **lab-op** nuance.
+
+**Companion:** **`windows-pcloud-drive-search-discipline.mdc`** — assume **`P:`** for pCloud on Windows; **default** = **`es-find.ps1`** / **`es.exe`** on huge sync subtrees; **`Get-ChildItem`** only as **recovery** after **`es`** fails (see Fallback) — avoid **unbounded** **`-Recurse`** from massive roots as the **opening** move.
+
+## Default (stable — do not regress)
+
+- On **Windows primary dev PC**, for **filename/path** discovery, the **default** is **`.\scripts\es-find.ps1`** (calls **`es.exe`**) or **any other `scripts/*.ps1` wrapper that already invokes `es.exe`**. Clarifying fallbacks does **not** demote **`es`** — **`Get-ChildItem`** is **not** an equal default for the same job; use it only when the **`es`** path failed (notify operator) or is **inapplicable** (e.g. **Linux lab-op**).
+
+## Platform
+
+- **`es.exe`** exists on **Windows** only (Voidtools Everything). The operator’s **L-series** workstation is the normal place to run **`.\scripts\es-find.ps1`**.
+- **`lab-op`** in docs means **Linux over SSH** — there is **no** Everything/`es` there. For filename search on the server, use **`find`**, **`fd`**, or **`locate`**, or rely on **`lab-op.ps1`** / host reports. Do **not** tell the operator to run `es.exe` **on** lab-op.
+
+## When to use
+
+- **Use `.\scripts\es-find.ps1`** when the task is **find files by name or path** across a **large tree**, **outside the repo**, or when **Cursor `Glob` would be huge or slow**, and you need **fast** results from the **Everything index**.
+- **On Windows primary dev PC, `es.exe` via `es-find.ps1` is the default tool** for **filename/path** discovery. **Do not skip** the wrapper in favour of ad-hoc **`Get-ChildItem`** when **`es`** should work — use **`es-find.ps1`** for “where is this file named like X” — not **`SemanticSearch`** and not broad content **Grep** as a stand-in for filename search.
+- **Prefer repo tools first** for normal work **inside `data-boar/`**: **`Glob`**, **`Grep`**, **`SemanticSearch`** — they respect workspace scope and avoid leaking unrelated paths into the transcript — **unless** the operator or task clearly needs **Everything** (huge tree, path outside workspace, index speed).
+- **Do not “forget” wrappers:** **`es-find.ps1`** is one agreed script among many — see **`.cursor/rules/repo-scripts-wrapper-ritual.mdc`** and **`docs/ops/TOKEN_AWARE_SCRIPTS_HUB.md`** / **`check-all-gate.mdc`** before inventing long one-off shell.
+
+## Fallback (if `es.exe` / IPC / wrapper fails — notify, then native tools)
+
+1. **Notify the operator** briefly (exit code, “IPC not found”, `es.exe` not on PATH, etc.) so they can fix Everything or PATH — do not silently pretend the fast path worked.
+2. Re-run **`.\scripts\es-find.ps1 -Query "..." -FallbackPowerShell`** (same scope; **no** `-Regex`/`-Global` with fallback).
+3. **`Glob`** in the workspace for **in-repo** filename patterns.
+4. **`Get-ChildItem`** (with **`-Recurse`** only when the root is **narrow** or the operator confirmed scope) — **native OS tools are fine**; they are the usual fallback when **`es`** is down. High token/IO cost on huge trees — prefer **capped** depth or **`-MaxCount`**-style discipline when you script it yourself.
+5. **Never** use **`SemanticSearch`** as the primary way to locate a file **by name**.
+6. **lab-op (Linux):** **`find`**, **`fd`**, **`locate`** — **not** `es.exe`.
+
+## When not to use
+
+- **Content search** inside files: use **`Grep`** / **`SemanticSearch`**, not `es` (Everything is **not** full-text by default).
+- **Default** project navigation: **`Glob`** for known patterns under the repo root.
+
+## How (wrapper)
+
+From the repo root:
+
+| Goal | Example |
+| --- | --- |
+| Names under this repo (default scope), capped | `.\scripts\es-find.ps1 -Query "*.md" -MaxCount 40` |
+| Full index (still capped) | `.\scripts\es-find.ps1 -Query "foo" -Global -MaxCount 30` |
+| Custom root | `.\scripts\es-find.ps1 -Query "bar" -SearchRoot "D:\work"` |
+| Count only | `.\scripts\es-find.ps1 -Query "*.py" -GetResultCount` |
+| Show resolved invocation (copy/paste to extend raw `es`) | `.\scripts\es-find.ps1 -Query "*.py" -ShowCommand` |
+| Built-in usage | `.\scripts\es-find.ps1 -Help` |
+
+**Prerequisites:** [Everything](https://www.voidtools.com/) running; `es.exe` on `PATH` or WinGet shim under `%LOCALAPPDATA%\Microsoft\WinGet\Links\es.exe`.
+
+**Operator guide (primary Windows dev PC + lab context):** **`docs/ops/EVERYTHING_ES_PRIMARY_WINDOWS_DEV_LAB.md`**.
+
+## Session keyword
+
+- **`es-find`** in **`.cursor/rules/session-mode-keywords.mdc`** — run the wrapper with a **low** `-MaxCount` unless the operator asked for an exhaustive list.
+
+## Token hygiene
+
+- **Always** pass a **sensible `-MaxCount`** (script default is **50**). Raise only when the operator asked for exhaustive lists.
+- **Do not** paste **long** result lists into chat; summarize or take **top N** paths.
+- **PII / paths:** treat `es` output like any filesystem listing — **no** real home paths or third-party identifiers in **commits, PRs, or tracked docs** (see **`private-pii-never-public.mdc`**).
+- **primary Windows dev PC:** `es-find.ps1` is **read-only** (filename index) — safe on the primary dev workstation; it is **not** a destructive repo op (**`primary-windows-workstation-protected-no-destructive-repo-ops.mdc`**).
+
+Skill: **`.cursor/skills/everything-es-search/SKILL.md`**.

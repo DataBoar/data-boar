@@ -1,0 +1,17 @@
+---
+- name: Skip shell umask snippets
+  when: not (lab_node_01_shell_umask_enable | bool)
+  ansible.builtin.debug:
+    msg: "Shell umask snippets disabled (lab_node_01_shell_umask_enable=false)."
+
+- name: Ensure system-wide umask in /etc/profile and bash.bashrc
+  when: lab_node_01_shell_umask_enable | bool
+  ansible.builtin.blockinfile:
+    path: "{{ item }}"
+    marker: "# {mark} ANSIBLE MANAGED BLOCK lab_node_01_shell_umask"
+    block: |
+      umask {{ lab_node_01_shell_umask }}
+    create: false
+  loop:
+    - /etc/profile
+    - /etc/bash.bashrc

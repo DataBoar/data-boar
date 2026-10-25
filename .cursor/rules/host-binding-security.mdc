@@ -1,0 +1,11 @@
+---
+description: Keep API host binding safe-by-default (CLI loopback, Docker reachable)
+globs: ["core/host_resolution.py", "Dockerfile", "docs/USAGE*.md"]
+alwaysApply: false
+---
+
+# Host-binding best practice
+
+1. Never change the CLI/desktop default away from `127.0.0.1` unless explicitly requested by config/CLI.
+1. For Docker/container runs, prefer an image/runtime-specific override (e.g. Docker sets `API_HOST=0.0.0.0`) so port publishing works from outside, without making non-container runs public.
+1. If you touch `resolve_api_host` or docs/USAGE host paragraphs, also update/extend `tests/test_host_resolution.py` to prevent regressions.

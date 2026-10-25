@@ -1,0 +1,1159 @@
+"""
+SQL connector: connect via SQLAlchemy, discover schemas/tables/columns, sample rows (no raw storage),
+run detector, save_finding. Supports PostgreSQL, MySQL, MariaDB, SQLite, MSSQL, Oracle via driver.
+"""
+
+import json
+import os
+import time
+from collections.abc import Set
+from typing import Any
+from urllib.parse import quote
+
+from sqlalchemy import create_engine, inspect, text
+
+from connectors.sample_value_dedup import (
+    join_distinct_sample,
+    resolve_fetch_row_budget,
+)
+from connectors.sql_driver_deps import ensure_sql_driver_available
+from connectors.sql_sampling import (
+    SamplingManager,
+    TableSamplingMetadata,
+    resolve_sql_sample_limit,
+)
+from core.connector_registry import register
+from core.crypto_audit import (
+    collect_sql_crypto_facts,
+    evaluate_strong_crypto,
+    infer_controls_from_identifiers,
+)
+from core.sampling import SamplingPolicy
+from core.suggested_review import (
+    SUGGESTED_REVIEW_PATTERN,
+    augment_low_id_like_for_persist,
+)
+
+# Driver to SQLAlchemy drivername mapping (driver in config may be e.g. postgresql+psycopg2)
+DRIVER_MAP = {
+    "postgresql": "postgresql+psycopg2",
+    "mysql": "mysql+pymysql",
+    "mariadb": "mariadb+mariadbconnector",
+    "sqlite": "sqlite",
+    "mssql": "mssql+pymssql",
+    "oracle": "oracle+oracledb",
+}
+
+# Oracle system schemas to skip when discovering (credential sees only accessible schemas; skip Oracle-maintained)
+ORACLE_SYSTEM_SCHEMAS = frozenset(
+    {
+        "SYS",
+        "SYSTEM",
+        "OUTLN",
+        "DBSNMP",
+        "DIP",
+        "ORACLE_OCM",
+        "APPQOSSYS",
+        "WMSYS",
+        "EXFSYS",
+        "CTXSYS",
+        "XDB",
+        "ANONYMOUS",
+        "MDSYS",
+        "OLAPSYS",
+        "ORDSYS",
+        "ORDDATA",
+        "SI_INFORMTN_SCHEMA",
+        "LBACSYS",
+        "DVF",
+        "DVSYS",
+        "GSMADMIN_INTERNAL",
+        "OJVMSYS",
+        "GSMCATUSER",
+        "GSMUSER",
+        "MDDATA",
+        "REMOTE_SCHEDULER_AGENT",
+        "DBSFWUSER",
+        # 12c+/19c/23c Oracle-maintained (issue #1315; AUDSYS = unified audit trail noise)
+        "AUDSYS",
+        "SYS$UMF",
+        "GGSYS",
+        "SYSBACKUP",
+        "SYSDG",
+        "SYSKM",
+        "SYSRAC",
+        "PDBADMIN",
+    }
+)
+
+_DEFAULT_SKIP_SCHEMAS: frozenset[str] = frozenset(
+    {
+        "information_schema",
+        "sys",
+        "pg_catalog",
+        "performance_schema",
+        # MySQL system schema (catalog noise in PoCs)
+        "mysql",
+    }
+)
+
+# SQL Server: system / pseudo-schemas (NOLOCK sampling targets user tables only).
+_MSSQL_SKIP_SCHEMAS: frozenset[str] = frozenset(
+    {
+        "SYS",
+        "INFORMATION_SCHEMA",
+        "GUEST",
+    }
+)
+
+# Snowflake account-level noise (uppercase match in _should_skip_schema).
+_SNOWFLAKE_SKIP_SCHEMAS: frozenset[str] = frozenset(
+    {
+        "INFORMATION_SCHEMA",
+        "ACCOUNT_USAGE",
+        "READER_ACCOUNT_USAGE",
+        "SNOWFLAKE",
+    }
+)
+
+# scan_failures reason for column sampling errors (#1140; taxonomy shared with #828).
+SCAN_FAILURE_REASON_SAMPLING_ERROR = "sampling_error"
+
+
+class ColumnSampleError(RuntimeError):
+    """Column sampling failed; the connector persisted a scan_failures row."""
+
+
+def format_column_sample_failure_details(
+    *,
+    schema: str,
+    table: str,
+    column_name: str,
+    dialect: str,
+    exc: BaseException,
+) -> str:
+    """Stable detail string for scan_failures when SQL column sampling fails."""
+    loc = f"{schema}.{table}.{column_name}" if schema else f"{table}.{column_name}"
+    return f"{loc} dialect={dialect}: {type(exc).__name__}: {exc}"
+
+
+def _get_skip_schemas(dialect: str) -> frozenset[str]:
+    """Return schema names to skip when discovering (dialect-specific blacklist)."""
+    d = (dialect or "").lower()
+    if d == "oracle":
+        return ORACLE_SYSTEM_SCHEMAS
+    if d in ("mssql", "microsoft sql server"):
+        return _MSSQL_SKIP_SCHEMAS
+    if d == "snowflake":
+        return _SNOWFLAKE_SKIP_SCHEMAS
+    return _DEFAULT_SKIP_SCHEMAS
+
+
+def _should_skip_schema(
+    schema: str | None, dialect: str, skip_schemas: Set[str] | frozenset[str]
+) -> bool:
+    """True if schema should be skipped (empty or in skip_schemas)."""
+    if not schema:
+        return True
+    d = (dialect or "").lower()
+    if d in ("oracle", "mssql", "microsoft sql server", "snowflake"):
+        key = schema.upper()
+    else:
+        key = schema.lower()
+    return key in skip_schemas
+
+
+def _tables_from_schema(inspector: Any, schema: str) -> list[dict[str, Any]]:
+    """Return list of {schema, table, columns} for the given schema; empty list on error."""
+    out = []
+    try:
+        for table in inspector.get_table_names(schema=schema):
+            columns = inspector.get_columns(table, schema=schema)
+            out.append(
+                {
+                    "schema": schema or "",
+                    "table": table,
+                    "columns": [
+                        {"name": c["name"], "type": str(c["type"])} for c in columns
+                    ],
+                }
+            )
+    except Exception:
+        pass
+    return out
+
+
+def _discover_fallback_no_schemas(inspector: Any) -> list[dict[str, Any]]:
+    """When no schemas (e.g. SQLite), get tables without schema."""
+    out = []
+    if not hasattr(inspector, "get_table_names"):
+        return out
+    try:
+        for table in inspector.get_table_names():
+            columns = inspector.get_columns(table)
+            out.append(
+                {
+                    "schema": "",
+                    "table": table,
+                    "columns": [
+                        {"name": c["name"], "type": str(c["type"])} for c in columns
+                    ],
+                }
+            )
+    except Exception:
+        pass
+    return out
+
+
+def _resolve_driver(target_driver: str | None) -> tuple[str, str]:
+    """
+    Return (sqlalchemy_drivername, base_engine_key) from config driver.
+
+    When the config includes a dialect+driver suffix (e.g. ``mssql+pymssql``),
+    the full string is used as the SQLAlchemy drivername. Bare engine keys
+    (e.g. ``mssql``) resolve through DRIVER_MAP.
+    """
+    raw = (target_driver or "postgresql").strip()
+    if "+" in raw:
+        base = raw.split("+", 1)[0].lower()
+        drivername = raw.lower()
+    else:
+        base = raw.lower()
+        drivername = DRIVER_MAP.get(base, base)
+    return drivername, base
+
+
+def _quote_userinfo(value: str) -> str:
+    """URL-encode user or password for use in connection URL userinfo. Prevents special chars (@, :, /, #) from breaking URL parsing."""
+    if not value:
+        return ""
+    return quote(str(value), safe="")
+
+
+def _build_url(target: dict[str, Any]) -> str:
+    """Build SQLAlchemy URL from target config. User and password are URL-encoded to avoid injection or misparsing when they contain @, :, /, #."""
+    drivername, base = _resolve_driver(target.get("driver"))
+    # Allow full URL override
+    if target.get("url"):
+        return target["url"]
+    if base == "sqlite":
+        return f"sqlite:///{target.get('database', 'audit.db')}"
+    user = _quote_userinfo(target.get("user", ""))
+    password = _quote_userinfo(target.get("pass", target.get("password", "")))
+    host = target.get("host", "localhost")
+    port = target.get("port", 5432)
+    database = target.get("database", "")
+    if "oracle" in drivername:
+        return (
+            f"{drivername}://{user}:{password}@{host}:{port}/?service_name={database}"
+        )
+    return f"{drivername}://{user}:{password}@{host}:{port}/{database}"
+
+
+# Per-dialect allowlist of SQLAlchemy URL query keys that cannot redirect the
+# TCP/unix peer (#1556). Anything else is rejected — blocklists of dangerous
+# keys (host, hostaddr, odbc_connect, DSN, …) do not scale across dialects.
+# Dialects absent from this map: any non-empty query string is rejected.
+_SQL_SAFE_QUERY_KEYS_BY_DIALECT: dict[str, frozenset[str]] = {
+    "postgresql": frozenset(
+        {
+            "sslmode",
+            "sslrootcert",
+            "sslcert",
+            "sslkey",
+            "sslcrl",
+            "connect_timeout",
+            "application_name",
+            "client_encoding",
+            "target_session_attrs",
+            "gssencmode",
+            "channel_binding",
+        }
+    ),
+    "mysql": frozenset(
+        {
+            "charset",
+            "charset_connector",
+            "connect_timeout",
+            "compress",
+            "ssl_ca",
+            "ssl_cert",
+            "ssl_key",
+            "ssl_disabled",
+            "ssl_verify_cert",
+            "ssl_verify_identity",
+        }
+    ),
+    "mssql": frozenset(
+        {
+            "driver",
+            "encrypt",
+            "trustservercertificate",
+            "timeout",
+            "login timeout",
+            "login_timeout",
+            # MS ODBC 18+: TLS name when SERVER= is a pin IP (#1586 slice E).
+            "hostnameincertificate",
+        }
+    ),
+    "oracle": frozenset(
+        {
+            # Produced by _build_url for service_name databases.
+            "service_name",
+            "encoding",
+            "nencoding",
+        }
+    ),
+}
+
+
+def _sql_url_dialect_family(drivername: str | None) -> str:
+    base = (drivername or "").split("+")[0].strip().lower()
+    if base == "mariadb":
+        return "mysql"
+    return base
+
+
+def _guard_sql_url_query_params(parsed: Any) -> None:
+    """Reject peer-redirecting or unknown URL query keys (#1556).
+
+    Strategy: allowlist per vetted dialect family. Unknown dialects may not
+    carry a query string at all. Keys such as ``host``, ``hostaddr``,
+    ``odbc_connect``, ``DSN``, and unix-socket selectors are never allowlisted.
+    """
+    query = getattr(parsed, "query", None) or {}
+    if not query:
+        return
+    family = _sql_url_dialect_family(getattr(parsed, "drivername", None))
+    allowed = _SQL_SAFE_QUERY_KEYS_BY_DIALECT.get(family)
+    if allowed is None:
+        raise ValueError(
+            f"host rejected: SQL URL query string is not allowed for dialect "
+            f"'{family or 'unknown'}' (unvetted — refuse peer overrides). (#1556)"
+        )
+    allowed_l = {k.lower() for k in allowed}
+    for key in query:
+        key_l = str(key).lower()
+        if key_l not in allowed_l:
+            raise ValueError(
+                f"host rejected: SQL URL query parameter '{key}' is not in the "
+                f"allowlist for dialect '{family}' (peer-override / unknown keys "
+                f"are refuse-by-default). (#1556)"
+            )
+
+
+def _guard_sql_connection_url(url: str, target: dict[str, Any]) -> list[str]:
+    """Reject non-global SQL hosts unless allow_private_networks (#1556).
+
+    Runs on the *final* URL from ``_build_url`` so both discrete host/port fields
+    and a full ``url`` override are covered. Query strings use a per-dialect
+    **allowlist** (unknown key or unvetted dialect → reject) so peer overrides
+    such as ``?host=``, ``?hostaddr=``, ``?odbc_connect=``, or ``?DSN=`` cannot
+    bypass the authority check (#1556 / Bugbot).
+
+    Returns the guard-validated pin IP strings (preferred order) for TCP pinning
+    (#1586). Empty list for sqlite / empty URL (no network peer).
+    """
+    if not url or url.startswith("sqlite:"):
+        return []
+    from sqlalchemy.engine.url import make_url
+
+    from .url_guard import resolve_and_validate_outbound_url, target_allows_private
+
+    allow_private = target_allows_private(target)
+    parsed = make_url(url)
+    _guard_sql_url_query_params(parsed)
+    host = parsed.host
+    if not host:
+        raise ValueError("host rejected: no host found in SQL connection URL. (#1556)")
+    port = parsed.port
+    candidate = f"{host}:{port}" if port is not None else host
+    err, ips = resolve_and_validate_outbound_url(
+        candidate,
+        allow_private=allow_private,
+        label="host",
+    )
+    if err:
+        raise ValueError(err)
+    return [str(ip) for ip in ips]
+
+
+def _apply_postgres_hostaddr_pin(
+    connect_args: dict[str, Any],
+    pin_ips: list[str],
+) -> dict[str, Any]:
+    """Inject libpq ``hostaddr`` from guard pins (#1586 slice A).
+
+    Keeps SQLAlchemy URL ``host`` as the original hostname for TLS/SCRAM
+    identity. Never put ``hostaddr`` in the URL query (#1556 allowlist).
+    """
+    if not pin_ips:
+        return connect_args
+    from .tcp_pin import format_libpq_hostaddr, primary_pin_str
+
+    out = dict(connect_args)
+    out["hostaddr"] = format_libpq_hostaddr(primary_pin_str(pin_ips))
+    return out
+
+
+def _mysql_family_python_dns_pin_supported(drivername: str) -> bool:
+    """True when the DBAPI resolves TCP peers via Python ``getaddrinfo`` (#1586).
+
+    ``HostResolutionPin`` only intercepts Python ``socket.getaddrinfo``. Drivers
+    such as ``mariadb+mariadbconnector``, ``mysql+mysqldb``, and
+    ``mysql+mysqlconnector`` resolve in native code — installing the pin would
+    be a no-op and falsely suggest peers are pinned for the engine lifetime.
+    """
+    if not drivername or "+" not in drivername:
+        return False
+    return drivername.rsplit("+", 1)[-1].lower() == "pymysql"
+
+
+def _install_mysql_host_resolution_pin(
+    url: str,
+    pin_ips: list[str],
+    *,
+    drivername: str,
+) -> Any:
+    """Pin pymysql DNS for *url* hostname to *pin_ips* (#1586 MySQL slice).
+
+    pymysql uses ``socket.create_connection((host, port))`` and TLS
+    ``server_hostname=self.host``, so we keep the URL hostname and restrict
+    ``getaddrinfo`` via :class:`~connectors.tcp_pin.HostResolutionPin`.
+
+    Fail-closed for MySQL/MariaDB drivers that resolve outside Python (Security
+    Agent MEDIUM on #1597): raise rather than install a no-op pin. Literal IP
+    hosts need no pin (no DNS rebinding window).
+
+    Returns the pin object (caller must ``release`` on close) or ``None`` when
+    there is nothing to pin.
+    """
+    from sqlalchemy.engine.url import make_url
+
+    from .tcp_pin import HostResolutionPin, is_ip_literal
+
+    host = make_url(url).host
+    if not host:
+        return None
+    if is_ip_literal(str(host)):
+        return None
+    if not _mysql_family_python_dns_pin_supported(drivername):
+        raise ValueError(
+            "TCP peer pin (#1586) requires a Python-socket MySQL/MariaDB driver "
+            f"(…+pymysql); got {drivername!r}. Use mysql+pymysql or "
+            "mariadb+pymysql, or a literal IP host (no DNS rebinding). "
+            "Native connectors (mariadbconnector, mysqldb, mysqlconnector) "
+            "resolve outside Python getaddrinfo — same class as Oracle thin."
+        )
+    if not pin_ips:
+        return None
+    return HostResolutionPin(str(host), pin_ips).install()
+
+
+# FreeTDS / ODBC resolve outside Python getaddrinfo — pin by rewriting URL host
+# to a guard-validated IP (#1586 slice E). HostResolutionPin would be a no-op.
+_MSSQL_URL_IP_PIN_DBAPIS = frozenset({"pymssql", "pyodbc"})
+
+
+def _mssql_dbapi_name(drivername: str) -> str:
+    """Return the SQLAlchemy DBAPI suffix for an mssql drivername."""
+    raw = (drivername or "").strip().lower()
+    if "+" in raw:
+        return raw.rsplit("+", 1)[-1]
+    return "pymssql"
+
+
+def _apply_mssql_tcp_peer_pin(url: str, pin_ips: list[str]) -> str:
+    """Rewrite MSSQL URL host to a guard-pinned IP (#1586 slice E).
+
+    ``pymssql`` (FreeTDS ``dbopen``) and ``pyodbc`` resolve TCP peers in native
+    code, so :class:`~connectors.tcp_pin.HostResolutionPin` cannot close the
+    validate→connect rebinding window. Putting the validated IP in the URL
+    authority forces the dial peer to the guard-approved address.
+
+    For ``mssql+pyodbc``, inject ``HostNameInCertificate`` with the original
+    hostname when missing so MS ODBC 18+ can verify TLS against the DNS name
+    while connecting to the pin IP. pymssql/FreeTDS has no equivalent knob;
+    encrypting to an IP may need an IP SAN or ``TrustServerCertificate``.
+
+    Literal IP hosts are unchanged. Unsupported mssql DBAPIs fail-closed.
+    """
+    from sqlalchemy.engine.url import make_url
+
+    from .tcp_pin import is_ip_literal, primary_pin_str
+
+    if not pin_ips:
+        return url
+    u = make_url(url)
+    dbapi = _mssql_dbapi_name(u.drivername or "")
+    if dbapi not in _MSSQL_URL_IP_PIN_DBAPIS:
+        raise ValueError(
+            "TCP peer pin (#1586) for mssql requires pymssql or pyodbc "
+            f"(got {u.drivername!r}). Use mssql+pymssql, mssql+pyodbc, or a "
+            "literal IP host (no DNS rebinding)."
+        )
+    host = u.host
+    if not host:
+        return url
+    host_s = str(host)
+    if is_ip_literal(host_s):
+        return url
+    pin = primary_pin_str(pin_ips)
+    new_u = u.set(host=pin)
+    if dbapi == "pyodbc" and not is_ip_literal(host_s):
+        q = dict(new_u.query)
+        if "hostnameincertificate" not in {str(k).lower() for k in q}:
+            new_u = new_u.update_query_dict({"HostNameInCertificate": host_s})
+    return new_u.render_as_string(hide_password=False)
+
+
+# oracledb Thin resolves outside Python getaddrinfo — pin by rewriting URL host
+# (#1586 slice F). HostResolutionPin would be a no-op (same class as FreeTDS).
+_ORACLE_URL_IP_PIN_DBAPIS = frozenset({"oracledb"})
+
+
+def _oracle_dbapi_name(drivername: str) -> str:
+    """Return the SQLAlchemy DBAPI suffix for an oracle drivername."""
+    raw = (drivername or "").strip().lower()
+    if "+" in raw:
+        return raw.rsplit("+", 1)[-1]
+    return "oracledb"
+
+
+def _apply_oracle_tcp_peer_pin(url: str, pin_ips: list[str]) -> str:
+    """Rewrite Oracle URL host to a guard-pinned IP (#1586 slice F).
+
+    ``oracle+oracledb`` Thin dials TCP in native code, so
+    :class:`~connectors.tcp_pin.HostResolutionPin` cannot close the
+    validate→connect rebinding window. Putting the validated IP in the URL
+    authority forces the dial peer to the guard-approved address.
+
+    TCPS / DN match then uses the IP (or operator-supplied
+    ``ssl_server_cert_dn`` via ``connect_args``). Hostname certs without an IP
+    SAN may need that DN override — same trade-off as pymssql encrypt-to-IP.
+
+    Literal IP hosts are unchanged. ``cx_oracle`` and other DBAPIs fail-closed.
+    """
+    from sqlalchemy.engine.url import make_url
+
+    from .tcp_pin import is_ip_literal, primary_pin_str
+
+    if not pin_ips:
+        return url
+    u = make_url(url)
+    dbapi = _oracle_dbapi_name(u.drivername or "")
+    if dbapi not in _ORACLE_URL_IP_PIN_DBAPIS:
+        raise ValueError(
+            "TCP peer pin (#1586) for oracle requires oracledb "
+            f"(got {u.drivername!r}). Use oracle+oracledb or a literal IP host "
+            "(no DNS rebinding). cx_Oracle / Thick Client resolve outside "
+            "Python getaddrinfo — same class as Oracle thin before this pin."
+        )
+    host = u.host
+    if not host:
+        return url
+    host_s = str(host)
+    if is_ip_literal(host_s):
+        return url
+    pin = primary_pin_str(pin_ips)
+    return u.set(host=pin).render_as_string(hide_password=False)
+
+
+def _connect_args_from_target(target: dict[str, Any]) -> dict[str, Any]:
+    """
+    Build SQLAlchemy ``connect_args`` from target timeouts (config loader merges global + per-target).
+
+    Uses ``connect_timeout_seconds`` for connect; ``read_timeout_seconds`` for statement_timeout
+    (PostgreSQL), SQLite lock wait, or pymssql query ``timeout``.
+
+    Branch on the **resolved SQLAlchemy drivername** from ``_resolve_driver`` (not bare
+    ``base == "mssql"`` alone): ``mssql+pymssql`` and ``mssql+pyodbc`` share base ``mssql``
+    but accept different connect kwargs (#1302).
+
+    Driver → connect_args mapping::
+
+        postgresql[+…]       connect_timeout, options=-c statement_timeout=… (ms);
+                             ``hostaddr`` is added separately from guard pins (#1586)
+        mysql+pymysql /       connect_timeout; DNS pinned via HostResolutionPin (#1586)
+        mariadb+pymysql       only — other mysql/mariadb drivers fail-closed on hostname
+        sqlite               timeout  (lock wait; read_timeout_seconds)
+        mssql+pymssql        login_timeout, timeout  (#1297; bare ``mssql`` maps here);
+                             TCP pin via URL host→guard IP (#1586 slice E; FreeTDS)
+        mssql+pyodbc         timeout only  (pyodbc.connect accepts ``timeout``; not login_timeout);
+                             TCP pin via URL host→IP + HostNameInCertificate (#1586)
+        oracle+oracledb      tcp_connect_timeout  (oracledb; not connect_timeout);
+                             TCP pin via URL host→guard IP (#1586 slice F; Thin)
+        other                connect_timeout  (best-effort)
+    """
+    connect_s = int(target.get("connect_timeout_seconds", 25))
+    read_s = int(target.get("read_timeout_seconds", 90))
+    drivername, base = _resolve_driver(target.get("driver"))
+    connect_s = max(1, connect_s)
+    read_s = max(1, read_s)
+    if base == "sqlite":
+        return {"timeout": read_s}
+    if base == "postgresql":
+        # statement_timeout in PostgreSQL is in milliseconds
+        return {
+            "connect_timeout": connect_s,
+            "options": f"-c statement_timeout={read_s * 1000}",
+        }
+    if base in ("mysql", "mariadb"):
+        return {"connect_timeout": connect_s}
+    if base == "mssql":
+        if drivername.endswith("+pyodbc"):
+            # pyodbc.connect(..., timeout=seconds) — no login_timeout kwarg
+            return {"timeout": connect_s}
+        # mssql+pymssql (default via DRIVER_MAP) and other mssql+* pymssql-style
+        return {"login_timeout": connect_s, "timeout": read_s}
+    if base == "oracle":
+        return {"tcp_connect_timeout": connect_s}
+    return {"connect_timeout": connect_s}
+
+
+def _resolve_sample_statement_timeout_ms(target: dict[str, Any]) -> int | None:
+    """
+    Per-target sampling statement budget (ms). Env overrides YAML.
+
+    ``<= 0`` disables hints / ``SET LOCAL`` for that target (operator choice).
+    Default when unset: **5000** ms.
+    """
+    raw_env = os.environ.get("DATA_BOAR_SAMPLE_STATEMENT_TIMEOUT_MS", "").strip()
+    if raw_env:
+        try:
+            v = int(raw_env)
+            return None if v <= 0 else max(250, min(v, 60_000))
+        except ValueError:
+            pass
+    v = target.get("sample_statement_timeout_ms")
+    if v is None and target.get("sample_statement_timeout_seconds") is not None:
+        v = int(float(target["sample_statement_timeout_seconds"])) * 1000
+    if v is None:
+        return 5000
+    vi = int(v)
+    return None if vi <= 0 else max(250, min(vi, 60_000))
+
+
+class SQLConnector:
+    """
+    Connect to a SQL database, discover tables/columns, sample content, run sensitivity detection,
+    save findings (metadata only). Implements connect, discover, sample, close.
+    """
+
+    def __init__(
+        self,
+        target_config: dict[str, Any],
+        scanner: Any,
+        db_manager: Any,
+        sample_limit: int = 5,
+        detection_config: dict[str, Any] | None = None,
+        sampling_policy: SamplingPolicy | None = None,
+    ):
+        self.config = target_config
+        self.scanner = scanner
+        self.db_manager = db_manager
+        self.sample_limit = sample_limit
+        self.sampling_policy = sampling_policy
+        self.detection_config = detection_config or {}
+        self.engine = None
+        # Compatibility shim: legacy tests/helpers may still patch this attribute.
+        self._connection = None
+        self._dns_pin = None
+        self._sql_sampling_audit_key: str | None = None
+        self._table_row_cache: dict[tuple[str, str], int | None] = {}
+        self._sample_statement_timeout_ms = _resolve_sample_statement_timeout_ms(
+            self.config
+        )
+        self._inter_query_delay_s = max(
+            0.0, float(self.config.get("inter_query_delay_ms", 0) or 0) / 1000.0
+        )
+        self._scan_progress = target_config.get("_scan_progress")
+
+    def connect(self) -> None:
+        ensure_sql_driver_available(self.config.get("driver"))
+        url = _build_url(self.config)
+        pin_ips = _guard_sql_connection_url(url, self.config)
+        connect_args = _connect_args_from_target(self.config)
+        drivername, base = _resolve_driver(self.config.get("driver"))
+        if base == "postgresql":
+            connect_args = _apply_postgres_hostaddr_pin(connect_args, pin_ips)
+        dns_pin = None
+        if base in ("mysql", "mariadb"):
+            dns_pin = _install_mysql_host_resolution_pin(
+                url, pin_ips, drivername=drivername
+            )
+        if base == "mssql":
+            url = _apply_mssql_tcp_peer_pin(url, pin_ips)
+        if base == "oracle":
+            url = _apply_oracle_tcp_peer_pin(url, pin_ips)
+        try:
+            self.engine = create_engine(
+                url, pool_pre_ping=True, connect_args=connect_args
+            )
+        except Exception:
+            if dns_pin is not None:
+                dns_pin.release()
+            raise
+        self._dns_pin = dns_pin
+        self._table_row_cache = {}
+
+    def close(self) -> None:
+        if self._connection:
+            try:
+                self._connection.close()
+            except Exception:
+                pass
+            self._connection = None
+        if self.engine:
+            self.engine.dispose()
+            self.engine = None
+        # Release after dispose so pool reconnects during teardown still see pins.
+        pin = getattr(self, "_dns_pin", None)
+        if pin is not None:
+            pin.release()
+            self._dns_pin = None
+
+    def discover(self) -> list[dict[str, Any]]:
+        """Return list of {schema, table, columns: [{name, type}]}. For Oracle, skips system schemas."""
+        inspector = inspect(self.engine)
+        dialect = self.engine.dialect.name if self.engine else ""
+        skip_schemas = _get_skip_schemas(dialect)
+        result = []
+        for schema in inspector.get_schema_names():
+            if _should_skip_schema(schema, dialect, skip_schemas):
+                continue
+            result.extend(_tables_from_schema(inspector, schema))
+        if not result:
+            result = _discover_fallback_no_schemas(inspector)
+        return result
+
+    def _process_one_finding(
+        self,
+        target_name: str,
+        server_ip: str,
+        engine_name: str,
+        schema: str,
+        table: str,
+        cname: str,
+        ctype: str,
+        *,
+        audit_log_name: str | None = None,
+    ) -> None:
+        """Sample column, run detection, optionally full-scan for minor; save finding and log."""
+        if self._inter_query_delay_s > 0:
+            time.sleep(self._inter_query_delay_s)
+        try:
+            sample = self.sample(schema, table, cname)
+        except ColumnSampleError:
+            return
+        res = self.scanner.scan_column(cname, sample, connector_data_type=ctype)
+        res = augment_low_id_like_for_persist(res, cname, self.detection_config)
+        if (
+            res["sensitivity_level"] == "LOW"
+            and res.get("pattern_detected") != SUGGESTED_REVIEW_PATTERN
+        ):
+            return
+        norm_tag = res.get("norm_tag", "")
+        if "DOB_POSSIBLE_MINOR" in (
+            res.get("pattern_detected") or ""
+        ) and self.detection_config.get("minor_full_scan"):
+            full_scan_limit = self.detection_config.get("minor_full_scan_limit", 100)
+            try:
+                full_sample = self.sample(schema, table, cname, limit=full_scan_limit)
+            except ColumnSampleError:
+                pass
+            else:
+                full_res = self.scanner.scan_column(
+                    cname, full_sample, connector_data_type=ctype
+                )
+                if "DOB_POSSIBLE_MINOR" in (full_res.get("pattern_detected") or ""):
+                    res = full_res
+                    suffix = " (full-scan confirmed)"
+                    norm_tag = (
+                        (norm_tag or "").rstrip() + suffix
+                        if norm_tag
+                        else suffix.lstrip()
+                    )
+        self.db_manager.save_finding(
+            source_type="database",
+            target_name=target_name,
+            server_ip=server_ip,
+            engine_details=engine_name,
+            schema_name=schema,
+            table_name=table,
+            column_name=cname,
+            data_type=ctype,
+            sensitivity_level=res["sensitivity_level"],
+            pattern_detected=res["pattern_detected"],
+            norm_tag=norm_tag,
+            ml_confidence=res.get("ml_confidence", 0),
+        )
+        try:
+            from utils.logger import log_finding
+
+            log_label = audit_log_name or target_name
+            log_finding(
+                "database",
+                log_label,
+                f"{schema}.{table}.{cname}",
+                res["sensitivity_level"],
+                res["pattern_detected"],
+            )
+        except Exception:
+            pass
+
+    def sample(
+        self, schema: str, table: str, column_name: str, limit: int | None = None
+    ) -> str:
+        """Fetch up to limit (or sample_limit) values from column; return concatenated string for detection (not stored)."""
+        if limit is not None:
+            use_limit = resolve_sql_sample_limit(limit)
+        else:
+            base = int(self.sample_limit)
+            if self.sampling_policy is not None:
+                base = self.sampling_policy.get_effective_sample_limit(
+                    target_name=str(self.config.get("name") or "database"),
+                    schema=schema or "",
+                    table=table,
+                    global_limit=base,
+                )
+            use_limit = resolve_sql_sample_limit(base)
+        dialect = self.engine.dialect.name if self.engine else ""
+        # Escape identifiers per dialect. Names come from the scanned catalog
+        # (discover()), which is not a trusted input. Oracle quoting is
+        # oracle_sql_identifier; other dialects double the quote character.
+        # Double-quote for SQLite/Postgres; backtick for MySQL.
+        safe_col = column_name.replace('"', '""')
+        safe_table = table.replace('"', '""')
+        safe_schema = (schema or "").replace('"', '""')
+        tkey = (schema or "", table)
+        to = self._sample_statement_timeout_ms
+        audit_key = f"{schema or ''}.{table}"
+        try:
+            with self.engine.connect() as conn:
+                with conn.begin():
+                    if tkey not in self._table_row_cache:
+                        try:
+                            from connectors.sql_table_row_estimate import (
+                                estimate_table_rows,
+                            )
+
+                            self._table_row_cache[tkey] = estimate_table_rows(
+                                conn, dialect, schema or "", table
+                            )
+                        except Exception:
+                            self._table_row_cache[tkey] = None
+                    est = self._table_row_cache[tkey]
+                    table_meta = TableSamplingMetadata(estimated_row_count=est)
+                    fetch_budget = resolve_fetch_row_budget(
+                        use_limit, estimated_row_count=est
+                    )
+                    oracle_raw = {"raw_col": column_name, "raw_table": table}
+                    if schema:
+                        oracle_raw["raw_schema"] = schema
+                    plan = SamplingManager.build_column_sample(
+                        dialect,
+                        safe_col=safe_col,
+                        safe_table=safe_table,
+                        safe_schema=safe_schema,
+                        schema=schema,
+                        limit=fetch_budget,
+                        table_metadata=table_meta,
+                        statement_timeout_ms=to,
+                        **(oracle_raw if (dialect or "").lower() == "oracle" else {}),
+                    )
+                    if self._sql_sampling_audit_key != audit_key:
+                        self._sql_sampling_audit_key = audit_key
+                        try:
+                            from utils.logger import get_logger
+
+                            human = plan.human_strategy or plan.strategy_label
+                            msg = (
+                                "Sampling %s using %s strategy (label=%s dialect=%s)"
+                                % (
+                                    audit_key,
+                                    human,
+                                    plan.strategy_label,
+                                    dialect,
+                                )
+                            )
+                            if plan.audit_notes:
+                                msg += " notes=%s" % (plan.audit_notes,)
+                            get_logger().info(msg)
+                        except Exception:
+                            pass  # best-effort audit logging — never break sampling for a log line
+                    if dialect in ("postgresql", "postgres") and to:
+                        conn.execute(
+                            text("SET LOCAL statement_timeout = :mt").bindparams(
+                                mt=int(to)
+                            )
+                        )
+                    rows = conn.execute(plan.query).fetchall()
+        except Exception as e:
+            target_name = str(self.config.get("name") or "database")
+            details = format_column_sample_failure_details(
+                schema=schema or "",
+                table=table,
+                column_name=column_name,
+                dialect=dialect,
+                exc=e,
+            )
+            self.db_manager.save_failure(
+                target_name, SCAN_FAILURE_REASON_SAMPLING_ERROR, details
+            )
+            try:
+                from utils.logger import get_logger
+
+                get_logger().warning(
+                    "sample_failed schema=%s table=%s col=%s dialect=%s err=%s",
+                    schema or "",
+                    table,
+                    column_name,
+                    dialect,
+                    str(e)[:200],
+                )
+            except Exception:
+                pass
+            raise ColumnSampleError from e
+        return join_distinct_sample((r[0] for r in rows), distinct_cap=use_limit)
+
+    def fetch_column_values(
+        self,
+        schema: str,
+        table: str,
+        column_name: str,
+        *,
+        limit: int,
+    ) -> list[str]:
+        """Return up to *limit* cell values as strings (L3). Never logs cell contents.
+
+        *limit* is clamped to 1..10000 here. Unlike :meth:`sample`, this path does
+        **not** honour ``DATA_BOAR_SQL_SAMPLE_LIMIT`` (that env is a scan-sample
+        relief valve; L3 blast radius is the operator's ``--l3-max-rows`` only).
+        """
+        if self.engine is None:
+            raise RuntimeError("SQLConnector.fetch_column_values requires connect()")
+        use_limit = max(1, min(int(limit), 10_000))
+        dialect = self.engine.dialect.name if self.engine else ""
+        safe_col = column_name.replace('"', '""')
+        safe_table = table.replace('"', '""')
+        safe_schema = (schema or "").replace('"', '""')
+        to = self._sample_statement_timeout_ms
+        oracle_raw = {"raw_col": column_name, "raw_table": table}
+        if schema:
+            oracle_raw["raw_schema"] = schema
+        table_meta = TableSamplingMetadata(estimated_row_count=None)
+        plan = SamplingManager.build_column_sample(
+            dialect,
+            safe_col=safe_col,
+            safe_table=safe_table,
+            safe_schema=safe_schema,
+            schema=schema,
+            limit=use_limit,
+            table_metadata=table_meta,
+            statement_timeout_ms=to,
+            **(oracle_raw if (dialect or "").lower() == "oracle" else {}),
+        )
+        try:
+            with self.engine.connect() as conn, conn.begin():
+                if dialect in ("postgresql", "postgres") and to:
+                    conn.execute(
+                        text("SET LOCAL statement_timeout = :mt").bindparams(mt=int(to))
+                    )
+                rows = conn.execute(plan.query).fetchall()
+        except Exception as exc:
+            raise RuntimeError("L3 column projection failed") from exc
+        out: list[str] = []
+        for row in rows:
+            if not row:
+                continue
+            cell = row[0]
+            if cell is None:
+                continue
+            text_value = str(cell)
+            if text_value == "":
+                continue
+            out.append(text_value)
+            if len(out) >= use_limit:
+                break
+        return out
+
+    def _probe_product_version(self, engine_name: str) -> str | None:
+        if not self.engine:
+            return None
+        probe_sql = {
+            "postgresql": text("SELECT version()"),
+            "mysql": text("SELECT VERSION()"),
+            "mariadb": text("SELECT VERSION()"),
+            "sqlite": text("SELECT sqlite_version()"),
+            "mssql": text("SELECT @@VERSION"),
+            "oracle": text("SELECT banner FROM v$version WHERE ROWNUM = 1"),
+        }
+        stmt = probe_sql.get(engine_name)
+        if stmt is None:
+            return None
+        try:
+            # Keep probe transaction scope local so sampling starts from a clean connection state.
+            with self.engine.connect() as conn, conn.begin():
+                value = conn.execute(stmt).scalar()
+            return str(value or "")
+        except Exception:
+            return None
+
+    def _save_inventory_snapshot(self, target_name: str, engine_name: str) -> None:
+        """
+        Persist one best-effort inventory row (product/version/protocol/transport).
+
+        Phase 1 intentionally keeps this lightweight and resilient: failures here must not
+        break scanning.
+        """
+        if not hasattr(self.db_manager, "save_data_source_inventory"):
+            return
+        product_version = self._probe_product_version(engine_name)
+        raw_details: dict[str, str] = {}
+        raw_details["driver"] = (self.config.get("driver") or "").strip()
+        if product_version:
+            raw_details["version_probe"] = product_version[:500]
+
+        sslmode = str(self.config.get("sslmode") or "").strip().lower()
+        if sslmode:
+            transport_security = f"sslmode={sslmode}"
+        elif "sslmode=" in str(self.config.get("url") or "").lower():
+            transport_security = "sslmode(from-url)"
+        else:
+            transport_security = "unknown"
+
+        try:
+            self.db_manager.save_data_source_inventory(
+                target_name=target_name,
+                source_type="database",
+                product=engine_name,
+                product_version=product_version,
+                protocol_or_api_version=engine_name,
+                transport_security=transport_security,
+                raw_details=json.dumps(raw_details, ensure_ascii=False),
+            )
+        except Exception:
+            # Never fail a scan because inventory persistence failed.
+            pass
+
+    def _save_crypto_controls_audit(self, target_name: str) -> None:
+        """
+        Opt-in strong-crypto validation after connect (Order 5 Phase 2a).
+
+        Fail-soft: probe/persist errors never fail the scan. No PEMs or DSNs in details.
+        """
+        if not self.config.get("_validate_crypto"):
+            return
+        if not hasattr(self.db_manager, "save_crypto_controls_audit"):
+            return
+        if not self.engine:
+            return
+        try:
+            facts = collect_sql_crypto_facts(self.engine, self.config)
+            result, details = evaluate_strong_crypto(facts)
+            self.db_manager.save_crypto_controls_audit(
+                target_name=target_name,
+                connection_type="database",
+                strong_crypto_result=result.value,
+                strong_crypto_details=details[:512],
+                inferred_controls_summary=None,
+            )
+        except Exception:
+            # Fail-soft: crypto probe/persist errors never fail the scan.
+            pass
+
+    def _save_inferred_controls_summary(
+        self, target_name: str, identifier_names: list[str]
+    ) -> None:
+        """Phase 3: attach count-by-category inference to the crypto audit row."""
+        if not self.config.get("_validate_crypto"):
+            return
+        if not hasattr(self.db_manager, "update_crypto_controls_inferred_summary"):
+            return
+        try:
+            summary = infer_controls_from_identifiers(identifier_names)
+            if not summary:
+                return
+            self.db_manager.update_crypto_controls_inferred_summary(
+                target_name, summary
+            )
+        except Exception:
+            # Fail-soft: inference never fails the scan.
+            pass
+
+    def run(self) -> None:
+        """Connect, discover, sample each column, detect, save_finding; on error save_failure."""
+        from utils.audit_log_display import audit_log_target_label
+
+        target_name = self.config.get("name", "database")
+        audit_name = audit_log_target_label(self.config, default="database")
+        server_ip = self.config.get("host", "localhost")
+        try:
+            self.connect()
+        except Exception as e:
+            self.db_manager.save_failure(target_name, "unreachable", str(e))
+            return
+        identifier_names: list[str] = []
+        try:
+            from utils.logger import log_connection
+
+            log_connection(audit_name, "database", server_ip or "local")
+            engine_name = self.engine.dialect.name if self.engine else "sql"
+            self._save_inventory_snapshot(target_name, engine_name)
+            self._save_crypto_controls_audit(target_name)
+            discovered = self.discover()
+            progress = self._scan_progress
+            if progress is not None and getattr(progress, "enabled", False):
+                progress.set_tables_total(len(discovered), target_name=target_name)
+            completed_tables: set[tuple[str, str]] = set()
+            from core.database import LocalDBManager
+
+            if isinstance(self.db_manager, LocalDBManager):
+                completed_tables = self.db_manager.list_completed_sql_tables(
+                    target_name
+                )
+            for table_index, item in enumerate(discovered, start=1):
+                schema = item["schema"]
+                table = item["table"]
+                table_key = ((schema or "").strip(), table)
+                if table_key in completed_tables:
+                    continue
+                table_label = f"{schema}.{table}" if schema else table
+                if progress is not None and getattr(progress, "enabled", False):
+                    progress.advance_table(
+                        table_index,
+                        table_label=table_label,
+                        target_name=target_name,
+                    )
+                if isinstance(self.db_manager, LocalDBManager):
+                    self.db_manager.mark_sql_table_in_progress(
+                        target_name, schema, table
+                    )
+                for col in item["columns"]:
+                    cname = col["name"]
+                    if cname:
+                        identifier_names.append(str(cname))
+                    self._process_one_finding(
+                        target_name,
+                        server_ip,
+                        engine_name,
+                        schema,
+                        table,
+                        cname,
+                        col["type"],
+                        audit_log_name=audit_name,
+                    )
+                if isinstance(self.db_manager, LocalDBManager):
+                    self.db_manager.mark_sql_table_completed(target_name, schema, table)
+        except Exception as e:
+            self.db_manager.save_failure(target_name, "error", str(e))
+        finally:
+            # Best-effort even when mid-loop sampling/detection raises.
+            self._save_inferred_controls_summary(target_name, identifier_names)
+            self.close()
+
+
+# Register for common SQL engines
+for _t in ("postgresql", "mysql", "mariadb", "sqlite", "mssql", "oracle"):
+    register(_t, SQLConnector, ["name", "type"])

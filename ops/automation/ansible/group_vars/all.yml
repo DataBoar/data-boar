@@ -1,0 +1,13 @@
+---
+# Shared by all plays in this tree (inventory "all" group).
+# Debian/Ubuntu: apt-listbugs aborts unattended apt when it finds serious bugs (exit 10).
+# See ops/automation/ansible/README.md (Troubleshooting) and `man apt-listbugs`.
+# Override per host in host_vars if you need interactive listbugs during a play.
+
+# Human operator login for roles that must not target root (supplementary groups, Bitwarden bw verify).
+# Empty = auto: lab_node_01_operator_target_user override, else SUDO_USER, else ansible_user / ansible_user_id.
+# Set e.g. leitao for localhost if facts resolve to root.
+lab_node_01_operator_target_user: ""
+
+labop_debian_unattended_apt_environment:
+  APT_LISTBUGS_FRONTEND: "none"

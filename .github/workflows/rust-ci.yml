@@ -1,0 +1,98 @@
+# Rust CI: cargo check, test, fmt, and clippy for the boar_fast_filter crate
+# (rust/boar_fast_filter), the only Rust component in this repo.
+#
+# Triggers: every push and PR targeting main or master, scoped via path filters
+# so unrelated Python-only changes do not spend a Rust runner.
+#
+# Path filters must stay on rust/** (this workflow file). The Python executive
+# Markdown CLI is the console script data-boar-report (cli/reporter.py); that
+# string is not a repo directory -- do not use it in paths: or pathspecs here.
+#
+# Action pins follow the existing repo convention (full commit SHA + version
+# comment). The Rust toolchain itself is provided by the runner image; we
+# install/refresh it deterministically with `rustup` instead of adding a new
+# third-party action SHA to track.
+#
+# Quality bar: `cargo clippy --all-targets -- -D warnings` makes any clippy
+# lint a CI failure, satisfying the "fail on lint errors" requirement.
+name: Rust CI
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - "rust/**"
+      - ".github/workflows/rust-ci.yml"
+  pull_request:
+    branches: [main, master]
+    paths:
+      - "rust/**"
+      - ".github/workflows/rust-ci.yml"
+
+defaults:
+  run:
+    working-directory: rust/boar_fast_filter
+
+jobs:
+  rust:
+    name: cargo check / test / clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # PyO3 needs a Python interpreter visible at link time; setup-python
+      # exports PYO3_PYTHON-compatible env via PATH so cargo builds find it.
+      - name: Set up Python (for PyO3 link)
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Install Rust toolchain (stable) with clippy and rustfmt
+        run: |
+          rustup toolchain install stable --profile minimal --no-self-update
+          rustup default stable
+          rustup component add clippy rustfmt
+          rustc --version
+          cargo --version
+          cargo clippy --version
+          cargo fmt --version
+
+      - name: Cache cargo registry and crate target
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            rust/boar_fast_filter/target
+          key: cargo-${{ runner.os }}-${{ hashFiles('rust/boar_fast_filter/Cargo.lock') }}
+          restore-keys: |
+            cargo-${{ runner.os }}-
+
+      - name: cargo fmt --check
+        run: cargo fmt --all -- --check
+
+      - name: cargo check
+        run: cargo check --all-targets --locked
+
+      - name: cargo test
+        run: cargo test --all-targets --locked
+
+      - name: cargo clippy (deny warnings)
+        run: cargo clippy --all-targets --locked -- -D warnings
+
+      # Supply-chain Layer 1 (ADR-0074 / GitHub #988): Rust SCA before merge.
+      - name: Install cargo-audit and cargo-deny
+        run: |
+          cargo install cargo-audit --version 0.22.2 --locked --force
+          cargo install cargo-deny --version 0.19.9 --locked --force
+
+      - name: cargo audit (RUSTSEC)
+        run: cargo audit
+
+      - name: cargo deny check
+        run: cargo deny check advisories bans licenses sources

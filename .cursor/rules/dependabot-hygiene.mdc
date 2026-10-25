@@ -1,0 +1,22 @@
+---
+description: When touching dependencies or opportunistically, check Dependabot recommendations; validate and apply only if safe, tests green, and consider adding a regression test.
+globs: ["pyproject.toml", "uv.lock", "requirements.txt", ".github/dependabot.yml", ".github/workflows/*.yml"]
+alwaysApply: false
+---
+
+# Dependabot recommendation hygiene
+
+When working with **dependencies** (pyproject.toml, uv.lock, requirements.txt) or when the user asks about updates:
+
+1. **Check Dependabot** (e.g. `gh pr list --author dependabot[bot]` or GitHub PRs). On Windows, **`.\scripts\maintenance-check.ps1`** lists open Dependabot PRs and optionally runs **Docker Scout quickview** on the published image (see **SECURITY.md**).
+1. **Verify viability**: Apply recommended version bumps only if they are compatible (no known breaking changes for this project).
+1. **Apply safely**: Update constraints in pyproject.toml, run `uv lock`, refresh requirements.txt if used; do not merge Dependabot branches blindly—prefer applying the same change locally and validating.
+1. **Validate**: Run the full test suite with `uv run pytest -v -W error`; all tests must pass with no errors or warnings.
+1. **Regression guard**: If the update fixes a bug or enforces a contract (e.g. minimum version), add or extend a test so future changes do not reintroduce the issue.
+1. **PR-ready**: After applying, the tree should be ready for a PR (tests green, pre-commit / Ruff clean).
+
+## Security alerts (not the same as Dependabot PRs)
+
+GitHub **Dependabot alerts** can stay open when **no fix fits the resolver** (e.g. **pyOpenSSL ≥ 26** blocked by **`snowflake-connector-python`**’s published upper bound). Before forcing pins, read **`docs/ops/DEPENDABOT_PYOPENSSL_SNOWFLAKE.md`** and **SECURITY.md** (bullet on pyOpenSSL/Snowflake). **`.\scripts\maintenance-check.ps1`** lists open alerts when `gh` is authenticated.
+
+For the full step-by-step workflow, use the **dependabot-recommendations** skill when performing dependency updates.

@@ -1,0 +1,36 @@
+---
+description: Windows dev workstation (L-series) — same destructive-repo prohibitions when this machine holds the canonical clone; secondary today, may become main dev box again.
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# primary Windows dev PC workstation protection (canonical clone + evidence)
+
+## Scope
+
+- **Windows dev workstation (L-series):** **Secondary** today while canonical clone lives on Linux; **same rigor** as main dev box when this machine holds the canonical tree (may become **main dev box** again after repair). Tracked docs use **role labels** (not hostnames in commits).
+- **lab-op** and other **manifest SSH hosts** are **not** the primary dev PC canonical tree: **`git reset --hard`**, **`lab-op-git-align-main`**, **`lab-op-git-ensure-ref -Mode Reset`**, and similar **only** apply to **`repoPaths`** on those remote hosts — **never** to the operator’s primary clone path opened in Cursor on Windows — see **`docs/ops/LAB_COMPLETAO_RUNBOOK.md`** (*Blast radius*) and **`docs/ops/PRIMARY_WINDOWS_WORKSTATION_PROTECTION.md`**.
+- **Container images** (Docker / Swarm / Podman / Kubernetes): re-pull from **Docker Hub** (or configured registry) is **normal** and **reversible** for lab work — not the same blast radius as rewriting Git history on the primary dev PC.
+
+## Hard prohibitions (assistants + automation)
+
+1. **Do not run** on primary Windows dev PC (integrated terminal or scripted): **`clean-slate.sh`** / private **`clean-slate`**, **`git filter-repo`** against the **canonical** tree, **`git reset --hard`** / **`git clean -fdx`** on the **canonical** clone, **`scripts/run-pii-history-rewrite.ps1`** unless the script’s **documented opt-in guard** is satisfied **and** the operator explicitly asked for that flow on **this** machine (default: treat primary Windows dev PC as **never** for those).
+2. **Do not narrate or “simulate”** a successful destructive reset, mirror rewrite, or “wiped and recloned” outcome for the **canonical** primary Windows dev PC tree in chat — that erodes auditability the same way fake clean-slate claims do (**`clean-slate-pii-self-audit.mdc`**).
+3. **Do not add** repo automation that **deletes or replaces** the operator’s main clone path **without** an explicit **off-by-default** guard (env var / remote-only doc) documented in **`docs/ops/PRIMARY_WINDOWS_WORKSTATION_PROTECTION.md`**.
+
+## Allowed on primary Windows dev PC (non-destructive to canonical tree)
+
+- **Guards on current tree:** `uv run python scripts/pii_history_guard.py`, `uv run pytest tests/test_pii_guard.py`, `check-all`, etc.
+- **Temp-only clones:** **`scripts/pii-fresh-clone-audit.ps1`**, **`scripts/new-b2-verify.ps1`** — only remove paths under **`%TEMP%`** / a **dedicated temp folder**, not the canonical repo root.
+- **Read-only search:** **`scripts/es-find.ps1`** (voidtools Everything) — filename/path index only; **`docs/ops/EVERYTHING_ES_PRIMARY_WINDOWS_DEV_LAB.md`**; session **`es-find`**; **`.cursor/rules/everything-es-cli.mdc`**.
+
+## Where destructive work belongs
+
+- **Linux `clean-slate` / full tree reset:** designated **lab** machines, **not** primary Windows dev PC — **`docs/ops/PII_PUBLIC_TREE_OPERATOR_GUIDE.md`** H.9.
+- **Public history rewrite:** isolated working copy + mirror backup workflow; **`run-pii-history-rewrite.ps1`** requires **`DATA_BOAR_ALLOW_DESTRUCTIVE_REPO_OPS=1`** (set **only** on an agreed non-primary-workstation host per operator policy).
+
+## Cross-links
+
+- **`docs/ops/PRIMARY_WINDOWS_WORKSTATION_PROTECTION.md`** (EN) / **`.pt_BR.md`**
+- **`docs/ops/LAB_COMPLETAO_RUNBOOK.md`** (*Blast radius* — LAB vs primary Windows dev PC)
+- **`clean-slate-pii-self-audit.mdc`**, **`private-pii-never-public.mdc`**

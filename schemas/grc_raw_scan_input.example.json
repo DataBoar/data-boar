@@ -1,0 +1,27 @@
+{
+  "schema": "data_boar_grc_raw_scan_input_example_v1",
+  "scope": "Example lab slice; replace with real scan scope text.",
+  "client_display_name": "Example Org (placeholder)",
+  "session_id": "example-session",
+  "total_records_scanned": 0,
+  "compliance_mapping": {
+    "lgpd_articles_hint": ["LGPD:Art.46"],
+    "mapping_confidence": "workshop_hints"
+  },
+  "assets": [
+    {
+      "asset_id": "db:example:dbo.clientes",
+      "asset_class": "database_table",
+      "use_lgpd_density_risk": true,
+      "pii_types": [
+        {"type": "EMAIL", "count": 5},
+        {"type": "CPF", "count": 2}
+      ],
+      "location_summary": "dbo.clientes (placeholder)",
+      "violation_desc": "Technical density note for automation sample only.",
+      "norm_tags": ["EXAMPLE_TAG"],
+      "data_category": "unknown",
+      "regulatory_impact": ""
+    }
+  ]
+}

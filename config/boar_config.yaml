@@ -1,0 +1,13 @@
+# boar_config.yaml básico para o Smoke Test
+audit_log:
+  strategy: sampling
+  row_cap: 1000
+
+targets:
+  - type: filesystem
+    name: "home_leitao"
+    path: "/home/leitao/Documents/LGPD"
+
+detection:
+  min_sensitivity: medium
+  aggregated_identification: true

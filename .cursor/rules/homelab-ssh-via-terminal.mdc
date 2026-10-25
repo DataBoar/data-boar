@@ -1,0 +1,35 @@
+---
+description: Homelab reachability via operator dev PC terminal (ssh, scp, curl to LAN); specifics in gitignored docs/private/homelab/AGENT_LAB_ACCESS.md; never put real hosts in tracked files. Situational — session token homelab or @homelab-ssh-via-terminal.mdc when globs miss.
+globs:
+  - docs/private.example/homelab/**
+  - docs/PRIVATE_OPERATOR_NOTES.md
+  - docs/ops/HOMELAB*
+  - scripts/lab-op*
+  - scripts/collect-homelab*
+  - scripts/homelab*
+alwaysApply: false
+---
+
+# Homelab access — via operator workstation (SSH, HTTP/API, `P:`)
+
+## When this rule attaches (Cursor)
+
+**Context:** **`alwaysApply: false`** — Cursor loads this rule when a path matches the **`globs`** above **or** the operator uses the English session token **`homelab`** **or** attaches **`@homelab-ssh-via-terminal.mdc`**. For **completão** orchestration, **`lab-completao-workflow.mdc`** is the primary latch; still **`read_file`** this rule when **`ssh` / LAN / `sudo -n` vs tmux`** behaviour is the question.
+
+1. **How traffic moves:** The assistant runs commands in the **Cursor integrated terminal** on the **operator’s dev PC**. That PC is on the **lab LAN** (per **`docs/private/homelab/AGENT_LAB_ACCESS.md`** when present). There is **no separate “AI server”** dialing the house — **same effective access** as the operator’s shell: **`ssh`**, **`scp`/`sftp`**, **`curl`** to **`http://<host>:8088/`** (Data Boar default web port when applicable), etc.
+
+1. **`read_file`** these when homelab / operator context applies (once this rule is in context from **globs** or **`homelab`** / **`@homelab-ssh-via-terminal.mdc`**; **`docs/private/`** ≠ GitHub):
+
+   **`docs/private/homelab/AGENT_LAB_ACCESS.md`**, then **`docs/private/homelab/OPERATOR_SYSTEM_MAP.md`** (hardware + access + software chart), then **`docs/private/homelab/OPERATOR_RETEACH.md`**, then **`docs/private/homelab/HARDWARE_CATALOG.md`** if needed. Prefer **`ssh <linux-user>@<hostname>`** or **`Host` aliases** from **`~/.ssh/config`** (see **`docs/private.example/homelab/README.md`**). **Never** paste **passwords** or **private keys** into chat or **tracked** files.
+
+1. **If a command fails:** DNS from dev PC, **`ping`**, **`ssh -v`**, **`sshd`** on target, **WSL vs Windows** `~/.ssh`, whether the service is listening (e.g. **8088**).
+
+1. **Agent SSH vs operator tmux / `sudo` on the lab host:** Commands the assistant runs use **`ssh`** from the **Cursor integrated terminal** on the **dev PC** — same **machine and LAN** as your shell; **switching IDE/editor** does **not** remove keys, DNS, or reachability. It is **not** the same **TTY** as an existing **tmux** pane on **LAB-NODE-01 / lab-node-02 / etc.** Default **`sudo`** caching is usually **per TTY**: **`sudo -v` in tmux** warms sudo for **commands you type in that same pane**, not automatically for a **separate** non-interactive **`ssh host "sudo …"`** from Cursor (unless your **`sudoers`** uses a **global** timestamp — uncommon). If **`sudo -n`** fails, the assistant may use **`ssh -tt`** so **you** can type the password once, **or** you run the privileged one-liner **on the host** (tmux/SSH session), **or** **`ansible-playbook`** with **`become`** (rewrites e.g. **`/etc/docker/daemon.json`** from role defaults — see **`ops/automation/ansible/README.md`** Docker troubleshooting). **Do not** claim the assistant shares your tmux **`sudo`** cache without that mechanism. For **lab completão** orchestration and the **`-Privileged`** default, see **`.cursor/rules/lab-completao-workflow.mdc`**.
+
+1. **Windows `P:` (pCloud):** **`P:\...`** is in scope on the dev PC when mounted — see **`AGENTS.md`**.
+
+1. **Prefer running repo scripts over pasting one-liners** when the operator has configured SSH and a manifest: **`scripts/lab-op-sync-and-collect.ps1`**, **`scripts/collect-homelab-report-remote.ps1`** — see **`agent-autonomous-merge-and-lab-ops.mdc`**.
+
+**Same-PC symmetry (browser MCP):** on the **operator dev PC**, **`cursor-ide-browser`** reaches **Gmail**, **operator social sites**, and other web dashboards with the same **try before refusing** rule and **Google SSO** when the session is cold — see **`.cursor/rules/cursor-browser-social-sso-hygiene.mdc`** (*Contrato único*).
+
+See **`docs/PRIVATE_OPERATOR_NOTES.md`** §4–§5, **`AGENTS.md`** (homelab + `P:`).

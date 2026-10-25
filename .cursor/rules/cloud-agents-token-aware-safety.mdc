@@ -1,0 +1,71 @@
+# Cloud Agents / Cursor Web — token-aware + safety guardrails
+
+## Purpose
+
+Use Cloud Agents as a **toil offload** and **reproducible sandbox**, not as a replacement for:
+
+- LAB-OP (operator LAN via SSH),
+- `docs/private/` / `P:` workflows,
+- or secret-bearing operations.
+
+## Default stance (token-aware)
+
+- Prefer **light gates** by default:
+  - `uv sync`
+  - `uv run pre-commit run --all-files`
+  - a **targeted** `pytest` subset only when needed
+- Avoid running heavy gates on every refresh:
+  - `.\scripts\check-all.ps1` is for **pre-PR / pre-merge / pre-release** moments.
+
+## Environment limitations (avoid false positives/negatives)
+
+Cloud Agents may differ from the operator workstation:
+
+- OS (Linux vs Windows), shells (bash vs PowerShell), and available system packages
+- no access to operator LAN / homelab SSH targets (unless explicitly bridged)
+- no access to `docs/private/` values (gitignored) unless explicitly provided
+
+Treat failures as **signal to investigate**, not as proof of regression until reproduced in the right environment.
+
+## Secrets and sensitive data (hard rule)
+
+- Never put secrets in:
+  - update/setup scripts
+  - committed files
+  - PR descriptions
+- If a task requires secrets, use:
+  - CI secret store / environment variables
+  - or operator-controlled manual steps documented in `docs/private/`
+
+## Recommended “Update Script” (minimal)
+
+Use scripts as the repo’s “API” where possible.
+
+### Minimal refresh (default)
+
+```bash
+uv sync
+uv run pre-commit run --all-files
+```
+
+### Add tests (only when needed)
+
+```bash
+uv sync
+uv run pre-commit run --all-files
+uv run pytest -q
+```
+
+## What Cloud Agents are good for
+
+- docs refactors, link fixes, markdown lint
+- Python refactors guarded by unit tests
+- pre-commit and CI-like checks in a clean sandbox
+- draft PR descriptions / summaries
+
+## What Cloud Agents should NOT do
+
+- LAB-OP SSH actions (unless explicitly requested to run via the operator workstation terminal)
+- any action that depends on private inventory values
+- any destructive actions (mass deletes, force pushes, infra changes) without explicit operator intent
+

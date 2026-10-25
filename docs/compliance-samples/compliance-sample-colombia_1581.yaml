@@ -1,0 +1,61 @@
+# Colombia Law 1581 – sample compliance profile (Ley 1581/2012, SIC)
+#
+# Target audience: Colombia and South America deployments. Superintendencia de Industria y Comercio (SIC).
+# Terms in Spanish and English (datos personales / personal data, responsable del tratamiento).
+#
+# How to use:
+#   1. Set in your main config:
+#        regex_overrides_file: path/to/compliance-sample-colombia_1581.yaml
+#        ml_patterns_file: path/to/compliance-sample-colombia_1581.yaml
+#   2. Merge the recommendation_overrides list below into your config under report.recommendation_overrides.
+#
+# Colombia: Ley 1581 de 2012; SIC; Registro Nacional de Bases de Datos.
+
+regex:
+  - name: "CC_CO"
+    pattern: "\\b\\d{6,10}\\b"
+    norm_tag: "Colombia 1581"
+  - name: "NIT_CO"
+    pattern: "\\b\\d{9,10}-?\\d\\b"
+    norm_tag: "Colombia 1581"
+
+# ML terms: Spanish and English (datos personales, responsible party, SIC).
+terms:
+  - text: "datos personales"
+    label: sensitive
+  - text: "personal data"
+    label: sensitive
+  - text: "titular"
+    label: sensitive
+  - text: "data subject"
+    label: sensitive
+  - text: "responsable del tratamiento"
+    label: sensitive
+  - text: "responsible party"
+    label: sensitive
+  - text: "encargado del tratamiento"
+    label: sensitive
+  - text: "processor"
+    label: sensitive
+  - text: "sic"
+    label: sensitive
+  - text: "superintendencia de industria y comercio"
+    label: sensitive
+  - text: "ley 1581"
+    label: sensitive
+  - text: "registro nacional de bases de datos"
+    label: sensitive
+  - text: "autorización"
+    label: sensitive
+  - text: "authorization"
+    label: sensitive
+  - text: "habeas data"
+    label: sensitive
+
+recommendation_overrides:
+  - norm_tag_pattern: "Colombia 1581"
+    base_legal: "Ley 1581 de 2012; Superintendencia de Industria y Comercio (SIC)"
+    risk: "Datos personales; responsable del tratamiento; autorización y registro."
+    recommendation: "Cumplir Ley 1581; inscribir en el Registro Nacional de Bases de Datos si corresponde; obtener autorización del titular."
+    priority: "ALTA"
+    relevant_for: "DPO, SIC, Responsable del tratamiento"

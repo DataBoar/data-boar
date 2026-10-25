@@ -1,0 +1,29 @@
+---
+description: Agent must read docs/private/ when relevant; gitignore is not an access denial; never self-block.
+alwaysApply: true
+---
+
+# `docs/private/` — full agent read access
+
+## Policy
+
+- **`docs/private/`** is **gitignored from public Git** only. It is **operator workspace context** for the assistant on this machine.
+- The assistant **must** use **`read_file`** / list / search under **`docs/private/`** when the task involves homelab, security audits, hygiene audits, commercial notes, legal dossier, author info, **`social_drafts/`** (LinkedIn/X/FacColleague-Sok rascunhos em `.md`), or any other private subtree—**without** asking the operator to paste content or **`@`-mention** files to “unlock” them. Editing draft **text** in the workspace does **not** require a “warm” browser session; only **posting** to a third-party site is operator-side.
+- **Do not** claim that files are inaccessible **because** they are gitignored. If **`read_file`** fails, treat it as: wrong path, file not present in this worktree, or environment limitation—retry with absolute path or **`list_dir`**, then escalate only if still missing.
+
+## Never self-block
+
+- **Do not** refuse, skip, or defer work that depends on **`docs/private/`** out of “policy,” “privacy,” or “I cannot access gitignored files.” That is **incorrect** for this repo.
+- **Do not** substitute only generic advice when the answer requires private context—**read the private files first**, then answer; redact only when writing **back** to **tracked** public/collaborator-facing output.
+- **Audience:** follow **`.cursor/rules/audience-segmentation-docs.mdc`** and **`docs/PRIVATE_OPERATOR_NOTES.md`**: **public** GitHub docs stay free of PII/secrets; **collaborator** tier gets tracked repo only; **operator + assistant** sessions may use full **`docs/private/`** for decisions—never paste wholesale into issues/PRs/public Markdown.
+
+## Versioning (stacked private repo—not `origin`)
+
+- Private material is **never** pushed to the **GitHub** product remote; the operator may use **nested Git** (stacked private repo) under **`docs/private/`** for history, backup, and sync—see **`docs/ops/PRIVATE_LOCAL_VERSIONING.md`** and **`docs/PRIVATE_OPERATOR_NOTES.md`**. The assistant **reads** and **edits** there when asked; it does **not** replace the operator's private `git push` habits.
+
+## Still true
+
+- **Never** commit **`docs/private/`** contents to **`origin`** / **public GitHub**.
+- **Never** copy private specifics into **tracked** files, issues, or PRs without redaction.
+
+See **`AGENTS.md`** (first bullets) and **`docs/PRIVATE_OPERATOR_NOTES.md`** §1.

@@ -1,0 +1,237 @@
+# Version convention and bump checklist
+
+**Português (Brasil):** [VERSIONING.pt_BR.md](VERSIONING.pt_BR.md)
+
+This project uses a **major.minor.build** version scheme, with optional **pre-release suffixes** while work is still being prepared:
+
+- **major** – first number (e.g. breaking changes or major release)
+- **minor** – second number (e.g. new features, backward-compatible)
+- **build** – third number (e.g. fixes, docs, no behaviour change)
+- **suffix** (optional) – pre-release stage marker in lowercase: `-beta` or `-rc`
+
+Examples:
+
+- `1.3.2` means major 1, minor 3, build 2 (final publishable number).
+- `1.3.3-beta` means pre-release work in progress for the next build.
+- `1.3.3-rc` means release candidate (feature/code/docs/tests wired, final publish checks pending).
+
+---
+
+## Bump rules
+
+| Bump type | Rule                                                    | Example             |
+| ---       | ---                                                     | ---                 |
+| **Major** | Increment first number; set minor and build to **0**    | `1.3.2` → **2.0.0** |
+| **Minor** | Keep major; increment second number; set build to **0** | `1.3.2` → **1.4.0** |
+| **Build** | Keep major and minor; increment build only              | `1.3.2` → **1.3.3** |
+
+---
+
+## Octet maturity (side-channel) + release-line roadmap (ADR-0073 — Accepted)
+
+**Canonical:** [ADR-0073](adr/ADR-0073-version-scheme-octet-maturity-and-roadmap.md) (**Accepted**). Pairs with [ADR-0072](adr/ADR-0072-commit-gate-vs-release-gate-distinct-criteria.md) (commit gate ≠ release gate).
+
+### Public version vs maturity octet (do not conflate)
+
+| Surface | Format | Rule |
+| --- | --- | --- |
+| **Public version** (`[project] version`, About, tags, Docker, README) | `major.minor.build` + optional PEP 440 suffix (`-beta[.N]` / `-rc[.N]`) or none | **Three segments only** — never `1.7.4.201` or any fourth segment |
+| **Maturity octet** (Gibson DNS-beacon bands) | `[tool.databoar] maturity_build` (derived, side-channel) | **Never** in `[project] version` or About |
+| **`-alpha` suffix** | Tamper-detection (#856) | **Not** a maturity band |
+
+Octet bands when using `maturity_build` (operator/beacon tooling — **not** the public semver build digit unless explicitly mapped by operator policy):
+
+| Octet range | Meaning |
+| --- | --- |
+| **1–126** | beta maturity (counter starts at **1** — first beta = `.1`; forgiving ceiling) |
+| **127–199** | rc maturity |
+| **200–254** | release / GA + fix (`.200` = GA on that line, `.201` = first post-GA fix, …) |
+| **255** | overflow sentinel — consult TXT beacon |
+
+**Counting starts at 1** (nothing is `.0`) for non-technical clarity. Band ceilings are **forgiving** — beacon TXT absorbs overflow; do not treat band tops as rigid hard limits.
+
+### New public line — maturity band reset
+
+When the project opens a **new semver line** (e.g. **`1.8.0`** after **`1.7.4`**), **`maturity_build` does not continue** from `.208` on the old line. It **resets into the Gibson band** that matches the **pre-release suffix** on `[project] version`:
+
+| `[project] version` on the new line | `maturity_build` band | Typical anchor |
+| --- | --- | --- |
+| **`X.Y.Z-beta`** (or `-beta.N`) | **1–126** | Restart at **`1`** (first beta = `.1`) — record in release notes |
+| **`X.Y.Z-rc`** (or `-rc.N`) | **127–199** | Restart low in band (e.g. **`127`** or **`128`**) |
+| **`X.Y.Z`** stable (GA) | **200–254** | **`.200`** = GA maturity on that line; **`.201`** = first fix, … |
+
+**`.postN` PyPI counters apply only on a GA release band** (fix-line republication on the **same** public line, e.g. `1.7.4.post2`). They do **not** carry across to **`1.8.0-beta`**.
+
+Suffixes (`-beta`, `-rc`, `-rc-N`) are required on `main` while a **release gate** issue (e.g. GitHub #406) is **open**. A green **commit gate** (`check-all`) never authorizes removing them — see ADR-0072. Gate **#406** closed with **1.7.4** stable (PR **#1024**).
+
+### Current lines (`1.7.4` published · `1.8.0-rc` working)
+
+| Label | Status |
+| --- | --- |
+| **`main` working tree** | **`1.8.0-rc`** in `pyproject.toml` (`maturity_build = 127` — rc band entry; promoted 2026-09-22). Git-only for consumers. |
+| **Published customer channels** | **`1.7.4.post12`** / **`v1.7.4.post12`** on PyPI + Hub (+ historical GA **`1.7.4`**) until a later **`1.8.0`** release-ritual |
+| **#970** | Premature stable bump/tag without release gate — corrected by **ADR-0072** + gate **#406**; **`1.7.4` is not VOID** |
+| **Post-GA public fix numbering** | **Resolved** (#977) — **`1.7.4`** fix-line used **`.postN`** + octet; **`.postN` does not carry** onto **`1.8.0-beta`** |
+
+Ladder (historic `1.7.4`): `1.7.4-beta` → `1.7.4-rc` → `1.7.4-rc-2` → **`1.7.4`** (GA, PR **#1024**) → **`.postN`** fix-line. Next: **`1.8.0-beta`** → **`1.8.0-rc`** → **`1.8.0`**.
+
+### Release-line roadmap (intent — not naive semver increment)
+
+| Line | Scope |
+| --- | --- |
+| **`1.7.4` line** | Open-core maturity + commercial JWT protection |
+| **`1.8.x`** | Augmented corporate capacities (re-ID, sidecars, plugins/Clojure — **new architecture**, not a 1.7 minor) |
+| **`1.7.5`** | **Does not exist** — agents must not invent it (#772). Next dev milestone: **`1.8.0-beta`**. |
+| **`1.9.x`** | Horizon (compliance-domain expansion — triage per #772) |
+
+DNS-beacon / heartbeat / kill-switch lifecycle (#717) stays on the **1.8.x** roadmap (`docs/plans/PLAN_SELF_UPGRADE_AND_VERSION_CHECK.md`, maintainer index in `docs/README.md`); out of scope for this section.
+
+### PyPI post-releases + dual counters (ADR-0073 — ratified 2026-06-27)
+
+When **`1.7.4`** is already on PyPI and a packaging fix must ship without a new public line:
+
+| Counter | Field | Rule |
+| --- | --- | --- |
+| **Publication** | `[project] version` **`.postN`**, About, PyPI | One increment per **PyPI upload** (not per fix on `main`) |
+| **Maturity** | `[tool.databoar] maturity_build` | Octet side-channel; +1 per **discrete fix** to installed/runtime behavior (may run ahead of `postN`) |
+
+**Marketing line** stays **`1.7.4`** (README, man); **build line** is **`1.7.4.postN`**. Maintain the **`postN ↔ maturity_build` map** in [`docs/releases/`](releases/) — e.g. [`1.7.4.post1.md`](releases/1.7.4.post1.md): `1.7.4=.201 · 1.7.4.post1=.202`.
+
+For every **new** `X.Y.Z.postN` note, make the unpublished interval explicit: add one row per intermediate `maturity_build` as `*(fix, unpublished on PyPI)*` between `post(N-1)` and `postN`. Do not compress that interval into a single “N fixes” summary.
+In that map, keep **Notes** as short effect prose (with `#issue` when known), not raw commit subjects. Keep git-literal proof (`fix(...)` subjects + hashes) only in an **Appendix — Fix set (N=...)** section.
+
+### Post-GA tag / GitHub Release / Docker cadence (CVE vs planned deferral)
+
+After a line reaches **GA** (release gate closed — see [ADR-0072](adr/ADR-0072-commit-gate-vs-release-gate-distinct-criteria.md)), the operator may run a **deliberate pause** on **Git tag**, **GitHub Release**, and **Docker Hub** while the **PyPI `.postN` fix-line** stabilizes on `main`. That pause is a **publish rhythm** choice; it is **not** the same question as commit gate vs release gate. ADR-0072 names those gates; this subsection records **when to break or hold** the post-GA tag/Release/container pace.
+
+| Situation | Tag + GitHub Release + Docker Hub | PyPI `.postN` / `maturity_build` on `main` |
+| --- | --- | --- |
+| **CVE or real bug** (exploitable risk, user-visible incorrect behavior, dependency CVE with an actionable **fixed** upstream) | **Break the pause immediately** — run **release-ritual** for the fix-line upload and refresh Hub/tags as needed | Advance per the dual-counter table above and [ADR-0073](adr/ADR-0073-version-scheme-octet-maturity-and-roadmap.md) |
+| **Planned rigor** (operator-perceived hardening still in flight) or a fix **intentionally deferred** before rc→GA | **Hold the agreed pace** — do not accelerate tag/Release/container for perception or backlog grooming alone | Land fixes on `main`; octet / `.postN` only when runnable substance warrants |
+| **Docs / ADR / plans / chore / ci / test-only** | No automatic tag/Release/Docker bump | **Does not** increment `maturity_build` |
+
+**Roster doctrine (origin):** [data-boar-shared#14](https://github.com/DataBoar/data-boar-shared/issues/14) (2026-07-13). **Related gate taxonomy:** [ADR-0072](adr/ADR-0072-commit-gate-vs-release-gate-distinct-criteria.md) — commit gate ≠ release gate; it does **not** subsume this CVE-vs-planned distinction.
+
+---
+
+## Pre-release flow (`-beta` / `-rc`) before final publish
+
+Use lowercase suffixes consistently:
+
+| Stage                 | Recommended use                                                                                                                   | Example      |
+| ---                   | ---                                                                                                                               | ---          |
+| **`-beta`**           | Relevant code/behavior changes started and tracked, but not yet considered release-candidate ready.                               | `1.7.1-beta` |
+| **`-rc`**             | Candidate ready for final validation/publish choreography (tests green, docs synced, release notes ready, merge/release pending). | `1.7.1-rc`   |
+| **final (no suffix)** | Public release number (Git tag + GitHub Release + Docker Hub publish).                                                            | `1.7.1`      |
+
+### Practical policy
+
+- If a slice changes meaningful behavior (API, detection logic, report output, runtime operation, security posture), prefer moving the working version to `X.Y.Z-beta`.
+- When the release package is materially ready (code + tests + docs/release notes in shape), promote to `X.Y.Z-rc`.
+- Only remove suffix and publish `X.Y.Z` when doing the real release sequence (merge + tag + GitHub Release + Docker publish).
+- For bigger scope (or when explicitly requested), publish as a **minor bump**: `X.(Y+1).0` (no suffix at final publish).
+
+---
+
+## Working vs published version (avoid confusion)
+
+- **Working version:** what `pyproject.toml` currently states on your branch (may be `-beta`/`-rc` or unsent work).
+- **Published version:** latest Git tag + GitHub Release + Docker Hub tag + PyPI **`data-boar`** version available to external users.
+- Do not assume they are equal; always call both explicitly in release notes and review requests.
+
+### Assistant / automation (ordering guardrail)
+
+**Cursor / agents:** follow **`.cursor/rules/release-publish-sequencing.mdc`** (**situational** — session **`release-ritual`** or **`@release-publish-sequencing.mdc`** when globs miss; **`docker-local-smoke-cleanup.mdc`** stays **always-on** for smoke/prune) — create Git tag **`vX.Y.Z`**, GitHub Release, and Docker Hub publish steps **before** moving `main` to the next **`-beta`** (or next dev) bump. Session keyword **`release-ritual`** means **`read_file`** that rule (or **`@`**) and this file before editing semver or release docs.
+
+---
+
+## Distribution channels (published artifacts)
+
+| Channel | Consumer install | Maintainer publish (stable) |
+| --- | --- | --- |
+| **Git** | `git clone` / release tarball | Tag **`vX.Y.Z`** + **`gh release create`** |
+| **PyPI** | `pip install data-boar` / `pipx install data-boar` | OIDC dispatch: **`scripts/pypi-publish.ps1`** / **`pypi-publish.sh`** → **`.github/workflows/publish-pypi.yml`** — **TestPyPI first**, then **pypi** (#1046). **No** workstation API token. Packaging: [ADR-0031](adr/ADR-0031-pypi-packaging-hatchling-flat-layout.md); workflow pins: [ADR-0005](adr/ADR-0005-ci-github-actions-supply-chain-pins.md). |
+| **Docker Hub** | `docker pull fabioleitao/data_boar:X.Y.Z` | Local smoke + **`docker-hub-publish`** ritual — see **`docs/ops/DOCKER_IMAGE_RELEASE_ORDER.md`** |
+
+Pre-release **`-beta`** / **`-rc`** builds stay **git-only** for external consumers on PyPI and Docker Hub (stable suffix only on those indexes). See **`.cursor/rules/release-publish-sequencing.mdc`** for full order (GitHub Release → PyPI → Docker).
+
+---
+
+## Where the version appears (bump checklist)
+
+When you bump the version, update **all** of the following so the number is consistent everywhere:
+
+### 1. Source of truth (required)
+
+| Location             | What to change                                                                                                                                                                                                                                                                                                                |
+| ---                  | ---                                                                                                                                                                                                                                                                                                                           |
+| **`pyproject.toml`** | Update the `version = "X.Y.Z"` line. This is the **single source of truth** for the installed package. The running application (About page, Report info sheet, heatmap footer, API `/about/json`) reads the version from the installed package metadata, so updating `pyproject.toml` and reinstalling is enough for runtime. |
+
+### 2. Fallback when metadata is missing
+
+| Location            | What to change                                                                                                                                                                    |
+| ---                 | ---                                                                                                                                                                               |
+| **`core/about.py`** | Update the fallback string in `get_about_info()` when `importlib.metadata.version(...)` fails (e.g. running from source without install). Example: `ver = "1.3.0"` → new version. |
+
+### 3. Man pages
+
+| Location               | What to change                                                                                                  |
+| ---                    | ---                                                                                                             |
+| **`docs/data_boar.1`** | In the `.TH` line (e.g. `"Data Boar 1.5.4"`), set the version to the new one.                                   |
+| **`docs/data_boar.5`** | Same: update the version in the `.TH` line.                                                                     |
+
+**Command vs man page names:** The packaged CLI is **`data-boar`** (hyphen). The primary installed man pages are **`data-boar`** (sections 1 and 5). Source files remain **`docs/data_boar.{1,5}`** in the repository; install copies them as `data-boar.{1,5}` with optional symlinks **`data_boar`** and **`lgpd_crawler`** (legacy aliases). See the **INSTALLATION OF THIS MAN PAGE** section in `docs/data_boar.1`.
+
+### 4. Deploy and Docker
+
+| Location                    | What to change                                                                                                                                                    |
+| ---                         | ---                                                                                                                                                               |
+| **`docs/deploy/DEPLOY.md`** | Update any **example** version tags in the Docker tag/push commands (e.g. `1.3.0` in the examples) to the new version so copy-paste commands use the correct tag. |
+
+### 5. Documentation (EN and PT-BR)
+
+| Location                       | What to change                                                                                                                                   |
+| ---                            | ---                                                                                                                                              |
+| **`README.md`**                | If the text mentions the current version number (e.g. in a release or image tag example), update it.                                             |
+| **`README.pt_BR.md`**          | Same as README.md for any explicit version mention.                                                                                              |
+| **`docs/USAGE.md`**            | Update any explicit version reference if present.                                                                                                |
+| **`docs/USAGE.pt_BR.md`**      | Same as USAGE.md.                                                                                                                                |
+| **`docs/plans/PLANS_TODO.md`** | If there is a “current version” or “app version” note in a plan’s “Current state” or publish step, update it when you release.                   |
+| **Other docs**                 | Search the repo for the old version string (e.g. `1.3.0`) and update any remaining references in SECURITY.md, CONTRIBUTING.md, or release notes. |
+
+### 6. Distribution, Docker Hub, and customer-facing copy
+
+Keep **published** semver story consistent for anyone pulling images or reading marketing text (not only `pyproject.toml`):
+
+| Location | What to change |
+| --- | --- |
+| **`docs/ops/DOCKER_HUB_REPOSITORY_DESCRIPTION.md`** | **Short** + **Full** blocks for the Docker Hub UI: **Current release**, **Supported tags** semver, **copyright/maintainer** lines, and CLI examples (`python main.py`). **Manual paste** into Hub **after each stable image push** — the website does not pull from Git; drift (e.g. years-old **Tags** listing **1.6.5**) means someone skipped this step. Skip Hub copy refresh for **`-beta`** / **`-rc`**-only pushes unless you intentionally advertise them. |
+| **`docs/ops/today-mode/PUBLISHED_SYNC.md`** (+ **`.pt_BR.md`**) | Table row: **GitHub Latest**, **Docker Hub** tags, **PyPI** project version, and “next” patch — must match what customers can actually install. |
+| **`docs/TECH_GUIDE.md`** (+ **`.pt_BR.md`**) | Example Hub tag in the Docker subsection (if it pins a semver). |
+| **Operator social / milestones** (e.g. **`docs/private/social_drafts/`**, gitignored) | If a post cites “current release”, “latest on Docker Hub”, or a version number, align with **`README.md`** **Current release** line and **`PUBLISHED_SYNC`** — never celebrate a version that is not yet on GitHub + Hub unless you label it as **upcoming**. |
+
+### 7. UI and reports (no edit needed if 1–2 are done)
+
+These show the version **dynamically** from package metadata (via `core/about.py`), so they do **not** need manual edits when you bump:
+
+- **About page** (`api/templates/about.html`) – uses `{{ about.version }}`
+- **Dashboard / Reports pages** – use `{{ about.version }}`
+- **Excel report “Report info” sheet** – `report/generator.py` uses `about["version"]`
+- **Heatmap PNG footer** – same `about` dict
+- **API `/about/json`** – same `about` dict
+
+After updating `pyproject.toml` (and optionally `core/about.py`), reinstall the package (e.g. `uv sync` or `pip install -e .`) so the new version is in metadata; then the UI and reports will show it automatically.
+
+---
+
+## Quick reference
+
+- **Format:** `major.minor.build`
+- **Pre-release suffixes:** lowercase `-beta`, `-rc` (working states only)
+- **Bump major:** `X.Y.Z` → `(X+1).0.0`
+- **Bump minor:** `X.Y.Z` → `X.(Y+1).0`
+- **Bump build:** `X.Y.Z` → `X.Y.(Z+1)`
+- **Promote flow:** `X.Y.Z-beta` → `X.Y.Z-rc` → `X.Y.Z` (final publish)
+- **Checklist:** pyproject.toml → core/about.py → docs/data_boar.1, data_boar.5 → docs/deploy/DEPLOY.md → README (EN/PT-BR), USAGE (EN/PT-BR), PLANS_TODO → **DOCKER_HUB_REPOSITORY_DESCRIPTION** + **PUBLISHED_SYNC** → TECH_GUIDE Docker example → optional social drafts → search repo for old version string.
+
+**Português (Brasil):** [VERSIONING.pt_BR.md](VERSIONING.pt_BR.md)

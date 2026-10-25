@@ -1,0 +1,77 @@
+# Zizmor static analysis for GitHub Actions workflows.
+# Complements CodeQL/Semgrep/Bandit by focusing on CI/workflow-specific risks.
+# Third-party Actions are pinned to full commit SHAs (tag in comment).
+name: Zizmor
+
+permissions:
+  contents: read
+  # zizmor-action advanced-security uploads SARIF (category zizmor). One upload per job only —
+  # do not add a second upload-sarif step (GitHub aborts duplicate category/tool).
+  # On pull_request, checkout head.sha so the internal upload targets refs/pull/<N>/head.
+  security-events: write
+  actions: read
+
+'on':
+  # No paths: filter on pull_request or push. A GitHub code_scanning ruleset
+  # that requires zizmor needs a result for THIS commit and THIS ref. Filtering
+  # to .github/workflows/** skips the job on docs-only main pushes and on PRs
+  # that do not touch workflows — then required zizmor SARIF is missing and
+  # every merge deadlocks (ruleset 21118976 had to drop zizmor after main
+  # rewrite 405c06cd). Cost: zizmor on every PR/push (workflow lint, fast).
+  pull_request:
+    branches: [main, master]
+  push:
+    branches: [main, master]
+  schedule:
+    - cron: "0 9 * * 2"
+  workflow_dispatch:
+    inputs:
+      enforce:
+        description: "Fail the workflow when zizmor finds issues."
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  zizmor:
+    name: Zizmor (GitHub Actions security lint)
+    runs-on: ubuntu-latest
+    env:
+      # Default mode: enforced on PR/push/schedule (issue #732).
+      # Opt out temporarily with repository variable ZIZMOR_ENFORCE=false.
+      # workflow_dispatch defaults to advisory unless input enforce=true.
+      ENFORCE_ZIZMOR: ${{ github.event_name == 'workflow_dispatch' && (inputs.enforce && 'true' || 'false') || (vars.ZIZMOR_ENFORCE == 'false' && 'false' || 'true') }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # PR default is merge commit; code_scanning ruleset matches head SHA only.
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.ref }}
+          persist-credentials: false
+
+      - name: Run zizmor
+        id: zizmor
+        continue-on-error: true
+        uses: zizmorcore/zizmor-action@cc914d7f3750a2d13d75c7f184a1060aa0e9d482 # v0.6.4
+        with:
+          # Deterministic runs: skip network-dependent audits (e.g.
+          # ref-version-mismatch, known-vulnerable-actions) that flap on
+          # GITHUB_TOKEN rate-limits. Offline audits (template-injection,
+          # excessive-permissions, artipacked, unpinned-uses, ...) still run.
+          # SHA pins + exact version comments (#878) keep the offline posture.
+          online-audits: false
+          # advanced-security:true generates SARIF and uploads once (category zizmor).
+          # Requires PR checkout on head.sha above — no second upload-sarif in this job.
+          advanced-security: true
+
+      - name: Warn in advisory mode
+        if: ${{ steps.zizmor.outcome == 'failure' && env.ENFORCE_ZIZMOR != 'true' }}
+        run: |
+          echo "::warning::zizmor found workflow issues (advisory mode)."
+          echo "::warning::Enforcement is on by default; set repository variable ZIZMOR_ENFORCE=false to opt out temporarily."
+
+      - name: Enforce findings
+        if: ${{ steps.zizmor.outcome == 'failure' && env.ENFORCE_ZIZMOR == 'true' }}
+        run: |
+          echo "zizmor found workflow issues and enforcement is enabled."
+          exit 1

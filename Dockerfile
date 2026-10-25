@@ -1,0 +1,157 @@
+# Canonical published image (#1409 / ADR-0091): free-threaded CPython (cp314t).
+# Multi-stage: builder (uv-installed 3.14t) → runtime-assembler → distroless nonroot.
+#
+# There is no `python:3.14t-slim` on Docker Hub (404). Builder is stock
+# `python:3.14-slim` plus `uv python install` (python-build-standalone).
+#
+# CPU contract: x86-64-v2+ (numpy cp314t has popcnt≠0). Does NOT target alpine-emachines.
+# One Hub image: `:latest` is this file. No parallel GIL-on tag.
+# Runtime GIL: ENTRYPOINT sets PYTHON_GIL=1 unless license tier is Enterprise.
+# Do NOT force GIL off with env PYTHON_GIL=0 / -Xgil=0 (undeclared-safe C extensions).
+
+# -----------------------------------------------------------------------------
+# Stage 1: free-threaded interpreter + deps + cp314t wheelhouse
+# -----------------------------------------------------------------------------
+FROM python:3.14-slim@sha256:cea0e6040540fb2b965b6e7fb5ffa00871e632eef63719f0ea54bca189ce14a6 AS builder
+
+# uv 0.11.x cannot fetch cpython-3.14.6+freethreaded; pin 0.12.0 + sha256 of the
+# official linux-gnu tarball (measured 2026-07-30).
+ARG UV_VERSION=0.12.0
+ARG UV_SHA256=eaf842262aa1c418d8ecc5605f02ee1ebfd369124fa48548e85f9481a47831a9
+ARG UV_PYTHON=3.14.6+freethreaded
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential gcc g++ pkg-config curl ca-certificates binutils \
+    libpq-dev libffi-dev libssl-dev unixodbc-dev default-libmysqlclient-dev \
+    freetds-dev libkrb5-dev \
+    && rm -rf /var/lib/apt/lists/* \
+    && curl -fsSL \
+        "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/uv-x86_64-unknown-linux-gnu.tar.gz" \
+        -o /tmp/uv.tgz \
+    && echo "${UV_SHA256}  /tmp/uv.tgz" | sha256sum -c - \
+    && tar -xzf /tmp/uv.tgz -C /tmp \
+    && install -m 0755 /tmp/uv-x86_64-unknown-linux-gnu/uv /usr/local/bin/uv \
+    && rm -rf /tmp/uv.tgz /tmp/uv-x86_64-unknown-linux-gnu
+
+# Install free-threaded CPython into a staging dir, then overlay onto /usr/local
+# so collect-runtime-rootfs + distroless see a normal prefix layout.
+ENV UV_PYTHON_INSTALL_DIR=/opt/uv-pythons
+RUN uv python install "${UV_PYTHON}" \
+    && PYROOT="$(find /opt/uv-pythons -maxdepth 1 -type d -name 'cpython-*freethreaded*' | sort | tail -1)" \
+    && test -n "${PYROOT}" \
+    && test -x "${PYROOT}/bin/python3.14t" \
+    && rm -rf /usr/local/lib/python3.14 /usr/local/lib/python3.14t \
+    && cp -a "${PYROOT}/bin/." /usr/local/bin/ \
+    && cp -a "${PYROOT}/lib/." /usr/local/lib/ \
+    && cp -a "${PYROOT}/include/." /usr/local/include/ \
+    && ln -sf python3.14t /usr/local/bin/python3 \
+    && ln -sf python3.14t /usr/local/bin/python \
+    && python -c 'import sys; assert sys._is_gil_enabled() is False, sys.version' \
+    && rm -f /usr/local/lib/python3.14t/EXTERNALLY-MANAGED \
+    && python -m ensurepip --upgrade
+
+WORKDIR /app
+COPY requirements.txt /app/requirements.txt
+COPY . /app
+
+ARG WHEELHOUSE_TAG=wheelhouse-x86-64-v1-2026-07-29
+# SQLAlchemy cyextension .so re-enables the GIL on import (undeclared free-threaded
+# safety). Force pure-Python sqlalchemy so the -nogil image keeps GIL=False after
+# app imports (core/database*.py import sqlalchemy at module level). Do NOT use
+# PYTHON_GIL=0 / -Xgil=0 — that would run unsafe C extensions (operator forbid).
+ENV DISABLE_SQLALCHEMY_CEXT=1
+
+# Container owns /usr/local; PEP 668 marker removed above after uv overlay.
+# #1890: pin pip/wheel/cryptography to exact versions (Scorecard Pinned-Dependencies).
+# pip/wheel are not in uv.lock; floors match the previous >= pins. cryptography==50.0.0
+# matches uv.lock / requirements.txt. sqlalchemy==2.0.50 stays the GIL-safe
+# --no-binary reinstall (pyproject allows >=2.0.50; lock currently 2.0.52).
+RUN pip uninstall -y wheel || true && \
+    pip install --no-cache-dir --upgrade "pip==25.3" && \
+    pip install --no-cache-dir --force-reinstall "wheel==0.46.2" && \
+    python -c "import wheel; import sys; sys.exit(0 if tuple(map(int, wheel.__version__.split('.'))) >= (0,46,2) else 1)" && \
+    pip install --no-cache-dir --require-hashes -r /app/requirements.txt && \
+    pip install --no-cache-dir --force-reinstall --no-binary sqlalchemy "sqlalchemy==2.0.50" && \
+    python -c 'import pathlib, site, sqlalchemy, sys; root=pathlib.Path(site.getsitepackages()[0])/"sqlalchemy"; sos=list(root.rglob("*.so")); assert not sos, sos; assert sys._is_gil_enabled() is False, "GIL re-enabled after sqlalchemy"' && \
+    pip install --no-cache-dir --no-deps -e /app && \
+    WHEELHOUSE_TAG="${WHEELHOUSE_TAG}" bash /app/scripts/docker/apply_wheelhouse_v1.sh && \
+    # Lean extras after wheelhouse so cp314t SQL wheels (mariadb/oracledb/psycopg2/pymssql)
+    # are already present — avoids source rebuild (#1398). freetds-dev/libkrb5-dev remain
+    # as compile fallback if a wheel is missing.
+    pip install --no-cache-dir "/app[sql-community,mssql,oracle]" && \
+    # Extras can resolve an older cryptography; re-pin GHSA-g6cj-pr64-35w5 (#1409 grype).
+    pip install --no-cache-dir --upgrade "cryptography==50.0.0" && \
+    python /app/scripts/generate_extras_manifest.py --probe --write /app/EXTRAS_MANIFEST.json && \
+    PY_LIB="$(python -c 'import sysconfig; from pathlib import Path; print(Path(sysconfig.get_path("stdlib")))')" && \
+    rm -rf /tmp/wheelhouse-v1-glibc-cp314t && \
+    (find "${PY_LIB}/site-packages" -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true) && \
+    (find "${PY_LIB}/site-packages" -name "*.pyc" -delete 2>/dev/null || true)
+
+# -----------------------------------------------------------------------------
+# Stage 2: assemble runtime rootfs (shell stage — not shipped)
+# -----------------------------------------------------------------------------
+FROM python:3.14-slim@sha256:cea0e6040540fb2b965b6e7fb5ffa00871e632eef63719f0ea54bca189ce14a6 AS runtime-assembler
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq5 libffi8 unixodbc libmariadb3 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /usr/local /usr/local
+
+RUN ln -sf python3.14t /usr/local/bin/python3 && \
+    ln -sf python3.14t /usr/local/bin/python && \
+    python -c 'import sys; assert sys._is_gil_enabled() is False'
+
+# Runtime extras mount point (#1400): owned by distroless nonroot (65532).
+RUN mkdir -p /extras && chown 65532:65532 /extras
+
+# No pip/wheel/setuptools in the release image (#1028).
+RUN /usr/local/bin/python3.14t -m pip uninstall -y pip wheel setuptools 2>/dev/null || true && \
+    rm -f /usr/local/bin/pip /usr/local/bin/pip3 /usr/local/bin/pip3.14 /usr/local/bin/pip3.14t \
+          /usr/local/bin/wheel /usr/local/bin/uv 2>/dev/null || true
+
+COPY scripts/docker/collect-runtime-rootfs.sh /tmp/collect-runtime-rootfs.sh
+RUN chmod +x /tmp/collect-runtime-rootfs.sh && /tmp/collect-runtime-rootfs.sh /rootfs
+
+# -----------------------------------------------------------------------------
+# Stage 3: minimal distroless runtime (nonroot uid 65532, no shell/apt)
+# -----------------------------------------------------------------------------
+FROM gcr.io/distroless/cc-debian13:nonroot@sha256:54df941ed0d06a1bd95ef5e0ce391fd8d9f94b64782dc9a60062727849ee3f97
+
+# image.version is ARG (empty unless --build-arg) so a baked semver cannot go stale.
+ARG OCI_IMAGE_VERSION=""
+LABEL org.opencontainers.image.title="Data Boar" \
+      org.opencontainers.image.description="LGPD/GDPR/CCPA audit. Free-threaded CPython; PYTHON_GIL=1 unless Enterprise license. x86-64-v2+." \
+      org.opencontainers.image.vendor="Fabio Tavares Leitão" \
+      org.opencontainers.image.source="https://github.com/DataBoar/data-boar" \
+      org.opencontainers.image.licenses="BSD-3-Clause" \
+      org.opencontainers.image.version="${OCI_IMAGE_VERSION}"
+
+WORKDIR /app
+
+COPY --from=runtime-assembler /rootfs /
+COPY --chown=65532:65532 . .
+COPY --from=builder --chown=65532:65532 /app/EXTRAS_MANIFEST.json /app/EXTRAS_MANIFEST.json
+
+ENV CONFIG_PATH=/data/config.yaml
+ENV PYTHONUNBUFFERED=1
+ENV API_HOST=0.0.0.0
+ENV PATH=/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+# Build-time contract reminder (cext absent in this image); harmless at runtime.
+ENV DISABLE_SQLALCHEMY_CEXT=1
+ENV PYTHONPATH=/extras:/app
+ENV DATA_BOAR_MACHINE_SEED=
+VOLUME ["/extras"]
+
+USER 65532:65532
+
+EXPOSE 8088
+
+# Distroless has no shell: JSON exec form only. A shell-form probe would fail.
+# HEALTHCHECK bypasses ENTRYPOINT (inspects loopback HTTP, not the GIL gate).
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+    CMD ["/usr/local/bin/python3.14t", "-c", "import urllib.request, sys; r = urllib.request.urlopen('http://127.0.0.1:8088/health', timeout=8); sys.exit(0 if r.status == 200 else 1)"]
+
+# Probe process then execve with PYTHON_GIL=1 unless Enterprise (#1409).
+ENTRYPOINT ["/usr/local/bin/python3.14t", "-m", "core.licensing.gil_container_gate"]
+CMD ["main.py", "--config", "/data/config.yaml", "--web", "--port", "8088", "--allow-insecure-http"]

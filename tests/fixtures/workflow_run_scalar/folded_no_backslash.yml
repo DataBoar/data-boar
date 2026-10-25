@@ -1,0 +1,10 @@
+name: folded-no-backslash-ok
+on: push
+jobs:
+  t:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Scan
+        run: >-
+          semgrep scan --config p/python --metrics=off
+          --error .

@@ -1,0 +1,4 @@
+Cadastro parcialmente mascarado (sintetico)
+Nome: Ana **** Souza
+CPF: ***.***.***-**
+documento_oculto: 5 2 9 . 9 8 2 . 2 4 7 - 2 5

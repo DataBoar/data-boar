@@ -1,0 +1,59 @@
+# Brazil — insurance-sector data inventory (LGPD-anchored labels) — skeleton sample (EN header)
+#
+# NOT LEGAL ADVICE. This file is a technical starting point for tagging column names
+# and free text that often appear in insurance operations. It does NOT certify
+# compliance with LGPD, SUSEP, CNSP, or any prudential rule. It does NOT replace
+# counsel, DPO analysis, or regulator-facing filings.
+#
+# Scope: generic norm_tag strings for inventory and report wording only. Extend
+# regex and terms after your own legal and data-governance review.
+#
+# How to use:
+#   regex_overrides_file: path/to/compliance-sample-br_insurance_lgpd_anchor.yaml
+#   ml_patterns_file: path/to/compliance-sample-br_insurance_lgpd_anchor.yaml
+# Merge recommendation_overrides into report.recommendation_overrides.
+
+regex:
+  - name: "INS_POLICY_MENTION_GENERIC"
+    pattern: "(?i)\\b(insurance\\s+policy|policy\\s+holder|ap[oó]lice\\s+de\\s+seguro)\\b"
+    norm_tag: "LGPD inventory (insurance document mention)"
+
+terms:
+  - text: "insured party"
+    label: sensitive
+  - text: "policyholder"
+    label: sensitive
+  - text: "beneficiary name"
+    label: sensitive
+  - text: "premium amount"
+    label: sensitive
+  - text: "claim number"
+    label: sensitive
+  - text: "underwriting notes"
+    label: sensitive
+  - text: "segurado"
+    label: sensitive
+  - text: "seguradora"
+    label: sensitive
+  - text: "sinistro"
+    label: sensitive
+  - text: "apolice"
+    label: sensitive
+  - text: "beneficiario"
+    label: sensitive
+  - text: "beneficiário"
+    label: sensitive
+  - text: "corretagem"
+    label: sensitive
+  - text: "proposta de seguro"
+    label: sensitive
+  - text: "dados cadastrais"
+    label: sensitive
+
+recommendation_overrides:
+  - norm_tag_pattern: "LGPD inventory (insurance document mention)"
+    base_legal: "LGPD (Brazil) — personal and sensitive data in insurance operations; this tag marks document or field vocabulary for inventory only."
+    risk: "Insurance files often combine identifiers, health or financial context, and third-party data; false positives and jurisdictional overlap are common without legal and facts review."
+    recommendation: "Pair this inventory output with your LGPD RoPA/legitimate basis mapping and sector-specific obligations. Consult DPO and qualified counsel; do not treat detector labels as regulatory certification."
+    priority: "MÉDIA"
+    relevant_for: "DPO, insurance compliance, IT security, legal counsel"

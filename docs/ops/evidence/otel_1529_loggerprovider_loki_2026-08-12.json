@@ -1,0 +1,69 @@
+{
+  "issue": 1529,
+  "date": "2026-08-12",
+  "setup_ok": true,
+  "otel_endpoint": "http://127.0.0.1:4317",
+  "service_name": "data-boar",
+  "marker": "db1529-e2e2-1786537170",
+  "loki_query": "{service_name=\"data-boar\"} |= \"db1529-e2e2-1786537170\"",
+  "loki_matching_lines": 5,
+  "sample_lines": [
+    {
+      "ts": "1786537172805086464",
+      "line": "1529 burst db1529-e2e2-1786537170 i=0",
+      "stream_labels": {
+        "service_name": "data-boar",
+        "service_namespace": "databoar",
+        "scope_name": "data_boar.e2e_1529",
+        "severity_text": "WARN"
+      }
+    },
+    {
+      "ts": "1786537172805555968",
+      "line": "1529 burst db1529-e2e2-1786537170 i=1",
+      "stream_labels": {
+        "service_name": "data-boar",
+        "service_namespace": "databoar",
+        "scope_name": "data_boar.e2e_1529",
+        "severity_text": "WARN"
+      }
+    },
+    {
+      "ts": "1786537172805807104",
+      "line": "1529 burst db1529-e2e2-1786537170 i=2",
+      "stream_labels": {
+        "service_name": "data-boar",
+        "service_namespace": "databoar",
+        "scope_name": "data_boar.e2e_1529",
+        "severity_text": "WARN"
+      }
+    },
+    {
+      "ts": "1786537172805987840",
+      "line": "1529 burst db1529-e2e2-1786537170 i=3",
+      "stream_labels": {
+        "service_name": "data-boar",
+        "service_namespace": "databoar",
+        "scope_name": "data_boar.e2e_1529",
+        "severity_text": "WARN"
+      }
+    },
+    {
+      "ts": "1786537172806178048",
+      "line": "1529 burst db1529-e2e2-1786537170 i=4",
+      "stream_labels": {
+        "service_name": "data-boar",
+        "service_namespace": "databoar",
+        "scope_name": "data_boar.e2e_1529",
+        "severity_text": "WARN"
+      }
+    }
+  ],
+  "collector": {
+    "otlp_accepted_log_records": "81714",
+    "otlp_http_logs_sent": "81714",
+    "send_failed_log_records": [],
+    "note": "send_failed empty at probe time (previous filelog send_failed episode not reproducing)"
+  },
+  "grafana_api": "GET /api/datasources/proxy/uid/loki/loki/api/v1/query_range (no token stored)"
+}

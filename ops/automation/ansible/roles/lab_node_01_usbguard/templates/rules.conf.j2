@@ -1,0 +1,30 @@
+#
+# USBGuard rules — LAB-OP baseline (safe, reviewable)
+#
+# Learned model:
+# - Existing LAB-OP hosts keep rules in /etc/usbguard/rules.conf (root-only).
+# - Allowlist is device-specific; keep suggestions commented until confirmed.
+#
+# Policy:
+# - Prefer "generate-policy" on the host and then review, instead of guessing device IDs.
+# - Keep any real device IDs / hashes in a private overlay under docs/private/homelab/.
+#
+
+# --- Suggestions (comment-only; "uncomment to activate") ---
+#
+# 1) Start from an on-host snapshot (recommended):
+#    sudo usbguard generate-policy > /etc/usbguard/rules.conf
+#    sudo systemctl restart usbguard
+#
+# 2) If you have stable, hardwired devices (keyboards, receivers, hubs), allow them by id/name/port.
+#
+# Examples (do NOT trust blindly; replace placeholders with real values from your host):
+#
+# allow id 046d:c542 name "Wireless Receiver" with-interface 03:01:02
+# allow id 1a2c:0b2a name "USB Keyboard" with-interface { 03:01:01 03:00:00 }
+#
+# 3) Deny everything else explicitly if you want strict mode:
+# deny with-interface *
+#
+# Keep this file short; large allowlists belong in a private overlay.
+

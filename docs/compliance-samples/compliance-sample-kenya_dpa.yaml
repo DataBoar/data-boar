@@ -1,0 +1,55 @@
+# Kenya DPA – sample compliance profile (Data Protection Act 2019, ODPC)
+#
+# Target audience: Kenya and East Africa deployments. Office of the Data Protection Commissioner (ODPC).
+# Terms: personal data, data controller (EN).
+#
+# How to use:
+#   1. Set in your main config:
+#        regex_overrides_file: path/to/compliance-sample-kenya_dpa.yaml
+#        ml_patterns_file: path/to/compliance-sample-kenya_dpa.yaml
+#   2. Merge the recommendation_overrides list below into your config under report.recommendation_overrides.
+#
+# Kenya: Data Protection Act 2019; ODPC; registration and processing principles.
+
+regex:
+  - name: "KENYA_ID"
+    pattern: "\\b\\d{7,8}\\b"
+    norm_tag: "Kenya DPA"
+  - name: "KRA_PIN"
+    pattern: "\\b[A-Z]\\d{10}[A-Z]\\b"
+    norm_tag: "Kenya DPA"
+
+# ML terms: personal data, data controller, ODPC.
+terms:
+  - text: "personal data"
+    label: sensitive
+  - text: "data controller"
+    label: sensitive
+  - text: "data processor"
+    label: sensitive
+  - text: "data subject"
+    label: sensitive
+  - text: "odpc"
+    label: sensitive
+  - text: "data protection commissioner"
+    label: sensitive
+  - text: "data protection act"
+    label: sensitive
+  - text: "registration certificate"
+    label: sensitive
+  - text: "consent"
+    label: sensitive
+  - text: "lawful basis"
+    label: sensitive
+  - text: "data protection impact assessment"
+    label: sensitive
+  - text: "dpia"
+    label: sensitive
+
+recommendation_overrides:
+  - norm_tag_pattern: "Kenya DPA"
+    base_legal: "Data Protection Act 2019 (Kenya); ODPC"
+    risk: "Personal data; data controller registration and processing principles."
+    recommendation: "Comply with Data Protection Act 2019; register with ODPC if required; implement consent and lawful basis."
+    priority: "ALTA"
+    relevant_for: "DPO, ODPC, Data Controller"

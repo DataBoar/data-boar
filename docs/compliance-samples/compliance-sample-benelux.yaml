@@ -1,0 +1,82 @@
+# Benelux – sample compliance profile (Belgium, Netherlands, Luxembourg)
+#
+# Target audience: Benelux deployments. Extends EU GDPR with national identifiers:
+# Dutch BSN, Belgian NISS/INS, Luxembourg national ID.
+# Terms in EN + NL/FR/DE. German covers Belgium's third official
+# language (Ostbelgien / German-speaking Community).
+#
+# How to use:
+#   1. Set in your main config:
+#        regex_overrides_file: path/to/compliance-sample-benelux.yaml
+#        ml_patterns_file: path/to/compliance-sample-benelux.yaml
+#   2. Merge the recommendation_overrides list below into your config under report.recommendation_overrides.
+#
+# National DPAs: BE = APD/GBA, NL = Autoriteit Persoonsgegevens, LU = CNPD.
+
+regex:
+  - name: "BSN_NL"
+    pattern: "\\b\\d{8}\\b|\\b\\d{9}\\b"
+    norm_tag: "Benelux"
+  - name: "NISS_BE"
+    pattern: "\\b\\d{2}\\.?\\d{2}\\.?\\d{2}\\s?-?\\d{3}\\.?\\d{2}\\b"
+    norm_tag: "Benelux"
+  - name: "MATRICULE_LU"
+    pattern: "\\b\\d{13}\\b"
+    norm_tag: "Benelux"
+
+# ML terms: EN + Dutch (NL) + French (BE/LU) + German (BE Ostbelgien).
+terms:
+  - text: "personal data"
+    label: sensitive
+  - text: "persoonsgegevens"
+    label: sensitive
+  - text: "données personnelles"
+    label: sensitive
+  - text: "personenbezogene Daten"
+    label: sensitive
+  - text: "data subject"
+    label: sensitive
+  - text: "betrokkene"
+    label: sensitive
+  - text: "personne concernée"
+    label: sensitive
+  - text: "betroffene Person"
+    label: sensitive
+  - text: "Einwilligung"
+    label: sensitive
+  - text: "Verantwortlicher"
+    label: sensitive
+  - text: "Auftragsverarbeiter"
+    label: sensitive
+  - text: "besondere Kategorien personenbezogener Daten"
+    label: sensitive
+  - text: "Aufsichtsbehörde"
+    label: sensitive
+  - text: "bsn"
+    label: sensitive
+  - text: "burgerservicenummer"
+    label: sensitive
+  - text: "niss"
+    label: sensitive
+  - text: "numéro de registre national"
+    label: sensitive
+  - text: "autoriteit persoonsgegevens"
+    label: sensitive
+  - text: "apd"
+    label: sensitive
+  - text: "gba"
+    label: sensitive
+  - text: "cnpd"
+    label: sensitive
+  - text: "benelux"
+    label: sensitive
+  - text: "eu gdpr"
+    label: sensitive
+
+recommendation_overrides:
+  - norm_tag_pattern: "Benelux"
+    base_legal: "EU GDPR; national IDs (BSN, NISS, matricule); APD/GBA (BE), Autoriteit Persoonsgegevens (NL), CNPD (LU)"
+    risk: "Personal data and national identifiers; Benelux DPA oversight."
+    recommendation: "Apply EU GDPR and national rules; register with or notify APD (BE), Autoriteit Persoonsgegevens (NL), or CNPD (LU) as required."
+    priority: "ALTA"
+    relevant_for: "DPO, APD/GBA (BE), Autoriteit Persoonsgegevens (NL), CNPD (LU)"

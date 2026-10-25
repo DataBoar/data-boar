@@ -1,0 +1,86 @@
+# Install MariaDB client headers so the `mariadb` PyPI package can build from
+# source on Ubuntu runners. Used by Linux jobs in ci.yml and sbom.yml.
+#
+# Composite-action steps cannot set `timeout-minutes` (workflow job steps only).
+# Fail-fast for stalled apt mirrors is coreutils `timeout` around apt-get
+# (GitHub's default job timeout is 6h — see #1627).
+name: Install libmariadb-dev
+description: >-
+  Install libmariadb-dev and pkg-config via apt with a bounded timeout so stalled
+  mirrors fail the step instead of hanging the runner for hours (#1627). Restricts
+  apt indexes to Ubuntu main+updates (#1862) and retries transient
+  archive.ubuntu.com stalls via apt Acquire::Retries (#1865).
+
+runs:
+  using: composite
+  steps:
+    - name: apt-get install libmariadb-dev
+      shell: bash
+      run: |
+        set -euo pipefail
+        # #1646: ubuntu-latest (24.04) uses deb822 ubuntu.sources plus
+        # /etc/apt/apt-mirrors.txt (azure priority 1); 22.04 may still use
+        # sources.list with azure.archive.ubuntu.com directly — repoint all.
+        echo "apt layout (pre-mirror-pin):"
+        if [ -f /etc/apt/apt-mirrors.txt ]; then
+          echo "  apt-mirrors.txt:"
+          grep -E 'archive|azure' /etc/apt/apt-mirrors.txt || true
+        fi
+        if [ -f /etc/apt/sources.list.d/ubuntu.sources ]; then
+          echo "  ubuntu.sources: deb822 present"
+        fi
+        if [ -f /etc/apt/sources.list ]; then
+          grep -E 'archive|azure' /etc/apt/sources.list || true
+        fi
+        repointed=0
+        repoint_azure() {
+          local f="$1"
+          if [ -f "$f" ] && grep -q 'azure\.archive\.ubuntu\.com' "$f"; then
+            sudo sed -i 's|azure\.archive\.ubuntu\.com|archive.ubuntu.com|g' "$f"
+            repointed=1
+            echo "  repointed azure mirror in $f"
+          fi
+        }
+        repoint_azure /etc/apt/apt-mirrors.txt
+        repoint_azure /etc/apt/sources.list
+        for f in /etc/apt/sources.list.d/*; do
+          repoint_azure "$f"
+        done
+        if [ "$repointed" -eq 0 ]; then
+          echo "  note: no azure.archive.ubuntu.com entries found"
+        fi
+        # #1862: apt-get update fetching noble+updates+backports+security plus
+        # Microsoft/Google lists can exceed 240s on a slow canonical mirror even
+        # after the #1646 azure→archive repoint. Keep only Ubuntu main+updates
+        # (enough for libmariadb-dev / pkg-config); disable the rest.
+        . /etc/os-release
+        printf 'deb http://archive.ubuntu.com/ubuntu/ %s main universe\n' \
+          "${VERSION_CODENAME}" \
+          | sudo tee /etc/apt/sources.list.d/data-boar-mariadb.list >/dev/null
+        printf 'deb http://archive.ubuntu.com/ubuntu/ %s-updates main universe\n' \
+          "${VERSION_CODENAME}" \
+          | sudo tee -a /etc/apt/sources.list.d/data-boar-mariadb.list >/dev/null
+        if [ -f /etc/apt/sources.list ]; then
+          sudo mv /etc/apt/sources.list /etc/apt/sources.list.disabled-1862
+          echo "  disabled sources.list (#1862)"
+        fi
+        for f in /etc/apt/sources.list.d/*; do
+          [ -e "$f" ] || continue
+          base="$(basename "$f")"
+          case "$base" in
+            data-boar-mariadb.list|*.disabled-1862) ;;
+            *)
+              sudo mv "$f" "${f}.disabled-1862"
+              echo "  disabled ${base} (#1862)"
+              ;;
+          esac
+        done
+        # #1865: apt-level retries for transient archive.ubuntu.com stalls that
+        # survive the #1862 index shrink.
+        apt_retry_opts=(
+          -o Acquire::Retries=3
+          -o Acquire::http::Timeout=30
+        )
+        # 420s wall clock per apt-get invocation (composite steps have no timeout-minutes).
+        timeout 420 sudo apt-get "${apt_retry_opts[@]}" update
+        timeout 420 sudo apt-get "${apt_retry_opts[@]}" install -y libmariadb-dev pkg-config

@@ -1,0 +1,41 @@
+---
+description: Confidential commercial, client-specific, and pricing drafts never belong in tracked Git files
+alwaysApply: true
+---
+
+# Confidential commercial material — never track in Git
+
+## Scope (treat as operator-only / competitive sensitivity)
+
+Content in this category **must not** be committed, pushed to GitHub, or published online. Keep it **only** under **gitignored** paths (workspace-local), e.g. **`docs/private/commercial/`** (client-facing rates/proposals) or **`docs/private/operator_economics/`** (your OPEX, shopping lists, runway).
+
+## Includes (non-exhaustive):
+
+- **Pricing** studies, rate cards, scenario tables, partner margins, proposal numbers.
+- **Client-specific** facts: names, environments, findings, SOW drafts, engagement terms.
+- **Strategic / mercadológico** rascunhos that could help **competitors** if leaked.
+- Any **extension** or **spin-off** of internal studies (same sensitivity as the source).
+
+## Explicitly allowed in Git (tracked):
+
+- **Product** licensing *concepts* and technical specs without client numbers: e.g. **`docs/LICENSING_SPEC.md`**, **`docs/CODE_PROTECTION_OPERATOR_PLAYBOOK.md`** — no bespoke pricing bands for real engagements.
+- **Layout only:** **`docs/private.example/commercial/README.md`** (pointers, no real data).
+
+## Agent actions
+
+1. **Do** place or edit sensitive commercial notes under **`docs/private/...`** (operator machine).
+1. **Do not** create or edit tracked files under **`docs/`** that contain path segment **`commercial/`** except **`docs/private.example/commercial/`**.
+1. **Do not** use tracked filenames under **`docs/`** that match the guard in **`tests/test_confidential_commercial_guard.py`** (e.g. `*PRICING_STUDY*`, `MATURITY_CONSULTING_PRICING`, `*RATE_CARD*`).
+1. **Do not** paste full rate tables, client identifiers, or proposal numbers into **issues**, **PR descriptions**, or **tracked** Markdown.
+1. If the operator pastes client context in **chat**, use it to refine **private** docs only unless they ask for redacted, generic wording suitable for a public doc.
+
+## Automation
+
+- **`tests/test_confidential_commercial_guard.py`** — fails CI if the Git index violates the rules.
+- **Pre-commit:** same test via **`.pre-commit-config.yaml`** (commercial guard hook).
+
+## Human policy
+
+**`docs/PRIVATE_OPERATOR_NOTES.md`** — private tree layout and commercial refinement workflow.
+
+**Skill:** **`.cursor/skills/confidential-commercial-layout/SKILL.md`**.

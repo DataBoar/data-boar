@@ -1,0 +1,473 @@
+{
+  "info": {
+    "name": "Data Boar POC — Error Scenarios",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "A — API Surface",
+      "item": [
+        {
+          "request": {
+            "url": "{{base_url}}/health",
+            "method": "GET"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "name": "A1 Health check"
+        },
+        {
+          "request": {
+            "url": "{{base_url}}/about/json",
+            "header": [
+              {
+                "value": "{{api_key}}",
+                "key": "X-API-Key"
+              }
+            ],
+            "method": "GET"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 or 401', () => [200,401,403].includes(pm.response.code));"
+                ]
+              }
+            }
+          ],
+          "name": "A2 Auth status (about/json)"
+        },
+        {
+          "request": {
+            "url": "{{base_url}}/scan",
+            "header": [
+              {
+                "value": "application/json",
+                "key": "Content-Type"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{ invalid json {{"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('400 or 422', () => [400,422].includes(pm.response.code));"
+                ]
+              }
+            }
+          ],
+          "name": "A3 Malformed JSON to /scan"
+        },
+        {
+          "request": {
+            "url": "{{base_url}}/route-does-not-exist-xyz",
+            "method": "GET"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "name": "A4 Unknown route"
+        },
+        {
+          "request": {
+            "url": "{{base_url}}/scan",
+            "header": [
+              {
+                "value": "application/json",
+                "key": "Content-Type"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('400 or 422', () => [400,422].includes(pm.response.code));"
+                ]
+              }
+            }
+          ],
+          "name": "A5 Empty payload /scan"
+        }
+      ]
+    },
+    {
+      "name": "B — Bad DB Config",
+      "item": [
+        {
+          "name": "B1 Wrong host (unreachable)",
+          "request": {
+            "url": "{{base_url}}/scan",
+            "header": [
+              {
+                "value": "application/json",
+                "key": "Content-Type"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"targets\":[{\"type\":\"postgresql\",\"host\":\"192.0.2.1\",\"port\":5432,\"database\":\"test\",\"user\":\"test\",\"password\":\"test\"}]}"
+            }
+          }
+        },
+        {
+          "name": "B2 Wrong credentials",
+          "request": {
+            "url": "{{base_url}}/scan",
+            "header": [
+              {
+                "value": "application/json",
+                "key": "Content-Type"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"targets\":[{\"type\":\"postgresql\",\"host\":\"localhost\",\"port\":5432,\"database\":\"postgres\",\"user\":\"wrong\",\"password\":\"wrong\"}]}"
+            }
+          }
+        },
+        {
+          "request": {
+            "url": "{{base_url}}/scan",
+            "header": [
+              {
+                "value": "application/json",
+                "key": "Content-Type"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"targets\":[{\"type\":\"oracle_db_v99\",\"host\":\"localhost\",\"port\":1521,\"database\":\"XE\",\"user\":\"hr\",\"password\":\"hr\"}]}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('400 or 422', () => [400,422].includes(pm.response.code));"
+                ]
+              }
+            }
+          ],
+          "name": "B3 Invalid connector type"
+        },
+        {
+          "request": {
+            "url": "{{base_url}}/scan",
+            "header": [
+              {
+                "value": "application/json",
+                "key": "Content-Type"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"targets\":[{\"type\":\"postgresql\",\"database\":\"test\",\"user\":\"u\",\"password\":\"p\"}]}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('422 missing host', () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ],
+          "name": "B4 Missing host field"
+        },
+        {
+          "request": {
+            "url": "{{base_url}}/scan",
+            "header": [
+              {
+                "value": "application/json",
+                "key": "Content-Type"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"targets\":[{\"type\":\"postgresql\",\"host\":\"localhost\",\"port\":\"not_a_number\",\"database\":\"db\",\"user\":\"u\",\"password\":\"p\"}]}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('422 type error', () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ],
+          "name": "B5 Port as string (wrong type)"
+        },
+        {
+          "name": "B6 SQLite — path nao existe",
+          "request": {
+            "url": "{{base_url}}/scan",
+            "header": [
+              {
+                "value": "application/json",
+                "key": "Content-Type"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"targets\":[{\"type\":\"sqlite\",\"path\":\"/this/sqlite/does/not/exist.db\"}]}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "C — Bad File Config",
+      "item": [
+        {
+          "name": "C1 Path inexistente",
+          "request": {
+            "url": "{{base_url}}/scan",
+            "header": [
+              {
+                "value": "application/json",
+                "key": "Content-Type"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"targets\":[{\"type\":\"filesystem\",\"path\":\"/this/path/does/not/exist\"}]}"
+            }
+          }
+        },
+        {
+          "request": {
+            "url": "{{base_url}}/scan",
+            "header": [
+              {
+                "value": "application/json",
+                "key": "Content-Type"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"targets\":[{\"type\":\"filesystem\"}]}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('422', () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ],
+          "name": "C2 Sem campo path"
+        },
+        {
+          "name": "C3 Path e arquivo unico (nao diretorio)",
+          "request": {
+            "url": "{{base_url}}/scan",
+            "header": [
+              {
+                "value": "application/json",
+                "key": "Content-Type"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"targets\":[{\"type\":\"filesystem\",\"path\":\"/etc/hostname\"}]}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "D — Load / Stress",
+      "item": [
+        {
+          "request": {
+            "url": "{{base_url}}/status",
+            "method": "GET"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "name": "D1 20x GET /status (rapid)"
+        },
+        {
+          "name": "D2 POST /scan x200 targets",
+          "request": {
+            "url": "{{base_url}}/scan",
+            "header": [
+              {
+                "value": "application/json",
+                "key": "Content-Type"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"targets\":[{\"type\":\"filesystem\",\"path\":\"/tmp/t1\"},{\"type\":\"filesystem\",\"path\":\"/tmp/t2\"}]}"
+            }
+          }
+        },
+        {
+          "request": {
+            "url": "{{base_url}}/list",
+            "method": "GET"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "name": "D3 GET /list"
+        },
+        {
+          "request": {
+            "url": "{{base_url}}/health",
+            "method": "GET"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('latencia < 500ms', () => pm.expect(pm.response.responseTime).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "name": "D4 GET /health (latencia)"
+        },
+        {
+          "name": "D5 GET /about/json",
+          "request": {
+            "url": "{{base_url}}/about/json",
+            "method": "GET"
+          }
+        }
+      ]
+    },
+    {
+      "name": "E — Happy Path (referencia)",
+      "item": [
+        {
+          "request": {
+            "url": "{{base_url}}/scan",
+            "header": [
+              {
+                "value": "application/json",
+                "key": "Content-Type"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"targets\":[{\"type\":\"filesystem\",\"path\":\"/tmp\"}]}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('202 ou 200', () => [200,202].includes(pm.response.code));"
+                ]
+              }
+            }
+          ],
+          "name": "E1 Scan filesystem /tmp"
+        },
+        {
+          "request": {
+            "url": "{{base_url}}/status",
+            "method": "GET"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "name": "E2 GET /status pos-scan"
+        },
+        {
+          "name": "E3 GET /list (sessoes)",
+          "request": {
+            "url": "{{base_url}}/list",
+            "method": "GET"
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "value": "http://localhost:8088",
+      "key": "base_url"
+    },
+    {
+      "value": "",
+      "key": "api_key"
+    }
+  ]
+}

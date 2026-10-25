@@ -1,0 +1,24 @@
+---
+- name: Restart rsyslog
+  ansible.builtin.service:
+    name: rsyslog
+    state: restarted
+  failed_when: false
+
+- name: Restart munin-node
+  ansible.builtin.service:
+    name: munin-node
+    state: restarted
+  failed_when: false
+
+- name: Restart monit
+  ansible.builtin.service:
+    name: monit
+    state: restarted
+  failed_when: false
+
+- name: Restart wazuh-agent
+  ansible.builtin.service:
+    name: wazuh-agent
+    state: restarted
+  failed_when: false

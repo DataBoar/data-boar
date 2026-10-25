@@ -1,0 +1,23 @@
+# Example config for container. Copy to /data/config.yaml or mount your own.
+# In container: sqlite_path and report.output_dir should be under /data so they persist.
+# Add database/filesystem/API targets (see docs/USAGE.md).
+targets: []
+
+file_scan:
+  extensions: [.txt, .csv, .pdf, .docx, .xlsx]
+  recursive: true
+  scan_sqlite_as_db: true
+  # Rows / TOPN for DB-like sampling and SQLite-as-DB per column (not plain-text char budget).
+  sample_limit: 5
+  # UTF-8 characters read per plain-text file (.txt, .md, …) for lyrics/cifra heuristics.
+  file_sample_max_chars: 12000
+
+report:
+  output_dir: /data
+
+api:
+  port: 8088
+
+sqlite_path: /data/audit_results.db
+scan:
+  max_workers: 1

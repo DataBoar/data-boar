@@ -1,0 +1,172 @@
+version: 1
+issue: 835
+methodology:
+  detector_tuple: sensitivity_level, pattern_detected, norm_tag, confidence 0-100
+  classes:
+  - pii
+  - clean
+  - tricky_fp
+  - tricky_fn
+  splits:
+    measure: Final precision/recall/F1 publication. Do not reuse these templates for
+      confidence calibration.
+    calibrate: Reserved for confidence-threshold tuning only. Disjoint template_id
+      family and synthetic identifiers (Presidio-research anti-leakage).
+  anti_leakage: No template_id and no synthetic identifier may appear in both measure
+    and calibrate splits.
+template_families:
+  measure:
+    cpf: 529.982.247-25
+    cnpj: 11.222.333/0001-81
+    email: ana.souza@example-test.com
+  calibrate:
+    cpf: 390.533.447-05
+    cnpj: 12.345.678/0001-95
+    email: carlos.lima@demo.invalid
+files:
+- path: measure/pii/roster_a.txt
+  split: measure
+  class: pii
+  template_id: measure_roster_v1
+  expected_patterns:
+  - LGPD_CPF
+  - LGPD_CNPJ
+  - EMAIL
+  expected_miss: false
+  notes: Clear PII; same identifiers across formats
+- path: measure/pii/roster_a.csv
+  split: measure
+  class: pii
+  template_id: measure_roster_v1
+  expected_patterns:
+  - LGPD_CPF
+  - LGPD_CNPJ
+  - EMAIL
+  expected_miss: false
+  notes: Clear PII; same identifiers across formats
+- path: measure/pii/roster_a.tsv
+  split: measure
+  class: pii
+  template_id: measure_roster_v1
+  expected_patterns:
+  - LGPD_CPF
+  - LGPD_CNPJ
+  - EMAIL
+  expected_miss: false
+  notes: Clear PII; same identifiers across formats
+- path: measure/pii/roster_a.json
+  split: measure
+  class: pii
+  template_id: measure_roster_v1
+  expected_patterns:
+  - LGPD_CPF
+  - LGPD_CNPJ
+  - EMAIL
+  expected_miss: false
+  notes: Clear PII; same identifiers across formats
+- path: measure/pii/roster_a.xml
+  split: measure
+  class: pii
+  template_id: measure_roster_v1
+  expected_patterns:
+  - LGPD_CPF
+  - LGPD_CNPJ
+  - EMAIL
+  expected_miss: false
+  notes: Clear PII; same identifiers across formats
+- path: measure/pii/roster_a.html
+  split: measure
+  class: pii
+  template_id: measure_roster_v1
+  expected_patterns:
+  - LGPD_CPF
+  - LGPD_CNPJ
+  - EMAIL
+  expected_miss: false
+  notes: Clear PII; same identifiers across formats
+- path: measure/clean/catalog.txt
+  split: measure
+  class: clean
+  template_id: measure_catalog_v1
+  expected_patterns: []
+  expected_miss: false
+  notes: No personal identifiers
+- path: measure/clean/catalog.json
+  split: measure
+  class: clean
+  template_id: measure_catalog_v1
+  expected_patterns: []
+  expected_miss: false
+  notes: No personal identifiers
+- path: measure/tricky_fp/lyrics_dates.txt
+  split: measure
+  class: tricky_fp
+  template_id: measure_lyrics_v1
+  expected_patterns: []
+  expected_miss: false
+  notes: Dates/phone-like tokens in song lyrics (entertainment context)
+- path: measure/tricky_fp/invalid_cpf_shape.txt
+  split: measure
+  class: tricky_fp
+  template_id: measure_invalid_cpf_v1
+  expected_patterns: []
+  expected_miss: false
+  notes: CPF-shaped but checksum-invalid; checksum gate should suppress LGPD_CPF
+- path: measure/tricky_fn/masked_spaced_cpf.txt
+  split: measure
+  class: tricky_fn
+  template_id: measure_mask_spaced_v1
+  expected_patterns:
+  - LGPD_CPF
+  expected_miss: true
+  notes: Spaced/masked CPF — known FN risk; counted in recall honestly
+- path: measure/tricky_fn/stego_placeholder.txt
+  split: measure
+  class: tricky_fn
+  template_id: measure_stego_note_v1
+  expected_patterns:
+  - LGPD_CPF
+  expected_miss: true
+  notes: Documents known stego gap without embedding binary; expected miss
+- path: calibrate/pii/invoice_b.txt
+  split: calibrate
+  class: pii
+  template_id: calibrate_invoice_v1
+  expected_patterns:
+  - LGPD_CPF
+  - LGPD_CNPJ
+  - EMAIL
+  expected_miss: false
+  notes: Calibrate-only template family B
+- path: calibrate/pii/invoice_b.json
+  split: calibrate
+  class: pii
+  template_id: calibrate_invoice_v1
+  expected_patterns:
+  - LGPD_CPF
+  - LGPD_CNPJ
+  - EMAIL
+  expected_miss: false
+  notes: ''
+- path: calibrate/clean/lab_inventory.txt
+  split: calibrate
+  class: clean
+  template_id: calibrate_inventory_v1
+  expected_patterns: []
+  expected_miss: false
+  notes: ''
+- path: calibrate/tricky_fp/bridge_lyrics.txt
+  split: calibrate
+  class: tricky_fp
+  template_id: calibrate_lyrics_v1
+  expected_patterns: []
+  expected_miss: false
+  notes: Different song template than measure_lyrics_v1
+- path: calibrate/tricky_fn/partial_redaction.txt
+  split: calibrate
+  class: tricky_fn
+  template_id: calibrate_partial_redact_v1
+  expected_patterns:
+  - LGPD_CPF
+  expected_miss: true
+  notes: Partial redaction of calibrate CPF — disjoint from measure masks

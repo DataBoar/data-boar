@@ -1,0 +1,18 @@
+---
+# Path POC-DB: spin up a test database and populate with synthetic PII data.
+# Usage:
+#   ansible-playbook site-poc-db.yml --check   # dry-run
+#   ansible-playbook site-poc-db.yml           # apply
+#
+# Connects locally (localhost) — run on the target node or adjust inventory.
+
+- name: Setup POC database for Data Boar testing
+  hosts: data_boar
+  become: true
+  environment: "{{ labop_debian_unattended_apt_environment }}"
+  vars:
+    poc_db_type: postgres      # change to "mariadb" if preferred
+    poc_db_docker_enabled: true
+    poc_db_large_rows: 10000
+  roles:
+    - poc_database

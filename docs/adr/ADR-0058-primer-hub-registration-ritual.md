@@ -1,0 +1,46 @@
+# ADR 0058 — Primer hub registration ritual
+
+- **Date (UTC):** 2026-05-20
+- **Authors:** Fabio Leitao
+- **Deciders:** Fabio Leitao
+
+## Status
+
+Accepted
+
+### Status history
+
+- 2026-05-20 — Accepted
+- 2026-06-11 — Amended: retrofit to ADR-0045 UMADR format (metadata list, Authors, Status history) — GitHub #675
+- 2026-06-17 — Amended: primer taxonomy split — technical/onboarding primers live under `docs/primers/` (local index); compliance/framework primers stay under `docs/plans/` (this hub). See ADR-0070 — GitHub #744
+- 2026-10-12 — Amended: operator rule — compliance/framework primer bodies migrated to `docs/primers/`; register new primers in `docs/primers/INDEX.md` (+ pt-BR); keep `PRIMERS_HUB.md` rows pointing at `../primers/*.md` (epic #2038)
+
+## Context
+
+Primers under `docs/plans/` are indexed in **`docs/plans/PRIMERS_HUB.md`**. Issues **#598**, **#554**, **#629**, and **#630** were opened without matching hub rows — drift between GitHub backlog and the in-tree index. **`scripts/check_hubs.py`** validates existing primer **links** but does not require every planned issue to appear in the hub table.
+
+Issue **#626** requested a durable ritual so new primer issues do not become "vaporware" invisible to maintainers.
+
+## Decision
+
+1. When opening **any** GitHub issue whose deliverable is a new `*_PRIMER.md`, `*_ALIGNMENT.md`, or equivalent plan-tier explainer under **`docs/plans/`**, add a **`*(planned — #NNN)*`** row to **`PRIMERS_HUB.md`** in the **same PR** that lands the issue reference (or in the PR that creates the primer file).
+2. Acceptance criteria on primer issues must include: *"Row added to PRIMERS_HUB.md (planned link until file exists)."*
+3. When a primer ships, replace the plain-text planned row with a markdown link to the file and run **`python scripts/plans_hub_sync.py --write`** if plan metadata changed.
+4. **`GOVERNANCE_ITSM_DIAGRAMS_SOURCE.md`** and similar **diagram companions** may stay outside the hub table; cross-link from the primer issue or primer doc instead of duplicating rows.
+5. **Taxonomy (amended 2026-10-12 — ADR-0070):** primer **files** live under **`docs/primers/`**
+   (EN + pt-BR when applicable). **New** primers add a row to **`docs/primers/INDEX.md`** and
+   **`INDEX.pt_BR.md`**. **`PRIMERS_HUB.md`** stays the central index: link each shipped primer
+   as `../primers/<NAME>_PRIMER.md`. Planned rows may remain plain text until the file lands.
+
+## Consequences
+
+- **Positive:** Agents and contributors see one index; `#625`-class hygiene gaps shrink.
+- **Negative:** Small overhead on every primer issue/PR.
+- **Enforcement:** Review convention + **`check_hubs.py`** for broken links; optional future pytest for orphan `*(planned — #`* without open issue (not in scope here).
+
+## References
+
+- [PRIMERS_HUB.md](../plans/PRIMERS_HUB.md)
+- [ADR-0057](ADR-0057-lightweight-hub-index-co-located-links.md)
+- [ADR-0070](ADR-0070-primer-taxonomy-and-home.md) — primer taxonomy and home (amends this ADR)
+- GitHub **#625**, **#626**, **#744**

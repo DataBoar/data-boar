@@ -1,0 +1,28 @@
+---
+- name: Ensure sshguard package is installed
+  ansible.builtin.apt:
+    name: sshguard
+    state: present
+    update_cache: false
+  failed_when: false
+
+- name: Optionally extend sshguard whitelist (best-effort)
+  when: lab_node_01_sshguard_enable | bool
+  ansible.builtin.blockinfile:
+    path: /etc/sshguard/whitelist
+    marker: "# {mark} managed by ansible (lab_node_01_sshguard)"
+    block: |
+      {% for line in lab_node_01_sshguard_whitelist_lines %}
+      {{ line }}
+      {% endfor %}
+    create: false
+  failed_when: false
+
+- name: Configure sshguard (best-effort)
+  when: lab_node_01_sshguard_enable | bool
+  ansible.builtin.service:
+    name: sshguard
+    state: started
+    enabled: true
+  failed_when: false
+

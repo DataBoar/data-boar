@@ -1,0 +1,4 @@
+Numeros de serie / placeholders (NAO sao CPF validos)
+serial: 111.111.111-11
+pedido: 123.456.789-00
+ip_like: 192.168.0.1

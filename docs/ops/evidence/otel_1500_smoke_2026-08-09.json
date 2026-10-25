@@ -1,0 +1,13 @@
+{
+  "issue": 1500,
+  "setup_ok": true,
+  "endpoint": "http://127.0.0.1:4317",
+  "span_name": "data-boar.otel.smoke",
+  "metric_name": "data_boar.otel.smoke.requests",
+  "note": "OTLP export attempted against local collector; HTTP POST /v1/traces previously returned 200 on :4318",
+  "otlp_http_post": {
+    "url": "http://127.0.0.1:4318/v1/traces",
+    "http_code": 200,
+    "body": "{\"partialSuccess\":{}}"
+  }
+}

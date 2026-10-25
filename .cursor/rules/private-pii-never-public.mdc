@@ -1,0 +1,136 @@
+---
+description: "PII and personal sensitive content -- never in public Git or GitHub. alwaysApply guardrail."
+alwaysApply: true
+---
+
+# PII and personal sensitive content -- never commit to public repo
+
+## Hard rule (enforced on every session, every file, every commit)
+
+The following categories of information **MUST NEVER** appear in any file that is
+tracked by the **public Git** (`origin` / GitHub). They belong **exclusively** in:
+- `docs/private/` (gitignored from public; has its own stacked private git)
+- Session memory (chat only, not persisted to tracked files)
+- Password manager / secure vault
+
+---
+
+## Categories of information that are PRIVATE-ONLY
+
+### 1. Operator identity and family
+- Full legal name of the operator or any family member (spouse, children, parents, siblings)
+- CPF, RG, or any national ID number (pattern: `\d{3}\.\d{3}\.\d{3}-\d{2}` or 11 bare digits)
+- Physical address, neighborhood, city/state beyond "Rio de Janeiro" as region
+- Date of birth of operator or family
+- Wedding anniversary date or family event dates
+- Spouse employer, workplace, or detailed career info
+- Any reference to children, godparents, wedding witnesses by full name + role
+
+### 2. Employment and career
+- Full name of current or past **employer** (replace with "the operator employer", "a port logistics company", etc. in public docs)
+- Specific job title + company combination that uniquely identifies the operator
+- Salary, compensation, or benefit details
+- Details of employment disputes (dossier content -- keep in docs/private/ only)
+- Reference letters, demission interviews, HR correspondence
+
+### 3. Financial information
+- Personal income, bank account, FGTS balance
+- OPEX/CAPEX amounts for household or lab-op
+- Shopping lists with prices for personal use
+- Subscription costs, utility bill amounts
+- Pricing studies and commercial proposals (also covered by confidential-commercial-never-tracked.mdc)
+
+### 4. Health and medical
+- Diagnoses, medications, psychiatrist/psychologist notes
+- Medical letters or correspondence
+- Burnout, CID, INSS/CAT documents
+- Weight, surgical history, or other medical details
+
+### 5. Lab-op infrastructure
+- Real hostnames (use lab-pb, lab-op or <hostname> placeholders in public docs)
+- LAN IP addresses (RFC1918: 10.0.x.x, 10.x.x.x, 172.16-31.x.x)
+- Hardware serial numbers, MAC addresses
+- SSH private keys, API tokens, passwords, SNMP communities
+- LAB-ROUTER-01/UniFi client MAC lists or device fingerprints with real names
+
+### 6. Feedback and external reviews (MUST be in private git -- NOT gitignored from it)
+- Corporate-Entity-C, Gemini, or partner review reports -- docs/private/feedbacks_and_reviews/
+- These are evidence and MUST be committed to the stacked private git
+- Raw Gemini chat dumps, Gemini bundles -- docs/private/gemini_bundles/
+- The gitignored "docs/feedbacks, reviews, comments and criticism/" is a working inbox only
+  Mirror all receipts to docs/private/feedbacks_and_reviews/ and commit to private git
+
+### 7. Courses, certifications, study enrollment
+- Specific course enrollment status, fee paid, platform login
+- Detailed study schedule tied to personal calendar
+- Academic transcripts, grades, thesis drafts -- docs/private/author_info/
+
+### 8. Personal legal matters
+- Labor dispute dossier (any employer) -- keep in docs/private/ only
+- Any document that is "privileged" (attorney-client, court filing, settlement)
+- Third-party names in legal context (except genericized references)
+
+### 9. Plan documents and context sections — third-party names and commercial attribution
+- **No real first names, surnames, or nicknames** of business contacts, prospects, clients,
+  students, professors, university staff, or any non-operator third party in tracked plan
+  files (docs/plans/), use-case files (docs/use-cases/), or Motivation/Context sections.
+- **No company names, product names, or event details** that would uniquely identify a real
+  commercial interaction (e.g. "EAD provider in Brazil, 2026").
+- Even when chat context includes a name (e.g. "agradecemos a Fulana"), the agent MUST NOT
+  propagate it into tracked Markdown. Use genericized language instead:
+  - Real name → "a DPO contact", "an EAD provider", "a university professor", "a prospect"
+  - "EAD no Rio Grande do Sul" → "an EAD provider in Brazil"
+  - "(agradeça a X)" → omit entirely or write "based on a real-world contact"
+- Private notes about inspiration sources: save under docs/private/author_info/ or
+  docs/private/ops/ only; never in tracked plan Motivation sections.
+- Attribution in commit messages is also forbidden (e.g. "Co-credit: Fulana from X").
+
+---
+
+## What IS acceptable in public tracked files
+
+- Author name in LICENSE, NOTICE, README (standard FOSS practice -- single canonical occurrence)
+- Genericized references: "the operator", "the operator employer", "a port terminal operator"
+- ADRs that describe decisions without naming real companies or people
+- Plans and to-dos without financial figures or personal identifiers
+- Corporate-Entity-C/Gemini analysis summaries in docs/plans/Corporate-Entity-C_ANALISE_*.md when they contain
+  only product-level recommendations (no personal data, no vulnerability exploitation details)
+- Process docs (docs/ops/) describing how to send/receive reviews (no real content inside)
+
+---
+
+## Audience tiers (see audience-segmentation-docs.mdc)
+
+| Tier | Path | Allowed to contain PII? |
+|---|---|---|
+| External / GitHub public | docs/, tracked *.md, scripts/, .cursor/ | NO -- stub/generic only |
+| Internal project | docs/plans/, docs/ops/, docs/adr/ | No personal PII; product/process only |
+| Secrets-access | docs/private/ (gitignored + stacked private git) | YES -- full context |
+
+---
+
+## Agent actions on violation
+
+1. **Stop and flag** before committing: if a file about to be staged contains PII from the
+   categories above, do NOT commit it -- move to docs/private/ first.
+2. **Replace** with generic wording in the public file and document the real detail in the
+   matching docs/private/ companion.
+3. **Scan before PR**: look for patterns in the diff: 11-digit sequences (CPF),
+   full names of family members, RFC1918 IPs, real employer names.
+4. **Scan plan Motivation/Context sections**: before staging any PLAN_*.md or use-case file,
+   re-read the Motivation section for first names, company names, gratitude phrases
+   ("agradece a", "thanks to", "agradeça a"), or temporal commercial identifiers
+   ("maio 2026", provider city + date). Genericize before commit.
+5. **Private git commit --trailer "Made-with: Cursor"**: after any session that adds content to docs/private/,
+   run scripts/private-git-sync.ps1 or git -C docs/private add -A && commit.
+
+---
+
+## Stacked private repo commit cadence
+
+- Commit after every meaningful session that changes private files
+- Use chore(private): prefix in commit messages
+- Push the stacked private repo to your configured backup remote regularly (pCloud `P:/` is additional backup, not sole copy)
+- feedbacks_and_reviews/ must be committed -- never gitignored from the private repo
+
+See docs/private/ for full private git workflow.

@@ -1,0 +1,13 @@
+version: '3.8'
+services:
+  db-test-pg:
+    image: postgres:15-alpine
+    environment: [POSTGRES_PASSWORD=test_pii]
+    networks: [databoar-net]
+  db-test-maria:
+    image: mariadb:10.11
+    environment: [MARIADB_ROOT_PASSWORD=test_pii]
+    networks: [databoar-net]
+networks:
+  databoar-net:
+    driver: overlay

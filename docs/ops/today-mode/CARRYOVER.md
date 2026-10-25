@@ -1,0 +1,81 @@
+# Today-mode carryover queue (rolling)
+
+**Português (Brasil):** [CARRYOVER.pt_BR.md](CARRYOVER.pt_BR.md)
+
+**Purpose:** Single **rolling list** of operator items that survive across dated `OPERATOR_TODAY_MODE_*` files. **Close, defer with date, or move to `PLANS_TODO` / an issue** — nothing immortal without an owner.
+
+**Related:** **`carryover-sweep`** (morning), **`eod-sync`** (evening), **`docs/private/TODAY_MODE_CARRYOVER_AND_FOUNDER_RHYTHM.md`** (private).
+
+---
+
+## Queue (update in place)
+
+| Item | Source | Status | Next step / defer |
+| ---- | ------ | ------ | ----- |
+| **Today anchor (re-anchor after gap)** | [OPERATOR_TODAY_MODE_2026-09-28.md](OPERATOR_TODAY_MODE_2026-09-28.md) | 🔄 Active | Two-week cycle **2026-09-28 → 2026-10-11**; PMO table at bottom of today file. |
+| **Maestro RC smoke + sentinel (#91)** | [data-boar#2011](https://github.com/DataBoar/data-boar/pull/2011) · [maestro#91](https://github.com/DataBoar/maestro/issues/91) | ✅ Merged data-boar | Close **maestro#91** with pointer to **#2011**; optional **lab host** RC smoke after podman image restore ([#756](https://github.com/DataBoar/data-boar/issues/756)) (`postgres`, `mariadb`, `oracle-xe`, `mssql`). **Defer** `engine/` uv-sync mirror (maestro private). |
+| **REST / Microsoft env-secret egress (#2006/#2007)** | [data-boar#2012](https://github.com/DataBoar/data-boar/pull/2012) | ✅ Merged **2026-09-28** | Issues **#2006** / **#2007** close via PR. |
+| **License trust anchor (#1992)** | [#1994](https://github.com/DataBoar/data-boar/pull/1994) · comment **5878436617** | ✅ Closed **completed** | Offline revocation = known limitation; short TTL is the control. |
+| **Maestro e2e audit (#82)** | [maestro#82](https://github.com/DataBoar/maestro/issues/82) | 🔄 Partial | **CREDIT_CARD** → Covered (**#1995** / maestro#92 closed). Remaining §B rows + lab evidence **#87**. |
+| **carrion-crow GA neighbor + security lot** | [crow#99](https://github.com/DataBoar/carrion-crow/pull/99) · **#94–#101** | 🔄 Queued | Operator order: **#99** merge first, then security batch. |
+| **1.8.0 GA / BFF hardening** | [data-boar#1980](https://github.com/DataBoar/data-boar/issues/1980) | 🔄 Active | Validate Maestro/KP/Crow path on **`1.8.0-rc`** before stable tag. |
+| **Cursor cloud agent commits + `required_signatures` (#2009)** | [data-boar#2009](https://github.com/DataBoar/data-boar/issues/2009) · PR **#2008** evidence | ⏸️ **Operator decision pending** | Choose: document manual re-sign runbook vs other options in issue body — **not** agent-owned. |
+| **Dependabot queue** | **#1997–#2001** open **2026-09-28** | 🔄 Reopened | Triage **one** PR (`deps` skill); prefer Actions pins before **#2000** / **#2001** majors. |
+| **CRM connector backlog (filing only)** | **#2014–#2018** | ⬜ Backlog | P2 features — not this two-week primary unless operator re-points. |
+| **Operator slowdown — token refill ~2026-09-09** | Operator **2026-08-30** | ✅ Ended | Normal **`feature`** cadence resumed **2026-09-28**. |
+| **#1840 issue queue map — PR #1841** | [#1840](https://github.com/DataBoar/data-boar/issues/1840) | ✅ Done | Map regen: `uv run python scripts/issue_queue_sequencing_map.py --write`. |
+| **#1709 operator-gated PR guard — PR #1832** | [#1709](https://github.com/DataBoar/data-boar/issues/1709) | ✅ Merged **2026-08-30** | Operator-only: add **SSHSIG attestation when gated** to ruleset **`main-gate-pii`**. |
+| **Heptapod / Codeberg give-back (AIIDCOBPP #63)** | [data-boar-shared#63](https://github.com/DataBoar/data-boar-shared/issues/63) | ⬜ Decantar | **No upstream contact** until post **09/09**. Heptapod `projects_limit: 0` — give-back via upstream issues first. |
+| **Milestone hygiene — 3 open without milestone** | [ISSUE_QUEUE_SEQUENCING_MAP.md](../ISSUE_QUEUE_SEQUENCING_MAP.md) **2026-08-30** | ⬜ Optional | `#696`, `#697`, `#1538` — assign via [#1522](https://github.com/DataBoar/data-boar/issues/1522) when energy allows. |
+| **#552 findings sink — PR #1816** | [#552](https://github.com/DataBoar/data-boar/issues/552) · [PR #1816](https://github.com/DataBoar/data-boar/pull/1816) | ✅ Merged | **#552** **CLOSED** — do not manual-close. |
+| **#553 multi-format reports — Part A ODS + path allowlist** | Session **2026-08-28** · [#553](https://github.com/DataBoar/data-boar/issues/553) · branch `feat/report-multiformat-553` | 🔄 Uncommitted WIP | Bugbot HIGH: `_REPORT_FILENAME_PATTERN` now `.xlsx`\|`.ods`. Commit Part A after `check-all`; Part B (pandoc GRC) next. Do **not** stack on #1816. |
+| **#1061 DSAR tombstone — not Boar scope** | [#1061](https://github.com/DataBoar/data-boar/issues/1061) · [tidy-tortoise#14](https://github.com/DataBoar/tidy-tortoise/issues/14) | ✅ Closed (not planned) | Milestone **v1.8.0** removed **2026-08-28**. Residual **`docs`:** drop remaining-survey wording in `PLANS_TODO.md`. |
+| **Lab-op observability plan Status drift (#1542)** | Lab session **2026-08-11→12** · [PLAN_LAB_OP_OBSERVABILITY_STACK.md](../../plans/PLAN_LAB_OP_OBSERVABILITY_STACK.md) | ✅ Done | Closed via PR **#1545** (**2026-08-12**). Phase D (Graylog) still **not** adopted — out of scope. |
+| **Product OTel gaps — LoggerProvider + CLI oneshot + preflight plan** | [#1529](https://github.com/DataBoar/data-boar/issues/1529) · [#1535](https://github.com/DataBoar/data-boar/issues/1535) · [#1540](https://github.com/DataBoar/data-boar/issues/1540) | ✅ Done (product/plan) | **#1544 / #1547 / #1548** on `main` **2026-08-12**. Residual **code:** [maestro#32](https://github.com/DataBoar/maestro/issues/32) OTel preflight in DataBoar/maestro (row below). |
+| **Maestro OTel preflight implementation (maestro#32)** | [maestro#32](https://github.com/DataBoar/maestro/issues/32) · unblocked by [#8](https://github.com/DataBoar/maestro/issues/8) close | ⬜ Pending | Implement in **DataBoar/maestro** `core/`/`engine/` — not under data-boar. |
+| **Native packages plan linkage (#1541) + Windows CI (#1427)** | [#1541](https://github.com/DataBoar/data-boar/issues/1541) · [#1427](https://github.com/DataBoar/data-boar/issues/1427) · [#1467](https://github.com/DataBoar/data-boar/issues/1467) | 🔄 #1541 closed; #1427 still open | Windows `windows-latest` job (#1427) still blocks MSI/winget (#1467). |
+| **Bestiary doctrine sidequest (#994) — 10 repos, vault SOUL → DOUTRINA + ADRs** | Sessions **2026-07-01**–**03** · `docs/private/commercial/bestiais/BEASTIE_INVENTORY_HONEST_2026-07-01.pt_BR.md` · vault `bestiais/` | 🔄 In progress | **Done:** honest inventory + roster; Homing Robin birth-triplet **pushed**; local drafts **Faithful Ferret / Sage Remora / Stealthy Stoat** (2026-07-02). **Next:** finish 7 repos (Quati, Tortoise, Mimic, Llama, Otter, Squirrel + Robin #2 enrich) — **one PR/repo**. **Maestro** phase-1 **PR #9** merged **2026-07-20** (row below closed). |
+| **Maestro private repo — phase-1 migration + companion purge (#8)** | `DataBoar/maestro` · `docs/ops/CURSOR_ECOSYSTEM_ONBOARDING.md` · data-boar **#1551** | ✅ Done | Phase-1 **PR #9** (**2026-07-20**). Spinout **#8** closed **2026-08-12** — data-boar **#1551** removed `scripts/maestro/`; consumers use **`MAESTRO_ROOT`** / sibling `../maestro` via `scripts/Resolve-MaestroRoot.ps1`. Operator gate: **ADR-0001 Proposed → Accepted**. |
+| **#828 scan_failures — open-core on `main`** | PR **#1146** merged **2026-07-03** | 🔄 Partial | Zip/7z/PDF + Bugbot on `main`. Issue **#828** stays **OPEN** for Pro-tier, fixtures, plan. |
+| **Plans housekeeping (#91 internal) + #1062 survey** | [OPERATOR_TODAY_MODE_2026-06-29.md](OPERATOR_TODAY_MODE_2026-06-29.md) | ✅ Done | **#91** merged · **#1062** merged **2026-06-30**. Residual: branches **`houseclean/plans-drift-archive-91`** / **`plans-wave-2`** — open PR or delete if superseded. |
+| **Legacy pipx / Alpine musl (no-AVX Celeron) — Claude Code spike** | Private investigation **2026-06**; TestPyPI `1.7.4.post1` | ⬜ Paused | ML stack (numpy/scipy/pandas/sklearn) on Alpine **without DL** — evidence stays **`docs/private/`** until token refill (~17h); promote to `PLAN_*` or ADR + optional TestPyPI runbook. |
+| **Dependabot queue (`deps`) — land or supersede locally** | `gh pr list` **2026-08-28** · skill **dependabot-recommendations** · ADR-0069 **`rpds-py<2026`** | 🔄 Reopened | **New 2026-08-28:** **#1802** setup-uv **10** · **#1803** claude-code-action · **#1805** CodeQL analyze · **#1804** distroless · **#1807** uv-minor-patch group · **#1808** sentence-transformers **6** (major) · **#1810** types-pyyaml. Prior **2026-08-17** queue was cleared. Triage **one** PR; do not blind-merge majors. |
+| **#1586 TCP peer pin (Mongo/Redis/SQL)** | Survey + design · slices A–F | ✅ Done | **Closed 2026-08-17** (UTC) on merge of **#1603**. Matrix on `main`: Postgres **#1589** · Mongo **#1591** · tests **#1593** · harden **#1594** · Redis **#1596** · MySQL **#1597** · mssql SSOT **#1598** / **#1588** · MSSQL pin **#1600** · Oracle **#1603**. |
+| **LAB-OP [#756](https://github.com/DataBoar/data-boar/issues/756) — disk-constrained lab host ~90% + `bw` CLI on the dev laptop Ansible** | [OPERATOR_TODAY_MODE_2026-05-29.md](OPERATOR_TODAY_MODE_2026-05-29.md) · `PLANS_TODO.md` LAB-OP § | ⬜ Pending | **`[U1]`** SSH + free space on the disk-constrained lab host before completão on that host · **`[U2]`** playbook task for **`bw`** on the dev laptop — **not** release gate; close when issue closes or defer with date |
+| **Licensing [#719](https://github.com/DataBoar/data-boar/issues/719) — dev env JWT bypass** | GitHub [P1] · `PLANS_TODO.md` **`[H0][U1]` Licensing enforcement** | ⬜ Pending | After **#704** [P0] or if prod exposure confirmed (**U0**); thin **`fix(security)`** + **A6** smoke regression |
+| **PCI-DSS v4 / global readiness — PAN noise + ADR-0052 Phase 2 (context gates)** | Operator session **2026-05-14** (strategic note; not vapour carryover) | ⬜ Pending | **Owned row:** `PLANS_TODO.md` post-`1.7.4` table **S4b** — extend `plugin_schema` + validator + `SensitivityDetector` gating (optional proximity / Luhn path); calibrate `docs/compliance-samples/compliance-sample-pci_dss.yaml` vs built-in `CREDIT_CARD`; see `PLAN_YAML_PLUGIN_SYSTEM.md` § *Phase 1b*. Close this carryover row when S4b ships or you defer with a **date** in `PLANS_TODO`. |
+| **`v1.7.4` GA + Hub `latest`** | [OPERATOR_TODAY_MODE_2026-05-11.md](OPERATOR_TODAY_MODE_2026-05-11.md) · [PUBLISHED_SYNC.md](PUBLISHED_SYNC.md) | ✅ Shipped | **GA 2026-06-26** — GitHub **v1.7.4**, Docker Hub **`latest`**, PyPI **`1.7.4.post1`**. Post-GA dev on `main` (e.g. **#1097** licensing) without semver bump until next release ritual. |
+| **`zizmor` workflow** — `.github/workflows/zizmor.yml` + local **`scripts/workflow-security-lint.ps1`** / **`.sh`** (manual pre-commit hook) | PR **#354** merged **2026-05-11**; enforced default **#732** | ✅ Done | CI enforced by default (opt out: repo var **`ZIZMOR_ENFORCE=false`**). Local stays advisory unless **`-Enforce`** or **`DATA_BOAR_ENFORCE_ZIZMOR=true`**. |
+| **Maestro DB matrix evidence (all-to-all)** | [LAB_LESSONS_LEARNED_2026_05_10.md](../lab_lessons_learned/LAB_LESSONS_LEARNED_2026_05_10.md) | ⬜ Pending | One consolidated round + per-host configs in **`docs/private/homelab/reports/`**. |
+| **Post-`1.7.4` short-sprint closure (pick one)** — **S3 CNPJ Phase 5**, **S1 Bandit Phase 3**, **S2 Scope import Phase E** | `PLANS_TODO.md` H1/U1 | ⬜ Pending | After lab metrics or same day if no LAB slot — **`feature`** + **`check-all`**. |
+| **`benchmark-ab` harness on `main` (PR #229)** — `scripts/benchmark-ab.ps1`, `benchmark_runs/` gitignore, runbook/hub, `docs/plans/BENCHMARK_EVOLUTION.md` | EOD **2026-04-27** (carryover from completão / benchmark ritual) | ✅ Merged (CI green) | When LAB slot exists, run `.\scripts\benchmark-ab.ps1` and replace **TBD** rows in `BENCHMARK_EVOLUTION.md` with real `benchmark_runs/times.txt` + manifest deltas. |
+| **1.7.0 shipped; CI `ci.yml` Sonar `if` fix; beta testers (IDENTIDADE_COLABORADOR_A / IDENTIDADE_COLABORADOR_B) synthetic tests; lab-op smoke** | [OPERATOR_TODAY_MODE_2026-04-17.md](OPERATOR_TODAY_MODE_2026-04-17.md) | ⬜ Pending | **`gh run list --workflow ci.yml`** green on `main`; **`git pull`**; short tester brief; optional **`lab-op-sync-and-collect.ps1`** / **`docker pull`** `1.7.0` — [PUBLISHED_SYNC.md](PUBLISHED_SYNC.md) |
+| **1.6.9 prep + Corporate-Entity-C-ready gates (Dependabot → CodeQL → Sonar? → Scout → check-all)** | [OPERATOR_TODAY_MODE_2026-04-16.md](OPERATOR_TODAY_MODE_2026-04-16.md) | ⬜ Superseded by 1.7.0 lane | Older checklist row — close or archive when **2026-04-17** items are done; **Corporate-Entity-C** still follows [Corporate-Entity-C_REVIEW_REQUEST_GUIDELINE.md](../Corporate-Entity-C_REVIEW_REQUEST_GUIDELINE.md) |
+| Close **1.6.8 release gate** (notes + tests + publish/defer decision) | 2026-04-02 | ⬜ Pending | Follow `OPERATOR_TODAY_MODE_2026-04-02.md` Block C; if deferred, write explicit target date |
+| New external round **WRB + Gemini** with "code is truth" framing | 2026-04-02 | ⬜ Pending | Send WRB with 3 time lenses and build Gemini bundle with `--verify`; triage in `PLAN_GEMINI_FEEDBACK_TRIAGE.md` |
+| Quantified snapshot (today / 3 days / 7 days) with front split | 2026-04-02 | ⬜ Pending | Run `.\scripts\progress-snapshot.ps1 -OutputMarkdown docs/private/progress/progress_snapshot_2026-04-02.md` |
+| Founder LinkedIn/ATS profile full refresh | 2026-04-02 | ⬜ Pending | Apply private playbook section in `LINKEDIN_ATS_AND_POSITIONING_PLAYBOOK.pt_BR.md` |
+| Time Machine USB recovery before repurposing as P0 external backup | 2026-04-02 | ⬜ Pending | Follow `docs/ops/TIME_MACHINE_USB_RECOVERY_AND_REPURPOSE.md` (read-only triage -> copy -> wipe -> new backup policy) |
+| **Corporate-Entity-C WRB** e-mail | 2026-03-26 / 03-29 / 03-31 | ⬜ Pending | Paste block: **`docs/ops/WRB_DELTA_SNAPSHOT_2026-03-31.md`** — send today or defer with a date in PLANS/private |
+| **Slack** proof-of-ping (desktop + phone) | 2026-03-27 | ✅ Done | Founder-only channel confirmed; ping received on desktop + phone (**CHAN-OK**) |
+| **Dependabot** PRs (#134 pypdf, #144 starlette, #147 pip group) | 2026-03-29 / 30 / 03-31 | ✅ Done | Merged (green + mergeable). Keep watching new PRs per **`SECURITY.md`** |
+| **Branch protection** (required checks) | 2026-03-26 optional | ⬜ Optional | Enable when you want CI/Semgrep enforced on `main` |
+| **Gemini Cold doc slice** (e.g. G-26-04 + G-26-13) | `PLANS_TODO.md` | ⬜ Optional | One **`docs`** PR; safest items first |
+| **`/help` vs `main.py`** parity skim | 2026-03-29 | ⬜ When flags change | After next CLI/dashboard flag — **`tests/test_operator_help_sync.py`** |
+
+**Done / archived (do not resurrect without new work):**
+
+- **Tag `v1.6.7` + GitHub Release + Docker Hub** — shipped **2026-03-26** — see [PUBLISHED_SYNC.md](PUBLISHED_SYNC.md).
+- **Help-sync / OpenAPI / README `--host`** for the 2026-03-27 pass — see completion logs in [OPERATOR_TODAY_MODE_2026-03-27.md](OPERATOR_TODAY_MODE_2026-03-27.md).
+
+---
+
+## Housekeeping PR (this folder move)
+
+If you have **local commits** that created **`docs/ops/today-mode/`**, finish themed commits (docs/workflow), run **`.\scripts\lint-only.ps1`** or **`check-all`**, then merge to `main`.
+
+---
+
+## LAB-NODE-01 + LMDE (parallel)
+
+Hardware install is **out of Git** — use **[`docs/ops/LMDE7_LAB-NODE-01_DEVELOPER_SETUP.md`](../LMDE7_LAB-NODE-01_DEVELOPER_SETUP.md)** ([pt-BR](../LMDE7_LAB-NODE-01_DEVELOPER_SETUP.pt_BR.md)) when the laptop is ready for **uv**, **git**, **SSH** keys, and repo clone.

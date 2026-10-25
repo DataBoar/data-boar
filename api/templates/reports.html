@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}{{ t('reports.page_title') }}{% endblock %}
+{% block content %}
+<h1><img src="/static/mascot/data_boar_mascote_color.svg" alt="" width="40" height="40" style="vertical-align: middle; margin-right: 0.35em;">{{ t('reports.h1') }}</h1>
+<p>{{ t('reports.intro') }}</p>
+<p class="sort-row">{{ t('reports.order_label') }} {% if sort == "date_desc" %}<strong>{{ t('reports.sort_newest') }}</strong>{% else %}<a href="{{ base_path }}/reports?sort=date_desc">{{ t('reports.sort_newest') }}</a>{% endif %} · {% if sort == "date_asc" %}<strong>{{ t('reports.sort_oldest') }}</strong>{% else %}<a href="{{ base_path }}/reports?sort=date_asc">{{ t('reports.sort_oldest') }}</a>{% endif %}</p>
+<table class="table">
+  <thead>
+    <tr>
+      <th>{{ t('reports.th_session') }}</th>
+      <th>{{ t('reports.th_started') }}</th>
+      <th>{{ t('reports.th_finished') }}</th>
+      <th>{{ t('reports.th_status') }}</th>
+      <th>{{ t('reports.th_tenant') }}</th>
+      <th>{{ t('reports.th_technician') }}</th>
+      <th>{{ t('reports.th_db') }}</th>
+      <th>{{ t('reports.th_fs') }}</th>
+      <th>{{ t('reports.th_failures') }}</th>
+      <th>{{ t('reports.th_report') }}</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for s in sessions %}
+    <tr>
+      <td><code>{{ s.session_id }}</code></td>
+      <td>{{ s.started_at or "—" }}</td>
+      <td>{{ s.finished_at or "—" }}</td>
+      <td>{{ s.status }}</td>
+      <td>{{ s.tenant_name or "—" }}</td>
+      <td>{{ s.technician_name or "—" }}</td>
+      <td>{{ s.database_findings }}</td>
+      <td>{{ s.filesystem_findings }}</td>
+      <td>{{ s.scan_failures }}</td>
+      <td><a href="/reports/{{ s.session_id }}" download class="btn btn-sm">{{ t('reports.download') }}</a></td>
+    </tr>
+    {% else %}
+    <tr><td colspan="10">{{ t('reports.no_sessions') }} <a href="{{ base_path }}/">{{ t('reports.dashboard_link') }}</a>.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

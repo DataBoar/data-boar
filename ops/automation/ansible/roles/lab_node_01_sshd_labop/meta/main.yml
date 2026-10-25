@@ -1,0 +1,8 @@
+---
+galaxy_info:
+  role_name: lab_node_01_sshd_labop
+  description: sshd drop-in hardening under sshd_config.d (validated with sshd -t).
+  license: BSD-3-Clause
+  platforms:
+    - name: Debian
+dependencies: []

@@ -1,0 +1,216 @@
+#!/usr/bin/env bash
+# check-all.sh — Linux/macOS (bash) mirror of scripts/check-all.ps1.
+# Same gates: gatekeeper_audit.py (uv) + gate_change_tripwire.py (ADR-0071, #1385) +
+# workflow_run_scalar_guard.py (#1918) +
+# Rust (cargo fmt/check/test, PYO3 ABI3 hint) +
+# plans-stats --write + pre-commit-and-tests.sh (venv + pre-commit + pytest).
+# Publish gate (ADR-0080, issues #1151 / #1153): default invocation (and
+# --enforced, which the versioned pre-push hook runs) MUST be ALL-GREEN before
+# git push / gh pr create. --skip-pre-commit is LOCAL ITERATION ONLY — never
+# treat it as pre-push proof.
+# From repo root:
+#   ./scripts/check-all.sh
+#   ./scripts/check-all.sh --skip-pre-commit
+#   ./scripts/check-all.sh --include-version-smoke
+#   ./scripts/check-all.sh --enforced          # + Semgrep (version from semgrep.yml image tag; network)
+# On Windows, prefer .\scripts\check-all.ps1 (gatekeeper stays gatekeeper-audit.ps1 per #560).
+# Linux/macOS: gatekeeper_audit.py avoids a silent skip when pwsh is absent (issue #560).
+# Rust requires cargo on PATH.
+# Memory safety: pre-commit-and-tests.sh runs tests/security/test_mem_integrity.py first (Hypothesis),
+# then full pytest with --deselect on that file (parity with check-all.ps1).
+set -euo pipefail
+
+REPO_ROOT=$(cd "$(dirname "$0")/.." && pwd)
+cd "$REPO_ROOT" || exit 2
+
+SKIP_PRECOMMIT=0
+INCLUDE_VERSION_SMOKE=0
+ENFORCED=0
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -SkipPreCommit | --skip-pre-commit) SKIP_PRECOMMIT=1 ;;
+    -IncludeVersionSmoke | --include-version-smoke) INCLUDE_VERSION_SMOKE=1 ;;
+    -Enforced | --enforced) ENFORCED=1 ;;
+    -h | --help)
+      echo "Usage: $0 [options]"
+      echo "  --skip-pre-commit          Only run pytest (LOCAL ITERATION — not the ADR-0080 push/PR gate)"
+      echo "  --include-version-smoke    After success, run version-readiness-smoke.ps1 (requires pwsh)"
+      echo "  --enforced                 Also run Semgrep (engine tag from semgrep.yml; needs network)"
+      echo "  -h, --help                 This help"
+      exit 0
+      ;;
+    *)
+      echo "check-all.sh: unknown option: $1" >&2
+      exit 2
+      ;;
+  esac
+  shift
+done
+
+if [[ "$SKIP_PRECOMMIT" -eq 1 ]]; then
+  printf '\033[33m%s\033[0m\n' "check-all.sh: WARNING: --skip-pre-commit is LOCAL ITERATION ONLY." >&2
+  printf '\033[33m%s\033[0m\n' "This run is NOT the ADR-0080 / #1151 / #1153 publish gate. Re-run without skip before git push / gh pr create." >&2
+fi
+
+# PII seed gate — Python port (parity with scripts/gatekeeper-audit.ps1; issue #560).
+if ! command -v uv >/dev/null 2>&1; then
+  echo "check-all.sh: ABORTED: uv not on PATH (required for scripts/gatekeeper_audit.py)." >&2
+  exit 2
+fi
+# `if ! cmd; then exit "$?"; fi` exits 0: $? is the successful `!` (bash 5).
+uv run python "$REPO_ROOT/scripts/gatekeeper_audit.py" || {
+  rc=$?
+  echo "check-all.sh: ABORTED by gatekeeper_audit (PII seed hit or gate failure)." >&2
+  exit "$rc"
+}
+
+# Same range as CI (ci.yml PII gate change tripwire). Fetch may fail offline;
+# the Python tool SKIP/fail-opens if origin/main is missing. Do not swallow the
+# tripwire exit code (#1385, ADR-0071 / ADR-0080).
+# Never `git fetch --depth=1` here: that converts a full clone into a shallow
+# repo and breaks merge-base / pii_history_guard / the tripwire itself.
+git fetch origin main 2>/dev/null || true
+uv run python "$REPO_ROOT/scripts/gate_change_tripwire.py" --base origin/main || {
+  rc=$?
+  echo "check-all.sh: ABORTED by gate_change_tripwire (ADR-0071)." >&2
+  exit "$rc"
+}
+
+uv run python "$REPO_ROOT/scripts/workflow_run_scalar_guard.py" || {
+  rc=$?
+  echo "check-all.sh: ABORTED by workflow_run_scalar_guard (#1918)." >&2
+  exit "$rc"
+}
+
+# #1926: error-level shellcheck on tracked scripts. Warning/info and the
+# selective bats slice stay out of this gate.
+echo "Running shellcheck (severity=error) on tracked shell scripts..." >&2
+if ! command -v shellcheck >/dev/null 2>&1; then
+  echo "check-all.sh: ABORTED: shellcheck not on PATH (#1926)." >&2
+  exit 1
+fi
+mapfile -d '' sh_files < <(git ls-files -z '*.sh')
+if ((${#sh_files[@]})); then
+  shellcheck --severity=error -- "${sh_files[@]}" || {
+    rc=$?
+    echo "check-all.sh: ABORTED by shellcheck (#1926)." >&2
+    exit "$rc"
+  }
+fi
+printf '\033[32m%s\033[0m\n' "Shellcheck... Passed" >&2
+
+# #1926: optional bats slice (hermetic tests under tests/bats). Not in CI.
+echo "Running optional bats slice (#1926)..." >&2
+if ! command -v bats >/dev/null 2>&1; then
+  echo "check-all.sh: WARNING: bats not on PATH; skipping tests/bats (#1926)." >&2
+else
+  if ! bats "$REPO_ROOT/tests/bats"; then
+    rc=$?
+    echo "check-all.sh: ABORTED by bats (#1926)." >&2
+    exit "$rc"
+  fi
+  printf '\033[32m%s\033[0m\n' "Bats... Passed" >&2
+fi
+
+# #2044: tracked paths that differ only by case break Windows/macOS checkout.
+uv run python "$REPO_ROOT/scripts/check_case_collisions.py" || {
+  rc=$?
+  echo "check-all.sh: ABORTED by check_case_collisions (#2044)." >&2
+  exit "$rc"
+}
+
+# #1003: non-interactive SSH/login-env parity — cargo/uv/maturin often live off default PATH.
+_ensure_login_tool_path() {
+  command -v cargo >/dev/null 2>&1 && return 0
+  if [[ -f "${HOME}/.cargo/env" ]]; then
+    # shellcheck source=/dev/null
+    . "${HOME}/.cargo/env"
+  fi
+  if [[ -d "${HOME}/.local/bin" ]]; then
+    export PATH="${HOME}/.local/bin:${PATH}"
+  fi
+  command -v cargo >/dev/null 2>&1
+}
+if ! _ensure_login_tool_path; then
+  printf '\033[31m%s\033[0m\n' "Rust Guard... Failed (cargo not on PATH; source ~/.cargo/env?)" >&2
+  exit 1
+fi
+
+# Rust guard (same commands as check-all.ps1: fmt --check, check, test --quiet)
+echo "Running Rust guard (cargo fmt, check, test)..." >&2
+if ! (
+  export PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1
+  cd "$REPO_ROOT/rust/boar_fast_filter" || exit 1
+  cargo fmt -- --check && cargo check && cargo test --quiet
+); then
+  printf '\033[31m%s\033[0m\n' "Rust Guard... Failed" >&2
+  exit 1
+fi
+printf '\033[32m%s\033[0m\n' "Rust Guard... Passed" >&2
+
+echo "=== check-all.sh: lint + tests (repo: $REPO_ROOT) ===" >&2
+
+# Keep plan dashboard stats in sync before lint/tests (same as check-all.ps1).
+PY=python3
+if ! command -v python3 >/dev/null 2>&1; then
+  PY=python
+fi
+echo "Refreshing plans status dashboard..." >&2
+"$PY" "$REPO_ROOT/scripts/plans-stats.py" --write
+
+echo "Checking hub index links..." >&2
+"$PY" "$REPO_ROOT/scripts/check_hubs.py" || {
+  echo "check-all.sh: FAILED hub link check (check_hubs.py)." >&2
+  exit 1
+}
+
+if command -v pwsh >/dev/null 2>&1; then
+  echo "Running Pester (PowerShell logic)..." >&2
+  pwsh -NoProfile -NonInteractive -File "$REPO_ROOT/scripts/run-pester.ps1" || {
+    echo "check-all.sh: FAILED Pester suite (run-pester.ps1)." >&2
+    exit 1
+  }
+else
+  echo "check-all.sh: pwsh not on PATH; skipping Pester (#984 — install pwsh for PS1 logic gate)." >&2
+fi
+
+# Delegate: same behaviour as pre-commit-and-tests.ps1 (venv recovery, pre-commit, pytest).
+pct_args=()
+if [[ "$SKIP_PRECOMMIT" -eq 1 ]]; then
+  pct_args+=(--skip-pre-commit)
+fi
+set +e
+bash "$REPO_ROOT/scripts/pre-commit-and-tests.sh" "${pct_args[@]}"
+exit_code=$?
+set -e
+if [[ "$exit_code" -ne 0 ]]; then
+  echo "check-all.sh: FAILED (see output above)." >&2
+  exit "$exit_code"
+fi
+
+sec_args=()
+if [[ "$ENFORCED" -eq 1 ]]; then
+  sec_args+=(--enforced)
+fi
+echo "=== check-all.sh: security scans (Bandit + Zizmor + Gitleaks; --enforced + OSV + Semgrep) ===" >&2
+if ! bash "$REPO_ROOT/scripts/check-all-security-scans.sh" "${sec_args[@]}"; then
+  echo "check-all.sh: FAILED security scan tier." >&2
+  exit 1
+fi
+
+if [[ "$INCLUDE_VERSION_SMOKE" -eq 1 ]]; then
+  vsmoke="$REPO_ROOT/scripts/version-readiness-smoke.ps1"
+  if [[ -f "$vsmoke" ]]; then
+    if command -v pwsh >/dev/null 2>&1; then
+      echo "Running version readiness smoke..." >&2
+      pwsh "$vsmoke" || exit "$?"
+    else
+      echo "check-all.sh: --include-version-smoke needs pwsh; skipping (script present)." >&2
+    fi
+  else
+    echo "Version readiness smoke script not found; skipping." >&2
+  fi
+fi
+
+echo "check-all.sh: OK (pre-commit, pytest, and security scans passed)." >&2
+exit 0

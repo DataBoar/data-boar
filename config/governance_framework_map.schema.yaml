@@ -1,0 +1,80 @@
+---
+# governance_framework_map.schema.yaml — STRUCTURE ONLY (OSS)
+#
+# This file documents the YAML shape for Governance Lens framework mappings.
+# It is NOT the curated commercial map.
+#
+# Curated entries ship separately:
+#   - governance_framework_map_pro.yaml        (Pro tier — Tier 1 frameworks)
+#   - governance_framework_map_enterprise.yaml (Enterprise — Tier 2 sectoral)
+# Those files are NOT committed to the public GitHub tree; they are operator/
+# licensee artefacts distributed under commercial terms (see PLAN_GOVERNANCE_LENS.md).
+#
+# Runtime loader (Phase B — #540) will validate against this schema before merging
+# findings with control-gap narratives for the Governance View.
+#
+# See: docs/plans/PLAN_GOVERNANCE_LENS.md, docs/LICENSING_SPEC.md
+
+version: "1.0"
+
+# Top-level key consumed by the future loader:
+# entries: list of mapping objects (see item_fields below).
+
+entries:
+  # --- Example 1 (synthetic — not production data) ---
+  - pattern_name: LGPD_CPF
+    target_context: database_nonprod
+    frameworks:
+      - id: COBIT-DSS05.04
+        name: "DSS05.04 — Gerenciar identidade e acesso"
+        tier: pro
+        control_gap_title: "Dados pessoais identificáveis em base não produtiva"
+        control_gap_body: >
+          Amostras indicam CPF em ambiente que pode não ter controles equivalentes
+          à produção. Evidência técnica de descoberta — não conclusão legal.
+        recommendation: "Restringir cópias de produção, mascarar CPF ou eliminar dados desnecessários."
+        deadline_days: 30
+
+  # --- Example 2 (synthetic) ---
+  - pattern_name: EMAIL
+    target_context: filesystem
+    frameworks:
+      - id: ISO27001-A.8.11
+        name: "A.8.11 — Mascaramento de dados"
+        tier: pro
+        control_gap_title: "E-mail pessoal em repositório de arquivos"
+        control_gap_body: >
+          Achado sugere dado de contato em filesystem compartilhado ou backup.
+          Avaliar necessidade de negócio e controles de acesso.
+        recommendation: "Classificar o repositório, aplicar ACL mínima e revisar retenção."
+        deadline_days: 45
+
+  # --- Example 3 (synthetic — Enterprise tier illustration) ---
+  - pattern_name: LGPD_CNPJ
+    target_context: api
+    frameworks:
+      - id: PCI-DSS-4.0-Req3
+        name: "PCI-DSS v4.0 — Requisito 3 (proteger dados armazenados)"
+        tier: enterprise
+        control_gap_title: "Identificador empresarial exposto via API"
+        control_gap_body: >
+          CNPJ em resposta ou payload de API pode indicar superfície de exposição
+          em integração. Correlacionar com escopo PCI se aplicável.
+        recommendation: "Inventariar API, tokenizar ou remover campos desnecessários; revisar logs."
+        deadline_days: 60
+
+# --- Field reference (item_fields) ---
+#
+# entries[]:
+#   pattern_name: string (required)
+#     Detector pattern name, e.g. LGPD_CPF, EMAIL — must match pattern_detected in findings.
+#   target_context: string|null (optional)
+#     Narrow match: database_nonprod | filesystem | api | share | null (any context).
+#   frameworks: list (required, min 1)
+#     - id: string (required) — stable control reference for reports/exports.
+#     - name: string (required) — human-readable control label (pt-BR in curated maps).
+#     - tier: pro|enterprise (required) — license gate for this mapping row.
+#     - control_gap_title: string (required) — short title for Governance View / pandoc export.
+#     - control_gap_body: string (required) — auditor/DPO narrative (heuristic; not legal advice).
+#     - recommendation: string (required) — suggested remediation action.
+#     - deadline_days: int|null (optional) — suggested follow-up horizon in days.

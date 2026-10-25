@@ -1,0 +1,741 @@
+"""
+Runtime license guard: open mode (default) vs enforced commercial token verification.
+"""
+
+from __future__ import annotations
+
+import base64
+import binascii
+import json
+import logging
+import os
+import re
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+import jwt
+from cryptography.exceptions import InvalidSignature
+
+from core.licensing.audit import audit_enforcement_event
+from core.licensing.feature_gate import FeatureCheckResult, check_feature
+from core.licensing.fingerprint import compute_machine_fingerprint
+from core.licensing.runtime_feature_tier import map_dbtier_string_to_tier
+from core.licensing.tier_features import Tier
+from core.licensing.integrity import (
+    check_build_digest_expected,
+    verify_manifest_optional,
+)
+from core.licensing import trust_anchor
+from core.licensing.paths import resolve_license_path
+from core.licensing.verify import (
+    CLAIM_MLDSA_SIG,
+    decode_license_jwt_hybrid,
+    load_ed25519_public_key_pem,
+    load_embedded_official_public_key_pem,
+    load_mldsa65_public_key_pem,
+    load_revocation_ids,
+    utc_now_ts,
+    RevocationListUnverified,
+)
+
+
+def _token_has_mldsa_claim(token: str) -> bool:
+    """True when the unverified JWT payload carries a ``dbmldsa_sig`` key at all.
+
+    Any present value (including ``null``, empty, or non-string) is a claim.
+    An absent key is not Ed25519-only: ``LicenseGuard`` rejects it.
+    """
+    parts = token.split(".")
+    if len(parts) != 3 or not parts[1]:
+        return False
+    try:
+        payload = json.loads(
+            base64.urlsafe_b64decode(parts[1] + "=" * (-len(parts[1]) % 4))
+        )
+    except (ValueError, binascii.Error, json.JSONDecodeError):
+        return False
+    if not isinstance(payload, dict):
+        return False
+    return CLAIM_MLDSA_SIG in payload
+
+
+def _license_detail(state: str, *, hybrid: bool, rotation_epoch: int | None) -> str:
+    """Usable states name every layer that actually verified."""
+    if state not in ("VALID", "GRACE"):
+        return state.lower()
+    parts: list[str] = []
+    if hybrid:
+        parts.append("hybrid_mldsa65_verified")
+    if rotation_epoch is not None:
+        parts.append(f"rotation_epoch_{rotation_epoch}")
+    return ";".join(parts) if parts else "ok"
+
+
+@dataclass
+class LicenseContext:
+    """Snapshot for logs, API, and report info."""
+
+    state: str
+    mode: str
+    customer_id: str = ""
+    customer_name: str = ""
+    environment: str = ""
+    license_id: str = ""
+    expires_at_iso: str = ""
+    grace_until_iso: str = ""
+    issuer_id: str = ""
+    key_id: str = ""
+    trial: bool = False
+    max_report_rows: int = 0
+    machine_fingerprint: str = ""
+    detail: str = ""
+    watermark: str = ""
+    # Product tier hint from JWT (`dbtier` claim) when mode is enforced — see LICENSING_SPEC.md
+    dbtier: str = ""
+    # Parallel scan worker cap from JWT (`dbmax_workers` claim, #551); 0 = no explicit claim.
+    max_workers: int = 0
+    # Deployment pack (#846): commercial add-on id + licensed site count. The GLOBAL
+    # deploy count is issuance-enforced (the issuer emits the pack); runtime only
+    # validates its OWN fingerprint ∈ dbmfp (single hex or pack array) — see #718.
+    deployment_pack_id: str = ""
+    max_deployments: int = 0
+
+    def to_public_dict(self) -> dict[str, Any]:
+        return {
+            "license_state": self.state,
+            "license_mode": self.mode,
+            "customer_id": self.customer_id or None,
+            "customer_name": self.customer_name or None,
+            "environment": self.environment or None,
+            "license_id": self.license_id or None,
+            "expires_at": self.expires_at_iso or None,
+            "grace_until": self.grace_until_iso or None,
+            "issuer_id": self.issuer_id or None,
+            "trial": self.trial,
+            "watermark": self.watermark or None,
+            "dbtier": self.dbtier or None,
+            "deployment_pack_id": self.deployment_pack_id or None,
+            "max_deployments": self.max_deployments or None,
+        }
+
+
+# #846: deployment-count defaults are ISSUANCE-enforced — the issuer emits the
+# fingerprint pack; runtime only validates its OWN fingerprint ∈ dbmfp (#718).
+# Pro = 2 deployments (operator-ratified 2026-06-11: on-prem + 1 cloud/branch).
+DEFAULT_PRO_DEPLOYMENTS = 2
+DEFAULT_ENTERPRISE_DEPLOYMENTS = 0  # 0 = unlimited (contract-driven)
+
+
+_DBMFP_HEX_RE = re.compile(r"[0-9a-f]{64}")
+# ASCII whitespace only: str.strip() without args also drops C0 separators
+# (0x1C-0x1F), which Go strings.TrimSpace on the issuer side keeps (#1939).
+_DBMFP_TRIM = " \t\r\n"
+
+
+def _normalize_dbmfp_entry(item: Any) -> str | None:
+    if not isinstance(item, str):
+        return None
+    v = item.strip(_DBMFP_TRIM).lower()
+    return v if _DBMFP_HEX_RE.fullmatch(v) else None
+
+
+def _parse_dbmfp_claim(raw: Any) -> list[str] | None:
+    """
+    Parse a **present** ``dbmfp`` claim (#718 + #846 + #1939).
+
+    The caller maps an absent claim to ``[]`` (no binding) and only calls this
+    when the key exists. Accepted shapes: one 64-hex fingerprint string →
+    one-entry list; a non-empty list/tuple of 64-hex strings (deployment pack)
+    → normalized list. Anything else — ``null``, empty/whitespace-only strings,
+    non-hex or wrong-length values, empty packs, non-string entries — is a
+    malformed claim → ``None`` (caller fails closed, #719 posture — a present
+    binding claim must never mean "unbound").
+    """
+    if isinstance(raw, str):
+        v = _normalize_dbmfp_entry(raw)
+        return [v] if v else None
+    if isinstance(raw, (list, tuple)):
+        if not raw:
+            return None
+        out: list[str] = []
+        for item in raw:
+            v = _normalize_dbmfp_entry(item)
+            if v is None:
+                return None
+            out.append(v)
+        return out
+    return None
+
+
+# #551 + #853 + #2047: fallback worker caps when a usable license carries no
+# dbmax_workers claim. A positive dbmax_workers claim still wins over the
+# tier default at issuance (Pro+ tokens may still carry dbmax_workers=8).
+# Pro+ is Tier.PRO_PLUS. Std uses the same floor as Community unless that
+# claim raises it. Tier resolution in enforced mode already fails closed to
+# COMMUNITY, so an unlicensed or invalid state inherits the Community cap.
+_TIER_DEFAULT_WORKER_CAP: dict[Tier, int | None] = {
+    Tier.OPEN: None,
+    Tier.COMMUNITY: 2,
+    Tier.STD: 2,
+    Tier.PRO: 4,
+    Tier.PRO_PLUS: 8,
+    Tier.ENTERPRISE: None,  # unlimited — Enterprise perk
+    Tier.PARTNER: None,  # contract-driven; treat as unlimited unless claim caps
+}
+
+_guard_instance: LicenseGuard | None = None
+
+
+def get_license_guard(config: dict[str, Any] | None = None) -> LicenseGuard:
+    """Singleton guard for process lifetime (config merged once per first call)."""
+    global _guard_instance
+    if _guard_instance is None:
+        _guard_instance = LicenseGuard(config or {})
+    return _guard_instance
+
+
+def reset_license_guard_for_tests() -> None:
+    """Clear singleton (tests only)."""
+    global _guard_instance
+    _guard_instance = None
+
+
+class LicenseGuard:
+    """
+    Evaluates licensing mode and optional JWT. Default: open (no blocking).
+    """
+
+    def __init__(self, config: dict[str, Any]) -> None:
+        lc = (config.get("licensing") or {}) if isinstance(config, dict) else {}
+        yaml_mode = str(lc.get("mode", "open")).strip().lower()
+        if yaml_mode not in ("open", "enforced"):
+            yaml_mode = "open"
+        env_mode = (os.environ.get("DATA_BOAR_LICENSE_MODE") or "").strip().lower()
+        # #719: environment can only ESCALATE open -> enforced; it can never
+        # downgrade enforced -> open. Enforcement state is determined solely by
+        # licensing.mode + a valid signed license — no env kill-switch.
+        if yaml_mode == "enforced":
+            mode = "enforced"
+            if env_mode == "open":
+                audit_enforcement_event(
+                    "env_mode_downgrade_ignored",
+                    mode="enforced",
+                    allowed=False,
+                    detail="DATA_BOAR_LICENSE_MODE=open ignored — licensing.mode is enforced",
+                )
+        elif env_mode == "enforced":
+            mode = "enforced"
+        else:
+            mode = yaml_mode
+        self.mode = mode
+        self._config = config
+        self._lc = lc
+        self._context: LicenseContext | None = None
+        self._evaluate()
+        # Audit Trail (#719): every license evaluation outcome is recorded —
+        # allow (OPEN/VALID/GRACE) at INFO, deny/expire at CRITICAL in enforced.
+        c = self.context
+        audit_enforcement_event(
+            "license_evaluated",
+            mode=c.mode,
+            state=c.state,
+            allowed=c.state in ("OPEN", "VALID", "GRACE"),
+            detail=c.detail,
+        )
+
+    def _resolve_verify_key_sources(self) -> tuple[str, str]:
+        """PEM of the Ed25519 verify key, and an unused path slot.
+
+        The verify key is the packaged Ed25519 anchor, or the Ed25519 half of
+        a rotation attestation signed by both embedded anchors (#1992).
+        Tests monkeypatch this method. Environment variables and
+        ``licensing.public_key_path`` are not accepted as keys.
+        """
+        self._rotation_epoch = None
+        self._rotation_mldsa_pem = None
+        if trust_anchor.raw_key_override_configured(
+            str(self._lc.get("public_key_path") or ""),
+            str(self._lc.get("mldsa_public_key_path") or ""),
+        ):
+            raise trust_anchor.UntrustedKeyOverride()
+        rotation_path = str(self._lc.get("rotation_attestation_path") or "").strip()
+        if rotation_path:
+            ed_anchor = load_embedded_official_public_key_pem() or ""
+            ml_anchor = trust_anchor.load_embedded_mldsa_anchor_pem()
+            try:
+                raw = Path(rotation_path).read_text(encoding="utf-8")
+            except OSError as exc:
+                raise trust_anchor.RotationRejected("attestation_unreadable") from exc
+            ed_pem, ml_pem, epoch = trust_anchor.verify_rotation_attestation(
+                raw,
+                ed25519_anchor_pem=ed_anchor,
+                mldsa_anchor_pem=ml_anchor,
+            )
+            self._rotation_epoch = epoch
+            self._rotation_mldsa_pem = ml_pem
+            return ed_pem, ""
+        embedded = load_embedded_official_public_key_pem()
+        if embedded:
+            return embedded, ""
+        return "", ""
+
+    def _load_mldsa_public_key(self) -> Any | None:
+        """ML-DSA-65 verify key for a hybrid token.
+
+        The key is the ML-DSA half of an accepted rotation, or the packaged
+        ML-DSA anchor. Raw env and YAML paths are rejected earlier as
+        ``untrusted_key_override``. Absent material returns ``None`` so
+        ``decode_license_jwt_hybrid`` fails closed instead of ignoring the claim.
+        """
+        pem = getattr(self, "_rotation_mldsa_pem", None)
+        if not pem:
+            pem = trust_anchor.load_embedded_mldsa_anchor_pem()
+        if not pem:
+            return None
+        return load_mldsa65_public_key_pem(pem)
+
+    def _evaluate(self) -> None:
+        mfp = compute_machine_fingerprint()
+        if self.mode == "open":
+            self._context = LicenseContext(
+                state="OPEN",
+                mode="open",
+                machine_fingerprint=mfp,
+                detail="enforcement_disabled",
+                watermark="",
+            )
+            return
+
+        ok_digest, digest_msg = check_build_digest_expected()
+        if not ok_digest:
+            self._context = LicenseContext(
+                state="TAMPERED",
+                mode="enforced",
+                machine_fingerprint=mfp,
+                detail=digest_msg,
+                watermark="UNAUTHORIZED_BUILD",
+            )
+            return
+
+        manifest_path = (
+            os.environ.get("DATA_BOAR_RELEASE_MANIFEST_PATH")
+            or self._lc.get("manifest_path")
+            or ""
+        ).strip()
+        ok_man, man_msg = verify_manifest_optional(manifest_path or None)
+        if not ok_man:
+            self._context = LicenseContext(
+                state="TAMPERED",
+                mode="enforced",
+                machine_fingerprint=mfp,
+                detail=man_msg,
+                watermark="UNAUTHORIZED_BUILD",
+            )
+            return
+
+        try:
+            pem_env, key_path = self._resolve_verify_key_sources()
+        except trust_anchor.UntrustedKeyOverride:
+            self._context = LicenseContext(
+                state="INVALID",
+                mode="enforced",
+                machine_fingerprint=mfp,
+                detail="untrusted_key_override",
+                watermark="UNTRUSTED_KEY",
+            )
+            return
+        except trust_anchor.RotationRejected as exc:
+            self._context = LicenseContext(
+                state="INVALID",
+                mode="enforced",
+                machine_fingerprint=mfp,
+                detail=f"rotation_rejected:{exc.detail}",
+                watermark="UNTRUSTED_KEY",
+            )
+            return
+        lic_path = resolve_license_path(self._lc.get("license_path"))
+        rev_path = (
+            os.environ.get("DATA_BOAR_LICENSE_REVOCATION_PATH")
+            or self._lc.get("revocation_list_path")
+            or ""
+        ).strip()
+
+        if not pem_env and not key_path:
+            self._context = LicenseContext(
+                state="UNLICENSED",
+                mode="enforced",
+                machine_fingerprint=mfp,
+                detail="missing_public_key",
+                watermark="NO_VERIFY_KEY",
+            )
+            return
+
+        try:
+            pub = load_ed25519_public_key_pem(pem_env)
+        except Exception as e:
+            self._context = LicenseContext(
+                state="INVALID",
+                mode="enforced",
+                machine_fingerprint=mfp,
+                detail=f"public_key_load_error:{e}",
+                watermark="INVALID_KEY_MATERIAL",
+            )
+            return
+
+        if not lic_path or not Path(lic_path).is_file():
+            self._context = LicenseContext(
+                state="UNLICENSED",
+                mode="enforced",
+                machine_fingerprint=mfp,
+                detail="missing_license_file",
+                watermark="NO_LICENSE",
+            )
+            return
+
+        try:
+            raw = Path(lic_path).read_text(encoding="utf-8").strip()
+            if not _token_has_mldsa_claim(raw):
+                self._context = LicenseContext(
+                    state="INVALID",
+                    mode="enforced",
+                    machine_fingerprint=mfp,
+                    detail="hybrid_claim_required",
+                    watermark="INVALID_TOKEN",
+                )
+                return
+            mldsa_pub = self._load_mldsa_public_key()
+            if mldsa_pub is None:
+                self._context = LicenseContext(
+                    state="INVALID",
+                    mode="enforced",
+                    machine_fingerprint=mfp,
+                    detail="missing_mldsa_anchor",
+                    watermark="INVALID_KEY_MATERIAL",
+                )
+                return
+            claims = decode_license_jwt_hybrid(raw, pub, mldsa_pub)
+        except InvalidSignature:
+            self._context = LicenseContext(
+                state="INVALID",
+                mode="enforced",
+                machine_fingerprint=mfp,
+                detail="mldsa_signature_invalid",
+                watermark="INVALID_TOKEN",
+            )
+            return
+        except jwt.PyJWTError as e:
+            self._context = LicenseContext(
+                state="INVALID",
+                mode="enforced",
+                machine_fingerprint=mfp,
+                detail=f"jwt_error:{e}",
+                watermark="INVALID_TOKEN",
+            )
+            return
+        except Exception as e:
+            self._context = LicenseContext(
+                state="INVALID",
+                mode="enforced",
+                machine_fingerprint=mfp,
+                detail=f"read_error:{e}",
+                watermark="INVALID_TOKEN",
+            )
+            return
+
+        # #717 kill-switch: an entry in the revocation list may name the
+        # license id (`sub`), a token id (`jti`), or a signing key id
+        # (`dbkid`). Any match fails CLOSED — REVOKED resolves to the
+        # Community tier via runtime_trust (_UNEXPECTED_LICENSE_STATES).
+        # #717 kill-switch + #1753: the list is opt-in (empty path → skip)
+        # but once configured it must verify like license-studio revoke.Verify
+        # — unsigned/missing .sig is TAMPERED, not an empty set.
+        try:
+            revoked = load_revocation_ids(rev_path or None, pub)
+        except RevocationListUnverified as e:
+            self._context = LicenseContext(
+                state="TAMPERED",
+                mode="enforced",
+                machine_fingerprint=mfp,
+                detail=f"revocation_unverified:{e.reason}",
+                watermark="INVALID_REVOCATION_LIST",
+            )
+            return
+        lic_id = str(claims.get("sub", ""))
+        token_id = str(claims.get("jti", "") or "")
+        key_id = str(claims.get("dbkid", "") or "")
+        revoked_field = ""
+        if lic_id and lic_id in revoked:
+            revoked_field = "sub"
+        elif token_id and token_id in revoked:
+            revoked_field = "jti"
+        elif key_id and key_id in revoked:
+            revoked_field = "dbkid"
+        if revoked_field:
+            detail = f"license_revoked:{revoked_field}"
+            self._context = LicenseContext(
+                state="REVOKED",
+                mode="enforced",
+                license_id=lic_id,
+                key_id=key_id,
+                machine_fingerprint=mfp,
+                detail=detail,
+                watermark="REVOKED",
+            )
+            # Dedicated kill-switch audit record (WARNING): the generic
+            # `license_evaluated` event still fires CRITICAL afterwards.
+            audit_enforcement_event(
+                "license_revoked",
+                mode="enforced",
+                state="REVOKED",
+                allowed=False,
+                detail=detail,
+                level=logging.WARNING,
+            )
+            return
+
+        now = utc_now_ts()
+        try:
+            exp = float(claims.get("exp", 0))
+        except (TypeError, ValueError):
+            # verify_exp is False in decode_license_jwt (#1212); require[] only
+            # checks presence. Non-numeric exp must fail CLOSED — never crash.
+            self._context = LicenseContext(
+                state="INVALID",
+                mode="enforced",
+                license_id=lic_id,
+                machine_fingerprint=mfp,
+                detail="malformed_exp_claim",
+                watermark="INVALID_TOKEN",
+            )
+            return
+        grace_until = claims.get("dbgrace")
+        try:
+            grace_ts = float(grace_until) if grace_until is not None else 0.0
+        except (TypeError, ValueError):
+            grace_ts = 0.0
+
+        exp_iso = _ts_iso(exp)
+        grace_iso = _ts_iso(grace_ts) if grace_ts else ""
+
+        # #718 + #846: dbmfp binds the license to one fingerprint (single hex
+        # string) or to a deployment pack (list of hex strings). Runtime
+        # validates only its OWN fingerprint ∈ pack; the GLOBAL deploy count
+        # (dbmax_deployments) is issuance-enforced by the issuer.
+        allowed_fps = _parse_dbmfp_claim(claims["dbmfp"]) if "dbmfp" in claims else []
+        pack_id = str(claims.get("dbdeployment_pack_id", "") or "").strip()
+        try:
+            max_deployments = int(claims.get("dbmax_deployments", 0) or 0)
+        except (TypeError, ValueError):
+            max_deployments = 0
+        if allowed_fps is None:
+            # Malformed binding claim fails CLOSED (#719 posture) — it must
+            # never degrade to "unbound".
+            self._context = LicenseContext(
+                state="INVALID",
+                mode="enforced",
+                license_id=lic_id,
+                machine_fingerprint=mfp,
+                detail="malformed_dbmfp_claim",
+                watermark="INVALID_TOKEN",
+            )
+            return
+        if allowed_fps and mfp.lower() not in allowed_fps:
+            self._context = LicenseContext(
+                state="MACHINE_MISMATCH",
+                mode="enforced",
+                license_id=lic_id,
+                customer_id=str(claims.get("dbcid", "") or ""),
+                customer_name=str(claims.get("dbcname", "") or ""),
+                environment=str(claims.get("dbenv", "") or ""),
+                expires_at_iso=exp_iso,
+                grace_until_iso=grace_iso,
+                issuer_id=str(claims.get("dbissuer", "") or ""),
+                key_id=str(claims.get("dbkid", "") or ""),
+                trial=bool(claims.get("dbtrial", False)),
+                max_report_rows=int(claims.get("dbmaxrows", 0) or 0),
+                machine_fingerprint=mfp,
+                detail="machine_fingerprint_mismatch",
+                watermark="WRONG_HOST",
+                deployment_pack_id=pack_id,
+                max_deployments=max_deployments,
+            )
+            return
+
+        bind_strict = bool(self._lc.get("machine_bind_strict")) or (
+            os.environ.get("DATA_BOAR_LICENSE_MACHINE_STRICT", "").strip().lower()
+            in ("1", "true", "yes")
+        )
+        if bind_strict and not allowed_fps:
+            self._context = LicenseContext(
+                state="UNLICENSED",
+                mode="enforced",
+                machine_fingerprint=mfp,
+                detail="machine_binding_required_but_missing_in_token",
+                watermark="BINDING_REQUIRED",
+            )
+            return
+
+        trial = bool(claims.get("dbtrial", False))
+        max_rows = int(claims.get("dbmaxrows", 0) or 0)
+        # #551: dbmax_workers claim — fail-soft on malformed values (treat as absent).
+        try:
+            claim_workers = int(claims.get("dbmax_workers", 0) or 0)
+        except (TypeError, ValueError):
+            claim_workers = 0
+        if claim_workers < 0:
+            claim_workers = 0
+
+        if now <= exp:
+            state = "VALID"
+        elif grace_ts and now <= grace_ts:
+            state = "GRACE"
+        else:
+            state = "EXPIRED"
+
+        wm = ""
+        if trial:
+            wm = "TRIAL_WATERMARK"
+        if state == "EXPIRED":
+            wm = "EXPIRED"
+
+        self._context = LicenseContext(
+            state=state,
+            mode="enforced",
+            license_id=lic_id,
+            customer_id=str(claims.get("dbcid", "") or ""),
+            customer_name=str(claims.get("dbcname", "") or ""),
+            environment=str(claims.get("dbenv", "") or ""),
+            expires_at_iso=exp_iso,
+            grace_until_iso=grace_iso,
+            issuer_id=str(claims.get("dbissuer", "") or ""),
+            key_id=str(claims.get("dbkid", "") or ""),
+            trial=trial,
+            max_report_rows=max_rows,
+            machine_fingerprint=mfp,
+            detail=_license_detail(
+                state,
+                hybrid=True,
+                rotation_epoch=getattr(self, "_rotation_epoch", None),
+            ),
+            watermark=wm,
+            dbtier=str(claims.get("dbtier") or "").strip(),
+            max_workers=claim_workers,
+            deployment_pack_id=pack_id,
+            max_deployments=max_deployments,
+        )
+
+    @property
+    def context(self) -> LicenseContext:
+        assert self._context is not None
+        return self._context
+
+    def allows_scan(self) -> bool:
+        c = self.context
+        allowed = c.state in ("OPEN", "VALID", "GRACE")
+        audit_enforcement_event(
+            "scan_gate",
+            mode=c.mode,
+            state=c.state,
+            allowed=allowed,
+            detail=c.detail if not allowed else "",
+        )
+        return allowed
+
+    def allows_full_report(self) -> bool:
+        c = self.context
+        if c.state == "OPEN":
+            return True
+        if c.state not in ("VALID", "GRACE"):
+            return False
+        if c.trial and c.max_report_rows > 0:
+            return True  # report generated with cap (trial)
+        if c.trial:
+            return True
+        return True
+
+    def trial_cap_rows(self) -> int | None:
+        """If trial with positive cap, return max rows; else None (no cap)."""
+        c = self.context
+        if c.state in ("OPEN", "VALID", "GRACE") and c.trial and c.max_report_rows > 0:
+            audit_enforcement_event(
+                "report_rows_clamped",
+                mode=c.mode,
+                state=c.state,
+                allowed=False,
+                detail=f"trial_cap={c.max_report_rows}",
+                level=logging.WARNING,
+            )
+            return c.max_report_rows
+        return None
+
+    def worker_cap(self) -> int | None:
+        """
+        Max parallel scan workers allowed by licensing (#551). ``None`` = unlimited.
+
+        Only ``enforced`` mode caps — open mode never restricts ``scan.max_workers``.
+        A positive ``dbmax_workers`` claim on a usable (VALID/GRACE) license wins;
+        otherwise the resolved tier default applies (Community 2 / Std 2 /
+        Pro 4 / Pro+ 8 / Enterprise unlimited / Partner unlimited). Enforced
+        fail-closed states resolve to the Community tier, so they inherit
+        the Community cap.
+        """
+        c = self.context
+        if c.mode != "enforced":
+            return None
+        if c.state in ("VALID", "GRACE") and c.max_workers > 0:
+            return c.max_workers
+        return _TIER_DEFAULT_WORKER_CAP.get(self.product_tier_for_features(), 2)
+
+    def product_tier_for_features(self) -> Tier:
+        """Resolve product tier for feature gates (YAML lab simulation or JWT dbtier)."""
+        from core.licensing.runtime_feature_tier import get_runtime_tier_for_features
+
+        return get_runtime_tier_for_features(self._config)
+
+    def check_feature(self, feature: str) -> FeatureCheckResult:
+        """Structured tier gate — does not raise on denial. Denials are audited."""
+        result = check_feature(feature, self.product_tier_for_features())
+        c = self.context
+        if result.allowed:
+            # Per-feature allows are high-frequency: DEBUG keeps the audit
+            # record available without flooding default INFO logs.
+            audit_enforcement_event(
+                "feature_gate",
+                mode=c.mode,
+                state=c.state,
+                allowed=True,
+                feature=result.feature,
+                tier=result.current_tier,
+                level=logging.DEBUG,
+            )
+        else:
+            audit_enforcement_event(
+                "feature_denied",
+                mode=c.mode,
+                state=c.state,
+                allowed=False,
+                feature=result.feature,
+                tier=result.current_tier,
+                detail=f"required={result.required_tier}",
+            )
+        return result
+
+    def is_allowed(self, feature: str) -> bool:
+        return self.check_feature(feature).allowed
+
+    @staticmethod
+    def tier_from_dbtier_string(raw: str) -> Tier:
+        """Map a tier label (fixtures / tests) to :class:`Tier`."""
+        return map_dbtier_string_to_tier(raw)
+
+
+def _ts_iso(ts: float) -> str:
+    if ts <= 0:
+        return ""
+    try:
+        dt = datetime.fromtimestamp(ts, tz=timezone.utc)
+        return dt.isoformat()
+    except (OSError, ValueError, OverflowError):
+        return ""

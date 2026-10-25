@@ -1,0 +1,136 @@
+# UK GDPR – sample compliance profile (UK post-Brexit + EU-like)
+#
+# How to use:
+#   1. Set in your main config:
+#        regex_overrides_file: path/to/compliance-sample-uk_gdpr.yaml
+#        ml_patterns_file: path/to/compliance-sample-uk_gdpr.yaml
+#   2. Merge the recommendation_overrides list below into your config under report.recommendation_overrides.
+#
+# This file uses keys "regex" and "terms" so the same file can be used for both regex_overrides_file and
+# ml_patterns_file. Paths are typically relative to the working directory or absolute.
+
+# Custom regex patterns; matches get norm_tag "UK GDPR" in the report.
+# Use double-quoted YAML with escaped backslashes (\\b, \\s, \\d) so linters and loaders accept; value is literal \b \s \d for regex.
+#
+# Precise geolocation (logs / APIs): same regex geometry as compliance-sample-us_va_vcdpa.yaml and
+# compliance-sample-eu_gdpr.yaml (JSON lat/lng, location: pair, latitude=&longitude=). norm_tag stays
+# "UK GDPR" for UK inventory. Heuristic only — not an ICO or lawful-basis determination.
+
+regex:
+  - name: "UK_NIN"
+    pattern: "\\b[A-Z]{2}\\s?\\d{6}\\s?[A-D]\\b"
+    norm_tag: "UK GDPR"
+  - name: "UK_NINO_ALT"
+    pattern: "\\b[A-Z]{2}\\s?\\d{2}\\s?\\d{2}\\s?\\d{2}\\s?\\d{2}\\s?[A-D]\\b"
+    norm_tag: "UK GDPR"
+  - name: "UK_JSON_LAT_PRECISION"
+    pattern: "(?i)[\"']lat[\"']\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\b"
+    norm_tag: "UK GDPR"
+  - name: "UK_JSON_LNG_PRECISION"
+    pattern: "(?i)[\"'](?:lng|lon)[\"']\\s*:\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}\\b"
+    norm_tag: "UK GDPR"
+  - name: "UK_LOCATION_CSV_PAIR"
+    pattern: "(?i)\\blocation\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*,\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "UK GDPR"
+  - name: "UK_QUERYSTRING_LAT_LONG"
+    pattern: "(?i)latitude=[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*&\\s*longitude=[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "UK GDPR"
+
+# ML training terms for column/sample classification (UK / data subject terminology).
+terms:
+  - text: "data subject"
+    label: sensitive
+  - text: "personal data"
+    label: sensitive
+  - text: "data subject rights"
+    label: sensitive
+  - text: "uk representative"
+    label: sensitive
+  - text: "ico"
+    label: sensitive
+  - text: "information commissioner"
+    label: sensitive
+  - text: "lawful basis"
+    label: sensitive
+  - text: "legitimate interest"
+    label: sensitive
+  - text: "uk gdpr"
+    label: sensitive
+  - text: "geolocation"
+    label: sensitive
+  - text: "geolocation data"
+    label: sensitive
+  - text: "precise geolocation"
+    label: sensitive
+  # Phone / contact (multiple naming schemes for column names)
+  - text: "phone"
+    label: sensitive
+  - text: "telephone"
+    label: sensitive
+  - text: "mobile"
+    label: sensitive
+  - text: "home phone"
+    label: sensitive
+  - text: "work phone"
+    label: sensitive
+  - text: "cell phone"
+    label: sensitive
+  - text: "contact number"
+    label: sensitive
+  - text: "phone number"
+    label: sensitive
+  # Name / identifier (multiple naming schemes for column names)
+  - text: "first name"
+    label: sensitive
+  - text: "last name"
+    label: sensitive
+  - text: "surname"
+    label: sensitive
+  - text: "full name"
+    label: sensitive
+  - text: "birth name"
+    label: sensitive
+  - text: "christian name"
+    label: sensitive
+  - text: "nickname"
+    label: sensitive
+  - text: "given name"
+    label: sensitive
+  - text: "family name"
+    label: sensitive
+  - text: "middle name"
+    label: sensitive
+  # ID / document (naming schemes for column names)
+  - text: "passport"
+    label: sensitive
+  - text: "id card"
+    label: sensitive
+  - text: "identity document"
+    label: sensitive
+  - text: "national id"
+    label: sensitive
+  - text: "document number"
+    label: sensitive
+  - text: "driver license"
+    label: sensitive
+  - text: "driving licence"
+    label: sensitive
+  - text: "national insurance number"
+    label: sensitive
+  - text: "ni number"
+    label: sensitive
+  - text: "voter id"
+    label: sensitive
+  - text: "green card"
+    label: sensitive
+  - text: "professional registration"
+    label: sensitive
+
+# Merge this list into config.report.recommendation_overrides.
+recommendation_overrides:
+  - norm_tag_pattern: "UK GDPR"
+    base_legal: "UK GDPR Art. 4(1); ICO guidance"
+    risk: "Identification of data subject; possible precise geolocation or biometric-adjacent fields in logs/APIs (heuristic regex only — not an ICO classification)."
+    recommendation: "Apply UK GDPR safeguards; consider DPA registration with ICO if required; where location tracking applies, confirm lawful basis and record DPIA decisions with counsel."
+    priority: "ALTA"
+    relevant_for: "DPO, UK Representative, ICO"

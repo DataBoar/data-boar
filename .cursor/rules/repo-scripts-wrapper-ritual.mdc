@@ -1,0 +1,46 @@
+---
+description: Repo script wrappers before ad-hoc shell. Situational — scripts/** or TOKEN_AWARE_SCRIPTS_HUB globs; @repo-scripts-wrapper-ritual.mdc when globs miss.
+globs:
+  - scripts/**
+  - docs/ops/TOKEN_AWARE_SCRIPTS*
+  - docs/ops/SCRIPTS_CROSS_PLATFORM*
+alwaysApply: false
+---
+
+# Repo scripts and wrapper ritual (token-aware, agreed automation)
+
+## Problem
+
+Assistants sometimes **reinvent** long PowerShell / bash / manual sequences and **“forget”** **`scripts/*.ps1`**, Python helpers under **`scripts/`**, and **skills** the repo already **documented and wired** (PII, lab-op, completão, commit/PR, Docker smoke, talent, **`es-find`**, **`repo-grep`** / **`repo-tail`** / **`repo-view`**, private stack sync, etc.). That wastes **time**, **tokens**, and drifts from **operator-agreed** behaviour.
+
+## Ritual (every task that touches automation)
+
+1. **Skim the map first** when the task is not trivially one file: **`docs/ops/TOKEN_AWARE_SCRIPTS_HUB.md`** ([pt-BR](../../docs/ops/TOKEN_AWARE_SCRIPTS_HUB.pt_BR.md)) — *what exists and where it is documented*.
+2. **Prefer the documented path:** run **`.\scripts\<Name>.ps1`** (or **`uv run python scripts/...`**) that the hub, **`docs/ops/`** runbooks, **`.cursor/rules/check-all-gate.mdc`**, or **session-mode-keywords** already associate with that flow — **not only** **`es-find.ps1`**; **`es-find`** is **one** agreed wrapper among many.
+3. **Read the skill or rule** linked from the hub row when you are unsure of flags or side effects (**`.cursor/skills/token-aware-automation/SKILL.md`**, domain skills, **`session-mode-keywords.mdc`**).
+4. **If a documented wrapper fails** (exit **≠0**, missing binary, wrong drive, auth): **tell the operator** in one short line — agreed automation is often **misinstalled or misconfigured** on the workstation. **Then** use the **documented fallback** for that script (see hub + rule for that family). Do **not** silently pivot to a different tool without saying the wrapper failed.
+5. **Under time pressure — answer first, fix wiring later:** if the fast path errors but the script’s **fallback** still returns a useful result, **ship that result** and only then (or in a calmer follow-up) tighten flags or edge cases. If the blocker **requires the operator** (**EULA**, **UAC**, service stopped, installer), **one** clear ping — assistants **reduce** toil, not add mystery failures.
+
+## Windows fast CLI (primary dev PC)
+
+- **Content search:** prefer **`scripts/repo-grep.ps1`** ( **`rg`** when installed; optional **`baregrep`** with **`-PreferBareGrep`**) over long ad-hoc **`Get-ChildItem`** + **`Select-String`** pipelines.
+- **Tail of a file:** prefer **`scripts/repo-tail.ps1`** (Git **`tail.exe`** when present) over hand-built tails. **BareTail** is **GUI** — not used for automation; the script **hints** if **`baretail.exe`** (or common typo **`baretai.exe`**) sits under **`Downloads`** so the operator knows to install **Git for Windows** for the fast path.
+- **Head / preview:** prefer **`scripts/repo-view.ps1`** ( **`bat`** / **`batcat`** when present) over pasting huge files.
+- **Filename / path index:** **`scripts/es-find.ps1`** / **`es.exe`** — see **`docs/ops/EVERYTHING_ES_PRIMARY_WINDOWS_DEV_LAB.md`**. Full table: **`docs/ops/WINDOWS_FAST_CLI_WRAPPERS.md`**.
+
+## What this does **not** mean
+
+- **Small one-liners** (`Test-Path`, `git status`, `gh pr view`) stay fine when no wrapper adds value.
+- **Linux lab-op over SSH** uses **`find`**, **`fd`**, **`locate`/`plocate`**, **`git grep`**, **`grep -r`**, **`lab-op.ps1`**, host reports — not Windows-only wrappers.
+
+## Cross-platform gate twins (`.ps1` ↔ `.sh`)
+
+When you **add or change** a **paired** dev gate script (**`check-all`**, **`lint-only`**, **`quick-test`**, **`pre-commit-and-tests`**), update **both** the **`.ps1`** and **`.sh`** in the **same PR** when practical so Linux and Windows stay aligned. Contract and table: **`docs/ops/SCRIPTS_CROSS_PLATFORM_PAIRING.md`** ([pt-BR](docs/ops/SCRIPTS_CROSS_PLATFORM_PAIRING.pt_BR.md)). **Linux/macOS** operators should prefer **`./scripts/*.sh`** from the repo root; **Windows** stays **`.\scripts\*.ps1`** unless **`pwsh`** is the deliberate choice.
+
+## Pointers
+
+- **Script index:** **`docs/ops/TOKEN_AWARE_SCRIPTS_HUB.md`** · **Cross-platform pairs:** **`docs/ops/SCRIPTS_CROSS_PLATFORM_PAIRING.md`**
+- **Daily command table:** **`.cursor/rules/check-all-gate.mdc`** · **`.cursor/skills/token-aware-automation/SKILL.md`**
+- **Filename search (Windows):** **`.cursor/rules/everything-es-cli.mdc`** · **`windows-pcloud-drive-search-discipline.mdc`**
+- **Recovery / “figure it out”:** **`.cursor/rules/operator-investigation-before-blocking.mdc`**
+- **Windows fast CLI wrappers:** **`docs/ops/WINDOWS_FAST_CLI_WRAPPERS.md`**

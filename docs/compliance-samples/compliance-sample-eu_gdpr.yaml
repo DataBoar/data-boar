@@ -1,0 +1,216 @@
+# EU GDPR – sample compliance profile (EEA; EU 27 + EEA states)
+#
+# Target audience: EEA deployments; contracts requiring EU (not UK) alignment. Norm_tag
+# "EU GDPR" for EDPB and member-state DPA references. Optional EN + DE/FR terms for multilingual EU data.
+#
+# How to use:
+#   1. Set in your main config:
+#        regex_overrides_file: path/to/compliance-sample-eu_gdpr.yaml
+#        ml_patterns_file: path/to/compliance-sample-eu_gdpr.yaml
+#   2. Merge the recommendation_overrides list below into your config under report.recommendation_overrides.
+#
+# Detection thresholds (not configurable in this file; set in main config.yaml):
+#   - sensitivity_detection.fuzzy_column_match_min_confidence (int, default 25):
+#       Minimum Levenshtein similarity for fuzzy column-name matching.
+#       Raise to 60-80 to reduce false positives on short column names.
+#   - sensitivity_detection.embedding_prototype_hint_min_confidence (int, default 20):
+#       Minimum cosine similarity for embedding-based prototype hints.
+#   The ML confidence score (0-100) is computed internally by scikit-learn
+#   predict_proba; there is no per-term min_confidence field in this YAML.
+#
+# Regulation (EU) 2016/679; EDPB; member-state DPAs.
+#
+# Precise geolocation (logs / APIs): same regex geometry as compliance-sample-us_va_vcdpa.yaml
+# (JSON lat/lng, location: pair, latitude=&longitude=); norm_tag stays "EU GDPR" for EEA inventory.
+# Heuristic only - not an automated Art. 9 / special-category legal determination.
+
+regex:
+  - name: "EU_IBAN"
+    pattern: "\\b[A-Z]{2}\\d{2}\\s?\\d{4}\\s?\\d{4}\\s?\\d{4}\\s?\\d{4}\\s?\\d{0,4}\\b"
+    norm_tag: "EU GDPR"
+  - name: "EU_VAT"
+    pattern: "\\b[A-Z]{2}?\\s?[A-Z0-9]{8,12}\\b"
+    norm_tag: "EU GDPR"
+  - name: "EU_JSON_LAT_PRECISION"
+    pattern: "(?i)[\"']lat[\"']\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\b"
+    norm_tag: "EU GDPR"
+  - name: "EU_JSON_LNG_PRECISION"
+    pattern: "(?i)[\"'](?:lng|lon)[\"']\\s*:\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}\\b"
+    norm_tag: "EU GDPR"
+  - name: "EU_LOCATION_CSV_PAIR"
+    pattern: "(?i)\\blocation\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*,\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "EU GDPR"
+  - name: "EU_QUERYSTRING_LAT_LONG"
+    pattern: "(?i)latitude=[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*&\\s*longitude=[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "EU GDPR"
+
+# ML terms: Art. 4(1) personal data, data subject; EN + DE/FR for multilingual EU.
+terms:
+  - text: "personal data"
+    label: sensitive
+  - text: "personenbezogene Daten"
+    label: sensitive
+  - text: "données personnelles"
+    label: sensitive
+  - text: "data subject"
+    label: sensitive
+  - text: "betroffene Person"
+    label: sensitive
+  - text: "personne concernée"
+    label: sensitive
+  - text: "eu gdpr"
+    label: sensitive
+  - text: "geolocation"
+    label: sensitive
+  - text: "geolocation data"
+    label: sensitive
+  - text: "biometric data"
+    label: sensitive
+  - text: "special categories of personal data"
+    label: sensitive
+  - text: "besondere kategorien personenbezogener daten"
+    label: sensitive
+  - text: "données sensibles"
+    label: sensitive
+  - text: "regulation 2016/679"
+    label: sensitive
+  - text: "edpb"
+    label: sensitive
+  - text: "lawful basis"
+    label: sensitive
+  - text: "legal basis"
+    label: sensitive
+  - text: "recital"
+    label: sensitive
+  - text: "controller"
+    label: sensitive
+  - text: "processor"
+    label: sensitive
+  # Phone / contact (EN + DE/FR for multilingual EU data)
+  - text: "phone"
+    label: sensitive
+  - text: "telephone"
+    label: sensitive
+  - text: "mobile"
+    label: sensitive
+  - text: "home phone"
+    label: sensitive
+  - text: "work phone"
+    label: sensitive
+  - text: "cell phone"
+    label: sensitive
+  - text: "téléphone"
+    label: sensitive
+  - text: "Telefon"
+    label: sensitive
+  - text: "handynummer"
+    label: sensitive
+  - text: "mobilnummer"
+    label: sensitive
+  - text: "contact number"
+    label: sensitive
+  # Name / identifier (EN + DE/FR for multilingual EU data)
+  - text: "first name"
+    label: sensitive
+  - text: "last name"
+    label: sensitive
+  - text: "surname"
+    label: sensitive
+  - text: "full name"
+    label: sensitive
+  - text: "birth name"
+    label: sensitive
+  - text: "nickname"
+    label: sensitive
+  - text: "given name"
+    label: sensitive
+  - text: "family name"
+    label: sensitive
+  - text: "vorname"
+    label: sensitive
+  - text: "nachname"
+    label: sensitive
+  - text: "geburtsname"
+    label: sensitive
+  - text: "prénom"
+    label: sensitive
+  - text: "nom de famille"
+    label: sensitive
+  - text: "nom complet"
+    label: sensitive
+  - text: "nombre"
+    label: sensitive
+  - text: "apellido"
+    label: sensitive
+  # ID / document (EN + DE/FR/ES for multilingual EU data)
+  - text: "passport"
+    label: sensitive
+  - text: "id card"
+    label: sensitive
+  - text: "identity document"
+    label: sensitive
+  - text: "national id"
+    label: sensitive
+  - text: "document number"
+    label: sensitive
+  - text: "driver license"
+    label: sensitive
+  - text: "driving licence"
+    label: sensitive
+  - text: "carte d'identité"
+    label: sensitive
+  - text: "document d'identité"
+    label: sensitive
+  - text: "passeport"
+    label: sensitive
+  - text: "Personalausweis"
+    label: sensitive
+  - text: "Reisepass"
+    label: sensitive
+  - text: "pasaporte"
+    label: sensitive
+  - text: "documento de identidad"
+    label: sensitive
+  - text: "green card"
+    label: sensitive
+  - text: "professional registration"
+    label: sensitive
+  # French document nicknames (carte bleue, carte rose, carte vitale, etc.) and regional ID
+  - text: "carte bleue"
+    label: sensitive
+  - text: "carte rose"
+    label: sensitive
+  - text: "carte vitale"
+    label: sensitive
+  - text: "titre de séjour"
+    label: sensitive
+  - text: "carte de séjour"
+    label: sensitive
+  - text: "numéro de sécurité sociale"
+    label: sensitive
+  - text: "numero de securite sociale"
+    label: sensitive
+  - text: "Aufenthaltserlaubnis"
+    label: sensitive
+  - text: "Sozialversicherungsnummer"
+    label: sensitive
+  - text: "nie"
+    label: sensitive
+  - text: "libro de familia"
+    label: sensitive
+  - text: "carnet de conducir"
+    label: sensitive
+
+recommendation_overrides:
+  - norm_tag_pattern: "PII_AMBIGUOUS"
+    base_legal: "Generic identifier – confirm manually"
+    risk: "Column name is generic (doc_id, document_id, id_number, etc.). May be PII or internal ID."
+    recommendation: "Confirm manually: verify whether the column contains personal data (PII) or only an internal identifier. If PII, apply access controls and lawful basis; if internal, treat as medium priority."
+    priority: "MÉDIA"
+    relevant_for: "Operator, DPO, Information Security"
+  - norm_tag_pattern: "EU GDPR"
+    base_legal: "Regulation (EU) 2016/679 Art. 4(1); Recitals; EDPB"
+    risk: "Identification of data subject; personal data as defined in EU GDPR."
+    recommendation: "Apply EU GDPR safeguards; ensure lawful basis and member-state DPA compliance; consider EDPB guidance."
+    priority: "ALTA"
+    relevant_for: "DPO, EU Representative, Lead DPA, EDPB"

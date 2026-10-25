@@ -1,0 +1,50 @@
+<style>
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:8px 12px;border-bottom:1px solid var(--color-border-secondary);color:var(--color-text-secondary);font-weight:500;font-size:12px}
+td{padding:8px 12px;border-bottom:0.5px solid var(--color-border-tertiary);vertical-align:top;color:var(--color-text-primary)}
+td:first-child{font-weight:500;white-space:nowrap;width:22%}
+td:nth-child(2){color:var(--color-text-secondary);width:30%}
+td:nth-child(3){width:48%}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:500}
+.b-teal{background:var(--color-background-success);color:var(--color-text-success)}
+.b-amber{background:var(--color-background-warning);color:var(--color-text-warning)}
+.b-info{background:var(--color-background-info);color:var(--color-text-info)}
+tr:last-child td{border-bottom:none}
+</style>
+<h2 class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden">Mapeamento das 5 práticas ITIL selecionadas ao Data Boar</h2>
+<table>
+<thead>
+<tr>
+<th>Prática ITIL</th>
+<th>O que a prática faz</th>
+<th>Como o Data Boar contribui</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Gestão de incidentes <span class="badge b-teal">ativo</span></td>
+<td>Restaurar serviços interrompidos com mínimo de impacto ao negócio</td>
+<td>Exposição de PII em produção é um incidente de dados. O scan identifica onde dados sensíveis residem <em>antes</em> da quebra, reduzindo o tempo de resposta e a superfície de impacto quando o incidente ocorre.</td>
+</tr>
+<tr>
+<td>Gestão de problemas <span class="badge b-teal">ativo</span></td>
+<td>Identificar e eliminar causas-raiz de incidentes recorrentes</td>
+<td>PII recorrente em colunas de log ou bancos de homologação = problema sistêmico. O histórico de scans session-over-session revela padrões: qual pipeline continua gerando exposição mesmo após remediação.</td>
+</tr>
+<tr>
+<td>Controle de mudanças <span class="badge b-amber">integração</span></td>
+<td>Garantir que mudanças sejam implementadas com risco controlado</td>
+<td>Scan pré/pós-deploy detecta se uma mudança introduziu nova exposição de PII. Integração com CI/CD: o Data Boar pode ser gate de qualidade antes de promoção para produção.</td>
+</tr>
+<tr>
+<td>Gestão de capacidade <span class="badge b-info">operacional</span></td>
+<td>Assegurar que recursos atendam demanda atual e futura</td>
+<td>Sampling configurável, timeouts por alvo, orçamento de caracteres por scan — o Data Boar opera dentro de limites de capacidade definidos pelo operador. O <code>scan_manifest</code> documenta o que foi coberto e com qual profundidade.</td>
+</tr>
+<tr>
+<td>Continuidade de serviços <span class="badge b-info">operacional</span></td>
+<td>Garantir recuperação dentro de prazos acordados após desastre</td>
+<td>O <code>scan_manifest</code> + evidência auditável do Data Boar integra o pacote de diligência pós-incidente: <em>o que existia, onde estava, quando foi verificado</em>. Base documental para resposta a reguladores após uma quebra.</td>
+</tr>
+</tbody>
+</table>

@@ -1,0 +1,55 @@
+---
+description: All documentation must exist in Brazilian Portuguese and stay in sync with the English source of truth; both must reflect the app's code, functionality, and capabilities. Use when creating or editing .md files in docs/, README, CONTRIBUTING, SECURITY, or any user-facing doc.
+globs: ["**/*.md", "docs/**/*.md", "README*.md", "CONTRIBUTING*.md", "SECURITY*.md"]
+alwaysApply: false
+---
+
+# Documentation policy (EN + pt-BR)
+
+**Rule:** All user-facing documentation **MUST** exist in **Brazilian Portuguese** and be **kept in sync** with the **English source of truth**, while reflecting the **actual source**: the **source code**, **functionalities**, and **capabilities** of the application. When you add or change docs, update EN first (to match code and behaviour), then sync the pt-BR file so structure and coverage stay aligned.
+
+- **Not European Portuguese (pt-PT):** Files **`*.pt_BR.md`** and operator-facing **pt-BR prose** must follow **Brazil** usage, not Portugal. Non-negotiable default and exceptions: **`.cursor/rules/docs-locale-pt-br-contract.mdc`** (always applied). Prefer: **arquivo** (not *ficheiro*), **compartilhamento / compartilhar** (not *partilha / partilhar*), **padrão** or **por padrão** for “default” (not *defeito / por defeito* in IT sense), **seção** (not *secção*), **executar** or **rodar** for running commands (avoid *correr* for software). Orthography: follow **Brazilian** norms where they differ from Portugal (e.g. **canônico**). Assistant chat narrative: **`AGENTS.md`** (Brazilian Portuguese for explanations).
+
+- **Source of truth (order):** **Code and application behaviour** are the deepest source of truth (config, API, CLI, capabilities). The **English (EN)** doc is the **canonical written** source and must accurately reflect the code and behaviour. **Brazilian Portuguese (pt-BR)** is the translation and must stay in sync with the EN version (same structure and coverage).
+- **Location:** Put new application documentation (guides, reference, branding) under **docs/** and link from docs/README.md. Keep at repo root only what GitHub/tooling expect (README, SECURITY, CONTRIBUTING, CODE_OF_CONDUCT, LICENSE, NOTICE). Do not move **.github/** or **.cursor/**; pointer READMEs (deploy/, tests/) or deprecated notices (database/, scanners/) may stay next to code.
+- **New documentation:** Any **new** user-facing doc (guides, reference, deploy, testing, observability, etc.) must exist in **both English and Brazilian Portuguese**. **Exception:** Plan files (e.g. `docs/plans/PLAN_*.md`, `docs/plans/PLANS_TODO.md`, `docs/plans/completed/`, `.cursor/plans/`) may be **English-only**. When adding a new doc: create the EN file first, add it to **docs/README.md** (index table) with both language links when pt-BR exists, then create the pt-BR file with the same structure and a language switcher at the top.
+- **Planning vs product (links):** Do **not** add markdown links from user-facing guides into `docs/plans/` or `.cursor/plans/`; use **docs/README.md** *Internal and reference* and **`.cursor/rules/audience-segmentation-docs.mdc`**. CI: **`tests/test_docs_external_no_plan_links.py`**.
+- **When behaviour changes:** Update the **English** doc first so it matches code and behaviour, then **sync the pt-BR** file so structure and coverage stay aligned.
+
+## Navigability (no dead ends)
+
+Documentation must be **navigable to and from** other documents so that:
+
+- Readers do not hit **dead ends** (a doc that does not link onward to related topics).
+- Operators can **discover** further details when learning the application.
+- The goal is to make it **easy for operators** to learn how to use the app, what it is capable of doing, and how to get it working properly.
+
+When writing or updating a doc: link **out** to related docs (usage, deploy, testing, troubleshooting, compliance, etc.) where the topic is mentioned; ensure the **docs/README.md** index and in-doc cross-links let readers move between topics and languages without getting stuck.
+
+## Language switcher and EN ↔ pt-BR links (required)
+
+Whenever a doc has a **Brazilian Portuguese** version (as it should for all user-facing docs except plan files), **both directions** of the link are required:
+
+- **In EN files:** At the top (right after the title), add `**Português (Brasil):** [Filename.pt_BR.md](Filename.pt_BR.md)` (or path-relative, e.g. `[deploy/DEPLOY.pt_BR.md](deploy/DEPLOY.pt_BR.md)` from `docs/`).
+- **In pt-BR files:** At the top, add `**English:** [Filename.md](Filename.md)` (or path-relative).
+
+So: **EN always links to pt-BR** when pt-BR exists, and **pt-BR always links to EN**. This allows readers in either language to switch and avoids dead ends when only one language is open.
+
+## Discoverability and cross-links
+
+When a doc mentions a topic that has its own dedicated doc, **link to that doc**. If that doc exists in both languages, provide **both links** so the user can switch easily:
+
+- Example (from an EN doc): `[DEPLOY.md](deploy/DEPLOY.md) ([pt-BR](deploy/DEPLOY.pt_BR.md))`
+- Example (from a pt-BR doc): `[DEPLOY.pt_BR.md](deploy/DEPLOY.pt_BR.md) ([EN](deploy/DEPLOY.md))`
+
+Typical cross-link targets: deploy (Docker, Kubernetes), testing, topology, commit/PR, compliance frameworks, sensitivity detection, adding connectors, usage. The main index is **docs/README.md**.
+
+## Locale guard (pt-BR vs pt-PT)
+
+After substantive edits to **`*.pt_BR.md`**, run **`uv run pytest tests/test_docs_pt_br_locale.py -v`** so common **European Portuguese** markers (e.g. *ficheiro*, *partilhar*, *secção*, *utilizador*, *tem de*, *continua a usar*) do not slip back in. The scan includes **`docs/private/**/*.pt_BR.md`** when that tree exists locally (same bar as markdown lint for operator notes). See **`.cursor/rules/docs-pt-br-locale.mdc`** for the preference table and how to extend the scan (e.g. tracked pitch/website YAML).
+
+## Reference
+
+- **Full policy and doc index:** **docs/README.md** (section "Documentation policy").
+- **Skill:** `.cursor/skills/documentation-en-pt-br/SKILL.md` – step-by-step when adding or updating docs (EN first, index, pt-BR, markdown fix/lint).
+- **Locale (pt-BR):** `.cursor/rules/docs-pt-br-locale.mdc` and **`tests/test_docs_pt_br_locale.py`**.

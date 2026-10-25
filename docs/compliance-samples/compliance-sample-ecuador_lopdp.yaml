@@ -1,0 +1,205 @@
+# Ecuador — Ley Orgánica de Protección de Datos Personales (LOPDP)
+# Approved: 26 May 2021; full enforcement: 26 May 2023 (2-year transition).
+#
+# NOT LEGAL ADVICE. Technical starting point for inventory of personal data
+# fields in systems that may fall under Ecuador's LOPDP. Does NOT certify
+# compliance or replace DPO analysis or legal counsel.
+#
+# Authority: Autoridad de Protección de Datos Personales (APDP) — Ecuador
+# Reference: Registro Oficial N° 459 (26 May 2021)
+#
+# Key scope: organisations processing personal data of individuals located in
+# Ecuador, or organisations located in Ecuador processing data abroad
+# (extraterritorial reach). LOPDP is strongly GDPR-influenced.
+#
+# Key differentiator: Art. 4 defines condición migratoria as sensitive data
+# (unusual among LatAm frameworks); Art. 25 lists special categories; Art. 26
+# sets processing conditions. Identifiers (cédula, RUC, passport) use
+# contextual column labels — not bare 10-digit matchers (high FP; same class
+# as ISPB / nude CPF).
+# Breach notification: Art. 43 — five days. Art. 42 is impact assessment.
+#
+# Pair with: compliance-sample-colombia_1581.yaml,
+# compliance-sample-chile_privacy.yaml, or compliance-sample-mexico_lfpdppp.yaml.
+#
+# NOTE — recommendation_overrides use distinctive Art. N (role) patterns.
+# Do not add a bare "LOPDP" catch-all: _find_override_row is bidirectional
+# substring match and would steal every LOPDP row.
+#
+# How to use:
+#   regex_overrides_file: path/to/compliance-sample-ecuador_lopdp.yaml
+#   ml_patterns_file:     path/to/compliance-sample-ecuador_lopdp.yaml
+#   Merge recommendation_overrides into report.recommendation_overrides.
+
+regex:
+  - name: "EC_FIELD_CEDULA_LABEL"
+    pattern: "(?i)(?:^|_|\b)(cedula[_\\s]?(?:de[_\\s]?)?identidad|numero[_\\s]?(?:de[_\\s]?)?cedula|ci[_\\s]?ecuador|cedula[_\\s]?ecuatoriana|cédula[_\\s]?(?:de[_\\s]?)?identidad)\\w*"
+    norm_tag: "LOPDP Art. 4 (dato personal — cédula)"
+
+  - name: "EC_FIELD_RUC_LABEL"
+    pattern: "(?i)(?:^|_|\b)(numero[_\\s]?(?:de[_\\s]?)?ruc|ruc[_\\s]?ecuador|ruc[_\\s]?contribuyente|registro[_\\s]?unico[_\\s]?(?:de[_\\s]?)?contribuyentes)\\w*"
+    norm_tag: "LOPDP Art. 4 (dato personal — RUC)"
+
+  - name: "EC_FIELD_PASSPORT_LABEL"
+    pattern: "(?i)(?:^|_|\b)(pasaporte[_\\s]?ecuador|numero[_\\s]?pasaporte[_\\s]?ec|passport[_\\s]?ec|ec[_\\s]?passport)\\w*"
+    norm_tag: "LOPDP Art. 4 (dato personal — pasaporte)"
+
+  - name: "EC_FIELD_HEALTH_LABEL"
+    pattern: "(?i)(?:^|_|\b)(historia[_\\s]?clinica|expediente[_\\s]?medico|datos[_\\s]?salud|registro[_\\s]?medico|diagnostico[_\\s]?medico)\\w*"
+    norm_tag: "LOPDP Art. 25 (categoría especial — salud)"
+
+  - name: "EC_FIELD_MIGRATION_LABEL"
+    # Condición migratoria is sensitive under Art. 4; Art. 25/26 govern special-category processing.
+    pattern: "(?i)(?:^|_|\b)(estatus[_\\s]?migratorio|condicion[_\\s]?migratoria|visa[_\\s]?tipo|permiso[_\\s]?(?:de[_\\s]?)?residencia|status[_\\s]?migratorio)\\w*"
+    norm_tag: "LOPDP Art. 4 y 25 (dato sensible — migratorio)"
+
+  - name: "EC_FIELD_MINOR_LABEL"
+    pattern: "(?i)(?:^|_|\b)(datos[_\\s]?menores|datos[_\\s]?ninos|consentimiento[_\\s]?parental|menor[_\\s]?(?:de[_\\s]?)?edad)\\w*"
+    norm_tag: "LOPDP Art. 25 (categoría especial — NNA)"
+
+  - name: "EC_LOPDP_JSON_LAT_PRECISION"
+    pattern: "(?i)[\"']lat[\"']\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\b"
+    norm_tag: "LOPDP Art. 4 (dato personal — geolocalización)"
+
+  - name: "EC_LOPDP_JSON_LNG_PRECISION"
+    pattern: "(?i)[\"'](?:lng|lon)[\"']\\s*:\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}\\b"
+    norm_tag: "LOPDP Art. 4 (dato personal — geolocalización)"
+
+  - name: "EC_LOPDP_LOCATION_CSV_PAIR"
+    pattern: "(?i)\\blocation\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*,\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "LOPDP Art. 4 (dato personal — geolocalización)"
+
+terms:
+  - { text: "datos personales", label: sensitive }
+  - { text: "dato personal", label: sensitive }
+  - { text: "personal data", label: sensitive }
+  - { text: "información personal", label: sensitive }
+  - { text: "titular de datos", label: sensitive }
+  - { text: "data subject", label: sensitive }
+
+  - { text: "cédula de identidad", label: sensitive }
+  - { text: "cedula de identidad", label: sensitive }
+  - { text: "número de cédula", label: sensitive }
+  - { text: "numero de cedula", label: sensitive }
+  - { text: "registro único de contribuyentes", label: sensitive }
+  - { text: "registro unico de contribuyentes", label: sensitive }
+  - { text: "documento de identidad", label: sensitive }
+  - { text: "national id", label: sensitive }
+
+  - { text: "datos de salud", label: sensitive }
+  - { text: "historia clínica", label: sensitive }
+  - { text: "historia clinica", label: sensitive }
+  - { text: "health data", label: sensitive }
+  - { text: "medical record", label: sensitive }
+  - { text: "datos genéticos", label: sensitive }
+  - { text: "datos geneticos", label: sensitive }
+  - { text: "datos biométricos", label: sensitive }
+  - { text: "datos biometricos", label: sensitive }
+  - { text: "genetic data", label: sensitive }
+  - { text: "biometric data", label: sensitive }
+  - { text: "orientación sexual", label: sensitive }
+  - { text: "orientacion sexual", label: sensitive }
+  - { text: "vida sexual", label: sensitive }
+  - { text: "sexual orientation", label: sensitive }
+  - { text: "opinión política", label: sensitive }
+  - { text: "opinion politica", label: sensitive }
+  - { text: "creencia religiosa", label: sensitive }
+  - { text: "origen racial", label: sensitive }
+  - { text: "origen étnico", label: sensitive }
+  - { text: "origen etnico", label: sensitive }
+  - { text: "racial origin", label: sensitive }
+  - { text: "ethnic origin", label: sensitive }
+  - { text: "afiliación sindical", label: sensitive }
+  - { text: "trade union membership", label: sensitive }
+
+  - { text: "estatus migratorio", label: sensitive }
+  - { text: "condición migratoria", label: sensitive }
+  - { text: "condicion migratoria", label: sensitive }
+  - { text: "migratory status", label: sensitive }
+  - { text: "permiso de residencia", label: sensitive }
+  - { text: "residency permit", label: sensitive }
+  - { text: "solicitante de asilo", label: sensitive }
+
+  - { text: "datos de niños", label: sensitive }
+  - { text: "datos de menores", label: sensitive }
+  - { text: "datos de niñas y niños", label: sensitive }
+  - { text: "children's data", label: sensitive }
+  - { text: "menor de edad", label: sensitive }
+  - { text: "consentimiento parental", label: sensitive }
+
+  - { text: "correo electrónico", label: sensitive }
+  - { text: "correo electronico", label: sensitive }
+  - { text: "número de teléfono", label: sensitive }
+  - { text: "numero de telefono", label: sensitive }
+  - { text: "fecha de nacimiento", label: sensitive }
+  - { text: "date of birth", label: sensitive }
+  - { text: "nombre completo", label: sensitive }
+  - { text: "full name", label: sensitive }
+
+  - { text: "datos financieros", label: sensitive }
+  - { text: "cuenta bancaria", label: sensitive }
+  - { text: "bank account", label: sensitive }
+  - { text: "tarjeta de crédito", label: sensitive }
+  - { text: "tarjeta de credito", label: sensitive }
+  - { text: "credit card", label: sensitive }
+
+  - { text: "geolocalización", label: sensitive }
+  - { text: "geolocalizacion", label: sensitive }
+  - { text: "ubicación precisa", label: sensitive }
+  - { text: "ubicacion precisa", label: sensitive }
+  - { text: "precise geolocation", label: sensitive }
+
+  - { text: "product_id", label: non_sensitive }
+  - { text: "item_code", label: non_sensitive }
+  - { text: "session_log", label: non_sensitive }
+  - { text: "debug_output", label: non_sensitive }
+
+recommendation_overrides:
+  - norm_tag_pattern: "LOPDP Art. 25 (categoría especial — salud)"
+    base_legal: "LOPDP Ecuador Art. 4 (datos relativos a la salud / datos sensibles) and Art. 25(c) (special category). Art. 26 sets processing conditions (explicit consent or a statutory exception). Full enforcement since 26 May 2023. Authority: Autoridad de Protección de Datos Personales."
+    risk: "Health data is a special category. Requires a qualified legal basis and stronger security measures. A breach may trigger supervisory action and Art. 43 notification."
+    recommendation: "Verify legal basis (Art. 26). Encrypt at rest and in transit. Limit access. Notify the authority of security breaches under Art. 43 (five days). Consult DPO and legal counsel. Not a legal conclusion."
+    priority: "ALTA"
+    relevant_for: "DPO, legal, CISO, APDP compliance"
+
+  - norm_tag_pattern: "LOPDP Art. 4 y 25 (dato sensible — migratorio)"
+    base_legal: "LOPDP Ecuador Art. 4 — condición migratoria is listed as sensitive data; Art. 25(a) special categories; Art. 26 processing conditions. Full enforcement since 26 May 2023. Authority: Autoridad de Protección de Datos Personales."
+    risk: "Migratory status is a sensitive category under LOPDP — unusual among LatAm frameworks. Processing typically needs explicit consent or another Art. 26 ground. Exposure can seriously harm the data subject."
+    recommendation: "Verify Art. 26 legal basis for processing migratory status. Apply least-privilege access. Review retention. Consult DPO and legal counsel. Not a legal conclusion."
+    priority: "ALTA"
+    relevant_for: "DPO, legal, CISO, human resources"
+
+  - norm_tag_pattern: "LOPDP Art. 25 (categoría especial — NNA)"
+    base_legal: "LOPDP Ecuador Art. 25(b) — data of niñas, niños y adolescentes is a special category. Art. 21 restricts automated decisions involving children's data; Art. 24 covers exercise of rights via legal representatives. Full enforcement since 26 May 2023."
+    risk: "Column names indicate children's or minors' data. Art. 25 requires additional safeguards beyond ordinary personal data."
+    recommendation: "Confirm representative-consent workflow and purpose limitation. Minimize retention. This does not certify age verification. Consult DPO. Not a legal conclusion."
+    priority: "ALTA"
+    relevant_for: "DPO, legal, product, education / HR operations"
+
+  - norm_tag_pattern: "LOPDP Art. 4 (dato personal — cédula)"
+    base_legal: "LOPDP Ecuador Art. 4 — a cédula is personal data (identifies a natural person). Art. 7 governs lawful processing. Full enforcement since 26 May 2023."
+    risk: "Ecuadorian cédula fields identify the data subject directly. Unauthorized exposure can enable identity fraud and phishing."
+    recommendation: "Apply data minimization. Verify Art. 7 legal basis and purpose. Encrypt at rest. Restrict access. Notify security breaches under Art. 43 (five days). Consult DPO. Not a legal conclusion."
+    priority: "ALTA"
+    relevant_for: "DPO, legal, CISO, operations"
+
+  - norm_tag_pattern: "LOPDP Art. 4 (dato personal — RUC)"
+    base_legal: "LOPDP Ecuador Art. 4 — RUC can identify a natural person (cédula + establishment suffix) or a legal entity. Art. 7 governs lawful processing when the RUC relates to an identifiable individual. Full enforcement since 26 May 2023."
+    risk: "RUC fields may identify a natural person or link a person to a tax registration. Treat as personal data when they relate to an identifiable individual."
+    recommendation: "Confirm whether the RUC identifies a natural person. Minimize storage of full RUC when a token or last-four suffices. Consult DPO. Not a legal conclusion."
+    priority: "ALTA"
+    relevant_for: "DPO, legal, finance, operations"
+
+  - norm_tag_pattern: "LOPDP Art. 4 (dato personal — pasaporte)"
+    base_legal: "LOPDP Ecuador Art. 4 — a passport number identifies the data subject. Art. 7 governs lawful processing. Full enforcement since 26 May 2023."
+    risk: "Passport numbers enable direct identification. Combined with other fields, they raise identity-fraud risk."
+    recommendation: "Verify whether retaining the passport number is necessary versus a verification flag. Encrypt and apply least privilege. Consult DPO. Not a legal conclusion."
+    priority: "ALTA"
+    relevant_for: "DPO, legal, HR operations"
+
+  - norm_tag_pattern: "LOPDP Art. 4 (dato personal — geolocalización)"
+    base_legal: "LOPDP Ecuador Art. 4 — precise geolocation can identify or make identifiable a natural person. Art. 7 governs lawful processing. Full enforcement since 26 May 2023."
+    risk: "Precise geolocation can track the data subject. Processing without consent or another Art. 7 basis may violate LOPDP."
+    recommendation: "Minimize stored location precision. Verify consent or another legal basis. Review retention. Consult DPO and legal counsel. Heuristic inventory — not a legal conclusion."
+    priority: "MÉDIA"
+    relevant_for: "DPO, product, legal"

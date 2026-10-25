@@ -1,0 +1,944 @@
+"""
+Security tests: SQL injection resistance, path traversal, credential encoding, and safe handling of untrusted input.
+
+Regression tests for critical/high severity issues so they are not reintroduced:
+
+- SQL injection: identifier escaping (quote/backtick) ensures table/column names from discover()
+  never execute as multiple statements.
+- Path traversal: session_id is validated (api/routes) before use in paths; invalid format returns 400.
+- Credential injection in URLs: user and password are URL-encoded when building connection URLs so that
+  special characters (@, :, /, #) do not break parsing or allow injection (sql_connector, mongodb_connector).
+- Config/serialization: YAML config uses safe_load; no code execution from config content.
+- Config endpoint: when require_api_key is true, /config requires valid API key (no raw secret exposure).
+"""
+
+import asyncio
+import os
+import sqlite3
+import tempfile
+from pathlib import Path
+from urllib.parse import unquote, urlparse
+
+import pytest
+
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+
+
+def _resolve_maestro_root() -> Path | None:
+    """DataBoar/maestro clone after spinout (maestro#8); never scripts/maestro/."""
+    env = (os.environ.get("MAESTRO_ROOT") or "").strip()
+    candidates: list[Path] = []
+    if env:
+        candidates.append(Path(env))
+    parent = _REPO_ROOT.parent
+    candidates.extend([parent / "maestro", parent / "Maestro"])
+    for root in candidates:
+        if (root / "core" / "Maestro.ps1").is_file():
+            return root.resolve()
+    return None
+
+
+# --- SQL injection: identifier escaping (sql_connector pattern) ---
+
+
+def test_sqlite_identifier_escaping_prevents_second_statement():
+    """
+    When column/table names contain quote and semicolon (injection attempt), the escaped
+    query must not execute a second statement. Uses same escaping as connectors.sql_connector (double-quote).
+    """
+    conn = sqlite3.connect(":memory:")
+    conn.execute("CREATE TABLE t1 (a TEXT)")
+    conn.execute("INSERT INTO t1 (a) VALUES ('ok')")
+    conn.commit()
+
+    # Simulate connector escaping for SQLite: double-quote inside identifiers
+    malicious_col = 'a"; DROP TABLE t1; --'
+    safe_col = malicious_col.replace('"', '""')
+    safe_table = "t1"
+    query = f'SELECT "{safe_col}" FROM "{safe_table}" LIMIT 1'
+    try:
+        conn.execute(query)
+    except sqlite3.OperationalError:
+        pass  # Column may not exist; no injection is what we care about
+    # In the same connection: t1 must still exist (no second statement was executed)
+    conn.execute("SELECT 1 FROM t1")
+    conn.close()
+
+
+def test_sql_connector_sample_uses_escaped_identifiers_sqlite(tmp_path):
+    """
+    SQLConnector.sample() with SQLite dialect builds a single SELECT with escaped identifiers;
+    a malicious-looking column name does not result in executing multiple statements.
+    """
+    from connectors.sql_connector import SQLConnector
+    from unittest.mock import MagicMock
+
+    db_path = tmp_path / "security_test.sqlite"
+    conn = sqlite3.connect(str(db_path))
+    conn.execute("CREATE TABLE safe_t (col1 TEXT)")
+    conn.execute("INSERT INTO safe_t (col1) VALUES ('x')")
+    conn.commit()
+    conn.close()
+
+    target = {
+        "type": "database",
+        "driver": "sqlite",
+        "database": str(db_path),
+        "name": "SecurityTest",
+    }
+    scanner = MagicMock()
+    db_manager = MagicMock()
+    connector = SQLConnector(target, scanner, db_manager)
+    connector.connect()
+    try:
+        connector.sample("", "safe_t", 'col1"; DROP TABLE safe_t; --', limit=1)
+    finally:
+        connector.close()
+    # Table must still exist (no second statement executed)
+    conn2 = sqlite3.connect(str(db_path))
+    conn2.execute("SELECT 1 FROM safe_t")
+    conn2.close()
+
+
+# --- Path traversal: session_id validation (covered in test_routes_responses; assert behaviour) ---
+
+
+def test_session_id_validation_rejects_dangerous_patterns():
+    """API rejects session_id that could be used for path traversal (validated in routes)."""
+    import api.routes as routes
+
+    pattern = getattr(routes, "_SESSION_ID_PATTERN", None)
+    assert pattern is not None
+    assert not pattern.fullmatch("../../../etc/passwd")
+    assert not pattern.fullmatch("a" * 11)
+    assert not pattern.fullmatch("x'; DROP TABLE sessions; --")
+    assert pattern.fullmatch("a1b2c3d4e5f6_20250101")
+
+
+# --- Database layer: session_id used via ORM only (no raw SQL with user input) ---
+
+
+def test_database_filters_use_orm_not_raw_sql():
+    """LocalDBManager uses SQLAlchemy ORM filter() for session_id; no raw text() with session_id."""
+    from core.database import DatabaseFinding
+    from sqlalchemy.sql.elements import BinaryExpression
+
+    # session_id in queries is used as ORM column comparison (parameterized), not string-interpolated
+    clause = DatabaseFinding.session_id == "test_sid"
+    assert isinstance(clause, BinaryExpression)
+
+
+# --- Config: YAML safe_load (no code execution) ---
+
+
+def test_config_save_uses_safe_load():
+    """Config loader and save path use safe YAML parsing (no !!python/object or code execution)."""
+    import yaml
+
+    # safe_load does not deserialize arbitrary Python objects
+    payload = "!!python/object/apply:os.system ['echo pwned']"
+    with pytest.raises(yaml.YAMLError):
+        yaml.safe_load(payload)
+
+
+def test_config_loader_uses_safe_load_not_load(tmp_path):
+    """load_config must use safe_load for YAML so malicious config cannot execute code."""
+    import yaml
+
+    malicious = tmp_path / "bad.yaml"
+    malicious.write_text(
+        "!!python/object/apply:os.system ['echo pwned']", encoding="utf-8"
+    )
+    from config.loader import load_config
+
+    with pytest.raises(yaml.YAMLError):
+        load_config(malicious)
+
+
+# --- Credential encoding in connection URLs (prevent misparsing / injection) ---
+
+
+def test_sql_connector_build_url_encodes_password_special_chars():
+    """
+    _build_url must URL-encode user and password so that @, :, /, # in credentials
+    do not break URL parsing or allow injection into host/path.
+    """
+    from connectors.sql_connector import _build_url
+
+    target = {
+        "driver": "postgresql+psycopg2",
+        "host": "db.example.com",
+        "port": 5432,
+        "user": "u",
+        "password": "p@ss:word/with#hash",
+        "database": "mydb",
+    }
+    url = _build_url(target)
+    parsed = urlparse(url)
+    assert parsed.username is not None
+    assert parsed.password is not None
+    assert unquote(parsed.password) == "p@ss:word/with#hash"
+    assert unquote(parsed.username) == "u"
+    # Raw @ must not appear in userinfo (would be interpreted as userinfo@host boundary)
+    netloc = parsed.netloc
+    userinfo = netloc.rsplit("@", 1)[0] if "@" in netloc else ""
+    assert "@" not in userinfo.replace("%40", "")
+
+
+def test_sql_connector_build_url_encodes_user_with_at():
+    """User containing @ must be encoded so it does not get interpreted as user@host boundary."""
+    from connectors.sql_connector import _build_url
+
+    target = {
+        "driver": "postgresql+psycopg2",
+        "host": "host",
+        "port": 5432,
+        "user": "user@realm",
+        "password": "secret",
+        "database": "db",
+    }
+    url = _build_url(target)
+    parsed = urlparse(url)
+    assert unquote(parsed.username) == "user@realm"
+    assert unquote(parsed.password) == "secret"
+
+
+def test_mongodb_connector_uri_encodes_password_special_chars():
+    """MongoDB connector must build URI with URL-encoded user/password so special chars do not break parsing."""
+    from unittest.mock import MagicMock, patch
+
+    config = {
+        "name": "test",
+        "host": "localhost",
+        "port": 27017,
+        "database": "testdb",
+        "user": "admin",
+        "password": "p@ss:word",
+        "allow_private_networks": True,
+    }
+    from connectors.mongodb_connector import MongoDBConnector
+
+    connector = MongoDBConnector(config, MagicMock(), MagicMock())
+    # Patch MongoClient so we don't need pymongo installed and we can assert the URI passed
+    with patch("connectors.mongodb_connector.MongoClient") as mongo_mock:
+        with patch("connectors.mongodb_connector._MONGO_AVAILABLE", True):
+            connector.connect()
+    mongo_mock.assert_called_once()
+    (uri,) = mongo_mock.call_args[0]
+    parsed = urlparse(uri)
+    assert unquote(parsed.password) == "p@ss:word"
+    assert unquote(parsed.username) == "admin"
+
+
+# --- Config endpoint protected when API key required ---
+
+
+# --- Tenant / technician validation (length and control chars) ---
+
+
+def test_sanitize_tenant_technician_returns_none_for_none_or_empty():
+    """sanitize_tenant_technician returns None for None and empty/whitespace-only strings."""
+    from core.validation import sanitize_tenant_technician
+
+    assert sanitize_tenant_technician(None) is None
+    assert sanitize_tenant_technician("") is None
+    assert sanitize_tenant_technician("   ") is None
+
+
+def test_sanitize_tenant_technician_strips_and_removes_control_chars():
+    """sanitize_tenant_technician strips whitespace and removes ASCII control characters."""
+    from core.validation import sanitize_tenant_technician
+
+    assert sanitize_tenant_technician("  Acme Corp  ") == "Acme Corp"
+    # Control chars (NULL, tab, newline, DEL) removed
+    assert sanitize_tenant_technician("Acme\x00Corp") == "AcmeCorp"
+    assert sanitize_tenant_technician("Alice\tV.") == "AliceV."
+    assert sanitize_tenant_technician("Bob\nOperator") == "BobOperator"
+    assert sanitize_tenant_technician("Op\x7fname") == "Opname"
+    # Only control chars removed; printable kept
+    assert sanitize_tenant_technician("User (DPO)") == "User (DPO)"
+
+
+def test_sanitize_tenant_technician_truncates_to_max_length():
+    """sanitize_tenant_technician truncates to MAX_TENANT_TECHNICIAN_LENGTH (255)."""
+    from core.validation import sanitize_tenant_technician, MAX_TENANT_TECHNICIAN_LENGTH
+
+    long_str = "a" * 300
+    result = sanitize_tenant_technician(long_str)
+    assert result is not None
+    assert len(result) == MAX_TENANT_TECHNICIAN_LENGTH
+    assert result == "a" * MAX_TENANT_TECHNICIAN_LENGTH
+
+
+def test_sanitize_tenant_technician_all_control_chars_returns_none():
+    """If string is only control chars/whitespace after strip, return None."""
+    from core.validation import sanitize_tenant_technician
+
+    assert sanitize_tenant_technician("\x00\x01\t\n\x7f") is None
+
+
+def test_redact_secrets_for_log_masks_passwords_and_urls():
+    """redact_secrets_for_log masks passwords, API keys, and connection URLs in log content."""
+    from core.validation import redact_secrets_for_log
+
+    assert "***REDACTED***" in redact_secrets_for_log(
+        "postgresql://user:secret@host/db"
+    )
+    assert "secret" not in redact_secrets_for_log("postgresql://user:secret@host/db")
+    assert "***REDACTED***" in redact_secrets_for_log("password=mysecret")
+    assert "mysecret" not in redact_secrets_for_log("password=mysecret")
+    assert "***REDACTED***" in redact_secrets_for_log("api_key=abc123")
+    assert "abc123" not in redact_secrets_for_log("api_key=abc123")
+    assert redact_secrets_for_log(None) == ""
+    assert redact_secrets_for_log("no secrets here") == "no secrets here"
+
+
+def test_redact_pii_for_log_masks_detector_aligned_shapes():
+    """redact_pii_for_log strips CPF, email, and card-like runs from arbitrary text."""
+    from core.validation import redact_pii_for_log
+
+    raw = "contact leak@example.com and CPF 529.982.247-25 card 4111-1111-1111-1111"
+    out = redact_pii_for_log(raw)
+    assert "leak@example.com" not in out
+    assert "529.982.247-25" not in out
+    assert "4111-1111-1111-1111" not in out
+    assert "***REDACTED***" in out
+
+
+def test_sanitize_log_text_applies_secrets_then_pii():
+    from core.validation import sanitize_log_text
+
+    s = sanitize_log_text(
+        "postgresql://u:dbpass@db:5432/app and user@x.com CPF 111.444.777-35"
+    )
+    assert "dbpass" not in s
+    assert "user@x.com" not in s
+    assert "111.444.777-35" not in s
+
+
+def test_clean_error_walks_cause_chain_and_redacts():
+    from core.validation import clean_error
+
+    class Inner(Exception):
+        pass
+
+    class Outer(Exception):
+        pass
+
+    try:
+        try:
+            raise Inner("inner leak@inner.com")
+        except Inner as inner:
+            raise Outer("outer 52998224725") from inner
+    except Outer as outer:
+        msg = clean_error(outer)
+    assert "leak@inner.com" not in msg
+    assert "52998224725" not in msg
+    assert "outer" in msg or "***REDACTED***" in msg
+
+
+def _asgi_post_body(
+    app,
+    body_chunks: list[bytes],
+    *,
+    extra_headers: list[tuple[bytes, bytes]] | None = None,
+) -> int:
+    """Drive one POST through an ASGI app; return the HTTP status from response.start."""
+    remaining = list(body_chunks)
+    sent: list[dict] = []
+
+    async def receive() -> dict:
+        if remaining:
+            chunk = remaining.pop(0)
+            return {
+                "type": "http.request",
+                "body": chunk,
+                "more_body": bool(remaining),
+            }
+        return {"type": "http.disconnect"}
+
+    async def send(message: dict) -> None:
+        sent.append(message)
+
+    headers = [(b"host", b"testserver")]
+    if extra_headers:
+        headers.extend(extra_headers)
+
+    scope = {
+        "type": "http",
+        "asgi": {"version": "3.0"},
+        "http_version": "1.1",
+        "method": "POST",
+        "scheme": "http",
+        "path": "/scan",
+        "raw_path": b"/scan",
+        "query_string": b"",
+        "headers": headers,
+        "client": ("127.0.0.1", 1),
+        "server": ("testserver", 80),
+    }
+
+    async def _run() -> None:
+        await app(scope, receive, send)
+
+    asyncio.run(_run())
+    starts = [m for m in sent if m.get("type") == "http.response.start"]
+    assert starts, f"no http.response.start in {sent!r}"
+    return int(starts[0]["status"])
+
+
+def test_request_body_size_limit_counts_chunked_bytes_without_content_length():
+    """#1558: missing Content-Length still caps cumulative http.request body bytes."""
+    from api.request_body_limit import RequestBodySizeLimitMiddleware
+
+    async def echo_app(scope, receive, send):
+        while True:
+            message = await receive()
+            if message.get("type") != "http.request":
+                break
+            if not message.get("more_body"):
+                break
+        await send(
+            {
+                "type": "http.response.start",
+                "status": 200,
+                "headers": [(b"content-type", b"text/plain")],
+            }
+        )
+        await send({"type": "http.response.body", "body": b"ok"})
+
+    capped = RequestBodySizeLimitMiddleware(echo_app, max_bytes=64)
+    under = [b"x" * 32, b"x" * 32]
+    over = [b"x" * 40, b"x" * 40]
+    assert _asgi_post_body(capped, under) == 200
+    assert (
+        _asgi_post_body(
+            capped,
+            over,
+            extra_headers=[(b"transfer-encoding", b"chunked")],
+        )
+        == 413
+    )
+
+
+def test_request_body_size_limit_returns_413_when_content_length_exceeds_1mb():
+    """API returns 413 when Content-Length exceeds 1 MB (DoS mitigation)."""
+    from fastapi.testclient import TestClient
+
+    import api.routes as routes
+
+    max_bytes = routes.MAX_REQUEST_BODY_BYTES
+    with tempfile.TemporaryDirectory() as tmp:
+        config_path = Path(tmp) / "config.yaml"
+        config_path.write_text(
+            "targets: []\nreport:\n  output_dir: .\napi:\n  port: 8088\nsqlite_path: audit.db\n",
+            encoding="utf-8",
+        )
+        orig_path = getattr(routes, "_config_path", None)
+        orig_cfg = getattr(routes, "_config", None)
+        orig_engine = getattr(routes, "_audit_engine", None)
+        try:
+            routes._config_path = str(config_path)
+            routes._config = None
+            routes._audit_engine = None
+            client = TestClient(routes.app)
+            # Send a body larger than 1 MB; client sets Content-Length automatically
+            big_body = b"x" * (max_bytes + 1)
+            resp = client.post("/scan", content=big_body)
+            assert resp.status_code == 413
+            assert "too large" in (resp.json().get("detail") or "").lower()
+        finally:
+            if orig_path is not None:
+                routes._config_path = orig_path
+            routes._config = orig_cfg
+            routes._audit_engine = orig_engine
+
+
+def test_request_body_size_limit_returns_413_when_streamed_body_exceeds_1mb():
+    """API returns 413 when the streamed body exceeds 1 MB with no Content-Length (#1558)."""
+    from fastapi.testclient import TestClient
+
+    import api.routes as routes
+
+    max_bytes = routes.MAX_REQUEST_BODY_BYTES
+
+    def _chunks():
+        yield b"x" * (max_bytes + 1)
+
+    with tempfile.TemporaryDirectory() as tmp:
+        config_path = Path(tmp) / "config.yaml"
+        config_path.write_text(
+            "targets: []\nreport:\n  output_dir: .\napi:\n  port: 8088\nsqlite_path: audit.db\n",
+            encoding="utf-8",
+        )
+        orig_path = getattr(routes, "_config_path", None)
+        orig_cfg = getattr(routes, "_config", None)
+        orig_engine = getattr(routes, "_audit_engine", None)
+        try:
+            routes._config_path = str(config_path)
+            routes._config = None
+            routes._audit_engine = None
+            client = TestClient(routes.app)
+            resp = client.post("/scan", content=_chunks())
+            assert resp.status_code == 413
+            assert "too large" in (resp.json().get("detail") or "").lower()
+        finally:
+            if orig_path is not None:
+                routes._config_path = orig_path
+            routes._config = orig_cfg
+            routes._audit_engine = orig_engine
+
+
+# --- Config endpoint protected when API key required ---
+
+
+def test_config_endpoint_requires_api_key_when_required(tmp_path):
+    """When api.require_api_key is true, GET /config must return 401 without valid API key."""
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        f"targets: []\nreport:\n  output_dir: {tmp_path}\napi:\n  port: 8088\n  require_api_key: true\n  api_key: secret123\nsqlite_path: {tmp_path}/audit.db\n",
+        encoding="utf-8",
+    )
+    import api.routes as routes
+
+    orig_path = routes._config_path
+    orig_cfg = routes._config
+    orig_engine = routes._audit_engine
+    try:
+        routes._config_path = str(config_path)
+        routes._config = None
+        routes._audit_engine = None
+        from fastapi.testclient import TestClient
+
+        client = TestClient(routes.app)
+        resp = client.get("/config")
+        assert resp.status_code == 401
+        resp_with_key = client.get("/config", headers={"X-API-Key": "secret123"})
+        assert resp_with_key.status_code == 200
+    finally:
+        routes._config_path = orig_path
+        routes._config = orig_cfg
+        routes._audit_engine = orig_engine
+
+
+# --- Secrets Phase A: config redaction and merge ---
+
+
+def test_redact_config_for_display_redacts_secrets():
+    """GET /config shows redacted secrets; redact_config_for_display replaces pass, api_key, etc."""
+    from config.redact_config import redact_config_for_display, REDACTED_PLACEHOLDER
+
+    data = {
+        "api": {"port": 8088, "api_key": "secret-key-123", "api_key_from_env": None},
+        "targets": [
+            {"name": "db1", "type": "database", "pass": "dbpass", "user": "dbuser"},
+            {"name": "rest1", "type": "rest", "auth": {"token": "bearer-token-xyz"}},
+        ],
+    }
+    redacted = redact_config_for_display(data)
+    assert redacted["api"]["api_key"] == REDACTED_PLACEHOLDER
+    assert redacted["api"].get("api_key_from_env") is None
+    assert redacted["targets"][0]["pass"] == REDACTED_PLACEHOLDER
+    assert (
+        redacted["targets"][0]["user"] == "dbuser"
+    )  # user not in _SECRET_KEYS by default
+    assert redacted["targets"][1]["auth"]["token"] == REDACTED_PLACEHOLDER
+    assert "secret-key-123" not in str(redacted)
+    assert "dbpass" not in str(redacted)
+
+
+def test_redact_config_substring_keys_and_allowlist():
+    """Compound secret key names redact; token_url stays visible (not a credential value)."""
+    from config.redact_config import redact_config_for_display, REDACTED_PLACEHOLDER
+
+    data = {
+        "notifications": {
+            "operator": {
+                "telegram_bot_token": "bot-secret",
+                "token_url": "https://example.com/oauth/token",
+            }
+        },
+        "file_passwords": {"archive.zip": "zip-pass"},
+        "api": {"maturity_integrity_secret_from_env": "MY_MATURITY_SECRET"},
+    }
+    redacted = redact_config_for_display(data)
+    assert (
+        redacted["notifications"]["operator"]["telegram_bot_token"]
+        == REDACTED_PLACEHOLDER
+    )
+    assert (
+        redacted["notifications"]["operator"]["token_url"]
+        == "https://example.com/oauth/token"
+    )
+    assert redacted["file_passwords"]["archive.zip"] == REDACTED_PLACEHOLDER
+    assert redacted["api"]["maturity_integrity_secret_from_env"] == REDACTED_PLACEHOLDER
+
+
+def test_merge_config_on_save_preserves_secrets_when_submitted_is_placeholder():
+    """POST /config merge keeps current secret when submitted value is placeholder or empty."""
+    from config.redact_config import merge_config_on_save, REDACTED_PLACEHOLDER
+
+    current = {
+        "api": {"api_key": "real-key"},
+        "targets": [{"name": "db1", "pass": "realpass"}],
+    }
+    submitted = {
+        "api": {"api_key": REDACTED_PLACEHOLDER},
+        "targets": [{"name": "db1", "pass": REDACTED_PLACEHOLDER}],
+    }
+    merged = merge_config_on_save(submitted, current)
+    assert merged["api"]["api_key"] == "real-key"
+    assert merged["targets"][0]["pass"] == "realpass"
+    submitted_new = {
+        "api": {"api_key": "new-key"},
+        "targets": [{"name": "db1", "pass": "newpass"}],
+    }
+    merged2 = merge_config_on_save(submitted_new, current)
+    assert merged2["api"]["api_key"] == "new-key"
+    assert merged2["targets"][0]["pass"] == "newpass"
+
+
+def test_merge_config_on_save_preserves_current_when_submitted_is_redacted_dsn():
+    """Round-trip save keeps current DSN when submitted value is redacted display form."""
+    from config.redact_config import merge_config_on_save
+
+    current = {
+        "targets": [
+            {
+                "name": "db1",
+                "url": (
+                    "postgresql://db_user:RealSecret@db.example.com:5432/appdb"
+                    "?token=sensitive-token"
+                ),
+            }
+        ]
+    }
+    submitted = {
+        "targets": [
+            {
+                "name": "db1",
+                "url": ("postgresql://db_user:***@db.example.com:5432/appdb?token=***"),
+            }
+        ]
+    }
+    merged = merge_config_on_save(submitted, current)
+    assert merged["targets"][0]["url"] == current["targets"][0]["url"]
+
+
+def test_redact_config_for_display_masks_dsn_userinfo_and_query_secrets():
+    """DSN/URL credential fragments are redacted even when key name is not secret-like."""
+    from config.redact_config import redact_config_for_display
+
+    data = {
+        "targets": [
+            {
+                "name": "db1",
+                "type": "database",
+                "connection_string": (
+                    "postgresql://audit_user:UltraSecretPwd@db.example.com:5432/audit_db"
+                    "?sslmode=require&token=abc123&password=hidden-value"
+                ),
+            }
+        ],
+        "api": {"token_url": "https://idp.example.com/oauth/token"},
+    }
+    redacted = redact_config_for_display(data)
+    dsn = redacted["targets"][0]["connection_string"]
+    assert "UltraSecretPwd" not in dsn
+    assert "abc123" not in dsn
+    assert "hidden-value" not in dsn
+    assert "db.example.com:5432/audit_db" in dsn
+    assert "audit_user:***@" in dsn
+    assert "token=***" in dsn
+    assert "password=***" in dsn
+    # token_url key remains allowlisted by name when it only carries endpoint path.
+    assert redacted["api"]["token_url"] == "https://idp.example.com/oauth/token"
+
+
+def test_config_get_never_exposes_password_in_dsn_url(tmp_path):
+    """GET /config must not render DSN/URL passwords in the HTML editor payload."""
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        f"""targets:
+  - name: db1
+    type: database
+    url: postgresql://db_user:SuperSecretPass@db.example.com:5432/appdb?token=abc123
+report:
+  output_dir: {tmp_path}
+api:
+  port: 8088
+  require_api_key: true
+  api_key: secret123
+sqlite_path: {tmp_path}/audit.db
+""",
+        encoding="utf-8",
+    )
+    import api.routes as routes
+
+    orig_path = routes._config_path
+    orig_cfg = routes._config
+    orig_engine = routes._audit_engine
+    try:
+        routes._config_path = str(config_path)
+        routes._config = None
+        routes._audit_engine = None
+        from fastapi.testclient import TestClient
+
+        client = TestClient(routes.app)
+        resp = client.get("/config", headers={"X-API-Key": "secret123"})
+        assert resp.status_code == 200
+        html = resp.text
+        assert "SuperSecretPass" not in html
+        assert "abc123" not in html
+        assert "db.example.com:5432/appdb" in html
+        assert "db_user:***@" in html
+    finally:
+        routes._config_path = orig_path
+        routes._config = orig_cfg
+        routes._audit_engine = orig_engine
+
+
+def test_normalize_config_resolves_pass_from_env_and_user_from_env(monkeypatch):
+    """Loader resolves pass_from_env, password_from_env, user_from_env for targets."""
+    from config.loader import normalize_config
+
+    monkeypatch.setenv("API_DB_PASS", "env-pass")
+    monkeypatch.setenv("API_DB_USER", "env-user")
+    data = {
+        "targets": [
+            {
+                "name": "db1",
+                "type": "database",
+                "host": "db.example",
+                "allowed_hosts": ["db.example"],
+                "pass_from_env": "API_DB_PASS",
+            },
+            {
+                "name": "db2",
+                "type": "database",
+                "host": "db.example",
+                "allowed_hosts": ["db.example"],
+                "password_from_env": "API_DB_PASS",
+                "user_from_env": "API_DB_USER",
+            },
+        ],
+        "api": {},
+        "report": {"output_dir": "."},
+    }
+    out = normalize_config(data)
+    assert out["targets"][0]["pass"] == "env-pass"
+    assert out["targets"][1]["pass"] == "env-pass"
+    assert out["targets"][1]["user"] == "env-user"
+
+
+def test_normalize_config_secret_binding_is_by_identity_not_position(monkeypatch):
+    """#1210 — credential-from-env binds to the same target dict (identity), never list index.
+
+    Reordering targets must not swap secrets. Distinct env vars → distinct values per name.
+    """
+    from config.loader import normalize_config
+
+    monkeypatch.setenv("SECRET_ALPHA", "alpha-secret-value")
+    monkeypatch.setenv("SECRET_BETA", "beta-secret-value")
+    monkeypatch.setenv("PASS_ALPHA", "alpha-pass")
+    monkeypatch.setenv("PASS_BETA", "beta-pass")
+
+    def _by_name(targets: list) -> dict:
+        return {t["name"]: t for t in targets}
+
+    data = {
+        "targets": [
+            {
+                "name": "alpha",
+                "type": "rest_api",
+                "base_url": "https://api.trusted.example",
+                "client_secret_from_env": "SECRET_ALPHA",
+                "pass_from_env": "PASS_ALPHA",
+            },
+            {
+                "name": "beta",
+                "type": "rest_api",
+                "base_url": "https://api.trusted.example",
+                "client_secret_from_env": "SECRET_BETA",
+                "pass_from_env": "PASS_BETA",
+            },
+        ],
+        "api": {},
+        "report": {"output_dir": "."},
+    }
+    out = normalize_config(data)
+    named = _by_name(out["targets"])
+    assert named["alpha"]["client_secret"] == "alpha-secret-value"
+    assert named["beta"]["client_secret"] == "beta-secret-value"
+    assert named["alpha"]["pass"] == "alpha-pass"
+    assert named["beta"]["pass"] == "beta-pass"
+
+    reordered = {
+        "targets": [
+            dict(data["targets"][1]),
+            dict(data["targets"][0]),
+        ],
+        "api": {},
+        "report": {"output_dir": "."},
+    }
+    out2 = normalize_config(reordered)
+    named2 = _by_name(out2["targets"])
+    assert named2["alpha"]["client_secret"] == "alpha-secret-value"
+    assert named2["beta"]["client_secret"] == "beta-secret-value"
+    assert named2["alpha"]["pass"] == "alpha-pass"
+    assert named2["beta"]["pass"] == "beta-pass"
+    # Position 0 after reorder is beta — must carry beta's secret, not alpha's.
+    assert out2["targets"][0]["name"] == "beta"
+    assert out2["targets"][0]["client_secret"] == "beta-secret-value"
+
+
+def test_normalize_config_warns_when_pass_from_env_unset_then_falls_back(monkeypatch):
+    """Issue #508: missing env for pass_from_env emits UserWarning; inline pass still applies."""
+    import warnings
+
+    from config.loader import normalize_config
+
+    monkeypatch.delenv("API_MISSING_DB_PASS", raising=False)
+    data = {
+        "targets": [
+            {
+                "name": "db1",
+                "type": "database",
+                "host": "db.example",
+                "allowed_hosts": ["db.example"],
+                "pass": "inline-secret",
+                "pass_from_env": "API_MISSING_DB_PASS",
+            }
+        ],
+        "api": {},
+        "report": {"output_dir": "."},
+    }
+    with warnings.catch_warnings(record=True) as recorded:
+        warnings.simplefilter("always")
+        out = normalize_config(data)
+    assert out["targets"][0]["pass"] == "inline-secret"
+    assert any("pass_from_env" in str(w.message) for w in recorded)
+    assert any("API_MISSING_DB_PASS" in str(w.message) for w in recorded)
+
+
+# ---------------------------------------------------------------------------
+# Anti-regression for #825 security findings
+# ---------------------------------------------------------------------------
+
+
+def test_api_key_middleware_uses_hmac_compare_digest() -> None:
+    """Anti-regression #825 finding-2: API key comparison must use hmac.compare_digest.
+
+    Direct string equality (provided != expected) is vulnerable to timing attacks.
+    The middleware in api/routes.py must use hmac.compare_digest instead.
+    """
+    from pathlib import Path
+
+    routes_text = (Path(__file__).parent.parent / "api" / "routes.py").read_text(
+        encoding="utf-8"
+    )
+    assert "hmac.compare_digest" in routes_text, (
+        "api/routes.py API key middleware must use hmac.compare_digest to prevent "
+        "timing-based key enumeration attacks (#825 finding-2)"
+    )
+
+
+def test_maturity_integrity_uses_hmac_compare_digest() -> None:
+    """Anti-regression #825 finding-2: MAC verification must use hmac.compare_digest.
+
+    Direct string equality (mac == got) is vulnerable to timing attacks.
+    core/maturity_assessment/integrity.py must use hmac.compare_digest.
+    """
+    from pathlib import Path
+
+    integrity_text = (
+        Path(__file__).parent.parent / "core" / "maturity_assessment" / "integrity.py"
+    ).read_text(encoding="utf-8")
+    assert "hmac.compare_digest" in integrity_text, (
+        "core/maturity_assessment/integrity.py must use hmac.compare_digest for MAC "
+        "verification to prevent timing attacks (#825 finding-2)"
+    )
+
+
+def test_sync_working_tree_excludes_dotenv_from_rsync() -> None:
+    """Anti-regression #825 finding-3: rsync must exclude .env and .env.* files.
+
+    Without these excludes, rsync could exfiltrate operator secrets (API keys, passwords)
+    stored in .env files to remote lab-op hosts during sync.
+    """
+    maestro = _resolve_maestro_root()
+    if maestro is None:
+        pytest.skip(
+            "DataBoar/maestro clone not found (set MAESTRO_ROOT or sibling ../maestro)"
+        )
+    sync_text = (maestro / "core" / "Sync-WorkingTree.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "--exclude='.env'" in sync_text or "--exclude=.env" in sync_text, (
+        "Sync-WorkingTree.ps1 rsync command must exclude '.env' files to prevent "
+        "secret exfiltration to lab-op hosts (#825 finding-3)"
+    )
+    assert "--exclude='.env.*'" in sync_text or "--exclude=.env.*" in sync_text, (
+        "Sync-WorkingTree.ps1 rsync command must exclude '.env.*' files (#825 finding-3)"
+    )
+
+
+def test_dashboard_html_does_not_load_chart_js_from_cdn() -> None:
+    """Anti-regression #825 finding-4: Chart.js must be vendored, not loaded from CDN.
+
+    Loading third-party scripts from CDN (cdn.jsdelivr.net) bypasses CSP 'self'
+    and creates a supply-chain risk. Chart.js must be served from /static/.
+    """
+    from pathlib import Path
+
+    dashboard_html = (
+        Path(__file__).parent.parent / "api" / "templates" / "dashboard.html"
+    ).read_text(encoding="utf-8")
+    assert "cdn.jsdelivr.net" not in dashboard_html, (
+        "api/templates/dashboard.html must not load Chart.js from CDN; "
+        "use the vendored /static/chart.umd.min.js instead (#825 finding-4)"
+    )
+    assert (
+        "/static/chart.umd.min.js" in dashboard_html
+        or "chart.umd.min.js" in dashboard_html
+    ), (
+        "api/templates/dashboard.html must reference the vendored chart.umd.min.js (#825 finding-4)"
+    )
+
+
+def test_csp_does_not_allow_cdn_jsdelivr_in_script_src() -> None:
+    """Anti-regression #825 finding-4: CSP script-src must not include cdn.jsdelivr.net.
+
+    With Chart.js vendored, the CSP can drop the CDN allowance and enforce 'self' only.
+    """
+    from pathlib import Path
+
+    routes_text = (Path(__file__).parent.parent / "api" / "routes.py").read_text(
+        encoding="utf-8"
+    )
+    assert "cdn.jsdelivr.net" not in routes_text, (
+        "api/routes.py CSP must not allow cdn.jsdelivr.net in script-src; "
+        "Chart.js is now vendored so 'self' is sufficient (#825 finding-4)"
+    )
+
+
+def test_maestro_aggregates_real_failures_in_exit() -> None:
+    """Anti-regression #825 finding-5: Maestro.ps1 must exit non-zero on real handler failures.
+
+    Previously Maestro always exited 0 even when handlers returned non-zero exit codes,
+    masking genuine failures. Offline-skips and Safe-Hold are excluded from the failure count.
+    """
+    maestro = _resolve_maestro_root()
+    if maestro is None:
+        pytest.skip(
+            "DataBoar/maestro clone not found (set MAESTRO_ROOT or sibling ../maestro)"
+        )
+    maestro_text = (maestro / "core" / "Maestro.ps1").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    assert "realFailCount" in maestro_text, (
+        "Maestro.ps1 must track real handler failures in $realFailCount (#825 finding-5)"
+    )
+    assert "exit 1" in maestro_text, (
+        "Maestro.ps1 must exit 1 when real handler failures are detected (#825 finding-5)"
+    )

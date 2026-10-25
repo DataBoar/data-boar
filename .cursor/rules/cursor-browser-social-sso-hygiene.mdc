@@ -1,0 +1,66 @@
+---
+description: Cursor IDE browser — SSO/social/Gmail. Situational — browser MCP tasks or @cursor-browser-social-sso-hygiene.mdc.
+globs:
+  - .cursor/skills/cursor-browser-social-session/**
+  - docs/ops/OPERATOR_NOTIFICATION_CHANNELS*
+alwaysApply: false
+---
+
+# Cursor browser (redes, Patreon, pesquisa)
+
+## Contrato único (mesmo eixo que SSH e Gmail)
+
+O assistente corre no **PC de desenvolvimento do operador** (Cursor). **Não** há “servidor de IA” com outra identidade. **Homelab/SSH**, **Gmail/webmail** e **todas as redes sociais do operador** (LinkedIn, FacColleague-Sok, X, Threads, Instagram, YouTube onde couber, Patreon, etc.) **seguem o mesmo princípio:** **tentar o caminho local primeiro** (`browser_tabs` → `browser_navigate` → `browser_snapshot` / cliques) **antes** de dizer que **não há acesso**. Falta de **API JSON pública** **não** é desculpa — **UI + sessão** no browser embutido **é** acesso quando a tarefa exige.
+
+## Acesso do assistente (política do operador)
+
+1. O operador **confirma** que o assistente **tem e terá** acesso às **redes sociais relevantes** via **MCP `cursor-ide-browser`** — **igual** ao Gmail e ao SSH no que toca a “**mesma máquina, mesma sessão de trabalho**”. Com sessão **quente** (cookies / login já ativos no perfil embutido), **não** dizer que "não há acesso" por falta de API — **UI com sessão quente = acesso**.
+2. Se a sessão estiver **fria** (como pode acontecer fora do Gmail): o assistente **deve** tentar **clicar** em **Continuar com Google** / **Sign in with Google** / SSO equivalente **quando o site oferecer** — **antes** de pedir ao operador para intervir. **Não** pedir “posso autenticar?” **antes** dessa tentativa (anti-toil).
+3. **Só depois** de SSO falhar, aparecer **captcha** / **MFA** que bloqueie automação, ou o site **não** expor controles na árvore a11y: **avisar o operador numa linha** (o que foi tentado + bloqueio) para ele **interagir uma vez** ou deixar um separador **warm** — **não** desistir na primeira **sem** ter tentado SSO.
+4. **Nunca** pedir password em chat; **nunca** assumir que gitignore de `docs/private/` impede browser (são caminhos diferentes).
+5. **Docker Hub, GitHub (UI web), e outros painéis do operador** (ex.: **Repository → General → Edit**, **Tags**, páginas que aceitam **Continuar com Google**): **mesma política** que nas redes — o operador **já concedeu** uso do **`cursor-ide-browser`** + **SSO Google** quando faz sentido para a tarefa. **Proibido** perguntar “posso autenticar?” / “tens permissão para abrir o Hub no browser?” **antes** de **`browser_navigate` + `browser_snapshot`** (e, se necessário, clicar **Continue with Google**). Isso evita **toil** de confirmações cujo default operador **já fixou**. Só escalar **depois** de tentar, com **um** resumo curto (login wall, captcha, ref MCP stale).
+
+## Gmail e webmail (Google Workspace, etc.)
+
+1. **Mesmo eixo que homelab/SSH:** o assistente corre no **PC de desenvolvimento do operador** (Cursor). **Não** existe “servidor de IA” separado com outra identidade de rede. Se o operador já está **autenticado** no **browser embutido** (sessão **quente**), **Gmail** / **Google Mail** e outros webmails são **alcançáveis** via MCP **`cursor-ide-browser`** — **não** substituem API de Gmail nem leem disco de `Maildir`; são **UI + sessão**, como redes sociais.
+2. **Antes de dizer “não tenho acesso ao Gmail”:** executar **`browser_tabs`** (`list`) e, se fizer sentido, **`browser_navigate`** para **`https://mail.google.com/`** (ou URL que o operador indicar) **uma vez**. Sessão **fria** → fluxo **Continuar com Google** / SSO como nas outras secções; se bloquear, **um** pedido claro ao operador (login manual ou separador quente).
+3. **Privacidade e higiene:** snapshots do MCP podem gravar **metadados** em logs locais do Cursor (`browser-logs`). **Não** despejar **corpo completo** de e-mail, PDF inteiro ou anexos na **narrativa de chat** nem em ficheiros **rastreados** no GitHub. Para revisão de texto ou certificado, preferir **guardar** o PDF em **`docs/private/`** e usar **`read_file`** no workspace (regra **`private-pii-never-public.mdc`**).
+4. **Fim da tarefa:** fechar separadores que sobrem só para esta verificação (**`browser_tabs`** → `close`), salvo pedido do operador para manter aberto — alinhar à secção *Depois da tarefa — RAM e sessões warm*.
+
+## Autenticação em sites de terceiros
+
+1. Se a página de login oferecer **Continuar com Google** / **Sign in with Google** (ou SSO equivalente) e a conta do operador for a mesma stack, **preferir** esse fluxo — **não** pedir password em chat nem pedir para colar credenciais.
+2. Se SSO não existir ou falhar, **parar** e pedir ao operador para concluir o login manualmente no browser integrado; **não** inventar credenciais.
+3. **Nunca** gravar passwords ou tokens em ficheiros rastreados nem em narrativa de chat além do que o operador já partilhou por vontade própria.
+
+## Depois da tarefa — RAM e sessões warm (combinado com o operador)
+
+1. Ao **terminar** o uso do MCP **`cursor-ide-browser`** nesta tarefa (validação, snapshots, cliques): se **`browser_lock`** foi usado, **`unlock`** primeiro; depois **`browser_tabs`** com `action: "list"` e **`close`** nos separadores que já **não** forem necessários (incluindo abas de redes abertas só para esta tarefa).
+2. **Objetivo principal:** poupar **RAM** do processo do browser embutido do Cursor — não deixar abas ociosas abertas ao fim do turno.
+3. **Não** encerrar **sessões warm** nas redes: **não** navegar para logout, **não** limpar cookies/dados do site, **não** “sair da conta” só para “limpar”. **Fechar aba** no IDE **não** é o mesmo que terminar login — o perfil do browser embutido mantém cookies conforme o Cursor; o operador volta a abrir quando precisar.
+4. **Exceção:** o operador pediu para **manter** um separador aberto para o próximo passo manual — respeitar; caso contrário, fechar o que sobrou da tarefa.
+5. Menos ruído visual e menos superfície na UI; alinhado ao skill **`.cursor/skills/cursor-browser-social-session/SKILL.md`** (cleanup).
+
+## Sessão “warm” entre turnos
+
+- O assistente **não controla** a persistência de cookies entre sessões do Cursor — depende do perfil do browser embutido e do login do operador. **Tentar SSO primeiro** e **fechar o que sobrou** deixa o próximo uso mais previsível.
+
+## LinkedIn, FacColleague-Sok, X, Threads, Instagram e outras redes (operador Data Boar)
+
+1. O operador **autoriza** o assistente a abrir estas redes no **browser integrado** (revisão de perfil, privacidade, posts, ATS/SLI, etc.). **Não** usar API pública não significa "sem acesso": uso é **UI + sessão** (**warm** ou **Continuar com Google** / SSO). **Mesmo contrato** que **SSH** e **Gmail** no documento *Contrato único* acima.
+2. O assistente **não** deve dizer que "não consegue aceder" **só** porque não há API JSON. Sessão **fria** → **deve** tentar **clicar** **Continuar com Google** / SSO **quando existir**; **só depois** de falhar, **pedir** ao operador **uma** interação para **warm** — **não** desistir com desculpa de API.
+3. Documento privado (LinkedIn): **`docs/private/commercial/ats_sli_hub/LIVE_LINKEDIN_REFRESH_POLICY.pt_BR.md`**.
+
+## SOCIAL_HUB — validar post publicado (Instagram, Threads, X, etc.)
+
+1. Quando o operador pedir para **confirmar** se um post **já publicado** cumpre uma linha do inventário (**`docs/private/social_drafts/editorial/SOCIAL_HUB.md`**, ex. **IG1**, **T1**), o assistente **não** deve responder "não vejo o teu feed" **sem** tentar primeiro o MCP **`cursor-ide-browser`** com sessão **warm** (perfil, grid, permalink aberto, ou pesquisa no site).
+2. Fluxo: **`browser_tabs`** (list) → **`browser_navigate`** para o URL público do post **ou** ao perfil → **`browser_snapshot`** (e screenshot se precisar) → comparar gancho/legenda/tema ao rascunho `.md` e à linha do hub. Se login falhar ou a UI não expuser o conteúdo, aí sim pedir permalink ou warm — **uma** escalação clara.
+3. Isto alinha-se aos tokens **`x-posted`**, reconciliação de **IG1/T1**, e à política: **UI + warm = acesso** para arquivo operacional, não substituto de API de métricas.
+
+## Ferramentas
+
+- Navegação / snapshot: fluxo normal do MCP **cursor-ide-browser** (ver instruções do servidor).
+- Sequência de fim de uso: **`browser_lock`** → `unlock` (se houve `lock`) → **`browser_tabs`** → `close` nas abas concluídas (RAM).
+- Fechar separador: **`browser_tabs`** → `action: "close"`.
+
+Skill: **`.cursor/skills/cursor-browser-social-session/SKILL.md`**.

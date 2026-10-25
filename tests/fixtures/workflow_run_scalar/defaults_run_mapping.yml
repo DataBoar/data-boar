@@ -1,0 +1,10 @@
+name: defaults-run-mapping-ok
+on: push
+defaults:
+  run:
+    working-directory: rust/boar_fast_filter
+jobs:
+  t:
+    runs-on: ubuntu-latest
+    steps:
+      - run: cargo test

@@ -1,0 +1,658 @@
+# LGPD – sample compliance profile (Brazil; Lei Geral de Proteção de Dados)
+#
+# Target audience: Brazilian deployments and LGPD compliance. Bilingual PT-BR + EN
+# terms (see .cursor/rules/compliance-samples-language.mdc). This sample includes
+# the same regex and ML terms as the app's built-in defaults (so using this file
+# as regex_overrides_file and ml_patterns_file does not reduce coverage), plus
+# extra Brazilian regex (RG, CEP, PIS/PASEP), precise geolocation, and field-
+# validated column-header patterns (#1288): criminal records (Art. 11), CNH/RG,
+# bank account/branch, geolocation columns, emergency contact.
+#
+# How to use:
+#   1. Set in your main config:
+#        regex_overrides_file: path/to/compliance-sample-lgpd.yaml
+#        ml_patterns_file: path/to/compliance-sample-lgpd.yaml
+#   2. Merge the recommendation_overrides list below into report.recommendation_overrides.
+#
+# Detection thresholds (not configurable in this file; set in main config.yaml):
+#   - sensitivity_detection.fuzzy_column_match_min_confidence (int, default 25):
+#       Similarity mínima (Levenshtein) para matching fuzzy de nomes de coluna.
+#       Aumente para 60-80 para reduzir falsos positivos em colunas com nomes curtos.
+#   - sensitivity_detection.embedding_prototype_hint_min_confidence (int, default 20):
+#       Similaridade coseno mínima para hints via embedding.
+#   O score de confiança do ML (0-100) é calculado internamente pelo predict_proba;
+#   não há campo min_confidence por termo neste YAML.
+#
+# Regex: built-in LGPD-relevant patterns (CPF, CNPJ, phone, email, card, date) are
+# included explicitly so the sample matches the detector; RG, CEP and PIS/PASEP add
+# high-confidence Brazilian identifiers so we don't rely only on ML/DL in hybrid mode.
+# Use double-quoted YAML with escaped backslashes for regex (see .cursor/rules/yaml-regex-patterns.mdc).
+#
+# Precise geolocation (logs / APIs): same regex geometry as compliance-sample-us_va_vcdpa.yaml and
+# compliance-sample-eu_gdpr.yaml (JSON lat/lng, location: pair, latitude=&longitude=). norm_tag stays
+# "LGPD Art. 5" for inventory alignment with other personal-data signals in this file. Heuristic only —
+# not an automated Art. 11 LGPD / sensitive-data legal determination.
+
+regex:
+  # Built-in patterns (same as core/detector.py DEFAULT_PATTERNS) – LGPD-relevant
+  - name: "LGPD_CPF"
+    # Pattern matches formatted (123.456.789-09) and unformatted (11 digits) CPF.
+    # Note: the scanner engine validates CPF checksum digits (Mod-11 algorithm) at
+    # detection time — format-only matches without valid checksum are suppressed.
+    # False-positive risk: low for formatted, near-zero for unformatted (checksum gate).
+    pattern: "\\b\\d{3}\\.?\\d{3}\\.?\\d{3}-?\\d{2}\\b"
+    norm_tag: "LGPD Art. 5"
+  - name: "LGPD_CNPJ"
+    # Pattern matches formatted and unformatted CNPJ (14 digits).
+    # Checksum validation (Mod-11) is applied by the engine.
+    pattern: "\\b\\d{2}\\.?\\d{3}\\.?\\d{3}/?\\d{4}-?\\d{2}\\b"
+    norm_tag: "LGPD Art. 5"
+  - name: "LGPD_CNPJ_ALNUM"
+    pattern: "\\b[A-Z0-9]{2}\\.?[A-Z0-9]{3}\\.?[A-Z0-9]{3}/?[A-Z0-9]{4}-?\\d{2}\\b"
+    norm_tag: "LGPD Art. 5"
+  - name: "PHONE_BR"
+    pattern: "\\b(?:\\+55\\s?)?\\(?\\d{2}\\)?\\s?\\d{4,5}-?\\d{4}\\b"
+    norm_tag: "LGPD Art. 5"
+  - name: "EMAIL"
+    pattern: "\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}\\b"
+    norm_tag: "LGPD Art. 5"
+  - name: "CREDIT_CARD"
+    pattern: "\\b\\d{4}[-\\s]?\\d{4}[-\\s]?\\d{4}[-\\s]?\\d{4}\\b"
+    norm_tag: "LGPD Art. 5"
+  - name: "DATE_DMY"
+    pattern: "\\b\\d{1,2}/\\d{1,2}/\\d{2,4}\\b"
+    norm_tag: "LGPD Art. 5"
+  # Brazilian identifiers (high-confidence regex in addition to built-in)
+  - name: "RG_BR"
+    pattern: "\\b\\d{1,2}\\.?\\d{3}\\.?\\d{3}-?[0-9Xx]\\b"
+    norm_tag: "LGPD Art. 5"
+  # CEP: same 8-digit shape as many SKUs/internal IDs — review noisy sources; see SENSITIVITY_DETECTION.md (CEP precision).
+  - name: "CEP_BR"
+    pattern: "\\b\\d{5}-?\\d{3}\\b"
+    norm_tag: "LGPD Art. 5"
+  - name: "PIS_PASEP_BR"
+    pattern: "\\b\\d{3}\\.?\\d{5}\\.?\\d{2}-?\\d\\b"
+    norm_tag: "LGPD Art. 5"
+  - name: "LGPD_JSON_LAT_PRECISION"
+    pattern: "(?i)[\"']lat[\"']\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\b"
+    norm_tag: "LGPD Art. 5"
+  - name: "LGPD_JSON_LNG_PRECISION"
+    pattern: "(?i)[\"'](?:lng|lon)[\"']\\s*:\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}\\b"
+    norm_tag: "LGPD Art. 5"
+  - name: "LGPD_LOCATION_CSV_PAIR"
+    pattern: "(?i)\\blocation\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*,\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "LGPD Art. 5"
+  - name: "LGPD_QUERYSTRING_LAT_LONG"
+    pattern: "(?i)latitude=[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*&\\s*longitude=[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "LGPD Art. 5"
+  # Field-validated column-header patterns (#1288).
+  # - No trailing \\b after stems that may take underscore suffixes (\\b fails before '_').
+  # - Leading (?:^|_) anchors at start-or-underscore so prefixed columns match
+  #   (user_latitude, titular_cnh) without mid-word hits (platitude).
+  - name: "LGPD_CRIMINAL_RECORDS"
+    pattern: "(?i)(?:criminal_records?\\w*|antecedentes?_?criminal\\w*|certidao_?negativa(?:_?criminal)?\\w*|criminal_?background\\w*)"
+    norm_tag: "dado SENSIVEL - antecedentes criminais (Art. 11)"
+  - name: "LGPD_CNH"
+    pattern: "(?i)(?:^|_)(?:cnh\\w*|carteira_?de_?habilitacao\\w*|driver_?licen[cs]e\\w*|driving_?licen[cs]e\\w*)"
+    norm_tag: "LGPD Art. 5 (documento — CNH)"
+  - name: "LGPD_RG_IDENTITY"
+    pattern: "(?i)(?:^|_)(?:rg_?(?:number|numero)?\\w*|numero_?rg\\w*|registro_?geral\\w*|carteira_?de_?identidade\\w*|identity_?(?:card|doc(?:ument)?)\\w*)"
+    norm_tag: "LGPD Art. 5 (documento — RG/identidade)"
+  - name: "LGPD_BANK_ACCOUNT"
+    pattern: "(?i)(?:^|_)(?:bank_?account\\w*|conta_?(?:bancaria|corrente)\\w*|numero_?(?:da_?)?conta\\w*|agencia_?(?:bancaria)?\\w*|codigo_?agencia\\w*|account_?(?:number|no)\\w*|branch_?(?:number|code)\\w*)"
+    norm_tag: "LGPD Art. 5 (dado financeiro — conta/agência bancária)"
+  - name: "LGPD_GEOLOCATION"
+    pattern: "(?i)(?:^|_)(?:latitude\\w*|longitude\\w*|geo_?loc(?:ation)?\\w*|coordenadas?_?(?:gps|geograficas)\\w*|precise_?location\\w*)"
+    norm_tag: "LGPD Art. 5 (geolocalização precisa — re-ID)"
+  - name: "LGPD_ADDRESS_COMPONENT"
+    pattern: "(?i)(?:^|_)(?:zip_?code\\w*|postal_?code\\w*|cep\\w*|street_?(?:number|name)?\\w*|rua\\w*|numero\\w*|complemento\\w*|complement\\w*|bairro\\w*|neighborhood\\w*|cidade\\w*|city\\w*|state(?:_code)?\\w*|estado\\w*|endereco\\w*|address\\w*)"
+    norm_tag: "LGPD Art. 5 (endereço / componente de localização)"
+  - name: "LGPD_EMERGENCY_CONTACT"
+    pattern: "(?i)(?:^|_)(?:emergency_?contact\\w*|contato_?(?:de_?)?emergencia\\w*|next_?of_?kin\\w*)"
+    norm_tag: "LGPD Art. 5 (dado de terceiro — contato de emergência)"
+
+# ML/DL terms: full set matching app defaults (core/detector.py DEFAULT_ML_TERMS) plus
+# LGPD-specific extras. When this file is used as ml_patterns_file, coverage is at least
+# as good as the built-in; sensitive categories (health, religion, political, etc.) and
+# non_sensitive (lyrics, system_log, etc.) are included so the classifier behaves correctly.
+terms:
+  - text: "cpf"
+    label: sensitive
+  - text: "email"
+    label: sensitive
+  - text: "credit card"
+    label: sensitive
+  - text: "password"
+    label: sensitive
+  - text: "senha"
+    label: sensitive
+  - text: "health record"
+    label: sensitive
+  - text: "saude"
+    label: sensitive
+  - text: "data de nascimento"
+    label: sensitive
+  - text: "birth date"
+    label: sensitive
+  - text: "ethnic origin"
+    label: sensitive
+  - text: "political opinion"
+    label: sensitive
+  - text: "religion"
+    label: sensitive
+  - text: "gender"
+    label: sensitive
+  - text: "rg"
+    label: sensitive
+  - text: "ssn"
+    label: sensitive
+  - text: "salary"
+    label: sensitive
+  - text: "salário"
+    label: sensitive
+  - text: "phone"
+    label: sensitive
+  - text: "telefone"
+    label: sensitive
+  - text: "celular"
+    label: sensitive
+  - text: "mobile"
+    label: sensitive
+  - text: "fone"
+    label: sensitive
+  - text: "home phone"
+    label: sensitive
+  - text: "work phone"
+    label: sensitive
+  - text: "cell phone"
+    label: sensitive
+  - text: "contact number"
+    label: sensitive
+  - text: "phone number"
+    label: sensitive
+  - text: "téléphone"
+    label: sensitive
+  - text: "tél"
+    label: sensitive
+  - text: "teléfono"
+    label: sensitive
+  - text: "telefono"
+    label: sensitive
+  - text: "móvil"
+    label: sensitive
+  - text: "cel"
+    label: sensitive
+  - text: "handy"
+    label: sensitive
+  - text: "handynummer"
+    label: sensitive
+  - text: "mobilnummer"
+    label: sensitive
+  - text: "telefon"
+    label: sensitive
+  - text: "número de telefone"
+    label: sensitive
+  - text: "first name"
+    label: sensitive
+  - text: "last name"
+    label: sensitive
+  - text: "surname"
+    label: sensitive
+  - text: "full name"
+    label: sensitive
+  - text: "birth name"
+    label: sensitive
+  - text: "christian name"
+    label: sensitive
+  - text: "nickname"
+    label: sensitive
+  - text: "given name"
+    label: sensitive
+  - text: "family name"
+    label: sensitive
+  - text: "middle name"
+    label: sensitive
+  - text: "nome"
+    label: sensitive
+  - text: "sobrenome"
+    label: sensitive
+  - text: "nome do meio"
+    label: sensitive
+  - text: "nome completo"
+    label: sensitive
+  - text: "nombre"
+    label: sensitive
+  - text: "apellido"
+    label: sensitive
+  - text: "nombre completo"
+    label: sensitive
+  - text: "segundo nombre"
+    label: sensitive
+  - text: "prénom"
+    label: sensitive
+  - text: "nom de famille"
+    label: sensitive
+  - text: "nom de naissance"
+    label: sensitive
+  - text: "nom complet"
+    label: sensitive
+  - text: "vorname"
+    label: sensitive
+  - text: "nachname"
+    label: sensitive
+  - text: "geburtsname"
+    label: sensitive
+  - text: "familienname"
+    label: sensitive
+  - text: "rufname"
+    label: sensitive
+  - text: "cognome"
+    label: sensitive
+  - text: "nome di battesimo"
+    label: sensitive
+  - text: "cnpj"
+    label: sensitive
+  - text: "passaporte"
+    label: sensitive
+  - text: "passport"
+    label: sensitive
+  - text: "pasaporte"
+    label: sensitive
+  - text: "passeport"
+    label: sensitive
+  - text: "Reisepass"
+    label: sensitive
+  - text: "ctps"
+    label: sensitive
+  - text: "carteira de trabalho"
+    label: sensitive
+  - text: "work permit"
+    label: sensitive
+  - text: "residence permit"
+    label: sensitive
+  - text: "distintivo"
+    label: sensitive
+  - text: "badge"
+    label: sensitive
+  - text: "documento oficial"
+    label: sensitive
+  - text: "official document"
+    label: sensitive
+  - text: "carteira sindical"
+    label: sensitive
+  - text: "union card"
+    label: sensitive
+  - text: "certificado de reservista"
+    label: sensitive
+  - text: "reservist certificate"
+    label: sensitive
+  - text: "título eleitoral"
+    label: sensitive
+  - text: "titulo eleitoral"
+    label: sensitive
+  - text: "voter id"
+    label: sensitive
+  - text: "voter registration"
+    label: sensitive
+  - text: "pis"
+    label: sensitive
+  - text: "pasep"
+    label: sensitive
+  - text: "cartão cidadão"
+    label: sensitive
+  - text: "cartao cidadao"
+    label: sensitive
+  - text: "citizen card"
+    label: sensitive
+  - text: "identidade de estrangeiro"
+    label: sensitive
+  - text: "foreigner id"
+    label: sensitive
+  - text: "certidão"
+    label: sensitive
+  - text: "certidao"
+    label: sensitive
+  - text: "birth certificate"
+    label: sensitive
+  - text: "green card"
+    label: sensitive
+  - text: "registro no conselho de classe"
+    label: sensitive
+  - text: "professional registration"
+    label: sensitive
+  - text: "conselho de classe"
+    label: sensitive
+  - text: "cnh"
+    label: sensitive
+  - text: "carteira de motorista"
+    label: sensitive
+  - text: "driver license"
+    label: sensitive
+  - text: "driving licence"
+    label: sensitive
+  - text: "documento de identidade"
+    label: sensitive
+  - text: "documento de identidad"
+    label: sensitive
+  - text: "identity document"
+    label: sensitive
+  - text: "id card"
+    label: sensitive
+  - text: "carteira de identidade"
+    label: sensitive
+  - text: "cédula"
+    label: sensitive
+  - text: "cedula"
+    label: sensitive
+  - text: "national id"
+    label: sensitive
+  - text: "national id number"
+    label: sensitive
+  - text: "número do documento"
+    label: sensitive
+  - text: "document number"
+    label: sensitive
+  - text: "identification number"
+    label: sensitive
+  - text: "carte d'identité"
+    label: sensitive
+  - text: "document d'identité"
+    label: sensitive
+  - text: "Personalausweis"
+    label: sensitive
+  - text: "Ausweisnummer"
+    label: sensitive
+  - text: "tax id"
+    label: sensitive
+  - text: "tax identification number"
+    label: sensitive
+  - text: "cadastro de pessoa física"
+    label: sensitive
+  - text: "carte bleue"
+    label: sensitive
+  - text: "carte rose"
+    label: sensitive
+  - text: "carte vitale"
+    label: sensitive
+  - text: "titre de séjour"
+    label: sensitive
+  - text: "carte de séjour"
+    label: sensitive
+  - text: "numéro de sécurité sociale"
+    label: sensitive
+  - text: "numero de securite sociale"
+    label: sensitive
+  - text: "n° sécu"
+    label: sensitive
+  - text: "rne"
+    label: sensitive
+  - text: "ric"
+    label: sensitive
+  - text: "certidão de nascimento"
+    label: sensitive
+  - text: "certidão de casamento"
+    label: sensitive
+  - text: "certidão de óbito"
+    label: sensitive
+  - text: "certidao de nascimento"
+    label: sensitive
+  - text: "oab"
+    label: sensitive
+  - text: "crm"
+    label: sensitive
+  - text: "crc"
+    label: sensitive
+  - text: "crea"
+    label: sensitive
+  - text: "crq"
+    label: sensitive
+  - text: "registro profissional"
+    label: sensitive
+  - text: "employee badge number"
+    label: sensitive
+  - text: "membership number"
+    label: sensitive
+  - text: "license number"
+    label: sensitive
+  - text: "permit number"
+    label: sensitive
+  - text: "alien registration number"
+    label: sensitive
+  - text: "visa number"
+    label: sensitive
+  - text: "nie"
+    label: sensitive
+  - text: "libro de familia"
+    label: sensitive
+  - text: "carnet de conducir"
+    label: sensitive
+  - text: "titulo de residencia"
+    label: sensitive
+  - text: "Aufenthaltserlaubnis"
+    label: sensitive
+  - text: "Sozialversicherungsnummer"
+    label: sensitive
+  - text: "doc_id"
+    label: sensitive
+  - text: "document_id"
+    label: sensitive
+  - text: "id_number"
+    label: sensitive
+  - text: "doc_number"
+    label: sensitive
+  - text: "doc_ref"
+    label: sensitive
+  - text: "document_ref"
+    label: sensitive
+  - text: "identifier"
+    label: sensitive
+  - text: "religious affiliation"
+    label: sensitive
+  - text: "religiao"
+    label: sensitive
+  - text: "political affiliation"
+    label: sensitive
+  - text: "filiacao politica"
+    label: sensitive
+  - text: "biometric data"
+    label: sensitive
+  - text: "genetic data"
+    label: sensitive
+  - text: "geolocalização"
+    label: sensitive
+  - text: "geolocalizacao"
+    label: sensitive
+  - text: "dados de geolocalização"
+    label: sensitive
+  - text: "dados de geolocalizacao"
+    label: sensitive
+  - text: "localização precisa"
+    label: sensitive
+  - text: "localizacao precisa"
+    label: sensitive
+  - text: "coordenadas gps"
+    label: sensitive
+  - text: "precise geolocation"
+    label: sensitive
+  - text: "geolocation data"
+    label: sensitive
+  - text: "geolocation"
+    label: sensitive
+  - text: "union affiliation"
+    label: sensitive
+  - text: "sindicato"
+    label: sensitive
+  - text: "politically exposed person"
+    label: sensitive
+  - text: "PEP"
+    label: sensitive
+  - text: "race"
+    label: sensitive
+  - text: "skin color"
+    label: sensitive
+  - text: "sexual orientation"
+    label: sensitive
+  - text: "disability"
+    label: sensitive
+  - text: "deficiencia"
+    label: sensitive
+  - text: "condicao de saude"
+    label: sensitive
+  - text: "health condition"
+    label: sensitive
+  # Non-sensitive (reduce false positives)
+  - text: "system_log"
+    label: non_sensitive
+  - text: "item_count"
+    label: non_sensitive
+  - text: "config_file"
+    label: non_sensitive
+  - text: "temp_data"
+    label: non_sensitive
+  - text: "id_interno"
+    label: non_sensitive
+  - text: "quantidade_estoque"
+    label: non_sensitive
+  - text: "lyrics"
+    label: non_sensitive
+  - text: "verse"
+    label: non_sensitive
+  - text: "chorus"
+    label: non_sensitive
+  - text: "bridge"
+    label: non_sensitive
+  - text: "refrão"
+    label: non_sensitive
+  - text: "estrofe"
+    label: non_sensitive
+  - text: "letra"
+    label: non_sensitive
+  - text: "cifra"
+    label: non_sensitive
+  - text: "tab"
+    label: non_sensitive
+  - text: "tablature"
+    label: non_sensitive
+  - text: "chord"
+    label: non_sensitive
+  - text: "guitar"
+    label: non_sensitive
+  - text: "intro"
+    label: non_sensitive
+  - text: "outro"
+    label: non_sensitive
+  - text: "riff"
+    label: non_sensitive
+  - text: "bass"
+    label: non_sensitive
+  - text: "capo"
+    label: non_sensitive
+  - text: "tuning"
+    label: non_sensitive
+  # LGPD sample extra: generic "id" column name (ambiguous; detector may treat as PII_AMBIGUOUS)
+  - text: "id"
+    label: sensitive
+  - text: "endereço"
+    label: sensitive
+  - text: "address"
+    label: sensitive
+  - text: "identidade"
+    label: sensitive
+  - text: "identity"
+    label: sensitive
+  - text: "antecedentes criminais"
+    label: sensitive
+  - text: "criminal record"
+    label: sensitive
+  - text: "criminal background"
+    label: sensitive
+  - text: "certidão negativa"
+    label: sensitive
+  - text: "certidao negativa"
+    label: sensitive
+  - text: "negative criminal certificate"
+    label: sensitive
+  - text: "conta bancária"
+    label: sensitive
+  - text: "conta bancaria"
+    label: sensitive
+  - text: "bank account"
+    label: sensitive
+  - text: "bank account number"
+    label: sensitive
+  - text: "agência bancária"
+    label: sensitive
+  - text: "agencia bancaria"
+    label: sensitive
+  - text: "bank branch"
+    label: sensitive
+  - text: "branch number"
+    label: sensitive
+  - text: "contato de emergência"
+    label: sensitive
+  - text: "contato de emergencia"
+    label: sensitive
+  - text: "emergency contact"
+    label: sensitive
+  - text: "next of kin"
+    label: sensitive
+  - text: "numero rg"
+    label: sensitive
+  - text: "rg number"
+    label: sensitive
+
+recommendation_overrides:
+  - norm_tag_pattern: "antecedentes criminais (Art. 11)"
+    base_legal: "LGPD Art. 11 — dado pessoal sensível (antecedentes criminais)"
+    risk: "Antecedentes criminais são dado sensível; tratamento exige base legal específica do Art. 11 e controles reforçados. Exposição indevida pode gerar discriminação e violação de sigilo."
+    recommendation: "Confirmar base legal do Art. 11 (ex.: consentimento específico, tutela da saúde, procedimento legal). Restringir acesso, criptografar, minimizar retenção e registrar finalidade. Consultar DPO e jurídico — não é conclusão legal."
+    priority: "ALTA"
+    relevant_for: "DPO, Encarregado LGPD, Jurídico, Segurança da Informação"
+  - norm_tag_pattern: "documento — CNH"
+    base_legal: "LGPD Art. 5 — documento de identificação (CNH)"
+    risk: "CNH identifica o titular e pode ser usada para fraude documental ou acesso indevido a serviços."
+    recommendation: "Aplicar minimização, controle de acesso e bases legais da LGPD; mascarar em relatórios quando possível."
+    priority: "ALTA"
+    relevant_for: "DPO, Operador, Segurança da Informação"
+  - norm_tag_pattern: "documento — RG/identidade"
+    base_legal: "LGPD Art. 5 — documento de identidade"
+    risk: "RG ou equivalente identifica pessoa natural; exposição facilita fraude e reidentificação."
+    recommendation: "Restringir acesso, criptografar em repouso/trânsito e documentar finalidade e base legal."
+    priority: "ALTA"
+    relevant_for: "DPO, Operador, Segurança da Informação"
+  - norm_tag_pattern: "conta/agência bancária"
+    base_legal: "LGPD Art. 5 — dado financeiro (conta/agência)"
+    risk: "Conta e agência bancária permitem vincular titular a instituição financeira; risco de fraude e vazamento financeiro."
+    recommendation: "Mascarar em relatórios, restringir acesso e alinhar com políticas de segurança financeira e LGPD."
+    priority: "ALTA"
+    relevant_for: "DPO, CISO, Operador financeiro"
+  - norm_tag_pattern: "geolocalização precisa"
+    base_legal: "LGPD Art. 5 — localização precisa (vetor de reidentificação)"
+    risk: "Coordenadas ou colunas de latitude/longitude precisas permitem rastrear ou reidentificar titulares."
+    recommendation: "Avaliar necessidade de precisão; agregar ou anonimizar quando possível; restringir acesso e retenção."
+    priority: "ALTA"
+    relevant_for: "DPO, Arquitetura de dados, Segurança da Informação"
+  - norm_tag_pattern: "endereço / componente de localização"
+    base_legal: "LGPD Art. 5 — endereço e componentes (CEP, rua, bairro, cidade) permitem localização e reidentificação."
+    risk: "Schema de endereço completo equivale a dado de localização; combinação de campos aumenta risco de re-ID."
+    recommendation: "Minimizar granularidade quando possível; restringir acesso; documentar finalidade e base legal."
+    priority: "ALTA"
+    relevant_for: "DPO, Arquitetura de dados, Segurança da Informação"
+  - norm_tag_pattern: "contato de emergência"
+    base_legal: "LGPD Art. 5 — dado pessoal de terceiro (contato de emergência)"
+    risk: "Contato de emergência é dado de terceiro sem relação direta com o titular principal; exige transparência e base legal adequada."
+    recommendation: "Informar finalidade ao titular; obter consentimento quando aplicável; restringir uso à finalidade declarada."
+    priority: "MÉDIA"
+    relevant_for: "DPO, RH, Operador"
+  - norm_tag_pattern: "PII_AMBIGUOUS"
+    base_legal: "Identificador genérico – confirmar manualmente"
+    risk: "Nome de coluna genérico (doc_id, document_id, id_number, etc.). Pode ser PII ou ID interno."
+    recommendation: "Confirmar manualmente: verificar se a coluna contém dado pessoal (PII) ou apenas identificador interno. Se for PII, aplicar controles e base legal; se interno, prioridade MÉDIA."
+    priority: "MÉDIA"
+    relevant_for: "Operador, DPO, Segurança da Informação"
+  - norm_tag_pattern: "LGPD Art. 5"
+    base_legal: "LGPD Art. 5 (dados pessoais); Lei 13.709/2018"
+    risk: "Identificação de pessoa natural."
+    recommendation: "Aplicar bases legais e medidas de segurança da LGPD; tratar conforme finalidade e necessidade."
+    priority: "ALTA"
+    relevant_for: "DPO, Encarregado LGPD"

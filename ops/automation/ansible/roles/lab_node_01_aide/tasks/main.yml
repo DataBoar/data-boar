@@ -1,0 +1,23 @@
+---
+- name: Ensure aide package is installed
+  when: lab_node_01_aide_enable | bool
+  ansible.builtin.apt:
+    name: aide
+    state: present
+    update_cache: false
+  failed_when: false
+
+- name: Optionally append operator AIDE lines (comment-only unless overridden)
+  when: lab_node_01_aide_enable | bool
+  ansible.builtin.blockinfile:
+    path: "{{ lab_node_01_aide_conf_path }}"
+    marker: "# {mark} managed by ansible (lab_node_01_aide)"
+    block: |
+      # Learned baseline: keep custom additions small and reviewable.
+      # Add host/profile-specific ignores in a private overlay, not in tracked files.
+      {% for line in lab_node_01_aide_extra_lines %}
+      {{ line }}
+      {% endfor %}
+    create: false
+  failed_when: false
+

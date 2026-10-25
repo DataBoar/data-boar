@@ -1,0 +1,159 @@
+# Mexico LFPDPPP — sample compliance profile (Ley Federal de Protección de Datos
+# Personales en Posesión de los Particulares)
+#
+# Target audience: Mexico and LATAM deployments; controllers/processors subject to
+# Mexican federal private-sector personal data law. Authority: INAI (Instituto
+# Nacional de Transparencia, Acceso a la Información y Protección de Datos Personales).
+#
+# How to use:
+#   1. Set in your main config:
+#        regex_overrides_file: path/to/compliance-sample-mexico_lfpdppp.yaml
+#        ml_patterns_file: path/to/compliance-sample-mexico_lfpdppp.yaml
+#   2. Merge the recommendation_overrides list below into your config under
+#      report.recommendation_overrides.
+#
+# Legal scope (summary — not legal advice):
+#   - LFPDPPP regulates processing of personal data by private parties; key constructs
+#     include datos personales, datos personales sensibles, titular, responsable,
+#     encargado, tratamiento, consentimiento, derechos ARCO, aviso de privacidad,
+#     and domestic / international transfers. Secondary regulation and sector practice
+#     evolve — scope with Mexican counsel.
+#   - CURP and RFC appear in HR, tax, and identity workflows; patterns below use
+#     **contextual** labels to reduce false positives vs bare alphanumeric strings.
+#   - Precise geolocation: same four-decimal geometry as compliance-sample-us_va_vcdpa.yaml.
+#   - Data Boar performs technical pattern/term matching only — not legal basis,
+#     consent validity, or INAI complaint classification.
+#
+# Use double-quoted YAML with escaped backslashes.
+
+regex:
+  - name: "MX_CURP_CTX"
+    pattern: "(?i)(?:CURP|clave\\s+u\u00fanica\\s+de\\s+registro)\\s*[:#]?\\s*\\b[A-Z\u00d1]{4}\\d{6}[HM][A-Z\u00d1]{2}[A-Z0-9\u00d1]{5}\\b"
+    norm_tag: "Mexico LFPDPPP"
+  - name: "MX_RFC_CTX"
+    pattern: "(?i)(?:RFC|registro\\s+federal\\s+de\\s+contribuyentes)\\s*[:#]?\\s*\\b[A-Z\u00d1&]{3,4}\\d{6}[A-Z0-9\u00d1]{2,3}\\b"
+    norm_tag: "Mexico LFPDPPP"
+  - name: "MX_JSON_LAT_PRECISION"
+    pattern: "(?i)[\"']lat[\"']\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\b"
+    norm_tag: "Mexico LFPDPPP"
+  - name: "MX_JSON_LNG_PRECISION"
+    pattern: "(?i)[\"'](?:lng|lon)[\"']\\s*:\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}\\b"
+    norm_tag: "Mexico LFPDPPP"
+  - name: "MX_LOCATION_CSV_PAIR"
+    pattern: "(?i)\\blocation\\s*:\\s*[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*,\\s*[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "Mexico LFPDPPP"
+  - name: "MX_QUERYSTRING_LAT_LONG"
+    pattern: "(?i)latitude=[-+]?(?:[1-8]?\\d|90)\\.\\d{4,}\\s*&\\s*longitude=[-+]?(?:180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}"
+    norm_tag: "Mexico LFPDPPP"
+
+terms:
+  - text: "LFPDPPP"
+    label: sensitive
+  - text: "ley federal de protección de datos personales"
+    label: sensitive
+  - text: "Federal Law on Protection of Personal Data"
+    label: sensitive
+  - text: "datos personales"
+    label: sensitive
+  - text: "personal data"
+    label: sensitive
+  - text: "datos personales sensibles"
+    label: sensitive
+  - text: "sensitive personal data"
+    label: sensitive
+  - text: "titular"
+    label: sensitive
+  - text: "data subject"
+    label: sensitive
+  - text: "responsable"
+    label: sensitive
+  - text: "controller"
+    label: sensitive
+  - text: "encargado"
+    label: sensitive
+  - text: "processor"
+    label: sensitive
+  - text: "tratamiento"
+    label: sensitive
+  - text: "processing"
+    label: sensitive
+  - text: "finalidades"
+    label: sensitive
+  - text: "purposes of processing"
+    label: sensitive
+  - text: "consentimiento"
+    label: sensitive
+  - text: "consent"
+    label: sensitive
+  - text: "ARCO"
+    label: sensitive
+  - text: "derechos ARCO"
+    label: sensitive
+  - text: "access rectification cancellation opposition"
+    label: sensitive
+  - text: "acceso rectificación cancelación oposición"
+    label: sensitive
+  - text: "INAI"
+    label: sensitive
+  - text: "instituto nacional de transparencia"
+    label: sensitive
+  - text: "aviso de privacidad"
+    label: sensitive
+  - text: "privacy notice"
+    label: sensitive
+  - text: "transferencia de datos"
+    label: sensitive
+  - text: "data transfer"
+    label: sensitive
+  - text: "transferencia internacional"
+    label: sensitive
+  - text: "international data transfer"
+    label: sensitive
+  - text: "IFAI"
+    label: sensitive
+  - text: "video vigilancia"
+    label: sensitive
+  - text: "videovigilancia"
+    label: sensitive
+  - text: "CCTV"
+    label: sensitive
+  - text: "datos biométricos"
+    label: sensitive
+  - text: "biometric data"
+    label: sensitive
+  - text: "datos patrimoniales"
+    label: sensitive
+  - text: "financial or patrimonial data"
+    label: sensitive
+  - text: "origen racial o étnico"
+    label: sensitive
+  - text: "racial or ethnic origin"
+    label: sensitive
+  - text: "estado de salud"
+    label: sensitive
+  - text: "health data"
+    label: sensitive
+  - text: "creencias religiosas"
+    label: sensitive
+  - text: "religious beliefs"
+    label: sensitive
+  - text: "opiniones políticas"
+    label: sensitive
+  - text: "political opinions"
+    label: sensitive
+  - text: "vida sexual"
+    label: sensitive
+  - text: "sexual life"
+    label: sensitive
+  - text: "menores de edad"
+    label: sensitive
+  - text: "children personal data"
+    label: sensitive
+
+recommendation_overrides:
+  - norm_tag_pattern: "Mexico LFPDPPP"
+    base_legal: "Mexico LFPDPPP (Ley Federal de Protección de Datos Personales en Posesión de los Particulares); INAI (transparency and personal data protection authority for the federal law)."
+    risk: "Personal and sensitive personal data; ARCO rights; privacy notice; domestic and international transfers; high-sensitivity inventory signals (biometrics, health, precise geolocation) require governance alignment — statutory exceptions and sector overlays are not evaluated by the scanner."
+    recommendation: "Map inventory to LFPDPPP roles (responsable/encargado); maintain aviso de privacidad and consent/transfer documentation; pair technical findings with counsel on INAI-facing posture and cross-border mechanisms."
+    priority: "ALTA"
+    relevant_for: "DPO, Privacy Counsel, INAI liaison, Responsable, Encargado"

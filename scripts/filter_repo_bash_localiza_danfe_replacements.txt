@@ -1,0 +1,5 @@
+# Placeholder mapping lines for git filter-repo (copy and fill with operator-local literals).
+# Do not commit real employer URLs or mailbox identifiers — keep those in docs/private/ only.
+http://gitlab.example.internal/IDENTIDADE_OPERADOR_SLUG/localiza_danfe_por_id_de_upload.git==>https://github.com/GITHUB_OWNER/bash_localiza_danfe_por_id_de_upload.git
+CORREIO_OPERADOR_EXEMPLO@empresa.exemplo==>https://github.com/GITHUB_OWNER
+/tospprodsharedfiles/tospsharedfiles/athenas/jboss/repositorio_aft/bkp/checkin==>/var/lib/danfe-checkin-backup/bkp/checkin

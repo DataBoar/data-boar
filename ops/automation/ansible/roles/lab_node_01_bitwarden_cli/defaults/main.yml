@@ -1,0 +1,4 @@
+---
+# Bitwarden CLI is not packaged in Debian main (trixie/LMDE). Install via npm from Debian nodejs/npm.
+lab_node_01_install_bitwarden_cli: true
+lab_node_01_bitwarden_cli_npm_package: "@bitwarden/cli"

@@ -1,0 +1,72 @@
+{
+  "schema_version": "data_boar_grc_executive_report_v1",
+  "report_metadata": {
+    "report_id": "DB-EXAMPLE-001",
+    "client_display_name": "Example Org (placeholder)",
+    "scan_date": "2026-04-25T12:00:00Z",
+    "scanner_version": "0.0.0-example",
+    "scope": "Lab smoke — single synthetic database; sample_limit applied (placeholder)",
+    "session_id": "example-session-id"
+  },
+  "executive_summary": {
+    "total_records_scanned": 1500000,
+    "pii_instances_found": 2440,
+    "critical_assets_at_risk": 2,
+    "compliance_score": 70.3,
+    "risk_level": "CRITICAL",
+    "compliance_score_method": "heuristic_v1_weighted_excess_risk"
+  },
+  "compliance_mapping": {
+    "lgpd_articles_hint": ["LGPD:Art.5", "LGPD:Art.7", "LGPD:Art.46"],
+    "gdpr_articles_hint": ["GDPR:Art.4", "GDPR:Art.32"],
+    "mapping_confidence": "workshop_hints_not_legal_classification"
+  },
+  "detailed_findings": [
+    {
+      "asset_id": "db:example_target:dbo.clientes",
+      "asset_class": "database_table",
+      "data_category": "personal",
+      "risk_score": 85,
+      "risk_score_input": 85,
+      "impact_score": 85,
+      "likelihood_score": 81.8,
+      "heatmap_quadrant": "impact_high_likelihood_high",
+      "pii_types": [
+        {"type": "CPF", "count": 1200, "exposure": "Cleartext"},
+        {"type": "EMAIL", "count": 1200, "exposure": "Hashed"}
+      ],
+      "location_summary": "dbo.clientes — columns cpf, email (placeholder)",
+      "violation_desc": "High-density national-ID-like tokens stored without field-level encryption signal in this scan configuration (technical observation).",
+      "norm_tags": ["EXAMPLE_NORM_TAG"],
+      "remediation_priority": "CRITICAL",
+      "regulatory_impact": "Workshop placeholder only: map to LGPD security / processing principles with counsel; not an automated sanction estimate."
+    },
+    {
+      "asset_id": "db:example_target:dbo.health_notes",
+      "asset_class": "database_table",
+      "data_category": "sensitive",
+      "risk_score": 100,
+      "risk_score_input": 82,
+      "impact_score": 100,
+      "likelihood_score": 90,
+      "heatmap_quadrant": "impact_high_likelihood_high",
+      "pii_types": [
+        {"type": "HEALTH", "count": 40, "exposure": "Cleartext"}
+      ],
+      "location_summary": "dbo.health_notes — clinical free-text (placeholder)",
+      "violation_desc": "Special-category-like metadata detected in this configuration (technical observation).",
+      "norm_tags": ["EXAMPLE_SENSITIVE_TAG"],
+      "remediation_priority": "CRITICAL",
+      "regulatory_impact": "Workshop placeholder: special-category rigour and DPO review; verify classification with counsel."
+    }
+  ],
+  "recommendations": [
+    {
+      "id": "REC-001",
+      "priority": "P0",
+      "action": "Apply field-level encryption or vault tokenisation for identified columns (operator-defined control).",
+      "estimated_effort": "Medium",
+      "regulatory_impact_note": "May support DPO discussion of administrative risk; non-authoritative — verify with counsel."
+    }
+  ]
+}

@@ -1,0 +1,226 @@
+# Licensing specification (runtime)
+
+**Português (Brasil):** [LICENSING_SPEC.pt_BR.md](LICENSING_SPEC.pt_BR.md)
+
+Technical specification for **optional** commercial enforcement. Default is **open** mode (no token required).
+
+## Modes
+
+| Mode       | Config / env                                                    | Behaviour                                                                                          |
+| ----       | ------------                                                    | ----------                                                                                         |
+| `open`     | `licensing.mode: open` or unset; `DATA_BOAR_LICENSE_MODE=enforced` can escalate | Full functionality; license token optional; status shows **OPEN**                                  |
+| `enforced` | `licensing.mode: enforced`                                      | Valid signed token required for ingest/digest; invalid/expired/revoked/tampered states block scans |
+
+### No environment bypass (#719)
+
+Enforcement state is determined **only** by `licensing.mode: enforced` plus a
+valid signed license. Environment variables can never disable it:
+
+- `DATA_BOAR_LICENSE_MODE=open` is **ignored** when YAML sets `mode: enforced`
+  (the attempt is recorded as a CRITICAL audit event). The env var can only
+  **escalate** `open` → `enforced`.
+- `DATA_BOAR_ENV=development`, `DEBUG=1`, and the former
+  `DATA_BOAR_TIER_OVERRIDE` have **zero** licensing effect. The dev/CI tier
+  override was removed — use a locally issued signed QA license instead
+  (`scripts/issue_dev_license_jwt.py`).
+- Without a valid license in enforced mode the runtime **fails closed**:
+  scans are denied (Safe-Hold / HTTP 403) and the feature tier is capped to
+  Community — never "open".
+
+Every enforcement decision (allow / deny / clamp / expire) is recorded on the
+`data_boar.licensing.audit` logger with the `LICENSE_AUDIT` prefix.
+
+Environment variables override YAML when set:
+
+- `DATA_BOAR_LICENSE_MODE` — `enforced` (escalation only; `open` cannot downgrade YAML `enforced`)
+- `DATA_BOAR_LICENSE_PATH` — path to the signed JWT file (`.lic` or `license.jwt`)
+
+### License file path precedence (#1940)
+
+`LicenseGuard` calls `core.licensing.paths.resolve_license_path`. Order:
+
+1. **`DATA_BOAR_LICENSE_PATH`** — wins when set to a non-empty path after strip. Whitespace-only env is treated as unset.
+2. **`licensing.license_path`** in YAML — same strip rule; used when (1) is unset or blank.
+3. **Canonical org path** — only when (1) and (2) are both unset/blank **and** the file exists:
+   - Linux: `$XDG_CONFIG_HOME/databoar/license.jwt` or `~/.config/databoar/license.jwt`
+   - macOS: `~/Library/Application Support/databoar/license.jwt`
+   - Windows: `%AppData%\databoar\license.jwt`
+
+The directory name is **`databoar`** (org), not the repo slug `data-boar`. `license-studio sign -deploy auto` writes here. An explicit env or config path is never replaced silently: a missing explicit file stays fail-closed (`missing_license_file`, #719). Canonical fallback only chooses **where to read**; signature and claims validation are unchanged. Operator QA: [QA_LOCAL_LICENSE.md](ops/QA_LOCAL_LICENSE.md) ([pt-BR](ops/QA_LOCAL_LICENSE.pt_BR.md)).
+
+`DATA_BOAR_LICENSE_PUBLIC_KEY_PEM`, `DATA_BOAR_LICENSE_PUBLIC_KEY_PATH`, `DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_PEM`, `DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_PATH`, `licensing.public_key_path`, and `licensing.mldsa_public_key_path` are **not** verify keys. If any of them is set, enforced mode fails closed with `untrusted_key_override` (#1992). There is no test-only environment flag that turns that into an override. The ML-DSA key for `dbmldsa_sig` is the packaged anchor or the ML-DSA half of an accepted rotation.
+
+### Public-key resolution (#1331, #1992)
+
+Enforced mode verifies the `.lic` against the Ed25519 **public** key shipped **inside the wheel** as `core/licensing/license-pub-v1.pem` (loaded via `importlib.resources`). A clean install with a valid machine-bound `.lic` does **not** need a pubkey path.
+
+The ML-DSA-65 **rotation / hybrid** anchor ships as `core/licensing/license-mldsa-pub-v1.pem` (same packaging path as Ed25519). Canonical on-disk SHA-256 (LF bytes): `37faef8ff167cf01a0fc6a2bc8b7cfcac6bfe5651360051b1eb00a0a60fa85b8`. Hybrid `dbmldsa_sig` is **required** on every enforced token (#2042). A token without that claim is invalid. Reissue Ed25519-only licenses from 1.7.4 before upgrading a deployment that runs `licensing.mode: enforced`.
+
+Key rotation is a JSON attestation at `licensing.rotation_attestation_path`. It is accepted only when **both** embedded anchors (Ed25519 and ML-DSA-65) sign the same message and `epoch` is `>= MIN_ACCEPTED_KEY_EPOCH` in `core/licensing/trust_anchor.py`. The signed bytes are `data-boar/license-key-rotation/v1\\0` plus the epoch as an 8-byte big-endian integer plus the canonical JSON of the new public keys. The epoch is inside that message; changing it after signing fails the signature. One anchor, a raw PEM, or an older epoch fails closed (`rotation_rejected:…`). `missing_public_key` remains only when the packaged Ed25519 resource is absent and no accepted rotation is configured.
+
+Other environment variables:
+
+- `DATA_BOAR_LICENSE_REVOCATION_PATH` — JSON file listing revoked license IDs
+- `DATA_BOAR_RELEASE_MANIFEST_PATH` — optional JSON manifest for integrity (see [RELEASE_INTEGRITY.md](RELEASE_INTEGRITY.md))
+- `DATA_BOAR_EXPECTED_BUILD_DIGEST` — optional hex SHA-256; if set, compared to embedded build digest
+
+## YAML (`config.yaml`)
+
+```yaml
+licensing:
+  mode: open                    # open | enforced
+  public_key_path: ""           # rejected if set (#1992); not a verify key
+  mldsa_public_key_path: ""     # rejected if set (#1992); not a verify key
+  rotation_attestation_path: "" # cross-signed Ed25519+ML-DSA rotation, or empty
+  license_path: ""              # signed JWT; blank + unset env → canonical databoar/license.jwt if that file exists (#1940)
+  revocation_list_path: ""      # optional JSON revoke list
+  manifest_path: ""             # optional release manifest
+  machine_bind_strict: false    # if true, token mfp must match host fingerprint
+```
+
+## License JWT payload (claims)
+
+Signed with **Ed25519** (JWS `EdDSA`). Standard claims:
+
+| Claim | Meaning             |
+| ----- | -------             |
+| `sub` | License ID (unique) |
+| `iat` | Issued-at (unix)    |
+| `exp` | Expiration (unix)   |
+
+Custom claims (namespaced to avoid collisions):
+
+| Claim       | Type   | Meaning                                                                         |
+| -----       | ----   | -------                                                                         |
+| `dbcid`     | string | Customer ID                                                                     |
+| `dbcname`   | string | Customer display name                                                           |
+| `dbenv`     | string | Target environment: `production`, `qa`, `uat`, `homologation`, `debug`, `trial` |
+| `dbmfp`     | string \| array | Expected machine fingerprint(s). Single hex string = one host; **array of hex strings = deployment pack** (#718 + #846): runtime accepts when its own fingerprint ∈ pack. Each entry must be exactly 64 hex chars (case-insensitive; only ASCII whitespace is trimmed). **Absent = any host.** A **present** claim that is `null`, empty, whitespace/control-char only, non-hex, wrong length, an empty pack, or the wrong type **fails closed** (`INVALID`, `malformed_dbmfp_claim`) — never degrades to "unbound" (#1939). |
+| `dbtrial`   | bool   | Trial / POC: cap report rows and watermark                                      |
+| `dbmaxrows` | int    | Max data rows in report when trial (e.g. 15)                                    |
+| `dbissuer`  | string | Issuer operator id (e.g. SSH key fingerprint or email)                          |
+| `dbkid`     | string | Signing key id for rotation                                                     |
+| `dbgrace`   | int    | Grace period end (unix); after `exp`, still **GRACE** until this time           |
+| `dbmax_workers` | int | Max parallel scan workers (#551) — in practice the number of **targets scanned concurrently**. **Enforced mode only:** the engine clamps `scan.max_workers` to `min(scan.max_workers, dbmax_workers)`. Absent/zero on a usable license → tier defaults apply (Community **2** / Std **2** / Pro **4** / Pro+ **8** / Enterprise **unlimited** / Partner **contract-driven**; #2047). Pro+ is a tier (`Tier.PRO_PLUS`); a positive `dbmax_workers` claim still wins over the tier default. Open mode never caps. Clamp is fail-soft and audited (`workers_clamped`, WARNING). |
+| `dbmax_deployments` | int | Max distinct **licensed production sites** (fingerprints) for this token (#846). **Issuance-enforced:** the issuer emits the `dbmfp` pack with at most this many entries; runtime reads the claim into `LicenseContext.max_deployments` (audit/report surface) and validates only its **own** fingerprint ∈ pack. **0** may mean **unlimited** when contract allows (Enterprise). Pro default = **2** (operator-ratified 2026-06-11: on-prem + 1 cloud/branch) — see `DEFAULT_PRO_DEPLOYMENTS` in `core/licensing/guard.py`. |
+| `dbdeployment_pack_id` | string | Id of a **commercial add-on** (e.g. “+5 sites”) for audit/refill trail (#846); surfaced in `LicenseContext.deployment_pack_id`. Issuer: `scripts/issue_dev_license_jwt.py --dbmfp-pack <hex,hex,...> [--pack-id ...]`. |
+| `dbmldsa_sig` | string | Optional ML-DSA-65 overlay (#48). **Not** a JOSE algorithm. See [Hybrid Ed25519 + ML-DSA-65](#hybrid-ed25519--ml-dsa-65-overlay-48). |
+
+### Hybrid Ed25519 + ML-DSA-65 overlay (#48)
+
+JOSE `alg` stays **EdDSA** (Ed25519). License Studio can attach claim `dbmldsa_sig` (`CLAIM_MLDSA_SIG` in `core/licensing/verify.py`): base64url of an **ML-DSA-65** signature over `header_b64` + `.` + base64url of the JWT payload JSON **without** that claim.
+
+| Surface | What it does |
+| ------- | ------------ |
+| `decode_license_jwt` | Verifies EdDSA only. Extra `dbmldsa_sig` is ignored (retrocompat). |
+| `decode_license_jwt_hybrid` | EdDSA first, then ML-DSA when the claim is present. |
+| `LicenseGuard` | Always calls **`decode_license_jwt_hybrid`**. The ML-DSA key is the packaged anchor or an accepted rotation, never an env/YAML override (`untrusted_key_override`). A missing claim is `hybrid_claim_required`. A missing anchor is `missing_mldsa_anchor`. A verified token sets `license_detail=hybrid_mldsa65_verified`. |
+
+**Constraints (verify against source, do not invent a runtime gate):**
+
+- Claim present + `mldsa_pub is None` → `ValueError` (`hybrid claim present: ML-DSA public key required`).
+- "Present" means the `dbmldsa_sig` **key** exists in the payload. A present claim whose value is `null`, an empty string, or a non-string fails closed (`ValueError`; `LicenseGuard` → `INVALID`). An absent key is also invalid (`hybrid_claim_required`, #2042). #1996 still covers the present-but-invalid values.
+- Bad ML-DSA signature → `cryptography.exceptions.InvalidSignature`.
+- Payload JSON must match license-studio `pkg/verify/hybrid.go`: `json.dumps(..., sort_keys=True, separators=(",", ":"), ensure_ascii=False)` plus Go HTML-safe escapes (`<` `>` `&` U+2028 U+2029).
+- Public key PEM is `-----BEGIN ML-DSA-65 PUBLIC KEY-----` with **raw** public bytes (`MLDSA65PublicKey.from_public_bytes`), **not** PKIX/`SubjectPublicKeyInfo`.
+- Tests: `tests/test_licensing_hybrid_mldsa_verify.py` (skipped when OpenSSL has no ML-DSA: `backend.mldsa_supported()`).
+- **Forgery bar:** omitting `dbmldsa_sig` does not fall back to Ed25519-only. Both signatures are required (#2042).
+
+**Multi-site verification (honest boundary, #718 + #846):** Implemented via option (1) — **array** of allowed fingerprints in the `dbmfp` claim (deployment pack). Runtime validates only that **its own** `compute_machine_fingerprint()` (hostname + optional `DATA_BOAR_MACHINE_SEED`) is in the pack — the **global** deploy count is enforced at **issuance** (the issuer signs a pack of at most `dbmax_deployments` fingerprints). Alternatives kept for reference: (2) **online** registration (privacy + ops cost); (3) **multiple JWTs** same `dbcid`, one fingerprint each. See [LICENSING_OPEN_CORE_AND_COMMERCIAL.md](LICENSING_OPEN_CORE_AND_COMMERCIAL.md) §Deployments, copies, and sites.
+
+## Lifecycle states
+
+| State              | Meaning                                                                |
+| -----              | -------                                                                |
+| `OPEN`             | Enforcement off; community / dev build                                 |
+| `VALID`            | Token signature OK, not expired (or in grace), not revoked, machine OK |
+| `GRACE`            | Past `exp` but before `dbgrace`                                        |
+| `EXPIRED`          | Past grace                                                             |
+| `REVOKED`          | License ID on revocation list                                          |
+| `UNLICENSED`       | Enforced but no token or unreadable token                              |
+| `INVALID`          | Bad signature or malformed JWT                                         |
+| `MACHINE_MISMATCH` | `dbmfp` set and does not match host                                    |
+| `TAMPERED`         | Release integrity / manifest check failed                              |
+| `CRACKED`          | Reserved for future anti-tamper signals (e.g. bytecode check failures) |
+
+## Machine fingerprint
+
+Computed as **SHA-256** hex over a stable string built from:
+
+- Hostname (short)
+- Optional: `DATA_BOAR_MACHINE_SEED` (set in deployment for Docker/VM stability)
+
+Docker: set `DATA_BOAR_MACHINE_SEED` to a deployment-specific secret so containers on the same image share one licensed fingerprint.
+
+## Revocation file format
+
+JSON:
+
+```json
+{
+  "revoked_license_ids": ["license-uuid-1", "license-uuid-2", "jti-token-id", "k1"],
+  "generated_at_unix": 1714000000
+}
+```
+
+Companion file **`revocation.json.sig`**: standard Base64 (plus trailing newline) of the raw 64-byte **Ed25519** signature over the **exact bytes on disk** of `revocation.json` (not a re-serialization). Same issuance key as the license JWT. Reference reader: License Studio `revoke.Verify` (`DataBoar/license-studio`).
+
+When `DATA_BOAR_LICENSE_REVOCATION_PATH` / `licensing.revocation_list_path` **is set** in **enforced** mode, a missing list, missing/malformed `.sig`, or a signature that does not verify is **fail-closed** (`TAMPERED`, detail `revocation_unverified:…`) — never a silent empty set (#1753). When **no** path is configured, the kill-switch is skipped (opt-in).
+
+**Kill-switch matching (#717):** each entry may name a **license id** (`sub` claim), a **token id** (`jti` claim), or a **signing key id** (`dbkid` claim). Any match fails **closed**: state `REVOKED`, watermark `REVOKED`, effective tier capped to **Community**, plus a dedicated `license_revoked` audit event (WARNING) with the matched field (`license_revoked:sub|jti|dbkid`). Revoking a `dbkid` disables **every** token signed with that key — the emergency lever for a compromised signing key.
+
+**Distribution:** the list is read from `DATA_BOAR_LICENSE_REVOCATION_PATH` (env) or `licensing.revocation_list_path` (YAML) at license evaluation time. To apply an updated revocation list, re-evaluate the license (e.g. restart the process or container). The path may point at a local file (air-gapped-friendly) or an operator-managed distribution.
+
+## Trial / POC behaviour
+
+When `dbtrial` is true:
+
+- Scan may run (if otherwise valid) but **report generation** caps findings to `dbmaxrows` and appends synthetic “teaser” rows (watermarked).
+- Logs and Report info sheet state **TRIAL**.
+
+## Blocking rule
+
+When mode is **enforced** and state is not `VALID` or `GRACE` (and not `OPEN`):
+
+- **CLI**: `start_audit` raises `LicenseBlockedError`; message printed to stderr.
+- **API**: `POST /scan`, `POST /start`, `POST /scan_database` return **403** with `detail.license_state`.
+
+Health and About still respond so operators can see **why** the system is restricted.
+
+## Future extensions (planning reminder — partner tiers / consulting SKUs)
+
+When you **change or harden licensing** for IP and profitability, you may introduce **separate commercial programs** (e.g. **direct end-customer** vs **partner / pro / enterprise**—exact names and contracts TBD with counsel). One goal: allow **partners** to use a **partner-level** entitlement to serve **their customers’** engagements without collapsing into the same SKU as a single-tenant end user.
+
+**Not implemented today.** Possible directions (to be validated legally and product-wise):
+
+| Idea                  | Notes                                                                                                                              |             |                                                                                                   |
+| ----                  | -----                                                                                                                              |             |                                                                                                   |
+| **Custom JWT claims** | e.g. `dbprogram` or `dbtier` (`direct` \                                                                                           | `partner` \ | `enterprise`, …) and optional `dbmax_customers` / `dbconsulting_allowed`—names illustrative only. |
+| **Enforcement**       | `LicenseGuard` and report metadata would read claims and block or watermark **unauthorised** consulting or multi-customer use.     |             |                                                                                                   |
+| **Issuance**          | Private issuer ([`DataBoar/license-studio`](https://github.com/DataBoar/license-studio) — operator-only) issues different token **templates** per SKU; audit log records program/tier. |             |                                                                                                   |
+
+Keep this section in sync with [LICENSING_OPEN_CORE_AND_COMMERCIAL.md](LICENSING_OPEN_CORE_AND_COMMERCIAL.md) (“Future product tiers” and **Brand, narrative, and experience IP** — mascot, data soup, dashBOARd, report/UI presentation, companion resources). **Do not add claims to production tokens until contracts and pricing are defined.**
+
+### Future extension: entitlement-driven feature packs and kill switch
+
+Not implemented yet. Planning target: when tier contracts are frozen, license claims can drive
+which optional capabilities are available at runtime and which installer extras are permitted.
+
+| Claim / control idea                                  | Purpose                                                                                                                               |
+| ---                                                   | ---                                                                                                                                   |
+| `dbtier` (`standard`, `pro`, `partner`, `enterprise`) | Single source of truth for entitlement tier in runtime, report info, and audit trail. **Implementation (2026-04):** when `licensing.mode` is **enforced** and the token is **VALID** or **GRACE**, the verify path copies this claim into `LicenseContext.dbtier` and `GET /status` → `license.dbtier` (`GET /health` is liveness only, #2077); dashboard code maps it to internal tier for **optional** feature gates (e.g. maturity POC) alongside lab-only `licensing.effective_tier` in YAML. **Maturity POC gate:** `docs/plans/completed/PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md` § *Next slice*; regression: `tests/test_api_assessment_poc.py` (`test_assessment_enforced_jwt_dbtier_*`). |
+| `dbmax_workers` (int)                                 | **Implemented (#551/#853)** — cap on **parallel scan workers** (≈ concurrent targets). Band defaults: Community **2** · Std **2** · Pro **4** · Pro+ **8** (`Tier.PRO_PLUS`; a `dbmax_workers` claim still wins over the tier default) · Enterprise **unlimited** · Partner **contract-driven** — canonical ladder in [SUBSCRIPTION_TIERS.md](SUBSCRIPTION_TIERS.md) (not a price list). |
+| `dbmax_targets` (int)                                 | Optional cap on **configured targets** per session or deployment envelope; **0** may mean unlimited when contract allows.              |
+| `dbfeatures` (string list)                            | Explicit feature flags independent from tier defaults (e.g. `compressed_scan`, `content_type_cloaking`, future `ai_heuristics_plus`). |
+| `dbkill` / revocation overlays                        | Emergency disable for vulnerable/abused capabilities without shipping a full app update.                                              |
+| `dbextras_profile` (`core`, `plus`, `full`)           | Maps entitlement to allowed dependency packs (`.[nosql]`, `.[datalake]`, etc.) in controlled environments.                            |
+
+## Operational policy sketch (to refine in plan + legal):
+
+1. **Enterprise**: allow all vetted extras profiles (`full`) and all optional runtime controls; **workers/targets**: **unlimited** in entitlement (subject to host), unless contract narrows.
+1. **Pro / Partner**: allow a curated subset (for example cloaking/content-type checks and selected premium heuristics), deny high-cost packs by default; **workers/targets**: **above open-core caps**, not necessarily unlimited; some **premium ingredients** may be **Enterprise-only**.
+1. **Open core / community** (no paid token): when enforcement is active for a **build** that embeds band defaults, align with **1–2 workers** and **capped targets** policy — see [SUBSCRIPTION_TIERS.md](SUBSCRIPTION_TIERS.md).
+1. **Standard** (if used as a label): core runtime only, with a short allowlist of low-risk options (example: compressed archive scan).
+1. **Enforcement posture**: fail closed for disallowed premium options in `enforced` mode, but keep explicit operator guidance in logs/docs.
+
+**`uv`/extras note:** automatic dependency installation must be **opt-in** and auditable (prefer explicit operator command or installer profile), never silent package mutation during scan runtime. Record entitlement decisions in audit surfaces once implemented.
