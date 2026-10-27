@@ -21,6 +21,12 @@ paths = [
   '''docs/ops/SECURE_DASHBOARD_AUTH_AND_HTTPS_HOWTO\.md''',
   '''docs/ops/SECURE_DASHBOARD_AUTH_AND_HTTPS_HOWTO\.pt_BR\.md''',
   '''docs/OPERATOR_NOTIFICATION_CHANNELS\.md''',
+  # FP 2026-10-27: generic-api-key default rule matches the literal path string
+  # `docs/private/` inside the sentence "tokens in env, `docs/private/`" on line 5
+  # of docs/ops/OPERATOR_NOTIFICATION_CHANNELS.md (commit 325021fe). That is a
+  # docs path, not a credential. Narrow path allowlist only; the generic-api-key
+  # rule itself is not weakened.
+  '''docs/ops/OPERATOR_NOTIFICATION_CHANNELS\.md''',
   '''tests/data/licensing_hybrid/.*\.jwt''',
 ]
 
