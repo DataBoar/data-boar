@@ -950,10 +950,10 @@ wheels = [{ url = "https://files.pythonhosted.org/packages/02/08/9c41fb51ab5b43e
 
 [[packages]]
 name = "dnspython"
-version = "2.8.0"
+version = "2.9.0"
 index = "https://pypi.org/simple"
-sdist = { url = "https://files.pythonhosted.org/packages/8c/8b/57666417c0f90f08bcafa776861060426765fdb422eb10212086fb811d26/dnspython-2.8.0.tar.gz", upload-time = 2025-09-07T18:58:00Z, size = 368251, hashes = { sha256 = "181d3c6996452cb1189c4046c61599b84a5a86e099562ffde77d26984ff26d0f" } }
-wheels = [{ url = "https://files.pythonhosted.org/packages/ba/5a/18ad964b0086c6e62e2e7500f7edc89e3faa45033c71c1893d34eed2b2de/dnspython-2.8.0-py3-none-any.whl", upload-time = 2025-09-07T18:57:58Z, size = 331094, hashes = { sha256 = "01d9bbc4a2d76bf0db7c1f729812ded6d912bd318d3b1cf81d30c0f845dbf3af" } }]
+sdist = { url = "https://files.pythonhosted.org/packages/ef/4a/50822184bd67cc6493f0fb6a880749158fcd31ab3fa07409acfd91f9fc85/dnspython-2.9.0.tar.gz", upload-time = 2026-10-09T00:07:24Z, size = 423560, hashes = { sha256 = "b44dc6b18f07a8b1c56676a19fbfdb5209415b046a9cece286baafa87ff3f7f1" } }
+wheels = [{ url = "https://files.pythonhosted.org/packages/10/02/cdcc9b7c051786a103c3b09e1003a82fa0c66bcb91ffbdabcfbf7b4163b9/dnspython-2.9.0-py3-none-any.whl", upload-time = 2026-10-09T00:07:22Z, size = 354822, hashes = { sha256 = "9a4aedb833c3c1b49214d04d44d3032ab7a9135f7c1d29a549b4ff78fd82fda9" } }]
 
 [[packages]]
 name = "easygui"
@@ -2090,7 +2090,7 @@ wheels = [{ url = "https://files.pythonhosted.org/packages/43/e3/7d92a15f894aa0c
 [[packages]]
 name = "msoffcrypto-tool"
 version = "6.0.0"
-marker = "(platform_python_implementation != 'PyPy' and sys_platform == 'darwin') or (platform_python_implementation != 'PyPy' and sys_platform == 'win32') or (sys_platform != 'darwin' and sys_platform != 'win32')"
+marker = "platform_python_implementation != 'PyPy' or (sys_platform != 'darwin' and sys_platform != 'win32')"
 index = "https://pypi.org/simple"
 sdist = { url = "https://files.pythonhosted.org/packages/a6/34/6250bdddaeaae24098e45449ea362fb3555a65fba30cad0ad5630ea48d1a/msoffcrypto_tool-6.0.0.tar.gz", upload-time = 2026-01-12T08:59:56Z, size = 40593, hashes = { sha256 = "9a5ebc4c0096b42e5d7ebc2350afdc92dc511061e935ca188468094fdd032bbe" } }
 wheels = [{ url = "https://files.pythonhosted.org/packages/3c/85/9e359fa9279e1d6861faaf9b6f037a3226374deb20a054c3937be6992013/msoffcrypto_tool-6.0.0-py3-none-any.whl", upload-time = 2026-01-12T08:59:55Z, size = 48791, hashes = { sha256 = "46c394ed5d9641e802fc79bf3fb0666a53748b23fa8c4aa634ae9d30d46fe397" } }]
