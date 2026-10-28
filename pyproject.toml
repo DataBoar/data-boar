@@ -87,6 +87,9 @@ dependencies = [
     "pygments>=2.20.0",
     "pyparsing>=3.3.2",
     "pypdf>=6.20.1",
+    # dnspython is transitive (pymongo in nosql extra); direct floor so uv resolves
+    # the security fix for GHSA-45c3-73f7-pv4m (dnspython 2.8.0 -> 2.9.0+).
+    "dnspython>=2.9.0",
     "pyjwt>=2.12.0",
     "python-dateutil>=2.9.0.post0",
     "python-docx>=1.2.0",
