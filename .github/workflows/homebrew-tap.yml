@@ -99,6 +99,7 @@ jobs:
           set -euo pipefail
           TAP="databoar/databoar"
           brew tap-new --no-git "${TAP}"
+          brew trust "${TAP}"
           TAP_DIR="$(brew --repo "${TAP}")"
           mkdir -p "${TAP_DIR}/Formula"
           cp packaging/homebrew/Formula/data-boar.rb "${TAP_DIR}/Formula/data-boar.rb"
