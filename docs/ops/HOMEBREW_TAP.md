@@ -31,7 +31,7 @@ See formula caveats for the `opt_libexec` path Homebrew prints.
 
 ## Validation (CI, not lab metal)
 
-GitHub Actions [`.github/workflows/homebrew-tap.yml`](../../.github/workflows/homebrew-tap.yml) runs on **macos-14** (Apple Silicon):
+GitHub Actions [`.github/workflows/homebrew-tap.yml`](../../.github/workflows/homebrew-tap.yml) runs on **macos-15** (Apple Silicon):
 
 1. `brew audit --strict --new`
 2. `brew install` from a local tap copy of `packaging/homebrew/Formula/data-boar.rb`

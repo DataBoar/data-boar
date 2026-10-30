@@ -2,7 +2,7 @@
 # Formula depends on Homebrew python@3.13 and pip-installs the PyPI sdist
 # (no embedded CPython payload).
 #
-# brew-macos: native macos-14 (Apple Silicon). Intel is the same pip path;
+# brew-macos: native macos-15 (Apple Silicon). Intel is the same pip path;
 # GitHub does not gate a separate Intel runner here.
 # bump: rewrite Formula url/sha256 from PyPI and optionally push the tap repo.
 name: Homebrew tap
@@ -76,12 +76,12 @@ jobs:
           uv run python scripts/homebrew_formula_bump.py --check
 
   brew-macos:
-    name: brew audit/install/test (macos-14)
+    name: brew audit/install/test (macos-15)
     if: >-
       github.event_name == 'pull_request' ||
       github.event_name == 'push' ||
       (github.event_name == 'workflow_dispatch' && inputs.bump != true)
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 50
     permissions:
       contents: read
