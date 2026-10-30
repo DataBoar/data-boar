@@ -1272,7 +1272,7 @@ def test_void_xbps_workflow_present_and_valid() -> None:
 
 
 def test_homebrew_tap_workflow_present_and_valid() -> None:
-    """#1425: macos-14 brew audit --strict --new plus install/test; PyPI bump job."""
+    """#1425: macos-15 brew audit --strict --new plus install/test; PyPI bump job."""
     data = _load_workflow("homebrew-tap.yml")
     assert data.get("name") == "Homebrew tap"
     on = data.get("on") or {}
@@ -1284,7 +1284,7 @@ def test_homebrew_tap_workflow_present_and_valid() -> None:
     assert "brew-macos" in jobs
     assert "bump-formula" in jobs
     macos = jobs["brew-macos"]
-    assert macos.get("runs-on") == "macos-14"
+    assert macos.get("runs-on") == "macos-15"
     macos_runs = "\n".join(_ci_step_run_texts(macos))
     assert "brew audit --strict --new" in macos_runs
     assert "brew install" in macos_runs

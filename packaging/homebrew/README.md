@@ -25,6 +25,6 @@ uv run python scripts/homebrew_formula_bump.py --write
 uv run python scripts/homebrew_formula_bump.py --check --latest
 ```
 
-CI workflow [`.github/workflows/homebrew-tap.yml`](../../.github/workflows/homebrew-tap.yml) runs `brew audit --strict --new` plus `brew test` on **macos-14** (Apple Silicon). Intel macOS is the same bottle-less pip path; GitHub no longer gates a separate Intel runner here.
+CI workflow [`.github/workflows/homebrew-tap.yml`](../../.github/workflows/homebrew-tap.yml) runs `brew audit --strict --new` plus `brew test` on **macos-15** (Apple Silicon). Intel macOS is the same bottle-less pip path; GitHub no longer gates a separate Intel runner here.
 
 **Out of scope:** arm64 Linux (#1403), xbps (#1404), MSI/winget (#1467).
