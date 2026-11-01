@@ -10,8 +10,8 @@ class DataBoar < Formula
 
   desc "Discover personal and sensitive data across files, databases, and APIs"
   homepage "https://github.com/DataBoar/data-boar"
-  url "https://files.pythonhosted.org/packages/ad/ad/ea0ff6e770702ffe24bc374209e73dd9812d42bb7cc13e6c3eab29c776ec/data_boar-1.7.4.post12.tar.gz"
-  sha256 "3e67e81d2e1d381780dc21240e6dfbb596fe8b3a32700e7aa2386daabdc17ec0"
+  url "https://files.pythonhosted.org/packages/6c/73/75387908371ae9a33c967c20fec91bfbc2345f4e2c823291230b8c64bdd9/data_boar-1.8.0.tar.gz"
+  sha256 "6fed428b8c73ff40bd6f240f1c17bf68d06d26d1693a8189c67501f9f545a49a"
   license "BSD-3-Clause"
 
   livecheck do

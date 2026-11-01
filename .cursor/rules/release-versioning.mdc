@@ -33,9 +33,9 @@ alwaysApply: false
 
 > **Esta regra DERIVA de ADR-0073 (+ `docs/VERSIONING.md`). Em conflito, a ADR vence → corrigir o `.mdc`, não a ADR. Se o certo não estiver claro, PARAR e perguntar ao operador.**
 
-- **`main` working tree:** **`1.8.0`** (`maturity_build = 200` — ADR-0073 L36 GA anchor); ADR-0073 **Accepted**; release gate **#2123 CLOSED** (successor of **#406** / **1.7.4**). **Not** tagged / not on PyPI or Hub until operator **release-ritual**.
+- **`main` working tree:** **`1.8.0`** (`maturity_build = 200` — ADR-0073 L36 GA anchor); ADR-0073 **Accepted**; release gate **#2123 CLOSED** (successor of **#406** / **1.7.4**). Tagged **`v1.8.0`** on commit `3b0170641f2ab7a1358058902e12ff3f1fc3f545`.
 - **#970:** premature stable bump/tag without release gate — corrected by **ADR-0072** + **#406**; **`1.7.4` is not VOID**.
-- **Published customer channels (still):** tag **`v1.7.4.post12`**, GitHub Release, Docker Hub **`1.7.4.post12`** / **`latest`** — **`1.8.0`** publish is operator **release-ritual** (not agent-autonomous).
+- **Published customer channels:** tag **`v1.8.0`**, GitHub Release **Data Boar 1.8.0** (**2026-11-01T23:11:10Z**), Docker Hub **`1.8.0`** / **`latest`** (`sha256:1f7a8a32b2fced12969382579721d6311a6b4f3fd98d2e6ffca921da47ec6ebc`, **2026-11-01T23:28Z**), PyPI **1.8.0**. Historical: **`1.7.4.post12`**, **`1.7.4`**, **`1.7.3`**.
 - **`1.7.5` does not exist.** Next **dev** line after **`1.8.0`** publish ritual: **`1.9.0-beta`** (do not invent **`1.7.5`**).
 - **Maturity octet** (1–126 beta · 127–199 rc · 200–254 GA+fix; counter starts at **`1`**): **`[tool.databoar] maturity_build = 200`** on this GA cut — **never** in `[project] version` or About. See **`docs/VERSIONING.md`**.
 

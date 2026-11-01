@@ -64,12 +64,12 @@ When the project opens a **new semver line** (e.g. **`1.8.0`** after **`1.7.4`**
 
 Suffixes (`-beta`, `-rc`, `-rc-N`) are required on `main` while a **release gate** issue (e.g. GitHub #406) is **open**. A green **commit gate** (`check-all`) never authorizes removing them — see ADR-0072. Gate **#406** closed with **1.7.4** stable (PR **#1024**).
 
-### Current lines (`1.7.4.post12` published · `1.8.0` working)
+### Current lines (`1.8.0` published)
 
 | Label | Status |
 | --- | --- |
-| **`main` working tree** | **`1.8.0`** in `pyproject.toml` (`maturity_build = 200` — GA band anchor; ADR-0073 L36). **Not** tagged / not on PyPI or Hub until operator **release-ritual**. |
-| **Published customer channels** | **`1.7.4.post12`** / **`v1.7.4.post12`** on PyPI + Hub (+ historical GA **`1.7.4`**) until the **`1.8.0`** release-ritual |
+| **`main` working tree** | **`1.8.0`** in `pyproject.toml` (`maturity_build = 200` — GA band anchor; ADR-0073 L36). Tagged **`v1.8.0`** on commit `3b0170641f2ab7a1358058902e12ff3f1fc3f545`. |
+| **Published customer channels** | **`1.8.0`** / **`v1.8.0`** on PyPI + Hub + GitHub Release (**2026-11-01**). Historical: **`1.7.4.post12`**, **`1.7.4`**, **`1.7.3`**. |
 | **#970** | Premature stable bump/tag without release gate — corrected by **ADR-0072** + gate **#406**; **`1.7.4` is not VOID** |
 | **Post-GA public fix numbering** | **Resolved** (#977) — **`1.7.4`** fix-line used **`.postN`** + octet; **`.postN` does not carry** onto **`1.8.0-beta`** |
 
