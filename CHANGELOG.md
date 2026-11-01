@@ -30,7 +30,7 @@ Migration notes on the **`1.8.0-rc`** working line (no new semver cut):
 
 ---
 
-## 1.8.0-rc (working line on `main` — git-only)
+## 1.8.0-rc (superseded on `main` by **`1.8.0`** — git-only history)
 
 > Release candidate for **`1.8.0`**. **`[project] version = 1.8.0-rc`** (ADR-0073 PEP 440 hyphen form). **`[tool.databoar] maturity_build = 127`** — **rc band entry** on promotion from **`1.8.0-beta`** (last beta reconciliation **`.116`**, 2026-08-22). **Not** on PyPI or Docker Hub **`latest`**. Notes: [docs/releases/1.8.0-rc.md](docs/releases/1.8.0-rc.md).
 
