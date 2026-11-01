@@ -29,6 +29,8 @@ LINE_180_BETA_FIX_COUNT_SINCE_CUT = 115
 LINE_180_BETA_MATURITY_BUILD = 1 + LINE_180_BETA_FIX_COUNT_SINCE_CUT
 # 1.8.0-rc promotion (2026-09-22): rc band floor per docs/releases/1.8.0-rc.md.
 LINE_180_RC_MATURITY_BUILD = 127
+# 1.8.0 GA (ADR-0073 L36): new-line GA anchor — does not continue from rc 127.
+LINE_180_GA_MATURITY_BUILD = 200
 
 
 def _load_pyproject() -> dict:
@@ -53,14 +55,14 @@ def test_post12_canonical_map_arithmetic_is_internally_consistent() -> None:
     assert POST7_MATURITY_BUILD + POST8_FIX_COUNT == POST8_MATURITY_BUILD
 
 
-def test_pyproject_maturity_build_matches_180_rc_cut() -> None:
+def test_pyproject_maturity_build_matches_180_ga_cut() -> None:
     data = _load_pyproject()
     version = data.get("project", {}).get("version")
     maturity = data.get("tool", {}).get("databoar", {}).get("maturity_build")
-    assert version == "1.8.0-rc"
-    assert maturity == LINE_180_RC_MATURITY_BUILD
-    assert maturity == 127
+    assert version == "1.8.0"
+    assert maturity == LINE_180_GA_MATURITY_BUILD
+    assert maturity == 200
     assert maturity != POST12_MATURITY_BUILD  # must not carry .263 across lines
-    assert (
-        maturity > LINE_180_BETA_MATURITY_BUILD
-    )  # rc band entry above last beta octet
+    assert maturity != LINE_180_RC_MATURITY_BUILD  # GA band reset, not rc+1
+    assert maturity > LINE_180_BETA_MATURITY_BUILD
+    assert maturity > LINE_180_RC_MATURITY_BUILD

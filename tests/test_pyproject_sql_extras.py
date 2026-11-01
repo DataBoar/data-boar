@@ -61,14 +61,14 @@ def test_sql_optional_extras_present() -> None:
     assert not missing, f"missing SQL extras in pyproject.toml: {missing}"
 
 
-def test_maturity_build_matches_180_rc_cut() -> None:
-    """ADR-0073: rc band entry at 127 on beta→rc promotion (docs/releases/1.8.0-rc.md)."""
+def test_maturity_build_matches_180_ga_cut() -> None:
+    """ADR-0073 L36: GA band anchor at 200 on 1.8.0-rc → 1.8.0 (docs/releases/1.8.0.md)."""
     data = _load_pyproject()
     maturity = data.get("tool", {}).get("databoar", {}).get("maturity_build")
-    assert maturity == 127
+    assert maturity == 200
 
 
-def test_version_is_180_rc_not_phantom_175() -> None:
+def test_version_is_180_ga_not_phantom_175() -> None:
     version = _load_pyproject().get("project", {}).get("version")
-    assert version == "1.8.0-rc"
+    assert version == "1.8.0"
     assert not str(version).startswith("1.7.5")

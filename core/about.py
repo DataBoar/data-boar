@@ -9,7 +9,7 @@ import tomllib
 from pathlib import Path
 
 # docs/VERSIONING.md checklist §2 — keep identical to pyproject.toml ``[project].version``.
-_FALLBACK_VERSION = "1.8.0-rc"
+_FALLBACK_VERSION = "1.8.0"
 
 
 def _package_version() -> str:

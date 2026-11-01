@@ -547,7 +547,7 @@ def main() -> None:
             "\n"
             "  # After a pip/pipx upgrade: re-baseline integrity hashes (operator confirm)\n"
             f"  {prog} --config config.yaml --reconcile-integrity-anchor "
-            "--confirm-upgrade-to=1.8.0-rc\n"
+            "--confirm-upgrade-to=1.8.0\n"
             "\n"
             "Web/API examples:\n"
             "  # HTTPS: PEM cert + key (TLS >= 1.2)\n"

@@ -77,12 +77,12 @@ docker push ghcr.io/fabioleitao/data_boar:latest
 
 ```bash
 # From repo root
-docker build -t fabioleitao/data_boar:latest -t fabioleitao/data_boar:1.7.4 .
+docker build -t fabioleitao/data_boar:latest -t fabioleitao/data_boar:1.8.0 .
 docker login
 # Username: fabioleitao (or your Docker Hub username)
 # Password: your Docker Hub password or Access Token
 docker push fabioleitao/data_boar:latest
-docker push fabioleitao/data_boar:1.7.4
+docker push fabioleitao/data_boar:1.8.0
 ```
 
 Then in `deploy/docker-compose.yml` set `image:` to your pushed image (e.g. `fabioleitao/data_boar:latest` or `ghcr.io/fabioleitao/...`).
@@ -91,10 +91,10 @@ Then in `deploy/docker-compose.yml` set `image:` to your pushed image (e.g. `fab
 
 ```bash
 uv run pytest -v -W error
-docker build -t fabioleitao/data_boar:latest -t fabioleitao/data_boar:1.7.4 .
+docker build -t fabioleitao/data_boar:latest -t fabioleitao/data_boar:1.8.0 .
 docker login              # username: fabioleitao, password: your token
 docker push fabioleitao/data_boar:latest
-docker push fabioleitao/data_boar:1.7.4
+docker push fabioleitao/data_boar:1.8.0
 ```
 
 See also [DOCKER_SETUP.md](../DOCKER_SETUP.md).
