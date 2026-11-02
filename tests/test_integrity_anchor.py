@@ -23,8 +23,9 @@ Contract under test:
    matches; unset env → False (no signature overclaim).
 9. Legacy DB column ``signature_ok`` migrates to ``build_digest_matched``.
 10. Release upgrade (#1262): hash drift after a label change remains
-    ``tampered`` until ``reconcile_integrity_anchor`` with a matching
-    ``confirm_upgrade_to``; auto-rebaseline on semver is not allowed.
+    ``tampered`` unless a proven official upgrade (newer PEP 440 metadata
+    **and** ``RECORD`` match) auto-rebaselines. Semver/label change alone
+    is not enough. Manual ``reconcile_integrity_anchor`` stays as recovery.
 """
 
 from __future__ import annotations

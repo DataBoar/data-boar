@@ -72,15 +72,19 @@ Append a structured record to `security_alert.log` (or SIEM sink):
    scan tables only.
 2. **Startup re-verify (E.3):** every start (CLI and web, **any** licensing
    mode including `open`) recomputes the hashes and compares to the anchor.
-   - **Hash mismatch** (any `release_label`, including a pip/pipx upgrade that
-     touched `CRITICAL_MODULES`) → `integrity_state=tampered` /
-     `trust_level=adulterated`. **Do not** auto-re-baseline on semver /
-     `release_label` change alone (bypass: an attacker could bump the label
-     with the hashes).
+   - **Hash mismatch** → `integrity_state=tampered` / `trust_level=adulterated`
+     **unless** a proven official upgrade (#1262): the installed
+     `importlib.metadata` version is **newer** than the stored
+     `release_label` (PEP 440 / `packaging.version`, not string order) **and**
+     every `CRITICAL_MODULES` file matches the installed wheel `RECORD` hash
+     (the same check pip uses). Then the runtime re-baselines automatically
+     (`re-baseline-auto-upgrade`, no `-alpha`). Still tampered: same-version
+     edit; newer version with a RECORD miss; downgrade; no distribution
+     metadata (raw checkout). Semver/label change alone is **not** enough.
    - **Operator re-baseline (#1262):** `data-boar --reconcile-integrity-anchor
-     --confirm-upgrade-to=<installed-version>` writes a new anchor **only**
-     when `VERSION` equals the running package version. Append-only
-     `re-baseline` event records the confirmation.
+     --confirm-upgrade-to=<installed-version>` remains the recovery path and
+     writes a new anchor **only** when `VERSION` equals the running package
+     version. Append-only `re-baseline` event records the confirmation.
    - **Hash match + `release_label` changed** → keep `validated`; persist the
      new label only (hashes unchanged — not a re-baseline).
 3. **TINTED / `-alpha` (E.4):** the adulterated state forces the
@@ -94,16 +98,19 @@ Append a structured record to `security_alert.log` (or SIEM sink):
    `OPEN_MODE_WORKER_CAP = 2` in open mode. The clamp lives inside the hashed
    allowlist — removing it changes `core/engine.py` and tints the build.
 5. **Forensics (E.5):** `integrity_events` is an append-only table
-   (validation / re-verify / re-baseline / tamper) preserved across data wipes.
+   (validation / re-verify / re-baseline / re-baseline-auto-upgrade / tamper)
+   preserved across data wipes.
 
 ### Honest threat model (E.6)
 
 This is **tamper-EVIDENT, not tamper-PROOF.** An attacker with write access to
-both the code tree **and** the SQLite anchor file can delete or re-baseline the
-anchor (the app then re-runs first validation or shows `unknown`). The
+the code tree, the installed `RECORD`, the reported distribution version, **and**
+the SQLite anchor can still force a re-baseline (same class as deleting the
+anchor). The auto-upgrade path only proves “newer packaged version whose
+critical files still match `RECORD`”; it does **not** prove a cryptographic
+vendor signature. Same-version hash drift still tints. The
 **operator confirm** path (`--reconcile-integrity-anchor --confirm-upgrade-to`)
-is the only supported re-baseline besides first-run; same-version hash drift
-still tints. Mitigations: file permissions, read-only
+stays as recovery. Mitigations: file permissions, read-only
 DB mounts in high-assurance deploys, and the **signed manifest** (Sigstore /
 CI OIDC — Phase C.4 of `PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY`) as the next
 hardening layer. The local anchor reliably catches casual edits, forks with
