@@ -148,6 +148,14 @@ def build_core_nfpm_doc(*, version: str) -> dict[str, Any]:
                 "dst": "/etc/data-boar/config.example.yaml",
                 "type": "config|noreplace",
             },
+            {
+                "src": "../../docs/data_boar.1",
+                "dst": "/usr/share/man/man1/data-boar.1",
+            },
+            {
+                "src": "../../docs/data_boar.5",
+                "dst": "/usr/share/man/man5/data-boar.5",
+            },
         ],
         "overrides": {
             packager: {"depends": list(deps)}

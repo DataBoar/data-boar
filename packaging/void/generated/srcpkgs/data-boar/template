@@ -33,6 +33,8 @@ do_install() {
 	if [ -f "${FILESDIR}/staging/etc/data-boar/config.example.yaml" ]; then
 		vinstall "${FILESDIR}/staging/etc/data-boar/config.example.yaml" 644 etc/data-boar
 	fi
+	vman "${FILESDIR}/data-boar.1"
+	vman "${FILESDIR}/data-boar.5"
 	vsv data-boar
 }
 

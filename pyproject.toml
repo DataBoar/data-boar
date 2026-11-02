@@ -347,6 +347,12 @@ packages = [
 "docs/sdk/transformed_rows.schema.json" = "core/data/transformed_rows.schema.json"
 "docs/sdk/transformed_rows.pin.json" = "core/data/transformed_rows.pin.json"
 
+# Canonical man names only. docs/data_boar.1 documents data_boar and
+# lgpd_crawler as symlink aliases; do not duplicate the troff sources in the wheel.
+[tool.hatch.build.targets.wheel.shared-data]
+"docs/data_boar.1" = "share/man/man1/data-boar.1"
+"docs/data_boar.5" = "share/man/man5/data-boar.5"
+
 [dependency-groups]
 dev = [
     "bandit>=1.9.4",

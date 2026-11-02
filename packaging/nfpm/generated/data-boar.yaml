@@ -23,6 +23,10 @@ contents:
 - src: staging/etc/data-boar/config.example.yaml
   dst: /etc/data-boar/config.example.yaml
   type: config|noreplace
+- src: ../../docs/data_boar.1
+  dst: /usr/share/man/man1/data-boar.1
+- src: ../../docs/data_boar.5
+  dst: /usr/share/man/man5/data-boar.5
 overrides:
   deb:
     depends:
