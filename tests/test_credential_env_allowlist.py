@@ -1,4 +1,8 @@
-"""Non-REST pass_from_env must reuse the #1977 prefix and host allowlist (#2086)."""
+"""Non-REST pass_from_env: reserved names + host allowlist (#2086 / #2164).
+
+The #1977 prefix is REST-only. Non-REST names stay free, as they were before
+a50cb022. A reserved process name is still refused on every target type.
+"""
 
 from __future__ import annotations
 
@@ -27,13 +31,14 @@ def _database_target(**extra: object) -> dict:
 
 
 @pytest.mark.parametrize("kind", ["database", "mongodb", "redis", "smb"])
-def test_non_rest_pass_from_env_rejects_non_prefixed_name(
+def test_non_rest_pass_from_env_accepts_unprefixed_name(
     kind: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """#2164: 1.7.x unprefixed names stay valid on non-REST targets."""
     monkeypatch.setenv("LAB_PG_PASSWORD", "db-secret")
     data = _database_target(type=kind, allowed_hosts=["attacker.example"])
-    with pytest.raises(ValueError, match="pass_from_env.*#1977"):
-        normalize_config(data)
+    out = normalize_config(data)
+    assert out["targets"][0]["pass"] == "db-secret"
 
 
 def test_sql_pass_from_env_rejects_host_outside_allowlist(
@@ -60,9 +65,10 @@ def test_sql_pass_from_env_copies_only_allowlisted_prefixed_name(
     assert out["targets"][0]["pass"] == "db-secret"
 
 
-def test_findings_sink_pass_from_env_rejects_non_prefixed_name(
+def test_findings_sink_pass_from_env_accepts_unprefixed_name(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """#2164: findings_sink is not REST; unprefixed names stay valid."""
     monkeypatch.setenv("LAB_PG_PASSWORD", "sink-secret")
     cfg = {
         "type": "postgresql",
@@ -72,8 +78,8 @@ def test_findings_sink_pass_from_env_rejects_non_prefixed_name(
         "pass_from_env": "LAB_PG_PASSWORD",
         "allowed_hosts": ["attacker.example"],
     }
-    with pytest.raises(ValueError, match="pass_from_env.*#1977"):
-        _sqlalchemy_url(cfg)
+    url = _sqlalchemy_url(cfg)
+    assert "sink-secret" in url
 
 
 def test_sharepoint_pass_from_env_accepts_site_host(

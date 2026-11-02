@@ -459,16 +459,20 @@ def assert_explicit_destination_allowlisted(cfg: dict[str, Any], label: str) -> 
 def assert_non_rest_env_credential(
     cfg: dict[str, Any], env_name: str, label: str
 ) -> None:
-    """Prefix plus destination allowlist for non-REST env credentials (#2086)."""
-    assert_credential_env_name(env_name, label)
+    """Reserved-name plus destination allowlist for non-REST env credentials.
+
+    The #1977 prefix applies only to REST targets (#2164). Non-REST names stay
+    free, as they were before a50cb022. A reserved process name is still refused.
+    """
+    _reject_reserved_credential_env_name(env_name, label)
     assert_explicit_destination_allowlisted(cfg, label)
 
 
 def _gate_non_rest_env_credential(
     target: dict[str, Any], env_name: str, label: str
 ) -> None:
-    # Reserved names apply to REST and non-REST. The prefix rule for REST
-    # stays at the connector; non-REST still checks prefix and destination here.
+    # Reserved names apply to REST and non-REST. The #1977 prefix stays on
+    # REST only (connector). Non-REST checks reserved + destination here.
     _reject_reserved_credential_env_name(env_name, label)
     kind = str(target.get("type") or "").strip().lower()
     if kind in _REST_TARGET_TYPES:
@@ -886,6 +890,26 @@ def _normalize_operator_channel_block(d: dict[str, Any]) -> dict[str, Any]:
         "telegram_bot_token": _notification_env_value(d.get("telegram_bot_token")),
         "telegram_chat_id": _notification_env_value(d.get("telegram_chat_id")),
     }
+
+
+def peek_sqlite_path(path: str | Path) -> str:
+    """Read ``sqlite_path`` without validating target credentials (#2164)."""
+    path = Path(path)
+    if not path.exists():
+        raise FileNotFoundError(f"Config file not found: {path}")
+    raw = read_text_auto_encoding(path)
+    suffix = path.suffix.lower()
+    if suffix in (".yaml", ".yml"):
+        data = yaml.safe_load(raw)
+    elif suffix == ".json":
+        if json is None:
+            raise RuntimeError("JSON config requires stdlib json")
+        data = json.loads(raw)
+    else:
+        raise ValueError(f"Unsupported config format: {suffix}. Use .yaml or .json")
+    if not isinstance(data, dict):
+        raise ValueError("Config root must be a dict")
+    return str(data.get("sqlite_path") or "audit_results.db")
 
 
 def load_config(path: str | Path) -> dict[str, Any]:

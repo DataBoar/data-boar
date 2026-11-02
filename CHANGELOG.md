@@ -2,6 +2,10 @@
 
 Human-readable summary of user-facing changes. **Detailed release notes:** [docs/releases/](docs/releases/) (full checklists, Docker publish commands, GitHub Release text).
 
+## Unreleased
+
+- **Non-REST credential env names (#2164):** `pass_from_env` on database, SMB, Mongo, Redis, and `findings_sink` accepts the name the operator already uses. The #1977 prefix stays REST-only. Reserved process names remain refused on every target type.
+
 ## 1.8.0
 
 See [docs/releases/1.8.0.md](docs/releases/1.8.0.md) for the full release notes.
