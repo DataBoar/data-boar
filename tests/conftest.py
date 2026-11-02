@@ -77,16 +77,16 @@ _FIXTURE_OPERATOR_HOSTS = ",".join(
 @pytest.fixture(autouse=True)
 def _signed_integrity_manifest_for_tests(
     tmp_path_factory: pytest.TempPathFactory,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> Iterator[None]:
     """Give the suite a matching signed manifest so startup is not tinted."""
-    from tests.integrity_manifest_helpers import (
-        install_matching_signed_manifest,
-        reset_signed_manifest_pins,
-    )
+    from tests.integrity_manifest_helpers import install_matching_signed_manifest
 
-    install_matching_signed_manifest(tmp_path_factory.mktemp("integrity-manifest"))
+    install_matching_signed_manifest(
+        tmp_path_factory.mktemp("integrity-manifest"),
+        monkeypatch,
+    )
     yield
-    reset_signed_manifest_pins()
 
 
 @pytest.fixture(autouse=True)

@@ -74,7 +74,7 @@ def _cfg(tmp_path) -> dict:
 
 
 def test_first_run_without_signed_manifest_is_tampered(tmp_path, monkeypatch):
-    reset_signed_manifest_pins()
+    reset_signed_manifest_pins(monkeypatch)
     monkeypatch.delenv("DATA_BOAR_EXPECTED_BUILD_DIGEST", raising=False)
     snap = ensure_integrity_anchor(_cfg(tmp_path))
     assert snap["integrity_state"] == "tampered"

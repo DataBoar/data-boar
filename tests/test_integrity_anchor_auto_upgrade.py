@@ -124,13 +124,13 @@ def test_missing_distribution_metadata_does_not_block_signed_match(
 def test_unsigned_tree_stays_tampered_after_metadata_only_upgrade(
     tmp_path, monkeypatch
 ) -> None:
-    reset_signed_manifest_pins()
+    reset_signed_manifest_pins(monkeypatch)
     cfg = _cfg(tmp_path)
     monkeypatch.setattr("core.integrity_anchor._release_label", lambda: "1.8.0")
     reset_integrity_anchor_for_tests()
     snap = ensure_integrity_anchor(cfg)
     assert snap["integrity_state"] == "tampered"
-    install_matching_signed_manifest(tmp_path, release_label="1.8.0")
+    install_matching_signed_manifest(tmp_path, monkeypatch, release_label="1.8.0")
     reset_integrity_anchor_for_tests()
     snap = ensure_integrity_anchor(cfg)
     assert snap["integrity_state"] == "validated"

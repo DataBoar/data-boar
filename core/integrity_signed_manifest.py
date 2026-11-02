@@ -27,39 +27,17 @@ from core.licensing.verify import (
 SCHEMA = "data-boar.integrity-manifest.v1"
 PACKAGED_MANIFEST_NAME = "integrity_manifest.json"
 
-_manifest_path_override: str | None = None
-_verify_pem_override: str | None = None
-
-
-def set_manifest_path_for_tests(path: str | None) -> None:
-    global _manifest_path_override
-    _manifest_path_override = path
-
-
-def set_verify_pem_for_tests(pem: str | None) -> None:
-    global _verify_pem_override
-    _verify_pem_override = pem
-
-
-def reset_integrity_manifest_for_tests() -> None:
-    set_manifest_path_for_tests(None)
-    set_verify_pem_for_tests(None)
-
 
 def packaged_manifest_path() -> Path:
     return Path(__file__).resolve().parent / "licensing" / PACKAGED_MANIFEST_NAME
 
 
 def resolve_manifest_path() -> Path | None:
-    if _manifest_path_override:
-        return Path(_manifest_path_override)
     path = packaged_manifest_path()
     return path if path.is_file() else None
 
 
 def load_integrity_verify_pem() -> str | None:
-    if _verify_pem_override:
-        return _verify_pem_override
     return load_embedded_official_public_key_pem()
 
 

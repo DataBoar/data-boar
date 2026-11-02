@@ -1,23 +1,22 @@
 """Test helpers for #2168 signed integrity manifests.
 
-Pins are independent of the license verify loader.
+Pins use ``monkeypatch.setattr`` on production call sites. There is no
+public key-swap or path-swap API in ``core.integrity_signed_manifest``.
 """
 
 from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from core.integrity_anchor import _release_label, compute_module_hashes
-from core.integrity_signed_manifest import (
-    reset_integrity_manifest_for_tests,
-    set_manifest_path_for_tests,
-    set_verify_pem_for_tests,
-    sign_manifest_body,
-)
+from core.integrity_signed_manifest import sign_manifest_body
+
+_MISSING_MANIFEST = Path("/nonexistent/integrity_manifest.json")
 
 
 def generate_test_signing_key() -> tuple[Ed25519PrivateKey, str]:
@@ -47,8 +46,21 @@ def write_signed_manifest(
     return path
 
 
+def pin_signed_manifest(monkeypatch: Any, path: Path, public_pem: str | None) -> None:
+    monkeypatch.setattr(
+        "core.integrity_signed_manifest.packaged_manifest_path",
+        lambda: path,
+    )
+    monkeypatch.setattr(
+        "core.integrity_signed_manifest.load_embedded_official_public_key_pem",
+        lambda: public_pem,
+    )
+
+
 def install_matching_signed_manifest(
-    directory: Path, release_label: str | None = None
+    directory: Path,
+    monkeypatch: Any,
+    release_label: str | None = None,
 ) -> Path:
     private_key, public_pem = generate_test_signing_key()
     label = release_label or _release_label()
@@ -58,10 +70,9 @@ def install_matching_signed_manifest(
         label,
         private_key,
     )
-    set_manifest_path_for_tests(str(path))
-    set_verify_pem_for_tests(public_pem)
+    pin_signed_manifest(monkeypatch, path, public_pem)
     return path
 
 
-def reset_signed_manifest_pins() -> None:
-    reset_integrity_manifest_for_tests()
+def reset_signed_manifest_pins(monkeypatch: Any) -> None:
+    pin_signed_manifest(monkeypatch, _MISSING_MANIFEST, None)

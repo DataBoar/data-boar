@@ -30,7 +30,7 @@ New keys are out of scope. The repository already ships an Ed25519 license verif
 
 ## Consequences
 
-- First signed release must write `core/licensing/integrity_manifest.json` on the operator TTY and include it in the wheel (`force-include` when the file exists).
+- First signed release must write `core/licensing/integrity_manifest.json` on the operator TTY. Hatch already ships the `core` package (`[tool.hatch.build.targets.wheel] packages`); that file enters the wheel when it exists on disk at build time. `pyproject.toml` does not add a `force-include` for it — existing `force-include` entries are only `main.py`, the license PEMs, and SDK schema pins.
 - Trees without that file stay tinted (`-alpha`) until a matching signed manifest is present.
 - #2165 `RECORD` auto-rebaseline is superseded as a trust root. The merged PR remains history; this ADR replaces that mechanism.
 - Honest limit: this proves match to a manifest signed by the packaged verify key. It does not prove physical or nation-state resistance.
