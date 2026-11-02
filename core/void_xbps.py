@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import re
+import shutil
 from pathlib import Path
 from typing import Any
 
@@ -18,6 +19,7 @@ from core.extras_manifest import (
 )
 from core.native_nfpm import (
     CORE_PACKAGE,
+    project_license,
     project_version,
     read_subpackage_map,
     repo_root,
@@ -154,7 +156,7 @@ def render_template(
         f"nocross=yes\n"
         f'short_desc="{_SHORT_DESC}"\n'
         f'maintainer="Data Boar maintainers <contact@databoar.com.br>"\n'
-        f'license="AGPL-3.0-or-later"\n'
+        f'license="{project_license()}"\n'
         f'homepage="https://github.com/DataBoar/data-boar"\n'
         f'depends="{depends} runit"\n'
         f'subpackages="{subpackages_line}"\n'
@@ -174,6 +176,8 @@ def render_template(
         f'\tif [ -f "${{FILESDIR}}/staging/etc/data-boar/config.example.yaml" ]; then\n'
         f'\t\tvinstall "${{FILESDIR}}/staging/etc/data-boar/config.example.yaml" 644 etc/data-boar\n'
         f"\tfi\n"
+        f'\tvman "${{FILESDIR}}/data-boar.1"\n'
+        f'\tvman "${{FILESDIR}}/data-boar.5"\n'
         f"\tvsv data-boar\n"
         f"}}\n"
         f"\n"
@@ -252,6 +256,15 @@ def write_generated_void(
     run_path.write_text(render_runit_run(), encoding="utf-8")
     run_path.chmod(run_path.stat().st_mode | 0o111)
 
+    files_root = srcpkg / "files"
+    files_root.mkdir(parents=True, exist_ok=True)
+    man1_src = repo_root() / "docs" / "data_boar.1"
+    man5_src = repo_root() / "docs" / "data_boar.5"
+    man1_dest = files_root / "data-boar.1"
+    man5_dest = files_root / "data-boar.5"
+    shutil.copy2(man1_src, man1_dest)
+    shutil.copy2(man5_src, man5_dest)
+
     meta_path = dest_root / "PACKAGES.meta.json"
     meta_path.write_text(
         json.dumps(
@@ -272,6 +285,8 @@ def write_generated_void(
         "runit_run": run_path,
         "meta": meta_path,
         "links": links_path,
+        "man1": man1_dest,
+        "man5": man5_dest,
     }
 
 
@@ -290,6 +305,8 @@ def expected_generated_text(
         )
         + "\n",
         "links": "\n".join(sorted(read_subpackage_map())) + "\n",
+        "man1": (repo_root() / "docs" / "data_boar.1").read_text(encoding="utf-8"),
+        "man5": (repo_root() / "docs" / "data_boar.5").read_text(encoding="utf-8"),
     }
 
 
@@ -310,6 +327,12 @@ def assert_generated_in_sync(
         ).read_text(encoding="utf-8"),
         "meta": (root / "PACKAGES.meta.json").read_text(encoding="utf-8"),
         "links": (root / "srcpkgs" / "SUBPACKAGE_LINKS.txt").read_text(
+            encoding="utf-8"
+        ),
+        "man1": (root / "srcpkgs" / CORE_PACKAGE / "files" / "data-boar.1").read_text(
+            encoding="utf-8"
+        ),
+        "man5": (root / "srcpkgs" / CORE_PACKAGE / "files" / "data-boar.5").read_text(
             encoding="utf-8"
         ),
     }
