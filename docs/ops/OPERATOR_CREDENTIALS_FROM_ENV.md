@@ -20,7 +20,7 @@
 
 **Rule:** Do not invent a second secret channel in YAML that bypasses **A→B**. New vault products should **populate environment variables** (or future `@vault:` resolution that the loader already planned) with the **same names** your `*_from_env` keys point to.
 
-**Load gate (#2086):** `pass_from_env`, `password_from_env`, `user_from_env`, `token_from_env`, and `client_secret_from_env` names must start with `DATA_BOAR_`, `REST_API_`, or `API_`, and the target’s `allowed_hosts` must include the destination. Example: `pass_from_env: DATA_BOAR_DEMO_DB_PASSWORD` with `allowed_hosts: ["192.0.2.10"]`. `allowed_hosts` lives in the same YAML the config author writes and only narrows `DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS`. Unset or empty fails closed. Lab opt-out: `DATA_BOAR_CREDENTIAL_HOSTS_UNRESTRICTED=1`.
+**Load gate (#2086 / #2164):** REST `*_from_env` names must start with `DATA_BOAR_`, `REST_API_`, or `API_` (#1977). Non-REST targets (database, SMB, Mongo, Redis, …) keep the env name the operator already uses. A name this process reserves for itself is refused on every target type. The target’s `allowed_hosts` must include the destination. Example: `pass_from_env: DATABOAR_PG_PASSWORD` with `allowed_hosts: ["192.0.2.10"]`. `allowed_hosts` lives in the same YAML the config author writes and only narrows `DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS`. Unset or empty fails closed. Lab opt-out: `DATA_BOAR_CREDENTIAL_HOSTS_UNRESTRICTED=1`.
 
 ```text
   Bitwarden / HCP Vault / K8s Secret / systemd EnvironmentFile

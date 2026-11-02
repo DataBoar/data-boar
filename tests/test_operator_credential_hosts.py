@@ -15,11 +15,13 @@ from core.findings_sink import _sqlalchemy_url
 
 _HOSTS = "DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS"
 _OPEN = "DATA_BOAR_CREDENTIAL_HOSTS_UNRESTRICTED"
+_STRICT = "DATA_BOAR_CREDENTIAL_STRICT"
 
 
 def _clear(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv(_HOSTS, raising=False)
     monkeypatch.delenv(_OPEN, raising=False)
+    monkeypatch.setenv(_STRICT, "1")
 
 
 def _db(monkeypatch: pytest.MonkeyPatch, **fields: object) -> dict:
@@ -183,12 +185,20 @@ def test_yaml_cannot_opt_out(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_reserved_operator_names_are_refused(monkeypatch: pytest.MonkeyPatch) -> None:
     _clear(monkeypatch)
     monkeypatch.setenv(_HOSTS, "db.trusted.example")
-    for name in (_HOSTS, _HOSTS.swapcase(), _OPEN, _OPEN.casefold()):
+    for name in (
+        _HOSTS,
+        _HOSTS.swapcase(),
+        _OPEN,
+        _OPEN.casefold(),
+        _STRICT,
+        _STRICT.casefold(),
+    ):
         with pytest.raises(ValueError, match="reserved"):
             normalize_config(_db(monkeypatch, pass_from_env=name))
     for secret in (
         "${DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS}",
         "${data_boar_credential_hosts_unrestricted}",
+        "${DATA_BOAR_CREDENTIAL_STRICT}",
     ):
         data = {
             "targets": [

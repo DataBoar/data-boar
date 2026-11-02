@@ -66,6 +66,7 @@ BOAR_INTERNAL_ENV_NAMES = frozenset(
     {
         "DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS",
         "DATA_BOAR_CREDENTIAL_HOSTS_UNRESTRICTED",
+        "DATA_BOAR_CREDENTIAL_STRICT",
         "DATA_BOAR_API_KEY",
         "DATA_BOAR_CONTAINER_PYTHON",
         "DATA_BOAR_DASHBOARD_INSECURE_OPT_IN",
@@ -111,6 +112,7 @@ OPERATIONAL_ENV_NAMES = frozenset(
 _WEBAUTHN_TOKEN_ENV_DEFAULT = "DATA_BOAR_WEBAUTHN_TOKEN_SECRET"
 _OPERATOR_HOSTS_ENV = "DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS"
 _OPERATOR_HOSTS_UNRESTRICTED_ENV = "DATA_BOAR_CREDENTIAL_HOSTS_UNRESTRICTED"
+_OPERATOR_STRICT_ENV = "DATA_BOAR_CREDENTIAL_STRICT"
 _OPERATOR_HOSTS_TRUTHY = frozenset({"1", "true", "yes", "on"})
 _credential_env_root: contextvars.ContextVar[dict[str, Any] | None] = (
     contextvars.ContextVar("credential_env_root", default=None)
@@ -308,6 +310,22 @@ def _credential_destination_groups(cfg: dict[str, Any]) -> list[set[str]] | None
 
 
 _operator_hosts_unrestricted_logged = False
+_operator_strict_logged = False
+
+
+def _credential_host_gate_strict() -> bool:
+    """True only when the operator opts into the #2103 fail-closed host gate."""
+    global _operator_strict_logged
+    flag = os.environ.get(_OPERATOR_STRICT_ENV, "")
+    if flag.strip().casefold() not in _OPERATOR_HOSTS_TRUTHY:
+        return False
+    if not _operator_strict_logged:
+        _operator_strict_logged = True
+        _logger.warning(
+            "%s is set; credential host gate is fail-closed (#2103).",
+            _OPERATOR_STRICT_ENV,
+        )
+    return True
 
 
 def _operator_host_key(value: str) -> str:
@@ -352,6 +370,8 @@ def enforce_operator_credential_host_gate(
     destinations: list[set[str]], label: str
 ) -> None:
     """Accept env-credential destinations only when the operator listed them."""
+    if not _credential_host_gate_strict():
+        return
     allowed = _operator_credential_hosts()
     if allowed is None:
         return
@@ -386,6 +406,8 @@ def enforce_operator_credential_host_gate(
 
 def _assert_yaml_hosts_within_operator(cfg: dict[str, Any], label: str) -> None:
     """YAML allowed_hosts may only narrow the operator list."""
+    if not _credential_host_gate_strict():
+        return
     allowed = _operator_credential_hosts()
     if not allowed:
         return
@@ -429,10 +451,14 @@ def _rest_env_destinations(target: dict[str, Any]) -> list[set[str]]:
 def assert_explicit_destination_allowlisted(cfg: dict[str, Any], label: str) -> None:
     """Fail closed unless every credential destination is explicitly allowlisted.
 
-    The process env DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS is the operator
-    authority. YAML allowed_hosts can only narrow that set. Unset or empty
-    fails closed unless DATA_BOAR_CREDENTIAL_HOSTS_UNRESTRICTED=1 (lab only).
+    Default load is 1.7.x-compatible (no host list). With
+    DATA_BOAR_CREDENTIAL_STRICT=1 the process env
+    DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS is the operator authority. YAML
+    allowed_hosts can only narrow that set. Unset or empty then fails
+    closed unless DATA_BOAR_CREDENTIAL_HOSTS_UNRESTRICTED=1 (lab only).
     """
+    if not _credential_host_gate_strict():
+        return
     groups = _credential_destination_groups(cfg)
     if groups is None:
         vendor = _vendor_fixed_destination_groups(cfg)
@@ -459,16 +485,21 @@ def assert_explicit_destination_allowlisted(cfg: dict[str, Any], label: str) -> 
 def assert_non_rest_env_credential(
     cfg: dict[str, Any], env_name: str, label: str
 ) -> None:
-    """Prefix plus destination allowlist for non-REST env credentials (#2086)."""
-    assert_credential_env_name(env_name, label)
+    """Reserved-name plus optional destination allowlist for non-REST env credentials.
+
+    The #1977 prefix applies only to REST targets (#2164). Non-REST names stay
+    free, as they were before a50cb022. A reserved process name is still refused.
+    Destination lists apply only when DATA_BOAR_CREDENTIAL_STRICT=1.
+    """
+    _reject_reserved_credential_env_name(env_name, label)
     assert_explicit_destination_allowlisted(cfg, label)
 
 
 def _gate_non_rest_env_credential(
     target: dict[str, Any], env_name: str, label: str
 ) -> None:
-    # Reserved names apply to REST and non-REST. The prefix rule for REST
-    # stays at the connector; non-REST still checks prefix and destination here.
+    # Reserved names apply to REST and non-REST. The #1977 prefix stays on
+    # REST only (connector). Non-REST checks reserved + destination here.
     _reject_reserved_credential_env_name(env_name, label)
     kind = str(target.get("type") or "").strip().lower()
     if kind in _REST_TARGET_TYPES:
@@ -886,6 +917,26 @@ def _normalize_operator_channel_block(d: dict[str, Any]) -> dict[str, Any]:
         "telegram_bot_token": _notification_env_value(d.get("telegram_bot_token")),
         "telegram_chat_id": _notification_env_value(d.get("telegram_chat_id")),
     }
+
+
+def peek_sqlite_path(path: str | Path) -> str:
+    """Read ``sqlite_path`` without validating target credentials (#2164)."""
+    path = Path(path)
+    if not path.exists():
+        raise FileNotFoundError(f"Config file not found: {path}")
+    raw = read_text_auto_encoding(path)
+    suffix = path.suffix.lower()
+    if suffix in (".yaml", ".yml"):
+        data = yaml.safe_load(raw)
+    elif suffix == ".json":
+        if json is None:
+            raise RuntimeError("JSON config requires stdlib json")
+        data = json.loads(raw)
+    else:
+        raise ValueError(f"Unsupported config format: {suffix}. Use .yaml or .json")
+    if not isinstance(data, dict):
+        raise ValueError("Config root must be a dict")
+    return str(data.get("sqlite_path") or "audit_results.db")
 
 
 def load_config(path: str | Path) -> dict[str, Any]:
