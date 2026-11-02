@@ -81,7 +81,7 @@ Ladder (historic `1.7.4`): `1.7.4-beta` → `1.7.4-rc` → `1.7.4-rc-2` → **`1
 | --- | --- |
 | **`1.7.4` line** | Open-core maturity + commercial JWT protection |
 | **`1.8.x`** | Augmented corporate capacities (re-ID, sidecars, plugins/Clojure — **new architecture**, not a 1.7 minor) |
-| **`1.7.5`** | **Does not exist** — agents must not invent it (#772). Next dev milestone: **`1.8.0-beta`**. |
+| **`1.7.5`** | **Does not exist** — agents must not invent it (#772). Next **dev** line after the **`1.8.0`** publish ritual: milestone **`v1.8.1`**. |
 | **`1.9.x`** | Horizon (compliance-domain expansion — triage per #772) |
 
 DNS-beacon / heartbeat / kill-switch lifecycle (#717) stays on the **1.8.x** roadmap (`docs/plans/PLAN_SELF_UPGRADE_AND_VERSION_CHECK.md`, maintainer index in `docs/README.md`); out of scope for this section.
