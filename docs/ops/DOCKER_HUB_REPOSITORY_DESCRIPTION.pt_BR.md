@@ -8,6 +8,19 @@
 
 ---
 
+## O que faz
+
+- **Chega nas suas fontes:** arquivos, **SQL**, **NoSQL**, **APIs**, **Power BI**, **Dataverse**, **SharePoint**, **SMB/NFS** e mais. Varre dentro de arquivos compactados (zip, tar, gz, 7z com extra opcional) e lida com encodings multilíngues e legados.
+- **Encontra mais do que identificadores óbvios:** CPF, CNPJ (incluindo o formato alfanumérico novo), e-mail, telefone e dados de pagamento — mais **categorias sensíveis** (saúde, religião, opinião política, biométrico, genético: LGPD art. 5º II, GDPR art. 9) e **combinações de campos que podem reidentificar pessoas**. **Dados de menores** têm lógica de detector dedicada.
+- **Metadados, não o dado:** registra onde algo foi encontrado e qual padrão casou. Não armazena nem exfiltra o dado pessoal em si.
+- **Um motor dirigido por config:** um único arquivo YAML/JSON define alvos, regex, termos ML/DL, tags de norma e overrides de recomendação, sem mudar código para alinhar a outro framework.
+- **Rode do seu jeito:** **CLI** one-shot, ou **REST API** (porta **8088**) com dashboard web; os scans podem ser agendados pela API.
+- **Saídas que você entrega a um auditor:** relatórios **Excel**, **heatmaps**, **tendências** entre sessões e JSON de auditoria, com recomendações etiquetadas por norma.
+
+## Aceleração Rust
+
+**`boar_fast_filter`** é um acelerador Rust (PyO3) **embutido nesta imagem**. É um pré-filtro para três padrões de alto volume: **CPF, e-mail e números de cartão**. Num microbenchmark pinado e reproduzível em **200 mil linhas** (mesmo payload, contagens de hit idênticas: 100.000 dos dois lados) ficou **4,69×** mais rápido que o pré-filtro Python ([`tests/benchmarks/rust_prefilter_hotspot.json`](https://github.com/DataBoar/data-boar/blob/main/tests/benchmarks/rust_prefilter_hotspot.json), 2026-06-30). Esse número mede **o estágio do filtro isolado**; **não** é ganho ponta a ponta do scan. Os demais detectores, inclusive CNPJ, continuam em Python.
+
 ## Qual imagem puxar? (escolha)
 
 A imagem **1.8.0** **já está no Hub** (`latest` e `1.8.0`, mesmo digest, **2026-11-01**).

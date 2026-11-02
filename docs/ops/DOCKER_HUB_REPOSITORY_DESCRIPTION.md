@@ -27,9 +27,24 @@ The **1.8.0** image is already on Hub (`latest` and `1.8.0`, same digest, **2026
 ```markdown
 ## Data Boar
 
-**Compliance-aware discovery** of personal and sensitive data across databases, files, APIs, and more — **data soup** in, structured findings out. Open-source Python stack with optional ML/DL; aligns with **LGPD**, **GDPR**, **CCPA**, and other frameworks via config.
+**Enterprise data discovery and risk governance.** Data Boar maps **where personal and sensitive data lives** across databases, files, APIs and more — **data soup** in, structured findings out — and turns that into compliance-oriented evidence. Open-source Python stack with optional ML/DL; aligns with **LGPD**, **GDPR**, **CCPA**, **GLBA** and other frameworks via configuration. **Evidence, not a legal conclusion.**
 
-**Current Hub image (release `1.8.0`):** **`latest`** and **`1.8.0`** resolve to the **same digest** (Linux/amd64, pushed **2026-11-01**):
+### What it does
+
+- **Reaches your sources:** files, **SQL**, **NoSQL**, **APIs**, **Power BI**, **Dataverse**, **SharePoint**, **SMB/NFS** and more. Scans inside compressed archives (zip, tar, gz, 7z with an optional extra) and handles multilingual and legacy encodings.
+- **Finds more than obvious identifiers:** CPF, CNPJ (including the new alphanumeric format), e-mail, phone and payment data — plus **sensitive categories** (health, religion, political opinion, biometric, genetic: LGPD Art. 5 II, GDPR Art. 9) and **field combinations that can re-identify individuals**. **Minors' data** has dedicated detector logic.
+- **Metadata, not the data:** it records where something was found and which pattern matched. It does not store or exfiltrate the personal data itself.
+- **One config-driven engine:** a single YAML/JSON file sets targets, regex, ML/DL terms, norm tags and recommendation overrides, with no code changes to align with a different framework.
+- **Run it your way:** one-shot **CLI**, or a **REST API** (port **8088**) with a web dashboard; scans can be scheduled through the API.
+- **Outputs you can hand to an auditor:** **Excel** reports, **heatmaps**, **trends** across sessions and audit JSON, with recommendations tagged by norm.
+
+### Rust acceleration
+
+**`boar_fast_filter`** is a Rust accelerator (PyO3) that is **embedded in this image**. It is a pre-filter for three high-volume patterns: **CPF, e-mail and payment-card numbers**. In a pinned, reproducible microbenchmark on **200,000 rows** (same payload, identical hit counts: 100,000 on both sides) it ran **4.69×** faster than the Python pre-filter ([`tests/benchmarks/rust_prefilter_hotspot.json`](https://github.com/DataBoar/data-boar/blob/main/tests/benchmarks/rust_prefilter_hotspot.json), 2026-06-30). That number measures **the filter stage in isolation**; it is **not** an end-to-end scan speedup. The other detectors, including CNPJ, remain in Python.
+
+### Current Hub image (release `1.8.0`)
+
+**`latest`** and **`1.8.0`** resolve to the **same digest** (Linux/amd64, pushed **2026-11-01**):
 
 `sha256:1f7a8a32b2fced12969382579721d6311a6b4f3fd98d2e6ffca921da47ec6ebc` (~**281 MB** compressed on Hub).
 
@@ -37,7 +52,7 @@ The **1.8.0** image is already on Hub (`latest` and `1.8.0`, same digest, **2026
 
 **CPU requirement changed:** this image targets **x86-64-v2 or newer** (SSE4.2 / POPCNT). It does **not** run on older CPUs without POPCNT (for example Celeron 900-class machines). For those hosts, pin **`1.7.4.post12`** (GIL image, runs on any x86-64).
 
-**Runtime shape:** multi-stage build → **`python:3.14-slim`** + free-threaded CPython 3.14 (installed with `uv`) → **`gcr.io/distroless/cc-debian13:nonroot`** (uid **65532**, no shell / no apt). **`boar_fast_filter`** (Rust accelerator) is **embedded** in the image. SQLAlchemy is pure-Python here (no C extension), so importing it does not re-enable the GIL.
+**Runtime shape:** multi-stage build → **`python:3.14-slim`** + free-threaded CPython 3.14 (installed with `uv`) → **`gcr.io/distroless/cc-debian13:nonroot`** (uid **65532**, no shell / no apt). SQLAlchemy is pure-Python here (no C extension), so importing it does not re-enable the GIL.
 
 **Release:** [GitHub Release v1.8.0](https://github.com/DataBoar/data-boar/releases/tag/v1.8.0) · PyPI [`data-boar 1.8.0`](https://pypi.org/project/data-boar/1.8.0/). Confirm **`pyproject.toml`** and **[GitHub Releases](https://github.com/DataBoar/data-boar/releases)** for the exact pairing.
 
