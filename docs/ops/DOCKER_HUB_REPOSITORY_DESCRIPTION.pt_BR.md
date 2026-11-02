@@ -10,42 +10,21 @@
 
 ## Qual imagem puxar? (escolha)
 
-**Uma imagem publicada (cp314t).** No-GIL em runtime é **só Enterprise** (`PYTHON_GIL=1` nos demais tiers). Cole o Full **quando essa imagem estiver no Hub** — até o próximo publish, `:latest` no Hub ainda é a imagem GIL de **2026-07-30**.
+A imagem **1.8.0** **já está no Hub** (`latest` e `1.8.0`, mesmo digest, **2026-11-01**).
 
-### `latest` / `1.7.4.post12` — universal, é o default
+**Uma imagem publicada, CPython free-threaded (`cp314t`).** No-GIL em runtime é **só Enterprise**: o entrypoint do container define `PYTHON_GIL=1` nos demais tiers. Não force `PYTHON_GIL=0`.
 
-Use esta a menos que tenha motivo concreto para free-threading.
+**Imagem atual no Hub (release `1.8.0`):** **`latest`** e **`1.8.0`** apontam para o **mesmo digest** (Linux/amd64, enviada **2026-11-01**):
 
-- Python **3.14 com GIL**, distroless nonroot (uid **65532**).
-- **`popcnt = 0`** em **540** `.so` (medido) → roda em **qualquer x86-64**, inclusive **Celeron 900 de 2009** sem AVX.
-- ML completo: **numpy 2.5.1 · scipy 1.18.0 · scikit-learn 1.9.0 · pandas 3.0.5**.
-- **`boar_fast_filter`** (Rust) via **`abi3`**.
-- ~**309 MB** no Hub (`sha256:ab8f5dad3e336…`, medido **2026-07-30**).
+`sha256:1f7a8a32b2fced12969382579721d6311a6b4f3fd98d2e6ffca921da47ec6ebc` (~**281 MB** comprimido no Hub).
 
-**Use esta se:** não sabe qual escolher · hardware antigo ou heterogêneo · frota mista · on-prem com máquina de idade desconhecida · quer o piso garantido.
+**Requisito de CPU mudou:** esta imagem exige **x86-64-v2 ou mais recente** (SSE4.2 / POPCNT). **Não** roda em CPU antiga sem POPCNT (por exemplo máquinas classe Celeron 900). Nesses hosts, fixe a tag **`1.7.4.post12`** (imagem GIL, roda em qualquer x86-64).
 
-### `1.7.4.post12-nogil` — paralelismo real (opt-in)
+**Forma do runtime:** build multi-stage → **`python:3.14-slim`** + CPython 3.14 free-threaded (instalado com `uv`) → **`gcr.io/distroless/cc-debian13:nonroot`** (uid **65532**, sem shell / sem apt). **`boar_fast_filter`** (acelerador Rust) vem **embutido**. SQLAlchemy é puro-Python nesta imagem (sem extensão C), então o import não religa o GIL.
 
-- Python **3.14t free-threaded** (PEP 703); `sys._is_gil_enabled()` → **False** — **inclusive depois de `import sqlalchemy`**.
-- Mesmo ML, wheels **`cp314t`** — **`cp314` e `cp314t` não são intercambiáveis**.
-- **`boar_fast_filter`** compilado **nativo para `cp314t`** (não abi3).
-- **SQLAlchemy é puro-Python nesta imagem** (`DISABLE_SQLALCHEMY_CEXT=1`, zero `.so` em `sqlalchemy/**`). O cyextension de estoque **religa o GIL** no import e anularia o propósito da `-nogil`. Na imagem GIL (`latest` / `post12`) o cext **permanece** — correto lá.
-- **Exige x86-64-v2+** — o **numpy cp314t** de upstream usa **`popcnt`** (**1477** ocorrências, medido). **Não roda** em CPU sem SSE4.2/POPCNT.
-- **`:latest` nunca aponta para esta tag.**
+**Release:** [GitHub Release v1.8.0](https://github.com/DataBoar/data-boar/releases/tag/v1.8.0) · PyPI [`data-boar 1.8.0`](https://pypi.org/project/data-boar/1.8.0/). Confirme o **`pyproject.toml`** e as [GitHub Releases](https://github.com/DataBoar/data-boar/releases) para o pareamento exato.
 
-**Use esta se:** CPU moderna **e** vários workers **e** detecção **regex-bound**.
-
-**Não use se:** hardware antigo/desconhecido, ou **1 worker** (não há ganho).
-
-### O que “mais rápido” significa (microbenchmark medido + mecanismo)
-
-Mecanismo ([#551](https://github.com/DataBoar/data-boar/issues/551)): workers em **regex Python puro** (`core/detector.py`) são **serializados pelo GIL**; free-threaded remove isso. **`boar_fast_filter`** já libera o GIL (ganho menor). I/O-bound: marginal.
-
-**Medido no builder nogil** (microbenchmark — **não** substitui `--demo` real): com cext, GIL volta a **True** e regex 8 threads fica **0,90×** (pior que 1 thread); sem cext, GIL fica **False** e regex 8 threads fica **5,30×**, com SELECT ~**+21%** e INSERT igual. A imagem paga esse SELECT para não anular o paralelismo da detecção. Sem outros multiplicadores inventados. **Não** use `PYTHON_GIL=0` / `-Xgil=0` para manter o cext.
-
-### Tier de licença limita workers — e o GIL
-
-Os bits são free-threaded, mas **no-GIL na subida do processo é só Enterprise**. Os demais tiers recebem `PYTHON_GIL=1`. O teto de workers continua `min(scan.max_workers, tier cap)` em `core/engine.py` (`#551`); sem JWT vale `OPEN_MODE_WORKER_CAP`.
+Não existe tag **`-nogil`** no Hub. A **`1.7.4.post12`** histórica é GIL e roda em qualquer x86-64.
 
 ---
 
@@ -53,8 +32,9 @@ Os bits são free-threaded, mas **no-GIL na subida do processo é só Enterprise
 
 | Tag | Papel |
 | --- | ----- |
-| **`latest`** | Próximo publish: cp314t + gate de GIL por licença. **Até lá** = **`1.7.4.post12`** (GIL). |
-| **`1.7.4.post12`** | Última `:latest` com GIL (qualquer x86-64, `popcnt=0`). |
-| **`1.7.4`** | GA de junho/2026 (histórica). |
+| **`fabioleitao/data_boar:latest`** | Build publicado mais recente (mesmo digest que **`1.8.0`**) |
+| **`fabioleitao/data_boar:1.8.0`** | Imagem imutável atual (free-threaded **`cp314t`** / distroless / **x86-64-v2+**) |
+| **`fabioleitao/data_boar:1.7.4.post12`** | Imagem anterior: GIL, roda em qualquer x86-64 (**popcnt=0**); fixe-a em CPU antiga |
+| **`fabioleitao/data_boar:1.7.4`** | Imagem GA de junho/2026 (histórica) |
 
 **Checklist / versão nos artefatos:** [VERSIONING.md](../VERSIONING.md) · [PUBLISHED_SYNC.md](today-mode/PUBLISHED_SYNC.md).
