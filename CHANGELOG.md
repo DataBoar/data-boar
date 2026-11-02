@@ -4,6 +4,8 @@ Human-readable summary of user-facing changes. **Detailed release notes:** [docs
 
 ## Unreleased
 
+- **CREDIT_CARD Amex/Diners (#1984):** the built-in detector, Luhn candidate, PCI `PAN` / LGPD `CREDIT_CARD` samples, and Rust FastFilter share one IIN-anchored regex (16-digit 4-4-4-4, Amex 15 `3[47]`, Diners 14 `300-305` / `36` / `38`) plus Luhn on the match span. This is not a bare 13–19 digit run.
+
 - **Non-REST credential env names (#2164):** `pass_from_env` on database, SMB, Mongo, Redis, and `findings_sink` accepts the name the operator already uses. The #1977 prefix stays REST-only. Reserved process names remain refused on every target type.
 - **Credential host gate (#2164 / #2103):** default load matches 1.7.x — no operator host list and no YAML `allowed_hosts` required for non-REST `*_from_env`. `DATA_BOAR_CREDENTIAL_STRICT=1` restores the fail-closed #2103 gate (`DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS` plus per-target `allowed_hosts`) for processes that expose config to third parties.
 

@@ -24,7 +24,7 @@
 
 regex:
   - name: "PAN"
-    pattern: "\\b\\d{4}[-\\s]?\\d{4}[-\\s]?\\d{4}[-\\s]?\\d{4}\\b"
+    pattern: "\\b(?:\\d{4}[-\\s]?\\d{4}[-\\s]?\\d{4}[-\\s]?\\d{4}|3[47]\\d{2}[-\\s]?\\d{6}[-\\s]?\\d{5}|3(?:0[0-5]\\d|[68]\\d{2})[-\\s]?\\d{4}[-\\s]?\\d{4}[-\\s]?\\d{2})\\b"
     norm_tag: "PCI-DSS"
     validator: luhn
   - name: "CARD_TRACK_ALT"

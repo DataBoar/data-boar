@@ -4,9 +4,18 @@ from __future__ import annotations
 
 import re
 
-# Fallback scan when no detector match span is available (e.g. Pro prefilter).
-# Align separator class with CREDIT_CARD detection: optional whitespace or hyphen.
-_CARD_CANDIDATE_RX = re.compile(r"\b(?:\d[-\s]?){13,19}\b")
+# IIN-anchored shapes (#1984). Not a bare 13–19 digit run (that reopens #1332 FP).
+# Separator class [-\s] includes hyphen, space, TAB, and NBSP.
+# 16-digit 4-4-4-4 (Visa/Mastercard/Discover), Amex 15 (3[47], 4-6-5 or run-on),
+# Diners 14 (300-305 / 36 / 38, 4-4-4-2 or run-on).
+CREDIT_CARD_PATTERN = (
+    r"\b(?:"
+    r"\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}"
+    r"|3[47]\d{2}[-\s]?\d{6}[-\s]?\d{5}"
+    r"|3(?:0[0-5]\d|[68]\d{2})[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{2}"
+    r")\b"
+)
+_CARD_CANDIDATE_RX = re.compile(CREDIT_CARD_PATTERN)
 
 
 def check_luhn(card_number: str) -> bool:

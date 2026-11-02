@@ -16,6 +16,8 @@ from __future__ import annotations
 import re
 from typing import Pattern
 
+from utils.luhn_card import CREDIT_CARD_PATTERN
+
 # Match DB column size (core.database.ScanSession.tenant_name / technician_name)
 MAX_TENANT_TECHNICIAN_LENGTH = 255
 
@@ -34,7 +36,7 @@ def _pii_regexes_for_log() -> tuple[Pattern[str], ...]:
         r"\b\d{2}\.?\d{3}\.?\d{3}/?\d{4}-?\d{2}\b",  # LGPD_CNPJ
         r"\b[A-Z0-9]{2}\.?[A-Z0-9]{3}\.?[A-Z0-9]{3}/?[A-Z0-9]{4}-?\d{2}\b",  # LGPD_CNPJ_ALNUM
         r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b",  # EMAIL
-        r"\b\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b",  # CREDIT_CARD
+        CREDIT_CARD_PATTERN,  # CREDIT_CARD (#1984 IIN SSOT)
         r"\b(?:\+55\s?)?\(?\d{2}\)?\s?\d{4,5}-?\d{4}\b",  # PHONE_BR (#393 DDD required)
         r"\b\d{3}-\d{2}-\d{4}\b",  # CCPA_SSN
     )

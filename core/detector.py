@@ -51,7 +51,11 @@ from core.embedding_prototype_hint import try_embedding_prototype_elevation
 from core.fuzzy_column_match import try_fuzzy_elevation
 from core.suggested_review import column_name_suggests_identifier_review
 from utils.file_encoding import read_text_with_encoding
-from utils.luhn_card import luhn_check_matched_card_span, text_contains_luhn_valid_card
+from utils.luhn_card import (
+    CREDIT_CARD_PATTERN,
+    luhn_check_matched_card_span,
+    text_contains_luhn_valid_card,
+)
 
 if TYPE_CHECKING:
     from core.dl_backend import DLClassifier
@@ -117,7 +121,7 @@ DEFAULT_PATTERNS = {
         "LGPD Art. 5",
     ),
     "EMAIL": (r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b", "GDPR Art. 4(1)"),
-    "CREDIT_CARD": (r"\b\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b", "PCI/GLBA"),
+    "CREDIT_CARD": (CREDIT_CARD_PATTERN, "PCI/GLBA"),
     # DDD/area code is required (#393): 8–9 digit IDs like 1234-5678 must not match.
     "PHONE_BR": (r"\b(?:\+55\s?)?\(?\d{2}\)?\s?\d{4,5}-?\d{4}\b", "LGPD Art. 5"),
     "CCPA_SSN": (r"\b\d{3}-\d{2}-\d{4}\b", "CCPA"),
