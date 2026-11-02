@@ -18,6 +18,7 @@ from core.extras_manifest import (
 )
 from core.native_nfpm import (
     CORE_PACKAGE,
+    project_license,
     project_version,
     read_subpackage_map,
     repo_root,
@@ -154,7 +155,7 @@ def render_template(
         f"nocross=yes\n"
         f'short_desc="{_SHORT_DESC}"\n'
         f'maintainer="Data Boar maintainers <contact@databoar.com.br>"\n'
-        f'license="AGPL-3.0-or-later"\n'
+        f'license="{project_license()}"\n'
         f'homepage="https://github.com/DataBoar/data-boar"\n'
         f'depends="{depends} runit"\n'
         f'subpackages="{subpackages_line}"\n'
