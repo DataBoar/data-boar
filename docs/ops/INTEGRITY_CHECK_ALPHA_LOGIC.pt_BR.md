@@ -54,43 +54,39 @@ Anexar registro estruturado a `security_alert.log` (ou destino SIEM):
 - **Extensões:** módulos nativos podem residir em `site-packages`; hasheie o **artefato instalado** resolvido em runtime, não só `pro/*.pyd` na árvore de fontes.
 - **Assinatura:** manifestos “known-good” devem ser **assinados** ou distribuídos por canal confiável do operador (fora do escopo deste texto).
 
-## Implementado: Fase E — âncora de integridade em SQLite (#856)
+## Implementado: Fase E — confiança no manifesto assinado + forense SQLite (#856 / #2168)
 
-`core/integrity_anchor.py` implementa a espinha da detecção Alpha:
+`core/integrity_anchor.py` e `core/integrity_signed_manifest.py`
+implementam a espinha da detecção Alpha:
 
-1. **Primeira execução (E.1–E.2):** SHA-256 da allowlist crítica de
+1. **Raiz de confiança (#2168):** SHA-256 da allowlist crítica de
    comportamento (spine + `connectors/*.py` + `core/licensing/*.py` + extras
    explícitos — ver `resolve_critical_modules()` em
    `core/integrity_anchor.py` e
    [PLAN_INTEGRITY_HARDENING.md](../plans/PLAN_INTEGRITY_HARDENING.md) § *behaviour-critical criterion*)
-   → persistido na tabela SQLite `build_integrity_anchor` (`release_label`,
-   hashes por arquivo, `validated_at`, `build_digest_matched`,
-   `validator_version`).
-   **`build_digest_matched` é um flag de match de build-digest, não uma
-   assinatura criptográfica** (#1211): `True` só quando
-   `DATA_BOAR_EXPECTED_BUILD_DIGEST` estava definido e casou com o digest
-   embutido; env unset → `False` (nada verificado ≠ “ok”). A âncora
-   **sobrevive ao `--reset-data`**: `wipe_all_data()` limpa apenas as tabelas
-   de scan.
-2. **Re-verificação no startup (E.3):** todo start (CLI e web, **qualquer**
-   modo de licenciamento, incluindo `open`) recomputa os hashes e compara com
-   a âncora.
-   - **Hash divergente** → `integrity_state=tampered` / `trust_level=adulterated`
-     **salvo** um upgrade oficial comprovado (#1262): a versão instalada em
-     `importlib.metadata` é **mais nova** que o `release_label` gravado
-     (PEP 440 / `packaging.version`, não ordem de string) **e** todos os
-     arquivos de `CRITICAL_MODULES` batem com o hash `RECORD` da distribuição
-     instalada (a mesma verificação do pip). Aí o runtime re-baselineia sozinho
-     (`re-baseline-auto-upgrade`, sem `-alpha`). Continua tampered: edição na
-     mesma versão; versão nova com falha no `RECORD`; downgrade; sem metadados
-     de distribuição (checkout cru). Só mudar semver/rótulo **não** basta.
-   - **Re-baseline do operador (#1262):** `data-boar --reconcile-integrity-anchor
-     --confirm-upgrade-to=<versão-instalada>` continua como recuperação e
-     grava âncora nova **somente** quando `VERSION` é igual à versão do pacote
-     em execução. O evento append-only `re-baseline` registra a confirmação.
-   - **Hashes iguais + `release_label` mudou** → permanece `validated`; só
-     persiste o rótulo novo (hashes intactos — não é re-baseline).
-3. **TINTED / `-alpha` (E.4):** o estado adulterado força o rótulo
+   é comparado a um manifesto **assinado no release**, empacotado em
+   `core/licensing/integrity_manifest.json`. A assinatura é Ed25519 sobre
+   um payload JSON canônico e verifica com a chave pública de licença já
+   existente (`core/licensing/license-pub-v1.pem`). `validated` / `expected`
+   só quando essa assinatura verifica **e** cada hash da allowlist casa.
+   Árvore ausente, sem assinatura, ilegível, com chave errada, hash
+   divergente ou downgrade fica `tampered`. Árvores 1.8.0 sem manifesto
+   **não** viram `validated` por omissão.
+2. **SQLite é forense, não árbitro:** `build_integrity_anchor` guarda
+   hashes vistos, `signed_release_label`, `validated_at` e
+   `build_digest_matched`. **`build_digest_matched` é um flag de match de
+   build-digest, não uma assinatura criptográfica** (#1211): `True` só
+   quando `DATA_BOAR_EXPECTED_BUILD_DIGEST` estava definido e casou com o
+   digest embutido; env unset → `False`. A linha **sobrevive ao
+   `--reset-data`**.
+3. **Re-verificação no startup:** todo start (CLI e web, **qualquer** modo
+   de licenciamento, incluindo `open`) reavalia o manifesto assinado.
+   - **Upgrade assinado legítimo:** arquivos assinados casam com o rótulo
+     novo → `validated` (sem comando do operador, sem `-alpha`).
+   - **`--reconcile-integrity-anchor --confirm-upgrade-to=<versão-instalada>`**
+     registra um evento `reconcile` e reavalia o mesmo manifesto assinado.
+     Não pode produzir `validated` sozinho.
+4. **TINTED / `-alpha` (E.4):** o estado adulterado força o rótulo
    `-alpha (development / not CI-validated)` na aba Info do report (linhas
    `Build trust` / `Integrity state`), no rodapé do dashboard, em
    `GET /about`, `GET /status`, `/health`, logs de startup (log CRITICAL
@@ -98,29 +94,24 @@ Anexar registro estruturado a `security_alert.log` (ou destino SIEM):
    **`--validate-config`** ([#1298](https://github.com/DataBoar/data-boar/issues/1298)).
    A severidade de `enterprise_surface` sobe para
    `elevated` com a razão `integrity_tampered` (alinhado ao ADR-0066).
-4. **Clamp de workers em modo open:** `core/engine.py` limita
+5. **Clamp de workers em modo open:** `core/engine.py` limita
    `scan.max_workers` a `OPEN_MODE_WORKER_CAP = 2` no modo open. O clamp fica
    dentro da allowlist hasheada — remover o clamp altera `core/engine.py` e
    tinge o build.
-5. **Forense (E.5):** `integrity_events` é uma tabela append-only
-   (validation / re-verify / re-baseline / re-baseline-auto-upgrade / tamper)
-   preservada em wipes de dados.
+6. **Forense (E.5):** `integrity_events` é uma tabela append-only
+   (validation / re-verify / reconcile / tamper) preservada em wipes de dados.
 
 ### Modelo de ameaça honesto (E.6)
 
-Isto é **evidência de adulteração, não prova de inviolabilidade.** Um atacante
-com acesso de escrita ao código, ao `RECORD` instalado, à versão reportada da
-distribuição **e** ao arquivo SQLite da âncora ainda consegue forçar um
-re-baseline (a mesma classe de apagar a âncora). O caminho de upgrade
-automático só prova “versão empacotada mais nova cujos arquivos críticos ainda
-batem com o `RECORD`”; **não** prova assinatura criptográfica do fornecedor.
-Drift de hash na mesma versão ainda tingido. O confirm do operador
-(`--reconcile-integrity-anchor --confirm-upgrade-to`) continua como recuperação.
-Mitigações: permissões de arquivo, montagem somente leitura do DB em deploys
-de alta garantia, e o **manifest assinado** (Sigstore / CI OIDC — Fase C.4 do
-`PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY`) como próxima camada. A âncora local
-captura com confiabilidade edições casuais, forks com gates removidos e drift
-silencioso de deploy — que é o objetivo da detecção Alpha.
+Isto é **evidência de adulteração, não prova de inviolabilidade.** A checagem
+prova que os arquivos críticos casam com um manifesto assinado pela chave
+pública de licença **já empacotada**. **Não** prova resistência se essa chave
+pública empacotada for substituída. SQLite, `RECORD` da wheel e
+`--reconcile-integrity-anchor` não são raiz de confiança. Drift de hash na
+mesma versão ainda tingido. Mitigações: permissões de arquivo e um manifesto
+assinado na TTY a cada release (`scripts/sign-integrity-manifest.py`). O
+runtime captura com confiabilidade edições casuais, forks com gates removidos
+e drift silencioso de deploy — que é o objetivo da detecção Alpha.
 
 ## Relacionados
 

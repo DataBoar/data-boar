@@ -152,4 +152,4 @@ def test_reconcile_ignores_unprefixed_target_credentials(
     )
     assert r.returncode == 0, r.stdout + r.stderr
     assert "Config error" not in r.stdout + r.stderr
-    assert "[OK] integrity anchor re-baselined" in r.stdout
+    assert "[OK] integrity event recorded" in r.stdout

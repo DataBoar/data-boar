@@ -36,6 +36,7 @@ permissions:
       - "rust/boar_fast_filter/Cargo.toml"
       - "scripts/generate_build_digest.py"
       - "scripts/generate_release_manifest.py"
+      - "scripts/sign-integrity-manifest.py"
       - "core/**/*.py"
       - "main.py"
   workflow_dispatch:
@@ -103,6 +104,10 @@ jobs:
             --canonical
           uv run python scripts/application_sbom.py check \
             --application sbom-python.cdx.json
+
+      - name: Verify signed integrity manifest (public key only)
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+        run: uv run python scripts/sign-integrity-manifest.py --verify-only
 
       - name: Generate build digest (licensing tamper check)
         run: uv run python scripts/generate_build_digest.py --quiet

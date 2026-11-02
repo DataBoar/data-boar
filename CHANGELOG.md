@@ -11,6 +11,8 @@ Human-readable summary of user-facing changes. **Detailed release notes:** [docs
 
 See [docs/releases/1.8.0.md](docs/releases/1.8.0.md) for the full release notes.
 
+- **Integrity trust root (#2168):** `validated` only when CRITICAL_MODULES match a release-signed manifest verified with the packaged license public key. SQLite and `--reconcile-integrity-anchor` are forensic. Unsigned 1.8.0-class trees stay `tampered` until the operator signs the packaged manifest.
+
 Migration notes on the **`1.8.0-rc`** working line (no new semver cut):
 
 - **CPU preflight probes installed stack (#2125):** `core.cpu_preflight` no longer decides ML import safety from CPU flags alone. When required flags (SSE4.2/POPCNT/AVX) are missing, it runs a one-time probe of the **installed** numpy/scipy/scikit-learn stack in a child process. A working wheelhouse x86-64-v1 build passes the probe and enables ML/DL on CPUs without those flags. A failed probe (killed by a signal such as SIGILL, a timeout, a non-zero exit such as an import that refuses to run on this CPU, or a start error) skips ML/DL. Regex CPF/CNPJ continues unaffected. The skip warning states the real cause (signal name, timeout, exit code with the last stderr line, or start error) and still carries the wheelhouse remedy.

@@ -81,8 +81,10 @@ def test_reconcile_ok_matching_installed_version(tmp_path: Path) -> None:
         ["--reconcile-integrity-anchor", "--confirm-upgrade-to", ver],
     )
     assert r.returncode == 0, r.stdout + r.stderr
-    assert "[OK] integrity anchor re-baselined" in r.stdout
+    assert "[OK] integrity event recorded" in r.stdout
     assert ver in r.stdout
+    # Unsigned checkout: reconcile cannot mint validated by itself (#2168).
+    assert "state=tampered" in r.stdout
 
 
 def test_reconcile_refuses_wrong_version(tmp_path: Path) -> None:

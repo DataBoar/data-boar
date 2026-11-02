@@ -39,7 +39,7 @@ A path belongs in the anchor when tamper would, without detection:
 
 ## Phase 2 — backlog (not this slice)
 
-- Signed manifest / Sigstore (Phase C.4 of build-identity plan)
+- Signed manifest trust root — landed in [PLAN_INTEGRITY_SIGNED_MANIFEST.md](PLAN_INTEGRITY_SIGNED_MANIFEST.md) (#2168)
 - `--reverify-integrity` operator flag
 - Optional extension-module hashing (`boar_fast_filter`)
 
