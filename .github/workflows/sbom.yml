@@ -231,7 +231,10 @@ jobs:
               exit 1
             fi
             test -s /tmp/relman/release-manifest.json
-            python3 scripts/generate_release_manifest.py \
+            # #2158: invoked as a file, python3 puts scripts/ on sys.path, not
+            # the repo root. Image generate/check steps keep working via
+            # Dockerfile PYTHONPATH=/extras:/app — do not change those.
+            PYTHONPATH="${GITHUB_WORKSPACE:-$PWD}" python3 scripts/generate_release_manifest.py \
               --patch-native-into release-manifest.json \
               --preserve-native-from /tmp/relman/release-manifest.json \
               --quiet

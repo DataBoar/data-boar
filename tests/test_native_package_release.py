@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import json
+import os
+import subprocess
+import sys
 from pathlib import Path
 
 from scripts.generate_release_manifest import apply_preserved_native_packages
@@ -164,6 +167,95 @@ def test_apply_preserved_native_packages(tmp_path: Path) -> None:
         encoding="utf-8",
     )
     assert apply_preserved_native_packages(dest, src) is True
+    data = json.loads(dest.read_text(encoding="utf-8"))
+    assert data["files"][0]["path"] == "main.py"
+    assert data["native_packages"][0]["name"].endswith(".deb")
+
+
+def test_patch_native_into_via_main_preserves_packages(tmp_path: Path) -> None:
+    dest = tmp_path / "release-manifest.json"
+    dest.write_text(
+        json.dumps({"files": [{"path": "main.py", "sha256": "aa" * 32}]}) + "\n",
+        encoding="utf-8",
+    )
+    src = tmp_path / "prior.json"
+    src.write_text(
+        json.dumps(
+            {
+                "files": [],
+                "native_packages": [
+                    {
+                        "name": "data-boar_1.8.0-rc_amd64.deb",
+                        "packager": "deb",
+                        "sha256": "bb" * 32,
+                    }
+                ],
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    assert (
+        release_manifest_main(
+            [
+                "--patch-native-into",
+                str(dest),
+                "--preserve-native-from",
+                str(src),
+                "--quiet",
+            ]
+        )
+        == 0
+    )
+    data = json.loads(dest.read_text(encoding="utf-8"))
+    assert data["files"][0]["path"] == "main.py"
+    assert data["native_packages"][0]["name"].endswith(".deb")
+
+
+def test_patch_native_into_as_script_uses_pythonpath(tmp_path: Path) -> None:
+    """#2158: file invocation needs repo root on PYTHONPATH (not scripts/)."""
+    repo_root = Path(__file__).resolve().parents[1]
+    dest = tmp_path / "release-manifest.json"
+    dest.write_text(
+        json.dumps({"files": [{"path": "main.py", "sha256": "aa" * 32}]}) + "\n",
+        encoding="utf-8",
+    )
+    src = tmp_path / "prior.json"
+    src.write_text(
+        json.dumps(
+            {
+                "files": [],
+                "native_packages": [
+                    {
+                        "name": "data-boar_1.8.0-rc_amd64.deb",
+                        "packager": "deb",
+                        "sha256": "bb" * 32,
+                    }
+                ],
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(repo_root)
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(repo_root / "scripts" / "generate_release_manifest.py"),
+            "--patch-native-into",
+            str(dest),
+            "--preserve-native-from",
+            str(src),
+            "--quiet",
+        ],
+        cwd=repo_root,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
     data = json.loads(dest.read_text(encoding="utf-8"))
     assert data["files"][0]["path"] == "main.py"
     assert data["native_packages"][0]["name"].endswith(".deb")

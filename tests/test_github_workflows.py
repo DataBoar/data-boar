@@ -340,6 +340,19 @@ def test_sbom_workflow_generates_release_manifest_after_docker_build() -> None:
     assert "native_packages" in text
     assert "refusing to clobber native_packages[]" in text
     assert "gh release view" in text
+    # Docker generate/check stay as ``python scripts/...`` (image PYTHONPATH).
+    assert "python scripts/generate_release_manifest.py --out" in text
+    assert "python scripts/generate_release_manifest.py --check" in text
+
+
+def test_sbom_attach_sets_pythonpath_for_release_manifest_import() -> None:
+    """#2158: runner ``python3`` as a file needs the repo root on PYTHONPATH."""
+    text = (WORKFLOWS / "sbom.yml").read_text(encoding="utf-8")
+    attach_idx = text.index("Attach SBOMs to GitHub Release (when applicable)")
+    patch_idx = text.index("--patch-native-into", attach_idx)
+    snippet = text[attach_idx:patch_idx]
+    assert 'PYTHONPATH="${GITHUB_WORKSPACE:-$PWD}"' in snippet
+    assert "python3 scripts/generate_release_manifest.py" in snippet
 
 
 def test_sbom_yml_pins_actions_to_shas() -> None:
