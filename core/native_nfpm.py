@@ -86,11 +86,19 @@ def read_subpackage_map(path: Path | None = None) -> dict[str, str]:
     return {str(k): str(v) for k, v in raw.items()}
 
 
-def project_version(pyproject: Path | None = None) -> str:
+def _project_table(pyproject: Path | None = None) -> dict[str, Any]:
     path = pyproject or (repo_root() / "pyproject.toml")
     with path.open("rb") as handle:
         data = tomllib.load(handle)
-    return str(data["project"]["version"])
+    return dict(data["project"])
+
+
+def project_version(pyproject: Path | None = None) -> str:
+    return str(_project_table(pyproject)["version"])
+
+
+def project_license(pyproject: Path | None = None) -> str:
+    return str(_project_table(pyproject)["license"])
 
 
 def _dump_yaml(doc: dict[str, Any]) -> str:
@@ -122,7 +130,7 @@ def build_core_nfpm_doc(*, version: str) -> dict[str, Any]:
         ),
         "vendor": "Data Boar",
         "homepage": "https://github.com/DataBoar/data-boar",
-        "license": "AGPL-3.0-or-later",
+        "license": project_license(),
         # No Depends: python3 — interpreter is embedded (ADR-0084 channel a).
         "depends": [],
         "contents": [
@@ -139,6 +147,14 @@ def build_core_nfpm_doc(*, version: str) -> dict[str, Any]:
                 "src": "staging/etc/data-boar/config.example.yaml",
                 "dst": "/etc/data-boar/config.example.yaml",
                 "type": "config|noreplace",
+            },
+            {
+                "src": "../../docs/data_boar.1",
+                "dst": "/usr/share/man/man1/data-boar.1",
+            },
+            {
+                "src": "../../docs/data_boar.5",
+                "dst": "/usr/share/man/man5/data-boar.5",
             },
         ],
         "overrides": {
@@ -174,7 +190,7 @@ def build_subpackage_nfpm_doc(
         ),
         "vendor": "Data Boar",
         "homepage": "https://github.com/DataBoar/data-boar",
-        "license": "AGPL-3.0-or-later",
+        "license": project_license(),
         # Exact-version pin so subpackage cannot float against a different core ABI.
         "depends": [f"{CORE_PACKAGE} (= {version}-1)"],
         "contents": [

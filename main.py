@@ -16,7 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from datetime import UTC
 
-from config.loader import load_config
+from config.loader import load_config, peek_sqlite_path
 from core.database import LocalDBManager
 from core.engine import AuditEngine
 from core.licensing import LicenseBlockedError
@@ -1496,7 +1496,10 @@ def main() -> None:
         sys.exit(2)
 
     try:
-        config = load_config(args.config)
+        if reconcile_anchor:
+            config = {"sqlite_path": peek_sqlite_path(args.config)}
+        else:
+            config = load_config(args.config)
     except FileNotFoundError as e:
         print(f"Config not found: {e}")
         if not demo_mode:

@@ -12,7 +12,7 @@ description: 'Data Boar connector extra [compressed] (packages: py7zr>=1.1.3).
   ADR-0084: embedded cp314t does NOT unlock Enterprise. Entitlement remains worker caps (#551) + pro_prefilter_accel.'
 vendor: Data Boar
 homepage: https://github.com/DataBoar/data-boar
-license: AGPL-3.0-or-later
+license: BSD-3-Clause
 depends:
 - data-boar (= 1.8.0-1)
 contents:
