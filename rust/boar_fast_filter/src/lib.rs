@@ -93,9 +93,12 @@ impl FastFilter {
     /// Pure-Rust constructor (no Python dependency). Returns the underlying
     /// regex error directly so it can be unit-tested without a Python interpreter.
     pub fn try_new() -> Result<Self, regex::Error> {
-        let cpf_pattern = Regex::new(r"\d{3}\.?\d{3}\.?\d{3}-?\d{2}")?;
+        let cpf_pattern = Regex::new(r"\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b")?;
         let email_pattern = Regex::new(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}")?;
-        let credit_card_pattern = Regex::new(r"\b(?:\d[ -]*?){13,19}\b")?;
+        // Keep this string identical to utils.luhn_card.CREDIT_CARD_PATTERN (#1984).
+        let credit_card_pattern = Regex::new(
+            r"\b(?:\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}|3[47]\d{2}[-\s]?\d{6}[-\s]?\d{5}|3(?:0[0-5]\d|[68]\d{2})[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{2})\b",
+        )?;
         Ok(FastFilter {
             cpf_pattern,
             email_pattern,
@@ -286,6 +289,42 @@ mod tests {
         assert_eq!(f.filter_batch_pure(&batch), vec![0]);
     }
 
+    #[test]
+    fn detects_amex_with_valid_luhn() {
+        let f = ff();
+        let batch = s(&["amex 3782 822463 10005"]);
+        assert_eq!(f.filter_batch_pure(&batch), vec![0]);
+    }
+
+    #[test]
+    fn detects_diners_with_valid_luhn() {
+        let f = ff();
+        let batch = s(&["diners 3056 9309 0259 04"]);
+        assert_eq!(f.filter_batch_pure(&batch), vec![0]);
+    }
+
+    #[test]
+    fn detects_visa_with_tab_separator() {
+        let f = ff();
+        let batch = s(&["card 4111\t1111\t1111\t1111"]);
+        assert_eq!(f.filter_batch_pure(&batch), vec![0]);
+    }
+
+    #[test]
+    fn skips_amex_failing_luhn() {
+        // Spaces keep the 15-digit run from also matching the CPF prefilter.
+        let f = ff();
+        let batch = s(&["amex 3782 822463 10006"]);
+        assert!(f.filter_batch_pure(&batch).is_empty());
+    }
+
+    #[test]
+    fn skips_non_card_invoice_ref() {
+        let f = ff();
+        let batch = s(&["ref INV-2023-0042"]);
+        assert!(f.filter_batch_pure(&batch).is_empty());
+    }
+
     // ----- filter_batch_pure: negative cases ----------------------------
 
     #[test]
@@ -302,6 +341,13 @@ mod tests {
         // credit-card path specifically and must NOT be flagged.
         let f = ff();
         let batch = s(&["order id 1234 5678 9012 3456 here"]);
+        assert!(f.filter_batch_pure(&batch).is_empty());
+    }
+
+    #[test]
+    fn skips_long_non_card_digit_run() {
+        let f = ff();
+        let batch = s(&["id 12345678901234567890"]);
         assert!(f.filter_batch_pure(&batch).is_empty());
     }
 

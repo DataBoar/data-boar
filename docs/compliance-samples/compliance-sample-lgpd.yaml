@@ -57,7 +57,7 @@ regex:
     pattern: "\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}\\b"
     norm_tag: "LGPD Art. 5"
   - name: "CREDIT_CARD"
-    pattern: "\\b\\d{4}[-\\s]?\\d{4}[-\\s]?\\d{4}[-\\s]?\\d{4}\\b"
+    pattern: "\\b(?:\\d{4}[-\\s]?\\d{4}[-\\s]?\\d{4}[-\\s]?\\d{4}|3[47]\\d{2}[-\\s]?\\d{6}[-\\s]?\\d{5}|3(?:0[0-5]\\d|[68]\\d{2})[-\\s]?\\d{4}[-\\s]?\\d{4}[-\\s]?\\d{2})\\b"
     norm_tag: "LGPD Art. 5"
   - name: "DATE_DMY"
     pattern: "\\b\\d{1,2}/\\d{1,2}/\\d{2,4}\\b"
