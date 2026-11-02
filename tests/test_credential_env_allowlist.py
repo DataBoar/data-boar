@@ -44,6 +44,7 @@ def test_non_rest_pass_from_env_accepts_unprefixed_name(
 def test_sql_pass_from_env_rejects_host_outside_allowlist(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.setenv("DATA_BOAR_CREDENTIAL_STRICT", "1")
     monkeypatch.setenv("API_DB_PASSWORD", "db-secret")
     data = _database_target(
         pass_from_env="API_DB_PASSWORD",
@@ -198,6 +199,7 @@ def test_non_rest_env_credential_copies_when_destination_allowlisted(
 def test_non_rest_env_credential_rejects_other_host(
     kind: str, fields: dict, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    monkeypatch.setenv("DATA_BOAR_CREDENTIAL_STRICT", "1")
     monkeypatch.setenv("API_TARGET_SECRET", "copied-secret")
     target = {
         "name": kind,
@@ -235,6 +237,7 @@ def test_hubspot_token_from_env_keeps_vendor_host_allowlist(
 def test_findings_sink_pass_from_env_rejects_other_host(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.setenv("DATA_BOAR_CREDENTIAL_STRICT", "1")
     monkeypatch.setenv("API_SINK_PASSWORD", "sink-secret")
     cfg = {
         "type": "postgresql",
@@ -290,6 +293,7 @@ def test_powerbi_client_secret_from_env_uses_vendor_token_host(
 def test_org_and_token_url_must_both_be_allowlisted(
     kind: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    monkeypatch.setenv("DATA_BOAR_CREDENTIAL_STRICT", "1")
     monkeypatch.setenv("API_DV_SECRET", "dv-secret")
     target = {
         "name": kind,

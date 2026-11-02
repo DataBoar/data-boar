@@ -22,6 +22,9 @@ LEGACY_FIXTURE = (
 
 
 def _legacy_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS", raising=False)
+    monkeypatch.delenv("DATA_BOAR_CREDENTIAL_STRICT", raising=False)
+    monkeypatch.delenv("DATA_BOAR_CREDENTIAL_HOSTS_UNRESTRICTED", raising=False)
     monkeypatch.setenv("DATABOAR_PG_PASSWORD", "pg-secret")
     monkeypatch.setenv("MEU_BANCO_SENHA", "smb-secret")
     monkeypatch.setenv("DATABOAR_MONGO_PASS", "mongo-secret")
@@ -38,6 +41,15 @@ def test_legacy_unprefixed_non_rest_config_loads(
     assert by_name["smb-legacy"]["pass"] == "smb-secret"
     assert by_name["mongo-legacy"]["pass"] == "mongo-secret"
     assert by_name["redis-legacy"]["pass"] == "redis-secret"
+
+
+def test_strict_mode_rejects_legacy_config_without_host_list(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _legacy_env(monkeypatch)
+    monkeypatch.setenv("DATA_BOAR_CREDENTIAL_STRICT", "1")
+    with pytest.raises(ValueError, match="DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS"):
+        load_config(LEGACY_FIXTURE)
 
 
 def test_rest_target_still_rejects_unprefixed_name(
@@ -79,11 +91,9 @@ def test_reserved_env_name_refused_on_every_target_type(
         "name": "t1",
         "type": kind,
         "pass_from_env": reserved,
-        "allowed_hosts": ["db.example"],
     }
     if kind == "api":
         target["base_url"] = "https://api.example.com"
-        target["allowed_hosts"] = ["api.example.com"]
     else:
         target["host"] = "db.example"
     with pytest.raises(ValueError, match="reserved for this process"):
