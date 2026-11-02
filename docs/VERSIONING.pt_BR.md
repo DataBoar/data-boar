@@ -81,7 +81,7 @@ Escada (histórico `1.7.4`): `1.7.4-beta` → `1.7.4-rc` → `1.7.4-rc-2` → **
 | --- | --- |
 | **Linha `1.7.4`** | Maturidade open-core + proteção comercial JWT |
 | **`1.8.x`** | Capacidades corporativas aumentadas (re-ID, sidecars, plugins/Clojure — **nova arquitetura**) |
-| **`1.7.5`** | **Não existe** — agentes não inventam (#772). Próximo milestone dev: **`1.8.0-beta`**. |
+| **`1.7.5`** | **Não existe** — agentes não inventam (#772). Próxima linha **dev** depois do ritual de publicação da **`1.8.0`**: milestone **`v1.8.1`**. |
 | **`1.9.x`** | Horizonte (expansão compliance — triagem #772) |
 
 Lifecycle DNS-beacon / heartbeat / kill-switch (#717) fica no roadmap **1.8.x** (`docs/plans/PLAN_SELF_UPGRADE_AND_VERSION_CHECK.md`, índice interno em `docs/README.md`).
