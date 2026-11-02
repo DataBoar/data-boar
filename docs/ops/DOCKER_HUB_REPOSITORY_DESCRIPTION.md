@@ -15,7 +15,7 @@
 Use one line (adjust version when you bump):
 
 ```text
-Data Boar — PII discovery. Image: cp314t; no-GIL only with Enterprise license.
+Data Boar — enterprise data discovery and risk governance (LGPD, GDPR, CCPA).
 ```
 
 ---
