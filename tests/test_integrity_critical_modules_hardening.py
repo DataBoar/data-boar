@@ -53,6 +53,7 @@ def test_resolve_critical_modules_includes_globs_and_extras():
         "utils/logger.py",
         "api/webauthn_routes.py",
         "api/webauthn_html_gate.py",
+        "core/integrity_signed_manifest.py",
     ):
         assert rel in modules
     hashes = compute_module_hashes()

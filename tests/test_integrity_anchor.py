@@ -3,8 +3,8 @@
 
 Contract under test:
 
-1. First run creates the ``build_integrity_anchor`` row + a ``validation``
-   event; state = validated / trust expected.
+1. First run without a signed manifest is ``tampered``. A matching signed
+   manifest yields validated / expected and a ``validation`` event.
 2. Re-run with unchanged modules → re-verify ok (``re-verify`` event).
 3. Tamper (hash drift) → ``integrity_state=tampered`` /
    ``trust_level=adulterated`` + append-only ``tamper`` event + CRITICAL log.
@@ -22,10 +22,9 @@ Contract under test:
 8. ``build_digest_matched`` (#1211): True only when expected digest set and
    matches; unset env → False (no signature overclaim).
 9. Legacy DB column ``signature_ok`` migrates to ``build_digest_matched``.
-10. Release upgrade (#1262): hash drift after a label change remains
-    ``tampered`` unless a proven official upgrade (newer PEP 440 metadata
-    **and** ``RECORD`` match) auto-rebaselines. Semver/label change alone
-    is not enough. Manual ``reconcile_integrity_anchor`` stays as recovery.
+10. Release upgrade (#2168): hash drift stays ``tampered`` unless a new
+    signed manifest matches. ``reconcile_integrity_anchor`` cannot validate
+    by itself.
 """
 
 from __future__ import annotations
@@ -37,6 +36,8 @@ import sqlite3
 from datetime import datetime, timezone
 
 import pytest
+
+from tests.integrity_manifest_helpers import reset_signed_manifest_pins
 
 from core.integrity_anchor import (
     ANCHOR_VERSION,
@@ -70,6 +71,14 @@ def _cfg(tmp_path) -> dict:
 
 
 # --- 1./2. first run + re-verify ------------------------------------------------
+
+
+def test_first_run_without_signed_manifest_is_tampered(tmp_path, monkeypatch):
+    reset_signed_manifest_pins()
+    monkeypatch.delenv("DATA_BOAR_EXPECTED_BUILD_DIGEST", raising=False)
+    snap = ensure_integrity_anchor(_cfg(tmp_path))
+    assert snap["integrity_state"] == "tampered"
+    assert snap["trust_level"] == "adulterated"
 
 
 def test_first_run_creates_anchor_and_validation_event(tmp_path, monkeypatch):
@@ -121,6 +130,7 @@ def test_hashes_cover_behaviour_critical_modules():
         "core/detector.py",
         "core/engine.py",
         "core/integrity_anchor.py",
+        "core/integrity_signed_manifest.py",
         "connectors/sql_connector.py",
         "core/licensing/verify.py",
         "core/licensing/guard.py",
@@ -188,8 +198,8 @@ def test_release_upgrade_without_reconcile_is_tampered(tmp_path, monkeypatch):
     assert not any(e["event_type"] == "re-baseline" for e in list_integrity_events(cfg))
 
 
-def test_operator_reconcile_rebaselines_after_confirmed_upgrade(tmp_path, monkeypatch):
-    """#1262: --confirm-upgrade-to matching installed version re-baselines."""
+def test_operator_reconcile_cannot_validate_after_module_drift(tmp_path, monkeypatch):
+    """#2168 invert: reconcile records an event and re-evaluates; hash drift stays tampered."""
     cfg = _cfg(tmp_path)
     monkeypatch.setattr("core.integrity_anchor._release_label", lambda: "1.7.4.post4")
     ensure_integrity_anchor(cfg)
@@ -202,26 +212,15 @@ def test_operator_reconcile_rebaselines_after_confirmed_upgrade(tmp_path, monkey
     assert ensure_integrity_anchor(cfg)["integrity_state"] == "tampered"
 
     snap = reconcile_integrity_anchor(cfg, "1.7.4.post5")
-    assert snap["integrity_state"] == "validated"
-    assert snap["trust_level"] == "expected"
-    assert snap["release_label"] == "1.7.4.post5"
-    assert snap["mismatched_files"] == []
-    assert is_tampered() is False
-    assert alpha_version_suffix() == ""
-
-    with contextlib.closing(sqlite3.connect(cfg["sqlite_path"])) as conn:
-        rows = conn.execute(
-            "SELECT release_label, file_hashes_json FROM build_integrity_anchor"
-        ).fetchall()
-    assert len(rows) == 1
-    assert rows[0][0] == "1.7.4.post5"
-    stored = json.loads(rows[0][1])
-    assert stored["core/engine.py"] == "a" * 64
+    assert snap["integrity_state"] == "tampered"
+    assert snap["trust_level"] == "adulterated"
+    assert "core/engine.py" in snap["mismatched_files"]
+    assert is_tampered() is True
+    assert alpha_version_suffix() == "-alpha"
 
     events = list_integrity_events(cfg)
-    re_bl = next(e for e in events if e["event_type"] == "re-baseline")
-    assert "1.7.4.post4 -> 1.7.4.post5" in re_bl["detail"]
-    assert "operator confirmed" in re_bl["detail"]
+    assert any(e["event_type"] == "reconcile" for e in events)
+    assert not any(e["event_type"] == "re-baseline" for e in events)
 
 
 def test_reconcile_rejects_confirm_mismatch(tmp_path, monkeypatch):

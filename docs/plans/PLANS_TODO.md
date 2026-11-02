@@ -8,7 +8,7 @@ This document is the **single source of truth** for the project's plan status an
 
 **How the pieces fit:** **`PLAN_*.md`** = durable spec · **`PLANS_HUB.md`** = index of all plan files · **`PLANS_TODO.md`** = execution mirror and dependency dashboard — see **[PLANS_DOCUMENTATION_HIERARCHY.md](../ops/PLANS_DOCUMENTATION_HIERARCHY.md)** ([pt-BR](../ops/PLANS_DOCUMENTATION_HIERARCHY.pt_BR.md)).
 
-**Integrity / tamper-evidence (index):** links-only map in **[Integrity and tamper-evidence index (planning map)](#integrity-and-tamper-evidence-index-planning-map)** below — no separate `PLAN_INTEGRITY_*.md` file.
+**Integrity / tamper-evidence (index):** links-only map in **[Integrity and tamper-evidence index (planning map)](#integrity-and-tamper-evidence-index-planning-map)** below — allowlist expansion in [PLAN_INTEGRITY_HARDENING.md](PLAN_INTEGRITY_HARDENING.md); signed-manifest trust root in [PLAN_INTEGRITY_SIGNED_MANIFEST.md](PLAN_INTEGRITY_SIGNED_MANIFEST.md).
 
 **Token-aware work:** When context or token limits apply (e.g. after an initial Pro+ burst), prefer **one plan or one to-do per session**; open only the files needed for that step. See **[TOKEN_AWARE_USAGE.md](TOKEN_AWARE_USAGE.md)** for short vs long-term goals, artifact references (Docker Hub, `docs/private/`), and one-session workflow.
 
@@ -30,15 +30,15 @@ Use these tags in headings to keep priorities explicit and machine-countable:
 
 Do not edit this block manually; refresh with `python scripts/plans-stats.py --write`.
 
-- **Status rows counted:** 272  (Done: 161 | Incomplete: 111)
-- **Incomplete breakdown:** Pending `⬜`=93, Tracked `🔄` / `Tracked (partially done)`=18, Under consideration=0, Backlog-marked rows=0
+- **Status rows counted:** 276  (Done: 164 | Incomplete: 112)
+- **Incomplete breakdown:** Pending `⬜`=93, Tracked `🔄` / `Tracked (partially done)`=19, Under consideration=0, Backlog-marked rows=0
 
 | Horizon | Total rows | Done | Incomplete |
 | ------- | ----------: | ----: | ----------: |
 | `H0` | 65 | 41 | 24 |
 | `H1` | 54 | 33 | 21 |
 | `H2` | 0 | 0 | 0 |
-| `H3` | 137 | 73 | 64 |
+| `H3` | 141 | 76 | 65 |
 | `H4` | 0 | 0 | 0 |
 | `H5` | 0 | 0 | 0 |
 | `UNSPECIFIED` | 16 | 14 | 2 |
@@ -261,7 +261,8 @@ Post–PR **#118**: clarified **`private-layout`** vs **`docs/private/homelab`**
 **Scope (what this index covers):**
 
 - **Behaviour-critical allowlist expansion (glob + CLI surfacing):** `connectors/`, `core/licensing/`, PII redaction, WebAuthn — [PLAN_INTEGRITY_HARDENING.md](PLAN_INTEGRITY_HARDENING.md) (**Phase 1** #1298).
-- **Build / runtime / on-disk code:** optional hash manifest, SQLite anchor across wipes, startup re-verify, user-visible trust strings — [PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md](PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md) (Phases A–E; **E.11** audit-export baseline on `main`).
+- **Signed CRITICAL_MODULES manifest (runtime trust root):** [PLAN_INTEGRITY_SIGNED_MANIFEST.md](PLAN_INTEGRITY_SIGNED_MANIFEST.md) ([#2168](https://github.com/DataBoar/data-boar/issues/2168); ADR 0093). SQLite and `--reconcile` are forensic only.
+- **Build / runtime / on-disk code:** optional hash manifest, SQLite forensics across wipes, startup re-verify, user-visible trust strings — [PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md](PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md) (Phases A–E; **E.11** audit-export baseline on `main`).
 - **Transport / TLS / channel posture:** HTTPS-by-default, explicit HTTP risk, `dashboard_transport` / `enterprise_surface`; **Phase 7** certificate/trust monitoring and tamper-aware reactions — [PLAN_DASHBOARD_HTTPS_BY_DEFAULT_AND_HTTP_EXPLICIT_RISK.md](completed/PLAN_DASHBOARD_HTTPS_BY_DEFAULT_AND_HTTP_EXPLICIT_RISK.md).
 - **Dashboard identity, sessions, FIDO2 / WebAuthn, RBAC:** route matrix, middleware order, phased passwordless then roles — [PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md](PLAN_DASHBOARD_REPORTS_ACCESS_CONTROL.md); GitHub [#86](https://github.com/DataBoar/data-boar/issues/86). Vendor-neutral WebAuthn JSON (Phase 1) — [ADR 0033](../adr/ADR-0033-webauthn-open-relying-party-json-endpoints.md).
 - **SQLite questionnaire / operator artefacts (POC):** per-row HMAC sealing, integrity summary on `/status` and `--export-audit-trail` — [PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md](completed/PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md); batch history — [ADR 0032](../adr/ADR-0032-maturity-assessment-batch-history-sqlite.md).
@@ -933,16 +934,29 @@ Core flow first (sections 1–7); then optional Phase 9 (complexity/gain: high c
 
 ---
 
+### Integrity signed manifest – [PLAN_INTEGRITY_SIGNED_MANIFEST.md](PLAN_INTEGRITY_SIGNED_MANIFEST.md)
+
+Runtime trust root is a release-signed CRITICAL_MODULES manifest ([#2168](https://github.com/DataBoar/data-boar/issues/2168); ADR 0093).
+
+| Step | To-do | Status |
+| ---- | ----- | ------ |
+| 1 | Signed-manifest evaluate + forensic SQLite + reconcile re-eval | ✅ Done |
+| 2 | Invert RECORD/reconcile-as-root tests; adversarial signed cases | ✅ Done |
+| 3 | Operator TTY sign + package `integrity_manifest.json` on each release | ⬜ Pending |
+
+---
+
 ### Build identity, runtime version & release integrity – [PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md](PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md)
 
-**Do first:** Phase A (startup `INFO`, dashboard `build`, PEP 440 / git dirty). **Then:** C.1 manifest format → **Phase E** (SQLite anchor, survive `--reset-data`, startup re-verify, tamper → **`-alpha`** in reports/`/status`/logs) → Phase B/D as needed; C.2–C.4 signing optional.
+**Do first:** Phase A (startup `INFO`, dashboard `build`, PEP 440 / git dirty). **Then:** C.1 manifest format → **Phase E** (SQLite forensics, survive `--reset-data`, startup re-verify, tamper → **`-alpha`** in reports/`/status`/logs) → Phase B/D as needed. **C.4 signed-manifest trust root:** [PLAN_INTEGRITY_SIGNED_MANIFEST.md](PLAN_INTEGRITY_SIGNED_MANIFEST.md) (#2168).
 
 | #        | To-do                                                                                                                                                              | Status                                           |
 | -----    | -----                                                                                                                                                              | ------                                           |
 | A.1–A.5  | `get_build_identity()`, CLI log line, dashboard/API, Docker labels                                                                                                 | ⬜ Pending                                        |
 | B.1–B.2  | Pre-release convention + CI env / bump                                                                                                                             | ⬜ Pending                                        |
-| C.1–C.4  | Optional manifest; signed manifest (stretch)                                                                                                                       | ⬜ Pending                                        |
-| E.1–E.10 | SQLite `build_integrity_anchor`; first-run validate/import; **no wipe** on `--reset-data`; startup re-verify; tamper → trust level + Report info / status / health | ⬜ Pending                                        |
+| C.1–C.3  | Optional extra signing channels                                                                                                                                    | ⬜ Pending                                        |
+| C.4      | Signed CRITICAL_MODULES manifest (license Ed25519 verify key)                                                                                                      | ✅ Done (#2168 runtime; TTY package step remains) |
+| E.1–E.10 | SQLite `build_integrity_anchor`; first-run validate/import; **no wipe** on `--reset-data`; startup re-verify; tamper → trust level + Report info / status / health | 🔄 Tracked (#2168 signed-manifest arbiter)        |
 | E.11     | **`--export-audit-trail`** JSON: `runtime_trust`, `data_wipe_log`, `scan_sessions_summary`, placeholders for integrity; stdout or file; no DB mutation             | ✅ Done (baseline; see plan §E.6)                 |
 | E.12     | Extend export with `integrity_events`, per-run version checks, optional execution-log pointers when tables exist                                                   | ⬜ Pending                                        |
 | E.13     | Runtime trust warning surface in CLI `INFO` (stdout + stderr) for unexpected states                                                                                | ✅ Done (baseline message + audit export linkage) |

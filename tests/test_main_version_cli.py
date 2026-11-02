@@ -38,8 +38,13 @@ def test_main_version_prints_public_version_exit_zero(tmp_path):
     )
     assert r.returncode == 0, r.stderr
     expected = f"Data Boar {public}"
-    assert r.stdout.strip() == expected
-    assert r.stderr == ""
+    # #2168 invert: unsigned trees are tampered; --version stays exit 0 and
+    # may carry -alpha plus an integrity banner on stderr.
+    assert r.stdout.strip() in {expected, f"{expected}-alpha"}
+    if r.stdout.strip().endswith("-alpha"):
+        assert "INTEGRITY" in r.stderr
+    else:
+        assert r.stderr == ""
 
     maturity = _maturity_build_octet()
     assert f".{maturity}" not in r.stdout

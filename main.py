@@ -1534,7 +1534,7 @@ def main() -> None:
             print(f"Integrity reconcile failed: {e}", file=sys.stderr)
             sys.exit(1)
         print(
-            f"[OK] integrity anchor re-baselined to {snap['release_label']} "
+            f"[OK] integrity event recorded for {snap['release_label']} "
             f"(state={snap['integrity_state']})"
         )
         sys.exit(0)

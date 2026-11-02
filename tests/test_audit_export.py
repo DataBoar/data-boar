@@ -129,9 +129,10 @@ scan:
     data = json.loads(r.stdout)
     assert data["schema_version"] == AUDIT_TRAIL_SCHEMA_VERSION
     assert data["runtime_trust"]["license_state"] == "OPEN"
+    # License trust stays expected; canonical trust is untrusted on unsigned trees (#2168).
     assert data["runtime_trust"]["trust_state"] == "trusted"
-    assert data["trust_state"] == "trusted"
-    assert data["output_confidence"] == "full"
+    assert data["trust_state"] == "untrusted"
+    assert data["output_confidence"] == "minimal"
     assert "enterprise_surface" in data
     assert data["scan_sessions_summary"]["count"] == 0
     assert data["dashboard_transport"]["mode"] == "not_configured"

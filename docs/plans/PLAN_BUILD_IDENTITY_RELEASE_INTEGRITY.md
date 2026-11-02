@@ -1,10 +1,10 @@
 # Plan: Build identity, runtime version display, and release integrity
 
-**Status:** In progress — Phase E core landed (#856): SQLite integrity anchor (`core/integrity_anchor.py`), startup re-verify in any mode, TINTED/`-alpha` trust surfaces, `integrity_events`, open-mode worker clamp. Signed manifest (Phase C.4) and `--reverify-integrity` flag remain pending.
+**Status:** In progress — Phase E core landed (#856). Signed-manifest trust root landed (#2168 / [PLAN_INTEGRITY_SIGNED_MANIFEST.md](PLAN_INTEGRITY_SIGNED_MANIFEST.md)). `--reverify-integrity` flag remains pending.
 **Date:** 2026-03-23
 **Authors:** Fabio Leitao
 **Priority:** H2
-**GitHub:** [#856](https://github.com/DataBoar/data-boar/issues/856) (Phase E core landed; Phase C.4 signed manifest + `--reverify-integrity` pending)
+**GitHub:** [#856](https://github.com/DataBoar/data-boar/issues/856) (Phase E core landed; Phase C.4 signed manifest in #2168; `--reverify-integrity` pending)
 **Depends on:** ADR-0034
 
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md)

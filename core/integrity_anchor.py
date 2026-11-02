@@ -1,41 +1,11 @@
 """
-SQLite integrity anchor + startup re-verify + TINTED/-alpha trust level (#856, Phase E).
+SQLite integrity forensics + signed-manifest trust (#856 / #2168).
 
-Tamper-EVIDENT, not tamper-PROOF (E.6 — see docs/ops/INTEGRITY_CHECK_ALPHA_LOGIC.md
-and SECURITY.md threat model): an attacker with write access to both code AND the
-SQLite anchor can re-baseline. The local anchor catches casual edits, forks with
-gates removed, and drifted deploys; the SIGNED manifest (Sigstore / CI OIDC,
-PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY Phase C.4) is the next hardening layer.
-
-Flow (E.1–E.5):
-
-1. First run: hash the behaviour-critical allowlist (CRITICAL_MODULES) →
-   persist ``build_integrity_anchor`` (release_label, per-file hashes,
-   manifest_content_hash, validated_at, build_digest_matched, validator_version)
-   in the SAME SQLite file as scan data — ``wipe_all_data()`` / ``--reset-data``
-   only delete ORM scan tables, so the anchor SURVIVES a data wipe by design.
-   ``build_digest_matched`` is a **digest compare** flag (not a cryptographic
-   signature): True only when ``DATA_BOAR_EXPECTED_BUILD_DIGEST`` was set and
-   matched the embedded digest (#1211).
-2. Every later startup (ANY mode, including ``open``): recompute hashes.
-   Hash mismatch is ``tampered`` / ``-alpha`` unless a **proven** official
-   upgrade is detected (#1262): installed ``importlib.metadata`` version is
-   newer than the stored ``release_label`` (PEP 440 via ``packaging.version``,
-   never string order) **and** every ``CRITICAL_MODULES`` file matches the
-   installed distribution ``RECORD`` hash. Then re-baseline automatically
-   (event ``re-baseline-auto-upgrade``) and do **not** tint. Still tampered:
-   same-version hash drift; newer version with a RECORD miss; downgrade;
-   no distribution metadata (raw checkout). ``--reconcile-integrity-anchor
-   --confirm-upgrade-to`` remains the recovery path. Semver/label change
-   alone is **not** enough. Hash match with a newer ``release_label`` only
-   updates the stored label (hashes unchanged — not a re-baseline).
-3. ``integrity_events`` is append-only
-   (validation / re-verify / re-baseline / re-baseline-auto-upgrade / tamper)
-   for forensics and is also preserved by ``wipe_all_data()``.
-
-The open-mode worker clamp (OPEN_MODE_WORKER_CAP, enforced in core/engine.py)
-is part of the hashed allowlist: removing the clamp changes ``core/engine.py``
-(or this module) → the build self-marks ``-alpha``.
+``validated`` / ``expected`` only when installed CRITICAL_MODULES match a
+manifest whose Ed25519 signature verifies with the packaged license public
+key. SQLite stores events and a last-seen signed label. It is not the
+arbiter. ``--reconcile-integrity-anchor`` records an event and re-evaluates
+the same signed manifest. See docs/ops/INTEGRITY_CHECK_ALPHA_LOGIC.md.
 """
 
 from __future__ import annotations
@@ -47,11 +17,8 @@ import logging
 import sqlite3
 import threading
 from datetime import datetime, timezone
-from importlib import metadata as importlib_metadata
 from pathlib import Path
 from typing import Any
-
-from packaging.version import InvalidVersion, Version
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +29,6 @@ class IntegrityReconcileError(ValueError):
 
 ANCHOR_VERSION = 1
 VALIDATOR_VERSION = "1"
-DIST_NAME = "data-boar"
 
 # Behaviour-critical spine (#856) — always hashed.
 _CRITICAL_MODULE_SPINE: tuple[str, ...] = (
@@ -86,6 +52,7 @@ _CRITICAL_MODULE_EXTRAS: tuple[str, ...] = (
     "utils/logger.py",
     "api/webauthn_routes.py",
     "api/webauthn_html_gate.py",
+    "core/integrity_signed_manifest.py",
 )
 
 
@@ -175,11 +142,20 @@ def _ensure_tables(conn: sqlite3.Connection) -> None:
             file_hashes_json TEXT NOT NULL,
             validated_at TEXT NOT NULL,
             build_digest_matched INTEGER NOT NULL,
-            validator_version TEXT NOT NULL
+            validator_version TEXT NOT NULL,
+            signed_release_label TEXT
         )
         """
     )
     _migrate_legacy_signature_ok_column(conn)
+    cols = {
+        row[1]
+        for row in conn.execute("PRAGMA table_info(build_integrity_anchor)").fetchall()
+    }
+    if "signed_release_label" not in cols:
+        conn.execute(
+            "ALTER TABLE build_integrity_anchor ADD COLUMN signed_release_label TEXT"
+        )
     conn.execute(
         """
         CREATE TABLE IF NOT EXISTS integrity_events (
@@ -210,90 +186,49 @@ def _release_label() -> str:
         return "unknown"
 
 
-def _installed_distribution_version() -> str | None:
-    """Installed PEP 440 version from distribution metadata, or None if absent."""
-    try:
-        return importlib_metadata.version(DIST_NAME)
-    except importlib_metadata.PackageNotFoundError:
-        return None
-    except Exception:  # pragma: no cover
-        return None
-
-
-def _pep440_is_newer(installed: str, stored: str) -> bool:
-    try:
-        return Version(installed) > Version(stored)
-    except InvalidVersion:
-        return False
-
-
-def _record_sha256_hex(file_hash: Any) -> str | None:
-    if file_hash is None:
-        return None
-    mode = getattr(file_hash, "mode", None)
-    value = getattr(file_hash, "value", None)
-    if mode != "sha256" or not value:
-        return None
-    import base64
-
-    pad = "=" * ((4 - len(value) % 4) % 4)
-    try:
-        digest = base64.urlsafe_b64decode(value + pad)
-    except Exception:
-        return None
-    if len(digest) != 32:
-        return None
-    return digest.hex()
-
-
-def critical_modules_match_installed_record() -> bool:
-    """True when every CRITICAL_MODULES file matches the installed RECORD hash."""
-    try:
-        dist = importlib_metadata.distribution(DIST_NAME)
-    except importlib_metadata.PackageNotFoundError:
-        return False
-    except Exception:
-        return False
-    files = dist.files
-    if not files:
-        return False
-    by_path = {Path(str(item)).as_posix(): item for item in files}
-    current = compute_module_hashes()
-    for rel, hexdig in current.items():
-        rec = by_path.get(rel)
-        if rec is None:
-            return False
-        expected = _record_sha256_hex(getattr(rec, "hash", None))
-        if expected is None or expected != hexdig:
-            return False
-    return True
-
-
-def _persist_rebaseline(
+def _persist_forensic(
     conn: sqlite3.Connection,
     *,
+    current: dict[str, str],
     label: str,
-    hashes: dict[str, str],
     now_iso: str,
     digest_matched: bool,
-    event_type: str,
-    detail: str,
+    signed_release_label: str | None,
+    first_row: bool,
 ) -> None:
+    if first_row:
+        conn.execute(
+            "INSERT INTO build_integrity_anchor (anchor_version, "
+            "release_label, manifest_content_hash, file_hashes_json, "
+            "validated_at, build_digest_matched, validator_version, "
+            "signed_release_label) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                ANCHOR_VERSION,
+                label,
+                _manifest_content_hash(current),
+                json.dumps(current, sort_keys=True),
+                now_iso,
+                1 if digest_matched else 0,
+                VALIDATOR_VERSION,
+                signed_release_label,
+            ),
+        )
+        return
     conn.execute(
         "UPDATE build_integrity_anchor SET release_label=?, "
         "manifest_content_hash=?, file_hashes_json=?, "
-        "validated_at=?, build_digest_matched=? "
+        "validated_at=?, build_digest_matched=?, signed_release_label=? "
         "WHERE anchor_version=?",
         (
             label,
-            _manifest_content_hash(hashes),
-            json.dumps(hashes, sort_keys=True),
+            _manifest_content_hash(current),
+            json.dumps(current, sort_keys=True),
             now_iso,
             1 if digest_matched else 0,
+            signed_release_label,
             ANCHOR_VERSION,
         ),
     )
-    _record_event(conn, event_type, detail)
 
 
 def _build_digest_matched() -> bool:
@@ -333,121 +268,47 @@ def ensure_integrity_anchor(config: dict[str, Any] | None = None) -> dict[str, A
         ):
             _ensure_tables(conn)
             row = conn.execute(
-                "SELECT release_label, manifest_content_hash, file_hashes_json, "
-                "validated_at, build_digest_matched FROM build_integrity_anchor "
+                "SELECT signed_release_label FROM build_integrity_anchor "
                 "WHERE anchor_version = ?",
                 (ANCHOR_VERSION,),
             ).fetchone()
             now_iso = datetime.now(timezone.utc).isoformat()
-            if row is None:
-                # E.1/E.2 — first-run validation: persist the anchor baseline.
-                label = _release_label()
-                digest_matched = _build_digest_matched()
-                conn.execute(
-                    "INSERT INTO build_integrity_anchor (anchor_version, "
-                    "release_label, manifest_content_hash, file_hashes_json, "
-                    "validated_at, build_digest_matched, validator_version) "
-                    "VALUES (?, ?, ?, ?, ?, ?, ?)",
-                    (
-                        ANCHOR_VERSION,
-                        label,
-                        _manifest_content_hash(current),
-                        json.dumps(current, sort_keys=True),
-                        now_iso,
-                        1 if digest_matched else 0,
-                        VALIDATOR_VERSION,
-                    ),
-                )
-                _record_event(
-                    conn,
-                    "validation",
-                    f"first-run anchor created: release_label={label} "
-                    f"files={len(current)} build_digest_matched={digest_matched}",
-                )
-                snapshot = {
-                    "integrity_state": "validated",
-                    "trust_level": "expected",
-                    "release_label": label,
-                    "validated_at": now_iso,
-                    "build_digest_matched": digest_matched,
-                    "mismatched_files": [],
-                }
+            label = _release_label()
+            digest_matched = _build_digest_matched()
+            previous_signed = (row[0] if row else None) or None
+            from core.integrity_signed_manifest import evaluate_signed_manifest
+
+            verdict = evaluate_signed_manifest(current, label, previous_signed)
+            keep_signed = verdict["signed_release_label"] or previous_signed
+            _persist_forensic(
+                conn,
+                current=current,
+                label=label,
+                now_iso=now_iso,
+                digest_matched=digest_matched,
+                signed_release_label=keep_signed,
+                first_row=row is None,
+            )
+            if verdict["integrity_state"] == "validated":
+                event_type = "validation" if row is None else "re-verify"
             else:
-                # E.3 — startup re-verify against the stored anchor.
-                label, _stored_manifest, stored_json, validated_at, digest_flag = row
-                current_label = _release_label()
-                stored: dict[str, str] = json.loads(stored_json)
-                mismatched = sorted(set(stored) | set(current))
-                mismatched = [
-                    rel for rel in mismatched if stored.get(rel) != current.get(rel)
-                ]
-                if mismatched:
-                    installed = _installed_distribution_version()
-                    if (
-                        installed
-                        and _pep440_is_newer(installed, str(label))
-                        and critical_modules_match_installed_record()
-                    ):
-                        digest_matched = _build_digest_matched()
-                        _persist_rebaseline(
-                            conn,
-                            label=installed,
-                            hashes=current,
-                            now_iso=now_iso,
-                            digest_matched=digest_matched,
-                            event_type="re-baseline-auto-upgrade",
-                            detail=(
-                                f"official upgrade {label} -> {installed}: "
-                                f"RECORD matched ({len(current)} files, "
-                                f"build_digest_matched={digest_matched})"
-                            ),
-                        )
-                        snapshot = {
-                            "integrity_state": "validated",
-                            "trust_level": "expected",
-                            "release_label": installed,
-                            "validated_at": now_iso,
-                            "build_digest_matched": digest_matched,
-                            "mismatched_files": [],
-                        }
-                    else:
-                        _record_event(
-                            conn,
-                            "tamper",
-                            "startup re-verify mismatch: " + ", ".join(mismatched),
-                        )
-                        snapshot = {
-                            "integrity_state": "tampered",
-                            "trust_level": "adulterated",
-                            "release_label": label,
-                            "validated_at": validated_at,
-                            "build_digest_matched": bool(digest_flag),
-                            "mismatched_files": mismatched,
-                        }
-                else:
-                    if label != current_label:
-                        conn.execute(
-                            "UPDATE build_integrity_anchor SET release_label=? "
-                            "WHERE anchor_version=?",
-                            (current_label, ANCHOR_VERSION),
-                        )
-                        _record_event(
-                            conn,
-                            "re-verify",
-                            f"release_label sync {label} -> {current_label} "
-                            "(hashes unchanged; not a re-baseline)",
-                        )
-                        label = current_label
-                    else:
-                        _record_event(conn, "re-verify", "startup re-verify ok")
-                    snapshot = {
-                        "integrity_state": "validated",
-                        "trust_level": "expected",
-                        "release_label": label,
-                        "validated_at": validated_at,
-                        "build_digest_matched": bool(digest_flag),
-                        "mismatched_files": [],
-                    }
+                event_type = "tamper"
+            mismatch = ",".join(verdict["mismatched_files"])
+            _record_event(
+                conn,
+                event_type,
+                f"{verdict['detail']}: release_label={label} "
+                f"files={len(current)} build_digest_matched={digest_matched}"
+                + (f" mismatched={mismatch}" if mismatch else ""),
+            )
+            snapshot = {
+                "integrity_state": verdict["integrity_state"],
+                "trust_level": verdict["trust_level"],
+                "release_label": label,
+                "validated_at": now_iso,
+                "build_digest_matched": digest_matched,
+                "mismatched_files": verdict["mismatched_files"],
+            }
             conn.commit()
     except (sqlite3.Error, OSError, json.JSONDecodeError) as e:
         logger.warning("Integrity anchor unavailable (state=unknown): %s", e)
@@ -486,12 +347,11 @@ def reconcile_integrity_anchor(
     config: dict[str, Any] | None,
     confirm_upgrade_to: str,
 ) -> dict[str, Any]:
-    """Re-baseline hashes only after an explicit operator confirmation (#1262).
+    """Record a reconcile event and re-evaluate the signed manifest (#2168).
 
     ``confirm_upgrade_to`` must equal the installed ``_package_version()``.
-    Mismatch is a hard error — never fall through to a silent re-baseline.
+    This path cannot produce ``validated`` by itself.
     """
-    global _SNAPSHOT
     wanted = (confirm_upgrade_to or "").strip()
     current_label = _release_label()
     if not wanted:
@@ -503,75 +363,22 @@ def reconcile_integrity_anchor(
             f"--confirm-upgrade-to={wanted!r} does not match installed "
             f"release_label={current_label!r}"
         )
-    current = compute_module_hashes()
     db_path = _db_path_from_config(config)
     Path(db_path).parent.mkdir(parents=True, exist_ok=True)
-    now_iso = datetime.now(timezone.utc).isoformat()
-    digest_matched = _build_digest_matched()
     with (
         _LOCK,
         contextlib.closing(sqlite3.connect(db_path, timeout=10)) as conn,
     ):
         _ensure_tables(conn)
-        row = conn.execute(
-            "SELECT release_label FROM build_integrity_anchor WHERE anchor_version = ?",
-            (ANCHOR_VERSION,),
-        ).fetchone()
-        previous = row[0] if row else "(none)"
-        if row is None:
-            conn.execute(
-                "INSERT INTO build_integrity_anchor (anchor_version, "
-                "release_label, manifest_content_hash, file_hashes_json, "
-                "validated_at, build_digest_matched, validator_version) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (
-                    ANCHOR_VERSION,
-                    current_label,
-                    _manifest_content_hash(current),
-                    json.dumps(current, sort_keys=True),
-                    now_iso,
-                    1 if digest_matched else 0,
-                    VALIDATOR_VERSION,
-                ),
-            )
-        else:
-            conn.execute(
-                "UPDATE build_integrity_anchor SET release_label=?, "
-                "manifest_content_hash=?, file_hashes_json=?, "
-                "validated_at=?, build_digest_matched=? "
-                "WHERE anchor_version=?",
-                (
-                    current_label,
-                    _manifest_content_hash(current),
-                    json.dumps(current, sort_keys=True),
-                    now_iso,
-                    1 if digest_matched else 0,
-                    ANCHOR_VERSION,
-                ),
-            )
         _record_event(
             conn,
-            "re-baseline",
-            f"operator confirmed upgrade {previous} -> {current_label}: "
-            f"re-baselined anchor ({len(current)} files, "
-            f"build_digest_matched={digest_matched})",
+            "reconcile",
+            f"operator confirmed upgrade to {current_label}; "
+            "re-evaluating signed manifest",
         )
         conn.commit()
-    snapshot = {
-        "integrity_state": "validated",
-        "trust_level": "expected",
-        "release_label": current_label,
-        "validated_at": now_iso,
-        "build_digest_matched": digest_matched,
-        "mismatched_files": [],
-    }
-    logger.info(
-        "Integrity anchor re-baselined by operator: %s -> %s",
-        previous,
-        current_label,
-    )
-    _SNAPSHOT = snapshot
-    return dict(snapshot)
+    logger.info("Integrity reconcile event recorded for %s", current_label)
+    return ensure_integrity_anchor(config)
 
 
 def get_integrity_snapshot() -> dict[str, Any]:
