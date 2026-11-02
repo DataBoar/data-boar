@@ -75,15 +75,19 @@ Anexar registro estruturado a `security_alert.log` (ou destino SIEM):
 2. **Re-verificação no startup (E.3):** todo start (CLI e web, **qualquer**
    modo de licenciamento, incluindo `open`) recomputa os hashes e compara com
    a âncora.
-   - **Hash divergente** (qualquer `release_label`, inclusive upgrade pip/pipx
-     que toque `CRITICAL_MODULES`) → `integrity_state=tampered` /
-     `trust_level=adulterated`. **Não** re-baselinar sozinho por semver /
-     mudança de `release_label` (bypass: um atacante poderia só subir o rótulo
-     junto com os hashes).
+   - **Hash divergente** → `integrity_state=tampered` / `trust_level=adulterated`
+     **salvo** um upgrade oficial comprovado (#1262): a versão instalada em
+     `importlib.metadata` é **mais nova** que o `release_label` gravado
+     (PEP 440 / `packaging.version`, não ordem de string) **e** todos os
+     arquivos de `CRITICAL_MODULES` batem com o hash `RECORD` da distribuição
+     instalada (a mesma verificação do pip). Aí o runtime re-baselineia sozinho
+     (`re-baseline-auto-upgrade`, sem `-alpha`). Continua tampered: edição na
+     mesma versão; versão nova com falha no `RECORD`; downgrade; sem metadados
+     de distribuição (checkout cru). Só mudar semver/rótulo **não** basta.
    - **Re-baseline do operador (#1262):** `data-boar --reconcile-integrity-anchor
-     --confirm-upgrade-to=<versão-instalada>` grava âncora nova **somente**
-     quando `VERSION` é igual à versão do pacote em execução. O evento
-     append-only `re-baseline` registra a confirmação.
+     --confirm-upgrade-to=<versão-instalada>` continua como recuperação e
+     grava âncora nova **somente** quando `VERSION` é igual à versão do pacote
+     em execução. O evento append-only `re-baseline` registra a confirmação.
    - **Hashes iguais + `release_label` mudou** → permanece `validated`; só
      persiste o rótulo novo (hashes intactos — não é re-baseline).
 3. **TINTED / `-alpha` (E.4):** o estado adulterado força o rótulo
@@ -99,17 +103,20 @@ Anexar registro estruturado a `security_alert.log` (ou destino SIEM):
    dentro da allowlist hasheada — remover o clamp altera `core/engine.py` e
    tinge o build.
 5. **Forense (E.5):** `integrity_events` é uma tabela append-only
-   (validation / re-verify / re-baseline / tamper) preservada em wipes de
-   dados.
+   (validation / re-verify / re-baseline / re-baseline-auto-upgrade / tamper)
+   preservada em wipes de dados.
 
 ### Modelo de ameaça honesto (E.6)
 
 Isto é **evidência de adulteração, não prova de inviolabilidade.** Um atacante
-com acesso de escrita ao código **e** ao arquivo SQLite da âncora pode apagar
-ou re-basear a âncora (o app então re-executa a primeira validação ou mostra
-`unknown`). O caminho suportado de **re-baseline** é o confirm do operador
-(`--reconcile-integrity-anchor --confirm-upgrade-to`); drift de hash na mesma
-versão ainda tingido. Mitigações: permissões de arquivo, montagem somente leitura do DB em deploys
+com acesso de escrita ao código, ao `RECORD` instalado, à versão reportada da
+distribuição **e** ao arquivo SQLite da âncora ainda consegue forçar um
+re-baseline (a mesma classe de apagar a âncora). O caminho de upgrade
+automático só prova “versão empacotada mais nova cujos arquivos críticos ainda
+batem com o `RECORD`”; **não** prova assinatura criptográfica do fornecedor.
+Drift de hash na mesma versão ainda tingido. O confirm do operador
+(`--reconcile-integrity-anchor --confirm-upgrade-to`) continua como recuperação.
+Mitigações: permissões de arquivo, montagem somente leitura do DB em deploys
 de alta garantia, e o **manifest assinado** (Sigstore / CI OIDC — Fase C.4 do
 `PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY`) como próxima camada. A âncora local
 captura com confiabilidade edições casuais, forks com gates removidos e drift

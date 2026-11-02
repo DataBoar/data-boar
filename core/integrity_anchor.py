@@ -18,17 +18,20 @@ Flow (E.1–E.5):
    signature): True only when ``DATA_BOAR_EXPECTED_BUILD_DIGEST`` was set and
    matched the embedded digest (#1211).
 2. Every later startup (ANY mode, including ``open``): recompute hashes.
-   Hash mismatch → ``integrity_state=tampered`` / ``trust_level=adulterated``
-   (every user-visible surface shows ``-alpha``). A legitimate ``pip`` /
-   ``pipx`` upgrade that touches ``CRITICAL_MODULES`` **tints until** the
-   operator re-baselines with ``--reconcile-integrity-anchor
-   --confirm-upgrade-to=<installed-version>`` (#1262). Do **not** auto-reconcile
-   on semver / ``release_label`` change alone (bypass surface). Same-version
-   hash drift remains tamper. Hash match with a newer ``release_label`` only
+   Hash mismatch is ``tampered`` / ``-alpha`` unless a **proven** official
+   upgrade is detected (#1262): installed ``importlib.metadata`` version is
+   newer than the stored ``release_label`` (PEP 440 via ``packaging.version``,
+   never string order) **and** every ``CRITICAL_MODULES`` file matches the
+   installed distribution ``RECORD`` hash. Then re-baseline automatically
+   (event ``re-baseline-auto-upgrade``) and do **not** tint. Still tampered:
+   same-version hash drift; newer version with a RECORD miss; downgrade;
+   no distribution metadata (raw checkout). ``--reconcile-integrity-anchor
+   --confirm-upgrade-to`` remains the recovery path. Semver/label change
+   alone is **not** enough. Hash match with a newer ``release_label`` only
    updates the stored label (hashes unchanged — not a re-baseline).
 3. ``integrity_events`` is append-only
-   (validation / re-verify / re-baseline / tamper) for forensics and is also
-   preserved by ``wipe_all_data()``.
+   (validation / re-verify / re-baseline / re-baseline-auto-upgrade / tamper)
+   for forensics and is also preserved by ``wipe_all_data()``.
 
 The open-mode worker clamp (OPEN_MODE_WORKER_CAP, enforced in core/engine.py)
 is part of the hashed allowlist: removing the clamp changes ``core/engine.py``
@@ -44,8 +47,11 @@ import logging
 import sqlite3
 import threading
 from datetime import datetime, timezone
+from importlib import metadata as importlib_metadata
 from pathlib import Path
 from typing import Any
+
+from packaging.version import InvalidVersion, Version
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +62,7 @@ class IntegrityReconcileError(ValueError):
 
 ANCHOR_VERSION = 1
 VALIDATOR_VERSION = "1"
+DIST_NAME = "data-boar"
 
 # Behaviour-critical spine (#856) — always hashed.
 _CRITICAL_MODULE_SPINE: tuple[str, ...] = (
@@ -203,6 +210,92 @@ def _release_label() -> str:
         return "unknown"
 
 
+def _installed_distribution_version() -> str | None:
+    """Installed PEP 440 version from distribution metadata, or None if absent."""
+    try:
+        return importlib_metadata.version(DIST_NAME)
+    except importlib_metadata.PackageNotFoundError:
+        return None
+    except Exception:  # pragma: no cover
+        return None
+
+
+def _pep440_is_newer(installed: str, stored: str) -> bool:
+    try:
+        return Version(installed) > Version(stored)
+    except InvalidVersion:
+        return False
+
+
+def _record_sha256_hex(file_hash: Any) -> str | None:
+    if file_hash is None:
+        return None
+    mode = getattr(file_hash, "mode", None)
+    value = getattr(file_hash, "value", None)
+    if mode != "sha256" or not value:
+        return None
+    import base64
+
+    pad = "=" * ((4 - len(value) % 4) % 4)
+    try:
+        digest = base64.urlsafe_b64decode(value + pad)
+    except Exception:
+        return None
+    if len(digest) != 32:
+        return None
+    return digest.hex()
+
+
+def critical_modules_match_installed_record() -> bool:
+    """True when every CRITICAL_MODULES file matches the installed RECORD hash."""
+    try:
+        dist = importlib_metadata.distribution(DIST_NAME)
+    except importlib_metadata.PackageNotFoundError:
+        return False
+    except Exception:
+        return False
+    files = dist.files
+    if not files:
+        return False
+    by_path = {Path(str(item)).as_posix(): item for item in files}
+    current = compute_module_hashes()
+    for rel, hexdig in current.items():
+        rec = by_path.get(rel)
+        if rec is None:
+            return False
+        expected = _record_sha256_hex(getattr(rec, "hash", None))
+        if expected is None or expected != hexdig:
+            return False
+    return True
+
+
+def _persist_rebaseline(
+    conn: sqlite3.Connection,
+    *,
+    label: str,
+    hashes: dict[str, str],
+    now_iso: str,
+    digest_matched: bool,
+    event_type: str,
+    detail: str,
+) -> None:
+    conn.execute(
+        "UPDATE build_integrity_anchor SET release_label=?, "
+        "manifest_content_hash=?, file_hashes_json=?, "
+        "validated_at=?, build_digest_matched=? "
+        "WHERE anchor_version=?",
+        (
+            label,
+            _manifest_content_hash(hashes),
+            json.dumps(hashes, sort_keys=True),
+            now_iso,
+            1 if digest_matched else 0,
+            ANCHOR_VERSION,
+        ),
+    )
+    _record_event(conn, event_type, detail)
+
+
 def _build_digest_matched() -> bool:
     """True only when an expected build digest was configured and matched (#1211).
 
@@ -289,19 +382,48 @@ def ensure_integrity_anchor(config: dict[str, Any] | None = None) -> dict[str, A
                     rel for rel in mismatched if stored.get(rel) != current.get(rel)
                 ]
                 if mismatched:
-                    _record_event(
-                        conn,
-                        "tamper",
-                        "startup re-verify mismatch: " + ", ".join(mismatched),
-                    )
-                    snapshot = {
-                        "integrity_state": "tampered",
-                        "trust_level": "adulterated",
-                        "release_label": label,
-                        "validated_at": validated_at,
-                        "build_digest_matched": bool(digest_flag),
-                        "mismatched_files": mismatched,
-                    }
+                    installed = _installed_distribution_version()
+                    if (
+                        installed
+                        and _pep440_is_newer(installed, str(label))
+                        and critical_modules_match_installed_record()
+                    ):
+                        digest_matched = _build_digest_matched()
+                        _persist_rebaseline(
+                            conn,
+                            label=installed,
+                            hashes=current,
+                            now_iso=now_iso,
+                            digest_matched=digest_matched,
+                            event_type="re-baseline-auto-upgrade",
+                            detail=(
+                                f"official upgrade {label} -> {installed}: "
+                                f"RECORD matched ({len(current)} files, "
+                                f"build_digest_matched={digest_matched})"
+                            ),
+                        )
+                        snapshot = {
+                            "integrity_state": "validated",
+                            "trust_level": "expected",
+                            "release_label": installed,
+                            "validated_at": now_iso,
+                            "build_digest_matched": digest_matched,
+                            "mismatched_files": [],
+                        }
+                    else:
+                        _record_event(
+                            conn,
+                            "tamper",
+                            "startup re-verify mismatch: " + ", ".join(mismatched),
+                        )
+                        snapshot = {
+                            "integrity_state": "tampered",
+                            "trust_level": "adulterated",
+                            "release_label": label,
+                            "validated_at": validated_at,
+                            "build_digest_matched": bool(digest_flag),
+                            "mismatched_files": mismatched,
+                        }
                 else:
                     if label != current_label:
                         conn.execute(
