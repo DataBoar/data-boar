@@ -1,6 +1,6 @@
 # smoke_upgrade_path.ps1 — upgrade-path smoke for data-boar #2162
 # Usage: .\scripts\smoke_upgrade_path.ps1 [-PrevVersion '1.7.4'] [-CandidateWheel 'C:\path\to\wheel.whl']
-# Reprodutive: clean venv with previous PyPI version, create SQLite anchor, upgrade to candidate wheel built via uv build, verify no TAMPER / -alpha / config rejection.
+# Reproducible: clean venv with previous PyPI version, create SQLite anchor, upgrade to candidate wheel built via uv build, verify no TAMPER / -alpha / config rejection.
 [CmdletBinding()]
 param(
     [string]$PrevVersion = '1.7.4',
@@ -15,6 +15,13 @@ $WorkDir = Join-Path ([System.IO.Path]::GetTempPath()) ("smoke_upgrade_$([guid]:
 New-Item -ItemType Directory -Path $WorkDir | Out-Null
 $Venv = Join-Path $WorkDir 'venv'
 $ConfigFixture = Join-Path $RepoRoot 'tests/data/upgrade_2162/pre_1_8_0_legacy_credentials.yaml'
+
+# Isolate user data
+$env:HOME = Join-Path $WorkDir 'home'
+$env:XDG_CONFIG_HOME = Join-Path $WorkDir 'xdg_config'
+$env:XDG_DATA_HOME = Join-Path $WorkDir 'xdg_data'
+$env:XDG_CACHE_HOME = Join-Path $WorkDir 'xdg_cache'
+@($env:HOME, $env:XDG_CONFIG_HOME, $env:XDG_DATA_HOME, $env:XDG_CACHE_HOME) | ForEach-Object { New-Item -ItemType Directory -Path $_ -Force | Out-Null }
 
 function Log { param([string]$msg) Write-Host "[smoke] $msg" }
 
@@ -33,10 +40,17 @@ try {
     & "$Venv\Scripts\pip.exe" install "data-boar==$PrevVersion"
 
     Log "First run to create SQLite anchor"
-    & "$Venv\Scripts\data-boar.exe" --config $ConfigFixture --check-extras *> $null
+    # --validate-config triggers _run_startup_integrity_check (main.py:265) -> ensure_integrity_anchor
+    & "$Venv\Scripts\data-boar.exe" --validate-config --config $ConfigFixture
+    # Verify anchor DB exists
+    $sqlitePath = Select-String -Path $ConfigFixture -Pattern '^\s*sqlite_path:' | ForEach-Object { $_.Line -replace '^\s*sqlite_path:\s*','' }
+    if (-not [string]::IsNullOrWhiteSpace($sqlitePath) -and -not (Test-Path $sqlitePath)) {
+        throw "FAIL: integrity anchor DB not created at $sqlitePath"
+    }
+    Log "Anchor created at $sqlitePath"
 
     Log "Upgrading to candidate wheel $(Split-Path $CandidateWheel -Leaf)"
-    & "$Venv\Scripts\pip.exe" install --force-reinstall --no-deps $CandidateWheel
+    & "$Venv\Scripts\pip.exe" install --force-reinstall $CandidateWheel
 
     Log "Verifying version"
     $VersionOut = & "$Venv\Scripts\data-boar.exe" --version 2>&1
@@ -46,8 +60,12 @@ try {
     }
 
     Log "Running with legacy config fixture"
-    $RunOut = & "$Venv\Scripts\data-boar.exe" --config $ConfigFixture --check-extras 2>&1
+    $RunOut = & "$Venv\Scripts\data-boar.exe" --validate-config --config $ConfigFixture 2>&1
+    $RunExit = $LASTEXITCODE
     Log "Run output: $RunOut"
+    if ($RunExit -ne 0) {
+        throw "FAIL: validate-config exited with $RunExit (config rejected?)"
+    }
     if ($RunOut -match 'INTEGRITY TAMPER DETECTED') {
         throw "FAIL: INTEGRITY TAMPER DETECTED after upgrade"
     }
