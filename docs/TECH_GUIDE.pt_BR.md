@@ -123,15 +123,31 @@ O inventário e os testes anti-drift estão em `cli/bash_completion_inventory.py
 
 ### Haiku (R1/beta6, x86_64)
 
+> ⚠️ **Release beta — Haiku OS não é produção.** Data Boar funciona no Haiku R1/beta6, mas o próprio OS é uma release beta. Use apenas em ambientes de teste, avaliação, ou desenvolvimento.
+
 O **Data Boar** é compatível com **Haiku OS** (R1/beta6 x86_64) via wheelhouse dedicado. Haiku publica wheels Python 3.14 e fornece pacotes pré-construídos para dependências essenciais.
+
+**Importante:** A validação "sem compilação" foi realizada na mesma VM onde os wheels foram compilados. Ela prova que o pip resolve, mas **não testa uma instalação Haiku limpa**. Outro agente deve validar numa VM Haiku limpa em outra sessão.
 
 #### Requisitos do sistema (HaikuPorts)
 
 Instale esses pacotes no Haiku:
 
+| Pacote | Wheels obrigatórios | Fonte |
+| --- | --- | --- |
+| `python3.14` | `data-boar`, todos os pacotes Python | HaikuPorts |
+| `python3_14_dev` | `pydantic-core`, extensões nativas | HaikuPorts |
+| `cmake`, `ninja`, `meson` | `pandas`, `matplotlib`, `scipy`, `scikit-learn` | HaikuPorts |
+| `rust_bin` | `cryptography`, `ruff` | HaikuPorts |
+| `libffi_devel`, `openssl3_devel`, `libsqlite3_dev` | `cffi`, `cryptography`, suporte SQLite | HaikuPorts |
+| `openblas`, `lapack`, `gfortran` | `scipy` (BLAS/LAPACK) | HaikuPorts |
+| `omp` | `scikit-learn` (OpenMP), `pythran` para `scipy` | HaikuPorts |
+| `hpkg_numpy` | `numpy` 2.5.3 (com fix do `ctype.h` do Haiku) | HaikuPorts |
+
 ```bash
 pkgman install python3_14 python3_14_dev cmake ninja meson \
   rust_bin libffi_devel openssl3_devel libsqlite3_dev \
+  openblas lapack gfortran omp \
   hpkg_numpy
 ```
 
@@ -183,7 +199,27 @@ python main.py --demo
 
 **Tag de plataforma:** `cp314-cp314-haiku_r1~beta6_x86_64`
 
-**Nota importante:** O wheelhouse Haiku é **parcial** — 21 wheels estão disponíveis para a stack principal. **`scikit-learn`** e **`scipy`** ainda **não** têm wheels e vão precisar ser compilados a partir do código-fonte. Essas dependências são parte do núcleo do pipeline de varredura (para detecção baseada em ML), então os usuários Haiku podem ver capacidades de detecção degradadas até que a cobertura do wheelhouse esteja completa.
+#### Estado
+
+**Todos os 23 wheels estão disponíveis** (71 MB, SHA256 conferido). A instalação funciona ponta a ponta: `pip install --only-binary=:all: --find-links <wheelhouse> data-boar` conclui em ~69s em um venv limpo.
+
+**Nota de validação:** A validação "sem compilação" foi realizada na mesma VM onde os wheels foram compilados. Uma instalação Haiku limpa deve ser testada separadamente.
+
+#### Armadilhas de build (sessões não-login)
+
+Em sessões de shell não-login (SSH, tmux), essas variáveis podem estar ausentes e causar falhas de build:
+
+- **`LIBRARY_PATH`**: Exporte para incluir os caminhos de biblioteca do sistema Haiku:
+
+  ```bash
+  export LIBRARY_PATH="/boot/system/lib:$LIBRARY_PATH"
+  ```
+
+- **`PYTHONPATH`**: Quando `meson` resolve o Python via `/bin/python3.14`, pode não ver o `Cython` do venv:
+
+  ```bash
+  export PYTHONPATH="$(pwd)/venv/lib/python3.14/site-packages:$PYTHONPATH"
+  ```
 
 ### Homebrew (macOS)
 

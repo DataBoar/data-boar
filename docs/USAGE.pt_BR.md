@@ -573,7 +573,11 @@ Defina `licensing.effective_tier: enterprise` em lab. Mesmo CLI do Pro (`--gover
 
 ## Haiku (R1/beta6, x86_64)
 
+> ⚠️ **Release beta — Haiku OS não é produção.** Data Boar funciona no Haiku R1/beta6, mas o próprio OS é uma release beta. Use apenas em ambientes de teste, avaliação, ou desenvolvimento.
+
 O **Data Boar** é compatível com **Haiku OS** (R1/beta6 x86_64) via wheelhouse dedicado. Haiku publica wheels Python 3.14 e fornece pacotes pré-construídos para dependências essenciais.
+
+**Importante:** A validação "instala sem compilar" foi realizada na mesma VM onde os wheels foram compilados. Ela prova que o pip resolve, mas **não testa uma instalação Haiku limpa**. Outro agente deve validar numa VM Haiku limpa em outra sessão.
 
 ### Requisitos do sistema (HaikuPorts)
 
@@ -582,8 +586,20 @@ Instale esses pacotes no Haiku:
 ```bash
 pkgman install python3_14 python3_14_dev cmake ninja meson \
   rust_bin libffi_devel openssl3_devel libsqlite3_dev \
+  openblas lapack gfortran omp \
   hpkg_numpy
 ```
+
+| Pacote | Wheels obrigatórios | Fonte |
+| --- | --- | --- |
+| `python3.14` | `data-boar`, todos os pacotes Python | HaikuPorts |
+| `python3_14_dev` | `pydantic-core`, extensões nativas | HaikuPorts |
+| `cmake`, `ninja`, `meson` | `pandas`, `matplotlib`, `scipy`, `scikit-learn` | HaikuPorts |
+| `rust_bin` | `cryptography`, `ruff` | HaikuPorts |
+| `libffi_devel`, `openssl3_devel`, `libsqlite3_dev` | `cffi`, `cryptography`, suporte SQLite | HaikuPorts |
+| `openblas`, `lapack`, `gfortran` | `scipy` (BLAS/LAPACK) | HaikuPorts |
+| `omp` | `scikit-learn` (OpenMP), `pythran` para `scipy` | HaikuPorts |
+| `hpkg_numpy` | `numpy` 2.5.3 (com fix do `ctype.h` do Haiku) | HaikuPorts |
 
 - **`python3.14`**: Interpretador Python.
 - **`pkgman`**: Gerenciador de pacotes do Haiku.
@@ -644,7 +660,52 @@ O wheelhouse usa a tag de plataforma: `cp314-cp314-haiku_r1~beta6_x86_64`
 
 ### Estado atual
 
-O wheelhouse Haiku é **parcial**: 21 wheels estão disponíveis para a stack principal. **`scikit-learn`** e **`scipy`** ainda **não** têm wheels e vão precisar ser compilados a partir do código-fonte. Essas dependências são parte do núcleo do pipeline de varredura (para detecção baseada em ML), então os usuários Haiku podem ver capacidades de detecção degradadas até que a cobertura do wheelhouse esteja completa.
+**Todos os 23 wheels estão disponíveis** (71 MB, SHA256 conferido). O wheelhouse inclui:
+
+- Pacotes principais: `data-boar`, `numpy`, `pandas`, `scipy`, `scikit-learn`, `matplotlib`, `pillow`, `cffi`, `cryptography`, `contourpy`, `greenlet`, `kiwisolver`, `lxml`, `markupsafe`, `pyyaml`, `regex`, `rpds-py`, `hypothesis`, `maturin`, `pydantic-core`, `odfpy`, `rapidfuzz`, `red_black_tree_mod`
+- Ferramentas de build: `cython` (necessário para compilação do pandas)
+
+A instalação funciona ponta a ponta: `pip install --only-binary=:all: --find-links <wheelhouse> data-boar` conclui em ~69s em um venv limpo.
+
+### Nota de validação
+
+A validação "sem compilação" foi realizada na mesma VM onde os wheels foram compilados. Uma instalação Haiku limpa deve ser testada separadamente.
+
+### Variáveis de ambiente (requisitos específicos do Haiku)
+
+**IMPORTANTE:** Essas variáveis de ambiente devem ser definidas em sessões de shell não-login:
+
+- **`LIBRARY_PATH`**: Deve incluir os caminhos de biblioteca do sistema Haiku quando compilando extensões nativas:
+
+  ```bash
+  export LIBRARY_PATH="/boot/system/lib:$LIBRARY_PATH"
+  ```
+
+- **`PYTHONPATH`**: Quando construindo pandas a partir do código-fonte com `--no-build-isolation`, garanta que os site-packages do venv estejam disponíveis:
+
+  ```bash
+  export PYTHONPATH="$(pwd)/venv/lib/python3.14/site-packages:$PYTHONPATH"
+  ```
+
+**Nota:** Essas variáveis são necessárias para a compilação em tempo de build de extensões nativas no Haiku, particularmente quando construindo `pandas` a partir do código-fonte.
+
+### Armadilhas de build (sessões não-login)
+
+Em sessões de shell não-login (SSH, tmux), essas variáveis podem estar ausentes e causar falhas de build:
+
+- **`LIBRARY_PATH`**: O runtime do Haiku pode não definir isso em shells não-login, causando `KeyError: 'LIBRARY_PATH'` quando extensões tentam localizar bibliotecas. Exporte explicitamente:
+
+  ```bash
+  export LIBRARY_PATH="/boot/system/lib:$LIBRARY_PATH"
+  ```
+
+- **`PYTHONPATH`**: Quando `meson` resolve o Python via `/bin/python3.14`, pode não ver o `Cython` do venv. Construa com `PYTHONPATH` definido:
+
+  ```bash
+  export PYTHONPATH="$(pwd)/venv/lib/python3.14/site-packages:$PYTHONPATH"
+  ```
+
+**Ordem de workaround:** Defina `LIBRARY_PATH` primeiro, depois `PYTHONPATH` quando necessário para builds.
 
 ---
 
