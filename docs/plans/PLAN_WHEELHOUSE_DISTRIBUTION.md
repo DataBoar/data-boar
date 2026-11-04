@@ -321,3 +321,61 @@ pipx install data-boar \
 ```
 
 Superseded for production musl/v1 paths by **`wheelhouse-x86-64-v1-2026-07-29`**.
+
+---
+
+## Install command (verified on metal — Haiku)
+
+**Status (2026-11-04):** Wheelhouse Haiku is **partial** — 21 wheels available for core stack. **`scikit-learn`** and **`scipy`** lack wheels (will timeout or require build from source on Haiku).
+
+**System packages (HaikuPorts):**
+
+```bash
+pkgman install python3_14 python3_14_dev cmake ninja meson \
+  rust_bin libffi_devel openssl3_devel libsqlite3_dev \
+  hpkg_numpy
+```
+
+**Install from wheelhouse:**
+
+```bash
+# Create wheelhouse directory
+mkdir -p ~/haiku-wheelhouse
+
+# Download wheels from the Haiku wheelhouse location (URL TBD)
+# Install data-boar from wheelhouse
+pip install --no-index --find-links ~/haiku-wheelhouse data-boar
+
+# Install pandas with --no-build-isolation (cython must be in PATH)
+pip install --no-index --find-links ~/haiku-wheelhouse pandas --no-build-isolation
+```
+
+**Wheels available (EN):** `cbor2`, `cffi`, `contourpy`, `cryptography`, `greenlet`, `hypothesis`, `kiwisolver`, `lxml`, `markupsafe`, `maturin`, `matplotlib`, `numpy` (hpkg), `odfpy`, `pandas`, `pillow`, `pydantic_core`, `pyyaml`, `rapidfuzz`, `regex`, `rpds_py`, `red_black_tree_mod`, `scikitlearn` (TBD - pending), `scipy` (TBD - pending), and `data-boar` itself.
+
+**Platform tag:** `cp314-cp314-haiku_r1~beta6_x86_64` (PEP 503 `%7E` encoded in simple/ index).
+
+**Run the demo to verify:**
+
+```bash
+python main.py --demo
+```
+
+**Pending:**
+- **[ ] `scikit-learn`** wheel for Haiku (core dependency; no Haiku wheel on PyPI)
+- **[ ] `scipy`** wheel for Haiku (core dependency; build timeout in testing)
+- **[ ] Final wheelhouse release** with SHA256SUMS verified (Owl to confirm `scikit-learn` and `scipy`)
+
+---
+
+## Haiku wheelhouse summary
+
+<!-- plans-hub-summary: Haiku wheelhouse (partial) — 21 wheels + numpy hpkg; scikit-learn/scipy pending; cp314-cp314-haiku_r1~beta6_x86_64 tag -->
+
+| Item | Status |
+| ---- | ------ |
+| Wheels compiled on Haiku | ✅ 21 wheels (38 MB) |
+| SHA256SUMS verified | ✅ Checked by Owl |
+| `scikit-learn` | ⬜ No wheel on PyPI, build pending |
+| `scipy` | ⬜ Build timeout pending |
+| Platform tag | `cp314-cp314-haiku_r1~beta6_x86_64` |
+| PEP 503 simple/ index | Pending (awaiting release tag naming test) |

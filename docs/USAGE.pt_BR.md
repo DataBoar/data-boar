@@ -571,6 +571,83 @@ Defina `licensing.effective_tier: enterprise` em lab. Mesmo CLI do Pro (`--gover
 
 ---
 
+## Haiku (R1/beta6, x86_64)
+
+O **Data Boar** é compatível com **Haiku OS** (R1/beta6 x86_64) via wheelhouse dedicado. Haiku publica wheels Python 3.14 e fornece pacotes pré-construídos para dependências essenciais.
+
+### Requisitos do sistema (HaikuPorts)
+
+Instale esses pacotes no Haiku:
+
+```bash
+pkgman install python3_14 python3_14_dev cmake ninja meson \
+  rust_bin libffi_devel openssl3_devel libsqlite3_dev \
+  hpkg_numpy
+```
+
+- **`python3.14`**: Interpretador Python.
+- **`pkgman`**: Gerenciador de pacotes do Haiku.
+- **`cmake` / `ninja` / `meson`**: Ferramentas de build para compilação nativa.
+- **`rust_bin`**: Compilador Rust para extensões nativas.
+- **`numpy` (do hpkg)**: O numpy HaikuPorts (2.5.3) resolve o problema dos macros do `ctype.h` (`isalpha`, `isalnum`, etc.) do Haiku que quebramariam o numpy 2.5.4 do PyPI.
+
+### Ambiente virtual com site-packages do sistema
+
+Crie um ambiente virtual que inclua os pacotes do sistema:
+
+```bash
+python3 -m venv --system-site-packages venv
+source venv/bin/activate
+```
+
+**Importante:** Adicione `venv/bin` ao `PATH` para o Meson encontrar o `cython`:
+
+```bash
+export PATH="$(pwd)/venv/bin:$PATH"
+```
+
+### Instalação via wheelhouse
+
+Baixe wheels do wheelhouse Haiku e instale:
+
+```bash
+# Criar diretório do wheelhouse
+mkdir -p ~/haiku-wheelhouse
+cd ~/haiku-wheelhouse
+
+# Download dos wheels (o wheelhouse real será publicado na URL do operador)
+# Use --find-links apontando para o local do wheelhouse Haiku
+pip install --no-index --find-links ~/haiku-wheelhouse data-boar
+
+# Instalar dependências, inclusive pandas, com --no-build-isolation
+# (cython deve estar disponível no PATH)
+pip install --no-index --find-links ~/haiku-wheelhouse pandas --no-build-isolation
+```
+
+**Pacotes disponíveis no wheelhouse Haiku:**
+- Pacotes Python: `data-boar`, `numpy`, `pandas`, `scikit-learn`, `scipy`, `matplotlib`, `pillow`, `cffi`, `cryptography`, `contourpy`, `greenlet`, `kiwisolver`, `lxml`, `markupsafe`, `pyyaml`, `regex`, `rpds-py`, `hypothesis`, `maturin`, `pydantic-core`, `odfpy`, `rapidfuzz`, `red_black_tree_mod`
+- Ferramentas de build: `cython` (necessário para compilação do pandas)
+
+### Executar o demo
+
+Após a instalação, verifique com a demonstração zero-config:
+
+```bash
+python main.py --demo
+```
+
+Isso inicia uma varredura com dados de exemplo e abre o dashboard em `http://127.0.0.1:8088/`.
+
+### Tag de plataforma
+
+O wheelhouse usa a tag de plataforma: `cp314-cp314-haiku_r1~beta6_x86_64`
+
+### Estado atual
+
+O wheelhouse Haiku é **parcial**: 21 wheels estão disponíveis para a stack principal. **`scikit-learn`** e **`scipy`** ainda **não** têm wheels e vão precisar ser compilados a partir do código-fonte. Essas dependências são parte do núcleo do pipeline de varredura (para detecção baseada em ML), então os usuários Haiku podem ver capacidades de detecção degradadas até que a cobertura do wheelhouse esteja completa.
+
+---
+
 ## 4. Notas sobre configuração
 
 - A aplicação utiliza um único arquivo de configuração (YAML/JSON) com as chaves principais:

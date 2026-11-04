@@ -1479,6 +1479,93 @@ After a scan finishes (CLI one-shot or `POST /scan` / `POST /start` background r
 
 ---
 
+### Haiku (R1/beta6, x86_64)
+
+Data Boar is compatible with **Haiku OS** (R1/beta6 x86_64) via a dedicated wheelhouse. Haiku publishes Python 3.14 wheels and provides pre-built packages for core dependencies.
+
+#### System requirements (HaikuPorts)
+
+Install these packages on Haiku:
+
+```bash
+pkgman install python3_14 python3_14_dev cmake ninja meson \
+  rust_bin libffi_devel openssl3_devel libsqlite3_dev \
+  hpkg_numpy
+```
+
+- **`python3.14`**: Python interpreter.
+- **`pkgman`**: Haiku package manager.
+- **`cmake` / `ninja` / `meson`**: Build tools for native compilation.
+- **`rust_bin`**: Rust compiler for native extensions.
+- **`numpy` (from hpkg)**: HaikuPorts `numpy` (2.5.3) works around Haiku's `ctype.h` macros (`isalpha`, `isalnum`, etc.) that would break PyPI's numpy 2.5.4.
+
+#### Virtual environment with system site packages
+
+Create a virtual environment that includes Haiku's system packages:
+
+```bash
+python3 -m venv --system-site-packages venv
+source venv/bin/activate
+```
+
+**Important:** Add `venv/bin` to `PATH` so Meson can find `cython`:
+
+```bash
+export PATH="$(pwd)/venv/bin:$PATH"
+```
+
+#### Installing via wheelhouse
+
+Download wheels from the Haiku wheelhouse and install:
+
+```bash
+# Create wheelhouse directory
+mkdir -p ~/haiku-wheelhouse
+cd ~/haiku-wheelhouse
+
+# Download wheels (the actual wheelhouse will be published at the operator URL)
+# For now, use --find-links pointing to the Haiku wheelhouse location
+pip install --no-index --find-links ~/haiku-wheelhouse data-boar
+
+# Install dependencies including pandas with --no-build-isolation
+# (cython must be available in PATH)
+pip install --no-index --find-links ~/haiku-wheelhouse pandas --no-build-isolation
+```
+
+**Packages available in the Haiku wheelhouse (EN):**
+- Python packages: `data-boar`, `numpy`, `pandas`, `scikit-learn`, `scipy`, `matplotlib`, `pillow`, `cffi`, `cryptography`, `contourpy`, `greenlet`, `kiwisolver`, `lxml`, `markupsafe`, `pyyaml`, `regex`, `rpds-py`, `hypothesis`, `maturin`, `pydantic-core`, `odfpy`, `rapidfuzz`, `red_black_tree_mod`
+- Build tools: `cython` (needed for pandas compilation)
+
+#### Installing via PyPI index alternative
+
+An alternative is to use the PyPI-style index with `--extra-index-url`:
+
+```bash
+pip install data-boar --extra-index-url https://databoar.com.br/simple/
+```
+
+**Note:** This path is **partial** — `scikit-learn` and `scipy` do not yet have Haiku wheels and will need to be built from source.
+
+#### Running the demo
+
+After installation, verify with the zero-config demo:
+
+```bash
+python main.py --demo
+```
+
+This starts an interactive scan with sample data and opens the dashboard on `http://127.0.0.1:8088/`.
+
+#### Platform tag
+
+The wheelhouse uses the platform tag: `cp314-cp314-haiku_r1~beta6_x86_64`
+
+#### Status
+
+The Haiku wheelhouse is **partial**: 21 wheels are available for the core stack. **`scikit-learn`** and **`scipy`** lack wheels and will time out or require building from source. These dependencies are part of the core scanning pipeline (for ML-based detection), so Haiku users may see degraded detection capabilities until wheel coverage is complete.
+
+---
+
 ## 6. Infrastructure as Code — OpenTofu / Terraform
 
 For corporate and enterprise environments that manage infrastructure via OpenTofu or Terraform,

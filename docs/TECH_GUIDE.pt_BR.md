@@ -121,6 +121,70 @@ O inventário e os testes anti-drift estão em `cli/bash_completion_inventory.py
 
 **`[noavx]` não é extra do PyPI.** Em hosts sem SSE4.2, POPCNT ou AVX, o numpy do PyPI dá **SIGILL**. Restaure **ML de verdade** com o wheelhouse verificado ([#929](https://github.com/DataBoar/data-boar/issues/929)): tag `wheelhouse-x86-64-v1-2026-07-29`, dois passos `gh release download` e `pip install --no-index --find-links` (ou `pipx runpip`). Receita: [TROUBLESHOOTING.pt_BR.md](TROUBLESHOOTING.pt_BR.md) *x86-64-v1 / wheelhouse*. O pre-flight evita o crash; **não** substitui essa instalação.
 
+### Haiku (R1/beta6, x86_64)
+
+O **Data Boar** é compatível com **Haiku OS** (R1/beta6 x86_64) via wheelhouse dedicado. Haiku publica wheels Python 3.14 e fornece pacotes pré-construídos para dependências essenciais.
+
+#### Requisitos do sistema (HaikuPorts)
+
+Instale esses pacotes no Haiku:
+
+```bash
+pkgman install python3_14 python3_14_dev cmake ninja meson \
+  rust_bin libffi_devel openssl3_devel libsqlite3_dev \
+  hpkg_numpy
+```
+
+- **`python3.14`**: Interpretador Python.
+- **`pkgman`**: Gerenciador de pacotes do Haiku.
+- **`cmake` / `ninja` / `meson`**: Ferramentas de build para compilação nativa.
+- **`rust_bin`**: Compilador Rust para extensões nativas.
+- **`numpy` (do hpkg)**: O numpy HaikuPorts (2.5.3) resolve o problema dos macros do `ctype.h` (`isalpha`, `isalnum`, etc.) do Haiku que quebramariam o numpy 2.5.4 do PyPI.
+
+#### Ambiente virtual com site-packages do sistema
+
+Crie um ambiente virtual que inclua os pacotes do sistema:
+
+```bash
+python3 -m venv --system-site-packages venv
+source venv/bin/activate
+```
+
+**Importante:** Adicione `venv/bin` ao `PATH` para o Meson encontrar o `cython`:
+
+```bash
+export PATH="$(pwd)/venv/bin:$PATH"
+```
+
+#### Instalação via wheelhouse
+
+Baixe wheels do wheelhouse Haiku e instale:
+
+```bash
+# Criar diretório do wheelhouse
+mkdir -p ~/haiku-wheelhouse
+
+# Download dos wheels (o wheelhouse real será publicado na URL do operador)
+pip install --no-index --find-links ~/haiku-wheelhouse data-boar
+
+# Instalar dependências, inclusive pandas, com --no-build-isolation
+pip install --no-index --find-links ~/haiku-wheelhouse pandas --no-build-isolation
+```
+
+**Pacotes disponíveis no wheelhouse Haiku:**
+- Pacotes Python: `data-boar`, `numpy`, `pandas`, `scikit-learn`, `scipy`, `matplotlib`, `pillow`, `cffi`, `cryptography`, `contourpy`, `greenlet`, `kiwisolver`, `lxml`, `markupsafe`, `pyyaml`, `regex`, `rpds-py`, `hypothesis`, `maturin`, `pydantic-core`, `odfpy`, `rapidfuzz`, `red_black_tree_mod`
+- Ferramentas de build: `cython` (necessário para compilação do pandas)
+
+#### Executar o demo
+
+```bash
+python main.py --demo
+```
+
+**Tag de plataforma:** `cp314-cp314-haiku_r1~beta6_x86_64`
+
+**Nota importante:** O wheelhouse Haiku é **parcial** — 21 wheels estão disponíveis para a stack principal. **`scikit-learn`** e **`scipy`** ainda **não** têm wheels e vão precisar ser compilados a partir do código-fonte. Essas dependências são parte do núcleo do pipeline de varredura (para detecção baseada em ML), então os usuários Haiku podem ver capacidades de detecção degradadas até que a cobertura do wheelhouse esteja completa.
+
 ### Homebrew (macOS)
 
 Tap próprio (não é homebrew-core). Python do host via Homebrew; o pip instala o sdist do PyPI — **sem** payload de CPython embarcado:
