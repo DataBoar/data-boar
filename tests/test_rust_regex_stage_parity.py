@@ -24,6 +24,82 @@ def test_rust_regex_stage_status_shape() -> None:
     assert isinstance(status.get("python_fallback_reasons"), dict)
 
 
+def test_rust_stage_tier_gate_blocks_open() -> None:
+    """Rust regex stage is blocked for OPEN tier (dev/lab default)."""
+    det = SensitivityDetector()  # default config => Tier.OPEN
+    status = det.rust_regex_stage_status.to_prefilter_dict()
+    assert status["active"] is False
+    assert status["tier"] == "open"
+    assert status["reason"] == "tier_below_pro_plus"
+
+
+def test_rust_stage_tier_gate_blocks_community() -> None:
+    """Rust regex stage is blocked for Community tier."""
+    det = SensitivityDetector(
+        licensing_config={"licensing": {"mode": "open", "effective_tier": "community"}}
+    )
+    status = det.rust_regex_stage_status.to_prefilter_dict()
+    assert status["active"] is False
+    assert status["tier"] == "community"
+    assert status["reason"] == "tier_below_pro_plus"
+
+
+def test_rust_stage_tier_gate_blocks_std() -> None:
+    """Rust regex stage is blocked for Std tier."""
+    det = SensitivityDetector(
+        licensing_config={"licensing": {"mode": "open", "effective_tier": "std"}}
+    )
+    status = det.rust_regex_stage_status.to_prefilter_dict()
+    assert status["active"] is False
+    assert status["tier"] == "std"
+    assert status["reason"] == "tier_below_pro_plus"
+
+
+def test_rust_stage_tier_gate_blocks_pro() -> None:
+    """Rust regex stage is blocked for Pro tier (requires Pro+)."""
+    det = SensitivityDetector(
+        licensing_config={"licensing": {"mode": "open", "effective_tier": "pro"}}
+    )
+    status = det.rust_regex_stage_status.to_prefilter_dict()
+    assert status["active"] is False
+    assert status["tier"] == "pro"
+    assert status["reason"] == "tier_below_pro_plus"
+
+
+def test_rust_stage_tier_gate_permits_pro_plus() -> None:
+    """Rust regex stage is permitted for Pro+ tier (rust may be missing)."""
+    det = SensitivityDetector(
+        licensing_config={"licensing": {"mode": "open", "effective_tier": "pro_plus"}}
+    )
+    status = det.rust_regex_stage_status.to_prefilter_dict()
+    assert status["tier"] == "pro_plus"
+    # active is False only because boar_fast_filter is not installed in test env
+    # but the tier gate should allow the check to proceed
+    assert status["reason"] in ("rust_extension_missing", None)
+
+
+def test_rust_stage_tier_gate_permits_enterprise() -> None:
+    """Rust regex stage is permitted for Enterprise tier."""
+    det = SensitivityDetector(licensing_config=_ENT_CFG)
+    status = det.rust_regex_stage_status.to_prefilter_dict()
+    assert status["tier"] == "enterprise"
+    # active is False only because boar_fast_filter is not installed in test env
+    # but the tier gate should allow the check to proceed
+    assert status["reason"] in ("rust_extension_missing", None)
+
+
+def test_rust_stage_tier_gate_permits_partner() -> None:
+    """Rust regex stage is permitted for Partner tier."""
+    det = SensitivityDetector(
+        licensing_config={"licensing": {"mode": "open", "effective_tier": "partner"}}
+    )
+    status = det.rust_regex_stage_status.to_prefilter_dict()
+    assert status["tier"] == "partner"
+    # active is False only because boar_fast_filter is not installed in test env
+    # but the tier gate should allow the check to proceed
+    assert status["reason"] in ("rust_extension_missing", None)
+
+
 def test_rust_stage_superset_on_builtin_probes() -> None:
     pytest.importorskip(
         "boar_fast_filter",
