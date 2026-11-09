@@ -180,7 +180,7 @@ Ao dar bump na versão, atualize **todos** os itens abaixo para manter o número
 | **`docs/data_boar.1`** | Na linha `.TH` (ex.: `"Data Boar 1.5.4"`), defina a versão para a nova.                        |
 | **`docs/data_boar.5`** | Idem: atualize a versão na linha `.TH`.                                                         |
 
-**Comando vs nome da man:** O CLI empacotado é **`data-boar`** (hífen). As man pages primárias instaladas são **`data-boar`** (seções 1 e 5). Os arquivos-fonte no repositório continuam **`docs/data_boar.{1,5}`**; na instalação copie como `data-boar.{1,5}` com symlinks opcionais **`data_boar`** e **`lgpd_crawler`** (aliases legados). Veja a seção **INSTALLATION OF THIS MAN PAGE** em `docs/data_boar.1`.
+**Comando vs nome da man:** O CLI empacotado é **`data-boar`** (hífen). As man pages primárias instaladas são **`data-boar`** (seções 1 e 5). Os arquivos-fonte no repositório continuam **`docs/data_boar.{1,5}`**; **wheels PyPI** (`pip` / `pipx`) e **pacotes nativos** instalam `data-boar.{1,5}` mais os symlinks **`data_boar`** e **`lgpd_crawler`** (nomes legados). Passos de clone/git em `docs/data_boar.1` continuam válidos para quem instala sem pacote empacotado.
 
 ### 4. Deploy e Docker
 
