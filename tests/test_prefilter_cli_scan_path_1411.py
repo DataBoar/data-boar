@@ -103,6 +103,7 @@ def test_zero_regression_latch_default_on() -> None:
 
 
 def test_paid_tier_reports_rust_regex_stage_status() -> None:
+    reset_license_guard_for_tests()
     scanner = DataScanner(licensing_config=_ENT_CFG)
     st = scanner.prefilter_status
     assert st["name"] == "rust_regex_stage"
@@ -122,6 +123,7 @@ def test_paid_tier_reports_rust_regex_stage_status() -> None:
 
 
 def test_open_tier_inactive() -> None:
+    reset_license_guard_for_tests()
     _, st = resolve_pro_scan_path({})
     assert st["active"] is False
     assert st["reason"] == "tier_below_pro_plus"
