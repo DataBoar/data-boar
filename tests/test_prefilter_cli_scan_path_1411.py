@@ -130,6 +130,42 @@ def test_open_tier_inactive() -> None:
     assert st["engine"] == "core"
 
 
+def test_open_tier_community_blocks() -> None:
+    """Open mode with Community tier blocks pro scan path."""
+    reset_license_guard_for_tests()
+    _, st = resolve_pro_scan_path(
+        {"licensing": {"mode": "open", "effective_tier": "community"}}
+    )
+    assert st["active"] is False
+    assert st["tier"] == "community"
+    assert st["reason"] == "tier_below_pro_plus"
+    assert st["engine"] == "core"
+
+
+def test_open_tier_std_blocks() -> None:
+    """Open mode with Std tier blocks pro scan path."""
+    reset_license_guard_for_tests()
+    _, st = resolve_pro_scan_path(
+        {"licensing": {"mode": "open", "effective_tier": "std"}}
+    )
+    assert st["active"] is False
+    assert st["tier"] == "std"
+    assert st["reason"] == "tier_below_pro_plus"
+    assert st["engine"] == "core"
+
+
+def test_open_tier_pro_blocks() -> None:
+    """Open mode with Pro tier blocks pro scan path (requires Pro+)."""
+    reset_license_guard_for_tests()
+    _, st = resolve_pro_scan_path(
+        {"licensing": {"mode": "open", "effective_tier": "pro"}}
+    )
+    assert st["active"] is False
+    assert st["tier"] == "pro"
+    assert st["reason"] == "tier_below_pro_plus"
+    assert st["engine"] == "core"
+
+
 # --- enforced mode with signed JWT (end-to-end tier gating) ---------------
 
 
