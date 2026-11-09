@@ -193,3 +193,20 @@ def features_for_tier(tier: Tier) -> list[str]:
         for name, required in FEATURE_TIER_MAP.items()
         if _TIER_ORDER.get(required, 0) <= _TIER_ORDER.get(tier, 0)
     ]
+
+
+# ---------------------------------------------------------------------------
+# Shared tier gate helpers for Pro+ features
+# ---------------------------------------------------------------------------
+PAID_TIER_SET: tuple[Tier, ...] = (Tier.PRO_PLUS, Tier.ENTERPRISE, Tier.PARTNER)
+
+
+def tier_allows_pro_plus_features(tier: Tier) -> bool:
+    """
+    Returns True if the given tier permits Pro+ features.
+
+    Used by rust_regex_stage and pro_scan_path for consistent tier gating.
+    Only PRO_PLUS, ENTERPRISE, and PARTNER tiers are allowed; all others
+    (including OPEN for dev/lab mode) are blocked.
+    """
+    return tier in PAID_TIER_SET

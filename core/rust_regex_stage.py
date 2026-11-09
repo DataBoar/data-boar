@@ -11,11 +11,10 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any
 
+from core.licensing.tier_features import tier_allows_pro_plus_features
 from core.regex_translate import PatternRouting, RoutingKind, classify_pattern
 
 logger = logging.getLogger(__name__)
-
-_RUST_STAGE_FEATURE = "rust_regex_stage"
 
 
 @dataclass
@@ -108,14 +107,12 @@ def _tier_allows_rust_stage(
 ) -> tuple[bool, str | None, str | None]:
     try:
         from core.licensing.runtime_feature_tier import get_runtime_tier_for_features
-        from core.licensing.tier_features import FEATURE_TIER_MAP, Tier
 
-        _ = FEATURE_TIER_MAP[_RUST_STAGE_FEATURE]
         tier = get_runtime_tier_for_features(licensing_config or {})
         tier_value = getattr(tier, "value", str(tier))
-        # Explicit tier check per FEATURE_TIER_MAP["rust_regex_stage"] == Tier.PRO_PLUS
+        # Explicit paid tier check per FEATURE_TIER_MAP["rust_regex_stage"] == Tier.PRO_PLUS
         # OPEN (dev/lab) bypasses enforcement but should not activate paid features.
-        if tier not in (Tier.PRO_PLUS, Tier.ENTERPRISE, Tier.PARTNER):
+        if not tier_allows_pro_plus_features(tier):
             return False, tier_value, "tier_below_pro_plus"
         return True, tier_value, None
     except Exception as exc:  # noqa: BLE001

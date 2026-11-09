@@ -26,6 +26,21 @@ logger = logging.getLogger(__name__)
 PRO_SCAN_PATH_ZERO_REGRESSION_LATCH = True
 
 
+def _tier_allows_pro_scan(
+    cfg: dict[str, Any] | None,
+) -> tuple[bool, str | None]:
+    """Check if tier permits pro scan path activation."""
+    from core.licensing.runtime_feature_tier import get_runtime_tier_for_features
+    from core.licensing.tier_features import tier_allows_pro_plus_features
+
+    tier = get_runtime_tier_for_features(cfg or {})
+    tier_value = getattr(tier, "value", str(tier))
+    # Check explicit paid tier per FEATURE_TIER_MAP["pro_prefilter_accel"] == Tier.PRO_PLUS
+    if not tier_allows_pro_plus_features(tier):
+        return False, tier_value
+    return True, tier_value
+
+
 def resolve_pro_scan_path(
     cfg: dict[str, Any] | None,
     *,
@@ -58,15 +73,11 @@ def resolve_pro_scan_path(
         return None, status
 
     try:
-        from core.licensing.runtime_feature_tier import get_runtime_tier_for_features
-        from core.licensing.tier_features import FEATURE_TIER_MAP, Tier
         from pro.engine import RUST_AVAILABLE, ProScanner
 
-        _ = FEATURE_TIER_MAP["pro_prefilter_accel"]
-        tier = get_runtime_tier_for_features(cfg or {})
-        status["tier"] = getattr(tier, "value", str(tier))
-        # Explicit paid set — never check_feature (OPEN bypasses that API).
-        if tier not in (Tier.PRO_PLUS, Tier.ENTERPRISE, Tier.PARTNER):
+        allowed, tier_value = _tier_allows_pro_scan(cfg)
+        status["tier"] = tier_value
+        if not allowed:
             status["reason"] = "tier_below_pro_plus"
             logger.info(
                 "pro-scan-path: inactive (tier=%s requires Pro+/Enterprise/Partner) [#1411]",
