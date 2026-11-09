@@ -108,12 +108,14 @@ def _tier_allows_rust_stage(
 ) -> tuple[bool, str | None, str | None]:
     try:
         from core.licensing.runtime_feature_tier import get_runtime_tier_for_features
-        from core.licensing.tier_features import FEATURE_TIER_MAP, is_feature_available
+        from core.licensing.tier_features import FEATURE_TIER_MAP, Tier
 
         _ = FEATURE_TIER_MAP[_RUST_STAGE_FEATURE]
         tier = get_runtime_tier_for_features(licensing_config or {})
         tier_value = getattr(tier, "value", str(tier))
-        if not is_feature_available(_RUST_STAGE_FEATURE, tier):
+        # Explicit tier check per FEATURE_TIER_MAP["rust_regex_stage"] == Tier.PRO_PLUS
+        # OPEN (dev/lab) bypasses enforcement but should not activate paid features.
+        if tier not in (Tier.PRO_PLUS, Tier.ENTERPRISE, Tier.PARTNER):
             return False, tier_value, "tier_below_pro_plus"
         return True, tier_value, None
     except Exception as exc:  # noqa: BLE001
