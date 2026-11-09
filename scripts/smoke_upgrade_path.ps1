@@ -1,4 +1,4 @@
-# smoke_upgrade_path.ps1 - upgrade-path smoke for data-boar #2162
+# smoke_upgrade_path.ps1 — upgrade-path smoke for data-boar #2162
 # Usage: .\scripts\smoke_upgrade_path.ps1 [-PrevVersion '1.7.4'] [-CandidateWheel 'C:\path\to\wheel.whl']
 # Reproducible: clean venv with previous PyPI version, create SQLite anchor, upgrade to candidate wheel built via uv build, verify no TAMPER / -alpha / config rejection.
 [CmdletBinding()]
