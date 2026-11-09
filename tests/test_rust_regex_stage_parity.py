@@ -13,7 +13,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from core.detector import SensitivityDetector
 from core.licensing.tier_features import FEATURE_TIER_MAP, Tier
 from core.licensing.guard import reset_license_guard_for_tests
-from tests.hybrid_license_fixture import seal_enforced_test_token, test_mldsa_private
+from tests import hybrid_license_fixture as hlf
 from tests.license_verify_pin import pin_embedded_ed25519_pem
 
 _ENT_CFG = {"licensing": {"mode": "open", "effective_tier": "enterprise"}}
@@ -32,7 +32,7 @@ def _enforced_cfg(tmp_path: Path, dbtier: str) -> dict:
     )
     now = datetime.now(timezone.utc)
 
-    token = seal_enforced_test_token(
+    token = hlf.seal_enforced_test_token(
         priv,
         jwt.encode(
             {
@@ -44,7 +44,7 @@ def _enforced_cfg(tmp_path: Path, dbtier: str) -> dict:
             priv,
             algorithm="EdDSA",
         ),
-        mldsa_private=test_mldsa_private(),
+        mldsa_private=hlf.test_mldsa_private(),
         pin=True,
     )
     lic = tmp_path / "t.lic"

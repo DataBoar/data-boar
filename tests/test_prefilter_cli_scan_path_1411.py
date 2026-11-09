@@ -30,7 +30,7 @@ from core.pro_scan_path import (
 from core.scanner import DataScanner
 from pro.engine import ProScanner
 from report.scan_evidence import write_scan_evidence_artifacts
-from tests.hybrid_license_fixture import seal_enforced_test_token, test_mldsa_private
+from tests import hybrid_license_fixture as hlf
 from tests.license_verify_pin import pin_embedded_ed25519_pem
 
 # #1411 — probes that historically diverge when ProScanner skips non-suspects.
@@ -67,7 +67,7 @@ def _enforced_cfg(tmp_path: Path, dbtier: str) -> dict:
     )
     now = datetime.now(timezone.utc)
 
-    token = seal_enforced_test_token(
+    token = hlf.seal_enforced_test_token(
         priv,
         jwt.encode(
             {
@@ -79,7 +79,7 @@ def _enforced_cfg(tmp_path: Path, dbtier: str) -> dict:
             priv,
             algorithm="EdDSA",
         ),
-        mldsa_private=test_mldsa_private(),
+        mldsa_private=hlf.test_mldsa_private(),
         pin=True,
     )
     lic = tmp_path / "t.lic"
