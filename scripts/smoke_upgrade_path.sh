@@ -68,10 +68,16 @@ pip install "data-boar==$PREV_VERSION"
 pip install pymongo redis pysmb
 
 # Determine if previous version has integrity anchor feature
+# The anchor is created by _run_startup_integrity_check() at main.py:1070 via --version
+# or at main.py:1593 during startup (e.g., --plan command).
+# Detection: 1.8.0+ has --plan in help, 1.7.4 does not.
 HAS_ANCHOR_FEATURE=0
-if "$VENV/bin/python" -c "from core.integrity_anchor import ensure_integrity_anchor" 2>/dev/null; then
-  HAS_ANCHOR_FEATURE=1
-  log "Previous version $PREV_VERSION has integrity anchor feature"
+set +e
+"$VENV/bin/data-boar" --help 2>/dev/null | grep -q '\-\-plan' && HAS_ANCHOR_FEATURE=1
+set -e
+
+if [[ $HAS_ANCHOR_FEATURE -eq 1 ]]; then
+  log "Previous version $PREV_VERSION has integrity anchor feature (main.py:1070 -> --version)"
 else
   log "Previous version $PREV_VERSION does NOT have integrity anchor feature (expected for 1.7.4)"
 fi
@@ -80,38 +86,24 @@ ANCHOR_DB="$WORKDIR/audit_legacy_upgrade.db"
 cd "$WORKDIR"
 
 if [[ $HAS_ANCHOR_FEATURE -eq 1 ]]; then
-  log "First run to create SQLite anchor via previous version (main.py:1593 -> _run_startup_integrity_check)"
-  # The real user command that creates the anchor is: data-boar --config <config>
-  # This triggers _run_startup_integrity_check at main.py:1593
-  # We run it with the original fixture config which has sqlite_path: audit_legacy_upgrade.db
-  # Since we cd'd to WORKDIR, the relative path resolves to WORKDIR/audit_legacy_upgrade.db
+  log "First run to create SQLite anchor via previous version (main.py:1070 -> --version)"
+  # The real user command that creates the anchor is: data-boar --version
+  # This triggers _run_startup_integrity_check at main.py:1070 with sqlite_path: audit_results.db
   set +e
-  "$VENV/bin/data-boar" --config "$CONFIG_FIXTURE" --plan > /dev/null 2>&1
-  FIRST_EXIT=$?
+  "$VENV/bin/data-boar" --version > /dev/null 2>&1
   set -e
-  # --plan exits early but anchor should still be created during startup
-  # If command failed, we still check if anchor was created
-  if [[ ! -f "$ANCHOR_DB" ]]; then
-    # Anchor not created, try with --version which also triggers integrity check
-    log "Anchor not created via --plan, trying --version"
-    set +e
-    "$VENV/bin/data-boar" --version > /dev/null 2>&1
-    set -e
-    # For --version, sqlite_path is hardcoded to audit_results.db
-    # Copy it to expected location
-    if [[ -f "$WORKDIR/audit_results.db" ]]; then
-      cp "$WORKDIR/audit_results.db" "$ANCHOR_DB"
-    fi
-  fi
-  
-  if [[ ! -f "$ANCHOR_DB" ]]; then
+  # The anchor is created at audit_results.db in the current directory (WORKDIR)
+  # Move it to the expected location
+  if [[ -f "$WORKDIR/audit_results.db" ]]; then
+    mv "$WORKDIR/audit_results.db" "$ANCHOR_DB"
+    log "Anchor created at $ANCHOR_DB via --version (main.py:1070)"
+  else
     echo "FAIL: integrity anchor DB not created at $ANCHOR_DB" >&2
     exit 1
   fi
-  log "Anchor created at $ANCHOR_DB"
 else
-  log "Skipping anchor creation (previous version lacks feature)"
-  # Create empty anchor DB for upgrade test
+  log "Creating empty anchor DB (previous version $PREV_VERSION lacks integrity anchor feature)"
+  # Create empty anchor DB for upgrade test (candidate will have the feature)
   "$VENV/bin/python" -c "
 import sqlite3
 conn = sqlite3.connect('$ANCHOR_DB')
@@ -146,9 +138,19 @@ if [[ $RUN_EXIT -ne 0 ]]; then
   exit 1
 fi
 
-# Check for TAMPER / -alpha issues
+# Check if candidate has valid signed manifest (not tampered)
+# For unsigned local builds, the integrity is NOT evaluated - this is PARTIAL mode
+# The anchor (validated anchor ()) appears empty for unsigned builds
+if echo "$VERSION_OUT" | grep -q "validated anchor ()"; then
+  log "integridade NAO avaliada: candidato sem manifesto assinado"
+  log "Upgrade path PARTIAL (unsigned candidate)"
+  echo "UPGRADE_PATH_PARTIAL $PREV_VERSION -> $(basename "$CANDIDATE_WHEEL")"
+  exit 1
+fi
+
+# Check for TAMPER / -alpha issues (for signed releases)
 if echo "$VERSION_OUT" | grep -qi "alpha"; then
-  echo "FAIL: version contains -alpha" >&2
+  echo "FAIL: version contains -alpha (candidate appears unsigned)" >&2
   exit 1
 fi
 if echo "$RUN_OUT" | grep -qi "INTEGRITY TAMPER DETECTED"; then

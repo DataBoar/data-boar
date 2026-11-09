@@ -46,11 +46,13 @@ try {
 
     & "$Venv\Scripts\pip.exe" install pymongo redis pysmb
 
+    # Detect anchor feature by checking if --version creates the anchor
+    # The anchor is created by _run_startup_integrity_check() at main.py:1070 via --version
     $HasAnchorFeature = $false
-    $importResult = & "$Venv\Scripts\python.exe" -c "from core.integrity_anchor import ensure_integrity_anchor" 2>$null
-    if ($LASTEXITCODE -eq 0) {
+    $helpOutput = & "$Venv\Scripts\data-boar.exe" --help 2>&1
+    if ($helpOutput -match '\-\-plan') {
         $HasAnchorFeature = $true
-        Log "Previous version $PrevVersion has integrity anchor feature"
+        Log "Previous version $PrevVersion has integrity anchor feature (main.py:1070 -> --version)"
     } else {
         Log "Previous version $PrevVersion does NOT have integrity anchor feature (expected for 1.7.4)"
     }
@@ -59,24 +61,20 @@ try {
     $AnchorDb = Join-Path $WorkDir 'audit_legacy_upgrade.db'
 
     if ($HasAnchorFeature) {
-        Log "First run to create SQLite anchor via previous version (main.py:1593 -> _run_startup_integrity_check)"
-        # Use real user command: data-boar --config <config>
-        # This triggers _run_startup_integrity_check at main.py:1593
-        $null = & "$Venv\Scripts\data-boar.exe" --plan --config $ConfigFixture 2>$null
-        if (-not (Test-Path $AnchorDb)) {
-            Log "Anchor not created via --plan, trying --version"
-            $null = & "$Venv\Scripts\data-boar.exe" --version 2>$null
-            $AuditResultsDb = Join-Path $WorkDir 'audit_results.db'
-            if (Test-Path $AuditResultsDb) {
-                Copy-Item $AuditResultsDb $AnchorDb -Force
-            }
-        }
-        if (-not (Test-Path $AnchorDb)) {
+        Log "First run to create SQLite anchor via previous version (main.py:1070 -> --version)"
+        # The real user command that creates the anchor is: data-boar --version
+        # This triggers _run_startup_integrity_check at main.py:1070 with sqlite_path: audit_results.db
+        $null = & "$Venv\Scripts\data-boar.exe" --version 2>$null
+        $AuditResultsDb = Join-Path $WorkDir 'audit_results.db'
+        if (Test-Path $AuditResultsDb) {
+            Move-Item $AuditResultsDb $AnchorDb -Force
+            Log "Anchor created at $AnchorDb via --version (main.py:1070)"
+        } else {
             throw "FAIL: integrity anchor DB not created at $AnchorDb"
         }
-        Log "Anchor created at $AnchorDb"
     } else {
-        Log "Skipping anchor creation (previous version lacks feature)"
+        Log "Creating empty anchor DB (previous version $PrevVersion lacks integrity anchor feature)"
+        # Create empty anchor DB for upgrade test (candidate will have the feature)
         & "$Venv\Scripts\python.exe" -c @"
 import sqlite3
 conn = sqlite3.connect('$AnchorDb')
@@ -98,13 +96,24 @@ conn.close()
     $RunOut = & "$Venv\Scripts\data-boar.exe" --plan --config $ConfigFixture 2>&1
     $RunExit = $LASTEXITCODE
     Log "Run output: $RunOut"
-    
+
     if ($RunExit -ne 0) {
         throw "FAIL: validate-config exited with $RunExit (legacy config rejected - regression of #2164)"
     }
 
+    # Check if candidate has valid signed manifest (not tampered)
+    # For unsigned local builds, the integrity is NOT evaluated - this is PARTIAL mode
+    # The anchor (validated anchor ()) appears empty for unsigned builds
+    if ($VersionOut -match 'validated anchor \(\)') {
+        Log "integridade NAO avaliada: candidato sem manifesto assinado"
+        Log "Upgrade path PARTIAL (unsigned candidate)"
+        Write-Host "UPGRADE_PATH_PARTIAL $PrevVersion -> $(Split-Path $CandidateWheel -Leaf)"
+        exit 1
+    }
+
+    # Check for TAMPER / -alpha issues (for signed releases)
     if ($VersionOut -match 'alpha') {
-        throw "FAIL: version contains -alpha"
+        throw "FAIL: version contains -alpha (candidate appears unsigned)"
     }
     if ($RunOut -match 'INTEGRITY TAMPER DETECTED') {
         throw "FAIL: INTEGRITY TAMPER DETECTED after upgrade"
