@@ -1,0 +1,123 @@
+{
+  "benchmark": "rust_per_call_cost_v1",
+  "rows_default": 20000,
+  "warmup_iterations": 1,
+  "measure_iterations": 5,
+  "profiles": [
+    {
+      "profile": "short_70_chars",
+      "rows": 20000,
+      "python_seconds_per_call_loop": 0.020584,
+      "python_seconds_single_batch": 0.017037,
+      "rust_seconds_per_call_loop": 0.340867,
+      "rust_seconds_single_batch": 0.003601,
+      "rust_regex_stage_seconds_per_call_loop": 0.492687,
+      "ratio_per_call_python_over_rust_filter": 0.0604,
+      "ratio_batch_python_over_rust_filter": 4.7305,
+      "ratio_per_call_python_over_rust_stage": 0.0418,
+      "python_hit_count": 20000,
+      "rust_batch_hit_count": 20000,
+      "per_call_us_python": 1.029,
+      "per_call_us_rust_filter": 17.043,
+      "per_call_us_rust_stage": 24.634
+    },
+    {
+      "profile": "long_2300_chars",
+      "rows": 500,
+      "python_seconds_per_call_loop": 0.000329,
+      "python_seconds_single_batch": 0.000252,
+      "rust_seconds_per_call_loop": 0.009893,
+      "rust_seconds_single_batch": 0.001424,
+      "rust_regex_stage_seconds_per_call_loop": 0.019361,
+      "ratio_per_call_python_over_rust_filter": 0.0332,
+      "ratio_batch_python_over_rust_filter": 0.177,
+      "ratio_per_call_python_over_rust_stage": 0.017,
+      "python_hit_count": 500,
+      "rust_batch_hit_count": 500,
+      "per_call_us_python": 0.657,
+      "per_call_us_rust_filter": 19.786,
+      "per_call_us_rust_stage": 38.722
+    }
+  ],
+  "activation": {
+    "activation_min_text_chars": 4097,
+    "length_sweep": [
+      {
+        "text_chars": 64,
+        "python_seconds": 3e-06,
+        "rust_stage_seconds": 6e-05,
+        "ratio_python_over_rust": 0.0534
+      },
+      {
+        "text_chars": 96,
+        "python_seconds": 2e-06,
+        "rust_stage_seconds": 5.5e-05,
+        "ratio_python_over_rust": 0.04
+      },
+      {
+        "text_chars": 128,
+        "python_seconds": 2e-06,
+        "rust_stage_seconds": 5.3e-05,
+        "ratio_python_over_rust": 0.0374
+      },
+      {
+        "text_chars": 256,
+        "python_seconds": 2e-06,
+        "rust_stage_seconds": 5.3e-05,
+        "ratio_python_over_rust": 0.0353
+      },
+      {
+        "text_chars": 512,
+        "python_seconds": 2e-06,
+        "rust_stage_seconds": 5.2e-05,
+        "ratio_python_over_rust": 0.0327
+      },
+      {
+        "text_chars": 768,
+        "python_seconds": 2e-06,
+        "rust_stage_seconds": 5.3e-05,
+        "ratio_python_over_rust": 0.0352
+      },
+      {
+        "text_chars": 1024,
+        "python_seconds": 2e-06,
+        "rust_stage_seconds": 5.3e-05,
+        "ratio_python_over_rust": 0.0329
+      },
+      {
+        "text_chars": 1536,
+        "python_seconds": 2e-06,
+        "rust_stage_seconds": 5.4e-05,
+        "ratio_python_over_rust": 0.0345
+      },
+      {
+        "text_chars": 2048,
+        "python_seconds": 2e-06,
+        "rust_stage_seconds": 5.3e-05,
+        "ratio_python_over_rust": 0.0339
+      },
+      {
+        "text_chars": 3072,
+        "python_seconds": 2e-06,
+        "rust_stage_seconds": 5.4e-05,
+        "ratio_python_over_rust": 0.0317
+      },
+      {
+        "text_chars": 4096,
+        "python_seconds": 2e-06,
+        "rust_stage_seconds": 5.3e-05,
+        "ratio_python_over_rust": 0.0315
+      }
+    ]
+  },
+  "host_profile": "linux-x86_64",
+  "host_load": {
+    "load_1m": 5.2431640625,
+    "load_5m": 3.04638671875,
+    "load_15m": 2.373046875
+  },
+  "gil_enabled": true,
+  "python_version": "3.13.5",
+  "git_sha": "90e6328a",
+  "generated_at": "2026-11-10T03:34:19.052263+00:00"
+}

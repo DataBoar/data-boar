@@ -1,0 +1,88 @@
+{
+  "benchmark": "rust_tier_scan_io_v1",
+  "file_count": 200,
+  "requested_max_workers": 16,
+  "tier_runs": [
+    {
+      "dbtier": "community",
+      "tier_enum": "community",
+      "nominal_worker_cap": 2,
+      "requested_max_workers": 16,
+      "effective_max_workers": 2,
+      "wall_seconds": 1.3255,
+      "file_count": 200,
+      "finding_count": 200,
+      "rust_regex_stage_backend": "python",
+      "rust_regex_stage_active": false,
+      "rust_regex_stage_reason": "tier_below_pro_plus",
+      "wall_seconds_median": 1.3255,
+      "iterations": 1
+    },
+    {
+      "dbtier": "std",
+      "tier_enum": "std",
+      "nominal_worker_cap": 2,
+      "requested_max_workers": 16,
+      "effective_max_workers": 2,
+      "wall_seconds": 1.2887,
+      "file_count": 200,
+      "finding_count": 200,
+      "rust_regex_stage_backend": "python",
+      "rust_regex_stage_active": false,
+      "rust_regex_stage_reason": "tier_below_pro_plus",
+      "wall_seconds_median": 1.2887,
+      "iterations": 1
+    },
+    {
+      "dbtier": "pro",
+      "tier_enum": "pro",
+      "nominal_worker_cap": 4,
+      "requested_max_workers": 16,
+      "effective_max_workers": 4,
+      "wall_seconds": 1.3227,
+      "file_count": 200,
+      "finding_count": 200,
+      "rust_regex_stage_backend": "python",
+      "rust_regex_stage_active": false,
+      "rust_regex_stage_reason": "tier_below_pro_plus",
+      "wall_seconds_median": 1.3227,
+      "iterations": 1
+    },
+    {
+      "dbtier": "pro_plus",
+      "tier_enum": "pro_plus",
+      "nominal_worker_cap": 8,
+      "requested_max_workers": 16,
+      "effective_max_workers": 8,
+      "wall_seconds": 1.3566,
+      "file_count": 200,
+      "finding_count": 200,
+      "rust_regex_stage_backend": "rust",
+      "rust_regex_stage_active": true,
+      "rust_regex_stage_reason": null,
+      "wall_seconds_median": 1.3566,
+      "iterations": 1
+    }
+  ],
+  "tier_differentiator_recommendation": {
+    "rust_as_headline_speed_differentiator": false,
+    "keep_rust_regex_stage_on_pro_plus": true,
+    "rationale_en": "Pinned rust_per_call_cost_v1 shows Rust loses per sample on short text; RUST_REGEX_STAGE_MIN_TEXT_CHARS keeps typical cells on Python regex. End-to-end filesystem scan I/O dominates wall time at every tier worker cap (this artifact); Rust tier gating remains a Pro+ equivalence/superset feature (ADR 0083), not a net speed upsell for default workloads.",
+    "pro_plus_over_community_wall_ratio_median": 0.9771
+  },
+  "cp314t_wheel_status": {
+    "published_in_repo_ci": false,
+    "blocker": "pyo3 abi3-py38 stable wheel does not load on python3.14t",
+    "follow_up": "docs/TECH_GUIDE.md \u00a7 Rust extension \u2014 cp314t; wheel-matrix #782"
+  },
+  "host_profile": "linux-x86_64",
+  "host_load": {
+    "load_1m": 4.8671875,
+    "load_5m": 3.7314453125,
+    "load_15m": 2.93017578125
+  },
+  "gil_enabled": true,
+  "python_version": "3.13.5",
+  "git_sha": "90e6328a",
+  "generated_at": "2026-11-10T03:42:44.543853+00:00"
+}

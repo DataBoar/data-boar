@@ -706,6 +706,14 @@ The optional `boar_fast_filter` Rust extension (built with [maturin](https://git
 
 **Deterministic regex** (built-in + ``regex_overrides_file`` / compliance samples under ``docs/compliance-samples/``) remains the catalogue authority (open domain — not only the three legacy CPF/e-mail/card shapes). When Rust acceleration is on under form **B**, findings must satisfy ``findings(Rust) ⊇ findings(Python)`` with attributable extras — never a silent subset from skipping text.
 
+**Per-call vs batch (#2182):** the pinned ``rust_prefilter_hotspot_v1`` artifact measures ``FastFilter.filter_batch`` on a **single large batch** (isolated filter, Pro+ tier). Production ``rust_regex_stage`` calls ``RegexStageEngine.match_names`` **once per sample**, where the PyO3 + GIL boundary can dominate on short text. ``tests/benchmarks/rust_per_call_cost.json`` records that gap and the ``RUST_REGEX_STAGE_MIN_TEXT_CHARS`` activation floor in ``core/rust_regex_stage.py`` — below that decoded length the detector stays on Python regex with identical verdicts.
+
+**End-to-end scan I/O (#2182):** ``tests/benchmarks/rust_tier_scan_io.json`` (`rust_tier_scan_io_v1`) times a synthetic filesystem target through ``AuditEngine.start_audit()`` at each enforced tier worker cap (Community/Std 2, Pro 4, Pro+ 8). Wall time is dominated by walk/read/detect I/O; Rust backend status is recorded per tier but is not a headline speed upsell on typical cell-sized samples.
+
+**Tier differentiator recommendation (#2182):** keep ``rust_regex_stage`` on **Pro+** for **equivalence / superset** (ADR 0083) and optional long-text margin — **not** as a marketed net-speed tier hook for default short-text workloads. Public performance claims stay scoped to pinned artifacts (isolated ``filter_batch`` vs per-call / scan I/O). See ``tier_differentiator_recommendation`` in ``rust_tier_scan_io.json``.
+
+**cp314t (free-threaded CPython):** release wheels built with PyO3 ``abi3-py38`` **do not load** on ``python3.14t`` (``SystemError`` on module init). A separate per-interpreter wheel (non-abi3 build) is required; publishing it through the repo CI wheel matrix is tracked in **#782** and is **out of scope** for ad-hoc PR edits to ``.github/workflows/``. Lab validation: rebuild ``boar_fast_filter`` locally without ``abi3`` on the free-threaded interpreter.
+
 **Encoding boundary (important for malformed-byte files):**
 
 The Rust module operates exclusively on decoded Python strings — it never receives raw bytes. All file-reading and encoding resolution happens on the **Python side** before text is passed into the extension:
