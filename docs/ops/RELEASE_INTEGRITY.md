@@ -35,6 +35,7 @@ releases, with explicit focus on Pro+ paths.
 - [ ] Throttling behavior verified under synthetic latency pressure.
 - [ ] Checkpoint resume verified after simulated crash/interruption.
 - [ ] Luhn gate verified for valid and invalid card candidates.
+- [ ] upgrade path verified — previous version → candidate, `data-boar --version` output without `INTEGRITY TAMPER DETECTED` / `-alpha` label, and legacy config load succeeds (registro: versão anterior, versão candidata, saída do comando). Regra auditor: P1 fechado com remendo conta como risco aberto no gate.
 
 ## 5) Related specifications
 
