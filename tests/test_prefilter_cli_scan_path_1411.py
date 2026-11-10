@@ -432,6 +432,9 @@ def test_get_rust_regex_stage_status_tier_ok_no_rust_wheel(
 
 def test_get_rust_regex_stage_status_tier_ok_with_rust_wheel() -> None:
     """Tier ok with Rust wheel -> active true, backend=rust, reason=None."""
+    pytest.importorskip(
+        "boar_fast_filter", reason="Rust wheel not installed; skipping active=true test"
+    )
     reset_license_guard_for_tests()
     st = get_rust_regex_stage_status(_ENT_CFG)
     assert st["active"] is True
