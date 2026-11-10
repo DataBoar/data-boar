@@ -25,6 +25,7 @@ from core.licensing.guard import reset_license_guard_for_tests
 from core.licensing.tier_features import FEATURE_TIER_MAP, Tier
 from core.pro_scan_path import (
     PRO_SCAN_PATH_ZERO_REGRESSION_LATCH,
+    get_rust_regex_stage_status,
     resolve_pro_scan_path,
 )
 from core.scanner import DataScanner
@@ -375,3 +376,80 @@ def test_scan_manifest_includes_detection_prefilter(tmp_path: Path) -> None:
     assert "detection_prefilter" in loaded
     assert loaded["detection_prefilter"]["reason"] == "zero_regression_latch"
     assert loaded["detection_prefilter"]["active"] is False
+
+
+# --- Tests for get_rust_regex_stage_status (--prefilter-status CLI) --- #2178
+
+
+def test_get_rust_regex_stage_status_no_license() -> None:
+    """No license (open mode) -> inactive, tier_below_pro_plus."""
+    reset_license_guard_for_tests()
+    st = get_rust_regex_stage_status({})
+    assert st["active"] is False
+    assert st["name"] == "rust_regex_stage"
+    assert st["tier"] == "open"
+    assert st["reason"] == "tier_below_pro_plus"
+    assert st["engine"] == "core"
+    assert st["backend"] == "python"
+
+
+def test_get_rust_regex_stage_status_tier_below_pro_plus() -> None:
+    """Tier below pro_plus (std, pro) -> inactive, tier_below_pro_plus."""
+    reset_license_guard_for_tests()
+    for tier in ("community", "std", "pro"):
+        st = get_rust_regex_stage_status(
+            {"licensing": {"mode": "open", "effective_tier": tier}}
+        )
+        assert st["active"] is False, f"tier={tier}"
+        assert st["name"] == "rust_regex_stage"
+        assert st["tier"] == tier
+        assert st["reason"] == "tier_below_pro_plus"
+        assert st["engine"] == "core"
+        assert st["backend"] == "python"
+
+
+def test_get_rust_regex_stage_status_tier_ok_no_rust_wheel(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Tier ok (pro_plus/enterprise/partner) but Rust wheel missing -> inactive, rust_extension_missing."""
+    reset_license_guard_for_tests()
+
+    # Mock _rust_installed to return False
+    monkeypatch.setattr("core.rust_regex_stage._rust_installed", lambda: False)
+
+    for tier in ("pro_plus", "enterprise", "partner"):
+        st = get_rust_regex_stage_status(
+            {"licensing": {"mode": "open", "effective_tier": tier}}
+        )
+        assert st["active"] is False, f"tier={tier}"
+        assert st["name"] == "rust_regex_stage"
+        assert st["tier"] == tier
+        assert st["reason"] == "rust_extension_missing"
+        assert st["engine"] == "core"
+        assert st["backend"] == "python"
+        assert st["rust_accelerator_installed"] is False
+
+
+def test_get_rust_regex_stage_status_tier_ok_with_rust_wheel() -> None:
+    """Tier ok with Rust wheel -> active true, backend=rust, reason=None."""
+    reset_license_guard_for_tests()
+    st = get_rust_regex_stage_status(_ENT_CFG)
+    assert st["active"] is True
+    assert st["name"] == "rust_regex_stage"
+    assert st["tier"] == "enterprise"
+    assert st["reason"] is None
+    assert st["engine"] == "core"
+    assert st["backend"] == "rust"
+    assert st["rust_accelerator_installed"] is True
+    assert st["accelerated_count"] >= 0
+
+
+def test_get_rust_regex_stage_status_env_off(monkeypatch: pytest.MonkeyPatch) -> None:
+    """DATA_BOAR_PREFILTER=off -> inactive, env_off."""
+    reset_license_guard_for_tests()
+    monkeypatch.setenv("DATA_BOAR_PREFILTER", "off")
+    st = get_rust_regex_stage_status(_ENT_CFG)
+    assert st["active"] is False
+    assert st["reason"] == "env_off"
+    assert st["name"] == "rust_regex_stage"
+    assert st["engine"] == "core"
