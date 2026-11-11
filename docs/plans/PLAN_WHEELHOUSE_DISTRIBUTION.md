@@ -138,7 +138,7 @@ Measured: the `v1.8.0` `requirements.txt` (145 pins) against the assets of `whee
 | threadpoolctl | 3.7.0 | 3.6.0 | 1 (pure) |
 | tzdata | 2026.5 | 2026.3 | 1 (pure) |
 
-Nine packages trail the GA pins (32 native wheels to rebuild plus 5 pure). Open decision: the target is the GA tag or `main` (dependabot has moved about 40 pins since the GA). Until a new release exists, offline `--find-links` installs on musl and non-AVX hosts resolve versions older than the ones the GA was tested with (hypothesis, to be confirmed by an install test).
+Nine packages trail the GA pins (32 native wheels to rebuild plus 5 pure). **Open decision (operator, scope): rebuild to the GA tag or to `main`?** Recommendation: the GA tag (`v1.8.0`), because it is the set the published image and package were tested with, and `main` moves with dependabot (about 40 pins since the GA); rebuild for `main` when 1.8.1 is cut. Until a new release exists, offline `--find-links` installs on musl and non-AVX hosts resolve versions older than the ones the GA was tested with (hypothesis, to be confirmed by an install test).
 
 ### Seed release `wheelhouse-2026-07-12` (checksum gap check)
 
@@ -382,6 +382,7 @@ python main.py --demo
 - **[ ] `scikit-learn`** wheel for Haiku (core dependency; no Haiku wheel on PyPI)
 - **[ ] `scipy`** wheel for Haiku (core dependency; build timeout in testing)
 - **[ ] Final wheelhouse release** with SHA256SUMS verified (Owl to confirm `scikit-learn` and `scipy`)
+- **Script (draft, not yet run on a guest):** `scripts/wheelhouse/haiku_build_wheels.sh <requirements.txt> <out-dir>` builds one wheel per pin inside Haiku (no Docker, no auditwheel), retries `numpy`/`pandas`/`scipy`/`scikit-learn` with `--no-build-isolation`, and writes `results.tsv`, `platform.txt` and `SHA256SUMS`; its hermetic test uses a fake interpreter.
 - **[ ] Platform tag proof** (#2175): record `sysconfig.get_platform()` on the guest and show `pip install --no-index --find-links` accepting it; do not assume the tag.
 - **[ ] Root cause of the 5 FAIL + 1 TIMEOUT** (`ast-serialize`, `numpy`, `pandas`, `ruff`, `scikit-learn`; `scipy` timed out at 40 min) or a per-package "unsupported on Haiku" note with evidence.
 - **[ ] End-to-end proof** on a clean Haiku VM using only the wheelhouse, ending in `python main.py --config ... --demo` with findings; the build itself needs a Haiku VM and the public upload is an operator act.
