@@ -8,7 +8,7 @@
 **GitHub:** [#837](https://github.com/DataBoar/data-boar/issues/837) (RoPA / Art. 30 export) · [#838](https://github.com/DataBoar/data-boar/issues/838) (SARIF / SIEM / webhook push)
 
 <!-- plans-hub-summary: Pro+ governance exports: a RoPA (GDPR Art. 30 / LGPD Art. 37) evidence workbook built from scan metadata with unknown fields left as "A COMPLETAR", a SARIF 2.1.0 export, and a post-scan SIEM/webhook findings push whose payload carries the new-since-last-scan delta. Evidence, not legal conclusion; metadata only. -->
-<!-- plans-hub-related: PLAN_NOTIFICATIONS_OFFBAND_AND_SCAN_COMPLETE.md, PLAN_CLI_VALIDATE_DIFF_AND_DSAR_EXPORT.md, PLAN_FINDINGS_CORPORATE_REPOSITORY_EXPORT.md -->
+<!-- plans-hub-related: PLAN_NOTIFICATIONS_OFFBAND_AND_SCAN_COMPLETE.md, completed/PLAN_CLI_VALIDATE_DIFF_AND_DSAR_EXPORT.md, PLAN_FINDINGS_CORPORATE_REPOSITORY_EXPORT.md -->
 
 ## Purpose
 

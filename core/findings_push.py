@@ -433,6 +433,11 @@ def push_findings_for_session(
                 "destination rejected by SSRF guard "
                 "(set allow_private_networks to opt in to a private host)"
             )
+        if urlparse(settings["url"]).scheme.lower() == "http" and not all(
+            ip.is_loopback for ip in pinned
+        ):
+            # Config-time check is on the literal host; re-check what it resolved to.
+            raise FindingsPushError("plain http is allowed only to a loopback address")
         headers = {
             "Content-Type": "application/json",
             "Accept": "*/*",

@@ -801,3 +801,23 @@ def test_tls_context_enforces_modern_protocol_and_verification():
     assert ctx.minimum_version >= ssl.TLSVersion.TLSv1_2
     assert ctx.verify_mode == ssl.CERT_REQUIRED
     assert ctx.check_hostname is True
+
+
+def test_plain_http_requires_every_resolved_address_to_be_loopback(db, monkeypatch):
+    import ipaddress
+
+    monkeypatch.setattr(
+        findings_push,
+        "resolve_and_validate_outbound_url",
+        lambda *_a, **_k: (None, [ipaddress.ip_address("10.0.0.5")]),
+    )
+    with RecordingServer() as srv:
+        res = push_findings_for_session(
+            push_config(f"http://localhost:{srv.port}/x"),
+            db,
+            SESSION_NEW,
+            sleep=no_sleep(),
+        )
+        assert srv.requests == []
+    assert res.status == "failed"
+    assert "loopback" in res.detail

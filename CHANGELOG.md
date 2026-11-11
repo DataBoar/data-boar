@@ -4,6 +4,8 @@ Human-readable summary of user-facing changes. **Detailed release notes:** [docs
 
 ## Unreleased
 
+- **Governance exports, Pro+ (#837, #838):** `--export-ropa` writes a Record of Processing Activities **evidence** workbook and JSON from scan metadata (Art. 30(1) fields the scan cannot know come from the optional `ropa:` block, else `A COMPLETAR`; evidence, not a legal conclusion). `--export-sarif` writes SARIF 2.1.0. `notifications.findings_push` POSTs a post-scan event (JSON or SARIF; generic webhook or `splunk_hec`) with `new_findings_count`, `resolved_count` and `previous_session_id` (`null` on the first scan). The token comes only from an environment variable; `https` is required (loopback `http` only); SSRF guard, no redirects, capped payload. Metadata only. Docs: USAGE §5.2 and §5.3.
+
 - **CREDIT_CARD Amex/Diners (#1984):** the built-in detector, Luhn candidate, PCI `PAN` / LGPD `CREDIT_CARD` samples, and Rust FastFilter share one IIN-anchored regex (16-digit 4-4-4-4, Amex 15 `3[47]`, Diners 14 `300-305` / `36` / `38`) plus Luhn on the match span. This is not a bare 13–19 digit run.
 
 - **Non-REST credential env names (#2164):** `pass_from_env` on database, SMB, Mongo, Redis, and `findings_sink` accepts the name the operator already uses. The #1977 prefix stays REST-only. Reserved process names remain refused on every target type.
