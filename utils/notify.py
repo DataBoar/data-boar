@@ -29,6 +29,9 @@ _SCAN_COMPLETE_OK_LOCK = threading.Lock()
 _SCAN_COMPLETE_OK_SESSIONS: set[str] = set()
 _MAX_DEDUPE_SESSIONS = 10_000
 
+# Same idea for the findings push (#838): one successful SIEM POST per session.
+_FINDINGS_PUSH_OK_SESSIONS: set[str] = set()
+
 
 class _RefuseRedirects(urllib.request.HTTPRedirectHandler):
     """Do not follow webhook redirects (#2088). A 302 stays an HTTP error."""
@@ -374,6 +377,52 @@ def _maybe_record_notification_audit(
         _LOGGER.debug("notification audit row skipped: %s", e)
 
 
+def _maybe_push_findings(
+    config: dict[str, Any],
+    db_manager: Any,
+    session_id: str,
+) -> None:
+    """Post-scan SIEM/webhook push of structured findings (#838). Never raises.
+
+    Independent of the human-brief filters (``on_scan_complete``,
+    ``notify_only_if_high_or_critical``): a SIEM wants the delta even when no
+    one should be paged. Gated by ``notifications.enabled`` +
+    ``notifications.findings_push.enabled`` and the Pro+ feature gate.
+    """
+    n = config.get("notifications") if isinstance(config, dict) else None
+    if not isinstance(n, dict) or not bool(n.get("enabled", False)):
+        return
+    fp = n.get("findings_push")
+    if not isinstance(fp, dict) or not bool(fp.get("enabled", False)):
+        return
+    if bool(n.get("dedupe_scan_complete_per_session", True)):
+        with _SCAN_COMPLETE_OK_LOCK:
+            if session_id in _FINDINGS_PUSH_OK_SESSIONS:
+                _LOGGER.info(
+                    "Findings push skipped (dedupe): session=%s",
+                    session_id,
+                )
+                return
+    from core.findings_push import push_findings_for_session
+
+    result = push_findings_for_session(config, db_manager, session_id)
+    _maybe_record_notification_audit(
+        db_manager,
+        config,
+        session_id=session_id,
+        trigger="findings_push",
+        recipient="siem",
+        channel=result.channel or None,
+        success=result.ok,
+        err=None if result.ok else result.detail,
+    )
+    if result.ok:
+        with _SCAN_COMPLETE_OK_LOCK:
+            if len(_FINDINGS_PUSH_OK_SESSIONS) >= _MAX_DEDUPE_SESSIONS:
+                _FINDINGS_PUSH_OK_SESSIONS.clear()
+            _FINDINGS_PUSH_OK_SESSIONS.add(session_id)
+
+
 def notify_scan_complete_sync(
     config: dict[str, Any],
     db_manager: Any,
@@ -382,9 +431,20 @@ def notify_scan_complete_sync(
     """
     If configured, send operator notification(s) and optional tenant copy with session summary.
 
+    Also runs the optional findings push (``notifications.findings_push``, #838).
+
     Call after the session is finished and (for CLI) after report generation if desired.
     Does not raise on webhook errors; logs warnings.
     """
+    try:
+        _maybe_push_findings(config, db_manager, session_id)
+    except Exception as e:
+        # Fail-soft: the push must never block the human brief below.
+        _LOGGER.warning(
+            "findings push hook failed: session=%s class=%s",
+            session_id,
+            type(e).__name__,
+        )
     summary = db_manager.get_session_scan_summary_for_notification(session_id)
     if not should_send_scan_complete_notification(config, summary):
         return
@@ -467,8 +527,12 @@ def notify_scan_complete_background(
     config: dict[str, Any],
     db_manager: Any,
     session_id: str,
-) -> None:
-    """Fire-and-forget scan-complete notification (does not block CLI/API)."""
+) -> threading.Thread:
+    """Fire-and-forget scan-complete notification (does not block CLI/API).
+
+    Returns the daemon thread so a short-lived caller (the one-shot CLI) can
+    ``join(timeout=...)`` before the interpreter exits and kills it.
+    """
 
     def _run() -> None:
         try:
@@ -480,7 +544,9 @@ def notify_scan_complete_background(
                 e,
             )
 
-    threading.Thread(target=_run, daemon=True).start()
+    thread = threading.Thread(target=_run, daemon=True)
+    thread.start()
+    return thread
 
 
 def send_manual_operator_message(

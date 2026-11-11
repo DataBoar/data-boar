@@ -241,6 +241,45 @@ def _validate_config_and_exit(config: dict[str, Any], config_path: str) -> None:
             f"(reason={pf_status.get('reason') or 'n/a'} tier={pf_status.get('tier')})"
         )
 
+    # #838 — findings push (SIEM/webhook): offline hints only, never the URL path or token.
+    notif = config.get("notifications") or {}
+    push = notif.get("findings_push") or {}
+    if push.get("enabled"):
+        from core.findings_push import redacted_destination
+
+        if not notif.get("enabled"):
+            warnings.append(
+                "notifications.findings_push.enabled is true but notifications.enabled "
+                "is false — the push will not run"
+            )
+        if not push.get("auth_env"):
+            warnings.append(
+                "notifications.findings_push: no auth_env configured "
+                "(the push is sent without an Authorization header)"
+            )
+        elif not os.environ.get(str(push["auth_env"])):
+            warnings.append(
+                "notifications.findings_push: auth_env variable is not set in this process"
+            )
+        print(
+            "  OK    findings push "
+            f"{redacted_destination(str(push.get('url') or ''))} "
+            f"adapter={push.get('adapter')} format={push.get('format')} "
+            f"scope={push.get('findings_scope')}"
+        )
+
+    # #837 — RoPA inputs (validated by the loader); pending fields stay 'A COMPLETAR'.
+    ropa_cfg = config.get("ropa") or {}
+    if (
+        ropa_cfg.get("controller")
+        or ropa_cfg.get("defaults")
+        or ropa_cfg.get("activities")
+    ):
+        print(
+            f"  OK    ropa block: {len(ropa_cfg.get('activities') or [])} activit(y/ies) "
+            "declared (unset Art. 30(1) fields export as 'A COMPLETAR')"
+        )
+
     from core.output_paths import OutputPathError, ensure_config_output_directories
 
     # #538: connector/key errors abort before mkdir, integrity-anchor sqlite, or trust emit.
@@ -472,6 +511,88 @@ def _run_governance_report_cli(
         engine.db_manager.dispose()
 
 
+def _run_export_ropa_cli(
+    config: dict[str, Any],
+    config_path: str,
+    session_id: str,
+    output_dir: str | None,
+) -> None:
+    """``--export-ropa``: RoPA evidence workbook + JSON (#837, Pro+)."""
+    from core.findings_common import UnknownSessionError
+    from core.licensing.errors import FeatureTierBlockedError
+    from core.licensing.feature_gate import require_feature
+    from core.otel_setup import otel_span
+    from core.ropa_export import build_ropa_payload, write_ropa_outputs
+    from report.session_export import resolve_output_dir
+
+    try:
+        require_feature(config, "ropa_export")
+    except FeatureTierBlockedError as e:
+        print(f"Licensing: {e}", file=sys.stderr)
+        sys.exit(2)
+    with otel_span("export.ropa", session_id=str(session_id)):
+        engine = AuditEngine(config, config_path=config_path)
+        try:
+            try:
+                payload = build_ropa_payload(
+                    engine.db_manager,
+                    session_id=session_id,
+                    ropa_config=config.get("ropa"),
+                )
+            except UnknownSessionError as e:
+                print(f"Session error: {e}", file=sys.stderr)
+                sys.exit(2)
+            dest = resolve_output_dir(config, output_dir, config_path=Path(config_path))
+            written = write_ropa_outputs(payload, dest)
+            pending = payload["summary"]["fields_pending_completion"]
+            print(f"RoPA evidence written: {written['xlsx']}")
+            print(f"RoPA evidence written: {written['json']}")
+            if pending:
+                print(
+                    f"{pending} field(s) marked 'A COMPLETAR' (not known to the scan; "
+                    "see the optional 'ropa:' config block).",
+                    file=sys.stderr,
+                )
+        finally:
+            engine.db_manager.dispose()
+
+
+def _run_export_sarif_cli(
+    config: dict[str, Any],
+    config_path: str,
+    session_id: str,
+    output_path: str | None,
+) -> None:
+    """``--export-sarif``: SARIF 2.1.0 for one session (#838, Pro+)."""
+    from core.findings_common import UnknownSessionError
+    from core.licensing.errors import FeatureTierBlockedError
+    from core.licensing.feature_gate import require_feature
+    from core.otel_setup import otel_span
+    from core.sarif_export import build_sarif_payload
+
+    try:
+        require_feature(config, "findings_siem_push")
+    except FeatureTierBlockedError as e:
+        print(f"Licensing: {e}", file=sys.stderr)
+        sys.exit(2)
+    with otel_span("export.sarif", session_id=str(session_id)):
+        engine = AuditEngine(config, config_path=config_path)
+        try:
+            try:
+                payload = build_sarif_payload(engine.db_manager, session_id=session_id)
+            except UnknownSessionError as e:
+                print(f"Session error: {e}", file=sys.stderr)
+                sys.exit(2)
+            body = json.dumps(payload, indent=2, ensure_ascii=False) + "\n"
+            if output_path:
+                Path(output_path).write_text(body, encoding="utf-8")
+                print(f"SARIF export written to {output_path}", file=sys.stderr)
+            else:
+                sys.stdout.write(body)
+        finally:
+            engine.db_manager.dispose()
+
+
 def _display_prog(argv0: str | None = None) -> str:
     """Return the operator-facing command form for this runtime."""
     name = Path(argv0 or sys.argv[0] or "").name.lower()
@@ -522,6 +643,12 @@ def main() -> None:
             "\n"
             "  # DSAR-oriented JSON export for one session (stdout or --dsar-output)\n"
             f"  {prog} --config config.yaml --export-dsar <session_id>\n"
+            "\n"
+            "  # RoPA evidence workbook + JSON (Pro+; GDPR Art. 30 / LGPD Art. 37 inputs)\n"
+            f"  {prog} --config config.yaml --export-ropa <session_id> --ropa-output ./ropa\n"
+            "\n"
+            "  # SARIF 2.1.0 findings (Pro+; stdout or --sarif-output; metadata only)\n"
+            f"  {prog} --config config.yaml --export-sarif <session_id> --sarif-output findings.sarif\n"
             "\n"
             "  # L1 metadata_manifest for sidecars (stdout or --l1-output; no raw values)\n"
             f"  {prog} --config config.yaml --export-l1 <session_id>\n"
@@ -801,6 +928,51 @@ def main() -> None:
             "With --export-dsar: include raw sample fields from finding rows when "
             "present (increases disclosure risk; SQLite stores metadata only by default)."
         ),
+    )
+    parser.add_argument(
+        "--export-ropa",
+        metavar="SESSION_ID",
+        dest="export_ropa",
+        default=None,
+        help=(
+            "Export a Record of Processing Activities (RoPA) EVIDENCE workbook (.xlsx) "
+            "and JSON for SESSION_ID (GDPR Art. 30 / LGPD Art. 37 inputs). Built from "
+            "scan metadata (data categories, where, sensitivity, norm tags); controller/"
+            "DPO, purposes, legal basis, recipients, transfers, retention and security "
+            "measures come from the optional 'ropa:' config block, else 'A COMPLETAR'. "
+            "Evidence only, not a legal conclusion; metadata only. Pro+ tier. Unknown "
+            "session exits 2. Incompatible with --web, --reset-data and other export modes."
+        ),
+    )
+    parser.add_argument(
+        "--ropa-output",
+        metavar="DIR",
+        dest="ropa_output",
+        default=None,
+        help=(
+            "Directory for ropa_<session>.xlsx and ropa_<session>.json "
+            "(default: report.output_dir). Requires --export-ropa."
+        ),
+    )
+    parser.add_argument(
+        "--export-sarif",
+        metavar="SESSION_ID",
+        dest="export_sarif",
+        default=None,
+        help=(
+            "Export findings for SESSION_ID as SARIF 2.1.0 (one rule per detector, "
+            "level from sensitivity, locations from path/file or schema.table.column; "
+            "metadata only, no samples). Print to stdout or --sarif-output PATH. "
+            "Pro+ tier. Unknown session exits 2. Incompatible with --web, --reset-data "
+            "and other export modes."
+        ),
+    )
+    parser.add_argument(
+        "--sarif-output",
+        metavar="PATH",
+        dest="sarif_output",
+        default=None,
+        help="Write SARIF to PATH instead of stdout. Requires --export-sarif.",
     )
     parser.add_argument(
         "--export-l1",
@@ -1100,6 +1272,8 @@ def main() -> None:
             or export_l1
             or export_l3
             or export_sink
+            or args.export_ropa is not None
+            or args.export_sarif is not None
             or args.export_remediation_manifest is not None
             or args.diff_sessions
             or args.regenerate_report is not None
@@ -1110,7 +1284,8 @@ def main() -> None:
             print(
                 "Cannot combine --demo with --validate-config, --plan, --resume, --prefilter-status, "
                 "--check-extras, --reset-data, --export-audit-trail, --export-dsar, "
-                "--export-l1, --export-l3, --export-remediation-manifest, --diff, "
+                "--export-l1, --export-l3, --export-ropa, --export-sarif, "
+                "--export-remediation-manifest, --diff, "
                 "--regenerate-report, --governance-report, or --reconcile-integrity-anchor.",
                 file=sys.stderr,
             )
@@ -1427,6 +1602,50 @@ def main() -> None:
         )
         sys.exit(2)
 
+    # #837 / #838: one guard covers every pairing for the two governance exports
+    # (the per-mode blocks above predate them).
+    export_ropa = args.export_ropa is not None
+    export_sarif = args.export_sarif is not None
+    if export_ropa or export_sarif:
+        clash = (
+            args.web
+            or args.reset_data
+            or args.export_audit_trail is not None
+            or args.validate_config
+            or args.plan
+            or getattr(args, "resume_session", None)
+            or args.prefilter_status
+            or args.diff_sessions
+            or args.export_dsar is not None
+            or export_l1
+            or export_l3
+            or export_sink
+            or args.export_remediation_manifest is not None
+            or args.regenerate_report is not None
+            or args.governance_report is not None
+            or reconcile_anchor
+            or (export_ropa and export_sarif)
+        )
+        if clash:
+            print(
+                "Cannot combine --export-ropa / --export-sarif with each other, "
+                "--web, --demo, --reset-data, --export-audit-trail, --validate-config, "
+                "--plan, --resume, --prefilter-status, --diff, --export-dsar, "
+                "--export-l1, --export-l3, --export-findings-sink, "
+                "--export-remediation-manifest, --regenerate-report, "
+                "--governance-report, or --reconcile-integrity-anchor.",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+
+    if args.ropa_output and not export_ropa:
+        print("--ropa-output requires --export-ropa.", file=sys.stderr)
+        sys.exit(2)
+
+    if args.sarif_output and not export_sarif:
+        print("--sarif-output requires --export-sarif.", file=sys.stderr)
+        sys.exit(2)
+
     if args.dsar_output and args.export_dsar is None:
         print("--dsar-output requires --export-dsar.", file=sys.stderr)
         sys.exit(2)
@@ -1621,6 +1840,16 @@ def main() -> None:
                     sys.stdout.write(body)
             finally:
                 engine.db_manager.dispose()
+        return
+
+    if export_ropa:
+        _emit_runtime_trust_info(runtime_trust, to_stdout=False, to_stderr=True)
+        _run_export_ropa_cli(config, args.config, args.export_ropa, args.ropa_output)
+        return
+
+    if export_sarif:
+        _emit_runtime_trust_info(runtime_trust, to_stdout=False, to_stderr=True)
+        _run_export_sarif_cli(config, args.config, args.export_sarif, args.sarif_output)
         return
 
     if args.export_l1 is not None:
@@ -2224,9 +2453,13 @@ def main() -> None:
             maybe_run_remediation_hook(config, session_id, db_manager=engine.db_manager)
             from utils.notify import notify_scan_complete_background
 
-            notify_scan_complete_background(
+            notify_thread = notify_scan_complete_background(
                 engine.config, engine.db_manager, session_id
             )
+            # One-shot process: wait (bounded) so the daemon thread can finish
+            # the SIEM/webhook POSTs before the interpreter exits (#838).
+            if notify_thread is not None:
+                notify_thread.join(timeout=120)
     except ValueError as exc:
         if "#1330" in str(exc):
             print(str(exc), file=sys.stderr)
