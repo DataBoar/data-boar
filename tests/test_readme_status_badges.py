@@ -23,7 +23,7 @@ def test_readme_status_badges_after_mascot(readme_name: str) -> None:
     intro = text[i_mascot:i_rule]
     assert f"{_GITHUB}/actions/workflows/ci.yml/badge.svg" in intro
     assert f"{_GITHUB}/actions/workflows/codeql.yml/badge.svg" in intro
-    assert f"{_GITHUB}/actions/workflows/sbom.yml/badge.svg?event=release" in intro
+    assert f"{_GITHUB}/actions/workflows/sbom.yml/badge.svg?branch=main" in intro
     assert "api.scorecard.dev/projects/github.com/DataBoar/data-boar/badge" in intro
     assert "scorecard.dev/viewer/?uri=github.com/DataBoar/data-boar" in intro
     assert f"img.shields.io/docker/v/{_HUB_IMAGE}" in intro
