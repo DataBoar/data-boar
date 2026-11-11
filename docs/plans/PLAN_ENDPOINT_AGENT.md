@@ -6,7 +6,7 @@
 **Priority:** H1
 **GitHub:** [#2207](https://github.com/DataBoar/data-boar/issues/2207)
 **Depends on:** [PLAN_MULTI_INSTANCE_REPORT_HUB.md](PLAN_MULTI_INSTANCE_REPORT_HUB.md) (the agent reports to a hub)
-**Tier (proposed, pending operator ratification):** Enterprise (fleet-style deployment and central consolidation); not claimed until ratified
+**Tier (default for new features):** Enterprise (fleet-style deployment and central consolidation); lowered only after validation, by operator decision
 
 <!-- plans-hub-summary: Reach thousands of Windows desktops: Phase 0 documents a measured SMB scan recipe (one instance per VLAN, pilot of 20-50 machines, no figures until measured); Phase 1 designs a signed, GPO/MSI/Intune-distributed endpoint agent that sends metadata-only findings to a hub. -->
 <!-- plans-hub-related: PLAN_MULTI_INSTANCE_REPORT_HUB.md, PLAN_CONNECTOR_TIER_GATING.md, PLAN_NATIVE_PACKAGES.md -->

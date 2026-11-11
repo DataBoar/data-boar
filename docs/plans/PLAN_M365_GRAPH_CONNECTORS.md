@@ -6,9 +6,9 @@
 **Priority:** H1
 **GitHub:** [#2206](https://github.com/DataBoar/data-boar/issues/2206)
 **Depends on:** [PLAN_CONNECTOR_TIER_GATING.md](PLAN_CONNECTOR_TIER_GATING.md) (fail-closed tier map, #854); token-host allowlist (#2007, done)
-**Tier (proposed, pending operator ratification):** Pro, same family as the SharePoint on-prem, PowerBI and Dataverse connectors already ratified as Pro
+**Tier (default for new features):** Enterprise. New features start at Enterprise and are lowered only after validation, by operator decision. The SharePoint on-prem, PowerBI and Dataverse connectors are Pro today; this connector is not assumed to follow them.
 
-<!-- plans-hub-summary: Read-only Microsoft 365 inventory via Microsoft Graph (app-only): SharePoint Online and OneDrive files first, Exchange Online mail second; least-privilege consent, Graph throttling, simulated-Graph tests; proposed Pro tier. -->
+<!-- plans-hub-summary: Read-only Microsoft 365 inventory via Microsoft Graph (app-only): SharePoint Online and OneDrive files first, Exchange Online mail second; least-privilege consent, Graph throttling, simulated-Graph tests; starts at Enterprise until validated. -->
 <!-- plans-hub-related: PLAN_CONNECTOR_TIER_GATING.md, PLAN_PRODUCT_TIERS_AND_OPEN_CORE.md, PLAN_MULTI_INSTANCE_REPORT_HUB.md -->
 
 ## Context
@@ -58,10 +58,10 @@ Out of scope: Teams/chat, any write path (#2048, #2050), Gmail/Workspace (#1158,
 ## Tier and gating
 
 The tier map is **fail-closed** (#854): a new connector type needs an explicit entry in the
-exhaustive connector tier map before it can run outside `Tier.OPEN`. Proposed entry: Pro. The
-operator ratifies or changes it (record the decision in
-[PLAN_CONNECTOR_TIER_GATING.md](PLAN_CONNECTOR_TIER_GATING.md)); until then this plan does not
-claim a tier.
+exhaustive connector tier map before it can run outside `Tier.OPEN`. Entry: Enterprise, the
+default for every new feature. Lowering it to another tier happens only after validation and is
+an operator decision (record it in
+[PLAN_CONNECTOR_TIER_GATING.md](PLAN_CONNECTOR_TIER_GATING.md)).
 
 ## Relationship to other plans
 

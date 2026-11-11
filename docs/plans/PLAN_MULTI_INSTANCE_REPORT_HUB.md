@@ -6,7 +6,7 @@
 **Priority:** H1
 **GitHub:** [#2208](https://github.com/DataBoar/data-boar/issues/2208)
 **Depends on:** none for Phase 0; [PLAN_CONNECTOR_TIER_GATING.md](PLAN_CONNECTOR_TIER_GATING.md) for tier framing
-**Tier (proposed, pending operator ratification):** Enterprise (aligns with the "multi-entity" item in [ENT_CAPABILITY_ROADMAP.md](ENT_CAPABILITY_ROADMAP.md) and the findings-sink family); open-core vs. tier is the operator's call and is not claimed here
+**Tier (default for new features):** Enterprise (also aligns with the "multi-entity" item in [ENT_CAPABILITY_ROADMAP.md](ENT_CAPABILITY_ROADMAP.md) and the findings-sink family); lowered only after validation, by operator decision
 
 <!-- plans-hub-summary: Consolidated view across several Data Boar instances (per VLAN, site or endpoint): Phase 0 is a documented pull-and-merge CSV script that adds a node_id the API does not emit; Phase 1 is a hub mode with provenance, dedupe and a unified Excel report. -->
 <!-- plans-hub-related: ENT_CAPABILITY_ROADMAP.md, PLAN_ENDPOINT_AGENT.md, PLAN_M365_GRAPH_CONNECTORS.md, PLAN_CONNECTOR_TIER_GATING.md -->

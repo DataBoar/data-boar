@@ -518,7 +518,7 @@ No capacity or timing claim is made without a measurement.
 
 ### Microsoft 365 via Graph – [PLAN_M365_GRAPH_CONNECTORS.md](PLAN_M365_GRAPH_CONNECTORS.md)
 
-**`[H1][U1]`** · GitHub [#2206](https://github.com/DataBoar/data-boar/issues/2206) · [P2]. Proposed tier: Pro.
+**`[H1][U1]`** · GitHub [#2206](https://github.com/DataBoar/data-boar/issues/2206) · [P2]. Tier: Enterprise by default (lowered only after validation).
 
 | # | To-do | Status |
 | - | ----- | ------ |
@@ -529,7 +529,7 @@ No capacity or timing claim is made without a measurement.
 
 ### Windows endpoint agent and SMB desktop recipe – [PLAN_ENDPOINT_AGENT.md](PLAN_ENDPOINT_AGENT.md)
 
-**`[H1][U2]`** · GitHub [#2207](https://github.com/DataBoar/data-boar/issues/2207) · [P2]. Proposed tier: Enterprise. Depends on the hub below.
+**`[H1][U2]`** · GitHub [#2207](https://github.com/DataBoar/data-boar/issues/2207) · [P2]. Tier: Enterprise by default (lowered only after validation). Depends on the hub below.
 
 | # | To-do | Status |
 | - | ----- | ------ |
@@ -540,7 +540,7 @@ No capacity or timing claim is made without a measurement.
 
 ### Multi-instance report hub – [PLAN_MULTI_INSTANCE_REPORT_HUB.md](PLAN_MULTI_INSTANCE_REPORT_HUB.md)
 
-**`[H1][U1]`** · GitHub [#2208](https://github.com/DataBoar/data-boar/issues/2208) · [P2]. Proposed tier: Enterprise.
+**`[H1][U1]`** · GitHub [#2208](https://github.com/DataBoar/data-boar/issues/2208) · [P2]. Tier: Enterprise by default (lowered only after validation).
 
 | # | To-do | Status |
 | - | ----- | ------ |
