@@ -30,14 +30,14 @@ Use these tags in headings to keep priorities explicit and machine-countable:
 
 Do not edit this block manually; refresh with `python scripts/plans-stats.py --write`.
 
-- **Status rows counted:** 276  (Done: 164 | Incomplete: 112)
-- **Incomplete breakdown:** Pending `⬜`=93, Tracked `🔄` / `Tracked (partially done)`=19, Under consideration=0, Backlog-marked rows=0
+- **Status rows counted:** 279  (Done: 165 | Incomplete: 114)
+- **Incomplete breakdown:** Pending `⬜`=95, Tracked `🔄` / `Tracked (partially done)`=19, Under consideration=0, Backlog-marked rows=0
 
 | Horizon | Total rows | Done | Incomplete |
 | ------- | ----------: | ----: | ----------: |
 | `H0` | 65 | 41 | 24 |
 | `H1` | 54 | 33 | 21 |
-| `H2` | 0 | 0 | 0 |
+| `H2` | 3 | 1 | 2 |
 | `H3` | 141 | 76 | 65 |
 | `H4` | 0 | 0 | 0 |
 | `H5` | 0 | 0 | 0 |
@@ -537,6 +537,18 @@ Doc-first wave 1 shipped; **v1.8.0 wave 2 ([#1056](https://github.com/DataBoar/d
 | D3 | Propose `integrity_anchor.py` compiled-artifact hash redesign (no impl) | ⬜ Pending |
 | D4 | musl Nuitka build | ⬜ Pending |
 | D5 | Confirm real FreeBSD Nuitka support | ⬜ Pending |
+
+## [H2] dashBOARd branding (mascot and favicon)
+
+### Mascot presence per screen + new favicon – [PLAN_DASHBOARD_MASCOT.md](PLAN_DASHBOARD_MASCOT.md)
+
+**`[H2][U2]`** · GitHub [#1450](https://github.com/DataBoar/data-boar/issues/1450) · milestone v1.8.1. Complements [PLAN_WEB_GUI_DESIGN_SYSTEM_EVOLUTION.md](PLAN_WEB_GUI_DESIGN_SYSTEM_EVOLUTION.md) (#1004).
+
+| # | To-do | Status |
+| - | ----- | ------ |
+| 1 | New favicon set, About page mascot, README banner (EN + pt-BR), asset-presence tests | ✅ Done |
+| 2 | Reports empty state with `data-soup-pot` | ⬜ Blocked (asset not in the canonical source) |
+| 3 | Idle dashboard with `mascot-hero` | ⬜ Blocked (asset not in the canonical source) |
 
 ## [H1] CLI operator tools and public contact policy
 
