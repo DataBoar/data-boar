@@ -115,6 +115,8 @@ Os títulos na tabela abaixo ficam em **inglês** (canônicos, iguais ao [README
 | 0092 | [Proveniência de build: Scorecard + atestações em GitHub Release (sem badges no PyPI)](ADR-0092-build-provenance-scorecard-and-github-release-attestations.md) | Aceito |
 | 0093 | [Release-signed CRITICAL_MODULES manifest is the integrity trust root](ADR-0093-signed-integrity-manifest.md) | Proposto |
 
+| 0095  | [multi-instance-report-hub-pull-provenance-dedupe](ADR-0095-multi-instance-report-hub-pull-provenance-dedupe.md) | Proposed |
+
 ## Docs relacionados
 
 | Doc | Notas |
@@ -140,4 +142,3 @@ O **data-boar** é a regência UMADR **canônica** ([ADR 0000](ADR-0000-project-
 4. Usar nomes com **quatro dígitos** e corpos de ADR **somente em inglês**.
 
 Acompanhamento: GitHub [#994](https://github.com/DataBoar/data-boar/issues/994).
-

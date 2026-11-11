@@ -2233,6 +2233,33 @@ def _normalize_config_body(
         "map_file": map_file or DEFAULT_GOVERNANCE_MAP_FILE,
     }
 
+    hub_raw = data.get("hub") or {}
+    if not isinstance(hub_raw, dict):
+        hub_raw = {}
+    hub_nodes: list[dict[str, str]] = []
+    for item in hub_raw.get("nodes") or []:
+        if isinstance(item, dict):
+            hub_nodes.append(
+                {
+                    "id": str(item.get("id") or "").strip(),
+                    "url": str(item.get("url") or "").strip(),
+                    "api_key_from_env": str(item.get("api_key_from_env") or "").strip(),
+                }
+            )
+    try:
+        hub_timeout = float(hub_raw.get("timeout_seconds") or 0)
+    except (TypeError, ValueError):
+        hub_timeout = 0.0
+    try:
+        hub_max_bytes = int(hub_raw.get("max_bytes") or 0)
+    except (TypeError, ValueError):
+        hub_max_bytes = 0
+    out["hub"] = {
+        "nodes": hub_nodes,
+        "timeout_seconds": hub_timeout,
+        "max_bytes": hub_max_bytes,
+    }
+
     sink_raw = data.get("findings_sink") or {}
     if not isinstance(sink_raw, dict):
         sink_raw = {}

@@ -143,6 +143,8 @@ FEATURE_TIER_MAP: dict[str, Tier] = {
     "historical_comparison": Tier.ENTERPRISE,
     "audit_log_export": Tier.ENTERPRISE,
     "custom_detectors": Tier.ENTERPRISE,
+    # Multi-instance report hub (#2208 / ADR-0095): new features start at Enterprise.
+    "multi_instance_hub": Tier.ENTERPRISE,
     "vcs_connector": Tier.ENTERPRISE,  # files version control (VCS) scanner — see #677
     "plugin_partner_interface": Tier.ENTERPRISE,  # L1/L2/L3 plugin arch — see #695
     "partner_provider_driver": Tier.ENTERPRISE,  # stealthization via partner provider — see #696

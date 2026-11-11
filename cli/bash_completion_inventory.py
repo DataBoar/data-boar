@@ -76,6 +76,8 @@ _DATA_BOAR_LONG_OPTIONS: frozenset[str] = frozenset(
         "--host",
         "--https-cert-file",
         "--https-key-file",
+        "--hub-overwrite",
+        "--hub-report",
         "--jurisdiction-hint",
         "--l1-output",
         "--l3-allow-unprotected",

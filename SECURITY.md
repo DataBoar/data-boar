@@ -200,6 +200,10 @@ The application adds the following headers to all web and API responses by defau
 
 When the app is behind a reverse proxy (e.g. nginx, Caddy, load balancer), ensure the proxy sets **X-Forwarded-Proto: https** for TLS-terminated requests so HSTS is applied correctly. Configure **`api.trusted_proxy_cidrs`** to the CIDR(s) of the **direct** proxy peer; without a match, `X-Forwarded-*` headers are ignored (fail-safe). When the peer matches and the forwarded proto is trusted `https`, the dashboard suppresses the plaintext-risk banner for that request and **`GET /status`** exposes **`effective_external_transport`** with `tls_termination: trusted_proxy` — process-level **`dashboard_transport`** still reports upstream HTTP honestly. Do not enable HSTS at the app layer for plain HTTP; the proxy can add HSTS when serving over HTTPS.
 
+## Multi-instance report hub (Enterprise)
+
+The hub (`--hub-report`) pulls findings from other Data Boar instances. It reads only each node's existing API, sends the API key from an environment variable (never from the command line or the config file), requires `https` except for loopback, never follows redirects, refuses link-local and multicast hosts, caps the response size and never prints a URL, a token or a path. The output workbook holds paths and host names, so it is created with mode `0600`: treat it as confidential. See ADR 0095.
+
 ## Optional API key (enterprise)
 
 The API does not implement authentication by default; secure the app at the reverse proxy or network level when exposed. For enterprises that want a simple shared-secret gate without changing the “secure at proxy” model, the application supports an **optional API key**:

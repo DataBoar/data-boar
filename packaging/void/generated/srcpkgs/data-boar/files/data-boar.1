@@ -265,6 +265,20 @@ Cannot be combined with
 .BR \-\-web ", " \-\-reset\-data ", " \-\-export\-audit\-trail ", " \-\-export\-dsar ", " \-\-regenerate\-report ", or " \-\-prefilter\-status .
 .
 .TP
+.B \-\-hub\-report OUTPUT.xlsx
+Multi\-instance report hub (Enterprise).
+Pull the newest completed session of every node listed in
+.B hub.nodes
+and write one consolidated Excel report with provenance (node, version, session) and deduplication.
+Tokens come only from the environment variables named by
+.BR api_key_from_env .
+Exit status 0 when every node was consolidated, 2 when only some were (or the license blocks the feature), 1 when none.
+.TP
+.B \-\-hub\-overwrite
+With
+.BR \-\-hub\-report :
+replace the output file if it already exists.
+.TP
 .B \-\-prefilter\-status
 Print rust\-regex\-stage / accelerator readiness for this configuration as JSON
 .RB ( active ", " name ", " backend ", " tier ", " reason ", " engine ,

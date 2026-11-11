@@ -30,13 +30,13 @@ Use these tags in headings to keep priorities explicit and machine-countable:
 
 Do not edit this block manually; refresh with `python scripts/plans-stats.py --write`.
 
-- **Status rows counted:** 295  (Done: 175 | Incomplete: 120)
-- **Incomplete breakdown:** Pending `⬜`=101, Tracked `🔄` / `Tracked (partially done)`=19, Under consideration=0, Backlog-marked rows=0
+- **Status rows counted:** 296  (Done: 178 | Incomplete: 118)
+- **Incomplete breakdown:** Pending `⬜`=99, Tracked `🔄` / `Tracked (partially done)`=19, Under consideration=0, Backlog-marked rows=0
 
 | Horizon | Total rows | Done | Incomplete |
 | ------- | ----------: | ----: | ----------: |
 | `H0` | 65 | 41 | 24 |
-| `H1` | 73 | 44 | 29 |
+| `H1` | 74 | 47 | 27 |
 | `H2` | 0 | 0 | 0 |
 | `H3` | 141 | 76 | 65 |
 | `H4` | 0 | 0 | 0 |
@@ -546,8 +546,9 @@ No capacity or timing claim is made without a measurement.
 | - | ----- | ------ |
 | 1 | PLAN written; Phase 0 PoC script, tests and runbook ([runbook](../ops/MULTI_INSTANCE_FINDINGS_CSV_POC.md)) | ✅ Done |
 | 2 | Phase 0b: two-instance synthetic evidence (52 merged rows from 2 x 26) | ✅ Done |
-| 3 | Phase 1: hub mode with provenance model, dedupe key and tests | ⬜ Pending |
-| 4 | Phase 2: unified Excel report with per-node filter | ⬜ Pending |
+| 3 | Phase 1: hub (`--hub-report`) with provenance model, dedupe key and tests (ADR-0095) | ✅ Done |
+| 4 | Phase 2: unified Excel report with per-node filter | ✅ Done |
+| 5 | Deployment modes written down in the plan: on-premises pull (implemented by this plan) and hosted push (**design only**, depends on #838) | ✅ Done (documentation) |
 
 ## [H1] Open-core / Pro plugin governance
 

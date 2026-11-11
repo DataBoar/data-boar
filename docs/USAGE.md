@@ -84,6 +84,31 @@ Opt-in YAML `remediation:` loads a partner `RemediationPlugin` after report gene
 
 Operator YAML files inject extra regex / ML / DL **terms** into the detector (`patterns_plugin_file`, or legacy `regex_overrides_file` / `ml_patterns_file` / `dl_patterns_file`). They do **not** run code. Author guide: **[PLUGIN_AUTHOR_GUIDE.md](PLUGIN_AUTHOR_GUIDE.md)** ([pt-BR](PLUGIN_AUTHOR_GUIDE.pt_BR.md)). Schema: `config/plugin_schema.yaml`. Field-level how-to: [SENSITIVITY_DETECTION.md](SENSITIVITY_DETECTION.md#custom-regex-patterns-detecting-new-personalsensitive-values).
 
+## Multi-instance report hub (Enterprise)
+
+One central instance can **pull** the findings of several Data Boar instances and write ONE consolidated Excel report. Every row keeps its node, version and session, and identical findings inside one node and session are deduplicated. The report is technical evidence to support a review, not a legal conclusion. Enterprise tier (`multi_instance_hub`).
+
+```yaml
+hub:
+  timeout_seconds: 30
+  nodes:
+    - id: site-a
+      url: https://boar-a.example.internal:8088
+      api_key_from_env: HUB_KEY_SITE_A   # only if that node requires an API key
+    - id: site-b
+      url: https://boar-b.example.internal:8088
+```
+
+```bash
+uv run python main.py --config config.yaml --hub-report hub.xlsx
+```
+
+- Only the newest **completed** session of each node is consolidated; if the newest one is still running or failed, the hub uses the newest completed one and says so in the Summary sheet.
+- The workbook has a **Summary** sheet (status per node), a **Findings** sheet with a per-node filter and a **Notes** sheet.
+- Exit code `0`: every node consolidated; `2`: only some nodes (or the license does not allow the feature); `1`: nothing consolidated, and no file is written. Use `--hub-overwrite` to replace an existing output file.
+- Tokens come only from the environment variable named by `api_key_from_env`. `https` is required except for loopback; redirects are never followed; URLs and tokens are never printed.
+- File paths and host names are sensitive even as metadata: the output file is created with mode `0600`; store and share it accordingly.
+
 ## Findings sink (Pro/Enterprise)
 
 Optional **post-scan echo** of the same metadata-oriented finding rows already stored in local SQLite. It does **not** replace SQLite. Object storage (S3 / Azure Blob / GCS) is out of scope here.

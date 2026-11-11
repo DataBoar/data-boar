@@ -93,6 +93,31 @@ YAML opt-in `remediation:` carrega um `RemediationPlugin` de parceiro após a ge
 
 Arquivos YAML do operador injetam termos extras de regex / ML / DL no detector (`patterns_plugin_file`, ou as chaves legadas `regex_overrides_file` / `ml_patterns_file` / `dl_patterns_file`). **Não** executam código. Guia do autor: **[PLUGIN_AUTHOR_GUIDE.pt_BR.md](PLUGIN_AUTHOR_GUIDE.pt_BR.md)** ([EN](PLUGIN_AUTHOR_GUIDE.md)). Schema: `config/plugin_schema.yaml`. How-to campo a campo: [SENSITIVITY_DETECTION.pt_BR.md](SENSITIVITY_DETECTION.pt_BR.md#padrões-regex-customizados-detectar-novos-dados-pessoaissensíveis).
 
+## Hub de relatório multi-instância (Enterprise)
+
+Uma instância central pode **buscar (pull)** os findings de várias instâncias do Data Boar e gerar UM relatório Excel consolidado. Cada linha mantém o nó, a versão e a sessão de origem, e findings idênticos dentro de um mesmo nó e sessão são deduplicados. O relatório é evidência técnica para apoiar uma revisão, não uma conclusão jurídica. Camada Enterprise (`multi_instance_hub`).
+
+```yaml
+hub:
+  timeout_seconds: 30
+  nodes:
+    - id: site-a
+      url: https://boar-a.example.internal:8088
+      api_key_from_env: HUB_KEY_SITE_A   # só se esse nó exigir chave de API
+    - id: site-b
+      url: https://boar-b.example.internal:8088
+```
+
+```bash
+uv run python main.py --config config.yaml --hub-report hub.xlsx
+```
+
+- Só a sessão **concluída** mais recente de cada nó é consolidada; se a mais recente ainda estiver rodando ou tiver falhado, o hub usa a concluída mais recente e avisa na aba Summary.
+- O arquivo tem a aba **Summary** (situação por nó), a aba **Findings** com filtro por nó e a aba **Notes**.
+- Código de saída `0`: todos os nós consolidados; `2`: só alguns nós (ou a licença não permite o recurso); `1`: nada consolidado, e nenhum arquivo é gravado. Use `--hub-overwrite` para substituir um arquivo de saída existente.
+- Os tokens vêm só da variável de ambiente indicada em `api_key_from_env`. `https` é obrigatório, exceto em loopback; redirecionamentos nunca são seguidos; URLs e tokens nunca são impressos.
+- Caminhos de arquivo e nomes de host são sensíveis mesmo como metadado: o arquivo de saída é criado com modo `0600`; guarde e compartilhe com esse cuidado.
+
 ## Findings sink (Pro/Enterprise)
 
 **Eco opcional pós-scan** das mesmas linhas de achado (metadados) já gravadas no SQLite local. **Não** substitui o SQLite. Object storage (S3 / Azure Blob / GCS) fica fora deste recorte.

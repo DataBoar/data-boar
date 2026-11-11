@@ -601,6 +601,34 @@ def _display_prog(argv0: str | None = None) -> str:
     return "python main.py"
 
 
+def _run_hub_report_cli(args: argparse.Namespace) -> int:
+    """``--hub-report``: consolidate the findings of several nodes into one workbook (#2208)."""
+    from core.licensing.errors import FeatureTierBlockedError
+    from core.licensing.feature_gate import require_feature
+    from core.report_hub import FEATURE, HubError, run_hub_report
+
+    try:
+        config = load_config(args.config)
+    except FileNotFoundError as e:
+        print(f"Config not found: {e}", file=sys.stderr)
+        return 1
+    try:
+        require_feature(config, FEATURE)
+    except FeatureTierBlockedError as e:
+        print(f"Licensing: {e}", file=sys.stderr)
+        return 2
+    try:
+        result = run_hub_report(
+            config, Path(args.hub_report), overwrite=bool(args.hub_overwrite)
+        )
+    except HubError as e:
+        print(f"Hub error: {e}", file=sys.stderr)
+        return 1
+    for line in result.summary_lines():
+        print(line, file=sys.stderr)
+    return result.exit_code
+
+
 def main() -> None:
     prog = _display_prog()
     parser = argparse.ArgumentParser(
@@ -1223,7 +1251,27 @@ def main() -> None:
         dest="scan_progress",
         help="Disable live scan progress lines for this run.",
     )
+    parser.add_argument(
+        "--hub-report",
+        metavar="OUTPUT.xlsx",
+        dest="hub_report",
+        default=None,
+        help=(
+            "Multi-instance hub (Enterprise): pull the newest completed session of every "
+            "node listed in config `hub.nodes` and write ONE consolidated Excel report with "
+            "provenance (node, version, session) and deduplication. Exit 0 all nodes, 2 partial, "
+            "1 none. Tokens come only from environment variables (`api_key_from_env`)."
+        ),
+    )
+    parser.add_argument(
+        "--hub-overwrite",
+        action="store_true",
+        dest="hub_overwrite",
+        help="With --hub-report: replace OUTPUT.xlsx if it already exists.",
+    )
     args = parser.parse_args()
+    if args.hub_report is not None:
+        sys.exit(_run_hub_report_cli(args))
     export_l1 = args.export_l1 is not None
     export_l3 = args.export_l3 is not None
     export_sink = args.export_findings_sink is not None
