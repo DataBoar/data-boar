@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}{{ t('reports.page_title') }}{% endblock %}
 {% block content %}
-<h1><img src="/static/mascot/data_boar_mascote_color.svg" alt="" width="40" height="40" style="vertical-align: middle; margin-right: 0.35em;">{{ t('reports.h1') }}</h1>
+<h1><img src="/static/mascot/mascot-mark-face.png" alt="" width="40" height="35" style="vertical-align: middle; margin-right: 0.35em;">{{ t('reports.h1') }}</h1>
 <p>{{ t('reports.intro') }}</p>
 <p class="sort-row">{{ t('reports.order_label') }} {% if sort == "date_desc" %}<strong>{{ t('reports.sort_newest') }}</strong>{% else %}<a href="{{ base_path }}/reports?sort=date_desc">{{ t('reports.sort_newest') }}</a>{% endif %} · {% if sort == "date_asc" %}<strong>{{ t('reports.sort_oldest') }}</strong>{% else %}<a href="{{ base_path }}/reports?sort=date_asc">{{ t('reports.sort_oldest') }}</a>{% endif %}</p>
 <table class="table">
@@ -34,7 +34,7 @@
       <td><a href="/reports/{{ s.session_id }}" download class="btn btn-sm">{{ t('reports.download') }}</a></td>
     </tr>
     {% else %}
-    <tr><td colspan="10">{{ t('reports.no_sessions') }} <a href="{{ base_path }}/">{{ t('reports.dashboard_link') }}</a>.</td></tr>
+    <tr><td colspan="10" style="text-align: center; padding: 1.5rem 0;"><img src="/static/mascot/data-soup-pot.png" alt="" aria-hidden="true" width="260" height="191" style="max-width: 100%; height: auto;"><br>{{ t('reports.no_sessions') }} <a href="{{ base_path }}/">{{ t('reports.dashboard_link') }}</a>.</td></tr>
     {% endfor %}
   </tbody>
 </table>
