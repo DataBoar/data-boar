@@ -751,6 +751,7 @@ def _https_server(tmp_path):
     cert, key = _self_signed(tmp_path)
     httpd = ThreadingHTTPServer(("127.0.0.1", 0), _OkHandler)
     ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    ctx.minimum_version = ssl.TLSVersion.TLSv1_2  # no TLS 1.0/1.1 even in a test server
     ctx.load_cert_chain(cert, key)
     httpd.socket = ctx.wrap_socket(httpd.socket, server_side=True)
     t = threading.Thread(target=httpd.serve_forever, daemon=True)

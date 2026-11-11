@@ -336,7 +336,10 @@ def test_workbook_has_summary_findings_with_node_filter_and_notes(
     assert any(
         "evidence" in str(row[0].value).lower() for row in wb["Notes"].iter_rows()
     )
-    assert (out.stat().st_mode & 0o777) == 0o600
+    if (
+        sys.platform != "win32"
+    ):  # Windows has no POSIX permission bits (mode reads 0o666)
+        assert (out.stat().st_mode & 0o777) == 0o600
 
 
 def test_existing_output_needs_overwrite(tmp_path: Path) -> None:
