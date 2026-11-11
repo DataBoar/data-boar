@@ -473,7 +473,12 @@ def test_sbom_yml_libmariadb_uses_timed_composite_action() -> None:
     text = (WORKFLOWS / "sbom.yml").read_text(encoding="utf-8")
     assert "sudo apt-get update && sudo apt-get install -y libmariadb-dev" not in text
     assert "$/.github/actions/install-libmariadb-dev" in text
-    assert "timeout 240 sudo apt-get install -y build-essential" in text
+    # Bounded by `timeout` AND retried: a single transient archive.ubuntu.com failure must not
+    # fail the SBOM job (and turn the main badge red). Same rule as the composite action (#1865).
+    assert (
+        "timeout 240 sudo apt-get -o Acquire::Retries=3 install -y build-essential"
+        in text
+    )
     # Pin + apt-get update live only in the composite action (#1648).
     data = _load_workflow("sbom.yml")
     runs = _ci_step_run_texts(data["jobs"]["generate"])
