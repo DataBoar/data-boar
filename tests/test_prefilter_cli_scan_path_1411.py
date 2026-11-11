@@ -11,12 +11,17 @@ activation.
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+import jwt
 import pytest
 import yaml
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from core.detector import SensitivityDetector
+from core.licensing.guard import reset_license_guard_for_tests
 from core.licensing.tier_features import FEATURE_TIER_MAP, Tier
 from core.pro_scan_path import (
     PRO_SCAN_PATH_ZERO_REGRESSION_LATCH,
@@ -25,6 +30,8 @@ from core.pro_scan_path import (
 from core.scanner import DataScanner
 from pro.engine import ProScanner
 from report.scan_evidence import write_scan_evidence_artifacts
+from tests import hybrid_license_fixture as hlf
+from tests.license_verify_pin import pin_embedded_ed25519_pem
 
 # #1411 — probes that historically diverge when ProScanner skips non-suspects.
 _PARITY_PROBES: list[tuple[str, str]] = [
@@ -47,6 +54,41 @@ _CHILE = (
 )
 
 
+def _enforced_cfg(tmp_path: Path, dbtier: str) -> dict:
+    """Create licensing config with enforced mode and signed JWT for given dbtier."""
+    priv = Ed25519PrivateKey.generate()
+    pub_pem = (
+        priv.public_key()
+        .public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo,
+        )
+        .decode("ascii")
+    )
+    now = datetime.now(timezone.utc)
+
+    token = hlf.seal_enforced_test_token(
+        priv,
+        jwt.encode(
+            {
+                "sub": "lic-prefilter-test",
+                "iat": int(now.timestamp()),
+                "exp": int((now + timedelta(days=1)).timestamp()),
+                "dbtier": dbtier,
+            },
+            priv,
+            algorithm="EdDSA",
+        ),
+        mldsa_private=hlf.test_mldsa_private(),
+        pin=True,
+    )
+    lic = tmp_path / "t.lic"
+    lic.write_text(token, encoding="utf-8")
+    # Pin embedded Ed25519 anchor for test verification
+    pin_embedded_ed25519_pem(pub_pem)
+    return {"licensing": {"mode": "enforced", "license_path": str(lic)}}
+
+
 def _finding_key(result: dict) -> tuple[str | None, str | None]:
     return result.get("sensitivity_level"), result.get("pattern_detected")
 
@@ -61,6 +103,7 @@ def test_zero_regression_latch_default_on() -> None:
 
 
 def test_paid_tier_reports_rust_regex_stage_status() -> None:
+    reset_license_guard_for_tests()
     scanner = DataScanner(licensing_config=_ENT_CFG)
     st = scanner.prefilter_status
     assert st["name"] == "rust_regex_stage"
@@ -80,10 +123,107 @@ def test_paid_tier_reports_rust_regex_stage_status() -> None:
 
 
 def test_open_tier_inactive() -> None:
+    reset_license_guard_for_tests()
     _, st = resolve_pro_scan_path({})
     assert st["active"] is False
     assert st["reason"] == "tier_below_pro_plus"
     assert st["engine"] == "core"
+
+
+def test_open_tier_community_blocks() -> None:
+    """Open mode with Community tier blocks pro scan path."""
+    reset_license_guard_for_tests()
+    _, st = resolve_pro_scan_path(
+        {"licensing": {"mode": "open", "effective_tier": "community"}}
+    )
+    assert st["active"] is False
+    assert st["tier"] == "community"
+    assert st["reason"] == "tier_below_pro_plus"
+    assert st["engine"] == "core"
+
+
+def test_open_tier_std_blocks() -> None:
+    """Open mode with Std tier blocks pro scan path."""
+    reset_license_guard_for_tests()
+    _, st = resolve_pro_scan_path(
+        {"licensing": {"mode": "open", "effective_tier": "std"}}
+    )
+    assert st["active"] is False
+    assert st["tier"] == "std"
+    assert st["reason"] == "tier_below_pro_plus"
+    assert st["engine"] == "core"
+
+
+def test_open_tier_pro_blocks() -> None:
+    """Open mode with Pro tier blocks pro scan path (requires Pro+)."""
+    reset_license_guard_for_tests()
+    _, st = resolve_pro_scan_path(
+        {"licensing": {"mode": "open", "effective_tier": "pro"}}
+    )
+    assert st["active"] is False
+    assert st["tier"] == "pro"
+    assert st["reason"] == "tier_below_pro_plus"
+    assert st["engine"] == "core"
+
+
+# --- enforced mode with signed JWT (end-to-end tier gating) ---------------
+
+
+def test_enforced_no_token_blocks(tmp_path: Path) -> None:
+    """Enforced mode without license blocks pro scan path (fail-closed)."""
+    reset_license_guard_for_tests()
+    _, st = resolve_pro_scan_path({"licensing": {"mode": "enforced"}})
+    assert st["active"] is False
+    assert st["tier"] == "community"
+    assert st["reason"] == "tier_below_pro_plus"
+
+
+def test_enforced_community_blocks(tmp_path: Path) -> None:
+    """Enforced mode with Community dbtier blocks pro scan path."""
+    reset_license_guard_for_tests()
+    cfg = _enforced_cfg(tmp_path, "community")
+    _, st = resolve_pro_scan_path(cfg)
+    assert st["active"] is False
+    assert st["tier"] == "community"
+    assert st["reason"] == "tier_below_pro_plus"
+
+
+def test_enforced_pro_blocks(tmp_path: Path) -> None:
+    """Enforced mode with Pro dbtier blocks pro scan path (requires Pro+)."""
+    reset_license_guard_for_tests()
+    cfg = _enforced_cfg(tmp_path, "pro")
+    _, st = resolve_pro_scan_path(cfg)
+    assert st["active"] is False
+    assert st["tier"] == "pro"
+    assert st["reason"] == "tier_below_pro_plus"
+
+
+def test_enforced_pro_plus_allows_gate(tmp_path: Path) -> None:
+    """Enforced mode with Pro+ dbtier allows pro scan path gate to pass."""
+    reset_license_guard_for_tests()
+    cfg = _enforced_cfg(tmp_path, "pro_plus")
+    _, st = resolve_pro_scan_path(cfg)
+    assert st["tier"] == "pro_plus"
+    # Gate passes; active depends on latch + rust extension
+    assert st["reason"] in ("zero_regression_latch", "rust_extension_missing")
+
+
+def test_enforced_enterprise_allows_gate(tmp_path: Path) -> None:
+    """Enforced mode with Enterprise dbtier allows pro scan path gate to pass."""
+    reset_license_guard_for_tests()
+    cfg = _enforced_cfg(tmp_path, "enterprise")
+    _, st = resolve_pro_scan_path(cfg)
+    assert st["tier"] == "enterprise"
+    assert st["reason"] in ("zero_regression_latch", "rust_extension_missing")
+
+
+def test_enforced_partner_allows_gate(tmp_path: Path) -> None:
+    """Enforced mode with Partner dbtier allows pro scan path gate to pass."""
+    reset_license_guard_for_tests()
+    cfg = _enforced_cfg(tmp_path, "partner")
+    _, st = resolve_pro_scan_path(cfg)
+    assert st["tier"] == "partner"
+    assert st["reason"] in ("zero_regression_latch", "rust_extension_missing")
 
 
 def test_env_off_short_circuits(monkeypatch: pytest.MonkeyPatch) -> None:

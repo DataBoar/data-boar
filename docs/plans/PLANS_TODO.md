@@ -30,13 +30,13 @@ Use these tags in headings to keep priorities explicit and machine-countable:
 
 Do not edit this block manually; refresh with `python scripts/plans-stats.py --write`.
 
-- **Status rows counted:** 276  (Done: 164 | Incomplete: 112)
-- **Incomplete breakdown:** Pending `⬜`=93, Tracked `🔄` / `Tracked (partially done)`=19, Under consideration=0, Backlog-marked rows=0
+- **Status rows counted:** 288  (Done: 168 | Incomplete: 120)
+- **Incomplete breakdown:** Pending `⬜`=101, Tracked `🔄` / `Tracked (partially done)`=19, Under consideration=0, Backlog-marked rows=0
 
 | Horizon | Total rows | Done | Incomplete |
 | ------- | ----------: | ----: | ----------: |
 | `H0` | 65 | 41 | 24 |
-| `H1` | 54 | 33 | 21 |
+| `H1` | 66 | 37 | 29 |
 | `H2` | 0 | 0 | 0 |
 | `H3` | 141 | 76 | 65 |
 | `H4` | 0 | 0 | 0 |
@@ -170,6 +170,7 @@ Refresh periodically: `gh issue list --state open --limit 50` (requires [`gh`](h
 | [1470](https://github.com/DataBoar/data-boar/issues/1470) | Docs & discoverability — business/non-tech path + anti-invention facts | Docs / onboarding | [PLAN_CANONICAL_PRODUCT_FACTS.md](PLAN_CANONICAL_PRODUCT_FACTS.md) | **`[H1][U1]`** — FACTS + guard (slice 1) 🔄; README/QUICKSTART/Audience remain; [#1473](https://github.com/DataBoar/data-boar/issues/1473) org-path ✅ on `main` |
 | [1922](https://github.com/DataBoar/data-boar/issues/1922) | Distribution format matrix (Nuitka binary / `--module` / `.pyc` × OS corners) | Packaging / evaluation | [PLAN_DISTRIBUTION_FORMAT_MATRIX_NUITKA.md](PLAN_DISTRIBUTION_FORMAT_MATRIX_NUITKA.md) | **`[H1][U2]`** [P2] **v1.8.0** — plan + matrix **this PR**; spikes D1–D5 ⬜; **not** an adopt-Nuitka decision; independent of [#676](https://github.com/DataBoar/data-boar/issues/676) |
 | [1182](https://github.com/DataBoar/data-boar/issues/1182) | Wheelhouse distribution (pan-ABI: cp312/313/314 + abi3 ext) | Packaging / distro | [PLAN_WHEELHOUSE_DISTRIBUTION.md](PLAN_WHEELHOUSE_DISTRIBUTION.md) | **`[H1][U1]`** [P1] — **x86-64-v1** release + user docs ([#1365](https://github.com/DataBoar/data-boar/issues/1365)) ✅; PEP 503 `simple/` ([#1445](https://github.com/DataBoar/data-boar/issues/1445) / site#21) ✅; remainder: arm64 + `+x86v1` local versions |
+| [2175](https://github.com/DataBoar/data-boar/issues/2175) | Haiku wheelhouse — documentação + publicação (21 wheels; scikit-learn/scipy pending) | Packaging / Haiku | [PLAN_WHEELHOUSE_DISTRIBUTION.md](PLAN_WHEELHOUSE_DISTRIBUTION.md) | **`[H1][U2]`** [P2] **1.8.x** — documentar no repo USAGE/TECH_GUIDE; criar release DRAFT no data-boar-site; validar instalação numa VM Haiku limpa |
 | [1400](https://github.com/DataBoar/data-boar/issues/1400) · [1401](https://github.com/DataBoar/data-boar/issues/1401) · [1399](https://github.com/DataBoar/data-boar/issues/1399) · [1402](https://github.com/DataBoar/data-boar/issues/1402) | Container extras: `/extras`+PYTHONPATH runtime mount, EXTRAS_MANIFEST + `--check-extras`, lean base (not fat 18), named missing-extra messages | Packaging / Docker | [PLAN_PACKAGING_EXTRAS.md](PLAN_PACKAGING_EXTRAS.md) | **`[H1][U1]`** [P1] **1.8.x** — mount-based extension; distroless nonroot; smoke guards `in_artifact` |
 | [1406](https://github.com/DataBoar/data-boar/issues/1406) | Native package: whose CPython? (embed for Enterprise / defer community without no-GIL) | Packaging / decision | [PLAN_NATIVE_PACKAGES.md](PLAN_NATIVE_PACKAGES.md) · [ADR-0084](../adr/ADR-0084-native-package-embedded-cpython-by-channel.md) | **`[H1][U1]`** [P1] **1.8.x** — ADR-0084 **Accepted**; commercial protection = worker caps (#551), not cp314t presence |
 | [1403](https://github.com/DataBoar/data-boar/issues/1403) | Native packages via nfpm (deb/rpm/apk/pacman) + connector subpackages from EXTRAS_MANIFEST | Packaging / distro | [PLAN_NATIVE_PACKAGES.md](PLAN_NATIVE_PACKAGES.md) · [ADR-0084](../adr/ADR-0084-native-package-embedded-cpython-by-channel.md) | **`[H1][U1]`** [P1] **1.8.x** — foundation ✅ (#1436); CI build → [#1437](https://github.com/DataBoar/data-boar/issues/1437); metal/apk/arm64 later |
@@ -509,6 +510,45 @@ Doc-first wave 1 shipped; **v1.8.0 wave 2 ([#1056](https://github.com/DataBoar/d
 | 2 | Wire `PLAN_PRODUCT_TIERS_AND_OPEN_CORE`, `SPRINTS_AND_MILESTONES` §4.1 (EN+pt-BR), Integration bullet, hub sync | ✅ Done |
 | 3 | Per-capability ADRs + product code | ⬜ Pending (operator-gated) |
 | 4 | Related P1: open-core/plugin governance [#811](https://github.com/DataBoar/data-boar/issues/811) | 🔄 Tracked |
+## [H1] Enterprise estate coverage (Microsoft 365, endpoints, multi-instance)
+
+Three linked fronts from concrete enterprise demand (2026-11-10). Tier framing for each is a
+**proposal pending operator ratification** (boundary table: [PLAN_CONNECTOR_TIER_GATING.md](PLAN_CONNECTOR_TIER_GATING.md)).
+No capacity or timing claim is made without a measurement.
+
+### Microsoft 365 via Graph – [PLAN_M365_GRAPH_CONNECTORS.md](PLAN_M365_GRAPH_CONNECTORS.md)
+
+**`[H1][U1]`** · GitHub [#2206](https://github.com/DataBoar/data-boar/issues/2206) · [P2]. Tier: Enterprise by default (lowered only after validation).
+
+| # | To-do | Status |
+| - | ----- | ------ |
+| 1 | PLAN written (design, least privilege, fail-closed tier entry) | ✅ Done |
+| 2 | Phase 0: validate or discard the WebDAV/rclone workaround (needs a development tenant) | ⬜ Pending (blocked on tenant) |
+| 3 | Phase 1: SharePoint Online + OneDrive, app-only, simulated-Graph tests | ⬜ Pending |
+| 4 | Phase 2: Exchange Online mail; permission and consent guide (en_US + pt_BR) | ⬜ Pending |
+
+### Windows endpoint agent and SMB desktop recipe – [PLAN_ENDPOINT_AGENT.md](PLAN_ENDPOINT_AGENT.md)
+
+**`[H1][U2]`** · GitHub [#2207](https://github.com/DataBoar/data-boar/issues/2207) · [P2]. Tier: Enterprise by default (lowered only after validation). Depends on the hub below.
+
+| # | To-do | Status |
+| - | ----- | ------ |
+| 1 | PLAN written; Phase 0 recipe and measurement template ([runbook](../ops/WINDOWS_DESKTOP_SMB_SCAN_RECIPE.md)) | ✅ Done (no figures) |
+| 2 | Phase 0b: run the 20-50 machine pilot and fill the measurements | ⬜ Pending (no pilot environment) |
+| 3 | Phase 1: PLAN approval before any code | ⬜ Pending |
+| 4 | Phase 2: agent build (GPO/MSI/Intune, signed, offline queue) | ⬜ Pending (blocked on 3 and on the hub) |
+
+### Multi-instance report hub – [PLAN_MULTI_INSTANCE_REPORT_HUB.md](PLAN_MULTI_INSTANCE_REPORT_HUB.md)
+
+**`[H1][U1]`** · GitHub [#2208](https://github.com/DataBoar/data-boar/issues/2208) · [P2]. Tier: Enterprise by default (lowered only after validation).
+
+| # | To-do | Status |
+| - | ----- | ------ |
+| 1 | PLAN written; Phase 0 PoC script, tests and runbook ([runbook](../ops/MULTI_INSTANCE_FINDINGS_CSV_POC.md)) | ✅ Done |
+| 2 | Phase 0b: two-instance synthetic evidence (52 merged rows from 2 x 26) | ✅ Done |
+| 3 | Phase 1: hub mode with provenance model, dedupe key and tests | ⬜ Pending |
+| 4 | Phase 2: unified Excel report with per-node filter | ⬜ Pending |
+
 ## [H1] Open-core / Pro plugin governance
 
 ### Pro plugin auditability + open-core boundary – [PLAN_PRO_PLUGIN_AUDITABILITY.md](PLAN_PRO_PLUGIN_AUDITABILITY.md) · [ADR-0090](../adr/ADR-0090-open-core-plugin-boundary-pro-auditability-reference-sample.md)

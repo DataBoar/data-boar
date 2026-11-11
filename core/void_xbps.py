@@ -13,6 +13,7 @@ import shutil
 from pathlib import Path
 from typing import Any
 
+from core.man_page_packaging import void_man_alias_install_lines
 from core.extras_manifest import (
     EMBEDDED_INTERPRETER_NATIVE,
     build_manifest,
@@ -178,6 +179,7 @@ def render_template(
         f"\tfi\n"
         f'\tvman "${{FILESDIR}}/data-boar.1"\n'
         f'\tvman "${{FILESDIR}}/data-boar.5"\n'
+        f"{void_man_alias_install_lines()}"
         f"\tvsv data-boar\n"
         f"}}\n"
         f"\n"

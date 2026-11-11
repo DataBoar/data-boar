@@ -34,13 +34,17 @@ claims:
       - issue: 854
 
   - id: rust-prefilter-speedup
-    text: "Pré-filtro Rust (Pro) acelera o hotspot ~4–5× vs Python no perfil pinado, com paridade de findings."
-    tier: pro
+    text: "Pré-filtro Rust isolado (filter_batch em lote, tier Pro+) acelera o hotspot pinado vs Python OpenCore, com paridade de hits — não mede o estágio rust_regex_stage por chamada."
+    tier: pro_plus
     backed_by:
       - symbol: "pro/prefilter.py::ProPreFilter"
       - benchmark: tests/benchmarks/rust_prefilter_hotspot.json
+      - benchmark: tests/benchmarks/rust_per_call_cost.json
+      - benchmark: tests/benchmarks/rust_tier_scan_io.json
       - test: tests/test_rust_prefilter_hotspot_evidence.py
-      - note: "PERF: número no JSON pinado; pytest valida schema + direção (speedup > 1.0) + paridade hits."
+      - test: tests/test_rust_per_call_cost_evidence.py
+      - test: tests/test_rust_tier_scan_io_evidence.py
+      - note: "PERF: speedup só no JSON rust_prefilter_hotspot (lote). rust_per_call_cost = por chamada; rust_tier_scan_io = scan com I/O por worker cap."
 
   - id: sbom-generation
     text: "Gera SBOM (CycloneDX) para visibilidade de supply-chain / IR."

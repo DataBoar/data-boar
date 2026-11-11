@@ -20,6 +20,7 @@ from core.extras_manifest import (
     load_manifest,
     repo_root,
 )
+from core.man_page_packaging import nfpm_man_symlink_contents
 
 # Formats this foundation targets (#1403). xbps is intentionally absent.
 NFPM_PACKAGERS: tuple[str, ...] = ("deb", "rpm", "apk", "archlinux")
@@ -156,6 +157,7 @@ def build_core_nfpm_doc(*, version: str) -> dict[str, Any]:
                 "src": "../../docs/data_boar.5",
                 "dst": "/usr/share/man/man5/data-boar.5",
             },
+            *nfpm_man_symlink_contents(),
         ],
         "overrides": {
             packager: {"depends": list(deps)}

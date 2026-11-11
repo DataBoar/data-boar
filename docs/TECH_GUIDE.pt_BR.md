@@ -121,6 +121,106 @@ O inventário e os testes anti-drift estão em `cli/bash_completion_inventory.py
 
 **`[noavx]` não é extra do PyPI.** Em hosts sem SSE4.2, POPCNT ou AVX, o numpy do PyPI dá **SIGILL**. Restaure **ML de verdade** com o wheelhouse verificado ([#929](https://github.com/DataBoar/data-boar/issues/929)): tag `wheelhouse-x86-64-v1-2026-07-29`, dois passos `gh release download` e `pip install --no-index --find-links` (ou `pipx runpip`). Receita: [TROUBLESHOOTING.pt_BR.md](TROUBLESHOOTING.pt_BR.md) *x86-64-v1 / wheelhouse*. O pre-flight evita o crash; **não** substitui essa instalação.
 
+### Haiku (R1/beta6, x86_64)
+
+> ⚠️ **Release beta — Haiku OS não é produção.** Data Boar funciona no Haiku R1/beta6, mas o próprio OS é uma release beta. Use apenas em ambientes de teste, avaliação, ou desenvolvimento.
+
+O **Data Boar** é compatível com **Haiku OS** (R1/beta6 x86_64) via wheelhouse dedicado. Haiku publica wheels Python 3.14 e fornece pacotes pré-construídos para dependências essenciais.
+
+**Importante:** A validação "sem compilação" foi realizada na mesma VM onde os wheels foram compilados. Ela prova que o pip resolve, mas **não testa uma instalação Haiku limpa**. Outro agente deve validar numa VM Haiku limpa em outra sessão.
+
+#### Requisitos do sistema (HaikuPorts)
+
+Instale esses pacotes no Haiku:
+
+| Pacote | Wheels obrigatórios | Fonte |
+| --- | --- | --- |
+| `python3.14` | `data-boar`, todos os pacotes Python | HaikuPorts |
+| `python3_14_dev` | `pydantic-core`, extensões nativas | HaikuPorts |
+| `cmake`, `ninja`, `meson` | `pandas`, `matplotlib`, `scipy`, `scikit-learn` | HaikuPorts |
+| `rust_bin` | `cryptography`, `ruff` | HaikuPorts |
+| `libffi_devel`, `openssl3_devel`, `libsqlite3_dev` | `cffi`, `cryptography`, suporte SQLite | HaikuPorts |
+| `openblas`, `lapack`, `gfortran` | `scipy` (BLAS/LAPACK) | HaikuPorts |
+| `omp` | `scikit-learn` (OpenMP), `pythran` para `scipy` | HaikuPorts |
+| `hpkg_numpy` | `numpy` 2.5.3 (com fix do `ctype.h` do Haiku) | HaikuPorts |
+
+```bash
+pkgman install python3_14 python3_14_dev cmake ninja meson \
+  rust_bin libffi_devel openssl3_devel libsqlite3_dev \
+  openblas lapack gfortran omp \
+  hpkg_numpy
+```
+
+- **`python3.14`**: Interpretador Python.
+- **`pkgman`**: Gerenciador de pacotes do Haiku.
+- **`cmake` / `ninja` / `meson`**: Ferramentas de build para compilação nativa.
+- **`rust_bin`**: Compilador Rust para extensões nativas.
+- **`numpy` (do hpkg)**: O numpy HaikuPorts (2.5.3) resolve o problema dos macros do `ctype.h` (`isalpha`, `isalnum`, etc.) do Haiku que quebramariam o numpy 2.5.4 do PyPI.
+
+#### Ambiente virtual com site-packages do sistema
+
+Crie um ambiente virtual que inclua os pacotes do sistema:
+
+```bash
+python3 -m venv --system-site-packages venv
+source venv/bin/activate
+```
+
+**Importante:** Adicione `venv/bin` ao `PATH` para o Meson encontrar o `cython`:
+
+```bash
+export PATH="$(pwd)/venv/bin:$PATH"
+```
+
+#### Instalação via wheelhouse
+
+Baixe wheels do wheelhouse Haiku e instale:
+
+```bash
+# Criar diretório do wheelhouse
+mkdir -p ~/haiku-wheelhouse
+
+# Download dos wheels (o wheelhouse real será publicado na URL do operador)
+pip install --no-index --find-links ~/haiku-wheelhouse data-boar
+
+# Instalar dependências, inclusive pandas, com --no-build-isolation
+pip install --no-index --find-links ~/haiku-wheelhouse pandas --no-build-isolation
+```
+
+**Pacotes disponíveis no wheelhouse Haiku:**
+- Pacotes Python: `data-boar`, `numpy`, `pandas`, `scikit-learn`, `scipy`, `matplotlib`, `pillow`, `cffi`, `cryptography`, `contourpy`, `greenlet`, `kiwisolver`, `lxml`, `markupsafe`, `pyyaml`, `regex`, `rpds-py`, `hypothesis`, `maturin`, `pydantic-core`, `odfpy`, `rapidfuzz`, `red_black_tree_mod`
+- Ferramentas de build: `cython` (necessário para compilação do pandas)
+
+#### Executar o demo
+
+```bash
+python main.py --demo
+```
+
+**Tag de plataforma:** `cp314-cp314-haiku_r1~beta6_x86_64`
+
+#### Estado
+
+**Todos os 23 wheels estão disponíveis** (71 MB, SHA256 conferido). A instalação funciona ponta a ponta: `pip install --only-binary=:all: --find-links <wheelhouse> data-boar` conclui em ~69s em um venv limpo.
+
+**Nota de validação:** A validação "sem compilação" foi realizada na mesma VM onde os wheels foram compilados. Uma instalação Haiku limpa deve ser testada separadamente.
+
+#### Armadilhas de build (sessões não-login)
+
+Em sessões de shell não-login (SSH, tmux), essas variáveis podem estar ausentes e causar falhas de build:
+
+- **`LIBRARY_PATH`**: Exporte para incluir os caminhos de biblioteca do sistema Haiku:
+
+  ```bash
+  export LIBRARY_PATH="/boot/system/lib:$LIBRARY_PATH"
+  ```
+
+- **`PYTHONPATH`**: Quando `meson` resolve o Python via `/bin/python3.14`, pode não ver o `Cython` do venv:
+
+  ```bash
+  export PYTHONPATH="$(pwd)/venv/lib/python3.14/site-packages:$PYTHONPATH"
+  ```
+
 ### Homebrew (macOS)
 
 Tap próprio (não é homebrew-core). Python do host via Homebrew; o pip instala o sdist do PyPI — **sem** payload de CPython embarcado:
@@ -612,6 +712,14 @@ A extensão opcional `boar_fast_filter` acelera o casamento **padrão × texto**
 | **Restrito** (<4 GB de RAM, ex.: Raspberry Pi 3B) | Instala um **wheel** abi3 pré-compilado — nunca compila | consome o wheel da wheel-matrix (#782) |
 
 A extensão é **opcional em tempo de execução**: quando o `boar_fast_filter` está ausente, o motor usa o pré-filtro em Python puro (mais lento, achados idênticos). Um host restrito que não compila e não tem wheel compatível ainda funciona pelo caminho Python. A wheel-matrix multi-host que gera os wheels abi3 para hosts restritos é rastreada na **#782**.
+
+**Por chamada vs lote (#2182):** o artefato pinado ``rust_prefilter_hotspot_v1`` mede ``FastFilter.filter_batch`` em **um único lote grande** (filtro isolado, tier Pro+). Em produção, ``rust_regex_stage`` chama ``RegexStageEngine.match_names`` **uma vez por amostra**; a fronteira PyO3 + GIL pode dominar em texto curto. ``tests/benchmarks/rust_per_call_cost.json`` documenta essa diferença e o piso ``RUST_REGEX_STAGE_MIN_TEXT_CHARS`` em ``core/rust_regex_stage.py`` — abaixo desse tamanho decodificado o detector permanece no regex Python com o mesmo veredito.
+
+**Scan de produto com I/O (#2182):** ``tests/benchmarks/rust_tier_scan_io.json`` (``rust_tier_scan_io_v1``) mede um alvo filesystem sintético via ``AuditEngine.start_audit()`` em cada teto de ``worker_cap`` por tier (Community/Std 2, Pro 4, Pro+ 8, modo ``enforced`` em banco de lab). O tempo de parede é dominado por walk/leitura/detecção; o backend Rust é registrado por tier, mas não sustenta upsell de velocidade em amostras curtas típicas.
+
+**Recomendação de diferencial de tier (#2182):** manter ``rust_regex_stage`` em **Pro+** por **equivalência / superconjunto** (ADR 0083) e margem opcional em texto longo — **não** como ganho líquido de velocidade de tier para cargas padrão em células curtas. Claims públicas de performance ficam limitadas aos JSONs pinados (``filter_batch`` isolado vs por chamada / I/O de scan). Ver ``tier_differentiator_recommendation`` em ``rust_tier_scan_io.json``.
+
+**cp314t (CPython free-threaded):** wheels de release com PyO3 ``abi3-py38`` **não carregam** em ``python3.14t`` (``SystemError`` na inicialização do módulo). É preciso wheel por interpretador (build sem ``abi3``); publicação na matriz de CI do repo está em **#782** e **fica fora** de PRs ad-hoc que toquem ``.github/workflows/``. Validação em lab: recompilar ``boar_fast_filter`` localmente sem ``abi3`` no interpretador free-threaded.
 
 ## Dependências e segurança
 

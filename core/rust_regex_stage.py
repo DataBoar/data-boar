@@ -17,6 +17,11 @@ logger = logging.getLogger(__name__)
 
 _RUST_STAGE_FEATURE = "rust_regex_stage"
 
+# Minimum decoded sample length before invoking the Rust engine per call.
+# Pinned with tests/benchmarks/rust_per_call_cost.json (rust_per_call_cost_v1).
+# Below this size the PyO3 boundary dominates and Python regex is faster (#2182).
+RUST_REGEX_STAGE_MIN_TEXT_CHARS = 4097
+
 
 @dataclass
 class RustRegexStageStatus:
@@ -86,6 +91,8 @@ class RustRegexStage:
         """Return matched pattern names and whether the Rust engine succeeded."""
         if self._engine is None:
             return set(), False
+        if len(text) < RUST_REGEX_STAGE_MIN_TEXT_CHARS:
+            return set(), False
         try:
             hits = self._engine.match_names(text)
         except Exception as exc:  # noqa: BLE001 — fail-soft per ADR-0083
@@ -108,12 +115,14 @@ def _tier_allows_rust_stage(
 ) -> tuple[bool, str | None, str | None]:
     try:
         from core.licensing.runtime_feature_tier import get_runtime_tier_for_features
-        from core.licensing.tier_features import FEATURE_TIER_MAP, is_feature_available
+        from core.licensing.tier_features import FEATURE_TIER_MAP, Tier
 
         _ = FEATURE_TIER_MAP[_RUST_STAGE_FEATURE]
         tier = get_runtime_tier_for_features(licensing_config or {})
         tier_value = getattr(tier, "value", str(tier))
-        if not is_feature_available(_RUST_STAGE_FEATURE, tier):
+        # Explicit tier check per FEATURE_TIER_MAP["rust_regex_stage"] == Tier.PRO_PLUS
+        # OPEN (dev/lab) bypasses enforcement but should not activate paid features.
+        if tier not in (Tier.PRO_PLUS, Tier.ENTERPRISE, Tier.PARTNER):
             return False, tier_value, "tier_below_pro_plus"
         return True, tier_value, None
     except Exception as exc:  # noqa: BLE001

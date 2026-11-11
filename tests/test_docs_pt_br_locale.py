@@ -42,7 +42,11 @@ def _iter_pt_br_markdown_files(*, include_private: bool) -> list[Path]:
     for p in REPO_ROOT.rglob("*.pt_BR.md"):
         parts = p.parts
         parts_set = set(parts)
-        if ".venv" in parts_set or "node_modules" in parts_set:
+        if (
+            ".venv" in parts_set
+            or "node_modules" in parts_set
+            or ".paperclip-repositories" in parts_set
+        ):
             continue
         if not include_private and "private" in parts:
             continue
