@@ -3,7 +3,7 @@
 
 # Plan: Rust regex stage (open-domain YAML / accept form B)
 
-**Status:** In progress — core stage wired on branch `feat/1414-rust-regex-stage` (phases 1–5); docs/thread-scale tests (6–7) pending
+**Status:** In progress — core stage wired (phases 1–5); `--prefilter-status` / `--validate-config` observability fixed (#2178); docs/thread-scale tests (6–7) pending
 **Date:** 2026-07-31
 **Authors:** Cursor (executor) + Claude Code brief (auditor R.O.) + operator
 **Priority:** H0 / U1 (detection correctness)
@@ -247,13 +247,13 @@ CLI: `python main.py --config config.yaml --…`.
 
 | # | Fase | Status |
 | - | ---- | ------ |
-| 0 | Aposentar WIP latch/ProScanner-skip (não shipar narrativa antiga) | 🟡 observability → `rust_regex_stage`; legado ProScanner ainda presente |
+| 0 | Aposentar WIP latch/ProScanner-skip (não shipar narrativa antiga) | ✅ observability → `rust_regex_stage`; legado ProScanner permanece só para ProcessPool/QA |
 | 1 | **#1412 schema** — **blocker** · ADR-0083 Accepted | ✅ (#1412 fechado; manifest estendido) |
 | 2 | **Portar `translate.py`** para `core/` + testes (controle cru vs traduzido) | ✅ `core/regex_translate.py` + adversarial pytest |
 | 3 | Classe A/B / fallback reasons via tradutor em `_load_regex_overrides` (§2.5–2.7) | ✅ `classify_pattern` no build do stage; warnings `--validate-config` → fase 6 |
 | 4 | API Rust: **`Vec<Regex>` + cache** + **`py.detach`** no match — zero padrão cravado; **não** RegexSet | ✅ `RegexStageEngine` |
 | 5 | Wire `analyze` + tier fail-soft (§2.1–2.3) | ✅ `_match_regex_patterns` + `rust_regex_stage` tier |
-| 6 | validate-config + status/help/man/docs (garantia B) | ⬜ |
+| 6 | validate-config + status/help/man/docs (garantia B) | ✅ `--prefilter-status` reports `rust_regex_stage`; `#1411` removed as cause; 4-case regression tests added |
 | 7 | Testes diferenciais (§2.4) + **escala com threads em build COM GIL** (§2.0b); migrar `FastFilter` legado | ⬜ |
 | 8 | Opcional: reescrita `LGPD_CNPJ_ALNUM` (§2.6) | ⬜ |
 
