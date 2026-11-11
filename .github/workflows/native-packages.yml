@@ -69,18 +69,12 @@ jobs:
         with:
           persist-credentials: false
 
-      # Same ubuntu-latest azure.archive stall as ci.yml / #1648 / #1702.
-      # Reuse the composite for the pin + timed apt-get update; then install
-      # nfpm toolchain packages (the action also pulls libmariadb-dev — unused
-      # here, accepted so we do not fork the pin script).
-      - name: Pin Ubuntu apt mirrors (#1646)
-        uses: $/.github/actions/install-libmariadb-dev
-
+      # Ubuntu runner: apt goes through the composite action (two mirrors, retried, bounded; #2220).
       - name: Install build tools
-        run: |
-          set -euo pipefail
-          timeout 240 sudo apt-get install -y --no-install-recommends \
-            curl ca-certificates binutils file build-essential
+        uses: $/.github/actions/install-libmariadb-dev
+        with:
+          packages: curl ca-certificates binutils file build-essential
+          no-install-recommends: "true"
 
       - name: Populate staging (cp314t + wheelhouse — fail-closed)
         run: bash scripts/native-nfpm-populate-staging.sh
@@ -166,8 +160,9 @@ jobs:
       # azure.archive.ubuntu.com. The pin would no-op; leave Debian's CDN.
       - name: Install bash and ca-certificates
         run: |
-          apt-get update
-          apt-get install -y --no-install-recommends bash ca-certificates
+          # Debian's CDN: bounded and retried (no Ubuntu mirror list applies here; #2220).
+          timeout 420 apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 update
+          timeout 420 apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 install -y --no-install-recommends bash ca-certificates
 
       - name: apt install .deb and run launcher
         shell: bash
@@ -176,7 +171,7 @@ jobs:
           deb="$(ls /tmp/pkgs/*.deb | head -1)"
           test -n "${deb}"
           # Resolves Layer-2 Depends from overrides (libc/openssl/tesseract/…).
-          apt-get install -y "${deb}"
+          timeout 600 apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 install -y "${deb}"
           test -x /usr/bin/data-boar
           test -x /usr/lib/data-boar/python3.14t/bin/python3.14t
           /usr/lib/data-boar/python3.14t/bin/python3.14t -c \

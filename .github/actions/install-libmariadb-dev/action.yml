@@ -6,17 +6,30 @@
 # (GitHub's default job timeout is 6h — see #1627).
 name: Install libmariadb-dev
 description: >-
-  Install libmariadb-dev and pkg-config via apt with a bounded timeout so stalled
+  Install apt packages (default libmariadb-dev and pkg-config) via apt with a bounded timeout so stalled
   mirrors fail the step instead of hanging the runner for hours (#1627). Restricts
   apt indexes to Ubuntu main+updates (#1862), retries transient stalls via apt
   Acquire::Retries (#1865) and lists both azure.archive.ubuntu.com and
   archive.ubuntu.com so one mirror or DNS outage does not fail the install (#2220).
 
+inputs:
+  packages:
+    description: Space-separated apt packages to install (default keeps the original libmariadb-dev use).
+    required: false
+    default: libmariadb-dev pkg-config
+  no-install-recommends:
+    description: Pass --no-install-recommends to apt-get install ("true" or "false").
+    required: false
+    default: "false"
+
 runs:
   using: composite
   steps:
-    - name: apt-get install libmariadb-dev
+    - name: apt-get install (two Ubuntu mirrors, bounded, retried)
       shell: bash
+      env:
+        PACKAGES: ${{ inputs.packages }}
+        NO_RECOMMENDS: ${{ inputs.no-install-recommends }}
       run: |
         set -euo pipefail
         # Log the runner's native apt layout (ubuntu.sources / apt-mirrors.txt / sources.list)
@@ -73,4 +86,7 @@ runs:
         )
         # 420s wall clock per apt-get invocation (composite steps have no timeout-minutes).
         timeout 420 sudo apt-get "${apt_retry_opts[@]}" update
-        timeout 420 sudo apt-get "${apt_retry_opts[@]}" install -y libmariadb-dev pkg-config
+        install_opts=(-y)
+        if [ "${NO_RECOMMENDS}" = "true" ]; then install_opts+=(--no-install-recommends); fi
+        read -r -a pkgs <<< "${PACKAGES}"
+        timeout 420 sudo apt-get "${apt_retry_opts[@]}" install "${install_opts[@]}" "${pkgs[@]}"
