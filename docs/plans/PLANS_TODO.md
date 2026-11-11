@@ -30,13 +30,13 @@ Use these tags in headings to keep priorities explicit and machine-countable:
 
 Do not edit this block manually; refresh with `python scripts/plans-stats.py --write`.
 
-- **Status rows counted:** 288  (Done: 168 | Incomplete: 120)
+- **Status rows counted:** 295  (Done: 175 | Incomplete: 120)
 - **Incomplete breakdown:** Pending `⬜`=101, Tracked `🔄` / `Tracked (partially done)`=19, Under consideration=0, Backlog-marked rows=0
 
 | Horizon | Total rows | Done | Incomplete |
 | ------- | ----------: | ----: | ----------: |
 | `H0` | 65 | 41 | 24 |
-| `H1` | 66 | 37 | 29 |
+| `H1` | 73 | 44 | 29 |
 | `H2` | 0 | 0 | 0 |
 | `H3` | 141 | 76 | 65 |
 | `H4` | 0 | 0 | 0 |
@@ -588,6 +588,20 @@ No capacity or timing claim is made without a measurement.
 | A.1–A.4 | `--validate-config` (or agreed name): CLI + tests + USAGE / operator-help | ✅ Done |
 | B.1–B.3 | Session `--diff`: inputs, stable output format, regression fixtures | ✅ Done |
 | C.1–C.3 | `--export-dsar`: metadata-first default, explicit opt-in for samples, docs | ✅ Done |
+
+### Governance exports — RoPA evidence, SARIF, SIEM / webhook push – [PLAN_GOVERNANCE_EXPORTS_ROPA_SIEM.md](completed/PLAN_GOVERNANCE_EXPORTS_ROPA_SIEM.md) *(archived)*
+
+**`[H2][U2]`** — GitHub [#837](https://github.com/DataBoar/data-boar/issues/837), [#838](https://github.com/DataBoar/data-boar/issues/838). Pro+ (`ropa_export`, `findings_siem_push`).
+
+| Phase | To-do | Status |
+| ----- | ----- | ------ |
+| A | Tier map keys + gating tests | ✅ Done |
+| B | Shared findings view + session delta | ✅ Done |
+| C | `--export-ropa` (XLSX + JSON, `ropa:` config, `A COMPLETAR`) | ✅ Done |
+| D | `--export-sarif` (SARIF 2.1.0) | ✅ Done |
+| E | `notifications.findings_push` (json/sarif, `splunk_hec`, delta, SSRF/https hardening) | ✅ Done |
+| F | Offline tests; secrets never logged | ✅ Done |
+| G | Docs EN + pt-BR, man pages, operator-help sync, pitch | ✅ Done |
 
 ### Operating-domain contacts and alias policy – [PLAN_OPERATING_DOMAIN_CONTACTS_AND_ALIAS_POLICY.md](completed/PLAN_OPERATING_DOMAIN_CONTACTS_AND_ALIAS_POLICY.md) *(archived)*
 
@@ -1171,6 +1185,7 @@ Historical mentions (ADRs, some completed plans) may still cite the **original**
 
 - **Corporate compliance** – [.cursor/plans/](.cursor/plans/) (reference)
 - **Minor data detection** – [completed/PLAN_MINOR_DATA_DETECTION.md](completed/PLAN_MINOR_DATA_DETECTION.md)
+- **Governance exports (RoPA, SARIF, SIEM push)** – [completed/PLAN_GOVERNANCE_EXPORTS_ROPA_SIEM.md](completed/PLAN_GOVERNANCE_EXPORTS_ROPA_SIEM.md)
 - **Aggregated identification** – [completed/PLAN_AGGREGATED_IDENTIFICATION.md](completed/PLAN_AGGREGATED_IDENTIFICATION.md)
 - **Sensitive categories ML/DL** – [completed/PLAN_SENSITIVE_CATEGORIES_ML_DL.md](completed/PLAN_SENSITIVE_CATEGORIES_ML_DL.md)
 - **Rate limiting** – [completed/PLAN_RATE_LIMIT_SCANS.md](completed/PLAN_RATE_LIMIT_SCANS.md)

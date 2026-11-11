@@ -247,6 +247,8 @@ uv run python main.py --config config.yaml --diff <session_a_uuid> <session_b_uu
 uv run python main.py --config config.yaml --diff <session_a_uuid> <session_b_uuid> --fail-on-new-high
 uv run python main.py --config config.yaml --export-dsar <session_uuid>
 uv run python main.py --config config.yaml --export-dsar <session_uuid> --dsar-output dsar_export.json
+uv run python main.py --config config.yaml --export-ropa <session_uuid> --ropa-output ./ropa
+uv run python main.py --config config.yaml --export-sarif <session_uuid> --sarif-output findings.sarif
 
 # Iniciar o servidor da API (texto plano explícito; veja o gate de transporte em "API REST")
 uv run python main.py --config config.yaml --web --allow-insecure-http --port 8088
@@ -685,6 +687,25 @@ Para **uma única execução** sem alterar o config gravado: CLI **`--content-ty
 ## Adicionando novos conectores
 
 Para suportar uma nova fonte de dados (ex.: outro driver de banco ou API), veja **[ADDING_CONNECTORS.md](ADDING_CONNECTORS.md)** (inglês) ou **[ADDING_CONNECTORS.pt_BR.md](ADDING_CONNECTORS.pt_BR.md)** (Português – Brasil). O guia descreve o contrato do conector, como registrar um novo tipo (ou driver), dependências opcionais e inclui instruções passo a passo e exemplos (estilo banco e estilo API).
+
+## Exports de governança e push de achados (Pro+) {#governance-exports-and-findings-push}
+
+Três recursos Pro+ compartilham uma única visão só de metadados de uma sessão (`core/findings_common.py`): a chave de identidade do achado é a mesma tupla que o `--diff` usa, então os deltas sempre concordam com o `--diff`.
+
+| Recurso | CLI / gatilho | Módulo | Chave de recurso |
+| --- | --- | --- | --- |
+| Planilha de evidências RoPA + JSON | `--export-ropa SESSION_ID` | `core/ropa_export.py` | `ropa_export` |
+| Export SARIF 2.1.0 | `--export-sarif SESSION_ID` | `core/sarif_export.py` | `findings_siem_push` |
+| Push pós-varredura para SIEM / webhook | `notifications.findings_push` | `core/findings_push.py`, gancho em `utils/notify.py` | `findings_siem_push` |
+
+- **Gate de tier:** as duas chaves são entradas explícitas `Tier.PRO_PLUS` em `FEATURE_TIER_MAP`. Os exports de CLI chamam `require_feature` e saem com **2** em tier inferior; o push é fail-soft (ignorado com aviso, auditado em `notification_send_log`). `Tier.OPEN` contorna como no restante.
+- **Validação de config:** `config/loader.py` valida `ropa:` (chaves desconhecidas rejeitadas, tamanhos limitados) e `notifications.findings_push` (regra https/loopback, sem credenciais embutidas, segredos literais recusados, `auth_env` com os prefixos de credencial e o gate de hosts do operador no modo estrito).
+- **Linha de base do delta:** a sessão anterior mais recente com status `completed` ou `completed_errors` e o mesmo `config_scope_hash` (quando ambos são conhecidos). Sem linha de base → campos de delta `null`.
+- **Transporte do push:** `http.client` com conexão fixada nos endereços validados pelo guarda SSRF (verificação TLS contra o nome de host configurado, TLS mínimo 1.2), sem redirecionamentos, leitura de resposta limitada, tentativas limitadas com backoff injetável (os testes não dormem).
+- **Testes:** todos offline (`http.server` em loopback, porta efêmera, certificado autoassinado para o caminho TLS); o SARIF é validado contra um subconjunto estrutural do schema 2.1.0.
+- **Fronteira de escopo:** sem `/metrics` Prometheus, canal Signal nem saída syslog.
+
+Descrição para o usuário: [USAGE.pt_BR.md §5.2 e §5.3](USAGE.pt_BR.md#push-de-achados-siem).
 
 ## Log e alertas
 
