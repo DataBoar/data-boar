@@ -250,3 +250,21 @@ def test_response_over_max_bytes_is_a_failure(tmp_path: Path, capsys) -> None:
             capsys,
         )
     assert code == 1 and "larger than --max-bytes" in err
+
+
+def test_merged_csv_neutralises_formula_cells_and_header_names(tmp_path: Path) -> None:
+    """CWE-1236: node-supplied cells and extra column names must not open as formulas."""
+    out = tmp_path / "merged.csv"
+    names = ["node_id", "path", "=HYPERLINK(1)"]
+    rows = [
+        {"node_id": "a", "path": "=cmd|' /C calc'!A0", "=HYPERLINK(1)": "@SUM(1)"},
+        {"node_id": "a", "path": "-2+3", "=HYPERLINK(1)": "ok"},
+    ]
+    poc.write_merged_csv(out, names, rows, overwrite=False)
+    lines = out.read_text(encoding="utf-8").splitlines()
+    assert lines[0] == "node_id,path,'=HYPERLINK(1)"
+    for line in lines[1:]:
+        for cell in line.split(","):
+            assert not cell.startswith(("=", "+", "-", "@"))
+    assert "'=cmd|" in lines[1] and "'@SUM(1)" in lines[1]
+    assert "'-2+3" in lines[2]

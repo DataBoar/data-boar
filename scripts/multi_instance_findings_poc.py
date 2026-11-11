@@ -46,6 +46,11 @@ from urllib.parse import urlsplit
 
 import requests
 
+if str(Path(__file__).resolve().parents[1]) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from report.excel_sanitizer import excel_sanitize_cell  # noqa: E402
+
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 # Starts alphanumeric: a leading "-", "=", "+" or "@" would be a spreadsheet formula trigger.
 _NODE_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$")
@@ -226,11 +231,22 @@ def write_merged_csv(
     flags = os.O_WRONLY | os.O_CREAT | (os.O_TRUNC if overwrite else os.O_EXCL)
     fd = os.open(resolved, flags, 0o600)
     with os.fdopen(fd, "w", encoding="utf-8", newline="") as handle:
+        # CWE-1236: node-supplied header names and cells open in Excel/Calc, so every one is
+        # neutralised (formula-looking text gets a leading apostrophe). Row keys are the
+        # original names; the writer fieldnames are the sanitised ones, mapped one to one.
+        names = list(fieldnames)
+        safe = {name: str(excel_sanitize_cell(name)) for name in names}
         writer = csv.DictWriter(
-            handle, fieldnames=list(fieldnames), restval="", lineterminator="\r\n"
+            handle,
+            fieldnames=[safe[n] for n in names],
+            restval="",
+            lineterminator="\r\n",
         )
         writer.writeheader()
-        writer.writerows(rows)
+        writer.writerows(
+            {safe[k]: excel_sanitize_cell(v) for k, v in row.items() if k in safe}
+            for row in rows
+        )
 
 
 def main(argv: Sequence[str] | None = None) -> int:
