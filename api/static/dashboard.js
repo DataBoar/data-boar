@@ -125,6 +125,8 @@
           var runLabel = i18n.status_running || 'Running';
           var idleLabel = i18n.status_idle || 'Idle';
           if (statusRunning) statusRunning.textContent = d.running ? runLabel : idleLabel;
+          var idleMascot = document.getElementById('idle-mascot');
+          if (idleMascot) idleMascot.hidden = !!d.running;
           if (statusSession) statusSession.textContent = d.current_session_id || '\u2014';
           if (statusFindings) statusFindings.textContent = d.findings_count;
           if (d.running) {

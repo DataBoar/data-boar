@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}{{ t('dashboard.page_title') }}{% endblock %}
 {% block content %}
-<h1><img src="/static/mascot/data_boar_mascote_color.svg" alt="" width="40" height="40" style="vertical-align: middle; margin-right: 0.35em;">{{ t('dashboard.h1') }}</h1>
+<h1><img src="/static/mascot/mascot-mark-face.png" alt="" width="40" height="35" style="vertical-align: middle; margin-right: 0.35em;">{{ t('dashboard.h1') }}</h1>
 
 {% if license %}
 <section class="card" style="margin-bottom: 1rem;">
@@ -12,6 +12,7 @@
 
 <section class="card status-card" id="status-card">
   <h2>{{ t('dashboard.scan_h2') }}</h2>
+  <div id="idle-mascot"{% if status.running %} hidden{% endif %} style="float: right; margin: 0 0 0.5rem 1rem;"><img src="/static/mascot/mascot-hero.png" alt="" aria-hidden="true" width="200" height="147" style="max-width: 100%; height: auto;"></div>
   <div id="status-content">
     <p><strong>{{ t('dashboard.state') }}</strong> <span id="status-running" data-running="{{ '1' if status.running else '0' }}">{% if status.running %}{{ t('dashboard.running') }}{% else %}{{ t('dashboard.idle') }}{% endif %}</span></p>
     <p><strong>{{ t('dashboard.current_session') }}</strong> <span id="status-session">{{ status.current_session_id or "—" }}</span></p>
@@ -143,7 +144,7 @@
 
 <section class="card about-report" aria-label="Application and report attribution">
   <h2>{{ t('dashboard.about_app_h2') }}</h2>
-  <p class="muted"><img src="/static/mascot/data_boar_mascote_color.svg" alt="" width="32" height="32" style="vertical-align: middle; margin-right: 0.25em;"><strong>{{ about.name }}</strong> v{{ about.version }} · Author: {{ about.author }} · {{ about.license }} · {{ about.copyright }}. {{ t('dashboard.about_app_p') }} <a href="{{ base_path }}/about">{{ t('dashboard.about_link') }}</a></p>
+  <p class="muted"><img src="/static/mascot/mascot-mark-face.png" alt="" width="32" height="28" style="vertical-align: middle; margin-right: 0.25em;"><strong>{{ about.name }}</strong> v{{ about.version }} · Author: {{ about.author }} · {{ about.license }} · {{ about.copyright }}. {{ t('dashboard.about_app_p') }} <a href="{{ base_path }}/about">{{ t('dashboard.about_link') }}</a></p>
 </section>
 <script type="application/json" id="db-dashboard-i18n-data">{{ dashboard_js_i18n | tojson }}</script>
 {% endblock %}
