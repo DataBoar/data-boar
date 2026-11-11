@@ -155,7 +155,9 @@ jobs:
           persist-credentials: false
 
       - name: Install unixodbc-dev (pyodbc / mssql-pyodbc extra)
-        run: timeout 240 sudo apt-get install -y unixodbc-dev
+        uses: $/.github/actions/install-libmariadb-dev
+        with:
+          packages: unixodbc-dev
 
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -253,12 +255,19 @@ jobs:
         run: uv sync --extra shares --group dev
 
       # #1926: error-level only. Same file set as scripts/check-all.sh.
+      - name: Detect shellcheck (preinstalled on ubuntu-latest)
+        id: shellcheck_present
+        run: |
+          if command -v shellcheck >/dev/null 2>&1; then echo "present=true" >> "$GITHUB_OUTPUT"; fi
+
+      - name: Install shellcheck
+        if: steps.shellcheck_present.outputs.present != 'true'
+        uses: $/.github/actions/install-libmariadb-dev
+        with:
+          packages: shellcheck
+
       - name: Shellcheck (severity=error)
         run: |
-          if ! command -v shellcheck >/dev/null 2>&1; then
-            sudo apt-get update
-            sudo apt-get install -y shellcheck
-          fi
           mapfile -d '' sh_files < <(git ls-files -z '*.sh')
           if ((${#sh_files[@]})); then
             shellcheck --severity=error -- "${sh_files[@]}"

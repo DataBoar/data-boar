@@ -469,7 +469,7 @@ def test_sbom_workflow_merges_cargo_lock_into_application_cdx() -> None:
 
 
 def test_sbom_yml_libmariadb_uses_timed_composite_action() -> None:
-    """SBOM must share the #1646 azure→archive pin; do not inline bare apt-get."""
+    """SBOM must share the composite apt install (two mirrors, #2220); do not inline bare apt-get."""
     text = (WORKFLOWS / "sbom.yml").read_text(encoding="utf-8")
     assert "sudo apt-get update && sudo apt-get install -y libmariadb-dev" not in text
     assert "$/.github/actions/install-libmariadb-dev" in text
@@ -575,23 +575,23 @@ def test_ci_yml_libmariadb_install_uses_timed_composite_action() -> None:
     # Composite steps cannot declare timeout-minutes (GHA schema); use coreutils timeout.
     assert "timeout-minutes:" not in action_text
     assert "timeout " in action_text
-    assert "libmariadb-dev" in action_text
-    # #1646: repoint stalled regional mirror before apt-get update.
-    # Regex on file body (not URL substring `in`) — CodeQL py/incomplete-url-substring-sanitization.
-    assert re.search(
-        r"repoint_azure /etc/apt/apt-mirrors\.txt",
-        action_text,
-    ), "missing apt-mirrors repoint hook (#1646)"
-    assert re.search(
-        r"s\|azure\\\.archive\\\.ubuntu\\\.com\|archive\.ubuntu\.com\|g",
-        action_text,
-    ), "missing azure→archive sed repoint (#1646)"
+    assert "default: libmariadb-dev pkg-config" in action_text
+    # #2220: BOTH mirrors are listed (the runner's native azure one first), so a DNS or mirror
+    # outage on one host falls back to the other instead of `E: Unable to locate package`.
+    # The old single-host repoint (#1646) is gone: it removed the native mirror and had no fallback.
+    assert "repoint_azure" not in action_text, (
+        "single-host repoint (#1646) must not return"
+    )
+    mirrors = re.findall(r"for mirror in (\S+) (\S+); do", action_text)
+    assert mirrors == [("azure.archive.ubuntu.com", "archive.ubuntu.com")], (
+        "both mirrors must be listed, native azure first (#2220)"
+    )
     assert re.search(
         r"timeout 420 sudo apt-get \"\$\{apt_retry_opts\[@\]\}\" update",
         action_text,
     ), "missing timed apt-get update with retry opts (#1627, #1862, #1865)"
     assert (
-        'timeout 420 sudo apt-get "${apt_retry_opts[@]}" install -y libmariadb-dev pkg-config'
+        'timeout 420 sudo apt-get "${apt_retry_opts[@]}" install "${install_opts[@]}" "${pkgs[@]}"'
         in action_text
     )
     assert "Acquire::Retries=3" in action_text
@@ -817,8 +817,16 @@ def test_ci_yml_has_optional_extras_job() -> None:
         "--deselect=tests/test_security.py::test_maestro_aggregates_real_failures_in_exit"
         in runs
     )
-    assert "$/.github/actions/install-libmariadb-dev" not in str(extras)
-    assert "unixodbc-dev" in runs
+    # The extras job must not install libmariadb (upstream mariadb 1.1.14 SyntaxError on 3.13); it
+    # reaches the apt action only for unixodbc-dev, with the same two-mirror handling (#2220).
+    action_steps = [
+        st
+        for st in (extras.get("steps") or [])
+        if isinstance(st, dict) and "install-libmariadb-dev" in str(st.get("uses"))
+    ]
+    assert [(st.get("with") or {}).get("packages") for st in action_steps] == [
+        "unixodbc-dev"
+    ]
 
 
 def test_ci_yml_has_dl_extra_job() -> None:
@@ -1417,8 +1425,12 @@ def test_native_packages_build_job_pins_ubuntu_apt_mirror() -> None:
     assert any("$/.github/actions/install-libmariadb-dev" in u for u in uses)
     runs = _ci_step_run_texts(build)
     assert not any("apt-get update" in r for r in runs)
-    assert any(
-        "timeout 240 sudo apt-get install" in r and "build-essential" in r for r in runs
+    steps = [x for x in (build.get("steps") or []) if isinstance(x, dict)]
+    install = next(x for x in steps if x.get("name") == "Install build tools")
+    assert "install-libmariadb-dev" in str(install.get("uses"))
+    assert "build-essential" in str((install.get("with") or {}).get("packages"))
+    assert not any("apt-get install" in r for r in runs), (
+        "inline apt-get install (#2220)"
     )
 
 
@@ -1435,7 +1447,7 @@ def test_native_packages_smoke_deb_uses_debian_cdn_not_ubuntu_azure_pin() -> Non
     dump = yaml.dump(smoke)
     assert "apt-mirrors.txt" not in dump
     runs = _ci_step_run_texts(smoke)
-    assert any("apt-get update" in r for r in runs)
+    assert any(re.search(r"apt-get\b.*\bupdate", r) for r in runs)
 
 
 def test_workflows_in_repo_uses_self_repository_syntax() -> None:
@@ -1449,3 +1461,40 @@ def test_workflows_in_repo_uses_self_repository_syntax() -> None:
             if "uses:" in code and "uses: ./.github/" in code:
                 offenders.append(f"{path.name}:{i}")
     assert not offenders, offenders
+
+
+# Debian-container steps (deb.debian.org CDN): not covered by the Ubuntu two-mirror action, but each
+# apt-get must still be bounded and retried. sbom.yml keeps its own retried step until #2174 lands.
+_APT_ALLOWED_OUTSIDE_ACTION = {
+    ("native-packages.yml", "smoke-deb"),
+    ("sbom.yml", "generate"),
+}
+
+
+def test_no_workflow_apt_get_install_bypasses_the_two_mirror_action() -> None:
+    """#2220: every apt-get install on an Ubuntu runner goes through the composite action."""
+    offenders: list[str] = []
+    for path in sorted(WORKFLOWS.glob("*.yml")):
+        data = _load_workflow(path.name)
+        for job_id, job in (data.get("jobs") or {}).items():
+            if (path.name, job_id) in _APT_ALLOWED_OUTSIDE_ACTION:
+                continue
+            for run in _ci_step_run_texts(job):
+                if re.search(r"\bapt(-get)?\b[^\n]*\binstall\b", run):
+                    offenders.append(f"{path.name}:{job_id}")
+    assert not offenders, (
+        f"apt install outside the two-mirror action: {sorted(set(offenders))}"
+    )
+
+
+def test_debian_container_apt_steps_are_bounded_and_retried() -> None:
+    text = (WORKFLOWS / "native-packages.yml").read_text(encoding="utf-8")
+    apt_lines = [
+        ln
+        for ln in text.splitlines()
+        if re.search(r"\bapt-get\b.*\b(update|install)\b", ln)
+    ]
+    for ln in apt_lines:
+        if ln.lstrip().startswith("#") or "sudo" in ln or "$/" in ln:
+            continue
+        assert "Acquire::Retries=3" in ln and "timeout " in ln, ln.strip()
