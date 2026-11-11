@@ -30,13 +30,13 @@ Use these tags in headings to keep priorities explicit and machine-countable:
 
 Do not edit this block manually; refresh with `python scripts/plans-stats.py --write`.
 
-- **Status rows counted:** 276  (Done: 164 | Incomplete: 112)
-- **Incomplete breakdown:** Pending `⬜`=93, Tracked `🔄` / `Tracked (partially done)`=19, Under consideration=0, Backlog-marked rows=0
+- **Status rows counted:** 288  (Done: 168 | Incomplete: 120)
+- **Incomplete breakdown:** Pending `⬜`=101, Tracked `🔄` / `Tracked (partially done)`=19, Under consideration=0, Backlog-marked rows=0
 
 | Horizon | Total rows | Done | Incomplete |
 | ------- | ----------: | ----: | ----------: |
 | `H0` | 65 | 41 | 24 |
-| `H1` | 54 | 33 | 21 |
+| `H1` | 66 | 37 | 29 |
 | `H2` | 0 | 0 | 0 |
 | `H3` | 141 | 76 | 65 |
 | `H4` | 0 | 0 | 0 |
@@ -510,6 +510,45 @@ Doc-first wave 1 shipped; **v1.8.0 wave 2 ([#1056](https://github.com/DataBoar/d
 | 2 | Wire `PLAN_PRODUCT_TIERS_AND_OPEN_CORE`, `SPRINTS_AND_MILESTONES` §4.1 (EN+pt-BR), Integration bullet, hub sync | ✅ Done |
 | 3 | Per-capability ADRs + product code | ⬜ Pending (operator-gated) |
 | 4 | Related P1: open-core/plugin governance [#811](https://github.com/DataBoar/data-boar/issues/811) | 🔄 Tracked |
+## [H1] Enterprise estate coverage (Microsoft 365, endpoints, multi-instance)
+
+Three linked fronts from concrete enterprise demand (2026-11-10). Tier framing for each is a
+**proposal pending operator ratification** (boundary table: [PLAN_CONNECTOR_TIER_GATING.md](PLAN_CONNECTOR_TIER_GATING.md)).
+No capacity or timing claim is made without a measurement.
+
+### Microsoft 365 via Graph – [PLAN_M365_GRAPH_CONNECTORS.md](PLAN_M365_GRAPH_CONNECTORS.md)
+
+**`[H1][U1]`** · GitHub [#2206](https://github.com/DataBoar/data-boar/issues/2206) · [P2]. Proposed tier: Pro.
+
+| # | To-do | Status |
+| - | ----- | ------ |
+| 1 | PLAN written (design, least privilege, fail-closed tier entry) | ✅ Done |
+| 2 | Phase 0: validate or discard the WebDAV/rclone workaround (needs a development tenant) | ⬜ Pending (blocked on tenant) |
+| 3 | Phase 1: SharePoint Online + OneDrive, app-only, simulated-Graph tests | ⬜ Pending |
+| 4 | Phase 2: Exchange Online mail; permission and consent guide (en_US + pt_BR) | ⬜ Pending |
+
+### Windows endpoint agent and SMB desktop recipe – [PLAN_ENDPOINT_AGENT.md](PLAN_ENDPOINT_AGENT.md)
+
+**`[H1][U2]`** · GitHub [#2207](https://github.com/DataBoar/data-boar/issues/2207) · [P2]. Proposed tier: Enterprise. Depends on the hub below.
+
+| # | To-do | Status |
+| - | ----- | ------ |
+| 1 | PLAN written; Phase 0 recipe and measurement template ([runbook](../ops/WINDOWS_DESKTOP_SMB_SCAN_RECIPE.md)) | ✅ Done (no figures) |
+| 2 | Phase 0b: run the 20-50 machine pilot and fill the measurements | ⬜ Pending (no pilot environment) |
+| 3 | Phase 1: PLAN approval before any code | ⬜ Pending |
+| 4 | Phase 2: agent build (GPO/MSI/Intune, signed, offline queue) | ⬜ Pending (blocked on 3 and on the hub) |
+
+### Multi-instance report hub – [PLAN_MULTI_INSTANCE_REPORT_HUB.md](PLAN_MULTI_INSTANCE_REPORT_HUB.md)
+
+**`[H1][U1]`** · GitHub [#2208](https://github.com/DataBoar/data-boar/issues/2208) · [P2]. Proposed tier: Enterprise.
+
+| # | To-do | Status |
+| - | ----- | ------ |
+| 1 | PLAN written; Phase 0 PoC script, tests and runbook ([runbook](../ops/MULTI_INSTANCE_FINDINGS_CSV_POC.md)) | ✅ Done |
+| 2 | Phase 0b: two-instance synthetic evidence (52 merged rows from 2 x 26) | ✅ Done |
+| 3 | Phase 1: hub mode with provenance model, dedupe key and tests | ⬜ Pending |
+| 4 | Phase 2: unified Excel report with per-node filter | ⬜ Pending |
+
 ## [H1] Open-core / Pro plugin governance
 
 ### Pro plugin auditability + open-core boundary – [PLAN_PRO_PLUGIN_AUDITABILITY.md](PLAN_PRO_PLUGIN_AUDITABILITY.md) · [ADR-0090](../adr/ADR-0090-open-core-plugin-boundary-pro-auditability-reference-sample.md)
