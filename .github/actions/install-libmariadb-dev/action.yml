@@ -8,8 +8,9 @@ name: Install libmariadb-dev
 description: >-
   Install libmariadb-dev and pkg-config via apt with a bounded timeout so stalled
   mirrors fail the step instead of hanging the runner for hours (#1627). Restricts
-  apt indexes to Ubuntu main+updates (#1862) and retries transient
-  archive.ubuntu.com stalls via apt Acquire::Retries (#1865).
+  apt indexes to Ubuntu main+updates (#1862), retries transient stalls via apt
+  Acquire::Retries (#1865) and lists both azure.archive.ubuntu.com and
+  archive.ubuntu.com so one mirror or DNS outage does not fail the install (#2220).
 
 runs:
   using: composite
@@ -18,10 +19,9 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
-        # #1646: ubuntu-latest (24.04) uses deb822 ubuntu.sources plus
-        # /etc/apt/apt-mirrors.txt (azure priority 1); 22.04 may still use
-        # sources.list with azure.archive.ubuntu.com directly — repoint all.
-        echo "apt layout (pre-mirror-pin):"
+        # Log the runner's native apt layout (ubuntu.sources / apt-mirrors.txt / sources.list)
+        # for diagnosis; the sources actually used are written below (#2220).
+        echo "apt layout (before the sources below):"
         if [ -f /etc/apt/apt-mirrors.txt ]; then
           echo "  apt-mirrors.txt:"
           grep -E 'archive|azure' /etc/apt/apt-mirrors.txt || true
@@ -32,34 +32,24 @@ runs:
         if [ -f /etc/apt/sources.list ]; then
           grep -E 'archive|azure' /etc/apt/sources.list || true
         fi
-        repointed=0
-        repoint_azure() {
-          local f="$1"
-          if [ -f "$f" ] && grep -q 'azure\.archive\.ubuntu\.com' "$f"; then
-            sudo sed -i 's|azure\.archive\.ubuntu\.com|archive.ubuntu.com|g' "$f"
-            repointed=1
-            echo "  repointed azure mirror in $f"
-          fi
-        }
-        repoint_azure /etc/apt/apt-mirrors.txt
-        repoint_azure /etc/apt/sources.list
-        for f in /etc/apt/sources.list.d/*; do
-          repoint_azure "$f"
-        done
-        if [ "$repointed" -eq 0 ]; then
-          echo "  note: no azure.archive.ubuntu.com entries found"
-        fi
         # #1862: apt-get update fetching noble+updates+backports+security plus
-        # Microsoft/Google lists can exceed 240s on a slow canonical mirror even
-        # after the #1646 azure→archive repoint. Keep only Ubuntu main+updates
-        # (enough for libmariadb-dev / pkg-config); disable the rest.
+        # Microsoft/Google lists can exceed 240s on a slow canonical mirror.
+        # Keep only Ubuntu main+updates (enough for libmariadb-dev / pkg-config);
+        # disable the rest.
         . /etc/os-release
-        printf 'deb http://archive.ubuntu.com/ubuntu/ %s main universe\n' \
-          "${VERSION_CODENAME}" \
-          | sudo tee /etc/apt/sources.list.d/data-boar-mariadb.list >/dev/null
-        printf 'deb http://archive.ubuntu.com/ubuntu/ %s-updates main universe\n' \
-          "${VERSION_CODENAME}" \
-          | sudo tee -a /etc/apt/sources.list.d/data-boar-mariadb.list >/dev/null
+        # #2220: list BOTH mirrors, the runner's native one first. With a single host and no
+        # fallback, `apt-get update` exits 0 with `W: Failed to fetch` when that host does not
+        # resolve, and the install then dies with `E: Unable to locate package` (seen on main,
+        # Ubuntu `resolute`, `Temporary failure resolving archive.ubuntu.com`). apt moves on to
+        # the next source for each index, so one mirror/DNS outage no longer fails the job.
+        : > /tmp/data-boar-mariadb.list
+        for mirror in azure.archive.ubuntu.com archive.ubuntu.com; do
+          printf 'deb http://%s/ubuntu/ %s main universe\n' \
+            "${mirror}" "${VERSION_CODENAME}" >> /tmp/data-boar-mariadb.list
+          printf 'deb http://%s/ubuntu/ %s-updates main universe\n' \
+            "${mirror}" "${VERSION_CODENAME}" >> /tmp/data-boar-mariadb.list
+        done
+        sudo install -m 0644 /tmp/data-boar-mariadb.list /etc/apt/sources.list.d/data-boar-mariadb.list
         if [ -f /etc/apt/sources.list ]; then
           sudo mv /etc/apt/sources.list /etc/apt/sources.list.disabled-1862
           echo "  disabled sources.list (#1862)"
