@@ -719,7 +719,16 @@ A extensão é **opcional em tempo de execução**: quando o `boar_fast_filter` 
 
 **Recomendação de diferencial de tier (#2182):** manter ``rust_regex_stage`` em **Pro+** por **equivalência / superconjunto** (ADR 0083) e margem opcional em texto longo — **não** como ganho líquido de velocidade de tier para cargas padrão em células curtas. Claims públicas de performance ficam limitadas aos JSONs pinados (``filter_batch`` isolado vs por chamada / I/O de scan). Ver ``tier_differentiator_recommendation`` em ``rust_tier_scan_io.json``.
 
-**cp314t (CPython free-threaded):** wheels de release com PyO3 ``abi3-py38`` **não carregam** em ``python3.14t`` (``SystemError`` na inicialização do módulo). É preciso wheel por interpretador (build sem ``abi3``); publicação na matriz de CI do repo está em **#782** e **fica fora** de PRs ad-hoc que toquem ``.github/workflows/``. Validação em lab: recompilar ``boar_fast_filter`` localmente sem ``abi3`` no interpretador free-threaded.
+**cp314t (CPython free-threaded):** o build padrão é um único wheel `cp38-abi3`, que **não** carrega em `python3.14t` (`SystemError` na inicialização do módulo); por isso o `rust_regex_stage` informa `rust_extension_missing` ali, mesmo em Pro+/Enterprise (roda o estágio em Python puro, com os mesmos achados). O crate declara `abi3` como **feature padrão do Cargo** (`rust/boar_fast_filter/Cargo.toml`), então o wheel free-threaded sai do mesmo manifesto, sem cópia editada:
+
+```bash
+# dentro de um ambiente python3.14t (ex.: uv python install 3.14+freethreaded)
+cd rust/boar_fast_filter
+maturin build --release --no-default-features -i python3.14t -o dist/
+# -> boar_fast_filter-0.1.0-cp314-cp314t-manylinux_<glibc>_x86_64.whl
+```
+
+Use o wheel com `pip install` no ambiente `3.14t`, ou monte-o no `PYTHONPATH` (por exemplo `/extras`) à frente do `/app` da imagem. O log de inicialização informa o motivo quando o estágio não carrega, com a tag do interpretador, por exemplo `rust-regex-stage: inactive, reason=rust_extension_missing (python=cp314t free_threaded=True): boar_fast_filter imports but does not expose RegexStageEngine ... needs a per-interpreter cp314t wheel`. Publicar esse wheel na matriz de CI do repo e na imagem / nos pacotes nativos é a **#2216** (a mudança de workflow é arquivo de gate do operador); até lá o wheelhouse hospeda wheels `cp314t` montados à mão (ver `docs/plans/PLAN_WHEELHOUSE_DISTRIBUTION.md`). Sem afirmação de velocidade aqui: o ganho continua o delimitado na #2182 (equivalência/superset, não velocidade em texto curto).
 
 ## Dependências e segurança
 

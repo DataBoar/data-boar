@@ -85,7 +85,7 @@ Ten wheels on the same release tag for CPython **3.14 free-threaded** (`python3.
 | **scipy** 1.18.0 | ✅ | ✅ | Upstream publishes cp314t (10/10) |
 | **pandas** 3.0.5 | ✅ | ✅ | Upstream publishes cp314t (10/10) |
 | **scikit-learn** 1.9.0 | ✅ | ✅ | Upstream: manylinux **4** variants; **musllinux = 0 for every variant** — musl cell **built here from source** (`SK_OK`, **10 325 434** bytes) |
-| **boar_fast_filter** 0.1.0 | ✅ `cp314-cp314t` | ✅ `cp314-cp314t` | Built with **maturin `--interpreter python3.14t`**, one wheel per libc. The release **`cp38-abi3` does not load** on free-threaded. |
+| **boar_fast_filter** 0.1.0 | ✅ `cp314-cp314t` | ✅ `cp314-cp314t` | Built with **maturin `--interpreter python3.14t`**, one wheel per libc. The release **`cp38-abi3` does not load** on free-threaded. Since #2216 the crate keeps `abi3` as a **default Cargo feature**, so this wheel is `maturin build --release --no-default-features -i python3.14t` from the same manifest (verified 2026-11-11: `cp314-cp314t` wheel imports on 3.14.10t and exposes `RegexStageEngine`; the default build still yields `cp38-abi3`). Not yet in the image or native packages: the CI wheel matrix is an operator-gated workflow change (#2216). |
 
 **`popcnt` measured (2026-07-30):**
 
@@ -121,6 +121,24 @@ Tag is **`linux_x86_64`** (compiled inside the nogil builder), **not** `manylinu
 | **`libkrb5-dev`** | `pymssql` links `-lkrb5` |
 
 `SHA256SUMS` on the tag now covers **58** `.whl` (the previous 54 plus these four). PEP 503 `simple/` stubs: [data-boar-site#86](https://github.com/DataBoar/data-boar-site/pull/86).
+
+### Pin × wheel delta — GA `requirements.txt` vs hosted release (measured 2026-11-11, #2218)
+
+Measured: the `v1.8.0` `requirements.txt` (145 pins) against the assets of `wheelhouse-x86-64-v1-2026-07-29` (58 wheels, 19 packages). Rebuilding and publishing the release, and the `simple/` index, belong to the site repository; this plan only records the measurement and the target decision.
+
+| Package | Pin (1.8.0) | In the wheelhouse | Cells |
+| ------- | ----------- | ----------------- | ----- |
+| numpy | 2.5.4 | 2.5.1 | 8 |
+| pandas | 3.1.0 | 3.0.5 | 8 |
+| scikit-learn | 1.9.1 | 1.9.0 | 8 |
+| scipy | 1.18.1 | 1.18.0 | 8 |
+| joblib | 1.6.0 | 1.5.3 | 1 (pure) |
+| narwhals | 2.27.1 | 2.24.0 | 1 (pure) |
+| packaging | 26.3 | 26.2 | 1 (pure) |
+| threadpoolctl | 3.7.0 | 3.6.0 | 1 (pure) |
+| tzdata | 2026.5 | 2026.3 | 1 (pure) |
+
+Nine packages trail the GA pins (32 native wheels to rebuild plus 5 pure). Open decision: the target is the GA tag or `main` (dependabot has moved about 40 pins since the GA). Until a new release exists, offline `--find-links` installs on musl and non-AVX hosts resolve versions older than the ones the GA was tested with (hypothesis, to be confirmed by an install test).
 
 ### Seed release `wheelhouse-2026-07-12` (checksum gap check)
 
@@ -326,7 +344,7 @@ Superseded for production musl/v1 paths by **`wheelhouse-x86-64-v1-2026-07-29`**
 
 ## Install command (verified on metal — Haiku)
 
-**Status (2026-11-04):** Wheelhouse Haiku is **partial** — 21 wheels available for core stack. **`scikit-learn`** and **`scipy`** lack wheels (will timeout or require build from source on Haiku).
+**Status (2026-11-11):** Wheelhouse Haiku is **partial** — the release `wheelhouse-haiko-2026-11-04` (tag spelled "haiko"; probably a typo, rename pending) holds 23 wheels plus `SHA256SUMS`, and differs from the GA pins only on `hypothesis` (hosted 6.170.9, pin 6.170.8, i.e. ahead). Earlier count: 21 wheels available for core stack. **`scikit-learn`** and **`scipy`** lack wheels (will timeout or require build from source on Haiku).
 
 **System packages (HaikuPorts):**
 
@@ -364,6 +382,9 @@ python main.py --demo
 - **[ ] `scikit-learn`** wheel for Haiku (core dependency; no Haiku wheel on PyPI)
 - **[ ] `scipy`** wheel for Haiku (core dependency; build timeout in testing)
 - **[ ] Final wheelhouse release** with SHA256SUMS verified (Owl to confirm `scikit-learn` and `scipy`)
+- **[ ] Platform tag proof** (#2175): record `sysconfig.get_platform()` on the guest and show `pip install --no-index --find-links` accepting it; do not assume the tag.
+- **[ ] Root cause of the 5 FAIL + 1 TIMEOUT** (`ast-serialize`, `numpy`, `pandas`, `ruff`, `scikit-learn`; `scipy` timed out at 40 min) or a per-package "unsupported on Haiku" note with evidence.
+- **[ ] End-to-end proof** on a clean Haiku VM using only the wheelhouse, ending in `python main.py --config ... --demo` with findings; the build itself needs a Haiku VM and the public upload is an operator act.
 
 ---
 
