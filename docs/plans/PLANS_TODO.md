@@ -30,14 +30,14 @@ Use these tags in headings to keep priorities explicit and machine-countable:
 
 Do not edit this block manually; refresh with `python scripts/plans-stats.py --write`.
 
-- **Status rows counted:** 288  (Done: 168 | Incomplete: 120)
+- **Status rows counted:** 292  (Done: 172 | Incomplete: 120)
 - **Incomplete breakdown:** Pending `⬜`=101, Tracked `🔄` / `Tracked (partially done)`=19, Under consideration=0, Backlog-marked rows=0
 
 | Horizon | Total rows | Done | Incomplete |
 | ------- | ----------: | ----: | ----------: |
 | `H0` | 65 | 41 | 24 |
 | `H1` | 66 | 37 | 29 |
-| `H2` | 0 | 0 | 0 |
+| `H2` | 4 | 4 | 0 |
 | `H3` | 141 | 76 | 65 |
 | `H4` | 0 | 0 | 0 |
 | `H5` | 0 | 0 | 0 |
@@ -576,6 +576,19 @@ No capacity or timing claim is made without a measurement.
 | D3 | Propose `integrity_anchor.py` compiled-artifact hash redesign (no impl) | ⬜ Pending |
 | D4 | musl Nuitka build | ⬜ Pending |
 | D5 | Confirm real FreeBSD Nuitka support | ⬜ Pending |
+
+## [H2] dashBOARd branding (mascot and favicon)
+
+### Mascot presence per screen + new favicon – [PLAN_DASHBOARD_MASCOT.md](completed/PLAN_DASHBOARD_MASCOT.md) *(archived)*
+
+**`[H2][U2]`** · GitHub [#1450](https://github.com/DataBoar/data-boar/issues/1450) · milestone v1.8.1. Complements [PLAN_WEB_GUI_DESIGN_SYSTEM_EVOLUTION.md](PLAN_WEB_GUI_DESIGN_SYSTEM_EVOLUTION.md) (#1004).
+
+| # | To-do | Status |
+| - | ----- | ------ |
+| 1 | New favicon set, About page mascot, README banner (EN + pt-BR), asset-presence tests | ✅ Done |
+| 2 | Reports empty state with `data-soup-pot` | ✅ Done |
+| 3 | Idle dashboard with `mascot-hero` | ✅ Done |
+| 4 | Every legacy-art usage in templates replaced by the new set (full grep) | ✅ Done |
 
 ## [H1] CLI operator tools and public contact policy
 

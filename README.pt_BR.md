@@ -2,7 +2,11 @@
 
 **Data Boar** — descoberta de dados e governança de risco corporativa: mapeamento com consciência de conformidade na sua sopa de dados (motor de inteligência, não um “app de auditoria” de um só marco).
 
+<p align="center">
+
 ![Data Boar mascot](https://databoar.com.br/images/mascot-pot.png)
+
+</p>
 
 [![CI](https://github.com/DataBoar/data-boar/actions/workflows/ci.yml/badge.svg)](https://github.com/DataBoar/data-boar/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/DataBoar/data-boar/actions/workflows/codeql.yml/badge.svg)](https://github.com/DataBoar/data-boar/security/code-scanning)

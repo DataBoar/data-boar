@@ -1,11 +1,12 @@
 {% extends "base.html" %}
 {% block title %}{{ t('about.page_title') }}{% endblock %}
 {% block content %}
-<h1>{{ t('about.h1') }} <span class="muted">{{ t('about.dashmuted') }}</span></h1>
+<h1><img src="/static/mascot/mascot-mark-face.png" alt="" width="40" height="35" style="vertical-align: middle; margin-right: 0.35em;">{{ t('about.h1') }} <span class="muted">{{ t('about.dashmuted') }}</span></h1>
 
 <section class="card">
   <h2>{{ t('about.app_h2') }}</h2>
-  <p><img src="/static/mascot/data_boar_mascote_color.svg" alt="Data Boar" width="72" height="72" style="vertical-align: middle; margin-right: 0.5em;"><strong>{{ about.name }}</strong> — {{ about.description }}</p>
+  <p><img src="/static/mascot/mascot-pot.png" alt="Data Boar" width="280" height="206" style="display: block; max-width: 100%; height: auto; margin: 0 0 0.75em 0;"></p>
+  <p><strong>{{ about.name }}</strong> — {{ about.description }}</p>
   <p><span class="muted">Version:</span> {{ about.version }}</p>
   <p class="muted">{{ t('about.web_dash') }} <strong>dashBOARd</strong> (part of Data Boar).</p>
 </section>
