@@ -110,6 +110,64 @@ def _rust_installed() -> bool:
         return False
 
 
+_missing_logged = False
+
+
+def rust_extension_diagnosis() -> dict[str, Any]:
+    """Why the Rust regex stage cannot load, with the interpreter ABI (#2216).
+
+    A ``cp38-abi3`` wheel imports on GIL CPython but not on free-threaded ``python3.14t``;
+    knowing the running tag turns ``rust_extension_missing`` into an actionable message.
+    """
+    import sys
+    import sysconfig
+
+    free_threaded = bool(sysconfig.get_config_var("Py_GIL_DISABLED"))
+    tag = f"cp{sys.version_info.major}{sys.version_info.minor}" + (
+        "t" if free_threaded else ""
+    )
+    info: dict[str, Any] = {
+        "python_tag": tag,
+        "free_threaded": free_threaded,
+        "module_present": False,
+        "detail": "",
+    }
+    try:
+        import boar_fast_filter  # noqa: F401
+    except ModuleNotFoundError:
+        info["detail"] = "boar_fast_filter is not installed"
+    except Exception as exc:  # noqa: BLE001 - any import failure is a diagnosis, not a crash
+        info["module_present"] = True
+        info["detail"] = f"boar_fast_filter failed to import ({type(exc).__name__})"
+    else:
+        info["module_present"] = True
+        if hasattr(boar_fast_filter, "RegexStageEngine"):
+            info["detail"] = "boar_fast_filter loads and exposes RegexStageEngine"
+        else:
+            info["detail"] = (
+                "boar_fast_filter imports but does not expose RegexStageEngine "
+                "(wheel built for a different ABI or an older release)"
+            )
+    if free_threaded and info["detail"] != "boar_fast_filter is not installed":
+        info["detail"] += "; free-threaded CPython needs a per-interpreter cp314t wheel"
+    return info
+
+
+def _log_extension_missing_once() -> None:
+    global _missing_logged
+    if _missing_logged:
+        return
+    _missing_logged = True
+    diag = rust_extension_diagnosis()
+    logger.warning(
+        "rust-regex-stage: inactive, reason=rust_extension_missing "
+        "(python=%s free_threaded=%s): %s",
+        diag["python_tag"],
+        diag["free_threaded"],
+        diag["detail"],
+    )
+
+
 def _tier_allows_rust_stage(
     licensing_config: dict[str, Any] | None,
 ) -> tuple[bool, str | None, str | None]:
@@ -161,6 +219,7 @@ def build_rust_regex_stage(
         return None, base_status
     if not installed:
         base_status.reason = "rust_extension_missing"
+        _log_extension_missing_once()
         return None, base_status
 
     rust_names: list[str] = []
