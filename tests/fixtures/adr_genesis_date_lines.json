@@ -91,5 +91,6 @@
   "ADR-0090-open-core-plugin-boundary-pro-auditability-reference-sample.md": "- **Date (UTC):** 2026-08-18",
   "ADR-0091-container-cp314t-license-gil-gate.md": "- **Date (UTC):** 2026-08-29",
   "ADR-0092-build-provenance-scorecard-and-github-release-attestations.md": "- **Date (UTC):** 2026-09-22",
-  "ADR-0093-signed-integrity-manifest.md": "- **Date (UTC):** 2026-11-02"
+  "ADR-0093-signed-integrity-manifest.md": "- **Date (UTC):** 2026-11-02",
+  "ADR-0094-forensic-acquisition-posture-scan-manifest-iso27037.md": "- **Date (UTC):** 2026-11-10"
 }

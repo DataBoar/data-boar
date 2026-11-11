@@ -114,6 +114,7 @@ Canonical completeness of numbered ADR files is enforced for this table **and** 
 | 0091 | [One published container image (cp314t); GIL restored by license at ENTRYPOINT](ADR-0091-container-cp314t-license-gil-gate.md) | Proposed |
 | 0092 | [Build provenance: Scorecard + GitHub Release attestations (not PyPI badges)](ADR-0092-build-provenance-scorecard-and-github-release-attestations.md) | Accepted |
 | 0093 | [Release-signed CRITICAL_MODULES manifest is the integrity trust root](ADR-0093-signed-integrity-manifest.md) | Proposed |
+| 0094 | [Forensic-acquisition posture of scan_manifest — ISO/IEC 27037 alignment, deliberate absence of source hash / bit-for-bit image](ADR-0094-forensic-acquisition-posture-scan-manifest-iso27037.md) | Proposed |
 
 ## Related docs
 

@@ -108,7 +108,7 @@ A ISO/IEC 38505 estende os princípios da ISO/IEC 38500 (governança corporativa
 para o domínio específico de dados. Foco: valor dos dados, riscos a mitigar,
 alinhamento da gestão de dados à governança de TI e corporativa.
 
-Esta norma não está ainda em `docs/COMPLIANCE_AND_LEGAL.md` — adicionar na próxima atualização.
+Detalhe de posicionamento do produto para DPOs e segurança: [ISO/IEC 38505](COMPLIANCE_AND_LEGAL.md#isoiec-abnt-nbr-e-ioc-positioning-for-dpos-and-security-leads) (em [COMPLIANCE_AND_LEGAL.pt_BR.md](COMPLIANCE_AND_LEGAL.pt_BR.md)).
 
 - [ISO/IEC 38505](https://www.iso.org/standard/56639.html)
 - [ISO/IEC 38500](https://www.iso.org/standard/62816.html)
