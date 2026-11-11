@@ -12,6 +12,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from core.detector import SensitivityDetector
 from core.licensing.tier_features import FEATURE_TIER_MAP, Tier
+from core.rust_regex_stage import RUST_REGEX_STAGE_MIN_TEXT_CHARS
 from core.licensing.guard import reset_license_guard_for_tests
 from tests import hybrid_license_fixture as hlf
 from tests.license_verify_pin import pin_embedded_ed25519_pem
@@ -208,6 +209,27 @@ def test_rust_stage_enforced_partner_allows_gate(tmp_path: Path) -> None:
     status = det.rust_regex_stage_status.to_prefilter_dict()
     assert status["tier"] == "partner"
     assert status["reason"] in ("rust_extension_missing", None)
+
+
+def test_rust_stage_short_text_matches_python_only_path() -> None:
+    """Below the activation length, Rust is skipped and Python handles regex."""
+    pytest.importorskip(
+        "boar_fast_filter",
+        reason="Run maturin develop for boar_fast_filter",
+    )
+    col = "c"
+    probe = "390.533.447-05"
+    pad_len = RUST_REGEX_STAGE_MIN_TEXT_CHARS - len(col) - len(probe) - 3
+    assert pad_len > 0
+    sample = ("x" * pad_len) + " " + probe
+    combined = f"{col} {sample}"
+    assert len(combined) < RUST_REGEX_STAGE_MIN_TEXT_CHARS
+    det_py = SensitivityDetector(
+        licensing_config={"licensing": {"effective_tier": "community"}}
+    )
+    det_rust = SensitivityDetector(licensing_config=_ENT_CFG)
+    assert det_rust.rust_regex_stage_status.active
+    assert det_py.analyze(col, sample) == det_rust.analyze(col, sample)
 
 
 def test_rust_stage_superset_on_builtin_probes() -> None:

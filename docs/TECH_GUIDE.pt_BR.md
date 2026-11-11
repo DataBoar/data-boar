@@ -713,6 +713,14 @@ A extensão opcional `boar_fast_filter` acelera o casamento **padrão × texto**
 
 A extensão é **opcional em tempo de execução**: quando o `boar_fast_filter` está ausente, o motor usa o pré-filtro em Python puro (mais lento, achados idênticos). Um host restrito que não compila e não tem wheel compatível ainda funciona pelo caminho Python. A wheel-matrix multi-host que gera os wheels abi3 para hosts restritos é rastreada na **#782**.
 
+**Por chamada vs lote (#2182):** o artefato pinado ``rust_prefilter_hotspot_v1`` mede ``FastFilter.filter_batch`` em **um único lote grande** (filtro isolado, tier Pro+). Em produção, ``rust_regex_stage`` chama ``RegexStageEngine.match_names`` **uma vez por amostra**; a fronteira PyO3 + GIL pode dominar em texto curto. ``tests/benchmarks/rust_per_call_cost.json`` documenta essa diferença e o piso ``RUST_REGEX_STAGE_MIN_TEXT_CHARS`` em ``core/rust_regex_stage.py`` — abaixo desse tamanho decodificado o detector permanece no regex Python com o mesmo veredito.
+
+**Scan de produto com I/O (#2182):** ``tests/benchmarks/rust_tier_scan_io.json`` (``rust_tier_scan_io_v1``) mede um alvo filesystem sintético via ``AuditEngine.start_audit()`` em cada teto de ``worker_cap`` por tier (Community/Std 2, Pro 4, Pro+ 8, modo ``enforced`` em banco de lab). O tempo de parede é dominado por walk/leitura/detecção; o backend Rust é registrado por tier, mas não sustenta upsell de velocidade em amostras curtas típicas.
+
+**Recomendação de diferencial de tier (#2182):** manter ``rust_regex_stage`` em **Pro+** por **equivalência / superconjunto** (ADR 0083) e margem opcional em texto longo — **não** como ganho líquido de velocidade de tier para cargas padrão em células curtas. Claims públicas de performance ficam limitadas aos JSONs pinados (``filter_batch`` isolado vs por chamada / I/O de scan). Ver ``tier_differentiator_recommendation`` em ``rust_tier_scan_io.json``.
+
+**cp314t (CPython free-threaded):** wheels de release com PyO3 ``abi3-py38`` **não carregam** em ``python3.14t`` (``SystemError`` na inicialização do módulo). É preciso wheel por interpretador (build sem ``abi3``); publicação na matriz de CI do repo está em **#782** e **fica fora** de PRs ad-hoc que toquem ``.github/workflows/``. Validação em lab: recompilar ``boar_fast_filter`` localmente sem ``abi3`` no interpretador free-threaded.
+
 ## Dependências e segurança
 
 - **Fonte da verdade:** Para a ferramenta **uv**, o **`pyproject.toml`** é a fonte de verdade das dependências declaradas; o **`uv.lock`** fixa a árvore resolvida para instalações reproduzíveis (evita quebras “funcionou ontem”). **pip** e **`requirements.txt`** são derivados (o requirements.txt é exportado do lockfile para ambientes pip). Não edite **`uv.lock`** nem **`requirements.txt`** à mão para mudanças de versão. Ao adicionar, remover ou alterar uma dependência, edite apenas o **`pyproject.toml`**, depois execute `uv lock` e export.

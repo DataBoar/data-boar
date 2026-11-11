@@ -17,6 +17,11 @@ logger = logging.getLogger(__name__)
 
 _RUST_STAGE_FEATURE = "rust_regex_stage"
 
+# Minimum decoded sample length before invoking the Rust engine per call.
+# Pinned with tests/benchmarks/rust_per_call_cost.json (rust_per_call_cost_v1).
+# Below this size the PyO3 boundary dominates and Python regex is faster (#2182).
+RUST_REGEX_STAGE_MIN_TEXT_CHARS = 4097
+
 
 @dataclass
 class RustRegexStageStatus:
@@ -85,6 +90,8 @@ class RustRegexStage:
     def match_names(self, text: str) -> tuple[set[str], bool]:
         """Return matched pattern names and whether the Rust engine succeeded."""
         if self._engine is None:
+            return set(), False
+        if len(text) < RUST_REGEX_STAGE_MIN_TEXT_CHARS:
             return set(), False
         try:
             hits = self._engine.match_names(text)
