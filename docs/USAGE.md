@@ -94,7 +94,7 @@ hub:
   nodes:
     - id: site-a
       url: https://boar-a.example.internal:8088
-      api_key_from_env: HUB_KEY_SITE_A   # only if that node requires an API key
+      api_key_from_env: DATA_BOAR_HUB_KEY_SITE_A   # only if that node requires an API key
     - id: site-b
       url: https://boar-b.example.internal:8088
 ```
@@ -106,7 +106,7 @@ uv run python main.py --config config.yaml --hub-report hub.xlsx
 - Only the newest **completed** session of each node is consolidated; if the newest one is still running or failed, the hub uses the newest completed one and says so in the Summary sheet.
 - The workbook has a **Summary** sheet (status per node), a **Findings** sheet with a per-node filter and a **Notes** sheet.
 - Exit code `0`: every node consolidated; `2`: only some nodes (or the license does not allow the feature); `1`: nothing consolidated, and no file is written. Use `--hub-overwrite` to replace an existing output file.
-- Tokens come only from the environment variable named by `api_key_from_env`. `https` is required except for loopback; redirects are never followed; URLs and tokens are never printed.
+- Tokens come only from the environment variable named by `api_key_from_env` (name must start with `DATA_BOAR_`, `REST_API_` or `API_`; with `DATA_BOAR_CREDENTIAL_STRICT=1` the node host must also be in `DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS`). A node that reports a session id with unexpected characters is marked failed. `https` is required except for loopback; redirects are never followed; URLs and tokens are never printed.
 - File paths and host names are sensitive even as metadata: the output file is created with mode `0600`; store and share it accordingly.
 
 ## Findings sink (Pro/Enterprise)

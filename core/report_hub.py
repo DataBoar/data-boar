@@ -33,6 +33,11 @@ from urllib.parse import quote, urlsplit
 
 import requests
 
+from config.loader import (
+    _operator_host_key,
+    assert_credential_env_name,
+    enforce_operator_credential_host_gate,
+)
 from report.excel_sanitizer import excel_sanitize_cell
 
 FEATURE = "multi_instance_hub"
@@ -40,6 +45,9 @@ DEFAULT_TIMEOUT_S = 30.0
 DEFAULT_MAX_BYTES = 64 * 1024 * 1024
 
 _NODE_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$")
+# Identifiers a node reports (session id, version) end up in stderr and in the report:
+# anything outside this alphabet (control characters, escape sequences) is refused.
+_NODE_TOKEN_RE = re.compile(r"^[A-Za-z0-9_.:+-]{1,128}$")
 
 FINDING_FIELDS = (
     "source_type",
@@ -142,9 +150,16 @@ def parse_hub_nodes(cfg: Mapping[str, Any]) -> list[HubNode]:
             raise HubError(f"duplicate hub node id {node_id!r}")
         seen.add(node_id)
         base_url = _validate_url(node_id, str(item.get("url") or "").strip())
-        nodes.append(
-            HubNode(node_id, base_url, str(item.get("api_key_from_env") or "").strip())
-        )
+        env_name = str(item.get("api_key_from_env") or "").strip()
+        if env_name:
+            label = f"hub.nodes[{node_id}].api_key_from_env"
+            assert_credential_env_name(env_name, label)
+            # Same operator host gate as the findings push: a config file alone must not
+            # be able to send an environment secret to an arbitrary host.
+            enforce_operator_credential_host_gate(
+                [{_operator_host_key(base_url)}], label
+            )
+        nodes.append(HubNode(node_id, base_url, env_name))
     return nodes
 
 
@@ -241,6 +256,8 @@ def fetch_snapshot(
         session_id = str(chosen.get("session_id") or "")
         if not session_id:
             raise NodeError("completed session without session_id")
+        if not _NODE_TOKEN_RE.fullmatch(session_id):
+            raise NodeError("session_id has unexpected characters")
         note = ""
         if sessions and sessions[0] is not chosen:
             note = "newest session is not completed; using the newest completed one"
@@ -260,6 +277,8 @@ def fetch_snapshot(
                 node, "/about/json", token=token, timeout=timeout, max_bytes=max_bytes
             )
             version = str(about.get("version") or "") if isinstance(about, dict) else ""
+            if version and not _NODE_TOKEN_RE.fullmatch(version):
+                version = ""  # untrusted text never reaches the report or the terminal
         except NodeError:
             version = ""  # the version is provenance, not a reason to drop the node
         return NodeSnapshot(

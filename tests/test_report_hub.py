@@ -219,7 +219,9 @@ def test_token_comes_only_from_the_environment_and_never_leaks(tmp_path: Path) -
     ):
         out = tmp_path / "hub.xlsx"
         cons = run_hub_report(
-            _cfg(("a", url, "HUB_KEY_A")), out, environ={"HUB_KEY_A": "s3cr3t-token"}
+            _cfg(("a", url, "DATA_BOAR_HUB_KEY_A")),
+            out,
+            environ={"DATA_BOAR_HUB_KEY_A": "s3cr3t-token"},
         )
     assert cons.exit_code == 0
     assert all(call["key"] == "s3cr3t-token" for call in seen)
@@ -441,3 +443,44 @@ def test_cli_is_blocked_by_the_tier_in_enforced_mode(tmp_path: Path) -> None:
         proc = _run_cli(cfg, out)
     assert proc.returncode == 2 and "Licensing:" in proc.stderr
     assert not out.exists()
+
+
+# --- credential gate and untrusted node text (security review follow-up) -----------------------
+
+
+@pytest.mark.parametrize("env_name", ["PATH", "HOME", "bad name", "1BAD"])
+def test_hub_node_env_credential_name_is_validated(env_name: str) -> None:
+    with pytest.raises(ValueError):
+        parse_hub_nodes(_cfg(("a", "https://x.example", env_name)))
+
+
+def test_hub_node_env_credential_obeys_the_operator_host_gate(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("DATA_BOAR_CREDENTIAL_STRICT", "1")
+    monkeypatch.setenv("DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS", "good.example")
+    monkeypatch.delenv("DATA_BOAR_CREDENTIAL_HOSTS_UNRESTRICTED", raising=False)
+    parse_hub_nodes(_cfg(("a", "https://good.example", "DATA_BOAR_HUB_A_KEY")))
+    with pytest.raises(ValueError, match="outside"):
+        parse_hub_nodes(_cfg(("b", "https://evil.example", "DATA_BOAR_HUB_B_KEY")))
+    # A node without a credential has nothing to exfiltrate: the gate does not apply.
+    parse_hub_nodes(_cfg(("c", "https://evil.example", "")))
+
+
+@pytest.mark.parametrize("bad", ["S1\x1b[2J", "S1\nfake=line", "x" * 200, "a b"])
+def test_session_id_with_control_or_odd_characters_fails_the_node(bad: str) -> None:
+    with _node([_session(bad)], {bad: [_finding(1, sid=bad)]}) as (a, _):
+        snap = fetch_snapshot(HubNode("a", a))
+    assert snap.status == "failed"
+    assert snap.detail == "session_id has unexpected characters"
+    assert bad not in "\n".join(consolidate([snap]).summary_lines())
+
+
+def test_untrusted_version_is_dropped_not_printed() -> None:
+    with _node([_session("S1")], {"S1": [_finding(1)]}, version="1.0\x1b]0;x\x07") as (
+        a,
+        _,
+    ):
+        snap = fetch_snapshot(HubNode("a", a))
+    assert snap.status == "ok"
+    assert snap.node_version == ""
