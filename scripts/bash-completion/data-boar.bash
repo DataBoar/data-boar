@@ -8,10 +8,11 @@ _data_boar_complete() {
   prev="${COMP_WORDS[COMP_CWORD-1]}"
   local flags="
     --version --check-extras --demo --config --web --port --host
-    --https-cert-file --https-key-file --allow-insecure-http --reset-data
+    --https-cert-file --https-key-file --allow-insecure-http --reset-data --hub-report --hub-overwrite
     --reconcile-integrity-anchor --confirm-upgrade-to --export-audit-trail
     --validate-config --plan --resume --prefilter-status --diff --fail-on-new-high
-    --export-dsar --dsar-output --dsar-include-samples --export-l1 --l1-output
+    --export-dsar --dsar-output --dsar-include-samples --export-ropa --ropa-output
+    --export-sarif --sarif-output --export-l1 --l1-output
     --export-findings-sink --allow-sample-export --export-l3 --l3-grant --l3-persist
     --l3-column --l3-max-rows --l3-allow-unprotected --session
     --export-remediation-manifest --regenerate-report --governance-report

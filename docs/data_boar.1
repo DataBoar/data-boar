@@ -265,6 +265,20 @@ Cannot be combined with
 .BR \-\-web ", " \-\-reset\-data ", " \-\-export\-audit\-trail ", " \-\-export\-dsar ", " \-\-regenerate\-report ", or " \-\-prefilter\-status .
 .
 .TP
+.B \-\-hub\-report OUTPUT.xlsx
+Multi\-instance report hub (Enterprise).
+Pull the newest completed session of every node listed in
+.B hub.nodes
+and write one consolidated Excel report with provenance (node, version, session) and deduplication.
+Tokens come only from the environment variables named by
+.BR api_key_from_env .
+Exit status 0 when every node was consolidated, 2 when only some were (or the license blocks the feature), 1 when none.
+.TP
+.B \-\-hub\-overwrite
+With
+.BR \-\-hub\-report :
+replace the output file if it already exists.
+.TP
 .B \-\-prefilter\-status
 Print rust\-regex\-stage / accelerator readiness for this configuration as JSON
 .RB ( active ", " name ", " backend ", " tier ", " reason ", " engine ,
@@ -323,6 +337,50 @@ instead of stdout. Requires
 With
 .BR \-\-export\-dsar :
 include raw sample fields from stored finding rows when present (SQLite stores metadata only by default).
+.
+.TP
+.B \-\-export\-ropa SESSION_ID
+Export a Record of Processing Activities (RoPA) evidence workbook (.xlsx) and JSON for one scan session (GDPR Art. 30 / LGPD Art. 37 inputs; Pro+ tier). Built from scan metadata: personal\-data categories detected, where (source and location), sensitivity and norm tags. What a scan cannot know (controller and DPO, purposes, legal basis, recipients, transfers, retention, security measures) comes from the optional
+.B ropa
+configuration block; anything missing is written as
+.BR "A COMPLETAR" .
+Evidence only, not a legal conclusion; metadata only (no samples). Files are written to
+.BR "\-\-ropa\-output DIR"
+(default
+.BR report.output_dir ).
+Unknown session exits
+.B 2 ;
+a tier below Pro+ exits
+.B 2 .
+Cannot be combined with
+.BR \-\-web ", " \-\-reset\-data ", " \-\-export\-audit\-trail ", " \-\-validate\-config ", " \-\-diff ", " \-\-export\-dsar ", " \-\-export\-sarif ", or other export modes" .
+.
+.TP
+.B \-\-ropa\-output DIR
+Directory for
+.B ropa_<session>.xlsx
+and
+.BR ropa_<session>.json .
+Requires
+.BR \-\-export\-ropa .
+.
+.TP
+.B \-\-export\-sarif SESSION_ID
+Export findings for one scan session as SARIF 2.1.0 (Pro+ tier): one rule per detector, result level from sensitivity (HIGH error, MEDIUM warning, LOW note), locations from path and file name or from schema.table.column, and a stable fingerprint per finding. Metadata only; no samples. Print to stdout or use
+.BR "\-\-sarif\-output PATH" .
+Unknown session exits
+.B 2 ;
+a tier below Pro+ exits
+.B 2 .
+Cannot be combined with
+.BR \-\-web ", " \-\-reset\-data ", " \-\-export\-audit\-trail ", " \-\-validate\-config ", " \-\-diff ", " \-\-export\-dsar ", " \-\-export\-ropa ", or other export modes" .
+.
+.TP
+.B \-\-sarif\-output PATH
+Write SARIF to
+.B PATH
+instead of stdout. Requires
+.BR \-\-export\-sarif .
 .
 .TP
 .B \-\-export\-l1 SESSION_ID

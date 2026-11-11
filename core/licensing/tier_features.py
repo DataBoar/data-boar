@@ -123,6 +123,12 @@ FEATURE_TIER_MAP: dict[str, Tier] = {
     "pro_prefilter_accel": Tier.PRO_PLUS,
     # Pro+ — Rust regex matching stage (#1414 / ADR-0083); same tier gate as legacy key.
     "rust_regex_stage": Tier.PRO_PLUS,
+    # Pro+ — governance exports (#837 / #838). Explicit keys: an absent key would
+    # fall through to Community in is_feature_available(), so these stay listed.
+    # ropa_export: --export-ropa (GDPR Art. 30 / LGPD Art. 37 evidence workbook).
+    # findings_siem_push: --export-sarif + post-scan findings push (SARIF/JSON/HEC).
+    "ropa_export": Tier.PRO_PLUS,
+    "findings_siem_push": Tier.PRO_PLUS,
     # GRC-style org maturity questionnaire UI (POC); not open core — see PLAN_MATURITY_SELF_ASSESSMENT_GRC_QUESTIONNAIRE.md
     "maturity_self_assessment_poc": Tier.PRO,
     "notifications_email": Tier.PRO,
@@ -137,6 +143,8 @@ FEATURE_TIER_MAP: dict[str, Tier] = {
     "historical_comparison": Tier.ENTERPRISE,
     "audit_log_export": Tier.ENTERPRISE,
     "custom_detectors": Tier.ENTERPRISE,
+    # Multi-instance report hub (#2208 / ADR-0095): new features start at Enterprise.
+    "multi_instance_hub": Tier.ENTERPRISE,
     "vcs_connector": Tier.ENTERPRISE,  # files version control (VCS) scanner — see #677
     "plugin_partner_interface": Tier.ENTERPRISE,  # L1/L2/L3 plugin arch — see #695
     "partner_provider_driver": Tier.ENTERPRISE,  # stealthization via partner provider — see #696

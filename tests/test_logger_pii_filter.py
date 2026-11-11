@@ -68,6 +68,9 @@ EXPECTED_STR_E_COUNTS: Counter[tuple[str, str, str]] = Counter(
             "filter_batch_with_mutual_attestation",
             "inert",
         ): 2,
+        # NodeError text is a fixed safe category (never a URL, token or path); it goes to the
+        # workbook Summary sheet and the CLI summary line, not to a logger or SQLite.
+        ("core/report_hub.py", "fetch_snapshot", "inert"): 1,
     }
 )
 
@@ -172,7 +175,7 @@ def test_str_e_survey_matches_snapshot() -> None:
     kind_totals = Counter(s.kind for s in sites)
     assert kind_totals["logger"] == 2
     assert kind_totals["persist"] == 20
-    assert kind_totals["inert"] == 13
+    assert kind_totals["inert"] == 14
 
 
 def test_logger_str_e_sites_are_allowlisted() -> None:

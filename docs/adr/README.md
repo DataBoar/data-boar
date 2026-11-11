@@ -116,6 +116,8 @@ Canonical completeness of numbered ADR files is enforced for this table **and** 
 | 0093 | [Release-signed CRITICAL_MODULES manifest is the integrity trust root](ADR-0093-signed-integrity-manifest.md) | Proposed |
 | 0094 | [Forensic-acquisition posture of scan_manifest — ISO/IEC 27037 alignment, deliberate absence of source hash / bit-for-bit image](ADR-0094-forensic-acquisition-posture-scan-manifest-iso27037.md) | Proposed |
 
+| 0095  | [multi-instance-report-hub-pull-provenance-dedupe](ADR-0095-multi-instance-report-hub-pull-provenance-dedupe.md) | Proposed |
+
 ## Related docs
 
 | Doc | Notes |
@@ -141,4 +143,3 @@ See [docs/README.md](../README.md) for the full documentation map.
 4. Use **four-digit** filenames and **English-only** ADR bodies.
 
 Tracking: GitHub [#994](https://github.com/DataBoar/data-boar/issues/994).
-

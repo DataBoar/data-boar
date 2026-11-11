@@ -199,6 +199,10 @@ A aplicação adiciona os seguintes cabeçalhos a todas as respostas web e da AP
 
 Quando o app estiver atrás de um proxy reverso (ex.: nginx, Caddy, load balancer), garanta que o proxy defina **X-Forwarded-Proto: https** para requisições com TLS terminado para que o HSTS seja aplicado corretamente. Configure **`api.trusted_proxy_cidrs`** com o(s) CIDR(s) do peer **direto** do proxy; sem correspondência, cabeçalhos `X-Forwarded-*` são ignorados (fail-safe). Quando o peer corresponde e o proto forwarded confiável é `https`, o painel suprime o banner de risco de texto claro nessa requisição e **`GET /status`** expõe **`effective_external_transport`** com `tls_termination: trusted_proxy` — o **`dashboard_transport`** a nível de processo continua reportando HTTP upstream com honestidade. Não habilite HSTS na camada do app para HTTP puro; o proxy pode adicionar HSTS ao servir via HTTPS.
 
+## Hub de relatório multi-instância (Enterprise)
+
+O hub (`--hub-report`) busca findings de outras instâncias do Data Boar. Ele lê só a API já existente de cada nó, envia a chave de API a partir de uma variável de ambiente (nunca pela linha de comando nem pelo arquivo de configuração), exige `https` exceto em loopback, nunca segue redirecionamentos, recusa hosts link-local e multicast, limita o tamanho da resposta e nunca imprime URL, token ou caminho. O arquivo de saída contém caminhos e nomes de host, por isso é criado com modo `0600`: trate-o como confidencial. Veja o ADR 0095.
+
 ## Chave de API opcional (empresarial)
 
 A API não implementa autenticação por padrão; proteja o app no proxy reverso ou no nível de rede quando exposto. Para empresas que desejam um gate de segredo compartilhado simples sem alterar o modelo “proteger no proxy”, a aplicação suporta uma **chave de API opcional**:

@@ -46,6 +46,10 @@ O ponto de entrada é `main.py`.
 | `--export-dsar`         | `SESSION_ID`         | Exporta achados de uma sessão em JSON orientado a DSAR (metadados primeiro; enquadramento LGPD Art. 18 / GDPR Art. 15). Imprime em **stdout** ou use `--dsar-output PATH`. Sessão inexistente ou vazia → `findings_by_source` vazio, sai **0**. Incompatível com `--web`, `--reset-data`, `--export-audit-trail`, `--validate-config`, `--diff`, `--export-l1` e `--export-l3`. |
 | `--dsar-output`         | `PATH`               | Grava o JSON DSAR em `PATH` em vez de stdout. Exige `--export-dsar`. |
 | `--dsar-include-samples`| *(flag)*             | Com `--export-dsar`: inclui campos de amostra bruta nas linhas de achado quando existirem (SQLite guarda só metadados por padrão). |
+| `--export-ropa`         | `SESSION_ID`         | **Pro+.** Exporta uma planilha de **evidências** do Registro das Operações de Tratamento (RoPA) (`ropa_<sessão>.xlsx`) e JSON (`ropa_<sessão>.json`) de uma sessão (insumos para GDPR Art. 30 / LGPD Art. 37). Construída a partir de metadados da varredura (categorias de dados detectadas, onde, sensibilidade, norm tags); os campos do Art. 30(1)(a)–(g) que a varredura não conhece vêm do bloco opcional `ropa:` no config, senão saem como `A COMPLETAR`. Evidência, não conclusão jurídica; só metadados. Diretório de saída: `--ropa-output` (padrão `report.output_dir`). Sessão inexistente ou tier abaixo de Pro+ → sai **2**. Veja [§5.3](#53-export-de-evidências-do-ropa-pro). Incompatível com `--web`, `--reset-data`, `--export-audit-trail`, `--validate-config`, `--diff`, `--export-dsar`, `--export-sarif` e os demais modos de export. |
+| `--ropa-output`         | `DIR`                | Diretório dos arquivos do RoPA. Exige `--export-ropa`. |
+| `--export-sarif`        | `SESSION_ID`         | **Pro+.** Exporta os achados de uma sessão em **SARIF 2.1.0** (uma regra por detector, nível pela sensibilidade, locais a partir de caminho/arquivo ou `schema.tabela.coluna`, fingerprint estável por achado; `baselineState` quando existe sessão anterior comparável). Só metadados. Imprime em **stdout** ou `--sarif-output PATH`. Sessão inexistente ou tier abaixo de Pro+ → sai **2**. Incompatível com os mesmos modos de `--export-ropa`. |
+| `--sarif-output`        | `PATH`               | Grava o SARIF em `PATH` em vez de stdout. Exige `--export-sarif`. |
 | `--export-l1`           | `SESSION_ID`         | Exporta achados de uma sessão como JSON L1 **metadata_manifest** (pin do contrato SDK; só metadados — nunca amostras brutas). Lê o SQLite existente (sem re-varredura). Imprime em **stdout** ou `--l1-output PATH`. Sessão inexistente ou vazia → `findings` vazio, sai **0**. Violação de contrato → aborta, sai **1** (fail-closed). Incompatível com `--web`, `--reset-data`, `--export-audit-trail`, `--validate-config`, `--diff`, `--export-dsar`, `--export-l3` e `--export-findings-sink`. |
 | `--l1-output`           | `PATH`               | Grava o JSON L1 metadata_manifest em `PATH` em vez de stdout. Exige `--export-l1`. |
 | `--export-findings-sink`| `SESSION_ID`         | Ecoa os achados de uma sessão do SQLite local para o **findings_sink** configurado (SQL = Pro, MongoDB = Enterprise). Só metadados por padrão. Se `findings_sink.include_sample_content: true`, passe também `--allow-sample-export` (LGPD Art. 46) ou a CLI sai **1**. Erro no sink na CLI sai **1**; tier insuficiente sai **2**. Incompatível com `--web`, `--reset-data` e outros modos de export. |
@@ -88,6 +92,31 @@ YAML opt-in `remediation:` carrega um `RemediationPlugin` de parceiro após a ge
 ### Plugins YAML de padrões (opcional)
 
 Arquivos YAML do operador injetam termos extras de regex / ML / DL no detector (`patterns_plugin_file`, ou as chaves legadas `regex_overrides_file` / `ml_patterns_file` / `dl_patterns_file`). **Não** executam código. Guia do autor: **[PLUGIN_AUTHOR_GUIDE.pt_BR.md](PLUGIN_AUTHOR_GUIDE.pt_BR.md)** ([EN](PLUGIN_AUTHOR_GUIDE.md)). Schema: `config/plugin_schema.yaml`. How-to campo a campo: [SENSITIVITY_DETECTION.pt_BR.md](SENSITIVITY_DETECTION.pt_BR.md#padrões-regex-customizados-detectar-novos-dados-pessoaissensíveis).
+
+## Hub de relatório multi-instância (Enterprise)
+
+Uma instância central pode **buscar (pull)** os findings de várias instâncias do Data Boar e gerar UM relatório Excel consolidado. Cada linha mantém o nó, a versão e a sessão de origem, e findings idênticos dentro de um mesmo nó e sessão são deduplicados. O relatório é evidência técnica para apoiar uma revisão, não uma conclusão jurídica. Camada Enterprise (`multi_instance_hub`).
+
+```yaml
+hub:
+  timeout_seconds: 30
+  nodes:
+    - id: site-a
+      url: https://boar-a.example.internal:8088
+      api_key_from_env: DATA_BOAR_HUB_KEY_SITE_A   # só se esse nó exigir chave de API
+    - id: site-b
+      url: https://boar-b.example.internal:8088
+```
+
+```bash
+uv run python main.py --config config.yaml --hub-report hub.xlsx
+```
+
+- Só a sessão **concluída** mais recente de cada nó é consolidada; se a mais recente ainda estiver rodando ou tiver falhado, o hub usa a concluída mais recente e avisa na aba Summary.
+- O arquivo tem a aba **Summary** (situação por nó), a aba **Findings** com filtro por nó e a aba **Notes**.
+- Código de saída `0`: todos os nós consolidados; `2`: só alguns nós (ou a licença não permite o recurso); `1`: nada consolidado, e nenhum arquivo é gravado. Use `--hub-overwrite` para substituir um arquivo de saída existente.
+- Os tokens vêm só da variável de ambiente indicada em `api_key_from_env` (o nome deve começar com `DATA_BOAR_`, `REST_API_` ou `API_`; com `DATA_BOAR_CREDENTIAL_STRICT=1` o host do nó também precisa estar em `DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS`). Um nó que informe um id de sessão com caracteres inesperados é marcado como falho. `https` é obrigatório, exceto em loopback; redirecionamentos nunca são seguidos; URLs e tokens nunca são impressos.
+- Caminhos de arquivo e nomes de host são sensíveis mesmo como metadado: o arquivo de saída é criado com modo `0600`; guarde e compartilhe com esse cuidado.
 
 ## Findings sink (Pro/Enterprise)
 
@@ -733,7 +762,7 @@ Em sessões de shell não-login (SSH, tmux), essas variáveis podem estar ausent
 - `scan` – `max_workers` para paralelismo.
 - `timeouts` – timeouts globais para conexões (ex.: `connect_seconds`, `read_seconds`); cada alvo pode sobrescrever com `connect_timeout`, `read_timeout` ou `timeout`. Ver abaixo.
 - `api.workers` – número de workers uvicorn (padrão 1; 2+ para mais requisições concorrentes).
-- Opcionais: **`sql_sampling`** (tetos hierárquicos de amostragem SQL/Snowflake; ver bullet `file_scan` acima e [USAGE.md](USAGE.md)), `ml_patterns_file`, `ml_patterns_files`, `dl_patterns_file`, `regex_overrides_file`, `regex_overrides_files`, `compliance_frameworks`, `sensitivity_detection` (termos ML/DL inline), `learned_patterns` (export de termos classificados), **`pattern_files_encoding`** (encoding dos arquivos de padrões; ver abaixo), **`findings_sink`** (eco pós-scan Pro/Enterprise).
+- Opcionais: **`sql_sampling`** (tetos hierárquicos de amostragem SQL/Snowflake; ver bullet `file_scan` acima e [USAGE.md](USAGE.md)), `ml_patterns_file`, `ml_patterns_files`, `dl_patterns_file`, `regex_overrides_file`, `regex_overrides_files`, `compliance_frameworks`, `sensitivity_detection` (termos ML/DL inline), `learned_patterns` (export de termos classificados), **`pattern_files_encoding`** (encoding dos arquivos de padrões; ver abaixo), **`findings_sink`** (eco pós-scan Pro/Enterprise). Também opcionais: **`notifications.findings_push`** (push SIEM/webhook Pro+, [§5.2](#push-de-achados-siem)) e **`ropa`** (insumos das evidências do RoPA, [§5.3](#53-export-de-evidências-do-ropa-pro)).
 - **Backend DL (extra opcional):** instale com `uv pip install -e ".[dl]"` (`sentence-transformers`). Com termos DL, a confiança combina com o ML. O job de CI **`test-dl`** instala `--extra dl` e exercita `SentenceTransformer.encode()` via `core/dl_backend.py` (não só import). A matriz pytest padrão e o job **`test-extras`** não instalam esse extra.
 - **Pedindo acesso à TI:** Quando for preciso solicitar permissões à equipe de TI (ex.: pastas compartilhadas, contas de banco, tokens de API), solicite o **mínimo** necessário. Veja [OPERATOR_IT_REQUIREMENTS.pt_BR.md](ops/OPERATOR_IT_REQUIREMENTS.pt_BR.md) para o checklist por fonte (somente leitura, sem admin), o que não precisamos e uma breve justificativa, alinhada a zero-trust ou IAM restrito. ([EN](ops/OPERATOR_IT_REQUIREMENTS.md))
 
@@ -1331,6 +1360,59 @@ Após o fim da varredura (CLI ou `POST /scan` / `POST /start` em segundo plano),
 - **Segredos:** URLs podem usar `${VAR_DE_AMBIENTE}`. Os POSTs repetem algumas vezes em HTTP 5xx ou erro de rede transitório.
 - **Manual / CI:** `python scripts/notify_webhook.py "mensagem"` (mesmo `config.yaml`; exige `notifications.enabled: true` e um canal configurado). Por padrão o script abre o SQLite em ``sqlite_path`` e grava auditoria por canal (como no fim de varredura); use ``--no-audit`` quando não houver banco local (ex.: alguns jobs de CI).
 - **Detalhes:** [TECH_GUIDE.pt_BR.md](TECH_GUIDE.pt_BR.md) (notificações e webhooks) e [ops/OPERATOR_NOTIFICATION_CHANNELS.pt_BR.md](ops/OPERATOR_NOTIFICATION_CHANNELS.pt_BR.md).
+
+### 5.2 Push de achados para SIEM ou webhook (Pro+) {#push-de-achados-siem}
+
+Ao fim de uma varredura, o Data Boar pode **enviar (POST) um evento estruturado** a um SIEM ou webhook, para que a varredura vire um sinal recorrente e integrado, e não um arquivo que alguém precisa buscar. O evento é **centrado em delta**: `new_findings_count`, `resolved_count` e `previous_session_id` dizem o que mudou desde a última varredura comparável (mesma contagem do `--diff`). Chave de recurso `findings_siem_push` (**Pro+**; Community, Std e Pro ignoram o push com um aviso; `effective_tier` de laboratório e `Tier.OPEN` se comportam como no restante). Padrão: **desligado**.
+
+```yaml
+notifications:
+  enabled: true                  # chave geral (compartilhada com o resumo ao operador)
+  findings_push:
+    enabled: true
+    url: "https://splunk.example.test:8088/services/collector/event"   # ou ${API_SIEM_URL}
+    adapter: splunk_hec          # webhook (padrão) | splunk_hec
+    format: json                 # json (padrão) | sarif
+    auth_env: API_SIEM_TOKEN     # NOME de uma variável de ambiente; o token nunca fica no arquivo
+    findings_scope: new          # new (padrão; na primeira varredura envia tudo) | all
+    # allow_private_networks: true   # opt-in explícito para destino privado ou loopback
+```
+
+- **Autenticação:** somente por variável de ambiente. `auth_env` deve usar um dos prefixos de credencial (`DATA_BOAR_`, `REST_API_`, `API_`). Chaves literais `token` / `password` / `authorization` são **recusadas no carregamento**. O cabeçalho padrão do webhook genérico é `Authorization: Bearer <token>` (`auth_header` / `auth_scheme` ajustam; `auth_scheme` vazio envia o token puro). O `splunk_hec` envia `Authorization: Splunk <token>` e embrulha o evento como `{time, source, sourcetype, index?, event}` (`hec_index`, `hec_source`, `hec_sourcetype`). **Microsoft Sentinel** e **Elastic** usam o adaptador de webhook genérico com o endpoint HTTPS autenticado de ingestão deles.
+- **Transporte:** `https` é obrigatório; `http` simples só é aceito para host loopback. O destino passa pelo mesmo guarda SSRF dos conectores (endereços privados, loopback e link-local exigem `allow_private_networks: true`), a conexão vai aos endereços validados (o TLS ainda verifica o nome de host configurado), **redirecionamentos nunca são seguidos** e as respostas são lidas com limite rígido.
+- **Confiabilidade:** `timeout_seconds` (padrão 15), até `max_attempts` (padrão 3) com backoff em HTTP 5xx, 408, 429, timeouts e erros de conexão; outros 4xx e erros de TLS não são repetidos. Um push que falha nunca bloqueia a varredura nem o resumo ao operador; cada tentativa vira uma linha em `notification_send_log` (gatilho `findings_push`, destinatário `siem`).
+- **Tamanho:** `max_findings` (padrão 5000) e `max_payload_bytes` (padrão 5 MiB) limitam o evento. Os achados mais sensíveis são mantidos e o evento traz `findings_truncated: true`.
+- **Campos de delta:** na primeira varredura (sem sessão anterior concluída e comparável) `previous_session_id`, `new_findings_count` e `resolved_count` são `null` e `delta_available` é `false`; assim, uma regra como `new_findings_count > 0` não dispara na linha de base. `scan_failures` em `summary` avisa quando uma varredura parcial pode superestimar `resolved_count`.
+- **Envelopes:** `json` é o evento próprio do Data Boar (`schema: data-boar.findings-push`). `sarif` é um log SARIF 2.1.0 cujo run leva o mesmo delta em `properties`. Ambos são **somente metadados** (local, rótulo do detector, sensibilidade, norm tag) — nunca amostras.
+- **Logs:** logs e a tabela de auditoria guardam só `esquema://host:porta` e classes de erro fixas — nunca o caminho ou a query da URL, o token ou o texto bruto de exceções.
+- **CLI de varredura única:** o processo espera (até 120 s) a thread de notificação antes de encerrar.
+- Fora de escopo aqui: endpoint Prometheus `/metrics`, canal Signal e saída syslog (RFC 5424).
+
+### 5.3 Export de evidências do RoPA (Pro+) {#export-de-evidências-do-ropa-pro}
+
+`--export-ropa SESSION_ID` grava uma **planilha de evidências do Registro das Operações de Tratamento** e um JSON (insumos para GDPR Art. 30 / LGPD Art. 37; chave de recurso `ropa_export`, **Pro+**). É um inventário técnico que o DPO pode completar — **evidência, não conclusão jurídica** — e leva só metadados (sem amostras).
+
+- **Vem da varredura:** por fonte, as categorias de dados pessoais detectadas, onde apareceram (lista limitada de locais), maior sensibilidade, contagens e norm tags; mais as falhas de varredura como sinal de lacuna de cobertura.
+- **A varredura não conhece:** controlador e DPO (Art. 30(1)(a)), finalidades (b), categorias de titulares (c), destinatários (d), transferências a países terceiros (e), retenção (f), medidas de segurança (g) e a base legal. Declare-os no bloco opcional `ropa:`; o que faltar sai como **`A COMPLETAR`**.
+
+```yaml
+ropa:
+  controller: {name: "Example Controller Ltda", contact: "privacidade@example.test",
+               dpo_name: "Example DPO", dpo_contact: "dpo@example.test"}
+  defaults:                      # vale para toda fonte, salvo override da atividade
+    retention: "5 anos após o fim do contrato"
+    security_measures: ["Criptografia em repouso", "Controle de acesso por papéis"]
+  activities:                    # ligadas aos targets da varredura por `target` (nome do target)
+    - target: crm-db
+      name: "Gestão de relacionamento com clientes"
+      purposes: ["Execução de contrato"]
+      legal_basis: ["Execução de contrato (LGPD Art. 7º, V)"]
+      data_subject_categories: ["clientes"]
+      recipients: ["Processador de pagamentos"]
+      transfers: ["Nenhuma"]
+```
+
+Chaves desconhecidas em `ropa:` são rejeitadas no carregamento (o `--validate-config` as reporta). Abas da planilha: `RoPA`, `Controller`, `Locations`, `Notes`; as células são sanitizadas contra injeção de fórmula.
 
 ## 6. Infraestrutura como Código — OpenTofu / Terraform
 

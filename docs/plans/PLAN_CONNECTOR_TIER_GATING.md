@@ -57,3 +57,7 @@ stays free for dev and lab.
   a tier decision and can never leak as silent community.
 - Open on #854: tier decision for `rich_media` / data-soup formats
   (community vs Pro) — operator call, tracked on the issue.
+- **New features start at Enterprise** and are lowered only after validation, by
+  operator decision (recorded 2026-11-11). `multi_instance_hub` (#2208, [ADR-0095](../adr/ADR-0095-multi-instance-report-hub-pull-provenance-dedupe.md))
+  is Enterprise in `FEATURE_TIER_MAP`; the planned Microsoft 365 connector follows the same default
+  ([PLAN_M365_GRAPH_CONNECTORS.md](PLAN_M365_GRAPH_CONNECTORS.md)).

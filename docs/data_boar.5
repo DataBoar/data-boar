@@ -412,6 +412,55 @@ See
 and
 .IR docs/deploy/findings_sink_schema.sql .
 .TP
+.B notifications.findings_push
+(optional, Pro+) Post\-scan push of a structured findings event to a SIEM or webhook.
+Requires
+.B notifications.enabled
+and
+.IR enabled .
+Sub\-keys:
+.I url
+(https; plain http only for a loopback host; may be
+.IR ${API_...} ),
+.I format
+(json, sarif),
+.I adapter
+(webhook, splunk_hec),
+.I auth_env
+(NAME of an environment variable that holds the token; a literal token is refused),
+.I auth_header ,
+.I auth_scheme ,
+.I findings_scope
+(new, all),
+.I max_findings ,
+.I max_payload_bytes ,
+.I timeout_seconds ,
+.I max_attempts ,
+.I allow_private_networks
+(SSRF opt\-in for a private or loopback destination),
+.IR hec_index ,
+.IR hec_source ,
+.IR hec_sourcetype .
+The event carries
+.IR new_findings_count ,
+.IR resolved_count
+and
+.I previous_session_id
+(null on the first scan). Redirects are not followed. See
+.IR docs/USAGE.md .
+.TP
+.B ropa
+(optional) Inputs for
+.B \-\-export\-ropa
+that a scan cannot observe (GDPR Art. 30(1)(a)\-(g)). Sub\-keys:
+.I controller
+(name, contact, representative, dpo_name, dpo_contact),
+.I defaults
+and per\-target
+.I activities
+(each with target, name, data_subject_categories, purposes, legal_basis, recipients, transfers, retention, security_measures).
+Unset fields are exported as "A COMPLETAR". Unknown keys are rejected.
+.TP
 .B scan
 .I max_workers
 (integer, parallelism).

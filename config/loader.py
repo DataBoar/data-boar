@@ -919,6 +919,337 @@ def _normalize_operator_channel_block(d: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+# --- RoPA evidence export (#837) and findings push (#838) ------------------
+
+_ROPA_TOP_KEYS = frozenset({"controller", "defaults", "activities"})
+_ROPA_CONTROLLER_KEYS = (
+    "name",
+    "contact",
+    "representative",
+    "dpo_name",
+    "dpo_contact",
+)
+_ROPA_LIST_KEYS = (
+    "data_subject_categories",
+    "purposes",
+    "legal_basis",
+    "recipients",
+    "transfers",
+    "security_measures",
+)
+_ROPA_SCALAR_KEYS = ("retention",)
+_ROPA_ACTIVITY_KEYS = _ROPA_LIST_KEYS + _ROPA_SCALAR_KEYS
+_ROPA_MAX_TEXT = 2000
+_ROPA_MAX_ITEMS = 100
+_ROPA_MAX_ACTIVITIES = 500
+
+
+def _ropa_text(value: Any, label: str) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, bool) or not isinstance(value, (str, int, float)):
+        raise ValueError(f"{label} must be a string")
+    text = str(value).strip()
+    if len(text) > _ROPA_MAX_TEXT:
+        raise ValueError(f"{label} is longer than {_ROPA_MAX_TEXT} characters")
+    return text
+
+
+def _ropa_text_list(value: Any, label: str) -> list[str]:
+    if value is None:
+        return []
+    items = [value] if isinstance(value, (str, int, float)) else value
+    if not isinstance(items, list) or isinstance(value, bool):
+        raise ValueError(f"{label} must be a string or a list of strings")
+    if len(items) > _ROPA_MAX_ITEMS:
+        raise ValueError(f"{label} has more than {_ROPA_MAX_ITEMS} items")
+    out = [_ropa_text(v, f"{label}[]") for v in items]
+    return [v for v in out if v]
+
+
+def _ropa_activity_fields(raw: dict[str, Any], label: str) -> dict[str, Any]:
+    out: dict[str, Any] = {}
+    for key in _ROPA_LIST_KEYS:
+        out[key] = _ropa_text_list(raw.get(key), f"{label}.{key}")
+    for key in _ROPA_SCALAR_KEYS:
+        out[key] = _ropa_text(raw.get(key), f"{label}.{key}")
+    return out
+
+
+def normalize_ropa_block(raw: Any) -> dict[str, Any]:
+    """Validate the optional ``ropa:`` block (Art. 30(1) fields the scan cannot know).
+
+    Everything is optional: missing values are exported as ``A COMPLETAR``.
+    Unknown keys fail loudly so a typo cannot silently drop a declared field.
+    """
+    if raw is None:
+        raw = {}
+    if not isinstance(raw, dict):
+        raise ValueError("ropa must be a mapping")
+    unknown = sorted(set(raw) - _ROPA_TOP_KEYS)
+    if unknown:
+        raise ValueError(
+            f"ropa has unknown key(s) {unknown}; allowed: {sorted(_ROPA_TOP_KEYS)}"
+        )
+
+    c_raw = raw.get("controller")
+    if c_raw is None:
+        c_raw = {}
+    if not isinstance(c_raw, dict):
+        raise ValueError("ropa.controller must be a mapping")
+    bad = sorted(set(c_raw) - set(_ROPA_CONTROLLER_KEYS))
+    if bad:
+        raise ValueError(
+            f"ropa.controller has unknown key(s) {bad}; "
+            f"allowed: {list(_ROPA_CONTROLLER_KEYS)}"
+        )
+    controller = {
+        k: _ropa_text(c_raw.get(k), f"ropa.controller.{k}")
+        for k in _ROPA_CONTROLLER_KEYS
+    }
+
+    d_raw = raw.get("defaults")
+    if d_raw is None:
+        d_raw = {}
+    if not isinstance(d_raw, dict):
+        raise ValueError("ropa.defaults must be a mapping")
+    bad = sorted(set(d_raw) - set(_ROPA_ACTIVITY_KEYS))
+    if bad:
+        raise ValueError(
+            f"ropa.defaults has unknown key(s) {bad}; "
+            f"allowed: {list(_ROPA_ACTIVITY_KEYS)}"
+        )
+    defaults = _ropa_activity_fields(d_raw, "ropa.defaults")
+
+    a_raw = raw.get("activities")
+    if a_raw is None:
+        a_raw = []
+    if not isinstance(a_raw, list):
+        raise ValueError("ropa.activities must be a list")
+    if len(a_raw) > _ROPA_MAX_ACTIVITIES:
+        raise ValueError(f"ropa.activities has more than {_ROPA_MAX_ACTIVITIES} items")
+    activities: list[dict[str, Any]] = []
+    for i, item in enumerate(a_raw):
+        label = f"ropa.activities[{i}]"
+        if not isinstance(item, dict):
+            raise ValueError(f"{label} must be a mapping")
+        bad = sorted(set(item) - set(_ROPA_ACTIVITY_KEYS) - {"target", "name"})
+        if bad:
+            raise ValueError(
+                f"{label} has unknown key(s) {bad}; "
+                f"allowed: {['target', 'name', *_ROPA_ACTIVITY_KEYS]}"
+            )
+        target = _ropa_text(item.get("target"), f"{label}.target")
+        if not target:
+            raise ValueError(f"{label}.target is required (a scan target name)")
+        activities.append(
+            {
+                "target": target,
+                "name": _ropa_text(item.get("name"), f"{label}.name"),
+                **_ropa_activity_fields(item, label),
+            }
+        )
+    return {"controller": controller, "defaults": defaults, "activities": activities}
+
+
+_PUSH_FORMATS = ("json", "sarif")
+_PUSH_ADAPTERS = ("webhook", "splunk_hec")
+_PUSH_SCOPES = ("new", "all")
+# A token written in the file is refused outright: auth is by env var NAME only.
+_PUSH_LITERAL_SECRET_KEYS = frozenset(
+    {
+        "token",
+        "auth_token",
+        "authorization",
+        "password",
+        "pass",
+        "secret",
+        "api_key",
+        "apikey",
+        "bearer_token",
+        "hec_token",
+    }
+)
+_PUSH_KNOWN_KEYS = frozenset(
+    {
+        "enabled",
+        "url",
+        "format",
+        "adapter",
+        "auth_env",
+        "auth_header",
+        "auth_scheme",
+        "findings_scope",
+        "max_findings",
+        "max_payload_bytes",
+        "timeout_seconds",
+        "max_attempts",
+        "allow_private_networks",
+        "hec_index",
+        "hec_source",
+        "hec_sourcetype",
+    }
+)
+_PUSH_HEADER_RE = re.compile(r"^[A-Za-z0-9-]{1,64}$")
+_PUSH_SCHEME_RE = re.compile(r"^[A-Za-z0-9._~+-]{0,32}$")
+_PUSH_HEC_LABEL_RE = re.compile(r"^[A-Za-z0-9_.:-]{0,64}$")
+_LOOPBACK_NAMES = frozenset({"localhost", "localhost."})
+
+
+def _is_loopback_host_literal(host: str) -> bool:
+    """True for ``localhost`` or a loopback IP literal (no DNS involved)."""
+    import ipaddress
+
+    h = (host or "").strip().strip("[]").lower()
+    if h in _LOOPBACK_NAMES:
+        return True
+    try:
+        return ipaddress.ip_address(h).is_loopback
+    except ValueError:
+        return False
+
+
+def validate_findings_push_url(url: str) -> None:
+    """Syntactic URL rules for the findings push (no DNS, no secrets in output).
+
+    ``https`` is required; plain ``http`` only for a loopback host. A URL that
+    embeds ``user:pass@`` credentials is refused. Error text never echoes the URL.
+    """
+    parsed = urlparse(url)
+    scheme = (parsed.scheme or "").lower()
+    if scheme not in ("http", "https"):
+        raise ValueError("notifications.findings_push.url must be an http(s) URL")
+    if not parsed.hostname:
+        raise ValueError("notifications.findings_push.url must include a host")
+    if (
+        parsed.username is not None
+        or parsed.password is not None
+        or "@" in (parsed.netloc or "")
+    ):
+        raise ValueError(
+            "notifications.findings_push.url must not embed credentials "
+            "(use auth_env for the token)"
+        )
+    if parsed.fragment:
+        raise ValueError("notifications.findings_push.url must not have a fragment")
+    if scheme == "http" and not _is_loopback_host_literal(parsed.hostname):
+        raise ValueError(
+            "notifications.findings_push.url must use https "
+            "(plain http is accepted only for a loopback host)"
+        )
+    try:
+        parsed.port  # noqa: B018 - raises ValueError on a malformed port
+    except ValueError as exc:
+        raise ValueError("notifications.findings_push.url has an invalid port") from exc
+
+
+def _push_int(raw: dict[str, Any], key: str, default: int, lo: int, hi: int) -> int:
+    val = raw.get(key)
+    if val in (None, ""):
+        return default
+    if isinstance(val, bool):
+        raise ValueError(f"notifications.findings_push.{key} must be an integer")
+    try:
+        n = int(val)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(
+            f"notifications.findings_push.{key} must be an integer"
+        ) from exc
+    return max(lo, min(n, hi))
+
+
+def normalize_findings_push(raw: Any) -> dict[str, Any]:
+    """Validate ``notifications.findings_push`` (SIEM / webhook push, #838)."""
+    label = "notifications.findings_push"
+    if raw is None:
+        raw = {}
+    if not isinstance(raw, dict):
+        raise ValueError(f"{label} must be a mapping")
+    literal = sorted(k for k in raw if str(k).lower() in _PUSH_LITERAL_SECRET_KEYS)
+    if literal:
+        raise ValueError(
+            f"{label} must not contain a literal secret ({literal}); "
+            "set auth_env to the NAME of an environment variable instead"
+        )
+    unknown = sorted(set(raw) - _PUSH_KNOWN_KEYS)
+    if unknown:
+        raise ValueError(
+            f"{label} has unknown key(s) {unknown}; allowed: {sorted(_PUSH_KNOWN_KEYS)}"
+        )
+
+    enabled = bool(raw.get("enabled", False))
+    fmt = str(raw.get("format") or "json").strip().lower()
+    if fmt not in _PUSH_FORMATS:
+        raise ValueError(f"{label}.format must be one of {list(_PUSH_FORMATS)}")
+    adapter = str(raw.get("adapter") or "webhook").strip().lower()
+    if adapter not in _PUSH_ADAPTERS:
+        raise ValueError(f"{label}.adapter must be one of {list(_PUSH_ADAPTERS)}")
+    scope = str(raw.get("findings_scope") or "new").strip().lower()
+    if scope not in _PUSH_SCOPES:
+        raise ValueError(f"{label}.findings_scope must be one of {list(_PUSH_SCOPES)}")
+
+    auth_env = str(raw.get("auth_env") or "").strip()
+    if auth_env:
+        assert_credential_env_name(auth_env, f"{label}.auth_env")
+
+    header = str(raw.get("auth_header") or "").strip()
+    scheme_raw = raw.get("auth_scheme")
+    if adapter == "splunk_hec":
+        # Fixed by the adapter; the normalized form carries the fixed values, so
+        # re-normalizing an already-normalized block stays valid (idempotent).
+        if (header and header != "Authorization") or (
+            scheme_raw is not None and str(scheme_raw).strip() not in ("", "Splunk")
+        ):
+            raise ValueError(
+                f"{label}.auth_header / auth_scheme are fixed by adapter splunk_hec "
+                "(Authorization: Splunk <token>)"
+            )
+        header, scheme_raw = "Authorization", "Splunk"
+    if not header:
+        header = "Authorization"
+    if not _PUSH_HEADER_RE.fullmatch(header):
+        raise ValueError(f"{label}.auth_header is not a valid header name")
+    scheme = "Bearer" if scheme_raw is None else str(scheme_raw).strip()
+    if not _PUSH_SCHEME_RE.fullmatch(scheme):
+        raise ValueError(f"{label}.auth_scheme is not a valid scheme token")
+
+    url = _notification_env_value(raw.get("url"), label=f"{label}.url") or ""
+    if url:
+        validate_findings_push_url(url)
+        if auth_env:
+            enforce_operator_credential_host_gate(
+                [{_operator_host_key(url)}], f"{label}.auth_env"
+            )
+    elif enabled:
+        raise ValueError(f"{label}.url is required when {label}.enabled is true")
+
+    hec: dict[str, str] = {}
+    for key in ("hec_index", "hec_source", "hec_sourcetype"):
+        val = str(raw.get(key) or "").strip()
+        if not _PUSH_HEC_LABEL_RE.fullmatch(val):
+            raise ValueError(f"{label}.{key} contains unsupported characters")
+        hec[key] = val
+
+    return {
+        "enabled": enabled,
+        "url": url,
+        "format": fmt,
+        "adapter": adapter,
+        "auth_env": auth_env,
+        "auth_header": header,
+        "auth_scheme": scheme,
+        "findings_scope": scope,
+        "max_findings": _push_int(raw, "max_findings", 5000, 1, 100_000),
+        "max_payload_bytes": _push_int(
+            raw, "max_payload_bytes", 5 * 1024 * 1024, 4096, 50 * 1024 * 1024
+        ),
+        "timeout_seconds": _push_int(raw, "timeout_seconds", 15, 1, 120),
+        "max_attempts": _push_int(raw, "max_attempts", 3, 1, 5),
+        "allow_private_networks": bool(raw.get("allow_private_networks", False)),
+        **hec,
+    }
+
+
 def peek_sqlite_path(path: str | Path) -> str:
     """Read ``sqlite_path`` without validating target credentials (#2164)."""
     path = Path(path)
@@ -1845,7 +2176,12 @@ def _normalize_config_body(
             "default_slack_webhook_url": default_tenant_slack,
             "by_tenant": by_tenant,
         },
+        "findings_push": normalize_findings_push(n_raw.get("findings_push")),
     }
+
+    # Optional RoPA evidence-export inputs (#837): controller/purposes/etc. that a
+    # scan cannot observe. Validated here so --validate-config reports typos.
+    out["ropa"] = normalize_ropa_block(data.get("ropa"))
 
     # Unique, sanitized audit log labels per target (text logs only; DB keeps config ``name``).
     assign_unique_audit_log_names(out.get("targets") or [])
@@ -1895,6 +2231,33 @@ def _normalize_config_body(
         "enabled": bool(gov_raw.get("enabled", False)),
         "tier": gov_tier,
         "map_file": map_file or DEFAULT_GOVERNANCE_MAP_FILE,
+    }
+
+    hub_raw = data.get("hub") or {}
+    if not isinstance(hub_raw, dict):
+        hub_raw = {}
+    hub_nodes: list[dict[str, str]] = []
+    for item in hub_raw.get("nodes") or []:
+        if isinstance(item, dict):
+            hub_nodes.append(
+                {
+                    "id": str(item.get("id") or "").strip(),
+                    "url": str(item.get("url") or "").strip(),
+                    "api_key_from_env": str(item.get("api_key_from_env") or "").strip(),
+                }
+            )
+    try:
+        hub_timeout = float(hub_raw.get("timeout_seconds") or 0)
+    except (TypeError, ValueError):
+        hub_timeout = 0.0
+    try:
+        hub_max_bytes = int(hub_raw.get("max_bytes") or 0)
+    except (TypeError, ValueError):
+        hub_max_bytes = 0
+    out["hub"] = {
+        "nodes": hub_nodes,
+        "timeout_seconds": hub_timeout,
+        "max_bytes": hub_max_bytes,
     }
 
     sink_raw = data.get("findings_sink") or {}

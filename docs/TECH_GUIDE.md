@@ -247,6 +247,8 @@ uv run python main.py --config config.yaml --diff <session_a_uuid> <session_b_uu
 uv run python main.py --config config.yaml --diff <session_a_uuid> <session_b_uuid> --fail-on-new-high
 uv run python main.py --config config.yaml --export-dsar <session_uuid>
 uv run python main.py --config config.yaml --export-dsar <session_uuid> --dsar-output dsar_export.json
+uv run python main.py --config config.yaml --export-ropa <session_uuid> --ropa-output ./ropa
+uv run python main.py --config config.yaml --export-sarif <session_uuid> --sarif-output findings.sarif
 
 # Start the API server (plaintext opt-in; see the transport gate under "REST API")
 uv run python main.py --config config.yaml --web --allow-insecure-http --port 8088
@@ -685,6 +687,25 @@ For a **single run** without editing the saved config, use CLI **`--content-type
 ## Adding new connectors
 
 To support a new data source (e.g. another database driver or API), see **[ADDING_CONNECTORS.md](ADDING_CONNECTORS.md)** (English) or **[ADDING_CONNECTORS.pt_BR.md](ADDING_CONNECTORS.pt_BR.md)** (Português – Brasil). The guide describes the connector contract, how to register a new type (or driver), optional dependencies, and includes step-by-step instructions plus examples (database-style and API-style).
+
+## Governance exports and findings push (Pro+) {#governance-exports-and-findings-push}
+
+Three Pro+ features share one metadata-only view of a session (`core/findings_common.py`): the finding identity key is the same tuple `--diff` uses, so deltas always agree with `--diff`.
+
+| Feature | CLI / trigger | Module | Feature key |
+| --- | --- | --- | --- |
+| RoPA evidence workbook + JSON | `--export-ropa SESSION_ID` | `core/ropa_export.py` | `ropa_export` |
+| SARIF 2.1.0 export | `--export-sarif SESSION_ID` | `core/sarif_export.py` | `findings_siem_push` |
+| Post-scan SIEM / webhook push | `notifications.findings_push` | `core/findings_push.py`, hook in `utils/notify.py` | `findings_siem_push` |
+
+- **Tier gating:** both keys are explicit `Tier.PRO_PLUS` entries in `FEATURE_TIER_MAP`. The CLI exports call `require_feature` and exit **2** on a lower tier; the push is fail-soft (skipped with a warning, audited in `notification_send_log`). `Tier.OPEN` bypasses as elsewhere.
+- **Config validation:** `config/loader.py` validates `ropa:` (unknown keys rejected, bounded lengths) and `notifications.findings_push` (https/loopback rule, no embedded credentials, literal secrets refused, `auth_env` must use the credential prefixes and the operator host gate in strict mode).
+- **Baseline for the delta:** the most recent earlier session with status `completed` or `completed_errors` and the same `config_scope_hash` (when both are known). No baseline → `null` delta fields.
+- **Push transport:** `http.client` with a connection pinned to the SSRF-guard-validated addresses (TLS verification against the configured host name, minimum TLS 1.2), no redirects, capped response read, bounded retries with injectable backoff (tests do not sleep).
+- **Tests:** all offline (loopback `http.server` on an ephemeral port, a self-signed certificate for the TLS path); SARIF is validated against a structural subset of the 2.1.0 schema.
+- **Scope boundary:** no Prometheus `/metrics`, Signal channel or syslog output.
+
+User-facing description: [USAGE.md §5.2 and §5.3](USAGE.md#52-findings-push-to-a-siem-or-webhook-pro).
 
 ## Logging and alerts
 

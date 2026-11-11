@@ -61,6 +61,10 @@ _MAN_FAIL_ON_NEW_HIGH = r"\-\-fail\-on\-new\-high"
 _MAN_EXPORT_DSAR = r"\-\-export\-dsar"
 _MAN_DSAR_OUTPUT = r"\-\-dsar\-output"
 _MAN_DSAR_INCLUDE_SAMPLES = r"\-\-dsar\-include\-samples"
+_MAN_EXPORT_ROPA = r"\-\-export\-ropa"
+_MAN_ROPA_OUTPUT = r"\-\-ropa\-output"
+_MAN_EXPORT_SARIF = r"\-\-export\-sarif"
+_MAN_SARIF_OUTPUT = r"\-\-sarif\-output"
 _MAN_EXPORT_L1 = r"\-\-export\-l1"
 _MAN_L1_OUTPUT = r"\-\-l1\-output"
 _MAN_EXPORT_FINDINGS_SINK = r"\-\-export\-findings\-sink"
@@ -171,6 +175,30 @@ OPERATOR_HELP_MARKERS: tuple[OperatorHelpMarker, ...] = (
         "--l1-output",
         "--l1-output",
         _MAN_L1_OUTPUT,
+    ),
+    OperatorHelpMarker(
+        "export_ropa",
+        "--export-ropa",
+        "--export-ropa",
+        _MAN_EXPORT_ROPA,
+    ),
+    OperatorHelpMarker(
+        "ropa_output",
+        "--ropa-output",
+        "--ropa-output",
+        _MAN_ROPA_OUTPUT,
+    ),
+    OperatorHelpMarker(
+        "export_sarif",
+        "--export-sarif",
+        "--export-sarif",
+        _MAN_EXPORT_SARIF,
+    ),
+    OperatorHelpMarker(
+        "sarif_output",
+        "--sarif-output",
+        "--sarif-output",
+        _MAN_SARIF_OUTPUT,
     ),
     OperatorHelpMarker(
         "export_findings_sink",

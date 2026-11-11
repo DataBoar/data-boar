@@ -37,6 +37,10 @@ The main entry point is `main.py`.
 | `--export-dsar`         | `SESSION_ID`      | Export findings for one scan session as DSAR-oriented JSON (metadata-first; LGPD Art. 18 / GDPR Art. 15 framing). Print to **stdout** or use `--dsar-output PATH`. Unknown or empty session → empty `findings_by_source`, exit **0**. Incompatible with `--web`, `--reset-data`, `--export-audit-trail`, `--validate-config`, `--diff`, `--export-l1`, and `--export-l3`. |
 | `--dsar-output`         | `PATH`            | Write DSAR JSON to `PATH` instead of stdout. Requires `--export-dsar`. |
 | `--dsar-include-samples`| *(flag)*          | With `--export-dsar`: include raw sample fields from stored finding rows when present (SQLite stores metadata only by default). |
+| `--export-ropa`         | `SESSION_ID`      | **Pro+.** Export a Record of Processing Activities (RoPA) **evidence** workbook (`ropa_<session>.xlsx`) and JSON (`ropa_<session>.json`) for one session (GDPR Art. 30 / LGPD Art. 37 inputs). Built from scan metadata (data categories detected, where, sensitivity, norm tags); Art. 30(1)(a)–(g) fields the scan cannot know come from the optional `ropa:` config block, else `A COMPLETAR`. Evidence, not a legal conclusion; metadata only. Output directory: `--ropa-output` (default `report.output_dir`). Unknown session or a tier below Pro+ → exit **2**. See [§5.3](#53-ropa-evidence-export-pro). Incompatible with `--web`, `--reset-data`, `--export-audit-trail`, `--validate-config`, `--diff`, `--export-dsar`, `--export-sarif`, and the other export modes. |
+| `--ropa-output`         | `DIR`             | Directory for the RoPA files. Requires `--export-ropa`. |
+| `--export-sarif`        | `SESSION_ID`      | **Pro+.** Export findings for one session as **SARIF 2.1.0** (one rule per detector, level from sensitivity, locations from path/file or `schema.table.column`, stable fingerprint per finding; `baselineState` when a previous comparable session exists). Metadata only. Print to **stdout** or `--sarif-output PATH`. Unknown session or a tier below Pro+ → exit **2**. Incompatible with the same modes as `--export-ropa`. |
+| `--sarif-output`        | `PATH`            | Write SARIF to `PATH` instead of stdout. Requires `--export-sarif`. |
 | `--export-l1`           | `SESSION_ID`      | Export findings for one scan session as an L1 **metadata_manifest** JSON (SDK contract pin; metadata only — never raw samples). Reads existing SQLite (no re-scan). Print to **stdout** or `--l1-output PATH`. Unknown or empty session → empty `findings`, exit **0**. Contract violation → abort, exit **1** (fail-closed). Incompatible with `--web`, `--reset-data`, `--export-audit-trail`, `--validate-config`, `--diff`, `--export-dsar`, `--export-l3`, and `--export-findings-sink`. |
 | `--l1-output`           | `PATH`            | Write L1 metadata_manifest JSON to `PATH` instead of stdout. Requires `--export-l1`. |
 | `--export-findings-sink`| `SESSION_ID`      | Echo findings for one session from local SQLite to the configured **findings_sink** (SQL = Pro, MongoDB = Enterprise). Metadata-only by default. If `findings_sink.include_sample_content: true`, also pass `--allow-sample-export` (LGPD Art. 46) or exit **1**. Sink errors on the CLI exit **1**; missing tier exits **2**. Incompatible with `--web`, `--reset-data`, and other export modes. |
@@ -79,6 +83,31 @@ Opt-in YAML `remediation:` loads a partner `RemediationPlugin` after report gene
 ### YAML pattern plugins (optional)
 
 Operator YAML files inject extra regex / ML / DL **terms** into the detector (`patterns_plugin_file`, or legacy `regex_overrides_file` / `ml_patterns_file` / `dl_patterns_file`). They do **not** run code. Author guide: **[PLUGIN_AUTHOR_GUIDE.md](PLUGIN_AUTHOR_GUIDE.md)** ([pt-BR](PLUGIN_AUTHOR_GUIDE.pt_BR.md)). Schema: `config/plugin_schema.yaml`. Field-level how-to: [SENSITIVITY_DETECTION.md](SENSITIVITY_DETECTION.md#custom-regex-patterns-detecting-new-personalsensitive-values).
+
+## Multi-instance report hub (Enterprise)
+
+One central instance can **pull** the findings of several Data Boar instances and write ONE consolidated Excel report. Every row keeps its node, version and session, and identical findings inside one node and session are deduplicated. The report is technical evidence to support a review, not a legal conclusion. Enterprise tier (`multi_instance_hub`).
+
+```yaml
+hub:
+  timeout_seconds: 30
+  nodes:
+    - id: site-a
+      url: https://boar-a.example.internal:8088
+      api_key_from_env: DATA_BOAR_HUB_KEY_SITE_A   # only if that node requires an API key
+    - id: site-b
+      url: https://boar-b.example.internal:8088
+```
+
+```bash
+uv run python main.py --config config.yaml --hub-report hub.xlsx
+```
+
+- Only the newest **completed** session of each node is consolidated; if the newest one is still running or failed, the hub uses the newest completed one and says so in the Summary sheet.
+- The workbook has a **Summary** sheet (status per node), a **Findings** sheet with a per-node filter and a **Notes** sheet.
+- Exit code `0`: every node consolidated; `2`: only some nodes (or the license does not allow the feature); `1`: nothing consolidated, and no file is written. Use `--hub-overwrite` to replace an existing output file.
+- Tokens come only from the environment variable named by `api_key_from_env` (name must start with `DATA_BOAR_`, `REST_API_` or `API_`; with `DATA_BOAR_CREDENTIAL_STRICT=1` the node host must also be in `DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS`). A node that reports a session id with unexpected characters is marked failed. `https` is required except for loopback; redirects are never followed; URLs and tokens are never printed.
+- File paths and host names are sensitive even as metadata: the output file is created with mode `0600`; store and share it accordingly.
 
 ## Findings sink (Pro/Enterprise)
 
@@ -519,7 +548,7 @@ CLI uses the path you pass with `--config` (e.g. `config.yaml`). For the **web s
 ### Config file location and shape
 
 - **Location:** Any path; typical names: `config.yaml`, `config/config.json`. Legacy `config/config.json` with `databases` and `file_scan.directories` is normalized automatically.
-- **Root keys:** `targets`, `file_scan`, `report`, `api`, `sqlite_path`, `scan`, **`rate_limit`**, **`timeouts`**, optional **`sql_sampling`** (hierarchical row caps for SQL/Snowflake targets), optional `ml_patterns_file`, `ml_patterns_files`, `dl_patterns_file`, `regex_overrides_file`, `regex_overrides_files`, `compliance_frameworks`, `sensitivity_detection`, `learned_patterns`, **`pattern_files_encoding`**, optional **`findings_sink`**.
+- **Root keys:** `targets`, `file_scan`, `report`, `api`, `sqlite_path`, `scan`, **`rate_limit`**, **`timeouts`**, optional **`sql_sampling`** (hierarchical row caps for SQL/Snowflake targets), optional `ml_patterns_file`, `ml_patterns_files`, `dl_patterns_file`, `regex_overrides_file`, `regex_overrides_files`, `compliance_frameworks`, `sensitivity_detection`, `learned_patterns`, **`pattern_files_encoding`**, optional **`findings_sink`**, optional **`notifications.findings_push`** (Pro+ SIEM/webhook push, [§5.2](#52-findings-push-to-a-siem-or-webhook-pro)), optional **`ropa`** (RoPA evidence inputs, [§5.3](#53-ropa-evidence-export-pro)).
 
 ### Starter config (copy-paste) and where to look first {#starter-config-samples}
 
@@ -1476,6 +1505,59 @@ After a scan finishes (CLI one-shot or `POST /scan` / `POST /start` background r
 - **Secrets:** URLs may use `${ENV_VAR}`. Outbound webhook POSTs retry a few times on HTTP 5xx or transient network errors.
 - **Manual / CI:** `python scripts/notify_webhook.py "message"` (same config file; requires `notifications.enabled: true` and a channel URL). By default the script opens ``sqlite_path`` and appends audit rows for each channel (same as scan-complete); use ``--no-audit`` when no local DB exists (e.g. some CI jobs).
 - **Details:** [TECH_GUIDE.md](TECH_GUIDE.md) (notifications and webhooks) and [ops/OPERATOR_NOTIFICATION_CHANNELS.md](ops/OPERATOR_NOTIFICATION_CHANNELS.md).
+
+### 5.2 Findings push to a SIEM or webhook (Pro+)
+
+After a scan finishes, Data Boar can **POST one structured event** to a SIEM or webhook so a scan becomes a recurring, integrated signal instead of a file someone pulls. The event is **delta-first**: `new_findings_count`, `resolved_count` and `previous_session_id` say what changed since the last comparable scan (same counting as `--diff`). Feature key `findings_siem_push` (**Pro+**; Community, Std and Pro skip the push with a warning; lab `effective_tier` and `Tier.OPEN` behave as elsewhere). Default is **off**.
+
+```yaml
+notifications:
+  enabled: true                  # master switch (shared with the operator brief)
+  findings_push:
+    enabled: true
+    url: "https://splunk.example.test:8088/services/collector/event"   # or ${API_SIEM_URL}
+    adapter: splunk_hec          # webhook (default) | splunk_hec
+    format: json                 # json (default) | sarif
+    auth_env: API_SIEM_TOKEN     # NAME of an environment variable; the token is never in the file
+    findings_scope: new          # new (default; first scan sends all) | all
+    # allow_private_networks: true   # explicit opt-in for a private or loopback destination
+```
+
+- **Authentication:** only by environment variable. `auth_env` must use one of the credential prefixes (`DATA_BOAR_`, `REST_API_`, `API_`). A literal `token` / `password` / `authorization` key is **refused at load**. Generic webhook default header is `Authorization: Bearer <token>` (`auth_header` / `auth_scheme` adjust it; an empty `auth_scheme` sends the bare token). `splunk_hec` sends `Authorization: Splunk <token>` and wraps the event as `{time, source, sourcetype, index?, event}` (`hec_index`, `hec_source`, `hec_sourcetype`). **Microsoft Sentinel** and **Elastic** use the generic webhook adapter with their own authenticated HTTPS ingestion endpoint.
+- **Transport:** `https` is required; plain `http` is accepted only for a loopback host. The destination goes through the same SSRF guard as connectors (private, loopback and link-local addresses need `allow_private_networks: true`), the connection is made to the validated addresses (TLS still verifies the configured host name), **redirects are never followed**, and responses are read with a hard cap.
+- **Reliability:** `timeout_seconds` (default 15), up to `max_attempts` (default 3) with backoff on HTTP 5xx, 408, 429, timeouts and connection errors; other 4xx and TLS errors are not retried. A failed push never blocks the scan or the operator brief; each attempt is one row in `notification_send_log` (trigger `findings_push`, recipient `siem`).
+- **Size:** `max_findings` (default 5000) and `max_payload_bytes` (default 5 MiB) bound the event. Most sensitive findings are kept; the event says `findings_truncated: true`.
+- **Delta fields:** on the first scan (no comparable earlier finished session) `previous_session_id`, `new_findings_count` and `resolved_count` are `null` and `delta_available` is `false`, so a rule such as `new_findings_count > 0` does not fire on the baseline run. `scan_failures` in `summary` tells consumers when a partial scan may overstate `resolved_count`.
+- **Envelopes:** `json` is Data Boar's own event (`schema: data-boar.findings-push`). `sarif` is a SARIF 2.1.0 log whose run carries the same delta in `properties`. Both are **metadata only** (location, detector label, sensitivity, norm tag) — never samples.
+- **Logs:** logs and the audit table carry only `scheme://host:port` and fixed error classes — never the URL path or query, the token, or raw exception text.
+- **One-shot CLI:** the process waits (up to 120 s) for the notification thread before exiting.
+- Out of scope here: a Prometheus `/metrics` endpoint, a Signal channel and syslog (RFC 5424) output.
+
+### 5.3 RoPA evidence export (Pro+)
+
+`--export-ropa SESSION_ID` writes a **Record of Processing Activities evidence workbook** and JSON (GDPR Art. 30 / LGPD Art. 37 inputs; feature key `ropa_export`, **Pro+**). It is a technical inventory a DPO can complete — **evidence, not a legal conclusion** — and carries metadata only (no samples).
+
+- **From the scan:** per source, the personal-data categories detected, where they were seen (bounded list of locations), highest sensitivity, finding counts and norm tags; plus scan failures as a coverage-gap signal.
+- **Not known to the scan:** controller and DPO (Art. 30(1)(a)), purposes (b), data-subject categories (c), recipients (d), third-country transfers (e), retention (f), security measures (g), and the legal basis. Declare them in the optional `ropa:` block; anything missing is written as **`A COMPLETAR`**.
+
+```yaml
+ropa:
+  controller: {name: "Example Controller Ltda", contact: "privacy@example.test",
+               dpo_name: "Example DPO", dpo_contact: "dpo@example.test"}
+  defaults:                      # applied to every source unless an activity overrides it
+    retention: "5 years after contract end"
+    security_measures: ["Encryption at rest", "Role-based access"]
+  activities:                    # matched to scan targets by `target` (the target name)
+    - target: crm-db
+      name: "Customer relationship management"
+      purposes: ["Contract performance"]
+      legal_basis: ["Contract (GDPR Art. 6(1)(b))"]
+      data_subject_categories: ["customers"]
+      recipients: ["Payment processor"]
+      transfers: ["None"]
+```
+
+Unknown keys under `ropa:` are rejected at load (`--validate-config` reports them). Workbook sheets: `RoPA`, `Controller`, `Locations`, `Notes`; cells are sanitized against spreadsheet formula injection.
 
 ---
 
