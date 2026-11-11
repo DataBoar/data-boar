@@ -208,13 +208,13 @@ def _validate_config_and_exit(config: dict[str, Any], config_path: str) -> None:
         label = f"type={kind or '?'}" + (f" driver={driver}" if driver else "")
         print(f'  OK    target[{i}] "{name}"  {label}')
 
-    # #1411 — Pro accelerator observability (same class of WARN as missing SQL driver).
+    # #1411 — Rust regex-stage observability (same class of WARN as missing SQL driver).
     from core.pro_scan_path import (
-        resolve_pro_scan_path,
+        get_rust_regex_stage_status,
         rust_accelerator_installed,
     )
 
-    _, pf_status = resolve_pro_scan_path(config)
+    pf_status = get_rust_regex_stage_status(config)
     paid_prefilter_tier = pf_status.get("tier") in (
         "pro_plus",
         "enterprise",
@@ -234,8 +234,7 @@ def _validate_config_and_exit(config: dict[str, Any], config_path: str) -> None:
             f"backend={pf_status.get('backend')} tier={pf_status.get('tier')}"
         )
     else:
-        # Status JSON may still carry legacy reason codes from WIP routing;
-        # product framing (#1414): observability only — no skip/latch narrative.
+        # Product framing (#1414): observability only — no skip/latch narrative.
         print(
             "  OK    rust-regex-stage readiness inactive "
             f"(reason={pf_status.get('reason') or 'n/a'} tier={pf_status.get('tier')})"
@@ -1820,14 +1819,10 @@ def main() -> None:
         sys.exit(0)
 
     if args.prefilter_status:
-        from core.pro_scan_path import resolve_pro_scan_path, rust_accelerator_installed
+        from core.pro_scan_path import get_rust_regex_stage_status
 
-        _, pf_status = resolve_pro_scan_path(config)
-        payload = {
-            **pf_status,
-            "rust_accelerator_installed": rust_accelerator_installed(),
-        }
-        print(json.dumps(payload, indent=2, sort_keys=True))
+        pf_status = get_rust_regex_stage_status(config)
+        print(json.dumps(pf_status, indent=2, sort_keys=True))
         sys.exit(0)
 
     if args.diff_sessions:

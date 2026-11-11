@@ -13,10 +13,14 @@ only until PLAN §0 retirement — do not document them as shipping behaviour.
 
 from __future__ import annotations
 
+import copy
 import logging
 import os
 from collections.abc import Callable
 from typing import Any
+
+from core.detector import DEFAULT_PATTERNS
+from core.rust_regex_stage import build_rust_regex_stage
 
 logger = logging.getLogger(__name__)
 
@@ -120,3 +124,76 @@ def rust_accelerator_installed() -> bool:
         return bool(RUST_AVAILABLE)
     except Exception:  # noqa: BLE001
         return False
+
+
+def _build_patterns_from_config(
+    cfg: dict[str, Any] | None,
+) -> dict[str, tuple[str, str]]:
+    """Build regex patterns dict from config (same logic as SensitivityDetector.__init__).
+
+    This is a lightweight version that only builds the regex patterns needed
+    for the rust regex stage, without ML/DL components.
+    """
+    det = (cfg or {}).get("sensitivity_detection", {}) if isinstance(cfg, dict) else {}
+    patterns = copy.deepcopy(DEFAULT_PATTERNS)
+    if not bool(det.get("cnpj_alphanumeric", False)):
+        patterns.pop("LGPD_CNPJ_ALNUM", None)
+
+    regex_overrides_path = None
+    if isinstance(cfg, dict):
+        regex_overrides_path = (
+            cfg.get("regex_overrides_files") or cfg.get("regex_overrides_file") or None
+        )
+
+    if regex_overrides_path:
+        from core.detector import _load_regex_overrides
+
+        enc = "utf-8"
+        err = "replace"
+        over, _pattern_validators = _load_regex_overrides(
+            regex_overrides_path, encoding=enc, errors=err
+        )
+        for k, v in over.items():
+            patterns[k] = v
+
+    return patterns
+
+
+def get_rust_regex_stage_status(cfg: dict[str, Any] | None) -> dict[str, Any]:
+    """
+    Get the Rust regex stage status for observability (--prefilter-status, GET /status).
+
+    This returns the same status as ``SensitivityDetector.rust_regex_stage_status``,
+    which is what the scanner exposes as ``prefilter_status`` and what
+    ``GET /status`` → ``detection_prefilter`` returns.
+
+    Returns a dict with keys: ``active``, ``name``, ``backend``, ``tier``,
+    ``reason``, ``engine``, ``rust_accelerator_installed``, ``accelerated_count``,
+    ``translated_count``, ``python_fallback_count``, ``rust_only_count``,
+    ``python_fallback_reasons``, ``rust_only_patterns``.
+    """
+    # Check env override first
+    if os.environ.get("DATA_BOAR_PREFILTER", "").strip().lower() in (
+        "0",
+        "off",
+        "false",
+    ):
+        return {
+            "active": False,
+            "name": "rust_regex_stage",
+            "backend": "python",
+            "tier": None,
+            "reason": "env_off",
+            "engine": "core",
+            "rust_accelerator_installed": False,
+            "accelerated_count": 0,
+            "translated_count": 0,
+            "python_fallback_count": 0,
+            "rust_only_count": 0,
+            "python_fallback_reasons": {},
+            "rust_only_patterns": [],
+        }
+
+    patterns = _build_patterns_from_config(cfg)
+    _stage, status = build_rust_regex_stage(patterns, licensing_config=cfg)
+    return status.to_prefilter_dict()

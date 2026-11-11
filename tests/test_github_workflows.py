@@ -355,6 +355,62 @@ def test_sbom_attach_sets_pythonpath_for_release_manifest_import() -> None:
     assert "python3 scripts/generate_release_manifest.py" in snippet
 
 
+def test_sbom_workflow_push_includes_main_branch() -> None:
+    """#2158: push trigger must include main branch to show current SBOM status."""
+    data = _load_workflow("sbom.yml")
+    on = data.get("on") or {}
+    push_config = on.get("push") or {}
+    assert "branches" in push_config, "push trigger must have branches"
+    assert "main" in push_config["branches"], "push trigger must include main branch"
+    # Ensure tags are still triggered
+    assert "tags" in push_config, "push trigger must still have tags"
+    assert "v*" in push_config["tags"], "push trigger must include v* tags"
+
+
+def test_sbom_workflow_push_and_pull_request_paths_match() -> None:
+    """#2158: push and pull_request triggers must have identical paths for consistency."""
+    data = _load_workflow("sbom.yml")
+    on = data.get("on") or {}
+
+    push_config = on.get("push") or {}
+    pull_request_config = on.get("pull_request") or {}
+
+    assert "paths" in push_config, "push trigger must have paths"
+    assert "paths" in pull_request_config, "pull_request trigger must have paths"
+
+    push_paths = set(push_config["paths"])
+    pull_request_paths = set(pull_request_config["paths"])
+
+    assert push_paths == pull_request_paths, (
+        f"push and pull_request paths must match:\n"
+        f"push: {sorted(push_paths)}\n"
+        f"pull_request: {sorted(pull_request_paths)}"
+    )
+
+
+def test_sbom_attest_and_attach_still_requires_tag_or_release() -> None:
+    """#2158: attest-and-attach job must still be conditioned on tag/release only."""
+    data = _load_workflow("sbom.yml")
+    jobs = data.get("jobs") or {}
+    attach_job = jobs.get("attest-and-attach")
+
+    assert attach_job is not None, "attest-and-attach job must exist"
+
+    # The job should only run on tag pushes or release events
+    job_if = str(attach_job.get("if") or "")
+    assert (
+        "(github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v'))"
+        in job_if
+    ), "attest-and-attach must run on tag pushes"
+    assert "github.event_name == 'release'" in job_if, (
+        "attest-and-attach must run on release events"
+    )
+    # It should NOT run on regular pushes to main
+    assert "github.ref_name == 'main'" not in job_if, (
+        "attest-and-attach should NOT run on regular main pushes"
+    )
+
+
 def test_sbom_yml_pins_actions_to_shas() -> None:
     """Third-party Actions in sbom.yml use full commit SHAs (same bar as ci.yml)."""
     text = (WORKFLOWS / "sbom.yml").read_text(encoding="utf-8")
@@ -417,7 +473,12 @@ def test_sbom_yml_libmariadb_uses_timed_composite_action() -> None:
     text = (WORKFLOWS / "sbom.yml").read_text(encoding="utf-8")
     assert "sudo apt-get update && sudo apt-get install -y libmariadb-dev" not in text
     assert "$/.github/actions/install-libmariadb-dev" in text
-    assert "timeout 240 sudo apt-get install -y build-essential" in text
+    # Bounded by `timeout` AND retried: a single transient archive.ubuntu.com failure must not
+    # fail the SBOM job (and turn the main badge red). Same rule as the composite action (#1865).
+    assert (
+        "timeout 240 sudo apt-get -o Acquire::Retries=3 install -y build-essential"
+        in text
+    )
     # Pin + apt-get update live only in the composite action (#1648).
     data = _load_workflow("sbom.yml")
     runs = _ci_step_run_texts(data["jobs"]["generate"])

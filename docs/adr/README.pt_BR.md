@@ -114,6 +114,7 @@ Os títulos na tabela abaixo ficam em **inglês** (canônicos, iguais ao [README
 | 0091 | [Uma imagem publicada (cp314t); GIL religado por licença no ENTRYPOINT](ADR-0091-container-cp314t-license-gil-gate.md) | Proposto |
 | 0092 | [Proveniência de build: Scorecard + atestações em GitHub Release (sem badges no PyPI)](ADR-0092-build-provenance-scorecard-and-github-release-attestations.md) | Aceito |
 | 0093 | [Release-signed CRITICAL_MODULES manifest is the integrity trust root](ADR-0093-signed-integrity-manifest.md) | Proposto |
+| 0094 | [Forensic-acquisition posture of scan_manifest — ISO/IEC 27037 alignment, deliberate absence of source hash / bit-for-bit image](ADR-0094-forensic-acquisition-posture-scan-manifest-iso27037.md) | Proposto |
 
 | 0095  | [multi-instance-report-hub-pull-provenance-dedupe](ADR-0095-multi-instance-report-hub-pull-provenance-dedupe.md) | Proposed |
 
