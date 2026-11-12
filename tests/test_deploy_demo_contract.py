@@ -10,7 +10,6 @@ from __future__ import annotations
 import json
 import os
 import re
-import stat
 import subprocess
 from pathlib import Path
 
@@ -134,8 +133,18 @@ def test_no_secret_is_tracked():
             assert ip in ("127.0.0.1", "0.0.0.0"), (path, ip)
 
 
-def test_restore_script_is_executable_and_parses():
-    assert RESTORE.stat().st_mode & stat.S_IXUSR
+def test_restore_script_is_executable_in_git_and_parses():
+    # The mode on disk says nothing on Windows (no execute bit, st_mode 0o100666);
+    # what reaches the demo host is the mode committed in the git index, and that
+    # one is the same on every platform. No platform branch, so no skip is counted.
+    listed = subprocess.run(
+        ["git", "ls-files", "-s", "--", RESTORE.relative_to(REPO).as_posix()],
+        cwd=REPO,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    assert listed.startswith("100755 "), listed
     subprocess.run(["bash", "-n", str(RESTORE)], check=True)
 
 
