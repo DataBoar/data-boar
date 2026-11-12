@@ -1122,29 +1122,29 @@ def test_pinned_uv_ps1_survives_concurrent_links_to_a_path_uv(
     )
 
 
-@pytest.mark.skipif(
-    sys.platform != "win32" or shutil.which("pwsh") is None,
-    reason="proves the Windows path of pinned-uv.ps1 on the Windows runner (real download)",
-)
-def test_pinned_uv_ps1_downloads_installs_and_reuses_the_real_uv_on_windows(
-    pin_tree: Path, tmp_path: Path
-) -> None:
-    """Real asset from the official release: download -> SHA256 from the registry -> extract ->
-    run uv.exe -> reuse the cache. This is the only test that exercises the Windows branch for real."""
-    version = read_source_version(pin_tree)
-    cache = tmp_path / "cache"
-    first = _run_ps1(pin_tree, cache)
-    assert first.returncode == 0, first.stderr
-    assert "SHA256 verified" in first.stderr
-    exe = Path(first.stdout.strip()) / "uv.exe"
-    assert exe.is_file(), first.stdout
-    reported = subprocess.run(
-        [str(exe), "--version"], capture_output=True, text=True, check=False
-    )
-    assert f"uv {version}" in reported.stdout, reported.stderr
-    second = _run_ps1(
-        pin_tree, cache, PINNED_UV_BASE_URL="https://invalid.invalid/none"
-    )
-    assert second.returncode == 0, second.stderr
-    assert second.stdout == first.stdout
-    assert "downloading" not in second.stderr
+# Defined ONLY on the Windows runner. A skipif here would add one skip to every Linux run, and the
+# extras job fails above its skip ceiling (scripts/ci_pytest_skip_ceiling.py --max-skipped 60).
+if sys.platform == "win32" and shutil.which("pwsh") is not None:
+
+    def test_pinned_uv_ps1_downloads_installs_and_reuses_the_real_uv_on_windows(
+        pin_tree: Path, tmp_path: Path
+    ) -> None:
+        """Real asset from the official release: download -> SHA256 from the registry -> extract ->
+        run uv.exe -> reuse the cache. This is the only test that exercises the Windows branch for real."""
+        version = read_source_version(pin_tree)
+        cache = tmp_path / "cache"
+        first = _run_ps1(pin_tree, cache)
+        assert first.returncode == 0, first.stderr
+        assert "SHA256 verified" in first.stderr
+        exe = Path(first.stdout.strip()) / "uv.exe"
+        assert exe.is_file(), first.stdout
+        reported = subprocess.run(
+            [str(exe), "--version"], capture_output=True, text=True, check=False
+        )
+        assert f"uv {version}" in reported.stdout, reported.stderr
+        second = _run_ps1(
+            pin_tree, cache, PINNED_UV_BASE_URL="https://invalid.invalid/none"
+        )
+        assert second.returncode == 0, second.stderr
+        assert second.stdout == first.stdout
+        assert "downloading" not in second.stderr
