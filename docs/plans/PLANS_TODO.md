@@ -30,13 +30,13 @@ Use these tags in headings to keep priorities explicit and machine-countable:
 
 Do not edit this block manually; refresh with `python scripts/plans-stats.py --write`.
 
-- **Status rows counted:** 304  (Done: 183 | Incomplete: 121)
-- **Incomplete breakdown:** Pending `⬜`=102, Tracked `🔄` / `Tracked (partially done)`=19, Under consideration=0, Backlog-marked rows=0
+- **Status rows counted:** 304  (Done: 186 | Incomplete: 118)
+- **Incomplete breakdown:** Pending `⬜`=99, Tracked `🔄` / `Tracked (partially done)`=19, Under consideration=0, Backlog-marked rows=0
 
 | Horizon | Total rows | Done | Incomplete |
 | ------- | ----------: | ----: | ----------: |
 | `H0` | 65 | 41 | 24 |
-| `H1` | 78 | 48 | 30 |
+| `H1` | 78 | 51 | 27 |
 | `H2` | 4 | 4 | 0 |
 | `H3` | 141 | 76 | 65 |
 | `H4` | 0 | 0 | 0 |
@@ -559,9 +559,9 @@ No capacity or timing claim is made without a measurement.
 | # | To-do | Status |
 | - | ----- | ------ |
 | 1 | PLAN written | ✅ Done |
-| 2 | `docs/data_boar.7` with `VERIFY` marks closed against the code | ⬜ Pending |
-| 3 | Guard: AST inventory vs. page vs. exclusion list with reason; sync tests extended | ⬜ Pending |
-| 4 | Packaging: wheel, nfpm and Void ship `man7` and the legacy aliases | ⬜ Pending |
+| 2 | `docs/data_boar.7` with `VERIFY` marks closed against the code | ✅ Done (in PR) |
+| 3 | Guard: AST inventory vs. page vs. exclusion list with reason; sync tests extended | ✅ Done (in PR) |
+| 4 | Packaging: wheel, nfpm and Void ship `man7` and the legacy aliases | ✅ Done (in PR) |
 
 ## [H1] Open-core / Pro plugin governance
 

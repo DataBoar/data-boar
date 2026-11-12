@@ -11,7 +11,7 @@
 
 ## Context
 
-Production code reads 56 environment variables (AST inventory of 2026-09-26, #1990). The ENVIRONMENT
+Production code read 56 environment variables in the AST inventory of 2026-09-26 (#1990) and reads 64 at the time of delivery (2026-11-12; new: the three `DATA_BOAR_CREDENTIAL_*` gates, two more issuer variables, and the OS locations `APPDATA`, `USERPROFILE`, `XDG_CONFIG_HOME` used to find the license). The ENVIRONMENT
 section of `docs/data_boar.1` covers only a few, and the same defect (a variable or config key
 missing from a man page) was fixed repeatedly (#440-#456). Names chosen by `*_from_env`
 configuration keys make a fixed list impossible to keep complete by hand.
@@ -38,12 +38,18 @@ configuration keys make a fixed list impossible to keep complete by hand.
 | # | To-do | Status |
 | - | ----- | ------ |
 | 1 | PLAN and hub entry | ✅ Done |
-| 2 | `data_boar.7` with VERIFY marks closed against code | ⬜ Pending |
-| 3 | Guard (AST inventory, exclusions with reason) and sync tests | ⬜ Pending |
-| 4 | Packaging in wheel, nfpm and Void | ⬜ Pending |
+| 2 | `data_boar.7` with VERIFY marks closed against code | ✅ Done (in PR) |
+| 3 | Guard (AST inventory, exclusions with reason) and sync tests | ✅ Done (in PR) |
+| 4 | Packaging in wheel, nfpm and Void | ✅ Done (in PR; apk smoke depends on #2189) |
 
 ## Risks
 
 - #2189 (apk/musl, rc=127) may disturb the apk install smoke; reported, not hidden.
 - Moving the ENVIRONMENT content out of `data_boar(1)` is deliberately deferred until the guard has
   been green for a while.
+
+## Known limits of the guard
+
+The inventory is Python-only static analysis: it does not see `in os.environ`, `pop`/`setdefault`,
+constants imported from another module, or reads in Rust and shell code. Config-named reads
+(`*_from_env`) are covered by the page's SECRETS section, not by name.
