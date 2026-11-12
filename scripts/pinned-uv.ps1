@@ -32,6 +32,7 @@ param()
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+$ProgressPreference = 'SilentlyContinue' # the progress bar makes Invoke-WebRequest much slower on Windows
 
 function Write-Err([string]$Message) { [Console]::Error.WriteLine($Message) }
 function Fail([string]$Message) {
