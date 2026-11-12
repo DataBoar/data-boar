@@ -671,16 +671,23 @@ for the full schema and examples.
 .SH ENVIRONMENT
 .TP
 .B CONFIG_PATH
-Path to the configuration file used by the web API.
+Path to the configuration file read by the web API module.
 When the server is started with
-.B \-\-web
-and no
+.BR \-\-web ,
+the served file is always the one given by
 .B \-\-config
-path is given, the application loads configuration from
-.B CONFIG_PATH
-if set, or from
+(default
 .IR config.yaml
-in the current working directory.
+in the current working directory), and
+.B CONFIG_PATH
+does not select a different file:
+on a loopback bind a different value is silently ignored;
+on a bind beyond loopback a different value aborts startup with exit status 2.
+Use the same path for both, or leave
+.B CONFIG_PATH
+unset.
+See
+.BR data\-boar (7).
 .
 .TP
 .B AUDIT_API_KEY
@@ -736,7 +743,7 @@ and
 Optional integer (clamped between 1 and 10000): when set in the process environment it
 .B replaces
 .B file_scan.sample_limit
-for SQLAlchemy and Snowflake column sampling only, without editing YAML.
+as the per-column sample size for SQLAlchemy and Snowflake targets and for filesystem and MongoDB sampling, without editing YAML.
 See
 .I docs/USAGE.md
 (\(lqRelational database sampling\(rq).
