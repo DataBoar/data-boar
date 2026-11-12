@@ -797,3 +797,35 @@ def test_pinned_uv_twins_share_the_same_contract() -> None:
         assert asset in ps, f"pinned-uv.ps1 has no mapping to {asset}"
     for asset in WINDOWS_ASSETS.values():
         assert asset in ps
+
+
+@needs_pwsh
+def test_pinned_uv_ps1_result_is_capturable_in_process(
+    pin_tree: Path, tmp_path: Path
+) -> None:
+    """check-all.ps1 calls the script in-process (`$d = & pinned-uv.ps1`): the directory must travel on
+    the PowerShell success pipeline, not only on the console (a subprocess capture hides that)."""
+    cache = tmp_path / "cache"
+    version = read_source_version(pin_tree)
+    _fake_uv(cache / f"uv-{version}", version)
+    script = str(pin_tree / PINNED_UV_PS1)
+    r = subprocess.run(
+        [
+            shutil.which("pwsh") or "pwsh",
+            "-NoProfile",
+            "-NonInteractive",
+            "-Command",
+            f"$d = (& '{script}' | Select-Object -Last 1); "
+            "[Console]::Out.WriteLine('GOT=' + $d + ' LAST=' + $LASTEXITCODE)",
+        ],
+        capture_output=True,
+        text=True,
+        env={
+            "PATH": str(_tools_dir(pin_tree.parent)),
+            "HOME": str(pin_tree.parent / "home"),
+            "DATA_BOAR_UV_CACHE_DIR": str(cache),
+        },
+        check=False,
+    )
+    assert r.returncode == 0, r.stderr
+    assert f"GOT={cache / f'uv-{version}'} LAST=0" in r.stdout, (r.stdout, r.stderr)
