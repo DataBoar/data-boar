@@ -333,6 +333,11 @@ def test_stale_exception_is_reported(tree: Path) -> None:
 PINNED_UV_SCRIPT = "scripts/pinned-uv.sh"
 PINNED_UV_PS1 = "scripts/pinned-uv.ps1"
 CHECK_ALL_SH = "scripts/check-all.sh"
+posix_only = pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="drives bash or a fake POSIX uv (#!/bin/sh) and symlinks; the Windows runner proves "
+    "pinned-uv.ps1 with the real download test below",
+)
 linux_x64_only = pytest.mark.skipif(
     not (sys.platform == "linux" and os.uname().machine == "x86_64"),
     reason="the digest registry only covers linux-x86_64",
@@ -401,6 +406,7 @@ def _fake_uv(directory: Path, reported: str) -> None:
     exe.chmod(0o755)
 
 
+@posix_only
 def test_pinned_uv_uses_the_version_in_the_file(pin_tree: Path, tmp_path: Path) -> None:
     cache = tmp_path / "cache"
     version = read_source_version(pin_tree)
@@ -411,6 +417,7 @@ def test_pinned_uv_uses_the_version_in_the_file(pin_tree: Path, tmp_path: Path) 
     assert f"uv {version}" in r.stderr
 
 
+@posix_only
 def test_pinned_uv_follows_a_changed_version_file(
     pin_tree: Path, tmp_path: Path
 ) -> None:
@@ -423,6 +430,7 @@ def test_pinned_uv_follows_a_changed_version_file(
     assert r.stdout.strip() == str(cache / "uv-0.12.0")
 
 
+@posix_only
 def test_pinned_uv_rejects_a_cached_binary_of_another_version(
     pin_tree: Path, tmp_path: Path
 ) -> None:
@@ -439,6 +447,7 @@ def _path_with(fake_dir: Path, parent: Path) -> str:
     return f"{fake_dir}:{_tools_dir(parent)}"
 
 
+@posix_only
 def test_pinned_uv_accepts_an_exact_uv_already_on_path(
     pin_tree: Path, tmp_path: Path
 ) -> None:
@@ -462,6 +471,7 @@ def test_pinned_uv_accepts_an_exact_uv_already_on_path(
     assert f"uv {version}" in reported.stdout
 
 
+@posix_only
 def test_pinned_uv_rejects_a_path_uv_of_another_version(
     pin_tree: Path, tmp_path: Path
 ) -> None:
@@ -479,6 +489,7 @@ def test_pinned_uv_rejects_a_path_uv_of_another_version(
     assert version in r.stderr
 
 
+@posix_only
 def test_pinned_uv_on_an_unsupported_platform_explains_what_really_works(
     pin_tree: Path, tmp_path: Path
 ) -> None:
@@ -494,6 +505,7 @@ def test_pinned_uv_on_an_unsupported_platform_explains_what_really_works(
     assert "PATH" in r.stderr
 
 
+@posix_only
 def test_pinned_uv_on_an_unsupported_platform_accepts_an_exact_uv_on_path(
     pin_tree: Path, tmp_path: Path
 ) -> None:
@@ -511,6 +523,7 @@ def test_pinned_uv_on_an_unsupported_platform_accepts_an_exact_uv_on_path(
 
 
 @pytest.mark.parametrize("content", ["latest\n", "0.11\n", "", "0.11.2 0.12.0\n"])
+@posix_only
 def test_pinned_uv_rejects_a_malformed_version_file(
     pin_tree: Path, tmp_path: Path, content: str
 ) -> None:
@@ -520,6 +533,7 @@ def test_pinned_uv_rejects_a_malformed_version_file(
     assert "uv-version" in r.stderr
 
 
+@posix_only
 def test_pinned_uv_refuses_a_version_without_registered_digest(
     pin_tree: Path, tmp_path: Path
 ) -> None:
@@ -532,6 +546,7 @@ def test_pinned_uv_refuses_a_version_without_registered_digest(
 
 
 @linux_x64_only
+@posix_only
 def test_pinned_uv_fails_on_a_tampered_download(pin_tree: Path, tmp_path: Path) -> None:
     version = read_source_version(pin_tree)
     served = tmp_path / "served" / version
@@ -547,6 +562,7 @@ def test_pinned_uv_fails_on_a_tampered_download(pin_tree: Path, tmp_path: Path) 
 
 
 @linux_x64_only
+@posix_only
 def test_pinned_uv_fails_when_the_download_is_unreachable(
     pin_tree: Path, tmp_path: Path
 ) -> None:
@@ -570,6 +586,7 @@ def test_check_all_sh_resolves_the_pinned_uv_before_using_uv() -> None:
     assert text.count('export PATH="$PINNED_UV_DIR:$PATH"') >= 2
 
 
+@posix_only
 def test_pinned_uv_registry_and_native_exception_are_untouched() -> None:
     """#2232 does not move the declared 0.12.0 exception."""
     assert check_uv_pins(REPO_ROOT) == []
@@ -612,6 +629,7 @@ def test_asset_registry_is_well_formed_and_consistent() -> None:
 
 
 @pytest.mark.parametrize(("tag", "asset"), sorted(PLATFORM_ASSETS.items()))
+@posix_only
 def test_pinned_uv_sh_downloads_the_registered_asset_of_each_platform(
     pin_tree: Path, tmp_path: Path, tag: str, asset: str
 ) -> None:
@@ -632,11 +650,28 @@ def test_pinned_uv_sh_downloads_the_registered_asset_of_each_platform(
     assert not (cache / f"uv-{version}" / "uv").exists()
 
 
+def _windows_env() -> dict[str, str]:
+    """pwsh on Windows needs a few system variables (SystemRoot, TEMP...); nothing else leaks in."""
+    if sys.platform != "win32":
+        return {}
+    keep = (
+        "SystemRoot",
+        "windir",
+        "TEMP",
+        "TMP",
+        "USERPROFILE",
+        "LOCALAPPDATA",
+        "APPDATA",
+    )
+    return {k: os.environ[k] for k in keep if k in os.environ}
+
+
 def _run_ps1(root: Path, cache: Path, **env: str) -> subprocess.CompletedProcess[str]:
     full = {
         "PATH": str(_tools_dir(root.parent)),
         "HOME": str(root.parent / "home"),
         "DATA_BOAR_UV_CACHE_DIR": str(cache),
+        **_windows_env(),
         **env,
     }
     return subprocess.run(
@@ -655,6 +690,7 @@ def _run_ps1(root: Path, cache: Path, **env: str) -> subprocess.CompletedProcess
 
 
 @needs_pwsh
+@posix_only
 def test_pinned_uv_ps1_uses_the_cached_version_in_the_file(
     pin_tree: Path, tmp_path: Path
 ) -> None:
@@ -668,6 +704,7 @@ def test_pinned_uv_ps1_uses_the_cached_version_in_the_file(
 
 
 @needs_pwsh
+@posix_only
 def test_pinned_uv_ps1_accepts_an_exact_uv_already_on_path(
     pin_tree: Path, tmp_path: Path
 ) -> None:
@@ -686,6 +723,7 @@ def test_pinned_uv_ps1_accepts_an_exact_uv_already_on_path(
 
 
 @needs_pwsh
+@posix_only
 def test_pinned_uv_ps1_is_idempotent(pin_tree: Path, tmp_path: Path) -> None:
     version = read_source_version(pin_tree)
     on_path = tmp_path / "userbin"
@@ -701,6 +739,7 @@ def test_pinned_uv_ps1_is_idempotent(pin_tree: Path, tmp_path: Path) -> None:
 
 
 @needs_pwsh
+@posix_only
 def test_pinned_uv_ps1_rejects_a_path_uv_of_another_version(
     pin_tree: Path, tmp_path: Path
 ) -> None:
@@ -804,6 +843,7 @@ def test_pinned_uv_twins_share_the_same_contract() -> None:
 
 
 @needs_pwsh
+@posix_only
 def test_pinned_uv_ps1_result_is_capturable_in_process(
     pin_tree: Path, tmp_path: Path
 ) -> None:
@@ -858,6 +898,7 @@ def _tools_dir_without_sha256sum(parent: Path) -> Path:
 
 
 @pytest.mark.parametrize(("tag", "asset"), sorted(PLATFORM_ASSETS.items()))
+@posix_only
 def test_pinned_uv_sh_works_without_sha256sum_using_shasum(
     pin_tree: Path, tmp_path: Path, tag: str, asset: str
 ) -> None:
@@ -941,6 +982,7 @@ def _pwsh_cmd(root: Path) -> list[str]:
     ]
 
 
+@posix_only
 def test_pinned_uv_sh_installs_a_verified_download_and_reuses_the_cache(
     pin_tree: Path, tmp_path: Path
 ) -> None:
@@ -967,6 +1009,7 @@ def test_pinned_uv_sh_installs_a_verified_download_and_reuses_the_cache(
 
 
 @needs_pwsh
+@posix_only
 def test_pinned_uv_ps1_installs_a_verified_download_and_reuses_the_cache(
     pin_tree: Path, tmp_path: Path
 ) -> None:
@@ -1011,6 +1054,7 @@ def _run_concurrently(
         assert f"uv {version}" in probe.stdout, f"round {n}: {probe.stderr!r}"
 
 
+@posix_only
 def test_pinned_uv_sh_survives_concurrent_cold_cache_downloads(
     pin_tree: Path, tmp_path: Path
 ) -> None:
@@ -1028,6 +1072,7 @@ def test_pinned_uv_sh_survives_concurrent_cold_cache_downloads(
 
 
 @needs_pwsh
+@posix_only
 def test_pinned_uv_ps1_survives_concurrent_cold_cache_downloads(
     pin_tree: Path, tmp_path: Path
 ) -> None:
@@ -1042,6 +1087,7 @@ def test_pinned_uv_ps1_survives_concurrent_cold_cache_downloads(
     )
 
 
+@posix_only
 def test_pinned_uv_sh_survives_concurrent_links_to_a_path_uv(
     pin_tree: Path, tmp_path: Path
 ) -> None:
@@ -1059,6 +1105,7 @@ def test_pinned_uv_sh_survives_concurrent_links_to_a_path_uv(
 
 
 @needs_pwsh
+@posix_only
 def test_pinned_uv_ps1_survives_concurrent_links_to_a_path_uv(
     pin_tree: Path, tmp_path: Path
 ) -> None:
@@ -1073,3 +1120,31 @@ def test_pinned_uv_ps1_survives_concurrent_links_to_a_path_uv(
         PATH=_path_with(on_path, pin_tree.parent),
         PINNED_UV_BASE_URL=f"file://{tmp_path}/nowhere",
     )
+
+
+@pytest.mark.skipif(
+    sys.platform != "win32" or shutil.which("pwsh") is None,
+    reason="proves the Windows path of pinned-uv.ps1 on the Windows runner (real download)",
+)
+def test_pinned_uv_ps1_downloads_installs_and_reuses_the_real_uv_on_windows(
+    pin_tree: Path, tmp_path: Path
+) -> None:
+    """Real asset from the official release: download -> SHA256 from the registry -> extract ->
+    run uv.exe -> reuse the cache. This is the only test that exercises the Windows branch for real."""
+    version = read_source_version(pin_tree)
+    cache = tmp_path / "cache"
+    first = _run_ps1(pin_tree, cache)
+    assert first.returncode == 0, first.stderr
+    assert "SHA256 verified" in first.stderr
+    exe = Path(first.stdout.strip()) / "uv.exe"
+    assert exe.is_file(), first.stdout
+    reported = subprocess.run(
+        [str(exe), "--version"], capture_output=True, text=True, check=False
+    )
+    assert f"uv {version}" in reported.stdout, reported.stderr
+    second = _run_ps1(
+        pin_tree, cache, PINNED_UV_BASE_URL="https://invalid.invalid/none"
+    )
+    assert second.returncode == 0, second.stderr
+    assert second.stdout == first.stdout
+    assert "downloading" not in second.stderr
