@@ -171,5 +171,33 @@ def diff_requirements(committed: str, fresh: str) -> list[str]:
     return problems
 
 
+_PYLOCK_MARKER = re.compile(
+    r'^(?P<key>\s*marker\s*=\s*)"(?P<expr>(?:[^"\\]|\\.)*)"\s*$'
+)
+
+
 def diff_pylock_bodies(committed: list[str], fresh: list[str]) -> list[str]:
-    raise NotImplementedError
+    """Differences between two ``pylock.toml`` bodies (header already stripped).
+
+    Every line is compared exactly except ``marker = "..."`` values, compared by semantic
+    equivalence (see ``markers_equivalent``).
+    """
+    problems: list[str] = []
+    for no, (a, b) in enumerate(itertools.zip_longest(committed, fresh), start=1):
+        if a == b:
+            continue
+        if a is None or b is None:
+            problems.append(
+                f"line {no}: only in {'fresh' if a is None else 'committed'}: {(a or b)!r}"
+            )
+            continue
+        ma, mb = _PYLOCK_MARKER.match(a), _PYLOCK_MARKER.match(b)
+        if (
+            ma
+            and mb
+            and ma["key"] == mb["key"]
+            and markers_equivalent(ma["expr"], mb["expr"])
+        ):
+            continue
+        problems.append(f"line {no}: committed {a!r} != fresh {b!r}")
+    return problems

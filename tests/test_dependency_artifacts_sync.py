@@ -15,7 +15,7 @@ import tempfile
 import tomllib
 from pathlib import Path
 
-from tests.uv_export_compare import diff_requirements
+from tests.uv_export_compare import diff_pylock_bodies, diff_requirements
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -117,8 +117,12 @@ def test_pylock_toml_matches_uv_export() -> None:
     assert committed.splitlines()[1:2] == [f"#    {PYLOCK_EXPORT_CMD}"], (
         f"pylock.toml header must record: {PYLOCK_EXPORT_CMD}"
     )
-    assert _body(committed) == _body(fresh), (
-        f"pylock.toml does not match `uv export` from the lockfile. Regenerate: {PYLOCK_EXPORT_CMD}"
+    # Same rule as requirements.txt: everything exact, markers by semantic equivalence (#2228).
+    problems = diff_pylock_bodies(_body(committed), _body(fresh))
+    assert not problems, (
+        "pylock.toml does not match `uv export` from the lockfile:\n  "
+        + "\n  ".join(problems[:20])
+        + f"\nRegenerate: {PYLOCK_EXPORT_CMD}"
     )
 
 
