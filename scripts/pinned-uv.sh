@@ -9,13 +9,17 @@
 # Resolution order (every step needs `uv --version` to print EXACTLY the pinned version):
 #   1. the cached binary;
 #   2. a uv already on PATH (any platform; it is linked into the cache dir, not hashed);
-#   3. otherwise the official astral-sh/uv linux-x86_64 tarball is downloaded and its SHA256 is
-# checked against the digest registered in tests/test_uv_version_single_source.py
-# (KNOWN_LINUX_X64_SHA256, from the official release asset). No digest, no download.
+#   3. otherwise the official astral-sh/uv release asset of THIS platform is downloaded (Linux and
+#      macOS, x86_64 and aarch64; Windows is covered by the twin scripts/pinned-uv.ps1) and its SHA256
+#      is checked against the digest registered in tests/test_uv_version_single_source.py
+#      (KNOWN_ASSET_SHA256, one entry per <version>/<asset>, from the official release). No digest,
+#      no download.
 # There is no skip and no fallback to another version: failure is a hard error.
+# Cross-platform twin: scripts/pinned-uv.ps1 (same contract; keep them in sync, see
+# docs/ops/SCRIPTS_CROSS_PLATFORM_PAIRING.md).
 #
-# Test seam: PINNED_UV_BASE_URL replaces https://github.com/astral-sh/uv/releases/download
-# (the digest check still applies).
+# Test seams: PINNED_UV_BASE_URL replaces https://github.com/astral-sh/uv/releases/download (the
+# digest check still applies); PINNED_UV_UNAME overrides "<uname -s>-<uname -m>" (e.g. Darwin-arm64).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -62,15 +66,19 @@ if [[ -n "$PATH_UV" ]]; then
 fi
 
 # Not cached, not on PATH (or only other versions there): download, verify, install.
-[[ -f "$GUARD_TEST" ]] || die "$GUARD_TEST not found (digest registry)"
-EXPECTED_SHA="$(grep -oE "\"${VERSION//./\\.}\": *\"[0-9a-f]{64}\"" "$GUARD_TEST" | head -n1 | grep -oE '[0-9a-f]{64}' || true)"
-[[ -n "$EXPECTED_SHA" ]] || die "no official SHA256 registered for uv $VERSION in $GUARD_TEST; refusing to download an unverified binary"
-
 PLATFORM="${PINNED_UV_UNAME:-$(uname -s)-$(uname -m)}"
 case "$PLATFORM" in
-  Linux-x86_64) TARGET="uv-x86_64-unknown-linux-gnu" ;;
-  *) die "no uv $VERSION in the cache ($DEST_BIN) or on PATH, and download digests are only registered for Linux-x86_64 (this platform: $PLATFORM). Install uv $VERSION so that 'uv --version' reports exactly $VERSION and keep it on PATH (this script finds it there), or place it at $DEST_BIN" ;;
+  Linux-x86_64) ASSET="uv-x86_64-unknown-linux-gnu.tar.gz" ;;
+  Linux-aarch64 | Linux-arm64) ASSET="uv-aarch64-unknown-linux-gnu.tar.gz" ;;
+  Darwin-x86_64) ASSET="uv-x86_64-apple-darwin.tar.gz" ;;
+  Darwin-arm64 | Darwin-aarch64) ASSET="uv-aarch64-apple-darwin.tar.gz" ;;
+  *) die "no uv $VERSION in the cache ($DEST_BIN) or on PATH, and this script downloads only for Linux and macOS on x86_64/aarch64 (this platform: $PLATFORM; on Windows use scripts/pinned-uv.ps1). Install uv $VERSION so that 'uv --version' reports exactly $VERSION and keep it on PATH (this script finds it there), or place it at $DEST_BIN" ;;
 esac
+TARGET="${ASSET%.tar.gz}"
+
+[[ -f "$GUARD_TEST" ]] || die "$GUARD_TEST not found (digest registry)"
+EXPECTED_SHA="$(grep -oE "\"${VERSION//./\\.}/${ASSET//./\\.}\": *\"[0-9a-f]{64}\"" "$GUARD_TEST" | head -n1 | grep -oE '[0-9a-f]{64}' || true)"
+[[ -n "$EXPECTED_SHA" ]] || die "no official SHA256 registered for uv $VERSION / $ASSET in $GUARD_TEST (KNOWN_ASSET_SHA256); refusing to download an unverified binary"
 
 command -v curl >/dev/null 2>&1 || die "curl not found"
 command -v sha256sum >/dev/null 2>&1 || die "sha256sum not found"
@@ -79,13 +87,13 @@ mkdir -p "$CACHE_ROOT" || die "cannot create cache dir $CACHE_ROOT"
 TMP="$(mktemp -d "$CACHE_ROOT/.fetch-XXXXXX")"
 trap 'rm -rf "$TMP"' EXIT
 
-URL="$BASE_URL/$VERSION/$TARGET.tar.gz"
+URL="$BASE_URL/$VERSION/$ASSET"
 echo "pinned-uv.sh: downloading uv $VERSION from $URL" >&2
 curl --fail --silent --show-error --location --retry 3 --connect-timeout 20 --max-time 300 \
   "$URL" -o "$TMP/uv.tgz" || die "download of uv $VERSION failed ($URL)"
 
 ACTUAL_SHA="$(sha256sum "$TMP/uv.tgz" | awk '{print $1}')"
-[[ "$ACTUAL_SHA" == "$EXPECTED_SHA" ]] || die "SHA256 mismatch for uv $VERSION: expected $EXPECTED_SHA, got $ACTUAL_SHA"
+[[ "$ACTUAL_SHA" == "$EXPECTED_SHA" ]] || die "SHA256 mismatch for uv $VERSION ($ASSET): expected $EXPECTED_SHA, got $ACTUAL_SHA"
 
 tar -xzf "$TMP/uv.tgz" -C "$TMP" || die "cannot extract the uv tarball"
 [[ -f "$TMP/$TARGET/uv" ]] || die "tarball has no $TARGET/uv"
