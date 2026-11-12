@@ -77,3 +77,18 @@ def test_walk_error_during_iteration_is_recorded_not_raised():
     mock_smb.walk.side_effect = _failing_walk
     db = _run(mock_smb)
     assert [f for f in db.failures if f[1] == "unreachable"], db.failures
+
+
+def test_walk_access_denied_is_recorded_not_silently_clean():
+    """smbclient.walk ignores scandir errors unless ``onerror`` is given (like
+    os.walk), so a denied share root looked like an empty, clean share."""
+
+    def _walk(top, onerror=None, **_k):
+        if onerror is not None:
+            onerror(PermissionError(f"STATUS_ACCESS_DENIED: {top}"))
+        return iter(())
+
+    mock_smb = MagicMock()
+    mock_smb.walk.side_effect = _walk
+    db = _run(mock_smb)
+    assert [f for f in db.failures if "ACCESS_DENIED" in f[2]], db.failures
