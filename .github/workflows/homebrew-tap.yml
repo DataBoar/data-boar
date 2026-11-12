@@ -63,7 +63,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           # Off: this workflow also has `release: published` (zizmor cache-poisoning).
           enable-cache: false
@@ -125,7 +125,7 @@ jobs:
         with:
           persist-credentials: true
 
-      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           # Off: this workflow also has `release: published` (zizmor cache-poisoning).
           enable-cache: false
