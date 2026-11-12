@@ -348,13 +348,16 @@ packages = [
 "docs/sdk/transformed_rows.pin.json" = "core/data/transformed_rows.pin.json"
 
 # Man pages (#2163): canonical names plus legacy alias symlinks under
-# packaging/wheel-man-aliases/ (same troff source as docs/data_boar.{1,5}).
+# packaging/wheel-man-aliases/ (same troff source as docs/data_boar.{1,5,7}).
 [tool.hatch.build.targets.wheel.shared-data]
 "docs/data_boar.1" = "share/man/man1/data-boar.1"
 "docs/data_boar.5" = "share/man/man5/data-boar.5"
+"docs/data_boar.7" = "share/man/man7/data-boar.7"
 "packaging/wheel-man-aliases/man1/data_boar.1" = "share/man/man1/data_boar.1"
 "packaging/wheel-man-aliases/man1/lgpd_crawler.1" = "share/man/man1/lgpd_crawler.1"
 "packaging/wheel-man-aliases/man5/data_boar.5" = "share/man/man5/data_boar.5"
+"packaging/wheel-man-aliases/man7/data_boar.7" = "share/man/man7/data_boar.7"
+"packaging/wheel-man-aliases/man7/lgpd_crawler.7" = "share/man/man7/lgpd_crawler.7"
 "packaging/wheel-man-aliases/man5/lgpd_crawler.5" = "share/man/man5/lgpd_crawler.5"
 
 [dependency-groups]

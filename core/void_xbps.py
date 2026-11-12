@@ -179,6 +179,7 @@ def render_template(
         f"\tfi\n"
         f'\tvman "${{FILESDIR}}/data-boar.1"\n'
         f'\tvman "${{FILESDIR}}/data-boar.5"\n'
+        f'\tvman "${{FILESDIR}}/data-boar.7"\n'
         f"{void_man_alias_install_lines()}"
         f"\tvsv data-boar\n"
         f"}}\n"
@@ -264,8 +265,11 @@ def write_generated_void(
     man5_src = repo_root() / "docs" / "data_boar.5"
     man1_dest = files_root / "data-boar.1"
     man5_dest = files_root / "data-boar.5"
+    man7_src = repo_root() / "docs" / "data_boar.7"
+    man7_dest = files_root / "data-boar.7"
     shutil.copy2(man1_src, man1_dest)
     shutil.copy2(man5_src, man5_dest)
+    shutil.copy2(man7_src, man7_dest)
 
     meta_path = dest_root / "PACKAGES.meta.json"
     meta_path.write_text(
@@ -289,6 +293,7 @@ def write_generated_void(
         "links": links_path,
         "man1": man1_dest,
         "man5": man5_dest,
+        "man7": man7_dest,
     }
 
 
@@ -309,6 +314,7 @@ def expected_generated_text(
         "links": "\n".join(sorted(read_subpackage_map())) + "\n",
         "man1": (repo_root() / "docs" / "data_boar.1").read_text(encoding="utf-8"),
         "man5": (repo_root() / "docs" / "data_boar.5").read_text(encoding="utf-8"),
+        "man7": (repo_root() / "docs" / "data_boar.7").read_text(encoding="utf-8"),
     }
 
 
@@ -335,6 +341,9 @@ def assert_generated_in_sync(
             encoding="utf-8"
         ),
         "man5": (root / "srcpkgs" / CORE_PACKAGE / "files" / "data-boar.5").read_text(
+            encoding="utf-8"
+        ),
+        "man7": (root / "srcpkgs" / CORE_PACKAGE / "files" / "data-boar.7").read_text(
             encoding="utf-8"
         ),
     }

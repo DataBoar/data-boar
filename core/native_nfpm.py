@@ -157,6 +157,10 @@ def build_core_nfpm_doc(*, version: str) -> dict[str, Any]:
                 "src": "../../docs/data_boar.5",
                 "dst": "/usr/share/man/man5/data-boar.5",
             },
+            {
+                "src": "../../docs/data_boar.7",
+                "dst": "/usr/share/man/man7/data-boar.7",
+            },
             *nfpm_man_symlink_contents(),
         ],
         "overrides": {

@@ -1,0 +1,53 @@
+# Environment variables read by production code that data_boar(7) deliberately does not document (#1990).
+# Format: NAME REASON   (one per line; the reason is mandatory; "#" starts a comment)
+# Reasons: ci | release | lab | vendor-issuer | licensing-pending
+# tests/test_man7_env_catalog.py fails when production code reads a variable that is neither
+# cited in docs/data_boar.7 nor listed here, and when an entry here is stale or also documented.
+
+# Licensing and build integrity: operator decision (2026-11-12), not on the public page for now.
+DATA_BOAR_LICENSE_PATH licensing-pending
+DATA_BOAR_LICENSE_MODE licensing-pending
+DATA_BOAR_LICENSE_REVOCATION_PATH licensing-pending
+DATA_BOAR_LICENSE_MACHINE_STRICT licensing-pending
+DATA_BOAR_MACHINE_SEED licensing-pending
+DATA_BOAR_EXPECTED_BUILD_DIGEST licensing-pending
+DATA_BOAR_RELEASE_MANIFEST_PATH licensing-pending
+DATA_BOAR_CONTAINER_PYTHON licensing-pending
+# OS locations used only to find the license file (core/licensing/paths.py).
+APPDATA licensing-pending
+USERPROFILE licensing-pending
+XDG_CONFIG_HOME licensing-pending
+
+# License issuer (private key): never on a user page; read only by issuer tooling.
+DATA_BOAR_LICENSE_ISSUER_MLDSA_PRIVATE_KEY_PEM vendor-issuer
+DATA_BOAR_LICENSE_ISSUER_MLDSA_PRIVATE_KEY_PEM_FILE vendor-issuer
+DATA_BOAR_LICENSE_ISSUER_PRIVATE_KEY_PASSWORD vendor-issuer
+DATA_BOAR_LICENSE_ISSUER_PRIVATE_KEY_PEM vendor-issuer
+DATA_BOAR_LICENSE_ISSUER_PRIVATE_KEY_PEM_FILE vendor-issuer
+
+# Laboratory and helper scripts, optional apps.
+DATA_BOAR_GRC_JSON lab
+DATA_BOAR_API_KEY lab
+DATA_BOAR_BASE lab
+CLOUDFLARE_EXPORT_LAG_MINUTES lab
+CLOUDFLARE_EXPORT_LIMIT lab
+CLOUDFLARE_EXPORT_LOOKBACK_MINUTES lab
+CLOUDFLARE_EXPORT_OVERLAP_MINUTES lab
+CLOUDFLARE_EXPORT_WATERMARK_PATH lab
+CLOUDFLARE_HOSTNAME_ALLOWLIST lab
+OTEL_EXPORTER_OTLP_METRICS_ENDPOINT lab
+
+# Continuous integration and repository maintenance.
+SONAR_BRANCH ci
+SONAR_HOST_URL ci
+SONAR_PROJECT_KEY ci
+SONAR_TOKEN ci
+SLACK_WEBHOOK_DATA_BOAR_OPS ci
+SLACK_WEBHOOK_URL ci
+INCLUDE_PRIVATE_LINT ci
+DISABLE_SQLALCHEMY_CEXT ci
+
+# Release and packaging.
+GNUPGHOME release
+NATIVE_PACKAGE_GPG_PRIVATE_KEY release
+DATA_BOAR_IMAGE_VARIANT release

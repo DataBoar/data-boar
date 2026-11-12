@@ -27,6 +27,8 @@ contents:
   dst: /usr/share/man/man1/data-boar.1
 - src: ../../docs/data_boar.5
   dst: /usr/share/man/man5/data-boar.5
+- src: ../../docs/data_boar.7
+  dst: /usr/share/man/man7/data-boar.7
 - dst: /usr/share/man/man1/data_boar.1
   type: symlink
   src: /usr/share/man/man1/data-boar.1
@@ -39,6 +41,12 @@ contents:
 - dst: /usr/share/man/man5/lgpd_crawler.5
   type: symlink
   src: /usr/share/man/man5/data-boar.5
+- dst: /usr/share/man/man7/data_boar.7
+  type: symlink
+  src: /usr/share/man/man7/data-boar.7
+- dst: /usr/share/man/man7/lgpd_crawler.7
+  type: symlink
+  src: /usr/share/man/man7/data-boar.7
 overrides:
   deb:
     depends:

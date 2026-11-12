@@ -7,6 +7,7 @@ globs:
 - api/templates/dashboard.html
 - docs/data_boar.1
 - docs/data_boar.5
+- docs/data_boar.7
 - docs/USAGE.md
 - docs/USAGE.pt_BR.md
 
@@ -22,6 +23,7 @@ When you change **user-visible** runtime options here:
    - **`main.py`** — `argparse` + epilog examples
    - **`api/templates/help.html`** — dashBOARd quick reference
    - **`docs/data_boar.1`** / **`docs/data_boar.5`** — if the option is man-worthy
+   - **`docs/data_boar.7`** — environment variables (catalog; `tests/test_man7_env_catalog.py` fails when production code reads one that is neither cited there nor in `tests/man7_env_exclusions.txt`)
    - **`docs/USAGE.md`** and **`docs/USAGE.pt_BR.md`** — tables and binding/security notes
 1. **Run** `uv run pytest tests/test_operator_help_sync.py -v`
 1. **Optional:** OpenAPI (`api/routes`) if the JSON body or behaviour changed for API clients.
