@@ -20,8 +20,11 @@ Contract
 
 from __future__ import annotations
 
+import os
 import re
 import shutil
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -305,3 +308,151 @@ def test_detects_missing_exception_justification(tree: Path) -> None:
 def test_stale_exception_is_reported(tree: Path) -> None:
     (tree / SOURCE_FILE).write_text("0.12.0\n", encoding="utf-8")
     assert any("stale" in p for p in check_uv_pins(tree))
+
+
+# --------------------------------------------------------------------------- pinned-uv.sh (#2232)
+
+PINNED_UV_SCRIPT = "scripts/pinned-uv.sh"
+CHECK_ALL_SH = "scripts/check-all.sh"
+linux_x64_only = pytest.mark.skipif(
+    not (sys.platform == "linux" and os.uname().machine == "x86_64"),
+    reason="the digest registry only covers linux-x86_64",
+)
+
+
+@pytest.fixture()
+def pin_tree(tmp_path: Path) -> Path:
+    """Minimal repo tree for pinned-uv.sh: the script, the version file and the digest registry."""
+    root = tmp_path / "repo"
+    for rel in (
+        PINNED_UV_SCRIPT,
+        SOURCE_FILE,
+        "tests/test_uv_version_single_source.py",
+    ):
+        dst = root / rel
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(REPO_ROOT / rel, dst)
+    return root
+
+
+def _run_pinned(
+    root: Path, cache: Path, **env: str
+) -> subprocess.CompletedProcess[str]:
+    full = {
+        "PATH": os.environ["PATH"],
+        "HOME": str(root.parent / "home"),
+        "DATA_BOAR_UV_CACHE_DIR": str(cache),
+        **env,
+    }
+    return subprocess.run(
+        ["bash", str(root / PINNED_UV_SCRIPT)],
+        capture_output=True,
+        text=True,
+        env=full,
+        check=False,
+    )
+
+
+def _fake_uv(directory: Path, reported: str) -> None:
+    directory.mkdir(parents=True, exist_ok=True)
+    exe = directory / "uv"
+    exe.write_text(f'#!/bin/sh\necho "uv {reported} (fake)"\n', encoding="utf-8")
+    exe.chmod(0o755)
+
+
+def test_pinned_uv_uses_the_version_in_the_file(pin_tree: Path, tmp_path: Path) -> None:
+    cache = tmp_path / "cache"
+    version = read_source_version(pin_tree)
+    _fake_uv(cache / f"uv-{version}", version)
+    r = _run_pinned(pin_tree, cache)
+    assert r.returncode == 0, r.stderr
+    assert r.stdout.strip() == str(cache / f"uv-{version}")
+    assert f"uv {version}" in r.stderr
+
+
+def test_pinned_uv_follows_a_changed_version_file(
+    pin_tree: Path, tmp_path: Path
+) -> None:
+    cache = tmp_path / "cache"
+    (pin_tree / SOURCE_FILE).write_text("0.12.0\n", encoding="utf-8")
+    _fake_uv(cache / "uv-0.12.0", "0.12.0")
+    _fake_uv(cache / "uv-0.11.2", "0.11.2")
+    r = _run_pinned(pin_tree, cache)
+    assert r.returncode == 0, r.stderr
+    assert r.stdout.strip() == str(cache / "uv-0.12.0")
+
+
+def test_pinned_uv_rejects_a_cached_binary_of_another_version(
+    pin_tree: Path, tmp_path: Path
+) -> None:
+    cache = tmp_path / "cache"
+    version = read_source_version(pin_tree)
+    _fake_uv(cache / f"uv-{version}", "0.13.7")
+    r = _run_pinned(pin_tree, cache, PINNED_UV_BASE_URL=f"file://{tmp_path}/missing")
+    assert r.returncode != 0
+    assert r.stdout.strip() == ""
+    assert "ERROR" in r.stderr
+
+
+@pytest.mark.parametrize("content", ["latest\n", "0.11\n", "", "0.11.2 0.12.0\n"])
+def test_pinned_uv_rejects_a_malformed_version_file(
+    pin_tree: Path, tmp_path: Path, content: str
+) -> None:
+    (pin_tree / SOURCE_FILE).write_text(content, encoding="utf-8")
+    r = _run_pinned(pin_tree, tmp_path / "cache")
+    assert r.returncode != 0
+    assert "uv-version" in r.stderr
+
+
+def test_pinned_uv_refuses_a_version_without_registered_digest(
+    pin_tree: Path, tmp_path: Path
+) -> None:
+    (pin_tree / SOURCE_FILE).write_text("0.99.0\n", encoding="utf-8")
+    r = _run_pinned(
+        pin_tree, tmp_path / "cache", PINNED_UV_BASE_URL=f"file://{tmp_path}/x"
+    )
+    assert r.returncode != 0
+    assert "no official SHA256" in r.stderr
+
+
+@linux_x64_only
+def test_pinned_uv_fails_on_a_tampered_download(pin_tree: Path, tmp_path: Path) -> None:
+    version = read_source_version(pin_tree)
+    served = tmp_path / "served" / version
+    served.mkdir(parents=True)
+    (served / "uv-x86_64-unknown-linux-gnu.tar.gz").write_bytes(
+        b"not the official asset"
+    )
+    cache = tmp_path / "cache"
+    r = _run_pinned(pin_tree, cache, PINNED_UV_BASE_URL=f"file://{tmp_path}/served")
+    assert r.returncode != 0
+    assert "SHA256 mismatch" in r.stderr
+    assert not (cache / f"uv-{version}" / "uv").exists()
+
+
+@linux_x64_only
+def test_pinned_uv_fails_when_the_download_is_unreachable(
+    pin_tree: Path, tmp_path: Path
+) -> None:
+    cache = tmp_path / "cache"
+    r = _run_pinned(pin_tree, cache, PINNED_UV_BASE_URL=f"file://{tmp_path}/nowhere")
+    assert r.returncode != 0
+    assert "download" in r.stderr
+
+
+def test_check_all_sh_resolves_the_pinned_uv_before_using_uv() -> None:
+    text = _read(REPO_ROOT, CHECK_ALL_SH)
+    resolve = text.index("scripts/pinned-uv.sh")
+    assert resolve < text.index("command -v uv")
+    assert resolve < text.index("gatekeeper_audit.py")
+    assert 'export PATH="$PINNED_UV_DIR:$PATH"' in text
+    assert "using $(uv --version)" in text  # prints the version in use
+    # no escape hatch around the pin
+    assert "|| true" not in text[resolve : text.index("command -v uv")]
+    # ~/.local/bin must not shadow the pinned uv after the login-env PATH fix-up
+    assert text.count('export PATH="$PINNED_UV_DIR:$PATH"') >= 2
+
+
+def test_pinned_uv_registry_and_native_exception_are_untouched() -> None:
+    """#2232 does not move the declared 0.12.0 exception."""
+    assert check_uv_pins(REPO_ROOT) == []
