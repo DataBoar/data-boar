@@ -88,13 +88,18 @@ if ($pathCmd) {
     $pathUv = $pathCmd.Source
     if ((Get-ReportedVersion $pathUv) -eq $version) {
         New-Item -ItemType Directory -Force -Path $destDir | Out-Null
-        if (Test-Path -LiteralPath $destBin) { Remove-Item -LiteralPath $destBin -Force }
+        # Concurrent runs (one check-all per worktree): build the link/copy under a name unique to
+        # this process, then ONE rename over the destination (remove + create is not atomic).
+        $linkTmp = Join-Path $destDir ".uv.link.$([guid]::NewGuid().ToString('N').Substring(0, 8))"
         if ($IsWindows) {
-            Copy-Item -LiteralPath $pathUv -Destination $destBin -Force
+            Copy-Item -LiteralPath $pathUv -Destination $linkTmp -Force
         }
         else {
-            New-Item -ItemType SymbolicLink -Path $destBin -Target $pathUv -Force | Out-Null
+            New-Item -ItemType SymbolicLink -Path $linkTmp -Target $pathUv | Out-Null
         }
+        # File.Move(.., $true) is an atomic replace (rename / MoveFileEx); Move-Item -Force removes
+        # the destination first and loses the race against another process ("already exists").
+        [System.IO.File]::Move($linkTmp, $destBin, $true)
         Write-Err "pinned-uv.ps1: using uv $version found on PATH ($pathUv)"
         Write-ResultAndExit $destDir
     }
@@ -171,10 +176,12 @@ try {
     if (-not $found) { Fail "archive has no $exeName" }
 
     New-Item -ItemType Directory -Force -Path $destDir | Out-Null
-    $newBin = "$destBin.new"
+    # Prepared inside this process's private $tmp (same filesystem as the cache) and moved with ONE
+    # rename: concurrent runs never share a temp file (review of #2233; twin of pinned-uv.sh).
+    $newBin = Join-Path $tmp "$exeName.ready"
     Copy-Item -LiteralPath $found.FullName -Destination $newBin -Force
     if (-not $IsWindows) { & chmod 755 $newBin }
-    Move-Item -LiteralPath $newBin -Destination $destBin -Force
+    [System.IO.File]::Move($newBin, $destBin, $true) # atomic replace, see the PATH branch above
 }
 finally {
     Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue

@@ -1036,7 +1036,7 @@ def test_pinned_uv_ps1_survives_concurrent_cold_cache_downloads(
         _pwsh_cmd(pin_tree),
         pin_tree,
         tmp_path,
-        5,
+        8,
         PINNED_UV_UNAME="Linux-x86_64",
         PINNED_UV_BASE_URL=f"file://{base}",
     )
