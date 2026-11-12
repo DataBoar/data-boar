@@ -651,7 +651,10 @@ def test_pinned_uv_sh_downloads_the_registered_asset_of_each_platform(
 
 
 def _windows_env() -> dict[str, str]:
-    """pwsh on Windows needs a few system variables (SystemRoot, TEMP...); nothing else leaks in."""
+    """pwsh on Windows needs a few system variables (SystemRoot, TEMP...); nothing else leaks in.
+
+    PATHEXT matters most: without it PowerShell treats uv.exe as a "document" ('Cannot run a document
+    in the middle of a pipeline'), the failure seen on the first Windows run of #2233."""
     if sys.platform != "win32":
         return {}
     keep = (
@@ -662,6 +665,8 @@ def _windows_env() -> dict[str, str]:
         "USERPROFILE",
         "LOCALAPPDATA",
         "APPDATA",
+        "PATHEXT",
+        "ComSpec",
     )
     return {k: os.environ[k] for k in keep if k in os.environ}
 
