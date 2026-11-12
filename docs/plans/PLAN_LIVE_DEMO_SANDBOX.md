@@ -2,7 +2,7 @@
 
 <!-- plans-hub-summary: Public synthetic demo on one VPS behind a protected edge: read-only curated scans, admin-gated writes, a 30-minute reset instance and a no-reset presentation instance. Not a production tenant. -->
 
-Status: in progress — v0 running on a single host (synthetic corpus and database seeds loaded); periodic reset fix, archive scenario and acceptance still open (#1447, epic #1446)
+Status: in progress — v0 running on a single host (synthetic corpus and database seeds loaded); periodic reset fix, publishing the archive scenario and acceptance still open (#1447, epic #1446)
 Scope: public, synthetic-data demonstration environment
 Synced with: [PLANS_TODO.md](PLANS_TODO.md)
 
@@ -38,39 +38,49 @@ recorded in this public repository.
   `deploy/lab-smoke-stack/init/`. Synthetic data only; no customer credentials,
   production data or paid third-party secrets.
 
-## Synthetic identifiers (decision pending)
+## Synthetic identifiers
 
-> **To be decided by the operator.** Which synthetic identifier the demo uses to
-> show LGPD detection is open. The detector tags `LGPD_CPF` / `LGPD_CNPJ` only
-> when the Mod-11 check digits are valid, and a valid check digit cannot prove the
-> number is not assigned to a real person. Options under evaluation:
->
-> - **(a)** CPF/CNPJ with valid check digits from a small, declared synthetic pool
->   (detected as `LGPD_CPF` / `LGPD_CNPJ`; non-collision is not provable);
-> - **(b)** CPF/CNPJ with invalid check digits (never a real number; not tagged
->   `LGPD_CPF` / `LGPD_CNPJ`, only e-mail/phone/ML signals remain);
-> - **(c)** identifiers that are fictitious by definition — network test card
->   numbers (Luhn-valid) and e-mail under reserved domains (`.invalid`, `.test`,
->   `example.com`) — alongside (a) or (b).
->
-> Scenario `4_false_positive` is now deterministic and contains no checksum-valid
-> CPF/CNPJ (#2176); its remaining non-CPF signals are tracked separately.
+Marks: **[V]** verified in code or tests on this branch; **[H]** hypothesis or
+proposal not yet verified.
 
-## Protected archive scenario (wording pending)
+- **[V]** The detector tags `LGPD_CPF` / `LGPD_CNPJ` only when the Mod-11 check
+  digits are valid (`_CHECKSUM_GATED_PATTERNS` in `core/detector.py`). With invalid
+  check digits the demo corpus produced no `LGPD_CPF` / `LGPD_CNPJ` finding.
+- **[V]** Where the demo must find CPF/CNPJ (`1_happy`, `2_unhappy`, the protected
+  archive), the corpus uses small, fixed pools with **valid** check digits,
+  labelled synthetic in the code, in `EXPECTED.txt` and in the corpus manifest.
+  A valid check digit does not prove a number is unassigned, so this plan makes no
+  claim that the values cannot match a real record.
+- **[V]** Only `4_false_positive` uses invalid check digits, built so by
+  construction with a fixed seed (#2176); tests pin that every checksum-valid
+  CPF/CNPJ in the demo corpus comes from the declared pools.
+- **[V]** E-mails use RFC 2606 / RFC 6761 reserved names only (`example.com`,
+  `.invalid`, `.test`); one CNPJ publicly associated with a real company was
+  replaced by a generated value.
+- **[V]** Expected result of `4_false_positive`: no `LGPD_CPF` / `LGPD_CNPJ`.
+  Known detector false positive: `PHONE_BR` on 11-digit codes (#2235, not fixed in
+  the demo work); other files still get ML-based MEDIUM signals.
 
-A password-protected `.7z` with synthetic content will be added to the demo corpus,
-with a fictitious demo password documented next to it (never a real credential).
-Expected behaviour:
+## Protected archive scenario
 
-- **without** the password configured, the archive is **flagged** in
-  `scan_failures` (`encrypted_no_password`) — never reported as clean;
-- **with** the password in `file_scan.file_passwords`, the content is read and its
-  findings appear.
-
-> **To be decided by the operator:** whether reading protected archives is split by
-> license tier. Today archive scanning and `file_passwords` are not tier-gated, so
-> the demo must not present this scenario as an open-core/Pro difference until that
-> decision is made.
+- **[V]** Scenario `protected_archive` (folder `9_protected_archive`) writes a
+  `.7z` encrypted with a fictitious demo password, documented in its
+  `EXPECTED.txt` (never a real credential), with synthetic PII inside. It needs
+  the optional `compressed` extra (`py7zr`); without it the generator writes only
+  `EXPECTED.txt` and explains how to enable it.
+- **[V]** Without a password in `file_scan.file_passwords`, the archive is
+  **flagged** in `scan_failures` (`encrypted_no_password`) and never reported as
+  clean; with the demo password configured, the content is read and its findings
+  appear (`tests/test_demo_protected_archive.py`).
+- **[V]** No license-tier split exists for this today: compressed-file scanning is
+  a Community feature and `file_passwords` is not tier-gated. The demo presents it
+  as "flagged without the password, read with the configured password", not as an
+  open-core/Pro difference.
+- **[H]** Proposed wiring on the demo host (not applied yet): generate
+  `protected_archive` with the other curated scenarios, enable `scan_compressed`
+  with `.7z` in `compressed_extensions`, keep the main instance without the
+  password (shows the flagged state) and configure the password on the
+  presentation instance through the admin-gated `/config` (shows the read state).
 
 ## Safety controls
 
@@ -87,10 +97,11 @@ Expected behaviour:
 2. Synthetic file corpus (scenarios 1, 2, 4) and database seeds loaded — **done**.
 3. Fix the periodic reset of the main instance and verify it restores the
    baseline — **open**.
-4. Decide the synthetic identifier option and the archive-scenario wording — **open
-   (operator)**.
-5. Add the protected `.7z` scenario to the corpus and the curated scan list —
-   **open**.
+4. Synthetic identifiers aligned (valid check digits where the demo must find,
+   invalid only in scenario 4, reserved e-mail domains) — **done in the repo**
+   (#1447), pending publication to the demo host.
+5. Protected `.7z` scenario in the corpus generator — **done in the repo**; adding
+   it to the curated scan list on the demo host — **open**.
 6. SMB target — **conditional** on measured RAM headroom on the host.
 7. Add the demo link to `databoar.com.br` only after the endpoint is stable.
 8. Record operational limits and the migration path to BYO-cloud and air-gapped

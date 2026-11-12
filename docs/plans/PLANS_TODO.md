@@ -30,15 +30,15 @@ Use these tags in headings to keep priorities explicit and machine-countable:
 
 Do not edit this block manually; refresh with `python scripts/plans-stats.py --write`.
 
-- **Status rows counted:** 307  (Done: 188 | Incomplete: 119)
-- **Incomplete breakdown:** Pending `⬜`=100, Tracked `🔄` / `Tracked (partially done)`=19, Under consideration=0, Backlog-marked rows=0
+- **Status rows counted:** 307  (Done: 189 | Incomplete: 118)
+- **Incomplete breakdown:** Pending `⬜`=98, Tracked `🔄` / `Tracked (partially done)`=20, Under consideration=0, Backlog-marked rows=0
 
 | Horizon | Total rows | Done | Incomplete |
 | ------- | ----------: | ----: | ----------: |
 | `H0` | 65 | 41 | 24 |
 | `H1` | 78 | 51 | 27 |
 | `H2` | 4 | 4 | 0 |
-| `H3` | 144 | 78 | 66 |
+| `H3` | 144 | 79 | 65 |
 | `H4` | 0 | 0 | 0 |
 | `H5` | 0 | 0 | 0 |
 | `UNSPECIFIED` | 16 | 14 | 2 |
@@ -1198,15 +1198,15 @@ Historical mentions (ADRs, some completed plans) may still cite the **original**
 
 ## [H3][U3] Live demo sandbox — [PLAN_LIVE_DEMO_SANDBOX.md](PLAN_LIVE_DEMO_SANDBOX.md)
 
-**Status:** In progress (v0, #1447). Running on a single host behind a protected edge with the synthetic corpus and database seeds; reset fix, archive scenario and acceptance still open.
+**Status:** In progress (v0, #1447). Running on a single host behind a protected edge with the synthetic corpus and database seeds; reset fix, publishing the archive scenario and acceptance still open.
 
 | Phase | To-do | Status |
 | ----- | ----- | ------ |
 | 1 | Single host, rootless containers, protected edge; application and data services off the public Internet | ✅ Done |
 | 2 | Synthetic file corpus (scenarios 1, 2, 4) and database seeds loaded | ✅ Done |
 | 3 | Fix the 30-minute reset of the main instance; keep the presentation instance without reset | ⬜ Pending |
-| 4 | Operator decision: synthetic identifier option and protected-archive wording (tier split open) | ⬜ Pending |
-| 5 | Protected `.7z` scenario in the corpus and curated scan list | ⬜ Pending |
+| 4 | Synthetic identifiers: valid check digits where the demo must find, invalid only in scenario 4, reserved e-mail domains | ✅ Done (repo) |
+| 5 | Protected `.7z` scenario: generator done in the repo; curated scan list on the demo host pending | 🔄 Tracked (partially done) |
 | 6 | SMB target, conditional on RAM measurement (NFS out of v0) | ⬜ Pending |
 
 ---
