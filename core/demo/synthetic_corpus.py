@@ -939,6 +939,14 @@ def gen_protected_archive(base: Path) -> None:
     print(f"  v  Scenario 9 (protected_archive) -> {out}")
 
 
+COMPRESSED_SMB_SUBDIR = "10_compressed_smb"
+
+
+def gen_compressed_smb(base: Path) -> None:
+    """Write the compressed corpus served over SMB (not implemented yet)."""
+    raise NotImplementedError("compressed_smb scenario")
+
+
 _SCENARIO_MAP: dict[str, Callable[[Path], None]] = {
     "happy": gen_scenario_1,
     "unhappy": gen_scenario_2,
@@ -950,6 +958,7 @@ _SCENARIO_MAP: dict[str, Callable[[Path], None]] = {
     "stress_load": gen_stress_load,
     "config_errors": gen_config_errors,
     "protected_archive": gen_protected_archive,
+    "compressed_smb": gen_compressed_smb,
 }
 ALL_SCENARIOS = list(_SCENARIO_MAP)
 
