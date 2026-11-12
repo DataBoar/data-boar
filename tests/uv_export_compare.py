@@ -44,6 +44,8 @@ _MARKER_VARS = (
 _VERSION_VARS = frozenset(
     {"implementation_version", "python_full_version", "python_version"}
 )
+# These carry a patch level (3.9.5 is > 3.9 but < 3.10); python_version is always X.Y.
+_PATCH_LEVEL_VARS = frozenset({"implementation_version", "python_full_version"})
 _VAR_ALT = "|".join(sorted(_MARKER_VARS, key=len, reverse=True))
 _OP = r"(?:===|==|!=|<=|>=|~=|<|>|in|not in)"
 _LIT = r"""(?:'([^']*)'|"([^"]*)")"""
@@ -91,7 +93,12 @@ def _candidates(var: str, literals: set[str]) -> list[str]:
     if var in _VERSION_VARS:
         values = {"0", "9999"}
         for literal in literals:
-            values |= _version_neighbours(literal)
+            for near in _version_neighbours(literal):
+                values.add(near)
+                if var in _PATCH_LEVEL_VARS:
+                    values.add(
+                        f"{near}.0.1"
+                    )  # just above `near`, below the next component
         return sorted(values)
     return sorted(literals | {_OTHER})
 
