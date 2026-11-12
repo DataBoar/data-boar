@@ -247,7 +247,17 @@ class SMBConnector:
             if recursive:
                 # Materialize inside the guard: walk() is lazy and a connection
                 # error would otherwise escape run() during iteration (#1447).
-                walker = list(smbclient.walk(root_unc, port=port))
+                walker = list(
+                    smbclient.walk(
+                        root_unc,
+                        port=port,
+                        # walk() swallows directory errors unless onerror is
+                        # set; record them so a denied path is never 'clean'.
+                        onerror=lambda err: self.db_manager.save_failure(
+                            target_name, "permission_denied", str(err)
+                        ),
+                    )
+                )
             else:
                 entries = list(smbclient.scandir(root_unc, port=port))
                 files = [e.name for e in entries if e.is_file()]
