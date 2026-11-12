@@ -336,7 +336,7 @@ def pin_tree(tmp_path: Path) -> Path:
 
 
 _SCRIPT_TOOLS = (
-    "awk", "cat", "curl", "dirname", "grep", "head", "install", "ln", "mkdir",
+    "awk", "basename", "cat", "curl", "dirname", "grep", "head", "install", "ln", "mkdir",
     "mktemp", "mv", "readlink", "rm", "sed", "sha256sum", "tar", "tr", "uname",
 )  # fmt: skip
 

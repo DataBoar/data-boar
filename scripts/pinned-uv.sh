@@ -6,8 +6,10 @@
 #
 # Cache (outside the repo, global PATH untouched):
 #   ${DATA_BOAR_UV_CACHE_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/data-boar}/uv-<version>/uv
-# A cached binary is reused only if `uv --version` prints exactly the pinned version.
-# Otherwise the official astral-sh/uv linux-x86_64 tarball is downloaded and its SHA256 is
+# Resolution order (every step needs `uv --version` to print EXACTLY the pinned version):
+#   1. the cached binary;
+#   2. a uv already on PATH (any platform; it is linked into the cache dir, not hashed);
+#   3. otherwise the official astral-sh/uv linux-x86_64 tarball is downloaded and its SHA256 is
 # checked against the digest registered in tests/test_uv_version_single_source.py
 # (KNOWN_LINUX_X64_SHA256, from the official release asset). No digest, no download.
 # There is no skip and no fallback to another version: failure is a hard error.
@@ -44,14 +46,30 @@ if [[ -x "$DEST_BIN" ]] && [[ "$(reported_version "$DEST_BIN")" == "$VERSION" ]]
   exit 0
 fi
 
-# Not cached (or cache holds another version): download, verify, install.
+# Any platform: a uv of EXACTLY the pinned version already on PATH is enough. We do not hash
+# an install the developer made themselves; the digest registry only guards what we download.
+# It is exposed through the cache dir (a symlink), so PATH order cannot shadow it later.
+PATH_UV="$(command -v uv 2>/dev/null || true)"
+if [[ -n "$PATH_UV" ]]; then
+  PATH_UV="$(cd "$(dirname "$PATH_UV")" && pwd)/$(basename "$PATH_UV")"
+  if [[ "$(reported_version "$PATH_UV")" == "$VERSION" ]]; then
+    mkdir -p "$DEST_DIR" || die "cannot create cache dir $DEST_DIR"
+    ln -sfn "$PATH_UV" "$DEST_BIN"
+    echo "pinned-uv.sh: using uv $VERSION found on PATH ($PATH_UV)" >&2
+    echo "$DEST_DIR"
+    exit 0
+  fi
+fi
+
+# Not cached, not on PATH (or only other versions there): download, verify, install.
 [[ -f "$GUARD_TEST" ]] || die "$GUARD_TEST not found (digest registry)"
 EXPECTED_SHA="$(grep -oE "\"${VERSION//./\\.}\": *\"[0-9a-f]{64}\"" "$GUARD_TEST" | head -n1 | grep -oE '[0-9a-f]{64}' || true)"
 [[ -n "$EXPECTED_SHA" ]] || die "no official SHA256 registered for uv $VERSION in $GUARD_TEST; refusing to download an unverified binary"
 
-case "$(uname -s)-$(uname -m)" in
+PLATFORM="${PINNED_UV_UNAME:-$(uname -s)-$(uname -m)}"
+case "$PLATFORM" in
   Linux-x86_64) TARGET="uv-x86_64-unknown-linux-gnu" ;;
-  *) die "no pinned digest for platform $(uname -s)-$(uname -m); only linux-x86_64 is registered (install uv $VERSION yourself and put it first on PATH)" ;;
+  *) die "no uv $VERSION in the cache ($DEST_BIN) or on PATH, and download digests are only registered for Linux-x86_64 (this platform: $PLATFORM). Install uv $VERSION so that 'uv --version' reports exactly $VERSION and keep it on PATH (this script finds it there), or place it at $DEST_BIN" ;;
 esac
 
 command -v curl >/dev/null 2>&1 || die "curl not found"
