@@ -50,6 +50,21 @@ KNOWN_LINUX_X64_SHA256 = {
     "0.12.0": "eaf842262aa1c418d8ecc5605f02ee1ebfd369124fa48548e85f9481a47831a9",
 }
 
+# Official sha256 of every uv release asset the pinned-uv helpers may download, one flat key per
+# ``<version>/<asset>`` (read by BOTH scripts/pinned-uv.sh and scripts/pinned-uv.ps1).
+# Source: the GitHub API ``digest`` of each asset, cross-checked with the published ``<asset>.sha256``.
+# Checked 2026-11-12. A platform missing here has no download path: a uv of the exact pinned
+# version must already be on PATH or in the cache.
+KNOWN_ASSET_SHA256 = {
+    "0.11.2/uv-aarch64-apple-darwin.tar.gz": "4beaa9550f93ef7f0fc02f7c28c9c48cd61fe30db00f5ac8947e0a425c3fb282",
+    "0.11.2/uv-aarch64-pc-windows-msvc.zip": "ffdded8338205f53727b51d404563a5ac8eaa9aea53279a7b7c42177e11d478c",
+    "0.11.2/uv-aarch64-unknown-linux-gnu.tar.gz": "04792cac761c4a6ba78267f36f2af541b7f92196d42ac55d21d3ff6b0f5ab6a5",
+    "0.11.2/uv-x86_64-apple-darwin.tar.gz": "a9c3653245031304c50dd60ac0301bf6c112e12c38c32302a71d4fa6a63ba2cb",
+    "0.11.2/uv-x86_64-pc-windows-msvc.zip": "171b7ccda1bbd562da6babeffcf533a1c6cc7862cf998da826e1db534fc43e48",
+    "0.11.2/uv-x86_64-unknown-linux-gnu.tar.gz": "7ac2ca0449c8d68dae9b99e635cd3bc9b22a4cb1de64b7c43716398447d42981",
+    "0.12.0/uv-x86_64-unknown-linux-gnu.tar.gz": "eaf842262aa1c418d8ecc5605f02ee1ebfd369124fa48548e85f9481a47831a9",
+}
+
 # Minimum number of pinned setup-uv steps per workflow (a removed pin must not pass silently).
 MIN_SETUP_UV_PINS = {
     ".github/workflows/ci.yml": 8,
@@ -313,6 +328,7 @@ def test_stale_exception_is_reported(tree: Path) -> None:
 # --------------------------------------------------------------------------- pinned-uv.sh (#2232)
 
 PINNED_UV_SCRIPT = "scripts/pinned-uv.sh"
+PINNED_UV_PS1 = "scripts/pinned-uv.ps1"
 CHECK_ALL_SH = "scripts/check-all.sh"
 linux_x64_only = pytest.mark.skipif(
     not (sys.platform == "linux" and os.uname().machine == "x86_64"),
@@ -326,6 +342,7 @@ def pin_tree(tmp_path: Path) -> Path:
     root = tmp_path / "repo"
     for rel in (
         PINNED_UV_SCRIPT,
+        PINNED_UV_PS1,
         SOURCE_FILE,
         "tests/test_uv_version_single_source.py",
     ):
@@ -465,10 +482,10 @@ def test_pinned_uv_on_an_unsupported_platform_explains_what_really_works(
     saying the truth (cache dir or a uv of that exact version on PATH), never hint at
     something the script does not do."""
     version = read_source_version(pin_tree)
-    r = _run_pinned(pin_tree, tmp_path / "cache", PINNED_UV_UNAME="Darwin-arm64")
+    r = _run_pinned(pin_tree, tmp_path / "cache", PINNED_UV_UNAME="FreeBSD-amd64")
     assert r.returncode != 0
     assert r.stdout.strip() == ""
-    assert "Darwin-arm64" in r.stderr
+    assert "FreeBSD-amd64" in r.stderr
     assert version in r.stderr
     assert "PATH" in r.stderr
 
@@ -552,3 +569,231 @@ def test_check_all_sh_resolves_the_pinned_uv_before_using_uv() -> None:
 def test_pinned_uv_registry_and_native_exception_are_untouched() -> None:
     """#2232 does not move the declared 0.12.0 exception."""
     assert check_uv_pins(REPO_ROOT) == []
+
+
+# --------------------------------------------------------------------------- registry + .ps1 twin (#2232)
+
+PLATFORM_ASSETS = {
+    "Linux-x86_64": "uv-x86_64-unknown-linux-gnu.tar.gz",
+    "Linux-aarch64": "uv-aarch64-unknown-linux-gnu.tar.gz",
+    "Darwin-x86_64": "uv-x86_64-apple-darwin.tar.gz",
+    "Darwin-arm64": "uv-aarch64-apple-darwin.tar.gz",
+}
+WINDOWS_ASSETS = {
+    "Windows-x86_64": "uv-x86_64-pc-windows-msvc.zip",
+    "Windows-aarch64": "uv-aarch64-pc-windows-msvc.zip",
+}
+PAIRING_DOCS = (
+    "docs/ops/SCRIPTS_CROSS_PLATFORM_PAIRING.md",
+    "docs/ops/SCRIPTS_CROSS_PLATFORM_PAIRING.pt_BR.md",
+)
+needs_pwsh = pytest.mark.skipif(
+    shutil.which("pwsh") is None, reason="pwsh not installed"
+)
+
+
+def test_asset_registry_is_well_formed_and_consistent() -> None:
+    for key, sha in KNOWN_ASSET_SHA256.items():
+        assert re.fullmatch(r"\d+\.\d+\.\d+/uv-[a-z0-9_.-]+\.(tar\.gz|zip)", key), key
+        assert re.fullmatch(r"[0-9a-f]{64}", sha), key
+    for version, sha in KNOWN_LINUX_X64_SHA256.items():
+        assert (
+            KNOWN_ASSET_SHA256[f"{version}/uv-x86_64-unknown-linux-gnu.tar.gz"] == sha
+        )
+    pinned = read_source_version(REPO_ROOT)
+    for asset in (*PLATFORM_ASSETS.values(), *WINDOWS_ASSETS.values()):
+        assert f"{pinned}/{asset}" in KNOWN_ASSET_SHA256, (
+            f"no digest for {pinned}/{asset}"
+        )
+
+
+@pytest.mark.parametrize(("tag", "asset"), sorted(PLATFORM_ASSETS.items()))
+def test_pinned_uv_sh_downloads_the_registered_asset_of_each_platform(
+    pin_tree: Path, tmp_path: Path, tag: str, asset: str
+) -> None:
+    version = read_source_version(pin_tree)
+    served = tmp_path / "served" / version
+    served.mkdir(parents=True)
+    (served / asset).write_bytes(b"not a real tarball")
+    cache = tmp_path / "cache"
+    r = _run_pinned(
+        pin_tree,
+        cache,
+        PINNED_UV_UNAME=tag,
+        PINNED_UV_BASE_URL=f"file://{tmp_path}/served",
+    )
+    assert r.returncode != 0
+    assert "SHA256 mismatch" in r.stderr
+    assert asset in r.stderr
+    assert not (cache / f"uv-{version}" / "uv").exists()
+
+
+def _run_ps1(root: Path, cache: Path, **env: str) -> subprocess.CompletedProcess[str]:
+    full = {
+        "PATH": str(_tools_dir(root.parent)),
+        "HOME": str(root.parent / "home"),
+        "DATA_BOAR_UV_CACHE_DIR": str(cache),
+        **env,
+    }
+    return subprocess.run(
+        [
+            shutil.which("pwsh") or "pwsh",
+            "-NoProfile",
+            "-NonInteractive",
+            "-File",
+            str(root / PINNED_UV_PS1),
+        ],
+        capture_output=True,
+        text=True,
+        env=full,
+        check=False,
+    )
+
+
+@needs_pwsh
+def test_pinned_uv_ps1_uses_the_cached_version_in_the_file(
+    pin_tree: Path, tmp_path: Path
+) -> None:
+    cache = tmp_path / "cache"
+    version = read_source_version(pin_tree)
+    _fake_uv(cache / f"uv-{version}", version)
+    r = _run_ps1(pin_tree, cache)
+    assert r.returncode == 0, r.stderr
+    assert r.stdout.strip() == str(cache / f"uv-{version}")
+    assert f"uv {version}" in r.stderr
+
+
+@needs_pwsh
+def test_pinned_uv_ps1_accepts_an_exact_uv_already_on_path(
+    pin_tree: Path, tmp_path: Path
+) -> None:
+    version = read_source_version(pin_tree)
+    on_path = tmp_path / "userbin"
+    _fake_uv(on_path, version)
+    r = _run_ps1(
+        pin_tree,
+        tmp_path / "cache",
+        PATH=_path_with(on_path, pin_tree.parent),
+        PINNED_UV_BASE_URL=f"file://{tmp_path}/nowhere",
+    )
+    assert r.returncode == 0, r.stderr
+    assert "downloading" not in r.stderr
+    assert (Path(r.stdout.strip()) / "uv").exists()
+
+
+@needs_pwsh
+def test_pinned_uv_ps1_is_idempotent(pin_tree: Path, tmp_path: Path) -> None:
+    version = read_source_version(pin_tree)
+    on_path = tmp_path / "userbin"
+    _fake_uv(on_path, version)
+    kw = {
+        "PATH": _path_with(on_path, pin_tree.parent),
+        "PINNED_UV_BASE_URL": f"file://{tmp_path}/nowhere",
+    }
+    first = _run_ps1(pin_tree, tmp_path / "cache", **kw)
+    second = _run_ps1(pin_tree, tmp_path / "cache", **kw)
+    assert first.returncode == second.returncode == 0, (first.stderr, second.stderr)
+    assert first.stdout == second.stdout
+
+
+@needs_pwsh
+def test_pinned_uv_ps1_rejects_a_path_uv_of_another_version(
+    pin_tree: Path, tmp_path: Path
+) -> None:
+    version = read_source_version(pin_tree)
+    on_path = tmp_path / "userbin"
+    _fake_uv(on_path, "0.13.7")
+    r = _run_ps1(
+        pin_tree,
+        tmp_path / "cache",
+        PATH=_path_with(on_path, pin_tree.parent),
+        PINNED_UV_BASE_URL=f"file://{tmp_path}/nowhere",
+    )
+    assert r.returncode != 0
+    assert r.stdout.strip() == ""
+    assert version in r.stderr
+
+
+@needs_pwsh
+@pytest.mark.parametrize("content", ["latest\n", "0.11\n", "0.11.2 0.12.0\n"])
+def test_pinned_uv_ps1_rejects_a_malformed_version_file(
+    pin_tree: Path, tmp_path: Path, content: str
+) -> None:
+    (pin_tree / SOURCE_FILE).write_text(content, encoding="utf-8")
+    r = _run_ps1(pin_tree, tmp_path / "cache")
+    assert r.returncode != 0
+    assert "uv-version" in r.stderr
+
+
+@needs_pwsh
+def test_pinned_uv_ps1_on_an_unsupported_platform_explains_what_really_works(
+    pin_tree: Path, tmp_path: Path
+) -> None:
+    version = read_source_version(pin_tree)
+    r = _run_ps1(pin_tree, tmp_path / "cache", PINNED_UV_UNAME="FreeBSD-amd64")
+    assert r.returncode != 0
+    assert r.stdout.strip() == ""
+    assert "FreeBSD-amd64" in r.stderr
+    assert version in r.stderr
+    assert "PATH" in r.stderr
+
+
+@needs_pwsh
+@pytest.mark.parametrize(
+    ("tag", "asset"), sorted({**PLATFORM_ASSETS, **WINDOWS_ASSETS}.items())
+)
+def test_pinned_uv_ps1_downloads_the_registered_asset_of_each_platform(
+    pin_tree: Path, tmp_path: Path, tag: str, asset: str
+) -> None:
+    version = read_source_version(pin_tree)
+    served = tmp_path / "served" / version
+    served.mkdir(parents=True)
+    (served / asset).write_bytes(b"not a real archive")
+    cache = tmp_path / "cache"
+    r = _run_ps1(
+        pin_tree,
+        cache,
+        PINNED_UV_UNAME=tag,
+        PINNED_UV_BASE_URL=f"file://{tmp_path}/served",
+    )
+    assert r.returncode != 0
+    assert "SHA256 mismatch" in r.stderr
+    assert asset in r.stderr
+    assert not any((cache / f"uv-{version}").glob("uv*"))
+
+
+def test_ps1_twin_is_wired_into_check_all_and_documented() -> None:
+    assert (REPO_ROOT / PINNED_UV_PS1).is_file()
+    ps = _read(REPO_ROOT, "scripts/check-all.ps1")
+    assert "pinned-uv.ps1" in ps
+    assert "pinned by .github/uv-version" in ps
+    assert ps.index("pinned-uv.ps1") < ps.index("uv run python")
+    # resolve + prepend + re-prepend after Ensure-LoginToolPath (~/.local/bin must not shadow it)
+    assert ps.count("$pinnedUvDir") >= 3
+    login = ps.index("Ensure-LoginToolPath")
+    assert "$pinnedUvDir" in ps[login:], (
+        "pinned uv must win over the login-env PATH fix-up"
+    )
+    for doc in PAIRING_DOCS:
+        text = _read(REPO_ROOT, doc)
+        assert "pinned-uv.ps1" in text and "pinned-uv.sh" in text, doc
+
+
+def test_pinned_uv_twins_share_the_same_contract() -> None:
+    sh = _read(REPO_ROOT, PINNED_UV_SCRIPT)
+    ps = _read(REPO_ROOT, PINNED_UV_PS1)
+    for token in (
+        "DATA_BOAR_UV_CACHE_DIR",
+        "PINNED_UV_BASE_URL",
+        "PINNED_UV_UNAME",
+        ".github/uv-version",
+        "KNOWN_ASSET_SHA256",
+        "SHA256 mismatch",
+    ):
+        assert token in sh, f"pinned-uv.sh lost {token}"
+        assert token in ps, f"pinned-uv.ps1 lost {token}"
+    for asset in PLATFORM_ASSETS.values():
+        assert asset in sh, f"pinned-uv.sh has no mapping to {asset}"
+        assert asset in ps, f"pinned-uv.ps1 has no mapping to {asset}"
+    for asset in WINDOWS_ASSETS.values():
+        assert asset in ps
