@@ -52,6 +52,15 @@ if [[ "$SKIP_PRECOMMIT" -eq 1 ]]; then
   printf '\033[33m%s\033[0m\n' "This run is NOT the ADR-0080 / #1151 / #1153 publish gate. Re-run without skip before git push / gh pr create." >&2
 fi
 
+# #2232: use the uv pinned in .github/uv-version (cached outside the repo, global PATH
+# untouched), not whatever uv the developer has. Hard failure if it cannot be obtained.
+PINNED_UV_DIR=$(bash "$REPO_ROOT/scripts/pinned-uv.sh") || {
+  echo "check-all.sh: ABORTED: cannot obtain the uv pinned in .github/uv-version (#2232)." >&2
+  exit 2
+}
+export PATH="$PINNED_UV_DIR:$PATH"
+echo "check-all.sh: using $(uv --version) from $PINNED_UV_DIR (pinned by .github/uv-version)" >&2
+
 # PII seed gate — Python port (parity with scripts/gatekeeper-audit.ps1; issue #560).
 if ! command -v uv >/dev/null 2>&1; then
   echo "check-all.sh: ABORTED: uv not on PATH (required for scripts/gatekeeper_audit.py)." >&2
@@ -131,7 +140,11 @@ _ensure_login_tool_path() {
   fi
   command -v cargo >/dev/null 2>&1
 }
-if ! _ensure_login_tool_path; then
+_ensure_login_tool_path_keep_pinned_uv() {
+  _ensure_login_tool_path || return 1
+  export PATH="$PINNED_UV_DIR:$PATH" # ~/.local/bin must not shadow the pinned uv (#2232)
+}
+if ! _ensure_login_tool_path_keep_pinned_uv; then
   printf '\033[31m%s\033[0m\n' "Rust Guard... Failed (cargo not on PATH; source ~/.cargo/env?)" >&2
   exit 1
 fi
