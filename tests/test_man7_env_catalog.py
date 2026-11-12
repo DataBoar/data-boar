@@ -5,6 +5,15 @@ The inventory is a static (AST) analysis, so names resolved through module const
 defaults of ``*_from_env`` keys are found too; a plain ``grep`` for ``os.environ.get("X")``
 misses them. A variable that production code reads must be cited in the page or listed in
 ``tests/man7_env_exclusions.txt`` with a reason.
+
+Known limits of the scanner (no real gap today; extend it if one appears):
+
+- membership tests (``"X" in os.environ``) and ``os.environ.pop`` / ``setdefault`` are not seen;
+- a name held in a constant imported from another module is not resolved (only same-file
+  constants and ``*_from_env`` defaults are);
+- reads in Rust or shell code are out of scope (Python only);
+- config-named reads (``cfg["token_from_env"]``) are counted but cannot be listed by name,
+  so they are covered by the ``*_from_env`` section of the page, not by this test.
 """
 
 from __future__ import annotations
