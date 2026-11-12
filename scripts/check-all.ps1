@@ -23,6 +23,17 @@ if ($SkipPreCommit) {
     Write-Host "This run is NOT the ADR-0080 / #1151 / #1153 publish gate. Re-run without -SkipPreCommit before git push / gh pr create." -ForegroundColor Yellow
 }
 
+# #2232: use the uv pinned in .github/uv-version (cached outside the repo, global PATH untouched),
+# not whatever uv the developer has. Hard failure if it cannot be obtained. Twin of the same block
+# in scripts/check-all.sh (scripts/pinned-uv.ps1 <-> scripts/pinned-uv.sh).
+$pinnedUvDir = (& "$repoRoot\scripts\pinned-uv.ps1" | Select-Object -Last 1)
+if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($pinnedUvDir)) {
+    Write-Host "check-all: ABORTED: cannot obtain the uv pinned in .github/uv-version (#2232)." -ForegroundColor Red
+    exit 2
+}
+$env:PATH = "$pinnedUvDir$([IO.Path]::PathSeparator)$env:PATH"
+Write-Host "check-all: using $(uv --version) from $pinnedUvDir (pinned by .github/uv-version)" -ForegroundColor Yellow
+
 # PII gate: maintainer seeds vs staged paths only (see scripts/gatekeeper-audit.ps1).
 & "$repoRoot\scripts\gatekeeper-audit.ps1"
 if ($LASTEXITCODE -ne 0) {
@@ -116,6 +127,8 @@ if (-not (Ensure-LoginToolPath)) {
     Write-Host "Rust Guard... Failed (cargo not on PATH; source ~/.cargo/env?)" -ForegroundColor Red
     exit 1
 }
+# ~/.local/bin (prepended above) must not shadow the pinned uv (#2232; same as check-all.sh).
+$env:PATH = "$pinnedUvDir$([IO.Path]::PathSeparator)$env:PATH"
 
 try {
     $prevPyO3Abi3 = $env:PYO3_USE_ABI3_FORWARD_COMPATIBILITY
