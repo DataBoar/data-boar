@@ -17,6 +17,7 @@ from tests.operator_help_sync_manifest import OPERATOR_HELP_MARKERS
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 _MAN1_PATH = _REPO_ROOT / "docs" / "data_boar.1"
 _MAN5_PATH = _REPO_ROOT / "docs" / "data_boar.5"
+_MAN7_PATH = _REPO_ROOT / "docs" / "data_boar.7"
 
 
 def _cli_help_stdout() -> str:
@@ -81,6 +82,12 @@ def man5_text() -> str:
     return _MAN5_PATH.read_text(encoding="utf-8")
 
 
+@pytest.fixture(scope="module")
+def man7_text() -> str:
+    assert _MAN7_PATH.is_file(), f"missing {_MAN7_PATH}"
+    return _MAN7_PATH.read_text(encoding="utf-8")
+
+
 def test_operator_help_markers_in_cli_help(cli_help_text: str) -> None:
     for marker in OPERATOR_HELP_MARKERS:
         if marker.cli_help_substring is None:
@@ -111,6 +118,17 @@ def test_operator_help_markers_in_man1(man1_text: str) -> None:
         assert marker.man1_troff_substring in man1_text, (
             f"docs/data_boar.1 missing {marker.id!r} "
             f"(expected troff substring {marker.man1_troff_substring!r}); "
+            "update man page and tests/operator_help_sync_manifest.py"
+        )
+
+
+def test_operator_help_markers_in_man7(man7_text: str) -> None:
+    for marker in OPERATOR_HELP_MARKERS:
+        if marker.man7_troff_substring is None:
+            continue
+        assert marker.man7_troff_substring in man7_text, (
+            f"docs/data_boar.7 missing {marker.id!r} "
+            f"(expected troff substring {marker.man7_troff_substring!r}); "
             "update man page and tests/operator_help_sync_manifest.py"
         )
 
@@ -156,13 +174,17 @@ def test_man5_norm_tag_default_is_structured_tp(man5_text: str) -> None:
 
 
 def test_man_pages_use_installed_invocation_contract(
-    man1_text: str, man5_text: str
+    man1_text: str, man5_text: str, man7_text: str
 ) -> None:
     """
     #1131: man pages are user-facing installed docs (man 1/5), so they must not
     drift back to source-run wrappers.
     """
-    for name, body in (("data_boar.1", man1_text), ("data_boar.5", man5_text)):
+    for name, body in (
+        ("data_boar.1", man1_text),
+        ("data_boar.5", man5_text),
+        ("data_boar.7", man7_text),
+    ):
         assert "uv run" not in body, f"{name} must not include uv-run wrappers"
         assert "python main.py" not in body, (
             f"{name} must use installed invocation (data-boar)"

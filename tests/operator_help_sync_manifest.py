@@ -29,6 +29,11 @@ class OperatorHelpMarker:
     If set, must appear in `docs/data_boar.1` (troff source).
     Use escapes as stored on disk (e.g. raw ``\\-\\-web`` in the file).
     """
+    man7_troff_substring: str | None = None
+    """
+    If set, must appear in `docs/data_boar.7` (troff source): the environment catalog
+    shared by all commands (#1990).
+    """
 
 
 # Troff hyphenated options in data_boar.1 use \- for a literal hyphen in output.
@@ -325,7 +330,13 @@ OPERATOR_HELP_MARKERS: tuple[OperatorHelpMarker, ...] = (
         "python main.py --config config.yaml",
         None,
     ),
-    OperatorHelpMarker("api_host_env", "API_HOST", "API_HOST", "API_HOST"),
+    OperatorHelpMarker(
+        "api_host_env",
+        "API_HOST",
+        "API_HOST",
+        "API_HOST",
+        man7_troff_substring="API_HOST",
+    ),
     OperatorHelpMarker("bind_loopback", "127.0.0.1", "127.0.0.1", "127.0.0.1"),
     OperatorHelpMarker(
         "findings_export",
@@ -343,12 +354,14 @@ OPERATOR_HELP_MARKERS: tuple[OperatorHelpMarker, ...] = (
         None,
         "DATA_BOAR_SQL_SAMPLE_LIMIT",
         "DATA_BOAR_SQL_SAMPLE_LIMIT",
+        man7_troff_substring="DATA_BOAR_SQL_SAMPLE_LIMIT",
     ),
     OperatorHelpMarker(
         "sample_statement_timeout_env",
         None,
         "DATA_BOAR_SAMPLE_STATEMENT_TIMEOUT_MS",
         "DATA_BOAR_SAMPLE_STATEMENT_TIMEOUT_MS",
+        man7_troff_substring="DATA_BOAR_SAMPLE_STATEMENT_TIMEOUT_MS",
     ),
 )
 
