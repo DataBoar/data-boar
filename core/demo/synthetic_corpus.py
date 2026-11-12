@@ -894,6 +894,17 @@ def gen_config_errors(base: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Scenario 9 - Password-protected 7z (demo password is fictitious)
+# ---------------------------------------------------------------------------
+DEMO_ARCHIVE_PASSWORD = "demo-boar-7z-ficticia"
+PROTECTED_ARCHIVE_NAME = "protegido_demo.7z"
+
+
+def gen_protected_archive(base: Path) -> None:
+    raise NotImplementedError
+
+
 _SCENARIO_MAP: dict[str, Callable[[Path], None]] = {
     "happy": gen_scenario_1,
     "unhappy": gen_scenario_2,
@@ -904,6 +915,7 @@ _SCENARIO_MAP: dict[str, Callable[[Path], None]] = {
     "extensions": gen_all_extensions,
     "stress_load": gen_stress_load,
     "config_errors": gen_config_errors,
+    "protected_archive": gen_protected_archive,
 }
 ALL_SCENARIOS = list(_SCENARIO_MAP)
 
