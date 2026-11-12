@@ -308,14 +308,34 @@ def gen_scenario_3(base: Path) -> None:
 # ---------------------------------------------------------------------------
 # Scenario 4 - False positive pressure
 # ---------------------------------------------------------------------------
-def gen_scenario_4(base: Path) -> None:
-    import random as _r
+_SCENARIO_4_SEED = 2176  # fixed seed: scenario 4 must be reproducible (#2176)
 
+
+def _cpf_check_digits(base9: list[int]) -> tuple[int, int]:
+    def _dv(digits: list[int]) -> int:
+        n = len(digits) + 1
+        r = sum(d * (n - i) for i, d in enumerate(digits)) % 11
+        return 0 if r < 2 else 11 - r
+
+    d1 = _dv(base9)
+    return d1, _dv([*base9, d1])
+
+
+def gen_scenario_4(base: Path) -> None:
+    import random
+
+    _r = random.Random(_SCENARIO_4_SEED)
     out = base / "4_false_positive"
 
-    def _invalid_cpf_shaped() -> str:
+    def _invalid_cpf_digits() -> str:
+        """11 digits whose last check digit is wrong by construction (Mod-11 fails)."""
         d = [_r.randint(0, 9) for _ in range(9)]
-        return f"{d[0]}{d[1]}{d[2]}.{d[3]}{d[4]}{d[5]}.{d[6]}{d[7]}{d[8]}-{(d[0] + 1) % 10}{(d[1] + 1) % 10}"
+        d1, d2 = _cpf_check_digits(d)
+        return "".join(map(str, d)) + f"{d1}{(d2 + 1) % 10}"
+
+    def _invalid_cpf_shaped() -> str:
+        s = _invalid_cpf_digits()
+        return f"{s[0:3]}.{s[3:6]}.{s[6:9]}-{s[9:11]}"
 
     _w(
         out / "serial_numbers.txt",
@@ -325,7 +345,7 @@ def gen_scenario_4(base: Path) -> None:
     _w(out / "cnpj_shaped_refs.txt", "Ref: 00.111.222/0099-00\n" * 5)  # invalid CNPJ
     _w(
         out / "random_codes.txt",
-        "\n".join(f"Cod: {_r.randint(10000000000, 99999999999)}" for _ in range(20)),
+        "\n".join(f"Cod: {_invalid_cpf_digits()}" for _ in range(20)),
     )
     _w(
         out / "ip_addresses.txt",
