@@ -139,6 +139,35 @@ def test_demo_corpus_valid_identifiers_come_only_from_declared_synthetic_pools(
         assert set(_EMAIL_TOKEN.findall(text)) <= pool_emails, path.name
 
 
+_RESERVED_EMAIL_DOMAINS = ("example.com", "example.net", "example.org")
+_RESERVED_EMAIL_TLDS = (".test", ".invalid", ".example", ".localhost")
+
+
+def test_demo_corpus_emails_use_reserved_domains():
+    """E-mails in the synthetic pool use RFC 2606 / RFC 6761 reserved names only."""
+    for email in sc._EMAILS:
+        domain = email.rsplit("@", 1)[1].lower()
+        assert domain in _RESERVED_EMAIL_DOMAINS or domain.endswith(
+            _RESERVED_EMAIL_TLDS
+        ), email
+
+
+def test_demo_cnpj_pool_avoids_well_known_registered_numbers():
+    """The CNPJ pool must not reuse a number publicly associated with a real
+    company; pool values are generated (valid check digits, arbitrary base)."""
+    digits = {normalize_cnpj_digits(c) for c in sc._CNPJS}
+    assert "00000000000191" not in digits
+    assert all(cnpj_checksum_valid(d) for d in digits)
+
+
+def test_false_positive_expected_text_matches_measured_contract():
+    """EXPECTED for scenario 4 states the measured contract (no checksum-gated
+    CPF/CNPJ) and points at the known PHONE_BR false positive (#2235)."""
+    text = sc.EXPECTED["4_false_positive"]
+    assert "LGPD_CPF" in text and "LGPD_CNPJ" in text
+    assert "#2235" in text
+
+
 def test_demo_corpus_manifest_labels_content_as_synthetic(tmp_path):
     """The generated manifest and every scenario folder say the data is synthetic."""
     import json
