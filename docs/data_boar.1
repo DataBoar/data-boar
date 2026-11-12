@@ -1080,9 +1080,10 @@ curl \-X POST http://localhost:8088/scan \\
 .
 .SH INSTALLATION OF THIS MAN PAGE
 Install the troff sources from this repository as
-.BR data-boar (1)
-and
+.BR data-boar (1),
 .BR data-boar (5)
+and
+.BR data-boar (7)
 (the installed filenames use a hyphen, matching the packaged CLI
 .BR data-boar ).
 Create optional symlinks so
@@ -1090,6 +1091,7 @@ Create optional symlinks so
 and
 .BR lgpd_crawler
 also resolve (legacy aliases).
+Packages (wheel, deb, rpm, apk, pacman, xbps) install all three sections and the aliases.
 .PP
 Two common routes:
 .TP
@@ -1099,16 +1101,20 @@ Two common routes:
 typical Linux or BSD)
 .RS
 .nf
-sudo mkdir \-p /usr/local/share/man/man1/ /usr/local/share/man/man5/
-sudo chmod 755 /usr/local/share/man/man1/ /usr/local/share/man/man5/
+sudo mkdir \-p /usr/local/share/man/man1/ /usr/local/share/man/man5/ /usr/local/share/man/man7/
+sudo chmod 755 /usr/local/share/man/man1/ /usr/local/share/man/man5/ /usr/local/share/man/man7/
 sudo cp docs/data_boar.1 /usr/local/share/man/man1/data-boar.1
 sudo cp docs/data_boar.5 /usr/local/share/man/man5/data-boar.5
+sudo cp docs/data_boar.7 /usr/local/share/man/man7/data-boar.7
 sudo chmod 644 /usr/local/share/man/man1/data-boar.1 \\
-    /usr/local/share/man/man5/data-boar.5
+    /usr/local/share/man/man5/data-boar.5 \\
+    /usr/local/share/man/man7/data-boar.7
 sudo ln \-sf data-boar.1 /usr/local/share/man/man1/data_boar.1
 sudo ln \-sf data-boar.1 /usr/local/share/man/man1/lgpd_crawler.1
 sudo ln \-sf data-boar.5 /usr/local/share/man/man5/data_boar.5
 sudo ln \-sf data-boar.5 /usr/local/share/man/man5/lgpd_crawler.5
+sudo ln \-sf data-boar.7 /usr/local/share/man/man7/data_boar.7
+sudo ln \-sf data-boar.7 /usr/local/share/man/man7/lgpd_crawler.7
 sudo mandb
 .fi
 .RE
@@ -1122,23 +1128,28 @@ on many distributions already includes
 .IR ~/.local/share/man )
 .RS
 .nf
-mkdir \-p ~/.local/share/man/man1 ~/.local/share/man/man5
+mkdir \-p ~/.local/share/man/man1 ~/.local/share/man/man5 ~/.local/share/man/man7
 cp docs/data_boar.1 ~/.local/share/man/man1/data-boar.1
 cp docs/data_boar.5 ~/.local/share/man/man5/data-boar.5
+cp docs/data_boar.7 ~/.local/share/man/man7/data-boar.7
 chmod 644 ~/.local/share/man/man1/data-boar.1 \\
-    ~/.local/share/man/man5/data-boar.5
+    ~/.local/share/man/man5/data-boar.5 \\
+    ~/.local/share/man/man7/data-boar.7
 ln \-sf data-boar.1 ~/.local/share/man/man1/data_boar.1
 ln \-sf data-boar.1 ~/.local/share/man/man1/lgpd_crawler.1
 ln \-sf data-boar.5 ~/.local/share/man/man5/data_boar.5
 ln \-sf data-boar.5 ~/.local/share/man/man5/lgpd_crawler.5
+ln \-sf data-boar.7 ~/.local/share/man/man7/data_boar.7
+ln \-sf data-boar.7 ~/.local/share/man/man7/lgpd_crawler.7
 mandb \-u
 .fi
 .RE
 .PP
 Source paths remain
-.I docs/data_boar.1
-and
+.IR docs/data_boar.1 ,
 .I docs/data_boar.5
+and
+.I docs/data_boar.7
 in the repository; only the installed primary names use the hyphen.
 .PP
 The
@@ -1170,10 +1181,16 @@ or
 .B "man 5 data_boar"
 or
 .B "man 5 lgpd_crawler"
-(section 5).
+(section 5), and
+.B "man 7 data-boar"
+or
+.B "man 7 data_boar"
+or
+.B "man 7 lgpd_crawler"
+(section 7).
 .RE
 .
-.SH TWO MAN PAGES (SECTION 1 AND 5)
+.SH THREE MAN PAGES (SECTIONS 1, 5 AND 7)
 This manual is in section
 .B 1
 (commands).
@@ -1188,7 +1205,20 @@ or
 .BR "man 5 data_boar"
 or
 .BR "man 5 lgpd_crawler" .
-On Unix/Linux/BSD, section 1 is for programs and commands; section 5 is for file formats and conventions.
+A third manual in section
+.B 7
+describes the
+.I conventions shared by every command
+(environment variables, secrets supplied through
+.BR *_from_env
+keys, and how a variable relates to the configuration).
+View it with
+.BR "man 7 data-boar"
+or
+.BR "man 7 data_boar"
+or
+.BR "man 7 lgpd_crawler" .
+On Unix/Linux/BSD, section 1 is for programs and commands; section 5 is for file formats and conventions; section 7 is for miscellaneous conventions.
 .
 .SH REPORT EXPORT CLI (data-boar-report)
 .PP
@@ -1252,6 +1282,10 @@ section 5.
 .BR data_boar (5),
 .BR lgpd_crawler (5)
 (configuration and pattern file formats),
+.BR data-boar (7),
+.BR data_boar (7),
+.BR lgpd_crawler (7)
+(environment variables, secrets and configuration precedence shared by all commands),
 .BR python (1),
 .BR curl (1).
 .P
