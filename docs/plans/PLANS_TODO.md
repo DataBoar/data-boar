@@ -30,13 +30,13 @@ Use these tags in headings to keep priorities explicit and machine-countable:
 
 Do not edit this block manually; refresh with `python scripts/plans-stats.py --write`.
 
-- **Status rows counted:** 300  (Done: 182 | Incomplete: 118)
-- **Incomplete breakdown:** Pending `⬜`=99, Tracked `🔄` / `Tracked (partially done)`=19, Under consideration=0, Backlog-marked rows=0
+- **Status rows counted:** 304  (Done: 183 | Incomplete: 121)
+- **Incomplete breakdown:** Pending `⬜`=102, Tracked `🔄` / `Tracked (partially done)`=19, Under consideration=0, Backlog-marked rows=0
 
 | Horizon | Total rows | Done | Incomplete |
 | ------- | ----------: | ----: | ----------: |
 | `H0` | 65 | 41 | 24 |
-| `H1` | 74 | 47 | 27 |
+| `H1` | 78 | 48 | 30 |
 | `H2` | 4 | 4 | 0 |
 | `H3` | 141 | 76 | 65 |
 | `H4` | 0 | 0 | 0 |
@@ -549,6 +549,19 @@ No capacity or timing claim is made without a measurement.
 | 3 | Phase 1: hub (`--hub-report`) with provenance model, dedupe key and tests (ADR-0095) | ✅ Done |
 | 4 | Phase 2: unified Excel report with per-node filter | ✅ Done |
 | 5 | Deployment modes written down in the plan: on-premises pull (implemented by this plan) and hosted push (**design only**, depends on #838) | ✅ Done (documentation) |
+
+## [H1] Documentation: environment catalog (man 7)
+
+### `data_boar(7)` environment catalog and guard – [PLAN_MAN7_ENV_CATALOG.md](PLAN_MAN7_ENV_CATALOG.md)
+
+**`[H1][U1]`** · GitHub [#1990](https://github.com/DataBoar/data-boar/issues/1990) · [P2]. Axes proposed, to be confirmed by the operator. Documentation, test and packaging only.
+
+| # | To-do | Status |
+| - | ----- | ------ |
+| 1 | PLAN written | ✅ Done |
+| 2 | `docs/data_boar.7` with `VERIFY` marks closed against the code | ⬜ Pending |
+| 3 | Guard: AST inventory vs. page vs. exclusion list with reason; sync tests extended | ⬜ Pending |
+| 4 | Packaging: wheel, nfpm and Void ship `man7` and the legacy aliases | ⬜ Pending |
 
 ## [H1] Open-core / Pro plugin governance
 
