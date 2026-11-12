@@ -12,6 +12,8 @@ Covers seven test scenarios:
   5. manual_review  -- ambiguous / partial data (flag for human review)
   6. stego          -- CPF/RG hidden in image LSB (NOT found without stego module)
   7. extensions     -- one file per supported extension, all containing a CPF
+  9. protected_archive -- password-protected .7z (flagged without the password,
+                          read with the fictitious demo password; needs py7zr)
 
 Usage:
   uv run python scripts/generate_synthetic_poc_corpus.py
@@ -85,6 +87,13 @@ EXPECTED: dict[str, str] = {
     "5_manual_review": "DEVE SINALIZAR PARA REVISAO MANUAL -- dados parcialmente mascarados",
     "6_stego": "NAO DEVE ENCONTRAR sem modulo estego -- CPF em LSB de imagem PNG",
     "7_extensions": "DEVE ENCONTRAR em todos os formatos suportados",
+    "9_protected_archive": (
+        "SEM SENHA: deve SINALIZAR em scan_failures (encrypted_no_password), nunca "
+        "'limpo'. COM SENHA: deve ENCONTRAR o CPF sintetico dentro do .7z. "
+        "Senha de DEMO (ficticia, nao e credencial real): demo-boar-7z-ficticia -- "
+        "configure file_scan.file_passwords: {'.7z': '<senha>'} e scan_compressed: true. "
+        "Requer o extra opcional 'compressed' (py7zr)."
+    ),
 }
 
 
@@ -902,7 +911,32 @@ PROTECTED_ARCHIVE_NAME = "protegido_demo.7z"
 
 
 def gen_protected_archive(base: Path) -> None:
-    raise NotImplementedError
+    """Write a password-protected .7z with synthetic PII (needs the ``compressed`` extra).
+
+    Without ``file_scan.file_passwords`` the scan records ``encrypted_no_password``
+    in ``scan_failures``; with ``{".7z": DEMO_ARCHIVE_PASSWORD}`` the inner file is
+    read and its findings appear. The password is a fictitious demo value.
+    """
+    out = base / "9_protected_archive"
+    out.mkdir(parents=True, exist_ok=True)
+    _w(out / "EXPECTED.txt", EXPECTED["9_protected_archive"])
+    try:
+        import py7zr
+    except ImportError:
+        print(
+            "  !  Scenario 9 (protected_archive) skipped: install the optional "
+            "'compressed' extra (py7zr) to generate the .7z"
+        )
+        return
+    inner = textwrap.dedent(f"""\
+        FICHA CADASTRAL -- FICTICIA -- APENAS PARA DEMO
+        Nome: {_p(_NAMES, 4)}  CPF: {_p(_CPFS, 4)}
+        Email: {_p(_EMAILS, 1)}  CNPJ: {_p(_CNPJS, 2)}
+    """)
+    archive = out / PROTECTED_ARCHIVE_NAME
+    with py7zr.SevenZipFile(archive, "w", password=DEMO_ARCHIVE_PASSWORD) as z:
+        z.writestr(inner.encode("utf-8"), "ficha_cadastral.txt")
+    print(f"  v  Scenario 9 (protected_archive) -> {out}")
 
 
 _SCENARIO_MAP: dict[str, Callable[[Path], None]] = {

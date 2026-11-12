@@ -54,7 +54,7 @@ def _scan(root: Path, file_passwords: dict[str, str]) -> _CaptureDB:
         },
         DataScanner(),
         db,
-        extensions=[".7z"],
+        extensions=[".7z", ".txt"],
         scan_sqlite_as_db=False,
         sample_limit=5000,
         file_passwords=file_passwords,
