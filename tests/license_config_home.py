@@ -18,3 +18,20 @@ def isolate_user_config_home(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) ->
     monkeypatch.setenv("APPDATA", str(roaming))
     monkeypatch.delenv("XDG_CONFIG_HOME", raising=False)
     return home
+
+
+# Environment that can change the outcome of a "no token" evaluation (#2226).
+LICENSE_ENV_VARS_CLEARED: tuple[str, ...] = (
+    "DATA_BOAR_LICENSE_PATH",
+    "DATA_BOAR_LICENSE_MODE",
+    "DATA_BOAR_LICENSE_PUBLIC_KEY_PEM",
+    "DATA_BOAR_LICENSE_PUBLIC_KEY_PATH",
+    "DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_PEM",
+    "DATA_BOAR_LICENSE_MLDSA_PUBLIC_KEY_PATH",
+    "DATA_BOAR_LICENSE_REVOCATION_PATH",
+    "DATA_BOAR_TIER_OVERRIDE",
+)
+
+
+def isolate_license_environment(monkeypatch: pytest.MonkeyPatch, sandbox: Path) -> Path:
+    raise NotImplementedError

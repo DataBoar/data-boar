@@ -13,6 +13,7 @@ from __future__ import annotations
 import os
 import subprocess
 from collections.abc import Iterator
+from pathlib import Path
 
 import pytest
 
@@ -112,6 +113,14 @@ def _restore_license_verify_key_loader():
     from tests.license_verify_pin import restore_embedded_ed25519_loader
 
     restore_embedded_ed25519_loader()
+
+
+@pytest.fixture
+def hermetic_license_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
+    """#2226: no developer license file or license/tier env var can leak into the test."""
+    from tests.license_config_home import isolate_license_environment
+
+    return isolate_license_environment(monkeypatch, tmp_path / "license-sandbox")
 
 
 @pytest.fixture(scope="session")
