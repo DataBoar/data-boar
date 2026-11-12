@@ -69,7 +69,9 @@ function Get-ReportedVersion([string]$Path) {
 }
 
 function Write-ResultAndExit([string]$Dir) {
-    [Console]::Out.WriteLine($Dir)
+    # Success pipeline (not [Console]::Out): `$d = & pinned-uv.ps1` in check-all.ps1 must capture it;
+    # with -File the same line still lands on stdout.
+    Write-Output $Dir
     exit 0
 }
 
