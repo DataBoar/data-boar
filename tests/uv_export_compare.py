@@ -169,3 +169,7 @@ def diff_requirements(committed: str, fresh: str) -> list[str]:
                 continue
         problems.append(f"line {no}: committed {a!r} != fresh {b!r}")
     return problems
+
+
+def diff_pylock_bodies(committed: list[str], fresh: list[str]) -> list[str]:
+    raise NotImplementedError

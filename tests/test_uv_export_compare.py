@@ -11,6 +11,7 @@ from pathlib import Path
 import pytest
 
 from tests.uv_export_compare import (
+    diff_pylock_bodies,
     diff_requirements,
     markers_equivalent,
     normalize_uv_export_text,
@@ -218,3 +219,48 @@ def test_committed_requirements_survive_the_measured_uv_013_rewrite() -> None:
         committed,
         rewritten.replace("msoffcrypto-tool==6.1.0", "msoffcrypto-tool==6.1.1"),
     )
+
+
+# --------------------------------------------------------------------------- pylock.toml body
+
+
+def _pylock(marker: str, version: str = "6.1.0", sha: str = "cccc") -> list[str]:
+    return [
+        "[[packages]]",
+        'name = "msoffcrypto-tool"',
+        f'version = "{version}"',
+        f'marker = "{marker}"',
+        f'sdist = {{ hashes = {{ sha256 = "{sha}" }} }}',
+    ]
+
+
+def test_pylock_identical_bodies_have_no_diff() -> None:
+    assert (
+        diff_pylock_bodies(_pylock(MSOFFCRYPTO_0112), _pylock(MSOFFCRYPTO_0112)) == []
+    )
+
+
+def test_pylock_equivalent_marker_rewrite_is_tolerated() -> None:
+    assert (
+        diff_pylock_bodies(_pylock(MSOFFCRYPTO_0112), _pylock(MSOFFCRYPTO_0137)) == []
+    )
+
+
+def test_pylock_non_equivalent_marker_is_detected() -> None:
+    assert diff_pylock_bodies(
+        _pylock(MSOFFCRYPTO_0112), _pylock("sys_platform == 'win32'")
+    )
+
+
+def test_pylock_version_and_hash_changes_are_detected() -> None:
+    base = _pylock(MSOFFCRYPTO_0112)
+    assert diff_pylock_bodies(base, _pylock(MSOFFCRYPTO_0112, version="6.1.1"))
+    assert diff_pylock_bodies(base, _pylock(MSOFFCRYPTO_0112, sha="dddd"))
+    # version change hidden behind an equivalent marker rewrite
+    assert diff_pylock_bodies(base, _pylock(MSOFFCRYPTO_0137, version="6.1.1"))
+
+
+def test_pylock_length_change_is_detected() -> None:
+    base = _pylock(MSOFFCRYPTO_0112)
+    assert diff_pylock_bodies(base, base + ["[[packages]]"])
+    assert diff_pylock_bodies(base + ["[[packages]]"], base)
