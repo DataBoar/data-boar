@@ -61,9 +61,18 @@ $exeName = if ($IsWindows) { 'uv.exe' } else { 'uv' }
 $destDir = Join-Path $cacheRoot "uv-$version"
 $destBin = Join-Path $destDir $exeName
 
+$script:LastProbeError = ''
 function Get-ReportedVersion([string]$Path) {
-    try { $line = & $Path --version 2>$null | Select-Object -First 1 } catch { return $null }
-    if (-not $line) { return $null }
+    $script:LastProbeError = ''
+    try { $line = & $Path --version 2>$null | Select-Object -First 1 }
+    catch {
+        $script:LastProbeError = $_.Exception.Message
+        return $null
+    }
+    if (-not $line) {
+        $script:LastProbeError = "no output (exit code $LASTEXITCODE)"
+        return $null
+    }
     $parts = "$line" -split '\s+'
     if ($parts.Count -ge 2) { return $parts[1] }
     return $null
@@ -188,7 +197,17 @@ finally {
     Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue
 }
 
-$reported = Get-ReportedVersion $destBin
-if ($reported -ne $version) { Fail "installed uv reports '$reported', expected $version" }
+# A freshly written .exe can stay locked for a few seconds while Windows antivirus scans it, which
+# makes the first run fail silently: retry on Windows only, and report WHY if it never works.
+$attempts = if ($IsWindows) { 10 } else { 1 }
+$reported = $null
+for ($attempt = 1; $attempt -le $attempts; $attempt++) {
+    $reported = Get-ReportedVersion $destBin
+    if ($reported -eq $version) { break }
+    if ($attempt -lt $attempts) { Start-Sleep -Seconds 1 }
+}
+if ($reported -ne $version) {
+    Fail "installed uv reports '$reported', expected $version (after $attempts attempt(s); last probe: $script:LastProbeError)"
+}
 Write-Err "pinned-uv.ps1: installed uv $version in $destDir (SHA256 verified)"
 Write-ResultAndExit $destDir
