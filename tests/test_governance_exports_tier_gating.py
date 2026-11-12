@@ -25,6 +25,10 @@ from core.licensing.tier_features import (
 )
 from tests.license_verify_pin import pin_embedded_ed25519_pem
 
+pytestmark = pytest.mark.usefixtures(
+    "hermetic_license_env"
+)  # #2226: no dev license leaks in
+
 FEATURES = ("ropa_export", "findings_siem_push")
 
 

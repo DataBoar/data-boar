@@ -49,6 +49,9 @@ permissions:
 
 env:
   WHEELHOUSE_TAG: wheelhouse-x86-64-v1-2026-07-29
+  # Declared exception to .github/uv-version (#2228): uv 0.11.x cannot fetch cpython-3.14.6+freethreaded
+  # (measured: "No download found for request"). Same pin as Dockerfile, Dockerfile.nogil and
+  # scripts/native-nfpm-populate-staging.sh; tests/test_uv_version_single_source.py keeps them aligned.
   UV_VERSION: "0.12.0"
   UV_SHA256: eaf842262aa1c418d8ecc5605f02ee1ebfd369124fa48548e85f9481a47831a9
   UV_PYTHON: "3.14.6+freethreaded"

@@ -17,6 +17,10 @@ from core.licensing.guard import reset_license_guard_for_tests
 from tests import hybrid_license_fixture as hlf
 from tests.license_verify_pin import pin_embedded_ed25519_pem
 
+pytestmark = pytest.mark.usefixtures(
+    "hermetic_license_env"
+)  # #2226: no dev license leaks in
+
 _ENT_CFG = {"licensing": {"mode": "open", "effective_tier": "enterprise"}}
 
 

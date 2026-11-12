@@ -16,6 +16,9 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
+# Declared exception to .github/uv-version (#2228): uv 0.11.x cannot fetch cpython-3.14.6+freethreaded
+# (measured: "No download found for request"). Keep aligned with Dockerfile, Dockerfile.nogil and
+# native-packages.yml (tests/test_uv_version_single_source.py).
 UV_VERSION="${UV_VERSION:-0.12.0}"
 UV_SHA256="${UV_SHA256:-eaf842262aa1c418d8ecc5605f02ee1ebfd369124fa48548e85f9481a47831a9}"
 UV_PYTHON="${UV_PYTHON:-3.14.6+freethreaded}"
