@@ -114,14 +114,15 @@ _UNPROVABLE_LIT_FIRST = re.compile(
 def _provable(expr: str) -> bool:
     """False when the candidate set cannot decide the expression (fail closed).
 
-    ``in`` / ``not in`` are substring tests, and ordering operators on non-version variables
-    (``platform_release`` ...) are lexicographic; neither is covered by the candidate values.
+    ``in`` / ``not in`` are substring tests, ``===`` is arbitrary string equality (PEP 440: it
+    differs from ``==`` on '3.10.0' vs '3.10'), and ordering operators on non-version variables
+    (``platform_release`` ...) are lexicographic; none of these is covered by the candidate values.
     """
     for m in _UNPROVABLE_VAR_FIRST.finditer(expr):
-        if m.group(2) in ("in", "not in") or m.group(1) not in _VERSION_VARS:
+        if m.group(2) in ("in", "not in", "===") or m.group(1) not in _VERSION_VARS:
             return False
     for m in _UNPROVABLE_LIT_FIRST.finditer(expr):
-        if m.group(3) in ("in", "not in") or m.group(4) not in _VERSION_VARS:
+        if m.group(3) in ("in", "not in", "===") or m.group(4) not in _VERSION_VARS:
             return False
     return True
 
