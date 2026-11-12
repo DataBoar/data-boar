@@ -116,11 +116,16 @@ def _restore_license_verify_key_loader():
 
 
 @pytest.fixture
-def hermetic_license_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
+def hermetic_license_env(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> Iterator[Path]:
     """#2226: no developer license file or license/tier env var can leak into the test."""
+    from core.licensing import reset_license_guard_for_tests
     from tests.license_config_home import isolate_license_environment
 
-    return isolate_license_environment(monkeypatch, tmp_path / "license-sandbox")
+    home = isolate_license_environment(monkeypatch, tmp_path / "license-sandbox")
+    yield home
+    reset_license_guard_for_tests()
 
 
 @pytest.fixture(scope="session")

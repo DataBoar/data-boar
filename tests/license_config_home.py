@@ -34,4 +34,25 @@ LICENSE_ENV_VARS_CLEARED: tuple[str, ...] = (
 
 
 def isolate_license_environment(monkeypatch: pytest.MonkeyPatch, sandbox: Path) -> Path:
-    raise NotImplementedError
+    """Make "no token" independent of the machine running the test (#2226).
+
+    Points ``HOME`` / ``USERPROFILE`` / ``APPDATA`` / ``XDG_CONFIG_HOME`` at ``sandbox`` (so
+    ``<user config dir>/databoar/license.jwt`` is never the developer's) and drops the license
+    and tier environment variables. Explicit ``licensing.license_path`` config values still work.
+    Returns the simulated home.
+    """
+    from core.licensing import reset_license_guard_for_tests
+
+    home = sandbox / "home"
+    xdg = sandbox / "xdg"
+    roaming = home / "AppData" / "Roaming"
+    for d in (home, xdg, roaming):
+        d.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
+    monkeypatch.setenv("APPDATA", str(roaming))
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(xdg))
+    for name in LICENSE_ENV_VARS_CLEARED:
+        monkeypatch.delenv(name, raising=False)
+    reset_license_guard_for_tests()
+    return home

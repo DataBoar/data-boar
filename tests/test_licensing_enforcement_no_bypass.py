@@ -29,6 +29,10 @@ from tests.license_verify_pin import pin_embedded_ed25519_pem
 from core.licensing.runtime_feature_tier import get_runtime_tier_for_features
 from core.licensing.tier_features import Tier
 
+pytestmark = pytest.mark.usefixtures(
+    "hermetic_license_env"
+)  # #2226: no dev license leaks in
+
 AUDIT_LOGGER = "data_boar.licensing.audit"
 
 

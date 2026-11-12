@@ -34,6 +34,10 @@ from report.scan_evidence import write_scan_evidence_artifacts
 from tests import hybrid_license_fixture as hlf
 from tests.license_verify_pin import pin_embedded_ed25519_pem
 
+pytestmark = pytest.mark.usefixtures(
+    "hermetic_license_env"
+)  # #2226: no dev license leaks in
+
 # #1411 — probes that historically diverge when ProScanner skips non-suspects.
 _PARITY_PROBES: list[tuple[str, str]] = [
     ("noise", "lorem ipsum dolor sit"),
