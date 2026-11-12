@@ -13,6 +13,8 @@ import re
 import subprocess
 from pathlib import Path
 
+from tests.test_wheelhouse_sha256sums_gate import resolve_bash_executable
+
 REPO = Path(__file__).resolve().parents[1]
 DEMO = REPO / "deploy" / "demo"
 QUADLET = DEMO / "quadlet"
@@ -145,7 +147,10 @@ def test_restore_script_is_executable_in_git_and_parses():
         text=True,
     ).stdout
     assert listed.startswith("100755 "), listed
-    subprocess.run(["bash", "-n", str(RESTORE)], check=True)
+    # Bare `bash` on a GitHub Windows runner is the System32 WSL launcher (no
+    # distro installed, #1619); the repo helper picks Git Bash there, and the
+    # wheelhouse tests already run scripts through it with a plain str(path).
+    subprocess.run([resolve_bash_executable(), "-n", str(RESTORE)], check=True)
 
 
 if os.name != "nt":  # bash + POSIX fake podman; defined only where it runs (#2233)
