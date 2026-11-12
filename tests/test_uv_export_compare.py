@@ -106,6 +106,11 @@ def test_equivalent_markers(a: str, b: str) -> None:
         ("python_full_version >= '3.10'", "python_full_version > '3.9'"),
         ("python_full_version > '3.9.0'", "python_full_version >= '3.9.1'"),
         ("implementation_version >= '7.3'", "implementation_version > '7.2'"),
+        # `in` / `not in` are substring tests; ordering on non-version variables is
+        # lexicographic. Not provable with the candidate set: fail closed (B1).
+        ("sys_platform == 'linux2'", "sys_platform in 'linux2'"),
+        ("platform_machine != 'x86_64'", "platform_machine not in 'x86_64'"),
+        ("platform_release > '4.9'", "platform_release >= '5.0'"),
         # different variable
         ("sys_platform == 'win32'", "os_name == 'nt'"),
         (
@@ -269,3 +274,31 @@ def test_pylock_length_change_is_detected() -> None:
     base = _pylock(MSOFFCRYPTO_0112)
     assert diff_pylock_bodies(base, base + ["[[packages]]"])
     assert diff_pylock_bodies(base + ["[[packages]]"], base)
+
+
+def test_fail_closed_does_not_reject_genuinely_equivalent_pairs() -> None:
+    """B1: the fail-closed rule targets `in`/ordering on string variables only."""
+    assert markers_equivalent(MSOFFCRYPTO_0112, MSOFFCRYPTO_0137)
+    assert markers_equivalent(
+        "python_version >= '3.10'",
+        "python_version >= '3.10' and python_version >= '3.10'",
+    )
+    assert markers_equivalent(
+        "python_full_version >= '3.10.0'", "python_full_version >= '3.10'"
+    )
+    assert markers_equivalent("sys_platform == 'win32'", 'sys_platform == "win32"')
+
+
+@pytest.mark.parametrize(
+    ("a", "b"),
+    [
+        # `===` is arbitrary string equality (PEP 440): it differs from `==` on '3.10.0' vs '3.10'.
+        ("python_full_version === '3.10'", "python_full_version == '3.10'"),
+        ("python_full_version == '3.10'", "python_full_version === '3.10'"),
+        ("'3.10' === python_full_version", "python_full_version == '3.10'"),
+    ],
+)
+def test_triple_equals_is_never_proven_equivalent_to_double_equals(
+    a: str, b: str
+) -> None:
+    assert not markers_equivalent(a, b)

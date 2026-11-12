@@ -539,7 +539,10 @@ def test_ci_yml_pins_pip_commands_with_hashes() -> None:
     assert "\\ -r" not in install_run
     uv_req = REPO_ROOT / ".github" / "pip-constraints" / "ci-uv-fallback.txt"
     ansible_req = REPO_ROOT / ".github" / "pip-constraints" / "ci-ansible-syntax.txt"
-    assert "uv==0.11.2" in uv_req.read_text(encoding="utf-8")
+    uv_version = (
+        (REPO_ROOT / ".github" / "uv-version").read_text(encoding="utf-8").strip()
+    )
+    assert f"uv=={uv_version} " in uv_req.read_text(encoding="utf-8")
     assert "--hash=sha256:" in uv_req.read_text(encoding="utf-8")
     ansible_body = ansible_req.read_text(encoding="utf-8")
     assert "ansible-core==2.18.19" in ansible_body

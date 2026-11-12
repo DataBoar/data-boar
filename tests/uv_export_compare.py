@@ -103,6 +103,30 @@ def _candidates(var: str, literals: set[str]) -> list[str]:
     return sorted(literals | {_OTHER})
 
 
+_UNPROVABLE_VAR_FIRST = re.compile(
+    rf"\b({_VAR_ALT})\s*(not in|in|===|~=|<=|>=|<|>)\s*{_LIT}"
+)
+_UNPROVABLE_LIT_FIRST = re.compile(
+    rf"{_LIT}\s*(not in|in|===|~=|<=|>=|<|>)\s*\b({_VAR_ALT})\b"
+)
+
+
+def _provable(expr: str) -> bool:
+    """False when the candidate set cannot decide the expression (fail closed).
+
+    ``in`` / ``not in`` are substring tests, ``===`` is arbitrary string equality (PEP 440: it
+    differs from ``==`` on '3.10.0' vs '3.10'), and ordering operators on non-version variables
+    (``platform_release`` ...) are lexicographic; none of these is covered by the candidate values.
+    """
+    for m in _UNPROVABLE_VAR_FIRST.finditer(expr):
+        if m.group(2) in ("in", "not in", "===") or m.group(1) not in _VERSION_VARS:
+            return False
+    for m in _UNPROVABLE_LIT_FIRST.finditer(expr):
+        if m.group(3) in ("in", "not in", "===") or m.group(4) not in _VERSION_VARS:
+            return False
+    return True
+
+
 def markers_equivalent(a: str, b: str) -> bool:
     """True when both marker expressions give the same result in every observed environment."""
     a, b = a.strip(), b.strip()
@@ -113,6 +137,8 @@ def markers_equivalent(a: str, b: str) -> bool:
     except InvalidMarker:
         return False
 
+    if not (_provable(a) and _provable(b)):
+        return False
     used = _observed_values(a, b)
     for var in _MARKER_VARS:
         if re.search(rf"\b{var}\b", a) or re.search(rf"\b{var}\b", b):
