@@ -99,9 +99,26 @@ See the variables of the same name under ENVIRONMENT.
 .SS Configuration and API access
 .TP
 .B CONFIG_PATH
-Path of the configuration file used when the web API is started without
-.BR \-\-config .
-Class: fallback.
+Path of the configuration file, read by the web API module.
+When the API is started through
+.BR data\-boar ,
+the served file is always the one given by
+.B \-\-config
+(default
+.IR config.yaml ),
+and
+.B CONFIG_PATH
+never selects a different file:
+on a loopback bind a different value is silently ignored;
+on a bind beyond loopback a different value aborts startup with exit status 2
+(\(lq\-\-config and CONFIG_PATH point at different files\(rq).
+Set it to the same path as
+.BR \-\-config ,
+or leave it unset.
+It selects the file only when the API module is loaded outside
+.BR data\-boar ,
+for example by a separate ASGI server.
+Class: path (consistency check; not an override and not a fallback).
 See
 .BR data\-boar (1).
 .TP
@@ -186,13 +203,20 @@ Class: override.
 .SS SQL sampling
 .TP
 .B DATA_BOAR_SQL_SAMPLE_LIMIT
-Upper bound of sampled rows per table.
+Integer, clamped between 1 and 10000.
+When set, it replaces the configured sample limit (\fBfile_scan.sample_limit\fR) with a per-column sample size;
+an invalid value is ignored.
+It applies to SQL (SQLAlchemy) and Snowflake targets and also to filesystem and MongoDB sampling.
 Class: override.
 See
 .BR data\-boar (1).
 .TP
 .B DATA_BOAR_SAMPLE_STATEMENT_TIMEOUT_MS
-Optional per-statement time limit for sampling queries, in milliseconds.
+Per-statement time limit for sampling queries, in milliseconds.
+The built-in default is 5000 when neither this variable nor the target key
+.B sample_statement_timeout_ms
+is set.
+Values are clamped between 250 and 60000, and a value of 0 or below turns the limit off for that target.
 Applied on MySQL and MariaDB (execution-time hint) and on PostgreSQL (statement timeout).
 Class: override.
 See
@@ -201,13 +225,14 @@ See
 .B DATA_BOAR_PG_TABLESAMPLE_SYSTEM_PERCENT
 PostgreSQL
 .B TABLESAMPLE SYSTEM
-percentage of the relation, from 0.01 to 100.
+percentage of the relation, from 0.01 to 100 (built-in default 1.0; an invalid value uses the default).
 Class: override.
 .TP
 .B DATA_BOAR_MSSQL_TABLESAMPLE_SYSTEM_PERCENT
 SQL Server
 .B TABLESAMPLE SYSTEM
-percentage, used when table metadata marks a table as huge.
+percentage, used when table metadata marks a table as huge (built-in default 10.0, from 0.01 to 100;
+an invalid value uses the default).
 Class: override.
 .TP
 .B DATA_BOAR_SAMPLE_FETCH_MULTIPLIER
@@ -318,7 +343,9 @@ Serialized TLS posture shared with worker processes. Class: internal.
 .SS Not documented on this page
 Variables read only by repository maintenance, release, continuous-integration and laboratory scripts are documented in the
 repository documentation, not here.
-Licensing and build-integrity variables are documented with the licensing documentation.
+Licensing and build-integrity variables are described in the repository file
+.IR docs/LICENSING_SPEC.md ,
+not on this page.
 .
 .SH SECURITY
 Environment variables are visible to other processes of the same user and are often captured by container and
