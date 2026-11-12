@@ -81,7 +81,17 @@ EXPECTED_SHA="$(grep -oE "\"${VERSION//./\\.}/${ASSET//./\\.}\": *\"[0-9a-f]{64}
 [[ -n "$EXPECTED_SHA" ]] || die "no official SHA256 registered for uv $VERSION / $ASSET in $GUARD_TEST (KNOWN_ASSET_SHA256); refusing to download an unverified binary"
 
 command -v curl >/dev/null 2>&1 || die "curl not found"
-command -v sha256sum >/dev/null 2>&1 || die "sha256sum not found"
+# Stock macOS ships `shasum`, not `sha256sum` (Bugbot, #2233): accept either, same digest.
+sha256_of() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$1" | awk '{print $1}'
+  elif command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "$1" | awk '{print $1}'
+  else
+    return 1
+  fi
+}
+command -v sha256sum >/dev/null 2>&1 || command -v shasum >/dev/null 2>&1 || die "neither sha256sum nor shasum found (needed to verify the download)"
 
 mkdir -p "$CACHE_ROOT" || die "cannot create cache dir $CACHE_ROOT"
 TMP="$(mktemp -d "$CACHE_ROOT/.fetch-XXXXXX")"
@@ -92,7 +102,7 @@ echo "pinned-uv.sh: downloading uv $VERSION from $URL" >&2
 curl --fail --silent --show-error --location --retry 3 --connect-timeout 20 --max-time 300 \
   "$URL" -o "$TMP/uv.tgz" || die "download of uv $VERSION failed ($URL)"
 
-ACTUAL_SHA="$(sha256sum "$TMP/uv.tgz" | awk '{print $1}')"
+ACTUAL_SHA="$(sha256_of "$TMP/uv.tgz")" || die "cannot compute the SHA256 of the download"
 [[ "$ACTUAL_SHA" == "$EXPECTED_SHA" ]] || die "SHA256 mismatch for uv $VERSION ($ASSET): expected $EXPECTED_SHA, got $ACTUAL_SHA"
 
 tar -xzf "$TMP/uv.tgz" -C "$TMP" || die "cannot extract the uv tarball"
