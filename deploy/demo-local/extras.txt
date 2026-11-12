@@ -1,0 +1,9 @@
+# Optional extras the published image does NOT ship (#1447 local demo).
+# Versions match uv.lock. Built as cp314t wheels (free-threaded CPython 3.14);
+# abi3 wheels do not load there, build-extras.sh rejects them.
+py7zr==1.1.4
+pymongo==4.19.0
+redis==8.1.0
+smbprotocol==1.17.0
+webdavclient3==3.14.7
+requests-ntlm==1.3.0
