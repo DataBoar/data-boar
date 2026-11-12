@@ -53,6 +53,18 @@ def _normalize_extensions(extensions: Any) -> set[str]:
     return {e if e.startswith(".") else f".{e.lstrip('*')}" for e in exts}
 
 
+def _archive_temp_suffix(filename: str, ext: str, allowed: set[str]) -> str:
+    """Suffix for the temp copy of an archive: keep ``.tar.gz``-style compounds.
+
+    ``Path.suffix`` alone yields ``.gz``/``.bz2`` for ``x.tar.gz``/``x.tar.bz2``, so
+    the archive reader saw a single compressed stream instead of a tar archive.
+    """
+    suffixes = [s.lower() for s in Path(filename).suffixes]
+    if len(suffixes) >= 2 and "".join(suffixes[-2:]) in allowed:
+        return "".join(suffixes[-2:])
+    return ext
+
+
 class SMBConnector:
     """
     Connect to SMB/CIFS share (host FQDN or IP, share name, path). Credentials: user, password, optional domain.
@@ -307,7 +319,11 @@ class SMBConnector:
                             pass
                     continue
                 if self.scan_compressed and ext in self.compressed_extensions:
-                    fd, temp_path = tempfile.mkstemp(suffix=ext)
+                    fd, temp_path = tempfile.mkstemp(
+                        suffix=_archive_temp_suffix(
+                            filename, ext, self.compressed_extensions
+                        )
+                    )
                     try:
                         os.write(fd, content)
                         os.close(fd)
