@@ -1,0 +1,340 @@
+.\" data_boar.7 - conventions shared by all Data Boar commands (environment, secrets, precedence)
+.\" View as: man data-boar (section 1), man 5 data_boar (files), man 7 data_boar (this page)
+.TH DATA-BOAR 7 "November 2026" "Data Boar 1.8.0" "Miscellaneous Information Manual"
+.SH NAME
+data-boar, data_boar \- conventions shared by every Data Boar command: environment variables, secrets and configuration precedence
+.
+.SH DESCRIPTION
+This page documents the conventions that cut across the Data Boar commands and configuration:
+which environment variables the program reads, how secrets are supplied without being stored in the
+configuration file, and how an environment variable relates to a configuration key.
+It complements
+.BR data\-boar (1),
+which documents commands and options, and
+.BR data_boar (5),
+which documents the configuration file format.
+.PP
+Data Boar reports findings as evidence for the operator; nothing on this page is a legal conclusion.
+.
+.SH HOW A VARIABLE RELATES TO THE CONFIGURATION
+Each variable listed below is used in one of these ways.
+There is no single global precedence rule; use the class of each variable.
+.TP
+.B override
+The variable takes precedence over the corresponding key of the configuration file.
+.TP
+.B fallback
+The variable is used only when neither the command line nor the configuration file provides the value.
+Where a configuration key exists, the variable has a lower precedence than that key.
+.TP
+.B secret source
+The configuration file does not hold the secret.
+A key whose name ends in
+.B _from_env
+holds the
+.I name
+of the variable that holds the secret.
+.TP
+.B gate
+The variable switches an optional feature on or off.
+.TP
+.B path
+The variable names a location and has a built-in default.
+.TP
+.B internal
+The variable is written by
+.B data\-boar
+itself to share state with its own worker processes.
+Do not set it; it is listed only so that it is not set by mistake.
+.
+.SH SECRETS
+Secrets are supplied through the environment (or another secret mechanism of the deployment), never inline in a
+configuration file that is committed or shared.
+.SS The \fB*_from_env\fR convention
+Several configuration keys end in
+.BR _from_env :
+.BR user_from_env ,
+.BR pass_from_env ,
+.BR password_from_env ,
+.BR api_key_from_env ,
+.BR token_from_env ,
+.BR client_secret_from_env ,
+.BR token_secret_from_env
+and
+.BR maturity_integrity_secret_from_env .
+The value of such a key is the
+.I name
+of an environment variable, not the secret itself.
+Because the name is chosen in the configuration, the complete set of variable names is open-ended;
+the rules below therefore matter more than any fixed list.
+.PP
+When a variable named by such a key is unset or empty, loading the configuration emits a non-fatal
+warning that names the variable, and the value falls back to the inline or default one when the
+configuration provides it.
+The warning covers the password, user and token keys of the targets.
+.SS REST connector credentials
+For REST targets,
+.B auth.token_from_env
+and
+.B auth.client_secret_from_env
+must name a variable that starts with one of
+.BR DATA_BOAR_ ,
+.B REST_API_
+or
+.BR API_ ;
+any other name is rejected when the configuration is loaded.
+By default there is no host list.
+With
+.B DATA_BOAR_CREDENTIAL_STRICT=1
+the destination host must also appear in
+.B DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS
+and in the
+.B allowed_hosts
+(or
+.BR auth.allowed_hosts )
+key of the target; the key can only narrow the environment list.
+See the variables of the same name under ENVIRONMENT.
+.
+.SH ENVIRONMENT
+.SS Configuration and API access
+.TP
+.B CONFIG_PATH
+Path of the configuration file used when the web API is started without
+.BR \-\-config .
+Class: fallback.
+See
+.BR data\-boar (1).
+.TP
+.B API_HOST
+Bind address of the web API when it is not given on the command line.
+The bind address is resolved in this order:
+.BR \-\-host ,
+the
+.B api.host
+configuration key, this variable, then the safe default
+.B 127.0.0.1
+(loopback).
+Ignored in one-shot audit mode.
+Class: fallback.
+See
+.BR data\-boar (1).
+.TP
+.B AUDIT_API_KEY
+API key read when
+.B api.api_key_from_env
+is set and
+.B api.require_api_key
+is true.
+Class: secret source.
+See
+.BR data\-boar (1).
+.TP
+.B DATA_BOAR_WEBAUTHN_TOKEN_SECRET
+WebAuthn session signing secret when
+.B api.webauthn.enabled
+is true.
+The name can be changed with
+.BR api.webauthn.token_secret_from_env .
+Class: secret source.
+Startup fails if WebAuthn is enabled and the secret is unset.
+.TP
+.B DATA_BOAR_HTML_CSRF_SECRET
+Signing key for the dashboard HTML forms.
+The key is resolved in this order, first match wins:
+the WebAuthn token secret when WebAuthn is enabled and the secret resolves;
+this variable, which gives a stable key across restarts;
+a random key that lives only as long as the process (form tokens become invalid after a restart).
+Class: secret source.
+.TP
+.B DATA_BOAR_MATURITY_INTEGRITY_SECRET
+Secret used to seal maturity assessment rows; when unset, rows are stored unsealed.
+The name can be changed with
+.BR maturity_integrity_secret_from_env .
+Class: secret source.
+.
+.SS Rate limiting of scan-starting API endpoints
+Each variable overrides the key of the same meaning in the
+top-level
+.B rate_limit
+block of the configuration file (see
+.BR data_boar (5)).
+.TP
+.B RATE_LIMIT_ENABLED
+.B 1 ,
+.BR true ,
+.B yes
+or
+.B on
+(any case) enable the limit; any other value disables it.
+Class: override.
+.TP
+.B RATE_LIMIT_MAX_CONCURRENT_SCANS
+Integer, minimum 1 (built-in default 1).
+An invalid integer is ignored and the configuration value is kept.
+Class: override.
+.TP
+.B RATE_LIMIT_MIN_INTERVAL_SECONDS
+Integer, minimum 0 (built-in default 0).
+An invalid integer is ignored and the configuration value is kept.
+Class: override.
+.TP
+.B RATE_LIMIT_GRACE_FOR_RUNNING_STATUS
+Integer (built-in default 0).
+An invalid integer is ignored and the configuration value is kept.
+Class: override.
+.
+.SS SQL sampling
+.TP
+.B DATA_BOAR_SQL_SAMPLE_LIMIT
+Upper bound of sampled rows per table.
+Class: override.
+See
+.BR data\-boar (1).
+.TP
+.B DATA_BOAR_SAMPLE_STATEMENT_TIMEOUT_MS
+Optional per-statement time limit for sampling queries, in milliseconds.
+Applied on MySQL and MariaDB (execution-time hint) and on PostgreSQL (statement timeout).
+Class: override.
+See
+.BR data\-boar (1).
+.TP
+.B DATA_BOAR_PG_TABLESAMPLE_SYSTEM_PERCENT
+PostgreSQL
+.B TABLESAMPLE SYSTEM
+percentage of the relation, from 0.01 to 100.
+Class: override.
+.TP
+.B DATA_BOAR_MSSQL_TABLESAMPLE_SYSTEM_PERCENT
+SQL Server
+.B TABLESAMPLE SYSTEM
+percentage, used when table metadata marks a table as huge.
+Class: override.
+.TP
+.B DATA_BOAR_SAMPLE_FETCH_MULTIPLIER
+Multiplier applied to the distinct-value sample limit to size the number of rows read from a SQL source
+before client-side de-duplication (built-in default 10; values are clamped between 1 and 100,
+and an invalid or empty value uses the default).
+The row budget never exceeds 10000 rows, and a table estimated to have fewer rows than the budget is read in full.
+Class: override.
+.
+.SS Credential host gate
+These variables apply to credentials read through
+.B *_from_env
+keys (see SECRETS).
+.TP
+.B DATA_BOAR_CREDENTIAL_STRICT
+.BR 1 ,
+.BR true ,
+.B yes
+or
+.B on
+(any case) turn on the fail-closed host gate; anything else leaves it off, which is the default.
+Class: gate.
+.TP
+.B DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS
+Comma-separated list of hosts (without port; bracket an IPv6 address, case-insensitive) that may receive
+environment credentials.
+Used only when the gate is on; unset or empty then rejects the configuration.
+Class: gate.
+.TP
+.B DATA_BOAR_CREDENTIAL_HOSTS_UNRESTRICTED
+.BR 1 ,
+.BR true ,
+.B yes
+or
+.B on
+disable the environment host list while the gate is on, for a laboratory process only; a warning is logged.
+Set it in the process environment, not in the configuration file.
+Class: gate.
+.
+.SS Optional features
+.TP
+.B DATA_BOAR_PREFILTER
+.BR 0 ,
+.B off
+or
+.B false
+(any case) turn the optional prefilter accelerator off for the scan path; the core engine is used instead.
+Any other value, or no value, leaves the decision to the licensed tier and the installed accelerator.
+Class: gate.
+.TP
+.B DATA_BOAR_EXTRAS_DIR
+Directory searched for optional extras (built-in default
+.IR /extras ).
+Class: path.
+.TP
+.B DATA_BOAR_OTEL_ENABLED
+.BR 1 ,
+.BR true ,
+.B yes
+or
+.B on
+(any case) enable OpenTelemetry export; anything else leaves it disabled.
+Class: gate.
+.TP
+.B OTEL_EXPORTER_OTLP_ENDPOINT
+OTLP endpoint (built-in default
+.IR http://127.0.0.1:4317 ).
+Plaintext OTLP is used only for loopback hosts; remote collectors use TLS.
+Only the scheme, host and port are written to the logs.
+Class: path.
+.TP
+.B OTEL_SERVICE_NAME
+Service name reported to the OTLP collector, following the OpenTelemetry convention
+(built-in default
+.IR data\-boar ).
+There is no configuration key for it.
+Class: fallback.
+.
+.SS Variables set by the program (do not set)
+.B data\-boar
+writes these variables before it starts the web server so that worker processes see the same transport state.
+The operator supplies the same information through command-line options, not through these variables:
+.BR \-\-https\-cert\-file ,
+.B \-\-https\-key\-file
+and
+.BR \-\-allow\-insecure\-http
+(see
+.BR data\-boar (1)).
+.TP
+.B DATA_BOAR_DASHBOARD_TRANSPORT
+Transport mode chosen at startup. Class: internal.
+.TP
+.B DATA_BOAR_DASHBOARD_INSECURE_OPT_IN
+.B 1
+when plaintext HTTP was explicitly accepted, otherwise
+.BR 0 .
+Class: internal.
+.TP
+.B DATA_BOAR_HTTPS_CERT_FILE
+Certificate path in use. Class: internal.
+.TP
+.B DATA_BOAR_HTTPS_KEY_FILE
+Key path in use. Class: internal.
+.TP
+.B DATA_BOAR_TLS_POSTURE
+Serialized TLS posture shared with worker processes. Class: internal.
+.
+.SS Not documented on this page
+Variables read only by repository maintenance, release, continuous-integration and laboratory scripts are documented in the
+repository documentation, not here.
+Licensing and build-integrity variables are documented with the licensing documentation.
+.
+.SH SECURITY
+Environment variables are visible to other processes of the same user and are often captured by container and
+orchestration tooling.
+Treat every variable classed as
+.B secret source
+as sensitive: supply it from a secret store or an orchestrator secret, do not commit it, and do not echo it into logs.
+.
+.SH FILES
+Configuration and report locations are documented in
+.BR data_boar (5)
+and in the
+.B FILES
+section of
+.BR data\-boar (1).
+.
+.SH SEE ALSO
+.BR data\-boar (1),
+.BR data_boar (5)
