@@ -38,7 +38,12 @@ from pathlib import Path
 from typing import Callable
 
 # ---------------------------------------------------------------------------
-# Synthetic PII (deterministic, never real persons)
+# Synthetic PII (deterministic, fixed pools)
+# CPF/CNPJ values carry VALID Mod-11 check digits on purpose: the detector only
+# tags LGPD_CPF / LGPD_CNPJ when the checksum passes, so the demo must use them
+# to find anything. A valid check digit does not prove the number is unassigned;
+# the values are labelled synthetic, and only scenario 4 uses invalid digits.
+# E-mails use RFC 2606 / RFC 6761 reserved names only.
 # ---------------------------------------------------------------------------
 _CPFS = [
     "123.456.789-09",
@@ -47,7 +52,7 @@ _CPFS = [
     "000.000.001-91",
     "529.982.247-25",
 ]
-_CNPJS = ["11.222.333/0001-81", "00.000.000/0001-91", "12.345.678/0001-95"]
+_CNPJS = ["11.222.333/0001-81", "98.765.432/0001-98", "12.345.678/0001-95"]
 _RGS = ["12.345.678-9", "98.765.432-1", "00.111.222-3"]
 _NAMES = [
     "Ana Paula Souza",
@@ -57,7 +62,7 @@ _NAMES = [
     "Maria Oliveira Santos",
 ]
 _EMAILS = [
-    "ana.souza@example-test.com",
+    "ana.souza@example.com",
     "carlos.lima@demo.invalid",
     "f.costa@poc-databoar.test",
 ]
@@ -72,7 +77,11 @@ EXPECTED: dict[str, str] = {
     "1_happy": "DEVE ENCONTRAR -- PII em claro, sem ofuscacao",
     "2_unhappy": "DEVE ENCONTRAR -- mas pode requerer OCR ou tolerancia a ruido",
     "3_catastrophic": "PODE NAO ENCONTRAR -- dados em arquivos aninhados ou com senha",
-    "4_false_positive": "NAO DEVE ENCONTRAR -- strings similares a PII mas invalidas",
+    "4_false_positive": (
+        "NAO DEVE ENCONTRAR LGPD_CPF nem LGPD_CNPJ -- strings com formato de CPF/CNPJ "
+        "mas digito verificador invalido. Falso positivo conhecido: PHONE_BR em codigos "
+        "de 11 digitos (#2235)."
+    ),
     "5_manual_review": "DEVE SINALIZAR PARA REVISAO MANUAL -- dados parcialmente mascarados",
     "6_stego": "NAO DEVE ENCONTRAR sem modulo estego -- CPF em LSB de imagem PNG",
     "7_extensions": "DEVE ENCONTRAR em todos os formatos suportados",

@@ -58,7 +58,7 @@ _CPFS = [
     "000.000.001-91",
     "529.982.247-25",
 ]
-_CNPJS = ["11.222.333/0001-81", "00.000.000/0001-91", "12.345.678/0001-95"]
+_CNPJS = ["11.222.333/0001-81", "98.765.432/0001-98", "12.345.678/0001-95"]
 _RGS = ["12.345.678-9", "98.765.432-1", "00.111.222-3"]
 _NAMES = [
     "Ana Paula Souza",
@@ -70,7 +70,7 @@ _NAMES = [
 _NAMES_ES = ["Maria García López", "Juan Carlos Rodríguez", "Ana Martínez Pérez"]
 _NAMES_EN = ["John Smith", "Jane Doe", "Alice Johnson"]
 _EMAILS = [
-    "ana.souza@example-test.com",
+    "ana.souza@example.com",
     "carlos.lima@demo.invalid",
     "f.costa@poc-databoar.test",
 ]
