@@ -12,7 +12,7 @@ Some **developer gates** and **thin wrappers** exist in **two forms**: **PowerSh
 
 1. **Paired scripts:** When you **add** or **change behaviour** (flags, order of steps, exit codes, retry logic) in one member of a pair, update the **sibling** in the **same PR** when practical; if not, add a **tracked TODO** (e.g. `PLANS_TODO.md` row) and link both filenames so the gap is visible.
 2. **New gate wrapper:** If you introduce a **new** Windows-first **`scripts/*.ps1`** that operators are expected to run routinely from the repo root, consider whether a **`scripts/*.sh`** twin is warranted for Linux — and vice versa if you add a **Linux-first** **`*.sh`** that Windows contributors would miss.
-3. **Not everything is paired:** Lab-only **`*.sh`** (SSH targets), Windows-only **`es-find.ps1`**, and large orchestrators may stay **single-platform**; document that in the hub row or script header instead of inventing a hollow twin.
+3. **Not everything is paired:** Lab-only **`*.sh`** (SSH targets), Windows-only **`es-find.ps1`**, and large orchestrators may stay **single-platform**; document that in the hub row or script header instead of inventing a hollow twin. Example: **`deploy/demo/bin/demo-restore-baseline.sh`** runs only on the Linux demo host (rootless Podman `ExecStartPre`), so it has no `.ps1` twin.
 4. **Canonical behaviour:** The **`.ps1`** remains the **reference** for Windows-first docs strings today; **`.sh`** mirrors **intent** (`uv`, `pre-commit`, `pytest` flags). If behaviour diverges, fix the drift — do not “paper over” with docs-only claims.
 
 ## Current paired gates (dev PC)

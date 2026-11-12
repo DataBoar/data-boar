@@ -12,6 +12,8 @@ Covers seven test scenarios:
   5. manual_review  -- ambiguous / partial data (flag for human review)
   6. stego          -- CPF/RG hidden in image LSB (NOT found without stego module)
   7. extensions     -- one file per supported extension, all containing a CPF
+  9. protected_archive -- password-protected .7z (flagged without the password,
+                          read with the fictitious demo password; needs py7zr)
 
 Usage:
   uv run python scripts/generate_synthetic_poc_corpus.py
@@ -38,7 +40,12 @@ from pathlib import Path
 from typing import Callable
 
 # ---------------------------------------------------------------------------
-# Synthetic PII (deterministic, never real persons)
+# Synthetic PII (deterministic, fixed pools)
+# CPF/CNPJ values carry VALID Mod-11 check digits on purpose: the detector only
+# tags LGPD_CPF / LGPD_CNPJ when the checksum passes, so the demo must use them
+# to find anything. A valid check digit does not prove the number is unassigned;
+# the values are labelled synthetic, and only scenario 4 uses invalid digits.
+# E-mails use RFC 2606 / RFC 6761 reserved names only.
 # ---------------------------------------------------------------------------
 _CPFS = [
     "123.456.789-09",
@@ -47,7 +54,7 @@ _CPFS = [
     "000.000.001-91",
     "529.982.247-25",
 ]
-_CNPJS = ["11.222.333/0001-81", "00.000.000/0001-91", "12.345.678/0001-95"]
+_CNPJS = ["11.222.333/0001-81", "98.765.432/0001-98", "12.345.678/0001-95"]
 _RGS = ["12.345.678-9", "98.765.432-1", "00.111.222-3"]
 _NAMES = [
     "Ana Paula Souza",
@@ -57,7 +64,7 @@ _NAMES = [
     "Maria Oliveira Santos",
 ]
 _EMAILS = [
-    "ana.souza@example-test.com",
+    "ana.souza@example.com",
     "carlos.lima@demo.invalid",
     "f.costa@poc-databoar.test",
 ]
@@ -72,10 +79,21 @@ EXPECTED: dict[str, str] = {
     "1_happy": "DEVE ENCONTRAR -- PII em claro, sem ofuscacao",
     "2_unhappy": "DEVE ENCONTRAR -- mas pode requerer OCR ou tolerancia a ruido",
     "3_catastrophic": "PODE NAO ENCONTRAR -- dados em arquivos aninhados ou com senha",
-    "4_false_positive": "NAO DEVE ENCONTRAR -- strings similares a PII mas invalidas",
+    "4_false_positive": (
+        "NAO DEVE ENCONTRAR LGPD_CPF nem LGPD_CNPJ -- strings com formato de CPF/CNPJ "
+        "mas digito verificador invalido. Falso positivo conhecido: PHONE_BR em codigos "
+        "de 11 digitos (#2235)."
+    ),
     "5_manual_review": "DEVE SINALIZAR PARA REVISAO MANUAL -- dados parcialmente mascarados",
     "6_stego": "NAO DEVE ENCONTRAR sem modulo estego -- CPF em LSB de imagem PNG",
     "7_extensions": "DEVE ENCONTRAR em todos os formatos suportados",
+    "9_protected_archive": (
+        "SEM SENHA: deve SINALIZAR em scan_failures (encrypted_no_password), nunca "
+        "'limpo'. COM SENHA: deve ENCONTRAR o CPF sintetico dentro do .7z. "
+        "Senha de DEMO (ficticia, nao e credencial real): demo-boar-7z-ficticia -- "
+        "configure file_scan.file_passwords: {'.7z': '<senha>'} e scan_compressed: true. "
+        "Requer o extra opcional 'compressed' (py7zr)."
+    ),
 }
 
 
@@ -308,14 +326,34 @@ def gen_scenario_3(base: Path) -> None:
 # ---------------------------------------------------------------------------
 # Scenario 4 - False positive pressure
 # ---------------------------------------------------------------------------
-def gen_scenario_4(base: Path) -> None:
-    import random as _r
+_SCENARIO_4_SEED = 2176  # fixed seed: scenario 4 must be reproducible (#2176)
 
+
+def _cpf_check_digits(base9: list[int]) -> tuple[int, int]:
+    def _dv(digits: list[int]) -> int:
+        n = len(digits) + 1
+        r = sum(d * (n - i) for i, d in enumerate(digits)) % 11
+        return 0 if r < 2 else 11 - r
+
+    d1 = _dv(base9)
+    return d1, _dv([*base9, d1])
+
+
+def gen_scenario_4(base: Path) -> None:
+    import random
+
+    _r = random.Random(_SCENARIO_4_SEED)
     out = base / "4_false_positive"
 
-    def _invalid_cpf_shaped() -> str:
+    def _invalid_cpf_digits() -> str:
+        """11 digits whose last check digit is wrong by construction (Mod-11 fails)."""
         d = [_r.randint(0, 9) for _ in range(9)]
-        return f"{d[0]}{d[1]}{d[2]}.{d[3]}{d[4]}{d[5]}.{d[6]}{d[7]}{d[8]}-{(d[0] + 1) % 10}{(d[1] + 1) % 10}"
+        d1, d2 = _cpf_check_digits(d)
+        return "".join(map(str, d)) + f"{d1}{(d2 + 1) % 10}"
+
+    def _invalid_cpf_shaped() -> str:
+        s = _invalid_cpf_digits()
+        return f"{s[0:3]}.{s[3:6]}.{s[6:9]}-{s[9:11]}"
 
     _w(
         out / "serial_numbers.txt",
@@ -325,7 +363,7 @@ def gen_scenario_4(base: Path) -> None:
     _w(out / "cnpj_shaped_refs.txt", "Ref: 00.111.222/0099-00\n" * 5)  # invalid CNPJ
     _w(
         out / "random_codes.txt",
-        "\n".join(f"Cod: {_r.randint(10000000000, 99999999999)}" for _ in range(20)),
+        "\n".join(f"Cod: {_invalid_cpf_digits()}" for _ in range(20)),
     )
     _w(
         out / "ip_addresses.txt",
@@ -865,6 +903,42 @@ def gen_config_errors(base: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Scenario 9 - Password-protected 7z (demo password is fictitious)
+# ---------------------------------------------------------------------------
+DEMO_ARCHIVE_PASSWORD = "demo-boar-7z-ficticia"
+PROTECTED_ARCHIVE_NAME = "protegido_demo.7z"
+
+
+def gen_protected_archive(base: Path) -> None:
+    """Write a password-protected .7z with synthetic PII (needs the ``compressed`` extra).
+
+    Without ``file_scan.file_passwords`` the scan records ``encrypted_no_password``
+    in ``scan_failures``; with ``{".7z": DEMO_ARCHIVE_PASSWORD}`` the inner file is
+    read and its findings appear. The password is a fictitious demo value.
+    """
+    out = base / "9_protected_archive"
+    out.mkdir(parents=True, exist_ok=True)
+    _w(out / "EXPECTED.txt", EXPECTED["9_protected_archive"])
+    try:
+        import py7zr
+    except ImportError:
+        print(
+            "  !  Scenario 9 (protected_archive) skipped: install the optional "
+            "'compressed' extra (py7zr) to generate the .7z"
+        )
+        return
+    inner = textwrap.dedent(f"""\
+        FICHA CADASTRAL -- FICTICIA -- APENAS PARA DEMO
+        Nome: {_p(_NAMES, 4)}  CPF: {_p(_CPFS, 4)}
+        Email: {_p(_EMAILS, 1)}  CNPJ: {_p(_CNPJS, 2)}
+    """)
+    archive = out / PROTECTED_ARCHIVE_NAME
+    with py7zr.SevenZipFile(archive, "w", password=DEMO_ARCHIVE_PASSWORD) as z:
+        z.writestr(inner.encode("utf-8"), "ficha_cadastral.txt")
+    print(f"  v  Scenario 9 (protected_archive) -> {out}")
+
+
 _SCENARIO_MAP: dict[str, Callable[[Path], None]] = {
     "happy": gen_scenario_1,
     "unhappy": gen_scenario_2,
@@ -875,6 +949,7 @@ _SCENARIO_MAP: dict[str, Callable[[Path], None]] = {
     "extensions": gen_all_extensions,
     "stress_load": gen_stress_load,
     "config_errors": gen_config_errors,
+    "protected_archive": gen_protected_archive,
 }
 ALL_SCENARIOS = list(_SCENARIO_MAP)
 
