@@ -335,17 +335,37 @@ def pin_tree(tmp_path: Path) -> Path:
     return root
 
 
+_SCRIPT_TOOLS = (
+    "awk", "cat", "curl", "dirname", "grep", "head", "install", "ln", "mkdir",
+    "mktemp", "mv", "readlink", "rm", "sed", "sha256sum", "tar", "tr", "uname",
+)  # fmt: skip
+
+
+def _tools_dir(parent: Path) -> Path:
+    """A PATH holding only what pinned-uv.sh needs, and NO uv: the host's own uv (the CI
+    runner has the pinned one) must not decide the outcome of these tests."""
+    tools = parent / "tools"
+    tools.mkdir(parents=True, exist_ok=True)
+    for name in _SCRIPT_TOOLS:
+        real = shutil.which(name)
+        link = tools / name
+        if real and not link.exists():
+            link.symlink_to(real)
+    assert not (tools / "uv").exists()
+    return tools
+
+
 def _run_pinned(
     root: Path, cache: Path, **env: str
 ) -> subprocess.CompletedProcess[str]:
     full = {
-        "PATH": os.environ["PATH"],
+        "PATH": str(_tools_dir(root.parent)),
         "HOME": str(root.parent / "home"),
         "DATA_BOAR_UV_CACHE_DIR": str(cache),
         **env,
     }
     return subprocess.run(
-        ["bash", str(root / PINNED_UV_SCRIPT)],
+        [shutil.which("bash") or "bash", str(root / PINNED_UV_SCRIPT)],
         capture_output=True,
         text=True,
         env=full,
@@ -392,6 +412,81 @@ def test_pinned_uv_rejects_a_cached_binary_of_another_version(
     assert r.returncode != 0
     assert r.stdout.strip() == ""
     assert "ERROR" in r.stderr
+
+
+def _path_with(fake_dir: Path, parent: Path) -> str:
+    return f"{fake_dir}:{_tools_dir(parent)}"
+
+
+def test_pinned_uv_accepts_an_exact_uv_already_on_path(
+    pin_tree: Path, tmp_path: Path
+) -> None:
+    """Any platform: a uv of EXACTLY the pinned version on PATH is enough (no download)."""
+    version = read_source_version(pin_tree)
+    on_path = tmp_path / "userbin"
+    _fake_uv(on_path, version)
+    r = _run_pinned(
+        pin_tree,
+        tmp_path / "cache",
+        PATH=_path_with(on_path, pin_tree.parent),
+        PINNED_UV_BASE_URL=f"file://{tmp_path}/nowhere",
+    )
+    assert r.returncode == 0, r.stderr
+    assert "downloading" not in r.stderr
+    out_dir = Path(r.stdout.strip())
+    assert (out_dir / "uv").exists()
+    reported = subprocess.run(
+        [str(out_dir / "uv"), "--version"], capture_output=True, text=True, check=False
+    )
+    assert f"uv {version}" in reported.stdout
+
+
+def test_pinned_uv_rejects_a_path_uv_of_another_version(
+    pin_tree: Path, tmp_path: Path
+) -> None:
+    version = read_source_version(pin_tree)
+    on_path = tmp_path / "userbin"
+    _fake_uv(on_path, "0.13.7")
+    r = _run_pinned(
+        pin_tree,
+        tmp_path / "cache",
+        PATH=_path_with(on_path, pin_tree.parent),
+        PINNED_UV_BASE_URL=f"file://{tmp_path}/nowhere",
+    )
+    assert r.returncode != 0
+    assert r.stdout.strip() == ""
+    assert version in r.stderr
+
+
+def test_pinned_uv_on_an_unsupported_platform_explains_what_really_works(
+    pin_tree: Path, tmp_path: Path
+) -> None:
+    """Off linux-x86_64 there is no registered digest: with no exact uv anywhere it must fail
+    saying the truth (cache dir or a uv of that exact version on PATH), never hint at
+    something the script does not do."""
+    version = read_source_version(pin_tree)
+    r = _run_pinned(pin_tree, tmp_path / "cache", PINNED_UV_UNAME="Darwin-arm64")
+    assert r.returncode != 0
+    assert r.stdout.strip() == ""
+    assert "Darwin-arm64" in r.stderr
+    assert version in r.stderr
+    assert "PATH" in r.stderr
+
+
+def test_pinned_uv_on_an_unsupported_platform_accepts_an_exact_uv_on_path(
+    pin_tree: Path, tmp_path: Path
+) -> None:
+    version = read_source_version(pin_tree)
+    on_path = tmp_path / "userbin"
+    _fake_uv(on_path, version)
+    r = _run_pinned(
+        pin_tree,
+        tmp_path / "cache",
+        PATH=_path_with(on_path, pin_tree.parent),
+        PINNED_UV_UNAME="FreeBSD-aarch64",
+    )
+    assert r.returncode == 0, r.stderr
+    assert (Path(r.stdout.strip()) / "uv").exists()
 
 
 @pytest.mark.parametrize("content", ["latest\n", "0.11\n", "", "0.11.2 0.12.0\n"])
