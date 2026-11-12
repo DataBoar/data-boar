@@ -49,7 +49,9 @@ EXPECTED_STR_E_COUNTS: Counter[tuple[str, str, str]] = Counter(
         ("connectors/redis_connector.py", "_save_inventory_snapshot", "inert"): 1,
         ("connectors/rest_connector.py", "run", "persist"): 1,
         ("connectors/sharepoint_connector.py", "run", "persist"): 1,
-        ("connectors/smb_connector.py", "_run_registered_session", "persist"): 2,
+        # +1 (#1447): walk onerror records permission_denied via save_failure,
+        # which runs sanitize_log_text before logging and storing (core/database.py).
+        ("connectors/smb_connector.py", "_run_registered_session", "persist"): 3,
         ("connectors/snowflake_connector.py", "run", "persist"): 2,
         ("connectors/sql_connector.py", "sample", "logger"): 1,
         ("connectors/sql_connector.py", "run", "persist"): 2,
