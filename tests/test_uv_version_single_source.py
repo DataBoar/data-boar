@@ -20,11 +20,14 @@ Contract
 
 from __future__ import annotations
 
+import hashlib
+import io
 import os
 import re
 import shutil
 import subprocess
 import sys
+import tarfile
 from pathlib import Path
 
 import pytest
@@ -353,7 +356,8 @@ def pin_tree(tmp_path: Path) -> Path:
 
 
 _SCRIPT_TOOLS = (
-    "awk", "basename", "cat", "curl", "dirname", "grep", "head", "install", "ln", "mkdir",
+    "awk", "basename", "cat", "chmod", "curl", "dirname", "grep", "gzip", "head", "install", "ln",
+    "mkdir",
     "mktemp", "mv", "readlink", "rm", "sed", "sha256sum", "tar", "tr", "uname",
 )  # fmt: skip
 
@@ -873,3 +877,199 @@ def test_pinned_uv_sh_works_without_sha256sum_using_shasum(
     assert "sha256sum not found" not in r.stderr
     assert "SHA256 mismatch" in r.stderr  # the digest WAS computed, via shasum
     assert asset in r.stderr
+
+
+# --------------------------------------------------------------------------- concurrency + happy path
+
+
+def _serve_fake_uv(
+    root: Path, tmp_path: Path, asset: str = "uv-x86_64-unknown-linux-gnu.tar.gz"
+) -> str:
+    """Serve a tarball holding a fake `uv` and make THIS tree's copy of the digest registry trust it,
+    so the whole download -> verify -> extract -> install path runs for real (review of #2233)."""
+    version = read_source_version(root)
+    served = tmp_path / "served" / version
+    served.mkdir(parents=True, exist_ok=True)
+    body = f'#!/bin/sh\necho "uv {version} (fake)"\n'.encode()
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w:gz") as tar:
+        info = tarfile.TarInfo(f"{asset.removesuffix('.tar.gz')}/uv")
+        info.size = len(body)
+        info.mode = 0o755
+        tar.addfile(info, io.BytesIO(body))
+    data = buf.getvalue()
+    (served / asset).write_bytes(data)
+    sha = hashlib.sha256(data).hexdigest()
+    registry = root / "tests/test_uv_version_single_source.py"
+    text = registry.read_text(encoding="utf-8")
+    key = re.escape(f"{version}/{asset}")
+    patched = re.sub(rf'("{key}":\s*")[0-9a-f]{{64}}(")', rf"\g<1>{sha}\g<2>", text)
+    assert patched != text, f"registry has no entry for {version}/{asset}"
+    registry.write_text(patched, encoding="utf-8")
+    return str(tmp_path / "served")
+
+
+def _spawn(
+    cmd: list[str], root: Path, cache: Path, **env: str
+) -> subprocess.Popen[str]:
+    full = {
+        "PATH": str(_tools_dir(root.parent)),
+        "HOME": str(root.parent / "home"),
+        "DATA_BOAR_UV_CACHE_DIR": str(cache),
+        **env,
+    }
+    return subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        env=full,
+    )
+
+
+def _bash_cmd(root: Path) -> list[str]:
+    return [shutil.which("bash") or "bash", str(root / PINNED_UV_SCRIPT)]
+
+
+def _pwsh_cmd(root: Path) -> list[str]:
+    return [
+        shutil.which("pwsh") or "pwsh",
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        str(root / PINNED_UV_PS1),
+    ]
+
+
+def test_pinned_uv_sh_installs_a_verified_download_and_reuses_the_cache(
+    pin_tree: Path, tmp_path: Path
+) -> None:
+    base = _serve_fake_uv(pin_tree, tmp_path)
+    cache = tmp_path / "cache"
+    first = _run_pinned(
+        pin_tree,
+        cache,
+        PINNED_UV_UNAME="Linux-x86_64",
+        PINNED_UV_BASE_URL=f"file://{base}",
+    )
+    assert first.returncode == 0, first.stderr
+    assert "SHA256 verified" in first.stderr
+    assert (Path(first.stdout.strip()) / "uv").stat().st_mode & 0o111
+    second = _run_pinned(
+        pin_tree,
+        cache,
+        PINNED_UV_UNAME="Linux-x86_64",
+        PINNED_UV_BASE_URL=f"file://{tmp_path}/nowhere",
+    )
+    assert second.returncode == 0, second.stderr
+    assert second.stdout == first.stdout
+    assert "downloading" not in second.stderr
+
+
+@needs_pwsh
+def test_pinned_uv_ps1_installs_a_verified_download_and_reuses_the_cache(
+    pin_tree: Path, tmp_path: Path
+) -> None:
+    base = _serve_fake_uv(pin_tree, tmp_path)
+    cache = tmp_path / "cache"
+    first = _run_ps1(
+        pin_tree,
+        cache,
+        PINNED_UV_UNAME="Linux-x86_64",
+        PINNED_UV_BASE_URL=f"file://{base}",
+    )
+    assert first.returncode == 0, first.stderr
+    assert "SHA256 verified" in first.stderr
+    assert (Path(first.stdout.strip()) / "uv").stat().st_mode & 0o111
+    second = _run_ps1(
+        pin_tree,
+        cache,
+        PINNED_UV_UNAME="Linux-x86_64",
+        PINNED_UV_BASE_URL=f"file://{tmp_path}/nowhere",
+    )
+    assert second.returncode == 0, second.stderr
+    assert second.stdout == first.stdout
+    assert "downloading" not in second.stderr
+
+
+def _run_concurrently(
+    cmd: list[str], root: Path, tmp_path: Path, rounds: int, **env: str
+) -> None:
+    version = read_source_version(root)
+    for n in range(rounds):
+        cache = tmp_path / f"cache{n}"
+        procs = [_spawn(cmd, root, cache, **env) for _ in range(3)]
+        results = [(p, *p.communicate()) for p in procs]
+        for proc, out, err in results:
+            assert proc.returncode == 0, f"round {n}: {err}"
+            assert out.strip() == str(cache / f"uv-{version}"), f"round {n}: {out!r}"
+        installed = cache / f"uv-{version}" / "uv"
+        assert installed.stat().st_mode & 0o111, f"round {n}: uv not executable"
+        probe = subprocess.run(
+            [str(installed), "--version"], capture_output=True, text=True, check=False
+        )
+        assert f"uv {version}" in probe.stdout, f"round {n}: {probe.stderr!r}"
+
+
+def test_pinned_uv_sh_survives_concurrent_cold_cache_downloads(
+    pin_tree: Path, tmp_path: Path
+) -> None:
+    """Several check-all runs (one per worktree) filling an empty cache at once: all must succeed
+    and leave one working uv. A shared fixed temp name made 65 of 75 runs fail (review of #2233)."""
+    base = _serve_fake_uv(pin_tree, tmp_path)
+    _run_concurrently(
+        _bash_cmd(pin_tree),
+        pin_tree,
+        tmp_path,
+        10,
+        PINNED_UV_UNAME="Linux-x86_64",
+        PINNED_UV_BASE_URL=f"file://{base}",
+    )
+
+
+@needs_pwsh
+def test_pinned_uv_ps1_survives_concurrent_cold_cache_downloads(
+    pin_tree: Path, tmp_path: Path
+) -> None:
+    base = _serve_fake_uv(pin_tree, tmp_path)
+    _run_concurrently(
+        _pwsh_cmd(pin_tree),
+        pin_tree,
+        tmp_path,
+        5,
+        PINNED_UV_UNAME="Linux-x86_64",
+        PINNED_UV_BASE_URL=f"file://{base}",
+    )
+
+
+def test_pinned_uv_sh_survives_concurrent_links_to_a_path_uv(
+    pin_tree: Path, tmp_path: Path
+) -> None:
+    version = read_source_version(pin_tree)
+    on_path = tmp_path / "userbin"
+    _fake_uv(on_path, version)
+    _run_concurrently(
+        _bash_cmd(pin_tree),
+        pin_tree,
+        tmp_path,
+        10,
+        PATH=_path_with(on_path, pin_tree.parent),
+        PINNED_UV_BASE_URL=f"file://{tmp_path}/nowhere",
+    )
+
+
+@needs_pwsh
+def test_pinned_uv_ps1_survives_concurrent_links_to_a_path_uv(
+    pin_tree: Path, tmp_path: Path
+) -> None:
+    version = read_source_version(pin_tree)
+    on_path = tmp_path / "userbin"
+    _fake_uv(on_path, version)
+    _run_concurrently(
+        _pwsh_cmd(pin_tree),
+        pin_tree,
+        tmp_path,
+        5,
+        PATH=_path_with(on_path, pin_tree.parent),
+        PINNED_UV_BASE_URL=f"file://{tmp_path}/nowhere",
+    )

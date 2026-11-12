@@ -287,3 +287,18 @@ def test_fail_closed_does_not_reject_genuinely_equivalent_pairs() -> None:
         "python_full_version >= '3.10.0'", "python_full_version >= '3.10'"
     )
     assert markers_equivalent("sys_platform == 'win32'", 'sys_platform == "win32"')
+
+
+@pytest.mark.parametrize(
+    ("a", "b"),
+    [
+        # `===` is arbitrary string equality (PEP 440): it differs from `==` on '3.10.0' vs '3.10'.
+        ("python_full_version === '3.10'", "python_full_version == '3.10'"),
+        ("python_full_version == '3.10'", "python_full_version === '3.10'"),
+        ("'3.10' === python_full_version", "python_full_version == '3.10'"),
+    ],
+)
+def test_triple_equals_is_never_proven_equivalent_to_double_equals(
+    a: str, b: str
+) -> None:
+    assert not markers_equivalent(a, b)
