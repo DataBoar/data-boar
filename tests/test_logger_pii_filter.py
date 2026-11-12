@@ -176,7 +176,7 @@ def test_str_e_survey_matches_snapshot() -> None:
     )
     kind_totals = Counter(s.kind for s in sites)
     assert kind_totals["logger"] == 2
-    assert kind_totals["persist"] == 20
+    assert kind_totals["persist"] == 21  # +1 SMB walk onerror (#1447)
     assert kind_totals["inert"] == 14
 
 
