@@ -444,7 +444,8 @@ def test_check_all_sh_resolves_the_pinned_uv_before_using_uv() -> None:
     text = _read(REPO_ROOT, CHECK_ALL_SH)
     resolve = text.index("scripts/pinned-uv.sh")
     assert resolve < text.index("command -v uv")
-    assert resolve < text.index("gatekeeper_audit.py")
+    # first EXECUTABLE use of uv (the header comment also names gatekeeper_audit.py)
+    assert resolve < text.index("uv run python")
     assert 'export PATH="$PINNED_UV_DIR:$PATH"' in text
     assert "using $(uv --version)" in text  # prints the version in use
     # no escape hatch around the pin
