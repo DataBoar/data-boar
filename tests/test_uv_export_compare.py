@@ -55,6 +55,7 @@ def _doc(body: str = BODY, out: str = "requirements.txt") -> str:
     ("a", "b"),
     [
         (MSOFFCRYPTO_0112, MSOFFCRYPTO_0137),
+        ("python_full_version >= '3.10.0'", "python_full_version >= '3.10'"),
         ("sys_platform == 'win32'", 'sys_platform == "win32"'),
         (
             "sys_platform == 'win32' or os_name == 'nt'",
@@ -101,6 +102,10 @@ def test_equivalent_markers(a: str, b: str) -> None:
         # version boundary
         ("python_version >= '3.10'", "python_version >= '3.11'"),
         ("python_version < '3.12'", "python_version <= '3.12'"),
+        # python_full_version carries a patch level: 3.9.5 is > 3.9 but < 3.10
+        ("python_full_version >= '3.10'", "python_full_version > '3.9'"),
+        ("python_full_version > '3.9.0'", "python_full_version >= '3.9.1'"),
+        ("implementation_version >= '7.3'", "implementation_version > '7.2'"),
         # different variable
         ("sys_platform == 'win32'", "os_name == 'nt'"),
         (
