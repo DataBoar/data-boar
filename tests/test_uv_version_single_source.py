@@ -829,3 +829,47 @@ def test_pinned_uv_ps1_result_is_capturable_in_process(
     )
     assert r.returncode == 0, r.stderr
     assert f"GOT={cache / f'uv-{version}'} LAST=0" in r.stdout, (r.stdout, r.stderr)
+
+
+def _tools_dir_without_sha256sum(parent: Path) -> Path:
+    """Like stock macOS: no `sha256sum`, only `shasum -a 256` (a fake that delegates to the real
+    sha256sum by absolute path, so the digest it prints is genuine)."""
+    tools = parent / "tools-no-sha256sum"
+    tools.mkdir(parents=True, exist_ok=True)
+    for name in _SCRIPT_TOOLS:
+        real = shutil.which(name)
+        link = tools / name
+        if name != "sha256sum" and real and not link.exists():
+            link.symlink_to(real)
+    real_sum = shutil.which("sha256sum")
+    assert real_sum
+    shasum = tools / "shasum"
+    shasum.write_text(
+        f'#!/bin/sh\n[ "$1" = "-a" ] && [ "$2" = "256" ] || exit 2\nexec {real_sum} "$3"\n',
+        encoding="utf-8",
+    )
+    shasum.chmod(0o755)
+    assert not (tools / "sha256sum").exists() and not (tools / "uv").exists()
+    return tools
+
+
+@pytest.mark.parametrize(("tag", "asset"), sorted(PLATFORM_ASSETS.items()))
+def test_pinned_uv_sh_works_without_sha256sum_using_shasum(
+    pin_tree: Path, tmp_path: Path, tag: str, asset: str
+) -> None:
+    """Stock macOS has `shasum`, not `sha256sum`: the download path must verify with either."""
+    version = read_source_version(pin_tree)
+    served = tmp_path / "served" / version
+    served.mkdir(parents=True)
+    (served / asset).write_bytes(b"not a real tarball")
+    r = _run_pinned(
+        pin_tree,
+        tmp_path / "cache",
+        PATH=str(_tools_dir_without_sha256sum(pin_tree.parent)),
+        PINNED_UV_UNAME=tag,
+        PINNED_UV_BASE_URL=f"file://{tmp_path}/served",
+    )
+    assert r.returncode != 0
+    assert "sha256sum not found" not in r.stderr
+    assert "SHA256 mismatch" in r.stderr  # the digest WAS computed, via shasum
+    assert asset in r.stderr
