@@ -1,0 +1,12 @@
+# Periodic reset of the main demo instance (#1447).
+# Only asks systemd to restart dashboard.service. The baseline restore runs as
+# that service's ExecStartPre, and the new container's conmon lives in the
+# dashboard.service cgroup. The previous oneshot ran `podman start` itself, so
+# conmon stayed in the oneshot's cgroup and was SIGKILLed at the stop timeout.
+
+[Unit]
+Description=Reset the Data Boar public demo (main instance only)
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/systemctl --user restart dashboard.service

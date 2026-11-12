@@ -1,0 +1,10 @@
+[Unit]
+Description=Reset the Data Boar public demo every 30 minutes
+
+[Timer]
+OnCalendar=*:00/30
+Unit=demo-reset.service
+Persistent=false
+
+[Install]
+WantedBy=timers.target

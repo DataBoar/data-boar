@@ -1,0 +1,37 @@
+# Public demo, presentation instance (#1447). Same build and corpus as the
+# main instance, own data directory, NO periodic reset.
+# Flags mirror the original `podman run` of the demo host. Memory goes through
+# PodmanArgs because Quadlet in Podman 5.4 has no Memory= key.
+
+[Unit]
+Description=Data Boar public demo (presentation, no reset)
+Wants=network-online.target
+After=network-online.target
+
+[Container]
+Image=docker.io/fabioleitao/data_boar:1.8.0
+ContainerName=apresentacao
+HostName=%H
+Network=host
+PodmanArgs=--memory 700m
+DropCapability=all
+NoNewPrivileges=true
+StopTimeout=20
+EnvironmentFile=%h/demo/env
+Environment=API_HOST=127.0.0.1
+Environment=DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS=127.0.0.1
+Environment=DATA_BOAR_LICENSE_MODE=enforced
+Environment=DATA_BOAR_LICENSE_PATH=/lic/vps-demo.lic
+Volume=%h/demo/lic:/lic:ro,Z
+Volume=%h/demo/apresentacao/data:/data:U,Z
+Volume=%h/demo/corpus:/corpus:ro,Z
+Volume=%h/demo/certs:/certs:ro,Z
+Volume=%h/demo/extras:/extras:ro,Z
+Exec=main.py --config /data/config.yaml --web --host 127.0.0.1 --port 8089 --https-cert-file /certs/tls.crt --https-key-file /certs/tls.key
+
+[Service]
+Restart=on-failure
+TimeoutStartSec=300
+
+[Install]
+WantedBy=default.target

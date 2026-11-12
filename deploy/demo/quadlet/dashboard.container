@@ -1,0 +1,40 @@
+# Public demo, main instance (#1447). Restored to the synthetic baseline on
+# every start; demo-reset.timer restarts it every 30 minutes.
+# Flags mirror the original `podman run` of the demo host. Memory goes through
+# PodmanArgs because Quadlet in Podman 5.4 has no Memory= key.
+
+[Unit]
+Description=Data Boar public demo (main, 30-minute reset)
+Wants=network-online.target
+After=network-online.target
+
+[Container]
+Image=docker.io/fabioleitao/data_boar:1.8.0
+ContainerName=dashboard
+HostName=%H
+Network=host
+PodmanArgs=--memory 700m
+DropCapability=all
+NoNewPrivileges=true
+StopTimeout=20
+EnvironmentFile=%h/demo/env
+Environment=API_HOST=127.0.0.1
+Environment=DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS=127.0.0.1
+Environment=DATA_BOAR_LICENSE_MODE=enforced
+Environment=DATA_BOAR_LICENSE_PATH=/lic/vps-demo.lic
+Volume=%h/demo/lic:/lic:ro,Z
+Volume=%h/demo/data:/data:U,Z
+Volume=%h/demo/corpus:/corpus:ro,Z
+Volume=%h/demo/certs:/certs:ro,Z
+Volume=%h/demo/extras:/extras:ro,Z
+Exec=main.py --config /data/config.yaml --web --host 127.0.0.1 --port 8088 --https-cert-file /certs/tls.crt --https-key-file /certs/tls.key
+
+[Service]
+# Runs before the container exists and exits; nothing stays in this cgroup
+# except the container's own conmon, which belongs to this service.
+ExecStartPre=%h/demo/bin/demo-restore-baseline.sh %h/demo/data %h/demo/baseline
+Restart=on-failure
+TimeoutStartSec=300
+
+[Install]
+WantedBy=default.target

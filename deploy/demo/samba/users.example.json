@@ -1,0 +1,12 @@
+{
+  "samba-container-config": "v0",
+  "users": {
+    "all_entries": [
+      {
+        "name": "boardemo",
+        "password": "CHANGE-ME-on-the-host-never-commit"
+      }
+    ]
+  },
+  "_footer": 1
+}

@@ -1,0 +1,36 @@
+{
+  "samba-container-config": "v0",
+  "configs": {
+    "boardemo": {
+      "shares": ["corpus"],
+      "globals": ["demo"],
+      "instance_name": "BOARDEMO"
+    }
+  },
+  "shares": {
+    "corpus": {
+      "options": {
+        "path": "/share",
+        "read only": "yes",
+        "browseable": "yes",
+        "valid users": "boardemo"
+      }
+    }
+  },
+  "globals": {
+    "demo": {
+      "options": {
+        "security": "user",
+        "server min protocol": "SMB3",
+        "load printers": "no",
+        "printing": "bsd",
+        "printcap name": "/dev/null",
+        "disable spoolss": "yes",
+        "guest ok": "no",
+        "map to guest": "Never",
+        "max connections": "8"
+      }
+    }
+  },
+  "_footer": 1
+}

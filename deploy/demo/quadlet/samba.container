@@ -1,0 +1,36 @@
+# Read-only SMB share of the synthetic corpus for the demo SMB scan (#1447).
+# Image: samba-in-kubernetes samba-server (GPL-3.0), pinned by digest.
+# Loopback only, high host port (rootless Podman cannot bind < 1024 on the
+# host); the dashboard reaches it at 127.0.0.1:4450 (SMB target `port: 4450`).
+# Capabilities measured on Podman 5.4 rootless: smbd needs SETUID/SETGID to
+# switch to the share user and NET_BIND_SERVICE for 445 inside the container.
+# UserNS=host pins the default rootless mapping (a host-wide keep-id default
+# makes sambacc fail to create /run/samba/*).
+# users.json (account + password) is created on the host only, never in git;
+# see ../samba/users.example.json.
+
+[Unit]
+Description=Samba read-only share for the Data Boar demo
+Wants=network-online.target
+After=network-online.target
+
+[Container]
+Image=quay.io/samba.org/samba-server@sha256:b8b12bd681c08371182587ef5934581570bfa86bd37786760493ee834696b50c
+ContainerName=samba
+UserNS=host
+PodmanArgs=--memory 96m
+DropCapability=all
+AddCapability=SETUID SETGID NET_BIND_SERVICE
+NoNewPrivileges=true
+PublishPort=127.0.0.1:4450:445
+Environment=SAMBA_CONTAINER_ID=boardemo
+Environment=SAMBACC_CONFIG=/etc/samba-demo/container.json:/etc/samba-demo/users.json
+Volume=%h/demo/samba/container.json:/etc/samba-demo/container.json:ro,Z
+Volume=%h/demo/samba/users.json:/etc/samba-demo/users.json:ro,Z
+Volume=%h/demo/corpus:/share:ro,Z
+
+[Service]
+Restart=on-failure
+
+[Install]
+WantedBy=default.target
