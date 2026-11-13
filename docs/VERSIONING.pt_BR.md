@@ -82,6 +82,7 @@ Escada (histórico `1.7.4`): `1.7.4-beta` → `1.7.4-rc` → `1.7.4-rc-2` → **
 | **Linha `1.7.4`** | Maturidade open-core + proteção comercial JWT |
 | **`1.8.x`** | Capacidades corporativas aumentadas (re-ID, sidecars, plugins/Clojure — **nova arquitetura**) |
 | **`1.7.5`** | **Não existe** — agentes não inventam (#772). Próxima linha **dev** depois do ritual de publicação da **`1.8.0`**: milestone **`v1.8.1`**. |
+| **`1.8.1`** | Versão da apresentação de **16/11/2026 14h** (#2240): só o que a demo ao vivo usa. Não é release por si só — tag, GitHub Release e Docker Hub seguem o ritual de release. Os antigos milestones **`v1.8.1`–`v1.8.4`** passaram a **`v1.8.2`–`v1.8.5`**. |
 | **`1.9.x`** | Horizonte (expansão compliance — triagem #772) |
 
 Lifecycle DNS-beacon / heartbeat / kill-switch (#717) fica no roadmap **1.8.x** (`docs/plans/PLAN_SELF_UPGRADE_AND_VERSION_CHECK.md`, índice interno em `docs/README.md`).

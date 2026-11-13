@@ -21,7 +21,7 @@ Este arquivo é a **política externa de vulnerabilidades**. As outras camadas n
 
 ### Host do executor e detecção (L3/L4) — só ponte
 
-**Não está entregue neste repositório.** O trabalho está na issue **[#989](https://github.com/DataBoar/data-boar/issues/989)** (OPEN, milestone **v1.8.4**). O [ADR 0074](docs/adr/ADR-0074-supply-chain-layer1-digest-pins-and-rust-sca.md) permanece **Camada 1** até essa issue emendar o ADR.
+**Não está entregue neste repositório.** O trabalho está na issue **[#989](https://github.com/DataBoar/data-boar/issues/989)** (OPEN, milestone **v1.8.5**). O [ADR 0074](docs/adr/ADR-0074-supply-chain-layer1-digest-pins-and-rust-sca.md) permanece **Camada 1** até essa issue emendar o ADR.
 
 - **L3 (host do executor):** Cursor/Electron (e similares) é superfície privilegiada de escrita — poucas extensões, preferir OpenVSX / publishers confiáveis, menor privilégio nas chaves de assinatura. Requisitos e auditoria de lab ficam na **#989**, não como política extra aqui.
 - **L4 (detecção):** tripwires no host (arquivos canário, AIDE + auditd), não funcionalidade do produto. Baseline de lab: [`docs/ops/DOCKER_AIDE_AUDITD_BASELINE.pt_BR.md`](docs/ops/DOCKER_AIDE_AUDITD_BASELINE.pt_BR.md); plantar canários nos hosts é trabalho de operador/vault na **#989**.

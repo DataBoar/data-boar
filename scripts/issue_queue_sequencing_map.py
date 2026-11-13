@@ -55,6 +55,7 @@ MILESTONE_MERMAID_ORDER = (
     "v1.8.2",
     "v1.8.3",
     "v1.8.4",
+    "v1.8.5",
     "backlog",
 )
 ACTIVE_MILESTONE = "v1.8.0"
@@ -301,7 +302,7 @@ Removed from the previous map: `#539 → #540–#543` (all five closed); `#668` 
 | Total open | {total} |
 | Issue Type Bug / Feature / Task / (none) | {issue_type_row} |
 | P0 / P1 / P2 / P3 / sem P (`[Pn]` in title, body, or labels) | {p_row} |
-| Milestone v1.8.0 / v1.8.1 / v1.8.2 / v1.8.3 / v1.8.4 / backlog / (none) | {milestone_row} |
+| Milestone v1.8.0 / v1.8.1 / v1.8.2 / v1.8.3 / v1.8.4 / v1.8.5 / backlog / (none) | {milestone_row} |
 | U0 / U1 / U2 / U3 / sem U (`[Un]` in title or body) | {u_row} |
 | Active hard-blocker edges | {sum(len(v) for v in active.values())} |
 """

@@ -21,7 +21,7 @@ This file is the **external vulnerability policy**. Other layers are not copies 
 
 ### Executor host and detection (L3/L4) — pointer only
 
-**Not shipped in this repo.** Work is tracked in GitHub issue **[#989](https://github.com/DataBoar/data-boar/issues/989)** (OPEN, milestone **v1.8.4**). [ADR 0074](docs/adr/ADR-0074-supply-chain-layer1-digest-pins-and-rust-sca.md) remains **Layer 1** only until that issue lands an ADR amendment.
+**Not shipped in this repo.** Work is tracked in GitHub issue **[#989](https://github.com/DataBoar/data-boar/issues/989)** (OPEN, milestone **v1.8.5**). [ADR 0074](docs/adr/ADR-0074-supply-chain-layer1-digest-pins-and-rust-sca.md) remains **Layer 1** only until that issue lands an ADR amendment.
 
 - **L3 (executor host):** Cursor/Electron (and similar) is a privileged write surface — minimize extensions, prefer OpenVSX / trusted publishers, least privilege for signing keys. Requirements and lab audit live in **#989**, not as extra policy here.
 - **L4 (detection):** host tripwires (canary-class files, AIDE + auditd), not a product feature. Lab baseline: [`docs/ops/DOCKER_AIDE_AUDITD_BASELINE.md`](docs/ops/DOCKER_AIDE_AUDITD_BASELINE.md); planting canaries on lab hosts is operator/vault work in **#989**.
