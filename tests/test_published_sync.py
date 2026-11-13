@@ -16,6 +16,7 @@ import urllib.request
 from pathlib import Path
 
 import pytest
+from packaging.version import InvalidVersion, Version
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SYNC_EN = REPO_ROOT / "docs" / "ops" / "today-mode" / "PUBLISHED_SYNC.md"
@@ -62,11 +63,60 @@ def test_published_sync_matches_pyproject_and_live_org(path: Path) -> None:
     assert LIVE_ORG in text, f"{path.name} must link {LIVE_ORG}"
 
 
+def _tag_key(tag: str) -> Version:
+    return Version(tag.removeprefix("v"))
+
+
+def _release_tags(tags: list[str]) -> list[str]:
+    """Keep only PEP 440 release tags (ignores labels such as ``v1.7.2-safe``)."""
+    out: list[str] = []
+    for tag in tags:
+        try:
+            _tag_key(tag)
+        except InvalidVersion:
+            continue
+        out.append(tag)
+    return out
+
+
+def _release_tag_sync_problems(
+    version: str, local_tags: list[str], docs: dict[str, str]
+) -> list[str]:
+    """Return drift problems between pyproject, local ``v*`` tags and the sync docs.
+
+    * Tag ``v{version}`` exists: both docs cite it and it is the newest tag.
+    * Tag missing (bump ritual in progress: the tag is cut with the release): the
+      newest existing tag must be older than ``version`` and both docs must cite it.
+      The condition is asserted, not skipped, so it never eats the CI skip ceiling.
+    """
+    expected = f"v{version}"
+    tags = sorted(_release_tags(local_tags), key=_tag_key)
+    latest = tags[-1]
+    problems: list[str] = []
+    if expected in tags:
+        cited = expected
+        if latest != expected:
+            problems.append(
+                f"latest local tag is {latest} but pyproject is {version}; "
+                "refresh PUBLISHED_SYNC or finish the tag ritual"
+            )
+    else:
+        cited = latest
+        if _tag_key(latest) > _tag_key(expected):
+            problems.append(
+                f"latest local tag {latest} is newer than pyproject {version} "
+                f"and tag {expected} does not exist; pyproject is behind the tags"
+            )
+    for name, text in docs.items():
+        if cited not in text:
+            problems.append(f"{name} must cite GitHub Release tag {cited}")
+    return problems
+
+
 def test_published_sync_cites_release_tag_for_pyproject_version() -> None:
-    """Docs must name ``v{pyproject.version}`` when that tag exists locally."""
+    """Docs cite ``v{pyproject.version}``, or the newest tag while the bump is in progress."""
     version, _ = _pyproject()
-    expected_tag = f"v{version}"
-    local_tags = {
+    local_tags = [
         ln.strip()
         for ln in subprocess.run(
             ["git", "tag", "-l", "v*"],
@@ -76,21 +126,14 @@ def test_published_sync_cites_release_tag_for_pyproject_version() -> None:
             check=True,
         ).stdout.splitlines()
         if ln.strip()
-    }
-    if expected_tag not in local_tags:
-        pytest.skip(f"tag {expected_tag} not present locally (bump ritual in progress)")
-    for path in (SYNC_EN, SYNC_PT):
-        text = path.read_text(encoding="utf-8")
-        assert expected_tag in text, (
-            f"{path.name} must cite GitHub Release tag {expected_tag}"
+    ]
+    if not _release_tags(local_tags):
+        pytest.skip(
+            "no local PEP 440 v* tags (shallow clone without tags); nothing to compare"
         )
-    # Newest local v* should not silently leap ahead of the sync table.
-    latest = _latest_v_tag()
-    if latest != expected_tag:
-        pytest.fail(
-            f"latest local tag is {latest} but pyproject is {version}; "
-            "refresh PUBLISHED_SYNC or finish the tag ritual"
-        )
+    docs = {path.name: path.read_text(encoding="utf-8") for path in (SYNC_EN, SYNC_PT)}
+    problems = _release_tag_sync_problems(version, local_tags, docs)
+    assert not problems, "\n".join(problems)
 
 
 @pytest.mark.skipif(
@@ -122,3 +165,57 @@ def test_published_sync_optional_network_py_pi_and_hub() -> None:
         pytest.skip(f"Docker Hub unreachable: {exc}")
     else:
         assert "name" in hub_body and version in hub_body
+
+
+# --- release-tag sync rules (#2240): the bump ritual must be asserted, not skipped ---------
+
+
+def _docs_citing(*tags: str) -> dict[str, str]:
+    body = " ".join(
+        f"[{t}](https://github.com/{LIVE_ORG}/releases/tag/{t})" for t in tags
+    )
+    return {"PUBLISHED_SYNC.md": body, "PUBLISHED_SYNC.pt_BR.md": body}
+
+
+def test_tag_sync_tag_exists_and_cited_is_clean() -> None:
+    assert (
+        _release_tag_sync_problems(
+            "1.8.1", ["v1.8.0", "v1.8.1"], _docs_citing("v1.8.1")
+        )
+        == []
+    )
+
+
+def test_tag_sync_tag_exists_but_not_cited_is_a_problem() -> None:
+    problems = _release_tag_sync_problems(
+        "1.8.1", ["v1.8.0", "v1.8.1"], _docs_citing("v1.8.0")
+    )
+    assert any("v1.8.1" in p and "PUBLISHED_SYNC.md" in p for p in problems)
+
+
+def test_tag_sync_tag_exists_but_newer_tag_leaps_ahead() -> None:
+    problems = _release_tag_sync_problems(
+        "1.8.1", ["v1.8.1", "v1.8.2"], _docs_citing("v1.8.1")
+    )
+    assert any("v1.8.2" in p for p in problems)
+
+
+def test_tag_sync_bump_in_progress_checks_latest_existing_tag() -> None:
+    """pyproject 1.8.1 ahead of the newest tag v1.8.0: verified, not skipped."""
+    assert (
+        _release_tag_sync_problems(
+            "1.8.1", ["v1.7.4", "v1.8.0"], _docs_citing("v1.8.0")
+        )
+        == []
+    )
+
+
+def test_tag_sync_bump_in_progress_docs_must_cite_latest_existing_tag() -> None:
+    problems = _release_tag_sync_problems("1.8.1", ["v1.8.0"], _docs_citing("v1.7.4"))
+    assert any("v1.8.0" in p and "PUBLISHED_SYNC" in p for p in problems)
+
+
+def test_tag_sync_bump_in_progress_tag_ahead_of_pyproject_is_a_problem() -> None:
+    """A tag newer than pyproject while the pyproject tag is missing is drift."""
+    problems = _release_tag_sync_problems("1.8.1", ["v1.8.2"], _docs_citing("v1.8.2"))
+    assert any("v1.8.2" in p and "1.8.1" in p for p in problems)
