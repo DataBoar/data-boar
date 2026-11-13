@@ -94,6 +94,19 @@ EXPECTED: dict[str, str] = {
         "configure file_scan.file_passwords: {'.7z': '<senha>'} e scan_compressed: true. "
         "Requer o extra opcional 'compressed' (py7zr)."
     ),
+    "10_compressed_smb": (
+        "Corpus de compactados para o alvo SMB (demo local). Cada arquivo guarda "
+        "um cadastro.csv sintetico com CPF de checksum valido e e-mail reservado: "
+        "cadastro.zip, cadastro.tgz e cadastro.tar.bz2 (sem senha) e "
+        "protegido_demo.7z (cifrado). Configure file_scan.scan_compressed: true, "
+        "file_scan.compressed_extensions e, para o .7z, file_scan.file_passwords: "
+        "{'.7z': 'demo-boar-7z-ficticia'} (senha de DEMO ficticia). "
+        "ESPERADO COM SENHA: 4 achados (1 por cadastro.csv interno, padroes "
+        "LGPD_CPF e EMAIL). SEM SENHA: 3 achados (zip, tgz, tar.bz2) e "
+        "scan_failures encrypted_no_password para o .7z. SENHA ERRADA: 3 achados "
+        "e scan_failures wrong_password ou archive_read_error para o .7z. O .7z requer o extra opcional "
+        "'compressed' (py7zr)."
+    ),
 }
 
 
@@ -939,6 +952,63 @@ def gen_protected_archive(base: Path) -> None:
     print(f"  v  Scenario 9 (protected_archive) -> {out}")
 
 
+COMPRESSED_SMB_SUBDIR = "10_compressed_smb"
+COMPRESSED_SMB_STDLIB_ARCHIVES = ("cadastro.zip", "cadastro.tgz", "cadastro.tar.bz2")
+
+
+def _compressed_smb_csv(start: int) -> bytes:
+    """Two synthetic rows (name, valid-checksum CPF, reserved e-mail), pools only."""
+    rows = ["nome,cpf,email"]
+    for k in range(2):
+        rows.append(
+            f"{_p(_NAMES, start + k)},{_p(_CPFS, start + k)},{_p(_EMAILS, start + k)}"
+        )
+    return ("\n".join(rows) + "\n").encode("utf-8")
+
+
+def gen_compressed_smb(base: Path) -> None:
+    """Write the compressed corpus served over SMB (demo local rehearsal, #1447).
+
+    ``.zip``, ``.tgz`` and ``.tar.bz2`` use only the stdlib; the password-protected
+    ``.7z`` needs the optional ``compressed`` extra (py7zr) and is skipped, with
+    the reason printed, when it is missing. The inner file is always
+    ``cadastro.csv``.
+    """
+    import io
+    import tarfile
+    import zipfile
+
+    out = base / COMPRESSED_SMB_SUBDIR
+    out.mkdir(parents=True, exist_ok=True)
+    _w(out / "EXPECTED.txt", EXPECTED[COMPRESSED_SMB_SUBDIR])
+
+    with zipfile.ZipFile(out / "cadastro.zip", "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("cadastro.csv", _compressed_smb_csv(0))
+    for name, mode, start in (
+        ("cadastro.tgz", "w:gz", 2),
+        ("cadastro.tar.bz2", "w:bz2", 4),
+    ):
+        data = _compressed_smb_csv(start)
+        info = tarfile.TarInfo("cadastro.csv")
+        info.size = len(data)
+        with tarfile.open(out / name, mode) as t:
+            t.addfile(info, io.BytesIO(data))
+
+    try:
+        import py7zr
+    except ImportError:
+        print(
+            "  !  Scenario 10 (compressed_smb): .7z skipped, install the optional "
+            "'compressed' extra (py7zr)"
+        )
+    else:
+        with py7zr.SevenZipFile(
+            out / PROTECTED_ARCHIVE_NAME, "w", password=DEMO_ARCHIVE_PASSWORD
+        ) as z:
+            z.writestr(_compressed_smb_csv(6), "cadastro.csv")
+    print(f"  v  Scenario 10 (compressed_smb) -> {out}")
+
+
 _SCENARIO_MAP: dict[str, Callable[[Path], None]] = {
     "happy": gen_scenario_1,
     "unhappy": gen_scenario_2,
@@ -950,6 +1020,7 @@ _SCENARIO_MAP: dict[str, Callable[[Path], None]] = {
     "stress_load": gen_stress_load,
     "config_errors": gen_config_errors,
     "protected_archive": gen_protected_archive,
+    "compressed_smb": gen_compressed_smb,
 }
 ALL_SCENARIOS = list(_SCENARIO_MAP)
 

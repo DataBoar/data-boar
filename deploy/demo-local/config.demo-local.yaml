@@ -1,0 +1,101 @@
+# Data Boar config for the LOCAL demo harness (#1447). Rendered by
+# render_config.py: ${VAR:-default} is expanded, ${DEMO_LOCAL_DATA_DIR} is set
+# per mode. Every secret is read from the environment (pass_from_env); the
+# harness generates random, ephemeral values at `up.sh` time.
+# Synthetic data only. Loopback only (allow_private_networks is required by
+# the SSRF guard for 127.0.0.1 and is meant for this harness, not production).
+#
+# The real Supabase target is NOT in this file: see README.md.
+
+targets:
+  - name: Lab_Postgres
+    type: database
+    driver: postgresql+psycopg2
+    host: 127.0.0.1
+    port: ${DEMO_LOCAL_PG_PORT:-55433}
+    user: demo
+    pass_from_env: DATA_BOAR_DEMO_PG_PASS
+    database: lab
+    allow_private_networks: true
+    allowed_hosts: ["127.0.0.1"]
+
+  - name: Demo_SMB_Compressed
+    type: smb
+    host: 127.0.0.1
+    port: ${DEMO_LOCAL_SMB_PORT:-4450}
+    share: corpus
+    user: boardemo
+    pass_from_env: DATA_BOAR_DEMO_SMB_PASS
+    allow_private_networks: true
+    allowed_hosts: ["127.0.0.1"]
+
+  - name: Lab_Redis
+    type: database
+    driver: redis
+    host: 127.0.0.1
+    port: ${DEMO_LOCAL_REDIS_PORT:-56380}
+    pass_from_env: DATA_BOAR_DEMO_REDIS_PASS
+    allow_private_networks: true
+    allowed_hosts: ["127.0.0.1"]
+
+  - name: Lab_Mongo
+    type: database
+    driver: mongodb
+    host: 127.0.0.1
+    port: ${DEMO_LOCAL_MONGO_PORT:-27019}
+    user: boar
+    pass_from_env: DATA_BOAR_DEMO_MONGO_PASS
+    database: lab_smoke_mongo
+    allow_private_networks: true
+    allowed_hosts: ["127.0.0.1"]
+
+  # SIMULATED Supabase: a local PostgreSQL 17 database with a synthetic table.
+  # It does not reproduce the ~20 ms pooler latency of the real service.
+  - name: Supabase_Simulated
+    type: database
+    driver: postgresql+psycopg2
+    host: 127.0.0.1
+    port: ${DEMO_LOCAL_PG_PORT:-55433}
+    user: demo
+    pass_from_env: DATA_BOAR_DEMO_PG_PASS
+    database: supa_sim
+    allow_private_networks: true
+    allowed_hosts: ["127.0.0.1"]
+
+  # Optional (web.sh): dropped from the rendered config when the toy httpd is down.
+  - name: WebDAV_Demo
+    type: webdav
+    base_url: http://127.0.0.1:${DEMO_LOCAL_WEB_PORT:-8077}/dav
+    allow_private_networks: true
+    allowed_hosts: ["127.0.0.1"]
+
+  - name: REST_Demo
+    type: rest
+    base_url: http://127.0.0.1:${DEMO_LOCAL_WEB_PORT:-8077}/api
+    paths: ["/people"]
+    allow_private_networks: true
+    allowed_hosts: ["127.0.0.1"]
+
+file_scan:
+  # No .txt on purpose: EXPECTED.txt files sit next to the archives and would
+  # add findings. .bz2 covers cadastro.tar.bz2.
+  extensions: [".zip", ".tgz", ".bz2", ".7z", ".csv"]
+  recursive: true
+  scan_sqlite_as_db: false
+  sample_limit: 5000
+  scan_compressed: true
+  # The SMB connector matches only the LAST suffix (Path.suffix), so a double
+  # suffix like .tar.bz2 needs its last part (.bz2) listed too.
+  compressed_extensions: [".zip", ".tgz", ".bz2", ".tar.bz2", ".7z"]
+  file_passwords:
+    # Fictitious demo password (core/demo/synthetic_corpus.py), not a credential.
+    ".7z": "demo-boar-7z-ficticia"
+
+api:
+  port: ${DEMO_LOCAL_BOAR_PORT:-8099}
+
+report:
+  output_dir: ${DEMO_LOCAL_DATA_DIR}
+sqlite_path: ${DEMO_LOCAL_DATA_DIR}/audit_results.db
+scan:
+  max_workers: 1
