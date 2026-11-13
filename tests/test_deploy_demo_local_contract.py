@@ -214,7 +214,9 @@ def test_supa_sim_seed_is_synthetic_deterministic_and_checksum_valid():
     cpfs = re.findall(r"'(\d{3}\.\d{3}\.\d{3}-\d{2})'", sql)
     assert len(cpfs) == seed.ROWS
     assert all(cpf_checksum_valid(normalize_cpf_digits(c)) for c in cpfs)
-    assert "example.com" in sql and "@" in sql
+    emails = re.findall(r"'([^'\s@]+@[^'\s]+)'", sql)
+    assert emails
+    assert all(e.endswith("@example.com") for e in emails)  # RFC 2606 reserved
 
 
 def _load_seed(name: str):
