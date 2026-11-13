@@ -20,6 +20,11 @@ FROM python:3.14-slim@sha256:9aaa474097d094040649f2162a627c0049b408f52138d980916
 # official linux-gnu tarball (measured 2026-07-30).
 ARG UV_VERSION=0.13.8
 ARG UV_SHA256=5acfd9177cfecf0bf87578f059728215ccc884388988f55f7a65041b57387d91
+# 2026-11-13: 3.14.10 is the newest free-threaded CPython obtainable (uv 0.13.8 and
+# python-build-standalone 20261110 stop there; python:3.14-slim too). grype flags it
+# with a fix in 3.14.11 (one High finding) that does not exist yet: no ignore/VEX
+# is added. The gate (--fail-on high --only-fixed) goes green when 3.14.11 ships; bump
+# UV_PYTHON then (and UV_VERSION/UV_SHA256 if uv needs it).
 ARG UV_PYTHON=3.14.10+freethreaded
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
