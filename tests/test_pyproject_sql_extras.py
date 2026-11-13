@@ -70,5 +70,5 @@ def test_maturity_build_matches_180_ga_cut() -> None:
 
 def test_version_is_180_ga_not_phantom_175() -> None:
     version = _load_pyproject().get("project", {}).get("version")
-    assert version == "1.8.0"
+    assert version == "1.8.1"
     assert not str(version).startswith("1.7.5")

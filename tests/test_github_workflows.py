@@ -1215,7 +1215,7 @@ def test_native_packages_workflow_present_and_valid() -> None:
     assert "release" in on
     env = data.get("env") or {}
     assert env.get("WHEELHOUSE_TAG") == "wheelhouse-x86-64-v1-2026-07-29"
-    assert env.get("UV_PYTHON") == "3.14.6+freethreaded"
+    assert env.get("UV_PYTHON") == "3.14.10+freethreaded"
     assert env.get("NFPM_VERSION") == "2.47.0"
     assert env.get("DISABLE_SQLALCHEMY_CEXT") == "1"
     assert re.fullmatch(r"[0-9a-f]{64}", str(env.get("NFPM_SHA256") or ""))

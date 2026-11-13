@@ -1,7 +1,7 @@
 # Issue Queue Sequencing Map
 <!-- auto-maintained: run `uv run python scripts/issue_queue_sequencing_map.py --write` -->
 **Última atualização:** 2026-11-13
-**Total open issues:** 294
+**Total open issues:** 295
 
 Snapshot via `gh issue list --state open` + GraphQL `issueType` (DataBoar/data-boar). **GitHub is the source of truth for milestone assignment** — this file mirrors that distribution; do not move issues in GitHub to match stale `.md`. Contagens ±5% por race com o GitHub.
 
@@ -15,8 +15,8 @@ subgraph ms_1["Milestone: v1.8.1 (3 open)"]
   n1["3 open in v1.8.1"]:::p3
 end
 
-subgraph ms_2["Milestone: v1.8.2 (74 open)"]
-  n2["74 open in v1.8.2"]:::p3
+subgraph ms_2["Milestone: v1.8.2 (75 open)"]
+  n2["75 open in v1.8.2"]:::p3
 end
 
 subgraph ms_3["Milestone: v1.8.3 (36 open)"]
@@ -73,9 +73,9 @@ Removed from the previous map: `#539 → #540–#543` (all five closed); `#668` 
 
 | Dimensão | Distribuição |
 | --- | --- |
-| Total open | 294 |
-| Issue Type Bug / Feature / Task / (none) | 18 / 79 / 134 / 63 |
-| P0 / P1 / P2 / P3 / sem P (`[Pn]` in title, body, or labels) | 0 / 11 / 88 / 62 / 133 |
-| Milestone v1.8.0 / v1.8.1 / v1.8.2 / v1.8.3 / v1.8.4 / v1.8.5 / backlog / (none) | 0 / 3 / 74 / 36 / 58 / 76 / 11 / 36 |
-| U0 / U1 / U2 / U3 / sem U (`[Un]` in title or body) | 0 / 0 / 1 / 0 / 293 |
+| Total open | 295 |
+| Issue Type Bug / Feature / Task / (none) | 18 / 79 / 134 / 64 |
+| P0 / P1 / P2 / P3 / sem P (`[Pn]` in title, body, or labels) | 0 / 11 / 89 / 62 / 133 |
+| Milestone v1.8.0 / v1.8.1 / v1.8.2 / v1.8.3 / v1.8.4 / v1.8.5 / backlog / (none) | 0 / 3 / 75 / 36 / 58 / 76 / 11 / 36 |
+| U0 / U1 / U2 / U3 / sem U (`[Un]` in title or body) | 0 / 0 / 1 / 0 / 294 |
 | Active hard-blocker edges | 0 |
