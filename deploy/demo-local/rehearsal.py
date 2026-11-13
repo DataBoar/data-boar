@@ -16,6 +16,7 @@ import sqlite3
 import subprocess
 import threading
 import time
+import urllib.parse
 import urllib.request
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -197,11 +198,19 @@ def _mb(text: str) -> float:
     return float(t[:i]) * _UNITS.get(t[i:] or "b", 1) / 1e6
 
 
+_LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
+
+
 def _http(url: str, data: bytes | None = None) -> dict:
+    """GET/POST JSON to the local Boar only: http(s) on a loopback host."""
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme not in ("http", "https") or parsed.hostname not in _LOOPBACK_HOSTS:
+        raise ValueError("rehearsal only talks to http(s) on loopback")
     req = urllib.request.Request(url, data=data)
     if data is not None:
         req.add_header("Content-Type", "application/json")
-    with urllib.request.urlopen(req, timeout=20) as resp:  # noqa: S310 loopback
+    # B310: scheme and host are restricted to http(s) on loopback just above.
+    with urllib.request.urlopen(req, timeout=20) as resp:  # nosec B310  # noqa: S310
         return json.loads(resp.read())
 
 
@@ -317,7 +326,9 @@ def _iso(s: str | None) -> datetime | None:
 
 # ------------------------------------------------------------------- run a case
 def run_case(case: Case, a: argparse.Namespace, boar_container: str) -> dict:
-    sh = [str(HERE / "boar.sh"), "restart", a.mode, case.only]
+    # --mode is restricted to two choices; forward a literal, never argv text.
+    mode_literal = "native" if a.mode == "native" else "container"
+    sh = [str(HERE / "boar.sh"), "restart", mode_literal, case.only]
     if case.variant:
         sh.append(case.variant)
     subprocess.run(sh, check=True, capture_output=True, timeout=300)
@@ -539,7 +550,13 @@ def main() -> int:
             )
     # Leave the full scenario ready (all targets) after the one-target runs.
     subprocess.run(
-        [str(HERE / "boar.sh"), "restart", a.mode], check=False, capture_output=True
+        [
+            str(HERE / "boar.sh"),
+            "restart",
+            "native" if a.mode == "native" else "container",
+        ],
+        check=False,
+        capture_output=True,
     )
     text = build_report(rows, a)
     out = Path(a.out)
