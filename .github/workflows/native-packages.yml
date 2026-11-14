@@ -52,9 +52,9 @@ env:
   # Declared exception to .github/uv-version (#2228): uv 0.11.x cannot fetch cpython-3.14.6+freethreaded
   # (measured: "No download found for request"). Same pin as Dockerfile, Dockerfile.nogil and
   # scripts/native-nfpm-populate-staging.sh; tests/test_uv_version_single_source.py keeps them aligned.
-  UV_VERSION: "0.12.0"
-  UV_SHA256: eaf842262aa1c418d8ecc5605f02ee1ebfd369124fa48548e85f9481a47831a9
-  UV_PYTHON: "3.14.6+freethreaded"
+  UV_VERSION: "0.13.8"
+  UV_SHA256: 5acfd9177cfecf0bf87578f059728215ccc884388988f55f7a65041b57387d91
+  UV_PYTHON: "3.14.10+freethreaded"
   NFPM_VERSION: "2.47.0"
   NFPM_SHA256: 0660ca602b2d2d2ae4781a06c692b3eeb9d437ffea05b831d76e41f4a3188783
   NFPM_ARCH: amd64

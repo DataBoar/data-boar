@@ -36,7 +36,7 @@ alwaysApply: false
 - **`main` working tree:** **`1.8.0`** (`maturity_build = 200` — ADR-0073 L36 GA anchor); ADR-0073 **Accepted**; release gate **#2123 CLOSED** (successor of **#406** / **1.7.4**). Tagged **`v1.8.0`** on commit `3b0170641f2ab7a1358058902e12ff3f1fc3f545`.
 - **#970:** premature stable bump/tag without release gate — corrected by **ADR-0072** + **#406**; **`1.7.4` is not VOID**.
 - **Published customer channels:** tag **`v1.8.0`**, GitHub Release **Data Boar 1.8.0** (**2026-11-01T23:11:10Z**), Docker Hub **`1.8.0`** / **`latest`** (`sha256:1f7a8a32b2fced12969382579721d6311a6b4f3fd98d2e6ffca921da47ec6ebc`, **2026-11-01T23:28Z**), PyPI **1.8.0**. Historical: **`1.7.4.post12`**, **`1.7.4`**, **`1.7.3`**.
-- **`1.7.5` does not exist.** Next **dev** line after the **`1.8.0`** publish ritual: milestone **`v1.8.1`**; do not invent **`1.7.5`**.
+- **`1.7.5` does not exist.** Next **dev** line after the **`1.8.0`** publish ritual: milestone **`v1.8.1`** (the 2026-11-16 presentation version, #2240; former v1.8.1–v1.8.4 are now v1.8.2–v1.8.5); do not invent **`1.7.5`**.
 - **Maturity octet** (1–126 beta · 127–199 rc · 200–254 GA+fix; counter starts at **`1`**): **`[tool.databoar] maturity_build = 200`** on this GA cut — **never** in `[project] version` or About. See **`docs/VERSIONING.md`**.
 
 ## Distribution policy (pre-release vs stable)

@@ -87,7 +87,7 @@ Cross-link hygiene for this table: [#1541](https://github.com/DataBoar/data-boar
 
 Workflow: [`.github/workflows/native-packages.yml`](../../.github/workflows/native-packages.yml)
 
-1. `scripts/native-nfpm-populate-staging.sh` — `uv python install 3.14.6+freethreaded` → `/usr/lib/data-boar/python3.14t`; install product + `requirements.txt`; apply hosted wheelhouse tag `wheelhouse-x86-64-v1-2026-07-29` (cp314t cells); **fail-closed** if assets are not downloadable.
+1. `scripts/native-nfpm-populate-staging.sh` — `uv python install 3.14.10+freethreaded` → `/usr/lib/data-boar/python3.14t`; install product + `requirements.txt`; apply hosted wheelhouse tag `wheelhouse-x86-64-v1-2026-07-29` (cp314t cells); **fail-closed** if assets are not downloadable.
 2. `nfpm package` for **deb** + **rpm** (core `data-boar`; x86-64 glibc).
 3. Install-smoke: debian bookworm (`.deb`) + Rocky 9 (`.rpm`) run `/usr/lib/data-boar/.../python3.14t -m data_boar --version`.
 4. Upload `native-packages-x86_64-glibc` artifacts.

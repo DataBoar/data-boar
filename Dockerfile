@@ -12,13 +12,18 @@
 # -----------------------------------------------------------------------------
 # Stage 1: free-threaded interpreter + deps + cp314t wheelhouse
 # -----------------------------------------------------------------------------
-FROM python:3.14-slim@sha256:cea0e6040540fb2b965b6e7fb5ffa00871e632eef63719f0ea54bca189ce14a6 AS builder
+FROM python:3.14-slim@sha256:9aaa474097d094040649f2162a627c0049b408f52138d980916788d80f04802f AS builder
 
-# uv 0.11.x cannot fetch cpython-3.14.6+freethreaded; pin 0.12.0 + sha256 of the
+# uv 0.11.x cannot fetch cpython-3.14.6+freethreaded or newer; pin 0.13.8 + sha256 of the
 # official linux-gnu tarball (measured 2026-07-30).
-ARG UV_VERSION=0.12.0
-ARG UV_SHA256=eaf842262aa1c418d8ecc5605f02ee1ebfd369124fa48548e85f9481a47831a9
-ARG UV_PYTHON=3.14.6+freethreaded
+ARG UV_VERSION=0.13.8
+ARG UV_SHA256=5acfd9177cfecf0bf87578f059728215ccc884388988f55f7a65041b57387d91
+# 2026-11-13: 3.14.10 is the newest free-threaded CPython obtainable (uv 0.13.8 and
+# python-build-standalone 20261110 stop there; python:3.14-slim too). grype flags it
+# with a fix in 3.14.11 (one High finding) that does not exist yet: no ignore/VEX
+# is added. The gate (--fail-on high --only-fixed) goes green when 3.14.11 ships; bump
+# UV_PYTHON then (and UV_VERSION/UV_SHA256 if uv needs it).
+ARG UV_PYTHON=3.14.10+freethreaded
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential gcc g++ pkg-config curl ca-certificates binutils \
@@ -90,7 +95,7 @@ RUN pip uninstall -y wheel || true && \
 # -----------------------------------------------------------------------------
 # Stage 2: assemble runtime rootfs (shell stage — not shipped)
 # -----------------------------------------------------------------------------
-FROM python:3.14-slim@sha256:cea0e6040540fb2b965b6e7fb5ffa00871e632eef63719f0ea54bca189ce14a6 AS runtime-assembler
+FROM python:3.14-slim@sha256:9aaa474097d094040649f2162a627c0049b408f52138d980916788d80f04802f AS runtime-assembler
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 libffi8 unixodbc libmariadb3 \
@@ -116,7 +121,7 @@ RUN chmod +x /tmp/collect-runtime-rootfs.sh && /tmp/collect-runtime-rootfs.sh /r
 # -----------------------------------------------------------------------------
 # Stage 3: minimal distroless runtime (nonroot uid 65532, no shell/apt)
 # -----------------------------------------------------------------------------
-FROM gcr.io/distroless/cc-debian13:nonroot@sha256:54df941ed0d06a1bd95ef5e0ce391fd8d9f94b64782dc9a60062727849ee3f97
+FROM gcr.io/distroless/cc-debian13:nonroot@sha256:cb87acc574abe719b6e5c547384defa2f7b1f24af9605d3f618cf852495d8be2
 
 # image.version is ARG (empty unless --build-arg) so a baked semver cannot go stale.
 ARG OCI_IMAGE_VERSION=""

@@ -51,6 +51,7 @@ EXCEPTION_REASON = "uv 0.11.x cannot fetch cpython-3.14.6+freethreaded"
 KNOWN_LINUX_X64_SHA256 = {
     "0.11.2": "7ac2ca0449c8d68dae9b99e635cd3bc9b22a4cb1de64b7c43716398447d42981",
     "0.12.0": "eaf842262aa1c418d8ecc5605f02ee1ebfd369124fa48548e85f9481a47831a9",
+    "0.13.8": "5acfd9177cfecf0bf87578f059728215ccc884388988f55f7a65041b57387d91",
 }
 
 # Official sha256 of every uv release asset the pinned-uv helpers may download, one flat key per
@@ -66,6 +67,7 @@ KNOWN_ASSET_SHA256 = {
     "0.11.2/uv-x86_64-pc-windows-msvc.zip": "171b7ccda1bbd562da6babeffcf533a1c6cc7862cf998da826e1db534fc43e48",
     "0.11.2/uv-x86_64-unknown-linux-gnu.tar.gz": "7ac2ca0449c8d68dae9b99e635cd3bc9b22a4cb1de64b7c43716398447d42981",
     "0.12.0/uv-x86_64-unknown-linux-gnu.tar.gz": "eaf842262aa1c418d8ecc5605f02ee1ebfd369124fa48548e85f9481a47831a9",
+    "0.13.8/uv-x86_64-unknown-linux-gnu.tar.gz": "5acfd9177cfecf0bf87578f059728215ccc884388988f55f7a65041b57387d91",
 }
 
 # Minimum number of pinned setup-uv steps per workflow (a removed pin must not pass silently).
@@ -298,7 +300,7 @@ def test_detects_prep_audit_sha_tamper(tree: Path) -> None:
 
 @pytest.mark.parametrize("rel", NATIVE_DOCKERFILES)
 def test_detects_dockerfile_sha_tamper(tree: Path, rel: str) -> None:
-    _sub(tree, rel, KNOWN_LINUX_X64_SHA256["0.12.0"], "f" * 64)
+    _sub(tree, rel, KNOWN_LINUX_X64_SHA256["0.13.8"], "f" * 64)
     assert any(rel in p for p in check_uv_pins(tree))
 
 
@@ -306,7 +308,7 @@ def test_detects_native_pins_disagreeing(tree: Path) -> None:
     _sub(
         tree,
         NATIVE_SCRIPT,
-        'UV_VERSION="${UV_VERSION:-0.12.0}"',
+        'UV_VERSION="${UV_VERSION:-0.13.8}"',
         'UV_VERSION="${UV_VERSION:-0.11.2}"',
     )
     assert any("disagree" in p for p in check_uv_pins(tree))
@@ -324,7 +326,7 @@ def test_detects_missing_exception_justification(tree: Path) -> None:
 
 
 def test_stale_exception_is_reported(tree: Path) -> None:
-    (tree / SOURCE_FILE).write_text("0.12.0\n", encoding="utf-8")
+    (tree / SOURCE_FILE).write_text("0.13.8\n", encoding="utf-8")
     assert any("stale" in p for p in check_uv_pins(tree))
 
 
@@ -588,7 +590,7 @@ def test_check_all_sh_resolves_the_pinned_uv_before_using_uv() -> None:
 
 @posix_only
 def test_pinned_uv_registry_and_native_exception_are_untouched() -> None:
-    """#2232 does not move the declared 0.12.0 exception."""
+    """#2232 does not move the declared 0.13.8 exception (bumped from 0.12.0 in #2240)."""
     assert check_uv_pins(REPO_ROOT) == []
 
 

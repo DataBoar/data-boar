@@ -59,7 +59,7 @@ def test_pyproject_maturity_build_matches_180_ga_cut() -> None:
     data = _load_pyproject()
     version = data.get("project", {}).get("version")
     maturity = data.get("tool", {}).get("databoar", {}).get("maturity_build")
-    assert version == "1.8.0"
+    assert version == "1.8.1"
     assert maturity == LINE_180_GA_MATURITY_BUILD
     assert maturity == 200
     assert maturity != POST12_MATURITY_BUILD  # must not carry .263 across lines
