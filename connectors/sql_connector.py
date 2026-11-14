@@ -5,12 +5,16 @@ run detector, save_finding. Supports PostgreSQL, MySQL, MariaDB, SQLite, MSSQL, 
 
 import json
 import os
+import threading
 import time
+from collections import deque
 from collections.abc import Set
-from typing import Any
+from concurrent.futures import Future, ThreadPoolExecutor
+from typing import Any, NamedTuple
 from urllib.parse import quote
 
 from sqlalchemy import create_engine, inspect, text
+from sqlalchemy.pool import QueuePool
 
 from connectors.sample_value_dedup import (
     join_distinct_sample,
@@ -634,6 +638,58 @@ def _resolve_sample_statement_timeout_ms(target: dict[str, Any]) -> int | None:
     return None if vi <= 0 else max(250, min(vi, 60_000))
 
 
+# Thread-name prefix of the per-table pool workers (#1322).
+INTRA_TARGET_THREAD_PREFIX = "databoar-sql-intra"
+
+# In-flight tables per pool worker before the target thread drains (#1322).
+_INTRA_TARGET_WINDOW_FACTOR = 4
+
+
+class _ScanContext(NamedTuple):
+    target_name: str
+    server_ip: str
+    engine_name: str
+    audit_name: str
+
+
+class _PoolStopped(Exception):
+    """Raised inside a pool worker once the target thread asked the pool to stop."""
+
+
+def _emit_log_finding(*args: Any) -> None:
+    try:
+        from utils.logger import log_finding
+
+        log_finding(*args)
+    except Exception:
+        pass
+
+
+class _TableSink:
+    """Pool worker side: buffer one table's writes; the target thread replays them."""
+
+    def __init__(self) -> None:
+        self._ops: list[tuple[str, tuple[Any, ...], dict[str, Any]]] = []
+
+    def save_finding(self, *args: Any, **kwargs: Any) -> None:
+        self._ops.append(("save_finding", args, kwargs))
+
+    def save_failure(self, *args: Any, **kwargs: Any) -> None:
+        self._ops.append(("save_failure", args, kwargs))
+
+    def log_finding(self, *args: Any) -> None:
+        self._ops.append(("log_finding", args, {}))
+
+    def replay(self, db_manager: Any) -> None:
+        """Re-issue the recorded calls in order (on the target thread)."""
+        ops, self._ops = self._ops, []
+        for name, args, kwargs in ops:
+            if name == "log_finding":
+                _emit_log_finding(*args)
+            else:
+                getattr(db_manager, name)(*args, **kwargs)
+
+
 class SQLConnector:
     """
     Connect to a SQL database, discover tables/columns, sample content, run sensitivity detection,
@@ -659,7 +715,12 @@ class SQLConnector:
         # Compatibility shim: legacy tests/helpers may still patch this attribute.
         self._connection = None
         self._dns_pin = None
-        self._sql_sampling_audit_key: str | None = None
+        # Per-thread state (#1322): the recording sink of a pool worker and the
+        # last table whose sampling strategy was logged by this thread.
+        self._tls = threading.local()
+        self._stop = threading.Event()
+        # (schema, table) left in_progress by an interrupted run of this session.
+        self._resume_partial: set[tuple[str, str]] = set()
         self._table_row_cache: dict[tuple[str, str], int | None] = {}
         self._sample_statement_timeout_ms = _resolve_sample_statement_timeout_ms(
             self.config
@@ -686,9 +747,15 @@ class SQLConnector:
             url = _apply_mssql_tcp_peer_pin(url, pin_ips)
         if base == "oracle":
             url = _apply_oracle_tcp_peer_pin(url, pin_ips)
+        pool_kw: dict[str, Any] = {}
+        requested = self._requested_workers()
+        if requested > 1:
+            # One pooled connection per worker (#1322); below this a worker would
+            # wait for pool_timeout and its column would end as sampling_error.
+            pool_kw["pool_size"] = requested
         try:
             self.engine = create_engine(
-                url, pool_pre_ping=True, connect_args=connect_args
+                url, pool_pre_ping=True, connect_args=connect_args, **pool_kw
             )
         except Exception:
             if dns_pin is not None:
@@ -696,6 +763,35 @@ class SQLConnector:
             raise
         self._dns_pin = dns_pin
         self._table_row_cache = {}
+
+    def _requested_workers(self) -> int:
+        try:
+            n = int(self.config.get("_intra_target_workers", 1) or 1)
+        except (TypeError, ValueError):
+            return 1
+        return max(1, n)
+
+    def intra_target_workers(self) -> int:
+        """Per-table pool size for this target (#1322), injected by the engine.
+
+        The engine derives ``_intra_target_workers`` from ``scan.max_workers``
+        after the licensing clamp (#551 / #856), so this connector never widens
+        the tier cap. Serial (1) when the value is missing or malformed, when
+        ``inter_query_delay_ms`` is set (a pool would multiply the query rate),
+        or when the engine pool is not a ``QueuePool`` (SQLite ``:memory:``
+        keeps one connection per thread, so each worker would see an empty DB).
+        """
+        n = self._requested_workers()
+        if n <= 1 or self._inter_query_delay_s > 0:
+            return 1
+        if self.engine is not None and not isinstance(self.engine.pool, QueuePool):
+            return 1
+        return n
+
+    def _out(self) -> Any:
+        """Where this thread's writes go: its table sink in a pool worker, else db_manager."""
+        sink = getattr(self._tls, "sink", None)
+        return sink if sink is not None else self.db_manager
 
     def close(self) -> None:
         if self._connection:
@@ -774,7 +870,7 @@ class SQLConnector:
                         if norm_tag
                         else suffix.lstrip()
                     )
-        self.db_manager.save_finding(
+        self._out().save_finding(
             source_type="database",
             target_name=target_name,
             server_ip=server_ip,
@@ -788,19 +884,18 @@ class SQLConnector:
             norm_tag=norm_tag,
             ml_confidence=res.get("ml_confidence", 0),
         )
-        try:
-            from utils.logger import log_finding
-
-            log_label = audit_log_name or target_name
-            log_finding(
-                "database",
-                log_label,
-                f"{schema}.{table}.{cname}",
-                res["sensitivity_level"],
-                res["pattern_detected"],
-            )
-        except Exception:
-            pass
+        log_args = (
+            "database",
+            audit_log_name or target_name,
+            f"{schema}.{table}.{cname}",
+            res["sensitivity_level"],
+            res["pattern_detected"],
+        )
+        sink = getattr(self._tls, "sink", None)
+        if sink is not None:
+            sink.log_finding(*log_args)
+        else:
+            _emit_log_finding(*log_args)
 
     def sample(
         self, schema: str, table: str, column_name: str, limit: int | None = None
@@ -862,8 +957,8 @@ class SQLConnector:
                         statement_timeout_ms=to,
                         **(oracle_raw if (dialect or "").lower() == "oracle" else {}),
                     )
-                    if self._sql_sampling_audit_key != audit_key:
-                        self._sql_sampling_audit_key = audit_key
+                    if getattr(self._tls, "audit_key", None) != audit_key:
+                        self._tls.audit_key = audit_key
                         try:
                             from utils.logger import get_logger
 
@@ -898,7 +993,7 @@ class SQLConnector:
                 dialect=dialect,
                 exc=e,
             )
-            self.db_manager.save_failure(
+            self._out().save_failure(
                 target_name, SCAN_FAILURE_REASON_SAMPLING_ERROR, details
             )
             try:
@@ -1082,6 +1177,110 @@ class SQLConnector:
             # Fail-soft: inference never fails the scan.
             pass
 
+    def _begin_table(
+        self, table_index: int, item: dict[str, Any], ctx: _ScanContext
+    ) -> None:
+        """Target thread: progress line and ``in_progress`` checkpoint of one table."""
+        schema, table = item["schema"], item["table"]
+        progress = self._scan_progress
+        if progress is not None and getattr(progress, "enabled", False):
+            progress.advance_table(
+                table_index,
+                table_label=f"{schema}.{table}" if schema else table,
+                target_name=ctx.target_name,
+            )
+        from core.database import LocalDBManager
+
+        if isinstance(self.db_manager, LocalDBManager):
+            replace = ((schema or "").strip(), table) in self._resume_partial
+            self.db_manager.mark_sql_table_in_progress(
+                ctx.target_name, schema, table, replace=replace
+            )
+
+    def _complete_table(self, item: dict[str, Any], ctx: _ScanContext) -> None:
+        """Target thread: checkpoint a table only after all its writes (#1330)."""
+        from core.database import LocalDBManager
+
+        if isinstance(self.db_manager, LocalDBManager):
+            self.db_manager.mark_sql_table_completed(
+                ctx.target_name, item["schema"], item["table"]
+            )
+
+    def _scan_table_recorded(
+        self, item: dict[str, Any], ctx: _ScanContext, sink: _TableSink
+    ) -> None:
+        """Pool worker: sample and detect one table; writes go to *sink* only."""
+        self._tls.sink = sink
+        try:
+            for col in item["columns"]:
+                if self._stop.is_set():
+                    raise _PoolStopped
+                self._process_one_finding(
+                    ctx.target_name,
+                    ctx.server_ip,
+                    ctx.engine_name,
+                    item["schema"],
+                    item["table"],
+                    col["name"],
+                    col["type"],
+                    audit_log_name=ctx.audit_name,
+                )
+        finally:
+            self._tls.sink = None
+
+    def _run_table_pool(
+        self,
+        work: list[tuple[int, dict[str, Any]]],
+        ctx: _ScanContext,
+        workers: int,
+        identifier_names: list[str],
+    ) -> None:
+        """Sample and detect on *workers* threads; persist on this thread in table order.
+
+        Workers never touch ``db_manager``: each table's writes are recorded and
+        replayed here in discovery order, between the same ``in_progress`` and
+        ``completed`` checkpoints as the serial loop, so persisted rows and
+        checkpoints are identical to the serial run and the results DB keeps a
+        single writer per target. The in-flight window bounds memory.
+        """
+        window = workers * _INTRA_TARGET_WINDOW_FACTOR
+        pending: deque[tuple[Future[None], _TableSink, int, dict[str, Any]]] = deque()
+        self._stop.clear()
+        pool = ThreadPoolExecutor(
+            max_workers=workers, thread_name_prefix=INTRA_TARGET_THREAD_PREFIX
+        )
+        try:
+            for table_index, item in work:
+                sink = _TableSink()
+                fut = pool.submit(self._scan_table_recorded, item, ctx, sink)
+                pending.append((fut, sink, table_index, item))
+                if len(pending) >= window:
+                    self._drain_table(pending.popleft(), ctx, identifier_names)
+            while pending:
+                self._drain_table(pending.popleft(), ctx, identifier_names)
+        finally:
+            # Interrupt or error: workers stop at their next column, queued tables
+            # are dropped, and no pool thread outlives run().
+            self._stop.set()
+            pool.shutdown(wait=True, cancel_futures=True)
+
+    def _drain_table(
+        self,
+        entry: tuple[Future[None], _TableSink, int, dict[str, Any]],
+        ctx: _ScanContext,
+        identifier_names: list[str],
+    ) -> None:
+        fut, sink, table_index, item = entry
+        exc = fut.exception()
+        self._begin_table(table_index, item, ctx)
+        identifier_names.extend(str(c["name"]) for c in item["columns"] if c["name"])
+        # Writes recorded before a failure are kept, as in the serial loop, and
+        # the table stays in_progress (resume re-scans and replaces it).
+        sink.replay(self.db_manager)
+        if exc is not None:
+            raise exc
+        self._complete_table(item, ctx)
+
     def run(self) -> None:
         """Connect, discover, sample each column, detect, save_finding; on error save_failure."""
         from utils.audit_log_display import audit_log_target_label
@@ -1107,45 +1306,44 @@ class SQLConnector:
             if progress is not None and getattr(progress, "enabled", False):
                 progress.set_tables_total(len(discovered), target_name=target_name)
             completed_tables: set[tuple[str, str]] = set()
+            self._resume_partial = set()
             from core.database import LocalDBManager
 
             if isinstance(self.db_manager, LocalDBManager):
                 completed_tables = self.db_manager.list_completed_sql_tables(
                     target_name
                 )
-            for table_index, item in enumerate(discovered, start=1):
-                schema = item["schema"]
-                table = item["table"]
-                table_key = ((schema or "").strip(), table)
-                if table_key in completed_tables:
-                    continue
-                table_label = f"{schema}.{table}" if schema else table
-                if progress is not None and getattr(progress, "enabled", False):
-                    progress.advance_table(
-                        table_index,
-                        table_label=table_label,
-                        target_name=target_name,
-                    )
-                if isinstance(self.db_manager, LocalDBManager):
-                    self.db_manager.mark_sql_table_in_progress(
-                        target_name, schema, table
-                    )
-                for col in item["columns"]:
-                    cname = col["name"]
-                    if cname:
-                        identifier_names.append(str(cname))
-                    self._process_one_finding(
-                        target_name,
-                        server_ip,
-                        engine_name,
-                        schema,
-                        table,
-                        cname,
-                        col["type"],
-                        audit_log_name=audit_name,
-                    )
-                if isinstance(self.db_manager, LocalDBManager):
-                    self.db_manager.mark_sql_table_completed(target_name, schema, table)
+                self._resume_partial = self.db_manager.list_in_progress_sql_tables(
+                    target_name
+                )
+            work = [
+                (table_index, item)
+                for table_index, item in enumerate(discovered, start=1)
+                if ((item["schema"] or "").strip(), item["table"])
+                not in completed_tables
+            ]
+            ctx = _ScanContext(target_name, server_ip, engine_name, audit_name)
+            workers = self.intra_target_workers()
+            if workers > 1:
+                self._run_table_pool(work, ctx, workers, identifier_names)
+            else:
+                for table_index, item in work:
+                    self._begin_table(table_index, item, ctx)
+                    for col in item["columns"]:
+                        cname = col["name"]
+                        if cname:
+                            identifier_names.append(str(cname))
+                        self._process_one_finding(
+                            target_name,
+                            server_ip,
+                            engine_name,
+                            item["schema"],
+                            item["table"],
+                            cname,
+                            col["type"],
+                            audit_log_name=audit_name,
+                        )
+                    self._complete_table(item, ctx)
         except Exception as e:
             self.db_manager.save_failure(target_name, "error", str(e))
         finally:

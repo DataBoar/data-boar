@@ -33,7 +33,7 @@ alwaysApply: false
 
 > **Esta regra DERIVA de ADR-0073 (+ `docs/VERSIONING.md`). Em conflito, a ADR vence → corrigir o `.mdc`, não a ADR. Se o certo não estiver claro, PARAR e perguntar ao operador.**
 
-- **`main` working tree:** **`1.8.0`** (`maturity_build = 200` — ADR-0073 L36 GA anchor); ADR-0073 **Accepted**; release gate **#2123 CLOSED** (successor of **#406** / **1.7.4**). Tagged **`v1.8.0`** on commit `3b0170641f2ab7a1358058902e12ff3f1fc3f545`.
+- **`main` working tree:** **`1.8.1`** — the presentation version (#2240), git-only, not a release until the release ritual (`maturity_build = 200`). Last GA cut: **`1.8.0`** (ADR-0073 L36 GA anchor); ADR-0073 **Accepted**; release gate **#2123 CLOSED** (successor of **#406** / **1.7.4**). Tagged **`v1.8.0`** on commit `3b0170641f2ab7a1358058902e12ff3f1fc3f545`.
 - **#970:** premature stable bump/tag without release gate — corrected by **ADR-0072** + **#406**; **`1.7.4` is not VOID**.
 - **Published customer channels:** tag **`v1.8.0`**, GitHub Release **Data Boar 1.8.0** (**2026-11-01T23:11:10Z**), Docker Hub **`1.8.0`** / **`latest`** (`sha256:1f7a8a32b2fced12969382579721d6311a6b4f3fd98d2e6ffca921da47ec6ebc`, **2026-11-01T23:28Z**), PyPI **1.8.0**. Historical: **`1.7.4.post12`**, **`1.7.4`**, **`1.7.3`**.
 - **`1.7.5` does not exist.** Next **dev** line after the **`1.8.0`** publish ritual: milestone **`v1.8.1`** (the 2026-11-16 presentation version, #2240; former v1.8.1–v1.8.4 are now v1.8.2–v1.8.5); do not invent **`1.7.5`**.
@@ -70,7 +70,7 @@ Beta/rc builds stay **git-only** for external users; operators may build images 
 | Motivation | What moves | Example |
 | --- | --- | --- |
 | **Fix-line republication** | `[project] version` → next **`.postN`** **because** at least one **fix** already advanced **`maturity_build`** since the last PyPI upload | `post1` → `post2` after `.203`–`.208` fixes on `main` |
-| **Next public line** | New semver train (**`1.8.0-beta`** → GA per gate + ritual), **not** another `.postN` on the old line | ADR-0073 next line **`1.8.0`** |
+| **Next public line** | New semver train (**`X.Y.Z-beta`** → GA per gate + ritual), **not** another `.postN` on the old line | Historical: after **`1.7.4`**, ADR-0073 next line **`1.8.0`** (`1.8.0-beta` → GA 2026-11-01) |
 
 If **`maturity_build` did not advance** since the last PyPI upload (docs/ADR/chore/rito only), **do not** publish a new **`postN`** — there is nothing new for the user to install.
 
@@ -109,7 +109,7 @@ If **`maturity_build` did not advance** since the last PyPI upload (docs/ADR/cho
 
 ## New public line — maturity band reset (ADR-0073)
 
-When opening **`1.8.0-beta`** (next dev line after **`1.7.4`** completes), **`maturity_build` resets** — it does **not** continue from `.208`.
+When opening a new public line, **`maturity_build` resets** — it does **not** continue from the previous line's fix octet. *(Historical example below: **`1.8.0-beta`** opened after **`1.7.4`**, resetting from `.208`; **`1.8.0`** GA shipped 2026-11-01.)*
 
 | `[project] version` | `maturity_build` band | Typical start |
 | --- | --- | --- |
