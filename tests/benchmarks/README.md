@@ -110,3 +110,19 @@ on import). The `simulated_read_latency` profile adds a fixed sleep before each
 sample read; it stands in for network filesystem round trips and is labelled
 `simulated: true` — it is not a network measurement. In a container image, run
 the same command with the image's interpreter and pass `--output` to a mounted path.
+
+## Regenerate `sql_intra_target_v1` (#1322)
+
+Load average (1 min) below 1.5 before each run; repo root on `PYTHONPATH`;
+both interpreters with the project dependencies.
+
+```bash
+python3.14t -X gil=0 tests/benchmarks/run_sql_intra_target_bench.py \
+  --output tests/benchmarks/sql_intra_target_nogil.json
+python3.14 tests/benchmarks/run_sql_intra_target_bench.py \
+  --output tests/benchmarks/sql_intra_target_gil.json
+uv run pytest tests/test_sql_intra_target_evidence.py -v
+```
+
+Defaults: 60 tables × 6 columns × 50 rows, workers 1/2/4/8, 5 iterations,
+20 ms simulated per-query wait (fixture, not a remote database).

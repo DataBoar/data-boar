@@ -69,7 +69,24 @@ Also observed while collecting the evidence: if a second process resumes a sessi
 
 ## Measurement
 
-_Pending (measurement window on the dev workstation)._ Runner in the format of `tests/benchmarks/run_filesystem_intra_target_bench.py`: serial vs 2 / 4 / 8 workers, N ≥ 5, median, exact parity, host / GIL / commit in the header, load < 1.5, on 3.14t (GIL off) and 3.14 (GIL). Profiles: local SQLite file, and a **simulated** per-query latency (fixture, not a real network). No gain is claimed here until it is measured.
+Runner: `tests/benchmarks/run_sql_intra_target_bench.py`; artifacts `tests/benchmarks/sql_intra_target_{nogil,gil}.json`; evidence test `tests/test_sql_intra_target_evidence.py`; reproduce commands in [tests/benchmarks/README.md](../../tests/benchmarks/README.md).
+
+**Pinned results** (2026-11-14, primary dev workstation, 12 CPUs, commit `9aee6022` (code as in `3385e86b`), one `database` target on a synthetic SQLite file of 60 tables × 6 columns × 50 rows (360 columns, 360 findings), whole scan through `AuditEngine.start_audit` with the real `DataScanner` — connect, discover, sample, detect, persist, no report; Enterprise test JWT so the cap does not clamp; median in seconds of 5 iterations; load average 1 min at the start 1.19 (3.14t) and 0.76 (3.14); exact finding parity, ordered and sorted, in **every** row; GIL state identical before and after each run):
+
+| Runtime | Profile | Serial | N=2 | N=4 | N=8 | Best vs serial |
+| ------- | ------- | ------ | --- | --- | --- | -------------- |
+| 3.14t, GIL off | local SQLite | 0.87 | 0.47 | 0.52 | 0.58 | 1.85× (N=2) |
+| 3.14t, GIL off | 20 ms simulated query wait | 8.33 | 4.02 | 2.07 | 1.14 | 7.3× (N=8) |
+| 3.14, GIL | local SQLite | 0.75 | 0.90 | 0.95 | 1.29 | 0.84× (threads slower) |
+| 3.14, GIL | 20 ms simulated query wait | 8.20 | 3.98 | 2.07 | 1.22 | 6.7× (N=8) |
+
+Reading the numbers without inflating them:
+
+- **Default unchanged:** `scan.max_workers: 1` builds no pool.
+- **The gain is waiting overlapped, not CPU:** with a per-query wait (a `time.sleep` before each column sample; a fixture standing in for the round trip measured in #1322, not a real remote database) the pool scales close to N on both runtimes (2.1× / 4.0× / 7.3× on 3.14t, 2.1× / 4.0× / 6.7× with the GIL). A real database adds server-side cost, connection setup and the customer's connection limits, none of which this measures.
+- **Local SQLite, no wait:** 3.14t gains at most 1.85× and drops with more workers (N=8: 1.49×); with the GIL threads are slower (0.84× → 0.59×). There is nothing to overlap and the detector is CPU-bound under the GIL.
+- **Tier relevance:** Community / open mode get at most N=2 (≈ 2× on the wait profile), Pro N=4, Pro+ N=8; only Enterprise may run the free-threaded build (#1409).
+- Not measured: PostgreSQL / SQL Server / Oracle, a real network, multiple targets, the batch-per-table idea.
 
 ## Risks
 
