@@ -1134,6 +1134,8 @@ class LocalDBManager:
     ) -> None:
         """Drop this session's filesystem findings for one file (and its members)."""
         parent, name = os.path.dirname(abs_path), os.path.basename(abs_path)
+        # File names often contain LIKE wildcards ("_", "%"): match them literally.
+        esc = name.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
         (
             session.query(FilesystemFinding)
             .filter(
@@ -1141,8 +1143,8 @@ class LocalDBManager:
                 FilesystemFinding.target_name == target_name,
                 FilesystemFinding.path == parent,
                 (FilesystemFinding.file_name == name)
-                | FilesystemFinding.file_name.like(f"{name} | %")
-                | FilesystemFinding.file_name.like(f"{name}|%"),
+                | FilesystemFinding.file_name.like(f"{esc} | %", escape="\\")
+                | FilesystemFinding.file_name.like(f"{esc}|%", escape="\\"),
             )
             .delete(synchronize_session=False)
         )
