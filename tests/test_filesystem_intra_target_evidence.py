@@ -145,10 +145,14 @@ def test_d1820_detector_fix_speeds_up_the_serial_scan() -> None:
 
 
 def test_d1820_free_threaded_pool_gains_after_detector_fix() -> None:
-    """With the fix, 3.14t gains on local disk (bounded by the serial writer) and more on waits."""
+    """With the fix, 3.14t gains on local disk (bounded by the serial writer) and more on waits.
+
+    Re-measured after the batched per-file writes (3736feda): the serial scan got
+    faster, so the local-disk gain of the pool shrank from ~1.6x to 1.33x.
+    """
     data = _load("nogil", "none", "fix")
     local = _speedups(data, "local_disk")
-    assert max(v for w, v in local.items() if w > 1) >= 1.4
+    assert max(v for w, v in local.items() if w > 1) >= 1.3
     assert all(v >= 1.0 for v in local.values())
     sim = _speedups(data, "simulated_read_latency")
     assert max(v for w, v in sim.items() if w > 1) >= 2.0

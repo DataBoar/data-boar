@@ -11,6 +11,7 @@ import os
 import stat
 import tempfile
 import threading
+import time
 import zipfile
 from collections import deque
 from collections.abc import Callable, Iterator
@@ -867,18 +868,35 @@ class FilesystemConnector:
         ctx = _FileScanContext(
             target_name=target_name, audit_name=audit_name, root=path
         )
+        writer = _FileCheckpointer(self.db_manager, target_name)
         candidates = (
             fp
             for fp in iter_scan_files(path, recursive=recursive)
-            if self._is_candidate(fp)
+            if self._is_candidate(fp) and not writer.already_done(fp)
         )
-        if workers <= 1:
-            # Serial path (default; tier cap or scan.max_workers of 1): no pool.
-            sink = _DirectSink(self.db_manager)
-            for file_path in candidates:
-                self._process_file(file_path, ctx, sink)
-            return
-        self._run_pool(candidates, ctx, workers)
+        try:
+            if workers > 1:
+                self._run_pool(candidates, ctx, workers, writer)
+            elif not writer.batching:
+                # Serial path without checkpoint support (e.g. test doubles):
+                # writes go straight to db_manager, as before #1820.
+                sink = _DirectSink(self.db_manager)
+                for file_path in candidates:
+                    self._process_file(file_path, ctx, sink)
+            else:
+                # Serial path (default; tier cap or scan.max_workers of 1): no pool.
+                for file_path in candidates:
+                    rec = _RecordingSink()
+                    try:
+                        self._process_file_tracked(file_path, ctx, rec)
+                    except BaseException:
+                        writer.partial(rec)
+                        raise
+                    writer.done(file_path, rec)
+        finally:
+            # Completed files reach SQLite with their checkpoints, also on
+            # interrupt; a hard kill loses at most the unflushed batch.
+            writer.flush(final=True)
 
     def intra_target_workers(self) -> int:
         """Pool size for this target (#1820), injected by the engine.
@@ -902,7 +920,11 @@ class FilesystemConnector:
         )
 
     def _run_pool(
-        self, candidates: Iterator[Path], ctx: "_FileScanContext", workers: int
+        self,
+        candidates: Iterator[Path],
+        ctx: "_FileScanContext",
+        workers: int,
+        writer: "_FileCheckpointer",
     ) -> None:
         """Read and detect on *workers* threads; persist on this thread in walk order.
 
@@ -912,34 +934,44 @@ class FilesystemConnector:
         sees no extra concurrent writers. The in-flight window bounds memory.
         """
         window = workers * _INTRA_TARGET_WINDOW_FACTOR
-        pending: deque[tuple[Future[None], _RecordingSink]] = deque()
+        pending: deque[tuple[Future[None], _RecordingSink, Path]] = deque()
         pool = ThreadPoolExecutor(
             max_workers=workers, thread_name_prefix=INTRA_TARGET_THREAD_PREFIX
         )
         try:
             for file_path in candidates:
                 sink = _RecordingSink()
-                pending.append(
-                    (pool.submit(self._process_file, file_path, ctx, sink), sink)
-                )
+                fut = pool.submit(self._process_file_tracked, file_path, ctx, sink)
+                pending.append((fut, sink, file_path))
                 if len(pending) >= window:
-                    self._drain_oldest(pending)
+                    self._drain_oldest(pending, writer)
             while pending:
-                self._drain_oldest(pending)
+                self._drain_oldest(pending, writer)
         finally:
             # Interrupt or error: drop queued work, wait for running items, so no
             # pool thread outlives run().
             pool.shutdown(wait=True, cancel_futures=True)
 
     def _drain_oldest(
-        self, pending: "deque[tuple[Future[None], _RecordingSink]]"
+        self,
+        pending: "deque[tuple[Future[None], _RecordingSink, Path]]",
+        writer: "_FileCheckpointer",
     ) -> None:
-        fut, sink = pending.popleft()
+        fut, sink, file_path = pending.popleft()
         exc = fut.exception()
-        # Writes recorded before a failure are kept, as in the serial path.
-        sink.replay(self.db_manager)
         if exc is not None:
+            # Writes recorded before a failure are kept, as in the serial path,
+            # but the file is not checkpointed (resume re-scans it).
+            writer.partial(sink)
             raise exc
+        writer.done(file_path, sink)
+
+    def _process_file_tracked(
+        self, file_path: Path, ctx: "_FileScanContext", sink: "_RecordingSink"
+    ) -> None:
+        """``_process_file`` plus the ``(mtime_ns, size)`` checkpoint key (#1820)."""
+        sink.ckey = _stat_key(file_path)
+        self._process_file(file_path, ctx, sink)
 
     def _process_file(
         self, file_path: Path, ctx: "_FileScanContext", sink: Any
@@ -1084,6 +1116,94 @@ class FilesystemConnector:
         )
 
 
+# Per-file resume (#1820 epic 2): checkpoint rows written per transaction.
+FILE_CHECKPOINT_BATCH = 256
+
+
+# Also flush when this many seconds passed, so live finding counts lag little.
+FILE_CHECKPOINT_FLUSH_SECONDS = 1.0
+
+
+def _stat_key(path: Path) -> tuple[int | None, int | None]:
+    try:
+        st = path.stat()
+    except OSError:
+        return (None, None)
+    return (st.st_mtime_ns, st.st_size)
+
+
+class _FileCheckpointer:
+    """Per-file resume and batched writes for one target (#1820 epic 2).
+
+    With a ``LocalDBManager`` (``persist_file_batch`` / ``list_file_checkpoints``):
+    each finished file's recorded writes plus its ``(abs_path, mtime_ns, size)``
+    checkpoint are queued and committed together in batches, so findings and
+    checkpoints of a file are durable in the same transaction. On resume
+    (checkpoints already in the session) unchanged files are skipped; a file
+    changed since its checkpoint is re-scanned and its old findings replaced.
+    Without that support (test doubles), writes are replayed immediately and
+    nothing is checkpointed.
+    """
+
+    def __init__(self, db_manager: Any, target_name: str) -> None:
+        self._db = db_manager
+        self._target = target_name
+        self.batching = callable(
+            getattr(db_manager, "persist_file_batch", None)
+        ) and callable(getattr(db_manager, "list_file_checkpoints", None))
+        self._done: dict[str, tuple[int | None, int | None]] = {}
+        if self.batching:
+            self._done = dict(db_manager.list_file_checkpoints(target_name) or {})
+        self._changed: set[str] = set()
+        self._items: list[tuple[list, tuple | None, bool]] = []
+        self._logs: list[tuple[Any, ...]] = []
+        self._last_flush = time.monotonic()
+
+    def already_done(self, file_path: Path) -> bool:
+        if not self._done:
+            return False
+        key = self._done.get(str(file_path))
+        if key is None:
+            return False
+        if _stat_key(file_path) == tuple(key):
+            return True
+        self._changed.add(str(file_path))
+        return False
+
+    def done(self, file_path: Path, sink: "_RecordingSink") -> None:
+        if not self.batching:
+            sink.replay(self._db)
+            return
+        ops, logs = sink.split()
+        path = str(file_path)
+        mtime_ns, size = sink.ckey
+        self._items.append(((ops), (path, mtime_ns, size), path in self._changed))
+        self._logs.extend(logs)
+        if (
+            len(self._items) >= FILE_CHECKPOINT_BATCH
+            or time.monotonic() - self._last_flush >= FILE_CHECKPOINT_FLUSH_SECONDS
+        ):
+            self.flush()
+
+    def partial(self, sink: "_RecordingSink") -> None:
+        if not self.batching:
+            sink.replay(self._db)
+            return
+        ops, logs = sink.split()
+        self._items.append((ops, None, False))
+        self._logs.extend(logs)
+
+    def flush(self, *, final: bool = False) -> None:
+        if not self.batching or not self._items:
+            return
+        items, logs = self._items, self._logs
+        self._items, self._logs = [], []
+        self._db.persist_file_batch(self._target, items)
+        for args in logs:
+            _emit_log_finding(*args)
+        self._last_flush = time.monotonic()
+
+
 # In-flight work items per pool worker before the target thread drains (#1820).
 _INTRA_TARGET_WINDOW_FACTOR = 4
 
@@ -1153,6 +1273,7 @@ class _RecordingSink:
 
     def __init__(self) -> None:
         self._ops: list[tuple[str, tuple[Any, ...], dict[str, Any]]] = []
+        self.ckey: tuple[int | None, int | None] = (None, None)
 
     def save_finding(self, *args: Any, **kwargs: Any) -> None:
         self._ops.append(("save_finding", args, kwargs))
@@ -1165,6 +1286,13 @@ class _RecordingSink:
 
     def log_finding(self, *args: Any) -> None:
         self._ops.append(("log_finding", args, {}))
+
+    def split(self) -> tuple[list, list]:
+        """(db write ops, audit-log argument tuples) in recorded order."""
+        ops = [op for op in self._ops if op[0] != "log_finding"]
+        logs = [op[1] for op in self._ops if op[0] == "log_finding"]
+        self._ops = []
+        return ops, logs
 
     def replay(self, db_manager: Any) -> None:
         direct = _DirectSink(db_manager)

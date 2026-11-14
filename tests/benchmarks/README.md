@@ -11,6 +11,7 @@ Regenerate only with intent — commit artifact and prose together.
 | `rust_tier_scan_io_v1` | `run_rust_tier_scan_io_bench.py` | ``AuditEngine`` filesystem scan at each tier ``worker_cap`` (enforced JWT bench) | SMB/NFS, ML/DL, full product multi-target |
 | `filesystem_phase_breakdown_v1` | `run_filesystem_phase_breakdown_bench.py` | Walk/glob vs read sample vs detect on synthetic `.txt` tree (local disk) | SMB/NFS, PDF extraction, parallel walk decisions (#1080) |
 | `filesystem_intra_target_v1` | `run_filesystem_intra_target_bench.py` | One filesystem target, serial vs intra-target pool (1/2/4/8 workers) through `AuditEngine`; local disk and a **simulated** read-latency profile; exact finding parity; free-threaded 3.14t and 3.14 with GIL (#1820) | Real NFS/SSHFS/SMB, report generation, multi-target |
+| `sql_intra_target_v1` | `run_sql_intra_target_bench.py` | One SQL target (synthetic SQLite source), serial vs per-table pool (1/2/4/8 workers) through `AuditEngine`; local SQLite and a **simulated** per-query latency profile; exact finding parity; free-threaded 3.14t and 3.14 with GIL (#1322) | Real remote databases, connection limits, batch-per-table sampling, Snowflake |
 
 ## Regenerate `rust_prefilter_hotspot_v1`
 
@@ -109,3 +110,19 @@ on import). The `simulated_read_latency` profile adds a fixed sleep before each
 sample read; it stands in for network filesystem round trips and is labelled
 `simulated: true` — it is not a network measurement. In a container image, run
 the same command with the image's interpreter and pass `--output` to a mounted path.
+
+## Regenerate `sql_intra_target_v1` (#1322)
+
+Load average (1 min) below 1.5 before each run; repo root on `PYTHONPATH`;
+both interpreters with the project dependencies.
+
+```bash
+python3.14t -X gil=0 tests/benchmarks/run_sql_intra_target_bench.py \
+  --output tests/benchmarks/sql_intra_target_nogil.json
+python3.14 tests/benchmarks/run_sql_intra_target_bench.py \
+  --output tests/benchmarks/sql_intra_target_gil.json
+uv run pytest tests/test_sql_intra_target_evidence.py -v
+```
+
+Defaults: 60 tables × 6 columns × 50 rows, workers 1/2/4/8, 5 iterations,
+20 ms simulated per-query wait (fixture, not a remote database).

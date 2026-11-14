@@ -1,0 +1,180 @@
+{
+  "benchmark": "sql_intra_target_v1",
+  "issue": "#1322",
+  "source": {
+    "tables": 60,
+    "columns_per_table": 6,
+    "rows_per_table": 50
+  },
+  "profiles": [
+    {
+      "name": "local_sqlite",
+      "simulated": false,
+      "simulated_query_latency_ms": 0.0,
+      "rows": [
+        {
+          "workers": 1,
+          "effective_max_workers": 1,
+          "iterations": 5,
+          "wall_seconds": [
+            0.8645,
+            0.8744,
+            0.8563,
+            0.8927,
+            0.8691
+          ],
+          "wall_seconds_median": 0.8691,
+          "finding_count": 360,
+          "parity_exact_ordered": true,
+          "parity_exact_sorted": true,
+          "speedup_vs_serial": 1.0
+        },
+        {
+          "workers": 2,
+          "effective_max_workers": 2,
+          "iterations": 5,
+          "wall_seconds": [
+            0.4709,
+            0.4814,
+            0.4427,
+            0.4649,
+            0.4762
+          ],
+          "wall_seconds_median": 0.4709,
+          "finding_count": 360,
+          "parity_exact_ordered": true,
+          "parity_exact_sorted": true,
+          "speedup_vs_serial": 1.846
+        },
+        {
+          "workers": 4,
+          "effective_max_workers": 4,
+          "iterations": 5,
+          "wall_seconds": [
+            0.5171,
+            0.6163,
+            0.5314,
+            0.5159,
+            0.5183
+          ],
+          "wall_seconds_median": 0.5183,
+          "finding_count": 360,
+          "parity_exact_ordered": true,
+          "parity_exact_sorted": true,
+          "speedup_vs_serial": 1.677
+        },
+        {
+          "workers": 8,
+          "effective_max_workers": 8,
+          "iterations": 5,
+          "wall_seconds": [
+            0.5724,
+            0.5854,
+            0.5904,
+            0.5664,
+            0.5825
+          ],
+          "wall_seconds_median": 0.5825,
+          "finding_count": 360,
+          "parity_exact_ordered": true,
+          "parity_exact_sorted": true,
+          "speedup_vs_serial": 1.492
+        }
+      ]
+    },
+    {
+      "name": "simulated_query_latency",
+      "simulated": true,
+      "simulated_query_latency_ms": 20.0,
+      "rows": [
+        {
+          "workers": 1,
+          "effective_max_workers": 1,
+          "iterations": 5,
+          "wall_seconds": [
+            8.34,
+            8.2864,
+            8.3308,
+            8.3697,
+            8.2627
+          ],
+          "wall_seconds_median": 8.3308,
+          "finding_count": 360,
+          "parity_exact_ordered": true,
+          "parity_exact_sorted": true,
+          "speedup_vs_serial": 1.0
+        },
+        {
+          "workers": 2,
+          "effective_max_workers": 2,
+          "iterations": 5,
+          "wall_seconds": [
+            4.0225,
+            4.0177,
+            4.0889,
+            4.077,
+            4.0077
+          ],
+          "wall_seconds_median": 4.0225,
+          "finding_count": 360,
+          "parity_exact_ordered": true,
+          "parity_exact_sorted": true,
+          "speedup_vs_serial": 2.071
+        },
+        {
+          "workers": 4,
+          "effective_max_workers": 4,
+          "iterations": 5,
+          "wall_seconds": [
+            2.0469,
+            2.0465,
+            2.0742,
+            2.1144,
+            2.0665
+          ],
+          "wall_seconds_median": 2.0665,
+          "finding_count": 360,
+          "parity_exact_ordered": true,
+          "parity_exact_sorted": true,
+          "speedup_vs_serial": 4.031
+        },
+        {
+          "workers": 8,
+          "effective_max_workers": 8,
+          "iterations": 5,
+          "wall_seconds": [
+            1.1266,
+            1.1389,
+            1.1524,
+            1.1505,
+            1.111
+          ],
+          "wall_seconds_median": 1.1389,
+          "finding_count": 360,
+          "parity_exact_ordered": true,
+          "parity_exact_sorted": true,
+          "speedup_vs_serial": 7.315
+        }
+      ]
+    }
+  ],
+  "python_version": "3.14.10",
+  "python_implementation": "CPython",
+  "free_threaded_build": true,
+  "gil_enabled_before": false,
+  "gil_enabled_after": false,
+  "cpu_count": 12,
+  "host_profile": "linux-x86_64",
+  "host_load_before": {
+    "load_1m": 1.19384765625,
+    "load_5m": 1.18505859375,
+    "load_15m": 1.537109375
+  },
+  "host_load": {
+    "load_1m": 1.0009765625,
+    "load_5m": 1.11083984375,
+    "load_15m": 1.4716796875
+  },
+  "git_sha": "9aee6022",
+  "generated_at": "2026-11-14T09:04:29.252463+00:00"
+}
