@@ -11,6 +11,7 @@ Regenerate only with intent — commit artifact and prose together.
 | `rust_tier_scan_io_v1` | `run_rust_tier_scan_io_bench.py` | ``AuditEngine`` filesystem scan at each tier ``worker_cap`` (enforced JWT bench) | SMB/NFS, ML/DL, full product multi-target |
 | `filesystem_phase_breakdown_v1` | `run_filesystem_phase_breakdown_bench.py` | Walk/glob vs read sample vs detect on synthetic `.txt` tree (local disk) | SMB/NFS, PDF extraction, parallel walk decisions (#1080) |
 | `filesystem_intra_target_v1` | `run_filesystem_intra_target_bench.py` | One filesystem target, serial vs intra-target pool (1/2/4/8 workers) through `AuditEngine`; local disk and a **simulated** read-latency profile; exact finding parity; free-threaded 3.14t and 3.14 with GIL (#1820) | Real NFS/SSHFS/SMB, report generation, multi-target |
+| `sql_intra_target_v1` | `run_sql_intra_target_bench.py` | One SQL target (synthetic SQLite source), serial vs per-table pool (1/2/4/8 workers) through `AuditEngine`; local SQLite and a **simulated** per-query latency profile; exact finding parity; free-threaded 3.14t and 3.14 with GIL (#1322) | Real remote databases, connection limits, batch-per-table sampling, Snowflake |
 
 ## Regenerate `rust_prefilter_hotspot_v1`
 
