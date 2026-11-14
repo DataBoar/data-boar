@@ -104,3 +104,11 @@ def test_d1820_ml_confidence_consistent_under_8_threads(
     for t in threads:
         t.join()
     assert all(r == expected for r in results)
+
+
+def test_d1820_ml_instance_predict_proba_override_is_honoured(
+    detector, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An instance-level ``predict_proba`` (test seam or wrapper) still decides."""
+    monkeypatch.setattr(detector._model, "predict_proba", lambda X: [[0.62, 0.38]])
+    assert detector._predict_ml_confidence(_TEXTS[0]) == 38
