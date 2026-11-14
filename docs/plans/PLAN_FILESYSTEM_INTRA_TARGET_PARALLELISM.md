@@ -63,7 +63,7 @@ The same file passes 5/5 runs on free-threaded 3.14t with `-X gil=0`.
 
 Runner: `tests/benchmarks/run_filesystem_intra_target_bench.py`; artifacts `tests/benchmarks/filesystem_intra_target_{nogil,gil}.json` (with the fix) and `filesystem_intra_target_{nogil,gil}{,_ml_lock}_before_fix.json`; evidence test `tests/test_filesystem_intra_target_evidence.py`. Reproduce commands are in [tests/benchmarks/README.md](../../tests/benchmarks/README.md).
 
-**Pinned results** (2026-11-14, primary dev workstation, 12 CPUs, one target of 2 000 synthetic `.csv` files plus 80 alias links, whole scan through `AuditEngine.start_audit` — walk, read, detect, persist, no report; 3 iterations, median in seconds; exact finding parity, ordered and sorted, in **every** row; GIL state identical before and after each run):
+**Pinned results** (2026-11-14, primary dev workstation, 12 CPUs, one target of 2 000 synthetic `.csv` files plus 80 alias links, whole scan through `AuditEngine.start_audit` — walk, read, detect, persist, no report; median in seconds of 3 iterations (before fix) or 5 iterations (fix, load average 1 min 1.06 at the start of the run, rising to ~3 from the benchmark's own threads); exact finding parity, ordered and sorted, in **every** row; GIL state identical before and after each run):
 
 | Runtime | Detector ML step | Profile | Serial | N=2 | N=4 | N=8 | Best vs serial |
 | ------- | ---------------- | ------- | ------ | --- | --- | --- | -------------- |
@@ -71,19 +71,20 @@ Runner: `tests/benchmarks/run_filesystem_intra_target_bench.py`; artifacts `test
 | 3.14t, GIL off | before fix | 2 ms simulated read wait | 17.86 | 16.98 | 111.34 | 179.72 | 1.05× |
 | 3.14, GIL | before fix | local disk | 13.28 | 14.95 | 15.62 | 17.31 | 0.89× |
 | 3.14, GIL | before fix | 2 ms simulated read wait | 16.27 | 15.03 | 17.37 | 17.57 | 1.08× |
-| 3.14t, GIL off | **fix** (`5edfdee4`) | local disk | **7.33** | **4.75** | **4.64** | 6.29 | **1.58×** |
-| 3.14t, GIL off | fix | 2 ms simulated read wait | 11.94 | 5.15 | 4.59 | 4.40 | 2.71× |
-| 3.14, GIL | fix | local disk | **6.45** | 7.64 | 8.27 | 10.35 | 0.85× (threads slower) |
-| 3.14, GIL | fix | 2 ms simulated read wait | 11.59 | 9.01 | 11.05 | 9.18 | 1.29× |
+| 3.14t, GIL off | **fix** (`cedd97cf`) | local disk | **6.75** | **4.19** | **4.42** | **4.38** | **1.61×** |
+| 3.14t, GIL off | fix | 2 ms simulated read wait | 11.35 | 5.00 | 4.20 | 4.68 | 2.70× |
+| 3.14, GIL | fix | local disk | **6.82** | 7.47 | 8.27 | 7.76 | 0.91× (threads slower) |
+| 3.14, GIL | fix | 2 ms simulated read wait | 11.39 | 8.73 | 8.37 | 8.43 | 1.36× |
 
 Option (a) (lock around the ML step, bench harness only, before the fix) removed the collapse but gave no gain: 3.14t 13.61 / 12.73 / 13.23 / 13.98 s on local disk; 3.14 with GIL 13.30 / 13.68 / 13.69 / 14.52 s.
 
-Reading the numbers without inflating them:
+Reading the numbers without inflating them (operator decision on the ML fix approved on 2026-11-14):
 
-- The **detector fix alone** makes the serial whole scan 1.85× faster on 3.14t (13.57 → 7.33 s) and 2.06× faster with the GIL (13.28 → 6.45 s), in every tier, with or without the pool.
-- With the fix, the **pool on 3.14t** gains 1.54× (N=2) and 1.58× (N=4) over the fixed serial scan on local disk; 13.57 → 4.64 s is 2.9× against the scan before #1820. N=8 is worse than N=4 (6.29 s).
-- **With the GIL**, threads make the local-disk scan slower (0.62–0.85×); they only overlap waits: up to 1.29× with a 2 ms simulated wait per read. On the 1-vCPU VPS only the overlap of real I/O waits can show.
-- **Remaining bottleneck:** the single writer. With detection stubbed out, the same scan costs 3.0 s serial and 3.3 s with 4 workers on 3.14t — walk, read and, mostly, one SQLite commit plus an `upsert_object_state` and an audit log line per finding, all on the target thread. The pool converges to that floor (≈ 4.6 s). Batching those writes is the next lever (not in this slice).
+- **Default unchanged:** with `scan.max_workers: 1` (the default) there is no pool; the only change a default scan sees is the detector fix.
+- **(i) The detector fix alone roughly doubles the serial scan:** 3.14t 13.57 → 6.75 s (2.0×), 3.14 with the GIL 13.28 → 6.82 s (1.95×), N = 1, in every tier.
+- **(ii) Pool on 3.14t (GIL off), with the fix, local disk:** 1.61× (N=2), 1.53× (N=4), 1.54× (N=8) over the fixed serial scan. An earlier 3-iteration run under load average ~3 gave 1.54× / 1.58× / 1.17×; N=8 is the noisiest row. With a 2 ms simulated wait per read: 2.27–2.70×.
+- **(iii) With the GIL the pool gains no CPU on local disk:** 0.83–0.91× (the earlier 3-iteration run: 0.62–0.85×). With the 2 ms simulated wait it only overlaps I/O: 1.31–1.36× (earlier run 1.05–1.29×). On the 1-vCPU VPS only real I/O overlap can show.
+- **(iv) What limits the gain beyond N=2 on local disk:** the single writer. With detection stubbed out, the same scan costs 3.0 s serial and 3.3 s with 4 workers on 3.14t — walk, read and, mostly, one SQLite commit plus an `upsert_object_state` and an audit log line per finding, all on the target thread; the pool flattens at ≈ 4.2–4.4 s, near that floor. Why N=8 was worse than N=4 in the loaded 3-iteration run was not investigated beyond that. Batching the writes is the next lever (not in this slice).
 
 **Cause (profiled 2026-11-14, micro-benchmarks of 400–450 samples per row, 3.14t vs 3.14):** regex matching and TF-IDF vectorisation scale with threads; the ML step does not. `RandomForestClassifier.predict_proba` (called from `SensitivityDetector._predict_ml_confidence`) always runs through `joblib.Parallel` (here with `n_jobs=1`), and `joblib.Parallel` entered concurrently from several threads collapses on the free-threaded build: a bare `joblib.Parallel(n_jobs=1)` over 100 no-op items costs 0.05 s for 400 calls serially and 20.5 s with 4 threads on 3.14t (0.07 s → 0.06 s with the GIL). Limiting native thread pools (`OMP/OPENBLAS/MKL_NUM_THREADS=1`, `threadpoolctl.threadpool_limits(1)`) changes nothing. Accumulating the per-tree `predict_proba(X, check_input=False)` directly, in the same order and divided by the number of trees, gives **bit-identical** probabilities and runs 0.75 s → 0.27 s (4 threads) on 3.14t and 0.32 s serial with the GIL, against 1.4–1.55 s serial for the forest call. The same collapse affected multi-target scans on free-threaded runtimes before this fix.
 
