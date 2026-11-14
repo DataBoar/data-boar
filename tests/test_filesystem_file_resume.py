@@ -241,3 +241,42 @@ def test_legacy_db_gains_file_checkpoint_table(tmp_path: Path) -> None:
         con.close()
     mgr.engine.dispose()
     assert "scan_file_checkpoints" in names
+
+
+@pytest.mark.parametrize(
+    ("target", "sibling"),
+    [("a_b.zip", "aXb.zip"), ("p%q.csv", "pZZq.csv"), ("x_y.db", "x-y.db")],
+)
+def test_replace_on_resume_only_touches_the_same_file(
+    tmp_path: Path, target: str, sibling: str
+) -> None:
+    """LIKE wildcards in file names must be literal when replacing findings."""
+    from core.database import LocalDBManager
+
+    mgr = LocalDBManager(str(tmp_path / "esc.db"))
+    mgr.set_current_session_id("sess-esc")
+    folder = str(tmp_path / "dir")
+
+    def _f(name: str) -> tuple:
+        return (
+            "save_finding",
+            (),
+            {
+                "source_type": "filesystem",
+                "target_name": "fs",
+                "path": folder,
+                "file_name": name,
+                "data_type": "TXT",
+                "sensitivity_level": "HIGH",
+                "pattern_detected": "LGPD_CPF",
+            },
+        )
+
+    ops = [_f(target), _f(f"{target}|inner.txt"), _f(f"{target} | t.c")]
+    ops += [_f(sibling), _f(f"{sibling}|inner.txt"), _f(f"{sibling} | t.c")]
+    mgr.persist_file_batch("fs", [(ops, None, False)])
+    mgr.persist_file_batch("fs", [([], (str(Path(folder) / target), 1, 1), True)])
+    _, fs_rows, _, _ = mgr.get_findings("sess-esc")
+    names = sorted(r["file_name"] for r in fs_rows)
+    mgr.engine.dispose()
+    assert names == sorted([sibling, f"{sibling}|inner.txt", f"{sibling} | t.c"])
