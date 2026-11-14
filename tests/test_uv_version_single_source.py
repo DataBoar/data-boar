@@ -989,6 +989,34 @@ def _pwsh_cmd(root: Path) -> list[str]:
     ]
 
 
+def test_spawn_gives_each_process_its_own_powershell_cache_but_one_uv_cache(
+    pin_tree: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """#2249: pwsh reads $XDG_CACHE_HOME/powershell/StartupProfileData-* at startup and rewrites it
+    with O_TRUNC at exit. Concurrent pwsh sharing that file tore it and .NET aborted (FileLoadException,
+    returncode -6). Only the pwsh cache is private: the uv cache and the uv on PATH stay shared, since
+    that shared link is the race the concurrent tests prove."""
+    seen: list[dict[str, str]] = []
+
+    class _Recorder:
+        def __init__(
+            self, cmd: list[str], *, env: dict[str, str], **kwargs: object
+        ) -> None:
+            seen.append(dict(env))
+
+    monkeypatch.setattr(subprocess, "Popen", _Recorder)
+    cache = tmp_path / "cache0"
+    for _ in range(3):
+        _spawn(["true"], pin_tree, cache)
+    xdg = [env.get("XDG_CACHE_HOME") for env in seen]
+    assert all(xdg), xdg
+    assert len(set(xdg)) == 3, xdg
+    for path in xdg:
+        assert Path(path).is_dir() and Path(path).is_relative_to(tmp_path), path
+    assert {env["DATA_BOAR_UV_CACHE_DIR"] for env in seen} == {str(cache)}
+    assert len({env["PATH"] for env in seen}) == 1
+
+
 @posix_only
 def test_pinned_uv_sh_installs_a_verified_download_and_reuses_the_cache(
     pin_tree: Path, tmp_path: Path
