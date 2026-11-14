@@ -1169,10 +1169,41 @@ class LocalDBManager:
         finally:
             session.close()
 
+    def list_in_progress_sql_tables(self, target_name: str) -> set[tuple[str, str]]:
+        """Return {(schema, table)} started but never completed in the current session."""
+        sid = self._current_session_id
+        if not sid:
+            return set()
+        session = self._session_factory()
+        try:
+            rows = (
+                session.query(ScanTableCheckpoint)
+                .filter(
+                    ScanTableCheckpoint.session_id == sid,
+                    ScanTableCheckpoint.target_name == target_name,
+                    ScanTableCheckpoint.status == "in_progress",
+                )
+                .all()
+            )
+            return {(r.schema_name or "", r.table_name or "") for r in rows}
+        finally:
+            session.close()
+
     def mark_sql_table_in_progress(
-        self, target_name: str, schema_name: str | None, table_name: str
+        self,
+        target_name: str,
+        schema_name: str | None,
+        table_name: str,
+        *,
+        replace: bool = False,
     ) -> None:
-        """Record that sampling of this table has started. Never demotes completed."""
+        """Record that sampling of this table has started. Never demotes completed.
+
+        ``replace`` (#1322): the table was left ``in_progress`` by an interrupted
+        run of this session; drop its earlier findings in the session in the same
+        transaction, so re-scanning it on ``--resume`` does not duplicate them.
+        Names are matched by equality (never ``LIKE``).
+        """
         sid = self._current_session_id
         if not sid or not table_name:
             return
@@ -1189,11 +1220,28 @@ class LocalDBManager:
                 )
                 .first()
             )
+            if replace and (rec is None or rec.status != "completed"):
+                if schema_name:
+                    schema_match = DatabaseFinding.schema_name == schema_name
+                else:
+                    schema_match = DatabaseFinding.schema_name.is_(None) | (
+                        DatabaseFinding.schema_name == ""
+                    )
+                (
+                    session.query(DatabaseFinding)
+                    .filter(
+                        DatabaseFinding.session_id == sid,
+                        DatabaseFinding.target_name == target_name,
+                        DatabaseFinding.table_name == table_name,
+                        schema_match,
+                    )
+                    .delete(synchronize_session=False)
+                )
             if rec is not None:
                 if rec.status != "completed":
                     rec.status = "in_progress"
                     rec.updated_at = _utc_now()
-                    session.commit()
+                session.commit()
                 return
             session.add(
                 ScanTableCheckpoint(
