@@ -1273,7 +1273,8 @@ def _forest_predict_proba(model: Any, X: Any) -> Any:
     probabilities in estimator order into a float64 buffer and divides by the tree
     count — the same arithmetic as sklearn's accumulator, so the result is
     bit-identical. Any other model (or a forest missing the expected attributes)
-    takes the unchanged ``predict_proba`` path.
+    takes the unchanged ``predict_proba`` path, as does a forest whose
+    ``predict_proba`` was overridden on the instance.
     """
     try:
         from sklearn.ensemble import RandomForestClassifier
@@ -1284,6 +1285,7 @@ def _forest_predict_proba(model: Any, X: Any) -> Any:
     n_classes = getattr(model, "n_classes_", None)
     if (
         not isinstance(model, RandomForestClassifier)
+        or "predict_proba" in vars(model)  # instance override (wrapper/test seam)
         or not estimators
         or validate is None
         or not hasattr(n_classes, "__index__")
