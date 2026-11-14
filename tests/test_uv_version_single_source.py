@@ -28,6 +28,7 @@ import shutil
 import subprocess
 import sys
 import tarfile
+import tempfile
 from pathlib import Path
 
 import pytest
@@ -960,9 +961,12 @@ def _serve_fake_uv(
 def _spawn(
     cmd: list[str], root: Path, cache: Path, **env: str
 ) -> subprocess.Popen[str]:
+    # A private XDG_CACHE_HOME per process: pwsh tears a shared StartupProfileData-* (#2249).
+    # The uv cache stays the one passed in, so the round still races on the same uv link.
     full = {
         "PATH": str(_tools_dir(root.parent)),
         "HOME": str(root.parent / "home"),
+        "XDG_CACHE_HOME": tempfile.mkdtemp(prefix="xdg-cache-", dir=root.parent),
         "DATA_BOAR_UV_CACHE_DIR": str(cache),
         **env,
     }
