@@ -96,6 +96,13 @@ PYTHONPATH=. <venv-3.14>/bin/python tests/benchmarks/run_filesystem_intra_target
 uv run pytest tests/test_filesystem_intra_target_evidence.py -v
 ```
 
+Pinned files: `filesystem_intra_target_{nogil,gil}.json` (current code, with the
+joblib-free detector ML step, header `detector_joblib_free_ml: true`) and the
+historical `filesystem_intra_target_{nogil,gil}_before_fix.json` plus
+`..._ml_lock_before_fix.json` (`--variant ml_lock`: bench-only lock around the
+ML step) from commit `d661e225`, kept because the plan cites them. Re-running
+the before-fix files needs that commit checked out.
+
 The runner refuses to write the artifact when `sys._is_gil_enabled()` changes
 during the run (a C extension without free-threading support re-enables the GIL
 on import). The `simulated_read_latency` profile adds a fixed sleep before each

@@ -1,0 +1,161 @@
+{
+  "benchmark": "filesystem_intra_target_v1",
+  "issue": "#1820",
+  "variant": "none",
+  "detector_joblib_free_ml": true,
+  "corpus": {
+    "files": 2000,
+    "large_files": 40,
+    "alias_links": 80
+  },
+  "profiles": [
+    {
+      "name": "local_disk",
+      "simulated": false,
+      "simulated_read_latency_ms": 0.0,
+      "rows": [
+        {
+          "workers": 1,
+          "effective_max_workers": 1,
+          "iterations": 3,
+          "wall_seconds": [
+            7.8563,
+            7.3301,
+            7.3018
+          ],
+          "wall_seconds_median": 7.3301,
+          "finding_count": 2000,
+          "parity_exact_ordered": true,
+          "parity_exact_sorted": true,
+          "speedup_vs_serial": 1.0
+        },
+        {
+          "workers": 2,
+          "effective_max_workers": 2,
+          "iterations": 3,
+          "wall_seconds": [
+            4.4675,
+            4.7534,
+            4.7598
+          ],
+          "wall_seconds_median": 4.7534,
+          "finding_count": 2000,
+          "parity_exact_ordered": true,
+          "parity_exact_sorted": true,
+          "speedup_vs_serial": 1.542
+        },
+        {
+          "workers": 4,
+          "effective_max_workers": 4,
+          "iterations": 3,
+          "wall_seconds": [
+            4.5388,
+            4.6789,
+            4.6358
+          ],
+          "wall_seconds_median": 4.6358,
+          "finding_count": 2000,
+          "parity_exact_ordered": true,
+          "parity_exact_sorted": true,
+          "speedup_vs_serial": 1.581
+        },
+        {
+          "workers": 8,
+          "effective_max_workers": 8,
+          "iterations": 3,
+          "wall_seconds": [
+            4.886,
+            6.2885,
+            6.8692
+          ],
+          "wall_seconds_median": 6.2885,
+          "finding_count": 2000,
+          "parity_exact_ordered": true,
+          "parity_exact_sorted": true,
+          "speedup_vs_serial": 1.166
+        }
+      ]
+    },
+    {
+      "name": "simulated_read_latency",
+      "simulated": true,
+      "simulated_read_latency_ms": 2.0,
+      "rows": [
+        {
+          "workers": 1,
+          "effective_max_workers": 1,
+          "iterations": 3,
+          "wall_seconds": [
+            11.8629,
+            11.9443,
+            12.2089
+          ],
+          "wall_seconds_median": 11.9443,
+          "finding_count": 2000,
+          "parity_exact_ordered": true,
+          "parity_exact_sorted": true,
+          "speedup_vs_serial": 1.0
+        },
+        {
+          "workers": 2,
+          "effective_max_workers": 2,
+          "iterations": 3,
+          "wall_seconds": [
+            5.4962,
+            5.1544,
+            5.0319
+          ],
+          "wall_seconds_median": 5.1544,
+          "finding_count": 2000,
+          "parity_exact_ordered": true,
+          "parity_exact_sorted": true,
+          "speedup_vs_serial": 2.317
+        },
+        {
+          "workers": 4,
+          "effective_max_workers": 4,
+          "iterations": 3,
+          "wall_seconds": [
+            4.589,
+            4.9214,
+            4.3234
+          ],
+          "wall_seconds_median": 4.589,
+          "finding_count": 2000,
+          "parity_exact_ordered": true,
+          "parity_exact_sorted": true,
+          "speedup_vs_serial": 2.603
+        },
+        {
+          "workers": 8,
+          "effective_max_workers": 8,
+          "iterations": 3,
+          "wall_seconds": [
+            4.3916,
+            4.4046,
+            4.4685
+          ],
+          "wall_seconds_median": 4.4046,
+          "finding_count": 2000,
+          "parity_exact_ordered": true,
+          "parity_exact_sorted": true,
+          "speedup_vs_serial": 2.712
+        }
+      ]
+    }
+  ],
+  "python_version": "3.14.10",
+  "python_implementation": "CPython",
+  "free_threaded_build": true,
+  "gil_enabled_before": false,
+  "gil_enabled_after": false,
+  "cpu_count": 12,
+  "host_profile": "linux-x86_64",
+  "host_load": {
+    "load_1m": 3.21337890625,
+    "load_5m": 3.0634765625,
+    "load_15m": 2.64599609375
+  },
+  "git_sha": "5edfdee4",
+  "generated_at": "2026-11-14T05:52:45.626417+00:00"
+}

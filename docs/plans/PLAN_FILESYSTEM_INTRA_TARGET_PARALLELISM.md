@@ -1,6 +1,6 @@
 # Plan: Filesystem intra-target parallelism (worker pool inside one target)
 
-**Status:** Active (pool implemented on branch, benchmark pinned; resume per file is roadmap)
+**Status:** Active (pool and detector ML fix on branch, benchmark pinned; resume per file and write batching are roadmap)
 **Date:** 2026-11-14
 **Authors:** Fabio Leitao
 **Priority:** H1 / U1 (GitHub milestone v1.8.2 after the #2240 renumbering; pulled forward for the 18/Nov presentation by operator order)
@@ -61,11 +61,69 @@ The same file passes 5/5 runs on free-threaded 3.14t with `-X gil=0`.
 
 ## Measurement
 
-Runner: `tests/benchmarks/run_filesystem_intra_target_bench.py`; artifacts `tests/benchmarks/filesystem_intra_target_nogil.json` and `filesystem_intra_target_gil.json`; evidence test `tests/test_filesystem_intra_target_evidence.py`. Reproduce commands are in [tests/benchmarks/README.md](../../tests/benchmarks/README.md).
+Runner: `tests/benchmarks/run_filesystem_intra_target_bench.py`; artifacts `tests/benchmarks/filesystem_intra_target_{nogil,gil}.json` (with the fix) and `filesystem_intra_target_{nogil,gil}{,_ml_lock}_before_fix.json`; evidence test `tests/test_filesystem_intra_target_evidence.py`. Reproduce commands are in [tests/benchmarks/README.md](../../tests/benchmarks/README.md).
 
-**Interim (2026-11-14, primary dev workstation, 12 CPUs, 2 000 synthetic `.csv`, commit `11c8db04`, CPython 3.14.10 free-threaded, GIL off before and after):** exact parity in every row, but the pool is **slower** on 3.14t: median 12.9 s serial vs 18.6 s (2 workers), 119.6 s (4), 170.7 s (8) on local disk; with 2 ms simulated read latency 17.9 s serial vs 15.8 s (2), 110.8 s (4), 175.4 s (8). The 3.14-with-GIL run is pending and the artifacts are not committed.
+**Pinned results** (2026-11-14, primary dev workstation, 12 CPUs, one target of 2 000 synthetic `.csv` files plus 80 alias links, whole scan through `AuditEngine.start_audit` — walk, read, detect, persist, no report; 3 iterations, median in seconds; exact finding parity, ordered and sorted, in **every** row; GIL state identical before and after each run):
 
-**Cause (profiled 2026-11-14, micro-benchmarks of 400–450 samples per row, 3.14t vs 3.14):** regex matching and TF-IDF vectorisation scale with threads; the ML step does not. `RandomForestClassifier.predict_proba` (called from `SensitivityDetector._predict_ml_confidence`) always runs through `joblib.Parallel` (here with `n_jobs=1`), and `joblib.Parallel` entered concurrently from several threads collapses on the free-threaded build: a bare `joblib.Parallel(n_jobs=1)` over 100 no-op items costs 0.05 s for 400 calls serially and 20.5 s with 4 threads on 3.14t (0.07 s → 0.06 s with the GIL). Limiting native thread pools (`OMP/OPENBLAS/MKL_NUM_THREADS=1`, `threadpoolctl.threadpool_limits(1)`) changes nothing. Accumulating the per-tree `predict_proba(X, check_input=False)` directly, in the same order and divided by the number of trees, gives **bit-identical** probabilities and runs 0.75 s → 0.27 s (4 threads) on 3.14t and 0.32 s serial with the GIL, against 1.4–1.55 s serial for the forest call. The fix lives in `core/detector.py` and waits for the operator's approval; the same collapse already affects multi-target scans on free-threaded runtimes today.
+| Runtime | Detector ML step | Profile | Serial | N=2 | N=4 | N=8 | Best vs serial |
+| ------- | ---------------- | ------- | ------ | --- | --- | --- | -------------- |
+| 3.14t, GIL off | before fix (`d661e225`) | local disk | 13.57 | 18.80 | 121.16 | 175.98 | 0.72× (collapse) |
+| 3.14t, GIL off | before fix | 2 ms simulated read wait | 17.86 | 16.98 | 111.34 | 179.72 | 1.05× |
+| 3.14, GIL | before fix | local disk | 13.28 | 14.95 | 15.62 | 17.31 | 0.89× |
+| 3.14, GIL | before fix | 2 ms simulated read wait | 16.27 | 15.03 | 17.37 | 17.57 | 1.08× |
+| 3.14t, GIL off | **fix** (`5edfdee4`) | local disk | **7.33** | **4.75** | **4.64** | 6.29 | **1.58×** |
+| 3.14t, GIL off | fix | 2 ms simulated read wait | 11.94 | 5.15 | 4.59 | 4.40 | 2.71× |
+| 3.14, GIL | fix | local disk | **6.45** | 7.64 | 8.27 | 10.35 | 0.85× (threads slower) |
+| 3.14, GIL | fix | 2 ms simulated read wait | 11.59 | 9.01 | 11.05 | 9.18 | 1.29× |
+
+Option (a) (lock around the ML step, bench harness only, before the fix) removed the collapse but gave no gain: 3.14t 13.61 / 12.73 / 13.23 / 13.98 s on local disk; 3.14 with GIL 13.30 / 13.68 / 13.69 / 14.52 s.
+
+Reading the numbers without inflating them:
+
+- The **detector fix alone** makes the serial whole scan 1.85× faster on 3.14t (13.57 → 7.33 s) and 2.06× faster with the GIL (13.28 → 6.45 s), in every tier, with or without the pool.
+- With the fix, the **pool on 3.14t** gains 1.54× (N=2) and 1.58× (N=4) over the fixed serial scan on local disk; 13.57 → 4.64 s is 2.9× against the scan before #1820. N=8 is worse than N=4 (6.29 s).
+- **With the GIL**, threads make the local-disk scan slower (0.62–0.85×); they only overlap waits: up to 1.29× with a 2 ms simulated wait per read. On the 1-vCPU VPS only the overlap of real I/O waits can show.
+- **Remaining bottleneck:** the single writer. With detection stubbed out, the same scan costs 3.0 s serial and 3.3 s with 4 workers on 3.14t — walk, read and, mostly, one SQLite commit plus an `upsert_object_state` and an audit log line per finding, all on the target thread. The pool converges to that floor (≈ 4.6 s). Batching those writes is the next lever (not in this slice).
+
+**Cause (profiled 2026-11-14, micro-benchmarks of 400–450 samples per row, 3.14t vs 3.14):** regex matching and TF-IDF vectorisation scale with threads; the ML step does not. `RandomForestClassifier.predict_proba` (called from `SensitivityDetector._predict_ml_confidence`) always runs through `joblib.Parallel` (here with `n_jobs=1`), and `joblib.Parallel` entered concurrently from several threads collapses on the free-threaded build: a bare `joblib.Parallel(n_jobs=1)` over 100 no-op items costs 0.05 s for 400 calls serially and 20.5 s with 4 threads on 3.14t (0.07 s → 0.06 s with the GIL). Limiting native thread pools (`OMP/OPENBLAS/MKL_NUM_THREADS=1`, `threadpoolctl.threadpool_limits(1)`) changes nothing. Accumulating the per-tree `predict_proba(X, check_input=False)` directly, in the same order and divided by the number of trees, gives **bit-identical** probabilities and runs 0.75 s → 0.27 s (4 threads) on 3.14t and 0.32 s serial with the GIL, against 1.4–1.55 s serial for the forest call. The same collapse affected multi-target scans on free-threaded runtimes before this fix.
+
+**Options compared** (micro-benchmark of `scan_file_content`, 400 in-memory samples, seconds for N = 1 / 2 / 4 / 8 threads, output identical to the serial reference in every cell):
+
+| Option | 3.14t (GIL off) | 3.14 (GIL) | Touches the detector |
+| ------ | --------------- | ---------- | -------------------- |
+| None (as shipped) | 1.51 / 2.30 / 19.7 / 32.9 | 1.60 / 1.59 / 2.23 / 2.23 | no |
+| (a) lock around the ML step only | 1.55 / 1.57 / 1.65 / 1.89 | 1.48 / 1.70 / 2.08 / 1.82 | no (applied by a caller) |
+| (b) forest probabilities without `joblib.Parallel` | 0.59 / 0.38 / 0.31 / 0.23 | 0.47 / 0.59 / 0.85 / 0.88 | yes |
+| (b2) `joblib.parallel_config(backend="sequential")` | 1.72 / 2.76 / 19.1 / 32.8 | 1.44 / 2.16 / 2.40 / 2.47 | yes |
+| (c) ML as a serial phase after the pool (estimate) | 1.58 / 1.54 / 1.66 / 1.75 | 1.60 / 1.98 / 1.80 / 1.78 | yes (splits `analyze`) |
+
+(a) removes the collapse but cannot gain: ML is about 93 % of detection time and stays serial. (b) is the only option with a gain. (b2) keeps `Parallel` on the path. (c) costs what (a) costs and needs a larger detector change.
+
+**Fix (b) — operator decision approved on 2026-11-14, applied in its own commit `ffdd4785` (`perf(detector)`, the only change to `core/detector.py` in #1820; revert that commit alone to restore the old path).** `SensitivityDetector._predict_ml_confidence` now calls the module helper `_forest_predict_proba(self._model, X)` instead of `self._model.predict_proba(X)`:
+
+```python
+def _forest_predict_proba(model, X):
+    from sklearn.ensemble import RandomForestClassifier
+    import numpy as np
+
+    estimators = getattr(model, "estimators_", None)
+    validate = getattr(model, "_validate_X_predict", None)
+    if (
+        not isinstance(model, RandomForestClassifier)
+        or not estimators
+        or validate is None
+        or getattr(model, "n_outputs_", 1) != 1
+    ):
+        return model.predict_proba(X)  # unchanged path
+    Xv = validate(X)
+    acc = np.zeros((Xv.shape[0], int(model.n_classes_)), dtype=np.float64)
+    for est in estimators:  # same order and float64 sum as sklearn's accumulator
+        acc += est.predict_proba(Xv, check_input=False)
+    acc /= len(estimators)
+    return acc
+```
+
+Bit-identical to `predict_proba` (`np.array_equal`). Risk: `_validate_X_predict` is private sklearn API; mitigated by the fallback to `predict_proba` for anything that is not a single-output `RandomForestClassifier` with the expected attributes, and by `tests/test_detector_forest_predict_1820.py` (red first in `d661e225`): bit-identical probabilities, unchanged `ml_confidence` with `joblib.Parallel` forbidden, single-class model, no model, non-forest fallback, 8 threads.
 
 ## Risks
 
@@ -113,7 +171,8 @@ A filesystem target is **re-scanned from the start**: nothing is lost, but every
 | ----- | ------ |
 | Plan + red tests | ✅ |
 | Pool + budget + atomic dedup | ✅ |
-| Pinned benchmark (3.14t vs 3.14 GIL, dev workstation) | ⬜ in progress — 3.14t shows contention |
+| Detector ML fix (operator-approved) | ✅ |
+| Pinned benchmark (3.14t vs 3.14 GIL, dev workstation) | ✅ |
 | Resume survey | ✅ |
 | Demo image + VPS measurement (operator / PM) | ⬜ |
 | Resume per file | ⬜ roadmap |
