@@ -10,6 +10,7 @@ Regenerate only with intent — commit artifact and prose together.
 | `rust_per_call_cost_v1` | `run_rust_per_call_cost_bench.py` | Per-call PyO3 loop vs single `filter_batch`; short/long corpora; `RegexStageEngine.match_names` | End-to-end scan I/O (see `rust_tier_scan_io_v1`) |
 | `rust_tier_scan_io_v1` | `run_rust_tier_scan_io_bench.py` | ``AuditEngine`` filesystem scan at each tier ``worker_cap`` (enforced JWT bench) | SMB/NFS, ML/DL, full product multi-target |
 | `filesystem_phase_breakdown_v1` | `run_filesystem_phase_breakdown_bench.py` | Walk/glob vs read sample vs detect on synthetic `.txt` tree (local disk) | SMB/NFS, PDF extraction, parallel walk decisions (#1080) |
+| `filesystem_intra_target_v1` | `run_filesystem_intra_target_bench.py` | One filesystem target, serial vs intra-target pool (1/2/4/8 workers) through `AuditEngine`; local disk and a **simulated** read-latency profile; exact finding parity; free-threaded 3.14t and 3.14 with GIL (#1820) | Real NFS/SSHFS/SMB, report generation, multi-target |
 
 ## Regenerate `rust_prefilter_hotspot_v1`
 
@@ -77,3 +78,34 @@ uv run python tests/benchmarks/run_filesystem_phase_breakdown_bench.py \
 ```
 
 Use results to gate parallel filesystem walk (#1080) and to complement `rust_prefilter_hotspot_v1` for #1078 (local txt profile only).
+
+## Regenerate `filesystem_intra_target_v1` (#1820)
+
+Two interpreters with the project dependencies installed (for example
+`uv export --no-hashes --no-emit-project > /tmp/req.txt`, then
+`uv venv --python 3.14t <dir>` and `uv pip install -p <dir>/bin/python -r /tmp/req.txt`,
+same for `3.14`). Nothing else heavy on the host while measuring.
+
+```bash
+PYTHONPATH=. <venv-3.14t>/bin/python -X gil=0 tests/benchmarks/run_filesystem_intra_target_bench.py \
+  --files 2000 --workers 1,2,4,8 --iterations 3 --latency-ms 2 \
+  --output tests/benchmarks/filesystem_intra_target_nogil.json
+PYTHONPATH=. <venv-3.14>/bin/python tests/benchmarks/run_filesystem_intra_target_bench.py \
+  --files 2000 --workers 1,2,4,8 --iterations 3 --latency-ms 2 \
+  --output tests/benchmarks/filesystem_intra_target_gil.json
+uv run pytest tests/test_filesystem_intra_target_evidence.py -v
+```
+
+Pinned files: `filesystem_intra_target_{nogil,gil}.json` (current code, with the
+joblib-free detector ML step, header `detector_joblib_free_ml: true`) and the
+historical `filesystem_intra_target_{nogil,gil}_before_fix.json` plus
+`..._ml_lock_before_fix.json` (`--variant ml_lock`: bench-only lock around the
+ML step) from commit `d661e225`, kept because the plan cites them. Re-running
+the before-fix files needs that commit checked out.
+
+The runner refuses to write the artifact when `sys._is_gil_enabled()` changes
+during the run (a C extension without free-threading support re-enables the GIL
+on import). The `simulated_read_latency` profile adds a fixed sleep before each
+sample read; it stands in for network filesystem round trips and is labelled
+`simulated: true` — it is not a network measurement. In a container image, run
+the same command with the image's interpreter and pass `--output` to a mounted path.

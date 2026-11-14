@@ -1264,6 +1264,44 @@ def _format_hint_suggests_sensitive_column(
     return None
 
 
+def _forest_predict_proba(model: Any, X: Any) -> Any:
+    """Same probabilities as ``model.predict_proba(X)`` without ``joblib.Parallel`` (#1820).
+
+    ``RandomForestClassifier.predict_proba`` always runs through ``joblib.Parallel``
+    (even with ``n_jobs=1``), which collapses when entered from several threads on
+    free-threaded CPython. For a single-output random forest this sums the per-tree
+    probabilities in estimator order into a float64 buffer and divides by the tree
+    count — the same arithmetic as sklearn's accumulator, so the result is
+    bit-identical. Any other model (or a forest missing the expected attributes)
+    takes the unchanged ``predict_proba`` path, as does a forest whose
+    ``predict_proba`` was overridden on the instance.
+    """
+    try:
+        from sklearn.ensemble import RandomForestClassifier
+    except ImportError:  # pragma: no cover - sklearn absent means no model either
+        return model.predict_proba(X)
+    estimators = getattr(model, "estimators_", None)
+    validate = getattr(model, "_validate_X_predict", None)
+    n_classes = getattr(model, "n_classes_", None)
+    if (
+        not isinstance(model, RandomForestClassifier)
+        or "predict_proba" in vars(model)  # instance override (wrapper/test seam)
+        or not estimators
+        or validate is None
+        or not hasattr(n_classes, "__index__")
+        or getattr(model, "n_outputs_", 1) != 1
+    ):
+        return model.predict_proba(X)
+    import numpy as np
+
+    Xv = validate(X)
+    acc = np.zeros((Xv.shape[0], int(n_classes)), dtype=np.float64)
+    for est in estimators:
+        acc += est.predict_proba(Xv, check_input=False)
+    acc /= len(estimators)
+    return acc
+
+
 class SensitivityDetector:
     """
     Hybrid detector: regex first, then ML (TF-IDF + RandomForest), then optional DL (sentence embeddings + classifier).
@@ -1529,7 +1567,7 @@ class SensitivityDetector:
             return 0
         try:
             X = self._vectorizer.transform([ml_dl_text.lower()])
-            proba = self._model.predict_proba(X)
+            proba = _forest_predict_proba(self._model, X)
             classes = list(getattr(self._model, "classes_", []))
             if not classes:
                 return 0

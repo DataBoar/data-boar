@@ -1,0 +1,182 @@
+{
+  "benchmark": "filesystem_intra_target_v1",
+  "issue": "#1820",
+  "variant": "none",
+  "detector_joblib_free_ml": true,
+  "corpus": {
+    "files": 2000,
+    "large_files": 40,
+    "alias_links": 80
+  },
+  "profiles": [
+    {
+      "name": "local_disk",
+      "simulated": false,
+      "simulated_read_latency_ms": 0.0,
+      "rows": [
+        {
+          "workers": 1,
+          "effective_max_workers": 1,
+          "iterations": 5,
+          "wall_seconds": [
+            6.8721,
+            7.112,
+            6.7516,
+            6.732,
+            6.7246
+          ],
+          "wall_seconds_median": 6.7516,
+          "finding_count": 2000,
+          "parity_exact_ordered": true,
+          "parity_exact_sorted": true,
+          "speedup_vs_serial": 1.0
+        },
+        {
+          "workers": 2,
+          "effective_max_workers": 2,
+          "iterations": 5,
+          "wall_seconds": [
+            4.2503,
+            4.1912,
+            4.3653,
+            4.1852,
+            4.1406
+          ],
+          "wall_seconds_median": 4.1912,
+          "finding_count": 2000,
+          "parity_exact_ordered": true,
+          "parity_exact_sorted": true,
+          "speedup_vs_serial": 1.611
+        },
+        {
+          "workers": 4,
+          "effective_max_workers": 4,
+          "iterations": 5,
+          "wall_seconds": [
+            4.545,
+            4.1407,
+            4.42,
+            4.6505,
+            4.1872
+          ],
+          "wall_seconds_median": 4.42,
+          "finding_count": 2000,
+          "parity_exact_ordered": true,
+          "parity_exact_sorted": true,
+          "speedup_vs_serial": 1.528
+        },
+        {
+          "workers": 8,
+          "effective_max_workers": 8,
+          "iterations": 5,
+          "wall_seconds": [
+            4.5191,
+            4.6197,
+            4.3788,
+            4.2608,
+            4.0662
+          ],
+          "wall_seconds_median": 4.3788,
+          "finding_count": 2000,
+          "parity_exact_ordered": true,
+          "parity_exact_sorted": true,
+          "speedup_vs_serial": 1.542
+        }
+      ]
+    },
+    {
+      "name": "simulated_read_latency",
+      "simulated": true,
+      "simulated_read_latency_ms": 2.0,
+      "rows": [
+        {
+          "workers": 1,
+          "effective_max_workers": 1,
+          "iterations": 5,
+          "wall_seconds": [
+            11.0799,
+            11.3548,
+            12.0552,
+            12.5874,
+            11.2311
+          ],
+          "wall_seconds_median": 11.3548,
+          "finding_count": 2000,
+          "parity_exact_ordered": true,
+          "parity_exact_sorted": true,
+          "speedup_vs_serial": 1.0
+        },
+        {
+          "workers": 2,
+          "effective_max_workers": 2,
+          "iterations": 5,
+          "wall_seconds": [
+            5.0023,
+            4.8585,
+            4.8975,
+            5.1314,
+            5.3884
+          ],
+          "wall_seconds_median": 5.0023,
+          "finding_count": 2000,
+          "parity_exact_ordered": true,
+          "parity_exact_sorted": true,
+          "speedup_vs_serial": 2.27
+        },
+        {
+          "workers": 4,
+          "effective_max_workers": 4,
+          "iterations": 5,
+          "wall_seconds": [
+            4.1988,
+            4.1001,
+            4.1537,
+            4.2034,
+            4.2943
+          ],
+          "wall_seconds_median": 4.1988,
+          "finding_count": 2000,
+          "parity_exact_ordered": true,
+          "parity_exact_sorted": true,
+          "speedup_vs_serial": 2.704
+        },
+        {
+          "workers": 8,
+          "effective_max_workers": 8,
+          "iterations": 5,
+          "wall_seconds": [
+            4.4652,
+            4.2976,
+            4.7538,
+            4.6755,
+            4.6882
+          ],
+          "wall_seconds_median": 4.6755,
+          "finding_count": 2000,
+          "parity_exact_ordered": true,
+          "parity_exact_sorted": true,
+          "speedup_vs_serial": 2.429
+        }
+      ]
+    }
+  ],
+  "python_version": "3.14.10",
+  "python_implementation": "CPython",
+  "free_threaded_build": true,
+  "gil_enabled_before": false,
+  "gil_enabled_after": false,
+  "cpu_count": 12,
+  "host_profile": "linux-x86_64",
+  "host_load_before": {
+    "load_1m": 1.06494140625,
+    "load_5m": 2.27978515625,
+    "load_15m": 2.86669921875
+  },
+  "host_load": {
+    "load_1m": 3.15380859375,
+    "load_5m": 2.52880859375,
+    "load_15m": 2.814453125
+  },
+  "git_sha": "cedd97cf",
+  "generated_at": "2026-11-14T06:25:56.354671+00:00"
+}

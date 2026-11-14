@@ -18,6 +18,24 @@ from typing import Any
 from config.scan_defaults import DEFAULT_FILE_SAMPLE_MAX_CHARS
 
 
+# Target types whose connector walks a mounted tree via FilesystemConnector (#1820).
+_INTRA_TARGET_POOL_TYPES = frozenset({"filesystem", "nfs"})
+
+
+def _intra_target_worker_budget(max_workers: int, concurrent_targets: int) -> int:
+    """Per-target worker pool size (#1820) inside the clamped ``max_workers`` budget.
+
+    ``max_workers`` is the value after the licensing clamp in ``start_audit``
+    (#551 ``worker_cap`` / ``dbmax_workers`` claim, #856 open-mode clamp); no new
+    cap is introduced here. The budget is split across the targets that run at
+    the same time, so ``outer * inner <= max_workers`` and a pool of pools never
+    exceeds the tier cap. ``max_workers <= 1`` keeps every target serial.
+    """
+    budget = max(1, int(max_workers))
+    outer = max(1, min(budget, int(concurrent_targets)))
+    return max(1, budget // outer)
+
+
 def _compute_config_scope_hash(config: dict[str, Any]) -> str:
     """
     Compute a non-reversible digest of the scan scope (target names, types, file_scan.extensions only).
@@ -186,6 +204,8 @@ class AuditEngine:
         self._scan_progress = scan_progress_from_config(config)
         self._target_seq = 0
         self._target_seq_lock = threading.Lock()
+        # #1820: per-target filesystem pool size; set per run in _run_audit_targets.
+        self._intra_target_workers = 1
 
     def _next_target_index(self) -> int:
         with self._target_seq_lock:
@@ -473,6 +493,9 @@ class AuditEngine:
         session_id = self.db_manager.current_session_id
         targets = self.config.get("targets", [])
         self._target_seq = 0
+        self._intra_target_workers = _intra_target_worker_budget(
+            self._max_workers, len(targets)
+        )
         self._scan_progress.start_run(len(targets))
         final_status = "completed"
         try:
@@ -552,6 +575,9 @@ class AuditEngine:
             "_scan_progress": self._scan_progress,
             "_validate_crypto": validate_crypto_enabled(self.config),
         }
+        if t in _INTRA_TARGET_POOL_TYPES:
+            # #1820: local/NFS-mounted trees get a pool inside the tier budget.
+            target_with_fs["_intra_target_workers"] = self._intra_target_workers
         scan_sqlite_as_db = fs_config.get("scan_sqlite_as_db", True)
         sample_limit = fs_config.get("sample_limit", 5)
         file_sample_max_chars = int(

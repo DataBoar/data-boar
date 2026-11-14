@@ -10,10 +10,13 @@ import math
 import os
 import stat
 import tempfile
+import threading
 import zipfile
+from collections import deque
 from collections.abc import Callable, Iterator
+from concurrent.futures import Future, ThreadPoolExecutor
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple
 
 from core.connector_registry import register
 from core.archives import (
@@ -132,7 +135,43 @@ def _path_contained_under_root(path: Path, root: Path) -> bool:
         return False
 
 
-def iter_scan_files(root: Path, *, recursive: bool) -> Iterator[Path]:
+# Thread-name prefix of the intra-target worker pool (#1820).
+INTRA_TARGET_THREAD_PREFIX = "databoar-fs-intra"
+
+
+class InodeDedup:
+    """Atomic ``(st_dev, st_ino)`` claim set shared by walkers (#1820).
+
+    ``key in seen`` followed by ``seen.add(key)`` is a check-then-act race once
+    more than one thread walks (and free-threaded CPython does not serialize
+    the two steps). ``claim`` does both under one lock. Directory and file keys
+    live in separate sets so a directory never shadows a file with equal ids.
+    """
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._dirs: set[tuple[int, int]] = set()
+        self._files: set[tuple[int, int]] = set()
+
+    def claim(self, key: tuple[int, int]) -> bool:
+        """Return True exactly once per file *key*, even under concurrent callers."""
+        return self._claim(self._files, key)
+
+    def claim_dir(self, key: tuple[int, int]) -> bool:
+        """Return True exactly once per directory *key*."""
+        return self._claim(self._dirs, key)
+
+    def _claim(self, bucket: set[tuple[int, int]], key: tuple[int, int]) -> bool:
+        with self._lock:
+            if key in bucket:
+                return False
+            bucket.add(key)
+            return True
+
+
+def iter_scan_files(
+    root: Path, *, recursive: bool, dedup: InodeDedup | None = None
+) -> Iterator[Path]:
     """
     Yield files under *root* for filesystem scans.
 
@@ -140,10 +179,11 @@ def iter_scan_files(root: Path, *, recursive: bool) -> Iterator[Path]:
     - Skips duplicate regular files reachable via multiple hard links / symlink aliases.
     - File symlinks: yield the symlink path when the *target* inode is new and the
       resolved target stays under *root* (#1579).
+    - *dedup* (#1820): optional shared claim set so several concurrent walkers
+      visit each directory and file inode exactly once.
     """
     root = root.resolve()
-    seen_dirs: set[tuple[int, int]] = set()
-    seen_files: set[tuple[int, int]] = set()
+    seen = dedup if dedup is not None else InodeDedup()
 
     def _maybe_yield_file_symlink(entry: os.DirEntry[str]) -> Iterator[Path]:
         if not entry.is_file(follow_symlinks=True):
@@ -152,17 +192,15 @@ def iter_scan_files(root: Path, *, recursive: bool) -> Iterator[Path]:
         if not _path_contained_under_root(fpath, root):
             return
         fkey = _symlink_target_inode_key(entry)
-        if fkey is not None and fkey not in seen_files:
-            seen_files.add(fkey)
+        if fkey is not None and seen.claim(fkey):
             yield fpath
 
     def _walk_dir(directory: Path) -> Iterator[Path]:
         dkey = _dir_inode_key(directory)
         if dkey is None:
             return
-        if dkey in seen_dirs:
+        if not seen.claim_dir(dkey):
             return
-        seen_dirs.add(dkey)
         try:
             with os.scandir(directory) as it:
                 for entry in it:
@@ -173,8 +211,7 @@ def iter_scan_files(root: Path, *, recursive: bool) -> Iterator[Path]:
                         if entry.is_file(follow_symlinks=False):
                             fpath = Path(entry.path)
                             fkey = _file_inode_key(fpath)
-                            if fkey is not None and fkey not in seen_files:
-                                seen_files.add(fkey)
+                            if fkey is not None and seen.claim(fkey):
                                 yield fpath
                         elif recursive and entry.is_dir(follow_symlinks=False):
                             yield from _walk_dir(Path(entry.path))
@@ -196,8 +233,7 @@ def iter_scan_files(root: Path, *, recursive: bool) -> Iterator[Path]:
                         if entry.is_file(follow_symlinks=False):
                             fpath = Path(entry.path)
                             fkey = _file_inode_key(fpath)
-                            if fkey is not None and fkey not in seen_files:
-                                seen_files.add(fkey)
+                            if fkey is not None and seen.claim(fkey):
                                 yield fpath
                     except OSError:
                         continue
@@ -765,15 +801,19 @@ class FilesystemConnector:
         target_name: str,
         scan_root: Path,
         audit_log_name: str,
+        db: Any = None,
     ) -> None:
-        """Open archive and scan inner members with supported extensions; save findings with path like archive.zip|inner/path.txt."""
+        """Open archive and scan inner members with supported extensions; save findings with path like archive.zip|inner/path.txt.
+
+        *db* (#1820): write target (a sink on the pool path); defaults to ``db_manager``.
+        """
         scan_archive_at_path(
             archive_path=file_path,
             archive_display_name=file_path.name,
             target_name=target_name,
             path_display=str(file_path.parent),
             scanner=self.scanner,
-            db_manager=self.db_manager,
+            db_manager=self.db_manager if db is None else db,
             extensions=self.extensions,
             max_inner_size=self.max_inner_size,
             max_members=self.max_members,
@@ -795,7 +835,6 @@ class FilesystemConnector:
         """Walk target path, check permission, read sample, detect, save_finding or save_failure."""
         from utils.audit_log_display import (
             audit_log_target_label,
-            format_filesystem_finding_location_for_audit_log,
             format_filesystem_scan_root_for_audit_log,
         )
 
@@ -824,163 +863,314 @@ class FilesystemConnector:
             )
         except Exception:
             pass
-        for file_path in iter_scan_files(path, recursive=recursive):
-            ext = file_path.suffix.lower()
-            has_archive_ext = self.scan_compressed and path_has_compressed_extension(
+        workers = self.intra_target_workers()
+        ctx = _FileScanContext(
+            target_name=target_name, audit_name=audit_name, root=path
+        )
+        candidates = (
+            fp
+            for fp in iter_scan_files(path, recursive=recursive)
+            if self._is_candidate(fp)
+        )
+        if workers <= 1:
+            # Serial path (default; tier cap or scan.max_workers of 1): no pool.
+            sink = _DirectSink(self.db_manager)
+            for file_path in candidates:
+                self._process_file(file_path, ctx, sink)
+            return
+        self._run_pool(candidates, ctx, workers)
+
+    def intra_target_workers(self) -> int:
+        """Pool size for this target (#1820), injected by the engine.
+
+        The engine derives ``_intra_target_workers`` from ``scan.max_workers``
+        after the licensing clamp (#551 / #856), so this connector never widens
+        the tier cap. Missing or malformed values mean serial (1).
+        """
+        try:
+            n = int(self.config.get("_intra_target_workers", 1) or 1)
+        except (TypeError, ValueError):
+            return 1
+        return max(1, n)
+
+    def _is_candidate(self, file_path: Path) -> bool:
+        """Extension filter (pure string check, no I/O) applied on the walking thread."""
+        if file_path.suffix.lower() in self.extensions:
+            return True
+        return self.scan_compressed and path_has_compressed_extension(
+            file_path, self.compressed_extensions
+        )
+
+    def _run_pool(
+        self, candidates: Iterator[Path], ctx: "_FileScanContext", workers: int
+    ) -> None:
+        """Read and detect on *workers* threads; persist on this thread in walk order.
+
+        Workers never touch ``db_manager``: each one fills a ``_RecordingSink``
+        that this (target) thread replays in submission order. Persisted rows
+        and their order are therefore identical to the serial path, and SQLite
+        sees no extra concurrent writers. The in-flight window bounds memory.
+        """
+        window = workers * _INTRA_TARGET_WINDOW_FACTOR
+        pending: deque[tuple[Future[None], _RecordingSink]] = deque()
+        pool = ThreadPoolExecutor(
+            max_workers=workers, thread_name_prefix=INTRA_TARGET_THREAD_PREFIX
+        )
+        try:
+            for file_path in candidates:
+                sink = _RecordingSink()
+                pending.append(
+                    (pool.submit(self._process_file, file_path, ctx, sink), sink)
+                )
+                if len(pending) >= window:
+                    self._drain_oldest(pending)
+            while pending:
+                self._drain_oldest(pending)
+        finally:
+            # Interrupt or error: drop queued work, wait for running items, so no
+            # pool thread outlives run().
+            pool.shutdown(wait=True, cancel_futures=True)
+
+    def _drain_oldest(
+        self, pending: "deque[tuple[Future[None], _RecordingSink]]"
+    ) -> None:
+        fut, sink = pending.popleft()
+        exc = fut.exception()
+        # Writes recorded before a failure are kept, as in the serial path.
+        sink.replay(self.db_manager)
+        if exc is not None:
+            raise exc
+
+    def _process_file(
+        self, file_path: Path, ctx: "_FileScanContext", sink: Any
+    ) -> None:
+        """Read, detect and report one file through *sink* (direct or recording)."""
+        target_name = ctx.target_name
+        audit_name = ctx.audit_name
+        path = ctx.root
+        ext = file_path.suffix.lower()
+        has_archive_ext = self.scan_compressed and path_has_compressed_extension(
+            file_path, self.compressed_extensions
+        )
+        if ext not in self.extensions and not has_archive_ext:
+            return
+        if not os.access(file_path, os.R_OK):
+            sink.save_failure(target_name, "permission_denied", str(file_path))
+            return
+        # When scan_compressed is enabled, open archive and scan inner members.
+        if has_archive_ext:
+            if is_supported_archive(file_path, exts=self.compressed_extensions):
+                self._scan_archive_contents(
+                    file_path, target_name, path, audit_name, db=sink
+                )
+                return
+            mismatch = describe_archive_type_mismatch(
                 file_path, self.compressed_extensions
             )
-            if ext not in self.extensions and not has_archive_ext:
-                continue
-            if not os.access(file_path, os.R_OK):
-                self.db_manager.save_failure(
-                    target_name, "permission_denied", str(file_path)
+            if mismatch:
+                sink.save_failure(
+                    target_name,
+                    SCAN_FAILURE_REASON_ARCHIVE_TYPE_MISMATCH,
+                    f"{file_path}:{mismatch}",
                 )
-                continue
-            # When scan_compressed is enabled, open archive and scan inner members.
-            if has_archive_ext:
-                if is_supported_archive(file_path, exts=self.compressed_extensions):
-                    self._scan_archive_contents(
-                        file_path, target_name, path, audit_name
-                    )
-                    continue
-                mismatch = describe_archive_type_mismatch(
-                    file_path, self.compressed_extensions
+            return
+        # 2.6: treat .sqlite/.sqlite3/.db as DBs when scan_sqlite_as_db is True
+        if self.scan_sqlite_as_db and ext in self.SQLITE_EXTENSIONS:
+            for finding in _scan_sqlite_file_as_db(
+                file_path, self.scanner, self.sample_limit
+            ):
+                sink.save_finding(
+                    source_type="filesystem",
+                    target_name=target_name,
+                    path=finding["path"],
+                    file_name=finding["file_name"],
+                    data_type=finding["data_type"],
+                    sensitivity_level=finding["sensitivity_level"],
+                    pattern_detected=finding["pattern_detected"],
+                    norm_tag=finding["norm_tag"],
+                    ml_confidence=finding["ml_confidence"],
                 )
-                if mismatch:
-                    self.db_manager.save_failure(
-                        target_name,
-                        SCAN_FAILURE_REASON_ARCHIVE_TYPE_MISMATCH,
-                        f"{file_path}:{mismatch}",
-                    )
-                continue
-            # 2.6: treat .sqlite/.sqlite3/.db as DBs when scan_sqlite_as_db is True
-            if self.scan_sqlite_as_db and ext in self.SQLITE_EXTENSIONS:
-                for finding in _scan_sqlite_file_as_db(
-                    file_path, self.scanner, self.sample_limit
-                ):
-                    self.db_manager.save_finding(
-                        source_type="filesystem",
-                        target_name=target_name,
-                        path=finding["path"],
-                        file_name=finding["file_name"],
-                        data_type=finding["data_type"],
-                        sensitivity_level=finding["sensitivity_level"],
-                        pattern_detected=finding["pattern_detected"],
-                        norm_tag=finding["norm_tag"],
-                        ml_confidence=finding["ml_confidence"],
-                    )
-                    try:
-                        from utils.logger import log_finding
-
-                        log_finding(
-                            "filesystem",
-                            audit_name,
-                            format_filesystem_finding_location_for_audit_log(
-                                path,
-                                file_path,
-                                audit_name,
-                                finding["file_name"],
-                            ),
-                            finding["sensitivity_level"],
-                            finding["pattern_detected"],
-                        )
-                    except Exception:
-                        pass
-                continue
-            # Optional: when use_content_type is enabled, use shared helper for the narrow PDF-only
-            # slice so renamed PDFs are treated as .pdf for extraction.
-            effective_ext = choose_effective_pdf_extension(
-                ext, self.use_content_type, file_path
-            )
-            effective_ext = choose_effective_rich_media_extension(
-                effective_ext, self.use_content_type, file_path
-            )
-            # Collect file-identity stats before read (Phase 1 — ADR-0051).
-            # Stat is best-effort; failure never aborts the scan.
-            _mtime_ns: int | None = None
-            _size: int | None = None
-            try:
-                _stat = file_path.stat()
-                _mtime_ns = _stat.st_mtime_ns
-                _size = _stat.st_size
-            except OSError:  # noqa: BLE001
-                pass  # stat() best-effort for file-identity metadata
-
-            def _record_read_barrier(reason: str, details: str) -> None:
-                self.db_manager.save_failure(target_name, reason, details)
-
-            content = _read_text_sample(
-                file_path,
-                effective_ext,
-                self.file_sample_max_chars,
-                self.file_passwords,
-                rich_media_metadata=self.scan_rich_media_metadata,
-                scan_image_ocr=self.scan_image_ocr,
-                ocr_max_dimension=self.ocr_max_dimension,
-                ocr_lang=self.ocr_lang,
-                scan_for_stego=self.scan_for_stego,
-                on_read_barrier=_record_read_barrier,
-            )
-            res = self.scanner.scan_file_content(content, file_path)
-            if res is None:
-                continue
-            # Compute content fingerprint from the raw byte prefix of the sample.
-            # Uses the text content encoded back to UTF-8 as a best-effort proxy for
-            # raw bytes (avoids re-reading the file; fast and consistent per session).
-            _fingerprint: str | None = None
-            try:
-                if content:
-                    _fingerprint = _file_content_fingerprint(
-                        content.encode("utf-8", errors="replace")
-                    )
-            except Exception:  # noqa: BLE001
-                pass  # fingerprint is optional audit metadata
-            self.db_manager.save_finding(
-                source_type="filesystem",
-                target_name=target_name,
-                path=str(file_path.parent),
-                file_name=file_path.name,
-                data_type=file_path.suffix.replace(".", "").upper(),
-                sensitivity_level=res["sensitivity_level"],
-                pattern_detected=res["pattern_detected"],
-                norm_tag=res.get("norm_tag", ""),
-                ml_confidence=res.get("ml_confidence", 0),
-                source_mtime_ns=_mtime_ns,
-                source_size=_size,
-                content_fingerprint=_fingerprint,
-            )
-            # Phase 2 (ADR-0051): upsert cross-session file identity index.
-            _sid = getattr(self.db_manager, "_current_session_id", None)
-            if _sid:
-                try:
-                    self.db_manager.upsert_object_state(
-                        target_name=target_name,
-                        abs_path=str(file_path),
-                        session_id=_sid,
-                        mtime_ns=_mtime_ns,
-                        size=_size,
-                        content_fingerprint=_fingerprint,
-                        sensitivity_level=res["sensitivity_level"],
-                    )
-                except Exception:
-                    pass  # non-fatal: Phase 2 state index should not break the scan
-            try:
-                from utils.logger import log_finding
-
-                log_finding(
-                    "filesystem",
+                sink.log_finding(
+                    path,
+                    file_path,
                     audit_name,
-                    format_filesystem_finding_location_for_audit_log(
-                        path,
-                        file_path,
-                        audit_name,
-                        file_path.name,
-                    ),
-                    res["sensitivity_level"],
-                    res["pattern_detected"],
+                    finding["file_name"],
+                    finding["sensitivity_level"],
+                    finding["pattern_detected"],
                 )
-            except Exception:
-                pass
+            return
+        # Optional: when use_content_type is enabled, use shared helper for the narrow PDF-only
+        # slice so renamed PDFs are treated as .pdf for extraction.
+        effective_ext = choose_effective_pdf_extension(
+            ext, self.use_content_type, file_path
+        )
+        effective_ext = choose_effective_rich_media_extension(
+            effective_ext, self.use_content_type, file_path
+        )
+        # Collect file-identity stats before read (Phase 1 — ADR-0051).
+        # Stat is best-effort; failure never aborts the scan.
+        _mtime_ns: int | None = None
+        _size: int | None = None
+        try:
+            _stat = file_path.stat()
+            _mtime_ns = _stat.st_mtime_ns
+            _size = _stat.st_size
+        except OSError:  # noqa: BLE001
+            pass  # stat() best-effort for file-identity metadata
+
+        def _record_read_barrier(reason: str, details: str) -> None:
+            sink.save_failure(target_name, reason, details)
+
+        content = _read_text_sample(
+            file_path,
+            effective_ext,
+            self.file_sample_max_chars,
+            self.file_passwords,
+            rich_media_metadata=self.scan_rich_media_metadata,
+            scan_image_ocr=self.scan_image_ocr,
+            ocr_max_dimension=self.ocr_max_dimension,
+            ocr_lang=self.ocr_lang,
+            scan_for_stego=self.scan_for_stego,
+            on_read_barrier=_record_read_barrier,
+        )
+        res = self.scanner.scan_file_content(content, file_path)
+        if res is None:
+            return
+        # Compute content fingerprint from the raw byte prefix of the sample.
+        # Uses the text content encoded back to UTF-8 as a best-effort proxy for
+        # raw bytes (avoids re-reading the file; fast and consistent per session).
+        _fingerprint: str | None = None
+        try:
+            if content:
+                _fingerprint = _file_content_fingerprint(
+                    content.encode("utf-8", errors="replace")
+                )
+        except Exception:  # noqa: BLE001
+            pass  # fingerprint is optional audit metadata
+        sink.save_finding(
+            source_type="filesystem",
+            target_name=target_name,
+            path=str(file_path.parent),
+            file_name=file_path.name,
+            data_type=file_path.suffix.replace(".", "").upper(),
+            sensitivity_level=res["sensitivity_level"],
+            pattern_detected=res["pattern_detected"],
+            norm_tag=res.get("norm_tag", ""),
+            ml_confidence=res.get("ml_confidence", 0),
+            source_mtime_ns=_mtime_ns,
+            source_size=_size,
+            content_fingerprint=_fingerprint,
+        )
+        # Phase 2 (ADR-0051): upsert cross-session file identity index.
+        _sid = getattr(self.db_manager, "_current_session_id", None)
+        if _sid:
+            # Non-fatal: Phase 2 state index should not break the scan.
+            sink.upsert_object_state(
+                target_name=target_name,
+                abs_path=str(file_path),
+                session_id=_sid,
+                mtime_ns=_mtime_ns,
+                size=_size,
+                content_fingerprint=_fingerprint,
+                sensitivity_level=res["sensitivity_level"],
+            )
+        sink.log_finding(
+            path,
+            file_path,
+            audit_name,
+            file_path.name,
+            res["sensitivity_level"],
+            res["pattern_detected"],
+        )
+
+
+# In-flight work items per pool worker before the target thread drains (#1820).
+_INTRA_TARGET_WINDOW_FACTOR = 4
+
+
+class _FileScanContext(NamedTuple):
+    target_name: str
+    audit_name: str
+    root: Path
+
+
+def _emit_log_finding(
+    root: Path,
+    file_path: Path,
+    audit_name: str,
+    display_name: str,
+    sensitivity_level: Any,
+    pattern_detected: Any,
+) -> None:
+    """Audit log line for one finding; best-effort, as before #1820."""
+    try:
+        from utils.audit_log_display import (
+            format_filesystem_finding_location_for_audit_log,
+        )
+        from utils.logger import log_finding
+
+        log_finding(
+            "filesystem",
+            audit_name,
+            format_filesystem_finding_location_for_audit_log(
+                root, file_path, audit_name, display_name
+            ),
+            sensitivity_level,
+            pattern_detected,
+        )
+    except Exception:
+        pass
+
+
+class _DirectSink:
+    """Serial path: forward writes to ``db_manager`` immediately (#1820)."""
+
+    def __init__(self, db_manager: Any) -> None:
+        self._db = db_manager
+
+    @property
+    def _current_session_id(self) -> Any:
+        return getattr(self._db, "_current_session_id", None)
+
+    def save_finding(self, *args: Any, **kwargs: Any) -> None:
+        self._db.save_finding(*args, **kwargs)
+
+    def save_failure(self, *args: Any, **kwargs: Any) -> None:
+        self._db.save_failure(*args, **kwargs)
+
+    def upsert_object_state(self, **kwargs: Any) -> None:
+        try:
+            self._db.upsert_object_state(**kwargs)
+        except Exception:
+            pass  # non-fatal: Phase 2 state index should not break the scan
+
+    def log_finding(self, *args: Any) -> None:
+        _emit_log_finding(*args)
+
+
+class _RecordingSink:
+    """Pool worker side: buffer writes; the target thread replays them in order."""
+
+    def __init__(self) -> None:
+        self._ops: list[tuple[str, tuple[Any, ...], dict[str, Any]]] = []
+
+    def save_finding(self, *args: Any, **kwargs: Any) -> None:
+        self._ops.append(("save_finding", args, kwargs))
+
+    def save_failure(self, *args: Any, **kwargs: Any) -> None:
+        self._ops.append(("save_failure", args, kwargs))
+
+    def upsert_object_state(self, **kwargs: Any) -> None:
+        self._ops.append(("upsert_object_state", (), kwargs))
+
+    def log_finding(self, *args: Any) -> None:
+        self._ops.append(("log_finding", args, {}))
+
+    def replay(self, db_manager: Any) -> None:
+        direct = _DirectSink(db_manager)
+        for name, args, kwargs in self._ops:
+            getattr(direct, name)(*args, **kwargs)
+        self._ops.clear()
 
 
 def scan_archive_at_path(
