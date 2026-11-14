@@ -53,6 +53,15 @@ from typing import Any
 
 BENCHMARK_ID = "filesystem_intra_target_v1"
 
+# Variants (bench harness only; product code is not changed by this flag):
+#   none    - code as shipped on the branch.
+#   ml_lock - option (a) from the #1820 profile: one lock around the detector ML
+#             step, applied here on the engine's detector instance, so regex,
+#             TF-IDF and reads stay parallel while predict_proba is serialized.
+VARIANTS = ("none", "ml_lock")
+_VARIANT = "none"
+_ML_LOCK = None
+
 _SMALL = (
     "nome;email;cpf;telefone\n"
     "Pessoa {i};pessoa{i}@example.com;529.982.247-25;+55 21 99999-{j:04d}\n"
@@ -189,6 +198,8 @@ def _scan_once(
     }
     engine = AuditEngine(cfg, db_path=str(db_path))
     get_license_guard(cfg)
+    if _VARIANT == "ml_lock":
+        _apply_ml_lock(engine.scanner.detector)
     start = time.perf_counter()
     session_id = engine.start_audit()
     wall = time.perf_counter() - start
@@ -206,6 +217,32 @@ def _scan_once(
     ]
     engine.db_manager.engine.dispose()
     return wall, keys, effective
+
+
+def _detector_joblib_free_ml() -> bool:
+    """True when the detector ML step bypasses joblib.Parallel (#1820 fix)."""
+    import inspect
+
+    from core.detector import SensitivityDetector
+
+    src = inspect.getsource(SensitivityDetector._predict_ml_confidence)
+    return "_forest_predict_proba(" in src
+
+
+def _apply_ml_lock(detector: Any) -> None:
+    import threading
+
+    global _ML_LOCK
+    if _ML_LOCK is None:
+        _ML_LOCK = threading.Lock()
+    lock = _ML_LOCK
+    original = type(detector)._predict_ml_confidence
+
+    def _locked(text: str) -> int:
+        with lock:
+            return original(detector, text)
+
+    detector._predict_ml_confidence = _locked
 
 
 def _run_profile(
@@ -310,6 +347,8 @@ def run_benchmark(
     return {
         "benchmark": BENCHMARK_ID,
         "issue": "#1820",
+        "variant": _VARIANT,
+        "detector_joblib_free_ml": _detector_joblib_free_ml(),
         "corpus": corpus_info,
         "profiles": profiles,
         "python_version": platform.python_version(),
@@ -333,11 +372,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--workers", default="1,2,4,8")
     parser.add_argument("--iterations", type=int, default=3)
     parser.add_argument("--latency-ms", type=float, default=2.0)
+    parser.add_argument("--variant", choices=VARIANTS, default="none")
     parser.add_argument("--output", required=True)
     args = parser.parse_args(argv)
     workers_list = sorted({max(1, int(w)) for w in str(args.workers).split(",")})
     if workers_list[0] != 1:
         workers_list.insert(0, 1)
+    global _VARIANT
+    _VARIANT = args.variant
     artifact = run_benchmark(
         file_count=max(100, int(args.files)),
         workers_list=workers_list,
