@@ -19,11 +19,12 @@ from config.scan_defaults import DEFAULT_FILE_SAMPLE_MAX_CHARS
 
 
 # Target types whose connector walks a mounted tree via FilesystemConnector (#1820).
+# SQLConnector targets (any type) get the per-table pool of #1322.
 _INTRA_TARGET_POOL_TYPES = frozenset({"filesystem", "nfs"})
 
 
 def _intra_target_worker_budget(max_workers: int, concurrent_targets: int) -> int:
-    """Per-target worker pool size (#1820) inside the clamped ``max_workers`` budget.
+    """Per-target worker pool size (#1820, #1322) inside the clamped ``max_workers`` budget.
 
     ``max_workers`` is the value after the licensing clamp in ``start_audit``
     (#551 ``worker_cap`` / ``dbmax_workers`` claim, #856 open-mode clamp); no new
@@ -578,6 +579,14 @@ class AuditEngine:
         if t in _INTRA_TARGET_POOL_TYPES:
             # #1820: local/NFS-mounted trees get a pool inside the tier budget.
             target_with_fs["_intra_target_workers"] = self._intra_target_workers
+        elif isinstance(connector_class, type) and issubclass(
+            connector_class, SQLConnector
+        ):
+            # #1322: per-table pool inside the same budget. Adaptive throttling
+            # (#1320) measures per-target latency, so it keeps tables serial.
+            target_with_fs["_intra_target_workers"] = (
+                1 if self._adaptive_rate_limit else self._intra_target_workers
+            )
         scan_sqlite_as_db = fs_config.get("scan_sqlite_as_db", True)
         sample_limit = fs_config.get("sample_limit", 5)
         file_sample_max_chars = int(
