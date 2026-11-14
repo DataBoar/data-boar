@@ -1264,6 +1264,11 @@ def _format_hint_suggests_sensitive_column(
     return None
 
 
+def _forest_predict_proba(model: Any, X: Any) -> Any:
+    """Same probabilities as ``model.predict_proba(X)`` without ``joblib.Parallel`` (#1820)."""
+    raise NotImplementedError("joblib-free forest predict_proba (#1820)")
+
+
 class SensitivityDetector:
     """
     Hybrid detector: regex first, then ML (TF-IDF + RandomForest), then optional DL (sentence embeddings + classifier).
