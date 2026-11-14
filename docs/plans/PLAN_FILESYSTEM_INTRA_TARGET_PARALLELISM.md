@@ -41,7 +41,7 @@ Thread names start with `databoar-fs-intra` (`INTRA_TARGET_THREAD_PREFIX`).
 | ----------- | ----------------------------- | ---- |
 | Any, `scan.max_workers: 1` (default) | 1 (serial, identical to before) | |
 | Open mode | up to 2 | #856 clamp |
-| Community / Std | up to 2 | **Behaviour change** when `max_workers ≥ 2` and few targets: those 2 slots used to sit idle on a single target. See *Open question for the operator*. |
+| Community / Std | up to 2 | **Behaviour change** when `max_workers ≥ 2` and few targets: those 2 slots used to sit idle on a single target. Accepted; see *Tier decision*. |
 | Pro | up to 4 | |
 | Pro+ | up to 8 | |
 | Enterprise / Partner | `scan.max_workers` (or the `dbmax_workers` claim) | Only tier where a free-threaded runtime is allowed by #1409, so the only one with CPU-parallel detection. |
@@ -63,7 +63,9 @@ The same file passes 5/5 runs on free-threaded 3.14t with `-X gil=0`.
 
 Runner: `tests/benchmarks/run_filesystem_intra_target_bench.py`; artifacts `tests/benchmarks/filesystem_intra_target_nogil.json` and `filesystem_intra_target_gil.json`; evidence test `tests/test_filesystem_intra_target_evidence.py`. Reproduce commands are in [tests/benchmarks/README.md](../../tests/benchmarks/README.md).
 
-**Interim (2026-11-14, primary dev workstation, 12 CPUs, 2 000 synthetic `.csv`, commit `11c8db04`, CPython 3.14.10 free-threaded, GIL off before and after):** exact parity in every row, but the pool is **slower** on 3.14t: median 12.9 s serial vs 18.6 s (2 workers), 119.6 s (4), 170.7 s (8) on local disk; with 2 ms simulated read latency 17.9 s serial vs 15.8 s (2), 110.8 s (4), 175.4 s (8). Contention inside the worker path (read + detect) is under investigation before any speed claim; the 3.14-with-GIL run is pending. The artifacts are not committed until the cause is understood.
+**Interim (2026-11-14, primary dev workstation, 12 CPUs, 2 000 synthetic `.csv`, commit `11c8db04`, CPython 3.14.10 free-threaded, GIL off before and after):** exact parity in every row, but the pool is **slower** on 3.14t: median 12.9 s serial vs 18.6 s (2 workers), 119.6 s (4), 170.7 s (8) on local disk; with 2 ms simulated read latency 17.9 s serial vs 15.8 s (2), 110.8 s (4), 175.4 s (8). The 3.14-with-GIL run is pending and the artifacts are not committed.
+
+**Cause (profiled 2026-11-14, micro-benchmarks of 400–450 samples per row, 3.14t vs 3.14):** regex matching and TF-IDF vectorisation scale with threads; the ML step does not. `RandomForestClassifier.predict_proba` (called from `SensitivityDetector._predict_ml_confidence`) always runs through `joblib.Parallel` (here with `n_jobs=1`), and `joblib.Parallel` entered concurrently from several threads collapses on the free-threaded build: a bare `joblib.Parallel(n_jobs=1)` over 100 no-op items costs 0.05 s for 400 calls serially and 20.5 s with 4 threads on 3.14t (0.07 s → 0.06 s with the GIL). Limiting native thread pools (`OMP/OPENBLAS/MKL_NUM_THREADS=1`, `threadpoolctl.threadpool_limits(1)`) changes nothing. Accumulating the per-tree `predict_proba(X, check_input=False)` directly, in the same order and divided by the number of trees, gives **bit-identical** probabilities and runs 0.75 s → 0.27 s (4 threads) on 3.14t and 0.32 s serial with the GIL, against 1.4–1.55 s serial for the forest call. The fix lives in `core/detector.py` and waits for the operator's approval; the same collapse already affects multi-target scans on free-threaded runtimes today.
 
 ## Risks
 
@@ -78,16 +80,17 @@ Runner: `tests/benchmarks/run_filesystem_intra_target_bench.py`; artifacts `test
 | Hard-link "winner" | Serial walk keeps it deterministic. A parallel walk would make the reported alias a race (see roadmap). |
 | Detector thread safety | `DataScanner` was already shared across parallel targets; the real-detector parity test and the 3.14t runs exercise it inside one target. |
 | Integrity manifest | `connectors/*.py` and `core/engine.py` are `CRITICAL_MODULES`: an image built from this branch shows the runtime integrity warning until the operator re-signs the manifest for the release. |
-| Behaviour change on Community/open with `max_workers ≥ 2` | Open question below. |
+| Behaviour change on Community/open with `max_workers ≥ 2` | Accepted; see *Tier decision*. |
 
-## Open question for the operator
+## Tier decision (closed)
 
-Public project rule: new features are born Enterprise. Today the pool follows the existing worker cap, so Community/open with `scan.max_workers: 2` gets 2 threads inside a single target (under the GIL that only overlaps I/O). Options: (1) keep as is — the cap already *is* the tier mechanism, no new knob; (2) restrict the intra-target pool to Enterprise, which needs a tier check in the budget (a new gate, against decision 2). The implementation follows (1) until the operator decides.
+Decided 2026-11-14 (project-manager, under the operator's rule "ceiling from the existing tier cap, no new cap"): the pool follows the existing worker cap for every tier. Community/open with `scan.max_workers: 2` gets up to 2 threads inside a single target (with the GIL they only overlap I/O); the default `max_workers: 1` changes nothing. No tier check is added to the budget.
 
 ## Out of scope (this plan)
 
 - **Parallel walk / one work item per top-level folder.** Walk is 0.08 % of the local profile, below the 15 % gate of `filesystem_phase_breakdown_v1`; a parallel walk makes the reported path of a hard link or duplicate symlink a race and breaks exact parity. `InodeDedup` and `iter_scan_files(dedup=...)` are ready for it; revisit with an SSHFS/NFS measurement where `scandir` latency dominates.
 - SMB, WebDAV, SharePoint connectors (separate code paths).
+- Per-file isolation of unexpected exceptions: an unexpected error while processing one file keeps aborting the target at the same ordered position as the serial path (decided 2026-11-14). Read failures were already isolated by `_read_text_sample`.
 - Adaptive throttling inside the target (`BoarThrottler` stays per target).
 - Any native extension.
 
