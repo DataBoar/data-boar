@@ -1,12 +1,12 @@
 # Plan: Filesystem intra-target parallelism (worker pool inside one target)
 
-**Status:** Active (pool and detector ML fix on branch, benchmark pinned; resume per file and write batching are roadmap)
+**Status:** Active (pool, detector ML fix, per-file resume with batched atomic writes; parallel walk and DB per-table parallelism are separate work)
 **Date:** 2026-11-14
 **Authors:** Fabio Leitao
 **Priority:** H1 / U1 (GitHub milestone v1.8.2 after the #2240 renumbering; pulled forward for the 18/Nov presentation by operator order)
 **GitHub:** [#1820](https://github.com/DataBoar/data-boar/issues/1820) (pair of [#1322](https://github.com/DataBoar/data-boar/issues/1322) on the DB axis; cap from [#551](https://github.com/DataBoar/data-boar/issues/551); free-threading from [#1409](https://github.com/DataBoar/data-boar/issues/1409); resume from [#1330](https://github.com/DataBoar/data-boar/issues/1330))
 
-<!-- plans-hub-summary: Worker pool inside one filesystem/NFS target (pure-Python threads, tier cap from #551, no new cap): workers read and detect, the target thread persists in walk order for exact serial parity; atomic inode dedup; pinned 3.14t vs GIL benchmark; per-file resume surveyed and left as roadmap (#1820). -->
+<!-- plans-hub-summary: Worker pool inside one filesystem/NFS target (pure-Python threads, tier cap from #551, no new cap): workers read and detect, the target thread persists in walk order for exact serial parity; atomic inode dedup; pinned 3.14t vs GIL benchmark; per-file resume with batched atomic writes, no duplicates after SIGTERM/SIGKILL (#1820). -->
 <!-- plans-hub-related: PLAN_BENCHMARK_SAFE_AXIS.md, PLAN_SCHEMA_MIGRATION.md -->
 
 **Synced with:** [PLANS_TODO.md](PLANS_TODO.md)
@@ -84,7 +84,7 @@ Reading the numbers without inflating them (operator decision on the ML fix appr
 - **(i) The detector fix alone roughly doubles the serial scan:** 3.14t 13.57 → 6.75 s (2.0×), 3.14 with the GIL 13.28 → 6.82 s (1.95×), N = 1, in every tier.
 - **(ii) Pool on 3.14t (GIL off), with the fix, local disk:** 1.61× (N=2), 1.53× (N=4), 1.54× (N=8) over the fixed serial scan. An earlier 3-iteration run under load average ~3 gave 1.54× / 1.58× / 1.17×; N=8 is the noisiest row. With a 2 ms simulated wait per read: 2.27–2.70×.
 - **(iii) With the GIL the pool gains no CPU on local disk:** 0.83–0.91× (the earlier 3-iteration run: 0.62–0.85×). With the 2 ms simulated wait it only overlaps I/O: 1.31–1.36× (earlier run 1.05–1.29×). On the 1-vCPU VPS only real I/O overlap can show.
-- **(iv) What limits the gain beyond N=2 on local disk:** the single writer. With detection stubbed out, the same scan costs 3.0 s serial and 3.3 s with 4 workers on 3.14t — walk, read and, mostly, one SQLite commit plus an `upsert_object_state` and an audit log line per finding, all on the target thread; the pool flattens at ≈ 4.2–4.4 s, near that floor. Why N=8 was worse than N=4 in the loaded 3-iteration run was not investigated beyond that. Batching the writes is the next lever (not in this slice).
+- **(iv) What limits the gain beyond N=2 on local disk:** the single writer. With detection stubbed out, the same scan costs 3.0 s serial and 3.3 s with 4 workers on 3.14t — walk, read and, mostly, one SQLite commit plus an `upsert_object_state` and an audit log line per finding, all on the target thread; the pool flattens at ≈ 4.2–4.4 s, near that floor. Why N=8 was worse than N=4 in the loaded 3-iteration run was not investigated beyond that. The per-file resume below now batches those writes into one transaction per batch; the pinned numbers above were measured **before** that change (commit `cedd97cf`) and were not re-measured.
 
 **Cause (profiled 2026-11-14, micro-benchmarks of 400–450 samples per row, 3.14t vs 3.14):** regex matching and TF-IDF vectorisation scale with threads; the ML step does not. `RandomForestClassifier.predict_proba` (called from `SensitivityDetector._predict_ml_confidence`) always runs through `joblib.Parallel` (here with `n_jobs=1`), and `joblib.Parallel` entered concurrently from several threads collapses on the free-threaded build: a bare `joblib.Parallel(n_jobs=1)` over 100 no-op items costs 0.05 s for 400 calls serially and 20.5 s with 4 threads on 3.14t (0.07 s → 0.06 s with the GIL). Limiting native thread pools (`OMP/OPENBLAS/MKL_NUM_THREADS=1`, `threadpoolctl.threadpool_limits(1)`) changes nothing. Accumulating the per-tree `predict_proba(X, check_input=False)` directly, in the same order and divided by the number of trees, gives **bit-identical** probabilities and runs 0.75 s → 0.27 s (4 threads) on 3.14t and 0.32 s serial with the GIL, against 1.4–1.55 s serial for the forest call. The same collapse affected multi-target scans on free-threaded runtimes before this fix.
 
@@ -153,18 +153,31 @@ Decided 2026-11-14 (project-manager, under the operator's rule "ceiling from the
 - Adaptive throttling inside the target (`BoarThrottler` stays per target).
 - Any native extension.
 
-## Resume per file (#1330 survey — evidence, not implemented)
+## Resume per file (implemented 2026-11-14, extends #1330)
 
-`--resume <session>` checkpoints SQL/Snowflake tables only (`ScanTableCheckpoint`). Executed locally on 2026-11-14 (branch code, serial path, 6 000 synthetic `.csv` files, one filesystem target):
+**Before** (survey on the pool branch, 6 000 synthetic `.csv`, one filesystem target, serial): `--resume` re-scanned the whole filesystem target. Nothing was lost, but every finding saved before the kill was duplicated in the same session — SIGTERM at 8 s: 346 rows before, 6 346 after resume (6 000 distinct); SIGKILL at 8 s: 341 → 6 341. `scan_object_state` could not serve as the base: it is cross-session and written only for files with a finding.
 
-| Kill | Session status after kill | Rows before resume | After `--resume` | Distinct files |
-| ---- | ------------------------- | ------------------ | ---------------- | -------------- |
-| SIGTERM at 8 s (#1251 → `KeyboardInterrupt`) | `interrupted` | 346 | 6 346 (`completed`) | 6 000 |
-| SIGKILL at 8 s | `running` | 341 | 6 341 (`completed`) | 6 000 |
+**Design (as implemented):**
 
-A filesystem target is **re-scanned from the start**: nothing is lost, but every finding saved before the kill is **duplicated** inside the same session (346 and 341 duplicate rows). `scan_object_state` is not a usable base as is: it is keyed by `(target_name, abs_path)` across sessions and is written only for files **with** a finding, so clean files leave no trace. (A SIGINT sent to a background job of a non-interactive shell is ignored by the interpreter; operators press Ctrl+C in a foreground terminal, which behaves like the SIGTERM row.)
+- New table `scan_file_checkpoints(session_id, target_name, abs_path, mtime_ns, size)` with `_ensure_scan_file_checkpoints_table` (legacy DBs gain it on open; test included).
+- The target thread queues each finished candidate file's recorded writes (findings, failures, read barriers, object-state upsert) together with its checkpoint, and `LocalDBManager.persist_file_batch` commits a batch in **one transaction** (every 256 files or 1 s, and on interrupt). A file's findings and its checkpoint become durable together, so a hard kill loses the whole unflushed batch — findings and checkpoints — and `--resume` re-scans those files **without duplicating**. Batching also cuts the per-finding commits of the single writer.
+- On resume the walk skips files whose `(abs_path, mtime_ns, size)` matches the session checkpoint. A file changed since its checkpoint is re-scanned and its earlier findings in the session (including archive / SQLite-as-DB members) are replaced; the file-name match is literal (LIKE wildcards escaped).
+- Serial and pool paths share it. A DB manager without these methods (test doubles) keeps immediate per-call writes and no checkpoints. `--resume` on a fresh run is a no-op lookup.
 
-**Minimal design (roadmap):** new table `scan_file_checkpoints(session_id, target_name, abs_path, mtime_ns, size)` plus `_ensure_*` migration (`PLAN_SCHEMA_MIGRATION.md`); the target thread inserts one row per processed file **after** its sink is replayed (clean files included), committed in batches of ~500; on resume, the connector skips files whose `(abs_path, mtime_ns, size)` is already checkpointed for that session, and a changed file is re-scanned. Risks: one extra write per file (measure the overhead on the local profile), batch boundary may re-scan up to one batch (re-introducing up to ~500 duplicates unless findings of the unconfirmed batch are deleted on resume), path canonicalisation for symlink aliases. Effort: about 2 days with tests (schema + migration test + connector skip + kill/resume integration test). Not implemented in this slice.
+**Evidence after the change** (same corpus and procedure, `python main.py --config … --resume <session>`):
+
+| Kill | Session after kill | Rows before resume | After `--resume` | Distinct files | Uninterrupted run |
+| ---- | ------------------ | ------------------ | ---------------- | -------------- | ----------------- |
+| SIGTERM at 8 s | `interrupted` | 390 | **6 000** (`completed`) | 6 000 | 6 000 |
+| SIGKILL at 8 s | `running` | 384 | **6 000** (`completed`) | 6 000 | 6 000 |
+
+No duplicate and no loss. `tests/test_filesystem_file_resume.py` checks the same with stub detection on serial and pool runs: identical multiset of findings and failures against an uninterrupted run, skip of checkpointed files, lost last batch (simulated kill -9), changed file, fresh-session checkpoint count, legacy DB, literal file-name match.
+
+**Limits:**
+- A file interrupted by an **unexpected exception** (the target aborts with `error`, same as before) keeps its partial writes without a checkpoint; resuming re-scans it and can duplicate that one file's partial findings.
+- Failures (`scan_failures`) of a file that **changed** between the runs are not replaced, only its findings.
+- The checkpoint key is path + mtime + size, not a content hash: a rewrite that keeps both mtime and size is treated as unchanged.
+- Live finding counts during a scan lag by up to one batch (≤ 1 s).
 
 ## Phases
 
@@ -176,5 +189,5 @@ A filesystem target is **re-scanned from the start**: nothing is lost, but every
 | Pinned benchmark (3.14t vs 3.14 GIL, dev workstation) | ✅ |
 | Resume survey | ✅ |
 | Demo image + VPS measurement (operator / PM) | ⬜ |
-| Resume per file | ⬜ roadmap |
+| Resume per file | ✅ |
 | Parallel walk (top-level folders) | ⬜ roadmap, needs network-FS measurement |
