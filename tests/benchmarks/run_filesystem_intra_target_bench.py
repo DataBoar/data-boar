@@ -315,6 +315,7 @@ def run_benchmark(
     *, file_count: int, workers_list: list[int], iterations: int, latency_ms: float
 ) -> dict[str, Any]:
     gil_before = _gil_enabled()
+    load_before = _host_load()
     with tempfile.TemporaryDirectory(prefix="db_fs_intra_1820_") as tmp:
         work = Path(tmp)
         _hermetic_home(work)
@@ -358,6 +359,7 @@ def run_benchmark(
         "gil_enabled_after": gil_after,
         "cpu_count": os.cpu_count() or 1,
         "host_profile": f"{platform.system().lower()}-{platform.machine()}",
+        "host_load_before": load_before,
         "host_load": _host_load(),
         "git_sha": _git_sha_short(),
         "generated_at": datetime.now(UTC).isoformat(),
