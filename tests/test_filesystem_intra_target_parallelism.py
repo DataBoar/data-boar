@@ -601,13 +601,9 @@ def test_d1820_e_read_failure_keeps_pool_and_other_findings(
         dict(op[2])["file_name"] for op in par_db.ops if op[0] == "finding"
     }
     assert "f003.txt" not in finding_files
-    assert {
-        "f000.txt",
-        "f006.txt",
-        "f045.txt",
-        "c.csv",
-        "big_head.txt",
-    } <= finding_files
+    assert {"f000.txt", "f006.txt", "f045.txt", "big_head.txt"} <= finding_files
+    # sub1/c.csv is reported under whichever alias the walk reaches first.
+    assert len({"c.csv", "alias_c.csv"} & finding_files) == 1
     assert _pool_threads() == []
 
 
