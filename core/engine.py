@@ -18,6 +18,11 @@ from typing import Any
 from config.scan_defaults import DEFAULT_FILE_SAMPLE_MAX_CHARS
 
 
+def _intra_target_worker_budget(max_workers: int, concurrent_targets: int) -> int:
+    """Per-target worker pool size (#1820) inside the clamped ``max_workers`` budget."""
+    raise NotImplementedError("intra-target worker budget (#1820)")
+
+
 def _compute_config_scope_hash(config: dict[str, Any]) -> str:
     """
     Compute a non-reversible digest of the scan scope (target names, types, file_scan.extensions only).

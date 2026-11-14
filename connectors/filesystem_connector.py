@@ -132,7 +132,21 @@ def _path_contained_under_root(path: Path, root: Path) -> bool:
         return False
 
 
-def iter_scan_files(root: Path, *, recursive: bool) -> Iterator[Path]:
+# Thread-name prefix of the intra-target worker pool (#1820).
+INTRA_TARGET_THREAD_PREFIX = "databoar-fs-intra"
+
+
+class InodeDedup:
+    """Atomic ``(st_dev, st_ino)`` claim set shared by walkers (#1820)."""
+
+    def claim(self, key: tuple[int, int]) -> bool:
+        """Return True exactly once per *key*, even under concurrent callers."""
+        raise NotImplementedError("InodeDedup.claim (#1820)")
+
+
+def iter_scan_files(
+    root: Path, *, recursive: bool, dedup: InodeDedup | None = None
+) -> Iterator[Path]:
     """
     Yield files under *root* for filesystem scans.
 
@@ -140,7 +154,11 @@ def iter_scan_files(root: Path, *, recursive: bool) -> Iterator[Path]:
     - Skips duplicate regular files reachable via multiple hard links / symlink aliases.
     - File symlinks: yield the symlink path when the *target* inode is new and the
       resolved target stays under *root* (#1579).
+    - *dedup* (#1820): optional shared claim set so several concurrent walkers
+      visit each directory and file inode exactly once.
     """
+    if dedup is not None:
+        raise NotImplementedError("shared dedup for iter_scan_files (#1820)")
     root = root.resolve()
     seen_dirs: set[tuple[int, int]] = set()
     seen_files: set[tuple[int, int]] = set()
@@ -824,6 +842,8 @@ class FilesystemConnector:
             )
         except Exception:
             pass
+        if int(self.config.get("_intra_target_workers", 1) or 1) > 1:
+            raise NotImplementedError("intra-target worker pool (#1820)")
         for file_path in iter_scan_files(path, recursive=recursive):
             ext = file_path.suffix.lower()
             has_archive_ext = self.scan_compressed and path_has_compressed_extension(
