@@ -94,6 +94,32 @@ class ScanTableCheckpoint(Base):
     )
 
 
+class ScanFileCheckpoint(Base):
+    """Per-file filesystem/NFS progress for ``--resume`` (#1820 epic 2, extends #1330).
+
+    One row per processed candidate file in a session, written after the file's
+    findings and failures. ``(abs_path, mtime_ns, size)`` lets a resumed run skip
+    unchanged files and re-scan changed ones. Not ADR-0051 cross-session identity.
+    """
+
+    __tablename__ = "scan_file_checkpoints"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    session_id = Column(String(64), nullable=False, index=True)
+    target_name = Column(String(100), nullable=False)
+    abs_path = Column(Text, nullable=False)
+    mtime_ns = Column(BigInteger, nullable=True)
+    size = Column(BigInteger, nullable=True)
+    updated_at = Column(DateTime, default=_utc_now)
+    __table_args__ = (
+        UniqueConstraint(
+            "session_id",
+            "target_name",
+            "abs_path",
+            name="uq_scan_file_checkpoints_peer",
+        ),
+    )
+
+
 class DatabaseFinding(Base):
     """A single finding from a database target (metadata only, no raw content)."""
 
@@ -1007,6 +1033,22 @@ class LocalDBManager:
             raise
         finally:
             session.close()
+
+    def list_file_checkpoints(
+        self, target_name: str
+    ) -> dict[str, tuple[int | None, int | None]]:
+        """Return {abs_path: (mtime_ns, size)} checkpointed in the current session."""
+        raise NotImplementedError("list_file_checkpoints (#1820 epic 2)")
+
+    def save_file_checkpoints(
+        self, target_name: str, rows: list[tuple[str, int | None, int | None]]
+    ) -> None:
+        """Upsert ``(abs_path, mtime_ns, size)`` rows for the current session (one commit)."""
+        raise NotImplementedError("save_file_checkpoints (#1820 epic 2)")
+
+    def delete_file_partial_results(self, target_name: str, abs_path: str) -> None:
+        """Remove this session's rows for one file before it is re-scanned on resume."""
+        raise NotImplementedError("delete_file_partial_results (#1820 epic 2)")
 
     def list_completed_sql_tables(self, target_name: str) -> set[tuple[str, str]]:
         """Return {(schema, table)} marked completed for the current session."""

@@ -1084,6 +1084,21 @@ class FilesystemConnector:
         )
 
 
+# Per-file resume (#1820 epic 2): checkpoint rows written per transaction.
+FILE_CHECKPOINT_BATCH = 256
+
+
+class _FileCheckpointer:
+    """Batches per-file checkpoints for ``--resume``; disabled without DB support."""
+
+    def __init__(self, db_manager: Any, target_name: str) -> None:
+        self._db = db_manager
+        self._target = target_name
+
+    def flush(self, *, final: bool = False) -> None:
+        raise NotImplementedError("_FileCheckpointer.flush (#1820 epic 2)")
+
+
 # In-flight work items per pool worker before the target thread drains (#1820).
 _INTRA_TARGET_WINDOW_FACTOR = 4
 
