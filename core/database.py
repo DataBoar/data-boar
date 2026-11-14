@@ -439,6 +439,7 @@ class LocalDBManager:
         self._ensure_source_size_column()
         self._ensure_content_fingerprint_column()
         self._ensure_scan_table_checkpoints_table()
+        self._ensure_scan_file_checkpoints_table()
         self._session_factory = sessionmaker(bind=self.engine, expire_on_commit=False)
         self._current_session_id: str | None = None
         # Crash-recovery: mark dead-PID / legacy-NULL orphans as interrupted (#1251).
@@ -526,6 +527,10 @@ class LocalDBManager:
                     )
                 )
             conn.commit()
+
+    def _ensure_scan_file_checkpoints_table(self) -> None:
+        """Create scan_file_checkpoints when missing (#1820 epic 2)."""
+        ScanFileCheckpoint.__table__.create(self.engine, checkfirst=True)
 
     def _ensure_scan_table_checkpoints_table(self) -> None:
         """Create scan_table_checkpoints when missing (#1330)."""
@@ -1038,17 +1043,109 @@ class LocalDBManager:
         self, target_name: str
     ) -> dict[str, tuple[int | None, int | None]]:
         """Return {abs_path: (mtime_ns, size)} checkpointed in the current session."""
-        raise NotImplementedError("list_file_checkpoints (#1820 epic 2)")
+        sid = self._current_session_id
+        if not sid:
+            return {}
+        session = self._session_factory()
+        try:
+            rows = (
+                session.query(ScanFileCheckpoint)
+                .filter(
+                    ScanFileCheckpoint.session_id == sid,
+                    ScanFileCheckpoint.target_name == target_name,
+                )
+                .all()
+            )
+            return {r.abs_path: (r.mtime_ns, r.size) for r in rows}
+        finally:
+            session.close()
 
-    def save_file_checkpoints(
-        self, target_name: str, rows: list[tuple[str, int | None, int | None]]
+    def persist_file_batch(
+        self,
+        target_name: str,
+        items: list[tuple[list[tuple[str, tuple, dict]], tuple | None, bool]],
     ) -> None:
-        """Upsert ``(abs_path, mtime_ns, size)`` rows for the current session (one commit)."""
-        raise NotImplementedError("save_file_checkpoints (#1820 epic 2)")
+        """Persist several files' writes and checkpoints in **one** transaction.
 
-    def delete_file_partial_results(self, target_name: str, abs_path: str) -> None:
-        """Remove this session's rows for one file before it is re-scanned on resume."""
-        raise NotImplementedError("delete_file_partial_results (#1820 epic 2)")
+        Each item is ``(ops, checkpoint, replace)``: ``ops`` are recorded
+        ``save_finding`` / ``save_failure`` / ``upsert_object_state`` calls in
+        order; ``checkpoint`` is ``(abs_path, mtime_ns, size)`` or ``None`` for a
+        file that did not finish; ``replace`` drops this session's earlier
+        findings of the same file first (file changed since its checkpoint).
+        A crash before commit loses the whole batch, findings and checkpoints
+        together, so ``--resume`` re-scans those files without duplicates.
+        ``upsert_object_state`` stays best-effort, as in the per-call path.
+        """
+        sid = self._current_session_id
+        if not sid or not items:
+            return
+        session = self._session_factory()
+        try:
+            for ops, checkpoint, replace in items:
+                if replace and checkpoint is not None:
+                    self._delete_file_findings(session, sid, target_name, checkpoint[0])
+                for name, args, kwargs in ops:
+                    if name == "save_finding":
+                        kw = dict(kwargs)
+                        kind = args[0] if args else kw.pop("source_type", "")
+                        row = self._finding_row(sid, kind, kw)
+                        if row is not None:
+                            session.add(row)
+                    elif name == "save_failure":
+                        session.add(self._failure_row(sid, *args, **kwargs))
+                    elif name == "upsert_object_state":
+                        try:
+                            self._apply_object_state(session, **kwargs)
+                        except Exception:
+                            pass  # non-fatal, as in upsert_object_state callers
+                if checkpoint is not None:
+                    abs_path, mtime_ns, size = checkpoint
+                    rec = (
+                        session.query(ScanFileCheckpoint)
+                        .filter_by(
+                            session_id=sid, target_name=target_name, abs_path=abs_path
+                        )
+                        .first()
+                    )
+                    if rec is None:
+                        session.add(
+                            ScanFileCheckpoint(
+                                session_id=sid,
+                                target_name=target_name,
+                                abs_path=abs_path,
+                                mtime_ns=mtime_ns,
+                                size=size,
+                            )
+                        )
+                    else:
+                        rec.mtime_ns = mtime_ns
+                        rec.size = size
+                        rec.updated_at = _utc_now()
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
+
+    @staticmethod
+    def _delete_file_findings(
+        session: Any, sid: str, target_name: str, abs_path: str
+    ) -> None:
+        """Drop this session's filesystem findings for one file (and its members)."""
+        parent, name = os.path.dirname(abs_path), os.path.basename(abs_path)
+        (
+            session.query(FilesystemFinding)
+            .filter(
+                FilesystemFinding.session_id == sid,
+                FilesystemFinding.target_name == target_name,
+                FilesystemFinding.path == parent,
+                (FilesystemFinding.file_name == name)
+                | FilesystemFinding.file_name.like(f"{name} | %")
+                | FilesystemFinding.file_name.like(f"{name}|%"),
+            )
+            .delete(synchronize_session=False)
+        )
 
     def list_completed_sql_tables(self, target_name: str) -> set[tuple[str, str]]:
         """Return {(schema, table)} marked completed for the current session."""
@@ -1197,28 +1294,8 @@ class LocalDBManager:
             return
         session = self._session_factory()
         try:
-            kind = (source_type or "").strip().lower()
-            if kind == "database":
-                kwargs["session_id"] = sid
-                finding = DatabaseFinding(
-                    **{k: v for k, v in kwargs.items() if hasattr(DatabaseFinding, k)}
-                )
-                session.add(finding)
-            elif kind == "filesystem":
-                kwargs["session_id"] = sid
-                finding = FilesystemFinding(
-                    **{k: v for k, v in kwargs.items() if hasattr(FilesystemFinding, k)}
-                )
-                session.add(finding)
-            elif kind in _APPLICATION_SOURCE_TYPES:
-                kwargs["session_id"] = sid
-                finding = ApplicationFinding(
-                    **{
-                        k: v
-                        for k, v in kwargs.items()
-                        if hasattr(ApplicationFinding, k)
-                    }
-                )
+            finding = self._finding_row(sid, source_type, kwargs)
+            if finding is not None:
                 session.add(finding)
             session.commit()
         except Exception:
@@ -1226,6 +1303,21 @@ class LocalDBManager:
             raise
         finally:
             session.close()
+
+    @staticmethod
+    def _finding_row(sid: str, source_type: str, kwargs: dict[str, Any]) -> Any:
+        """Build the ORM row for one finding (shared by save_finding and batches)."""
+        kind = (source_type or "").strip().lower()
+        if kind == "database":
+            model: Any = DatabaseFinding
+        elif kind == "filesystem":
+            model = FilesystemFinding
+        elif kind in _APPLICATION_SOURCE_TYPES:
+            model = ApplicationFinding
+        else:
+            return None
+        kwargs["session_id"] = sid
+        return model(**{k: v for k, v in kwargs.items() if hasattr(model, k)})
 
     def upsert_object_state(
         self,
@@ -1245,36 +1337,59 @@ class LocalDBManager:
         """
         session = self._session_factory()
         try:
-            existing = (
-                session.query(ScanObjectState)
-                .filter_by(target_name=target_name, abs_path=abs_path)
-                .first()
+            self._apply_object_state(
+                session,
+                target_name=target_name,
+                abs_path=abs_path,
+                session_id=session_id,
+                mtime_ns=mtime_ns,
+                size=size,
+                content_fingerprint=content_fingerprint,
+                sensitivity_level=sensitivity_level,
             )
-            if existing is not None:
-                existing.last_session_id = session_id
-                existing.mtime_ns = mtime_ns
-                existing.size = size
-                existing.content_fingerprint = content_fingerprint
-                existing.last_sensitivity = sensitivity_level
-                existing.updated_at = _utc_now()
-            else:
-                session.add(
-                    ScanObjectState(
-                        target_name=target_name,
-                        abs_path=abs_path,
-                        last_session_id=session_id,
-                        mtime_ns=mtime_ns,
-                        size=size,
-                        content_fingerprint=content_fingerprint,
-                        last_sensitivity=sensitivity_level,
-                    )
-                )
             session.commit()
         except Exception:
             session.rollback()
             raise
         finally:
             session.close()
+
+    @staticmethod
+    def _apply_object_state(
+        session: Any,
+        *,
+        target_name: str,
+        abs_path: str,
+        session_id: str,
+        mtime_ns: int | None,
+        size: int | None,
+        content_fingerprint: str | None,
+        sensitivity_level: str | None,
+    ) -> None:
+        existing = (
+            session.query(ScanObjectState)
+            .filter_by(target_name=target_name, abs_path=abs_path)
+            .first()
+        )
+        if existing is not None:
+            existing.last_session_id = session_id
+            existing.mtime_ns = mtime_ns
+            existing.size = size
+            existing.content_fingerprint = content_fingerprint
+            existing.last_sensitivity = sensitivity_level
+            existing.updated_at = _utc_now()
+        else:
+            session.add(
+                ScanObjectState(
+                    target_name=target_name,
+                    abs_path=abs_path,
+                    last_session_id=session_id,
+                    mtime_ns=mtime_ns,
+                    size=size,
+                    content_fingerprint=content_fingerprint,
+                    last_sensitivity=sensitivity_level,
+                )
+            )
 
     def get_object_state(
         self,
@@ -1313,6 +1428,22 @@ class LocalDBManager:
         sid = self._current_session_id
         if not sid:
             return
+        row = self._failure_row(sid, target_name, reason, details)
+        session = self._session_factory()
+        try:
+            session.add(row)
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
+
+    @staticmethod
+    def _failure_row(
+        sid: str, target_name: str, reason: str, details: str | None
+    ) -> ScanFailure:
+        """Redact, mirror to the audit log (best-effort) and build the failure row."""
         from core.validation import sanitize_log_text
 
         # Same redaction for log line and SQLite (drivers/httpx may embed SQL or bodies in str(e)).
@@ -1333,22 +1464,12 @@ class LocalDBManager:
         except Exception:
             # Logging must not break persistence.
             pass
-        session = self._session_factory()
-        try:
-            session.add(
-                ScanFailure(
-                    session_id=sid,
-                    target_name=target_name,
-                    reason=reason,
-                    details=stored_details,
-                )
-            )
-            session.commit()
-        except Exception:
-            session.rollback()
-            raise
-        finally:
-            session.close()
+        return ScanFailure(
+            session_id=sid,
+            target_name=target_name,
+            reason=reason,
+            details=stored_details,
+        )
 
     def get_findings(
         self, session_id: str | None = None
