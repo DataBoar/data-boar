@@ -42,7 +42,7 @@ The report is written under `report.output_dir` in config (e.g. `/data`); copy i
 
 You can run the application **without cloning the repository** by using the published image on Docker Hub:
 
-- **Docker Hub:** [hub.docker.com/r/fabioleitao/data_boar](https://hub.docker.com/r/fabioleitao/data_boar) — **`fabioleitao/data_boar:latest`** and **`fabioleitao/data_boar:1.7.4`**
+- **Docker Hub:** [hub.docker.com/r/fabioleitao/data_boar](https://hub.docker.com/r/fabioleitao/data_boar) — **`fabioleitao/data_boar:latest`** and **`fabioleitao/data_boar:1.8.0`**
 
 Example:
 
@@ -426,7 +426,7 @@ Typical deployments keep all durable state under **`/data`** (volume or bind mou
 #### Operational notes
 
 - Prefer **API keys from environment** (`api.api_key_from_env`) so secrets are not only in files you include in file-level backups—see [SECURITY.md](../../SECURITY.md).
-- For long-term recovery, record the **image tag or digest** you ran (e.g. `fabioleitao/data_boar:1.7.4`) alongside the data backup so you can match behaviour when restoring.
+- For long-term recovery, record the **image tag or digest** you ran (e.g. `fabioleitao/data_boar:1.8.0`) alongside the data backup so you can match behaviour when restoring.
 
 **Português (Brasil):** [DEPLOY.pt_BR.md §9](DEPLOY.pt_BR.md#9-backup-e-restore-dados-persistentes).
 

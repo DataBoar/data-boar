@@ -38,8 +38,9 @@ OpenSSF Scorecard for this repository (badge after publish; JSON API): [Scorecar
 
 | Line | Status |
 | ----- | ------ |
-| **1.7.4.x** (stable **1.7.4**, including PyPI **1.7.4.postN**; Docker Hub `fabioleitao/data_boar` **1.7.4** / `latest` when those tags are published) | **Supported** — security fixes for this stable line |
-| **`main`** (working tree; currently **1.8.0-rc**, git-only) | **Supported** — fixes land here first, then stable as appropriate |
+| **1.8.0** (GA **2026-11-01**: PyPI, Docker Hub `fabioleitao/data_boar` **1.8.0**, GitHub Release **`v1.8.0`**) | **Supported** — latest published release |
+| **1.7.4.x** (stable **1.7.4**, including PyPI **1.7.4.postN**; Docker Hub `fabioleitao/data_boar` **1.7.4** / `latest` when those tags are published) <!-- politica 1.7.4.x pendente: operador --> | **Supported** — security fixes for this stable line |
+| **`main`** (working tree; currently **1.8.1**, the presentation version — git-only, not a release) | **Supported** — fixes land here first, then stable as appropriate |
 
 **Not supported:** tags and images **older than 1.7.4**; unofficial forks or rebuilt images; unofficial mirrors; any fourth-segment “1.7.4.N” public version (this project does not publish that scheme — see [docs/VERSIONING.md](docs/VERSIONING.md)).
 

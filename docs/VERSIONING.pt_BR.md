@@ -68,12 +68,12 @@ Sufixos (`-beta`, `-rc`, `-rc-N`) são obrigatórios em `main` enquanto um issue
 
 | Rótulo | Status |
 | --- | --- |
-| **Working tree `main`** | **`1.8.0`** no `pyproject.toml` (`maturity_build = 200` — âncora da faixa GA; ADR-0073 L36). Tag **`v1.8.0`** no commit `3b0170641f2ab7a1358058902e12ff3f1fc3f545`. |
+| **Working tree `main`** | **`1.8.1`** no `pyproject.toml` — a versão da apresentação (#2240), só git, não é release até o ritual de release (`maturity_build = 200`; ADR-0073 L36). Última tag **`v1.8.0`** no commit `3b0170641f2ab7a1358058902e12ff3f1fc3f545`. |
 | **Canais publicados** | **`1.8.0`** / **`v1.8.0`** no PyPI + Hub + GitHub Release (**2026-11-01**). Histórico: **`1.7.4.post12`**, **`1.7.4`**, **`1.7.3`**. |
 | **#970** | Bump/tag stable prematuro sem release gate — corrigido por **ADR-0072** + gate **#406**; **`1.7.4` não é VOID** |
 | **Numeração pública pós-GA** | **Resolvido** (#977) — fix-line **`1.7.4`** usou **`.postN`** + octeto; **`.postN` não carrega** para **`1.8.0-beta`** |
 
-Escada (histórico `1.7.4`): `1.7.4-beta` → `1.7.4-rc` → `1.7.4-rc-2` → **`1.7.4`** (GA, PR **#1024**) → **`.postN`**. Próximo: **`1.8.0-beta`** → **`1.8.0-rc`** → **`1.8.0`**.
+Escada (histórico `1.7.4`): `1.7.4-beta` → `1.7.4-rc` → `1.7.4-rc-2` → **`1.7.4`** (GA, PR **#1024**) → **`.postN`**. Histórico `1.8.0`: **`1.8.0-beta`** → **`1.8.0-rc`** → **`1.8.0`** (GA **2026-11-01**). Agora: **`1.8.1`** no `main` (versão da apresentação, #2240).
 
 ### Roadmap de linha (intenção — sem incremento ingênuo)
 
@@ -198,6 +198,9 @@ Ao dar bump na versão, atualize **todos** os itens abaixo para manter o número
 | **`docs/USAGE.md`**            | Atualize qualquer referência explícita à versão, se houver.                                                                                            |
 | **`docs/USAGE.pt_BR.md`**      | Idem ao USAGE.md.                                                                                                                                      |
 | **`docs/plans/PLANS_TODO.md`** | Se houver nota de “versão atual” ou “app version” no “Current state” ou passo de publish de um plano, atualize ao lançar.                              |
+| **`SECURITY.md`** (+ **`SECURITY.pt_BR.md`**) | Tabela "Versões suportadas": acrescente a linha recém-publicada (data e canais) e mantenha a linha do **`main`** na versão do `pyproject.toml` — sem `-rc` / `-beta` depois que o sufixo sai. O texto da política de suporte é decisão do operador. Guardado por `tests/test_version_docs_sync.py`. |
+| **`CONTRIBUTING.md`** (+ **`CONTRIBUTING.pt_BR.md`**) | Seção de instalação: última versão publicada no PyPI/Hub e a data; só diga que bate com o `pyproject.toml` quando bater. Guardado por `tests/test_version_docs_sync.py`. |
+| **`docs/VERSIONING.md`** (+ **`.pt_BR.md`**) | Tabela *Linhas atuais*: a linha **Working tree `main`** cita a versão do `pyproject.toml` (guardado por `tests/test_version_docs_sync.py`); atualize a escada. |
 | **Outros docs**                | Pesquise no repositório pela string da versão antiga (ex.: `1.3.0`) e atualize referências restantes em SECURITY.md, CONTRIBUTING.md ou release notes. |
 
 ### 6. Distribuição, Docker Hub e texto voltado ao cliente
