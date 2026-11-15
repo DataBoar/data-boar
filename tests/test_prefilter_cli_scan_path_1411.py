@@ -20,11 +20,12 @@ import yaml
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from core.detector import SensitivityDetector
+from core.detector import DEFAULT_PATTERNS, SensitivityDetector
 from core.licensing.guard import reset_license_guard_for_tests
 from core.licensing.tier_features import FEATURE_TIER_MAP, Tier
 from core.pro_scan_path import (
     PRO_SCAN_PATH_ZERO_REGRESSION_LATCH,
+    _build_patterns_from_config,
     get_rust_regex_stage_status,
     resolve_pro_scan_path,
 )
@@ -451,12 +452,76 @@ def test_get_rust_regex_stage_status_tier_ok_with_rust_wheel() -> None:
     assert st["accelerated_count"] >= 0
 
 
-def test_get_rust_regex_stage_status_env_off(monkeypatch: pytest.MonkeyPatch) -> None:
-    """DATA_BOAR_PREFILTER=off -> inactive, env_off."""
+@pytest.mark.parametrize("flag", ("off", "0", "false", " OFF ", "False"))
+def test_get_rust_regex_stage_status_env_off(
+    monkeypatch: pytest.MonkeyPatch, flag: str
+) -> None:
+    """DATA_BOAR_PREFILTER aliases (0/off/false, any case) -> inactive, env_off."""
     reset_license_guard_for_tests()
-    monkeypatch.setenv("DATA_BOAR_PREFILTER", "off")
+    monkeypatch.setenv("DATA_BOAR_PREFILTER", flag)
     st = get_rust_regex_stage_status(_ENT_CFG)
     assert st["active"] is False
     assert st["reason"] == "env_off"
     assert st["name"] == "rust_regex_stage"
     assert st["engine"] == "core"
+    assert st["tier"] is None
+
+
+def test_get_rust_regex_stage_status_non_dict_config_fails_closed() -> None:
+    """A non-mapping config must not crash; the stage stays inactive."""
+    reset_license_guard_for_tests()
+    st = get_rust_regex_stage_status("not-a-mapping")  # type: ignore[arg-type]
+    assert st["active"] is False
+    assert str(st["reason"]).startswith("tier_gate_error")
+
+
+def test_build_patterns_omits_alphanumeric_cnpj_unless_enabled() -> None:
+    default = _build_patterns_from_config({})
+    enabled = _build_patterns_from_config(
+        {"sensitivity_detection": {"cnpj_alphanumeric": True}}
+    )
+    assert "LGPD_CNPJ_ALNUM" in DEFAULT_PATTERNS
+    assert "LGPD_CNPJ_ALNUM" not in default
+    assert "LGPD_CNPJ_ALNUM" in enabled
+    assert enabled["LGPD_CNPJ_ALNUM"] == DEFAULT_PATTERNS["LGPD_CNPJ_ALNUM"]
+
+
+def test_build_patterns_loads_regex_overrides_file_and_files(tmp_path: Path) -> None:
+    one = tmp_path / "one.yaml"
+    two = tmp_path / "two.yaml"
+    one.write_text(
+        yaml.dump(
+            {
+                "regex": [
+                    {"name": "HUB_COV_A", "pattern": "aaa[0-9]+", "norm_tag": "A"},
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    two.write_text(
+        yaml.dump(
+            {
+                "regex": [
+                    {"name": "HUB_COV_B", "pattern": "bbb[0-9]+", "norm_tag": "B"},
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    from_singular = _build_patterns_from_config({"regex_overrides_file": str(one)})
+    assert from_singular["HUB_COV_A"][0] == "aaa[0-9]+"
+    from_plural = _build_patterns_from_config(
+        {"regex_overrides_files": [str(one), str(two)]}
+    )
+    assert from_plural["HUB_COV_A"][0] == "aaa[0-9]+"
+    assert from_plural["HUB_COV_B"][0] == "bbb[0-9]+"
+    # Plural wins when both keys are present (same as the status helper).
+    both = _build_patterns_from_config(
+        {
+            "regex_overrides_files": [str(two)],
+            "regex_overrides_file": str(one),
+        }
+    )
+    assert "HUB_COV_B" in both
+    assert "HUB_COV_A" not in both

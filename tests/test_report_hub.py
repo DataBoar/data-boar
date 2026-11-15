@@ -244,9 +244,18 @@ def test_missing_token_is_reported_as_an_authentication_failure() -> None:
     [
         {"id": "a", "url": "http://example.com"},  # plain http only on loopback
         {"id": "a", "url": "https://user:pw@example.com"},  # credentials in the url
+        {"id": "a", "url": "https://user@example.com"},  # username without password
+        {"id": "a", "url": "http://127.0.0.1@evil.example"},  # userinfo host spoof
         {"id": "a", "url": "https://example.com/?k=v"},  # query in the url
+        {"id": "a", "url": "https://example.com/#frag"},  # fragment in the url
         {"id": "a", "url": "ftp://example.com"},
+        {"id": "a", "url": "https://"},  # scheme without host
+        {"id": "a", "url": "not-a-url"},
         {"id": "a", "url": "https://169.254.169.254"},  # link-local (cloud metadata)
+        {"id": "a", "url": "https://0.0.0.0"},  # unspecified IPv4
+        {"id": "a", "url": "https://[::]"},  # unspecified IPv6
+        {"id": "a", "url": "https://224.0.0.1"},  # IPv4 multicast
+        {"id": "a", "url": "https://[ff02::1]"},  # IPv6 multicast
         {
             "id": "-x",
             "url": "https://example.com",
@@ -273,10 +282,14 @@ def test_https_and_loopback_http_are_accepted() -> None:
         _cfg(
             ("a", "https://boar.example.internal:8088/", ""),
             ("b", "http://[::1]:8088", ""),
+            ("c", "http://127.0.0.1:8088", ""),
+            ("d", "http://localhost:8088", ""),
         )
     )
     assert nodes[0].base_url == "https://boar.example.internal:8088"
     assert nodes[1].node_id == "b"
+    assert nodes[2].base_url == "http://127.0.0.1:8088"
+    assert nodes[3].base_url == "http://localhost:8088"
 
 
 def test_config_loader_normalizes_the_hub_section() -> None:
