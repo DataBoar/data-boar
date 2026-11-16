@@ -70,8 +70,8 @@ This document helps you diagnose and fix **unreachable**, **timeout**, and **per
 
 1. **Co-locate** — run Data Boar in the **same VPC/region** as the database (jump box, CI runner, lab VM). This removes most cross-region RTT.
 2. **Reduce scope** — fewer schemas/tables, tighter `sample_limit`, or dedicated audit replica in-region.
-3. **`scan.max_workers`** — increases **parallel targets only**. It does **not** parallelize tables inside one PostgreSQL/RDS target today. Future per-table parallelism is tracked in [#1322](https://github.com/DataBoar/data-boar/issues/1322) (1.8.x milestone; not scheduled for the current release line).
-4. **ARL** — `scan.adaptive_rate_limit: true` tunes target concurrency from latency; it does not remove RTT per query.
+3. **`scan.max_workers`** — raises concurrent **targets** and, for SQLAlchemy SQL connectors, a **per-table** pool inside each target ([#1322](https://github.com/DataBoar/data-boar/issues/1322)). The budget is split so the product of outer and inner workers never exceeds the licensing cap. Snowflake does not use that pool. Column sampling inside a table stays serial.
+4. **ARL** — `scan.adaptive_rate_limit: true` tunes target concurrency from latency and **forces SQL tables serial** (the throttler is per-target). It does not remove RTT per query.
 
 **Live progress:** enable `scan.progress` (default) or `--progress` so stderr shows `target X/Y · table N/M` without manual log archaeology — see [USAGE.md](USAGE.md) § *Live scan progress*.
 

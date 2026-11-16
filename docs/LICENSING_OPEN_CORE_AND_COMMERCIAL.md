@@ -16,7 +16,7 @@ This mirrors the industry pattern used by projects such as **Bitwarden**: core u
 ## What stays in the public repository
 
 - Scanner engine, connectors (baseline), report generation, API/dashboard (dashBOARd), tests, docs for **operators** (USAGE, SECURITY, deployment guides).
-- **Runtime verification only**: public **Ed25519 verify key** (not the signing key), revocation list format, and the behaviour of `core/licensing/` when `licensing.enforcement` is enabled. Optional **ML-DSA-65** claim `dbmldsa_sig` is verified by **`LicenseGuard`** via `decode_license_jwt_hybrid` when present ([LICENSING_SPEC.md](LICENSING_SPEC.md) #48).
+- **Runtime verification only**: public **Ed25519 verify key** (not the signing key), revocation list format, and the behaviour of `core/licensing/` when `licensing.enforcement` is enabled. **`LicenseGuard` always calls `decode_license_jwt_hybrid`**. In **enforced** mode the **ML-DSA-65** claim `dbmldsa_sig` is **required** (missing claim → `hybrid_claim_required`, #2042). `licensing.mode: open` is unchanged. See [LICENSING_SPEC.md](LICENSING_SPEC.md) *Hybrid Ed25519 + ML-DSA-65 overlay*.
 
 **Note:** Open-source licensing of **code** under BSD (or future AGPL) does **not** waive **trademark**, **trade-dress**, or **commercial goodwill** in the **name, mascot, narrative, and product experience** below. Forks may redistribute code under license terms but must not imply endorsement or confuse origin unless permitted. Counsel should align `LICENSE`, `NOTICE`, trademark policy, and any **partner / white-label** SKUs (see [Future product tiers](#future-product-tiers-partners-vs-end-customers-planning-reminder)) with this inventory.
 

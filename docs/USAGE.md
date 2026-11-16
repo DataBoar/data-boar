@@ -348,7 +348,7 @@ The **Start scan** button sends `POST /scan` and triggers a **full audit of all 
 
 | Method  | Endpoint                            | Purpose                                                                                                                                                |
 | ---     | ---                                 | ---                                                                                                                                                    |
-| `POST`  | `/scan` or `/start`                 | Start a full audit in the background. Returns `session_id`. Optional JSON body: `tenant`, `technician`, `scan_compressed`, `content_type_check`, `scan_for_stego`, `jurisdiction_hint` (booleans for run-local toggles). **HTTP 409** if a scan is already running in this process. |
+| `POST`  | `/scan` or `/start`                 | Start a full audit in the background. Returns `session_id`. **Requires** `Content-Type: application/json` (empty `{}` is enough) — otherwise **HTTP 415**. `Sec-Fetch-Site: cross-site` → **HTTP 403**. Optional JSON body: `tenant`, `technician`, `scan_compressed`, `content_type_check`, `scan_for_stego`, `jurisdiction_hint` (booleans for run-local toggles). **HTTP 409** if a scan is already running in this process. |
 | `POST`  | `/scan_database`                    | One-off scan of a single database (body: name, host, port, user, password, database, driver, optional tenant/technician, optional `jurisdiction_hint`). Returns `session_id`. **HTTP 409** if a scan is already running in this process. |
 | `GET`   | `/status`                           | Current run state: `running`, `current_session_id`, `findings_count`, plus canonical **`trust_state`** / **`trust_reasons`** / **`output_confidence`**, `runtime_trust`, **`detection_prefilter`** (#1411), `dashboard_transport`, `enterprise_surface`, and **`maturity_assessment_integrity`** (HMAC summary for POC questionnaire rows when configured). |
 | `GET`   | `/report`                           | Download the **last generated** Excel report (or generate from last session if none).                                                                  |
@@ -385,14 +385,18 @@ One process holds **one** `AuditEngine`. `POST /scan`, `/start`, and `/scan_data
 ### Start a full audit
 
 ```bash
-# Minimal: start a scan with default metadata
-curl -X POST http://localhost:8088/scan
+# Minimal: JSON Content-Type is required even with an empty body (HTTP 415 without it)
+curl -X POST http://localhost:8088/scan \
+  -H "Content-Type: application/json" \
+  -d '{}'
 
 # Start a scan tagged with tenant/customer and technician/operator
 curl -X POST http://localhost:8088/scan \
   -H "Content-Type: application/json" \
   -d '{ "tenant": "Acme Corp", "technician": "Alice V." }'
 ```
+
+Browsers that send `Sec-Fetch-Site: cross-site` on these two paths get **HTTP 403**. Same-origin dashboard `POST`s already send JSON.
 
 ## Response (200)
 
@@ -833,7 +837,7 @@ When the scanner and the database are in **different regions** (e.g. Brazil work
 - **Symptoms:** CloudWatch **CPUUtilization** low (e.g. ~7%), **ReadLatency** near idle (~1 ms on the server), but the scan still takes tens of minutes — the client spends time **waiting on the network**.
 - **Not GIL / not “server overloaded”:** Python GIL does not explain multi-minute SQL scans with idle server CPU; check client-side wait and RTT first.
 - **Recommendation #1:** **Co-locate** the scanner with the database — same **VPC/region** as RDS (jump host, CI runner, or lab VM in that region).
-- **`scan.max_workers` caveat (current behaviour):** Database parallelism is **per target**, not per table or column within one database. `max_workers: 8` helps only when you have **many targets**; it does **not** speed up a single large RDS with one target. Finer-grained DB parallelism is tracked as future work ([#1322](https://github.com/DataBoar/data-boar/issues/1322) — 1.8.x milestone; not promised for the current release line).
+- **`scan.max_workers` (SQLAlchemy SQL, [#1322](https://github.com/DataBoar/data-boar/issues/1322)):** the same budget (after the licensing cap) is also used **inside** one SQLAlchemy database target: each worker samples **one table**, with one pooled connection per worker. The engine splits the budget across targets that run at the same time (`outer × inner ≤ max_workers`). Findings persist in table-discovery order. The pool stays at **1** when `max_workers: 1`, when `scan.adaptive_rate_limit: true` (ARL measures per-target latency), when `inter_query_delay_ms` is set, or when the SQLAlchemy pool is not a `QueuePool` (SQLite `:memory:`). Snowflake is a different connector and does **not** get this pool. Column sampling inside a table stays serial. Follow-ups (batch `SELECT`, column-level pool, Snowflake, real-DB numbers): [#2251](https://github.com/DataBoar/data-boar/issues/2251).
 - **Filesystem and NFS targets ([#1820](https://github.com/DataBoar/data-boar/issues/1820)):** the same `scan.max_workers` budget (after the licensing cap) is also used **inside** a `filesystem` or `nfs` target: files are read and checked by a pool of threads, split across the targets that run at the same time, so the total never exceeds the cap. Findings are saved in the same order as a sequential scan. With the standard (GIL) Python runtime the threads only overlap file I/O waits, so a local disk scan is not faster; CPU-parallel detection needs a free-threaded runtime. `max_workers: 1` keeps the scan sequential.
 - **How to measure:** Client concurrency `ss -tn dst :<port>`; server **DatabaseConnections**, **ReadLatency**, **CPUUtilization** (CloudWatch or equivalent); baseline **TCP RTT** (`ping` / `mtr` — interpret with care through firewalls).
 

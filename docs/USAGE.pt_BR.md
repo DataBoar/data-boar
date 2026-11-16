@@ -337,7 +337,7 @@ O Excel é salvo na pasta de downloads do navegador; o mapa de calor PNG é gera
 
 | Método  | Endpoint                            | Finalidade                                                                                              |
 | ---     | ---                                 | ---                                                                                                     |
-| `POST`  | `/scan` ou `/start`                 | Inicia uma varredura completa em background; retorna `session_id`. Corpo JSON opcional: `tenant`, `technician`, `scan_compressed`, `content_type_check`, `scan_for_stego`, `jurisdiction_hint` (booleanos pontuais por execução). **HTTP 409** se já houver varredura em execução neste processo. |
+| `POST`  | `/scan` ou `/start`                 | Inicia uma varredura completa em background; retorna `session_id`. **Exige** `Content-Type: application/json` (`{}` vazio basta) — senão **HTTP 415**. `Sec-Fetch-Site: cross-site` → **HTTP 403**. Corpo JSON opcional: `tenant`, `technician`, `scan_compressed`, `content_type_check`, `scan_for_stego`, `jurisdiction_hint` (booleanos pontuais por execução). **HTTP 409** se já houver varredura em execução neste processo. |
 | `POST`  | `/scan_database`                    | Inicia varredura pontual de um único banco (body JSON). Pode incluir `tenant` e `technician`. **HTTP 409** se já houver varredura em execução neste processo. |
 | `GET`   | `/status`                           | Retorna `running`, `current_session_id`, `findings_count`, além de **`trust_state`** / **`trust_reasons`** / **`output_confidence`** canônicos, `runtime_trust`, **`detection_prefilter`** (#1411), `dashboard_transport`, `enterprise_surface` e **`maturity_assessment_integrity`** (resumo HMAC das respostas do POC quando configurado). |
 | `GET`   | `/report`                           | Baixa o último relatório Excel gerado (ou gera a partir da sessão mais recente).                        |
@@ -374,14 +374,18 @@ Um processo mantém **um** `AuditEngine`. `POST /scan`, `/start` e `/scan_databa
 ### Iniciar varredura completa
 
 ```bash
-# Sem metadados extras
-curl -X POST http://localhost:8088/scan
+# Sem metadados extras: Content-Type JSON é obrigatório mesmo com corpo vazio (HTTP 415 sem ele)
+curl -X POST http://localhost:8088/scan \
+  -H "Content-Type: application/json" \
+  -d '{}'
 
 # Com tenant e technician
 curl -X POST http://localhost:8088/scan \
   -H "Content-Type: application/json" \
   -d '{ "tenant": "Acme Corp", "technician": "Alice V." }'
 ```
+
+Navegadores que enviam `Sec-Fetch-Site: cross-site` nesses dois caminhos recebem **HTTP 403**. Os `POST` same-origin do dashboard já enviam JSON.
 
 Resposta típica:
 
@@ -970,7 +974,7 @@ Com scanner e banco em **regiões diferentes** (ex.: estação no Brasil → RDS
 - **Sintomas:** **CPUUtilization** baixa no CloudWatch, **ReadLatency** ~ociosa no servidor, scan ainda lento — o cliente fica em **espera de rede**.
 - **Não é GIL / servidor sobrecarregado:** com CPU ociosa no RDS, investigue RTT e filas no cliente primeiro.
 - **Recomendação #1:** **Co-localizar** scanner e banco — mesma **VPC/região** (jump host, runner de CI ou VM de lab na região).
-- **Caveat `scan.max_workers` (comportamento atual):** paralelismo de DB é **por target**, não por tabela/coluna. `max_workers` alto só ajuda com **vários targets**; não acelera um único RDS grande. Paralelismo fino dentro do DB está em [#1322](https://github.com/DataBoar/data-boar/issues/1322) (milestone 1.8.x — trabalho futuro, sem promessa de data).
+- **`scan.max_workers` (SQL SQLAlchemy, [#1322](https://github.com/DataBoar/data-boar/issues/1322)):** o mesmo orçamento (depois do teto da licença) vale também **dentro** de um alvo de banco SQLAlchemy: cada worker amostra **uma tabela**, com uma conexão pooled por worker. O engine divide o orçamento entre os alvos que rodam ao mesmo tempo (`outer × inner ≤ max_workers`). Os achados persistem na ordem da descoberta de tabelas. O pool fica em **1** quando `max_workers: 1`, quando `scan.adaptive_rate_limit: true` (ARL mede latência por alvo), quando `inter_query_delay_ms` está definido, ou quando o pool SQLAlchemy não é `QueuePool` (SQLite `:memory:`). Snowflake é outro conector e **não** recebe esse pool. A amostragem de colunas dentro de uma tabela continua serial. Residuais (lote `SELECT`, pool por coluna, Snowflake, números em DB real): [#2251](https://github.com/DataBoar/data-boar/issues/2251).
 - **Alvos filesystem e NFS ([#1820](https://github.com/DataBoar/data-boar/issues/1820)):** o mesmo orçamento de `scan.max_workers` (depois do teto da licença) vale também **dentro** de um alvo `filesystem` ou `nfs`: os arquivos são lidos e analisados por um pool de threads, dividido entre os alvos que rodam ao mesmo tempo, sem passar do teto. Os achados são gravados na mesma ordem do scan sequencial. No runtime Python padrão (com GIL), as threads só sobrepõem a espera de I/O, então um disco local não fica mais rápido; a detecção em paralelo de CPU exige um runtime free-threaded. `max_workers: 1` mantém o scan sequencial.
 - **Como medir:** `ss -tn dst :<porta>` no cliente; **DatabaseConnections**, **ReadLatency**, **CPUUtilization** no servidor; RTT TCP de referência.
 

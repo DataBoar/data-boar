@@ -56,7 +56,7 @@ No config, defina `timeout` maior para o alvo que falha (veja [USAGE.pt_BR.md](U
 
 **Diagnóstico:** CPU/latência de leitura baixas no servidor **não** indicam GIL nem servidor sobrecarregado neste padrão — verifique RTT e conexões no cliente (`ss -tn dst :<porta>`).
 
-**Mitigações:** (1) **co-localizar** scanner e banco na mesma VPC/região; (2) reduzir escopo/amostragem; (3) `scan.max_workers` só paraleliza **targets**, não tabelas dentro de um único RDS — comportamento atual; [#1322](https://github.com/DataBoar/data-boar/issues/1322) rastreia paralelismo por tabela/coluna (milestone 1.8.x, sem promessa de data). **Progresso ao vivo:** `scan.progress` ou `--progress` — veja [USAGE.pt_BR.md](USAGE.pt_BR.md) § *Progresso ao vivo do scan*.
+**Mitigações:** (1) **co-localizar** scanner e banco na mesma VPC/região; (2) reduzir escopo/amostragem; (3) `scan.max_workers` paraleliza **targets** e, em conectores SQL SQLAlchemy, um pool **por tabela** dentro do alvo ([#1322](https://github.com/DataBoar/data-boar/issues/1322); Snowflake não entra; ARL e `inter_query_delay_ms` mantêm tabelas seriais). **Progresso ao vivo:** `scan.progress` ou `--progress` — veja [USAGE.pt_BR.md](USAGE.pt_BR.md) § *Progresso ao vivo do scan*.
 
 ---
 
