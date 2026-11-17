@@ -377,10 +377,18 @@ def _private_dir_problem(path: Path) -> str | None:
     return None
 
 
+def _posix_file_permissions() -> bool:
+    """True where 0600/0700 mode bits exist and can be enforced (not Windows)."""
+    return os.name == "posix"
+
+
 def _token_cache_path(auth: dict[str, Any]) -> Path | None:
     """Optional refresh-token cache (the only optional key; absent = memory only)."""
     if "token_cache_path" not in auth:
         return None
+    if not _posix_file_permissions():
+        # 0600/0700 cannot be guaranteed without POSIX permissions: fail closed.
+        raise _cache_refused("token cache needs POSIX file permissions")
     raw = auth.get("token_cache_path")
     if not isinstance(raw, str) or not raw or not os.path.isabs(raw):
         raise _cache_refused("it must be an absolute file path")
