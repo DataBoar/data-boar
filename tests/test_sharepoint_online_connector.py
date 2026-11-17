@@ -1292,7 +1292,7 @@ def test_D2206_1_40_allowlisted_host_resolving_to_private_ip(make_fake, ip):
         f"/{SECRET}relative",
         f"https://u:p@{DEFAULT_DOWNLOAD_HOST}/{SECRET}x",
         f"https://{DEFAULT_DOWNLOAD_HOST}:8443/{SECRET}x",
-        f"https://files.1drv.com/{SECRET}x",
+        f"https://microsoftpersonalcontent.com/{SECRET}x",
         f"https://{DEFAULT_DOWNLOAD_HOST}.evil.example/{SECRET}x",
     ],
 )
@@ -1480,10 +1480,15 @@ def test_D2206_1_47_module_passes_the_str_e_gate():
 
 
 def test_D2206_1_48_no_secret_storage_no_redirect_following():
-    """D2206.1-48: no client_secret, no open( for writing, no follow_redirects=True."""
+    """D2206.1-48: no client_secret, no builtin open( and no follow_redirects=True.
+
+    Revised 2026-11-17: the operator approved an optional refresh-token cache, so the
+    module may use ``os.open`` (O_NOFOLLOW read) and the repo's atomic writer; the
+    builtin ``open(`` stays banned, and the only write path is tested in D-60.
+    """
     source = MODULE_PATH.read_text(encoding="utf-8")
     assert "client_secret" not in source
-    assert not re.search(r"\bopen\(", source)
+    assert not re.search(r"(?<![.\w])open\(", source)
     assert "follow_redirects=True" not in source
 
 
@@ -1643,6 +1648,7 @@ REQUIRED_KEYS = (
     "graph.base_url",
     "download_host_suffixes",
     "drive",
+    "include_names",
     "max_depth",
     "max_file_bytes",
     "page_size",
@@ -1721,7 +1727,12 @@ def test_D2206_1_53_every_key_is_required_and_cited(make_fake, key):
         ("auth.scopes", ""),
         ("graph.base_url", "http://graph.example/v1.0"),
         ("download_host_suffixes", []),
-        ("download_host_suffixes", ["files.1drv.example"]),
+        ("download_host_suffixes", ["microsoftpersonalcontent.example"]),
+        ("include_names", "a.txt"),
+        ("include_names", [""]),
+        ("include_names", ["sub/c.csv"]),
+        ("auth.token_cache_path", "relative/cache.json"),
+        ("auth.token_cache_path", ""),
         ("page_size", 0),
         ("max_pages_per_folder", 0),
         ("http_timeout_seconds", 0),
@@ -1871,3 +1882,224 @@ def test_D2206_1_56_read_scopes_are_accepted(make_fake, scopes):
     result = scan(fake, target)
     assert "config_error" not in result.db.reasons()
     assert fake.device_requests[0]["scope"] == " ".join(scopes.split())
+
+
+# ----------------------------------------------------------------------------
+# 2026-11-17 round: real download discovery, include_names, optional token cache
+# ----------------------------------------------------------------------------
+
+
+def test_D2206_1_57_download_annotation_is_never_used(make_fake):
+    """D2206.1-57: the reader ignores @microsoft.graph.downloadUrl and downloads
+    through the Location of /content, without Authorization (the flow the
+    2026-11-17 probe proved; the annotation disappears under $select)."""
+    fake = make_fake()
+    assert fake.download_host == "my.microsoftpersonalcontent.com"
+
+    def annotate(body: dict[str, Any]) -> None:
+        for value in body.get("value", []):
+            value["@microsoft.graph.downloadUrl"] = (
+                f"https://{EVIL_HOST}/{SECRET}annotation?tempauth={SECRET}a"
+            )
+
+    transport = patched_json(
+        fake, lambda r: r.url.host == GRAPH_HOST and is_children(r), annotate
+    )
+    out = scan(fake, transport=transport)
+    assert fake.requests_to(EVIL_HOST) == []
+    assert out.paths == EXPECTED
+    content = [r for r in fake.graph_requests() if is_content(r)]
+    assert len(content) == 3 and all(r.headers.get("authorization") for r in content)
+    downloads = fake.download_requests()
+    assert len(downloads) == 3
+    assert all(urlsplit(r.url).hostname == fake.download_host for r in downloads)
+    assert all("authorization" not in r.headers for r in downloads)
+
+
+def test_D2206_1_58_include_names_filters_files_by_exact_name(make_fake):
+    """D2206.1-58: only listed names are downloaded and reported; a similar name
+    (case, extra suffix, prefix) does not match; [] means no filter."""
+    tree_ = {
+        "DataBoar-Sintetico": {
+            "a.txt": CPF_TXT,
+            "A.txt": CPF_TXT,
+            "a.txt.bak": CPF_TXT,
+            "xa.txt": CPF_TXT,
+            "real.txt": CPF_TXT,
+            "sub": {"a.txt": CPF_TXT},
+        }
+    }
+    fake = make_fake(tree_)
+    out = scan(fake, make_target(include_names=["a.txt"]))
+    assert out.paths == {f"{PREFIX}/a.txt", f"{PREFIX}/sub/a.txt"}
+    for name in ("A.txt", "a.txt.bak", "xa.txt", "real.txt"):
+        item_id = fake.id_of(f"{ROOT}/{name}")
+        assert not any(item_id in r.url for r in fake.requests), name
+
+    fake2 = make_fake(tree_)
+    entries = {
+        e.display_path
+        for e in build(fake2, make_target(include_names=["a.txt"])).conn.list_scope()
+    }
+    assert f"{PREFIX}/real.txt" not in entries and f"{PREFIX}/A.txt" not in entries
+    assert f"{PREFIX}/a.txt" in entries
+
+    fake3 = make_fake(tree_)
+    out3 = scan(fake3, make_target(include_names=[]))
+    assert len(out3.paths) == 6
+
+
+def test_D2206_1_59_max_depth_one_reads_only_direct_files(make_fake):
+    """D2206.1-59: max_depth 1 lists root_folder only, never a subfolder."""
+    fake = make_fake()
+    out = scan(fake, make_target(max_depth=1))
+    sub_id = fake.id_of(f"{ROOT}/sub")
+    assert not any(f"{sub_id}/children" in r.url for r in fake.requests)
+    assert out.paths == {f"{PREFIX}/a.txt"}
+
+
+def _cached_target(path: Path, **extra: Any) -> dict[str, Any]:
+    target = make_target(**extra)
+    target["auth"]["token_cache_path"] = str(path)
+    return target
+
+
+def _mode(path: Path) -> int:
+    return stat.S_IMODE(os.lstat(path).st_mode)
+
+
+def test_D2206_1_60_no_cache_key_writes_nothing(make_fake, tmp_path, monkeypatch):
+    """D2206.1-60: without auth.token_cache_path nothing is written anywhere."""
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    fake = make_fake()
+    assert scan(fake).paths == EXPECTED
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_D2206_1_60_cache_is_private_bound_and_has_no_access_token(make_fake, tmp_path):
+    """D2206.1-60: dir 0700 (created), file 0600, refresh token only, bound to config."""
+    cache = tmp_path / "cachedir" / "m365.json"
+    fake = make_fake()
+    scan(fake, _cached_target(cache))
+    assert _mode(cache.parent) == 0o700 and _mode(cache) == 0o600
+    data = json.loads(cache.read_text(encoding="utf-8"))
+    assert data["refresh_token"] == f"{SECRET}RT-1"
+    assert f"{SECRET}AT-" not in cache.read_text(encoding="utf-8")
+    assert data["client_id"] == TEST_CLIENT_ID
+    assert {"tenant", "login_host", "scopes_sha256"} <= set(data)
+    assert sorted(p.name for p in cache.parent.iterdir()) == ["m365.json"]
+
+
+def test_D2206_1_60_second_run_renews_without_device_code(make_fake, tmp_path):
+    """D2206.1-60: a valid cache renews without a new device code and rotates."""
+    cache = tmp_path / "c" / "m365.json"
+    fake = make_fake()
+    scan(fake, _cached_target(cache))
+    assert len(fake.device_requests) == 1
+    out = scan(fake, _cached_target(cache), interactive=False, tty=False)
+    assert len(fake.device_requests) == 1
+    assert out.paths == EXPECTED
+    data = json.loads(cache.read_text(encoding="utf-8"))
+    assert data["refresh_token"] == f"{SECRET}RT-2"
+    assert sorted(p.name for p in cache.parent.iterdir()) == ["m365.json"]
+    assert _mode(cache) == 0o600
+
+
+@pytest.mark.parametrize("error", ["invalid_grant", "interaction_required"])
+def test_D2206_1_60_renewal_refused_deletes_cache(make_fake, tmp_path, error):
+    """D2206.1-60: invalid_grant/interaction_required deletes the cache; with a
+    terminal a new device code follows, without one auth_failed."""
+    cache = tmp_path / "c" / "m365.json"
+    fake = make_fake()
+    scan(fake, _cached_target(cache))
+    fake.refresh_fails = error
+    out = scan(fake, _cached_target(cache), interactive=False, tty=False)
+    assert out.db.reasons() == ["auth_failed"]
+    assert not cache.exists()
+
+    fake2 = make_fake()
+    scan(fake2, _cached_target(cache))
+    fake2.refresh_fails = error
+    out2 = scan(fake2, _cached_target(cache))
+    assert len(fake2.device_requests) == 2
+    assert out2.paths == EXPECTED
+    assert cache.exists()
+
+
+def test_D2206_1_60_auth_failed_deletes_cache(make_fake, tmp_path):
+    """D2206.1-60: any auth_failed removes the cache file."""
+    cache = tmp_path / "c" / "m365.json"
+    fake = make_fake()
+    scan(fake, _cached_target(cache))
+    fake.refresh_fails = "invalid_client"
+    out = scan(fake, _cached_target(cache))
+    assert "auth_failed" in out.db.reasons()
+    assert not cache.exists()
+
+
+def test_D2206_1_60_cache_of_another_config_is_refused(make_fake, tmp_path):
+    """D2206.1-60: a cache bound to another client_id is deleted, never used."""
+    cache = tmp_path / "c" / "m365.json"
+    fake = make_fake()
+    scan(fake, _cached_target(cache))
+    other = _cached_target(cache)
+    other["auth"]["client_id"] = "0b0b0b0b-0000-4000-8000-000000000002"
+    scan(fake, other)
+    assert not any(f.get("grant_type") == "refresh_token" for f in fake.token_requests)
+    assert len(fake.device_requests) == 2
+    data = json.loads(cache.read_text(encoding="utf-8"))
+    assert data["client_id"] == "0b0b0b0b-0000-4000-8000-000000000002"
+
+
+def test_D2206_1_60_unsafe_locations_are_refused(make_fake, tmp_path):
+    """D2206.1-60: open dir or file modes, symlinks and paths inside a git repo fail
+    closed with config_error and no request."""
+    cases: list[Path] = []
+    wide_dir = tmp_path / "wide"
+    wide_dir.mkdir(mode=0o755)
+    os.chmod(wide_dir, 0o755)
+    cases.append(wide_dir / "m365.json")
+    ok_dir = tmp_path / "ok"
+    ok_dir.mkdir(mode=0o700)
+    wide_file = ok_dir / "wide.json"
+    wide_file.write_text("{}", encoding="utf-8")
+    os.chmod(wide_file, 0o644)
+    cases.append(wide_file)
+    real = ok_dir / "real.json"
+    real.write_text("{}", encoding="utf-8")
+    os.chmod(real, 0o600)
+    link = ok_dir / "link.json"
+    link.symlink_to(real)
+    cases.append(link)
+    link_dir = tmp_path / "linkdir"
+    link_dir.symlink_to(ok_dir, target_is_directory=True)
+    cases.append(link_dir / "m365.json")
+    repo = tmp_path / "repo"
+    (repo / ".git").mkdir(parents=True)
+    (repo / "private").mkdir(mode=0o700)
+    cases.append(repo / "private" / "m365.json")
+    for path in cases:
+        fake = make_fake()
+        out = scan(fake, _cached_target(path))
+        _assert_config_error(fake, out)
+        assert "auth.token_cache_path" in out.details("config_error")[0], path
+    assert real.read_text(encoding="utf-8") == "{}"
+
+
+def test_D2206_1_60_cache_never_leaks(make_fake, tmp_path, caplog, capsys):
+    """D2206.1-60: cache use and rotation leak nothing to logs, output, failures or repr."""
+    caplog.set_level(logging.DEBUG)
+    cache = tmp_path / "c" / "m365.json"
+    fake = make_fake()
+    outs = [scan(fake, _cached_target(cache))]
+    outs.append(scan(fake, _cached_target(cache), interactive=False, tty=False))
+    fake.refresh_fails = "invalid_grant"
+    outs.append(scan(fake, _cached_target(cache), interactive=False, tty=False))
+    captured = capsys.readouterr()
+    for marker in LEAK_MARKERS:
+        assert marker not in caplog.text
+        assert marker not in captured.out + captured.err
+        for out in outs:
+            assert marker not in out.db.as_text()
+            assert marker not in repr(out.conn) + str(out.conn)

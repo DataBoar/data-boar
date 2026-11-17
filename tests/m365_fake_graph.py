@@ -34,7 +34,8 @@ import httpx
 
 LOGIN_HOST = "login.microsoftonline.com"
 GRAPH_HOST = "graph.microsoft.com"
-DEFAULT_DOWNLOAD_HOST = "dl.files.1drv.com"
+# Host observed by the 2026-11-17 probe on a personal OneDrive (#2260).
+DEFAULT_DOWNLOAD_HOST = "my.microsoftpersonalcontent.com"
 EVIL_HOST = "evil.example"
 
 SECRET = "SECRET-"
@@ -50,11 +51,9 @@ OTHER_DRIVE_ID = "DRIVE-OTHER-9"
 LEAK_MARKERS = (SECRET, TEST_CLIENT_ID)
 
 SCOPE = "https://graph.microsoft.com/Files.Read offline_access"
-DOWNLOAD_HOST_SUFFIXES = (
-    ".files.1drv.com",
-    ".microsoftpersonalcontent.com",
-    ".sharepoint.com",
-)
+# Only the suffix observed on 2026-11-17; .files.1drv.com and .sharepoint.com
+# were not observed.
+DOWNLOAD_HOST_SUFFIXES = (".microsoftpersonalcontent.com",)
 
 
 class Req(NamedTuple):
@@ -670,6 +669,7 @@ def make_target(**overrides: Any) -> dict[str, Any]:
         "download_host_suffixes": list(DOWNLOAD_HOST_SUFFIXES),
         "drive": "me",
         "root_folder": "/DataBoar-Sintetico",
+        "include_names": [],  # explicit: no name filter
         "max_depth": 32,
         "max_file_bytes": 100 * 1024 * 1024,
         "page_size": 200,
