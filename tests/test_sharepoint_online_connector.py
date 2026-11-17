@@ -2042,6 +2042,11 @@ def _cached_target(path: Path, **extra: Any) -> dict[str, Any]:
     return target
 
 
+# Wide modes on purpose (the reader must refuse them), spelled with stat flags.
+_WIDE_DIR = stat.S_IRWXU | stat.S_IRGRP | stat.S_IXGRP | stat.S_IROTH | stat.S_IXOTH
+_WIDE_FILE = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH
+
+
 def _mode(path: Path) -> int:
     return stat.S_IMODE(os.lstat(path).st_mode)
 
@@ -2161,18 +2166,18 @@ def test_D2206_1_60_unsafe_locations_are_refused(make_fake, cache_dir):
     closed with config_error and no request."""
     cases: list[Path] = []
     wide_dir = cache_dir / "wide"
-    wide_dir.mkdir(mode=0o755)
-    os.chmod(wide_dir, 0o755)
+    wide_dir.mkdir(mode=_WIDE_DIR)
+    os.chmod(wide_dir, _WIDE_DIR)
     cases.append(wide_dir / "m365.json")
     ok_dir = cache_dir / "ok"
-    ok_dir.mkdir(mode=0o700)
+    ok_dir.mkdir(mode=stat.S_IRWXU)
     wide_file = ok_dir / "wide.json"
     wide_file.write_text("{}", encoding="utf-8")
-    os.chmod(wide_file, 0o644)
+    os.chmod(wide_file, _WIDE_FILE)
     cases.append(wide_file)
     real = ok_dir / "real.json"
     real.write_text("{}", encoding="utf-8")
-    os.chmod(real, 0o600)
+    os.chmod(real, stat.S_IRUSR | stat.S_IWUSR)
     link = ok_dir / "link.json"
     link.symlink_to(real)
     cases.append(link)
@@ -2181,7 +2186,7 @@ def test_D2206_1_60_unsafe_locations_are_refused(make_fake, cache_dir):
     cases.append(link_dir / "m365.json")
     repo = cache_dir / "repo"
     (repo / ".git").mkdir(parents=True)
-    (repo / "private").mkdir(mode=0o700)
+    (repo / "private").mkdir(mode=stat.S_IRWXU)
     cases.append(repo / "private" / "m365.json")
     for path in cases:
         fake = make_fake()
@@ -2280,3 +2285,31 @@ def test_D2206_1_62_windows_temp_dir_is_restricted_to_the_user(make_fake, monkey
     out3 = scan(fake3)
     assert out3.db.reasons() == ["config_error"]
     assert fake3.download_requests() == []
+
+
+_MODE_CALLS = {"chmod", "fchmod", "mkdir", "makedirs", "open", "umask", "mkdtemp"}
+
+
+def _octal_mode_literals(path: Path) -> list[str]:
+    """Calls to os/Path mode APIs that pass an integer literal as the mode."""
+    found = []
+    for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+        if not isinstance(node, ast.Call):
+            continue
+        func = node.func
+        name = func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", "")
+        if name not in _MODE_CALLS:
+            continue
+        values = list(node.args) + [kw.value for kw in node.keywords]
+        for value in values:
+            if isinstance(value, ast.Constant) and type(value.value) is int:
+                found.append(f"{path.name}:{node.lineno} {name}({value.value:#o})")
+    return found
+
+
+def test_D2206_1_63_no_octal_mode_literal_in_mode_calls():
+    """D2206.1-63: modes are spelled with stat flags (stat.S_IRWXU, S_IRUSR|S_IWUSR),
+    never as octal literals in chmod/mkdir/open/umask calls, in the reader and in
+    these tests (Semgrep insecure-file-permissions matched os.chmod(p, 0o700))."""
+    assert _octal_mode_literals(MODULE_PATH) == []
+    assert _octal_mode_literals(Path(__file__)) == []
