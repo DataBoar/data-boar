@@ -903,8 +903,8 @@ class SharePointOnlineConnector:
         parent = path.parent
         try:
             if not os.path.lexists(parent):
-                os.mkdir(parent, 0o700)
-                os.chmod(parent, 0o700)
+                os.mkdir(parent, stat.S_IRWXU)
+                os.chmod(parent, stat.S_IRWXU)
             problem = _private_dir_problem(parent)
             if problem:
                 raise _cache_refused(problem)
