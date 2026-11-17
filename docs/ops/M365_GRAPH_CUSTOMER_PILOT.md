@@ -40,11 +40,7 @@ Before the pilot, check two tenant settings (both are the administrator's decisi
 
 1. Register the app (or use the vendor's app) with the settings in section 1.
 2. Create a test folder in the pilot user's OneDrive and put only synthetic files in it.
-3. On the scanning host, set the client ID in the environment and write a configuration **outside any repository**:
-
-   ```bash
-   export M365_CLIENT_ID='<APP_CLIENT_ID>'
-   ```
+3. On the scanning host, write a configuration **outside any repository**. Every key is required (no default; a missing key fails with `config_error` citing it; reference: [USAGE.md](../USAGE.md)). The values below are for the Microsoft global cloud; a sovereign cloud uses its own hosts ([TECH_GUIDE.md](../TECH_GUIDE.md#microsoft-365-via-graph)). The download host suffix of a work tenant is an unconfirmed hypothesis: if the reader refuses a download with `scope_violation`, record only the suffix it reports.
 
    ```yaml
    targets:
@@ -52,10 +48,23 @@ Before the pilot, check two tenant settings (both are the administrator's decisi
        type: sharepoint_online
        auth:
          mode: delegated
-         tenant: <TENANT_ID>             # or organizations
-         client_id_from_env: M365_CLIENT_ID
+         tenant: <TENANT_ID>
+         client_id: <APP_CLIENT_ID>
+         login_host: login.microsoftonline.com
+         allowed_login_hosts: [login.microsoftonline.com]
+         scopes: "https://graph.microsoft.com/Files.Read offline_access"
+       graph:
+         base_url: https://graph.microsoft.com/v1.0
+         allowed_hosts: [graph.microsoft.com]
+       download_host_suffixes: [.sharepoint.com]
        drive: me
        root_folder: /DataBoar-Pilot
+       max_depth: 32
+       max_file_bytes: 104857600
+       page_size: 200
+       max_pages_per_folder: 10000
+       http_timeout_seconds: 30
+       throttle_max_wait_seconds: 120
    ```
 
 4. Run `python main.py --config <file>` from a terminal; the pilot user follows the printed instructions (address and code) in a browser.

@@ -28,7 +28,7 @@ Faça no centro de administração do Microsoft Entra (Registros de aplicativo).
 4. **Autenticação:** "Permitir fluxos de cliente público" ("Allow public client flows") = **Sim**. Com **Não**, o endpoint de token falha com `invalid_client` (AADSTS7000218).
 5. **Permissões de API:** Microsoft Graph, **delegada**, `Files.Read`. Se o portal acrescentar `User.Read`, remova. O `offline_access` é pedido na entrada.
 6. **Certificados e segredos:** não crie **nada**. Nem client secret, nem certificado.
-7. Anote o **ID do aplicativo (cliente)** num lugar privado. Ele vai por variável de ambiente.
+7. Anote o **ID do aplicativo (cliente)** num lugar privado. Ele vai na configuração efêmera da seção 4.
 
 ## 3. Preparar a pasta sintética (operador)
 
@@ -43,31 +43,35 @@ Faça no centro de administração do Microsoft Entra (Registros de aplicativo).
 
 ## 4. Configuração efêmera (fora do repositório)
 
-Crie um arquivo de configuração **fora do repositório** (por exemplo `/tmp/m365-phase0.yaml`). O client ID vem de uma variável de ambiente; o YAML guarda só o **nome** da variável:
+Crie um arquivo de configuração **fora do repositório** (por exemplo `/tmp/m365-phase0.yaml`). **Todas as chaves são obrigatórias**; não há default, e chave ausente falha com `config_error` citando a chave (referência das chaves: [USAGE.pt_BR.md](../USAGE.pt_BR.md)). O client ID não é segredo, mas identifica o seu registro: mantenha este arquivo fora de qualquer repositório, issue ou evidência.
 
 ```yaml
 targets:
   - name: onedrive-sintetico
     type: sharepoint_online
     auth:
-      mode: delegated                     # único modo disponível agora
-      tenant: consumers                   # contas pessoais
-      client_id_from_env: M365_CLIENT_ID  # nome da variável, não o valor
-    drive: me                             # único drive disponível agora
-    root_folder: /DataBoar-Sintetico      # obrigatório; nunca a raiz do drive
-    # max_depth: 32                       # opcional, 1..256
-    # max_file_bytes: 104857600           # opcional, padrão 100 MiB
-    # throttle_max_wait_seconds: 120      # opcional, 1..600
+      mode: delegated
+      tenant: consumers                     # contas pessoais
+      client_id: <APP_CLIENT_ID>            # não é segredo, mas nunca vai para commit
+      login_host: login.microsoftonline.com
+      allowed_login_hosts: [login.microsoftonline.com]
+      scopes: "https://graph.microsoft.com/Files.Read offline_access"
+    graph:
+      base_url: https://graph.microsoft.com/v1.0
+      allowed_hosts: [graph.microsoft.com]
+    download_host_suffixes: [.files.1drv.com, .microsoftpersonalcontent.com]
+    drive: me
+    root_folder: /DataBoar-Sintetico
+    max_depth: 32
+    max_file_bytes: 104857600
+    page_size: 200
+    max_pages_per_folder: 10000
+    http_timeout_seconds: 30
+    throttle_max_wait_seconds: 120
 report:
   output_dir: /tmp/m365-phase0-report
 sqlite_path: /tmp/m365-phase0-report/audit.db
 ```
-
-```bash
-export M365_CLIENT_ID='<ID do aplicativo (cliente)>'   # nunca em commit
-```
-
-Com `DATA_BOAR_CREDENTIAL_STRICT=1`, libere também os dois destinos: `DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS=login.microsoftonline.com,graph.microsoft.com`.
 
 ## 5. Rodar a varredura num terminal
 
@@ -75,10 +79,10 @@ Com `DATA_BOAR_CREDENTIAL_STRICT=1`, libere também os dois destinos: `DATA_BOAR
 uv run python main.py --config /tmp/m365-phase0.yaml
 ```
 
-No Docker, o contêiner precisa de terminal (`-it`), da variável e da configuração:
+No Docker, o contêiner precisa de terminal (`-it`) e da configuração:
 
 ```bash
-docker run -it --rm -e M365_CLIENT_ID \
+docker run -it --rm \
   -v /tmp/m365-phase0.yaml:/data/m365-phase0.yaml:ro \
   -v /tmp/m365-phase0-report:/tmp/m365-phase0-report \
   <imagem do data-boar> main.py --config /data/m365-phase0.yaml

@@ -28,7 +28,7 @@ Do this in the Microsoft Entra admin center (App registrations). Never copy any 
 4. **Authentication:** "Allow public client flows" = **Yes** ("Enable the following mobile and desktop flows"). With **No**, the token endpoint fails with `invalid_client` (AADSTS7000218).
 5. **API permissions:** Microsoft Graph, **delegated**, `Files.Read`. If the portal added `User.Read`, remove it. `offline_access` is requested at sign-in.
 6. **Certificates & secrets:** create **nothing**. No client secret, no certificate.
-7. Note the **Application (client) ID** somewhere private. You will pass it through an environment variable.
+7. Note the **Application (client) ID** somewhere private. It goes into the ephemeral configuration of section 4.
 
 ## 3. Prepare the synthetic folder (operator)
 
@@ -43,31 +43,35 @@ Do this in the Microsoft Entra admin center (App registrations). Never copy any 
 
 ## 4. Ephemeral configuration (outside the repository)
 
-Create a config file **outside the repository** (for example `/tmp/m365-phase0.yaml`). The client ID comes from an environment variable; the YAML holds only the variable **name**:
+Create a config file **outside the repository** (for example `/tmp/m365-phase0.yaml`). **Every key is required**; there is no default, and a missing key fails with `config_error` citing it (key reference: [USAGE.md](../USAGE.md)). The client ID is not a secret, but it identifies your registration: keep this file out of any repository, issue or evidence.
 
 ```yaml
 targets:
   - name: onedrive-sintetico
     type: sharepoint_online
     auth:
-      mode: delegated                     # the only mode available now
-      tenant: consumers                   # personal accounts
-      client_id_from_env: M365_CLIENT_ID  # variable name, not the value
-    drive: me                             # the only drive available now
-    root_folder: /DataBoar-Sintetico      # required; never the drive root
-    # max_depth: 32                       # optional, 1..256
-    # max_file_bytes: 104857600           # optional, default 100 MiB
-    # throttle_max_wait_seconds: 120      # optional, 1..600
+      mode: delegated
+      tenant: consumers                     # personal accounts
+      client_id: <APP_CLIENT_ID>            # not a secret, but never commit it
+      login_host: login.microsoftonline.com
+      allowed_login_hosts: [login.microsoftonline.com]
+      scopes: "https://graph.microsoft.com/Files.Read offline_access"
+    graph:
+      base_url: https://graph.microsoft.com/v1.0
+      allowed_hosts: [graph.microsoft.com]
+    download_host_suffixes: [.files.1drv.com, .microsoftpersonalcontent.com]
+    drive: me
+    root_folder: /DataBoar-Sintetico
+    max_depth: 32
+    max_file_bytes: 104857600
+    page_size: 200
+    max_pages_per_folder: 10000
+    http_timeout_seconds: 30
+    throttle_max_wait_seconds: 120
 report:
   output_dir: /tmp/m365-phase0-report
 sqlite_path: /tmp/m365-phase0-report/audit.db
 ```
-
-```bash
-export M365_CLIENT_ID='<application (client) ID>'   # never commit it
-```
-
-With `DATA_BOAR_CREDENTIAL_STRICT=1`, also allow both destinations: `DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS=login.microsoftonline.com,graph.microsoft.com`.
 
 ## 5. Run the scan from a terminal
 
@@ -75,10 +79,10 @@ With `DATA_BOAR_CREDENTIAL_STRICT=1`, also allow both destinations: `DATA_BOAR_C
 uv run python main.py --config /tmp/m365-phase0.yaml
 ```
 
-In Docker, the container needs a terminal (`-it`), the variable and the config:
+In Docker, the container needs a terminal (`-it`) and the config:
 
 ```bash
-docker run -it --rm -e M365_CLIENT_ID \
+docker run -it --rm \
   -v /tmp/m365-phase0.yaml:/data/m365-phase0.yaml:ro \
   -v /tmp/m365-phase0-report:/tmp/m365-phase0-report \
   <data-boar image> main.py --config /data/m365-phase0.yaml

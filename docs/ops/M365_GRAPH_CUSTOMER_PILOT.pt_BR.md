@@ -40,11 +40,7 @@ Antes do piloto, confira duas configurações do tenant (as duas são decisão d
 
 1. Registre o aplicativo (ou use o aplicativo do fornecedor) com as configurações da seção 1.
 2. Crie uma pasta de teste no OneDrive do usuário do piloto e coloque nela só arquivos sintéticos.
-3. No host da varredura, defina o client ID no ambiente e escreva uma configuração **fora de qualquer repositório**:
-
-   ```bash
-   export M365_CLIENT_ID='<APP_CLIENT_ID>'
-   ```
+3. No host da varredura, escreva uma configuração **fora de qualquer repositório**. Todas as chaves são obrigatórias (sem default; chave ausente falha com `config_error` citando a chave; referência: [USAGE.pt_BR.md](../USAGE.pt_BR.md)). Os valores abaixo são da nuvem global da Microsoft; uma nuvem soberana usa os próprios hosts ([TECH_GUIDE.pt_BR.md](../TECH_GUIDE.pt_BR.md#microsoft-365-via-graph)). O sufixo do host de download de um tenant de trabalho é uma hipótese não confirmada: se o leitor recusar um download com `scope_violation`, anote só o sufixo informado.
 
    ```yaml
    targets:
@@ -52,10 +48,23 @@ Antes do piloto, confira duas configurações do tenant (as duas são decisão d
        type: sharepoint_online
        auth:
          mode: delegated
-         tenant: <TENANT_ID>             # ou organizations
-         client_id_from_env: M365_CLIENT_ID
+         tenant: <TENANT_ID>
+         client_id: <APP_CLIENT_ID>
+         login_host: login.microsoftonline.com
+         allowed_login_hosts: [login.microsoftonline.com]
+         scopes: "https://graph.microsoft.com/Files.Read offline_access"
+       graph:
+         base_url: https://graph.microsoft.com/v1.0
+         allowed_hosts: [graph.microsoft.com]
+       download_host_suffixes: [.sharepoint.com]
        drive: me
        root_folder: /DataBoar-Pilot
+       max_depth: 32
+       max_file_bytes: 104857600
+       page_size: 200
+       max_pages_per_folder: 10000
+       http_timeout_seconds: 30
+       throttle_max_wait_seconds: 120
    ```
 
 4. Rode `python main.py --config <arquivo>` num terminal; o usuário do piloto segue as instruções impressas (endereço e código) num navegador.

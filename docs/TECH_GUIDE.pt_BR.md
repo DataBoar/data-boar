@@ -627,7 +627,7 @@ Você pode varrer compartilhamentos de arquivos remotos por **FQDN ou IP** com c
 | Tipo               | Host / URL                                                         | Credenciais                       | Notas                                                                       |
 | ------             | ------------                                                       | -------------                     | --------                                                                    |
 | **sharepoint**     | `site_url`: `<https://host/sites/sitenam>e`                        | `user`, `pass`; NTLM ou basic     | Só on-prem; path = pasta relativa ao servidor (ex.: `Shared Documents`) |
-| **sharepoint_online** | Microsoft Graph (hosts fixos); `root_folder` no OneDrive do usuário | device code (cliente público, sem segredo); `auth.client_id_from_env` | Delegado, Enterprise, sem o extra `shares`; testado só contra um Graph simulado, ver [M365_GRAPH_DELEGATED_RUNBOOK.pt_BR.md](ops/M365_GRAPH_DELEGATED_RUNBOOK.pt_BR.md) |
+| **sharepoint_online** | hosts e allowlists do Microsoft Graph vêm do YAML; `root_folder` no OneDrive do usuário | device code (cliente público, sem segredo); `auth.client_id` no YAML | Delegado, Enterprise, sem o extra `shares`; testado só contra um Graph simulado, ver [M365_GRAPH_DELEGATED_RUNBOOK.pt_BR.md](ops/M365_GRAPH_DELEGATED_RUNBOOK.pt_BR.md) |
 | **webdav**         | `base_url`: `<https://host/pat>h`                                  | `user`, `pass`                    | Listagem e download recursivos                                              |
 | **smb** / **cifs** | `host`: FQDN ou IP, `share`: nome do share, `path`: caminho dentro | `user`, `pass`, opcional `domain` | Porta 445 padrão                                                            |
 | **nfs**            | `path`: **ponto de montagem local** (NFS deve estar montado antes) | —                                 | `host` / `export_path` apenas para relatório                                |
@@ -692,7 +692,7 @@ Para **uma única execução** sem alterar o config gravado: CLI **`--content-ty
 
 ### Registro do aplicativo no Microsoft Entra
 
-O leitor precisa de um **registro de aplicativo** cujo ID do aplicativo (cliente) vai por variável de ambiente (`auth.client_id_from_env`). Em qualquer documento ou chamado, só placeholders: `<APP_CLIENT_ID>`, `<TENANT_ID>`, `user@example.com`.
+O leitor precisa de um **registro de aplicativo**. O ID do aplicativo (cliente) vai em `auth.client_id` do YAML do alvo (não é segredo; guarde o arquivo do cliente fora de qualquer repositório). Em qualquer documento ou chamado, só placeholders: `<APP_CLIENT_ID>`, `<TENANT_ID>`, `user@example.com`.
 
 | Configuração | Valor | Referência da Microsoft |
 | --- | --- | --- |
@@ -703,6 +703,30 @@ O leitor precisa de um **registro de aplicativo** cujo ID do aplicativo (cliente
 | URI de redirecionamento | Nenhuma para o device code (a Fase 0 confirma; [H]). | [Fluxo de device code](https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-device-code) |
 
 `Files.Read` permite "ler os arquivos do usuário que entrou" e também dá acesso aos arquivos compartilhados com esse usuário ([referência de permissões](https://learn.microsoft.com/en-us/graph/permissions-reference)). Ou seja, o token consegue ler o **drive inteiro**; quem restringe a varredura ao `root_folder` é o leitor, não o token (ele anda pelos ids dos itens abaixo da pasta resolvida e ignora atalhos para outros drives).
+
+### Chaves de configuração e nuvens soberanas
+
+O leitor **não tem host da Microsoft, versão da API, escopo nem tenant embutidos**, nem default para nenhuma chave: tudo vem do YAML do alvo, e chave ausente falha fechada com `config_error` citando a chave. O exemplo completo e as mensagens de erro estão no [USAGE.pt_BR.md](USAGE.pt_BR.md). As chaves que mudam entre as nuvens da Microsoft:
+
+| Chave | Nuvem global | Observações |
+| --- | --- | --- |
+| `auth.login_host` e `auth.allowed_login_hosts` | `login.microsoftonline.com` | `login_host` precisa estar na allowlist (conferido pelo mesmo helper do Power BI e do Dataverse, `connectors/microsoft_identity.py`) |
+| `graph.base_url` e `graph.allowed_hosts` | `https://graph.microsoft.com/v1.0` e `graph.microsoft.com` | o `@odata.nextLink` precisa ficar nesse host e caminho |
+| `auth.scopes` | `https://graph.microsoft.com/Files.Read offline_access` | a parte do recurso segue o host do Graph da nuvem |
+| `download_host_suffixes` | `.files.1drv.com`, `.microsoftpersonalcontent.com` (OneDrive pessoal), `.sharepoint.com` (OneDrive de trabalho) | **[H]** não confirmado por página da Microsoft; a Fase 0 registra o sufixo real |
+
+Exemplo, governo dos EUA L4 (GCC High), a partir das tabelas públicas de endpoints da Microsoft ([implantações nacionais do Graph](https://learn.microsoft.com/en-us/graph/deployments), [endpoints de autenticação das nuvens nacionais](https://learn.microsoft.com/en-us/entra/identity-platform/authentication-national-cloud)). **Não testado** com este leitor; o sufixo de download é um placeholder que você precisa tirar do seu ambiente:
+
+```yaml
+auth:
+  login_host: login.microsoftonline.us
+  allowed_login_hosts: [login.microsoftonline.us]
+  scopes: "https://graph.microsoft.us/Files.Read offline_access"
+graph:
+  base_url: https://graph.microsoft.us/v1.0
+  allowed_hosts: [graph.microsoft.us]
+download_host_suffixes: [<DOWNLOAD_HOST_SUFFIX>]
+```
 
 ### Entrada por device code
 

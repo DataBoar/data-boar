@@ -1296,22 +1296,37 @@ Leitor somente leitura de **uma pasta do OneDrive do usuário que entrou**, pelo
 
     type: sharepoint_online
     auth:
-      mode: delegated                     # único valor aceito agora; app_only é a #2262
-      tenant: consumers                   # consumers | organizations | common | GUID do tenant
-      client_id_from_env: M365_CLIENT_ID  # NOME da variável de ambiente (ou client_id: <GUID> num config efêmero)
-    drive: me                             # único valor aceito agora
-    root_folder: /DataBoar-Sintetico      # obrigatório (ou root_folder_id); nunca a raiz do drive
-    max_depth: 32                         # opcional, 1..256
-    max_file_bytes: 104857600             # opcional, 1 byte..2 GiB, padrão 100 MiB
-    throttle_max_wait_seconds: 120        # opcional, 1..600
+      mode: delegated                       # único valor aceito agora; app_only é a #2262
+      tenant: consumers                     # GUID ou apelido do tenant: <TENANT_ID>, consumers, organizations, common
+      client_id: <APP_CLIENT_ID>            # ID do aplicativo (cliente), um GUID; não é segredo
+      login_host: login.microsoftonline.com # host de autoridade do Microsoft Entra da sua nuvem
+      allowed_login_hosts:                  # allowlist; login_host precisa estar nela
+        - login.microsoftonline.com
+      scopes: "https://graph.microsoft.com/Files.Read offline_access"
+    graph:
+      base_url: https://graph.microsoft.com/v1.0  # endpoint e versão da API do Graph da sua nuvem
+      allowed_hosts:                        # allowlist; o host do base_url precisa estar nela
+        - graph.microsoft.com
+    download_host_suffixes:                 # hosts de download pré-autenticados (não confirmados até a Fase 0)
+      - .files.1drv.com
+      - .microsoftpersonalcontent.com
+    drive: me                               # único valor aceito agora
+    root_folder: /DataBoar-Sintetico        # ou root_folder_id (exatamente um); nunca a raiz do drive
+    max_depth: 32                           # 1..256
+    max_file_bytes: 104857600               # 1 byte..2 GiB
+    page_size: 200                          # 1..1000, filhos por página do Graph
+    max_pages_per_folder: 10000             # 1..1000000
+    http_timeout_seconds: 30                # 1..600
+    throttle_max_wait_seconds: 120          # 1..600, teto para Retry-After e backoff
 ```
 
-- **Entrada:** device code OAuth, cliente público, **sem client secret**. Escopos: `https://graph.microsoft.com/Files.Read offline_access`. O leitor escreve o endereço de verificação e o código na saída de erro padrão.
+**Todas as chaves acima são obrigatórias; não há default em lugar nenhum** (nem no código, nem no carregador de configuração). Chave ausente para o alvo antes de qualquer chamada de rede com `config_error` "required key `<chave>` is missing (sharepoint_online has no defaults)"; valor inválido falha do mesmo jeito e cita a chave (por exemplo "auth.login_host is not in auth.allowed_login_hosts", "graph.base_url host is not in graph.allowed_hosts"). A única exceção é o par `root_folder` / `root_folder_id`: exatamente um deles. Os valores mostrados são os da nuvem global da Microsoft ([implantações nacionais do Graph](https://learn.microsoft.com/en-us/graph/deployments)); para outra nuvem, ver [TECH_GUIDE.pt_BR.md](TECH_GUIDE.pt_BR.md#microsoft-365-via-graph). O `--validate-config` também informa as chaves ausentes.
+
+- **Entrada:** device code OAuth, cliente público, **sem client secret**. O leitor escreve o endereço de verificação e o código na saída de erro padrão.
 - **Precisa de uma pessoa num terminal.** Só a varredura única da CLI (`python main.py --config ...`, ou `docker run -it`) pode fazer a entrada. O dashboard web, a API e os agendadores nunca fazem: um alvo disparado por eles falha com `auth_required`. Varredura sem pessoa precisa do modo app-only ([#2262](https://github.com/DataBoar/data-boar/issues/2262), ainda não disponível).
 - **Escopo:** `Files.Read` dá ao token leitura do **drive inteiro**. Quem restringe a varredura é o leitor, não o token: ele resolve o `root_folder` uma vez e só anda pelos ids dos itens abaixo dele. Atalhos para outros drives, pacotes, itens marcados como malware ou apagados e itens de outro drive são ignorados e informados numa única falha `skipped`, só com contagens.
 - **Tokens** ficam na memória durante a varredura e nunca vão para disco, log, relatório ou achado.
-- **Client ID:** passe só por variável de ambiente (`auth.client_id_from_env`) ou por uma configuração efêmera guardada pelo cliente fora de qualquer repositório. Nunca faça commit dele; use placeholders como `<APP_CLIENT_ID>` em documentos e chamados.
-- **Gate de credencial:** com `DATA_BOAR_CREDENTIAL_STRICT=1`, `DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS` precisa listar `login.microsoftonline.com` e `graph.microsoft.com`.
+- **Sem segredo:** o modo delegado não tem nenhum. O client ID não é segredo e fica no YAML; guarde a configuração do cliente (com o tenant e o client ID) fora de qualquer repositório, e use placeholders como `<APP_CLIENT_ID>` e `<TENANT_ID>` em documentos e chamados.
 - **Achados** vão para a planilha **Filesystem findings** com caminhos como `onedrive:/DataBoar-Sintetico/sub/a.txt` (sem id de item, nome de conta nem URL).
 - Passos do operador (registro do aplicativo, consentimento, revogação, evidência): [M365_GRAPH_DELEGATED_RUNBOOK.pt_BR.md](ops/M365_GRAPH_DELEGATED_RUNBOOK.pt_BR.md). Piloto do administrador do cliente: [M365_GRAPH_CUSTOMER_PILOT.pt_BR.md](ops/M365_GRAPH_CUSTOMER_PILOT.pt_BR.md). Registro no Entra, consentimento e o limite do publicador não verificado: [TECH_GUIDE.pt_BR.md](TECH_GUIDE.pt_BR.md#microsoft-365-via-graph).
 

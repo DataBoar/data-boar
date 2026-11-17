@@ -1146,22 +1146,37 @@ Read-only reader for **one folder of the signed-in user's OneDrive** through Mic
 
     type: sharepoint_online
     auth:
-      mode: delegated                     # only value accepted now; app_only is #2262
-      tenant: consumers                   # consumers | organizations | common | tenant GUID
-      client_id_from_env: M365_CLIENT_ID  # environment variable NAME (or client_id: <GUID> in an ephemeral config)
-    drive: me                             # only value accepted now
-    root_folder: /DataBoar-Sintetico      # required (or root_folder_id); never the drive root
-    max_depth: 32                         # optional, 1..256
-    max_file_bytes: 104857600             # optional, 1 byte..2 GiB, default 100 MiB
-    throttle_max_wait_seconds: 120        # optional, 1..600
+      mode: delegated                       # only value accepted now; app_only is #2262
+      tenant: consumers                     # tenant GUID or alias: <TENANT_ID>, consumers, organizations, common
+      client_id: <APP_CLIENT_ID>            # Application (client) ID, a GUID; not a secret
+      login_host: login.microsoftonline.com # Microsoft Entra authority host of your cloud
+      allowed_login_hosts:                  # allowlist; login_host must be in it
+        - login.microsoftonline.com
+      scopes: "https://graph.microsoft.com/Files.Read offline_access"
+    graph:
+      base_url: https://graph.microsoft.com/v1.0  # Graph endpoint and API version of your cloud
+      allowed_hosts:                        # allowlist; the base_url host must be in it
+        - graph.microsoft.com
+    download_host_suffixes:                 # pre-authenticated download hosts (unconfirmed until Phase 0)
+      - .files.1drv.com
+      - .microsoftpersonalcontent.com
+    drive: me                               # only value accepted now
+    root_folder: /DataBoar-Sintetico        # or root_folder_id (exactly one); never the drive root
+    max_depth: 32                           # 1..256
+    max_file_bytes: 104857600               # 1 byte..2 GiB
+    page_size: 200                          # 1..1000, children per Graph page
+    max_pages_per_folder: 10000             # 1..1000000
+    http_timeout_seconds: 30                # 1..600
+    throttle_max_wait_seconds: 120          # 1..600, ceiling for Retry-After and backoff
 ```
 
-- **Sign-in:** OAuth device code, public client, **no client secret**. Scopes: `https://graph.microsoft.com/Files.Read offline_access`. The reader prints the verification address and the code on standard error.
+**Every key above is required; there is no default anywhere** (neither in the code nor in the configuration loader). A missing key stops the target before any network call with `config_error` "required key `<key>` is missing (sharepoint_online has no defaults)"; an invalid value fails the same way and cites the key (for example "auth.login_host is not in auth.allowed_login_hosts", "graph.base_url host is not in graph.allowed_hosts"). The only exception is the pair `root_folder` / `root_folder_id`: exactly one of them. The values shown are those of the Microsoft global cloud ([Graph national cloud deployments](https://learn.microsoft.com/en-us/graph/deployments)); for another cloud see [TECH_GUIDE.md](TECH_GUIDE.md#microsoft-365-via-graph). `--validate-config` reports the missing keys too.
+
+- **Sign-in:** OAuth device code, public client, **no client secret**. The reader prints the verification address and the code on standard error.
 - **A human at a terminal is required.** Only the one-shot CLI scan (`python main.py --config ...`, or `docker run -it`) may sign in. The web dashboard, the API and schedulers never sign in: a target started from them fails with `auth_required`. Unattended scans need app-only mode ([#2262](https://github.com/DataBoar/data-boar/issues/2262), not available yet).
 - **Scope:** `Files.Read` gives the token read access to the **whole drive**. The reader, not the token, restricts the scan: it resolves `root_folder` once and walks only item ids below it. Shortcuts to other drives, packages, items flagged as malware or deleted and items from another drive are skipped and reported as one `skipped` failure with counts only.
 - **Tokens** stay in memory for the duration of the scan and are never written to disk, logs, reports or findings.
-- **Client ID handling:** pass it only through an environment variable (`auth.client_id_from_env`) or an ephemeral configuration kept by the customer outside any repository. Never commit it; use placeholders such as `<APP_CLIENT_ID>` in documents and tickets.
-- **Credential gate:** with `DATA_BOAR_CREDENTIAL_STRICT=1`, `DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS` must list both `login.microsoftonline.com` and `graph.microsoft.com`.
+- **No secret:** delegated mode has none. The client ID is not a secret and stays in the YAML; keep the customer's configuration (with its tenant and client ID) outside any repository, and use placeholders such as `<APP_CLIENT_ID>` and `<TENANT_ID>` in documents and tickets.
 - **Findings** go to the **Filesystem findings** sheet with paths such as `onedrive:/DataBoar-Sintetico/sub/a.txt` (no item ids, account names or URLs).
 - Operator steps (app registration, consent, revocation, evidence): [M365_GRAPH_DELEGATED_RUNBOOK.md](ops/M365_GRAPH_DELEGATED_RUNBOOK.md). Customer administrator pilot: [M365_GRAPH_CUSTOMER_PILOT.md](ops/M365_GRAPH_CUSTOMER_PILOT.md). Entra registration, consent and the unverified publisher limit: [TECH_GUIDE.md](TECH_GUIDE.md#microsoft-365-via-graph).
 

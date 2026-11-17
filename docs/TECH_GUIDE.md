@@ -627,7 +627,7 @@ You can scan remote file shares by **FQDN or IP** with credentials in config. In
 | Type               | Host / URL                                                         | Credentials                       | Notes                                                                   |
 | ------             | ------------                                                       | -------------                     | --------                                                                |
 | **sharepoint**     | `site_url`: `<https://host/sites/sitenam>e`                        | `user`, `pass`; NTLM or basic     | On-prem only; path = server-relative folder (e.g. `Shared Documents`) |
-| **sharepoint_online** | Microsoft Graph (fixed hosts); `root_folder` in the user's OneDrive | device code (public client, no secret); `auth.client_id_from_env` | Delegated, Enterprise, no `shares` extra; tested against a simulated Graph only, see [M365_GRAPH_DELEGATED_RUNBOOK.md](ops/M365_GRAPH_DELEGATED_RUNBOOK.md) |
+| **sharepoint_online** | Microsoft Graph hosts and allowlists from the YAML; `root_folder` in the user's OneDrive | device code (public client, no secret); `auth.client_id` in the YAML | Delegated, Enterprise, no `shares` extra; tested against a simulated Graph only, see [M365_GRAPH_DELEGATED_RUNBOOK.md](ops/M365_GRAPH_DELEGATED_RUNBOOK.md) |
 | **webdav**         | `base_url`: `<https://host/pat>h`                                  | `user`, `pass`                    | Recursive list and download                                             |
 | **smb** / **cifs** | `host`: FQDN or IP, `share`: share name, `path`: path inside share | `user`, `pass`, optional `domain` | Port 445 default                                                        |
 | **nfs**            | `path`: **local mount point** (NFS must be mounted first)          | —                                 | `host` / `export_path` for reporting only                               |
@@ -692,7 +692,7 @@ For a **single run** without editing the saved config, use CLI **`--content-type
 
 ### App registration in Microsoft Entra
 
-The reader needs an **app registration** whose Application (client) ID you pass through an environment variable (`auth.client_id_from_env`). Placeholders only in any document or ticket: `<APP_CLIENT_ID>`, `<TENANT_ID>`, `user@example.com`.
+The reader needs an **app registration**. Its Application (client) ID goes into `auth.client_id` of the target YAML (it is not a secret; keep the customer's file outside any repository). Placeholders only in any document or ticket: `<APP_CLIENT_ID>`, `<TENANT_ID>`, `user@example.com`.
 
 | Setting | Value | Microsoft reference |
 | --- | --- | --- |
@@ -703,6 +703,30 @@ The reader needs an **app registration** whose Application (client) ID you pass 
 | Redirect URI | None for the device code flow (Phase 0 confirms this; [H]). | [Device code flow](https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-device-code) |
 
 `Files.Read` "allows the app to read the signed-in user's files" and also grants access to files shared with that user ([permissions reference](https://learn.microsoft.com/en-us/graph/permissions-reference)). The token can therefore read the **whole drive**; the reader, not the token, restricts the scan to `root_folder` (it walks item ids below the resolved folder and skips shortcuts to other drives).
+
+### Configuration keys and sovereign clouds
+
+The reader has **no built-in Microsoft host, API version, scope or tenant**, and no default for any key: everything comes from the target YAML, and a missing key fails closed with `config_error` citing it. The complete example and the error messages are in [USAGE.md](USAGE.md). The keys that change between Microsoft clouds:
+
+| Key | Global cloud | Notes |
+| --- | --- | --- |
+| `auth.login_host` and `auth.allowed_login_hosts` | `login.microsoftonline.com` | `login_host` must be in the allowlist (checked by the same helper Power BI and Dataverse use, `connectors/microsoft_identity.py`) |
+| `graph.base_url` and `graph.allowed_hosts` | `https://graph.microsoft.com/v1.0` and `graph.microsoft.com` | `@odata.nextLink` must stay on this host and path |
+| `auth.scopes` | `https://graph.microsoft.com/Files.Read offline_access` | the resource part follows the Graph host of the cloud |
+| `download_host_suffixes` | `.files.1drv.com`, `.microsoftpersonalcontent.com` (personal OneDrive), `.sharepoint.com` (work OneDrive) | **[H]** not confirmed by a Microsoft page; Phase 0 records the real suffix |
+
+Example, US Government L4 (GCC High), from Microsoft's public endpoint tables ([Graph national cloud deployments](https://learn.microsoft.com/en-us/graph/deployments), [national cloud authentication endpoints](https://learn.microsoft.com/en-us/entra/identity-platform/authentication-national-cloud)). **Not tested** with this reader; the download suffix is a placeholder you must take from your own environment:
+
+```yaml
+auth:
+  login_host: login.microsoftonline.us
+  allowed_login_hosts: [login.microsoftonline.us]
+  scopes: "https://graph.microsoft.us/Files.Read offline_access"
+graph:
+  base_url: https://graph.microsoft.us/v1.0
+  allowed_hosts: [graph.microsoft.us]
+download_host_suffixes: [<DOWNLOAD_HOST_SUFFIX>]
+```
 
 ### Device code sign-in
 
