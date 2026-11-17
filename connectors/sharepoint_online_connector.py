@@ -66,6 +66,7 @@ from core.content_type import (
 # Protocol constants (OAuth 2.0 device authorization grant, RFC 8628 / Entra v2.0).
 DEVICE_CODE_GRANT = "urn:ietf:params:oauth:grant-type:device_code"
 OAUTH_PATH = "oauth2/v2.0"
+OFFLINE_ACCESS_SCOPE = "offline_access"  # OAuth scope that asks for a refresh token
 
 # Keys the reader requires; there is no default for any of them (#2261).
 REQUIRED_KEYS = [
@@ -74,10 +75,8 @@ REQUIRED_KEYS = [
     "auth.tenant",
     "auth.client_id",
     "auth.login_host",
-    "auth.allowed_login_hosts",
     "auth.scopes",
     "graph.base_url",
-    "graph.allowed_hosts",
     "download_host_suffixes",
     "drive",
     "max_depth",
@@ -111,6 +110,11 @@ _TENANT = re.compile(r"[A-Za-z0-9-]{1,64}")
 _HOST = re.compile(
     r"[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?)+"
 )
+# Read-only rule on the scope structure: <Resource>.Read, .Read.All or .Read.Selected.
+_READ_PERMISSION = re.compile(
+    r"[A-Za-z][A-Za-z0-9]*(?:\.[A-Za-z][A-Za-z0-9]*)*?\.Read(?:\.All|\.Selected)?"
+)
+_WRITE_WORDS = re.compile(r"write|manage|fullcontrol", re.I)
 _HOST_SUFFIX = re.compile(r"(?:\.[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?){2,}")
 _ITEM_ID = re.compile(r"[A-Za-z0-9!._-]{1,256}")
 _FORBIDDEN_SEGMENT_CHARS = frozenset("\\*<>?:|")
@@ -235,17 +239,6 @@ def _int_key(cfg: dict[str, Any], key: str, low: int, high: int) -> int:
     return raw
 
 
-def _host_list(cfg: dict[str, Any], key: str) -> tuple[str, ...]:
-    raw = _lookup(cfg, key)
-    if (
-        not isinstance(raw, list)
-        or not raw
-        or not all(isinstance(h, str) and _HOST.fullmatch(h.lower()) for h in raw)
-    ):
-        raise _config_error(f"{key} must be a non-empty list of host names")
-    return tuple(h.lower() for h in raw)
-
-
 def _root_segments(raw: Any) -> tuple[str, ...]:
     if not isinstance(raw, str) or not raw.startswith("/"):
         raise _config_error("root_folder must be an absolute folder path")
@@ -265,7 +258,6 @@ def _root_segments(raw: Any) -> tuple[str, ...]:
 
 
 def _graph_base(cfg: dict[str, Any]) -> tuple[str, str, bytes]:
-    allowed = _host_list(cfg, "graph.allowed_hosts")
     raw = _lookup(cfg, "graph.base_url")
     try:
         url = httpx.URL(raw) if isinstance(raw, str) else None
@@ -282,15 +274,68 @@ def _graph_base(cfg: dict[str, Any]) -> tuple[str, str, bytes]:
         or url.fragment
         or not path.startswith(b"/")
         or b".." in path.split(b"/")
+        or not _HOST.fullmatch(host)
     ):
         raise _config_error(
             "graph.base_url must be an https URL with a path and no port, "
             "userinfo, query or fragment"
         )
-    if host not in allowed:
-        raise _config_error("graph.base_url host is not in graph.allowed_hosts")
     prefix = path.rstrip(b"/")
     return f"https://{host}{prefix.decode('ascii')}", host, prefix + b"/"
+
+
+def _read_only_scopes(raw: Any, graph_host: str) -> str:
+    """Accept only read permissions, bare or on the configured Graph host."""
+    message = (
+        "auth.scopes must hold only read permissions (<Resource>.Read, .Read.All "
+        "or .Read.Selected, bare or on the graph.base_url host) and optionally "
+        f"{OFFLINE_ACCESS_SCOPE}"
+    )
+    tokens = raw.split() if isinstance(raw, str) and raw.isprintable() else []
+    permissions = 0
+    for token in tokens:
+        if token == OFFLINE_ACCESS_SCOPE:
+            continue
+        permission = token
+        if "://" in token:
+            try:
+                url = httpx.URL(token)
+            except (httpx.InvalidURL, TypeError, ValueError):
+                raise _config_error(message) from None
+            if (
+                url.scheme != "https"
+                or (url.host or "").lower() != graph_host
+                or url.port is not None
+                or url.userinfo
+                or url.query
+            ):
+                raise _config_error(message)
+            permission = url.path.lstrip("/")
+        if not _READ_PERMISSION.fullmatch(permission) or _WRITE_WORDS.search(
+            permission
+        ):
+            raise _config_error(message)
+        permissions += 1
+    if not permissions:
+        raise _config_error(message)
+    return " ".join(tokens)
+
+
+def _operator_approves_hosts(cfg: dict[str, Any]) -> None:
+    """The operator list (DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS) approves login and Graph.
+
+    Reuses the #2086/#2103 gate of config/loader.py with its current semantics: it
+    checks only when the operator opted into strict mode.
+    """
+    from config.loader import assert_explicit_destination_allowlisted
+
+    try:
+        assert_explicit_destination_allowlisted(cfg, "sharepoint_online target")
+    except ValueError:
+        raise _config_error(
+            "auth.login_host or graph.base_url is not approved by the operator "
+            "credential host list (#2103)"
+        ) from None
 
 
 def _validate(cfg: dict[str, Any]) -> _Settings:
@@ -318,26 +363,12 @@ def _validate(cfg: dict[str, Any]) -> _Settings:
     client_id = auth.get("client_id")
     if not isinstance(client_id, str) or not _GUID.fullmatch(client_id):
         raise _config_error("auth.client_id must be a GUID")
-    allowed_login = _host_list(cfg, "auth.allowed_login_hosts")
     login_host = auth.get("login_host")
     if not isinstance(login_host, str) or not _HOST.fullmatch(login_host.lower()):
         raise _config_error("auth.login_host must be a host name")
-    from connectors.microsoft_identity import assert_allowlisted_microsoft_token_url
-
-    try:
-        assert_allowlisted_microsoft_token_url(
-            f"https://{login_host.lower()}/",
-            allowed_hosts=allowed_login,
-            label="auth.login_host",
-        )
-    except ValueError:
-        raise _config_error(
-            "auth.login_host is not in auth.allowed_login_hosts"
-        ) from None
-    scopes = auth.get("scopes")
-    if not isinstance(scopes, str) or not scopes.strip() or not scopes.isprintable():
-        raise _config_error("auth.scopes must be a non-empty space-separated string")
     graph_root, graph_host, graph_prefix = _graph_base(cfg)
+    scopes = _read_only_scopes(auth.get("scopes"), graph_host)
+    _operator_approves_hosts(cfg)
     suffixes = cfg.get("download_host_suffixes")
     if (
         not isinstance(suffixes, list)
@@ -377,7 +408,7 @@ def _validate(cfg: dict[str, Any]) -> _Settings:
         tenant=tenant,
         client_id=client_id,
         login_host=login_host.lower(),
-        scopes=" ".join(scopes.split()),
+        scopes=scopes,
         graph_root=graph_root,
         graph_host=graph_host,
         graph_prefix=graph_prefix,

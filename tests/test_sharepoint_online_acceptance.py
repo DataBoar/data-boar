@@ -503,13 +503,14 @@ def test_A2206_1_16a_client_id_fica_no_yaml_e_nao_vem_de_variavel(monkeypatch):
     assert from_env["targets"][0]["auth"].get("client_id") is None
 
 
-def test_A2206_1_16b_sem_segredo_nao_ha_gate_de_credencial(monkeypatch):
-    """A2206.1-16b, ajustado em 17/nov por ordem do operador (#2261, regra C).
+def test_A2206_1_16b_gate_estrito_exige_login_e_graph(monkeypatch):
+    """A2206.1-16b, ajustado em 17/nov (regra C do operador e achado de seguranca
+    no ca69f2aa, #2261).
 
-    Antes: o modo estrito exigia login e Graph em DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS
-    por causa do ``client_id_from_env``. No modo delegado nao ha segredo nenhum, entao
-    o gate de credencial de ambiente nao se aplica: o alvo carrega no modo estrito,
-    mesmo com a lista de hosts so com o login.
+    O nome e a intencao originais voltam: com DATA_BOAR_CREDENTIAL_STRICT=1 e a
+    lista do operador so com o host de login, o alvo e recusado (ValueError). A
+    diferenca e a origem: nao ha mais client_id_from_env; os hosts de login e de
+    Graph vem do YAML do alvo e quem os aprova e a lista do operador.
     """
     from config.loader import normalize_config
 
@@ -517,12 +518,18 @@ def test_A2206_1_16b_sem_segredo_nao_ha_gate_de_credencial(monkeypatch):
     monkeypatch.setenv(
         "DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS", "login.microsoftonline.com"
     )
-    out = normalize_config(
-        _config_with(
-            {"mode": "delegated", "tenant": "consumers", "client_id": TEST_CLIENT_ID}
+    err = None
+    try:
+        normalize_config(
+            {
+                "targets": [make_target()],
+                "api": {},
+                "report": {"output_dir": "."},
+            }
         )
-    )
-    assert out["targets"][0]["auth"].get("client_id") == TEST_CLIENT_ID
+    except Exception as exc:  # noqa: BLE001 - the assertion below fixes the type
+        err = exc
+    assert isinstance(err, ValueError)
 
 
 def _signed_license(tmp_path, dbtier: str) -> dict[str, Any]:

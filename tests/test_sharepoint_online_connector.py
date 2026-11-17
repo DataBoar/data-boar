@@ -517,19 +517,30 @@ def test_D2206_1_7_client_id_is_read_from_the_yaml_only(make_fake, monkeypatch):
     assert "auth.client_id" in result.details("config_error")[0]
 
 
-def test_D2206_1_8_no_secret_means_no_credential_gate(monkeypatch):
-    """D2206.1-8 (revised 2026-11-17, operator rule C on #2261).
+def test_D2206_1_8_strict_mode_checks_the_yaml_hosts_without_a_secret(monkeypatch):
+    """D2206.1-8 (revised twice on 2026-11-17: operator rule C, then the security
+    finding on ca69f2aa).
 
-    Delegated mode carries no secret, so the env-credential host gate does not apply:
-    the target loads in strict mode even when the operator list has only one host.
+    Delegated mode has no env secret, but the bearer token still goes to the YAML
+    hosts, so the #2103 operator list approves them: with both hosts listed the
+    target loads; with only the login host it is refused.
     """
     from config.loader import normalize_config
 
     monkeypatch.setenv("DATA_BOAR_CREDENTIAL_STRICT", "1")
-    monkeypatch.setenv("DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS", LOGIN_HOST)
-    auth = dict(make_target()["auth"])
-    out = normalize_config(_cfg(auth))
+    target = make_target()
+    config = {"targets": [target], "api": {}, "report": {"output_dir": "."}}
+    monkeypatch.setenv(
+        "DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS", f"{LOGIN_HOST},{GRAPH_HOST}"
+    )
+    out = normalize_config(config)
     assert out["targets"][0]["auth"]["client_id"] == TEST_CLIENT_ID
+
+    monkeypatch.setenv("DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS", LOGIN_HOST)
+    with pytest.raises(ValueError):
+        normalize_config(
+            {"targets": [make_target()], "api": {}, "report": {"output_dir": "."}}
+        )
 
 
 # ----------------------------------------------------------------------------
@@ -1803,6 +1814,7 @@ def test_D2206_1_55_without_strict_mode_the_gate_does_not_run(make_fake, monkeyp
     monkeypatch.delenv("DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS", raising=False)
     target = make_target()
     target["graph"] = {"base_url": "https://graph.other.example/v1.0"}
+    target["auth"]["scopes"] = "Files.Read offline_access"
     out = normalize_config(
         {"targets": [dict(target)], "api": {}, "report": {"output_dir": "."}}
     )
