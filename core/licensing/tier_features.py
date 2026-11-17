@@ -99,6 +99,9 @@ FEATURE_TIER_MAP: dict[str, Tier] = {
     "connector_powerbi": Tier.PRO,
     "connector_hubspot": Tier.PRO,  # managed SaaS CRM (#1229)
     "connector_sharepoint": Tier.PRO,
+    # Microsoft Graph reader, delegated mode (2206.1, #2261). New features start
+    # at Enterprise and are lowered only after validation, by operator decision.
+    "connector_sharepoint_online": Tier.ENTERPRISE,
     "connector_dataverse": Tier.PRO,
     "connector_webdav": Tier.PRO,
     "connector_smb": Tier.PRO,

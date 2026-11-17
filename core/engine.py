@@ -94,6 +94,8 @@ try:
     import connectors.sharepoint_connector
 except ImportError:
     pass  # optional connector not installed
+import connectors.sharepoint_online_connector  # noqa: F401 - httpx only (2206.1)
+
 try:
     import connectors.nfs_connector
 except ImportError:
@@ -619,7 +621,14 @@ class AuditEngine:
                         file_sample_max_chars=file_sample_max_chars,
                         file_passwords=file_passwords,
                     )
-            elif t in ("sharepoint", "webdav", "smb", "cifs", "nfs"):
+            elif t in (
+                "sharepoint",
+                "sharepoint_online",
+                "webdav",
+                "smb",
+                "cifs",
+                "nfs",
+            ):
                 connector = connector_class(
                     target_with_fs,
                     self.scanner,

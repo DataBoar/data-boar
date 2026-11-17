@@ -126,7 +126,7 @@ _ENV_FIELDS_TARGET = (
     "token_from_env",
     "api_key_from_env",
 )
-_ENV_FIELDS_AUTH = ("client_secret_from_env",)
+_ENV_FIELDS_AUTH = ("client_secret_from_env", "client_id_from_env")
 _SENSITIVE_FIELDS = frozenset(
     {
         "pass_from_env",
@@ -2478,6 +2478,11 @@ def main() -> None:
     _install_scan_interrupt_signal_handlers()
     try:
         _emit_runtime_trust_info(runtime_trust, to_stdout=True, to_stderr=True)
+        # Delegated Microsoft sign-in (device code) is allowed only in this one-shot
+        # CLI scan; --web, the API and schedulers never enable it (2206.1, DEC-5).
+        import connectors.sharepoint_online_connector as _sharepoint_online
+
+        _sharepoint_online.enable_interactive_sign_in()
         with otel_span("scan", mode="oneshot"):
             session_id = engine.start_audit(
                 tenant_name=tenant,

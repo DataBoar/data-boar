@@ -270,6 +270,9 @@ def _credential_destination_groups(cfg: dict[str, Any]) -> list[set[str]] | None
 
     if kind == "hubspot":
         return None
+    if kind == "sharepoint_online":
+        # Fixed vendor destinations (2206.1): see _vendor_fixed_destination_groups.
+        return None
     if kind == "powerbi":
         if not token_url:
             return None
@@ -429,6 +432,10 @@ def _vendor_fixed_destination_groups(cfg: dict[str, Any]) -> list[set[str]]:
         return [{_operator_host_key(raw)}]
     if kind == "powerbi" and not str(auth.get("token_url") or "").strip():
         return [{"login.microsoftonline.com"}]
+    if kind == "sharepoint_online":
+        # Two distinct destinations (2206.1): the login host and the Graph host.
+        # The pre-authenticated download host never receives a credential.
+        return [{"login.microsoftonline.com"}, {"graph.microsoft.com"}]
     return [set()]
 
 
@@ -1606,6 +1613,15 @@ def _normalize_config_body(
                 auth["client_secret"] = (
                     (os.environ.get(cs_env) or "").strip()
                     or auth.get("client_secret")
+                    or ""
+                )
+            cid_env = (auth.get("client_id_from_env") or "").strip()
+            if cid_env:
+                _gate_non_rest_env_credential(t, cid_env, "auth.client_id_from_env")
+                _warn_if_env_from_key_unset_or_empty(cid_env, "auth.client_id_from_env")
+                auth["client_id"] = (
+                    (os.environ.get(cid_env) or "").strip()
+                    or auth.get("client_id")
                     or ""
                 )
             _reject_reserved_interpolation(

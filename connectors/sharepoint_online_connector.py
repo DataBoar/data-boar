@@ -10,6 +10,8 @@ import tempfile  # noqa: F401 - used by the implementation
 import time
 from typing import Any, Literal, NamedTuple
 
+from core.connector_registry import register
+
 from connectors.filesystem_connector import (  # noqa: F401 - used by the implementation
     _read_text_sample,
     _scan_sqlite_file_as_db,
@@ -40,7 +42,9 @@ class ScopeEntry(NamedTuple):
 
 
 def enable_interactive_sign_in() -> None:
-    raise NotImplementedError("2206.1: enable_interactive_sign_in")
+    """Allow the device code sign-in in this process (one-shot CLI scan only)."""
+    global _interactive_enabled
+    _interactive_enabled = True
 
 
 class SharePointOnlineConnector:
@@ -71,3 +75,6 @@ class SharePointOnlineConnector:
 
     def list_scope(self) -> list[ScopeEntry]:
         raise NotImplementedError("2206.1: list_scope")
+
+
+register("sharepoint_online", SharePointOnlineConnector, ["name"])

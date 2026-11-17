@@ -493,7 +493,6 @@ def _config_with(auth: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-@pending_assert("A2206.1-16a")
 def test_A2206_1_16a_client_id_vem_da_variavel_de_ambiente(monkeypatch):
     """A2206.1-16a (auth.client_id_from_env vira auth.client_id)."""
     from config.loader import normalize_config
@@ -511,7 +510,6 @@ def test_A2206_1_16a_client_id_vem_da_variavel_de_ambiente(monkeypatch):
     assert cfg["targets"][0]["auth"].get("client_id") == TEST_CLIENT_ID
 
 
-@pending_assert("A2206.1-16b")
 def test_A2206_1_16b_gate_estrito_exige_login_e_graph(monkeypatch):
     """A2206.1-16b (DATA_BOAR_CREDENTIAL_STRICT=1 sem graph.microsoft.com: ValueError)."""
     from config.loader import normalize_config
@@ -593,7 +591,6 @@ def _gate_error(cfg: dict[str, Any], reset) -> Exception | None:
     return None
 
 
-@pending_assert("A2206.1-15")
 def test_A2206_1_15_tier_enterprise_fail_closed(tmp_path, clean_license_guard):
     """A2206.1-15 (so Enterprise, ou Tier.OPEN, usa o tipo novo)."""
     from core.connector_registry import tier_feature_for_target
@@ -614,7 +611,6 @@ def test_A2206_1_15_tier_enterprise_fail_closed(tmp_path, clean_license_guard):
     assert isinstance(err, FeatureTierBlockedError)
 
 
-@pending_assert("A2206.1-18")
 def test_A2206_1_18_registro_resolve_o_conector_novo():
     """A2206.1-18 (o tipo novo resolve para a classe nova, nao para o SharePoint on-prem)."""
     import core.engine  # noqa: F401 - the engine imports the connector modules (registration)
