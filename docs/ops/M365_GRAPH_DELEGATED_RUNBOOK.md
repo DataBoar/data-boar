@@ -57,10 +57,11 @@ targets:
       scopes: "https://graph.microsoft.com/Files.Read offline_access"
     graph:
       base_url: https://graph.microsoft.com/v1.0
-    download_host_suffixes: [.files.1drv.com, .microsoftpersonalcontent.com]
+    download_host_suffixes: [.microsoftpersonalcontent.com]  # observed on 2026-11-17
     drive: me
     root_folder: /DataBoar-Sintetico
-    max_depth: 32
+    include_names: [<file1>, <file2>, <file3>, <file4>, <file5>]  # the synthetic files only
+    max_depth: 1                            # direct files of the folder only
     max_file_bytes: 104857600
     page_size: 200
     max_pages_per_folder: 10000
@@ -72,6 +73,12 @@ sqlite_path: /tmp/m365-phase0-report/audit.db
 ```
 
 Recommended: let the operator approve the two hosts, outside the YAML: `export DATA_BOAR_CREDENTIAL_STRICT=1` and `export DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS=login.microsoftonline.com,graph.microsoft.com`. Without strict mode, nothing approves the hosts beyond their format.
+
+**Discovery of 2026-11-17 (probe on the personal OneDrive):** `/content` answered `302` with a `Location` on `my.microsoftpersonalcontent.com`, and the download without `Authorization` matched the SHA-256 of the five files. The `@microsoft.graph.downloadUrl` annotation disappears when the listing uses `$select`, and `@content.downloadUrl` never came back; that is why the reader does not use the annotation. Details: [TECH_GUIDE.md](../TECH_GUIDE.md#download-discovery-2026-11-17).
+
+**Real scan scope:** if the folder holds subfolders or files that are not synthetic, use `include_names` with the exact names of the synthetic files and `max_depth: 1` (direct files of the folder only). A file outside the list is neither downloaded, listed by `list_scope()` nor reported.
+
+**Optional cache:** without `auth.token_cache_path` nothing is written and each run asks for a device code (including the evidence snippet below). With the key, the second run renews without a device code; read the risk first in [TECH_GUIDE.md](../TECH_GUIDE.md#optional-refresh-token-cache), and delete the file at the end of Phase 0.
 
 ## 5. Run the scan from a terminal
 
@@ -124,7 +131,7 @@ Checklist for Phase 0:
 | P0-2 | The consent screen asks only to read files and keep access | review scopes and this runbook |
 | P0-3 | The token endpoint returns a refresh token; note the observed `expires_in` (never the token) | review refresh handling |
 | P0-4 | Device code works without a redirect URI | add the redirect URI to section 2 |
-| P0-5 | The real download host ends in an allowlisted suffix (`.files.1drv.com` or `.microsoftpersonalcontent.com`); note the suffix only | the reader refuses the download (`scope_violation`); the allowlist needs a design revision before merge |
+| P0-5 | The real download host ends in an allowlisted suffix. **Observed on 2026-11-17** (probe, personal OneDrive): `my.microsoftpersonalcontent.com`, suffix `.microsoftpersonalcontent.com`; `.files.1drv.com` was not observed | the reader refuses the download (`scope_violation`); note the suffix only |
 | P0-6 | `list_scope()` lists only the synthetic folder, with the same names and sizes as the local files | blocks the merge |
 | P0-7 | (optional) a shortcut to another folder shows up as skipped | review the shortcut rule |
 | P0-8 | The report has the findings expected from the synthetic content | blocks the merge |

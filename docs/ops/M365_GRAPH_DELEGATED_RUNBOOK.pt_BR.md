@@ -57,10 +57,11 @@ targets:
       scopes: "https://graph.microsoft.com/Files.Read offline_access"
     graph:
       base_url: https://graph.microsoft.com/v1.0
-    download_host_suffixes: [.files.1drv.com, .microsoftpersonalcontent.com]
+    download_host_suffixes: [.microsoftpersonalcontent.com]  # observado em 17/11/2026
     drive: me
     root_folder: /DataBoar-Sintetico
-    max_depth: 32
+    include_names: [<file1>, <file2>, <file3>, <file4>, <file5>]  # só os sintéticos
+    max_depth: 1                            # só os arquivos diretos da pasta
     max_file_bytes: 104857600
     page_size: 200
     max_pages_per_folder: 10000
@@ -72,6 +73,12 @@ sqlite_path: /tmp/m365-phase0-report/audit.db
 ```
 
 Recomendado: deixe o operador aprovar os dois hosts, fora do YAML: `export DATA_BOAR_CREDENTIAL_STRICT=1` e `export DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS=login.microsoftonline.com,graph.microsoft.com`. Sem o modo estrito, nada aprova os hosts além do formato.
+
+**Descoberta de 17/11/2026 (sonda no OneDrive pessoal):** o `/content` respondeu `302` com `Location` em `my.microsoftpersonalcontent.com`, e o download sem `Authorization` bateu o SHA-256 dos cinco arquivos. A anotação `@microsoft.graph.downloadUrl` some quando a listagem usa `$select`, e `@content.downloadUrl` nunca veio; por isso o leitor não usa a anotação. Detalhes: [TECH_GUIDE.pt_BR.md](../TECH_GUIDE.pt_BR.md#descoberta-do-download-17112026).
+
+**Escopo do scan real:** se a pasta tiver subpastas ou arquivos que não são sintéticos, use `include_names` com os nomes exatos dos arquivos sintéticos e `max_depth: 1` (só os arquivos diretos da pasta). Arquivo fora da lista não é baixado nem aparece no `list_scope()` nem nos achados.
+
+**Cache opcional:** sem `auth.token_cache_path`, nada é gravado e cada execução pede um device code (inclusive o trecho de evidência abaixo). Com a chave, a segunda execução renova sem device code; leia o risco antes, em [TECH_GUIDE.pt_BR.md](../TECH_GUIDE.pt_BR.md#cache-opcional-do-refresh-token), e apague o arquivo no fim da Fase 0.
 
 ## 5. Rodar a varredura num terminal
 
@@ -124,7 +131,7 @@ Roteiro da Fase 0:
 | P0-2 | A tela de consentimento pede só leitura de arquivos e manutenção do acesso | revise escopos e este runbook |
 | P0-3 | O endpoint de token devolve refresh token; anote o `expires_in` observado (nunca o token) | revise o tratamento do refresh |
 | P0-4 | Device code funciona sem URI de redirecionamento | acrescente a URI à seção 2 |
-| P0-5 | O host real de download termina num sufixo da allowlist (`.files.1drv.com` ou `.microsoftpersonalcontent.com`); anote só o sufixo | o leitor recusa o download (`scope_violation`); a allowlist precisa de revisão do desenho antes do merge |
+| P0-5 | O host real de download termina num sufixo da allowlist. **Observado em 17/11/2026** (sonda, OneDrive pessoal): `my.microsoftpersonalcontent.com`, sufixo `.microsoftpersonalcontent.com`; `.files.1drv.com` não foi observado | o leitor recusa o download (`scope_violation`); anote só o sufixo |
 | P0-6 | `list_scope()` lista só a pasta sintética, com nomes e tamanhos iguais aos locais | bloqueia o merge |
 | P0-7 | (opcional) um atalho para outra pasta aparece como ignorado | revise a regra de atalho |
 | P0-8 | O relatório tem os achados esperados do conteúdo sintético | bloqueia o merge |

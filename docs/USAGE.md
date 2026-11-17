@@ -1151,14 +1151,15 @@ Read-only reader for **one folder of the signed-in user's OneDrive** through Mic
       client_id: <APP_CLIENT_ID>            # Application (client) ID, a GUID; not a secret
       login_host: login.microsoftonline.com # Microsoft Entra authority host of your cloud
       scopes: "https://graph.microsoft.com/Files.Read offline_access"
+      # token_cache_path: /home/<user>/.config/data-boar-m365/token.json  # OPTIONAL; absent = memory only
     graph:
       base_url: https://graph.microsoft.com/v1.0  # Graph endpoint and API version of your cloud
-    download_host_suffixes:                 # pre-authenticated download hosts (unconfirmed until Phase 0)
-      - .files.1drv.com
-      - .microsoftpersonalcontent.com
+    download_host_suffixes:                 # pre-authenticated download hosts
+      - .microsoftpersonalcontent.com       # personal OneDrive, observed on 2026-11-17
     drive: me                               # only value accepted now
     root_folder: /DataBoar-Sintetico        # or root_folder_id (exactly one); never the drive root
-    max_depth: 32                           # 1..256
+    include_names: []                       # exact file names; [] = no name filter (explicit)
+    max_depth: 32                           # 1..256; 1 = only the direct files of root_folder
     max_file_bytes: 104857600               # 1 byte..2 GiB
     page_size: 200                          # 1..1000, children per Graph page
     max_pages_per_folder: 10000             # 1..1000000
@@ -1166,9 +1167,12 @@ Read-only reader for **one folder of the signed-in user's OneDrive** through Mic
     throttle_max_wait_seconds: 120          # 1..600, ceiling for Retry-After and backoff
 ```
 
-**Every key above is required; there is no default anywhere** (neither in the code nor in the configuration loader). A missing key stops the target before any network call with `config_error` "required key `<key>` is missing (sharepoint_online has no defaults)"; an invalid value fails the same way and cites the key (for example "graph.base_url must be an https URL with a path and no port, userinfo, query or fragment"). The only exception is the pair `root_folder` / `root_folder_id`: exactly one of them. The values shown are those of the Microsoft global cloud ([Graph national cloud deployments](https://learn.microsoft.com/en-us/graph/deployments)); for another cloud see [TECH_GUIDE.md](TECH_GUIDE.md#microsoft-365-via-graph). `--validate-config` reports the missing keys too.
+**Every key above is required except `auth.token_cache_path`; there is no default anywhere** (neither in the code nor in the configuration loader). A missing key stops the target before any network call with `config_error` "required key `<key>` is missing (sharepoint_online has no defaults)"; an invalid value fails the same way and cites the key (for example "graph.base_url must be an https URL with a path and no port, userinfo, query or fragment"). The only exception is the pair `root_folder` / `root_folder_id`: exactly one of them. The values shown are those of the Microsoft global cloud ([Graph national cloud deployments](https://learn.microsoft.com/en-us/graph/deployments)); for another cloud see [TECH_GUIDE.md](TECH_GUIDE.md#microsoft-365-via-graph). `--validate-config` reports the missing keys too.
 
 - **Sign-in:** OAuth device code, public client, **no client secret**. The reader prints the verification address and the code on standard error.
+- **Name filter and depth:** `include_names` lists exact, case-sensitive file names; any other file is neither downloaded, reported nor listed by `list_scope()`, and a similar name (`A.txt`, `a.txt.bak`, `xa.txt`) does not match. `[]` means no name filter and must be written explicitly. `max_depth: 1` reads only the files directly in `root_folder` and never enters a subfolder.
+- **Download hosts:** on 2026-11-17 a probe on a personal OneDrive saw `/content` answer `302` with a `Location` on `my.microsoftpersonalcontent.com`; the files downloaded from it without `Authorization` and their SHA-256 matched the local copies. `.files.1drv.com` and `.sharepoint.com` were **not observed** and stay hypotheses; add them only after seeing them in your environment.
+- **Optional token cache:** `auth.token_cache_path` is the only optional key. Absent, nothing is written anywhere and the refresh token lives in memory only (one device code per run). Present, the refresh token is kept in that file so the next run renews **without** a device code or a new MFA prompt, including a run without a terminal. Rules and risk: [TECH_GUIDE.md](TECH_GUIDE.md#optional-refresh-token-cache).
 - **Who approves the hosts:** the login host and the Graph host come from the YAML, but the YAML does not approve them. The operator does, outside the YAML, through the existing credential host gate: with `DATA_BOAR_CREDENTIAL_STRICT=1`, both hosts must be in `DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS` (for the global cloud, `DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS=login.microsoftonline.com,graph.microsoft.com`), at load time and again when the scan starts; a YAML `allowed_hosts` can only narrow that list. **Without strict mode the gate does not run** (the same #2103 semantics as every other connector): the reader then checks only the host format, so production should set strict mode.
 - **Read-only scopes:** `auth.scopes` accepts only read permissions, `<Resource>.Read`, `.Read.All` or `.Read.Selected` (bare, or on the `graph.base_url` host), plus `offline_access`. Anything with `Write`, `Manage` or `FullControl`, or any other shape, fails with `config_error` citing `auth.scopes`.
 - **A human at a terminal is required.** Only the one-shot CLI scan (`python main.py --config ...`, or `docker run -it`) may sign in. The web dashboard, the API and schedulers never sign in: a target started from them fails with `auth_required`. Unattended scans need app-only mode ([#2262](https://github.com/DataBoar/data-boar/issues/2262), not available yet).

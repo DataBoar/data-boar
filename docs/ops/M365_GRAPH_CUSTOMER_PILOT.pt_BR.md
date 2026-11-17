@@ -54,9 +54,10 @@ Antes do piloto, confira duas configurações do tenant (as duas são decisão d
          scopes: "https://graph.microsoft.com/Files.Read offline_access"
        graph:
          base_url: https://graph.microsoft.com/v1.0
-       download_host_suffixes: [.sharepoint.com]
+       download_host_suffixes: [.sharepoint.com]  # [H] não observado
        drive: me
        root_folder: /DataBoar-Pilot
+       include_names: []                 # ou os nomes exatos dos arquivos de teste
        max_depth: 32
        max_file_bytes: 104857600
        page_size: 200

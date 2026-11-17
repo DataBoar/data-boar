@@ -713,7 +713,7 @@ O leitor **não tem host da Microsoft, versão da API, escopo nem tenant embutid
 | `auth.login_host` | `login.microsoftonline.com` | aprovado pela lista do operador `DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS` no modo estrito, não pelo YAML |
 | `graph.base_url` | `https://graph.microsoft.com/v1.0` | host aprovado como o de login; o `@odata.nextLink` precisa ficar nesse host e caminho |
 | `auth.scopes` | `https://graph.microsoft.com/Files.Read offline_access` | só permissões de leitura; um prefixo de recurso precisa ser o host do `graph.base_url` |
-| `download_host_suffixes` | `.files.1drv.com`, `.microsoftpersonalcontent.com` (OneDrive pessoal), `.sharepoint.com` (OneDrive de trabalho) | **[H]** não confirmado por página da Microsoft; a Fase 0 registra o sufixo real |
+| `download_host_suffixes` | `.microsoftpersonalcontent.com` (OneDrive pessoal, **observado** em 17/11/2026: `my.microsoftpersonalcontent.com`) | `.files.1drv.com` e `.sharepoint.com` **não foram observados** ([H]); nenhuma página da Microsoft lista esses hosts |
 
 Exemplo, governo dos EUA L4 (GCC High), a partir das tabelas públicas de endpoints da Microsoft ([implantações nacionais do Graph](https://learn.microsoft.com/en-us/graph/deployments), [endpoints de autenticação das nuvens nacionais](https://learn.microsoft.com/en-us/entra/identity-platform/authentication-national-cloud)). **Não testado** com este leitor; o sufixo de download é um placeholder que você precisa tirar do seu ambiente:
 
@@ -742,9 +742,31 @@ Com `DATA_BOAR_CREDENTIAL_STRICT=1`, o operador define então `DATA_BOAR_CREDENT
 
 ### Revogar o consentimento
 
-- **Conta pessoal:** o usuário remove o aplicativo em [account.live.com/consent/Manage](https://account.live.com/consent/Manage).
+- **Conta pessoal:** o usuário remove o aplicativo em [account.live.com/consent/Manage](https://account.live.com/consent/Manage) ([H]: informação do operador; não achei página da Microsoft Learn que documente esse endereço).
+- **Usuário de trabalho ou escola:** o usuário pode rever os aplicativos em [Meus Aplicativos](https://myapplications.microsoft.com) ([H]: a Microsoft Learn descreve o Meus Aplicativos como portal de aplicativos; a revogação pelo próprio usuário ali não foi confirmada).
 - **Tenant de trabalho ou escola:** um administrador revê e revoga as permissões concedidas ao aplicativo (para a organização toda ou um usuário) em Aplicativos empresariais ([rever permissões concedidas a aplicativos empresariais](https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/manage-application-permissions)) e pode apagar o aplicativo empresarial ([apagar um aplicativo empresarial](https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/delete-application-portal)).
 - Apagar o registro do aplicativo impede qualquer nova entrada com aquele client ID.
+
+### Descoberta do download (17/11/2026)
+
+Uma sonda no OneDrive pessoal do operador (preparação da Fase 0, [#2260](https://github.com/DataBoar/data-boar/issues/2260)) observou:
+
+- `GET /me/drive/items/{id}/content` sem seguir redirecionamento respondeu `302` com `Location` https em `my.microsoftpersonalcontent.com`; um `GET` nessa URL **sem** `Authorization` (com cabeçalho `Range`) respondeu `206`, e os cinco arquivos bateram com o SHA-256 local.
+- A anotação `@microsoft.graph.downloadUrl` veio numa listagem de filhos **sem** `$select` e sumiu **com** `$select` (mesmo pedindo a anotação); num item só, veio com `?select=id,@microsoft.graph.downloadUrl` (sem `$`) e sumiu com `?$select=...`; `@content.downloadUrl` nunca veio.
+
+Por isso o leitor nunca usa a anotação: ele baixa pela `Location` do `/content`, com redirecionamento desligado, que é o fluxo que a sonda provou.
+
+### Cache opcional do refresh token
+
+`auth.token_cache_path` (caminho absoluto) é a única chave opcional. **Ausente, nada é gravado**: os tokens ficam na memória e cada execução pede um device code. Presente:
+
+- a primeira entrada grava **só o refresh token** (nunca o access token), junto com o client ID, o tenant, o host de login e um hash dos escopos; um cache gravado para outra configuração é apagado e nunca usado;
+- a execução seguinte renova por ele **sem device code e sem novo MFA**, mesmo sem terminal (agendador, dashboard); sem cache, essas continuam falhando com `auth_required`;
+- o arquivo é `0600` e o diretório `0700`, os dois do usuário atual; o leitor cria só esse último diretório. Arquivo ou diretório existente com permissão mais aberta, de outro dono, symlink, caminho relativo e qualquer caminho com `.git` num ancestral são recusados com `config_error`;
+- cada renovação troca o arquivo de forma atômica (temporário exclusivo com `O_NOFOLLOW` no mesmo diretório, `fsync`, `os.replace`, `fsync` do diretório), pelo gravador que o repositório já tem (`core/l3_transformed_rows.persist_l3_body`);
+- o arquivo é apagado em `auth_failed` e quando a Microsoft responde `invalid_grant` ou `interaction_required`; depois, com terminal, vem um novo device code, e sem terminal a execução falha com `auth_failed`.
+
+**Risco.** O refresh token vale 90 dias para esse tipo de cliente e se renova a cada uso ([refresh tokens](https://learn.microsoft.com/en-us/entra/identity-platform/refresh-tokens)); com `Files.Read`, o arquivo é uma credencial em repouso que lê o drive inteiro do usuário. Guarde-o em disco criptografado do host da varredura, fora de qualquer repositório ou backup que saia do host. Para revogar: apague o arquivo **e** revogue o consentimento como acima (conta pessoal, usuário de trabalho ou o administrador em Aplicativos empresariais).
 
 ### Modo app-only: planejado, não entregue
 

@@ -713,7 +713,7 @@ The reader has **no built-in Microsoft host, API version, scope or tenant**, and
 | `auth.login_host` | `login.microsoftonline.com` | approved by the operator list `DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS` in strict mode, not by the YAML |
 | `graph.base_url` | `https://graph.microsoft.com/v1.0` | host approved like the login host; `@odata.nextLink` must stay on this host and path |
 | `auth.scopes` | `https://graph.microsoft.com/Files.Read offline_access` | read permissions only; a resource prefix must be the `graph.base_url` host |
-| `download_host_suffixes` | `.files.1drv.com`, `.microsoftpersonalcontent.com` (personal OneDrive), `.sharepoint.com` (work OneDrive) | **[H]** not confirmed by a Microsoft page; Phase 0 records the real suffix |
+| `download_host_suffixes` | `.microsoftpersonalcontent.com` (personal OneDrive, **observed** on 2026-11-17: `my.microsoftpersonalcontent.com`) | `.files.1drv.com` and `.sharepoint.com` were **not observed** ([H]); no Microsoft page lists these hosts |
 
 Example, US Government L4 (GCC High), from Microsoft's public endpoint tables ([Graph national cloud deployments](https://learn.microsoft.com/en-us/graph/deployments), [national cloud authentication endpoints](https://learn.microsoft.com/en-us/entra/identity-platform/authentication-national-cloud)). **Not tested** with this reader; the download suffix is a placeholder you must take from your own environment:
 
@@ -742,9 +742,31 @@ With `DATA_BOAR_CREDENTIAL_STRICT=1`, the operator then sets `DATA_BOAR_CREDENTI
 
 ### Revoking consent
 
-- **Personal account:** the user removes the app at [account.live.com/consent/Manage](https://account.live.com/consent/Manage).
+- **Personal account:** the user removes the app at [account.live.com/consent/Manage](https://account.live.com/consent/Manage) ([H]: operator information; no Microsoft Learn page found that documents this address).
+- **Work or school user:** the user may review apps in [My Apps](https://myapplications.microsoft.com) ([H]: Microsoft Learn describes My Apps as the app portal; a user-side revoke there was not confirmed).
 - **Work or school tenant:** an administrator reviews and revokes permissions granted to the app (for the whole organization or one user) under Enterprise applications ([review permissions granted to enterprise applications](https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/manage-application-permissions)), and can delete the enterprise application ([delete an enterprise application](https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/delete-application-portal)).
 - Deleting the app registration stops any new sign-in with its client ID.
+
+### Download discovery (2026-11-17)
+
+A probe on the operator's personal OneDrive (Phase 0 preparation, [#2260](https://github.com/DataBoar/data-boar/issues/2260)) observed:
+
+- `GET /me/drive/items/{id}/content` without following redirects answered `302` with an https `Location` on `my.microsoftpersonalcontent.com`; a `GET` on that URL **without** `Authorization` (with a `Range` header) answered `206`, and the five files matched their local SHA-256.
+- The `@microsoft.graph.downloadUrl` annotation came back in a children listing **without** `$select` and disappeared **with** `$select` (even when the annotation was requested); on a single item it came back with `?select=id,@microsoft.graph.downloadUrl` (no `$`) and disappeared with `?$select=...`; `@content.downloadUrl` never came back.
+
+The reader therefore never uses the annotation: it downloads through the `Location` of `/content` with redirects disabled, which is the flow the probe proved.
+
+### Optional refresh-token cache
+
+`auth.token_cache_path` (absolute path) is the only optional key. **Absent, nothing is written**: tokens live in memory and each run asks for a device code. Present:
+
+- the first sign-in writes the **refresh token only** (never the access token) together with the client ID, tenant, login host and a hash of the scopes; a cache written for another configuration is deleted and never used;
+- the next run renews from it **without a device code and without a new MFA prompt**, even without a terminal (scheduler, dashboard); without a cache those still fail with `auth_required`;
+- the file is `0600` and its directory `0700`, both owned by the current user; the reader creates only that last directory. An existing file or directory with wider permissions, another owner, a symlink, a relative path and any path with a `.git` in an ancestor are refused with `config_error`;
+- each renewal rotates the file atomically (exclusive temporary file with `O_NOFOLLOW` in the same directory, `fsync`, `os.replace`, `fsync` of the directory), through the repository's existing writer (`core/l3_transformed_rows.persist_l3_body`);
+- the file is deleted on `auth_failed` and when Microsoft answers `invalid_grant` or `interaction_required`; then a terminal gets a new device code, and a run without one fails with `auth_failed`.
+
+**Risk.** Refresh tokens are valid for 90 days for this kind of client and replace themselves on every use ([refresh tokens](https://learn.microsoft.com/en-us/entra/identity-platform/refresh-tokens)); with `Files.Read` the file is a credential that reads the user's whole drive at rest. Keep it on an encrypted disk of the scanning host, outside any repository or backup that leaves the host. To revoke it: delete the file **and** revoke the consent as above (personal account, work user, or the administrator under Enterprise applications).
 
 ### App-only mode: planned, not delivered
 
