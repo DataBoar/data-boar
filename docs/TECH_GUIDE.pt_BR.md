@@ -764,7 +764,8 @@ Por isso o leitor nunca usa a anotação: ele baixa pela `Location` do `/content
 - a execução seguinte renova por ele **sem device code e sem novo MFA**, mesmo sem terminal (agendador, dashboard); sem cache, essas continuam falhando com `auth_required`;
 - o arquivo é `0600` e o diretório `0700`, os dois do usuário atual; o leitor cria só esse último diretório. Arquivo ou diretório existente com permissão mais aberta, de outro dono, symlink, caminho relativo e qualquer caminho com `.git` num ancestral são recusados com `config_error`;
 - cada renovação troca o arquivo de forma atômica (temporário exclusivo com `O_NOFOLLOW` no mesmo diretório, `fsync`, `os.replace`, `fsync` do diretório), pelo gravador que o repositório já tem (`core/l3_transformed_rows.persist_l3_body`);
-- o arquivo é apagado em `auth_failed` e quando a Microsoft responde `invalid_grant` ou `interaction_required`; depois, com terminal, vem um novo device code, e sem terminal a execução falha com `auth_failed`.
+- o arquivo é apagado em `auth_failed` e quando a Microsoft responde `invalid_grant` ou `interaction_required`; depois, com terminal, vem um novo device code, e sem terminal a execução falha com `auth_failed`;
+- **Windows:** não há bits de modo POSIX, então `0600`/`0700` não podem ser garantidos e a chave é recusada (`config_error` "token cache needs POSIX file permissions"). No Windows, o leitor pede um device code a cada execução.
 
 **Risco.** O refresh token vale 90 dias para esse tipo de cliente e se renova a cada uso ([refresh tokens](https://learn.microsoft.com/en-us/entra/identity-platform/refresh-tokens)); com `Files.Read`, o arquivo é uma credencial em repouso que lê o drive inteiro do usuário. Guarde-o em disco criptografado do host da varredura, fora de qualquer repositório ou backup que saia do host. Para revogar: apague o arquivo **e** revogue o consentimento como acima (conta pessoal, usuário de trabalho ou o administrador em Aplicativos empresariais).
 
