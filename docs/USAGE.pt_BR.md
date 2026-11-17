@@ -1286,6 +1286,34 @@ Instale os extras opcionais: `uv pip install -e ".[shares]"`.
 
 Todos os tipos de *share* usam as mesmas chaves de `file_scan` (extensões, recursividade, `scan_sqlite_as_db`, `sample_limit`, `file_sample_max_chars`, `file_passwords`). Os achados entram na planilha **Filesystem findings**.
 
+### Microsoft Graph em modo delegado (`type: sharepoint_online`)
+
+Leitor somente leitura de **uma pasta do OneDrive do usuário que entrou**, pelo Microsoft Graph. Tier **Enterprise**. Precisa só da instalação base (`httpx`), não do extra `shares`. Situação: implementado e testado contra um Microsoft Graph **simulado**; a prova real num OneDrive pessoal está pendente ([#2260](https://github.com/DataBoar/data-boar/issues/2260)). **Não** foi validado contra SharePoint Online nem tenant de trabalho.
+
+```yaml
+
+- name: "onedrive-sintetico"
+
+    type: sharepoint_online
+    auth:
+      mode: delegated                     # único valor aceito agora; app_only é a #2262
+      tenant: consumers                   # consumers | organizations | common | GUID do tenant
+      client_id_from_env: M365_CLIENT_ID  # NOME da variável de ambiente (ou client_id: <GUID> num config efêmero)
+    drive: me                             # único valor aceito agora
+    root_folder: /DataBoar-Sintetico      # obrigatório (ou root_folder_id); nunca a raiz do drive
+    max_depth: 32                         # opcional, 1..256
+    max_file_bytes: 104857600             # opcional, 1 byte..2 GiB, padrão 100 MiB
+    throttle_max_wait_seconds: 120        # opcional, 1..600
+```
+
+- **Entrada:** device code OAuth, cliente público, **sem client secret**. Escopos: `https://graph.microsoft.com/Files.Read offline_access`. O leitor escreve o endereço de verificação e o código na saída de erro padrão.
+- **Precisa de uma pessoa num terminal.** Só a varredura única da CLI (`python main.py --config ...`, ou `docker run -it`) pode fazer a entrada. O dashboard web, a API e os agendadores nunca fazem: um alvo disparado por eles falha com `auth_required`. Varredura sem pessoa precisa do modo app-only ([#2262](https://github.com/DataBoar/data-boar/issues/2262), ainda não disponível).
+- **Escopo:** `Files.Read` dá ao token leitura do **drive inteiro**. Quem restringe a varredura é o leitor, não o token: ele resolve o `root_folder` uma vez e só anda pelos ids dos itens abaixo dele. Atalhos para outros drives, pacotes, itens marcados como malware ou apagados e itens de outro drive são ignorados e informados numa única falha `skipped`, só com contagens.
+- **Tokens** ficam na memória durante a varredura e nunca vão para disco, log, relatório ou achado.
+- **Gate de credencial:** com `DATA_BOAR_CREDENTIAL_STRICT=1`, `DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS` precisa listar `login.microsoftonline.com` e `graph.microsoft.com`.
+- **Achados** vão para a planilha **Filesystem findings** com caminhos como `onedrive:/DataBoar-Sintetico/sub/a.txt` (sem id de item, nome de conta nem URL).
+- Passos do operador (registro do aplicativo, consentimento, revogação, evidência): [M365_GRAPH_DELEGATED_RUNBOOK.pt_BR.md](ops/M365_GRAPH_DELEGATED_RUNBOOK.pt_BR.md).
+
 ---
 
 ## 5. Baixando relatórios (resumo)

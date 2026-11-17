@@ -1136,6 +1136,34 @@ Install optional deps: `uv pip install -e ".[shares]"`.
 
 All share types use the same `file_scan` settings (extensions, recursive, scan_sqlite_as_db, `sample_limit`, `file_sample_max_chars`, file_passwords). Findings appear in the **Filesystem findings** sheet.
 
+### Microsoft Graph, delegated mode (`type: sharepoint_online`)
+
+Read-only reader for **one folder of the signed-in user's OneDrive** through Microsoft Graph. **Enterprise** tier. It needs only the core install (`httpx`), not the `shares` extra. Status: implemented and tested against a **simulated** Microsoft Graph; real proof against a personal OneDrive is pending ([#2260](https://github.com/DataBoar/data-boar/issues/2260)). It has **not** been validated against SharePoint Online or a work tenant.
+
+```yaml
+
+- name: "onedrive-sintetico"
+
+    type: sharepoint_online
+    auth:
+      mode: delegated                     # only value accepted now; app_only is #2262
+      tenant: consumers                   # consumers | organizations | common | tenant GUID
+      client_id_from_env: M365_CLIENT_ID  # environment variable NAME (or client_id: <GUID> in an ephemeral config)
+    drive: me                             # only value accepted now
+    root_folder: /DataBoar-Sintetico      # required (or root_folder_id); never the drive root
+    max_depth: 32                         # optional, 1..256
+    max_file_bytes: 104857600             # optional, 1 byte..2 GiB, default 100 MiB
+    throttle_max_wait_seconds: 120        # optional, 1..600
+```
+
+- **Sign-in:** OAuth device code, public client, **no client secret**. Scopes: `https://graph.microsoft.com/Files.Read offline_access`. The reader prints the verification address and the code on standard error.
+- **A human at a terminal is required.** Only the one-shot CLI scan (`python main.py --config ...`, or `docker run -it`) may sign in. The web dashboard, the API and schedulers never sign in: a target started from them fails with `auth_required`. Unattended scans need app-only mode ([#2262](https://github.com/DataBoar/data-boar/issues/2262), not available yet).
+- **Scope:** `Files.Read` gives the token read access to the **whole drive**. The reader, not the token, restricts the scan: it resolves `root_folder` once and walks only item ids below it. Shortcuts to other drives, packages, items flagged as malware or deleted and items from another drive are skipped and reported as one `skipped` failure with counts only.
+- **Tokens** stay in memory for the duration of the scan and are never written to disk, logs, reports or findings.
+- **Credential gate:** with `DATA_BOAR_CREDENTIAL_STRICT=1`, `DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS` must list both `login.microsoftonline.com` and `graph.microsoft.com`.
+- **Findings** go to the **Filesystem findings** sheet with paths such as `onedrive:/DataBoar-Sintetico/sub/a.txt` (no item ids, account names or URLs).
+- Operator steps (app registration, consent, revocation, evidence): [M365_GRAPH_DELEGATED_RUNBOOK.md](ops/M365_GRAPH_DELEGATED_RUNBOOK.md).
+
 ### Global options (excerpt)
 
 ```yaml

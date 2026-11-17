@@ -23,7 +23,8 @@ Do **not** start from scattered snippets: use one tracked sample and edit paths/
 - **SQL databases**: PostgreSQL, MySQL, MariaDB, SQLite, Microsoft SQL Server, Oracle (via SQLAlchemy drivers).
 - **Power BI (optional)**: Discover workspaces, datasets, and tables via Power BI REST API; sample with DAX. Azure AD OAuth2 (client credentials). Findings in **Database findings** sheet; inventory metadata in **Data source inventory**.
 - **Power Apps / Dataverse (optional)**: Discover entities and attributes via Dataverse Web API; sample rows. Azure AD OAuth2 (client credentials). Findings in **Database findings** sheet; inventory metadata in **Data source inventory**.
-- **Remote shares (optional)**: SharePoint, WebDAV, SMB/CIFS, NFS — by FQDN or IP with credentials in config; install `.[shares]`.
+- **Remote shares (optional)**: SharePoint on-prem, WebDAV, SMB/CIFS, NFS — by FQDN or IP with credentials in config; install `.[shares]`.
+- **Microsoft Graph, delegated mode (`sharepoint_online`, Enterprise)**: one folder of the signed-in user's OneDrive, device code sign-in from a terminal; tested against a simulated Graph, real proof pending (see the table below).
 - **NoSQL (optional)**: MongoDB, Redis — install optional deps: `uv pip install -e ".[nosql]"`.
 - **Filesystem**: Recursive scan of local (or mounted) directories; permission check before reading. Supports many extensions: text (`.txt`, `.csv`, `.json`, `.xml`, `.html`, `.md`, `.yml`, `.log`, `.ini`, `.sql`, `.rtf`, subtitle sidecars **`.srt` / `.vtt` / `.ass` / `.ssa`**, etc.), documents (`.pdf`, `.doc`, `.docx`, `.odt`, `.ods`, `.odp`, `.xls`, `.xlsx`, `.xlsm`, `.ppt`, `.pptx`, **`.epub`**), email (`.eml`, `.msg`), and data (`.sqlite`, `.db`, **`.parquet`**, **`.feather`**, **`.orc`**, **`.avro`**, **`.dbf`** when optional **`.[dataformats]`** deps are installed). **Optional rich media:** `file_scan.scan_rich_media_metadata` and `scan_image_ocr` (default off) add EXIF/audio-tag/video-tag text and optional Tesseract OCR; install `.[richmedia]`, and for OCR/video tags ensure **tesseract** / **ffprobe** on `PATH`. When **`licensing.mode: enforced`**, those flags and **`.[dataformats]`** extractors (parquet/avro/dbf, not EPUB) require **Pro or higher**. **Optional stego hints:** `file_scan.scan_for_stego` (or CLI `--scan-stego` / dashboard / `POST /scan`) appends a short entropy heuristic on image/audio/video — not a stego extractor. **SQLite files** (`.sqlite`, `.sqlite3`, `.db`) found on disk are opened and scanned as databases (discover tables/columns, sample and detect); set `file_scan.scan_sqlite_as_db: false` to skip. Set `file_scan.extensions` to a list of suffixes, or `"*"` / `"all"` for all supported types.
 - **Sensitivity detection**: Regex (configurable) + **ML** (TF-IDF + RandomForest) + optional **DL** (sentence embeddings + classifier) on column names and sampled content; no raw data is stored. You can set **ML and DL training terms** in the config (inline or via `ml_patterns_file` / `dl_patterns_file`). See [SENSITIVITY_DETECTION.md](SENSITIVITY_DETECTION.md) (English) or [SENSITIVITY_DETECTION.pt_BR.md](SENSITIVITY_DETECTION.pt_BR.md) (Português – Brasil) for examples. Built-in **`CREDIT_CARD`** is **IIN-anchored** (16-digit 4-4-4-4, Amex 15, Diners 14) plus **Luhn on the match span** (TAB/NBSP separators allowed). SQL/FS distinct samples join with **U+241F**, not spaces. **Lyrics and music tablature** are detected via heuristics so that date-like or digit sequences in song lyrics and guitar tabs are downgraded to MEDIUM/LOW to reduce false positives; strong PII (CPF, email, etc.) still reports HIGH.
@@ -625,7 +626,8 @@ You can scan remote file shares by **FQDN or IP** with credentials in config. In
 
 | Type               | Host / URL                                                         | Credentials                       | Notes                                                                   |
 | ------             | ------------                                                       | -------------                     | --------                                                                |
-| **sharepoint**     | `site_url`: `<https://host/sites/sitenam>e`                        | `user`, `pass`; NTLM or basic     | On-prem or URL; path = server-relative folder (e.g. `Shared Documents`) |
+| **sharepoint**     | `site_url`: `<https://host/sites/sitenam>e`                        | `user`, `pass`; NTLM or basic     | On-prem only; path = server-relative folder (e.g. `Shared Documents`) |
+| **sharepoint_online** | Microsoft Graph (fixed hosts); `root_folder` in the user's OneDrive | device code (public client, no secret); `auth.client_id_from_env` | Delegated, Enterprise, no `shares` extra; tested against a simulated Graph only, see [M365_GRAPH_DELEGATED_RUNBOOK.md](ops/M365_GRAPH_DELEGATED_RUNBOOK.md) |
 | **webdav**         | `base_url`: `<https://host/pat>h`                                  | `user`, `pass`                    | Recursive list and download                                             |
 | **smb** / **cifs** | `host`: FQDN or IP, `share`: share name, `path`: path inside share | `user`, `pass`, optional `domain` | Port 445 default                                                        |
 | **nfs**            | `path`: **local mount point** (NFS must be mounted first)          | —                                 | `host` / `export_path` for reporting only                               |
@@ -658,7 +660,7 @@ targets:
   recursive: true
   verify_ssl: true
 
-  # SharePoint (on-prem or URL; NTLM or basic)
+  # SharePoint (on-prem only; NTLM or basic)
 - name: "SharePoint HR"
 
   type: sharepoint
