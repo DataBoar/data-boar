@@ -527,7 +527,7 @@ No capacity or timing claim is made without a measurement.
 | 1 | PLAN written (design, least privilege, fail-closed tier entry) | ✅ Done |
 | 2 | Phase 0 ([#2260](https://github.com/DataBoar/data-boar/issues/2260)): real proof against a personal OneDrive, delegated device-code mode, synthetic folder (rclone/WebDAV discarded) | ⬜ Pending (needs the operator's app registration) |
 | 3 | Phase 1 ([#2261](https://github.com/DataBoar/data-boar/issues/2261)): `sharepoint_online` reader, delegated mode, simulated-Graph tests | ⬜ Pending |
-| 3b | Phase 1c ([#2262](https://github.com/DataBoar/data-boar/issues/2262)): app-only (client credentials) for a work tenant | ⬜ Pending |
+| 3b | Phase 1c ([#2262](https://github.com/DataBoar/data-boar/issues/2262)): app-only (client credentials) for a work tenant | ⬜ Blocked: no work-tenant available; roadmap, no proof |
 | 4 | Phase 2: Exchange Online mail; permission and consent guide (en_US + pt_BR) | ⬜ Pending |
 
 ### Windows endpoint agent and SMB desktop recipe – [PLAN_ENDPOINT_AGENT.md](PLAN_ENDPOINT_AGENT.md)

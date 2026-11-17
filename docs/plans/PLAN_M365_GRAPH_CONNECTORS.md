@@ -50,9 +50,9 @@ has no reader for these today.
 
 | Phase | Deliverable | Status |
 | ----- | ----------- | ------ |
-| 0 | Real proof against a personal OneDrive in delegated mode (device code, `Files.Read` + `offline_access`, synthetic folder): Graph listing, file in OneDrive, Boar report. Issue [#2260](https://github.com/DataBoar/data-boar/issues/2260). | ⬜ Pending (needs the operator's app registration) |
+| 0 | Real proof against a personal OneDrive in delegated mode (device code, `Files.Read` + `offline_access`, synthetic folder): Graph listing, file in OneDrive, Boar report. This phase proves a personal OneDrive only, not SharePoint Online and not a work tenant. Issue [#2260](https://github.com/DataBoar/data-boar/issues/2260). | ⬜ Pending (needs the operator's app registration) |
 | 1 | `sharepoint_online` reader, delegated mode: device code flow, list/download inside the configured folder, reuse the file-connector extraction and detection, `@odata.nextLink` paging, honour `429` + `Retry-After`, simulated-Graph tests. Issue [#2261](https://github.com/DataBoar/data-boar/issues/2261). | ⬜ Pending |
-| 1c | App-only (client credentials) for a work tenant, `Sites.Selected` vs `Sites.Read.All` to be confirmed. Issue [#2262](https://github.com/DataBoar/data-boar/issues/2262). | ⬜ Pending |
+| 1c | App-only (client credentials) for a work tenant, `Sites.Selected` vs `Sites.Read.All` to be confirmed. Issue [#2262](https://github.com/DataBoar/data-boar/issues/2262). | ⬜ Blocked: no work-tenant available; roadmap, no proof |
 | 1b | Incremental scan through Graph delta queries | ⬜ Pending |
 | 2 | Exchange Online mail: body and attachments, scoped by mailbox or group, application permission restricted by the tenant access policy | ⬜ Pending |
 | 3 | Permission and consent guide (en_US + pt_BR) ready for the customer DPO and IT team | ⬜ Pending |
